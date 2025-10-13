@@ -67,7 +67,7 @@ stages:
     - powershell: |
         Write-Host "Searching for DACPAC..."
         $dacpac = Get-ChildItem $(System.ArtifactsDirectory)\dacpac\*.dacpac | Select-Object -First 1
-        
+         
         if (-not $dacpac) {
           Write-Error "DACPAC not found!"
           exit 1
@@ -75,22 +75,33 @@ stages:
         
         Write-Host "Found: $($dacpac.FullName)"
         
+        $sqlPackage = "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\Extensions\Microsoft\SQLDB\DAC\SqlPackage.exe"
+        
+        if (-not (Test-Path $sqlPackage)) {
+          Write-Error "SqlPackage not found at: $sqlPackage"
+          exit 1
+        }
+        
+        Write-Host "Using SqlPackage: $sqlPackage"
+        
         $outputScript = "$(Agent.TempDirectory)\deploy.sql"
         
-        Write-Host "Generating deployment script..."
-        SqlPackage.exe /Action:Script `
+        Write-Host "Generating deployment script for $(targetServer)\$(targetDatabase)..."
+        Write-Host ""
+        
+        & $sqlPackage /Action:Script `
           /SourceFile:$($dacpac.FullName) `
           /TargetServerName:$(targetServer) `
           /TargetDatabaseName:$(targetDatabase) `
           /TargetUser:$(SqlUsername) `
           /TargetPassword:$(SqlPassword) `
-          /OutputPath:$outputScript
+          /OutputPath:$outputScript `
+          /p:IncludeCompositeObjects=true
         
         if ($LASTEXITCODE -ne 0) {
           Write-Error "SqlPackage failed with exit code $LASTEXITCODE"
           exit $LASTEXITCODE
-        }
-        
+        } 
         Write-Host ""
         Write-Host "================================"
         Write-Host "FULL DEPLOYMENT SCRIPT:"
