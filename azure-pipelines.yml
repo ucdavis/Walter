@@ -14,7 +14,7 @@ variables:
 - name: buildConfiguration
   value: 'Release'
 - name: targetServer
-  value: 'ELZAR'
+  value: 'CAES-ELZAR'
 - name: targetDatabase
   value: 'WalterDev'
 
