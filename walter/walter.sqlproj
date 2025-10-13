@@ -3,7 +3,7 @@
   <Sdk Name="Microsoft.Build.Sql" Version="1.0.0" />
   <PropertyGroup>
     <Name>dbo</Name>
-    <DSP>Microsoft.Data.Tools.Schema.Sql.Sql160DatabaseSchemaProvider</DSP>
+    <DSP>Microsoft.Data.Tools.Schema.Sql.Sql140DatabaseSchemaProvider</DSP>
     <ModelCollation>1033, CI</ModelCollation>
     <TreatSqlErrorsAsWarnings>71501</TreatSqlErrorsAsWarnings>
     <SuppressTSqlWarnings>71501;71562</SuppressTSqlWarnings>
@@ -11,11 +11,4 @@
     <SuppressMissingDependenciesErrors>True</SuppressMissingDependenciesErrors>
     <ProjectGuid>{00000000-0000-0000-0000-000000000000}</ProjectGuid>
   </PropertyGroup>
-  <ItemGroup>
-    <PackageReference Include="Microsoft.SqlServer.Dacpacs.Master">
-      <Version>160.0.0</Version>
-      <GeneratePathProperty>True</GeneratePathProperty>
-      <DatabaseVariableLiteralValue>master</DatabaseVariableLiteralValue>
-    </PackageReference>
-  </ItemGroup>
 </Project>
