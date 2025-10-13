@@ -1,10 +1,2 @@
 CREATE VIEW dbo.v_UCPathProjects as
-SELECT PROJECT_ID,
-           DESCR as PROJECT_DESCRIPTION
-    FROM OPENQUERY([FIS_BISTG_PRD (CAES_HCMODS_APPUSER)],
-    'SELECT distinct PROJECT_ID, DESCR
-    FROM caes_hcmods.PS_PROJECT_V
-    WHERE project_id = ''SP0FSNCF24'' 
-')
-go
-
+SELECT TestID FROM dbo.test;
