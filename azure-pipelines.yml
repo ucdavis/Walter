@@ -97,6 +97,7 @@ stages:
           /TargetPassword:$(SqlPassword) `
           /OutputPath:$outputScript `
           /p:IncludeCompositeObjects=true
+          /p:TrustServerCertificate=True
         
         if ($LASTEXITCODE -ne 0) {
           Write-Error "SqlPackage failed with exit code $LASTEXITCODE"
