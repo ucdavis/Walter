@@ -86,23 +86,22 @@ stages:
         
         $outputScript = "$(Agent.TempDirectory)\deploy.sql"
         
+        $connectionString = "Server=$(targetServer);Database=$(targetDatabase);User ID=$(SqlUsername);Password=$(SqlPassword);Encrypt=False;"
+    
         Write-Host "Generating deployment script for $(targetServer)\$(targetDatabase)..."
         Write-Host ""
         
         & $sqlPackage /Action:Script `
           /SourceFile:$($dacpac.FullName) `
-          /TargetServerName:$(targetServer) `
-          /TargetDatabaseName:$(targetDatabase) `
-          /TargetUser:$(SqlUsername) `
-          /TargetPassword:$(SqlPassword) `
+          /TargetConnectionString:$connectionString `
           /OutputPath:$outputScript `
-          /p:IncludeCompositeObjects=true `
-          /p:TrustServerCertificate=True
+          /p:IncludeCompositeObjects=true
         
         if ($LASTEXITCODE -ne 0) {
           Write-Error "SqlPackage failed with exit code $LASTEXITCODE"
           exit $LASTEXITCODE
         } 
+        
         Write-Host ""
         Write-Host "================================"
         Write-Host "FULL DEPLOYMENT SCRIPT:"
