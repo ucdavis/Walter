@@ -1,19 +1,105 @@
-# Starter pipeline
-# Start with a minimal pipeline that you can customize to build and deploy your code.
-# Add steps that build, run tests, deploy, and more:
-# https://aka.ms/yaml
-
+# azure-pipelines.yml
 trigger:
-- main
+  branches:
+    include:
+      - main
 
 pool:
-  vmImage: ubuntu-latest
+  name: 'Pazuzu Pool'
 
-steps:
-- script: echo Hello, world!
-  displayName: 'Run a one-line script'
+variables:
+- group: 'WalterDev'
+- name: solution
+  value: '**/*.sqlproj'
+- name: buildConfiguration
+  value: 'Release'
+- name: targetServer
+  value: 'ELZAR'
+- name: targetDatabase
+  value: 'WalterDev'
 
-- script: |
-    echo Add other tasks to build, test, and deploy your project.
-    echo See https://aka.ms/yaml
-  displayName: 'Run a multi-line script'
+stages:
+- stage: Build
+  displayName: 'Build DACPAC'
+  jobs:
+  - job: BuildJob
+    displayName: 'Build SQL Database Project'
+    steps:
+    - task: VSBuild@1
+      displayName: 'Build SQL Project'
+      inputs:
+        solution: '$(solution)'
+        msbuildArchitecture: 'x86'
+        configuration: '$(buildConfiguration)'
+    
+    - task: CopyFiles@2
+      displayName: 'Copy DACPAC to staging'
+      inputs:
+        SourceFolder: '$(Build.SourcesDirectory)'
+        Contents: '**/bin/$(buildConfiguration)/*.dacpac'
+        TargetFolder: '$(Build.ArtifactStagingDirectory)'
+        flattenFolders: true
+    
+    # ADDED: Publish the artifact
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publish DACPAC'
+      inputs:
+        PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+        ArtifactName: 'dacpac'
+        publishLocation: 'Container'
+
+- stage: GenerateScript
+  displayName: 'Generate Deployment Script'
+  dependsOn: Build
+  condition: succeeded()
+  jobs:
+  - job: ScriptJob
+    displayName: 'Generate SQL Diff Script'
+    steps:
+    - task: DownloadBuildArtifacts@1
+      displayName: 'Download DACPAC'
+      inputs:
+        buildType: 'current'
+        downloadType: 'single'
+        artifactName: 'dacpac'
+        downloadPath: '$(System.ArtifactsDirectory)'
+    
+    - powershell: |
+        Write-Host "Searching for DACPAC..."
+        $dacpac = Get-ChildItem $(System.ArtifactsDirectory)\dacpac\*.dacpac | Select-Object -First 1
+        
+        if (-not $dacpac) {
+          Write-Error "DACPAC not found!"
+          exit 1
+        }
+        
+        Write-Host "Found: $($dacpac.FullName)"
+        
+        $outputScript = "$(Agent.TempDirectory)\deploy.sql"
+        
+        Write-Host "Generating deployment script..."
+        SqlPackage.exe /Action:Script `
+          /SourceFile:$($dacpac.FullName) `
+          /TargetServerName:$(targetServer) `
+          /TargetDatabaseName:$(targetDatabase) `
+          /TargetUser:$(SqlUsername) `
+          /TargetPassword:$(SqlPassword) `
+          /OutputPath:$outputScript
+        
+        if ($LASTEXITCODE -ne 0) {
+          Write-Error "SqlPackage failed with exit code $LASTEXITCODE"
+          exit $LASTEXITCODE
+        }
+        
+        Write-Host ""
+        Write-Host "================================"
+        Write-Host "FULL DEPLOYMENT SCRIPT:"
+        Write-Host "================================"
+        Get-Content $outputScript
+        Write-Host ""
+        Write-Host "================================"
+        Write-Host "Script generated successfully!"
+      displayName: 'Print Deployment Script'
+      env:
+        SqlUsername: $(SqlUsername)
+        SqlPassword: $(SqlPassword)
