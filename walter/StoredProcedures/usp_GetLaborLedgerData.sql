@@ -10,16 +10,12 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    -- Validate: at least one parameter required
+    -- Validate: at least one of Emplid, FinancialDept, or ProjectId is required
     IF @Emplid IS NULL
        AND @FinancialDept IS NULL
-       AND @Fund IS NULL
-       AND @NaturalAccount IS NULL
        AND @ProjectId IS NULL
-       AND @StartDate IS NULL
-       AND @EndDate IS NULL
     BEGIN
-        RAISERROR('At least one filter parameter is required', 16, 1);
+        RAISERROR('At least one of Emplid, FinancialDept, or ProjectId is required', 16, 1);
         RETURN;
     END;
 
