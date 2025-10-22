@@ -1,4 +1,0 @@
-CREATE TABLE dbo.test
-(
-    TestID INT PRIMARY KEY IDENTITY(1,1),
-);
