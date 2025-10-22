@@ -188,7 +188,7 @@ stages:
   jobs:
   - deployment: DeployProdJob
     displayName: 'Deploy DACPAC to Production'
-    environment: 'Walter-Production'
+    environment: 'WalterTest'
     strategy:
       runOnce:
         deploy:
