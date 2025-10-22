@@ -54,6 +54,11 @@ BEGIN
     DECLARE @TSQLCommand NVARCHAR(MAX);
     DECLARE @LinkedServerName SYSNAME = '[FIS_BISTG_PRD (CAES_HCMODS_APPUSER)]';
     DECLARE @FilterClause NVARCHAR(MAX) = '';
+    DECLARE @StartTime DATETIME2 = SYSDATETIME();
+    DECLARE @RowCount INT;
+    DECLARE @Duration_MS INT;
+    DECLARE @ErrorMsg NVARCHAR(MAX);
+    DECLARE @ParametersJSON NVARCHAR(MAX);
 
     -- Build filter clause for CTEs
     IF @Emplid IS NOT NULL
@@ -138,10 +143,51 @@ BEGIN
         ORDER BY base.EMPLID, base.POSITION_NBR, base.PAY_END_DT
     ';
 
-    -- Execute via OPENQUERY
-    SET @TSQLCommand =
-        'SELECT * FROM OPENQUERY(' + @LinkedServerName + ', ''' + REPLACE(@OracleQuery, '''', '''''') + ''')';
+    -- Build parameters JSON for logging
+    SET @ParametersJSON = (
+        SELECT
+            @Emplid AS Emplid,
+            @FinancialDept AS FinancialDept,
+            @Fund AS Fund,
+            @NaturalAccount AS NaturalAccount,
+            @ProjectId AS ProjectId,
+            CONVERT(VARCHAR(10), @StartDate, 120) AS StartDate,
+            CONVERT(VARCHAR(10), @EndDate, 120) AS EndDate
+        FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
+    );
 
-    EXEC sp_executesql @TSQLCommand;
+    -- Execute via OPENQUERY
+    BEGIN TRY
+        SET @TSQLCommand =
+            'SELECT * FROM OPENQUERY(' + @LinkedServerName + ', ''' + REPLACE(@OracleQuery, '''', '''''') + ''')';
+
+        EXEC sp_executesql @TSQLCommand;
+
+        SET @RowCount = @@ROWCOUNT;
+        SET @Duration_MS = DATEDIFF(MILLISECOND, @StartTime, SYSDATETIME());
+
+        -- Log successful execution
+        EXEC [dbo].[usp_LogProcedureExecution]
+            @ProcedureName = 'dbo.usp_GetLaborLedgerData',
+            @Duration_MS = @Duration_MS,
+            @RowCount = @RowCount,
+            @Parameters = @ParametersJSON,
+            @Success = 1;
+    END TRY
+    BEGIN CATCH
+        SET @Duration_MS = DATEDIFF(MILLISECOND, @StartTime, SYSDATETIME());
+        SET @ErrorMsg = ERROR_MESSAGE();
+
+        -- Log failed execution
+        EXEC [dbo].[usp_LogProcedureExecution]
+            @ProcedureName = 'dbo.usp_GetLaborLedgerData',
+            @Duration_MS = @Duration_MS,
+            @Parameters = @ParametersJSON,
+            @Success = 0,
+            @ErrorMessage = @ErrorMsg;
+
+        -- Re-throw the error
+        THROW;
+    END CATCH
 END;
 GO
