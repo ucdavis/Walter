@@ -48,13 +48,13 @@ stages:
         ArtifactName: 'dacpac'
         publishLocation: 'Container'
 
-- stage: GenerateScript
-  displayName: 'Generate Deployment Script'
+- stage: Deploy
+  displayName: 'Deploy to WalterDev'
   dependsOn: Build
   condition: succeeded()
   jobs:
-  - job: ScriptJob
-    displayName: 'Generate SQL Diff Script'
+  - job: DeployJob
+    displayName: 'Deploy DACPAC to SQL Server'
     steps:
     - task: DownloadBuildArtifacts@1
       displayName: 'Download DACPAC'
@@ -63,54 +63,47 @@ stages:
         downloadType: 'single'
         artifactName: 'dacpac'
         downloadPath: '$(System.ArtifactsDirectory)'
-    
+
     - powershell: |
         Write-Host "Searching for DACPAC..."
         $dacpac = Get-ChildItem $(System.ArtifactsDirectory)\dacpac\*.dacpac | Select-Object -First 1
-         
+
         if (-not $dacpac) {
           Write-Error "DACPAC not found!"
           exit 1
         }
-        
+
         Write-Host "Found: $($dacpac.FullName)"
-        
+
         $sqlPackage = "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\Extensions\Microsoft\SQLDB\DAC\SqlPackage.exe"
-        
+
         if (-not (Test-Path $sqlPackage)) {
           Write-Error "SqlPackage not found at: $sqlPackage"
           exit 1
         }
-        
+
         Write-Host "Using SqlPackage: $sqlPackage"
-        
-        $outputScript = "$(Agent.TempDirectory)\deploy.sql"
-        
+
         $connectionString = "Server=$(targetServer);Database=$(targetDatabase);User ID=$(SqlUsername);Password=$(SqlPassword);Encrypt=False;"
-    
-        Write-Host "Generating deployment script for $(targetServer)\$(targetDatabase)..."
+
+        Write-Host "Deploying DACPAC to $(targetServer)\$(targetDatabase)..."
         Write-Host ""
-        
-        & $sqlPackage /Action:Script `
+
+        & $sqlPackage /Action:Publish `
           /SourceFile:$($dacpac.FullName) `
           /TargetConnectionString:$connectionString `
-          /OutputPath:$outputScript `
           /p:IncludeCompositeObjects=true
-        
+
         if ($LASTEXITCODE -ne 0) {
-          Write-Error "SqlPackage failed with exit code $LASTEXITCODE"
+          Write-Error "Deployment failed with exit code $LASTEXITCODE"
           exit $LASTEXITCODE
-        } 
-        
+        }
+
         Write-Host ""
         Write-Host "================================"
-        Write-Host "FULL DEPLOYMENT SCRIPT:"
+        Write-Host "Deployment completed successfully!"
         Write-Host "================================"
-        Get-Content $outputScript
-        Write-Host ""
-        Write-Host "================================"
-        Write-Host "Script generated successfully!"
-      displayName: 'Print Deployment Script'
+      displayName: 'Deploy DACPAC to Database'
       env:
         SqlUsername: $(SqlUsername)
         SqlPassword: $(SqlPassword)
