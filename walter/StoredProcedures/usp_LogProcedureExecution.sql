@@ -4,6 +4,7 @@ CREATE PROCEDURE [dbo].[usp_LogProcedureExecution]
     @Duration_MS INT = NULL,
     @RowCount INT = NULL,
     @Parameters NVARCHAR(MAX) = NULL,
+    @ApplicationName NVARCHAR(128) = NULL,
     @Success BIT = 1,
     @ErrorMessage NVARCHAR(MAX) = NULL
 AS
@@ -13,6 +14,10 @@ BEGIN
     -- Default ExecutedBy to current user if not provided
     IF @ExecutedBy IS NULL
         SET @ExecutedBy = COALESCE(ORIGINAL_LOGIN(), SYSTEM_USER);
+
+    -- Default ApplicationName to APP_NAME() if not provided
+    IF @ApplicationName IS NULL
+        SET @ApplicationName = APP_NAME();
 
     INSERT INTO [dbo].[AuditLog]
     (
@@ -37,7 +42,7 @@ BEGIN
         @Duration_MS,
         @RowCount,
         @Parameters,
-        APP_NAME(),
+        @ApplicationName,
         HOST_NAME(),
         DB_NAME(),
         @@SPID,

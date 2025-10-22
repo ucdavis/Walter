@@ -5,7 +5,8 @@ CREATE PROCEDURE dbo.usp_GetLaborLedgerData
     @NaturalAccount VARCHAR(10) = NULL,
     @ProjectId VARCHAR(15) = NULL,
     @StartDate DATE = NULL,
-    @EndDate DATE = NULL
+    @EndDate DATE = NULL,
+    @ApplicationName NVARCHAR(128) = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -152,7 +153,8 @@ BEGIN
             @NaturalAccount AS NaturalAccount,
             @ProjectId AS ProjectId,
             CONVERT(VARCHAR(10), @StartDate, 120) AS StartDate,
-            CONVERT(VARCHAR(10), @EndDate, 120) AS EndDate
+            CONVERT(VARCHAR(10), @EndDate, 120) AS EndDate,
+            COALESCE(@ApplicationName, APP_NAME()) AS ApplicationName
         FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
     );
 
@@ -172,6 +174,7 @@ BEGIN
             @Duration_MS = @Duration_MS,
             @RowCount = @RowCount,
             @Parameters = @ParametersJSON,
+            @ApplicationName = @ApplicationName,
             @Success = 1;
     END TRY
     BEGIN CATCH
@@ -183,6 +186,7 @@ BEGIN
             @ProcedureName = 'dbo.usp_GetLaborLedgerData',
             @Duration_MS = @Duration_MS,
             @Parameters = @ParametersJSON,
+            @ApplicationName = @ApplicationName,
             @Success = 0,
             @ErrorMessage = @ErrorMsg;
 
