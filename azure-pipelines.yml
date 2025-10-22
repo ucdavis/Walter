@@ -40,7 +40,6 @@ stages:
         TargetFolder: '$(Build.ArtifactStagingDirectory)'
         flattenFolders: true
     
-    # ADDED: Publish the artifact
     - task: PublishBuildArtifacts@1
       displayName: 'Publish DACPAC'
       inputs:
@@ -48,13 +47,13 @@ stages:
         ArtifactName: 'dacpac'
         publishLocation: 'Container'
 
-- stage: Deploy
-  displayName: 'Deploy to WalterDev'
+- stage: DeployDev
+  displayName: 'Deploy to Dev'
   dependsOn: Build
   condition: succeeded()
   jobs:
-  - job: DeployJob
-    displayName: 'Deploy DACPAC to SQL Server'
+  - job: DeployDevJob
+    displayName: 'Deploy DACPAC to WalterDev'
     steps:
     - task: DownloadBuildArtifacts@1
       displayName: 'Download DACPAC'
@@ -103,7 +102,145 @@ stages:
         Write-Host "================================"
         Write-Host "Deployment completed successfully!"
         Write-Host "================================"
-      displayName: 'Deploy DACPAC to Database'
+      displayName: 'Deploy DACPAC to Dev Database'
       env:
         SqlUsername: $(SqlUsername)
         SqlPassword: $(SqlPassword)
+
+- stage: ReviewProd
+  displayName: 'Review Production Changes'
+  dependsOn: DeployDev
+  condition: succeeded()
+  jobs:
+  - job: GenerateScript
+    displayName: 'Generate Production Deployment Script'
+    steps:
+    - task: DownloadBuildArtifacts@1
+      displayName: 'Download DACPAC'
+      inputs:
+        buildType: 'current'
+        downloadType: 'single'
+        artifactName: 'dacpac'
+        downloadPath: '$(System.ArtifactsDirectory)'
+
+    - powershell: |
+        Write-Host "Searching for DACPAC..."
+        $dacpac = Get-ChildItem $(System.ArtifactsDirectory)\dacpac\*.dacpac | Select-Object -First 1
+
+        if (-not $dacpac) {
+          Write-Error "DACPAC not found!"
+          exit 1
+        }
+
+        Write-Host "Found: $($dacpac.FullName)"
+
+        $sqlPackage = "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\Extensions\Microsoft\SQLDB\DAC\SqlPackage.exe"
+
+        if (-not (Test-Path $sqlPackage)) {
+          Write-Error "SqlPackage not found at: $sqlPackage"
+          exit 1
+        }
+
+        Write-Host "Using SqlPackage: $sqlPackage"
+
+        $outputScript = "$(Build.ArtifactStagingDirectory)\production-deploy.sql"
+
+        $connectionString = "Server=$(targetServer);Database=$(targetDatabase);User ID=$(SqlUsername);Password=$(SqlPassword);Encrypt=False;"
+
+        Write-Host "Generating deployment script for $(targetServer)\$(targetDatabase) (Production)..."
+        Write-Host ""
+
+        & $sqlPackage /Action:Script `
+          /SourceFile:$($dacpac.FullName) `
+          /TargetConnectionString:$connectionString `
+          /OutputPath:$outputScript `
+          /p:IncludeCompositeObjects=true
+
+        if ($LASTEXITCODE -ne 0) {
+          Write-Error "Script generation failed with exit code $LASTEXITCODE"
+          exit $LASTEXITCODE
+        }
+
+        Write-Host ""
+        Write-Host "================================"
+        Write-Host "PRODUCTION DEPLOYMENT SCRIPT:"
+        Write-Host "================================"
+        Get-Content $outputScript
+        Write-Host ""
+        Write-Host "================================"
+        Write-Host "Review the script above before approving production deployment"
+      displayName: 'Generate and Display Production Script'
+      env:
+        SqlUsername: $(SqlUsername)
+        SqlPassword: $(SqlPassword)
+
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publish Production Script'
+      inputs:
+        PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+        ArtifactName: 'production-script'
+        publishLocation: 'Container'
+
+- stage: DeployProd
+  displayName: 'Deploy to Production'
+  dependsOn: ReviewProd
+  condition: succeeded()
+  jobs:
+  - deployment: DeployProdJob
+    displayName: 'Deploy DACPAC to Production'
+    environment: 'Walter-Production'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: DownloadBuildArtifacts@1
+            displayName: 'Download DACPAC'
+            inputs:
+              buildType: 'current'
+              downloadType: 'single'
+              artifactName: 'dacpac'
+              downloadPath: '$(System.ArtifactsDirectory)'
+
+          - powershell: |
+              Write-Host "Searching for DACPAC..."
+              $dacpac = Get-ChildItem $(System.ArtifactsDirectory)\dacpac\*.dacpac | Select-Object -First 1
+
+              if (-not $dacpac) {
+                Write-Error "DACPAC not found!"
+                exit 1
+              }
+
+              Write-Host "Found: $($dacpac.FullName)"
+
+              $sqlPackage = "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\Extensions\Microsoft\SQLDB\DAC\SqlPackage.exe"
+
+              if (-not (Test-Path $sqlPackage)) {
+                Write-Error "SqlPackage not found at: $sqlPackage"
+                exit 1
+              }
+
+              Write-Host "Using SqlPackage: $sqlPackage"
+
+              $connectionString = "Server=$(targetServer);Database=$(targetDatabase);User ID=$(SqlUsername);Password=$(SqlPassword);Encrypt=False;"
+
+              Write-Host "Deploying DACPAC to PRODUCTION: $(targetServer)\$(targetDatabase)..."
+              Write-Host ""
+
+              & $sqlPackage /Action:Publish `
+                /SourceFile:$($dacpac.FullName) `
+                /TargetConnectionString:$connectionString `
+                /p:IncludeCompositeObjects=true
+
+              if ($LASTEXITCODE -ne 0) {
+                Write-Error "Production deployment failed with exit code $LASTEXITCODE"
+                exit $LASTEXITCODE
+              }
+
+              Write-Host ""
+              Write-Host "================================"
+              Write-Host "Production deployment completed successfully!"
+              Write-Host "================================"
+            displayName: 'Deploy DACPAC to Production Database'
+            env:
+              SqlUsername: $(SqlUsername)
+              SqlPassword: $(SqlPassword)
