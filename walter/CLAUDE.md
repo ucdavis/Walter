@@ -109,13 +109,23 @@ These scripts run **after** the DACPAC is deployed, avoiding build failures from
 
 ## CI/CD Pipeline
 
-The project uses Azure Pipelines with two stages:
+The project uses Azure Pipelines with four stages:
 
 1. **Build Stage**: Compiles the SQL project and publishes the DACPAC artifact
-2. **GenerateScript Stage**: Downloads the DACPAC, generates a deployment script against the WalterDev database on CAES-ELZAR server, and displays the full diff for review
+2. **DeployDev Stage**: Deploys to WalterDev database automatically
+3. **ReviewProd Stage**: Generates deployment script for production review
+4. **DeployProd Stage**: Deploys to WalterProd behind approval gate (requires WalterProd environment approval)
 
-The pipeline uses VSBuild with x86 architecture and requires the 'WalterDev' variable group with the following variables:
-- `targetServer` - SQL Server hostname or IP address
-- `targetDatabase` - Target database name (e.g., WalterDev)
-- `sqlUsername` - SQL authentication username
+The pipeline uses VSBuild with x86 architecture and requires two variable groups:
+
+**WalterDev variable group** (for dev deployment):
+- `targetServer` - SQL Server hostname (e.g., CAES-ROBERTO)
+- `targetDatabase` - Target database name (WalterDev)
+- `sqlUsername` - SQL authentication username (walter_deploy_dev)
+- `sqlPassword` - SQL authentication password (secret)
+
+**WalterProd variable group** (for production deployment):
+- `targetServer` - SQL Server hostname (e.g., CAES-ROBERTO)
+- `targetDatabase` - Target database name (WalterProd)
+- `sqlUsername` - SQL authentication username (walter_deploy_prod)
 - `sqlPassword` - SQL authentication password (secret)

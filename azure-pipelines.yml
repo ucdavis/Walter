@@ -88,6 +88,8 @@ stages:
   displayName: 'Review Production Changes'
   dependsOn: DeployDev
   condition: succeeded()
+  variables:
+  - group: 'WalterProd'
   jobs:
   - job: GenerateScript
     displayName: 'Generate Production Deployment Script'
@@ -136,10 +138,12 @@ stages:
   displayName: 'Deploy to Production'
   dependsOn: ReviewProd
   condition: succeeded()
+  variables:
+  - group: 'WalterProd'
   jobs:
   - deployment: DeployProdJob
-    displayName: 'Deploy DACPAC to Production'
-    environment: 'WalterTest'
+    displayName: 'Deploy DACPAC to WalterProd'
+    environment: 'WalterProd'
     strategy:
       runOnce:
         deploy:
