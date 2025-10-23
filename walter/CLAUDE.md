@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Walter** (Warehouse Analytics and Ledger Tools for Enterprise Reporting) is a Microsoft SQL Server database project using the new SDK-style SQL project format with Microsoft.Build.Sql. The project targets SQL Server 2017 and generates a DACPAC file for deployment.
+**Walter** (Warehouse Analytics and Ledger Tools for Enterprise Reporting) is a Microsoft SQL Server database project using the new SDK-style SQL project format with Microsoft.Build.Sql. The project targets SQL Server 2022 and generates a DACPAC file for deployment.
 
 ## Build Commands
 
@@ -68,7 +68,7 @@ This starts SQL Server 2022 on localhost:1433 with:
 ## Key Configuration
 
 The project is configured with:
-- **Target Platform**: SQL Server 2017 (SQL160DatabaseSchemaProvider in project file)
+- **Target Platform**: SQL Server 2022 (SQL160DatabaseSchemaProvider in project file)
 - **Collation**: 1033, CI (Case Insensitive)
 - **Suppressed Dependencies**: `SuppressMissingDependenciesErrors=True` - Required for OPENQUERY and linked server references
 - **External References**: `Microsoft.SqlServer.Dacpacs.Master` for system database objects
@@ -95,7 +95,7 @@ The database serves as a data warehousing layer that consolidates data from exte
 
 ### Post-Deployment Scripts
 
-Views that depend on linked servers (e.g., `v_PS_PROJECT_V_Oracle` accessing UCPath data via `FIS_BISTG_PRD`) are located in:
+Views that depend on linked servers (e.g., `v_PS_PROJECT_V_Oracle` accessing UCPath data via `AIT_BISTG_PRD-CAESAPP_HCMODS_APPUSER`) are located in:
 - `Scripts/PostDeployment/` - Individual view scripts
 - `Scripts/Script.PostDeployment.sql` - Main post-deployment script that orchestrates execution
 
@@ -114,4 +114,8 @@ The project uses Azure Pipelines with two stages:
 1. **Build Stage**: Compiles the SQL project and publishes the DACPAC artifact
 2. **GenerateScript Stage**: Downloads the DACPAC, generates a deployment script against the WalterDev database on CAES-ELZAR server, and displays the full diff for review
 
-The pipeline uses VSBuild with x86 architecture and requires the 'WalterDev' variable group with `SqlUsername` and `SqlPassword` secrets.
+The pipeline uses VSBuild with x86 architecture and requires the 'WalterDev' variable group with the following variables:
+- `targetServer` - SQL Server hostname or IP address
+- `targetDatabase` - Target database name (e.g., WalterDev)
+- `sqlUsername` - SQL authentication username
+- `sqlPassword` - SQL authentication password (secret)

@@ -4,7 +4,7 @@
 
   <PropertyGroup>
     <Name>Walter</Name>
-    <DSP>Microsoft.Data.Tools.Schema.Sql.Sql140DatabaseSchemaProvider</DSP>
+    <DSP>Microsoft.Data.Tools.Schema.Sql.Sql160DatabaseSchemaProvider</DSP>
     <ModelCollation>1033, CI</ModelCollation>
     <SuppressTSqlWarnings>71502</SuppressTSqlWarnings>
     <ProjectGuid>{00000000-0000-0000-0000-000000000000}</ProjectGuid>

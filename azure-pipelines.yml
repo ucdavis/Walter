@@ -15,10 +15,6 @@ variables:
   value: 'Release'
 - name: dacpacFileName
   value: 'walter.dacpac'
-- name: targetServer
-  value: 'CAES-ELZAR'
-- name: targetDatabase
-  value: 'WalterDev'
 
 stages:
 - stage: Build
@@ -68,7 +64,7 @@ stages:
     - powershell: |
         $dacpac = "$(System.ArtifactsDirectory)\dacpac\$(dacpacFileName)"
         $sqlPackage = "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\Extensions\Microsoft\SQLDB\DAC\SqlPackage.exe"
-        $connectionString = "Server=$(targetServer);Database=$(targetDatabase);User ID=$(SqlUsername);Password=$(SqlPassword);Encrypt=False;"
+        $connectionString = "Server=$(targetServer);Database=$(targetDatabase);User ID=$(sqlUsername);Password=$(sqlPassword);Encrypt=False;"
 
         Write-Host "Deploying $dacpac to $(targetServer)\$(targetDatabase)..."
 
@@ -85,8 +81,8 @@ stages:
         Write-Host "Deployment completed successfully!"
       displayName: 'Deploy DACPAC to Dev Database'
       env:
-        SqlUsername: $(SqlUsername)
-        SqlPassword: $(SqlPassword)
+        sqlUsername: $(sqlUsername)
+        sqlPassword: $(sqlPassword)
 
 - stage: ReviewProd
   displayName: 'Review Production Changes'
@@ -108,7 +104,7 @@ stages:
         $dacpac = "$(System.ArtifactsDirectory)\dacpac\$(dacpacFileName)"
         $sqlPackage = "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\Extensions\Microsoft\SQLDB\DAC\SqlPackage.exe"
         $outputScript = "$(Build.ArtifactStagingDirectory)\production-deploy.sql"
-        $connectionString = "Server=$(targetServer);Database=$(targetDatabase);User ID=$(SqlUsername);Password=$(SqlPassword);Encrypt=False;"
+        $connectionString = "Server=$(targetServer);Database=$(targetDatabase);User ID=$(sqlUsername);Password=$(sqlPassword);Encrypt=False;"
 
         Write-Host "Generating deployment script for $(targetServer)\$(targetDatabase)..."
 
@@ -126,8 +122,8 @@ stages:
         Write-Host "Deployment script generated successfully. Download the 'production-script' artifact to review."
       displayName: 'Generate Production Deployment Script'
       env:
-        SqlUsername: $(SqlUsername)
-        SqlPassword: $(SqlPassword)
+        sqlUsername: $(sqlUsername)
+        sqlPassword: $(sqlPassword)
 
     - task: PublishBuildArtifacts@1
       displayName: 'Publish Production Script'
@@ -159,7 +155,7 @@ stages:
           - powershell: |
               $dacpac = "$(System.ArtifactsDirectory)\dacpac\$(dacpacFileName)"
               $sqlPackage = "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\Extensions\Microsoft\SQLDB\DAC\SqlPackage.exe"
-              $connectionString = "Server=$(targetServer);Database=$(targetDatabase);User ID=$(SqlUsername);Password=$(SqlPassword);Encrypt=False;"
+              $connectionString = "Server=$(targetServer);Database=$(targetDatabase);User ID=$(sqlUsername);Password=$(sqlPassword);Encrypt=False;"
 
               Write-Host "Deploying $dacpac to PRODUCTION: $(targetServer)\$(targetDatabase)..."
 
@@ -176,5 +172,5 @@ stages:
               Write-Host "Production deployment completed successfully!"
             displayName: 'Deploy DACPAC to Production Database'
             env:
-              SqlUsername: $(SqlUsername)
-              SqlPassword: $(SqlPassword)
+              sqlUsername: $(sqlUsername)
+              sqlPassword: $(sqlPassword)
