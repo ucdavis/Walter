@@ -1,9 +1,5 @@
 CREATE PROCEDURE dbo.usp_GetLaborLedgerData
-    @Emplid VARCHAR(10) = NULL,
-    @FinancialDept VARCHAR(10) = NULL,
-    @Fund VARCHAR(10) = NULL,
-    @NaturalAccount VARCHAR(10) = NULL,
-    @ProjectId VARCHAR(15) = NULL,
+    @FinancialDept VARCHAR(7),
     @StartDate DATE = NULL,
     @EndDate DATE = NULL,
     @ApplicationName NVARCHAR(128) = NULL
@@ -11,49 +7,55 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    -- Validate: at least one of Emplid, FinancialDept, or ProjectId is required
-    IF @Emplid IS NULL
-       AND @FinancialDept IS NULL
-       AND @ProjectId IS NULL
+    -- Validate: FinancialDept is required
+    IF @FinancialDept IS NULL
     BEGIN
-        RAISERROR('At least one of Emplid, FinancialDept, or ProjectId is required', 16, 1);
+        RAISERROR('FinancialDept is required', 16, 1);
         RETURN;
     END;
 
-    -- Validate input formats to prevent SQL injection
-    IF @Emplid IS NOT NULL AND (@Emplid LIKE '%[^0-9]%' OR LEN(@Emplid) > 10)
+    -- Validate input format: exactly 7 alphanumeric characters
+    IF LEN(@FinancialDept) != 7 OR @FinancialDept LIKE '%[^A-Z0-9]%'
     BEGIN
-        RAISERROR('Invalid Emplid format (10 digits max)', 16, 1);
+        RAISERROR('Invalid Financial Dept format (must be exactly 7 alphanumeric characters)', 16, 1);
         RETURN;
     END;
 
-    IF @FinancialDept IS NOT NULL AND (@FinancialDept LIKE '%[^A-Z0-9-]%' OR @FinancialDept LIKE '%-%-%' OR LEN(@FinancialDept) > 10)
+    -- Validate date range if both are provided
+    IF @StartDate IS NOT NULL AND @EndDate IS NOT NULL AND @EndDate < @StartDate
     BEGIN
-        RAISERROR('Invalid Financial Dept format (alphanumeric with single hyphen allowed, 10 chars max)', 16, 1);
+        RAISERROR('EndDate must be greater than or equal to StartDate', 16, 1);
         RETURN;
     END;
 
-    IF @Fund IS NOT NULL AND (@Fund LIKE '%[^A-Z0-9-]%' OR @Fund LIKE '%--%' OR LEN(@Fund) > 10)
-    BEGIN
-        RAISERROR('Invalid Fund format (alphanumeric with hyphens, 10 chars max)', 16, 1);
-        RETURN;
-    END;
+    -- Validate that FinancialDept belongs to ANR or CAES hierarchy
+    DECLARE @IsValidDept INT;
+    DECLARE @ValidationQuery NVARCHAR(MAX);
+    DECLARE @ValidationTSQL NVARCHAR(MAX);
+    DECLARE @RedshiftLinkedServer SYSNAME = '[AE_Redshift_PROD]';
 
-    IF @NaturalAccount IS NOT NULL AND (@NaturalAccount LIKE '%[^A-Z0-9]%' OR LEN(@NaturalAccount) > 10)
-    BEGIN
-        RAISERROR('Invalid Natural Account format (alphanumeric, 10 chars max)', 16, 1);
-        RETURN;
-    END;
+    SET @ValidationQuery = '
+        SELECT COUNT(*)
+        FROM ae_dwh.erp_fin_dept
+        WHERE code = ''' + @FinancialDept + '''
+          AND (parent_level_2_code = ''AAES00C'' OR parent_level_3_code = ''9AAES0D'')
+          AND hierarchy_depth = 6
+    ';
 
-    IF @ProjectId IS NOT NULL AND (@ProjectId LIKE '%[^A-Z0-9_-]%' OR LEN(@ProjectId) > 15)
+    SET @ValidationTSQL =
+        'SELECT @Count = * FROM OPENQUERY(' + @RedshiftLinkedServer + ', ''' + REPLACE(@ValidationQuery, '''', '''''') + ''')';
+
+    EXEC sp_executesql @ValidationTSQL, N'@Count INT OUTPUT', @Count = @IsValidDept OUTPUT;
+
+    IF @IsValidDept = 0
     BEGIN
-        RAISERROR('Invalid Project ID format (alphanumeric with hyphen or underscore, 15 chars max)', 16, 1);
+        RAISERROR('Financial Department must belong to ANR or CAES hierarchy', 16, 1);
         RETURN;
     END;
 
     DECLARE @OracleQuery NVARCHAR(MAX);
     DECLARE @TSQLCommand NVARCHAR(MAX);
-    DECLARE @LinkedServerName SYSNAME = '[AIT_BISTG_PRD-CAESAPP_HCMODS_APPUSER]';
+    DECLARE @LinkedServerName SYSNAME = '[AIT_BISTG_PRD-CAES_HCMODS_APPUSER]';
     DECLARE @FilterClause NVARCHAR(MAX) = '';
     DECLARE @StartTime DATETIME2 = SYSDATETIME();
     DECLARE @RowCount INT;
@@ -62,20 +64,7 @@ BEGIN
     DECLARE @ParametersJSON NVARCHAR(MAX);
 
     -- Build filter clause for CTEs
-    IF @Emplid IS NOT NULL
-        SET @FilterClause = @FilterClause + ' AND EMPLID = ''' + @Emplid + '''';
-
-    IF @FinancialDept IS NOT NULL
-        SET @FilterClause = @FilterClause + ' AND DEPTID_CF = ''' + @FinancialDept + '''';
-
-    IF @Fund IS NOT NULL
-        SET @FilterClause = @FilterClause + ' AND FUND_CODE = ''' + @Fund + '''';
-
-    IF @NaturalAccount IS NOT NULL
-        SET @FilterClause = @FilterClause + ' AND ACCOUNT = ''' + @NaturalAccount + '''';
-
-    IF @ProjectId IS NOT NULL
-        SET @FilterClause = @FilterClause + ' AND PROJECT_ID = ''' + @ProjectId + '''';
+    SET @FilterClause = ' AND DEPTID_CF = ''' + @FinancialDept + '''';
 
     IF @StartDate IS NOT NULL
         SET @FilterClause = @FilterClause + ' AND PAY_END_DT >= TO_DATE(''' + CONVERT(VARCHAR(10), @StartDate, 120) + ''', ''YYYY-MM-DD'')';
@@ -147,11 +136,7 @@ BEGIN
     -- Build parameters JSON for logging
     SET @ParametersJSON = (
         SELECT
-            @Emplid AS Emplid,
             @FinancialDept AS FinancialDept,
-            @Fund AS Fund,
-            @NaturalAccount AS NaturalAccount,
-            @ProjectId AS ProjectId,
             CONVERT(VARCHAR(10), @StartDate, 120) AS StartDate,
             CONVERT(VARCHAR(10), @EndDate, 120) AS EndDate,
             COALESCE(@ApplicationName, APP_NAME()) AS ApplicationName
