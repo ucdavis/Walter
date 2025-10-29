@@ -75,17 +75,17 @@ BEGIN
     -- Build Redshift query with explicit column list
     SET @RedshiftQuery = '
         SELECT
-            entity, entity_description, fund, fund_description,
-            financial_department, financial_department_description,
-            account, account_description, purpose, purpose_description,
-            program, program_description, project, project_description,
-            activity, activity_description, document_type,
-            accounting_sequence_number, tracking_no, reference,
-            journal_line_description, journal_acct_date, journal_name,
-            journal_reference, period_name, journal_batch_name,
-            journal_source, journal_category, batch_status, actual_flag,
-            encumbrance_type_code, actual_amount, commitment_amount,
-            obligation_amount
+            ENTITY, ENTITY_DESCRIPTION, FUND, FUND_DESCRIPTION,
+            FINANCIAL_DEPARTMENT, FINANCIAL_DEPARTMENT_DESCRIPTION,
+            ACCOUNT, ACCOUNT_DESCRIPTION, PURPOSE, PURPOSE_DESCRIPTION,
+            PROGRAM, PROGRAM_DESCRIPTION, PROJECT, PROJECT_DESCRIPTION,
+            ACTIVITY, ACTIVITY_DESCRIPTION, DOCUMENT_TYPE,
+            ACCOUNTING_SEQUENCE_NUMBER, TRACKING_NO, REFERENCE,
+            JOURNAL_LINE_DESCRIPTION, JOURNAL_ACCT_DATE, JOURNAL_NAME,
+            JOURNAL_REFERENCE, PERIOD_NAME, JOURNAL_BATCH_NAME,
+            JOURNAL_SOURCE, JOURNAL_CATEGORY, BATCH_STATUS, ACTUAL_FLAG,
+            ENCUMBRANCE_TYPE_CODE, ACTUAL_AMOUNT, COMMITMENT_AMOUNT,
+            OBLIGATION_AMOUNT
         FROM ae_dwh.transactional_listing_report
         ' + @FilterClause;
 
