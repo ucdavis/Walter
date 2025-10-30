@@ -27,6 +27,12 @@ BEGIN
     DECLARE @ErrorMsg NVARCHAR(MAX);
     DECLARE @ParametersJSON NVARCHAR(MAX);
 
+    -- Sanitize ApplicationName for injection protection (whitelist: alphanumeric + spaces only)
+    EXEC dbo.usp_SanitizeInputString @ApplicationName OUTPUT;
+
+    -- Sanitize FinancialDept for SQL injection protection (defense in depth)
+    EXEC dbo.usp_SanitizeInputString @FinancialDept OUTPUT;
+
     -- Build filter clause
     SET @FilterClause = ' WHERE prj_owning_cd = ''' + @FinancialDept + '''';
 
