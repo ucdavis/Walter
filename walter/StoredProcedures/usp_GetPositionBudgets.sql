@@ -76,8 +76,7 @@ BEGIN
                 EMPLID,
                 NAME
             FROM caes_hcmods.UCD_PS_NAMES_V
-            WHERE DML_IND != ''D''
-              AND EMPLID IN (SELECT DISTINCT EMPLID FROM LatestPosition WHERE EMPLID IS NOT NULL)
+            WHERE EMPLID IN (SELECT DISTINCT EMPLID FROM LatestPosition WHERE EMPLID IS NOT NULL)
         ),
         LatestPositionDesc AS (
             SELECT
