@@ -7,49 +7,13 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    -- Validate: FinancialDept is required
-    IF @FinancialDept IS NULL
-    BEGIN
-        RAISERROR('FinancialDept is required', 16, 1);
-        RETURN;
-    END;
-
-    -- Validate input format: exactly 7 alphanumeric characters
-    IF LEN(@FinancialDept) != 7 OR @FinancialDept LIKE '%[^A-Z0-9]%'
-    BEGIN
-        RAISERROR('Invalid Financial Dept format (must be exactly 7 alphanumeric characters)', 16, 1);
-        RETURN;
-    END;
+    -- Validate FinancialDept
+    EXEC dbo.usp_ValidateFinancialDept @FinancialDept;
 
     -- Validate date range if both are provided
     IF @StartDate IS NOT NULL AND @EndDate IS NOT NULL AND @EndDate < @StartDate
     BEGIN
         RAISERROR('EndDate must be greater than or equal to StartDate', 16, 1);
-        RETURN;
-    END;
-
-    -- Validate that FinancialDept belongs to ANR or CAES hierarchy
-    DECLARE @IsValidDept INT;
-    DECLARE @ValidationQuery NVARCHAR(MAX);
-    DECLARE @ValidationTSQL NVARCHAR(MAX);
-    DECLARE @RedshiftLinkedServer SYSNAME = '[AE_Redshift_PROD]';
-
-    SET @ValidationQuery = '
-        SELECT COUNT(*) AS cnt
-        FROM ae_dwh.erp_fin_dept
-        WHERE code = ''' + @FinancialDept + '''
-          AND (parent_level_2_code = ''AAES00C'' OR parent_level_3_code = ''9AAES0D'')
-          AND hierarchy_depth = 6
-    ';
-
-    SET @ValidationTSQL =
-        'SELECT TOP 1 @Count = cnt FROM OPENQUERY(' + @RedshiftLinkedServer + ', ''' + REPLACE(@ValidationQuery, '''', '''''') + ''')';
-
-    EXEC sp_executesql @ValidationTSQL, N'@Count INT OUTPUT', @Count = @IsValidDept OUTPUT;
-
-    IF @IsValidDept = 0
-    BEGIN
-        RAISERROR('Financial Department must belong to ANR or CAES hierarchy', 16, 1);
         RETURN;
     END;
 
