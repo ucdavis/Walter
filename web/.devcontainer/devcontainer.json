@@ -2,7 +2,10 @@
     "name": "Walter Web",
     "dockerComposeFile": "docker-compose.yml",
     "service": "devcontainer",
-    "workspaceFolder": "/workspace",
+    "workspaceFolder": "/workspace/walter/web", // Set the workspace folder to the web project
+    "mounts": [ // Mount the parent folder as /workspaces/walter
+        "type=bind,source=${localWorkspaceFolder}/..,target=/workspace/walter,consistency=cached"
+    ],
     "features": {
         "ghcr.io/devcontainers/features/node:1": {
             "version": "22"
@@ -25,6 +28,7 @@
                 "bradlc.vscode-tailwindcss"
             ],
             "settings": {
+                "git.openRepositoryInParentFolders": "always",
                 "terminal.integrated.defaultProfile.linux": "bash",
                 "editor.formatOnSave": true,
                 "files.insertFinalNewline": true
