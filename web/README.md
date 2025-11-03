@@ -38,14 +38,14 @@ _Using the DevContainer is optional, but it will get you the right version of do
 
 4. **Access the application**
 
-The application will auto launch in your browser (to http://localhost:5173).
+The application will auto launch in your browser (to http://localhost:5174).
 
 If you want to access endpoints individually, you can do so at the following URLs:
 
-- Frontend: http://localhost:5173
-- Backend API: http://localhost:5165 (nothing to see, but /api/\* has the direct API endpoints)
-- API Documentation (Swagger): http://localhost:5165/swagger/index.html
-- Health check: http://localhost:5165/health
+- Frontend: http://localhost:5174
+- Backend API: http://localhost:5166 (nothing to see, but /api/\* has the direct API endpoints)
+- API Documentation (Swagger): http://localhost:5166/swagger/index.html
+- Health check: http://localhost:5166/health
 
 ### Database configuration
 
@@ -57,7 +57,7 @@ When you want to specify your own DB connection, provide it by setting the `DB_C
 
 We use OIDC with Microsoft Entra ID (Azure AD) for authentication. The auth flow doesn't use any secrets and the settings in `appsettings.*.json` are sufficient for local development.
 
-When you are ready to get your own, go to [Microsoft Entra ID](https://entra.microsoft.com/) and create a new application registration. Set the redirect url to `http://localhost:5165/signin-oidc` and check the box for "ID tokens".
+When you are ready to get your own, go to [Microsoft Entra ID](https://entra.microsoft.com/) and create a new application registration. Set the redirect url to `http://localhost:5166/signin-oidc` and check the box for "ID tokens".
 
 You might also want to set the publisher domain to ucdavis.edu and fill in the other general branding info.
 
