@@ -1,0 +1,4 @@
+# Apply consistent LF line endings by default
+* text=auto eol=lf
+
+
