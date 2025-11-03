@@ -1,5 +1,5 @@
 {
-    "name": "Walter Web",
+    "name": "🐶 Walter Web",
     "dockerComposeFile": "docker-compose.yml",
     "service": "devcontainer",
     "workspaceFolder": "/workspace/walter/web", // Set the workspace folder to the web project

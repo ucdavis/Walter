@@ -1,3 +1,4 @@
+name: WalterWeb_devcontainer
 services:
   devcontainer:
     build:
