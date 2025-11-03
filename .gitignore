@@ -1,0 +1,12 @@
+# Root gitignore file
+# Most rules should go in the app-specific .gitignore files
+
+# OS/editor
+.DS_Store
+Thumbs.db
+*.log
+
+# VSCode user stuff
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
