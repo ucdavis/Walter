@@ -1,0 +1,12 @@
+{
+    "name": "🐶 Walter Web",
+    "folders": [
+        {
+            "path": "."
+        }
+    ],
+    "settings": {
+        "git.openRepositoryInParentFolders": "always",
+        "terminal.integrated.cwd": "."
+    }
+}

@@ -1,0 +1,180 @@
+# azure-pipelines.yml
+trigger:
+  branches:
+    include:
+      - main
+
+pool:
+  name: "Pazuzu Pool"
+
+variables:
+  - group: "WalterDev"
+  - name: solution
+    value: "**/*.sqlproj"
+  - name: buildConfiguration
+    value: "Release"
+  - name: dacpacFileName
+    value: "walter.dacpac"
+
+stages:
+  - stage: Build
+    displayName: "Build DACPAC"
+    jobs:
+      - job: BuildJob
+        displayName: "Build SQL Database Project"
+        steps:
+          - task: VSBuild@1
+            displayName: "Build SQL Project"
+            inputs:
+              solution: "$(solution)"
+              msbuildArchitecture: "x86"
+              configuration: "$(buildConfiguration)"
+
+          - task: CopyFiles@2
+            displayName: "Copy DACPAC to staging"
+            inputs:
+              SourceFolder: "$(Build.SourcesDirectory)"
+              Contents: "**/bin/$(buildConfiguration)/*.dacpac"
+              TargetFolder: "$(Build.ArtifactStagingDirectory)"
+              flattenFolders: true
+
+          - task: PublishBuildArtifacts@1
+            displayName: "Publish DACPAC"
+            inputs:
+              PathtoPublish: "$(Build.ArtifactStagingDirectory)"
+              ArtifactName: "dacpac"
+              publishLocation: "Container"
+
+  - stage: DeployDev
+    displayName: "Deploy to Dev"
+    dependsOn: Build
+    condition: succeeded()
+    jobs:
+      - job: DeployDevJob
+        displayName: "Deploy DACPAC to WalterDev"
+        steps:
+          - task: DownloadBuildArtifacts@1
+            displayName: "Download DACPAC"
+            inputs:
+              buildType: "current"
+              downloadType: "single"
+              artifactName: "dacpac"
+              downloadPath: "$(System.ArtifactsDirectory)"
+
+          - powershell: |
+              $dacpac = "$(System.ArtifactsDirectory)\dacpac\$(dacpacFileName)"
+              $sqlPackage = "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\Extensions\Microsoft\SQLDB\DAC\SqlPackage.exe"
+              $connectionString = "Server=$(targetServer);Database=$(targetDatabase);User ID=$(sqlUsername);Password=$(sqlPassword);Encrypt=False;"
+
+              Write-Host "Deploying $dacpac to $(targetServer)\$(targetDatabase)..."
+
+              & $sqlPackage /Action:Publish `
+                /SourceFile:$dacpac `
+                /TargetConnectionString:$connectionString `
+                /p:IncludeCompositeObjects=true
+
+              if ($LASTEXITCODE -ne 0) {
+                Write-Error "Deployment failed"
+                exit $LASTEXITCODE
+              }
+
+              Write-Host "Deployment completed successfully!"
+            displayName: "Deploy DACPAC to Dev Database"
+            env:
+              sqlUsername: $(sqlUsername)
+              sqlPassword: $(sqlPassword)
+
+  - stage: ReviewProd
+    displayName: "Review Production Changes"
+    dependsOn: DeployDev
+    condition: succeeded()
+    variables:
+      - group: "WalterProd"
+    jobs:
+      - job: GenerateScript
+        displayName: "Generate Production Deployment Script"
+        steps:
+          - task: DownloadBuildArtifacts@1
+            displayName: "Download DACPAC"
+            inputs:
+              buildType: "current"
+              downloadType: "single"
+              artifactName: "dacpac"
+              downloadPath: "$(System.ArtifactsDirectory)"
+
+          - powershell: |
+              $dacpac = "$(System.ArtifactsDirectory)\dacpac\$(dacpacFileName)"
+              $sqlPackage = "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\Extensions\Microsoft\SQLDB\DAC\SqlPackage.exe"
+              $outputScript = "$(Build.ArtifactStagingDirectory)\production-deploy.sql"
+              $connectionString = "Server=$(targetServer);Database=$(targetDatabase);User ID=$(sqlUsername);Password=$(sqlPassword);Encrypt=False;"
+
+              Write-Host "Generating deployment script for $(targetServer)\$(targetDatabase)..."
+
+              & $sqlPackage /Action:Script `
+                /SourceFile:$dacpac `
+                /TargetConnectionString:$connectionString `
+                /OutputPath:$outputScript `
+                /p:IncludeCompositeObjects=true
+
+              if ($LASTEXITCODE -ne 0) {
+                Write-Error "Script generation failed"
+                exit $LASTEXITCODE
+              }
+
+              Write-Host "Deployment script generated successfully. Download the 'production-script' artifact to review."
+            displayName: "Generate Production Deployment Script"
+            env:
+              sqlUsername: $(sqlUsername)
+              sqlPassword: $(sqlPassword)
+
+          - task: PublishBuildArtifacts@1
+            displayName: "Publish Production Script"
+            inputs:
+              PathtoPublish: "$(Build.ArtifactStagingDirectory)"
+              ArtifactName: "production-script"
+              publishLocation: "Container"
+
+  - stage: DeployProd
+    displayName: "Deploy to Production"
+    dependsOn: ReviewProd
+    condition: succeeded()
+    variables:
+      - group: "WalterProd"
+    jobs:
+      - deployment: DeployProdJob
+        displayName: "Deploy DACPAC to WalterProd"
+        environment: "WalterProd"
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: DownloadBuildArtifacts@1
+                  displayName: "Download DACPAC"
+                  inputs:
+                    buildType: "current"
+                    downloadType: "single"
+                    artifactName: "dacpac"
+                    downloadPath: "$(System.ArtifactsDirectory)"
+
+                - powershell: |
+                    $dacpac = "$(System.ArtifactsDirectory)\dacpac\$(dacpacFileName)"
+                    $sqlPackage = "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\Extensions\Microsoft\SQLDB\DAC\SqlPackage.exe"
+                    $connectionString = "Server=$(targetServer);Database=$(targetDatabase);User ID=$(sqlUsername);Password=$(sqlPassword);Encrypt=False;"
+
+                    Write-Host "Deploying $dacpac to PRODUCTION: $(targetServer)\$(targetDatabase)..."
+
+                    & $sqlPackage /Action:Publish `
+                      /SourceFile:$dacpac `
+                      /TargetConnectionString:$connectionString `
+                      /p:IncludeCompositeObjects=true
+
+                    if ($LASTEXITCODE -ne 0) {
+                      Write-Error "Production deployment failed"
+                      exit $LASTEXITCODE
+                    }
+
+                    Write-Host "Production deployment completed successfully!"
+                  displayName: "Deploy DACPAC to Production Database"
+                  env:
+                    sqlUsername: $(sqlUsername)
+                    sqlPassword: $(sqlPassword)

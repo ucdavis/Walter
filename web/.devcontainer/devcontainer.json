@@ -1,0 +1,57 @@
+{
+    "name": "🐶 Walter Web",
+    "dockerComposeFile": "docker-compose.yml",
+    "service": "devcontainer",
+    "workspaceFolder": "/workspace/walter/web", // Set the workspace folder to the web project
+    "mounts": [ // Mount the parent folder as /workspaces/walter
+        "type=bind,source=${localWorkspaceFolder}/..,target=/workspace/walter,consistency=cached"
+    ],
+    "features": {
+        "ghcr.io/devcontainers/features/node:1": {
+            "version": "22"
+        },
+        "ghcr.io/devcontainers/features/dotnet:2": {
+            "version": "8.0",
+            "sdk": true
+        },
+        "ghcr.io/devcontainers/features/git:1": {}
+    },
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-dotnettools.csdevkit",
+                "ms-azuretools.vscode-docker",
+                "ms-vscode.vscode-node-azure-pack",
+                "ms-vscode.js-debug",
+                "esbenp.prettier-vscode",
+                "dbaeumer.vscode-eslint",
+                "bradlc.vscode-tailwindcss"
+            ],
+            "settings": {
+                "git.openRepositoryInParentFolders": "always",
+                "terminal.integrated.defaultProfile.linux": "bash",
+                "editor.formatOnSave": true,
+                "files.insertFinalNewline": true
+            }
+        }
+    },
+    "containerEnv": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_URLS": "http://0.0.0.0:5166"
+    },
+    "postCreateCommand": "bash .devcontainer/setup.sh",
+    "postStartCommand": "bash .devcontainer/wait-for-sql.sh",
+    "remoteUser": "vscode",
+    "forwardPorts": [
+        5174,
+        5166
+    ],
+    "portsAttributes": {
+        "5174": {
+            "label": "Vite Dev Server"
+        },
+        "5166": {
+            "label": "ASP.NET HTTP API"
+        }
+    }
+}
