@@ -2,18 +2,22 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.Identity.Web;
+using Microsoft.Extensions.Logging;
 using Server.Services;
 
 namespace server.Helpers;
 
 public static class AuthenticationHelper
 {
+    private const string KerberosClaimType = "urn:ucdavis:iam:kerberos";
+    private const string IamIdClaimType = "urn:ucdavis:iam:iamid";
+
     /// <summary>
     /// Configures Microsoft Identity Web authentication with Azure AD/Entra ID
     /// </summary>
     public static IServiceCollection AddAuthenticationServices(this IServiceCollection services, IConfiguration configuration)
     {
-        services
+        var authBuilder = services
             .AddAuthentication(options =>
             {
                 options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
@@ -22,6 +26,8 @@ public static class AuthenticationHelper
             .AddMicrosoftIdentityWebApp(options =>
             {
                 configuration.Bind("Auth", options);
+
+                options.Scope.Add("User.Read.All"); // ability to look up other users and our own extension attributes
 
                 options.TokenValidationParameters = new()
                 {
@@ -33,6 +39,10 @@ public static class AuthenticationHelper
                 options.Events.OnRedirectToIdentityProvider = OnRedirectToIdentityProvider;
                 options.Events.OnTokenValidated = OnTokenValidated;
             });
+
+        authBuilder
+            .EnableTokenAcquisitionToCallDownstreamApi(initialScopes: EntraUserAttributeService.RequiredScopes)
+            .AddInMemoryTokenCaches();
 
         services.PostConfigure<CookieAuthenticationOptions>(CookieAuthenticationDefaults.AuthenticationScheme, options =>
         {
@@ -79,14 +89,44 @@ public static class AuthenticationHelper
     private static async Task OnTokenValidated(Microsoft.AspNetCore.Authentication.OpenIdConnect.TokenValidatedContext ctx)
     {
         // Load up the roles on first login (can also change other user info/claims here if needed)
-        var userService = ctx.HttpContext.RequestServices.GetRequiredService<IUserService>();
-        var userId = ctx.Principal!.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var userKey = ctx.Principal!.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-        if (string.IsNullOrEmpty(userId)) return;
+        if (string.IsNullOrEmpty(userKey)) return;
 
-        var roles = await userService.GetRolesForUser(userId);
+        var userObjectId = ctx.Principal.FindFirstValue(ClaimConstants.ObjectId)
+                          ?? ctx.Principal.FindFirstValue(ClaimConstants.Oid)
+                          ?? userKey;
+
+        var logger = ctx.HttpContext.RequestServices
+            .GetRequiredService<ILoggerFactory>()
+            .CreateLogger("AuthenticationHelper");
+
+        var attributeService = ctx.HttpContext.RequestServices.GetRequiredService<IEntraUserAttributeService>();
+        var attributes = await attributeService.GetExtensionAttributesAsync(userObjectId, ctx.Principal, ctx.HttpContext.RequestAborted);
 
         var identity = (ClaimsIdentity)ctx.Principal.Identity!;
+
+        if (attributes?.Kerberos is { Length: > 0 } kerberos)
+        {
+            AddOrUpdateClaim(identity, KerberosClaimType, kerberos);
+        }
+        else
+        {
+            logger.LogInformation("Kerberos (extension attribute 2) not available for user {UserId}", userKey);
+        }
+
+        if (attributes?.IamId is { Length: > 0 } iamId)
+        {
+            AddOrUpdateClaim(identity, IamIdClaimType, iamId);
+        }
+        else
+        {
+            logger.LogInformation("IAMID (extension attribute 7) not available for user {UserId}", userKey);
+        }
+
+        var userService = ctx.HttpContext.RequestServices.GetRequiredService<IUserService>();
+        var roles = await userService.GetRolesForUser(userKey);
+
         foreach (var role in roles)
         {
             identity.AddClaim(new Claim(ClaimTypes.Role, role));
@@ -108,5 +148,16 @@ public static class AuthenticationHelper
             ctx.ReplacePrincipal(updated);
             ctx.ShouldRenew = true; // Renew the cookie with the new principal
         }
+    }
+
+    private static void AddOrUpdateClaim(ClaimsIdentity identity, string claimType, string value)
+    {
+        var existing = identity.FindFirst(claimType);
+        if (existing != null)
+        {
+            identity.RemoveClaim(existing);
+        }
+
+        identity.AddClaim(new Claim(claimType, value));
     }
 }

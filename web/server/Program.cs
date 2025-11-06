@@ -39,6 +39,7 @@ builder.Services.AddResponseCaching();
 // add scoped services here
 builder.Services.AddScoped<IDbInitializer, DbInitializer>();
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IEntraUserAttributeService, EntraUserAttributeService>();
 // add auth policies here
 
 // add db context (check secrets first, then config, then default)
