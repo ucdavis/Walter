@@ -2,16 +2,12 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.Identity.Web;
-using Microsoft.Extensions.Logging;
 using Server.Services;
 
 namespace server.Helpers;
 
 public static class AuthenticationHelper
 {
-    private const string KerberosClaimType = "urn:ucdavis:iam:kerberos";
-    private const string IamIdClaimType = "urn:ucdavis:iam:iamid";
-
     /// <summary>
     /// Configures Microsoft Identity Web authentication with Azure AD/Entra ID
     /// </summary>
@@ -93,36 +89,10 @@ public static class AuthenticationHelper
 
         if (string.IsNullOrEmpty(userKey)) return;
 
-        var userObjectId = ctx.Principal.FindFirstValue(ClaimConstants.ObjectId)
-                          ?? ctx.Principal.FindFirstValue(ClaimConstants.Oid)
-                          ?? userKey;
-
-        var logger = ctx.HttpContext.RequestServices
-            .GetRequiredService<ILoggerFactory>()
-            .CreateLogger("AuthenticationHelper");
-
         var attributeService = ctx.HttpContext.RequestServices.GetRequiredService<IEntraUserAttributeService>();
-        var attributes = await attributeService.GetExtensionAttributesAsync(userObjectId, ctx.Principal, ctx.HttpContext.RequestAborted);
+        await attributeService.UpdateClaimsAsync(ctx.Principal, ctx.HttpContext.RequestAborted);
 
         var identity = (ClaimsIdentity)ctx.Principal.Identity!;
-
-        if (attributes?.Kerberos is { Length: > 0 } kerberos)
-        {
-            AddOrUpdateClaim(identity, KerberosClaimType, kerberos);
-        }
-        else
-        {
-            logger.LogInformation("Kerberos (extension attribute 2) not available for user {UserId}", userKey);
-        }
-
-        if (attributes?.IamId is { Length: > 0 } iamId)
-        {
-            AddOrUpdateClaim(identity, IamIdClaimType, iamId);
-        }
-        else
-        {
-            logger.LogInformation("IAMID (extension attribute 7) not available for user {UserId}", userKey);
-        }
 
         var userService = ctx.HttpContext.RequestServices.GetRequiredService<IUserService>();
         var roles = await userService.GetRolesForUser(userKey);
@@ -148,16 +118,5 @@ public static class AuthenticationHelper
             ctx.ReplacePrincipal(updated);
             ctx.ShouldRenew = true; // Renew the cookie with the new principal
         }
-    }
-
-    private static void AddOrUpdateClaim(ClaimsIdentity identity, string claimType, string value)
-    {
-        var existing = identity.FindFirst(claimType);
-        if (existing != null)
-        {
-            identity.RemoveClaim(existing);
-        }
-
-        identity.AddClaim(new Claim(claimType, value));
     }
 }

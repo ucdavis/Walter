@@ -10,13 +10,16 @@ namespace Server.Services;
 
 public interface IEntraUserAttributeService
 {
-    Task<EntraUserAttributes?> GetExtensionAttributesAsync(string userObjectId, ClaimsPrincipal? principal = default, CancellationToken cancellationToken = default);
+    Task UpdateClaimsAsync(ClaimsPrincipal? principal, CancellationToken cancellationToken = default);
 }
 
 public record EntraUserAttributes(string? Kerberos, string? IamId);
 
 public class EntraUserAttributeService : IEntraUserAttributeService
 {
+    private const string KerberosClaimType = "urn:ucdavis:iam:kerberos";
+    private const string IamIdClaimType = "urn:ucdavis:iam:iamid";
+
     internal static readonly string[] RequiredScopes = new[] { "User.Read.All" };
 
     private readonly ITokenAcquisition _tokenAcquisition;
@@ -28,16 +31,50 @@ public class EntraUserAttributeService : IEntraUserAttributeService
         _logger = logger;
     }
 
-    public async Task<EntraUserAttributes?> GetExtensionAttributesAsync(string userObjectId, ClaimsPrincipal? principal = default, CancellationToken cancellationToken = default)
+    public async Task UpdateClaimsAsync(ClaimsPrincipal? principal, CancellationToken cancellationToken = default)
+    {
+        if (principal?.Identity is not ClaimsIdentity identity)
+        {
+            _logger.LogWarning("Skipping attribute lookup because no claims identity was provided.");
+            return;
+        }
+
+        var userKey = principal.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrWhiteSpace(userKey))
+        {
+            _logger.LogWarning("Skipping attribute lookup because the user principal lacks a NameIdentifier claim.");
+            return;
+        }
+
+        var userObjectId = principal.FindFirstValue(ClaimConstants.ObjectId)
+                           ?? principal.FindFirstValue(ClaimConstants.Oid)
+                           ?? userKey;
+
+        var attributes = await GetExtensionAttributesAsync(userObjectId, principal, cancellationToken);
+
+        if (attributes?.Kerberos is { Length: > 0 } kerberos)
+        {
+            AddOrUpdateClaim(identity, KerberosClaimType, kerberos);
+        }
+        else
+        {
+            _logger.LogInformation("Kerberos (extension attribute 13) not available for user {UserId}", userKey);
+        }
+
+        if (attributes?.IamId is { Length: > 0 } iamId)
+        {
+            AddOrUpdateClaim(identity, IamIdClaimType, iamId);
+        }
+        else
+        {
+            _logger.LogInformation("IAMID (extension attribute 7) not available for user {UserId}", userKey);
+        }
+    }
+
+    private async Task<EntraUserAttributes?> GetExtensionAttributesAsync(string userObjectId, ClaimsPrincipal principal, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(userObjectId))
         {
-            return null;
-        }
-
-        if (principal == null)
-        {
-            _logger.LogWarning("Skipping attribute lookup for user {UserObjectId} because no principal was provided.", userObjectId);
             return null;
         }
 
@@ -59,7 +96,7 @@ public class EntraUserAttributeService : IEntraUserAttributeService
             }
 
             return new EntraUserAttributes(
-                Kerberos: extensions.ExtensionAttribute2,
+                Kerberos: extensions.ExtensionAttribute13,
                 IamId: extensions.ExtensionAttribute7);
         }
         catch (Exception ex)
@@ -112,11 +149,11 @@ public class EntraUserAttributeService : IEntraUserAttributeService
                 return new AccessToken(accessToken, expiresOn);
             }
             catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to acquire Graph access token");
-                throw;
+                {
+                    _logger.LogWarning(ex, "Failed to acquire Graph access token");
+                    throw;
+                }
             }
-        }
 
         private static DateTimeOffset TryGetExpiry(string token)
         {
@@ -131,5 +168,15 @@ public class EntraUserAttributeService : IEntraUserAttributeService
                 return DateTimeOffset.UtcNow.AddMinutes(5);
             }
         }
+    }
+    private static void AddOrUpdateClaim(ClaimsIdentity identity, string claimType, string value)
+    {
+        var existing = identity.FindFirst(claimType);
+        if (existing != null)
+        {
+            identity.RemoveClaim(existing);
+        }
+
+        identity.AddClaim(new Claim(claimType, value));
     }
 }
