@@ -6,7 +6,13 @@
 Thumbs.db
 *.log
 
-# VSCode user stuff
+# IDEs
+.idea/
 .vscode/*
 !.vscode/extensions.json
 !.vscode/settings.json
+
+# Walter build artifacts (monorepo structure)
+walter/bin/
+walter/obj/
+walter/**/*.user
