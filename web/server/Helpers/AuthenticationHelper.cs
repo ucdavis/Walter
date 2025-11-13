@@ -3,10 +3,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.Identity.Web;
-using Microsoft.Extensions.Logging;
 using Server.Services;
-using server.core.Domain;
-using server.core.Services;
 
 namespace server.Helpers;
 
@@ -86,7 +83,7 @@ public static class AuthenticationHelper
     /// <summary>
     /// Handles token validation - loads user roles on first login
     /// </summary>
-    private static async Task OnTokenValidated(Microsoft.AspNetCore.Authentication.OpenIdConnect.TokenValidatedContext ctx)
+    private static async Task OnTokenValidated(TokenValidatedContext ctx)
     {
         var principal = ctx.Principal ?? throw new InvalidOperationException("Token validation did not provide a claims principal.");
 
@@ -98,83 +95,10 @@ public static class AuthenticationHelper
             throw new InvalidOperationException($"NameIdentifier claim '{userIdClaim}' is not a valid GUID.");
         }
 
-        var loggerFactory = ctx.HttpContext.RequestServices.GetRequiredService<ILoggerFactory>();
-        var logger = loggerFactory.CreateLogger("AuthenticationHelper");
-        var attributeService = ctx.HttpContext.RequestServices.GetRequiredService<IEntraUserAttributeService>();
-        var identityService = ctx.HttpContext.RequestServices.GetRequiredService<IIdentityService>();
-        var userService = ctx.HttpContext.RequestServices.GetRequiredService<IUserService>();
+        var profileOrchestrator = ctx.HttpContext.RequestServices.GetRequiredService<IUserProfileOrchestrator>();
         var cancellationToken = ctx.HttpContext.RequestAborted;
 
-        var existingUser = await userService.GetByIdAsync(userId, cancellationToken);
-
-        var attributes = await attributeService.GetAttributesAsync(userIdClaim, principal, cancellationToken);
-
-        var kerberos = !string.IsNullOrWhiteSpace(attributes?.Kerberos)
-            ? attributes!.Kerberos
-            : existingUser?.Kerberos;
-
-        if (string.IsNullOrWhiteSpace(kerberos))
-        {
-            throw new InvalidOperationException(existingUser == null
-                ? $"Kerberos extension attribute is missing for new user {userId}."
-                : $"Kerberos extension attribute missing for {userId} and no stored value was found.");
-        }
-
-        if (attributes == null && existingUser != null)
-        {
-            logger.LogWarning("Falling back to stored profile for user {UserId} because Entra attributes could not be loaded.", userId);
-        }
-
-        var iamId = !string.IsNullOrWhiteSpace(attributes?.IamId)
-            ? attributes!.IamId
-            : existingUser?.IamId;
-
-        if (string.IsNullOrWhiteSpace(iamId))
-        {
-            throw new InvalidOperationException(existingUser == null
-                ? $"IAM extension attribute is missing for new user {userId}."
-                : $"IAM extension attribute missing for {userId} and no stored value was found.");
-        }
-
-        IamIdentity? iamIdentity = null;
-        try
-        {
-            iamIdentity = await identityService.GetByIamId(iamId);
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "Failed to retrieve IAM identity for IAM ID '{IamId}'.", iamId);
-        }
-
-        if (iamIdentity == null && existingUser != null)
-        {
-            logger.LogWarning("Using stored IAM profile for user {UserId} because IAM lookup failed.", userId);
-        }
-        else if (iamIdentity == null)
-        {
-            throw new InvalidOperationException($"IAM identity lookup failed for IAM ID '{iamId}'.");
-        }
-
-        var employeeId = iamIdentity?.EmployeeId ?? existingUser?.EmployeeId;
-        if (string.IsNullOrWhiteSpace(employeeId))
-        {
-            throw new InvalidOperationException($"Employee ID is missing for user {userId}.");
-        }
-
-        var profile = new UserProfileData
-        {
-            UserId = userId,
-            Kerberos = kerberos!,
-            IamId = iamId!,
-            EmployeeId = employeeId,
-            DisplayName = iamIdentity?.FullName ?? existingUser?.DisplayName,
-            // entra has email as preferred_username claim so check that first
-            Email = principal.FindFirst("preferred_username")?.Value
-                    ?? principal.FindFirst(ClaimTypes.Email)?.Value
-                    ?? existingUser?.Email
-        };
-
-        await userService.CreateOrUpdateUserAsync(profile, cancellationToken);
+        await profileOrchestrator.EnsureUserProfileAsync(userId, userIdClaim, principal, cancellationToken);
 
         // now we have our user in the DB, and can load them via their name identifier.
         // we'll load the roles from the db when validating the cookie on future requests.
@@ -184,7 +108,7 @@ public static class AuthenticationHelper
     /// <summary>
     /// Validates cookie principal on every request - updates user roles/claims if needed
     /// </summary>
-    private static async Task OnValidatePrincipal(Microsoft.AspNetCore.Authentication.Cookies.CookieValidatePrincipalContext ctx)
+    private static async Task OnValidatePrincipal(CookieValidatePrincipalContext ctx)
     {
         // On every request with a cookie, check if the user's roles/claims need updating
         // We could use a cache here or roleVersion or timestamp or something, but for simplicity we'll just hit the DB every time
