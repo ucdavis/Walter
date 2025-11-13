@@ -1,30 +1,52 @@
-using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Identity.Web;
+using server.core.Data;
 
 namespace Server.Controllers;
 
 public class UserController : ApiControllerBase
 {
-    [HttpGet("me")]
-    public IActionResult Me()
+    private readonly AppDbContext _dbContext;
+
+    public UserController(AppDbContext dbContext)
     {
-        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        var userName = User.FindFirst("name")?.Value;
-        var userEmail = User.FindFirst("preferred_username")?.Value;
+        _dbContext = dbContext;
+    }
 
-        var userRoles = User.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList();
+    [HttpGet("me")]
+    public async Task<IActionResult> Me(CancellationToken cancellationToken)
+    {
+        var userId = User.FindFirst(ClaimConstants.ObjectId)?.Value;
 
-        if (userId == null)
+        if (!Guid.TryParse(userId, out var parsedUserId))
         {
             return Unauthorized();
         }
 
+        var user = await _dbContext.Users
+            .AsNoTracking()
+            .Include(u => u.Permissions)
+                .ThenInclude(p => p.Role)
+            .SingleOrDefaultAsync(u => u.Id == parsedUserId, cancellationToken);
+
+        if (user is null)
+        {
+            return NotFound();
+        }
+
+        var roles = user.Permissions
+            .Where(p => p.Role != null)
+            .Select(p => p.Role!.Name)
+            .Distinct()
+            .ToList();
+
         var userInfo = new
         {
-            Id = userId,
-            Name = userName,
-            Email = userEmail,
-            Roles = userRoles,
+            Id = user.Id,
+            Name = user.DisplayName ?? user.Kerberos,
+            Email = user.Email,
+            Roles = roles,
         };
 
         return Ok(userInfo);

@@ -89,7 +89,7 @@ public static class AuthenticationHelper
     {
         var principal = ctx.Principal ?? throw new InvalidOperationException("Token validation did not provide a claims principal.");
 
-        var userIdClaim = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value
+        var userIdClaim = principal.FindFirst(ClaimConstants.ObjectId)?.Value
                           ?? throw new InvalidOperationException("Authenticated principal is missing the NameIdentifier claim.");
 
         if (!Guid.TryParse(userIdClaim, out var userId))
