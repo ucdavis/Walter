@@ -15,8 +15,7 @@ namespace server.core.Migrations
                 table: "Users",
                 type: "nvarchar(20)",
                 maxLength: 20,
-                nullable: false,
-                defaultValue: "");
+                nullable: false);
 
             migrationBuilder.CreateIndex(
                 name: "IX_Users_EmployeeId",
