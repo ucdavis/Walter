@@ -44,8 +44,8 @@ function RouteComponent() {
                   data and different data types, loaded from the backend API
                 </p>
                 <div className="card-actions justify-end">
-                  <Link className="btn btn-primary" to="/fetch">
-                    Go to Table Page
+                  <Link className="btn btn-primary" to="/">
+                    Page Not Available
                   </Link>
                 </div>
               </div>
