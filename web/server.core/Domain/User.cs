@@ -27,6 +27,13 @@ public class User
     [MaxLength(50)]
     public string IamId { get; set; } = null!;
 
+    /// <summary>
+    /// Employee ID - will be looked up via Entra.
+    /// </summary>
+    [Required]
+    [MaxLength(20)]
+    public string EmployeeId { get; set; } = null!;
+
     [MaxLength(200)]
     public string? DisplayName { get; set; }
 

@@ -6,6 +6,7 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using server.core.Data;
 using server.Helpers;
 using Server.Services;
+using server.core.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -30,6 +31,9 @@ builder.Services.Configure<ForwardedHeadersOptions>(o =>
 // Add auth config (entra)
 builder.Services.AddAuthenticationServices(builder.Configuration);
 
+// app settings sections
+builder.Services.Configure<IamSettings>(builder.Configuration.GetSection("Iam"));
+
 builder.Services.AddControllers();
 
 // Add response caching for pages that opt-in
@@ -40,6 +44,7 @@ builder.Services.AddResponseCaching();
 builder.Services.AddScoped<IDbInitializer, DbInitializer>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IEntraUserAttributeService, EntraUserAttributeService>();
+builder.Services.AddScoped<IIdentityService, IdentityService>();
 // add auth policies here
 
 // add db context (check secrets first, then config, then default)
