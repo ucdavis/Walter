@@ -1,8 +1,11 @@
+using System;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.Identity.Web;
+using Microsoft.Extensions.Logging;
 using Server.Services;
+using server.core.Services;
 
 namespace server.Helpers;
 
@@ -90,17 +93,16 @@ public static class AuthenticationHelper
         if (string.IsNullOrEmpty(userKey)) return;
 
         var attributeService = ctx.HttpContext.RequestServices.GetRequiredService<IEntraUserAttributeService>();
-        await attributeService.UpdateClaimsAsync(ctx.Principal, ctx.HttpContext.RequestAborted);
+        var identityService = ctx.HttpContext.RequestServices.GetRequiredService<IIdentityService>();
 
-        var identity = (ClaimsIdentity)ctx.Principal.Identity!;
+        // get the user's kerb & iam from Entra (stored as extension attributes)
+        var attributes = await attributeService.GetAttributesAsync(userKey, ctx.Principal!, ctx.HttpContext.RequestAborted);
 
-        var userService = ctx.HttpContext.RequestServices.GetRequiredService<IUserService>();
-        var roles = await userService.GetRolesForUser(userKey);
+        // now pull additional info including employeeId from IAM using the iamId
+        var iamIdentity = await identityService.GetByIamId(attributes.IamId);
 
-        foreach (var role in roles)
-        {
-            identity.AddClaim(new Claim(ClaimTypes.Role, role));
-        }
+
+
     }
 
     /// <summary>
@@ -119,4 +121,5 @@ public static class AuthenticationHelper
             ctx.ShouldRenew = true; // Renew the cookie with the new principal
         }
     }
+
 }

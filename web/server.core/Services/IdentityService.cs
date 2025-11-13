@@ -6,7 +6,7 @@ namespace server.core.Services;
 
 public interface IIdentityService
 {
-    Task<IamIdentity?> GetByKerberos(string kerberosId);
+    Task<IamIdentity?> GetByIamId(string iamId);
 }
 
 public sealed class IdentityService : IIdentityService
@@ -18,11 +18,11 @@ public sealed class IdentityService : IIdentityService
         _iamApiKey = iamSettings.Value.ApiKey ?? string.Empty;
     }
 
-    public async Task<IamIdentity?> GetByKerberos(string kerberosId)
+    public async Task<IamIdentity?> GetByIamId(string iamId)
     {
-        if (string.IsNullOrWhiteSpace(kerberosId))
+        if (string.IsNullOrWhiteSpace(iamId))
         {
-            throw new ArgumentException("Kerberos ID is required.", nameof(kerberosId));
+            throw new ArgumentException("IAM ID is required.", nameof(iamId));
         }
 
         if (string.IsNullOrWhiteSpace(_iamApiKey))
@@ -31,43 +31,18 @@ public sealed class IdentityService : IIdentityService
         }
 
         var client = new IetClient(_iamApiKey);
-        var kerbResponse = await client.Kerberos.Search(KerberosSearchField.userId, kerberosId);
-        var results = kerbResponse.ResponseData.Results;
+        var iamResponse = await client.People.Get(iamId);
+
+        var results = iamResponse.ResponseData.Results;
 
         if (results.Length == 0)
         {
             return null;
         }
 
-        EnsureUniqueResult(results);
-
+        // should only be one result for a given IAM ID, so just take the first
         var person = results.First();
-        var iamId = person.IamId;
-        var employeeId = person.EmployeeId;
-
-        if (string.IsNullOrWhiteSpace(iamId) || string.IsNullOrWhiteSpace(employeeId))
-        {
-            throw new InvalidOperationException("IAM returned an incomplete record for Kerberos lookup.");
-        }
-
-        return new IamIdentity(iamId, employeeId, person.FullName);
-    }
-
-    private static void EnsureUniqueResult(KerberosResult[] results)
-    {
-        if (results.Length <= 1)
-        {
-            return;
-        }
-
-        var iamIds = results.Select(r => r.IamId).Distinct().ToArray();
-        var kerbs = results.Select(r => r.UserId).Distinct().ToArray();
-
-        if (iamIds.Length != 1 && kerbs.Length != 1)
-        {
-            throw new InvalidOperationException(
-                $"IAM issue with non unique values for kerbs: {string.Join(',', kerbs)} IAM: {string.Join(',', iamIds)}");
-        }
+        return new IamIdentity(person.IamId, person.EmployeeId, person.FullName);
     }
 
 }

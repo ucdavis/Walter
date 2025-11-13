@@ -10,16 +10,13 @@ namespace Server.Services;
 
 public interface IEntraUserAttributeService
 {
-    Task UpdateClaimsAsync(ClaimsPrincipal? principal, CancellationToken cancellationToken = default);
+    Task<EntraUserAttributes?> GetAttributesAsync(string userId, ClaimsPrincipal principal, CancellationToken cancellationToken = default);
 }
 
 public record EntraUserAttributes(string? Kerberos, string? IamId);
 
 public class EntraUserAttributeService : IEntraUserAttributeService
 {
-    private const string KerberosClaimType = "urn:ucdavis:iam:kerberos";
-    private const string IamIdClaimType = "urn:ucdavis:iam:iamid";
-
     internal static readonly string[] RequiredScopes = new[] { "User.Read.All" };
 
     private readonly ITokenAcquisition _tokenAcquisition;
@@ -31,44 +28,25 @@ public class EntraUserAttributeService : IEntraUserAttributeService
         _logger = logger;
     }
 
-    public async Task UpdateClaimsAsync(ClaimsPrincipal? principal, CancellationToken cancellationToken = default)
+    public async Task<EntraUserAttributes?> GetAttributesAsync(string userId, ClaimsPrincipal principal, CancellationToken cancellationToken = default)
     {
-        if (principal?.Identity is not ClaimsIdentity identity)
+        if (principal == null)
         {
-            _logger.LogWarning("Skipping attribute lookup because no claims identity was provided.");
-            return;
+            _logger.LogWarning("Skipping attribute lookup because no claims principal was provided.");
+            return null;
         }
 
-        var userKey = principal.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (string.IsNullOrWhiteSpace(userKey))
+        if (string.IsNullOrWhiteSpace(userId))
         {
-            _logger.LogWarning("Skipping attribute lookup because the user principal lacks a NameIdentifier claim.");
-            return;
+            _logger.LogWarning("Skipping attribute lookup because the user ID was empty.");
+            return null;
         }
 
         var userObjectId = principal.FindFirstValue(ClaimConstants.ObjectId)
                            ?? principal.FindFirstValue(ClaimConstants.Oid)
-                           ?? userKey;
+                           ?? userId;
 
-        var attributes = await GetExtensionAttributesAsync(userObjectId, principal, cancellationToken);
-
-        if (attributes?.Kerberos is { Length: > 0 } kerberos)
-        {
-            AddOrUpdateClaim(identity, KerberosClaimType, kerberos);
-        }
-        else
-        {
-            _logger.LogInformation("Kerberos (extension attribute 13) not available for user {UserId}", userKey);
-        }
-
-        if (attributes?.IamId is { Length: > 0 } iamId)
-        {
-            AddOrUpdateClaim(identity, IamIdClaimType, iamId);
-        }
-        else
-        {
-            _logger.LogInformation("IAMID (extension attribute 7) not available for user {UserId}", userKey);
-        }
+        return await GetExtensionAttributesAsync(userObjectId, principal, cancellationToken);
     }
 
     private async Task<EntraUserAttributes?> GetExtensionAttributesAsync(string userObjectId, ClaimsPrincipal principal, CancellationToken cancellationToken)
@@ -168,15 +146,5 @@ public class EntraUserAttributeService : IEntraUserAttributeService
                 return DateTimeOffset.UtcNow.AddMinutes(5);
             }
         }
-    }
-    private static void AddOrUpdateClaim(ClaimsIdentity identity, string claimType, string value)
-    {
-        var existing = identity.FindFirst(claimType);
-        if (existing != null)
-        {
-            identity.RemoveClaim(existing);
-        }
-
-        identity.AddClaim(new Claim(claimType, value));
     }
 }

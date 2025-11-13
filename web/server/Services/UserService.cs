@@ -1,5 +1,7 @@
+using System;
 using System.Security.Claims;
 using server.core.Data;
+using server.core.Services;
 
 namespace Server.Services;
 
@@ -14,11 +16,13 @@ public class UserService : IUserService
 {
     private readonly ILogger<UserService> _logger;
     private readonly AppDbContext _dbContext;
+    private readonly IIdentityService _identityService;
 
-    public UserService(ILogger<UserService> logger, AppDbContext dbContext)
+    public UserService(ILogger<UserService> logger, AppDbContext dbContext, IIdentityService identityService)
     {
         _logger = logger;
         _dbContext = dbContext;
+        _identityService = identityService;
     }
 
     public async Task<List<string>> GetRolesForUser(string userId)
