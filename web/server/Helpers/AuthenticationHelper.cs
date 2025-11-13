@@ -1,3 +1,4 @@
+using System;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
@@ -13,7 +14,7 @@ public static class AuthenticationHelper
     /// </summary>
     public static IServiceCollection AddAuthenticationServices(this IServiceCollection services, IConfiguration configuration)
     {
-        services
+        var authBuilder = services
             .AddAuthentication(options =>
             {
                 options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
@@ -22,6 +23,8 @@ public static class AuthenticationHelper
             .AddMicrosoftIdentityWebApp(options =>
             {
                 configuration.Bind("Auth", options);
+
+                options.Scope.Add("User.Read.All"); // ability to look up other users and our own extension attributes
 
                 options.TokenValidationParameters = new()
                 {
@@ -33,6 +36,10 @@ public static class AuthenticationHelper
                 options.Events.OnRedirectToIdentityProvider = OnRedirectToIdentityProvider;
                 options.Events.OnTokenValidated = OnTokenValidated;
             });
+
+        authBuilder
+            .EnableTokenAcquisitionToCallDownstreamApi(initialScopes: EntraUserAttributeService.RequiredScopes)
+            .AddInMemoryTokenCaches();
 
         services.PostConfigure<CookieAuthenticationOptions>(CookieAuthenticationDefaults.AuthenticationScheme, options =>
         {
@@ -76,27 +83,26 @@ public static class AuthenticationHelper
     /// <summary>
     /// Handles token validation - loads user roles on first login
     /// </summary>
-    private static async Task OnTokenValidated(Microsoft.AspNetCore.Authentication.OpenIdConnect.TokenValidatedContext ctx)
+    private static async Task OnTokenValidated(TokenValidatedContext ctx)
     {
-        // Load up the roles on first login (can also change other user info/claims here if needed)
-        var userService = ctx.HttpContext.RequestServices.GetRequiredService<IUserService>();
-        var userId = ctx.Principal!.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var principal = ctx.Principal ?? throw new InvalidOperationException("Token validation did not provide a claims principal.");
+        var userId = principal.GetUserId();
+        var userObjectId = userId.ToString();
 
-        if (string.IsNullOrEmpty(userId)) return;
+        var profileOrchestrator = ctx.HttpContext.RequestServices.GetRequiredService<IUserProfileOrchestrator>();
+        var cancellationToken = ctx.HttpContext.RequestAborted;
 
-        var roles = await userService.GetRolesForUser(userId);
+        await profileOrchestrator.EnsureUserProfileAsync(userId, userObjectId, principal, cancellationToken);
 
-        var identity = (ClaimsIdentity)ctx.Principal.Identity!;
-        foreach (var role in roles)
-        {
-            identity.AddClaim(new Claim(ClaimTypes.Role, role));
-        }
+        // now we have our user in the DB, and can load them via their name identifier.
+        // we'll load the roles from the db when validating the cookie on future requests.
+        // If we want, later on we can add roles/attribute claims here for the initial login token.
     }
 
     /// <summary>
     /// Validates cookie principal on every request - updates user roles/claims if needed
     /// </summary>
-    private static async Task OnValidatePrincipal(Microsoft.AspNetCore.Authentication.Cookies.CookieValidatePrincipalContext ctx)
+    private static async Task OnValidatePrincipal(CookieValidatePrincipalContext ctx)
     {
         // On every request with a cookie, check if the user's roles/claims need updating
         // We could use a cache here or roleVersion or timestamp or something, but for simplicity we'll just hit the DB every time
@@ -109,4 +115,5 @@ public static class AuthenticationHelper
             ctx.ShouldRenew = true; // Renew the cookie with the new principal
         }
     }
+
 }

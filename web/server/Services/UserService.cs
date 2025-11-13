@@ -1,13 +1,20 @@
 using System.Security.Claims;
+using Microsoft.EntityFrameworkCore;
 using server.core.Data;
+using server.core.Domain;
+using server.Helpers;
 
 namespace Server.Services;
 
 public interface IUserService
 {
-    Task<List<string>> GetRolesForUser(string userId);
+    Task<List<string>> GetRolesForUser(Guid userId);
 
     Task<ClaimsPrincipal?> UpdateUserPrincipalIfNeeded(ClaimsPrincipal principal);
+
+    Task<User> CreateOrUpdateUserAsync(UserProfileData userInfo, CancellationToken cancellationToken = default);
+
+    Task<User?> GetByIdAsync(Guid userId, CancellationToken cancellationToken = default);
 }
 
 public class UserService : IUserService
@@ -21,23 +28,23 @@ public class UserService : IUserService
         _dbContext = dbContext;
     }
 
-    public async Task<List<string>> GetRolesForUser(string userId)
+    public async Task<List<string>> GetRolesForUser(Guid userId)
     {
-        // fake role strings but use _dbContext to get real roles later
-        var roles = new List<string> { "User", "SampleRole" };
-
-        return await Task.FromResult(roles);
+        return await _dbContext.Users
+            .AsNoTracking()
+            .Where(u => u.Id == userId)
+            .SelectMany(u => u.Permissions)
+            .Where(p => p.Role != null)
+            .Select(p => p.Role!.Name)
+            .Distinct()
+            .ToListAsync();
     }
 
     public async Task<ClaimsPrincipal?> UpdateUserPrincipalIfNeeded(ClaimsPrincipal principal)
     {
         // Here you could check if the user's roles or other claims have changed
         // and if so, create a new ClaimsPrincipal with updated claims.
-        var userId = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (userId == null)
-        {
-            return null; // can't update without user ID
-        }
+        var userId = principal.GetUserId();
 
         // get user's roles
         // might want to cache w/ IMemoryCache to avoid DB hits on every request, but we'll skip that for simplicity
@@ -68,4 +75,62 @@ public class UserService : IUserService
         // create new principal and return it
         return new ClaimsPrincipal(newId);
     }
+
+    public async Task<User> CreateOrUpdateUserAsync(UserProfileData userInfo, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(userInfo);
+
+        if (userInfo.UserId == Guid.Empty)
+        {
+            throw new ArgumentException("User ID is required.", nameof(userInfo));
+        }
+
+        if (string.IsNullOrWhiteSpace(userInfo.Kerberos))
+        {
+            throw new ArgumentException("Kerberos ID is required.", nameof(userInfo));
+        }
+
+        if (string.IsNullOrWhiteSpace(userInfo.IamId))
+        {
+            throw new ArgumentException("IAM ID is required.", nameof(userInfo));
+        }
+
+        if (string.IsNullOrWhiteSpace(userInfo.EmployeeId))
+        {
+            throw new ArgumentException("Employee ID is required.", nameof(userInfo));
+        }
+
+        var user = await _dbContext.Users
+            .SingleOrDefaultAsync(u => u.Id == userInfo.UserId, cancellationToken);
+
+        if (user == null)
+        {
+            user = new User { Id = userInfo.UserId };
+            await _dbContext.Users.AddAsync(user, cancellationToken);
+        }
+
+        user.Kerberos = userInfo.Kerberos;
+        user.IamId = userInfo.IamId;
+        user.EmployeeId = userInfo.EmployeeId;
+        user.DisplayName = userInfo.DisplayName;
+        user.Email = userInfo.Email;
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return user;
+    }
+
+    public Task<User?> GetByIdAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        return _dbContext.Users.SingleOrDefaultAsync(u => u.Id == userId, cancellationToken);
+    }
+}
+
+public sealed record UserProfileData
+{
+    public Guid UserId { get; init; }
+    public required string Kerberos { get; init; }
+    public required string IamId { get; init; }
+    public required string EmployeeId { get; init; }
+    public string? DisplayName { get; init; }
+    public string? Email { get; init; }
 }

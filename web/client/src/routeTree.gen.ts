@@ -15,7 +15,6 @@ import { Route as authenticatedIndexRouteImport } from './routes/(authenticated)
 import { Route as authenticatedStylesRouteImport } from './routes/(authenticated)/styles'
 import { Route as authenticatedMeRouteImport } from './routes/(authenticated)/me'
 import { Route as authenticatedFormRouteImport } from './routes/(authenticated)/form'
-import { Route as authenticatedFetchRouteImport } from './routes/(authenticated)/fetch'
 
 const AboutRoute = AboutRouteImport.update({
   id: '/about',
@@ -46,15 +45,9 @@ const authenticatedFormRoute = authenticatedFormRouteImport.update({
   path: '/form',
   getParentRoute: () => authenticatedRouteRoute,
 } as any)
-const authenticatedFetchRoute = authenticatedFetchRouteImport.update({
-  id: '/fetch',
-  path: '/fetch',
-  getParentRoute: () => authenticatedRouteRoute,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/about': typeof AboutRoute
-  '/fetch': typeof authenticatedFetchRoute
   '/form': typeof authenticatedFormRoute
   '/me': typeof authenticatedMeRoute
   '/styles': typeof authenticatedStylesRoute
@@ -62,7 +55,6 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/about': typeof AboutRoute
-  '/fetch': typeof authenticatedFetchRoute
   '/form': typeof authenticatedFormRoute
   '/me': typeof authenticatedMeRoute
   '/styles': typeof authenticatedStylesRoute
@@ -72,7 +64,6 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/(authenticated)': typeof authenticatedRouteRouteWithChildren
   '/about': typeof AboutRoute
-  '/(authenticated)/fetch': typeof authenticatedFetchRoute
   '/(authenticated)/form': typeof authenticatedFormRoute
   '/(authenticated)/me': typeof authenticatedMeRoute
   '/(authenticated)/styles': typeof authenticatedStylesRoute
@@ -80,14 +71,13 @@ export interface FileRoutesById {
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/about' | '/fetch' | '/form' | '/me' | '/styles' | '/'
+  fullPaths: '/about' | '/form' | '/me' | '/styles' | '/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/about' | '/fetch' | '/form' | '/me' | '/styles' | '/'
+  to: '/about' | '/form' | '/me' | '/styles' | '/'
   id:
     | '__root__'
     | '/(authenticated)'
     | '/about'
-    | '/(authenticated)/fetch'
     | '/(authenticated)/form'
     | '/(authenticated)/me'
     | '/(authenticated)/styles'
@@ -143,18 +133,10 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authenticatedFormRouteImport
       parentRoute: typeof authenticatedRouteRoute
     }
-    '/(authenticated)/fetch': {
-      id: '/(authenticated)/fetch'
-      path: '/fetch'
-      fullPath: '/fetch'
-      preLoaderRoute: typeof authenticatedFetchRouteImport
-      parentRoute: typeof authenticatedRouteRoute
-    }
   }
 }
 
 interface authenticatedRouteRouteChildren {
-  authenticatedFetchRoute: typeof authenticatedFetchRoute
   authenticatedFormRoute: typeof authenticatedFormRoute
   authenticatedMeRoute: typeof authenticatedMeRoute
   authenticatedStylesRoute: typeof authenticatedStylesRoute
@@ -162,7 +144,6 @@ interface authenticatedRouteRouteChildren {
 }
 
 const authenticatedRouteRouteChildren: authenticatedRouteRouteChildren = {
-  authenticatedFetchRoute: authenticatedFetchRoute,
   authenticatedFormRoute: authenticatedFormRoute,
   authenticatedMeRoute: authenticatedMeRoute,
   authenticatedStylesRoute: authenticatedStylesRoute,
