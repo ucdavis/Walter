@@ -6,6 +6,13 @@ namespace server.core.Domain;
 
 public class Role
 {
+    // Centralized role name constants so assignments stay consistent.
+    public static class Names
+    {
+        public const string System = "System";
+        public const string Admin = "Admin";
+    }
+
     [Key]
     public int Id { get; set; }
 

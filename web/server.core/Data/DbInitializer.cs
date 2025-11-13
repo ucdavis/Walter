@@ -37,28 +37,44 @@ public class DbInitializer : IDbInitializer
 
     private async Task SeedDevelopmentAsync(CancellationToken ct)
     {
-        if (!await _db.WeatherForecasts.AnyAsync(ct))
-        {
-            var forecasts = new[]
-            {
-                new WeatherForecast { Date = DateOnly.FromDateTime(DateTime.Now.AddDays(-5)), TemperatureC = 18, Summary = "Cool" },
-                new WeatherForecast { Date = DateOnly.FromDateTime(DateTime.Now.AddDays(-4)), TemperatureC = 22, Summary = "Mild" },
-                new WeatherForecast { Date = DateOnly.FromDateTime(DateTime.Now.AddDays(-3)), TemperatureC = 35, Summary = "Hot" },
-                new WeatherForecast { Date = DateOnly.FromDateTime(DateTime.Now.AddDays(-2)), TemperatureC = 15, Summary = "Chilly" },
-                new WeatherForecast { Date = DateOnly.FromDateTime(DateTime.Now.AddDays(-1)), TemperatureC = 8, Summary = "Freezing" },
-                new WeatherForecast { Date = DateOnly.FromDateTime(DateTime.Now), TemperatureC = 25, Summary = "Warm" },
-                new WeatherForecast { Date = DateOnly.FromDateTime(DateTime.Now.AddDays(1)), TemperatureC = 28, Summary = "Balmy" },
-                new WeatherForecast { Date = DateOnly.FromDateTime(DateTime.Now.AddDays(2)), TemperatureC = 12, Summary = "Cold" },
-                new WeatherForecast { Date = DateOnly.FromDateTime(DateTime.Now.AddDays(3)), TemperatureC = 32, Summary = "Scorching" },
-                new WeatherForecast { Date = DateOnly.FromDateTime(DateTime.Now.AddDays(4)), TemperatureC = 20, Summary = "Pleasant" }
-            };
+        _logger.LogInformation("Seeding development data...");
 
-            _db.WeatherForecasts.AddRange(forecasts);
-            await _db.SaveChangesAsync(ct);
-        }
+        await AddRolesIfMissingAsync(ct);
+
+        _logger.LogInformation("Development data seeded.");
     }
 
-    // just a placeholder for any production-safe seeding
-    private Task SeedProductionSafeAsync(CancellationToken ct)
-        => Task.CompletedTask;
+    /// <summary>
+    /// In production we want to make sure the roles and other essential data exist,
+    /// </summary>
+    /// <param name="ct"></param>
+    /// <returns></returns>
+    private async Task SeedProductionSafeAsync(CancellationToken ct)
+    {
+        _logger.LogInformation("Seeding production-safe data...");
+
+        await AddRolesIfMissingAsync(ct);
+
+        _logger.LogInformation("Production-safe data seeded.");
+    }
+
+    private async Task AddRolesIfMissingAsync(CancellationToken ct)
+    {
+        var rolesToEnsure = new[]
+        {
+            Role.Names.System,
+            Role.Names.Admin
+        };
+
+        foreach (var roleName in rolesToEnsure)
+        {
+            var exists = await _db.Roles.AnyAsync(r => r.Name == roleName, ct);
+            if (!exists)
+            {
+                _db.Roles.Add(new Role { Name = roleName });
+            }
+        }
+
+        await _db.SaveChangesAsync(ct);
+    }
 }
