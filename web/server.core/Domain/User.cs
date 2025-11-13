@@ -28,7 +28,7 @@ public class User
     public string IamId { get; set; } = null!;
 
     /// <summary>
-    /// Employee ID - will be looked up via Entra.
+    /// Employee ID - will be looked up via AIM.
     /// </summary>
     [Required]
     [MaxLength(20)]
@@ -67,6 +67,10 @@ public class User
 
         modelBuilder.Entity<User>()
             .HasIndex(u => u.IamId)
+            .IsUnique();
+
+        modelBuilder.Entity<User>()
+            .HasIndex(u => u.EmployeeId)
             .IsUnique();
     }
 }
