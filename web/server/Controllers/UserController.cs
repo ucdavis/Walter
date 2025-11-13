@@ -46,6 +46,8 @@ public class UserController : ApiControllerBase
             Id = user.Id,
             Name = user.DisplayName ?? user.Kerberos,
             Email = user.Email,
+            EmployeeId = user.EmployeeId,
+            Kerberos = user.Kerberos,
             Roles = roles,
         };
 
