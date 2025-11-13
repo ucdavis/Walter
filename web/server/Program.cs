@@ -44,7 +44,7 @@ builder.Services.AddResponseCaching();
 builder.Services.AddScoped<IDbInitializer, DbInitializer>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IEntraUserAttributeService, EntraUserAttributeService>();
-builder.Services.AddScoped<IIdentityService, IdentityService>();
+builder.Services.AddHttpClient<IIdentityService, IdentityService>();
 builder.Services.AddScoped<IUserProfileOrchestrator, UserProfileOrchestrator>();
 // add auth policies here
 

@@ -1,4 +1,5 @@
 using System.Linq;
+using System.Net.Http;
 using Ietws;
 using Microsoft.Extensions.Options;
 
@@ -11,11 +12,20 @@ public interface IIdentityService
 
 public sealed class IdentityService : IIdentityService
 {
-    private readonly string _iamApiKey;
+    private readonly IetClient _ietClient;
 
-    public IdentityService(IOptions<IamSettings> iamSettings)
+    public IdentityService(HttpClient httpClient, IOptions<IamSettings> iamSettings)
     {
-        _iamApiKey = iamSettings.Value.ApiKey ?? string.Empty;
+        ArgumentNullException.ThrowIfNull(httpClient);
+        ArgumentNullException.ThrowIfNull(iamSettings);
+
+        var apiKey = iamSettings.Value.ApiKey;
+        if (string.IsNullOrWhiteSpace(apiKey))
+        {
+            throw new InvalidOperationException("IAM API key is not configured.");
+        }
+
+        _ietClient = new IetClient(httpClient, apiKey);
     }
 
     public async Task<IamIdentity?> GetByIamId(string iamId)
@@ -25,17 +35,11 @@ public sealed class IdentityService : IIdentityService
             throw new ArgumentException("IAM ID is required.", nameof(iamId));
         }
 
-        if (string.IsNullOrWhiteSpace(_iamApiKey))
-        {
-            throw new InvalidOperationException("IAM API key is not configured.");
-        }
+        var iamResponse = await _ietClient.People.Get(iamId);
 
-        var client = new IetClient(_iamApiKey);
-        var iamResponse = await client.People.Get(iamId);
+        var results = iamResponse.ResponseData?.Results;
 
-        var results = iamResponse.ResponseData.Results;
-
-        if (results.Length == 0)
+        if (results is null || results.Length == 0)
         {
             return null;
         }
