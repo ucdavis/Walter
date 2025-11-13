@@ -1,6 +1,8 @@
 using System;
 using System.Security.Claims;
+using Microsoft.EntityFrameworkCore;
 using server.core.Data;
+using server.core.Domain;
 using server.core.Services;
 
 namespace Server.Services;
@@ -10,6 +12,8 @@ public interface IUserService
     Task<List<string>> GetRolesForUser(string userId);
 
     Task<ClaimsPrincipal?> UpdateUserPrincipalIfNeeded(ClaimsPrincipal principal);
+
+    Task<User> CreateOrUpdateUserAsync(UserProfileData userInfo, CancellationToken cancellationToken = default);
 }
 
 public class UserService : IUserService
@@ -72,4 +76,57 @@ public class UserService : IUserService
         // create new principal and return it
         return new ClaimsPrincipal(newId);
     }
+
+    public async Task<User> CreateOrUpdateUserAsync(UserProfileData userInfo, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(userInfo);
+
+        if (userInfo.UserId == Guid.Empty)
+        {
+            throw new ArgumentException("User ID is required.", nameof(userInfo));
+        }
+
+        if (string.IsNullOrWhiteSpace(userInfo.Kerberos))
+        {
+            throw new ArgumentException("Kerberos ID is required.", nameof(userInfo));
+        }
+
+        if (string.IsNullOrWhiteSpace(userInfo.IamId))
+        {
+            throw new ArgumentException("IAM ID is required.", nameof(userInfo));
+        }
+
+        if (string.IsNullOrWhiteSpace(userInfo.EmployeeId))
+        {
+            throw new ArgumentException("Employee ID is required.", nameof(userInfo));
+        }
+
+        var user = await _dbContext.Users
+            .SingleOrDefaultAsync(u => u.Id == userInfo.UserId, cancellationToken);
+
+        if (user == null)
+        {
+            user = new User { Id = userInfo.UserId };
+            await _dbContext.Users.AddAsync(user, cancellationToken);
+        }
+
+        user.Kerberos = userInfo.Kerberos;
+        user.IamId = userInfo.IamId;
+        user.EmployeeId = userInfo.EmployeeId;
+        user.DisplayName = userInfo.DisplayName;
+        user.Email = userInfo.Email;
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return user;
+    }
+}
+
+public sealed record UserProfileData
+{
+    public Guid UserId { get; init; }
+    public required string Kerberos { get; init; }
+    public required string IamId { get; init; }
+    public required string EmployeeId { get; init; }
+    public string? DisplayName { get; init; }
+    public string? Email { get; init; }
 }

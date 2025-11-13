@@ -87,22 +87,52 @@ public static class AuthenticationHelper
     /// </summary>
     private static async Task OnTokenValidated(Microsoft.AspNetCore.Authentication.OpenIdConnect.TokenValidatedContext ctx)
     {
-        // Load up the roles on first login (can also change other user info/claims here if needed)
-        var userKey = ctx.Principal!.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var principal = ctx.Principal ?? throw new InvalidOperationException("Token validation did not provide a claims principal.");
 
-        if (string.IsNullOrEmpty(userKey)) return;
+        var userIdClaim = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                          ?? throw new InvalidOperationException("Authenticated principal is missing the NameIdentifier claim.");
+
+        if (!Guid.TryParse(userIdClaim, out var userId))
+        {
+            throw new InvalidOperationException($"NameIdentifier claim '{userIdClaim}' is not a valid GUID.");
+        }
 
         var attributeService = ctx.HttpContext.RequestServices.GetRequiredService<IEntraUserAttributeService>();
         var identityService = ctx.HttpContext.RequestServices.GetRequiredService<IIdentityService>();
+        var userService = ctx.HttpContext.RequestServices.GetRequiredService<IUserService>();
 
-        // get the user's kerb & iam from Entra (stored as extension attributes)
-        var attributes = await attributeService.GetAttributesAsync(userKey, ctx.Principal!, ctx.HttpContext.RequestAborted);
+        var attributes = await attributeService.GetAttributesAsync(userIdClaim, principal, ctx.HttpContext.RequestAborted)
+                         ?? throw new InvalidOperationException($"Failed to load Entra extension attributes for user {userId}.");
 
-        // now pull additional info including employeeId from IAM using the iamId
-        var iamIdentity = await identityService.GetByIamId(attributes.IamId);
+        if (string.IsNullOrWhiteSpace(attributes.Kerberos))
+        {
+            throw new InvalidOperationException($"Kerberos extension attribute is missing for user {userId}.");
+        }
 
+        if (string.IsNullOrWhiteSpace(attributes.IamId))
+        {
+            throw new InvalidOperationException($"IAM extension attribute is missing for user {userId}.");
+        }
 
+        var iamIdentity = await identityService.GetByIamId(attributes.IamId)
+                          ?? throw new InvalidOperationException($"IAM identity lookup failed for IAM ID '{attributes.IamId}'.");
 
+        var profile = new UserProfileData
+        {
+            UserId = userId,
+            Kerberos = attributes.Kerberos,
+            IamId = attributes.IamId,
+            EmployeeId = iamIdentity.EmployeeId,
+            DisplayName = iamIdentity.FullName,
+            // entra has email as preferred_username claim so check that first
+            Email = principal.FindFirst("preferred_username")?.Value ?? principal.FindFirst(ClaimTypes.Email)?.Value
+        };
+
+        await userService.CreateOrUpdateUserAsync(profile, ctx.HttpContext.RequestAborted);
+
+        // now we have our user in the DB, and can load them via their name identifier.
+        // we'll load the roles from the db when validating the cookie on future requests.
+        // If we want, later on we can add roles/attribute claims here for the initial login token.
     }
 
     /// <summary>
