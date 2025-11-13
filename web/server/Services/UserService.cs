@@ -1,14 +1,14 @@
-using System;
 using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
 using server.core.Data;
 using server.core.Domain;
+using server.Helpers;
 
 namespace Server.Services;
 
 public interface IUserService
 {
-    Task<List<string>> GetRolesForUser(string userId);
+    Task<List<string>> GetRolesForUser(Guid userId);
 
     Task<ClaimsPrincipal?> UpdateUserPrincipalIfNeeded(ClaimsPrincipal principal);
 
@@ -28,23 +28,23 @@ public class UserService : IUserService
         _dbContext = dbContext;
     }
 
-    public async Task<List<string>> GetRolesForUser(string userId)
+    public async Task<List<string>> GetRolesForUser(Guid userId)
     {
-        // fake role strings but use _dbContext to get real roles later
-        var roles = new List<string> { "User", "SampleRole" };
-
-        return await Task.FromResult(roles);
+        return await _dbContext.Users
+            .AsNoTracking()
+            .Where(u => u.Id == userId)
+            .SelectMany(u => u.Permissions)
+            .Where(p => p.Role != null)
+            .Select(p => p.Role!.Name)
+            .Distinct()
+            .ToListAsync();
     }
 
     public async Task<ClaimsPrincipal?> UpdateUserPrincipalIfNeeded(ClaimsPrincipal principal)
     {
         // Here you could check if the user's roles or other claims have changed
         // and if so, create a new ClaimsPrincipal with updated claims.
-        var userId = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (userId == null)
-        {
-            return null; // can't update without user ID
-        }
+        var userId = principal.GetUserId();
 
         // get user's roles
         // might want to cache w/ IMemoryCache to avoid DB hits on every request, but we'll skip that for simplicity

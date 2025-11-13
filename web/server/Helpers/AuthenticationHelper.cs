@@ -86,19 +86,13 @@ public static class AuthenticationHelper
     private static async Task OnTokenValidated(TokenValidatedContext ctx)
     {
         var principal = ctx.Principal ?? throw new InvalidOperationException("Token validation did not provide a claims principal.");
-
-        var userIdClaim = principal.FindFirst(ClaimConstants.ObjectId)?.Value
-                          ?? throw new InvalidOperationException("Authenticated principal is missing the NameIdentifier claim.");
-
-        if (!Guid.TryParse(userIdClaim, out var userId))
-        {
-            throw new InvalidOperationException($"NameIdentifier claim '{userIdClaim}' is not a valid GUID.");
-        }
+        var userId = principal.GetUserId();
+        var userObjectId = userId.ToString();
 
         var profileOrchestrator = ctx.HttpContext.RequestServices.GetRequiredService<IUserProfileOrchestrator>();
         var cancellationToken = ctx.HttpContext.RequestAborted;
 
-        await profileOrchestrator.EnsureUserProfileAsync(userId, userIdClaim, principal, cancellationToken);
+        await profileOrchestrator.EnsureUserProfileAsync(userId, userObjectId, principal, cancellationToken);
 
         // now we have our user in the DB, and can load them via their name identifier.
         // we'll load the roles from the db when validating the cookie on future requests.

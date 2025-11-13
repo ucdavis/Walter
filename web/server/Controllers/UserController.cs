@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Identity.Web;
 using server.core.Data;
+using server.Helpers;
 
 namespace Server.Controllers;
 
@@ -17,9 +17,12 @@ public class UserController : ApiControllerBase
     [HttpGet("me")]
     public async Task<IActionResult> Me(CancellationToken cancellationToken)
     {
-        var userId = User.FindFirst(ClaimConstants.ObjectId)?.Value;
-
-        if (!Guid.TryParse(userId, out var parsedUserId))
+        Guid userId;
+        try
+        {
+            userId = User.GetUserId();
+        }
+        catch (InvalidOperationException)
         {
             return Unauthorized();
         }
@@ -28,7 +31,7 @@ public class UserController : ApiControllerBase
             .AsNoTracking()
             .Include(u => u.Permissions)
                 .ThenInclude(p => p.Role)
-            .SingleOrDefaultAsync(u => u.Id == parsedUserId, cancellationToken);
+            .SingleOrDefaultAsync(u => u.Id == userId, cancellationToken);
 
         if (user is null)
         {
