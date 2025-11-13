@@ -13,6 +13,8 @@ public interface IUserService
     Task<ClaimsPrincipal?> UpdateUserPrincipalIfNeeded(ClaimsPrincipal principal);
 
     Task<User> CreateOrUpdateUserAsync(UserProfileData userInfo, CancellationToken cancellationToken = default);
+
+    Task<User?> GetByIdAsync(Guid userId, CancellationToken cancellationToken = default);
 }
 
 public class UserService : IUserService
@@ -115,6 +117,11 @@ public class UserService : IUserService
 
         await _dbContext.SaveChangesAsync(cancellationToken);
         return user;
+    }
+
+    public Task<User?> GetByIdAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        return _dbContext.Users.SingleOrDefaultAsync(u => u.Id == userId, cancellationToken);
     }
 }
 

@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.Identity.Web;
 using Microsoft.Extensions.Logging;
 using Server.Services;
+using server.core.Domain;
 using server.core.Services;
 
 namespace server.Helpers;
@@ -97,38 +98,83 @@ public static class AuthenticationHelper
             throw new InvalidOperationException($"NameIdentifier claim '{userIdClaim}' is not a valid GUID.");
         }
 
+        var loggerFactory = ctx.HttpContext.RequestServices.GetRequiredService<ILoggerFactory>();
+        var logger = loggerFactory.CreateLogger("AuthenticationHelper");
         var attributeService = ctx.HttpContext.RequestServices.GetRequiredService<IEntraUserAttributeService>();
         var identityService = ctx.HttpContext.RequestServices.GetRequiredService<IIdentityService>();
         var userService = ctx.HttpContext.RequestServices.GetRequiredService<IUserService>();
+        var cancellationToken = ctx.HttpContext.RequestAborted;
 
-        var attributes = await attributeService.GetAttributesAsync(userIdClaim, principal, ctx.HttpContext.RequestAborted)
-                         ?? throw new InvalidOperationException($"Failed to load Entra extension attributes for user {userId}.");
+        var existingUser = await userService.GetByIdAsync(userId, cancellationToken);
 
-        if (string.IsNullOrWhiteSpace(attributes.Kerberos))
+        var attributes = await attributeService.GetAttributesAsync(userIdClaim, principal, cancellationToken);
+
+        var kerberos = !string.IsNullOrWhiteSpace(attributes?.Kerberos)
+            ? attributes!.Kerberos
+            : existingUser?.Kerberos;
+
+        if (string.IsNullOrWhiteSpace(kerberos))
         {
-            throw new InvalidOperationException($"Kerberos extension attribute is missing for user {userId}.");
+            throw new InvalidOperationException(existingUser == null
+                ? $"Kerberos extension attribute is missing for new user {userId}."
+                : $"Kerberos extension attribute missing for {userId} and no stored value was found.");
         }
 
-        if (string.IsNullOrWhiteSpace(attributes.IamId))
+        if (attributes == null && existingUser != null)
         {
-            throw new InvalidOperationException($"IAM extension attribute is missing for user {userId}.");
+            logger.LogWarning("Falling back to stored profile for user {UserId} because Entra attributes could not be loaded.", userId);
         }
 
-        var iamIdentity = await identityService.GetByIamId(attributes.IamId)
-                          ?? throw new InvalidOperationException($"IAM identity lookup failed for IAM ID '{attributes.IamId}'.");
+        var iamId = !string.IsNullOrWhiteSpace(attributes?.IamId)
+            ? attributes!.IamId
+            : existingUser?.IamId;
+
+        if (string.IsNullOrWhiteSpace(iamId))
+        {
+            throw new InvalidOperationException(existingUser == null
+                ? $"IAM extension attribute is missing for new user {userId}."
+                : $"IAM extension attribute missing for {userId} and no stored value was found.");
+        }
+
+        IamIdentity? iamIdentity = null;
+        try
+        {
+            iamIdentity = await identityService.GetByIamId(iamId);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to retrieve IAM identity for IAM ID '{IamId}'.", iamId);
+        }
+
+        if (iamIdentity == null && existingUser != null)
+        {
+            logger.LogWarning("Using stored IAM profile for user {UserId} because IAM lookup failed.", userId);
+        }
+        else if (iamIdentity == null)
+        {
+            throw new InvalidOperationException($"IAM identity lookup failed for IAM ID '{iamId}'.");
+        }
+
+        var employeeId = iamIdentity?.EmployeeId ?? existingUser?.EmployeeId;
+        if (string.IsNullOrWhiteSpace(employeeId))
+        {
+            throw new InvalidOperationException($"Employee ID is missing for user {userId}.");
+        }
 
         var profile = new UserProfileData
         {
             UserId = userId,
-            Kerberos = attributes.Kerberos,
-            IamId = attributes.IamId,
-            EmployeeId = iamIdentity.EmployeeId,
-            DisplayName = iamIdentity.FullName,
+            Kerberos = kerberos!,
+            IamId = iamId!,
+            EmployeeId = employeeId,
+            DisplayName = iamIdentity?.FullName ?? existingUser?.DisplayName,
             // entra has email as preferred_username claim so check that first
-            Email = principal.FindFirst("preferred_username")?.Value ?? principal.FindFirst(ClaimTypes.Email)?.Value
+            Email = principal.FindFirst("preferred_username")?.Value
+                    ?? principal.FindFirst(ClaimTypes.Email)?.Value
+                    ?? existingUser?.Email
         };
 
-        await userService.CreateOrUpdateUserAsync(profile, ctx.HttpContext.RequestAborted);
+        await userService.CreateOrUpdateUserAsync(profile, cancellationToken);
 
         // now we have our user in the DB, and can load them via their name identifier.
         // we'll load the roles from the db when validating the cookie on future requests.
