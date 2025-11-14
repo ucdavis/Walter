@@ -31,7 +31,7 @@ function RouteComponent() {
       <section className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
         <div className="mb-4">
           <span className="inline-block bg-blue-600 text-white px-3 py-1 text-xs rounded">
-            DATA AS OF {formatAsOfDate(summary.awardEndDate)}
+            DATA AS OF {formatAsOfDate(new Date().toDateString())}
           </span>
         </div>
         <h1 className="mb-1">{summary.projectName}</h1>
