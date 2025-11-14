@@ -1,56 +1,51 @@
-// TODO: FAKE DATA
-const projects = [
-  {
-    active: true,
-    budget: '$2,967',
-    date: '10.05.2025',
-    name: "Dean's Office Allocation",
-  },
-  {
-    active: false,
-    budget: '$268',
-    date: '10.05.2025',
-    name: 'Summer Research Program',
-  },
-  {
-    active: false,
-    budget: '$138.87',
-    date: '10.05.2025',
-    name: 'Summer Research Program',
-  },
-  {
-    active: false,
-    budget: '$929.23',
-    date: '10.05.2025',
-    name: 'USDA Africa Biotechnol...',
-  },
-  {
-    active: false,
-    budget: '$991.23',
-    date: '10.05.2025',
-    name: 'USDA Vietnam VetScienc...',
-  },
-  {
-    active: false,
-    budget: '$2,891.23',
-    date: '10.05.2025',
-    name: 'Food for Progress - Bangl...',
-  },
-  {
-    active: false,
-    budget: '$8,228.23',
-    date: '10.05.2025',
-    name: 'Centers of Excellence an...',
-  },
-  {
-    active: false,
-    budget: '$100.99',
-    date: '10.05.2025',
-    name: 'Ag Partnership with Japa...',
-  },
-];
+import { allProjectsQueryOptions, ProjectRecord } from '@/queries/project.ts';
+import { useSuspenseQuery } from '@tanstack/react-query';
+
+interface ProjectSummary {
+  award_end_date: string | null;
+  project_name: string;
+  project_number: string;
+  project_status_code: string;
+  total_cat_bud_bal: number;
+}
+
+function groupProjects(records: ProjectRecord[]): ProjectSummary[] {
+  const map: Record<string, ProjectSummary> = {};
+
+  for (const rec of records) {
+    const key = rec.project_number;
+
+    if (!map[key]) {
+      map[key] = {
+        award_end_date: rec.award_end_date,
+        project_name: rec.project_name,
+        project_number: rec.project_number,
+        project_status_code: rec.project_status_code,
+        total_cat_bud_bal: 0,
+      };
+    }
+
+    // add cat_bud_bal
+    map[key].total_cat_bud_bal += rec.cat_bud_bal;
+
+    // pick latest award_end_date (YYYY-MM-DD string compare works)
+    if (rec.award_end_date) {
+      const current = map[key].award_end_date;
+      if (!current || rec.award_end_date > current) {
+        map[key].award_end_date = rec.award_end_date;
+      }
+    }
+  }
+
+  return Object.values(map);
+}
 
 export function ProjectsSidebar() {
+  const { data: projects } = useSuspenseQuery(allProjectsQueryOptions());
+
+  // we want to group projects by project_number
+  const groupedProjects = groupProjects(projects);
+
   return (
     <aside className="w-72 shrink-0">
       <div className="sticky top-24">
@@ -74,19 +69,21 @@ export function ProjectsSidebar() {
           </div>
 
           <div className="space-y-1 max-h-[600px] overflow-y-auto">
-            {projects.map((project, index) => (
+            {groupedProjects.map((project, index) => (
               <button
                 className={`w-full text-left px-3 py-2 rounded-md transition-colors ${
-                  project.active ? 'bg-gray-100' : 'hover:bg-gray-50'
+                  project.project_status_code === 'ACTIVE'
+                    ? 'bg-gray-100'
+                    : 'hover:bg-gray-50'
                 }`}
                 key={index}
               >
                 <div className="flex justify-between items-start mb-1">
-                  <span className="text-sm">{project.name}</span>
+                  <span className="text-sm">{project.project_name}</span>
                 </div>
                 <div className="flex justify-between items-center text-xs text-gray-500">
-                  <span>{project.budget}</span>
-                  <span>{project.date}</span>
+                  <span>{project.total_cat_bud_bal}</span>
+                  <span>{project.award_end_date}</span>
                 </div>
               </button>
             ))}
