@@ -8,22 +8,41 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 
-const data = [
-  { date: '05.23.2012', value: 212_889.95 },
-  { date: '07.15.2013', value: 195_000 },
-  { date: '02.28.2015', value: 165_000 },
-  { date: '08.12.2016', value: 145_000 },
-  { date: '03.05.2018', value: 125_000 },
-  { date: '11.18.2020', value: 98_000 },
-  { date: '05.30.2022', value: 75_000 },
-  { date: '01.15.2024', value: 55_000 },
-  { date: '11.9.2025', value: 30_719.77 },
-  { date: '08.23.2029', value: 0 },
+const dates = [
+  '05.23.2012',
+  '07.15.2013',
+  '02.28.2015',
+  '08.12.2016',
+  '03.05.2018',
+  '11.18.2020',
+  '05.30.2022',
+  '01.15.2024',
+  '11.9.2025',
+  '08.23.2029',
 ];
 
+function generateChartData() {
+  return dates.map((date) => ({
+    date,
+    value: Number((25_000 + Math.random() * 225_000).toFixed(2)),
+  }));
+}
+
+function formatCurrency(value: number) {
+  return `$${value.toLocaleString(undefined, {
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 2,
+  })}`;
+}
+
 export function ProjectChart() {
+  const data = generateChartData();
+  const startBalance = data[0]?.value ?? 0;
+  const currentPoint = data.at(-2);
+  const projectedEnd = data.at(-1)?.value ?? 0;
+
   return (
-    <div className="h-64">
+    <div className="h-64 mb-6 pb-4">
       <ResponsiveContainer height="100%" width="100%">
         <LineChart data={data}>
           <CartesianGrid stroke="#e5e7eb" strokeDasharray="3 3" />
@@ -46,10 +65,7 @@ export function ProjectChart() {
               borderRadius: '6px',
               fontSize: '12px',
             }}
-            formatter={(value: number) => [
-              `$${value.toLocaleString()}`,
-              'Balance',
-            ]}
+            formatter={(value: number) => [formatCurrency(value), 'Balance']}
           />
           <Line
             activeDot={{ r: 6 }}
@@ -64,15 +80,19 @@ export function ProjectChart() {
       <div className="flex justify-between mt-4 px-2">
         <div>
           <div className="text-xs text-gray-500">Start Balance</div>
-          <div className="text-gray-900">$212,889.95</div>
+          <div className="text-gray-900">{formatCurrency(startBalance)}</div>
         </div>
         <div className="text-center">
-          <div className="text-xs text-gray-500">Current (11.9.2025)</div>
-          <div className="text-blue-600">$30,719.77</div>
+          <div className="text-xs text-gray-500">
+            Current ({currentPoint?.date ?? 'N/A'})
+          </div>
+          <div className="text-blue-600">
+            {formatCurrency(currentPoint?.value ?? 0)}
+          </div>
         </div>
         <div className="text-right">
           <div className="text-xs text-gray-500">Projected End</div>
-          <div className="text-gray-900">$0.00</div>
+          <div className="text-gray-900">{formatCurrency(projectedEnd)}</div>
         </div>
       </div>
     </div>

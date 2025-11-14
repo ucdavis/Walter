@@ -42,6 +42,16 @@ function groupProjects(records: ProjectRecord[]): ProjectSummary[] {
   return Object.values(map);
 }
 
+const linkClasses = (isActive: boolean, isActiveStatus: boolean) =>
+  [
+    'block text-left px-3 py-2 rounded-md transition-colors border border-transparent',
+    isActive
+      ? 'bg-blue-50 text-blue-700 border-blue-100'
+      : isActiveStatus
+        ? 'bg-gray-100'
+        : 'hover:bg-gray-50',
+  ].join(' ');
+
 export function ProjectsSidebar() {
   const { data: projects } = useSuspenseQuery(allProjectsQueryOptions());
   const pathname = useRouterState({
@@ -58,30 +68,13 @@ export function ProjectsSidebar() {
   const isAllProjectsActive =
     pathname === '/projects' || pathname === '/projects/';
 
-  const linkClasses = (isActive: boolean, isActiveStatus: boolean) =>
-    [
-      'block text-left px-3 py-2 rounded-md transition-colors border border-transparent',
-      isActive
-        ? 'bg-blue-50 text-blue-700 border-blue-100'
-        : isActiveStatus
-          ? 'bg-gray-100'
-          : 'hover:bg-gray-50',
-    ].join(' ');
-
   return (
     <aside className="w-72 shrink-0">
       <div className="sticky top-24">
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <div className="mb-4">
             <h2 className="text-gray-500 text-xs mb-3">MY PROJECTS</h2>
-            <div className="flex items-center justify-between mb-3">
-              <Link
-                className="text-sm font-medium hover:text-blue-600"
-                to="/projects"
-              >
-                All Projects Dashboard
-              </Link>
-            </div>
+
             <div className="relative">
               <input
                 className="pl-9 h-9 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -95,6 +88,7 @@ export function ProjectsSidebar() {
             <Link
               className={linkClasses(isAllProjectsActive, true)}
               to="/projects"
+              viewTransition={{ types: ['slide-right'] }}
             >
               <div className="flex justify-between items-start mb-1">
                 <span className="text-sm">All Projects</span>
@@ -113,13 +107,14 @@ export function ProjectsSidebar() {
                 key={index}
                 params={{ projectNumber: project.project_number }}
                 to="/projects/$projectNumber"
+                viewTransition={{ types: ['slide-left'] }}
               >
                 <div className="flex justify-between items-start mb-1">
                   <span className="text-sm">{project.project_name}</span>
                 </div>
                 <div className="flex justify-between items-center text-xs text-gray-500">
                   <Currency value={project.total_cat_bud_bal} />
-                    <span>{project.award_end_date ?? 'No end date'}</span>
+                  <span>{project.award_end_date ?? 'No end date'}</span>
                 </div>
               </Link>
             ))}
