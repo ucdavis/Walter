@@ -1,4 +1,4 @@
-import { ProjectChart } from '@/components/ProjectChart.tsx';
+import { ProjectChart } from '@/components/project/chart.tsx';
 import { createFileRoute } from '@tanstack/react-router';
 
 export const Route = createFileRoute('/(authenticated)/projects/')({
