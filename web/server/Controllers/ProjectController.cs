@@ -25,9 +25,6 @@ public sealed class ProjectController : ApiControllerBase
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        // wait 5s to simulate latency
-        Thread.Sleep(5000);
-
         var path = Path.Combine(_env.ContentRootPath, "Models", "FacultyReport.json");
         var json = System.IO.File.ReadAllText(path);
 

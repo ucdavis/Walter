@@ -60,6 +60,7 @@ This is a full-stack web application template using modern React and .NET techno
 ### Path Aliases
 
 - `@/` resolves to `./src/`
+- When referencing files, always use the alias for cleaner imports, but make sure to include the path with extension, ex: `import { formatCurrency } from '@/lib/currency.ts';
 
 ## Backend Technology Stack
 

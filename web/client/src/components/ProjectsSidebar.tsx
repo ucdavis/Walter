@@ -1,4 +1,5 @@
 import { allProjectsQueryOptions, ProjectRecord } from '@/queries/project.ts';
+import { Currency } from '@/shared/Currency.tsx';
 import { useSuspenseQuery } from '@tanstack/react-query';
 
 interface ProjectSummary {
@@ -82,7 +83,7 @@ export function ProjectsSidebar() {
                   <span className="text-sm">{project.project_name}</span>
                 </div>
                 <div className="flex justify-between items-center text-xs text-gray-500">
-                  <span>{project.total_cat_bud_bal}</span>
+                  <Currency value={project.total_cat_bud_bal} />
                   <span>{project.award_end_date}</span>
                 </div>
               </button>
