@@ -15,6 +15,7 @@ import { Route as authenticatedIndexRouteImport } from './routes/(authenticated)
 import { Route as authenticatedStylesRouteImport } from './routes/(authenticated)/styles'
 import { Route as authenticatedMeRouteImport } from './routes/(authenticated)/me'
 import { Route as authenticatedFormRouteImport } from './routes/(authenticated)/form'
+import { Route as authenticatedProjectsRouteRouteImport } from './routes/(authenticated)/projects/route'
 import { Route as authenticatedProjectsIndexRouteImport } from './routes/(authenticated)/projects/index'
 
 const AboutRoute = AboutRouteImport.update({
@@ -46,20 +47,27 @@ const authenticatedFormRoute = authenticatedFormRouteImport.update({
   path: '/form',
   getParentRoute: () => authenticatedRouteRoute,
 } as any)
+const authenticatedProjectsRouteRoute =
+  authenticatedProjectsRouteRouteImport.update({
+    id: '/projects',
+    path: '/projects',
+    getParentRoute: () => authenticatedRouteRoute,
+  } as any)
 const authenticatedProjectsIndexRoute =
   authenticatedProjectsIndexRouteImport.update({
-    id: '/projects/',
-    path: '/projects/',
-    getParentRoute: () => authenticatedRouteRoute,
+    id: '/',
+    path: '/',
+    getParentRoute: () => authenticatedProjectsRouteRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
   '/about': typeof AboutRoute
+  '/projects': typeof authenticatedProjectsRouteRouteWithChildren
   '/form': typeof authenticatedFormRoute
   '/me': typeof authenticatedMeRoute
   '/styles': typeof authenticatedStylesRoute
   '/': typeof authenticatedIndexRoute
-  '/projects': typeof authenticatedProjectsIndexRoute
+  '/projects/': typeof authenticatedProjectsIndexRoute
 }
 export interface FileRoutesByTo {
   '/about': typeof AboutRoute
@@ -73,6 +81,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/(authenticated)': typeof authenticatedRouteRouteWithChildren
   '/about': typeof AboutRoute
+  '/(authenticated)/projects': typeof authenticatedProjectsRouteRouteWithChildren
   '/(authenticated)/form': typeof authenticatedFormRoute
   '/(authenticated)/me': typeof authenticatedMeRoute
   '/(authenticated)/styles': typeof authenticatedStylesRoute
@@ -81,13 +90,21 @@ export interface FileRoutesById {
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/about' | '/form' | '/me' | '/styles' | '/' | '/projects'
+  fullPaths:
+    | '/about'
+    | '/projects'
+    | '/form'
+    | '/me'
+    | '/styles'
+    | '/'
+    | '/projects/'
   fileRoutesByTo: FileRoutesByTo
   to: '/about' | '/form' | '/me' | '/styles' | '/' | '/projects'
   id:
     | '__root__'
     | '/(authenticated)'
     | '/about'
+    | '/(authenticated)/projects'
     | '/(authenticated)/form'
     | '/(authenticated)/me'
     | '/(authenticated)/styles'
@@ -144,30 +161,51 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authenticatedFormRouteImport
       parentRoute: typeof authenticatedRouteRoute
     }
-    '/(authenticated)/projects/': {
-      id: '/(authenticated)/projects/'
+    '/(authenticated)/projects': {
+      id: '/(authenticated)/projects'
       path: '/projects'
       fullPath: '/projects'
-      preLoaderRoute: typeof authenticatedProjectsIndexRouteImport
+      preLoaderRoute: typeof authenticatedProjectsRouteRouteImport
       parentRoute: typeof authenticatedRouteRoute
+    }
+    '/(authenticated)/projects/': {
+      id: '/(authenticated)/projects/'
+      path: '/'
+      fullPath: '/projects/'
+      preLoaderRoute: typeof authenticatedProjectsIndexRouteImport
+      parentRoute: typeof authenticatedProjectsRouteRoute
     }
   }
 }
 
+interface authenticatedProjectsRouteRouteChildren {
+  authenticatedProjectsIndexRoute: typeof authenticatedProjectsIndexRoute
+}
+
+const authenticatedProjectsRouteRouteChildren: authenticatedProjectsRouteRouteChildren =
+  {
+    authenticatedProjectsIndexRoute: authenticatedProjectsIndexRoute,
+  }
+
+const authenticatedProjectsRouteRouteWithChildren =
+  authenticatedProjectsRouteRoute._addFileChildren(
+    authenticatedProjectsRouteRouteChildren,
+  )
+
 interface authenticatedRouteRouteChildren {
+  authenticatedProjectsRouteRoute: typeof authenticatedProjectsRouteRouteWithChildren
   authenticatedFormRoute: typeof authenticatedFormRoute
   authenticatedMeRoute: typeof authenticatedMeRoute
   authenticatedStylesRoute: typeof authenticatedStylesRoute
   authenticatedIndexRoute: typeof authenticatedIndexRoute
-  authenticatedProjectsIndexRoute: typeof authenticatedProjectsIndexRoute
 }
 
 const authenticatedRouteRouteChildren: authenticatedRouteRouteChildren = {
+  authenticatedProjectsRouteRoute: authenticatedProjectsRouteRouteWithChildren,
   authenticatedFormRoute: authenticatedFormRoute,
   authenticatedMeRoute: authenticatedMeRoute,
   authenticatedStylesRoute: authenticatedStylesRoute,
   authenticatedIndexRoute: authenticatedIndexRoute,
-  authenticatedProjectsIndexRoute: authenticatedProjectsIndexRoute,
 }
 
 const authenticatedRouteRouteWithChildren =
