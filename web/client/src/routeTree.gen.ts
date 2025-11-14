@@ -15,6 +15,9 @@ import { Route as authenticatedIndexRouteImport } from './routes/(authenticated)
 import { Route as authenticatedStylesRouteImport } from './routes/(authenticated)/styles'
 import { Route as authenticatedMeRouteImport } from './routes/(authenticated)/me'
 import { Route as authenticatedFormRouteImport } from './routes/(authenticated)/form'
+import { Route as authenticatedProjectsRouteRouteImport } from './routes/(authenticated)/projects/route'
+import { Route as authenticatedProjectsIndexRouteImport } from './routes/(authenticated)/projects/index'
+import { Route as authenticatedProjectsProjectNumberIndexRouteImport } from './routes/(authenticated)/projects/$projectNumber/index'
 
 const AboutRoute = AboutRouteImport.update({
   id: '/about',
@@ -45,13 +48,34 @@ const authenticatedFormRoute = authenticatedFormRouteImport.update({
   path: '/form',
   getParentRoute: () => authenticatedRouteRoute,
 } as any)
+const authenticatedProjectsRouteRoute =
+  authenticatedProjectsRouteRouteImport.update({
+    id: '/projects',
+    path: '/projects',
+    getParentRoute: () => authenticatedRouteRoute,
+  } as any)
+const authenticatedProjectsIndexRoute =
+  authenticatedProjectsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => authenticatedProjectsRouteRoute,
+  } as any)
+const authenticatedProjectsProjectNumberIndexRoute =
+  authenticatedProjectsProjectNumberIndexRouteImport.update({
+    id: '/$projectNumber/',
+    path: '/$projectNumber/',
+    getParentRoute: () => authenticatedProjectsRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/about': typeof AboutRoute
+  '/projects': typeof authenticatedProjectsRouteRouteWithChildren
   '/form': typeof authenticatedFormRoute
   '/me': typeof authenticatedMeRoute
   '/styles': typeof authenticatedStylesRoute
   '/': typeof authenticatedIndexRoute
+  '/projects/': typeof authenticatedProjectsIndexRoute
+  '/projects/$projectNumber': typeof authenticatedProjectsProjectNumberIndexRoute
 }
 export interface FileRoutesByTo {
   '/about': typeof AboutRoute
@@ -59,29 +83,52 @@ export interface FileRoutesByTo {
   '/me': typeof authenticatedMeRoute
   '/styles': typeof authenticatedStylesRoute
   '/': typeof authenticatedIndexRoute
+  '/projects': typeof authenticatedProjectsIndexRoute
+  '/projects/$projectNumber': typeof authenticatedProjectsProjectNumberIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/(authenticated)': typeof authenticatedRouteRouteWithChildren
   '/about': typeof AboutRoute
+  '/(authenticated)/projects': typeof authenticatedProjectsRouteRouteWithChildren
   '/(authenticated)/form': typeof authenticatedFormRoute
   '/(authenticated)/me': typeof authenticatedMeRoute
   '/(authenticated)/styles': typeof authenticatedStylesRoute
   '/(authenticated)/': typeof authenticatedIndexRoute
+  '/(authenticated)/projects/': typeof authenticatedProjectsIndexRoute
+  '/(authenticated)/projects/$projectNumber/': typeof authenticatedProjectsProjectNumberIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/about' | '/form' | '/me' | '/styles' | '/'
+  fullPaths:
+    | '/about'
+    | '/projects'
+    | '/form'
+    | '/me'
+    | '/styles'
+    | '/'
+    | '/projects/'
+    | '/projects/$projectNumber'
   fileRoutesByTo: FileRoutesByTo
-  to: '/about' | '/form' | '/me' | '/styles' | '/'
+  to:
+    | '/about'
+    | '/form'
+    | '/me'
+    | '/styles'
+    | '/'
+    | '/projects'
+    | '/projects/$projectNumber'
   id:
     | '__root__'
     | '/(authenticated)'
     | '/about'
+    | '/(authenticated)/projects'
     | '/(authenticated)/form'
     | '/(authenticated)/me'
     | '/(authenticated)/styles'
     | '/(authenticated)/'
+    | '/(authenticated)/projects/'
+    | '/(authenticated)/projects/$projectNumber/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -133,10 +180,49 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authenticatedFormRouteImport
       parentRoute: typeof authenticatedRouteRoute
     }
+    '/(authenticated)/projects': {
+      id: '/(authenticated)/projects'
+      path: '/projects'
+      fullPath: '/projects'
+      preLoaderRoute: typeof authenticatedProjectsRouteRouteImport
+      parentRoute: typeof authenticatedRouteRoute
+    }
+    '/(authenticated)/projects/': {
+      id: '/(authenticated)/projects/'
+      path: '/'
+      fullPath: '/projects/'
+      preLoaderRoute: typeof authenticatedProjectsIndexRouteImport
+      parentRoute: typeof authenticatedProjectsRouteRoute
+    }
+    '/(authenticated)/projects/$projectNumber/': {
+      id: '/(authenticated)/projects/$projectNumber/'
+      path: '/$projectNumber'
+      fullPath: '/projects/$projectNumber'
+      preLoaderRoute: typeof authenticatedProjectsProjectNumberIndexRouteImport
+      parentRoute: typeof authenticatedProjectsRouteRoute
+    }
   }
 }
 
+interface authenticatedProjectsRouteRouteChildren {
+  authenticatedProjectsIndexRoute: typeof authenticatedProjectsIndexRoute
+  authenticatedProjectsProjectNumberIndexRoute: typeof authenticatedProjectsProjectNumberIndexRoute
+}
+
+const authenticatedProjectsRouteRouteChildren: authenticatedProjectsRouteRouteChildren =
+  {
+    authenticatedProjectsIndexRoute: authenticatedProjectsIndexRoute,
+    authenticatedProjectsProjectNumberIndexRoute:
+      authenticatedProjectsProjectNumberIndexRoute,
+  }
+
+const authenticatedProjectsRouteRouteWithChildren =
+  authenticatedProjectsRouteRoute._addFileChildren(
+    authenticatedProjectsRouteRouteChildren,
+  )
+
 interface authenticatedRouteRouteChildren {
+  authenticatedProjectsRouteRoute: typeof authenticatedProjectsRouteRouteWithChildren
   authenticatedFormRoute: typeof authenticatedFormRoute
   authenticatedMeRoute: typeof authenticatedMeRoute
   authenticatedStylesRoute: typeof authenticatedStylesRoute
@@ -144,6 +230,7 @@ interface authenticatedRouteRouteChildren {
 }
 
 const authenticatedRouteRouteChildren: authenticatedRouteRouteChildren = {
+  authenticatedProjectsRouteRoute: authenticatedProjectsRouteRouteWithChildren,
   authenticatedFormRoute: authenticatedFormRoute,
   authenticatedMeRoute: authenticatedMeRoute,
   authenticatedStylesRoute: authenticatedStylesRoute,
