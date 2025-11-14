@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet } from '@tanstack/react-router';
-import { ProjectsSidebar } from './components/ProjectsSidebar.tsx';
+import { ProjectsSidebar } from '@/components/ProjectsSidebar.tsx';
 
 export const Route = createFileRoute('/(authenticated)/projects')({
   component: RouteComponent,

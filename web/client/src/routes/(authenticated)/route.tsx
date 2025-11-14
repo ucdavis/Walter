@@ -1,4 +1,4 @@
-import { createFileRoute, Outlet } from '@tanstack/react-router';
+import { createFileRoute, Link, Outlet } from '@tanstack/react-router';
 import { RouterContext } from '../../main.tsx';
 import { meQueryOptions } from '../../queries/user.ts';
 import { UserProvider } from '@/shared/auth/UserContext.tsx';
@@ -19,7 +19,7 @@ export const Route = createFileRoute('/(authenticated)')({
           </div>
           <nav className="flex items-center gap-6">
             <a className="text-gray-600 hover:text-gray-900" href="#">
-              Lorem
+              <Link to="/projects">Projects</Link>
             </a>
             <a className="text-gray-600 hover:text-gray-900" href="#">
               Ipsum
