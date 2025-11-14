@@ -1,69 +1,54 @@
-const expenditures = [
-  {
-    balance: 4293.08,
-    budget: 29_486.0,
-    category: 'Salaries and Wages',
-    encumbrance: 0.0,
-    expense: 25_193.08,
-    icon: '👤',
-  },
-  {
-    balance: 3.0,
-    budget: 12_569.0,
-    category: 'Fringe Benefits',
-    encumbrance: 0.0,
-    expense: 9598.2,
-    icon: '🎁',
-  },
-  {
-    balance: 9612.0,
-    budget: 117_244.82,
-    category: 'Supplies / Services / Other Expenses',
-    encumbrance: 0.0,
-    expense: 108_121.0,
-    icon: '📦',
-  },
-  {
-    balance: 0.0,
-    budget: 0.0,
-    category: 'Contract (Subcontracts)',
-    encumbrance: 0.0,
-    expense: 0.0,
-    icon: '📄',
-  },
-  {
-    balance: 10_523.51,
-    budget: 41_038.0,
-    category: 'Travel',
-    encumbrance: 0.0,
-    expense: 25_323.61,
-    icon: '✈️',
-  },
-  {
-    balance: 8523.51,
-    budget: 20_750.18,
-    category: 'Indirect Costs',
-    encumbrance: 0.0,
-    expense: 17_523.51,
-    icon: '💰',
-  },
-];
+import type { ProjectSummary } from '@/lib/projectSummary.ts';
+import { Currency } from '@/shared/Currency.tsx';
 
-const formatCurrency = (value: number) =>
-  `$${value.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+const ICONS: Record<string, string> = {
+  Contract: '📄',
+  Fringe: '🎁',
+  Indirect: '💰',
+  Salaries: '👤',
+  Supplies: '📦',
+  Travel: '✈️',
+};
 
-export function FinancialDetails() {
+const resolveIcon = (category: string) => {
+  const key = category.toLowerCase();
+  if (key.includes('salary') || key.includes('wage')) {
+    return ICONS.Salaries;
+  }
+  if (key.includes('fringe')) {
+    return ICONS.Fringe;
+  }
+  if (key.includes('supplies') || key.includes('services')) {
+    return ICONS.Supplies;
+  }
+  if (key.includes('contract')) {
+    return ICONS.Contract;
+  }
+  if (key.includes('travel')) {
+    return ICONS.Travel;
+  }
+  if (key.includes('indirect') || key.includes('overhead')) {
+    return ICONS.Indirect;
+  }
+  return '💼';
+};
+
+interface FinancialDetailsProps {
+  summary: ProjectSummary;
+}
+
+export function FinancialDetails({ summary }: FinancialDetailsProps) {
   return (
     <section className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
       <h2 className="mb-4">Financial Details</h2>
       <div className="flex gap-8 mb-6">
         <div>
           <div className="text-sm text-gray-500 mb-1">Budget</div>
-          <div>$221,051.00</div>
+          <Currency value={summary.totals.budget} />
         </div>
         <div>
           <div className="text-sm text-gray-500 mb-1">Current Balance</div>
-          <div>$30,719.77</div>
+          <Currency value={summary.totals.balance} />
         </div>
       </div>
       <div className="flex justify-end mb-4">
@@ -88,34 +73,42 @@ export function FinancialDetails() {
             </tr>
           </thead>
           <tbody>
-            {expenditures.map((item, index) => (
-              <tr className="border-t border-gray-200" key={index}>
+            {summary.categories.map((category) => (
+              <tr className="border-t border-gray-200" key={category.name}>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
-                    <span>{item.icon}</span>
-                    <span>{item.category}</span>
+                    <span>{resolveIcon(category.name)}</span>
+                    <span>{category.name}</span>
                   </div>
                 </td>
                 <td className="text-right px-4 py-3">
-                  {formatCurrency(item.budget)}
+                  <Currency value={category.budget} />
                 </td>
                 <td className="text-right px-4 py-3">
-                  {formatCurrency(item.expense)}
+                  <Currency value={category.expense} />
                 </td>
                 <td className="text-right px-4 py-3">
-                  {formatCurrency(item.encumbrance)}
+                  <Currency value={category.encumbrance} />
                 </td>
                 <td className="text-right px-4 py-3">
-                  {formatCurrency(item.balance)}
+                  <Currency value={category.balance} />
                 </td>
               </tr>
             ))}
             <tr className="border-t-2 border-gray-300 bg-gray-50">
               <td className="px-4 py-3 font-semibold">TOTALS</td>
-              <td className="text-right px-4 py-3">$221,051.00</td>
-              <td className="text-right px-4 py-3">$185,759.77</td>
-              <td className="text-right px-4 py-3">$0.01</td>
-              <td className="text-right px-4 py-3">$30,719.77</td>
+              <td className="text-right px-4 py-3">
+                <Currency value={summary.totals.budget} />
+              </td>
+              <td className="text-right px-4 py-3">
+                <Currency value={summary.totals.expense} />
+              </td>
+              <td className="text-right px-4 py-3">
+                <Currency value={summary.totals.encumbrance} />
+              </td>
+              <td className="text-right px-4 py-3">
+                <Currency value={summary.totals.balance} />
+              </td>
             </tr>
           </tbody>
         </table>

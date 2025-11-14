@@ -1,6 +1,7 @@
 import { allProjectsQueryOptions, ProjectRecord } from '@/queries/project.ts';
 import { Currency } from '@/shared/Currency.tsx';
 import { useSuspenseQuery } from '@tanstack/react-query';
+import { Link, useRouterState } from '@tanstack/react-router';
 
 interface ProjectSummary {
   award_end_date: string | null;
@@ -43,9 +44,29 @@ function groupProjects(records: ProjectRecord[]): ProjectSummary[] {
 
 export function ProjectsSidebar() {
   const { data: projects } = useSuspenseQuery(allProjectsQueryOptions());
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  });
 
   // we want to group projects by project_number
   const groupedProjects = groupProjects(projects);
+  const totalOverviewBalance = groupedProjects.reduce(
+    (total, project) => total + project.total_cat_bud_bal,
+    0
+  );
+
+  const isAllProjectsActive =
+    pathname === '/projects' || pathname === '/projects/';
+
+  const linkClasses = (isActive: boolean, isActiveStatus: boolean) =>
+    [
+      'block text-left px-3 py-2 rounded-md transition-colors border border-transparent',
+      isActive
+        ? 'bg-blue-50 text-blue-700 border-blue-100'
+        : isActiveStatus
+          ? 'bg-gray-100'
+          : 'hover:bg-gray-50',
+    ].join(' ');
 
   return (
     <aside className="w-72 shrink-0">
@@ -54,11 +75,12 @@ export function ProjectsSidebar() {
           <div className="mb-4">
             <h2 className="text-gray-500 text-xs mb-3">MY PROJECTS</h2>
             <div className="flex items-center justify-between mb-3">
-              <span>All Projects Dashboard</span>
-              <button className="p-1 hover:bg-gray-100 rounded">
-                {/* <Grid className="w-4 h-4" /> */}
-                btn
-              </button>
+              <Link
+                className="text-sm font-medium hover:text-blue-600"
+                to="/projects"
+              >
+                All Projects Dashboard
+              </Link>
             </div>
             <div className="relative">
               <input
@@ -70,23 +92,36 @@ export function ProjectsSidebar() {
           </div>
 
           <div className="space-y-1 max-h-[600px] overflow-y-auto">
+            <Link
+              className={linkClasses(isAllProjectsActive, true)}
+              to="/projects"
+            >
+              <div className="flex justify-between items-start mb-1">
+                <span className="text-sm">All Projects</span>
+              </div>
+              <div className="flex justify-between items-center text-xs text-gray-500">
+                <Currency value={totalOverviewBalance} />
+                <span>Overview</span>
+              </div>
+            </Link>
             {groupedProjects.map((project, index) => (
-              <button
-                className={`w-full text-left px-3 py-2 rounded-md transition-colors ${
+              <Link
+                className={linkClasses(
+                  pathname.startsWith(`/projects/${project.project_number}`),
                   project.project_status_code === 'ACTIVE'
-                    ? 'bg-gray-100'
-                    : 'hover:bg-gray-50'
-                }`}
+                )}
                 key={index}
+                params={{ projectNumber: project.project_number }}
+                to="/projects/$projectNumber"
               >
                 <div className="flex justify-between items-start mb-1">
                   <span className="text-sm">{project.project_name}</span>
                 </div>
                 <div className="flex justify-between items-center text-xs text-gray-500">
                   <Currency value={project.total_cat_bud_bal} />
-                  <span>{project.award_end_date}</span>
+                    <span>{project.award_end_date ?? 'No end date'}</span>
                 </div>
-              </button>
+              </Link>
             ))}
           </div>
         </div>
