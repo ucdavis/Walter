@@ -1,4 +1,6 @@
 import { ProjectChart } from '@/components/project/chart.tsx';
+import { ProjectDetails } from '@/components/project/details.tsx';
+import { FinancialDetails } from '@/components/project/financialDetails.tsx';
 import { createFileRoute } from '@tanstack/react-router';
 
 export const Route = createFileRoute('/(authenticated)/projects/')({
@@ -24,10 +26,10 @@ function RouteComponent() {
       </section>
 
       {/* Project Details */}
-      {/* <ProjectDetails /> */}
+      <ProjectDetails />
 
       {/* Financial Details */}
-      {/* <FinancialDetails /> */}
+      <FinancialDetails />
 
       {/* Personnel */}
       {/* <PersonnelSection /> */}
