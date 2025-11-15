@@ -13,6 +13,10 @@ variables:
   azureSubscriptionProd: "AzureProdDeploy"
   testWebApp: "walter-test"
   prodWebApp: "walter"
+  webDir: "$(Build.SourcesDirectory)/web"
+  clientDir: "$(webDir)/client"
+  solutionPath: "$(webDir)/app.sln"
+  serverProjectPath: "$(webDir)/server/server.csproj"
 
 stages:
   - stage: BuildAndTest
@@ -31,15 +35,13 @@ stages:
             inputs:
               version: $(nodeVersion)
 
-          - script: |
-              cd client
-              npm ci
+          - script: npm ci
             displayName: Install client dependencies
+            workingDirectory: $(clientDir)
 
-          - script: |
-              cd client
-              npm run test -- --run
+          - script: npm run test -- --run
             displayName: Run client Vitest suite
+            workingDirectory: $(clientDir)
 
           - task: UseDotNet@2
             displayName: Use .NET SDK 8.0
@@ -47,16 +49,13 @@ stages:
               packageType: sdk
               version: 8.0.x
 
-          - script: |
-              dotnet restore app.sln
+          - script: dotnet restore $(solutionPath)
             displayName: Restore .NET solution
 
-          - script: |
-              dotnet test server/server.csproj --configuration $(buildConfiguration) --logger trx
+          - script: dotnet test $(serverProjectPath) --configuration $(buildConfiguration) --logger trx
             displayName: Run server tests
 
-          - script: |
-              dotnet publish server/server.csproj --configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)/server
+          - script: dotnet publish $(serverProjectPath) --configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)/server
             displayName: Publish server project
 
           - task: ArchiveFiles@2
