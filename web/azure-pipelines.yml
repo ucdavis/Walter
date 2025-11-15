@@ -9,10 +9,10 @@ variables:
   buildConfiguration: Release
   nodeVersion: "22.x"
   artifactName: drop
-  azureSubscriptionTest: "$(AZURE_TEST_SERVICE_CONNECTION)"
-  azureSubscriptionProd: "$(AZURE_PROD_SERVICE_CONNECTION)"
-  testWebApp: "$(TEST_WEBAPP_NAME)"
-  prodWebApp: "$(PROD_WEBAPP_NAME)"
+  azureSubscriptionTest: "AzureTestDeploy"
+  azureSubscriptionProd: "AzureProdDeploy"
+  testWebApp: "walter-test"
+  prodWebApp: "walter"
 
 stages:
   - stage: BuildAndTest
