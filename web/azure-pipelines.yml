@@ -1,0 +1,128 @@
+name: 1.1.$(Date:yyMM).$(Build.BuildId)
+
+trigger:
+  branches:
+    include:
+      - main
+
+variables:
+  buildConfiguration: Release
+  nodeVersion: "22.x"
+  artifactName: drop
+  azureSubscriptionTest: "$(AZURE_TEST_SERVICE_CONNECTION)"
+  azureSubscriptionProd: "$(AZURE_PROD_SERVICE_CONNECTION)"
+  testWebApp: "$(TEST_WEBAPP_NAME)"
+  prodWebApp: "$(PROD_WEBAPP_NAME)"
+
+stages:
+  - stage: BuildAndTest
+    displayName: Build & Test
+    jobs:
+      - job: Build_Test
+        displayName: Build solution and run automated tests
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - checkout: self
+            clean: true
+
+          - task: UseNode@1
+            displayName: Use Node $(nodeVersion)
+            inputs:
+              version: $(nodeVersion)
+
+          - script: |
+              cd client
+              npm ci
+            displayName: Install client dependencies
+
+          - script: |
+              cd client
+              npm run test -- --run
+            displayName: Run client Vitest suite
+
+          - task: UseDotNet@2
+            displayName: Use .NET SDK 8.0
+            inputs:
+              packageType: sdk
+              version: 8.0.x
+
+          - script: |
+              dotnet restore app.sln
+            displayName: Restore .NET solution
+
+          - script: |
+              dotnet test server/server.csproj --configuration $(buildConfiguration) --logger trx
+            displayName: Run server tests
+
+          - script: |
+              dotnet publish server/server.csproj --configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)/server
+            displayName: Publish server project
+
+          - task: ArchiveFiles@2
+            displayName: Create deployment package
+            inputs:
+              rootFolderOrFile: $(Build.ArtifactStagingDirectory)
+              includeRootFolder: false
+              archiveType: zip
+              archiveFile: $(Build.ArtifactStagingDirectory)/site.zip
+              replaceExistingArchive: true
+
+          - publish: $(Build.ArtifactStagingDirectory)
+            displayName: Publish build artifacts
+            artifact: $(artifactName)
+
+  - stage: DeployToTest
+    displayName: Deploy to Test
+    dependsOn: BuildAndTest
+    condition: succeeded()
+    jobs:
+      - deployment: Deploy_Test
+        displayName: Deploy package to Azure test site
+        environment: Test
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - download: current
+                  displayName: Download packaged artifacts
+                  artifact: $(artifactName)
+
+                - task: AzureWebApp@1
+                  displayName: Deploy to test web app
+                  inputs:
+                    azureSubscription: $(azureSubscriptionTest)
+                    appName: $(testWebApp)
+                    appType: webAppLinux
+                    package: $(Pipeline.Workspace)/$(artifactName)/site.zip
+
+  - stage: DeployToProd
+    displayName: Deploy to Production
+    dependsOn: DeployToTest
+    condition: succeeded()
+    jobs:
+      - deployment: Deploy_Prod
+        displayName: Manual approval and deploy to prod
+        environment: Production
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: ManualValidation@0
+                  name: AwaitApproval
+                  displayName: Await go-ahead for production release
+                  inputs:
+                    instructions: "Validate the Azure test site deployment. Approve to promote to production."
+                    onTimeout: reject
+
+                - download: current
+                  displayName: Download packaged artifacts
+                  artifact: $(artifactName)
+
+                - task: AzureWebApp@1
+                  displayName: Deploy to production web app
+                  inputs:
+                    azureSubscription: $(azureSubscriptionProd)
+                    appName: $(prodWebApp)
+                    appType: webAppLinux
+                    package: $(Pipeline.Workspace)/$(artifactName)/site.zip
