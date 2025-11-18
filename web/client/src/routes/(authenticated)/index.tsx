@@ -10,29 +10,13 @@ function RouteComponent() {
   return (
     <div className="min-h-screen bg-base-100">
       <div className="container mx-auto px-4 py-16">
-        {/* Header Section */}
-        <header className="text-center mb-16">
-          <div className="mb-8">
-            <img
-              alt="App Logo"
-              className="mx-auto"
-              height={77}
-              src="/caes.svg"
-              width={419}
-            />
-          </div>
-
-          {/* Hero Message */}
-          <div className="mb-8">
-            <h1 className="text-5xl font-bold mb-4">Hello {user.name}!</h1>
-            <p className="text-xl max-w-2xl mx-auto text-base-content/70">
-              Welcome to your modern app template. Built with Vite, React,
-              TypeScript, and TanStack Router for rapid development.
-            </p>
-          </div>
-        </header>
-
-        {/* Sample Section */}
+        <div className="mb-8">
+          <h1 className="text-5xl font-bold mb-4">Hello {user.name}!</h1>
+          <p className="text-xl max-w-2xl mx-auto text-base-content/70">
+            Welcome to your modern app template. Built with Vite, React,
+            TypeScript, and TanStack Router for rapid development.
+          </p>
+        </div>
         <section className="mb-16">
           <h2 className="text-3xl font-bold text-center mb-12">Sample Pages</h2>
           <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">

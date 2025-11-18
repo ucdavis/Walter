@@ -22,13 +22,13 @@
   --color-base-200: var(--color-light-bg-200);
   --color-base-300: var(--color-light-bg-300);
   --color-base-content: var(--color-dark-font);
-  --color-primary: var(--color-ucd-recpool);
-  --color-primary-content: var(--color-dark-font);
+  --color-primary: var(--color-ucd-gunrock);
+  --color-primary-content: var(--color-light-font);
   --color-secondary: var(--color-ucd-goldenstate);
-  --color-error: var(--color-documentation); /* using for Documentation */
-  --color-info: var(--color-team); /* using for Teams */
-  --color-success: var(--color-portfolio); /* using for Portfolio */
-  --color-warning: var(--color-services); /* using for Services */
+  --color-error: var(--color-documentation);
+  --color-info: var(--color-team);
+  --color-success: var(--color-quad);
+  --color-warning: var(--color-services);
 }
 @layer base {
   .card {
