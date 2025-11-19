@@ -20,13 +20,13 @@ const Footer: React.FC = () => {
 
         {/* Right */}
         <div className="flex-1 flex justify-end">
-          <Link to="https://caes.ucdavis.edu">
+          <a href="https://caes.ucdavis.edu" target="_blank" rel="noopener noreferrer">
             <img
               alt="CA&ES UC Davis Logo"
               className="w-36 opacity-70"
               src="/caes.svg"
             />
-          </Link>
+          </a>
         </div>
       </div>
     </footer>
