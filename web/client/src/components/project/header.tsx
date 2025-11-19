@@ -11,8 +11,8 @@ const Header: React.FC = () => {
 
         <nav className="flex items-center gap-6">
           <Link to="/projects">Projects</Link>
-          <Link to="/projects">Projects</Link>
-          <Link to="/projects">Projects</Link>
+          <Link to="/about">About</Link>
+          <Link to="/contact">Contact</Link>
         </nav>
       </div>
     </header>
