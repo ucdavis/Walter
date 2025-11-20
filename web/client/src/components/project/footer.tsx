@@ -1,4 +1,3 @@
-import { Link } from '@tanstack/react-router';
 
 const Footer: React.FC = () => {
   return (
@@ -20,7 +19,7 @@ const Footer: React.FC = () => {
 
         {/* Right */}
         <div className="flex-1 flex justify-end">
-          <a href="https://caes.ucdavis.edu" target="_blank" rel="noopener noreferrer">
+          <a href="https://caes.ucdavis.edu" rel="noopener noreferrer" target="_blank">
             <img
               alt="CA&ES UC Davis Logo"
               className="w-36 opacity-70"

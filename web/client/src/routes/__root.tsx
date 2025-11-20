@@ -60,6 +60,6 @@ const RootErrorBoundary = ({ error, reset }: ErrorComponentProps) => {
 
 export const Route = createRootRouteWithContext<RouterContext>()({
   component: RootLayout,
-  notFoundComponent: () => <div>404 - Not Found!</div>,
   errorComponent: RootErrorBoundary,
+  notFoundComponent: () => <div>404 - Not Found!</div>,
 });
