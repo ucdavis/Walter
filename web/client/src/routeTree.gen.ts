@@ -17,6 +17,7 @@ import { Route as authenticatedMeRouteImport } from './routes/(authenticated)/me
 import { Route as authenticatedFormRouteImport } from './routes/(authenticated)/form'
 import { Route as authenticatedProjectsRouteRouteImport } from './routes/(authenticated)/projects/route'
 import { Route as authenticatedProjectsIndexRouteImport } from './routes/(authenticated)/projects/index'
+import { Route as authenticatedAccrualsIndexRouteImport } from './routes/(authenticated)/accruals/index'
 import { Route as authenticatedProjectsProjectNumberIndexRouteImport } from './routes/(authenticated)/projects/$projectNumber/index'
 
 const AboutRoute = AboutRouteImport.update({
@@ -60,6 +61,12 @@ const authenticatedProjectsIndexRoute =
     path: '/',
     getParentRoute: () => authenticatedProjectsRouteRoute,
   } as any)
+const authenticatedAccrualsIndexRoute =
+  authenticatedAccrualsIndexRouteImport.update({
+    id: '/accruals/',
+    path: '/accruals/',
+    getParentRoute: () => authenticatedRouteRoute,
+  } as any)
 const authenticatedProjectsProjectNumberIndexRoute =
   authenticatedProjectsProjectNumberIndexRouteImport.update({
     id: '/$projectNumber/',
@@ -74,6 +81,7 @@ export interface FileRoutesByFullPath {
   '/me': typeof authenticatedMeRoute
   '/styles': typeof authenticatedStylesRoute
   '/': typeof authenticatedIndexRoute
+  '/accruals': typeof authenticatedAccrualsIndexRoute
   '/projects/': typeof authenticatedProjectsIndexRoute
   '/projects/$projectNumber': typeof authenticatedProjectsProjectNumberIndexRoute
 }
@@ -83,6 +91,7 @@ export interface FileRoutesByTo {
   '/me': typeof authenticatedMeRoute
   '/styles': typeof authenticatedStylesRoute
   '/': typeof authenticatedIndexRoute
+  '/accruals': typeof authenticatedAccrualsIndexRoute
   '/projects': typeof authenticatedProjectsIndexRoute
   '/projects/$projectNumber': typeof authenticatedProjectsProjectNumberIndexRoute
 }
@@ -95,6 +104,7 @@ export interface FileRoutesById {
   '/(authenticated)/me': typeof authenticatedMeRoute
   '/(authenticated)/styles': typeof authenticatedStylesRoute
   '/(authenticated)/': typeof authenticatedIndexRoute
+  '/(authenticated)/accruals/': typeof authenticatedAccrualsIndexRoute
   '/(authenticated)/projects/': typeof authenticatedProjectsIndexRoute
   '/(authenticated)/projects/$projectNumber/': typeof authenticatedProjectsProjectNumberIndexRoute
 }
@@ -107,6 +117,7 @@ export interface FileRouteTypes {
     | '/me'
     | '/styles'
     | '/'
+    | '/accruals'
     | '/projects/'
     | '/projects/$projectNumber'
   fileRoutesByTo: FileRoutesByTo
@@ -116,6 +127,7 @@ export interface FileRouteTypes {
     | '/me'
     | '/styles'
     | '/'
+    | '/accruals'
     | '/projects'
     | '/projects/$projectNumber'
   id:
@@ -127,6 +139,7 @@ export interface FileRouteTypes {
     | '/(authenticated)/me'
     | '/(authenticated)/styles'
     | '/(authenticated)/'
+    | '/(authenticated)/accruals/'
     | '/(authenticated)/projects/'
     | '/(authenticated)/projects/$projectNumber/'
   fileRoutesById: FileRoutesById
@@ -194,6 +207,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authenticatedProjectsIndexRouteImport
       parentRoute: typeof authenticatedProjectsRouteRoute
     }
+    '/(authenticated)/accruals/': {
+      id: '/(authenticated)/accruals/'
+      path: '/accruals'
+      fullPath: '/accruals'
+      preLoaderRoute: typeof authenticatedAccrualsIndexRouteImport
+      parentRoute: typeof authenticatedRouteRoute
+    }
     '/(authenticated)/projects/$projectNumber/': {
       id: '/(authenticated)/projects/$projectNumber/'
       path: '/$projectNumber'
@@ -227,6 +247,7 @@ interface authenticatedRouteRouteChildren {
   authenticatedMeRoute: typeof authenticatedMeRoute
   authenticatedStylesRoute: typeof authenticatedStylesRoute
   authenticatedIndexRoute: typeof authenticatedIndexRoute
+  authenticatedAccrualsIndexRoute: typeof authenticatedAccrualsIndexRoute
 }
 
 const authenticatedRouteRouteChildren: authenticatedRouteRouteChildren = {
@@ -235,6 +256,7 @@ const authenticatedRouteRouteChildren: authenticatedRouteRouteChildren = {
   authenticatedMeRoute: authenticatedMeRoute,
   authenticatedStylesRoute: authenticatedStylesRoute,
   authenticatedIndexRoute: authenticatedIndexRoute,
+  authenticatedAccrualsIndexRoute: authenticatedAccrualsIndexRoute,
 }
 
 const authenticatedRouteRouteWithChildren =
