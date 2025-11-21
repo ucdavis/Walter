@@ -6,16 +6,7 @@
     "mounts": [ // Mount the parent folder as /workspaces/walter
         "type=bind,source=${localWorkspaceFolder}/..,target=/workspace/walter,consistency=cached"
     ],
-    "features": {
-        "ghcr.io/devcontainers/features/node:1": {
-            "version": "22"
-        },
-        "ghcr.io/devcontainers/features/dotnet:2": {
-            "version": "8.0",
-            "sdk": true
-        },
-        "ghcr.io/devcontainers/features/git:1": {}
-    },
+    // instead of features to install Node.js, .NET, and Git, we'll do it in the Dockerfile
     "customizations": {
         "vscode": {
             "extensions": [
