@@ -44,12 +44,12 @@ function groupProjects(records: ProjectRecord[]): ProjectSummary[] {
 
 const linkClasses = (isActive: boolean, isActiveStatus: boolean) =>
   [
-    'block text-left px-3 py-2 rounded-md transition-colors border border-transparent',
+    'block mb-0 text-left px-3 py-2 transition-colors border-b border-main-border',
     isActive
-      ? 'bg-blue-50 text-blue-700 border-blue-100'
+      ? 'bg-primary-color/10'
       : isActiveStatus
-        ? 'bg-gray-100'
-        : 'hover:bg-gray-50',
+        ? 'bg-primary-color/20'
+        : 'hover:bg-primary-color/10',
   ].join(' ');
 
 export function ProjectsSidebar() {
@@ -71,31 +71,34 @@ export function ProjectsSidebar() {
   return (
     <aside className="w-72 shrink-0">
       <div className="sticky top-24">
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="mb-4">
-            <h2 className="text-gray-500 text-xs mb-3">MY PROJECTS</h2>
-
-            <div className="relative">
+        <div className="bg-white rounded-sm border border-main-border">
+          <div className="bg-light-bg-200 border-b border-main-border">
+            <div className="px-4 py-2 border-b border-main-border">
+              <h2 className="text-primary-font text-sm uppercase">
+                My Projects
+              </h2>
+            </div>
+            <div className="px-4 py-1">
               <input
-                className="pl-9 h-9 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full h-9"
                 placeholder="Search..."
                 type="text"
               />
             </div>
           </div>
 
-          <div className="space-y-1 max-h-[600px] overflow-y-auto">
+          <div className="space-y-1 max-h-[650px] overflow-y-auto">
             <Link
-              className={linkClasses(isAllProjectsActive, true)}
+              className={linkClasses(isAllProjectsActive, false)}
               to="/projects"
               viewTransition={{ types: ['slide-right'] }}
             >
               <div className="flex justify-between items-start mb-1">
-                <span className="text-sm">All Projects</span>
+                <span className="text-base">All Projects</span>
               </div>
-              <div className="flex justify-between items-center text-xs text-gray-500">
+              <div className="flex justify-between text-sm items-center text-dark-font/70">
                 <Currency value={totalOverviewBalance} />
-                <span>Overview</span>
+                <span>total proj #</span>
               </div>
             </Link>
             {groupedProjects.map((project, index) => (
@@ -110,9 +113,9 @@ export function ProjectsSidebar() {
                 viewTransition={{ types: ['slide-left'] }}
               >
                 <div className="flex justify-between items-start mb-1">
-                  <span className="text-sm">{project.project_name}</span>
+                  <span className="text-base">{project.project_name}</span>
                 </div>
-                <div className="flex justify-between items-center text-xs text-gray-500">
+                <div className="flex text-sm justify-between items-center text-dark-font/70">
                   <Currency value={project.total_cat_bud_bal} />
                   <span>{project.award_end_date ?? 'No end date'}</span>
                 </div>
