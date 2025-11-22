@@ -136,3 +136,6 @@ html:active-view-transition-type(slide-right) {
 .h4 {
   @apply text-base font-proxima-bold text-dark-font/40;
 }
+.h5 {
+  @apply text-base font-proxima-bold;
+}

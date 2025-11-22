@@ -42,57 +42,59 @@ export function ProjectChart() {
   const projectedEnd = data.at(-1)?.value ?? 0;
 
   return (
-    <div className="h-64 mb-6 pb-4">
-      <ResponsiveContainer height="100%" width="100%">
-        <LineChart data={data}>
-          <CartesianGrid stroke="#e5e7eb" strokeDasharray="3 3" />
-          <XAxis
-            dataKey="date"
-            tick={{ fontSize: 12 }}
-            tickFormatter={(value) => {
-              const parts = value.split('.');
-              return `${parts[0]}.${parts[2]}`;
-            }}
-          />
-          <YAxis
-            tick={{ fontSize: 12 }}
-            tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
-          />
-          <Tooltip
-            contentStyle={{
-              backgroundColor: 'white',
-              border: '1px solid #e5e7eb',
-              borderRadius: '6px',
-              fontSize: '12px',
-            }}
-            formatter={(value: number) => [formatCurrency(value), 'Balance']}
-          />
-          <Line
-            activeDot={{ r: 6 }}
-            dataKey="value"
-            dot={{ fill: '#2563eb', r: 4 }}
-            stroke="#2563eb"
-            strokeWidth={2}
-            type="monotone"
-          />
-        </LineChart>
-      </ResponsiveContainer>
-      <div className="flex justify-between mt-4 px-2">
+    <div>
+      <div className="h-80 pb-2">
+        <ResponsiveContainer>
+          <LineChart data={data}>
+            <CartesianGrid stroke="#D8D8D8" strokeDasharray="3 3" />
+            <XAxis
+              dataKey="date"
+              tick={{ fontSize: 12 }}
+              tickFormatter={(value) => {
+                const parts = value.split('.');
+                return `${parts[0]}.${parts[2]}`;
+              }}
+            />
+            <YAxis
+              tick={{ fontSize: 12 }}
+              tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
+            />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: 'white',
+                border: '1px solid #E9E3EE',
+                borderRadius: '6px',
+                fontSize: '12px',
+              }}
+              formatter={(value: number) => [formatCurrency(value), 'Balance']}
+            />
+            <Line
+              activeDot={{ r: 6 }}
+              dataKey="value"
+              dot={{ fill: '#0047BA', r: 4 }}
+              stroke="#0047BA"
+              strokeWidth={2}
+              type="monotone"
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+      <div className="flex justify-between px-4 mt-4 border-t border-b bg-light-bg-200 border-main-border py-2">
         <div>
-          <div className="text-xs text-gray-500">Start Balance</div>
-          <div className="text-gray-900">{formatCurrency(startBalance)}</div>
+          <p className="text-sm uppercase">Starting</p>
+          <p className="h5">{formatCurrency(startBalance)}</p>
         </div>
         <div className="text-center">
-          <div className="text-xs text-gray-500">
+          <p className="text-sm uppercase">
             Current ({currentPoint?.date ?? 'N/A'})
-          </div>
-          <div className="text-blue-600">
+          </p>
+          <p className="text-primary-color font-proxima-bold">
             {formatCurrency(currentPoint?.value ?? 0)}
-          </div>
+          </p>
         </div>
         <div className="text-right">
-          <div className="text-xs text-gray-500">Projected End</div>
-          <div className="text-gray-900">{formatCurrency(projectedEnd)}</div>
+          <p className="text-sm uppercase">Projected</p>
+          <p className="h5">{formatCurrency(projectedEnd)}</p>
         </div>
       </div>
     </div>
