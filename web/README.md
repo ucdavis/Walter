@@ -168,3 +168,18 @@ And as always, after updating dependencies, make sure to run `dotnet build` and 
 - `dotnet build` - Build the application
 - `dotnet test` - Run tests
 ```
+
+## Deployment
+
+Deployments use Azure DevOps (https://dev.azure.com/ucdavis/Walter) with separate pipelines for backend and web.
+
+### Deploy Prep
+
+When setting up a new Azure environment, you'll need:
+
+- Website (Azure App Service - Linux preferred)
+- Database (Azure SQL Database)
+
+You'll then need to allow the App Service to access the SQL Database by configuring the firewall rules to allow Azure services. I've included a script in `deploy/test/set-sql-firewall.sh` that can help with this.
+
+Then you'll need to setup Env Settings, basically mirror the `.env` file. Remember to set the correct connection string for your database.

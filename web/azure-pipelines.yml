@@ -59,9 +59,9 @@ stages:
             displayName: Publish server project
 
           - task: ArchiveFiles@2
-            displayName: Create deployment package
+            displayName: Create deployment package from Server Build
             inputs:
-              rootFolderOrFile: $(Build.ArtifactStagingDirectory)
+              rootFolderOrFile: $(Build.ArtifactStagingDirectory)/server
               includeRootFolder: false
               archiveType: zip
               archiveFile: $(Build.ArtifactStagingDirectory)/site.zip
@@ -74,7 +74,7 @@ stages:
   - stage: DeployToTest
     displayName: Deploy to Test
     dependsOn: BuildAndTest
-    condition: succeeded()
+    condition: and(succeeded(),eq(variables['Build.SourceBranch'], 'refs/heads/main'))
     jobs:
       - deployment: Deploy_Test
         displayName: Deploy package to Azure test site
@@ -98,16 +98,17 @@ stages:
   - stage: DeployToProd
     displayName: Deploy to Production
     dependsOn: DeployToTest
-    condition: succeeded()
+    condition: and(succeeded(),eq(variables['Build.SourceBranch'], 'refs/heads/main'))
     jobs:
       - job: Await_Manual_Go
         displayName: Await go-ahead for production release
         pool: server
         steps:
-          - task: ManualValidation@0
+          - task: ManualValidation@1
             inputs:
               instructions: "Validate the Azure test site deployment. Approve to promote to production."
               onTimeout: reject
+              notifyUsers: ''
 
       - deployment: Deploy_Prod
         displayName: Deploy to production web app
