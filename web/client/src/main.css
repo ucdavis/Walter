@@ -131,6 +131,9 @@ html:active-view-transition-type(slide-right) {
   }
 }
 .h1 {
+  @apply text-3xl font-proxima-bold;
+}
+.h2 {
   @apply text-2xl font-proxima-bold;
 }
 .h4 {
@@ -138,4 +141,7 @@ html:active-view-transition-type(slide-right) {
 }
 .h5 {
   @apply text-base font-proxima-bold;
+}
+.section-margin {
+  @apply mb-15;
 }

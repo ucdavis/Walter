@@ -43,7 +43,7 @@ const ProjectNotFound = ({ projectNumber }: { projectNumber: string }) => (
 function ProjectContent({ summary }: { summary: ProjectSummary }) {
   return (
     <main className="flex-1">
-      <section className="mt-8 mb-10">
+      <section className="mt-8 section-margin">
         <div className="mb-2">
           <span className="inline-block bg-primary-color text-white px-3 py-1 text-xs rounded font-proxima-bold">
             DATA AS OF {formatAsOfDate(new Date().toDateString())}

@@ -28,7 +28,7 @@ function RouteComponent() {
       {/* <AlertSection /> */}
 
       {/* Chart Section */}
-      <section className="mt-8 mb-10">
+      <section className="mt-8 section-margin">
         <div className="mb-2">
           <span className="inline-block bg-primary-color text-white px-3 py-1 text-xs rounded font-proxima-bold">
             DATA AS OF {formatAsOfDate(new Date().toDateString())}

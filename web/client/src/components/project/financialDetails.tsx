@@ -1,13 +1,26 @@
 import type { ProjectSummary } from '@/lib/projectSummary.ts';
 import { Currency } from '@/shared/Currency.tsx';
 
-const ICONS: Record<string, string> = {
-  Contract: '📄',
-  Fringe: '🎁',
-  Indirect: '💰',
-  Salaries: '👤',
-  Supplies: '📦',
-  Travel: '✈️',
+// Import Heroicons
+import {
+  AcademicCapIcon,
+  PaperClipIcon,
+  ArchiveBoxIcon,
+  UserIcon,
+  GlobeAltIcon,
+  BoltIcon,
+  BriefcaseIcon,
+  BookOpenIcon,
+} from '@heroicons/react/24/outline';
+
+const ICONS = {
+  Contract: UserIcon,
+  Default: BriefcaseIcon,
+  Fringe: PaperClipIcon,
+  Indirect: BoltIcon,
+  Salaries: AcademicCapIcon,
+  Supplies: ArchiveBoxIcon,
+  Travel: GlobeAltIcon,
 };
 
 const resolveIcon = (category: string) => {
@@ -30,7 +43,7 @@ const resolveIcon = (category: string) => {
   if (key.includes('indirect') || key.includes('overhead')) {
     return ICONS.Indirect;
   }
-  return '💼';
+  return ICONS.Default;
 };
 
 interface FinancialDetailsProps {
@@ -39,8 +52,10 @@ interface FinancialDetailsProps {
 
 export function FinancialDetails({ summary }: FinancialDetailsProps) {
   return (
-    <section className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
-      <h2 className="mb-4">Financial Details</h2>
+    <section className="section-margin">
+      <h2 className="h2">Financial Details</h2>
+
+      {/* Totals */}
       <div className="flex gap-8 mb-6">
         <div>
           <div className="text-sm text-gray-500 mb-1">Budget</div>
@@ -51,15 +66,17 @@ export function FinancialDetails({ summary }: FinancialDetailsProps) {
           <Currency value={summary.totals.balance} />
         </div>
       </div>
+
       <div className="flex justify-end mb-4">
-        <button className="btn btn-outline btn-sm">
-          <span className="mr-2">📄</span>
+        <button className="btn btn-outline btn-sm flex items-center gap-2">
+          <BookOpenIcon className="w-4 h-4" />
           View More
         </button>
       </div>
-      <div className="border border-gray-200 rounded-lg overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50">
+
+      <div className="overflow-x-auto">
+        <table className="table">
+          <thead>
             <tr>
               <th className="text-left px-4 py-3 text-gray-600">
                 Expenditure category name
@@ -73,28 +90,33 @@ export function FinancialDetails({ summary }: FinancialDetailsProps) {
             </tr>
           </thead>
           <tbody>
-            {summary.categories.map((category) => (
-              <tr className="border-t border-gray-200" key={category.name}>
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <span>{resolveIcon(category.name)}</span>
-                    <span>{category.name}</span>
-                  </div>
-                </td>
-                <td className="text-right px-4 py-3">
-                  <Currency value={category.budget} />
-                </td>
-                <td className="text-right px-4 py-3">
-                  <Currency value={category.expense} />
-                </td>
-                <td className="text-right px-4 py-3">
-                  <Currency value={category.encumbrance} />
-                </td>
-                <td className="text-right px-4 py-3">
-                  <Currency value={category.balance} />
-                </td>
-              </tr>
-            ))}
+            {summary.categories.map((category) => {
+              const Icon = resolveIcon(category.name);
+              return (
+                <tr className="border-t border-gray-200" key={category.name}>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <Icon className="w-5 h-5 text-gray-500" />
+                      <span>{category.name}</span>
+                    </div>
+                  </td>
+                  <td className="text-right px-4 py-3">
+                    <Currency value={category.budget} />
+                  </td>
+                  <td className="text-right px-4 py-3">
+                    <Currency value={category.expense} />
+                  </td>
+                  <td className="text-right px-4 py-3">
+                    <Currency value={category.encumbrance} />
+                  </td>
+                  <td className="text-right px-4 py-3">
+                    <Currency value={category.balance} />
+                  </td>
+                </tr>
+              );
+            })}
+
+            {/* Totals Row */}
             <tr className="border-t-2 border-gray-300 bg-gray-50">
               <td className="px-4 py-3 font-semibold">TOTALS</td>
               <td className="text-right px-4 py-3">

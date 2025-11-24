@@ -43,7 +43,7 @@ export function ProjectChart() {
 
   return (
     <div>
-      <div className="h-80 pb-2">
+      <div className="h-80">
         <ResponsiveContainer>
           <LineChart data={data}>
             <CartesianGrid stroke="#D8D8D8" strokeDasharray="3 3" />
