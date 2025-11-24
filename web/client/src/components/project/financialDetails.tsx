@@ -69,7 +69,7 @@ export function FinancialDetails({ summary }: FinancialDetailsProps) {
       </div>
 
       <div className="flex justify-end">
-        <button className="btn btn-primary btn-sm flex items-center gap-2">
+        <button className="btn btn-outline btn-primary btn-sm flex items-center gap-2">
           <BookOpenIcon className="w-4 h-4" />
           View More
         </button>
