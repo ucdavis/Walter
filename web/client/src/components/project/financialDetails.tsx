@@ -56,18 +56,20 @@ export function FinancialDetails({ summary }: FinancialDetailsProps) {
       <h2 className="h2">Financial Details</h2>
 
       {/* Totals */}
-      <div className="flex gap-8 mb-6">
+
+      <div className="grid grid-cols-5 gap-4 mt-4 mb-6">
         <div>
-          <div className="text-sm text-gray-500 mb-1">Budget</div>
+          <div className="h5">Budget</div>
           <Currency value={summary.totals.budget} />
         </div>
         <div>
-          <div className="text-sm text-gray-500 mb-1">Current Balance</div>
+          <div className="h5">Current Balance</div>
           <Currency value={summary.totals.balance} />
         </div>
       </div>
 
-      <div className="flex justify-end mb-4">
+      <div className="flex justify-between">
+        <h3 className="h3 self-end">Expenditure table</h3>
         <button className="btn btn-outline btn-sm flex items-center gap-2">
           <BookOpenIcon className="w-4 h-4" />
           View More
@@ -75,18 +77,14 @@ export function FinancialDetails({ summary }: FinancialDetailsProps) {
       </div>
 
       <div className="overflow-x-auto">
-        <table className="table">
+        <table className="table walter-table">
           <thead>
             <tr>
-              <th className="text-left px-4 py-3 text-gray-600">
-                Expenditure category name
-              </th>
-              <th className="text-right px-4 py-3 text-gray-600">Budget</th>
-              <th className="text-right px-4 py-3 text-gray-600">Expense</th>
-              <th className="text-right px-4 py-3 text-gray-600">
-                Encumbrance
-              </th>
-              <th className="text-right px-4 py-3 text-gray-600">Balance</th>
+              <th className="text-left text-gray-600">Category name</th>
+              <th className="text-right text-gray-600">Budget</th>
+              <th className="text-right text-gray-600">Expense</th>
+              <th className="text-right text-gray-600">Encumbrance</th>
+              <th className="text-right text-gray-600">Balance</th>
             </tr>
           </thead>
           <tbody>

@@ -136,6 +136,9 @@ html:active-view-transition-type(slide-right) {
 .h2 {
   @apply text-2xl font-proxima-bold;
 }
+.h3 {
+  @apply text-sm uppercase text-dark-font;
+}
 .h4 {
   @apply text-base font-proxima-bold text-dark-font/40;
 }
