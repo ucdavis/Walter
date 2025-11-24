@@ -72,11 +72,11 @@ export function ProjectDetails({ summary }: ProjectDetailsProps) {
         </div>
         <div>
           <div className="h5">Total Budget</div>
-          <Currency className="text-base" value={summary.totals.budget} />
+          <Currency value={summary.totals.budget} />
         </div>
         <div>
           <div className="h5">Balance</div>
-          <Currency className="text-base" value={summary.totals.balance} />
+          <Currency value={summary.totals.balance} />
         </div>
       </div>
     </section>
