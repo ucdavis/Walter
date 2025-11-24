@@ -59,9 +59,9 @@ stages:
             displayName: Publish server project
 
           - task: ArchiveFiles@2
-            displayName: Create deployment package
+            displayName: Create deployment package from Server Build
             inputs:
-              rootFolderOrFile: $(Build.ArtifactStagingDirectory)
+              rootFolderOrFile: $(Build.ArtifactStagingDirectory)/server
               includeRootFolder: false
               archiveType: zip
               archiveFile: $(Build.ArtifactStagingDirectory)/site.zip
