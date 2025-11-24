@@ -88,7 +88,7 @@ export function FinancialDetails({ summary }: FinancialDetailsProps) {
               const Icon = resolveIcon(category.name);
               return (
                 <tr key={category.name}>
-                  <td className="px-4 py-3">
+                  <td>
                     <div className="flex items-center gap-2">
                       <Icon className="w-5 h-5" />
                       <span>{category.name}</span>
