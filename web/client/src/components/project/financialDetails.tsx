@@ -61,8 +61,6 @@ export function FinancialDetails({ summary }: FinancialDetailsProps) {
         </button>
       </div>
 
-      {/* Totals */}
-
       <div className="grid grid-cols-5 gap-4 mt-4 mb-6">
         <div>
           <div className="h5">Budget</div>
@@ -74,7 +72,7 @@ export function FinancialDetails({ summary }: FinancialDetailsProps) {
         </div>
       </div>
 
-      <div className="overflow-x-aut mt-4">
+      <div className="overflow-x-auto mt-4">
         <table className="table walter-table">
           <thead>
             <tr>
