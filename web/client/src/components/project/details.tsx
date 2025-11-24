@@ -40,13 +40,13 @@ export function ProjectDetails({ summary }: ProjectDetailsProps) {
         </div>
         <div>
           <div className="h5">PM</div>
-          <div className="text-base text-blue-600 underline cursor-pointer">
+          <div className="text-base text-primary-color underline cursor-pointer">
             {displayValue(summary.pm)}
           </div>
         </div>
         <div>
           <div className="h5">PI</div>
-          <div className="text-base text-blue-600 underline cursor-pointer">
+          <div className="text-base text-primary-color underline cursor-pointer">
             {displayValue(summary.pi)}
           </div>
         </div>

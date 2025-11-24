@@ -53,7 +53,13 @@ interface FinancialDetailsProps {
 export function FinancialDetails({ summary }: FinancialDetailsProps) {
   return (
     <section className="section-margin">
-      <h2 className="h2">Financial Details</h2>
+      <div className="flex justify-between">
+        <h2 className="h2">Financial Details</h2>
+        <button className="btn btn-outline btn-primary btn-sm flex items-center gap-2">
+          <BookOpenIcon className="w-4 h-4" />
+          View More
+        </button>
+      </div>
 
       {/* Totals */}
 
@@ -66,13 +72,6 @@ export function FinancialDetails({ summary }: FinancialDetailsProps) {
           <div className="h5">Current Balance</div>
           <Currency value={summary.totals.balance} />
         </div>
-      </div>
-
-      <div className="flex justify-end">
-        <button className="btn btn-outline btn-primary btn-sm flex items-center gap-2">
-          <BookOpenIcon className="w-4 h-4" />
-          View More
-        </button>
       </div>
 
       <div className="overflow-x-aut mt-4">
