@@ -74,10 +74,7 @@ stages:
   - stage: DeployToTest
     displayName: Deploy to Test
     dependsOn: BuildAndTest
-    condition: and(
-      succeeded(),
-      eq(variables['Build.SourceBranch'], 'refs/heads/main')
-    )
+    condition: and(succeeded(),eq(variables['Build.SourceBranch'], 'refs/heads/main'))
     jobs:
       - deployment: Deploy_Test
         displayName: Deploy package to Azure test site
@@ -101,19 +98,17 @@ stages:
   - stage: DeployToProd
     displayName: Deploy to Production
     dependsOn: DeployToTest
-    condition: and(
-      succeeded(),
-      eq(variables['Build.SourceBranch'], 'refs/heads/main')
-    )
+    condition: and(succeeded(),eq(variables['Build.SourceBranch'], 'refs/heads/main'))
     jobs:
       - job: Await_Manual_Go
         displayName: Await go-ahead for production release
         pool: server
         steps:
-          - task: ManualValidation@0
+          - task: ManualValidation@1
             inputs:
               instructions: "Validate the Azure test site deployment. Approve to promote to production."
               onTimeout: reject
+              notifyUsers: ''
 
       - deployment: Deploy_Prod
         displayName: Deploy to production web app
