@@ -74,7 +74,10 @@ stages:
   - stage: DeployToTest
     displayName: Deploy to Test
     dependsOn: BuildAndTest
-    condition: succeeded()
+    condition: and(
+      succeeded(),
+      eq(variables['Build.SourceBranch'], 'refs/heads/main')
+    )
     jobs:
       - deployment: Deploy_Test
         displayName: Deploy package to Azure test site
@@ -98,7 +101,10 @@ stages:
   - stage: DeployToProd
     displayName: Deploy to Production
     dependsOn: DeployToTest
-    condition: succeeded()
+    condition: and(
+      succeeded(),
+      eq(variables['Build.SourceBranch'], 'refs/heads/main')
+    )
     jobs:
       - job: Await_Manual_Go
         displayName: Await go-ahead for production release
