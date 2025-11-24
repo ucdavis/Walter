@@ -1,3 +1,6 @@
+#!/bin/bash
+set -euo pipefail
+
 RESOURCE_GROUP="walter-test"
 APP_NAME="walter-test"
 SQL_SERVER_NAME="walter-test"
