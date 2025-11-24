@@ -148,3 +148,25 @@ html:active-view-transition-type(slide-right) {
 .section-margin {
   @apply mb-15;
 }
+.walter-table th {
+  padding: 4px 0;
+  border-top: 1px solid var(--color-main-border);
+  border-bottom: 1px solid var(--color-main-border);
+  font-size: 0.8rem;
+  font-family: var(--font-proxima-bold);
+  color: var(--color-dark-font);
+}
+.walter-table td {
+  padding: 12px 0;
+  color: var(--color-dark-font);
+}
+.walter-table tr {
+  border: none;
+}
+.walter-table .totaltr {
+  border-top: 1px solid var(--color-main-border);
+  border-bottom: 1px solid var(--color-main-border);
+  font-size: 0.8rem;
+  font-family: var(--font-proxima-bold);
+  color: var(--color-dark-font);
+}

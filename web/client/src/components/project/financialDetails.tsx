@@ -68,46 +68,45 @@ export function FinancialDetails({ summary }: FinancialDetailsProps) {
         </div>
       </div>
 
-      <div className="flex justify-between">
-        <h3 className="h3 self-end">Expenditure table</h3>
-        <button className="btn btn-outline btn-sm flex items-center gap-2">
+      <div className="flex justify-end">
+        <button className="btn btn-primary btn-sm flex items-center gap-2">
           <BookOpenIcon className="w-4 h-4" />
           View More
         </button>
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="overflow-x-aut mt-4">
         <table className="table walter-table">
           <thead>
             <tr>
-              <th className="text-left text-gray-600">Category name</th>
-              <th className="text-right text-gray-600">Budget</th>
-              <th className="text-right text-gray-600">Expense</th>
-              <th className="text-right text-gray-600">Encumbrance</th>
-              <th className="text-right text-gray-600">Balance</th>
+              <th className="text-left">Category name</th>
+              <th className="text-right">Budget</th>
+              <th className="text-right">Expense</th>
+              <th className="text-right">Encumbrance</th>
+              <th className="text-right">Balance</th>
             </tr>
           </thead>
           <tbody>
             {summary.categories.map((category) => {
               const Icon = resolveIcon(category.name);
               return (
-                <tr className="border-t border-gray-200" key={category.name}>
+                <tr key={category.name}>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
-                      <Icon className="w-5 h-5 text-gray-500" />
+                      <Icon className="w-5 h-5" />
                       <span>{category.name}</span>
                     </div>
                   </td>
-                  <td className="text-right px-4 py-3">
+                  <td className="text-right">
                     <Currency value={category.budget} />
                   </td>
-                  <td className="text-right px-4 py-3">
+                  <td className="text-right">
                     <Currency value={category.expense} />
                   </td>
-                  <td className="text-right px-4 py-3">
+                  <td className="text-right">
                     <Currency value={category.encumbrance} />
                   </td>
-                  <td className="text-right px-4 py-3">
+                  <td className="text-right">
                     <Currency value={category.balance} />
                   </td>
                 </tr>
@@ -115,18 +114,18 @@ export function FinancialDetails({ summary }: FinancialDetailsProps) {
             })}
 
             {/* Totals Row */}
-            <tr className="border-t-2 border-gray-300 bg-gray-50">
-              <td className="px-4 py-3 font-semibold">TOTALS</td>
-              <td className="text-right px-4 py-3">
+            <tr className="totaltr">
+              <td>TOTALS</td>
+              <td className="text-right">
                 <Currency value={summary.totals.budget} />
               </td>
-              <td className="text-right px-4 py-3">
+              <td className="text-right">
                 <Currency value={summary.totals.expense} />
               </td>
-              <td className="text-right px-4 py-3">
+              <td className="text-right">
                 <Currency value={summary.totals.encumbrance} />
               </td>
-              <td className="text-right px-4 py-3">
+              <td className="text-right">
                 <Currency value={summary.totals.balance} />
               </td>
             </tr>
