@@ -75,7 +75,7 @@ export function FinancialDetails({ summary }: FinancialDetailsProps) {
         </button>
       </div>
 
-      <div className="overflow-x-aut mt-4">
+      <div className="overflow-x-auto mt-4">
         <table className="table walter-table">
           <thead>
             <tr>
