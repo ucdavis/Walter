@@ -12,7 +12,9 @@ export const Route = createFileRoute('/(authenticated)')({
   component: () => (
     <UserProvider>
       <Header />
+
       <Outlet />
+
       <Footer />
     </UserProvider>
   ),

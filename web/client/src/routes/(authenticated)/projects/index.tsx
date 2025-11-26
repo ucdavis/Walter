@@ -23,19 +23,19 @@ function RouteComponent() {
   const summary = summarizeAllProjects(projects);
 
   return (
-    <main className="flex-1 max-w-4xl">
+    <main className="flex-1">
       {/* Alerts */}
       {/* <AlertSection /> */}
 
       {/* Chart Section */}
-      <section className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
-        <div className="mb-4">
-          <span className="inline-block bg-blue-600 text-white px-3 py-1 text-xs rounded">
+      <section className="mt-8 section-margin">
+        <div className="mb-2">
+          <span className="inline-block bg-primary-color text-white px-3 py-1 text-xs rounded font-proxima-bold">
             DATA AS OF {formatAsOfDate(new Date().toDateString())}
           </span>
         </div>
-        <h1 className="mb-1">{summary.projectName}</h1>
-        <p className="text-gray-500 text-sm mb-6">{summary.projectNumber}</p>
+        <h1 className="h1">{summary.projectName}</h1>
+        <p className="h4 mb-4">{summary.projectNumber}</p>
         <ProjectChart />
       </section>
 
