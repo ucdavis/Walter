@@ -30,4 +30,15 @@ public sealed class ProjectController : ApiControllerBase
 
         return Content(json, "application/json");
     }
+
+    [HttpGet("transactions")]
+    public IActionResult GetTransactionsForProjects(CancellationToken cancellationToken, [FromQuery] string projectCodes)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var path = Path.Combine(_env.ContentRootPath, "Models", "FacultyTransactionsFake.json");
+        var json = System.IO.File.ReadAllText(path);
+
+        return Content(json, "application/json");
+    }
 }

@@ -11,7 +11,7 @@ import {
   BoltIcon,
   BriefcaseIcon,
   BookOpenIcon,
-} from '@heroicons/react/24/outline';
+} from '@heroicons/react/outline';
 
 const ICONS = {
   Contract: UserIcon,
