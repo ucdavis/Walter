@@ -12,6 +12,8 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 
+type ChartPoint = { date: string; value: number };
+
 function formatCurrency(value: number) {
   return `$${value.toLocaleString(undefined, {
     maximumFractionDigits: 2,
@@ -19,40 +21,139 @@ function formatCurrency(value: number) {
   })}`;
 }
 
-function formatDataForChart(data: Transaction[]) {
-  // Transform transaction data into chart-friendly format
-  // we'll use journal_acct_date for x-axis and actual_amount for y-axis
-  const chartData: { date: string; value: number }[] = [];
-  const dateMap: Record<string, number> = {};
+function parseYearMonth(input: string): { month: number; year: number } {
+  const trimmed = input.trim();
+  const [datePart] = trimmed.split('T'); // handle ISO strings with time
+  const parts = datePart.split('-'); // "YYYY-MM" or "YYYY-MM-DD"
 
-  data.forEach((transaction) => {
-    const date = new Date(transaction.journal_acct_date);
-    const formattedDate = `${date.getMonth() + 1}.${date.getDate()}.${date.getFullYear()}`;
-
-    if (!dateMap[formattedDate]) {
-      dateMap[formattedDate] = 0;
+  if (parts.length >= 2) {
+    const year = Number(parts[0]);
+    const month = Number(parts[1]);
+    if (
+      !Number.isNaN(year) &&
+      !Number.isNaN(month) &&
+      month >= 1 &&
+      month <= 12
+    ) {
+      return { month, year };
     }
-    dateMap[formattedDate] += transaction.actual_amount;
-  });
+  }
 
-  for (const date of Object.keys(dateMap).sort((a, b) => {
-    const [aMonth, aDay, aYear] = a.split('.').map(Number);
-    const [bMonth, bDay, bYear] = b.split('.').map(Number);
-    return (
-      new Date(aYear, aMonth - 1, aDay).getTime() -
-      new Date(bYear, bMonth - 1, bDay).getTime()
-    );
-  })) {
-    chartData.push({ date, value: dateMap[date] });
+  // Fallback to Date parsing if format is different
+  const d = new Date(trimmed);
+  if (!Number.isNaN(d.getTime())) {
+    return { month: d.getMonth() + 1, year: d.getFullYear() };
+  }
+
+  throw new Error(`Unable to parse year/month from date: "${input}"`);
+}
+
+function toMonthId(year: number, month: number): number {
+  // month is 1–12; stored as 0-based internally
+  return year * 12 + (month - 1);
+}
+
+function monthIdToIsoDateString(monthId: number): string {
+  const year = Math.floor(monthId / 12);
+  const month = (monthId % 12) + 1;
+  // First of the month, ISO format
+  return `${year}-${String(month).padStart(2, '0')}-01`;
+}
+
+export function formatDataForChart(
+  data: Transaction[],
+  startingBalance: number,
+  startingDate: string
+): ChartPoint[] {
+  // Month we start tracking from
+  const { month: startMonth, year: startYear } = parseYearMonth(startingDate);
+  const startMonthId = toMonthId(startYear, startMonth);
+
+  // Aggregate monthly net change (credits/spends) starting from start month
+  const monthChanges = new Map<number, number>();
+
+  for (const transaction of data) {
+    const { month, year } = parseYearMonth(transaction.expenditureItemDate);
+    const monthId = toMonthId(year, month);
+
+    // Ignore transactions before the starting month
+    if (monthId < startMonthId) {
+      continue;
+    }
+
+    const signedAmount = transaction.burdenedCostInReceiverLedgerCurrency;
+
+    // Positive = spend (subtract from balance), negative = credit (add to balance)
+    const change = -signedAmount;
+
+    monthChanges.set(monthId, (monthChanges.get(monthId) ?? 0) + change);
+  }
+
+  // Decide how far to run the chart: at least the starting month,
+  // up through the last month that has any transactions
+  let lastMonthId = startMonthId;
+  for (const monthId of monthChanges.keys()) {
+    if (monthId > lastMonthId) {
+      lastMonthId = monthId;
+    }
+  }
+
+  const chartData: ChartPoint[] = [];
+  let runningBalance = startingBalance;
+
+  for (let monthId = startMonthId; monthId <= lastMonthId; monthId++) {
+    const monthChange = monthChanges.get(monthId) ?? 0;
+    runningBalance += monthChange;
+
+    chartData.push({
+      date: monthIdToIsoDateString(monthId),
+      value: runningBalance,
+    });
+  }
+
+  // If there were no transactions >= starting month, still return a single point
+  if (chartData.length === 0) {
+    chartData.push({
+      date: monthIdToIsoDateString(startMonthId),
+      value: startingBalance,
+    });
   }
 
   return chartData;
 }
 
-export function ProjectChart() {
-  const { data: transactions } = useTransactionsForProjectQuery(['K30ESS6F22']);
+export interface ProjectChartProps {
+  projects: string[];
+  startingBalance: number;
+  startingDate: string | null;
+}
 
-  const data = transactions ? formatDataForChart(transactions) : [];
+export function ProjectChart({
+  projects,
+  startingBalance,
+  startingDate,
+}: ProjectChartProps) {
+  const { data: transactions } = useTransactionsForProjectQuery([...projects]);
+
+  // if starting date not provided, get the earliest date from transactions
+  if (!startingDate) {
+    let earliestDate: string | null = null;
+    if (transactions) {
+      for (const transaction of transactions) {
+        const transactionDate = transaction.expenditureItemDate;
+        if (
+          !earliestDate ||
+          new Date(transactionDate) < new Date(earliestDate)
+        ) {
+          earliestDate = transactionDate;
+        }
+      }
+    }
+    startingDate = earliestDate || new Date().toISOString();
+  }
+  const data = transactions
+    ? formatDataForChart(transactions, startingBalance, startingDate)
+    : [];
 
   const startBalance = data[0]?.value ?? 0;
   const currentPoint = data.at(-2);
@@ -64,14 +165,7 @@ export function ProjectChart() {
         <ResponsiveContainer>
           <LineChart data={data}>
             <CartesianGrid stroke="#D8D8D8" strokeDasharray="3 3" />
-            <XAxis
-              dataKey="date"
-              tick={{ fontSize: 12 }}
-              tickFormatter={(value) => {
-                const parts = value.split('.');
-                return `${parts[0]}.${parts[2]}`;
-              }}
-            />
+            <XAxis dataKey="date" tick={{ fontSize: 12 }} />
             <YAxis
               tick={{ fontSize: 12 }}
               tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}

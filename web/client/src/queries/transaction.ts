@@ -2,20 +2,17 @@ import { useQuery } from '@tanstack/react-query';
 import { fetchJson } from '@/lib/api.ts';
 
 export interface Transaction {
-  account: string;
-  account_description: string;
-  activity: string;
-  actual_amount: number;
-  commitment_amount: number;
-  department: string;
-  entity: string;
-  fund: string;
-  journal_acct_date: string;
-  obligation_amount: number;
-  period_name: string;
-  program: string;
-  project: string;
-  purpose: string;
+  accountingPeriod: string;
+  burdenedCostInReceiverLedgerCurrency: number;
+  contractNumber: string;
+  creationDate: string;
+  expenditureCategory: string;
+  expenditureItemDate: string;
+  expenditureType: string;
+  fundingSources: string;
+  projectNumber: string;
+  rawCostInReceiverLedgerCurrency: number;
+  taskNumber: string;
 }
 
 export const transactionsForProjectQueryOptions = (projectCodes: string[]) => ({

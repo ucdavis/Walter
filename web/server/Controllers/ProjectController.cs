@@ -36,7 +36,7 @@ public sealed class ProjectController : ApiControllerBase
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var path = Path.Combine(_env.ContentRootPath, "Models", "FacultyTransactionsFake.json");
+        var path = Path.Combine(_env.ContentRootPath, "Models", "ProjectTransactionsFake.json");
         var json = System.IO.File.ReadAllText(path);
 
         return Content(json, "application/json");

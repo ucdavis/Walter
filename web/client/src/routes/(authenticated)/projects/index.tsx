@@ -22,6 +22,10 @@ function RouteComponent() {
   const { data: projects } = useSuspenseQuery(allProjectsQueryOptions());
   const summary = summarizeAllProjects(projects);
 
+  const projectNumbers = projects.map((project) => project.project_number);
+  const earliestStartDate = summary.awardStartDate;
+  const startingBalanceAllProjects = summary.totals.balance;
+
   return (
     <main className="flex-1">
       {/* Alerts */}
@@ -36,7 +40,16 @@ function RouteComponent() {
         </div>
         <h1 className="h1">{summary.projectName}</h1>
         <p className="h4 mb-4">{summary.projectNumber}</p>
-        <ProjectChart />
+        <ProjectChart
+          projects={projectNumbers}
+          startingBalance={startingBalanceAllProjects}
+          startingDate={
+            earliestStartDate ||
+            new Date(
+              new Date().setFullYear(new Date().getFullYear() - 1)
+            ).toISOString()
+          }
+        />
       </section>
 
       {/* Financial Details */}
