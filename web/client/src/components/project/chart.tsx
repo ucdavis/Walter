@@ -1,4 +1,8 @@
 import {
+  Transaction,
+  useTransactionsForProjectQuery,
+} from '@/queries/transaction.ts';
+import {
   LineChart,
   Line,
   XAxis,
@@ -8,26 +12,6 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 
-const dates = [
-  '05.23.2012',
-  '07.15.2013',
-  '02.28.2015',
-  '08.12.2016',
-  '03.05.2018',
-  '11.18.2020',
-  '05.30.2022',
-  '01.15.2024',
-  '11.9.2025',
-  '08.23.2029',
-];
-
-function generateChartData() {
-  return dates.map((date) => ({
-    date,
-    value: Number((25_000 + Math.random() * 225_000).toFixed(2)),
-  }));
-}
-
 function formatCurrency(value: number) {
   return `$${value.toLocaleString(undefined, {
     maximumFractionDigits: 2,
@@ -35,8 +19,41 @@ function formatCurrency(value: number) {
   })}`;
 }
 
+function formatDataForChart(data: Transaction[]) {
+  // Transform transaction data into chart-friendly format
+  // we'll use journal_acct_date for x-axis and actual_amount for y-axis
+  const chartData: { date: string; value: number }[] = [];
+  const dateMap: Record<string, number> = {};
+
+  data.forEach((transaction) => {
+    const date = new Date(transaction.journal_acct_date);
+    const formattedDate = `${date.getMonth() + 1}.${date.getDate()}.${date.getFullYear()}`;
+
+    if (!dateMap[formattedDate]) {
+      dateMap[formattedDate] = 0;
+    }
+    dateMap[formattedDate] += transaction.actual_amount;
+  });
+
+  for (const date of Object.keys(dateMap).sort((a, b) => {
+    const [aMonth, aDay, aYear] = a.split('.').map(Number);
+    const [bMonth, bDay, bYear] = b.split('.').map(Number);
+    return (
+      new Date(aYear, aMonth - 1, aDay).getTime() -
+      new Date(bYear, bMonth - 1, bDay).getTime()
+    );
+  })) {
+    chartData.push({ date, value: dateMap[date] });
+  }
+
+  return chartData;
+}
+
 export function ProjectChart() {
-  const data = generateChartData();
+  const { data: transactions } = useTransactionsForProjectQuery(['K30ESS6F22']);
+
+  const data = transactions ? formatDataForChart(transactions) : [];
+
   const startBalance = data[0]?.value ?? 0;
   const currentPoint = data.at(-2);
   const projectedEnd = data.at(-1)?.value ?? 0;
