@@ -43,7 +43,7 @@ export function ProjectChart() {
 
   return (
     <div>
-      <ResponsiveContainer height={568} width="100%">
+      <ResponsiveContainer height={468} width="100%">
         <LineChart data={data}>
           <CartesianGrid stroke="#D8D8D8" strokeDasharray="3 3" />
           <XAxis
