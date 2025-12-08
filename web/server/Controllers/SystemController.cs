@@ -49,6 +49,16 @@ public class SystemController : ApiControllerBase
 
         await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
 
-        return Ok($"Now emulating user: {user.DisplayName ?? user.Kerberos} ({user.Email})");
+        return Redirect("/");
+    }
+
+    [HttpGet("endemulate")]
+    [Authorize] // Allow any authenticated user to end emulation (not just System role)
+    [AllowAnonymous] // Actually, just sign them out regardless
+    public async Task<IActionResult> EndEmulate()
+    {
+        await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+
+        return Ok("Emulation ended. Please log in again.");
     }
 }
