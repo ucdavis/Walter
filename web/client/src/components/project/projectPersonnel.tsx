@@ -27,6 +27,7 @@ export function ProjectPersonnel({ projects }: ProjectPersonnelProps) {
           <table className="table walter-table">
             <thead>
               <tr>
+                <th className="text-left">Project</th>
                 <th className="text-left">Name</th>
                 <th className="text-right">Dist %</th>
                 <th className="text-right pr-6">FTE</th>
@@ -39,6 +40,7 @@ export function ProjectPersonnel({ projects }: ProjectPersonnelProps) {
                 <tr
                   key={`${person.JOB_EMPLID}-${person.POSITION_NBR}-${index}`}
                 >
+                  <td>{person.PROJECT_ID}</td>
                   <td>
                     <div className="flex items-center gap-2">
                       <UserGroupIcon className="w-5 h-5" />
