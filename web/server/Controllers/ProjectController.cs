@@ -41,4 +41,15 @@ public sealed class ProjectController : ApiControllerBase
 
         return Content(json, "application/json");
     }
+
+    [HttpGet("personnel")]
+    public IActionResult GetPersonnelForProjects(CancellationToken cancellationToken, [FromQuery] string projectCodes)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var path = Path.Combine(_env.ContentRootPath, "Models", "ProjectPersonnelFake.json");
+        var json = System.IO.File.ReadAllText(path);
+
+        return Content(json, "application/json");
+    }
 }

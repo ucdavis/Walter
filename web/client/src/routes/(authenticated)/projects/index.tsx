@@ -1,5 +1,6 @@
 import { ProjectChart } from '@/components/project/chart.tsx';
 import { FinancialDetails } from '@/components/project/financialDetails.tsx';
+import { ProjectPersonnel } from '@/components/project/projectPersonnel.tsx';
 import { summarizeAllProjects } from '@/lib/projectSummary.ts';
 import { allProjectsQueryOptions } from '@/queries/project.ts';
 import { useSuspenseQuery } from '@tanstack/react-query';
@@ -22,7 +23,10 @@ function RouteComponent() {
   const { data: projects } = useSuspenseQuery(allProjectsQueryOptions());
   const summary = summarizeAllProjects(projects);
 
-  const projectNumbers = projects.map((project) => project.project_number);
+  const projectNumbers = [
+    ...new Set(projects.map((project) => project.project_number)),
+  ];
+
   const earliestStartDate = summary.awardStartDate;
   const startingBalanceAllProjects = summary.totals.balance;
 
@@ -56,7 +60,7 @@ function RouteComponent() {
       <FinancialDetails summary={summary} />
 
       {/* Personnel */}
-      {/* <PersonnelSection /> */}
+      <ProjectPersonnel projects={projectNumbers} />
     </main>
   );
 }
