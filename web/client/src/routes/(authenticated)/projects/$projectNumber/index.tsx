@@ -51,7 +51,11 @@ function ProjectContent({ summary }: { summary: ProjectSummary }) {
         </div>
         <h1 className="h1">{summary.projectName}</h1>
         <p className="mb-4 h4">{summary.projectNumber}</p>
-        <ProjectChart />
+        <ProjectChart
+          projects={[summary.projectNumber]}
+          startingBalance={summary.totals.balance}
+          startingDate={summary.awardStartDate}
+        />
       </section>
 
       <ProjectDetails summary={summary} />
