@@ -12,7 +12,7 @@ export const Route = createFileRoute('/(authenticated)/projects')({
 function RouteComponent() {
   return (
     <div className="container">
-      <div className="flex gap-8">
+      <div className="flex gap-12">
         <ProjectsSidebar />
 
         {/* Main Content */}

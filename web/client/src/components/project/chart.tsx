@@ -161,36 +161,34 @@ export function ProjectChart({
 
   return (
     <div>
-      <div className="h-80">
-        <ResponsiveContainer>
-          <LineChart data={data}>
-            <CartesianGrid stroke="#D8D8D8" strokeDasharray="3 3" />
-            <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-            <YAxis
-              tick={{ fontSize: 12 }}
-              tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
-            />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: 'white',
-                border: '1px solid #E9E3EE',
-                borderRadius: '6px',
-                fontSize: '12px',
-              }}
-              formatter={(value: number) => [formatCurrency(value), 'Balance']}
-            />
-            <Line
-              activeDot={{ r: 6 }}
-              dataKey="value"
-              dot={{ fill: '#0047BA', r: 4 }}
-              stroke="#0047BA"
-              strokeWidth={2}
-              type="monotone"
-            />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
-      <div className="flex justify-between px-4 mt-4 border-t border-b bg-light-bg-200 border-main-border py-2">
+      <ResponsiveContainer height={468} width="100%">
+        <LineChart data={data}>
+          <CartesianGrid stroke="#D8D8D8" strokeDasharray="3 3" />
+          <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+          <YAxis
+            tick={{ fontSize: 12 }}
+            tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
+          />
+          <Tooltip
+            contentStyle={{
+              backgroundColor: 'white',
+              border: '1px solid #E9E3EE',
+              borderRadius: '6px',
+              fontSize: '12px',
+            }}
+            formatter={(value: number) => [formatCurrency(value), 'Balance']}
+          />
+          <Line
+            activeDot={{ r: 6 }}
+            dataKey="value"
+            dot={{ fill: '#0047BA', r: 4 }}
+            stroke="#0047BA"
+            strokeWidth={2}
+            type="monotone"
+          />
+        </LineChart>
+      </ResponsiveContainer>
+      <div className="flex justify-between px-6 mt-4 mb-8 border rounded-md bg-light-bg-200 border-main-border py-4">
         <div>
           <p className="text-sm uppercase">Starting</p>
           <p className="h5">{formatCurrency(startBalance)}</p>

@@ -43,9 +43,7 @@ export const DataTable = <TData extends object>({
   return (
     <div className="space-y-4">
       {globalFilter !== 'none' && (
-        <div
-          className={`flex items-center ${globalFilter === 'right' ? 'justify-end' : 'justify-start'}`}
-        >
+        <div className={`flex`}>
           <label className="input input-bordered flex items-center gap-2 w-full max-w-sm">
             <svg
               className="h-[1em] opacity-50"
@@ -92,8 +90,7 @@ export const DataTable = <TData extends object>({
 
       <div className="overflow-x-auto">
         {' '}
-        {/* enables horizontal scroll on small screens */}
-        <table className="table table-zebra w-full">
+        <table className="table walter-table">
           <thead>
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id}>

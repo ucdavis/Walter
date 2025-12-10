@@ -87,56 +87,48 @@ function RouteComponent() {
       : `${Math.round((value / totalEmployees) * 100)}%`;
 
   return (
-    <div className="min-h-screen bg-base-100">
-      <div className="container mx-auto px-4 py-10 space-y-6">
-        <div>
-          <h1 className="text-4xl font-bold mb-2">Accruals</h1>
-        </div>
+    <div className="container mt-8">
+      <div className="flex gap-12 mt-8">
+        <aside className="w-72 shrink-0">Sidenav placeholder?</aside>
 
-        <div className="grid gap-4 md:grid-cols-3">
-          <div className="card bg-base-100 border border-base-200 shadow-sm">
-            <div className="card-body">
-              <h2 className="card-title">Employees at Max</h2>
-              <p className="text-4xl font-semibold text-error">
-                {employeesAtMax}
-              </p>
-              <p className="opacity-80">
+        <section className="flex-1">
+          <h1 className="h1">Employee Vacation Accruals</h1>
+          <div className="flex justify-between gap-12 px-6 mt-4 mb-8 border rounded-md bg-light-bg-200 border-main-border py-4 h-36">
+            <div className="flex flex-col flex-1">
+              <h2 className="h5">Employees at Max</h2>
+              <p className="text-3xl mt-1">{employeesAtMax}</p>
+              <p className="mt-auto text-sm text-dark-font/70">
                 {toPercent(employeesAtMax)} of{' '}
-                {totalEmployees === 0 ? '0' : totalEmployees} employees have
-                reached their accrual limit.
+                {totalEmployees === 0 ? '0' : totalEmployees} employees reached
+                accrual limit.
               </p>
             </div>
-          </div>
 
-          <div className="card bg-base-100 border border-base-200 shadow-sm">
-            <div className="card-body">
-              <h2 className="card-title">Trending to Max (&gt;90%)</h2>
-              <p className="text-4xl font-semibold text-warning">
-                {trendingToMax}
-              </p>
-              <p className="opacity-80">
+            <div className="flex flex-col flex-1">
+              <h2 className="h5">Trending to Max (&gt;90%)</h2>
+              <p className="text-3xl mt-1 text-error">{trendingToMax}</p>
+              <p className="mt-auto text-sm text-dark-font/70">
                 {toPercent(trendingToMax)} are above 90% of their limit.
               </p>
             </div>
-          </div>
 
-          <div className="card bg-base-100 border border-base-200 shadow-sm">
-            <div className="card-body">
-              <h2 className="card-title">Monthly Liability</h2>
-              <p className="text-4xl font-semibold text-success">$75,945</p>
-              <p className="opacity-80">Static value for now.</p>
+            <div className="flex flex-col flex-1">
+              <h2 className="h5">Monthly Liability</h2>
+              <p className="text-3xl mt-1 font-semibold text-primary">
+                $75,945
+              </p>
+              <p className="mt-auto text-sm text-dark-font/70">
+                Static value for now.
+              </p>
             </div>
           </div>
-        </div>
-        <div className="card bg-base-100 shadow">
-          <div className="card-body">
-            <DataTable
-              columns={columns}
-              data={accruals}
-              initialState={{ pagination: { pageSize: 25 } }}
-            />
-          </div>
-        </div>
+
+          <DataTable
+            columns={columns}
+            data={accruals}
+            initialState={{ pagination: { pageSize: 25 } }}
+          />
+        </section>
       </div>
     </div>
   );
