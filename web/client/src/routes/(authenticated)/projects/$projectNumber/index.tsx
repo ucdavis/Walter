@@ -15,15 +15,6 @@ export const Route = createFileRoute(
   component: RouteComponent,
 });
 
-const formatAsOfDate = (value: string | null) => {
-  if (!value) {
-    return 'N/A';
-  }
-
-  const date = new Date(value);
-  return `${date.getMonth() + 1}.${date.getDate()}.${date.getFullYear()}`;
-};
-
 const ProjectNotFound = ({ projectNumber }: { projectNumber: string }) => (
   <main className="flex-1 max-w-4xl">
     <section className="bg-white rounded-lg border border-gray-200 p-8">
@@ -44,11 +35,6 @@ function ProjectContent({ summary }: { summary: ProjectSummary }) {
   return (
     <main className="flex-1">
       <section className="mt-8 section-margin">
-        <div className="mb-2">
-          <span className="inline-block bg-primary-color text-white px-3 py-1 text-xs rounded font-proxima-bold">
-            DATA AS OF {formatAsOfDate(new Date().toDateString())}
-          </span>
-        </div>
         <h1 className="h1">{summary.projectName}</h1>
         <p className="mb-4 h4">{summary.projectNumber}</p>
         <ProjectChart

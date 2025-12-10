@@ -1,6 +1,15 @@
 import React from 'react';
 import { Link } from '@tanstack/react-router';
 
+const formatAsOfDate = (value: string | null) => {
+  if (!value) {
+    return 'N/A';
+  }
+
+  const date = new Date(value);
+  return `${date.getMonth() + 1}.${date.getDate()}.${date.getFullYear()}`;
+};
+
 const Header: React.FC = () => {
   return (
     <header className="bg-light-bg-200 border-b py-3 border-main-border sticky top-0 z-50">
@@ -9,7 +18,11 @@ const Header: React.FC = () => {
           <img alt="Dog outline logo" className="w-8" src="/walter.svg" />
           <h1 className="text-2xl">Walter</h1>
         </Link>
-
+        <div className="absolute top-[48px] left-1/2 -translate-x-1/2">
+          <span className="inline-block bg-primary-color text-white px-3 py-1 text-xs rounded font-proxima-bold">
+            DATA AS OF {formatAsOfDate(new Date().toDateString())}
+          </span>
+        </div>
         <nav className="flex items-center gap-6">
           <Link to="/projects">Projects</Link>
           <Link to="/about">About</Link>
