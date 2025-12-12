@@ -7,6 +7,7 @@ using server.core.Data;
 using server.Helpers;
 using Server.Services;
 using server.core.Services;
+using server.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -33,15 +34,17 @@ builder.Services.AddAuthenticationServices(builder.Configuration);
 
 // app settings sections
 builder.Services.Configure<IamSettings>(builder.Configuration.GetSection("Iam"));
+builder.Services.Configure<FinancialSettings>(builder.Configuration.GetSection("Financial"));
 
 builder.Services.AddControllers();
 
-// Add response caching for pages that opt-in
+// add response caching for pages that opt-in
 // https://learn.microsoft.com/en-us/aspnet/core/performance/caching/middleware?view=aspnetcore-9.0
 builder.Services.AddResponseCaching();
 
 // add singleton services here
 builder.Services.AddSingleton<DmConnectionHelper>();
+builder.Services.AddSingleton<IFinancialApiService, FinancialApiService>();
 
 // add scoped services here
 builder.Services.AddScoped<IDbInitializer, DbInitializer>();

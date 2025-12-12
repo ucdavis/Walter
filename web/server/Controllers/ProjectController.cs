@@ -1,3 +1,4 @@
+using AggieEnterpriseApi.Extensions;
 using DotEnv.Core;
 using Microsoft.AspNetCore.Mvc;
 using server.Helpers;
@@ -10,27 +11,32 @@ public sealed class ProjectController : ApiControllerBase
     private readonly ILogger<ProjectController> _logger;
     private readonly IWebHostEnvironment _env;
     private readonly DmConnectionHelper _dmConnection;
+    private readonly IFinancialApiService _financialApiService;
 
-    public ProjectController(ILogger<ProjectController> logger, IWebHostEnvironment env, DmConnectionHelper dmConnection)
+    public ProjectController(
+        ILogger<ProjectController> logger,
+        IWebHostEnvironment env,
+        DmConnectionHelper dmConnection,
+        IFinancialApiService financialApiService)
     {
         _logger = logger;
         _env = env;
         _dmConnection = dmConnection;
+        _financialApiService = financialApiService;
     }
 
     [HttpGet("{employeeId}")]
     public async Task<IActionResult> GetByEmployeeIdAsync(string employeeId, CancellationToken cancellationToken)
     {
-        // TODO: get real data from AE API
-        var projectNumbers = new List<string>
-        {
-            "CS0K336F22",
-            "CS0K372B43",
-            "K30ESS6F22"
-        };
+        var client = _financialApiService.GetClient();
 
-        // Note: OPENQUERY requires the inner query to be a string literal, preventing true parameterization.
-        // We sanitize the input by escaping single quotes to prevent SQL injection.
+        // Query projects where the specified employee is a Principal Investigator
+        var result = await client.PpmProjectByProjectTeamMemberEmployeeId.ExecuteAsync(employeeId, PpmRole.PrincipalInvestigator, cancellationToken);
+
+        var data = result.ReadData();
+
+        var projectNumbers = data.PpmProjectByProjectTeamMemberEmployeeId.Select(p => p.ProjectNumber).Distinct().ToList();
+
         var sql = QueryService.FormatQueryWithList("FacultyProjectReport", projectNumbers);
 
         var results = await _dmConnection.QueryAsync<object>(sql, ct: cancellationToken);
