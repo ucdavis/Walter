@@ -43,7 +43,7 @@ public static class QueryService
     }
 
     /// <summary>
-    /// Formats a query with IN clause for a list of string values
+    /// Formats a query with IN clause for a list of string values (safely escaped for OPENQUERY)
     /// </summary>
     /// <param name="queryName">Name of the query file without .sql extension</param>
     /// <param name="values">List of values to include in the IN clause</param>
@@ -51,7 +51,8 @@ public static class QueryService
     public static string FormatQueryWithList(string queryName, IEnumerable<string> values)
     {
         var query = GetQuery(queryName);
-        var quotedValues = string.Join(", ", values.Select(v => $"''{v}''"));
+        // Escape single quotes and wrap in quotes for SQL safety
+        var quotedValues = string.Join(", ", values.Select(v => $"''{v.Replace("'", "''''''")}''"));
         return string.Format(query, quotedValues);
     }
 

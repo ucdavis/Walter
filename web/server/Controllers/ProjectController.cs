@@ -29,6 +29,8 @@ public sealed class ProjectController : ApiControllerBase
             "K30ESS6F22"
         };
 
+        // Note: OPENQUERY requires the inner query to be a string literal, preventing true parameterization.
+        // We sanitize the input by escaping single quotes to prevent SQL injection.
         var sql = QueryService.FormatQueryWithList("FacultyProjectReport", projectNumbers);
 
         var results = await _dmConnection.QueryAsync<object>(sql, ct: cancellationToken);
