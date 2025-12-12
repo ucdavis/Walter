@@ -82,4 +82,40 @@ public sealed class ProjectController : ApiControllerBase
 
         return Content(json, "application/json");
     }
+
+    /// <summary>
+    /// Gets a unique list of Principal Investigators for all projects managed by the specified employee.
+    /// </summary>
+    /// <param name="employeeId">The employee ID of the Project Manager</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>A unique list of Principal Investigators with their name and employee ID</returns>
+    [HttpGet("managed/{employeeId}")]
+    public async Task<IActionResult> GetManagedFaculty(string employeeId, CancellationToken cancellationToken)
+    {
+        var client = _financialApiService.GetClient();
+
+        // Query projects where the specified employee is a Project Manager
+        var result = await client.PpmProjectByProjectTeamMemberEmployeeId.ExecuteAsync(
+            employeeId,
+            PpmRole.ProjectManager,
+            cancellationToken);
+
+        var data = result.ReadData();
+
+        // Extract unique Principal Investigators from all projects with project count
+        var principalInvestigators = data.PpmProjectByProjectTeamMemberEmployeeId
+            .SelectMany(project => project.TeamMembers)
+            .Where(member => member.RoleName == PpmRole.PrincipalInvestigator)
+            .GroupBy(member => member.EmployeeId)
+            .Select(group => new
+            {
+                name = group.First().Name,
+                employeeId = group.Key,
+                projectCount = group.Count()
+            })
+            .OrderBy(pi => pi.name)
+            .ToList();
+
+        return Ok(principalInvestigators);
+    }
 }
