@@ -1,5 +1,7 @@
 using DotEnv.Core;
 using Microsoft.AspNetCore.Mvc;
+using server.Helpers;
+using server.Services;
 
 namespace Server.Controllers;
 
@@ -7,11 +9,31 @@ public sealed class ProjectController : ApiControllerBase
 {
     private readonly ILogger<ProjectController> _logger;
     private readonly IWebHostEnvironment _env;
+    private readonly DmConnectionHelper _dmConnection;
 
-    public ProjectController(ILogger<ProjectController> logger, IWebHostEnvironment env)
+    public ProjectController(ILogger<ProjectController> logger, IWebHostEnvironment env, DmConnectionHelper dmConnection)
     {
         _logger = logger;
         _env = env;
+        _dmConnection = dmConnection;
+    }
+
+    [HttpGet("{employeeId}")]
+    public async Task<IActionResult> GetByEmployeeIdAsync(string employeeId, CancellationToken cancellationToken)
+    {
+        // TODO: get real data from AE API
+        var projectNumbers = new List<string>
+        {
+            "CS0K336F22",
+            "CS0K372B43",
+            "K30ESS6F22"
+        };
+
+        var sql = QueryService.FormatQueryWithList("FacultyProjectReport", projectNumbers);
+
+        var results = await _dmConnection.QueryAsync<object>(sql, ct: cancellationToken);
+
+        return Ok(results);
     }
 
     /// <summary>

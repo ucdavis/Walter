@@ -40,6 +40,9 @@ builder.Services.AddControllers();
 // https://learn.microsoft.com/en-us/aspnet/core/performance/caching/middleware?view=aspnetcore-9.0
 builder.Services.AddResponseCaching();
 
+// add singleton services here
+builder.Services.AddSingleton<DmConnectionHelper>();
+
 // add scoped services here
 builder.Services.AddScoped<IDbInitializer, DbInitializer>();
 builder.Services.AddScoped<IUserService, UserService>();
