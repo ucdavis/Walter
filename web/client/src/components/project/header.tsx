@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from '@tanstack/react-router';
+import { useUser } from '@/shared/auth/UserContext.tsx';
 
 const formatAsOfDate = (value: string | null) => {
   if (!value) {
@@ -11,6 +12,7 @@ const formatAsOfDate = (value: string | null) => {
 };
 
 const Header: React.FC = () => {
+  const user = useUser();
   return (
     <header className="bg-light-bg-200 border-b py-3 border-main-border sticky top-0 z-50">
       <div className="container flex items-center justify-between">
@@ -30,12 +32,12 @@ const Header: React.FC = () => {
             <Link to="/accruals">Accruals</Link>
           </nav>
           <div className="flex-col text-right border-l border-main-border ps-4">
-            <p>Username</p>
+            <p>{user?.name}</p>
             <a
               className="underline text-sm text-dark-font/70 font-proxima-bold"
               href="#"
             >
-              Staff
+              Staff???
             </a>
           </div>
           <div className="avatar">
