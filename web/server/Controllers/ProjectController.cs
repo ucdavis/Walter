@@ -104,14 +104,14 @@ public sealed class ProjectController : ApiControllerBase
 
         // Extract unique Principal Investigators from all projects with project count
         var principalInvestigators = data.PpmProjectByProjectTeamMemberEmployeeId
-            .SelectMany(project => project.TeamMembers)
-            .Where(member => member.RoleName == PpmRole.PrincipalInvestigator)
-            .GroupBy(member => member.EmployeeId)
+            .SelectMany(project => project.TeamMembers.Select(member => new { project.ProjectNumber, Member = member }))
+            .Where(x => x.Member.RoleName == PpmRole.PrincipalInvestigator)
+            .GroupBy(x => x.Member.EmployeeId)
             .Select(group => new
             {
-                name = group.First().Name,
+                name = group.First().Member.Name,
                 employeeId = group.Key,
-                projectCount = group.Count()
+                projectCount = group.Select(x => x.ProjectNumber).Distinct().Count()
             })
             .OrderBy(pi => pi.name)
             .ToList();

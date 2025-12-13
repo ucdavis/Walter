@@ -32,22 +32,22 @@ public sealed class DmConnectionHelper
         int commandTimeoutSeconds = 60,
         CancellationToken ct = default)
     {
-        return await _retry.ExecuteAsync(async () =>
+        return await _retry.ExecuteAsync(async ct2 =>
         {
             await using var conn = new SqlConnection(_connectionString);
-            await conn.OpenAsync(ct);
+            await conn.OpenAsync(ct2);
 
             var cmd = new CommandDefinition(
                 commandText: sql,
                 parameters: parameters,
                 commandType: CommandType.Text,
                 commandTimeout: commandTimeoutSeconds,
-                cancellationToken: ct);
+                cancellationToken: ct2);
 
             // Force load into memory:
             var rows = await conn.QueryAsync<T>(cmd);
             return rows.AsList(); // materialize
-        });
+        }, ct);
     }
 
     public async Task<T?> QuerySingleOrDefaultAsync<T>(
