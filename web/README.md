@@ -53,6 +53,8 @@ The backend requires a SQL Server connection string. By default `appsettings.Dev
 
 When you want to specify your own DB connection, provide it by setting the `DB_CONNECTION` environment variable (for example in a `.env` file) or by updating `ConnectionStrings:DefaultConnection` in `appsettings.*.json` (`.env` is recommended)
 
+For connecting to actual data sources, you'll also need to set `DM_CONNECTION` which should point to the Elzar database for real data connections.
+
 ### Auth Configuration
 
 We use OIDC with Microsoft Entra ID (Azure AD) for authentication. The auth flow doesn't use any secrets and the settings in `appsettings.*.json` are sufficient for local development.
