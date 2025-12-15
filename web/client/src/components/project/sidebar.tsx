@@ -4,7 +4,7 @@ import {
 } from '@/queries/project.ts';
 import { Currency } from '@/shared/Currency.tsx';
 import { useSuspenseQuery } from '@tanstack/react-query';
-import { Link, useParams, useRouterState } from '@tanstack/react-router';
+import { Link, useParams } from '@tanstack/react-router';
 
 interface ProjectSummary {
   award_end_date: string | null;
@@ -56,13 +56,10 @@ const linkClasses = (isActive: boolean, isActiveStatus: boolean) =>
   ].join(' ');
 
 export function ProjectsSidebar() {
-  const { employeeId } = useParams({ strict: false });
+  const { employeeId, projectNumber } = useParams({ strict: false });
   const { data: projects } = useSuspenseQuery(
     projectsDetailQueryOptions(employeeId)
   );
-  const pathname = useRouterState({
-    select: (state) => state.location.pathname,
-  });
 
   if (!projects?.length) {
     return null;
@@ -75,8 +72,7 @@ export function ProjectsSidebar() {
     0
   );
 
-  const isAllProjectsActive =
-    pathname === '/projects' || pathname === '/projects/';
+  const isAllProjectsActive = !projectNumber;
 
   return (
     <aside className="w-72 shrink-0">
@@ -100,7 +96,8 @@ export function ProjectsSidebar() {
           <div className="space-y-1 max-h-[650px] overflow-y-auto">
             <Link
               className={linkClasses(isAllProjectsActive, false)}
-              to="/projects"
+              params={{ employeeId }}
+              to="/projects/$employeeId"
               viewTransition={{ types: ['slide-right'] }}
             >
               <div className="flex justify-between items-start mb-1">
@@ -114,12 +111,12 @@ export function ProjectsSidebar() {
             {groupedProjects.map((project, index) => (
               <Link
                 className={linkClasses(
-                  pathname.startsWith(`/projects/${project.project_number}`),
+                  projectNumber === project.project_number,
                   project.project_status_code === 'ACTIVE'
                 )}
                 key={index}
-                params={{ projectNumber: project.project_number }}
-                to="/projects/$projectNumber"
+                params={{ employeeId, projectNumber: project.project_number }}
+                to="/projects//$employeeId/$projectNumber"
                 viewTransition={{ types: ['slide-left'] }}
               >
                 <div className="flex justify-between items-start mb-1">

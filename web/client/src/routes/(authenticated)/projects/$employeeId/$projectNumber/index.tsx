@@ -51,8 +51,10 @@ function ProjectContent({ summary }: { summary: ProjectSummary }) {
 }
 
 function RouteComponent() {
-  const { projectNumber } = Route.useParams();
-  const { data: projects } = useSuspenseQuery(projectsDetailQueryOptions());
+  const { employeeId, projectNumber } = Route.useParams();
+  const { data: projects } = useSuspenseQuery(
+    projectsDetailQueryOptions(employeeId)
+  );
   const summary = summarizeProjectByNumber(projects, projectNumber);
 
   if (!summary) {
