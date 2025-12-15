@@ -2,7 +2,7 @@ import { ProjectChart } from '@/components/project/chart.tsx';
 import { FinancialDetails } from '@/components/project/financialDetails.tsx';
 import { ProjectPersonnel } from '@/components/project/projectPersonnel.tsx';
 import { summarizeAllProjects } from '@/lib/projectSummary.ts';
-import { allProjectsQueryOptions } from '@/queries/project.ts';
+import { projectsDetailQueryOptions } from '@/queries/project.ts';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 
@@ -11,7 +11,10 @@ export const Route = createFileRoute('/(authenticated)/projects/$employeeId/')({
 });
 
 function RouteComponent() {
-  const { data: projects } = useSuspenseQuery(allProjectsQueryOptions());
+  const { employeeId } = Route.useParams();
+  const { data: projects } = useSuspenseQuery(
+    projectsDetailQueryOptions(employeeId)
+  );
   const summary = summarizeAllProjects(projects);
 
   const projectNumbers = [

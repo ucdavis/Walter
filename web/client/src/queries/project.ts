@@ -33,16 +33,17 @@ export interface ManagedPiRecord {
   projectCount: number;
 }
 
-export const allProjectsQueryOptions = () => ({
+export const projectsDetailQueryOptions = (employeeId: string) => ({
+  enabled: Boolean(employeeId),
   queryFn: async (): Promise<ProjectRecord[]> => {
-    return await fetchJson<ProjectRecord[]>('/api/project');
+    return await fetchJson<ProjectRecord[]>(`/api/project/${employeeId}`);
   },
-  queryKey: ['projects', 'me'] as const,
+  queryKey: ['projects', employeeId] as const,
   staleTime: 60 * 60 * 1000, // 1 hour
 });
 
-export const useAllProjectsQuery = () => {
-  return useQuery(allProjectsQueryOptions());
+export const useProjectsDetailQuery = (employeeId: string) => {
+  return useQuery(projectsDetailQueryOptions(employeeId));
 };
 
 export const managedPisQueryOptions = (employeeId: string) => ({

@@ -5,7 +5,7 @@ import {
   summarizeProjectByNumber,
   type ProjectSummary,
 } from '@/lib/projectSummary.ts';
-import { allProjectsQueryOptions } from '@/queries/project.ts';
+import { projectsDetailQueryOptions } from '@/queries/project.ts';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { Link, createFileRoute } from '@tanstack/react-router';
 
@@ -52,7 +52,7 @@ function ProjectContent({ summary }: { summary: ProjectSummary }) {
 
 function RouteComponent() {
   const { projectNumber } = Route.useParams();
-  const { data: projects } = useSuspenseQuery(allProjectsQueryOptions());
+  const { data: projects } = useSuspenseQuery(projectsDetailQueryOptions());
   const summary = summarizeProjectByNumber(projects, projectNumber);
 
   if (!summary) {

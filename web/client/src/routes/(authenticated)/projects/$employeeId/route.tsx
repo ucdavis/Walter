@@ -1,11 +1,11 @@
 import { createFileRoute, Outlet } from '@tanstack/react-router';
 import { ProjectsSidebar } from '@/components/project/sidebar.tsx';
-import { allProjectsQueryOptions } from '@/queries/project.ts';
+import { projectsDetailQueryOptions } from '@/queries/project.ts';
 
 export const Route = createFileRoute('/(authenticated)/projects/$employeeId')({
   component: RouteComponent,
-  loader: ({ context: { queryClient } }) =>
-    queryClient.ensureQueryData(allProjectsQueryOptions()),
+  loader: ({ context: { queryClient }, params: { employeeId } }) =>
+    queryClient.ensureQueryData(projectsDetailQueryOptions(employeeId)),
   pendingComponent: () => <div>Loading projects...</div>,
 });
 

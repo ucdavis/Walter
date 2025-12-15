@@ -1,4 +1,7 @@
-import { allProjectsQueryOptions, ProjectRecord } from '@/queries/project.ts';
+import {
+  projectsDetailQueryOptions,
+  ProjectRecord,
+} from '@/queries/project.ts';
 import { Currency } from '@/shared/Currency.tsx';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { Link, useRouterState } from '@tanstack/react-router';
@@ -53,7 +56,7 @@ const linkClasses = (isActive: boolean, isActiveStatus: boolean) =>
   ].join(' ');
 
 export function ProjectsSidebar() {
-  const { data: projects } = useSuspenseQuery(allProjectsQueryOptions());
+  const { data: projects } = useSuspenseQuery(projectsDetailQueryOptions());
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
