@@ -15,6 +15,19 @@ function RouteComponent() {
   const { data: projects } = useSuspenseQuery(
     projectsDetailQueryOptions(employeeId)
   );
+
+  if (!projects?.length) {
+    return (
+      <main className="flex-1">
+        <section className="mt-8 section-margin">
+          <div className="alert">
+            <span>We didn&apos;t find any projects for you.</span>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
   const summary = summarizeAllProjects(projects);
 
   const projectNumbers = [

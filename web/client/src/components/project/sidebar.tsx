@@ -4,7 +4,7 @@ import {
 } from '@/queries/project.ts';
 import { Currency } from '@/shared/Currency.tsx';
 import { useSuspenseQuery } from '@tanstack/react-query';
-import { Link, useRouterState } from '@tanstack/react-router';
+import { Link, useParams, useRouterState } from '@tanstack/react-router';
 
 interface ProjectSummary {
   award_end_date: string | null;
@@ -56,10 +56,17 @@ const linkClasses = (isActive: boolean, isActiveStatus: boolean) =>
   ].join(' ');
 
 export function ProjectsSidebar() {
-  const { data: projects } = useSuspenseQuery(projectsDetailQueryOptions());
+  const { employeeId } = useParams({ strict: false });
+  const { data: projects } = useSuspenseQuery(
+    projectsDetailQueryOptions(employeeId)
+  );
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
+
+  if (!projects?.length) {
+    return null;
+  }
 
   // we want to group projects by project_number
   const groupedProjects = groupProjects(projects);
