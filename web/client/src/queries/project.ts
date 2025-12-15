@@ -27,6 +27,12 @@ export interface ProjectRecord {
   task_status: string;
 }
 
+export interface ManagedPiRecord {
+  employeeId: string;
+  name: string;
+  projectCount: number;
+}
+
 export const allProjectsQueryOptions = () => ({
   queryFn: async (): Promise<ProjectRecord[]> => {
     return await fetchJson<ProjectRecord[]>('/api/project');
@@ -37,4 +43,19 @@ export const allProjectsQueryOptions = () => ({
 
 export const useAllProjectsQuery = () => {
   return useQuery(allProjectsQueryOptions());
+};
+
+export const managedPisQueryOptions = (employeeId: string) => ({
+  enabled: Boolean(employeeId),
+  queryFn: async (): Promise<ManagedPiRecord[]> => {
+    return await fetchJson<ManagedPiRecord[]>(
+      `/api/project/managed/${employeeId}`
+    );
+  },
+  queryKey: ['projects', 'managed', employeeId] as const,
+  staleTime: 5 * 60 * 1000, // 5 minutes
+});
+
+export const useManagedPisQuery = (employeeId: string) => {
+  return useQuery(managedPisQueryOptions(employeeId));
 };

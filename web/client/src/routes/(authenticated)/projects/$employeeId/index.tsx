@@ -6,7 +6,7 @@ import { allProjectsQueryOptions } from '@/queries/project.ts';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 
-export const Route = createFileRoute('/(authenticated)/projects/')({
+export const Route = createFileRoute('/(authenticated)/projects/$employeeId/')({
   component: RouteComponent,
 });
 

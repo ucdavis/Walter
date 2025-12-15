@@ -1,6 +1,5 @@
-import { createFileRoute, Outlet } from '@tanstack/react-router';
-import { ProjectsSidebar } from '@/components/project/sidebar.tsx';
 import { allProjectsQueryOptions } from '@/queries/project.ts';
+import { createFileRoute } from '@tanstack/react-router';
 
 export const Route = createFileRoute('/(authenticated)/projects')({
   component: RouteComponent,
@@ -10,14 +9,5 @@ export const Route = createFileRoute('/(authenticated)/projects')({
 });
 
 function RouteComponent() {
-  return (
-    <div className="container">
-      <div className="flex gap-12">
-        <ProjectsSidebar />
-
-        {/* Main Content */}
-        <Outlet />
-      </div>
-    </div>
-  );
+  return <div>here we will check what permissions you have</div>;
 }

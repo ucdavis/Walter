@@ -16,9 +16,10 @@ import { Route as authenticatedStylesRouteImport } from './routes/(authenticated
 import { Route as authenticatedMeRouteImport } from './routes/(authenticated)/me'
 import { Route as authenticatedFormRouteImport } from './routes/(authenticated)/form'
 import { Route as authenticatedProjectsRouteRouteImport } from './routes/(authenticated)/projects/route'
-import { Route as authenticatedProjectsIndexRouteImport } from './routes/(authenticated)/projects/index'
 import { Route as authenticatedAccrualsIndexRouteImport } from './routes/(authenticated)/accruals/index'
-import { Route as authenticatedProjectsProjectNumberIndexRouteImport } from './routes/(authenticated)/projects/$projectNumber/index'
+import { Route as authenticatedProjectsEmployeeIdRouteRouteImport } from './routes/(authenticated)/projects/$employeeId/route'
+import { Route as authenticatedProjectsEmployeeIdIndexRouteImport } from './routes/(authenticated)/projects/$employeeId/index'
+import { Route as authenticatedProjectsEmployeeIdProjectNumberIndexRouteImport } from './routes/(authenticated)/projects/$employeeId/$projectNumber/index'
 
 const AboutRoute = AboutRouteImport.update({
   id: '/about',
@@ -55,23 +56,29 @@ const authenticatedProjectsRouteRoute =
     path: '/projects',
     getParentRoute: () => authenticatedRouteRoute,
   } as any)
-const authenticatedProjectsIndexRoute =
-  authenticatedProjectsIndexRouteImport.update({
-    id: '/',
-    path: '/',
-    getParentRoute: () => authenticatedProjectsRouteRoute,
-  } as any)
 const authenticatedAccrualsIndexRoute =
   authenticatedAccrualsIndexRouteImport.update({
     id: '/accruals/',
     path: '/accruals/',
     getParentRoute: () => authenticatedRouteRoute,
   } as any)
-const authenticatedProjectsProjectNumberIndexRoute =
-  authenticatedProjectsProjectNumberIndexRouteImport.update({
+const authenticatedProjectsEmployeeIdRouteRoute =
+  authenticatedProjectsEmployeeIdRouteRouteImport.update({
+    id: '/$employeeId',
+    path: '/$employeeId',
+    getParentRoute: () => authenticatedProjectsRouteRoute,
+  } as any)
+const authenticatedProjectsEmployeeIdIndexRoute =
+  authenticatedProjectsEmployeeIdIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => authenticatedProjectsEmployeeIdRouteRoute,
+  } as any)
+const authenticatedProjectsEmployeeIdProjectNumberIndexRoute =
+  authenticatedProjectsEmployeeIdProjectNumberIndexRouteImport.update({
     id: '/$projectNumber/',
     path: '/$projectNumber/',
-    getParentRoute: () => authenticatedProjectsRouteRoute,
+    getParentRoute: () => authenticatedProjectsEmployeeIdRouteRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -81,19 +88,21 @@ export interface FileRoutesByFullPath {
   '/me': typeof authenticatedMeRoute
   '/styles': typeof authenticatedStylesRoute
   '/': typeof authenticatedIndexRoute
+  '/projects/$employeeId': typeof authenticatedProjectsEmployeeIdRouteRouteWithChildren
   '/accruals': typeof authenticatedAccrualsIndexRoute
-  '/projects/': typeof authenticatedProjectsIndexRoute
-  '/projects/$projectNumber': typeof authenticatedProjectsProjectNumberIndexRoute
+  '/projects/$employeeId/': typeof authenticatedProjectsEmployeeIdIndexRoute
+  '/projects/$employeeId/$projectNumber': typeof authenticatedProjectsEmployeeIdProjectNumberIndexRoute
 }
 export interface FileRoutesByTo {
   '/about': typeof AboutRoute
+  '/projects': typeof authenticatedProjectsRouteRouteWithChildren
   '/form': typeof authenticatedFormRoute
   '/me': typeof authenticatedMeRoute
   '/styles': typeof authenticatedStylesRoute
   '/': typeof authenticatedIndexRoute
   '/accruals': typeof authenticatedAccrualsIndexRoute
-  '/projects': typeof authenticatedProjectsIndexRoute
-  '/projects/$projectNumber': typeof authenticatedProjectsProjectNumberIndexRoute
+  '/projects/$employeeId': typeof authenticatedProjectsEmployeeIdIndexRoute
+  '/projects/$employeeId/$projectNumber': typeof authenticatedProjectsEmployeeIdProjectNumberIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -104,9 +113,10 @@ export interface FileRoutesById {
   '/(authenticated)/me': typeof authenticatedMeRoute
   '/(authenticated)/styles': typeof authenticatedStylesRoute
   '/(authenticated)/': typeof authenticatedIndexRoute
+  '/(authenticated)/projects/$employeeId': typeof authenticatedProjectsEmployeeIdRouteRouteWithChildren
   '/(authenticated)/accruals/': typeof authenticatedAccrualsIndexRoute
-  '/(authenticated)/projects/': typeof authenticatedProjectsIndexRoute
-  '/(authenticated)/projects/$projectNumber/': typeof authenticatedProjectsProjectNumberIndexRoute
+  '/(authenticated)/projects/$employeeId/': typeof authenticatedProjectsEmployeeIdIndexRoute
+  '/(authenticated)/projects/$employeeId/$projectNumber/': typeof authenticatedProjectsEmployeeIdProjectNumberIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -117,19 +127,21 @@ export interface FileRouteTypes {
     | '/me'
     | '/styles'
     | '/'
+    | '/projects/$employeeId'
     | '/accruals'
-    | '/projects/'
-    | '/projects/$projectNumber'
+    | '/projects/$employeeId/'
+    | '/projects/$employeeId/$projectNumber'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/about'
+    | '/projects'
     | '/form'
     | '/me'
     | '/styles'
     | '/'
     | '/accruals'
-    | '/projects'
-    | '/projects/$projectNumber'
+    | '/projects/$employeeId'
+    | '/projects/$employeeId/$projectNumber'
   id:
     | '__root__'
     | '/(authenticated)'
@@ -139,9 +151,10 @@ export interface FileRouteTypes {
     | '/(authenticated)/me'
     | '/(authenticated)/styles'
     | '/(authenticated)/'
+    | '/(authenticated)/projects/$employeeId'
     | '/(authenticated)/accruals/'
-    | '/(authenticated)/projects/'
-    | '/(authenticated)/projects/$projectNumber/'
+    | '/(authenticated)/projects/$employeeId/'
+    | '/(authenticated)/projects/$employeeId/$projectNumber/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -200,13 +213,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authenticatedProjectsRouteRouteImport
       parentRoute: typeof authenticatedRouteRoute
     }
-    '/(authenticated)/projects/': {
-      id: '/(authenticated)/projects/'
-      path: '/'
-      fullPath: '/projects/'
-      preLoaderRoute: typeof authenticatedProjectsIndexRouteImport
-      parentRoute: typeof authenticatedProjectsRouteRoute
-    }
     '/(authenticated)/accruals/': {
       id: '/(authenticated)/accruals/'
       path: '/accruals'
@@ -214,26 +220,56 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authenticatedAccrualsIndexRouteImport
       parentRoute: typeof authenticatedRouteRoute
     }
-    '/(authenticated)/projects/$projectNumber/': {
-      id: '/(authenticated)/projects/$projectNumber/'
-      path: '/$projectNumber'
-      fullPath: '/projects/$projectNumber'
-      preLoaderRoute: typeof authenticatedProjectsProjectNumberIndexRouteImport
+    '/(authenticated)/projects/$employeeId': {
+      id: '/(authenticated)/projects/$employeeId'
+      path: '/$employeeId'
+      fullPath: '/projects/$employeeId'
+      preLoaderRoute: typeof authenticatedProjectsEmployeeIdRouteRouteImport
       parentRoute: typeof authenticatedProjectsRouteRoute
+    }
+    '/(authenticated)/projects/$employeeId/': {
+      id: '/(authenticated)/projects/$employeeId/'
+      path: '/'
+      fullPath: '/projects/$employeeId/'
+      preLoaderRoute: typeof authenticatedProjectsEmployeeIdIndexRouteImport
+      parentRoute: typeof authenticatedProjectsEmployeeIdRouteRoute
+    }
+    '/(authenticated)/projects/$employeeId/$projectNumber/': {
+      id: '/(authenticated)/projects/$employeeId/$projectNumber/'
+      path: '/$projectNumber'
+      fullPath: '/projects/$employeeId/$projectNumber'
+      preLoaderRoute: typeof authenticatedProjectsEmployeeIdProjectNumberIndexRouteImport
+      parentRoute: typeof authenticatedProjectsEmployeeIdRouteRoute
     }
   }
 }
 
+interface authenticatedProjectsEmployeeIdRouteRouteChildren {
+  authenticatedProjectsEmployeeIdIndexRoute: typeof authenticatedProjectsEmployeeIdIndexRoute
+  authenticatedProjectsEmployeeIdProjectNumberIndexRoute: typeof authenticatedProjectsEmployeeIdProjectNumberIndexRoute
+}
+
+const authenticatedProjectsEmployeeIdRouteRouteChildren: authenticatedProjectsEmployeeIdRouteRouteChildren =
+  {
+    authenticatedProjectsEmployeeIdIndexRoute:
+      authenticatedProjectsEmployeeIdIndexRoute,
+    authenticatedProjectsEmployeeIdProjectNumberIndexRoute:
+      authenticatedProjectsEmployeeIdProjectNumberIndexRoute,
+  }
+
+const authenticatedProjectsEmployeeIdRouteRouteWithChildren =
+  authenticatedProjectsEmployeeIdRouteRoute._addFileChildren(
+    authenticatedProjectsEmployeeIdRouteRouteChildren,
+  )
+
 interface authenticatedProjectsRouteRouteChildren {
-  authenticatedProjectsIndexRoute: typeof authenticatedProjectsIndexRoute
-  authenticatedProjectsProjectNumberIndexRoute: typeof authenticatedProjectsProjectNumberIndexRoute
+  authenticatedProjectsEmployeeIdRouteRoute: typeof authenticatedProjectsEmployeeIdRouteRouteWithChildren
 }
 
 const authenticatedProjectsRouteRouteChildren: authenticatedProjectsRouteRouteChildren =
   {
-    authenticatedProjectsIndexRoute: authenticatedProjectsIndexRoute,
-    authenticatedProjectsProjectNumberIndexRoute:
-      authenticatedProjectsProjectNumberIndexRoute,
+    authenticatedProjectsEmployeeIdRouteRoute:
+      authenticatedProjectsEmployeeIdRouteRouteWithChildren,
   }
 
 const authenticatedProjectsRouteRouteWithChildren =

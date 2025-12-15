@@ -10,7 +10,7 @@ import { useSuspenseQuery } from '@tanstack/react-query';
 import { Link, createFileRoute } from '@tanstack/react-router';
 
 export const Route = createFileRoute(
-  '/(authenticated)/projects/$projectNumber/'
+  '/(authenticated)/projects/$employeeId/$projectNumber/'
 )({
   component: RouteComponent,
 });
