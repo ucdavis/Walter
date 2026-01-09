@@ -1,5 +1,6 @@
 CREATE PROCEDURE dbo.usp_GetFacultyDeptPortfolio
-    @FinancialDept VARCHAR(7),
+    @FinancialDept VARCHAR(7) = NULL,
+    @ProjectIds VARCHAR(MAX) = NULL,
     @StartDate DATE = NULL,
     @EndDate DATE = NULL,
     @ApplicationName NVARCHAR(128) = NULL
@@ -7,8 +8,22 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    -- Validate FinancialDept
-    EXEC dbo.usp_ValidateFinancialDept @FinancialDept;
+    -- Validate: exactly one filter must be provided
+    IF (@FinancialDept IS NULL AND @ProjectIds IS NULL)
+    BEGIN
+        RAISERROR('Either @FinancialDept or @ProjectIds must be provided', 16, 1);
+        RETURN;
+    END;
+
+    IF (@FinancialDept IS NOT NULL AND @ProjectIds IS NOT NULL)
+    BEGIN
+        RAISERROR('Cannot specify both @FinancialDept and @ProjectIds', 16, 1);
+        RETURN;
+    END;
+
+    -- Validate FinancialDept if provided
+    IF @FinancialDept IS NOT NULL
+        EXEC dbo.usp_ValidateFinancialDept @FinancialDept;
 
     -- Validate date range if both are provided
     IF @StartDate IS NOT NULL AND @EndDate IS NOT NULL AND @EndDate < @StartDate
@@ -27,14 +42,50 @@ BEGIN
     DECLARE @ErrorMsg NVARCHAR(MAX);
     DECLARE @ParametersJSON NVARCHAR(MAX);
 
-    -- Sanitize ApplicationName for injection protection (whitelist: alphanumeric + spaces only)
+    -- Sanitize ApplicationName for injection protection
     EXEC dbo.usp_SanitizeInputString @ApplicationName OUTPUT;
 
-    -- Sanitize FinancialDept for SQL injection protection (defense in depth)
-    EXEC dbo.usp_SanitizeInputString @FinancialDept OUTPUT;
+    -- Sanitize FinancialDept for SQL injection protection
+    IF @FinancialDept IS NOT NULL
+        EXEC dbo.usp_SanitizeInputString @FinancialDept OUTPUT;
 
-    -- Build filter clause
-    SET @FilterClause = ' WHERE prj_owning_cd = ''' + @FinancialDept + '''';
+    -- Build ProjectId filter if provided
+    DECLARE @ProjectIdFilter NVARCHAR(MAX);
+
+    IF @ProjectIds IS NOT NULL
+    BEGIN
+        DECLARE @ProjectId VARCHAR(15);
+        DECLARE @ValidatedProjects TABLE (ProjectId VARCHAR(15));
+
+        -- Parse comma-separated list into table
+        INSERT INTO @ValidatedProjects (ProjectId)
+        SELECT TRIM(value)
+        FROM STRING_SPLIT(@ProjectIds, ',')
+        WHERE TRIM(value) <> '';
+
+        -- Validate each project ID format
+        DECLARE ProjectCursor CURSOR FOR
+            SELECT ProjectId FROM @ValidatedProjects;
+        OPEN ProjectCursor;
+        FETCH NEXT FROM ProjectCursor INTO @ProjectId;
+        WHILE @@FETCH_STATUS = 0
+        BEGIN
+            EXEC dbo.usp_ValidateAggieEnterpriseProject @ProjectId;
+            FETCH NEXT FROM ProjectCursor INTO @ProjectId;
+        END;
+        CLOSE ProjectCursor;
+        DEALLOCATE ProjectCursor;
+
+        -- Build IN clause for query
+        SELECT @ProjectIdFilter = STRING_AGG('''' + ProjectId + '''', ',')
+        FROM @ValidatedProjects;
+    END
+
+    -- Build filter clause based on which parameter was provided
+    IF @FinancialDept IS NOT NULL
+        SET @FilterClause = ' WHERE prj_owning_cd = ''' + @FinancialDept + '''';
+    ELSE
+        SET @FilterClause = ' WHERE PROJECT_NUMBER IN (' + @ProjectIdFilter + ')';
 
     -- Add date overlap logic
     IF @StartDate IS NOT NULL
@@ -56,6 +107,7 @@ BEGIN
     SET @ParametersJSON = (
         SELECT
             @FinancialDept AS FinancialDept,
+            @ProjectIds AS ProjectIds,
             CONVERT(VARCHAR(10), @StartDate, 120) AS StartDate,
             CONVERT(VARCHAR(10), @EndDate, 120) AS EndDate,
             COALESCE(@ApplicationName, APP_NAME()) AS ApplicationName
