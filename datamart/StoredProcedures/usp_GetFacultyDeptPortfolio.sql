@@ -57,11 +57,18 @@ BEGIN
         DECLARE @ProjectId VARCHAR(15);
         DECLARE @ValidatedProjects TABLE (ProjectId VARCHAR(15));
 
-        -- Parse comma-separated list into table
+        -- Parse comma-separated list into table, filtering out empty strings and literal 'null' values
         INSERT INTO @ValidatedProjects (ProjectId)
         SELECT TRIM(value)
         FROM STRING_SPLIT(@ProjectIds, ',')
-        WHERE TRIM(value) <> '';
+        WHERE TRIM(value) <> '' AND LOWER(TRIM(value)) <> 'null';
+
+        -- Validate that at least one project ID was provided
+        IF NOT EXISTS (SELECT 1 FROM @ValidatedProjects)
+        BEGIN
+            RAISERROR('No valid project IDs provided', 16, 1);
+            RETURN;
+        END;
 
         -- Validate each project ID format
         DECLARE ProjectCursor CURSOR FOR
