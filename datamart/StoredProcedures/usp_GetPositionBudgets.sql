@@ -39,37 +39,11 @@ BEGIN
     IF @FinancialDept IS NOT NULL
         EXEC dbo.usp_SanitizeInputString @FinancialDept OUTPUT;
 
-    -- Build ProjectId filter if provided
+    -- Parse and validate ProjectIds if provided
     DECLARE @ProjectIdFilter NVARCHAR(MAX);
 
     IF @ProjectIds IS NOT NULL
-    BEGIN
-        DECLARE @ProjectId VARCHAR(15);
-        DECLARE @ValidatedProjects TABLE (ProjectId VARCHAR(15));
-
-        -- Parse comma-separated list into table
-        INSERT INTO @ValidatedProjects (ProjectId)
-        SELECT TRIM(value)
-        FROM STRING_SPLIT(@ProjectIds, ',')
-        WHERE TRIM(value) <> '';
-
-        -- Validate each project ID format
-        DECLARE ProjectCursor CURSOR FOR
-            SELECT ProjectId FROM @ValidatedProjects;
-        OPEN ProjectCursor;
-        FETCH NEXT FROM ProjectCursor INTO @ProjectId;
-        WHILE @@FETCH_STATUS = 0
-        BEGIN
-            EXEC dbo.usp_ValidateAggieEnterpriseProject @ProjectId;
-            FETCH NEXT FROM ProjectCursor INTO @ProjectId;
-        END;
-        CLOSE ProjectCursor;
-        DEALLOCATE ProjectCursor;
-
-        -- Build IN clause for Oracle query (e.g., 'PROJ001','PROJ002')
-        SELECT @ProjectIdFilter = STRING_AGG('''' + ProjectId + '''', ',')
-        FROM @ValidatedProjects;
-    END
+        EXEC dbo.usp_ParseProjectIdFilter @ProjectIds, @ProjectIdFilter OUTPUT;
 
     -- Build Oracle query joining budget and position data
     SET @OracleQuery = '

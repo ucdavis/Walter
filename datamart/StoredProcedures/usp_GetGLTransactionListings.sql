@@ -1,5 +1,6 @@
 CREATE PROCEDURE dbo.usp_GetGLTransactionListings
-    @FinancialDept VARCHAR(7),
+    @FinancialDept VARCHAR(7) = NULL,
+    @ProjectIds VARCHAR(MAX) = NULL,
     @StartDate DATE = NULL,
     @EndDate DATE = NULL,
     @ApplicationName NVARCHAR(128) = NULL
@@ -7,8 +8,22 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    -- Validate FinancialDept
-    EXEC dbo.usp_ValidateFinancialDept @FinancialDept;
+    -- Validate: exactly one filter must be provided
+    IF (@FinancialDept IS NULL AND @ProjectIds IS NULL)
+    BEGIN
+        RAISERROR('Either @FinancialDept or @ProjectIds must be provided', 16, 1);
+        RETURN;
+    END;
+
+    IF (@FinancialDept IS NOT NULL AND @ProjectIds IS NOT NULL)
+    BEGIN
+        RAISERROR('Cannot specify both @FinancialDept and @ProjectIds', 16, 1);
+        RETURN;
+    END;
+
+    -- Validate FinancialDept if provided
+    IF @FinancialDept IS NOT NULL
+        EXEC dbo.usp_ValidateFinancialDept @FinancialDept;
 
     -- Validate date range if both are provided
     IF @StartDate IS NOT NULL AND @EndDate IS NOT NULL AND @EndDate < @StartDate
@@ -31,10 +46,20 @@ BEGIN
     EXEC dbo.usp_SanitizeInputString @ApplicationName OUTPUT;
 
     -- Sanitize FinancialDept for SQL injection protection (defense in depth)
-    EXEC dbo.usp_SanitizeInputString @FinancialDept OUTPUT;
+    IF @FinancialDept IS NOT NULL
+        EXEC dbo.usp_SanitizeInputString @FinancialDept OUTPUT;
 
-    -- Build filter clause
-    SET @FilterClause = ' WHERE financial_department = ''' + @FinancialDept + '''';
+    -- Parse and validate ProjectIds if provided
+    DECLARE @ProjectIdFilter NVARCHAR(MAX);
+
+    IF @ProjectIds IS NOT NULL
+        EXEC dbo.usp_ParseProjectIdFilter @ProjectIds, @ProjectIdFilter OUTPUT;
+
+    -- Build filter clause based on which parameter was provided
+    IF @FinancialDept IS NOT NULL
+        SET @FilterClause = ' WHERE financial_department = ''' + @FinancialDept + '''';
+    ELSE
+        SET @FilterClause = ' WHERE PROJECT IN (' + @ProjectIdFilter + ')';
 
     -- Add date filters
     IF @StartDate IS NOT NULL
@@ -64,6 +89,7 @@ BEGIN
     SET @ParametersJSON = (
         SELECT
             @FinancialDept AS FinancialDept,
+            @ProjectIds AS ProjectIds,
             CONVERT(VARCHAR(10), @StartDate, 120) AS StartDate,
             CONVERT(VARCHAR(10), @EndDate, 120) AS EndDate,
             COALESCE(@ApplicationName, APP_NAME()) AS ApplicationName
