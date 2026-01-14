@@ -116,7 +116,7 @@ export function ProjectsSidebar() {
                 )}
                 key={index}
                 params={{ employeeId, projectNumber: project.project_number }}
-                to="/projects//$employeeId/$projectNumber"
+                to="/projects/$employeeId/$projectNumber"
                 viewTransition={{ types: ['slide-left'] }}
               >
                 <div className="flex justify-between items-start mb-1">
