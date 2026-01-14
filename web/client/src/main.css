@@ -139,7 +139,7 @@ html:active-view-transition-type(slide-right) {
   @apply text-3xl font-proxima-bold;
 }
 .h2 {
-  @apply text-2xl font-proxima-bold;
+  @apply text-2xl;
 }
 .h3 {
   @apply text-sm uppercase text-dark-font;
