@@ -3,7 +3,7 @@
 -- Parameters: @ProjectNumbers (list of project numbers)
 SELECT *
 FROM OPENQUERY(
-    AERedshift,
+    AE_Redshift_PROD,
     '
         SELECT
             PROJECT_NUMBER,
