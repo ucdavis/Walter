@@ -20,28 +20,24 @@ const Header: React.FC = () => {
           <img alt="Dog outline logo" className="w-8" src="/walter.svg" />
           <h1 className="text-2xl">Walter</h1>
         </Link>
-        <div className="absolute top-[60px] left-1/2 -translate-x-1/2">
+        <div className="absolute top-[48px] left-1/2 -translate-x-1/2">
           <span className="inline-block bg-primary-color text-white px-3 py-1 text-xs rounded font-proxima-bold">
             DATA AS OF {formatAsOfDate(new Date().toDateString())}
           </span>
         </div>
         <div className="flex items-center gap-8">
-          <nav className="flex text-lg items-center gap-6">
+          <nav className="flex items-center gap-6">
+            <Link to="/">Dashboard</Link>
             <Link to="/projects">Projects</Link>
-            <Link to="/about">About</Link>
+            <Link to="/personnel">Personnel</Link>
+            <Link to="/reports">Reports</Link>
             <Link to="/accruals">Accruals</Link>
           </nav>
-          <div className="flex-col text-right border-l border-main-border ps-4">
-            <p>{user?.name}</p>
-            <a
-              className="underline text-sm text-dark-font/70 font-proxima-bold"
-              href="#"
-            >
-              Staff???
-            </a>
+          <div className="flex-col text-right ps-4">
+            <p className="font-proxima-bold">{user?.name}</p>
           </div>
           <div className="avatar">
-            <div className="w-12 rounded-full">
+            <div className="w-8 rounded-full">
               <img src="https://img.daisyui.com/images/profile/demo/yellingcat@192.webp" />
             </div>
           </div>
