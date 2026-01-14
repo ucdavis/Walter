@@ -5,74 +5,31 @@ import { server } from '@/test/mswUtils.ts';
 import { renderRoute } from '@/test/routerUtils.tsx';
 
 describe('projects route', () => {
-  it('renders the dashboard after fetching user and project data', async () => {
-    const projects = [
-      {
-        activity_desc: 'Research',
-        award_end_date: '2024-12-31',
-        award_number: 'A-001',
-        award_start_date: '2023-01-01',
-        cat_bud_bal: 5000,
-        cat_budget: 20_000,
-        cat_commitments: 2500,
-        cat_itd_exp: 12_500,
-        copi: 'Co-PI 1',
-        expenditure_category_name: 'Personnel',
-        fund_desc: 'General Fund',
-        pa: 'PA Team',
-        pi: 'PI One',
-        pm: 'PM One',
-        program_desc: 'Science',
-        project_name: 'Alpha Project',
-        project_number: 'PRJ-001',
-        project_owning_org: 'Org A',
-        project_status_code: 'ACTIVE',
-        purpose_desc: 'Discovery',
-        task_name: 'Task A',
-        task_num: '1',
-        task_status: 'ACTIVE',
-      },
-      {
-        activity_desc: 'Research',
-        award_end_date: '2025-06-30',
-        award_number: 'A-001',
-        award_start_date: '2023-01-01',
-        cat_bud_bal: 3000,
-        cat_budget: 15_000,
-        cat_commitments: 1500,
-        cat_itd_exp: 10_500,
-        copi: 'Co-PI 1',
-        expenditure_category_name: 'Operations',
-        fund_desc: 'General Fund',
-        pa: 'PA Team',
-        pi: 'PI One',
-        pm: 'PM One',
-        program_desc: 'Science',
-        project_name: 'Alpha Project',
-        project_number: 'PRJ-001',
-        project_owning_org: 'Org A',
-        project_status_code: 'ACTIVE',
-        purpose_desc: 'Discovery',
-        task_name: 'Task B',
-        task_num: '2',
-        task_status: 'ACTIVE',
-      },
+  it('renders managed investigators dashboard when user manages investigators', async () => {
+    const managedPis = [
+      { employeeId: '2001', name: 'PI One', projectCount: 2 },
+      { employeeId: '2002', name: 'PI Two', projectCount: 1 },
     ];
 
     const user = {
       email: 'alpha@example.com',
+      employeeId: '1000',
       id: 'user-1',
+      kerberos: 'alpha',
       name: 'Alpha User',
       roles: ['admin'],
     };
 
-    let projectRequestCount = 0;
+    let managedRequestCount = 0;
     let userRequestCount = 0;
 
     server.use(
-      http.get('/api/project', () => {
-        projectRequestCount += 1;
-        return HttpResponse.json(projects);
+      http.get('/api/project/managed/:employeeId', ({ params }) => {
+        managedRequestCount += 1;
+        if (params.employeeId !== user.employeeId) {
+          return HttpResponse.json([], { status: 400 });
+        }
+        return HttpResponse.json(managedPis);
       }),
       http.get('/api/user/me', () => {
         userRequestCount += 1;
@@ -84,10 +41,41 @@ describe('projects route', () => {
 
     try {
       expect(
-        await screen.findByText('All Projects Dashboard')
+        await screen.findByRole('heading', { name: 'Managed Investigators' })
       ).toBeInTheDocument();
-      expect(projectRequestCount).toBe(1);
+      expect(await screen.findByText('PI One')).toBeInTheDocument();
+      expect(managedRequestCount).toBe(1);
       expect(userRequestCount).toBe(1);
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('redirects to my projects when user manages no investigators', async () => {
+    const user = {
+      email: 'alpha@example.com',
+      employeeId: '1000',
+      id: 'user-1',
+      kerberos: 'alpha',
+      name: 'Alpha User',
+      roles: ['admin'],
+    };
+
+    server.use(
+      http.get('/api/user/me', () => HttpResponse.json(user)),
+      http.get('/api/project/managed/:employeeId', () => HttpResponse.json([])),
+      http.get('/api/project/:employeeId', () => HttpResponse.json([]))
+    );
+
+    const { cleanup, router } = renderRoute({ initialPath: '/projects' });
+
+    try {
+      expect(
+        await screen.findByText("We didn't find any projects for you.")
+      ).toBeInTheDocument();
+      expect(router.state.location.pathname).toContain(
+        `/projects/${user.employeeId}`
+      );
     } finally {
       cleanup();
     }
