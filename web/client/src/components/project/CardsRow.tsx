@@ -1,4 +1,3 @@
-// CardsRow.tsx
 import React from 'react';
 import {
   ClipboardDocumentIcon,
@@ -113,12 +112,12 @@ export default function CardsRow() {
       title: 'Edward Spang',
     },
     {
-      badge: { text: 'Project', variant: 'neutral' },
+      badge: { text: 'Project', variant: 'primary' },
       footer: [
         { label: 'Next end date', value: '01.05.2026' },
         { label: 'Remaining Funds', value: '$222.11' },
       ],
-      id: 'project-deans-office-1',
+      id: 'project-deans-office',
       metrics: [
         { icon: <UserGroupIcon />, value: '9' },
         { icon: <BanknotesIcon />, value: '22%' },
@@ -126,20 +125,20 @@ export default function CardsRow() {
       title: 'Dean’s Office Allocation',
     },
     {
-      badge: { text: 'Project', variant: 'neutral' },
+      badge: { text: 'Person', variant: 'primary' },
       footer: [
-        { label: 'Next end date', value: '01.05.2026' },
+        { label: 'Contract end date', value: '03.23.2026' },
         { label: 'Remaining Funds', value: '$222.11' },
       ],
-      id: 'project-deans-office-2',
+      id: 'cal-doval',
       metrics: [
-        { icon: <UserGroupIcon />, value: '9' },
+        { icon: <ClipboardDocumentIcon />, value: '1' },
         { icon: <BanknotesIcon />, value: '22%' },
       ],
-      title: 'Dean’s Office Allocation',
+      title: 'Cal Doval',
     },
     {
-      badge: { text: 'Project', variant: 'neutral' },
+      badge: { text: 'Project', variant: 'primary' },
       footer: [
         { label: 'Next end date', value: '01.05.2026' },
         { label: 'Remaining Funds', value: '$222.11' },
