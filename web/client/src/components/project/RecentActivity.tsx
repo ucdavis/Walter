@@ -93,7 +93,7 @@ function Card({
   );
 }
 
-export default function CardsRow() {
+export default function RecentActivity() {
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
 
   const cards: CardModel[] = [
@@ -153,26 +153,14 @@ export default function CardsRow() {
   ];
 
   const handleClick = (id: string) => {
-    setSelectedId(id); // placeholder click behavior
-    // later: router.push(`/details/${id}`)
+    setSelectedId(id);
   };
 
   return (
-    <div className="w-full space-y-3">
-      {/* placeholder selected value */}
-      <div className="px-2 text-sm text-base-content/70">
-        Selected:{' '}
-        <span className="font-semibold text-base-content">
-          {selectedId ?? '(none)'}
-        </span>
-      </div>
-
-      {/* non-scrollable 4-col grid */}
-      <div className="grid grid-cols-1 gap-6 px-2 py-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {cards.map((c) => (
-          <Card key={c.id} model={c} onClick={handleClick} />
-        ))}
-      </div>
+    <div className="mt-4 grid grid-cols-1 gap-6 px-2 py-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      {cards.map((c) => (
+        <Card key={c.id} model={c} onClick={handleClick} />
+      ))}
     </div>
   );
 }
