@@ -1,12 +1,27 @@
 CREATE PROCEDURE dbo.usp_GetPositionBudgets
-    @FinancialDept VARCHAR(7),
+    @FinancialDept VARCHAR(7) = NULL,
+    @ProjectIds VARCHAR(MAX) = NULL,
     @ApplicationName NVARCHAR(128) = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
 
-    -- Validate FinancialDept
-    EXEC dbo.usp_ValidateFinancialDept @FinancialDept;
+    -- Validate: exactly one filter must be provided
+    IF (@FinancialDept IS NULL AND @ProjectIds IS NULL)
+    BEGIN
+        RAISERROR('Either @FinancialDept or @ProjectIds must be provided', 16, 1);
+        RETURN;
+    END;
+
+    IF (@FinancialDept IS NOT NULL AND @ProjectIds IS NOT NULL)
+    BEGIN
+        RAISERROR('Cannot specify both @FinancialDept and @ProjectIds', 16, 1);
+        RETURN;
+    END;
+
+    -- Validate FinancialDept if provided
+    IF @FinancialDept IS NOT NULL
+        EXEC dbo.usp_ValidateFinancialDept @FinancialDept;
 
     DECLARE @OracleQuery NVARCHAR(MAX);
     DECLARE @TSQLCommand NVARCHAR(MAX);
@@ -17,11 +32,18 @@ BEGIN
     DECLARE @ErrorMsg NVARCHAR(MAX);
     DECLARE @ParametersJSON NVARCHAR(MAX);
 
-    -- Sanitize ApplicationName for injection protection (whitelist: alphanumeric + spaces only)
+    -- Sanitize ApplicationName for injection protection
     EXEC dbo.usp_SanitizeInputString @ApplicationName OUTPUT;
 
-    -- Sanitize FinancialDept for SQL injection protection (defense in depth)
-    EXEC dbo.usp_SanitizeInputString @FinancialDept OUTPUT;
+    -- Sanitize FinancialDept for SQL injection protection
+    IF @FinancialDept IS NOT NULL
+        EXEC dbo.usp_SanitizeInputString @FinancialDept OUTPUT;
+
+    -- Parse and validate ProjectIds if provided
+    DECLARE @ProjectIdFilter NVARCHAR(MAX);
+
+    IF @ProjectIds IS NOT NULL
+        EXEC dbo.usp_ParseProjectIdFilter @ProjectIds, @ProjectIdFilter OUTPUT;
 
     -- Build Oracle query joining budget and position data
     SET @OracleQuery = '
@@ -51,7 +73,11 @@ BEGIN
                 ON budget.ACCT_CD = acct.ACCT_CD
             WHERE budget.DML_IND != ''D''
               AND acct.DML_IND != ''D''
-              AND acct.DEPTID_CF = ''' + @FinancialDept + '''
+              ' + CASE
+                    WHEN @FinancialDept IS NOT NULL
+                    THEN 'AND acct.DEPTID_CF = ''' + @FinancialDept + ''''
+                    ELSE 'AND acct.PROJECT_ID IN (' + @ProjectIdFilter + ')'
+                END + '
         ),
         LatestPosition AS (
             SELECT
@@ -132,6 +158,7 @@ BEGIN
     SET @ParametersJSON = (
         SELECT
             @FinancialDept AS FinancialDept,
+            @ProjectIds AS ProjectIds,
             COALESCE(@ApplicationName, APP_NAME()) AS ApplicationName
         FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
     );
