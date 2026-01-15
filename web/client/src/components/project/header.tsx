@@ -34,7 +34,7 @@ const Header: React.FC = () => {
           </nav>
           <div className="avatar ms-6">
             <div className="w-10 rounded-full">
-              <img src="https://img.daisyui.com/images/profile/demo/yellingcat@192.webp" />
+              <img alt="User avatar" src="https://img.daisyui.com/images/profile/demo/yellingcat@192.webp" />
             </div>
           </div>
         </div>
