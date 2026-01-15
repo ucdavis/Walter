@@ -1,7 +1,14 @@
 import { fetchJson } from '../lib/api.ts';
 import { useQuery } from '@tanstack/react-query';
 
-export type User = { email: string; id: string; name: string; roles: string[] };
+export type User = {
+  email: string;
+  employeeId: string;
+  id: string;
+  kerberos: string;
+  name: string;
+  roles: string[];
+};
 
 export const meQueryOptions = () => ({
   queryFn: async (): Promise<User> => {

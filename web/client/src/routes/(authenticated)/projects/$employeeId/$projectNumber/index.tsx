@@ -5,12 +5,12 @@ import {
   summarizeProjectByNumber,
   type ProjectSummary,
 } from '@/lib/projectSummary.ts';
-import { allProjectsQueryOptions } from '@/queries/project.ts';
+import { projectsDetailQueryOptions } from '@/queries/project.ts';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { Link, createFileRoute } from '@tanstack/react-router';
 
 export const Route = createFileRoute(
-  '/(authenticated)/projects/$projectNumber/'
+  '/(authenticated)/projects/$employeeId/$projectNumber/'
 )({
   component: RouteComponent,
 });
@@ -51,8 +51,10 @@ function ProjectContent({ summary }: { summary: ProjectSummary }) {
 }
 
 function RouteComponent() {
-  const { projectNumber } = Route.useParams();
-  const { data: projects } = useSuspenseQuery(allProjectsQueryOptions());
+  const { employeeId, projectNumber } = Route.useParams();
+  const { data: projects } = useSuspenseQuery(
+    projectsDetailQueryOptions(employeeId)
+  );
   const summary = summarizeProjectByNumber(projects, projectNumber);
 
   if (!summary) {
