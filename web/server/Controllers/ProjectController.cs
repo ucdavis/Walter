@@ -37,6 +37,11 @@ public sealed class ProjectController : ApiControllerBase
 
         var projectNumbers = data.PpmProjectByProjectTeamMemberEmployeeId.Select(p => p.ProjectNumber).Distinct().ToList();
 
+        if (!projectNumbers.Any())
+        {
+            return Ok(Array.Empty<object>());
+        }
+
         var sql = QueryService.FormatQueryWithList("FacultyProjectReport", projectNumbers);
 
         var results = await _dmConnection.QueryAsync<object>(sql, ct: cancellationToken);

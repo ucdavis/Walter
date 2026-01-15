@@ -15,6 +15,8 @@ public interface IUserService
     Task<User> CreateOrUpdateUserAsync(UserProfileData userInfo, CancellationToken cancellationToken = default);
 
     Task<User?> GetByIdAsync(Guid userId, CancellationToken cancellationToken = default);
+
+    Task<User?> GetByEmployeeIdAsync(string employeeId, CancellationToken cancellationToken = default);
 }
 
 public class UserService : IUserService
@@ -122,6 +124,16 @@ public class UserService : IUserService
     public Task<User?> GetByIdAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         return _dbContext.Users.SingleOrDefaultAsync(u => u.Id == userId, cancellationToken);
+    }
+
+    public Task<User?> GetByEmployeeIdAsync(string employeeId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(employeeId))
+        {
+            throw new ArgumentException("Employee ID is required.", nameof(employeeId));
+        }
+
+        return _dbContext.Users.SingleOrDefaultAsync(u => u.EmployeeId == employeeId, cancellationToken);
     }
 }
 

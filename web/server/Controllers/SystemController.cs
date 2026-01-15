@@ -19,21 +19,36 @@ public class SystemController : ApiControllerBase
         _userService = userService;
     }
 
-    [HttpGet("emulate/{id:guid}")]
-    public async Task<IActionResult> Emulate(Guid id)
+    [HttpGet("emulate/{identifier}")]
+    public async Task<IActionResult> Emulate(string identifier)
     {
-        var user = await _userService.GetByIdAsync(id);
+        if (string.IsNullOrWhiteSpace(identifier))
+        {
+            return BadRequest("Identifier is required.");
+        }
+
+        User? user;
+
+        if (Guid.TryParse(identifier, out var userId))
+        {
+            user = await _userService.GetByIdAsync(userId);
+        }
+        else
+        {
+            user = await _userService.GetByEmployeeIdAsync(identifier);
+            userId = user?.Id ?? Guid.Empty;
+        }
 
         if (user == null)
         {
-            return NotFound($"User with ID {id} not found.");
+            return NotFound($"User '{identifier}' not found.");
         }
 
-        var roles = await _userService.GetRolesForUser(id);
+        var roles = await _userService.GetRolesForUser(userId);
 
         var claims = new List<Claim>
         {
-            new(ClaimConstants.ObjectId, id.ToString()),
+            new(ClaimConstants.ObjectId, userId.ToString()),
             new(ClaimTypes.Name, user.DisplayName ?? user.Kerberos),
             new(ClaimTypes.Email, user.Email ?? string.Empty),
             new("kerberos", user.Kerberos),
