@@ -1,17 +1,14 @@
 @description('Location for all resources')
 param location string = resourceGroup().location
 
-@description('Web app name')
-param webAppName string
+@description('Application name (ex: walter)')
+param appName string = 'walter'
+
+@description('Environment name (ex: test, production)')
+param env string = ''
 
 @description('Existing App Service Plan resource ID')
 param appServicePlanId string
-
-@description('SQL logical server name (must be globally unique)')
-param sqlServerName string
-
-@description('SQL database name')
-param sqlDbName string
 
 @description('SQL admin login name')
 param sqlAdminLogin string
@@ -25,6 +22,19 @@ param linuxFxVersion string = 'DOTNETCORE|8.0'
 
 @description('Whether to create a SQL firewall rule to allow access from Azure services (0.0.0.0).')
 param allowAzureServicesToSql bool = false
+
+var normalizedAppName = toLower(replace(replace(appName, ' ', '-'), '_', '-'))
+var normalizedEnv = toLower(replace(replace(env, ' ', '-'), '_', '-'))
+
+var baseName = empty(normalizedEnv)
+  ? normalizedAppName
+  : '${normalizedAppName}-${normalizedEnv}'
+
+var nameToken = toLower(substring(uniqueString(resourceGroup().id, normalizedAppName, normalizedEnv), 0, 6))
+
+var webAppName = 'web-${baseName}-${nameToken}'
+var sqlServerName = 'sql-${baseName}-${nameToken}'
+var sqlDbName = normalizedAppName
 
 var dbConnection = 'Server=tcp:${sqlServerName}.${environment().suffixes.sqlServerHostname},1433;Initial Catalog=${sqlDbName};Persist Security Info=False;User ID=${sqlAdminLogin};Password=${sqlAdminPassword};MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;'
 
@@ -58,3 +68,7 @@ module web './modules/webapp.bicep' = {
 
 output webAppId string = web.outputs.webAppId
 output sqlServerFqdn string = sql.outputs.sqlServerFqdn
+output nameToken string = nameToken
+output webAppName string = webAppName
+output sqlServerName string = sqlServerName
+output sqlDbName string = sqlDbName

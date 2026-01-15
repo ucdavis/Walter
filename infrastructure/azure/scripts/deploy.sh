@@ -2,12 +2,12 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-TEMPLATE_FILE="${SCRIPT_DIR}/../infrastructure/azure/main.bicep"
+TEMPLATE_FILE="${SCRIPT_DIR}/../main.bicep"
 
 usage() {
   cat <<'EOF'
 Usage:
-  scripts/deploy.sh --resource-group <name> --app-service-plan-id <id> --sql-admin-login <login> [options]
+  infrastructure/azure/scripts/deploy.sh --resource-group <name> --app-service-plan-id <id> --sql-admin-login <login> [options]
 
 Required:
   -g, --resource-group           Azure resource group name to deploy into
@@ -18,11 +18,8 @@ SQL password:
       --sql-admin-password       SQL admin password (or set env var SQL_ADMIN_PASSWORD)
 
 Naming:
-      --env                      Environment name (ex: test, production)
-      --name-prefix              Base name used to derive resource names (default: walter)
-      --web-app-name             Override web app name (default: <name-prefix>-<env> or <name-prefix>)
-      --sql-server-name          Override SQL server name (default: <name-prefix>-<env> or <name-prefix>)
-      --sql-db-name              Override SQL database name (default: <name-prefix>-<env> or <name-prefix>)
+      --app-name                 Application name used for generated names (default: walter)
+      --env                      Environment name used for generated names (ex: test, production)
 
 Other:
   -l, --location                 Location used if resource group must be created (default: westus2)
@@ -32,13 +29,13 @@ Other:
   -h, --help                     Show help
 
 Examples:
-  SQL_ADMIN_PASSWORD='...' scripts/deploy.sh \\
-    -g walter-test --env test \\
+  SQL_ADMIN_PASSWORD='...' infrastructure/azure/scripts/deploy.sh \\
+    -g walter-test --app-name walter --env test \\
     --app-service-plan-id "/subscriptions/.../serverfarms/DefaultPlan2" \\
     --sql-admin-login walter
 
-  scripts/deploy.sh \\
-    -g walter --env production \\
+  infrastructure/azure/scripts/deploy.sh \\
+    -g walter --app-name walter --env production \\
     --app-service-plan-id "/subscriptions/.../serverfarms/DefaultPlan2" \\
     --sql-admin-login walter \\
     --sql-admin-password '...'
@@ -48,11 +45,7 @@ EOF
 RESOURCE_GROUP=""
 LOCATION=""
 ENVIRONMENT=""
-NAME_PREFIX="walter"
-
-WEB_APP_NAME=""
-SQL_SERVER_NAME=""
-SQL_DB_NAME=""
+APP_NAME="walter"
 
 APP_SERVICE_PLAN_ID="${APP_SERVICE_PLAN_ID:-}"
 SQL_ADMIN_LOGIN_VALUE="${SQL_ADMIN_LOGIN:-}"
@@ -70,14 +63,8 @@ while [[ $# -gt 0 ]]; do
       LOCATION="${2:-}"; shift 2 ;;
     --env)
       ENVIRONMENT="${2:-}"; shift 2 ;;
-    --name-prefix)
-      NAME_PREFIX="${2:-}"; shift 2 ;;
-    --web-app-name)
-      WEB_APP_NAME="${2:-}"; shift 2 ;;
-    --sql-server-name)
-      SQL_SERVER_NAME="${2:-}"; shift 2 ;;
-    --sql-db-name)
-      SQL_DB_NAME="${2:-}"; shift 2 ;;
+    --app-name|--name-prefix)
+      APP_NAME="${2:-}"; shift 2 ;;
     --app-service-plan-id)
       APP_SERVICE_PLAN_ID="${2:-}"; shift 2 ;;
     --sql-admin-login)
@@ -127,21 +114,6 @@ if [[ -z "$SQL_ADMIN_PASSWORD_VALUE" ]]; then
   exit 2
 fi
 
-suffix=""
-if [[ -n "$ENVIRONMENT" ]]; then
-  case "$ENVIRONMENT" in
-    prod|production)
-      suffix="" ;;
-    *)
-      suffix="-${ENVIRONMENT}" ;;
-  esac
-fi
-
-default_name="${NAME_PREFIX}${suffix}"
-WEB_APP_NAME="${WEB_APP_NAME:-$default_name}"
-SQL_SERVER_NAME="${SQL_SERVER_NAME:-$default_name}"
-SQL_DB_NAME="${SQL_DB_NAME:-$default_name}"
-
 if ! command -v az >/dev/null 2>&1; then
   echo "Azure CLI not found. Install it first: https://learn.microsoft.com/cli/azure/install-azure-cli" >&2
   exit 1
@@ -157,19 +129,21 @@ else
   fi
 fi
 
-DEPLOYMENT_NAME="${WEB_APP_NAME}-$(date -u +%Y%m%d%H%M%S)"
+DEPLOYMENT_NAME="walter-${APP_NAME}${ENVIRONMENT:+-${ENVIRONMENT}}-$(date -u +%Y%m%d%H%M%S)"
 
 AZ_PARAMS=(
   "location=${LOCATION}"
-  "webAppName=${WEB_APP_NAME}"
+  "appName=${APP_NAME}"
   "appServicePlanId=${APP_SERVICE_PLAN_ID}"
-  "sqlServerName=${SQL_SERVER_NAME}"
-  "sqlDbName=${SQL_DB_NAME}"
   "sqlAdminLogin=${SQL_ADMIN_LOGIN_VALUE}"
   "sqlAdminPassword=${SQL_ADMIN_PASSWORD_VALUE}"
   "linuxFxVersion=${LINUX_FX_VERSION}"
   "allowAzureServicesToSql=${ALLOW_AZURE_SERVICES_TO_SQL}"
 )
+
+if [[ -n "$ENVIRONMENT" ]]; then
+  AZ_PARAMS+=("env=${ENVIRONMENT}")
+fi
 
 if [[ "$WHAT_IF" == "true" ]]; then
   az deployment group what-if \
