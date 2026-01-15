@@ -10,7 +10,7 @@ This script is idempotent:
   - Removes stale rules previously created by this script
 
 Usage:
-  scripts/sync-sql-firewall.sh -g <resource-group> --app-name <name> [--env <env>] [options]
+  infrastructure/azure/scripts/sync-sql-firewall.sh -g <resource-group> --app-name <name> [--env <env>] [options]
 
 Required:
   -g, --resource-group     Resource group containing the web app + SQL server

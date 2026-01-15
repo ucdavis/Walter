@@ -13,9 +13,6 @@ param linuxFxVersion string
 @description('App settings to apply to the web app (merged with existing by default)')
 param appSettings object = {}
 
-@description('Preserve existing app settings by merging with current settings')
-param preserveExistingAppSettings bool = true
-
 resource webApp 'Microsoft.Web/sites@2024-11-01' = {
   name: webAppName
   location: location
@@ -32,12 +29,10 @@ resource webApp 'Microsoft.Web/sites@2024-11-01' = {
   }
 }
 
-resource webAppSettings 'Microsoft.Web/sites/config@2024-11-01' = {
+resource webAppSettings 'Microsoft.Web/sites/config@2024-11-01' = if (!empty(appSettings)) {
   name: 'appsettings'
   parent: webApp
-  properties: preserveExistingAppSettings
-    ? union(list('${webApp.id}/config/appsettings', '2024-11-01').properties, appSettings)
-    : appSettings
+  properties: appSettings
 }
 
 output webAppId string = webApp.id
