@@ -150,7 +150,7 @@ fi
 if [[ "$CURRENT_ONLY" == "true" ]]; then
   ips_raw="$(az webapp show --resource-group "$RESOURCE_GROUP" --name "$WEB_APP_NAME" --query 'outboundIpAddresses' -o tsv)"
 else
-  ips_raw="$(az webapp show --resource-group "$RESOURCE_GROUP" --name "$WEB_APP_NAME" --query \"join(',', [outboundIpAddresses, possibleOutboundIpAddresses])\" -o tsv)"
+  ips_raw="$(az webapp show --resource-group "$RESOURCE_GROUP" --name "$WEB_APP_NAME" --query "join(',', [outboundIpAddresses, possibleOutboundIpAddresses])" -o tsv)"
 fi
 
 ips=()
@@ -210,7 +210,7 @@ done
 existing_rules_raw="$(az sql server firewall-rule list \
   --resource-group "$RESOURCE_GROUP" \
   --server "$SQL_SERVER_NAME" \
-  --query \"[?starts_with(name, '${rule_prefix}')].name\" \
+  --query "[?starts_with(name, '${rule_prefix}')].name" \
   -o tsv || true)"
 
 existing_rules=()
@@ -218,20 +218,22 @@ while IFS= read -r r; do
   [[ -n "$r" ]] && existing_rules+=("$r")
 done < <(echo "$existing_rules_raw" | sed '/^$/d')
 
-for rule_name in "${existing_rules[@]}"; do
-  if ! contains "$rule_name" "${desired_rules[@]}"; then
-    if [[ "$WHAT_IF" == "true" ]]; then
-      echo "[what-if] delete stale firewall rule '${rule_name}'"
-    else
-      az sql server firewall-rule delete \
-        --resource-group "$RESOURCE_GROUP" \
-        --server "$SQL_SERVER_NAME" \
-        --name "$rule_name" \
-        --yes \
-        >/dev/null
+if [[ "${#existing_rules[@]}" -gt 0 ]]; then
+  for rule_name in "${existing_rules[@]}"; do
+    if ! contains "$rule_name" "${desired_rules[@]}"; then
+      if [[ "$WHAT_IF" == "true" ]]; then
+        echo "[what-if] delete stale firewall rule '${rule_name}'"
+      else
+        az sql server firewall-rule delete \
+          --resource-group "$RESOURCE_GROUP" \
+          --server "$SQL_SERVER_NAME" \
+          --name "$rule_name" \
+          --yes \
+          >/dev/null
+      fi
     fi
-  fi
-done
+  done
+fi
 
 if [[ "$WHAT_IF" == "true" ]]; then
   echo "[what-if] done"
