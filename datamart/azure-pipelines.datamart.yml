@@ -7,11 +7,15 @@ trigger:
     include:
       - datamart/**
 
+pr:
+  branches:
+    include:
+      - main
+
 pool:
   name: "Pazuzu Pool"
 
 variables:
-  - group: "WalterDev"
   - name: solution
     value: "datamart/**/*.sqlproj"
   - name: buildConfiguration
@@ -51,7 +55,9 @@ stages:
   - stage: DeployDev
     displayName: "Deploy to Dev"
     dependsOn: Build
-    condition: succeeded()
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    variables:
+      - group: "WalterDev"
     jobs:
       - job: DeployDevJob
         displayName: "Deploy DACPAC to WalterDev"
@@ -90,7 +96,7 @@ stages:
   - stage: ReviewProd
     displayName: "Review Production Changes"
     dependsOn: DeployDev
-    condition: succeeded()
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
     variables:
       - group: "WalterProd"
     jobs:
@@ -140,7 +146,7 @@ stages:
   - stage: DeployProd
     displayName: "Deploy to Production"
     dependsOn: ReviewProd
-    condition: succeeded()
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
     variables:
       - group: "WalterProd"
     jobs:
