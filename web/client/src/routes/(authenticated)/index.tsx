@@ -1,8 +1,11 @@
+import { useState } from 'react';
 import { ProjectAlerts } from '@/components/alerts/ProjectAlerts.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import { useManagedPisQuery } from '@/queries/project.ts';
 import { useUser } from '@/shared/auth/UserContext.tsx';
 import { createFileRoute, Link, Navigate } from '@tanstack/react-router';
+
+type Tab = 'pis' | 'reports';
 
 export const Route = createFileRoute('/(authenticated)/')({
   component: RouteComponent,
@@ -15,6 +18,7 @@ const formatPercent = (balance: number, budget: number) => {
 };
 
 function RouteComponent() {
+  const [activeTab, setActiveTab] = useState<Tab>('pis');
   const user = useUser();
   const { error, isError, isPending, managedPis } = useManagedPisQuery(
     user.employeeId
@@ -54,51 +58,91 @@ function RouteComponent() {
         </p>
       </div>
 
+      <div className="relative mx-auto w-full sm:max-w-[90%] md:max-w-[80%] xl:max-w-[66%]">
+        <input
+          className="input input-bordered w-full pl-10"
+          placeholder="Search PIs, Projects, Personnel..."
+          type="text"
+        />
+        <svg
+          className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-base-content/40"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+          />
+        </svg>
+      </div>
+
       <ProjectAlerts managedPis={managedPis} />
 
       <div className="tabs mt-16" role="tablist">
-        <a className="text-2xl tab tab-active ps-0" role="tab">
+        <button
+          className={`text-2xl tab ps-0 ${activeTab === 'pis' ? 'tab-active' : ''}`}
+          onClick={() => setActiveTab('pis')}
+          role="tab"
+          type="button"
+        >
           Principal Investigators
-        </a>
-        <a className="text-2xl tab" role="tab">
-          Personnel
-        </a>
-        <a className="text-2xl tab" role="tab">
-          Expenditures
-        </a>
+        </button>
+        <button
+          className={`text-2xl tab ${activeTab === 'reports' ? 'tab-active' : ''}`}
+          onClick={() => setActiveTab('reports')}
+          role="tab"
+          type="button"
+        >
+          Reports
+        </button>
       </div>
 
-      <table className="table mt-8">
-        <thead>
-          <tr>
-            <th>PI Name</th>
-            <th className="text-right">Projects</th>
-            <th className="text-right">Balance</th>
-          </tr>
-        </thead>
-        <tbody>
-          {managedPis.map((pi) => (
-            <tr key={pi.employeeId}>
-              <td>
-                <Link
-                  className="link link-hover link-primary"
-                  params={{ employeeId: pi.employeeId }}
-                  to="/projects/$employeeId/"
-                >
-                  {pi.name}
-                </Link>
-              </td>
-              <td className="text-right">{pi.projectCount}</td>
-              <td className="text-right">
-                {formatCurrency(pi.totalBalance)}{' '}
-                <span className="text-base-content/60">
-                  ({formatPercent(pi.totalBalance, pi.totalBudget)})
-                </span>
-              </td>
+      {activeTab === 'pis' && (
+        <table className="table mt-8">
+          <thead>
+            <tr>
+              <th>PI Name</th>
+              <th className="text-right">Projects</th>
+              <th className="text-right">Balance</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {managedPis.map((pi) => (
+              <tr key={pi.employeeId}>
+                <td>
+                  <Link
+                    className="link link-hover link-primary"
+                    params={{ employeeId: pi.employeeId }}
+                    to="/projects/$employeeId/"
+                  >
+                    {pi.name}
+                  </Link>
+                </td>
+                <td className="text-right">{pi.projectCount}</td>
+                <td className="text-right">
+                  {formatCurrency(pi.totalBalance)}{' '}
+                  <span className="text-base-content/60">
+                    ({formatPercent(pi.totalBalance, pi.totalBudget)})
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+
+      {activeTab === 'reports' && (
+        <ul className="mt-8">
+          <li>
+            <Link className="text-xl link link-hover link-primary" to="/accruals">
+              Employee Vacation Accruals
+            </Link>
+          </li>
+        </ul>
+      )}
     </div>
   );
 }
