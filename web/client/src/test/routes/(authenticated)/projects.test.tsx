@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { userEvent } from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { getProjectAlerts } from '@/components/alerts/ProjectAlerts.tsx';
 import { PiWithProjects } from '@/queries/project.ts';
