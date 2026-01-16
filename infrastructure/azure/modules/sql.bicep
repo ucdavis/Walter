@@ -32,7 +32,7 @@ param sqlDbCollation string = 'SQL_Latin1_General_CP1_CI_AS'
 @description('SQL database max size in bytes')
 param sqlDbMaxSizeBytes int = 2147483648
 
-resource sqlServer 'Microsoft.Sql/servers@2024-05-01-preview' = {
+resource sqlServer 'Microsoft.Sql/servers@2024-11-01-preview' = {
   name: sqlServerName
   location: location
   properties: {
@@ -45,7 +45,7 @@ resource sqlServer 'Microsoft.Sql/servers@2024-05-01-preview' = {
   }
 }
 
-resource allowAzureServices 'Microsoft.Sql/servers/firewallRules@2024-05-01-preview' = if (allowAzureServicesToSql) {
+resource allowAzureServices 'Microsoft.Sql/servers/firewallRules@2024-11-01-preview' = if (allowAzureServicesToSql) {
   name: 'AllowAzureServices'
   parent: sqlServer
   properties: {
@@ -54,7 +54,7 @@ resource allowAzureServices 'Microsoft.Sql/servers/firewallRules@2024-05-01-prev
   }
 }
 
-resource sqlDb 'Microsoft.Sql/servers/databases@2024-05-01-preview' = {
+resource sqlDb 'Microsoft.Sql/servers/databases@2024-11-01-preview' = {
   name: sqlDbName
   parent: sqlServer
   location: location
