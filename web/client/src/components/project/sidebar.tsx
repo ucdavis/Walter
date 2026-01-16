@@ -51,7 +51,7 @@ const linkClasses = (isActive: boolean, isActiveStatus: boolean) =>
     isActive
       ? 'bg-primary-color/10'
       : isActiveStatus
-        ? 'bg-primary-color/20'
+        ? 'bg-base-100'
         : 'hover:bg-primary-color/10',
   ].join(' ');
 
