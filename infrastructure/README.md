@@ -36,7 +36,6 @@ Prereqs:
 Deploy (creates the resource group if missing):
 
 ```bash
-SQL_ADMIN_PASSWORD='...' \
 infrastructure/azure/scripts/deploy.sh \
   -g rg-walter-test \
   --app-name walter \
@@ -48,7 +47,6 @@ infrastructure/azure/scripts/deploy.sh \
 What-if mode (no changes):
 
 ```bash
-SQL_ADMIN_PASSWORD='...' \
 infrastructure/azure/scripts/deploy.sh \
   -g rg-walter-test \
   --app-name walter \
@@ -98,4 +96,3 @@ Notes:
   - The App Service Plan ID you passed doesn’t exist in the subscription/resource group you’re deploying into (or you don’t have access to it). Double-check the `--app-service-plan-id` and the active subscription (`az account show`).
 - SQL connectivity from the Web App fails:
   - Run the firewall sync script above (or enable `allowAzureServicesToSql=true` temporarily, if appropriate for your security posture).
-
