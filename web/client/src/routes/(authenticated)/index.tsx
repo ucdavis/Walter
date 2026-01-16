@@ -83,7 +83,10 @@ function RouteComponent() {
 
       <div className="tabs mt-16" role="tablist">
         <button
+          aria-controls="panel-pis"
+          aria-selected={activeTab === 'pis'}
           className={`text-2xl tab ps-0 ${activeTab === 'pis' ? 'tab-active' : ''}`}
+          id="tab-pis"
           onClick={() => setActiveTab('pis')}
           role="tab"
           type="button"
@@ -91,7 +94,10 @@ function RouteComponent() {
           Principal Investigators
         </button>
         <button
+          aria-controls="panel-reports"
+          aria-selected={activeTab === 'reports'}
           className={`text-2xl tab ${activeTab === 'reports' ? 'tab-active' : ''}`}
+          id="tab-reports"
           onClick={() => setActiveTab('reports')}
           role="tab"
           type="button"
@@ -101,47 +107,59 @@ function RouteComponent() {
       </div>
 
       {activeTab === 'pis' && (
-        <table className="table mt-8">
-          <thead>
-            <tr>
-              <th>PI Name</th>
-              <th className="text-right">Projects</th>
-              <th className="text-right">Balance</th>
-            </tr>
-          </thead>
-          <tbody>
-            {managedPis.map((pi) => (
-              <tr key={pi.employeeId}>
-                <td>
-                  <Link
-                    className="link link-hover link-primary"
-                    params={{ employeeId: pi.employeeId }}
-                    to="/projects/$employeeId/"
-                  >
-                    {pi.name}
-                  </Link>
-                </td>
-                <td className="text-right">{pi.projectCount}</td>
-                <td className="text-right">
-                  {formatCurrency(pi.totalBalance)}{' '}
-                  <span className="text-base-content/60">
-                    ({formatPercent(pi.totalBalance, pi.totalBudget)})
-                  </span>
-                </td>
+        <div
+          aria-labelledby="tab-pis"
+          id="panel-pis"
+          role="tabpanel"
+        >
+          <table className="table mt-8">
+            <thead>
+              <tr>
+                <th>PI Name</th>
+                <th className="text-right">Projects</th>
+                <th className="text-right">Balance</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {managedPis.map((pi) => (
+                <tr key={pi.employeeId}>
+                  <td>
+                    <Link
+                      className="link link-hover link-primary"
+                      params={{ employeeId: pi.employeeId }}
+                      to="/projects/$employeeId/"
+                    >
+                      {pi.name}
+                    </Link>
+                  </td>
+                  <td className="text-right">{pi.projectCount}</td>
+                  <td className="text-right">
+                    {formatCurrency(pi.totalBalance)}{' '}
+                    <span className="text-base-content/60">
+                      ({formatPercent(pi.totalBalance, pi.totalBudget)})
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       {activeTab === 'reports' && (
-        <ul className="mt-8">
-          <li>
-            <Link className="text-xl link link-hover link-primary" to="/accruals">
-              Employee Vacation Accruals
-            </Link>
-          </li>
-        </ul>
+        <div
+          aria-labelledby="tab-reports"
+          id="panel-reports"
+          role="tabpanel"
+        >
+          <ul className="mt-8">
+            <li>
+              <Link className="text-xl link link-hover link-primary" to="/accruals">
+                Employee Vacation Accruals
+              </Link>
+            </li>
+          </ul>
+        </div>
       )}
     </div>
   );
