@@ -36,7 +36,12 @@ var webAppName = 'web-${baseName}-${nameToken}'
 var sqlServerName = 'sql-${baseName}-${nameToken}'
 var sqlDbName = normalizedAppName
 
-var dbConnection = 'Server=tcp:${sqlServerName}.${environment().suffixes.sqlServerHostname},1433;Initial Catalog=${sqlDbName};Persist Security Info=False;User ID=${sqlAdminLogin};Password=${sqlAdminPassword};MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;'
+var sqlHostSuffix = environment().suffixes.sqlServerHostname
+var sqlHost = substring(sqlHostSuffix, 0, 1) == '.'
+  ? '${sqlServerName}${sqlHostSuffix}'
+  : '${sqlServerName}.${sqlHostSuffix}'
+
+var dbConnection = 'Server=tcp:${sqlHost},1433;Initial Catalog=${sqlDbName};Persist Security Info=False;User ID=${sqlAdminLogin};Password=${sqlAdminPassword};MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;'
 
 module sql './modules/sql.bicep' = {
   name: 'sql'

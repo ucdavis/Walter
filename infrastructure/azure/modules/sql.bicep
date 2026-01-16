@@ -72,5 +72,8 @@ resource sqlDb 'Microsoft.Sql/servers/databases@2024-05-01-preview' = {
 }
 
 output sqlServerId string = sqlServer.id
-output sqlServerFqdn string = '${sqlServer.name}.${environment().suffixes.sqlServerHostname}'
+var sqlHostSuffix = environment().suffixes.sqlServerHostname
+output sqlServerFqdn string = substring(sqlHostSuffix, 0, 1) == '.'
+  ? '${sqlServer.name}${sqlHostSuffix}'
+  : '${sqlServer.name}.${sqlHostSuffix}'
 output sqlDbId string = sqlDb.id
