@@ -94,7 +94,7 @@ function Card({
 }
 
 export default function RecentActivity() {
-  const [selectedId, setSelectedId] = React.useState<string | null>(null);
+  const [, setSelectedId] = React.useState<string | null>(null);
 
   const cards: CardModel[] = [
     {
