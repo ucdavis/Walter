@@ -93,7 +93,7 @@ describe('home route', () => {
       { employeeId: '2001', name: 'PI One', projectCount: 2 },
     ];
 
-    const user = {
+    const testUser = {
       email: 'alpha@example.com',
       employeeId: '1000',
       id: 'user-1',
@@ -107,9 +107,10 @@ describe('home route', () => {
         HttpResponse.json(managedPis)
       ),
       http.get('/api/project/:employeeId', () => HttpResponse.json([])),
-      http.get('/api/user/me', () => HttpResponse.json(user))
+      http.get('/api/user/me', () => HttpResponse.json(testUser))
     );
 
+    const user = userEvent.setup();
     const { cleanup } = renderRoute({ initialPath: '/' });
 
     try {
@@ -118,14 +119,14 @@ describe('home route', () => {
       expect(screen.getByRole('table')).toBeInTheDocument();
 
       // Click Reports tab
-      await userEvent.click(screen.getByRole('tab', { name: 'Reports' }));
+      await user.click(screen.getByRole('tab', { name: 'Reports' }));
 
       // Table should be hidden, Reports content should show
       expect(screen.queryByRole('table')).not.toBeInTheDocument();
       expect(screen.getByText('Employee Vacation Accruals')).toBeInTheDocument();
 
       // Click back to PIs tab
-      await userEvent.click(
+      await user.click(
         screen.getByRole('tab', { name: 'Principal Investigators' })
       );
 
