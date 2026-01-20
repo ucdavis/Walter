@@ -97,13 +97,13 @@ function RouteComponent() {
     );
   }
 
-  if (projectCodes.length === 0) {
-    return (
-      <div className="container py-10">
-        <p className="text-base-content/70">No projects found.</p>
-      </div>
-    );
-  }
+  // if (projectCodes.length === 0) {
+  //   return (
+  //     <div className="container py-10">
+  //       <p className="text-base-content/70">No projects found.</p>
+  //     </div>
+  //   );
+  // }
 
   if (personnelQuery.isPending) {
     return (
