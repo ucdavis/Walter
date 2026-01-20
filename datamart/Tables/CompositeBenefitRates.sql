@@ -8,5 +8,5 @@ CREATE TABLE [dbo].[CompositeBenefitRates]
     [CBRGroup] VARCHAR(200) NULL,
     [VacationAccrual] DECIMAL(5,4) NULL,
     [CBR] DECIMAL(5,4) NULL,
-    CONSTRAINT [PK_CompositeBenefitRates] PRIMARY KEY ([JobCode], [TitleCode])
+    CONSTRAINT [PK_CompositeBenefitRates] PRIMARY KEY ([JobCode])
 );
