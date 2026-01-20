@@ -3,15 +3,18 @@ import { createFileRoute } from '@tanstack/react-router';
 import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
 import { formatCurrency } from '@/lib/currency.ts';
 import { formatDate } from '@/lib/date.ts';
-import { PersonnelRecord, useProjectPersonnelQuery } from '@/queries/personnel.ts';
+import {
+  PersonnelRecord,
+  useProjectPersonnelQuery,
+} from '@/queries/personnel.ts';
 import { useProjectsDetailQuery } from '@/queries/project.ts';
 import { useUser } from '@/shared/auth/UserContext.tsx';
 
 interface AggregatedEmployee {
   emplid: string;
   name: string;
-  projectCount: number;
   positions: PersonnelRecord[];
+  projectCount: number;
   totalAnnualSalary: number;
   totalFringeAmount: number;
 }
@@ -32,37 +35,51 @@ function EmployeeRow({ employee }: { employee: AggregatedEmployee }) {
       >
         <td>
           <div className="flex items-center gap-2">
-            {isExpanded
-              ? <ChevronUpIcon className="w-4 h-4" />
-              : <ChevronDownIcon className="w-4 h-4" />
-            }
+            {isExpanded ? (
+              <ChevronUpIcon className="w-4 h-4" />
+            ) : (
+              <ChevronDownIcon className="w-4 h-4" />
+            )}
             {formatName(employee.name)}
           </div>
         </td>
         <td />
         <td />
         <td className="text-right">{employee.projectCount}</td>
-        <td className="text-right">{formatCurrency(employee.totalAnnualSalary)}</td>
-        <td className="text-right">{formatCurrency(employee.totalFringeAmount)}</td>
-        <td className="text-right">{formatCurrency(employee.totalAnnualSalary + employee.totalFringeAmount)}</td>
+        <td className="text-right">
+          {formatCurrency(employee.totalAnnualSalary)}
+        </td>
+        <td className="text-right">
+          {formatCurrency(employee.totalFringeAmount)}
+        </td>
+        <td className="text-right">
+          {formatCurrency(
+            employee.totalAnnualSalary + employee.totalFringeAmount
+          )}
+        </td>
       </tr>
-      {isExpanded && employee.positions.map((position, idx) => {
-        const annualSalary = position.monthlyRt * 12;
-        const fringeAmount = annualSalary * position.cbr;
-        return (
-          <tr key={`${employee.emplid}-${idx}`} className="bg-base-200/50">
-            <td className="pl-10 text-sm text-base-content/70">
-              {position.projectName}
-            </td>
-            <td className="text-sm">{position.positionDescr}</td>
-            <td className="text-sm">{formatDate(position.fundingEndDt)}</td>
-            <td className="text-right text-sm">{position.distPct}%</td>
-            <td className="text-right text-sm">{formatCurrency(annualSalary)}</td>
-            <td className="text-right text-sm">{formatCurrency(fringeAmount)}</td>
-            <td className="text-right text-sm">{formatCurrency(annualSalary + fringeAmount)}</td>
-          </tr>
-        );
-      })}
+      {isExpanded &&
+        employee.positions.map((position, idx) => {
+          const annualSalary = position.monthlyRt * 12;
+          const fringeAmount = annualSalary * position.cbr;
+          return (
+            <tr className="pivot-row" key={`${employee.emplid}-${idx}`}>
+              <td className="text-sm">{position.projectName}</td>
+              <td className="text-sm">{position.positionDescr}</td>
+              <td className="text-sm">{formatDate(position.fundingEndDt)}</td>
+              <td className="text-right text-sm">{position.distPct}%</td>
+              <td className="text-right text-sm">
+                {formatCurrency(annualSalary)}
+              </td>
+              <td className="text-right text-sm">
+                {formatCurrency(fringeAmount)}
+              </td>
+              <td className="text-right text-sm">
+                {formatCurrency(annualSalary + fringeAmount)}
+              </td>
+            </tr>
+          );
+        })}
     </>
   );
 }
@@ -140,8 +157,8 @@ function RouteComponent() {
       employeeMap.set(record.emplid, {
         emplid: record.emplid,
         name: record.name,
-        projectCount: 1,
         positions: [record],
+        projectCount: 1,
         totalAnnualSalary: annualSalary,
         totalFringeAmount: fringeAmount,
       });
@@ -151,43 +168,57 @@ function RouteComponent() {
   const employees = Array.from(employeeMap.values());
   const totalEmployees = employees.length;
   const totalProjects = new Set((data ?? []).map((r) => r.projectId)).size;
-  const totalSalary = employees.reduce((sum, e) => sum + e.totalAnnualSalary, 0);
-  const totalFringe = employees.reduce((sum, e) => sum + e.totalFringeAmount, 0);
+  const totalSalary = employees.reduce(
+    (sum, e) => sum + e.totalAnnualSalary,
+    0
+  );
+  const totalFringe = employees.reduce(
+    (sum, e) => sum + e.totalFringeAmount,
+    0
+  );
 
   return (
     <div className="container">
-      <div className="py-10 mx-auto w-full sm:max-w-[90%] md:max-w-[80%] xl:max-w-[66%]">
-        <h1 className="text-2xl font-proxima-bold">{user.name}'s Personnel</h1>
-        <p className="text-base-content/70">
-          {totalEmployees} employees across {totalProjects} projects
-        </p>
-      </div>
+      <h1 className="h1 mt-8">{user.name}'s Personnel</h1>
+      <p className="mb-4 h3">
+        {totalEmployees} employees across {totalProjects} projects
+      </p>
 
       {/* Summary Cards */}
-      <div className="mx-auto w-full sm:max-w-[90%] md:max-w-[80%] xl:max-w-[66%]">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 border border-base-300 rounded-lg">
-          <div>
-            <div className="text-xs uppercase text-base-content/60"># of Employees</div>
-            <div className="text-xl font-semibold">{totalEmployees}</div>
-          </div>
-          <div>
-            <div className="text-xs uppercase text-base-content/60"># of Projects</div>
-            <div className="text-xl font-semibold">{totalProjects}</div>
-          </div>
-          <div>
-            <div className="text-xs uppercase text-base-content/60">Total Salary</div>
-            <div className="text-xl font-semibold">{formatCurrency(totalSalary)}</div>
-          </div>
-          <div>
-            <div className="text-xs uppercase text-base-content/60">Total Fringe</div>
-            <div className="text-xl font-semibold text-success">{formatCurrency(totalFringe)}</div>
-          </div>
+
+      <div className="my-8 flex justify-between px-6 mt-4 mb-8 border rounded-md bg-light-bg-200 border-main-border py-4">
+        <div>
+          <p className="h5"># of Employees</p>
+          <p className="h4">{totalEmployees}</p>
+        </div>
+        <div>
+          <p className="h5"># of Projects</p>
+          <p className="h4">{totalProjects}</p>
+        </div>
+        <div>
+          <p className="h5">Total Salary</p>
+          <p className="h4">{formatCurrency(totalSalary)}</p>
+        </div>
+        <div className="text-right">
+          <p className="h5">Total Fringe</p>
+          <p className="h4 text-success font-proxima-bold">
+            {formatCurrency(totalFringe)}
+          </p>
         </div>
       </div>
 
       {/* Personnel Table */}
-      <div className="mx-auto w-full sm:max-w-[90%] md:max-w-[80%] xl:max-w-[66%] mt-8">
+      <div className="overflow-x-auto">
         <table className="table walter-table">
+          <colgroup>
+            <col className="w-1/4" /> {/* Name */}
+            <col className="w-1/6" /> {/* Job Title */}
+            <col className="w-1/12" /> {/* End Date */}
+            <col className="w-1/12" />
+            <col className="w-1/12" />
+            <col className="w-1/12" />
+            <col className="w-1/12" />
+          </colgroup>
           <thead>
             <tr>
               <th>Name</th>
@@ -201,15 +232,17 @@ function RouteComponent() {
           </thead>
           <tbody>
             {employees.map((employee) => (
-              <EmployeeRow key={employee.emplid} employee={employee} />
+              <EmployeeRow employee={employee} key={employee.emplid} />
             ))}
           </tbody>
           <tfoot>
-            <tr className="font-semibold">
+            <tr className="totaltr">
               <td colSpan={4}>Totals</td>
               <td className="text-right">{formatCurrency(totalSalary)}</td>
               <td className="text-right">{formatCurrency(totalFringe)}</td>
-              <td className="text-right">{formatCurrency(totalSalary + totalFringe)}</td>
+              <td className="text-right">
+                {formatCurrency(totalSalary + totalFringe)}
+              </td>
             </tr>
           </tfoot>
         </table>

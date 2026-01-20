@@ -19,8 +19,10 @@ export function ProjectPersonnel({ projects }: ProjectPersonnelProps) {
         <h2 className="h2">Personnel</h2>
       </div>
 
-      {isLoading && <p className="text-gray-500 mt-4">Loading personnel...</p>}
-      {error && <p className="text-red-500 mt-4">Error loading personnel.</p>}
+      {isLoading && (
+        <p className="text-base-content/70 mt-4">Loading personnel...</p>
+      )}
+      {error && <p className="text-error mt-4">Error loading personnel.</p>}
 
       {personnel && personnel.length > 0 && (
         <div className="overflow-x-auto mt-4">
@@ -59,7 +61,7 @@ export function ProjectPersonnel({ projects }: ProjectPersonnelProps) {
       )}
 
       {personnel && personnel.length === 0 && (
-        <p className="text-gray-500 mt-4">
+        <p className="text-base-content/70 mt-4">
           No personnel found for selected projects.
         </p>
       )}
