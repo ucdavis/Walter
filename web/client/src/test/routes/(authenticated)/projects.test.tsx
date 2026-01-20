@@ -59,7 +59,7 @@ describe('home route', () => {
     }
   });
 
-  it('redirects to my projects when user manages no investigators', async () => {
+  it('shows projects table when user is not a PM', async () => {
     const user = {
       email: 'alpha@example.com',
       employeeId: '1000',
@@ -69,20 +69,62 @@ describe('home route', () => {
       roles: ['admin'],
     };
 
+    const projects = [
+      { project_number: 'P1', project_name: 'Project One', award_end_date: '2099-12-31', cat_bud_bal: 1000 },
+      { project_number: 'P2', project_name: 'Project Two', award_end_date: null, cat_bud_bal: 2000 },
+    ];
+
     server.use(
       http.get('/api/user/me', () => HttpResponse.json(user)),
       http.get('/api/project/managed/:employeeId', () => HttpResponse.json([])),
-      http.get('/api/project/:employeeId', () => HttpResponse.json([]))
+      http.get('/api/project/:employeeId', () => HttpResponse.json(projects))
     );
 
-    const { cleanup, router } = renderRoute({ initialPath: '/' });
+    const { cleanup } = renderRoute({ initialPath: '/' });
 
     try {
-      // Wait for redirect to complete
-      await screen.findByText("We didn't find any projects for you.");
-      expect(router.state.location.pathname).toContain(
-        `/projects/${user.employeeId}`
-      );
+      // Should show Projects tab and project table
+      expect(await screen.findByRole('tab', { name: 'Projects' })).toBeInTheDocument();
+      expect(await screen.findByText('Project One')).toBeInTheDocument();
+      expect(await screen.findByText('Project Two')).toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('aggregates projects by project number with summed balance', async () => {
+    const user = {
+      email: 'alpha@example.com',
+      employeeId: '1000',
+      id: 'user-1',
+      kerberos: 'alpha',
+      name: 'Alpha User',
+      roles: ['admin'],
+    };
+
+    // Same project with multiple records (different tasks/categories)
+    const projects = [
+      { project_number: 'P1', project_name: 'Project One', award_end_date: '2099-12-31', cat_bud_bal: 1000 },
+      { project_number: 'P1', project_name: 'Project One', award_end_date: '2099-12-31', cat_bud_bal: 500 },
+      { project_number: 'P1', project_name: 'Project One', award_end_date: '2099-12-31', cat_bud_bal: 250 },
+    ];
+
+    server.use(
+      http.get('/api/user/me', () => HttpResponse.json(user)),
+      http.get('/api/project/managed/:employeeId', () => HttpResponse.json([])),
+      http.get('/api/project/:employeeId', () => HttpResponse.json(projects))
+    );
+
+    const { cleanup } = renderRoute({ initialPath: '/' });
+
+    try {
+      await screen.findByText('Project One');
+      // Should only have one row for Project One
+      const rows = screen.getAllByRole('row');
+      // 1 header row + 1 data row
+      expect(rows).toHaveLength(2);
+      // Balance should be summed: 1000 + 500 + 250 = 1750
+      expect(screen.getByText('$1,750.00')).toBeInTheDocument();
     } finally {
       cleanup();
     }
