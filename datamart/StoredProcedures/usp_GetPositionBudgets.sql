@@ -108,6 +108,7 @@ BEGIN
             SELECT
                 POSITION_NBR,
                 DESCR,
+                JOBCODE,
                 ROW_NUMBER() OVER(
                     PARTITION BY POSITION_NBR
                     ORDER BY EFFDT DESC
@@ -140,7 +141,8 @@ BEGIN
             p.FTE,
             p.TERMINATION_DT,
             e.NAME,
-            pd.DESCR AS POSITION_DESCR
+            pd.DESCR AS POSITION_DESCR,
+            pd.JOBCODE
         FROM LatestBudget b
         LEFT JOIN LatestPosition p
             ON b.POSITION_NBR = p.POSITION_NBR
@@ -163,10 +165,12 @@ BEGIN
         FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
     );
 
-    -- Execute via OPENQUERY
+    -- Execute via OPENQUERY and join with local CompositeBenefitRates table
     BEGIN TRY
         SET @TSQLCommand =
-            'SELECT * FROM OPENQUERY(' + @LinkedServerName + ', ''' + REPLACE(@OracleQuery, '''', '''''') + ''')';
+            'SELECT oq.*, cbr.VacationAccrual, cbr.CBR
+             FROM OPENQUERY(' + @LinkedServerName + ', ''' + REPLACE(@OracleQuery, '''', '''''') + ''') oq
+             LEFT JOIN dbo.CompositeBenefitRates cbr ON oq.JOBCODE = cbr.JobCode';
 
         EXEC sp_executesql @TSQLCommand;
 
