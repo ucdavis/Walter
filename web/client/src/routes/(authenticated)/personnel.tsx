@@ -81,7 +81,7 @@ function RouteComponent() {
 
   const personnelQuery = useProjectPersonnelQuery(projectCodes);
 
-  if (projectsQuery.isPending || personnelQuery.isPending) {
+  if (projectsQuery.isPending) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center">
         <div className="loading loading-spinner loading-lg" />
@@ -89,10 +89,34 @@ function RouteComponent() {
     );
   }
 
-  if (projectsQuery.isError || personnelQuery.isError) {
+  if (projectsQuery.isError) {
     return (
       <div className="alert alert-error">
-        <span>Unable to load data: {projectsQuery.error?.message ?? personnelQuery.error?.message}</span>
+        <span>Unable to load data: {projectsQuery.error?.message}</span>
+      </div>
+    );
+  }
+
+  if (projectCodes.length === 0) {
+    return (
+      <div className="container py-10">
+        <p className="text-base-content/70">No projects found.</p>
+      </div>
+    );
+  }
+
+  if (personnelQuery.isPending) {
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <div className="loading loading-spinner loading-lg" />
+      </div>
+    );
+  }
+
+  if (personnelQuery.isError) {
+    return (
+      <div className="alert alert-error">
+        <span>Unable to load personnel: {personnelQuery.error?.message}</span>
       </div>
     );
   }
