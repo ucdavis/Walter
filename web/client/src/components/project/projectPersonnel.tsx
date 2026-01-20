@@ -37,21 +37,19 @@ export function ProjectPersonnel({ projects }: ProjectPersonnelProps) {
             </thead>
             <tbody>
               {personnel.map((person, index) => (
-                <tr
-                  key={`${person.JOB_EMPLID}-${person.POSITION_NBR}-${index}`}
-                >
-                  <td>{person.PROJECT_ID}</td>
+                <tr key={`${person.emplid}-${person.projectId}-${index}`}>
+                  <td>{person.projectId}</td>
                   <td>
                     <div className="flex items-center gap-2">
                       <UserGroupIcon className="w-5 h-5" />
-                      <span>{person.PREFERRED_NAME}</span>
+                      <span>{person.name}</span>
                     </div>
                   </td>
-                  <td className="text-right">{person.DIST_PCT}%</td>
-                  <td className="text-right pr-6">{person.FTE}</td>
-                  <td>{person.JOBCODE_SHORT}</td>
+                  <td className="text-right">{person.distPct}%</td>
+                  <td className="text-right pr-6">{person.fte}</td>
+                  <td>{person.positionDescr}</td>
                   <td className="text-right">
-                    <Currency value={person.JOB_MONTHLY_RT_EQUIV} />
+                    <Currency value={person.monthlyRt} />
                   </td>
                 </tr>
               ))}
