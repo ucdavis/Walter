@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { ProjectAlerts } from '@/components/alerts/ProjectAlerts.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
-import { useManagedPisQuery } from '@/queries/project.ts';
+import { formatDate } from '@/lib/date.ts';
+import { useManagedPisQuery, useProjectsDetailQuery } from '@/queries/project.ts';
 import { useUser } from '@/shared/auth/UserContext.tsx';
-import { createFileRoute, Link, Navigate } from '@tanstack/react-router';
+import { createFileRoute, Link } from '@tanstack/react-router';
 
 type Tab = 'pis' | 'reports';
 
@@ -23,8 +24,9 @@ function RouteComponent() {
   const { error, isError, isPending, managedPis } = useManagedPisQuery(
     user.employeeId
   );
+  const userProjectsQuery = useProjectsDetailQuery(user.employeeId);
 
-  if (isPending) {
+  if (isPending || userProjectsQuery.isPending) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center">
         <div className="loading loading-spinner loading-lg" />
@@ -40,14 +42,41 @@ function RouteComponent() {
     );
   }
 
-  if (!managedPis?.length) {
+  if (userProjectsQuery.isError) {
     return (
-      <Navigate
-        params={{ employeeId: user.employeeId }}
-        to="/projects/$employeeId/"
-      />
+      <div className="alert alert-error">
+        <span>Unable to load projects: {userProjectsQuery.error?.message}</span>
+      </div>
     );
   }
+
+  const isProjectManager = managedPis && managedPis.length > 0;
+
+  // Aggregate projects by project_number, summing balances
+  const projectsRaw = userProjectsQuery.data ?? [];
+  const projectsMap = new Map<string, { project_number: string; project_name: string; award_end_date: string | null; totalBalance: number }>();
+  for (const p of projectsRaw) {
+    const existing = projectsMap.get(p.project_number);
+    if (existing) {
+      existing.totalBalance += p.cat_bud_bal;
+    } else {
+      projectsMap.set(p.project_number, {
+        project_number: p.project_number,
+        project_name: p.project_name,
+        award_end_date: p.award_end_date,
+        totalBalance: p.cat_bud_bal,
+      });
+    }
+  }
+  const now = new Date();
+  const projects = Array.from(projectsMap.values())
+    .filter((p) => !p.award_end_date || new Date(p.award_end_date) >= now)
+    .sort((a, b) => {
+      if (!a.award_end_date && !b.award_end_date) return 0;
+      if (!a.award_end_date) return -1;
+      if (!b.award_end_date) return 1;
+      return new Date(a.award_end_date).getTime() - new Date(b.award_end_date).getTime();
+    });
 
   return (
     <div className="container">
@@ -91,7 +120,7 @@ function RouteComponent() {
           role="tab"
           type="button"
         >
-          Principal Investigators
+          {isProjectManager ? 'Principal Investigators' : 'Projects'}
         </button>
         <button
           aria-controls="panel-reports"
@@ -112,37 +141,69 @@ function RouteComponent() {
           id="panel-pis"
           role="tabpanel"
         >
-          <table className="table mt-8">
-            <thead>
-              <tr>
-                <th>PI Name</th>
-                <th className="text-right">Projects</th>
-                <th className="text-right">Balance</th>
-              </tr>
-            </thead>
-            <tbody>
-              {managedPis.map((pi) => (
-                <tr key={pi.employeeId}>
-                  <td>
-                    <Link
-                      className="link link-hover link-primary"
-                      params={{ employeeId: pi.employeeId }}
-                      to="/projects/$employeeId/"
-                    >
-                      {pi.name}
-                    </Link>
-                  </td>
-                  <td className="text-right">{pi.projectCount}</td>
-                  <td className="text-right">
-                    {formatCurrency(pi.totalBalance)}{' '}
-                    <span className="text-base-content/60">
-                      ({formatPercent(pi.totalBalance, pi.totalBudget)})
-                    </span>
-                  </td>
+          {isProjectManager ? (
+            <table className="walter-test table mt-8">
+              <thead>
+                <tr>
+                  <th>PI Name</th>
+                  <th className="text-right">Projects</th>
+                  <th className="text-right">Balance</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {managedPis.map((pi) => (
+                  <tr key={pi.employeeId}>
+                    <td>
+                      <Link
+                        className="link link-hover link-primary"
+                        params={{ employeeId: pi.employeeId }}
+                        to="/projects/$employeeId/"
+                      >
+                        {pi.name}
+                      </Link>
+                    </td>
+                    <td className="text-right">{pi.projectCount}</td>
+                    <td className="text-right">
+                      {formatCurrency(pi.totalBalance)}{' '}
+                      <span className="text-base-content/60">
+                        ({formatPercent(pi.totalBalance, pi.totalBudget)})
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <table className="walter-test table mt-8">
+              <thead>
+                <tr>
+                  <th>Project Name</th>
+                  <th className="text-right">End Date</th>
+                  <th className="text-right">Balance</th>
+                </tr>
+              </thead>
+              <tbody>
+                {projects.map((project) => (
+                  <tr key={project.project_number}>
+                    <td>
+                      <Link
+                        className="link link-hover link-primary"
+                        params={{
+                          employeeId: user.employeeId,
+                          projectNumber: project.project_number,
+                        }}
+                        to="/projects/$employeeId/$projectNumber/"
+                      >
+                        {project.project_name}
+                      </Link>
+                    </td>
+                    <td className="text-right">{formatDate(project.award_end_date)}</td>
+                    <td className="text-right">{formatCurrency(project.totalBalance)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       )}
 

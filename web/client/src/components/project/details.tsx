@@ -1,22 +1,10 @@
+import { formatDate } from '@/lib/date.ts';
 import type { ProjectSummary } from '@/lib/projectSummary.ts';
 import { Currency } from '@/shared/Currency.tsx';
 
 interface ProjectDetailsProps {
   summary: ProjectSummary;
 }
-
-const formatDate = (value: string | null) => {
-  if (!value) {
-    return 'Not provided';
-  }
-
-  const date = new Date(value);
-  return date.toLocaleDateString('en-US', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
-};
 
 const displayValue = (value: string | null) => value ?? 'Not provided';
 

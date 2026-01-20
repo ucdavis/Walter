@@ -91,6 +91,7 @@ describe('home route', () => {
   it('switches between tabs', async () => {
     const managedPis = [
       { employeeId: '2001', name: 'PI One', projectCount: 2 },
+      { employeeId: '2002', name: 'PI Two', projectCount: 1 },
     ];
 
     const testUser = {

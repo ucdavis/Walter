@@ -1,3 +1,4 @@
+import { formatDate } from '@/lib/date.ts';
 import {
   projectsDetailQueryOptions,
   ProjectRecord,
@@ -124,7 +125,7 @@ export function ProjectsSidebar() {
                 </div>
                 <div className="flex text-sm justify-between items-center text-dark-font/70">
                   <Currency value={project.total_cat_bud_bal} />
-                  <span>{project.award_end_date ?? 'No end date'}</span>
+                  <span>{formatDate(project.award_end_date, 'No end date')}</span>
                 </div>
               </Link>
             ))}
