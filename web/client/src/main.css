@@ -151,7 +151,7 @@ html:active-view-transition-type(slide-right) {
 }
 /* Labels */
 .h5 {
-  @apply text-sm uppercase font-proxima-bold;
+  @apply font-proxima-bold;
 }
 
 .section-margin {
