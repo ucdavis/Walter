@@ -36,7 +36,7 @@ function ProjectContent({ summary }: { summary: ProjectSummary }) {
     <main className="flex-1">
       <section className="mt-8 section-margin">
         <h1 className="h1">{summary.projectName}</h1>
-        <p className="mb-4 h4">{summary.projectNumber}</p>
+        <p className="mb-4 h3">{summary.projectNumber}</p>
         <ProjectChart
           projects={[summary.projectNumber]}
           startingBalance={summary.totals.balance}

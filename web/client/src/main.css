@@ -141,8 +141,9 @@ html:active-view-transition-type(slide-right) {
 .h2 {
   @apply text-2xl font-proxima-bold;
 }
+/* subheadings */
 .h3 {
-  @apply text-sm uppercase;
+  @apply text-base font-proxima-bold uppercase text-base-content/60;
 }
 /* stat data */
 .h4 {
