@@ -139,19 +139,22 @@ html:active-view-transition-type(slide-right) {
   @apply text-3xl font-proxima-bold;
 }
 .h2 {
-  @apply text-2xl font-extrabold;
+  @apply text-2xl font-proxima-bold;
 }
 .h3 {
-  @apply text-sm uppercase text-dark-font;
+  @apply text-sm uppercase;
 }
+/* stat data */
 .h4 {
-  @apply text-base font-proxima-bold text-dark-font/40;
+  @apply text-lg;
 }
+/* Labels */
 .h5 {
-  @apply text-base font-proxima-bold;
+  @apply text-sm uppercase font-proxima-bold;
 }
+
 .section-margin {
-  @apply mb-15;
+  @apply mb-20;
 }
 .walter-table th {
   padding: 4px 0;
