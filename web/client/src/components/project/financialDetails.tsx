@@ -64,11 +64,15 @@ export function FinancialDetails({ summary }: FinancialDetailsProps) {
       <div className="grid grid-cols-5 gap-4 mt-4 mb-6">
         <div>
           <div className="h5">Budget</div>
-          <Currency value={summary.totals.budget} />
+          <div className="h4">
+            <Currency value={summary.totals.budget} />
+          </div>
         </div>
         <div>
           <div className="h5">Current Balance</div>
-          <Currency value={summary.totals.balance} />
+          <div className="h4">
+            <Currency value={summary.totals.balance} />
+          </div>
         </div>
       </div>
 
