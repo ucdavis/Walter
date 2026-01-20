@@ -7,12 +7,19 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools';
 import { RouterContext } from '../main.tsx';
 import { HttpError } from '../lib/api.ts';
+import Footer from '@/components/project/footer.tsx';
 
 const RootLayout = () => (
   <>
-    <Outlet />
-    <ReactQueryDevtools buttonPosition="top-right" />
-    <TanStackRouterDevtools position="bottom-right" />
+    <div className="min-h-screen flex flex-col">
+      <main className="flex-1">
+        <Outlet />
+      </main>
+
+      <Footer />
+      <ReactQueryDevtools buttonPosition="top-right" />
+      <TanStackRouterDevtools position="bottom-right" />
+    </div>
   </>
 );
 
@@ -37,9 +44,7 @@ const RootErrorBoundary = ({ error, reset }: ErrorComponentProps) => {
       <div className="max-w-xl rounded-box bg-base-100 p-8 text-center shadow-lg">
         <p className="text-sm font-semibold uppercase text-error">Error</p>
         <h1 className="mt-2 text-2xl font-bold text-base-content">
-          {httpError
-            ? 'We could not reach the server'
-            : 'Something went wrong'}
+          {httpError ? 'We could not reach the server' : 'Something went wrong'}
         </h1>
         <p className="mt-4 text-base-content/80">{message}</p>
         {detail ? (
@@ -49,7 +54,10 @@ const RootErrorBoundary = ({ error, reset }: ErrorComponentProps) => {
           <button className="btn btn-primary" onClick={() => reset()}>
             Try again
           </button>
-          <button className="btn btn-outline" onClick={() => window.location.reload()}>
+          <button
+            className="btn btn-outline"
+            onClick={() => window.location.reload()}
+          >
             Reload page
           </button>
         </div>

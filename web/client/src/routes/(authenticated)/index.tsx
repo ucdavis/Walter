@@ -1,215 +1,227 @@
+import { useState } from 'react';
+import { ProjectAlerts } from '@/components/alerts/ProjectAlerts.tsx';
+import { formatCurrency } from '@/lib/currency.ts';
+import { formatDate } from '@/lib/date.ts';
+import { useManagedPisQuery, useProjectsDetailQuery } from '@/queries/project.ts';
 import { useUser } from '@/shared/auth/UserContext.tsx';
 import { createFileRoute, Link } from '@tanstack/react-router';
+
+type Tab = 'pis' | 'reports';
 
 export const Route = createFileRoute('/(authenticated)/')({
   component: RouteComponent,
 });
 
+const formatPercent = (balance: number, budget: number) => {
+  if (budget === 0) return '—';
+  const percent = (balance / budget) * 100;
+  return `${percent.toFixed(0)}%`;
+};
+
 function RouteComponent() {
+  const [activeTab, setActiveTab] = useState<Tab>('pis');
   const user = useUser();
-  return (
-    <div className="min-h-screen bg-base-100">
-      <div className="container mx-auto px-4 py-16">
-        <div className="mb-8">
-          <h1 className="text-5xl font-bold mb-4">Hello {user.name}!</h1>
-          <p className="text-xl max-w-2xl mx-auto text-base-content/70">
-            Welcome to your modern app template. Built with Vite, React,
-            TypeScript, and TanStack Router for rapid development.
-          </p>
-        </div>
-        <section className="mb-16">
-          <h2 className="text-3xl font-bold text-center mb-12">Sample Pages</h2>
-          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            <div className="card bg-base-100 shadow-md">
-              <div className="card-body">
-                <h3 className="card-title">Data Table Fetch Example</h3>
-                <p className="text-base-content/70">
-                  This page demonstrates the DataTable component with sample
-                  data and different data types, loaded from the backend API
-                </p>
-                <div className="card-actions justify-end">
-                  <Link className="btn btn-primary" to="/">
-                    Page Not Available
-                  </Link>
-                </div>
-              </div>
-            </div>
-            <div className="card bg-base-100 shadow-md">
-              <div className="card-body">
-                <h3 className="card-title">Form Example</h3>
-                <p className="text-base-content/70">
-                  This page demonstrates custom form components with TanStack
-                  Form, Zod validation, and real-time async validation.
-                </p>
-                <div className="card-actions justify-end">
-                  <Link className="btn btn-primary" to="/form">
-                    Go to Form Page
-                  </Link>
-                </div>
-              </div>
-            </div>
-            <div className="card bg-base-100 shadow-md">
-              <div className="card-body">
-                <h3 className="card-title">Style Guide</h3>
-                <p className="text-base-content/70">
-                  Explore the design system and UI components available in this
-                  template.
-                </p>
-                <div className="card-actions justify-end">
-                  <Link className="btn btn-primary" to="/styles">
-                    Go to Style Guide
-                  </Link>
-                </div>
-              </div>
-            </div>
-            <div className="card bg-base-100 shadow-md">
-              <div className="card-body">
-                <h3 className="card-title">Anonymous About Page</h3>
-                <p className="text-base-content/70">
-                  This page is accessible without a login.
-                </p>
-                <div className="card-actions justify-end">
-                  <Link className="btn btn-primary" to="/about">
-                    Go to About Page
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
+  const { error, isError, isPending, managedPis } = useManagedPisQuery(
+    user.employeeId
+  );
+  const userProjectsQuery = useProjectsDetailQuery(user.employeeId);
 
-        {/* Features Grid */}
-        <section className="mb-16">
-          <h2 className="text-3xl font-bold text-center mb-12">
-            What is Included
-          </h2>
-          <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
-            <div className="card bg-base-100 shadow-md text-center">
-              <div className="card-body">
-                <div className="w-12 h-12 bg-primary/20 rounded-lg flex items-center justify-center mx-auto mb-4">
-                  <svg
-                    className="w-6 h-6 text-primary"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      d="M13 10V3L4 14h7v7l9-11h-7z"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                    />
-                  </svg>
-                </div>
-                <h3 className="card-title justify-center mb-2">
-                  Fast & Modern
-                </h3>
-                <p className="text-base-content/70">
-                  Built with Vite, React, TypeScript, and modern development
-                  practices
-                </p>
-              </div>
-            </div>
-
-            <div className="card bg-base-100 shadow-md text-center">
-              <div className="card-body">
-                <div className="w-12 h-12 bg-success/20 rounded-lg flex items-center justify-center mx-auto mb-4">
-                  <svg
-                    className="w-6 h-6 text-success"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                    />
-                  </svg>
-                </div>
-                <h3 className="card-title justify-center mb-2">
-                  Type-Safe API
-                </h3>
-                <p className="text-base-content/70">
-                  End-to-end type safety with ASP.NET Core and automatic API
-                  validation
-                </p>
-              </div>
-            </div>
-
-            <div className="card bg-base-100 shadow-md text-center">
-              <div className="card-body">
-                <div className="w-12 h-12 bg-secondary/20 rounded-lg flex items-center justify-center mx-auto mb-4">
-                  <svg
-                    className="w-6 h-6 text-secondary"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                    />
-                  </svg>
-                </div>
-                <h3 className="card-title justify-center mb-2">Secure Auth</h3>
-                <p className="text-base-content/70">
-                  Built-in authentication system with session management
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Getting Started Section */}
-        <section className="text-center mb-16">
-          <div className="card bg-base-200 shadow-xl max-w-2xl mx-auto">
-            <div className="card-body">
-              <h2 className="card-title text-2xl font-bold justify-center mb-4">
-                Getting Started
-              </h2>
-              <p className="text-base-content/70 mb-6">
-                Start building your own app with this template in just one
-                command:
-              </p>
-              <div className="mockup-code mb-6">
-                <pre data-prefix="$">
-                  <code>
-                    git clone https://github.com/ucdavis/web-app-template/
-                    my-app
-                  </code>
-                </pre>
-              </div>
-              <p className="text-base-content/70 mb-8">
-                This will scaffold a new project using this template, so you can
-                get started quickly with all the best practices and tools
-                already set up.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <a
-                  className="btn btn-primary"
-                  href="https://vitejs.dev/guide/"
-                  rel="noopener noreferrer"
-                  target="_blank"
-                >
-                  View Vite Documentation
-                </a>
-                <a
-                  className="btn btn-outline"
-                  href="https://github.com/ucdavis/web-app-template"
-                  rel="noopener noreferrer"
-                  target="_blank"
-                >
-                  View Source
-                </a>
-              </div>
-            </div>
-          </div>
-        </section>
+  if (isPending || userProjectsQuery.isPending) {
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <div className="loading loading-spinner loading-lg" />
       </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="alert alert-error">
+        <span>Unable to load managed investigators: {error?.message}</span>
+      </div>
+    );
+  }
+
+  if (userProjectsQuery.isError) {
+    return (
+      <div className="alert alert-error">
+        <span>Unable to load projects: {userProjectsQuery.error?.message}</span>
+      </div>
+    );
+  }
+
+  const isProjectManager = managedPis && managedPis.length > 0;
+
+  // Aggregate projects by project_number, summing balances
+  const projectsRaw = userProjectsQuery.data ?? [];
+  const projectsMap = new Map<string, { project_number: string; project_name: string; award_end_date: string | null; totalBalance: number }>();
+  for (const p of projectsRaw) {
+    const existing = projectsMap.get(p.project_number);
+    if (existing) {
+      existing.totalBalance += p.cat_bud_bal;
+    } else {
+      projectsMap.set(p.project_number, {
+        project_number: p.project_number,
+        project_name: p.project_name,
+        award_end_date: p.award_end_date,
+        totalBalance: p.cat_bud_bal,
+      });
+    }
+  }
+  const now = new Date();
+  const projects = Array.from(projectsMap.values())
+    .filter((p) => !p.award_end_date || new Date(p.award_end_date) >= now)
+    .sort((a, b) => {
+      if (!a.award_end_date && !b.award_end_date) return 0;
+      if (!a.award_end_date) return -1;
+      if (!b.award_end_date) return 1;
+      return new Date(a.award_end_date).getTime() - new Date(b.award_end_date).getTime();
+    });
+
+  return (
+    <div className="container">
+      <div className="py-10 mx-auto w-full sm:max-w-[90%] md:max-w-[80%] xl:max-w-[66%]">
+        <h1 className="text-2xl font-proxima-bold">W.A.L.T.E.R.</h1>
+        <p className="uppercase">
+          warehouse analytics and ledger tools for enterprise reporting
+        </p>
+      </div>
+
+      <div className="relative mx-auto w-full sm:max-w-[90%] md:max-w-[80%] xl:max-w-[66%]">
+        <input
+          className="input input-bordered w-full pl-10"
+          placeholder="Search PIs, Projects, Personnel..."
+          type="text"
+        />
+        <svg
+          className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-base-content/40"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+          />
+        </svg>
+      </div>
+
+      <ProjectAlerts managedPis={managedPis} />
+
+      <div className="tabs mt-16" role="tablist">
+        <button
+          aria-controls="panel-pis"
+          aria-selected={activeTab === 'pis'}
+          className={`text-2xl tab ps-0 ${activeTab === 'pis' ? 'tab-active' : ''}`}
+          id="tab-pis"
+          onClick={() => setActiveTab('pis')}
+          role="tab"
+          type="button"
+        >
+          {isProjectManager ? 'Principal Investigators' : 'Projects'}
+        </button>
+        <button
+          aria-controls="panel-reports"
+          aria-selected={activeTab === 'reports'}
+          className={`text-2xl tab ${activeTab === 'reports' ? 'tab-active' : ''}`}
+          id="tab-reports"
+          onClick={() => setActiveTab('reports')}
+          role="tab"
+          type="button"
+        >
+          Reports
+        </button>
+      </div>
+
+      {activeTab === 'pis' && (
+        <div
+          aria-labelledby="tab-pis"
+          id="panel-pis"
+          role="tabpanel"
+        >
+          {isProjectManager ? (
+            <table className="walter-test table mt-8">
+              <thead>
+                <tr>
+                  <th>PI Name</th>
+                  <th className="text-right">Projects</th>
+                  <th className="text-right">Balance</th>
+                </tr>
+              </thead>
+              <tbody>
+                {managedPis.map((pi) => (
+                  <tr key={pi.employeeId}>
+                    <td>
+                      <Link
+                        className="link link-hover link-primary"
+                        params={{ employeeId: pi.employeeId }}
+                        to="/projects/$employeeId/"
+                      >
+                        {pi.name}
+                      </Link>
+                    </td>
+                    <td className="text-right">{pi.projectCount}</td>
+                    <td className="text-right">
+                      {formatCurrency(pi.totalBalance)}{' '}
+                      <span className="text-base-content/60">
+                        ({formatPercent(pi.totalBalance, pi.totalBudget)})
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <table className="walter-test table mt-8">
+              <thead>
+                <tr>
+                  <th>Project Name</th>
+                  <th className="text-right">End Date</th>
+                  <th className="text-right">Balance</th>
+                </tr>
+              </thead>
+              <tbody>
+                {projects.map((project) => (
+                  <tr key={project.project_number}>
+                    <td>
+                      <Link
+                        className="link link-hover link-primary"
+                        params={{
+                          employeeId: user.employeeId,
+                          projectNumber: project.project_number,
+                        }}
+                        to="/projects/$employeeId/$projectNumber/"
+                      >
+                        {project.project_name}
+                      </Link>
+                    </td>
+                    <td className="text-right">{formatDate(project.award_end_date)}</td>
+                    <td className="text-right">{formatCurrency(project.totalBalance)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'reports' && (
+        <div
+          aria-labelledby="tab-reports"
+          id="panel-reports"
+          role="tabpanel"
+        >
+          <ul className="mt-8">
+            <li>
+              <Link className="text-xl link link-hover link-primary" to="/accruals">
+                Employee Vacation Accruals
+              </Link>
+            </li>
+          </ul>
+        </div>
+      )}
     </div>
   );
 }

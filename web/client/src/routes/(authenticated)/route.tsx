@@ -3,7 +3,6 @@ import { RouterContext } from '../../main.tsx';
 import { meQueryOptions } from '../../queries/user.ts';
 import { UserProvider } from '@/shared/auth/UserContext.tsx';
 import Header from '@/components/project/header.tsx';
-import Footer from '@/components/project/footer.tsx';
 
 export const Route = createFileRoute('/(authenticated)')({
   beforeLoad: async ({ context }: { context: RouterContext }) => {
@@ -14,8 +13,6 @@ export const Route = createFileRoute('/(authenticated)')({
       <Header />
 
       <Outlet />
-
-      <Footer />
     </UserProvider>
   ),
 });
