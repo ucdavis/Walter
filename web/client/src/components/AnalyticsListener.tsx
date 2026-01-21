@@ -5,15 +5,21 @@ export function AnalyticsListener() {
   const router = useRouter();
 
   useEffect(() => {
-    // Fire initial page view
+    // Initial page view
+    console.log('[Analytics] initial page view:', window.location.pathname);
+
     window.gtag?.('event', 'page_view', {
       page_path: window.location.pathname,
     });
 
-    // Fire on route changes
+    // Route change tracking
     return router.subscribe('onResolved', () => {
+      const path = window.location.pathname;
+
+      console.log('[Analytics] route resolved:', path);
+
       window.gtag?.('event', 'page_view', {
-        page_path: window.location.pathname,
+        page_path: path,
       });
     });
   }, [router]);
