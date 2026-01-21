@@ -1,7 +1,8 @@
 import { ProjectChart } from '@/components/project/chart.tsx';
 import { FinancialDetails } from '@/components/project/financialDetails.tsx';
-import { ProjectPersonnel } from '@/components/project/projectPersonnel.tsx';
+import { PersonnelTable } from '@/components/project/PersonnelTable.tsx';
 import { summarizeAllProjects } from '@/lib/projectSummary.ts';
+import { usePersonnelQuery } from '@/queries/personnel.ts';
 import { projectsDetailQueryOptions } from '@/queries/project.ts';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
@@ -9,6 +10,28 @@ import { createFileRoute } from '@tanstack/react-router';
 export const Route = createFileRoute('/(authenticated)/projects/$employeeId/')({
   component: RouteComponent,
 });
+
+function PersonnelSection() {
+  const personnelQuery = usePersonnelQuery();
+
+  // TODO: Filter by user's projects when using real data
+  const personnelData = personnelQuery.data ?? [];
+
+  return (
+    <section className="section-margin">
+      <h2 className="h2">Personnel</h2>
+      {personnelQuery.isPending && (
+        <p className="text-base-content/70 mt-4">Loading personnel...</p>
+      )}
+      {personnelQuery.isError && (
+        <p className="text-error mt-4">Error loading personnel.</p>
+      )}
+      {personnelQuery.isSuccess && (
+        <PersonnelTable data={personnelData} />
+      )}
+    </section>
+  );
+}
 
 function RouteComponent() {
   const { employeeId } = Route.useParams();
@@ -62,7 +85,7 @@ function RouteComponent() {
       <FinancialDetails summary={summary} />
 
       {/* Personnel */}
-      <ProjectPersonnel projects={projectNumbers} />
+      <PersonnelSection projectNumbers={projectNumbers} />
     </main>
   );
 }

@@ -14,6 +14,19 @@ export interface PersonnelRecord {
   fte: number;
 }
 
+export const personnelQueryOptions = () => ({
+  queryFn: async (): Promise<PersonnelRecord[]> => {
+    return await fetchJson<PersonnelRecord[]>('/api/project/personnel');
+  },
+  queryKey: ['personnel'] as const,
+  staleTime: 60 * 60 * 1000, // 1 hour
+});
+
+export const usePersonnelQuery = () => {
+  return useQuery(personnelQueryOptions());
+};
+
+// Project-specific personnel query (for project detail pages)
 export const projectPersonnelQueryOptions = (projectCodes: string[]) => ({
   enabled: projectCodes.length > 0,
   queryFn: async (): Promise<PersonnelRecord[]> => {
@@ -23,7 +36,7 @@ export const projectPersonnelQueryOptions = (projectCodes: string[]) => ({
       `/api/project/personnel?${params.toString()}`
     );
   },
-  queryKey: ['projects', 'personnel', projectCodes] as const,
+  queryKey: ['personnel', 'projects', projectCodes] as const,
   staleTime: 60 * 60 * 1000, // 1 hour
 });
 
