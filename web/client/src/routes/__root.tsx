@@ -10,11 +10,13 @@ import { RouterContext } from '../main.tsx';
 import { HttpError } from '../lib/api.ts';
 import Footer from '@/components/project/footer.tsx';
 import { Walter404 } from '@/shared/walter404.tsx';
+import { AnalyticsListener } from '@/components/AnalyticsListener.tsx';
 
 const RootLayout = () => (
   <>
     <div className="min-h-screen flex flex-col">
       <main className="flex-1">
+        <AnalyticsListener />
         <Outlet />
       </main>
 
