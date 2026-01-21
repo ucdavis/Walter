@@ -1,6 +1,7 @@
 import {
   type ErrorComponentProps,
   createRootRouteWithContext,
+  Link,
   Outlet,
 } from '@tanstack/react-router';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
@@ -8,6 +9,7 @@ import { TanStackRouterDevtools } from '@tanstack/react-router-devtools';
 import { RouterContext } from '../main.tsx';
 import { HttpError } from '../lib/api.ts';
 import Footer from '@/components/project/footer.tsx';
+import { Walter404 } from '@/shared/walter404.tsx';
 
 const RootLayout = () => (
   <>
@@ -69,5 +71,17 @@ const RootErrorBoundary = ({ error, reset }: ErrorComponentProps) => {
 export const Route = createRootRouteWithContext<RouterContext>()({
   component: RootLayout,
   errorComponent: RootErrorBoundary,
-  notFoundComponent: () => <div>404 - Not Found!</div>,
+  notFoundComponent: () => (
+    <div className="container">
+      <div className="mx-auto text-center mt-20">
+        <Walter404 />
+        <p className="mt-4 text-lg my-4">
+          Walter ran into a 404 and had trouble fetching that...
+        </p>
+        <Link className="btn btn-outline" to="/">
+          Return home
+        </Link>
+      </div>
+    </div>
+  ),
 });
