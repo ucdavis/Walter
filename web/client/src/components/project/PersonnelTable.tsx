@@ -11,14 +11,9 @@ export interface AggregatedEmployee {
   projectCount: number;
   totalAnnualSalary: number;
   totalFringeAmount: number;
-  // Primary position (highest distribution %)
   primaryPosition: PersonnelRecord;
 }
 
-const formatName = (name: string) => {
-  const [last, first] = name.split(',');
-  return `${first?.trim() ?? ''} ${last?.trim() ?? ''}`.trim();
-};
 
 function EmployeeRow({ employee }: { employee: AggregatedEmployee }) {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -38,7 +33,7 @@ function EmployeeRow({ employee }: { employee: AggregatedEmployee }) {
             ) : (
               <ChevronDownIcon className="w-4 h-4" />
             )}
-            {formatName(employee.name)}
+            {employee.name}
           </div>
         </td>
         <td>

@@ -165,7 +165,7 @@ describe('PersonnelTable', () => {
 
     render(<PersonnelTable data={filtered} />);
 
-    expect(screen.getByText('Alice Adams')).toBeInTheDocument();
-    expect(screen.queryByText('Bob Baker')).not.toBeInTheDocument();
+    expect(screen.getByText('Adams,Alice')).toBeInTheDocument();
+    expect(screen.queryByText('Baker,Bob')).not.toBeInTheDocument();
   });
 });
