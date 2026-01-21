@@ -130,10 +130,13 @@ describe('home route', () => {
     }
   });
 
-  it('switches between tabs', async () => {
+  it('switches between all tabs', async () => {
     const managedPis = [
       { employeeId: '2001', name: 'PI One', projectCount: 2 },
-      { employeeId: '2002', name: 'PI Two', projectCount: 1 },
+    ];
+
+    const projects = [
+      { project_number: 'P1', project_name: 'Project One', award_end_date: '2099-12-31', cat_bud_bal: 1000 },
     ];
 
     const testUser = {
@@ -149,36 +152,38 @@ describe('home route', () => {
       http.get('/api/project/managed/:employeeId', () =>
         HttpResponse.json(managedPis)
       ),
-      http.get('/api/project/:employeeId', () => HttpResponse.json([])),
-      http.get('/api/user/me', () => HttpResponse.json(testUser))
+      http.get('/api/project/:employeeId', () => HttpResponse.json(projects)),
+      http.get('/api/user/me', () => HttpResponse.json(testUser)),
+      http.get('/api/project/personnel', () => HttpResponse.json([]))
     );
 
     const user = userEvent.setup();
     const { cleanup } = renderRoute({ initialPath: '/' });
 
     try {
-      // Wait for initial render with PI table
+      // Wait for initial render - PIs tab is active by default when user is a PM
       await screen.findByText('PI One');
-      expect(screen.getByRole('table')).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: 'Principal Investigators' })).toHaveAttribute('aria-selected', 'true');
+
+      // Click Personnel tab
+      await user.click(screen.getByRole('tab', { name: 'Personnel' }));
+      expect(screen.getByRole('tabpanel', { name: /personnel/i })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: 'Personnel' })).toHaveAttribute('aria-selected', 'true');
 
       // Click Reports tab
       await user.click(screen.getByRole('tab', { name: 'Reports' }));
-
-      // Table should be hidden, Reports content should show
-      expect(screen.queryByRole('table')).not.toBeInTheDocument();
       expect(screen.getByText('Employee Vacation Accruals')).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: 'Reports' })).toHaveAttribute('aria-selected', 'true');
 
       // Click back to PIs tab
-      await user.click(
-        screen.getByRole('tab', { name: 'Principal Investigators' })
-      );
-
-      // Table should be visible again
-      expect(screen.getByRole('table')).toBeInTheDocument();
+      await user.click(screen.getByRole('tab', { name: 'Principal Investigators' }));
+      expect(screen.getByText('PI One')).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: 'Principal Investigators' })).toHaveAttribute('aria-selected', 'true');
     } finally {
       cleanup();
     }
   });
+
 });
 
 describe('getProjectAlerts', () => {

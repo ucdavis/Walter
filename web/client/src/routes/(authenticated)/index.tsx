@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { ProjectAlerts } from '@/components/alerts/ProjectAlerts.tsx';
+import { PersonnelTable } from '@/components/project/PersonnelTable.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import { formatDate } from '@/lib/date.ts';
+import { usePersonnelQuery } from '@/queries/personnel.ts';
 import {
   useManagedPisQuery,
   useProjectsDetailQuery,
@@ -9,7 +11,7 @@ import {
 import { useUser } from '@/shared/auth/UserContext.tsx';
 import { createFileRoute, Link } from '@tanstack/react-router';
 
-type Tab = 'pis' | 'reports';
+type Tab = 'pis' | 'personnel' | 'reports';
 
 export const Route = createFileRoute('/(authenticated)/')({
   component: RouteComponent,
@@ -30,6 +32,7 @@ function RouteComponent() {
     user.employeeId
   );
   const userProjectsQuery = useProjectsDetailQuery(user.employeeId);
+  const personnelQuery = usePersonnelQuery();
 
   if (isPending || userProjectsQuery.isPending) {
     return (
@@ -145,6 +148,17 @@ function RouteComponent() {
           {isProjectManager ? 'Principal Investigators' : 'Projects'}
         </button>
         <button
+          aria-controls="panel-personnel"
+          aria-selected={activeTab === 'personnel'}
+          className={`text-2xl tab ${activeTab === 'personnel' ? 'tab-active' : ''}`}
+          id="tab-personnel"
+          onClick={() => setActiveTab('personnel')}
+          role="tab"
+          type="button"
+        >
+          Personnel
+        </button>
+        <button
           aria-controls="panel-reports"
           aria-selected={activeTab === 'reports'}
           className={`text-2xl tab ${activeTab === 'reports' ? 'tab-active' : ''}`}
@@ -225,6 +239,26 @@ function RouteComponent() {
                 ))}
               </tbody>
             </table>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'personnel' && (
+        <div aria-labelledby="tab-personnel" id="panel-personnel" role="tabpanel">
+          {personnelQuery.isPending && (
+            <div className="flex min-h-[20vh] items-center justify-center">
+              <div className="loading loading-spinner loading-lg" />
+            </div>
+          )}
+          {personnelQuery.isError && (
+            <div className="alert alert-error mt-8">
+              <span>Unable to load personnel: {personnelQuery.error?.message}</span>
+            </div>
+          )}
+          {personnelQuery.isSuccess && (
+            <div className="mt-8">
+              <PersonnelTable data={personnelQuery.data ?? []} />
+            </div>
           )}
         </div>
       )}
