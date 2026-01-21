@@ -45,6 +45,32 @@
   }
 }
 
+@layer components {
+  [cmdk-root] {
+    @apply flex flex-col;
+  }
+
+  [cmdk-list] {
+    @apply max-h-[60vh] overflow-y-auto p-2;
+  }
+
+  [cmdk-group-heading] {
+    @apply px-2 py-2 text-xs font-semibold uppercase text-base-content/60;
+  }
+
+  [cmdk-item] {
+    @apply flex cursor-default select-none items-center gap-2 rounded px-2 py-2;
+  }
+
+  [cmdk-item][aria-disabled='true'] {
+    @apply opacity-60;
+  }
+
+  [cmdk-item][data-selected='true'] {
+    @apply bg-base-200 outline outline-1 outline-base-300;
+  }
+}
+
 .container {
   padding: 0;
   width: 94%;

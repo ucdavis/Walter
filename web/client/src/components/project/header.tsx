@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from '@tanstack/react-router';
+import { SearchButton } from '@/components/search/SearchButton.tsx';
 
 const formatAsOfDate = (value: string | null) => {
   if (!value) {
@@ -24,12 +25,15 @@ const Header: React.FC = () => {
           </span>
         </div>
         <div className="flex items-center">
-          <nav className="flex items-center gap-6">
-            <Link to="/projects">Projects</Link>
-            <Link to="/personnel">Personnel</Link>
-            <Link to="/reports">Reports</Link>
-            <Link to="/accruals">Accruals</Link>
-          </nav>
+          <div className="flex items-center gap-4">
+            <SearchButton className="w-52 sm:w-64" placeholder="Search…" />
+            <nav className="flex items-center gap-6">
+              <Link to="/projects">Projects</Link>
+              <Link to="/personnel">Personnel</Link>
+              <Link to="/reports">Reports</Link>
+              <Link to="/accruals">Accruals</Link>
+            </nav>
+          </div>
           <div className="avatar ms-6">
             <div className="w-10 rounded-full">
               <img alt="User avatar" src="https://img.daisyui.com/images/profile/demo/yellingcat@192.webp" />

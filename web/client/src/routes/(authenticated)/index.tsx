@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ProjectAlerts } from '@/components/alerts/ProjectAlerts.tsx';
+import { SearchButton } from '@/components/search/SearchButton.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import { formatDate } from '@/lib/date.ts';
 import { useManagedPisQuery, useProjectsDetailQuery } from '@/queries/project.ts';
@@ -88,24 +89,10 @@ function RouteComponent() {
       </div>
 
       <div className="relative mx-auto w-full sm:max-w-[90%] md:max-w-[80%] xl:max-w-[66%]">
-        <input
-          className="input input-bordered w-full pl-10"
+        <SearchButton
+          className="w-full"
           placeholder="Search PIs, Projects, Personnel..."
-          type="text"
         />
-        <svg
-          className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-base-content/40"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-          />
-        </svg>
       </div>
 
       <ProjectAlerts managedPis={managedPis} />
