@@ -11,6 +11,8 @@ interface AggregatedEmployee {
   projectCount: number;
   totalAnnualSalary: number;
   totalFringeAmount: number;
+  // Primary position (highest distribution %)
+  primaryPosition: PersonnelRecord;
 }
 
 const formatName = (name: string) => {
@@ -20,6 +22,8 @@ const formatName = (name: string) => {
 
 function EmployeeRow({ employee }: { employee: AggregatedEmployee }) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const uniqueJobTitles = new Set(employee.positions.map((p) => p.positionDescr));
+  const additionalTitles = uniqueJobTitles.size - 1;
 
   return (
     <>
@@ -37,8 +41,15 @@ function EmployeeRow({ employee }: { employee: AggregatedEmployee }) {
             {formatName(employee.name)}
           </div>
         </td>
-        <td />
-        <td />
+        <td>
+          {employee.primaryPosition.positionDescr}
+          {additionalTitles > 0 && (
+            <span className="text-base-content/50 text-sm ml-1">
+              (+{additionalTitles})
+            </span>
+          )}
+        </td>
+        <td>{formatDate(employee.primaryPosition.fundingEndDt)}</td>
         <td className="text-right">{employee.projectCount}</td>
         <td className="text-right">
           {formatCurrency(employee.totalAnnualSalary)}
@@ -52,8 +63,15 @@ function EmployeeRow({ employee }: { employee: AggregatedEmployee }) {
           )}
         </td>
       </tr>
+      {/* Sort positions by job title, then by distribution % descending */}
       {isExpanded &&
-        employee.positions.map((position, idx) => {
+        [...employee.positions]
+          .sort((a, b) => {
+            const titleCompare = a.positionDescr.localeCompare(b.positionDescr);
+            if (titleCompare !== 0) return titleCompare;
+            return b.distPct - a.distPct;
+          })
+          .map((position, idx) => {
           const annualSalary = position.monthlyRt * 12;
           const fringeAmount = annualSalary * position.cbr;
           return (
@@ -100,6 +118,7 @@ function aggregateByEmployee(data: PersonnelRecord[]): AggregatedEmployee[] {
         projectCount: 1,
         totalAnnualSalary: annualSalary,
         totalFringeAmount: fringeAmount,
+        primaryPosition: record,
       });
     }
   }

@@ -9,7 +9,19 @@
     "distPct": 60.0,
     "cbr": 0.40,
     "fundingEndDt": "2026-09-30T00:00:00.000Z",
-    "fte": 0.60
+    "fte": 0.50
+  },
+  {
+    "emplid": "10211722",
+    "name": "Chen,Sarah",
+    "projectId": "GLAANS4995",
+    "projectName": "Climate Adaptation Field Studies",
+    "positionDescr": "POSTDOC-EMPLOYEE",
+    "monthlyRt": 3166.67,
+    "distPct": 100.0,
+    "cbr": 0.40,
+    "fundingEndDt": "2026-12-31T00:00:00.000Z",
+    "fte": 0.50
   },
   {
     "emplid": "10211722",
@@ -21,7 +33,7 @@
     "distPct": 40.0,
     "cbr": 0.40,
     "fundingEndDt": "2026-12-31T00:00:00.000Z",
-    "fte": 0.40
+    "fte": 0.50
   },
   {
     "emplid": "10223146",
