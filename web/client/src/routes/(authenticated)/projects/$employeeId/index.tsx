@@ -11,11 +11,22 @@ export const Route = createFileRoute('/(authenticated)/projects/$employeeId/')({
   component: RouteComponent,
 });
 
-function PersonnelSection() {
+// TODO: Remove this fallback when using real data
+const FAKE_PROJECT_ID = 'GLAANS4995'; // Climate Adaptation Field Studies
+
+function PersonnelSection({ projectNumbers }: { projectNumbers: string[] }) {
   const personnelQuery = usePersonnelQuery();
 
-  // TODO: Filter by user's projects when using real data
-  const personnelData = personnelQuery.data ?? [];
+  // Filter personnel by project IDs
+  // TODO: Remove fake data fallback when backend returns real data
+  const filteredPersonnel = personnelQuery.data?.filter((p) =>
+    projectNumbers.includes(p.projectId)
+  );
+  const personnelData =
+    filteredPersonnel && filteredPersonnel.length > 0
+      ? filteredPersonnel
+      : personnelQuery.data?.filter((p) => p.projectId === FAKE_PROJECT_ID) ??
+        [];
 
   return (
     <section className="section-margin">

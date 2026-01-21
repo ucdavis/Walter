@@ -4,7 +4,7 @@ import { formatCurrency } from '@/lib/currency.ts';
 import { formatDate } from '@/lib/date.ts';
 import { PersonnelRecord } from '@/queries/personnel.ts';
 
-interface AggregatedEmployee {
+export interface AggregatedEmployee {
   emplid: string;
   name: string;
   positions: PersonnelRecord[];
@@ -96,7 +96,7 @@ function EmployeeRow({ employee }: { employee: AggregatedEmployee }) {
   );
 }
 
-function aggregateByEmployee(data: PersonnelRecord[]): AggregatedEmployee[] {
+export function aggregateByEmployee(data: PersonnelRecord[]): AggregatedEmployee[] {
   const employeeMap = new Map<string, AggregatedEmployee>();
 
   for (const record of data) {
