@@ -38,6 +38,3 @@ msbuild.wrn
 # Jetbrains
 .idea/
 
-# Node
-node_modules/
-package-lock.json
