@@ -16,15 +16,32 @@ if (!Element.prototype.scrollIntoView) {
 }
 
 if (typeof HTMLDialogElement !== 'undefined') {
+  if (!('open' in HTMLDialogElement.prototype)) {
+    Object.defineProperty(HTMLDialogElement.prototype, 'open', {
+      configurable: true,
+      get() {
+        return this.hasAttribute('open');
+      },
+      set(value: boolean) {
+        if (value) {
+          this.setAttribute('open', '');
+        } else {
+          this.removeAttribute('open');
+        }
+      },
+    });
+  }
+
   if (!HTMLDialogElement.prototype.showModal) {
     HTMLDialogElement.prototype.showModal = function showModal() {
       this.setAttribute('open', '');
     };
   }
 
-  if (!HTMLDialogElement.prototype.close) {
-    HTMLDialogElement.prototype.close = function close() {
-      this.removeAttribute('open');
-    };
-  }
+  const nativeClose = HTMLDialogElement.prototype.close;
+  HTMLDialogElement.prototype.close = function close() {
+    nativeClose?.call(this);
+    this.removeAttribute('open');
+    this.dispatchEvent(new Event('close'));
+  };
 }
