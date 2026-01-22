@@ -13,6 +13,7 @@ import { Route as AboutRouteImport } from './routes/about'
 import { Route as authenticatedRouteRouteImport } from './routes/(authenticated)/route'
 import { Route as authenticatedIndexRouteImport } from './routes/(authenticated)/index'
 import { Route as authenticatedStylesRouteImport } from './routes/(authenticated)/styles'
+import { Route as authenticatedPersonnelRouteImport } from './routes/(authenticated)/personnel'
 import { Route as authenticatedMeRouteImport } from './routes/(authenticated)/me'
 import { Route as authenticatedFormRouteImport } from './routes/(authenticated)/form'
 import { Route as authenticatedProjectsRouteRouteImport } from './routes/(authenticated)/projects/route'
@@ -38,6 +39,11 @@ const authenticatedIndexRoute = authenticatedIndexRouteImport.update({
 const authenticatedStylesRoute = authenticatedStylesRouteImport.update({
   id: '/styles',
   path: '/styles',
+  getParentRoute: () => authenticatedRouteRoute,
+} as any)
+const authenticatedPersonnelRoute = authenticatedPersonnelRouteImport.update({
+  id: '/personnel',
+  path: '/personnel',
   getParentRoute: () => authenticatedRouteRoute,
 } as any)
 const authenticatedMeRoute = authenticatedMeRouteImport.update({
@@ -86,6 +92,7 @@ export interface FileRoutesByFullPath {
   '/projects': typeof authenticatedProjectsRouteRouteWithChildren
   '/form': typeof authenticatedFormRoute
   '/me': typeof authenticatedMeRoute
+  '/personnel': typeof authenticatedPersonnelRoute
   '/styles': typeof authenticatedStylesRoute
   '/': typeof authenticatedIndexRoute
   '/projects/$employeeId': typeof authenticatedProjectsEmployeeIdRouteRouteWithChildren
@@ -98,6 +105,7 @@ export interface FileRoutesByTo {
   '/projects': typeof authenticatedProjectsRouteRouteWithChildren
   '/form': typeof authenticatedFormRoute
   '/me': typeof authenticatedMeRoute
+  '/personnel': typeof authenticatedPersonnelRoute
   '/styles': typeof authenticatedStylesRoute
   '/': typeof authenticatedIndexRoute
   '/accruals': typeof authenticatedAccrualsIndexRoute
@@ -111,6 +119,7 @@ export interface FileRoutesById {
   '/(authenticated)/projects': typeof authenticatedProjectsRouteRouteWithChildren
   '/(authenticated)/form': typeof authenticatedFormRoute
   '/(authenticated)/me': typeof authenticatedMeRoute
+  '/(authenticated)/personnel': typeof authenticatedPersonnelRoute
   '/(authenticated)/styles': typeof authenticatedStylesRoute
   '/(authenticated)/': typeof authenticatedIndexRoute
   '/(authenticated)/projects/$employeeId': typeof authenticatedProjectsEmployeeIdRouteRouteWithChildren
@@ -125,6 +134,7 @@ export interface FileRouteTypes {
     | '/projects'
     | '/form'
     | '/me'
+    | '/personnel'
     | '/styles'
     | '/'
     | '/projects/$employeeId'
@@ -137,6 +147,7 @@ export interface FileRouteTypes {
     | '/projects'
     | '/form'
     | '/me'
+    | '/personnel'
     | '/styles'
     | '/'
     | '/accruals'
@@ -149,6 +160,7 @@ export interface FileRouteTypes {
     | '/(authenticated)/projects'
     | '/(authenticated)/form'
     | '/(authenticated)/me'
+    | '/(authenticated)/personnel'
     | '/(authenticated)/styles'
     | '/(authenticated)/'
     | '/(authenticated)/projects/$employeeId'
@@ -190,6 +202,13 @@ declare module '@tanstack/react-router' {
       path: '/styles'
       fullPath: '/styles'
       preLoaderRoute: typeof authenticatedStylesRouteImport
+      parentRoute: typeof authenticatedRouteRoute
+    }
+    '/(authenticated)/personnel': {
+      id: '/(authenticated)/personnel'
+      path: '/personnel'
+      fullPath: '/personnel'
+      preLoaderRoute: typeof authenticatedPersonnelRouteImport
       parentRoute: typeof authenticatedRouteRoute
     }
     '/(authenticated)/me': {
@@ -281,6 +300,7 @@ interface authenticatedRouteRouteChildren {
   authenticatedProjectsRouteRoute: typeof authenticatedProjectsRouteRouteWithChildren
   authenticatedFormRoute: typeof authenticatedFormRoute
   authenticatedMeRoute: typeof authenticatedMeRoute
+  authenticatedPersonnelRoute: typeof authenticatedPersonnelRoute
   authenticatedStylesRoute: typeof authenticatedStylesRoute
   authenticatedIndexRoute: typeof authenticatedIndexRoute
   authenticatedAccrualsIndexRoute: typeof authenticatedAccrualsIndexRoute
@@ -290,6 +310,7 @@ const authenticatedRouteRouteChildren: authenticatedRouteRouteChildren = {
   authenticatedProjectsRouteRoute: authenticatedProjectsRouteRouteWithChildren,
   authenticatedFormRoute: authenticatedFormRoute,
   authenticatedMeRoute: authenticatedMeRoute,
+  authenticatedPersonnelRoute: authenticatedPersonnelRoute,
   authenticatedStylesRoute: authenticatedStylesRoute,
   authenticatedIndexRoute: authenticatedIndexRoute,
   authenticatedAccrualsIndexRoute: authenticatedAccrualsIndexRoute,

@@ -190,20 +190,18 @@ export function ProjectChart({
       </ResponsiveContainer>
       <div className="flex justify-between px-6 mt-4 mb-8 border rounded-md bg-light-bg-200 border-main-border py-4">
         <div>
-          <p className="text-sm uppercase">Starting</p>
-          <p className="h5">{formatCurrency(startBalance)}</p>
+          <p className="h5">Starting</p>
+          <p className="h4">{formatCurrency(startBalance)}</p>
         </div>
         <div className="text-center">
-          <p className="text-sm uppercase">
-            Current ({currentPoint?.date ?? 'N/A'})
-          </p>
-          <p className="text-primary-color font-proxima-bold">
+          <p className="h5">Current ({currentPoint?.date ?? 'N/A'})</p>
+          <p className="text-primary-color text-lg">
             {formatCurrency(currentPoint?.value ?? 0)}
           </p>
         </div>
         <div className="text-right">
-          <p className="text-sm uppercase">Projected</p>
-          <p className="h5">{formatCurrency(projectedEnd)}</p>
+          <p className="h5">Projected</p>
+          <p className="h4">{formatCurrency(projectedEnd)}</p>
         </div>
       </div>
     </div>

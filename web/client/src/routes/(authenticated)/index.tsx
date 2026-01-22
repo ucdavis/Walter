@@ -1,19 +1,26 @@
 import { useState } from 'react';
 import { ProjectAlerts } from '@/components/alerts/ProjectAlerts.tsx';
+import { PersonnelTable } from '@/components/project/PersonnelTable.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import { formatDate } from '@/lib/date.ts';
-import { useManagedPisQuery, useProjectsDetailQuery } from '@/queries/project.ts';
+import { usePersonnelQuery } from '@/queries/personnel.ts';
+import {
+  useManagedPisQuery,
+  useProjectsDetailQuery,
+} from '@/queries/project.ts';
 import { useUser } from '@/shared/auth/UserContext.tsx';
 import { createFileRoute, Link } from '@tanstack/react-router';
 
-type Tab = 'pis' | 'reports';
+type Tab = 'pis' | 'personnel' | 'reports';
 
 export const Route = createFileRoute('/(authenticated)/')({
   component: RouteComponent,
 });
 
 const formatPercent = (balance: number, budget: number) => {
-  if (budget === 0) return '—';
+  if (budget === 0) {
+    return '—';
+  }
   const percent = (balance / budget) * 100;
   return `${percent.toFixed(0)}%`;
 };
@@ -25,6 +32,7 @@ function RouteComponent() {
     user.employeeId
   );
   const userProjectsQuery = useProjectsDetailQuery(user.employeeId);
+  const personnelQuery = usePersonnelQuery();
 
   if (isPending || userProjectsQuery.isPending) {
     return (
@@ -54,16 +62,24 @@ function RouteComponent() {
 
   // Aggregate projects by project_number, summing balances
   const projectsRaw = userProjectsQuery.data ?? [];
-  const projectsMap = new Map<string, { project_number: string; project_name: string; award_end_date: string | null; totalBalance: number }>();
+  const projectsMap = new Map<
+    string,
+    {
+      award_end_date: string | null;
+      project_name: string;
+      project_number: string;
+      totalBalance: number;
+    }
+  >();
   for (const p of projectsRaw) {
     const existing = projectsMap.get(p.project_number);
     if (existing) {
       existing.totalBalance += p.cat_bud_bal;
     } else {
       projectsMap.set(p.project_number, {
-        project_number: p.project_number,
-        project_name: p.project_name,
         award_end_date: p.award_end_date,
+        project_name: p.project_name,
+        project_number: p.project_number,
         totalBalance: p.cat_bud_bal,
       });
     }
@@ -72,10 +88,19 @@ function RouteComponent() {
   const projects = Array.from(projectsMap.values())
     .filter((p) => !p.award_end_date || new Date(p.award_end_date) >= now)
     .sort((a, b) => {
-      if (!a.award_end_date && !b.award_end_date) return 0;
-      if (!a.award_end_date) return -1;
-      if (!b.award_end_date) return 1;
-      return new Date(a.award_end_date).getTime() - new Date(b.award_end_date).getTime();
+      if (!a.award_end_date && !b.award_end_date) {
+        return 0;
+      }
+      if (!a.award_end_date) {
+        return -1;
+      }
+      if (!b.award_end_date) {
+        return 1;
+      }
+      return (
+        new Date(a.award_end_date).getTime() -
+        new Date(b.award_end_date).getTime()
+      );
     });
 
   return (
@@ -123,6 +148,17 @@ function RouteComponent() {
           {isProjectManager ? 'Principal Investigators' : 'Projects'}
         </button>
         <button
+          aria-controls="panel-personnel"
+          aria-selected={activeTab === 'personnel'}
+          className={`text-2xl tab ${activeTab === 'personnel' ? 'tab-active' : ''}`}
+          id="tab-personnel"
+          onClick={() => setActiveTab('personnel')}
+          role="tab"
+          type="button"
+        >
+          Personnel
+        </button>
+        <button
           aria-controls="panel-reports"
           aria-selected={activeTab === 'reports'}
           className={`text-2xl tab ${activeTab === 'reports' ? 'tab-active' : ''}`}
@@ -136,13 +172,9 @@ function RouteComponent() {
       </div>
 
       {activeTab === 'pis' && (
-        <div
-          aria-labelledby="tab-pis"
-          id="panel-pis"
-          role="tabpanel"
-        >
+        <div aria-labelledby="tab-pis" id="panel-pis" role="tabpanel">
           {isProjectManager ? (
-            <table className="walter-test table mt-8">
+            <table className="walter-table table mt-8">
               <thead>
                 <tr>
                   <th>PI Name</th>
@@ -174,7 +206,7 @@ function RouteComponent() {
               </tbody>
             </table>
           ) : (
-            <table className="walter-test table mt-8">
+            <table className="walter-table table mt-8">
               <thead>
                 <tr>
                   <th>Project Name</th>
@@ -197,8 +229,12 @@ function RouteComponent() {
                         {project.project_name}
                       </Link>
                     </td>
-                    <td className="text-right">{formatDate(project.award_end_date)}</td>
-                    <td className="text-right">{formatCurrency(project.totalBalance)}</td>
+                    <td className="text-right">
+                      {formatDate(project.award_end_date)}
+                    </td>
+                    <td className="text-right">
+                      {formatCurrency(project.totalBalance)}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -207,15 +243,34 @@ function RouteComponent() {
         </div>
       )}
 
+      {activeTab === 'personnel' && (
+        <div aria-labelledby="tab-personnel" id="panel-personnel" role="tabpanel">
+          {personnelQuery.isPending && (
+            <div className="flex min-h-[20vh] items-center justify-center">
+              <div className="loading loading-spinner loading-lg" />
+            </div>
+          )}
+          {personnelQuery.isError && (
+            <div className="alert alert-error mt-8">
+              <span>Unable to load personnel: {personnelQuery.error?.message}</span>
+            </div>
+          )}
+          {personnelQuery.isSuccess && (
+            <div className="mt-8">
+              <PersonnelTable data={personnelQuery.data ?? []} />
+            </div>
+          )}
+        </div>
+      )}
+
       {activeTab === 'reports' && (
-        <div
-          aria-labelledby="tab-reports"
-          id="panel-reports"
-          role="tabpanel"
-        >
+        <div aria-labelledby="tab-reports" id="panel-reports" role="tabpanel">
           <ul className="mt-8">
             <li>
-              <Link className="text-xl link link-hover link-primary" to="/accruals">
+              <Link
+                className="text-xl link link-hover link-primary"
+                to="/accruals"
+              >
                 Employee Vacation Accruals
               </Link>
             </li>

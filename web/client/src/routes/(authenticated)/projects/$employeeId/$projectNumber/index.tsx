@@ -1,6 +1,8 @@
 import { ProjectChart } from '@/components/project/chart.tsx';
 import { ProjectDetails } from '@/components/project/details.tsx';
 import { FinancialDetails } from '@/components/project/financialDetails.tsx';
+import { PersonnelTable } from '@/components/project/PersonnelTable.tsx';
+import { usePersonnelQuery } from '@/queries/personnel.ts';
 import {
   summarizeProjectByNumber,
   type ProjectSummary,
@@ -31,12 +33,28 @@ const ProjectNotFound = ({ projectNumber }: { projectNumber: string }) => (
   </main>
 );
 
+// TODO: Remove this fallback when using real data
+const FAKE_PROJECT_ID = 'GLAANS4995'; // Climate Adaptation Field Studies
+
 function ProjectContent({ summary }: { summary: ProjectSummary }) {
+  const personnelQuery = usePersonnelQuery();
+
+  // Filter personnel by project ID
+  // TODO: Remove fake data fallback when backend returns real data
+  const projectId = summary.projectNumber;
+  const filteredPersonnel = personnelQuery.data?.filter(
+    (p) => p.projectId === projectId
+  );
+  const personnelData =
+    filteredPersonnel && filteredPersonnel.length > 0
+      ? filteredPersonnel
+      : personnelQuery.data?.filter((p) => p.projectId === FAKE_PROJECT_ID) ?? [];
+
   return (
     <main className="flex-1">
       <section className="mt-8 section-margin">
         <h1 className="h1">{summary.projectName}</h1>
-        <p className="mb-4 h4">{summary.projectNumber}</p>
+        <p className="mb-4 h3">{summary.projectNumber}</p>
         <ProjectChart
           projects={[summary.projectNumber]}
           startingBalance={summary.totals.balance}
@@ -46,6 +64,19 @@ function ProjectContent({ summary }: { summary: ProjectSummary }) {
 
       <ProjectDetails summary={summary} />
       <FinancialDetails summary={summary} />
+
+      <section className="section-margin">
+        <h2 className="h2">Personnel</h2>
+        {personnelQuery.isPending && (
+          <p className="text-base-content/70 mt-4">Loading personnel...</p>
+        )}
+        {personnelQuery.isError && (
+          <p className="text-error mt-4">Error loading personnel.</p>
+        )}
+        {personnelQuery.isSuccess && (
+          <PersonnelTable data={personnelData} showTotals={false} />
+        )}
+      </section>
     </main>
   );
 }
