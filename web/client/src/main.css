@@ -203,3 +203,16 @@ html:active-view-transition-type(slide-right) {
   font-family: var(--font-proxima-bold);
   color: var(--color-dark-font);
 }
+
+.input {
+  &:focus,
+  &:focus-within {
+    outline: 2px solid var(--color-primary-color);
+  }
+}
+.tab {
+  &:focus-visible,
+  &:is(label:has(:checked:focus-visible)) {
+    outline: 2px solid var(--color-primary-color);
+  }
+}
