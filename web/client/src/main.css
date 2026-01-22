@@ -38,10 +38,12 @@
 
   --input-color: var(--color-primary-color);
 }
+
 @layer base {
   .card {
     @apply border-1 border-main-border bg-base-200;
   }
+
   .fancy-list {
     @apply inline-flex items-center gap-2 px-3 py-2 rounded hover:bg-base-300 transition-colors duration-200 text-lg;
   }
@@ -163,20 +165,25 @@ html:active-view-transition-type(slide-right) {
     transform: translateX(0);
   }
 }
+
 .h1 {
   @apply text-3xl font-proxima-bold;
 }
+
 .h2 {
   @apply text-2xl font-proxima-bold;
 }
+
 /* subheadings */
 .h3 {
   @apply text-base font-proxima-bold uppercase text-base-content/60;
 }
+
 /* stat data */
 .h4 {
   @apply text-lg;
 }
+
 /* Labels */
 .h5 {
   @apply font-proxima-bold;
@@ -185,11 +192,13 @@ html:active-view-transition-type(slide-right) {
 .section-margin {
   @apply mb-20;
 }
+
 .walter-table {
   table-layout: fixed;
   width: 100%;
   min-width: 900px;
 }
+
 .walter-table th {
   padding: 4px 0;
   border-top: 1px solid var(--color-main-border);
@@ -198,19 +207,24 @@ html:active-view-transition-type(slide-right) {
   font-family: var(--font-proxima-bold);
   color: var(--color-dark-font);
 }
+
 .walter-table td {
   padding: 12px 0;
   color: var(--color-dark-font);
 }
+
 .walter-table tr {
   border: none;
 }
+
 .walter-table .pivot-row {
   background-color: var(--color-base-200);
 }
+
 .walter-table .pivot-row td:first-child {
   padding-left: 24px;
 }
+
 .walter-table .totaltr {
   border-top: 1px solid var(--color-main-border);
   border-bottom: 1px solid var(--color-main-border);
@@ -220,14 +234,17 @@ html:active-view-transition-type(slide-right) {
 }
 
 .input {
+
   &:focus,
   &:focus-within {
     outline: 2px solid var(--color-primary-color);
   }
 }
+
 .tab {
+
   &:focus-visible,
   &:is(label:has(:checked:focus-visible)) {
     outline: 2px solid var(--color-primary-color);
   }
-  
+}
