@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { ProjectAlerts } from '@/components/alerts/ProjectAlerts.tsx';
-import { PersonnelTable } from '@/components/project/PersonnelTable.tsx';
+import { SearchButton } from '@/components/search/SearchButton.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import { formatDate } from '@/lib/date.ts';
+import { PersonnelTable } from '@/components/project/PersonnelTable.tsx';
 import { usePersonnelQuery } from '@/queries/personnel.ts';
 import {
   useManagedPisQuery,
@@ -25,6 +26,12 @@ const formatPercent = (balance: number, budget: number) => {
   return `${percent.toFixed(0)}%`;
 };
 
+const EmptyWrapper = ({ children }: { children: React.ReactNode }) => (
+  <div className="container">
+    <div className="mt-16">{children}</div>
+  </div>
+);
+
 function RouteComponent() {
   const [activeTab, setActiveTab] = useState<Tab>('pis');
   const user = useUser();
@@ -36,25 +43,34 @@ function RouteComponent() {
 
   if (isPending || userProjectsQuery.isPending) {
     return (
-      <div className="flex min-h-[50vh] items-center justify-center">
-        <div className="loading loading-spinner loading-lg" />
-      </div>
+      <EmptyWrapper>
+        <div className="text-center">
+          <div className="loading loading-spinner loading-lg mb-2" />
+          <div className="mb-4 text-lg">Loading dashboard...</div>
+        </div>
+      </EmptyWrapper>
     );
   }
 
   if (isError) {
     return (
-      <div className="alert alert-error">
-        <span>Unable to load managed investigators: {error?.message}</span>
-      </div>
+      <EmptyWrapper>
+        <div className="alert alert-error">
+          <span>Unable to load managed investigators: {error?.message}</span>
+        </div>
+      </EmptyWrapper>
     );
   }
 
   if (userProjectsQuery.isError) {
     return (
-      <div className="alert alert-error">
-        <span>Unable to load projects: {userProjectsQuery.error?.message}</span>
-      </div>
+      <EmptyWrapper>
+        <div className="alert alert-error">
+          <span>
+            Unable to load projects: {userProjectsQuery.error?.message}
+          </span>
+        </div>
+      </EmptyWrapper>
     );
   }
 
@@ -105,7 +121,7 @@ function RouteComponent() {
 
   return (
     <div className="container">
-      <div className="py-10 mx-auto w-full sm:max-w-[90%] md:max-w-[80%] xl:max-w-[66%]">
+      <div className="pt-10 pb-5 mx-auto w-full sm:max-w-[90%] md:max-w-[80%] xl:max-w-[66%]">
         <h1 className="text-2xl font-proxima-bold">W.A.L.T.E.R.</h1>
         <p className="uppercase">
           warehouse analytics and ledger tools for enterprise reporting
@@ -113,24 +129,10 @@ function RouteComponent() {
       </div>
 
       <div className="relative mx-auto w-full sm:max-w-[90%] md:max-w-[80%] xl:max-w-[66%]">
-        <input
-          className="input input-bordered w-full pl-10"
+        <SearchButton
+          className="w-full"
           placeholder="Search PIs, Projects, Personnel..."
-          type="text"
         />
-        <svg
-          className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-base-content/40"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-          />
-        </svg>
       </div>
 
       <ProjectAlerts managedPis={managedPis} />
@@ -244,7 +246,11 @@ function RouteComponent() {
       )}
 
       {activeTab === 'personnel' && (
-        <div aria-labelledby="tab-personnel" id="panel-personnel" role="tabpanel">
+        <div
+          aria-labelledby="tab-personnel"
+          id="panel-personnel"
+          role="tabpanel"
+        >
           {personnelQuery.isPending && (
             <div className="flex min-h-[20vh] items-center justify-center">
               <div className="loading loading-spinner loading-lg" />
@@ -252,7 +258,9 @@ function RouteComponent() {
           )}
           {personnelQuery.isError && (
             <div className="alert alert-error mt-8">
-              <span>Unable to load personnel: {personnelQuery.error?.message}</span>
+              <span>
+                Unable to load personnel: {personnelQuery.error?.message}
+              </span>
             </div>
           )}
           {personnelQuery.isSuccess && (
