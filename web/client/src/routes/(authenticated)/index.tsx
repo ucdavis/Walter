@@ -246,7 +246,11 @@ function RouteComponent() {
       )}
 
       {activeTab === 'personnel' && (
-        <div aria-labelledby="tab-personnel" id="panel-personnel" role="tabpanel">
+        <div
+          aria-labelledby="tab-personnel"
+          id="panel-personnel"
+          role="tabpanel"
+        >
           {personnelQuery.isPending && (
             <div className="flex min-h-[20vh] items-center justify-center">
               <div className="loading loading-spinner loading-lg" />
@@ -254,7 +258,9 @@ function RouteComponent() {
           )}
           {personnelQuery.isError && (
             <div className="alert alert-error mt-8">
-              <span>Unable to load personnel: {personnelQuery.error?.message}</span>
+              <span>
+                Unable to load personnel: {personnelQuery.error?.message}
+              </span>
             </div>
           )}
           {personnelQuery.isSuccess && (
