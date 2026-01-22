@@ -3,7 +3,11 @@ import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 
 const isAppleDevice = () => {
   const platform = navigator.platform?.toLowerCase() ?? '';
-  return platform.includes('mac') || platform.includes('iphone') || platform.includes('ipad');
+  return (
+    platform.includes('mac') ||
+    platform.includes('iphone') ||
+    platform.includes('ipad')
+  );
 };
 
 export function SearchButton({
@@ -35,4 +39,3 @@ export function SearchButton({
     </button>
   );
 }
-

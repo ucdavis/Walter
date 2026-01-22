@@ -35,6 +35,8 @@
   --color-info: var(--color-info-color);
   --color-success: var(--color-success-color);
   --color-warning: var(--color-warning-color);
+
+  --input-color: var(--color-primary-color);
 }
 @layer base {
   .card {
@@ -55,7 +57,7 @@
   }
 
   [cmdk-group-heading] {
-    @apply px-2 py-2 text-xs font-semibold uppercase text-base-content/60;
+    @apply px-2 py-2 text-xs uppercase text-base-content/60;
   }
 
   [cmdk-item] {

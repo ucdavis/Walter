@@ -222,7 +222,7 @@ function CommandPaletteDialog({
 
   return (
     <dialog className="modal" onClose={closeAndReset} ref={dialogRef}>
-      <div className="modal-box w-full max-w-2xl p-0">
+      <div className="modal-box w-full max-w-3xl p-2">
         <Command
           className="w-full"
           key={paletteKey}
@@ -233,7 +233,7 @@ function CommandPaletteDialog({
           }}
           shouldFilter={false}
         >
-          <div className="border-b border-base-300 p-3">
+          <div className="p-3">
             <Command.Input
               className="input input-bordered w-full"
               onValueChange={setQuery}
