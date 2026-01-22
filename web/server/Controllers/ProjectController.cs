@@ -78,7 +78,7 @@ public sealed class ProjectController : ApiControllerBase
     }
 
     [HttpGet("personnel")]
-    public IActionResult GetPersonnelForProjects(CancellationToken cancellationToken, [FromQuery] string projectCodes)
+    public IActionResult GetPersonnelForProjects(CancellationToken cancellationToken, [FromQuery] string? projectCodes = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
