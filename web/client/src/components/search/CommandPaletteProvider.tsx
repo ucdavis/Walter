@@ -161,7 +161,8 @@ function CommandPaletteDialog({
   // Fetch people search results based on the query
   // This is assuming we are searching on all people. If we only want to search on PIs, we can add to catalog
   const peopleQuery = usePeopleSearchQuery({
-    enabled: isOpen && debouncedQuery.trim().length > 0,
+    enabled:
+      isOpen && query.trim().length > 0 && debouncedQuery.trim().length > 0,
     query: debouncedQuery,
   });
 
