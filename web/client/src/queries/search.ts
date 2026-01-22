@@ -42,27 +42,30 @@ export const useSearchCatalogQuery = ({ enabled }: { enabled: boolean }) => {
   });
 };
 
-export const peopleSearchQueryOptions = (query: string) => ({
-  enabled: query.trim().length > 0,
-  gcTime: 0,
-  queryFn: async ({
-    signal,
-  }: {
-    signal: AbortSignal;
-  }): Promise<SearchPerson[]> => {
-    const q = query.trim();
-    if (!q) {
-      return [];
-    }
-    return await fetchJson<SearchPerson[]>(
-      `/api/search/people?query=${encodeURIComponent(q)}`,
-      {},
-      signal
-    );
-  },
-  queryKey: ['search', 'people', query] as const,
-  staleTime: 0,
-});
+export const peopleSearchQueryOptions = (query: string) => {
+  const q = query.trim();
+
+  return {
+    enabled: q.length > 0,
+    gcTime: 0,
+    queryFn: async ({
+      signal,
+    }: {
+      signal: AbortSignal;
+    }): Promise<SearchPerson[]> => {
+      if (!q) {
+        return [];
+      }
+      return await fetchJson<SearchPerson[]>(
+        `/api/search/people?query=${encodeURIComponent(q)}`,
+        {},
+        signal
+      );
+    },
+    queryKey: ['search', 'people', q] as const,
+    staleTime: 0,
+  };
+};
 
 export const usePeopleSearchQuery = ({
   enabled,
