@@ -34,7 +34,10 @@ function RouteComponent() {
   const uniqueEmployees = new Set(data.map((r) => r.emplid)).size;
   const uniqueProjects = new Set(data.map((r) => r.projectId)).size;
   const totalSalary = data.reduce((sum, r) => sum + r.monthlyRt * 12, 0);
-  const totalFringe = data.reduce((sum, r) => sum + r.monthlyRt * 12 * r.cbr, 0);
+  const totalFringe = data.reduce(
+    (sum, r) => sum + r.monthlyRt * 12 * r.cbr,
+    0
+  );
 
   return (
     <div className="container">
@@ -44,24 +47,26 @@ function RouteComponent() {
       </p>
 
       {/* Summary Cards */}
-      <div className="my-8 flex justify-between px-6 mt-4 mb-8 border rounded-md bg-light-bg-200 border-main-border py-4">
-        <div>
-          <p className="h5"># of Employees</p>
-          <p className="h4">{uniqueEmployees}</p>
-        </div>
-        <div>
-          <p className="h5"># of Projects</p>
-          <p className="h4">{uniqueProjects}</p>
-        </div>
-        <div>
-          <p className="h5">Total Salary</p>
-          <p className="h4">{formatCurrency(totalSalary)}</p>
-        </div>
-        <div className="text-right">
-          <p className="h5">Total Fringe</p>
-          <p className="h4 text-success font-proxima-bold">
-            {formatCurrency(totalFringe)}
-          </p>
+      <div className="fancy-data">
+        <div className="fancy-data-grid">
+          <div>
+            <p className="h5"># of Employees</p>
+            <p className="h4">{uniqueEmployees}</p>
+          </div>
+          <div>
+            <p className="h5"># of Projects</p>
+            <p className="h4">{uniqueProjects}</p>
+          </div>
+          <div>
+            <p className="h5">Total Salary</p>
+            <p className="h4">{formatCurrency(totalSalary)}</p>
+          </div>
+          <div className="">
+            <p className="h5">Total Fringe</p>
+            <p className="h4 text-success font-proxima-bold">
+              {formatCurrency(totalFringe)}
+            </p>
+          </div>
         </div>
       </div>
 
