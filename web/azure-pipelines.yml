@@ -11,8 +11,6 @@ variables:
   artifactName: drop
   azureSubscriptionTest: "AzureTestDeploy"
   azureSubscriptionProd: "AzureProdDeploy"
-  testWebApp: "walter-test"
-  prodWebApp: "walter"
   webDir: "$(Build.SourcesDirectory)/web"
   clientDir: "$(webDir)/client"
   solutionPath: "$(webDir)/app.sln"
@@ -75,6 +73,8 @@ stages:
     displayName: Deploy to Test
     dependsOn: BuildAndTest
     condition: and(succeeded(),eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    variables:
+      - group: "WalterDev"
     jobs:
       - deployment: Deploy_Test
         displayName: Deploy package to Azure test site
@@ -91,7 +91,7 @@ stages:
                   displayName: Deploy to test web app
                   inputs:
                     azureSubscription: $(azureSubscriptionTest)
-                    appName: $(testWebApp)
+                    appName: $(webAppName)
                     appType: webAppLinux
                     package: $(Pipeline.Workspace)/$(artifactName)/site.zip
 
@@ -99,6 +99,8 @@ stages:
     displayName: Deploy to Production
     dependsOn: DeployToTest
     condition: and(succeeded(),eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    variables:
+      - group: "WalterProd"
     jobs:
       - job: Await_Manual_Go
         displayName: Await go-ahead for production release
@@ -127,6 +129,6 @@ stages:
                   displayName: Deploy to production web app
                   inputs:
                     azureSubscription: $(azureSubscriptionProd)
-                    appName: $(prodWebApp)
+                    appName: $(webAppName)
                     appType: webAppLinux
                     package: $(Pipeline.Workspace)/$(artifactName)/site.zip
