@@ -1,7 +1,7 @@
 import type { ProjectSummary } from '@/lib/projectSummary.ts';
 import { Currency } from '@/shared/Currency.tsx';
+import { Link } from '@tanstack/react-router';
 
-// Import Heroicons
 import {
   AcademicCapIcon,
   PaperClipIcon,
@@ -55,10 +55,13 @@ export function FinancialDetails({ summary }: FinancialDetailsProps) {
     <section className="section-margin">
       <div className="flex justify-between">
         <h2 className="h2">Financial Details</h2>
-        <button className="btn btn-outline btn-primary btn-sm flex items-center gap-2">
+        <Link
+          className="btn btn-outline btn-primary btn-sm flex items-center gap-2"
+          to="./transactions"
+        >
           <BookOpenIcon className="w-4 h-4" />
           View More
-        </button>
+        </Link>
       </div>
 
       <div className="grid grid-cols-5 gap-4 mt-4 mb-6">
@@ -82,7 +85,7 @@ export function FinancialDetails({ summary }: FinancialDetailsProps) {
             <tr>
               <th className="text-left">Category name</th>
               <th className="text-right">Budget</th>
-              <th className="text-right">Expense</th>
+              <th className="text-right">Expenses</th>
               <th className="text-right">Encumbrance</th>
               <th className="text-right">Balance</th>
             </tr>

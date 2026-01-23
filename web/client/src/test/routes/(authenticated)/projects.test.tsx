@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
-import { getProjectAlerts } from '@/components/alerts/ProjectAlerts.tsx';
+import { getPiProjectAlerts } from '@/components/alerts/PiProjectAlerts.tsx';
 import { PiWithProjects } from '@/queries/project.ts';
 import { server } from '@/test/mswUtils.ts';
 import { renderRoute } from '@/test/routerUtils.tsx';
@@ -186,7 +186,7 @@ describe('home route', () => {
 
 });
 
-describe('getProjectAlerts', () => {
+describe('getPiProjectAlerts', () => {
   const createPi = (
     employeeId: string,
     projects: Array<{ project_number: string; project_name: string; cat_budget: number; cat_bud_bal: number }>
@@ -206,10 +206,10 @@ describe('getProjectAlerts', () => {
       ]),
     ];
 
-    const alerts = getProjectAlerts(pis);
+    const alerts = getPiProjectAlerts(pis);
 
     expect(alerts).toHaveLength(1);
-    expect(alerts[0].type).toBe('error');
+    expect(alerts[0].severity).toBe('error');
     expect(alerts[0].message).toContain('negative balance');
   });
 
@@ -220,10 +220,10 @@ describe('getProjectAlerts', () => {
       ]),
     ];
 
-    const alerts = getProjectAlerts(pis);
+    const alerts = getPiProjectAlerts(pis);
 
     expect(alerts).toHaveLength(1);
-    expect(alerts[0].type).toBe('warning');
+    expect(alerts[0].severity).toBe('warning');
     expect(alerts[0].message).toContain('less than 10%');
   });
 
@@ -234,7 +234,7 @@ describe('getProjectAlerts', () => {
       ]),
     ];
 
-    const alerts = getProjectAlerts(pis);
+    const alerts = getPiProjectAlerts(pis);
 
     expect(alerts).toHaveLength(0);
   });
@@ -247,10 +247,10 @@ describe('getProjectAlerts', () => {
       ]),
     ];
 
-    const alerts = getProjectAlerts(pis);
+    const alerts = getPiProjectAlerts(pis);
 
-    expect(alerts[0].type).toBe('error');
-    expect(alerts[1].type).toBe('warning');
+    expect(alerts[0].severity).toBe('error');
+    expect(alerts[1].severity).toBe('warning');
   });
 
   it('limits to 3 alerts', () => {
@@ -263,7 +263,7 @@ describe('getProjectAlerts', () => {
       ]),
     ];
 
-    const alerts = getProjectAlerts(pis);
+    const alerts = getPiProjectAlerts(pis);
 
     expect(alerts).toHaveLength(3);
   });
