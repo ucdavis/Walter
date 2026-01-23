@@ -51,17 +51,21 @@ interface FinancialDetailsProps {
 }
 
 export function FinancialDetails({ summary }: FinancialDetailsProps) {
+  const isSingleProject = summary.projectNumber !== 'MULTIPLE';
+
   return (
     <section className="section-margin">
       <div className="flex justify-between">
         <h2 className="h2">Financial Details</h2>
-        <Link
-          className="btn btn-outline btn-primary btn-sm flex items-center gap-2"
-          to="./transactions"
-        >
-          <BookOpenIcon className="w-4 h-4" />
-          View More
-        </Link>
+        {isSingleProject && (
+          <Link
+            className="btn btn-outline btn-primary btn-sm flex items-center gap-2"
+            to="./transactions"
+          >
+            <BookOpenIcon className="w-4 h-4" />
+            View More
+          </Link>
+        )}
       </div>
 
       <div className="grid grid-cols-5 gap-4 mt-4 mb-6">
