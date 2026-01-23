@@ -51,10 +51,6 @@
   .fancy-data {
     @apply mt-4 mb-8 px-6 py-4 border rounded-md bg-light-bg-200 border-main-border;
   }
-
-  .fancy-data-grid {
-    @apply grid grid-cols-1 md:grid-cols-4 items-stretch gap-6 md:gap-8 divide-y md:divide-y-0 md:divide-x divide-main-border;
-  }
 }
 
 @layer components {
@@ -187,13 +183,11 @@ html:active-view-transition-type(slide-right) {
   @apply text-base font-proxima-bold uppercase text-base-content/60;
 }
 
-/* stat data */
-.h4 {
-  @apply text-lg;
+.stat-value {
+  @apply text-lg font-medium;
 }
 
-/* Labels */
-.h5 {
+.stat-label {
   @apply font-proxima-bold;
 }
 

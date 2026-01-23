@@ -48,26 +48,26 @@ function RouteComponent() {
 
       {/* Summary Cards */}
       <div className="fancy-data">
-        <div className="fancy-data-grid">
+        <dl className="grid items-stretch gap-6 md:gap-8 divide-y md:divide-y-0 md:divide-x divide-main-border grid-cols-1 md:grid-cols-4">
           <div>
-            <p className="h5"># of Employees</p>
-            <p className="h4">{uniqueEmployees}</p>
+            <dt className="stat-label"># of Employees</dt>
+            <dd className="stat-value">{uniqueEmployees}</dd>
           </div>
           <div>
-            <p className="h5"># of Projects</p>
-            <p className="h4">{uniqueProjects}</p>
+            <dt className="stat-label"># of Projects</dt>
+            <dd className="stat-value">{uniqueProjects}</dd>
           </div>
           <div>
-            <p className="h5">Total Salary</p>
-            <p className="h4">{formatCurrency(totalSalary)}</p>
+            <dt className="stat-label">Total Salary</dt>
+            <dd className="stat-value">{formatCurrency(totalSalary)}</dd>
           </div>
-          <div className="">
-            <p className="h5">Total Fringe</p>
-            <p className="h4 text-success font-proxima-bold">
+          <div>
+            <dt className="stat-label">Total Fringe</dt>
+            <dd className="stat-value text-success font-proxima-bold">
               {formatCurrency(totalFringe)}
-            </p>
+            </dd>
           </div>
-        </div>
+        </dl>
       </div>
 
       {/* Personnel Table */}

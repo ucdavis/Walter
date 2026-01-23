@@ -68,20 +68,20 @@ export function FinancialDetails({ summary }: FinancialDetailsProps) {
         )}
       </div>
 
-      <div className="grid grid-cols-5 gap-4 mt-4 mb-6">
+      <dl className="grid grid-cols-5 gap-4 mt-4 mb-6">
         <div>
-          <div className="h5">Budget</div>
-          <div className="h4">
+          <dd className="stat-label">Budget</dd>
+          <dt className="stat-value">
             <Currency value={summary.totals.budget} />
-          </div>
+          </dt>
         </div>
         <div>
-          <div className="h5">Current Balance</div>
-          <div className="h4">
+          <dd className="stat-label">Current Balance</dd>
+          <dt className="stat-value">
             <Currency value={summary.totals.balance} />
-          </div>
+          </dt>
         </div>
-      </div>
+      </dl>
 
       <div className="overflow-x-auto mt-4">
         <table className="table walter-table">
