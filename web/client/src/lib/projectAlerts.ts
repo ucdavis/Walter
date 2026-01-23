@@ -1,4 +1,5 @@
-import type { ProjectSummary } from '@/lib/projectSummary.ts';
+import { summarizeProjectByNumber, type ProjectSummary } from '@/lib/projectSummary.ts';
+import type { PiWithProjects, ProjectRecord } from '@/queries/project.ts';
 
 export interface Alert {
   id: string;
@@ -57,4 +58,52 @@ export function getAlertsForProject(
   }
 
   return alerts;
+}
+
+export interface PiProjectAlert extends Alert {
+  balance: number;
+  piEmployeeId: string;
+  projectNumber: string;
+}
+
+/**
+ * Aggregate alerts across all projects managed by PIs.
+ * Returns top 3 alerts sorted by severity (errors first) then by balance.
+ */
+export function getPiProjectAlerts(managedPis: PiWithProjects[]): PiProjectAlert[] {
+  const alerts: PiProjectAlert[] = [];
+
+  for (const pi of managedPis) {
+    const projectMap = new Map<string, ProjectRecord[]>();
+    for (const p of pi.projects) {
+      const existing = projectMap.get(p.project_number) ?? [];
+      existing.push(p);
+      projectMap.set(p.project_number, existing);
+    }
+
+    for (const [projectNumber, records] of projectMap) {
+      const summary = summarizeProjectByNumber(records, projectNumber);
+      if (!summary) continue;
+
+      const projectAlerts = getAlertsForProject(summary, `${summary.projectName} `);
+
+      for (const alert of projectAlerts) {
+        alerts.push({
+          ...alert,
+          balance: summary.totals.balance,
+          piEmployeeId: pi.employeeId,
+          projectNumber,
+        });
+      }
+    }
+  }
+
+  return alerts
+    .sort((a, b) => {
+      if (a.severity !== b.severity) {
+        return a.severity === 'error' ? -1 : 1;
+      }
+      return a.balance - b.balance;
+    })
+    .slice(0, 3);
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getPiProjectAlerts } from '@/components/alerts/PiProjectAlerts.tsx';
+import { getPiProjectAlerts } from '@/lib/projectAlerts.ts';
 import type { PiWithProjects } from '@/queries/project.ts';
 
 const createPi = (

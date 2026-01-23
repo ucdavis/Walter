@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
-import { getPiProjectAlerts } from '@/components/alerts/PiProjectAlerts.tsx';
+import { getPiProjectAlerts } from '@/lib/projectAlerts.ts';
 import { PiWithProjects } from '@/queries/project.ts';
 import { server } from '@/test/mswUtils.ts';
 import { renderRoute } from '@/test/routerUtils.tsx';
