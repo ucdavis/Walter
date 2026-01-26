@@ -1,3 +1,14 @@
+import { Fragment, useMemo } from 'react';
+import {
+  createColumnHelper,
+  flexRender,
+  getCoreRowModel,
+  getExpandedRowModel,
+  getSortedRowModel,
+  useReactTable,
+  type ExpandedState,
+  type SortingState,
+} from '@tanstack/react-table';
 import { useState } from 'react';
 import {
   ChevronDownIcon,
@@ -16,6 +27,14 @@ function isEndingSoon(dateStr: string | null): boolean {
   return endDate <= threeMonthsFromNow && endDate >= now;
 }
 
+export interface AggregatedDistribution {
+  record: PersonnelRecord;
+  monthlyRate: number;
+  monthlyFringe: number;
+  monthlyTotal: number;
+  fundingEndingSoon: boolean;
+}
+
 export interface AggregatedPosition {
   key: string; // emplid + positionNumber
   emplid: string;
@@ -25,79 +44,23 @@ export interface AggregatedPosition {
   fte: number;
   jobEffectiveDate: string | null;
   jobEndDate: string | null;
+  jobEndingSoon: boolean;
   monthlyRate: number;
-  cbr: number;
-  distributions: PersonnelRecord[];
   monthlyFringe: number;
+  monthlyTotal: number;
+  distributions: AggregatedDistribution[];
 }
 
-function PositionRow({ position }: { position: AggregatedPosition }) {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const { monthlyRate, monthlyFringe } = position;
-
-  return (
-    <>
-      <tr
-        className="cursor-pointer hover:bg-base-200"
-        onClick={() => setIsExpanded(!isExpanded)}
-      >
-        <td>
-          <div className="flex items-center gap-2">
-            {isExpanded ? (
-              <ChevronUpIcon className="w-4 h-4" />
-            ) : (
-              <ChevronDownIcon className="w-4 h-4" />
-            )}
-            {position.name} - {position.positionDescription}
-          </div>
-        </td>
-        <td className="text-right">{position.fte}</td>
-        <td></td>
-        <td className="text-right">{formatDate(position.jobEffectiveDate, '')}</td>
-        <td className="text-right">
-          {isEndingSoon(position.jobEndDate) ? (
-            <span className="text-amber-600 inline-flex items-center gap-1" title="Ending within 3 months">
-              <ClockIcon className="w-4 h-4" />
-              {formatDate(position.jobEndDate, '')}
-            </span>
-          ) : (
-            formatDate(position.jobEndDate, '')
-          )}
-        </td>
-        <td className="text-right">{formatCurrency(monthlyRate)}</td>
-        <td className="text-right">{formatCurrency(monthlyFringe)}</td>
-        <td className="text-right">
-          {formatCurrency(monthlyRate + monthlyFringe)}
-        </td>
-      </tr>
-      {isExpanded &&
-        position.distributions.map((dist, idx) => {
-          const distMonthlyRate = dist.monthlyRate * (dist.distributionPercent / 100);
-          const distMonthlyFringe = distMonthlyRate * dist.cbr;
-          return (
-            <tr className="pivot-row" key={`${position.key}-${idx}`}>
-              <td className="text-sm pl-8">{dist.projectName}</td>
-              <td></td>
-              <td className="text-right text-sm">{dist.distributionPercent}%</td>
-              <td className="text-right text-sm">{formatDate(dist.fundingEffectiveDate, '')}</td>
-              <td className="text-right text-sm">
-                {isEndingSoon(dist.fundingEndDate) ? (
-                  <span className="text-amber-600 inline-flex items-center gap-1" title="Ending within 3 months">
-                    <ClockIcon className="w-3 h-3" />
-                    {formatDate(dist.fundingEndDate, '')}
-                  </span>
-                ) : (
-                  formatDate(dist.fundingEndDate, '')
-                )}
-              </td>
-              <td className="text-right text-sm">{formatCurrency(distMonthlyRate)}</td>
-              <td className="text-right text-sm">{formatCurrency(distMonthlyFringe)}</td>
-              <td className="text-right text-sm">{formatCurrency(distMonthlyRate + distMonthlyFringe)}</td>
-            </tr>
-          );
-        })}
-    </>
-  );
+function aggregateDistribution(record: PersonnelRecord): AggregatedDistribution {
+  const monthlyRate = record.monthlyRate * (record.distributionPercent / 100);
+  const monthlyFringe = monthlyRate * record.cbr;
+  return {
+    record,
+    monthlyRate,
+    monthlyFringe,
+    monthlyTotal: monthlyRate + monthlyFringe,
+    fundingEndingSoon: isEndingSoon(record.fundingEndDate),
+  };
 }
 
 export function aggregateByPosition(data: PersonnelRecord[]): AggregatedPosition[] {
@@ -108,8 +71,10 @@ export function aggregateByPosition(data: PersonnelRecord[]): AggregatedPosition
     const existing = positionMap.get(key);
 
     if (existing) {
-      existing.distributions.push(record);
+      existing.distributions.push(aggregateDistribution(record));
     } else {
+      const monthlyRate = record.monthlyRate;
+      const monthlyFringe = monthlyRate * record.cbr;
       positionMap.set(key, {
         key,
         emplid: record.emplid,
@@ -119,10 +84,11 @@ export function aggregateByPosition(data: PersonnelRecord[]): AggregatedPosition
         fte: record.fte,
         jobEffectiveDate: record.jobEffectiveDate,
         jobEndDate: record.jobEndDate,
-        monthlyRate: record.monthlyRate,
-        cbr: record.cbr,
-        distributions: [record],
-        monthlyFringe: record.monthlyRate * record.cbr,
+        jobEndingSoon: isEndingSoon(record.jobEndDate),
+        monthlyRate,
+        monthlyFringe,
+        monthlyTotal: monthlyRate + monthlyFringe,
+        distributions: [aggregateDistribution(record)],
       });
     }
   }
@@ -130,15 +96,113 @@ export function aggregateByPosition(data: PersonnelRecord[]): AggregatedPosition
   return Array.from(positionMap.values());
 }
 
+const columnHelper = createColumnHelper<AggregatedPosition>();
+
+const columns = [
+  columnHelper.display({
+    id: 'positionProject',
+    header: 'Position/Project',
+    cell: ({ row }) => (
+      <div className="flex items-center gap-2">
+        <button
+          onClick={row.getToggleExpandedHandler()}
+          className="cursor-pointer"
+        >
+          {row.getIsExpanded() ? (
+            <ChevronUpIcon className="w-4 h-4" />
+          ) : (
+            <ChevronDownIcon className="w-4 h-4" />
+          )}
+        </button>
+        {row.original.name} - {row.original.positionDescription}
+      </div>
+    ),
+  }),
+  columnHelper.accessor('fte', {
+    header: () => <span className="flex justify-end w-full">FTE</span>,
+    cell: (info) => <span className="flex justify-end">{info.getValue()}</span>,
+  }),
+  columnHelper.display({
+    id: 'distPct',
+    header: () => <span className="flex justify-end w-full">Dist Pct</span>,
+    cell: () => null,
+  }),
+  columnHelper.accessor('jobEffectiveDate', {
+    header: () => <span className="flex justify-end w-full">Effective Date</span>,
+    cell: (info) => (
+      <span className="flex justify-end">{formatDate(info.getValue(), '')}</span>
+    ),
+  }),
+  columnHelper.accessor('jobEndDate', {
+    header: () => <span className="flex justify-end w-full">Expected End Date</span>,
+    cell: ({ row }) => {
+      const { jobEndDate, jobEndingSoon } = row.original;
+      return (
+        <span className="flex justify-end">
+          {jobEndingSoon ? (
+            <span className="text-amber-600 inline-flex items-center gap-1" title="Ending within 3 months">
+              <ClockIcon className="w-4 h-4" />
+              {formatDate(jobEndDate, '')}
+            </span>
+          ) : (
+            formatDate(jobEndDate, '')
+          )}
+        </span>
+      );
+    },
+  }),
+  columnHelper.accessor('monthlyRate', {
+    header: () => <span className="flex justify-end w-full">Monthly Rate</span>,
+    cell: (info) => (
+      <span className="flex justify-end">{formatCurrency(info.getValue())}</span>
+    ),
+  }),
+  columnHelper.accessor((row) => row.monthlyFringe, {
+    id: 'monthlyFringe',
+    header: () => <span className="flex justify-end w-full">Monthly Fringe</span>,
+    cell: (info) => (
+      <span className="flex justify-end">{formatCurrency(info.getValue())}</span>
+    ),
+  }),
+  columnHelper.accessor('monthlyTotal', {
+    header: () => <span className="flex justify-end w-full">Monthly Total</span>,
+    cell: (info) => (
+      <span className="flex justify-end">{formatCurrency(info.getValue())}</span>
+    ),
+  }),
+];
+
 interface PersonnelTableProps {
   data: PersonnelRecord[];
   showTotals?: boolean;
 }
 
 export function PersonnelTable({ data, showTotals = true }: PersonnelTableProps) {
-  const positions = aggregateByPosition(data).sort((a, b) => a.name.localeCompare(b.name));
+  const [sorting, setSorting] = useState<SortingState>([
+    { id: 'positionProject', desc: false },
+  ]);
+  const [expanded, setExpanded] = useState<ExpandedState>({});
+
+  const positions = useMemo(() => aggregateByPosition(data), [data]);
+
+  const table = useReactTable({
+    data: positions,
+    columns,
+    state: {
+      sorting,
+      expanded,
+    },
+    onSortingChange: setSorting,
+    onExpandedChange: setExpanded,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getExpandedRowModel: getExpandedRowModel(),
+    getRowCanExpand: () => true,
+  });
+
   const totalMonthlyRate = positions.reduce((sum, p) => sum + p.monthlyRate, 0);
   const totalMonthlyFringe = positions.reduce((sum, p) => sum + p.monthlyFringe, 0);
+  const totalMonthlyTotal = totalMonthlyRate + totalMonthlyFringe;
 
   if (positions.length === 0) {
     return <p className="text-base-content/70 mt-4">No personnel found.</p>;
@@ -158,20 +222,57 @@ export function PersonnelTable({ data, showTotals = true }: PersonnelTableProps)
           <col className="w-24" />
         </colgroup>
         <thead>
-          <tr>
-            <th>Position/Project</th>
-            <th className="text-right">FTE</th>
-            <th className="text-right">Dist Pct</th>
-            <th className="text-right">Effective Date</th>
-            <th className="text-right">Expected End Date</th>
-            <th className="text-right">Monthly Rate</th>
-            <th className="text-right">Monthly Fringe</th>
-            <th className="text-right">Monthly Total</th>
-          </tr>
+          {table.getHeaderGroups().map((headerGroup) => (
+            <tr key={headerGroup.id}>
+              {headerGroup.headers.map((header) => (
+                <th key={header.id}>
+                  {header.isPlaceholder
+                    ? null
+                    : flexRender(
+                        header.column.columnDef.header,
+                        header.getContext()
+                      )}
+                </th>
+              ))}
+            </tr>
+          ))}
         </thead>
         <tbody>
-          {positions.map((position) => (
-            <PositionRow position={position} key={position.key} />
+          {table.getRowModel().rows.map((row) => (
+            <Fragment key={row.id}>
+              <tr
+                className="cursor-pointer hover:bg-base-200"
+                onClick={() => row.toggleExpanded()}
+              >
+                {row.getVisibleCells().map((cell) => (
+                  <td key={cell.id}>
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </td>
+                ))}
+              </tr>
+              {row.getIsExpanded() &&
+                row.original.distributions.map((dist, idx) => (
+                  <tr className="pivot-row" key={`${row.id}-dist-${idx}`}>
+                    <td className="text-sm pl-8">{dist.record.projectName}</td>
+                    <td></td>
+                    <td className="text-right text-sm">{dist.record.distributionPercent}%</td>
+                    <td className="text-right text-sm">{formatDate(dist.record.fundingEffectiveDate, '')}</td>
+                    <td className="text-right text-sm">
+                      {dist.fundingEndingSoon ? (
+                        <span className="text-amber-600 inline-flex items-center gap-1" title="Ending within 3 months">
+                          <ClockIcon className="w-3 h-3" />
+                          {formatDate(dist.record.fundingEndDate, '')}
+                        </span>
+                      ) : (
+                        formatDate(dist.record.fundingEndDate, '')
+                      )}
+                    </td>
+                    <td className="text-right text-sm">{formatCurrency(dist.monthlyRate)}</td>
+                    <td className="text-right text-sm">{formatCurrency(dist.monthlyFringe)}</td>
+                    <td className="text-right text-sm">{formatCurrency(dist.monthlyTotal)}</td>
+                  </tr>
+                ))}
+            </Fragment>
           ))}
         </tbody>
         {showTotals && (
@@ -180,9 +281,7 @@ export function PersonnelTable({ data, showTotals = true }: PersonnelTableProps)
               <td colSpan={5}>Totals</td>
               <td className="text-right">{formatCurrency(totalMonthlyRate)}</td>
               <td className="text-right">{formatCurrency(totalMonthlyFringe)}</td>
-              <td className="text-right">
-                {formatCurrency(totalMonthlyRate + totalMonthlyFringe)}
-              </td>
+              <td className="text-right">{formatCurrency(totalMonthlyTotal)}</td>
             </tr>
           </tfoot>
         )}
