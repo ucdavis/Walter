@@ -5,7 +5,8 @@ const Footer: React.FC = () => {
         {/* Left */}
         <div className="flex-1 flex items-center">
           <h1 className="text-sm text-dark-font/80">
-            © {new Date().getFullYear()}
+            © {new Date().getFullYear()} UC Regents, Davis campus. All rights
+            reserved.
           </h1>
         </div>
 
