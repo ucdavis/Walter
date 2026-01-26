@@ -1,7 +1,7 @@
 import type { ProjectSummary } from '@/lib/projectSummary.ts';
 import { Currency } from '@/shared/Currency.tsx';
+import { Link } from '@tanstack/react-router';
 
-// Import Heroicons
 import {
   AcademicCapIcon,
   PaperClipIcon,
@@ -51,30 +51,37 @@ interface FinancialDetailsProps {
 }
 
 export function FinancialDetails({ summary }: FinancialDetailsProps) {
+  const isSingleProject = summary.projectNumber !== 'MULTIPLE';
+
   return (
     <section className="section-margin">
       <div className="flex justify-between">
         <h2 className="h2">Financial Details</h2>
-        <button className="btn btn-outline btn-primary btn-sm flex items-center gap-2">
-          <BookOpenIcon className="w-4 h-4" />
-          View More
-        </button>
+        {isSingleProject && (
+          <Link
+            className="btn btn-outline btn-primary btn-sm flex items-center gap-2"
+            to="./transactions"
+          >
+            <BookOpenIcon className="w-4 h-4" />
+            View More
+          </Link>
+        )}
       </div>
 
-      <div className="grid grid-cols-5 gap-4 mt-4 mb-6">
+      <dl className="grid grid-cols-5 gap-4 mt-4 mb-6">
         <div>
-          <div className="h5">Budget</div>
-          <div className="h4">
+          <dd className="stat-label">Budget</dd>
+          <dt className="stat-value">
             <Currency value={summary.totals.budget} />
-          </div>
+          </dt>
         </div>
         <div>
-          <div className="h5">Current Balance</div>
-          <div className="h4">
+          <dd className="stat-label">Current Balance</dd>
+          <dt className="stat-value">
             <Currency value={summary.totals.balance} />
-          </div>
+          </dt>
         </div>
-      </div>
+      </dl>
 
       <div className="overflow-x-auto mt-4">
         <table className="table walter-table">
@@ -82,7 +89,7 @@ export function FinancialDetails({ summary }: FinancialDetailsProps) {
             <tr>
               <th className="text-left">Category name</th>
               <th className="text-right">Budget</th>
-              <th className="text-right">Expense</th>
+              <th className="text-right">Expenses</th>
               <th className="text-right">Encumbrance</th>
               <th className="text-right">Balance</th>
             </tr>

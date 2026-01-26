@@ -1,107 +1,93 @@
 import { formatCurrency } from '@/lib/currency.ts';
-import { PiWithProjects, ProjectRecord } from '@/queries/project.ts';
+import { getAlertsForProject, type Alert } from '@/lib/projectAlerts.ts';
+import type { ProjectSummary } from '@/lib/projectSummary.ts';
 import {
+  CalendarIcon,
   ExclamationCircleIcon,
   ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline';
 import { Link } from '@tanstack/react-router';
 
-export interface ProjectAlert {
-  balance: number;
-  id: string;
-  message: string;
-  piEmployeeId: string;
-  projectNumber: string;
-  type: 'error' | 'warning';
+function AlertIcon({ type }: { type: Alert['type'] }) {
+  if (type === 'ending-soon') {
+    return <CalendarIcon className="h-5 w-5" />;
+  }
+  if (type === 'negative-balance') {
+    return <ExclamationCircleIcon className="h-5 w-5" />;
+  }
+  return <ExclamationTriangleIcon className="h-5 w-5" />;
 }
 
-export function getProjectAlerts(managedPis: PiWithProjects[]): ProjectAlert[] {
-  const alerts: ProjectAlert[] = [];
+interface AlertCardProps {
+  alert: Alert;
+  balance: number;
+  linkParams?: { employeeId: string; projectNumber: string };
+}
 
-  for (const pi of managedPis) {
-    // Group projects by project number
-    const projectMap = new Map<string, ProjectRecord[]>();
-    for (const p of pi.projects) {
-      const existing = projectMap.get(p.project_number) ?? [];
-      existing.push(p);
-      projectMap.set(p.project_number, existing);
-    }
+export function AlertCard({ alert, balance, linkParams }: AlertCardProps) {
+  const showBalance = alert.type === 'negative-balance' || alert.type === 'low-budget';
 
-    for (const [projectNumber, records] of projectMap) {
-      const first = records[0];
-      const totalBudget = records.reduce((sum, r) => sum + r.cat_budget, 0);
-      const totalBalance = records.reduce((sum, r) => sum + r.cat_bud_bal, 0);
+  const content = (
+    <>
+      <AlertIcon type={alert.type} />
+      <span>
+        {alert.message}
+        {showBalance && ` (${formatCurrency(balance)})`}
+      </span>
+    </>
+  );
 
-      if (totalBalance < 0) {
-        alerts.push({
-          balance: totalBalance,
-          id: `budget-${projectNumber}`,
-          message: `${first.project_name} has negative balance`,
-          piEmployeeId: pi.employeeId,
-          projectNumber,
-          type: 'error',
-        });
-      } else if (totalBudget > 0 && totalBalance > 0 && totalBalance / totalBudget < 0.1) {
-        alerts.push({
-          balance: totalBalance,
-          id: `budget-${projectNumber}`,
-          message: `${first.project_name} has less than 10% budget remaining`,
-          piEmployeeId: pi.employeeId,
-          projectNumber,
-          type: 'warning',
-        });
-      }
-    }
+  if (linkParams) {
+    return (
+      <Link
+        className={`alert alert-${alert.severity} alert-soft`}
+        params={linkParams}
+        role="alert"
+        to="/projects/$employeeId/$projectNumber/"
+      >
+        {content}
+      </Link>
+    );
   }
 
-  // Sort: errors first, then by balance ascending (most negative first for errors, lowest remaining for warnings)
-  return alerts
-    .sort((a, b) => {
-      if (a.type !== b.type) {
-        return a.type === 'error' ? -1 : 1;
-      }
-      return a.balance - b.balance;
-    })
-    .slice(0, 3);
+  return (
+    <div className={`alert alert-${alert.severity} alert-soft`} role="alert">
+      {content}
+    </div>
+  );
 }
 
 interface ProjectAlertsProps {
-  managedPis: PiWithProjects[];
+  summary: ProjectSummary;
+  employeeId?: string;
+  prefix?: string;
 }
 
-export function ProjectAlerts({ managedPis }: ProjectAlertsProps) {
-  const alerts = getProjectAlerts(managedPis);
+export function ProjectAlerts({
+  summary,
+  employeeId,
+  prefix,
+}: ProjectAlertsProps) {
+  const alerts = getAlertsForProject(summary, prefix);
 
   if (alerts.length === 0) {
     return null;
   }
 
+  const linkParams = employeeId
+    ? { employeeId, projectNumber: summary.projectNumber }
+    : undefined;
+
   return (
-    <>
-      <h2 className="h2 mt-8">Alerts</h2>
-      <div className="mt-4 flex flex-col gap-4">
-        {alerts.map((alert) => (
-          <Link
-            className={`alert alert-${alert.type} alert-soft`}
-            key={alert.id}
-            params={{
-              employeeId: alert.piEmployeeId,
-              projectNumber: alert.projectNumber,
-            }}
-            role="alert"
-            to="/projects/$employeeId/$projectNumber/"
-          >
-            {alert.type === 'error' ? (
-              <ExclamationCircleIcon className="h-5 w-5" />
-            ) : (
-              <ExclamationTriangleIcon className="h-5 w-5" />
-            )}
-            <span>
-              {alert.message} ({formatCurrency(alert.balance)})
-            </span>
-          </Link>
-        ))}
-      </div>
-    </>
+    <div className="flex flex-col gap-3">
+      {alerts.map((alert) => (
+        <AlertCard
+          alert={alert}
+          balance={summary.totals.balance}
+          key={alert.id}
+          linkParams={linkParams}
+        />
+      ))}
+    </div>
   );
 }

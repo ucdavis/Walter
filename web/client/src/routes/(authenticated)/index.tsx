@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ProjectAlerts } from '@/components/alerts/ProjectAlerts.tsx';
+import { PiProjectAlerts } from '@/components/alerts/PiProjectAlerts.tsx';
 import { SearchButton } from '@/components/search/SearchButton.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import { formatDate } from '@/lib/date.ts';
@@ -135,7 +135,7 @@ function RouteComponent() {
         />
       </div>
 
-      <ProjectAlerts managedPis={managedPis} />
+      <PiProjectAlerts managedPis={managedPis} />
 
       <div className="tabs mt-16" role="tablist">
         <button

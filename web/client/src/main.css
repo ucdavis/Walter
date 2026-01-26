@@ -47,6 +47,10 @@
   .fancy-list {
     @apply inline-flex items-center gap-2 px-3 py-2 rounded hover:bg-base-300 transition-colors duration-200 text-lg;
   }
+
+  .fancy-data {
+    @apply mt-4 mb-8 px-6 py-4 border rounded-md bg-light-bg-200 border-main-border;
+  }
 }
 
 @layer components {
@@ -179,13 +183,11 @@ html:active-view-transition-type(slide-right) {
   @apply text-base font-proxima-bold uppercase text-base-content/60;
 }
 
-/* stat data */
-.h4 {
-  @apply text-lg;
+.stat-value {
+  @apply text-lg font-medium;
 }
 
-/* Labels */
-.h5 {
+.stat-label {
   @apply font-proxima-bold;
 }
 
@@ -234,7 +236,6 @@ html:active-view-transition-type(slide-right) {
 }
 
 .input {
-
   &:focus,
   &:focus-within {
     outline: 2px solid var(--color-primary-color);
@@ -242,7 +243,6 @@ html:active-view-transition-type(slide-right) {
 }
 
 .tab {
-
   &:focus-visible,
   &:is(label:has(:checked:focus-visible)) {
     outline: 2px solid var(--color-primary-color);

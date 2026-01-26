@@ -6,7 +6,12 @@ export const Route = createFileRoute('/(authenticated)/projects/$employeeId')({
   component: RouteComponent,
   loader: ({ context: { queryClient }, params: { employeeId } }) =>
     queryClient.ensureQueryData(projectsDetailQueryOptions(employeeId)),
-  pendingComponent: () => <div>Loading projects...</div>,
+  pendingComponent: () => (
+    <div className="text-center mt-20">
+      <div className="loading loading-spinner loading-lg mb-2" />
+      <div className="mb-4 text-lg">Loading Projects...</div>
+    </div>
+  ),
 });
 
 function RouteComponent() {

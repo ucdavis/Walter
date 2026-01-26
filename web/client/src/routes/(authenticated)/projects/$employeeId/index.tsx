@@ -1,4 +1,3 @@
-import { ProjectChart } from '@/components/project/chart.tsx';
 import { FinancialDetails } from '@/components/project/financialDetails.tsx';
 import { PersonnelTable } from '@/components/project/PersonnelTable.tsx';
 import { summarizeAllProjects } from '@/lib/projectSummary.ts';
@@ -68,34 +67,15 @@ function RouteComponent() {
     ...new Set(projects.map((project) => project.project_number)),
   ];
 
-  const earliestStartDate = summary.awardStartDate;
-  const startingBalanceAllProjects = summary.totals.balance;
-
   return (
     <main className="flex-1">
-      {/* Alerts */}
-      {/* <AlertSection /> */}
-
-      {/* Chart Section */}
       <section className="mt-8 section-margin">
         <h1 className="h1">{summary.projectName}</h1>
-        <p className="h4 mb-4">{summary.projectNumber}</p>
-        <ProjectChart
-          projects={projectNumbers}
-          startingBalance={startingBalanceAllProjects}
-          startingDate={
-            earliestStartDate ||
-            new Date(
-              new Date().setFullYear(new Date().getFullYear() - 1)
-            ).toISOString()
-          }
-        />
+        <p className="h4">{summary.projectNumber}</p>
       </section>
 
-      {/* Financial Details */}
       <FinancialDetails summary={summary} />
 
-      {/* Personnel */}
       <PersonnelSection projectNumbers={projectNumbers} />
     </main>
   );
