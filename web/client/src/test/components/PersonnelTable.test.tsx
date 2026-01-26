@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import {
-  aggregateByEmployee,
+  aggregateByPosition,
   PersonnelTable,
 } from '@/components/project/PersonnelTable.tsx';
 import { PersonnelRecord } from '@/queries/personnel.ts';
@@ -10,134 +10,84 @@ const createRecord = (
   overrides: Partial<PersonnelRecord> = {}
 ): PersonnelRecord => ({
   cbr: 0.4,
-  distPct: 100,
+  distributionPercent: 100,
   emplid: '1001',
   fte: 1.0,
-  fundingEndDt: '2026-12-31T00:00:00.000Z',
-  monthlyRt: 5000,
-  name: 'Smith,John',
-  positionDescr: 'PROF-FY',
+  fundingEffectiveDate: '2025-07-01T00:00:00.000Z',
+  fundingEndDate: '2026-12-31T00:00:00.000Z',
+  jobEffectiveDate: '2020-01-01T00:00:00.000Z',
+  jobEndDate: null,
+  monthlyRate: 5000,
+  name: 'Smith, John',
+  positionDescription: 'PROF-FY',
+  positionNumber: '40001234',
   projectId: 'PROJ1',
   projectName: 'Test Project',
   ...overrides,
 });
 
-describe('aggregateByEmployee', () => {
-  it('groups records by employee ID', () => {
+describe('aggregateByPosition', () => {
+  it('groups records by employee + position number', () => {
     const records = [
-      createRecord({ emplid: '1001', name: 'Smith,John', projectId: 'PROJ1' }),
-      createRecord({ emplid: '1001', name: 'Smith,John', projectId: 'PROJ2' }),
-      createRecord({ emplid: '1002', name: 'Doe,Jane', projectId: 'PROJ1' }),
+      createRecord({ emplid: '1001', positionNumber: '40001234', projectId: 'PROJ1' }),
+      createRecord({ emplid: '1001', positionNumber: '40001234', projectId: 'PROJ2' }), // same position, diff project
+      createRecord({ emplid: '1001', positionNumber: '40005678', projectId: 'PROJ1' }), // diff position
     ];
 
-    const result = aggregateByEmployee(records);
+    const result = aggregateByPosition(records);
 
     expect(result).toHaveLength(2);
-    expect(result.find((e) => e.emplid === '1001')?.positions).toHaveLength(2);
-    expect(result.find((e) => e.emplid === '1002')?.positions).toHaveLength(1);
+    const pos1 = result.find((p) => p.positionNumber === '40001234');
+    const pos2 = result.find((p) => p.positionNumber === '40005678');
+    expect(pos1?.distributions).toHaveLength(2);
+    expect(pos2?.distributions).toHaveLength(1);
   });
 
-  it('calculates totals correctly across positions', () => {
+  it('separates same position number for different employees', () => {
     const records = [
-      createRecord({ emplid: '1001', monthlyRt: 5000, cbr: 0.4 }), // annual: 60000, fringe: 24000
-      createRecord({ emplid: '1001', monthlyRt: 3000, cbr: 0.4 }), // annual: 36000, fringe: 14400
+      createRecord({ emplid: '1001', positionNumber: '40001234' }),
+      createRecord({ emplid: '1002', name: 'Doe, Jane', positionNumber: '40001234' }),
     ];
 
-    const result = aggregateByEmployee(records);
-    const employee = result[0];
+    const result = aggregateByPosition(records);
 
-    expect(employee.totalAnnualSalary).toBe(96000); // 60000 + 36000
-    expect(employee.totalFringeAmount).toBe(38400); // 24000 + 14400
-  });
-
-  it('sets primary position to first record', () => {
-    const records = [
-      createRecord({
-        emplid: '1001',
-        positionDescr: 'FIRST POSITION',
-        distPct: 30,
-      }),
-      createRecord({
-        emplid: '1001',
-        positionDescr: 'SECOND POSITION',
-        distPct: 70,
-      }),
-    ];
-
-    const result = aggregateByEmployee(records);
-
-    expect(result[0].primaryPosition.positionDescr).toBe('FIRST POSITION');
-  });
-
-  it('counts unique projects correctly', () => {
-    const records = [
-      createRecord({ emplid: '1001', projectId: 'PROJ1' }),
-      createRecord({ emplid: '1001', projectId: 'PROJ1' }), // same project
-      createRecord({ emplid: '1001', projectId: 'PROJ2' }),
-    ];
-
-    const result = aggregateByEmployee(records);
-
-    expect(result[0].projectCount).toBe(2);
+    expect(result).toHaveLength(2);
   });
 });
 
 describe('PersonnelTable', () => {
-  it('shows (+N) indicator only when multiple unique job titles exist', async () => {
-    // Employee with same job title twice - should NOT show indicator
-    const sameTitle = [
-      createRecord({
-        emplid: '1001',
-        name: 'Smith,John',
-        positionDescr: 'PROF-FY',
-        projectId: 'PROJ1',
-      }),
-      createRecord({
-        emplid: '1001',
-        name: 'Smith,John',
-        positionDescr: 'PROF-FY',
-        projectId: 'PROJ2',
-      }),
-    ];
-
-    const { unmount } = render(<PersonnelTable data={sameTitle} />);
-    expect(screen.queryByText(/\(\+\d+\)/)).not.toBeInTheDocument();
-    unmount();
-
-    // Employee with different job titles - should show indicator
-    const diffTitles = [
-      createRecord({
-        emplid: '1001',
-        name: 'Smith,John',
-        positionDescr: 'PROF-FY',
-        projectId: 'PROJ1',
-      }),
-      createRecord({
-        emplid: '1001',
-        name: 'Smith,John',
-        positionDescr: 'POSTDOC-EMPLOYEE',
-        projectId: 'PROJ2',
-      }),
-    ];
-
-    render(<PersonnelTable data={diffTitles} />);
-    expect(screen.getByText('(+1)')).toBeInTheDocument();
-  });
-
-  it('displays totals in footer', () => {
+  it('displays name and position in combined format', () => {
     const records = [
-      createRecord({ emplid: '1001', monthlyRt: 5000, cbr: 0.4 }), // salary: 60000, fringe: 24000
-      createRecord({ emplid: '1002', name: 'Doe,Jane', monthlyRt: 4000, cbr: 0.4 }), // salary: 48000, fringe: 19200
+      createRecord({ name: 'Smith, John', positionDescription: 'PROF-FY' }),
     ];
 
     render(<PersonnelTable data={records} />);
 
-    // Total salary: 60000 + 48000 = 108000
-    expect(screen.getByText('$108,000.00')).toBeInTheDocument();
-    // Total fringe: 24000 + 19200 = 43200
-    expect(screen.getByText('$43,200.00')).toBeInTheDocument();
-    // Grand total: 108000 + 43200 = 151200
-    expect(screen.getByText('$151,200.00')).toBeInTheDocument();
+    expect(screen.getByText('Smith, John - PROF-FY')).toBeInTheDocument();
+  });
+
+  it('displays FTE column', () => {
+    const records = [createRecord({ fte: 0.75 })];
+
+    render(<PersonnelTable data={records} />);
+
+    expect(screen.getByText('0.75')).toBeInTheDocument();
+  });
+
+  it('displays totals in footer', () => {
+    const records = [
+      createRecord({ emplid: '1001', positionNumber: '40001234', monthlyRate: 5000, cbr: 0.4 }), // monthly: 5000, fringe: 2000
+      createRecord({ emplid: '1002', name: 'Doe, Jane', positionNumber: '40005678', monthlyRate: 4000, cbr: 0.4 }), // monthly: 4000, fringe: 1600
+    ];
+
+    render(<PersonnelTable data={records} />);
+
+    // Total monthly rate: 5000 + 4000 = 9000
+    expect(screen.getByText('$9,000.00')).toBeInTheDocument();
+    // Total monthly fringe: 2000 + 1600 = 3600
+    expect(screen.getByText('$3,600.00')).toBeInTheDocument();
+    // Monthly total: 9000 + 3600 = 12600
+    expect(screen.getByText('$12,600.00')).toBeInTheDocument();
   });
 
   it('shows empty state when no data', () => {
@@ -145,17 +95,33 @@ describe('PersonnelTable', () => {
     expect(screen.getByText('No personnel found.')).toBeInTheDocument();
   });
 
+  it('shows ending soon indicator for dates within 3 months', () => {
+    const twoMonthsFromNow = new Date();
+    twoMonthsFromNow.setMonth(twoMonthsFromNow.getMonth() + 2);
+
+    const records = [
+      createRecord({
+        jobEndDate: twoMonthsFromNow.toISOString(),
+      }),
+    ];
+
+    render(<PersonnelTable data={records} />);
+
+    expect(screen.getByTitle('Ending within 3 months')).toBeInTheDocument();
+  });
+
   it('renders only filtered data when passed filtered records', () => {
-    // Simulate what project detail page does - filter by projectId
     const allPersonnel = [
       createRecord({
         emplid: '1001',
-        name: 'Adams,Alice',
+        name: 'Adams, Alice',
+        positionNumber: '40001111',
         projectId: 'PROJ1',
       }),
       createRecord({
         emplid: '1002',
-        name: 'Baker,Bob',
+        name: 'Baker, Bob',
+        positionNumber: '40002222',
         projectId: 'PROJ2',
       }),
     ];
@@ -165,7 +131,7 @@ describe('PersonnelTable', () => {
 
     render(<PersonnelTable data={filtered} />);
 
-    expect(screen.getByText('Adams,Alice')).toBeInTheDocument();
-    expect(screen.queryByText('Baker,Bob')).not.toBeInTheDocument();
+    expect(screen.getByText('Adams, Alice - PROF-FY')).toBeInTheDocument();
+    expect(screen.queryByText('Baker, Bob - PROF-FY')).not.toBeInTheDocument();
   });
 });

@@ -1,24 +1,39 @@
 import { useState } from 'react';
-import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
+import {
+  ChevronDownIcon,
+  ChevronUpIcon,
+  ClockIcon,
+} from '@heroicons/react/24/outline';
 import { formatCurrency } from '@/lib/currency.ts';
 import { formatDate } from '@/lib/date.ts';
 import { PersonnelRecord } from '@/queries/personnel.ts';
 
-export interface AggregatedEmployee {
-  emplid: string;
-  name: string;
-  positions: PersonnelRecord[];
-  projectCount: number;
-  totalAnnualSalary: number;
-  totalFringeAmount: number;
-  primaryPosition: PersonnelRecord;
+function isEndingSoon(dateStr: string | null): boolean {
+  if (!dateStr) return false;
+  const endDate = new Date(dateStr);
+  const now = new Date();
+  const threeMonthsFromNow = new Date(now.getFullYear(), now.getMonth() + 3, now.getDate());
+  return endDate <= threeMonthsFromNow && endDate >= now;
 }
 
+export interface AggregatedPosition {
+  key: string; // emplid + positionNumber
+  emplid: string;
+  name: string;
+  positionNumber: string;
+  positionDescription: string;
+  fte: number;
+  jobEffectiveDate: string | null;
+  jobEndDate: string | null;
+  monthlyRate: number;
+  cbr: number;
+  distributions: PersonnelRecord[];
+  monthlyFringe: number;
+}
 
-function EmployeeRow({ employee }: { employee: AggregatedEmployee }) {
+function PositionRow({ position }: { position: AggregatedPosition }) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const uniqueJobTitles = new Set(employee.positions.map((p) => p.positionDescr));
-  const additionalTitles = uniqueJobTitles.size - 1;
+  const { monthlyRate, monthlyFringe } = position;
 
   return (
     <>
@@ -33,57 +48,51 @@ function EmployeeRow({ employee }: { employee: AggregatedEmployee }) {
             ) : (
               <ChevronDownIcon className="w-4 h-4" />
             )}
-            {employee.name}
+            {position.name} - {position.positionDescription}
           </div>
         </td>
-        <td>
-          {employee.primaryPosition.positionDescr}
-          {additionalTitles > 0 && (
-            <span className="text-base-content/50 text-sm ml-1">
-              (+{additionalTitles})
+        <td className="text-right">{position.fte}</td>
+        <td></td>
+        <td className="text-right">{formatDate(position.jobEffectiveDate, '')}</td>
+        <td className="text-right">
+          {isEndingSoon(position.jobEndDate) ? (
+            <span className="text-amber-600 inline-flex items-center gap-1" title="Ending within 3 months">
+              <ClockIcon className="w-4 h-4" />
+              {formatDate(position.jobEndDate, '')}
             </span>
+          ) : (
+            formatDate(position.jobEndDate, '')
           )}
         </td>
-        <td>{formatDate(employee.primaryPosition.fundingEndDt)}</td>
-        <td className="text-right">{employee.projectCount}</td>
+        <td className="text-right">{formatCurrency(monthlyRate)}</td>
+        <td className="text-right">{formatCurrency(monthlyFringe)}</td>
         <td className="text-right">
-          {formatCurrency(employee.totalAnnualSalary)}
-        </td>
-        <td className="text-right">
-          {formatCurrency(employee.totalFringeAmount)}
-        </td>
-        <td className="text-right">
-          {formatCurrency(
-            employee.totalAnnualSalary + employee.totalFringeAmount
-          )}
+          {formatCurrency(monthlyRate + monthlyFringe)}
         </td>
       </tr>
-      {/* Sort positions by job title, then by distribution % descending */}
       {isExpanded &&
-        [...employee.positions]
-          .sort((a, b) => {
-            const titleCompare = a.positionDescr.localeCompare(b.positionDescr);
-            if (titleCompare !== 0) return titleCompare;
-            return b.distPct - a.distPct;
-          })
-          .map((position, idx) => {
-          const annualSalary = position.monthlyRt * 12;
-          const fringeAmount = annualSalary * position.cbr;
+        position.distributions.map((dist, idx) => {
+          const distMonthlyRate = dist.monthlyRate * (dist.distributionPercent / 100);
+          const distMonthlyFringe = distMonthlyRate * dist.cbr;
           return (
-            <tr className="pivot-row" key={`${employee.emplid}-${idx}`}>
-              <td className="text-sm">{position.projectName}</td>
-              <td className="text-sm">{position.positionDescr}</td>
-              <td className="text-sm">{formatDate(position.fundingEndDt)}</td>
-              <td className="text-right text-sm">{position.distPct}%</td>
+            <tr className="pivot-row" key={`${position.key}-${idx}`}>
+              <td className="text-sm pl-8">{dist.projectName}</td>
+              <td></td>
+              <td className="text-right text-sm">{dist.distributionPercent}%</td>
+              <td className="text-right text-sm">{formatDate(dist.fundingEffectiveDate, '')}</td>
               <td className="text-right text-sm">
-                {formatCurrency(annualSalary)}
+                {isEndingSoon(dist.fundingEndDate) ? (
+                  <span className="text-amber-600 inline-flex items-center gap-1" title="Ending within 3 months">
+                    <ClockIcon className="w-3 h-3" />
+                    {formatDate(dist.fundingEndDate, '')}
+                  </span>
+                ) : (
+                  formatDate(dist.fundingEndDate, '')
+                )}
               </td>
-              <td className="text-right text-sm">
-                {formatCurrency(fringeAmount)}
-              </td>
-              <td className="text-right text-sm">
-                {formatCurrency(annualSalary + fringeAmount)}
-              </td>
+              <td className="text-right text-sm">{formatCurrency(distMonthlyRate)}</td>
+              <td className="text-right text-sm">{formatCurrency(distMonthlyFringe)}</td>
+              <td className="text-right text-sm">{formatCurrency(distMonthlyRate + distMonthlyFringe)}</td>
             </tr>
           );
         })}
@@ -91,34 +100,34 @@ function EmployeeRow({ employee }: { employee: AggregatedEmployee }) {
   );
 }
 
-export function aggregateByEmployee(data: PersonnelRecord[]): AggregatedEmployee[] {
-  const employeeMap = new Map<string, AggregatedEmployee>();
+export function aggregateByPosition(data: PersonnelRecord[]): AggregatedPosition[] {
+  const positionMap = new Map<string, AggregatedPosition>();
 
   for (const record of data) {
-    const existing = employeeMap.get(record.emplid);
-    const annualSalary = record.monthlyRt * 12;
-    const fringeAmount = annualSalary * record.cbr;
+    const key = `${record.emplid}-${record.positionNumber}`;
+    const existing = positionMap.get(key);
 
     if (existing) {
-      existing.positions.push(record);
-      existing.totalAnnualSalary += annualSalary;
-      existing.totalFringeAmount += fringeAmount;
-      const projectIds = new Set(existing.positions.map((p) => p.projectId));
-      existing.projectCount = projectIds.size;
+      existing.distributions.push(record);
     } else {
-      employeeMap.set(record.emplid, {
+      positionMap.set(key, {
+        key,
         emplid: record.emplid,
         name: record.name,
-        positions: [record],
-        projectCount: 1,
-        totalAnnualSalary: annualSalary,
-        totalFringeAmount: fringeAmount,
-        primaryPosition: record,
+        positionNumber: record.positionNumber,
+        positionDescription: record.positionDescription,
+        fte: record.fte,
+        jobEffectiveDate: record.jobEffectiveDate,
+        jobEndDate: record.jobEndDate,
+        monthlyRate: record.monthlyRate,
+        cbr: record.cbr,
+        distributions: [record],
+        monthlyFringe: record.monthlyRate * record.cbr,
       });
     }
   }
 
-  return Array.from(employeeMap.values());
+  return Array.from(positionMap.values());
 }
 
 interface PersonnelTableProps {
@@ -127,11 +136,11 @@ interface PersonnelTableProps {
 }
 
 export function PersonnelTable({ data, showTotals = true }: PersonnelTableProps) {
-  const employees = aggregateByEmployee(data);
-  const totalSalary = employees.reduce((sum, e) => sum + e.totalAnnualSalary, 0);
-  const totalFringe = employees.reduce((sum, e) => sum + e.totalFringeAmount, 0);
+  const positions = aggregateByPosition(data).sort((a, b) => a.name.localeCompare(b.name));
+  const totalMonthlyRate = positions.reduce((sum, p) => sum + p.monthlyRate, 0);
+  const totalMonthlyFringe = positions.reduce((sum, p) => sum + p.monthlyFringe, 0);
 
-  if (employees.length === 0) {
+  if (positions.length === 0) {
     return <p className="text-base-content/70 mt-4">No personnel found.</p>;
   }
 
@@ -139,38 +148,40 @@ export function PersonnelTable({ data, showTotals = true }: PersonnelTableProps)
     <div className="overflow-x-auto">
       <table className="table walter-table">
         <colgroup>
-          <col className="w-1/4" />
-          <col className="w-1/6" />
-          <col className="w-1/12" />
-          <col className="w-1/12" />
-          <col className="w-1/12" />
-          <col className="w-1/12" />
-          <col className="w-1/12" />
+          <col className="w-1/3" />
+          <col className="w-14" />
+          <col className="w-12" />
+          <col className="w-24" />
+          <col className="w-24" />
+          <col className="w-28" />
+          <col className="w-24" />
+          <col className="w-24" />
         </colgroup>
         <thead>
           <tr>
-            <th>Name</th>
-            <th>Job Title</th>
-            <th>End Date</th>
-            <th className="text-right"># Proj</th>
-            <th className="text-right">Salary (year)</th>
-            <th className="text-right">Fringe (year)</th>
-            <th className="text-right">Total</th>
+            <th>Position/Project</th>
+            <th className="text-right">FTE</th>
+            <th className="text-right">Dist Pct</th>
+            <th className="text-right">Effective Date</th>
+            <th className="text-right">Expected End Date</th>
+            <th className="text-right">Monthly Rate</th>
+            <th className="text-right">Monthly Fringe</th>
+            <th className="text-right">Monthly Total</th>
           </tr>
         </thead>
         <tbody>
-          {employees.map((employee) => (
-            <EmployeeRow employee={employee} key={employee.emplid} />
+          {positions.map((position) => (
+            <PositionRow position={position} key={position.key} />
           ))}
         </tbody>
         {showTotals && (
           <tfoot>
             <tr className="totaltr">
-              <td colSpan={4}>Totals</td>
-              <td className="text-right">{formatCurrency(totalSalary)}</td>
-              <td className="text-right">{formatCurrency(totalFringe)}</td>
+              <td colSpan={5}>Totals</td>
+              <td className="text-right">{formatCurrency(totalMonthlyRate)}</td>
+              <td className="text-right">{formatCurrency(totalMonthlyFringe)}</td>
               <td className="text-right">
-                {formatCurrency(totalSalary + totalFringe)}
+                {formatCurrency(totalMonthlyRate + totalMonthlyFringe)}
               </td>
             </tr>
           </tfoot>

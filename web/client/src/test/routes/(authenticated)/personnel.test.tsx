@@ -18,39 +18,51 @@ describe('personnel page', () => {
     const personnel = [
       {
         emplid: '1001',
-        name: 'Smith,John',
+        name: 'Smith, John',
         projectId: 'PROJ1',
         projectName: 'Project One',
-        positionDescr: 'PROF-FY',
-        monthlyRt: 5000,
-        distPct: 100,
+        positionNumber: '40001234',
+        positionDescription: 'PROF-FY',
+        monthlyRate: 5000,
+        distributionPercent: 100,
         cbr: 0.4,
-        fundingEndDt: '2026-12-31T00:00:00.000Z',
         fte: 1.0,
+        jobEffectiveDate: '2020-01-01T00:00:00.000Z',
+        jobEndDate: null,
+        fundingEffectiveDate: '2025-07-01T00:00:00.000Z',
+        fundingEndDate: '2026-12-31T00:00:00.000Z',
       },
       {
         emplid: '1001',
-        name: 'Smith,John',
+        name: 'Smith, John',
         projectId: 'PROJ2',
         projectName: 'Project Two',
-        positionDescr: 'PROF-FY',
-        monthlyRt: 3000,
-        distPct: 50,
+        positionNumber: '40009999',
+        positionDescription: 'ASSOC PROF-FY',
+        monthlyRate: 3000,
+        distributionPercent: 50,
         cbr: 0.4,
-        fundingEndDt: '2027-06-30T00:00:00.000Z',
         fte: 0.5,
+        jobEffectiveDate: '2020-01-01T00:00:00.000Z',
+        jobEndDate: null,
+        fundingEffectiveDate: '2025-07-01T00:00:00.000Z',
+        fundingEndDate: '2027-06-30T00:00:00.000Z',
       },
       {
         emplid: '1002',
-        name: 'Doe,Jane',
+        name: 'Doe, Jane',
         projectId: 'PROJ1',
         projectName: 'Project One',
-        positionDescr: 'POSTDOC-EMPLOYEE',
-        monthlyRt: 4000,
-        distPct: 100,
+        positionNumber: '40005678',
+        positionDescription: 'POSTDOC-EMPLOYEE',
+        monthlyRate: 4000,
+        distributionPercent: 100,
         cbr: 0.4,
-        fundingEndDt: '2026-09-30T00:00:00.000Z',
         fte: 1.0,
+        jobEffectiveDate: '2023-09-01T00:00:00.000Z',
+        jobEndDate: '2026-08-31T00:00:00.000Z',
+        fundingEffectiveDate: '2025-07-01T00:00:00.000Z',
+        fundingEndDate: '2026-09-30T00:00:00.000Z',
       },
     ];
 
@@ -73,15 +85,14 @@ describe('personnel page', () => {
       const employeeCards = screen.getAllByText('2');
       expect(employeeCards.length).toBeGreaterThanOrEqual(2); // In card and subtitle
 
-      // Total Salary: (5000 + 3000 + 4000) * 12 = 144000
+      // Monthly Rate: 5000 + 3000 + 4000 = 12000
       // Appears in both summary card and table footer
-      expect(screen.getAllByText('$144,000.00').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText('$12,000.00').length).toBeGreaterThanOrEqual(1);
 
-      // Total Fringe: 144000 * 0.4 = 57600
-      expect(screen.getAllByText('$57,600.00').length).toBeGreaterThanOrEqual(1);
+      // Monthly Fringe: 12000 * 0.4 = 4800
+      expect(screen.getAllByText('$4,800.00').length).toBeGreaterThanOrEqual(1);
     } finally {
       cleanup();
     }
   });
 });
-

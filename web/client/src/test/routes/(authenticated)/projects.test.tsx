@@ -41,7 +41,8 @@ describe('home route', () => {
       http.get('/api/user/me', () => {
         userRequestCount += 1;
         return HttpResponse.json(user);
-      })
+      }),
+      http.get('/api/project/personnel', () => HttpResponse.json([]))
     );
 
     const { cleanup } = renderRoute({ initialPath: '/' });
@@ -77,7 +78,8 @@ describe('home route', () => {
     server.use(
       http.get('/api/user/me', () => HttpResponse.json(user)),
       http.get('/api/project/managed/:employeeId', () => HttpResponse.json([])),
-      http.get('/api/project/:employeeId', () => HttpResponse.json(projects))
+      http.get('/api/project/:employeeId', () => HttpResponse.json(projects)),
+      http.get('/api/project/personnel', () => HttpResponse.json([]))
     );
 
     const { cleanup } = renderRoute({ initialPath: '/' });
@@ -112,7 +114,8 @@ describe('home route', () => {
     server.use(
       http.get('/api/user/me', () => HttpResponse.json(user)),
       http.get('/api/project/managed/:employeeId', () => HttpResponse.json([])),
-      http.get('/api/project/:employeeId', () => HttpResponse.json(projects))
+      http.get('/api/project/:employeeId', () => HttpResponse.json(projects)),
+      http.get('/api/project/personnel', () => HttpResponse.json([]))
     );
 
     const { cleanup } = renderRoute({ initialPath: '/' });
