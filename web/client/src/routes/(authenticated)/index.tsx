@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { PiProjectAlerts } from '@/components/alerts/PiProjectAlerts.tsx';
+import { ExportCsvButton } from '@/components/ExportCsvButton.tsx';
 import { SearchButton } from '@/components/search/SearchButton.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import { formatDate } from '@/lib/date.ts';
@@ -11,6 +12,20 @@ import {
 } from '@/queries/project.ts';
 import { useUser } from '@/shared/auth/UserContext.tsx';
 import { createFileRoute, Link } from '@tanstack/react-router';
+
+const piCsvColumns = [
+  { key: 'name' as const, header: 'PI Name' },
+  { key: 'projectCount' as const, header: 'Projects' },
+  { key: 'totalBalance' as const, header: 'Balance' },
+  { key: 'totalBudget' as const, header: 'Budget' },
+];
+
+const projectCsvColumns = [
+  { key: 'project_number' as const, header: 'Project Number' },
+  { key: 'project_name' as const, header: 'Project Name' },
+  { key: 'award_end_date' as const, header: 'End Date' },
+  { key: 'totalBalance' as const, header: 'Balance' },
+];
 
 type Tab = 'pis' | 'personnel' | 'reports';
 
@@ -176,7 +191,15 @@ function RouteComponent() {
       {activeTab === 'pis' && (
         <div aria-labelledby="tab-pis" id="panel-pis" role="tabpanel">
           {isProjectManager ? (
-            <table className="walter-table table mt-8">
+            <>
+              <div className="flex justify-end mt-4">
+                <ExportCsvButton
+                  data={managedPis}
+                  columns={piCsvColumns}
+                  filename="principal-investigators.csv"
+                />
+              </div>
+              <table className="walter-table table mt-2">
               <thead>
                 <tr>
                   <th>PI Name</th>
@@ -207,8 +230,17 @@ function RouteComponent() {
                 ))}
               </tbody>
             </table>
+            </>
           ) : (
-            <table className="walter-table table mt-8">
+            <>
+              <div className="flex justify-end mt-4">
+                <ExportCsvButton
+                  data={projects}
+                  columns={projectCsvColumns}
+                  filename="projects.csv"
+                />
+              </div>
+              <table className="walter-table table mt-2">
               <thead>
                 <tr>
                   <th>Project Name</th>
@@ -241,6 +273,7 @@ function RouteComponent() {
                 ))}
               </tbody>
             </table>
+            </>
           )}
         </div>
       )}

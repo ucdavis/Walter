@@ -207,3 +207,46 @@ public class ExampleController : ApiControllerBase
 ```
 
 When generating code, ensure it follows these patterns and integrates well with the existing technology stack.
+
+## User Emulation (Development)
+
+### View Existing Employee IDs
+
+Query the database to see users available for emulation:
+
+```javascript
+node << 'EOF'
+const sql = require('mssql');
+const config = {
+    user: 'sa',
+    password: 'LocalDev123!',
+    server: 'sql',
+    database: 'AppDb',
+    options: { encrypt: false, trustServerCertificate: true }
+};
+sql.connect(config).then(pool => {
+    return pool.request().query('SELECT EmployeeId, Kerberos, DisplayName FROM Users');
+}).then(result => {
+    console.table(result.recordset);
+    sql.close();
+});
+EOF
+```
+
+### Emulate a User
+
+Use the system emulation endpoint to switch to a different user context:
+
+```
+GET /api/system/emulate/{identifier}
+```
+
+The `identifier` can be either a Kerberos ID or Employee ID. Example:
+- `/api/system/emulate/testuser` (by kerberos)
+- `/api/system/emulate/10221216` (by employee ID)
+
+### End Emulation
+
+```
+GET /api/system/endemulate
+```

@@ -15,6 +15,7 @@ import {
   ChevronUpIcon,
   ClockIcon,
 } from '@heroicons/react/24/outline';
+import { ExportCsvButton } from '@/components/ExportCsvButton.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import { formatDate } from '@/lib/date.ts';
 import { PersonnelRecord } from '@/queries/personnel.ts';
@@ -167,6 +168,38 @@ const columns = [
   }),
 ];
 
+function getExportData(positions: AggregatedPosition[]) {
+  return positions.flatMap((pos) =>
+    pos.distributions.map((dist) => ({
+      name: pos.name,
+      positionNumber: pos.positionNumber,
+      positionDescription: pos.positionDescription,
+      fte: pos.fte,
+      projectName: dist.record.projectName,
+      distributionPercent: dist.record.distributionPercent,
+      fundingEffectiveDate: dist.record.fundingEffectiveDate ?? '',
+      fundingEndDate: dist.record.fundingEndDate ?? '',
+      monthlyRate: dist.monthlyRate,
+      monthlyFringe: dist.monthlyFringe,
+      monthlyTotal: dist.monthlyTotal,
+    }))
+  );
+}
+
+const personnelCsvColumns = [
+  { key: 'name' as const, header: 'Name' },
+  { key: 'positionNumber' as const, header: 'Position Number' },
+  { key: 'positionDescription' as const, header: 'Position' },
+  { key: 'fte' as const, header: 'FTE' },
+  { key: 'projectName' as const, header: 'Project' },
+  { key: 'distributionPercent' as const, header: 'Dist %' },
+  { key: 'fundingEffectiveDate' as const, header: 'Effective Date' },
+  { key: 'fundingEndDate' as const, header: 'End Date' },
+  { key: 'monthlyRate' as const, header: 'Monthly Rate' },
+  { key: 'monthlyFringe' as const, header: 'Monthly Fringe' },
+  { key: 'monthlyTotal' as const, header: 'Monthly Total' },
+];
+
 interface PersonnelTableProps {
   data: PersonnelRecord[];
   showTotals?: boolean;
@@ -205,6 +238,13 @@ export function PersonnelTable({ data, showTotals = true }: PersonnelTableProps)
 
   return (
     <div className="overflow-x-auto">
+      <div className="flex justify-end mb-2">
+        <ExportCsvButton
+          data={getExportData(positions)}
+          columns={personnelCsvColumns}
+          filename="personnel.csv"
+        />
+      </div>
       <table className="table walter-table">
         <colgroup>
           <col className="w-1/3" />
