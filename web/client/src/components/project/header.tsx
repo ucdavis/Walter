@@ -31,10 +31,37 @@ const Header: React.FC = () => {
         <div className="flex items-center">
           <div className="flex items-center gap-4">
             <nav className="flex items-center gap-6">
-              <Link to="/projects">Projects</Link>
-              <Link to="/personnel">Personnel</Link>
-              <Link to="/reports">Reports</Link>
-              <Link to="/accruals">Accruals</Link>
+              <Link
+                activeOptions={{ exact: false }}
+                className="nav-link"
+                to="/projects"
+              >
+                Projects
+              </Link>
+
+              <Link
+                activeOptions={{ exact: false }}
+                className="nav-link"
+                to="/personnel"
+              >
+                Personnel
+              </Link>
+
+              <Link
+                activeOptions={{ exact: false }}
+                className="nav-link"
+                to="/reports"
+              >
+                Reports
+              </Link>
+
+              <Link
+                activeOptions={{ exact: false }}
+                className="nav-link"
+                to="/accruals"
+              >
+                Accruals
+              </Link>
             </nav>
           </div>
           <div className="avatar ms-6">
