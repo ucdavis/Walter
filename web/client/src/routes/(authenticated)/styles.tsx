@@ -31,20 +31,23 @@ function RouteComponent() {
       <div className="w-full max-w-1/2 space-y-8">
         {/* Typography */}
         <section>
-          <h1>Heading 1</h1>
-          <h2>Heading 2</h2>
-          <h3>Heading 3</h3>
-          <p>This is a paragraph of base text.</p>
-          <p>This is small, muted text.</p>
+          <h1 className="h1">Heading 1</h1>
+          <h2 className="h2">Heading 2</h2>
+          <h3 className="h3">Heading 3</h3>
+          <p className="p">This is a paragraph of base text.</p>
+          <p className="small muted">This is small, muted text.</p>
         </section>
 
         {/* Buttons */}
         <section className="space-x-2">
-          <button className="btn btn-primary">Primary</button>
-          <button className="btn btn-secondary">Secondary</button>
-          <button className="btn btn-accent">Accent</button>
-          <button className="btn btn-outline">Outline</button>
-          <button className="btn btn-disabled">Disabled</button>
+          <button className="btn btn-active">Default</button>
+          <button className="btn btn-active btn-primary">Primary</button>
+          <button className="btn btn-active btn-secondary">Secondary</button>
+          <button className="btn btn-active btn-accent">Accent</button>
+          <button className="btn btn-active btn-info">Info</button>
+          <button className="btn btn-active btn-success">Success</button>
+          <button className="btn btn-active btn-warning">Warning</button>
+          <button className="btn btn-active btn-error">Error</button>
         </section>
 
         {/* Inputs */}

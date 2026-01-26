@@ -141,7 +141,7 @@ function RouteComponent() {
         <button
           aria-controls="panel-pis"
           aria-selected={activeTab === 'pis'}
-          className={`text-2xl tab ps-0 ${activeTab === 'pis' ? 'tab-active' : ''}`}
+          className={`text-2xl tab -ms-4 ${activeTab === 'pis' ? 'tab-active' : ''}`}
           id="tab-pis"
           onClick={() => setActiveTab('pis')}
           role="tab"

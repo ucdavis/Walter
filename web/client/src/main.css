@@ -11,12 +11,12 @@
   --font-proxima-bold: 'proxima-nova-b', sans-serif;
 
   --color-primary-color: var(--color-ucd-gunrock);
-  --color-secondary-color: var(--color-ucd-goldenstate);
+  --color-secondary-color: #ffbf00;
   --color-accent-color: var(--color-ucd-goldenstate);
   --color-error-color: var(--color-ucd-doubledecker);
-  --color-info-color: var(--color-ucd-arboretum);
+  --color-info-color: var(--color-ucd-rain);
   --color-success-color: var(--color-ucd-sage);
-  --color-warning-color: var(--color-ucd-poppy);
+  --color-warning-color: #ffbf00;
 }
 
 @plugin "daisyui/theme" {
@@ -30,13 +30,17 @@
   --color-primary-content: var(--color-light-font);
 
   --color-secondary: var(--color-secondary-color);
-  --color-accent: var(--color-accent-color);
-  --color-error: var(--color-error-color);
-  --color-info: var(--color-info-color);
-  --color-success: var(--color-success-color);
-  --color-warning: var(--color-warning-color);
+  --color-secondary-content: var(--color-light-font);
 
-  --input-color: var(--color-primary-color);
+  --color-error: var(--color-error-color);
+  --color-error-content: var(--color-light-font);
+
+  --color-info: var(--color-info-color);
+  --color-accent: var(--color-accent-color);
+  --color-success: var(--color-success-color);
+
+  --color-warning: var(--color-warning-color);
+  --color-warning-content: var(--color-light-font);
 }
 
 @layer base {
