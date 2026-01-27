@@ -104,16 +104,11 @@ const columns = [
     header: 'Position/Project',
     cell: ({ row }) => (
       <div className="flex items-center gap-2">
-        <button
-          onClick={row.getToggleExpandedHandler()}
-          className="cursor-pointer"
-        >
-          {row.getIsExpanded() ? (
-            <ChevronUpIcon className="w-4 h-4" />
-          ) : (
-            <ChevronDownIcon className="w-4 h-4" />
-          )}
-        </button>
+        {row.getIsExpanded() ? (
+          <ChevronUpIcon className="w-4 h-4" />
+        ) : (
+          <ChevronDownIcon className="w-4 h-4" />
+        )}
         {row.original.name} - {row.original.positionDescription}
       </div>
     ),
