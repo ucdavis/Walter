@@ -4,10 +4,10 @@ const Footer: React.FC = () => {
       <div className="container flex items-center justify-between">
         {/* Left */}
         <div className="flex-1 flex items-center">
-          <h1 className="text-sm text-dark-font/80">
+          <p className="text-sm text-dark-font/80">
             © {new Date().getFullYear()} UC Regents, Davis campus. All rights
             reserved.
-          </h1>
+          </p>
         </div>
 
         {/* Center */}

@@ -247,7 +247,7 @@ html:active-view-transition-type(slide-right) {
 
 .walter-login-pattern {
   background: url(/money-pattern.svg) repeat;
-  background-color: #fff9e5;
+  background-color: #f3f6fc;
   background-size: 233px;
   animation: walterDiagonalPan 60s linear infinite;
   will-change: background-position;

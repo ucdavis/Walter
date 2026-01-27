@@ -12,18 +12,54 @@ function About() {
           <div className="h-full border-r border-main-border" />
         </aside>
 
-        <main className="flex flex-1">
-          <div className="flex w-full max-w-xl flex-col p-10 mt-6 sm:max-w-[90%] md:max-w-[80%] xl:max-w-[50%]">
+        <main className="flex flex-col p-10 mt-6 flex-1">
+          <div className="flex w-full max-w-xl flex-col md:mt-10 sm:max-w-[90%] md:max-w-[80%] xl:max-w-[50%]">
             <img alt="Dog outline logo" className="w-8" src="/walter.svg" />
             <h1 className="text-2xl font-proxima-bold">W.A.L.T.E.R.</h1>
             <p className="uppercase">
               warehouse analytics and ledger tools for enterprise reporting
             </p>
-            <Link className="btn btn-primary btn-lg mt-8" to="/dashboard">
+            <p className="mt-4 border-t border-main-border pt-4">
+              Walter Warehouse Analytics & Ledger Tools is an enterprise-grade
+              reporting application designed to give organizations a clear,
+              trustworthy view of their financial and operational data—without
+              the usual spreadsheet chaos. Developed by{' '}
+              <a
+                className="underline"
+                href="https://computing.caes.ucdavis.edu/"
+              >
+                CRU
+              </a>
+            </p>
+            <div className="flex gap-2 mt-4 border-b border-main-border pb-4">
+              <Link className="btn btn-outline btn-primary btn-sm" to="/terms">
+                FAQs
+              </Link>
+              <Link className="btn btn-outline btn-primary btn-sm" to="/terms">
+                Documentation
+              </Link>
+            </div>
+            <Link className="btn btn-primary btn-lg mt-4" to="/dashboard">
               UC Davis Login
             </Link>
           </div>
-          <div className="mt-auto">Footer</div>
+          <div className="mt-auto items-start">
+            <a
+              href="https://caes.ucdavis.edu"
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              <img
+                alt="CA&ES UC Davis Logo"
+                className="w-36 opacity-50"
+                src="/caes.svg"
+              />
+            </a>
+            <p className="text-sm text-dark-font/80 mt-4">
+              © {new Date().getFullYear()} UC Regents, Davis campus. All rights
+              reserved.
+            </p>
+          </div>
         </main>
       </div>
     </div>
