@@ -6,12 +6,16 @@ export interface PersonnelRecord {
   name: string;
   projectId: string;
   projectName: string;
-  positionDescr: string;
-  monthlyRt: number;
-  distPct: number;
+  positionNumber: string;
+  positionDescription: string;
+  monthlyRate: number;
+  distributionPercent: number;
   cbr: number;
-  fundingEndDt: string | null;
   fte: number;
+  jobEffectiveDate: string | null;
+  jobEndDate: string | null;
+  fundingEffectiveDate: string | null;
+  fundingEndDate: string | null;
 }
 
 export const personnelQueryOptions = () => ({
