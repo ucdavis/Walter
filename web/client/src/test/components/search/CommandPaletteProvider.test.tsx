@@ -56,6 +56,8 @@ describe('CommandPaletteProvider', () => {
       )
     );
 
+    const { cleanup } = renderRoute({ initialPath: '/styles' });
+
     try {
       await screen.findByText('Heading 1');
       const dialog = document.querySelector(
