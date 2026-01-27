@@ -236,10 +236,27 @@ html:active-view-transition-type(slide-right) {
   font-family: var(--font-proxima-bold);
   color: var(--color-dark-font);
 }
+@keyframes walterDiagonalPan {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 233px 233px; /* one tile step, keeps it seamless */
+  }
+}
 
 .walter-login-pattern {
   background: url(/money-pattern.svg) repeat;
-  background-color: #e7eaee;
+  background-color: #fff9e5;
+  background-size: 233px;
+  animation: walterDiagonalPan 60s linear infinite;
+  will-change: background-position;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .walter-login-pattern {
+    animation: none;
+  }
 }
 .input {
   &:focus,
