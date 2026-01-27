@@ -1,5 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { PersonnelTable } from '@/components/project/PersonnelTable.tsx';
+import {
+  aggregateByPosition,
+  PersonnelTable,
+} from '@/components/project/PersonnelTable.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import { usePersonnelQuery } from '@/queries/personnel.ts';
 import { useUser } from '@/shared/auth/UserContext.tsx';
@@ -33,9 +36,10 @@ function RouteComponent() {
   // Calculate summary stats
   const uniqueEmployees = new Set(data.map((r) => r.emplid)).size;
   const uniqueProjects = new Set(data.map((r) => r.projectId)).size;
-  const totalSalary = data.reduce((sum, r) => sum + r.monthlyRt * 12, 0);
-  const totalFringe = data.reduce(
-    (sum, r) => sum + r.monthlyRt * 12 * r.cbr,
+  const positions = aggregateByPosition(data);
+  const totalMonthlyRate = positions.reduce((sum, p) => sum + p.monthlyRate, 0);
+  const totalMonthlyFringe = positions.reduce(
+    (sum, p) => sum + p.monthlyFringe,
     0
   );
 
@@ -58,13 +62,13 @@ function RouteComponent() {
             <dd className="stat-value">{uniqueProjects}</dd>
           </div>
           <div>
-            <dt className="stat-label">Total Salary</dt>
-            <dd className="stat-value">{formatCurrency(totalSalary)}</dd>
+            <dt className="stat-label">Monthly Rate</dt>
+            <dd className="stat-value">{formatCurrency(totalMonthlyRate)}</dd>
           </div>
           <div>
-            <dt className="stat-label">Total Fringe</dt>
+            <dt className="stat-label">Monthly Fringe</dt>
             <dd className="stat-value text-success font-proxima-bold">
-              {formatCurrency(totalFringe)}
+              {formatCurrency(totalMonthlyFringe)}
             </dd>
           </div>
         </dl>
