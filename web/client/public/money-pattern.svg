@@ -4,7 +4,7 @@
     <defs>
         <path d="M0,0 L2000,0 L2000,2000 L0,2000 L0,0 Z" id="path-1"></path>
     </defs>
-    <g id="money-pattern" stroke="none" fill="none" transform="translate(0.84, 0.9)" xlink:href="#path-1" fill-rule="evenodd" stroke-width="1">
+    <g id="money-pattern" stroke="none" fill="none" transform="translate(0.84, 0.9)" xlink:href="#path-1" fill-rule="evenodd" opacity="0.400000006" stroke-width="1">
         <g id="Group-1338" transform="translate(0.481, -0.388)" fill="#1F1F1F">
             <path d="M465,1183.0014 C465,1176.3754 459.627,1171.0024 453,1171.0024 C446.373,1171.0024 441,1176.3754 441,1183.0014 C441,1189.6284 446.373,1195.0014 453,1195.0014 C459.627,1195.0014 465,1189.6284 465,1183.0014" id="Fill-664"></path>
             <path d="M1822,1678.0004 C1822,1671.3744 1816.627,1666.0014 1810,1666.0014 C1803.373,1666.0014 1798,1671.3744 1798,1678.0004 C1798,1684.6274 1803.373,1690.0004 1810,1690.0004 C1816.627,1690.0004 1822,1684.6274 1822,1678.0004" id="Fill-666"></path>
