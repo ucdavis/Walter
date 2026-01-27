@@ -2,20 +2,20 @@ import { useQuery } from '@tanstack/react-query';
 import { fetchJson } from '@/lib/api.ts';
 
 export interface PersonnelRecord {
-  emplid: string;
-  name: string;
-  projectId: string;
-  projectName: string;
-  positionNumber: string;
-  positionDescription: string;
-  monthlyRate: number;
-  distributionPercent: number;
   cbr: number;
+  distributionPercent: number;
+  emplid: string;
   fte: number;
-  jobEffectiveDate: string | null;
-  jobEndDate: string | null;
   fundingEffectiveDate: string | null;
   fundingEndDate: string | null;
+  jobEffectiveDate: string | null;
+  jobEndDate: string | null;
+  monthlyRate: number;
+  name: string;
+  positionDescription: string;
+  positionNumber: string;
+  projectId: string;
+  projectName: string;
 }
 
 export const personnelQueryOptions = () => ({

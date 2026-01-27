@@ -15,11 +15,11 @@ import {
 } from '@heroicons/react/24/outline';
 
 const financialCsvColumns = [
-  { key: 'name' as const, header: 'Category' },
-  { key: 'budget' as const, header: 'Budget' },
-  { key: 'expense' as const, header: 'Expenses' },
-  { key: 'encumbrance' as const, header: 'Encumbrance' },
-  { key: 'balance' as const, header: 'Balance' },
+  { header: 'Category', key: 'name' as const },
+  { header: 'Budget', key: 'budget' as const },
+  { header: 'Expenses', key: 'expense' as const },
+  { header: 'Encumbrance', key: 'encumbrance' as const },
+  { header: 'Balance', key: 'balance' as const },
 ];
 
 const ICONS = {
@@ -68,14 +68,14 @@ export function FinancialDetails({ summary }: FinancialDetailsProps) {
         <h2 className="h2">Financial Details</h2>
         <div className="flex gap-2">
           <ExportCsvButton
-            data={summary.categories.map((c) => ({
-              name: c.name,
-              budget: c.budget,
-              expense: c.expense,
-              encumbrance: c.encumbrance,
-              balance: c.balance,
-            }))}
             columns={financialCsvColumns}
+            data={summary.categories.map((c) => ({
+              balance: c.balance,
+              budget: c.budget,
+              encumbrance: c.encumbrance,
+              expense: c.expense,
+              name: c.name,
+            }))}
             filename="financial-details.csv"
           />
           {isSingleProject && (
