@@ -32,14 +32,17 @@ function About() {
               </a>
             </p>
             <div className="flex gap-2 mt-4 border-b border-main-border pb-4">
-              <Link className="btn btn-outline btn-primary btn-sm" to="/terms">
+              <Link className="btn btn-outline btn-primary btn-sm" to="/FAQs">
                 FAQs
               </Link>
-              <Link className="btn btn-outline btn-primary btn-sm" to="/terms">
+              <Link
+                className="btn btn-outline btn-primary btn-sm"
+                to="https://computing.caes.ucdavis.edu/documentation/walter"
+              >
                 Documentation
               </Link>
             </div>
-            <Link className="btn btn-primary btn-lg mt-4" to="/dashboard">
+            <Link className="btn btn-primary btn-lg mt-4" to="/">
               UC Davis Login
             </Link>
           </div>
