@@ -9,7 +9,7 @@ using Server.Services;
 
 namespace Server.Controllers;
 
-// [Authorize(Roles = Role.Names.System)]
+[Authorize(Roles = Role.Names.System)]
 public class SystemController : ApiControllerBase
 {
     private readonly IUserService _userService;
