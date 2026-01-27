@@ -12,7 +12,6 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as authenticatedRouteRouteImport } from './routes/(authenticated)/route'
 import { Route as authenticatedIndexRouteImport } from './routes/(authenticated)/index'
-import { Route as authenticatedStylesRouteImport } from './routes/(authenticated)/styles'
 import { Route as authenticatedPersonnelRouteImport } from './routes/(authenticated)/personnel'
 import { Route as authenticatedMeRouteImport } from './routes/(authenticated)/me'
 import { Route as authenticatedFormRouteImport } from './routes/(authenticated)/form'
@@ -35,11 +34,6 @@ const authenticatedRouteRoute = authenticatedRouteRouteImport.update({
 const authenticatedIndexRoute = authenticatedIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => authenticatedRouteRoute,
-} as any)
-const authenticatedStylesRoute = authenticatedStylesRouteImport.update({
-  id: '/styles',
-  path: '/styles',
   getParentRoute: () => authenticatedRouteRoute,
 } as any)
 const authenticatedPersonnelRoute = authenticatedPersonnelRouteImport.update({
@@ -100,7 +94,6 @@ export interface FileRoutesByFullPath {
   '/form': typeof authenticatedFormRoute
   '/me': typeof authenticatedMeRoute
   '/personnel': typeof authenticatedPersonnelRoute
-  '/styles': typeof authenticatedStylesRoute
   '/': typeof authenticatedIndexRoute
   '/projects/$employeeId': typeof authenticatedProjectsEmployeeIdRouteRouteWithChildren
   '/accruals': typeof authenticatedAccrualsIndexRoute
@@ -114,7 +107,6 @@ export interface FileRoutesByTo {
   '/form': typeof authenticatedFormRoute
   '/me': typeof authenticatedMeRoute
   '/personnel': typeof authenticatedPersonnelRoute
-  '/styles': typeof authenticatedStylesRoute
   '/': typeof authenticatedIndexRoute
   '/accruals': typeof authenticatedAccrualsIndexRoute
   '/projects/$employeeId': typeof authenticatedProjectsEmployeeIdIndexRoute
@@ -129,7 +121,6 @@ export interface FileRoutesById {
   '/(authenticated)/form': typeof authenticatedFormRoute
   '/(authenticated)/me': typeof authenticatedMeRoute
   '/(authenticated)/personnel': typeof authenticatedPersonnelRoute
-  '/(authenticated)/styles': typeof authenticatedStylesRoute
   '/(authenticated)/': typeof authenticatedIndexRoute
   '/(authenticated)/projects/$employeeId': typeof authenticatedProjectsEmployeeIdRouteRouteWithChildren
   '/(authenticated)/accruals/': typeof authenticatedAccrualsIndexRoute
@@ -145,7 +136,6 @@ export interface FileRouteTypes {
     | '/form'
     | '/me'
     | '/personnel'
-    | '/styles'
     | '/'
     | '/projects/$employeeId'
     | '/accruals'
@@ -159,7 +149,6 @@ export interface FileRouteTypes {
     | '/form'
     | '/me'
     | '/personnel'
-    | '/styles'
     | '/'
     | '/accruals'
     | '/projects/$employeeId'
@@ -173,7 +162,6 @@ export interface FileRouteTypes {
     | '/(authenticated)/form'
     | '/(authenticated)/me'
     | '/(authenticated)/personnel'
-    | '/(authenticated)/styles'
     | '/(authenticated)/'
     | '/(authenticated)/projects/$employeeId'
     | '/(authenticated)/accruals/'
@@ -208,13 +196,6 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof authenticatedIndexRouteImport
-      parentRoute: typeof authenticatedRouteRoute
-    }
-    '/(authenticated)/styles': {
-      id: '/(authenticated)/styles'
-      path: '/styles'
-      fullPath: '/styles'
-      preLoaderRoute: typeof authenticatedStylesRouteImport
       parentRoute: typeof authenticatedRouteRoute
     }
     '/(authenticated)/personnel': {
@@ -324,7 +305,6 @@ interface authenticatedRouteRouteChildren {
   authenticatedFormRoute: typeof authenticatedFormRoute
   authenticatedMeRoute: typeof authenticatedMeRoute
   authenticatedPersonnelRoute: typeof authenticatedPersonnelRoute
-  authenticatedStylesRoute: typeof authenticatedStylesRoute
   authenticatedIndexRoute: typeof authenticatedIndexRoute
   authenticatedAccrualsIndexRoute: typeof authenticatedAccrualsIndexRoute
 }
@@ -334,7 +314,6 @@ const authenticatedRouteRouteChildren: authenticatedRouteRouteChildren = {
   authenticatedFormRoute: authenticatedFormRoute,
   authenticatedMeRoute: authenticatedMeRoute,
   authenticatedPersonnelRoute: authenticatedPersonnelRoute,
-  authenticatedStylesRoute: authenticatedStylesRoute,
   authenticatedIndexRoute: authenticatedIndexRoute,
   authenticatedAccrualsIndexRoute: authenticatedAccrualsIndexRoute,
 }

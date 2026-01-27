@@ -75,12 +75,7 @@ public sealed class SearchController : ApiControllerBase
                 "/form",
                 ["form", "request", "demo"]
             ),
-            new SearchReport(
-                "styles",
-                "Style Guide",
-                "/styles",
-                ["styles", "theme", "design", "components"]
-            ),
+            
             new SearchReport(
                 "me",
                 "My Profile",

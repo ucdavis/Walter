@@ -237,6 +237,10 @@ html:active-view-transition-type(slide-right) {
   color: var(--color-dark-font);
 }
 
+.walter-login-pattern {
+  background: url(/money-pattern.svg) repeat;
+  background-color: #e7eaee;
+}
 .input {
   &:focus,
   &:focus-within {
