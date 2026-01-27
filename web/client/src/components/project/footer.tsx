@@ -4,14 +4,17 @@ const Footer: React.FC = () => {
       <div className="container flex items-center justify-between">
         {/* Left */}
         <div className="flex-1 flex items-center">
-          <h1 className="text-sm text-dark-font/70">Copyright 2025</h1>
+          <p className="text-sm text-dark-font/80">
+            © {new Date().getFullYear()} UC Regents, Davis campus. All rights
+            reserved.
+          </p>
         </div>
 
         {/* Center */}
         <div className="flex-1 flex justify-center">
           <img
             alt="Dog outline logo"
-            className="w-8 opacity-70"
+            className="w-8 opacity-80"
             src="/walter.svg"
           />
         </div>
@@ -25,7 +28,7 @@ const Footer: React.FC = () => {
           >
             <img
               alt="CA&ES UC Davis Logo"
-              className="w-36 opacity-70"
+              className="w-36 opacity-80"
               src="/caes.svg"
             />
           </a>

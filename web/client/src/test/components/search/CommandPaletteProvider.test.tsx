@@ -28,12 +28,14 @@ describe('CommandPaletteProvider', () => {
     try {
       await screen.findByText('Heading 1');
 
-      const dialog = document.querySelector('dialog.modal') as HTMLDialogElement;
+      const dialog = document.querySelector(
+        'dialog.modal'
+      ) as HTMLDialogElement;
       expect(dialog).toBeInTheDocument();
       expect(dialog.hasAttribute('open')).toBe(false);
 
       const user = userEvent.setup();
-      await user.click(screen.getByRole('button', { name: /Search…/i }));
+      await user.click(screen.getByRole('button', { name: /search…/i }));
 
       await waitFor(() => expect(dialog).toHaveAttribute('open'));
 
@@ -58,7 +60,9 @@ describe('CommandPaletteProvider', () => {
 
     try {
       await screen.findByText('Heading 1');
-      const dialog = document.querySelector('dialog.modal') as HTMLDialogElement;
+      const dialog = document.querySelector(
+        'dialog.modal'
+      ) as HTMLDialogElement;
 
       window.dispatchEvent(
         new KeyboardEvent('keydown', { ctrlKey: true, key: 'k' })
@@ -106,10 +110,12 @@ describe('CommandPaletteProvider', () => {
 
     try {
       await screen.findByText('Heading 1');
-      const dialog = document.querySelector('dialog.modal') as HTMLDialogElement;
+      const dialog = document.querySelector(
+        'dialog.modal'
+      ) as HTMLDialogElement;
       const user = userEvent.setup();
 
-      await user.click(screen.getByRole('button', { name: /Search…/i }));
+      await user.click(screen.getByRole('button', { name: /search…/i }));
       await screen.findByText('Project Alpha');
       expect(catalogRequests).toBe(1);
 
@@ -122,7 +128,7 @@ describe('CommandPaletteProvider', () => {
       await user.keyboard('{Escape}');
       await waitFor(() => expect(dialog).not.toHaveAttribute('open'));
 
-      await user.click(screen.getByRole('button', { name: /Search…/i }));
+      await user.click(screen.getByRole('button', { name: /search…/i }));
       await screen.findByText('Project Alpha');
       expect(catalogRequests).toBe(1);
       expect(screen.queryByText('Loading projects…')).not.toBeInTheDocument();
@@ -163,10 +169,12 @@ describe('CommandPaletteProvider', () => {
 
     try {
       await screen.findByText('Heading 1');
-      const dialog = document.querySelector('dialog.modal') as HTMLDialogElement;
+      const dialog = document.querySelector(
+        'dialog.modal'
+      ) as HTMLDialogElement;
 
       const user = userEvent.setup();
-      await user.click(screen.getByRole('button', { name: /Search…/i }));
+      await user.click(screen.getByRole('button', { name: /search…/i }));
 
       const input = await screen.findByPlaceholderText(
         'Search projects, reports, people...'
@@ -180,7 +188,7 @@ describe('CommandPaletteProvider', () => {
       await user.keyboard('{Escape}');
       await waitFor(() => expect(dialog).not.toHaveAttribute('open'));
 
-      await user.click(screen.getByRole('button', { name: /Search…/i }));
+      await user.click(screen.getByRole('button', { name: /search…/i }));
       const inputReopen = await screen.findByPlaceholderText(
         'Search projects, reports, people...'
       );

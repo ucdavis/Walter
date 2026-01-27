@@ -11,12 +11,12 @@
   --font-proxima-bold: 'proxima-nova-b', sans-serif;
 
   --color-primary-color: var(--color-ucd-gunrock);
-  --color-secondary-color: var(--color-ucd-goldenstate);
+  --color-secondary-color: var(--color-ucd-gold);
   --color-accent-color: var(--color-ucd-goldenstate);
   --color-error-color: var(--color-ucd-doubledecker);
-  --color-info-color: var(--color-ucd-arboretum);
+  --color-info-color: var(--color-ucd-rain);
   --color-success-color: var(--color-ucd-sage);
-  --color-warning-color: var(--color-ucd-poppy);
+  --color-warning-color: var(--color-ucd-gold);
 }
 
 @plugin "daisyui/theme" {
@@ -30,16 +30,39 @@
   --color-primary-content: var(--color-light-font);
 
   --color-secondary: var(--color-secondary-color);
-  --color-accent: var(--color-accent-color);
-  --color-error: var(--color-error-color);
-  --color-info: var(--color-info-color);
-  --color-success: var(--color-success-color);
-  --color-warning: var(--color-warning-color);
+  --color-secondary-content: var(--color-light-font);
 
-  --input-color: var(--color-primary-color);
+  --color-error: var(--color-error-color);
+  --color-error-content: var(--color-light-font);
+
+  --color-info: var(--color-info-color);
+  --color-accent: var(--color-accent-color);
+  --color-success: var(--color-success-color);
+
+  --color-warning: var(--color-warning-color);
+  --color-warning-content: var(--color-light-font);
 }
 
-@layer base {
+.h1 {
+  @apply text-3xl font-proxima-bold;
+}
+.h2 {
+  @apply text-2xl font-proxima-bold;
+}
+.h3 {
+  @apply text-base font-proxima-bold uppercase text-base-content/60;
+}
+.stat-value {
+  @apply text-lg font-medium;
+}
+.stat-label {
+  @apply font-proxima-bold;
+}
+.section-margin {
+  @apply mb-20;
+}
+
+@layer components {
   .card {
     @apply border-1 border-main-border bg-base-200;
   }
@@ -51,9 +74,13 @@
   .fancy-data {
     @apply mt-4 mb-8 px-6 py-4 border rounded-md bg-light-bg-200 border-main-border;
   }
-}
+  .nav-link {
+    @apply border-b-2 border-base-200 transition hover:font-semibold;
+  }
 
-@layer components {
+  .nav-link[data-status='active'] {
+    @apply font-semibold border-primary-color;
+  }
   [cmdk-root] {
     @apply flex flex-col;
   }
@@ -170,31 +197,6 @@ html:active-view-transition-type(slide-right) {
   }
 }
 
-.h1 {
-  @apply text-3xl font-proxima-bold;
-}
-
-.h2 {
-  @apply text-2xl font-proxima-bold;
-}
-
-/* subheadings */
-.h3 {
-  @apply text-base font-proxima-bold uppercase text-base-content/60;
-}
-
-.stat-value {
-  @apply text-lg font-medium;
-}
-
-.stat-label {
-  @apply font-proxima-bold;
-}
-
-.section-margin {
-  @apply mb-20;
-}
-
 .walter-table {
   table-layout: fixed;
   width: 100%;
@@ -234,7 +236,28 @@ html:active-view-transition-type(slide-right) {
   font-family: var(--font-proxima-bold);
   color: var(--color-dark-font);
 }
+@keyframes walterDiagonalPan {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 233px 233px; /* one tile step, keeps it seamless */
+  }
+}
 
+.walter-login-pattern {
+  background: url(/money-pattern.svg) repeat;
+  background-color: #f3f6fc;
+  background-size: 233px;
+  animation: walterDiagonalPan 60s linear infinite;
+  will-change: background-position;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .walter-login-pattern {
+    animation: none;
+  }
+}
 .input {
   &:focus,
   &:focus-within {

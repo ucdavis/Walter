@@ -14,17 +14,17 @@ import { useUser } from '@/shared/auth/UserContext.tsx';
 import { createFileRoute, Link } from '@tanstack/react-router';
 
 const piCsvColumns = [
-  { key: 'name' as const, header: 'PI Name' },
-  { key: 'projectCount' as const, header: 'Projects' },
-  { key: 'totalBalance' as const, header: 'Balance' },
-  { key: 'totalBudget' as const, header: 'Budget' },
+  { header: 'PI Name', key: 'name' as const },
+  { header: 'Projects', key: 'projectCount' as const },
+  { header: 'Balance', key: 'totalBalance' as const },
+  { header: 'Budget', key: 'totalBudget' as const },
 ];
 
 const projectCsvColumns = [
-  { key: 'project_number' as const, header: 'Project Number' },
-  { key: 'project_name' as const, header: 'Project Name' },
-  { key: 'award_end_date' as const, header: 'End Date' },
-  { key: 'totalBalance' as const, header: 'Balance' },
+  { header: 'Project Number', key: 'project_number' as const },
+  { header: 'Project Name', key: 'project_name' as const },
+  { header: 'End Date', key: 'award_end_date' as const },
+  { header: 'Balance', key: 'totalBalance' as const },
 ];
 
 type Tab = 'pis' | 'personnel' | 'reports';
@@ -136,18 +136,17 @@ function RouteComponent() {
 
   return (
     <div className="container">
-      <div className="pt-10 pb-5 mx-auto w-full sm:max-w-[90%] md:max-w-[80%] xl:max-w-[66%]">
+      <div className="py-16 mx-auto w-full sm:max-w-[90%] md:max-w-[80%] xl:max-w-[66%]">
         <h1 className="text-2xl font-proxima-bold">W.A.L.T.E.R.</h1>
         <p className="uppercase">
           warehouse analytics and ledger tools for enterprise reporting
         </p>
-      </div>
-
-      <div className="relative mx-auto w-full sm:max-w-[90%] md:max-w-[80%] xl:max-w-[66%]">
-        <SearchButton
-          className="w-full"
-          placeholder="Search PIs, Projects, Personnel..."
-        />
+        <div className="relative mt-5">
+          <SearchButton
+            className="w-full"
+            placeholder="Search PIs, Projects, Personnel..."
+          />
+        </div>
       </div>
 
       <PiProjectAlerts managedPis={managedPis} />
@@ -156,7 +155,7 @@ function RouteComponent() {
         <button
           aria-controls="panel-pis"
           aria-selected={activeTab === 'pis'}
-          className={`text-2xl tab ps-0 ${activeTab === 'pis' ? 'tab-active' : ''}`}
+          className={`text-2xl tab -ms-4 ${activeTab === 'pis' ? 'tab-active' : ''}`}
           id="tab-pis"
           onClick={() => setActiveTab('pis')}
           role="tab"
@@ -192,92 +191,92 @@ function RouteComponent() {
         <div aria-labelledby="tab-pis" id="panel-pis" role="tabpanel">
           {isProjectManager ? (
             <>
-              <div className="flex justify-end mt-4">
+              <div className="flex justify-end -mt-4">
                 <ExportCsvButton
+                  columns={piCsvColumns}
                   data={managedPis.map((pi) => ({
                     name: pi.name,
                     projectCount: pi.projectCount,
                     totalBalance: pi.totalBalance,
                     totalBudget: pi.totalBudget,
                   }))}
-                  columns={piCsvColumns}
                   filename="principal-investigators.csv"
                 />
               </div>
               <table className="walter-table table mt-2">
-              <thead>
-                <tr>
-                  <th>PI Name</th>
-                  <th className="text-right">Projects</th>
-                  <th className="text-right">Balance</th>
-                </tr>
-              </thead>
-              <tbody>
-                {managedPis.map((pi) => (
-                  <tr key={pi.employeeId}>
-                    <td>
-                      <Link
-                        className="link link-hover link-primary"
-                        params={{ employeeId: pi.employeeId }}
-                        to="/projects/$employeeId/"
-                      >
-                        {pi.name}
-                      </Link>
-                    </td>
-                    <td className="text-right">{pi.projectCount}</td>
-                    <td className="text-right">
-                      {formatCurrency(pi.totalBalance)}{' '}
-                      <span className="text-base-content/60">
-                        ({formatPercent(pi.totalBalance, pi.totalBudget)})
-                      </span>
-                    </td>
+                <thead>
+                  <tr>
+                    <th>PI Name</th>
+                    <th className="text-right">Projects</th>
+                    <th className="text-right">Balance</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {managedPis.map((pi) => (
+                    <tr key={pi.employeeId}>
+                      <td>
+                        <Link
+                          className="link link-hover link-primary"
+                          params={{ employeeId: pi.employeeId }}
+                          to="/projects/$employeeId/"
+                        >
+                          {pi.name}
+                        </Link>
+                      </td>
+                      <td className="text-right">{pi.projectCount}</td>
+                      <td className="text-right">
+                        {formatCurrency(pi.totalBalance)}{' '}
+                        <span className="text-base-content/60">
+                          ({formatPercent(pi.totalBalance, pi.totalBudget)})
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </>
           ) : (
             <>
-              <div className="flex justify-end mt-4">
+              <div className="flex justify-end -mt-4">
                 <ExportCsvButton
-                  data={projects}
                   columns={projectCsvColumns}
+                  data={projects}
                   filename="projects.csv"
                 />
               </div>
               <table className="walter-table table mt-2">
-              <thead>
-                <tr>
-                  <th>Project Name</th>
-                  <th className="text-right">End Date</th>
-                  <th className="text-right">Balance</th>
-                </tr>
-              </thead>
-              <tbody>
-                {projects.map((project) => (
-                  <tr key={project.project_number}>
-                    <td>
-                      <Link
-                        className="link link-hover link-primary"
-                        params={{
-                          employeeId: user.employeeId,
-                          projectNumber: project.project_number,
-                        }}
-                        to="/projects/$employeeId/$projectNumber/"
-                      >
-                        {project.project_name}
-                      </Link>
-                    </td>
-                    <td className="text-right">
-                      {formatDate(project.award_end_date)}
-                    </td>
-                    <td className="text-right">
-                      {formatCurrency(project.totalBalance)}
-                    </td>
+                <thead>
+                  <tr>
+                    <th>Project Name</th>
+                    <th className="text-right">End Date</th>
+                    <th className="text-right">Balance</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {projects.map((project) => (
+                    <tr key={project.project_number}>
+                      <td>
+                        <Link
+                          className="link link-hover link-primary"
+                          params={{
+                            employeeId: user.employeeId,
+                            projectNumber: project.project_number,
+                          }}
+                          to="/projects/$employeeId/$projectNumber/"
+                        >
+                          {project.project_name}
+                        </Link>
+                      </td>
+                      <td className="text-right">
+                        {formatDate(project.award_end_date)}
+                      </td>
+                      <td className="text-right">
+                        {formatCurrency(project.totalBalance)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </>
           )}
         </div>
