@@ -150,7 +150,7 @@ const columns = [
         <span className="flex justify-end">
           {jobEndingSoon ? (
             <span
-              className="text-amber-600 inline-flex items-center gap-1"
+              className="text-error inline-flex items-center gap-1"
               title="Ending within 3 months"
             >
               <ClockIcon className="w-4 h-4" />
@@ -273,7 +273,7 @@ export function PersonnelTable({
 
   return (
     <div className="overflow-x-auto">
-      <div className="flex justify-end mb-2">
+      <div className="flex justify-end -mt-4">
         <ExportCsvButton
           columns={personnelCsvColumns}
           data={getExportData(positions)}
@@ -334,7 +334,7 @@ export function PersonnelTable({
                     <td className="text-right text-sm">
                       {dist.fundingEndingSoon ? (
                         <span
-                          className="text-amber-600 inline-flex items-center gap-1"
+                          className="text-error inline-flex items-center gap-1"
                           title="Ending within 3 months"
                         >
                           <ClockIcon className="w-3 h-3" />
