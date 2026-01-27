@@ -1,4 +1,5 @@
 import type { ProjectSummary } from '@/lib/projectSummary.ts';
+import { ExportCsvButton } from '@/components/ExportCsvButton.tsx';
 import { Currency } from '@/shared/Currency.tsx';
 import { Link } from '@tanstack/react-router';
 
@@ -12,6 +13,14 @@ import {
   BriefcaseIcon,
   BookOpenIcon,
 } from '@heroicons/react/24/outline';
+
+const financialCsvColumns = [
+  { key: 'name' as const, header: 'Category' },
+  { key: 'budget' as const, header: 'Budget' },
+  { key: 'expense' as const, header: 'Expenses' },
+  { key: 'encumbrance' as const, header: 'Encumbrance' },
+  { key: 'balance' as const, header: 'Balance' },
+];
 
 const ICONS = {
   Contract: UserIcon,
@@ -57,15 +66,28 @@ export function FinancialDetails({ summary }: FinancialDetailsProps) {
     <section className="section-margin">
       <div className="flex justify-between">
         <h2 className="h2">Financial Details</h2>
-        {isSingleProject && (
-          <Link
-            className="btn btn-outline btn-primary btn-sm flex items-center gap-2"
-            to="./transactions"
-          >
-            <BookOpenIcon className="w-4 h-4" />
-            View More
-          </Link>
-        )}
+        <div className="flex gap-2">
+          <ExportCsvButton
+            data={summary.categories.map((c) => ({
+              name: c.name,
+              budget: c.budget,
+              expense: c.expense,
+              encumbrance: c.encumbrance,
+              balance: c.balance,
+            }))}
+            columns={financialCsvColumns}
+            filename="financial-details.csv"
+          />
+          {isSingleProject && (
+            <Link
+              className="btn btn-outline btn-primary btn-sm flex items-center gap-2"
+              to="./transactions"
+            >
+              <BookOpenIcon className="w-4 h-4" />
+              View More
+            </Link>
+          )}
+        </div>
       </div>
 
       <dl className="grid grid-cols-5 gap-4 mt-4 mb-6">
