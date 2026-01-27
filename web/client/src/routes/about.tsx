@@ -35,12 +35,12 @@ function About() {
               <Link className="btn btn-outline btn-primary btn-sm" to="/FAQs">
                 FAQs
               </Link>
-              <Link
+              <a
                 className="btn btn-outline btn-primary btn-sm"
-                to="https://computing.caes.ucdavis.edu/documentation/walter"
+                href="https://computing.caes.ucdavis.edu/documentation/walter"
               >
                 Documentation
-              </Link>
+              </a>
             </div>
             <Link className="btn btn-primary btn-lg mt-4" to="/">
               UC Davis Login
