@@ -136,18 +136,17 @@ function RouteComponent() {
 
   return (
     <div className="container">
-      <div className="pt-10 pb-5 mx-auto w-full sm:max-w-[90%] md:max-w-[80%] xl:max-w-[66%]">
+      <div className="py-16 mx-auto w-full sm:max-w-[90%] md:max-w-[80%] xl:max-w-[66%]">
         <h1 className="text-2xl font-proxima-bold">W.A.L.T.E.R.</h1>
         <p className="uppercase">
           warehouse analytics and ledger tools for enterprise reporting
         </p>
-      </div>
-
-      <div className="relative mx-auto w-full sm:max-w-[90%] md:max-w-[80%] xl:max-w-[66%]">
-        <SearchButton
-          className="w-full"
-          placeholder="Search PIs, Projects, Personnel..."
-        />
+        <div className="relative mt-5">
+          <SearchButton
+            className="w-full"
+            placeholder="Search PIs, Projects, Personnel..."
+          />
+        </div>
       </div>
 
       <PiProjectAlerts managedPis={managedPis} />
