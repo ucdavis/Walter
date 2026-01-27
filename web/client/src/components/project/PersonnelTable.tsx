@@ -123,6 +123,7 @@ const columns = [
     ),
     header: 'Position/Project',
     id: 'positionProject',
+    sortingFn: (a, b) => a.original.name.localeCompare(b.original.name),
   }),
   columnHelper.accessor('fte', {
     cell: (info) => <span className="flex justify-end">{info.getValue()}</span>,
