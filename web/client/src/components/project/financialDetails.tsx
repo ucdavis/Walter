@@ -68,7 +68,13 @@ export function FinancialDetails({ summary }: FinancialDetailsProps) {
         <h2 className="h2">Financial Details</h2>
         <div className="flex gap-2">
           <ExportCsvButton
-            data={summary.categories}
+            data={summary.categories.map((c) => ({
+              name: c.name,
+              budget: c.budget,
+              expense: c.expense,
+              encumbrance: c.encumbrance,
+              balance: c.balance,
+            }))}
             columns={financialCsvColumns}
             filename="financial-details.csv"
           />

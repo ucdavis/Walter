@@ -194,7 +194,12 @@ function RouteComponent() {
             <>
               <div className="flex justify-end mt-4">
                 <ExportCsvButton
-                  data={managedPis}
+                  data={managedPis.map((pi) => ({
+                    name: pi.name,
+                    projectCount: pi.projectCount,
+                    totalBalance: pi.totalBalance,
+                    totalBudget: pi.totalBudget,
+                  }))}
                   columns={piCsvColumns}
                   filename="principal-investigators.csv"
                 />
