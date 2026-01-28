@@ -9,6 +9,9 @@ using Server.Services;
 using server.core.Services;
 using server.Services;
 
+// Configure Dapper to map underscore column names to PascalCase properties
+Dapper.DefaultTypeMap.MatchNamesWithUnderscores = true;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // setup configuration sources (last one wins)

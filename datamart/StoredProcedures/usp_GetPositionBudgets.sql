@@ -24,8 +24,10 @@ BEGIN
         EXEC dbo.usp_ValidateFinancialDept @FinancialDept;
 
     DECLARE @OracleQuery NVARCHAR(MAX);
+    DECLARE @RedshiftQuery NVARCHAR(MAX);
     DECLARE @TSQLCommand NVARCHAR(MAX);
     DECLARE @LinkedServerName SYSNAME = '[AIT_BISTG_PRD-CAES_HCMODS_APPUSER]';
+    DECLARE @RedshiftLinkedServer SYSNAME = '[AE_Redshift_PROD]';
     DECLARE @StartTime DATETIME2 = SYSDATETIME();
     DECLARE @RowCount INT;
     DECLARE @Duration_MS INT;
@@ -55,6 +57,7 @@ BEGIN
                 budget.DIST_PCT,
                 budget.FUNDING_END_DT,
                 budget.UC_PERCENT_PAY,
+                budget.EFFDT AS FUNDING_EFFDT,
                 acct.ACCOUNT AS NATURAL_ACCOUNT,
                 acct.DEPTID_CF,
                 acct.PROJECT_ID,
@@ -123,6 +126,7 @@ BEGIN
             b.ACCT_CD,
             b.DIST_PCT,
             b.FUNDING_END_DT,
+            b.FUNDING_EFFDT,
             b.UC_PERCENT_PAY,
             b.NATURAL_ACCOUNT,
             b.DEPTID_CF AS FINANCIAL_DEPT,
@@ -165,17 +169,107 @@ BEGIN
         FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
     );
 
-    -- Execute via OPENQUERY and join with local CompositeBenefitRates table
+    -- Execute via OPENQUERY, join with CompositeBenefitRates and Redshift project names
     BEGIN TRY
+        -- Create temp table for Oracle results
+        CREATE TABLE #PositionBudgets (
+            FISCAL_YEAR VARCHAR(4),
+            POSITION_NBR VARCHAR(8),
+            ACCT_CD VARCHAR(25),
+            DIST_PCT DECIMAL(6,3),
+            FUNDING_END_DT DATE,
+            FUNDING_EFFDT DATE,
+            UC_PERCENT_PAY DECIMAL(6,3),
+            NATURAL_ACCOUNT VARCHAR(6),
+            FINANCIAL_DEPT VARCHAR(10),
+            PROJECT_ID VARCHAR(15),
+            TASK VARCHAR(10),
+            FUND_CODE VARCHAR(5),
+            PROGRAM_CODE VARCHAR(6),
+            PURPOSE VARCHAR(6),
+            ACTIVITY VARCHAR(6),
+            AWARD VARCHAR(10),
+            POSITION_EFFDT DATE,
+            POSITION_EFFSEQ INT,
+            EMPLID VARCHAR(11),
+            MONTHLY_RT DECIMAL(18,6),
+            EXPECTED_END_DATE DATE,
+            FTE DECIMAL(7,6),
+            TERMINATION_DT DATE,
+            NAME VARCHAR(100),
+            POSITION_DESCR VARCHAR(100),
+            JOBCODE VARCHAR(6)
+        );
+
+        -- Insert Oracle data into temp table
         SET @TSQLCommand =
-            'SELECT oq.*, cbr.VacationAccrual, cbr.CBR
-             FROM OPENQUERY(' + @LinkedServerName + ', ''' + REPLACE(@OracleQuery, '''', '''''') + ''') oq
-             LEFT JOIN dbo.CompositeBenefitRates cbr ON oq.JOBCODE = cbr.JobCode';
+            'INSERT INTO #PositionBudgets
+             SELECT oq.*
+             FROM OPENQUERY(' + @LinkedServerName + ', ''' + REPLACE(@OracleQuery, '''', '''''') + ''') oq';
 
         EXEC sp_executesql @TSQLCommand;
 
+        -- TODO: Replace this temp table approach with a local Projects table populated via ETL
+        -- Create temp table for project names from Redshift
+        CREATE TABLE #ProjectNames (
+            CODE VARCHAR(15),
+            DESCRIPTION VARCHAR(255)
+        );
+
+        -- Query Redshift for project names
+        SET @RedshiftQuery = '
+            SELECT code, description
+            FROM ae_dwh.erp_project
+        ';
+
+        SET @TSQLCommand =
+            'INSERT INTO #ProjectNames
+             SELECT * FROM OPENQUERY(' + @RedshiftLinkedServer + ', ''' + REPLACE(@RedshiftQuery, '''', '''''') + ''')';
+
+        EXEC sp_executesql @TSQLCommand;
+
+        -- Return final results joining all data sources
+        SELECT
+            pb.FISCAL_YEAR,
+            pb.POSITION_NBR AS POSITION_NUMBER,
+            pb.ACCT_CD AS ACCOUNT_CODE,
+            pb.DIST_PCT AS DISTRIBUTION_PERCENT,
+            pb.FUNDING_END_DT AS FUNDING_END_DATE,
+            pb.FUNDING_EFFDT AS FUNDING_EFFECTIVE_DATE,
+            pb.UC_PERCENT_PAY,
+            pb.NATURAL_ACCOUNT,
+            pb.FINANCIAL_DEPT,
+            pb.PROJECT_ID,
+            pn.DESCRIPTION AS PROJECT_DESCRIPTION,
+            pb.TASK,
+            pb.FUND_CODE,
+            pb.PROGRAM_CODE,
+            pb.PURPOSE,
+            pb.ACTIVITY,
+            pb.AWARD,
+            pb.POSITION_EFFDT AS POSITION_EFFECTIVE_DATE,
+            pb.POSITION_EFFSEQ AS POSITION_SEQUENCE,
+            pb.EMPLID AS EMPLOYEE_ID,
+            pb.MONTHLY_RT AS MONTHLY_RATE,
+            pb.EXPECTED_END_DATE,
+            pb.FTE,
+            pb.TERMINATION_DT AS JOB_END_DATE,
+            pb.NAME,
+            pb.POSITION_DESCR AS POSITION_DESCRIPTION,
+            pb.JOBCODE AS JOB_CODE,
+            cbr.VacationAccrual AS VACATION_ACCRUAL,
+            cbr.CBR AS COMPOSITE_BENEFIT_RATE
+        FROM #PositionBudgets pb
+        LEFT JOIN #ProjectNames pn ON pb.PROJECT_ID = pn.CODE
+        LEFT JOIN dbo.CompositeBenefitRates cbr ON pb.JOBCODE = cbr.JobCode
+        ORDER BY pb.POSITION_NBR;
+
         SET @RowCount = @@ROWCOUNT;
         SET @Duration_MS = DATEDIFF(MILLISECOND, @StartTime, SYSDATETIME());
+
+        -- Clean up temp tables
+        DROP TABLE #PositionBudgets;
+        DROP TABLE #ProjectNames;
 
         -- Log successful execution
         EXEC [dbo].[usp_LogProcedureExecution]
@@ -189,6 +283,12 @@ BEGIN
     BEGIN CATCH
         SET @Duration_MS = DATEDIFF(MILLISECOND, @StartTime, SYSDATETIME());
         SET @ErrorMsg = ERROR_MESSAGE();
+
+        -- Clean up temp tables if they exist
+        IF OBJECT_ID('tempdb..#PositionBudgets') IS NOT NULL
+            DROP TABLE #PositionBudgets;
+        IF OBJECT_ID('tempdb..#ProjectNames') IS NOT NULL
+            DROP TABLE #ProjectNames;
 
         -- Log failed execution
         EXEC [dbo].[usp_LogProcedureExecution]
