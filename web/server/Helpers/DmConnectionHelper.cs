@@ -26,8 +26,8 @@ public sealed class DmConnectionHelper
             );
     }
 
-    public async Task<IReadOnlyList<T>> QueryAsync<T>(
-        string sql,
+    public async Task<IReadOnlyList<T>> ExecuteSprocAsync<T>(
+        string sprocName,
         object? parameters = null,
         int commandTimeoutSeconds = 60,
         CancellationToken ct = default)
@@ -38,25 +38,14 @@ public sealed class DmConnectionHelper
             await conn.OpenAsync(ct2);
 
             var cmd = new CommandDefinition(
-                commandText: sql,
+                commandText: sprocName,
                 parameters: parameters,
-                commandType: CommandType.Text,
+                commandType: CommandType.StoredProcedure,
                 commandTimeout: commandTimeoutSeconds,
                 cancellationToken: ct2);
 
-            // Force load into memory:
             var rows = await conn.QueryAsync<T>(cmd);
-            return rows.AsList(); // materialize
+            return rows.AsList();
         }, ct);
-    }
-
-    public async Task<T?> QuerySingleOrDefaultAsync<T>(
-        string sql,
-        object? parameters = null,
-        int commandTimeoutSeconds = 60,
-        CancellationToken ct = default)
-    {
-        var list = await QueryAsync<T>(sql, parameters, commandTimeoutSeconds, ct);
-        return list.Count == 0 ? default : list[0];
     }
 }
