@@ -57,6 +57,7 @@ function RouteComponent() {
     (sum, p) => sum + p.monthlyFringe,
     0
   );
+  const totalMonthlyTotal = totalMonthlyRate + totalMonthlyFringe;
 
   return (
     <div className="container">
@@ -67,7 +68,7 @@ function RouteComponent() {
 
       {/* Summary Cards */}
       <div className="fancy-data">
-        <dl className="grid items-stretch gap-6 md:gap-8 divide-y md:divide-y-0 md:divide-x divide-main-border grid-cols-1 md:grid-cols-4">
+        <dl className="grid items-stretch gap-6 md:gap-8 divide-y md:divide-y-0 md:divide-x divide-main-border grid-cols-1 md:grid-cols-5">
           <div>
             <dt className="stat-label"># of Employees</dt>
             <dd className="stat-value">{uniqueEmployees}</dd>
@@ -82,8 +83,12 @@ function RouteComponent() {
           </div>
           <div>
             <dt className="stat-label">Monthly Fringe</dt>
+            <dd className="stat-value">{formatCurrency(totalMonthlyFringe)}</dd>
+          </div>
+          <div>
+            <dt className="stat-label">Monthly Total</dt>
             <dd className="stat-value text-success font-proxima-bold">
-              {formatCurrency(totalMonthlyFringe)}
+              {formatCurrency(totalMonthlyTotal)}
             </dd>
           </div>
         </dl>

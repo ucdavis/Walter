@@ -8,18 +8,15 @@ namespace Server.Controllers;
 
 public sealed class ProjectController : ApiControllerBase
 {
-    private readonly ILogger<ProjectController> _logger;
     private readonly IWebHostEnvironment _env;
     private readonly IFinancialApiService _financialApiService;
     private readonly IDatamartService _datamartService;
 
     public ProjectController(
-        ILogger<ProjectController> logger,
         IWebHostEnvironment env,
         IFinancialApiService financialApiService,
         IDatamartService datamartService)
     {
-        _logger = logger;
         _env = env;
         _financialApiService = financialApiService;
         _datamartService = datamartService;
