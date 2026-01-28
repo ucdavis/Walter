@@ -48,6 +48,7 @@ builder.Services.AddResponseCaching();
 // add singleton services here
 builder.Services.AddSingleton<DmConnectionHelper>();
 builder.Services.AddSingleton<IFinancialApiService, FinancialApiService>();
+builder.Services.AddSingleton<IDatamartService, DatamartService>();
 
 // add scoped services here
 builder.Services.AddScoped<IDbInitializer, DbInitializer>();

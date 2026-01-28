@@ -9,29 +9,29 @@ import { PersonnelRecord } from '@/queries/personnel.ts';
 const createRecord = (
   overrides: Partial<PersonnelRecord> = {}
 ): PersonnelRecord => ({
-  cbr: 0.4,
+  compositeBenefitRate: 0.4,
   distributionPercent: 100,
-  emplid: '1001',
+  employeeId: '1001',
   fte: 1.0,
   fundingEffectiveDate: '2025-07-01T00:00:00.000Z',
   fundingEndDate: '2026-12-31T00:00:00.000Z',
-  jobEffectiveDate: '2020-01-01T00:00:00.000Z',
+  positionEffectiveDate: '2020-01-01T00:00:00.000Z',
   jobEndDate: null,
   monthlyRate: 5000,
   name: 'Smith, John',
   positionDescription: 'PROF-FY',
   positionNumber: '40001234',
   projectId: 'PROJ1',
-  projectName: 'Test Project',
+  projectDescription: 'Test Project',
   ...overrides,
 });
 
 describe('aggregateByPosition', () => {
   it('groups records by employee + position number', () => {
     const records = [
-      createRecord({ emplid: '1001', positionNumber: '40001234', projectId: 'PROJ1' }),
-      createRecord({ emplid: '1001', positionNumber: '40001234', projectId: 'PROJ2' }), // same position, diff project
-      createRecord({ emplid: '1001', positionNumber: '40005678', projectId: 'PROJ1' }), // diff position
+      createRecord({ employeeId: '1001', positionNumber: '40001234', projectId: 'PROJ1' }),
+      createRecord({ employeeId: '1001', positionNumber: '40001234', projectId: 'PROJ2' }), // same position, diff project
+      createRecord({ employeeId: '1001', positionNumber: '40005678', projectId: 'PROJ1' }), // diff position
     ];
 
     const result = aggregateByPosition(records);
@@ -45,8 +45,8 @@ describe('aggregateByPosition', () => {
 
   it('separates same position number for different employees', () => {
     const records = [
-      createRecord({ emplid: '1001', positionNumber: '40001234' }),
-      createRecord({ emplid: '1002', name: 'Doe, Jane', positionNumber: '40001234' }),
+      createRecord({ employeeId: '1001', positionNumber: '40001234' }),
+      createRecord({ employeeId: '1002', name: 'Doe, Jane', positionNumber: '40001234' }),
     ];
 
     const result = aggregateByPosition(records);
@@ -76,8 +76,8 @@ describe('PersonnelTable', () => {
 
   it('displays totals in footer', () => {
     const records = [
-      createRecord({ emplid: '1001', positionNumber: '40001234', monthlyRate: 5000, cbr: 0.4 }), // monthly: 5000, fringe: 2000
-      createRecord({ emplid: '1002', name: 'Doe, Jane', positionNumber: '40005678', monthlyRate: 4000, cbr: 0.4 }), // monthly: 4000, fringe: 1600
+      createRecord({ employeeId: '1001', positionNumber: '40001234', monthlyRate: 5000, compositeBenefitRate: 0.4 }), // monthly: 5000, fringe: 2000
+      createRecord({ employeeId: '1002', name: 'Doe, Jane', positionNumber: '40005678', monthlyRate: 4000, compositeBenefitRate: 0.4 }), // monthly: 4000, fringe: 1600
     ];
 
     render(<PersonnelTable data={records} />);
@@ -113,13 +113,13 @@ describe('PersonnelTable', () => {
   it('renders only filtered data when passed filtered records', () => {
     const allPersonnel = [
       createRecord({
-        emplid: '1001',
+        employeeId: '1001',
         name: 'Adams, Alice',
         positionNumber: '40001111',
         projectId: 'PROJ1',
       }),
       createRecord({
-        emplid: '1002',
+        employeeId: '1002',
         name: 'Baker, Bob',
         positionNumber: '40002222',
         projectId: 'PROJ2',

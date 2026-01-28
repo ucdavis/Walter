@@ -34,7 +34,7 @@ function RouteComponent() {
   const data = personnelQuery.data ?? [];
 
   // Calculate summary stats
-  const uniqueEmployees = new Set(data.map((r) => r.emplid)).size;
+  const uniqueEmployees = new Set(data.map((r) => r.employeeId)).size;
   const uniqueProjects = new Set(data.map((r) => r.projectId)).size;
   const positions = aggregateByPosition(data);
   const totalMonthlyRate = positions.reduce((sum, p) => sum + p.monthlyRate, 0);

@@ -44,12 +44,12 @@ export interface AggregatedDistribution {
 
 export interface AggregatedPosition {
   distributions: AggregatedDistribution[];
-  emplid: string;
+  employeeId: string;
   fte: number;
-  jobEffectiveDate: string | null;
+  positionEffectiveDate: string | null;
   jobEndDate: string | null;
   jobEndingSoon: boolean;
-  key: string; // emplid + positionNumber
+  key: string; // employeeId + positionNumber
   monthlyFringe: number;
   monthlyRate: number;
   monthlyTotal: number;
@@ -62,7 +62,7 @@ function aggregateDistribution(
   record: PersonnelRecord
 ): AggregatedDistribution {
   const monthlyRate = record.monthlyRate * (record.distributionPercent / 100);
-  const monthlyFringe = monthlyRate * record.cbr;
+  const monthlyFringe = monthlyRate * record.compositeBenefitRate;
   return {
     fundingEndingSoon: isEndingSoon(record.fundingEndDate),
     monthlyFringe,
@@ -78,19 +78,19 @@ export function aggregateByPosition(
   const positionMap = new Map<string, AggregatedPosition>();
 
   for (const record of data) {
-    const key = `${record.emplid}-${record.positionNumber}`;
+    const key = `${record.employeeId}-${record.positionNumber}`;
     const existing = positionMap.get(key);
 
     if (existing) {
       existing.distributions.push(aggregateDistribution(record));
     } else {
       const monthlyRate = record.monthlyRate;
-      const monthlyFringe = monthlyRate * record.cbr;
+      const monthlyFringe = monthlyRate * record.compositeBenefitRate;
       positionMap.set(key, {
         distributions: [aggregateDistribution(record)],
-        emplid: record.emplid,
+        employeeId: record.employeeId,
         fte: record.fte,
-        jobEffectiveDate: record.jobEffectiveDate,
+        positionEffectiveDate: record.positionEffectiveDate,
         jobEndDate: record.jobEndDate,
         jobEndingSoon: isEndingSoon(record.jobEndDate),
         key,
@@ -211,7 +211,7 @@ function getExportData(positions: AggregatedPosition[]) {
       name: pos.name,
       positionDescription: pos.positionDescription,
       positionNumber: pos.positionNumber,
-      projectName: dist.record.projectName,
+      projectDescription: dist.record.projectDescription,
     }))
   );
 }
@@ -221,7 +221,7 @@ const personnelCsvColumns = [
   { header: 'Position Number', key: 'positionNumber' as const },
   { header: 'Position', key: 'positionDescription' as const },
   { header: 'FTE', key: 'fte' as const },
-  { header: 'Project', key: 'projectName' as const },
+  { header: 'Project', key: 'projectDescription' as const },
   { header: 'Dist %', key: 'distributionPercent' as const },
   { header: 'Effective Date', key: 'fundingEffectiveDate' as const },
   { header: 'End Date', key: 'fundingEndDate' as const },
@@ -324,7 +324,7 @@ export function PersonnelTable({
               {row.getIsExpanded() &&
                 row.original.distributions.map((dist, idx) => (
                   <tr className="pivot-row" key={`${row.id}-dist-${idx}`}>
-                    <td className="text-sm pl-8">{dist.record.projectName}</td>
+                    <td className="text-sm pl-8">{dist.record.projectDescription}</td>
                     <td></td>
                     <td className="text-right text-sm">
                       {dist.record.distributionPercent}%

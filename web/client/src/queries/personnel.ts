@@ -2,20 +2,20 @@ import { useQuery } from '@tanstack/react-query';
 import { fetchJson } from '@/lib/api.ts';
 
 export interface PersonnelRecord {
-  cbr: number;
+  compositeBenefitRate: number;
   distributionPercent: number;
-  emplid: string;
+  employeeId: string;
   fte: number;
   fundingEffectiveDate: string | null;
   fundingEndDate: string | null;
-  jobEffectiveDate: string | null;
+  positionEffectiveDate: string | null;
   jobEndDate: string | null;
   monthlyRate: number;
   name: string;
   positionDescription: string;
   positionNumber: string;
   projectId: string;
-  projectName: string;
+  projectDescription: string;
 }
 
 export const personnelQueryOptions = () => ({
@@ -35,7 +35,7 @@ export const projectPersonnelQueryOptions = (projectCodes: string[]) => ({
   enabled: projectCodes.length > 0,
   queryFn: async (): Promise<PersonnelRecord[]> => {
     const params = new URLSearchParams();
-    params.set('projectCodes', projectCodes.join(','));
+    projectCodes.forEach((code) => params.append('projectCodes', code));
     return await fetchJson<PersonnelRecord[]>(
       `/api/project/personnel?${params.toString()}`
     );
