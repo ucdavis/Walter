@@ -22,7 +22,7 @@ function RouteComponent() {
   }, [userProjectsQuery.data]);
   const personnelQuery = usePersonnelQuery(projectCodes);
 
-  if (userProjectsQuery.isPending || personnelQuery.isPending) {
+  if (userProjectsQuery.isPending) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center">
         <div className="loading loading-spinner loading-lg" />
@@ -34,6 +34,26 @@ function RouteComponent() {
     return (
       <div className="alert alert-error">
         <span>Unable to load projects: {userProjectsQuery.error?.message}</span>
+      </div>
+    );
+  }
+
+  // Show empty state when user has no projects (personnelQuery is disabled)
+  if (projectCodes.length === 0) {
+    return (
+      <div className="container">
+        <h1 className="h1 mt-8">{user.name}'s Personnel</h1>
+        <p className="text-base-content/70 mt-4">
+          No projects found. Personnel will appear here once you have projects.
+        </p>
+      </div>
+    );
+  }
+
+  if (personnelQuery.isPending) {
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <div className="loading loading-spinner loading-lg" />
       </div>
     );
   }

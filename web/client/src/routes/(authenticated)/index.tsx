@@ -292,19 +292,25 @@ function RouteComponent() {
           id="panel-personnel"
           role="tabpanel"
         >
-          {personnelQuery.isPending && (
+          {projectCodes.length === 0 && (
+            <p className="text-base-content/70 mt-8">
+              No projects found. Personnel will appear here once you have
+              projects.
+            </p>
+          )}
+          {projectCodes.length > 0 && personnelQuery.isPending && (
             <div className="flex min-h-[20vh] items-center justify-center">
               <div className="loading loading-spinner loading-lg" />
             </div>
           )}
-          {personnelQuery.isError && (
+          {projectCodes.length > 0 && personnelQuery.isError && (
             <div className="alert alert-error mt-8">
               <span>
                 Unable to load personnel: {personnelQuery.error?.message}
               </span>
             </div>
           )}
-          {personnelQuery.isSuccess && (
+          {projectCodes.length > 0 && personnelQuery.isSuccess && (
             <div className="mt-8">
               <PersonnelTable data={personnelQuery.data ?? []} />
             </div>
