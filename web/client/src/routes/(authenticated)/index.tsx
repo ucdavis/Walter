@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react';
 import { PiProjectAlerts } from '@/components/alerts/PiProjectAlerts.tsx';
 import { ExportCsvButton } from '@/components/ExportCsvButton.tsx';
+import { PersonnelTable } from '@/components/project/PersonnelTable.tsx';
+import { ProjectsTable } from '@/components/project/ProjectsTable.tsx';
 import { SearchButton } from '@/components/search/SearchButton.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
-import { formatDate } from '@/lib/date.ts';
-import { PersonnelTable } from '@/components/project/PersonnelTable.tsx';
 import { usePersonnelQuery } from '@/queries/personnel.ts';
 import {
   useManagedPisQuery,
@@ -18,13 +18,6 @@ const piCsvColumns = [
   { key: 'projectCount' as const, header: 'Projects' },
   { key: 'totalBalance' as const, header: 'Balance' },
   { key: 'totalBudget' as const, header: 'Budget' },
-];
-
-const projectCsvColumns = [
-  { key: 'projectNumber' as const, header: 'Project Number' },
-  { key: 'projectName' as const, header: 'Project Name' },
-  { key: 'awardEndDate' as const, header: 'End Date' },
-  { key: 'totalBalance' as const, header: 'Balance' },
 ];
 
 type Tab = 'pis' | 'personnel' | 'reports';
@@ -94,48 +87,7 @@ function RouteComponent() {
   }
 
   const isProjectManager = managedPis && managedPis.length > 0;
-
-  // Aggregate projects by projectNumber, summing balances
-  const projectsRaw = userProjectsQuery.data ?? [];
-  const projectsMap = new Map<
-    string,
-    {
-      awardEndDate: string | null;
-      projectName: string;
-      projectNumber: string;
-      totalBalance: number;
-    }
-  >();
-  for (const p of projectsRaw) {
-    const existing = projectsMap.get(p.projectNumber);
-    if (existing) {
-      existing.totalBalance += p.catBudBal;
-    } else {
-      projectsMap.set(p.projectNumber, {
-        awardEndDate: p.awardEndDate,
-        projectName: p.projectName,
-        projectNumber: p.projectNumber,
-        totalBalance: p.catBudBal,
-      });
-    }
-  }
-  const now = new Date();
-  const projects = Array.from(projectsMap.values())
-    .filter((p) => !p.awardEndDate || new Date(p.awardEndDate) >= now)
-    .sort((a, b) => {
-      if (!a.awardEndDate && !b.awardEndDate) {
-        return 0;
-      }
-      if (!a.awardEndDate) {
-        return -1;
-      }
-      if (!b.awardEndDate) {
-        return 1;
-      }
-      return (
-        new Date(a.awardEndDate).getTime() - new Date(b.awardEndDate).getTime()
-      );
-    });
+  const projectRecords = userProjectsQuery.data ?? [];
 
   return (
     <div className="container">
@@ -240,48 +192,12 @@ function RouteComponent() {
               </table>
             </>
           ) : (
-            <>
-              <div className="flex justify-end mt-4">
-                <ExportCsvButton
-                  data={projects}
-                  columns={projectCsvColumns}
-                  filename="projects.csv"
-                />
-              </div>
-              <table className="walter-table table mt-2">
-                <thead>
-                  <tr>
-                    <th>Project Name</th>
-                    <th className="text-right">End Date</th>
-                    <th className="text-right">Balance</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {projects.map((project) => (
-                    <tr key={project.projectNumber}>
-                      <td>
-                        <Link
-                          className="link link-hover link-primary"
-                          params={{
-                            employeeId: user.employeeId,
-                            projectNumber: project.projectNumber,
-                          }}
-                          to="/projects/$employeeId/$projectNumber/"
-                        >
-                          {project.projectName}
-                        </Link>
-                      </td>
-                      <td className="text-right">
-                        {formatDate(project.awardEndDate)}
-                      </td>
-                      <td className="text-right">
-                        {formatCurrency(project.totalBalance)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </>
+            <div className="mt-4">
+              <ProjectsTable
+                employeeId={user.employeeId}
+                records={projectRecords}
+              />
+            </div>
           )}
         </div>
       )}
