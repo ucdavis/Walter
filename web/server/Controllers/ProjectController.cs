@@ -76,12 +76,14 @@ public sealed class ProjectController : ApiControllerBase
     [HttpGet("personnel")]
     public async Task<IActionResult> GetPersonnelForProjects(
         CancellationToken cancellationToken,
-        [FromQuery] string[]? projectCodes = null)
+        [FromQuery] string? projectCodes = null)
     {
-        if (projectCodes == null || projectCodes.Length == 0)
+        if (string.IsNullOrWhiteSpace(projectCodes))
             return Ok(Array.Empty<PositionBudgetRecord>());
 
-        var personnel = await _datamartService.GetPositionBudgetsAsync(projectCodes, cancellationToken);
+        var codes = projectCodes.Split(',', StringSplitOptions.RemoveEmptyEntries);
+        var personnel = await _datamartService.GetPositionBudgetsAsync(codes, cancellationToken);
+
         return Ok(personnel);
     }
 

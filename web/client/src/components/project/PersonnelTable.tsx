@@ -134,10 +134,10 @@ const columns = [
     header: () => <span className="flex justify-end w-full">Dist Pct</span>,
     id: 'distPct',
   }),
-  columnHelper.accessor('jobEffectiveDate', {
+  columnHelper.accessor('positionEffectiveDate', {
     cell: (info) => (
       <span className="flex justify-end">
-        {formatDate(info.getValue(), '')}
+        {formatDate(info.getValue() as string | null, '')}
       </span>
     ),
     header: () => (

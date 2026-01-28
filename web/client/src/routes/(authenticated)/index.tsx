@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { PiProjectAlerts } from '@/components/alerts/PiProjectAlerts.tsx';
 import { ExportCsvButton } from '@/components/ExportCsvButton.tsx';
 import { SearchButton } from '@/components/search/SearchButton.tsx';
@@ -54,7 +54,11 @@ function RouteComponent() {
     user.employeeId
   );
   const userProjectsQuery = useProjectsDetailQuery(user.employeeId);
-  const personnelQuery = usePersonnelQuery();
+  const projectCodes = useMemo(() => {
+    const projects = userProjectsQuery.data ?? [];
+    return [...new Set(projects.map((p) => p.projectNumber))];
+  }, [userProjectsQuery.data]);
+  const personnelQuery = usePersonnelQuery(projectCodes);
 
   if (isPending || userProjectsQuery.isPending) {
     return (

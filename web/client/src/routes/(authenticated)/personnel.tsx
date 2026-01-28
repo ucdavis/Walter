@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import {
   aggregateByPosition,
@@ -5,6 +6,7 @@ import {
 } from '@/components/project/PersonnelTable.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import { usePersonnelQuery } from '@/queries/personnel.ts';
+import { useProjectsDetailQuery } from '@/queries/project.ts';
 import { useUser } from '@/shared/auth/UserContext.tsx';
 
 export const Route = createFileRoute('/(authenticated)/personnel')({
@@ -13,12 +15,25 @@ export const Route = createFileRoute('/(authenticated)/personnel')({
 
 function RouteComponent() {
   const user = useUser();
-  const personnelQuery = usePersonnelQuery();
+  const userProjectsQuery = useProjectsDetailQuery(user.employeeId);
+  const projectCodes = useMemo(() => {
+    const projects = userProjectsQuery.data ?? [];
+    return [...new Set(projects.map((p) => p.projectNumber))];
+  }, [userProjectsQuery.data]);
+  const personnelQuery = usePersonnelQuery(projectCodes);
 
-  if (personnelQuery.isPending) {
+  if (userProjectsQuery.isPending || personnelQuery.isPending) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center">
         <div className="loading loading-spinner loading-lg" />
+      </div>
+    );
+  }
+
+  if (userProjectsQuery.isError) {
+    return (
+      <div className="alert alert-error">
+        <span>Unable to load projects: {userProjectsQuery.error?.message}</span>
       </div>
     );
   }

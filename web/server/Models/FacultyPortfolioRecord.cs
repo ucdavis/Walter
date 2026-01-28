@@ -5,28 +5,74 @@ namespace server.Models;
 /// <summary>
 /// Maps output from usp_GetFacultyDeptPortfolio stored procedure.
 /// </summary>
-public sealed record FacultyPortfolioRecord(
-    [property: JsonPropertyName("awardNumber")] string? AwardNumber,
-    [property: JsonPropertyName("awardStartDate")] DateTime? AwardStartDate,
-    [property: JsonPropertyName("awardEndDate")] DateTime? AwardEndDate,
-    [property: JsonPropertyName("projectNumber")] string ProjectNumber,
-    [property: JsonPropertyName("projectName")] string? ProjectName,
-    [property: JsonPropertyName("projectOwningOrg")] string? ProjectOwningOrg,
-    [property: JsonPropertyName("projectStatusCode")] string? ProjectStatus,
-    [property: JsonPropertyName("taskNum")] string? TaskNum,
-    [property: JsonPropertyName("taskName")] string? TaskName,
-    [property: JsonPropertyName("taskStatus")] string? TaskStatus,
-    [property: JsonPropertyName("pm")] string? Pm,
-    [property: JsonPropertyName("pa")] string? Pa,
-    [property: JsonPropertyName("pi")] string? Pi,
-    [property: JsonPropertyName("copi")] string? Copi,
-    [property: JsonPropertyName("expenditureCategoryName")] string? ExpenditureCategoryName,
-    [property: JsonPropertyName("fundDesc")] string? FundDesc,
-    [property: JsonPropertyName("purposeDesc")] string? PurposeDesc,
-    [property: JsonPropertyName("programDesc")] string? ProgramDesc,
-    [property: JsonPropertyName("activityDesc")] string? ActivityDesc,
-    [property: JsonPropertyName("catBudget")] decimal CatBudget,
-    [property: JsonPropertyName("catCommitments")] decimal CatCommitments,
-    [property: JsonPropertyName("catItdExp")] decimal CatItdExp,
-    [property: JsonPropertyName("catBudBal")] decimal CatBudBal
-);
+public sealed class FacultyPortfolioRecord
+{
+    [JsonPropertyName("awardNumber")]
+    public string? AwardNumber { get; set; }
+
+    [JsonPropertyName("awardStartDate")]
+    public DateTime? AwardStartDate { get; set; }
+
+    [JsonPropertyName("awardEndDate")]
+    public DateTime? AwardEndDate { get; set; }
+
+    [JsonPropertyName("projectNumber")]
+    public string ProjectNumber { get; set; } = "";
+
+    [JsonPropertyName("projectName")]
+    public string? ProjectName { get; set; }
+
+    [JsonPropertyName("projectOwningOrg")]
+    public string? ProjectOwningOrg { get; set; }
+
+    [JsonPropertyName("projectStatusCode")]
+    public string? ProjectStatus { get; set; }
+
+    [JsonPropertyName("taskNum")]
+    public string? TaskNum { get; set; }
+
+    [JsonPropertyName("taskName")]
+    public string? TaskName { get; set; }
+
+    [JsonPropertyName("taskStatus")]
+    public string? TaskStatus { get; set; }
+
+    [JsonPropertyName("pm")]
+    public string? Pm { get; set; }
+
+    [JsonPropertyName("pa")]
+    public string? Pa { get; set; }
+
+    [JsonPropertyName("pi")]
+    public string? Pi { get; set; }
+
+    [JsonPropertyName("copi")]
+    public string? Copi { get; set; }
+
+    [JsonPropertyName("expenditureCategoryName")]
+    public string? ExpenditureCategoryName { get; set; }
+
+    [JsonPropertyName("fundDesc")]
+    public string? FundDesc { get; set; }
+
+    [JsonPropertyName("purposeDesc")]
+    public string? PurposeDesc { get; set; }
+
+    [JsonPropertyName("programDesc")]
+    public string? ProgramDesc { get; set; }
+
+    [JsonPropertyName("activityDesc")]
+    public string? ActivityDesc { get; set; }
+
+    [JsonPropertyName("catBudget")]
+    public decimal CatBudget { get; set; }
+
+    [JsonPropertyName("catCommitments")]
+    public decimal CatCommitments { get; set; }
+
+    [JsonPropertyName("catItdExp")]
+    public decimal CatItdExp { get; set; }
+
+    [JsonPropertyName("catBudBal")]
+    public decimal CatBudBal { get; set; }
+}

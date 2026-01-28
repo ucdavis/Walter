@@ -33,22 +33,8 @@ const ProjectNotFound = ({ projectNumber }: { projectNumber: string }) => (
   </main>
 );
 
-// TODO: Remove this fallback when using real data
-const FAKE_PROJECT_ID = 'GLAANS4995'; // Climate Adaptation Field Studies
-
 function ProjectContent({ summary }: { summary: ProjectSummary }) {
-  const personnelQuery = usePersonnelQuery();
-
-  // Filter personnel by project ID
-  // TODO: Remove fake data fallback when backend returns real data
-  const projectId = summary.projectNumber;
-  const filteredPersonnel = personnelQuery.data?.filter(
-    (p) => p.projectId === projectId
-  );
-  const personnelData =
-    filteredPersonnel && filteredPersonnel.length > 0
-      ? filteredPersonnel
-      : personnelQuery.data?.filter((p) => p.projectId === FAKE_PROJECT_ID) ?? [];
+  const personnelQuery = usePersonnelQuery([summary.projectNumber]);
 
   return (
     <main className="flex-1">
@@ -72,7 +58,7 @@ function ProjectContent({ summary }: { summary: ProjectSummary }) {
           <p className="text-error mt-4">Error loading personnel.</p>
         )}
         {personnelQuery.isSuccess && (
-          <PersonnelTable data={personnelData} showTotals={false} />
+          <PersonnelTable data={personnelQuery.data ?? []} showTotals={false} />
         )}
       </section>
     </main>

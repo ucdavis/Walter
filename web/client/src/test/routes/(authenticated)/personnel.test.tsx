@@ -66,9 +66,17 @@ describe('personnel page', () => {
       },
     ];
 
+    // Mock the projects endpoint to provide project codes for personnel query
+    const projects = [
+      { projectNumber: 'PROJ1', projectName: 'Project One', catBudBal: 1000, awardEndDate: null },
+      { projectNumber: 'PROJ2', projectName: 'Project Two', catBudBal: 2000, awardEndDate: null },
+    ];
+
     server.use(
       http.get('/api/user/me', () => HttpResponse.json(mockUser)),
-      http.get('/api/project/personnel', () => HttpResponse.json(personnel))
+      // Personnel handler must be before :employeeId to avoid conflict
+      http.get('/api/project/personnel', () => HttpResponse.json(personnel)),
+      http.get('/api/project/:employeeId', () => HttpResponse.json(projects))
     );
 
     const { cleanup } = renderRoute({ initialPath: '/personnel' });
