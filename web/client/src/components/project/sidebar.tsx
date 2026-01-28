@@ -8,37 +8,37 @@ import { useSuspenseQuery } from '@tanstack/react-query';
 import { Link, useParams } from '@tanstack/react-router';
 
 interface ProjectSummary {
-  award_end_date: string | null;
-  project_name: string;
-  project_number: string;
-  project_status_code: string;
-  total_cat_bud_bal: number;
+  awardEndDate: string | null;
+  projectName: string;
+  projectNumber: string;
+  projectStatusCode: string;
+  totalCatBudBal: number;
 }
 
 function groupProjects(records: ProjectRecord[]): ProjectSummary[] {
   const map: Record<string, ProjectSummary> = {};
 
   for (const rec of records) {
-    const key = rec.project_number;
+    const key = rec.projectNumber;
 
     if (!map[key]) {
       map[key] = {
-        award_end_date: rec.award_end_date,
-        project_name: rec.project_name,
-        project_number: rec.project_number,
-        project_status_code: rec.project_status_code,
-        total_cat_bud_bal: 0,
+        awardEndDate: rec.awardEndDate,
+        projectName: rec.projectName,
+        projectNumber: rec.projectNumber,
+        projectStatusCode: rec.projectStatusCode,
+        totalCatBudBal: 0,
       };
     }
 
-    // add cat_bud_bal
-    map[key].total_cat_bud_bal += rec.cat_bud_bal;
+    // add catBudBal
+    map[key].totalCatBudBal += rec.catBudBal;
 
-    // pick latest award_end_date (YYYY-MM-DD string compare works)
-    if (rec.award_end_date) {
-      const current = map[key].award_end_date;
-      if (!current || rec.award_end_date > current) {
-        map[key].award_end_date = rec.award_end_date;
+    // pick latest awardEndDate (YYYY-MM-DD string compare works)
+    if (rec.awardEndDate) {
+      const current = map[key].awardEndDate;
+      if (!current || rec.awardEndDate > current) {
+        map[key].awardEndDate = rec.awardEndDate;
       }
     }
   }
@@ -66,10 +66,10 @@ export function ProjectsSidebar() {
     return null;
   }
 
-  // we want to group projects by project_number
+  // we want to group projects by projectNumber
   const groupedProjects = groupProjects(projects);
   const totalOverviewBalance = groupedProjects.reduce(
-    (total, project) => total + project.total_cat_bud_bal,
+    (total, project) => total + project.totalCatBudBal,
     0
   );
 
@@ -112,20 +112,20 @@ export function ProjectsSidebar() {
             {groupedProjects.map((project, index) => (
               <Link
                 className={linkClasses(
-                  projectNumber === project.project_number,
-                  project.project_status_code === 'ACTIVE'
+                  projectNumber === project.projectNumber,
+                  project.projectStatusCode === 'ACTIVE'
                 )}
                 key={index}
-                params={{ employeeId, projectNumber: project.project_number }}
+                params={{ employeeId, projectNumber: project.projectNumber }}
                 to="/projects/$employeeId/$projectNumber"
                 viewTransition={{ types: ['slide-left'] }}
               >
                 <div className="flex justify-between items-start mb-1">
-                  <span className="text-base">{project.project_name}</span>
+                  <span className="text-base">{project.projectName}</span>
                 </div>
                 <div className="flex text-sm justify-between items-center text-dark-font/70">
-                  <Currency value={project.total_cat_bud_bal} />
-                  <span>{formatDate(project.award_end_date, 'No end date')}</span>
+                  <Currency value={project.totalCatBudBal} />
+                  <span>{formatDate(project.awardEndDate, 'No end date')}</span>
                 </div>
               </Link>
             ))}

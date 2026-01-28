@@ -71,8 +71,8 @@ describe('home route', () => {
     };
 
     const projects = [
-      { project_number: 'P1', project_name: 'Project One', award_end_date: '2099-12-31', cat_bud_bal: 1000 },
-      { project_number: 'P2', project_name: 'Project Two', award_end_date: null, cat_bud_bal: 2000 },
+      { projectNumber: 'P1', projectName: 'Project One', awardEndDate: '2099-12-31', catBudBal: 1000 },
+      { projectNumber: 'P2', projectName: 'Project Two', awardEndDate: null, catBudBal: 2000 },
     ];
 
     server.use(
@@ -106,9 +106,9 @@ describe('home route', () => {
 
     // Same project with multiple records (different tasks/categories)
     const projects = [
-      { project_number: 'P1', project_name: 'Project One', award_end_date: '2099-12-31', cat_bud_bal: 1000 },
-      { project_number: 'P1', project_name: 'Project One', award_end_date: '2099-12-31', cat_bud_bal: 500 },
-      { project_number: 'P1', project_name: 'Project One', award_end_date: '2099-12-31', cat_bud_bal: 250 },
+      { projectNumber: 'P1', projectName: 'Project One', awardEndDate: '2099-12-31', catBudBal: 1000 },
+      { projectNumber: 'P1', projectName: 'Project One', awardEndDate: '2099-12-31', catBudBal: 500 },
+      { projectNumber: 'P1', projectName: 'Project One', awardEndDate: '2099-12-31', catBudBal: 250 },
     ];
 
     server.use(
@@ -139,7 +139,7 @@ describe('home route', () => {
     ];
 
     const projects = [
-      { project_number: 'P1', project_name: 'Project One', award_end_date: '2099-12-31', cat_bud_bal: 1000 },
+      { projectNumber: 'P1', projectName: 'Project One', awardEndDate: '2099-12-31', catBudBal: 1000 },
     ];
 
     const testUser = {
@@ -192,20 +192,20 @@ describe('home route', () => {
 describe('getPiProjectAlerts', () => {
   const createPi = (
     employeeId: string,
-    projects: Array<{ project_number: string; project_name: string; cat_budget: number; cat_bud_bal: number }>
+    projects: Array<{ projectNumber: string; projectName: string; catBudget: number; catBudBal: number }>
   ): PiWithProjects => ({
     employeeId,
     name: `PI ${employeeId}`,
     projectCount: projects.length,
     projects: projects as PiWithProjects['projects'],
-    totalBalance: projects.reduce((sum, p) => sum + p.cat_bud_bal, 0),
-    totalBudget: projects.reduce((sum, p) => sum + p.cat_budget, 0),
+    totalBalance: projects.reduce((sum, p) => sum + p.catBudBal, 0),
+    totalBudget: projects.reduce((sum, p) => sum + p.catBudget, 0),
   });
 
   it('returns error for negative balance', () => {
     const pis = [
       createPi('1', [
-        { project_number: 'P1', project_name: 'Project One', cat_budget: 1000, cat_bud_bal: -500 },
+        { projectNumber: 'P1', projectName: 'Project One', catBudget: 1000, catBudBal: -500 },
       ]),
     ];
 
@@ -219,7 +219,7 @@ describe('getPiProjectAlerts', () => {
   it('returns warning for less than 10% budget remaining', () => {
     const pis = [
       createPi('1', [
-        { project_number: 'P1', project_name: 'Project One', cat_budget: 1000, cat_bud_bal: 50 },
+        { projectNumber: 'P1', projectName: 'Project One', catBudget: 1000, catBudBal: 50 },
       ]),
     ];
 
@@ -233,7 +233,7 @@ describe('getPiProjectAlerts', () => {
   it('returns no alert for healthy budget', () => {
     const pis = [
       createPi('1', [
-        { project_number: 'P1', project_name: 'Project One', cat_budget: 1000, cat_bud_bal: 500 },
+        { projectNumber: 'P1', projectName: 'Project One', catBudget: 1000, catBudBal: 500 },
       ]),
     ];
 
@@ -245,8 +245,8 @@ describe('getPiProjectAlerts', () => {
   it('sorts errors before warnings', () => {
     const pis = [
       createPi('1', [
-        { project_number: 'P1', project_name: 'Warning Project', cat_budget: 1000, cat_bud_bal: 50 },
-        { project_number: 'P2', project_name: 'Error Project', cat_budget: 1000, cat_bud_bal: -100 },
+        { projectNumber: 'P1', projectName: 'Warning Project', catBudget: 1000, catBudBal: 50 },
+        { projectNumber: 'P2', projectName: 'Error Project', catBudget: 1000, catBudBal: -100 },
       ]),
     ];
 
@@ -259,10 +259,10 @@ describe('getPiProjectAlerts', () => {
   it('limits to 3 alerts', () => {
     const pis = [
       createPi('1', [
-        { project_number: 'P1', project_name: 'Project 1', cat_budget: 1000, cat_bud_bal: -100 },
-        { project_number: 'P2', project_name: 'Project 2', cat_budget: 1000, cat_bud_bal: -200 },
-        { project_number: 'P3', project_name: 'Project 3', cat_budget: 1000, cat_bud_bal: -300 },
-        { project_number: 'P4', project_name: 'Project 4', cat_budget: 1000, cat_bud_bal: -400 },
+        { projectNumber: 'P1', projectName: 'Project 1', catBudget: 1000, catBudBal: -100 },
+        { projectNumber: 'P2', projectName: 'Project 2', catBudget: 1000, catBudBal: -200 },
+        { projectNumber: 'P3', projectName: 'Project 3', catBudget: 1000, catBudBal: -300 },
+        { projectNumber: 'P4', projectName: 'Project 4', catBudget: 1000, catBudBal: -400 },
       ]),
     ];
 

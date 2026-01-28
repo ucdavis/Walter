@@ -64,7 +64,7 @@ function RouteComponent() {
   const summary = summarizeAllProjects(projects);
 
   const projectNumbers = [
-    ...new Set(projects.map((project) => project.project_number)),
+    ...new Set(projects.map((project) => project.projectNumber)),
   ];
 
   return (

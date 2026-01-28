@@ -76,9 +76,9 @@ export function getPiProjectAlerts(managedPis: PiWithProjects[]): PiProjectAlert
   for (const pi of managedPis) {
     const projectMap = new Map<string, ProjectRecord[]>();
     for (const p of pi.projects) {
-      const existing = projectMap.get(p.project_number) ?? [];
+      const existing = projectMap.get(p.projectNumber) ?? [];
       existing.push(p);
-      projectMap.set(p.project_number, existing);
+      projectMap.set(p.projectNumber, existing);
     }
 
     for (const [projectNumber, records] of projectMap) {
