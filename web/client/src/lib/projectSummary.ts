@@ -29,7 +29,7 @@ export interface ProjectSummary {
   totals: ProjectTotals;
 }
 
-type DateKey = 'award_start_date' | 'award_end_date';
+type DateKey = 'awardStartDate' | 'awardEndDate';
 
 const DEFAULT_SUMMARY_NAME = 'All Projects Dashboard';
 const DEFAULT_SUMMARY_NUMBER = 'MULTIPLE';
@@ -46,24 +46,24 @@ const aggregateCategories = (records: ProjectRecord[]) => {
   const totals = buildEmptyTotals();
 
   for (const record of records) {
-    totals.budget += record.cat_budget;
-    totals.expense += record.cat_itd_exp;
-    totals.encumbrance += record.cat_commitments;
-    totals.balance += record.cat_bud_bal;
+    totals.budget += record.catBudget;
+    totals.expense += record.catItdExp;
+    totals.encumbrance += record.catCommitments;
+    totals.balance += record.catBudBal;
 
-    const existing = categories.get(record.expenditure_category_name);
+    const existing = categories.get(record.expenditureCategoryName);
     if (existing) {
-      existing.budget += record.cat_budget;
-      existing.expense += record.cat_itd_exp;
-      existing.encumbrance += record.cat_commitments;
-      existing.balance += record.cat_bud_bal;
+      existing.budget += record.catBudget;
+      existing.expense += record.catItdExp;
+      existing.encumbrance += record.catCommitments;
+      existing.balance += record.catBudBal;
     } else {
-      categories.set(record.expenditure_category_name, {
-        balance: record.cat_bud_bal,
-        budget: record.cat_budget,
-        encumbrance: record.cat_commitments,
-        expense: record.cat_itd_exp,
-        name: record.expenditure_category_name,
+      categories.set(record.expenditureCategoryName, {
+        balance: record.catBudBal,
+        budget: record.catBudget,
+        encumbrance: record.catCommitments,
+        expense: record.catItdExp,
+        name: record.expenditureCategoryName,
       });
     }
   }
@@ -109,8 +109,8 @@ export const summarizeAllProjects = (
 ): ProjectSummary => {
   const { categories, totals } = aggregateCategories(records);
   return {
-    awardEndDate: findLatestDate(records, 'award_end_date'),
-    awardStartDate: findEarliestDate(records, 'award_start_date'),
+    awardEndDate: findLatestDate(records, 'awardEndDate'),
+    awardStartDate: findEarliestDate(records, 'awardStartDate'),
     categories,
     copi: null,
     pa: null,
@@ -128,7 +128,7 @@ export const summarizeProjectByNumber = (
   projectNumber: string
 ): ProjectSummary | null => {
   const filtered = records.filter(
-    (record) => record.project_number === projectNumber
+    (record) => record.projectNumber === projectNumber
   );
 
   if (!filtered.length) {
@@ -139,16 +139,16 @@ export const summarizeProjectByNumber = (
   const first = filtered[0];
 
   return {
-    awardEndDate: findLatestDate(filtered, 'award_end_date'),
-    awardStartDate: findEarliestDate(filtered, 'award_start_date'),
+    awardEndDate: findLatestDate(filtered, 'awardEndDate'),
+    awardStartDate: findEarliestDate(filtered, 'awardStartDate'),
     categories,
     copi: first.copi,
     pa: first.pa,
     pi: first.pi,
     pm: first.pm,
-    projectName: first.project_name,
-    projectNumber: first.project_number,
-    projectStatusCode: first.project_status_code,
+    projectName: first.projectName,
+    projectNumber: first.projectNumber,
+    projectStatusCode: first.projectStatusCode,
     totals,
   };
 };

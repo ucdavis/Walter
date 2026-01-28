@@ -1,4 +1,7 @@
-import { summarizeProjectByNumber, type ProjectSummary } from '@/lib/projectSummary.ts';
+import {
+  summarizeProjectByNumber,
+  type ProjectSummary,
+} from '@/lib/projectSummary.ts';
 import type { PiWithProjects, ProjectRecord } from '@/queries/project.ts';
 
 export interface Alert {
@@ -70,22 +73,27 @@ export interface PiProjectAlert extends Alert {
  * Aggregate alerts across all projects managed by PIs.
  * Returns top 3 alerts sorted by severity (errors first) then by balance.
  */
-export function getPiProjectAlerts(managedPis: PiWithProjects[]): PiProjectAlert[] {
+export function getPiProjectAlerts(
+  managedPis: PiWithProjects[]
+): PiProjectAlert[] {
   const alerts: PiProjectAlert[] = [];
 
   for (const pi of managedPis) {
     const projectMap = new Map<string, ProjectRecord[]>();
     for (const p of pi.projects) {
-      const existing = projectMap.get(p.project_number) ?? [];
+      const existing = projectMap.get(p.projectNumber) ?? [];
       existing.push(p);
-      projectMap.set(p.project_number, existing);
+      projectMap.set(p.projectNumber, existing);
     }
 
     for (const [projectNumber, records] of projectMap) {
       const summary = summarizeProjectByNumber(records, projectNumber);
       if (!summary) continue;
 
-      const projectAlerts = getAlertsForProject(summary, `${summary.projectName} `);
+      const projectAlerts = getAlertsForProject(
+        summary,
+        `${summary.projectName} `
+      );
 
       for (const alert of projectAlerts) {
         alerts.push({

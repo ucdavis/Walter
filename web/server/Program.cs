@@ -9,6 +9,9 @@ using Server.Services;
 using server.core.Services;
 using server.Services;
 
+// Configure Dapper to map underscore column names to PascalCase properties
+Dapper.DefaultTypeMap.MatchNamesWithUnderscores = true;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // setup configuration sources (last one wins)
@@ -43,8 +46,8 @@ builder.Services.AddControllers();
 builder.Services.AddResponseCaching();
 
 // add singleton services here
-builder.Services.AddSingleton<DmConnectionHelper>();
 builder.Services.AddSingleton<IFinancialApiService, FinancialApiService>();
+builder.Services.AddSingleton<IDatamartService, DatamartService>();
 
 // add scoped services here
 builder.Services.AddScoped<IDbInitializer, DbInitializer>();

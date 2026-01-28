@@ -17,58 +17,76 @@ describe('personnel page', () => {
   it('calculates summary stats correctly', async () => {
     const personnel = [
       {
-        emplid: '1001',
+        employeeId: '1001',
         name: 'Smith, John',
         projectId: 'PROJ1',
-        projectName: 'Project One',
+        projectDescription: 'Project One',
         positionNumber: '40001234',
         positionDescription: 'PROF-FY',
         monthlyRate: 5000,
         distributionPercent: 100,
-        cbr: 0.4,
+        compositeBenefitRate: 0.4,
         fte: 1.0,
-        jobEffectiveDate: '2020-01-01T00:00:00.000Z',
+        positionEffectiveDate: '2020-01-01T00:00:00.000Z',
         jobEndDate: null,
         fundingEffectiveDate: '2025-07-01T00:00:00.000Z',
         fundingEndDate: '2026-12-31T00:00:00.000Z',
       },
       {
-        emplid: '1001',
+        employeeId: '1001',
         name: 'Smith, John',
         projectId: 'PROJ2',
-        projectName: 'Project Two',
+        projectDescription: 'Project Two',
         positionNumber: '40009999',
         positionDescription: 'ASSOC PROF-FY',
         monthlyRate: 3000,
         distributionPercent: 50,
-        cbr: 0.4,
+        compositeBenefitRate: 0.4,
         fte: 0.5,
-        jobEffectiveDate: '2020-01-01T00:00:00.000Z',
+        positionEffectiveDate: '2020-01-01T00:00:00.000Z',
         jobEndDate: null,
         fundingEffectiveDate: '2025-07-01T00:00:00.000Z',
         fundingEndDate: '2027-06-30T00:00:00.000Z',
       },
       {
-        emplid: '1002',
+        employeeId: '1002',
         name: 'Doe, Jane',
         projectId: 'PROJ1',
-        projectName: 'Project One',
+        projectDescription: 'Project One',
         positionNumber: '40005678',
         positionDescription: 'POSTDOC-EMPLOYEE',
         monthlyRate: 4000,
         distributionPercent: 100,
-        cbr: 0.4,
+        compositeBenefitRate: 0.4,
         fte: 1.0,
-        jobEffectiveDate: '2023-09-01T00:00:00.000Z',
+        positionEffectiveDate: '2023-09-01T00:00:00.000Z',
         jobEndDate: '2026-08-31T00:00:00.000Z',
         fundingEffectiveDate: '2025-07-01T00:00:00.000Z',
         fundingEndDate: '2026-09-30T00:00:00.000Z',
       },
     ];
 
+    // Mock the projects endpoint to provide project codes for personnel query
+    const projects = [
+      {
+        projectNumber: 'PROJ1',
+        projectName: 'Project One',
+        catBudBal: 1000,
+        awardEndDate: null,
+      },
+      {
+        projectNumber: 'PROJ2',
+        projectName: 'Project Two',
+        catBudBal: 2000,
+        awardEndDate: null,
+      },
+    ];
+
     server.use(
       http.get('/api/user/me', () => HttpResponse.json(mockUser)),
-      http.get('/api/project/personnel', () => HttpResponse.json(personnel))
+      // Personnel handler must be before :employeeId to avoid conflict
+      http.get('/api/project/personnel', () => HttpResponse.json(personnel)),
+      http.get('/api/project/:employeeId', () => HttpResponse.json(projects))
     );
 
     const { cleanup } = renderRoute({ initialPath: '/personnel' });
@@ -78,7 +96,9 @@ describe('personnel page', () => {
       await screen.findByText("Test User's Personnel");
 
       // Should show 2 unique employees
-      expect(screen.getByText('2 employees across 2 projects')).toBeInTheDocument();
+      expect(
+        screen.getByText('2 employees across 2 projects')
+      ).toBeInTheDocument();
 
       // Summary cards should show correct values
       // # of Employees: 2
@@ -87,7 +107,9 @@ describe('personnel page', () => {
 
       // Monthly Rate: 5000 + 3000 + 4000 = 12000
       // Appears in both summary card and table footer
-      expect(screen.getAllByText('$12,000.00').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText('$12,000.00').length).toBeGreaterThanOrEqual(
+        1
+      );
 
       // Monthly Fringe: 12000 * 0.4 = 4800
       expect(screen.getAllByText('$4,800.00').length).toBeGreaterThanOrEqual(1);

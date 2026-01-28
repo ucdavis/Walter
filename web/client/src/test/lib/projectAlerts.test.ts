@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { getAlertsForProject } from '@/lib/projectAlerts.ts';
 import type { ProjectSummary } from '@/lib/projectSummary.ts';
 
-const createSummary = (overrides: Partial<ProjectSummary> = {}): ProjectSummary => ({
+const createSummary = (
+  overrides: Partial<ProjectSummary> = {}
+): ProjectSummary => ({
   awardEndDate: '2030-12-31',
   awardStartDate: '2020-01-01',
   categories: [],
@@ -19,7 +21,9 @@ const createSummary = (overrides: Partial<ProjectSummary> = {}): ProjectSummary 
 
 describe('getAlertsForProject', () => {
   it('returns error alert for negative balance', () => {
-    const summary = createSummary({ totals: { balance: -500, budget: 10000, encumbrance: 0, expense: 10500 } });
+    const summary = createSummary({
+      totals: { balance: -500, budget: 10000, encumbrance: 0, expense: 10500 },
+    });
     const alerts = getAlertsForProject(summary);
 
     expect(alerts).toHaveLength(1);
@@ -28,7 +32,9 @@ describe('getAlertsForProject', () => {
   });
 
   it('returns warning alert for low budget (<10%)', () => {
-    const summary = createSummary({ totals: { balance: 900, budget: 10000, encumbrance: 0, expense: 9100 } });
+    const summary = createSummary({
+      totals: { balance: 900, budget: 10000, encumbrance: 0, expense: 9100 },
+    });
     const alerts = getAlertsForProject(summary);
 
     expect(alerts).toHaveLength(1);
@@ -39,7 +45,9 @@ describe('getAlertsForProject', () => {
   it('returns warning alert when project ends within 3 months', () => {
     const twoMonthsFromNow = new Date();
     twoMonthsFromNow.setMonth(twoMonthsFromNow.getMonth() + 2);
-    const summary = createSummary({ awardEndDate: twoMonthsFromNow.toISOString() });
+    const summary = createSummary({
+      awardEndDate: twoMonthsFromNow.toISOString(),
+    });
     const alerts = getAlertsForProject(summary);
 
     expect(alerts).toHaveLength(1);
@@ -55,7 +63,9 @@ describe('getAlertsForProject', () => {
   });
 
   it('uses custom prefix in message', () => {
-    const summary = createSummary({ totals: { balance: -500, budget: 10000, encumbrance: 0, expense: 10500 } });
+    const summary = createSummary({
+      totals: { balance: -500, budget: 10000, encumbrance: 0, expense: 10500 },
+    });
     const alerts = getAlertsForProject(summary, 'My Project ');
 
     expect(alerts[0].message).toMatch(/^My Project /);
@@ -63,7 +73,9 @@ describe('getAlertsForProject', () => {
 
   describe('edge cases', () => {
     it('handles zero budget without error', () => {
-      const summary = createSummary({ totals: { balance: 0, budget: 0, encumbrance: 0, expense: 0 } });
+      const summary = createSummary({
+        totals: { balance: 0, budget: 0, encumbrance: 0, expense: 0 },
+      });
       const alerts = getAlertsForProject(summary);
 
       expect(alerts).toHaveLength(0);

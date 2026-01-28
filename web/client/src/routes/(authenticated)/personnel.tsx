@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import {
   aggregateByPosition,
@@ -5,6 +6,7 @@ import {
 } from '@/components/project/PersonnelTable.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import { usePersonnelQuery } from '@/queries/personnel.ts';
+import { useProjectsDetailQuery } from '@/queries/project.ts';
 import { useUser } from '@/shared/auth/UserContext.tsx';
 
 export const Route = createFileRoute('/(authenticated)/personnel')({
@@ -13,12 +15,29 @@ export const Route = createFileRoute('/(authenticated)/personnel')({
 
 function RouteComponent() {
   const user = useUser();
-  const personnelQuery = usePersonnelQuery();
+  const userProjectsQuery = useProjectsDetailQuery(user.employeeId);
+  const projectCodes = useMemo(() => {
+    const projects = userProjectsQuery.data ?? [];
+    return [...new Set(projects.map((p) => p.projectNumber))];
+  }, [userProjectsQuery.data]);
+  const personnelQuery = usePersonnelQuery(projectCodes);
 
-  if (personnelQuery.isPending) {
+  const isLoading =
+    userProjectsQuery.isPending ||
+    (projectCodes.length > 0 && personnelQuery.isPending);
+
+  if (isLoading) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center">
         <div className="loading loading-spinner loading-lg" />
+      </div>
+    );
+  }
+
+  if (userProjectsQuery.isError) {
+    return (
+      <div className="alert alert-error">
+        <span>Unable to load projects: {userProjectsQuery.error?.message}</span>
       </div>
     );
   }
@@ -31,10 +50,22 @@ function RouteComponent() {
     );
   }
 
+  // Show empty state when user has no projects
+  if (projectCodes.length === 0) {
+    return (
+      <div className="container">
+        <h1 className="h1 mt-8">{user.name}'s Personnel</h1>
+        <p className="text-base-content/70 mt-4">
+          No projects found. Personnel will appear here once you have projects.
+        </p>
+      </div>
+    );
+  }
+
   const data = personnelQuery.data ?? [];
 
   // Calculate summary stats
-  const uniqueEmployees = new Set(data.map((r) => r.emplid)).size;
+  const uniqueEmployees = new Set(data.map((r) => r.employeeId)).size;
   const uniqueProjects = new Set(data.map((r) => r.projectId)).size;
   const positions = aggregateByPosition(data);
   const totalMonthlyRate = positions.reduce((sum, p) => sum + p.monthlyRate, 0);
@@ -42,6 +73,7 @@ function RouteComponent() {
     (sum, p) => sum + p.monthlyFringe,
     0
   );
+  const totalMonthlyTotal = totalMonthlyRate + totalMonthlyFringe;
 
   return (
     <div className="container">
@@ -52,7 +84,7 @@ function RouteComponent() {
 
       {/* Summary Cards */}
       <div className="fancy-data">
-        <dl className="grid items-stretch gap-6 md:gap-8 divide-y md:divide-y-0 md:divide-x divide-main-border grid-cols-1 md:grid-cols-4">
+        <dl className="grid items-stretch gap-6 md:gap-8 divide-y md:divide-y-0 md:divide-x divide-main-border grid-cols-1 md:grid-cols-5">
           <div>
             <dt className="stat-label"># of Employees</dt>
             <dd className="stat-value">{uniqueEmployees}</dd>
@@ -67,8 +99,12 @@ function RouteComponent() {
           </div>
           <div>
             <dt className="stat-label">Monthly Fringe</dt>
+            <dd className="stat-value">{formatCurrency(totalMonthlyFringe)}</dd>
+          </div>
+          <div>
+            <dt className="stat-label">Monthly Total</dt>
             <dd className="stat-value text-success font-proxima-bold">
-              {formatCurrency(totalMonthlyFringe)}
+              {formatCurrency(totalMonthlyTotal)}
             </dd>
           </div>
         </dl>

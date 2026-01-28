@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { PiProjectAlerts } from '@/components/alerts/PiProjectAlerts.tsx';
 import { ExportCsvButton } from '@/components/ExportCsvButton.tsx';
 import { SearchButton } from '@/components/search/SearchButton.tsx';
@@ -14,17 +14,17 @@ import { useUser } from '@/shared/auth/UserContext.tsx';
 import { createFileRoute, Link } from '@tanstack/react-router';
 
 const piCsvColumns = [
-  { header: 'PI Name', key: 'name' as const },
-  { header: 'Projects', key: 'projectCount' as const },
-  { header: 'Balance', key: 'totalBalance' as const },
-  { header: 'Budget', key: 'totalBudget' as const },
+  { key: 'name' as const, header: 'PI Name' },
+  { key: 'projectCount' as const, header: 'Projects' },
+  { key: 'totalBalance' as const, header: 'Balance' },
+  { key: 'totalBudget' as const, header: 'Budget' },
 ];
 
 const projectCsvColumns = [
-  { header: 'Project Number', key: 'project_number' as const },
-  { header: 'Project Name', key: 'project_name' as const },
-  { header: 'End Date', key: 'award_end_date' as const },
-  { header: 'Balance', key: 'totalBalance' as const },
+  { key: 'projectNumber' as const, header: 'Project Number' },
+  { key: 'projectName' as const, header: 'Project Name' },
+  { key: 'awardEndDate' as const, header: 'End Date' },
+  { key: 'totalBalance' as const, header: 'Balance' },
 ];
 
 type Tab = 'pis' | 'personnel' | 'reports';
@@ -54,7 +54,11 @@ function RouteComponent() {
     user.employeeId
   );
   const userProjectsQuery = useProjectsDetailQuery(user.employeeId);
-  const personnelQuery = usePersonnelQuery();
+  const projectCodes = useMemo(() => {
+    const projects = userProjectsQuery.data ?? [];
+    return [...new Set(projects.map((p) => p.projectNumber))];
+  }, [userProjectsQuery.data]);
+  const personnelQuery = usePersonnelQuery(projectCodes);
 
   if (isPending || userProjectsQuery.isPending) {
     return (
@@ -91,62 +95,62 @@ function RouteComponent() {
 
   const isProjectManager = managedPis && managedPis.length > 0;
 
-  // Aggregate projects by project_number, summing balances
+  // Aggregate projects by projectNumber, summing balances
   const projectsRaw = userProjectsQuery.data ?? [];
   const projectsMap = new Map<
     string,
     {
-      award_end_date: string | null;
-      project_name: string;
-      project_number: string;
+      awardEndDate: string | null;
+      projectName: string;
+      projectNumber: string;
       totalBalance: number;
     }
   >();
   for (const p of projectsRaw) {
-    const existing = projectsMap.get(p.project_number);
+    const existing = projectsMap.get(p.projectNumber);
     if (existing) {
-      existing.totalBalance += p.cat_bud_bal;
+      existing.totalBalance += p.catBudBal;
     } else {
-      projectsMap.set(p.project_number, {
-        award_end_date: p.award_end_date,
-        project_name: p.project_name,
-        project_number: p.project_number,
-        totalBalance: p.cat_bud_bal,
+      projectsMap.set(p.projectNumber, {
+        awardEndDate: p.awardEndDate,
+        projectName: p.projectName,
+        projectNumber: p.projectNumber,
+        totalBalance: p.catBudBal,
       });
     }
   }
   const now = new Date();
   const projects = Array.from(projectsMap.values())
-    .filter((p) => !p.award_end_date || new Date(p.award_end_date) >= now)
+    .filter((p) => !p.awardEndDate || new Date(p.awardEndDate) >= now)
     .sort((a, b) => {
-      if (!a.award_end_date && !b.award_end_date) {
+      if (!a.awardEndDate && !b.awardEndDate) {
         return 0;
       }
-      if (!a.award_end_date) {
+      if (!a.awardEndDate) {
         return -1;
       }
-      if (!b.award_end_date) {
+      if (!b.awardEndDate) {
         return 1;
       }
       return (
-        new Date(a.award_end_date).getTime() -
-        new Date(b.award_end_date).getTime()
+        new Date(a.awardEndDate).getTime() - new Date(b.awardEndDate).getTime()
       );
     });
 
   return (
     <div className="container">
-      <div className="py-16 mx-auto w-full sm:max-w-[90%] md:max-w-[80%] xl:max-w-[66%]">
+      <div className="pt-10 pb-5 mx-auto w-full sm:max-w-[90%] md:max-w-[80%] xl:max-w-[66%]">
         <h1 className="text-2xl font-proxima-bold">W.A.L.T.E.R.</h1>
         <p className="uppercase">
           warehouse analytics and ledger tools for enterprise reporting
         </p>
-        <div className="relative mt-5">
-          <SearchButton
-            className="w-full"
-            placeholder="Search PIs, Projects, Personnel..."
-          />
-        </div>
+      </div>
+
+      <div className="relative mx-auto w-full sm:max-w-[90%] md:max-w-[80%] xl:max-w-[66%]">
+        <SearchButton
+          className="w-full"
+          placeholder="Search PIs, Projects, Personnel..."
+        />
       </div>
 
       <PiProjectAlerts managedPis={managedPis} />
@@ -155,7 +159,7 @@ function RouteComponent() {
         <button
           aria-controls="panel-pis"
           aria-selected={activeTab === 'pis'}
-          className={`text-2xl tab -ms-4 ${activeTab === 'pis' ? 'tab-active' : ''}`}
+          className={`text-2xl tab ps-0 ${activeTab === 'pis' ? 'tab-active' : ''}`}
           id="tab-pis"
           onClick={() => setActiveTab('pis')}
           role="tab"
@@ -191,15 +195,15 @@ function RouteComponent() {
         <div aria-labelledby="tab-pis" id="panel-pis" role="tabpanel">
           {isProjectManager ? (
             <>
-              <div className="flex justify-end -mt-4">
+              <div className="flex justify-end mt-4">
                 <ExportCsvButton
-                  columns={piCsvColumns}
                   data={managedPis.map((pi) => ({
                     name: pi.name,
                     projectCount: pi.projectCount,
                     totalBalance: pi.totalBalance,
                     totalBudget: pi.totalBudget,
                   }))}
+                  columns={piCsvColumns}
                   filename="principal-investigators.csv"
                 />
               </div>
@@ -237,10 +241,10 @@ function RouteComponent() {
             </>
           ) : (
             <>
-              <div className="flex justify-end -mt-4">
+              <div className="flex justify-end mt-4">
                 <ExportCsvButton
-                  columns={projectCsvColumns}
                   data={projects}
+                  columns={projectCsvColumns}
                   filename="projects.csv"
                 />
               </div>
@@ -254,21 +258,21 @@ function RouteComponent() {
                 </thead>
                 <tbody>
                   {projects.map((project) => (
-                    <tr key={project.project_number}>
+                    <tr key={project.projectNumber}>
                       <td>
                         <Link
                           className="link link-hover link-primary"
                           params={{
                             employeeId: user.employeeId,
-                            projectNumber: project.project_number,
+                            projectNumber: project.projectNumber,
                           }}
                           to="/projects/$employeeId/$projectNumber/"
                         >
-                          {project.project_name}
+                          {project.projectName}
                         </Link>
                       </td>
                       <td className="text-right">
-                        {formatDate(project.award_end_date)}
+                        {formatDate(project.awardEndDate)}
                       </td>
                       <td className="text-right">
                         {formatCurrency(project.totalBalance)}
@@ -288,19 +292,25 @@ function RouteComponent() {
           id="panel-personnel"
           role="tabpanel"
         >
-          {personnelQuery.isPending && (
+          {projectCodes.length === 0 && (
+            <p className="text-base-content/70 mt-8">
+              No projects found. Personnel will appear here once you have
+              projects.
+            </p>
+          )}
+          {projectCodes.length > 0 && personnelQuery.isPending && (
             <div className="flex min-h-[20vh] items-center justify-center">
               <div className="loading loading-spinner loading-lg" />
             </div>
           )}
-          {personnelQuery.isError && (
+          {projectCodes.length > 0 && personnelQuery.isError && (
             <div className="alert alert-error mt-8">
               <span>
                 Unable to load personnel: {personnelQuery.error?.message}
               </span>
             </div>
           )}
-          {personnelQuery.isSuccess && (
+          {projectCodes.length > 0 && personnelQuery.isSuccess && (
             <div className="mt-8">
               <PersonnelTable data={personnelQuery.data ?? []} />
             </div>

@@ -4,21 +4,40 @@ import type { PiWithProjects } from '@/queries/project.ts';
 
 const createPi = (
   employeeId: string,
-  projects: Array<{ project_number: string; project_name: string; cat_budget: number; cat_bud_bal: number }>
+  projects: Array<{
+    projectNumber: string;
+    projectName: string;
+    catBudget: number;
+    catBudBal: number;
+  }>
 ): PiWithProjects => ({
   employeeId,
   name: `PI ${employeeId}`,
   projectCount: projects.length,
   projects: projects as PiWithProjects['projects'],
-  totalBalance: projects.reduce((sum, p) => sum + p.cat_bud_bal, 0),
-  totalBudget: projects.reduce((sum, p) => sum + p.cat_budget, 0),
+  totalBalance: projects.reduce((sum, p) => sum + p.catBudBal, 0),
+  totalBudget: projects.reduce((sum, p) => sum + p.catBudget, 0),
 });
 
 describe('getPiProjectAlerts', () => {
   it('aggregates alerts across multiple PIs', () => {
     const pis = [
-      createPi('1', [{ project_number: 'P1', project_name: 'Project One', cat_budget: 10000, cat_bud_bal: -500 }]),
-      createPi('2', [{ project_number: 'P2', project_name: 'Project Two', cat_budget: 10000, cat_bud_bal: -200 }]),
+      createPi('1', [
+        {
+          projectNumber: 'P1',
+          projectName: 'Project One',
+          catBudget: 10000,
+          catBudBal: -500,
+        },
+      ]),
+      createPi('2', [
+        {
+          projectNumber: 'P2',
+          projectName: 'Project Two',
+          catBudget: 10000,
+          catBudBal: -200,
+        },
+      ]),
     ];
 
     const alerts = getPiProjectAlerts(pis);
@@ -31,8 +50,18 @@ describe('getPiProjectAlerts', () => {
   it('sorts errors before warnings', () => {
     const pis = [
       createPi('1', [
-        { project_number: 'P1', project_name: 'Warning Project', cat_budget: 10000, cat_bud_bal: 500 },
-        { project_number: 'P2', project_name: 'Error Project', cat_budget: 10000, cat_bud_bal: -100 },
+        {
+          projectNumber: 'P1',
+          projectName: 'Warning Project',
+          catBudget: 10000,
+          catBudBal: 500,
+        },
+        {
+          projectNumber: 'P2',
+          projectName: 'Error Project',
+          catBudget: 10000,
+          catBudBal: -100,
+        },
       ]),
     ];
 

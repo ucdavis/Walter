@@ -1,28 +1,25 @@
 using AggieEnterpriseApi.Extensions;
-using DotEnv.Core;
 using Microsoft.AspNetCore.Mvc;
 using server.Helpers;
+using server.Models;
 using server.Services;
 
 namespace Server.Controllers;
 
 public sealed class ProjectController : ApiControllerBase
 {
-    private readonly ILogger<ProjectController> _logger;
     private readonly IWebHostEnvironment _env;
-    private readonly DmConnectionHelper _dmConnection;
     private readonly IFinancialApiService _financialApiService;
+    private readonly IDatamartService _datamartService;
 
     public ProjectController(
-        ILogger<ProjectController> logger,
         IWebHostEnvironment env,
-        DmConnectionHelper dmConnection,
-        IFinancialApiService financialApiService)
+        IFinancialApiService financialApiService,
+        IDatamartService datamartService)
     {
-        _logger = logger;
         _env = env;
-        _dmConnection = dmConnection;
         _financialApiService = financialApiService;
+        _datamartService = datamartService;
     }
 
     [HttpGet("{employeeId}")]
@@ -31,30 +28,26 @@ public sealed class ProjectController : ApiControllerBase
         var client = _financialApiService.GetClient();
 
         // Query projects where the specified employee is a Principal Investigator
-        var result = await client.PpmProjectByProjectTeamMemberEmployeeId.ExecuteAsync(employeeId, PpmRole.PrincipalInvestigator, cancellationToken);
+        var result = await client.PpmProjectByProjectTeamMemberEmployeeId.ExecuteAsync(
+            employeeId, PpmRole.PrincipalInvestigator, cancellationToken);
 
         var data = result.ReadData();
-
-        var projectNumbers = data.PpmProjectByProjectTeamMemberEmployeeId.Select(p => p.ProjectNumber).Distinct().ToList();
+        var projectNumbers = data.PpmProjectByProjectTeamMemberEmployeeId
+            .Select(p => p.ProjectNumber)
+            .Distinct()
+            .ToList();
 
         if (!projectNumbers.Any())
-        {
-            return Ok(Array.Empty<object>());
-        }
+            return Ok(Array.Empty<FacultyPortfolioRecord>());
 
-        var sql = QueryService.FormatQueryWithList("FacultyProjectReport", projectNumbers);
-
-        var results = await _dmConnection.QueryAsync<object>(sql, ct: cancellationToken);
-
-        return Ok(results);
+        var projects = await _datamartService.GetFacultyPortfolioAsync(projectNumbers, cancellationToken);
+        return Ok(projects);
     }
 
     /// <summary>
     /// Gets all projects for the current authenticated user.
-    /// TODO: For now, this will just read static data from a JSON file representing info from `ae_dwh.ucd_faculty_rpt_tae_dwh.ucd_faculty_rpt_t`
+    /// TODO: For now, this will just read static data from a JSON file
     /// </summary>
-    /// <param name="cancellationToken"></param>
-    /// <returns></returns>
     [HttpGet]
     public IActionResult GetAllForCurrentUser(CancellationToken cancellationToken)
     {
@@ -78,14 +71,17 @@ public sealed class ProjectController : ApiControllerBase
     }
 
     [HttpGet("personnel")]
-    public IActionResult GetPersonnelForProjects(CancellationToken cancellationToken, [FromQuery] string? projectCodes = null)
+    public async Task<IActionResult> GetPersonnelForProjects(
+        CancellationToken cancellationToken,
+        [FromQuery] string? projectCodes = null)
     {
-        cancellationToken.ThrowIfCancellationRequested();
+        if (string.IsNullOrWhiteSpace(projectCodes))
+            return Ok(Array.Empty<PositionBudgetRecord>());
 
-        var path = Path.Combine(_env.ContentRootPath, "Models", "ProjectPersonnelFake.json");
-        var json = System.IO.File.ReadAllText(path);
+        var codes = projectCodes.Split(',', StringSplitOptions.RemoveEmptyEntries);
+        var personnel = await _datamartService.GetPositionBudgetsAsync(codes, cancellationToken);
 
-        return Content(json, "application/json");
+        return Ok(personnel);
     }
 
     /// <summary>

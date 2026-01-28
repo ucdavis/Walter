@@ -16,7 +16,7 @@ function RouteComponent() {
         <p className="text-gray-600 mb-6">
           Transaction details for project{' '}
           <span className="font-mono">{projectNumber}</span>
-          <br/>
+          <br />
           Stay tuned for details!
         </p>
         <Link
