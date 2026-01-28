@@ -133,8 +133,7 @@ function RouteComponent() {
         return 1;
       }
       return (
-        new Date(a.awardEndDate).getTime() -
-        new Date(b.awardEndDate).getTime()
+        new Date(a.awardEndDate).getTime() - new Date(b.awardEndDate).getTime()
       );
     });
 
@@ -209,36 +208,36 @@ function RouteComponent() {
                 />
               </div>
               <table className="walter-table table mt-2">
-              <thead>
-                <tr>
-                  <th>PI Name</th>
-                  <th className="text-right">Projects</th>
-                  <th className="text-right">Balance</th>
-                </tr>
-              </thead>
-              <tbody>
-                {managedPis.map((pi) => (
-                  <tr key={pi.employeeId}>
-                    <td>
-                      <Link
-                        className="link link-hover link-primary"
-                        params={{ employeeId: pi.employeeId }}
-                        to="/projects/$employeeId/"
-                      >
-                        {pi.name}
-                      </Link>
-                    </td>
-                    <td className="text-right">{pi.projectCount}</td>
-                    <td className="text-right">
-                      {formatCurrency(pi.totalBalance)}{' '}
-                      <span className="text-base-content/60">
-                        ({formatPercent(pi.totalBalance, pi.totalBudget)})
-                      </span>
-                    </td>
+                <thead>
+                  <tr>
+                    <th>PI Name</th>
+                    <th className="text-right">Projects</th>
+                    <th className="text-right">Balance</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {managedPis.map((pi) => (
+                    <tr key={pi.employeeId}>
+                      <td>
+                        <Link
+                          className="link link-hover link-primary"
+                          params={{ employeeId: pi.employeeId }}
+                          to="/projects/$employeeId/"
+                        >
+                          {pi.name}
+                        </Link>
+                      </td>
+                      <td className="text-right">{pi.projectCount}</td>
+                      <td className="text-right">
+                        {formatCurrency(pi.totalBalance)}{' '}
+                        <span className="text-base-content/60">
+                          ({formatPercent(pi.totalBalance, pi.totalBudget)})
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </>
           ) : (
             <>
@@ -250,38 +249,38 @@ function RouteComponent() {
                 />
               </div>
               <table className="walter-table table mt-2">
-              <thead>
-                <tr>
-                  <th>Project Name</th>
-                  <th className="text-right">End Date</th>
-                  <th className="text-right">Balance</th>
-                </tr>
-              </thead>
-              <tbody>
-                {projects.map((project) => (
-                  <tr key={project.projectNumber}>
-                    <td>
-                      <Link
-                        className="link link-hover link-primary"
-                        params={{
-                          employeeId: user.employeeId,
-                          projectNumber: project.projectNumber,
-                        }}
-                        to="/projects/$employeeId/$projectNumber/"
-                      >
-                        {project.projectName}
-                      </Link>
-                    </td>
-                    <td className="text-right">
-                      {formatDate(project.awardEndDate)}
-                    </td>
-                    <td className="text-right">
-                      {formatCurrency(project.totalBalance)}
-                    </td>
+                <thead>
+                  <tr>
+                    <th>Project Name</th>
+                    <th className="text-right">End Date</th>
+                    <th className="text-right">Balance</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {projects.map((project) => (
+                    <tr key={project.projectNumber}>
+                      <td>
+                        <Link
+                          className="link link-hover link-primary"
+                          params={{
+                            employeeId: user.employeeId,
+                            projectNumber: project.projectNumber,
+                          }}
+                          to="/projects/$employeeId/$projectNumber/"
+                        >
+                          {project.projectName}
+                        </Link>
+                      </td>
+                      <td className="text-right">
+                        {formatDate(project.awardEndDate)}
+                      </td>
+                      <td className="text-right">
+                        {formatCurrency(project.totalBalance)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </>
           )}
         </div>

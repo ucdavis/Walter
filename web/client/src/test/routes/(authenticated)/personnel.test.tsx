@@ -68,8 +68,18 @@ describe('personnel page', () => {
 
     // Mock the projects endpoint to provide project codes for personnel query
     const projects = [
-      { projectNumber: 'PROJ1', projectName: 'Project One', catBudBal: 1000, awardEndDate: null },
-      { projectNumber: 'PROJ2', projectName: 'Project Two', catBudBal: 2000, awardEndDate: null },
+      {
+        projectNumber: 'PROJ1',
+        projectName: 'Project One',
+        catBudBal: 1000,
+        awardEndDate: null,
+      },
+      {
+        projectNumber: 'PROJ2',
+        projectName: 'Project Two',
+        catBudBal: 2000,
+        awardEndDate: null,
+      },
     ];
 
     server.use(
@@ -86,7 +96,9 @@ describe('personnel page', () => {
       await screen.findByText("Test User's Personnel");
 
       // Should show 2 unique employees
-      expect(screen.getByText('2 employees across 2 projects')).toBeInTheDocument();
+      expect(
+        screen.getByText('2 employees across 2 projects')
+      ).toBeInTheDocument();
 
       // Summary cards should show correct values
       // # of Employees: 2
@@ -95,7 +107,9 @@ describe('personnel page', () => {
 
       // Monthly Rate: 5000 + 3000 + 4000 = 12000
       // Appears in both summary card and table footer
-      expect(screen.getAllByText('$12,000.00').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText('$12,000.00').length).toBeGreaterThanOrEqual(
+        1
+      );
 
       // Monthly Fringe: 12000 * 0.4 = 4800
       expect(screen.getAllByText('$4,800.00').length).toBeGreaterThanOrEqual(1);

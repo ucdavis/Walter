@@ -25,7 +25,8 @@ interface AlertCardProps {
 }
 
 export function AlertCard({ alert, balance, linkParams }: AlertCardProps) {
-  const showBalance = alert.type === 'negative-balance' || alert.type === 'low-budget';
+  const showBalance =
+    alert.type === 'negative-balance' || alert.type === 'low-budget';
 
   const content = (
     <>

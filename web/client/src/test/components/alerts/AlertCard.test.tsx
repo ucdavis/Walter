@@ -6,7 +6,12 @@ describe('AlertCard', () => {
   it('shows balance for budget alerts', () => {
     render(
       <AlertCard
-        alert={{ id: '1', message: 'has a negative balance', severity: 'error', type: 'negative-balance' }}
+        alert={{
+          id: '1',
+          message: 'has a negative balance',
+          severity: 'error',
+          type: 'negative-balance',
+        }}
         balance={1000}
       />
     );

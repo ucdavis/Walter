@@ -36,4 +36,3 @@ describe('SearchButton', () => {
     expect(container.querySelectorAll('kbd')).toHaveLength(0);
   });
 });
-

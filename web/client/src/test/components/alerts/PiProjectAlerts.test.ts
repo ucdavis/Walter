@@ -4,7 +4,12 @@ import type { PiWithProjects } from '@/queries/project.ts';
 
 const createPi = (
   employeeId: string,
-  projects: Array<{ projectNumber: string; projectName: string; catBudget: number; catBudBal: number }>
+  projects: Array<{
+    projectNumber: string;
+    projectName: string;
+    catBudget: number;
+    catBudBal: number;
+  }>
 ): PiWithProjects => ({
   employeeId,
   name: `PI ${employeeId}`,
@@ -17,8 +22,22 @@ const createPi = (
 describe('getPiProjectAlerts', () => {
   it('aggregates alerts across multiple PIs', () => {
     const pis = [
-      createPi('1', [{ projectNumber: 'P1', projectName: 'Project One', catBudget: 10000, catBudBal: -500 }]),
-      createPi('2', [{ projectNumber: 'P2', projectName: 'Project Two', catBudget: 10000, catBudBal: -200 }]),
+      createPi('1', [
+        {
+          projectNumber: 'P1',
+          projectName: 'Project One',
+          catBudget: 10000,
+          catBudBal: -500,
+        },
+      ]),
+      createPi('2', [
+        {
+          projectNumber: 'P2',
+          projectName: 'Project Two',
+          catBudget: 10000,
+          catBudBal: -200,
+        },
+      ]),
     ];
 
     const alerts = getPiProjectAlerts(pis);
@@ -31,8 +50,18 @@ describe('getPiProjectAlerts', () => {
   it('sorts errors before warnings', () => {
     const pis = [
       createPi('1', [
-        { projectNumber: 'P1', projectName: 'Warning Project', catBudget: 10000, catBudBal: 500 },
-        { projectNumber: 'P2', projectName: 'Error Project', catBudget: 10000, catBudBal: -100 },
+        {
+          projectNumber: 'P1',
+          projectName: 'Warning Project',
+          catBudget: 10000,
+          catBudBal: 500,
+        },
+        {
+          projectNumber: 'P2',
+          projectName: 'Error Project',
+          catBudget: 10000,
+          catBudBal: -100,
+        },
       ]),
     ];
 

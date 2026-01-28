@@ -1,4 +1,7 @@
-import { summarizeProjectByNumber, type ProjectSummary } from '@/lib/projectSummary.ts';
+import {
+  summarizeProjectByNumber,
+  type ProjectSummary,
+} from '@/lib/projectSummary.ts';
 import type { PiWithProjects, ProjectRecord } from '@/queries/project.ts';
 
 export interface Alert {
@@ -70,7 +73,9 @@ export interface PiProjectAlert extends Alert {
  * Aggregate alerts across all projects managed by PIs.
  * Returns top 3 alerts sorted by severity (errors first) then by balance.
  */
-export function getPiProjectAlerts(managedPis: PiWithProjects[]): PiProjectAlert[] {
+export function getPiProjectAlerts(
+  managedPis: PiWithProjects[]
+): PiProjectAlert[] {
   const alerts: PiProjectAlert[] = [];
 
   for (const pi of managedPis) {
@@ -85,7 +90,10 @@ export function getPiProjectAlerts(managedPis: PiWithProjects[]): PiProjectAlert
       const summary = summarizeProjectByNumber(records, projectNumber);
       if (!summary) continue;
 
-      const projectAlerts = getAlertsForProject(summary, `${summary.projectName} `);
+      const projectAlerts = getAlertsForProject(
+        summary,
+        `${summary.projectName} `
+      );
 
       for (const alert of projectAlerts) {
         alerts.push({

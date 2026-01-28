@@ -324,7 +324,9 @@ export function PersonnelTable({
               {row.getIsExpanded() &&
                 row.original.distributions.map((dist, idx) => (
                   <tr className="pivot-row" key={`${row.id}-dist-${idx}`}>
-                    <td className="text-sm pl-8">{dist.record.projectDescription}</td>
+                    <td className="text-sm pl-8">
+                      {dist.record.projectDescription}
+                    </td>
                     <td></td>
                     <td className="text-right text-sm">
                       {dist.record.distributionPercent}%
