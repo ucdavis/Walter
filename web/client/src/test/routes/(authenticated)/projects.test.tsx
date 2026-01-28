@@ -151,10 +151,11 @@ describe('home route', () => {
       await screen.findByText('Project One');
       // Should only have one row for Project One
       const rows = screen.getAllByRole('row');
-      // 1 header row + 1 data row
-      expect(rows).toHaveLength(2);
+      // 1 header row + 1 data row + 1 totals row
+      expect(rows).toHaveLength(3);
       // Balance should be summed: 1000 + 500 + 250 = 1750
-      expect(screen.getByText('$1,750.00')).toBeInTheDocument();
+      // Appears in both data row and totals row
+      expect(screen.getAllByText('$1,750.00')).toHaveLength(2);
     } finally {
       cleanup();
     }

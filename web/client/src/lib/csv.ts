@@ -9,13 +9,13 @@ function escapeCsvValue(value: CsvValue): string {
   return str;
 }
 
-export function toCsv<T extends Record<string, CsvValue>>(
+export function toCsv<T>(
   rows: T[],
   columns: { key: keyof T; header: string }[]
 ): string {
   const headers = columns.map((c) => escapeCsvValue(c.header)).join(',');
   const dataRows = rows.map((row) =>
-    columns.map((c) => escapeCsvValue(row[c.key])).join(',')
+    columns.map((c) => escapeCsvValue(row[c.key] as CsvValue)).join(',')
   );
   return [headers, ...dataRows].join('\n');
 }

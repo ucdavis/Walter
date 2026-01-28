@@ -1,6 +1,6 @@
-import { FinancialDetails } from '@/components/project/financialDetails.tsx';
+import { useMemo } from 'react';
 import { PersonnelTable } from '@/components/project/PersonnelTable.tsx';
-import { summarizeAllProjects } from '@/lib/projectSummary.ts';
+import { ProjectsTable } from '@/components/project/ProjectsTable.tsx';
 import { usePersonnelQuery } from '@/queries/personnel.ts';
 import { projectsDetailQueryOptions } from '@/queries/project.ts';
 import { useSuspenseQuery } from '@tanstack/react-query';
@@ -12,6 +12,10 @@ export const Route = createFileRoute('/(authenticated)/projects/$employeeId/')({
 
 function PersonnelSection({ projectNumbers }: { projectNumbers: string[] }) {
   const personnelQuery = usePersonnelQuery(projectNumbers);
+
+  if (projectNumbers.length === 0) {
+    return null;
+  }
 
   return (
     <section className="section-margin">
@@ -35,6 +39,11 @@ function RouteComponent() {
     projectsDetailQueryOptions(employeeId)
   );
 
+  const projectNumbers = useMemo(
+    () => [...new Set(projects?.map((p) => p.projectNumber) ?? [])],
+    [projects]
+  );
+
   if (!projects?.length) {
     return (
       <main className="flex-1">
@@ -47,20 +56,15 @@ function RouteComponent() {
     );
   }
 
-  const summary = summarizeAllProjects(projects);
-
-  const projectNumbers = [
-    ...new Set(projects.map((project) => project.projectNumber)),
-  ];
-
   return (
     <main className="flex-1">
       <section className="mt-8 section-margin">
-        <h1 className="h1">{summary.projectName}</h1>
-        <p className="h4">{summary.projectNumber}</p>
+        <h1 className="h1">All Projects</h1>
       </section>
 
-      <FinancialDetails summary={summary} />
+      <section className="section-margin">
+        <ProjectsTable employeeId={employeeId} records={projects} />
+      </section>
 
       <PersonnelSection projectNumbers={projectNumbers} />
     </main>
