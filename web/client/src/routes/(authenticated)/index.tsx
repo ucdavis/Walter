@@ -14,17 +14,17 @@ import { useUser } from '@/shared/auth/UserContext.tsx';
 import { createFileRoute, Link } from '@tanstack/react-router';
 
 const piCsvColumns = [
-  { key: 'name' as const, header: 'PI Name' },
-  { key: 'projectCount' as const, header: 'Projects' },
-  { key: 'totalBalance' as const, header: 'Balance' },
-  { key: 'totalBudget' as const, header: 'Budget' },
+  { header: 'PI Name', key: 'name' as const },
+  { header: 'Projects', key: 'projectCount' as const },
+  { header: 'Balance', key: 'totalBalance' as const },
+  { header: 'Budget', key: 'totalBudget' as const },
 ];
 
 const projectCsvColumns = [
-  { key: 'projectNumber' as const, header: 'Project Number' },
-  { key: 'projectName' as const, header: 'Project Name' },
-  { key: 'awardEndDate' as const, header: 'End Date' },
-  { key: 'totalBalance' as const, header: 'Balance' },
+  { header: 'Project Number', key: 'projectNumber' as const },
+  { header: 'Project Name', key: 'projectName' as const },
+  { header: 'End Date', key: 'awardEndDate' as const },
+  { header: 'Balance', key: 'totalBalance' as const },
 ];
 
 type Tab = 'pis' | 'personnel' | 'reports';
@@ -197,13 +197,13 @@ function RouteComponent() {
             <>
               <div className="flex justify-end mt-4">
                 <ExportCsvButton
+                  columns={piCsvColumns}
                   data={managedPis.map((pi) => ({
                     name: pi.name,
                     projectCount: pi.projectCount,
                     totalBalance: pi.totalBalance,
                     totalBudget: pi.totalBudget,
                   }))}
-                  columns={piCsvColumns}
                   filename="principal-investigators.csv"
                 />
               </div>
@@ -243,8 +243,8 @@ function RouteComponent() {
             <>
               <div className="flex justify-end mt-4">
                 <ExportCsvButton
-                  data={projects}
                   columns={projectCsvColumns}
+                  data={projects}
                   filename="projects.csv"
                 />
               </div>

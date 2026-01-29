@@ -80,11 +80,11 @@ export function FinancialDetails({ summary }: FinancialDetailsProps) {
           />
           {isSingleProject && (
             <Link
-              className="btn btn-outline btn-primary btn-sm flex items-center gap-2"
+              className="btn btn-default btn-sm flex items-center gap-2"
               to="./transactions"
             >
               <BookOpenIcon className="w-4 h-4" />
-              View More
+              Transactions
             </Link>
           )}
         </div>

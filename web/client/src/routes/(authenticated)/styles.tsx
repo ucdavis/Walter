@@ -31,20 +31,23 @@ function RouteComponent() {
       <div className="w-full max-w-1/2 space-y-8">
         {/* Typography */}
         <section>
-          <h1>Heading 1</h1>
-          <h2>Heading 2</h2>
-          <h3>Heading 3</h3>
+          <h1 className="h1">Heading 1</h1>
+          <h2 className="h2">Heading 2</h2>
+          <h3 className="h3">Heading 3</h3>
           <p>This is a paragraph of base text.</p>
-          <p>This is small, muted text.</p>
+          <p className="text-sm">This is small, muted text.</p>
         </section>
 
         {/* Buttons */}
         <section className="space-x-2">
+          <button className="btn btn-default">Default</button>
           <button className="btn btn-primary">Primary</button>
           <button className="btn btn-secondary">Secondary</button>
-          <button className="btn btn-accent">Accent</button>
-          <button className="btn btn-outline">Outline</button>
-          <button className="btn btn-disabled">Disabled</button>
+
+          <button className="btn btn-info">Info</button>
+          <button className="btn btn-success">Success</button>
+          <button className="btn btn-warning">Warning</button>
+          <button className="btn btn-error">Error</button>
         </section>
 
         {/* Inputs */}
@@ -133,12 +136,41 @@ function RouteComponent() {
           </div>
         </section>
 
+        <section className="space-y-2">
+          <div className="alert alert-soft alert-info">
+            <span>Info alert message</span>
+          </div>
+          <div className="alert alert-soft alert-success">
+            <span>Success alert message</span>
+          </div>
+          <div className="alert alert-soft alert-warning">
+            <span>Warning alert message</span>
+          </div>
+          <div className="alert alert-soft alert-error">
+            <span>Error alert message</span>
+          </div>
+        </section>
+
         {/* Badges */}
+        <section className="space-x-2">
+          <div className="badge badge-soft badge-primary">Primary</div>
+          <div className="badge badge-soft badge-secondary">Secondary</div>
+
+          <div className="badge badge-soft badge-info">Info</div>
+          <div className="badge badge-soft badge-success">Success</div>
+          <div className="badge badge-soft badge-warning">Warning</div>
+          <div className="badge badge-soft badge-error">Error</div>
+        </section>
+
         <section className="space-x-2">
           <div className="badge badge-primary">Primary</div>
           <div className="badge badge-secondary">Secondary</div>
-          <div className="badge badge-accent">Accent</div>
-          <div className="badge badge-outline">Outline</div>
+
+          <div className="badge badge-neutral">Neutral</div>
+          <div className="badge badge-info">Info</div>
+          <div className="badge badge-success">Success</div>
+          <div className="badge badge-warning">Warning</div>
+          <div className="badge badge-error">Error</div>
         </section>
       </div>
     </div>
