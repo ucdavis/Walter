@@ -12,7 +12,7 @@ export function ProjectDetails({ summary }: ProjectDetailsProps) {
   return (
     <section className="section-margin">
       <div className="fancy-data">
-        <dl className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <dl className="grid grid-cols-1 md:grid-cols-4 gap-6 divide-x divide-main-border">
           <div className="flex flex-col">
             <dt className="font-proxima-bold text-lg">Start</dt>
             <dd className="text-xl">{formatDate(summary.awardStartDate)}</dd>
