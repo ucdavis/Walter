@@ -146,7 +146,7 @@ function RouteComponent() {
         </p>
       </div>
 
-      <div className="relative mx-auto w-full sm:max-w-[90%] md:max-w-[80%] xl:max-w-[66%]">
+      <div className="home-search relative mx-auto w-full sm:max-w-[90%] md:max-w-[80%] xl:max-w-[66%]">
         <SearchButton
           className="w-full"
           placeholder="Search PIs, Projects, Personnel..."
@@ -195,7 +195,7 @@ function RouteComponent() {
         <div aria-labelledby="tab-pis" id="panel-pis" role="tabpanel">
           {isProjectManager ? (
             <>
-              <div className="flex justify-end mt-4">
+              <div className="flex justify-end">
                 <ExportCsvButton
                   columns={piCsvColumns}
                   data={managedPis.map((pi) => ({
@@ -207,7 +207,7 @@ function RouteComponent() {
                   filename="principal-investigators.csv"
                 />
               </div>
-              <table className="walter-table table mt-2">
+              <table className="walter-table table">
                 <thead>
                   <tr>
                     <th>PI Name</th>
@@ -241,14 +241,14 @@ function RouteComponent() {
             </>
           ) : (
             <>
-              <div className="flex justify-end mt-4">
+              <div className="flex justify-end">
                 <ExportCsvButton
                   columns={projectCsvColumns}
                   data={projects}
                   filename="projects.csv"
                 />
               </div>
-              <table className="walter-table table mt-2">
+              <table className="walter-table table">
                 <thead>
                   <tr>
                     <th>Project Name</th>

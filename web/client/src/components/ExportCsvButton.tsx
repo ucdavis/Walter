@@ -1,4 +1,4 @@
-import { ArrowDownTrayIcon } from '@heroicons/react/24/outline';
+import { DocumentChartBarIcon } from '@heroicons/react/24/outline';
 import { downloadCsv, toCsv } from '@/lib/csv.ts';
 
 type CsvValue = string | number | boolean | null | undefined;
@@ -27,7 +27,7 @@ export function ExportCsvButton<T extends Record<string, CsvValue>>({
       onClick={handleExport}
       type="button"
     >
-      <ArrowDownTrayIcon className="w-4 h-4" />
+      <DocumentChartBarIcon className="w-4 h-4" />
       Export CSV
     </button>
   );
