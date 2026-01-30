@@ -2,7 +2,8 @@ CREATE PROCEDURE dbo.usp_GetLaborLedgerData
     @FinancialDept VARCHAR(7),
     @StartDate DATE = NULL,
     @EndDate DATE = NULL,
-    @ApplicationName NVARCHAR(128) = NULL
+    @ApplicationName NVARCHAR(128) = NULL,
+    @ApplicationUser NVARCHAR(256) = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -29,6 +30,9 @@ BEGIN
 
     -- Sanitize ApplicationName for injection protection (whitelist: alphanumeric + spaces only)
     EXEC dbo.usp_SanitizeInputString @ApplicationName OUTPUT;
+
+    -- Sanitize ApplicationUser for injection protection
+    EXEC dbo.usp_SanitizeInputString @ApplicationUser OUTPUT;
 
     -- Sanitize FinancialDept for SQL injection protection (defense in depth)
     EXEC dbo.usp_SanitizeInputString @FinancialDept OUTPUT;
@@ -130,6 +134,7 @@ BEGIN
             @RowCount = @RowCount,
             @Parameters = @ParametersJSON,
             @ApplicationName = @ApplicationName,
+            @ApplicationUser = @ApplicationUser,
             @Success = 1;
     END TRY
     BEGIN CATCH
@@ -142,6 +147,7 @@ BEGIN
             @Duration_MS = @Duration_MS,
             @Parameters = @ParametersJSON,
             @ApplicationName = @ApplicationName,
+            @ApplicationUser = @ApplicationUser,
             @Success = 0,
             @ErrorMessage = @ErrorMsg;
 
