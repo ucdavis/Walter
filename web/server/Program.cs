@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using server.core.Data;
+using server.HealthChecks;
 using server.Helpers;
 using Server.Services;
 using server.core.Services;
@@ -74,7 +75,12 @@ builder.Services.AddDbContextPool<AppDbContext>(o => o.UseSqlServer(conn, opt =>
 
 builder.Services
     .AddHealthChecks()
-    .AddDbContextCheck<AppDbContext>();
+    .AddDbContextCheck<AppDbContext>()
+    .AddCheck<DmConnectivityHealthCheck>(
+        name: "datamart_connectivity",
+        failureStatus: HealthStatus.Unhealthy,
+        tags: null,
+        timeout: TimeSpan.FromSeconds(60));
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
