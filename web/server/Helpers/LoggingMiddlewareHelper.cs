@@ -1,3 +1,4 @@
+using System;
 using System.Diagnostics;
 
 namespace server.Helpers;
@@ -17,10 +18,24 @@ public static class LoggingMiddlewareHelper
             var traceId = activity?.TraceId.ToString();
             var spanId = activity?.SpanId.ToString();
 
-            // user info (name/ID if authenticated)
-            var userName = ctx.User.Identity?.IsAuthenticated == true
-                ? (ctx.User.Identity?.Name ?? "authenticated")
-                : "anonymous";
+            // user info (stable identifiers when authenticated)
+            var isAuthenticated = ctx.User.Identity?.IsAuthenticated == true;
+
+            Guid? userId = null;
+            string? userIdentifier = null;
+
+            if (isAuthenticated)
+            {
+                try
+                {
+                    userId = ctx.User.GetUserId();
+                }
+                catch
+                {
+                }
+
+                userIdentifier = ctx.User.GetUserIdentifier();
+            }
 
             // client IP (respects ForwardedHeaders above)
             var clientIp = ctx.Connection.RemoteIpAddress?.ToString();
@@ -31,7 +46,8 @@ public static class LoggingMiddlewareHelper
             // Make these available to all logs in this request
             using (app.Logger.BeginScope(new Dictionary<string, object?>
             {
-                ["user.name"] = userName,
+                ["user.id"] = userId,
+                ["user.identifier"] = userIdentifier,
                 ["request.id"] = requestId,
                 ["trace.id"] = traceId,
                 ["span.id"] = spanId,
