@@ -89,39 +89,37 @@ function RouteComponent() {
   return (
     <div className="container mt-8">
       <div className="flex gap-12 mt-8">
-        <aside className="w-72 shrink-0">Sidenav placeholder?</aside>
-
         <section className="flex-1">
           <h1 className="h1">Employee Vacation Accruals</h1>
-          <div className="flex justify-between gap-12 px-6 mt-4 mb-8 border rounded-md bg-light-bg-200 border-main-border py-4 h-36">
-            <div className="flex flex-col flex-1">
-              <h2 className="h5">Employees at Max</h2>
-              <p className="text-3xl mt-1">{employeesAtMax}</p>
-              <p className="mt-auto text-sm text-dark-font/70">
-                {toPercent(employeesAtMax)} of{' '}
-                {totalEmployees === 0 ? '0' : totalEmployees} employees reached
-                accrual limit.
-              </p>
+          <dl className="fancy-data">
+            <div className="grid items-stretch grid-cols-1 md:grid-cols-3 gap-6 divide-y md:divide-y-0 md:divide-x divide-main-border">
+              <div className="flex flex-col">
+                <dt className="stat-label">Employees at Max</dt>
+                <dd className="text-xl mb-3">{employeesAtMax}</dd>
+                <dd className="mt-auto text-sm text-dark-font/70">
+                  {toPercent(employeesAtMax)} of{' '}
+                  {totalEmployees === 0 ? '0' : totalEmployees} employees
+                  reached accrual limit.
+                </dd>
+              </div>
+              <div className="flex flex-col">
+                <dt className="stat-label">Trending to Max (&gt;90%)</dt>
+                <dd className="text-xl mb-3">{trendingToMax}</dd>
+                <dd className="mt-auto text-sm text-dark-font/70">
+                  {toPercent(trendingToMax)} are above 90% of their limit.
+                </dd>
+              </div>
+              <div className="flex flex-col">
+                <dt className="stat-label">Monthly Liability</dt>
+                <dd className="text-xl font-extrabold text-info mb-3">
+                  $75,945
+                </dd>
+                <dd className="mt-auto text-sm text-dark-font/70">
+                  Static value for now.
+                </dd>
+              </div>
             </div>
-
-            <div className="flex flex-col flex-1">
-              <h2 className="h5">Trending to Max (&gt;90%)</h2>
-              <p className="text-3xl mt-1 text-error">{trendingToMax}</p>
-              <p className="mt-auto text-sm text-dark-font/70">
-                {toPercent(trendingToMax)} are above 90% of their limit.
-              </p>
-            </div>
-
-            <div className="flex flex-col flex-1">
-              <h2 className="h5">Monthly Liability</h2>
-              <p className="text-3xl mt-1 font-semibold text-primary">
-                $75,945
-              </p>
-              <p className="mt-auto text-sm text-dark-font/70">
-                Static value for now.
-              </p>
-            </div>
-          </div>
+          </dl>
 
           <DataTable
             columns={columns}

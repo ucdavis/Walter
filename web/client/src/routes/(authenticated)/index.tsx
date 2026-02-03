@@ -14,10 +14,10 @@ import { useUser } from '@/shared/auth/UserContext.tsx';
 import { createFileRoute, Link } from '@tanstack/react-router';
 
 const piCsvColumns = [
-  { key: 'name' as const, header: 'PI Name' },
-  { key: 'projectCount' as const, header: 'Projects' },
-  { key: 'totalBalance' as const, header: 'Balance' },
-  { key: 'totalBudget' as const, header: 'Budget' },
+  { header: 'PI Name', key: 'name' as const },
+  { header: 'Projects', key: 'projectCount' as const },
+  { header: 'Balance', key: 'totalBalance' as const },
+  { header: 'Budget', key: 'totalBudget' as const },
 ];
 
 type Tab = 'pis' | 'personnel' | 'reports';
@@ -98,7 +98,7 @@ function RouteComponent() {
         </p>
       </div>
 
-      <div className="relative mx-auto w-full sm:max-w-[90%] md:max-w-[80%] xl:max-w-[66%]">
+      <div className="home-search relative mx-auto w-full sm:max-w-[90%] md:max-w-[80%] xl:max-w-[66%]">
         <SearchButton
           className="w-full"
           placeholder="Search PIs, Projects, Personnel..."
@@ -147,19 +147,19 @@ function RouteComponent() {
         <div aria-labelledby="tab-pis" id="panel-pis" role="tabpanel">
           {isProjectManager ? (
             <>
-              <div className="flex justify-end mt-4">
+              <div className="flex justify-end">
                 <ExportCsvButton
+                  columns={piCsvColumns}
                   data={managedPis.map((pi) => ({
                     name: pi.name,
                     projectCount: pi.projectCount,
                     totalBalance: pi.totalBalance,
                     totalBudget: pi.totalBudget,
                   }))}
-                  columns={piCsvColumns}
                   filename="principal-investigators.csv"
                 />
               </div>
-              <table className="walter-table table mt-2">
+              <table className="walter-table table">
                 <thead>
                   <tr>
                     <th>PI Name</th>

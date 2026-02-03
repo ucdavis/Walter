@@ -12,11 +12,11 @@
 
   --color-primary-color: var(--color-ucd-gunrock);
   --color-secondary-color: var(--color-ucd-gold);
-  --color-accent-color: var(--color-ucd-goldenstate);
+  --color-accent-color: var(--color-ucd-gold);
   --color-error-color: var(--color-ucd-doubledecker);
-  --color-info-color: var(--color-ucd-rain);
-  --color-success-color: var(--color-ucd-sage);
-  --color-warning-color: var(--color-ucd-gold);
+  --color-info-color: var(--color-ucd-tahoe);
+  --color-success-color: var(--color-ucd-quad);
+  --color-warning-color: #e6a700;
 }
 
 @plugin "daisyui/theme" {
@@ -36,8 +36,13 @@
   --color-error-content: var(--color-light-font);
 
   --color-info: var(--color-info-color);
+  --color-info-content: var(--color-light-font);
+
   --color-accent: var(--color-accent-color);
+  --color-accent-content: var(--color-light-font);
+
   --color-success: var(--color-success-color);
+  --color-success-content: var(--color-light-font);
 
   --color-warning: var(--color-warning-color);
   --color-warning-content: var(--color-light-font);
@@ -61,7 +66,13 @@
 .section-margin {
   @apply mb-20;
 }
-
+.alert {
+  font-weight: 800;
+}
+.home-search .input {
+  height: 60px;
+  font-size: 1.1rem;
+}
 @layer components {
   .card {
     @apply border-1 border-main-border bg-base-200;

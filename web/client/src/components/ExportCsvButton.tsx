@@ -1,4 +1,4 @@
-import { ArrowDownTrayIcon } from '@heroicons/react/24/outline';
+import { DocumentChartBarIcon } from '@heroicons/react/24/outline';
 import { downloadCsv, toCsv } from '@/lib/csv.ts';
 
 interface ExportCsvButtonProps<T> {
@@ -25,7 +25,7 @@ export function ExportCsvButton<T>({
       onClick={handleExport}
       type="button"
     >
-      <ArrowDownTrayIcon className="w-4 h-4" />
+      <DocumentChartBarIcon className="w-4 h-4" />
       Export CSV
     </button>
   );
