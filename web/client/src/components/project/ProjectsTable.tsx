@@ -6,12 +6,12 @@ import { formatDate } from '@/lib/date.ts';
 import type { ProjectRecord } from '@/queries/project.ts';
 
 interface AggregatedProject {
-  projectNumber: string;
-  displayName: string;
-  awardStartDate: string | null;
   awardEndDate: string | null;
+
   awardStartDate: string | null;
+  displayName: string;
   projectName: string;
+
   projectNumber: string;
   totalBalance: number;
   totalBudget: number;
@@ -45,13 +45,13 @@ function aggregateProjects(records: ProjectRecord[]): AggregatedProject[] {
       }
     } else {
       projectsMap.set(p.projectNumber, {
-        projectNumber: p.projectNumber,
-        displayName: p.displayName,
-        awardStartDate: p.awardStartDate,
         awardEndDate: p.awardEndDate,
         awardStartDate: p.awardStartDate,
+
+        displayName: p.displayName,
         projectName: p.projectName,
         projectNumber: p.projectNumber,
+
         totalBalance: p.catBudBal,
         totalBudget: p.catBudget,
         totalEncumbrance: p.catCommitments,
