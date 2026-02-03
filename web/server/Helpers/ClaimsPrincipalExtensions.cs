@@ -29,4 +29,15 @@ public static class ClaimsPrincipalExtensions
 
         return userId;
     }
+
+    /// <summary>
+    /// Returns the authenticated user's kerberos ID or email for audit logging.
+    /// </summary>
+    public static string? GetUserIdentifier(this ClaimsPrincipal principal)
+    {
+        ArgumentNullException.ThrowIfNull(principal);
+
+        return principal.FindFirstValue("kerberos")
+            ?? principal.FindFirstValue(ClaimTypes.Email);
+    }
 }

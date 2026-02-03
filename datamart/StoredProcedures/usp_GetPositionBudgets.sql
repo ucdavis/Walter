@@ -136,6 +136,7 @@ BEGIN
                 POSITION_NBR,
                 DESCR,
                 JOBCODE,
+                EFF_STATUS,
                 ROW_NUMBER() OVER(
                     PARTITION BY POSITION_NBR
                     ORDER BY EFFDT DESC
@@ -177,9 +178,10 @@ BEGIN
             AND p.rnk = 1
         LEFT JOIN LatestEmployee e
             ON p.EMPLID = e.EMPLID
-        LEFT JOIN LatestPositionDesc pd
+        JOIN LatestPositionDesc pd
             ON b.POSITION_NBR = pd.POSITION_NBR
             AND pd.rnk = 1
+            AND pd.EFF_STATUS = ''A''
         WHERE b.rnk = 1
         ORDER BY b.POSITION_NBR
     ';

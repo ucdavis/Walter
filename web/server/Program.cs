@@ -25,7 +25,7 @@ builder.Configuration
 
 // setup logging and telemetry
 TelemetryHelper.ConfigureLogging(builder.Logging);
-TelemetryHelper.ConfigureOpenTelemetry(builder.Services);
+TelemetryHelper.ConfigureOpenTelemetry(builder.Services, builder.Environment);
 
 // handy for getting true client IP
 builder.Services.Configure<ForwardedHeadersOptions>(o =>

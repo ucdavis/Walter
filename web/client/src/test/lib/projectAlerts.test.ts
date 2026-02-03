@@ -12,7 +12,7 @@ const createSummary = (
   pa: null,
   pi: null,
   pm: null,
-  projectName: 'Test Project',
+  displayName: 'TEST-001: Test Project',
   projectNumber: 'TEST-001',
   projectStatusCode: 'ACTIVE',
   totals: { balance: 5000, budget: 10000, encumbrance: 0, expense: 5000 },

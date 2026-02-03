@@ -6,6 +6,9 @@ import { formatDate } from '@/lib/date.ts';
 import type { ProjectRecord } from '@/queries/project.ts';
 
 interface AggregatedProject {
+  projectNumber: string;
+  displayName: string;
+  awardStartDate: string | null;
   awardEndDate: string | null;
   awardStartDate: string | null;
   projectName: string;
@@ -42,6 +45,9 @@ function aggregateProjects(records: ProjectRecord[]): AggregatedProject[] {
       }
     } else {
       projectsMap.set(p.projectNumber, {
+        projectNumber: p.projectNumber,
+        displayName: p.displayName,
+        awardStartDate: p.awardStartDate,
         awardEndDate: p.awardEndDate,
         awardStartDate: p.awardStartDate,
         projectName: p.projectName,
@@ -82,8 +88,7 @@ function sortByEndDate(projects: AggregatedProject[]): AggregatedProject[] {
 }
 
 const csvColumns = [
-  { header: 'Project Number', key: 'projectNumber' as const },
-  { header: 'Project Name', key: 'projectName' as const },
+  { header: 'Project', key: 'displayName' as const },
   { header: 'Effective Date', key: 'awardStartDate' as const },
   { header: 'End Date', key: 'awardEndDate' as const },
   { header: 'Budget', key: 'totalBudget' as const },
@@ -160,7 +165,7 @@ export function ProjectsTable({ employeeId, records }: ProjectsTableProps) {
                   }}
                   to="/projects/$employeeId/$projectNumber/"
                 >
-                  {project.projectName}
+                  {project.displayName}
                 </Link>
               </td>
               <td className="text-right">

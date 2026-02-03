@@ -20,10 +20,10 @@ export interface ProjectSummary {
   awardStartDate: string | null;
   categories: ProjectCategorySummary[];
   copi: string | null;
+  displayName: string;
   pa: string | null;
   pi: string | null;
   pm: string | null;
-  projectName: string;
   projectNumber: string;
   projectStatusCode: string | null;
   totals: ProjectTotals;
@@ -113,10 +113,10 @@ export const summarizeAllProjects = (
     awardStartDate: findEarliestDate(records, 'awardStartDate'),
     categories,
     copi: null,
+    displayName: DEFAULT_SUMMARY_NAME,
     pa: null,
     pi: 'Multiple',
     pm: 'Multiple',
-    projectName: DEFAULT_SUMMARY_NAME,
     projectNumber: DEFAULT_SUMMARY_NUMBER,
     projectStatusCode: 'ACTIVE',
     totals,
@@ -143,10 +143,10 @@ export const summarizeProjectByNumber = (
     awardStartDate: findEarliestDate(filtered, 'awardStartDate'),
     categories,
     copi: first.copi,
+    displayName: first.displayName,
     pa: first.pa,
     pi: first.pi,
     pm: first.pm,
-    projectName: first.projectName,
     projectNumber: first.projectNumber,
     projectStatusCode: first.projectStatusCode,
     totals,
