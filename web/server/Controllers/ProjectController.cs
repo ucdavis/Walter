@@ -40,7 +40,8 @@ public sealed class ProjectController : ApiControllerBase
         if (!projectNumbers.Any())
             return Ok(Array.Empty<FacultyPortfolioRecord>());
 
-        var projects = await _datamartService.GetFacultyPortfolioAsync(projectNumbers, cancellationToken);
+        var applicationUser = User.GetUserIdentifier();
+        var projects = await _datamartService.GetFacultyPortfolioAsync(projectNumbers, applicationUser, cancellationToken);
         return Ok(projects);
     }
 
@@ -79,7 +80,8 @@ public sealed class ProjectController : ApiControllerBase
             return Ok(Array.Empty<PositionBudgetRecord>());
 
         var codes = projectCodes.Split(',', StringSplitOptions.RemoveEmptyEntries);
-        var personnel = await _datamartService.GetPositionBudgetsAsync(codes, cancellationToken);
+        var applicationUser = User.GetUserIdentifier();
+        var personnel = await _datamartService.GetPositionBudgetsAsync(codes, applicationUser, cancellationToken);
 
         return Ok(personnel);
     }
