@@ -38,6 +38,7 @@ public static class ClaimsPrincipalExtensions
         ArgumentNullException.ThrowIfNull(principal);
 
         return principal.FindFirstValue("kerberos")
-            ?? principal.FindFirstValue(ClaimTypes.Email);
+            ?? principal.FindFirstValue(ClaimTypes.Email)
+            ?? principal.FindFirstValue("preferred_username"); // email w/ our entra setup
     }
 }
