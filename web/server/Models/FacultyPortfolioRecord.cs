@@ -30,7 +30,10 @@ public sealed class FacultyPortfolioRecord
     {
         get
         {
-            var cleanedName = (ProjectName ?? "").Replace(ProjectNumber, "").Trim();
+            var projectName = ProjectName ?? "";
+            var cleanedName = string.IsNullOrEmpty(ProjectNumber)
+                ? projectName.Trim()
+                : projectName.Replace(ProjectNumber, "").Trim();
             var name = $"{ProjectNumber}: {cleanedName}";
             if (ProjectType == "Internal" && !string.IsNullOrEmpty(TaskName))
                 name += $" - {TaskName}";
