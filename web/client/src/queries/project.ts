@@ -11,6 +11,7 @@ export interface ProjectRecord {
   catCommitments: number;
   catItdExp: number;
   copi: string | null;
+  displayName: string;
   expenditureCategoryName: string;
   fundDesc: string;
   pa: string | null;
@@ -21,6 +22,7 @@ export interface ProjectRecord {
   projectNumber: string;
   projectOwningOrg: string;
   projectStatusCode: string;
+  projectType: string;
   purposeDesc: string;
   taskName: string;
   taskNum: string;

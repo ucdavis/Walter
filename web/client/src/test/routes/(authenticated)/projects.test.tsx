@@ -74,12 +74,14 @@ describe('home route', () => {
       {
         projectNumber: 'P1',
         projectName: 'Project One',
+        displayName: 'P1: Project One',
         awardEndDate: '2099-12-31',
         catBudBal: 1000,
       },
       {
         projectNumber: 'P2',
         projectName: 'Project Two',
+        displayName: 'P2: Project Two',
         awardEndDate: null,
         catBudBal: 2000,
       },
@@ -99,8 +101,8 @@ describe('home route', () => {
       expect(
         await screen.findByRole('tab', { name: 'Projects' })
       ).toBeInTheDocument();
-      expect(await screen.findByText('Project One')).toBeInTheDocument();
-      expect(await screen.findByText('Project Two')).toBeInTheDocument();
+      expect(await screen.findByText('P1: Project One')).toBeInTheDocument();
+      expect(await screen.findByText('P2: Project Two')).toBeInTheDocument();
     } finally {
       cleanup();
     }
@@ -121,18 +123,21 @@ describe('home route', () => {
       {
         projectNumber: 'P1',
         projectName: 'Project One',
+        displayName: 'P1: Project One',
         awardEndDate: '2099-12-31',
         catBudBal: 1000,
       },
       {
         projectNumber: 'P1',
         projectName: 'Project One',
+        displayName: 'P1: Project One',
         awardEndDate: '2099-12-31',
         catBudBal: 500,
       },
       {
         projectNumber: 'P1',
         projectName: 'Project One',
+        displayName: 'P1: Project One',
         awardEndDate: '2099-12-31',
         catBudBal: 250,
       },
@@ -148,7 +153,7 @@ describe('home route', () => {
     const { cleanup } = renderRoute({ initialPath: '/' });
 
     try {
-      await screen.findByText('Project One');
+      await screen.findByText('P1: Project One');
       // Should only have one row for Project One
       const rows = screen.getAllByRole('row');
       // 1 header row + 1 data row + 1 totals row
@@ -170,6 +175,7 @@ describe('home route', () => {
       {
         projectNumber: 'P1',
         projectName: 'Project One',
+        displayName: 'P1: Project One',
         awardEndDate: '2099-12-31',
         catBudBal: 1000,
       },
@@ -243,6 +249,7 @@ describe('getPiProjectAlerts', () => {
     projects: Array<{
       projectNumber: string;
       projectName: string;
+      displayName: string;
       catBudget: number;
       catBudBal: number;
     }>
@@ -261,6 +268,7 @@ describe('getPiProjectAlerts', () => {
         {
           projectNumber: 'P1',
           projectName: 'Project One',
+          displayName: 'P1: Project One',
           catBudget: 1000,
           catBudBal: -500,
         },
@@ -280,6 +288,7 @@ describe('getPiProjectAlerts', () => {
         {
           projectNumber: 'P1',
           projectName: 'Project One',
+          displayName: 'P1: Project One',
           catBudget: 1000,
           catBudBal: 50,
         },
@@ -299,6 +308,7 @@ describe('getPiProjectAlerts', () => {
         {
           projectNumber: 'P1',
           projectName: 'Project One',
+          displayName: 'P1: Project One',
           catBudget: 1000,
           catBudBal: 500,
         },
@@ -316,12 +326,14 @@ describe('getPiProjectAlerts', () => {
         {
           projectNumber: 'P1',
           projectName: 'Warning Project',
+          displayName: 'P1: Warning Project',
           catBudget: 1000,
           catBudBal: 50,
         },
         {
           projectNumber: 'P2',
           projectName: 'Error Project',
+          displayName: 'P2: Error Project',
           catBudget: 1000,
           catBudBal: -100,
         },
@@ -340,24 +352,28 @@ describe('getPiProjectAlerts', () => {
         {
           projectNumber: 'P1',
           projectName: 'Project 1',
+          displayName: 'P1: Project 1',
           catBudget: 1000,
           catBudBal: -100,
         },
         {
           projectNumber: 'P2',
           projectName: 'Project 2',
+          displayName: 'P2: Project 2',
           catBudget: 1000,
           catBudBal: -200,
         },
         {
           projectNumber: 'P3',
           projectName: 'Project 3',
+          displayName: 'P3: Project 3',
           catBudget: 1000,
           catBudBal: -300,
         },
         {
           projectNumber: 'P4',
           projectName: 'Project 4',
+          displayName: 'P4: Project 4',
           catBudget: 1000,
           catBudBal: -400,
         },

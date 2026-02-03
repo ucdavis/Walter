@@ -92,7 +92,7 @@ export function getPiProjectAlerts(
 
       const projectAlerts = getAlertsForProject(
         summary,
-        `${summary.projectName} `
+        `${summary.displayName} `
       );
 
       for (const alert of projectAlerts) {
