@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Hosting;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
@@ -23,26 +24,34 @@ public static class TelemetryHelper
             logOptions.IncludeFormattedMessage = true; // keep original message
             logOptions.IncludeScopes = true;           // carry our scope props
             logOptions.ParseStateValues = true;        // structured state
-            logOptions.AddOtlpExporter(); // read env vars for endpoint
+            logOptions.AddOtlpExporter(); // configured via OTEL_* env vars / IConfiguration
         });
     }
 
     /// <summary>
     /// Configures OpenTelemetry tracing and metrics with ASP.NET Core and HTTP client instrumentation
     /// </summary>
-    public static void ConfigureOpenTelemetry(IServiceCollection services)
+    public static void ConfigureOpenTelemetry(IServiceCollection services, IHostEnvironment env)
     {
+        Sampler sampler = env.IsDevelopment()
+            ? new AlwaysOnSampler()
+            : new TraceIdRatioBasedSampler(0.2);
+
         services.AddOpenTelemetry()
             .WithTracing(t => t
-                    .SetSampler(new TraceIdRatioBasedSampler(0.2))
+                    .SetSampler(sampler)
                     .AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation()
-                    .AddOtlpExporter()
+                    .AddSqlClientInstrumentation(o =>
+                    {
+                        o.RecordException = true;
+                    })
+                    .AddOtlpExporter() // configured via OTEL_* env vars / IConfiguration
             )
             .WithMetrics(m => m
                     .AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation()
-                    .AddOtlpExporter()
+                    .AddOtlpExporter() // configured via OTEL_* env vars / IConfiguration
             );
     }
 }
