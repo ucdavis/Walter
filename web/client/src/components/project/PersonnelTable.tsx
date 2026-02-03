@@ -274,7 +274,7 @@ export function PersonnelTable({
 
   return (
     <div className="overflow-x-auto">
-      <div className="flex justify-end">
+      <div className="flex justify-end mb-2">
         <ExportCsvButton
           columns={personnelCsvColumns}
           data={getExportData(positions)}

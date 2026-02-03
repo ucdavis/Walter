@@ -1,16 +1,14 @@
 import { DocumentChartBarIcon } from '@heroicons/react/24/outline';
 import { downloadCsv, toCsv } from '@/lib/csv.ts';
 
-type CsvValue = string | number | boolean | null | undefined;
-
-interface ExportCsvButtonProps<T extends Record<string, CsvValue>> {
+interface ExportCsvButtonProps<T> {
   className?: string;
   columns: { header: string; key: keyof T }[];
   data: T[];
   filename: string;
 }
 
-export function ExportCsvButton<T extends Record<string, CsvValue>>({
+export function ExportCsvButton<T>({
   className = '',
   columns,
   data,

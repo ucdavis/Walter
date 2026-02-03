@@ -1,12 +1,14 @@
 CREATE PROCEDURE dbo.usp_GetPositionBudgets
     @FinancialDept VARCHAR(7) = NULL,
     @ProjectIds VARCHAR(MAX) = NULL,
-    @ApplicationName NVARCHAR(128) = NULL
+    @FiscalYear VARCHAR(4) = NULL,
+    @ApplicationName NVARCHAR(128) = NULL,
+    @ApplicationUser NVARCHAR(256) = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
 
-    -- Validate: exactly one filter must be provided
+    -- Validate: exactly one filter must be
     IF (@FinancialDept IS NULL AND @ProjectIds IS NULL)
     BEGIN
         RAISERROR('Either @FinancialDept or @ProjectIds must be provided', 16, 1);
@@ -37,9 +39,16 @@ BEGIN
     -- Sanitize ApplicationName for injection protection
     EXEC dbo.usp_SanitizeInputString @ApplicationName OUTPUT;
 
+    -- Sanitize ApplicationUser for injection protection
+    EXEC dbo.usp_SanitizeInputString @ApplicationUser OUTPUT;
+
     -- Sanitize FinancialDept for SQL injection protection
     IF @FinancialDept IS NOT NULL
         EXEC dbo.usp_SanitizeInputString @FinancialDept OUTPUT;
+
+    -- Sanitize FiscalYear for SQL injection protection
+    IF @FiscalYear IS NOT NULL
+        EXEC dbo.usp_SanitizeInputString @FiscalYear OUTPUT;
 
     -- Parse and validate ProjectIds if provided
     DECLARE @ProjectIdFilter NVARCHAR(MAX);
@@ -49,7 +58,7 @@ BEGIN
 
     -- Build Oracle query joining budget and position data
     SET @OracleQuery = '
-        WITH LatestBudget AS (
+        WITH RankedBudget AS (
             SELECT
                 budget.FISCAL_YEAR,
                 budget.POSITION_NBR,
@@ -75,11 +84,20 @@ BEGIN
             JOIN caes_hcmods.PS_ACCT_CD_TBL_V acct
                 ON budget.ACCT_CD = acct.ACCT_CD
             WHERE budget.DML_IND != ''D''
-              AND acct.DML_IND != ''D''
+              AND acct.DML_IND != ''D''' +
+              CASE
+                    WHEN @FiscalYear IS NOT NULL
+                    THEN ' AND budget.FISCAL_YEAR = ''' + @FiscalYear + ''''
+                    ELSE ''
+              END + '
+        ),
+        LatestBudget AS (
+            SELECT * FROM RankedBudget
+            WHERE rnk = 1
               ' + CASE
                     WHEN @FinancialDept IS NOT NULL
-                    THEN 'AND acct.DEPTID_CF = ''' + @FinancialDept + ''''
-                    ELSE 'AND acct.PROJECT_ID IN (' + @ProjectIdFilter + ')'
+                    THEN 'AND DEPTID_CF = ''' + @FinancialDept + ''''
+                    ELSE 'AND PROJECT_ID IN (' + @ProjectIdFilter + ')'
                 END + '
         ),
         LatestPosition AS (
@@ -87,17 +105,20 @@ BEGIN
                 POSITION_NBR,
                 EFFDT,
                 EFFSEQ,
-                EMPLID,
-                MONTHLY_RT,
-                EXPECTED_END_DATE,
-                FTE,
-                TERMINATION_DT,
+                CASE WHEN EMPL_STATUS NOT IN (''T'', ''R'') THEN EMPLID END AS EMPLID,
+                CASE WHEN EMPL_STATUS NOT IN (''T'', ''R'') THEN MONTHLY_RT END AS MONTHLY_RT,
+                CASE WHEN EMPL_STATUS NOT IN (''T'', ''R'') THEN EXPECTED_END_DATE END AS EXPECTED_END_DATE,
+                CASE WHEN EMPL_STATUS NOT IN (''T'', ''R'') THEN FTE END AS FTE,
+                CASE WHEN EMPL_STATUS NOT IN (''T'', ''R'') THEN TERMINATION_DT END AS TERMINATION_DT,
+                CASE WHEN EMPL_STATUS NOT IN (''T'', ''R'') THEN 1 ELSE 0 END AS IS_ACTIVE,
                 DENSE_RANK() OVER(
                     PARTITION BY POSITION_NBR
                     ORDER BY EFFDT DESC, EFFSEQ DESC
                 ) AS rnk
             FROM caes_hcmods.PS_JOB_V
             WHERE DML_IND != ''D''
+              AND EFFDT <= TRUNC(SYSDATE)
+              AND NOT (AUTO_END_FLG = ''Y'' AND EXPECTED_END_DATE < TRUNC(SYSDATE))
               AND POSITION_NBR IN (SELECT DISTINCT POSITION_NBR FROM LatestBudget)
         ),
         LatestEmployee AS (
@@ -105,7 +126,10 @@ BEGIN
                 EMPLID,
                 NAME
             FROM caes_hcmods.UCD_PS_NAMES_V
-            WHERE EMPLID IN (SELECT DISTINCT EMPLID FROM LatestPosition WHERE EMPLID IS NOT NULL)
+            WHERE EMPLID IN (
+                SELECT DISTINCT EMPLID FROM LatestPosition
+                WHERE EMPLID IS NOT NULL AND rnk = 1 AND IS_ACTIVE = 1
+            )
         ),
         LatestPositionDesc AS (
             SELECT
@@ -144,7 +168,7 @@ BEGIN
             p.EXPECTED_END_DATE,
             p.FTE,
             p.TERMINATION_DT,
-            e.NAME,
+            CASE WHEN p.IS_ACTIVE = 1 THEN e.NAME END AS NAME,
             pd.DESCR AS POSITION_DESCR,
             pd.JOBCODE
         FROM LatestBudget b
@@ -165,6 +189,7 @@ BEGIN
         SELECT
             @FinancialDept AS FinancialDept,
             @ProjectIds AS ProjectIds,
+            @FiscalYear AS FiscalYear,
             COALESCE(@ApplicationName, APP_NAME()) AS ApplicationName
         FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
     );
@@ -278,6 +303,7 @@ BEGIN
             @RowCount = @RowCount,
             @Parameters = @ParametersJSON,
             @ApplicationName = @ApplicationName,
+            @ApplicationUser = @ApplicationUser,
             @Success = 1;
     END TRY
     BEGIN CATCH
@@ -296,6 +322,7 @@ BEGIN
             @Duration_MS = @Duration_MS,
             @Parameters = @ParametersJSON,
             @ApplicationName = @ApplicationName,
+            @ApplicationUser = @ApplicationUser,
             @Success = 0,
             @ErrorMessage = @ErrorMsg;
 
