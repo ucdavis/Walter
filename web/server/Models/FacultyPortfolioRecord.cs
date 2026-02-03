@@ -22,6 +22,25 @@ public sealed class FacultyPortfolioRecord
     [JsonPropertyName("projectName")]
     public string? ProjectName { get; set; }
 
+    [JsonPropertyName("projectType")]
+    public string? ProjectType { get; set; }
+
+    [JsonPropertyName("displayName")]
+    public string DisplayName
+    {
+        get
+        {
+            var projectName = ProjectName ?? "";
+            var cleanedName = string.IsNullOrEmpty(ProjectNumber)
+                ? projectName.Trim()
+                : projectName.Replace(ProjectNumber, "").Trim();
+            var name = $"{ProjectNumber}: {cleanedName}";
+            if (ProjectType == "Internal" && !string.IsNullOrEmpty(TaskName))
+                name += $" - {TaskName}";
+            return name;
+        }
+    }
+
     [JsonPropertyName("projectOwningOrg")]
     public string? ProjectOwningOrg { get; set; }
 

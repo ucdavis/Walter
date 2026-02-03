@@ -10,10 +10,10 @@ namespace server.Services;
 public interface IDatamartService
 {
     Task<IReadOnlyList<FacultyPortfolioRecord>> GetFacultyPortfolioAsync(
-        IEnumerable<string> projectNumbers, CancellationToken ct = default);
+        IEnumerable<string> projectNumbers, string? applicationUser = null, CancellationToken ct = default);
 
     Task<IReadOnlyList<PositionBudgetRecord>> GetPositionBudgetsAsync(
-        IEnumerable<string> projectNumbers, CancellationToken ct = default);
+        IEnumerable<string> projectNumbers, string? applicationUser = null, CancellationToken ct = default);
 }
 
 public sealed class DatamartService : IDatamartService
@@ -40,22 +40,22 @@ public sealed class DatamartService : IDatamartService
     }
 
     public async Task<IReadOnlyList<FacultyPortfolioRecord>> GetFacultyPortfolioAsync(
-        IEnumerable<string> projectNumbers, CancellationToken ct = default)
+        IEnumerable<string> projectNumbers, string? applicationUser = null, CancellationToken ct = default)
     {
         var projectNumbersParam = string.Join(",", projectNumbers);
         return await ExecuteSprocAsync<FacultyPortfolioRecord>(
             "dbo.usp_GetFacultyDeptPortfolio",
-            new { ProjectIds = projectNumbersParam, ApplicationName = _appName },
+            new { ProjectIds = projectNumbersParam, ApplicationName = _appName, ApplicationUser = applicationUser },
             ct: ct);
     }
 
     public async Task<IReadOnlyList<PositionBudgetRecord>> GetPositionBudgetsAsync(
-        IEnumerable<string> projectNumbers, CancellationToken ct = default)
+        IEnumerable<string> projectNumbers, string? applicationUser = null, CancellationToken ct = default)
     {
         var projectNumbersParam = string.Join(",", projectNumbers);
         return await ExecuteSprocAsync<PositionBudgetRecord>(
             "dbo.usp_GetPositionBudgets",
-            new { ProjectIds = projectNumbersParam, ApplicationName = _appName },
+            new { ProjectIds = projectNumbersParam, ApplicationName = _appName, ApplicationUser = applicationUser },
             ct: ct);
     }
 

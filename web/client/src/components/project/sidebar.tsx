@@ -9,7 +9,7 @@ import { Link, useParams } from '@tanstack/react-router';
 
 interface ProjectSummary {
   awardEndDate: string | null;
-  projectName: string;
+  displayName: string;
   projectNumber: string;
   projectStatusCode: string;
   totalCatBudBal: number;
@@ -24,7 +24,7 @@ function groupProjects(records: ProjectRecord[]): ProjectSummary[] {
     if (!map[key]) {
       map[key] = {
         awardEndDate: rec.awardEndDate,
-        projectName: rec.projectName,
+        displayName: rec.displayName,
         projectNumber: rec.projectNumber,
         projectStatusCode: rec.projectStatusCode,
         totalCatBudBal: 0,
@@ -121,7 +121,7 @@ export function ProjectsSidebar() {
                 viewTransition={{ types: ['slide-left'] }}
               >
                 <div className="flex justify-between items-start mb-1">
-                  <span className="text-base">{project.projectName}</span>
+                  <span className="text-base">{project.displayName}</span>
                 </div>
                 <div className="flex text-sm justify-between items-center text-dark-font/70">
                   <Currency value={project.totalCatBudBal} />
