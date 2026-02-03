@@ -2,15 +2,6 @@ import React from 'react';
 import { Link } from '@tanstack/react-router';
 import { SearchButton } from '@/components/search/SearchButton.tsx';
 
-const formatAsOfDate = (value: string | null) => {
-  if (!value) {
-    return 'N/A';
-  }
-
-  const date = new Date(value);
-  return `${date.getMonth() + 1}.${date.getDate()}.${date.getFullYear()}`;
-};
-
 const Header: React.FC = () => {
   return (
     <header className="bg-light-bg-200 border-b py-4 border-main-border sticky top-0 z-50">
@@ -23,11 +14,6 @@ const Header: React.FC = () => {
           <SearchButton className="w-52 sm:w-64" placeholder="Search…" />
         </div>
 
-        <div className="absolute top-[58px] left-1/2 -translate-x-1/2">
-          <span className="inline-block bg-primary-color text-white px-3 py-1 text-xs rounded font-proxima-bold">
-            DATA AS OF {formatAsOfDate(new Date().toDateString())}
-          </span>
-        </div>
         <div className="flex items-center">
           <div className="flex items-center gap-4">
             <nav className="flex items-center gap-6">
