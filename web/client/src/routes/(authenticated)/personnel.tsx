@@ -55,7 +55,7 @@ function RouteComponent() {
     return (
       <div className="container">
         <h1 className="h1 mt-8">{user.name}'s Personnel</h1>
-        <p className="text-base-content/70 mt-4">
+        <p className="text-base-content/70 mt-8">
           No projects found. Personnel will appear here once you have projects.
         </p>
       </div>

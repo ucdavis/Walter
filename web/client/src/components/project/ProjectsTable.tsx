@@ -6,14 +6,14 @@ import { formatDate } from '@/lib/date.ts';
 import type { ProjectRecord } from '@/queries/project.ts';
 
 interface AggregatedProject {
-  projectNumber: string;
-  projectName: string;
-  awardStartDate: string | null;
   awardEndDate: string | null;
-  totalBudget: number;
-  totalExpense: number;
-  totalEncumbrance: number;
+  awardStartDate: string | null;
+  projectName: string;
+  projectNumber: string;
   totalBalance: number;
+  totalBudget: number;
+  totalEncumbrance: number;
+  totalExpense: number;
 }
 
 function aggregateProjects(records: ProjectRecord[]): AggregatedProject[] {
@@ -42,14 +42,14 @@ function aggregateProjects(records: ProjectRecord[]): AggregatedProject[] {
       }
     } else {
       projectsMap.set(p.projectNumber, {
-        projectNumber: p.projectNumber,
-        projectName: p.projectName,
-        awardStartDate: p.awardStartDate,
         awardEndDate: p.awardEndDate,
-        totalBudget: p.catBudget,
-        totalExpense: p.catItdExp,
-        totalEncumbrance: p.catCommitments,
+        awardStartDate: p.awardStartDate,
+        projectName: p.projectName,
+        projectNumber: p.projectNumber,
         totalBalance: p.catBudBal,
+        totalBudget: p.catBudget,
+        totalEncumbrance: p.catCommitments,
+        totalExpense: p.catItdExp,
       });
     }
   }
@@ -66,9 +66,15 @@ function filterExpired(projects: AggregatedProject[]): AggregatedProject[] {
 
 function sortByEndDate(projects: AggregatedProject[]): AggregatedProject[] {
   return [...projects].sort((a, b) => {
-    if (!a.awardEndDate && !b.awardEndDate) return 0;
-    if (!a.awardEndDate) return -1;
-    if (!b.awardEndDate) return 1;
+    if (!a.awardEndDate && !b.awardEndDate) {
+      return 0;
+    }
+    if (!a.awardEndDate) {
+      return -1;
+    }
+    if (!b.awardEndDate) {
+      return 1;
+    }
     return (
       new Date(a.awardEndDate).getTime() - new Date(b.awardEndDate).getTime()
     );
@@ -102,23 +108,23 @@ export function ProjectsTable({ employeeId, records }: ProjectsTableProps) {
     () =>
       projects.reduce(
         (acc, p) => ({
-          totalBudget: acc.totalBudget + p.totalBudget,
-          totalExpense: acc.totalExpense + p.totalExpense,
-          totalEncumbrance: acc.totalEncumbrance + p.totalEncumbrance,
           totalBalance: acc.totalBalance + p.totalBalance,
+          totalBudget: acc.totalBudget + p.totalBudget,
+          totalEncumbrance: acc.totalEncumbrance + p.totalEncumbrance,
+          totalExpense: acc.totalExpense + p.totalExpense,
         }),
         {
-          totalBudget: 0,
-          totalExpense: 0,
-          totalEncumbrance: 0,
           totalBalance: 0,
+          totalBudget: 0,
+          totalEncumbrance: 0,
+          totalExpense: 0,
         }
       ),
     [projects]
   );
 
   if (projects.length === 0) {
-    return <p className="text-base-content/70 mt-4">No projects found.</p>;
+    return <p className="text-base-content/70 mt-8">No projects found.</p>;
   }
 
   return (
