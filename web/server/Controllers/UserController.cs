@@ -66,6 +66,8 @@ public class UserController : ApiControllerBase
         try
         {
             var photo = await _graphService.GetMePhotoAsync(User, cancellationToken);
+
+            // cache for 10 minutes even if not found (avoid repeated calls to graph for missing photos)
             SetAvatarCacheHeaders(seconds: 10 * 60);
 
             if (photo is null)

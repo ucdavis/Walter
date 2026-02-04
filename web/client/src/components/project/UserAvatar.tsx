@@ -33,6 +33,10 @@ export const getInitials = (name: string) => {
   }
 
   const tokens = toTokens(trimmed);
+  if (tokens.length === 0) {
+    return '?';
+  }
+
   if (tokens.length === 1) {
     return tokens[0].slice(0, 2).toUpperCase();
   }
@@ -87,4 +91,3 @@ export const UserAvatar: React.FC = () => {
     </div>
   );
 };
-
