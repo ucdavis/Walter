@@ -1,14 +1,19 @@
 import React from 'react';
 import { Link } from '@tanstack/react-router';
 import { SearchButton } from '@/components/search/SearchButton.tsx';
+import WalterLogo from '@/shared/walterLogo.tsx';
 
 const Header: React.FC = () => {
   return (
     <header className="bg-light-bg-200 border-b py-4 border-main-border sticky top-0 z-50">
       <div className="container flex items-center justify-between">
         <div className="flex items-center">
-          <Link className="flex items-center gap-2 mr-8" to="/">
-            <img alt="Dog outline logo" className="w-6" src="/walter.svg" />
+          <Link
+            aria-label="Walter"
+            className="flex items-center gap-2 mr-8"
+            to="/"
+          >
+            <WalterLogo className="w-8 h-8" />
             <h1 className="text-xl">Walter</h1>
           </Link>
           <SearchButton className="w-52 sm:w-64" placeholder="Search…" />
