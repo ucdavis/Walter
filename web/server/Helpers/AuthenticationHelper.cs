@@ -12,8 +12,25 @@ public static class AuthenticationHelper
     /// <summary>
     /// Configures Microsoft Identity Web authentication with Azure AD/Entra ID
     /// </summary>
-    public static IServiceCollection AddAuthenticationServices(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddAuthenticationServices(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        string dbConnectionString)
     {
+        if (string.IsNullOrWhiteSpace(dbConnectionString))
+        {
+            throw new InvalidOperationException("Database connection string is required for distributed token caching.");
+        }
+
+        // Persist MSAL token cache in SQL so delegated Graph calls survive server restarts.
+        // Table is created via EF Core migrations in server.core (see AppCache migration).
+        services.AddDistributedSqlServerCache(options =>
+        {
+            options.ConnectionString = dbConnectionString;
+            options.SchemaName = "dbo";
+            options.TableName = "AppCache";
+        });
+
         var authBuilder = services
             .AddAuthentication(options =>
             {
@@ -39,7 +56,7 @@ public static class AuthenticationHelper
 
         authBuilder
             .EnableTokenAcquisitionToCallDownstreamApi(initialScopes: EntraUserAttributeService.RequiredScopes)
-            .AddInMemoryTokenCaches();
+            .AddDistributedTokenCaches();
 
         services.PostConfigure<CookieAuthenticationOptions>(CookieAuthenticationDefaults.AuthenticationScheme, options =>
         {
