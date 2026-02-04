@@ -59,3 +59,14 @@ export const useUser = () => {
   }
   return context;
 };
+
+/**
+ * Checks if the user has any of the specified roles, or is Admin.
+ * Admin role has access to everything.
+ * System role is intentionally excluded - it only grants access to system operations.
+ */
+export const useHasRole = (...roles: string[]) => {
+  const user = useUser();
+  if (user.roles.includes('Admin')) return true;
+  return roles.some((role) => user.roles.includes(role));
+};

@@ -63,7 +63,9 @@ public class DbInitializer : IDbInitializer
         var rolesToEnsure = new[]
         {
             Role.Names.System,
-            Role.Names.Admin
+            Role.Names.Admin,
+            Role.Names.Manager,
+            Role.Names.AccrualViewer
         };
 
         foreach (var roleName in rolesToEnsure)
