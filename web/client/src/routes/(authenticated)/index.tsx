@@ -10,7 +10,7 @@ import {
   useManagedPisQuery,
   useProjectsDetailQuery,
 } from '@/queries/project.ts';
-import { useUser } from '@/shared/auth/UserContext.tsx';
+import { useHasRole, useUser } from '@/shared/auth/UserContext.tsx';
 import { createFileRoute, Link } from '@tanstack/react-router';
 
 const piCsvColumns = [
@@ -43,6 +43,7 @@ const EmptyWrapper = ({ children }: { children: React.ReactNode }) => (
 function RouteComponent() {
   const [activeTab, setActiveTab] = useState<Tab>('pis');
   const user = useUser();
+  const canViewAccruals = useHasRole('AccrualViewer');
   const { error, isError, isPending, managedPis } = useManagedPisQuery(
     user.employeeId
   );
@@ -237,14 +238,16 @@ function RouteComponent() {
       {activeTab === 'reports' && (
         <div aria-labelledby="tab-reports" id="panel-reports" role="tabpanel">
           <ul className="mt-8">
-            <li>
-              <Link
-                className="text-xl link link-hover link-primary"
-                to="/accruals"
-              >
-                Employee Vacation Accruals
-              </Link>
-            </li>
+            {canViewAccruals && (
+              <li>
+                <Link
+                  className="text-xl link link-hover link-primary"
+                  to="/accruals"
+                >
+                  Employee Vacation Accruals
+                </Link>
+              </li>
+            )}
           </ul>
         </div>
       )}
