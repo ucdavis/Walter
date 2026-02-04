@@ -54,6 +54,7 @@ builder.Services.AddSingleton<IDatamartService, DatamartService>();
 builder.Services.AddScoped<IDbInitializer, DbInitializer>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IEntraUserAttributeService, EntraUserAttributeService>();
+builder.Services.AddScoped<IGraphService, GraphService>();
 builder.Services.AddHttpClient<IIdentityService, IdentityService>();
 builder.Services.AddScoped<IUserProfileOrchestrator, UserProfileOrchestrator>();
 // add auth policies here
