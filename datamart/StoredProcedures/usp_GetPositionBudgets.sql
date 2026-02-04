@@ -1,6 +1,5 @@
 CREATE PROCEDURE dbo.usp_GetPositionBudgets
-    @FinancialDept VARCHAR(7) = NULL,
-    @ProjectIds VARCHAR(MAX) = NULL,
+    @ProjectIds VARCHAR(MAX),
     @FiscalYear VARCHAR(4) = NULL,
     @ApplicationName NVARCHAR(128) = NULL,
     @ApplicationUser NVARCHAR(256) = NULL
@@ -8,22 +7,12 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    -- Validate: exactly one filter must be
-    IF (@FinancialDept IS NULL AND @ProjectIds IS NULL)
+    -- Validate: ProjectIds is required
+    IF @ProjectIds IS NULL
     BEGIN
-        RAISERROR('Either @FinancialDept or @ProjectIds must be provided', 16, 1);
+        RAISERROR('@ProjectIds must be provided', 16, 1);
         RETURN;
     END;
-
-    IF (@FinancialDept IS NOT NULL AND @ProjectIds IS NOT NULL)
-    BEGIN
-        RAISERROR('Cannot specify both @FinancialDept and @ProjectIds', 16, 1);
-        RETURN;
-    END;
-
-    -- Validate FinancialDept if provided
-    IF @FinancialDept IS NOT NULL
-        EXEC dbo.usp_ValidateFinancialDept @FinancialDept;
 
     DECLARE @OracleQuery NVARCHAR(MAX);
     DECLARE @RedshiftQuery NVARCHAR(MAX);
@@ -42,23 +31,36 @@ BEGIN
     -- Sanitize ApplicationUser for injection protection
     EXEC dbo.usp_SanitizeInputString @ApplicationUser OUTPUT;
 
-    -- Sanitize FinancialDept for SQL injection protection
-    IF @FinancialDept IS NOT NULL
-        EXEC dbo.usp_SanitizeInputString @FinancialDept OUTPUT;
-
     -- Sanitize FiscalYear for SQL injection protection
     IF @FiscalYear IS NOT NULL
         EXEC dbo.usp_SanitizeInputString @FiscalYear OUTPUT;
 
-    -- Parse and validate ProjectIds if provided
+    -- Parse and validate ProjectIds
     DECLARE @ProjectIdFilter NVARCHAR(MAX);
-
-    IF @ProjectIds IS NOT NULL
-        EXEC dbo.usp_ParseProjectIdFilter @ProjectIds, @ProjectIdFilter OUTPUT;
+    EXEC dbo.usp_ParseProjectIdFilter @ProjectIds, @ProjectIdFilter OUTPUT;
 
     -- Build Oracle query joining budget and position data
+    -- Use two-stage approach for performance:
+    --   1. CandidatePositions: Fast lookup to find positions with ANY budget entry for the project.
+    --      This limits the number of records pulled in subsequent CTEs to improve performance
+    --   2. RankedBudget: Get all budget entries for just those positions and rank them
+    --   3. LatestBudget: Filter to positions whose LATEST entry is still in the project
     SET @OracleQuery = '
-        WITH RankedBudget AS (
+        WITH CandidatePositions AS (
+            SELECT DISTINCT budget.POSITION_NBR
+            FROM caes_hcmods.PS_DEPT_BUDGET_ERN_V budget
+            JOIN caes_hcmods.PS_ACCT_CD_TBL_V acct
+                ON budget.ACCT_CD = acct.ACCT_CD
+            WHERE budget.DML_IND != ''D''
+              AND acct.DML_IND != ''D''
+              AND acct.PROJECT_ID IN (' + @ProjectIdFilter + ')' +
+              CASE
+                    WHEN @FiscalYear IS NOT NULL
+                    THEN ' AND budget.FISCAL_YEAR = ''' + @FiscalYear + ''''
+                    ELSE ''
+              END + '
+        ),
+        RankedBudget AS (
             SELECT
                 budget.FISCAL_YEAR,
                 budget.POSITION_NBR,
@@ -84,7 +86,8 @@ BEGIN
             JOIN caes_hcmods.PS_ACCT_CD_TBL_V acct
                 ON budget.ACCT_CD = acct.ACCT_CD
             WHERE budget.DML_IND != ''D''
-              AND acct.DML_IND != ''D''' +
+              AND acct.DML_IND != ''D''
+              AND budget.POSITION_NBR IN (SELECT POSITION_NBR FROM CandidatePositions)' +
               CASE
                     WHEN @FiscalYear IS NOT NULL
                     THEN ' AND budget.FISCAL_YEAR = ''' + @FiscalYear + ''''
@@ -94,11 +97,7 @@ BEGIN
         LatestBudget AS (
             SELECT * FROM RankedBudget
             WHERE rnk = 1
-              ' + CASE
-                    WHEN @FinancialDept IS NOT NULL
-                    THEN 'AND DEPTID_CF = ''' + @FinancialDept + ''''
-                    ELSE 'AND PROJECT_ID IN (' + @ProjectIdFilter + ')'
-                END + '
+              AND PROJECT_ID IN (' + @ProjectIdFilter + ')
         ),
         LatestPosition AS (
             SELECT
@@ -189,7 +188,6 @@ BEGIN
     -- Build parameters JSON for logging
     SET @ParametersJSON = (
         SELECT
-            @FinancialDept AS FinancialDept,
             @ProjectIds AS ProjectIds,
             @FiscalYear AS FiscalYear,
             COALESCE(@ApplicationName, APP_NAME()) AS ApplicationName
