@@ -3,16 +3,45 @@ import { Link } from '@tanstack/react-router';
 import { SearchButton } from '@/components/search/SearchButton.tsx';
 import { useUser } from '@/shared/auth/UserContext.tsx';
 
-const getInitials = (name: string) => {
-  const cleaned = name.replaceAll(',', ' ').trim();
-  const parts = cleaned.split(/\s+/).filter(Boolean);
-  if (parts.length === 0) {
+const toTokens = (value: string) =>
+  value.replaceAll('.', ' ').trim().split(/\s+/).filter(Boolean);
+
+export const getInitials = (name: string) => {
+  const trimmed = name.trim();
+  if (!trimmed) {
     return '?';
   }
-  if (parts.length === 1) {
-    return parts[0].slice(0, 2).toUpperCase();
+
+  // Common directory-style display name: "Last, First Middle"
+  const commaIndex = trimmed.indexOf(',');
+  if (commaIndex >= 0) {
+    const lastName = trimmed.slice(0, commaIndex);
+    const firstNames = trimmed.slice(commaIndex + 1);
+
+    const lastTokens = toTokens(lastName);
+    const firstTokens = toTokens(firstNames);
+
+    const firstInitial = firstTokens[0]?.[0] ?? lastTokens[0]?.[0];
+    const lastInitial = lastTokens[0]?.[0];
+
+    if (!firstInitial) {
+      return '?';
+    }
+    if (!lastInitial) {
+      return firstInitial.toUpperCase();
+    }
+
+    return (firstInitial + lastInitial).toUpperCase();
   }
-  return (parts[0][0] + parts[1][0]).toUpperCase();
+
+  const tokens = toTokens(trimmed);
+  if (tokens.length === 1) {
+    return tokens[0].slice(0, 2).toUpperCase();
+  }
+
+  const first = tokens[0];
+  const last = tokens.at(-1) || '';
+  return (first[0] + last[0]).toUpperCase();
 };
 
 const UserAvatar: React.FC = () => {
