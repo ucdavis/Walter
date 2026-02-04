@@ -76,7 +76,7 @@
 }
 @layer components {
   .card {
-    @apply border border-main-border bg-base-200;
+    @apply border-1 border-main-border bg-base-200;
   }
 
   .fancy-list {
