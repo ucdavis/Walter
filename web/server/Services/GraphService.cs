@@ -1,6 +1,7 @@
 using Azure.Core;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.Graph;
+using Microsoft.Identity.Client;
 using Microsoft.Identity.Web;
 using Microsoft.Kiota.Abstractions;
 using System.IdentityModel.Tokens.Jwt;
@@ -56,6 +57,16 @@ public sealed class GraphService : IGraphService
         }
         catch (ApiException ex) when (ex.ResponseStatusCode == 404)
         {
+            return null;
+        }
+        catch (MicrosoftIdentityWebChallengeUserException ex)
+        {
+            _logger.LogInformation(ex, "User interaction required to acquire Graph token for profile photo.");
+            return null;
+        }
+        catch (MsalUiRequiredException ex)
+        {
+            _logger.LogInformation(ex, "User interaction required to acquire Graph token for profile photo.");
             return null;
         }
         catch (Exception ex)
@@ -167,4 +178,3 @@ public sealed class GraphService : IGraphService
         }
     }
 }
-

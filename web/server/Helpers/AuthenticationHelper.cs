@@ -30,6 +30,11 @@ public static class AuthenticationHelper
             options.ConnectionString = dbConnectionString;
             options.SchemaName = "dbo";
             options.TableName = "AppCache";
+            // IMPORTANT: SqlServerCache defaults to a ~20 minute sliding expiration.
+            // If left as-is, MSAL's distributed token cache entries can expire quickly,
+            // causing MsalUiRequiredException (user_null) while the auth cookie is still valid.
+            // if we use distributed cache for something else later, we may need to revisit this.
+            options.DefaultSlidingExpiration = TimeSpan.FromDays(14);
         });
 
         var authBuilder = services
