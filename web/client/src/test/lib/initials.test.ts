@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getInitials } from '@/components/project/header.tsx';
+import { getInitials } from '@/components/project/UserAvatar.tsx';
 
 describe('getInitials', () => {
   it('uses first + last name for multi-part names', () => {
@@ -18,4 +18,3 @@ describe('getInitials', () => {
     expect(getInitials('')).toBe('?');
   });
 });
-
