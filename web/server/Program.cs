@@ -49,6 +49,9 @@ if (string.IsNullOrWhiteSpace(conn))
 // Add auth config (entra)
 builder.Services.AddAuthenticationServices(builder.Configuration, conn);
 
+// add authorization
+builder.Services.AddAuthorizationPolicies();
+
 // app settings sections
 builder.Services.Configure<IamSettings>(builder.Configuration.GetSection("Iam"));
 builder.Services.Configure<FinancialSettings>(builder.Configuration.GetSection("Financial"));

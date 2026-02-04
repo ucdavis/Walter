@@ -2,8 +2,11 @@ import React from 'react';
 import { Link } from '@tanstack/react-router';
 import { SearchButton } from '@/components/search/SearchButton.tsx';
 import { UserAvatar } from '@/components/project/UserAvatar.tsx';
+import { useHasRole, useUser } from '@/shared/auth/UserContext.tsx';
 
 const Header: React.FC = () => {
+  const user = useUser();
+  const canViewAccruals = useHasRole('AccrualViewer');
   return (
     <header className="bg-light-bg-200 border-b py-4 border-main-border sticky top-0 z-50">
       <div className="container flex items-center justify-between">
@@ -21,7 +24,8 @@ const Header: React.FC = () => {
               <Link
                 activeOptions={{ exact: false }}
                 className="nav-link"
-                to="/projects"
+                params={{ employeeId: user.employeeId }}
+                to="/projects/$employeeId"
               >
                 Projects
               </Link>
@@ -42,13 +46,15 @@ const Header: React.FC = () => {
                 Reports
               </Link>
 
-              <Link
-                activeOptions={{ exact: false }}
-                className="nav-link"
-                to="/accruals"
-              >
-                Accruals
-              </Link>
+              {canViewAccruals && (
+                <Link
+                  activeOptions={{ exact: false }}
+                  className="nav-link"
+                  to="/accruals"
+                >
+                  Accruals
+                </Link>
+              )}
             </nav>
           </div>
           <div className="ms-6">

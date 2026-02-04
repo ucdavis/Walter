@@ -187,7 +187,7 @@ describe('home route', () => {
       id: 'user-1',
       kerberos: 'alpha',
       name: 'Alpha User',
-      roles: ['admin'],
+      roles: ['Admin'],
     };
 
     server.use(

@@ -1,23 +1,22 @@
-using DotEnv.Core;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using server.Helpers;
 
 namespace Server.Controllers;
 
+[Authorize(Policy = AuthorizationHelper.Policies.CanViewAccruals)]
 public sealed class AccrualController : ApiControllerBase
 {
-    private readonly ILogger<AccrualController> _logger;
     private readonly IWebHostEnvironment _env;
 
-    public AccrualController(ILogger<AccrualController> logger, IWebHostEnvironment env)
+    public AccrualController(IWebHostEnvironment env)
     {
-        _logger = logger;
         _env = env;
     }
 
 
     /// <summary>
-    /// Get all accruals
-    /// TODO: who can access this, what depts can they see, etc.
+    /// Get all accruals. Requires AccrualViewer role.
     /// </summary>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
