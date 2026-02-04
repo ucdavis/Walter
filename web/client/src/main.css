@@ -75,7 +75,7 @@
 }
 @layer components {
   .card {
-    @apply border-1 border-main-border bg-base-200;
+    @apply border border-main-border bg-base-200;
   }
 
   .fancy-list {
@@ -113,7 +113,7 @@
   }
 
   [cmdk-item][data-selected='true'] {
-    @apply bg-base-200 outline outline-1 outline-base-300;
+    @apply bg-base-200 outline outline-base-300;
   }
 }
 
