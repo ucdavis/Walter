@@ -1,6 +1,8 @@
 import { useMeQuery, User } from '@/queries/user.ts';
 import { createContext, useContext } from 'react';
 
+type UserRole = 'Admin' | 'System' | 'Manager' | 'AccrualViewer'
+
 /**
  * React context for managing authenticated user state throughout the application.
  * We'll use it in (authenticated) routes where components can call useUser() to get the current user.
@@ -65,7 +67,7 @@ export const useUser = () => {
  * Admin role has access to everything.
  * System role is intentionally excluded - it only grants access to system operations.
  */
-export const useHasRole = (...roles: string[]) => {
+export const useHasRole = (...roles: UserRole[]) => {
   const user = useUser();
   if (user.roles.includes('Admin')) return true;
   return roles.some((role) => user.roles.includes(role));
