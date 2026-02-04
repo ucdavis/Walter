@@ -24,6 +24,7 @@ public static class AuthenticationHelper
 
         // Persist MSAL token cache in SQL so delegated Graph calls survive server restarts.
         // Table is created via EF Core migrations in server.core (see AppCache migration).
+        // https://learn.microsoft.com/en-us/entra/msal/dotnet/how-to/token-cache-serialization?tabs=aspnetcore
         services.AddDistributedSqlServerCache(options =>
         {
             options.ConnectionString = dbConnectionString;
