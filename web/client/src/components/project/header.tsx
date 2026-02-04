@@ -25,7 +25,7 @@ const UserAvatar: React.FC = () => {
 
   if (!showPhoto) {
     return (
-      <div className="avatar placeholder">
+      <div className="avatar avatar-placeholder">
         <div className="bg-neutral text-neutral-content w-10 rounded-full">
           <span>{initials}</span>
         </div>
