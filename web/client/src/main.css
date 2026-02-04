@@ -47,6 +47,7 @@
   --color-warning: var(--color-warning-color);
   --color-warning-content: var(--color-light-font);
 }
+@import './animations.css';
 
 .h1 {
   @apply text-3xl font-proxima-bold;
@@ -196,4 +197,3 @@
     outline: 2px solid var(--color-primary-color);
   }
 }
-@import './animations.css';
