@@ -86,7 +86,7 @@ html:active-view-transition-type(slide-right) {
 }
 
 .walter-logo:hover #walter-eye {
-  animation: walter-wink 5s ease-in-out infinite;
+  animation: walter-wink 4s ease-in-out infinite;
 }
 
 @keyframes walter-wink {
