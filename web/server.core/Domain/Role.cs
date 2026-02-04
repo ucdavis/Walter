@@ -11,6 +11,8 @@ public class Role
     {
         public const string System = "System";
         public const string Admin = "Admin";
+        public const string Manager = "Manager";
+        public const string AccrualViewer = "AccrualViewer";
     }
 
     [Key]

@@ -35,6 +35,7 @@ builder.Services.Configure<ForwardedHeadersOptions>(o =>
 
 // Add auth config (entra)
 builder.Services.AddAuthenticationServices(builder.Configuration);
+builder.Services.AddAuthorizationPolicies();
 
 // app settings sections
 builder.Services.Configure<IamSettings>(builder.Configuration.GetSection("Iam"));

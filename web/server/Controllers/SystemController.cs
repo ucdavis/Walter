@@ -5,11 +5,12 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Identity.Web;
 using server.core.Domain;
+using server.Helpers;
 using Server.Services;
 
 namespace Server.Controllers;
 
-[Authorize(Roles = Role.Names.System)]
+[Authorize(Policy = AuthorizationHelper.Policies.IsSystem)]
 public class SystemController : ApiControllerBase
 {
     private readonly IUserService _userService;
