@@ -51,10 +51,6 @@ public sealed class SearchController : ApiControllerBase
         [property: JsonPropertyName("projects")] IReadOnlyList<SearchProject> Projects,
         [property: JsonPropertyName("principalInvestigators")] IReadOnlyList<SearchPerson> PrincipalInvestigators);
 
-    private sealed record FacultyReportProject(
-        [property: JsonPropertyName("project_number")] string ProjectNumber,
-        [property: JsonPropertyName("project_name")] string ProjectName);
-
     private sealed record ProjectPersonnelPerson(
         [property: JsonPropertyName("JOB_EMPLID")] string EmployeeId,
         [property: JsonPropertyName("PREFERRED_NAME")] string PreferredName);
@@ -63,21 +59,6 @@ public sealed class SearchController : ApiControllerBase
     public IActionResult GetCatalog(CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-
-        var facultyPath = Path.Combine(_env.ContentRootPath, "Models", "FacultyReportFake.json");
-        var facultyJson = System.IO.File.ReadAllText(facultyPath);
-        var facultyRecords = JsonSerializer.Deserialize<List<FacultyReportProject>>(facultyJson) ?? [];
-
-        var projects = facultyRecords
-            .GroupBy(p => p.ProjectNumber)
-            .Select(g =>
-            {
-                var first = g.First();
-                var keywords = new[] { first.ProjectNumber, first.ProjectName }.Distinct().ToArray();
-                return new SearchProject(first.ProjectNumber, first.ProjectName, keywords);
-            })
-            .OrderBy(p => p.ProjectName)
-            .ToArray();
 
         var reports = new[]
         {
@@ -88,26 +69,20 @@ public sealed class SearchController : ApiControllerBase
                 ["accruals", "vacation", "leave", "report"]
             ),
             new SearchReport(
-                "form",
-                "Request Form (Demo)",
-                "/form",
-                ["form", "request", "demo"]
+                "personnel",
+                "My Personnel Report",
+                "/personnel",
+                ["personnel", "payroll"]
             ),
              new SearchReport(
-                "styles",
-                "Style Guide",
-                "/styles",
-                ["styles", "theme", "design", "components"]
-            ),
-            new SearchReport(
-                "me",
-                "My Profile",
-                "/me",
-                ["me", "profile", "account"]
+                "reports",
+                "All Reports",
+                "/reports",
+                ["reports", "all reports"]
             ),
         };
 
-        return Ok(new SearchCatalog(projects, reports));
+        return Ok(new SearchCatalog(Array.Empty<SearchProject>(), reports));
     }
 
     [HttpGet("people")]
