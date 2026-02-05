@@ -1,16 +1,28 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using AggieEnterpriseApi.Extensions;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using server.core.Data;
+using server.Helpers;
+using server.Services;
 
 namespace Server.Controllers;
 
 public sealed class SearchController : ApiControllerBase
 {
     private readonly IWebHostEnvironment _env;
+    private readonly AppDbContext _dbContext;
+    private readonly IFinancialApiService _financialApiService;
 
-    public SearchController(IWebHostEnvironment env)
+    public SearchController(
+        IWebHostEnvironment env,
+        AppDbContext dbContext,
+        IFinancialApiService financialApiService)
     {
         _env = env;
+        _dbContext = dbContext;
+        _financialApiService = financialApiService;
     }
 
     public sealed record SearchProject(
@@ -32,6 +44,10 @@ public sealed class SearchController : ApiControllerBase
         [property: JsonPropertyName("employeeId")] string EmployeeId,
         [property: JsonPropertyName("name")] string Name,
         [property: JsonPropertyName("keywords")] IReadOnlyList<string> Keywords);
+
+    public sealed record SearchTeamMemberProjectsResponse(
+        [property: JsonPropertyName("projects")] IReadOnlyList<SearchProject> Projects,
+        [property: JsonPropertyName("principalInvestigators")] IReadOnlyList<SearchPerson> PrincipalInvestigators);
 
     private sealed record FacultyReportProject(
         [property: JsonPropertyName("project_number")] string ProjectNumber,
@@ -123,5 +139,88 @@ public sealed class SearchController : ApiControllerBase
 
         return Ok(results);
     }
-}
 
+    [HttpGet("projects/team")]
+    public async Task<IActionResult> GetProjectsWhereCurrentUserIsTeamMember(CancellationToken cancellationToken)
+    {
+        Guid userId;
+        try
+        {
+            userId = User.GetUserId();
+        }
+        catch (InvalidOperationException)
+        {
+            return Unauthorized();
+        }
+
+        var employeeId = await _dbContext.Users
+            .AsNoTracking()
+            .Where(u => u.Id == userId)
+            .Select(u => u.EmployeeId)
+            .SingleOrDefaultAsync(cancellationToken);
+
+        if (employeeId is null)
+        {
+            return NotFound();
+        }
+
+        if (string.IsNullOrWhiteSpace(employeeId))
+        {
+            return BadRequest("Current user is missing EmployeeId.");
+        }
+
+        var client = _financialApiService.GetClient();
+
+        var piResultTask = client.PpmProjectByProjectTeamMemberEmployeeId.ExecuteAsync(
+            employeeId,
+            PpmRole.PrincipalInvestigator,
+            cancellationToken);
+
+        var pmResultTask = client.PpmProjectByProjectTeamMemberEmployeeId.ExecuteAsync(
+            employeeId,
+            PpmRole.ProjectManager,
+            cancellationToken);
+
+        await Task.WhenAll(piResultTask, pmResultTask);
+
+        var piData = piResultTask.Result.ReadData();
+        var pmData = pmResultTask.Result.ReadData();
+
+        var projects = piData.PpmProjectByProjectTeamMemberEmployeeId
+            .Concat(pmData.PpmProjectByProjectTeamMemberEmployeeId)
+            .GroupBy(p => p.ProjectNumber, StringComparer.OrdinalIgnoreCase)
+            .Select(g =>
+            {
+                var first = g.First();
+                var keywords = new[] { first.ProjectNumber, first.Name }
+                    .Where(s => !string.IsNullOrWhiteSpace(s))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToArray();
+
+                return new SearchProject(first.ProjectNumber, first.Name, keywords);
+            })
+            .OrderBy(p => p.ProjectName)
+            .ToArray();
+
+        var principalInvestigators = piData.PpmProjectByProjectTeamMemberEmployeeId
+            .Concat(pmData.PpmProjectByProjectTeamMemberEmployeeId)
+            .SelectMany(project => project.TeamMembers)
+            .Where(member => member.RoleName == PpmRole.PrincipalInvestigator)
+            .Where(member => !string.IsNullOrWhiteSpace(member.EmployeeId))
+            .GroupBy(member => member.EmployeeId, StringComparer.OrdinalIgnoreCase)
+            .Select(g =>
+            {
+                var first = g.First();
+                var keywords = new[] { first.Name, first.EmployeeId }
+                    .Where(s => !string.IsNullOrWhiteSpace(s))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToArray();
+
+                return new SearchPerson(first.EmployeeId, first.Name, keywords);
+            })
+            .OrderBy(pi => pi.Name)
+            .ToArray();
+
+        return Ok(new SearchTeamMemberProjectsResponse(projects, principalInvestigators));
+    }
+}

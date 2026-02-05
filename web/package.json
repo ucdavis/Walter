@@ -2,7 +2,8 @@
   "name": "web-app-template",
   "private": true,
   "scripts": {
-    "start": "npx kill-port 5166 5174 && dotnet watch --project server/server.csproj"
+    "start": "dotnet watch --project server/server.csproj",
+    "kill-ports": "npx kill-port 5166 5174"
   },
   "devDependencies": {
     "npm-run-all": "^4.1.5"
