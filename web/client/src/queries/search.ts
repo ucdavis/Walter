@@ -25,6 +25,11 @@ export type SearchPerson = {
   name: string;
 };
 
+export type SearchTeamMemberProjectsResponse = {
+  principalInvestigators: SearchPerson[];
+  projects: SearchProject[];
+};
+
 export const searchCatalogQueryOptions = () => ({
   gcTime: Infinity,
   queryFn: async (): Promise<SearchCatalog> => {
@@ -38,6 +43,37 @@ export const searchCatalogQueryOptions = () => ({
 export const useSearchCatalogQuery = ({ enabled }: { enabled: boolean }) => {
   return useQuery({
     ...searchCatalogQueryOptions(),
+    enabled,
+  });
+};
+
+export const searchTeamMemberProjectsQueryOptions = (employeeId: string) => ({
+  gcTime: Infinity,
+  queryFn: async ({
+    signal,
+  }: {
+    signal: AbortSignal;
+  }): Promise<SearchTeamMemberProjectsResponse> => {
+    return await fetchJson<SearchTeamMemberProjectsResponse>(
+      '/api/search/projects/team',
+      {},
+      signal
+    );
+  },
+  queryKey: ['search', 'projects', 'team', employeeId] as const,
+  refetchOnWindowFocus: false,
+  staleTime: Infinity,
+});
+
+export const useSearchTeamMemberProjectsQuery = ({
+  employeeId,
+  enabled,
+}: {
+  employeeId: string;
+  enabled: boolean;
+}) => {
+  return useQuery({
+    ...searchTeamMemberProjectsQueryOptions(employeeId),
     enabled,
   });
 };
