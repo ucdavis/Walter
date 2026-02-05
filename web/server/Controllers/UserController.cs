@@ -2,16 +2,19 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using server.core.Data;
 using server.Helpers;
+using Server.Services;
 
 namespace Server.Controllers;
 
 public class UserController : ApiControllerBase
 {
     private readonly AppDbContext _dbContext;
+    private readonly IGraphService _graphService;
 
-    public UserController(AppDbContext dbContext)
+    public UserController(AppDbContext dbContext, IGraphService graphService)
     {
         _dbContext = dbContext;
+        _graphService = graphService;
     }
 
     [HttpGet("me")]
@@ -55,5 +58,38 @@ public class UserController : ApiControllerBase
         };
 
         return Ok(userInfo);
+    }
+
+    [HttpGet("me/photo")]
+    public async Task<IActionResult> MePhoto(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var photo = await _graphService.GetMePhotoAsync(User, cancellationToken);
+
+            // cache for 10 minutes even if not found (avoid repeated calls to graph for missing photos)
+            SetAvatarCacheHeaders(seconds: 10 * 60);
+
+            if (photo is null)
+            {
+                return NotFound();
+            }
+
+            return File(photo.Bytes, photo.ContentType);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            Response.Headers.CacheControl = "no-store";
+            return StatusCode(StatusCodes.Status502BadGateway);
+        }
+    }
+
+    private void SetAvatarCacheHeaders(int seconds)
+    {
+        Response.Headers.CacheControl = $"private, max-age={seconds}";
     }
 }

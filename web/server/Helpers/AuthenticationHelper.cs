@@ -12,8 +12,31 @@ public static class AuthenticationHelper
     /// <summary>
     /// Configures Microsoft Identity Web authentication with Azure AD/Entra ID
     /// </summary>
-    public static IServiceCollection AddAuthenticationServices(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddAuthenticationServices(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        string dbConnectionString)
     {
+        if (string.IsNullOrWhiteSpace(dbConnectionString))
+        {
+            throw new InvalidOperationException("Database connection string is required for distributed token caching.");
+        }
+
+        // Persist MSAL token cache in SQL so delegated Graph calls survive server restarts.
+        // Table is created via EF Core migrations in server.core (see AppCache migration).
+        // https://learn.microsoft.com/en-us/entra/msal/dotnet/how-to/token-cache-serialization?tabs=aspnetcore
+        services.AddDistributedSqlServerCache(options =>
+        {
+            options.ConnectionString = dbConnectionString;
+            options.SchemaName = "dbo";
+            options.TableName = "AppCache";
+            // IMPORTANT: SqlServerCache defaults to a ~20 minute sliding expiration.
+            // If left as-is, MSAL's distributed token cache entries can expire quickly,
+            // causing MsalUiRequiredException (user_null) while the auth cookie is still valid.
+            // if we use distributed cache for something else later, we may need to revisit this.
+            options.DefaultSlidingExpiration = TimeSpan.FromDays(14);
+        });
+
         var authBuilder = services
             .AddAuthentication(options =>
             {
@@ -39,7 +62,7 @@ public static class AuthenticationHelper
 
         authBuilder
             .EnableTokenAcquisitionToCallDownstreamApi(initialScopes: EntraUserAttributeService.RequiredScopes)
-            .AddInMemoryTokenCaches();
+            .AddDistributedTokenCaches();
 
         services.PostConfigure<CookieAuthenticationOptions>(CookieAuthenticationDefaults.AuthenticationScheme, options =>
         {

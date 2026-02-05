@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from '@tanstack/react-router';
 import { SearchButton } from '@/components/search/SearchButton.tsx';
+import { UserAvatar } from '@/components/project/UserAvatar.tsx';
 import WalterLogo from '@/shared/walterLogo.tsx';
 import { useHasRole, useUser } from '@/shared/auth/UserContext.tsx';
 
@@ -61,13 +62,8 @@ const Header: React.FC = () => {
               )}
             </nav>
           </div>
-          <div className="avatar ms-6">
-            <div className="w-10 rounded-full">
-              <img
-                alt="User avatar"
-                src="https://img.daisyui.com/images/profile/demo/yellingcat@192.webp"
-              />
-            </div>
+          <div className="ms-6">
+            <UserAvatar />
           </div>
         </div>
       </div>
