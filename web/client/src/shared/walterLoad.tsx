@@ -16,12 +16,12 @@ export const WalterLoad = ({ className, ...props }: WalterLoadProps) => (
     <g
       fill="none"
       fillRule="evenodd"
-      id="walter-logo"
+      id="walter-load"
       stroke="none"
       xlinkHref="#path-1"
     >
       <g
-        fill="#1F1F1F"
+        fill="#currentColor"
         id="bones"
         strokeWidth="1"
         transform="translate(120.9995, 27.7644)"
