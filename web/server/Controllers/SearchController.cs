@@ -28,7 +28,9 @@ public sealed class SearchController : ApiControllerBase
     public sealed record SearchProject(
         [property: JsonPropertyName("projectNumber")] string ProjectNumber,
         [property: JsonPropertyName("projectName")] string ProjectName,
-        [property: JsonPropertyName("keywords")] IReadOnlyList<string> Keywords);
+        [property: JsonPropertyName("keywords")] IReadOnlyList<string> Keywords,
+        [property: JsonPropertyName("projectPiEmployeeId")]
+        string? ProjectPiEmployeeId = null);
 
     public sealed record SearchReport(
         [property: JsonPropertyName("id")] string Id,
@@ -192,12 +194,21 @@ public sealed class SearchController : ApiControllerBase
             .Select(g =>
             {
                 var first = g.First();
+                var projectPiEmployeeId = g
+                    .SelectMany(p => p.TeamMembers)
+                    .Where(m => m.RoleName == PpmRole.PrincipalInvestigator)
+                    .Where(m => !string.IsNullOrWhiteSpace(m.EmployeeId))
+                    .OrderBy(m => m.Name)
+                    .ThenBy(m => m.EmployeeId)
+                    .Select(m => m.EmployeeId)
+                    .FirstOrDefault();
+
                 var keywords = new[] { first.ProjectNumber, first.Name }
                     .Where(s => !string.IsNullOrWhiteSpace(s))
                     .Distinct(StringComparer.OrdinalIgnoreCase)
                     .ToArray();
 
-                return new SearchProject(first.ProjectNumber, first.Name, keywords);
+                return new SearchProject(first.ProjectNumber, first.Name, keywords, projectPiEmployeeId);
             })
             .OrderBy(p => p.ProjectName)
             .ToArray();

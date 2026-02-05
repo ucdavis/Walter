@@ -108,13 +108,16 @@ const filterAndSort = <T extends { keywords: string[]; label: string }>(
 
 const projectToItem = (
   project: SearchProject,
-  employeeId: string
+  currentEmployeeId: string
 ): SearchItem => ({
   category: 'Projects',
   id: `project:${project.projectNumber}`,
   keywords: project.keywords,
   label: project.projectName,
-  params: { employeeId, projectNumber: project.projectNumber },
+  params: {
+    employeeId: project.projectPiEmployeeId ?? currentEmployeeId,
+    projectNumber: project.projectNumber,
+  },
   secondary: project.projectNumber,
   to: '/projects/$employeeId/$projectNumber/',
 });

@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 
 export type SearchProject = {
   keywords: string[];
+  projectPiEmployeeId?: string | null;
   projectName: string;
   projectNumber: string;
 };

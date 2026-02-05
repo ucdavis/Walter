@@ -111,6 +111,7 @@ describe('CommandPaletteProvider', () => {
           projects: [
             {
               keywords: ['P-001', 'Alpha'],
+              projectPiEmployeeId: '2001',
               projectName: 'Project Alpha',
               projectNumber: 'P-001',
             },
