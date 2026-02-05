@@ -63,13 +63,6 @@ function aggregateProjects(records: ProjectRecord[]): AggregatedProject[] {
   return Array.from(projectsMap.values());
 }
 
-function filterExpired(projects: AggregatedProject[]): AggregatedProject[] {
-  const now = new Date();
-  return projects.filter(
-    (p) => !p.awardEndDate || new Date(p.awardEndDate) >= now
-  );
-}
-
 function sortByEndDate(projects: AggregatedProject[]): AggregatedProject[] {
   return [...projects].sort((a, b) => {
     if (!a.awardEndDate && !b.awardEndDate) {
@@ -105,8 +98,7 @@ interface ProjectsTableProps {
 export function ProjectsTable({ employeeId, records }: ProjectsTableProps) {
   const projects = useMemo(() => {
     const aggregated = aggregateProjects(records);
-    const active = filterExpired(aggregated);
-    return sortByEndDate(active);
+    return sortByEndDate(aggregated);
   }, [records]);
 
   const totals = useMemo(

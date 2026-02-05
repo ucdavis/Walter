@@ -54,7 +54,10 @@ function RouteComponent() {
   }, [userProjectsQuery.data]);
   const personnelQuery = usePersonnelQuery(projectCodes);
 
-  // Compute tab visibility flags before early returns so useEffect is always called
+  // Wait for all queries to resolve before showing content
+  const isLoading = isPending || userProjectsQuery.isPending || (projectCodes.length > 0 && personnelQuery.isPending);
+
+  // Compute tab visibility flags
   const isProjectManager = managedPis && managedPis.length > 0;
   const hasProjects = projectCodes.length > 0;
   const showPisTab = isProjectManager || hasProjects;
@@ -62,8 +65,6 @@ function RouteComponent() {
   const showReportsTab = canViewAccruals;
 
   // Set active tab to first available if current tab is not visible
-  // Skip during loading to avoid switching before data is ready
-  const isLoading = isPending || userProjectsQuery.isPending;
   useEffect(() => {
     if (isLoading) return;
 
@@ -77,7 +78,7 @@ function RouteComponent() {
     }
   }, [activeTab, showPisTab, showPersonnelTab, showReportsTab, isLoading]);
 
-  if (isPending || userProjectsQuery.isPending) {
+  if (isLoading) {
     return (
       <EmptyWrapper>
         <div className="text-center">

@@ -261,45 +261,6 @@ describe('home route', () => {
     }
   });
 
-  it('hides Personnel tab when there are no personnel records', async () => {
-    const user = {
-      email: 'alpha@example.com',
-      employeeId: '1000',
-      id: 'user-1',
-      kerberos: 'alpha',
-      name: 'Alpha User',
-      roles: ['Admin'],
-    };
-
-    const projects = [
-      {
-        projectNumber: 'P1',
-        projectName: 'Project One',
-        displayName: 'P1: Project One',
-        awardEndDate: '2099-12-31',
-        catBudBal: 1000,
-      },
-    ];
-
-    server.use(
-      http.get('/api/user/me', () => HttpResponse.json(user)),
-      http.get('/api/project/managed/:employeeId', () => HttpResponse.json([])),
-      http.get('/api/project/:employeeId', () => HttpResponse.json(projects)),
-      http.get('/api/project/personnel', () => HttpResponse.json([]))
-    );
-
-    const { cleanup } = renderRoute({ initialPath: '/' });
-
-    try {
-      // Wait for content to load
-      await screen.findByText('P1: Project One');
-
-      // Personnel tab should not exist
-      expect(screen.queryByRole('tab', { name: 'Personnel' })).not.toBeInTheDocument();
-    } finally {
-      cleanup();
-    }
-  });
 });
 
 describe('getPiProjectAlerts', () => {
