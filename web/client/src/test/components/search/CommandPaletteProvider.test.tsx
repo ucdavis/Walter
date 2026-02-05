@@ -2,7 +2,7 @@ import { server } from '@/test/mswUtils.ts';
 import { renderRoute } from '@/test/routerUtils.tsx';
 import { screen, waitFor } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
-import { delay, http, HttpResponse } from 'msw';
+import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 
 const defaultUser = {
@@ -43,7 +43,7 @@ describe('CommandPaletteProvider', () => {
       await waitFor(() => expect(dialog).toHaveAttribute('open'));
 
       const input = await screen.findByPlaceholderText(
-        'Search projects, reports, people...'
+        'Search projects, PIs, reports...'
       );
       await waitFor(() => expect(input).toHaveFocus());
     } finally {
@@ -137,7 +137,7 @@ describe('CommandPaletteProvider', () => {
 
       // Ensure focus is inside the dialog so Escape is handled by cmdk.
       const input = screen.getByPlaceholderText(
-        'Search projects, reports, people...'
+        'Search projects, PIs, reports...'
       );
       input.focus();
 
@@ -154,8 +154,7 @@ describe('CommandPaletteProvider', () => {
     }
   });
 
-  it('debounces people search and resets query on close', async () => {
-    let peopleRequests = 0;
+  it('resets query on close', async () => {
     server.use(
       http.get('/api/user/me', () => HttpResponse.json(defaultUser)),
       http.get('/api/search/catalog', () =>
@@ -163,26 +162,7 @@ describe('CommandPaletteProvider', () => {
       ),
       http.get('/api/search/projects/team', () =>
         HttpResponse.json({ projects: [], principalInvestigators: [] })
-      ),
-      http.get('/api/search/people', async ({ request }) => {
-        peopleRequests += 1;
-        const url = new URL(request.url);
-        const q = url.searchParams.get('query') ?? '';
-
-        await delay(400);
-
-        return HttpResponse.json(
-          q.toLowerCase().includes('ali')
-            ? [
-                {
-                  employeeId: '2001',
-                  keywords: ['Alice', '2001'],
-                  name: 'Alice Example',
-                },
-              ]
-            : []
-        );
-      })
+      )
     );
 
     const { cleanup } = renderRoute({ initialPath: '/styles' });
@@ -197,27 +177,18 @@ describe('CommandPaletteProvider', () => {
       await user.click(screen.getByRole('button', { name: /search…/i }));
 
       const input = await screen.findByPlaceholderText(
-        'Search projects, reports, people...'
+        'Search projects, PIs, reports...'
       );
-      await user.type(input, 'ali');
-
-      expect(await screen.findByText('Searching people…')).toBeInTheDocument();
-      expect(await screen.findByText('Alice Example')).toBeInTheDocument();
-      expect(peopleRequests).toBe(1);
+      await user.type(input, 'alpha');
 
       await user.keyboard('{Escape}');
       await waitFor(() => expect(dialog).not.toHaveAttribute('open'));
 
       await user.click(screen.getByRole('button', { name: /search…/i }));
       const inputReopen = await screen.findByPlaceholderText(
-        'Search projects, reports, people...'
+        'Search projects, PIs, reports...'
       );
       expect(inputReopen).toHaveValue('');
-
-      await user.type(inputReopen, 'ali');
-      expect(await screen.findByText('Searching people…')).toBeInTheDocument();
-      expect(await screen.findByText('Alice Example')).toBeInTheDocument();
-      expect(peopleRequests).toBe(2);
     } finally {
       cleanup();
     }
