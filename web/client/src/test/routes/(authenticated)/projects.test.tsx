@@ -190,13 +190,32 @@ describe('home route', () => {
       roles: ['Admin'],
     };
 
+    const personnel = [
+      {
+        employeeId: 'E1',
+        name: 'Test Employee',
+        positionNumber: 'POS1',
+        positionDescription: 'Researcher',
+        projectId: 'P1',
+        projectDescription: 'Project One',
+        monthlyRate: 5000,
+        fte: 1.0,
+        distributionPercent: 100,
+        compositeBenefitRate: 0.3,
+        fundingEffectiveDate: '2024-01-01',
+        fundingEndDate: '2025-12-31',
+        positionEffectiveDate: '2024-01-01',
+        jobEndDate: null,
+      },
+    ];
+
     server.use(
       http.get('/api/project/managed/:employeeId', () =>
         HttpResponse.json(managedPis)
       ),
       http.get('/api/project/:employeeId', () => HttpResponse.json(projects)),
       http.get('/api/user/me', () => HttpResponse.json(testUser)),
-      http.get('/api/project/personnel', () => HttpResponse.json([]))
+      http.get('/api/project/personnel', () => HttpResponse.json(personnel))
     );
 
     const user = userEvent.setup();
@@ -237,6 +256,46 @@ describe('home route', () => {
       expect(
         screen.getByRole('tab', { name: 'Principal Investigators' })
       ).toHaveAttribute('aria-selected', 'true');
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('hides Personnel tab when there are no personnel records', async () => {
+    const user = {
+      email: 'alpha@example.com',
+      employeeId: '1000',
+      id: 'user-1',
+      kerberos: 'alpha',
+      name: 'Alpha User',
+      roles: ['Admin'],
+    };
+
+    const projects = [
+      {
+        projectNumber: 'P1',
+        projectName: 'Project One',
+        displayName: 'P1: Project One',
+        awardEndDate: '2099-12-31',
+        catBudBal: 1000,
+      },
+    ];
+
+    server.use(
+      http.get('/api/user/me', () => HttpResponse.json(user)),
+      http.get('/api/project/managed/:employeeId', () => HttpResponse.json([])),
+      http.get('/api/project/:employeeId', () => HttpResponse.json(projects)),
+      http.get('/api/project/personnel', () => HttpResponse.json([]))
+    );
+
+    const { cleanup } = renderRoute({ initialPath: '/' });
+
+    try {
+      // Wait for content to load
+      await screen.findByText('P1: Project One');
+
+      // Personnel tab should not exist
+      expect(screen.queryByRole('tab', { name: 'Personnel' })).not.toBeInTheDocument();
     } finally {
       cleanup();
     }

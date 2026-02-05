@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { PiProjectAlerts } from '@/components/alerts/PiProjectAlerts.tsx';
 import { ExportCsvButton } from '@/components/ExportCsvButton.tsx';
 import { PersonnelTable } from '@/components/project/PersonnelTable.tsx';
@@ -54,6 +54,29 @@ function RouteComponent() {
   }, [userProjectsQuery.data]);
   const personnelQuery = usePersonnelQuery(projectCodes);
 
+  // Compute tab visibility flags before early returns so useEffect is always called
+  const isProjectManager = managedPis && managedPis.length > 0;
+  const hasProjects = projectCodes.length > 0;
+  const showPisTab = isProjectManager || hasProjects;
+  const showPersonnelTab = personnelQuery.isSuccess && (personnelQuery.data?.length ?? 0) > 0;
+  const showReportsTab = canViewAccruals;
+
+  // Set active tab to first available if current tab is not visible
+  // Skip during loading to avoid switching before data is ready
+  const isLoading = isPending || userProjectsQuery.isPending;
+  useEffect(() => {
+    if (isLoading) return;
+
+    const availableTabs: Tab[] = [];
+    if (showPisTab) availableTabs.push('pis');
+    if (showPersonnelTab) availableTabs.push('personnel');
+    if (showReportsTab) availableTabs.push('reports');
+
+    if (availableTabs.length > 0 && !availableTabs.includes(activeTab)) {
+      setActiveTab(availableTabs[0]);
+    }
+  }, [activeTab, showPisTab, showPersonnelTab, showReportsTab, isLoading]);
+
   if (isPending || userProjectsQuery.isPending) {
     return (
       <EmptyWrapper>
@@ -87,7 +110,6 @@ function RouteComponent() {
     );
   }
 
-  const isProjectManager = managedPis && managedPis.length > 0;
   const projectRecords = userProjectsQuery.data ?? [];
 
   return (
@@ -109,42 +131,48 @@ function RouteComponent() {
       <PiProjectAlerts managedPis={managedPis} />
 
       <div className="tabs mt-16" role="tablist">
-        <button
-          aria-controls="panel-pis"
-          aria-selected={activeTab === 'pis'}
-          className={`text-2xl tab ps-0 ${activeTab === 'pis' ? 'tab-active' : ''}`}
-          id="tab-pis"
-          onClick={() => setActiveTab('pis')}
-          role="tab"
-          type="button"
-        >
-          {isProjectManager ? 'Principal Investigators' : 'Projects'}
-        </button>
-        <button
-          aria-controls="panel-personnel"
-          aria-selected={activeTab === 'personnel'}
-          className={`text-2xl tab ${activeTab === 'personnel' ? 'tab-active' : ''}`}
-          id="tab-personnel"
-          onClick={() => setActiveTab('personnel')}
-          role="tab"
-          type="button"
-        >
-          Personnel
-        </button>
-        <button
-          aria-controls="panel-reports"
-          aria-selected={activeTab === 'reports'}
-          className={`text-2xl tab ${activeTab === 'reports' ? 'tab-active' : ''}`}
-          id="tab-reports"
-          onClick={() => setActiveTab('reports')}
-          role="tab"
-          type="button"
-        >
-          Reports
-        </button>
+        {showPisTab && (
+          <button
+            aria-controls="panel-pis"
+            aria-selected={activeTab === 'pis'}
+            className={`text-2xl tab ps-0 ${activeTab === 'pis' ? 'tab-active' : ''}`}
+            id="tab-pis"
+            onClick={() => setActiveTab('pis')}
+            role="tab"
+            type="button"
+          >
+            {isProjectManager ? 'Principal Investigators' : 'Projects'}
+          </button>
+        )}
+        {showPersonnelTab && (
+          <button
+            aria-controls="panel-personnel"
+            aria-selected={activeTab === 'personnel'}
+            className={`text-2xl tab ${activeTab === 'personnel' ? 'tab-active' : ''}`}
+            id="tab-personnel"
+            onClick={() => setActiveTab('personnel')}
+            role="tab"
+            type="button"
+          >
+            Personnel
+          </button>
+        )}
+        {showReportsTab && (
+          <button
+            aria-controls="panel-reports"
+            aria-selected={activeTab === 'reports'}
+            className={`text-2xl tab ${activeTab === 'reports' ? 'tab-active' : ''}`}
+            id="tab-reports"
+            onClick={() => setActiveTab('reports')}
+            role="tab"
+            type="button"
+          >
+            Reports
+          </button>
+        )}
       </div>
 
-      {activeTab === 'pis' && (
+      {activeTab === 'pis' && showPisTab && (
         <div aria-labelledby="tab-pis" id="panel-pis" role="tabpanel">
           {isProjectManager ? (
             <>
@@ -203,39 +231,19 @@ function RouteComponent() {
         </div>
       )}
 
-      {activeTab === 'personnel' && (
+      {activeTab === 'personnel' && showPersonnelTab && (
         <div
           aria-labelledby="tab-personnel"
           id="panel-personnel"
           role="tabpanel"
         >
-          {projectCodes.length === 0 && (
-            <p className="text-base-content/70 mt-8">
-              No projects found. Personnel will appear here once you have
-              projects.
-            </p>
-          )}
-          {projectCodes.length > 0 && personnelQuery.isPending && (
-            <div className="flex min-h-[20vh] items-center justify-center">
-              <div className="loading loading-spinner loading-lg" />
-            </div>
-          )}
-          {projectCodes.length > 0 && personnelQuery.isError && (
-            <div className="alert alert-error mt-8">
-              <span>
-                Unable to load personnel: {personnelQuery.error?.message}
-              </span>
-            </div>
-          )}
-          {projectCodes.length > 0 && personnelQuery.isSuccess && (
-            <div className="mt-8">
-              <PersonnelTable data={personnelQuery.data ?? []} />
-            </div>
-          )}
+          <div className="mt-8">
+            <PersonnelTable data={personnelQuery.data ?? []} />
+          </div>
         </div>
       )}
 
-      {activeTab === 'reports' && (
+      {activeTab === 'reports' && showReportsTab && (
         <div aria-labelledby="tab-reports" id="panel-reports" role="tabpanel">
           <ul className="mt-8">
             {canViewAccruals && (
