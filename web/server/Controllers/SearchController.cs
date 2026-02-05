@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using AggieEnterpriseApi.Extensions;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using server.core.Data;
@@ -14,15 +15,18 @@ public sealed class SearchController : ApiControllerBase
     private readonly IWebHostEnvironment _env;
     private readonly AppDbContext _dbContext;
     private readonly IFinancialApiService _financialApiService;
+    private readonly IAuthorizationService _authorizationService;
 
     public SearchController(
         IWebHostEnvironment env,
         AppDbContext dbContext,
-        IFinancialApiService financialApiService)
+        IFinancialApiService financialApiService,
+        IAuthorizationService authorizationService)
     {
         _env = env;
         _dbContext = dbContext;
         _financialApiService = financialApiService;
+        _authorizationService = authorizationService;
     }
 
     public sealed record SearchProject(
@@ -56,31 +60,40 @@ public sealed class SearchController : ApiControllerBase
         [property: JsonPropertyName("PREFERRED_NAME")] string PreferredName);
 
     [HttpGet("catalog")]
-    public IActionResult GetCatalog(CancellationToken cancellationToken)
+    public async Task<IActionResult> GetCatalog(CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var reports = new[]
+        var reports = new List<SearchReport>();
+
+        var canViewAccruals = await _authorizationService.AuthorizeAsync(
+            User,
+            resource: null,
+            AuthorizationHelper.Policies.CanViewAccruals);
+
+        if (canViewAccruals.Succeeded)
         {
-            new SearchReport(
+            reports.Add(new SearchReport(
                 "accruals",
                 "Employee Vacation Accruals",
                 "/accruals",
                 ["accruals", "vacation", "leave", "report"]
-            ),
-            new SearchReport(
-                "personnel",
-                "My Personnel Report",
-                "/personnel",
-                ["personnel", "payroll"]
-            ),
-             new SearchReport(
-                "reports",
-                "All Reports",
-                "/reports",
-                ["reports", "all reports"]
-            ),
-        };
+            ));
+        }
+
+        reports.Add(new SearchReport(
+            "personnel",
+            "My Personnel Report",
+            "/personnel",
+            ["personnel", "payroll"]
+        ));
+
+        reports.Add(new SearchReport(
+            "reports",
+            "All Reports",
+            "/reports",
+            ["reports", "all reports"]
+        ));
 
         return Ok(new SearchCatalog(Array.Empty<SearchProject>(), reports));
     }
