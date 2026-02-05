@@ -1,3 +1,5 @@
+import WalterLogo from '@/shared/walterLogo.tsx';
+
 const Footer: React.FC = () => {
   return (
     <footer className="bg-light-bg-200 border-t border-main-border py-3">
@@ -12,11 +14,7 @@ const Footer: React.FC = () => {
 
         {/* Center */}
         <div className="flex-1 flex justify-center">
-          <img
-            alt="Dog outline logo"
-            className="w-8 opacity-80"
-            src="/walter.svg"
-          />
+          <WalterLogo className="w-8 h-8 text-dark-font/80" />
         </div>
 
         {/* Right */}
