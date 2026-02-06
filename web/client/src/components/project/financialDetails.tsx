@@ -1,7 +1,7 @@
 import type { ProjectSummary } from '@/lib/projectSummary.ts';
 import { ExportDataButton } from '@/components/ExportDataButton.tsx';
 import { Currency } from '@/shared/Currency.tsx';
-import { FinancialCategoriesTable } from '@/shared/FinancialCategoriesTable.tsx';
+import { FinancialCategoriesTable } from '@/components/project/FinancialCategoriesTable.tsx';
 import { Link } from '@tanstack/react-router';
 
 import { BookOpenIcon } from '@heroicons/react/24/outline';
