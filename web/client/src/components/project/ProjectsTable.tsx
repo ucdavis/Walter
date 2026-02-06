@@ -105,6 +105,31 @@ interface ProjectsTableProps {
 }
 
 export function ProjectsTable({ employeeId, records }: ProjectsTableProps) {
+  const projects = useMemo(() => {
+    const aggregated = aggregateProjects(records);
+    const active = filterExpired(aggregated);
+    return sortByEndDate(active);
+  }, [records]);
+
+  const totals = useMemo(
+    () =>
+      projects.reduce(
+        (acc, p) => ({
+          totalBalance: acc.totalBalance + p.totalBalance,
+          totalBudget: acc.totalBudget + p.totalBudget,
+          totalEncumbrance: acc.totalEncumbrance + p.totalEncumbrance,
+          totalExpense: acc.totalExpense + p.totalExpense,
+        }),
+        {
+          totalBalance: 0,
+          totalBudget: 0,
+          totalEncumbrance: 0,
+          totalExpense: 0,
+        }
+      ),
+    [projects]
+  );
+
   const columns = useMemo<ColumnDef<AggregatedProject>[]>(
     () => [
       {
@@ -121,6 +146,7 @@ export function ProjectsTable({ employeeId, records }: ProjectsTableProps) {
             {row.original.displayName}
           </Link>
         ),
+        footer: () => 'Totals',
         header: 'Project Name',
       },
       {
@@ -150,6 +176,11 @@ export function ProjectsTable({ employeeId, records }: ProjectsTableProps) {
             {formatCurrency(row.original.totalBudget)}
           </span>
         ),
+        footer: () => (
+          <span className="flex justify-end w-full">
+            {formatCurrency(totals.totalBudget)}
+          </span>
+        ),
         header: () => <span className="flex justify-end w-full">Budget</span>,
       },
       {
@@ -159,6 +190,11 @@ export function ProjectsTable({ employeeId, records }: ProjectsTableProps) {
             {formatCurrency(row.original.totalExpense)}
           </span>
         ),
+        footer: () => (
+          <span className="flex justify-end w-full">
+            {formatCurrency(totals.totalExpense)}
+          </span>
+        ),
         header: () => <span className="flex justify-end w-full">Expense</span>,
       },
       {
@@ -166,6 +202,11 @@ export function ProjectsTable({ employeeId, records }: ProjectsTableProps) {
         cell: ({ row }) => (
           <span className="flex justify-end w-full">
             {formatCurrency(row.original.totalEncumbrance)}
+          </span>
+        ),
+        footer: () => (
+          <span className="flex justify-end w-full">
+            {formatCurrency(totals.totalEncumbrance)}
           </span>
         ),
         header: () => (
@@ -179,35 +220,21 @@ export function ProjectsTable({ employeeId, records }: ProjectsTableProps) {
             {formatCurrency(row.original.totalBalance)}
           </span>
         ),
+        footer: () => (
+          <span className="flex justify-end w-full">
+            {formatCurrency(totals.totalBalance)}
+          </span>
+        ),
         header: () => <span className="flex justify-end w-full">Balance</span>,
       },
     ],
-    [employeeId]
-  );
-
-  const projects = useMemo(() => {
-    const aggregated = aggregateProjects(records);
-    const active = filterExpired(aggregated);
-    return sortByEndDate(active);
-  }, [records]);
-
-  const totals = useMemo(
-    () =>
-      projects.reduce(
-        (acc, p) => ({
-          totalBalance: acc.totalBalance + p.totalBalance,
-          totalBudget: acc.totalBudget + p.totalBudget,
-          totalEncumbrance: acc.totalEncumbrance + p.totalEncumbrance,
-          totalExpense: acc.totalExpense + p.totalExpense,
-        }),
-        {
-          totalBalance: 0,
-          totalBudget: 0,
-          totalEncumbrance: 0,
-          totalExpense: 0,
-        }
-      ),
-    [projects]
+    [
+      employeeId,
+      totals.totalBalance,
+      totals.totalBudget,
+      totals.totalEncumbrance,
+      totals.totalExpense,
+    ]
   );
 
   if (projects.length === 0) {
@@ -226,25 +253,7 @@ export function ProjectsTable({ employeeId, records }: ProjectsTableProps) {
       <DataTable
         columns={columns}
         data={projects}
-        footer={
-          <tfoot>
-            <tr className="totaltr">
-              <td colSpan={3}>Totals</td>
-              <td className="text-right">
-                {formatCurrency(totals.totalBudget)}
-              </td>
-              <td className="text-right">
-                {formatCurrency(totals.totalExpense)}
-              </td>
-              <td className="text-right">
-                {formatCurrency(totals.totalEncumbrance)}
-              </td>
-              <td className="text-right">
-                {formatCurrency(totals.totalBalance)}
-              </td>
-            </tr>
-          </tfoot>
-        }
+        footerRowClassName="totaltr"
         globalFilter="left"
         initialState={{ pagination: { pageSize: 25 } }}
       />

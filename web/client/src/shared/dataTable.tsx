@@ -1,6 +1,5 @@
 'use no memo';
 
-import type { ReactNode } from 'react';
 import {
   ColumnDef,
   flexRender,
@@ -12,10 +11,27 @@ import {
   useReactTable,
 } from '@tanstack/react-table';
 
+function hasAnyFooter<TData extends object>(
+  columns: ColumnDef<TData>[]
+): boolean {
+  for (const col of columns) {
+    const colAny = col as unknown as { columns?: unknown; footer?: unknown };
+    if (colAny.footer !== undefined) {
+      return true;
+    }
+    if (Array.isArray(colAny.columns) && colAny.columns.length > 0) {
+      if (hasAnyFooter(colAny.columns as ColumnDef<TData>[])) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 interface DataTableProps<TData extends object> {
   columns: ColumnDef<TData>[];
   data: TData[];
-  footer?: ReactNode; // Rendered inside the <table> after <tbody>. Prefer passing a <tfoot>.
+  footerRowClassName?: string;
   globalFilter?: 'left' | 'right' | 'none'; // Controls the position of the search box
   initialState?: InitialTableState; // Optional initial state for the table, use for stuff like setting page size or sorting
   pagination?: 'auto' | 'on' | 'off'; // 'auto' shows controls only when needed; 'off' disables pagination entirely
@@ -25,7 +41,7 @@ interface DataTableProps<TData extends object> {
 export const DataTable = <TData extends object>({
   columns,
   data,
-  footer,
+  footerRowClassName,
   globalFilter = 'right',
   initialState,
   pagination = 'auto',
@@ -55,6 +71,8 @@ export const DataTable = <TData extends object>({
 
   const showPaginationControls =
     pagination === 'on' || (pagination === 'auto' && table.getPageCount() > 1);
+
+  const showFooter = hasAnyFooter(columns);
 
   return (
     <div className="space-y-4">
@@ -116,6 +134,7 @@ export const DataTable = <TData extends object>({
                         ? 'cursor-pointer select-none'
                         : undefined
                     }
+                    colSpan={header.colSpan}
                     key={header.id}
                     onClick={
                       header.column.getCanSort()
@@ -164,7 +183,24 @@ export const DataTable = <TData extends object>({
               </tr>
             ))}
           </tbody>
-          {footer}
+          {showFooter && (
+            <tfoot>
+              {table.getFooterGroups().map((footerGroup) => (
+                <tr className={footerRowClassName} key={footerGroup.id}>
+                  {footerGroup.headers.map((header) => (
+                    <td colSpan={header.colSpan} key={header.id}>
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                            header.column.columnDef.footer,
+                            header.getContext()
+                          )}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tfoot>
+          )}
         </table>
         {showPaginationControls && (
           <div className="flex justify-end space-x-2 py-2">
