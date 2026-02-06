@@ -7,12 +7,11 @@ import type { ProjectRecord } from '@/queries/project.ts';
 
 interface AggregatedProject {
   awardEndDate: string | null;
-
   awardStartDate: string | null;
   displayName: string;
   projectName: string;
-
   projectNumber: string;
+  showReconciliationWarning: boolean;
   totalBalance: number;
   totalBudget: number;
   totalEncumbrance: number;
@@ -24,11 +23,15 @@ function aggregateProjects(records: ProjectRecord[]): AggregatedProject[] {
 
   for (const p of records) {
     const existing = projectsMap.get(p.projectNumber);
+    // Show warning if user manages this project and there's a discrepancy
+    const hasWarning = p.managedByCurrentUser && p.hasGlPpmDiscrepancy;
+
     if (existing) {
       existing.totalBudget += p.catBudget;
       existing.totalExpense += p.catItdExp;
       existing.totalEncumbrance += p.catCommitments;
       existing.totalBalance += p.catBudBal;
+      existing.showReconciliationWarning ||= hasWarning;
       // Pick earliest start date
       if (
         p.awardStartDate &&
@@ -47,11 +50,10 @@ function aggregateProjects(records: ProjectRecord[]): AggregatedProject[] {
       projectsMap.set(p.projectNumber, {
         awardEndDate: p.awardEndDate,
         awardStartDate: p.awardStartDate,
-
         displayName: p.displayName,
         projectName: p.projectName,
         projectNumber: p.projectNumber,
-
+        showReconciliationWarning: hasWarning,
         totalBalance: p.catBudBal,
         totalBudget: p.catBudget,
         totalEncumbrance: p.catCommitments,
@@ -167,6 +169,19 @@ export function ProjectsTable({ employeeId, records }: ProjectsTableProps) {
                 >
                   {project.displayName}
                 </Link>
+                {project.showReconciliationWarning && (
+                  <Link
+                    className="ml-2 text-warning tooltip tooltip-right"
+                    data-tip="GL/PPM reconciliation issue - click to view"
+                    params={{
+                      employeeId,
+                      projectNumber: project.projectNumber,
+                    }}
+                    to="/projects/$employeeId/$projectNumber/reconciliation"
+                  >
+                    ⚠
+                  </Link>
+                )}
               </td>
               <td className="text-right">
                 {formatDate(project.awardStartDate)}

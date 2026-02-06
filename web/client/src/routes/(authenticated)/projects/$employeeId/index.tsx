@@ -3,6 +3,7 @@ import { PersonnelTable } from '@/components/project/PersonnelTable.tsx';
 import { ProjectsTable } from '@/components/project/ProjectsTable.tsx';
 import { usePersonnelQuery } from '@/queries/personnel.ts';
 import { projectsDetailQueryOptions } from '@/queries/project.ts';
+import { useUser } from '@/shared/auth/UserContext.tsx';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 
@@ -35,8 +36,9 @@ function PersonnelSection({ projectNumbers }: { projectNumbers: string[] }) {
 
 function RouteComponent() {
   const { employeeId } = Route.useParams();
+  const user = useUser();
   const { data: projects } = useSuspenseQuery(
-    projectsDetailQueryOptions(employeeId)
+    projectsDetailQueryOptions(employeeId, user.employeeId)
   );
 
   const projectNumbers = useMemo(

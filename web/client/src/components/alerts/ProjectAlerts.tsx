@@ -12,7 +12,7 @@ function AlertIcon({ type }: { type: Alert['type'] }) {
   if (type === 'ending-soon') {
     return <CalendarIcon className="h-5 w-5" />;
   }
-  if (type === 'negative-balance') {
+  if (type === 'negative-balance' || type === 'reconciliation-issue') {
     return <ExclamationCircleIcon className="h-5 w-5" />;
   }
   return <ExclamationTriangleIcon className="h-5 w-5" />;
@@ -39,6 +39,20 @@ export function AlertCard({ alert, balance, linkParams }: AlertCardProps) {
   );
 
   if (linkParams) {
+    // Link to reconciliation page for reconciliation alerts
+    if (alert.type === 'reconciliation-issue') {
+      return (
+        <Link
+          className={`alert alert-${alert.severity} alert-soft`}
+          params={linkParams}
+          role="alert"
+          to="/projects/$employeeId/$projectNumber/reconciliation"
+        >
+          {content}
+        </Link>
+      );
+    }
+
     return (
       <Link
         className={`alert alert-${alert.severity} alert-soft`}
@@ -59,17 +73,26 @@ export function AlertCard({ alert, balance, linkParams }: AlertCardProps) {
 }
 
 interface ProjectAlertsProps {
-  summary: ProjectSummary;
   employeeId?: string;
   prefix?: string;
+  summary: ProjectSummary;
 }
 
 export function ProjectAlerts({
-  summary,
   employeeId,
   prefix,
+  summary,
 }: ProjectAlertsProps) {
   const alerts = getAlertsForProject(summary, prefix);
+
+  if (summary.showReconciliationWarning) {
+    alerts.push({
+      id: `reconciliation-issue-${summary.projectNumber}`,
+      message: `${prefix ?? 'This project '}has a GL/PPM reconciliation discrepancy`,
+      severity: 'warning',
+      type: 'reconciliation-issue',
+    });
+  }
 
   if (alerts.length === 0) {
     return null;

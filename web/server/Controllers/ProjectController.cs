@@ -11,15 +11,18 @@ public sealed class ProjectController : ApiControllerBase
     private readonly IWebHostEnvironment _env;
     private readonly IFinancialApiService _financialApiService;
     private readonly IDatamartService _datamartService;
+    private readonly ILogger<ProjectController> _logger;
 
     public ProjectController(
         IWebHostEnvironment env,
         IFinancialApiService financialApiService,
-        IDatamartService datamartService)
+        IDatamartService datamartService,
+        ILogger<ProjectController> logger)
     {
         _env = env;
         _financialApiService = financialApiService;
         _datamartService = datamartService;
+        _logger = logger;
     }
 
     [HttpGet("{employeeId}")]
@@ -32,7 +35,8 @@ public sealed class ProjectController : ApiControllerBase
             employeeId, PpmRole.PrincipalInvestigator, cancellationToken);
 
         var data = result.ReadData();
-        var projectNumbers = data.PpmProjectByProjectTeamMemberEmployeeId
+        var graphProjects = data.PpmProjectByProjectTeamMemberEmployeeId;
+        var projectNumbers = graphProjects
             .Select(p => p.ProjectNumber)
             .Distinct()
             .ToList();
@@ -40,9 +44,77 @@ public sealed class ProjectController : ApiControllerBase
         if (!projectNumbers.Any())
             return Ok(Array.Empty<FacultyPortfolioRecord>());
 
+        // Build lookup for PM employee ID by project number
+        var pmByProject = graphProjects
+            .ToDictionary(
+                p => p.ProjectNumber,
+                p => p.TeamMembers
+                    .FirstOrDefault(m => m.RoleName == PpmRole.ProjectManager)?.EmployeeId);
+
         var applicationUser = User.GetUserIdentifier();
-        var projects = await _datamartService.GetFacultyPortfolioAsync(projectNumbers, applicationUser, cancellationToken);
-        return Ok(projects);
+
+        // Fetch projects and reconciliation data in parallel
+        var projectsTask = _datamartService.GetFacultyPortfolioAsync(projectNumbers, applicationUser, cancellationToken);
+        var reconciliationTask = _datamartService.GetGLPPMReconciliationAsync(projectNumbers, applicationUser, cancellationToken);
+
+        await Task.WhenAll(projectsTask, reconciliationTask);
+
+        var projects = await projectsTask;
+        var reconciliation = await reconciliationTask;
+
+        _logger.LogInformation("Reconciliation: {Count} records returned", reconciliation.Count);
+
+        // Build lookup for GL totals by project number
+        var glTotalsLookup = reconciliation
+            .GroupBy(r => r.Project)
+            .ToDictionary(g => g.Key, g => g.Sum(r => r.GlTotalAmount));
+
+        _logger.LogInformation("GL totals lookup: {Count} projects", glTotalsLookup.Count);
+        foreach (var (proj, total) in glTotalsLookup.Take(5))
+        {
+            _logger.LogInformation("  GL [{Project}] = {Total}", proj, total);
+        }
+
+        // Build lookup for PPM totals by project number
+        var ppmTotalsLookup = projects
+            .GroupBy(p => p.ProjectNumber)
+            .ToDictionary(g => g.Key, g => g.Sum(p => p.CatBudBal));
+
+        _logger.LogInformation("PPM totals lookup: {Count} projects", ppmTotalsLookup.Count);
+        foreach (var (proj, total) in ppmTotalsLookup.Take(5))
+        {
+            _logger.LogInformation("  PPM [{Project}] = {Total}", proj, total);
+        }
+
+        // Filter out inactive and expired projects
+        var activeProjects = projects
+            .Where(p => p.ProjectStatus == "ACTIVE")
+            .Where(p => p.AwardEndDate == null || p.AwardEndDate >= DateTime.Today)
+            .ToList();
+
+        // Join PM employee ID and GL/PPM discrepancy flag to project records
+        foreach (var project in activeProjects)
+        {
+            if (pmByProject.TryGetValue(project.ProjectNumber, out var pmEmployeeId))
+            {
+                project.PmEmployeeId = pmEmployeeId;
+            }
+
+            if (glTotalsLookup.TryGetValue(project.ProjectNumber, out var glTotal) &&
+                ppmTotalsLookup.TryGetValue(project.ProjectNumber, out var ppmTotal))
+            {
+                var diff = Math.Abs(glTotal - ppmTotal);
+                project.HasGlPpmDiscrepancy = diff > 1;
+                _logger.LogInformation("Project {Project}: GL={GL}, PPM={PPM}, Diff={Diff}, Discrepancy={Discrepancy}",
+                    project.ProjectNumber, glTotal, ppmTotal, diff, project.HasGlPpmDiscrepancy);
+            }
+            else
+            {
+                _logger.LogInformation("Project {Project}: No GL data found in lookup", project.ProjectNumber);
+            }
+        }
+
+        return Ok(activeProjects);
     }
 
     /// <summary>
@@ -55,17 +127,6 @@ public sealed class ProjectController : ApiControllerBase
         cancellationToken.ThrowIfCancellationRequested();
 
         var path = Path.Combine(_env.ContentRootPath, "Models", "FacultyReportFake.json");
-        var json = System.IO.File.ReadAllText(path);
-
-        return Content(json, "application/json");
-    }
-
-    [HttpGet("transactions")]
-    public IActionResult GetTransactionsForProjects(CancellationToken cancellationToken, [FromQuery] string projectCodes)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-
-        var path = Path.Combine(_env.ContentRootPath, "Models", "ProjectTransactionsFake.json");
         var json = System.IO.File.ReadAllText(path);
 
         return Content(json, "application/json");
@@ -84,6 +145,36 @@ public sealed class ProjectController : ApiControllerBase
         var personnel = await _datamartService.GetPositionBudgetsAsync(codes, applicationUser, cancellationToken);
 
         return Ok(personnel);
+    }
+
+    [HttpGet("transactions")]
+    public async Task<IActionResult> GetTransactionsForProjectsAsync(
+        CancellationToken cancellationToken,
+        [FromQuery] string? projectCodes = null)
+    {
+        if (string.IsNullOrWhiteSpace(projectCodes))
+            return Ok(Array.Empty<GLTransactionRecord>());
+
+        var codes = projectCodes.Split(',', StringSplitOptions.RemoveEmptyEntries);
+        var applicationUser = User.GetUserIdentifier();
+        var transactions = await _datamartService.GetGLTransactionListingsAsync(codes, applicationUser, cancellationToken);
+
+        return Ok(transactions);
+    }
+
+    [HttpGet("gl-ppm-reconciliation")]
+    public async Task<IActionResult> GetGLPPMReconciliationAsync(
+        CancellationToken cancellationToken,
+        [FromQuery] string? projectCodes = null)
+    {
+        if (string.IsNullOrWhiteSpace(projectCodes))
+            return Ok(Array.Empty<GLPPMReconciliationRecord>());
+
+        var codes = projectCodes.Split(',', StringSplitOptions.RemoveEmptyEntries);
+        var applicationUser = User.GetUserIdentifier();
+        var reconciliation = await _datamartService.GetGLPPMReconciliationAsync(codes, applicationUser, cancellationToken);
+
+        return Ok(reconciliation);
     }
 
     /// <summary>

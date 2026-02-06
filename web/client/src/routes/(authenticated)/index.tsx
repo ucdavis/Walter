@@ -45,9 +45,10 @@ function RouteComponent() {
   const user = useUser();
   const canViewAccruals = useHasRole('AccrualViewer');
   const { error, isError, isPending, managedPis } = useManagedPisQuery(
+    user.employeeId,
     user.employeeId
   );
-  const userProjectsQuery = useProjectsDetailQuery(user.employeeId);
+  const userProjectsQuery = useProjectsDetailQuery(user.employeeId, user.employeeId);
   const projectCodes = useMemo(() => {
     const projects = userProjectsQuery.data ?? [];
     return [...new Set(projects.map((p) => p.projectNumber))];

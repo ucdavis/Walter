@@ -8,6 +8,7 @@ import {
   type ProjectSummary,
 } from '@/lib/projectSummary.ts';
 import { projectsDetailQueryOptions } from '@/queries/project.ts';
+import { useUser } from '@/shared/auth/UserContext.tsx';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { Link, createFileRoute } from '@tanstack/react-router';
 
@@ -33,7 +34,13 @@ const ProjectNotFound = ({ projectNumber }: { projectNumber: string }) => (
   </main>
 );
 
-function ProjectContent({ summary }: { summary: ProjectSummary }) {
+function ProjectContent({
+  employeeId,
+  summary,
+}: {
+  employeeId: string;
+  summary: ProjectSummary;
+}) {
   const personnelQuery = usePersonnelQuery([summary.projectNumber]);
 
   return (
@@ -41,7 +48,7 @@ function ProjectContent({ summary }: { summary: ProjectSummary }) {
       <section className="mt-8 mb-10">
         <h1 className="h1">{summary.displayName}</h1>
         <div className="mt-6">
-          <ProjectAlerts summary={summary} />
+          <ProjectAlerts employeeId={employeeId} summary={summary} />
         </div>
       </section>
 
@@ -66,8 +73,9 @@ function ProjectContent({ summary }: { summary: ProjectSummary }) {
 
 function RouteComponent() {
   const { employeeId, projectNumber } = Route.useParams();
+  const user = useUser();
   const { data: projects } = useSuspenseQuery(
-    projectsDetailQueryOptions(employeeId)
+    projectsDetailQueryOptions(employeeId, user.employeeId)
   );
   const summary = summarizeProjectByNumber(projects, projectNumber);
 
@@ -75,5 +83,5 @@ function RouteComponent() {
     return <ProjectNotFound projectNumber={projectNumber} />;
   }
 
-  return <ProjectContent summary={summary} />;
+  return <ProjectContent employeeId={employeeId} summary={summary} />;
 }
