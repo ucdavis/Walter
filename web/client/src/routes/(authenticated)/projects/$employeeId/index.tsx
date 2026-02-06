@@ -59,7 +59,7 @@ function RouteComponent() {
   return (
     <main className="flex-1">
       <section className="mt-8 section-margin">
-        <h1 className="h1">All Projects</h1>
+        <h1 className="h1">All Projects for {projects[0].pi}</h1>
       </section>
 
       <section className="section-margin">
