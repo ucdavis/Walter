@@ -108,12 +108,12 @@ export const DataTable = <TData extends object>({
               <tr key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
                   <th
-                    key={header.id}
                     className={
                       header.column.getCanSort()
                         ? 'cursor-pointer select-none'
                         : undefined
                     }
+                    key={header.id}
                     onClick={
                       header.column.getCanSort()
                         ? header.column.getToggleSortingHandler()
@@ -130,13 +130,16 @@ export const DataTable = <TData extends object>({
                             )}
                       </div>
                       {header.column.getIsSorted() === 'asc' ? (
-                        <span className="shrink-0" aria-label="Sorted ascending">
+                        <span
+                          aria-label="Sorted ascending"
+                          className="shrink-0"
+                        >
                           🔼
                         </span>
                       ) : header.column.getIsSorted() === 'desc' ? (
                         <span
-                          className="shrink-0"
                           aria-label="Sorted descending"
+                          className="shrink-0"
                         >
                           🔽
                         </span>
