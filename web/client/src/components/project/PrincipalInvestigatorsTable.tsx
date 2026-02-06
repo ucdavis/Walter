@@ -37,9 +37,7 @@ const columns: ColumnDef<PiWithProjects>[] = [
   {
     accessorKey: 'projectCount',
     cell: (info) => (
-      <span className="flex justify-end w-full">
-        {info.getValue<number>()}
-      </span>
+      <span className="flex justify-end w-full">{info.getValue<number>()}</span>
     ),
     header: () => <span className="flex justify-end w-full">Projects</span>,
   },
@@ -89,9 +87,9 @@ export function PrincipalInvestigatorsTable({
       <DataTable
         columns={columns}
         data={pis}
+        globalFilter="left"
         initialState={{ pagination: { pageSize: 25 } }}
       />
     </div>
   );
 }
-
