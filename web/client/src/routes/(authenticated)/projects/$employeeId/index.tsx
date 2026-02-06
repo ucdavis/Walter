@@ -5,7 +5,7 @@ import { usePersonnelQuery } from '@/queries/personnel.ts';
 import { projectsDetailQueryOptions } from '@/queries/project.ts';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
-import WalterDream from '@/shared/walterDream.tsx';
+import { PageEmpty } from '@/components/states/pageEmpty.tsx';
 
 export const Route = createFileRoute('/(authenticated)/projects/$employeeId/')({
   component: RouteComponent,
@@ -47,20 +47,13 @@ function RouteComponent() {
 
   if (!projects?.length) {
     return (
-      <main className="flex-1">
-        <section className="mx-auto text-center mt-16">
-          <WalterDream className="w-30 h-30 mx-auto" />
-          <p className="text-lg mt-8">
-            Walter could not fetch any projects for you...
-          </p>
-        </section>
-      </main>
+      <PageEmpty message="Walter could not fetch any projects for you..." />
     );
   }
 
   return (
     <main className="flex-1">
-      <section className="mt-8 section-margin">
+      <section className="mt-8">
         <h1 className="h1">
           {projects[0].pi
             ? `All Projects for ${projects[0].pi}`

@@ -1,3 +1,4 @@
+import { PageLoading } from '@/components/states/pageLoading.tsx';
 import { managedPisQueryOptions } from '@/queries/project.ts';
 import { meQueryOptions } from '@/queries/user.ts';
 import { createFileRoute, Outlet } from '@tanstack/react-router';
@@ -8,7 +9,9 @@ export const Route = createFileRoute('/(authenticated)/projects')({
     const user = await queryClient.ensureQueryData(meQueryOptions());
     return queryClient.ensureQueryData(managedPisQueryOptions(user.employeeId));
   },
-  pendingComponent: () => <div>Loading managed investigators...</div>,
+  pendingComponent: () => (
+    <PageLoading message="Fetching Managed Investigators..." />
+  ),
 });
 
 function RouteComponent() {

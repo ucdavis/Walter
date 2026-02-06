@@ -157,7 +157,7 @@ html:active-view-transition-type(slide-right) {
     transform: translate(115px, 26px);
   }
   50% {
-    transform: translate(110px, 16px);
+    transform: translate(100px, 10px);
   }
 }
 

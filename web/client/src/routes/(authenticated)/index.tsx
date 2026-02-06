@@ -12,6 +12,8 @@ import {
 } from '@/queries/project.ts';
 import { useHasRole, useUser } from '@/shared/auth/UserContext.tsx';
 import { createFileRoute, Link } from '@tanstack/react-router';
+import { PageLoading } from '@/components/states/pageLoading.tsx';
+import { PageError } from '@/components/states/pageError.tsx';
 
 const piCsvColumns = [
   { header: 'PI Name', key: 'name' as const },
@@ -55,35 +57,27 @@ function RouteComponent() {
   const personnelQuery = usePersonnelQuery(projectCodes);
 
   if (isPending || userProjectsQuery.isPending) {
-    return (
-      <EmptyWrapper>
-        <div className="text-center">
-          <div className="loading loading-spinner loading-lg mb-2" />
-          <div className="mb-4 text-lg">Loading dashboard...</div>
-        </div>
-      </EmptyWrapper>
-    );
+    return <PageLoading message="Fetching dashboard…" />;
   }
 
   if (isError) {
     return (
-      <EmptyWrapper>
-        <div className="alert alert-error">
-          <span>Unable to load managed investigators: {error?.message}</span>
-        </div>
-      </EmptyWrapper>
+      <PageError>
+        <p className="text-lg">
+          {' '}
+          Unable to load managed investigators: {error?.message}
+        </p>
+      </PageError>
     );
   }
 
   if (userProjectsQuery.isError) {
     return (
-      <EmptyWrapper>
-        <div className="alert alert-error">
-          <span>
-            Unable to load projects: {userProjectsQuery.error?.message}
-          </span>
-        </div>
-      </EmptyWrapper>
+      <PageError>
+        <p className="text-lg">
+          Unable to load projects: {userProjectsQuery.error?.message}
+        </p>
+      </PageError>
     );
   }
 
@@ -173,7 +167,7 @@ function RouteComponent() {
                     <tr key={pi.employeeId}>
                       <td>
                         <Link
-                          className="link link-hover link-primary"
+                          className="link link-hover underline"
                           params={{ employeeId: pi.employeeId }}
                           to="/projects/$employeeId/"
                         >
@@ -241,7 +235,7 @@ function RouteComponent() {
             {canViewAccruals && (
               <li>
                 <Link
-                  className="text-xl link link-hover link-primary"
+                  className="text-xl link link-hover underline"
                   to="/accruals"
                 >
                   Employee Vacation Accruals
