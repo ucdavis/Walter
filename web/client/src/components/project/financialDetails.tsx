@@ -65,10 +65,7 @@ export function FinancialDetails({ summary }: FinancialDetailsProps) {
       </dl>
 
       <div className="mt-4">
-        <FinancialCategoriesTable
-          categories={summary.categories}
-          totals={summary.totals}
-        />
+        <FinancialCategoriesTable categories={summary.categories} />
       </div>
     </section>
   );

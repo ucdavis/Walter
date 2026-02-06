@@ -1,5 +1,4 @@
-import { useMemo } from 'react';
-import type { ColumnDef } from '@tanstack/react-table';
+import { createColumnHelper } from '@tanstack/react-table';
 import {
   AcademicCapIcon,
   ArchiveBoxIcon,
@@ -9,10 +8,7 @@ import {
   PaperClipIcon,
   UserIcon,
 } from '@heroicons/react/24/outline';
-import type {
-  ProjectCategorySummary,
-  ProjectTotals,
-} from '@/lib/projectSummary.ts';
+import type { ProjectCategorySummary } from '@/lib/projectSummary.ts';
 import { Currency } from '@/shared/Currency.tsx';
 import { DataTable } from '@/shared/dataTable.tsx';
 
@@ -49,93 +45,99 @@ function resolveIcon(category: string) {
   return ICONS.Default;
 }
 
+const columnHelper = createColumnHelper<ProjectCategorySummary>();
+
+const columns = [
+  columnHelper.accessor('name', {
+    cell: (info) => {
+      const Icon = resolveIcon(info.getValue());
+      return (
+        <div className="flex items-center gap-2">
+          <Icon className="w-5 h-5" />
+          <span>{info.getValue()}</span>
+        </div>
+      );
+    },
+    footer: () => 'TOTALS',
+    header: 'Category name',
+  }),
+  columnHelper.accessor('budget', {
+    cell: (info) => (
+      <span className="flex justify-end w-full">
+        <Currency value={info.getValue()} />
+      </span>
+    ),
+    footer: ({ table }) => (
+      <span className="flex justify-end w-full">
+        <Currency
+          value={table
+            .getFilteredRowModel()
+            .rows.reduce((sum, row) => sum + row.original.budget, 0)}
+        />
+      </span>
+    ),
+    header: () => <span className="flex justify-end w-full">Budget</span>,
+  }),
+  columnHelper.accessor('expense', {
+    cell: (info) => (
+      <span className="flex justify-end w-full">
+        <Currency value={info.getValue()} />
+      </span>
+    ),
+    footer: ({ table }) => (
+      <span className="flex justify-end w-full">
+        <Currency
+          value={table
+            .getFilteredRowModel()
+            .rows.reduce((sum, row) => sum + row.original.expense, 0)}
+        />
+      </span>
+    ),
+    header: () => <span className="flex justify-end w-full">Expenses</span>,
+  }),
+  columnHelper.accessor('encumbrance', {
+    cell: (info) => (
+      <span className="flex justify-end w-full">
+        <Currency value={info.getValue()} />
+      </span>
+    ),
+    footer: ({ table }) => (
+      <span className="flex justify-end w-full">
+        <Currency
+          value={table
+            .getFilteredRowModel()
+            .rows.reduce((sum, row) => sum + row.original.encumbrance, 0)}
+        />
+      </span>
+    ),
+    header: () => <span className="flex justify-end w-full">Encumbrance</span>,
+  }),
+  columnHelper.accessor('balance', {
+    cell: (info) => (
+      <span className="flex justify-end w-full">
+        <Currency value={info.getValue()} />
+      </span>
+    ),
+    footer: ({ table }) => (
+      <span className="flex justify-end w-full">
+        <Currency
+          value={table
+            .getFilteredRowModel()
+            .rows.reduce((sum, row) => sum + row.original.balance, 0)}
+        />
+      </span>
+    ),
+    header: () => <span className="flex justify-end w-full">Balance</span>,
+  }),
+];
+
 interface FinancialCategoriesTableProps {
   categories: ProjectCategorySummary[];
-  totals: ProjectTotals;
 }
 
 export function FinancialCategoriesTable({
   categories,
-  totals,
 }: FinancialCategoriesTableProps) {
-  const columns = useMemo<ColumnDef<ProjectCategorySummary>[]>(
-    () => [
-      {
-        accessorKey: 'name',
-        cell: ({ row }) => {
-          const Icon = resolveIcon(row.original.name);
-          return (
-            <div className="flex items-center gap-2">
-              <Icon className="w-5 h-5" />
-              <span>{row.original.name}</span>
-            </div>
-          );
-        },
-        footer: () => 'TOTALS',
-        header: 'Category name',
-      },
-      {
-        accessorKey: 'budget',
-        cell: ({ row }) => (
-          <span className="flex justify-end w-full">
-            <Currency value={row.original.budget} />
-          </span>
-        ),
-        footer: () => (
-          <span className="flex justify-end w-full">
-            <Currency value={totals.budget} />
-          </span>
-        ),
-        header: () => <span className="flex justify-end w-full">Budget</span>,
-      },
-      {
-        accessorKey: 'expense',
-        cell: ({ row }) => (
-          <span className="flex justify-end w-full">
-            <Currency value={row.original.expense} />
-          </span>
-        ),
-        footer: () => (
-          <span className="flex justify-end w-full">
-            <Currency value={totals.expense} />
-          </span>
-        ),
-        header: () => <span className="flex justify-end w-full">Expenses</span>,
-      },
-      {
-        accessorKey: 'encumbrance',
-        cell: ({ row }) => (
-          <span className="flex justify-end w-full">
-            <Currency value={row.original.encumbrance} />
-          </span>
-        ),
-        footer: () => (
-          <span className="flex justify-end w-full">
-            <Currency value={totals.encumbrance} />
-          </span>
-        ),
-        header: () => (
-          <span className="flex justify-end w-full">Encumbrance</span>
-        ),
-      },
-      {
-        accessorKey: 'balance',
-        cell: ({ row }) => (
-          <span className="flex justify-end w-full">
-            <Currency value={row.original.balance} />
-          </span>
-        ),
-        footer: () => (
-          <span className="flex justify-end w-full">
-            <Currency value={totals.balance} />
-          </span>
-        ),
-        header: () => <span className="flex justify-end w-full">Balance</span>,
-      },
-    ],
-    [totals.balance, totals.budget, totals.encumbrance, totals.expense]
-  );
-
   return (
     <DataTable
       columns={columns}
