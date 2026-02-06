@@ -14,7 +14,7 @@ export function PageLoading({ message }: PageLoadingProps) {
       role="status"
     >
       <WalterLoad className="mx-auto w-32 h-32" />
-      {message && <p className="text-center text-lg">{message}</p>}
+      {message && <p className="text-center text-lg mt-8">{message}</p>}
     </div>
   );
 }
