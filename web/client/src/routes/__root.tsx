@@ -15,7 +15,7 @@ import { AnalyticsListener } from '@/components/AnalyticsListener.tsx';
 const RootLayout = () => (
   <>
     <div className="min-h-screen flex flex-col">
-      <div className="flex-1">
+      <div className="flex-1" role="main">
         <AnalyticsListener />
         <Outlet />
       </div>
