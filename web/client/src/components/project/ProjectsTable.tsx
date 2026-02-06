@@ -158,7 +158,7 @@ export function ProjectsTable({ employeeId, records }: ProjectsTableProps) {
             <tr key={project.projectNumber}>
               <td>
                 <Link
-                  className="link link-hover link-primary"
+                  className="link link-hover underline"
                   params={{
                     employeeId,
                     projectNumber: project.projectNumber,
