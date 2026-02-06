@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Link } from '@tanstack/react-router';
-import { ExportCsvButton } from '@/components/ExportCsvButton.tsx';
+import { ExportDataButton } from '@/components/ExportDataButton.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import { formatDate } from '@/lib/date.ts';
 import type { ProjectRecord } from '@/queries/project.ts';
@@ -135,7 +135,7 @@ export function ProjectsTable({ employeeId, records }: ProjectsTableProps) {
   return (
     <div className="overflow-x-auto">
       <div className="flex justify-end mb-2">
-        <ExportCsvButton
+        <ExportDataButton
           columns={csvColumns}
           data={projects}
           filename="projects.csv"

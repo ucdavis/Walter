@@ -1,4 +1,4 @@
-import { ExportCsvButton } from '@/components/ExportCsvButton.tsx';
+import { ExportDataButton } from '@/components/ExportDataButton.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import type { PiWithProjects } from '@/queries/project.ts';
 import { DataTable } from '@/shared/dataTable.tsx';
@@ -73,7 +73,7 @@ export function PrincipalInvestigatorsTable({
   return (
     <div className="mt-4">
       <div className="flex justify-end">
-        <ExportCsvButton
+        <ExportDataButton
           columns={piCsvColumns}
           data={pis.map((pi) => ({
             name: pi.name,

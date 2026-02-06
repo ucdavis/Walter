@@ -1,5 +1,5 @@
 import type { ProjectSummary } from '@/lib/projectSummary.ts';
-import { ExportCsvButton } from '@/components/ExportCsvButton.tsx';
+import { ExportDataButton } from '@/components/ExportDataButton.tsx';
 import { Currency } from '@/shared/Currency.tsx';
 import { Link } from '@tanstack/react-router';
 
@@ -67,7 +67,7 @@ export function FinancialDetails({ summary }: FinancialDetailsProps) {
       <div className="flex justify-between">
         <h2 className="h2">Financial Details</h2>
         <div className="flex gap-2">
-          <ExportCsvButton
+          <ExportDataButton
             columns={financialCsvColumns}
             data={summary.categories.map((c) => ({
               balance: c.balance,
