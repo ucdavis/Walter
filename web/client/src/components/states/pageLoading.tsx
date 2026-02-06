@@ -1,4 +1,4 @@
-import WalterLoad from '@/shared/walterLoad.tsx';
+import { WalterLoad } from '@/shared/walterLoad.tsx';
 import React from 'react';
 
 type PageLoadingProps = {
