@@ -36,12 +36,6 @@ const formatPercent = (balance: number, budget: number) => {
   return `${percent.toFixed(0)}%`;
 };
 
-const EmptyWrapper = ({ children }: { children: React.ReactNode }) => (
-  <div className="container">
-    <div className="mt-16">{children}</div>
-  </div>
-);
-
 function RouteComponent() {
   const [activeTab, setActiveTab] = useState<Tab>('pis');
   const user = useUser();
