@@ -12,7 +12,10 @@ import {
 } from '@tanstack/react-table';
 
 function hasAnyFooter<TData extends object>(
-  columns: ColumnDef<TData>[]
+  // TanStack Table's own `columns` option is typed as `ColumnDef<TData, any>[]`
+  // since tables commonly mix column value types (string/number/etc).
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  columns: ColumnDef<TData, any>[]
 ): boolean {
   for (const col of columns) {
     const colAny = col as unknown as { columns?: unknown; footer?: unknown };
@@ -20,7 +23,8 @@ function hasAnyFooter<TData extends object>(
       return true;
     }
     if (Array.isArray(colAny.columns) && colAny.columns.length > 0) {
-      if (hasAnyFooter(colAny.columns as ColumnDef<TData>[])) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if (hasAnyFooter(colAny.columns as ColumnDef<TData, any>[])) {
         return true;
       }
     }
@@ -29,7 +33,8 @@ function hasAnyFooter<TData extends object>(
 }
 
 interface DataTableProps<TData extends object> {
-  columns: ColumnDef<TData>[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  columns: ColumnDef<TData, any>[];
   data: TData[];
   footerRowClassName?: string;
   globalFilter?: 'left' | 'right' | 'none'; // Controls the position of the search box
