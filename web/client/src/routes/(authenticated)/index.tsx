@@ -12,6 +12,7 @@ import {
 } from '@/queries/project.ts';
 import { useHasRole, useUser } from '@/shared/auth/UserContext.tsx';
 import { createFileRoute, Link } from '@tanstack/react-router';
+import WalterLoad from '@/shared/walterLoad.tsx';
 
 const piCsvColumns = [
   { header: 'PI Name', key: 'name' as const },
@@ -93,6 +94,7 @@ function RouteComponent() {
   return (
     <div className="container">
       <div className="pt-10 pb-5 mx-auto w-full sm:max-w-[90%] md:max-w-[80%] xl:max-w-[66%]">
+        <WalterLoad />
         <h1 className="text-2xl font-proxima-bold">W.A.L.T.E.R.</h1>
         <p className="uppercase">
           warehouse analytics and ledger tools for enterprise reporting

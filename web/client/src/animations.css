@@ -113,3 +113,25 @@ html:active-view-transition-type(slide-right) {
     transform: scaleY(1);
   }
 }
+
+.walter-loading #bones {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.walter-loading #bones {
+  animation: walter-bone-loader 2.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes walter-bone-loader {
+  0% {
+    transform: rotate(100deg);
+  }
+
+  60% {
+    transform: rotate(1360deg);
+  }
+
+  100% {
+    transform: rotate(1360deg);
+  }
+}
