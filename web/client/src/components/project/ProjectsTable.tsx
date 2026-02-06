@@ -1,9 +1,11 @@
 import { useMemo } from 'react';
 import { Link } from '@tanstack/react-router';
+import type { ColumnDef } from '@tanstack/react-table';
 import { ExportDataButton } from '@/components/ExportDataButton.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import { formatDate } from '@/lib/date.ts';
 import type { ProjectRecord } from '@/queries/project.ts';
+import { DataTable } from '@/shared/dataTable.tsx';
 
 interface AggregatedProject {
   awardEndDate: string | null;
@@ -103,6 +105,86 @@ interface ProjectsTableProps {
 }
 
 export function ProjectsTable({ employeeId, records }: ProjectsTableProps) {
+  const columns = useMemo<ColumnDef<AggregatedProject>[]>(
+    () => [
+      {
+        accessorKey: 'displayName',
+        cell: ({ row }) => (
+          <Link
+            className="link link-hover link-primary"
+            params={{
+              employeeId,
+              projectNumber: row.original.projectNumber,
+            }}
+            to="/projects/$employeeId/$projectNumber/"
+          >
+            {row.original.displayName}
+          </Link>
+        ),
+        header: 'Project Name',
+      },
+      {
+        accessorKey: 'awardStartDate',
+        cell: ({ row }) => (
+          <span className="flex justify-end w-full">
+            {formatDate(row.original.awardStartDate)}
+          </span>
+        ),
+        header: () => (
+          <span className="flex justify-end w-full">Effective Date</span>
+        ),
+      },
+      {
+        accessorKey: 'awardEndDate',
+        cell: ({ row }) => (
+          <span className="flex justify-end w-full">
+            {formatDate(row.original.awardEndDate)}
+          </span>
+        ),
+        header: () => <span className="flex justify-end w-full">End Date</span>,
+      },
+      {
+        accessorKey: 'totalBudget',
+        cell: ({ row }) => (
+          <span className="flex justify-end w-full">
+            {formatCurrency(row.original.totalBudget)}
+          </span>
+        ),
+        header: () => <span className="flex justify-end w-full">Budget</span>,
+      },
+      {
+        accessorKey: 'totalExpense',
+        cell: ({ row }) => (
+          <span className="flex justify-end w-full">
+            {formatCurrency(row.original.totalExpense)}
+          </span>
+        ),
+        header: () => <span className="flex justify-end w-full">Expense</span>,
+      },
+      {
+        accessorKey: 'totalEncumbrance',
+        cell: ({ row }) => (
+          <span className="flex justify-end w-full">
+            {formatCurrency(row.original.totalEncumbrance)}
+          </span>
+        ),
+        header: () => (
+          <span className="flex justify-end w-full">Encumbrance</span>
+        ),
+      },
+      {
+        accessorKey: 'totalBalance',
+        cell: ({ row }) => (
+          <span className="flex justify-end w-full">
+            {formatCurrency(row.original.totalBalance)}
+          </span>
+        ),
+        header: () => <span className="flex justify-end w-full">Balance</span>,
+      },
+    ],
+    [employeeId]
+  );
+
   const projects = useMemo(() => {
     const aggregated = aggregateProjects(records);
     const active = filterExpired(aggregated);
@@ -133,7 +215,7 @@ export function ProjectsTable({ employeeId, records }: ProjectsTableProps) {
   }
 
   return (
-    <div className="overflow-x-auto">
+    <div className="mt-4">
       <div className="flex justify-end mb-2">
         <ExportDataButton
           columns={csvColumns}
@@ -141,68 +223,31 @@ export function ProjectsTable({ employeeId, records }: ProjectsTableProps) {
           filename="projects.csv"
         />
       </div>
-      <table className="table walter-table">
-        <thead>
-          <tr>
-            <th>Project Name</th>
-            <th className="text-right">Effective Date</th>
-            <th className="text-right">End Date</th>
-            <th className="text-right">Budget</th>
-            <th className="text-right">Expense</th>
-            <th className="text-right">Encumbrance</th>
-            <th className="text-right">Balance</th>
-          </tr>
-        </thead>
-        <tbody>
-          {projects.map((project) => (
-            <tr key={project.projectNumber}>
-              <td>
-                <Link
-                  className="link link-hover link-primary"
-                  params={{
-                    employeeId,
-                    projectNumber: project.projectNumber,
-                  }}
-                  to="/projects/$employeeId/$projectNumber/"
-                >
-                  {project.displayName}
-                </Link>
+      <DataTable
+        columns={columns}
+        data={projects}
+        footer={
+          <tfoot>
+            <tr className="totaltr">
+              <td colSpan={3}>Totals</td>
+              <td className="text-right">
+                {formatCurrency(totals.totalBudget)}
               </td>
               <td className="text-right">
-                {formatDate(project.awardStartDate)}
-              </td>
-              <td className="text-right">{formatDate(project.awardEndDate)}</td>
-              <td className="text-right">
-                {formatCurrency(project.totalBudget)}
+                {formatCurrency(totals.totalExpense)}
               </td>
               <td className="text-right">
-                {formatCurrency(project.totalExpense)}
+                {formatCurrency(totals.totalEncumbrance)}
               </td>
               <td className="text-right">
-                {formatCurrency(project.totalEncumbrance)}
-              </td>
-              <td className="text-right">
-                {formatCurrency(project.totalBalance)}
+                {formatCurrency(totals.totalBalance)}
               </td>
             </tr>
-          ))}
-        </tbody>
-        <tfoot>
-          <tr className="totaltr">
-            <td colSpan={3}>Totals</td>
-            <td className="text-right">{formatCurrency(totals.totalBudget)}</td>
-            <td className="text-right">
-              {formatCurrency(totals.totalExpense)}
-            </td>
-            <td className="text-right">
-              {formatCurrency(totals.totalEncumbrance)}
-            </td>
-            <td className="text-right">
-              {formatCurrency(totals.totalBalance)}
-            </td>
-          </tr>
-        </tfoot>
-      </table>
+          </tfoot>
+        }
+        globalFilter="left"
+        initialState={{ pagination: { pageSize: 25 } }}
+      />
     </div>
   );
 }

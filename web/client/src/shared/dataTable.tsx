@@ -1,5 +1,6 @@
 'use no memo';
 
+import type { ReactNode } from 'react';
 import {
   ColumnDef,
   flexRender,
@@ -14,6 +15,7 @@ import {
 interface DataTableProps<TData extends object> {
   columns: ColumnDef<TData>[];
   data: TData[];
+  footer?: ReactNode; // Rendered inside the <table> after <tbody>. Prefer passing a <tfoot>.
   globalFilter?: 'left' | 'right' | 'none'; // Controls the position of the search box
   initialState?: InitialTableState; // Optional initial state for the table, use for stuff like setting page size or sorting
   pagination?: 'auto' | 'on' | 'off'; // 'auto' shows controls only when needed; 'off' disables pagination entirely
@@ -23,6 +25,7 @@ interface DataTableProps<TData extends object> {
 export const DataTable = <TData extends object>({
   columns,
   data,
+  footer,
   globalFilter = 'right',
   initialState,
   pagination = 'auto',
@@ -161,6 +164,7 @@ export const DataTable = <TData extends object>({
               </tr>
             ))}
           </tbody>
+          {footer}
         </table>
         {showPaginationControls && (
           <div className="flex justify-end space-x-2 py-2">
