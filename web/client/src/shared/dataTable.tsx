@@ -16,6 +16,7 @@ interface DataTableProps<TData extends object> {
   data: TData[];
   globalFilter?: 'left' | 'right' | 'none'; // Controls the position of the search box
   initialState?: InitialTableState; // Optional initial state for the table, use for stuff like setting page size or sorting
+  pagination?: 'auto' | 'on' | 'off'; // 'auto' shows controls only when needed; 'off' disables pagination entirely
   // ...any other props, initial state?, export? pages? filter? sorting?
 }
 
@@ -24,6 +25,7 @@ export const DataTable = <TData extends object>({
   data,
   globalFilter = 'right',
   initialState,
+  pagination = 'auto',
 }: DataTableProps<TData>) => {
   // see note in https://tanstack.com/table/latest/docs/installation#react-table.  Added "use no memo" just to be safe but it's unnecessary.
   // once tanstack updates their docs and makes sure it works w/ react compiler (even though we aren't using it yet), we can remove this comment
@@ -33,17 +35,28 @@ export const DataTable = <TData extends object>({
     data,
     getCoreRowModel: getCoreRowModel(), // basic rendering
     getFilteredRowModel: getFilteredRowModel(), // enable filtering feature
-    getPaginationRowModel: getPaginationRowModel(), // enable pagination calculations
+    getPaginationRowModel:
+      pagination === 'off' ? undefined : getPaginationRowModel(), // enable pagination calculations
     getSortedRowModel: getSortedRowModel(), // enable sorting feature
     initialState: {
       ...initialState,
     },
   });
 
+  const filterJustifyClass =
+    globalFilter === 'left'
+      ? 'justify-start'
+      : globalFilter === 'right'
+        ? 'justify-end'
+        : '';
+
+  const showPaginationControls =
+    pagination === 'on' || (pagination === 'auto' && table.getPageCount() > 1);
+
   return (
     <div className="space-y-4">
       {globalFilter !== 'none' && (
-        <div className={`flex`}>
+        <div className={`flex w-full ${filterJustifyClass}`}>
           <label className="input input-bordered flex items-center gap-2 w-full max-w-sm">
             <svg
               className="h-[1em] opacity-50"
@@ -89,29 +102,46 @@ export const DataTable = <TData extends object>({
       )}
 
       <div className="overflow-x-auto">
-        {' '}
         <table className="table walter-table">
           <thead>
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
                   <th
-                    className="cursor-pointer"
                     key={header.id}
-                    onClick={header.column.getToggleSortingHandler?.()}
+                    className={
+                      header.column.getCanSort()
+                        ? 'cursor-pointer select-none'
+                        : undefined
+                    }
+                    onClick={
+                      header.column.getCanSort()
+                        ? header.column.getToggleSortingHandler()
+                        : undefined
+                    }
                   >
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
-                    {/* Add sort indicator if column is sorted */}
-                    {header.column.getIsSorted() === 'asc'
-                      ? ' 🔼'
-                      : header.column.getIsSorted() === 'desc'
-                        ? ' 🔽'
-                        : ''}
+                    <div className="flex flex-nowrap items-center gap-1 w-full">
+                      <div className="flex-1 min-w-0">
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
+                      </div>
+                      {header.column.getIsSorted() === 'asc' ? (
+                        <span className="shrink-0" aria-label="Sorted ascending">
+                          🔼
+                        </span>
+                      ) : header.column.getIsSorted() === 'desc' ? (
+                        <span
+                          className="shrink-0"
+                          aria-label="Sorted descending"
+                        >
+                          🔽
+                        </span>
+                      ) : null}
+                    </div>
                   </th>
                 ))}
               </tr>
@@ -129,23 +159,26 @@ export const DataTable = <TData extends object>({
             ))}
           </tbody>
         </table>
-        {/* (Optional) Pagination controls */}
-        <div className="flex justify-end space-x-2 py-2">
-          <button
-            className="btn btn-xs"
-            disabled={!table.getCanPreviousPage()}
-            onClick={() => table.previousPage()}
-          >
-            Previous
-          </button>
-          <button
-            className="btn btn-xs"
-            disabled={!table.getCanNextPage()}
-            onClick={() => table.nextPage()}
-          >
-            Next
-          </button>
-        </div>
+        {showPaginationControls && (
+          <div className="flex justify-end space-x-2 py-2">
+            <button
+              className="btn btn-xs"
+              disabled={!table.getCanPreviousPage()}
+              onClick={() => table.previousPage()}
+              type="button"
+            >
+              Previous
+            </button>
+            <button
+              className="btn btn-xs"
+              disabled={!table.getCanNextPage()}
+              onClick={() => table.nextPage()}
+              type="button"
+            >
+              Next
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
