@@ -11,11 +11,15 @@ import {
   useReactTable,
 } from '@tanstack/react-table';
 
+// TanStack Table types `TableOptions.columns` as `ColumnDef<TData, any>[]` because
+// tables commonly mix column value types (string/number/etc) in a single array.
+// We don't like the use of `any`, so a good compromise is to create an alias here so we only have to suppress the linter once.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type DataTableColumnDef<TData extends object> = ColumnDef<TData, any>;
+type DataTableColumns<TData extends object> = Array<DataTableColumnDef<TData>>;
+
 function hasAnyFooter<TData extends object>(
-  // TanStack Table's own `columns` option is typed as `ColumnDef<TData, any>[]`
-  // since tables commonly mix column value types (string/number/etc).
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  columns: ColumnDef<TData, any>[]
+  columns: DataTableColumns<TData>
 ): boolean {
   for (const col of columns) {
     const colAny = col as unknown as { columns?: unknown; footer?: unknown };
@@ -23,8 +27,7 @@ function hasAnyFooter<TData extends object>(
       return true;
     }
     if (Array.isArray(colAny.columns) && colAny.columns.length > 0) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      if (hasAnyFooter(colAny.columns as ColumnDef<TData, any>[])) {
+      if (hasAnyFooter(colAny.columns as DataTableColumns<TData>)) {
         return true;
       }
     }
@@ -33,8 +36,7 @@ function hasAnyFooter<TData extends object>(
 }
 
 interface DataTableProps<TData extends object> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  columns: ColumnDef<TData, any>[];
+  columns: DataTableColumns<TData>;
   data: TData[];
   footerRowClassName?: string;
   globalFilter?: 'left' | 'right' | 'none'; // Controls the position of the search box
