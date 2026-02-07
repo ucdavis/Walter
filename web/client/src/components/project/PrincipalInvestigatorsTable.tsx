@@ -3,7 +3,7 @@ import { formatCurrency } from '@/lib/currency.ts';
 import type { PiWithProjects } from '@/queries/project.ts';
 import { DataTable } from '@/shared/dataTable.tsx';
 import { Link } from '@tanstack/react-router';
-import type { ColumnDef } from '@tanstack/react-table';
+import { createColumnHelper } from '@tanstack/react-table';
 
 const piCsvColumns = [
   { header: 'PI Name', key: 'name' as const },
@@ -20,39 +20,41 @@ const formatPercent = (balance: number, budget: number) => {
   return `${percent.toFixed(0)}%`;
 };
 
-const columns: ColumnDef<PiWithProjects>[] = [
-  {
-    accessorKey: 'name',
-    cell: ({ row }) => (
+const columnHelper = createColumnHelper<PiWithProjects>();
+
+const columns = [
+  columnHelper.accessor('name', {
+    cell: (info) => (
       <Link
         className="link link-hover link-primary"
-        params={{ employeeId: row.original.employeeId }}
+        params={{ employeeId: info.row.original.employeeId }}
         to="/projects/$employeeId/"
       >
-        {row.original.name}
+        {info.getValue()}
       </Link>
     ),
     header: 'PI Name',
-  },
-  {
-    accessorKey: 'projectCount',
+  }),
+  columnHelper.accessor('projectCount', {
     cell: (info) => (
-      <span className="flex justify-end w-full">{info.getValue<number>()}</span>
+      <span className="flex justify-end w-full">{info.getValue()}</span>
     ),
     header: () => <span className="flex justify-end w-full">Projects</span>,
-  },
-  {
-    accessorKey: 'totalBalance',
-    cell: ({ row }) => (
-      <span className="flex justify-end w-full">
-        {formatCurrency(row.original.totalBalance)}{' '}
-        <span className="text-base-content/60">
-          ({formatPercent(row.original.totalBalance, row.original.totalBudget)})
+  }),
+  columnHelper.accessor('totalBalance', {
+    cell: (info) => {
+      const { totalBalance, totalBudget } = info.row.original;
+      return (
+        <span className="flex justify-end w-full">
+          {formatCurrency(totalBalance)}{' '}
+          <span className="text-base-content/60">
+            ({formatPercent(totalBalance, totalBudget)})
+          </span>
         </span>
-      </span>
-    ),
+      );
+    },
     header: () => <span className="flex justify-end w-full">Balance</span>,
-  },
+  }),
 ];
 
 interface PrincipalInvestigatorsTableProps {

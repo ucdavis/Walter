@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Link } from '@tanstack/react-router';
-import type { ColumnDef } from '@tanstack/react-table';
+import { createColumnHelper } from '@tanstack/react-table';
 import { ExportDataButton } from '@/components/ExportDataButton.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import { formatDate } from '@/lib/date.ts';
@@ -20,6 +20,8 @@ interface AggregatedProject {
   totalEncumbrance: number;
   totalExpense: number;
 }
+
+const columnHelper = createColumnHelper<AggregatedProject>();
 
 function aggregateProjects(records: ProjectRecord[]): AggregatedProject[] {
   const projectsMap = new Map<string, AggregatedProject>();
@@ -130,50 +132,46 @@ export function ProjectsTable({ employeeId, records }: ProjectsTableProps) {
     [projects]
   );
 
-  const columns = useMemo<ColumnDef<AggregatedProject>[]>(
+  const columns = useMemo(
     () => [
-      {
-        accessorKey: 'displayName',
-        cell: ({ row }) => (
+      columnHelper.accessor('displayName', {
+        cell: (info) => (
           <Link
             className="link link-hover link-primary"
             params={{
               employeeId,
-              projectNumber: row.original.projectNumber,
+              projectNumber: info.row.original.projectNumber,
             }}
             to="/projects/$employeeId/$projectNumber/"
           >
-            {row.original.displayName}
+            {info.getValue()}
           </Link>
         ),
         footer: () => 'Totals',
         header: 'Project Name',
-      },
-      {
-        accessorKey: 'awardStartDate',
-        cell: ({ row }) => (
+      }),
+      columnHelper.accessor('awardStartDate', {
+        cell: (info) => (
           <span className="flex justify-end w-full">
-            {formatDate(row.original.awardStartDate)}
+            {formatDate(info.getValue())}
           </span>
         ),
         header: () => (
           <span className="flex justify-end w-full">Effective Date</span>
         ),
-      },
-      {
-        accessorKey: 'awardEndDate',
-        cell: ({ row }) => (
+      }),
+      columnHelper.accessor('awardEndDate', {
+        cell: (info) => (
           <span className="flex justify-end w-full">
-            {formatDate(row.original.awardEndDate)}
+            {formatDate(info.getValue())}
           </span>
         ),
         header: () => <span className="flex justify-end w-full">End Date</span>,
-      },
-      {
-        accessorKey: 'totalBudget',
-        cell: ({ row }) => (
+      }),
+      columnHelper.accessor('totalBudget', {
+        cell: (info) => (
           <span className="flex justify-end w-full">
-            {formatCurrency(row.original.totalBudget)}
+            {formatCurrency(info.getValue())}
           </span>
         ),
         footer: () => (
@@ -182,12 +180,11 @@ export function ProjectsTable({ employeeId, records }: ProjectsTableProps) {
           </span>
         ),
         header: () => <span className="flex justify-end w-full">Budget</span>,
-      },
-      {
-        accessorKey: 'totalExpense',
-        cell: ({ row }) => (
+      }),
+      columnHelper.accessor('totalExpense', {
+        cell: (info) => (
           <span className="flex justify-end w-full">
-            {formatCurrency(row.original.totalExpense)}
+            {formatCurrency(info.getValue())}
           </span>
         ),
         footer: () => (
@@ -196,12 +193,11 @@ export function ProjectsTable({ employeeId, records }: ProjectsTableProps) {
           </span>
         ),
         header: () => <span className="flex justify-end w-full">Expense</span>,
-      },
-      {
-        accessorKey: 'totalEncumbrance',
-        cell: ({ row }) => (
+      }),
+      columnHelper.accessor('totalEncumbrance', {
+        cell: (info) => (
           <span className="flex justify-end w-full">
-            {formatCurrency(row.original.totalEncumbrance)}
+            {formatCurrency(info.getValue())}
           </span>
         ),
         footer: () => (
@@ -212,12 +208,11 @@ export function ProjectsTable({ employeeId, records }: ProjectsTableProps) {
         header: () => (
           <span className="flex justify-end w-full">Encumbrance</span>
         ),
-      },
-      {
-        accessorKey: 'totalBalance',
-        cell: ({ row }) => (
+      }),
+      columnHelper.accessor('totalBalance', {
+        cell: (info) => (
           <span className="flex justify-end w-full">
-            {formatCurrency(row.original.totalBalance)}
+            {formatCurrency(info.getValue())}
           </span>
         ),
         footer: () => (
@@ -226,7 +221,7 @@ export function ProjectsTable({ employeeId, records }: ProjectsTableProps) {
           </span>
         ),
         header: () => <span className="flex justify-end w-full">Balance</span>,
-      },
+      }),
     ],
     [
       employeeId,
