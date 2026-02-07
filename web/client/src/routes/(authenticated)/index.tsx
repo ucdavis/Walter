@@ -20,12 +20,6 @@ export const Route = createFileRoute('/(authenticated)/')({
   component: RouteComponent,
 });
 
-const EmptyWrapper = ({ children }: { children: React.ReactNode }) => (
-  <div className="container">
-    <div className="mt-16">{children}</div>
-  </div>
-);
-
 function RouteComponent() {
   const [activeTab, setActiveTab] = useState<Tab>('pis');
   const user = useUser();
