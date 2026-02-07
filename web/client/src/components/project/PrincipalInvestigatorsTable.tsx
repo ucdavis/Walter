@@ -26,7 +26,7 @@ const columns = [
   columnHelper.accessor('name', {
     cell: (info) => (
       <Link
-        className="link link-hover link-primary"
+        className="link link-hover underline"
         params={{ employeeId: info.row.original.employeeId }}
         to="/projects/$employeeId/"
       >

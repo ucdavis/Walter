@@ -137,7 +137,7 @@ export function ProjectsTable({ employeeId, records }: ProjectsTableProps) {
       columnHelper.accessor('displayName', {
         cell: (info) => (
           <Link
-            className="link link-hover link-primary"
+            className="link link-hover underline"
             params={{
               employeeId,
               projectNumber: info.row.original.projectNumber,
