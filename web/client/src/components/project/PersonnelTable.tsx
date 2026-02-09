@@ -54,7 +54,7 @@ export interface AggregatedPosition {
   monthlyTotal: number;
   name: string;
   positionDescription: string;
-  positionEffectiveDate: string | null;
+  jobEffectiveDate: string | null;
   positionNumber: string;
 }
 
@@ -98,7 +98,7 @@ export function aggregateByPosition(
         monthlyTotal: monthlyRate + monthlyFringe,
         name: record.name,
         positionDescription: record.positionDescription,
-        positionEffectiveDate: record.positionEffectiveDate,
+        jobEffectiveDate: record.jobEffectiveDate,
         positionNumber: record.positionNumber,
       });
     }
@@ -134,7 +134,7 @@ const columns = [
     header: () => <span className="flex justify-end w-full">Dist Pct</span>,
     id: 'distPct',
   }),
-  columnHelper.accessor('positionEffectiveDate', {
+  columnHelper.accessor('jobEffectiveDate', {
     cell: (info) => (
       <span className="flex justify-end">
         {formatDate(info.getValue() as string | null, '')}
