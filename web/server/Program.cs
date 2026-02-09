@@ -55,6 +55,7 @@ builder.Services.AddAuthorizationPolicies();
 // app settings sections
 builder.Services.Configure<IamSettings>(builder.Configuration.GetSection("Iam"));
 builder.Services.Configure<FinancialSettings>(builder.Configuration.GetSection("Financial"));
+builder.Services.Configure<AnthropicSettings>(builder.Configuration.GetSection("Anthropic"));
 
 builder.Services.AddControllers();
 
@@ -67,6 +68,7 @@ builder.Services.AddSingleton<IFinancialApiService, FinancialApiService>();
 builder.Services.AddSingleton<IDatamartService, DatamartService>();
 
 // add scoped services here
+builder.Services.AddScoped<IAskService, AskService>();
 builder.Services.AddScoped<IDbInitializer, DbInitializer>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IEntraUserAttributeService, EntraUserAttributeService>();
