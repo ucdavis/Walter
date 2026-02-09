@@ -15,7 +15,7 @@ import {
   ChevronUpIcon,
   ClockIcon,
 } from '@heroicons/react/24/outline';
-import { ExportCsvButton } from '@/components/ExportCsvButton.tsx';
+import { ExportDataButton } from '@/components/ExportDataButton.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import { formatDate } from '@/lib/date.ts';
 import { PersonnelRecord } from '@/queries/personnel.ts';
@@ -275,7 +275,7 @@ export function PersonnelTable({
   return (
     <div className="overflow-x-auto">
       <div className="flex justify-end mb-2">
-        <ExportCsvButton
+        <ExportDataButton
           columns={personnelCsvColumns}
           data={getExportData(positions)}
           filename="personnel.csv"

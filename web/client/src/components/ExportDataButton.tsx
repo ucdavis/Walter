@@ -1,22 +1,22 @@
 import { DocumentChartBarIcon } from '@heroicons/react/24/outline';
-import { downloadCsv, toCsv } from '@/lib/csv.ts';
+import { downloadExcelCsv, toExcelCsv } from '@/lib/csv.ts';
 
-interface ExportCsvButtonProps<T> {
+interface ExportDataButtonProps<T> {
   className?: string;
   columns: { header: string; key: keyof T }[];
   data: T[];
   filename: string;
 }
 
-export function ExportCsvButton<T>({
+export function ExportDataButton<T>({
   className = '',
   columns,
   data,
   filename,
-}: ExportCsvButtonProps<T>) {
+}: ExportDataButtonProps<T>) {
   const handleExport = () => {
-    const csv = toCsv(data, columns);
-    downloadCsv(csv, filename);
+    const csv = toExcelCsv(data, columns);
+    downloadExcelCsv(csv, filename);
   };
 
   return (
@@ -26,7 +26,7 @@ export function ExportCsvButton<T>({
       type="button"
     >
       <DocumentChartBarIcon className="w-4 h-4" />
-      Export CSV
+      Export
     </button>
   );
 }
