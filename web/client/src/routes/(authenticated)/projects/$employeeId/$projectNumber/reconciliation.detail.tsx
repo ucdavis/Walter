@@ -69,8 +69,67 @@ function RouteComponent() {
   // Find the specific reconciliation record
   const ppmRecord = reconciliation.find((r) => matchesPPM(r, search));
 
-  // Filter GL transactions to matching params
-  const glTransactions = transactions.filter((t) => matchesGL(t, search));
+  // Filter GL transactions to matching params, most recent first
+  const glTransactions = transactions
+    .filter((t) => matchesGL(t, search))
+    .sort((a, b) => {
+      if (!a.journalAcctDate && !b.journalAcctDate) return 0;
+      if (!a.journalAcctDate) return 1;
+      if (!b.journalAcctDate) return -1;
+      return new Date(b.journalAcctDate).getTime() - new Date(a.journalAcctDate).getTime();
+    });
+
+  // Aggregate PPM records at the task level
+  const ppmTasks = Object.values(
+    projects
+      .filter((p) => p.projectNumber === projectNumber)
+      .reduce<
+        Record<
+          string,
+          {
+            taskNum: string;
+            taskName: string | null;
+            projectNumber: string;
+            projectOwningOrg: string | null;
+            fundCode: string | null;
+            fundDesc: string;
+            programCode: string | null;
+            programDesc: string;
+            activityCode: string | null;
+            activityDesc: string;
+            budget: number;
+            expenses: number;
+            commitments: number;
+            balance: number;
+          }
+        >
+      >((acc, p) => {
+        const key = p.taskNum ?? '';
+        if (!acc[key]) {
+          acc[key] = {
+            taskNum: p.taskNum ?? '',
+            taskName: p.taskName ?? null,
+            projectNumber: p.projectNumber,
+            projectOwningOrg: p.projectOwningOrg ?? null,
+            fundCode: p.fundCode ?? null,
+            fundDesc: p.fundDesc ?? '',
+            programCode: p.programCode ?? null,
+            programDesc: p.programDesc ?? '',
+            activityCode: p.activityCode ?? null,
+            activityDesc: p.activityDesc ?? '',
+            budget: 0,
+            expenses: 0,
+            commitments: 0,
+            balance: 0,
+          };
+        }
+        acc[key].budget += p.catBudget;
+        acc[key].expenses += p.catItdExp;
+        acc[key].commitments += p.catCommitments;
+        acc[key].balance += p.catBudBal;
+        return acc;
+      }, {})
+  );
 
   const keyLabel = [search.dept, search.fund, search.program, search.activity]
     .filter(Boolean)
@@ -119,8 +178,7 @@ function RouteComponent() {
                     <th>Source</th>
                     <th className="text-right">Budget</th>
                     <th className="text-right">Expenses</th>
-                    <th className="text-right">Commitments</th>
-                    <th className="text-right">Balance/Total</th>
+                    <th className="text-right">Net Budget</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -133,10 +191,7 @@ function RouteComponent() {
                       {formatCurrency(ppmRecord.ppmItdExp)}
                     </td>
                     <td className="text-right font-mono">
-                      {formatCurrency(ppmRecord.ppmCommitments)}
-                    </td>
-                    <td className="text-right font-mono">
-                      {formatCurrency(ppmRecord.ppmBudBal)}
+                      {formatCurrency(ppmRecord.ppmBudget - ppmRecord.ppmItdExp)}
                     </td>
                   </tr>
                   <tr>
@@ -146,10 +201,7 @@ function RouteComponent() {
                       {formatCurrency(ppmRecord.glActualAmount)}
                     </td>
                     <td className="text-right font-mono">
-                      {formatCurrency(ppmRecord.glCommitmentAmount + ppmRecord.glObligationAmount)}
-                    </td>
-                    <td className="text-right font-mono">
-                      {formatCurrency(ppmRecord.glTotalAmount)}
+                      {formatCurrency(ppmRecord.glActualAmount)}
                     </td>
                   </tr>
                 </tbody>
@@ -158,13 +210,10 @@ function RouteComponent() {
                     <td className="font-medium">Difference</td>
                     <td className="text-right font-mono">-</td>
                     <td className="text-right font-mono">
-                      {formatCurrency(ppmRecord.ppmItdExp - ppmRecord.glActualAmount)}
-                    </td>
-                    <td className="text-right font-mono">
-                      {formatCurrency(ppmRecord.ppmCommitments - (ppmRecord.glCommitmentAmount + ppmRecord.glObligationAmount))}
+                      {formatCurrency(ppmRecord.ppmItdExp + ppmRecord.glActualAmount)}
                     </td>
                     <td className="text-right font-mono font-bold">
-                      {formatCurrency(ppmRecord.ppmBudBal - ppmRecord.glTotalAmount)}
+                      {formatCurrency(ppmRecord.glActualAmount + (ppmRecord.ppmBudget - ppmRecord.ppmItdExp))}
                     </td>
                   </tr>
                 </tfoot>
@@ -173,6 +222,89 @@ function RouteComponent() {
           </>
         ) : (
           <p className="text-base-content/60">No record found.</p>
+        )}
+      </section>
+
+      {/* PPM Task Breakdown */}
+      <section className="mb-8">
+        <h2 className="h2 mb-4">PPM Tasks ({ppmTasks.length})</h2>
+        {ppmTasks.length === 0 ? (
+          <p className="text-base-content/60">No PPM tasks found.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="table table-zebra table-sm w-full">
+              <thead>
+                <tr>
+                  <th>Dept</th>
+                  <th>Project</th>
+                  <th>Task</th>
+                  <th>Fund</th>
+                  <th>Program</th>
+                  <th>Activity</th>
+                  <th className="text-right">Budget</th>
+                  <th className="text-right">Expenses</th>
+                  <th className="text-right">Commitments</th>
+                  <th className="text-right">Balance</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ppmTasks.map((t) => (
+                  <tr key={t.taskNum}>
+                    <td className="font-mono text-sm">
+                      {t.projectOwningOrg ?? '-'}
+                    </td>
+                    <td className="font-mono text-sm">
+                      {t.projectNumber}
+                    </td>
+                    <td className="text-sm">
+                      <div>{t.taskNum}</div>
+                      {t.taskName && (
+                        <div className="text-xs text-base-content/60">
+                          {t.taskName}
+                        </div>
+                      )}
+                    </td>
+                    <td className="text-sm">
+                      <div className="font-mono">{t.fundCode ?? '-'}</div>
+                      {t.fundDesc && (
+                        <div className="text-xs text-base-content/60">
+                          {t.fundDesc}
+                        </div>
+                      )}
+                    </td>
+                    <td className="text-sm">
+                      <div className="font-mono">{t.programCode ?? '-'}</div>
+                      {t.programDesc && (
+                        <div className="text-xs text-base-content/60">
+                          {t.programDesc}
+                        </div>
+                      )}
+                    </td>
+                    <td className="text-sm">
+                      <div className="font-mono">{t.activityCode ?? '-'}</div>
+                      {t.activityDesc && (
+                        <div className="text-xs text-base-content/60">
+                          {t.activityDesc}
+                        </div>
+                      )}
+                    </td>
+                    <td className="text-right font-mono">
+                      {formatCurrency(t.budget)}
+                    </td>
+                    <td className="text-right font-mono">
+                      {formatCurrency(t.expenses)}
+                    </td>
+                    <td className="text-right font-mono">
+                      {formatCurrency(t.commitments)}
+                    </td>
+                    <td className="text-right font-mono">
+                      {formatCurrency(t.balance)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
 
@@ -191,9 +323,7 @@ function RouteComponent() {
                   <th>Journal</th>
                   <th>Batch</th>
                   <th>Description</th>
-                  <th className="text-right">Actual</th>
-                  <th className="text-right">Commitment</th>
-                  <th className="text-right">Obligation</th>
+                  <th className="text-right">Amount</th>
                 </tr>
               </thead>
               <tbody>
@@ -224,19 +354,7 @@ function RouteComponent() {
                       {t.journalLineDescription ?? '-'}
                     </td>
                     <td className="text-right font-mono">
-                      {t.actualAmount !== 0
-                        ? formatCurrency(t.actualAmount)
-                        : '-'}
-                    </td>
-                    <td className="text-right font-mono">
-                      {t.commitmentAmount !== 0
-                        ? formatCurrency(t.commitmentAmount)
-                        : '-'}
-                    </td>
-                    <td className="text-right font-mono">
-                      {t.obligationAmount !== 0
-                        ? formatCurrency(t.obligationAmount)
-                        : '-'}
+                      {formatCurrency(t.actualAmount)}
                     </td>
                   </tr>
                 ))}

@@ -26,7 +26,7 @@ function getRecordKey(r: GLPPMReconciliationRecord): string {
 }
 
 function hasDiscrepancy(r: GLPPMReconciliationRecord): boolean {
-  return Math.abs(r.glTotalAmount - r.ppmBudBal) > 1;
+  return Math.abs(r.glActualAmount + (r.ppmBudget - r.ppmItdExp)) > 1;
 }
 
 function RouteComponent() {
@@ -49,8 +49,8 @@ function RouteComponent() {
     if (aDisc !== bDisc) {
       return aDisc ? -1 : 1;
     }
-    const aDiff = Math.abs(a.glTotalAmount - a.ppmBudBal);
-    const bDiff = Math.abs(b.glTotalAmount - b.ppmBudBal);
+    const aDiff = Math.abs(a.glActualAmount + (a.ppmBudget - a.ppmItdExp));
+    const bDiff = Math.abs(b.glActualAmount + (b.ppmBudget - b.ppmItdExp));
     return bDiff - aDiff;
   });
 
@@ -94,11 +94,13 @@ function RouteComponent() {
             <thead>
               <tr>
                 <th>Dept</th>
+                <th>Project</th>
                 <th>Fund</th>
+                <th>PPM Fund</th>
                 <th>Program</th>
                 <th>Activity</th>
-                <th className="text-right">GL Total</th>
-                <th className="text-right">PPM Balance</th>
+                <th className="text-right">GL Actuals</th>
+                <th className="text-right">PPM Net Budget</th>
                 <th className="text-right">Difference</th>
                 <th></th>
               </tr>
@@ -106,7 +108,8 @@ function RouteComponent() {
             <tbody>
               {sorted.map((row) => {
                 const key = getRecordKey(row);
-                const diff = row.glTotalAmount - row.ppmBudBal;
+                const ppmNetBudget = row.ppmBudget - row.ppmItdExp;
+                const diff = row.glActualAmount + ppmNetBudget;
                 const isDiscrepancy = hasDiscrepancy(row);
 
                 return (
@@ -119,6 +122,16 @@ function RouteComponent() {
                     </td>
                     <td>
                       <div className="font-mono text-sm">
+                        {row.project}
+                      </div>
+                      {row.projectDescription && (
+                        <div className="text-xs text-base-content/60">
+                          {row.projectDescription}
+                        </div>
+                      )}
+                    </td>
+                    <td>
+                      <div className="font-mono text-sm">
                         {row.fundCode ?? '-'}
                       </div>
                       {row.fundDescription && (
@@ -126,6 +139,9 @@ function RouteComponent() {
                           {row.fundDescription}
                         </div>
                       )}
+                    </td>
+                    <td className="font-mono text-sm">
+                      {row.ppmFundCode}
                     </td>
                     <td>
                       <div className="font-mono text-sm">
@@ -148,10 +164,10 @@ function RouteComponent() {
                       )}
                     </td>
                     <td className="text-right font-mono">
-                      {formatCurrency(row.glTotalAmount)}
+                      {formatCurrency(row.glActualAmount)}
                     </td>
                     <td className="text-right font-mono">
-                      {formatCurrency(row.ppmBudBal)}
+                      {formatCurrency(ppmNetBudget)}
                     </td>
                     <td
                       className={`text-right font-mono ${

@@ -22,6 +22,9 @@ public sealed class GLPPMReconciliationRecord
     [JsonPropertyName("fundDescription")]
     public string? FundDescription { get; set; }
 
+    [JsonPropertyName("ppmFundCode")]
+    public string PpmFundCode { get; set; } = "";
+
     [JsonPropertyName("programCode")]
     public string? ProgramCode { get; set; }
 
@@ -36,15 +39,6 @@ public sealed class GLPPMReconciliationRecord
 
     [JsonPropertyName("glActualAmount")]
     public decimal GlActualAmount { get; set; }
-
-    [JsonPropertyName("glCommitmentAmount")]
-    public decimal GlCommitmentAmount { get; set; }
-
-    [JsonPropertyName("glObligationAmount")]
-    public decimal GlObligationAmount { get; set; }
-
-    [JsonPropertyName("glTotalAmount")]
-    public decimal GlTotalAmount { get; set; }
 
     [JsonPropertyName("ppmBudget")]
     public decimal PpmBudget { get; set; }

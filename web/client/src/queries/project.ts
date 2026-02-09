@@ -2,6 +2,7 @@ import { useQueries, useQuery } from '@tanstack/react-query';
 import { fetchJson } from '../lib/api.ts';
 
 export interface ProjectRecord {
+  activityCode: string | null;
   activityDesc: string;
   awardEndDate: string | null;
   awardNumber: string | null;
@@ -13,7 +14,10 @@ export interface ProjectRecord {
   copi: string | null;
   displayName: string;
   expenditureCategoryName: string;
+  fundCode: string | null;
   fundDesc: string;
+  programCode: string | null;
+  programDesc: string;
   hasGlPpmDiscrepancy: boolean;
   /** Computed on frontend: pmEmployeeId === currentUserEmployeeId */
   managedByCurrentUser: boolean;
@@ -21,7 +25,6 @@ export interface ProjectRecord {
   pi: string | null;
   pm: string | null;
   pmEmployeeId: string | null;
-  programDesc: string;
   projectName: string;
   projectNumber: string;
   projectOwningOrg: string;
@@ -82,14 +85,12 @@ export interface GLPPMReconciliationRecord {
   projectDescription: string | null;
   fundCode: string | null;
   fundDescription: string | null;
+  ppmFundCode: string;
   programCode: string | null;
   programDescription: string | null;
   activityCode: string | null;
   activityDescription: string | null;
   glActualAmount: number;
-  glCommitmentAmount: number;
-  glObligationAmount: number;
-  glTotalAmount: number;
   ppmBudget: number;
   ppmCommitments: number;
   ppmItdExp: number;

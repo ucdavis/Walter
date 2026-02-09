@@ -67,7 +67,7 @@ public sealed class ProjectController : ApiControllerBase
         // Build lookup for GL totals by project number
         var glTotalsLookup = reconciliation
             .GroupBy(r => r.Project)
-            .ToDictionary(g => g.Key, g => g.Sum(r => r.GlTotalAmount));
+            .ToDictionary(g => g.Key, g => g.Sum(r => r.GlActualAmount));
 
         _logger.LogInformation("GL totals lookup: {Count} projects", glTotalsLookup.Count);
         foreach (var (proj, total) in glTotalsLookup.Take(5))
@@ -78,7 +78,7 @@ public sealed class ProjectController : ApiControllerBase
         // Build lookup for PPM totals by project number
         var ppmTotalsLookup = projects
             .GroupBy(p => p.ProjectNumber)
-            .ToDictionary(g => g.Key, g => g.Sum(p => p.CatBudBal));
+            .ToDictionary(g => g.Key, g => g.Sum(p => p.CatBudget - p.CatItdExp));
 
         _logger.LogInformation("PPM totals lookup: {Count} projects", ppmTotalsLookup.Count);
         foreach (var (proj, total) in ppmTotalsLookup.Take(5))
@@ -103,7 +103,7 @@ public sealed class ProjectController : ApiControllerBase
             if (glTotalsLookup.TryGetValue(project.ProjectNumber, out var glTotal) &&
                 ppmTotalsLookup.TryGetValue(project.ProjectNumber, out var ppmTotal))
             {
-                var diff = Math.Abs(glTotal - ppmTotal);
+                var diff = Math.Abs(glTotal + ppmTotal);
                 project.HasGlPpmDiscrepancy = diff > 1;
                 _logger.LogInformation("Project {Project}: GL={GL}, PPM={PPM}, Diff={Diff}, Discrepancy={Discrepancy}",
                     project.ProjectNumber, glTotal, ppmTotal, diff, project.HasGlPpmDiscrepancy);
