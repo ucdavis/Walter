@@ -38,14 +38,6 @@ const Header: React.FC = () => {
               <Link
                 activeOptions={{ exact: false }}
                 className="nav-link"
-                to="/personnel"
-              >
-                Personnel
-              </Link>
-
-              <Link
-                activeOptions={{ exact: false }}
-                className="nav-link"
                 to="/reports"
               >
                 Reports

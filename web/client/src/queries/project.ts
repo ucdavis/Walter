@@ -1,4 +1,4 @@
-import { useQueries, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { fetchJson } from '../lib/api.ts';
 
 export interface ProjectRecord {
@@ -69,58 +69,12 @@ export interface PiWithProjects {
 }
 
 export const useManagedPisQuery = (employeeId: string) => {
-  // First fetch the list of managed PIs
   const managedPisResult = useQuery(managedPisQueryOptions(employeeId));
-  const employeeIds = managedPisResult.data?.map((pi) => pi.employeeId) ?? [];
-
-  // Then fetch projects for each PI in parallel
-  const projectsResult = useQueries({
-    combine: (results) => {
-      const byEmployeeId: Record<string, ProjectRecord[]> = {};
-
-      results.forEach((r, i) => {
-        const projects = r.data ?? [];
-        if (employeeIds[i]) {
-          byEmployeeId[employeeIds[i]] = projects;
-        }
-      });
-
-      return {
-        byEmployeeId,
-        error: results.find((r) => r.error)?.error ?? null,
-        isError: results.some((r) => r.isError),
-        isPending: results.some((r) => r.isPending),
-      };
-    },
-    queries: employeeIds.map((id) => projectsDetailQueryOptions(id)),
-  });
-
-  // Combine PI info with their projects (excluding expired)
-  const now = new Date();
-  const managedPis: PiWithProjects[] = (managedPisResult.data ?? []).map(
-    (pi) => {
-      const allProjects = projectsResult.byEmployeeId[pi.employeeId] ?? [];
-      const projects = allProjects.filter(
-        (p) => !p.awardEndDate || new Date(p.awardEndDate) >= now
-      );
-      const totalBudget = projects.reduce((sum, p) => sum + p.catBudget, 0);
-      const totalBalance = projects.reduce((sum, p) => sum + p.catBudBal, 0);
-
-      return {
-        employeeId: pi.employeeId,
-        name: pi.name,
-        projectCount: projects.length,
-        projects,
-        totalBalance,
-        totalBudget,
-      };
-    }
-  );
 
   return {
-    error: managedPisResult.error ?? projectsResult.error,
-    isError: managedPisResult.isError || projectsResult.isError,
-    isPending: managedPisResult.isPending || projectsResult.isPending,
-    managedPis,
+    error: managedPisResult.error,
+    isError: managedPisResult.isError,
+    isPending: managedPisResult.isPending,
+    managedPis: managedPisResult.data ?? [],
   };
 };
