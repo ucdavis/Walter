@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
-import { PersonnelTable } from '@/components/project/PersonnelTable.tsx';
+import { PersonnelSection } from './PersonnelSection.tsx';
 import { ProjectsTable } from '@/components/project/ProjectsTable.tsx';
-import { usePersonnelQuery } from '@/queries/personnel.ts';
 import { projectsDetailQueryOptions } from '@/queries/project.ts';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
@@ -10,29 +9,6 @@ import { PageEmpty } from '@/components/states/pageEmpty.tsx';
 export const Route = createFileRoute('/(authenticated)/projects/$employeeId/')({
   component: RouteComponent,
 });
-
-function PersonnelSection({ projectNumbers }: { projectNumbers: string[] }) {
-  const personnelQuery = usePersonnelQuery(projectNumbers);
-
-  if (projectNumbers.length === 0) {
-    return null;
-  }
-
-  return (
-    <section className="section-margin">
-      <h2 className="h2">Personnel</h2>
-      {personnelQuery.isPending && (
-        <p className="text-base-content/70 mt-4">Loading personnel...</p>
-      )}
-      {personnelQuery.isError && (
-        <p className="text-error mt-4">Error loading personnel.</p>
-      )}
-      {personnelQuery.isSuccess && (
-        <PersonnelTable data={personnelQuery.data ?? []} />
-      )}
-    </section>
-  );
-}
 
 function RouteComponent() {
   const { employeeId } = Route.useParams();
