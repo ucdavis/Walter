@@ -14,6 +14,8 @@ const Header: React.FC = () => {
   const menuRef = useRef<HTMLDivElement | null>(null);
   const [menuHeight, setMenuHeight] = useState<number>(0);
 
+  const linkTabIndex = mobileOpen ? 0 : -1;
+
   useEffect(() => {
     if (menuRef.current) {
       setMenuHeight(menuRef.current.scrollHeight);
@@ -47,6 +49,7 @@ const Header: React.FC = () => {
             <Link
               activeOptions={{ exact: false }}
               className="nav-link"
+              linkTabIndex={linkTabIndex}
               params={{ employeeId: user.employeeId }}
               to="/projects/$employeeId"
             >
@@ -56,6 +59,7 @@ const Header: React.FC = () => {
             <Link
               activeOptions={{ exact: false }}
               className="nav-link"
+              linkTabIndex={linkTabIndex}
               to="/personnel"
             >
               Personnel
@@ -64,6 +68,7 @@ const Header: React.FC = () => {
             <Link
               activeOptions={{ exact: false }}
               className="nav-link"
+              linkTabIndex={linkTabIndex}
               to="/reports"
             >
               Reports
@@ -103,11 +108,14 @@ const Header: React.FC = () => {
       {/* Mobile slide-down menu */}
       <div
         aria-hidden={!mobileOpen}
-        className="sm:hidden bg-light-bg-200 transition-[height,opacity] duration-300 ease-out"
+        className={`sm:hidden bg-light-bg-200 overflow-hidden
+    transition-[height,opacity] duration-300 ease-out
+    ${mobileOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}
         style={{
           height: mobileOpen ? menuHeight : 0,
           opacity: mobileOpen ? 1 : 0,
         }}
+        {...(!mobileOpen ? ({ inert: '' } as any) : {})}
       >
         <div className="container py-2 flex flex-col gap-2" ref={menuRef}>
           <Link

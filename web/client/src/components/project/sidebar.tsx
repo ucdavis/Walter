@@ -1,3 +1,4 @@
+import React, { useEffect, useRef, useState } from 'react';
 import { formatDate } from '@/lib/date.ts';
 import {
   projectsDetailQueryOptions,
@@ -31,10 +32,8 @@ function groupProjects(records: ProjectRecord[]): ProjectSummary[] {
       };
     }
 
-    // add catBudBal
     map[key].totalCatBudBal += rec.catBudBal;
 
-    // pick latest awardEndDate (YYYY-MM-DD string compare works)
     if (rec.awardEndDate) {
       const current = map[key].awardEndDate;
       if (!current || rec.awardEndDate > current) {
@@ -61,40 +60,195 @@ export function ProjectsSidebar() {
   const { data: projects } = useSuspenseQuery(
     projectsDetailQueryOptions(employeeId)
   );
+  const [open, setOpen] = useState(false);
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  const closeBtnRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    // close panel when route selection changes (e.g., user navigates to a project)
+    setOpen(false);
+  }, [projectNumber]);
+
+  useEffect(() => {
+    // handle escape to close
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        setOpen(false);
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   if (!projects?.length) {
     return null;
   }
 
-  // we want to group projects by projectNumber
   const groupedProjects = groupProjects(projects);
   const totalOverviewBalance = groupedProjects.reduce(
     (total, project) => total + project.totalCatBudBal,
     0
   );
-
   const isAllProjectsActive = !projectNumber;
 
   return (
-    <aside className="w-72 shrink-0">
-      <div className="sticky top-24">
-        <div className="bg-white rounded-sm border border-main-border">
-          <div className="bg-light-bg-200 border-b border-main-border">
-            <div className="px-4 py-2 border-b border-main-border">
-              <h2 className="text-primary-font text-sm uppercase">
-                My Projects
-              </h2>
+    <>
+      {/* Desktop/Tablet sidebar (md+) */}
+      <aside className="w-72 shrink-0 hidden md:block">
+        <div className="sticky top-24">
+          <div className="bg-white rounded-sm border border-main-border">
+            <div className="bg-light-bg-200 border-b border-main-border">
+              <div className="px-4 py-2 border-b border-main-border">
+                <h2 className="text-primary-font text-sm uppercase">
+                  My Projects
+                </h2>
+              </div>
+              <div className="px-4 py-1">
+                <input
+                  className="w-full h-9"
+                  placeholder="Search..."
+                  type="text"
+                />
+              </div>
             </div>
-            <div className="px-4 py-1">
-              <input
-                className="w-full h-9"
-                placeholder="Search..."
-                type="text"
+
+            <div className="space-y-1 max-h-[650px] overflow-y-auto">
+              <Link
+                className={linkClasses(isAllProjectsActive, false)}
+                params={{ employeeId }}
+                to="/projects/$employeeId"
+                viewTransition={{ types: ['slide-right'] }}
+              >
+                <div className="flex justify-between items-start mb-1">
+                  <span className="text-base">All Projects</span>
+                </div>
+                <div className="flex justify-between text-sm items-center text-dark-font/70">
+                  <Currency value={totalOverviewBalance} />
+                  <span>total proj #</span>
+                </div>
+              </Link>
+
+              {groupedProjects.map((project, index) => (
+                <Link
+                  className={linkClasses(
+                    projectNumber === project.projectNumber,
+                    project.projectStatusCode === 'ACTIVE'
+                  )}
+                  key={index}
+                  params={{ employeeId, projectNumber: project.projectNumber }}
+                  to="/projects/$employeeId/$projectNumber"
+                  viewTransition={{ types: ['slide-left'] }}
+                >
+                  <div className="flex justify-between items-start mb-1">
+                    <span className="text-base">{project.displayName}</span>
+                  </div>
+                  <div className="flex text-sm justify-between items-center text-dark-font/70">
+                    <Currency value={project.totalCatBudBal} />
+                    <span>
+                      {formatDate(project.awardEndDate, 'No end date')}
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      {/* Mobile sticky header with toggle (shown < md) */}
+      <div className="md:hidden sticky top-16 z-40">
+        <div className="bg-white border-b border-main-border px-4 py-2 flex items-center justify-between">
+          <button
+            aria-controls="projects-drawer"
+            aria-expanded={open}
+            className="flex items-center gap-2 text-sm font-medium"
+            onClick={() => {
+              setOpen((s) => !s);
+              // focus panel close button when opening
+              setTimeout(() => closeBtnRef.current?.focus(), 120);
+            }}
+          >
+            <svg
+              aria-hidden
+              className="w-5 h-5"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <path
+                d="M4 6h16M4 12h16M4 18h10"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
               />
+            </svg>
+            <span>My Projects</span>
+          </button>
+
+          <div className="text-sm text-dark-font/70">
+            <Currency value={totalOverviewBalance} />
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile off-canvas panel */}
+      <div
+        aria-hidden={!open}
+        className={`fixed inset-0 z-50 md:hidden pointer-events-none`}
+        id="projects-drawer"
+      >
+        {/* overlay */}
+        <div
+          className={`absolute inset-0 bg-black/40 transition-opacity duration-200 ${open ? 'opacity-100 pointer-events-auto' : 'opacity-0'}`}
+          onClick={() => setOpen(false)}
+        />
+
+        {/* panel */}
+        <div
+          aria-label="My Projects"
+          aria-modal="true"
+          className={`fixed top-0 left-0 h-full w-[78%] max-w-xs bg-white border-r border-main-border shadow-lg transform transition-transform duration-200 pointer-events-auto
+            ${open ? 'translate-x-0' : '-translate-x-full'}`}
+          ref={panelRef}
+          role="dialog"
+        >
+          <div className="px-4 py-3 border-b border-main-border flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-medium uppercase">My Projects</h3>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="text-sm text-dark-font/70">
+                <Currency value={totalOverviewBalance} />
+              </div>
+              <button
+                aria-label="Close projects"
+                className="p-2 rounded-md hover:bg-base-100"
+                onClick={() => setOpen(false)}
+                ref={closeBtnRef}
+              >
+                <svg
+                  aria-hidden
+                  className="w-4 h-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    d="M6 18L18 6M6 6l12 12"
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                  />
+                </svg>
+              </button>
             </div>
           </div>
 
-          <div className="space-y-1 max-h-[650px] overflow-y-auto">
+          <div className="px-4 py-2">
+            <input className="w-full h-9" placeholder="Search..." type="text" />
+          </div>
+
+          <div className="space-y-1 overflow-y-auto max-h-[calc(100vh-120px)]">
             <Link
               className={linkClasses(isAllProjectsActive, false)}
               params={{ employeeId }}
@@ -109,6 +263,7 @@ export function ProjectsSidebar() {
                 <span>total proj #</span>
               </div>
             </Link>
+
             {groupedProjects.map((project, index) => (
               <Link
                 className={linkClasses(
@@ -116,6 +271,7 @@ export function ProjectsSidebar() {
                   project.projectStatusCode === 'ACTIVE'
                 )}
                 key={index}
+                onClick={() => setOpen(false)} // close panel when navigating
                 params={{ employeeId, projectNumber: project.projectNumber }}
                 to="/projects/$employeeId/$projectNumber"
                 viewTransition={{ types: ['slide-left'] }}
@@ -132,6 +288,6 @@ export function ProjectsSidebar() {
           </div>
         </div>
       </div>
-    </aside>
+    </>
   );
 }
