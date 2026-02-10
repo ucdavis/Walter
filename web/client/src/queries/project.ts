@@ -95,21 +95,19 @@ export const useManagedPisQuery = (employeeId: string) => {
     queries: employeeIds.map((id) => projectsDetailQueryOptions(id)),
   });
 
-  // Combine PI info with their projects (excluding expired)
-  const now = new Date();
+  // Combine PI info with their projects (API already filters inactive/expired)
   const managedPis: PiWithProjects[] = (managedPisResult.data ?? []).map(
     (pi) => {
-      const allProjects = projectsResult.byEmployeeId[pi.employeeId] ?? [];
-      const projects = allProjects.filter(
-        (p) => !p.awardEndDate || new Date(p.awardEndDate) >= now
-      );
+      const projects = projectsResult.byEmployeeId[pi.employeeId] ?? [];
       const totalBudget = projects.reduce((sum, p) => sum + p.catBudget, 0);
       const totalBalance = projects.reduce((sum, p) => sum + p.catBudBal, 0);
+
+      const uniqueProjects = new Set(projects.map((p) => p.projectNumber));
 
       return {
         employeeId: pi.employeeId,
         name: pi.name,
-        projectCount: projects.length,
+        projectCount: uniqueProjects.size,
         projects,
         totalBalance,
         totalBudget,
