@@ -65,6 +65,7 @@ interface UseExpandableOverlayOptions {
 }
 
 interface UseExpandableOverlayResult {
+  canAnimateRect: boolean;
   closeExpanded: () => void;
   containerRef: RefObject<HTMLDivElement | null>;
   expandButtonRef: RefObject<HTMLButtonElement | null>;
@@ -91,6 +92,7 @@ export function useExpandableOverlay({
   const [placeholderHeight, setPlaceholderHeight] = useState<number | null>(
     null
   );
+  const [canAnimateRect, setCanAnimateRect] = useState(false);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const placeholderRef = useRef<HTMLDivElement | null>(null);
@@ -113,6 +115,7 @@ export function useExpandableOverlay({
     setExpandPhase('inline');
     setOverlayRect(null);
     setPlaceholderHeight(null);
+    setCanAnimateRect(false);
     expandButtonRef.current?.focus();
   }, []);
 
@@ -131,18 +134,22 @@ export function useExpandableOverlay({
     setPlaceholderHeight(container.offsetHeight);
 
     if (prefersReducedMotion || !isUsableRect(fromRect)) {
+      setCanAnimateRect(false);
       setOverlayRect(getExpandedRect(marginPx));
       setExpandPhase('expanded');
       return;
     }
 
     // Step 1: convert to fixed layout while staying visually in the inline spot.
+    setCanAnimateRect(false);
     setOverlayRect(fromRect);
     setExpandPhase('opening');
 
-    // Step 2: on the next paint cycle, move to the expanded rect so CSS can interpolate.
+    // Step 2: enable transitions, then on the next frame move to expanded bounds.
     cancelScheduledFrames();
     const firstFrameId = window.requestAnimationFrame(() => {
+      setCanAnimateRect(true);
+
       const secondFrameId = window.requestAnimationFrame(() => {
         setOverlayRect(getExpandedRect(marginPx));
       });
@@ -175,6 +182,7 @@ export function useExpandableOverlay({
     }
 
     // Transition back to the preserved inline bounds, then finalize on transition end.
+    setCanAnimateRect(true);
     setOverlayRect(toRect);
     setExpandPhase('closing');
   }, [finalizeClose, isOverlayActive, prefersReducedMotion]);
@@ -265,6 +273,7 @@ export function useExpandableOverlay({
   }, [expandPhase, marginPx]);
 
   return {
+    canAnimateRect,
     closeExpanded,
     containerRef,
     expandButtonRef,

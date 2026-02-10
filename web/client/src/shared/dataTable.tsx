@@ -75,6 +75,7 @@ export const DataTable = <TData extends object>({
   });
 
   const {
+    canAnimateRect,
     closeExpanded,
     containerRef,
     expandButtonRef,
@@ -127,7 +128,7 @@ export const DataTable = <TData extends object>({
           isOverlayActive
             ? [
                 'fixed z-100 bg-base-100 rounded-box shadow-xl p-4 min-h-0',
-                prefersReducedMotion
+                prefersReducedMotion || !canAnimateRect
                   ? 'transition-none'
                   : 'transition-[top,left,width,height] duration-300 ease-in-out',
               ].join(' ')
@@ -316,4 +317,3 @@ export const DataTable = <TData extends object>({
     </>
   );
 };
-
