@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useHasRole } from '@/shared/auth/UserContext.tsx';
+import { PageEmpty } from '../states/pageEmpty.tsx';
 
 type Report = {
   id: string;
@@ -27,9 +28,7 @@ export function Reports() {
 
   if (reports.length === 0) {
     return (
-      <div className="alert alert-info">
-        <span>No reports available for your account.</span>
-      </div>
+      <PageEmpty message="You don't have access to any reports. We're going to dig up some new ones for you soon." />
     );
   }
 

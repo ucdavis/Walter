@@ -47,7 +47,13 @@ function RouteComponent() {
 
   if (!projects?.length) {
     return (
-      <PageEmpty message="Walter could not fetch any projects for you..." />
+      <div>
+        <section className="mt-8 mb-10">
+          <h1 className="h1">Projects</h1>
+        </section>
+
+        <PageEmpty message="Looks like you don't have any projects for Walter to fetch..." />
+      </div>
     );
   }
 
