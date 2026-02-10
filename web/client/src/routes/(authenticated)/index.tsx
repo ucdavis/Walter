@@ -2,13 +2,14 @@ import { useMemo, useState } from 'react';
 import { PiProjectAlerts } from '@/components/alerts/PiProjectAlerts.tsx';
 import { PrincipalInvestigatorsTable } from '@/components/project/PrincipalInvestigatorsTable.tsx';
 import { ProjectsTable } from '@/components/project/ProjectsTable.tsx';
+import { Reports } from '@/components/reports/Reports.tsx';
 import { SearchButton } from '@/components/search/SearchButton.tsx';
 import {
   useManagedPisQuery,
   projectsDetailQueryOptions,
 } from '@/queries/project.ts';
-import { useHasRole, useUser } from '@/shared/auth/UserContext.tsx';
-import { createFileRoute, Link } from '@tanstack/react-router';
+import { useUser } from '@/shared/auth/UserContext.tsx';
+import { createFileRoute } from '@tanstack/react-router';
 import { PageLoading } from '@/components/states/pageLoading.tsx';
 import { PageError } from '@/components/states/pageError.tsx';
 import { useQuery } from '@tanstack/react-query';
@@ -22,7 +23,6 @@ export const Route = createFileRoute('/(authenticated)/')({
 function RouteComponent() {
   const [activeTab, setActiveTab] = useState<Tab>('pis');
   const user = useUser();
-  const canViewAccruals = useHasRole('AccrualViewer');
   const { error, isError, isPending, managedPis } = useManagedPisQuery(
     user.employeeId
   );
@@ -152,30 +152,16 @@ function RouteComponent() {
 
       {tabs.length > 1 && selectedTab === 'reports' && (
         <div aria-labelledby="tab-reports" id="panel-reports" role="tabpanel">
-          <Reports canViewAccruals={canViewAccruals} />
+          <Reports />
         </div>
       )}
 
       {tabs.length === 1 && (
         <div className="mt-16">
           <h2 className="h2">Reports</h2>
-          <Reports canViewAccruals={canViewAccruals} />
+          <Reports />
         </div>
       )}
     </div>
-  );
-}
-
-function Reports({ canViewAccruals }: { canViewAccruals: boolean }) {
-  return (
-    <ul className="mt-8">
-      {canViewAccruals && (
-        <li>
-          <Link className="text-xl link link-hover underline" to="/accruals">
-            Employee Vacation Accruals
-          </Link>
-        </li>
-      )}
-    </ul>
   );
 }
