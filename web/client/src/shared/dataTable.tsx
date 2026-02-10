@@ -191,7 +191,7 @@ export const DataTable = <TData extends object>({
             {expandable ? (
               <button
                 aria-label={isOverlayActive ? 'Collapse table' : 'Expand table'}
-                className="btn btn-ghost btn-sm btn-square"
+                className="btn btn-sm btn-square"
                 onClick={toggleExpanded}
                 ref={expandButtonRef}
                 title={isOverlayActive ? 'Collapse table' : 'Expand table'}
@@ -266,7 +266,10 @@ export const DataTable = <TData extends object>({
                 <tr key={row.id}>
                   {row.getVisibleCells().map((cell) => (
                     <td key={cell.id}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext()
+                      )}
                     </td>
                   ))}
                 </tr>
