@@ -129,19 +129,23 @@ export function ProjectsTable({ employeeId, records }: ProjectsTableProps) {
       columnHelper.accessor('displayName', {
         cell: (info) => {
           const name = info.getValue();
+          const { projectNumber } = info.row.original;
+
           return (
-            <div className="w-72 truncate" title={name}>
-              <Link
-                className="link link-hover underline"
-                params={{
-                  employeeId,
-                  projectNumber: info.row.original.projectNumber,
-                }}
-                to="/projects/$employeeId/$projectNumber/"
-              >
+            <Link
+              className="link link-hover no-underline"
+              params={{
+                employeeId,
+                projectNumber,
+              }}
+              to="/projects/$employeeId/$projectNumber/"
+            >
+              <div>{projectNumber}</div>
+
+              <div className="truncate" title={name}>
                 {name}
-              </Link>
-            </div>
+              </div>
+            </Link>
           );
         },
         footer: () => 'Totals',
