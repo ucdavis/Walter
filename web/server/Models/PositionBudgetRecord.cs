@@ -37,8 +37,8 @@ public sealed class PositionBudgetRecord
     [JsonPropertyName("fte")]
     public decimal? Fte { get; set; }
 
-    [JsonPropertyName("positionEffectiveDate")]
-    public DateTime? PositionEffectiveDate { get; set; }
+    [JsonPropertyName("jobEffectiveDate")]
+    public DateTime? JobEffectiveDate { get; set; }
 
     [JsonPropertyName("jobEndDate")]
     public DateTime? JobEndDate { get; set; }

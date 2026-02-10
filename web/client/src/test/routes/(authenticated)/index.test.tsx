@@ -166,6 +166,116 @@ describe('home route', () => {
     }
   });
 
+  it('excludes expired projects from PI project counts and balances', async () => {
+    const managedPis = [
+      { employeeId: '2001', name: 'Adams, Alice', projectCount: 3 },
+      { employeeId: '2002', name: 'Baker, Bob', projectCount: 1 },
+    ];
+
+    const activeProject = {
+      projectNumber: 'PROJ1',
+      projectName: 'Active Project',
+      displayName: 'Active Project',
+      awardEndDate: '2099-12-31',
+      catBudBal: 5000,
+      catBudget: 10000,
+    };
+
+    const expiredProject = {
+      projectNumber: 'PROJ_OLD',
+      projectName: 'Expired Project',
+      displayName: 'Expired Project',
+      awardEndDate: '2020-01-01',
+      catBudBal: 100000,
+      catBudget: 200000,
+    };
+
+    const user = {
+      email: 'pm@example.com',
+      employeeId: '1000',
+      id: 'user-1',
+      kerberos: 'pmuser',
+      name: 'PM User',
+      roles: ['admin'],
+    };
+
+    server.use(
+      http.get('/api/user/me', () => HttpResponse.json(user)),
+      http.get('/api/project/managed/:employeeId', () =>
+        HttpResponse.json(managedPis)
+      ),
+      http.get('/api/project/2001', () =>
+        HttpResponse.json([activeProject, expiredProject])
+      ),
+      http.get('/api/project/2002', () =>
+        HttpResponse.json([expiredProject])
+      ),
+      http.get('/api/project/1000', () =>
+        HttpResponse.json([activeProject])
+      ),
+      http.get('/api/project/personnel', () => HttpResponse.json([])),
+    );
+
+    const { cleanup } = renderRoute({ initialPath: '/' });
+
+    try {
+      await screen.findByText('Adams, Alice');
+
+      // Alice: 1 active + 1 expired → should show count 1
+      const aliceRow = screen.getByText('Adams, Alice').closest('tr')!;
+      expect(aliceRow).toHaveTextContent('1');
+
+      // Bob: only expired → should show count 0
+      const bobRow = screen.getByText('Baker, Bob').closest('tr')!;
+      expect(bobRow).toHaveTextContent('0');
+
+      // Balance should reflect only active project, not expired
+      expect(screen.getByText('$5,000.00')).toBeInTheDocument();
+      expect(screen.queryByText('$105,000.00')).not.toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('hides accruals link in reports tab when user lacks AccrualViewer role', async () => {
+    const managedPis = [
+      { employeeId: '2001', name: 'PI One', projectCount: 1 },
+    ];
+
+    const user = {
+      email: 'alpha@example.com',
+      employeeId: '1000',
+      id: 'user-1',
+      kerberos: 'alpha',
+      name: 'Alpha User',
+      roles: [],
+    };
+
+    server.use(
+      http.get('/api/user/me', () => HttpResponse.json(user)),
+      http.get('/api/project/managed/:employeeId', () =>
+        HttpResponse.json(managedPis)
+      ),
+      http.get('/api/project/:employeeId', () => HttpResponse.json([])),
+      http.get('/api/project/personnel', () => HttpResponse.json([])),
+    );
+
+    const ue = userEvent.setup();
+    const { cleanup } = renderRoute({ initialPath: '/' });
+
+    try {
+      await screen.findByText('PI One');
+
+      await ue.click(screen.getByRole('tab', { name: 'Reports' }));
+
+      expect(
+        screen.queryByText('Employee Vacation Accruals')
+      ).not.toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+
   it('switches between all tabs', async () => {
     const managedPis = [
       { employeeId: '2001', name: 'PI One', projectCount: 2 },

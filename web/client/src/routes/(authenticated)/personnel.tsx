@@ -8,6 +8,9 @@ import { formatCurrency } from '@/lib/currency.ts';
 import { usePersonnelQuery } from '@/queries/personnel.ts';
 import { useProjectsDetailQuery } from '@/queries/project.ts';
 import { useUser } from '@/shared/auth/UserContext.tsx';
+import { PageLoading } from '@/components/states/pageLoading.tsx';
+import { PageEmpty } from '@/components/states/pageEmpty.tsx';
+import { PageError } from '@/components/states/pageError.tsx';
 
 export const Route = createFileRoute('/(authenticated)/personnel')({
   component: RouteComponent,
@@ -27,38 +30,35 @@ function RouteComponent() {
     (projectCodes.length > 0 && personnelQuery.isPending);
 
   if (isLoading) {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center">
-        <div className="loading loading-spinner loading-lg" />
-      </div>
-    );
+    return <PageLoading message="Fetching personnel information..." />;
   }
 
   if (userProjectsQuery.isError) {
     return (
-      <div className="alert alert-error">
-        <span>Unable to load projects: {userProjectsQuery.error?.message}</span>
-      </div>
+      <PageError>
+        <div className="alert alert-error">
+          <span>
+            Unable to load projects: {userProjectsQuery.error?.message}
+          </span>
+        </div>
+      </PageError>
     );
   }
 
   if (personnelQuery.isError) {
     return (
-      <div className="alert alert-error">
-        <span>Unable to load personnel: {personnelQuery.error?.message}</span>
-      </div>
+      <PageError>
+        <div className="alert alert-error">
+          <span>Unable to load personnel: {personnelQuery.error?.message}</span>
+        </div>
+      </PageError>
     );
   }
 
   // Show empty state when user has no projects
   if (projectCodes.length === 0) {
     return (
-      <div className="container">
-        <h1 className="h1 mt-8">{user.name}'s Personnel</h1>
-        <p className="text-base-content/70 mt-8">
-          No projects found. Personnel will appear here once you have projects.
-        </p>
-      </div>
+      <PageEmpty message="Walter could not fetch any personnel for you..." />
     );
   }
 

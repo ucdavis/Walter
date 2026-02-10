@@ -15,7 +15,7 @@ import {
   ChevronUpIcon,
   ClockIcon,
 } from '@heroicons/react/24/outline';
-import { ExportCsvButton } from '@/components/ExportCsvButton.tsx';
+import { ExportDataButton } from '@/components/ExportDataButton.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import { formatDate } from '@/lib/date.ts';
 import { PersonnelRecord } from '@/queries/personnel.ts';
@@ -54,7 +54,7 @@ export interface AggregatedPosition {
   monthlyTotal: number;
   name: string;
   positionDescription: string;
-  positionEffectiveDate: string | null;
+  jobEffectiveDate: string | null;
   positionNumber: string;
 }
 
@@ -98,7 +98,7 @@ export function aggregateByPosition(
         monthlyTotal: monthlyRate + monthlyFringe,
         name: record.name,
         positionDescription: record.positionDescription,
-        positionEffectiveDate: record.positionEffectiveDate,
+        jobEffectiveDate: record.jobEffectiveDate,
         positionNumber: record.positionNumber,
       });
     }
@@ -134,7 +134,7 @@ const columns = [
     header: () => <span className="flex justify-end w-full">Dist Pct</span>,
     id: 'distPct',
   }),
-  columnHelper.accessor('positionEffectiveDate', {
+  columnHelper.accessor('jobEffectiveDate', {
     cell: (info) => (
       <span className="flex justify-end">
         {formatDate(info.getValue() as string | null, '')}
@@ -275,7 +275,7 @@ export function PersonnelTable({
   return (
     <div className="overflow-x-auto">
       <div className="flex justify-end mb-2">
-        <ExportCsvButton
+        <ExportDataButton
           columns={personnelCsvColumns}
           data={getExportData(positions)}
           filename="personnel.csv"

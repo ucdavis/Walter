@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { PiProjectAlerts } from '@/components/alerts/PiProjectAlerts.tsx';
-import { ExportCsvButton } from '@/components/ExportCsvButton.tsx';
 import { PersonnelTable } from '@/components/project/PersonnelTable.tsx';
+import { PrincipalInvestigatorsTable } from '@/components/project/PrincipalInvestigatorsTable.tsx';
 import { ProjectsTable } from '@/components/project/ProjectsTable.tsx';
 import { SearchButton } from '@/components/search/SearchButton.tsx';
-import { formatCurrency } from '@/lib/currency.ts';
 import { usePersonnelQuery } from '@/queries/personnel.ts';
 import {
   useManagedPisQuery,
@@ -12,33 +11,14 @@ import {
 } from '@/queries/project.ts';
 import { useHasRole, useUser } from '@/shared/auth/UserContext.tsx';
 import { createFileRoute, Link } from '@tanstack/react-router';
-
-const piCsvColumns = [
-  { header: 'PI Name', key: 'name' as const },
-  { header: 'Projects', key: 'projectCount' as const },
-  { header: 'Balance', key: 'totalBalance' as const },
-  { header: 'Budget', key: 'totalBudget' as const },
-];
+import { PageLoading } from '@/components/states/pageLoading.tsx';
+import { PageError } from '@/components/states/pageError.tsx';
 
 type Tab = 'pis' | 'personnel' | 'reports';
 
 export const Route = createFileRoute('/(authenticated)/')({
   component: RouteComponent,
 });
-
-const formatPercent = (balance: number, budget: number) => {
-  if (budget === 0) {
-    return '—';
-  }
-  const percent = (balance / budget) * 100;
-  return `${percent.toFixed(0)}%`;
-};
-
-const EmptyWrapper = ({ children }: { children: React.ReactNode }) => (
-  <div className="container">
-    <div className="mt-16">{children}</div>
-  </div>
-);
 
 function RouteComponent() {
   const [activeTab, setActiveTab] = useState<Tab>('pis');
@@ -79,35 +59,27 @@ function RouteComponent() {
   }, [activeTab, showPisTab, showPersonnelTab, showReportsTab, isLoading]);
 
   if (isLoading) {
-    return (
-      <EmptyWrapper>
-        <div className="text-center">
-          <div className="loading loading-spinner loading-lg mb-2" />
-          <div className="mb-4 text-lg">Loading dashboard...</div>
-        </div>
-      </EmptyWrapper>
-    );
+    return <PageLoading message="Fetching dashboard…" />;
   }
 
   if (isError) {
     return (
-      <EmptyWrapper>
-        <div className="alert alert-error">
-          <span>Unable to load managed investigators: {error?.message}</span>
-        </div>
-      </EmptyWrapper>
+      <PageError>
+        <p className="text-lg">
+          {' '}
+          Unable to load managed investigators: {error?.message}
+        </p>
+      </PageError>
     );
   }
 
   if (userProjectsQuery.isError) {
     return (
-      <EmptyWrapper>
-        <div className="alert alert-error">
-          <span>
-            Unable to load projects: {userProjectsQuery.error?.message}
-          </span>
-        </div>
-      </EmptyWrapper>
+      <PageError>
+        <p className="text-lg">
+          Unable to load projects: {userProjectsQuery.error?.message}
+        </p>
+      </PageError>
     );
   }
 
@@ -176,51 +148,7 @@ function RouteComponent() {
       {activeTab === 'pis' && showPisTab && (
         <div aria-labelledby="tab-pis" id="panel-pis" role="tabpanel">
           {isProjectManager ? (
-            <>
-              <div className="flex justify-end">
-                <ExportCsvButton
-                  columns={piCsvColumns}
-                  data={managedPis.map((pi) => ({
-                    name: pi.name,
-                    projectCount: pi.projectCount,
-                    totalBalance: pi.totalBalance,
-                    totalBudget: pi.totalBudget,
-                  }))}
-                  filename="principal-investigators.csv"
-                />
-              </div>
-              <table className="walter-table table">
-                <thead>
-                  <tr>
-                    <th>PI Name</th>
-                    <th className="text-right">Projects</th>
-                    <th className="text-right">Balance</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {managedPis.map((pi) => (
-                    <tr key={pi.employeeId}>
-                      <td>
-                        <Link
-                          className="link link-hover link-primary"
-                          params={{ employeeId: pi.employeeId }}
-                          to="/projects/$employeeId/"
-                        >
-                          {pi.name}
-                        </Link>
-                      </td>
-                      <td className="text-right">{pi.projectCount}</td>
-                      <td className="text-right">
-                        {formatCurrency(pi.totalBalance)}{' '}
-                        <span className="text-base-content/60">
-                          ({formatPercent(pi.totalBalance, pi.totalBudget)})
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </>
+            <PrincipalInvestigatorsTable pis={managedPis} />
           ) : (
             <div className="mt-4">
               <ProjectsTable
@@ -250,7 +178,7 @@ function RouteComponent() {
             {canViewAccruals && (
               <li>
                 <Link
-                  className="text-xl link link-hover link-primary"
+                  className="text-xl link link-hover underline"
                   to="/accruals"
                 >
                   Employee Vacation Accruals

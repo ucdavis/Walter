@@ -1,14 +1,12 @@
-import { useDebouncedValue } from '@/lib/useDebouncedValue.ts';
 import {
   type SearchCatalog,
   type SearchPerson,
   type SearchProject,
   type SearchReport,
-  usePeopleSearchQuery,
   useSearchCatalogQuery,
+  useSearchTeamMemberProjectsQuery,
 } from '@/queries/search.ts';
 import { useUser } from '@/shared/auth/UserContext.tsx';
-import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { Command } from 'cmdk';
 import {
@@ -42,7 +40,7 @@ export function useCommandPalette() {
   return context;
 }
 
-type SearchCategory = 'Projects' | 'Reports' | 'People';
+type SearchCategory = 'Projects' | 'Reports' | 'PIs';
 
 type SearchItem = {
   category: SearchCategory;
@@ -107,13 +105,16 @@ const filterAndSort = <T extends { keywords: string[]; label: string }>(
 
 const projectToItem = (
   project: SearchProject,
-  employeeId: string
+  currentEmployeeId: string
 ): SearchItem => ({
   category: 'Projects',
   id: `project:${project.projectNumber}`,
   keywords: project.keywords,
   label: project.projectName,
-  params: { employeeId, projectNumber: project.projectNumber },
+  params: {
+    employeeId: project.projectPiEmployeeId ?? currentEmployeeId,
+    projectNumber: project.projectNumber,
+  },
   secondary: project.projectNumber,
   to: '/projects/$employeeId/$projectNumber/',
 });
@@ -126,9 +127,9 @@ const reportToItem = (report: SearchReport): SearchItem => ({
   to: report.to,
 });
 
-const personToItem = (person: SearchPerson): SearchItem => ({
-  category: 'People',
-  id: `person:${person.employeeId}`,
+const principalInvestigatorToItem = (person: SearchPerson): SearchItem => ({
+  category: 'PIs',
+  id: `pi:${person.employeeId}`,
   keywords: person.keywords,
   label: person.name,
   params: { employeeId: person.employeeId },
@@ -147,60 +148,60 @@ function CommandPaletteDialog({
 }) {
   const user = useUser();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
 
   const [paletteKey, setPaletteKey] = useState(0);
   const [query, setQuery] = useState('');
-  const debouncedQuery = useDebouncedValue(query, 250);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   // Fetch 'catalog' data when opened - this will be stuff not dependent on the query
   // so for now, projects and reports
   const catalogQuery = useSearchCatalogQuery({ enabled: isOpen });
 
-  // Fetch people search results based on the query
-  // This is assuming we are searching on all people. If we only want to search on PIs, we can add to catalog
-  const peopleQuery = usePeopleSearchQuery({
-    enabled:
-      isOpen && query.trim().length > 0 && debouncedQuery.trim().length > 0,
-    query: debouncedQuery,
+  const teamProjectsQuery = useSearchTeamMemberProjectsQuery({
+    employeeId: user.employeeId,
+    enabled: isOpen,
   });
 
   const catalog: SearchCatalog | undefined = catalogQuery.data;
 
   const projects = useMemo(() => {
-    const raw = (catalog?.projects ?? []).map((p) =>
+    const raw = (teamProjectsQuery.data?.projects ?? []).map((p) =>
       projectToItem(p, user.employeeId)
     );
     return filterAndSort(raw, query);
-  }, [catalog?.projects, query, user.employeeId]);
+  }, [query, teamProjectsQuery.data?.projects, user.employeeId]);
 
   const reports = useMemo(() => {
     const raw = (catalog?.reports ?? []).map(reportToItem);
     return filterAndSort(raw, query);
   }, [catalog?.reports, query]);
 
-  const people = useMemo(() => {
-    const raw = (peopleQuery.data ?? []).map(personToItem);
+  const principalInvestigators = useMemo(() => {
+    const raw = (teamProjectsQuery.data?.principalInvestigators ?? []).map(
+      principalInvestigatorToItem
+    );
     return filterAndSort(raw, query);
-  }, [peopleQuery.data, query]);
+  }, [query, teamProjectsQuery.data?.principalInvestigators]);
 
   const isCatalogLoading = catalogQuery.isPending;
-  const isPeopleLoading = peopleQuery.isFetching;
+  const isProjectsLoading = teamProjectsQuery.isPending;
 
-  const hasAnyResults = projects.length + reports.length + people.length > 0;
+  const hasAnyResults =
+    projects.length +
+      reports.length +
+      principalInvestigators.length >
+    0;
   const showEmptyState =
     !isCatalogLoading &&
-    !isPeopleLoading &&
+    !isProjectsLoading &&
     query.trim().length > 0 &&
     !hasAnyResults;
 
   const closeAndReset = useCallback(() => {
     setQuery('');
     setPaletteKey((k) => k + 1);
-    queryClient.removeQueries({ queryKey: ['search', 'people'] });
     onClose();
-  }, [onClose, queryClient]);
+  }, [onClose]);
 
   // Focus the input when opened, using requestAnimationFrame to ensure it's visible
   useEffect(() => {
@@ -238,14 +239,14 @@ function CommandPaletteDialog({
             <Command.Input
               className="input input-bordered w-full"
               onValueChange={setQuery}
-              placeholder="Search projects, reports, people..."
+              placeholder="Search projects, PIs, reports..."
               ref={inputRef}
               value={query}
             />
           </div>
 
           <Command.List>
-            {isCatalogLoading ? (
+            {isProjectsLoading ? (
               <>
                 <Command.Group heading="Projects">
                   <Command.Item aria-disabled="true" data-disabled="true">
@@ -255,20 +256,54 @@ function CommandPaletteDialog({
                     </div>
                   </Command.Item>
                 </Command.Group>
-                <Command.Group heading="Reports">
+                <Command.Group heading="PIs">
                   <Command.Item aria-disabled="true" data-disabled="true">
                     <div className="flex items-center gap-3">
                       <div className="loading loading-spinner loading-sm" />
-                      <span>Loading reports…</span>
+                      <span>Loading PIs…</span>
                     </div>
                   </Command.Item>
                 </Command.Group>
               </>
             ) : null}
 
-            {!isCatalogLoading && projects.length ? (
+            {isCatalogLoading ? (
+              <Command.Group heading="Reports">
+                <Command.Item aria-disabled="true" data-disabled="true">
+                  <div className="flex items-center gap-3">
+                    <div className="loading loading-spinner loading-sm" />
+                    <span>Loading reports…</span>
+                  </div>
+                </Command.Item>
+              </Command.Group>
+            ) : null}
+
+            {!isProjectsLoading && projects.length ? (
               <Command.Group heading="Projects">
                 {projects.map((item) => (
+                  <Command.Item
+                    key={item.id}
+                    onSelect={() => onSelectItem(item)}
+                    value={item.id}
+                  >
+                    <div className="flex w-full items-start justify-between gap-4">
+                      <div className="min-w-0">
+                        <div className="truncate">{item.label}</div>
+                        {item.secondary ? (
+                          <div className="truncate text-xs text-base-content/60">
+                            {item.secondary}
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+                  </Command.Item>
+                ))}
+              </Command.Group>
+            ) : null}
+
+            {!isProjectsLoading && principalInvestigators.length ? (
+              <Command.Group heading="PIs">
+                {principalInvestigators.map((item) => (
                   <Command.Item
                     key={item.id}
                     onSelect={() => onSelectItem(item)}
@@ -304,40 +339,6 @@ function CommandPaletteDialog({
                     </div>
                   </Command.Item>
                 ))}
-              </Command.Group>
-            ) : null}
-
-            {query.trim().length > 0 ? (
-              <Command.Group heading="People">
-                {isPeopleLoading ? (
-                  <Command.Item aria-disabled="true" data-disabled="true">
-                    <div className="flex items-center gap-3">
-                      <div className="loading loading-spinner loading-sm" />
-                      <span>Searching people…</span>
-                    </div>
-                  </Command.Item>
-                ) : null}
-
-                {!isPeopleLoading && people.length
-                  ? people.map((item) => (
-                      <Command.Item
-                        key={item.id}
-                        onSelect={() => onSelectItem(item)}
-                        value={item.id}
-                      >
-                        <div className="flex w-full items-start justify-between gap-4">
-                          <div className="min-w-0">
-                            <div className="truncate">{item.label}</div>
-                            {item.secondary ? (
-                              <div className="truncate text-xs text-base-content/60">
-                                {item.secondary}
-                              </div>
-                            ) : null}
-                          </div>
-                        </div>
-                      </Command.Item>
-                    ))
-                  : null}
               </Command.Group>
             ) : null}
 

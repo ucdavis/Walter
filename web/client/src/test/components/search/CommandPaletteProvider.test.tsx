@@ -2,7 +2,7 @@ import { server } from '@/test/mswUtils.ts';
 import { renderRoute } from '@/test/routerUtils.tsx';
 import { screen, waitFor } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
-import { delay, http, HttpResponse } from 'msw';
+import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 
 const defaultUser = {
@@ -20,6 +20,9 @@ describe('CommandPaletteProvider', () => {
       http.get('/api/user/me', () => HttpResponse.json(defaultUser)),
       http.get('/api/search/catalog', () =>
         HttpResponse.json({ projects: [], reports: [] })
+      ),
+      http.get('/api/search/projects/team', () =>
+        HttpResponse.json({ projects: [], principalInvestigators: [] })
       )
     );
 
@@ -40,7 +43,7 @@ describe('CommandPaletteProvider', () => {
       await waitFor(() => expect(dialog).toHaveAttribute('open'));
 
       const input = await screen.findByPlaceholderText(
-        'Search projects, reports, people...'
+        'Search projects, PIs, reports...'
       );
       await waitFor(() => expect(input).toHaveFocus());
     } finally {
@@ -53,6 +56,9 @@ describe('CommandPaletteProvider', () => {
       http.get('/api/user/me', () => HttpResponse.json(defaultUser)),
       http.get('/api/search/catalog', () =>
         HttpResponse.json({ projects: [], reports: [] })
+      ),
+      http.get('/api/search/projects/team', () =>
+        HttpResponse.json({ projects: [], principalInvestigators: [] })
       )
     );
 
@@ -82,18 +88,13 @@ describe('CommandPaletteProvider', () => {
 
   it('fetches catalog once and reuses it across opens', async () => {
     let catalogRequests = 0;
+    let teamProjectsRequests = 0;
     server.use(
       http.get('/api/user/me', () => HttpResponse.json(defaultUser)),
       http.get('/api/search/catalog', () => {
         catalogRequests += 1;
         return HttpResponse.json({
-          projects: [
-            {
-              keywords: ['P-001', 'Alpha'],
-              projectName: 'Project Alpha',
-              projectNumber: 'P-001',
-            },
-          ],
+          projects: [],
           reports: [
             {
               id: 'me',
@@ -102,6 +103,20 @@ describe('CommandPaletteProvider', () => {
               to: '/me',
             },
           ],
+        });
+      }),
+      http.get('/api/search/projects/team', () => {
+        teamProjectsRequests += 1;
+        return HttpResponse.json({
+          projects: [
+            {
+              keywords: ['P-001', 'Alpha'],
+              projectPiEmployeeId: '2001',
+              projectName: 'Project Alpha',
+              projectNumber: 'P-001',
+            },
+          ],
+          principalInvestigators: [],
         });
       })
     );
@@ -118,10 +133,11 @@ describe('CommandPaletteProvider', () => {
       await user.click(screen.getByRole('button', { name: /search…/i }));
       await screen.findByText('Project Alpha');
       expect(catalogRequests).toBe(1);
+      expect(teamProjectsRequests).toBe(1);
 
       // Ensure focus is inside the dialog so Escape is handled by cmdk.
       const input = screen.getByPlaceholderText(
-        'Search projects, reports, people...'
+        'Search projects, PIs, reports...'
       );
       input.focus();
 
@@ -131,38 +147,22 @@ describe('CommandPaletteProvider', () => {
       await user.click(screen.getByRole('button', { name: /search…/i }));
       await screen.findByText('Project Alpha');
       expect(catalogRequests).toBe(1);
+      expect(teamProjectsRequests).toBe(1);
       expect(screen.queryByText('Loading projects…')).not.toBeInTheDocument();
     } finally {
       cleanup();
     }
   });
 
-  it('debounces people search and resets query on close', async () => {
-    let peopleRequests = 0;
+  it('resets query on close', async () => {
     server.use(
       http.get('/api/user/me', () => HttpResponse.json(defaultUser)),
       http.get('/api/search/catalog', () =>
         HttpResponse.json({ projects: [], reports: [] })
       ),
-      http.get('/api/search/people', async ({ request }) => {
-        peopleRequests += 1;
-        const url = new URL(request.url);
-        const q = url.searchParams.get('query') ?? '';
-
-        await delay(400);
-
-        return HttpResponse.json(
-          q.toLowerCase().includes('ali')
-            ? [
-                {
-                  employeeId: '2001',
-                  keywords: ['Alice', '2001'],
-                  name: 'Alice Example',
-                },
-              ]
-            : []
-        );
-      })
+      http.get('/api/search/projects/team', () =>
+        HttpResponse.json({ projects: [], principalInvestigators: [] })
+      )
     );
 
     const { cleanup } = renderRoute({ initialPath: '/styles' });
@@ -177,27 +177,53 @@ describe('CommandPaletteProvider', () => {
       await user.click(screen.getByRole('button', { name: /search…/i }));
 
       const input = await screen.findByPlaceholderText(
-        'Search projects, reports, people...'
+        'Search projects, PIs, reports...'
       );
-      await user.type(input, 'ali');
-
-      expect(await screen.findByText('Searching people…')).toBeInTheDocument();
-      expect(await screen.findByText('Alice Example')).toBeInTheDocument();
-      expect(peopleRequests).toBe(1);
+      await user.type(input, 'alpha');
 
       await user.keyboard('{Escape}');
       await waitFor(() => expect(dialog).not.toHaveAttribute('open'));
 
       await user.click(screen.getByRole('button', { name: /search…/i }));
       const inputReopen = await screen.findByPlaceholderText(
-        'Search projects, reports, people...'
+        'Search projects, PIs, reports...'
       );
       expect(inputReopen).toHaveValue('');
+    } finally {
+      cleanup();
+    }
+  });
 
-      await user.type(inputReopen, 'ali');
-      expect(await screen.findByText('Searching people…')).toBeInTheDocument();
+  it('shows principal investigators under a PIs group', async () => {
+    server.use(
+      http.get('/api/user/me', () => HttpResponse.json(defaultUser)),
+      http.get('/api/search/catalog', () =>
+        HttpResponse.json({ projects: [], reports: [] })
+      ),
+      http.get('/api/search/projects/team', () =>
+        HttpResponse.json({
+          projects: [],
+          principalInvestigators: [
+            {
+              employeeId: '2001',
+              keywords: ['Alice', '2001'],
+              name: 'Alice Example',
+            },
+          ],
+        })
+      )
+    );
+
+    const { cleanup } = renderRoute({ initialPath: '/styles' });
+
+    try {
+      await screen.findByText('Heading 1');
+      const user = userEvent.setup();
+
+      await user.click(screen.getByRole('button', { name: /search…/i }));
+
+      expect(await screen.findByText('PIs')).toBeInTheDocument();
       expect(await screen.findByText('Alice Example')).toBeInTheDocument();
-      expect(peopleRequests).toBe(2);
     } finally {
       cleanup();
     }

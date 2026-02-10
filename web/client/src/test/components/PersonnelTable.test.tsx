@@ -15,7 +15,7 @@ const createRecord = (
   fte: 1.0,
   fundingEffectiveDate: '2025-07-01T00:00:00.000Z',
   fundingEndDate: '2026-12-31T00:00:00.000Z',
-  positionEffectiveDate: '2020-01-01T00:00:00.000Z',
+  jobEffectiveDate: '2020-01-01T00:00:00.000Z',
   jobEndDate: null,
   monthlyRate: 5000,
   name: 'Smith, John',
