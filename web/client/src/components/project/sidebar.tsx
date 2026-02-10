@@ -7,6 +7,10 @@ import {
 import { Currency } from '@/shared/Currency.tsx';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { Link, useParams } from '@tanstack/react-router';
+import {
+  ClipboardDocumentListIcon,
+  XMarkIcon,
+} from '@heroicons/react/24/outline';
 
 interface ProjectSummary {
   awardEndDate: string | null;
@@ -156,38 +160,21 @@ export function ProjectsSidebar() {
       </aside>
 
       {/* Mobile sticky header with toggle (shown < md) */}
-      <div className="md:hidden sticky top-16 z-40">
-        <div className="bg-white border-b border-main-border px-4 py-2 flex items-center justify-between">
+      <div className="md:hidden sticky top-20 z-40">
+        <div className="btn btn-lg">
           <button
             aria-controls="projects-drawer"
             aria-expanded={open}
             className="flex items-center gap-2 text-sm font-medium"
             onClick={() => {
               setOpen((s) => !s);
-              // focus panel close button when opening
+
               setTimeout(() => closeBtnRef.current?.focus(), 120);
             }}
           >
-            <svg
-              aria-hidden
-              className="w-5 h-5"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <path
-                d="M4 6h16M4 12h16M4 18h10"
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-              />
-            </svg>
+            <ClipboardDocumentListIcon className="w-4 h-4" />
             <span>My Projects</span>
           </button>
-
-          <div className="text-sm text-dark-font/70">
-            <Currency value={totalOverviewBalance} />
-          </div>
         </div>
       </div>
 
@@ -226,20 +213,7 @@ export function ProjectsSidebar() {
                 onClick={() => setOpen(false)}
                 ref={closeBtnRef}
               >
-                <svg
-                  aria-hidden
-                  className="w-4 h-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    d="M6 18L18 6M6 6l12 12"
-                    stroke="currentColor"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                  />
-                </svg>
+                <XMarkIcon className="w-5 h-5" />
               </button>
             </div>
           </div>
