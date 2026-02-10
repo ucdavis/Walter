@@ -160,22 +160,20 @@ export function ProjectsSidebar() {
       </aside>
 
       {/* Mobile sticky header with toggle (shown < md) */}
-      <div className="md:hidden sticky top-20 z-40">
-        <div className="btn btn-lg">
-          <button
-            aria-controls="projects-drawer"
-            aria-expanded={open}
-            className="flex items-center gap-2 text-sm font-medium"
-            onClick={() => {
-              setOpen((s) => !s);
+      <div className="md:hidden sticky top-22 z-40">
+        <button
+          aria-controls="projects-drawer"
+          aria-expanded={open}
+          className="flex items-center btn gap-2 uppercase font-light"
+          onClick={() => {
+            setOpen((s) => !s);
 
-              setTimeout(() => closeBtnRef.current?.focus(), 120);
-            }}
-          >
-            <ClipboardDocumentListIcon className="w-4 h-4" />
-            <span>My Projects</span>
-          </button>
-        </div>
+            setTimeout(() => closeBtnRef.current?.focus(), 120);
+          }}
+        >
+          <ClipboardDocumentListIcon className="w-4 h-4" />
+          <span>My Projects</span>
+        </button>
       </div>
 
       {/* Mobile off-canvas panel */}

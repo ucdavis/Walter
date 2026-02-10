@@ -13,7 +13,7 @@ export const Route = createFileRoute('/(authenticated)/projects/$employeeId')({
 function RouteComponent() {
   return (
     <div className="container">
-      <div className="flex flex-col md:flex-row gap-4 md:gap-12">
+      <div className="flex flex-col md:flex-row gap-0 md:gap-12">
         <ProjectsSidebar />
 
         <Outlet />
