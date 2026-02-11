@@ -50,10 +50,11 @@ function groupProjects(records: ProjectRecord[]): ProjectSummary[] {
   return Object.values(map);
 }
 
-const linkClasses = (isActive: boolean) =>
+const linkClasses = (isActive: boolean, isActiveStatus: boolean) =>
   [
     'block mb-0 text-left px-3 py-2 transition-colors border-b border-main-border',
     isActive ? 'bg-primary-color/10' : 'hover:bg-[#F2F6FC]',
+    isActiveStatus ? 'bg-base-100' : 'hover:bg-[#F2F6FC]',
   ].join(' ');
 
 export function ProjectsSidebar() {
