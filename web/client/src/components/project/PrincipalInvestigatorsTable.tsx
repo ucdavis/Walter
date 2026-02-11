@@ -1,5 +1,5 @@
 import type { ManagedPiRecord } from '@/queries/project.ts';
-import { DataTable } from '@/shared/dataTable.tsx';
+import { DataTable } from '@/shared/DataTable.tsx';
 import { Link } from '@tanstack/react-router';
 import { createColumnHelper } from '@tanstack/react-table';
 
