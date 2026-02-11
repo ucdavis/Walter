@@ -133,7 +133,7 @@ export function ProjectsTable({ employeeId, records }: ProjectsTableProps) {
 
           return (
             <Link
-              className="link link-hover no-underline"
+              className="link link-hover"
               params={{
                 employeeId,
                 projectNumber,
