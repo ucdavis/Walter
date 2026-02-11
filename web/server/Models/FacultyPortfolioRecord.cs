@@ -34,7 +34,7 @@ public sealed class FacultyPortfolioRecord
             var cleanedName = string.IsNullOrEmpty(ProjectNumber)
                 ? projectName.Trim()
                 : projectName.Replace(ProjectNumber, "").Trim();
-            var name = $"{ProjectNumber}: {cleanedName}";
+            var name = cleanedName;
             if (ProjectType == "Internal" && !string.IsNullOrEmpty(TaskName))
                 name += $" - {TaskName}";
             return name;

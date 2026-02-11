@@ -42,7 +42,14 @@ public sealed class ProjectController : ApiControllerBase
 
         var applicationUser = User.GetUserIdentifier();
         var projects = await _datamartService.GetFacultyPortfolioAsync(projectNumbers, applicationUser, cancellationToken);
-        return Ok(projects);
+
+        // Filter out inactive and expired projects
+        var activeProjects = projects
+            .Where(p => p.ProjectStatus == "ACTIVE")
+            .Where(p => p.AwardEndDate == null || p.AwardEndDate >= DateTime.Today)
+            .ToList();
+
+        return Ok(activeProjects);
     }
 
     /// <summary>

@@ -47,15 +47,7 @@ describe('ProjectsTable', () => {
     expect(screen.getByText('No projects found.')).toBeInTheDocument();
   });
 
-  it('shows empty state when all projects are expired', () => {
-    const expiredProject = createProject({
-      awardEndDate: '2020-01-01',
-    });
-
-    render(<ProjectsTable employeeId="123" records={[expiredProject]} />);
-
-    expect(screen.getByText('No projects found.')).toBeInTheDocument();
-  });
+  // Note: Expired/inactive project filtering is handled at the API level
 
   it('renders totals row', () => {
     const projects = [

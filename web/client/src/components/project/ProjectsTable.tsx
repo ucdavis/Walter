@@ -67,13 +67,6 @@ function aggregateProjects(records: ProjectRecord[]): AggregatedProject[] {
   return Array.from(projectsMap.values());
 }
 
-function filterExpired(projects: AggregatedProject[]): AggregatedProject[] {
-  const now = new Date();
-  return projects.filter(
-    (p) => !p.awardEndDate || new Date(p.awardEndDate) >= now
-  );
-}
-
 function sortByEndDate(projects: AggregatedProject[]): AggregatedProject[] {
   return [...projects].sort((a, b) => {
     if (!a.awardEndDate && !b.awardEndDate) {
@@ -109,8 +102,7 @@ interface ProjectsTableProps {
 export function ProjectsTable({ employeeId, records }: ProjectsTableProps) {
   const projects = useMemo(() => {
     const aggregated = aggregateProjects(records);
-    const active = filterExpired(aggregated);
-    return sortByEndDate(active);
+    return sortByEndDate(aggregated);
   }, [records]);
 
   const totals = useMemo(
@@ -135,18 +127,27 @@ export function ProjectsTable({ employeeId, records }: ProjectsTableProps) {
   const columns = useMemo(
     () => [
       columnHelper.accessor('displayName', {
-        cell: (info) => (
-          <Link
-            className="link link-hover underline"
-            params={{
-              employeeId,
-              projectNumber: info.row.original.projectNumber,
-            }}
-            to="/projects/$employeeId/$projectNumber/"
-          >
-            {info.getValue()}
-          </Link>
-        ),
+        cell: (info) => {
+          const name = info.getValue();
+          const { projectNumber } = info.row.original;
+
+          return (
+            <Link
+              className="link link-hover no-underline"
+              params={{
+                employeeId,
+                projectNumber,
+              }}
+              to="/projects/$employeeId/$projectNumber/"
+            >
+              <div>{projectNumber}</div>
+
+              <div className="truncate" title={name}>
+                {name}
+              </div>
+            </Link>
+          );
+        },
         footer: () => 'Totals',
         header: 'Project Name',
       }),
