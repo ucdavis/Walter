@@ -97,7 +97,7 @@ export function ProjectsSidebar() {
     <>
       {/* Desktop/Tablet sidebar (md+) */}
       <aside className="w-72 shrink-0 hidden md:block">
-        <div className="sticky top-24">
+        <div className="sticky top-24 mt-8">
           <div className="bg-white rounded-sm border border-main-border">
             <div className="bg-light-bg-200 border-b border-main-border">
               <div className="px-4 py-2 border-b border-main-border">
