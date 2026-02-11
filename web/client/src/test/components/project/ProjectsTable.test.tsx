@@ -65,4 +65,52 @@ describe('ProjectsTable', () => {
 
     expect(screen.getByText('Totals')).toBeInTheDocument();
   });
+
+  it('shows warning icon when project has reconciliation discrepancy', () => {
+    const projects = [
+      createProject({
+        hasGlPpmDiscrepancy: true,
+        managedByCurrentUser: true,
+        projectNumber: 'P1',
+      }),
+    ];
+
+    render(<ProjectsTable employeeId="123" records={projects} />);
+
+    expect(
+      screen.getByTitle('GL/PPM reconciliation discrepancy')
+    ).toBeInTheDocument();
+  });
+
+  it('does not show warning icon when discrepancy exists but user does not manage project', () => {
+    const projects = [
+      createProject({
+        hasGlPpmDiscrepancy: true,
+        managedByCurrentUser: false,
+        projectNumber: 'P1',
+      }),
+    ];
+
+    render(<ProjectsTable employeeId="123" records={projects} />);
+
+    expect(
+      screen.queryByTitle('GL/PPM reconciliation discrepancy')
+    ).not.toBeInTheDocument();
+  });
+
+  it('does not show warning icon when user manages project but no discrepancy', () => {
+    const projects = [
+      createProject({
+        hasGlPpmDiscrepancy: false,
+        managedByCurrentUser: true,
+        projectNumber: 'P1',
+      }),
+    ];
+
+    render(<ProjectsTable employeeId="123" records={projects} />);
+
+    expect(
+      screen.queryByTitle('GL/PPM reconciliation discrepancy')
+    ).not.toBeInTheDocument();
+  });
 });
