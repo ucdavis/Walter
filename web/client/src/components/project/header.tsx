@@ -1,10 +1,45 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { SearchButton } from '@/components/search/SearchButton.tsx';
 import { UserAvatar } from '@/components/project/UserAvatar.tsx';
 import WalterLogo from '@/shared/walterLogo.tsx';
 import { useHasRole, useUser } from '@/shared/auth/UserContext.tsx';
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
+
+type NavLinkItem = {
+  label: string;
+  params?: Record<string, any>;
+  to: string;
+};
+
+function NavLinks({
+  className = '',
+  linkClassName = 'nav-link',
+  links,
+  onNavigate,
+}: {
+  className?: string;
+  linkClassName?: string;
+  links: NavLinkItem[];
+  onNavigate?: () => void;
+}) {
+  return (
+    <div className={className}>
+      {links.map((link) => (
+        <Link
+          activeOptions={{ exact: false }}
+          className={linkClassName}
+          key={link.label}
+          onClick={onNavigate}
+          params={link.params}
+          to={link.to}
+        >
+          {link.label}
+        </Link>
+      ))}
+    </div>
+  );
+}
 
 const Header: React.FC = () => {
   const user = useUser();
@@ -14,7 +49,19 @@ const Header: React.FC = () => {
   const menuRef = useRef<HTMLDivElement | null>(null);
   const [menuHeight, setMenuHeight] = useState<number>(0);
 
-  const linkTabIndex = mobileOpen ? 0 : -1;
+  const navLinks = useMemo<NavLinkItem[]>(
+    () => [
+      {
+        label: 'Projects',
+        params: { employeeId: user.employeeId },
+        to: '/projects/$employeeId',
+      },
+      { label: 'Personnel', to: '/personnel' },
+      { label: 'Reports', to: '/reports' },
+      ...(canViewAccruals ? [{ label: 'Accruals', to: '/accruals' }] : []),
+    ],
+    [user.employeeId, canViewAccruals]
+  );
 
   useEffect(() => {
     if (menuRef.current) {
@@ -25,11 +72,10 @@ const Header: React.FC = () => {
   return (
     <header className="bg-light-bg-200 border-b py-4 border-main-border sticky top-0 z-50">
       <div className="container flex items-center justify-between">
-        {/* Left side */}
         <div className="flex items-center gap-4 min-w-0">
           <Link
             aria-label="Walter"
-            className="flex items-center gap-2 flex-shrink-0"
+            className="flex items-center gap-2 shrink-0"
             to="/"
           >
             <WalterLogo className="w-8 h-8" />
@@ -42,48 +88,10 @@ const Header: React.FC = () => {
           </div>
         </div>
 
-        {/* Right side */}
         <div className="flex items-center gap-4">
           {/* Desktop nav */}
           <nav className="hidden md:flex items-center gap-6">
-            <Link
-              activeOptions={{ exact: false }}
-              className="nav-link"
-              params={{ employeeId: user.employeeId }}
-              TabIndex={linkTabIndex}
-              to="/projects/$employeeId"
-            >
-              Projects
-            </Link>
-
-            <Link
-              activeOptions={{ exact: false }}
-              className="nav-link"
-              TabIndex={linkTabIndex}
-              to="/personnel"
-            >
-              Personnel
-            </Link>
-
-            <Link
-              activeOptions={{ exact: false }}
-              className="nav-link"
-              TabIndex={linkTabIndex}
-              to="/reports"
-            >
-              Reports
-            </Link>
-
-            {canViewAccruals && (
-              <Link
-                activeOptions={{ exact: false }}
-                className="nav-link"
-                TabIndex={linkTabIndex}
-                to="/accruals"
-              >
-                Accruals
-              </Link>
-            )}
+            <NavLinks className="flex items-center gap-6" links={navLinks} />
           </nav>
 
           <button
@@ -110,8 +118,8 @@ const Header: React.FC = () => {
       <div
         aria-hidden={!mobileOpen}
         className={`md:hidden bg-light-bg-200 overflow-hidden
-    transition-[height,opacity] duration-300 ease-out
-    ${mobileOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}
+          transition-[height,opacity] duration-300 ease-out
+          ${mobileOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}
         style={{
           height: mobileOpen ? menuHeight : 0,
           opacity: mobileOpen ? 1 : 0,
@@ -119,44 +127,12 @@ const Header: React.FC = () => {
         {...(!mobileOpen ? ({ inert: '' } as any) : {})}
       >
         <div className="container py-2 flex flex-col gap-2" ref={menuRef}>
-          <Link
-            activeOptions={{ exact: false }}
-            className="nav-link py-2"
-            onClick={() => setMobileOpen(false)}
-            params={{ employeeId: user.employeeId }}
-            to="/projects/$employeeId"
-          >
-            Projects
-          </Link>
-
-          <Link
-            activeOptions={{ exact: false }}
-            className="nav-link py-2"
-            onClick={() => setMobileOpen(false)}
-            to="/personnel"
-          >
-            Personnel
-          </Link>
-
-          <Link
-            activeOptions={{ exact: false }}
-            className="nav-link py-2"
-            onClick={() => setMobileOpen(false)}
-            to="/reports"
-          >
-            Reports
-          </Link>
-
-          {canViewAccruals && (
-            <Link
-              activeOptions={{ exact: false }}
-              className="nav-link py-2"
-              onClick={() => setMobileOpen(false)}
-              to="/accruals"
-            >
-              Accruals
-            </Link>
-          )}
+          <NavLinks
+            className="flex flex-col gap-2"
+            linkClassName="nav-link py-2"
+            links={navLinks}
+            onNavigate={() => setMobileOpen(false)}
+          />
 
           <div className="pt-1">
             <SearchButton className="w-full" placeholder="Search…" />
