@@ -9,6 +9,7 @@ import { useSuspenseQuery } from '@tanstack/react-query';
 import { Link, useParams } from '@tanstack/react-router';
 import {
   ClipboardDocumentListIcon,
+  MagnifyingGlassIcon,
   XMarkIcon,
 } from '@heroicons/react/24/outline';
 
@@ -52,11 +53,7 @@ function groupProjects(records: ProjectRecord[]): ProjectSummary[] {
 const linkClasses = (isActive: boolean, isActiveStatus: boolean) =>
   [
     'block mb-0 text-left px-3 py-2 transition-colors border-b border-main-border',
-    isActive
-      ? 'bg-primary-color/10'
-      : isActiveStatus
-        ? 'bg-base-100'
-        : 'hover:bg-primary-color/10',
+    isActive ? 'bg-primary-color/10' : 'hover:bg-[#F2F6FC]',
   ].join(' ');
 
 export function ProjectsSidebar() {
@@ -108,11 +105,15 @@ export function ProjectsSidebar() {
                 </h2>
               </div>
               <div className="px-4 py-1">
-                <input
-                  className="w-full h-9"
-                  placeholder="Search..."
-                  type="text"
-                />
+                <div className="relative">
+                  <MagnifyingGlassIcon className="w-4 h-4 absolute left-0 top-1/2 -translate-y-1/2 pointer-events-none text-dark-font/55" />
+
+                  <input
+                    className="w-full h-9 pl-5 pr-3"
+                    placeholder="Search..."
+                    type="text"
+                  />
+                </div>
               </div>
             </div>
 
@@ -216,8 +217,16 @@ export function ProjectsSidebar() {
             </div>
           </div>
 
-          <div className="px-4 py-2">
-            <input className="w-full h-9" placeholder="Search..." type="text" />
+          <div className="px-4 py-1 border-b border-main-border">
+            <div className="relative">
+              <MagnifyingGlassIcon className="w-4 h-4 absolute left-0 top-1/2 -translate-y-1/2 pointer-events-none text-dark-font/55" />
+
+              <input
+                className="w-full h-9 pl-5 pr-3"
+                placeholder="Search..."
+                type="text"
+              />
+            </div>
           </div>
 
           <div className="space-y-1 overflow-y-auto max-h-[calc(100vh-120px)]">

@@ -33,19 +33,19 @@ const Header: React.FC = () => {
             to="/"
           >
             <WalterLogo className="w-8 h-8" />
-            <h1 className="text-xl hidden sm:block">Walter</h1>
+            <h1 className="text-xl hidden md:block">Walter</h1>
           </Link>
 
           {/* Desktop search */}
-          <div className="hidden sm:block">
-            <SearchButton className="w-52 sm:w-64" placeholder="Search…" />
+          <div className="hidden md:block">
+            <SearchButton className="w-52 md:w-64" placeholder="Search…" />
           </div>
         </div>
 
         {/* Right side */}
         <div className="flex items-center gap-4">
           {/* Desktop nav */}
-          <nav className="hidden sm:flex items-center gap-6">
+          <nav className="hidden md:flex items-center gap-6">
             <Link
               activeOptions={{ exact: false }}
               className="nav-link"
@@ -88,7 +88,7 @@ const Header: React.FC = () => {
           <button
             aria-expanded={mobileOpen}
             aria-label="Toggle menu"
-            className="sm:hidden p-1 rounded-md focus:outline-none focus:ring-1 focus:ring-offset-1"
+            className="md:hidden p-1 rounded-md focus:outline-none focus:ring-1 focus:ring-offset-1"
             onClick={() => setMobileOpen((v) => !v)}
             type="button"
           >
@@ -108,7 +108,7 @@ const Header: React.FC = () => {
       {/* Mobile slide-down menu */}
       <div
         aria-hidden={!mobileOpen}
-        className={`sm:hidden bg-light-bg-200 overflow-hidden
+        className={`md:hidden bg-light-bg-200 overflow-hidden
     transition-[height,opacity] duration-300 ease-out
     ${mobileOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}
         style={{
