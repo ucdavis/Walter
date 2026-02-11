@@ -142,6 +142,7 @@ export function ProjectsSidebar() {
                   )}
                   key={index}
                   params={{ employeeId, projectNumber: project.projectNumber }}
+                  title={project.displayName}
                   to="/projects/$employeeId/$projectNumber"
                   viewTransition={{ types: ['slide-left'] }}
                 >
