@@ -48,9 +48,9 @@ interface DataTableProps<TData extends object> {
   data: TData[];
   expandable?: boolean;
   footerRowClassName?: string;
-  globalFilter?: 'left' | 'right' | 'none'; // Controls the position of the search box
-  getRowProps?: (row: Row<TData>) => HTMLAttributes<HTMLTableRowElement>;
   getRowCanExpand?: (row: Row<TData>) => boolean; // Default is `() => true` when `renderSubComponent` is provided
+  getRowProps?: (row: Row<TData>) => HTMLAttributes<HTMLTableRowElement>;
+  globalFilter?: 'left' | 'right' | 'none'; // Controls the position of the search box
   initialState?: InitialTableState; // Optional initial state for the table, use for stuff like setting page size or sorting
   pagination?: 'auto' | 'on' | 'off'; // 'auto' shows controls only when needed; 'off' disables pagination entirely
   renderSubComponent?: (props: { row: Row<TData> }) => ReactNode;
@@ -62,9 +62,9 @@ export const DataTable = <TData extends object>({
   data,
   expandable = true,
   footerRowClassName,
-  globalFilter = 'right',
   getRowCanExpand,
   getRowProps,
+  globalFilter = 'right',
   initialState,
   pagination = 'auto',
   renderSubComponent,
@@ -84,10 +84,10 @@ export const DataTable = <TData extends object>({
       size: 100,
     },
     getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
     getExpandedRowModel: rowExpansionEnabled
       ? getExpandedRowModel()
       : undefined,
+    getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel:
       pagination === 'off' ? undefined : getPaginationRowModel(),
     getRowCanExpand: rowExpansionEnabled
