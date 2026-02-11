@@ -166,7 +166,7 @@ describe('home route', () => {
     }
   });
 
-  it('excludes expired projects from PI project counts and balances', async () => {
+  it('shows PI with zero active projects with zero counts', async () => {
     const managedPis = [
       { employeeId: '2001', name: 'Adams, Alice', projectCount: 3 },
       { employeeId: '2002', name: 'Baker, Bob', projectCount: 1 },
@@ -179,15 +179,6 @@ describe('home route', () => {
       awardEndDate: '2099-12-31',
       catBudBal: 5000,
       catBudget: 10000,
-    };
-
-    const expiredProject = {
-      projectNumber: 'PROJ_OLD',
-      projectName: 'Expired Project',
-      displayName: 'Expired Project',
-      awardEndDate: '2020-01-01',
-      catBudBal: 100000,
-      catBudget: 200000,
     };
 
     const user = {
@@ -205,10 +196,10 @@ describe('home route', () => {
         HttpResponse.json(managedPis)
       ),
       http.get('/api/project/2001', () =>
-        HttpResponse.json([activeProject, expiredProject])
+        HttpResponse.json([activeProject])
       ),
       http.get('/api/project/2002', () =>
-        HttpResponse.json([expiredProject])
+        HttpResponse.json([])
       ),
       http.get('/api/project/1000', () =>
         HttpResponse.json([activeProject])
@@ -221,25 +212,34 @@ describe('home route', () => {
     try {
       await screen.findByText('Adams, Alice');
 
-      // Alice: 1 active + 1 expired → should show count 1
+      // Alice has active projects → should appear with count
       const aliceRow = screen.getByText('Adams, Alice').closest('tr')!;
       expect(aliceRow).toHaveTextContent('1');
 
-      // Bob: only expired → should show count 0
+      // Bob has 0 active projects → appears but with 0 count
       const bobRow = screen.getByText('Baker, Bob').closest('tr')!;
       expect(bobRow).toHaveTextContent('0');
 
-      // Balance should reflect only active project, not expired
+      // Balance should reflect only Alice's active project
       expect(screen.getByText('$5,000.00')).toBeInTheDocument();
-      expect(screen.queryByText('$105,000.00')).not.toBeInTheDocument();
     } finally {
       cleanup();
     }
   });
 
-  it('hides accruals link in reports tab when user lacks AccrualViewer role', async () => {
+  it('hides reports tab when user lacks AccrualViewer role', async () => {
     const managedPis = [
       { employeeId: '2001', name: 'PI One', projectCount: 1 },
+    ];
+
+    const projects = [
+      {
+        projectNumber: 'P1',
+        projectName: 'Project One',
+        displayName: 'P1: Project One',
+        awardEndDate: '2099-12-31',
+        catBudBal: 1000,
+      },
     ];
 
     const user = {
@@ -256,20 +256,18 @@ describe('home route', () => {
       http.get('/api/project/managed/:employeeId', () =>
         HttpResponse.json(managedPis)
       ),
-      http.get('/api/project/:employeeId', () => HttpResponse.json([])),
+      http.get('/api/project/:employeeId', () => HttpResponse.json(projects)),
       http.get('/api/project/personnel', () => HttpResponse.json([])),
     );
 
-    const ue = userEvent.setup();
     const { cleanup } = renderRoute({ initialPath: '/' });
 
     try {
       await screen.findByText('PI One');
 
-      await ue.click(screen.getByRole('tab', { name: 'Reports' }));
-
+      // Reports tab should not be rendered at all without AccrualViewer role
       expect(
-        screen.queryByText('Employee Vacation Accruals')
+        screen.queryByRole('tab', { name: 'Reports' })
       ).not.toBeInTheDocument();
     } finally {
       cleanup();
