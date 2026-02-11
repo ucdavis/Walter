@@ -33,14 +33,18 @@ export function Reports() {
   }
 
   return (
-    <ul className="space-y-4">
-      {reports.map((report) => (
-        <li key={report.id}>
-          <Link className="text-xl link link-hover underline" to={report.url}>
-            {report.title}
-          </Link>
-        </li>
-      ))}
-    </ul>
+    <section className="mt-8 mb-10">
+      <h1 className="h1">Reports</h1>
+
+      <ul className="space-y-4">
+        {reports.map((report) => (
+          <li key={report.id}>
+            <Link className="text-xl link link-hover underline" to={report.url}>
+              {report.title}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

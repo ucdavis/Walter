@@ -23,11 +23,7 @@ function RouteComponent() {
 
   if (!projects?.length) {
     return (
-      <div>
-        <section className="mt-8 mb-10">
-          <h1 className="h1">Projects</h1>
-        </section>
-
+      <div className="mx-auto">
         <PageEmpty message="Looks like you don't have any projects for Walter to fetch..." />
       </div>
     );

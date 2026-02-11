@@ -97,7 +97,7 @@ export function ProjectsSidebar() {
     <>
       {/* Desktop/Tablet sidebar (md+) */}
       <aside className="w-72 shrink-0 hidden md:block">
-        <div className="sticky top-24">
+        <div className="sticky top-24 mt-8">
           <div className="bg-white rounded-sm border border-main-border">
             <div className="bg-light-bg-200 border-b border-main-border">
               <div className="px-4 py-2 border-b border-main-border">
@@ -142,11 +142,14 @@ export function ProjectsSidebar() {
                   )}
                   key={index}
                   params={{ employeeId, projectNumber: project.projectNumber }}
+                  title={project.displayName}
                   to="/projects/$employeeId/$projectNumber"
                   viewTransition={{ types: ['slide-left'] }}
                 >
                   <div className="flex justify-between items-start mb-1">
-                    <span className="text-base">{project.displayName}</span>
+                    <span className="text-base truncate">
+                      {project.displayName}
+                    </span>
                   </div>
                   <div className="flex text-sm justify-between items-center text-dark-font/70">
                     <Currency value={project.totalCatBudBal} />

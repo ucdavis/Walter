@@ -62,8 +62,14 @@ export const DataTable = <TData extends object>({
   // see note in https://tanstack.com/table/latest/docs/installation#react-table.
   // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
+    columnResizeMode: 'onChange',
     columns,
     data,
+    defaultColumn: {
+      maxSize: 600,
+      minSize: 60,
+      size: 100,
+    },
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel:
@@ -230,6 +236,7 @@ export const DataTable = <TData extends object>({
                           ? header.column.getToggleSortingHandler()
                           : undefined
                       }
+                      style={{ width: header.getSize() }}
                     >
                       <div className="flex flex-nowrap items-center gap-1 w-full">
                         <div className="flex-1 min-w-0">
@@ -265,7 +272,7 @@ export const DataTable = <TData extends object>({
               {table.getRowModel().rows.map((row) => (
                 <tr key={row.id}>
                   {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id}>
+                    <td key={cell.id} style={{ width: cell.column.getSize() }}>
                       {flexRender(
                         cell.column.columnDef.cell,
                         cell.getContext()
@@ -280,7 +287,11 @@ export const DataTable = <TData extends object>({
                 {table.getFooterGroups().map((footerGroup) => (
                   <tr className={footerRowClassName} key={footerGroup.id}>
                     {footerGroup.headers.map((header) => (
-                      <td colSpan={header.colSpan} key={header.id}>
+                      <td
+                        colSpan={header.colSpan}
+                        key={header.id}
+                        style={{ width: header.getSize() }}
+                      >
                         {header.isPlaceholder
                           ? null
                           : flexRender(
