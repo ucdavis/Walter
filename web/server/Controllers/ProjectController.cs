@@ -31,24 +31,49 @@ public sealed class ProjectController : ApiControllerBase
         var client = _financialApiService.GetClient();
 
         // Query projects where the specified employee is a Principal Investigator
-        var result = await client.PpmProjectByProjectTeamMemberEmployeeId.ExecuteAsync(
+        var piResultTask = client.PpmProjectByProjectTeamMemberEmployeeId.ExecuteAsync(
             employeeId, PpmRole.PrincipalInvestigator, cancellationToken);
 
-        var data = result.ReadData();
-        var graphProjects = data.PpmProjectByProjectTeamMemberEmployeeId;
-        var projectNumbers = graphProjects
-            .Select(p => p.ProjectNumber)
-            .Distinct()
+        // Also query projects where the employee is a Project Manager (to find orphaned projects with no PI)
+        var pmResultTask = client.PpmProjectByProjectTeamMemberEmployeeId.ExecuteAsync(
+            employeeId, PpmRole.ProjectManager, cancellationToken);
+
+        await Task.WhenAll(piResultTask, pmResultTask);
+
+        var piData = (await piResultTask).ReadData();
+        var graphProjects = piData.PpmProjectByProjectTeamMemberEmployeeId;
+
+        _logger.LogInformation("PI query for {EmployeeId}: {Count} projects from PPM API", employeeId, graphProjects.Count);
+        foreach (var p in graphProjects)
+        {
+            var roles = string.Join(", ", p.TeamMembers.Select(m => $"{m.Name}({m.RoleName})"));
+            _logger.LogInformation("  [{Project}] - Team: {Roles}", p.ProjectNumber, roles);
+        }
+
+        // Find orphaned projects where this employee is PM but no PI is assigned
+        var pmData = (await pmResultTask).ReadData();
+        var managedProjects = pmData.PpmProjectByProjectTeamMemberEmployeeId;
+        var orphanedProjects = managedProjects
+            .Where(p => !p.TeamMembers.Any(m => m.RoleName == PpmRole.PrincipalInvestigator))
             .ToList();
+
+        _logger.LogInformation("PM query for {EmployeeId}: {Count} managed projects, {Orphaned} with no PI",
+            employeeId, managedProjects.Count, orphanedProjects.Count);
+
+        var piProjectNumbers = graphProjects.Select(p => p.ProjectNumber).Distinct();
+        var orphanedProjectNumbers = orphanedProjects.Select(p => p.ProjectNumber).Distinct();
+        var projectNumbers = piProjectNumbers.Union(orphanedProjectNumbers).ToList();
 
         if (!projectNumbers.Any())
             return Ok(Array.Empty<FacultyPortfolioRecord>());
 
-        // Build lookup for PM employee ID by project number
+        // Build lookup for PM employee ID by project number (from both PI and orphaned projects)
         var pmByProject = graphProjects
+            .Concat(orphanedProjects)
+            .GroupBy(p => p.ProjectNumber)
             .ToDictionary(
-                p => p.ProjectNumber,
-                p => p.TeamMembers
+                g => g.Key,
+                g => g.First().TeamMembers
                     .FirstOrDefault(m => m.RoleName == PpmRole.ProjectManager)?.EmployeeId);
 
         var applicationUser = User.GetUserIdentifier();
@@ -72,11 +97,12 @@ public sealed class ProjectController : ApiControllerBase
             .GroupBy(p => p.ProjectNumber)
             .ToDictionary(g => g.Key, g => g.Sum(p => p.CatBudget - p.CatItdExp));
 
-        // Filter out inactive and expired projects
         var activeProjects = projects
             .Where(p => p.ProjectStatus == "ACTIVE")
-            .Where(p => p.AwardEndDate == null || p.AwardEndDate >= DateTime.Today)
             .ToList();
+
+        _logger.LogInformation("Faculty portfolio: {Total} total, {Active} active",
+            projects.Count, activeProjects.Count);
 
         // Join PM employee ID and GL/PPM discrepancy flag to project records
         foreach (var project in activeProjects)
@@ -176,9 +202,24 @@ public sealed class ProjectController : ApiControllerBase
             cancellationToken);
 
         var data = result.ReadData();
+        var managedProjects = data.PpmProjectByProjectTeamMemberEmployeeId;
+
+        _logger.LogInformation("Managed query for PM {EmployeeId}: {Count} projects from PPM API", employeeId, managedProjects.Count);
+        foreach (var p in managedProjects)
+        {
+            var roles = string.Join(", ", p.TeamMembers.Select(m => $"{m.Name}[{m.RoleName},{m.EmployeeId}]"));
+            _logger.LogInformation("  [{Project}] - Team: {Roles}", p.ProjectNumber, roles);
+        }
+
+        // Find projects that have no PI assigned
+        var orphanedProjectCount = managedProjects
+            .Where(p => !p.TeamMembers.Any(m => m.RoleName == PpmRole.PrincipalInvestigator))
+            .Select(p => p.ProjectNumber)
+            .Distinct()
+            .Count();
 
         // Extract unique Principal Investigators from all projects with project count
-        var principalInvestigators = data.PpmProjectByProjectTeamMemberEmployeeId
+        var principalInvestigators = managedProjects
             .SelectMany(project => project.TeamMembers.Select(member => new { project.ProjectNumber, Member = member }))
             .Where(x => x.Member.RoleName == PpmRole.PrincipalInvestigator)
             .GroupBy(x => x.Member.EmployeeId)
@@ -190,6 +231,40 @@ public sealed class ProjectController : ApiControllerBase
             })
             .OrderBy(pi => pi.name)
             .ToList();
+
+        // Include the PM themselves for orphaned projects (no PI assigned)
+        if (orphanedProjectCount > 0)
+        {
+            var pmMember = managedProjects
+                .SelectMany(p => p.TeamMembers)
+                .FirstOrDefault(m => m.EmployeeId == employeeId);
+
+            var pmName = pmMember?.Name ?? "Unassigned PI";
+
+            // Add or merge with existing entry if the PM is also a PI on other projects
+            var existingEntry = principalInvestigators.FirstOrDefault(pi => pi.employeeId == employeeId);
+            if (existingEntry != null)
+            {
+                principalInvestigators.Remove(existingEntry);
+                principalInvestigators.Add(new
+                {
+                    name = existingEntry.name,
+                    employeeId,
+                    projectCount = existingEntry.projectCount + orphanedProjectCount
+                });
+            }
+            else
+            {
+                principalInvestigators.Add(new
+                {
+                    name = pmName,
+                    employeeId,
+                    projectCount = orphanedProjectCount
+                });
+            }
+
+            principalInvestigators = principalInvestigators.OrderBy(pi => pi.name).ToList();
+        }
 
         return Ok(principalInvestigators);
     }

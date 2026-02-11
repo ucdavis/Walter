@@ -203,8 +203,8 @@ export const useManagedPisQuery = (employeeId: string, currentUserEmployeeId?: s
   });
 
   // Combine PI info with their projects (API already filters inactive/expired)
-  const managedPis: PiWithProjects[] = (managedPisResult.data ?? []).map(
-    (pi) => {
+  const managedPis: PiWithProjects[] = (managedPisResult.data ?? [])
+    .map((pi) => {
       const projects = projectsResult.byEmployeeId[pi.employeeId] ?? [];
       const totalBudget = projects.reduce((sum, p) => sum + p.catBudget, 0);
       const totalBalance = projects.reduce((sum, p) => sum + p.catBudBal, 0);
@@ -219,8 +219,8 @@ export const useManagedPisQuery = (employeeId: string, currentUserEmployeeId?: s
         totalBalance,
         totalBudget,
       };
-    }
-  );
+    })
+    .filter((pi) => pi.projectCount > 0);
 
   return {
     error: managedPisResult.error ?? projectsResult.error,
