@@ -8,9 +8,9 @@ import { formatCurrency } from '@/lib/currency.ts';
 import { usePersonnelQuery } from '@/queries/personnel.ts';
 import { useProjectsDetailQuery } from '@/queries/project.ts';
 import { useUser } from '@/shared/auth/UserContext.tsx';
-import { PageLoading } from '@/components/states/pageLoading.tsx';
-import { PageEmpty } from '@/components/states/pageEmpty.tsx';
-import { PageError } from '@/components/states/pageError.tsx';
+import { PageLoading } from '@/components/states/PageLoading.tsx';
+import { PageEmpty } from '@/components/states/PageEmpty.tsx';
+import { PageError } from '@/components/states/PageError.tsx';
 
 export const Route = createFileRoute('/(authenticated)/personnel')({
   component: RouteComponent,

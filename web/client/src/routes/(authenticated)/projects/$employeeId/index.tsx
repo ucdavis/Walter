@@ -4,7 +4,7 @@ import { ProjectsTable } from '@/components/project/ProjectsTable.tsx';
 import { projectsDetailQueryOptions } from '@/queries/project.ts';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
-import { PageEmpty } from '@/components/states/pageEmpty.tsx';
+import { PageEmpty } from '@/components/states/PageEmpty.tsx';
 
 export const Route = createFileRoute('/(authenticated)/projects/$employeeId/')({
   component: RouteComponent,

@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useHasRole } from '@/shared/auth/UserContext.tsx';
-import { PageEmpty } from '../states/pageEmpty.tsx';
+import { PageEmpty } from '../states/PageEmpty.tsx';
 
 type Report = {
   id: string;

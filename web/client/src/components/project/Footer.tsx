@@ -1,4 +1,4 @@
-import WalterLogo from '@/shared/walterLogo.tsx';
+import WalterLogo from '@/shared/WalterLogo.tsx';
 
 const Footer: React.FC = () => {
   return (

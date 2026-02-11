@@ -10,8 +10,8 @@ import {
 } from '@/queries/project.ts';
 import { useUser } from '@/shared/auth/UserContext.tsx';
 import { createFileRoute } from '@tanstack/react-router';
-import { PageLoading } from '@/components/states/pageLoading.tsx';
-import { PageError } from '@/components/states/pageError.tsx';
+import { PageLoading } from '@/components/states/PageLoading.tsx';
+import { PageError } from '@/components/states/PageError.tsx';
 import { useQuery } from '@tanstack/react-query';
 
 type Tab = 'pis' | 'projects' | 'reports';

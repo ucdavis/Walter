@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet } from '@tanstack/react-router';
-import { ProjectsSidebar } from '@/components/project/sidebar.tsx';
+import { ProjectsSidebar } from '@/components/project/ProjectsSidebar.tsx';
 import { projectsDetailQueryOptions } from '@/queries/project.ts';
-import { PageLoading } from '@/components/states/pageLoading.tsx';
+import { PageLoading } from '@/components/states/PageLoading.tsx';
 
 export const Route = createFileRoute('/(authenticated)/projects/$employeeId')({
   component: RouteComponent,

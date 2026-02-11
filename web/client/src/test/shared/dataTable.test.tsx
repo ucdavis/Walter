@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import type { ColumnDef } from '@tanstack/react-table';
-import { DataTable } from '@/shared/dataTable.tsx';
+import { DataTable } from '@/shared/DataTable.tsx';
 
 afterEach(() => {
   cleanup();
@@ -100,4 +100,3 @@ describe('DataTable expandable overlay', () => {
     await waitFor(() => expect(expandButtonAfterEscapeClose).toHaveFocus());
   });
 });
-
