@@ -133,18 +133,18 @@ export function ProjectsTable({ employeeId, records }: ProjectsTableProps) {
 
           return (
             <Link
-              className="link link-hover"
+              className="link no-underline"
               params={{
                 employeeId,
                 projectNumber,
               }}
               to="/projects/$employeeId/$projectNumber/"
             >
-              <div className="text-xs text-base-content/70">
+              <div className="text-xs text-base-content/70 no-underline">
                 {projectNumber}
               </div>
 
-              <div className="truncate" title={name}>
+              <div className="truncate underline" title={name}>
                 {name}
               </div>
             </Link>
