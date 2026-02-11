@@ -140,7 +140,9 @@ export function ProjectsTable({ employeeId, records }: ProjectsTableProps) {
               }}
               to="/projects/$employeeId/$projectNumber/"
             >
-              <div className="text-xs">{projectNumber}</div>
+              <div className="text-xs text-base-content/70">
+                {projectNumber}
+              </div>
 
               <div className="truncate" title={name}>
                 {name}
