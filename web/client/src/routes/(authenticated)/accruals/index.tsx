@@ -3,7 +3,7 @@ import {
   accrualsQueryOptions,
   useAccrualsQuery,
 } from '@/queries/accrual.ts';
-import { DataTable } from '@/shared/dataTable.tsx';
+import { DataTable } from '@/shared/DataTable.tsx';
 import { createFileRoute } from '@tanstack/react-router';
 import { ColumnDef } from '@tanstack/react-table';
 

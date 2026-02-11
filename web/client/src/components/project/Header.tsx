@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from '@tanstack/react-router';
 import { SearchButton } from '@/components/search/SearchButton.tsx';
 import { UserAvatar } from '@/components/project/UserAvatar.tsx';
-import WalterLogo from '@/shared/walterLogo.tsx';
+import WalterLogo from '@/shared/WalterLogo.tsx';
 import { useHasRole, useUser } from '@/shared/auth/UserContext.tsx';
 
 const Header: React.FC = () => {
