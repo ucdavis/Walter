@@ -7,9 +7,9 @@ import {
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools';
 import { RouterContext } from '../main.tsx';
-import { HttpError } from '../lib/api.ts';
-import Footer from '@/components/project/footer.tsx';
-import { Walter404 } from '@/shared/walter404.tsx';
+import { HttpError } from '@/lib/api.ts';
+import Footer from '@/components/project/Footer.tsx';
+import { Walter404 } from '@/shared/Walter404.tsx';
 import { AnalyticsListener } from '@/components/AnalyticsListener.tsx';
 
 const RootLayout = () => (

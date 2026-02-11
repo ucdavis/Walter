@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet } from '@tanstack/react-router';
-import { ProjectsSidebar } from '@/components/project/sidebar.tsx';
+import { ProjectsSidebar } from '@/components/project/ProjectsSidebar.tsx';
 import { projectsDetailQueryOptions } from '@/queries/project.ts';
-import { PageLoading } from '@/components/states/pageLoading.tsx';
+import { PageLoading } from '@/components/states/PageLoading.tsx';
 
 export const Route = createFileRoute('/(authenticated)/projects/$employeeId')({
   component: RouteComponent,
@@ -13,7 +13,7 @@ export const Route = createFileRoute('/(authenticated)/projects/$employeeId')({
 function RouteComponent() {
   return (
     <div className="container">
-      <div className="flex gap-12">
+      <div className="flex flex-col md:flex-row gap-0 md:gap-12">
         <ProjectsSidebar />
 
         <Outlet />

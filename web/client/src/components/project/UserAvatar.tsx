@@ -58,7 +58,7 @@ export const UserAvatar: React.FC = () => {
   if (!showPhoto) {
     return (
       <div
-        className="tooltip tooltip-bottom"
+        className="tooltip tooltip-left md:tooltip-bottom"
         data-tip={hoverName}
         title={hoverName}
       >
@@ -73,7 +73,7 @@ export const UserAvatar: React.FC = () => {
 
   return (
     <div
-      className="tooltip tooltip-bottom"
+      className="tooltip tooltip-left md:tooltip-bottom"
       data-tip={hoverName}
       title={hoverName}
     >

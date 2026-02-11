@@ -6,7 +6,7 @@ import { ExportDataButton } from '@/components/ExportDataButton.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import { formatDate } from '@/lib/date.ts';
 import type { ProjectRecord } from '@/queries/project.ts';
-import { DataTable } from '@/shared/dataTable.tsx';
+import { DataTable } from '@/shared/DataTable.tsx';
 
 interface AggregatedProject {
   awardEndDate: string | null;

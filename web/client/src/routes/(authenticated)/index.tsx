@@ -1,20 +1,20 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { PiProjectAlerts } from '@/components/alerts/PiProjectAlerts.tsx';
-import { PersonnelTable } from '@/components/project/PersonnelTable.tsx';
 import { PrincipalInvestigatorsTable } from '@/components/project/PrincipalInvestigatorsTable.tsx';
 import { ProjectsTable } from '@/components/project/ProjectsTable.tsx';
+import { Reports } from '@/components/reports/Reports.tsx';
 import { SearchButton } from '@/components/search/SearchButton.tsx';
-import { usePersonnelQuery } from '@/queries/personnel.ts';
 import {
   useManagedPisQuery,
-  useProjectsDetailQuery,
+  projectsDetailQueryOptions,
 } from '@/queries/project.ts';
-import { useHasRole, useUser } from '@/shared/auth/UserContext.tsx';
-import { createFileRoute, Link } from '@tanstack/react-router';
-import { PageLoading } from '@/components/states/pageLoading.tsx';
-import { PageError } from '@/components/states/pageError.tsx';
+import { useUser } from '@/shared/auth/UserContext.tsx';
+import { createFileRoute } from '@tanstack/react-router';
+import { PageLoading } from '@/components/states/PageLoading.tsx';
+import { PageError } from '@/components/states/PageError.tsx';
+import { useQuery } from '@tanstack/react-query';
 
-type Tab = 'pis' | 'personnel' | 'reports';
+type Tab = 'pis' | 'projects' | 'reports';
 
 export const Route = createFileRoute('/(authenticated)/')({
   component: RouteComponent,
@@ -23,43 +23,47 @@ export const Route = createFileRoute('/(authenticated)/')({
 function RouteComponent() {
   const [activeTab, setActiveTab] = useState<Tab>('pis');
   const user = useUser();
-  const canViewAccruals = useHasRole('AccrualViewer');
   const { error, isError, isPending, managedPis } = useManagedPisQuery(
-    user.employeeId,
     user.employeeId
   );
-  const userProjectsQuery = useProjectsDetailQuery(user.employeeId, user.employeeId);
-  const projectCodes = useMemo(() => {
-    const projects = userProjectsQuery.data ?? [];
-    return [...new Set(projects.map((p) => p.projectNumber))];
-  }, [userProjectsQuery.data]);
-  const personnelQuery = usePersonnelQuery(projectCodes);
 
-  // Wait for all queries to resolve before showing content
-  const isLoading = isPending || userProjectsQuery.isPending || (projectCodes.length > 0 && personnelQuery.isPending);
+  const isProjectManager = managedPis.length > 0;
 
-  // Compute tab visibility flags
-  const isProjectManager = managedPis && managedPis.length > 0;
-  const hasProjects = projectCodes.length > 0;
-  const showPisTab = isProjectManager || hasProjects;
-  const showPersonnelTab = personnelQuery.isSuccess && (personnelQuery.data?.length ?? 0) > 0;
-  const showReportsTab = canViewAccruals;
+  const userProjectsQuery = useQuery({
+    ...projectsDetailQueryOptions(user.employeeId),
+    enabled:
+      Boolean(user.employeeId) && !isPending && !isError && !isProjectManager,
+  });
 
-  // Set active tab to first available if current tab is not visible
-  useEffect(() => {
-    if (isLoading) return;
+  const isPrincipalInvestigator =
+    !isProjectManager && (userProjectsQuery.data?.length ?? 0) > 0;
 
-    const availableTabs: Tab[] = [];
-    if (showPisTab) availableTabs.push('pis');
-    if (showPersonnelTab) availableTabs.push('personnel');
-    if (showReportsTab) availableTabs.push('reports');
+  const showPiTab = isProjectManager;
+  const showProjectsTab = isPrincipalInvestigator;
 
-    if (availableTabs.length > 0 && !availableTabs.includes(activeTab)) {
-      setActiveTab(availableTabs[0]);
+  const tabs = useMemo(() => {
+    const base: Array<{ id: Tab; label: string }> = [];
+    if (showPiTab) {
+      base.push({ id: 'pis', label: 'Principal Investigators' });
     }
-  }, [activeTab, showPisTab, showPersonnelTab, showReportsTab, isLoading]);
+    if (showProjectsTab) {
+      base.push({ id: 'projects', label: 'Projects' });
+    }
+    base.push({ id: 'reports', label: 'Reports' });
+    return base;
+  }, [showPiTab, showProjectsTab]);
 
-  if (isLoading) {
+  const preferredTab: Tab = showPiTab
+    ? 'pis'
+    : showProjectsTab
+      ? 'projects'
+      : 'reports';
+
+  const selectedTab = tabs.some((t) => t.id === activeTab)
+    ? activeTab
+    : preferredTab;
+
+  if (isPending) {
     return <PageLoading message="Fetching dashboard…" />;
   }
 
@@ -74,7 +78,11 @@ function RouteComponent() {
     );
   }
 
-  if (userProjectsQuery.isError) {
+  if (!isProjectManager && userProjectsQuery.isPending) {
+    return <PageLoading message="Fetching dashboard…" />;
+  }
+
+  if (!isProjectManager && userProjectsQuery.isError) {
     return (
       <PageError>
         <p className="text-lg">
@@ -83,8 +91,6 @@ function RouteComponent() {
       </PageError>
     );
   }
-
-  const projectRecords = userProjectsQuery.data ?? [];
 
   return (
     <div className="container">
@@ -102,91 +108,58 @@ function RouteComponent() {
         />
       </div>
 
-      <PiProjectAlerts managedPis={managedPis} />
+      {isProjectManager && <PiProjectAlerts managedPis={managedPis} />}
 
-      <div className="tabs mt-16" role="tablist">
-        {showPisTab && (
-          <button
-            aria-controls="panel-pis"
-            aria-selected={activeTab === 'pis'}
-            className={`text-2xl tab ps-0 ${activeTab === 'pis' ? 'tab-active' : ''}`}
-            id="tab-pis"
-            onClick={() => setActiveTab('pis')}
-            role="tab"
-            type="button"
-          >
-            {isProjectManager ? 'Principal Investigators' : 'Projects'}
-          </button>
-        )}
-        {showPersonnelTab && (
-          <button
-            aria-controls="panel-personnel"
-            aria-selected={activeTab === 'personnel'}
-            className={`text-2xl tab ${activeTab === 'personnel' ? 'tab-active' : ''}`}
-            id="tab-personnel"
-            onClick={() => setActiveTab('personnel')}
-            role="tab"
-            type="button"
-          >
-            Personnel
-          </button>
-        )}
-        {showReportsTab && (
-          <button
-            aria-controls="panel-reports"
-            aria-selected={activeTab === 'reports'}
-            className={`text-2xl tab ${activeTab === 'reports' ? 'tab-active' : ''}`}
-            id="tab-reports"
-            onClick={() => setActiveTab('reports')}
-            role="tab"
-            type="button"
-          >
-            Reports
-          </button>
-        )}
-      </div>
-
-      {activeTab === 'pis' && showPisTab && (
-        <div aria-labelledby="tab-pis" id="panel-pis" role="tabpanel">
-          {isProjectManager ? (
-            <PrincipalInvestigatorsTable pis={managedPis} />
-          ) : (
-            <div className="mt-4">
-              <ProjectsTable
-                employeeId={user.employeeId}
-                records={projectRecords}
-              />
-            </div>
-          )}
+      {tabs.length > 1 && (
+        <div className="tabs mt-16" role="tablist">
+          {tabs.map((tab, index) => {
+            const tabId = `tab-${tab.id}`;
+            const panelId = `panel-${tab.id}`;
+            return (
+              <button
+                aria-controls={panelId}
+                aria-selected={selectedTab === tab.id}
+                className={`text-2xl tab ${index === 0 ? 'ps-0' : ''} ${selectedTab === tab.id ? 'tab-active' : ''}`}
+                id={tabId}
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                role="tab"
+                type="button"
+              >
+                {tab.label}
+              </button>
+            );
+          })}
         </div>
       )}
 
-      {activeTab === 'personnel' && showPersonnelTab && (
-        <div
-          aria-labelledby="tab-personnel"
-          id="panel-personnel"
-          role="tabpanel"
-        >
-          <div className="mt-8">
-            <PersonnelTable data={personnelQuery.data ?? []} />
+      {showPiTab && selectedTab === 'pis' && (
+        <div aria-labelledby="tab-pis" id="panel-pis" role="tabpanel">
+          <PrincipalInvestigatorsTable pis={managedPis} />
+        </div>
+      )}
+
+      {showProjectsTab && selectedTab === 'projects' && (
+        <div aria-labelledby="tab-projects" id="panel-projects" role="tabpanel">
+          <div className="mt-4">
+            <ProjectsTable
+              employeeId={user.employeeId}
+              records={userProjectsQuery.data ?? []}
+            />
           </div>
         </div>
       )}
 
-      {activeTab === 'reports' && showReportsTab && (
+      {tabs.length > 1 && selectedTab === 'reports' && (
         <div aria-labelledby="tab-reports" id="panel-reports" role="tabpanel">
-          <ul className="mt-8">
-            {canViewAccruals && (
-              <li>
-                <Link
-                  className="text-xl link link-hover underline"
-                  to="/accruals"
-                >
-                  Employee Vacation Accruals
-                </Link>
-              </li>
-            )}
-          </ul>
+          <Reports />
+        </div>
+      )}
+
+      {tabs.length === 1 && (
+        <div className="mt-16">
+          <h2 className="h2">Reports</h2>
+          <Reports />
         </div>
       )}
     </div>

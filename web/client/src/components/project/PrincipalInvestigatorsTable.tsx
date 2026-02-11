@@ -1,26 +1,9 @@
-import { ExportDataButton } from '@/components/ExportDataButton.tsx';
-import { formatCurrency } from '@/lib/currency.ts';
-import type { PiWithProjects } from '@/queries/project.ts';
-import { DataTable } from '@/shared/dataTable.tsx';
+import type { ManagedPiRecord } from '@/queries/project.ts';
+import { DataTable } from '@/shared/DataTable.tsx';
 import { Link } from '@tanstack/react-router';
 import { createColumnHelper } from '@tanstack/react-table';
 
-const piCsvColumns = [
-  { header: 'PI Name', key: 'name' as const },
-  { header: 'Projects', key: 'projectCount' as const },
-  { header: 'Balance', key: 'totalBalance' as const },
-  { header: 'Budget', key: 'totalBudget' as const },
-];
-
-const formatPercent = (balance: number, budget: number) => {
-  if (budget === 0) {
-    return '—';
-  }
-  const percent = (balance / budget) * 100;
-  return `${percent.toFixed(0)}%`;
-};
-
-const columnHelper = createColumnHelper<PiWithProjects>();
+const columnHelper = createColumnHelper<ManagedPiRecord>();
 
 const columns = [
   columnHelper.accessor('name', {
@@ -35,30 +18,10 @@ const columns = [
     ),
     header: 'PI Name',
   }),
-  columnHelper.accessor('projectCount', {
-    cell: (info) => (
-      <span className="flex justify-end w-full">{info.getValue()}</span>
-    ),
-    header: () => <span className="flex justify-end w-full">Projects</span>,
-  }),
-  columnHelper.accessor('totalBalance', {
-    cell: (info) => {
-      const { totalBalance, totalBudget } = info.row.original;
-      return (
-        <span className="flex justify-end w-full">
-          {formatCurrency(totalBalance)}{' '}
-          <span className="text-base-content/60">
-            ({formatPercent(totalBalance, totalBudget)})
-          </span>
-        </span>
-      );
-    },
-    header: () => <span className="flex justify-end w-full">Balance</span>,
-  }),
 ];
 
 interface PrincipalInvestigatorsTableProps {
-  pis: PiWithProjects[];
+  pis: ManagedPiRecord[];
 }
 
 export function PrincipalInvestigatorsTable({
@@ -74,18 +37,6 @@ export function PrincipalInvestigatorsTable({
 
   return (
     <div className="mt-4">
-      <div className="flex justify-end">
-        <ExportDataButton
-          columns={piCsvColumns}
-          data={pis.map((pi) => ({
-            name: pi.name,
-            projectCount: pi.projectCount,
-            totalBalance: pi.totalBalance,
-            totalBudget: pi.totalBudget,
-          }))}
-          filename="principal-investigators.csv"
-        />
-      </div>
       <DataTable
         columns={columns}
         data={pis}

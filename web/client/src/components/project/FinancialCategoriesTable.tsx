@@ -10,7 +10,7 @@ import {
 } from '@heroicons/react/24/outline';
 import type { ProjectCategorySummary } from '@/lib/projectSummary.ts';
 import { Currency } from '@/shared/Currency.tsx';
-import { DataTable } from '@/shared/dataTable.tsx';
+import { DataTable } from '@/shared/DataTable.tsx';
 
 const ICONS = {
   Contract: UserIcon,
