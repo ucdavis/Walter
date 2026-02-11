@@ -67,8 +67,8 @@ export const DataTable = <TData extends object>({
     data,
     defaultColumn: {
       maxSize: 600,
-      minSize: 80,
-      size: 160,
+      minSize: 60,
+      size: 100,
     },
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
