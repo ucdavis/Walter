@@ -182,6 +182,7 @@ export function ProjectsSidebar() {
         aria-hidden={!open}
         className={`fixed inset-0 z-50 md:hidden pointer-events-none`}
         id="projects-drawer"
+        {...(!open ? ({ inert: '' } as any) : {})}
       >
         {/* overlay */}
         <div
