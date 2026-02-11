@@ -8,7 +8,7 @@ export interface PersonnelRecord {
   fte: number;
   fundingEffectiveDate: string | null;
   fundingEndDate: string | null;
-  positionEffectiveDate: string | null;
+  jobEffectiveDate: string | null;
   jobEndDate: string | null;
   monthlyRate: number;
   name: string;

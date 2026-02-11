@@ -62,29 +62,15 @@ public sealed class ProjectController : ApiControllerBase
         var projects = await projectsTask;
         var reconciliation = await reconciliationTask;
 
-        _logger.LogInformation("Reconciliation: {Count} records returned", reconciliation.Count);
-
         // Build lookup for GL totals by project number
         var glTotalsLookup = reconciliation
             .GroupBy(r => r.Project)
             .ToDictionary(g => g.Key, g => g.Sum(r => r.GlActualAmount));
 
-        _logger.LogInformation("GL totals lookup: {Count} projects", glTotalsLookup.Count);
-        foreach (var (proj, total) in glTotalsLookup.Take(5))
-        {
-            _logger.LogInformation("  GL [{Project}] = {Total}", proj, total);
-        }
-
         // Build lookup for PPM totals by project number
         var ppmTotalsLookup = projects
             .GroupBy(p => p.ProjectNumber)
             .ToDictionary(g => g.Key, g => g.Sum(p => p.CatBudget - p.CatItdExp));
-
-        _logger.LogInformation("PPM totals lookup: {Count} projects", ppmTotalsLookup.Count);
-        foreach (var (proj, total) in ppmTotalsLookup.Take(5))
-        {
-            _logger.LogInformation("  PPM [{Project}] = {Total}", proj, total);
-        }
 
         // Filter out inactive and expired projects
         var activeProjects = projects

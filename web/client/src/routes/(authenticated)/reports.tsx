@@ -17,10 +17,7 @@ function RouteComponent() {
       <ul className="space-y-4">
         {canViewAccruals && (
           <li>
-            <Link
-              className="text-xl link link-hover link-primary"
-              to="/accruals"
-            >
+            <Link className="text-xl link link-hover underline" to="/accruals">
               Employee Vacation Accruals
             </Link>
           </li>

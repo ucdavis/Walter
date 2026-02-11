@@ -1,9 +1,11 @@
 import { useMemo } from 'react';
 import { Link } from '@tanstack/react-router';
-import { ExportCsvButton } from '@/components/ExportCsvButton.tsx';
+import { createColumnHelper } from '@tanstack/react-table';
+import { ExportDataButton } from '@/components/ExportDataButton.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import { formatDate } from '@/lib/date.ts';
 import type { ProjectRecord } from '@/queries/project.ts';
+import { DataTable } from '@/shared/dataTable.tsx';
 
 interface AggregatedProject {
   awardEndDate: string | null;
@@ -17,6 +19,8 @@ interface AggregatedProject {
   totalEncumbrance: number;
   totalExpense: number;
 }
+
+const columnHelper = createColumnHelper<AggregatedProject>();
 
 function aggregateProjects(records: ProjectRecord[]): AggregatedProject[] {
   const projectsMap = new Map<string, AggregatedProject>();
@@ -65,13 +69,6 @@ function aggregateProjects(records: ProjectRecord[]): AggregatedProject[] {
   return Array.from(projectsMap.values());
 }
 
-function filterExpired(projects: AggregatedProject[]): AggregatedProject[] {
-  const now = new Date();
-  return projects.filter(
-    (p) => !p.awardEndDate || new Date(p.awardEndDate) >= now
-  );
-}
-
 function sortByEndDate(projects: AggregatedProject[]): AggregatedProject[] {
   return [...projects].sort((a, b) => {
     if (!a.awardEndDate && !b.awardEndDate) {
@@ -107,8 +104,7 @@ interface ProjectsTableProps {
 export function ProjectsTable({ employeeId, records }: ProjectsTableProps) {
   const projects = useMemo(() => {
     const aggregated = aggregateProjects(records);
-    const active = filterExpired(aggregated);
-    return sortByEndDate(active);
+    return sortByEndDate(aggregated);
   }, [records]);
 
   const totals = useMemo(
@@ -130,94 +126,135 @@ export function ProjectsTable({ employeeId, records }: ProjectsTableProps) {
     [projects]
   );
 
+  const columns = useMemo(
+    () => [
+      columnHelper.accessor('displayName', {
+        cell: (info) => {
+          const name = info.getValue();
+          const { projectNumber } = info.row.original;
+
+          return (
+            <Link
+              className="link link-hover no-underline"
+              params={{
+                employeeId,
+                projectNumber,
+              }}
+              to="/projects/$employeeId/$projectNumber/"
+            >
+              <div>{projectNumber}</div>
+
+              <div className="truncate" title={name}>
+                {name}
+              </div>
+            </Link>
+          );
+        },
+        footer: () => 'Totals',
+        header: 'Project Name',
+      }),
+      columnHelper.accessor('awardStartDate', {
+        cell: (info) => (
+          <span className="flex justify-end w-full">
+            {formatDate(info.getValue())}
+          </span>
+        ),
+        header: () => (
+          <span className="flex justify-end w-full">Effective Date</span>
+        ),
+      }),
+      columnHelper.accessor('awardEndDate', {
+        cell: (info) => (
+          <span className="flex justify-end w-full">
+            {formatDate(info.getValue())}
+          </span>
+        ),
+        header: () => <span className="flex justify-end w-full">End Date</span>,
+      }),
+      columnHelper.accessor('totalBudget', {
+        cell: (info) => (
+          <span className="flex justify-end w-full">
+            {formatCurrency(info.getValue())}
+          </span>
+        ),
+        footer: () => (
+          <span className="flex justify-end w-full">
+            {formatCurrency(totals.totalBudget)}
+          </span>
+        ),
+        header: () => <span className="flex justify-end w-full">Budget</span>,
+      }),
+      columnHelper.accessor('totalExpense', {
+        cell: (info) => (
+          <span className="flex justify-end w-full">
+            {formatCurrency(info.getValue())}
+          </span>
+        ),
+        footer: () => (
+          <span className="flex justify-end w-full">
+            {formatCurrency(totals.totalExpense)}
+          </span>
+        ),
+        header: () => <span className="flex justify-end w-full">Expense</span>,
+      }),
+      columnHelper.accessor('totalEncumbrance', {
+        cell: (info) => (
+          <span className="flex justify-end w-full">
+            {formatCurrency(info.getValue())}
+          </span>
+        ),
+        footer: () => (
+          <span className="flex justify-end w-full">
+            {formatCurrency(totals.totalEncumbrance)}
+          </span>
+        ),
+        header: () => (
+          <span className="flex justify-end w-full">Encumbrance</span>
+        ),
+      }),
+      columnHelper.accessor('totalBalance', {
+        cell: (info) => (
+          <span className="flex justify-end w-full">
+            {formatCurrency(info.getValue())}
+          </span>
+        ),
+        footer: () => (
+          <span className="flex justify-end w-full">
+            {formatCurrency(totals.totalBalance)}
+          </span>
+        ),
+        header: () => <span className="flex justify-end w-full">Balance</span>,
+      }),
+    ],
+    [
+      employeeId,
+      totals.totalBalance,
+      totals.totalBudget,
+      totals.totalEncumbrance,
+      totals.totalExpense,
+    ]
+  );
+
   if (projects.length === 0) {
     return <p className="text-base-content/70 mt-8">No projects found.</p>;
   }
 
   return (
-    <div className="overflow-x-auto">
+    <div className="mt-4">
       <div className="flex justify-end mb-2">
-        <ExportCsvButton
+        <ExportDataButton
           columns={csvColumns}
           data={projects}
           filename="projects.csv"
         />
       </div>
-      <table className="table walter-table">
-        <thead>
-          <tr>
-            <th>Project Name</th>
-            <th className="text-right">Effective Date</th>
-            <th className="text-right">End Date</th>
-            <th className="text-right">Budget</th>
-            <th className="text-right">Expense</th>
-            <th className="text-right">Encumbrance</th>
-            <th className="text-right">Balance</th>
-          </tr>
-        </thead>
-        <tbody>
-          {projects.map((project) => (
-            <tr key={project.projectNumber}>
-              <td>
-                <Link
-                  className="link link-hover link-primary"
-                  params={{
-                    employeeId,
-                    projectNumber: project.projectNumber,
-                  }}
-                  to="/projects/$employeeId/$projectNumber/"
-                >
-                  {project.displayName}
-                </Link>
-                {project.showReconciliationWarning && (
-                  <Link
-                    className="ml-2 text-warning tooltip tooltip-right"
-                    data-tip="GL/PPM reconciliation issue - click to view"
-                    params={{
-                      employeeId,
-                      projectNumber: project.projectNumber,
-                    }}
-                    to="/projects/$employeeId/$projectNumber/reconciliation"
-                  >
-                    ⚠
-                  </Link>
-                )}
-              </td>
-              <td className="text-right">
-                {formatDate(project.awardStartDate)}
-              </td>
-              <td className="text-right">{formatDate(project.awardEndDate)}</td>
-              <td className="text-right">
-                {formatCurrency(project.totalBudget)}
-              </td>
-              <td className="text-right">
-                {formatCurrency(project.totalExpense)}
-              </td>
-              <td className="text-right">
-                {formatCurrency(project.totalEncumbrance)}
-              </td>
-              <td className="text-right">
-                {formatCurrency(project.totalBalance)}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-        <tfoot>
-          <tr className="totaltr">
-            <td colSpan={3}>Totals</td>
-            <td className="text-right">{formatCurrency(totals.totalBudget)}</td>
-            <td className="text-right">
-              {formatCurrency(totals.totalExpense)}
-            </td>
-            <td className="text-right">
-              {formatCurrency(totals.totalEncumbrance)}
-            </td>
-            <td className="text-right">
-              {formatCurrency(totals.totalBalance)}
-            </td>
-          </tr>
-        </tfoot>
-      </table>
+      <DataTable
+        columns={columns}
+        data={projects}
+        footerRowClassName="totaltr"
+        globalFilter="left"
+        initialState={{ pagination: { pageSize: 25 } }}
+      />
     </div>
   );
 }

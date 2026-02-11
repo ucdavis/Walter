@@ -1,6 +1,5 @@
 CREATE PROCEDURE dbo.usp_GetFacultyDeptPortfolio
-    @FinancialDept VARCHAR(7) = NULL,
-    @ProjectIds VARCHAR(MAX) = NULL,
+    @ProjectIds VARCHAR(MAX),
     @StartDate DATE = NULL,
     @EndDate DATE = NULL,
     @ApplicationName NVARCHAR(128) = NULL,
@@ -9,22 +8,12 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    -- Validate: exactly one filter must be provided
-    IF (@FinancialDept IS NULL AND @ProjectIds IS NULL)
+    -- Validate: ProjectIds must be provided
+    IF @ProjectIds IS NULL OR LEN(LTRIM(RTRIM(@ProjectIds))) = 0
     BEGIN
-        RAISERROR('Either @FinancialDept or @ProjectIds must be provided', 16, 1);
+        RAISERROR('@ProjectIds must be provided', 16, 1);
         RETURN;
     END;
-
-    IF (@FinancialDept IS NOT NULL AND @ProjectIds IS NOT NULL)
-    BEGIN
-        RAISERROR('Cannot specify both @FinancialDept and @ProjectIds', 16, 1);
-        RETURN;
-    END;
-
-    -- Validate FinancialDept if provided
-    IF @FinancialDept IS NOT NULL
-        EXEC dbo.usp_ValidateFinancialDept @FinancialDept;
 
     -- Validate date range if both are provided
     IF @StartDate IS NOT NULL AND @EndDate IS NOT NULL AND @EndDate < @StartDate
@@ -36,12 +25,12 @@ BEGIN
     DECLARE @RedshiftQuery NVARCHAR(MAX);
     DECLARE @TSQLCommand NVARCHAR(MAX);
     DECLARE @RedshiftLinkedServer SYSNAME = '[AE_Redshift_PROD]';
-    DECLARE @FilterClause NVARCHAR(MAX) = '';
     DECLARE @StartTime DATETIME2 = SYSDATETIME();
     DECLARE @RowCount INT;
     DECLARE @Duration_MS INT;
     DECLARE @ErrorMsg NVARCHAR(MAX);
     DECLARE @ParametersJSON NVARCHAR(MAX);
+    DECLARE @DateFilterClause NVARCHAR(MAX) = '';
 
     -- Sanitize ApplicationName for injection protection
     EXEC dbo.usp_SanitizeInputString @ApplicationName OUTPUT;
@@ -49,28 +38,16 @@ BEGIN
     -- Sanitize ApplicationUser for injection protection
     EXEC dbo.usp_SanitizeInputString @ApplicationUser OUTPUT;
 
-    -- Sanitize FinancialDept for SQL injection protection
-    IF @FinancialDept IS NOT NULL
-        EXEC dbo.usp_SanitizeInputString @FinancialDept OUTPUT;
-
-    -- Parse and validate ProjectIds if provided
+    -- Parse and validate ProjectIds
     DECLARE @ProjectIdFilter NVARCHAR(MAX);
+    EXEC dbo.usp_ParseProjectIdFilter @ProjectIds, @ProjectIdFilter OUTPUT;
 
-    IF @ProjectIds IS NOT NULL
-        EXEC dbo.usp_ParseProjectIdFilter @ProjectIds, @ProjectIdFilter OUTPUT;
-
-    -- Build filter clause based on which parameter was provided
-    IF @FinancialDept IS NOT NULL
-        SET @FilterClause = ' WHERE prj_owning_cd = ''' + @FinancialDept + '''';
-    ELSE
-        SET @FilterClause = ' WHERE PROJECT_NUMBER IN (' + @ProjectIdFilter + ')';
-
-    -- Add date overlap logic
+    -- Build date overlap filter
     IF @StartDate IS NOT NULL
-        SET @FilterClause = @FilterClause + ' AND award_end_date >= ''' + CONVERT(VARCHAR(10), @StartDate, 120) + '''';
+        SET @DateFilterClause = @DateFilterClause + ' AND award_end_date >= ''' + CONVERT(VARCHAR(10), @StartDate, 120) + '''';
 
     IF @EndDate IS NOT NULL
-        SET @FilterClause = @FilterClause + ' AND award_start_date <= ''' + CONVERT(VARCHAR(10), @EndDate, 120) + '''';
+        SET @DateFilterClause = @DateFilterClause + ' AND award_start_date <= ''' + CONVERT(VARCHAR(10), @EndDate, 120) + '''';
 
     -- Build Redshift query
     SET @RedshiftQuery = '
@@ -81,12 +58,11 @@ BEGIN
         PROGRAM_CD AS PROGRAM_CODE, PROGRAM_DESC, ACTIVITY_CD AS ACTIVITY_CODE, ACTIVITY_DESC,
         CAT_BUDGET, CAT_COMMITMENTS, CAT_ITD_EXP, CAT_BUD_BAL
         FROM ae_dwh.ucd_faculty_rpt_t
-        ' + @FilterClause;
+        WHERE PROJECT_NUMBER IN (' + @ProjectIdFilter + ')' + @DateFilterClause;
 
     -- Build parameters JSON for logging
     SET @ParametersJSON = (
         SELECT
-            @FinancialDept AS FinancialDept,
             @ProjectIds AS ProjectIds,
             CONVERT(VARCHAR(10), @StartDate, 120) AS StartDate,
             CONVERT(VARCHAR(10), @EndDate, 120) AS EndDate,
