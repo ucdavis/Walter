@@ -100,17 +100,12 @@ public sealed class ProjectController : ApiControllerBase
                 project.PmEmployeeId = pmEmployeeId;
             }
 
-            if (glTotalsLookup.TryGetValue(project.ProjectNumber, out var glTotal) &&
+            if (project.ProjectType == "Internal" &&
+                glTotalsLookup.TryGetValue(project.ProjectNumber, out var glTotal) &&
                 ppmTotalsLookup.TryGetValue(project.ProjectNumber, out var ppmTotal))
             {
                 var diff = Math.Abs(glTotal + ppmTotal);
                 project.HasGlPpmDiscrepancy = diff > 1;
-                _logger.LogInformation("Project {Project}: GL={GL}, PPM={PPM}, Diff={Diff}, Discrepancy={Discrepancy}",
-                    project.ProjectNumber, glTotal, ppmTotal, diff, project.HasGlPpmDiscrepancy);
-            }
-            else
-            {
-                _logger.LogInformation("Project {Project}: No GL data found in lookup", project.ProjectNumber);
             }
         }
 

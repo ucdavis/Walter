@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import {
@@ -69,16 +70,6 @@ function RouteComponent() {
   // Find the specific reconciliation record
   const ppmRecord = reconciliation.find((r) => matchesPPM(r, search));
 
-  // Filter GL transactions to matching params, most recent first
-  const glTransactions = transactions
-    .filter((t) => matchesGL(t, search))
-    .sort((a, b) => {
-      if (!a.journalAcctDate && !b.journalAcctDate) return 0;
-      if (!a.journalAcctDate) return 1;
-      if (!b.journalAcctDate) return -1;
-      return new Date(b.journalAcctDate).getTime() - new Date(a.journalAcctDate).getTime();
-    });
-
   // Aggregate PPM records at the task level
   const ppmTasks = Object.values(
     projects
@@ -130,6 +121,32 @@ function RouteComponent() {
         return acc;
       }, {})
   );
+
+  const [selectedTask, setSelectedTask] = useState<string | null>(null);
+
+  const selectedPpmTask = selectedTask
+    ? ppmTasks.find((t) => t.taskNum === selectedTask)
+    : null;
+
+  // Filter GL transactions — scope to selected task's chart string if one is selected
+  const glTransactions = transactions
+    .filter((t) => {
+      if (!matchesGL(t, search)) return false;
+      if (selectedPpmTask) {
+        return (
+          (t.fund ?? '') === (selectedPpmTask.fundCode ?? '') &&
+          (t.program ?? '') === (selectedPpmTask.programCode ?? '') &&
+          (t.activity ?? '') === (selectedPpmTask.activityCode ?? '')
+        );
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      if (!a.journalAcctDate && !b.journalAcctDate) return 0;
+      if (!a.journalAcctDate) return 1;
+      if (!b.journalAcctDate) return -1;
+      return new Date(b.journalAcctDate).getTime() - new Date(a.journalAcctDate).getTime();
+    });
 
   const keyLabel = [search.dept, search.fund, search.program, search.activity]
     .filter(Boolean)
@@ -249,7 +266,11 @@ function RouteComponent() {
               </thead>
               <tbody>
                 {ppmTasks.map((t) => (
-                  <tr key={t.taskNum}>
+                  <tr
+                    key={t.taskNum}
+                    className={`cursor-pointer hover:bg-base-200 ${selectedTask === t.taskNum ? 'bg-primary/10' : ''}`}
+                    onClick={() => setSelectedTask(selectedTask === t.taskNum ? null : t.taskNum)}
+                  >
                     <td className="font-mono text-sm">
                       {t.projectOwningOrg ?? '-'}
                     </td>
@@ -310,7 +331,21 @@ function RouteComponent() {
 
       {/* GL Transaction Listings */}
       <section className="mb-8">
-        <h2 className="h2 mb-4">GL Transactions ({glTransactions.length})</h2>
+        <h2 className="h2 mb-4">
+          GL Transactions ({glTransactions.length})
+          {selectedPpmTask && (
+            <span className="text-sm font-normal text-base-content/60 ml-2">
+              filtered to task {selectedPpmTask.taskNum}
+              <button
+                className="btn btn-xs btn-ghost ml-1"
+                onClick={() => setSelectedTask(null)}
+                type="button"
+              >
+                Clear
+              </button>
+            </span>
+          )}
+        </h2>
         {glTransactions.length === 0 ? (
           <p className="text-base-content/60">No GL transactions found.</p>
         ) : (

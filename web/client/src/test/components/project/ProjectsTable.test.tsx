@@ -12,6 +12,7 @@ afterEach(cleanup);
 const createProject = (
   overrides: Partial<ProjectRecord> = {}
 ): ProjectRecord => ({
+  activityCode: null,
   activityDesc: 'Activity',
   awardEndDate: '2099-12-31',
   awardNumber: 'AWD001',
@@ -23,6 +24,7 @@ const createProject = (
   copi: null,
   displayName: 'P1: Test Project',
   expenditureCategoryName: 'Personnel',
+  fundCode: null,
   fundDesc: 'Federal',
   hasGlPpmDiscrepancy: false,
   managedByCurrentUser: false,
@@ -30,6 +32,7 @@ const createProject = (
   pi: 'PI Name',
   pm: null,
   pmEmployeeId: null,
+  programCode: null,
   programDesc: 'Program',
   projectName: 'Test Project',
   projectNumber: 'P1',
