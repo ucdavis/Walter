@@ -100,3 +100,34 @@ describe('DataTable expandable overlay', () => {
     await waitFor(() => expect(expandButtonAfterEscapeClose).toHaveFocus());
   });
 });
+
+describe('DataTable row expansion', () => {
+  it('renders a sub component row when expanded', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <DataTable
+        columns={columns}
+        data={[{ name: 'Row1', value: 1 }]}
+        expandable={false}
+        getRowProps={(row) => ({
+          className: 'cursor-pointer',
+          onClick: () => row.toggleExpanded(),
+        })}
+        globalFilter="none"
+        pagination="off"
+        renderSubComponent={({ row }) => (
+          <div>{`Expanded ${row.original.name}`}</div>
+        )}
+      />
+    );
+
+    expect(screen.queryByText('Expanded Row1')).not.toBeInTheDocument();
+
+    await user.click(screen.getByText('Row1'));
+    expect(screen.getByText('Expanded Row1')).toBeInTheDocument();
+
+    await user.click(screen.getByText('Row1'));
+    expect(screen.queryByText('Expanded Row1')).not.toBeInTheDocument();
+  });
+});

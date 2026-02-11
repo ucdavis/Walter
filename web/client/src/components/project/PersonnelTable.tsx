@@ -1,15 +1,5 @@
-import { Fragment, useMemo } from 'react';
-import {
-  createColumnHelper,
-  flexRender,
-  getCoreRowModel,
-  getExpandedRowModel,
-  getSortedRowModel,
-  useReactTable,
-  type ExpandedState,
-  type SortingState,
-} from '@tanstack/react-table';
-import { useState } from 'react';
+import { useMemo } from 'react';
+import { createColumnHelper } from '@tanstack/react-table';
 import {
   ChevronDownIcon,
   ChevronUpIcon,
@@ -18,7 +8,8 @@ import {
 import { ExportDataButton } from '@/components/ExportDataButton.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import { formatDate } from '@/lib/date.ts';
-import { PersonnelRecord } from '@/queries/personnel.ts';
+import type { PersonnelRecord } from '@/queries/personnel.ts';
+import { DataTable } from '@/shared/DataTable.tsx';
 
 function isEndingSoon(dateStr: string | null): boolean {
   if (!dateStr) {
@@ -32,6 +23,10 @@ function isEndingSoon(dateStr: string | null): boolean {
     now.getDate()
   );
   return endDate <= threeMonthsFromNow && endDate >= now;
+}
+
+function safeText(value: string | null | undefined): string {
+  return value ?? '';
 }
 
 export interface AggregatedDistribution {
@@ -97,9 +92,9 @@ export function aggregateByPosition(
         monthlyFringe,
         monthlyRate,
         monthlyTotal: monthlyRate + monthlyFringe,
-        name: record.name,
-        positionDescription: record.positionDescription,
-        positionNumber: record.positionNumber,
+        name: safeText(record.name),
+        positionDescription: safeText(record.positionDescription),
+        positionNumber: safeText(record.positionNumber),
       });
     }
   }
@@ -109,94 +104,89 @@ export function aggregateByPosition(
 
 const columnHelper = createColumnHelper<AggregatedPosition>();
 
-const columns = [
-  columnHelper.display({
-    cell: ({ row }) => (
-      <div className="flex items-center gap-2">
-        {row.getIsExpanded() ? (
-          <ChevronUpIcon className="w-4 h-4" />
-        ) : (
-          <ChevronDownIcon className="w-4 h-4" />
-        )}
-        {row.original.name} - {row.original.positionDescription}
-      </div>
-    ),
-    header: 'Position/Project',
-    id: 'positionProject',
-    sortingFn: (a, b) => a.original.name.localeCompare(b.original.name),
-  }),
-  columnHelper.accessor('fte', {
-    cell: (info) => <span className="flex justify-end">{info.getValue()}</span>,
-    header: () => <span className="flex justify-end w-full">FTE</span>,
-  }),
-  columnHelper.display({
-    cell: () => null,
-    header: () => <span className="flex justify-end w-full">Dist Pct</span>,
-    id: 'distPct',
-  }),
-  columnHelper.accessor('jobEffectiveDate', {
-    cell: (info) => (
-      <span className="flex justify-end">
-        {formatDate(info.getValue() as string | null, '')}
-      </span>
-    ),
-    header: () => (
-      <span className="flex justify-end w-full">Effective Date</span>
-    ),
-  }),
-  columnHelper.accessor('jobEndDate', {
-    cell: ({ row }) => {
-      const { jobEndDate, jobEndingSoon } = row.original;
-      return (
-        <span className="flex justify-end">
-          {jobEndingSoon ? (
-            <span
-              className="text-error inline-flex items-center gap-1"
-              title="Ending within 3 months"
-            >
-              <ClockIcon className="w-4 h-4" />
-              {formatDate(jobEndDate, '')}
-            </span>
-          ) : (
-            formatDate(jobEndDate, '')
-          )}
-        </span>
-      );
-    },
-    header: () => (
-      <span className="flex justify-end w-full">Expected End Date</span>
-    ),
-  }),
-  columnHelper.accessor('monthlyRate', {
-    cell: (info) => (
-      <span className="flex justify-end">
-        {formatCurrency(info.getValue())}
-      </span>
-    ),
-    header: () => <span className="flex justify-end w-full">Monthly Rate</span>,
-  }),
-  columnHelper.accessor((row) => row.monthlyFringe, {
-    cell: (info) => (
-      <span className="flex justify-end">
-        {formatCurrency(info.getValue())}
-      </span>
-    ),
-    header: () => (
-      <span className="flex justify-end w-full">Monthly Fringe</span>
-    ),
-    id: 'monthlyFringe',
-  }),
-  columnHelper.accessor('monthlyTotal', {
-    cell: (info) => (
-      <span className="flex justify-end">
-        {formatCurrency(info.getValue())}
-      </span>
-    ),
-    header: () => (
-      <span className="flex justify-end w-full">Monthly Total</span>
-    ),
-  }),
-];
+function getPositionSearchText(position: AggregatedPosition): string {
+  const projectDescriptions = position.distributions
+    .map((dist) => dist.record.projectDescription)
+    .join(' ');
+
+  return [
+    safeText(position.name),
+    safeText(position.positionDescription),
+    safeText(position.positionNumber),
+    projectDescriptions,
+  ].join(' ');
+}
+
+function DistributionSubtable({
+  distributions,
+}: {
+  distributions: AggregatedDistribution[];
+}) {
+  return (
+    <div className="pr-4">
+      <table className="table walter-table walter-subtable">
+        <thead>
+          <tr>
+            <th>Project</th>
+            <th>
+              <span className="flex justify-end w-full">Dist %</span>
+            </th>
+            <th>
+              <span className="flex justify-end w-full">Funding Effective</span>
+            </th>
+            <th>
+              <span className="flex justify-end w-full">Funding End</span>
+            </th>
+            <th>
+              <span className="flex justify-end w-full">Monthly Rate</span>
+            </th>
+            <th>
+              <span className="flex justify-end w-full">Monthly Fringe</span>
+            </th>
+            <th>
+              <span className="flex justify-end w-full">Monthly Total</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {distributions.map((dist, idx) => (
+            <tr key={idx}>
+              <td className="text-sm">{dist.record.projectDescription}</td>
+              <td className="text-right text-sm">
+                {dist.record.distributionPercent}%
+              </td>
+              <td className="text-right text-sm">
+                {formatDate(dist.record.fundingEffectiveDate, '')}
+              </td>
+              <td className="text-right text-sm">
+                {dist.fundingEndingSoon ? (
+                  <span
+                    className="text-error inline-flex items-center gap-1"
+                    title="Ending within 3 months"
+                  >
+                    <ClockIcon className="w-3 h-3" />
+                    {formatDate(dist.record.fundingEndDate, '')}
+                  </span>
+                ) : (
+                  formatDate(dist.record.fundingEndDate, '')
+                )}
+              </td>
+              <td className="text-right text-sm">
+                {formatCurrency(dist.monthlyRate)}
+              </td>
+              <td className="text-right text-sm">
+                {formatCurrency(dist.monthlyFringe)}
+              </td>
+              <td className="text-right text-sm">
+                {formatCurrency(dist.monthlyTotal)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
 
 function getExportData(positions: AggregatedPosition[]) {
   return positions.flatMap((pos) =>
@@ -239,41 +229,153 @@ export function PersonnelTable({
   data,
   showTotals = true,
 }: PersonnelTableProps) {
-  const [sorting, setSorting] = useState<SortingState>([
-    { desc: false, id: 'positionProject' },
-  ]);
-  const [expanded, setExpanded] = useState<ExpandedState>({});
-
   const positions = useMemo(() => aggregateByPosition(data), [data]);
 
-  const table = useReactTable({
-    columns,
-    data: positions,
-    getCoreRowModel: getCoreRowModel(),
-    getExpandedRowModel: getExpandedRowModel(),
-    getRowCanExpand: () => true,
-    getSortedRowModel: getSortedRowModel(),
-    onExpandedChange: setExpanded,
-    onSortingChange: setSorting,
-    state: {
-      expanded,
-      sorting,
-    },
-  });
-
-  const totalMonthlyRate = positions.reduce((sum, p) => sum + p.monthlyRate, 0);
-  const totalMonthlyFringe = positions.reduce(
-    (sum, p) => sum + p.monthlyFringe,
-    0
+  const columns = useMemo(
+    () => [
+      columnHelper.accessor(getPositionSearchText, {
+        cell: ({ row }) => (
+          <div className="flex items-center gap-2">
+            {row.getCanExpand() ? (
+              row.getIsExpanded() ? (
+                <ChevronUpIcon className="w-4 h-4" />
+              ) : (
+                <ChevronDownIcon className="w-4 h-4" />
+              )
+            ) : null}
+            {safeText(row.original.name)} -{' '}
+            {safeText(row.original.positionDescription)}
+          </div>
+        ),
+        footer: showTotals ? () => 'Totals' : undefined,
+        header: 'Position/Project',
+        id: 'positionProject',
+        minSize: 260,
+        size: 320,
+        sortingFn: (a, b) =>
+          safeText(a.original.name).localeCompare(safeText(b.original.name)),
+      }),
+      columnHelper.accessor('fte', {
+        cell: (info) => (
+          <span className="flex justify-end">{info.getValue()}</span>
+        ),
+        header: () => <span className="flex justify-end w-full">FTE</span>,
+      }),
+      columnHelper.accessor('jobEffectiveDate', {
+        cell: (info) => (
+          <span className="flex justify-end">
+            {formatDate(info.getValue() as string | null, '')}
+          </span>
+        ),
+        header: () => (
+          <span className="flex justify-end w-full">Effective Date</span>
+        ),
+      }),
+      columnHelper.accessor('jobEndDate', {
+        cell: ({ row }) => {
+          const { jobEndDate, jobEndingSoon } = row.original;
+          return (
+            <span className="flex justify-end">
+              {jobEndingSoon ? (
+                <span
+                  className="text-error inline-flex items-center gap-1"
+                  title="Ending within 3 months"
+                >
+                  <ClockIcon className="w-4 h-4" />
+                  {formatDate(jobEndDate, '')}
+                </span>
+              ) : (
+                formatDate(jobEndDate, '')
+              )}
+            </span>
+          );
+        },
+        header: () => (
+          <span className="flex justify-end w-full">Expected End Date</span>
+        ),
+      }),
+      columnHelper.accessor('monthlyRate', {
+        cell: (info) => (
+          <span className="flex justify-end w-full">
+            {formatCurrency(info.getValue())}
+          </span>
+        ),
+        footer: showTotals
+          ? ({ table }) => (
+              <span className="flex justify-end w-full">
+                {formatCurrency(
+                  table
+                    .getFilteredRowModel()
+                    .rows.reduce(
+                      (sum, row) => sum + row.original.monthlyRate,
+                      0
+                    )
+                )}
+              </span>
+            )
+          : undefined,
+        header: () => (
+          <span className="flex justify-end w-full">Monthly Rate</span>
+        ),
+      }),
+      columnHelper.accessor('monthlyFringe', {
+        cell: (info) => (
+          <span className="flex justify-end w-full">
+            {formatCurrency(info.getValue())}
+          </span>
+        ),
+        footer: showTotals
+          ? ({ table }) => (
+              <span className="flex justify-end w-full">
+                {formatCurrency(
+                  table
+                    .getFilteredRowModel()
+                    .rows.reduce(
+                      (sum, row) => sum + row.original.monthlyFringe,
+                      0
+                    )
+                )}
+              </span>
+            )
+          : undefined,
+        header: () => (
+          <span className="flex justify-end w-full">Monthly Fringe</span>
+        ),
+      }),
+      columnHelper.accessor('monthlyTotal', {
+        cell: (info) => (
+          <span className="flex justify-end w-full">
+            {formatCurrency(info.getValue())}
+          </span>
+        ),
+        footer: showTotals
+          ? ({ table }) => (
+              <span className="flex justify-end w-full">
+                {formatCurrency(
+                  table
+                    .getFilteredRowModel()
+                    .rows.reduce(
+                      (sum, row) => sum + row.original.monthlyTotal,
+                      0
+                    )
+                )}
+              </span>
+            )
+          : undefined,
+        header: () => (
+          <span className="flex justify-end w-full">Monthly Total</span>
+        ),
+      }),
+    ],
+    [showTotals]
   );
-  const totalMonthlyTotal = totalMonthlyRate + totalMonthlyFringe;
 
   if (positions.length === 0) {
     return <p className="text-base-content/70 mt-4">No personnel found.</p>;
   }
 
   return (
-    <div className="overflow-x-auto">
+    <div>
       <div className="flex justify-end mb-2">
         <ExportDataButton
           columns={personnelCsvColumns}
@@ -281,101 +383,27 @@ export function PersonnelTable({
           filename="personnel.csv"
         />
       </div>
-      <table className="table walter-table">
-        <colgroup>
-          <col className="w-1/3" />
-          <col className="w-14" />
-          <col className="w-12" />
-          <col className="w-24" />
-          <col className="w-24" />
-          <col className="w-28" />
-          <col className="w-24" />
-          <col className="w-24" />
-        </colgroup>
-        <thead>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <tr key={headerGroup.id}>
-              {headerGroup.headers.map((header) => (
-                <th key={header.id}>
-                  {header.isPlaceholder
-                    ? null
-                    : flexRender(
-                        header.column.columnDef.header,
-                        header.getContext()
-                      )}
-                </th>
-              ))}
-            </tr>
-          ))}
-        </thead>
-        <tbody>
-          {table.getRowModel().rows.map((row) => (
-            <Fragment key={row.id}>
-              <tr
-                className="cursor-pointer hover:bg-base-200"
-                onClick={() => row.toggleExpanded()}
-              >
-                {row.getVisibleCells().map((cell) => (
-                  <td key={cell.id}>
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </td>
-                ))}
-              </tr>
-              {row.getIsExpanded() &&
-                row.original.distributions.map((dist, idx) => (
-                  <tr className="pivot-row" key={`${row.id}-dist-${idx}`}>
-                    <td className="text-sm pl-8">
-                      {dist.record.projectDescription}
-                    </td>
-                    <td></td>
-                    <td className="text-right text-sm">
-                      {dist.record.distributionPercent}%
-                    </td>
-                    <td className="text-right text-sm">
-                      {formatDate(dist.record.fundingEffectiveDate, '')}
-                    </td>
-                    <td className="text-right text-sm">
-                      {dist.fundingEndingSoon ? (
-                        <span
-                          className="text-error inline-flex items-center gap-1"
-                          title="Ending within 3 months"
-                        >
-                          <ClockIcon className="w-3 h-3" />
-                          {formatDate(dist.record.fundingEndDate, '')}
-                        </span>
-                      ) : (
-                        formatDate(dist.record.fundingEndDate, '')
-                      )}
-                    </td>
-                    <td className="text-right text-sm">
-                      {formatCurrency(dist.monthlyRate)}
-                    </td>
-                    <td className="text-right text-sm">
-                      {formatCurrency(dist.monthlyFringe)}
-                    </td>
-                    <td className="text-right text-sm">
-                      {formatCurrency(dist.monthlyTotal)}
-                    </td>
-                  </tr>
-                ))}
-            </Fragment>
-          ))}
-        </tbody>
-        {showTotals && (
-          <tfoot>
-            <tr className="totaltr">
-              <td colSpan={5}>Totals</td>
-              <td className="text-right">{formatCurrency(totalMonthlyRate)}</td>
-              <td className="text-right">
-                {formatCurrency(totalMonthlyFringe)}
-              </td>
-              <td className="text-right">
-                {formatCurrency(totalMonthlyTotal)}
-              </td>
-            </tr>
-          </tfoot>
+      <DataTable
+        columns={columns}
+        data={positions}
+        footerRowClassName="totaltr"
+        getRowCanExpand={(row) => row.original.distributions.length > 0}
+        getRowProps={(row) =>
+          row.getCanExpand()
+            ? {
+                className: 'cursor-pointer hover:bg-base-200',
+                onClick: () => row.toggleExpanded(),
+              }
+            : { className: 'hover:bg-base-200' }
+        }
+        globalFilter="left"
+        initialState={{ sorting: [{ desc: false, id: 'positionProject' }] }}
+        pagination="off"
+        renderSubComponent={({ row }) => (
+          <DistributionSubtable distributions={row.original.distributions} />
         )}
-      </table>
+        subComponentRowClassName="pivot-row"
+      />
     </div>
   );
 }

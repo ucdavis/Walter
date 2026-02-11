@@ -1,10 +1,17 @@
-import { describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it } from 'vitest';
+import { cleanup, render, screen } from '@testing-library/react';
+import { userEvent } from '@testing-library/user-event';
 import {
   aggregateByPosition,
   PersonnelTable,
 } from '@/components/project/PersonnelTable.tsx';
 import { PersonnelRecord } from '@/queries/personnel.ts';
+
+afterEach(() => {
+  cleanup();
+  document.body.style.overflow = '';
+  document.body.style.paddingRight = '';
+});
 
 const createRecord = (
   overrides: Partial<PersonnelRecord> = {}
@@ -135,6 +142,22 @@ describe('PersonnelTable', () => {
     render(<PersonnelTable data={records} />);
 
     expect(screen.getByTitle('Ending within 3 months')).toBeInTheDocument();
+  });
+
+  it('renders an expanded distributions subtable with headers', async () => {
+    const user = userEvent.setup();
+    const records = [createRecord({ projectDescription: 'Test Project' })];
+
+    render(<PersonnelTable data={records} />);
+
+    expect(screen.queryByText('Project')).not.toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole('cell', { name: 'Smith, John - PROF-FY' })
+    );
+
+    expect(screen.getByText('Project')).toBeInTheDocument();
+    expect(screen.getByText('Test Project')).toBeInTheDocument();
   });
 
   it('renders only filtered data when passed filtered records', () => {
