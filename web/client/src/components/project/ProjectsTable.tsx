@@ -150,8 +150,8 @@ export function ProjectsTable({ employeeId, records }: ProjectsTableProps) {
         },
         footer: () => 'Totals',
         header: 'Project Name',
-        minSize: 300,
-        size: 375,
+        minSize: 250,
+        size: 300,
       }),
       columnHelper.accessor('awardStartDate', {
         cell: (info) => (
