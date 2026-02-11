@@ -7,6 +7,24 @@ import { PiWithProjects } from '@/queries/project.ts';
 import { server } from '@/test/mswUtils.ts';
 import { renderRoute } from '@/test/routerUtils.tsx';
 
+const createPi = (
+  employeeId: string,
+  projects: Array<{
+    catBudBal: number;
+    catBudget: number;
+    displayName: string;
+    projectName: string;
+    projectNumber: string;
+  }>
+): PiWithProjects => ({
+  employeeId,
+  name: `PI ${employeeId}`,
+  projectCount: projects.length,
+  projects: projects as PiWithProjects['projects'],
+  totalBalance: projects.reduce((sum, p) => sum + p.catBudBal, 0),
+  totalBudget: projects.reduce((sum, p) => sum + p.catBudget, 0),
+});
+
 describe('home route', () => {
   it('renders managed investigators dashboard when user manages investigators', async () => {
     const managedPis = [
@@ -72,18 +90,18 @@ describe('home route', () => {
 
     const projects = [
       {
-        projectNumber: 'P1',
-        projectName: 'Project One',
-        displayName: 'P1: Project One',
         awardEndDate: '2099-12-31',
         catBudBal: 1000,
+        displayName: 'P1: Project One',
+        projectName: 'Project One',
+        projectNumber: 'P1',
       },
       {
-        projectNumber: 'P2',
-        projectName: 'Project Two',
-        displayName: 'P2: Project Two',
         awardEndDate: null,
         catBudBal: 2000,
+        displayName: 'P2: Project Two',
+        projectName: 'Project Two',
+        projectNumber: 'P2',
       },
     ];
 
@@ -121,25 +139,25 @@ describe('home route', () => {
     // Same project with multiple records (different tasks/categories)
     const projects = [
       {
-        projectNumber: 'P1',
-        projectName: 'Project One',
-        displayName: 'P1: Project One',
         awardEndDate: '2099-12-31',
         catBudBal: 1000,
+        displayName: 'P1: Project One',
+        projectName: 'Project One',
+        projectNumber: 'P1',
       },
       {
-        projectNumber: 'P1',
-        projectName: 'Project One',
-        displayName: 'P1: Project One',
         awardEndDate: '2099-12-31',
         catBudBal: 500,
+        displayName: 'P1: Project One',
+        projectName: 'Project One',
+        projectNumber: 'P1',
       },
       {
-        projectNumber: 'P1',
-        projectName: 'Project One',
-        displayName: 'P1: Project One',
         awardEndDate: '2099-12-31',
         catBudBal: 250,
+        displayName: 'P1: Project One',
+        projectName: 'Project One',
+        projectNumber: 'P1',
       },
     ];
 
@@ -166,80 +184,43 @@ describe('home route', () => {
     }
   });
 
-  it('shows PI with zero active projects with zero counts', async () => {
-    const managedPis = [
-      { employeeId: '2001', name: 'Adams, Alice', projectCount: 3 },
-      { employeeId: '2002', name: 'Baker, Bob', projectCount: 1 },
-    ];
-
-    const activeProject = {
-      projectNumber: 'PROJ1',
-      projectName: 'Active Project',
-      displayName: 'Active Project',
-      awardEndDate: '2099-12-31',
-      catBudBal: 5000,
-      catBudget: 10000,
-    };
-
+  it('shows reports only when user is neither PM nor PI', async () => {
     const user = {
-      email: 'pm@example.com',
+      email: 'alpha@example.com',
       employeeId: '1000',
       id: 'user-1',
-      kerberos: 'pmuser',
-      name: 'PM User',
+      kerberos: 'alpha',
+      name: 'Alpha User',
       roles: ['admin'],
     };
 
     server.use(
       http.get('/api/user/me', () => HttpResponse.json(user)),
-      http.get('/api/project/managed/:employeeId', () =>
-        HttpResponse.json(managedPis)
-      ),
-      http.get('/api/project/2001', () =>
-        HttpResponse.json([activeProject])
-      ),
-      http.get('/api/project/2002', () =>
-        HttpResponse.json([])
-      ),
-      http.get('/api/project/1000', () =>
-        HttpResponse.json([activeProject])
-      ),
+      http.get('/api/project/managed/:employeeId', () => HttpResponse.json([])),
+      http.get('/api/project/:employeeId', () => HttpResponse.json([])),
       http.get('/api/project/personnel', () => HttpResponse.json([])),
     );
 
     const { cleanup } = renderRoute({ initialPath: '/' });
 
     try {
-      await screen.findByText('Adams, Alice');
+      await screen.findByRole('heading', { name: 'W.A.L.T.E.R.' });
 
-      // Alice has active projects → should appear with count
-      const aliceRow = screen.getByText('Adams, Alice').closest('tr')!;
-      expect(aliceRow).toHaveTextContent('1');
+      expect(
+        screen.queryByRole('tab', { name: 'Principal Investigators' })
+      ).not.toBeInTheDocument();
+      expect(screen.queryByRole('tab', { name: 'Projects' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('tab', { name: 'Reports' })).not.toBeInTheDocument();
 
-      // Bob has 0 active projects → appears but with 0 count
-      const bobRow = screen.getByText('Baker, Bob').closest('tr')!;
-      expect(bobRow).toHaveTextContent('0');
-
-      // Balance should reflect only Alice's active project
-      expect(screen.getByText('$5,000.00')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Reports' })).toBeInTheDocument();
     } finally {
       cleanup();
     }
   });
 
-  it('hides reports tab when user lacks AccrualViewer role', async () => {
+  it('hides accruals link in reports tab when user lacks AccrualViewer role', async () => {
     const managedPis = [
       { employeeId: '2001', name: 'PI One', projectCount: 1 },
-    ];
-
-    const projects = [
-      {
-        projectNumber: 'P1',
-        projectName: 'Project One',
-        displayName: 'P1: Project One',
-        awardEndDate: '2099-12-31',
-        catBudBal: 1000,
-      },
     ];
 
     const user = {
@@ -256,18 +237,20 @@ describe('home route', () => {
       http.get('/api/project/managed/:employeeId', () =>
         HttpResponse.json(managedPis)
       ),
-      http.get('/api/project/:employeeId', () => HttpResponse.json(projects)),
+      http.get('/api/project/:employeeId', () => HttpResponse.json([])),
       http.get('/api/project/personnel', () => HttpResponse.json([])),
     );
 
+    const ue = userEvent.setup();
     const { cleanup } = renderRoute({ initialPath: '/' });
 
     try {
       await screen.findByText('PI One');
 
-      // Reports tab should not be rendered at all without AccrualViewer role
+      await ue.click(screen.getByRole('tab', { name: 'Reports' }));
+
       expect(
-        screen.queryByRole('tab', { name: 'Reports' })
+        screen.queryByText('Employee Vacation Accruals')
       ).not.toBeInTheDocument();
     } finally {
       cleanup();
@@ -281,11 +264,11 @@ describe('home route', () => {
 
     const projects = [
       {
-        projectNumber: 'P1',
-        projectName: 'Project One',
-        displayName: 'P1: Project One',
         awardEndDate: '2099-12-31',
         catBudBal: 1000,
+        displayName: 'P1: Project One',
+        projectName: 'Project One',
+        projectNumber: 'P1',
       },
     ];
 
@@ -298,32 +281,13 @@ describe('home route', () => {
       roles: ['Admin'],
     };
 
-    const personnel = [
-      {
-        employeeId: 'E1',
-        name: 'Test Employee',
-        positionNumber: 'POS1',
-        positionDescription: 'Researcher',
-        projectId: 'P1',
-        projectDescription: 'Project One',
-        monthlyRate: 5000,
-        fte: 1.0,
-        distributionPercent: 100,
-        compositeBenefitRate: 0.3,
-        fundingEffectiveDate: '2024-01-01',
-        fundingEndDate: '2025-12-31',
-        positionEffectiveDate: '2024-01-01',
-        jobEndDate: null,
-      },
-    ];
-
     server.use(
       http.get('/api/project/managed/:employeeId', () =>
         HttpResponse.json(managedPis)
       ),
       http.get('/api/project/:employeeId', () => HttpResponse.json(projects)),
       http.get('/api/user/me', () => HttpResponse.json(testUser)),
-      http.get('/api/project/personnel', () => HttpResponse.json(personnel))
+      http.get('/api/project/personnel', () => HttpResponse.json([]))
     );
 
     const user = userEvent.setup();
@@ -335,16 +299,6 @@ describe('home route', () => {
       expect(
         screen.getByRole('tab', { name: 'Principal Investigators' })
       ).toHaveAttribute('aria-selected', 'true');
-
-      // Click Personnel tab
-      await user.click(screen.getByRole('tab', { name: 'Personnel' }));
-      expect(
-        screen.getByRole('tabpanel', { name: /personnel/i })
-      ).toBeInTheDocument();
-      expect(screen.getByRole('tab', { name: 'Personnel' })).toHaveAttribute(
-        'aria-selected',
-        'true'
-      );
 
       // Click Reports tab
       await user.click(screen.getByRole('tab', { name: 'Reports' }));
@@ -368,37 +322,18 @@ describe('home route', () => {
       cleanup();
     }
   });
-
 });
 
 describe('getPiProjectAlerts', () => {
-  const createPi = (
-    employeeId: string,
-    projects: Array<{
-      projectNumber: string;
-      projectName: string;
-      displayName: string;
-      catBudget: number;
-      catBudBal: number;
-    }>
-  ): PiWithProjects => ({
-    employeeId,
-    name: `PI ${employeeId}`,
-    projectCount: projects.length,
-    projects: projects as PiWithProjects['projects'],
-    totalBalance: projects.reduce((sum, p) => sum + p.catBudBal, 0),
-    totalBudget: projects.reduce((sum, p) => sum + p.catBudget, 0),
-  });
-
   it('returns error for negative balance', () => {
     const pis = [
       createPi('1', [
         {
-          projectNumber: 'P1',
-          projectName: 'Project One',
-          displayName: 'P1: Project One',
-          catBudget: 1000,
           catBudBal: -500,
+          catBudget: 1000,
+          displayName: 'P1: Project One',
+          projectName: 'Project One',
+          projectNumber: 'P1',
         },
       ]),
     ];
@@ -414,11 +349,11 @@ describe('getPiProjectAlerts', () => {
     const pis = [
       createPi('1', [
         {
-          projectNumber: 'P1',
-          projectName: 'Project One',
-          displayName: 'P1: Project One',
-          catBudget: 1000,
           catBudBal: 50,
+          catBudget: 1000,
+          displayName: 'P1: Project One',
+          projectName: 'Project One',
+          projectNumber: 'P1',
         },
       ]),
     ];
@@ -434,11 +369,11 @@ describe('getPiProjectAlerts', () => {
     const pis = [
       createPi('1', [
         {
-          projectNumber: 'P1',
-          projectName: 'Project One',
-          displayName: 'P1: Project One',
-          catBudget: 1000,
           catBudBal: 500,
+          catBudget: 1000,
+          displayName: 'P1: Project One',
+          projectName: 'Project One',
+          projectNumber: 'P1',
         },
       ]),
     ];
@@ -452,18 +387,18 @@ describe('getPiProjectAlerts', () => {
     const pis = [
       createPi('1', [
         {
-          projectNumber: 'P1',
-          projectName: 'Warning Project',
-          displayName: 'P1: Warning Project',
-          catBudget: 1000,
           catBudBal: 50,
+          catBudget: 1000,
+          displayName: 'P1: Warning Project',
+          projectName: 'Warning Project',
+          projectNumber: 'P1',
         },
         {
-          projectNumber: 'P2',
-          projectName: 'Error Project',
-          displayName: 'P2: Error Project',
-          catBudget: 1000,
           catBudBal: -100,
+          catBudget: 1000,
+          displayName: 'P2: Error Project',
+          projectName: 'Error Project',
+          projectNumber: 'P2',
         },
       ]),
     ];
@@ -478,32 +413,32 @@ describe('getPiProjectAlerts', () => {
     const pis = [
       createPi('1', [
         {
-          projectNumber: 'P1',
-          projectName: 'Project 1',
-          displayName: 'P1: Project 1',
-          catBudget: 1000,
           catBudBal: -100,
+          catBudget: 1000,
+          displayName: 'P1: Project 1',
+          projectName: 'Project 1',
+          projectNumber: 'P1',
         },
         {
-          projectNumber: 'P2',
-          projectName: 'Project 2',
-          displayName: 'P2: Project 2',
-          catBudget: 1000,
           catBudBal: -200,
+          catBudget: 1000,
+          displayName: 'P2: Project 2',
+          projectName: 'Project 2',
+          projectNumber: 'P2',
         },
         {
-          projectNumber: 'P3',
-          projectName: 'Project 3',
-          displayName: 'P3: Project 3',
-          catBudget: 1000,
           catBudBal: -300,
+          catBudget: 1000,
+          displayName: 'P3: Project 3',
+          projectName: 'Project 3',
+          projectNumber: 'P3',
         },
         {
-          projectNumber: 'P4',
-          projectName: 'Project 4',
-          displayName: 'P4: Project 4',
-          catBudget: 1000,
           catBudBal: -400,
+          catBudget: 1000,
+          displayName: 'P4: Project 4',
+          projectName: 'Project 4',
+          projectNumber: 'P4',
         },
       ]),
     ];

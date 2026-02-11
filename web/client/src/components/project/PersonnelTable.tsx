@@ -46,6 +46,7 @@ export interface AggregatedPosition {
   distributions: AggregatedDistribution[];
   employeeId: string;
   fte: number;
+  jobEffectiveDate: string | null;
   jobEndDate: string | null;
   jobEndingSoon: boolean;
   key: string; // employeeId + positionNumber
@@ -54,7 +55,6 @@ export interface AggregatedPosition {
   monthlyTotal: number;
   name: string;
   positionDescription: string;
-  jobEffectiveDate: string | null;
   positionNumber: string;
 }
 
@@ -90,6 +90,7 @@ export function aggregateByPosition(
         distributions: [aggregateDistribution(record)],
         employeeId: record.employeeId,
         fte: record.fte,
+        jobEffectiveDate: record.jobEffectiveDate,
         jobEndDate: record.jobEndDate,
         jobEndingSoon: isEndingSoon(record.jobEndDate),
         key,
@@ -98,7 +99,6 @@ export function aggregateByPosition(
         monthlyTotal: monthlyRate + monthlyFringe,
         name: record.name,
         positionDescription: record.positionDescription,
-        jobEffectiveDate: record.jobEffectiveDate,
         positionNumber: record.positionNumber,
       });
     }

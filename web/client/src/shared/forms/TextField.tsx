@@ -1,5 +1,5 @@
 import { useFieldContext } from './formContext.tsx';
-import { FieldWrapper } from './fieldWrapper.tsx';
+import { FieldWrapper } from './FieldWrapper.tsx';
 
 interface TextFieldProps {
   label: string;

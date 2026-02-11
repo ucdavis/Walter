@@ -1,6 +1,6 @@
 import { ProjectAlerts } from '@/components/alerts/ProjectAlerts.tsx';
-import { ProjectDetails } from '@/components/project/details.tsx';
-import { FinancialDetails } from '@/components/project/financialDetails.tsx';
+import { ProjectDetails } from '@/components/project/ProjectDetails.tsx';
+import { FinancialDetails } from '@/components/project/FinancialDetails.tsx';
 import { PersonnelTable } from '@/components/project/PersonnelTable.tsx';
 import { usePersonnelQuery } from '@/queries/personnel.ts';
 import {
