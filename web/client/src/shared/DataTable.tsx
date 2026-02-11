@@ -1,5 +1,6 @@
 'use no memo';
 
+import { Fragment, type HTMLAttributes, type ReactNode } from 'react';
 import {
   ArrowsPointingInIcon,
   ArrowsPointingOutIcon,
@@ -8,10 +9,12 @@ import {
   ColumnDef,
   flexRender,
   getCoreRowModel,
+  getExpandedRowModel,
   getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
   InitialTableState,
+  type Row,
   useReactTable,
 } from '@tanstack/react-table';
 import { useExpandableOverlay } from '@/shared/hooks/useExpandableOverlay.ts';
@@ -46,8 +49,12 @@ interface DataTableProps<TData extends object> {
   expandable?: boolean;
   footerRowClassName?: string;
   globalFilter?: 'left' | 'right' | 'none'; // Controls the position of the search box
+  getRowProps?: (row: Row<TData>) => HTMLAttributes<HTMLTableRowElement>;
+  getRowCanExpand?: (row: Row<TData>) => boolean; // Default is `() => true` when `renderSubComponent` is provided
   initialState?: InitialTableState; // Optional initial state for the table, use for stuff like setting page size or sorting
   pagination?: 'auto' | 'on' | 'off'; // 'auto' shows controls only when needed; 'off' disables pagination entirely
+  renderSubComponent?: (props: { row: Row<TData> }) => ReactNode;
+  subComponentRowClassName?: string;
 }
 
 export const DataTable = <TData extends object>({
@@ -56,9 +63,15 @@ export const DataTable = <TData extends object>({
   expandable = true,
   footerRowClassName,
   globalFilter = 'right',
+  getRowCanExpand,
+  getRowProps,
   initialState,
   pagination = 'auto',
+  renderSubComponent,
+  subComponentRowClassName,
 }: DataTableProps<TData>) => {
+  const rowExpansionEnabled = renderSubComponent !== undefined;
+
   // see note in https://tanstack.com/table/latest/docs/installation#react-table.
   // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
@@ -72,8 +85,14 @@ export const DataTable = <TData extends object>({
     },
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+    getExpandedRowModel: rowExpansionEnabled
+      ? getExpandedRowModel()
+      : undefined,
     getPaginationRowModel:
       pagination === 'off' ? undefined : getPaginationRowModel(),
+    getRowCanExpand: rowExpansionEnabled
+      ? (getRowCanExpand ?? (() => true))
+      : undefined,
     getSortedRowModel: getSortedRowModel(),
     initialState: {
       ...initialState,
@@ -269,18 +288,35 @@ export const DataTable = <TData extends object>({
               ))}
             </thead>
             <tbody>
-              {table.getRowModel().rows.map((row) => (
-                <tr key={row.id}>
-                  {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} style={{ width: cell.column.getSize() }}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </td>
-                  ))}
-                </tr>
-              ))}
+              {table.getRowModel().rows.map((row) => {
+                const rowProps = getRowProps?.(row);
+
+                return (
+                  <Fragment key={row.id}>
+                    <tr {...rowProps}>
+                      {row.getVisibleCells().map((cell) => (
+                        <td
+                          key={cell.id}
+                          style={{ width: cell.column.getSize() }}
+                        >
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )}
+                        </td>
+                      ))}
+                    </tr>
+
+                    {renderSubComponent && row.getIsExpanded() ? (
+                      <tr className={subComponentRowClassName}>
+                        <td colSpan={row.getVisibleCells().length}>
+                          {renderSubComponent({ row })}
+                        </td>
+                      </tr>
+                    ) : null}
+                  </Fragment>
+                );
+              })}
             </tbody>
             {showFooter ? (
               <tfoot>
