@@ -1,5 +1,5 @@
 CREATE PROCEDURE dbo.usp_GetFacultyDeptPortfolio
-    @ProjectIds VARCHAR(MAX),
+    @ProjectIds VARCHAR(MAX) = NULL,
     @StartDate DATE = NULL,
     @EndDate DATE = NULL,
     @ApplicationName NVARCHAR(128) = NULL,
@@ -9,7 +9,7 @@ BEGIN
     SET NOCOUNT ON;
 
     -- Validate: ProjectIds must be provided
-    IF @ProjectIds IS NULL OR LEN(LTRIM(RTRIM(@ProjectIds))) = 0
+    IF @ProjectIds IS NULL
     BEGIN
         RAISERROR('@ProjectIds must be provided', 16, 1);
         RETURN;
@@ -25,12 +25,12 @@ BEGIN
     DECLARE @RedshiftQuery NVARCHAR(MAX);
     DECLARE @TSQLCommand NVARCHAR(MAX);
     DECLARE @RedshiftLinkedServer SYSNAME = '[AE_Redshift_PROD]';
+    DECLARE @FilterClause NVARCHAR(MAX) = '';
     DECLARE @StartTime DATETIME2 = SYSDATETIME();
     DECLARE @RowCount INT;
     DECLARE @Duration_MS INT;
     DECLARE @ErrorMsg NVARCHAR(MAX);
     DECLARE @ParametersJSON NVARCHAR(MAX);
-    DECLARE @DateFilterClause NVARCHAR(MAX) = '';
 
     -- Sanitize ApplicationName for injection protection
     EXEC dbo.usp_SanitizeInputString @ApplicationName OUTPUT;
@@ -40,14 +40,17 @@ BEGIN
 
     -- Parse and validate ProjectIds
     DECLARE @ProjectIdFilter NVARCHAR(MAX);
+
     EXEC dbo.usp_ParseProjectIdFilter @ProjectIds, @ProjectIdFilter OUTPUT;
 
-    -- Build date overlap filter
+    SET @FilterClause = ' WHERE PROJECT_NUMBER IN (' + @ProjectIdFilter + ')';
+
+    -- Add date overlap logic
     IF @StartDate IS NOT NULL
-        SET @DateFilterClause = @DateFilterClause + ' AND award_end_date >= ''' + CONVERT(VARCHAR(10), @StartDate, 120) + '''';
+        SET @FilterClause = @FilterClause + ' AND award_end_date >= ''' + CONVERT(VARCHAR(10), @StartDate, 120) + '''';
 
     IF @EndDate IS NOT NULL
-        SET @DateFilterClause = @DateFilterClause + ' AND award_start_date <= ''' + CONVERT(VARCHAR(10), @EndDate, 120) + '''';
+        SET @FilterClause = @FilterClause + ' AND award_start_date <= ''' + CONVERT(VARCHAR(10), @EndDate, 120) + '''';
 
     -- Build Redshift query
     SET @RedshiftQuery = '
@@ -58,7 +61,7 @@ BEGIN
         PROGRAM_CD AS PROGRAM_CODE, PROGRAM_DESC, ACTIVITY_CD AS ACTIVITY_CODE, ACTIVITY_DESC,
         CAT_BUDGET, CAT_COMMITMENTS, CAT_ITD_EXP, CAT_BUD_BAL
         FROM ae_dwh.ucd_faculty_rpt_t
-        WHERE PROJECT_NUMBER IN (' + @ProjectIdFilter + ')' + @DateFilterClause;
+        ' + @FilterClause;
 
     -- Build parameters JSON for logging
     SET @ParametersJSON = (
