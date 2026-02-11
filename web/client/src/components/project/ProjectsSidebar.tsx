@@ -146,7 +146,9 @@ export function ProjectsSidebar() {
                   viewTransition={{ types: ['slide-left'] }}
                 >
                   <div className="flex justify-between items-start mb-1">
-                    <span className="text-base">{project.displayName}</span>
+                    <span className="text-base truncate">
+                      {project.displayName}
+                    </span>
                   </div>
                   <div className="flex text-sm justify-between items-center text-dark-font/70">
                     <Currency value={project.totalCatBudBal} />
