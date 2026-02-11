@@ -109,6 +109,7 @@ export function ProjectsSidebar() {
                   <MagnifyingGlassIcon className="w-4 h-4 absolute left-0 top-1/2 -translate-y-1/2 pointer-events-none text-dark-font/55" />
 
                   <input
+                    aria-label="Search projects"
                     className="w-full h-9 pl-5 pr-3"
                     placeholder="Search..."
                     type="text"
@@ -222,6 +223,7 @@ export function ProjectsSidebar() {
               <MagnifyingGlassIcon className="w-4 h-4 absolute left-0 top-1/2 -translate-y-1/2 pointer-events-none text-dark-font/55" />
 
               <input
+                aria-label="Search projects"
                 className="w-full h-9 pl-5 pr-3"
                 placeholder="Search..."
                 type="text"
