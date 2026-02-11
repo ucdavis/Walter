@@ -11,18 +11,14 @@ public sealed class ProjectController : ApiControllerBase
     private readonly IWebHostEnvironment _env;
     private readonly IFinancialApiService _financialApiService;
     private readonly IDatamartService _datamartService;
-    private readonly ILogger<ProjectController> _logger;
-
     public ProjectController(
         IWebHostEnvironment env,
         IFinancialApiService financialApiService,
-        IDatamartService datamartService,
-        ILogger<ProjectController> logger)
+        IDatamartService datamartService)
     {
         _env = env;
         _financialApiService = financialApiService;
         _datamartService = datamartService;
-        _logger = logger;
     }
 
     [HttpGet("{employeeId}")]
@@ -43,22 +39,12 @@ public sealed class ProjectController : ApiControllerBase
         var piData = (await piResultTask).ReadData();
         var graphProjects = piData.PpmProjectByProjectTeamMemberEmployeeId;
 
-        _logger.LogInformation("PI query for {EmployeeId}: {Count} projects from PPM API", employeeId, graphProjects.Count);
-        foreach (var p in graphProjects)
-        {
-            var roles = string.Join(", ", p.TeamMembers.Select(m => $"{m.Name}({m.RoleName})"));
-            _logger.LogInformation("  [{Project}] - Team: {Roles}", p.ProjectNumber, roles);
-        }
-
         // Find orphaned projects where this employee is PM but no PI is assigned
         var pmData = (await pmResultTask).ReadData();
         var managedProjects = pmData.PpmProjectByProjectTeamMemberEmployeeId;
         var orphanedProjects = managedProjects
             .Where(p => !p.TeamMembers.Any(m => m.RoleName == PpmRole.PrincipalInvestigator))
             .ToList();
-
-        _logger.LogInformation("PM query for {EmployeeId}: {Count} managed projects, {Orphaned} with no PI",
-            employeeId, managedProjects.Count, orphanedProjects.Count);
 
         var piProjectNumbers = graphProjects.Select(p => p.ProjectNumber).Distinct();
         var orphanedProjectNumbers = orphanedProjects.Select(p => p.ProjectNumber).Distinct();
@@ -87,22 +73,18 @@ public sealed class ProjectController : ApiControllerBase
         var projects = await projectsTask;
         var reconciliation = await reconciliationTask;
 
-        // Build lookup for GL totals by project number
-        var glTotalsLookup = reconciliation
+        // Build lookups by project number from reconciliation data
+        var reconByProject = reconciliation
             .GroupBy(r => r.Project)
-            .ToDictionary(g => g.Key, g => g.Sum(r => r.GlActualAmount));
-
-        // Build lookup for PPM totals by project number
-        var ppmTotalsLookup = projects
-            .GroupBy(p => p.ProjectNumber)
-            .ToDictionary(g => g.Key, g => g.Sum(p => p.CatBudget - p.CatItdExp));
+            .ToDictionary(g => g.Key, g => new
+            {
+                GlTotal = g.Sum(r => r.GlActualAmount),
+                PpmTotal = g.Sum(r => r.PpmItdExp),
+            });
 
         var activeProjects = projects
             .Where(p => p.ProjectStatus == "ACTIVE")
             .ToList();
-
-        _logger.LogInformation("Faculty portfolio: {Total} total, {Active} active",
-            projects.Count, activeProjects.Count);
 
         // Join PM employee ID and GL/PPM discrepancy flag to project records
         foreach (var project in activeProjects)
@@ -113,10 +95,9 @@ public sealed class ProjectController : ApiControllerBase
             }
 
             if (project.ProjectType == "Internal" &&
-                glTotalsLookup.TryGetValue(project.ProjectNumber, out var glTotal) &&
-                ppmTotalsLookup.TryGetValue(project.ProjectNumber, out var ppmTotal))
+                reconByProject.TryGetValue(project.ProjectNumber, out var recon))
             {
-                var diff = Math.Abs(glTotal + ppmTotal);
+                var diff = Math.Abs(recon.GlTotal - recon.PpmTotal);
                 project.HasGlPpmDiscrepancy = diff > 1;
             }
         }
@@ -203,13 +184,6 @@ public sealed class ProjectController : ApiControllerBase
 
         var data = result.ReadData();
         var managedProjects = data.PpmProjectByProjectTeamMemberEmployeeId;
-
-        _logger.LogInformation("Managed query for PM {EmployeeId}: {Count} projects from PPM API", employeeId, managedProjects.Count);
-        foreach (var p in managedProjects)
-        {
-            var roles = string.Join(", ", p.TeamMembers.Select(m => $"{m.Name}[{m.RoleName},{m.EmployeeId}]"));
-            _logger.LogInformation("  [{Project}] - Team: {Roles}", p.ProjectNumber, roles);
-        }
 
         // Find projects that have no PI assigned
         var orphanedProjectCount = managedProjects

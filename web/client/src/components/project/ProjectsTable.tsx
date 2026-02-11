@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Link } from '@tanstack/react-router';
 import { createColumnHelper } from '@tanstack/react-table';
+import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import { ExportDataButton } from '@/components/ExportDataButton.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import { formatDate } from '@/lib/date.ts';
@@ -131,22 +132,30 @@ export function ProjectsTable({ employeeId, records }: ProjectsTableProps) {
       columnHelper.accessor('displayName', {
         cell: (info) => {
           const name = info.getValue();
-          const { projectNumber } = info.row.original;
+          const { projectNumber, showReconciliationWarning } =
+            info.row.original;
 
           return (
             <Link
-              className="link link-hover no-underline"
+              className="link link-hover no-underline flex items-start gap-1"
               params={{
                 employeeId,
                 projectNumber,
               }}
               to="/projects/$employeeId/$projectNumber/"
             >
-              <div>{projectNumber}</div>
-
-              <div className="truncate" title={name}>
-                {name}
+              <div className="min-w-0">
+                <div>{projectNumber}</div>
+                <div className="truncate" title={name}>
+                  {name}
+                </div>
               </div>
+              {showReconciliationWarning && (
+                <ExclamationTriangleIcon
+                  className="h-5 w-5 shrink-0 text-warning"
+                  title="GL/PPM reconciliation discrepancy"
+                />
+              )}
             </Link>
           );
         },
