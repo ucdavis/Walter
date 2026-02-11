@@ -49,8 +49,8 @@ const Header: React.FC = () => {
             <Link
               activeOptions={{ exact: false }}
               className="nav-link"
-              linkTabIndex={linkTabIndex}
               params={{ employeeId: user.employeeId }}
+              TabIndex={linkTabIndex}
               to="/projects/$employeeId"
             >
               Projects
@@ -59,7 +59,7 @@ const Header: React.FC = () => {
             <Link
               activeOptions={{ exact: false }}
               className="nav-link"
-              linkTabIndex={linkTabIndex}
+              TabIndex={linkTabIndex}
               to="/personnel"
             >
               Personnel
@@ -68,7 +68,7 @@ const Header: React.FC = () => {
             <Link
               activeOptions={{ exact: false }}
               className="nav-link"
-              linkTabIndex={linkTabIndex}
+              TabIndex={linkTabIndex}
               to="/reports"
             >
               Reports
@@ -78,6 +78,7 @@ const Header: React.FC = () => {
               <Link
                 activeOptions={{ exact: false }}
                 className="nav-link"
+                TabIndex={linkTabIndex}
                 to="/accruals"
               >
                 Accruals

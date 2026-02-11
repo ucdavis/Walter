@@ -130,7 +130,6 @@ export function ProjectsSidebar() {
                 </div>
                 <div className="flex justify-between text-sm items-center text-dark-font/70">
                   <Currency value={totalOverviewBalance} />
-                  <span>total proj #</span>
                 </div>
               </Link>
 
