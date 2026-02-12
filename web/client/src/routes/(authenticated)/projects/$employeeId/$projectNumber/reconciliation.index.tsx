@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { useSuspenseQuery } from '@tanstack/react-query';
+import { useQuery, useSuspenseQuery } from '@tanstack/react-query';
 import {
   glPpmReconciliationQueryOptions,
   projectsDetailQueryOptions,
@@ -38,12 +38,14 @@ function RouteComponent() {
   );
   const summary = summarizeProjectByNumber(projects, projectNumber);
 
-  const { data: records } = useSuspenseQuery(
-    glPpmReconciliationQueryOptions([projectNumber])
-  );
+  const {
+    data: records,
+    isError: isReconciliationError,
+    isPending: isReconciliationPending,
+  } = useQuery(glPpmReconciliationQueryOptions([projectNumber]));
 
   // Sort by discrepancy first (discrepancies at top), then by absolute difference
-  const sorted = [...records].sort((a, b) => {
+  const sorted = [...(records ?? [])].sort((a, b) => {
     const aDisc = hasDiscrepancy(a);
     const bDisc = hasDiscrepancy(b);
     if (aDisc !== bDisc) {
@@ -82,7 +84,11 @@ function RouteComponent() {
         </p>
       </section>
 
-      {discrepancies.length === 0 ? (
+      {isReconciliationPending ? (
+        <p className="text-base-content/70 mt-4">Loading reconciliation data…</p>
+      ) : isReconciliationError ? (
+        <p className="text-error mt-4">Error loading reconciliation data.</p>
+      ) : discrepancies.length === 0 ? (
         <section className="bg-success/10 border border-success/30 rounded-lg p-6">
           <p className="text-success font-medium">
             No discrepancies found. GL and PPM totals are in sync.
