@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { useQuery, useSuspenseQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import {
   glPpmReconciliationQueryOptions,
   glTransactionsQueryOptions,
@@ -53,10 +53,10 @@ function RouteComponent() {
   const { employeeId, projectNumber } = Route.useParams();
   const search = Route.useSearch();
 
-  const { data: projects } = useSuspenseQuery(
-    projectsDetailQueryOptions(employeeId)
-  );
-  const summary = summarizeProjectByNumber(projects, projectNumber);
+  const { data: projects } = useQuery(projectsDetailQueryOptions(employeeId));
+  const summary = projects
+    ? summarizeProjectByNumber(projects, projectNumber)
+    : null;
 
   const {
     data: reconciliation,
@@ -78,7 +78,7 @@ function RouteComponent() {
 
   // Aggregate PPM records at the task level
   const ppmTasks = Object.values(
-    projects
+    (projects ?? [])
       .filter((p) => p.projectNumber === projectNumber)
       .reduce<
         Record<
