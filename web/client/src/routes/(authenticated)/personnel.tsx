@@ -58,7 +58,7 @@ function RouteComponent() {
   // Show empty state when user has no projects
   if (projectCodes.length === 0) {
     return (
-      <PageEmpty message="Walter could not fetch any personnel for you..." />
+      <PageEmpty message="Looks like you don't have any personnel for Walter to fetch..." />
     );
   }
 

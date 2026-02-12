@@ -12,6 +12,8 @@ import { useUser } from '@/shared/auth/UserContext.tsx';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { Link, createFileRoute } from '@tanstack/react-router';
 
+import { ArrowLeftIcon } from '@heroicons/react/24/outline';
+
 export const Route = createFileRoute(
   '/(authenticated)/projects/$employeeId/$projectNumber/'
 )({
@@ -19,15 +21,16 @@ export const Route = createFileRoute(
 });
 
 const ProjectNotFound = ({ projectNumber }: { projectNumber: string }) => (
-  <main className="flex-1 max-w-4xl">
-    <section className="bg-white rounded-lg border border-gray-200 p-8">
+  <main className="flex-1">
+    <section className="card p-4 mt-8 max-w-prose">
       <h1 className="text-2xl font-semibold mb-3">Project not found</h1>
-      <p className="text-gray-600 mb-6">
+      <p className=" mb-6">
         We couldn&apos;t find any data for project{' '}
-        <span className="font-mono">{projectNumber}</span>. It may have been
-        archived or you might not have access.
+        <span className="font-mono">{projectNumber}</span>.<br /> It may have
+        been archived or you might not have access.
       </p>
       <Link className="btn btn-primary" to="/projects">
+        <ArrowLeftIcon className="w-4 h-4 me-2" />
         Back to Projects
       </Link>
     </section>

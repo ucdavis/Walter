@@ -137,7 +137,7 @@ export function ProjectsTable({ employeeId, records }: ProjectsTableProps) {
 
           return (
             <Link
-              className="link link-hover no-underline flex items-start gap-1"
+              className="link no-underline flex items-start gap-1"
               params={{
                 employeeId,
                 projectNumber,
@@ -145,8 +145,10 @@ export function ProjectsTable({ employeeId, records }: ProjectsTableProps) {
               to="/projects/$employeeId/$projectNumber/"
             >
               <div className="min-w-0">
-                <div>{projectNumber}</div>
-                <div className="truncate" title={name}>
+                <div className="text-xs text-base-content/70 no-underline">
+                  {projectNumber}
+                </div>
+                <div className="truncate underline" title={name}>
                   {name}
                 </div>
               </div>
@@ -161,37 +163,37 @@ export function ProjectsTable({ employeeId, records }: ProjectsTableProps) {
         },
         footer: () => 'Totals',
         header: 'Project Name',
+        minSize: 250,
+        size: 300,
       }),
       columnHelper.accessor('awardStartDate', {
         cell: (info) => (
-          <span className="flex justify-end w-full">
+          <span className="flex justify-end">
             {formatDate(info.getValue())}
           </span>
         ),
-        header: () => (
-          <span className="flex justify-end w-full">Effective Date</span>
-        ),
+        header: () => <span className="flex justify-end">Effective Date</span>,
       }),
       columnHelper.accessor('awardEndDate', {
         cell: (info) => (
-          <span className="flex justify-end w-full">
+          <span className="flex justify-end">
             {formatDate(info.getValue())}
           </span>
         ),
-        header: () => <span className="flex justify-end w-full">End Date</span>,
+        header: () => <span className="flex justify-end">End Date</span>,
       }),
       columnHelper.accessor('totalBudget', {
         cell: (info) => (
-          <span className="flex justify-end w-full">
+          <span className="flex justify-end">
             {formatCurrency(info.getValue())}
           </span>
         ),
         footer: () => (
-          <span className="flex justify-end w-full">
+          <span className="flex justify-end">
             {formatCurrency(totals.totalBudget)}
           </span>
         ),
-        header: () => <span className="flex justify-end w-full">Budget</span>,
+        header: () => <span className="flex justify-end">Budget</span>,
       }),
       columnHelper.accessor('totalExpense', {
         cell: (info) => (
@@ -217,22 +219,20 @@ export function ProjectsTable({ employeeId, records }: ProjectsTableProps) {
             {formatCurrency(totals.totalEncumbrance)}
           </span>
         ),
-        header: () => (
-          <span className="flex justify-end w-full">Encumbrance</span>
-        ),
+        header: () => <span className="flex justify-end">Encumbrance</span>,
       }),
       columnHelper.accessor('totalBalance', {
         cell: (info) => (
-          <span className="flex justify-end w-full">
+          <span className="flex justify-end">
             {formatCurrency(info.getValue())}
           </span>
         ),
         footer: () => (
-          <span className="flex justify-end w-full">
+          <span className="flex justify-end">
             {formatCurrency(totals.totalBalance)}
           </span>
         ),
-        header: () => <span className="flex justify-end w-full">Balance</span>,
+        header: () => <span className="flex justify-end">Balance</span>,
       }),
     ],
     [
