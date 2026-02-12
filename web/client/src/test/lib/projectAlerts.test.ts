@@ -10,6 +10,7 @@ const createSummary = (
   categories: [],
   copi: null,
   displayName: 'TEST-001: Test Project',
+  isInternal: false,
   pa: null,
   pi: null,
   pm: null,

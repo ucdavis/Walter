@@ -6,7 +6,7 @@ import {
   type GLPPMReconciliationRecord,
 } from '@/queries/project.ts';
 import { summarizeProjectByNumber } from '@/lib/projectSummary.ts';
-import { useUser } from '@/shared/auth/UserContext.tsx';
+
 import { formatCurrency } from '@/lib/currency.ts';
 
 export const Route = createFileRoute(
@@ -31,10 +31,9 @@ function hasDiscrepancy(r: GLPPMReconciliationRecord): boolean {
 
 function RouteComponent() {
   const { employeeId, projectNumber } = Route.useParams();
-  const user = useUser();
 
   const { data: projects } = useSuspenseQuery(
-    projectsDetailQueryOptions(employeeId, user.employeeId)
+    projectsDetailQueryOptions(employeeId)
   );
   const summary = summarizeProjectByNumber(projects, projectNumber);
 
@@ -88,127 +87,131 @@ function RouteComponent() {
         <p className="text-base-content/70 mt-4">Loading reconciliation data…</p>
       ) : isReconciliationError ? (
         <p className="text-error mt-4">Error loading reconciliation data.</p>
-      ) : discrepancies.length === 0 ? (
-        <section className="bg-success/10 border border-success/30 rounded-lg p-6">
-          <p className="text-success font-medium">
-            No discrepancies found. GL and PPM totals are in sync.
-          </p>
-        </section>
       ) : (
-        <section className="overflow-x-auto">
-          <table className="table table-zebra w-full">
-            <thead>
-              <tr>
-                <th>Dept</th>
-                <th>Project</th>
-                <th>Fund</th>
-                <th>PPM Fund</th>
-                <th>Program</th>
-                <th>Activity</th>
-                <th className="text-right">GL Actuals</th>
-                <th className="text-right">PPM Net Budget</th>
-                <th className="text-right">Difference</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {sorted.map((row) => {
-                const key = getRecordKey(row);
-                const ppmNetBudget = row.ppmBudget - row.ppmItdExp;
-                const diff = row.glActualAmount + ppmNetBudget;
-                const isDiscrepancy = hasDiscrepancy(row);
+        <>
+          {discrepancies.length === 0 && (
+            <section className="bg-success/10 border border-success/30 rounded-lg p-6 mb-6">
+              <p className="text-success font-medium">
+                No discrepancies found. GL and PPM totals are in sync.
+              </p>
+            </section>
+          )}
 
-                return (
-                  <tr
-                    key={key}
-                    className={isDiscrepancy ? 'bg-warning/10' : ''}
-                  >
-                    <td className="font-mono text-sm">
-                      {row.financialDepartment ?? '-'}
-                    </td>
-                    <td>
-                      <div className="font-mono text-sm">
-                        {row.project}
-                      </div>
-                      {row.projectDescription && (
-                        <div className="text-xs text-base-content/60">
-                          {row.projectDescription}
-                        </div>
-                      )}
-                    </td>
-                    <td>
-                      <div className="font-mono text-sm">
-                        {row.fundCode ?? '-'}
-                      </div>
-                      {row.fundDescription && (
-                        <div className="text-xs text-base-content/60">
-                          {row.fundDescription}
-                        </div>
-                      )}
-                    </td>
-                    <td className="font-mono text-sm">
-                      {row.ppmFundCode}
-                    </td>
-                    <td>
-                      <div className="font-mono text-sm">
-                        {row.programCode ?? '-'}
-                      </div>
-                      {row.programDescription && (
-                        <div className="text-xs text-base-content/60">
-                          {row.programDescription}
-                        </div>
-                      )}
-                    </td>
-                    <td>
-                      <div className="font-mono text-sm">
-                        {row.activityCode ?? '-'}
-                      </div>
-                      {row.activityDescription && (
-                        <div className="text-xs text-base-content/60">
-                          {row.activityDescription}
-                        </div>
-                      )}
-                    </td>
-                    <td className="text-right font-mono">
-                      {formatCurrency(row.glActualAmount)}
-                    </td>
-                    <td className="text-right font-mono">
-                      {formatCurrency(ppmNetBudget)}
-                    </td>
-                    <td
-                      className={`text-right font-mono ${
-                        isDiscrepancy
-                          ? diff < 0
-                            ? 'text-error'
-                            : 'text-warning'
-                          : ''
-                      }`}
+          <section className="overflow-x-auto">
+            <table className="table table-zebra w-full">
+              <thead>
+                <tr>
+                  <th>Dept</th>
+                  <th>Project</th>
+                  <th>Fund</th>
+                  <th>PPM Fund</th>
+                  <th>Program</th>
+                  <th>Activity</th>
+                  <th className="text-right">GL Actuals</th>
+                  <th className="text-right">PPM Net Budget</th>
+                  <th className="text-right">Difference</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {sorted.map((row) => {
+                  const key = getRecordKey(row);
+                  const ppmNetBudget = row.ppmBudget - row.ppmItdExp;
+                  const diff = row.glActualAmount + ppmNetBudget;
+                  const isDiscrepancy = hasDiscrepancy(row);
+
+                  return (
+                    <tr
+                      key={key}
+                      className={isDiscrepancy ? 'bg-warning/10' : ''}
                     >
-                      {formatCurrency(diff)}
-                    </td>
-                    <td>
-                      {isDiscrepancy && (
-                        <Link
-                          className="btn btn-xs btn-ghost"
-                          to="/projects/$employeeId/$projectNumber/reconciliation/detail"
-                          params={{ employeeId, projectNumber }}
-                          search={{
-                            dept: row.financialDepartment ?? '',
-                            fund: row.fundCode ?? '',
-                            program: row.programCode ?? '',
-                            activity: row.activityCode ?? '',
-                          }}
-                        >
-                          Details
-                        </Link>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </section>
+                      <td className="font-mono text-sm">
+                        {row.financialDepartment ?? '-'}
+                      </td>
+                      <td>
+                        <div className="font-mono text-sm">
+                          {row.project}
+                        </div>
+                        {row.projectDescription && (
+                          <div className="text-xs text-base-content/60">
+                            {row.projectDescription}
+                          </div>
+                        )}
+                      </td>
+                      <td>
+                        <div className="font-mono text-sm">
+                          {row.fundCode ?? '-'}
+                        </div>
+                        {row.fundDescription && (
+                          <div className="text-xs text-base-content/60">
+                            {row.fundDescription}
+                          </div>
+                        )}
+                      </td>
+                      <td className="font-mono text-sm">
+                        {row.ppmFundCode}
+                      </td>
+                      <td>
+                        <div className="font-mono text-sm">
+                          {row.programCode ?? '-'}
+                        </div>
+                        {row.programDescription && (
+                          <div className="text-xs text-base-content/60">
+                            {row.programDescription}
+                          </div>
+                        )}
+                      </td>
+                      <td>
+                        <div className="font-mono text-sm">
+                          {row.activityCode ?? '-'}
+                        </div>
+                        {row.activityDescription && (
+                          <div className="text-xs text-base-content/60">
+                            {row.activityDescription}
+                          </div>
+                        )}
+                      </td>
+                      <td className="text-right font-mono">
+                        {formatCurrency(row.glActualAmount)}
+                      </td>
+                      <td className="text-right font-mono">
+                        {formatCurrency(ppmNetBudget)}
+                      </td>
+                      <td
+                        className={`text-right font-mono ${
+                          isDiscrepancy
+                            ? diff < 0
+                              ? 'text-error'
+                              : 'text-warning'
+                            : ''
+                        }`}
+                      >
+                        {formatCurrency(diff)}
+                      </td>
+                      <td>
+                        {isDiscrepancy && (
+                          <Link
+                            className="btn btn-xs btn-ghost"
+                            to="/projects/$employeeId/$projectNumber/reconciliation/detail"
+                            params={{ employeeId, projectNumber }}
+                            search={{
+                              dept: row.financialDepartment ?? '',
+                              fund: row.fundCode ?? '',
+                              program: row.programCode ?? '',
+                              activity: row.activityCode ?? '',
+                            }}
+                          >
+                            Details
+                          </Link>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </section>
+        </>
       )}
 
       <section className="mt-8">

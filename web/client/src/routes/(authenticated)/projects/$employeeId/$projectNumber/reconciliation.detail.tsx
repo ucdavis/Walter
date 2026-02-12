@@ -9,7 +9,7 @@ import {
   type GLTransactionRecord,
 } from '@/queries/project.ts';
 import { summarizeProjectByNumber } from '@/lib/projectSummary.ts';
-import { useUser } from '@/shared/auth/UserContext.tsx';
+
 import { formatCurrency } from '@/lib/currency.ts';
 
 interface SearchParams {
@@ -52,10 +52,9 @@ function matchesGL(t: GLTransactionRecord, search: SearchParams): boolean {
 function RouteComponent() {
   const { employeeId, projectNumber } = Route.useParams();
   const search = Route.useSearch();
-  const user = useUser();
 
   const { data: projects } = useSuspenseQuery(
-    projectsDetailQueryOptions(employeeId, user.employeeId)
+    projectsDetailQueryOptions(employeeId)
   );
   const summary = summarizeProjectByNumber(projects, projectNumber);
 

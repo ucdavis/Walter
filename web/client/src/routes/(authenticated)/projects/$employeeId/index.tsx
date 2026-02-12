@@ -5,7 +5,7 @@ import {
   projectsDetailQueryOptions,
   useProjectDiscrepancies,
 } from '@/queries/project.ts';
-import { useUser } from '@/shared/auth/UserContext.tsx';
+
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import { PageEmpty } from '@/components/states/PageEmpty.tsx';
@@ -16,9 +16,8 @@ export const Route = createFileRoute('/(authenticated)/projects/$employeeId/')({
 
 function RouteComponent() {
   const { employeeId } = Route.useParams();
-  const user = useUser();
   const { data: projects } = useSuspenseQuery(
-    projectsDetailQueryOptions(employeeId, user.employeeId)
+    projectsDetailQueryOptions(employeeId)
   );
 
   const projectNumbers = useMemo(
@@ -26,7 +25,18 @@ function RouteComponent() {
     [projects]
   );
 
-  const discrepancies = useProjectDiscrepancies(projectNumbers);
+  const internalProjectNumbers = useMemo(
+    () => [
+      ...new Set(
+        (projects ?? [])
+          .filter((p) => p.projectType === 'Internal')
+          .map((p) => p.projectNumber)
+      ),
+    ],
+    [projects]
+  );
+
+  const discrepancies = useProjectDiscrepancies(internalProjectNumbers);
 
   if (!projects?.length) {
     return (

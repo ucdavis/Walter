@@ -11,7 +11,7 @@ import {
   projectsDetailQueryOptions,
   useProjectDiscrepancies,
 } from '@/queries/project.ts';
-import { useUser } from '@/shared/auth/UserContext.tsx';
+
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { Link, createFileRoute } from '@tanstack/react-router';
 
@@ -48,7 +48,9 @@ function ProjectContent({
   summary: ProjectSummary;
 }) {
   const personnelQuery = usePersonnelQuery([summary.projectNumber]);
-  const discrepancies = useProjectDiscrepancies([summary.projectNumber]);
+  const discrepancies = useProjectDiscrepancies(
+    summary.isInternal ? [summary.projectNumber] : []
+  );
 
   return (
     <main className="flex-1">
@@ -86,9 +88,8 @@ function ProjectContent({
 
 function RouteComponent() {
   const { employeeId, projectNumber } = Route.useParams();
-  const user = useUser();
   const { data: projects } = useSuspenseQuery(
-    projectsDetailQueryOptions(employeeId, user.employeeId)
+    projectsDetailQueryOptions(employeeId)
   );
   const summary = summarizeProjectByNumber(projects, projectNumber);
 

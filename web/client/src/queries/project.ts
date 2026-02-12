@@ -97,28 +97,17 @@ export interface ManagedPiRecord {
   projectCount: number;
 }
 
-export const projectsDetailQueryOptions = (
-  employeeId: string,
-  currentUserEmployeeId?: string
-) => ({
+export const projectsDetailQueryOptions = (employeeId: string) => ({
   enabled: Boolean(employeeId),
   queryFn: async () => {
     return await fetchJson<ProjectRecord[]>(`/api/project/${employeeId}`);
   },
   queryKey: ['projects', employeeId] as const,
-  select: (data: ProjectRecord[]): ProjectRecord[] =>
-    data.map((p) => ({
-      ...p,
-      managedByCurrentUser: p.pmEmployeeId === currentUserEmployeeId,
-    })),
   staleTime: 60 * 60 * 1000, // 1 hour
 });
 
-export const useProjectsDetailQuery = (
-  employeeId: string,
-  currentUserEmployeeId?: string
-) => {
-  return useQuery(projectsDetailQueryOptions(employeeId, currentUserEmployeeId));
+export const useProjectsDetailQuery = (employeeId: string) => {
+  return useQuery(projectsDetailQueryOptions(employeeId));
 };
 
 export const managedPisQueryOptions = (employeeId: string) => ({
@@ -186,20 +175,17 @@ export function useProjectDiscrepancies(projectCodes: string[]): Set<string> {
   return useMemo(() => {
     if (!data) return new Set<string>();
 
-    const byProject = new Map<string, { gl: number; ppm: number }>();
+    // Sum glActualAmount + (ppmBudget - ppmItdExp) per project,
+    // matching the per-row formula on the reconciliation page.
+    const byProject = new Map<string, number>();
     for (const r of data) {
-      const existing = byProject.get(r.project);
-      if (existing) {
-        existing.gl += r.glActualAmount;
-        existing.ppm += r.ppmItdExp;
-      } else {
-        byProject.set(r.project, { gl: r.glActualAmount, ppm: r.ppmItdExp });
-      }
+      const diff = r.glActualAmount + (r.ppmBudget - r.ppmItdExp);
+      byProject.set(r.project, (byProject.get(r.project) ?? 0) + diff);
     }
 
     const result = new Set<string>();
-    for (const [project, totals] of byProject) {
-      if (Math.abs(totals.gl - totals.ppm) > 1) {
+    for (const [project, total] of byProject) {
+      if (Math.abs(total) > 1) {
         result.add(project);
       }
     }
