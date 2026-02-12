@@ -5,6 +5,12 @@ import { projectsDetailQueryOptions } from '@/queries/project.ts';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import { PageEmpty } from '@/components/states/PageEmpty.tsx';
+import {
+  BanknotesIcon,
+  ClipboardDocumentCheckIcon,
+  ClipboardDocumentListIcon,
+  UsersIcon,
+} from '@heroicons/react/24/outline';
 
 export const Route = createFileRoute('/(authenticated)/projects/$employeeId/')({
   component: RouteComponent,
@@ -38,20 +44,24 @@ function RouteComponent() {
       </section>
       <section className="section-margin">
         <div className="fancy-data">
-          <dl className="grid grid-cols-1 md:grid-cols-4 gap-6 divide-y md:divide-y-0 divide-main-border">
+          <dl className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div className="flex flex-col">
+              <ClipboardDocumentListIcon className="w-4 h-4" />
               <dt className="font-proxima-bold text-lg">Projects</dt>
               <dd className="text-xl">2</dd>
             </div>
             <div className="flex flex-col">
+              <UsersIcon className="w-4 h-4" />
               <dt className="font-proxima-bold text-lg">Personnel</dt>
               <dd className="text-xl">8</dd>
             </div>
             <div className="flex flex-col">
+              <ClipboardDocumentCheckIcon className="w-4 h-4" />
               <dt className="font-proxima-bold text-lg">Total Budget</dt>
               <dd className="text-xl">$</dd>
             </div>
             <div className="flex flex-col">
+              <BanknotesIcon className="w-4 h-4" />
               <dt className="font-proxima-bold text-lg">Balance</dt>
               <dd className="text-xl text-success font-proxima-bold">$</dd>
             </div>
