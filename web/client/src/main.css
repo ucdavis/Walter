@@ -64,6 +64,9 @@
 .stat-label {
   @apply font-proxima-bold;
 }
+.subtitle {
+  @apply text-lg font-proxima-bold uppercase text-base-content/60;
+}
 .section-margin {
   @apply mb-20;
 }
