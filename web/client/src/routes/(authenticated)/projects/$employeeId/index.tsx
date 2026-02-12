@@ -37,7 +37,7 @@ function RouteComponent() {
 
   return (
     <main className="flex-1">
-      <section className="mt-8 mb-5">
+      <section className="mt-8 mb-2">
         <h1 className="h1">
           {projects[0].pi ? `${projects[0].pi}'s Dashboard` : 'Dashboard'}
         </h1>

@@ -41,7 +41,7 @@ function ProjectContent({ summary }: { summary: ProjectSummary }) {
 
   return (
     <main className="flex-1">
-      <section className="mt-8 mb-10">
+      <section className="mt-8 mb-2">
         <h1 className="h1">{summary.displayName}</h1>
         <h3 className="subtitle"> {summary.projectNumber}</h3>
         <div className="mt-6">
