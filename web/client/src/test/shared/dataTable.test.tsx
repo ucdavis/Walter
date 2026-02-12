@@ -100,3 +100,68 @@ describe('DataTable expandable overlay', () => {
     await waitFor(() => expect(expandButtonAfterEscapeClose).toHaveFocus());
   });
 });
+
+describe('DataTable row expansion', () => {
+  it('shows an expand-all toggle and expands/collapses all rows', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <DataTable
+        columns={columns}
+        data={[
+          { name: 'Row1', value: 1 },
+          { name: 'Row2', value: 2 },
+        ]}
+        expandable={false}
+        globalFilter="none"
+        pagination="off"
+        renderSubComponent={({ row }) => (
+          <div>{`Expanded ${row.original.name}`}</div>
+        )}
+      />
+    );
+
+    const expandAllButton = screen.getByRole('button', { name: /expand all rows/i });
+    expect(expandAllButton).toHaveTextContent('Expand all');
+
+    await user.click(expandAllButton);
+    expect(screen.getByText('Expanded Row1')).toBeInTheDocument();
+    expect(screen.getByText('Expanded Row2')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /collapse all rows/i })
+    ).toHaveTextContent('Collapse all');
+
+    await user.click(screen.getByRole('button', { name: /collapse all rows/i }));
+    expect(screen.queryByText('Expanded Row1')).not.toBeInTheDocument();
+    expect(screen.queryByText('Expanded Row2')).not.toBeInTheDocument();
+  });
+
+  it('renders a sub component row when expanded', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <DataTable
+        columns={columns}
+        data={[{ name: 'Row1', value: 1 }]}
+        expandable={false}
+        getRowProps={(row) => ({
+          className: 'cursor-pointer',
+          onClick: () => row.toggleExpanded(),
+        })}
+        globalFilter="none"
+        pagination="off"
+        renderSubComponent={({ row }) => (
+          <div>{`Expanded ${row.original.name}`}</div>
+        )}
+      />
+    );
+
+    expect(screen.queryByText('Expanded Row1')).not.toBeInTheDocument();
+
+    await user.click(screen.getByText('Row1'));
+    expect(screen.getByText('Expanded Row1')).toBeInTheDocument();
+
+    await user.click(screen.getByText('Row1'));
+    expect(screen.queryByText('Expanded Row1')).not.toBeInTheDocument();
+  });
+});
