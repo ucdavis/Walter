@@ -121,7 +121,14 @@ export const DataTable = <TData extends object>({
       : globalFilter === 'right'
         ? 'justify-end'
         : '';
-  const shouldShowToolbar = globalFilter !== 'none' || expandable;
+  const expandableRows = rowExpansionEnabled
+    ? table.getPrePaginationRowModel().rows.filter((row) => row.getCanExpand())
+    : [];
+  const hasExpandableRows = expandableRows.length > 0;
+  const areAllExpandableRowsExpanded =
+    hasExpandableRows && expandableRows.every((row) => row.getIsExpanded());
+  const shouldShowToolbar =
+    globalFilter !== 'none' || expandable || (rowExpansionEnabled && hasExpandableRows);
   const showFooter = hasAnyFooter(columns);
   const showPaginationControls =
     pagination === 'on' || (pagination === 'auto' && table.getPageCount() > 1);
@@ -213,22 +220,46 @@ export const DataTable = <TData extends object>({
               <div />
             )}
 
-            {expandable ? (
-              <button
-                aria-label={isOverlayActive ? 'Collapse table' : 'Expand table'}
-                className="btn btn-sm btn-square"
-                onClick={toggleExpanded}
-                ref={expandButtonRef}
-                title={isOverlayActive ? 'Collapse table' : 'Expand table'}
-                type="button"
-              >
-                {isOverlayActive ? (
-                  <ArrowsPointingInIcon className="h-5 w-5" />
-                ) : (
-                  <ArrowsPointingOutIcon className="h-5 w-5" />
-                )}
-              </button>
-            ) : null}
+            <div className="flex items-center gap-2">
+              {rowExpansionEnabled && hasExpandableRows ? (
+                <button
+                  aria-label={
+                    areAllExpandableRowsExpanded
+                      ? 'Collapse all rows'
+                      : 'Expand all rows'
+                  }
+                  className="btn btn-sm"
+                  onClick={() =>
+                    table.toggleAllRowsExpanded(!areAllExpandableRowsExpanded)
+                  }
+                  title={
+                    areAllExpandableRowsExpanded
+                      ? 'Collapse all rows'
+                      : 'Expand all rows'
+                  }
+                  type="button"
+                >
+                  {areAllExpandableRowsExpanded ? 'Collapse all' : 'Expand all'}
+                </button>
+              ) : null}
+
+              {expandable ? (
+                <button
+                  aria-label={isOverlayActive ? 'Collapse table' : 'Expand table'}
+                  className="btn btn-sm btn-square"
+                  onClick={toggleExpanded}
+                  ref={expandButtonRef}
+                  title={isOverlayActive ? 'Collapse table' : 'Expand table'}
+                  type="button"
+                >
+                  {isOverlayActive ? (
+                    <ArrowsPointingInIcon className="h-5 w-5" />
+                  ) : (
+                    <ArrowsPointingOutIcon className="h-5 w-5" />
+                  )}
+                </button>
+              ) : null}
+            </div>
           </div>
         ) : null}
 
