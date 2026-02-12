@@ -44,27 +44,23 @@ export function ProjectDetails({ summary }: ProjectDetailsProps) {
               </div>
             </dd>
           </div>
+          <div className="flex flex-col">
+            <div>
+              <dt className="stat-label">PM</dt>
+              <dd className="stat-value">{displayValue(summary.pm)}</dd>
+            </div>
+          </div>
 
           <div className="flex flex-col">
             <div>
               <dt className="stat-label">PI</dt>
               <dd className="stat-value">{displayValue(summary.pi)}</dd>
             </div>
-            <div>
-              <dt className="stat-label">PM</dt>
-              <dd className="stat-value">{displayValue(summary.pm)}</dd>
-            </div>
           </div>
           <div className="flex flex-col">
             <div>
               <dt className="stat-label">Co-PI</dt>
               <dd className="stat-value">{displayValue(summary.copi)}</dd>
-            </div>
-          </div>
-          <div className="flex flex-col">
-            <div>
-              <dt className="stat-label">PA</dt>
-              <dd className="stat-value">{displayValue(summary.pa)}</dd>
             </div>
           </div>
         </dl>
