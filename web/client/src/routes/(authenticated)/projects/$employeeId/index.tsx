@@ -1,7 +1,10 @@
 import { useMemo } from 'react';
 import { PersonnelSection } from '@/components/project/PersonnelSection.tsx';
 import { ProjectsTable } from '@/components/project/ProjectsTable.tsx';
-import { projectsDetailQueryOptions } from '@/queries/project.ts';
+import {
+  projectsDetailQueryOptions,
+  useProjectDiscrepancies,
+} from '@/queries/project.ts';
 import { useUser } from '@/shared/auth/UserContext.tsx';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
@@ -23,6 +26,8 @@ function RouteComponent() {
     [projects]
   );
 
+  const discrepancies = useProjectDiscrepancies(projectNumbers);
+
   if (!projects?.length) {
     return (
       <div className="mx-auto">
@@ -42,7 +47,11 @@ function RouteComponent() {
       </section>
 
       <section className="section-margin">
-        <ProjectsTable employeeId={employeeId} records={projects} />
+        <ProjectsTable
+          discrepancies={discrepancies}
+          employeeId={employeeId}
+          records={projects}
+        />
       </section>
 
       <PersonnelSection projectNumbers={projectNumbers} />

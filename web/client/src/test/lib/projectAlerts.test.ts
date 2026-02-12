@@ -15,7 +15,6 @@ const createSummary = (
   pm: null,
   projectNumber: 'TEST-001',
   projectStatusCode: 'ACTIVE',
-  showReconciliationWarning: false,
   totals: { balance: 5000, budget: 10000, encumbrance: 0, expense: 5000 },
   ...overrides,
 });

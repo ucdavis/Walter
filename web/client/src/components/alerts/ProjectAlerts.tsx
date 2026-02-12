@@ -74,18 +74,20 @@ export function AlertCard({ alert, balance, linkParams }: AlertCardProps) {
 
 interface ProjectAlertsProps {
   employeeId?: string;
+  hasReconciliationDiscrepancy?: boolean;
   prefix?: string;
   summary: ProjectSummary;
 }
 
 export function ProjectAlerts({
   employeeId,
+  hasReconciliationDiscrepancy,
   prefix,
   summary,
 }: ProjectAlertsProps) {
   const alerts = getAlertsForProject(summary, prefix);
 
-  if (summary.showReconciliationWarning) {
+  if (hasReconciliationDiscrepancy) {
     alerts.push({
       id: `reconciliation-issue-${summary.projectNumber}`,
       message: `${prefix ?? 'This project '}has a GL/PPM reconciliation discrepancy`,

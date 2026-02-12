@@ -14,7 +14,6 @@ interface AggregatedProject {
   displayName: string;
   projectName: string;
   projectNumber: string;
-  showReconciliationWarning: boolean;
   totalBalance: number;
   totalBudget: number;
   totalEncumbrance: number;
@@ -28,15 +27,12 @@ function aggregateProjects(records: ProjectRecord[]): AggregatedProject[] {
 
   for (const p of records) {
     const existing = projectsMap.get(p.projectNumber);
-    // Show warning if user manages this project and there's a discrepancy
-    const hasWarning = p.managedByCurrentUser && p.hasGlPpmDiscrepancy;
 
     if (existing) {
       existing.totalBudget += p.catBudget;
       existing.totalExpense += p.catItdExp;
       existing.totalEncumbrance += p.catCommitments;
       existing.totalBalance += p.catBudBal;
-      existing.showReconciliationWarning ||= hasWarning;
       // Pick earliest start date
       if (
         p.awardStartDate &&
@@ -58,7 +54,6 @@ function aggregateProjects(records: ProjectRecord[]): AggregatedProject[] {
         displayName: p.displayName,
         projectName: p.projectName,
         projectNumber: p.projectNumber,
-        showReconciliationWarning: hasWarning,
         totalBalance: p.catBudBal,
         totalBudget: p.catBudget,
         totalEncumbrance: p.catCommitments,
@@ -98,11 +93,16 @@ const csvColumns = [
 ];
 
 interface ProjectsTableProps {
+  discrepancies?: Set<string>;
   employeeId: string;
   records: ProjectRecord[];
 }
 
-export function ProjectsTable({ employeeId, records }: ProjectsTableProps) {
+export function ProjectsTable({
+  discrepancies,
+  employeeId,
+  records,
+}: ProjectsTableProps) {
   const projects = useMemo(() => {
     const aggregated = aggregateProjects(records);
     return sortByEndDate(aggregated);
@@ -132,8 +132,7 @@ export function ProjectsTable({ employeeId, records }: ProjectsTableProps) {
       columnHelper.accessor('displayName', {
         cell: (info) => {
           const name = info.getValue();
-          const { projectNumber, showReconciliationWarning } =
-            info.row.original;
+          const { projectNumber } = info.row.original;
 
           return (
             <Link
@@ -152,7 +151,7 @@ export function ProjectsTable({ employeeId, records }: ProjectsTableProps) {
                   {name}
                 </div>
               </div>
-              {showReconciliationWarning && (
+              {discrepancies?.has(projectNumber) && (
                 <ExclamationTriangleIcon
                   className="h-5 w-5 shrink-0 text-warning"
                   title="GL/PPM reconciliation discrepancy"
@@ -236,6 +235,7 @@ export function ProjectsTable({ employeeId, records }: ProjectsTableProps) {
       }),
     ],
     [
+      discrepancies,
       employeeId,
       totals.totalBalance,
       totals.totalBudget,

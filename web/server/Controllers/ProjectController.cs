@@ -63,42 +63,18 @@ public sealed class ProjectController : ApiControllerBase
                     .FirstOrDefault(m => m.RoleName == PpmRole.ProjectManager)?.EmployeeId);
 
         var applicationUser = User.GetUserIdentifier();
-
-        // Fetch projects and reconciliation data in parallel
-        var projectsTask = _datamartService.GetFacultyPortfolioAsync(projectNumbers, applicationUser, cancellationToken);
-        var reconciliationTask = _datamartService.GetGLPPMReconciliationAsync(projectNumbers, applicationUser, cancellationToken);
-
-        await Task.WhenAll(projectsTask, reconciliationTask);
-
-        var projects = await projectsTask;
-        var reconciliation = await reconciliationTask;
-
-        // Build lookups by project number from reconciliation data
-        var reconByProject = reconciliation
-            .GroupBy(r => r.Project)
-            .ToDictionary(g => g.Key, g => new
-            {
-                GlTotal = g.Sum(r => r.GlActualAmount),
-                PpmTotal = g.Sum(r => r.PpmItdExp),
-            });
+        var projects = await _datamartService.GetFacultyPortfolioAsync(projectNumbers, applicationUser, cancellationToken);
 
         var activeProjects = projects
             .Where(p => p.ProjectStatus == "ACTIVE")
             .ToList();
 
-        // Join PM employee ID and GL/PPM discrepancy flag to project records
+        // Join PM employee ID from GraphQL data
         foreach (var project in activeProjects)
         {
             if (pmByProject.TryGetValue(project.ProjectNumber, out var pmEmployeeId))
             {
                 project.PmEmployeeId = pmEmployeeId;
-            }
-
-            if (project.ProjectType == "Internal" &&
-                reconByProject.TryGetValue(project.ProjectNumber, out var recon))
-            {
-                var diff = Math.Abs(recon.GlTotal - recon.PpmTotal);
-                project.HasGlPpmDiscrepancy = diff > 1;
             }
         }
 

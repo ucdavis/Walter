@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchJson } from '../lib/api.ts';
 
@@ -16,8 +17,6 @@ export interface ProjectRecord {
   expenditureCategoryName: string;
   fundCode: string | null;
   fundDesc: string;
-  hasGlPpmDiscrepancy: boolean;
-  managedByCurrentUser: boolean;
   pa: string | null;
   pi: string | null;
   pm: string | null;
@@ -176,3 +175,34 @@ export const glPpmReconciliationQueryOptions = (projectCodes: string[]) => ({
   queryKey: ['gl-ppm-reconciliation', ...projectCodes] as const,
   staleTime: 5 * 60 * 1000, // 5 minutes
 });
+
+/**
+ * Non-blocking hook that fetches reconciliation data and returns a Set of
+ * project numbers that have GL/PPM discrepancies (|GL actuals - PPM ITD exp| > $1).
+ */
+export function useProjectDiscrepancies(projectCodes: string[]): Set<string> {
+  const { data } = useQuery(glPpmReconciliationQueryOptions(projectCodes));
+
+  return useMemo(() => {
+    if (!data) return new Set<string>();
+
+    const byProject = new Map<string, { gl: number; ppm: number }>();
+    for (const r of data) {
+      const existing = byProject.get(r.project);
+      if (existing) {
+        existing.gl += r.glActualAmount;
+        existing.ppm += r.ppmItdExp;
+      } else {
+        byProject.set(r.project, { gl: r.glActualAmount, ppm: r.ppmItdExp });
+      }
+    }
+
+    const result = new Set<string>();
+    for (const [project, totals] of byProject) {
+      if (Math.abs(totals.gl - totals.ppm) > 1) {
+        result.add(project);
+      }
+    }
+    return result;
+  }, [data]);
+}

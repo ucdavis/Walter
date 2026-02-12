@@ -112,10 +112,4 @@ public sealed class FacultyPortfolioRecord
     /// </summary>
     [JsonPropertyName("pmEmployeeId")]
     public string? PmEmployeeId { get; set; }
-
-    /// <summary>
-    /// Whether there is a GL/PPM reconciliation discrepancy (difference > $1).
-    /// </summary>
-    [JsonPropertyName("hasGlPpmDiscrepancy")]
-    public bool HasGlPpmDiscrepancy { get; set; }
 }

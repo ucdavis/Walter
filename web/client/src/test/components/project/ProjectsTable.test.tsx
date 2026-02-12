@@ -26,8 +26,6 @@ const createProject = (
   expenditureCategoryName: 'Personnel',
   fundCode: null,
   fundDesc: 'Federal',
-  hasGlPpmDiscrepancy: false,
-  managedByCurrentUser: false,
   pa: null,
   pi: 'PI Name',
   pm: null,
@@ -67,47 +65,31 @@ describe('ProjectsTable', () => {
   });
 
   it('shows warning icon when project has reconciliation discrepancy', () => {
-    const projects = [
-      createProject({
-        hasGlPpmDiscrepancy: true,
-        managedByCurrentUser: true,
-        projectNumber: 'P1',
-      }),
-    ];
+    const projects = [createProject({ projectNumber: 'P1' })];
 
-    render(<ProjectsTable employeeId="123" records={projects} />);
+    render(
+      <ProjectsTable
+        discrepancies={new Set(['P1'])}
+        employeeId="123"
+        records={projects}
+      />
+    );
 
     expect(
       screen.getByTitle('GL/PPM reconciliation discrepancy')
     ).toBeInTheDocument();
   });
 
-  it('does not show warning icon when discrepancy exists but user does not manage project', () => {
-    const projects = [
-      createProject({
-        hasGlPpmDiscrepancy: true,
-        managedByCurrentUser: false,
-        projectNumber: 'P1',
-      }),
-    ];
+  it('does not show warning icon when project has no discrepancy', () => {
+    const projects = [createProject({ projectNumber: 'P1' })];
 
-    render(<ProjectsTable employeeId="123" records={projects} />);
-
-    expect(
-      screen.queryByTitle('GL/PPM reconciliation discrepancy')
-    ).not.toBeInTheDocument();
-  });
-
-  it('does not show warning icon when user manages project but no discrepancy', () => {
-    const projects = [
-      createProject({
-        hasGlPpmDiscrepancy: false,
-        managedByCurrentUser: true,
-        projectNumber: 'P1',
-      }),
-    ];
-
-    render(<ProjectsTable employeeId="123" records={projects} />);
+    render(
+      <ProjectsTable
+        discrepancies={new Set()}
+        employeeId="123"
+        records={projects}
+      />
+    );
 
     expect(
       screen.queryByTitle('GL/PPM reconciliation discrepancy')

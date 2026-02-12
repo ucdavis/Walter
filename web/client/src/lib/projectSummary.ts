@@ -26,7 +26,6 @@ export interface ProjectSummary {
   pm: string | null;
   projectNumber: string;
   projectStatusCode: string | null;
-  showReconciliationWarning: boolean;
   totals: ProjectTotals;
 }
 
@@ -120,7 +119,6 @@ export const summarizeAllProjects = (
     pm: 'Multiple',
     projectNumber: DEFAULT_SUMMARY_NUMBER,
     projectStatusCode: 'ACTIVE',
-    showReconciliationWarning: false,
     totals,
   };
 };
@@ -140,11 +138,6 @@ export const summarizeProjectByNumber = (
   const { categories, totals } = aggregateCategories(filtered);
   const first = filtered[0];
 
-  // Show warning if any record has both managedByCurrentUser and hasGlPpmDiscrepancy
-  const showReconciliationWarning = filtered.some(
-    (r) => r.managedByCurrentUser && r.hasGlPpmDiscrepancy
-  );
-
   return {
     awardEndDate: findLatestDate(filtered, 'awardEndDate'),
     awardStartDate: findEarliestDate(filtered, 'awardStartDate'),
@@ -156,7 +149,6 @@ export const summarizeProjectByNumber = (
     pm: first.pm,
     projectNumber: first.projectNumber,
     projectStatusCode: first.projectStatusCode,
-    showReconciliationWarning,
     totals,
   };
 };
