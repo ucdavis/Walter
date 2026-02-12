@@ -35,3 +35,6 @@ msbuild.wrn
 # Jetbrains
 .idea/
 
+# Claude Code
+.claude/
+
