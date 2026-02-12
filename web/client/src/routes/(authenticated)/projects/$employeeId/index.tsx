@@ -70,6 +70,7 @@ function RouteComponent() {
       </section>
 
       <section className="section-margin">
+        <h2 className="h2">Projects</h2>
         <ProjectsTable employeeId={employeeId} records={projects} />
       </section>
 
