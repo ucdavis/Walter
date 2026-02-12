@@ -31,12 +31,32 @@ function RouteComponent() {
 
   return (
     <main className="flex-1">
-      <section className="mt-8">
+      <section className="mt-8 mb-5">
         <h1 className="h1">
-          {projects[0].pi
-            ? `All Projects for ${projects[0].pi}`
-            : 'All Projects'}
+          {projects[0].pi ? `${projects[0].pi}'s Dashboard` : 'Dashboard'}
         </h1>
+      </section>
+      <section className="section-margin">
+        <div className="fancy-data">
+          <dl className="grid grid-cols-1 md:grid-cols-4 gap-6 divide-y md:divide-y-0 divide-main-border">
+            <div className="flex flex-col">
+              <dt className="font-proxima-bold text-lg">Projects</dt>
+              <dd className="text-xl">2</dd>
+            </div>
+            <div className="flex flex-col">
+              <dt className="font-proxima-bold text-lg">Personnel</dt>
+              <dd className="text-xl">8</dd>
+            </div>
+            <div className="flex flex-col">
+              <dt className="font-proxima-bold text-lg">Total Budget</dt>
+              <dd className="text-xl">$</dd>
+            </div>
+            <div className="flex flex-col">
+              <dt className="font-proxima-bold text-lg">Balance</dt>
+              <dd className="text-xl text-success font-proxima-bold">$</dd>
+            </div>
+          </dl>
+        </div>
       </section>
 
       <section className="section-margin">

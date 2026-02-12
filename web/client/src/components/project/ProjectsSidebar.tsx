@@ -102,7 +102,7 @@ export function ProjectsSidebar() {
             <div className="bg-light-bg-200 border-b border-main-border">
               <div className="px-4 py-2 border-b border-main-border">
                 <h2 className="text-primary-font text-sm uppercase">
-                  My Projects
+                  Project List
                 </h2>
               </div>
               <div className="px-4 py-1">
@@ -177,7 +177,7 @@ export function ProjectsSidebar() {
           }}
         >
           <ClipboardDocumentListIcon className="w-4 h-4" />
-          <span>My Projects</span>
+          <span>Project List</span>
         </button>
       </div>
 
@@ -196,7 +196,7 @@ export function ProjectsSidebar() {
 
         {/* panel */}
         <div
-          aria-label="My Projects"
+          aria-label="Project List"
           aria-modal="true"
           className={`fixed top-0 left-0 h-full w-[78%] max-w-xs bg-white border-r border-main-border shadow-lg transform transition-transform duration-200 pointer-events-auto
             ${open ? 'translate-x-0' : '-translate-x-full'}`}
@@ -205,7 +205,7 @@ export function ProjectsSidebar() {
         >
           <div className="px-4 py-3 border-b border-main-border flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-medium uppercase">My Projects</h3>
+              <h3 className="text-sm font-medium uppercase">Project List</h3>
             </div>
             <div className="flex items-center gap-2">
               <div className="text-sm text-dark-font/70">

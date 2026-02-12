@@ -36,20 +36,15 @@ export function ProjectDetails({ summary }: ProjectDetailsProps) {
         </dl>
         <hr className="border-main-border my-5" />
         <dl className="grid items-stretch gap-6 md:gap-8 grid-cols-1 md:grid-cols-4">
-          <div className="flex flex-col">
-            <div>
-              <dt className="stat-label">Status</dt>
-              <dd className="stat-value">
-                <div className="badge badge-soft badge-primary">
-                  {displayValue(summary.projectStatusCode)}
-                </div>
-              </dd>
-            </div>
-            <div>
-              <dt className="stat-label">ID</dt>
-              <dd className="stat-value">{summary.projectNumber}</dd>
-            </div>
+          <div>
+            <dt className="stat-label">Status</dt>
+            <dd className="stat-value">
+              <div className="badge badge-soft badge-primary">
+                {displayValue(summary.projectStatusCode)}
+              </div>
+            </dd>
           </div>
+
           <div className="flex flex-col">
             <div>
               <dt className="stat-label">PI</dt>
