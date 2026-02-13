@@ -272,7 +272,7 @@ export const DataTable = <TData extends object>({
               {table.getRowModel().rows.map((row) => (
                 <tr key={row.id}>
                   {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} style={{ width: cell.column.getSize() }}>
+                    <td key={cell.id} className="align-top" style={{ width: cell.column.getSize() }}>
                       {flexRender(
                         cell.column.columnDef.cell,
                         cell.getContext()
