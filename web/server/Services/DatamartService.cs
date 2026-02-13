@@ -14,6 +14,12 @@ public interface IDatamartService
 
     Task<IReadOnlyList<PositionBudgetRecord>> GetPositionBudgetsAsync(
         IEnumerable<string> projectNumbers, string? applicationUser = null, CancellationToken ct = default);
+
+    Task<IReadOnlyList<GLPPMReconciliationRecord>> GetGLPPMReconciliationAsync(
+        IEnumerable<string> projectNumbers, string? applicationUser = null, CancellationToken ct = default);
+
+    Task<IReadOnlyList<GLTransactionRecord>> GetGLTransactionListingsAsync(
+        IEnumerable<string> projectNumbers, string? applicationUser = null, CancellationToken ct = default);
 }
 
 public sealed class DatamartService : IDatamartService
@@ -55,6 +61,26 @@ public sealed class DatamartService : IDatamartService
         var projectNumbersParam = string.Join(",", projectNumbers);
         return await ExecuteSprocAsync<PositionBudgetRecord>(
             "dbo.usp_GetPositionBudgets",
+            new { ProjectIds = projectNumbersParam, ApplicationName = _appName, ApplicationUser = applicationUser },
+            ct: ct);
+    }
+
+    public async Task<IReadOnlyList<GLPPMReconciliationRecord>> GetGLPPMReconciliationAsync(
+        IEnumerable<string> projectNumbers, string? applicationUser = null, CancellationToken ct = default)
+    {
+        var projectNumbersParam = string.Join(",", projectNumbers);
+        return await ExecuteSprocAsync<GLPPMReconciliationRecord>(
+            "dbo.usp_GetGLPPMReconciliation",
+            new { ProjectIds = projectNumbersParam, ApplicationName = _appName, ApplicationUser = applicationUser },
+            ct: ct);
+    }
+
+    public async Task<IReadOnlyList<GLTransactionRecord>> GetGLTransactionListingsAsync(
+        IEnumerable<string> projectNumbers, string? applicationUser = null, CancellationToken ct = default)
+    {
+        var projectNumbersParam = string.Join(",", projectNumbers);
+        return await ExecuteSprocAsync<GLTransactionRecord>(
+            "dbo.usp_GetGLTransactionListings",
             new { ProjectIds = projectNumbersParam, ApplicationName = _appName, ApplicationUser = applicationUser },
             ct: ct);
     }

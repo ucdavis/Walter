@@ -7,7 +7,11 @@ import {
   summarizeProjectByNumber,
   type ProjectSummary,
 } from '@/lib/projectSummary.ts';
-import { projectsDetailQueryOptions } from '@/queries/project.ts';
+import {
+  projectsDetailQueryOptions,
+  useProjectDiscrepancies,
+} from '@/queries/project.ts';
+
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { Link, createFileRoute } from '@tanstack/react-router';
 
@@ -36,15 +40,30 @@ const ProjectNotFound = ({ projectNumber }: { projectNumber: string }) => (
   </main>
 );
 
-function ProjectContent({ summary }: { summary: ProjectSummary }) {
+function ProjectContent({
+  employeeId,
+  summary,
+}: {
+  employeeId: string;
+  summary: ProjectSummary;
+}) {
   const personnelQuery = usePersonnelQuery([summary.projectNumber]);
+  const discrepancies = useProjectDiscrepancies(
+    summary.isInternal ? [summary.projectNumber] : []
+  );
 
   return (
     <main className="flex-1">
       <section className="mt-8 mb-10">
         <h1 className="h1">{summary.displayName}</h1>
         <div className="mt-6">
-          <ProjectAlerts summary={summary} />
+          <ProjectAlerts
+            employeeId={employeeId}
+            hasReconciliationDiscrepancy={discrepancies.has(
+              summary.projectNumber
+            )}
+            summary={summary}
+          />
         </div>
       </section>
 
@@ -78,5 +97,5 @@ function RouteComponent() {
     return <ProjectNotFound projectNumber={projectNumber} />;
   }
 
-  return <ProjectContent summary={summary} />;
+  return <ProjectContent employeeId={employeeId} summary={summary} />;
 }

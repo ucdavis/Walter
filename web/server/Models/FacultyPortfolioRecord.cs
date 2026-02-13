@@ -71,14 +71,26 @@ public sealed class FacultyPortfolioRecord
     [JsonPropertyName("expenditureCategoryName")]
     public string? ExpenditureCategoryName { get; set; }
 
+    [JsonPropertyName("fundCode")]
+    public string? FundCode { get; set; }
+
     [JsonPropertyName("fundDesc")]
     public string? FundDesc { get; set; }
+
+    [JsonPropertyName("purposeCode")]
+    public string? PurposeCode { get; set; }
 
     [JsonPropertyName("purposeDesc")]
     public string? PurposeDesc { get; set; }
 
+    [JsonPropertyName("programCode")]
+    public string? ProgramCode { get; set; }
+
     [JsonPropertyName("programDesc")]
     public string? ProgramDesc { get; set; }
+
+    [JsonPropertyName("activityCode")]
+    public string? ActivityCode { get; set; }
 
     [JsonPropertyName("activityDesc")]
     public string? ActivityDesc { get; set; }
@@ -94,4 +106,10 @@ public sealed class FacultyPortfolioRecord
 
     [JsonPropertyName("catBudBal")]
     public decimal CatBudBal { get; set; }
+
+    /// <summary>
+    /// Project Manager employee ID (from Financial Service API).
+    /// </summary>
+    [JsonPropertyName("pmEmployeeId")]
+    public string? PmEmployeeId { get; set; }
 }

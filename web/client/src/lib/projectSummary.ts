@@ -21,6 +21,7 @@ export interface ProjectSummary {
   categories: ProjectCategorySummary[];
   copi: string | null;
   displayName: string;
+  isInternal: boolean;
   pa: string | null;
   pi: string | null;
   pm: string | null;
@@ -114,6 +115,7 @@ export const summarizeAllProjects = (
     categories,
     copi: null,
     displayName: DEFAULT_SUMMARY_NAME,
+    isInternal: false,
     pa: null,
     pi: 'Multiple',
     pm: 'Multiple',
@@ -144,6 +146,7 @@ export const summarizeProjectByNumber = (
     categories,
     copi: first.copi,
     displayName: first.displayName,
+    isInternal: first.projectType === 'Internal',
     pa: first.pa,
     pi: first.pi,
     pm: first.pm,
