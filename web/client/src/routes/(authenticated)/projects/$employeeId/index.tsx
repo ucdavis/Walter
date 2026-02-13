@@ -5,10 +5,18 @@ import {
   projectsDetailQueryOptions,
   useProjectDiscrepancies,
 } from '@/queries/project.ts';
-
+import { usePersonnelQuery } from '@/queries/personnel.ts';
+import { summarizeAllProjects } from '@/lib/projectSummary.ts';
+import { Currency } from '@/shared/Currency.tsx';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import { PageEmpty } from '@/components/states/PageEmpty.tsx';
+import {
+  BanknotesIcon,
+  ClipboardDocumentCheckIcon,
+  ClipboardDocumentListIcon,
+  UsersIcon,
+} from '@heroicons/react/24/outline';
 
 export const Route = createFileRoute('/(authenticated)/projects/$employeeId/')({
   component: RouteComponent,
@@ -38,6 +46,17 @@ function RouteComponent() {
 
   const discrepancies = useProjectDiscrepancies(internalProjectNumbers);
 
+  const summary = useMemo(
+    () => (projects?.length ? summarizeAllProjects(projects) : null),
+    [projects]
+  );
+
+  const personnelQuery = usePersonnelQuery(projectNumbers);
+  const personnelCount = useMemo(() => {
+    if (!personnelQuery.data) return null;
+    return new Set(personnelQuery.data.map((p) => p.employeeId)).size;
+  }, [personnelQuery.data]);
+
   if (!projects?.length) {
     return (
       <div className="mx-auto">
@@ -48,15 +67,40 @@ function RouteComponent() {
 
   return (
     <main className="flex-1">
-      <section className="mt-8">
+      <section className="mt-8 mb-2">
         <h1 className="h1">
-          {projects[0].pi
-            ? `All Projects for ${projects[0].pi}`
-            : 'All Projects'}
+          {projects[0].pi ? `${projects[0].pi}'s Dashboard` : 'Dashboard'}
         </h1>
+      </section>
+      <section className="section-margin">
+        <div className="fancy-data">
+          <dl className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="flex flex-col">
+              <ClipboardDocumentListIcon className="w-4 h-4" />
+              <dt className="font-proxima-bold text-lg">Projects</dt>
+              <dd className="text-xl">{projectNumbers.length}</dd>
+            </div>
+            <div className="flex flex-col">
+              <UsersIcon className="w-4 h-4" />
+              <dt className="font-proxima-bold text-lg">Personnel</dt>
+              <dd className="text-xl">{personnelCount ?? '...'}</dd>
+            </div>
+            <div className="flex flex-col">
+              <ClipboardDocumentCheckIcon className="w-4 h-4" />
+              <dt className="font-proxima-bold text-lg">Total Budget</dt>
+              <dd className="text-xl">{summary ? <Currency value={summary.totals.budget} /> : '...'}</dd>
+            </div>
+            <div className="flex flex-col">
+              <BanknotesIcon className="w-4 h-4" />
+              <dt className="font-proxima-bold text-lg">Balance</dt>
+              <dd className="text-xl text-success font-proxima-bold">{summary ? <Currency value={summary.totals.balance} /> : '...'}</dd>
+            </div>
+          </dl>
+        </div>
       </section>
 
       <section className="section-margin">
+        <h2 className="h2">Projects</h2>
         <ProjectsTable
           discrepancies={discrepancies}
           employeeId={employeeId}

@@ -16,7 +16,7 @@
   --color-error-color: var(--color-ucd-doubledecker);
   --color-info-color: var(--color-ucd-tahoe);
   --color-success-color: var(--color-ucd-quad);
-  --color-warning-color: #e6a700;
+  --color-warning-color: #cd9400;
 }
 
 @plugin "daisyui/theme" {
@@ -63,6 +63,9 @@
 }
 .stat-label {
   @apply font-proxima-bold;
+}
+.subtitle {
+  @apply text-xl font-proxima-bold uppercase text-base-content/60;
 }
 .section-margin {
   @apply mb-20;
