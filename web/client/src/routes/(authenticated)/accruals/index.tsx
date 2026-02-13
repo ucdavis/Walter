@@ -88,7 +88,7 @@ function RouteComponent() {
 
   return (
     <div className="container mt-8">
-      <div className="flex gap-12 mt-8">
+      <div className="flex gap-8 mt-8">
         <section className="flex-1">
           <h1 className="h1">Employee Vacation Accruals</h1>
           <dl className="fancy-data">
