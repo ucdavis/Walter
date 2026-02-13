@@ -96,7 +96,7 @@ export function ProjectsSidebar() {
   return (
     <>
       {/* Desktop/Tablet sidebar (md+) */}
-      <aside className="w-72 shrink-0 hidden md:block">
+      <aside className="w-68 shrink-0 hidden md:block">
         <div className="sticky top-24 mt-8">
           <div className="bg-white rounded-sm border border-main-border">
             <div className="bg-light-bg-200 border-b border-main-border">
@@ -146,7 +146,7 @@ export function ProjectsSidebar() {
                   to="/projects/$employeeId/$projectNumber"
                   viewTransition={{ types: ['slide-left'] }}
                 >
-                  <div className="text-xs text-dark-font/50">
+                  <div className="text-xs text-dark-font/80">
                     {project.projectNumber}
                   </div>
                   <div className="flex justify-between items-start mb-1">
@@ -154,7 +154,7 @@ export function ProjectsSidebar() {
                       {project.displayName}
                     </span>
                   </div>
-                  <div className="flex text-sm justify-between items-center text-dark-font/70">
+                  <div className="flex text-sm justify-between items-center text-dark-font/60">
                     <Currency value={project.totalCatBudBal} />
                     <span>
                       {formatDate(project.awardEndDate, 'No end date')}
