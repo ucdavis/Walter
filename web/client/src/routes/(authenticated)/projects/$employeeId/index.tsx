@@ -2,6 +2,9 @@ import { useMemo } from 'react';
 import { PersonnelSection } from '@/components/project/PersonnelSection.tsx';
 import { ProjectsTable } from '@/components/project/ProjectsTable.tsx';
 import { projectsDetailQueryOptions } from '@/queries/project.ts';
+import { usePersonnelQuery } from '@/queries/personnel.ts';
+import { summarizeAllProjects } from '@/lib/projectSummary.ts';
+import { Currency } from '@/shared/Currency.tsx';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import { PageEmpty } from '@/components/states/PageEmpty.tsx';
@@ -27,6 +30,17 @@ function RouteComponent() {
     [projects]
   );
 
+  const summary = useMemo(
+    () => (projects?.length ? summarizeAllProjects(projects) : null),
+    [projects]
+  );
+
+  const personnelQuery = usePersonnelQuery(projectNumbers);
+  const personnelCount = useMemo(() => {
+    if (!personnelQuery.data) return null;
+    return new Set(personnelQuery.data.map((p) => p.employeeId)).size;
+  }, [personnelQuery.data]);
+
   if (!projects?.length) {
     return (
       <div className="mx-auto">
@@ -48,22 +62,22 @@ function RouteComponent() {
             <div className="flex flex-col">
               <ClipboardDocumentListIcon className="w-4 h-4" />
               <dt className="font-proxima-bold text-lg">Projects</dt>
-              <dd className="text-xl">2</dd>
+              <dd className="text-xl">{projectNumbers.length}</dd>
             </div>
             <div className="flex flex-col">
               <UsersIcon className="w-4 h-4" />
               <dt className="font-proxima-bold text-lg">Personnel</dt>
-              <dd className="text-xl">8</dd>
+              <dd className="text-xl">{personnelCount ?? '...'}</dd>
             </div>
             <div className="flex flex-col">
               <ClipboardDocumentCheckIcon className="w-4 h-4" />
               <dt className="font-proxima-bold text-lg">Total Budget</dt>
-              <dd className="text-xl">$</dd>
+              <dd className="text-xl">{summary ? <Currency value={summary.totals.budget} /> : '...'}</dd>
             </div>
             <div className="flex flex-col">
               <BanknotesIcon className="w-4 h-4" />
               <dt className="font-proxima-bold text-lg">Balance</dt>
-              <dd className="text-xl text-success font-proxima-bold">$</dd>
+              <dd className="text-xl text-success font-proxima-bold">{summary ? <Currency value={summary.totals.balance} /> : '...'}</dd>
             </div>
           </dl>
         </div>

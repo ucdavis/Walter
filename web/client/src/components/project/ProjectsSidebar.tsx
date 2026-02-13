@@ -146,6 +146,9 @@ export function ProjectsSidebar() {
                   to="/projects/$employeeId/$projectNumber"
                   viewTransition={{ types: ['slide-left'] }}
                 >
+                  <div className="text-xs text-dark-font/50">
+                    {project.projectNumber}
+                  </div>
                   <div className="flex justify-between items-start mb-1">
                     <span className="text-base truncate">
                       {project.displayName}
@@ -263,6 +266,9 @@ export function ProjectsSidebar() {
                 to="/projects/$employeeId/$projectNumber"
                 viewTransition={{ types: ['slide-left'] }}
               >
+                <div className="text-xs text-dark-font/50">
+                  {project.projectNumber}
+                </div>
                 <div className="flex justify-between items-start mb-1">
                   <span className="text-base">{project.displayName}</span>
                 </div>
