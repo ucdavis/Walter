@@ -21,8 +21,8 @@ const RootLayout = () => (
       </div>
 
       <Footer />
-      <ReactQueryDevtools buttonPosition="top-right" />
-      <TanStackRouterDevtools position="bottom-right" />
+      <ReactQueryDevtools buttonPosition="bottom-right" />
+      <TanStackRouterDevtools position="bottom-left" />
     </div>
   </>
 );

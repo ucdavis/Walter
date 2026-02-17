@@ -12,7 +12,6 @@ function PersonnelTableSkeleton({ rows = 5 }: { rows?: number }) {
         <colgroup>
           <col className="w-1/3" />
           <col className="w-14" />
-          <col className="w-12" />
           <col className="w-24" />
           <col className="w-24" />
           <col className="w-28" />
@@ -24,9 +23,6 @@ function PersonnelTableSkeleton({ rows = 5 }: { rows?: number }) {
             <th>Position/Project</th>
             <th>
               <span className="flex justify-end w-full">FTE</span>
-            </th>
-            <th>
-              <span className="flex justify-end w-full">Dist Pct</span>
             </th>
             <th>
               <span className="flex justify-end w-full">Effective Date</span>
@@ -53,9 +49,6 @@ function PersonnelTableSkeleton({ rows = 5 }: { rows?: number }) {
               </td>
               <td>
                 <div className="skeleton h-5 w-10 ml-auto" />
-              </td>
-              <td>
-                <div className="skeleton h-5 w-12 ml-auto" />
               </td>
               <td>
                 <div className="skeleton h-5 w-20 ml-auto" />

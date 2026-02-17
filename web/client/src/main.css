@@ -153,6 +153,11 @@
   min-width: 900px;
 }
 
+.walter-table.walter-subtable {
+  min-width: 0;
+  table-layout: auto;
+}
+
 .walter-table th {
   padding: 4px 0;
   border-top: 1px solid var(--color-main-border);
