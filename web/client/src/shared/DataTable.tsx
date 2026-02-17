@@ -55,6 +55,7 @@ interface DataTableProps<TData extends object> {
   pagination?: 'auto' | 'on' | 'off'; // 'auto' shows controls only when needed; 'off' disables pagination entirely
   renderSubComponent?: (props: { row: Row<TData> }) => ReactNode;
   subComponentRowClassName?: string;
+  tableActions?: ReactNode;
 }
 
 export const DataTable = <TData extends object>({
@@ -69,6 +70,7 @@ export const DataTable = <TData extends object>({
   pagination = 'auto',
   renderSubComponent,
   subComponentRowClassName,
+  tableActions,
 }: DataTableProps<TData>) => {
   const rowExpansionEnabled = renderSubComponent !== undefined;
 
@@ -221,6 +223,7 @@ export const DataTable = <TData extends object>({
             )}
 
             <div className="flex items-center gap-2">
+              {tableActions}
               {rowExpansionEnabled && hasExpandableRows ? (
                 <button
                   aria-label={
