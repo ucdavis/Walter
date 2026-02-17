@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { createColumnHelper } from '@tanstack/react-table';
+import { ExportDataButton } from '@/components/ExportDataButton.tsx';
 import {
   glPpmReconciliationQueryOptions,
   glTransactionsQueryOptions,
@@ -203,25 +204,11 @@ const glColumns = [
   }),
   glColumnHelper.display({
     id: 'chartString',
-    cell: (info) => {
-      const t = info.row.original;
-      return (
-        <span className="text-sm break-all">
-          {[
-            t.entity,
-            t.fund,
-            t.financialDepartment,
-            t.account,
-            t.purpose,
-            t.program,
-            t.project,
-            t.activity,
-          ]
-            .filter(Boolean)
-            .join('-')}
-        </span>
-      );
-    },
+    cell: (info) => (
+      <span className="text-sm break-all">
+        {buildChartString(info.row.original)}
+      </span>
+    ),
     header: 'Chart String',
   }),
   glColumnHelper.accessor('journalName', {
@@ -235,6 +222,12 @@ const glColumns = [
       <span className="text-sm">{info.getValue() ?? '-'}</span>
     ),
     header: 'Batch',
+  }),
+  glColumnHelper.accessor('journalCategory', {
+    cell: (info) => (
+      <span className="text-sm">{info.getValue() ?? '-'}</span>
+    ),
+    header: 'Category',
   }),
   glColumnHelper.accessor('journalLineDescription', {
     cell: (info) => (
@@ -253,6 +246,44 @@ const glColumns = [
     header: () => <span className="flex justify-end">Amount</span>,
   }),
 ];
+
+const ppmTaskCsvColumns = [
+  { header: 'Dept', key: 'projectOwningOrg' as const },
+  { header: 'Project', key: 'projectNumber' as const },
+  { header: 'Task', key: 'taskNum' as const },
+  { header: 'Task Name', key: 'taskName' as const },
+  { header: 'Fund', key: 'fundCode' as const },
+  { header: 'Program', key: 'programCode' as const },
+  { header: 'Activity', key: 'activityCode' as const },
+  { header: 'Budget', key: 'budget' as const },
+  { header: 'Expenses', key: 'expenses' as const },
+  { header: 'Balance', key: 'balance' as const },
+];
+
+const glCsvColumns = [
+  { header: 'Date', key: 'journalAcctDate' as const },
+  { header: 'Chart String', key: 'chartString' as const },
+  { header: 'Journal', key: 'journalName' as const },
+  { header: 'Batch', key: 'journalBatchName' as const },
+  { header: 'Category', key: 'journalCategory' as const },
+  { header: 'Description', key: 'journalLineDescription' as const },
+  { header: 'Amount', key: 'actualAmount' as const },
+];
+
+function buildChartString(t: GLTransactionRecord): string {
+  return [
+    t.entity,
+    t.fund,
+    t.financialDepartment,
+    t.account,
+    t.purpose,
+    t.program,
+    t.project,
+    t.activity,
+  ]
+    .filter(Boolean)
+    .join('-');
+}
 
 function RouteComponent() {
   const { employeeId, projectNumber } = Route.useParams();
@@ -465,6 +496,13 @@ function RouteComponent() {
               data={ppmTasks}
               expandable={true}
               pagination="auto"
+              tableActions={
+                <ExportDataButton
+                  columns={ppmTaskCsvColumns}
+                  data={ppmTasks}
+                  filename="ppm-tasks.csv"
+                />
+              }
             />
           </section>
 
@@ -481,6 +519,16 @@ function RouteComponent() {
                 data={glTransactions}
                 expandable={true}
                 pagination="auto"
+                tableActions={
+                  <ExportDataButton
+                    columns={glCsvColumns}
+                    data={glTransactions.map((t) => ({
+                      ...t,
+                      chartString: buildChartString(t),
+                    }))}
+                    filename="gl-transactions.csv"
+                  />
+                }
               />
             )}
           </section>
