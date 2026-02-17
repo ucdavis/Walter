@@ -64,6 +64,12 @@
 .stat-label {
   @apply font-proxima-bold;
 }
+.stat-value-lg {
+  @apply text-xl font-medium;
+}
+.stat-label-lg {
+  @apply font-proxima-bold text-lg;
+}
 .subtitle {
   @apply text-xl font-proxima-bold uppercase text-base-content/60;
 }

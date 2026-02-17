@@ -21,25 +21,29 @@ export function ProjectDetails({ summary }: ProjectDetailsProps) {
         <dl className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="flex flex-col">
             <ClockIcon className="w-4 h-4" />
-            <dt className="font-proxima-bold text-lg">Start</dt>
-            <dd className="text-xl">{formatDate(summary.awardStartDate)}</dd>
+            <dt className="stat-label-lg">Start</dt>
+            <dd className="stat-value-lg">
+              {formatDate(summary.awardStartDate)}
+            </dd>
           </div>
           <div className="flex flex-col">
             <ClockIcon className="w-4 h-4" />
-            <dt className="font-proxima-bold text-lg">End</dt>
-            <dd className="text-xl">{formatDate(summary.awardEndDate)}</dd>
+            <dt className="stat-label-lg">End</dt>
+            <dd className="stat-value-lg">
+              {formatDate(summary.awardEndDate)}
+            </dd>
           </div>
           <div className="flex flex-col">
             <ClipboardDocumentCheckIcon className="w-4 h-4" />
-            <dt className="font-proxima-bold text-lg">Total Budget</dt>
-            <dd className="text-xl">
+            <dt className="stat-label-lg">Total Budget</dt>
+            <dd className="stat-value-lg">
               <Currency value={summary.totals.budget} />
             </dd>
           </div>
           <div className="flex flex-col">
             <BanknotesIcon className="w-4 h-4" />
-            <dt className="font-proxima-bold text-lg">Balance</dt>
-            <dd className="text-xl text-success font-proxima-bold">
+            <dt className="stat-label-lg">Balance</dt>
+            <dd className="stat-value-lg text-success font-proxima-bold">
               <Currency value={summary.totals.balance} />
             </dd>
           </div>
