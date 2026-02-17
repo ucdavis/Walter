@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Link } from '@tanstack/react-router';
 import { createColumnHelper } from '@tanstack/react-table';
+import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import { ExportDataButton } from '@/components/ExportDataButton.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import { formatDate } from '@/lib/date.ts';
@@ -9,11 +10,9 @@ import { DataTable } from '@/shared/DataTable.tsx';
 
 interface AggregatedProject {
   awardEndDate: string | null;
-
   awardStartDate: string | null;
   displayName: string;
   projectName: string;
-
   projectNumber: string;
   totalBalance: number;
   totalBudget: number;
@@ -28,6 +27,7 @@ function aggregateProjects(records: ProjectRecord[]): AggregatedProject[] {
 
   for (const p of records) {
     const existing = projectsMap.get(p.projectNumber);
+
     if (existing) {
       existing.totalBudget += p.catBudget;
       existing.totalExpense += p.catItdExp;
@@ -51,11 +51,9 @@ function aggregateProjects(records: ProjectRecord[]): AggregatedProject[] {
       projectsMap.set(p.projectNumber, {
         awardEndDate: p.awardEndDate,
         awardStartDate: p.awardStartDate,
-
         displayName: p.displayName,
         projectName: p.projectName,
         projectNumber: p.projectNumber,
-
         totalBalance: p.catBudBal,
         totalBudget: p.catBudget,
         totalEncumbrance: p.catCommitments,
@@ -95,11 +93,16 @@ const csvColumns = [
 ];
 
 interface ProjectsTableProps {
+  discrepancies?: Set<string>;
   employeeId: string;
   records: ProjectRecord[];
 }
 
-export function ProjectsTable({ employeeId, records }: ProjectsTableProps) {
+export function ProjectsTable({
+  discrepancies,
+  employeeId,
+  records,
+}: ProjectsTableProps) {
   const projects = useMemo(() => {
     const aggregated = aggregateProjects(records);
     return sortByEndDate(aggregated);
@@ -133,20 +136,27 @@ export function ProjectsTable({ employeeId, records }: ProjectsTableProps) {
 
           return (
             <Link
-              className="link no-underline"
+              className="link no-underline flex items-start gap-1"
               params={{
                 employeeId,
                 projectNumber,
               }}
               to="/projects/$employeeId/$projectNumber/"
             >
-              <div className="text-xs text-base-content/70 no-underline">
-                {projectNumber}
+              <div className="min-w-0">
+                <div className="text-xs text-base-content/70 no-underline">
+                  {projectNumber}
+                </div>
+                <div className="truncate underline" title={name}>
+                  {name}
+                </div>
               </div>
-
-              <div className="truncate underline" title={name}>
-                {name}
-              </div>
+              {discrepancies?.has(projectNumber) && (
+                <ExclamationTriangleIcon
+                  className="h-5 w-5 shrink-0 text-warning"
+                  title="GL/PPM reconciliation discrepancy"
+                />
+              )}
             </Link>
           );
         },
@@ -225,6 +235,7 @@ export function ProjectsTable({ employeeId, records }: ProjectsTableProps) {
       }),
     ],
     [
+      discrepancies,
       employeeId,
       totals.totalBalance,
       totals.totalBudget,

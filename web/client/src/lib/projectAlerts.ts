@@ -8,7 +8,7 @@ export interface Alert {
   id: string;
   message: string;
   severity: 'error' | 'warning';
-  type: 'negative-balance' | 'low-budget' | 'ending-soon';
+  type: 'negative-balance' | 'low-budget' | 'ending-soon' | 'reconciliation-issue';
 }
 
 /**

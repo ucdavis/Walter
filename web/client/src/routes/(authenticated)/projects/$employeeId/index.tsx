@@ -1,7 +1,10 @@
 import { useMemo } from 'react';
 import { PersonnelSection } from '@/components/project/PersonnelSection.tsx';
 import { ProjectsTable } from '@/components/project/ProjectsTable.tsx';
-import { projectsDetailQueryOptions } from '@/queries/project.ts';
+import {
+  projectsDetailQueryOptions,
+  useProjectDiscrepancies,
+} from '@/queries/project.ts';
 import { usePersonnelQuery } from '@/queries/personnel.ts';
 import { summarizeAllProjects } from '@/lib/projectSummary.ts';
 import { Currency } from '@/shared/Currency.tsx';
@@ -29,6 +32,19 @@ function RouteComponent() {
     () => [...new Set(projects?.map((p) => p.projectNumber) ?? [])],
     [projects]
   );
+
+  const internalProjectNumbers = useMemo(
+    () => [
+      ...new Set(
+        (projects ?? [])
+          .filter((p) => p.projectType === 'Internal')
+          .map((p) => p.projectNumber)
+      ),
+    ],
+    [projects]
+  );
+
+  const discrepancies = useProjectDiscrepancies(internalProjectNumbers);
 
   const summary = useMemo(
     () => (projects?.length ? summarizeAllProjects(projects) : null),
@@ -85,7 +101,11 @@ function RouteComponent() {
 
       <section className="section-margin">
         <h2 className="h2">Projects</h2>
-        <ProjectsTable employeeId={employeeId} records={projects} />
+        <ProjectsTable
+          discrepancies={discrepancies}
+          employeeId={employeeId}
+          records={projects}
+        />
       </section>
 
       <PersonnelSection projectNumbers={projectNumbers} />

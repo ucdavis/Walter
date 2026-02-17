@@ -12,6 +12,7 @@ afterEach(cleanup);
 const createProject = (
   overrides: Partial<ProjectRecord> = {}
 ): ProjectRecord => ({
+  activityCode: null,
   activityDesc: 'Activity',
   awardEndDate: '2099-12-31',
   awardNumber: 'AWD001',
@@ -23,10 +24,13 @@ const createProject = (
   copi: null,
   displayName: 'P1: Test Project',
   expenditureCategoryName: 'Personnel',
+  fundCode: null,
   fundDesc: 'Federal',
   pa: null,
   pi: 'PI Name',
   pm: null,
+  pmEmployeeId: null,
+  programCode: null,
   programDesc: 'Program',
   projectName: 'Test Project',
   projectNumber: 'P1',
@@ -58,5 +62,37 @@ describe('ProjectsTable', () => {
     render(<ProjectsTable employeeId="123" records={projects} />);
 
     expect(screen.getByText('Totals')).toBeInTheDocument();
+  });
+
+  it('shows warning icon when project has reconciliation discrepancy', () => {
+    const projects = [createProject({ projectNumber: 'P1' })];
+
+    render(
+      <ProjectsTable
+        discrepancies={new Set(['P1'])}
+        employeeId="123"
+        records={projects}
+      />
+    );
+
+    expect(
+      screen.getByTitle('GL/PPM reconciliation discrepancy')
+    ).toBeInTheDocument();
+  });
+
+  it('does not show warning icon when project has no discrepancy', () => {
+    const projects = [createProject({ projectNumber: 'P1' })];
+
+    render(
+      <ProjectsTable
+        discrepancies={new Set()}
+        employeeId="123"
+        records={projects}
+      />
+    );
+
+    expect(
+      screen.queryByTitle('GL/PPM reconciliation discrepancy')
+    ).not.toBeInTheDocument();
   });
 });

@@ -16,7 +16,8 @@ const displayValue = (value: string | null) => value ?? 'Not provided';
 export function ProjectDetails({ summary }: ProjectDetailsProps) {
   return (
     <section className="section-margin">
-      <div className="fancy-data">
+      <h2 className="h2">Faculty Department Portfolio Report</h2>
+      <div className="fancy-data mt-4">
         <dl className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="flex flex-col">
             <ClockIcon className="w-4 h-4" />
@@ -44,14 +45,16 @@ export function ProjectDetails({ summary }: ProjectDetailsProps) {
           </div>
         </dl>
         <hr className="border-main-border my-5" />
-        <dl className="grid items-stretch gap-6 md:gap-8 grid-cols-1 md:grid-cols-4">
-          <div>
-            <dt className="stat-label">Status</dt>
-            <dd className="stat-value">
-              <div className="badge badge-soft badge-primary">
-                {displayValue(summary.projectStatusCode)}
-              </div>
-            </dd>
+        <dl className="grid items-stretch gap-6 md:gap-8 grid-cols-1 md:grid-cols-3">
+          <div className="flex flex-col">
+            <div>
+              <dt className="stat-label">Status</dt>
+              <dd className="stat-value">
+                <div className="badge badge-soft badge-primary">
+                  {displayValue(summary.projectStatusCode)}
+                </div>
+              </dd>
+            </div>
           </div>
           <div className="flex flex-col">
             <div>
@@ -59,17 +62,10 @@ export function ProjectDetails({ summary }: ProjectDetailsProps) {
               <dd className="stat-value">{displayValue(summary.pm)}</dd>
             </div>
           </div>
-
           <div className="flex flex-col">
             <div>
               <dt className="stat-label">PI</dt>
               <dd className="stat-value">{displayValue(summary.pi)}</dd>
-            </div>
-          </div>
-          <div className="flex flex-col">
-            <div>
-              <dt className="stat-label">Co-PI</dt>
-              <dd className="stat-value">{displayValue(summary.copi)}</dd>
             </div>
           </div>
         </dl>

@@ -1,5 +1,4 @@
 CREATE PROCEDURE dbo.usp_GetFacultyDeptPortfolio
-    @FinancialDept VARCHAR(7) = NULL,
     @ProjectIds VARCHAR(MAX) = NULL,
     @StartDate DATE = NULL,
     @EndDate DATE = NULL,
@@ -9,22 +8,12 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    -- Validate: exactly one filter must be provided
-    IF (@FinancialDept IS NULL AND @ProjectIds IS NULL)
+    -- Validate: ProjectIds must be provided
+    IF @ProjectIds IS NULL
     BEGIN
-        RAISERROR('Either @FinancialDept or @ProjectIds must be provided', 16, 1);
+        RAISERROR('@ProjectIds must be provided', 16, 1);
         RETURN;
     END;
-
-    IF (@FinancialDept IS NOT NULL AND @ProjectIds IS NOT NULL)
-    BEGIN
-        RAISERROR('Cannot specify both @FinancialDept and @ProjectIds', 16, 1);
-        RETURN;
-    END;
-
-    -- Validate FinancialDept if provided
-    IF @FinancialDept IS NOT NULL
-        EXEC dbo.usp_ValidateFinancialDept @FinancialDept;
 
     -- Validate date range if both are provided
     IF @StartDate IS NOT NULL AND @EndDate IS NOT NULL AND @EndDate < @StartDate
@@ -49,21 +38,12 @@ BEGIN
     -- Sanitize ApplicationUser for injection protection
     EXEC dbo.usp_SanitizeInputString @ApplicationUser OUTPUT;
 
-    -- Sanitize FinancialDept for SQL injection protection
-    IF @FinancialDept IS NOT NULL
-        EXEC dbo.usp_SanitizeInputString @FinancialDept OUTPUT;
-
-    -- Parse and validate ProjectIds if provided
+    -- Parse and validate ProjectIds
     DECLARE @ProjectIdFilter NVARCHAR(MAX);
 
-    IF @ProjectIds IS NOT NULL
-        EXEC dbo.usp_ParseProjectIdFilter @ProjectIds, @ProjectIdFilter OUTPUT;
+    EXEC dbo.usp_ParseProjectIdFilter @ProjectIds, @ProjectIdFilter OUTPUT;
 
-    -- Build filter clause based on which parameter was provided
-    IF @FinancialDept IS NOT NULL
-        SET @FilterClause = ' WHERE prj_owning_cd = ''' + @FinancialDept + '''';
-    ELSE
-        SET @FilterClause = ' WHERE PROJECT_NUMBER IN (' + @ProjectIdFilter + ')';
+    SET @FilterClause = ' WHERE PROJECT_NUMBER IN (' + @ProjectIdFilter + ')';
 
     -- Add date overlap logic
     IF @StartDate IS NOT NULL
@@ -77,14 +57,15 @@ BEGIN
         SELECT AWARD_NUMBER, AWARD_NAME, AWARD_TYPE, AWARD_ENTITY, AWARD_START_DATE, AWARD_END_DATE, AWARD_STATUS, AWD_PI_NAME,
         FUNDING_SOURCE, PROJECT_NUMBER, PROJECT_NAME, PROJECT_ENTITY, PRJ_OWNING_ORG AS PROJECT_OWNING_ORG,
         PROJECT_TYPE, PROJECT_STATUS_CODE AS PROJECT_STATUS, TASK_NUM, TASK_NAME, TASK_STATUS, PM, PA, PI, COPI, EXPENDITURE_CATEGORY_NAME,
-        FUND_DESC, PURPOSE_DESC, PROGRAM_DESC, ACTIVITY_DESC, CAT_BUDGET, CAT_COMMITMENTS, CAT_ITD_EXP, CAT_BUD_BAL
+        FUND_CD AS FUND_CODE, FUND_DESC, PURPOSE_CD AS PURPOSE_CODE, PURPOSE_DESC,
+        PROGRAM_CD AS PROGRAM_CODE, PROGRAM_DESC, ACTIVITY_CD AS ACTIVITY_CODE, ACTIVITY_DESC,
+        CAT_BUDGET, CAT_COMMITMENTS, CAT_ITD_EXP, CAT_BUD_BAL
         FROM ae_dwh.ucd_faculty_rpt_t
         ' + @FilterClause;
 
     -- Build parameters JSON for logging
     SET @ParametersJSON = (
         SELECT
-            @FinancialDept AS FinancialDept,
             @ProjectIds AS ProjectIds,
             CONVERT(VARCHAR(10), @StartDate, 120) AS StartDate,
             CONVERT(VARCHAR(10), @EndDate, 120) AS EndDate,
