@@ -2,8 +2,10 @@
 
 import { Fragment, type HTMLAttributes, type ReactNode } from 'react';
 import {
+  ArrowDownIcon,
   ArrowsPointingInIcon,
   ArrowsPointingOutIcon,
+  ArrowUpIcon,
 } from '@heroicons/react/24/outline';
 import {
   ColumnDef,
@@ -55,6 +57,7 @@ interface DataTableProps<TData extends object> {
   pagination?: 'auto' | 'on' | 'off'; // 'auto' shows controls only when needed; 'off' disables pagination entirely
   renderSubComponent?: (props: { row: Row<TData> }) => ReactNode;
   subComponentRowClassName?: string;
+  tableActions?: ReactNode;
 }
 
 export const DataTable = <TData extends object>({
@@ -69,6 +72,7 @@ export const DataTable = <TData extends object>({
   pagination = 'auto',
   renderSubComponent,
   subComponentRowClassName,
+  tableActions,
 }: DataTableProps<TData>) => {
   const rowExpansionEnabled = renderSubComponent !== undefined;
 
@@ -128,7 +132,9 @@ export const DataTable = <TData extends object>({
   const areAllExpandableRowsExpanded =
     hasExpandableRows && expandableRows.every((row) => row.getIsExpanded());
   const shouldShowToolbar =
-    globalFilter !== 'none' || expandable || (rowExpansionEnabled && hasExpandableRows);
+    globalFilter !== 'none' ||
+    expandable ||
+    (rowExpansionEnabled && hasExpandableRows);
   const showFooter = hasAnyFooter(columns);
   const showPaginationControls =
     pagination === 'on' || (pagination === 'auto' && table.getPageCount() > 1);
@@ -221,6 +227,7 @@ export const DataTable = <TData extends object>({
             )}
 
             <div className="flex items-center gap-2">
+              {tableActions}
               {rowExpansionEnabled && hasExpandableRows ? (
                 <button
                   aria-label={
@@ -245,7 +252,9 @@ export const DataTable = <TData extends object>({
 
               {expandable ? (
                 <button
-                  aria-label={isOverlayActive ? 'Collapse table' : 'Expand table'}
+                  aria-label={
+                    isOverlayActive ? 'Collapse table' : 'Expand table'
+                  }
                   className="btn btn-sm btn-square"
                   onClick={toggleExpanded}
                   ref={expandButtonRef}
@@ -302,14 +311,14 @@ export const DataTable = <TData extends object>({
                             aria-label="Sorted ascending"
                             className="shrink-0"
                           >
-                            🔼
+                            <ArrowUpIcon className="h-3 w-3" />
                           </span>
                         ) : header.column.getIsSorted() === 'desc' ? (
                           <span
                             aria-label="Sorted descending"
                             className="shrink-0"
                           >
-                            🔽
+                            <ArrowDownIcon className="h-3 w-3" />
                           </span>
                         ) : null}
                       </div>
@@ -327,8 +336,8 @@ export const DataTable = <TData extends object>({
                     <tr {...rowProps}>
                       {row.getVisibleCells().map((cell) => (
                         <td
-                          key={cell.id}
                           className="align-top"
+                          key={cell.id}
                           style={{ width: cell.column.getSize() }}
                         >
                           {flexRender(

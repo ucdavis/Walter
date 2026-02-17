@@ -250,19 +250,19 @@ export function ProjectsTable({
 
   return (
     <div className="mt-4">
-      <div className="flex justify-end mb-2">
-        <ExportDataButton
-          columns={csvColumns}
-          data={projects}
-          filename="projects.csv"
-        />
-      </div>
       <DataTable
         columns={columns}
         data={projects}
         footerRowClassName="totaltr"
         globalFilter="left"
         initialState={{ pagination: { pageSize: 25 } }}
+        tableActions={
+          <ExportDataButton
+            columns={csvColumns}
+            data={projects}
+            filename="projects.csv"
+          />
+        }
       />
     </div>
   );

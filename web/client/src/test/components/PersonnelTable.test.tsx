@@ -160,6 +160,58 @@ describe('PersonnelTable', () => {
     expect(screen.getByText('Test Project')).toBeInTheDocument();
   });
 
+  it('hides unfilled positions by default', () => {
+    const records = [
+      createRecord({ name: 'Smith, John', positionNumber: '40001234' }),
+      createRecord({
+        employeeId: '',
+        name: '',
+        positionNumber: '40005678',
+        positionDescription: 'STDT 3',
+      }),
+    ];
+
+    render(<PersonnelTable data={records} />);
+
+    expect(screen.getByText('Smith, John - PROF-FY')).toBeInTheDocument();
+    expect(screen.queryByText(/STDT 3/)).not.toBeInTheDocument();
+  });
+
+  it('shows unfilled positions when toggle is clicked', async () => {
+    const user = userEvent.setup();
+    const records = [
+      createRecord({ name: 'Smith, John', positionNumber: '40001234' }),
+      createRecord({
+        employeeId: '',
+        name: '',
+        positionNumber: '40005678',
+        positionDescription: 'STDT 3',
+      }),
+    ];
+
+    render(<PersonnelTable data={records} />);
+
+    const toggle = screen.getByRole('button', { name: /show unfilled/i });
+    expect(toggle).toHaveTextContent('Show unfilled (1)');
+
+    await user.click(toggle);
+
+    expect(screen.getByText(/STDT 3/)).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /hide unfilled/i })
+    ).toBeInTheDocument();
+  });
+
+  it('does not show unfilled toggle when no unfilled positions exist', () => {
+    const records = [createRecord({ name: 'Smith, John' })];
+
+    render(<PersonnelTable data={records} />);
+
+    expect(
+      screen.queryByRole('button', { name: /unfilled/i })
+    ).not.toBeInTheDocument();
+  });
+
   it('renders only filtered data when passed filtered records', () => {
     const allPersonnel = [
       createRecord({

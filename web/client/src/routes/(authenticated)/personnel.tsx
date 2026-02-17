@@ -63,11 +63,12 @@ function RouteComponent() {
   }
 
   const data = personnelQuery.data ?? [];
+  const filledData = data.filter((r) => r.name);
 
-  // Calculate summary stats
-  const uniqueEmployees = new Set(data.map((r) => r.employeeId)).size;
-  const uniqueProjects = new Set(data.map((r) => r.projectId)).size;
-  const positions = aggregateByPosition(data);
+  // Calculate summary stats (exclude unfilled positions)
+  const uniqueEmployees = new Set(filledData.map((r) => r.employeeId)).size;
+  const uniqueProjects = new Set(filledData.map((r) => r.projectId)).size;
+  const positions = aggregateByPosition(filledData);
   const totalMonthlyRate = positions.reduce((sum, p) => sum + p.monthlyRate, 0);
   const totalMonthlyFringe = positions.reduce(
     (sum, p) => sum + p.monthlyFringe,

@@ -101,6 +101,23 @@ describe('DataTable expandable overlay', () => {
   });
 });
 
+describe('DataTable tableActions', () => {
+  it('renders tableActions in the toolbar', () => {
+    render(
+      <DataTable
+        columns={columns}
+        data={[{ name: 'Row1', value: 1 }]}
+        expandable={false}
+        tableActions={<button type="button">Custom Action</button>}
+      />
+    );
+
+    expect(
+      screen.getByRole('button', { name: 'Custom Action' })
+    ).toBeInTheDocument();
+  });
+});
+
 describe('DataTable row expansion', () => {
   it('shows an expand-all toggle and expands/collapses all rows', async () => {
     const user = userEvent.setup();

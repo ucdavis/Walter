@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { createColumnHelper } from '@tanstack/react-table';
 import {
   ChevronDownIcon,
@@ -225,11 +225,25 @@ interface PersonnelTableProps {
   showTotals?: boolean;
 }
 
+function isUnfilled(position: AggregatedPosition): boolean {
+  return !position.name;
+}
+
 export function PersonnelTable({
   data,
   showTotals = true,
 }: PersonnelTableProps) {
-  const positions = useMemo(() => aggregateByPosition(data), [data]);
+  const [showUnfilled, setShowUnfilled] = useState(false);
+  const allPositions = useMemo(() => aggregateByPosition(data), [data]);
+  const unfilledCount = useMemo(
+    () => allPositions.filter(isUnfilled).length,
+    [allPositions]
+  );
+  const positions = useMemo(
+    () =>
+      showUnfilled ? allPositions : allPositions.filter((p) => !isUnfilled(p)),
+    [allPositions, showUnfilled]
+  );
 
   const columns = useMemo(
     () => [
@@ -374,18 +388,31 @@ export function PersonnelTable({
     return <p className="text-base-content/70 mt-4">No personnel found.</p>;
   }
 
+  const tableActions = (
+    <>
+      {unfilledCount > 0 && (
+        <button
+          className={`btn btn-sm ${showUnfilled ? 'btn-active' : 'btn-default'}`}
+          onClick={() => setShowUnfilled(!showUnfilled)}
+          type="button"
+        >
+          {showUnfilled ? 'Hide' : 'Show'} unfilled ({unfilledCount})
+        </button>
+      )}
+      <ExportDataButton
+        columns={personnelCsvColumns}
+        data={getExportData(positions)}
+        filename="personnel.csv"
+      />
+    </>
+  );
+
   return (
     <div>
-      <div className="flex justify-end mb-2">
-        <ExportDataButton
-          columns={personnelCsvColumns}
-          data={getExportData(positions)}
-          filename="personnel.csv"
-        />
-      </div>
       <DataTable
         columns={columns}
         data={positions}
+        tableActions={tableActions}
         footerRowClassName="totaltr"
         getRowCanExpand={(row) => row.original.distributions.length > 0}
         getRowProps={(row) =>
