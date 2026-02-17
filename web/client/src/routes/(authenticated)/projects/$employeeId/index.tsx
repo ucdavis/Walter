@@ -53,7 +53,9 @@ function RouteComponent() {
 
   const personnelQuery = usePersonnelQuery(projectNumbers);
   const personnelCount = useMemo(() => {
-    if (!personnelQuery.data) return null;
+    if (!personnelQuery.data) {
+      return null;
+    }
     return new Set(personnelQuery.data.map((p) => p.employeeId)).size;
   }, [personnelQuery.data]);
 
@@ -77,23 +79,27 @@ function RouteComponent() {
           <dl className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div className="flex flex-col">
               <ClipboardDocumentListIcon className="w-4 h-4" />
-              <dt className="font-proxima-bold text-lg">Projects</dt>
-              <dd className="text-xl">{projectNumbers.length}</dd>
+              <dt className="stat-label-lg">Projects</dt>
+              <dd className="stat-value-lg">{projectNumbers.length}</dd>
             </div>
             <div className="flex flex-col">
               <UsersIcon className="w-4 h-4" />
-              <dt className="font-proxima-bold text-lg">Personnel</dt>
-              <dd className="text-xl">{personnelCount ?? '...'}</dd>
+              <dt className="stat-label-lg">Personnel</dt>
+              <dd className="stat-value-lg">{personnelCount ?? '...'}</dd>
             </div>
             <div className="flex flex-col">
               <ClipboardDocumentCheckIcon className="w-4 h-4" />
-              <dt className="font-proxima-bold text-lg">Total Budget</dt>
-              <dd className="text-xl">{summary ? <Currency value={summary.totals.budget} /> : '...'}</dd>
+              <dt className="stat-label-lg">Total Budget</dt>
+              <dd className="stat-value-lg">
+                {summary ? <Currency value={summary.totals.budget} /> : '...'}
+              </dd>
             </div>
             <div className="flex flex-col">
               <BanknotesIcon className="w-4 h-4" />
-              <dt className="font-proxima-bold text-lg">Balance</dt>
-              <dd className="text-xl text-success font-proxima-bold">{summary ? <Currency value={summary.totals.balance} /> : '...'}</dd>
+              <dt className="stat-label-lg">Balance</dt>
+              <dd className="stat-value-lg text-success font-proxima-bold">
+                {summary ? <Currency value={summary.totals.balance} /> : '...'}
+              </dd>
             </div>
           </dl>
         </div>
