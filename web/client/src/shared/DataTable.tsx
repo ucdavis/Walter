@@ -130,7 +130,7 @@ export const DataTable = <TData extends object>({
   const areAllExpandableRowsExpanded =
     hasExpandableRows && expandableRows.every((row) => row.getIsExpanded());
   const shouldShowToolbar =
-    globalFilter !== 'none' || expandable || (rowExpansionEnabled && hasExpandableRows);
+    globalFilter !== 'none' || expandable || tableActions || (rowExpansionEnabled && hasExpandableRows);
   const showFooter = hasAnyFooter(columns);
   const showPaginationControls =
     pagination === 'on' || (pagination === 'auto' && table.getPageCount() > 1);
