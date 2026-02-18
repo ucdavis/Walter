@@ -2,8 +2,10 @@
 
 import { Fragment, type HTMLAttributes, type ReactNode } from 'react';
 import {
+  ArrowDownIcon,
   ArrowsPointingInIcon,
   ArrowsPointingOutIcon,
+  ArrowUpIcon,
 } from '@heroicons/react/24/outline';
 import {
   ColumnDef,
@@ -248,7 +250,9 @@ export const DataTable = <TData extends object>({
 
               {expandable ? (
                 <button
-                  aria-label={isOverlayActive ? 'Collapse table' : 'Expand table'}
+                  aria-label={
+                    isOverlayActive ? 'Collapse table' : 'Expand table'
+                  }
                   className="btn btn-sm btn-square"
                   onClick={toggleExpanded}
                   ref={expandButtonRef}
@@ -305,14 +309,14 @@ export const DataTable = <TData extends object>({
                             aria-label="Sorted ascending"
                             className="shrink-0"
                           >
-                            🔼
+                            <ArrowUpIcon className="h-3 w-3" />
                           </span>
                         ) : header.column.getIsSorted() === 'desc' ? (
                           <span
                             aria-label="Sorted descending"
                             className="shrink-0"
                           >
-                            🔽
+                            <ArrowDownIcon className="h-3 w-3" />
                           </span>
                         ) : null}
                       </div>
@@ -330,8 +334,8 @@ export const DataTable = <TData extends object>({
                     <tr {...rowProps}>
                       {row.getVisibleCells().map((cell) => (
                         <td
-                          key={cell.id}
                           className="align-top"
+                          key={cell.id}
                           style={{ width: cell.column.getSize() }}
                         >
                           {flexRender(
