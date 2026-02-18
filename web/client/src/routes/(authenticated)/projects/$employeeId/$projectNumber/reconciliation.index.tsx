@@ -61,19 +61,15 @@ function RouteComponent() {
   const columns = useMemo(
     () => [
       columnHelper.accessor('financialDepartment', {
-        cell: (info) => (
-          <span className="font-mono text-sm">
-            {info.getValue() ?? '-'}
-          </span>
-        ),
+        cell: (info) => <span>{info.getValue() ?? '-'}</span>,
         header: 'Dept',
       }),
       columnHelper.accessor('project', {
         cell: (info) => (
           <div>
-            <div className="font-mono text-sm">{info.getValue()}</div>
+            <div>{info.getValue()}</div>
             {info.row.original.projectDescription && (
-              <div className="text-xs text-base-content/60">
+              <div className="text-xs text-base-content/80">
                 {info.row.original.projectDescription}
               </div>
             )}
@@ -84,9 +80,9 @@ function RouteComponent() {
       columnHelper.accessor('fundCode', {
         cell: (info) => (
           <div>
-            <div className="font-mono text-sm">{info.getValue() ?? '-'}</div>
+            <div>{info.getValue() ?? '-'}</div>
             {info.row.original.fundDescription && (
-              <div className="text-xs text-base-content/60">
+              <div className="text-xs text-base-content/80">
                 {info.row.original.fundDescription}
               </div>
             )}
@@ -95,17 +91,15 @@ function RouteComponent() {
         header: 'Fund',
       }),
       columnHelper.accessor('ppmFundCode', {
-        cell: (info) => (
-          <span className="font-mono text-sm">{info.getValue()}</span>
-        ),
+        cell: (info) => <span>{info.getValue()}</span>,
         header: 'PPM Fund',
       }),
       columnHelper.accessor('programCode', {
         cell: (info) => (
           <div>
-            <div className="font-mono text-sm">{info.getValue() ?? '-'}</div>
+            <div>{info.getValue() ?? '-'}</div>
             {info.row.original.programDescription && (
-              <div className="text-xs text-base-content/60">
+              <div className="text-xs text-base-content/80">
                 {info.row.original.programDescription}
               </div>
             )}
@@ -116,9 +110,9 @@ function RouteComponent() {
       columnHelper.accessor('activityCode', {
         cell: (info) => (
           <div>
-            <div className="font-mono text-sm">{info.getValue() ?? '-'}</div>
+            <div>{info.getValue() ?? '-'}</div>
             {info.row.original.activityDescription && (
-              <div className="text-xs text-base-content/60">
+              <div className="text-xs text-base-content/80">
                 {info.row.original.activityDescription}
               </div>
             )}
@@ -128,7 +122,7 @@ function RouteComponent() {
       }),
       columnHelper.accessor('glActualAmount', {
         cell: (info) => (
-          <span className="flex justify-end font-mono">
+          <span className="flex justify-end">
             {formatCurrency(info.getValue())}
           </span>
         ),
@@ -136,23 +130,20 @@ function RouteComponent() {
       }),
       columnHelper.accessor('ppmItdExp', {
         cell: (info) => (
-          <span className="flex justify-end font-mono">
+          <span className="flex justify-end">
             {formatCurrency(info.getValue())}
           </span>
         ),
-        header: () => (
-          <span className="flex justify-end">PPM Actuals</span>
-        ),
+        header: () => <span className="flex justify-end">PPM Actuals</span>,
       }),
       columnHelper.display({
-        id: 'difference',
         cell: (info) => {
           const row = info.row.original;
           const diff = row.glActualAmount + row.ppmItdExp;
           const isDisc = hasDiscrepancy(row);
           return (
             <span
-              className={`flex justify-end font-mono ${
+              className={`flex font-proxima-bold justify-end ${
                 isDisc ? (diff < 0 ? 'text-error' : 'text-warning') : ''
               }`}
             >
@@ -161,29 +152,30 @@ function RouteComponent() {
           );
         },
         header: () => <span className="flex justify-end">Difference</span>,
+        id: 'difference',
       }),
       columnHelper.display({
-        id: 'actions',
         cell: (info) => {
           const row = info.row.original;
           return (
             <Link
-              className="btn btn-xs btn-ghost"
-              to="/projects/$employeeId/$projectNumber/reconciliation/detail"
+              className="btn btn-xs ms-2 -mt-1"
               params={{ employeeId, projectNumber }}
               search={{
+                activity: row.activityCode ?? '',
                 dept: row.financialDepartment ?? '',
                 fund: row.fundCode ?? '',
                 program: row.programCode ?? '',
-                activity: row.activityCode ?? '',
               }}
+              to="/projects/$employeeId/$projectNumber/reconciliation/detail"
             >
               Details
             </Link>
           );
         },
-        header: '',
         enableSorting: false,
+        header: '',
+        id: 'actions',
       }),
     ],
     [employeeId, projectNumber]
@@ -192,7 +184,7 @@ function RouteComponent() {
   return (
     <main className="flex-1">
       <section className="mt-8 mb-10">
-        <nav className="text-sm breadcrumbs mb-4">
+        {/* <nav className="text-sm breadcrumbs mb-4">
           <ul>
             <li>
               <Link to="/projects">Projects</Link>
@@ -207,16 +199,22 @@ function RouteComponent() {
             </li>
             <li>GL/PPM Reconciliation</li>
           </ul>
-        </nav>
+        </nav> */}
+        <Link
+          className="mb-4 btn btn-sm"
+          params={{ employeeId, projectNumber }}
+          to="/projects/$employeeId/$projectNumber/"
+        >
+          Back to Project
+        </Link>
         <h1 className="h1">GL/PPM Reconciliation</h1>
-        <p className="text-base-content/70 mt-2">
-          Comparing General Ledger totals against PPM budget balances for{' '}
-          <span className="font-semibold">{projectNumber}</span>
-        </p>
+        <h3 className="subtitle">{projectNumber}</h3>
+
+        <p>Comparing General Ledger totals against PPM budget balances</p>
       </section>
 
       {isReconciliationPending ? (
-        <p className="text-base-content/70 mt-4">
+        <p className="text-base-content/80 mt-4">
           Loading reconciliation data…
         </p>
       ) : isReconciliationError ? (
@@ -240,16 +238,6 @@ function RouteComponent() {
           />
         </>
       )}
-
-      <section className="mt-8">
-        <Link
-          className="btn btn-outline"
-          params={{ employeeId, projectNumber }}
-          to="/projects/$employeeId/$projectNumber/"
-        >
-          Back to Project
-        </Link>
-      </section>
     </main>
   );
 }
