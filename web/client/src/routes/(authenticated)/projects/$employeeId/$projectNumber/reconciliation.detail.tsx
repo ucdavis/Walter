@@ -398,7 +398,7 @@ function RouteComponent() {
   return (
     <main className="flex-1">
       <section className="mt-8 mb-10">
-        {/* <nav className="text-sm breadcrumbs mb-4">
+        <nav className="text-sm breadcrumbs mb-4">
           <ul>
             <li>
               <Link to="/projects">Projects</Link>
@@ -421,7 +421,7 @@ function RouteComponent() {
             </li>
             <li>Detail</li>
           </ul>
-        </nav> */}
+        </nav>
         <Link
           className="btn btn-sm mb-4"
           params={{ employeeId, projectNumber }}
