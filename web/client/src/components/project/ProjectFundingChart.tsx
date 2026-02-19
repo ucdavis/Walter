@@ -5,7 +5,6 @@ import {
   YAxis,
   ResponsiveContainer,
   Tooltip,
-  Cell,
 } from 'recharts';
 
 type FundingKey = 'sponsored' | 'spfabrication' | 'spcapital' | 'internal';
@@ -98,18 +97,15 @@ export function ProjectFundingChart() {
                     fill={COLORS[key]}
                     isAnimationActive
                     key={key}
+                    radius={
+                      index === 0
+                        ? [6, 0, 0, 6]
+                        : index === keys.length - 1
+                          ? [0, 6, 6, 0]
+                          : 0
+                    }
                     stackId="a"
-                  >
-                    <Cell
-                      radius={
-                        index === 0
-                          ? [6, 0, 0, 6] // left rounded
-                          : index === keys.length - 1
-                            ? [0, 6, 6, 0] // right rounded
-                            : 0
-                      }
-                    />
-                  </Bar>
+                  />
                 ))}
               </BarChart>
             </ResponsiveContainer>
