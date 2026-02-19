@@ -68,7 +68,7 @@ BEGIN
             'SELECT Award_Number, Award_Start_Date, Award_End_Date,
                 Project_Number, Project_Name,
                 Project_Owning_Organization AS Project_Owning_Org,
-                Project_Owning_Organization AS Expenditure_Category_Name,
+                ''All Expenditures'' AS Expenditure_Category_Name,
                 Project_Type, Project_Status,
                 [Task/Subtask_Number] AS Task_Num, [Task/Subtask_Name] AS Task_Name, Task_Status,
                 Project_Manager AS PM, Project_Administrator AS PA,
