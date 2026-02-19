@@ -98,11 +98,11 @@ export function ProjectFundingChart() {
                     isAnimationActive
                     key={key}
                     radius={
-                      index === 0
+                      (index === 0
                         ? [6, 0, 0, 6]
                         : index === keys.length - 1
                           ? [0, 6, 6, 0]
-                          : 0
+                          : 0) as any
                     }
                     stackId="a"
                   />
