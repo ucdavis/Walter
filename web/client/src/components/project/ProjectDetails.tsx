@@ -67,7 +67,7 @@ export function ProjectDetails({ summary }: ProjectDetailsProps) {
           <div className="flex flex-col">
             <BanknotesIcon className="w-4 h-4" />
             <dt className="stat-label">Balance</dt>
-            <dd className="stat-value text-success font-proxima-bold">
+            <dd className="stat-value">
               <Currency value={summary.totals.balance} />
             </dd>
           </div>

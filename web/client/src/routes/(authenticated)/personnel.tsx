@@ -116,9 +116,7 @@ function RouteComponent() {
           <div>
             <CreditCardIcon className="w-4 h-4" />
             <dt className="stat-label">Monthly Total</dt>
-            <dd className="stat-value text-success font-proxima-bold">
-              {formatCurrency(totalMonthlyTotal)}
-            </dd>
+            <dd className="stat-value">{formatCurrency(totalMonthlyTotal)}</dd>
           </div>
         </dl>
       </div>

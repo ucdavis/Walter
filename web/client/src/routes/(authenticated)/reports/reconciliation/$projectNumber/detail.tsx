@@ -433,7 +433,7 @@ function RouteComponent() {
               </div>
               <div className="flex flex-col">
                 <dt className="font-proxima-bold text-lg">Balance</dt>
-                <dd className="text-xl text-success font-proxima-bold">
+                <dd className="text-xl font-proxima-bold">
                   <Currency value={summary.totals.balance} />
                 </dd>
               </div>

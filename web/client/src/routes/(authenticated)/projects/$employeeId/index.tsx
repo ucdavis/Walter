@@ -97,7 +97,7 @@ function RouteComponent() {
             <div className="flex flex-col">
               <BanknotesIcon className="w-4 h-4" />
               <dt className="stat-label-lg">Balance</dt>
-              <dd className="stat-value-lg text-success font-proxima-bold">
+              <dd className="stat-value-lg">
                 {summary ? <Currency value={summary.totals.balance} /> : '...'}
               </dd>
             </div>
