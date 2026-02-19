@@ -107,7 +107,7 @@ function RouteComponent() {
       </section>
       <section className="section-margin">
         <h2 className="h2">Funding Breakdown</h2>
-        <ProjectFundingChart />
+        <ProjectFundingChart projects={projects} />
       </section>
 
       <section className="section-margin">

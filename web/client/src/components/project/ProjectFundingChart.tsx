@@ -6,51 +6,61 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from 'recharts';
+import { formatCurrency } from '@/lib/currency.ts';
+import type { ProjectRecord } from '@/queries/project.ts';
 
-type FundingKey = 'sponsored' | 'spfabrication' | 'spcapital' | 'internal';
-
-const COLORS: Record<FundingKey, string> = {
+const FUNDING_COLORS: Record<string, string> = {
   internal: '#f08a00',
-  spcapital: '#6ec1d6',
-  spfabrication: '#16a2c5',
   sponsored: '#1f4db8',
+  'sponsored capital': '#6ec1d6',
+  'sponsored fabrication': '#16a2c5',
 };
 
-const LABELS: Record<FundingKey, string> = {
-  internal: 'Internal',
-  spcapital: 'Sponsored Capital',
-  spfabrication: 'Sponsored Fabrication',
-  sponsored: 'Sponsored',
-};
+const FALLBACK_COLORS = [
+  '#3b82f6',
+  '#14b8a6',
+  '#ef4444',
+  '#84cc16',
+  '#f97316',
+  '#8b5cf6',
+  '#0ea5e9',
+  '#eab308',
+];
 
-const raw: Record<FundingKey, number> = {
-  internal: 20_440,
-  spcapital: 20_440,
-  spfabrication: 100_440,
-  sponsored: 100_440,
-};
-
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat('en-US', {
-    currency: 'USD',
-    maximumFractionDigits: 0,
-    style: 'currency',
-  }).format(value);
+function getFundingColor(key: string, index: number) {
+  return (
+    FUNDING_COLORS[key.toLowerCase()] ??
+    FALLBACK_COLORS[index % FALLBACK_COLORS.length]
+  );
 }
 
-export function ProjectFundingChart() {
-  const keys = Object.keys(raw) as FundingKey[];
-  const total = keys.reduce((t, k) => t + raw[k], 0);
+interface ProjectFundingChartProps {
+  projects: ProjectRecord[];
+}
 
-  const percents = keys.map((k) => (raw[k] / total) * 100);
+export function ProjectFundingChart({ projects }: ProjectFundingChartProps) {
+  const totalsByType = projects.reduce<Record<string, number>>(
+    (acc, project) => {
+      const key = project.projectType || 'Unknown';
+      acc[key] = (acc[key] ?? 0) + project.catBudBal;
+      return acc;
+    },
+    {}
+  );
+
+  const keys = Object.keys(totalsByType);
+  const total = keys.reduce((sum, key) => sum + totalsByType[key], 0);
+  const safeTotal = total === 0 ? 1 : total;
+
+  const percents = keys.map((key) => (totalsByType[key] / safeTotal) * 100);
 
   const data = [
     keys.reduce(
-      (acc, k) => {
-        acc[k] = (raw[k] / total) * 100;
+      (acc, key) => {
+        acc[key] = (totalsByType[key] / safeTotal) * 100;
         return acc;
       },
-      { name: 'Funding' } as { name: string } & Record<FundingKey, number>
+      { name: 'Funding' } as { name: string } & Record<string, number>
     ),
   ];
 
@@ -60,13 +70,13 @@ export function ProjectFundingChart() {
         Available balance broken down by funding source.
       </p>
       <div className="mb-10 flex flex-wrap gap-x-10 gap-y-3">
-        {keys.map((key) => (
+        {keys.map((key, index) => (
           <div className="flex items-center gap-2" key={key}>
             <span
               className="inline-block h-5 w-5 rounded-md"
-              style={{ backgroundColor: COLORS[key] }}
+              style={{ backgroundColor: getFundingColor(key, index) }}
             />
-            <span>{LABELS[key]}</span>
+            <span>{key}</span>
           </div>
         ))}
       </div>
@@ -84,9 +94,9 @@ export function ProjectFundingChart() {
 
                 <Tooltip
                   cursor={false}
-                  formatter={(value: number, key: FundingKey) => [
-                    `${formatCurrency(raw[key])} (${value.toFixed(0)}%)`,
-                    LABELS[key],
+                  formatter={(value: number, key: string) => [
+                    `${formatCurrency(totalsByType[key])} (${value.toFixed(0)}%)`,
+                    key,
                   ]}
                 />
 
@@ -94,16 +104,10 @@ export function ProjectFundingChart() {
                   <Bar
                     barSize={44}
                     dataKey={key}
-                    fill={COLORS[key]}
+                    fill={getFundingColor(key, index)}
                     isAnimationActive
                     key={key}
-                    radius={
-                      (index === 0
-                        ? [6, 0, 0, 6]
-                        : index === keys.length - 1
-                          ? [0, 6, 6, 0]
-                          : 0) as any
-                    }
+                    radius={getBarRadius(index, keys.length)}
                     stackId="a"
                   />
                 ))}
@@ -115,18 +119,21 @@ export function ProjectFundingChart() {
         <div
           className="mt-3 grid text-sm"
           style={{
-            gridTemplateColumns: percents.map((p) => `${p}%`).join(' '),
+            gridTemplateColumns:
+              total === 0
+                ? keys.map(() => `${100 / keys.length}%`).join(' ')
+                : percents.map((p) => `${p}%`).join(' '),
           }}
         >
           {keys.map((key) => {
-            const pct = Math.round((raw[key] / total) * 100);
+            const pct = Math.round((totalsByType[key] / safeTotal) * 100);
             return (
               <div className="min-w-0" key={key}>
                 <div
                   className="truncate ps-1"
-                  title={`${formatCurrency(raw[key])} (${pct}%)`}
+                  title={`${formatCurrency(totalsByType[key])} (${pct}%)`}
                 >
-                  {formatCurrency(raw[key])} ({pct}%)
+                  {formatCurrency(totalsByType[key])} ({pct}%)
                 </div>
               </div>
             );
@@ -135,4 +142,20 @@ export function ProjectFundingChart() {
       </div>
     </div>
   );
+}
+
+// Round the corners of the first and last bars
+function getBarRadius(
+  index: number,
+  count: number
+): 0 | [number, number, number, number] {
+  if (index === 0) {
+    return [6, 0, 0, 6];
+  }
+
+  if (index === count - 1) {
+    return [0, 6, 6, 0];
+  }
+
+  return 0;
 }
