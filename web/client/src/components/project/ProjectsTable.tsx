@@ -153,7 +153,7 @@ export function ProjectsTable({
               </div>
               {discrepancies?.has(projectNumber) && (
                 <ExclamationTriangleIcon
-                  className="h-5 w-5 shrink-0 text-warning"
+                  className="h-5 w-5 shrink-0 text-warning self-end"
                   title="GL/PPM reconciliation discrepancy"
                 />
               )}

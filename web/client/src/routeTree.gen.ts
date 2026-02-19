@@ -18,13 +18,14 @@ import { Route as authenticatedPersonnelRouteImport } from './routes/(authentica
 import { Route as authenticatedMeRouteImport } from './routes/(authenticated)/me'
 import { Route as authenticatedFormRouteImport } from './routes/(authenticated)/form'
 import { Route as authenticatedProjectsRouteRouteImport } from './routes/(authenticated)/projects/route'
+import { Route as authenticatedReportsIndexRouteImport } from './routes/(authenticated)/reports/index'
 import { Route as authenticatedAccrualsIndexRouteImport } from './routes/(authenticated)/accruals/index'
 import { Route as authenticatedProjectsEmployeeIdRouteRouteImport } from './routes/(authenticated)/projects/$employeeId/route'
 import { Route as authenticatedProjectsEmployeeIdIndexRouteImport } from './routes/(authenticated)/projects/$employeeId/index'
+import { Route as authenticatedReportsReconciliationProjectNumberIndexRouteImport } from './routes/(authenticated)/reports/reconciliation/$projectNumber/index'
 import { Route as authenticatedProjectsEmployeeIdProjectNumberIndexRouteImport } from './routes/(authenticated)/projects/$employeeId/$projectNumber/index'
+import { Route as authenticatedReportsReconciliationProjectNumberDetailRouteImport } from './routes/(authenticated)/reports/reconciliation/$projectNumber/detail'
 import { Route as authenticatedProjectsEmployeeIdProjectNumberTransactionsRouteImport } from './routes/(authenticated)/projects/$employeeId/$projectNumber/transactions'
-import { Route as authenticatedProjectsEmployeeIdProjectNumberReconciliationIndexRouteImport } from './routes/(authenticated)/projects/$employeeId/$projectNumber/reconciliation.index'
-import { Route as authenticatedProjectsEmployeeIdProjectNumberReconciliationDetailRouteImport } from './routes/(authenticated)/projects/$employeeId/$projectNumber/reconciliation.detail'
 
 const AboutRoute = AboutRouteImport.update({
   id: '/about',
@@ -71,6 +72,12 @@ const authenticatedProjectsRouteRoute =
     path: '/projects',
     getParentRoute: () => authenticatedRouteRoute,
   } as any)
+const authenticatedReportsIndexRoute =
+  authenticatedReportsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => authenticatedReportsRoute,
+  } as any)
 const authenticatedAccrualsIndexRoute =
   authenticatedAccrualsIndexRouteImport.update({
     id: '/accruals/',
@@ -89,11 +96,23 @@ const authenticatedProjectsEmployeeIdIndexRoute =
     path: '/',
     getParentRoute: () => authenticatedProjectsEmployeeIdRouteRoute,
   } as any)
+const authenticatedReportsReconciliationProjectNumberIndexRoute =
+  authenticatedReportsReconciliationProjectNumberIndexRouteImport.update({
+    id: '/reconciliation/$projectNumber/',
+    path: '/reconciliation/$projectNumber/',
+    getParentRoute: () => authenticatedReportsRoute,
+  } as any)
 const authenticatedProjectsEmployeeIdProjectNumberIndexRoute =
   authenticatedProjectsEmployeeIdProjectNumberIndexRouteImport.update({
     id: '/$projectNumber/',
     path: '/$projectNumber/',
     getParentRoute: () => authenticatedProjectsEmployeeIdRouteRoute,
+  } as any)
+const authenticatedReportsReconciliationProjectNumberDetailRoute =
+  authenticatedReportsReconciliationProjectNumberDetailRouteImport.update({
+    id: '/reconciliation/$projectNumber/detail',
+    path: '/reconciliation/$projectNumber/detail',
+    getParentRoute: () => authenticatedReportsRoute,
   } as any)
 const authenticatedProjectsEmployeeIdProjectNumberTransactionsRoute =
   authenticatedProjectsEmployeeIdProjectNumberTransactionsRouteImport.update({
@@ -101,22 +120,6 @@ const authenticatedProjectsEmployeeIdProjectNumberTransactionsRoute =
     path: '/$projectNumber/transactions',
     getParentRoute: () => authenticatedProjectsEmployeeIdRouteRoute,
   } as any)
-const authenticatedProjectsEmployeeIdProjectNumberReconciliationIndexRoute =
-  authenticatedProjectsEmployeeIdProjectNumberReconciliationIndexRouteImport.update(
-    {
-      id: '/$projectNumber/reconciliation/',
-      path: '/$projectNumber/reconciliation/',
-      getParentRoute: () => authenticatedProjectsEmployeeIdRouteRoute,
-    } as any,
-  )
-const authenticatedProjectsEmployeeIdProjectNumberReconciliationDetailRoute =
-  authenticatedProjectsEmployeeIdProjectNumberReconciliationDetailRouteImport.update(
-    {
-      id: '/$projectNumber/reconciliation/detail',
-      path: '/$projectNumber/reconciliation/detail',
-      getParentRoute: () => authenticatedProjectsEmployeeIdRouteRoute,
-    } as any,
-  )
 
 export interface FileRoutesByFullPath {
   '/about': typeof AboutRoute
@@ -124,16 +127,17 @@ export interface FileRoutesByFullPath {
   '/form': typeof authenticatedFormRoute
   '/me': typeof authenticatedMeRoute
   '/personnel': typeof authenticatedPersonnelRoute
-  '/reports': typeof authenticatedReportsRoute
+  '/reports': typeof authenticatedReportsRouteWithChildren
   '/styles': typeof authenticatedStylesRoute
   '/': typeof authenticatedIndexRoute
   '/projects/$employeeId': typeof authenticatedProjectsEmployeeIdRouteRouteWithChildren
   '/accruals': typeof authenticatedAccrualsIndexRoute
+  '/reports/': typeof authenticatedReportsIndexRoute
   '/projects/$employeeId/': typeof authenticatedProjectsEmployeeIdIndexRoute
   '/projects/$employeeId/$projectNumber/transactions': typeof authenticatedProjectsEmployeeIdProjectNumberTransactionsRoute
+  '/reports/reconciliation/$projectNumber/detail': typeof authenticatedReportsReconciliationProjectNumberDetailRoute
   '/projects/$employeeId/$projectNumber': typeof authenticatedProjectsEmployeeIdProjectNumberIndexRoute
-  '/projects/$employeeId/$projectNumber/reconciliation/detail': typeof authenticatedProjectsEmployeeIdProjectNumberReconciliationDetailRoute
-  '/projects/$employeeId/$projectNumber/reconciliation': typeof authenticatedProjectsEmployeeIdProjectNumberReconciliationIndexRoute
+  '/reports/reconciliation/$projectNumber': typeof authenticatedReportsReconciliationProjectNumberIndexRoute
 }
 export interface FileRoutesByTo {
   '/about': typeof AboutRoute
@@ -141,15 +145,15 @@ export interface FileRoutesByTo {
   '/form': typeof authenticatedFormRoute
   '/me': typeof authenticatedMeRoute
   '/personnel': typeof authenticatedPersonnelRoute
-  '/reports': typeof authenticatedReportsRoute
   '/styles': typeof authenticatedStylesRoute
   '/': typeof authenticatedIndexRoute
   '/accruals': typeof authenticatedAccrualsIndexRoute
+  '/reports': typeof authenticatedReportsIndexRoute
   '/projects/$employeeId': typeof authenticatedProjectsEmployeeIdIndexRoute
   '/projects/$employeeId/$projectNumber/transactions': typeof authenticatedProjectsEmployeeIdProjectNumberTransactionsRoute
+  '/reports/reconciliation/$projectNumber/detail': typeof authenticatedReportsReconciliationProjectNumberDetailRoute
   '/projects/$employeeId/$projectNumber': typeof authenticatedProjectsEmployeeIdProjectNumberIndexRoute
-  '/projects/$employeeId/$projectNumber/reconciliation/detail': typeof authenticatedProjectsEmployeeIdProjectNumberReconciliationDetailRoute
-  '/projects/$employeeId/$projectNumber/reconciliation': typeof authenticatedProjectsEmployeeIdProjectNumberReconciliationIndexRoute
+  '/reports/reconciliation/$projectNumber': typeof authenticatedReportsReconciliationProjectNumberIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -159,16 +163,17 @@ export interface FileRoutesById {
   '/(authenticated)/form': typeof authenticatedFormRoute
   '/(authenticated)/me': typeof authenticatedMeRoute
   '/(authenticated)/personnel': typeof authenticatedPersonnelRoute
-  '/(authenticated)/reports': typeof authenticatedReportsRoute
+  '/(authenticated)/reports': typeof authenticatedReportsRouteWithChildren
   '/(authenticated)/styles': typeof authenticatedStylesRoute
   '/(authenticated)/': typeof authenticatedIndexRoute
   '/(authenticated)/projects/$employeeId': typeof authenticatedProjectsEmployeeIdRouteRouteWithChildren
   '/(authenticated)/accruals/': typeof authenticatedAccrualsIndexRoute
+  '/(authenticated)/reports/': typeof authenticatedReportsIndexRoute
   '/(authenticated)/projects/$employeeId/': typeof authenticatedProjectsEmployeeIdIndexRoute
   '/(authenticated)/projects/$employeeId/$projectNumber/transactions': typeof authenticatedProjectsEmployeeIdProjectNumberTransactionsRoute
+  '/(authenticated)/reports/reconciliation/$projectNumber/detail': typeof authenticatedReportsReconciliationProjectNumberDetailRoute
   '/(authenticated)/projects/$employeeId/$projectNumber/': typeof authenticatedProjectsEmployeeIdProjectNumberIndexRoute
-  '/(authenticated)/projects/$employeeId/$projectNumber/reconciliation/detail': typeof authenticatedProjectsEmployeeIdProjectNumberReconciliationDetailRoute
-  '/(authenticated)/projects/$employeeId/$projectNumber/reconciliation/': typeof authenticatedProjectsEmployeeIdProjectNumberReconciliationIndexRoute
+  '/(authenticated)/reports/reconciliation/$projectNumber/': typeof authenticatedReportsReconciliationProjectNumberIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -183,11 +188,12 @@ export interface FileRouteTypes {
     | '/'
     | '/projects/$employeeId'
     | '/accruals'
+    | '/reports/'
     | '/projects/$employeeId/'
     | '/projects/$employeeId/$projectNumber/transactions'
+    | '/reports/reconciliation/$projectNumber/detail'
     | '/projects/$employeeId/$projectNumber'
-    | '/projects/$employeeId/$projectNumber/reconciliation/detail'
-    | '/projects/$employeeId/$projectNumber/reconciliation'
+    | '/reports/reconciliation/$projectNumber'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/about'
@@ -195,15 +201,15 @@ export interface FileRouteTypes {
     | '/form'
     | '/me'
     | '/personnel'
-    | '/reports'
     | '/styles'
     | '/'
     | '/accruals'
+    | '/reports'
     | '/projects/$employeeId'
     | '/projects/$employeeId/$projectNumber/transactions'
+    | '/reports/reconciliation/$projectNumber/detail'
     | '/projects/$employeeId/$projectNumber'
-    | '/projects/$employeeId/$projectNumber/reconciliation/detail'
-    | '/projects/$employeeId/$projectNumber/reconciliation'
+    | '/reports/reconciliation/$projectNumber'
   id:
     | '__root__'
     | '/(authenticated)'
@@ -217,11 +223,12 @@ export interface FileRouteTypes {
     | '/(authenticated)/'
     | '/(authenticated)/projects/$employeeId'
     | '/(authenticated)/accruals/'
+    | '/(authenticated)/reports/'
     | '/(authenticated)/projects/$employeeId/'
     | '/(authenticated)/projects/$employeeId/$projectNumber/transactions'
+    | '/(authenticated)/reports/reconciliation/$projectNumber/detail'
     | '/(authenticated)/projects/$employeeId/$projectNumber/'
-    | '/(authenticated)/projects/$employeeId/$projectNumber/reconciliation/detail'
-    | '/(authenticated)/projects/$employeeId/$projectNumber/reconciliation/'
+    | '/(authenticated)/reports/reconciliation/$projectNumber/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -294,6 +301,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authenticatedProjectsRouteRouteImport
       parentRoute: typeof authenticatedRouteRoute
     }
+    '/(authenticated)/reports/': {
+      id: '/(authenticated)/reports/'
+      path: '/'
+      fullPath: '/reports/'
+      preLoaderRoute: typeof authenticatedReportsIndexRouteImport
+      parentRoute: typeof authenticatedReportsRoute
+    }
     '/(authenticated)/accruals/': {
       id: '/(authenticated)/accruals/'
       path: '/accruals'
@@ -315,6 +329,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authenticatedProjectsEmployeeIdIndexRouteImport
       parentRoute: typeof authenticatedProjectsEmployeeIdRouteRoute
     }
+    '/(authenticated)/reports/reconciliation/$projectNumber/': {
+      id: '/(authenticated)/reports/reconciliation/$projectNumber/'
+      path: '/reconciliation/$projectNumber'
+      fullPath: '/reports/reconciliation/$projectNumber'
+      preLoaderRoute: typeof authenticatedReportsReconciliationProjectNumberIndexRouteImport
+      parentRoute: typeof authenticatedReportsRoute
+    }
     '/(authenticated)/projects/$employeeId/$projectNumber/': {
       id: '/(authenticated)/projects/$employeeId/$projectNumber/'
       path: '/$projectNumber'
@@ -322,25 +343,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authenticatedProjectsEmployeeIdProjectNumberIndexRouteImport
       parentRoute: typeof authenticatedProjectsEmployeeIdRouteRoute
     }
+    '/(authenticated)/reports/reconciliation/$projectNumber/detail': {
+      id: '/(authenticated)/reports/reconciliation/$projectNumber/detail'
+      path: '/reconciliation/$projectNumber/detail'
+      fullPath: '/reports/reconciliation/$projectNumber/detail'
+      preLoaderRoute: typeof authenticatedReportsReconciliationProjectNumberDetailRouteImport
+      parentRoute: typeof authenticatedReportsRoute
+    }
     '/(authenticated)/projects/$employeeId/$projectNumber/transactions': {
       id: '/(authenticated)/projects/$employeeId/$projectNumber/transactions'
       path: '/$projectNumber/transactions'
       fullPath: '/projects/$employeeId/$projectNumber/transactions'
       preLoaderRoute: typeof authenticatedProjectsEmployeeIdProjectNumberTransactionsRouteImport
-      parentRoute: typeof authenticatedProjectsEmployeeIdRouteRoute
-    }
-    '/(authenticated)/projects/$employeeId/$projectNumber/reconciliation/': {
-      id: '/(authenticated)/projects/$employeeId/$projectNumber/reconciliation/'
-      path: '/$projectNumber/reconciliation'
-      fullPath: '/projects/$employeeId/$projectNumber/reconciliation'
-      preLoaderRoute: typeof authenticatedProjectsEmployeeIdProjectNumberReconciliationIndexRouteImport
-      parentRoute: typeof authenticatedProjectsEmployeeIdRouteRoute
-    }
-    '/(authenticated)/projects/$employeeId/$projectNumber/reconciliation/detail': {
-      id: '/(authenticated)/projects/$employeeId/$projectNumber/reconciliation/detail'
-      path: '/$projectNumber/reconciliation/detail'
-      fullPath: '/projects/$employeeId/$projectNumber/reconciliation/detail'
-      preLoaderRoute: typeof authenticatedProjectsEmployeeIdProjectNumberReconciliationDetailRouteImport
       parentRoute: typeof authenticatedProjectsEmployeeIdRouteRoute
     }
   }
@@ -350,8 +364,6 @@ interface authenticatedProjectsEmployeeIdRouteRouteChildren {
   authenticatedProjectsEmployeeIdIndexRoute: typeof authenticatedProjectsEmployeeIdIndexRoute
   authenticatedProjectsEmployeeIdProjectNumberTransactionsRoute: typeof authenticatedProjectsEmployeeIdProjectNumberTransactionsRoute
   authenticatedProjectsEmployeeIdProjectNumberIndexRoute: typeof authenticatedProjectsEmployeeIdProjectNumberIndexRoute
-  authenticatedProjectsEmployeeIdProjectNumberReconciliationDetailRoute: typeof authenticatedProjectsEmployeeIdProjectNumberReconciliationDetailRoute
-  authenticatedProjectsEmployeeIdProjectNumberReconciliationIndexRoute: typeof authenticatedProjectsEmployeeIdProjectNumberReconciliationIndexRoute
 }
 
 const authenticatedProjectsEmployeeIdRouteRouteChildren: authenticatedProjectsEmployeeIdRouteRouteChildren =
@@ -362,10 +374,6 @@ const authenticatedProjectsEmployeeIdRouteRouteChildren: authenticatedProjectsEm
       authenticatedProjectsEmployeeIdProjectNumberTransactionsRoute,
     authenticatedProjectsEmployeeIdProjectNumberIndexRoute:
       authenticatedProjectsEmployeeIdProjectNumberIndexRoute,
-    authenticatedProjectsEmployeeIdProjectNumberReconciliationDetailRoute:
-      authenticatedProjectsEmployeeIdProjectNumberReconciliationDetailRoute,
-    authenticatedProjectsEmployeeIdProjectNumberReconciliationIndexRoute:
-      authenticatedProjectsEmployeeIdProjectNumberReconciliationIndexRoute,
   }
 
 const authenticatedProjectsEmployeeIdRouteRouteWithChildren =
@@ -388,12 +396,29 @@ const authenticatedProjectsRouteRouteWithChildren =
     authenticatedProjectsRouteRouteChildren,
   )
 
+interface authenticatedReportsRouteChildren {
+  authenticatedReportsIndexRoute: typeof authenticatedReportsIndexRoute
+  authenticatedReportsReconciliationProjectNumberDetailRoute: typeof authenticatedReportsReconciliationProjectNumberDetailRoute
+  authenticatedReportsReconciliationProjectNumberIndexRoute: typeof authenticatedReportsReconciliationProjectNumberIndexRoute
+}
+
+const authenticatedReportsRouteChildren: authenticatedReportsRouteChildren = {
+  authenticatedReportsIndexRoute: authenticatedReportsIndexRoute,
+  authenticatedReportsReconciliationProjectNumberDetailRoute:
+    authenticatedReportsReconciliationProjectNumberDetailRoute,
+  authenticatedReportsReconciliationProjectNumberIndexRoute:
+    authenticatedReportsReconciliationProjectNumberIndexRoute,
+}
+
+const authenticatedReportsRouteWithChildren =
+  authenticatedReportsRoute._addFileChildren(authenticatedReportsRouteChildren)
+
 interface authenticatedRouteRouteChildren {
   authenticatedProjectsRouteRoute: typeof authenticatedProjectsRouteRouteWithChildren
   authenticatedFormRoute: typeof authenticatedFormRoute
   authenticatedMeRoute: typeof authenticatedMeRoute
   authenticatedPersonnelRoute: typeof authenticatedPersonnelRoute
-  authenticatedReportsRoute: typeof authenticatedReportsRoute
+  authenticatedReportsRoute: typeof authenticatedReportsRouteWithChildren
   authenticatedStylesRoute: typeof authenticatedStylesRoute
   authenticatedIndexRoute: typeof authenticatedIndexRoute
   authenticatedAccrualsIndexRoute: typeof authenticatedAccrualsIndexRoute
@@ -404,7 +429,7 @@ const authenticatedRouteRouteChildren: authenticatedRouteRouteChildren = {
   authenticatedFormRoute: authenticatedFormRoute,
   authenticatedMeRoute: authenticatedMeRoute,
   authenticatedPersonnelRoute: authenticatedPersonnelRoute,
-  authenticatedReportsRoute: authenticatedReportsRoute,
+  authenticatedReportsRoute: authenticatedReportsRouteWithChildren,
   authenticatedStylesRoute: authenticatedStylesRoute,
   authenticatedIndexRoute: authenticatedIndexRoute,
   authenticatedAccrualsIndexRoute: authenticatedAccrualsIndexRoute,

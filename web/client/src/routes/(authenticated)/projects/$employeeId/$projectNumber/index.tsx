@@ -13,9 +13,7 @@ import {
 } from '@/queries/project.ts';
 
 import { useSuspenseQuery } from '@tanstack/react-query';
-import { Link, createFileRoute } from '@tanstack/react-router';
-
-import { ArrowLeftIcon } from '@heroicons/react/24/outline';
+import { createFileRoute } from '@tanstack/react-router';
 
 export const Route = createFileRoute(
   '/(authenticated)/projects/$employeeId/$projectNumber/'
@@ -32,10 +30,6 @@ const ProjectNotFound = ({ projectNumber }: { projectNumber: string }) => (
         <span className="font-mono">{projectNumber}</span>.<br /> It may have
         been archived or you might not have access.
       </p>
-      <Link className="btn btn-primary" to="/projects">
-        <ArrowLeftIcon className="w-4 h-4 me-2" />
-        Back to Projects
-      </Link>
     </section>
   </main>
 );
@@ -56,7 +50,7 @@ function ProjectContent({
     <main className="flex-1">
       <section className="mt-8 mb-2">
         <h1 className="h1">{summary.displayName}</h1>
-        <h3 className="subtitle"> {summary.projectNumber}</h3>
+        <h3 className="subtitle">Faculty Department Portfolio Report</h3>
         <div className="mt-6">
           <ProjectAlerts
             employeeId={employeeId}

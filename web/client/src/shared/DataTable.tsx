@@ -119,12 +119,6 @@ export const DataTable = <TData extends object>({
     enabled: expandable,
   });
 
-  const filterJustifyClass =
-    globalFilter === 'left'
-      ? 'justify-start'
-      : globalFilter === 'right'
-        ? 'justify-end'
-        : '';
   const expandableRows = rowExpansionEnabled
     ? table.getPrePaginationRowModel().rows.filter((row) => row.getCanExpand())
     : [];
@@ -177,49 +171,47 @@ export const DataTable = <TData extends object>({
         {shouldShowToolbar ? (
           <div className="grid grid-cols-[1fr_auto] items-center gap-2">
             {globalFilter !== 'none' ? (
-              <div className={`flex w-full ${filterJustifyClass}`}>
-                <label className="input input-bordered flex items-center gap-2 w-full max-w-sm">
-                  <svg
-                    className="h-[1em] opacity-50"
-                    viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
+              <label className="input input-bordered flex items-center gap-2 max-w-sm">
+                <svg
+                  className="h-[1em] opacity-50"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <g
+                    fill="none"
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2.5"
                   >
-                    <g
-                      fill="none"
-                      stroke="currentColor"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2.5"
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <path d="m21 21-4.3-4.3"></path>
+                  </g>
+                </svg>
+                <input
+                  className="grow"
+                  onChange={(e) => table.setGlobalFilter(e.target.value)}
+                  placeholder="Search all columns..."
+                  type="text"
+                  value={filterValue}
+                />
+                {hasFilterValue ? (
+                  <button
+                    className="btn btn-ghost btn-sm btn-circle"
+                    onClick={() => table.setGlobalFilter('')}
+                    type="button"
+                  >
+                    <svg
+                      className="h-4 w-4"
+                      fill="currentColor"
+                      viewBox="0 0 16 16"
+                      xmlns="http://www.w3.org/2000/svg"
                     >
-                      <circle cx="11" cy="11" r="8"></circle>
-                      <path d="m21 21-4.3-4.3"></path>
-                    </g>
-                  </svg>
-                  <input
-                    className="grow"
-                    onChange={(e) => table.setGlobalFilter(e.target.value)}
-                    placeholder="Search all columns..."
-                    type="text"
-                    value={filterValue}
-                  />
-                  {hasFilterValue ? (
-                    <button
-                      className="btn btn-ghost btn-sm btn-circle"
-                      onClick={() => table.setGlobalFilter('')}
-                      type="button"
-                    >
-                      <svg
-                        className="h-4 w-4"
-                        fill="currentColor"
-                        viewBox="0 0 16 16"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z" />
-                      </svg>
-                    </button>
-                  ) : null}
-                </label>
-              </div>
+                      <path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z" />
+                    </svg>
+                  </button>
+                ) : null}
+              </label>
             ) : (
               <div />
             )}
@@ -331,7 +323,12 @@ export const DataTable = <TData extends object>({
 
                 return (
                   <Fragment key={row.id}>
-                    <tr {...rowProps}>
+                    <tr
+                      {...rowProps}
+                      className={['', rowProps?.className]
+                        .filter(Boolean)
+                        .join(' ')}
+                    >
                       {row.getVisibleCells().map((cell) => (
                         <td
                           className="align-top"
