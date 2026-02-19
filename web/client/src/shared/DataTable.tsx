@@ -325,7 +325,12 @@ export const DataTable = <TData extends object>({
 
                 return (
                   <Fragment key={row.id}>
-                    <tr {...rowProps}>
+                    <tr
+                      {...rowProps}
+                      className={['', rowProps?.className]
+                        .filter(Boolean)
+                        .join(' ')}
+                    >
                       {row.getVisibleCells().map((cell) => (
                         <td
                           className="align-top"

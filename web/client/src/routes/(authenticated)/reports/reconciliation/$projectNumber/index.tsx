@@ -69,6 +69,7 @@ function RouteComponent() {
           </div>
         ),
         header: 'Project',
+        size: 180,
       }),
       columnHelper.accessor('fundCode', {
         cell: (info) => (
@@ -82,6 +83,7 @@ function RouteComponent() {
           </div>
         ),
         header: 'Fund',
+        size: 180,
       }),
       columnHelper.accessor('ppmFundCode', {
         cell: (info) => <span>{info.getValue()}</span>,
@@ -169,6 +171,7 @@ function RouteComponent() {
         enableSorting: false,
         header: '',
         id: 'actions',
+        size: 60,
       }),
     ],
     [projectNumber]
@@ -203,6 +206,19 @@ function RouteComponent() {
             columns={columns}
             data={sorted}
             expandable={false}
+            getRowProps={(row) => {
+              const r = row.original;
+              const diff = r.glActualAmount + r.ppmItdExp;
+              const isDisc = hasDiscrepancy(r);
+
+              if (!isDisc) {
+                return {};
+              }
+
+              return {
+                className: diff < 0 ? 'bg-error/10' : 'bg-warning/10',
+              };
+            }}
             globalFilter="none"
             pagination="off"
           />
