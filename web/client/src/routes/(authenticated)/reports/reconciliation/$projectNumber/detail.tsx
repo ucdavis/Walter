@@ -398,7 +398,7 @@ function RouteComponent() {
     .join(' / ');
 
   return (
-    <main className="flex-1">
+    <main className="container">
       <section className="mt-8 mb-10">
         <Link
           className="btn btn-sm mb-4"

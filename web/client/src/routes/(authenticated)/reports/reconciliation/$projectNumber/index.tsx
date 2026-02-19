@@ -175,7 +175,7 @@ function RouteComponent() {
   );
 
   return (
-    <main className="flex-1">
+    <main className="container">
       <section className="mt-8 mb-10">
         <h1 className="h1">GL/PPM Reconciliation</h1>
         <h3 className="subtitle">{projectNumber}</h3>
