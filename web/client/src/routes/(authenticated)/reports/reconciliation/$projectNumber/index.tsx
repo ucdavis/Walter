@@ -4,15 +4,13 @@ import { useQuery } from '@tanstack/react-query';
 import { createColumnHelper } from '@tanstack/react-table';
 import {
   glPpmReconciliationQueryOptions,
-  projectsDetailQueryOptions,
   type GLPPMReconciliationRecord,
 } from '@/queries/project.ts';
-import { summarizeProjectByNumber } from '@/lib/projectSummary.ts';
 import { formatCurrency } from '@/lib/currency.ts';
 import { DataTable } from '@/shared/DataTable.tsx';
 
 export const Route = createFileRoute(
-  '/(authenticated)/projects/$employeeId/$projectNumber/reconciliation/'
+  '/(authenticated)/reports/reconciliation/$projectNumber/'
 )({
   component: RouteComponent,
 });
@@ -24,12 +22,7 @@ function hasDiscrepancy(r: GLPPMReconciliationRecord): boolean {
 const columnHelper = createColumnHelper<GLPPMReconciliationRecord>();
 
 function RouteComponent() {
-  const { employeeId, projectNumber } = Route.useParams();
-
-  const { data: projects } = useQuery(projectsDetailQueryOptions(employeeId));
-  const summary = projects
-    ? summarizeProjectByNumber(projects, projectNumber)
-    : null;
+  const { projectNumber } = Route.useParams();
 
   const {
     data: records,
@@ -160,14 +153,14 @@ function RouteComponent() {
           return (
             <Link
               className="btn btn-xs ms-2 -mt-1"
-              params={{ employeeId, projectNumber }}
+              params={{ projectNumber }}
               search={{
                 activity: row.activityCode ?? '',
                 dept: row.financialDepartment ?? '',
                 fund: row.fundCode ?? '',
                 program: row.programCode ?? '',
               }}
-              to="/projects/$employeeId/$projectNumber/reconciliation/detail"
+              to="/reports/reconciliation/$projectNumber/detail"
             >
               Details
             </Link>
@@ -178,35 +171,12 @@ function RouteComponent() {
         id: 'actions',
       }),
     ],
-    [employeeId, projectNumber]
+    [projectNumber]
   );
 
   return (
     <main className="flex-1">
       <section className="mt-8 mb-10">
-        <nav className="text-sm breadcrumbs mb-4">
-          <ul>
-            <li>
-              <Link to="/projects">Projects</Link>
-            </li>
-            <li>
-              <Link
-                params={{ employeeId, projectNumber }}
-                to="/projects/$employeeId/$projectNumber/"
-              >
-                {summary?.displayName ?? projectNumber}
-              </Link>
-            </li>
-            <li>GL/PPM Reconciliation</li>
-          </ul>
-        </nav>
-        <Link
-          className="mb-4 btn btn-sm"
-          params={{ employeeId, projectNumber }}
-          to="/projects/$employeeId/$projectNumber/"
-        >
-          Back to Project
-        </Link>
         <h1 className="h1">GL/PPM Reconciliation</h1>
         <h3 className="subtitle">{projectNumber}</h3>
 

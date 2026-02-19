@@ -6,7 +6,7 @@ import { ExportDataButton } from '@/components/ExportDataButton.tsx';
 import {
   glPpmReconciliationQueryOptions,
   glTransactionsQueryOptions,
-  projectsDetailQueryOptions,
+  projectsByNumberQueryOptions,
   type GLPPMReconciliationRecord,
   type GLTransactionRecord,
 } from '@/queries/project.ts';
@@ -24,7 +24,7 @@ interface SearchParams {
 }
 
 export const Route = createFileRoute(
-  '/(authenticated)/projects/$employeeId/$projectNumber/reconciliation/detail'
+  '/(authenticated)/reports/reconciliation/$projectNumber/detail'
 )({
   component: RouteComponent,
   validateSearch: (search: Record<string, unknown>): SearchParams => ({
@@ -278,10 +278,12 @@ function buildChartString(t: GLTransactionRecord): string {
 }
 
 function RouteComponent() {
-  const { employeeId, projectNumber } = Route.useParams();
+  const { projectNumber } = Route.useParams();
   const search = Route.useSearch();
 
-  const { data: projects } = useQuery(projectsDetailQueryOptions(employeeId));
+  const { data: projects } = useQuery(
+    projectsByNumberQueryOptions([projectNumber])
+  );
   const summary = projects
     ? summarizeProjectByNumber(projects, projectNumber)
     : null;
@@ -398,34 +400,10 @@ function RouteComponent() {
   return (
     <main className="flex-1">
       <section className="mt-8 mb-10">
-        <nav className="text-sm breadcrumbs mb-4">
-          <ul>
-            <li>
-              <Link to="/projects">Projects</Link>
-            </li>
-            <li>
-              <Link
-                params={{ employeeId, projectNumber }}
-                to="/projects/$employeeId/$projectNumber/"
-              >
-                {summary?.displayName ?? projectNumber}
-              </Link>
-            </li>
-            <li>
-              <Link
-                params={{ employeeId, projectNumber }}
-                to="/projects/$employeeId/$projectNumber/reconciliation"
-              >
-                Reconciliation
-              </Link>
-            </li>
-            <li>Detail</li>
-          </ul>
-        </nav>
         <Link
           className="btn btn-sm mb-4"
-          params={{ employeeId, projectNumber }}
-          to="/projects/$employeeId/$projectNumber/reconciliation"
+          params={{ projectNumber }}
+          to="/reports/reconciliation/$projectNumber/"
         >
           Back to Reconciliation
         </Link>

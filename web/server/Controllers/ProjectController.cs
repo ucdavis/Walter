@@ -96,6 +96,21 @@ public sealed class ProjectController : ApiControllerBase
         return Content(json, "application/json");
     }
 
+    [HttpGet("byNumber")]
+    public async Task<IActionResult> GetByProjectNumberAsync(
+        CancellationToken cancellationToken,
+        [FromQuery] string? projectCodes = null)
+    {
+        if (string.IsNullOrWhiteSpace(projectCodes))
+            return Ok(Array.Empty<FacultyPortfolioRecord>());
+
+        var codes = projectCodes.Split(',', StringSplitOptions.RemoveEmptyEntries);
+        var applicationUser = User.GetUserIdentifier();
+        var projects = await _datamartService.GetFacultyPortfolioAsync(codes, applicationUser, cancellationToken);
+
+        return Ok(projects.Where(p => p.ProjectStatus == "ACTIVE").ToList());
+    }
+
     [HttpGet("personnel")]
     public async Task<IActionResult> GetPersonnelForProjects(
         CancellationToken cancellationToken,

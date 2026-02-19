@@ -141,6 +141,18 @@ export const useManagedPisQuery = (employeeId: string) => {
   };
 };
 
+export const projectsByNumberQueryOptions = (projectCodes: string[]) => ({
+  enabled: projectCodes.length > 0,
+  queryFn: async () => {
+    const codes = projectCodes.join(',');
+    return await fetchJson<ProjectRecord[]>(
+      `/api/project/byNumber?projectCodes=${encodeURIComponent(codes)}`
+    );
+  },
+  queryKey: ['projects-by-number', ...projectCodes] as const,
+  staleTime: 60 * 60 * 1000, // 1 hour
+});
+
 export const glTransactionsQueryOptions = (projectCodes: string[]) => ({
   enabled: projectCodes.length > 0,
   queryFn: async () => {
