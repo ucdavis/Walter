@@ -8,6 +8,7 @@ import {
   PaperClipIcon,
   UserIcon,
 } from '@heroicons/react/24/outline';
+import { ExportDataButton } from '@/components/ExportDataButton.tsx';
 import type { ProjectCategorySummary } from '@/lib/projectSummary.ts';
 import { Currency } from '@/shared/Currency.tsx';
 import { DataTable } from '@/shared/DataTable.tsx';
@@ -131,6 +132,14 @@ const columns = [
   }),
 ];
 
+const csvColumns = [
+  { header: 'Category', key: 'name' as const },
+  { header: 'Budget', key: 'budget' as const },
+  { header: 'Expenses', key: 'expense' as const },
+  { header: 'Encumbrance', key: 'encumbrance' as const },
+  { header: 'Balance', key: 'balance' as const },
+];
+
 interface FinancialCategoriesTableProps {
   categories: ProjectCategorySummary[];
 }
@@ -145,6 +154,13 @@ export function FinancialCategoriesTable({
       footerRowClassName="totaltr"
       globalFilter="none"
       pagination="off"
+      tableActions={
+        <ExportDataButton
+          columns={csvColumns}
+          data={categories}
+          filename="financial-details.csv"
+        />
+      }
     />
   );
 }
