@@ -6,7 +6,7 @@ import { ExportDataButton } from '@/components/ExportDataButton.tsx';
 import {
   glPpmReconciliationQueryOptions,
   glTransactionsQueryOptions,
-  projectsDetailQueryOptions,
+  projectsByNumberQueryOptions,
   type GLPPMReconciliationRecord,
   type GLTransactionRecord,
 } from '@/queries/project.ts';
@@ -17,28 +17,31 @@ import { Currency } from '@/shared/Currency.tsx';
 import { DataTable } from '@/shared/DataTable.tsx';
 
 interface SearchParams {
+  activity: string;
   dept: string;
   fund: string;
   program: string;
-  activity: string;
 }
 
 export const Route = createFileRoute(
-  '/(authenticated)/projects/$employeeId/$projectNumber/reconciliation/detail'
+  '/(authenticated)/reports/reconciliation/$projectNumber/detail'
 )({
   component: RouteComponent,
   validateSearch: (search: Record<string, unknown>): SearchParams => ({
+    activity: (search.activity as string) ?? '',
     dept: (search.dept as string) ?? '',
     fund: (search.fund as string) ?? '',
     program: (search.program as string) ?? '',
-    activity: (search.activity as string) ?? '',
   }),
 });
 
 const strip = (v: string | null | undefined): string =>
-  (v ?? '').replace(/^"|"$/g, '');
+  (v ?? '').replaceAll(/^"|"$/g, '');
 
-function matchesPPM(r: GLPPMReconciliationRecord, search: SearchParams): boolean {
+function matchesPPM(
+  r: GLPPMReconciliationRecord,
+  search: SearchParams
+): boolean {
   return (
     (r.financialDepartment ?? '') === search.dept &&
     (r.fundCode ?? '') === search.fund &&
@@ -57,24 +60,24 @@ function matchesGL(t: GLTransactionRecord, search: SearchParams): boolean {
 }
 
 interface SummaryRow {
-  source: string;
   actuals: number;
+  source: string;
 }
 
 interface PpmTaskRow {
-  taskNum: string;
-  taskName: string | null;
-  projectNumber: string;
-  projectOwningOrg: string | null;
+  activityCode: string | null;
+  activityDesc: string;
+  balance: number;
+  budget: number;
+  expenses: number;
   fundCode: string | null;
   fundDesc: string;
   programCode: string | null;
   programDesc: string;
-  activityCode: string | null;
-  activityDesc: string;
-  budget: number;
-  expenses: number;
-  balance: number;
+  projectNumber: string;
+  projectOwningOrg: string | null;
+  taskName: string | null;
+  taskNum: string;
 }
 
 const summaryColumnHelper = createColumnHelper<SummaryRow>();
@@ -82,12 +85,12 @@ const summaryColumnHelper = createColumnHelper<SummaryRow>();
 const summaryColumns = [
   summaryColumnHelper.accessor('source', {
     cell: (info) => <span className="font-medium">{info.getValue()}</span>,
-    header: 'Source',
     footer: () => <span className="font-medium">Difference</span>,
+    header: 'Source',
   }),
   summaryColumnHelper.accessor('actuals', {
     cell: (info) => (
-      <span className="flex justify-end font-mono">
+      <span className="flex justify-end">
         {formatCurrency(info.getValue())}
       </span>
     ),
@@ -95,20 +98,15 @@ const summaryColumns = [
   }),
 ];
 
-
 const ppmTaskColumnHelper = createColumnHelper<PpmTaskRow>();
 
 const ppmTaskColumns = [
   ppmTaskColumnHelper.accessor('projectOwningOrg', {
-    cell: (info) => (
-      <span className="text-sm">{info.getValue() ?? '-'}</span>
-    ),
+    cell: (info) => <span className="text-sm">{info.getValue() ?? '-'}</span>,
     header: 'Dept',
   }),
   ppmTaskColumnHelper.accessor('projectNumber', {
-    cell: (info) => (
-      <span className="text-sm">{info.getValue()}</span>
-    ),
+    cell: (info) => <span className="text-sm">{info.getValue()}</span>,
     header: 'Project',
   }),
   ppmTaskColumnHelper.accessor('taskNum', {
@@ -116,7 +114,7 @@ const ppmTaskColumns = [
       <div className="text-sm">
         <div>{info.getValue()}</div>
         {info.row.original.taskName && (
-          <div className="text-xs text-base-content/60">
+          <div className="text-xs text-base-content/80">
             {info.row.original.taskName}
           </div>
         )}
@@ -129,7 +127,7 @@ const ppmTaskColumns = [
       <div className="text-sm">
         <div>{info.getValue() ?? '-'}</div>
         {info.row.original.fundDesc && (
-          <div className="text-xs text-base-content/60">
+          <div className="text-xs text-base-content/80">
             {info.row.original.fundDesc}
           </div>
         )}
@@ -142,7 +140,7 @@ const ppmTaskColumns = [
       <div className="text-sm">
         <div>{info.getValue() ?? '-'}</div>
         {info.row.original.programDesc && (
-          <div className="text-xs text-base-content/60">
+          <div className="text-xs text-base-content/80">
             {info.row.original.programDesc}
           </div>
         )}
@@ -155,7 +153,7 @@ const ppmTaskColumns = [
       <div className="text-sm">
         <div>{info.getValue() ?? '-'}</div>
         {info.row.original.activityDesc && (
-          <div className="text-xs text-base-content/60">
+          <div className="text-xs text-base-content/80">
             {info.row.original.activityDesc}
           </div>
         )}
@@ -203,30 +201,24 @@ const glColumns = [
     header: 'Date',
   }),
   glColumnHelper.display({
-    id: 'chartString',
     cell: (info) => (
       <span className="text-sm break-all">
         {buildChartString(info.row.original)}
       </span>
     ),
     header: 'Chart String',
+    id: 'chartString',
   }),
   glColumnHelper.accessor('journalName', {
-    cell: (info) => (
-      <span className="text-sm">{info.getValue() ?? '-'}</span>
-    ),
+    cell: (info) => <span className="text-sm">{info.getValue() ?? '-'}</span>,
     header: 'Journal',
   }),
   glColumnHelper.accessor('journalBatchName', {
-    cell: (info) => (
-      <span className="text-sm">{info.getValue() ?? '-'}</span>
-    ),
+    cell: (info) => <span className="text-sm">{info.getValue() ?? '-'}</span>,
     header: 'Batch',
   }),
   glColumnHelper.accessor('journalCategory', {
-    cell: (info) => (
-      <span className="text-sm">{info.getValue() ?? '-'}</span>
-    ),
+    cell: (info) => <span className="text-sm">{info.getValue() ?? '-'}</span>,
     header: 'Category',
   }),
   glColumnHelper.accessor('journalLineDescription', {
@@ -239,7 +231,7 @@ const glColumns = [
   }),
   glColumnHelper.accessor('actualAmount', {
     cell: (info) => (
-      <span className="flex justify-end font-mono text-sm">
+      <span className="flex justify-end text-sm">
         {formatCurrency(info.getValue())}
       </span>
     ),
@@ -286,24 +278,26 @@ function buildChartString(t: GLTransactionRecord): string {
 }
 
 function RouteComponent() {
-  const { employeeId, projectNumber } = Route.useParams();
+  const { projectNumber } = Route.useParams();
   const search = Route.useSearch();
 
-  const { data: projects } = useQuery(projectsDetailQueryOptions(employeeId));
+  const { data: projects } = useQuery(
+    projectsByNumberQueryOptions([projectNumber])
+  );
   const summary = projects
     ? summarizeProjectByNumber(projects, projectNumber)
     : null;
 
   const {
     data: reconciliation,
-    isPending: isReconciliationPending,
     isError: isReconciliationError,
+    isPending: isReconciliationPending,
   } = useQuery(glPpmReconciliationQueryOptions([projectNumber]));
 
   const {
     data: transactions,
-    isPending: isTransactionsPending,
     isError: isTransactionsError,
+    isPending: isTransactionsPending,
   } = useQuery(glTransactionsQueryOptions([projectNumber]));
 
   const isPending = isReconciliationPending || isTransactionsPending;
@@ -314,21 +308,28 @@ function RouteComponent() {
 
   // Build summary table data with footer for difference
   const summaryData = useMemo((): SummaryRow[] => {
-    if (!ppmRecord) return [];
+    if (!ppmRecord) {
+      return [];
+    }
     return [
-      { source: 'PPM', actuals: ppmRecord.ppmItdExp },
-      { source: 'GL', actuals: ppmRecord.glActualAmount },
+      { actuals: ppmRecord.ppmItdExp, source: 'PPM' },
+      { actuals: ppmRecord.glActualAmount, source: 'GL' },
     ];
   }, [ppmRecord]);
 
   const summaryColumnsWithFooter = useMemo(() => {
-    if (!ppmRecord) return summaryColumns;
+    if (!ppmRecord) {
+      return summaryColumns;
+    }
     return summaryColumns.map((col) => {
-      if (col.id === 'actuals' || (col as { accessorKey?: string }).accessorKey === 'actuals') {
+      if (
+        col.id === 'actuals' ||
+        (col as { accessorKey?: string }).accessorKey === 'actuals'
+      ) {
         return {
           ...col,
           footer: () => (
-            <span className="flex justify-end font-mono font-bold">
+            <span className="flex justify-end font-proxima-bold">
               {formatCurrency(ppmRecord.glActualAmount + ppmRecord.ppmItdExp)}
             </span>
           ),
@@ -352,19 +353,19 @@ function RouteComponent() {
         const key = p.taskNum ?? '';
         if (!acc[key]) {
           acc[key] = {
-            taskNum: p.taskNum ?? '',
-            taskName: p.taskName ?? null,
-            projectNumber: p.projectNumber,
-            projectOwningOrg: p.projectOwningOrg ?? null,
+            activityCode: p.activityCode ?? null,
+            activityDesc: p.activityDesc ?? '',
+            balance: 0,
+            budget: 0,
+            expenses: 0,
             fundCode: p.fundCode ?? null,
             fundDesc: p.fundDesc ?? '',
             programCode: p.programCode ?? null,
             programDesc: p.programDesc ?? '',
-            activityCode: p.activityCode ?? null,
-            activityDesc: p.activityDesc ?? '',
-            budget: 0,
-            expenses: 0,
-            balance: 0,
+            projectNumber: p.projectNumber,
+            projectOwningOrg: p.projectOwningOrg ?? null,
+            taskName: p.taskName ?? null,
+            taskNum: p.taskNum ?? '',
           };
         }
         acc[key].budget += p.catBudget;
@@ -377,10 +378,19 @@ function RouteComponent() {
   const glTransactions = (transactions ?? [])
     .filter((t) => matchesGL(t, search))
     .sort((a, b) => {
-      if (!a.journalAcctDate && !b.journalAcctDate) return 0;
-      if (!a.journalAcctDate) return 1;
-      if (!b.journalAcctDate) return -1;
-      return new Date(b.journalAcctDate).getTime() - new Date(a.journalAcctDate).getTime();
+      if (!a.journalAcctDate && !b.journalAcctDate) {
+        return 0;
+      }
+      if (!a.journalAcctDate) {
+        return 1;
+      }
+      if (!b.journalAcctDate) {
+        return -1;
+      }
+      return (
+        new Date(b.journalAcctDate).getTime() -
+        new Date(a.journalAcctDate).getTime()
+      );
     });
 
   const keyLabel = [search.dept, search.fund, search.program, search.activity]
@@ -388,34 +398,17 @@ function RouteComponent() {
     .join(' / ');
 
   return (
-    <main className="flex-1">
+    <main className="container">
       <section className="mt-8 mb-10">
-        <nav className="text-sm breadcrumbs mb-4">
-          <ul>
-            <li>
-              <Link to="/projects">Projects</Link>
-            </li>
-            <li>
-              <Link
-                params={{ employeeId, projectNumber }}
-                to="/projects/$employeeId/$projectNumber/"
-              >
-                {summary?.displayName ?? projectNumber}
-              </Link>
-            </li>
-            <li>
-              <Link
-                params={{ employeeId, projectNumber }}
-                to="/projects/$employeeId/$projectNumber/reconciliation"
-              >
-                Reconciliation
-              </Link>
-            </li>
-            <li>Detail</li>
-          </ul>
-        </nav>
+        <Link
+          className="btn btn-sm mb-4"
+          params={{ projectNumber }}
+          to="/reports/reconciliation/$projectNumber/"
+        >
+          Back to Reconciliation
+        </Link>
         <h1 className="h1">Reconciliation Detail</h1>
-        <p className="text-base-content/70 mt-2 font-mono">{keyLabel}</p>
+        <p className="subtitle">{keyLabel}</p>
       </section>
 
       {summary && (
@@ -424,7 +417,9 @@ function RouteComponent() {
             <dl className="grid grid-cols-2 md:grid-cols-4 gap-6">
               <div className="flex flex-col">
                 <dt className="font-proxima-bold text-lg">Start</dt>
-                <dd className="text-xl">{formatDate(summary.awardStartDate)}</dd>
+                <dd className="text-xl">
+                  {formatDate(summary.awardStartDate)}
+                </dd>
               </div>
               <div className="flex flex-col">
                 <dt className="font-proxima-bold text-lg">End</dt>
@@ -438,7 +433,7 @@ function RouteComponent() {
               </div>
               <div className="flex flex-col">
                 <dt className="font-proxima-bold text-lg">Balance</dt>
-                <dd className="text-xl text-success font-proxima-bold">
+                <dd className="text-xl font-proxima-bold">
                   <Currency value={summary.totals.balance} />
                 </dd>
               </div>
@@ -467,7 +462,9 @@ function RouteComponent() {
       )}
 
       {isPending ? (
-        <p className="text-base-content/70 mt-4">Loading reconciliation data…</p>
+        <p className="text-base-content/70 mt-4">
+          Loading reconciliation data…
+        </p>
       ) : isError ? (
         <p className="text-error mt-4">Error loading reconciliation data.</p>
       ) : (
@@ -484,7 +481,7 @@ function RouteComponent() {
                 pagination="off"
               />
             ) : (
-              <p className="text-base-content/60">No record found.</p>
+              <p className="text-base-content/80">No record found.</p>
             )}
           </section>
 
@@ -512,7 +509,7 @@ function RouteComponent() {
               GL Transactions ({glTransactions.length})
             </h2>
             {glTransactions.length === 0 ? (
-              <p className="text-base-content/60">No GL transactions found.</p>
+              <p className="text-base-content/80">No GL transactions found.</p>
             ) : (
               <DataTable
                 columns={glColumns}
@@ -534,16 +531,6 @@ function RouteComponent() {
           </section>
         </>
       )}
-
-      <section className="mt-8">
-        <Link
-          className="btn btn-outline"
-          params={{ employeeId, projectNumber }}
-          to="/projects/$employeeId/$projectNumber/reconciliation"
-        >
-          Back to Reconciliation
-        </Link>
-      </section>
     </main>
   );
 }

@@ -44,9 +44,9 @@ export function AlertCard({ alert, balance, linkParams }: AlertCardProps) {
       return (
         <Link
           className={`alert alert-${alert.severity} alert-soft`}
-          params={linkParams}
+          params={{ projectNumber: linkParams.projectNumber }}
           role="alert"
-          to="/projects/$employeeId/$projectNumber/reconciliation"
+          to="/reports/reconciliation/$projectNumber/"
         >
           {content}
         </Link>
