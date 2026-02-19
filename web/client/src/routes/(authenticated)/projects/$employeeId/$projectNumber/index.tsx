@@ -62,8 +62,9 @@ function ProjectContent({
           />
         </div>
       </section>
-      <ProjectAdditionalInfo />
+
       <ProjectDetails summary={summary} />
+      <ProjectAdditionalInfo />
       <FinancialDetails summary={summary} />
 
       <section className="section-margin">
