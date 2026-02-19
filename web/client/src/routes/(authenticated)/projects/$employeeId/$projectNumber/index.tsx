@@ -14,6 +14,7 @@ import {
 
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
+import ProjectAdditionalInfo from '@/components/project/ProjectAdditionalInfo.tsx';
 
 export const Route = createFileRoute(
   '/(authenticated)/projects/$employeeId/$projectNumber/'
@@ -61,7 +62,7 @@ function ProjectContent({
           />
         </div>
       </section>
-
+      <ProjectAdditionalInfo />
       <ProjectDetails summary={summary} />
       <FinancialDetails summary={summary} />
 
