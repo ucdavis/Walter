@@ -59,6 +59,7 @@ This starts SQL Server 2022 on localhost:1433 with:
 - `Tables/` - Database table definitions (compiled into DACPAC)
 - `Views/` - Database view definitions (compiled into DACPAC)
 - `Synonyms/` - Database synonym definitions for cross-database references
+- `Security/` - Database roles and permission grants (compiled into DACPAC)
 - `Scripts/PostDeployment/` - Views with linked server dependencies (deployed after DACPAC)
 - `Scripts/Script.PostDeployment.sql` - Main post-deployment orchestration script
 - `walter.sqlproj` - Main project file with build configuration
@@ -107,21 +108,51 @@ These scripts run **after** the DACPAC is deployed, avoiding build failures from
 **Target State**: ETL processes populate local tables, views query local data
 **Benefit**: Entity Framework and other consumers remain unchanged during migration
 
+## Application Role and Permissions
+
+The project defines a `WalterAppRole` database role in `Security/` that controls which stored procedures the application can execute.
+
+- `Security/WalterAppRole.sql` - Role definition
+- `Security/WalterAppRole.Permissions.sql` - Individual GRANT EXECUTE statements per stored procedure
+
+### Adding permissions for new stored procedures
+
+When a new stored procedure is added to the project, it does **not** automatically get application access. You must add a corresponding GRANT line to `Security/WalterAppRole.Permissions.sql`:
+
+```sql
+GRANT EXECUTE ON [dbo].[usp_YourNewProcedure] TO [WalterAppRole]
+```
+
+### Adding users to the role
+
+The role-to-user mapping is environment-specific and done once per environment outside of source control. After creating a SQL login and database user, add them to the role:
+
+```sql
+ALTER ROLE [WalterAppRole] ADD MEMBER [your_app_user];
+```
+
 ## CI/CD Pipeline
 
-The project uses Azure Pipelines with four stages:
+The project uses Azure Pipelines with five stages:
 
 1. **Build Stage**: Compiles the SQL project and publishes the DACPAC artifact
 2. **DeployDev Stage**: Deploys to WalterDev database automatically
-3. **ReviewProd Stage**: Generates deployment script for production review
-4. **DeployProd Stage**: Deploys to WalterProd behind approval gate (requires WalterProd environment approval)
+3. **DeployTest Stage**: Deploys to WalterTest database automatically
+4. **ReviewProd Stage**: Generates deployment script for production review
+5. **DeployProd Stage**: Deploys to WalterProd behind approval gate (requires WalterProd environment approval)
 
-The pipeline uses VSBuild with x86 architecture and requires two variable groups:
+The pipeline uses VSBuild with x86 architecture and requires three variable groups:
 
 **WalterDev variable group** (for dev deployment):
 - `targetServer` - SQL Server hostname (e.g., CAES-ROBERTO)
 - `targetDatabase` - Target database name (WalterDev)
 - `sqlUsername` - SQL authentication username (walter_deploy_dev)
+- `sqlPassword` - SQL authentication password (secret)
+
+**WalterTest variable group** (for test deployment):
+- `targetServer` - SQL Server hostname (e.g., CAES-ROBERTO)
+- `targetDatabase` - Target database name (WalterTest)
+- `sqlUsername` - SQL authentication username (walter_deploy_test)
 - `sqlPassword` - SQL authentication password (secret)
 
 **WalterProd variable group** (for production deployment):
