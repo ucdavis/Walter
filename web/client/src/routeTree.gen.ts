@@ -18,8 +18,11 @@ import { Route as authenticatedPersonnelRouteImport } from './routes/(authentica
 import { Route as authenticatedMeRouteImport } from './routes/(authenticated)/me'
 import { Route as authenticatedFormRouteImport } from './routes/(authenticated)/form'
 import { Route as authenticatedProjectsRouteRouteImport } from './routes/(authenticated)/projects/route'
+import { Route as authenticatedAdminRouteRouteImport } from './routes/(authenticated)/admin/route'
 import { Route as authenticatedReportsIndexRouteImport } from './routes/(authenticated)/reports/index'
+import { Route as authenticatedAdminIndexRouteImport } from './routes/(authenticated)/admin/index'
 import { Route as authenticatedAccrualsIndexRouteImport } from './routes/(authenticated)/accruals/index'
+import { Route as authenticatedAdminUsersRouteImport } from './routes/(authenticated)/admin/users'
 import { Route as authenticatedProjectsEmployeeIdRouteRouteImport } from './routes/(authenticated)/projects/$employeeId/route'
 import { Route as authenticatedProjectsEmployeeIdIndexRouteImport } from './routes/(authenticated)/projects/$employeeId/index'
 import { Route as authenticatedReportsReconciliationProjectNumberIndexRouteImport } from './routes/(authenticated)/reports/reconciliation/$projectNumber/index'
@@ -72,18 +75,33 @@ const authenticatedProjectsRouteRoute =
     path: '/projects',
     getParentRoute: () => authenticatedRouteRoute,
   } as any)
+const authenticatedAdminRouteRoute = authenticatedAdminRouteRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => authenticatedRouteRoute,
+} as any)
 const authenticatedReportsIndexRoute =
   authenticatedReportsIndexRouteImport.update({
     id: '/',
     path: '/',
     getParentRoute: () => authenticatedReportsRoute,
   } as any)
+const authenticatedAdminIndexRoute = authenticatedAdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => authenticatedAdminRouteRoute,
+} as any)
 const authenticatedAccrualsIndexRoute =
   authenticatedAccrualsIndexRouteImport.update({
     id: '/accruals/',
     path: '/accruals/',
     getParentRoute: () => authenticatedRouteRoute,
   } as any)
+const authenticatedAdminUsersRoute = authenticatedAdminUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => authenticatedAdminRouteRoute,
+} as any)
 const authenticatedProjectsEmployeeIdRouteRoute =
   authenticatedProjectsEmployeeIdRouteRouteImport.update({
     id: '/$employeeId',
@@ -123,6 +141,7 @@ const authenticatedProjectsEmployeeIdProjectNumberTransactionsRoute =
 
 export interface FileRoutesByFullPath {
   '/about': typeof AboutRoute
+  '/admin': typeof authenticatedAdminRouteRouteWithChildren
   '/projects': typeof authenticatedProjectsRouteRouteWithChildren
   '/form': typeof authenticatedFormRoute
   '/me': typeof authenticatedMeRoute
@@ -131,7 +150,9 @@ export interface FileRoutesByFullPath {
   '/styles': typeof authenticatedStylesRoute
   '/': typeof authenticatedIndexRoute
   '/projects/$employeeId': typeof authenticatedProjectsEmployeeIdRouteRouteWithChildren
+  '/admin/users': typeof authenticatedAdminUsersRoute
   '/accruals': typeof authenticatedAccrualsIndexRoute
+  '/admin/': typeof authenticatedAdminIndexRoute
   '/reports/': typeof authenticatedReportsIndexRoute
   '/projects/$employeeId/': typeof authenticatedProjectsEmployeeIdIndexRoute
   '/projects/$employeeId/$projectNumber/transactions': typeof authenticatedProjectsEmployeeIdProjectNumberTransactionsRoute
@@ -147,7 +168,9 @@ export interface FileRoutesByTo {
   '/personnel': typeof authenticatedPersonnelRoute
   '/styles': typeof authenticatedStylesRoute
   '/': typeof authenticatedIndexRoute
+  '/admin/users': typeof authenticatedAdminUsersRoute
   '/accruals': typeof authenticatedAccrualsIndexRoute
+  '/admin': typeof authenticatedAdminIndexRoute
   '/reports': typeof authenticatedReportsIndexRoute
   '/projects/$employeeId': typeof authenticatedProjectsEmployeeIdIndexRoute
   '/projects/$employeeId/$projectNumber/transactions': typeof authenticatedProjectsEmployeeIdProjectNumberTransactionsRoute
@@ -159,6 +182,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/(authenticated)': typeof authenticatedRouteRouteWithChildren
   '/about': typeof AboutRoute
+  '/(authenticated)/admin': typeof authenticatedAdminRouteRouteWithChildren
   '/(authenticated)/projects': typeof authenticatedProjectsRouteRouteWithChildren
   '/(authenticated)/form': typeof authenticatedFormRoute
   '/(authenticated)/me': typeof authenticatedMeRoute
@@ -167,7 +191,9 @@ export interface FileRoutesById {
   '/(authenticated)/styles': typeof authenticatedStylesRoute
   '/(authenticated)/': typeof authenticatedIndexRoute
   '/(authenticated)/projects/$employeeId': typeof authenticatedProjectsEmployeeIdRouteRouteWithChildren
+  '/(authenticated)/admin/users': typeof authenticatedAdminUsersRoute
   '/(authenticated)/accruals/': typeof authenticatedAccrualsIndexRoute
+  '/(authenticated)/admin/': typeof authenticatedAdminIndexRoute
   '/(authenticated)/reports/': typeof authenticatedReportsIndexRoute
   '/(authenticated)/projects/$employeeId/': typeof authenticatedProjectsEmployeeIdIndexRoute
   '/(authenticated)/projects/$employeeId/$projectNumber/transactions': typeof authenticatedProjectsEmployeeIdProjectNumberTransactionsRoute
@@ -179,6 +205,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/about'
+    | '/admin'
     | '/projects'
     | '/form'
     | '/me'
@@ -187,7 +214,9 @@ export interface FileRouteTypes {
     | '/styles'
     | '/'
     | '/projects/$employeeId'
+    | '/admin/users'
     | '/accruals'
+    | '/admin/'
     | '/reports/'
     | '/projects/$employeeId/'
     | '/projects/$employeeId/$projectNumber/transactions'
@@ -203,7 +232,9 @@ export interface FileRouteTypes {
     | '/personnel'
     | '/styles'
     | '/'
+    | '/admin/users'
     | '/accruals'
+    | '/admin'
     | '/reports'
     | '/projects/$employeeId'
     | '/projects/$employeeId/$projectNumber/transactions'
@@ -214,6 +245,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/(authenticated)'
     | '/about'
+    | '/(authenticated)/admin'
     | '/(authenticated)/projects'
     | '/(authenticated)/form'
     | '/(authenticated)/me'
@@ -222,7 +254,9 @@ export interface FileRouteTypes {
     | '/(authenticated)/styles'
     | '/(authenticated)/'
     | '/(authenticated)/projects/$employeeId'
+    | '/(authenticated)/admin/users'
     | '/(authenticated)/accruals/'
+    | '/(authenticated)/admin/'
     | '/(authenticated)/reports/'
     | '/(authenticated)/projects/$employeeId/'
     | '/(authenticated)/projects/$employeeId/$projectNumber/transactions'
@@ -301,6 +335,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authenticatedProjectsRouteRouteImport
       parentRoute: typeof authenticatedRouteRoute
     }
+    '/(authenticated)/admin': {
+      id: '/(authenticated)/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof authenticatedAdminRouteRouteImport
+      parentRoute: typeof authenticatedRouteRoute
+    }
     '/(authenticated)/reports/': {
       id: '/(authenticated)/reports/'
       path: '/'
@@ -308,12 +349,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authenticatedReportsIndexRouteImport
       parentRoute: typeof authenticatedReportsRoute
     }
+    '/(authenticated)/admin/': {
+      id: '/(authenticated)/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof authenticatedAdminIndexRouteImport
+      parentRoute: typeof authenticatedAdminRouteRoute
+    }
     '/(authenticated)/accruals/': {
       id: '/(authenticated)/accruals/'
       path: '/accruals'
       fullPath: '/accruals'
       preLoaderRoute: typeof authenticatedAccrualsIndexRouteImport
       parentRoute: typeof authenticatedRouteRoute
+    }
+    '/(authenticated)/admin/users': {
+      id: '/(authenticated)/admin/users'
+      path: '/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof authenticatedAdminUsersRouteImport
+      parentRoute: typeof authenticatedAdminRouteRoute
     }
     '/(authenticated)/projects/$employeeId': {
       id: '/(authenticated)/projects/$employeeId'
@@ -359,6 +414,22 @@ declare module '@tanstack/react-router' {
     }
   }
 }
+
+interface authenticatedAdminRouteRouteChildren {
+  authenticatedAdminUsersRoute: typeof authenticatedAdminUsersRoute
+  authenticatedAdminIndexRoute: typeof authenticatedAdminIndexRoute
+}
+
+const authenticatedAdminRouteRouteChildren: authenticatedAdminRouteRouteChildren =
+  {
+    authenticatedAdminUsersRoute: authenticatedAdminUsersRoute,
+    authenticatedAdminIndexRoute: authenticatedAdminIndexRoute,
+  }
+
+const authenticatedAdminRouteRouteWithChildren =
+  authenticatedAdminRouteRoute._addFileChildren(
+    authenticatedAdminRouteRouteChildren,
+  )
 
 interface authenticatedProjectsEmployeeIdRouteRouteChildren {
   authenticatedProjectsEmployeeIdIndexRoute: typeof authenticatedProjectsEmployeeIdIndexRoute
@@ -414,6 +485,7 @@ const authenticatedReportsRouteWithChildren =
   authenticatedReportsRoute._addFileChildren(authenticatedReportsRouteChildren)
 
 interface authenticatedRouteRouteChildren {
+  authenticatedAdminRouteRoute: typeof authenticatedAdminRouteRouteWithChildren
   authenticatedProjectsRouteRoute: typeof authenticatedProjectsRouteRouteWithChildren
   authenticatedFormRoute: typeof authenticatedFormRoute
   authenticatedMeRoute: typeof authenticatedMeRoute
@@ -425,6 +497,7 @@ interface authenticatedRouteRouteChildren {
 }
 
 const authenticatedRouteRouteChildren: authenticatedRouteRouteChildren = {
+  authenticatedAdminRouteRoute: authenticatedAdminRouteRouteWithChildren,
   authenticatedProjectsRouteRoute: authenticatedProjectsRouteRouteWithChildren,
   authenticatedFormRoute: authenticatedFormRoute,
   authenticatedMeRoute: authenticatedMeRoute,

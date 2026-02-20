@@ -1,6 +1,7 @@
 using Azure.Core;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.Graph;
+using Microsoft.Graph.Models;
 using Microsoft.Identity.Client;
 using Microsoft.Identity.Web;
 using Microsoft.Kiota.Abstractions;
@@ -12,9 +13,28 @@ namespace Server.Services;
 public interface IGraphService
 {
     Task<GraphUserPhoto?> GetMePhotoAsync(ClaimsPrincipal principal, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<GraphUserSearchResult>> SearchUsersAsync(
+        ClaimsPrincipal principal,
+        string query,
+        CancellationToken cancellationToken = default);
+
+    Task<GraphUserProfile?> GetUserProfileAsync(
+        ClaimsPrincipal principal,
+        string userObjectId,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed record GraphUserPhoto(byte[] Bytes, string ContentType);
+
+public sealed record GraphUserSearchResult(string Id, string? DisplayName, string? Email);
+
+public sealed record GraphUserProfile(
+    string Id,
+    string? DisplayName,
+    string? Email,
+    string? Kerberos,
+    string? IamId);
 
 public sealed class GraphService : IGraphService
 {
@@ -73,6 +93,127 @@ public sealed class GraphService : IGraphService
         {
             _logger.LogWarning(ex, "Failed to retrieve current user's profile photo from Microsoft Graph.");
             throw;
+        }
+    }
+
+    public async Task<IReadOnlyList<GraphUserSearchResult>> SearchUsersAsync(
+        ClaimsPrincipal principal,
+        string query,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return Array.Empty<GraphUserSearchResult>();
+        }
+
+        var normalizedQuery = query.Trim();
+        if (normalizedQuery.Length < 3)
+        {
+            return Array.Empty<GraphUserSearchResult>();
+        }
+
+        var graphClient = CreateGraphClient(principal);
+
+        try
+        {
+            // Prefer $search to behave more like Entra's directory picker (matches on name/email tokens).
+            var sanitized = normalizedQuery.Replace("\"", string.Empty);
+
+            var searchResult = await graphClient.Users.GetAsync(requestConfiguration =>
+            {
+                requestConfiguration.Headers.Add("ConsistencyLevel", "eventual");
+
+                requestConfiguration.QueryParameters.Top = 25;
+                requestConfiguration.QueryParameters.Count = true;
+                requestConfiguration.QueryParameters.Select = new[] { "id", "displayName", "mail", "userPrincipalName" };
+                requestConfiguration.QueryParameters.Search = $"\"{sanitized}\"";
+            }, cancellationToken);
+
+            return MapUserSearchResults(searchResult?.Value);
+        }
+        catch (ApiException ex) when (ex.ResponseStatusCode == 400)
+        {
+            // Fallback to a prefix-filter search in case $search is unavailable in a given tenant/config.
+            var escaped = normalizedQuery.Replace("'", "''");
+            var filter =
+                $"startswith(displayName,'{escaped}') or " +
+                $"startswith(givenName,'{escaped}') or " +
+                $"startswith(surname,'{escaped}') or " +
+                $"startswith(mail,'{escaped}') or " +
+                $"startswith(userPrincipalName,'{escaped}')";
+
+            var filterResult = await graphClient.Users.GetAsync(requestConfiguration =>
+            {
+                requestConfiguration.QueryParameters.Top = 25;
+                requestConfiguration.QueryParameters.Select = new[] { "id", "displayName", "mail", "userPrincipalName" };
+                requestConfiguration.QueryParameters.Filter = filter;
+            }, cancellationToken);
+
+            return MapUserSearchResults(filterResult?.Value);
+        }
+    }
+
+    private static IReadOnlyList<GraphUserSearchResult> MapUserSearchResults(IList<User>? users)
+    {
+        if (users is null || users.Count == 0)
+        {
+            return Array.Empty<GraphUserSearchResult>();
+        }
+
+        return users
+            .Where(u => !string.IsNullOrWhiteSpace(u.Id))
+            .Select(u => new GraphUserSearchResult(
+                Id: u.Id!,
+                DisplayName: u.DisplayName,
+                Email: u.Mail ?? u.UserPrincipalName))
+            .OrderBy(u => u.DisplayName ?? string.Empty, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(u => u.Email ?? string.Empty, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    public async Task<GraphUserProfile?> GetUserProfileAsync(
+        ClaimsPrincipal principal,
+        string userObjectId,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(userObjectId))
+        {
+            return null;
+        }
+
+        var graphClient = CreateGraphClient(principal);
+
+        try
+        {
+            var user = await graphClient.Users[userObjectId]
+                .GetAsync(requestConfiguration =>
+                {
+                    requestConfiguration.QueryParameters.Select = new[]
+                    {
+                        "id",
+                        "displayName",
+                        "mail",
+                        "userPrincipalName",
+                        "onPremisesExtensionAttributes",
+                    };
+                }, cancellationToken);
+
+            if (user?.Id is null)
+            {
+                return null;
+            }
+
+            var extensions = user.OnPremisesExtensionAttributes;
+            return new GraphUserProfile(
+                Id: user.Id,
+                DisplayName: user.DisplayName,
+                Email: user.Mail ?? user.UserPrincipalName,
+                Kerberos: extensions?.ExtensionAttribute13,
+                IamId: extensions?.ExtensionAttribute7);
+        }
+        catch (ApiException ex) when (ex.ResponseStatusCode == 404)
+        {
+            return null;
         }
     }
 

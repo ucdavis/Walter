@@ -17,6 +17,12 @@ public interface IUserService
     Task<User?> GetByIdAsync(Guid userId, CancellationToken cancellationToken = default);
 
     Task<User?> GetByEmployeeIdAsync(string employeeId, CancellationToken cancellationToken = default);
+
+    Task<bool> AddRoleToUserAsync(
+        Guid userId,
+        string roleName,
+        Guid grantedByUserId,
+        CancellationToken cancellationToken = default);
 }
 
 public class UserService : IUserService
@@ -119,6 +125,62 @@ public class UserService : IUserService
 
         await _dbContext.SaveChangesAsync(cancellationToken);
         return user;
+    }
+
+    public async Task<bool> AddRoleToUserAsync(
+        Guid userId,
+        string roleName,
+        Guid grantedByUserId,
+        CancellationToken cancellationToken = default)
+    {
+        if (userId == Guid.Empty)
+        {
+            throw new ArgumentException("User ID is required.", nameof(userId));
+        }
+
+        if (grantedByUserId == Guid.Empty)
+        {
+            throw new ArgumentException("Granted-by user ID is required.", nameof(grantedByUserId));
+        }
+
+        if (string.IsNullOrWhiteSpace(roleName))
+        {
+            throw new ArgumentException("Role name is required.", nameof(roleName));
+        }
+
+        var userExists = await _dbContext.Users.AnyAsync(u => u.Id == userId, cancellationToken);
+        if (!userExists)
+        {
+            throw new InvalidOperationException($"User '{userId}' not found.");
+        }
+
+        var role = await _dbContext.Roles.SingleOrDefaultAsync(r => r.Name == roleName, cancellationToken);
+        if (role is null)
+        {
+            throw new InvalidOperationException($"Role '{roleName}' not found.");
+        }
+
+        var alreadyHasRole = await _dbContext.Permissions.AnyAsync(p =>
+            p.UserId == userId &&
+            p.RoleId == role.Id &&
+            p.DeptCode == null, cancellationToken);
+
+        if (alreadyHasRole)
+        {
+            return false;
+        }
+
+        _dbContext.Permissions.Add(new Permission
+        {
+            UserId = userId,
+            RoleId = role.Id,
+            DeptCode = null,
+            IncludeDescendants = true,
+            GrantedByUserId = grantedByUserId,
+        });
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return true;
     }
 
     public Task<User?> GetByIdAsync(Guid userId, CancellationToken cancellationToken = default)

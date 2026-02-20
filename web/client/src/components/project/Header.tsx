@@ -4,11 +4,14 @@ import { SearchButton } from '@/components/search/SearchButton.tsx';
 import { UserAvatar } from '@/components/project/UserAvatar.tsx';
 import WalterLogo from '@/shared/WalterLogo.tsx';
 import { useHasRole, useUser } from '@/shared/auth/UserContext.tsx';
+import {
+  canAccessAdminDashboard,
+} from '@/shared/auth/roleAccess.ts';
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
 
 type NavLinkItem = {
   label: string;
-  params?: Record<string, any>;
+  params?: Record<string, string>;
   to: string;
 };
 
@@ -44,6 +47,7 @@ function NavLinks({
 const Header: React.FC = () => {
   const user = useUser();
   const canViewAccruals = useHasRole('AccrualViewer');
+  const canViewAdminDashboard = canAccessAdminDashboard(user.roles);
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -59,15 +63,16 @@ const Header: React.FC = () => {
       { label: 'Personnel', to: '/personnel' },
       { label: 'Reports', to: '/reports' },
       ...(canViewAccruals ? [{ label: 'Accruals', to: '/accruals' }] : []),
+      ...(canViewAdminDashboard ? [{ label: 'Admin', to: '/admin' }] : []),
     ],
-    [user.employeeId, canViewAccruals]
+    [user.employeeId, canViewAccruals, canViewAdminDashboard]
   );
 
   useEffect(() => {
     if (menuRef.current) {
       setMenuHeight(menuRef.current.scrollHeight);
     }
-  }, [mobileOpen, canViewAccruals]);
+  }, [mobileOpen, canViewAccruals, canViewAdminDashboard]);
 
   return (
     <header className="bg-light-bg-200 border-b py-4 border-main-border sticky top-0 z-50">
@@ -120,11 +125,11 @@ const Header: React.FC = () => {
         className={`md:hidden bg-light-bg-200 overflow-hidden
           transition-[height,opacity] duration-300 ease-out
           ${mobileOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}
+        inert={!mobileOpen}
         style={{
           height: mobileOpen ? menuHeight : 0,
           opacity: mobileOpen ? 1 : 0,
         }}
-        {...(!mobileOpen ? ({ inert: '' } as any) : {})}
       >
         <div className="container py-2 flex flex-col gap-2" ref={menuRef}>
           <NavLinks
