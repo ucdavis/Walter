@@ -56,7 +56,7 @@ function RouteComponent() {
     <div className="container mt-8">
       <h1 className="h1">Admin Users</h1>
       <p className="subtitle">
-        Search Entra directory users and assign roles.
+        Search for users and assign roles.
       </p>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
@@ -82,7 +82,7 @@ function RouteComponent() {
                 value={query}
               />
               <p className="label">
-                Searches Microsoft Graph and returns up to 25 users.
+                Returns up to 25 results.
               </p>
             </div>
 
