@@ -93,9 +93,50 @@ stages:
               sqlUsername: $(sqlUsername)
               sqlPassword: $(sqlPassword)
 
+  - stage: DeployTest
+    displayName: "Deploy to Test"
+    dependsOn: DeployDev
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    variables:
+      - group: "WalterTest"
+    jobs:
+      - job: DeployTestJob
+        displayName: "Deploy DACPAC to WalterTest"
+        steps:
+          - task: DownloadBuildArtifacts@1
+            displayName: "Download DACPAC"
+            inputs:
+              buildType: "current"
+              downloadType: "single"
+              artifactName: "dacpac"
+              downloadPath: "$(System.ArtifactsDirectory)"
+
+          - powershell: |
+              $dacpac = "$(System.ArtifactsDirectory)\dacpac\$(dacpacFileName)"
+              $sqlPackage = "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\Extensions\Microsoft\SQLDB\DAC\SqlPackage.exe"
+              $connectionString = "Server=$(targetServer);Database=$(targetDatabase);User ID=$(sqlUsername);Password=$(sqlPassword);Encrypt=False;"
+
+              Write-Host "Deploying $dacpac to $(targetServer)\$(targetDatabase)..."
+
+              & $sqlPackage /Action:Publish `
+                /SourceFile:$dacpac `
+                /TargetConnectionString:$connectionString `
+                /p:IncludeCompositeObjects=true
+
+              if ($LASTEXITCODE -ne 0) {
+                Write-Error "Deployment failed"
+                exit $LASTEXITCODE
+              }
+
+              Write-Host "Deployment completed successfully!"
+            displayName: "Deploy DACPAC to Test Database"
+            env:
+              sqlUsername: $(sqlUsername)
+              sqlPassword: $(sqlPassword)
+
   - stage: ReviewProd
     displayName: "Review Production Changes"
-    dependsOn: DeployDev
+    dependsOn: DeployTest
     condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
     variables:
       - group: "WalterProd"

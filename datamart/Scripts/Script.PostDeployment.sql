@@ -11,8 +11,22 @@ Post-Deployment Script Template
 */
 
 PRINT 'Applying post-deployment scripts...'
-PRINT 'Creating views with linked server dependencies...'
-
--- Include the UCPath projects view
+      
+-- Grant permissions to application role
+PRINT 'Granting WalterAppRole permissions...'
+GRANT EXECUTE ON [dbo].[usp_GetFacultyDeptPortfolio] TO [WalterAppRole];
+GRANT EXECUTE ON [dbo].[usp_GetFacultyDeptPortfolioElzar] TO [WalterAppRole];
+GRANT EXECUTE ON [dbo].[usp_GetGLPPMReconciliation] TO [WalterAppRole];
+GRANT EXECUTE ON [dbo].[usp_GetGLTransactionListings] TO [WalterAppRole];
+GRANT EXECUTE ON [dbo].[usp_GetLaborLedgerData] TO [WalterAppRole];
+GRANT EXECUTE ON [dbo].[usp_GetPositionBudgets] TO [WalterAppRole];
+GRANT EXECUTE ON [dbo].[usp_HealthCheck_Connectivity] TO [WalterAppRole];
+GRANT EXECUTE ON [dbo].[usp_HealthCheck_RowCounts] TO [WalterAppRole];
+GRANT EXECUTE ON [dbo].[usp_HealthCheck_SchemaValidation] TO [WalterAppRole];
+GRANT EXECUTE ON [dbo].[usp_LogProcedureExecution] TO [WalterAppRole];
+GRANT EXECUTE ON [dbo].[usp_ParseProjectIdFilter] TO [WalterAppRole];
+GRANT EXECUTE ON [dbo].[usp_SanitizeInputString] TO [WalterAppRole];
+GRANT EXECUTE ON [dbo].[usp_ValidateAggieEnterpriseProject] TO [WalterAppRole];
+GRANT EXECUTE ON [dbo].[usp_ValidateFinancialDept] TO [WalterAppRole];
 
 PRINT 'Post-deployment complete.'
