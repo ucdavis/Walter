@@ -17,6 +17,7 @@ import {
   ClipboardDocumentListIcon,
   UsersIcon,
 } from '@heroicons/react/24/outline';
+import { ProjectFundingChart } from '@/components/project/ProjectFundingChart.tsx';
 
 export const Route = createFileRoute('/(authenticated)/projects/$employeeId/')({
   component: RouteComponent,
@@ -103,6 +104,10 @@ function RouteComponent() {
             </div>
           </dl>
         </div>
+      </section>
+      <section className="section-margin">
+        <h2 className="h2">Funding Breakdown</h2>
+        <ProjectFundingChart projects={projects} />
       </section>
 
       <section className="section-margin">
