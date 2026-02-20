@@ -89,7 +89,7 @@ describe('Admin dashboard access control', () => {
     const { cleanup } = renderRoute({ initialPath: '/admin/users' });
 
     try {
-      await screen.findByRole('heading', { name: 'Admin Users' });
+      await screen.findByRole('heading', { name: 'User Management' });
     } finally {
       cleanup();
     }
@@ -110,7 +110,7 @@ describe('Admin dashboard access control', () => {
         ).toBeInTheDocument();
       });
       expect(
-        screen.queryByRole('heading', { name: 'Admin Users' })
+        screen.queryByRole('heading', { name: 'User Management' })
       ).not.toBeInTheDocument();
     } finally {
       cleanup();

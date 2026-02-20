@@ -69,7 +69,7 @@ describe('/admin/users', () => {
     const { cleanup } = renderRoute({ initialPath: '/admin/users' });
 
     try {
-      await screen.findByRole('heading', { name: 'Admin Users' });
+      await screen.findByRole('heading', { name: 'User Management' });
 
       await ue.type(screen.getByLabelText(/search by name or email/i), 'gra');
 
