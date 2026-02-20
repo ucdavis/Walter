@@ -71,7 +71,7 @@
   @apply font-proxima-bold text-lg;
 }
 .subtitle {
-  @apply text-xl font-proxima-bold uppercase text-base-content/60;
+  @apply text-lg font-proxima-bold uppercase text-base-content/60;
 }
 .section-margin {
   @apply mb-20;
@@ -198,10 +198,15 @@
   color: var(--color-dark-font);
 }
 
-.input {
+.select,
+.input,
+.textarea {
   &:focus,
   &:focus-within {
     outline: 2px solid var(--color-primary-color);
+    outline-offset: 1px;
+    isolation: isolate;
+    z-index: 1;
   }
 }
 
