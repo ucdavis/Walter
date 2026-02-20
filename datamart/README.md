@@ -22,11 +22,11 @@ Learn more about authentication and other options for SqlPackage here: https://a
 
 ## Application Role and Permissions
 
-The project defines a `WalterAppRole` database role that controls which stored procedures the web application can execute. The role and its permissions are managed in the `Security/` directory and deployed as part of the DACPAC.
+The project defines a `WalterAppRole` database role that controls which stored procedures the web application can execute. The role is defined in `Security/WalterAppRole.sql` and permissions are granted in the post-deployment script.
 
 ### Adding permissions for new stored procedures
 
-New stored procedures do **not** automatically get application access. When you add a new sproc, add a corresponding line to `Security/WalterAppRole.Permissions.sql`:
+New stored procedures do **not** automatically get application access. When you add a new sproc, add a corresponding line to `Scripts/Script.PostDeployment.sql`:
 
 ```sql
 GRANT EXECUTE ON [dbo].[usp_YourNewProcedure] TO [WalterAppRole]

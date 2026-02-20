@@ -110,14 +110,14 @@ These scripts run **after** the DACPAC is deployed, avoiding build failures from
 
 ## Application Role and Permissions
 
-The project defines a `WalterAppRole` database role in `Security/` that controls which stored procedures the application can execute.
+The project defines a `WalterAppRole` database role that controls which stored procedures the application can execute.
 
-- `Security/WalterAppRole.sql` - Role definition
-- `Security/WalterAppRole.Permissions.sql` - Individual GRANT EXECUTE statements per stored procedure
+- `Security/WalterAppRole.sql` - Role definition (compiled into DACPAC)
+- `Scripts/Script.PostDeployment.sql` - GRANT EXECUTE statements per stored procedure
 
 ### Adding permissions for new stored procedures
 
-When a new stored procedure is added to the project, it does **not** automatically get application access. You must add a corresponding GRANT line to `Security/WalterAppRole.Permissions.sql`:
+When a new stored procedure is added to the project, it does **not** automatically get application access. You must add a corresponding GRANT line to `Scripts/Script.PostDeployment.sql`:
 
 ```sql
 GRANT EXECUTE ON [dbo].[usp_YourNewProcedure] TO [WalterAppRole]
