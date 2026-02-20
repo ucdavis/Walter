@@ -12,9 +12,16 @@ namespace Server.Services;
 public interface IGraphService
 {
     Task<GraphUserPhoto?> GetMePhotoAsync(ClaimsPrincipal principal, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<GraphUserSearchResult>> SearchUsersAsync(
+        ClaimsPrincipal principal,
+        string query,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed record GraphUserPhoto(byte[] Bytes, string ContentType);
+
+public sealed record GraphUserSearchResult(string Id, string? DisplayName, string? Email);
 
 public sealed class GraphService : IGraphService
 {
@@ -74,6 +81,49 @@ public sealed class GraphService : IGraphService
             _logger.LogWarning(ex, "Failed to retrieve current user's profile photo from Microsoft Graph.");
             throw;
         }
+    }
+
+    public async Task<IReadOnlyList<GraphUserSearchResult>> SearchUsersAsync(
+        ClaimsPrincipal principal,
+        string query,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return Array.Empty<GraphUserSearchResult>();
+        }
+
+        var normalizedQuery = query.Trim();
+        if (normalizedQuery.Length < 3)
+        {
+            return Array.Empty<GraphUserSearchResult>();
+        }
+
+        var escaped = normalizedQuery.Replace("'", "''");
+        var filter = $"startswith(displayName,'{escaped}') or startswith(mail,'{escaped}') or startswith(userPrincipalName,'{escaped}')";
+
+        var graphClient = CreateGraphClient(principal);
+
+        var result = await graphClient.Users.GetAsync(requestConfiguration =>
+        {
+            requestConfiguration.QueryParameters.Top = 25;
+            requestConfiguration.QueryParameters.Select = new[] { "id", "displayName", "mail", "userPrincipalName" };
+            requestConfiguration.QueryParameters.Filter = filter;
+        }, cancellationToken);
+
+        var users = result?.Value;
+        if (users is null || users.Count == 0)
+        {
+            return Array.Empty<GraphUserSearchResult>();
+        }
+
+        return users
+            .Where(u => !string.IsNullOrWhiteSpace(u.Id))
+            .Select(u => new GraphUserSearchResult(
+                Id: u.Id!,
+                DisplayName: u.DisplayName,
+                Email: u.Mail ?? u.UserPrincipalName))
+            .ToArray();
     }
 
     private GraphServiceClient CreateGraphClient(ClaimsPrincipal principal)
