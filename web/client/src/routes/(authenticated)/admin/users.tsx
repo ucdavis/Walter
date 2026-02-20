@@ -36,7 +36,7 @@ function RouteComponent() {
     query: debouncedQuery,
   });
 
-  const searchResults = searchQuery.data ?? [];
+  const searchResults = useMemo(() => searchQuery.data ?? [], [searchQuery.data]);
   const selectedUser = useMemo(
     () => searchResults.find((u) => u.id === selectedUserId) ?? null,
     [searchResults, selectedUserId]
