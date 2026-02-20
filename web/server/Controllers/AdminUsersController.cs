@@ -13,7 +13,7 @@ namespace Server.Controllers;
 [ApiController]
 [Route("api/admin/users")]
 [Authorize(Policy = AuthorizationHelper.Policies.IsManager)]
-public sealed class AdminUsersController : ControllerBase
+public sealed class AdminUsersController : ApiControllerBase
 {
     private readonly IGraphService _graphService;
     private readonly IUserService _userService;
