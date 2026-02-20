@@ -47,10 +47,8 @@ function RouteComponent() {
   const searchError = searchQuery.error;
   const showQueryHint = query.trim().length > 0 && query.trim().length < 3;
   const showNoResults =
-    query.trim().length >= 3 &&
-    !searchQuery.isPending &&
-    !searchQuery.isError &&
-    searchResults.length === 0;
+    query.trim().length >= 3 && searchQuery.isSuccess && searchResults.length === 0;
+  const showSearching = query.trim().length >= 3 && searchQuery.isFetching;
 
   const addRoleDisabled = !selectedUser || assignRoleMutation.isPending;
 
@@ -84,7 +82,7 @@ function RouteComponent() {
                 value={query}
               />
               <p className="label">
-                Searches Microsoft Graph (prefix match) and returns up to 25 users.
+                Searches Microsoft Graph and returns up to 25 users.
               </p>
             </div>
 
@@ -94,7 +92,7 @@ function RouteComponent() {
               </div>
             ) : null}
 
-            {searchQuery.isPending ? (
+            {showSearching ? (
               <div className="flex items-center gap-3 text-sm text-base-content/70">
                 <div className="loading loading-spinner loading-sm" />
                 <span>Searching…</span>
@@ -119,7 +117,7 @@ function RouteComponent() {
               </div>
             ) : null}
 
-            {searchResults.length ? (
+            {query.trim().length >= 3 && searchResults.length ? (
               <div className="max-h-96 overflow-auto rounded-box border border-base-300">
                 <ul className="menu menu-sm">
                   {searchResults.map((u) => {
