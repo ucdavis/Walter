@@ -17,11 +17,23 @@ public interface IGraphService
         ClaimsPrincipal principal,
         string query,
         CancellationToken cancellationToken = default);
+
+    Task<GraphUserProfile?> GetUserProfileAsync(
+        ClaimsPrincipal principal,
+        string userObjectId,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed record GraphUserPhoto(byte[] Bytes, string ContentType);
 
 public sealed record GraphUserSearchResult(string Id, string? DisplayName, string? Email);
+
+public sealed record GraphUserProfile(
+    string Id,
+    string? DisplayName,
+    string? Email,
+    string? Kerberos,
+    string? IamId);
 
 public sealed class GraphService : IGraphService
 {
@@ -124,6 +136,52 @@ public sealed class GraphService : IGraphService
                 DisplayName: u.DisplayName,
                 Email: u.Mail ?? u.UserPrincipalName))
             .ToArray();
+    }
+
+    public async Task<GraphUserProfile?> GetUserProfileAsync(
+        ClaimsPrincipal principal,
+        string userObjectId,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(userObjectId))
+        {
+            return null;
+        }
+
+        var graphClient = CreateGraphClient(principal);
+
+        try
+        {
+            var user = await graphClient.Users[userObjectId]
+                .GetAsync(requestConfiguration =>
+                {
+                    requestConfiguration.QueryParameters.Select = new[]
+                    {
+                        "id",
+                        "displayName",
+                        "mail",
+                        "userPrincipalName",
+                        "onPremisesExtensionAttributes",
+                    };
+                }, cancellationToken);
+
+            if (user?.Id is null)
+            {
+                return null;
+            }
+
+            var extensions = user.OnPremisesExtensionAttributes;
+            return new GraphUserProfile(
+                Id: user.Id,
+                DisplayName: user.DisplayName,
+                Email: user.Mail ?? user.UserPrincipalName,
+                Kerberos: extensions?.ExtensionAttribute13,
+                IamId: extensions?.ExtensionAttribute7);
+        }
+        catch (ApiException ex) when (ex.ResponseStatusCode == 404)
+        {
+            return null;
+        }
     }
 
     private GraphServiceClient CreateGraphClient(ClaimsPrincipal principal)
