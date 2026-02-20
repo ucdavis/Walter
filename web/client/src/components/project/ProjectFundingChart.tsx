@@ -149,6 +149,9 @@ function getBarRadius(
   index: number,
   count: number
 ): 0 | [number, number, number, number] {
+  if (count === 1) {
+    return [6, 6, 6, 6];
+  }
   if (index === 0) {
     return [6, 0, 0, 6];
   }
