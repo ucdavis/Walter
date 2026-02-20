@@ -71,7 +71,7 @@ function RouteComponent() {
         <p className="subtitle">Search for users and manage roles.</p>
         <hr className="border-main-border my-4" />
 
-        <div className="grid gap-8 divide-main-border cols-1 max-w-2xl">
+        <div className="grid gap-8 divide-main-border md:grid-cols-[2fr_3fr]">
           <div className="flex flex-col gap-2">
             <h2 className="card-title">Find a user</h2>
 
