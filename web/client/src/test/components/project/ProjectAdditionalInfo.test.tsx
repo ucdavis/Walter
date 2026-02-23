@@ -28,10 +28,11 @@ const createSummary = (
   pa: null,
   pi: 'PI Name',
   pm: null,
+  pmEmployeeId: null,
   postReportingPeriod: null,
   primarySponsorName: 'National Science Foundation',
-  projectBurdenCostRate: '26.5%',
-  projectBurdenScheduleBase: 'MTDC',
+  projectBurdenCostRate: '0.265',
+  projectBurdenScheduleBase: 'MTDC-Rev 001',
   projectFund: null,
   projectNumber: 'K30ABC123',
   projectStatusCode: 'ACTIVE',
@@ -92,6 +93,8 @@ describe('ProjectAdditionalInfo', () => {
     expect(screen.getByText('26.5%')).toBeInTheDocument();
     expect(screen.getByText('Burden Structure')).toBeInTheDocument();
     expect(screen.getByText('MTDC')).toBeInTheDocument();
+    // Verify "-Rev 001" suffix was stripped
+    expect(screen.queryByText('MTDC-Rev 001')).not.toBeInTheDocument();
   });
 
   it('collapses fields when Show less is clicked', async () => {

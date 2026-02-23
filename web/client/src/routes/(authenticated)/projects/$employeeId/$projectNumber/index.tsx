@@ -12,6 +12,7 @@ import {
   useProjectDiscrepancies,
 } from '@/queries/project.ts';
 
+import { useUser } from '@/shared/auth/UserContext.tsx';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import ProjectAdditionalInfo from '@/components/project/ProjectAdditionalInfo.tsx';
@@ -42,6 +43,8 @@ function ProjectContent({
   employeeId: string;
   summary: ProjectSummary;
 }) {
+  const user = useUser();
+  const isProjectManager = user.employeeId === summary.pmEmployeeId;
   const personnelQuery = usePersonnelQuery([summary.projectNumber]);
   const discrepancies = useProjectDiscrepancies(
     summary.isInternal ? [summary.projectNumber] : []
@@ -64,7 +67,7 @@ function ProjectContent({
       </section>
 
       <ProjectDetails summary={summary} />
-      <ProjectAdditionalInfo summary={summary} />
+      {isProjectManager && <ProjectAdditionalInfo summary={summary} />}
       <FinancialDetails summary={summary} />
 
       <section className="section-margin">

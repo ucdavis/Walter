@@ -24,6 +24,7 @@ const createSummary = (
   pa: null,
   pi: null,
   pm: null,
+  pmEmployeeId: null,
   postReportingPeriod: null,
   primarySponsorName: null,
   projectBurdenCostRate: null,

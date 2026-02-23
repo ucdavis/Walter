@@ -35,6 +35,7 @@ export interface ProjectSummary {
   pa: string | null;
   pi: string | null;
   pm: string | null;
+  pmEmployeeId: string | null;
   postReportingPeriod: string | null;
   primarySponsorName: string | null;
   projectBurdenCostRate: string | null;
@@ -145,6 +146,7 @@ export const summarizeAllProjects = (
     pa: null,
     pi: 'Multiple',
     pm: 'Multiple',
+    pmEmployeeId: null,
     postReportingPeriod: null,
     primarySponsorName: null,
     projectBurdenCostRate: null,
@@ -187,11 +189,14 @@ export const summarizeProjectByNumber = (
     costShareRequiredBySponsor: first.costShareRequiredBySponsor,
     displayName: first.displayName,
     grantAdministrator: first.grantAdministrator,
-    internalFundedProject: first.projectType === 'Internal' ? 'Yes' : 'No',
+    internalFundedProject: first.projectType
+      ? first.projectType === 'Internal' ? 'Yes' : 'No'
+      : null,
     isInternal: first.projectType === 'Internal',
     pa: first.pa,
     pi: first.pi,
     pm: first.pm,
+    pmEmployeeId: first.pmEmployeeId,
     postReportingPeriod: first.postReportingPeriod,
     primarySponsorName: first.primarySponsorName,
     projectBurdenCostRate: first.projectBurdenCostRate,

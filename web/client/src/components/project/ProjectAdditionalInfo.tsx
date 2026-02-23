@@ -19,11 +19,13 @@ function buildFields(summary: ProjectSummary): Field[] {
     { label: 'Billing Cycle', value: summary.billingCycle ?? '—' },
     {
       label: 'Burden Schedule Rate',
-      value: summary.projectBurdenCostRate ?? '—',
+      value: summary.projectBurdenCostRate
+        ? `${parseFloat((parseFloat(summary.projectBurdenCostRate) * 100).toFixed(4))}%`
+        : '—',
     },
     {
       label: 'Burden Structure',
-      value: summary.projectBurdenScheduleBase ?? '—',
+      value: summary.projectBurdenScheduleBase?.split('-')[0].trim() || '—',
     },
     {
       label: 'Contract Administrator',
