@@ -43,24 +43,52 @@ BEGIN
 
     EXEC dbo.usp_ParseProjectIdFilter @ProjectIds, @ProjectIdFilter OUTPUT;
 
-    SET @FilterClause = ' WHERE PROJECT_NUMBER IN (' + @ProjectIdFilter + ')';
+    SET @FilterClause = ' WHERE f.PROJECT_NUMBER IN (' + @ProjectIdFilter + ')';
 
     -- Add date overlap logic
     IF @StartDate IS NOT NULL
-        SET @FilterClause = @FilterClause + ' AND award_end_date >= ''' + CONVERT(VARCHAR(10), @StartDate, 120) + '''';
+        SET @FilterClause = @FilterClause + ' AND f.award_end_date >= ''' + CONVERT(VARCHAR(10), @StartDate, 120) + '''';
 
     IF @EndDate IS NOT NULL
-        SET @FilterClause = @FilterClause + ' AND award_start_date <= ''' + CONVERT(VARCHAR(10), @EndDate, 120) + '''';
+        SET @FilterClause = @FilterClause + ' AND f.award_start_date <= ''' + CONVERT(VARCHAR(10), @EndDate, 120) + '''';
 
-    -- Build Redshift query
+    -- Build Redshift query with LEFT JOIN to pgm_master_data
     SET @RedshiftQuery = '
-        SELECT AWARD_NUMBER, AWARD_NAME, AWARD_TYPE, AWARD_ENTITY, AWARD_START_DATE, AWARD_END_DATE, AWARD_STATUS, AWD_PI_NAME,
-        FUNDING_SOURCE, PROJECT_NUMBER, PROJECT_NAME, PROJECT_ENTITY, PRJ_OWNING_ORG AS PROJECT_OWNING_ORG,
-        PROJECT_TYPE, PROJECT_STATUS_CODE AS PROJECT_STATUS, TASK_NUM, TASK_NAME, TASK_STATUS, PM, PA, PI, COPI, EXPENDITURE_CATEGORY_NAME,
-        FUND_CD AS FUND_CODE, FUND_DESC, PURPOSE_CD AS PURPOSE_CODE, PURPOSE_DESC,
-        PROGRAM_CD AS PROGRAM_CODE, PROGRAM_DESC, ACTIVITY_CD AS ACTIVITY_CODE, ACTIVITY_DESC,
-        CAT_BUDGET, CAT_COMMITMENTS, CAT_ITD_EXP, CAT_BUD_BAL
-        FROM ae_dwh.ucd_faculty_rpt_t
+        WITH pgm AS (
+            SELECT
+                project_number, award_number,
+                close_date AS award_close_date,
+                LISTAGG(DISTINCT principal_investigator_person_name, ''; '') WITHIN GROUP (ORDER BY 1) AS award_pi,
+                billing_cycle, project_burden_schedule_base, project_burden_cost_rate,
+                cost_share_required_by_sponsor,
+                LISTAGG(DISTINCT grant_administrator, ''; '') WITHIN GROUP (ORDER BY 1) AS grant_administrator,
+                postrepperiod AS post_reporting_period,
+                primary_sponsor_name,
+                '''' AS project_fund,
+                LISTAGG(DISTINCT contractadmin, ''; '') WITHIN GROUP (ORDER BY 1) AS contract_administrator,
+                sponsor_award_number
+            FROM ae_dwh.pgm_master_data
+            WHERE project_number IN (' + @ProjectIdFilter + ')
+            GROUP BY
+                project_number, award_number, close_date, billing_cycle,
+                project_burden_schedule_base, project_burden_cost_rate,
+                cost_share_required_by_sponsor, postrepperiod, primary_sponsor_name,
+                sponsor_award_number
+        )
+        SELECT f.AWARD_NUMBER, f.AWARD_NAME, f.AWARD_TYPE, f.AWARD_ENTITY, f.AWARD_START_DATE, f.AWARD_END_DATE, f.AWARD_STATUS, f.AWD_PI_NAME,
+        f.FUNDING_SOURCE, f.PROJECT_NUMBER, f.PROJECT_NAME, f.PROJECT_ENTITY, f.PRJ_OWNING_ORG AS PROJECT_OWNING_ORG,
+        f.PROJECT_TYPE, f.PROJECT_STATUS_CODE AS PROJECT_STATUS, f.TASK_NUM, f.TASK_NAME, f.TASK_STATUS, f.PM, f.PA, f.PI, f.COPI, f.EXPENDITURE_CATEGORY_NAME,
+        f.FUND_CD AS FUND_CODE, f.FUND_DESC, f.PURPOSE_CD AS PURPOSE_CODE, f.PURPOSE_DESC,
+        f.PROGRAM_CD AS PROGRAM_CODE, f.PROGRAM_DESC, f.ACTIVITY_CD AS ACTIVITY_CODE, f.ACTIVITY_DESC,
+        f.CAT_BUDGET, f.CAT_COMMITMENTS, f.CAT_ITD_EXP, f.CAT_BUD_BAL,
+        p.award_close_date AS AWARD_CLOSE_DATE, p.award_pi AS AWARD_PI, p.billing_cycle AS BILLING_CYCLE,
+        p.project_burden_schedule_base AS PROJECT_BURDEN_SCHEDULE_BASE, p.project_burden_cost_rate AS PROJECT_BURDEN_COST_RATE,
+        p.cost_share_required_by_sponsor AS COST_SHARE_REQUIRED_BY_SPONSOR, p.grant_administrator AS GRANT_ADMINISTRATOR,
+        p.post_reporting_period AS POST_REPORTING_PERIOD,
+        p.primary_sponsor_name AS PRIMARY_SPONSOR_NAME, p.project_fund AS PROJECT_FUND,
+        p.contract_administrator AS CONTRACT_ADMINISTRATOR, p.sponsor_award_number AS SPONSOR_AWARD_NUMBER
+        FROM ae_dwh.ucd_faculty_rpt_t f
+        LEFT JOIN pgm p ON f.project_number = p.project_number AND f.award_number = p.award_number
         ' + @FilterClause;
 
     -- Build parameters JSON for logging

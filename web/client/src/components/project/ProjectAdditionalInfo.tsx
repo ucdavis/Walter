@@ -1,40 +1,77 @@
 import React from 'react';
-const FIELDS: Array<{ label: string; value: string }> = [
-  { label: 'Award Close Date', value: '06/30/2026' },
-  { label: 'Award End Date', value: '06/30/2026' },
-  { label: 'Award Number', value: 'AWD-123456' },
-  { label: 'Award PI', value: 'Dr. Jane Smith' },
-  { label: 'Award Start Date', value: '07/01/2023' },
-  { label: 'Award Status', value: 'Active' },
-  { label: 'Award Type', value: 'Grant' },
-  { label: 'Billing Cycle', value: 'Quarterly' },
+import { formatDate } from '@/lib/date.ts';
+import type { ProjectSummary } from '@/lib/projectSummary.ts';
 
-  { label: 'Burden Schedule Rate', value: '55%' },
-  { label: 'Burden Structure', value: 'On-Campus Research' },
-  { label: 'Contract Administrator', value: 'John Doe' },
-  { label: 'Cost Share Required by Sponsor', value: 'No' },
-  { label: 'Grant Administrator', value: 'Mary Johnson' },
-  { label: 'Internal Funded Project', value: 'No' },
-  { label: 'POETAF String', value: 'P12345-67890-001-ABC-0001' },
-  { label: 'Post Reporting Period', value: '90 Days' },
-  { label: 'Primary Sponsor Name', value: 'National Science Foundation' },
-  { label: 'Project Fund', value: '1234567' },
-  { label: 'Project Fund Name', value: 'Climate Research Initiative' },
-  { label: 'SPO Contact', value: 'spo@ucdavis.edu' },
-  { label: 'Sponsor Award Number', value: 'NSF-9876543' },
-];
+interface Field {
+  label: string;
+  value: string;
+}
+
+function buildFields(summary: ProjectSummary): Field[] {
+  return [
+    { label: 'Award Close Date', value: formatDate(summary.awardCloseDate) },
+    { label: 'Award End Date', value: formatDate(summary.awardEndDate) },
+    { label: 'Award Number', value: summary.awardNumber ?? '—' },
+    { label: 'Award PI', value: summary.awardPi ?? '—' },
+    { label: 'Award Start Date', value: formatDate(summary.awardStartDate) },
+    { label: 'Award Status', value: summary.awardStatus ?? '—' },
+    { label: 'Award Type', value: summary.awardType ?? '—' },
+    { label: 'Billing Cycle', value: summary.billingCycle ?? '—' },
+    {
+      label: 'Burden Schedule Rate',
+      value: summary.projectBurdenCostRate ?? '—',
+    },
+    {
+      label: 'Burden Structure',
+      value: summary.projectBurdenScheduleBase ?? '—',
+    },
+    {
+      label: 'Contract Administrator',
+      value: summary.contractAdministrator ?? '—',
+    },
+    {
+      label: 'Cost Share Required by Sponsor',
+      value: summary.costShareRequiredBySponsor ?? '—',
+    },
+    { label: 'Grant Administrator', value: summary.grantAdministrator ?? '—' },
+    {
+      label: 'Internal Funded Project',
+      value: summary.internalFundedProject ?? '—',
+    },
+    {
+      label: 'Post Reporting Period',
+      value: summary.postReportingPeriod ?? '—',
+    },
+    {
+      label: 'Primary Sponsor Name',
+      value: summary.primarySponsorName ?? '—',
+    },
+    { label: 'Project Fund', value: summary.projectFund ?? '—' },
+    {
+      label: 'Sponsor Award Number',
+      value: summary.sponsorAwardNumber ?? '—',
+    },
+  ];
+}
 
 const COLLAPSE_AFTER_LABEL = 'Billing Cycle';
 
-export function ProjectAdditionalInfo() {
+interface ProjectAdditionalInfoProps {
+  summary: ProjectSummary;
+}
+
+export function ProjectAdditionalInfo({
+  summary,
+}: ProjectAdditionalInfoProps) {
   const [expanded, setExpanded] = React.useState(false);
 
+  const fields = buildFields(summary);
+
   const splitIndex =
-    FIELDS.findIndex((f) => f.label === COLLAPSE_AFTER_LABEL) + 1;
+    fields.findIndex((f) => f.label === COLLAPSE_AFTER_LABEL) + 1;
 
-  const visibleFields = splitIndex > 0 ? FIELDS.slice(0, splitIndex) : FIELDS;
-
-  const hiddenFields = splitIndex > 0 ? FIELDS.slice(splitIndex) : [];
+  const visibleFields = splitIndex > 0 ? fields.slice(0, splitIndex) : fields;
+  const hiddenFields = splitIndex > 0 ? fields.slice(splitIndex) : [];
 
   return (
     <section className="section-margin">
