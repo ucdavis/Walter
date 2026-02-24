@@ -201,11 +201,11 @@ export function useProjectDiscrepancies(projectCodes: string[]): Set<string> {
   return useMemo(() => {
     if (!data) return new Set<string>();
 
-    // Sum glActualAmount + ppmItdExp per project,
+    // Sum glActualAmount + ppmBudBal per project,
     // matching the per-row formula on the reconciliation page.
     const byProject = new Map<string, number>();
     for (const r of data) {
-      const diff = r.glActualAmount + r.ppmItdExp;
+      const diff = r.glActualAmount + r.ppmBudBal;
       byProject.set(r.project, (byProject.get(r.project) ?? 0) + diff);
     }
 
