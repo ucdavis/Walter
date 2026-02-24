@@ -107,6 +107,48 @@ public sealed class FacultyPortfolioRecord
     [JsonPropertyName("catBudBal")]
     public decimal CatBudBal { get; set; }
 
+    [JsonPropertyName("awardStatus")]
+    public string? AwardStatus { get; set; }
+
+    [JsonPropertyName("awardType")]
+    public string? AwardType { get; set; }
+
+    [JsonPropertyName("awardCloseDate")]
+    public string? AwardCloseDate { get; set; }
+
+    [JsonPropertyName("awardPi")]
+    public string? AwardPi { get; set; }
+
+    [JsonPropertyName("billingCycle")]
+    public string? BillingCycle { get; set; }
+
+    [JsonPropertyName("projectBurdenScheduleBase")]
+    public string? ProjectBurdenScheduleBase { get; set; }
+
+    [JsonPropertyName("projectBurdenCostRate")]
+    public string? ProjectBurdenCostRate { get; set; }
+
+    [JsonPropertyName("costShareRequiredBySponsor")]
+    public string? CostShareRequiredBySponsor { get; set; }
+
+    [JsonPropertyName("grantAdministrator")]
+    public string? GrantAdministrator { get; set; }
+
+    [JsonPropertyName("postReportingPeriod")]
+    public string? PostReportingPeriod { get; set; }
+
+    [JsonPropertyName("primarySponsorName")]
+    public string? PrimarySponsorName { get; set; }
+
+    [JsonPropertyName("projectFund")]
+    public string? ProjectFund { get; set; }
+
+    [JsonPropertyName("contractAdministrator")]
+    public string? ContractAdministrator { get; set; }
+
+    [JsonPropertyName("sponsorAwardNumber")]
+    public string? SponsorAwardNumber { get; set; }
+
     /// <summary>
     /// Project Manager employee ID (from Financial Service API).
     /// </summary>

@@ -16,17 +16,34 @@ export interface ProjectTotals {
 }
 
 export interface ProjectSummary {
+  awardCloseDate: string | null;
   awardEndDate: string | null;
+  awardNumber: string | null;
+  awardPi: string | null;
   awardStartDate: string | null;
+  awardStatus: string | null;
+  awardType: string | null;
+  billingCycle: string | null;
   categories: ProjectCategorySummary[];
+  contractAdministrator: string | null;
   copi: string | null;
+  costShareRequiredBySponsor: string | null;
   displayName: string;
+  grantAdministrator: string | null;
+  internalFundedProject: string | null;
   isInternal: boolean;
   pa: string | null;
   pi: string | null;
   pm: string | null;
+  pmEmployeeId: string | null;
+  postReportingPeriod: string | null;
+  primarySponsorName: string | null;
+  projectBurdenCostRate: string | null;
+  projectBurdenScheduleBase: string | null;
+  projectFund: string | null;
   projectNumber: string;
   projectStatusCode: string | null;
+  sponsorAwardNumber: string | null;
   totals: ProjectTotals;
 }
 
@@ -110,17 +127,34 @@ export const summarizeAllProjects = (
 ): ProjectSummary => {
   const { categories, totals } = aggregateCategories(records);
   return {
+    awardCloseDate: null,
     awardEndDate: findLatestDate(records, 'awardEndDate'),
+    awardNumber: null,
+    awardPi: null,
     awardStartDate: findEarliestDate(records, 'awardStartDate'),
+    awardStatus: null,
+    awardType: null,
+    billingCycle: null,
     categories,
+    contractAdministrator: null,
     copi: null,
+    costShareRequiredBySponsor: null,
     displayName: DEFAULT_SUMMARY_NAME,
+    grantAdministrator: null,
+    internalFundedProject: null,
     isInternal: false,
     pa: null,
     pi: 'Multiple',
     pm: 'Multiple',
+    pmEmployeeId: null,
+    postReportingPeriod: null,
+    primarySponsorName: null,
+    projectBurdenCostRate: null,
+    projectBurdenScheduleBase: null,
+    projectFund: null,
     projectNumber: DEFAULT_SUMMARY_NUMBER,
     projectStatusCode: 'ACTIVE',
+    sponsorAwardNumber: null,
     totals,
   };
 };
@@ -141,17 +175,36 @@ export const summarizeProjectByNumber = (
   const first = filtered[0];
 
   return {
+    awardCloseDate: first.awardCloseDate,
     awardEndDate: findLatestDate(filtered, 'awardEndDate'),
+    awardNumber: first.awardNumber,
+    awardPi: first.awardPi,
     awardStartDate: findEarliestDate(filtered, 'awardStartDate'),
+    awardStatus: first.awardStatus,
+    awardType: first.awardType,
+    billingCycle: first.billingCycle,
     categories,
+    contractAdministrator: first.contractAdministrator,
     copi: first.copi,
+    costShareRequiredBySponsor: first.costShareRequiredBySponsor,
     displayName: first.displayName,
+    grantAdministrator: first.grantAdministrator,
+    internalFundedProject: first.projectType
+      ? first.projectType === 'Internal' ? 'Yes' : 'No'
+      : null,
     isInternal: first.projectType === 'Internal',
     pa: first.pa,
     pi: first.pi,
     pm: first.pm,
+    pmEmployeeId: first.pmEmployeeId,
+    postReportingPeriod: first.postReportingPeriod,
+    primarySponsorName: first.primarySponsorName,
+    projectBurdenCostRate: first.projectBurdenCostRate,
+    projectBurdenScheduleBase: first.projectBurdenScheduleBase,
+    projectFund: first.projectFund,
     projectNumber: first.projectNumber,
     projectStatusCode: first.projectStatusCode,
+    sponsorAwardNumber: first.sponsorAwardNumber,
     totals,
   };
 };
