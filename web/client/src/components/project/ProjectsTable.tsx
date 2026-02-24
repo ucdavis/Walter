@@ -88,7 +88,7 @@ const csvColumns = [
   { header: 'End Date', key: 'awardEndDate' as const },
   { header: 'Budget', key: 'totalBudget' as const },
   { header: 'Expense', key: 'totalExpense' as const },
-  { header: 'Encumbrance', key: 'totalEncumbrance' as const },
+  { header: 'Commitment', key: 'totalEncumbrance' as const },
   { header: 'Balance', key: 'totalBalance' as const },
 ];
 
@@ -174,11 +174,28 @@ export function ProjectsTable({
         header: () => <span className="flex justify-end">Effective Date</span>,
       }),
       columnHelper.accessor('awardEndDate', {
-        cell: (info) => (
-          <span className="flex justify-end">
-            {formatDate(info.getValue())}
-          </span>
-        ),
+        cell: (info) => {
+          const value = info.getValue();
+          let colorClass = '';
+          if (value) {
+            const endDate = new Date(value);
+            const now = new Date();
+            if (endDate < now) {
+              colorClass = 'text-error';
+            } else {
+              const ninetyDaysFromNow = new Date();
+              ninetyDaysFromNow.setDate(ninetyDaysFromNow.getDate() + 90);
+              if (endDate <= ninetyDaysFromNow) {
+                colorClass = 'text-warning';
+              }
+            }
+          }
+          return (
+            <span className={`flex justify-end ${colorClass}`}>
+              {formatDate(value)}
+            </span>
+          );
+        },
         header: () => <span className="flex justify-end">End Date</span>,
       }),
       columnHelper.accessor('totalBudget', {
@@ -218,16 +235,23 @@ export function ProjectsTable({
             {formatCurrency(totals.totalEncumbrance)}
           </span>
         ),
-        header: () => <span className="flex justify-end">Encumbrance</span>,
+        header: () => <span className="flex justify-end">Commitment</span>,
       }),
       columnHelper.accessor('totalBalance', {
-        cell: (info) => (
-          <span className="flex justify-end">
-            {formatCurrency(info.getValue())}
-          </span>
-        ),
+        cell: (info) => {
+          const value = info.getValue();
+          return (
+            <span
+              className={`flex justify-end ${value < 0 ? 'text-error' : ''}`}
+            >
+              {formatCurrency(value)}
+            </span>
+          );
+        },
         footer: () => (
-          <span className="flex justify-end">
+          <span
+            className={`flex justify-end ${totals.totalBalance < 0 ? 'text-error' : ''}`}
+          >
             {formatCurrency(totals.totalBalance)}
           </span>
         ),

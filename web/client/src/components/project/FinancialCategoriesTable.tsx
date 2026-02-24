@@ -111,23 +111,31 @@ const columns = [
         />
       </span>
     ),
-    header: () => <span className="flex justify-end w-full">Encumbrance</span>,
+    header: () => <span className="flex justify-end w-full">Commitment</span>,
   }),
   columnHelper.accessor('balance', {
-    cell: (info) => (
-      <span className="flex justify-end w-full">
-        <Currency value={info.getValue()} />
-      </span>
-    ),
-    footer: ({ table }) => (
-      <span className="flex justify-end w-full">
-        <Currency
-          value={table
-            .getFilteredRowModel()
-            .rows.reduce((sum, row) => sum + row.original.balance, 0)}
-        />
-      </span>
-    ),
+    cell: (info) => {
+      const value = info.getValue();
+      return (
+        <span
+          className={`flex justify-end w-full ${value < 0 ? 'text-error' : ''}`}
+        >
+          <Currency value={value} />
+        </span>
+      );
+    },
+    footer: ({ table }) => {
+      const total = table
+        .getFilteredRowModel()
+        .rows.reduce((sum, row) => sum + row.original.balance, 0);
+      return (
+        <span
+          className={`flex justify-end w-full ${total < 0 ? 'text-error' : ''}`}
+        >
+          <Currency value={total} />
+        </span>
+      );
+    },
     header: () => <span className="flex justify-end w-full">Balance</span>,
   }),
 ];
@@ -136,7 +144,7 @@ const csvColumns = [
   { header: 'Category', key: 'name' as const },
   { header: 'Budget', key: 'budget' as const },
   { header: 'Expenses', key: 'expense' as const },
-  { header: 'Encumbrance', key: 'encumbrance' as const },
+  { header: 'Commitment', key: 'encumbrance' as const },
   { header: 'Balance', key: 'balance' as const },
 ];
 
