@@ -16,7 +16,7 @@ export const Route = createFileRoute(
 });
 
 function hasDiscrepancy(r: GLPPMReconciliationRecord): boolean {
-  return Math.abs(r.glActualAmount + r.ppmItdExp) > 0.005;
+  return Math.abs(r.glActualAmount + r.ppmBudBal) > 0.005;
 }
 
 const columnHelper = createColumnHelper<GLPPMReconciliationRecord>();
@@ -121,20 +121,20 @@ function RouteComponent() {
             {formatCurrency(info.getValue())}
           </span>
         ),
-        header: () => <span className="flex justify-end">GL Actuals</span>,
+        header: () => <span className="flex justify-end">GL Balance</span>,
       }),
-      columnHelper.accessor('ppmItdExp', {
+      columnHelper.accessor('ppmBudBal', {
         cell: (info) => (
           <span className="flex justify-end">
             {formatCurrency(info.getValue())}
           </span>
         ),
-        header: () => <span className="flex justify-end">PPM Actuals</span>,
+        header: () => <span className="flex justify-end">PPM Balance</span>,
       }),
       columnHelper.display({
         cell: (info) => {
           const row = info.row.original;
-          const diff = row.glActualAmount + row.ppmItdExp;
+          const diff = row.glActualAmount + row.ppmBudBal;
           const isDisc = hasDiscrepancy(row);
           return (
             <span
@@ -208,7 +208,7 @@ function RouteComponent() {
             expandable={false}
             getRowProps={(row) => {
               const r = row.original;
-              const diff = r.glActualAmount + r.ppmItdExp;
+              const diff = r.glActualAmount + r.ppmBudBal;
               const isDisc = hasDiscrepancy(r);
 
               if (!isDisc) {
