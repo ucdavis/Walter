@@ -121,15 +121,15 @@ function RouteComponent() {
             {formatCurrency(info.getValue())}
           </span>
         ),
-        header: () => <span className="flex justify-end">GL Actuals</span>,
+        header: () => <span className="flex justify-end">GL Balance</span>,
       }),
-      columnHelper.accessor('ppmItdExp', {
+      columnHelper.accessor('ppmBudBal', {
         cell: (info) => (
           <span className="flex justify-end">
             {formatCurrency(info.getValue())}
           </span>
         ),
-        header: () => <span className="flex justify-end">PPM Actuals</span>,
+        header: () => <span className="flex justify-end">PPM Balance</span>,
       }),
       columnHelper.display({
         cell: (info) => {
