@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { createColumnHelper } from '@tanstack/react-table';
 import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
@@ -65,6 +65,11 @@ function aggregateProjects(records: ProjectRecord[]): AggregatedProject[] {
   return Array.from(projectsMap.values());
 }
 
+function isExpired(project: AggregatedProject): boolean {
+  if (!project.awardEndDate) return false;
+  return new Date(project.awardEndDate) < new Date();
+}
+
 function sortByEndDate(projects: AggregatedProject[]): AggregatedProject[] {
   return [...projects].sort((a, b) => {
     if (!a.awardEndDate && !b.awardEndDate) {
@@ -84,12 +89,12 @@ function sortByEndDate(projects: AggregatedProject[]): AggregatedProject[] {
 
 const csvColumns = [
   { header: 'Project', key: 'displayName' as const },
-  { header: 'Effective Date', key: 'awardStartDate' as const },
-  { header: 'End Date', key: 'awardEndDate' as const },
-  { header: 'Budget', key: 'totalBudget' as const },
-  { header: 'Expense', key: 'totalExpense' as const },
-  { header: 'Commitment', key: 'totalEncumbrance' as const },
-  { header: 'Balance', key: 'totalBalance' as const },
+  { format: 'date' as const, header: 'Effective Date', key: 'awardStartDate' as const },
+  { format: 'date' as const, header: 'End Date', key: 'awardEndDate' as const },
+  { format: 'currency' as const, header: 'Budget', key: 'totalBudget' as const },
+  { format: 'currency' as const, header: 'Expense', key: 'totalExpense' as const },
+  { format: 'currency' as const, header: 'Commitment', key: 'totalEncumbrance' as const },
+  { format: 'currency' as const, header: 'Balance', key: 'totalBalance' as const },
 ];
 
 interface ProjectsTableProps {
@@ -103,10 +108,22 @@ export function ProjectsTable({
   employeeId,
   records,
 }: ProjectsTableProps) {
-  const projects = useMemo(() => {
+  const [showExpired, setShowExpired] = useState(false);
+
+  const allProjects = useMemo(() => {
     const aggregated = aggregateProjects(records);
     return sortByEndDate(aggregated);
   }, [records]);
+
+  const expiredCount = useMemo(
+    () => allProjects.filter(isExpired).length,
+    [allProjects]
+  );
+
+  const projects = useMemo(
+    () => (showExpired ? allProjects : allProjects.filter((p) => !isExpired(p))),
+    [allProjects, showExpired]
+  );
 
   const totals = useMemo(
     () =>
@@ -268,9 +285,28 @@ export function ProjectsTable({
     ]
   );
 
-  if (projects.length === 0) {
+  if (allProjects.length === 0) {
     return <p className="text-base-content/70 mt-8">No projects found.</p>;
   }
+
+  const tableActions = (
+    <>
+      {expiredCount > 0 && (
+        <button
+          className={`btn btn-sm ${showExpired ? 'btn-active' : 'btn-default'}`}
+          onClick={() => setShowExpired(!showExpired)}
+          type="button"
+        >
+          {showExpired ? 'Hide' : 'Show'} expired ({expiredCount})
+        </button>
+      )}
+      <ExportDataButton
+        columns={csvColumns}
+        data={projects}
+        filename="projects.csv"
+      />
+    </>
+  );
 
   return (
     <div className="mt-4">
@@ -280,13 +316,7 @@ export function ProjectsTable({
         footerRowClassName="totaltr"
         globalFilter="left"
         initialState={{ pagination: { pageSize: 25 } }}
-        tableActions={
-          <ExportDataButton
-            columns={csvColumns}
-            data={projects}
-            filename="projects.csv"
-          />
-        }
+        tableActions={tableActions}
       />
     </div>
   );

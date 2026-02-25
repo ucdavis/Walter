@@ -213,11 +213,11 @@ const personnelCsvColumns = [
   { header: 'FTE', key: 'fte' as const },
   { header: 'Project', key: 'projectDescription' as const },
   { header: 'Dist %', key: 'distributionPercent' as const },
-  { header: 'Effective Date', key: 'fundingEffectiveDate' as const },
-  { header: 'End Date', key: 'fundingEndDate' as const },
-  { header: 'Monthly Rate', key: 'monthlyRate' as const },
-  { header: 'Monthly Fringe', key: 'monthlyFringe' as const },
-  { header: 'Monthly Total', key: 'monthlyTotal' as const },
+  { format: 'date' as const, header: 'Effective Date', key: 'fundingEffectiveDate' as const },
+  { format: 'date' as const, header: 'End Date', key: 'fundingEndDate' as const },
+  { format: 'currency' as const, header: 'Monthly Rate', key: 'monthlyRate' as const },
+  { format: 'currency' as const, header: 'Monthly Fringe', key: 'monthlyFringe' as const },
+  { format: 'currency' as const, header: 'Monthly Total', key: 'monthlyTotal' as const },
 ];
 
 interface PersonnelTableProps {

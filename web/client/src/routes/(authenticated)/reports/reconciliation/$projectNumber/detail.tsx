@@ -247,19 +247,19 @@ const ppmTaskCsvColumns = [
   { header: 'Fund', key: 'fundCode' as const },
   { header: 'Program', key: 'programCode' as const },
   { header: 'Activity', key: 'activityCode' as const },
-  { header: 'Budget', key: 'budget' as const },
-  { header: 'Expenses', key: 'expenses' as const },
-  { header: 'Balance', key: 'balance' as const },
+  { format: 'currency' as const, header: 'Budget', key: 'budget' as const },
+  { format: 'currency' as const, header: 'Expenses', key: 'expenses' as const },
+  { format: 'currency' as const, header: 'Balance', key: 'balance' as const },
 ];
 
 const glCsvColumns = [
-  { header: 'Date', key: 'journalAcctDate' as const },
+  { format: 'date' as const, header: 'Date', key: 'journalAcctDate' as const },
   { header: 'Chart String', key: 'chartString' as const },
   { header: 'Journal', key: 'journalName' as const },
   { header: 'Batch', key: 'journalBatchName' as const },
   { header: 'Category', key: 'journalCategory' as const },
   { header: 'Description', key: 'journalLineDescription' as const },
-  { header: 'Amount', key: 'actualAmount' as const },
+  { format: 'currency' as const, header: 'Amount', key: 'actualAmount' as const },
 ];
 
 function buildChartString(t: GLTransactionRecord): string {

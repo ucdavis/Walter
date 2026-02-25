@@ -142,10 +142,10 @@ const columns = [
 
 const csvColumns = [
   { header: 'Category', key: 'name' as const },
-  { header: 'Budget', key: 'budget' as const },
-  { header: 'Expenses', key: 'expense' as const },
-  { header: 'Commitment', key: 'encumbrance' as const },
-  { header: 'Balance', key: 'balance' as const },
+  { format: 'currency' as const, header: 'Budget', key: 'budget' as const },
+  { format: 'currency' as const, header: 'Expenses', key: 'expense' as const },
+  { format: 'currency' as const, header: 'Commitment', key: 'encumbrance' as const },
+  { format: 'currency' as const, header: 'Balance', key: 'balance' as const },
 ];
 
 interface FinancialCategoriesTableProps {

@@ -59,4 +59,29 @@ describe('toCsv', () => {
 
     expect(result).toBe('A,B,C\n,,value');
   });
+
+  it('formats dates as MM/dd/yyyy', () => {
+    const data = [{ name: 'Test', startDate: '2024-03-15T00:00:00' }];
+    const columns = [
+      { key: 'name' as const, header: 'Name' },
+      { format: 'date' as const, key: 'startDate' as const, header: 'Start' },
+    ];
+
+    const result = toCsv(data, columns);
+
+    expect(result).toBe('Name,Start\nTest,03/15/2024');
+  });
+
+  it('formats currency with commas and two decimals', () => {
+    const data = [{ name: 'Test', amount: 2000, balance: -1234.5 }];
+    const columns = [
+      { key: 'name' as const, header: 'Name' },
+      { format: 'currency' as const, key: 'amount' as const, header: 'Amount' },
+      { format: 'currency' as const, key: 'balance' as const, header: 'Balance' },
+    ];
+
+    const result = toCsv(data, columns);
+
+    expect(result).toBe('Name,Amount,Balance\nTest,"2,000.00","-1,234.50"');
+  });
 });
