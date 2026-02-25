@@ -1,9 +1,9 @@
 import { DocumentChartBarIcon } from '@heroicons/react/24/outline';
-import { downloadExcelCsv, toExcelCsv } from '@/lib/csv.ts';
+import { type CsvColumn, downloadExcelCsv, toExcelCsv } from '@/lib/csv.ts';
 
 interface ExportDataButtonProps<T> {
   className?: string;
-  columns: { header: string; key: keyof T }[];
+  columns: CsvColumn<T>[];
   data: T[];
   filename: string;
 }
