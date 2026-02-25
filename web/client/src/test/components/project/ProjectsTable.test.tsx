@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import userEvent from '@testing-library/user-event';
+import { userEvent } from '@testing-library/user-event';
 import { cleanup, render, screen } from '@testing-library/react';
 import { ProjectsTable } from '@/components/project/ProjectsTable.tsx';
 import type { ProjectRecord } from '@/queries/project.ts';
