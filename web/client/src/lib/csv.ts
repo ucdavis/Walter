@@ -44,7 +44,7 @@ function formatCurrencyCsv(value: unknown): string {
   if (!Number.isFinite(amount)) return '';
   return new Intl.NumberFormat('en-US', {
     minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    maximumFractionDigits: 6,
   }).format(amount);
 }
 
