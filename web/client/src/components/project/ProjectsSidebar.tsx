@@ -11,6 +11,9 @@ import {
   ClipboardDocumentListIcon,
   MagnifyingGlassIcon,
   XMarkIcon,
+  ChevronDoubleLeftIcon,
+  ChevronDoubleRightIcon,
+  HomeIcon,
 } from '@heroicons/react/24/outline';
 
 interface ProjectSummary {
@@ -62,7 +65,13 @@ export function ProjectsSidebar() {
   const { data: projects } = useSuspenseQuery(
     projectsDetailQueryOptions(employeeId)
   );
+
+  // mobile drawer
   const [open, setOpen] = useState(false);
+
+  // desktop collapse (md+)
+  const [collapsed, setCollapsed] = useState(false);
+
   const panelRef = useRef<HTMLDivElement | null>(null);
   const closeBtnRef = useRef<HTMLButtonElement | null>(null);
 
@@ -96,44 +105,82 @@ export function ProjectsSidebar() {
   return (
     <>
       {/* Desktop/Tablet sidebar (md+) */}
-      <aside className="w-68 shrink-0 hidden md:block">
+      <aside
+        className={[
+          'shrink-0 hidden md:block transition-[width] duration-200',
+          collapsed ? 'w-24' : 'w-68',
+        ].join(' ')}
+      >
         <div className="sticky top-24 mt-8">
-          <div className="bg-white rounded-sm border border-main-border">
+          <div className="bg-white rounded-sm border border-main-border overflow-hidden">
             <div className="bg-light-bg-200 border-b border-main-border">
-              <div className="px-4 py-2 border-b border-main-border">
-                <h2 className="text-primary-font text-sm uppercase">
-                  Project List
-                </h2>
-              </div>
-              <div className="px-4 py-1">
-                <div className="relative">
-                  <MagnifyingGlassIcon className="w-4 h-4 absolute left-0 top-1/2 -translate-y-1/2 pointer-events-none text-dark-font/55" />
+              <div className="px-4 py-2 border-b border-main-border flex items-center justify-between">
+                {!collapsed ? (
+                  <h2 className="text-primary-font text-sm uppercase">
+                    Project List
+                  </h2>
+                ) : (
+                  <span className="sr-only">Project List</span>
+                )}
 
-                  <input
-                    aria-label="Search projects"
-                    className="w-full h-9 pl-5 pr-3"
-                    placeholder="Search..."
-                    type="text"
-                  />
-                </div>
+                <button
+                  aria-label={
+                    collapsed ? 'Expand project list' : 'Collapse project list'
+                  }
+                  className="p-2 rounded-md"
+                  onClick={() => setCollapsed((s) => !s)}
+                >
+                  {collapsed ? (
+                    <ChevronDoubleRightIcon className="w-4 h-4" />
+                  ) : (
+                    <ChevronDoubleLeftIcon className="w-4 h-4" />
+                  )}
+                </button>
               </div>
+
+              {/* Search (hidden in collapsed mode) */}
+              {!collapsed && (
+                <div className="px-4 py-1">
+                  <div className="relative">
+                    <MagnifyingGlassIcon className="w-4 h-4 absolute left-0 top-1/2 -translate-y-1/2 pointer-events-none text-dark-font/55" />
+
+                    <input
+                      aria-label="Search projects"
+                      className="w-full h-9 pl-5 pr-3"
+                      placeholder="Search..."
+                      type="text"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="space-y-1 max-h-[650px] overflow-y-auto">
+              {/* All Projects */}
               <Link
                 className={linkClasses(isAllProjectsActive, false)}
                 params={{ employeeId }}
+                title={collapsed ? 'All Projects' : undefined}
                 to="/projects/$employeeId"
                 viewTransition={{ types: ['slide-right'] }}
               >
-                <div className="flex justify-between items-start mb-1">
-                  <span className="text-base">All Projects</span>
-                </div>
-                <div className="flex justify-between text-sm items-center text-dark-font/70">
-                  <Currency value={totalOverviewBalance} />
-                </div>
+                {collapsed ? (
+                  <div className="flex items-center justify-center py-2">
+                    <HomeIcon className="w-5 h-5 text-dark-font/70" />
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex justify-between items-start mb-1">
+                      <span className="text-base">All Projects</span>
+                    </div>
+                    <div className="flex justify-between text-sm items-center text-dark-font/70">
+                      <Currency value={totalOverviewBalance} />
+                    </div>
+                  </>
+                )}
               </Link>
 
+              {/* Individual projects */}
               {groupedProjects.map((project, index) => (
                 <Link
                   className={linkClasses(
@@ -142,24 +189,38 @@ export function ProjectsSidebar() {
                   )}
                   key={index}
                   params={{ employeeId, projectNumber: project.projectNumber }}
-                  title={project.displayName}
+                  title={
+                    collapsed
+                      ? `${project.displayName} • ${project.projectNumber}`
+                      : project.displayName
+                  }
                   to="/projects/$employeeId/$projectNumber"
                   viewTransition={{ types: ['slide-left'] }}
                 >
-                  <div className="text-xs text-dark-font/80">
-                    {project.projectNumber}
-                  </div>
-                  <div className="flex justify-between items-start mb-1">
-                    <span className="text-base truncate">
-                      {project.displayName}
-                    </span>
-                  </div>
-                  <div className="flex text-sm justify-between items-center text-dark-font/60">
-                    <Currency value={project.totalCatBudBal} />
-                    <span>
-                      {formatDate(project.awardEndDate, 'No end date')}
-                    </span>
-                  </div>
+                  {collapsed ? (
+                    <div className="flex flex-col gap-1 py-1">
+                      <div className="text-xs leading-tight text-dark-font/70">
+                        {project.projectNumber}
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="text-xs text-dark-font/80">
+                        {project.projectNumber}
+                      </div>
+                      <div className="flex justify-between items-start mb-1">
+                        <span className="text-base truncate">
+                          {project.displayName}
+                        </span>
+                      </div>
+                      <div className="flex text-sm justify-between items-center text-dark-font/60">
+                        <Currency value={project.totalCatBudBal} />
+                        <span>
+                          {formatDate(project.awardEndDate, 'No end date')}
+                        </span>
+                      </div>
+                    </>
+                  )}
                 </Link>
               ))}
             </div>
@@ -175,7 +236,6 @@ export function ProjectsSidebar() {
           className="flex items-center btn gap-2 uppercase font-light"
           onClick={() => {
             setOpen((s) => !s);
-
             setTimeout(() => closeBtnRef.current?.focus(), 120);
           }}
         >
@@ -187,13 +247,15 @@ export function ProjectsSidebar() {
       {/* Mobile off-canvas panel */}
       <div
         aria-hidden={!open}
-        className={`fixed inset-0 z-50 md:hidden pointer-events-none`}
+        className="fixed inset-0 z-50 md:hidden pointer-events-none"
         id="projects-drawer"
         {...(!open ? ({ inert: '' } as any) : {})}
       >
         {/* overlay */}
         <div
-          className={`absolute inset-0 bg-black/40 transition-opacity duration-200 ${open ? 'opacity-100 pointer-events-auto' : 'opacity-0'}`}
+          className={`absolute inset-0 bg-black/40 transition-opacity duration-200 ${
+            open ? 'opacity-100 pointer-events-auto' : 'opacity-0'
+          }`}
           onClick={() => setOpen(false)}
         />
 
@@ -261,7 +323,7 @@ export function ProjectsSidebar() {
                   project.projectStatusCode === 'ACTIVE'
                 )}
                 key={index}
-                onClick={() => setOpen(false)} // close panel when navigating
+                onClick={() => setOpen(false)}
                 params={{ employeeId, projectNumber: project.projectNumber }}
                 to="/projects/$employeeId/$projectNumber"
                 viewTransition={{ types: ['slide-left'] }}
