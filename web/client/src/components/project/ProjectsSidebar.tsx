@@ -158,6 +158,7 @@ export function ProjectsSidebar() {
             <div className="space-y-1 max-h-[650px] overflow-y-auto">
               {/* All Projects */}
               <Link
+                aria-label={collapsed ? 'All Projects' : undefined}
                 className={linkClasses(isAllProjectsActive, false)}
                 params={{ employeeId }}
                 title={collapsed ? 'All Projects' : undefined}
@@ -167,6 +168,7 @@ export function ProjectsSidebar() {
                 {collapsed ? (
                   <div className="flex items-center justify-center py-2">
                     <HomeIcon className="w-5 h-5 text-dark-font/70" />
+                    <span className="sr-only">All Projects</span>
                   </div>
                 ) : (
                   <>
