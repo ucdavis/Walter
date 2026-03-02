@@ -127,7 +127,7 @@ export function ProjectsSidebar() {
                   aria-label={
                     collapsed ? 'Expand project list' : 'Collapse project list'
                   }
-                  className="p-2 rounded-md"
+                  className="p-2 rounded-md cursor-pointer"
                   onClick={() => setCollapsed((s) => !s)}
                 >
                   {collapsed ? (
