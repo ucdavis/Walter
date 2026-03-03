@@ -17,6 +17,7 @@ PRINT 'Granting WalterAppRole permissions...'
 GRANT EXECUTE ON [dbo].[usp_GetFacultyDeptPortfolio] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_GetFacultyDeptPortfolioElzar] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_GetGLPPMReconciliation] TO [WalterAppRole];
+GRANT EXECUTE ON [dbo].[usp_GetGLPPMReconciliationElzar] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_GetGLTransactionListings] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_GetLaborLedgerData] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_GetPositionBudgets] TO [WalterAppRole];
