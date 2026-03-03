@@ -83,6 +83,7 @@ export interface GLTransactionRecord {
   actualAmount: number;
   commitmentAmount: number;
   obligationAmount: number;
+  transactionType: string | null;
 }
 
 export interface GLPPMReconciliationRecord {
@@ -101,7 +102,6 @@ export interface GLPPMReconciliationRecord {
   ppmCommitments: number;
   ppmItdExp: number;
   ppmBudBal: number;
-  remainingBalance: number;
   dataSource: string;
 }
 

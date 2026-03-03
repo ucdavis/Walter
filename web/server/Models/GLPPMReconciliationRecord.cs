@@ -52,9 +52,6 @@ public sealed class GLPPMReconciliationRecord
     [JsonPropertyName("ppmBudBal")]
     public decimal PpmBudBal { get; set; }
 
-    [JsonPropertyName("remainingBalance")]
-    public decimal RemainingBalance { get; set; }
-
     [JsonPropertyName("dataSource")]
     public string DataSource { get; set; } = "";
 }

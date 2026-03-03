@@ -10,10 +10,7 @@ import {
   type GLPPMReconciliationRecord,
   type GLTransactionRecord,
 } from '@/queries/project.ts';
-import { summarizeProjectByNumber } from '@/lib/projectSummary.ts';
 import { formatCurrency } from '@/lib/currency.ts';
-import { formatDate } from '@/lib/date.ts';
-import { Currency } from '@/shared/Currency.tsx';
 import { DataTable } from '@/shared/DataTable.tsx';
 
 interface SearchParams {
@@ -135,19 +132,6 @@ const ppmTaskColumns = [
     ),
     header: 'Fund',
   }),
-  ppmTaskColumnHelper.accessor('programCode', {
-    cell: (info) => (
-      <div className="text-sm">
-        <div>{info.getValue() ?? '-'}</div>
-        {info.row.original.programDesc && (
-          <div className="text-xs text-base-content/80">
-            {info.row.original.programDesc}
-          </div>
-        )}
-      </div>
-    ),
-    header: 'Program',
-  }),
   ppmTaskColumnHelper.accessor('activityCode', {
     cell: (info) => (
       <div className="text-sm">
@@ -217,6 +201,10 @@ const glColumns = [
     cell: (info) => <span className="text-sm">{info.getValue() ?? '-'}</span>,
     header: 'Batch',
   }),
+  glColumnHelper.accessor('transactionType', {
+    cell: (info) => <span className="text-sm">{info.getValue() ?? '-'}</span>,
+    header: 'Transaction Type',
+  }),
   glColumnHelper.accessor('journalCategory', {
     cell: (info) => <span className="text-sm">{info.getValue() ?? '-'}</span>,
     header: 'Category',
@@ -245,7 +233,6 @@ const ppmTaskCsvColumns = [
   { header: 'Task', key: 'taskNum' as const },
   { header: 'Task Name', key: 'taskName' as const },
   { header: 'Fund', key: 'fundCode' as const },
-  { header: 'Program', key: 'programCode' as const },
   { header: 'Activity', key: 'activityCode' as const },
   { format: 'currency' as const, header: 'Budget', key: 'budget' as const },
   { format: 'currency' as const, header: 'Expenses', key: 'expenses' as const },
@@ -253,13 +240,35 @@ const ppmTaskCsvColumns = [
 ];
 
 const glCsvColumns = [
-  { format: 'date' as const, header: 'Date', key: 'journalAcctDate' as const },
-  { header: 'Chart String', key: 'chartString' as const },
-  { header: 'Journal', key: 'journalName' as const },
-  { header: 'Batch', key: 'journalBatchName' as const },
-  { header: 'Category', key: 'journalCategory' as const },
-  { header: 'Description', key: 'journalLineDescription' as const },
+  { header: 'Entity', key: 'entity' as const },
+  { header: 'Entity Description', key: 'entityDescription' as const },
+  { header: 'Fund', key: 'fund' as const },
+  { header: 'Fund Description', key: 'fundDescription' as const },
+  { header: 'Financial Dept', key: 'financialDepartment' as const },
+  { header: 'Financial Dept Description', key: 'financialDepartmentDescription' as const },
+  { header: 'Account', key: 'account' as const },
+  { header: 'Account Description', key: 'accountDescription' as const },
+  { header: 'Purpose', key: 'purpose' as const },
+  { header: 'Purpose Description', key: 'purposeDescription' as const },
+  { header: 'Program', key: 'program' as const },
+  { header: 'Program Description', key: 'programDescription' as const },
+  { header: 'Project', key: 'project' as const },
+  { header: 'Project Description', key: 'projectDescription' as const },
+  { header: 'Activity', key: 'activity' as const },
+  { header: 'Activity Description', key: 'activityDescription' as const },
+  { header: 'Transaction Type', key: 'transactionType' as const },
+  { header: 'Document Type', key: 'documentType' as const },
+  { header: 'Document Number', key: 'accountingSequenceNumber' as const },
+  { header: 'Tracking Number', key: 'trackingNo' as const },
+  { header: 'Reference', key: 'reference' as const },
+  { header: 'JE Source', key: 'journalSource' as const },
+  { header: 'JE Category', key: 'journalCategory' as const },
+  { header: 'JE Batch Name', key: 'journalBatchName' as const },
+  { header: 'JE Name', key: 'journalName' as const },
+  { header: 'JE Accounting Period', key: 'periodName' as const },
+  { format: 'date' as const, header: 'JE Accounting Date', key: 'journalAcctDate' as const },
   { format: 'currency' as const, header: 'Amount', key: 'actualAmount' as const },
+  { header: 'JE Line Description', key: 'journalLineDescription' as const },
 ];
 
 function buildChartString(t: GLTransactionRecord): string {
@@ -284,9 +293,6 @@ function RouteComponent() {
   const { data: projects } = useQuery(
     projectsByNumberQueryOptions([projectNumber])
   );
-  const summary = projects
-    ? summarizeProjectByNumber(projects, projectNumber)
-    : null;
 
   const {
     data: reconciliation,
@@ -411,56 +417,6 @@ function RouteComponent() {
         <p className="subtitle">{keyLabel}</p>
       </section>
 
-      {summary && (
-        <section className="mb-8">
-          <div className="fancy-data">
-            <dl className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              <div className="flex flex-col">
-                <dt className="font-proxima-bold text-lg">Start</dt>
-                <dd className="text-xl">
-                  {formatDate(summary.awardStartDate)}
-                </dd>
-              </div>
-              <div className="flex flex-col">
-                <dt className="font-proxima-bold text-lg">End</dt>
-                <dd className="text-xl">{formatDate(summary.awardEndDate)}</dd>
-              </div>
-              <div className="flex flex-col">
-                <dt className="font-proxima-bold text-lg">Budget</dt>
-                <dd className="text-xl">
-                  <Currency value={summary.totals.budget} />
-                </dd>
-              </div>
-              <div className="flex flex-col">
-                <dt className="font-proxima-bold text-lg">Balance</dt>
-                <dd className="text-xl font-proxima-bold">
-                  <Currency value={summary.totals.balance} />
-                </dd>
-              </div>
-            </dl>
-            <hr className="border-main-border my-5" />
-            <dl className="grid grid-cols-2 md:grid-cols-3 gap-6">
-              <div className="flex flex-col">
-                <dt className="stat-label">Status</dt>
-                <dd className="stat-value">
-                  <div className="badge badge-soft badge-primary">
-                    {summary.projectStatusCode ?? 'Not provided'}
-                  </div>
-                </dd>
-              </div>
-              <div className="flex flex-col">
-                <dt className="stat-label">PM</dt>
-                <dd className="stat-value">{summary.pm ?? 'Not provided'}</dd>
-              </div>
-              <div className="flex flex-col">
-                <dt className="stat-label">PI</dt>
-                <dd className="stat-value">{summary.pi ?? 'Not provided'}</dd>
-              </div>
-            </dl>
-          </div>
-        </section>
-      )}
-
       {isPending ? (
         <p className="text-base-content/70 mt-4">
           Loading reconciliation data…
@@ -519,10 +475,7 @@ function RouteComponent() {
                 tableActions={
                   <ExportDataButton
                     columns={glCsvColumns}
-                    data={glTransactions.map((t) => ({
-                      ...t,
-                      chartString: buildChartString(t),
-                    }))}
+                    data={glTransactions}
                     filename="gl-transactions.csv"
                   />
                 }

@@ -61,32 +61,42 @@ BEGIN
 
     -- Build filter clause based on which parameter was provided
     IF @FinancialDept IS NOT NULL
-        SET @FilterClause = ' WHERE financial_department = ''' + @FinancialDept + '''';
+        SET @FilterClause = ' WHERE tlr.financial_department = ''' + @FinancialDept + '''';
     ELSE
-        SET @FilterClause = ' WHERE PROJECT IN (' + @ProjectIdFilter + ')';
+        SET @FilterClause = ' WHERE tlr.PROJECT IN (' + @ProjectIdFilter + ')';
 
     -- Add date filters
     IF @StartDate IS NOT NULL
-        SET @FilterClause = @FilterClause + ' AND journal_acct_date >= ''' + CONVERT(VARCHAR(10), @StartDate, 120) + '''';
+        SET @FilterClause = @FilterClause + ' AND tlr.journal_acct_date >= ''' + CONVERT(VARCHAR(10), @StartDate, 120) + '''';
 
     IF @EndDate IS NOT NULL
-        SET @FilterClause = @FilterClause + ' AND journal_acct_date <= ''' + CONVERT(VARCHAR(10), @EndDate, 120) + '''';
+        SET @FilterClause = @FilterClause + ' AND tlr.journal_acct_date <= ''' + CONVERT(VARCHAR(10), @EndDate, 120) + '''';
 
     -- Build Redshift query with explicit column list
     SET @RedshiftQuery = '
         SELECT
-            ENTITY, ENTITY_DESCRIPTION, FUND, FUND_DESCRIPTION,
-            FINANCIAL_DEPARTMENT, FINANCIAL_DEPARTMENT_DESCRIPTION,
-            ACCOUNT, ACCOUNT_DESCRIPTION, PURPOSE, PURPOSE_DESCRIPTION,
-            PROGRAM, PROGRAM_DESCRIPTION, PROJECT, PROJECT_DESCRIPTION,
-            ACTIVITY, ACTIVITY_DESCRIPTION, DOCUMENT_TYPE,
-            ACCOUNTING_SEQUENCE_NUMBER, TRACKING_NO, REFERENCE,
-            JOURNAL_LINE_DESCRIPTION, JOURNAL_ACCT_DATE, JOURNAL_NAME,
-            JOURNAL_REFERENCE, PERIOD_NAME, JOURNAL_BATCH_NAME,
-            JOURNAL_SOURCE, JOURNAL_CATEGORY, BATCH_STATUS, ACTUAL_FLAG,
-            ENCUMBRANCE_TYPE_CODE, ACTUAL_AMOUNT, COMMITMENT_AMOUNT,
-            OBLIGATION_AMOUNT
-        FROM ae_dwh.transactional_listing_report
+            tlr.ENTITY, tlr.ENTITY_DESCRIPTION, tlr.FUND, tlr.FUND_DESCRIPTION,
+            tlr.FINANCIAL_DEPARTMENT, tlr.FINANCIAL_DEPARTMENT_DESCRIPTION,
+            tlr.ACCOUNT, tlr.ACCOUNT_DESCRIPTION, tlr.PURPOSE, tlr.PURPOSE_DESCRIPTION,
+            tlr.PROGRAM, tlr.PROGRAM_DESCRIPTION, tlr.PROJECT, tlr.PROJECT_DESCRIPTION,
+            tlr.ACTIVITY, tlr.ACTIVITY_DESCRIPTION, tlr.DOCUMENT_TYPE,
+            tlr.ACCOUNTING_SEQUENCE_NUMBER, tlr.TRACKING_NO, tlr.REFERENCE,
+            tlr.JOURNAL_LINE_DESCRIPTION, tlr.JOURNAL_ACCT_DATE, tlr.JOURNAL_NAME,
+            tlr.JOURNAL_REFERENCE, tlr.PERIOD_NAME, tlr.JOURNAL_BATCH_NAME,
+            tlr.JOURNAL_SOURCE, tlr.JOURNAL_CATEGORY, tlr.BATCH_STATUS, tlr.ACTUAL_FLAG,
+            tlr.ENCUMBRANCE_TYPE_CODE, tlr.ACTUAL_AMOUNT, tlr.COMMITMENT_AMOUNT,
+            tlr.OBLIGATION_AMOUNT,
+            CASE
+                WHEN acc.parent_level_0_code LIKE ''1%'' THEN ''Asset''
+                WHEN acc.parent_level_0_code LIKE ''2%'' THEN ''Liability''
+                WHEN acc.parent_level_0_code LIKE ''3%'' THEN ''Net Position''
+                WHEN acc.parent_level_0_code LIKE ''4%'' THEN ''Revenue''
+                WHEN acc.parent_level_0_code LIKE ''5%'' THEN ''Expense''
+                WHEN acc.parent_level_0_code LIKE ''8%'' THEN ''Other Changes In Net Position''
+                ELSE ''Other''
+            END AS TRANSACTION_TYPE
+        FROM ae_dwh.transactional_listing_report tlr
+        LEFT JOIN ae_dwh.erp_account acc ON tlr.ACCOUNT = acc.code
         ' + @FilterClause;
 
     -- Build parameters JSON for logging
