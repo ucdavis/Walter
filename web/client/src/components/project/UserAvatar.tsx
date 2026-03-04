@@ -4,6 +4,17 @@ import { useUser } from '@/shared/auth/UserContext.tsx';
 const toTokens = (value: string) =>
   value.replaceAll('.', ' ').trim().split(/\s+/).filter(Boolean);
 
+export const isLocalLoopbackHost = (hostname: string) => {
+  const normalized = hostname.trim().toLowerCase();
+  return (
+    normalized === 'localhost' ||
+    normalized.endsWith('.localhost') ||
+    normalized === '127.0.0.1' ||
+    normalized === '::1' ||
+    normalized === '[::1]'
+  );
+};
+
 export const getInitials = (name: string) => {
   const trimmed = name.trim();
   if (!trimmed) {
@@ -54,22 +65,37 @@ export const UserAvatar: React.FC = () => {
   );
   const [showPhoto, setShowPhoto] = useState(true);
   const hoverName = user.name || user.kerberos || '';
+  const shouldLinkToLogin =
+    typeof window !== 'undefined' &&
+    isLocalLoopbackHost(window.location.hostname);
 
-  if (!showPhoto) {
-    return (
-      <div
-        className="tooltip tooltip-left md:tooltip-bottom"
-        data-tip={hoverName}
-        title={hoverName}
-      >
-        <div className="avatar avatar-placeholder">
-          <div className="bg-neutral text-neutral-content w-10 rounded-full">
-            <span>{initials}</span>
-          </div>
-        </div>
+  const avatar = !showPhoto ? (
+    <div className="avatar avatar-placeholder">
+      <div className="bg-neutral text-neutral-content w-10 rounded-full">
+        <span>{initials}</span>
       </div>
-    );
-  }
+    </div>
+  ) : (
+    <div className="avatar">
+      <div className="w-10 rounded-full">
+        <img
+          alt="User avatar"
+          decoding="async"
+          loading="lazy"
+          onError={() => setShowPhoto(false)}
+          src="/api/user/me/photo"
+        />
+      </div>
+    </div>
+  );
+
+  const avatarContent = shouldLinkToLogin ? (
+    <a aria-label="Open local login chooser" href="/login">
+      {avatar}
+    </a>
+  ) : (
+    avatar
+  );
 
   return (
     <div
@@ -77,17 +103,7 @@ export const UserAvatar: React.FC = () => {
       data-tip={hoverName}
       title={hoverName}
     >
-      <div className="avatar">
-        <div className="w-10 rounded-full">
-          <img
-            alt="User avatar"
-            decoding="async"
-            loading="lazy"
-            onError={() => setShowPhoto(false)}
-            src="/api/user/me/photo"
-          />
-        </div>
-      </div>
+      {avatarContent}
     </div>
   );
 };
