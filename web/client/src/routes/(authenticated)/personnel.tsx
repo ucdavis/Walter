@@ -30,7 +30,7 @@ function RouteComponent() {
     const projects = userProjectsQuery.data ?? [];
     return [...new Set(projects.map((p) => p.projectNumber))];
   }, [userProjectsQuery.data]);
-  const personnelQuery = usePersonnelQuery(projectCodes);
+  const personnelQuery = usePersonnelQuery(user.employeeId, projectCodes);
 
   const isLoading =
     userProjectsQuery.isPending ||

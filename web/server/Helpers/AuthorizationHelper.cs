@@ -8,6 +8,7 @@ public static class AuthorizationHelper
     public static class Policies
     {
         public const string CanViewAccruals = nameof(CanViewAccruals);
+        public const string CanViewFinancials = nameof(CanViewFinancials);
         public const string IsManager = nameof(IsManager);
         public const string IsSystem = nameof(IsSystem);
     }
@@ -22,6 +23,9 @@ public static class AuthorizationHelper
         {
             options.AddPolicy(Policies.CanViewAccruals, policy =>
                 policy.RequireRole(Role.Names.AccrualViewer));
+
+            options.AddPolicy(Policies.CanViewFinancials, policy =>
+                policy.RequireRole(Role.Names.FinancialViewer, Role.Names.ProjectManager));
 
             options.AddPolicy(Policies.IsManager, policy =>
                 policy.RequireRole(Role.Names.Manager));

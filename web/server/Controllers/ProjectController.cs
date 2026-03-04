@@ -1,29 +1,62 @@
 using AggieEnterpriseApi.Extensions;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using server.Helpers;
 using server.Models;
 using server.Services;
+using Server.Services;
 
 namespace Server.Controllers;
 
 public sealed class ProjectController : ApiControllerBase
 {
-    private readonly IWebHostEnvironment _env;
     private readonly IFinancialApiService _financialApiService;
     private readonly IDatamartService _datamartService;
+    private readonly IAuthorizationService _authorizationService;
+    private readonly IUserService _userService;
     public ProjectController(
-        IWebHostEnvironment env,
         IFinancialApiService financialApiService,
-        IDatamartService datamartService)
+        IDatamartService datamartService,
+        IAuthorizationService authorizationService,
+        IUserService userService)
     {
-        _env = env;
         _financialApiService = financialApiService;
         _datamartService = datamartService;
+        _authorizationService = authorizationService;
+        _userService = userService;
     }
 
     [HttpGet("{employeeId}")]
     public async Task<IActionResult> GetByEmployeeIdAsync(string employeeId, CancellationToken cancellationToken)
     {
+        // Check if the user has financial access
+        var hasFinancialAccess = (await _authorizationService.AuthorizeAsync(
+            User,
+            resource: null,
+            policyName: AuthorizationHelper.Policies.CanViewFinancials)).Succeeded;
+
+        // if not, they must be requesting their own data (PI)
+        if (!hasFinancialAccess)
+        {
+            Guid userId;
+            try
+            {
+                userId = User.GetUserId();
+            }
+            catch (InvalidOperationException)
+            {
+                return Unauthorized();
+            }
+
+            var currentUser = await _userService.GetByIdAsync(userId, cancellationToken);
+            var isSelf = string.Equals(currentUser?.EmployeeId, employeeId, StringComparison.OrdinalIgnoreCase);
+
+            if (!isSelf)
+            {
+                return Forbid();
+            }
+        }
+
         var client = _financialApiService.GetClient();
 
         // Query projects where the specified employee is a Principal Investigator
@@ -81,21 +114,7 @@ public sealed class ProjectController : ApiControllerBase
         return Ok(activeProjects);
     }
 
-    /// <summary>
-    /// Gets all projects for the current authenticated user.
-    /// TODO: For now, this will just read static data from a JSON file
-    /// </summary>
-    [HttpGet]
-    public IActionResult GetAllForCurrentUser(CancellationToken cancellationToken)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-
-        var path = Path.Combine(_env.ContentRootPath, "Models", "FacultyReportFake.json");
-        var json = System.IO.File.ReadAllText(path);
-
-        return Content(json, "application/json");
-    }
-
+    [Authorize(Policy = AuthorizationHelper.Policies.CanViewFinancials)]
     [HttpGet("byNumber")]
     public async Task<IActionResult> GetByProjectNumberAsync(
         CancellationToken cancellationToken,
@@ -114,18 +133,63 @@ public sealed class ProjectController : ApiControllerBase
     [HttpGet("personnel")]
     public async Task<IActionResult> GetPersonnelForProjects(
         CancellationToken cancellationToken,
+        [FromQuery] string? employeeId = null,
         [FromQuery] string? projectCodes = null)
     {
         if (string.IsNullOrWhiteSpace(projectCodes))
             return Ok(Array.Empty<PositionBudgetRecord>());
 
-        var codes = projectCodes.Split(',', StringSplitOptions.RemoveEmptyEntries);
+        var codes = projectCodes.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (codes.Length == 0)
+        {
+            return Ok(Array.Empty<PositionBudgetRecord>());
+        }
+
+        var hasFinancialAccess = (await _authorizationService.AuthorizeAsync(
+            User,
+            resource: null,
+            policyName: AuthorizationHelper.Policies.CanViewFinancials)).Succeeded;
+
+        if (!hasFinancialAccess)
+        {
+            if (string.IsNullOrWhiteSpace(employeeId))
+            {
+                return BadRequest("employeeId is required.");
+            }
+
+            Guid userId;
+            try
+            {
+                userId = User.GetUserId();
+            }
+            catch (InvalidOperationException)
+            {
+                return Unauthorized();
+            }
+
+            var currentUser = await _userService.GetByIdAsync(userId, cancellationToken);
+            var isSelf = string.Equals(currentUser?.EmployeeId, employeeId, StringComparison.OrdinalIgnoreCase);
+            if (!isSelf)
+            {
+                return Forbid();
+            }
+
+            var accessibleProjectNumbers = await GetAccessibleProjectNumbersForEmployeeAsync(employeeId, cancellationToken);
+            var requestedProjectNumbers = new HashSet<string>(codes, StringComparer.OrdinalIgnoreCase);
+
+            if (!requestedProjectNumbers.IsSubsetOf(accessibleProjectNumbers))
+            {
+                return Forbid();
+            }
+        }
+
         var applicationUser = User.GetUserIdentifier();
         var personnel = await _datamartService.GetPositionBudgetsAsync(codes, applicationUser, cancellationToken);
 
         return Ok(personnel);
     }
 
+    [Authorize(Policy = AuthorizationHelper.Policies.CanViewFinancials)]
     [HttpGet("transactions")]
     public async Task<IActionResult> GetTransactionsForProjectsAsync(
         CancellationToken cancellationToken,
@@ -141,6 +205,7 @@ public sealed class ProjectController : ApiControllerBase
         return Ok(transactions);
     }
 
+    [Authorize(Policy = AuthorizationHelper.Policies.CanViewFinancials)]
     [HttpGet("gl-ppm-reconciliation")]
     public async Task<IActionResult> GetGLPPMReconciliationAsync(
         CancellationToken cancellationToken,
@@ -165,6 +230,16 @@ public sealed class ProjectController : ApiControllerBase
     [HttpGet("managed/{employeeId}")]
     public async Task<IActionResult> GetManagedFaculty(string employeeId, CancellationToken cancellationToken)
     {
+        var hasFinancialAccess = (await _authorizationService.AuthorizeAsync(
+            User,
+            resource: null,
+            policyName: AuthorizationHelper.Policies.CanViewFinancials)).Succeeded;
+
+        if (!hasFinancialAccess)
+        {
+            return Ok(Array.Empty<object>());
+        }
+
         var client = _financialApiService.GetClient();
 
         // Query projects where the specified employee is a Project Manager
@@ -232,5 +307,22 @@ public sealed class ProjectController : ApiControllerBase
         }
 
         return Ok(principalInvestigators);
+    }
+
+    private async Task<HashSet<string>> GetAccessibleProjectNumbersForEmployeeAsync(
+        string employeeId,
+        CancellationToken cancellationToken)
+    {
+        var client = _financialApiService.GetClient();
+
+        var piResult = await client.PpmProjectByProjectTeamMemberEmployeeId.ExecuteAsync(
+            employeeId, PpmRole.PrincipalInvestigator, cancellationToken);
+        var piData = piResult.ReadData();
+
+        return piData.PpmProjectByProjectTeamMemberEmployeeId
+            .Select(p => p.ProjectNumber?.Trim())
+            .Where(p => !string.IsNullOrWhiteSpace(p))
+            .Select(p => p!)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
 }

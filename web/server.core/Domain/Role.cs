@@ -13,6 +13,10 @@ public class Role
         public const string Admin = "Admin";
         public const string Manager = "Manager";
         public const string AccrualViewer = "AccrualViewer";
+        public const string FinancialViewer = "FinancialViewer";
+        public const string ProjectManager = "ProjectManager";
+
+
     }
 
     [Key]
