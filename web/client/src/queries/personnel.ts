@@ -18,19 +18,23 @@ export interface PersonnelRecord {
   projectDescription: string;
 }
 
-export const personnelQueryOptions = (projectCodes: string[]) => ({
-  enabled: projectCodes.length > 0,
+export const personnelQueryOptions = (
+  employeeId: string,
+  projectCodes: string[]
+) => ({
+  enabled: Boolean(employeeId) && projectCodes.length > 0,
   queryFn: async (): Promise<PersonnelRecord[]> => {
     const params = new URLSearchParams();
+    params.set('employeeId', employeeId);
     params.set('projectCodes', projectCodes.join(','));
     return await fetchJson<PersonnelRecord[]>(
       `/api/project/personnel?${params.toString()}`
     );
   },
-  queryKey: ['personnel', projectCodes] as const,
+  queryKey: ['personnel', employeeId, projectCodes] as const,
   staleTime: 60 * 60 * 1000, // 1 hour
 });
 
-export const usePersonnelQuery = (projectCodes: string[]) => {
-  return useQuery(personnelQueryOptions(projectCodes));
+export const usePersonnelQuery = (employeeId: string, projectCodes: string[]) => {
+  return useQuery(personnelQueryOptions(employeeId, projectCodes));
 };

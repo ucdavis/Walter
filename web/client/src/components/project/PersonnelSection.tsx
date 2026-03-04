@@ -2,6 +2,7 @@ import { PersonnelTable } from '@/components/project/PersonnelTable.tsx';
 import { usePersonnelQuery } from '@/queries/personnel.ts';
 
 interface PersonnelSectionProps {
+  employeeId: string;
   projectNumbers: string[];
 }
 
@@ -73,8 +74,11 @@ function PersonnelTableSkeleton({ rows = 5 }: { rows?: number }) {
   );
 }
 
-export function PersonnelSection({ projectNumbers }: PersonnelSectionProps) {
-  const personnelQuery = usePersonnelQuery(projectNumbers);
+export function PersonnelSection({
+  employeeId,
+  projectNumbers,
+}: PersonnelSectionProps) {
+  const personnelQuery = usePersonnelQuery(employeeId, projectNumbers);
 
   if (projectNumbers.length === 0) {
     return null;

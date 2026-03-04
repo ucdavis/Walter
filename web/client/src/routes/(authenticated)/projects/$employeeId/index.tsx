@@ -52,7 +52,7 @@ function RouteComponent() {
     [projects]
   );
 
-  const personnelQuery = usePersonnelQuery(projectNumbers);
+  const personnelQuery = usePersonnelQuery(employeeId, projectNumbers);
   const personnelCount = useMemo(() => {
     if (!personnelQuery.data) {
       return null;
@@ -119,7 +119,7 @@ function RouteComponent() {
         />
       </section>
 
-      <PersonnelSection projectNumbers={projectNumbers} />
+      <PersonnelSection employeeId={employeeId} projectNumbers={projectNumbers} />
     </main>
   );
 }

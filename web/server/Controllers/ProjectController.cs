@@ -151,12 +151,52 @@ public sealed class ProjectController : ApiControllerBase
     [HttpGet("personnel")]
     public async Task<IActionResult> GetPersonnelForProjects(
         CancellationToken cancellationToken,
+        [FromQuery] string? employeeId = null,
         [FromQuery] string? projectCodes = null)
     {
         if (string.IsNullOrWhiteSpace(projectCodes))
             return Ok(Array.Empty<PositionBudgetRecord>());
 
-        var codes = projectCodes.Split(',', StringSplitOptions.RemoveEmptyEntries);
+        var codes = projectCodes.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        var hasFinancialAccess = (await _authorizationService.AuthorizeAsync(
+            User,
+            resource: null,
+            policyName: AuthorizationHelper.Policies.CanViewFinancials)).Succeeded;
+
+        if (!hasFinancialAccess)
+        {
+            if (string.IsNullOrWhiteSpace(employeeId))
+            {
+                return BadRequest("employeeId is required.");
+            }
+
+            Guid userId;
+            try
+            {
+                userId = User.GetUserId();
+            }
+            catch (InvalidOperationException)
+            {
+                return Unauthorized();
+            }
+
+            var currentUser = await _userService.GetByIdAsync(userId, cancellationToken);
+            var isSelf = string.Equals(currentUser?.EmployeeId, employeeId, StringComparison.OrdinalIgnoreCase);
+            if (!isSelf)
+            {
+                return Forbid();
+            }
+
+            var accessibleProjectNumbers = await GetAccessibleProjectNumbersForEmployeeAsync(employeeId, cancellationToken);
+            var requestedProjectNumbers = new HashSet<string>(codes, StringComparer.OrdinalIgnoreCase);
+
+            if (!requestedProjectNumbers.IsSubsetOf(accessibleProjectNumbers))
+            {
+                return Forbid();
+            }
+        }
+
         var applicationUser = User.GetUserIdentifier();
         var personnel = await _datamartService.GetPositionBudgetsAsync(codes, applicationUser, cancellationToken);
 
@@ -281,5 +321,21 @@ public sealed class ProjectController : ApiControllerBase
         }
 
         return Ok(principalInvestigators);
+    }
+
+    private async Task<HashSet<string>> GetAccessibleProjectNumbersForEmployeeAsync(
+        string employeeId,
+        CancellationToken cancellationToken)
+    {
+        var client = _financialApiService.GetClient();
+
+        var piResult = await client.PpmProjectByProjectTeamMemberEmployeeId.ExecuteAsync(
+            employeeId, PpmRole.PrincipalInvestigator, cancellationToken);
+        var piData = piResult.ReadData();
+
+        return piData.PpmProjectByProjectTeamMemberEmployeeId
+            .Select(p => p.ProjectNumber)
+            .Where(p => !string.IsNullOrWhiteSpace(p))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
 }

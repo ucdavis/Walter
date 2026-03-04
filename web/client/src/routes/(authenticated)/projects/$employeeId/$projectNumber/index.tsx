@@ -45,7 +45,7 @@ function ProjectContent({
 }) {
   const user = useUser();
   const isProjectManager = user.employeeId === summary.pmEmployeeId;
-  const personnelQuery = usePersonnelQuery([summary.projectNumber]);
+  const personnelQuery = usePersonnelQuery(employeeId, [summary.projectNumber]);
   const discrepancies = useProjectDiscrepancies(
     summary.isInternal ? [summary.projectNumber] : []
   );
