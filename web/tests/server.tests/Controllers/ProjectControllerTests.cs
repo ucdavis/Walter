@@ -2,11 +2,9 @@ using System.Security.Claims;
 using AggieEnterpriseApi;
 using FluentAssertions;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Server.Controllers;
@@ -28,7 +26,6 @@ public sealed class ProjectControllerTests
         var authorizationService = CreateAuthorizationService();
 
         var controller = new ProjectController(
-            new FakeWebHostEnvironment(),
             new ThrowingFinancialApiService(),
             new ThrowingDatamartService(),
             authorizationService,
@@ -63,16 +60,6 @@ public sealed class ProjectControllerTests
         var claims = roles.Select(r => new Claim(ClaimTypes.Role, r)).ToList();
         var identity = new ClaimsIdentity(claims, authenticationType: "Test");
         return new ClaimsPrincipal(identity);
-    }
-
-    private sealed class FakeWebHostEnvironment : IWebHostEnvironment
-    {
-        public string ApplicationName { get; set; } = "server.tests";
-        public IFileProvider WebRootFileProvider { get; set; } = null!;
-        public string WebRootPath { get; set; } = "";
-        public string EnvironmentName { get; set; } = "Development";
-        public string ContentRootPath { get; set; } = "";
-        public IFileProvider ContentRootFileProvider { get; set; } = null!;
     }
 
     private sealed class ThrowingFinancialApiService : IFinancialApiService

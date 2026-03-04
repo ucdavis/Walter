@@ -10,19 +10,16 @@ namespace Server.Controllers;
 
 public sealed class ProjectController : ApiControllerBase
 {
-    private readonly IWebHostEnvironment _env;
     private readonly IFinancialApiService _financialApiService;
     private readonly IDatamartService _datamartService;
     private readonly IAuthorizationService _authorizationService;
     private readonly IUserService _userService;
     public ProjectController(
-        IWebHostEnvironment env,
         IFinancialApiService financialApiService,
         IDatamartService datamartService,
         IAuthorizationService authorizationService,
         IUserService userService)
     {
-        _env = env;
         _financialApiService = financialApiService;
         _datamartService = datamartService;
         _authorizationService = authorizationService;
@@ -115,21 +112,6 @@ public sealed class ProjectController : ApiControllerBase
         }
 
         return Ok(activeProjects);
-    }
-
-    /// <summary>
-    /// Gets all projects for the current authenticated user.
-    /// TODO: For now, this will just read static data from a JSON file
-    /// </summary>
-    [HttpGet]
-    public IActionResult GetAllForCurrentUser(CancellationToken cancellationToken)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-
-        var path = Path.Combine(_env.ContentRootPath, "Models", "FacultyReportFake.json");
-        var json = System.IO.File.ReadAllText(path);
-
-        return Content(json, "application/json");
     }
 
     [Authorize(Policy = AuthorizationHelper.Policies.CanViewFinancials)]
