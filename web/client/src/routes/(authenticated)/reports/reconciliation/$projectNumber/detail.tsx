@@ -12,8 +12,6 @@ import {
 } from '@/queries/project.ts';
 import { summarizeProjectByNumber } from '@/lib/projectSummary.ts';
 import { formatCurrency } from '@/lib/currency.ts';
-import { formatDate } from '@/lib/date.ts';
-import { Currency } from '@/shared/Currency.tsx';
 import { DataTable } from '@/shared/DataTable.tsx';
 
 interface SearchParams {
@@ -259,7 +257,11 @@ const glCsvColumns = [
   { header: 'Batch', key: 'journalBatchName' as const },
   { header: 'Category', key: 'journalCategory' as const },
   { header: 'Description', key: 'journalLineDescription' as const },
-  { format: 'currency' as const, header: 'Amount', key: 'actualAmount' as const },
+  {
+    format: 'currency' as const,
+    header: 'Amount',
+    key: 'actualAmount' as const,
+  },
 ];
 
 function buildChartString(t: GLTransactionRecord): string {
@@ -411,56 +413,6 @@ function RouteComponent() {
         <p className="subtitle">{keyLabel}</p>
       </section>
 
-      {summary && (
-        <section className="mb-8">
-          <div className="fancy-data">
-            <dl className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              <div className="flex flex-col">
-                <dt className="font-proxima-bold text-lg">Start</dt>
-                <dd className="text-xl">
-                  {formatDate(summary.awardStartDate)}
-                </dd>
-              </div>
-              <div className="flex flex-col">
-                <dt className="font-proxima-bold text-lg">End</dt>
-                <dd className="text-xl">{formatDate(summary.awardEndDate)}</dd>
-              </div>
-              <div className="flex flex-col">
-                <dt className="font-proxima-bold text-lg">Budget</dt>
-                <dd className="text-xl">
-                  <Currency value={summary.totals.budget} />
-                </dd>
-              </div>
-              <div className="flex flex-col">
-                <dt className="font-proxima-bold text-lg">Balance</dt>
-                <dd className="text-xl font-proxima-bold">
-                  <Currency value={summary.totals.balance} />
-                </dd>
-              </div>
-            </dl>
-            <hr className="border-main-border my-5" />
-            <dl className="grid grid-cols-2 md:grid-cols-3 gap-6">
-              <div className="flex flex-col">
-                <dt className="stat-label">Status</dt>
-                <dd className="stat-value">
-                  <div className="badge badge-soft badge-primary">
-                    {summary.projectStatusCode ?? 'Not provided'}
-                  </div>
-                </dd>
-              </div>
-              <div className="flex flex-col">
-                <dt className="stat-label">PM</dt>
-                <dd className="stat-value">{summary.pm ?? 'Not provided'}</dd>
-              </div>
-              <div className="flex flex-col">
-                <dt className="stat-label">PI</dt>
-                <dd className="stat-value">{summary.pi ?? 'Not provided'}</dd>
-              </div>
-            </dl>
-          </div>
-        </section>
-      )}
-
       {isPending ? (
         <p className="text-base-content/70 mt-4">
           Loading reconciliation data…
@@ -471,7 +423,7 @@ function RouteComponent() {
         <>
           {/* Summary Comparison */}
           <section className="mb-8">
-            <h2 className="h2 mb-4">Summary</h2>
+            {/* <h2 className="h2 mb-4">Summary</h2>
             {ppmRecord ? (
               <DataTable
                 columns={summaryColumnsWithFooter}
@@ -482,7 +434,28 @@ function RouteComponent() {
               />
             ) : (
               <p className="text-base-content/80">No record found.</p>
-            )}
+            )} */}
+            <h2 className="h2 mb-4">Summary</h2>
+            <div className="stats shadow stats-vertical bg-base-200 lg:stats-horizontal w-full">
+              <div className="stat">
+                <div className="uppercase font-proxima-bold text-primary">
+                  PPM
+                </div>
+                <div className="text-2xl">$6,252.53</div>
+              </div>
+              <div className="stat">
+                <div className="uppercase font-proxima-bold text-accent">
+                  GL
+                </div>
+                <div className="text-2xl">$146.74</div>
+              </div>
+              <div className="stat bg-error/10">
+                <div className="uppercase font-proxima-bold text-dark-font/70">
+                  Difference
+                </div>
+                <div className="text-2xl font-proxima-bold">$6,399.27</div>
+              </div>
+            </div>
           </section>
 
           {/* PPM Task Breakdown */}
