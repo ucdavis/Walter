@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using server.Helpers;
 using server.Models;
 using server.Services;
+using Server.Services;
 
 namespace Server.Controllers;
 
@@ -12,19 +13,53 @@ public sealed class ProjectController : ApiControllerBase
     private readonly IWebHostEnvironment _env;
     private readonly IFinancialApiService _financialApiService;
     private readonly IDatamartService _datamartService;
+    private readonly IAuthorizationService _authorizationService;
+    private readonly IUserService _userService;
     public ProjectController(
         IWebHostEnvironment env,
         IFinancialApiService financialApiService,
-        IDatamartService datamartService)
+        IDatamartService datamartService,
+        IAuthorizationService authorizationService,
+        IUserService userService)
     {
         _env = env;
         _financialApiService = financialApiService;
         _datamartService = datamartService;
+        _authorizationService = authorizationService;
+        _userService = userService;
     }
 
     [HttpGet("{employeeId}")]
     public async Task<IActionResult> GetByEmployeeIdAsync(string employeeId, CancellationToken cancellationToken)
     {
+        // Check if the user has financial access
+        var hasFinancialAccess = (await _authorizationService.AuthorizeAsync(
+            User,
+            resource: null,
+            policyName: AuthorizationHelper.Policies.CanViewFinancials)).Succeeded;
+
+        // if not, they must be requesting their own data (PI)
+        if (!hasFinancialAccess)
+        {
+            Guid userId;
+            try
+            {
+                userId = User.GetUserId();
+            }
+            catch (InvalidOperationException)
+            {
+                return Unauthorized();
+            }
+
+            var currentUser = await _userService.GetByIdAsync(userId, cancellationToken);
+            var isSelf = string.Equals(currentUser?.EmployeeId, employeeId, StringComparison.OrdinalIgnoreCase);
+
+            if (!isSelf)
+            {
+                return Forbid();
+            }
+        }
+
         var client = _financialApiService.GetClient();
 
         // Query projects where the specified employee is a Principal Investigator
