@@ -1,7 +1,7 @@
 import { fetchJson } from '@/lib/api.ts';
 import { useQuery } from '@tanstack/react-query';
 
-export type AssignableRole = 'Manager' | 'AccrualViewer';
+export type AssignableRole = 'Manager' | 'AccrualViewer' | 'FinancialViewer';
 
 export type AdminUserSearchResult = {
   id: string;
