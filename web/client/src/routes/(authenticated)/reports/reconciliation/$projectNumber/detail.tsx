@@ -412,56 +412,6 @@ function RouteComponent() {
         <h1 className="h1">Reconciliation Detail</h1>
         <p className="subtitle">{keyLabel}</p>
       </section>
-      {/* 
-      {summary && (
-        <section className="mb-8">
-          <div className="fancy-data">
-            <dl className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              <div className="flex flex-col">
-                <dt className="font-proxima-bold text-lg">Start</dt>
-                <dd className="text-xl">
-                  {formatDate(summary.awardStartDate)}
-                </dd>
-              </div>
-              <div className="flex flex-col">
-                <dt className="font-proxima-bold text-lg">End</dt>
-                <dd className="text-xl">{formatDate(summary.awardEndDate)}</dd>
-              </div>
-              <div className="flex flex-col">
-                <dt className="font-proxima-bold text-lg">Budget</dt>
-                <dd className="text-xl">
-                  <Currency value={summary.totals.budget} />
-                </dd>
-              </div>
-              <div className="flex flex-col">
-                <dt className="font-proxima-bold text-lg">Balance</dt>
-                <dd className="text-xl font-proxima-bold">
-                  <Currency value={summary.totals.balance} />
-                </dd>
-              </div>
-            </dl>
-            <hr className="border-main-border my-5" />
-            <dl className="grid grid-cols-2 md:grid-cols-3 gap-6">
-              <div className="flex flex-col">
-                <dt className="stat-label">Status</dt>
-                <dd className="stat-value">
-                  <div className="badge badge-soft badge-primary">
-                    {summary.projectStatusCode ?? 'Not provided'}
-                  </div>
-                </dd>
-              </div>
-              <div className="flex flex-col">
-                <dt className="stat-label">PM</dt>
-                <dd className="stat-value">{summary.pm ?? 'Not provided'}</dd>
-              </div>
-              <div className="flex flex-col">
-                <dt className="stat-label">PI</dt>
-                <dd className="stat-value">{summary.pi ?? 'Not provided'}</dd>
-              </div>
-            </dl>
-          </div>
-        </section>
-      )} */}
 
       {isPending ? (
         <p className="text-base-content/70 mt-4">
