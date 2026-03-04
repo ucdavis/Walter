@@ -178,7 +178,6 @@
   color: var(--color-dark-font);
   white-space: normal;
   overflow-wrap: anywhere;
-  word-break: break-word;
 }
 
 .walter-table tr {
