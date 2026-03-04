@@ -1,4 +1,5 @@
 using AggieEnterpriseApi.Extensions;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using server.Helpers;
 using server.Models;
@@ -162,6 +163,7 @@ public sealed class ProjectController : ApiControllerBase
     /// <param name="employeeId">The employee ID of the Project Manager</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>A unique list of Principal Investigators with their name and employee ID</returns>
+    [Authorize(Policy = AuthorizationHelper.Policies.CanViewFinancials)]
     [HttpGet("managed/{employeeId}")]
     public async Task<IActionResult> GetManagedFaculty(string employeeId, CancellationToken cancellationToken)
     {
