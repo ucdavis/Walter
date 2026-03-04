@@ -1,5 +1,9 @@
 using System.Security.Claims;
+using AggieEnterpriseApi.Extensions;
+using server.core.Domain;
 using server.core.Services;
+using server.Helpers;
+using server.Services;
 
 namespace Server.Services;
 
@@ -13,17 +17,20 @@ public sealed class UserProfileOrchestrator : IUserProfileOrchestrator
     private readonly IEntraUserAttributeService _attributeService;
     private readonly IIdentityService _identityService;
     private readonly IUserService _userService;
+    private readonly IFinancialApiService _financialApiService;
     private readonly ILogger<UserProfileOrchestrator> _logger;
 
     public UserProfileOrchestrator(
         IEntraUserAttributeService attributeService,
         IIdentityService identityService,
         IUserService userService,
+        IFinancialApiService financialApiService,
         ILogger<UserProfileOrchestrator> logger)
     {
         _attributeService = attributeService;
         _identityService = identityService;
         _userService = userService;
+        _financialApiService = financialApiService;
         _logger = logger;
     }
 
@@ -104,7 +111,36 @@ public sealed class UserProfileOrchestrator : IUserProfileOrchestrator
         };
 
         await _userService.CreateOrUpdateUserAsync(profile, cancellationToken);
+        await SyncProjectManagerRoleAsync(userId, employeeId, cancellationToken);
 
         return profile;
+    }
+
+    private async Task SyncProjectManagerRoleAsync(Guid userId, string employeeId, CancellationToken cancellationToken)
+    {
+        var client = _financialApiService.GetClient();
+
+        var pmResultTask = client.PpmProjectByProjectTeamMemberEmployeeId.ExecuteAsync(
+            employeeId, PpmRole.ProjectManager, cancellationToken);
+
+        var pmData = (await pmResultTask).ReadData();
+        var isProjectManager = pmData.PpmProjectByProjectTeamMemberEmployeeId.Any();
+
+        if (isProjectManager)
+        {
+            var added = await _userService.AddRoleToUserAsync(userId, Role.Names.ProjectManager, userId, cancellationToken);
+            if (added)
+            {
+                _logger.LogInformation("Assigned {RoleName} role to user {UserId}.", Role.Names.ProjectManager, userId);
+            }
+
+            return;
+        }
+
+        var removed = await _userService.RemoveRoleFromUserAsync(userId, Role.Names.ProjectManager, cancellationToken);
+        if (removed)
+        {
+            _logger.LogInformation("Removed {RoleName} role from user {UserId}.", Role.Names.ProjectManager, userId);
+        }
     }
 }

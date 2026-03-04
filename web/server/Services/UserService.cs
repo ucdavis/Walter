@@ -23,6 +23,11 @@ public interface IUserService
         string roleName,
         Guid grantedByUserId,
         CancellationToken cancellationToken = default);
+
+    Task<bool> RemoveRoleFromUserAsync(
+        Guid userId,
+        string roleName,
+        CancellationToken cancellationToken = default);
 }
 
 public class UserService : IUserService
@@ -179,6 +184,47 @@ public class UserService : IUserService
             GrantedByUserId = grantedByUserId,
         });
 
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
+    public async Task<bool> RemoveRoleFromUserAsync(
+        Guid userId,
+        string roleName,
+        CancellationToken cancellationToken = default)
+    {
+        if (userId == Guid.Empty)
+        {
+            throw new ArgumentException("User ID is required.", nameof(userId));
+        }
+
+        if (string.IsNullOrWhiteSpace(roleName))
+        {
+            throw new ArgumentException("Role name is required.", nameof(roleName));
+        }
+
+        var userExists = await _dbContext.Users.AnyAsync(u => u.Id == userId, cancellationToken);
+        if (!userExists)
+        {
+            throw new InvalidOperationException($"User '{userId}' not found.");
+        }
+
+        var role = await _dbContext.Roles.SingleOrDefaultAsync(r => r.Name == roleName, cancellationToken);
+        if (role is null)
+        {
+            throw new InvalidOperationException($"Role '{roleName}' not found.");
+        }
+
+        var permissions = await _dbContext.Permissions
+            .Where(p => p.UserId == userId && p.RoleId == role.Id)
+            .ToListAsync(cancellationToken);
+
+        if (permissions.Count == 0)
+        {
+            return false;
+        }
+
+        _dbContext.Permissions.RemoveRange(permissions);
         await _dbContext.SaveChangesAsync(cancellationToken);
         return true;
     }

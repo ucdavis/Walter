@@ -135,4 +135,92 @@ public class UserServiceTests
 
         ctx.Permissions.Count(p => p.UserId == targetUser.Id && p.RoleId == role.Id).Should().Be(1);
     }
+
+    [Fact]
+    public async Task RemoveRoleFromUserAsync_removes_all_permissions_for_role_and_returns_true()
+    {
+        using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
+
+        var targetUser = new User
+        {
+            Id = Guid.NewGuid(),
+            Kerberos = "targetuser",
+            IamId = "IAM-TARGET",
+            EmployeeId = "E-TARGET",
+            DisplayName = "Target User",
+            Email = "target@example.com",
+        };
+
+        var projectManagerRole = new Role { Name = Role.Names.ProjectManager };
+        var accrualViewerRole = new Role { Name = Role.Names.AccrualViewer };
+
+        ctx.Users.Add(targetUser);
+        ctx.Roles.AddRange(projectManagerRole, accrualViewerRole);
+        await ctx.SaveChangesAsync();
+
+        ctx.Permissions.AddRange(
+            new Permission
+            {
+                UserId = targetUser.Id,
+                RoleId = projectManagerRole.Id,
+                DeptCode = null,
+            },
+            new Permission
+            {
+                UserId = targetUser.Id,
+                RoleId = projectManagerRole.Id,
+                DeptCode = "AA100",
+            },
+            new Permission
+            {
+                UserId = targetUser.Id,
+                RoleId = accrualViewerRole.Id,
+                DeptCode = null,
+            });
+
+        await ctx.SaveChangesAsync();
+
+        var service = new UserService(NullLogger<UserService>.Instance, ctx);
+
+        var removed = await service.RemoveRoleFromUserAsync(targetUser.Id, Role.Names.ProjectManager);
+
+        removed.Should().BeTrue();
+        ctx.Permissions.Should().NotContain(p => p.UserId == targetUser.Id && p.RoleId == projectManagerRole.Id);
+        ctx.Permissions.Should().ContainSingle(p => p.UserId == targetUser.Id && p.RoleId == accrualViewerRole.Id);
+    }
+
+    [Fact]
+    public async Task RemoveRoleFromUserAsync_is_idempotent()
+    {
+        using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
+
+        var targetUser = new User
+        {
+            Id = Guid.NewGuid(),
+            Kerberos = "targetuser",
+            IamId = "IAM-TARGET",
+            EmployeeId = "E-TARGET",
+            DisplayName = "Target User",
+            Email = "target@example.com",
+        };
+
+        var projectManagerRole = new Role { Name = Role.Names.ProjectManager };
+
+        ctx.Users.Add(targetUser);
+        ctx.Roles.Add(projectManagerRole);
+        await ctx.SaveChangesAsync();
+
+        ctx.Permissions.Add(new Permission
+        {
+            UserId = targetUser.Id,
+            RoleId = projectManagerRole.Id,
+            DeptCode = null,
+        });
+        await ctx.SaveChangesAsync();
+
+        var service = new UserService(NullLogger<UserService>.Instance, ctx);
+
+        (await service.RemoveRoleFromUserAsync(targetUser.Id, Role.Names.ProjectManager)).Should().BeTrue();
+        (await service.RemoveRoleFromUserAsync(targetUser.Id, Role.Names.ProjectManager)).Should().BeFalse();
+    }
 }
