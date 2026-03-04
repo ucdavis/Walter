@@ -198,10 +198,19 @@ public sealed class ProjectController : ApiControllerBase
     /// <param name="employeeId">The employee ID of the Project Manager</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>A unique list of Principal Investigators with their name and employee ID</returns>
-    [Authorize(Policy = AuthorizationHelper.Policies.CanViewFinancials)]
     [HttpGet("managed/{employeeId}")]
     public async Task<IActionResult> GetManagedFaculty(string employeeId, CancellationToken cancellationToken)
     {
+        var hasFinancialAccess = (await _authorizationService.AuthorizeAsync(
+            User,
+            resource: null,
+            policyName: AuthorizationHelper.Policies.CanViewFinancials)).Succeeded;
+
+        if (!hasFinancialAccess)
+        {
+            return Ok(Array.Empty<object>());
+        }
+
         var client = _financialApiService.GetClient();
 
         // Query projects where the specified employee is a Project Manager
