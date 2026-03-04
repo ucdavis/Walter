@@ -132,6 +132,7 @@ public sealed class ProjectController : ApiControllerBase
         return Content(json, "application/json");
     }
 
+    [Authorize(Policy = AuthorizationHelper.Policies.CanViewFinancials)]
     [HttpGet("byNumber")]
     public async Task<IActionResult> GetByProjectNumberAsync(
         CancellationToken cancellationToken,
@@ -162,6 +163,7 @@ public sealed class ProjectController : ApiControllerBase
         return Ok(personnel);
     }
 
+    [Authorize(Policy = AuthorizationHelper.Policies.CanViewFinancials)]
     [HttpGet("transactions")]
     public async Task<IActionResult> GetTransactionsForProjectsAsync(
         CancellationToken cancellationToken,
@@ -177,6 +179,7 @@ public sealed class ProjectController : ApiControllerBase
         return Ok(transactions);
     }
 
+    [Authorize(Policy = AuthorizationHelper.Policies.CanViewFinancials)]
     [HttpGet("gl-ppm-reconciliation")]
     public async Task<IActionResult> GetGLPPMReconciliationAsync(
         CancellationToken cancellationToken,
