@@ -140,6 +140,10 @@ public sealed class ProjectController : ApiControllerBase
             return Ok(Array.Empty<PositionBudgetRecord>());
 
         var codes = projectCodes.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (codes.Length == 0)
+        {
+            return Ok(Array.Empty<PositionBudgetRecord>());
+        }
 
         var hasFinancialAccess = (await _authorizationService.AuthorizeAsync(
             User,
@@ -316,8 +320,9 @@ public sealed class ProjectController : ApiControllerBase
         var piData = piResult.ReadData();
 
         return piData.PpmProjectByProjectTeamMemberEmployeeId
-            .Select(p => p.ProjectNumber)
+            .Select(p => p.ProjectNumber?.Trim())
             .Where(p => !string.IsNullOrWhiteSpace(p))
+            .Select(p => p!)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
 }
