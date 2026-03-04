@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getInitials } from '@/components/project/UserAvatar.tsx';
+import { getInitials, isLocalLoopbackHost } from '@/components/project/UserAvatar.tsx';
 
 describe('getInitials', () => {
   it('uses first + last name for multi-part names', () => {
@@ -16,5 +16,20 @@ describe('getInitials', () => {
 
   it('handles empty names', () => {
     expect(getInitials('')).toBe('?');
+  });
+});
+
+describe('isLocalLoopbackHost', () => {
+  it('returns true for local loopback hosts', () => {
+    expect(isLocalLoopbackHost('localhost')).toBe(true);
+    expect(isLocalLoopbackHost('127.0.0.1')).toBe(true);
+    expect(isLocalLoopbackHost('::1')).toBe(true);
+    expect(isLocalLoopbackHost('[::1]')).toBe(true);
+    expect(isLocalLoopbackHost('dev.localhost')).toBe(true);
+  });
+
+  it('returns false for non-loopback hosts', () => {
+    expect(isLocalLoopbackHost('example.com')).toBe(false);
+    expect(isLocalLoopbackHost('192.168.1.10')).toBe(false);
   });
 });
