@@ -29,7 +29,7 @@ public sealed class AccountController : Controller
 
     [HttpGet("login")]
     [ApiExplorerSettings(IgnoreApi = true)]
-    public Task<IActionResult> Login([FromQuery] string? returnUrl, [FromQuery(Name = "as")] string? asOption)
+    public async Task<IActionResult> Login([FromQuery] string? returnUrl, [FromQuery(Name = "as")] string? asOption)
     {
         var safeReturnUrl = NormalizeReturnUrl(returnUrl);
 
@@ -39,32 +39,32 @@ public sealed class AccountController : Controller
         {
             if (User.Identity?.IsAuthenticated == true)
             {
-                return Task.FromResult<IActionResult>(Redirect(safeReturnUrl));
+                return Redirect(safeReturnUrl);
             }
 
-            return Task.FromResult<IActionResult>(Challenge(
+            return Challenge(
                 new AuthenticationProperties { RedirectUri = safeReturnUrl },
-                OpenIdConnectDefaults.AuthenticationScheme));
+                OpenIdConnectDefaults.AuthenticationScheme);
         }
 
         // Dev + loopback: show chooser unless explicitly requested.
         var normalizedAs = asOption?.Trim().ToLowerInvariant();
         if (string.IsNullOrWhiteSpace(normalizedAs))
         {
-            return Task.FromResult<IActionResult>(RenderChooserHtml(safeReturnUrl, error: null));
+            return RenderChooserHtml(safeReturnUrl, error: null);
         }
 
         if (normalizedAs == "self")
         {
             // Redirect to OIDC challenge for self login
-            return Task.FromResult<IActionResult>(Challenge(
+            return Challenge(
                 new AuthenticationProperties { RedirectUri = safeReturnUrl },
-                OpenIdConnectDefaults.AuthenticationScheme));
+                OpenIdConnectDefaults.AuthenticationScheme);
         }
 
         if (normalizedAs == "pi")
         {
-            return SignInAsUserAsync(
+            return await SignInAsUserAsync(
                 email: "esspang@ucdavis.edu",
                 kerberosFallback: "esspang",
                 safeReturnUrl: safeReturnUrl);
@@ -72,15 +72,15 @@ public sealed class AccountController : Controller
 
         if (normalizedAs == "pm")
         {
-            return SignInAsUserAsync(
+            return await SignInAsUserAsync(
                 email: "kkolson@ucdavis.edu",
                 kerberosFallback: "kkolson",
                 safeReturnUrl: safeReturnUrl);
         }
 
-        return Task.FromResult<IActionResult>(RenderChooserHtml(
+        return RenderChooserHtml(
             safeReturnUrl,
-            error: $"Unknown login option '{asOption}'."));
+            error: $"Unknown login option '{asOption}'.");
     }
 
     private bool IsDevLoopback(HttpContext ctx)
