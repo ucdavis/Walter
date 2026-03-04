@@ -12,8 +12,6 @@ import {
 } from '@/queries/project.ts';
 import { summarizeProjectByNumber } from '@/lib/projectSummary.ts';
 import { formatCurrency } from '@/lib/currency.ts';
-import { formatDate } from '@/lib/date.ts';
-import { Currency } from '@/shared/Currency.tsx';
 import { DataTable } from '@/shared/DataTable.tsx';
 
 interface SearchParams {
@@ -259,7 +257,11 @@ const glCsvColumns = [
   { header: 'Batch', key: 'journalBatchName' as const },
   { header: 'Category', key: 'journalCategory' as const },
   { header: 'Description', key: 'journalLineDescription' as const },
-  { format: 'currency' as const, header: 'Amount', key: 'actualAmount' as const },
+  {
+    format: 'currency' as const,
+    header: 'Amount',
+    key: 'actualAmount' as const,
+  },
 ];
 
 function buildChartString(t: GLTransactionRecord): string {
@@ -410,7 +412,7 @@ function RouteComponent() {
         <h1 className="h1">Reconciliation Detail</h1>
         <p className="subtitle">{keyLabel}</p>
       </section>
-
+      {/* 
       {summary && (
         <section className="mb-8">
           <div className="fancy-data">
@@ -459,7 +461,7 @@ function RouteComponent() {
             </dl>
           </div>
         </section>
-      )}
+      )} */}
 
       {isPending ? (
         <p className="text-base-content/70 mt-4">
@@ -471,7 +473,7 @@ function RouteComponent() {
         <>
           {/* Summary Comparison */}
           <section className="mb-8">
-            <h2 className="h2 mb-4">Summary</h2>
+            {/* <h2 className="h2 mb-4">Summary</h2>
             {ppmRecord ? (
               <DataTable
                 columns={summaryColumnsWithFooter}
@@ -482,7 +484,26 @@ function RouteComponent() {
               />
             ) : (
               <p className="text-base-content/80">No record found.</p>
-            )}
+            )} */}
+            <h2 className="h2 mb-4">Summary</h2>
+            <div className="stats shadow stats-vertical bg-base-200 lg:stats-horizontal w-full">
+              <div className="stat">
+                <div className="uppercase font-proxima-bold text-primary">
+                  PPM
+                </div>
+                <div className="text-2xl">$6,252.53</div>
+              </div>
+              <div className="stat">
+                <div className="uppercase font-proxima-bold text-accent">
+                  GL
+                </div>
+                <div className="text-2xl">$146.74</div>
+              </div>
+              <div className="stat bg-error/10">
+                <div className="uppercase font-proxima-bold">Difference</div>
+                <div className="text-2xl font-proxima-bold">$6,399.27</div>
+              </div>
+            </div>
           </section>
 
           {/* PPM Task Breakdown */}
