@@ -450,7 +450,9 @@ function RouteComponent() {
                 <div className="text-2xl">$146.74</div>
               </div>
               <div className="stat bg-error/10">
-                <div className="uppercase font-proxima-bold">Difference</div>
+                <div className="uppercase font-proxima-bold text-dark-font/70">
+                  Difference
+                </div>
                 <div className="text-2xl font-proxima-bold">$6,399.27</div>
               </div>
             </div>
