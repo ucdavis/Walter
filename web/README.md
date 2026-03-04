@@ -85,6 +85,16 @@ The frontend uses Vite's hot module replacement (HMR). Changes to React componen
 4. Frontend API calls automatically include the authentication cookie
 5. Backend validates the cookie for protected endpoints
 
+### Local dev login
+
+When running locally in **Development** on **loopback** (`127.0.0.1` / `::1`), `GET /login` shows a small chooser page:
+
+- **Login as PI**: signs in as `esspang@ucdavis.edu` (must already exist in the local DB)
+- **Login as PM**: signs in as `kkolson@ucdavis.edu` (must already exist in the local DB)
+- **Login as self**: uses the normal Entra (OIDC) auth flow
+
+Outside of local dev, `/login` behaves like the normal auth entrypoint (OIDC challenge).
+
 ## Testing
 
 ### Client tests
