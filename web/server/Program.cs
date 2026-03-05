@@ -78,7 +78,8 @@ builder.Services.AddScoped<IUserProfileOrchestrator, UserProfileOrchestrator>();
 builder.Services.AddDbContextPool<AppDbContext>(o => o.UseSqlServer(conn, opt => opt.MigrationsAssembly("server.core")));
 
 builder.Services
-    .AddHealthChecks();
+    .AddHealthChecks()
+    .AddDbContextCheck<AppDbContext>();
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
