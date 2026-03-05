@@ -215,9 +215,11 @@ export const useResolveProjectPiQuery = ({
   enabled: boolean;
   projectNumber: string;
 }) => {
+  const options = resolveProjectPiQueryOptions({ projectNumber });
+
   return useQuery({
-    ...resolveProjectPiQueryOptions({ projectNumber }),
-    enabled,
+    ...options,
+    enabled: enabled && options.enabled,
   });
 };
 
