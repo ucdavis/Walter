@@ -19,6 +19,7 @@ public sealed class SearchController : ApiControllerBase
 {
     // Marks synthetic person IDs emitted by fallback search when Graph IDs are unavailable.
     private const string SyntheticEmployeeIdPrefix = "employee:";
+    private const int SearchResultLimit = 5;
 
     private readonly AppDbContext _dbContext;
     private readonly IFinancialApiService _financialApiService;
@@ -160,6 +161,7 @@ public sealed class SearchController : ApiControllerBase
                         Email: email,
                         Keywords: BuildKeywords(name, email));
                 })
+                .Take(SearchResultLimit)
                 .ToArray();
 
             return Ok(mapped);
@@ -345,7 +347,7 @@ public sealed class SearchController : ApiControllerBase
             .GroupBy(p => p.ProjectNumber, StringComparer.OrdinalIgnoreCase)
             .Select(g => g.First())
             .OrderBy(p => p.ProjectName, StringComparer.OrdinalIgnoreCase)
-            .Take(50)
+            .Take(SearchResultLimit)
             .ToArray();
 
         return Ok(merged);
@@ -683,7 +685,7 @@ public sealed class SearchController : ApiControllerBase
                         localUser?.Kerberos));
             })
             .OrderBy(p => p.Name, StringComparer.OrdinalIgnoreCase)
-            .Take(25)
+            .Take(SearchResultLimit)
             .ToArray();
 
         return managedPeople;

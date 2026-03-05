@@ -306,4 +306,95 @@ describe('CommandPaletteProvider', () => {
       cleanup();
     }
   });
+
+  it('shows start-typing helper text for financial users and limits project/people results to five', async () => {
+    server.use(
+      http.get('/api/user/me', () =>
+        HttpResponse.json({ ...defaultUser, roles: ['ProjectManager'] })
+      ),
+      http.get('/api/search/catalog', () =>
+        HttpResponse.json({
+          projects: [],
+          reports: [
+            {
+              id: 'reports',
+              keywords: ['reports'],
+              label: 'All Reports',
+              to: '/reports',
+            },
+          ],
+        })
+      ),
+      http.get('/api/search/projects/team', () =>
+        HttpResponse.json({ projects: [], principalInvestigators: [] })
+      ),
+      http.get('/api/search/projects', ({ request }) => {
+        const url = new URL(request.url);
+        const query = (url.searchParams.get('query') ?? '').toLowerCase();
+        if (!query.includes('fpaf')) {
+          return HttpResponse.json([]);
+        }
+
+        return HttpResponse.json(
+          Array.from({ length: 6 }, (_, i) => ({
+            keywords: [`FPAF${i + 1}`],
+            projectName: `FPAF Project ${i + 1}`,
+            projectNumber: `FPAF${i + 1}`,
+          }))
+        );
+      }),
+      http.get('/api/search/people', ({ request }) => {
+        const url = new URL(request.url);
+        const query = (url.searchParams.get('query') ?? '').toLowerCase();
+        if (!query.includes('spang')) {
+          return HttpResponse.json([]);
+        }
+
+        return HttpResponse.json(
+          Array.from({ length: 6 }, (_, i) => ({
+            email: `spang${i + 1}@ucdavis.edu`,
+            id: `entra-spang-${i + 1}`,
+            keywords: [`Spang ${i + 1}`],
+            name: `Spang Person ${i + 1}`,
+          }))
+        );
+      })
+    );
+
+    const { cleanup } = renderRoute({ initialPath: '/styles' });
+
+    try {
+      await screen.findByText('Heading 1');
+      const user = userEvent.setup();
+
+      await user.click(screen.getByRole('button', { name: /search…/i }));
+
+      expect(
+        await screen.findByText('Start typing to search projects and people.')
+      ).toBeInTheDocument();
+      expect(await screen.findByText('All Reports')).toBeInTheDocument();
+
+      const input = await screen.findByPlaceholderText(
+        'Search projects, people, reports...'
+      );
+      await user.type(input, 'fpaf');
+
+      expect(await screen.findByText('FPAF Project 1')).toBeInTheDocument();
+      expect(await screen.findByText('FPAF Project 5')).toBeInTheDocument();
+      await waitFor(() =>
+        expect(screen.queryByText('FPAF Project 6')).not.toBeInTheDocument()
+      );
+
+      await user.clear(input);
+      await user.type(input, 'spang');
+
+      expect(await screen.findByText('Spang Person 1')).toBeInTheDocument();
+      expect(await screen.findByText('Spang Person 5')).toBeInTheDocument();
+      await waitFor(() =>
+        expect(screen.queryByText('Spang Person 6')).not.toBeInTheDocument()
+      );
+    } finally {
+      cleanup();
+    }
+  });
 });

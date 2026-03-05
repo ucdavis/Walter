@@ -132,6 +132,34 @@ public sealed class SearchControllerTests
     }
 
     [Fact]
+    public async Task SearchPeople_limits_results_to_top_five_for_financial_users()
+    {
+        using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
+        var authorizationService = CreateAuthorizationService();
+        var graphService = new FakeGraphService(
+            searchResults: Enumerable.Range(1, 7)
+                .Select(i => new GraphUserSearchResult(
+                    $"id-{i}",
+                    $"Person {i}",
+                    $"person{i}@ucdavis.edu"))
+                .ToArray());
+
+        var controller = CreateController(
+            ctx,
+            authorizationService,
+            graphService,
+            new FakeIdentityService(),
+            roles: [Role.Names.ProjectManager]);
+
+        var result = await controller.SearchPeople("person", CancellationToken.None);
+        var payload = result.Should().BeOfType<OkObjectResult>().Which.Value
+            .Should().BeAssignableTo<IReadOnlyList<SearchController.SearchDirectoryPerson>>().Which;
+
+        payload.Should().HaveCount(5);
+        payload.Select(p => p.Id).Should().ContainInOrder("id-1", "id-2", "id-3", "id-4", "id-5");
+    }
+
+    [Fact]
     public async Task ResolvePersonByDirectoryId_returns_employee_id_when_identity_is_found()
     {
         using AppDbContext ctx = TestDbContextFactory.CreateInMemory();

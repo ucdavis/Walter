@@ -47,6 +47,7 @@ export function useCommandPalette() {
 }
 
 type SearchCategory = 'Projects' | 'Reports' | 'PIs' | 'People';
+const MAX_SEARCH_RESULTS = 5;
 
 type NavigateSearchItem = {
   category: SearchCategory;
@@ -253,7 +254,7 @@ function CommandPaletteDialog({
       projectToItem(p, user.employeeId, hasFinancialSearchAccess)
     );
 
-    return filterAndSort(raw, query);
+    return filterAndSort(raw, query).slice(0, MAX_SEARCH_RESULTS);
   }, [
     financialProjectsQuery.data,
     hasFinancialSearchAccess,
@@ -288,7 +289,7 @@ function CommandPaletteDialog({
     }
 
     const raw = (directoryPeopleQuery.data ?? []).map(directoryPersonToItem);
-    return filterAndSort(raw, query);
+    return filterAndSort(raw, query).slice(0, MAX_SEARCH_RESULTS);
   }, [directoryPeopleQuery.data, hasFinancialSearchAccess, query]);
 
   const isCatalogLoading = catalogQuery.isPending;
@@ -308,6 +309,8 @@ function CommandPaletteDialog({
 
   const showFinancialSearchHint =
     hasFinancialSearchAccess && query.trim().length > 0 && query.trim().length < 3;
+  const showFinancialStartTypingHint =
+    hasFinancialSearchAccess && query.trim().length === 0;
 
   const showEmptyState =
     !isCatalogLoading &&
@@ -409,6 +412,12 @@ function CommandPaletteDialog({
 
             {selectionError ? (
               <div className="px-4 py-2 text-sm text-error">{selectionError}</div>
+            ) : null}
+
+            {showFinancialStartTypingHint ? (
+              <div className="px-4 py-2 text-sm text-base-content/60">
+                Start typing to search projects and people.
+              </div>
             ) : null}
 
             {isProjectsLoading ? (
