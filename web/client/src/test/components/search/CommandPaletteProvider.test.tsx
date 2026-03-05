@@ -22,7 +22,12 @@ describe('CommandPaletteProvider', () => {
         HttpResponse.json({ projects: [], reports: [] })
       ),
       http.get('/api/search/projects/team', () =>
-        HttpResponse.json({ projects: [], principalInvestigators: [] })
+        HttpResponse.json({
+          myManagedProjects: [],
+          myProjects: [],
+          principalInvestigators: [],
+          projects: [],
+        })
       )
     );
 
@@ -58,7 +63,12 @@ describe('CommandPaletteProvider', () => {
         HttpResponse.json({ projects: [], reports: [] })
       ),
       http.get('/api/search/projects/team', () =>
-        HttpResponse.json({ projects: [], principalInvestigators: [] })
+        HttpResponse.json({
+          myManagedProjects: [],
+          myProjects: [],
+          principalInvestigators: [],
+          projects: [],
+        })
       )
     );
 
@@ -108,7 +118,8 @@ describe('CommandPaletteProvider', () => {
       http.get('/api/search/projects/team', () => {
         teamProjectsRequests += 1;
         return HttpResponse.json({
-          projects: [
+          myManagedProjects: [],
+          myProjects: [
             {
               keywords: ['P-001', 'Alpha'],
               projectPiEmployeeId: '2001',
@@ -117,6 +128,14 @@ describe('CommandPaletteProvider', () => {
             },
           ],
           principalInvestigators: [],
+          projects: [
+            {
+              keywords: ['P-001', 'Alpha'],
+              projectPiEmployeeId: '2001',
+              projectName: 'Project Alpha',
+              projectNumber: 'P-001',
+            },
+          ],
         });
       })
     );
@@ -161,7 +180,12 @@ describe('CommandPaletteProvider', () => {
         HttpResponse.json({ projects: [], reports: [] })
       ),
       http.get('/api/search/projects/team', () =>
-        HttpResponse.json({ projects: [], principalInvestigators: [] })
+        HttpResponse.json({
+          myManagedProjects: [],
+          myProjects: [],
+          principalInvestigators: [],
+          projects: [],
+        })
       )
     );
 
@@ -202,7 +226,8 @@ describe('CommandPaletteProvider', () => {
       ),
       http.get('/api/search/projects/team', () =>
         HttpResponse.json({
-          projects: [],
+          myManagedProjects: [],
+          myProjects: [],
           principalInvestigators: [
             {
               employeeId: '2001',
@@ -210,6 +235,7 @@ describe('CommandPaletteProvider', () => {
               name: 'Alice Example',
             },
           ],
+          projects: [],
         })
       )
     );
@@ -229,7 +255,7 @@ describe('CommandPaletteProvider', () => {
     }
   });
 
-  it('uses financial search endpoints for PM users and does not preload team projects', async () => {
+  it('uses financial search endpoints and keeps seeded project sections separate for PM users', async () => {
     let teamProjectsRequests = 0;
     let financialProjectRequests = 0;
     let peopleRequests = 0;
@@ -243,7 +269,45 @@ describe('CommandPaletteProvider', () => {
       ),
       http.get('/api/search/projects/team', () => {
         teamProjectsRequests += 1;
-        return HttpResponse.json({ projects: [], principalInvestigators: [] });
+        return HttpResponse.json({
+          myManagedProjects: [
+            {
+              keywords: ['seeded', 'Seeded PM Project', 'SEED-001'],
+              projectPiEmployeeId: '2001',
+              projectName: 'Seeded PM Project',
+              projectNumber: 'SEED-001',
+            },
+          ],
+          myProjects: [
+            {
+              keywords: ['seeded', 'Seeded PI Project', 'SEED-PI-001'],
+              projectPiEmployeeId: '2002',
+              projectName: 'Seeded PI Project',
+              projectNumber: 'SEED-PI-001',
+            },
+          ],
+          principalInvestigators: [
+            {
+              employeeId: '2001',
+              keywords: ['Alice Example', '2001'],
+              name: 'Alice Example',
+            },
+          ],
+          projects: [
+            {
+              keywords: ['seeded', 'Seeded PM Project', 'SEED-001'],
+              projectPiEmployeeId: '2001',
+              projectName: 'Seeded PM Project',
+              projectNumber: 'SEED-001',
+            },
+            {
+              keywords: ['seeded', 'Seeded PI Project', 'SEED-PI-001'],
+              projectPiEmployeeId: '2002',
+              projectName: 'Seeded PI Project',
+              projectNumber: 'SEED-PI-001',
+            },
+          ],
+        });
       }),
       http.get('/api/search/projects', ({ request }) => {
         financialProjectRequests += 1;
@@ -286,22 +350,31 @@ describe('CommandPaletteProvider', () => {
       const user = userEvent.setup();
       await user.click(screen.getByRole('button', { name: /search…/i }));
 
+      expect(await screen.findByText('My Projects')).toBeInTheDocument();
+      expect(await screen.findByText('My Managed Projects')).toBeInTheDocument();
+      expect(await screen.findByText('PIs')).toBeInTheDocument();
+      expect(await screen.findByText('Seeded PI Project')).toBeInTheDocument();
+      expect(await screen.findByText('Seeded PM Project')).toBeInTheDocument();
+      expect(await screen.findByText('Alice Example')).toBeInTheDocument();
+      expect(teamProjectsRequests).toBe(1);
+
       const input = await screen.findByPlaceholderText(
         'Search projects, people, reports...'
       );
       await user.type(input, 'fpaf');
 
+      expect(await screen.findByText('All Projects')).toBeInTheDocument();
       expect(await screen.findByText('FPAFST5328: Forest Ecology')).toBeInTheDocument();
       expect(financialProjectRequests).toBeGreaterThan(0);
-      expect(teamProjectsRequests).toBe(0);
+      expect(teamProjectsRequests).toBe(1);
 
       await user.clear(input);
       await user.type(input, 'esspang');
 
-      expect(await screen.findByText('People')).toBeInTheDocument();
+      expect(await screen.findByText('All People')).toBeInTheDocument();
       expect(await screen.findByText('Edward Spang')).toBeInTheDocument();
       expect(peopleRequests).toBeGreaterThan(0);
-      expect(teamProjectsRequests).toBe(0);
+      expect(teamProjectsRequests).toBe(1);
     } finally {
       cleanup();
     }
@@ -326,7 +399,24 @@ describe('CommandPaletteProvider', () => {
         })
       ),
       http.get('/api/search/projects/team', () =>
-        HttpResponse.json({ projects: [], principalInvestigators: [] })
+        HttpResponse.json({
+          myManagedProjects: Array.from({ length: 6 }, (_, i) => ({
+            keywords: [`MANAGED-${i + 1}`],
+            projectName: `Managed Project ${i + 1}`,
+            projectNumber: `MANAGED-${i + 1}`,
+          })),
+          myProjects: Array.from({ length: 6 }, (_, i) => ({
+            keywords: [`MINE-${i + 1}`],
+            projectName: `My Project ${i + 1}`,
+            projectNumber: `MINE-${i + 1}`,
+          })),
+          principalInvestigators: Array.from({ length: 6 }, (_, i) => ({
+            employeeId: `PI-${i + 1}`,
+            keywords: [`PI ${i + 1}`],
+            name: `PI ${i + 1}`,
+          })),
+          projects: [],
+        })
       ),
       http.get('/api/search/projects', ({ request }) => {
         const url = new URL(request.url);
@@ -370,8 +460,13 @@ describe('CommandPaletteProvider', () => {
       await user.click(screen.getByRole('button', { name: /search…/i }));
 
       expect(
-        await screen.findByText('Start typing to search projects and people.')
+        await screen.findByText(
+          'Start typing to search all projects and people. Your projects and PIs are shown below in separate sections.'
+        )
       ).toBeInTheDocument();
+      expect(await screen.findByText('My Project 6')).toBeInTheDocument();
+      expect(await screen.findByText('Managed Project 6')).toBeInTheDocument();
+      expect(await screen.findByText('PI 6')).toBeInTheDocument();
       expect(await screen.findByText('All Reports')).toBeInTheDocument();
 
       const input = await screen.findByPlaceholderText(

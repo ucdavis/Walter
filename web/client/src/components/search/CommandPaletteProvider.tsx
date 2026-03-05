@@ -203,6 +203,15 @@ const directoryPersonToItem = (
   secondary: person.email ?? undefined,
 });
 
+const sectionHeading = (label: string) => (
+  <span
+    className="text-xs font-semibold uppercase tracking-wide"
+    style={{ color: 'var(--color-secondary-color)' }}
+  >
+    {label}
+  </span>
+);
+
 function CommandPaletteDialog({
   dialogRef,
   isOpen,
@@ -230,7 +239,7 @@ function CommandPaletteDialog({
 
   const teamProjectsQuery = useSearchTeamMemberProjectsQuery({
     employeeId: user.employeeId,
-    enabled: isOpen && !hasFinancialSearchAccess,
+    enabled: isOpen,
   });
 
   const financialProjectsQuery = useSearchFinancialProjectsQuery({
@@ -245,21 +254,46 @@ function CommandPaletteDialog({
 
   const catalog: SearchCatalog | undefined = catalogQuery.data;
 
-  const projects = useMemo(() => {
-    const sourceProjects = hasFinancialSearchAccess
-      ? financialProjectsQuery.data?.slice() ?? []
-      : teamProjectsQuery.data?.projects?.slice() ?? [];
+  const myProjects = useMemo(() => {
+    const rawProjects =
+      teamProjectsQuery.data?.myProjects ?? teamProjectsQuery.data?.projects ?? [];
+    const raw = rawProjects.map((p) => projectToItem(p, user.employeeId, false));
+    return filterAndSort(raw, query);
+  }, [
+    query,
+    teamProjectsQuery.data?.myProjects,
+    teamProjectsQuery.data?.projects,
+    user.employeeId,
+  ]);
 
-    const raw = sourceProjects.map((p) =>
-      projectToItem(p, user.employeeId, hasFinancialSearchAccess)
+  const myManagedProjects = useMemo(() => {
+    const raw = (teamProjectsQuery.data?.myManagedProjects ?? []).map((p) =>
+      projectToItem(p, user.employeeId, false)
+    );
+    return filterAndSort(raw, query);
+  }, [query, teamProjectsQuery.data?.myManagedProjects, user.employeeId]);
+
+  const allProjects = useMemo(() => {
+    if (!hasFinancialSearchAccess) {
+      return [];
+    }
+
+    const excludedProjectIds = new Set(
+      [...myProjects, ...myManagedProjects].map((p) => p.id)
+    );
+    const raw = (financialProjectsQuery.data ?? []).map((p) =>
+      projectToItem(p, user.employeeId, true)
     );
 
-    return filterAndSort(raw, query).slice(0, MAX_SEARCH_RESULTS);
+    return filterAndSort(raw, query)
+      .filter((item) => !excludedProjectIds.has(item.id))
+      .slice(0, MAX_SEARCH_RESULTS);
   }, [
     financialProjectsQuery.data,
     hasFinancialSearchAccess,
+    myManagedProjects,
+    myProjects,
     query,
-    teamProjectsQuery.data?.projects,
     user.employeeId,
   ]);
 
@@ -269,19 +303,11 @@ function CommandPaletteDialog({
   }, [catalog?.reports, query]);
 
   const principalInvestigators = useMemo(() => {
-    if (hasFinancialSearchAccess) {
-      return [];
-    }
-
     const raw = (teamProjectsQuery.data?.principalInvestigators ?? []).map(
       principalInvestigatorToItem
     );
     return filterAndSort(raw, query);
-  }, [
-    hasFinancialSearchAccess,
-    query,
-    teamProjectsQuery.data?.principalInvestigators,
-  ]);
+  }, [query, teamProjectsQuery.data?.principalInvestigators]);
 
   const directoryPeople = useMemo(() => {
     if (!hasFinancialSearchAccess) {
@@ -293,15 +319,19 @@ function CommandPaletteDialog({
   }, [directoryPeopleQuery.data, hasFinancialSearchAccess, query]);
 
   const isCatalogLoading = catalogQuery.isPending;
-  const isProjectsLoading = hasFinancialSearchAccess
-    ? hasFinancialQuery && financialProjectsQuery.isPending
-    : teamProjectsQuery.isPending;
-  const isPiLoading = !hasFinancialSearchAccess && teamProjectsQuery.isPending;
+  const isMyProjectsLoading = teamProjectsQuery.isPending;
+  const isMyManagedProjectsLoading =
+    hasFinancialSearchAccess && teamProjectsQuery.isPending;
+  const isAllProjectsLoading =
+    hasFinancialSearchAccess && hasFinancialQuery && financialProjectsQuery.isPending;
+  const isPiLoading = teamProjectsQuery.isPending;
   const isPeopleLoading =
     hasFinancialSearchAccess && hasFinancialQuery && directoryPeopleQuery.isPending;
 
   const hasAnyResults =
-    projects.length +
+    myProjects.length +
+      myManagedProjects.length +
+      allProjects.length +
       reports.length +
       principalInvestigators.length +
       directoryPeople.length >
@@ -314,7 +344,9 @@ function CommandPaletteDialog({
 
   const showEmptyState =
     !isCatalogLoading &&
-    !isProjectsLoading &&
+    !isMyProjectsLoading &&
+    !isMyManagedProjectsLoading &&
+    !isAllProjectsLoading &&
     !isPiLoading &&
     !isPeopleLoading &&
     query.trim().length > 0 &&
@@ -374,6 +406,30 @@ function CommandPaletteDialog({
     [dialogRef, navigate]
   );
 
+  const renderSelectableItem = useCallback(
+    (item: SearchItem) => (
+      <Command.Item
+        key={item.id}
+        onSelect={() => {
+          void onSelectItem(item);
+        }}
+        value={item.id}
+      >
+        <div className="flex w-full items-start justify-between gap-4">
+          <div className="min-w-0">
+            <div className="truncate">{item.label}</div>
+            {item.secondary ? (
+              <div className="truncate text-xs text-base-content/60">
+                {item.secondary}
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </Command.Item>
+    ),
+    [onSelectItem]
+  );
+
   return (
     <dialog className="modal" onClose={closeAndReset} ref={dialogRef}>
       <div className="modal-box w-full max-w-3xl p-2">
@@ -416,146 +472,98 @@ function CommandPaletteDialog({
 
             {showFinancialStartTypingHint ? (
               <div className="px-4 py-2 text-sm text-base-content/60">
-                Start typing to search projects and people.
+                Start typing to search all projects and people. Your projects
+                and PIs are shown below in separate sections.
               </div>
             ) : null}
 
-            {isProjectsLoading ? (
-              <Command.Group heading="Projects">
-                <Command.Item aria-disabled="true" data-disabled="true">
-                  <div className="flex items-center gap-3">
-                    <div className="loading loading-spinner loading-sm" />
-                    <span>Loading projects…</span>
-                  </div>
-                </Command.Item>
-              </Command.Group>
-            ) : null}
-
-            {isPiLoading ? (
-              <Command.Group heading="PIs">
-                <Command.Item aria-disabled="true" data-disabled="true">
-                  <div className="flex items-center gap-3">
-                    <div className="loading loading-spinner loading-sm" />
-                    <span>Loading PIs…</span>
-                  </div>
-                </Command.Item>
-              </Command.Group>
-            ) : null}
-
-            {isPeopleLoading ? (
-              <Command.Group heading="People">
-                <Command.Item aria-disabled="true" data-disabled="true">
-                  <div className="flex items-center gap-3">
-                    <div className="loading loading-spinner loading-sm" />
-                    <span>Loading people…</span>
-                  </div>
-                </Command.Item>
-              </Command.Group>
-            ) : null}
-
-            {isCatalogLoading ? (
-              <Command.Group heading="Reports">
-                <Command.Item aria-disabled="true" data-disabled="true">
-                  <div className="flex items-center gap-3">
-                    <div className="loading loading-spinner loading-sm" />
-                    <span>Loading reports…</span>
-                  </div>
-                </Command.Item>
-              </Command.Group>
-            ) : null}
-
-            {!isProjectsLoading && projects.length ? (
-              <Command.Group heading="Projects">
-                {projects.map((item) => (
-                  <Command.Item
-                    key={item.id}
-                    onSelect={() => {
-                      void onSelectItem(item);
-                    }}
-                    value={item.id}
-                  >
-                    <div className="flex w-full items-start justify-between gap-4">
-                      <div className="min-w-0">
-                        <div className="truncate">{item.label}</div>
-                        {item.secondary ? (
-                          <div className="truncate text-xs text-base-content/60">
-                            {item.secondary}
-                          </div>
-                        ) : null}
-                      </div>
+            {isMyProjectsLoading || myProjects.length ? (
+              <Command.Group heading={sectionHeading('My Projects')}>
+                {isMyProjectsLoading ? (
+                  <Command.Item aria-disabled="true" data-disabled="true">
+                    <div className="flex items-center gap-3">
+                      <div className="loading loading-spinner loading-sm" />
+                      <span>Loading my projects…</span>
                     </div>
                   </Command.Item>
-                ))}
+                ) : (
+                  myProjects.map(renderSelectableItem)
+                )}
               </Command.Group>
             ) : null}
 
-            {!isPiLoading && principalInvestigators.length ? (
-              <Command.Group heading="PIs">
-                {principalInvestigators.map((item) => (
-                  <Command.Item
-                    key={item.id}
-                    onSelect={() => {
-                      void onSelectItem(item);
-                    }}
-                    value={item.id}
-                  >
-                    <div className="flex w-full items-start justify-between gap-4">
-                      <div className="min-w-0">
-                        <div className="truncate">{item.label}</div>
-                        {item.secondary ? (
-                          <div className="truncate text-xs text-base-content/60">
-                            {item.secondary}
-                          </div>
-                        ) : null}
-                      </div>
+            {isMyManagedProjectsLoading || myManagedProjects.length ? (
+              <Command.Group heading={sectionHeading('My Managed Projects')}>
+                {isMyManagedProjectsLoading ? (
+                  <Command.Item aria-disabled="true" data-disabled="true">
+                    <div className="flex items-center gap-3">
+                      <div className="loading loading-spinner loading-sm" />
+                      <span>Loading my managed projects…</span>
                     </div>
                   </Command.Item>
-                ))}
+                ) : (
+                  myManagedProjects.map(renderSelectableItem)
+                )}
               </Command.Group>
             ) : null}
 
-            {!isPeopleLoading && directoryPeople.length ? (
-              <Command.Group heading="People">
-                {directoryPeople.map((item) => (
-                  <Command.Item
-                    key={item.id}
-                    onSelect={() => {
-                      void onSelectItem(item);
-                    }}
-                    value={item.id}
-                  >
-                    <div className="flex w-full items-start justify-between gap-4">
-                      <div className="min-w-0">
-                        <div className="truncate">{item.label}</div>
-                        {item.secondary ? (
-                          <div className="truncate text-xs text-base-content/60">
-                            {item.secondary}
-                          </div>
-                        ) : null}
-                      </div>
+            {isPiLoading || principalInvestigators.length ? (
+              <Command.Group heading={sectionHeading('PIs')}>
+                {isPiLoading ? (
+                  <Command.Item aria-disabled="true" data-disabled="true">
+                    <div className="flex items-center gap-3">
+                      <div className="loading loading-spinner loading-sm" />
+                      <span>Loading PIs…</span>
                     </div>
                   </Command.Item>
-                ))}
+                ) : (
+                  principalInvestigators.map(renderSelectableItem)
+                )}
               </Command.Group>
             ) : null}
 
-            {!isCatalogLoading && reports.length ? (
-              <Command.Group heading="Reports">
-                {reports.map((item) => (
-                  <Command.Item
-                    key={item.id}
-                    onSelect={() => {
-                      void onSelectItem(item);
-                    }}
-                    value={item.id}
-                  >
-                    <div className="flex w-full items-start justify-between gap-4">
-                      <div className="min-w-0">
-                        <div className="truncate">{item.label}</div>
-                      </div>
+            {isAllProjectsLoading || allProjects.length ? (
+              <Command.Group heading={sectionHeading('All Projects')}>
+                {isAllProjectsLoading ? (
+                  <Command.Item aria-disabled="true" data-disabled="true">
+                    <div className="flex items-center gap-3">
+                      <div className="loading loading-spinner loading-sm" />
+                      <span>Loading all projects…</span>
                     </div>
                   </Command.Item>
-                ))}
+                ) : (
+                  allProjects.map(renderSelectableItem)
+                )}
+              </Command.Group>
+            ) : null}
+
+            {isPeopleLoading || directoryPeople.length ? (
+              <Command.Group heading={sectionHeading('All People')}>
+                {isPeopleLoading ? (
+                  <Command.Item aria-disabled="true" data-disabled="true">
+                    <div className="flex items-center gap-3">
+                      <div className="loading loading-spinner loading-sm" />
+                      <span>Loading all people…</span>
+                    </div>
+                  </Command.Item>
+                ) : (
+                  directoryPeople.map(renderSelectableItem)
+                )}
+              </Command.Group>
+            ) : null}
+
+            {isCatalogLoading || reports.length ? (
+              <Command.Group heading={sectionHeading('Reports')}>
+                {isCatalogLoading ? (
+                  <Command.Item aria-disabled="true" data-disabled="true">
+                    <div className="flex items-center gap-3">
+                      <div className="loading loading-spinner loading-sm" />
+                      <span>Loading reports…</span>
+                    </div>
+                  </Command.Item>
+                ) : (
+                  reports.map(renderSelectableItem)
+                )}
               </Command.Group>
             ) : null}
 

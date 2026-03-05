@@ -73,6 +73,8 @@ public sealed class SearchController : ApiControllerBase
         [property: JsonPropertyName("keywords")] IReadOnlyList<string> Keywords);
 
     public sealed record SearchTeamMemberProjectsResponse(
+        [property: JsonPropertyName("myProjects")] IReadOnlyList<SearchProject> MyProjects,
+        [property: JsonPropertyName("myManagedProjects")] IReadOnlyList<SearchProject> MyManagedProjects,
         [property: JsonPropertyName("projects")] IReadOnlyList<SearchProject> Projects,
         [property: JsonPropertyName("principalInvestigators")] IReadOnlyList<SearchPerson> PrincipalInvestigators);
 
@@ -447,8 +449,7 @@ public sealed class SearchController : ApiControllerBase
         var piData = piResultTask.Result.ReadData();
         var pmData = pmResultTask.Result.ReadData();
 
-        var projects = piData.PpmProjectByProjectTeamMemberEmployeeId
-            .Concat(pmData.PpmProjectByProjectTeamMemberEmployeeId)
+        var myProjects = piData.PpmProjectByProjectTeamMemberEmployeeId
             .GroupBy(p => p.ProjectNumber, StringComparer.OrdinalIgnoreCase)
             .Select(g =>
             {
@@ -462,8 +463,42 @@ public sealed class SearchController : ApiControllerBase
                     .Select(m => m.EmployeeId)
                     .FirstOrDefault();
 
-                return new SearchProject(first.ProjectNumber, first.Name, BuildKeywords(first.ProjectNumber, first.Name), projectPiEmployeeId);
+                return new SearchProject(
+                    first.ProjectNumber,
+                    first.Name,
+                    BuildKeywords(first.ProjectNumber, first.Name),
+                    projectPiEmployeeId);
             })
+            .OrderBy(p => p.ProjectName)
+            .ToArray();
+
+        var myManagedProjects = pmData.PpmProjectByProjectTeamMemberEmployeeId
+            .GroupBy(p => p.ProjectNumber, StringComparer.OrdinalIgnoreCase)
+            .Select(g =>
+            {
+                var first = g.First();
+                var projectPiEmployeeId = g
+                    .SelectMany(p => p.TeamMembers)
+                    .Where(m => m.RoleName == PpmRole.PrincipalInvestigator)
+                    .Where(m => !string.IsNullOrWhiteSpace(m.EmployeeId))
+                    .OrderBy(m => m.Name)
+                    .ThenBy(m => m.EmployeeId)
+                    .Select(m => m.EmployeeId)
+                    .FirstOrDefault();
+
+                return new SearchProject(
+                    first.ProjectNumber,
+                    first.Name,
+                    BuildKeywords(first.ProjectNumber, first.Name),
+                    projectPiEmployeeId);
+            })
+            .OrderBy(p => p.ProjectName)
+            .ToArray();
+
+        var projects = myProjects
+            .Concat(myManagedProjects)
+            .GroupBy(p => p.ProjectNumber, StringComparer.OrdinalIgnoreCase)
+            .Select(g => g.First())
             .OrderBy(p => p.ProjectName)
             .ToArray();
 
@@ -481,7 +516,11 @@ public sealed class SearchController : ApiControllerBase
             .OrderBy(pi => pi.Name)
             .ToArray();
 
-        return Ok(new SearchTeamMemberProjectsResponse(projects, principalInvestigators));
+        return Ok(new SearchTeamMemberProjectsResponse(
+            myProjects,
+            myManagedProjects,
+            projects,
+            principalInvestigators));
     }
 
     private async Task<bool> HasFinancialAccessAsync()

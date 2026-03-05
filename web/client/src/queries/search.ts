@@ -34,6 +34,8 @@ export type SearchDirectoryPerson = {
 };
 
 export type SearchTeamMemberProjectsResponse = {
+  myManagedProjects: SearchProject[];
+  myProjects: SearchProject[];
   principalInvestigators: SearchPerson[];
   projects: SearchProject[];
 };
