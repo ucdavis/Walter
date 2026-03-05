@@ -11,7 +11,7 @@ const defaultUser = {
   id: 'user-1',
   kerberos: 'alpha',
   name: 'Alpha User',
-  roles: ['admin'],
+  roles: [],
 };
 
 describe('CommandPaletteProvider', () => {
@@ -43,7 +43,7 @@ describe('CommandPaletteProvider', () => {
       await waitFor(() => expect(dialog).toHaveAttribute('open'));
 
       const input = await screen.findByPlaceholderText(
-        'Search projects, PIs, reports...'
+        'Search projects, people, reports...'
       );
       await waitFor(() => expect(input).toHaveFocus());
     } finally {
@@ -137,7 +137,7 @@ describe('CommandPaletteProvider', () => {
 
       // Ensure focus is inside the dialog so Escape is handled by cmdk.
       const input = screen.getByPlaceholderText(
-        'Search projects, PIs, reports...'
+        'Search projects, people, reports...'
       );
       input.focus();
 
@@ -177,7 +177,7 @@ describe('CommandPaletteProvider', () => {
       await user.click(screen.getByRole('button', { name: /search…/i }));
 
       const input = await screen.findByPlaceholderText(
-        'Search projects, PIs, reports...'
+        'Search projects, people, reports...'
       );
       await user.type(input, 'alpha');
 
@@ -186,7 +186,7 @@ describe('CommandPaletteProvider', () => {
 
       await user.click(screen.getByRole('button', { name: /search…/i }));
       const inputReopen = await screen.findByPlaceholderText(
-        'Search projects, PIs, reports...'
+        'Search projects, people, reports...'
       );
       expect(inputReopen).toHaveValue('');
     } finally {
@@ -224,6 +224,84 @@ describe('CommandPaletteProvider', () => {
 
       expect(await screen.findByText('PIs')).toBeInTheDocument();
       expect(await screen.findByText('Alice Example')).toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('uses financial search endpoints for PM users and does not preload team projects', async () => {
+    let teamProjectsRequests = 0;
+    let financialProjectRequests = 0;
+    let peopleRequests = 0;
+
+    server.use(
+      http.get('/api/user/me', () =>
+        HttpResponse.json({ ...defaultUser, roles: ['ProjectManager'] })
+      ),
+      http.get('/api/search/catalog', () =>
+        HttpResponse.json({ projects: [], reports: [] })
+      ),
+      http.get('/api/search/projects/team', () => {
+        teamProjectsRequests += 1;
+        return HttpResponse.json({ projects: [], principalInvestigators: [] });
+      }),
+      http.get('/api/search/projects', ({ request }) => {
+        financialProjectRequests += 1;
+        const url = new URL(request.url);
+        const query = url.searchParams.get('query') ?? '';
+        if (query.toLowerCase().includes('fpaf')) {
+          return HttpResponse.json([
+            {
+              keywords: ['FPAFST5328', 'Forest Ecology'],
+              projectName: 'FPAFST5328: Forest Ecology',
+              projectNumber: 'FPAFST5328',
+            },
+          ]);
+        }
+        return HttpResponse.json([]);
+      }),
+      http.get('/api/search/people', ({ request }) => {
+        peopleRequests += 1;
+        const url = new URL(request.url);
+        const query = (url.searchParams.get('query') ?? '').toLowerCase();
+        if (query.includes('esspang')) {
+          return HttpResponse.json([
+            {
+              email: 'esspang@ucdavis.edu',
+              id: 'entra-esspang',
+              keywords: ['Edward Spang', 'esspang@ucdavis.edu'],
+              name: 'Edward Spang',
+            },
+          ]);
+        }
+        return HttpResponse.json([]);
+      })
+    );
+
+    const { cleanup } = renderRoute({ initialPath: '/styles' });
+
+    try {
+      await screen.findByText('Heading 1');
+
+      const user = userEvent.setup();
+      await user.click(screen.getByRole('button', { name: /search…/i }));
+
+      const input = await screen.findByPlaceholderText(
+        'Search projects, people, reports...'
+      );
+      await user.type(input, 'fpaf');
+
+      expect(await screen.findByText('FPAFST5328: Forest Ecology')).toBeInTheDocument();
+      expect(financialProjectRequests).toBeGreaterThan(0);
+      expect(teamProjectsRequests).toBe(0);
+
+      await user.clear(input);
+      await user.type(input, 'esspang');
+
+      expect(await screen.findByText('People')).toBeInTheDocument();
+      expect(await screen.findByText('Edward Spang')).toBeInTheDocument();
+      expect(peopleRequests).toBeGreaterThan(0);
+      expect(teamProjectsRequests).toBe(0);
     } finally {
       cleanup();
     }

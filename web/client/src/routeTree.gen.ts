@@ -25,6 +25,7 @@ import { Route as authenticatedAccrualsIndexRouteImport } from './routes/(authen
 import { Route as authenticatedAdminUsersRouteImport } from './routes/(authenticated)/admin/users'
 import { Route as authenticatedProjectsEmployeeIdRouteRouteImport } from './routes/(authenticated)/projects/$employeeId/route'
 import { Route as authenticatedProjectsEmployeeIdIndexRouteImport } from './routes/(authenticated)/projects/$employeeId/index'
+import { Route as authenticatedProjectsByNumberProjectNumberRouteImport } from './routes/(authenticated)/projects/by-number/$projectNumber'
 import { Route as authenticatedReportsReconciliationProjectNumberIndexRouteImport } from './routes/(authenticated)/reports/reconciliation/$projectNumber/index'
 import { Route as authenticatedProjectsEmployeeIdProjectNumberIndexRouteImport } from './routes/(authenticated)/projects/$employeeId/$projectNumber/index'
 import { Route as authenticatedReportsReconciliationProjectNumberDetailRouteImport } from './routes/(authenticated)/reports/reconciliation/$projectNumber/detail'
@@ -114,6 +115,12 @@ const authenticatedProjectsEmployeeIdIndexRoute =
     path: '/',
     getParentRoute: () => authenticatedProjectsEmployeeIdRouteRoute,
   } as any)
+const authenticatedProjectsByNumberProjectNumberRoute =
+  authenticatedProjectsByNumberProjectNumberRouteImport.update({
+    id: '/by-number/$projectNumber',
+    path: '/by-number/$projectNumber',
+    getParentRoute: () => authenticatedProjectsRouteRoute,
+  } as any)
 const authenticatedReportsReconciliationProjectNumberIndexRoute =
   authenticatedReportsReconciliationProjectNumberIndexRouteImport.update({
     id: '/reconciliation/$projectNumber/',
@@ -154,6 +161,7 @@ export interface FileRoutesByFullPath {
   '/accruals': typeof authenticatedAccrualsIndexRoute
   '/admin/': typeof authenticatedAdminIndexRoute
   '/reports/': typeof authenticatedReportsIndexRoute
+  '/projects/by-number/$projectNumber': typeof authenticatedProjectsByNumberProjectNumberRoute
   '/projects/$employeeId/': typeof authenticatedProjectsEmployeeIdIndexRoute
   '/projects/$employeeId/$projectNumber/transactions': typeof authenticatedProjectsEmployeeIdProjectNumberTransactionsRoute
   '/reports/reconciliation/$projectNumber/detail': typeof authenticatedReportsReconciliationProjectNumberDetailRoute
@@ -172,6 +180,7 @@ export interface FileRoutesByTo {
   '/accruals': typeof authenticatedAccrualsIndexRoute
   '/admin': typeof authenticatedAdminIndexRoute
   '/reports': typeof authenticatedReportsIndexRoute
+  '/projects/by-number/$projectNumber': typeof authenticatedProjectsByNumberProjectNumberRoute
   '/projects/$employeeId': typeof authenticatedProjectsEmployeeIdIndexRoute
   '/projects/$employeeId/$projectNumber/transactions': typeof authenticatedProjectsEmployeeIdProjectNumberTransactionsRoute
   '/reports/reconciliation/$projectNumber/detail': typeof authenticatedReportsReconciliationProjectNumberDetailRoute
@@ -195,6 +204,7 @@ export interface FileRoutesById {
   '/(authenticated)/accruals/': typeof authenticatedAccrualsIndexRoute
   '/(authenticated)/admin/': typeof authenticatedAdminIndexRoute
   '/(authenticated)/reports/': typeof authenticatedReportsIndexRoute
+  '/(authenticated)/projects/by-number/$projectNumber': typeof authenticatedProjectsByNumberProjectNumberRoute
   '/(authenticated)/projects/$employeeId/': typeof authenticatedProjectsEmployeeIdIndexRoute
   '/(authenticated)/projects/$employeeId/$projectNumber/transactions': typeof authenticatedProjectsEmployeeIdProjectNumberTransactionsRoute
   '/(authenticated)/reports/reconciliation/$projectNumber/detail': typeof authenticatedReportsReconciliationProjectNumberDetailRoute
@@ -218,6 +228,7 @@ export interface FileRouteTypes {
     | '/accruals'
     | '/admin/'
     | '/reports/'
+    | '/projects/by-number/$projectNumber'
     | '/projects/$employeeId/'
     | '/projects/$employeeId/$projectNumber/transactions'
     | '/reports/reconciliation/$projectNumber/detail'
@@ -236,6 +247,7 @@ export interface FileRouteTypes {
     | '/accruals'
     | '/admin'
     | '/reports'
+    | '/projects/by-number/$projectNumber'
     | '/projects/$employeeId'
     | '/projects/$employeeId/$projectNumber/transactions'
     | '/reports/reconciliation/$projectNumber/detail'
@@ -258,6 +270,7 @@ export interface FileRouteTypes {
     | '/(authenticated)/accruals/'
     | '/(authenticated)/admin/'
     | '/(authenticated)/reports/'
+    | '/(authenticated)/projects/by-number/$projectNumber'
     | '/(authenticated)/projects/$employeeId/'
     | '/(authenticated)/projects/$employeeId/$projectNumber/transactions'
     | '/(authenticated)/reports/reconciliation/$projectNumber/detail'
@@ -384,6 +397,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authenticatedProjectsEmployeeIdIndexRouteImport
       parentRoute: typeof authenticatedProjectsEmployeeIdRouteRoute
     }
+    '/(authenticated)/projects/by-number/$projectNumber': {
+      id: '/(authenticated)/projects/by-number/$projectNumber'
+      path: '/by-number/$projectNumber'
+      fullPath: '/projects/by-number/$projectNumber'
+      preLoaderRoute: typeof authenticatedProjectsByNumberProjectNumberRouteImport
+      parentRoute: typeof authenticatedProjectsRouteRoute
+    }
     '/(authenticated)/reports/reconciliation/$projectNumber/': {
       id: '/(authenticated)/reports/reconciliation/$projectNumber/'
       path: '/reconciliation/$projectNumber'
@@ -454,12 +474,15 @@ const authenticatedProjectsEmployeeIdRouteRouteWithChildren =
 
 interface authenticatedProjectsRouteRouteChildren {
   authenticatedProjectsEmployeeIdRouteRoute: typeof authenticatedProjectsEmployeeIdRouteRouteWithChildren
+  authenticatedProjectsByNumberProjectNumberRoute: typeof authenticatedProjectsByNumberProjectNumberRoute
 }
 
 const authenticatedProjectsRouteRouteChildren: authenticatedProjectsRouteRouteChildren =
   {
     authenticatedProjectsEmployeeIdRouteRoute:
       authenticatedProjectsEmployeeIdRouteRouteWithChildren,
+    authenticatedProjectsByNumberProjectNumberRoute:
+      authenticatedProjectsByNumberProjectNumberRoute,
   }
 
 const authenticatedProjectsRouteRouteWithChildren =
