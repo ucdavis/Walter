@@ -239,7 +239,7 @@ function CommandPaletteDialog({
 
   const teamProjectsQuery = useSearchTeamMemberProjectsQuery({
     employeeId: user.employeeId,
-    enabled: isOpen,
+    enabled: user.employeeId.trim().length > 0,
   });
 
   const financialProjectsQuery = useSearchFinancialProjectsQuery({
@@ -472,8 +472,7 @@ function CommandPaletteDialog({
 
             {showFinancialStartTypingHint ? (
               <div className="px-4 py-2 text-sm text-base-content/60">
-                Start typing to search all projects and people. Your projects
-                and PIs are shown below in separate sections.
+                Start typing to search all projects and people.
               </div>
             ) : null}
 

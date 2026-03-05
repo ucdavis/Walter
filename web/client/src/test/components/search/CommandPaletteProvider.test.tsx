@@ -460,9 +460,7 @@ describe('CommandPaletteProvider', () => {
       await user.click(screen.getByRole('button', { name: /search…/i }));
 
       expect(
-        await screen.findByText(
-          'Start typing to search all projects and people. Your projects and PIs are shown below in separate sections.'
-        )
+        await screen.findByText('Start typing to search all projects and people.')
       ).toBeInTheDocument();
       expect(await screen.findByText('My Project 6')).toBeInTheDocument();
       expect(await screen.findByText('Managed Project 6')).toBeInTheDocument();

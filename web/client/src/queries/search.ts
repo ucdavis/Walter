@@ -1,6 +1,9 @@
 import { fetchJson } from '@/lib/api.ts';
 import { useQuery } from '@tanstack/react-query';
 
+const TEAM_SEARCH_STALE_TIME_MS = 5 * 60 * 1000;
+const TEAM_SEARCH_GC_TIME_MS = 30 * 60 * 1000;
+
 export type SearchProject = {
   keywords: string[];
   projectPiEmployeeId?: string | null;
@@ -69,7 +72,7 @@ export const useSearchCatalogQuery = ({ enabled }: { enabled: boolean }) => {
 };
 
 export const searchTeamMemberProjectsQueryOptions = (employeeId: string) => ({
-  gcTime: Infinity,
+  gcTime: TEAM_SEARCH_GC_TIME_MS,
   queryFn: async ({
     signal,
   }: {
@@ -83,7 +86,7 @@ export const searchTeamMemberProjectsQueryOptions = (employeeId: string) => ({
   },
   queryKey: ['search', 'projects', 'team', employeeId] as const,
   refetchOnWindowFocus: false,
-  staleTime: Infinity,
+  staleTime: TEAM_SEARCH_STALE_TIME_MS,
 });
 
 export const useSearchTeamMemberProjectsQuery = ({
