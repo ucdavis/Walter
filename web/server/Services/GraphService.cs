@@ -41,8 +41,7 @@ public sealed class GraphService : IGraphService
     private static readonly string[] RequiredScopes = new[] { "User.Read.All" };
     private const string ExcludedEmailSuffix = "@ad3.ucdavis.edu";
     private const int MaxPeopleSearchResults = 5;
-    private const int MaxPeopleCandidateProfilesToInspect = 50;
-    private const int GraphPeopleCandidateLimit = 50;
+    private const int GraphPeopleCandidateLimit = 30;
 
     private readonly ITokenAcquisition _tokenAcquisition;
     private readonly ILogger<GraphService> _logger;
@@ -146,7 +145,7 @@ public sealed class GraphService : IGraphService
                 requestConfiguration.QueryParameters.Filter = prefixFilter;
             }, cancellationToken);
 
-            return await BuildValidSearchResultsAsync(filterResult?.Value, graphClient, cancellationToken);
+            return BuildValidSearchResults(filterResult?.Value);
         }
 
         try
@@ -172,7 +171,7 @@ public sealed class GraphService : IGraphService
                 requestConfiguration.QueryParameters.Search = $"\"{sanitized}\"";
             }, cancellationToken);
 
-            var searchResults = await BuildValidSearchResultsAsync(searchResult?.Value, graphClient, cancellationToken);
+            var searchResults = BuildValidSearchResults(searchResult?.Value);
             if (searchResults.Count > 0)
             {
                 return searchResults;
@@ -188,17 +187,15 @@ public sealed class GraphService : IGraphService
         }
     }
 
-    private async Task<IReadOnlyList<GraphUserSearchResult>> BuildValidSearchResultsAsync(
-        IList<User>? users,
-        GraphServiceClient graphClient,
-        CancellationToken cancellationToken)
+    private static IReadOnlyList<GraphUserSearchResult> BuildValidSearchResults(
+        IList<User>? users)
     {
         if (users is null || users.Count == 0)
         {
             return Array.Empty<GraphUserSearchResult>();
         }
 
-        var candidates = users
+        return users
             .Where(u => !string.IsNullOrWhiteSpace(u.Id))
             .Where(u => u.AccountEnabled != false)
             .Where(u => !string.Equals(u.UserType, "Guest", StringComparison.OrdinalIgnoreCase))
@@ -206,44 +203,13 @@ public sealed class GraphService : IGraphService
             .Where(u => !HasExcludedEmailSuffix(u.UserPrincipalName))
             .Select(u => new GraphUserSearchResult(
                 Id: u.Id!,
-                DisplayName: u.DisplayName,
+                DisplayName: u.DisplayName?.Trim(),
                 Email: u.Mail ?? u.UserPrincipalName))
-            .ToArray();
-
-        if (candidates.Length == 0)
-        {
-            return Array.Empty<GraphUserSearchResult>();
-        }
-
-        var valid = new List<GraphUserSearchResult>(MaxPeopleSearchResults);
-        foreach (var candidate in candidates.Take(MaxPeopleCandidateProfilesToInspect))
-        {
-            var profile = await TryGetUserProfileByIdAsync(graphClient, candidate.Id, cancellationToken);
-            if (profile is null || string.IsNullOrWhiteSpace(profile.IamId))
-            {
-                continue;
-            }
-
-            var resolvedEmail = profile.Email ?? candidate.Email;
-            if (HasExcludedEmailSuffix(resolvedEmail))
-            {
-                continue;
-            }
-
-            valid.Add(new GraphUserSearchResult(
-                Id: candidate.Id,
-                DisplayName: profile.DisplayName ?? candidate.DisplayName,
-                Email: resolvedEmail));
-
-            if (valid.Count >= MaxPeopleSearchResults)
-            {
-                break;
-            }
-        }
-
-        return valid
+            .GroupBy(x => x.Id, StringComparer.OrdinalIgnoreCase)
+            .Select(g => g.First())
             .OrderBy(u => u.DisplayName ?? string.Empty, StringComparer.OrdinalIgnoreCase)
             .ThenBy(u => u.Email ?? string.Empty, StringComparer.OrdinalIgnoreCase)
+            .Take(MaxPeopleSearchResults)
             .ToArray();
     }
 
