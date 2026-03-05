@@ -180,7 +180,9 @@ const reportToItem = (report: SearchReport): NavigateSearchItem => ({
   to: report.to,
 });
 
-const principalInvestigatorToItem = (person: SearchPerson): NavigateSearchItem => ({
+const principalInvestigatorToItem = (
+  person: SearchPerson
+): NavigateSearchItem => ({
   category: 'PIs',
   id: `pi:${person.employeeId}`,
   keywords: person.keywords,
@@ -239,7 +241,7 @@ function CommandPaletteDialog({
 
   const teamProjectsQuery = useSearchTeamMemberProjectsQuery({
     employeeId: user.employeeId,
-    enabled: user.employeeId.trim().length > 0,
+    enabled: isOpen, // if we want to preload on page open later, // user.employeeId.trim().length > 0,
   });
 
   const financialProjectsQuery = useSearchFinancialProjectsQuery({
@@ -256,8 +258,12 @@ function CommandPaletteDialog({
 
   const myProjects = useMemo(() => {
     const rawProjects =
-      teamProjectsQuery.data?.myProjects ?? teamProjectsQuery.data?.projects ?? [];
-    const raw = rawProjects.map((p) => projectToItem(p, user.employeeId, false));
+      teamProjectsQuery.data?.myProjects ??
+      teamProjectsQuery.data?.projects ??
+      [];
+    const raw = rawProjects.map((p) =>
+      projectToItem(p, user.employeeId, false)
+    );
     return filterAndSort(raw, query);
   }, [
     query,
@@ -323,10 +329,14 @@ function CommandPaletteDialog({
   const isMyManagedProjectsLoading =
     hasFinancialSearchAccess && teamProjectsQuery.isPending;
   const isAllProjectsLoading =
-    hasFinancialSearchAccess && hasFinancialQuery && financialProjectsQuery.isPending;
+    hasFinancialSearchAccess &&
+    hasFinancialQuery &&
+    financialProjectsQuery.isPending;
   const isPiLoading = teamProjectsQuery.isPending;
   const isPeopleLoading =
-    hasFinancialSearchAccess && hasFinancialQuery && directoryPeopleQuery.isPending;
+    hasFinancialSearchAccess &&
+    hasFinancialQuery &&
+    directoryPeopleQuery.isPending;
 
   const hasAnyResults =
     myProjects.length +
@@ -338,7 +348,9 @@ function CommandPaletteDialog({
     0;
 
   const showFinancialSearchHint =
-    hasFinancialSearchAccess && query.trim().length > 0 && query.trim().length < 3;
+    hasFinancialSearchAccess &&
+    query.trim().length > 0 &&
+    query.trim().length < 3;
   const showFinancialStartTypingHint =
     hasFinancialSearchAccess && query.trim().length === 0;
 
@@ -467,7 +479,9 @@ function CommandPaletteDialog({
             ) : null}
 
             {selectionError ? (
-              <div className="px-4 py-2 text-sm text-error">{selectionError}</div>
+              <div className="px-4 py-2 text-sm text-error">
+                {selectionError}
+              </div>
             ) : null}
 
             {showFinancialStartTypingHint ? (
