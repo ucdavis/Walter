@@ -13,6 +13,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { PageLoading } from '@/components/states/PageLoading.tsx';
 import { PageError } from '@/components/states/PageError.tsx';
 import { useQuery } from '@tanstack/react-query';
+import { getErrorPresentation } from '@/lib/errorPresentation.ts';
 
 type Tab = 'pis' | 'projects' | 'reports';
 
@@ -68,13 +69,14 @@ function RouteComponent() {
   }
 
   if (isError) {
+    const presentation = getErrorPresentation(error);
     return (
-      <PageError>
-        <p className="text-lg">
-          {' '}
-          Unable to load managed investigators: {error?.message}
-        </p>
-      </PageError>
+      <PageError
+        detail={presentation.detail}
+        message={presentation.message}
+        statusCode={presentation.statusCode}
+        title="Unable to load managed investigators"
+      />
     );
   }
 
@@ -83,12 +85,14 @@ function RouteComponent() {
   }
 
   if (!isProjectManager && userProjectsQuery.isError) {
+    const presentation = getErrorPresentation(userProjectsQuery.error);
     return (
-      <PageError>
-        <p className="text-lg">
-          Unable to load projects: {userProjectsQuery.error?.message}
-        </p>
-      </PageError>
+      <PageError
+        detail={presentation.detail}
+        message={presentation.message}
+        statusCode={presentation.statusCode}
+        title="Unable to load projects"
+      />
     );
   }
 

@@ -19,7 +19,7 @@ const createProject = (
   awardType: null,
   billingCycle: null,
   catBudBal: 4000,
-  catBudget: 10000,
+  catBudget: 10_000,
   catCommitments: 1000,
   catItdExp: 5000,
   contractAdministrator: null,
@@ -69,16 +69,10 @@ const setupHandlers = (
         roles: [],
       })
     ),
-    http.get('/api/project/managed/:employeeId', () =>
-      HttpResponse.json([])
-    ),
-    http.get('/api/project/:employeeId', () =>
-      HttpResponse.json(projects)
-    ),
+    http.get('/api/project/managed/:employeeId', () => HttpResponse.json([])),
+    http.get('/api/project/:employeeId', () => HttpResponse.json(projects)),
     http.get('/api/project/personnel', () => HttpResponse.json([])),
-    http.get('/api/project/gl-ppm-reconciliation', () =>
-      HttpResponse.json([])
-    )
+    http.get('/api/project/gl-ppm-reconciliation', () => HttpResponse.json([]))
   );
 };
 
@@ -114,6 +108,64 @@ describe('project detail page', () => {
 
       expect(
         screen.queryByText('Additional Information')
+      ).not.toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('shows an authorization error inside the projects layout for forbidden portfolios', async () => {
+    server.use(
+      http.get('/api/user/me', () =>
+        HttpResponse.json({
+          email: 'pi.user@example.com',
+          employeeId: '1000',
+          id: 'user-1',
+          kerberos: 'piuser',
+          name: 'PI User',
+          roles: [],
+        })
+      ),
+      http.get('/api/project/managed/:employeeId', () => HttpResponse.json([])),
+      http.get('/api/project/:employeeId', ({ params }) => {
+        if (params.employeeId === '10212674') {
+          return HttpResponse.json(
+            { message: 'You are not allowed to view this portfolio.' },
+            { status: 403 }
+          );
+        }
+
+        return HttpResponse.json([]);
+      }),
+      http.get('/api/project/personnel', () => HttpResponse.json([])),
+      http.get('/api/project/gl-ppm-reconciliation', () =>
+        HttpResponse.json([])
+      )
+    );
+
+    const { cleanup } = renderRoute({
+      initialPath: '/projects/10212674',
+    });
+
+    try {
+      expect(
+        await screen.findByRole('heading', {
+          name: 'You do not have access to this portfolio',
+        })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          'Walter can only show project portfolios you are allowed to open.'
+        )
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText('You are not allowed to view this portfolio.')
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('link', { name: 'Projects' })
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByText('We could not reach the server')
       ).not.toBeInTheDocument();
     } finally {
       cleanup();
