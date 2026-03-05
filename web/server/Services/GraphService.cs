@@ -41,7 +41,7 @@ public sealed class GraphService : IGraphService
     private static readonly string[] RequiredScopes = new[] { "User.Read.All" };
     private const string ExcludedEmailSuffix = "@ad3.ucdavis.edu";
     private const int MaxPeopleSearchResults = 5;
-    private const int GraphPeopleCandidateLimit = 30;
+    private const int GraphPeopleCandidateLimit = 25;
 
     private readonly ITokenAcquisition _tokenAcquisition;
     private readonly ILogger<GraphService> _logger;
