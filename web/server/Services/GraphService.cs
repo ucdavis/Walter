@@ -187,7 +187,7 @@ public sealed class GraphService : IGraphService
         }
     }
 
-    private static IReadOnlyList<GraphUserSearchResult> BuildValidSearchResults(
+    internal static IReadOnlyList<GraphUserSearchResult> BuildValidSearchResults(
         IList<User>? users)
     {
         if (users is null || users.Count == 0)
