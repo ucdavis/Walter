@@ -107,7 +107,7 @@ public sealed class AdminUsersController : ApiControllerBase
             return BadRequest("Role name is required.");
         }
 
-        var allowed = new[] { Role.Names.Manager, Role.Names.AccrualViewer };
+        var allowed = new[] { Role.Names.Manager, Role.Names.AccrualViewer, Role.Names.FinancialViewer };
         if (!allowed.Contains(roleName, StringComparer.Ordinal))
         {
             return BadRequest($"Role '{roleName}' is not assignable via this endpoint.");

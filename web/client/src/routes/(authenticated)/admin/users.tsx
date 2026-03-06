@@ -193,6 +193,7 @@ function RouteComponent() {
                   value={roleName}
                 >
                   <option value="AccrualViewer">AccrualViewer</option>
+                  <option value="FinancialViewer">FinancialViewer</option>
                   <option value="Manager">Manager</option>
                 </select>
               </div>
