@@ -39,6 +39,9 @@ public sealed record GraphUserProfile(
 public sealed class GraphService : IGraphService
 {
     private static readonly string[] RequiredScopes = new[] { "User.Read.All" };
+    private const string ExcludedEmailSuffix = "@ad3.ucdavis.edu";
+    private const int MaxPeopleSearchResults = 5;
+    private const int GraphPeopleCandidateLimit = 25;
 
     private readonly ITokenAcquisition _tokenAcquisition;
     private readonly ILogger<GraphService> _logger;
@@ -113,6 +116,37 @@ public sealed class GraphService : IGraphService
         }
 
         var graphClient = CreateGraphClient(principal);
+        var escaped = normalizedQuery.Replace("'", "''");
+        var prefixFilter =
+            "(" +
+            $"startswith(displayName,'{escaped}') or " +
+            $"startswith(givenName,'{escaped}') or " +
+            $"startswith(surname,'{escaped}') or " +
+            $"startswith(mail,'{escaped}') or " +
+            $"startswith(userPrincipalName,'{escaped}')" +
+            ")";
+
+        async Task<IReadOnlyList<GraphUserSearchResult>> SearchByPrefixAsync()
+        {
+            var filterResult = await graphClient.Users.GetAsync(requestConfiguration =>
+            {
+                requestConfiguration.Headers.Add("ConsistencyLevel", "eventual");
+                requestConfiguration.QueryParameters.Top = GraphPeopleCandidateLimit;
+                requestConfiguration.QueryParameters.Count = true;
+                requestConfiguration.QueryParameters.Select = new[]
+                {
+                    "id",
+                    "displayName",
+                    "mail",
+                    "userPrincipalName",
+                    "accountEnabled",
+                    "userType",
+                };
+                requestConfiguration.QueryParameters.Filter = prefixFilter;
+            }, cancellationToken);
+
+            return BuildValidSearchResults(filterResult?.Value);
+        }
 
         try
         {
@@ -123,37 +157,38 @@ public sealed class GraphService : IGraphService
             {
                 requestConfiguration.Headers.Add("ConsistencyLevel", "eventual");
 
-                requestConfiguration.QueryParameters.Top = 25;
+                requestConfiguration.QueryParameters.Top = GraphPeopleCandidateLimit;
                 requestConfiguration.QueryParameters.Count = true;
-                requestConfiguration.QueryParameters.Select = new[] { "id", "displayName", "mail", "userPrincipalName" };
+                requestConfiguration.QueryParameters.Select = new[]
+                {
+                    "id",
+                    "displayName",
+                    "mail",
+                    "userPrincipalName",
+                    "accountEnabled",
+                    "userType",
+                };
                 requestConfiguration.QueryParameters.Search = $"\"{sanitized}\"";
             }, cancellationToken);
 
-            return MapUserSearchResults(searchResult?.Value);
+            var searchResults = BuildValidSearchResults(searchResult?.Value);
+            if (searchResults.Count > 0)
+            {
+                return searchResults;
+            }
+
+            // Some tenants under-return with $search for certain surnames/aliases; fall back to startswith.
+            return await SearchByPrefixAsync();
         }
         catch (ApiException ex) when (ex.ResponseStatusCode == 400)
         {
             // Fallback to a prefix-filter search in case $search is unavailable in a given tenant/config.
-            var escaped = normalizedQuery.Replace("'", "''");
-            var filter =
-                $"startswith(displayName,'{escaped}') or " +
-                $"startswith(givenName,'{escaped}') or " +
-                $"startswith(surname,'{escaped}') or " +
-                $"startswith(mail,'{escaped}') or " +
-                $"startswith(userPrincipalName,'{escaped}')";
-
-            var filterResult = await graphClient.Users.GetAsync(requestConfiguration =>
-            {
-                requestConfiguration.QueryParameters.Top = 25;
-                requestConfiguration.QueryParameters.Select = new[] { "id", "displayName", "mail", "userPrincipalName" };
-                requestConfiguration.QueryParameters.Filter = filter;
-            }, cancellationToken);
-
-            return MapUserSearchResults(filterResult?.Value);
+            return await SearchByPrefixAsync();
         }
     }
 
-    private static IReadOnlyList<GraphUserSearchResult> MapUserSearchResults(IList<User>? users)
+    internal static IReadOnlyList<GraphUserSearchResult> BuildValidSearchResults(
+        IList<User>? users)
     {
         if (users is null || users.Count == 0)
         {
@@ -162,13 +197,30 @@ public sealed class GraphService : IGraphService
 
         return users
             .Where(u => !string.IsNullOrWhiteSpace(u.Id))
+            .Where(u => u.AccountEnabled != false)
+            .Where(u => !string.Equals(u.UserType, "Guest", StringComparison.OrdinalIgnoreCase))
+            .Where(u => !HasExcludedEmailSuffix(u.Mail))
+            .Where(u => !HasExcludedEmailSuffix(u.UserPrincipalName))
             .Select(u => new GraphUserSearchResult(
                 Id: u.Id!,
-                DisplayName: u.DisplayName,
+                DisplayName: u.DisplayName?.Trim(),
                 Email: u.Mail ?? u.UserPrincipalName))
+            .GroupBy(x => x.Id, StringComparer.OrdinalIgnoreCase)
+            .Select(g => g.First())
             .OrderBy(u => u.DisplayName ?? string.Empty, StringComparer.OrdinalIgnoreCase)
             .ThenBy(u => u.Email ?? string.Empty, StringComparer.OrdinalIgnoreCase)
+            .Take(MaxPeopleSearchResults)
             .ToArray();
+    }
+
+    private static bool HasExcludedEmailSuffix(string? email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            return false;
+        }
+
+        return email.EndsWith(ExcludedEmailSuffix, StringComparison.OrdinalIgnoreCase);
     }
 
     public async Task<GraphUserProfile?> GetUserProfileAsync(
@@ -182,7 +234,14 @@ public sealed class GraphService : IGraphService
         }
 
         var graphClient = CreateGraphClient(principal);
+        return await TryGetUserProfileByIdAsync(graphClient, userObjectId, cancellationToken);
+    }
 
+    private static async Task<GraphUserProfile?> TryGetUserProfileByIdAsync(
+        GraphServiceClient graphClient,
+        string userObjectId,
+        CancellationToken cancellationToken = default)
+    {
         try
         {
             var user = await graphClient.Users[userObjectId]

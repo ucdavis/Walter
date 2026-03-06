@@ -1,6 +1,9 @@
 import { fetchJson } from '@/lib/api.ts';
 import { useQuery } from '@tanstack/react-query';
 
+const TEAM_SEARCH_STALE_TIME_MS = 5 * 60 * 1000;
+const TEAM_SEARCH_GC_TIME_MS = 30 * 60 * 1000;
+
 export type SearchProject = {
   keywords: string[];
   projectPiEmployeeId?: string | null;
@@ -26,9 +29,29 @@ export type SearchPerson = {
   name: string;
 };
 
+export type SearchDirectoryPerson = {
+  email?: string | null;
+  id: string;
+  keywords: string[];
+  name: string;
+};
+
 export type SearchTeamMemberProjectsResponse = {
+  myManagedProjects: SearchProject[];
+  myProjects: SearchProject[];
   principalInvestigators: SearchPerson[];
   projects: SearchProject[];
+};
+
+export type ResolveDirectoryPersonResponse = {
+  email?: string | null;
+  employeeId: string;
+  name: string;
+};
+
+export type ResolveProjectPiResponse = {
+  employeeId: string;
+  projectNumber: string;
 };
 
 export const searchCatalogQueryOptions = () => ({
@@ -49,7 +72,7 @@ export const useSearchCatalogQuery = ({ enabled }: { enabled: boolean }) => {
 };
 
 export const searchTeamMemberProjectsQueryOptions = (employeeId: string) => ({
-  gcTime: Infinity,
+  gcTime: TEAM_SEARCH_GC_TIME_MS,
   queryFn: async ({
     signal,
   }: {
@@ -63,7 +86,7 @@ export const searchTeamMemberProjectsQueryOptions = (employeeId: string) => ({
   },
   queryKey: ['search', 'projects', 'team', employeeId] as const,
   refetchOnWindowFocus: false,
-  staleTime: Infinity,
+  staleTime: TEAM_SEARCH_STALE_TIME_MS,
 });
 
 export const useSearchTeamMemberProjectsQuery = ({
@@ -79,21 +102,60 @@ export const useSearchTeamMemberProjectsQuery = ({
   });
 };
 
-export const peopleSearchQueryOptions = (query: string) => {
+export const searchFinancialProjectsQueryOptions = (query: string) => {
   const q = query.trim();
 
   return {
-    enabled: q.length > 0,
+    enabled: q.length >= 3,
     gcTime: 0,
     queryFn: async ({
       signal,
     }: {
       signal: AbortSignal;
-    }): Promise<SearchPerson[]> => {
-      if (!q) {
+    }): Promise<SearchProject[]> => {
+      if (q.length < 3) {
         return [];
       }
-      return await fetchJson<SearchPerson[]>(
+
+      return await fetchJson<SearchProject[]>(
+        `/api/search/projects?query=${encodeURIComponent(q)}`,
+        {},
+        signal
+      );
+    },
+    queryKey: ['search', 'projects', 'financial', q] as const,
+    staleTime: 0,
+  };
+};
+
+export const useSearchFinancialProjectsQuery = ({
+  enabled,
+  query,
+}: {
+  enabled: boolean;
+  query: string;
+}) => {
+  return useQuery({
+    ...searchFinancialProjectsQueryOptions(query),
+    enabled,
+  });
+};
+
+export const searchDirectoryPeopleQueryOptions = (query: string) => {
+  const q = query.trim();
+
+  return {
+    enabled: q.length >= 3,
+    gcTime: 0,
+    queryFn: async ({
+      signal,
+    }: {
+      signal: AbortSignal;
+    }): Promise<SearchDirectoryPerson[]> => {
+      if (q.length < 3) {
+        return [];
+      }
+      return await fetchJson<SearchDirectoryPerson[]>(
         `/api/search/people?query=${encodeURIComponent(q)}`,
         {},
         signal
@@ -104,7 +166,7 @@ export const peopleSearchQueryOptions = (query: string) => {
   };
 };
 
-export const usePeopleSearchQuery = ({
+export const useSearchDirectoryPeopleQuery = ({
   enabled,
   query,
 }: {
@@ -112,7 +174,70 @@ export const usePeopleSearchQuery = ({
   query: string;
 }) => {
   return useQuery({
-    ...peopleSearchQueryOptions(query),
+    ...searchDirectoryPeopleQueryOptions(query),
     enabled,
   });
 };
+
+export const peopleSearchQueryOptions = searchDirectoryPeopleQueryOptions;
+export const usePeopleSearchQuery = useSearchDirectoryPeopleQuery;
+
+export const resolveProjectPiQueryOptions = ({
+  projectNumber,
+}: {
+  projectNumber: string;
+}) => {
+  const p = projectNumber.trim();
+
+  return {
+    enabled: p.length > 0,
+    gcTime: 0,
+    queryFn: async ({
+      signal,
+    }: {
+      signal: AbortSignal;
+    }): Promise<ResolveProjectPiResponse> => {
+      return await fetchJson<ResolveProjectPiResponse>(
+        `/api/search/projects/resolve-pi?projectNumber=${encodeURIComponent(p)}`,
+        {},
+        signal
+      );
+    },
+    queryKey: ['search', 'projects', 'resolve-pi', p] as const,
+    staleTime: 0,
+  };
+};
+
+export const useResolveProjectPiQuery = ({
+  enabled,
+  projectNumber,
+}: {
+  enabled: boolean;
+  projectNumber: string;
+}) => {
+  const options = resolveProjectPiQueryOptions({ projectNumber });
+
+  return useQuery({
+    ...options,
+    enabled: enabled && options.enabled,
+  });
+};
+
+export async function resolveSearchPersonById({
+  signal,
+  userId,
+}: {
+  signal?: AbortSignal;
+  userId: string;
+}): Promise<ResolveDirectoryPersonResponse> {
+  const id = userId.trim();
+  if (!id) {
+    throw new Error('userId is required');
+  }
+
+  return await fetchJson<ResolveDirectoryPersonResponse>(
+    `/api/search/people/resolve?userId=${encodeURIComponent(id)}`,
+    {},
+    signal
+  );
+}
