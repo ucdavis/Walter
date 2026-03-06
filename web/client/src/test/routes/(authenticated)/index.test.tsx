@@ -78,6 +78,66 @@ describe('home route', () => {
     }
   });
 
+  it('shows broad search placeholder for users with financial access', async () => {
+    const user = {
+      email: 'alpha@example.com',
+      employeeId: '1000',
+      id: 'user-1',
+      kerberos: 'alpha',
+      name: 'Alpha User',
+      roles: ['FinancialViewer'],
+    };
+
+    server.use(
+      http.get('/api/user/me', () => HttpResponse.json(user)),
+      http.get('/api/project/managed/:employeeId', () => HttpResponse.json([])),
+      http.get('/api/project/:employeeId', () => HttpResponse.json([])),
+      http.get('/api/project/personnel', () => HttpResponse.json([]))
+    );
+
+    const { cleanup } = renderRoute({ initialPath: '/' });
+
+    try {
+      expect(
+        await screen.findByRole('button', {
+          name: /Search PIs, Projects, Personnel/i,
+        })
+      ).toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('shows limited search placeholder for users without financial access', async () => {
+    const user = {
+      email: 'alpha@example.com',
+      employeeId: '1000',
+      id: 'user-1',
+      kerberos: 'alpha',
+      name: 'Alpha User',
+      roles: [],
+    };
+
+    server.use(
+      http.get('/api/user/me', () => HttpResponse.json(user)),
+      http.get('/api/project/managed/:employeeId', () => HttpResponse.json([])),
+      http.get('/api/project/:employeeId', () => HttpResponse.json([])),
+      http.get('/api/project/personnel', () => HttpResponse.json([]))
+    );
+
+    const { cleanup } = renderRoute({ initialPath: '/' });
+
+    try {
+      expect(
+        await screen.findByRole('button', {
+          name: /Search projects and reports/i,
+        })
+      ).toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+
   it('shows projects table when user is not a PM', async () => {
     const user = {
       email: 'alpha@example.com',

@@ -17,6 +17,12 @@ import { getErrorPresentation } from '@/lib/errorPresentation.ts';
 
 type Tab = 'pis' | 'projects' | 'reports';
 
+const FINANCIAL_SEARCH_ROLES = new Set([
+  'admin',
+  'financialviewer',
+  'projectmanager',
+]);
+
 export const Route = createFileRoute('/(authenticated)/')({
   component: RouteComponent,
 });
@@ -41,6 +47,14 @@ function RouteComponent() {
 
   const showPiTab = isProjectManager;
   const showProjectsTab = isPrincipalInvestigator;
+
+  const canViewFinancials = user.roles.some((role) =>
+    FINANCIAL_SEARCH_ROLES.has(role.toLowerCase())
+  );
+
+  const searchPlaceholder = canViewFinancials
+    ? 'Search PIs, Projects, Personnel...'
+    : 'Search projects and reports...';
 
   const tabs = useMemo(() => {
     const base: Array<{ id: Tab; label: string }> = [];
@@ -106,10 +120,7 @@ function RouteComponent() {
       </div>
 
       <div className="home-search relative mx-auto w-full sm:max-w-[90%] md:max-w-[80%] xl:max-w-[66%]">
-        <SearchButton
-          className="w-full"
-          placeholder="Search PIs, Projects, Personnel..."
-        />
+        <SearchButton className="w-full" placeholder={searchPlaceholder} />
       </div>
 
       {isProjectManager && <PiProjectAlerts managedPis={managedPis} />}
