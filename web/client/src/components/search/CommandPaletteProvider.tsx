@@ -206,12 +206,9 @@ const directoryPersonToItem = (
 });
 
 const sectionHeading = (label: string) => (
-  <span
-    className="text-xs font-semibold uppercase tracking-wide"
-    style={{ color: 'var(--color-secondary-color)' }}
-  >
+  <div className="text-xs mt-3 font-bold uppercase tracking-wide text-base-content">
     {label}
-  </span>
+  </div>
 );
 
 function CommandPaletteDialog({
