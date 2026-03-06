@@ -25,6 +25,12 @@ import {
   useRef,
   useState,
 } from 'react';
+import {
+  AcademicCapIcon,
+  UsersIcon,
+  ClipboardDocumentCheckIcon,
+  DocumentChartBarIcon,
+} from '@heroicons/react/24/outline';
 
 type CommandPaletteContextValue = {
   close: () => void;
@@ -205,11 +211,33 @@ const directoryPersonToItem = (
   secondary: person.email ?? undefined,
 });
 
-const sectionHeading = (label: string) => (
-  <div className="text-xs mt-3 font-bold uppercase tracking-wide text-base-content">
-    {label}
-  </div>
-);
+const sectionHeading = (label: string) => {
+  const getIcon = (label: string) => {
+    switch (label) {
+      case 'My Projects':
+        return <ClipboardDocumentCheckIcon className="w-4 h-4" />;
+      case 'My Managed Projects':
+        return <ClipboardDocumentCheckIcon className="w-4 h-4" />;
+      case 'PIs':
+        return <AcademicCapIcon className="w-4 h-4" />;
+      case 'All Projects':
+        return <ClipboardDocumentCheckIcon className="w-4 h-4" />;
+      case 'All People':
+        return <UsersIcon className="w-4 h-4" />;
+      case 'Reports':
+        return <DocumentChartBarIcon className="w-4 h-4" />;
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="text-xs mt-3 font-bold uppercase tracking-wide text-base-content flex items-center gap-2">
+      {getIcon(label)}
+      {label}
+    </div>
+  );
+};
 
 function CommandPaletteDialog({
   dialogRef,
