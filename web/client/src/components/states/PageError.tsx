@@ -22,13 +22,15 @@ export function PageError({
     <div
       aria-label="Error"
       aria-live="polite"
-      className="mx-auto mt-8 max-w-3xl text-center"
+      className="mx-auto mt-8 max-w-xl text-start"
       role="alert"
     >
       <WalterDream className="mx-auto h-32 w-32" />
-      <div className="mt-6 rounded-box border border-main-border bg-base-100 px-6 py-8 shadow-sm">
+      <div className="mt-6">
         {statusCode ? (
-          <div className="badge badge-soft badge-error">{statusCode}</div>
+          <div className="badge badge-soft badge-error">
+            Error: {statusCode}
+          </div>
         ) : null}
         <h1 className="mt-3 text-3xl font-semibold text-base-content">
           {title}
@@ -41,7 +43,7 @@ export function PageError({
         ) : null}
         {children ? <div className="mt-6">{children}</div> : null}
         {actions ? (
-          <div className="mt-6 flex flex-wrap justify-center gap-3">
+          <div className="mt-6 flex flex-wrap justify-start gap-3">
             {actions}
           </div>
         ) : null}
