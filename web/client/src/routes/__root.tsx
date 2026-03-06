@@ -7,10 +7,12 @@ import {
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools';
 import { RouterContext } from '../main.tsx';
-import { HttpError } from '@/lib/api.ts';
 import Footer from '@/components/project/Footer.tsx';
 import { Walter404 } from '@/shared/Walter404.tsx';
 import { AnalyticsListener } from '@/components/AnalyticsListener.tsx';
+import { PageError } from '@/components/states/PageError.tsx';
+import { getErrorPresentation } from '@/lib/errorPresentation.ts';
+import { ErrorPageActions } from '@/components/states/ErrorPageActions.tsx';
 
 const RootLayout = () => (
   <>
@@ -28,44 +30,22 @@ const RootLayout = () => (
 );
 
 const RootErrorBoundary = ({ error, reset }: ErrorComponentProps) => {
-  const httpError = error instanceof HttpError ? error : undefined;
-  const message =
-    httpError?.message ??
-    error.message ??
-    'An unexpected error occurred while rendering this page.';
-  const detail =
-    httpError?.body &&
-    typeof httpError.body === 'object' &&
-    httpError.body !== null &&
-    'message' in httpError.body
-      ? String(
-          (httpError.body as { message?: string | number }).message ?? ''
-        ).trim()
-      : undefined;
+  const presentation = getErrorPresentation(error);
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-base-200 p-6">
-      <div className="max-w-xl rounded-box bg-base-100 p-8 text-center shadow-lg">
-        <p className="text-sm font-semibold uppercase text-error">Error</p>
-        <h1 className="mt-2 text-2xl font-bold text-base-content">
-          {httpError ? 'We could not reach the server' : 'Something went wrong'}
-        </h1>
-        <p className="mt-4 text-base-content/80">{message}</p>
-        {detail ? (
-          <p className="mt-2 text-sm text-base-content/60">{detail}</p>
-        ) : null}
-        <div className="mt-6 flex flex-wrap justify-center gap-3">
-          <button className="btn btn-primary" onClick={() => reset()}>
-            Try again
-          </button>
-          <button
-            className="btn btn-outline"
-            onClick={() => window.location.reload()}
-          >
-            Reload page
-          </button>
+    <div className="min-h-screen flex flex-col">
+      <div className="flex-1" role="main">
+        <div className="container py-8">
+          <PageError
+            actions={<ErrorPageActions onRetry={() => reset()} />}
+            detail={presentation.detail}
+            message={presentation.message}
+            statusCode={presentation.statusCode}
+            title={presentation.title}
+          />
         </div>
       </div>
+      <Footer />
     </div>
   );
 };

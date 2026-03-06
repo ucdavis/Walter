@@ -11,6 +11,7 @@ import { useUser } from '@/shared/auth/UserContext.tsx';
 import { PageLoading } from '@/components/states/PageLoading.tsx';
 import { PageEmpty } from '@/components/states/PageEmpty.tsx';
 import { PageError } from '@/components/states/PageError.tsx';
+import { getErrorPresentation } from '@/lib/errorPresentation.ts';
 import {
   CalendarDateRangeIcon,
   ClipboardDocumentListIcon,
@@ -41,24 +42,26 @@ function RouteComponent() {
   }
 
   if (userProjectsQuery.isError) {
+    const presentation = getErrorPresentation(userProjectsQuery.error);
     return (
-      <PageError>
-        <div className="alert alert-error">
-          <span>
-            Unable to load projects: {userProjectsQuery.error?.message}
-          </span>
-        </div>
-      </PageError>
+      <PageError
+        detail={presentation.detail}
+        message={presentation.message}
+        statusCode={presentation.statusCode}
+        title="Unable to load projects"
+      />
     );
   }
 
   if (personnelQuery.isError) {
+    const presentation = getErrorPresentation(personnelQuery.error);
     return (
-      <PageError>
-        <div className="alert alert-error">
-          <span>Unable to load personnel: {personnelQuery.error?.message}</span>
-        </div>
-      </PageError>
+      <PageError
+        detail={presentation.detail}
+        message={presentation.message}
+        statusCode={presentation.statusCode}
+        title="Unable to load personnel"
+      />
     );
   }
 
@@ -85,7 +88,7 @@ function RouteComponent() {
 
   return (
     <div className="container">
-      <h1 className="h1 mt-8">{user.name}'s Personnel</h1>
+      <h1 className="h1 mt-8">{user.name}&apos;s Personnel</h1>
       <h3 className="subtitle">
         {uniqueEmployees} employees across {uniqueProjects} projects
       </h3>
