@@ -138,10 +138,10 @@ function DistributionSubtable({
               <span className="flex justify-end w-full">Funding End</span>
             </th>
             <th>
-              <span className="flex justify-end w-full">Monthly Rate</span>
+              <span className="flex justify-end w-full">Monthly Salary</span>
             </th>
             <th>
-              <span className="flex justify-end w-full">Monthly Fringe</span>
+              <span className="flex justify-end w-full">Monthly CBR</span>
             </th>
             <th>
               <span className="flex justify-end w-full">Monthly Total</span>
@@ -213,10 +213,10 @@ const personnelCsvColumns = [
   { header: 'FTE', key: 'fte' as const },
   { header: 'Project', key: 'projectDescription' as const },
   { header: 'Dist %', key: 'distributionPercent' as const },
-  { format: 'date' as const, header: 'Effective Date', key: 'fundingEffectiveDate' as const },
+  { format: 'date' as const, header: 'Eff. Date', key: 'fundingEffectiveDate' as const },
   { format: 'date' as const, header: 'End Date', key: 'fundingEndDate' as const },
-  { format: 'currency' as const, header: 'Monthly Rate', key: 'monthlyRate' as const },
-  { format: 'currency' as const, header: 'Monthly Fringe', key: 'monthlyFringe' as const },
+  { format: 'currency' as const, header: 'Monthly Salary (1.0 FTE)', key: 'monthlyRate' as const },
+  { format: 'currency' as const, header: 'Monthly CBR (1.0 FTE)', key: 'monthlyFringe' as const },
   { format: 'currency' as const, header: 'Monthly Total', key: 'monthlyTotal' as const },
 ];
 
@@ -257,15 +257,17 @@ export function PersonnelTable({
                 <ChevronDownIcon className="w-4 h-4" />
               )
             ) : null}
-            {safeText(row.original.name)} -{' '}
+            {row.original.name
+              ? `${row.original.name} (${row.original.employeeId}) - `
+              : ''}
             {safeText(row.original.positionDescription)}
           </div>
         ),
         footer: showTotals ? () => 'Totals' : undefined,
-        header: 'Position/Project',
+        header: 'Position',
         id: 'positionProject',
-        minSize: 260,
-        size: 320,
+        minSize: 300,
+        size: 380,
         sortingFn: (a, b) =>
           safeText(a.original.name).localeCompare(safeText(b.original.name)),
       }),
@@ -282,7 +284,7 @@ export function PersonnelTable({
           </span>
         ),
         header: () => (
-          <span className="flex justify-end w-full">Effective Date</span>
+          <span className="flex justify-end w-full">Eff. Date</span>
         ),
       }),
       columnHelper.accessor('jobEndDate', {
@@ -305,7 +307,7 @@ export function PersonnelTable({
           );
         },
         header: () => (
-          <span className="flex justify-end w-full">Expected End Date</span>
+          <span className="flex justify-end w-full">End Date</span>
         ),
       }),
       columnHelper.accessor('monthlyRate', {
@@ -329,7 +331,10 @@ export function PersonnelTable({
             )
           : undefined,
         header: () => (
-          <span className="flex justify-end w-full">Monthly Rate</span>
+          <span className="flex flex-col items-end w-full">
+            <span>Monthly Salary</span>
+            <span className="text-xs font-normal">(1.0 FTE)</span>
+          </span>
         ),
       }),
       columnHelper.accessor('monthlyFringe', {
@@ -353,7 +358,10 @@ export function PersonnelTable({
             )
           : undefined,
         header: () => (
-          <span className="flex justify-end w-full">Monthly Fringe</span>
+          <span className="flex flex-col items-end w-full">
+            <span>Monthly CBR</span>
+            <span className="text-xs font-normal">(1.0 FTE)</span>
+          </span>
         ),
       }),
       columnHelper.accessor('monthlyTotal', {

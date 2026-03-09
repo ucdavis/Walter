@@ -86,7 +86,7 @@ describe('PersonnelTable', () => {
 
     render(<PersonnelTable data={records} />);
 
-    expect(screen.getByText('Smith, John - PROF-FY')).toBeInTheDocument();
+    expect(screen.getByText('Smith, John (1001) - PROF-FY')).toBeInTheDocument();
   });
 
   it('displays FTE column', () => {
@@ -153,7 +153,7 @@ describe('PersonnelTable', () => {
     expect(screen.queryByText('Project')).not.toBeInTheDocument();
 
     await user.click(
-      screen.getByRole('cell', { name: 'Smith, John - PROF-FY' })
+      screen.getByRole('cell', { name: 'Smith, John (1001) - PROF-FY' })
     );
 
     expect(screen.getByText('Project')).toBeInTheDocument();
@@ -173,7 +173,7 @@ describe('PersonnelTable', () => {
 
     render(<PersonnelTable data={records} />);
 
-    expect(screen.getByText('Smith, John - PROF-FY')).toBeInTheDocument();
+    expect(screen.getByText('Smith, John (1001) - PROF-FY')).toBeInTheDocument();
     expect(screen.queryByText(/STDT 3/)).not.toBeInTheDocument();
   });
 
@@ -233,7 +233,7 @@ describe('PersonnelTable', () => {
 
     render(<PersonnelTable data={filtered} />);
 
-    expect(screen.getByText('Adams, Alice - PROF-FY')).toBeInTheDocument();
-    expect(screen.queryByText('Baker, Bob - PROF-FY')).not.toBeInTheDocument();
+    expect(screen.getByText('Adams, Alice (1001) - PROF-FY')).toBeInTheDocument();
+    expect(screen.queryByText('Baker, Bob (1002) - PROF-FY')).not.toBeInTheDocument();
   });
 });
