@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { createColumnHelper } from '@tanstack/react-table';
@@ -10,10 +9,7 @@ import {
   type GLPPMReconciliationRecord,
   type GLTransactionRecord,
 } from '@/queries/project.ts';
-import { summarizeProjectByNumber } from '@/lib/projectSummary.ts';
 import { formatCurrency } from '@/lib/currency.ts';
-import { formatDate } from '@/lib/date.ts';
-import { Currency } from '@/shared/Currency.tsx';
 import { DataTable } from '@/shared/DataTable.tsx';
 
 interface SearchParams {
@@ -59,11 +55,6 @@ function matchesGL(t: GLTransactionRecord, search: SearchParams): boolean {
   );
 }
 
-interface SummaryRow {
-  actuals: number;
-  source: string;
-}
-
 interface PpmTaskRow {
   activityCode: string | null;
   activityDesc: string;
@@ -79,24 +70,6 @@ interface PpmTaskRow {
   taskName: string | null;
   taskNum: string;
 }
-
-const summaryColumnHelper = createColumnHelper<SummaryRow>();
-
-const summaryColumns = [
-  summaryColumnHelper.accessor('source', {
-    cell: (info) => <span className="font-medium">{info.getValue()}</span>,
-    footer: () => <span className="font-medium">Difference</span>,
-    header: 'Source',
-  }),
-  summaryColumnHelper.accessor('actuals', {
-    cell: (info) => (
-      <span className="flex justify-end">
-        {formatCurrency(info.getValue())}
-      </span>
-    ),
-    header: () => <span className="flex justify-end">Actuals</span>,
-  }),
-];
 
 const ppmTaskColumnHelper = createColumnHelper<PpmTaskRow>();
 
@@ -259,7 +232,11 @@ const glCsvColumns = [
   { header: 'Batch', key: 'journalBatchName' as const },
   { header: 'Category', key: 'journalCategory' as const },
   { header: 'Description', key: 'journalLineDescription' as const },
-  { format: 'currency' as const, header: 'Amount', key: 'actualAmount' as const },
+  {
+    format: 'currency' as const,
+    header: 'Amount',
+    key: 'actualAmount' as const,
+  },
 ];
 
 function buildChartString(t: GLTransactionRecord): string {
@@ -284,10 +261,6 @@ function RouteComponent() {
   const { data: projects } = useQuery(
     projectsByNumberQueryOptions([projectNumber])
   );
-  const summary = projects
-    ? summarizeProjectByNumber(projects, projectNumber)
-    : null;
-
   const {
     data: reconciliation,
     isError: isReconciliationError,
@@ -305,39 +278,6 @@ function RouteComponent() {
 
   // Find the specific reconciliation record
   const ppmRecord = reconciliation?.find((r) => matchesPPM(r, search));
-
-  // Build summary table data with footer for difference
-  const summaryData = useMemo((): SummaryRow[] => {
-    if (!ppmRecord) {
-      return [];
-    }
-    return [
-      { actuals: ppmRecord.ppmItdExp, source: 'PPM' },
-      { actuals: ppmRecord.glActualAmount, source: 'GL' },
-    ];
-  }, [ppmRecord]);
-
-  const summaryColumnsWithFooter = useMemo(() => {
-    if (!ppmRecord) {
-      return summaryColumns;
-    }
-    return summaryColumns.map((col) => {
-      if (
-        col.id === 'actuals' ||
-        (col as { accessorKey?: string }).accessorKey === 'actuals'
-      ) {
-        return {
-          ...col,
-          footer: () => (
-            <span className="flex justify-end font-proxima-bold">
-              {formatCurrency(ppmRecord.glActualAmount + ppmRecord.ppmItdExp)}
-            </span>
-          ),
-        };
-      }
-      return col;
-    });
-  }, [ppmRecord]);
 
   // Aggregate PPM records at the task level, filtered by chart string
   const ppmTasks = Object.values(
@@ -411,56 +351,6 @@ function RouteComponent() {
         <p className="subtitle">{keyLabel}</p>
       </section>
 
-      {summary && (
-        <section className="mb-8">
-          <div className="fancy-data">
-            <dl className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              <div className="flex flex-col">
-                <dt className="font-proxima-bold text-lg">Start</dt>
-                <dd className="text-xl">
-                  {formatDate(summary.awardStartDate)}
-                </dd>
-              </div>
-              <div className="flex flex-col">
-                <dt className="font-proxima-bold text-lg">End</dt>
-                <dd className="text-xl">{formatDate(summary.awardEndDate)}</dd>
-              </div>
-              <div className="flex flex-col">
-                <dt className="font-proxima-bold text-lg">Budget</dt>
-                <dd className="text-xl">
-                  <Currency value={summary.totals.budget} />
-                </dd>
-              </div>
-              <div className="flex flex-col">
-                <dt className="font-proxima-bold text-lg">Balance</dt>
-                <dd className="text-xl font-proxima-bold">
-                  <Currency value={summary.totals.balance} />
-                </dd>
-              </div>
-            </dl>
-            <hr className="border-main-border my-5" />
-            <dl className="grid grid-cols-2 md:grid-cols-3 gap-6">
-              <div className="flex flex-col">
-                <dt className="stat-label">Status</dt>
-                <dd className="stat-value">
-                  <div className="badge badge-soft badge-primary">
-                    {summary.projectStatusCode ?? 'Not provided'}
-                  </div>
-                </dd>
-              </div>
-              <div className="flex flex-col">
-                <dt className="stat-label">PM</dt>
-                <dd className="stat-value">{summary.pm ?? 'Not provided'}</dd>
-              </div>
-              <div className="flex flex-col">
-                <dt className="stat-label">PI</dt>
-                <dd className="stat-value">{summary.pi ?? 'Not provided'}</dd>
-              </div>
-            </dl>
-          </div>
-        </section>
-      )}
-
       {isPending ? (
         <p className="text-base-content/70 mt-4">
           Loading reconciliation data…
@@ -473,13 +363,36 @@ function RouteComponent() {
           <section className="mb-8">
             <h2 className="h2 mb-4">Summary</h2>
             {ppmRecord ? (
-              <DataTable
-                columns={summaryColumnsWithFooter}
-                data={summaryData}
-                expandable={false}
-                globalFilter="none"
-                pagination="off"
-              />
+              <div className="stats shadow stats-vertical bg-base-200 lg:stats-horizontal w-full">
+                <div className="stat">
+                  <div className="uppercase font-proxima-bold text-primary">
+                    PPM
+                  </div>
+                  <div className="text-2xl">
+                    {formatCurrency(ppmRecord.ppmBudBal)}
+                  </div>
+                </div>
+                <div className="stat">
+                  <div className="uppercase font-proxima-bold text-accent">
+                    GL
+                  </div>
+                  <div className="text-2xl">
+                    {formatCurrency(ppmRecord.glActualAmount)}
+                  </div>
+                </div>
+                <div
+                  className={`stat${Math.abs(ppmRecord.glActualAmount + ppmRecord.ppmBudBal) > 0.005 ? ' bg-error/10' : ''}`}
+                >
+                  <div className="uppercase font-proxima-bold text-dark-font/70">
+                    Difference
+                  </div>
+                  <div className="text-2xl font-proxima-bold">
+                    {formatCurrency(
+                      ppmRecord.glActualAmount + ppmRecord.ppmBudBal
+                    )}
+                  </div>
+                </div>
+              </div>
             ) : (
               <p className="text-base-content/80">No record found.</p>
             )}
