@@ -436,26 +436,40 @@ function RouteComponent() {
               <p className="text-base-content/80">No record found.</p>
             )} */}
             <h2 className="h2 mb-4">Summary</h2>
-            <div className="stats shadow stats-vertical bg-base-200 lg:stats-horizontal w-full">
-              <div className="stat">
-                <div className="uppercase font-proxima-bold text-primary">
-                  PPM
+            {ppmRecord ? (
+              <div className="stats shadow stats-vertical bg-base-200 lg:stats-horizontal w-full">
+                <div className="stat">
+                  <div className="uppercase font-proxima-bold text-primary">
+                    PPM
+                  </div>
+                  <div className="text-2xl">
+                    {formatCurrency(ppmRecord.ppmBudBal)}
+                  </div>
                 </div>
-                <div className="text-2xl">$6,252.53</div>
-              </div>
-              <div className="stat">
-                <div className="uppercase font-proxima-bold text-accent">
-                  GL
+                <div className="stat">
+                  <div className="uppercase font-proxima-bold text-accent">
+                    GL
+                  </div>
+                  <div className="text-2xl">
+                    {formatCurrency(ppmRecord.glActualAmount)}
+                  </div>
                 </div>
-                <div className="text-2xl">$146.74</div>
-              </div>
-              <div className="stat bg-error/10">
-                <div className="uppercase font-proxima-bold text-dark-font/70">
-                  Difference
+                <div
+                  className={`stat${Math.abs(ppmRecord.glActualAmount + ppmRecord.ppmBudBal) > 0.005 ? ' bg-error/10' : ''}`}
+                >
+                  <div className="uppercase font-proxima-bold text-dark-font/70">
+                    Difference
+                  </div>
+                  <div className="text-2xl font-proxima-bold">
+                    {formatCurrency(
+                      ppmRecord.glActualAmount + ppmRecord.ppmBudBal
+                    )}
+                  </div>
                 </div>
-                <div className="text-2xl font-proxima-bold">$6,399.27</div>
               </div>
-            </div>
+            ) : (
+              <p className="text-base-content/80">No record found.</p>
+            )}
           </section>
 
           {/* PPM Task Breakdown */}
