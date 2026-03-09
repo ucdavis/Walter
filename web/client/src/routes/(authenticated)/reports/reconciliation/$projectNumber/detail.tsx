@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { createColumnHelper } from '@tanstack/react-table';
@@ -10,7 +9,6 @@ import {
   type GLPPMReconciliationRecord,
   type GLTransactionRecord,
 } from '@/queries/project.ts';
-import { summarizeProjectByNumber } from '@/lib/projectSummary.ts';
 import { formatCurrency } from '@/lib/currency.ts';
 import { DataTable } from '@/shared/DataTable.tsx';
 
@@ -57,11 +55,6 @@ function matchesGL(t: GLTransactionRecord, search: SearchParams): boolean {
   );
 }
 
-interface SummaryRow {
-  actuals: number;
-  source: string;
-}
-
 interface PpmTaskRow {
   activityCode: string | null;
   activityDesc: string;
@@ -77,24 +70,6 @@ interface PpmTaskRow {
   taskName: string | null;
   taskNum: string;
 }
-
-const summaryColumnHelper = createColumnHelper<SummaryRow>();
-
-const summaryColumns = [
-  summaryColumnHelper.accessor('source', {
-    cell: (info) => <span className="font-medium">{info.getValue()}</span>,
-    footer: () => <span className="font-medium">Difference</span>,
-    header: 'Source',
-  }),
-  summaryColumnHelper.accessor('actuals', {
-    cell: (info) => (
-      <span className="flex justify-end">
-        {formatCurrency(info.getValue())}
-      </span>
-    ),
-    header: () => <span className="flex justify-end">Actuals</span>,
-  }),
-];
 
 const ppmTaskColumnHelper = createColumnHelper<PpmTaskRow>();
 
@@ -286,10 +261,6 @@ function RouteComponent() {
   const { data: projects } = useQuery(
     projectsByNumberQueryOptions([projectNumber])
   );
-  const summary = projects
-    ? summarizeProjectByNumber(projects, projectNumber)
-    : null;
-
   const {
     data: reconciliation,
     isError: isReconciliationError,
@@ -307,39 +278,6 @@ function RouteComponent() {
 
   // Find the specific reconciliation record
   const ppmRecord = reconciliation?.find((r) => matchesPPM(r, search));
-
-  // Build summary table data with footer for difference
-  const summaryData = useMemo((): SummaryRow[] => {
-    if (!ppmRecord) {
-      return [];
-    }
-    return [
-      { actuals: ppmRecord.ppmItdExp, source: 'PPM' },
-      { actuals: ppmRecord.glActualAmount, source: 'GL' },
-    ];
-  }, [ppmRecord]);
-
-  const summaryColumnsWithFooter = useMemo(() => {
-    if (!ppmRecord) {
-      return summaryColumns;
-    }
-    return summaryColumns.map((col) => {
-      if (
-        col.id === 'actuals' ||
-        (col as { accessorKey?: string }).accessorKey === 'actuals'
-      ) {
-        return {
-          ...col,
-          footer: () => (
-            <span className="flex justify-end font-proxima-bold">
-              {formatCurrency(ppmRecord.glActualAmount + ppmRecord.ppmItdExp)}
-            </span>
-          ),
-        };
-      }
-      return col;
-    });
-  }, [ppmRecord]);
 
   // Aggregate PPM records at the task level, filtered by chart string
   const ppmTasks = Object.values(
@@ -423,18 +361,6 @@ function RouteComponent() {
         <>
           {/* Summary Comparison */}
           <section className="mb-8">
-            {/* <h2 className="h2 mb-4">Summary</h2>
-            {ppmRecord ? (
-              <DataTable
-                columns={summaryColumnsWithFooter}
-                data={summaryData}
-                expandable={false}
-                globalFilter="none"
-                pagination="off"
-              />
-            ) : (
-              <p className="text-base-content/80">No record found.</p>
-            )} */}
             <h2 className="h2 mb-4">Summary</h2>
             {ppmRecord ? (
               <div className="stats shadow stats-vertical bg-base-200 lg:stats-horizontal w-full">
