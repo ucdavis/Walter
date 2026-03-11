@@ -10,6 +10,7 @@ import {
   useSearchFinancialProjectsQuery,
   useSearchTeamMemberProjectsQuery,
 } from '@/queries/search.ts';
+import { canViewFinancials } from '@/components/search/searchAccess.ts';
 import { useUser } from '@/shared/auth/UserContext.tsx';
 import { HttpError } from '@/lib/api.ts';
 import { useDebouncedValue } from '@/lib/useDebouncedValue.ts';
@@ -130,16 +131,6 @@ const filterAndSort = <T extends { keywords: string[]; label: string }>(
       (a, b) => b.score - a.score || a.item.label.localeCompare(b.item.label)
     )
     .map((x) => x.item);
-};
-
-const FINANCIAL_SEARCH_ROLES = new Set([
-  'admin',
-  'financialviewer',
-  'projectmanager',
-]);
-
-const canViewFinancials = (roles: readonly string[]) => {
-  return roles.some((role) => FINANCIAL_SEARCH_ROLES.has(role.toLowerCase()));
 };
 
 const projectToItem = (

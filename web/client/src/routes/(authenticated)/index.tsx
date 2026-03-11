@@ -106,10 +106,7 @@ function RouteComponent() {
       </div>
 
       <div className="home-search relative mx-auto w-full sm:max-w-[90%] md:max-w-[80%] xl:max-w-[66%]">
-        <SearchButton
-          className="w-full"
-          placeholder="Search PIs, Projects, Personnel..."
-        />
+        <SearchButton className="w-full" />
       </div>
 
       {isProjectManager && <PiProjectAlerts managedPis={managedPis} />}

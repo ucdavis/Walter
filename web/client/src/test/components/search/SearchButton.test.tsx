@@ -1,8 +1,18 @@
 import { render, screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
+import type { User } from '@/queries/user.ts';
 
 const openMock = vi.fn();
+const defaultUser: User = {
+  email: 'user@example.com',
+  employeeId: '12345',
+  id: '1',
+  kerberos: 'user',
+  name: 'Test User',
+  roles: [],
+};
+let mockUser: User = defaultUser;
 
 vi.mock('@/components/search/CommandPaletteProvider.tsx', () => ({
   useCommandPalette: () => ({
@@ -12,11 +22,40 @@ vi.mock('@/components/search/CommandPaletteProvider.tsx', () => ({
   }),
 }));
 
+vi.mock('@/shared/auth/UserContext.tsx', () => ({
+  useUser: () => mockUser,
+}));
+
 import { SearchButton } from '@/components/search/SearchButton.tsx';
 
 describe('SearchButton', () => {
+  it('uses the financial search placeholder for users who can view financials', () => {
+    mockUser = { ...defaultUser, roles: ['ProjectManager'] };
+
+    render(<SearchButton />);
+
+    expect(
+      screen.getByRole('button', {
+        name: /Search PIs, Projects, Personnel\.\.\./i,
+      })
+    ).toBeInTheDocument();
+  });
+
+  it('uses the non-financial placeholder for users without financial access', () => {
+    mockUser = { ...defaultUser, roles: ['PrincipalInvestigator'] };
+
+    render(<SearchButton />);
+
+    expect(
+      screen.getByRole('button', {
+        name: /Search projects and reports\.\.\./i,
+      })
+    ).toBeInTheDocument();
+  });
+
   it('renders placeholder and triggers open on click', async () => {
     const user = userEvent.setup();
+    mockUser = defaultUser;
 
     render(<SearchButton placeholder="Search things…" />);
 
@@ -27,6 +66,8 @@ describe('SearchButton', () => {
   });
 
   it('hides shortcut hint when showShortcut is false', () => {
+    mockUser = defaultUser;
+
     const { container } = render(
       <SearchButton placeholder="Search…" showShortcut={false} />
     );
