@@ -54,7 +54,9 @@ function ProjectContent({
     <main className="flex-1 min-w-0">
       <section className="mt-8 mb-2">
         <h1 className="h1">{summary.displayName}</h1>
-        <h3 className="subtitle">Faculty Department Portfolio Report</h3>
+        <h3 className="subtitle">
+          {summary.isInternal ? 'General Ledger' : 'Faculty Department Portfolio Report'}
+        </h3>
         <div className="mt-6">
           <ProjectAlerts
             employeeId={employeeId}

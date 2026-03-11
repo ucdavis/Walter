@@ -13,10 +13,13 @@ export interface ProjectRecord {
   awardStatus: string | null;
   awardType: string | null;
   billingCycle: string | null;
-  catBudBal: number;
-  catBudget: number;
-  catCommitments: number;
-  catItdExp: number;
+  glBeginningBalance: number | null;
+  glExpenses: number | null;
+  glRevenue: number | null;
+  ppmBudBal: number;
+  ppmBudget: number;
+  ppmCommitments: number;
+  ppmExpenses: number;
   contractAdministrator: string | null;
   copi: string | null;
   costShareRequiredBySponsor: string | null;

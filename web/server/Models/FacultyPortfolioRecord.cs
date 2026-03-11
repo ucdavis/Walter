@@ -95,17 +95,17 @@ public sealed class FacultyPortfolioRecord
     [JsonPropertyName("activityDesc")]
     public string? ActivityDesc { get; set; }
 
-    [JsonPropertyName("catBudget")]
-    public decimal CatBudget { get; set; }
+    [JsonPropertyName("ppmBudget")]
+    public decimal PpmBudget { get; set; }
 
-    [JsonPropertyName("catCommitments")]
-    public decimal CatCommitments { get; set; }
+    [JsonPropertyName("ppmCommitments")]
+    public decimal PpmCommitments { get; set; }
 
-    [JsonPropertyName("catItdExp")]
-    public decimal CatItdExp { get; set; }
+    [JsonPropertyName("ppmExpenses")]
+    public decimal PpmExpenses { get; set; }
 
-    [JsonPropertyName("catBudBal")]
-    public decimal CatBudBal { get; set; }
+    [JsonPropertyName("ppmBudBal")]
+    public decimal PpmBudBal { get; set; }
 
     [JsonPropertyName("awardStatus")]
     public string? AwardStatus { get; set; }
@@ -148,6 +148,16 @@ public sealed class FacultyPortfolioRecord
 
     [JsonPropertyName("sponsorAwardNumber")]
     public string? SponsorAwardNumber { get; set; }
+
+    [JsonPropertyName("glBeginningBalance")]
+    public decimal? GlBeginningBalance { get; set; }
+
+    [JsonPropertyName("glRevenue")]
+    public decimal? GlRevenue { get; set; }
+
+    [JsonPropertyName("glExpenses")]
+    public decimal? GlExpenses { get; set; }
+
 
     /// <summary>
     /// Project Manager employee ID (from Financial Service API).

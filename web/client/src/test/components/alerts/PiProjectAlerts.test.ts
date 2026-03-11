@@ -7,16 +7,16 @@ const createPi = (
   projects: Array<{
     projectNumber: string;
     projectName: string;
-    catBudget: number;
-    catBudBal: number;
+    ppmBudget: number;
+    ppmBudBal: number;
   }>
 ): PiWithProjects => ({
   employeeId,
   name: `PI ${employeeId}`,
   projectCount: projects.length,
   projects: projects as PiWithProjects['projects'],
-  totalBalance: projects.reduce((sum, p) => sum + p.catBudBal, 0),
-  totalBudget: projects.reduce((sum, p) => sum + p.catBudget, 0),
+  totalBalance: projects.reduce((sum, p) => sum + p.ppmBudBal, 0),
+  totalBudget: projects.reduce((sum, p) => sum + p.ppmBudget, 0),
 });
 
 describe('getPiProjectAlerts', () => {
@@ -26,16 +26,16 @@ describe('getPiProjectAlerts', () => {
         {
           projectNumber: 'P1',
           projectName: 'Project One',
-          catBudget: 10000,
-          catBudBal: -500,
+          ppmBudget: 10000,
+          ppmBudBal: -500,
         },
       ]),
       createPi('2', [
         {
           projectNumber: 'P2',
           projectName: 'Project Two',
-          catBudget: 10000,
-          catBudBal: -200,
+          ppmBudget: 10000,
+          ppmBudBal: -200,
         },
       ]),
     ];
@@ -53,14 +53,14 @@ describe('getPiProjectAlerts', () => {
         {
           projectNumber: 'P1',
           projectName: 'Warning Project',
-          catBudget: 10000,
-          catBudBal: 500,
+          ppmBudget: 10000,
+          ppmBudBal: 500,
         },
         {
           projectNumber: 'P2',
           projectName: 'Error Project',
-          catBudget: 10000,
-          catBudBal: -100,
+          ppmBudget: 10000,
+          ppmBudBal: -100,
         },
       ]),
     ];

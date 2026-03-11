@@ -1,18 +1,18 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Link } from '@tanstack/react-router';
 import { createColumnHelper } from '@tanstack/react-table';
+import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import { ExportDataButton } from '@/components/ExportDataButton.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
-import { formatDate } from '@/lib/date.ts';
 import type { ProjectRecord } from '@/queries/project.ts';
 import { DataTable } from '@/shared/DataTable.tsx';
 
 interface AggregatedProject {
-  awardEndDate: string | null;
-  awardStartDate: string | null;
+  beginningBalance: number;
   displayName: string;
   projectName: string;
   projectNumber: string;
+  revenue: number;
   totalBalance: number;
   totalBudget: number;
   totalEncumbrance: number;
@@ -27,34 +27,29 @@ function aggregateProjects(records: ProjectRecord[]): AggregatedProject[] {
   for (const p of records) {
     const existing = projectsMap.get(p.projectNumber);
 
+    const begBal = p.glBeginningBalance ?? 0;
+    const rev = p.glRevenue ?? 0;
+    const exp = p.glExpenses ?? 0;
+    const commit = p.ppmCommitments;
+
     if (existing) {
-      existing.totalBudget += p.ppmBudget;
-      existing.totalExpense += p.ppmExpenses;
-      existing.totalEncumbrance += p.ppmCommitments;
-      existing.totalBalance += p.ppmBudBal;
-      if (
-        p.awardStartDate &&
-        (!existing.awardStartDate || p.awardStartDate < existing.awardStartDate)
-      ) {
-        existing.awardStartDate = p.awardStartDate;
-      }
-      if (
-        p.awardEndDate &&
-        (!existing.awardEndDate || p.awardEndDate > existing.awardEndDate)
-      ) {
-        existing.awardEndDate = p.awardEndDate;
-      }
+      existing.beginningBalance += begBal;
+      existing.revenue += rev;
+      existing.totalBudget += begBal + rev;
+      existing.totalExpense += exp;
+      existing.totalEncumbrance += commit;
+      existing.totalBalance += begBal + rev - exp - commit;
     } else {
       projectsMap.set(p.projectNumber, {
-        awardEndDate: p.awardEndDate,
-        awardStartDate: p.awardStartDate,
+        beginningBalance: begBal,
         displayName: p.displayName,
         projectName: p.projectName,
         projectNumber: p.projectNumber,
-        totalBalance: p.ppmBudBal,
-        totalBudget: p.ppmBudget,
-        totalEncumbrance: p.ppmCommitments,
-        totalExpense: p.ppmExpenses,
+        revenue: rev,
+        totalBalance: begBal + rev - exp - commit,
+        totalBudget: begBal + rev,
+        totalEncumbrance: commit,
+        totalExpense: exp,
       });
     }
   }
@@ -62,66 +57,41 @@ function aggregateProjects(records: ProjectRecord[]): AggregatedProject[] {
   return Array.from(projectsMap.values());
 }
 
-function isExpired(project: AggregatedProject): boolean {
-  if (!project.awardEndDate) return false;
-  return new Date(project.awardEndDate) < new Date();
-}
-
-function sortByEndDate(projects: AggregatedProject[]): AggregatedProject[] {
-  return [...projects].sort((a, b) => {
-    if (!a.awardEndDate && !b.awardEndDate) return 0;
-    if (!a.awardEndDate) return -1;
-    if (!b.awardEndDate) return 1;
-    return new Date(a.awardEndDate).getTime() - new Date(b.awardEndDate).getTime();
-  });
-}
-
 const csvColumns = [
   { header: 'Project', key: 'displayName' as const },
-  { format: 'date' as const, header: 'Effective Date', key: 'awardStartDate' as const },
-  { format: 'date' as const, header: 'End Date', key: 'awardEndDate' as const },
   { format: 'currency' as const, header: 'Budget', key: 'totalBudget' as const },
+  { format: 'currency' as const, header: 'Beg. Balance', key: 'beginningBalance' as const },
+  { format: 'currency' as const, header: 'Revenue', key: 'revenue' as const },
   { format: 'currency' as const, header: 'Expense', key: 'totalExpense' as const },
   { format: 'currency' as const, header: 'Commitment', key: 'totalEncumbrance' as const },
   { format: 'currency' as const, header: 'Balance', key: 'totalBalance' as const },
 ];
 
-interface ProjectsTableProps {
+interface InternalProjectsTableProps {
+  discrepancies?: Set<string>;
   employeeId: string;
   records: ProjectRecord[];
 }
 
-export function ProjectsTable({
+export function InternalProjectsTable({
+  discrepancies,
   employeeId,
   records,
-}: ProjectsTableProps) {
-  const [showExpired, setShowExpired] = useState(false);
-
-  const allProjects = useMemo(() => {
-    const aggregated = aggregateProjects(records);
-    return sortByEndDate(aggregated);
-  }, [records]);
-
-  const expiredCount = useMemo(
-    () => allProjects.filter(isExpired).length,
-    [allProjects]
-  );
-
-  const projects = useMemo(
-    () => (showExpired ? allProjects : allProjects.filter((p) => !isExpired(p))),
-    [allProjects, showExpired]
-  );
+}: InternalProjectsTableProps) {
+  const projects = useMemo(() => aggregateProjects(records), [records]);
 
   const totals = useMemo(
     () =>
       projects.reduce(
         (acc, p) => ({
+          beginningBalance: acc.beginningBalance + p.beginningBalance,
+          revenue: acc.revenue + p.revenue,
           totalBalance: acc.totalBalance + p.totalBalance,
           totalBudget: acc.totalBudget + p.totalBudget,
           totalEncumbrance: acc.totalEncumbrance + p.totalEncumbrance,
           totalExpense: acc.totalExpense + p.totalExpense,
         }),
-        { totalBalance: 0, totalBudget: 0, totalEncumbrance: 0, totalExpense: 0 }
+        { beginningBalance: 0, revenue: 0, totalBalance: 0, totalBudget: 0, totalEncumbrance: 0, totalExpense: 0 }
       ),
     [projects]
   );
@@ -146,6 +116,12 @@ export function ProjectsTable({
                   {name}
                 </div>
               </div>
+              {discrepancies?.has(projectNumber) && (
+                <ExclamationTriangleIcon
+                  className="h-5 w-5 shrink-0 text-warning self-end"
+                  title="GL/PPM reconciliation discrepancy"
+                />
+              )}
             </Link>
           );
         },
@@ -153,39 +129,6 @@ export function ProjectsTable({
         header: 'Project Name',
         minSize: 250,
         size: 300,
-      }),
-      columnHelper.accessor('awardStartDate', {
-        cell: (info) => (
-          <span className="flex justify-end">
-            {formatDate(info.getValue())}
-          </span>
-        ),
-        header: () => <span className="flex justify-end">Eff. Date</span>,
-      }),
-      columnHelper.accessor('awardEndDate', {
-        cell: (info) => {
-          const value = info.getValue();
-          let colorClass = '';
-          if (value) {
-            const endDate = new Date(value);
-            const now = new Date();
-            if (endDate < now) {
-              colorClass = 'text-error';
-            } else {
-              const ninetyDaysFromNow = new Date();
-              ninetyDaysFromNow.setDate(ninetyDaysFromNow.getDate() + 90);
-              if (endDate <= ninetyDaysFromNow) {
-                colorClass = 'text-warning';
-              }
-            }
-          }
-          return (
-            <span className={`flex justify-end ${colorClass}`}>
-              {formatDate(value)}
-            </span>
-          );
-        },
-        header: () => <span className="flex justify-end">End Date</span>,
       }),
       columnHelper.accessor('totalBudget', {
         cell: (info) => (
@@ -199,6 +142,32 @@ export function ProjectsTable({
           </span>
         ),
         header: () => <span className="flex justify-end">Budget</span>,
+      }),
+      columnHelper.accessor('beginningBalance', {
+        cell: (info) => (
+          <span className="flex justify-end">
+            {formatCurrency(info.getValue())}
+          </span>
+        ),
+        footer: () => (
+          <span className="flex justify-end">
+            {formatCurrency(totals.beginningBalance)}
+          </span>
+        ),
+        header: () => <span className="flex justify-end">Beg. Balance</span>,
+      }),
+      columnHelper.accessor('revenue', {
+        cell: (info) => (
+          <span className="flex justify-end">
+            {formatCurrency(info.getValue())}
+          </span>
+        ),
+        footer: () => (
+          <span className="flex justify-end">
+            {formatCurrency(totals.revenue)}
+          </span>
+        ),
+        header: () => <span className="flex justify-end">Revenue</span>,
       }),
       columnHelper.accessor('totalExpense', {
         cell: (info) => (
@@ -243,27 +212,12 @@ export function ProjectsTable({
         header: () => <span className="flex justify-end">Balance</span>,
       }),
     ],
-    [employeeId, totals.totalBalance, totals.totalBudget, totals.totalEncumbrance, totals.totalExpense]
+    [discrepancies, employeeId, totals.beginningBalance, totals.revenue, totals.totalBalance, totals.totalBudget, totals.totalEncumbrance, totals.totalExpense]
   );
 
-  if (allProjects.length === 0) {
+  if (projects.length === 0) {
     return <p className="text-base-content/70 mt-8">No projects found.</p>;
   }
-
-  const tableActions = (
-    <>
-      {expiredCount > 0 && (
-        <button
-          className={`btn btn-sm ${showExpired ? 'btn-active' : 'btn-default'}`}
-          onClick={() => setShowExpired(!showExpired)}
-          type="button"
-        >
-          {showExpired ? 'Hide' : 'Show'} expired ({expiredCount})
-        </button>
-      )}
-      <ExportDataButton columns={csvColumns} data={projects} filename="projects.csv" />
-    </>
-  );
 
   return (
     <div className="mt-4">
@@ -273,7 +227,9 @@ export function ProjectsTable({
         footerRowClassName="totaltr"
         globalFilter="left"
         initialState={{ pagination: { pageSize: 25 } }}
-        tableActions={tableActions}
+        tableActions={
+          <ExportDataButton columns={csvColumns} data={projects} filename="internal-projects.csv" />
+        }
       />
     </div>
   );

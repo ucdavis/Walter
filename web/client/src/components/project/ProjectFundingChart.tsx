@@ -42,7 +42,7 @@ export function ProjectFundingChart({ projects }: ProjectFundingChartProps) {
   const totalsByType = projects.reduce<Record<string, number>>(
     (acc, project) => {
       const key = project.projectType || 'Unknown';
-      acc[key] = (acc[key] ?? 0) + project.catBudBal;
+      acc[key] = (acc[key] ?? 0) + project.ppmBudBal;
       return acc;
     },
     {}

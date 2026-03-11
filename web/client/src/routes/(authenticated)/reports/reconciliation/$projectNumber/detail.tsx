@@ -308,9 +308,9 @@ function RouteComponent() {
             taskNum: p.taskNum ?? '',
           };
         }
-        acc[key].budget += p.catBudget;
-        acc[key].expenses += p.catItdExp;
-        acc[key].balance += p.catBudBal;
+        acc[key].budget += p.ppmBudget;
+        acc[key].expenses += p.ppmExpenses;
+        acc[key].balance += p.ppmBudBal;
         return acc;
       }, {})
   );

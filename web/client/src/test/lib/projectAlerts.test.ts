@@ -33,14 +33,14 @@ const createSummary = (
   projectNumber: 'TEST-001',
   projectStatusCode: 'ACTIVE',
   sponsorAwardNumber: null,
-  totals: { balance: 5000, budget: 10000, encumbrance: 0, expense: 5000 },
+  totals: { balance: 5000, beginningBalance: 0, budget: 10000, encumbrance: 0, expense: 5000, revenue: 0 },
   ...overrides,
 });
 
 describe('getAlertsForProject', () => {
   it('returns error alert for negative balance', () => {
     const summary = createSummary({
-      totals: { balance: -500, budget: 10000, encumbrance: 0, expense: 10500 },
+      totals: { balance: -500, beginningBalance: 0, budget: 10000, encumbrance: 0, expense: 10500, revenue: 0 },
     });
     const alerts = getAlertsForProject(summary);
 
@@ -51,7 +51,7 @@ describe('getAlertsForProject', () => {
 
   it('returns warning alert for low budget (<10%)', () => {
     const summary = createSummary({
-      totals: { balance: 900, budget: 10000, encumbrance: 0, expense: 9100 },
+      totals: { balance: 900, beginningBalance: 0, budget: 10000, encumbrance: 0, expense: 9100, revenue: 0 },
     });
     const alerts = getAlertsForProject(summary);
 
@@ -82,7 +82,7 @@ describe('getAlertsForProject', () => {
 
   it('uses custom prefix in message', () => {
     const summary = createSummary({
-      totals: { balance: -500, budget: 10000, encumbrance: 0, expense: 10500 },
+      totals: { balance: -500, beginningBalance: 0, budget: 10000, encumbrance: 0, expense: 10500, revenue: 0 },
     });
     const alerts = getAlertsForProject(summary, 'My Project ');
 
@@ -92,7 +92,7 @@ describe('getAlertsForProject', () => {
   describe('edge cases', () => {
     it('handles zero budget without error', () => {
       const summary = createSummary({
-        totals: { balance: 0, budget: 0, encumbrance: 0, expense: 0 },
+        totals: { balance: 0, beginningBalance: 0, budget: 0, encumbrance: 0, expense: 0, revenue: 0 },
       });
       const alerts = getAlertsForProject(summary);
 
