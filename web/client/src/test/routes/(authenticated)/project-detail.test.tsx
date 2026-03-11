@@ -46,6 +46,7 @@ const createProject = (
   projectName: 'Test Project',
   projectNumber: 'P1',
   projectOwningOrg: 'ORG001',
+  projectOwningOrgCode: 'ORG001',
   projectStatusCode: 'ACTIVE',
   projectType: 'Sponsored',
   purposeDesc: 'Research',

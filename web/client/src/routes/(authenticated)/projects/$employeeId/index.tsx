@@ -46,6 +46,16 @@ function RouteComponent() {
     [projects]
   );
 
+  const internalProjects = useMemo(
+    () => (projects ?? []).filter((p) => p.projectType === 'Internal'),
+    [projects]
+  );
+
+  const sponsoredProjects = useMemo(
+    () => (projects ?? []).filter((p) => p.projectType !== 'Internal'),
+    [projects]
+  );
+
   const discrepancies = useProjectDiscrepancies(internalProjectNumbers);
 
   const summary = useMemo(
@@ -132,7 +142,7 @@ function RouteComponent() {
         </section>
       )}
 
-      <PersonnelSection projectNumbers={projectNumbers} />
+      <PersonnelSection employeeId={employeeId} projectNumbers={projectNumbers} />
     </main>
   );
 }

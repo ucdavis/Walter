@@ -13,7 +13,6 @@ const createSummary = (
   awardStatus: null,
   awardType: null,
   billingCycle: null,
-  categories: [],
   contractAdministrator: null,
   copi: null,
   costShareRequiredBySponsor: null,

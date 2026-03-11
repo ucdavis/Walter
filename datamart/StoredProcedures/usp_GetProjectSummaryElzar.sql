@@ -129,6 +129,9 @@ BEGIN
                     CAST(f.Award_Status AS NVARCHAR(MAX)) AS AWARD_STATUS, CAST(f.Award_Entity AS NVARCHAR(MAX)) AS AWARD_TYPE,
                     CAST(f.Project_Number AS NVARCHAR(MAX)) AS PROJECT_NUMBER, CAST(f.Project_Name AS NVARCHAR(MAX)) AS PROJECT_NAME,
                     CASE WHEN CHARINDEX('' - '', CAST(f.Project_Owning_Organization AS NVARCHAR(MAX))) > 0
+                        THEN LEFT(CAST(f.Project_Owning_Organization AS NVARCHAR(MAX)), CHARINDEX('' - '', CAST(f.Project_Owning_Organization AS NVARCHAR(MAX))) - 1)
+                        ELSE CAST(f.Project_Owning_Organization AS NVARCHAR(MAX)) END AS PROJECT_OWNING_ORG_CODE,
+                    CASE WHEN CHARINDEX('' - '', CAST(f.Project_Owning_Organization AS NVARCHAR(MAX))) > 0
                         THEN STUFF(CAST(f.Project_Owning_Organization AS NVARCHAR(MAX)), 1, CHARINDEX('' - '', CAST(f.Project_Owning_Organization AS NVARCHAR(MAX))) + 2, '''')
                         ELSE CAST(f.Project_Owning_Organization AS NVARCHAR(MAX)) END AS PROJECT_OWNING_ORG,
                     CAST(f.Project_Type AS NVARCHAR(MAX)) AS PROJECT_TYPE, CAST(f.Project_Status AS NVARCHAR(MAX)) AS PROJECT_STATUS,
@@ -194,7 +197,7 @@ BEGIN
         -- CTE 4: project-level metadata for internal projects
         SET @TSQLCommand = @TSQLCommand +
             N'internal_meta AS (
-                SELECT DISTINCT PROJECT_NUMBER, PROJECT_NAME, PROJECT_OWNING_ORG, PROJECT_TYPE, PROJECT_STATUS,
+                SELECT DISTINCT PROJECT_NUMBER, PROJECT_NAME, PROJECT_OWNING_ORG_CODE, PROJECT_OWNING_ORG, PROJECT_TYPE, PROJECT_STATUS,
                     PM, PA, PI, COPI,
                     AWARD_NUMBER, AWARD_START_DATE, AWARD_END_DATE, AWARD_STATUS, AWARD_TYPE,
                     AWARD_CLOSE_DATE, AWARD_PI, BILLING_CYCLE,
@@ -225,7 +228,7 @@ BEGIN
         -- Final SELECT: sponsored from portfolio, internal from FULL OUTER JOIN of PPM + GL
         SET @TSQLCommand = @TSQLCommand + N'
             SELECT AWARD_NUMBER, AWARD_START_DATE, AWARD_END_DATE, AWARD_STATUS, AWARD_TYPE,
-                PROJECT_NUMBER, PROJECT_NAME, PROJECT_OWNING_ORG, PROJECT_TYPE, PROJECT_STATUS,
+                PROJECT_NUMBER, PROJECT_NAME, PROJECT_OWNING_ORG_CODE, PROJECT_OWNING_ORG, PROJECT_TYPE, PROJECT_STATUS,
                 PM, PA, PI, COPI,
                 PPM_BUDGET, PPM_EXPENSES, PPM_COMMITMENTS, PPM_BUD_BAL,
                 NULL AS GL_BEGINNING_BALANCE, NULL AS GL_REVENUE, NULL AS GL_EXPENSES,
@@ -242,7 +245,7 @@ BEGIN
             UNION ALL
 
             SELECT m.AWARD_NUMBER, m.AWARD_START_DATE, m.AWARD_END_DATE, m.AWARD_STATUS, m.AWARD_TYPE,
-                m.PROJECT_NUMBER, m.PROJECT_NAME, m.PROJECT_OWNING_ORG, m.PROJECT_TYPE, m.PROJECT_STATUS,
+                m.PROJECT_NUMBER, m.PROJECT_NAME, m.PROJECT_OWNING_ORG_CODE, m.PROJECT_OWNING_ORG, m.PROJECT_TYPE, m.PROJECT_STATUS,
                 m.PM, m.PA, m.PI, m.COPI,
                 COALESCE(p.PPM_BUDGET, 0) AS PPM_BUDGET,
                 COALESCE(p.PPM_EXPENSES, 0) AS PPM_EXPENSES,

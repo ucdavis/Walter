@@ -12,6 +12,7 @@ interface ChartStringRow {
   commitments: number;
   expenses: number;
   financialDepartment: string;
+  financialDepartmentCode: string;
   fundCode: string;
   fundDesc: string;
   programCode: string;
@@ -64,6 +65,7 @@ function buildRows(records: ProjectRecord[], dataSource: DataSource): ChartStrin
         commitments: commit,
         expenses: exp,
         financialDepartment: r.projectOwningOrg,
+        financialDepartmentCode: r.projectOwningOrgCode,
         fundCode: fund,
         fundDesc: r.fundDesc,
         programCode: program,
@@ -100,7 +102,14 @@ export function ChartStringBreakdown({ dataSource, records }: ChartStringBreakdo
   const columns = useMemo(
     () => [
       columnHelper.accessor('financialDepartment', {
-        cell: (info) => info.getValue(),
+        cell: (info) => (
+          <div>
+            <div className="text-xs text-base-content/70">
+              {info.row.original.financialDepartmentCode}
+            </div>
+            <div>{info.getValue()}</div>
+          </div>
+        ),
         footer: () => 'Totals',
         header: 'Financial Dept',
         minSize: 180,

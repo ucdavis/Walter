@@ -41,6 +41,9 @@ public sealed class FacultyPortfolioRecord
         }
     }
 
+    [JsonPropertyName("projectOwningOrgCode")]
+    public string? ProjectOwningOrgCode { get; set; }
+
     [JsonPropertyName("projectOwningOrg")]
     public string? ProjectOwningOrg { get; set; }
 

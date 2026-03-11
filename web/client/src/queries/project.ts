@@ -24,7 +24,6 @@ export interface ProjectRecord {
   copi: string | null;
   costShareRequiredBySponsor: string | null;
   displayName: string;
-  expenditureCategoryName: string;
   fundCode: string | null;
   fundDesc: string;
   grantAdministrator: string | null;
@@ -42,6 +41,7 @@ export interface ProjectRecord {
   projectName: string;
   projectNumber: string;
   projectOwningOrg: string;
+  projectOwningOrgCode: string;
   projectStatusCode: string;
   projectType: string;
   purposeDesc: string;

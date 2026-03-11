@@ -17,7 +17,6 @@ const createSummary = (
   awardStatus: 'Active',
   awardType: 'Federal Grant',
   billingCycle: 'Monthly',
-  categories: [],
   contractAdministrator: null,
   copi: null,
   costShareRequiredBySponsor: null,
