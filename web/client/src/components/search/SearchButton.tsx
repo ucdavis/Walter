@@ -1,5 +1,13 @@
 import { useCommandPalette } from '@/components/search/CommandPaletteProvider.tsx';
+import { canViewFinancials } from '@/components/search/searchAccess.ts';
+import { useUser } from '@/shared/auth/UserContext.tsx';
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+
+const getDefaultPlaceholder = (roles: readonly string[]) => {
+  return canViewFinancials(roles)
+    ? 'Search PIs, Projects, Personnel...'
+    : 'Search projects and reports...';
+};
 
 const isAppleDevice = () => {
   const platform = navigator.platform?.toLowerCase() ?? '';
@@ -12,7 +20,7 @@ const isAppleDevice = () => {
 
 export function SearchButton({
   className = '',
-  placeholder = 'Search…',
+  placeholder,
   showShortcut = true,
 }: {
   className?: string;
@@ -20,7 +28,9 @@ export function SearchButton({
   showShortcut?: boolean;
 }) {
   const { open } = useCommandPalette();
+  const user = useUser();
   const shortcut = isAppleDevice() ? '⌘' : 'Ctrl';
+  const resolvedPlaceholder = placeholder ?? getDefaultPlaceholder(user.roles);
 
   return (
     <button
@@ -29,7 +39,7 @@ export function SearchButton({
       type="button"
     >
       <MagnifyingGlassIcon className="h-5 w-5 shrink-0 text-base-content/40" />
-      <span className="flex-1 text-base-content/60">{placeholder}</span>
+      <span className="flex-1 text-base-content/60">{resolvedPlaceholder}</span>
       {showShortcut ? (
         <span className="flex items-center gap-1 text-base-content/40">
           <kbd className="kbd kbd-sm">{shortcut}</kbd>
