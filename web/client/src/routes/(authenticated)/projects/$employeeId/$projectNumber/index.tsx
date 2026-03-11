@@ -1,4 +1,5 @@
 import { ProjectAlerts } from '@/components/alerts/ProjectAlerts.tsx';
+import { ChartStringBreakdown } from '@/components/project/ChartStringBreakdown.tsx';
 import { ProjectDetails } from '@/components/project/ProjectDetails.tsx';
 import { FinancialDetails } from '@/components/project/FinancialDetails.tsx';
 import { PersonnelTable } from '@/components/project/PersonnelTable.tsx';
@@ -8,6 +9,7 @@ import {
   type ProjectSummary,
 } from '@/lib/projectSummary.ts';
 import {
+  type ProjectRecord,
   projectsDetailQueryOptions,
   useProjectDiscrepancies,
 } from '@/queries/project.ts';
@@ -38,9 +40,11 @@ const ProjectNotFound = ({ projectNumber }: { projectNumber: string }) => (
 
 function ProjectContent({
   employeeId,
+  projectRecords,
   summary,
 }: {
   employeeId: string;
+  projectRecords: ProjectRecord[];
   summary: ProjectSummary;
 }) {
   const user = useUser();
@@ -72,6 +76,18 @@ function ProjectContent({
       {isProjectManager && <ProjectAdditionalInfo summary={summary} />}
       <FinancialDetails summary={summary} />
 
+      {summary.isInternal && (
+        <section className="section-margin">
+          <h2 className="h2">Chart String Breakdown</h2>
+          <div className="mt-4">
+            <ChartStringBreakdown
+              dataSource="GL"
+              records={projectRecords}
+            />
+          </div>
+        </section>
+      )}
+
       <section className="section-margin">
         <h2 className="h2">Personnel</h2>
         {personnelQuery.isPending && (
@@ -99,5 +115,15 @@ function RouteComponent() {
     return <ProjectNotFound projectNumber={projectNumber} />;
   }
 
-  return <ProjectContent employeeId={employeeId} summary={summary} />;
+  const projectRecords = projects.filter(
+    (p) => p.projectNumber === projectNumber
+  );
+
+  return (
+    <ProjectContent
+      employeeId={employeeId}
+      projectRecords={projectRecords}
+      summary={summary}
+    />
+  );
 }

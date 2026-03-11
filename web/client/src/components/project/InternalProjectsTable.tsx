@@ -1,7 +1,7 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { createColumnHelper } from '@tanstack/react-table';
-import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import { ChevronRightIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import { ExportDataButton } from '@/components/ExportDataButton.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import type { ProjectRecord } from '@/queries/project.ts';
@@ -78,6 +78,7 @@ export function InternalProjectsTable({
   employeeId,
   records,
 }: InternalProjectsTableProps) {
+  const [showBudgetDetails, setShowBudgetDetails] = useState(false);
   const projects = useMemo(() => aggregateProjects(records), [records]);
 
   const totals = useMemo(
@@ -95,6 +96,37 @@ export function InternalProjectsTable({
       ),
     [projects]
   );
+
+  const budgetDetailColumns = showBudgetDetails
+    ? [
+        columnHelper.accessor('beginningBalance', {
+          cell: (info) => (
+            <span className="flex justify-end">
+              {formatCurrency(info.getValue())}
+            </span>
+          ),
+          footer: () => (
+            <span className="flex justify-end">
+              {formatCurrency(totals.beginningBalance)}
+            </span>
+          ),
+          header: () => <span className="flex justify-end">Beg. Balance</span>,
+        }),
+        columnHelper.accessor('revenue', {
+          cell: (info) => (
+            <span className="flex justify-end">
+              {formatCurrency(info.getValue())}
+            </span>
+          ),
+          footer: () => (
+            <span className="flex justify-end">
+              {formatCurrency(totals.revenue)}
+            </span>
+          ),
+          header: () => <span className="flex justify-end">Revenue</span>,
+        }),
+      ]
+    : [];
 
   const columns = useMemo(
     () => [
@@ -141,34 +173,24 @@ export function InternalProjectsTable({
             {formatCurrency(totals.totalBudget)}
           </span>
         ),
-        header: () => <span className="flex justify-end">Budget</span>,
+        header: () => (
+          <button
+            className="flex justify-end items-center gap-1 w-full cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowBudgetDetails((v) => !v);
+            }}
+            title={showBudgetDetails ? 'Hide budget breakdown' : 'Show budget breakdown'}
+            type="button"
+          >
+            <ChevronRightIcon
+              className={`h-3 w-3 transition-transform ${showBudgetDetails ? 'rotate-90' : ''}`}
+            />
+            Budget
+          </button>
+        ),
       }),
-      columnHelper.accessor('beginningBalance', {
-        cell: (info) => (
-          <span className="flex justify-end">
-            {formatCurrency(info.getValue())}
-          </span>
-        ),
-        footer: () => (
-          <span className="flex justify-end">
-            {formatCurrency(totals.beginningBalance)}
-          </span>
-        ),
-        header: () => <span className="flex justify-end">Beg. Balance</span>,
-      }),
-      columnHelper.accessor('revenue', {
-        cell: (info) => (
-          <span className="flex justify-end">
-            {formatCurrency(info.getValue())}
-          </span>
-        ),
-        footer: () => (
-          <span className="flex justify-end">
-            {formatCurrency(totals.revenue)}
-          </span>
-        ),
-        header: () => <span className="flex justify-end">Revenue</span>,
-      }),
+      ...budgetDetailColumns,
       columnHelper.accessor('totalExpense', {
         cell: (info) => (
           <span className="flex justify-end w-full">
@@ -212,7 +234,8 @@ export function InternalProjectsTable({
         header: () => <span className="flex justify-end">Balance</span>,
       }),
     ],
-    [discrepancies, employeeId, totals.beginningBalance, totals.revenue, totals.totalBalance, totals.totalBudget, totals.totalEncumbrance, totals.totalExpense]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [discrepancies, employeeId, showBudgetDetails, totals.beginningBalance, totals.revenue, totals.totalBalance, totals.totalBudget, totals.totalEncumbrance, totals.totalExpense]
   );
 
   if (projects.length === 0) {

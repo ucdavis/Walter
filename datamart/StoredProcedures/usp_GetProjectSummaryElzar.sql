@@ -128,7 +128,9 @@ BEGIN
                     f.Award_End_Date AS AWARD_END_DATE,
                     CAST(f.Award_Status AS NVARCHAR(MAX)) AS AWARD_STATUS, CAST(f.Award_Entity AS NVARCHAR(MAX)) AS AWARD_TYPE,
                     CAST(f.Project_Number AS NVARCHAR(MAX)) AS PROJECT_NUMBER, CAST(f.Project_Name AS NVARCHAR(MAX)) AS PROJECT_NAME,
-                    CAST(f.Project_Owning_Organization AS NVARCHAR(MAX)) AS PROJECT_OWNING_ORG,
+                    CASE WHEN CHARINDEX('' - '', CAST(f.Project_Owning_Organization AS NVARCHAR(MAX))) > 0
+                        THEN STUFF(CAST(f.Project_Owning_Organization AS NVARCHAR(MAX)), 1, CHARINDEX('' - '', CAST(f.Project_Owning_Organization AS NVARCHAR(MAX))) + 2, '''')
+                        ELSE CAST(f.Project_Owning_Organization AS NVARCHAR(MAX)) END AS PROJECT_OWNING_ORG,
                     CAST(f.Project_Type AS NVARCHAR(MAX)) AS PROJECT_TYPE, CAST(f.Project_Status AS NVARCHAR(MAX)) AS PROJECT_STATUS,
                     CAST(f.Project_Manager AS NVARCHAR(MAX)) AS PM, CAST(f.Project_Administrator AS NVARCHAR(MAX)) AS PA,
                     CAST(f.Project_Principal_Investigator AS NVARCHAR(MAX)) AS PI,
@@ -136,10 +138,22 @@ BEGIN
                     SUM(f.Budget) AS PPM_BUDGET, SUM(f.Expenses) AS PPM_EXPENSES,
                     SUM(f.Commitments) AS PPM_COMMITMENTS,
                     SUM(f.[Budget_Balance_(Budget_' + NCHAR(8211) + N'_(Comm_&_Exp))]) AS PPM_BUD_BAL,
-                    CAST(f.UCD_Fund AS NVARCHAR(MAX)) AS FUND_CODE, CAST(f.Task_Fund AS NVARCHAR(MAX)) AS FUND_DESC,
-                    '''' AS PURPOSE_CODE, CAST(f.Task_Purpose AS NVARCHAR(MAX)) AS PURPOSE_DESC,
-                    CAST(f.Program AS NVARCHAR(MAX)) AS PROGRAM_CODE, CAST(f.Task_Program AS NVARCHAR(MAX)) AS PROGRAM_DESC,
-                    CAST(f.Activity AS NVARCHAR(MAX)) AS ACTIVITY_CODE, CAST(f.Task_Activity AS NVARCHAR(MAX)) AS ACTIVITY_DESC,
+                    CAST(f.UCD_Fund AS NVARCHAR(MAX)) AS FUND_CODE,
+                    CASE WHEN CHARINDEX('' - '', CAST(f.Task_Fund AS NVARCHAR(MAX))) > 0
+                        THEN STUFF(CAST(f.Task_Fund AS NVARCHAR(MAX)), 1, CHARINDEX('' - '', CAST(f.Task_Fund AS NVARCHAR(MAX))) + 2, '''')
+                        ELSE CAST(f.Task_Fund AS NVARCHAR(MAX)) END AS FUND_DESC,
+                    '''' AS PURPOSE_CODE,
+                    CASE WHEN CHARINDEX('' - '', CAST(f.Task_Purpose AS NVARCHAR(MAX))) > 0
+                        THEN STUFF(CAST(f.Task_Purpose AS NVARCHAR(MAX)), 1, CHARINDEX('' - '', CAST(f.Task_Purpose AS NVARCHAR(MAX))) + 2, '''')
+                        ELSE CAST(f.Task_Purpose AS NVARCHAR(MAX)) END AS PURPOSE_DESC,
+                    CAST(f.Program AS NVARCHAR(MAX)) AS PROGRAM_CODE,
+                    CASE WHEN CHARINDEX('' - '', CAST(f.Task_Program AS NVARCHAR(MAX))) > 0
+                        THEN STUFF(CAST(f.Task_Program AS NVARCHAR(MAX)), 1, CHARINDEX('' - '', CAST(f.Task_Program AS NVARCHAR(MAX))) + 2, '''')
+                        ELSE CAST(f.Task_Program AS NVARCHAR(MAX)) END AS PROGRAM_DESC,
+                    CAST(f.Activity AS NVARCHAR(MAX)) AS ACTIVITY_CODE,
+                    CASE WHEN CHARINDEX('' - '', CAST(f.Task_Activity AS NVARCHAR(MAX))) > 0
+                        THEN STUFF(CAST(f.Task_Activity AS NVARCHAR(MAX)), 1, CHARINDEX('' - '', CAST(f.Task_Activity AS NVARCHAR(MAX))) + 2, '''')
+                        ELSE CAST(f.Task_Activity AS NVARCHAR(MAX)) END AS ACTIVITY_DESC,
                     CAST(p.award_close_date AS NVARCHAR(MAX)) AS AWARD_CLOSE_DATE, CAST(p.award_pi AS NVARCHAR(MAX)) AS AWARD_PI, CAST(p.billing_cycle AS NVARCHAR(MAX)) AS BILLING_CYCLE,
                     CAST(p.project_burden_schedule_base AS NVARCHAR(MAX)) AS PROJECT_BURDEN_SCHEDULE_BASE, CAST(p.project_burden_cost_rate AS NVARCHAR(MAX)) AS PROJECT_BURDEN_COST_RATE,
                     CAST(p.cost_share_required_by_sponsor AS NVARCHAR(MAX)) AS COST_SHARE_REQUIRED_BY_SPONSOR, CAST(p.grant_administrator AS NVARCHAR(MAX)) AS GRANT_ADMINISTRATOR,
