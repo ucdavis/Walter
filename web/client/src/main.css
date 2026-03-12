@@ -163,6 +163,11 @@
   min-width: 0;
   table-layout: auto;
 }
+.walter-table.table-cardgrid {
+  min-width: 0;
+  table-layout: auto;
+}
+
 .walter-table.table-cardgrid tbody {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
