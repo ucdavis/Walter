@@ -71,13 +71,13 @@ describe('personnel page', () => {
       {
         projectNumber: 'PROJ1',
         projectName: 'Project One',
-        ppmBudBal: 1000,
+        balance: 1000,
         awardEndDate: null,
       },
       {
         projectNumber: 'PROJ2',
         projectName: 'Project Two',
-        ppmBudBal: 2000,
+        balance: 2000,
         awardEndDate: null,
       },
     ];

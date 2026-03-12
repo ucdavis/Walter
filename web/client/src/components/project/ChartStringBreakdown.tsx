@@ -21,9 +21,7 @@ interface ChartStringRow {
 
 const columnHelper = createColumnHelper<ChartStringRow>();
 
-type DataSource = 'GL' | 'PPM';
-
-function buildRows(records: ProjectRecord[], dataSource: DataSource): ChartStringRow[] {
+function buildRows(records: ProjectRecord[]): ChartStringRow[] {
   const map = new Map<string, ChartStringRow>();
 
   for (const r of records) {
@@ -32,38 +30,20 @@ function buildRows(records: ProjectRecord[], dataSource: DataSource): ChartStrin
     const activity = r.activityCode ?? '';
     const key = `${fund}|${program}|${activity}`;
 
-    let budget: number;
-    let exp: number;
-    let balance: number;
-    // We always use PPM commitments due to a bug in commitments in the datamart transaction listings report
-    const commit = r.ppmCommitments;
-
-    if (dataSource === 'GL') {
-      const begBal = r.glBeginningBalance ?? 0;
-      const rev = r.glRevenue ?? 0;
-      exp = r.glExpenses ?? 0;
-      budget = begBal + rev;
-      balance = begBal + rev - exp - commit;
-    } else {
-      budget = r.ppmBudget;
-      exp = r.ppmExpenses;
-      balance = r.ppmBudBal;
-    }
-
     const existing = map.get(key);
     if (existing) {
-      existing.budget += budget;
-      existing.expenses += exp;
-      existing.commitments += commit;
-      existing.balance += balance;
+      existing.budget += r.budget;
+      existing.expenses += r.expenses;
+      existing.commitments += r.commitments;
+      existing.balance += r.balance;
     } else {
       map.set(key, {
         activityCode: activity,
         activityDesc: r.activityDesc,
-        balance,
-        budget,
-        commitments: commit,
-        expenses: exp,
+        balance: r.balance,
+        budget: r.budget,
+        commitments: r.commitments,
+        expenses: r.expenses,
         financialDepartment: r.projectOwningOrg,
         financialDepartmentCode: r.projectOwningOrgCode,
         fundCode: fund,
@@ -78,12 +58,11 @@ function buildRows(records: ProjectRecord[], dataSource: DataSource): ChartStrin
 }
 
 interface ChartStringBreakdownProps {
-  dataSource: DataSource;
   records: ProjectRecord[];
 }
 
-export function ChartStringBreakdown({ dataSource, records }: ChartStringBreakdownProps) {
-  const rows = useMemo(() => buildRows(records, dataSource), [records, dataSource]);
+export function ChartStringBreakdown({ records }: ChartStringBreakdownProps) {
+  const rows = useMemo(() => buildRows(records), [records]);
 
   const totals = useMemo(
     () =>

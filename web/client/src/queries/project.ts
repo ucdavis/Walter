@@ -12,7 +12,11 @@ export interface ProjectRecord {
   awardStartDate: string | null;
   awardStatus: string | null;
   awardType: string | null;
+  balance: number;
   billingCycle: string | null;
+  budget: number;
+  commitments: number;
+  expenses: number;
   glBeginningBalance: number | null;
   glExpenses: number | null;
   glRevenue: number | null;

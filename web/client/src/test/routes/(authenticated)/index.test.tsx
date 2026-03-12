@@ -10,8 +10,8 @@ import { renderRoute } from '@/test/routerUtils.tsx';
 const createPi = (
   employeeId: string,
   projects: Array<{
-    ppmBudBal: number;
-    ppmBudget: number;
+    balance: number;
+    budget: number;
     displayName: string;
     projectName: string;
     projectNumber: string;
@@ -21,8 +21,8 @@ const createPi = (
   name: `PI ${employeeId}`,
   projectCount: projects.length,
   projects: projects as PiWithProjects['projects'],
-  totalBalance: projects.reduce((sum, p) => sum + p.ppmBudBal, 0),
-  totalBudget: projects.reduce((sum, p) => sum + p.ppmBudget, 0),
+  totalBalance: projects.reduce((sum, p) => sum + p.balance, 0),
+  totalBudget: projects.reduce((sum, p) => sum + p.budget, 0),
 });
 
 describe('home route', () => {
@@ -91,14 +91,14 @@ describe('home route', () => {
     const projects = [
       {
         awardEndDate: '2099-12-31',
-        ppmBudBal: 1000,
+        balance: 1000,
         displayName: 'P1: Project One',
         projectName: 'Project One',
         projectNumber: 'P1',
       },
       {
         awardEndDate: null,
-        ppmBudBal: 2000,
+        balance: 2000,
         displayName: 'P2: Project Two',
         projectName: 'Project Two',
         projectNumber: 'P2',
@@ -140,21 +140,21 @@ describe('home route', () => {
     const projects = [
       {
         awardEndDate: '2099-12-31',
-        ppmBudBal: 1000,
+        balance: 1000,
         displayName: 'P1: Project One',
         projectName: 'Project One',
         projectNumber: 'P1',
       },
       {
         awardEndDate: '2099-12-31',
-        ppmBudBal: 500,
+        balance: 500,
         displayName: 'P1: Project One',
         projectName: 'Project One',
         projectNumber: 'P1',
       },
       {
         awardEndDate: '2099-12-31',
-        ppmBudBal: 250,
+        balance: 250,
         displayName: 'P1: Project One',
         projectName: 'Project One',
         projectNumber: 'P1',
@@ -265,7 +265,7 @@ describe('home route', () => {
     const projects = [
       {
         awardEndDate: '2099-12-31',
-        ppmBudBal: 1000,
+        balance: 1000,
         displayName: 'P1: Project One',
         projectName: 'Project One',
         projectNumber: 'P1',
@@ -329,8 +329,8 @@ describe('getPiProjectAlerts', () => {
     const pis = [
       createPi('1', [
         {
-          ppmBudBal: -500,
-          ppmBudget: 1000,
+          balance: -500,
+          budget: 1000,
           displayName: 'P1: Project One',
           projectName: 'Project One',
           projectNumber: 'P1',
@@ -349,8 +349,8 @@ describe('getPiProjectAlerts', () => {
     const pis = [
       createPi('1', [
         {
-          ppmBudBal: 50,
-          ppmBudget: 1000,
+          balance: 50,
+          budget: 1000,
           displayName: 'P1: Project One',
           projectName: 'Project One',
           projectNumber: 'P1',
@@ -369,8 +369,8 @@ describe('getPiProjectAlerts', () => {
     const pis = [
       createPi('1', [
         {
-          ppmBudBal: 500,
-          ppmBudget: 1000,
+          balance: 500,
+          budget: 1000,
           displayName: 'P1: Project One',
           projectName: 'Project One',
           projectNumber: 'P1',
@@ -387,15 +387,15 @@ describe('getPiProjectAlerts', () => {
     const pis = [
       createPi('1', [
         {
-          ppmBudBal: 50,
-          ppmBudget: 1000,
+          balance: 50,
+          budget: 1000,
           displayName: 'P1: Warning Project',
           projectName: 'Warning Project',
           projectNumber: 'P1',
         },
         {
-          ppmBudBal: -100,
-          ppmBudget: 1000,
+          balance: -100,
+          budget: 1000,
           displayName: 'P2: Error Project',
           projectName: 'Error Project',
           projectNumber: 'P2',
@@ -413,29 +413,29 @@ describe('getPiProjectAlerts', () => {
     const pis = [
       createPi('1', [
         {
-          ppmBudBal: -100,
-          ppmBudget: 1000,
+          balance: -100,
+          budget: 1000,
           displayName: 'P1: Project 1',
           projectName: 'Project 1',
           projectNumber: 'P1',
         },
         {
-          ppmBudBal: -200,
-          ppmBudget: 1000,
+          balance: -200,
+          budget: 1000,
           displayName: 'P2: Project 2',
           projectName: 'Project 2',
           projectNumber: 'P2',
         },
         {
-          ppmBudBal: -300,
-          ppmBudget: 1000,
+          balance: -300,
+          budget: 1000,
           displayName: 'P3: Project 3',
           projectName: 'Project 3',
           projectNumber: 'P3',
         },
         {
-          ppmBudBal: -400,
-          ppmBudget: 1000,
+          balance: -400,
+          budget: 1000,
           displayName: 'P4: Project 4',
           projectName: 'Project 4',
           projectNumber: 'P4',

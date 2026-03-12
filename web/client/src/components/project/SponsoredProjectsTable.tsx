@@ -28,10 +28,10 @@ function aggregateProjects(records: ProjectRecord[]): AggregatedProject[] {
     const existing = projectsMap.get(p.projectNumber);
 
     if (existing) {
-      existing.totalBudget += p.ppmBudget;
-      existing.totalExpense += p.ppmExpenses;
-      existing.totalEncumbrance += p.ppmCommitments;
-      existing.totalBalance += p.ppmBudBal;
+      existing.totalBudget += p.budget;
+      existing.totalExpense += p.expenses;
+      existing.totalEncumbrance += p.commitments;
+      existing.totalBalance += p.balance;
       if (
         p.awardStartDate &&
         (!existing.awardStartDate || p.awardStartDate < existing.awardStartDate)
@@ -51,10 +51,10 @@ function aggregateProjects(records: ProjectRecord[]): AggregatedProject[] {
         displayName: p.displayName,
         projectName: p.projectName,
         projectNumber: p.projectNumber,
-        totalBalance: p.ppmBudBal,
-        totalBudget: p.ppmBudget,
-        totalEncumbrance: p.ppmCommitments,
-        totalExpense: p.ppmExpenses,
+        totalBalance: p.balance,
+        totalBudget: p.budget,
+        totalEncumbrance: p.commitments,
+        totalExpense: p.expenses,
       });
     }
   }

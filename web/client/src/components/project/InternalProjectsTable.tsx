@@ -29,16 +29,14 @@ function aggregateProjects(records: ProjectRecord[]): AggregatedProject[] {
 
     const begBal = p.glBeginningBalance ?? 0;
     const rev = p.glRevenue ?? 0;
-    const exp = p.glExpenses ?? 0;
-    const commit = p.ppmCommitments;
 
     if (existing) {
       existing.beginningBalance += begBal;
       existing.revenue += rev;
-      existing.totalBudget += begBal + rev;
-      existing.totalExpense += exp;
-      existing.totalEncumbrance += commit;
-      existing.totalBalance += begBal + rev - exp - commit;
+      existing.totalBudget += p.budget;
+      existing.totalExpense += p.expenses;
+      existing.totalEncumbrance += p.commitments;
+      existing.totalBalance += p.balance;
     } else {
       projectsMap.set(p.projectNumber, {
         beginningBalance: begBal,
@@ -46,10 +44,10 @@ function aggregateProjects(records: ProjectRecord[]): AggregatedProject[] {
         projectName: p.projectName,
         projectNumber: p.projectNumber,
         revenue: rev,
-        totalBalance: begBal + rev - exp - commit,
-        totalBudget: begBal + rev,
-        totalEncumbrance: commit,
-        totalExpense: exp,
+        totalBalance: p.balance,
+        totalBudget: p.budget,
+        totalEncumbrance: p.commitments,
+        totalExpense: p.expenses,
       });
     }
   }

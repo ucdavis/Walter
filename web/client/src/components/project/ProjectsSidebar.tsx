@@ -21,7 +21,7 @@ interface ProjectSummary {
   displayName: string;
   projectNumber: string;
   projectStatusCode: string;
-  totalPpmBudBal: number;
+  totalBalance: number;
 }
 
 function groupProjects(records: ProjectRecord[]): ProjectSummary[] {
@@ -36,11 +36,11 @@ function groupProjects(records: ProjectRecord[]): ProjectSummary[] {
         displayName: rec.displayName,
         projectNumber: rec.projectNumber,
         projectStatusCode: rec.projectStatusCode,
-        totalPpmBudBal: 0,
+        totalBalance: 0,
       };
     }
 
-    map[key].totalPpmBudBal += rec.ppmBudBal;
+    map[key].totalBalance += rec.balance;
 
     if (rec.awardEndDate) {
       const current = map[key].awardEndDate;
@@ -97,7 +97,7 @@ export function ProjectsSidebar() {
 
   const groupedProjects = groupProjects(projects);
   const totalOverviewBalance = groupedProjects.reduce(
-    (total, project) => total + project.totalPpmBudBal,
+    (total, project) => total + project.totalBalance,
     0
   );
   const isAllProjectsActive = !projectNumber;
@@ -216,7 +216,7 @@ export function ProjectsSidebar() {
                         </span>
                       </div>
                       <div className="flex text-sm justify-between items-center text-dark-font/60">
-                        <Currency value={project.totalPpmBudBal} />
+                        <Currency value={project.totalBalance} />
                         <span>
                           {formatDate(project.awardEndDate, 'No end date')}
                         </span>
@@ -337,7 +337,7 @@ export function ProjectsSidebar() {
                   <span className="text-base">{project.displayName}</span>
                 </div>
                 <div className="flex text-sm justify-between items-center text-dark-font/70">
-                  <Currency value={project.totalPpmBudBal} />
+                  <Currency value={project.totalBalance} />
                   <span>{formatDate(project.awardEndDate, 'No end date')}</span>
                 </div>
               </Link>

@@ -80,10 +80,7 @@ function ProjectContent({
         <section className="section-margin">
           <h2 className="h2">Chart String Breakdown</h2>
           <div className="mt-4">
-            <ChartStringBreakdown
-              dataSource="GL"
-              records={projectRecords}
-            />
+            <ChartStringBreakdown records={projectRecords} />
           </div>
         </section>
       )}

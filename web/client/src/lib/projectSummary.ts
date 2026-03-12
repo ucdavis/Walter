@@ -58,19 +58,12 @@ const aggregateTotals = (records: ProjectRecord[]): ProjectTotals => {
   const totals = buildEmptyTotals();
 
   for (const record of records) {
-    const isInternal = record.projectType === 'Internal';
-    const begBal = record.glBeginningBalance ?? 0;
-    const rev = record.glRevenue ?? 0;
-    const exp = isInternal ? (record.glExpenses ?? 0) : record.ppmExpenses;
-
-    totals.beginningBalance += begBal;
-    totals.revenue += rev;
-    totals.budget += isInternal ? begBal + rev : record.ppmBudget;
-    totals.expense += exp;
-    totals.encumbrance += record.ppmCommitments;
-    totals.balance += isInternal
-      ? begBal + rev - exp - record.ppmCommitments
-      : record.ppmBudBal;
+    totals.beginningBalance += record.glBeginningBalance ?? 0;
+    totals.revenue += record.glRevenue ?? 0;
+    totals.budget += record.budget;
+    totals.expense += record.expenses;
+    totals.encumbrance += record.commitments;
+    totals.balance += record.balance;
   }
 
   return totals;
