@@ -40,8 +40,10 @@ export function PrincipalInvestigatorsTable({
       <DataTable
         columns={columns}
         data={pis}
+        defaultColumnSize={220}
         globalFilter="left"
         initialState={{ pagination: { pageSize: 25 } }}
+        tableClassName="table-cardgrid"
       />
     </div>
   );
