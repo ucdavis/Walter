@@ -57,6 +57,7 @@ interface DataTableProps<TData extends object> {
   initialState?: InitialTableState; // Optional initial state for the table, use for stuff like setting page size or sorting
   pagination?: 'auto' | 'on' | 'off'; // 'auto' shows controls only when needed; 'off' disables pagination entirely
   renderSubComponent?: (props: { row: Row<TData> }) => ReactNode;
+  searchPlaceholder?: string;
   subComponentRowClassName?: string;
   tableActions?: ReactNode;
   tableClassName?: string;
@@ -74,6 +75,7 @@ export const DataTable = <TData extends object>({
   initialState,
   pagination = 'auto',
   renderSubComponent,
+  searchPlaceholder = 'Search all columns...',
   subComponentRowClassName,
   tableActions,
   tableClassName,
@@ -198,7 +200,7 @@ export const DataTable = <TData extends object>({
                 <input
                   className="grow"
                   onChange={(e) => table.setGlobalFilter(e.target.value)}
-                  placeholder="Search all columns..."
+                  placeholder={searchPlaceholder}
                   type="text"
                   value={filterValue}
                 />
