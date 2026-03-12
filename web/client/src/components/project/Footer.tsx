@@ -2,7 +2,7 @@ import WalterLogo from '@/shared/WalterLogo.tsx';
 
 const Footer: React.FC = () => {
   return (
-    <footer className="bg-light-bg-200 border-t border-main-border py-3">
+    <footer className="bg-light-bg-200 border-t border-main-border py-3 mt-15">
       <div className="container flex items-center justify-between">
         {/* Left */}
         <div className="flex-1 flex items-center">

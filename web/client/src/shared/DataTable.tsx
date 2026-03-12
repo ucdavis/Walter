@@ -48,7 +48,9 @@ function hasAnyFooter<TData extends object>(
 interface DataTableProps<TData extends object> {
   columns: DataTableColumns<TData>;
   data: TData[];
+  defaultColumnSize?: number;
   expandable?: boolean;
+  filterPlaceholder?: string;
   footerRowClassName?: string;
   getRowCanExpand?: (row: Row<TData>) => boolean; // Default is `() => true` when `renderSubComponent` is provided
   getRowProps?: (row: Row<TData>) => HTMLAttributes<HTMLTableRowElement>;
@@ -58,12 +60,15 @@ interface DataTableProps<TData extends object> {
   renderSubComponent?: (props: { row: Row<TData> }) => ReactNode;
   subComponentRowClassName?: string;
   tableActions?: ReactNode;
+  tableClassName?: string;
 }
 
 export const DataTable = <TData extends object>({
   columns,
   data,
+  defaultColumnSize = 100,
   expandable = true,
+  filterPlaceholder = 'Search all columns...',
   footerRowClassName,
   getRowCanExpand,
   getRowProps,
@@ -73,6 +78,7 @@ export const DataTable = <TData extends object>({
   renderSubComponent,
   subComponentRowClassName,
   tableActions,
+  tableClassName,
 }: DataTableProps<TData>) => {
   const rowExpansionEnabled = renderSubComponent !== undefined;
 
@@ -85,7 +91,7 @@ export const DataTable = <TData extends object>({
     defaultColumn: {
       maxSize: 600,
       minSize: 60,
-      size: 100,
+      size: defaultColumnSize,
     },
     getCoreRowModel: getCoreRowModel(),
     getExpandedRowModel: rowExpansionEnabled
@@ -126,7 +132,10 @@ export const DataTable = <TData extends object>({
   const areAllExpandableRowsExpanded =
     hasExpandableRows && expandableRows.every((row) => row.getIsExpanded());
   const shouldShowToolbar =
-    globalFilter !== 'none' || expandable || tableActions || (rowExpansionEnabled && hasExpandableRows);
+    globalFilter !== 'none' ||
+    expandable ||
+    tableActions ||
+    (rowExpansionEnabled && hasExpandableRows);
   const showFooter = hasAnyFooter(columns);
   const showPaginationControls =
     pagination === 'on' || (pagination === 'auto' && table.getPageCount() > 1);
@@ -191,7 +200,7 @@ export const DataTable = <TData extends object>({
                 <input
                   className="grow"
                   onChange={(e) => table.setGlobalFilter(e.target.value)}
-                  placeholder="Search all columns..."
+                  placeholder={filterPlaceholder}
                   type="text"
                   value={filterValue}
                 />
@@ -267,7 +276,11 @@ export const DataTable = <TData extends object>({
             isOverlayActive ? 'flex-1 min-h-0 overflow-auto' : 'overflow-x-auto'
           }
         >
-          <table className="table walter-table">
+          <table
+            className={['table walter-table', tableClassName]
+              .filter(Boolean)
+              .join(' ')}
+          >
             <thead>
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id}>
