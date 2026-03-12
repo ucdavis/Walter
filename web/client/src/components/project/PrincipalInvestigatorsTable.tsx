@@ -41,9 +41,9 @@ export function PrincipalInvestigatorsTable({
         columns={columns}
         data={pis}
         defaultColumnSize={220}
+        filterPlaceholder="Search PIs..."
         globalFilter="left"
         initialState={{ pagination: { pageSize: 25 } }}
-        searchPlaceholder="Search PIs..."
         tableClassName="table-cardgrid"
       />
     </div>
