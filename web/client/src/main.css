@@ -167,10 +167,9 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 20px;
+  margin-top: 16px;
 }
-.walter-table.table-cardgrid th {
-  display: none;
-}
+
 .walter-table.table-cardgrid td {
   padding: 0;
 }
