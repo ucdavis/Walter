@@ -345,6 +345,25 @@ describe('getPiProjectAlerts', () => {
     expect(alerts[0].message).toContain('negative balance');
   });
 
+  it('includes PI name and project number in alert message', () => {
+    const pis = [
+      createPi('1', [
+        {
+          balance: -500,
+          budget: 1000,
+          displayName: 'P1: Project One',
+          projectName: 'Project One',
+          projectNumber: 'P1',
+        },
+      ]),
+    ];
+
+    const alerts = getPiProjectAlerts(pis);
+
+    expect(alerts[0].message).toContain('PI 1');
+    expect(alerts[0].message).toContain('P1');
+  });
+
   it('returns warning for less than 10% budget remaining', () => {
     const pis = [
       createPi('1', [

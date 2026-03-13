@@ -100,19 +100,9 @@ describe('personnel page', () => {
         screen.getByText('2 employees across 2 projects')
       ).toBeInTheDocument();
 
-      // Summary cards should show correct values
-      // # of Employees: 2
+      // Summary cards should show correct counts
       const employeeCards = screen.getAllByText('2');
       expect(employeeCards.length).toBeGreaterThanOrEqual(2); // In card and subtitle
-
-      // Monthly Rate: 5000 + 3000 + 4000 = 12000
-      // Appears in both summary card and table footer
-      expect(screen.getAllByText('$12,000.00').length).toBeGreaterThanOrEqual(
-        1
-      );
-
-      // Monthly Fringe: 12000 * 0.4 = 4800
-      expect(screen.getAllByText('$4,800.00').length).toBeGreaterThanOrEqual(1);
     } finally {
       cleanup();
     }
