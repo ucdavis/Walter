@@ -1,5 +1,9 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { canAccessAdminUsers, hasAdminRole } from '@/shared/auth/roleAccess.ts';
+import {
+  canAccessAdminUsers,
+  hasAdminRole,
+  hasSystemRole,
+} from '@/shared/auth/roleAccess.ts';
 import { useUser } from '@/shared/auth/UserContext.tsx';
 import { UsersIcon } from '@heroicons/react/24/outline';
 
@@ -10,7 +14,9 @@ export const Route = createFileRoute('/(authenticated)/admin/')({
 function RouteComponent() {
   const user = useUser();
   const isAdmin = hasAdminRole(user.roles);
+  const isSystem = hasSystemRole(user.roles);
   const showUsersPageLink = canAccessAdminUsers(user.roles);
+  const currentRole = isAdmin ? 'Admin' : isSystem ? 'System' : 'Manager';
 
   return (
     <main className="mt-8">
@@ -24,7 +30,7 @@ function RouteComponent() {
           <dl className="grid items-stretch gap-6 md:grid-cols-3">
             <div>
               <dt className="stat-label">Current Role</dt>
-              <dd className="stat-value">{isAdmin ? 'Admin' : 'Manager'}</dd>
+              <dd className="stat-value">{currentRole}</dd>
               <dd className="mt-2 text-sm text-dark-font/70">
                 Access is determined by role assignments from the user profile.
               </dd>

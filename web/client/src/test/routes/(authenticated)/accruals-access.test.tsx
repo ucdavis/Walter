@@ -15,7 +15,7 @@ const createUser = (roles: string[]) => ({
 
 describe('Accruals access control', () => {
   describe('header navigation', () => {
-    it('shows Accruals link when user has AccrualViewer role', async () => {
+    it('shows Reports link instead of a dedicated Accruals nav item for AccrualViewer users', async () => {
       server.use(
         http.get('/api/user/me', () =>
           HttpResponse.json(createUser(['AccrualViewer']))
@@ -31,14 +31,15 @@ describe('Accruals access control', () => {
 
       try {
         await waitFor(() => {
-          expect(screen.getByRole('link', { name: 'Accruals' })).toBeInTheDocument();
+          expect(screen.getByRole('link', { name: 'Reports' })).toBeInTheDocument();
         });
+        expect(screen.queryByRole('link', { name: 'Accruals' })).not.toBeInTheDocument();
       } finally {
         cleanup();
       }
     });
 
-    it('hides Accruals link when user has no roles', async () => {
+    it('hides Accruals link for default users', async () => {
       server.use(
         http.get('/api/user/me', () => HttpResponse.json(createUser([]))),
         http.get('/api/project/managed/:employeeId', () =>
@@ -52,6 +53,7 @@ describe('Accruals access control', () => {
 
       try {
         await screen.findByRole('heading', { name: 'W.A.L.T.E.R.' });
+        expect(screen.getByRole('link', { name: 'Reports' })).toBeInTheDocument();
         expect(screen.queryByRole('link', { name: 'Accruals' })).not.toBeInTheDocument();
       } finally {
         cleanup();
