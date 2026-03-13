@@ -86,15 +86,15 @@ const csvColumns = [
   { format: 'currency' as const, header: 'Balance', key: 'totalBalance' as const },
 ];
 
-interface ProjectsTableProps {
+interface SponsoredProjectsTableProps {
   employeeId: string;
   records: ProjectRecord[];
 }
 
-export function ProjectsTable({
+export function SponsoredProjectsTable({
   employeeId,
   records,
-}: ProjectsTableProps) {
+}: SponsoredProjectsTableProps) {
   const [showExpired, setShowExpired] = useState(false);
 
   const allProjects = useMemo(() => {

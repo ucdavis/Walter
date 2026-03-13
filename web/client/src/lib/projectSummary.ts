@@ -1,18 +1,12 @@
 import type { ProjectRecord } from '@/queries/project.ts';
 
-export interface ProjectCategorySummary {
-  balance: number;
-  budget: number;
-  encumbrance: number;
-  expense: number;
-  name: string;
-}
-
 export interface ProjectTotals {
   balance: number;
+  beginningBalance: number;
   budget: number;
   encumbrance: number;
   expense: number;
+  revenue: number;
 }
 
 export interface ProjectSummary {
@@ -24,7 +18,6 @@ export interface ProjectSummary {
   awardStatus: string | null;
   awardType: string | null;
   billingCycle: string | null;
-  categories: ProjectCategorySummary[];
   contractAdministrator: string | null;
   copi: string | null;
   costShareRequiredBySponsor: string | null;
@@ -54,43 +47,26 @@ const DEFAULT_SUMMARY_NUMBER = 'MULTIPLE';
 
 const buildEmptyTotals = (): ProjectTotals => ({
   balance: 0,
+  beginningBalance: 0,
   budget: 0,
   encumbrance: 0,
   expense: 0,
+  revenue: 0,
 });
 
-const aggregateCategories = (records: ProjectRecord[]) => {
-  const categories = new Map<string, ProjectCategorySummary>();
+const aggregateTotals = (records: ProjectRecord[]): ProjectTotals => {
   const totals = buildEmptyTotals();
 
   for (const record of records) {
-    totals.budget += record.catBudget;
-    totals.expense += record.catItdExp;
-    totals.encumbrance += record.catCommitments;
-    totals.balance += record.catBudBal;
-
-    const existing = categories.get(record.expenditureCategoryName);
-    if (existing) {
-      existing.budget += record.catBudget;
-      existing.expense += record.catItdExp;
-      existing.encumbrance += record.catCommitments;
-      existing.balance += record.catBudBal;
-    } else {
-      categories.set(record.expenditureCategoryName, {
-        balance: record.catBudBal,
-        budget: record.catBudget,
-        encumbrance: record.catCommitments,
-        expense: record.catItdExp,
-        name: record.expenditureCategoryName,
-      });
-    }
+    totals.beginningBalance += record.glBeginningBalance ?? 0;
+    totals.revenue += record.glRevenue ?? 0;
+    totals.budget += record.budget;
+    totals.expense += record.expenses;
+    totals.encumbrance += record.commitments;
+    totals.balance += record.balance;
   }
 
-  const sortedCategories = Array.from(categories.values()).sort((a, b) =>
-    a.name.localeCompare(b.name)
-  );
-
-  return { categories: sortedCategories, totals };
+  return totals;
 };
 
 const pickDate = (
@@ -125,7 +101,7 @@ const findLatestDate = (records: ProjectRecord[], key: DateKey) =>
 export const summarizeAllProjects = (
   records: ProjectRecord[]
 ): ProjectSummary => {
-  const { categories, totals } = aggregateCategories(records);
+  const totals = aggregateTotals(records);
   return {
     awardCloseDate: null,
     awardEndDate: findLatestDate(records, 'awardEndDate'),
@@ -135,7 +111,6 @@ export const summarizeAllProjects = (
     awardStatus: null,
     awardType: null,
     billingCycle: null,
-    categories,
     contractAdministrator: null,
     copi: null,
     costShareRequiredBySponsor: null,
@@ -171,7 +146,7 @@ export const summarizeProjectByNumber = (
     return null;
   }
 
-  const { categories, totals } = aggregateCategories(filtered);
+  const totals = aggregateTotals(filtered);
   const first = filtered[0];
 
   return {
@@ -183,7 +158,6 @@ export const summarizeProjectByNumber = (
     awardStatus: first.awardStatus,
     awardType: first.awardType,
     billingCycle: first.billingCycle,
-    categories,
     contractAdministrator: first.contractAdministrator,
     copi: first.copi,
     costShareRequiredBySponsor: first.costShareRequiredBySponsor,

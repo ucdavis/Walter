@@ -41,6 +41,9 @@ public sealed class FacultyPortfolioRecord
         }
     }
 
+    [JsonPropertyName("projectOwningOrgCode")]
+    public string? ProjectOwningOrgCode { get; set; }
+
     [JsonPropertyName("projectOwningOrg")]
     public string? ProjectOwningOrg { get; set; }
 
@@ -95,17 +98,17 @@ public sealed class FacultyPortfolioRecord
     [JsonPropertyName("activityDesc")]
     public string? ActivityDesc { get; set; }
 
-    [JsonPropertyName("catBudget")]
-    public decimal CatBudget { get; set; }
+    [JsonPropertyName("ppmBudget")]
+    public decimal PpmBudget { get; set; }
 
-    [JsonPropertyName("catCommitments")]
-    public decimal CatCommitments { get; set; }
+    [JsonPropertyName("ppmCommitments")]
+    public decimal PpmCommitments { get; set; }
 
-    [JsonPropertyName("catItdExp")]
-    public decimal CatItdExp { get; set; }
+    [JsonPropertyName("ppmExpenses")]
+    public decimal PpmExpenses { get; set; }
 
-    [JsonPropertyName("catBudBal")]
-    public decimal CatBudBal { get; set; }
+    [JsonPropertyName("ppmBudBal")]
+    public decimal PpmBudBal { get; set; }
 
     [JsonPropertyName("awardStatus")]
     public string? AwardStatus { get; set; }
@@ -148,6 +151,37 @@ public sealed class FacultyPortfolioRecord
 
     [JsonPropertyName("sponsorAwardNumber")]
     public string? SponsorAwardNumber { get; set; }
+
+    [JsonPropertyName("glBeginningBalance")]
+    public decimal? GlBeginningBalance { get; set; }
+
+    [JsonPropertyName("glRevenue")]
+    public decimal? GlRevenue { get; set; }
+
+    [JsonPropertyName("glExpenses")]
+    public decimal? GlExpenses { get; set; }
+
+    // Consolidated financial fields: GL for Internal projects, PPM for Sponsored.
+    // These are computed so every consumer sees the same numbers.
+
+    [JsonPropertyName("budget")]
+    public decimal Budget => ProjectType == "Internal"
+        ? (GlBeginningBalance ?? 0) + (GlRevenue ?? 0)
+        : PpmBudget;
+
+    [JsonPropertyName("expenses")]
+    public decimal Expenses => ProjectType == "Internal"
+        ? (GlExpenses ?? 0)
+        : PpmExpenses;
+
+    // Always use PPM commitments — GL commitments in the datamart are unreliable.
+    [JsonPropertyName("commitments")]
+    public decimal Commitments => PpmCommitments;
+
+    [JsonPropertyName("balance")]
+    public decimal Balance => ProjectType == "Internal"
+        ? Budget - Expenses - Commitments
+        : PpmBudBal;
 
     /// <summary>
     /// Project Manager employee ID (from Financial Service API).

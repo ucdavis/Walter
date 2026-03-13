@@ -10,8 +10,8 @@ import { renderRoute } from '@/test/routerUtils.tsx';
 const createPi = (
   employeeId: string,
   projects: Array<{
-    catBudBal: number;
-    catBudget: number;
+    balance: number;
+    budget: number;
     displayName: string;
     projectName: string;
     projectNumber: string;
@@ -21,8 +21,8 @@ const createPi = (
   name: `PI ${employeeId}`,
   projectCount: projects.length,
   projects: projects as PiWithProjects['projects'],
-  totalBalance: projects.reduce((sum, p) => sum + p.catBudBal, 0),
-  totalBudget: projects.reduce((sum, p) => sum + p.catBudget, 0),
+  totalBalance: projects.reduce((sum, p) => sum + p.balance, 0),
+  totalBudget: projects.reduce((sum, p) => sum + p.budget, 0),
 });
 
 describe('home route', () => {
@@ -91,14 +91,14 @@ describe('home route', () => {
     const projects = [
       {
         awardEndDate: '2099-12-31',
-        catBudBal: 1000,
+        balance: 1000,
         displayName: 'P1: Project One',
         projectName: 'Project One',
         projectNumber: 'P1',
       },
       {
         awardEndDate: null,
-        catBudBal: 2000,
+        balance: 2000,
         displayName: 'P2: Project Two',
         projectName: 'Project Two',
         projectNumber: 'P2',
@@ -140,21 +140,21 @@ describe('home route', () => {
     const projects = [
       {
         awardEndDate: '2099-12-31',
-        catBudBal: 1000,
+        balance: 1000,
         displayName: 'P1: Project One',
         projectName: 'Project One',
         projectNumber: 'P1',
       },
       {
         awardEndDate: '2099-12-31',
-        catBudBal: 500,
+        balance: 500,
         displayName: 'P1: Project One',
         projectName: 'Project One',
         projectNumber: 'P1',
       },
       {
         awardEndDate: '2099-12-31',
-        catBudBal: 250,
+        balance: 250,
         displayName: 'P1: Project One',
         projectName: 'Project One',
         projectNumber: 'P1',
@@ -265,7 +265,7 @@ describe('home route', () => {
     const projects = [
       {
         awardEndDate: '2099-12-31',
-        catBudBal: 1000,
+        balance: 1000,
         displayName: 'P1: Project One',
         projectName: 'Project One',
         projectNumber: 'P1',
@@ -329,8 +329,8 @@ describe('getPiProjectAlerts', () => {
     const pis = [
       createPi('1', [
         {
-          catBudBal: -500,
-          catBudget: 1000,
+          balance: -500,
+          budget: 1000,
           displayName: 'P1: Project One',
           projectName: 'Project One',
           projectNumber: 'P1',
@@ -349,8 +349,8 @@ describe('getPiProjectAlerts', () => {
     const pis = [
       createPi('1', [
         {
-          catBudBal: 50,
-          catBudget: 1000,
+          balance: 50,
+          budget: 1000,
           displayName: 'P1: Project One',
           projectName: 'Project One',
           projectNumber: 'P1',
@@ -369,8 +369,8 @@ describe('getPiProjectAlerts', () => {
     const pis = [
       createPi('1', [
         {
-          catBudBal: 500,
-          catBudget: 1000,
+          balance: 500,
+          budget: 1000,
           displayName: 'P1: Project One',
           projectName: 'Project One',
           projectNumber: 'P1',
@@ -387,15 +387,15 @@ describe('getPiProjectAlerts', () => {
     const pis = [
       createPi('1', [
         {
-          catBudBal: 50,
-          catBudget: 1000,
+          balance: 50,
+          budget: 1000,
           displayName: 'P1: Warning Project',
           projectName: 'Warning Project',
           projectNumber: 'P1',
         },
         {
-          catBudBal: -100,
-          catBudget: 1000,
+          balance: -100,
+          budget: 1000,
           displayName: 'P2: Error Project',
           projectName: 'Error Project',
           projectNumber: 'P2',
@@ -413,29 +413,29 @@ describe('getPiProjectAlerts', () => {
     const pis = [
       createPi('1', [
         {
-          catBudBal: -100,
-          catBudget: 1000,
+          balance: -100,
+          budget: 1000,
           displayName: 'P1: Project 1',
           projectName: 'Project 1',
           projectNumber: 'P1',
         },
         {
-          catBudBal: -200,
-          catBudget: 1000,
+          balance: -200,
+          budget: 1000,
           displayName: 'P2: Project 2',
           projectName: 'Project 2',
           projectNumber: 'P2',
         },
         {
-          catBudBal: -300,
-          catBudget: 1000,
+          balance: -300,
+          budget: 1000,
           displayName: 'P3: Project 3',
           projectName: 'Project 3',
           projectNumber: 'P3',
         },
         {
-          catBudBal: -400,
-          catBudget: 1000,
+          balance: -400,
+          budget: 1000,
           displayName: 'P4: Project 4',
           projectName: 'Project 4',
           projectNumber: 'P4',

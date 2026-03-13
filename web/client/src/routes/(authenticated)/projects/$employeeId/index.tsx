@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
+import { InternalProjectsTable } from '@/components/project/InternalProjectsTable.tsx';
 import { PersonnelSection } from '@/components/project/PersonnelSection.tsx';
-import { ProjectsTable } from '@/components/project/ProjectsTable.tsx';
+import { SponsoredProjectsTable } from '@/components/project/SponsoredProjectsTable.tsx';
 import {
   projectsDetailQueryOptions,
   useProjectDiscrepancies,
@@ -42,6 +43,16 @@ function RouteComponent() {
           .map((p) => p.projectNumber)
       ),
     ],
+    [projects]
+  );
+
+  const internalProjects = useMemo(
+    () => (projects ?? []).filter((p) => p.projectType === 'Internal'),
+    [projects]
+  );
+
+  const sponsoredProjects = useMemo(
+    () => (projects ?? []).filter((p) => p.projectType !== 'Internal'),
     [projects]
   );
 
@@ -110,14 +121,26 @@ function RouteComponent() {
         <ProjectFundingChart projects={projects} />
       </section>
 
-      <section className="section-margin">
-        <h2 className="h2">Projects</h2>
-        <ProjectsTable
-          discrepancies={discrepancies}
-          employeeId={employeeId}
-          records={projects}
-        />
-      </section>
+      {internalProjects.length > 0 && (
+        <section className="section-margin">
+          <h2 className="h2">Internal Projects</h2>
+          <InternalProjectsTable
+            discrepancies={discrepancies}
+            employeeId={employeeId}
+            records={internalProjects}
+          />
+        </section>
+      )}
+
+      {sponsoredProjects.length > 0 && (
+        <section className="section-margin">
+          <h2 className="h2">Sponsored Projects</h2>
+          <SponsoredProjectsTable
+            employeeId={employeeId}
+            records={sponsoredProjects}
+          />
+        </section>
+      )}
 
       <PersonnelSection employeeId={employeeId} projectNumbers={projectNumbers} />
     </main>

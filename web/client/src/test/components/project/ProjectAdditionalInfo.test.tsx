@@ -17,7 +17,6 @@ const createSummary = (
   awardStatus: 'Active',
   awardType: 'Federal Grant',
   billingCycle: 'Monthly',
-  categories: [],
   contractAdministrator: null,
   copi: null,
   costShareRequiredBySponsor: null,
@@ -37,7 +36,7 @@ const createSummary = (
   projectNumber: 'K30ABC123',
   projectStatusCode: 'ACTIVE',
   sponsorAwardNumber: 'NSF-2024-001',
-  totals: { balance: 4000, budget: 10000, encumbrance: 1000, expense: 5000 },
+  totals: { balance: 4000, beginningBalance: 0, budget: 10000, encumbrance: 1000, expense: 5000, revenue: 0 },
   ...overrides,
 });
 

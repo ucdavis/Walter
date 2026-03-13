@@ -54,8 +54,8 @@ export function PiProjectAlerts({ managedPis }: PiProjectAlertsProps) {
     const projects = allProjects.filter(
       (p) => !p.awardEndDate || new Date(p.awardEndDate) >= now
     );
-    const totalBudget = projects.reduce((sum, p) => sum + p.catBudget, 0);
-    const totalBalance = projects.reduce((sum, p) => sum + p.catBudBal, 0);
+    const totalBudget = projects.reduce((sum, p) => sum + p.budget, 0);
+    const totalBalance = projects.reduce((sum, p) => sum + p.balance, 0);
 
     return {
       employeeId: pi.employeeId,
