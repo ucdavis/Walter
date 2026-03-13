@@ -62,6 +62,46 @@ describe('aggregateByPosition', () => {
     expect(pos2?.distributions).toHaveLength(1);
   });
 
+  it('calculates position at 1.0 FTE and distributions at actual FTE', () => {
+    // monthlyRate from API is FTE-adjusted (2000 = 4000 * 0.5 FTE)
+    const records = [
+      createRecord({
+        compositeBenefitRate: 0.4,
+        distributionPercent: 60,
+        fte: 0.5,
+        monthlyRate: 2000,
+        positionNumber: '40001234',
+        projectId: 'PROJ1',
+      }),
+      createRecord({
+        compositeBenefitRate: 0.4,
+        distributionPercent: 40,
+        fte: 0.5,
+        monthlyRate: 2000,
+        positionNumber: '40001234',
+        projectId: 'PROJ2',
+      }),
+    ];
+
+    const [position] = aggregateByPosition(records);
+
+    // Position level: divided by FTE to show 1.0 FTE rate
+    expect(position.monthlyRate).toBe(4000); // 2000 / 0.5
+    expect(position.monthlyFringe).toBe(1600); // 4000 * 0.4
+    expect(position.monthlyTotal).toBe(5600);
+
+    // Distribution level: FTE already baked into monthlyRate, just apply dist %
+    const [dist1, dist2] = position.distributions;
+    // 2000 * 60% = 1200
+    expect(dist1.monthlyRate).toBe(1200);
+    expect(dist1.monthlyFringe).toBeCloseTo(480); // 1200 * 0.4
+    expect(dist1.monthlyTotal).toBeCloseTo(1680);
+    // 2000 * 40% = 800
+    expect(dist2.monthlyRate).toBe(800);
+    expect(dist2.monthlyFringe).toBeCloseTo(320); // 800 * 0.4
+    expect(dist2.monthlyTotal).toBeCloseTo(1120);
+  });
+
   it('separates same position number for different employees', () => {
     const records = [
       createRecord({ employeeId: '1001', positionNumber: '40001234' }),
