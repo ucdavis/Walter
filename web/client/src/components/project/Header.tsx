@@ -33,11 +33,11 @@ function NavLinks({
 }) {
   return (
     <div className={className}>
-      {links.map((link) => (
+      {links.map((link) =>
         link.isPlaceholder ? (
           <span
             aria-disabled="true"
-            className={`${linkClassName} cursor-default opacity-60`}
+            className={`${linkClassName} cursor-default hover:font-medium opacity-60`}
             key={link.label}
           >
             {link.label}
@@ -54,7 +54,7 @@ function NavLinks({
             {link.label}
           </Link>
         )
-      ))}
+      )}
     </div>
   );
 }
@@ -90,8 +90,8 @@ const Header: React.FC = () => {
       ...(canViewPrincipalInvestigators
         ? [
             {
-              label: 'Principal Investigators',
               isPlaceholder: true,
+              label: 'Principal Investigators',
             } satisfies NavLinkItem,
           ]
         : []),
