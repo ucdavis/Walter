@@ -3,16 +3,21 @@ import { Link } from '@tanstack/react-router';
 import { SearchButton } from '@/components/search/SearchButton.tsx';
 import { UserAvatar } from '@/components/project/UserAvatar.tsx';
 import WalterLogo from '@/shared/WalterLogo.tsx';
-import { useHasRole, useUser } from '@/shared/auth/UserContext.tsx';
+import { useUser } from '@/shared/auth/UserContext.tsx';
 import {
+  canAccessPersonnelNav,
+  canAccessPrincipalInvestigatorsNav,
+  canAccessProjectsNav,
   canAccessAdminDashboard,
+  canAccessReportsNav,
 } from '@/shared/auth/roleAccess.ts';
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
 
 type NavLinkItem = {
+  isPlaceholder?: boolean;
   label: string;
   params?: Record<string, string>;
-  to: string;
+  to?: string;
 };
 
 function NavLinks({
@@ -28,25 +33,40 @@ function NavLinks({
 }) {
   return (
     <div className={className}>
-      {links.map((link) => (
-        <Link
-          activeOptions={{ exact: false }}
-          className={linkClassName}
-          key={link.label}
-          onClick={onNavigate}
-          params={link.params}
-          to={link.to}
-        >
-          {link.label}
-        </Link>
-      ))}
+      {links.map((link) =>
+        link.isPlaceholder ? (
+          <span
+            aria-disabled="true"
+            className={`${linkClassName} cursor-default hover:font-medium opacity-60`}
+            key={link.label}
+          >
+            {link.label}
+          </span>
+        ) : (
+          <Link
+            activeOptions={{ exact: false }}
+            className={linkClassName}
+            key={link.label}
+            onClick={onNavigate}
+            params={link.params}
+            to={link.to!}
+          >
+            {link.label}
+          </Link>
+        )
+      )}
     </div>
   );
 }
 
 const Header: React.FC = () => {
   const user = useUser();
-  const canViewAccruals = useHasRole('AccrualViewer');
+  const canViewProjects = canAccessProjectsNav(user.roles);
+  const canViewPersonnel = canAccessPersonnelNav(user.roles);
+  const canViewPrincipalInvestigators = canAccessPrincipalInvestigatorsNav(
+    user.roles
+  );
+  const canViewReports = canAccessReportsNav(user.roles);
   const canViewAdminDashboard = canAccessAdminDashboard(user.roles);
 
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -55,24 +75,53 @@ const Header: React.FC = () => {
 
   const navLinks = useMemo<NavLinkItem[]>(
     () => [
-      {
-        label: 'Projects',
-        params: { employeeId: user.employeeId },
-        to: '/projects/$employeeId',
-      },
-      { label: 'Personnel', to: '/personnel' },
-      { label: 'Reports', to: '/reports' },
-      ...(canViewAccruals ? [{ label: 'Accruals', to: '/accruals' }] : []),
+      ...(canViewProjects
+        ? [
+            {
+              label: 'Projects',
+              params: { employeeId: user.employeeId },
+              to: '/projects/$employeeId',
+            } satisfies NavLinkItem,
+          ]
+        : []),
+      ...(canViewPersonnel
+        ? [{ label: 'Personnel', to: '/personnel' } satisfies NavLinkItem]
+        : []),
+      ...(canViewPrincipalInvestigators
+        ? [
+            {
+              isPlaceholder: true,
+              label: 'Principal Investigators',
+            } satisfies NavLinkItem,
+          ]
+        : []),
+      ...(canViewReports
+        ? [{ label: 'Reports', to: '/reports' } satisfies NavLinkItem]
+        : []),
       ...(canViewAdminDashboard ? [{ label: 'Admin', to: '/admin' }] : []),
     ],
-    [user.employeeId, canViewAccruals, canViewAdminDashboard]
+    [
+      user.employeeId,
+      canViewProjects,
+      canViewPersonnel,
+      canViewPrincipalInvestigators,
+      canViewReports,
+      canViewAdminDashboard,
+    ]
   );
 
   useEffect(() => {
     if (menuRef.current) {
       setMenuHeight(menuRef.current.scrollHeight);
     }
-  }, [mobileOpen, canViewAccruals, canViewAdminDashboard]);
+  }, [
+    mobileOpen,
+    canViewProjects,
+    canViewPersonnel,
+    canViewPrincipalInvestigators,
+    canViewReports,
+    canViewAdminDashboard,
+  ]);
 
   return (
     <header className="bg-light-bg-200 border-b py-4 border-main-border sticky top-0 z-50">
