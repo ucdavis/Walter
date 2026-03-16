@@ -99,7 +99,7 @@ describe('header navigation access control', () => {
     const { cleanup } = await renderHomeForRoles(['FinancialViewer']);
 
     try {
-      expect(screen.getByText('Principal Investigators')).toBeInTheDocument();
+      expect(screen.getAllByText('Principal Investigators').length).toBeGreaterThan(0);
       expect(
         screen.queryByRole('link', { name: 'Principal Investigators' })
       ).not.toBeInTheDocument();
@@ -116,7 +116,7 @@ describe('header navigation access control', () => {
     const { cleanup } = await renderHomeForRoles(['ProjectManager']);
 
     try {
-      expect(screen.getByText('Principal Investigators')).toBeInTheDocument();
+      expect(screen.getAllByText('Principal Investigators').length).toBeGreaterThan(0);
       expect(
         screen.queryByRole('link', { name: 'Principal Investigators' })
       ).not.toBeInTheDocument();
