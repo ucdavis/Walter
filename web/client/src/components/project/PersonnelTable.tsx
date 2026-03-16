@@ -79,7 +79,7 @@ export function aggregateByPosition(
     if (existing) {
       existing.distributions.push(aggregateDistribution(record));
     } else {
-      const monthlyRate = record.monthlyRate;
+      const monthlyRate = record.fte > 0 ? record.monthlyRate / record.fte : 0;
       const monthlyFringe = monthlyRate * record.compositeBenefitRate;
       positionMap.set(key, {
         distributions: [aggregateDistribution(record)],
@@ -124,6 +124,7 @@ function DistributionSubtable({
 }) {
   return (
     <div className="pr-4">
+      <h4 className="font-semibold text-sm mb-2">Funding Distribution</h4>
       <table className="table walter-table walter-subtable">
         <thead>
           <tr>
@@ -138,10 +139,16 @@ function DistributionSubtable({
               <span className="flex justify-end w-full">Funding End</span>
             </th>
             <th>
-              <span className="flex justify-end w-full">Monthly Salary</span>
+              <span className="flex flex-col items-end w-full">
+                <span>Monthly Salary</span>
+                <span className="text-xs font-normal">(Distributed)</span>
+              </span>
             </th>
             <th>
-              <span className="flex justify-end w-full">Monthly CBR</span>
+              <span className="flex flex-col items-end w-full">
+                <span>Monthly CBR</span>
+                <span className="text-xs font-normal">(Distributed)</span>
+              </span>
             </th>
             <th>
               <span className="flex justify-end w-full">Monthly Total</span>
@@ -215,8 +222,8 @@ const personnelCsvColumns = [
   { header: 'Dist %', key: 'distributionPercent' as const },
   { format: 'date' as const, header: 'Eff. Date', key: 'fundingEffectiveDate' as const },
   { format: 'date' as const, header: 'End Date', key: 'fundingEndDate' as const },
-  { format: 'currency' as const, header: 'Monthly Salary (1.0 FTE)', key: 'monthlyRate' as const },
-  { format: 'currency' as const, header: 'Monthly CBR (1.0 FTE)', key: 'monthlyFringe' as const },
+  { format: 'currency' as const, header: 'Monthly Salary (Distributed)', key: 'monthlyRate' as const },
+  { format: 'currency' as const, header: 'Monthly CBR (Distributed)', key: 'monthlyFringe' as const },
   { format: 'currency' as const, header: 'Monthly Total', key: 'monthlyTotal' as const },
 ];
 
