@@ -3,7 +3,8 @@ CREATE PROCEDURE dbo.usp_GetFacultyDeptPortfolio
     @StartDate DATE = NULL,
     @EndDate DATE = NULL,
     @ApplicationName NVARCHAR(128) = NULL,
-    @ApplicationUser NVARCHAR(256) = NULL
+    @ApplicationUser NVARCHAR(256) = NULL,
+    @EmulatingUser NVARCHAR(256) = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -119,6 +120,7 @@ BEGIN
             @Parameters = @ParametersJSON,
             @ApplicationName = @ApplicationName,
             @ApplicationUser = @ApplicationUser,
+            @EmulatingUser = @EmulatingUser,
             @Success = 1;
     END TRY
     BEGIN CATCH
@@ -132,6 +134,7 @@ BEGIN
             @Parameters = @ParametersJSON,
             @ApplicationName = @ApplicationName,
             @ApplicationUser = @ApplicationUser,
+            @EmulatingUser = @EmulatingUser,
             @Success = 0,
             @ErrorMessage = @ErrorMsg;
 

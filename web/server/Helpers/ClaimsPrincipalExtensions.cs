@@ -41,4 +41,13 @@ public static class ClaimsPrincipalExtensions
             ?? principal.FindFirstValue(ClaimTypes.Email)
             ?? principal.FindFirstValue("preferred_username"); // email w/ our entra setup
     }
+
+    /// <summary>
+    /// Returns the emulating user's identifier if the current session is an emulation, otherwise null.
+    /// </summary>
+    public static string? GetEmulatingUser(this ClaimsPrincipal principal)
+    {
+        ArgumentNullException.ThrowIfNull(principal);
+        return principal.FindFirstValue("emulating_user");
+    }
 }
