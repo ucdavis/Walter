@@ -96,7 +96,8 @@ public sealed class ProjectController : ApiControllerBase
                     .FirstOrDefault(m => m.RoleName == PpmRole.ProjectManager)?.EmployeeId);
 
         var applicationUser = User.GetUserIdentifier();
-        var projects = await _datamartService.GetFacultyPortfolioAsync(projectNumbers, applicationUser, cancellationToken);
+        var emulatingUser = User.GetEmulatingUser();
+        var projects = await _datamartService.GetFacultyPortfolioAsync(projectNumbers, applicationUser, emulatingUser, cancellationToken);
 
         var activeProjects = projects
             .Where(p => p.ProjectStatus == "ACTIVE")
@@ -125,7 +126,8 @@ public sealed class ProjectController : ApiControllerBase
 
         var codes = projectCodes.Split(',', StringSplitOptions.RemoveEmptyEntries);
         var applicationUser = User.GetUserIdentifier();
-        var projects = await _datamartService.GetFacultyPortfolioAsync(codes, applicationUser, cancellationToken);
+        var emulatingUser = User.GetEmulatingUser();
+        var projects = await _datamartService.GetFacultyPortfolioAsync(codes, applicationUser, emulatingUser, cancellationToken);
 
         return Ok(projects.Where(p => p.ProjectStatus == "ACTIVE").ToList());
     }
@@ -184,7 +186,8 @@ public sealed class ProjectController : ApiControllerBase
         }
 
         var applicationUser = User.GetUserIdentifier();
-        var personnel = await _datamartService.GetPositionBudgetsAsync(codes, applicationUser, cancellationToken);
+        var emulatingUser = User.GetEmulatingUser();
+        var personnel = await _datamartService.GetPositionBudgetsAsync(codes, applicationUser, emulatingUser, cancellationToken);
 
         return Ok(personnel);
     }
@@ -200,7 +203,8 @@ public sealed class ProjectController : ApiControllerBase
 
         var codes = projectCodes.Split(',', StringSplitOptions.RemoveEmptyEntries);
         var applicationUser = User.GetUserIdentifier();
-        var transactions = await _datamartService.GetGLTransactionListingsAsync(codes, applicationUser, cancellationToken);
+        var emulatingUser = User.GetEmulatingUser();
+        var transactions = await _datamartService.GetGLTransactionListingsAsync(codes, applicationUser, emulatingUser, cancellationToken);
 
         return Ok(transactions);
     }
@@ -216,7 +220,8 @@ public sealed class ProjectController : ApiControllerBase
 
         var codes = projectCodes.Split(',', StringSplitOptions.RemoveEmptyEntries);
         var applicationUser = User.GetUserIdentifier();
-        var reconciliation = await _datamartService.GetGLPPMReconciliationAsync(codes, applicationUser, cancellationToken);
+        var emulatingUser = User.GetEmulatingUser();
+        var reconciliation = await _datamartService.GetGLPPMReconciliationAsync(codes, applicationUser, emulatingUser, cancellationToken);
 
         return Ok(reconciliation);
     }

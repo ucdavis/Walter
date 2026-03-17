@@ -37,6 +37,9 @@ public static class LoggingMiddlewareHelper
                 userIdentifier = ctx.User.GetUserIdentifier();
             }
 
+            // Track actual user when emulating
+            var emulatingUser = ctx.User.FindFirst("emulating_user")?.Value;
+
             // client IP (respects ForwardedHeaders above)
             var clientIp = ctx.Connection.RemoteIpAddress?.ToString();
 
@@ -48,6 +51,7 @@ public static class LoggingMiddlewareHelper
             {
                 ["user.id"] = userId,
                 ["user.identifier"] = userIdentifier,
+                ["user.emulating"] = emulatingUser,
                 ["request.id"] = requestId,
                 ["trace.id"] = traceId,
                 ["span.id"] = spanId,

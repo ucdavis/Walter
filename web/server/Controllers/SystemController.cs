@@ -28,6 +28,15 @@ public class SystemController : ApiControllerBase
             return BadRequest("Identifier is required.");
         }
 
+        // Block chained emulation — end current emulation first
+        if (User.FindFirst("emulating_user") != null)
+        {
+            return BadRequest("Already emulating a user. End the current emulation before starting a new one.");
+        }
+
+        // Preserve the actual user's identity for audit logging
+        var actualUserIdentifier = User.GetUserIdentifier();
+
         User? user;
 
         if (Guid.TryParse(identifier, out var userId))
@@ -54,6 +63,11 @@ public class SystemController : ApiControllerBase
             new(ClaimTypes.Email, user.Email ?? string.Empty),
             new("kerberos", user.Kerberos),
         };
+
+        if (!string.IsNullOrEmpty(actualUserIdentifier))
+        {
+            claims.Add(new Claim("emulating_user", actualUserIdentifier));
+        }
 
         foreach (var role in roles)
         {
