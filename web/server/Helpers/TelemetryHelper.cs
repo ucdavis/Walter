@@ -29,7 +29,7 @@ public static class TelemetryHelper
     }
 
     /// <summary>
-    /// Configures OpenTelemetry tracing and metrics with ASP.NET Core and HTTP client instrumentation
+    /// Configures OpenTelemetry tracing and metrics with ASP.NET Core, HTTP client, and SQL client instrumentation
     /// </summary>
     public static void ConfigureOpenTelemetry(IServiceCollection services, IHostEnvironment env)
     {
@@ -51,6 +51,7 @@ public static class TelemetryHelper
             .WithMetrics(m => m
                     .AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation()
+                    .AddSqlClientInstrumentation()
                     .AddOtlpExporter() // configured via OTEL_* env vars / IConfiguration
             );
     }
