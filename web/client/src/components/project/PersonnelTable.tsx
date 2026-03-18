@@ -126,6 +126,15 @@ function DistributionSubtable({
     <div className="pr-4">
       <h4 className="font-semibold text-sm mb-2">Funding Distribution</h4>
       <table className="table walter-table walter-subtable">
+        <colgroup>
+          <col className="walter-subtable-col-primary" />
+          <col className="walter-subtable-col-secondary" />
+          <col className="walter-subtable-col-equal" />
+          <col className="walter-subtable-col-equal" />
+          <col className="walter-subtable-col-equal" />
+          <col className="walter-subtable-col-equal" />
+          <col className="walter-subtable-col-equal" />
+        </colgroup>
         <thead>
           <tr>
             <th>Project</th>
@@ -158,7 +167,14 @@ function DistributionSubtable({
         <tbody>
           {distributions.map((dist, idx) => (
             <tr key={idx}>
-              <td className="text-sm">{dist.record.projectDescription}</td>
+              <td className="text-sm">
+                <span
+                  className="block truncate"
+                  title={dist.record.projectDescription}
+                >
+                  {dist.record.projectDescription}
+                </span>
+              </td>
               <td className="text-right text-sm">
                 {dist.record.distributionPercent}%
               </td>
@@ -220,11 +236,31 @@ const personnelCsvColumns = [
   { header: 'FTE', key: 'fte' as const },
   { header: 'Project', key: 'projectDescription' as const },
   { header: 'Dist %', key: 'distributionPercent' as const },
-  { format: 'date' as const, header: 'Eff. Date', key: 'fundingEffectiveDate' as const },
-  { format: 'date' as const, header: 'End Date', key: 'fundingEndDate' as const },
-  { format: 'currency' as const, header: 'Monthly Salary (Distributed)', key: 'monthlyRate' as const },
-  { format: 'currency' as const, header: 'Monthly CBR (Distributed)', key: 'monthlyFringe' as const },
-  { format: 'currency' as const, header: 'Monthly Total', key: 'monthlyTotal' as const },
+  {
+    format: 'date' as const,
+    header: 'Eff. Date',
+    key: 'fundingEffectiveDate' as const,
+  },
+  {
+    format: 'date' as const,
+    header: 'End Date',
+    key: 'fundingEndDate' as const,
+  },
+  {
+    format: 'currency' as const,
+    header: 'Monthly Salary (Distributed)',
+    key: 'monthlyRate' as const,
+  },
+  {
+    format: 'currency' as const,
+    header: 'Monthly CBR (Distributed)',
+    key: 'monthlyFringe' as const,
+  },
+  {
+    format: 'currency' as const,
+    header: 'Monthly Total',
+    key: 'monthlyTotal' as const,
+  },
 ];
 
 interface PersonnelTableProps {
@@ -274,7 +310,7 @@ export function PersonnelTable({
         header: 'Position',
         id: 'positionProject',
         minSize: 300,
-        size: 380,
+        size: 300,
         sortingFn: (a, b) =>
           safeText(a.original.name).localeCompare(safeText(b.original.name)),
       }),
@@ -313,9 +349,7 @@ export function PersonnelTable({
             </span>
           );
         },
-        header: () => (
-          <span className="flex justify-end w-full">End Date</span>
-        ),
+        header: () => <span className="flex justify-end w-full">End Date</span>,
       }),
       columnHelper.accessor('monthlyRate', {
         cell: (info) => (
@@ -427,7 +461,6 @@ export function PersonnelTable({
       <DataTable
         columns={columns}
         data={positions}
-        tableActions={tableActions}
         footerRowClassName="totaltr"
         getRowCanExpand={(row) => row.original.distributions.length > 0}
         getRowProps={(row) =>
@@ -445,6 +478,7 @@ export function PersonnelTable({
           <DistributionSubtable distributions={row.original.distributions} />
         )}
         subComponentRowClassName="pivot-row"
+        tableActions={tableActions}
       />
     </div>
   );

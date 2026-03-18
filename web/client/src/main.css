@@ -217,7 +217,7 @@
 
 .walter-table.walter-subtable {
   min-width: 0;
-  table-layout: auto;
+  table-layout: fixed;
 }
 .walter-table.walter-subtable th {
   border: none;
@@ -228,6 +228,15 @@
 }
 .walter-table.walter-subtable td:first-child {
   padding-left: 0;
+}
+.walter-subtable-col-primary {
+  width: 32%;
+}
+.walter-subtable-col-secondary {
+  width: 8%;
+}
+.walter-subtable-col-equal {
+  width: 12%;
 }
 .walter-table .pivot-row {
   background-color: var(--color-base-200);
