@@ -127,13 +127,13 @@ function DistributionSubtable({
       <h4 className="font-semibold text-sm mb-2">Funding Distribution</h4>
       <table className="table walter-table walter-subtable">
         <colgroup>
-          <col className="walter-subtable-project-col" />
-          <col className="walter-subtable-dist-col" />
-          <col className="walter-subtable-date-col" />
-          <col className="walter-subtable-date-col" />
-          <col className="walter-subtable-money-col" />
-          <col className="walter-subtable-money-col" />
-          <col className="walter-subtable-money-col" />
+          <col className="walter-subtable-col-primary" />
+          <col className="walter-subtable-col-secondary" />
+          <col className="walter-subtable-col-equal" />
+          <col className="walter-subtable-col-equal" />
+          <col className="walter-subtable-col-equal" />
+          <col className="walter-subtable-col-equal" />
+          <col className="walter-subtable-col-equal" />
         </colgroup>
         <thead>
           <tr>

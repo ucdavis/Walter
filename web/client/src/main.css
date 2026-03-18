@@ -229,16 +229,13 @@
 .walter-table.walter-subtable td:first-child {
   padding-left: 0;
 }
-.walter-subtable-project-col {
+.walter-subtable-col-primary {
   width: 32%;
 }
-.walter-subtable-dist-col {
+.walter-subtable-col-secondary {
   width: 8%;
 }
-.walter-subtable-date-col {
-  width: 12%;
-}
-.walter-subtable-money-col {
+.walter-subtable-col-equal {
   width: 12%;
 }
 .walter-table .pivot-row {
