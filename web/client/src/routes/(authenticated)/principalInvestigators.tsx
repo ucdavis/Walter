@@ -70,7 +70,7 @@ function RouteComponent() {
       <div className="fancy-data">
         <dl className="grid items-stretch gap-6 md:gap-8 grid-cols-1 md:grid-cols-2">
           <div>
-            <UsersIcon className="w-xz 4 h-4" />
+            <UsersIcon className="w-4 h-4" />
             <dt className="stat-label">Principal Investigators</dt>
             <dd className="stat-value">{managedPis.length}</dd>
           </div>
