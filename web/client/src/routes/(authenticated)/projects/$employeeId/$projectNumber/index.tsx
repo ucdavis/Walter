@@ -68,7 +68,7 @@ function ProjectContent({
         <h3 className="subtitle">
           {summary.isInternal
             ? 'General Ledger'
-            : 'Faculty Department Portfolio Report'}
+            : 'Data source: Faculty Department Portfolio Report (PPM)'}
         </h3>
         <div className="mt-6">
           <ProjectAlerts
