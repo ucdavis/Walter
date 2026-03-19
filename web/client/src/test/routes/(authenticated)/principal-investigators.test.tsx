@@ -28,12 +28,12 @@ describe('principal investigators route', () => {
     );
 
     const { cleanup } = renderRoute({
-      initialPath: '/principalinvestigators',
+      initialPath: '/principalInvestigators',
     });
 
     try {
       await screen.findByRole('heading', {
-        name: "Test User's Principal Investigators",
+        name: 'Managed Principal Investigators',
       });
       expect(screen.getByText('PI One')).toBeInTheDocument();
       expect(screen.getByText('PI Two')).toBeInTheDocument();
@@ -54,7 +54,7 @@ describe('principal investigators route', () => {
     );
 
     const { cleanup } = renderRoute({
-      initialPath: '/principalinvestigators',
+      initialPath: '/principalInvestigators',
     });
 
     try {
@@ -75,7 +75,7 @@ describe('principal investigators route', () => {
     );
 
     const { cleanup } = renderRoute({
-      initialPath: '/principalinvestigators',
+      initialPath: '/principalInvestigators',
     });
 
     try {
