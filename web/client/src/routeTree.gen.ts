@@ -58,8 +58,8 @@ const authenticatedReportsRoute = authenticatedReportsRouteImport.update({
 } as any)
 const authenticatedPrincipalInvestigatorsRoute =
   authenticatedPrincipalInvestigatorsRouteImport.update({
-    id: '/principalinvestigators',
-    path: '/principalinvestigators',
+    id: '/principalInvestigators',
+    path: '/principalInvestigators',
     getParentRoute: () => authenticatedRouteRoute,
   } as any)
 const authenticatedPersonnelRoute = authenticatedPersonnelRouteImport.update({
@@ -160,7 +160,7 @@ export interface FileRoutesByFullPath {
   '/form': typeof authenticatedFormRoute
   '/me': typeof authenticatedMeRoute
   '/personnel': typeof authenticatedPersonnelRoute
-  '/principalinvestigators': typeof authenticatedPrincipalInvestigatorsRoute
+  '/principalInvestigators': typeof authenticatedPrincipalInvestigatorsRoute
   '/reports': typeof authenticatedReportsRouteWithChildren
   '/styles': typeof authenticatedStylesRoute
   '/': typeof authenticatedIndexRoute
@@ -182,7 +182,7 @@ export interface FileRoutesByTo {
   '/form': typeof authenticatedFormRoute
   '/me': typeof authenticatedMeRoute
   '/personnel': typeof authenticatedPersonnelRoute
-  '/principalinvestigators': typeof authenticatedPrincipalInvestigatorsRoute
+  '/principalInvestigators': typeof authenticatedPrincipalInvestigatorsRoute
   '/styles': typeof authenticatedStylesRoute
   '/': typeof authenticatedIndexRoute
   '/admin/users': typeof authenticatedAdminUsersRoute
@@ -205,7 +205,7 @@ export interface FileRoutesById {
   '/(authenticated)/form': typeof authenticatedFormRoute
   '/(authenticated)/me': typeof authenticatedMeRoute
   '/(authenticated)/personnel': typeof authenticatedPersonnelRoute
-  '/(authenticated)/principalinvestigators': typeof authenticatedPrincipalInvestigatorsRoute
+  '/(authenticated)/principalInvestigators': typeof authenticatedPrincipalInvestigatorsRoute
   '/(authenticated)/reports': typeof authenticatedReportsRouteWithChildren
   '/(authenticated)/styles': typeof authenticatedStylesRoute
   '/(authenticated)/': typeof authenticatedIndexRoute
@@ -230,7 +230,7 @@ export interface FileRouteTypes {
     | '/form'
     | '/me'
     | '/personnel'
-    | '/principalinvestigators'
+    | '/principalInvestigators'
     | '/reports'
     | '/styles'
     | '/'
@@ -252,7 +252,7 @@ export interface FileRouteTypes {
     | '/form'
     | '/me'
     | '/personnel'
-    | '/principalinvestigators'
+    | '/principalInvestigators'
     | '/styles'
     | '/'
     | '/admin/users'
@@ -274,7 +274,7 @@ export interface FileRouteTypes {
     | '/(authenticated)/form'
     | '/(authenticated)/me'
     | '/(authenticated)/personnel'
-    | '/(authenticated)/principalinvestigators'
+    | '/(authenticated)/principalInvestigators'
     | '/(authenticated)/reports'
     | '/(authenticated)/styles'
     | '/(authenticated)/'
@@ -333,10 +333,10 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authenticatedReportsRouteImport
       parentRoute: typeof authenticatedRouteRoute
     }
-    '/(authenticated)/principalinvestigators': {
-      id: '/(authenticated)/principalinvestigators'
-      path: '/principalinvestigators'
-      fullPath: '/principalinvestigators'
+    '/(authenticated)/principalInvestigators': {
+      id: '/(authenticated)/principalInvestigators'
+      path: '/principalInvestigators'
+      fullPath: '/principalInvestigators'
       preLoaderRoute: typeof authenticatedPrincipalInvestigatorsRouteImport
       parentRoute: typeof authenticatedRouteRoute
     }
