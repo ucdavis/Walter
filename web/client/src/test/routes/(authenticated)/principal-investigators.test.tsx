@@ -28,7 +28,7 @@ describe('principal investigators route', () => {
     );
 
     const { cleanup } = renderRoute({
-      initialPath: '/principal-investigators',
+      initialPath: '/principalinvestigators',
     });
 
     try {
@@ -54,7 +54,7 @@ describe('principal investigators route', () => {
     );
 
     const { cleanup } = renderRoute({
-      initialPath: '/principal-investigators',
+      initialPath: '/principalinvestigators',
     });
 
     try {
@@ -75,7 +75,7 @@ describe('principal investigators route', () => {
     );
 
     const { cleanup } = renderRoute({
-      initialPath: '/principal-investigators',
+      initialPath: '/principalinvestigators',
     });
 
     try {

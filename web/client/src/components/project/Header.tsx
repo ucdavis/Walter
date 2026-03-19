@@ -80,7 +80,7 @@ const Header: React.FC = () => {
         ? [
             {
               label: 'Principal Investigators',
-              to: '/principal-investigators',
+              to: '/principalinvestigators',
             } satisfies NavLinkItem,
           ]
         : []),

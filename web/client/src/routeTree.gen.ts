@@ -14,7 +14,7 @@ import { Route as authenticatedRouteRouteImport } from './routes/(authenticated)
 import { Route as authenticatedIndexRouteImport } from './routes/(authenticated)/index'
 import { Route as authenticatedStylesRouteImport } from './routes/(authenticated)/styles'
 import { Route as authenticatedReportsRouteImport } from './routes/(authenticated)/reports'
-import { Route as authenticatedPrincipalInvestigatorsRouteImport } from './routes/(authenticated)/principal-investigators'
+import { Route as authenticatedPrincipalInvestigatorsRouteImport } from './routes/(authenticated)/principalInvestigators'
 import { Route as authenticatedPersonnelRouteImport } from './routes/(authenticated)/personnel'
 import { Route as authenticatedMeRouteImport } from './routes/(authenticated)/me'
 import { Route as authenticatedFormRouteImport } from './routes/(authenticated)/form'
@@ -58,8 +58,8 @@ const authenticatedReportsRoute = authenticatedReportsRouteImport.update({
 } as any)
 const authenticatedPrincipalInvestigatorsRoute =
   authenticatedPrincipalInvestigatorsRouteImport.update({
-    id: '/principal-investigators',
-    path: '/principal-investigators',
+    id: '/principalinvestigators',
+    path: '/principalinvestigators',
     getParentRoute: () => authenticatedRouteRoute,
   } as any)
 const authenticatedPersonnelRoute = authenticatedPersonnelRouteImport.update({
@@ -160,7 +160,7 @@ export interface FileRoutesByFullPath {
   '/form': typeof authenticatedFormRoute
   '/me': typeof authenticatedMeRoute
   '/personnel': typeof authenticatedPersonnelRoute
-  '/principal-investigators': typeof authenticatedPrincipalInvestigatorsRoute
+  '/principalinvestigators': typeof authenticatedPrincipalInvestigatorsRoute
   '/reports': typeof authenticatedReportsRouteWithChildren
   '/styles': typeof authenticatedStylesRoute
   '/': typeof authenticatedIndexRoute
@@ -182,7 +182,7 @@ export interface FileRoutesByTo {
   '/form': typeof authenticatedFormRoute
   '/me': typeof authenticatedMeRoute
   '/personnel': typeof authenticatedPersonnelRoute
-  '/principal-investigators': typeof authenticatedPrincipalInvestigatorsRoute
+  '/principalinvestigators': typeof authenticatedPrincipalInvestigatorsRoute
   '/styles': typeof authenticatedStylesRoute
   '/': typeof authenticatedIndexRoute
   '/admin/users': typeof authenticatedAdminUsersRoute
@@ -205,7 +205,7 @@ export interface FileRoutesById {
   '/(authenticated)/form': typeof authenticatedFormRoute
   '/(authenticated)/me': typeof authenticatedMeRoute
   '/(authenticated)/personnel': typeof authenticatedPersonnelRoute
-  '/(authenticated)/principal-investigators': typeof authenticatedPrincipalInvestigatorsRoute
+  '/(authenticated)/principalinvestigators': typeof authenticatedPrincipalInvestigatorsRoute
   '/(authenticated)/reports': typeof authenticatedReportsRouteWithChildren
   '/(authenticated)/styles': typeof authenticatedStylesRoute
   '/(authenticated)/': typeof authenticatedIndexRoute
@@ -230,7 +230,7 @@ export interface FileRouteTypes {
     | '/form'
     | '/me'
     | '/personnel'
-    | '/principal-investigators'
+    | '/principalinvestigators'
     | '/reports'
     | '/styles'
     | '/'
@@ -252,7 +252,7 @@ export interface FileRouteTypes {
     | '/form'
     | '/me'
     | '/personnel'
-    | '/principal-investigators'
+    | '/principalinvestigators'
     | '/styles'
     | '/'
     | '/admin/users'
@@ -274,7 +274,7 @@ export interface FileRouteTypes {
     | '/(authenticated)/form'
     | '/(authenticated)/me'
     | '/(authenticated)/personnel'
-    | '/(authenticated)/principal-investigators'
+    | '/(authenticated)/principalinvestigators'
     | '/(authenticated)/reports'
     | '/(authenticated)/styles'
     | '/(authenticated)/'
@@ -333,10 +333,10 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authenticatedReportsRouteImport
       parentRoute: typeof authenticatedRouteRoute
     }
-    '/(authenticated)/principal-investigators': {
-      id: '/(authenticated)/principal-investigators'
-      path: '/principal-investigators'
-      fullPath: '/principal-investigators'
+    '/(authenticated)/principalinvestigators': {
+      id: '/(authenticated)/principalinvestigators'
+      path: '/principalinvestigators'
+      fullPath: '/principalinvestigators'
       preLoaderRoute: typeof authenticatedPrincipalInvestigatorsRouteImport
       parentRoute: typeof authenticatedRouteRoute
     }

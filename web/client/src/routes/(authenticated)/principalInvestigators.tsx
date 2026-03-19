@@ -14,7 +14,7 @@ import {
   UsersIcon,
 } from '@heroicons/react/24/outline';
 
-export const Route = createFileRoute('/(authenticated)/principal-investigators')(
+export const Route = createFileRoute('/(authenticated)/principalinvestigators')(
   {
     beforeLoad: async ({ context }: { context: RouterContext }) => {
       const user = await context.queryClient.ensureQueryData(meQueryOptions());
@@ -62,7 +62,7 @@ function RouteComponent() {
 
   return (
     <div className="container">
-      <h1 className="h1 mt-8">{user.name}&apos;s Principal Investigators</h1>
+      <h1 className="h1 mt-8">{user.name}Managed Principal Investigators</h1>
       <h3 className="subtitle">
         {managedPis.length} investigators across {totalProjects} projects
       </h3>
