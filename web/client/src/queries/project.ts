@@ -17,9 +17,6 @@ export interface ProjectRecord {
   budget: number;
   commitments: number;
   expenses: number;
-  glBeginningBalance: number | null;
-  glExpenses: number | null;
-  glRevenue: number | null;
   ppmBudBal: number;
   ppmBudget: number;
   ppmCommitments: number;

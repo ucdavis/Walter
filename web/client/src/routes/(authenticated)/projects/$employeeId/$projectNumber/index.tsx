@@ -59,7 +59,7 @@ function ProjectContent({
       <section className="mt-8 mb-2">
         <h1 className="h1">{summary.displayName}</h1>
         <h3 className="subtitle">
-          {summary.isInternal ? 'General Ledger' : 'Faculty Department Portfolio Report'}
+          Faculty Department Portfolio Report
         </h3>
         <div className="mt-6">
           <ProjectAlerts
@@ -80,7 +80,7 @@ function ProjectContent({
         <section className="section-margin">
           <h2 className="h2">Chart String Breakdown</h2>
           <div className="mt-4">
-            <ChartStringBreakdown records={projectRecords} />
+            <ChartStringBreakdown employeeId={employeeId} projectNumber={summary.projectNumber} records={projectRecords} />
           </div>
         </section>
       )}
