@@ -14,10 +14,9 @@ import {
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
 
 type NavLinkItem = {
-  isPlaceholder?: boolean;
   label: string;
   params?: Record<string, string>;
-  to?: string;
+  to: string;
 };
 
 function NavLinks({
@@ -33,28 +32,18 @@ function NavLinks({
 }) {
   return (
     <div className={className}>
-      {links.map((link) =>
-        link.isPlaceholder ? (
-          <span
-            aria-disabled="true"
-            className={`${linkClassName} cursor-default hover:font-medium opacity-60`}
-            key={link.label}
-          >
-            {link.label}
-          </span>
-        ) : (
-          <Link
-            activeOptions={{ exact: false }}
-            className={linkClassName}
-            key={link.label}
-            onClick={onNavigate}
-            params={link.params}
-            to={link.to!}
-          >
-            {link.label}
-          </Link>
-        )
-      )}
+      {links.map((link) => (
+        <Link
+          activeOptions={{ exact: false }}
+          className={linkClassName}
+          key={link.label}
+          onClick={onNavigate}
+          params={link.params}
+          to={link.to}
+        >
+          {link.label}
+        </Link>
+      ))}
     </div>
   );
 }
@@ -90,8 +79,8 @@ const Header: React.FC = () => {
       ...(canViewPrincipalInvestigators
         ? [
             {
-              isPlaceholder: true,
               label: 'Principal Investigators',
+              to: '/principal-investigators',
             } satisfies NavLinkItem,
           ]
         : []),
