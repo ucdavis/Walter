@@ -57,9 +57,18 @@ function ProjectContent({
   return (
     <main className="flex-1 min-w-0">
       <section className="mt-8 mb-2">
+        <div className="mb-1">
+          <span
+            className={`badge font-proxima-bold badge-sm ${summary.isInternal ? 'badge-accent' : 'badge-info'}`}
+          >
+            {summary.isInternal ? 'Internal' : 'Sponsored'}
+          </span>
+        </div>
         <h1 className="h1">{summary.displayName}</h1>
         <h3 className="subtitle">
-          {summary.isInternal ? 'General Ledger' : 'Faculty Department Portfolio Report'}
+          {summary.isInternal
+            ? 'General Ledger'
+            : 'Data source: Faculty Department Portfolio Report (PPM)'}
         </h3>
         <div className="mt-6">
           <ProjectAlerts
