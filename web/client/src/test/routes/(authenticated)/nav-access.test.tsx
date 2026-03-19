@@ -99,10 +99,9 @@ describe('header navigation access control', () => {
     const { cleanup } = await renderHomeForRoles(['FinancialViewer']);
 
     try {
-      expect(screen.getAllByText('Principal Investigators').length).toBeGreaterThan(0);
       expect(
-        screen.queryByRole('link', { name: 'Principal Investigators' })
-      ).not.toBeInTheDocument();
+        screen.getByRole('link', { name: 'Principal Investigators' })
+      ).toBeInTheDocument();
       expect(screen.getByRole('link', { name: 'Reports' })).toBeInTheDocument();
       expect(screen.queryByRole('link', { name: 'Projects' })).not.toBeInTheDocument();
       expect(screen.queryByRole('link', { name: 'Personnel' })).not.toBeInTheDocument();
@@ -116,10 +115,9 @@ describe('header navigation access control', () => {
     const { cleanup } = await renderHomeForRoles(['ProjectManager']);
 
     try {
-      expect(screen.getAllByText('Principal Investigators').length).toBeGreaterThan(0);
       expect(
-        screen.queryByRole('link', { name: 'Principal Investigators' })
-      ).not.toBeInTheDocument();
+        screen.getByRole('link', { name: 'Principal Investigators' })
+      ).toBeInTheDocument();
       expect(screen.getByRole('link', { name: 'Reports' })).toBeInTheDocument();
       expect(screen.queryByRole('link', { name: 'Projects' })).not.toBeInTheDocument();
       expect(screen.queryByRole('link', { name: 'Personnel' })).not.toBeInTheDocument();
