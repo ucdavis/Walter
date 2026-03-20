@@ -10,10 +10,10 @@ import { formatCurrency } from '@/lib/currency.ts';
 import type { ProjectRecord } from '@/queries/project.ts';
 
 const FUNDING_COLORS: Record<string, string> = {
-  internal: '#F18A00',
-  sponsored: '#008EAA',
-  'sponsored capital': '#009ebe',
-  'sponsored fabrication': '#00c8f1',
+  internal: 'var(--color-accent)',
+  sponsored: 'var(--color-info)',
+  'sponsored capital': 'color-mix(in srgb, var(--color-info) 88%, white)',
+  'sponsored fabrication': 'color-mix(in srgb, var(--color-info) 72%, white)',
 };
 
 const FALLBACK_COLORS = [

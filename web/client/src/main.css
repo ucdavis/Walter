@@ -12,9 +12,9 @@
 
   --color-primary-color: var(--color-ucd-gunrock);
   --color-secondary-color: var(--color-ucd-gold);
-  --color-accent-color: #d9a611;
+  --color-accent-color: var(--color-ucd-poppy);
   --color-error-color: var(--color-ucd-doubledecker);
-  --color-info-color: var(--color-ucd-tahoe);
+  --color-info-color: var(--color-ucd-putahcreek);
   --color-success-color: var(--color-ucd-quad);
   --color-warning-color: #cd9400;
 }
@@ -96,11 +96,11 @@
     @apply mt-4 mb-8 px-6 py-4 border rounded-md bg-light-bg-200 border-main-border;
   }
   .nav-link {
-    @apply border-b-2 border-base-200 transition hover:font-semibold;
+    @apply border-b-2 border-base-200 transition text-base-content/60 hover:text-base-content;
   }
 
   .nav-link[data-status='active'] {
-    @apply font-semibold border-primary-color;
+    @apply text-base-content border-primary-color;
   }
   [cmdk-root] {
     @apply flex flex-col;
