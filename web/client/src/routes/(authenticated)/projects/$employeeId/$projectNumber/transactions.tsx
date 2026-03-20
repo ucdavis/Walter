@@ -136,7 +136,7 @@ function RouteComponent() {
         >
           Back to Project
         </Link>
-        <h1 className="h1">General Ledger Transaction Listings</h1>
+        <h1 className="h1">Transaction Listing Report (Data source: GL)</h1>
         {keyLabel && <p className="subtitle">{keyLabel}</p>}
       </section>
 
