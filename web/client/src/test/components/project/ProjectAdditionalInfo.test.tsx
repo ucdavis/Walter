@@ -11,13 +11,14 @@ const createSummary = (
 ): ProjectSummary => ({
   awardCloseDate: '2026-06-30',
   awardEndDate: '2026-12-31',
+  awardName: 'Test Award',
   awardNumber: 'AWD-100',
   awardPi: 'Smith, Jane',
   awardStartDate: '2024-01-01',
   awardStatus: 'Active',
   awardType: 'Federal Grant',
   billingCycle: 'Monthly',
-  contractAdministrator: null,
+  contractAdministrator: 'Admin, Carol',
   copi: null,
   costShareRequiredBySponsor: null,
   displayName: 'Test Project',
@@ -42,117 +43,97 @@ const createSummary = (
 
 describe('ProjectAdditionalInfo', () => {
   it('renders the section heading', () => {
-    render(<ProjectAdditionalInfo summary={createSummary()} />);
+    render(<ProjectAdditionalInfo isProjectManager={false} summary={createSummary()} />);
 
-    expect(screen.getByText('Additional Information')).toBeInTheDocument();
+    expect(screen.getByText('Award Information')).toBeInTheDocument();
   });
 
-  it('shows visible fields up through Billing Cycle', () => {
-    render(<ProjectAdditionalInfo summary={createSummary()} />);
+  it('shows primary award fields for all users', () => {
+    render(<ProjectAdditionalInfo isProjectManager={false} summary={createSummary()} />);
 
-    // These should be visible without expanding
-    expect(screen.getByText('Award Close Date')).toBeInTheDocument();
     expect(screen.getByText('Award Number')).toBeInTheDocument();
     expect(screen.getByText('AWD-100')).toBeInTheDocument();
-    expect(screen.getByText('Award PI')).toBeInTheDocument();
-    expect(screen.getByText('Smith, Jane')).toBeInTheDocument();
-    expect(screen.getByText('Award Status')).toBeInTheDocument();
-    expect(screen.getByText('Active')).toBeInTheDocument();
-    expect(screen.getByText('Award Type')).toBeInTheDocument();
-    expect(screen.getByText('Federal Grant')).toBeInTheDocument();
-    expect(screen.getByText('Billing Cycle')).toBeInTheDocument();
-    expect(screen.getByText('Monthly')).toBeInTheDocument();
-  });
-
-  it('hides fields after Billing Cycle until expanded', () => {
-    render(<ProjectAdditionalInfo summary={createSummary()} />);
-
-    // These should be hidden initially
-    expect(screen.queryByText('Primary Sponsor Name')).not.toBeInTheDocument();
-    expect(
-      screen.queryByText('National Science Foundation')
-    ).not.toBeInTheDocument();
-    expect(screen.queryByText('Sponsor Award Number')).not.toBeInTheDocument();
-    expect(screen.queryByText('Burden Schedule Rate')).not.toBeInTheDocument();
-  });
-
-  it('reveals hidden fields when Show more is clicked', async () => {
-    const user = userEvent.setup();
-    render(<ProjectAdditionalInfo summary={createSummary()} />);
-
-    await user.click(screen.getByRole('button', { name: 'Show more' }));
-
+    expect(screen.getByText('Award Name')).toBeInTheDocument();
+    expect(screen.getByText('Test Award')).toBeInTheDocument();
+    expect(screen.getByText('Award End Date')).toBeInTheDocument();
     expect(screen.getByText('Primary Sponsor Name')).toBeInTheDocument();
-    expect(
-      screen.getByText('National Science Foundation')
-    ).toBeInTheDocument();
+    expect(screen.getByText('National Science Foundation')).toBeInTheDocument();
     expect(screen.getByText('Sponsor Award Number')).toBeInTheDocument();
     expect(screen.getByText('NSF-2024-001')).toBeInTheDocument();
     expect(screen.getByText('Burden Schedule Rate')).toBeInTheDocument();
     expect(screen.getByText('26.5%')).toBeInTheDocument();
+    expect(screen.getByText('Contract Administrator')).toBeInTheDocument();
+    expect(screen.getByText('Admin, Carol')).toBeInTheDocument();
+  });
+
+  it('hides secondary fields and show more button for non-PMs', () => {
+    render(<ProjectAdditionalInfo isProjectManager={false} summary={createSummary()} />);
+
+    expect(screen.queryByText('Award Close Date')).not.toBeInTheDocument();
+    expect(screen.queryByText('Billing Cycle')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /show more/i })).not.toBeInTheDocument();
+  });
+
+  it('shows Show more button for PMs', () => {
+    render(<ProjectAdditionalInfo isProjectManager={true} summary={createSummary()} />);
+
+    expect(screen.getByRole('button', { name: 'Show more' })).toBeInTheDocument();
+  });
+
+  it('reveals hidden fields when PM clicks Show more', async () => {
+    const user = userEvent.setup();
+    render(<ProjectAdditionalInfo isProjectManager={true} summary={createSummary()} />);
+
+    await user.click(screen.getByRole('button', { name: 'Show more' }));
+
+    expect(screen.getByText('Award Close Date')).toBeInTheDocument();
+    expect(screen.getByText('Award PI')).toBeInTheDocument();
+    expect(screen.getByText('Smith, Jane')).toBeInTheDocument();
+    expect(screen.getByText('Billing Cycle')).toBeInTheDocument();
+    expect(screen.getByText('Monthly')).toBeInTheDocument();
     expect(screen.getByText('Burden Structure')).toBeInTheDocument();
     expect(screen.getByText('MTDC')).toBeInTheDocument();
-    // Verify "-Rev 001" suffix was stripped
-    expect(screen.queryByText('MTDC-Rev 001')).not.toBeInTheDocument();
   });
 
   it('collapses fields when Show less is clicked', async () => {
     const user = userEvent.setup();
-    render(<ProjectAdditionalInfo summary={createSummary()} />);
+    render(<ProjectAdditionalInfo isProjectManager={true} summary={createSummary()} />);
 
     await user.click(screen.getByRole('button', { name: 'Show more' }));
-    expect(screen.getByText('Sponsor Award Number')).toBeInTheDocument();
+    expect(screen.getByText('Billing Cycle')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Show less' }));
-    expect(screen.queryByText('Sponsor Award Number')).not.toBeInTheDocument();
+    expect(screen.queryByText('Billing Cycle')).not.toBeInTheDocument();
   });
 
   it('displays em-dash for null values', () => {
     render(
       <ProjectAdditionalInfo
+        isProjectManager={false}
         summary={createSummary({
+          awardName: null,
           awardNumber: null,
-          awardPi: null,
-          awardStatus: null,
-          billingCycle: null,
+          contractAdministrator: null,
         })}
       />
     );
 
-    // All null fields should show the em-dash fallback
     const dashes = screen.getAllByText('—');
-    expect(dashes.length).toBeGreaterThanOrEqual(4);
+    expect(dashes.length).toBeGreaterThanOrEqual(3);
   });
 
   it('formats dates as MM.dd.yyyy', () => {
     render(
       <ProjectAdditionalInfo
+        isProjectManager={false}
         summary={createSummary({
-          awardCloseDate: '2026-06-30',
           awardEndDate: '2026-12-31',
           awardStartDate: '2024-01-01',
         })}
       />
     );
 
-    expect(screen.getByText('06.30.2026')).toBeInTheDocument();
     expect(screen.getByText('12.31.2026')).toBeInTheDocument();
     expect(screen.getByText('01.01.2024')).toBeInTheDocument();
-  });
-
-  it('shows em-dash for null dates', () => {
-    render(
-      <ProjectAdditionalInfo
-        summary={createSummary({
-          awardCloseDate: null,
-          awardEndDate: null,
-          awardStartDate: null,
-        })}
-      />
-    );
-
-    // The three date fields plus any other null fields should all show dashes
-    const dashes = screen.getAllByText('—');
-    expect(dashes.length).toBeGreaterThanOrEqual(3);
   });
 });

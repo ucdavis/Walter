@@ -10,6 +10,9 @@ public sealed class FacultyPortfolioRecord
     [JsonPropertyName("awardNumber")]
     public string? AwardNumber { get; set; }
 
+    [JsonPropertyName("awardName")]
+    public string? AwardName { get; set; }
+
     [JsonPropertyName("awardStartDate")]
     public DateTime? AwardStartDate { get; set; }
 
