@@ -109,6 +109,7 @@ BEGIN
                 CASE WHEN EMPL_STATUS NOT IN (''T'', ''R'') THEN MONTHLY_RT END AS MONTHLY_RT,
                 CASE WHEN EMPL_STATUS NOT IN (''T'', ''R'') THEN EXPECTED_END_DATE END AS EXPECTED_END_DATE,
                 CASE WHEN EMPL_STATUS NOT IN (''T'', ''R'') THEN FTE END AS FTE,
+                CASE WHEN EMPL_STATUS NOT IN (''T'', ''R'') THEN COMP_FREQUENCY END AS COMP_FREQUENCY,
                 CASE WHEN EMPL_STATUS NOT IN (''T'', ''R'') THEN TERMINATION_DT END AS TERMINATION_DT,
                 CASE WHEN EMPL_STATUS NOT IN (''T'', ''R'') THEN 1 ELSE 0 END AS IS_ACTIVE,
                 DENSE_RANK() OVER(
@@ -168,6 +169,7 @@ BEGIN
             p.MONTHLY_RT,
             p.EXPECTED_END_DATE,
             p.FTE,
+            p.COMP_FREQUENCY,
             p.TERMINATION_DT,
             CASE WHEN p.IS_ACTIVE = 1 THEN e.NAME END AS NAME,
             pd.DESCR AS POSITION_DESCR,
@@ -221,6 +223,7 @@ BEGIN
             MONTHLY_RT DECIMAL(18,6),
             EXPECTED_END_DATE DATE,
             FTE DECIMAL(7,6),
+            COMP_FREQUENCY VARCHAR(5),
             TERMINATION_DT DATE,
             NAME VARCHAR(100),
             POSITION_DESCR VARCHAR(100),
@@ -276,7 +279,14 @@ BEGIN
             pb.JOB_EFFDT AS JOB_EFFECTIVE_DATE,
             pb.JOB_EFFSEQ AS JOB_SEQUENCE,
             pb.EMPLID AS EMPLOYEE_ID,
-            pb.MONTHLY_RT AS MONTHLY_RATE,
+            -- MONTHLY_RT from PS_JOB_V is inconsistent across comp frequencies:
+            --   Hourly (H): already the 1.0 FTE monthly equivalent (hourly_rate * std_hours)
+            --   All others (UC_FY, UC_9M, M, etc.): FTE-adjusted (actual pay, not 1.0 FTE rate)
+            -- Normalize to 1.0 FTE so the client can compute actual salary as MONTHLY_RATE * FTE
+            CASE
+                WHEN pb.COMP_FREQUENCY = 'H' THEN pb.MONTHLY_RT
+                ELSE pb.MONTHLY_RT / NULLIF(pb.FTE, 0)
+            END AS MONTHLY_RATE,
             pb.EXPECTED_END_DATE AS JOB_END_DATE,
             pb.FTE,
             pb.NAME,

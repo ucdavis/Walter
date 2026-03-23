@@ -9,8 +9,12 @@ import { DataTable } from '@/shared/DataTable.tsx';
 
 interface AggregatedProject {
   displayName: string;
+  pi: string | null;
+  pm: string | null;
   projectName: string;
   projectNumber: string;
+  projectOwningOrg: string;
+  projectStatusCode: string;
   totalBalance: number;
   totalBudget: number;
   totalEncumbrance: number;
@@ -33,8 +37,12 @@ function aggregateProjects(records: ProjectRecord[]): AggregatedProject[] {
     } else {
       projectsMap.set(p.projectNumber, {
         displayName: p.displayName,
+        pi: p.pi,
+        pm: p.pm,
         projectName: p.projectName,
         projectNumber: p.projectNumber,
+        projectOwningOrg: p.projectOwningOrg,
+        projectStatusCode: p.projectStatusCode,
         totalBalance: p.balance,
         totalBudget: p.budget,
         totalEncumbrance: p.commitments,
@@ -47,7 +55,12 @@ function aggregateProjects(records: ProjectRecord[]): AggregatedProject[] {
 }
 
 const csvColumns = [
-  { header: 'Project', key: 'displayName' as const },
+  { header: 'Project Number', key: 'projectNumber' as const },
+  { header: 'Project Name', key: 'displayName' as const },
+  { header: 'Status', key: 'projectStatusCode' as const },
+  { header: 'Owning Org', key: 'projectOwningOrg' as const },
+  { header: 'PI', key: 'pi' as const },
+  { header: 'PM', key: 'pm' as const },
   { format: 'currency' as const, header: 'Budget', key: 'totalBudget' as const },
   { format: 'currency' as const, header: 'Expense', key: 'totalExpense' as const },
   { format: 'currency' as const, header: 'Commitment', key: 'totalEncumbrance' as const },
