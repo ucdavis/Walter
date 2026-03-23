@@ -50,7 +50,7 @@ public sealed class DatamartService : IDatamartService
     {
         var projectNumbersParam = string.Join(",", projectNumbers);
         return await ExecuteSprocAsync<FacultyPortfolioRecord>(
-            "dbo.usp_GetProjectSummaryElzar",
+            "dbo.usp_GetPPMProjectSummaryElzar",
             new { ProjectIds = projectNumbersParam, ApplicationName = _appName, ApplicationUser = applicationUser, EmulatingUser = emulatingUser },
             ct: ct);
     }

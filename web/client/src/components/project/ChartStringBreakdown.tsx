@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { Link } from '@tanstack/react-router';
 import { createColumnHelper } from '@tanstack/react-table';
 import { formatCurrency } from '@/lib/currency.ts';
 import type { ProjectRecord } from '@/queries/project.ts';
@@ -17,6 +18,8 @@ interface ChartStringRow {
   fundDesc: string;
   programCode: string;
   programDesc: string;
+  taskName: string;
+  taskNum: string;
 }
 
 const columnHelper = createColumnHelper<ChartStringRow>();
@@ -28,7 +31,8 @@ function buildRows(records: ProjectRecord[]): ChartStringRow[] {
     const fund = r.fundCode ?? '';
     const program = r.programCode ?? '';
     const activity = r.activityCode ?? '';
-    const key = `${fund}|${program}|${activity}`;
+    const task = r.taskNum ?? '';
+    const key = `${task}|${fund}|${program}|${activity}`;
 
     const existing = map.get(key);
     if (existing) {
@@ -50,6 +54,8 @@ function buildRows(records: ProjectRecord[]): ChartStringRow[] {
         fundDesc: r.fundDesc,
         programCode: program,
         programDesc: r.programDesc,
+        taskName: r.taskName ?? '',
+        taskNum: task,
       });
     }
   }
@@ -58,10 +64,12 @@ function buildRows(records: ProjectRecord[]): ChartStringRow[] {
 }
 
 interface ChartStringBreakdownProps {
+  employeeId: string;
+  projectNumber: string;
   records: ProjectRecord[];
 }
 
-export function ChartStringBreakdown({ records }: ChartStringBreakdownProps) {
+export function ChartStringBreakdown({ employeeId, projectNumber, records }: ChartStringBreakdownProps) {
   const rows = useMemo(() => buildRows(records), [records]);
 
   const totals = useMemo(
@@ -92,6 +100,12 @@ export function ChartStringBreakdown({ records }: ChartStringBreakdownProps) {
         footer: () => 'Totals',
         header: 'Financial Dept',
         minSize: 180,
+      }),
+      columnHelper.accessor('taskNum', {
+        cell: (info) => (
+          <span title={info.row.original.taskName}>{info.getValue()}</span>
+        ),
+        header: 'Task',
       }),
       columnHelper.accessor('fundCode', {
         cell: (info) => (
@@ -166,8 +180,30 @@ export function ChartStringBreakdown({ records }: ChartStringBreakdownProps) {
         ),
         header: () => <span className="flex justify-end">Balance</span>,
       }),
+      columnHelper.display({
+        cell: (info) => {
+          const row = info.row.original;
+          return (
+            <Link
+              className="link font-semibold text-sm whitespace-nowrap"
+              params={{ employeeId, projectNumber }}
+              search={{
+                activity: row.activityCode,
+                dept: row.financialDepartmentCode,
+                fund: row.fundCode,
+                program: row.programCode,
+              }}
+              to="/projects/$employeeId/$projectNumber/transactions"
+            >
+              GL Details
+            </Link>
+          );
+        },
+        header: '',
+        id: 'glLink',
+      }),
     ],
-    [totals.balance, totals.budget, totals.commitments, totals.expenses]
+    [employeeId, projectNumber, totals.balance, totals.budget, totals.commitments, totals.expenses]
   );
 
   if (rows.length === 0) {

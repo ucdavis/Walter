@@ -66,9 +66,7 @@ function ProjectContent({
         </div>
         <h1 className="h1">{summary.displayName}</h1>
         <h3 className="subtitle">
-          {summary.isInternal
-            ? 'General Ledger'
-            : 'Data source: Faculty Department Portfolio Report (PPM)'}
+          Data source: Faculty Department Portfolio Report (PPM)
         </h3>
         <div className="mt-6">
           <ProjectAlerts
@@ -85,14 +83,12 @@ function ProjectContent({
       {isProjectManager && <ProjectAdditionalInfo summary={summary} />}
       <FinancialDetails summary={summary} />
 
-      {summary.isInternal && (
-        <section className="section-margin">
-          <h2 className="h2">Chart String Breakdown</h2>
-          <div className="mt-4">
-            <ChartStringBreakdown records={projectRecords} />
-          </div>
-        </section>
-      )}
+      <section className="section-margin">
+        <h2 className="h2">Chart String Breakdown</h2>
+        <div className="mt-4">
+          <ChartStringBreakdown employeeId={employeeId} projectNumber={summary.projectNumber} records={projectRecords} />
+        </div>
+      </section>
 
       <section className="section-margin">
         <h2 className="h2">Personnel</h2>

@@ -1,18 +1,16 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Link } from '@tanstack/react-router';
 import { createColumnHelper } from '@tanstack/react-table';
-import { ChevronRightIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import { ExportDataButton } from '@/components/ExportDataButton.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import type { ProjectRecord } from '@/queries/project.ts';
 import { DataTable } from '@/shared/DataTable.tsx';
 
 interface AggregatedProject {
-  beginningBalance: number;
   displayName: string;
   projectName: string;
   projectNumber: string;
-  revenue: number;
   totalBalance: number;
   totalBudget: number;
   totalEncumbrance: number;
@@ -27,23 +25,16 @@ function aggregateProjects(records: ProjectRecord[]): AggregatedProject[] {
   for (const p of records) {
     const existing = projectsMap.get(p.projectNumber);
 
-    const begBal = p.glBeginningBalance ?? 0;
-    const rev = p.glRevenue ?? 0;
-
     if (existing) {
-      existing.beginningBalance += begBal;
-      existing.revenue += rev;
       existing.totalBudget += p.budget;
       existing.totalExpense += p.expenses;
       existing.totalEncumbrance += p.commitments;
       existing.totalBalance += p.balance;
     } else {
       projectsMap.set(p.projectNumber, {
-        beginningBalance: begBal,
         displayName: p.displayName,
         projectName: p.projectName,
         projectNumber: p.projectNumber,
-        revenue: rev,
         totalBalance: p.balance,
         totalBudget: p.budget,
         totalEncumbrance: p.commitments,
@@ -58,8 +49,6 @@ function aggregateProjects(records: ProjectRecord[]): AggregatedProject[] {
 const csvColumns = [
   { header: 'Project', key: 'displayName' as const },
   { format: 'currency' as const, header: 'Budget', key: 'totalBudget' as const },
-  { format: 'currency' as const, header: 'Beg. Balance', key: 'beginningBalance' as const },
-  { format: 'currency' as const, header: 'Revenue', key: 'revenue' as const },
   { format: 'currency' as const, header: 'Expense', key: 'totalExpense' as const },
   { format: 'currency' as const, header: 'Commitment', key: 'totalEncumbrance' as const },
   { format: 'currency' as const, header: 'Balance', key: 'totalBalance' as const },
@@ -76,55 +65,21 @@ export function InternalProjectsTable({
   employeeId,
   records,
 }: InternalProjectsTableProps) {
-  const [showBudgetDetails, setShowBudgetDetails] = useState(false);
   const projects = useMemo(() => aggregateProjects(records), [records]);
 
   const totals = useMemo(
     () =>
       projects.reduce(
         (acc, p) => ({
-          beginningBalance: acc.beginningBalance + p.beginningBalance,
-          revenue: acc.revenue + p.revenue,
           totalBalance: acc.totalBalance + p.totalBalance,
           totalBudget: acc.totalBudget + p.totalBudget,
           totalEncumbrance: acc.totalEncumbrance + p.totalEncumbrance,
           totalExpense: acc.totalExpense + p.totalExpense,
         }),
-        { beginningBalance: 0, revenue: 0, totalBalance: 0, totalBudget: 0, totalEncumbrance: 0, totalExpense: 0 }
+        { totalBalance: 0, totalBudget: 0, totalEncumbrance: 0, totalExpense: 0 }
       ),
     [projects]
   );
-
-  const budgetDetailColumns = showBudgetDetails
-    ? [
-        columnHelper.accessor('beginningBalance', {
-          cell: (info) => (
-            <span className="flex justify-end">
-              {formatCurrency(info.getValue())}
-            </span>
-          ),
-          footer: () => (
-            <span className="flex justify-end">
-              {formatCurrency(totals.beginningBalance)}
-            </span>
-          ),
-          header: () => <span className="flex justify-end">Beg. Balance</span>,
-        }),
-        columnHelper.accessor('revenue', {
-          cell: (info) => (
-            <span className="flex justify-end">
-              {formatCurrency(info.getValue())}
-            </span>
-          ),
-          footer: () => (
-            <span className="flex justify-end">
-              {formatCurrency(totals.revenue)}
-            </span>
-          ),
-          header: () => <span className="flex justify-end">Revenue</span>,
-        }),
-      ]
-    : [];
 
   const columns = useMemo(
     () => [
@@ -171,24 +126,8 @@ export function InternalProjectsTable({
             {formatCurrency(totals.totalBudget)}
           </span>
         ),
-        header: () => (
-          <button
-            className="flex justify-end items-center gap-1 w-full cursor-pointer"
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowBudgetDetails((v) => !v);
-            }}
-            title={showBudgetDetails ? 'Hide budget breakdown' : 'Show budget breakdown'}
-            type="button"
-          >
-            <ChevronRightIcon
-              className={`h-3 w-3 transition-transform ${showBudgetDetails ? 'rotate-90' : ''}`}
-            />
-            Budget
-          </button>
-        ),
+        header: () => <span className="flex justify-end">Budget</span>,
       }),
-      ...budgetDetailColumns,
       columnHelper.accessor('totalExpense', {
         cell: (info) => (
           <span className="flex justify-end w-full">
@@ -232,8 +171,7 @@ export function InternalProjectsTable({
         header: () => <span className="flex justify-end">Balance</span>,
       }),
     ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [discrepancies, employeeId, showBudgetDetails, totals.beginningBalance, totals.revenue, totals.totalBalance, totals.totalBudget, totals.totalEncumbrance, totals.totalExpense]
+    [discrepancies, employeeId, totals.totalBalance, totals.totalBudget, totals.totalEncumbrance, totals.totalExpense]
   );
 
   if (projects.length === 0) {

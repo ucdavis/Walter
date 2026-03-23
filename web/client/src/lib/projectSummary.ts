@@ -2,11 +2,9 @@ import type { ProjectRecord } from '@/queries/project.ts';
 
 export interface ProjectTotals {
   balance: number;
-  beginningBalance: number;
   budget: number;
   encumbrance: number;
   expense: number;
-  revenue: number;
 }
 
 export interface ProjectSummary {
@@ -47,19 +45,15 @@ const DEFAULT_SUMMARY_NUMBER = 'MULTIPLE';
 
 const buildEmptyTotals = (): ProjectTotals => ({
   balance: 0,
-  beginningBalance: 0,
   budget: 0,
   encumbrance: 0,
   expense: 0,
-  revenue: 0,
 });
 
 const aggregateTotals = (records: ProjectRecord[]): ProjectTotals => {
   const totals = buildEmptyTotals();
 
   for (const record of records) {
-    totals.beginningBalance += record.glBeginningBalance ?? 0;
-    totals.revenue += record.glRevenue ?? 0;
     totals.budget += record.budget;
     totals.expense += record.expenses;
     totals.encumbrance += record.commitments;
