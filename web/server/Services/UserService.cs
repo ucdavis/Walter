@@ -215,8 +215,10 @@ public class UserService : IUserService
             throw new InvalidOperationException($"Role '{roleName}' not found.");
         }
 
+        // Only remove auto-synced permissions (self-granted).
+        // Manually granted permissions (GrantedByUserId != userId) are preserved.
         var permissions = await _dbContext.Permissions
-            .Where(p => p.UserId == userId && p.RoleId == role.Id)
+            .Where(p => p.UserId == userId && p.RoleId == role.Id && p.GrantedByUserId == userId)
             .ToListAsync(cancellationToken);
 
         if (permissions.Count == 0)

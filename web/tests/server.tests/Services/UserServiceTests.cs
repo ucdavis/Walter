@@ -158,18 +158,31 @@ public class UserServiceTests
         ctx.Roles.AddRange(projectManagerRole, accrualViewerRole);
         await ctx.SaveChangesAsync();
 
+        var adminUser = new User
+        {
+            Id = Guid.NewGuid(),
+            Kerberos = "adminuser",
+            IamId = "IAM-ADMIN",
+            EmployeeId = "E-ADMIN",
+            DisplayName = "Admin User",
+            Email = "admin@example.com",
+        };
+        ctx.Users.Add(adminUser);
+
         ctx.Permissions.AddRange(
             new Permission
             {
                 UserId = targetUser.Id,
                 RoleId = projectManagerRole.Id,
                 DeptCode = null,
+                GrantedByUserId = targetUser.Id, // auto-synced (self-granted)
             },
             new Permission
             {
                 UserId = targetUser.Id,
                 RoleId = projectManagerRole.Id,
                 DeptCode = "AA100",
+                GrantedByUserId = adminUser.Id, // manually granted by admin
             },
             new Permission
             {
@@ -185,7 +198,9 @@ public class UserServiceTests
         var removed = await service.RemoveRoleFromUserAsync(targetUser.Id, Role.Names.ProjectManager);
 
         removed.Should().BeTrue();
-        ctx.Permissions.Should().NotContain(p => p.UserId == targetUser.Id && p.RoleId == projectManagerRole.Id);
+        // Only the self-granted permission should be removed; admin-granted one is preserved
+        ctx.Permissions.Should().ContainSingle(p => p.UserId == targetUser.Id && p.RoleId == projectManagerRole.Id);
+        ctx.Permissions.Should().Contain(p => p.UserId == targetUser.Id && p.RoleId == projectManagerRole.Id && p.GrantedByUserId == adminUser.Id);
         ctx.Permissions.Should().ContainSingle(p => p.UserId == targetUser.Id && p.RoleId == accrualViewerRole.Id);
     }
 
@@ -215,6 +230,7 @@ public class UserServiceTests
             UserId = targetUser.Id,
             RoleId = projectManagerRole.Id,
             DeptCode = null,
+            GrantedByUserId = targetUser.Id, // auto-synced (self-granted)
         });
         await ctx.SaveChangesAsync();
 
