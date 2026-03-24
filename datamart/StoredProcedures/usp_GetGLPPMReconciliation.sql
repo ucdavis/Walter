@@ -76,7 +76,6 @@ BEGIN
                 SUM(CAT_BUDGET) - SUM(CAT_ITD_EXP) AS PPM_BUD_BAL
             FROM ae_dwh.ucd_faculty_rpt_t
             WHERE PROJECT_NUMBER IN (' + @ProjectIdFilter + ')
-              AND TASK_STATUS <> ''Inactive''
             GROUP BY PRJ_OWNING_CD, PROJECT_NUMBER, PROJECT_NAME, FUND_CD, PROGRAM_CD, ACTIVITY_CD
         )
         SELECT
