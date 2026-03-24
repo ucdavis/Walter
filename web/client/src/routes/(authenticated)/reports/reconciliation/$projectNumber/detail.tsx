@@ -108,19 +108,6 @@ const ppmTaskColumns = [
     ),
     header: 'Fund',
   }),
-  ppmTaskColumnHelper.accessor('programCode', {
-    cell: (info) => (
-      <div className="text-sm">
-        <div>{info.getValue() ?? '-'}</div>
-        {info.row.original.programDesc && (
-          <div className="text-xs text-base-content/80">
-            {info.row.original.programDesc}
-          </div>
-        )}
-      </div>
-    ),
-    header: 'Program',
-  }),
   ppmTaskColumnHelper.accessor('activityCode', {
     cell: (info) => (
       <div className="text-sm">
@@ -310,7 +297,7 @@ function RouteComponent() {
         }
         acc[key].budget += p.ppmBudget;
         acc[key].expenses += p.ppmExpenses;
-        acc[key].balance += p.ppmBudBal;
+        acc[key].balance += p.ppmBudget - p.ppmExpenses;
         return acc;
       }, {})
   );
