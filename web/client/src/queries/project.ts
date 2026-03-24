@@ -102,7 +102,6 @@ export interface GLPPMReconciliationRecord {
   activityDescription: string | null;
   glActualAmount: number;
   ppmBudget: number;
-  ppmCommitments: number;
   ppmItdExp: number;
   ppmBudBal: number;
   remainingBalance: number;

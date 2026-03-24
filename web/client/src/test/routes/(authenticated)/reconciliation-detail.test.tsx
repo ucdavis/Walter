@@ -17,7 +17,6 @@ const createReconciliationRecord = (
   glActualAmount: -500.25,
   ppmBudBal: 1500.75,
   ppmBudget: 10000,
-  ppmCommitments: 200,
   ppmFundCode: '13U02',
   ppmItdExp: 8299.25,
   programCode: '000',
