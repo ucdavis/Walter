@@ -88,6 +88,7 @@ export interface GLTransactionRecord {
   actualAmount: number;
   commitmentAmount: number;
   obligationAmount: number;
+  naturalAccountType: string | null;
 }
 
 export interface GLPPMReconciliationRecord {

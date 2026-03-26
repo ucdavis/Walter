@@ -108,4 +108,7 @@ public sealed class GLTransactionRecord
 
     [JsonPropertyName("obligationAmount")]
     public decimal ObligationAmount { get; set; }
+
+    [JsonPropertyName("naturalAccountType")]
+    public string? NaturalAccountType { get; set; }
 }
