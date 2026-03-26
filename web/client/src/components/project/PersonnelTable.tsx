@@ -56,7 +56,7 @@ export interface AggregatedPosition {
 function aggregateDistribution(
   record: PersonnelRecord
 ): AggregatedDistribution {
-  const monthlyRate = record.monthlyRate * (record.distributionPercent / 100);
+  const monthlyRate = record.monthlyRate * record.fte * (record.distributionPercent / 100);
   const monthlyFringe = monthlyRate * record.compositeBenefitRate;
   return {
     fundingEndingSoon: isEndingSoon(record.fundingEndDate),
@@ -79,7 +79,7 @@ export function aggregateByPosition(
     if (existing) {
       existing.distributions.push(aggregateDistribution(record));
     } else {
-      const monthlyRate = record.fte > 0 ? record.monthlyRate / record.fte : 0;
+      const monthlyRate = record.monthlyRate * record.fte;
       const monthlyFringe = monthlyRate * record.compositeBenefitRate;
       positionMap.set(key, {
         distributions: [aggregateDistribution(record)],
@@ -148,16 +148,10 @@ function DistributionSubtable({
               <span className="flex justify-end w-full">Funding End</span>
             </th>
             <th>
-              <span className="flex flex-col items-end w-full">
-                <span>Monthly Salary</span>
-                <span className="text-xs font-normal">(Distributed)</span>
-              </span>
+              <span className="flex justify-end w-full">Salary</span>
             </th>
             <th>
-              <span className="flex flex-col items-end w-full">
-                <span>Monthly CBR</span>
-                <span className="text-xs font-normal">(Distributed)</span>
-              </span>
+              <span className="flex justify-end w-full">CBR</span>
             </th>
             <th>
               <span className="flex justify-end w-full">Monthly Total</span>
@@ -372,10 +366,7 @@ export function PersonnelTable({
             )
           : undefined,
         header: () => (
-          <span className="flex flex-col items-end w-full">
-            <span>Monthly Salary</span>
-            <span className="text-xs font-normal">(1.0 FTE)</span>
-          </span>
+          <span className="flex justify-end w-full">Monthly Salary</span>
         ),
       }),
       columnHelper.accessor('monthlyFringe', {
@@ -399,10 +390,7 @@ export function PersonnelTable({
             )
           : undefined,
         header: () => (
-          <span className="flex flex-col items-end w-full">
-            <span>Monthly CBR</span>
-            <span className="text-xs font-normal">(1.0 FTE)</span>
-          </span>
+          <span className="flex justify-end w-full">Monthly CBR</span>
         ),
       }),
       columnHelper.accessor('monthlyTotal', {

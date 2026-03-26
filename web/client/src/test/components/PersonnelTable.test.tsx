@@ -62,14 +62,14 @@ describe('aggregateByPosition', () => {
     expect(pos2?.distributions).toHaveLength(1);
   });
 
-  it('calculates position at 1.0 FTE and distributions at actual FTE', () => {
-    // monthlyRate from API is FTE-adjusted (2000 = 4000 * 0.5 FTE)
+  it('calculates actual salaries using FTE', () => {
+    // monthlyRate from API is the 1.0 FTE rate; actual salary = monthlyRate * fte
     const records = [
       createRecord({
         compositeBenefitRate: 0.4,
         distributionPercent: 60,
         fte: 0.5,
-        monthlyRate: 2000,
+        monthlyRate: 4000,
         positionNumber: '40001234',
         projectId: 'PROJ1',
       }),
@@ -77,7 +77,7 @@ describe('aggregateByPosition', () => {
         compositeBenefitRate: 0.4,
         distributionPercent: 40,
         fte: 0.5,
-        monthlyRate: 2000,
+        monthlyRate: 4000,
         positionNumber: '40001234',
         projectId: 'PROJ2',
       }),
@@ -85,18 +85,18 @@ describe('aggregateByPosition', () => {
 
     const [position] = aggregateByPosition(records);
 
-    // Position level: divided by FTE to show 1.0 FTE rate
-    expect(position.monthlyRate).toBe(4000); // 2000 / 0.5
-    expect(position.monthlyFringe).toBe(1600); // 4000 * 0.4
-    expect(position.monthlyTotal).toBe(5600);
+    // Position level: actual salary = 4000 * 0.5 = 2000
+    expect(position.monthlyRate).toBe(2000);
+    expect(position.monthlyFringe).toBe(800); // 2000 * 0.4
+    expect(position.monthlyTotal).toBe(2800);
 
-    // Distribution level: FTE already baked into monthlyRate, just apply dist %
+    // Distribution level: actual salary * dist %
     const [dist1, dist2] = position.distributions;
-    // 2000 * 60% = 1200
+    // 4000 * 0.5 * 60% = 1200
     expect(dist1.monthlyRate).toBe(1200);
     expect(dist1.monthlyFringe).toBeCloseTo(480); // 1200 * 0.4
     expect(dist1.monthlyTotal).toBeCloseTo(1680);
-    // 2000 * 40% = 800
+    // 4000 * 0.5 * 40% = 800
     expect(dist2.monthlyRate).toBe(800);
     expect(dist2.monthlyFringe).toBeCloseTo(320); // 800 * 0.4
     expect(dist2.monthlyTotal).toBeCloseTo(1120);
