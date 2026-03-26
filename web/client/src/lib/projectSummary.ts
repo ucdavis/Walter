@@ -10,6 +10,7 @@ export interface ProjectTotals {
 export interface ProjectSummary {
   awardCloseDate: string | null;
   awardEndDate: string | null;
+  awardName: string | null;
   awardNumber: string | null;
   awardPi: string | null;
   awardStartDate: string | null;
@@ -99,6 +100,7 @@ export const summarizeAllProjects = (
   return {
     awardCloseDate: null,
     awardEndDate: findLatestDate(records, 'awardEndDate'),
+    awardName: null,
     awardNumber: null,
     awardPi: null,
     awardStartDate: findEarliestDate(records, 'awardStartDate'),
@@ -146,6 +148,7 @@ export const summarizeProjectByNumber = (
   return {
     awardCloseDate: first.awardCloseDate,
     awardEndDate: findLatestDate(filtered, 'awardEndDate'),
+    awardName: first.awardName,
     awardNumber: first.awardNumber,
     awardPi: first.awardPi,
     awardStartDate: findEarliestDate(filtered, 'awardStartDate'),

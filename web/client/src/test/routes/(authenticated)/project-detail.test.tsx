@@ -12,6 +12,7 @@ const createProject = (
   activityDesc: 'Activity',
   awardCloseDate: null,
   awardEndDate: '2099-12-31',
+  awardName: null,
   awardNumber: 'AWD001',
   awardPi: null,
   awardStartDate: '2024-01-01',
@@ -81,24 +82,7 @@ const setupHandlers = (
 };
 
 describe('project detail page', () => {
-  it('shows Additional Information when user is the project manager', async () => {
-    const projects = [createProject({ pmEmployeeId: '1000' })];
-    setupHandlers({ employeeId: '1000', name: 'PM User' }, projects);
-
-    const { cleanup } = renderRoute({
-      initialPath: '/projects/1000/P1',
-    });
-
-    try {
-      expect(
-        await screen.findByText('Additional Information')
-      ).toBeInTheDocument();
-    } finally {
-      cleanup();
-    }
-  });
-
-  it('hides Additional Information when user is not the project manager', async () => {
+  it('shows Award Information for all users', async () => {
     const projects = [createProject({ pmEmployeeId: '2000' })];
     setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);
 
@@ -107,11 +91,44 @@ describe('project detail page', () => {
     });
 
     try {
-      // Wait for the page to render by finding the project heading
-      await screen.findByRole('heading', { name: 'Test Project' });
-
       expect(
-        screen.queryByText('Additional Information')
+        await screen.findByText('Award Information')
+      ).toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('shows Show more button only for project managers', async () => {
+    const projects = [createProject({ pmEmployeeId: '1000' })];
+    setupHandlers({ employeeId: '1000', name: 'PM User' }, projects);
+
+    const { cleanup } = renderRoute({
+      initialPath: '/projects/1000/P1',
+    });
+
+    try {
+      await screen.findByText('Award Information');
+      expect(
+        screen.getByRole('button', { name: 'Show more' })
+      ).toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('hides Show more button for non-project managers', async () => {
+    const projects = [createProject({ pmEmployeeId: '2000' })];
+    setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);
+
+    const { cleanup } = renderRoute({
+      initialPath: '/projects/1000/P1',
+    });
+
+    try {
+      await screen.findByText('Award Information');
+      expect(
+        screen.queryByRole('button', { name: 'Show more' })
       ).not.toBeInTheDocument();
     } finally {
       cleanup();

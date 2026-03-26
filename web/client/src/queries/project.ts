@@ -7,6 +7,7 @@ export interface ProjectRecord {
   activityDesc: string;
   awardCloseDate: string | null;
   awardEndDate: string | null;
+  awardName: string | null;
   awardNumber: string | null;
   awardPi: string | null;
   awardStartDate: string | null;

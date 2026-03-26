@@ -7,6 +7,7 @@ const createSummary = (
 ): ProjectSummary => ({
   awardCloseDate: null,
   awardEndDate: '2030-12-31',
+  awardName: null,
   awardNumber: null,
   awardPi: null,
   awardStartDate: '2020-01-01',

@@ -73,6 +73,7 @@ BEGIN
         -- PPM financials at task+chart string level from Elzar, joined with pgm metadata
         SET @TSQLCommand = @TSQLCommand +
             N'SELECT CAST(f.Award_Number AS NVARCHAR(MAX)) AS AWARD_NUMBER,
+                CAST(f.Award_Name AS NVARCHAR(MAX)) AS AWARD_NAME,
                 f.Award_Start_Date AS AWARD_START_DATE, f.Award_End_Date AS AWARD_END_DATE,
                 CAST(f.Award_Status AS NVARCHAR(MAX)) AS AWARD_STATUS,
                 CAST(f.Award_Entity AS NVARCHAR(MAX)) AS AWARD_TYPE,
@@ -138,7 +139,8 @@ BEGIN
                 ON f.Project_Number = p.project_number AND f.Award_Number = p.award_number
             WHERE f.Project_Number IN (' + @ProjectIdFilter + N')
               AND f.Task_Status <> ''Inactive''
-            GROUP BY CAST(f.Award_Number AS NVARCHAR(MAX)), f.Award_Start_Date, f.Award_End_Date,
+            GROUP BY CAST(f.Award_Number AS NVARCHAR(MAX)), CAST(f.Award_Name AS NVARCHAR(MAX)),
+                f.Award_Start_Date, f.Award_End_Date,
                 CAST(f.Award_Status AS NVARCHAR(MAX)), CAST(f.Award_Entity AS NVARCHAR(MAX)),
                 CAST(f.Project_Number AS NVARCHAR(MAX)), CAST(f.Project_Name AS NVARCHAR(MAX)),
                 CAST(f.Project_Owning_Organization AS NVARCHAR(MAX)),

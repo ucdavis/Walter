@@ -18,6 +18,7 @@ const createProject = (
   activityDesc: 'Activity',
   awardCloseDate: null,
   awardEndDate: '2099-12-31',
+  awardName: null,
   awardNumber: 'AWD001',
   awardPi: null,
   awardStartDate: '2024-01-01',
