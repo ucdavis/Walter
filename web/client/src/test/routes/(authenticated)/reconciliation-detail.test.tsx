@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { screen } from '@testing-library/react';
+import { userEvent } from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
-import type { GLPPMReconciliationRecord } from '@/queries/project.ts';
+import type {
+  GLPPMReconciliationRecord,
+  GLTransactionRecord,
+} from '@/queries/project.ts';
 import { server } from '@/test/mswUtils.ts';
 import { renderRoute } from '@/test/routerUtils.tsx';
 
@@ -28,8 +32,50 @@ const createReconciliationRecord = (
   ...overrides,
 });
 
+const createTransaction = (
+  overrides: Partial<GLTransactionRecord> = {}
+): GLTransactionRecord => ({
+  account: '500001',
+  accountDescription: 'Supplies',
+  accountingSequenceNumber: null,
+  activity: '000000',
+  activityDescription: 'Default Activity',
+  actualAmount: 100,
+  actualFlag: 'A',
+  batchStatus: 'P',
+  commitmentAmount: 0,
+  documentType: null,
+  encumbranceTypeCode: null,
+  entity: 'ENTITY',
+  entityDescription: null,
+  financialDepartment: 'DEPT001',
+  financialDepartmentDescription: null,
+  fund: '13U02',
+  fundDescription: null,
+  journalAcctDate: '2026-01-15',
+  journalBatchName: null,
+  journalCategory: null,
+  journalLineDescription: 'Test transaction',
+  journalName: 'JE001',
+  journalReference: null,
+  journalSource: null,
+  naturalAccountType: null,
+  obligationAmount: 0,
+  periodName: null,
+  program: '000',
+  programDescription: null,
+  project: 'PROJ001',
+  projectDescription: null,
+  purpose: null,
+  purposeDescription: null,
+  reference: null,
+  trackingNo: null,
+  ...overrides,
+});
+
 const setupHandlers = (
-  reconciliation: GLPPMReconciliationRecord[] = []
+  reconciliation: GLPPMReconciliationRecord[] = [],
+  transactions: GLTransactionRecord[] = []
 ) => {
   server.use(
     http.get('/api/user/me', () =>
@@ -46,7 +92,9 @@ const setupHandlers = (
     http.get('/api/project/gl-ppm-reconciliation', () =>
       HttpResponse.json(reconciliation)
     ),
-    http.get('/api/project/transactions', () => HttpResponse.json([]))
+    http.get('/api/project/transactions', () =>
+      HttpResponse.json(transactions)
+    )
   );
 };
 
@@ -82,6 +130,55 @@ describe('reconciliation detail page', () => {
 
     try {
       expect(await screen.findByText('No record found.')).toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('renders filter buttons and filters transactions by account type', async () => {
+    const user = userEvent.setup();
+    const record = createReconciliationRecord();
+    const txns = [
+      createTransaction({
+        actualAmount: -1000,
+        journalLineDescription: 'Grant revenue',
+        naturalAccountType: '40000',
+      }),
+      createTransaction({
+        actualAmount: 250,
+        journalLineDescription: 'Lab supplies',
+        naturalAccountType: '50000',
+      }),
+      createTransaction({
+        actualAmount: 150,
+        journalLineDescription: 'Travel expense',
+        naturalAccountType: '54000',
+      }),
+    ];
+    setupHandlers([record], txns);
+
+    const { cleanup } = renderRoute({ initialPath: detailPath });
+
+    try {
+      // Wait for data to load — all 3 transactions visible
+      expect(
+        await screen.findByText('GL Transactions (3)')
+      ).toBeInTheDocument();
+
+      // Filter to revenue
+      await user.click(screen.getByRole('button', { name: 'Revenue' }));
+      expect(screen.getByText('GL Transactions (1)')).toBeInTheDocument();
+      expect(screen.getByText('Grant revenue')).toBeInTheDocument();
+
+      // Filter to expenses
+      await user.click(screen.getByRole('button', { name: 'Expenses' }));
+      expect(screen.getByText('GL Transactions (2)')).toBeInTheDocument();
+      expect(screen.getByText('Lab supplies')).toBeInTheDocument();
+      expect(screen.getByText('Travel expense')).toBeInTheDocument();
+
+      // Back to all
+      await user.click(screen.getByRole('button', { name: 'All' }));
+      expect(screen.getByText('GL Transactions (3)')).toBeInTheDocument();
     } finally {
       cleanup();
     }

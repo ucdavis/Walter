@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { createColumnHelper } from '@tanstack/react-table';
@@ -226,17 +227,43 @@ const ppmTaskCsvColumns = [
 ];
 
 const glCsvColumns = [
-  { format: 'date' as const, header: 'Date', key: 'journalAcctDate' as const },
-  { header: 'Chart String', key: 'chartString' as const },
-  { header: 'Journal', key: 'journalName' as const },
-  { header: 'Batch', key: 'journalBatchName' as const },
-  { header: 'Category', key: 'journalCategory' as const },
-  { header: 'Description', key: 'journalLineDescription' as const },
+  { header: 'Fund', key: 'fund' as const },
+  { header: 'Fund Description', key: 'fundDescription' as const },
+  { header: 'Financial Dept', key: 'financialDepartment' as const },
+  {
+    header: 'Financial Dept Description',
+    key: 'financialDepartmentDescription' as const,
+  },
+  { header: 'Account', key: 'account' as const },
+  { header: 'Account Description', key: 'accountDescription' as const },
+  { header: 'Purpose', key: 'purpose' as const },
+  { header: 'Purpose Description', key: 'purposeDescription' as const },
+  { header: 'Program', key: 'program' as const },
+  { header: 'Program Description', key: 'programDescription' as const },
+  { header: 'Project', key: 'project' as const },
+  { header: 'Project Description', key: 'projectDescription' as const },
+  { header: 'Activity', key: 'activity' as const },
+  { header: 'Activity Description', key: 'activityDescription' as const },
+  { header: 'Document Type', key: 'documentType' as const },
+  { header: 'Document Number', key: 'accountingSequenceNumber' as const },
+  { header: 'Tracking Number', key: 'trackingNo' as const },
+  { header: 'Reference', key: 'reference' as const },
+  { header: 'JE Source', key: 'journalSource' as const },
+  { header: 'JE Category', key: 'journalCategory' as const },
+  { header: 'JE Batch Name', key: 'journalBatchName' as const },
+  { header: 'JE Name', key: 'journalName' as const },
+  { header: 'JE Accounting Period', key: 'periodName' as const },
+  {
+    format: 'date' as const,
+    header: 'JE Accounting Date',
+    key: 'journalAcctDate' as const,
+  },
   {
     format: 'currency' as const,
     header: 'Amount',
     key: 'actualAmount' as const,
   },
+  { header: 'JE Line Description', key: 'journalLineDescription' as const },
 ];
 
 function buildChartString(t: GLTransactionRecord): string {
@@ -315,23 +342,21 @@ function RouteComponent() {
       }, {})
   );
 
-  const glTransactions = (transactions ?? [])
-    .filter((t) => matchesGL(t, search))
-    .sort((a, b) => {
-      if (!a.journalAcctDate && !b.journalAcctDate) {
-        return 0;
-      }
-      if (!a.journalAcctDate) {
-        return 1;
-      }
-      if (!b.journalAcctDate) {
-        return -1;
-      }
-      return (
-        new Date(b.journalAcctDate).getTime() -
-        new Date(a.journalAcctDate).getTime()
-      );
-    });
+  const [accountFilter, setAccountFilter] = useState<
+    'all' | 'revenue' | 'expense'
+  >('all');
+
+  const glTransactions = (transactions ?? []).filter(
+    (t) => matchesGL(t, search)
+  );
+
+  const filteredGlTransactions = glTransactions.filter((t) => {
+    if (accountFilter === 'revenue')
+      return t.naturalAccountType?.startsWith('4');
+    if (accountFilter === 'expense')
+      return t.naturalAccountType?.startsWith('5');
+    return true;
+  });
 
   const keyLabel = [search.dept, search.fund, search.program, search.activity]
     .filter(Boolean)
@@ -418,24 +443,49 @@ function RouteComponent() {
 
           {/* GL Transaction Listings */}
           <section className="mb-8">
-            <h2 className="h2 mb-4">
-              GL Transactions ({glTransactions.length})
-            </h2>
-            {glTransactions.length === 0 ? (
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="h2">
+                GL Transactions ({filteredGlTransactions.length})
+              </h2>
+              <div className="join">
+                <button
+                  className={`btn btn-sm join-item${accountFilter === 'all' ? ' btn-active' : ''}`}
+                  onClick={() => setAccountFilter('all')}
+                  type="button"
+                >
+                  All
+                </button>
+                <button
+                  className={`btn btn-sm join-item${accountFilter === 'revenue' ? ' btn-active' : ''}`}
+                  onClick={() => setAccountFilter('revenue')}
+                  type="button"
+                >
+                  Revenue
+                </button>
+                <button
+                  className={`btn btn-sm join-item${accountFilter === 'expense' ? ' btn-active' : ''}`}
+                  onClick={() => setAccountFilter('expense')}
+                  type="button"
+                >
+                  Expenses
+                </button>
+              </div>
+            </div>
+            {filteredGlTransactions.length === 0 ? (
               <p className="text-base-content/80">No GL transactions found.</p>
             ) : (
               <DataTable
                 columns={glColumns}
-                data={glTransactions}
+                data={filteredGlTransactions}
                 expandable={true}
+                initialState={{
+                  sorting: [{ id: 'journalAcctDate', desc: true }],
+                }}
                 pagination="auto"
                 tableActions={
                   <ExportDataButton
                     columns={glCsvColumns}
-                    data={glTransactions.map((t) => ({
-                      ...t,
-                      chartString: buildChartString(t),
-                    }))}
+                    data={filteredGlTransactions}
                     filename="gl-transactions.csv"
                   />
                 }
