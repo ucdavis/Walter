@@ -6,6 +6,7 @@ import {
   glPpmReconciliationQueryOptions,
   type GLPPMReconciliationRecord,
 } from '@/queries/project.ts';
+import { ExportDataButton } from '@/components/ExportDataButton.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import { DataTable } from '@/shared/DataTable.tsx';
 
@@ -18,6 +19,22 @@ export const Route = createFileRoute(
 function hasDiscrepancy(r: GLPPMReconciliationRecord): boolean {
   return Math.abs(r.glActualAmount + r.ppmBudBal) > 0.005;
 }
+
+const csvColumns = [
+  { header: 'Dept', key: 'financialDepartment' as const },
+  { header: 'Project', key: 'project' as const },
+  { header: 'Project Description', key: 'projectDescription' as const },
+  { header: 'Fund', key: 'fundCode' as const },
+  { header: 'Fund Description', key: 'fundDescription' as const },
+  { header: 'PPM Fund', key: 'ppmFundCode' as const },
+  { header: 'Program', key: 'programCode' as const },
+  { header: 'Program Description', key: 'programDescription' as const },
+  { header: 'Activity', key: 'activityCode' as const },
+  { header: 'Activity Description', key: 'activityDescription' as const },
+  { format: 'currency' as const, header: 'GL Balance', key: 'glActualAmount' as const },
+  { format: 'currency' as const, header: 'PPM Balance', key: 'ppmBudBal' as const },
+  { format: 'currency' as const, header: 'Remaining Balance', key: 'remainingBalance' as const },
+];
 
 const columnHelper = createColumnHelper<GLPPMReconciliationRecord>();
 
@@ -206,6 +223,13 @@ function RouteComponent() {
             columns={columns}
             data={sorted}
             expandable={false}
+            tableActions={
+              <ExportDataButton
+                columns={csvColumns}
+                data={sorted}
+                filename={`reconciliation-${projectNumber}.csv`}
+              />
+            }
             getRowProps={(row) => {
               const r = row.original;
               const diff = r.glActualAmount + r.ppmBudBal;

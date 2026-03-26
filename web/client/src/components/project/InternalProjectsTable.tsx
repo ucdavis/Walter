@@ -11,6 +11,8 @@ interface AggregatedProject {
   displayName: string;
   projectName: string;
   projectNumber: string;
+  taskName: string;
+  taskNum: string;
   totalBalance: number;
   totalBudget: number;
   totalEncumbrance: number;
@@ -23,7 +25,8 @@ function aggregateProjects(records: ProjectRecord[]): AggregatedProject[] {
   const projectsMap = new Map<string, AggregatedProject>();
 
   for (const p of records) {
-    const existing = projectsMap.get(p.projectNumber);
+    const key = `${p.projectNumber}|${p.taskNum}`;
+    const existing = projectsMap.get(key);
 
     if (existing) {
       existing.totalBudget += p.budget;
@@ -31,10 +34,12 @@ function aggregateProjects(records: ProjectRecord[]): AggregatedProject[] {
       existing.totalEncumbrance += p.commitments;
       existing.totalBalance += p.balance;
     } else {
-      projectsMap.set(p.projectNumber, {
+      projectsMap.set(key, {
         displayName: p.displayName,
         projectName: p.projectName,
         projectNumber: p.projectNumber,
+        taskName: p.taskName,
+        taskNum: p.taskNum,
         totalBalance: p.balance,
         totalBudget: p.budget,
         totalEncumbrance: p.commitments,
@@ -48,6 +53,8 @@ function aggregateProjects(records: ProjectRecord[]): AggregatedProject[] {
 
 const csvColumns = [
   { header: 'Project', key: 'displayName' as const },
+  { header: 'Task', key: 'taskNum' as const },
+  { header: 'Task Name', key: 'taskName' as const },
   { format: 'currency' as const, header: 'Budget', key: 'totalBudget' as const },
   { format: 'currency' as const, header: 'Expense', key: 'totalExpense' as const },
   { format: 'currency' as const, header: 'Commitment', key: 'totalEncumbrance' as const },
@@ -114,6 +121,13 @@ export function InternalProjectsTable({
         header: 'Project Name',
         minSize: 250,
         size: 300,
+      }),
+      columnHelper.accessor('taskNum', {
+        cell: (info) => (
+          <span title={info.row.original.taskName}>{info.getValue()}</span>
+        ),
+        footer: () => '',
+        header: 'Task',
       }),
       columnHelper.accessor('totalBudget', {
         cell: (info) => (
