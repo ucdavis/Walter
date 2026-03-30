@@ -6,6 +6,7 @@ import {
   PersonnelTable,
 } from '@/components/project/PersonnelTable.tsx';
 import { PersonnelRecord } from '@/queries/personnel.ts';
+import { tooltipDefinitions } from '@/shared/tooltips.ts';
 
 afterEach(() => {
   cleanup();
@@ -28,8 +29,8 @@ const createRecord = (
   name: 'Smith, John',
   positionDescription: 'PROF-FY',
   positionNumber: '40001234',
-  projectId: 'PROJ1',
   projectDescription: 'Test Project',
+  projectId: 'PROJ1',
   ...overrides,
 });
 
@@ -137,20 +138,39 @@ describe('PersonnelTable', () => {
     expect(screen.getByText('0.75')).toBeInTheDocument();
   });
 
+  it('renders a tooltip on the FTE header', () => {
+    render(<PersonnelTable data={[createRecord()]} />);
+
+    const fteHeader = screen.getByText('FTE');
+    const fteTooltip = fteHeader.parentElement;
+
+    expect(fteTooltip).toHaveAttribute('data-tip', tooltipDefinitions.fte);
+    expect(fteTooltip).toHaveAttribute('tabIndex', '0');
+    expect(fteTooltip).toHaveClass(
+      'tooltip',
+      'tooltip-bottom',
+      'tooltip-trigger',
+      'flex',
+      'justify-end',
+      'w-full'
+    );
+    expect(fteHeader).toHaveClass('tooltip-label');
+  });
+
   it('displays totals in footer', () => {
     const records = [
       createRecord({
-        employeeId: '1001',
-        positionNumber: '40001234',
-        monthlyRate: 5000,
         compositeBenefitRate: 0.4,
+        employeeId: '1001',
+        monthlyRate: 5000,
+        positionNumber: '40001234',
       }), // monthly: 5000, fringe: 2000
       createRecord({
+        compositeBenefitRate: 0.4,
         employeeId: '1002',
+        monthlyRate: 4000,
         name: 'Doe, Jane',
         positionNumber: '40005678',
-        monthlyRate: 4000,
-        compositeBenefitRate: 0.4,
       }), // monthly: 4000, fringe: 1600
     ];
 
@@ -206,8 +226,8 @@ describe('PersonnelTable', () => {
       createRecord({
         employeeId: '',
         name: '',
-        positionNumber: '40005678',
         positionDescription: 'STDT 3',
+        positionNumber: '40005678',
       }),
     ];
 
@@ -224,8 +244,8 @@ describe('PersonnelTable', () => {
       createRecord({
         employeeId: '',
         name: '',
-        positionNumber: '40005678',
         positionDescription: 'STDT 3',
+        positionNumber: '40005678',
       }),
     ];
 

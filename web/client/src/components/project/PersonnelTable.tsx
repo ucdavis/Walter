@@ -10,6 +10,8 @@ import { formatCurrency } from '@/lib/currency.ts';
 import { formatDate } from '@/lib/date.ts';
 import type { PersonnelRecord } from '@/queries/personnel.ts';
 import { DataTable } from '@/shared/DataTable.tsx';
+import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
+import { tooltipDefinitions } from '@/shared/tooltips.ts';
 
 function isEndingSoon(dateStr: string | null): boolean {
   if (!dateStr) {
@@ -56,7 +58,8 @@ export interface AggregatedPosition {
 function aggregateDistribution(
   record: PersonnelRecord
 ): AggregatedDistribution {
-  const monthlyRate = record.monthlyRate * record.fte * (record.distributionPercent / 100);
+  const monthlyRate =
+    record.monthlyRate * record.fte * (record.distributionPercent / 100);
   const monthlyFringe = monthlyRate * record.compositeBenefitRate;
   return {
     fundingEndingSoon: isEndingSoon(record.fundingEndDate),
@@ -312,7 +315,14 @@ export function PersonnelTable({
         cell: (info) => (
           <span className="flex justify-end">{info.getValue()}</span>
         ),
-        header: () => <span className="flex justify-end w-full">FTE</span>,
+        header: () => (
+          <TooltipLabel
+            className="flex justify-end w-full"
+            label="FTE"
+            placement="bottom"
+            tooltip={tooltipDefinitions.fte}
+          />
+        ),
       }),
       columnHelper.accessor('jobEffectiveDate', {
         cell: (info) => (

@@ -46,19 +46,21 @@ describe('FinancialDetails', () => {
     render(<FinancialDetails summary={createSummary()} />);
 
     const balanceLabel = screen.getByText('Balance');
+    const balanceTooltip = balanceLabel.parentElement;
 
     expect(balanceLabel).toBeInTheDocument();
-    expect(balanceLabel).toHaveAttribute(
+    expect(balanceTooltip).toHaveAttribute(
       'data-tip',
       tooltipDefinitions.balance
     );
-    expect(balanceLabel).not.toHaveAttribute('title');
-    expect(balanceLabel).toHaveAttribute('tabIndex', '0');
-    expect(balanceLabel).toHaveClass(
+    expect(balanceTooltip).not.toHaveAttribute('title');
+    expect(balanceTooltip).toHaveAttribute('tabIndex', '0');
+    expect(balanceTooltip).toHaveClass(
       'tooltip',
       'tooltip-top',
       'inline-block',
-      'tooltip-label'
+      'tooltip-trigger'
     );
+    expect(balanceLabel).toHaveClass('tooltip-label');
   });
 });
