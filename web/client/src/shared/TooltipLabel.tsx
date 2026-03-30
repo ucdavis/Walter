@@ -1,6 +1,8 @@
+import type { CSSProperties } from 'react';
 import { useId, useState } from 'react';
 import {
   autoUpdate,
+  arrow,
   flip,
   FloatingPortal,
   offset,
@@ -29,9 +31,21 @@ export function TooltipLabel({
   tooltip,
 }: TooltipLabelProps) {
   const [open, setOpen] = useState(false);
+  const [arrowElement, setArrowElement] = useState<HTMLDivElement | null>(null);
   const tooltipId = useId();
-  const { context, floatingStyles, refs } = useFloating({
-    middleware: [offset(8), flip({ padding: 8 }), shift({ padding: 8 })],
+  const {
+    context,
+    floatingStyles,
+    middlewareData,
+    placement: resolvedPlacement,
+    refs: { setFloating, setReference },
+  } = useFloating({
+    middleware: [
+      offset(12),
+      flip({ padding: 8 }),
+      shift({ padding: 8 }),
+      arrow({ element: arrowElement }),
+    ],
     onOpenChange: setOpen,
     open,
     placement,
@@ -61,6 +75,26 @@ export function TooltipLabel({
     labelClasses.push(labelClassName);
   }
 
+  const staticSideByPlacement = {
+    bottom: 'top',
+    left: 'right',
+    right: 'left',
+    top: 'bottom',
+  } as const;
+  const basePlacement = resolvedPlacement.split('-')[0] as keyof typeof staticSideByPlacement;
+  const staticSide = staticSideByPlacement[basePlacement];
+  const arrowStyle: CSSProperties = {};
+
+  if (middlewareData.arrow?.x != null) {
+    arrowStyle.left = `${middlewareData.arrow.x}px`;
+  }
+
+  if (middlewareData.arrow?.y != null) {
+    arrowStyle.top = `${middlewareData.arrow.y}px`;
+  }
+
+  arrowStyle[staticSide] = '-5px';
+
   return (
     <>
       <span
@@ -69,7 +103,7 @@ export function TooltipLabel({
           tabIndex: 0,
         })}
         data-tooltip-placement={placement}
-        ref={refs.setReference}
+        ref={setReference}
       >
         <span className={labelClasses.join(' ')}>{label}</span>
       </span>
@@ -79,10 +113,16 @@ export function TooltipLabel({
             {...getFloatingProps({
               className: 'floating-tooltip',
               id: tooltipId,
-              ref: refs.setFloating,
               style: floatingStyles,
             })}
+            ref={setFloating}
           >
+            <div
+              aria-hidden="true"
+              className="floating-tooltip-arrow"
+              ref={setArrowElement}
+              style={arrowStyle}
+            />
             {tooltip}
           </div>
         </FloatingPortal>

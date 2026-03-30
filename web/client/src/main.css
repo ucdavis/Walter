@@ -113,6 +113,11 @@
 
   .floating-tooltip {
     @apply pointer-events-none z-[200] max-w-sm rounded bg-neutral px-2 py-1 text-sm leading-tight text-neutral-content shadow-lg;
+    position: relative;
+  }
+
+  .floating-tooltip-arrow {
+    @apply absolute h-2.5 w-2.5 rotate-45 bg-neutral;
   }
 
   [cmdk-root] {
