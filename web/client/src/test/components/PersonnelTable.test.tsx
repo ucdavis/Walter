@@ -219,6 +219,41 @@ describe('PersonnelTable', () => {
     expect(screen.getByText('Test Project')).toBeInTheDocument();
   });
 
+  it('shows a tooltip on the Monthly CBR header', async () => {
+    const user = userEvent.setup();
+    render(<PersonnelTable data={[createRecord()]} />);
+
+    const label = screen.getByText('Monthly CBR');
+    await user.hover(label.parentElement as HTMLElement);
+
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+      tooltipDefinitions.monthlyCbr
+    );
+  });
+
+  it('shows tooltips in the funding distribution subtable', async () => {
+    const user = userEvent.setup();
+    render(<PersonnelTable data={[createRecord({ projectDescription: 'Test Project' })]} />);
+
+    await user.click(
+      screen.getByRole('cell', { name: 'Smith, John (1001) - PROF-FY' })
+    );
+
+    const distLabel = screen.getByText('Dist %');
+    await user.hover(distLabel.parentElement as HTMLElement);
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+      tooltipDefinitions.distributionPercent
+    );
+
+    await user.unhover(distLabel.parentElement as HTMLElement);
+
+    const cbrLabel = screen.getByText('CBR');
+    await user.hover(cbrLabel.parentElement as HTMLElement);
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+      tooltipDefinitions.cbr
+    );
+  });
+
   it('hides unfilled positions by default', () => {
     const records = [
       createRecord({ name: 'Smith, John', positionNumber: '40001234' }),

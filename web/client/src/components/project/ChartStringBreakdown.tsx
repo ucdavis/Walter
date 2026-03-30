@@ -132,7 +132,13 @@ export function ChartStringBreakdown({ employeeId, projectNumber, records }: Cha
       }),
       columnHelper.accessor('expenditureCategoryName', {
         cell: (info) => <span>{info.getValue() || '-'}</span>,
-        header: 'Expenditure Category',
+        header: () => (
+          <TooltipLabel
+            label="Expenditure Category"
+            placement="bottom"
+            tooltip={tooltipDefinitions.expenditureCategory}
+          />
+        ),
       }),
       columnHelper.accessor('budget', {
         cell: (info) => (

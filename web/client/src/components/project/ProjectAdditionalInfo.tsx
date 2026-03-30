@@ -1,9 +1,12 @@
 import React from 'react';
 import { formatDate } from '@/lib/date.ts';
 import type { ProjectSummary } from '@/lib/projectSummary.ts';
+import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
+import { tooltipDefinitions } from '@/shared/tooltips.ts';
 
 interface Field {
   label: string;
+  tooltip?: string;
   value: string;
 }
 
@@ -23,12 +26,14 @@ function buildPrimaryFields(summary: ProjectSummary): Field[] {
     },
     {
       label: 'Burden Schedule Rate',
+      tooltip: tooltipDefinitions.burdenScheduleRate,
       value: summary.projectBurdenCostRate
-        ? `${parseFloat((parseFloat(summary.projectBurdenCostRate) * 100).toFixed(4))}%`
+        ? `${Number.parseFloat((Number.parseFloat(summary.projectBurdenCostRate) * 100).toFixed(4))}%`
         : '—',
     },
     {
       label: 'Contract Administrator',
+      tooltip: tooltipDefinitions.contractAdministrator,
       value: summary.contractAdministrator ?? '—',
     },
   ];
@@ -36,26 +41,41 @@ function buildPrimaryFields(summary: ProjectSummary): Field[] {
 
 function buildSecondaryFields(summary: ProjectSummary): Field[] {
   return [
-    { label: 'Award Close Date', value: formatDate(summary.awardCloseDate) },
+    {
+      label: 'Award Close Date',
+      tooltip: tooltipDefinitions.awardCloseDate,
+      value: formatDate(summary.awardCloseDate),
+    },
     { label: 'Award PI', value: summary.awardPi ?? '—' },
     { label: 'Award Status', value: summary.awardStatus ?? '—' },
     { label: 'Award Type', value: summary.awardType ?? '—' },
-    { label: 'Billing Cycle', value: summary.billingCycle ?? '—' },
+    {
+      label: 'Billing Cycle',
+      tooltip: tooltipDefinitions.billingCycle,
+      value: summary.billingCycle ?? '—',
+    },
     {
       label: 'Burden Structure',
+      tooltip: tooltipDefinitions.burdenStructure,
       value: summary.projectBurdenScheduleBase?.split('-')[0].trim() || '—',
     },
     {
       label: 'Cost Share Required by Sponsor',
+      tooltip: tooltipDefinitions.costShareRequiredBySponsor,
       value: summary.costShareRequiredBySponsor ?? '—',
     },
-    { label: 'Grant Administrator', value: summary.grantAdministrator ?? '—' },
+    {
+      label: 'Grant Administrator',
+      tooltip: tooltipDefinitions.grantAdministrator,
+      value: summary.grantAdministrator ?? '—',
+    },
     {
       label: 'Internal Funded Project',
       value: summary.internalFundedProject ?? '—',
     },
     {
       label: 'Post Reporting Period',
+      tooltip: tooltipDefinitions.postReportingPeriod,
       value: summary.postReportingPeriod ?? '—',
     },
     { label: 'Project Fund', value: summary.projectFund ?? '—' },
@@ -75,6 +95,12 @@ export function ProjectAdditionalInfo({
 
   const primaryFields = buildPrimaryFields(summary);
   const secondaryFields = buildSecondaryFields(summary);
+  const renderLabel = (field: Field) =>
+    field.tooltip ? (
+      <TooltipLabel label={field.label} tooltip={field.tooltip} />
+    ) : (
+      field.label
+    );
 
   return (
     <section className="section-margin">
@@ -86,7 +112,7 @@ export function ProjectAdditionalInfo({
             className="grid grid-cols-[max-content_1fr] gap-x-4"
             key={field.label}
           >
-            <div className="font-proxima-bold">{field.label}</div>
+            <div className="font-proxima-bold">{renderLabel(field)}</div>
             <div>{field.value}</div>
           </div>
         ))}
@@ -97,7 +123,7 @@ export function ProjectAdditionalInfo({
               className="grid grid-cols-[max-content_1fr] gap-x-4"
               key={field.label}
             >
-              <div className="font-proxima-bold">{field.label}</div>
+              <div className="font-proxima-bold">{renderLabel(field)}</div>
               <div>{field.value}</div>
             </div>
           ))}

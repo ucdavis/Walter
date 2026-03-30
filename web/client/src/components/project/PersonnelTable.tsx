@@ -142,7 +142,13 @@ function DistributionSubtable({
           <tr>
             <th>Project</th>
             <th>
-              <span className="flex justify-end w-full">Dist %</span>
+              <span className="flex justify-end w-full">
+                <TooltipLabel
+                  label="Dist %"
+                  placement="bottom"
+                  tooltip={tooltipDefinitions.distributionPercent}
+                />
+              </span>
             </th>
             <th>
               <span className="flex justify-end w-full">Funding Effective</span>
@@ -154,7 +160,13 @@ function DistributionSubtable({
               <span className="flex justify-end w-full">Salary</span>
             </th>
             <th>
-              <span className="flex justify-end w-full">CBR</span>
+              <span className="flex justify-end w-full">
+                <TooltipLabel
+                  label="CBR"
+                  placement="bottom"
+                  tooltip={tooltipDefinitions.cbr}
+                />
+              </span>
             </th>
             <th>
               <span className="flex justify-end w-full">Monthly Total</span>
@@ -401,7 +413,13 @@ export function PersonnelTable({
             )
           : undefined,
         header: () => (
-          <span className="flex justify-end w-full">Monthly CBR</span>
+          <span className="flex justify-end w-full">
+            <TooltipLabel
+              label="Monthly CBR"
+              placement="bottom"
+              tooltip={tooltipDefinitions.monthlyCbr}
+            />
+          </span>
         ),
       }),
       columnHelper.accessor('monthlyTotal', {

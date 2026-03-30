@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { screen } from '@testing-library/react';
+import { userEvent } from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import type { ProjectRecord } from '@/queries/project.ts';
 import { server } from '@/test/mswUtils.ts';
 import { renderRoute } from '@/test/routerUtils.tsx';
+import { tooltipDefinitions } from '@/shared/tooltips.ts';
 
 const createProject = (
   overrides: Partial<ProjectRecord> = {}
@@ -22,16 +24,12 @@ const createProject = (
   billingCycle: null,
   budget: 10_000,
   commitments: 1000,
-  expenses: 5000,
-  ppmBudBal: 4000,
-  ppmBudget: 10_000,
-  ppmCommitments: 1000,
-  ppmExpenses: 5000,
   contractAdministrator: null,
   copi: null,
   costShareRequiredBySponsor: null,
   displayName: 'Test Project',
   expenditureCategoryName: null,
+  expenses: 5000,
   fundCode: null,
   fundDesc: 'Federal',
   grantAdministrator: null,
@@ -40,6 +38,10 @@ const createProject = (
   pm: 'PM Name',
   pmEmployeeId: '2000',
   postReportingPeriod: null,
+  ppmBudBal: 4000,
+  ppmBudget: 10_000,
+  ppmCommitments: 1000,
+  ppmExpenses: 5000,
   primarySponsorName: null,
   programCode: null,
   programDesc: 'Program',
@@ -189,6 +191,27 @@ describe('project detail page', () => {
       expect(
         screen.queryByText('We could not reach the server')
       ).not.toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('shows a tooltip for the Chart String Breakdown section heading', async () => {
+    const user = userEvent.setup();
+    const projects = [createProject({ pmEmployeeId: '2000' })];
+    setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);
+
+    const { cleanup } = renderRoute({
+      initialPath: '/projects/1000/P1',
+    });
+
+    try {
+      const label = await screen.findByText('Chart String Breakdown');
+      await user.hover(label.parentElement as HTMLElement);
+
+      expect(await screen.findByRole('tooltip')).toHaveTextContent(
+        tooltipDefinitions.chartStringBreakdown
+      );
     } finally {
       cleanup();
     }
