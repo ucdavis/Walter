@@ -138,7 +138,6 @@ BEGIN
             LEFT JOIN pgm_master_data p
                 ON f.Project_Number = p.project_number AND f.Award_Number = p.award_number
             WHERE f.Project_Number IN (' + @ProjectIdFilter + N')
-              AND f.Task_Status <> ''Inactive''
             GROUP BY CAST(f.Award_Number AS NVARCHAR(MAX)), CAST(f.Award_Name AS NVARCHAR(MAX)),
                 f.Award_Start_Date, f.Award_End_Date,
                 CAST(f.Award_Status AS NVARCHAR(MAX)), CAST(f.Award_Entity AS NVARCHAR(MAX)),

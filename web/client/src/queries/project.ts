@@ -26,6 +26,7 @@ export interface ProjectRecord {
   copi: string | null;
   costShareRequiredBySponsor: string | null;
   displayName: string;
+  expenditureCategoryName: string | null;
   fundCode: string | null;
   fundDesc: string;
   grantAdministrator: string | null;

@@ -11,6 +11,7 @@ interface ChartStringRow {
   balance: number;
   budget: number;
   commitments: number;
+  expenditureCategoryName: string;
   expenses: number;
   financialDepartment: string;
   financialDepartmentCode: string;
@@ -32,7 +33,8 @@ function buildRows(records: ProjectRecord[]): ChartStringRow[] {
     const program = r.programCode ?? '';
     const activity = r.activityCode ?? '';
     const task = r.taskNum ?? '';
-    const key = `${task}|${fund}|${program}|${activity}`;
+    const expenditureCategory = r.expenditureCategoryName ?? '';
+    const key = `${task}|${fund}|${program}|${activity}|${expenditureCategory}`;
 
     const existing = map.get(key);
     if (existing) {
@@ -47,6 +49,7 @@ function buildRows(records: ProjectRecord[]): ChartStringRow[] {
         balance: r.balance,
         budget: r.budget,
         commitments: r.commitments,
+        expenditureCategoryName: expenditureCategory,
         expenses: r.expenses,
         financialDepartment: r.projectOwningOrg,
         financialDepartmentCode: r.projectOwningOrgCode,
@@ -124,6 +127,10 @@ export function ChartStringBreakdown({ employeeId, projectNumber, records }: Cha
           <span title={info.row.original.activityDesc}>{info.getValue()}</span>
         ),
         header: 'Activity',
+      }),
+      columnHelper.accessor('expenditureCategoryName', {
+        cell: (info) => <span>{info.getValue() || '-'}</span>,
+        header: 'Expenditure Category',
       }),
       columnHelper.accessor('budget', {
         cell: (info) => (
