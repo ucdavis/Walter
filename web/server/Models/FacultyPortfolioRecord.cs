@@ -164,19 +164,21 @@ public sealed class FacultyPortfolioRecord
     [JsonPropertyName("glExpenses")]
     public decimal? GlExpenses { get; set; }
 
-    // Consolidated financial fields: always use PPM (Faculty Department Portfolio Report).
-
+    // GL for Internal projects, PPM for Sponsored
     [JsonPropertyName("budget")]
-    public decimal Budget => PpmBudget;
+    public decimal Budget => ProjectType == "Internal"
+        ? (GlBeginningBalance ?? 0) + (GlRevenue ?? 0) : PpmBudget;
 
     [JsonPropertyName("expenses")]
-    public decimal Expenses => PpmExpenses;
+    public decimal Expenses => ProjectType == "Internal"
+        ? (GlExpenses ?? 0) : PpmExpenses;
 
     [JsonPropertyName("commitments")]
-    public decimal Commitments => PpmCommitments;
+    public decimal Commitments => PpmCommitments; // always PPM
 
     [JsonPropertyName("balance")]
-    public decimal Balance => PpmBudBal;
+    public decimal Balance => ProjectType == "Internal"
+        ? Budget - Expenses - Commitments : PpmBudBal;
 
     /// <summary>
     /// Project Manager employee ID (from Financial Service API).
