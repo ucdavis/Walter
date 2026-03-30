@@ -42,6 +42,7 @@ This is a full-stack web application template using modern React and .NET techno
 
 - **Tailwind CSS** (`^4.1.14`) - Utility-first CSS framework
 - **DaisyUI** (`^5.1.27`) - Tailwind CSS component library
+- **Floating UI React** - Shared tooltip positioning via portal rendering
 - **UC Davis Gunrock Tailwind** (`^2.4.0`) - Custom design system
 - CSS imports structure:
   ```css
@@ -118,6 +119,18 @@ This is a full-stack web application template using modern React and .NET techno
 - Use Tailwind CSS classes for styling
 - Leverage DaisyUI components when appropriate
 - Follow UC Davis Gunrock design system patterns
+
+### Tooltip Pattern
+
+- Reuse `client/src/shared/TooltipLabel.tsx` for explanatory hover/focus labels instead of reintroducing DaisyUI's CSS tooltip classes.
+- Tooltip copy belongs in `client/src/shared/tooltips.ts`. Add a new shared definition there first, then reference it from the component.
+- `TooltipLabel` is the single tooltip primitive for this app. It uses `@floating-ui/react` with `FloatingPortal`, so the popup is not trapped inside table scroll containers.
+- Default placement is `top` for normal page labels and headings.
+- Use `placement="bottom"` for dense table headers and subtables where a top tooltip is more likely to collide with or visually crowd surrounding table UI.
+- Keep the visible trigger text short and human-readable. The long explanatory text should stay in `tooltips.ts`, not inline in component JSX.
+- When adding tooltip labels in grid/list field renderers, conditionally wrap only the label text with `TooltipLabel`; do not wrap the whole row or whole column.
+- Table header tooltip triggers should only wrap the header text itself, not the full-width header container. Use an outer layout span for alignment and the tooltip component just around the text.
+- When testing tooltip labels, prefer interaction-based tests (`userEvent.hover` or focus) and assert the rendered `role="tooltip"` content rather than DaisyUI-specific attributes or classes from the old implementation.
 
 ### Data Fetching
 
