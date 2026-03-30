@@ -104,11 +104,15 @@
   }
 
   .tooltip-trigger {
-    @apply focus:outline-none focus-visible:rounded-xs focus-visible:ring-2 focus-visible:ring-primary/30;
+    @apply inline-flex items-center cursor-help focus:outline-none focus-visible:rounded-xs focus-visible:ring-2 focus-visible:ring-primary/30;
   }
 
   .tooltip-label {
-    @apply cursor-help decoration-dotted underline underline-offset-4;
+    @apply decoration-dotted underline underline-offset-4;
+  }
+
+  .floating-tooltip {
+    @apply pointer-events-none z-[200] max-w-sm rounded bg-neutral px-2 py-1 text-sm leading-tight text-neutral-content shadow-lg;
   }
 
   [cmdk-root] {

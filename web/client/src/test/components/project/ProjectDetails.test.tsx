@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
+import { userEvent } from '@testing-library/user-event';
 import { ProjectDetails } from '@/components/project/ProjectDetails.tsx';
 import type { ProjectSummary } from '@/lib/projectSummary.ts';
 import { tooltipDefinitions } from '@/shared/tooltips.ts';
@@ -42,20 +43,21 @@ const createSummary = (
 });
 
 describe('ProjectDetails', () => {
-  it('renders a tooltip label for Balance in the main summary card', () => {
+  it('shows a tooltip for Balance in the main summary card', async () => {
+    const user = userEvent.setup();
     render(<ProjectDetails summary={createSummary()} />);
 
-    const balanceLabel = screen.getAllByText('Balance')[0];
-    const balanceTooltip = balanceLabel.parentElement;
+    const balanceLabel = screen.getByText('Balance');
+    const balanceTrigger = balanceLabel.parentElement as HTMLElement;
 
-    expect(balanceTooltip).toHaveAttribute('data-tip', tooltipDefinitions.balance);
-    expect(balanceTooltip).toHaveAttribute('tabIndex', '0');
-    expect(balanceTooltip).toHaveClass(
-      'tooltip',
-      'tooltip-top',
-      'inline-block',
-      'tooltip-trigger'
-    );
+    expect(balanceTrigger).toHaveAttribute('data-tooltip-placement', 'top');
+    expect(balanceTrigger).toHaveAttribute('tabIndex', '0');
     expect(balanceLabel).toHaveClass('tooltip-label');
+
+    await user.hover(balanceTrigger);
+
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+      tooltipDefinitions.balance
+    );
   });
 });

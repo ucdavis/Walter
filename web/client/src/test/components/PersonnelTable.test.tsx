@@ -138,21 +138,22 @@ describe('PersonnelTable', () => {
     expect(screen.getByText('0.75')).toBeInTheDocument();
   });
 
-  it('renders a tooltip on the FTE header', () => {
+  it('shows a tooltip on the FTE header', async () => {
+    const user = userEvent.setup();
     render(<PersonnelTable data={[createRecord()]} />);
 
     const fteHeader = screen.getByText('FTE');
-    const fteTooltip = fteHeader.parentElement;
+    const fteTrigger = fteHeader.parentElement as HTMLElement;
 
-    expect(fteTooltip).toHaveAttribute('data-tip', tooltipDefinitions.fte);
-    expect(fteTooltip).toHaveAttribute('tabIndex', '0');
-    expect(fteTooltip).toHaveClass(
-      'tooltip',
-      'tooltip-bottom',
-      'tooltip-trigger',
-      'inline-block'
-    );
+    expect(fteTrigger).toHaveAttribute('data-tooltip-placement', 'bottom');
+    expect(fteTrigger).toHaveAttribute('tabIndex', '0');
     expect(fteHeader).toHaveClass('tooltip-label');
+
+    await user.hover(fteTrigger);
+
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+      tooltipDefinitions.fte
+    );
   });
 
   it('displays totals in footer', () => {

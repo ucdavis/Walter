@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
+import { userEvent } from '@testing-library/user-event';
 import { ChartStringBreakdown } from '@/components/project/ChartStringBreakdown.tsx';
 import type { ProjectRecord } from '@/queries/project.ts';
 import { tooltipDefinitions } from '@/shared/tooltips.ts';
@@ -66,7 +67,8 @@ const createProject = (
 });
 
 describe('ChartStringBreakdown', () => {
-  it('renders a tooltip label for the Commitments table header', () => {
+  it('shows a tooltip for the Commitments table header', async () => {
+    const user = userEvent.setup();
     render(
       <ChartStringBreakdown
         employeeId="123"
@@ -76,23 +78,24 @@ describe('ChartStringBreakdown', () => {
     );
 
     const commitmentsLabel = screen.getByText('Commitments');
-    const commitmentsTooltip = commitmentsLabel.parentElement;
+    const commitmentsTrigger = commitmentsLabel.parentElement as HTMLElement;
 
-    expect(commitmentsTooltip).toHaveAttribute(
-      'data-tip',
+    expect(commitmentsTrigger).toHaveAttribute(
+      'data-tooltip-placement',
+      'bottom'
+    );
+    expect(commitmentsTrigger).toHaveAttribute('tabIndex', '0');
+    expect(commitmentsLabel).toHaveClass('tooltip-label');
+
+    await user.hover(commitmentsTrigger);
+
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(
       tooltipDefinitions.commitment
     );
-    expect(commitmentsTooltip).toHaveAttribute('tabIndex', '0');
-    expect(commitmentsTooltip).toHaveClass(
-      'tooltip',
-      'tooltip-bottom',
-      'inline-block',
-      'tooltip-trigger'
-    );
-    expect(commitmentsLabel).toHaveClass('tooltip-label');
   });
 
-  it('renders a tooltip label for the Balance table header', () => {
+  it('shows a tooltip for the Balance table header', async () => {
+    const user = userEvent.setup();
     render(
       <ChartStringBreakdown
         employeeId="123"
@@ -103,16 +106,16 @@ describe('ChartStringBreakdown', () => {
 
     const balanceHeaders = screen.getAllByText('Balance');
     const balanceLabel = balanceHeaders[0];
-    const balanceTooltip = balanceLabel.parentElement;
+    const balanceTrigger = balanceLabel.parentElement as HTMLElement;
 
-    expect(balanceTooltip).toHaveAttribute('data-tip', tooltipDefinitions.balance);
-    expect(balanceTooltip).toHaveAttribute('tabIndex', '0');
-    expect(balanceTooltip).toHaveClass(
-      'tooltip',
-      'tooltip-bottom',
-      'inline-block',
-      'tooltip-trigger'
-    );
+    expect(balanceTrigger).toHaveAttribute('data-tooltip-placement', 'bottom');
+    expect(balanceTrigger).toHaveAttribute('tabIndex', '0');
     expect(balanceLabel).toHaveClass('tooltip-label');
+
+    await user.hover(balanceTrigger);
+
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+      tooltipDefinitions.balance
+    );
   });
 });
