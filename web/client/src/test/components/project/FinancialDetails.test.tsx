@@ -42,6 +42,27 @@ const createSummary = (
 });
 
 describe('FinancialDetails', () => {
+  it('renders a keyboard-focusable tooltip label for Commitment', () => {
+    render(<FinancialDetails summary={createSummary()} />);
+
+    const commitmentLabel = screen.getByText('Commitment');
+    const commitmentTooltip = commitmentLabel.parentElement;
+
+    expect(commitmentLabel).toBeInTheDocument();
+    expect(commitmentTooltip).toHaveAttribute(
+      'data-tip',
+      tooltipDefinitions.commitment
+    );
+    expect(commitmentTooltip).toHaveAttribute('tabIndex', '0');
+    expect(commitmentTooltip).toHaveClass(
+      'tooltip',
+      'tooltip-top',
+      'inline-block',
+      'tooltip-trigger'
+    );
+    expect(commitmentLabel).toHaveClass('tooltip-label');
+  });
+
   it('renders a keyboard-focusable tooltip label for Balance', () => {
     render(<FinancialDetails summary={createSummary()} />);
 

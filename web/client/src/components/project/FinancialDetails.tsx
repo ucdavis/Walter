@@ -26,7 +26,12 @@ export function FinancialDetails({ summary }: FinancialDetailsProps) {
           </dt>
         </div>
         <div>
-          <dd className="stat-label">Commitment</dd>
+          <dd className="stat-label">
+            <TooltipLabel
+              label="Commitment"
+              tooltip={tooltipDefinitions.commitment}
+            />
+          </dd>
           <dt className="stat-value">
             <Currency value={summary.totals.encumbrance} />
           </dt>

@@ -66,6 +66,32 @@ const createProject = (
 });
 
 describe('ChartStringBreakdown', () => {
+  it('renders a tooltip label for the Commitments table header', () => {
+    render(
+      <ChartStringBreakdown
+        employeeId="123"
+        projectNumber="P1"
+        records={[createProject()]}
+      />
+    );
+
+    const commitmentsLabel = screen.getByText('Commitments');
+    const commitmentsTooltip = commitmentsLabel.parentElement;
+
+    expect(commitmentsTooltip).toHaveAttribute(
+      'data-tip',
+      tooltipDefinitions.commitment
+    );
+    expect(commitmentsTooltip).toHaveAttribute('tabIndex', '0');
+    expect(commitmentsTooltip).toHaveClass(
+      'tooltip',
+      'tooltip-bottom',
+      'inline-block',
+      'tooltip-trigger'
+    );
+    expect(commitmentsLabel).toHaveClass('tooltip-label');
+  });
+
   it('renders a tooltip label for the Balance table header', () => {
     render(
       <ChartStringBreakdown

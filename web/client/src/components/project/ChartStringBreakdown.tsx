@@ -171,7 +171,15 @@ export function ChartStringBreakdown({ employeeId, projectNumber, records }: Cha
             {formatCurrency(totals.commitments)}
           </span>
         ),
-        header: () => <span className="flex justify-end">Commitments</span>,
+        header: () => (
+          <span className="flex justify-end w-full">
+            <TooltipLabel
+              label="Commitments"
+              placement="bottom"
+              tooltip={tooltipDefinitions.commitment}
+            />
+          </span>
+        ),
       }),
       columnHelper.accessor('balance', {
         cell: (info) => {
