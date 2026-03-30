@@ -9,10 +9,19 @@ import { DataTable } from '@/shared/DataTable.tsx';
 
 interface AggregatedProject {
   awardEndDate: string | null;
+  awardNumber: string | null;
   awardStartDate: string | null;
+  awardStatus: string | null;
+  awardType: string | null;
   displayName: string;
+  pi: string | null;
+  pm: string | null;
+  primarySponsorName: string | null;
   projectName: string;
   projectNumber: string;
+  projectOwningOrg: string;
+  projectStatusCode: string;
+  projectType: string;
   totalBalance: number;
   totalBudget: number;
   totalEncumbrance: number;
@@ -47,10 +56,19 @@ function aggregateProjects(records: ProjectRecord[]): AggregatedProject[] {
     } else {
       projectsMap.set(p.projectNumber, {
         awardEndDate: p.awardEndDate,
+        awardNumber: p.awardNumber,
         awardStartDate: p.awardStartDate,
+        awardStatus: p.awardStatus,
+        awardType: p.awardType,
         displayName: p.displayName,
+        pi: p.pi,
+        pm: p.pm,
+        primarySponsorName: p.primarySponsorName,
         projectName: p.projectName,
         projectNumber: p.projectNumber,
+        projectOwningOrg: p.projectOwningOrg,
+        projectStatusCode: p.projectStatusCode,
+        projectType: p.projectType,
         totalBalance: p.balance,
         totalBudget: p.budget,
         totalEncumbrance: p.commitments,
@@ -77,7 +95,17 @@ function sortByEndDate(projects: AggregatedProject[]): AggregatedProject[] {
 }
 
 const csvColumns = [
-  { header: 'Project', key: 'displayName' as const },
+  { header: 'Project Number', key: 'projectNumber' as const },
+  { header: 'Project Name', key: 'displayName' as const },
+  { header: 'Type', key: 'projectType' as const },
+  { header: 'Status', key: 'projectStatusCode' as const },
+  { header: 'Owning Org', key: 'projectOwningOrg' as const },
+  { header: 'PI', key: 'pi' as const },
+  { header: 'PM', key: 'pm' as const },
+  { header: 'Sponsor', key: 'primarySponsorName' as const },
+  { header: 'Award Number', key: 'awardNumber' as const },
+  { header: 'Award Type', key: 'awardType' as const },
+  { header: 'Award Status', key: 'awardStatus' as const },
   { format: 'date' as const, header: 'Effective Date', key: 'awardStartDate' as const },
   { format: 'date' as const, header: 'End Date', key: 'awardEndDate' as const },
   { format: 'currency' as const, header: 'Budget', key: 'totalBudget' as const },

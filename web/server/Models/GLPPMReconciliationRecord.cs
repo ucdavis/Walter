@@ -43,9 +43,6 @@ public sealed class GLPPMReconciliationRecord
     [JsonPropertyName("ppmBudget")]
     public decimal PpmBudget { get; set; }
 
-    [JsonPropertyName("ppmCommitments")]
-    public decimal PpmCommitments { get; set; }
-
     [JsonPropertyName("ppmItdExp")]
     public decimal PpmItdExp { get; set; }
 

@@ -7,6 +7,7 @@ export interface ProjectRecord {
   activityDesc: string;
   awardCloseDate: string | null;
   awardEndDate: string | null;
+  awardName: string | null;
   awardNumber: string | null;
   awardPi: string | null;
   awardStartDate: string | null;
@@ -88,6 +89,7 @@ export interface GLTransactionRecord {
   actualAmount: number;
   commitmentAmount: number;
   obligationAmount: number;
+  naturalAccountType: string | null;
 }
 
 export interface GLPPMReconciliationRecord {
@@ -103,7 +105,6 @@ export interface GLPPMReconciliationRecord {
   activityDescription: string | null;
   glActualAmount: number;
   ppmBudget: number;
-  ppmCommitments: number;
   ppmItdExp: number;
   ppmBudBal: number;
   remainingBalance: number;
