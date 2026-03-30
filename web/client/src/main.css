@@ -102,6 +102,11 @@
   .nav-link[data-status='active'] {
     @apply text-base-content border-primary-color;
   }
+
+  .tooltip-label {
+    @apply cursor-help decoration-dotted underline underline-offset-4 focus:outline-none focus-visible:rounded-xs focus-visible:ring-2 focus-visible:ring-primary/30;
+  }
+
   [cmdk-root] {
     @apply flex flex-col;
   }

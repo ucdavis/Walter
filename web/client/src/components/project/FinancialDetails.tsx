@@ -1,5 +1,6 @@
 import type { ProjectSummary } from '@/lib/projectSummary.ts';
 import { Currency } from '@/shared/Currency.tsx';
+import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
 
 interface FinancialDetailsProps {
   summary: ProjectSummary;
@@ -30,13 +31,17 @@ export function FinancialDetails({ summary }: FinancialDetailsProps) {
           </dt>
         </div>
         <div>
-          <dd className="stat-label">Balance</dd>
+          <dd className="stat-label">
+            <TooltipLabel
+              label="Balance"
+              tooltip="Balance is your total budget minus expenses and commitments"
+            />
+          </dd>
           <dt className="stat-value">
             <Currency value={summary.totals.balance} />
           </dt>
         </div>
       </dl>
-
     </section>
   );
 }
