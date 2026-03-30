@@ -316,12 +316,13 @@ export function PersonnelTable({
           <span className="flex justify-end">{info.getValue()}</span>
         ),
         header: () => (
-          <TooltipLabel
-            className="flex justify-end w-full"
-            label="FTE"
-            placement="bottom"
-            tooltip={tooltipDefinitions.fte}
-          />
+          <span className="flex justify-end w-full">
+            <TooltipLabel
+              label="FTE"
+              placement="bottom"
+              tooltip={tooltipDefinitions.fte}
+            />
+          </span>
         ),
       }),
       columnHelper.accessor('jobEffectiveDate', {

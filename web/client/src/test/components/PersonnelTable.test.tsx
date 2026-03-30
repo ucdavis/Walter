@@ -150,9 +150,7 @@ describe('PersonnelTable', () => {
       'tooltip',
       'tooltip-bottom',
       'tooltip-trigger',
-      'flex',
-      'justify-end',
-      'w-full'
+      'inline-block'
     );
     expect(fteHeader).toHaveClass('tooltip-label');
   });
