@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import { FinancialDetails } from '@/components/project/FinancialDetails.tsx';
 import type { ProjectSummary } from '@/lib/projectSummary.ts';
+import { tooltipDefinitions } from '@/shared/tooltips.ts';
 
 afterEach(cleanup);
 
@@ -49,7 +50,7 @@ describe('FinancialDetails', () => {
     expect(balanceLabel).toBeInTheDocument();
     expect(balanceLabel).toHaveAttribute(
       'data-tip',
-      'Balance is your total budget minus expenses and commitments'
+      tooltipDefinitions.balance
     );
     expect(balanceLabel).not.toHaveAttribute('title');
     expect(balanceLabel).toHaveAttribute('tabIndex', '0');
