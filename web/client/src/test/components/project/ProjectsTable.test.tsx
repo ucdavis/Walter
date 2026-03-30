@@ -37,6 +37,7 @@ const createProject = (
   copi: null,
   costShareRequiredBySponsor: null,
   displayName: 'P1: Test Project',
+  expenditureCategoryName: null,
   fundCode: null,
   fundDesc: 'Federal',
   grantAdministrator: null,
