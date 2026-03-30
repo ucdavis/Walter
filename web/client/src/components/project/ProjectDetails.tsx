@@ -1,6 +1,8 @@
 import { formatDate } from '@/lib/date.ts';
 import type { ProjectSummary } from '@/lib/projectSummary.ts';
 import { Currency } from '@/shared/Currency.tsx';
+import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
+import { tooltipDefinitions } from '@/shared/tooltips.ts';
 import {
   AcademicCapIcon,
   BanknotesIcon,
@@ -66,7 +68,12 @@ export function ProjectDetails({ summary }: ProjectDetailsProps) {
           </div>
           <div className="flex flex-col">
             <BanknotesIcon className="w-4 h-4" />
-            <dt className="stat-label">Balance</dt>
+            <dt className="stat-label">
+              <TooltipLabel
+                label="Balance"
+                tooltip={tooltipDefinitions.balance}
+              />
+            </dt>
             <dd className="stat-value">
               <Currency value={summary.totals.balance} />
             </dd>

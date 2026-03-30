@@ -1,0 +1,92 @@
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, render, screen } from '@testing-library/react';
+import { ChartStringBreakdown } from '@/components/project/ChartStringBreakdown.tsx';
+import type { ProjectRecord } from '@/queries/project.ts';
+import { tooltipDefinitions } from '@/shared/tooltips.ts';
+
+vi.mock('@tanstack/react-router', () => ({
+  Link: ({ children }: { children: React.ReactNode }) => <a>{children}</a>,
+}));
+
+afterEach(cleanup);
+
+const createProject = (
+  overrides: Partial<ProjectRecord> = {}
+): ProjectRecord => ({
+  activityCode: null,
+  activityDesc: 'Activity',
+  awardCloseDate: null,
+  awardEndDate: '2099-12-31',
+  awardName: null,
+  awardNumber: 'AWD001',
+  awardPi: null,
+  awardStartDate: '2024-01-01',
+  awardStatus: null,
+  awardType: null,
+  balance: 4000,
+  billingCycle: null,
+  budget: 10_000,
+  commitments: 1000,
+  contractAdministrator: null,
+  copi: null,
+  costShareRequiredBySponsor: null,
+  displayName: 'P1: Test Project',
+  expenditureCategoryName: null,
+  expenses: 5000,
+  fundCode: 'FUND1',
+  fundDesc: 'Federal',
+  grantAdministrator: null,
+  pa: null,
+  pi: 'PI Name',
+  pm: null,
+  pmEmployeeId: null,
+  postReportingPeriod: null,
+  ppmBudBal: 4000,
+  ppmBudget: 10_000,
+  ppmCommitments: 1000,
+  ppmExpenses: 5000,
+  primarySponsorName: null,
+  programCode: 'PROG1',
+  programDesc: 'Program',
+  projectBurdenCostRate: null,
+  projectBurdenScheduleBase: null,
+  projectFund: null,
+  projectName: 'Test Project',
+  projectNumber: 'P1',
+  projectOwningOrg: 'ORG001',
+  projectOwningOrgCode: 'ORG001',
+  projectStatusCode: 'ACTIVE',
+  projectType: 'Sponsored',
+  purposeDesc: 'Research',
+  sponsorAwardNumber: null,
+  taskName: 'Task 1',
+  taskNum: 'T001',
+  taskStatus: 'OPEN',
+  ...overrides,
+});
+
+describe('ChartStringBreakdown', () => {
+  it('renders a tooltip label for the Balance table header', () => {
+    render(
+      <ChartStringBreakdown
+        employeeId="123"
+        projectNumber="P1"
+        records={[createProject()]}
+      />
+    );
+
+    const balanceHeaders = screen.getAllByText('Balance');
+    const balanceLabel = balanceHeaders[0];
+    const balanceTooltip = balanceLabel.parentElement;
+
+    expect(balanceTooltip).toHaveAttribute('data-tip', tooltipDefinitions.balance);
+    expect(balanceTooltip).toHaveAttribute('tabIndex', '0');
+    expect(balanceTooltip).toHaveClass(
+      'tooltip',
+      'tooltip-bottom',
+      'inline-block',
+      'tooltip-trigger'
+    );
+    expect(balanceLabel).toHaveClass('tooltip-label');
+  });
+});

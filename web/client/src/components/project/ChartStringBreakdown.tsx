@@ -4,6 +4,8 @@ import { createColumnHelper } from '@tanstack/react-table';
 import { formatCurrency } from '@/lib/currency.ts';
 import type { ProjectRecord } from '@/queries/project.ts';
 import { DataTable } from '@/shared/DataTable.tsx';
+import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
+import { tooltipDefinitions } from '@/shared/tooltips.ts';
 
 interface ChartStringRow {
   activityCode: string;
@@ -185,7 +187,15 @@ export function ChartStringBreakdown({ employeeId, projectNumber, records }: Cha
             {formatCurrency(totals.balance)}
           </span>
         ),
-        header: () => <span className="flex justify-end">Balance</span>,
+        header: () => (
+          <span className="flex justify-end w-full">
+            <TooltipLabel
+              label="Balance"
+              placement="bottom"
+              tooltip={tooltipDefinitions.balance}
+            />
+          </span>
+        ),
       }),
       columnHelper.display({
         cell: (info) => {
