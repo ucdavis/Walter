@@ -4,6 +4,8 @@ import { createColumnHelper } from '@tanstack/react-table';
 import { formatCurrency } from '@/lib/currency.ts';
 import type { ProjectRecord } from '@/queries/project.ts';
 import { DataTable } from '@/shared/DataTable.tsx';
+import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
+import { tooltipDefinitions } from '@/shared/tooltips.ts';
 
 interface ChartStringRow {
   activityCode: string;
@@ -130,7 +132,13 @@ export function ChartStringBreakdown({ employeeId, projectNumber, records }: Cha
       }),
       columnHelper.accessor('expenditureCategoryName', {
         cell: (info) => <span>{info.getValue() || '-'}</span>,
-        header: 'Expenditure Category',
+        header: () => (
+          <TooltipLabel
+            label="Expenditure Category"
+            placement="bottom"
+            tooltip={tooltipDefinitions.expenditureCategory}
+          />
+        ),
       }),
       columnHelper.accessor('budget', {
         cell: (info) => (
@@ -169,7 +177,15 @@ export function ChartStringBreakdown({ employeeId, projectNumber, records }: Cha
             {formatCurrency(totals.commitments)}
           </span>
         ),
-        header: () => <span className="flex justify-end">Commitments</span>,
+        header: () => (
+          <span className="flex justify-end w-full">
+            <TooltipLabel
+              label="Commitments"
+              placement="bottom"
+              tooltip={tooltipDefinitions.commitment}
+            />
+          </span>
+        ),
       }),
       columnHelper.accessor('balance', {
         cell: (info) => {
@@ -185,7 +201,15 @@ export function ChartStringBreakdown({ employeeId, projectNumber, records }: Cha
             {formatCurrency(totals.balance)}
           </span>
         ),
-        header: () => <span className="flex justify-end">Balance</span>,
+        header: () => (
+          <span className="flex justify-end w-full">
+            <TooltipLabel
+              label="Balance"
+              placement="bottom"
+              tooltip={tooltipDefinitions.balance}
+            />
+          </span>
+        ),
       }),
       columnHelper.display({
         cell: (info) => {

@@ -102,6 +102,24 @@
   .nav-link[data-status='active'] {
     @apply text-base-content border-primary-color;
   }
+
+  .tooltip-trigger {
+    @apply inline-flex items-center cursor-help focus:outline-none focus-visible:rounded-xs focus-visible:ring-2 focus-visible:ring-primary/30;
+  }
+
+  .tooltip-label {
+    @apply decoration-dotted underline underline-offset-4;
+  }
+
+  .floating-tooltip {
+    @apply pointer-events-none z-[200] max-w-sm rounded bg-neutral px-2 py-1 text-sm leading-tight text-neutral-content shadow-lg;
+    position: relative;
+  }
+
+  .floating-tooltip-arrow {
+    @apply absolute h-2.5 w-2.5 rotate-45 bg-neutral;
+  }
+
   [cmdk-root] {
     @apply flex flex-col;
   }

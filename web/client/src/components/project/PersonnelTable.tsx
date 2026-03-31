@@ -10,6 +10,8 @@ import { formatCurrency } from '@/lib/currency.ts';
 import { formatDate } from '@/lib/date.ts';
 import type { PersonnelRecord } from '@/queries/personnel.ts';
 import { DataTable } from '@/shared/DataTable.tsx';
+import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
+import { tooltipDefinitions } from '@/shared/tooltips.ts';
 
 function isEndingSoon(dateStr: string | null): boolean {
   if (!dateStr) {
@@ -56,7 +58,8 @@ export interface AggregatedPosition {
 function aggregateDistribution(
   record: PersonnelRecord
 ): AggregatedDistribution {
-  const monthlyRate = record.monthlyRate * record.fte * (record.distributionPercent / 100);
+  const monthlyRate =
+    record.monthlyRate * record.fte * (record.distributionPercent / 100);
   const monthlyFringe = monthlyRate * record.compositeBenefitRate;
   return {
     fundingEndingSoon: isEndingSoon(record.fundingEndDate),
@@ -139,7 +142,13 @@ function DistributionSubtable({
           <tr>
             <th>Project</th>
             <th>
-              <span className="flex justify-end w-full">Dist %</span>
+              <span className="flex justify-end w-full">
+                <TooltipLabel
+                  label="Dist %"
+                  placement="bottom"
+                  tooltip={tooltipDefinitions.distributionPercent}
+                />
+              </span>
             </th>
             <th>
               <span className="flex justify-end w-full">Funding Effective</span>
@@ -151,7 +160,13 @@ function DistributionSubtable({
               <span className="flex justify-end w-full">Salary</span>
             </th>
             <th>
-              <span className="flex justify-end w-full">CBR</span>
+              <span className="flex justify-end w-full">
+                <TooltipLabel
+                  label="CBR"
+                  placement="bottom"
+                  tooltip={tooltipDefinitions.cbr}
+                />
+              </span>
             </th>
             <th>
               <span className="flex justify-end w-full">Monthly Total</span>
@@ -312,7 +327,15 @@ export function PersonnelTable({
         cell: (info) => (
           <span className="flex justify-end">{info.getValue()}</span>
         ),
-        header: () => <span className="flex justify-end w-full">FTE</span>,
+        header: () => (
+          <span className="flex justify-end w-full">
+            <TooltipLabel
+              label="FTE"
+              placement="bottom"
+              tooltip={tooltipDefinitions.fte}
+            />
+          </span>
+        ),
       }),
       columnHelper.accessor('jobEffectiveDate', {
         cell: (info) => (
@@ -390,7 +413,13 @@ export function PersonnelTable({
             )
           : undefined,
         header: () => (
-          <span className="flex justify-end w-full">Monthly CBR</span>
+          <span className="flex justify-end w-full">
+            <TooltipLabel
+              label="Monthly CBR"
+              placement="bottom"
+              tooltip={tooltipDefinitions.monthlyCbr}
+            />
+          </span>
         ),
       }),
       columnHelper.accessor('monthlyTotal', {

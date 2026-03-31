@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { ProjectAdditionalInfo } from '@/components/project/ProjectAdditionalInfo.tsx';
+import { tooltipDefinitions } from '@/shared/tooltips.ts';
 import type { ProjectSummary } from '@/lib/projectSummary.ts';
 
 afterEach(cleanup);
@@ -37,7 +38,7 @@ const createSummary = (
   projectNumber: 'K30ABC123',
   projectStatusCode: 'ACTIVE',
   sponsorAwardNumber: 'NSF-2024-001',
-  totals: { balance: 4000, budget: 10000, encumbrance: 1000, expense: 5000 },
+  totals: { balance: 4000, budget: 10_000, encumbrance: 1000, expense: 5000 },
   ...overrides,
 });
 
@@ -135,5 +136,31 @@ describe('ProjectAdditionalInfo', () => {
 
     expect(screen.getByText('12.31.2026')).toBeInTheDocument();
     expect(screen.getByText('01.01.2024')).toBeInTheDocument();
+  });
+
+  it('shows a tooltip for Burden Schedule Rate', async () => {
+    const user = userEvent.setup();
+    render(<ProjectAdditionalInfo isProjectManager={false} summary={createSummary()} />);
+
+    const label = screen.getByText('Burden Schedule Rate');
+    await user.hover(label.parentElement as HTMLElement);
+
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+      tooltipDefinitions.burdenScheduleRate
+    );
+  });
+
+  it('shows tooltips for secondary award fields after expansion', async () => {
+    const user = userEvent.setup();
+    render(<ProjectAdditionalInfo isProjectManager={true} summary={createSummary()} />);
+
+    await user.click(screen.getByRole('button', { name: 'Show more' }));
+
+    const label = screen.getByText('Billing Cycle');
+    await user.hover(label.parentElement as HTMLElement);
+
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+      tooltipDefinitions.billingCycle
+    );
   });
 });

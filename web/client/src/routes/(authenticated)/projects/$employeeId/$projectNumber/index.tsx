@@ -15,6 +15,8 @@ import {
 } from '@/queries/project.ts';
 
 import { useUser } from '@/shared/auth/UserContext.tsx';
+import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
+import { tooltipDefinitions } from '@/shared/tooltips.ts';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import ProjectAdditionalInfo from '@/components/project/ProjectAdditionalInfo.tsx';
@@ -84,7 +86,12 @@ function ProjectContent({
       <FinancialDetails summary={summary} />
 
       <section className="section-margin">
-        <h2 className="h2">Chart String Breakdown</h2>
+        <h2 className="h2">
+          <TooltipLabel
+            label="Chart String Breakdown"
+            tooltip={tooltipDefinitions.chartStringBreakdown}
+          />
+        </h2>
         <div className="mt-4">
           <ChartStringBreakdown employeeId={employeeId} projectNumber={summary.projectNumber} records={projectRecords} />
         </div>

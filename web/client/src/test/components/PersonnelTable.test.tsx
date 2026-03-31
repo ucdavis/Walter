@@ -6,6 +6,7 @@ import {
   PersonnelTable,
 } from '@/components/project/PersonnelTable.tsx';
 import { PersonnelRecord } from '@/queries/personnel.ts';
+import { tooltipDefinitions } from '@/shared/tooltips.ts';
 
 afterEach(() => {
   cleanup();
@@ -28,8 +29,8 @@ const createRecord = (
   name: 'Smith, John',
   positionDescription: 'PROF-FY',
   positionNumber: '40001234',
-  projectId: 'PROJ1',
   projectDescription: 'Test Project',
+  projectId: 'PROJ1',
   ...overrides,
 });
 
@@ -137,20 +138,38 @@ describe('PersonnelTable', () => {
     expect(screen.getByText('0.75')).toBeInTheDocument();
   });
 
+  it('shows a tooltip on the FTE header', async () => {
+    const user = userEvent.setup();
+    render(<PersonnelTable data={[createRecord()]} />);
+
+    const fteHeader = screen.getByText('FTE');
+    const fteTrigger = fteHeader.parentElement as HTMLElement;
+
+    expect(fteTrigger).toHaveAttribute('data-tooltip-placement', 'bottom');
+    expect(fteTrigger).toHaveAttribute('tabIndex', '0');
+    expect(fteHeader).toHaveClass('tooltip-label');
+
+    await user.hover(fteTrigger);
+
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+      tooltipDefinitions.fte
+    );
+  });
+
   it('displays totals in footer', () => {
     const records = [
       createRecord({
-        employeeId: '1001',
-        positionNumber: '40001234',
-        monthlyRate: 5000,
         compositeBenefitRate: 0.4,
+        employeeId: '1001',
+        monthlyRate: 5000,
+        positionNumber: '40001234',
       }), // monthly: 5000, fringe: 2000
       createRecord({
+        compositeBenefitRate: 0.4,
         employeeId: '1002',
+        monthlyRate: 4000,
         name: 'Doe, Jane',
         positionNumber: '40005678',
-        monthlyRate: 4000,
-        compositeBenefitRate: 0.4,
       }), // monthly: 4000, fringe: 1600
     ];
 
@@ -200,14 +219,49 @@ describe('PersonnelTable', () => {
     expect(screen.getByText('Test Project')).toBeInTheDocument();
   });
 
+  it('shows a tooltip on the Monthly CBR header', async () => {
+    const user = userEvent.setup();
+    render(<PersonnelTable data={[createRecord()]} />);
+
+    const label = screen.getByText('Monthly CBR');
+    await user.hover(label.parentElement as HTMLElement);
+
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+      tooltipDefinitions.monthlyCbr
+    );
+  });
+
+  it('shows tooltips in the funding distribution subtable', async () => {
+    const user = userEvent.setup();
+    render(<PersonnelTable data={[createRecord({ projectDescription: 'Test Project' })]} />);
+
+    await user.click(
+      screen.getByRole('cell', { name: 'Smith, John (1001) - PROF-FY' })
+    );
+
+    const distLabel = screen.getByText('Dist %');
+    await user.hover(distLabel.parentElement as HTMLElement);
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+      tooltipDefinitions.distributionPercent
+    );
+
+    await user.unhover(distLabel.parentElement as HTMLElement);
+
+    const cbrLabel = screen.getByText('CBR');
+    await user.hover(cbrLabel.parentElement as HTMLElement);
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+      tooltipDefinitions.cbr
+    );
+  });
+
   it('hides unfilled positions by default', () => {
     const records = [
       createRecord({ name: 'Smith, John', positionNumber: '40001234' }),
       createRecord({
         employeeId: '',
         name: '',
-        positionNumber: '40005678',
         positionDescription: 'STDT 3',
+        positionNumber: '40005678',
       }),
     ];
 
@@ -224,8 +278,8 @@ describe('PersonnelTable', () => {
       createRecord({
         employeeId: '',
         name: '',
-        positionNumber: '40005678',
         positionDescription: 'STDT 3',
+        positionNumber: '40005678',
       }),
     ];
 
