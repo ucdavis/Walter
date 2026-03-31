@@ -113,3 +113,49 @@ export function getPiProjectAlerts(
     return a.balance - b.balance;
   });
 }
+
+/**
+ * Generate alerts for a flat list of projects belonging to a single user.
+ * Filters to active projects, groups by project number, and returns sorted alerts.
+ */
+export function getProjectListAlerts(
+  projects: ProjectRecord[],
+  employeeId: string
+): PiProjectAlert[] {
+  const now = new Date();
+  const active = projects.filter(
+    (p) => !p.awardEndDate || new Date(p.awardEndDate) >= now
+  );
+
+  const byNumber = new Map<string, ProjectRecord[]>();
+  for (const p of active) {
+    const group = byNumber.get(p.projectNumber) ?? [];
+    group.push(p);
+    byNumber.set(p.projectNumber, group);
+  }
+
+  const alerts: PiProjectAlert[] = [];
+  for (const [projectNumber, records] of byNumber) {
+    const summary = summarizeProjectByNumber(records, projectNumber);
+    if (!summary) continue;
+
+    for (const alert of getAlertsForProject(
+      summary,
+      `${summary.projectNumber} ${summary.displayName} `
+    )) {
+      alerts.push({
+        ...alert,
+        balance: summary.totals.balance,
+        piEmployeeId: employeeId,
+        projectNumber,
+      });
+    }
+  }
+
+  return alerts.sort((a, b) => {
+    if (a.severity !== b.severity) {
+      return a.severity === 'error' ? -1 : 1;
+    }
+    return a.balance - b.balance;
+  });
+}

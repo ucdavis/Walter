@@ -3,9 +3,11 @@ import {
   PiProjectAlerts,
   usePiProjectAlerts,
 } from '@/components/alerts/PiProjectAlerts.tsx';
+import { AlertCard } from '@/components/alerts/ProjectAlerts.tsx';
 import { PrincipalInvestigatorsTable } from '@/components/project/PrincipalInvestigatorsTable.tsx';
 import { ProjectsTable } from '@/components/project/ProjectsTable.tsx';
 import { SearchButton } from '@/components/search/SearchButton.tsx';
+import { getProjectListAlerts } from '@/lib/projectAlerts.ts';
 import {
   useManagedPisQuery,
   projectsDetailQueryOptions,
@@ -41,8 +43,18 @@ function RouteComponent() {
   const isPrincipalInvestigator =
     !isProjectManager && (userProjectsQuery.data?.length ?? 0) > 0;
 
-  const { alerts: piAlerts, isLoading: alertsLoading } =
+  const { alerts: pmAlerts, isLoading: alertsLoading } =
     usePiProjectAlerts(managedPis);
+
+  const piAlerts = useMemo(
+    () =>
+      isPrincipalInvestigator && userProjectsQuery.data
+        ? getProjectListAlerts(userProjectsQuery.data, user.employeeId)
+        : [],
+    [isPrincipalInvestigator, userProjectsQuery.data, user.employeeId]
+  );
+
+  const allAlerts = isProjectManager ? pmAlerts : piAlerts;
 
   const showPiTab = isProjectManager;
   const showProjectsTab = isPrincipalInvestigator;
@@ -138,9 +150,9 @@ function RouteComponent() {
                 )}
                 {tab.id === 'alerts' &&
                   !alertsLoading &&
-                  piAlerts.length > 0 && (
+                  allAlerts.length > 0 && (
                     <span className="badge badge-sm badge-warning ms-2">
-                      {piAlerts.length}
+                      {allAlerts.length}
                     </span>
                   )}
               </button>
@@ -170,6 +182,21 @@ function RouteComponent() {
         <div aria-labelledby="tab-alerts" id="panel-alerts" role="tabpanel">
           {isProjectManager && (
             <PiProjectAlerts managedPis={managedPis} />
+          )}
+          {isPrincipalInvestigator && piAlerts.length > 0 && (
+            <div className="mt-4 flex flex-col gap-4">
+              {piAlerts.map((alert) => (
+                <AlertCard
+                  alert={alert}
+                  balance={alert.balance}
+                  key={alert.id}
+                  linkParams={{
+                    employeeId: alert.piEmployeeId,
+                    projectNumber: alert.projectNumber,
+                  }}
+                />
+              ))}
+            </div>
           )}
         </div>
       )}
