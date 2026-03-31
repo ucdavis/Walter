@@ -124,7 +124,7 @@ function RouteComponent() {
       {internalProjects.length > 0 && (
         <section className="section-margin">
           <h2 className="h2">Internal Projects</h2>
-          <p className="subtitle">Financials from GL</p>
+          <p className="subtitle">Financials from General Ledger</p>
           <InternalProjectsTable
             discrepancies={discrepancies}
             employeeId={employeeId}

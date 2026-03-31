@@ -12,13 +12,13 @@ export function FinancialDetails({ summary }: FinancialDetailsProps) {
 
       <dl className="grid gap-4 mt-4 mb-2 grid-cols-4">
         <div>
-          <dd className="stat-label">Budget{summary.isInternal ? ' (GL)' : ''}</dd>
+          <dd className="stat-label">Budget{summary.isInternal ? ' (General Ledger)' : ''}</dd>
           <dt className="stat-value">
             <Currency value={summary.totals.budget} />
           </dt>
         </div>
         <div>
-          <dd className="stat-label">Expense{summary.isInternal ? ' (GL)' : ''}</dd>
+          <dd className="stat-label">Expense{summary.isInternal ? ' (General Ledger)' : ''}</dd>
           <dt className="stat-value">
             <Currency value={summary.totals.expense} />
           </dt>
