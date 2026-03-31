@@ -135,6 +135,46 @@ describe('project detail page', () => {
     }
   });
 
+  it('shows General Ledger data source and chart string breakdown for internal projects', async () => {
+    const projects = [
+      createProject({ projectType: 'Internal', projectNumber: 'P2' }),
+    ];
+    setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);
+
+    const { cleanup } = renderRoute({
+      initialPath: '/projects/1000/P2',
+    });
+
+    try {
+      expect(
+        await screen.findByText('Data source: General Ledger')
+      ).toBeInTheDocument();
+      expect(screen.getByText('Chart String Breakdown')).toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('shows PPM data source and hides chart string breakdown for sponsored projects', async () => {
+    const projects = [createProject()];
+    setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);
+
+    const { cleanup } = renderRoute({
+      initialPath: '/projects/1000/P1',
+    });
+
+    try {
+      expect(
+        await screen.findByText('Data source: PPM')
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByText('Chart String Breakdown')
+      ).not.toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+
   it('shows an authorization error inside the projects layout for forbidden portfolios', async () => {
     server.use(
       http.get('/api/user/me', () =>
