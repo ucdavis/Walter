@@ -18,8 +18,6 @@ interface ChartStringRow {
   fundDesc: string;
   programCode: string;
   programDesc: string;
-  taskName: string;
-  taskNum: string;
 }
 
 const columnHelper = createColumnHelper<ChartStringRow>();
@@ -31,8 +29,7 @@ function buildRows(records: ProjectRecord[]): ChartStringRow[] {
     const fund = r.fundCode ?? '';
     const program = r.programCode ?? '';
     const activity = r.activityCode ?? '';
-    const task = r.taskNum ?? '';
-    const key = `${task}|${fund}|${program}|${activity}`;
+    const key = `${fund}|${program}|${activity}`;
 
     const existing = map.get(key);
     if (existing) {
@@ -54,8 +51,6 @@ function buildRows(records: ProjectRecord[]): ChartStringRow[] {
         fundDesc: r.fundDesc,
         programCode: program,
         programDesc: r.programDesc,
-        taskName: r.taskName ?? '',
-        taskNum: task,
       });
     }
   }
@@ -100,12 +95,6 @@ export function ChartStringBreakdown({ employeeId, projectNumber, records }: Cha
         footer: () => 'Totals',
         header: 'Financial Dept',
         minSize: 180,
-      }),
-      columnHelper.accessor('taskNum', {
-        cell: (info) => (
-          <span title={info.row.original.taskName}>{info.getValue()}</span>
-        ),
-        header: 'Task',
       }),
       columnHelper.accessor('fundCode', {
         cell: (info) => (

@@ -83,12 +83,14 @@ function ProjectContent({
       <ProjectAdditionalInfo isProjectManager={isProjectManager} summary={summary} />
       <FinancialDetails summary={summary} />
 
-      <section className="section-margin">
-        <h2 className="h2">Chart String Breakdown</h2>
-        <div className="mt-4">
-          <ChartStringBreakdown employeeId={employeeId} projectNumber={summary.projectNumber} records={projectRecords} />
-        </div>
-      </section>
+      {summary.isInternal && (
+        <section className="section-margin">
+          <h2 className="h2">Chart String Breakdown</h2>
+          <div className="mt-4">
+            <ChartStringBreakdown employeeId={employeeId} projectNumber={summary.projectNumber} records={projectRecords} />
+          </div>
+        </section>
+      )}
 
       <section className="section-margin">
         <h2 className="h2">Personnel</h2>
