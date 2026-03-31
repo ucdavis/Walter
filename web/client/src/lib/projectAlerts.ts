@@ -106,12 +106,10 @@ export function getPiProjectAlerts(
     }
   }
 
-  return alerts
-    .sort((a, b) => {
-      if (a.severity !== b.severity) {
-        return a.severity === 'error' ? -1 : 1;
-      }
-      return a.balance - b.balance;
-    })
-    .slice(0, 3);
+  return alerts.sort((a, b) => {
+    if (a.severity !== b.severity) {
+      return a.severity === 'error' ? -1 : 1;
+    }
+    return a.balance - b.balance;
+  });
 }

@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react';
-import { PiProjectAlerts } from '@/components/alerts/PiProjectAlerts.tsx';
+import {
+  PiProjectAlerts,
+  usePiProjectAlerts,
+} from '@/components/alerts/PiProjectAlerts.tsx';
 import { PrincipalInvestigatorsTable } from '@/components/project/PrincipalInvestigatorsTable.tsx';
 import { ProjectsTable } from '@/components/project/ProjectsTable.tsx';
-import { Reports } from '@/components/reports/Reports.tsx';
 import { SearchButton } from '@/components/search/SearchButton.tsx';
 import {
   useManagedPisQuery,
@@ -15,7 +17,7 @@ import { PageError } from '@/components/states/PageError.tsx';
 import { useQuery } from '@tanstack/react-query';
 import { getErrorPresentation } from '@/lib/errorPresentation.ts';
 
-type Tab = 'pis' | 'projects' | 'reports';
+type Tab = 'pis' | 'projects' | 'alerts';
 
 export const Route = createFileRoute('/(authenticated)/')({
   component: RouteComponent,
@@ -39,6 +41,9 @@ function RouteComponent() {
   const isPrincipalInvestigator =
     !isProjectManager && (userProjectsQuery.data?.length ?? 0) > 0;
 
+  const { alerts: piAlerts, isLoading: alertsLoading } =
+    usePiProjectAlerts(managedPis);
+
   const showPiTab = isProjectManager;
   const showProjectsTab = isPrincipalInvestigator;
 
@@ -50,7 +55,9 @@ function RouteComponent() {
     if (showProjectsTab) {
       base.push({ id: 'projects', label: 'Projects' });
     }
-    base.push({ id: 'reports', label: 'Reports' });
+    if (showPiTab || showProjectsTab) {
+      base.push({ id: 'alerts', label: 'Alerts' });
+    }
     return base;
   }, [showPiTab, showProjectsTab]);
 
@@ -58,7 +65,7 @@ function RouteComponent() {
     ? 'pis'
     : showProjectsTab
       ? 'projects'
-      : 'reports';
+      : 'alerts';
 
   const selectedTab = tabs.some((t) => t.id === activeTab)
     ? activeTab
@@ -109,9 +116,7 @@ function RouteComponent() {
         <SearchButton className="w-full" />
       </div>
 
-      {isProjectManager && <PiProjectAlerts managedPis={managedPis} />}
-
-      {tabs.length > 1 && (
+      {tabs.length > 0 && (
         <div className="tabs mt-16" role="tablist">
           {tabs.map((tab, index) => {
             const tabId = `tab-${tab.id}`;
@@ -128,6 +133,16 @@ function RouteComponent() {
                 type="button"
               >
                 {tab.label}
+                {tab.id === 'alerts' && alertsLoading && (
+                  <span className="loading loading-spinner loading-xs ms-2" />
+                )}
+                {tab.id === 'alerts' &&
+                  !alertsLoading &&
+                  piAlerts.length > 0 && (
+                    <span className="badge badge-sm badge-warning ms-2">
+                      {piAlerts.length}
+                    </span>
+                  )}
               </button>
             );
           })}
@@ -151,16 +166,11 @@ function RouteComponent() {
         </div>
       )}
 
-      {tabs.length > 1 && selectedTab === 'reports' && (
-        <div aria-labelledby="tab-reports" id="panel-reports" role="tabpanel">
-          <Reports />
-        </div>
-      )}
-
-      {tabs.length === 1 && (
-        <div className="mt-16">
-          <h2 className="h2">Reports</h2>
-          <Reports />
+      {selectedTab === 'alerts' && (
+        <div aria-labelledby="tab-alerts" id="panel-alerts" role="tabpanel">
+          {isProjectManager && (
+            <PiProjectAlerts managedPis={managedPis} />
+          )}
         </div>
       )}
     </div>

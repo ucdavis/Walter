@@ -184,7 +184,7 @@ describe('home route', () => {
     }
   });
 
-  it('shows reports only when user is neither PM nor PI', async () => {
+  it('shows no tabs when user is neither PM nor PI', async () => {
     const user = {
       email: 'alpha@example.com',
       employeeId: '1000',
@@ -210,54 +210,13 @@ describe('home route', () => {
         screen.queryByRole('tab', { name: 'Principal Investigators' })
       ).not.toBeInTheDocument();
       expect(screen.queryByRole('tab', { name: 'Projects' })).not.toBeInTheDocument();
-      expect(screen.queryByRole('tab', { name: 'Reports' })).not.toBeInTheDocument();
-
-      expect(screen.getByRole('heading', { name: 'Reports' })).toBeInTheDocument();
+      expect(screen.queryByRole('tab', { name: /Alerts/ })).not.toBeInTheDocument();
     } finally {
       cleanup();
     }
   });
 
-  it('hides accruals link in reports tab when user lacks AccrualViewer role', async () => {
-    const managedPis = [
-      { employeeId: '2001', name: 'PI One', projectCount: 1 },
-    ];
-
-    const user = {
-      email: 'alpha@example.com',
-      employeeId: '1000',
-      id: 'user-1',
-      kerberos: 'alpha',
-      name: 'Alpha User',
-      roles: [],
-    };
-
-    server.use(
-      http.get('/api/user/me', () => HttpResponse.json(user)),
-      http.get('/api/project/managed/:employeeId', () =>
-        HttpResponse.json(managedPis)
-      ),
-      http.get('/api/project/:employeeId', () => HttpResponse.json([])),
-      http.get('/api/project/personnel', () => HttpResponse.json([])),
-    );
-
-    const ue = userEvent.setup();
-    const { cleanup } = renderRoute({ initialPath: '/' });
-
-    try {
-      await screen.findByText('PI One');
-
-      await ue.click(screen.getByRole('tab', { name: 'Reports' }));
-
-      expect(
-        screen.queryByText('Employee Vacation Accruals')
-      ).not.toBeInTheDocument();
-    } finally {
-      cleanup();
-    }
-  });
-
-  it('switches between all tabs', async () => {
+  it('switches between PIs and Alerts tabs', async () => {
     const managedPis = [
       { employeeId: '2001', name: 'PI One', projectCount: 2 },
     ];
@@ -300,12 +259,9 @@ describe('home route', () => {
         screen.getByRole('tab', { name: 'Principal Investigators' })
       ).toHaveAttribute('aria-selected', 'true');
 
-      // Click Reports tab
-      await user.click(screen.getByRole('tab', { name: 'Reports' }));
-      expect(
-        screen.getByText('Employee Vacation Accruals')
-      ).toBeInTheDocument();
-      expect(screen.getByRole('tab', { name: 'Reports' })).toHaveAttribute(
+      // Click Alerts tab
+      await user.click(screen.getByRole('tab', { name: /Alerts/ }));
+      expect(screen.getByRole('tab', { name: /Alerts/ })).toHaveAttribute(
         'aria-selected',
         'true'
       );
@@ -428,7 +384,7 @@ describe('getPiProjectAlerts', () => {
     expect(alerts[1].severity).toBe('warning');
   });
 
-  it('limits to 3 alerts', () => {
+  it('returns all alerts without limit', () => {
     const pis = [
       createPi('1', [
         {
@@ -464,6 +420,6 @@ describe('getPiProjectAlerts', () => {
 
     const alerts = getPiProjectAlerts(pis);
 
-    expect(alerts).toHaveLength(3);
+    expect(alerts).toHaveLength(4);
   });
 });
