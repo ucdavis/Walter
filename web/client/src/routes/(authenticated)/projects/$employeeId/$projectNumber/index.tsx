@@ -66,7 +66,7 @@ function ProjectContent({
         </div>
         <h1 className="h1">{summary.displayName}</h1>
         <h3 className="subtitle">
-          Data source: Faculty Department Portfolio Report (PPM)
+          Data source: {summary.isInternal ? 'GL' : 'PPM'}
         </h3>
         <div className="mt-6">
           <ProjectAlerts

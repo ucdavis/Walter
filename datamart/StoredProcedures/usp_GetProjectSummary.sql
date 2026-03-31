@@ -1,4 +1,4 @@
-CREATE PROCEDURE dbo.usp_GetFacultyDeptPortfolio
+CREATE PROCEDURE dbo.usp_GetProjectSummary
     @ProjectIds VARCHAR(MAX) = NULL,
     @StartDate DATE = NULL,
     @EndDate DATE = NULL,
@@ -150,94 +150,72 @@ BEGIN
         -- Sponsored: full detail rows, GL columns = NULL
         SET @TSQLCommand = @TSQLCommand + N'
             SELECT
-                CAST(f.AWARD_NUMBER AS NVARCHAR(MAX)) AS AWARD_NUMBER,
-                CAST(f.AWARD_NAME AS NVARCHAR(MAX)) AS AWARD_NAME,
-                CAST(f.AWARD_TYPE AS NVARCHAR(MAX)) AS AWARD_TYPE,
-                f.AWARD_START_DATE, f.AWARD_END_DATE,
-                CAST(f.AWARD_STATUS AS NVARCHAR(MAX)) AS AWARD_STATUS,
-                CAST(f.PROJECT_NUMBER AS NVARCHAR(MAX)) AS PROJECT_NUMBER,
-                CAST(f.PROJECT_NAME AS NVARCHAR(MAX)) AS PROJECT_NAME,
-                CAST(f.PRJ_OWNING_CD AS NVARCHAR(MAX)) AS PROJECT_OWNING_ORG_CODE,
-                CASE WHEN CHARINDEX('' - '', CAST(f.PRJ_OWNING_ORG AS NVARCHAR(MAX))) > 0
-                    THEN STUFF(CAST(f.PRJ_OWNING_ORG AS NVARCHAR(MAX)), 1,
-                         CHARINDEX('' - '', CAST(f.PRJ_OWNING_ORG AS NVARCHAR(MAX))) + 2, '''')
-                    ELSE CAST(f.PRJ_OWNING_ORG AS NVARCHAR(MAX))
+                f.AWARD_NUMBER, f.AWARD_NAME, f.AWARD_TYPE,
+                f.AWARD_START_DATE, f.AWARD_END_DATE, f.AWARD_STATUS,
+                f.PROJECT_NUMBER, f.PROJECT_NAME,
+                f.PRJ_OWNING_CD AS PROJECT_OWNING_ORG_CODE,
+                CASE WHEN CHARINDEX('' - '', f.PRJ_OWNING_ORG) > 0
+                    THEN STUFF(f.PRJ_OWNING_ORG, 1,
+                         CHARINDEX('' - '', f.PRJ_OWNING_ORG) + 2, '''')
+                    ELSE f.PRJ_OWNING_ORG
                 END AS PROJECT_OWNING_ORG,
-                CAST(f.PROJECT_TYPE AS NVARCHAR(MAX)) AS PROJECT_TYPE,
-                CAST(f.PROJECT_STATUS_CODE AS NVARCHAR(MAX)) AS PROJECT_STATUS,
-                CAST(f.TASK_NUM AS NVARCHAR(MAX)) AS TASK_NUM,
-                CAST(f.TASK_NAME AS NVARCHAR(MAX)) AS TASK_NAME,
-                CAST(f.TASK_STATUS AS NVARCHAR(MAX)) AS TASK_STATUS,
-                CAST(f.PM AS NVARCHAR(MAX)) AS PM,
-                CAST(f.PA AS NVARCHAR(MAX)) AS PA,
-                CAST(f.PI AS NVARCHAR(MAX)) AS PI,
-                CAST(f.COPI AS NVARCHAR(MAX)) AS COPI,
-                CAST(f.EXPENDITURE_CATEGORY_NAME AS NVARCHAR(MAX)) AS EXPENDITURE_CATEGORY_NAME,
-                CAST(f.FUND_CD AS NVARCHAR(MAX)) AS FUND_CODE,
-                CAST(f.FUND_DESC AS NVARCHAR(MAX)) AS FUND_DESC,
-                CAST(f.PURPOSE_CD AS NVARCHAR(MAX)) AS PURPOSE_CODE,
-                CAST(f.PURPOSE_DESC AS NVARCHAR(MAX)) AS PURPOSE_DESC,
-                CAST(f.PROGRAM_CD AS NVARCHAR(MAX)) AS PROGRAM_CODE,
-                CAST(f.PROGRAM_DESC AS NVARCHAR(MAX)) AS PROGRAM_DESC,
-                CAST(f.ACTIVITY_CD AS NVARCHAR(MAX)) AS ACTIVITY_CODE,
-                CAST(f.ACTIVITY_DESC AS NVARCHAR(MAX)) AS ACTIVITY_DESC,
+                f.PROJECT_TYPE, f.PROJECT_STATUS_CODE AS PROJECT_STATUS,
+                f.TASK_NUM, f.TASK_NAME, f.TASK_STATUS,
+                f.PM, f.PA, f.PI, f.COPI,
+                f.EXPENDITURE_CATEGORY_NAME,
+                f.FUND_CD AS FUND_CODE, f.FUND_DESC,
+                f.PURPOSE_CD AS PURPOSE_CODE, f.PURPOSE_DESC,
+                f.PROGRAM_CD AS PROGRAM_CODE, f.PROGRAM_DESC,
+                f.ACTIVITY_CD AS ACTIVITY_CODE, f.ACTIVITY_DESC,
                 f.CAT_BUDGET AS PPM_BUDGET, f.CAT_ITD_EXP AS PPM_EXPENSES,
                 f.CAT_COMMITMENTS AS PPM_COMMITMENTS, f.CAT_BUD_BAL AS PPM_BUD_BAL,
                 CAST(NULL AS DECIMAL) AS GL_BEGINNING_BALANCE,
                 CAST(NULL AS DECIMAL) AS GL_REVENUE,
                 CAST(NULL AS DECIMAL) AS GL_EXPENSES,
-                CAST(p.award_close_date AS NVARCHAR(MAX)) AS AWARD_CLOSE_DATE,
-                CAST(p.award_pi AS NVARCHAR(MAX)) AS AWARD_PI,
-                CAST(p.billing_cycle AS NVARCHAR(MAX)) AS BILLING_CYCLE,
-                CAST(p.project_burden_schedule_base AS NVARCHAR(MAX)) AS PROJECT_BURDEN_SCHEDULE_BASE,
-                CAST(p.project_burden_cost_rate AS NVARCHAR(MAX)) AS PROJECT_BURDEN_COST_RATE,
-                CAST(p.cost_share_required_by_sponsor AS NVARCHAR(MAX)) AS COST_SHARE_REQUIRED_BY_SPONSOR,
-                CAST(p.grant_administrator AS NVARCHAR(MAX)) AS GRANT_ADMINISTRATOR,
-                CAST(p.post_reporting_period AS NVARCHAR(MAX)) AS POST_REPORTING_PERIOD,
-                CAST(p.primary_sponsor_name AS NVARCHAR(MAX)) AS PRIMARY_SPONSOR_NAME,
-                CAST(p.project_fund AS NVARCHAR(MAX)) AS PROJECT_FUND,
-                CAST(p.contract_administrator AS NVARCHAR(MAX)) AS CONTRACT_ADMINISTRATOR,
-                CAST(p.sponsor_award_number AS NVARCHAR(MAX)) AS SPONSOR_AWARD_NUMBER
+                p.award_close_date AS AWARD_CLOSE_DATE,
+                p.award_pi AS AWARD_PI,
+                p.billing_cycle AS BILLING_CYCLE,
+                p.project_burden_schedule_base AS PROJECT_BURDEN_SCHEDULE_BASE,
+                p.project_burden_cost_rate AS PROJECT_BURDEN_COST_RATE,
+                p.cost_share_required_by_sponsor AS COST_SHARE_REQUIRED_BY_SPONSOR,
+                p.grant_administrator AS GRANT_ADMINISTRATOR,
+                p.post_reporting_period AS POST_REPORTING_PERIOD,
+                p.primary_sponsor_name AS PRIMARY_SPONSOR_NAME,
+                p.project_fund AS PROJECT_FUND,
+                p.contract_administrator AS CONTRACT_ADMINISTRATOR,
+                p.sponsor_award_number AS SPONSOR_AWARD_NUMBER
             FROM faculty f
             LEFT JOIN pgm p ON f.PROJECT_NUMBER = p.project_number AND f.AWARD_NUMBER = p.award_number
-            WHERE CAST(f.PROJECT_TYPE AS NVARCHAR(MAX)) <> ''Internal''
+            WHERE f.PROJECT_TYPE <> ''Internal''
             ';
 
         -- Internal: chart-string level with GL values
         SET @TSQLCommand = @TSQLCommand + N'
             UNION ALL
             SELECT
-                CAST(ppm.AWARD_NUMBER AS NVARCHAR(MAX)) AS AWARD_NUMBER,
-                CAST(ppm.AWARD_NAME AS NVARCHAR(MAX)) AS AWARD_NAME,
-                CAST(ppm.AWARD_TYPE AS NVARCHAR(MAX)) AS AWARD_TYPE,
-                ppm.AWARD_START_DATE, ppm.AWARD_END_DATE,
-                CAST(ppm.AWARD_STATUS AS NVARCHAR(MAX)) AS AWARD_STATUS,
-                COALESCE(CAST(ppm.PROJECT_NUMBER AS NVARCHAR(MAX)), CAST(g.PROJECT AS NVARCHAR(MAX))) AS PROJECT_NUMBER,
-                CAST(ppm.PROJECT_NAME AS NVARCHAR(MAX)) AS PROJECT_NAME,
-                CAST(ppm.PRJ_OWNING_CD AS NVARCHAR(MAX)) AS PROJECT_OWNING_ORG_CODE,
-                CASE WHEN CHARINDEX('' - '', CAST(ppm.PRJ_OWNING_ORG AS NVARCHAR(MAX))) > 0
-                    THEN STUFF(CAST(ppm.PRJ_OWNING_ORG AS NVARCHAR(MAX)), 1,
-                         CHARINDEX('' - '', CAST(ppm.PRJ_OWNING_ORG AS NVARCHAR(MAX))) + 2, '''')
-                    ELSE CAST(ppm.PRJ_OWNING_ORG AS NVARCHAR(MAX))
+                ppm.AWARD_NUMBER, ppm.AWARD_NAME, ppm.AWARD_TYPE,
+                ppm.AWARD_START_DATE, ppm.AWARD_END_DATE, ppm.AWARD_STATUS,
+                COALESCE(ppm.PROJECT_NUMBER, g.PROJECT) AS PROJECT_NUMBER,
+                ppm.PROJECT_NAME,
+                ppm.PRJ_OWNING_CD AS PROJECT_OWNING_ORG_CODE,
+                CASE WHEN CHARINDEX('' - '', ppm.PRJ_OWNING_ORG) > 0
+                    THEN STUFF(ppm.PRJ_OWNING_ORG, 1,
+                         CHARINDEX('' - '', ppm.PRJ_OWNING_ORG) + 2, '''')
+                    ELSE ppm.PRJ_OWNING_ORG
                 END AS PROJECT_OWNING_ORG,
-                CAST(ppm.PROJECT_TYPE AS NVARCHAR(MAX)) AS PROJECT_TYPE,
-                CAST(ppm.PROJECT_STATUS_CODE AS NVARCHAR(MAX)) AS PROJECT_STATUS,
+                ppm.PROJECT_TYPE, ppm.PROJECT_STATUS_CODE AS PROJECT_STATUS,
                 CAST(NULL AS NVARCHAR(MAX)) AS TASK_NUM,
                 CAST(NULL AS NVARCHAR(MAX)) AS TASK_NAME,
                 CAST(NULL AS NVARCHAR(MAX)) AS TASK_STATUS,
-                CAST(ppm.PM AS NVARCHAR(MAX)) AS PM,
-                CAST(ppm.PA AS NVARCHAR(MAX)) AS PA,
-                CAST(ppm.PI AS NVARCHAR(MAX)) AS PI,
-                CAST(ppm.COPI AS NVARCHAR(MAX)) AS COPI,
+                ppm.PM, ppm.PA, ppm.PI, ppm.COPI,
                 CAST(''All Expenditures'' AS NVARCHAR(MAX)) AS EXPENDITURE_CATEGORY_NAME,
-                COALESCE(CAST(ppm.FUND_CD AS NVARCHAR(MAX)), CAST(g.FUND AS NVARCHAR(MAX))) AS FUND_CODE,
-                CAST(ppm.FUND_DESC AS NVARCHAR(MAX)) AS FUND_DESC,
-                CAST(ppm.PURPOSE_CD AS NVARCHAR(MAX)) AS PURPOSE_CODE,
-                CAST(ppm.PURPOSE_DESC AS NVARCHAR(MAX)) AS PURPOSE_DESC,
-                COALESCE(CAST(ppm.PROGRAM_CD AS NVARCHAR(MAX)), CAST(g.PROGRAM AS NVARCHAR(MAX))) AS PROGRAM_CODE,
-                CAST(ppm.PROGRAM_DESC AS NVARCHAR(MAX)) AS PROGRAM_DESC,
-                COALESCE(CAST(ppm.ACTIVITY_CD AS NVARCHAR(MAX)), CAST(g.ACTIVITY AS NVARCHAR(MAX))) AS ACTIVITY_CODE,
-                CAST(ppm.ACTIVITY_DESC AS NVARCHAR(MAX)) AS ACTIVITY_DESC,
+                COALESCE(ppm.FUND_CD, g.FUND) AS FUND_CODE,
+                ppm.FUND_DESC,
+                ppm.PURPOSE_CD AS PURPOSE_CODE, ppm.PURPOSE_DESC,
+                COALESCE(ppm.PROGRAM_CD, g.PROGRAM) AS PROGRAM_CODE,
+                ppm.PROGRAM_DESC,
+                COALESCE(ppm.ACTIVITY_CD, g.ACTIVITY) AS ACTIVITY_CODE,
+                ppm.ACTIVITY_DESC,
                 COALESCE(ppm.PPM_BUDGET, 0) AS PPM_BUDGET,
                 COALESCE(ppm.PPM_EXPENSES, 0) AS PPM_EXPENSES,
                 COALESCE(ppm.PPM_COMMITMENTS, 0) AS PPM_COMMITMENTS,
@@ -245,18 +223,18 @@ BEGIN
                 -COALESCE(g.BEGINNING_BALANCE, 0) AS GL_BEGINNING_BALANCE,
                 -COALESCE(g.REVENUE, 0) AS GL_REVENUE,
                 COALESCE(g.EXPENSES, 0) AS GL_EXPENSES,
-                CAST(p.award_close_date AS NVARCHAR(MAX)) AS AWARD_CLOSE_DATE,
-                CAST(p.award_pi AS NVARCHAR(MAX)) AS AWARD_PI,
-                CAST(p.billing_cycle AS NVARCHAR(MAX)) AS BILLING_CYCLE,
-                CAST(p.project_burden_schedule_base AS NVARCHAR(MAX)) AS PROJECT_BURDEN_SCHEDULE_BASE,
-                CAST(p.project_burden_cost_rate AS NVARCHAR(MAX)) AS PROJECT_BURDEN_COST_RATE,
-                CAST(p.cost_share_required_by_sponsor AS NVARCHAR(MAX)) AS COST_SHARE_REQUIRED_BY_SPONSOR,
-                CAST(p.grant_administrator AS NVARCHAR(MAX)) AS GRANT_ADMINISTRATOR,
-                CAST(p.post_reporting_period AS NVARCHAR(MAX)) AS POST_REPORTING_PERIOD,
-                CAST(p.primary_sponsor_name AS NVARCHAR(MAX)) AS PRIMARY_SPONSOR_NAME,
-                CAST(p.project_fund AS NVARCHAR(MAX)) AS PROJECT_FUND,
-                CAST(p.contract_administrator AS NVARCHAR(MAX)) AS CONTRACT_ADMINISTRATOR,
-                CAST(p.sponsor_award_number AS NVARCHAR(MAX)) AS SPONSOR_AWARD_NUMBER
+                p.award_close_date AS AWARD_CLOSE_DATE,
+                p.award_pi AS AWARD_PI,
+                p.billing_cycle AS BILLING_CYCLE,
+                p.project_burden_schedule_base AS PROJECT_BURDEN_SCHEDULE_BASE,
+                p.project_burden_cost_rate AS PROJECT_BURDEN_COST_RATE,
+                p.cost_share_required_by_sponsor AS COST_SHARE_REQUIRED_BY_SPONSOR,
+                p.grant_administrator AS GRANT_ADMINISTRATOR,
+                p.post_reporting_period AS POST_REPORTING_PERIOD,
+                p.primary_sponsor_name AS PRIMARY_SPONSOR_NAME,
+                p.project_fund AS PROJECT_FUND,
+                p.contract_administrator AS CONTRACT_ADMINISTRATOR,
+                p.sponsor_award_number AS SPONSOR_AWARD_NUMBER
             FROM (
                 SELECT PROJECT_NUMBER, FUND_CD, PROGRAM_CD, ACTIVITY_CD,
                     MAX(AWARD_NUMBER) AS AWARD_NUMBER, MAX(AWARD_NAME) AS AWARD_NAME,
@@ -273,7 +251,7 @@ BEGIN
                     SUM(CAT_BUDGET) AS PPM_BUDGET, SUM(CAT_ITD_EXP) AS PPM_EXPENSES,
                     SUM(CAT_COMMITMENTS) AS PPM_COMMITMENTS, SUM(CAT_BUD_BAL) AS PPM_BUD_BAL
                 FROM faculty
-                WHERE CAST(PROJECT_TYPE AS NVARCHAR(MAX)) = ''Internal''
+                WHERE PROJECT_TYPE = ''Internal''
                 GROUP BY PROJECT_NUMBER, FUND_CD, PROGRAM_CD, ACTIVITY_CD
             ) ppm
             FULL OUTER JOIN gl g
@@ -290,7 +268,7 @@ BEGIN
 
         -- Log successful execution
         EXEC [dbo].[usp_LogProcedureExecution]
-            @ProcedureName = 'dbo.usp_GetFacultyDeptPortfolio',
+            @ProcedureName = 'dbo.usp_GetProjectSummary',
             @Duration_MS = @Duration_MS,
             @RowCount = @RowCount,
             @Parameters = @ParametersJSON,
@@ -305,7 +283,7 @@ BEGIN
 
         -- Log failed execution
         EXEC [dbo].[usp_LogProcedureExecution]
-            @ProcedureName = 'dbo.usp_GetFacultyDeptPortfolio',
+            @ProcedureName = 'dbo.usp_GetProjectSummary',
             @Duration_MS = @Duration_MS,
             @Parameters = @ParametersJSON,
             @ApplicationName = @ApplicationName,

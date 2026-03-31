@@ -1,4 +1,4 @@
--- Temporary sproc using CAES Elzar linked server until we can use the Aggie Enterprise data warehouse in usp_GetFacultyDeptPortfolio.
+-- Temporary sproc using CAES Elzar linked server until we can use the Aggie Enterprise data warehouse in usp_GetProjectSummary.
 -- We should delete this sproc once we move to the DWH
 CREATE PROCEDURE dbo.usp_GetFacultyDeptPortfolioElzar
     @ProjectIds VARCHAR(MAX) = NULL,

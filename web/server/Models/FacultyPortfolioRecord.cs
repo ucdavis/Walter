@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 namespace server.Models;
 
 /// <summary>
-/// Maps output from usp_GetFacultyDeptPortfolio stored procedure.
+/// Maps output from usp_GetProjectSummary stored procedure.
 /// </summary>
 public sealed class FacultyPortfolioRecord
 {

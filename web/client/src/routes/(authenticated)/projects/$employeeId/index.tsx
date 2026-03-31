@@ -124,6 +124,7 @@ function RouteComponent() {
       {internalProjects.length > 0 && (
         <section className="section-margin">
           <h2 className="h2">Internal Projects</h2>
+          <p className="subtitle">Financials from GL</p>
           <InternalProjectsTable
             discrepancies={discrepancies}
             employeeId={employeeId}
@@ -135,6 +136,7 @@ function RouteComponent() {
       {sponsoredProjects.length > 0 && (
         <section className="section-margin">
           <h2 className="h2">Sponsored Projects</h2>
+          <p className="subtitle">Financials from PPM</p>
           <SponsoredProjectsTable
             employeeId={employeeId}
             records={sponsoredProjects}

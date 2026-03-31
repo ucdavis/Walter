@@ -14,7 +14,7 @@ PRINT 'Applying post-deployment scripts...'
       
 -- Grant permissions to application role
 PRINT 'Granting WalterAppRole permissions...'
-GRANT EXECUTE ON [dbo].[usp_GetFacultyDeptPortfolio] TO [WalterAppRole];
+GRANT EXECUTE ON [dbo].[usp_GetProjectSummary] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_GetFacultyDeptPortfolioElzar] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_GetPPMProjectSummaryElzar] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_GetGLProjectSummaryElzar] TO [WalterAppRole];
