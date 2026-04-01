@@ -108,26 +108,31 @@ export function InternalProjectsTable({
           const name = info.getValue();
           const { projectNumber } = info.row.original;
           return (
-            <Link
-              className="link no-underline flex items-start gap-1"
-              params={{ employeeId, projectNumber }}
-              to="/projects/$employeeId/$projectNumber/"
-            >
-              <div className="min-w-0">
+            <div className="flex items-start gap-1">
+              <Link
+                className="link no-underline min-w-0"
+                params={{ employeeId, projectNumber }}
+                to="/projects/$employeeId/$projectNumber/"
+              >
                 <div className="text-xs text-base-content/70 no-underline">
                   {projectNumber}
                 </div>
                 <div className="truncate underline" title={name}>
                   {name}
                 </div>
-              </div>
+              </Link>
               {discrepancies?.has(projectNumber) && (
-                <ExclamationTriangleIcon
-                  className="h-5 w-5 shrink-0 text-warning self-end"
-                  title="GL/PPM reconciliation discrepancy"
-                />
+                <Link
+                  params={{ projectNumber }}
+                  to="/reports/reconciliation/$projectNumber/"
+                >
+                  <ExclamationTriangleIcon
+                    className="h-5 w-5 shrink-0 text-warning self-end"
+                    title="GL/PPM reconciliation discrepancy"
+                  />
+                </Link>
               )}
-            </Link>
+            </div>
           );
         },
         footer: () => 'Totals',
