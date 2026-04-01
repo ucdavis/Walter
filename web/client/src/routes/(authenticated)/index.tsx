@@ -1,9 +1,13 @@
 import { useMemo, useState } from 'react';
-import { PiProjectAlerts } from '@/components/alerts/PiProjectAlerts.tsx';
+import {
+  PiProjectAlerts,
+  usePiProjectAlerts,
+} from '@/components/alerts/PiProjectAlerts.tsx';
+import { AlertCard } from '@/components/alerts/ProjectAlerts.tsx';
 import { PrincipalInvestigatorsTable } from '@/components/project/PrincipalInvestigatorsTable.tsx';
 import { ProjectsTable } from '@/components/project/ProjectsTable.tsx';
-import { Reports } from '@/components/reports/Reports.tsx';
 import { SearchButton } from '@/components/search/SearchButton.tsx';
+import { getProjectListAlerts } from '@/lib/projectAlerts.ts';
 import {
   useManagedPisQuery,
   projectsDetailQueryOptions,
@@ -15,7 +19,7 @@ import { PageError } from '@/components/states/PageError.tsx';
 import { useQuery } from '@tanstack/react-query';
 import { getErrorPresentation } from '@/lib/errorPresentation.ts';
 
-type Tab = 'pis' | 'projects' | 'reports';
+type Tab = 'pis' | 'projects' | 'alerts';
 
 export const Route = createFileRoute('/(authenticated)/')({
   component: RouteComponent,
@@ -39,6 +43,19 @@ function RouteComponent() {
   const isPrincipalInvestigator =
     !isProjectManager && (userProjectsQuery.data?.length ?? 0) > 0;
 
+  const { alerts: pmAlerts, isLoading: alertsLoading } =
+    usePiProjectAlerts(managedPis);
+
+  const piAlerts = useMemo(
+    () =>
+      isPrincipalInvestigator && userProjectsQuery.data
+        ? getProjectListAlerts(userProjectsQuery.data, user.employeeId)
+        : [],
+    [isPrincipalInvestigator, userProjectsQuery.data, user.employeeId]
+  );
+
+  const allAlerts = isProjectManager ? pmAlerts : piAlerts;
+
   const showPiTab = isProjectManager;
   const showProjectsTab = isPrincipalInvestigator;
 
@@ -50,7 +67,9 @@ function RouteComponent() {
     if (showProjectsTab) {
       base.push({ id: 'projects', label: 'Projects' });
     }
-    base.push({ id: 'reports', label: 'Reports' });
+    if (showPiTab || showProjectsTab) {
+      base.push({ id: 'alerts', label: 'Alerts' });
+    }
     return base;
   }, [showPiTab, showProjectsTab]);
 
@@ -58,7 +77,7 @@ function RouteComponent() {
     ? 'pis'
     : showProjectsTab
       ? 'projects'
-      : 'reports';
+      : 'alerts';
 
   const selectedTab = tabs.some((t) => t.id === activeTab)
     ? activeTab
@@ -109,9 +128,7 @@ function RouteComponent() {
         <SearchButton className="w-full" />
       </div>
 
-      {isProjectManager && <PiProjectAlerts managedPis={managedPis} />}
-
-      {tabs.length > 1 && (
+      {tabs.length > 0 && (
         <div className="tabs mt-16" role="tablist">
           {tabs.map((tab, index) => {
             const tabId = `tab-${tab.id}`;
@@ -128,6 +145,16 @@ function RouteComponent() {
                 type="button"
               >
                 {tab.label}
+                {tab.id === 'alerts' && alertsLoading && (
+                  <span className="loading loading-spinner loading-xs ms-2" />
+                )}
+                {tab.id === 'alerts' &&
+                  !alertsLoading &&
+                  allAlerts.length > 0 && (
+                    <span className="badge badge-sm badge-warning ms-2">
+                      {allAlerts.length}
+                    </span>
+                  )}
               </button>
             );
           })}
@@ -151,16 +178,29 @@ function RouteComponent() {
         </div>
       )}
 
-      {tabs.length > 1 && selectedTab === 'reports' && (
-        <div aria-labelledby="tab-reports" id="panel-reports" role="tabpanel">
-          <Reports />
-        </div>
-      )}
-
-      {tabs.length === 1 && (
-        <div className="mt-16">
-          <h2 className="h2">Reports</h2>
-          <Reports />
+      {selectedTab === 'alerts' && (
+        <div aria-labelledby="tab-alerts" id="panel-alerts" role="tabpanel">
+          {isProjectManager && (
+            <PiProjectAlerts managedPis={managedPis} />
+          )}
+          {isPrincipalInvestigator && piAlerts.length > 0 && (
+            <div className="mt-4 flex flex-col gap-4">
+              {piAlerts.map((alert) => (
+                <AlertCard
+                  alert={alert}
+                  balance={alert.balance}
+                  key={alert.id}
+                  linkParams={{
+                    employeeId: alert.piEmployeeId,
+                    projectNumber: alert.projectNumber,
+                  }}
+                />
+              ))}
+            </div>
+          )}
+          {isPrincipalInvestigator && piAlerts.length === 0 && (
+            <p className="mt-4 text-base-content/60">No alerts</p>
+          )}
         </div>
       )}
     </div>
