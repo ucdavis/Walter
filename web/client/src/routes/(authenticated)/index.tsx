@@ -198,6 +198,9 @@ function RouteComponent() {
               ))}
             </div>
           )}
+          {isPrincipalInvestigator && piAlerts.length === 0 && (
+            <p className="mt-4 text-base-content/60">No alerts</p>
+          )}
         </div>
       )}
     </div>

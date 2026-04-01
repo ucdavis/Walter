@@ -97,7 +97,7 @@ export function PiProjectAlerts({ managedPis }: PiProjectAlertsProps) {
   }
 
   if (alerts.length === 0) {
-    return null;
+    return <p className="mt-4 text-base-content/60">No alerts</p>;
   }
 
   return (
