@@ -50,12 +50,23 @@ export function ProjectFundingChart({ projects }: ProjectFundingChartProps) {
   );
 
   // Separate positive and negative types (clamp at 0)
-  const positiveKeys = Object.keys(totalsByType).filter(
-    (key) => totalsByType[key] > 0
-  );
-  const negativeEntries = Object.entries(totalsByType).filter(
-    ([, value]) => value < 0
-  );
+  const TYPE_ORDER = new Map([
+    ['sponsored', 0],
+    ['internal', 1],
+    ['sponsored capital', 2],
+    ['sponsored fabrication', 3],
+  ]);
+
+  const typeSort = (a: string, b: string) =>
+    (TYPE_ORDER.get(a.toLowerCase()) ?? 99) -
+    (TYPE_ORDER.get(b.toLowerCase()) ?? 99);
+
+  const positiveKeys = Object.keys(totalsByType)
+    .filter((key) => totalsByType[key] > 0)
+    .sort(typeSort);
+  const negativeEntries = Object.entries(totalsByType)
+    .filter(([, value]) => value < 0)
+    .sort(([a], [b]) => typeSort(a, b));
 
   const total = positiveKeys.reduce((sum, key) => sum + totalsByType[key], 0);
   const safeTotal = total === 0 ? 1 : total;
