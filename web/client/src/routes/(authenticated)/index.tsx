@@ -5,12 +5,14 @@ import {
 } from '@/components/alerts/PiProjectAlerts.tsx';
 import { AlertCard } from '@/components/alerts/ProjectAlerts.tsx';
 import { PrincipalInvestigatorsTable } from '@/components/project/PrincipalInvestigatorsTable.tsx';
-import { ProjectsTable } from '@/components/project/ProjectsTable.tsx';
+import { InternalProjectsTable } from '@/components/project/InternalProjectsTable.tsx';
+import { SponsoredProjectsTable } from '@/components/project/SponsoredProjectsTable.tsx';
 import { SearchButton } from '@/components/search/SearchButton.tsx';
 import { getProjectListAlerts } from '@/lib/projectAlerts.ts';
 import {
   useManagedPisQuery,
   projectsDetailQueryOptions,
+  useProjectDiscrepancies,
 } from '@/queries/project.ts';
 import { useUser } from '@/shared/auth/UserContext.tsx';
 import { createFileRoute } from '@tanstack/react-router';
@@ -45,6 +47,29 @@ function RouteComponent() {
 
   const { alerts: pmAlerts, isLoading: alertsLoading } =
     usePiProjectAlerts(managedPis);
+
+  const sponsoredProjects = useMemo(
+    () =>
+      (userProjectsQuery.data ?? []).filter(
+        (p) => p.projectType !== 'Internal'
+      ),
+    [userProjectsQuery.data]
+  );
+
+  const internalProjects = useMemo(
+    () =>
+      (userProjectsQuery.data ?? []).filter(
+        (p) => p.projectType === 'Internal'
+      ),
+    [userProjectsQuery.data]
+  );
+
+  const internalProjectNumbers = useMemo(
+    () => [...new Set(internalProjects.map((p) => p.projectNumber))],
+    [internalProjects]
+  );
+
+  const discrepancies = useProjectDiscrepancies(internalProjectNumbers);
 
   const piAlerts = useMemo(
     () =>
@@ -169,12 +194,25 @@ function RouteComponent() {
 
       {showProjectsTab && selectedTab === 'projects' && (
         <div aria-labelledby="tab-projects" id="panel-projects" role="tabpanel">
-          <div className="mt-4">
-            <ProjectsTable
-              employeeId={user.employeeId}
-              records={userProjectsQuery.data ?? []}
-            />
-          </div>
+          {sponsoredProjects.length > 0 && (
+            <div className="mt-4">
+              <h2 className="h2">Sponsored Projects</h2>
+              <SponsoredProjectsTable
+                employeeId={user.employeeId}
+                records={sponsoredProjects}
+              />
+            </div>
+          )}
+          {internalProjects.length > 0 && (
+            <div className="mt-4">
+              <h2 className="h2">Internal Projects</h2>
+              <InternalProjectsTable
+                discrepancies={discrepancies}
+                employeeId={user.employeeId}
+                records={internalProjects}
+              />
+            </div>
+          )}
         </div>
       )}
 
