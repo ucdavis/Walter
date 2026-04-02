@@ -24,9 +24,10 @@ const csvColumns = [
   { header: 'Dept', key: 'financialDepartment' as const },
   { header: 'Project', key: 'project' as const },
   { header: 'Project Description', key: 'projectDescription' as const },
-  { header: 'Fund', key: 'fundCode' as const },
+  { header: 'GL Fund', key: 'fundCode' as const },
   { header: 'Fund Description', key: 'fundDescription' as const },
   { header: 'PPM Fund', key: 'ppmFundCode' as const },
+  { header: 'PPM Fund Description', key: 'ppmFundDescription' as const },
   { header: 'Program', key: 'programCode' as const },
   { header: 'Program Description', key: 'programDescription' as const },
   { header: 'Activity', key: 'activityCode' as const },
@@ -76,59 +77,41 @@ function RouteComponent() {
       }),
       columnHelper.accessor('project', {
         cell: (info) => (
-          <div>
-            <div>{info.getValue()}</div>
-            {info.row.original.projectDescription && (
-              <div className="text-xs text-base-content/80">
-                {info.row.original.projectDescription}
-              </div>
-            )}
-          </div>
+          <span title={info.row.original.projectDescription ?? undefined}>
+            {info.getValue()}
+          </span>
         ),
         header: 'Project',
-        size: 180,
       }),
       columnHelper.accessor('fundCode', {
         cell: (info) => (
-          <div>
-            <div>{info.getValue() ?? '-'}</div>
-            {info.row.original.fundDescription && (
-              <div className="text-xs text-base-content/80">
-                {info.row.original.fundDescription}
-              </div>
-            )}
-          </div>
+          <span title={info.row.original.fundDescription ?? undefined}>
+            {info.getValue() ?? '-'}
+          </span>
         ),
-        header: 'Fund',
-        size: 180,
+        header: 'GL Fund',
       }),
       columnHelper.accessor('ppmFundCode', {
-        cell: (info) => <span>{info.getValue()}</span>,
+        cell: (info) => (
+          <span title={info.row.original.ppmFundDescription ?? undefined}>
+            {info.getValue()}
+          </span>
+        ),
         header: 'PPM Fund',
       }),
       columnHelper.accessor('programCode', {
         cell: (info) => (
-          <div>
-            <div>{info.getValue() ?? '-'}</div>
-            {info.row.original.programDescription && (
-              <div className="text-xs text-base-content/80">
-                {info.row.original.programDescription}
-              </div>
-            )}
-          </div>
+          <span title={info.row.original.programDescription ?? undefined}>
+            {info.getValue() ?? '-'}
+          </span>
         ),
         header: 'Program',
       }),
       columnHelper.accessor('activityCode', {
         cell: (info) => (
-          <div>
-            <div>{info.getValue() ?? '-'}</div>
-            {info.row.original.activityDescription && (
-              <div className="text-xs text-base-content/80">
-                {info.row.original.activityDescription}
-              </div>
-            )}
-          </div>
+          <span title={info.row.original.activityDescription ?? undefined}>
+            {info.getValue() ?? '-'}
+          </span>
         ),
         header: 'Activity',
       }),
@@ -200,7 +183,7 @@ function RouteComponent() {
         <h1 className="h1">GL/PPM Reconciliation</h1>
         <h3 className="subtitle">{projectNumber}</h3>
 
-        <p>Comparing General Ledger totals against PPM budget balances</p>
+        <p>Comparing General Ledger balances to PPM balances</p>
       </section>
 
       {isReconciliationPending ? (

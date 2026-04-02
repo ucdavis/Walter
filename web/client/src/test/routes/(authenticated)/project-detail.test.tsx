@@ -138,6 +138,31 @@ describe('project detail page', () => {
     }
   });
 
+  it('hides Award Information and date fields for internal projects', async () => {
+    const projects = [
+      createProject({
+        awardEndDate: null,
+        awardNumber: null,
+        awardStartDate: null,
+        projectType: 'Internal',
+      }),
+    ];
+    setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);
+
+    const { cleanup } = renderRoute({
+      initialPath: '/projects/1000/P1',
+    });
+
+    try {
+      await screen.findByText('Project Number');
+      expect(screen.queryByText('Award Information')).not.toBeInTheDocument();
+      expect(screen.queryByText('Project Start')).not.toBeInTheDocument();
+      expect(screen.queryByText('Project End')).not.toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+
   it('shows an authorization error inside the projects layout for forbidden portfolios', async () => {
     server.use(
       http.get('/api/user/me', () =>

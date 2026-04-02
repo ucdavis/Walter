@@ -99,6 +99,7 @@ export interface GLPPMReconciliationRecord {
   fundCode: string | null;
   fundDescription: string | null;
   ppmFundCode: string;
+  ppmFundDescription: string | null;
   programCode: string | null;
   programDescription: string | null;
   activityCode: string | null;
