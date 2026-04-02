@@ -121,6 +121,16 @@ function RouteComponent() {
         <ProjectFundingChart projects={projects} />
       </section>
 
+      {sponsoredProjects.length > 0 && (
+        <section className="section-margin">
+          <h2 className="h2">Sponsored Projects</h2>
+          <SponsoredProjectsTable
+            employeeId={employeeId}
+            records={sponsoredProjects}
+          />
+        </section>
+      )}
+
       {internalProjects.length > 0 && (
         <section className="section-margin">
           <h2 className="h2">Internal Projects</h2>
@@ -128,16 +138,6 @@ function RouteComponent() {
             discrepancies={discrepancies}
             employeeId={employeeId}
             records={internalProjects}
-          />
-        </section>
-      )}
-
-      {sponsoredProjects.length > 0 && (
-        <section className="section-margin">
-          <h2 className="h2">Sponsored Projects</h2>
-          <SponsoredProjectsTable
-            employeeId={employeeId}
-            records={sponsoredProjects}
           />
         </section>
       )}

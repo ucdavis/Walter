@@ -1,7 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { userEvent } from '@testing-library/user-event';
 import { cleanup, render, screen } from '@testing-library/react';
-import { ProjectsTable } from '@/components/project/ProjectsTable.tsx';
 import { InternalProjectsTable } from '@/components/project/InternalProjectsTable.tsx';
 import type { ProjectRecord } from '@/queries/project.ts';
 
@@ -64,54 +62,6 @@ const createProject = (
   taskNum: 'T001',
   taskStatus: 'OPEN',
   ...overrides,
-});
-
-describe('ProjectsTable', () => {
-  it('shows empty state when no projects', () => {
-    render(<ProjectsTable employeeId="123" records={[]} />);
-
-    expect(screen.getByText('No projects found.')).toBeInTheDocument();
-  });
-
-  it('renders totals row', () => {
-    const projects = [
-      createProject({ projectNumber: 'P1', projectName: 'Project One' }),
-      createProject({ projectNumber: 'P2', projectName: 'Project Two' }),
-    ];
-
-    render(<ProjectsTable employeeId="123" records={projects} />);
-
-    expect(screen.getByText('Totals')).toBeInTheDocument();
-  });
-
-  it('hides expired projects by default', () => {
-    const projects = [
-      createProject({ projectNumber: 'P1', displayName: 'Active Project', awardEndDate: '2099-12-31' }),
-      createProject({ projectNumber: 'P2', displayName: 'Expired Project', awardEndDate: '2020-01-01' }),
-    ];
-
-    render(<ProjectsTable employeeId="123" records={projects} />);
-
-    expect(screen.getByText('Active Project')).toBeInTheDocument();
-    expect(screen.queryByText('Expired Project')).not.toBeInTheDocument();
-    expect(screen.getByText('Show expired (1)')).toBeInTheDocument();
-  });
-
-  it('shows expired projects after clicking toggle', async () => {
-    const user = userEvent.setup();
-    const projects = [
-      createProject({ projectNumber: 'P1', displayName: 'Active Project', awardEndDate: '2099-12-31' }),
-      createProject({ projectNumber: 'P2', displayName: 'Expired Project', awardEndDate: '2020-01-01' }),
-    ];
-
-    render(<ProjectsTable employeeId="123" records={projects} />);
-
-    await user.click(screen.getByText('Show expired (1)'));
-
-    expect(screen.getByText('Active Project')).toBeInTheDocument();
-    expect(screen.getByText('Expired Project')).toBeInTheDocument();
-    expect(screen.getByText('Hide expired (1)')).toBeInTheDocument();
-  });
 });
 
 describe('InternalProjectsTable', () => {
