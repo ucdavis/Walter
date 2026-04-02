@@ -61,7 +61,7 @@ function aggregateProjects(records: ProjectRecord[]): AggregatedProject[] {
 
 const csvColumns = [
   { header: 'Project Number', key: 'projectNumber' as const },
-  { header: 'Project Name', key: 'displayName' as const },
+  { header: 'Project', key: 'displayName' as const },
   { header: 'Task', key: 'taskNum' as const },
   { header: 'Task Name', key: 'taskName' as const },
   { header: 'Status', key: 'projectStatusCode' as const },
@@ -112,14 +112,10 @@ export function InternalProjectsTable({
               <Link
                 className="link no-underline min-w-0"
                 params={{ employeeId, projectNumber }}
+                title={name}
                 to="/projects/$employeeId/$projectNumber/"
               >
-                <div className="text-xs text-base-content/70 no-underline">
-                  {projectNumber}
-                </div>
-                <div className="truncate underline" title={name}>
-                  {name}
-                </div>
+                {projectNumber}
               </Link>
               {discrepancies?.has(projectNumber) && (
                 <Link
@@ -136,13 +132,18 @@ export function InternalProjectsTable({
           );
         },
         footer: () => 'Totals',
-        header: 'Project Name',
-        minSize: 250,
-        size: 300,
+        header: 'Project',
       }),
       columnHelper.accessor('taskNum', {
         cell: (info) => (
-          <span title={info.row.original.taskName}>{info.getValue()}</span>
+          <div>
+            <div>{info.getValue()}</div>
+            {info.row.original.taskName && (
+              <div className="text-xs text-base-content/80">
+                {info.row.original.taskName}
+              </div>
+            )}
+          </div>
         ),
         footer: () => '',
         header: 'Task',

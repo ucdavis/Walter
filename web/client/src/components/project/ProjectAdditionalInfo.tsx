@@ -93,6 +93,10 @@ export function ProjectAdditionalInfo({
 }: ProjectAdditionalInfoProps) {
   const [expanded, setExpanded] = React.useState(false);
 
+  if (!summary.awardNumber) {
+    return null;
+  }
+
   const primaryFields = buildPrimaryFields(summary);
   const secondaryFields = buildSecondaryFields(summary);
   const renderLabel = (field: Field) =>

@@ -29,16 +29,20 @@ export function ProjectDetails({ summary }: ProjectDetailsProps) {
             <dt className="stat-label">Project Number</dt>
             <dd className="stat-value">{summary.projectNumber}</dd>
           </div>
-          <div className="flex flex-col">
-            <ClockIcon className="w-4 h-4" />
-            <dt className="stat-label">Project Start</dt>
-            <dd className="stat-value">{formatDate(summary.awardStartDate)}</dd>
-          </div>
-          <div className="flex flex-col">
-            <ClockIcon className="w-4 h-4" />
-            <dt className="stat-label">Project End</dt>
-            <dd className="stat-value">{formatDate(summary.awardEndDate)}</dd>
-          </div>
+          {summary.awardStartDate && (
+            <div className="flex flex-col">
+              <ClockIcon className="w-4 h-4" />
+              <dt className="stat-label">Project Start</dt>
+              <dd className="stat-value">{formatDate(summary.awardStartDate)}</dd>
+            </div>
+          )}
+          {summary.awardEndDate && (
+            <div className="flex flex-col">
+              <ClockIcon className="w-4 h-4" />
+              <dt className="stat-label">Project End</dt>
+              <dd className="stat-value">{formatDate(summary.awardEndDate)}</dd>
+            </div>
+          )}
 
           <div className="flex flex-col">
             <BellAlertIcon className="w-4 h-4" />

@@ -113,14 +113,13 @@ describe('ProjectAdditionalInfo', () => {
         isProjectManager={false}
         summary={createSummary({
           awardName: null,
-          awardNumber: null,
           contractAdministrator: null,
         })}
       />
     );
 
     const dashes = screen.getAllByText('—');
-    expect(dashes.length).toBeGreaterThanOrEqual(3);
+    expect(dashes.length).toBeGreaterThanOrEqual(2);
   });
 
   it('formats dates as MM.dd.yyyy', () => {
@@ -162,5 +161,14 @@ describe('ProjectAdditionalInfo', () => {
     expect(await screen.findByRole('tooltip')).toHaveTextContent(
       tooltipDefinitions.billingCycle
     );
+  });
+
+  it('renders nothing when awardNumber is null (internal project)', () => {
+    const { container } = render(
+      <ProjectAdditionalInfo isProjectManager={false} summary={createSummary({ awardNumber: null })} />
+    );
+
+    expect(container.innerHTML).toBe('');
+    expect(screen.queryByText('Award Information')).not.toBeInTheDocument();
   });
 });
