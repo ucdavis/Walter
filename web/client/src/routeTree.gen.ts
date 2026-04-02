@@ -30,7 +30,7 @@ import { Route as authenticatedProjectsByNumberProjectNumberRouteImport } from '
 import { Route as authenticatedReportsReconciliationProjectNumberIndexRouteImport } from './routes/(authenticated)/reports/reconciliation/$projectNumber/index'
 import { Route as authenticatedProjectsEmployeeIdProjectNumberIndexRouteImport } from './routes/(authenticated)/projects/$employeeId/$projectNumber/index'
 import { Route as authenticatedReportsReconciliationProjectNumberDetailRouteImport } from './routes/(authenticated)/reports/reconciliation/$projectNumber/detail'
-import { Route as authenticatedProjectsEmployeeIdProjectNumberTransactionsRouteImport } from './routes/(authenticated)/projects/$employeeId/$projectNumber/transactions'
+import { Route as authenticatedProjectsEmployeeIdProjectNumberExpenditureCategoriesRouteImport } from './routes/(authenticated)/projects/$employeeId/$projectNumber/expenditure-categories'
 
 const AboutRoute = AboutRouteImport.update({
   id: '/about',
@@ -146,12 +146,14 @@ const authenticatedReportsReconciliationProjectNumberDetailRoute =
     path: '/reconciliation/$projectNumber/detail',
     getParentRoute: () => authenticatedReportsRoute,
   } as any)
-const authenticatedProjectsEmployeeIdProjectNumberTransactionsRoute =
-  authenticatedProjectsEmployeeIdProjectNumberTransactionsRouteImport.update({
-    id: '/$projectNumber/transactions',
-    path: '/$projectNumber/transactions',
-    getParentRoute: () => authenticatedProjectsEmployeeIdRouteRoute,
-  } as any)
+const authenticatedProjectsEmployeeIdProjectNumberExpenditureCategoriesRoute =
+  authenticatedProjectsEmployeeIdProjectNumberExpenditureCategoriesRouteImport.update(
+    {
+      id: '/$projectNumber/expenditure-categories',
+      path: '/$projectNumber/expenditure-categories',
+      getParentRoute: () => authenticatedProjectsEmployeeIdRouteRoute,
+    } as any,
+  )
 
 export interface FileRoutesByFullPath {
   '/about': typeof AboutRoute
@@ -171,7 +173,7 @@ export interface FileRoutesByFullPath {
   '/reports/': typeof authenticatedReportsIndexRoute
   '/projects/by-number/$projectNumber': typeof authenticatedProjectsByNumberProjectNumberRoute
   '/projects/$employeeId/': typeof authenticatedProjectsEmployeeIdIndexRoute
-  '/projects/$employeeId/$projectNumber/transactions': typeof authenticatedProjectsEmployeeIdProjectNumberTransactionsRoute
+  '/projects/$employeeId/$projectNumber/expenditure-categories': typeof authenticatedProjectsEmployeeIdProjectNumberExpenditureCategoriesRoute
   '/reports/reconciliation/$projectNumber/detail': typeof authenticatedReportsReconciliationProjectNumberDetailRoute
   '/projects/$employeeId/$projectNumber': typeof authenticatedProjectsEmployeeIdProjectNumberIndexRoute
   '/reports/reconciliation/$projectNumber': typeof authenticatedReportsReconciliationProjectNumberIndexRoute
@@ -191,7 +193,7 @@ export interface FileRoutesByTo {
   '/reports': typeof authenticatedReportsIndexRoute
   '/projects/by-number/$projectNumber': typeof authenticatedProjectsByNumberProjectNumberRoute
   '/projects/$employeeId': typeof authenticatedProjectsEmployeeIdIndexRoute
-  '/projects/$employeeId/$projectNumber/transactions': typeof authenticatedProjectsEmployeeIdProjectNumberTransactionsRoute
+  '/projects/$employeeId/$projectNumber/expenditure-categories': typeof authenticatedProjectsEmployeeIdProjectNumberExpenditureCategoriesRoute
   '/reports/reconciliation/$projectNumber/detail': typeof authenticatedReportsReconciliationProjectNumberDetailRoute
   '/projects/$employeeId/$projectNumber': typeof authenticatedProjectsEmployeeIdProjectNumberIndexRoute
   '/reports/reconciliation/$projectNumber': typeof authenticatedReportsReconciliationProjectNumberIndexRoute
@@ -216,7 +218,7 @@ export interface FileRoutesById {
   '/(authenticated)/reports/': typeof authenticatedReportsIndexRoute
   '/(authenticated)/projects/by-number/$projectNumber': typeof authenticatedProjectsByNumberProjectNumberRoute
   '/(authenticated)/projects/$employeeId/': typeof authenticatedProjectsEmployeeIdIndexRoute
-  '/(authenticated)/projects/$employeeId/$projectNumber/transactions': typeof authenticatedProjectsEmployeeIdProjectNumberTransactionsRoute
+  '/(authenticated)/projects/$employeeId/$projectNumber/expenditure-categories': typeof authenticatedProjectsEmployeeIdProjectNumberExpenditureCategoriesRoute
   '/(authenticated)/reports/reconciliation/$projectNumber/detail': typeof authenticatedReportsReconciliationProjectNumberDetailRoute
   '/(authenticated)/projects/$employeeId/$projectNumber/': typeof authenticatedProjectsEmployeeIdProjectNumberIndexRoute
   '/(authenticated)/reports/reconciliation/$projectNumber/': typeof authenticatedReportsReconciliationProjectNumberIndexRoute
@@ -241,7 +243,7 @@ export interface FileRouteTypes {
     | '/reports/'
     | '/projects/by-number/$projectNumber'
     | '/projects/$employeeId/'
-    | '/projects/$employeeId/$projectNumber/transactions'
+    | '/projects/$employeeId/$projectNumber/expenditure-categories'
     | '/reports/reconciliation/$projectNumber/detail'
     | '/projects/$employeeId/$projectNumber'
     | '/reports/reconciliation/$projectNumber'
@@ -261,7 +263,7 @@ export interface FileRouteTypes {
     | '/reports'
     | '/projects/by-number/$projectNumber'
     | '/projects/$employeeId'
-    | '/projects/$employeeId/$projectNumber/transactions'
+    | '/projects/$employeeId/$projectNumber/expenditure-categories'
     | '/reports/reconciliation/$projectNumber/detail'
     | '/projects/$employeeId/$projectNumber'
     | '/reports/reconciliation/$projectNumber'
@@ -285,7 +287,7 @@ export interface FileRouteTypes {
     | '/(authenticated)/reports/'
     | '/(authenticated)/projects/by-number/$projectNumber'
     | '/(authenticated)/projects/$employeeId/'
-    | '/(authenticated)/projects/$employeeId/$projectNumber/transactions'
+    | '/(authenticated)/projects/$employeeId/$projectNumber/expenditure-categories'
     | '/(authenticated)/reports/reconciliation/$projectNumber/detail'
     | '/(authenticated)/projects/$employeeId/$projectNumber/'
     | '/(authenticated)/reports/reconciliation/$projectNumber/'
@@ -445,11 +447,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authenticatedReportsReconciliationProjectNumberDetailRouteImport
       parentRoute: typeof authenticatedReportsRoute
     }
-    '/(authenticated)/projects/$employeeId/$projectNumber/transactions': {
-      id: '/(authenticated)/projects/$employeeId/$projectNumber/transactions'
-      path: '/$projectNumber/transactions'
-      fullPath: '/projects/$employeeId/$projectNumber/transactions'
-      preLoaderRoute: typeof authenticatedProjectsEmployeeIdProjectNumberTransactionsRouteImport
+    '/(authenticated)/projects/$employeeId/$projectNumber/expenditure-categories': {
+      id: '/(authenticated)/projects/$employeeId/$projectNumber/expenditure-categories'
+      path: '/$projectNumber/expenditure-categories'
+      fullPath: '/projects/$employeeId/$projectNumber/expenditure-categories'
+      preLoaderRoute: typeof authenticatedProjectsEmployeeIdProjectNumberExpenditureCategoriesRouteImport
       parentRoute: typeof authenticatedProjectsEmployeeIdRouteRoute
     }
   }
@@ -473,7 +475,7 @@ const authenticatedAdminRouteRouteWithChildren =
 
 interface authenticatedProjectsEmployeeIdRouteRouteChildren {
   authenticatedProjectsEmployeeIdIndexRoute: typeof authenticatedProjectsEmployeeIdIndexRoute
-  authenticatedProjectsEmployeeIdProjectNumberTransactionsRoute: typeof authenticatedProjectsEmployeeIdProjectNumberTransactionsRoute
+  authenticatedProjectsEmployeeIdProjectNumberExpenditureCategoriesRoute: typeof authenticatedProjectsEmployeeIdProjectNumberExpenditureCategoriesRoute
   authenticatedProjectsEmployeeIdProjectNumberIndexRoute: typeof authenticatedProjectsEmployeeIdProjectNumberIndexRoute
 }
 
@@ -481,8 +483,8 @@ const authenticatedProjectsEmployeeIdRouteRouteChildren: authenticatedProjectsEm
   {
     authenticatedProjectsEmployeeIdIndexRoute:
       authenticatedProjectsEmployeeIdIndexRoute,
-    authenticatedProjectsEmployeeIdProjectNumberTransactionsRoute:
-      authenticatedProjectsEmployeeIdProjectNumberTransactionsRoute,
+    authenticatedProjectsEmployeeIdProjectNumberExpenditureCategoriesRoute:
+      authenticatedProjectsEmployeeIdProjectNumberExpenditureCategoriesRoute,
     authenticatedProjectsEmployeeIdProjectNumberIndexRoute:
       authenticatedProjectsEmployeeIdProjectNumberIndexRoute,
   }
