@@ -39,6 +39,7 @@ interface ProjectFundingChartProps {
 }
 
 export function ProjectFundingChart({ projects }: ProjectFundingChartProps) {
+  // Aggregate balances by project type
   const totalsByType = projects.reduce<Record<string, number>>(
     (acc, project) => {
       const key = project.projectType || 'Unknown';
@@ -48,14 +49,23 @@ export function ProjectFundingChart({ projects }: ProjectFundingChartProps) {
     {}
   );
 
-  const keys = Object.keys(totalsByType);
-  const total = keys.reduce((sum, key) => sum + totalsByType[key], 0);
+  // Separate positive and negative types (clamp at 0)
+  const positiveKeys = Object.keys(totalsByType).filter(
+    (key) => totalsByType[key] > 0
+  );
+  const negativeEntries = Object.entries(totalsByType).filter(
+    ([, value]) => value < 0
+  );
+
+  const total = positiveKeys.reduce((sum, key) => sum + totalsByType[key], 0);
   const safeTotal = total === 0 ? 1 : total;
 
-  const percents = keys.map((key) => (totalsByType[key] / safeTotal) * 100);
+  const percents = positiveKeys.map(
+    (key) => (totalsByType[key] / safeTotal) * 100
+  );
 
   const data = [
-    keys.reduce(
+    positiveKeys.reduce(
       (acc, key) => {
         acc[key] = (totalsByType[key] / safeTotal) * 100;
         return acc;
@@ -69,77 +79,92 @@ export function ProjectFundingChart({ projects }: ProjectFundingChartProps) {
       <p className="text-lg mb-4">
         Available balance broken down by funding source.
       </p>
-      <div className="mb-10 flex flex-wrap gap-x-10 gap-y-3">
-        {keys.map((key, index) => (
-          <div className="flex items-center gap-2" key={key}>
-            <span
-              className="inline-block h-5 w-5 rounded-md"
-              style={{ backgroundColor: getFundingColor(key, index) }}
-            />
-            <span>{key}</span>
-          </div>
-        ))}
-      </div>
-      <div>
-        <div className="border border-main-border rounded-lg p-1">
-          <div className="w-full h-12">
-            <ResponsiveContainer>
-              <BarChart
-                data={data}
-                layout="vertical"
-                margin={{ bottom: 0, left: 0, right: 0, top: 0 }}
-              >
-                <XAxis domain={[0, 100]} hide type="number" />
-                <YAxis dataKey="name" hide type="category" />
-
-                <Tooltip
-                  cursor={false}
-                  formatter={(value: number, key: string) => [
-                    `${formatCurrency(totalsByType[key])} (${value.toFixed(0)}%)`,
-                    key,
-                  ]}
+      {positiveKeys.length > 0 && (
+        <>
+          <div className="mb-10 flex flex-wrap gap-x-10 gap-y-3">
+            {positiveKeys.map((key, index) => (
+              <div className="flex items-center gap-2" key={key}>
+                <span
+                  className="inline-block h-5 w-5 rounded-md"
+                  style={{ backgroundColor: getFundingColor(key, index) }}
                 />
-
-                {keys.map((key, index) => (
-                  <Bar
-                    barSize={44}
-                    dataKey={key}
-                    fill={getFundingColor(key, index)}
-                    isAnimationActive
-                    key={key}
-                    radius={getBarRadius(index, keys.length)}
-                    stackId="a"
-                  />
-                ))}
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        <div
-          className="mt-3 grid text-sm"
-          style={{
-            gridTemplateColumns:
-              total === 0
-                ? keys.map(() => `${100 / keys.length}%`).join(' ')
-                : percents.map((p) => `${p}%`).join(' '),
-          }}
-        >
-          {keys.map((key) => {
-            const pct = Math.round((totalsByType[key] / safeTotal) * 100);
-            return (
-              <div className="min-w-0" key={key}>
-                <div
-                  className="truncate ps-1"
-                  title={`${formatCurrency(totalsByType[key])} (${pct}%)`}
-                >
-                  {formatCurrency(totalsByType[key])} ({pct}%)
-                </div>
+                <span>{key}</span>
               </div>
-            );
-          })}
+            ))}
+          </div>
+          <div>
+            <div className="border border-main-border rounded-lg p-1">
+              <div className="w-full h-12">
+                <ResponsiveContainer>
+                  <BarChart
+                    data={data}
+                    layout="vertical"
+                    margin={{ bottom: 0, left: 0, right: 0, top: 0 }}
+                  >
+                    <XAxis domain={[0, 100]} hide type="number" />
+                    <YAxis dataKey="name" hide type="category" />
+
+                    <Tooltip
+                      cursor={false}
+                      formatter={(value: number, key: string) => [
+                        `${formatCurrency(totalsByType[key])} (${value.toFixed(0)}%)`,
+                        key,
+                      ]}
+                    />
+
+                    {positiveKeys.map((key, index) => (
+                      <Bar
+                        barSize={44}
+                        dataKey={key}
+                        fill={getFundingColor(key, index)}
+                        isAnimationActive
+                        key={key}
+                        radius={getBarRadius(index, positiveKeys.length)}
+                        stackId="a"
+                      />
+                    ))}
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            <div
+              className="mt-3 flex flex-wrap text-sm"
+              style={{ gap: '0.25rem 0' }}
+            >
+              {positiveKeys.map((key, index) => {
+                const pct = Math.round(percents[index]);
+                return (
+                  <div
+                    className="min-w-0 px-1"
+                    key={key}
+                    style={{ flex: `${percents[index]} 0 0%`, minWidth: '120px' }}
+                  >
+                    <div
+                      className="truncate"
+                      title={`${formatCurrency(totalsByType[key])} (${pct}%)`}
+                    >
+                      {formatCurrency(totalsByType[key])} ({pct}%)
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </>
+      )}
+      {negativeEntries.length > 0 && (
+        <div className="mt-4 text-sm text-base-content/70">
+          <p className="font-medium mb-1">Negative balances (not shown above):</p>
+          <ul className="list-disc list-inside">
+            {negativeEntries.map(([key, value]) => (
+              <li key={key}>
+                {key}: {formatCurrency(value)}
+              </li>
+            ))}
+          </ul>
         </div>
-      </div>
+      )}
     </div>
   );
 }
