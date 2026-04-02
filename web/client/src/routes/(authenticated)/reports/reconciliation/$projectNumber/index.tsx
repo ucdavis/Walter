@@ -27,6 +27,7 @@ const csvColumns = [
   { header: 'GL Fund', key: 'fundCode' as const },
   { header: 'Fund Description', key: 'fundDescription' as const },
   { header: 'PPM Fund', key: 'ppmFundCode' as const },
+  { header: 'PPM Fund Description', key: 'ppmFundDescription' as const },
   { header: 'Program', key: 'programCode' as const },
   { header: 'Program Description', key: 'programDescription' as const },
   { header: 'Activity', key: 'activityCode' as const },
@@ -91,7 +92,11 @@ function RouteComponent() {
         header: 'GL Fund',
       }),
       columnHelper.accessor('ppmFundCode', {
-        cell: (info) => <span>{info.getValue()}</span>,
+        cell: (info) => (
+          <span title={info.row.original.ppmFundDescription ?? undefined}>
+            {info.getValue()}
+          </span>
+        ),
         header: 'PPM Fund',
       }),
       columnHelper.accessor('programCode', {

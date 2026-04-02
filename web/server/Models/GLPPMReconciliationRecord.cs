@@ -25,6 +25,9 @@ public sealed class GLPPMReconciliationRecord
     [JsonPropertyName("ppmFundCode")]
     public string PpmFundCode { get; set; } = "";
 
+    [JsonPropertyName("ppmFundDescription")]
+    public string? PpmFundDescription { get; set; }
+
     [JsonPropertyName("programCode")]
     public string? ProgramCode { get; set; }
 

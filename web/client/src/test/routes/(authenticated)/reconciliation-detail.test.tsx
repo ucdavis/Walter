@@ -22,6 +22,7 @@ const createReconciliationRecord = (
   ppmBudBal: 1500.75,
   ppmBudget: 10000,
   ppmFundCode: '13U02',
+  ppmFundDescription: 'COFI University Common Funds',
   ppmItdExp: 8299.25,
   programCode: '000',
   programDescription: 'Default Program',
