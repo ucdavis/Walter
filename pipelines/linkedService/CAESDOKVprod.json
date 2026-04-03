@@ -1,0 +1,10 @@
+{
+	"name": "CAESDOKVprod",
+	"properties": {
+		"annotations": [],
+		"type": "AzureKeyVault",
+		"typeProperties": {
+			"baseUrl": "https://CAES-DO-KV-prod-westUS2.vault.azure.net/"
+		}
+	}
+}
