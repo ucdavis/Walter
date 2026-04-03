@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { ProjectDetails } from '@/components/project/ProjectDetails.tsx';
 import type { ProjectSummary } from '@/lib/projectSummary.ts';
@@ -43,20 +43,20 @@ const createSummary = (
 });
 
 describe('ProjectDetails', () => {
-  it('shows a tooltip for Balance in the main summary card', async () => {
+  it('opens a drawer for Balance in the main summary card', async () => {
     const user = userEvent.setup();
     render(<ProjectDetails summary={createSummary()} />);
 
-    const balanceLabel = screen.getByText('Balance');
-    const balanceTrigger = balanceLabel.parentElement as HTMLElement;
+    const balanceTrigger = screen.getByRole('button', { name: 'Balance' });
+    const balanceLabel = within(balanceTrigger).getByText('Balance');
 
     expect(balanceTrigger).toHaveAttribute('data-tooltip-placement', 'top');
-    expect(balanceTrigger).toHaveAttribute('tabIndex', '0');
+    expect(balanceTrigger).toHaveAttribute('aria-haspopup', 'dialog');
     expect(balanceLabel).toHaveClass('tooltip-label');
 
-    await user.hover(balanceTrigger);
+    await user.click(balanceTrigger);
 
-    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+    expect(await screen.findByRole('dialog', { name: 'Balance' })).toHaveTextContent(
       tooltipDefinitions.balance
     );
   });

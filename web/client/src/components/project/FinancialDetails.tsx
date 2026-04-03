@@ -28,6 +28,7 @@ export function FinancialDetails({ summary }: FinancialDetailsProps) {
         <div>
           <dd className="stat-label">
             <TooltipLabel
+              drawerStyle="spotlight"
               label="Commitment"
               tooltip={tooltipDefinitions.commitment}
             />
@@ -39,6 +40,7 @@ export function FinancialDetails({ summary }: FinancialDetailsProps) {
         <div>
           <dd className="stat-label">
             <TooltipLabel
+              drawerStyle="spotlight"
               label="Balance"
               tooltip={tooltipDefinitions.balance}
             />

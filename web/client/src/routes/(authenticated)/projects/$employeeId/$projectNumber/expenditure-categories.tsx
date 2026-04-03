@@ -6,7 +6,7 @@ import { ExportDataButton } from '@/components/ExportDataButton.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import { type ProjectRecord, projectsDetailQueryOptions } from '@/queries/project.ts';
 import { DataTable } from '@/shared/DataTable.tsx';
-import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
+import { TooltipIconButton } from '@/shared/TooltipLabel.tsx';
 import { tooltipDefinitions } from '@/shared/tooltips.ts';
 
 interface SearchParams {
@@ -44,12 +44,30 @@ function buildRows(
   search: SearchParams
 ): ExpenditureCategoryRow[] {
   const filtered = records.filter((r) => {
-    if (r.projectNumber !== projectNumber) return false;
-    if (search.task && (r.taskNum ?? '') !== search.task) return false;
-    if (search.fund && (r.fundCode ?? '') !== search.fund) return false;
-    if (search.program && (r.programCode ?? '') !== search.program) return false;
-    if (search.activity && (r.activityCode ?? '') !== search.activity) return false;
-    if (search.dept && (r.projectOwningOrgCode ?? '') !== search.dept) return false;
+    if (r.projectNumber !== projectNumber) {
+      return false;
+    }
+
+    if (search.task && (r.taskNum ?? '') !== search.task) {
+      return false;
+    }
+
+    if (search.fund && (r.fundCode ?? '') !== search.fund) {
+      return false;
+    }
+
+    if (search.program && (r.programCode ?? '') !== search.program) {
+      return false;
+    }
+
+    if (search.activity && (r.activityCode ?? '') !== search.activity) {
+      return false;
+    }
+
+    if (search.dept && (r.projectOwningOrgCode ?? '') !== search.dept) {
+      return false;
+    }
+
     return true;
   });
 
@@ -119,11 +137,14 @@ function RouteComponent() {
         cell: (info) => <span>{info.getValue() || '-'}</span>,
         footer: () => 'Totals',
         header: () => (
-          <TooltipLabel
-            label="Expenditure Category"
-            placement="bottom"
-            tooltip={tooltipDefinitions.expenditureCategory}
-          />
+          <span className="flex items-center gap-1">
+            <span>Expenditure Category</span>
+            <TooltipIconButton
+              drawerStyle="compact"
+              label="Expenditure Category"
+              tooltip={tooltipDefinitions.expenditureCategory}
+            />
+          </span>
         ),
         minSize: 200,
       }),
@@ -165,10 +186,11 @@ function RouteComponent() {
           </span>
         ),
         header: () => (
-          <span className="flex justify-end w-full">
-            <TooltipLabel
+          <span className="flex justify-end items-center gap-1 w-full">
+            <span>Commitments</span>
+            <TooltipIconButton
+              drawerStyle="compact"
               label="Commitments"
-              placement="bottom"
               tooltip={tooltipDefinitions.commitment}
             />
           </span>
@@ -189,10 +211,11 @@ function RouteComponent() {
           </span>
         ),
         header: () => (
-          <span className="flex justify-end w-full">
-            <TooltipLabel
+          <span className="flex justify-end items-center gap-1 w-full">
+            <span>Balance</span>
+            <TooltipIconButton
+              drawerStyle="compact"
               label="Balance"
-              placement="bottom"
               tooltip={tooltipDefinitions.balance}
             />
           </span>

@@ -104,11 +104,80 @@
   }
 
   .tooltip-trigger {
-    @apply inline-flex items-center cursor-help focus:outline-none focus-visible:rounded-xs focus-visible:ring-2 focus-visible:ring-primary/30;
+    @apply inline-flex items-center cursor-pointer border-0 bg-transparent p-0 text-left text-inherit focus:outline-none focus-visible:rounded-xs focus-visible:ring-2 focus-visible:ring-primary/30;
   }
 
   .tooltip-label {
     @apply decoration-dotted underline underline-offset-4;
+  }
+
+  .tooltip-icon-trigger {
+    @apply inline-flex items-center justify-center rounded-full border-0 bg-transparent p-0 text-base-content/55 transition-colors hover:text-base-content focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30;
+  }
+
+  .tooltip-drawer-frame {
+    @apply fixed inset-0 z-[300] flex justify-end;
+  }
+
+  .tooltip-drawer-shell {
+    @apply relative h-screen w-full max-w-xl shrink-0;
+  }
+
+  .tooltip-drawer-overlay {
+    @apply h-full flex-1 border-0 bg-neutral/45 p-0 backdrop-blur-[1px];
+  }
+
+  .tooltip-drawer-surface {
+    @apply flex h-screen min-h-screen flex-col bg-neutral text-neutral-content shadow-2xl;
+    background-image:
+      radial-gradient(circle at top left, rgb(255 255 255 / 0.08), transparent 32%),
+      linear-gradient(180deg, rgb(255 255 255 / 0.03), transparent 22%);
+  }
+
+  .tooltip-drawer-surface-spotlight {
+    @apply bg-neutral;
+    background-image:
+      radial-gradient(circle at top left, rgb(255 191 105 / 0.18), transparent 34%),
+      linear-gradient(180deg, rgb(255 255 255 / 0.06), transparent 26%);
+  }
+
+  .tooltip-drawer-surface-compact {
+    @apply bg-neutral;
+    background-image:
+      linear-gradient(180deg, rgb(255 255 255 / 0.04), transparent 20%),
+      linear-gradient(90deg, rgb(255 255 255 / 0.05), transparent 18%);
+  }
+
+  .tooltip-drawer-header {
+    @apply flex items-start justify-between gap-4 border-b border-white/10 px-6 py-5 sm:px-8;
+  }
+
+  .tooltip-drawer-eyebrow {
+    @apply text-xs font-semibold uppercase tracking-[0.24em] text-neutral-content/60;
+  }
+
+  .tooltip-drawer-title {
+    @apply mt-3 text-3xl font-semibold leading-tight text-balance sm:text-4xl;
+  }
+
+  .tooltip-drawer-body {
+    @apply flex flex-1 flex-col justify-between gap-8 px-6 py-6 sm:px-8 sm:py-8;
+  }
+
+  .tooltip-drawer-copy {
+    @apply max-w-2xl text-lg leading-8 text-neutral-content/90;
+  }
+
+  .tooltip-drawer-copy-spotlight {
+    @apply rounded-2xl border border-white/10 bg-white/5 p-6 text-xl leading-9 text-neutral-content;
+  }
+
+  .tooltip-drawer-copy-compact {
+    @apply border-l-4 border-warning pl-5 text-base leading-7 text-neutral-content/85;
+  }
+
+  .tooltip-drawer-footer {
+    @apply flex flex-wrap items-center gap-3 text-sm text-neutral-content/65;
   }
 
   .floating-tooltip {
