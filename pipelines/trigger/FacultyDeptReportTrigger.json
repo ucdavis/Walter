@@ -1,0 +1,17 @@
+{
+	"name": "FacultyDeptReportTrigger",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2026-04-04T12:00:00",
+				"timeZone": "Eastern Standard Time"
+			}
+		}
+	}
+}
