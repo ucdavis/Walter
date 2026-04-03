@@ -88,7 +88,7 @@ function ProjectContent({
       <section className="section-margin">
         <h2 className="h2">
           <TooltipLabel
-            label="Chart String Breakdown"
+            label="Task Breakdown"
             tooltip={tooltipDefinitions.chartStringBreakdown}
           />
         </h2>
