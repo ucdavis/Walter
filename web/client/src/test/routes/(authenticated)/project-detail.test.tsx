@@ -231,10 +231,13 @@ describe('project detail page', () => {
     });
 
     try {
-      const label = await screen.findByText('Chart String Breakdown');
-      await user.hover(label.parentElement as HTMLElement);
+      await user.click(
+        await screen.findByRole('button', { name: 'Chart String Breakdown' })
+      );
 
-      expect(await screen.findByRole('tooltip')).toHaveTextContent(
+      expect(
+        await screen.findByRole('dialog', { name: 'Chart String Breakdown' })
+      ).toHaveTextContent(
         tooltipDefinitions.chartStringBreakdown
       );
     } finally {

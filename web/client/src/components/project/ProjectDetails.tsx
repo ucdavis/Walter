@@ -74,6 +74,7 @@ export function ProjectDetails({ summary }: ProjectDetailsProps) {
             <BanknotesIcon className="w-4 h-4" />
             <dt className="stat-label">
               <TooltipLabel
+                drawerStyle="spotlight"
                 label="Balance"
                 tooltip={tooltipDefinitions.balance}
               />

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import {
   aggregateByPosition,
@@ -138,22 +138,33 @@ describe('PersonnelTable', () => {
     expect(screen.getByText('0.75')).toBeInTheDocument();
   });
 
-  it('shows a tooltip on the FTE header', async () => {
+  it('opens a drawer from the FTE header', async () => {
     const user = userEvent.setup();
     render(<PersonnelTable data={[createRecord()]} />);
 
-    const fteHeader = screen.getByText('FTE');
-    const fteTrigger = fteHeader.parentElement as HTMLElement;
+    const fteHeader = screen.getByRole('columnheader', { name: /fte/i });
+    const fteTrigger = screen.getByRole('button', { name: 'Open FTE help' });
 
-    expect(fteTrigger).toHaveAttribute('data-tooltip-placement', 'bottom');
-    expect(fteTrigger).toHaveAttribute('tabIndex', '0');
-    expect(fteHeader).toHaveClass('tooltip-label');
+    expect(fteHeader).toBeInTheDocument();
+    expect(fteTrigger).toHaveAttribute('aria-haspopup', 'dialog');
 
-    await user.hover(fteTrigger);
+    await user.click(fteTrigger);
 
-    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+    expect(await screen.findByRole('dialog', { name: 'FTE' })).toHaveTextContent(
       tooltipDefinitions.fte
     );
+  });
+
+  it('keeps sorting behavior on the FTE header text', async () => {
+    const user = userEvent.setup();
+    render(<PersonnelTable data={[createRecord({ fte: 0.5 }), createRecord({ fte: 1 })]} />);
+
+    const fteHeader = screen.getByRole('columnheader', { name: /fte/i });
+
+    await user.click(fteHeader);
+
+    expect(screen.queryByRole('dialog', { name: 'FTE' })).not.toBeInTheDocument();
+    expect(within(fteHeader).getByLabelText(/sorted/i)).toBeInTheDocument();
   });
 
   it('displays totals in footer', () => {
@@ -219,19 +230,18 @@ describe('PersonnelTable', () => {
     expect(screen.getByText('Test Project')).toBeInTheDocument();
   });
 
-  it('shows a tooltip on the Monthly CBR header', async () => {
+  it('opens a drawer from the Monthly CBR header', async () => {
     const user = userEvent.setup();
     render(<PersonnelTable data={[createRecord()]} />);
 
-    const label = screen.getByText('Monthly CBR');
-    await user.hover(label.parentElement as HTMLElement);
+    await user.click(screen.getByRole('button', { name: 'Open Monthly CBR help' }));
 
-    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+    expect(await screen.findByRole('dialog', { name: 'Monthly CBR' })).toHaveTextContent(
       tooltipDefinitions.monthlyCbr
     );
   });
 
-  it('shows tooltips in the funding distribution subtable', async () => {
+  it('opens drawers in the funding distribution subtable', async () => {
     const user = userEvent.setup();
     render(<PersonnelTable data={[createRecord({ projectDescription: 'Test Project' })]} />);
 
@@ -239,17 +249,15 @@ describe('PersonnelTable', () => {
       screen.getByRole('cell', { name: 'Smith, John (1001) - PROF-FY' })
     );
 
-    const distLabel = screen.getByText('Dist %');
-    await user.hover(distLabel.parentElement as HTMLElement);
-    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+    await user.click(screen.getByRole('button', { name: 'Dist %' }));
+    expect(await screen.findByRole('dialog', { name: 'Dist %' })).toHaveTextContent(
       tooltipDefinitions.distributionPercent
     );
 
-    await user.unhover(distLabel.parentElement as HTMLElement);
+    await user.click(screen.getByRole('button', { name: 'Close Dist % help' }));
 
-    const cbrLabel = screen.getByText('CBR');
-    await user.hover(cbrLabel.parentElement as HTMLElement);
-    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+    await user.click(screen.getByRole('button', { name: 'CBR' }));
+    expect(await screen.findByRole('dialog', { name: 'CBR' })).toHaveTextContent(
       tooltipDefinitions.cbr
     );
   });
