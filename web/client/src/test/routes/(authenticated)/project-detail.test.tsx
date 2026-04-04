@@ -221,7 +221,7 @@ describe('project detail page', () => {
     }
   });
 
-  it('shows a tooltip for the Chart String Breakdown section heading', async () => {
+  it('shows a tooltip for the Task Breakdown section heading', async () => {
     const user = userEvent.setup();
     const projects = [createProject({ pmEmployeeId: '2000' })];
     setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);
@@ -231,7 +231,7 @@ describe('project detail page', () => {
     });
 
     try {
-      const label = await screen.findByText('Chart String Breakdown');
+      const label = await screen.findByText('Task Breakdown');
       await user.hover(label.parentElement as HTMLElement);
 
       expect(await screen.findByRole('tooltip')).toHaveTextContent(

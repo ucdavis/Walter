@@ -68,7 +68,9 @@ function RouteComponent() {
     if (!personnelQuery.data) {
       return null;
     }
-    return new Set(personnelQuery.data.map((p) => p.employeeId)).size;
+    return new Set(
+      personnelQuery.data.filter((p) => p.name).map((p) => p.employeeId)
+    ).size;
   }, [personnelQuery.data]);
 
   if (!projects?.length) {
