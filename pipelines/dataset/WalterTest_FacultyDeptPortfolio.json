@@ -1,0 +1,163 @@
+{
+	"name": "WalterTest_FacultyDeptPortfolio",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "Roberto_WalterTest",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "SqlServerTable",
+		"schema": [
+			{
+				"name": "ProjectNumber",
+				"type": "nvarchar"
+			},
+			{
+				"name": "TaskNum",
+				"type": "nvarchar"
+			},
+			{
+				"name": "FundCode",
+				"type": "nvarchar"
+			},
+			{
+				"name": "ProgramCode",
+				"type": "nvarchar"
+			},
+			{
+				"name": "ActivityCode",
+				"type": "nvarchar"
+			},
+			{
+				"name": "ExpenditureCategoryName",
+				"type": "nvarchar"
+			},
+			{
+				"name": "ProjectOwningOrgCode",
+				"type": "nvarchar"
+			},
+			{
+				"name": "AwardNumber",
+				"type": "nvarchar"
+			},
+			{
+				"name": "AwardName",
+				"type": "nvarchar"
+			},
+			{
+				"name": "AwardType",
+				"type": "nvarchar"
+			},
+			{
+				"name": "AwardStartDate",
+				"type": "date"
+			},
+			{
+				"name": "AwardEndDate",
+				"type": "date"
+			},
+			{
+				"name": "AwardStatus",
+				"type": "nvarchar"
+			},
+			{
+				"name": "ProjectName",
+				"type": "nvarchar"
+			},
+			{
+				"name": "ProjectOwningOrg",
+				"type": "nvarchar"
+			},
+			{
+				"name": "ProjectType",
+				"type": "nvarchar"
+			},
+			{
+				"name": "ProjectStatus",
+				"type": "nvarchar"
+			},
+			{
+				"name": "TaskName",
+				"type": "nvarchar"
+			},
+			{
+				"name": "TaskStatus",
+				"type": "nvarchar"
+			},
+			{
+				"name": "Pm",
+				"type": "nvarchar"
+			},
+			{
+				"name": "Pa",
+				"type": "nvarchar"
+			},
+			{
+				"name": "Pi",
+				"type": "nvarchar"
+			},
+			{
+				"name": "Copi",
+				"type": "nvarchar"
+			},
+			{
+				"name": "FundDesc",
+				"type": "nvarchar"
+			},
+			{
+				"name": "PurposeCode",
+				"type": "nvarchar"
+			},
+			{
+				"name": "PurposeDesc",
+				"type": "nvarchar"
+			},
+			{
+				"name": "ProgramDesc",
+				"type": "nvarchar"
+			},
+			{
+				"name": "ActivityDesc",
+				"type": "nvarchar"
+			},
+			{
+				"name": "PpmBudget",
+				"type": "decimal",
+				"precision": 15,
+				"scale": 2
+			},
+			{
+				"name": "PpmCommitments",
+				"type": "decimal",
+				"precision": 15,
+				"scale": 2
+			},
+			{
+				"name": "PpmExpenses",
+				"type": "decimal",
+				"precision": 15,
+				"scale": 2
+			},
+			{
+				"name": "PpmBudBal",
+				"type": "decimal",
+				"precision": 15,
+				"scale": 2
+			},
+			{
+				"name": "LoadDate",
+				"type": "datetime2",
+				"scale": 3
+			},
+			{
+				"name": "LastUpdated",
+				"type": "datetime2",
+				"scale": 3
+			}
+		],
+		"typeProperties": {
+			"schema": "dbo",
+			"table": "FacultyDeptPortfolio"
+		}
+	}
+}
