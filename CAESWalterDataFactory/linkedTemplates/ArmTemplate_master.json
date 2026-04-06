@@ -11,6 +11,14 @@
 			"type": "secureString",
 			"metadata": "Secure string for 'password' of 'ROBERTO_WalterDev'"
 		},
+		"ROBERTO_WalterProd_password": {
+			"type": "secureString",
+			"metadata": "Secure string for 'password' of 'ROBERTO_WalterProd'"
+		},
+		"Roberto_WalterTest_password": {
+			"type": "secureString",
+			"metadata": "Secure string for 'password' of 'Roberto_WalterTest'"
+		},
 		"CAESDOKVprod_properties_typeProperties_baseUrl": {
 			"type": "string",
 			"defaultValue": "https://CAES-DO-KV-prod-westUS2.vault.azure.net/"
@@ -24,6 +32,30 @@
 			"defaultValue": "WalterDev"
 		},
 		"ROBERTO_WalterDev_properties_typeProperties_userName": {
+			"type": "string",
+			"defaultValue": "walter_adf"
+		},
+		"ROBERTO_WalterProd_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "caes-roberto"
+		},
+		"ROBERTO_WalterProd_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "WalterProd"
+		},
+		"ROBERTO_WalterProd_properties_typeProperties_userName": {
+			"type": "string",
+			"defaultValue": "walter_adf"
+		},
+		"Roberto_WalterTest_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "caes-roberto"
+		},
+		"Roberto_WalterTest_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "WalterTest"
+		},
+		"Roberto_WalterTest_properties_typeProperties_userName": {
 			"type": "string",
 			"defaultValue": "walter_adf"
 		},
@@ -54,11 +86,26 @@
 					"factoryName": {
 						"value": "[parameters('factoryName')]"
 					},
+					"ROBERTO_WalterProd_password": {
+						"value": "[parameters('ROBERTO_WalterProd_password')]"
+					},
 					"ROBERTO_WalterDev_password": {
 						"value": "[parameters('ROBERTO_WalterDev_password')]"
 					},
+					"Roberto_WalterTest_password": {
+						"value": "[parameters('Roberto_WalterTest_password')]"
+					},
 					"CAESDOKVprod_properties_typeProperties_baseUrl": {
 						"value": "[parameters('CAESDOKVprod_properties_typeProperties_baseUrl')]"
+					},
+					"ROBERTO_WalterProd_properties_typeProperties_server": {
+						"value": "[parameters('ROBERTO_WalterProd_properties_typeProperties_server')]"
+					},
+					"ROBERTO_WalterProd_properties_typeProperties_database": {
+						"value": "[parameters('ROBERTO_WalterProd_properties_typeProperties_database')]"
+					},
+					"ROBERTO_WalterProd_properties_typeProperties_userName": {
+						"value": "[parameters('ROBERTO_WalterProd_properties_typeProperties_userName')]"
 					},
 					"ROBERTO_WalterDev_properties_typeProperties_server": {
 						"value": "[parameters('ROBERTO_WalterDev_properties_typeProperties_server')]"
@@ -68,6 +115,15 @@
 					},
 					"ROBERTO_WalterDev_properties_typeProperties_userName": {
 						"value": "[parameters('ROBERTO_WalterDev_properties_typeProperties_userName')]"
+					},
+					"Roberto_WalterTest_properties_typeProperties_server": {
+						"value": "[parameters('Roberto_WalterTest_properties_typeProperties_server')]"
+					},
+					"Roberto_WalterTest_properties_typeProperties_database": {
+						"value": "[parameters('Roberto_WalterTest_properties_typeProperties_database')]"
+					},
+					"Roberto_WalterTest_properties_typeProperties_userName": {
+						"value": "[parameters('Roberto_WalterTest_properties_typeProperties_userName')]"
 					}
 				}
 			},

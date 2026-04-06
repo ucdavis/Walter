@@ -8,6 +8,12 @@
 		"ROBERTO_WalterDev_password": {
 			"value": ""
 		},
+		"ROBERTO_WalterProd_password": {
+			"value": ""
+		},
+		"Roberto_WalterTest_password": {
+			"value": ""
+		},
 		"CAESDOKVprod_properties_typeProperties_baseUrl": {
 			"value": "https://CAES-DO-KV-prod-westUS2.vault.azure.net/"
 		},
@@ -18,6 +24,24 @@
 			"value": "WalterDev"
 		},
 		"ROBERTO_WalterDev_properties_typeProperties_userName": {
+			"value": "walter_adf"
+		},
+		"ROBERTO_WalterProd_properties_typeProperties_server": {
+			"value": "caes-roberto"
+		},
+		"ROBERTO_WalterProd_properties_typeProperties_database": {
+			"value": "WalterProd"
+		},
+		"ROBERTO_WalterProd_properties_typeProperties_userName": {
+			"value": "walter_adf"
+		},
+		"Roberto_WalterTest_properties_typeProperties_server": {
+			"value": "caes-roberto"
+		},
+		"Roberto_WalterTest_properties_typeProperties_database": {
+			"value": "WalterTest"
+		},
+		"Roberto_WalterTest_properties_typeProperties_userName": {
 			"value": "walter_adf"
 		},
 		"containerUri": {
