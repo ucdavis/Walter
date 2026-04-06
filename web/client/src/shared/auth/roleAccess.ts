@@ -49,7 +49,7 @@ const isDefaultNavUser = (roles: readonly string[]) =>
   !hasSystemRole(roles) && !hasNonSystemSpecialRole(roles);
 
 export const canAccessAdminDashboard = (roles: readonly string[]) =>
-  !hasSystemRole(roles) && hasRole(roles, ELEVATED_ROLES);
+  hasRole(roles, ELEVATED_ROLES);
 
 export const canAccessAdminUsers = (roles: readonly string[]) =>
   hasManagerRole(roles);
