@@ -582,37 +582,182 @@ public sealed class SearchController : ApiControllerBase
             return localEmployeeId;
         }
 
+        var kerberosFallback = normalizedEmail.Split('@', 2, StringSplitOptions.TrimEntries)[0];
+        if (!string.IsNullOrWhiteSpace(kerberosFallback))
+        {
+            var normalizedKerberos = kerberosFallback.ToLowerInvariant();
+            var localKerberosEmployeeId = await _dbContext.Users
+                .AsNoTracking()
+                .Where(u => u.Kerberos.ToLower() == normalizedKerberos)
+                .Select(u => u.EmployeeId)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (!string.IsNullOrWhiteSpace(localKerberosEmployeeId))
+            {
+                return localKerberosEmployeeId;
+            }
+        }
+
         try
         {
-            var directoryUsers = await _graphService.SearchUsersAsync(User, normalizedEmail, cancellationToken);
-            var candidate = directoryUsers.FirstOrDefault(u =>
-                    string.Equals(u.Email?.Trim(), normalizedEmail, StringComparison.OrdinalIgnoreCase))
-                ?? directoryUsers.FirstOrDefault();
-
-            if (candidate is null)
+            // Try the direct match first, then keep searching alternate directory objects until one actually resolves.
+            var employeeId = await TryResolveEmployeeIdFromGraphMatchesAsync(normalizedEmail, cancellationToken);
+            if (string.IsNullOrWhiteSpace(employeeId))
             {
+                _logger.LogInformation("PI email '{Email}' did not resolve to a Graph profile.", normalizedEmail);
                 return null;
             }
 
-            var profile = await _graphService.GetUserProfileAsync(User, candidate.Id, cancellationToken);
-            if (profile is null || string.IsNullOrWhiteSpace(profile.IamId))
-            {
-                return null;
-            }
-
-            var identity = await _identityService.GetByIamId(profile.IamId);
-            if (identity is null || string.IsNullOrWhiteSpace(identity.EmployeeId))
-            {
-                return null;
-            }
-
-            return identity.EmployeeId;
+            return employeeId;
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to resolve employee ID from directory email '{Email}'.", normalizedEmail);
             return null;
         }
+    }
+
+    // Resolve a PI email against one or more Graph directory objects and keep going until one yields an employee ID.
+    private async Task<string?> TryResolveEmployeeIdFromGraphMatchesAsync(
+        string email,
+        CancellationToken cancellationToken)
+    {
+        var seenProfileIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        async Task<string?> TryProfileAsync(GraphUserProfile? profile)
+        {
+            if (profile?.Id is null || !seenProfileIds.Add(profile.Id))
+            {
+                return null;
+            }
+
+            return await TryResolveEmployeeIdFromGraphProfileAsync(profile, email, cancellationToken);
+        }
+
+        var directProfile = await _graphService.FindUserByEmailAsync(User, email, cancellationToken);
+        var directEmployeeId = await TryProfileAsync(directProfile);
+        if (!string.IsNullOrWhiteSpace(directEmployeeId))
+        {
+            return directEmployeeId;
+        }
+
+        foreach (var candidateProfile in await FindCandidateGraphProfilesByEmailAsync(email, cancellationToken))
+        {
+            var candidateEmployeeId = await TryProfileAsync(candidateProfile);
+            if (!string.IsNullOrWhiteSpace(candidateEmployeeId))
+            {
+                return candidateEmployeeId;
+            }
+        }
+
+        return null;
+    }
+
+    // Convert a specific Graph profile into an employee ID using the local Users table first, then IAM.
+    private async Task<string?> TryResolveEmployeeIdFromGraphProfileAsync(
+        GraphUserProfile profile,
+        string email,
+        CancellationToken cancellationToken)
+    {
+        if (Guid.TryParse(profile.Id, out var userId))
+        {
+            var localEmployeeIdByUserId = await _dbContext.Users
+                .AsNoTracking()
+                .Where(u => u.Id == userId)
+                .Select(u => u.EmployeeId)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (!string.IsNullOrWhiteSpace(localEmployeeIdByUserId))
+            {
+                _logger.LogInformation(
+                    "Resolved PI email '{Email}' via local user record for Entra object '{UserId}'.",
+                    email,
+                    userId);
+                return localEmployeeIdByUserId;
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(profile.IamId))
+        {
+            _logger.LogInformation(
+                "Graph profile '{UserId}' for PI email '{Email}' has no IAM ID.",
+                profile.Id,
+                email);
+            return null;
+        }
+
+        var identity = await _identityService.GetByIamId(profile.IamId);
+        if (identity is null || string.IsNullOrWhiteSpace(identity.EmployeeId))
+        {
+            _logger.LogInformation(
+                "IAM lookup for PI email '{Email}' and IAM ID '{IamId}' returned no employee ID.",
+                email,
+                profile.IamId);
+            return null;
+        }
+
+        return identity.EmployeeId;
+    }
+
+    // Mirror the people-search fallback by searching on the email local-part and returning all plausible matches.
+    private async Task<IReadOnlyList<GraphUserProfile>> FindCandidateGraphProfilesByEmailAsync(
+        string email,
+        CancellationToken cancellationToken)
+    {
+        var localPart = ExtractEmailLocalPart(email);
+        if (string.IsNullOrWhiteSpace(localPart) || localPart.Length < 3)
+        {
+            return [];
+        }
+
+        // Mirror the proven /api/search/people behavior and keep all matching directory objects, not just the first.
+        var results = await _graphService.SearchUsersAsync(User, localPart, cancellationToken);
+        var matchingUsers = results
+            .Where(result => result.Id is not null && HasMatchingEmailLocalPart(result.Email, email))
+            .ToArray();
+
+        if (matchingUsers.Length == 0)
+        {
+            return [];
+        }
+
+        var profiles = new List<GraphUserProfile>(matchingUsers.Length);
+        foreach (var matchingUser in matchingUsers)
+        {
+            var profile = await _graphService.GetUserProfileAsync(User, matchingUser.Id, cancellationToken);
+            if (profile is not null)
+            {
+                profiles.Add(profile);
+            }
+        }
+
+        return profiles;
+    }
+
+    private static bool HasMatchingEmailLocalPart(string? resultEmail, string candidateEmail)
+    {
+        var resultLocalPart = ExtractEmailLocalPart(resultEmail);
+        var candidateLocalPart = ExtractEmailLocalPart(candidateEmail);
+
+        return !string.IsNullOrWhiteSpace(resultLocalPart) &&
+               !string.IsNullOrWhiteSpace(candidateLocalPart) &&
+               string.Equals(resultLocalPart, candidateLocalPart, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string? ExtractEmailLocalPart(string? email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            return null;
+        }
+
+        var atIndex = email.IndexOf('@');
+        if (atIndex <= 0)
+        {
+            return null;
+        }
+
+        return email[..atIndex].Trim();
     }
 
     private async Task<IReadOnlyList<SearchDirectoryPerson>> SearchManagedPeopleFallbackAsync(

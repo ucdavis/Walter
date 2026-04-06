@@ -172,6 +172,14 @@ public sealed class AdminUsersControllerTests
             throw new NotImplementedException();
         }
 
+        public Task<GraphUserProfile?> FindUserByEmailAsync(
+            ClaimsPrincipal principal,
+            string email,
+            CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException();
+        }
+
         public Task<GraphUserProfile?> GetUserProfileAsync(
             ClaimsPrincipal principal,
             string userObjectId,
@@ -194,4 +202,3 @@ public sealed class AdminUsersControllerTests
         }
     }
 }
-
