@@ -16,7 +16,6 @@ interface RumAgent {
 }
 
 export interface RumPublicConfig {
-  distributedTracingOrigins: string[];
   enabled: boolean;
   environment: string;
   serverUrl: string;
@@ -65,17 +64,10 @@ export async function bootstrapRum(
         return null;
       }
 
-      const distributedTracingOrigins = Array.from(
-        new Set([
-          getOrigin(),
-          ...config.distributedTracingOrigins.filter(Boolean),
-        ])
-      );
-
       rumAgent = init({
         breakdownMetrics: true,
         centralConfig: false,
-        distributedTracingOrigins,
+        distributedTracingOrigins: [getOrigin()],
         environment: config.environment,
         serverUrl: config.serverUrl,
         serviceName: config.serviceName,

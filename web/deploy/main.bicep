@@ -38,9 +38,6 @@ param rumTransactionSampleRate string = '0.2'
 @description('Frontend environment label reported to Elastic APM.')
 param rumEnvironment string = 'production'
 
-@description('Optional comma-separated list of distributed tracing origins for browser requests.')
-param rumDistributedTracingOrigins string = ''
-
 // SQL Server
 resource sqlServer 'Microsoft.Sql/servers@2024-05-01-preview' = {
   name: sqlServerName
@@ -95,7 +92,6 @@ resource webAppSettings 'Microsoft.Web/sites/config@2024-11-01' = {
   parent: webApp
   properties: {
     DB_CONNECTION: 'Server=tcp:${sqlServer.name}.database.windows.net,1433;Initial Catalog=${sqlDb.name};Persist Security Info=False;User ID=${sqlAdminLogin};Password=${sqlAdminPassword};MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;'
-    Rum__DistributedTracingOrigins: rumDistributedTracingOrigins
     Rum__Enabled: string(rumEnabled)
     Rum__Environment: rumEnvironment
     Rum__ServerUrl: rumServerUrl

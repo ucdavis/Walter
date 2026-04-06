@@ -32,7 +32,7 @@ public class SystemController : ApiControllerBase
     [HttpGet("rum-config")]
     public ActionResult<RumPublicConfig> GetRumConfig()
     {
-        return Ok(_rumOptions.ToPublicConfig(Request, _hostEnvironment));
+        return Ok(_rumOptions.ToPublicConfig(_hostEnvironment));
     }
 
     [HttpGet("emulate/{identifier}")]

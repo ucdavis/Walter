@@ -17,9 +17,7 @@ public sealed class RumOptions
 
     public string? TransactionSampleRate { get; set; }
 
-    public string? DistributedTracingOrigins { get; set; }
-
-    public RumPublicConfig ToPublicConfig(HttpRequest request, IHostEnvironment hostEnvironment)
+    public RumPublicConfig ToPublicConfig(IHostEnvironment hostEnvironment)
     {
         var environment = string.IsNullOrWhiteSpace(Environment)
             ? hostEnvironment.EnvironmentName
@@ -32,11 +30,9 @@ public sealed class RumOptions
         var sampleRate = ResolveSampleRate(environment);
         var serverUrl = ServerUrl?.Trim() ?? string.Empty;
         var isEnabled = Enabled && !string.IsNullOrWhiteSpace(serverUrl);
-        var distributedTracingOrigins = ResolveDistributedTracingOrigins(request);
 
         return new RumPublicConfig
         {
-            DistributedTracingOrigins = distributedTracingOrigins,
             Enabled = isEnabled,
             Environment = environment,
             ServerUrl = isEnabled ? serverUrl : string.Empty,
@@ -71,25 +67,6 @@ public sealed class RumOptions
             ? 0.2d
             : 1d;
     }
-
-    private string[] ResolveDistributedTracingOrigins(HttpRequest request)
-    {
-        var configuredOrigins = (DistributedTracingOrigins ?? string.Empty)
-            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
-
-        var requestOrigin = $"{request.Scheme}://{request.Host}";
-        if (!string.IsNullOrWhiteSpace(requestOrigin))
-        {
-            configuredOrigins.Insert(0, requestOrigin);
-        }
-
-        return configuredOrigins
-            .Where(origin => !string.IsNullOrWhiteSpace(origin))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-    }
 }
 
 public sealed class RumPublicConfig
@@ -105,6 +82,4 @@ public sealed class RumPublicConfig
     public string ServerUrl { get; init; } = string.Empty;
 
     public double TransactionSampleRate { get; init; }
-
-    public string[] DistributedTracingOrigins { get; init; } = [];
 }

@@ -8,7 +8,6 @@ import {
 } from '@/lib/rum.ts';
 
 const enabledConfig: RumPublicConfig = {
-  distributedTracingOrigins: ['https://walter.example'],
   enabled: true,
   environment: 'production',
   serverUrl: 'https://elastic.example',
@@ -63,10 +62,7 @@ describe('bootstrapRum', () => {
     const init = vi.fn(() => agent);
 
     await bootstrapRum({
-      fetchConfig: async () => ({
-        ...enabledConfig,
-        distributedTracingOrigins: ['https://api.example'],
-      }),
+      fetchConfig: async () => enabledConfig,
       getOrigin: () => 'https://walter.example',
       init,
     });
@@ -74,10 +70,7 @@ describe('bootstrapRum', () => {
     expect(init).toHaveBeenCalledWith({
       breakdownMetrics: true,
       centralConfig: false,
-      distributedTracingOrigins: [
-        'https://walter.example',
-        'https://api.example',
-      ],
+      distributedTracingOrigins: ['https://walter.example'],
       environment: 'production',
       serverUrl: 'https://elastic.example',
       serviceName: 'walter-web',

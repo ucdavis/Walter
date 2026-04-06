@@ -39,7 +39,6 @@ public class SystemControllerTests
         result.Result.Should().BeOfType<OkObjectResult>()
             .Which.Value.Should().BeEquivalentTo(new
             {
-                DistributedTracingOrigins = new[] { "https://walter.local" },
                 Enabled = true,
                 Environment = Environments.Development,
                 ServerUrl = "https://elastic.example",
@@ -55,7 +54,6 @@ public class SystemControllerTests
         using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
         var rumOptions = new RumOptions
         {
-            DistributedTracingOrigins = "https://walter.example, https://api.example",
             Enabled = true,
             Environment = "staging",
             ServerUrl = "https://elastic.example",
@@ -73,11 +71,6 @@ public class SystemControllerTests
         result.Result.Should().BeOfType<OkObjectResult>()
             .Which.Value.Should().BeEquivalentTo(new
             {
-                DistributedTracingOrigins = new[]
-                {
-                    "https://walter.example",
-                    "https://api.example",
-                },
                 Enabled = true,
                 Environment = "staging",
                 ServerUrl = "https://elastic.example",
@@ -106,7 +99,6 @@ public class SystemControllerTests
         result.Result.Should().BeOfType<OkObjectResult>()
             .Which.Value.Should().BeEquivalentTo(new
             {
-                DistributedTracingOrigins = new[] { "https://walter.example" },
                 Enabled = false,
                 Environment = Environments.Production,
                 ServerUrl = string.Empty,

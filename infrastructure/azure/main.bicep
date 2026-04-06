@@ -38,9 +38,6 @@ param rumServiceVersion string = ''
 @description('Transaction sample rate for the browser agent. Use a string so App Settings preserve the exact value.')
 param rumTransactionSampleRate string = '0.2'
 
-@description('Optional comma-separated list of distributed tracing origins for browser requests.')
-param rumDistributedTracingOrigins string = ''
-
 var normalizedAppName = toLower(replace(replace(appName, ' ', '-'), '_', '-'))
 var normalizedEnv = toLower(replace(replace(env, ' ', '-'), '_', '-'))
 
@@ -82,7 +79,6 @@ module web './modules/webapp.bicep' = {
     linuxFxVersion: linuxFxVersion
     appSettings: {
       DB_CONNECTION: dbConnection
-      Rum__DistributedTracingOrigins: rumDistributedTracingOrigins
       Rum__Enabled: string(rumEnabled)
       Rum__Environment: empty(normalizedEnv) ? 'production' : normalizedEnv
       Rum__ServerUrl: rumServerUrl
