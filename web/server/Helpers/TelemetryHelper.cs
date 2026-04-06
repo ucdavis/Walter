@@ -34,8 +34,8 @@ public static class TelemetryHelper
     public static void ConfigureOpenTelemetry(IServiceCollection services, IHostEnvironment env)
     {
         Sampler sampler = env.IsDevelopment()
-            ? new AlwaysOnSampler()
-            : new TraceIdRatioBasedSampler(0.2);
+            ? new ParentBasedSampler(new AlwaysOnSampler())
+            : new ParentBasedSampler(new TraceIdRatioBasedSampler(0.2));
 
         services.AddOpenTelemetry()
             .WithTracing(t => t
