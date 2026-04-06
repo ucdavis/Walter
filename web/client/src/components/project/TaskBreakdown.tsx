@@ -109,19 +109,6 @@ export function TaskBreakdown({ employeeId, projectNumber, records }: TaskBreakd
 
   const columns = useMemo(
     () => [
-      columnHelper.accessor('financialDepartment', {
-        cell: (info) => (
-          <div>
-            <div className="text-xs text-base-content/70">
-              {info.row.original.financialDepartmentCode}
-            </div>
-            <div>{info.getValue()}</div>
-          </div>
-        ),
-        footer: () => 'Totals',
-        header: 'Financial Dept',
-        minSize: 180,
-      }),
       columnHelper.accessor('taskNum', {
         cell: (info) => (
           <div>
@@ -133,7 +120,13 @@ export function TaskBreakdown({ employeeId, projectNumber, records }: TaskBreakd
             )}
           </div>
         ),
+        footer: () => 'Totals',
         header: 'Task',
+        minSize: 200,
+      }),
+      columnHelper.accessor('financialDepartmentCode', {
+        cell: (info) => <span>{info.getValue()}</span>,
+        header: 'Dept',
       }),
       columnHelper.accessor('fundCode', {
         cell: (info) => (
