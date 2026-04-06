@@ -2125,16 +2125,22 @@
 					"server": "[parameters('ROBERTO_WalterProd_properties_typeProperties_server')]",
 					"database": "[parameters('ROBERTO_WalterProd_properties_typeProperties_database')]",
 					"encrypt": "mandatory",
-					"trustServerCertificate": false,
+					"trustServerCertificate": true,
 					"authenticationType": "SQL",
 					"userName": "[parameters('ROBERTO_WalterProd_properties_typeProperties_userName')]",
 					"password": {
 						"type": "SecureString",
 						"value": "[parameters('ROBERTO_WalterProd_password')]"
 					}
+				},
+				"connectVia": {
+					"referenceName": "CAES-ROBERTO-SHIR",
+					"type": "IntegrationRuntimeReference"
 				}
 			},
-			"dependsOn": []
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/integrationRuntimes/CAES-ROBERTO-SHIR')]"
+			]
 		},
 		{
 			"name": "[concat(parameters('factoryName'), '/Roberto_WalterTest')]",

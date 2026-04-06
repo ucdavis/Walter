@@ -7,13 +7,13 @@
 			"metadata": "Data Factory name",
 			"defaultValue": "CAESWalterDataFactory"
 		},
-		"ROBERTO_WalterProd_password": {
-			"type": "secureString",
-			"metadata": "Secure string for 'password' of 'ROBERTO_WalterProd'"
-		},
 		"ROBERTO_WalterDev_password": {
 			"type": "secureString",
 			"metadata": "Secure string for 'password' of 'ROBERTO_WalterDev'"
+		},
+		"ROBERTO_WalterProd_password": {
+			"type": "secureString",
+			"metadata": "Secure string for 'password' of 'ROBERTO_WalterProd'"
 		},
 		"Roberto_WalterTest_password": {
 			"type": "secureString",
@@ -22,18 +22,6 @@
 		"CAESDOKVprod_properties_typeProperties_baseUrl": {
 			"type": "string",
 			"defaultValue": "https://CAES-DO-KV-prod-westUS2.vault.azure.net/"
-		},
-		"ROBERTO_WalterProd_properties_typeProperties_server": {
-			"type": "string",
-			"defaultValue": "caes-roberto"
-		},
-		"ROBERTO_WalterProd_properties_typeProperties_database": {
-			"type": "string",
-			"defaultValue": "WalterProd"
-		},
-		"ROBERTO_WalterProd_properties_typeProperties_userName": {
-			"type": "string",
-			"defaultValue": "walter_adf"
 		},
 		"ROBERTO_WalterDev_properties_typeProperties_server": {
 			"type": "string",
@@ -44,6 +32,18 @@
 			"defaultValue": "WalterDev"
 		},
 		"ROBERTO_WalterDev_properties_typeProperties_userName": {
+			"type": "string",
+			"defaultValue": "walter_adf"
+		},
+		"ROBERTO_WalterProd_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "caes-roberto"
+		},
+		"ROBERTO_WalterProd_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "WalterProd"
+		},
+		"ROBERTO_WalterProd_properties_typeProperties_userName": {
 			"type": "string",
 			"defaultValue": "walter_adf"
 		},
@@ -78,28 +78,6 @@
 			"dependsOn": []
 		},
 		{
-			"name": "[concat(parameters('factoryName'), '/ROBERTO_WalterProd')]",
-			"type": "Microsoft.DataFactory/factories/linkedServices",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"annotations": [],
-				"type": "SqlServer",
-				"typeProperties": {
-					"server": "[parameters('ROBERTO_WalterProd_properties_typeProperties_server')]",
-					"database": "[parameters('ROBERTO_WalterProd_properties_typeProperties_database')]",
-					"encrypt": "mandatory",
-					"trustServerCertificate": false,
-					"authenticationType": "SQL",
-					"userName": "[parameters('ROBERTO_WalterProd_properties_typeProperties_userName')]",
-					"password": {
-						"type": "SecureString",
-						"value": "[parameters('ROBERTO_WalterProd_password')]"
-					}
-				}
-			},
-			"dependsOn": []
-		},
-		{
 			"name": "[concat(parameters('factoryName'), '/CAES-ROBERTO-SHIR')]",
 			"type": "Microsoft.DataFactory/factories/integrationRuntimes",
 			"apiVersion": "2018-06-01",
@@ -120,174 +98,6 @@
 			"dependsOn": []
 		},
 		{
-			"name": "[concat(parameters('factoryName'), '/WalterProd_FacultyDeptPortfolio')]",
-			"type": "Microsoft.DataFactory/factories/datasets",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"linkedServiceName": {
-					"referenceName": "ROBERTO_WalterProd",
-					"type": "LinkedServiceReference"
-				},
-				"annotations": [],
-				"type": "SqlServerTable",
-				"schema": [
-					{
-						"name": "ProjectNumber",
-						"type": "nvarchar"
-					},
-					{
-						"name": "TaskNum",
-						"type": "nvarchar"
-					},
-					{
-						"name": "FundCode",
-						"type": "nvarchar"
-					},
-					{
-						"name": "ProgramCode",
-						"type": "nvarchar"
-					},
-					{
-						"name": "ActivityCode",
-						"type": "nvarchar"
-					},
-					{
-						"name": "ExpenditureCategoryName",
-						"type": "nvarchar"
-					},
-					{
-						"name": "ProjectOwningOrgCode",
-						"type": "nvarchar"
-					},
-					{
-						"name": "AwardNumber",
-						"type": "nvarchar"
-					},
-					{
-						"name": "AwardName",
-						"type": "nvarchar"
-					},
-					{
-						"name": "AwardType",
-						"type": "nvarchar"
-					},
-					{
-						"name": "AwardStartDate",
-						"type": "date"
-					},
-					{
-						"name": "AwardEndDate",
-						"type": "date"
-					},
-					{
-						"name": "AwardStatus",
-						"type": "nvarchar"
-					},
-					{
-						"name": "ProjectName",
-						"type": "nvarchar"
-					},
-					{
-						"name": "ProjectOwningOrg",
-						"type": "nvarchar"
-					},
-					{
-						"name": "ProjectType",
-						"type": "nvarchar"
-					},
-					{
-						"name": "ProjectStatus",
-						"type": "nvarchar"
-					},
-					{
-						"name": "TaskName",
-						"type": "nvarchar"
-					},
-					{
-						"name": "TaskStatus",
-						"type": "nvarchar"
-					},
-					{
-						"name": "Pm",
-						"type": "nvarchar"
-					},
-					{
-						"name": "Pa",
-						"type": "nvarchar"
-					},
-					{
-						"name": "Pi",
-						"type": "nvarchar"
-					},
-					{
-						"name": "Copi",
-						"type": "nvarchar"
-					},
-					{
-						"name": "FundDesc",
-						"type": "nvarchar"
-					},
-					{
-						"name": "PurposeCode",
-						"type": "nvarchar"
-					},
-					{
-						"name": "PurposeDesc",
-						"type": "nvarchar"
-					},
-					{
-						"name": "ProgramDesc",
-						"type": "nvarchar"
-					},
-					{
-						"name": "ActivityDesc",
-						"type": "nvarchar"
-					},
-					{
-						"name": "PpmBudget",
-						"type": "decimal",
-						"precision": 15,
-						"scale": 2
-					},
-					{
-						"name": "PpmCommitments",
-						"type": "decimal",
-						"precision": 15,
-						"scale": 2
-					},
-					{
-						"name": "PpmExpenses",
-						"type": "decimal",
-						"precision": 15,
-						"scale": 2
-					},
-					{
-						"name": "PpmBudBal",
-						"type": "decimal",
-						"precision": 15,
-						"scale": 2
-					},
-					{
-						"name": "LoadDate",
-						"type": "datetime2",
-						"scale": 3
-					},
-					{
-						"name": "LastUpdated",
-						"type": "datetime2",
-						"scale": 3
-					}
-				],
-				"typeProperties": {
-					"schema": "dbo",
-					"table": "FacultyDeptPortfolio"
-				}
-			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/linkedServices/ROBERTO_WalterProd')]"
-			]
-		},
-		{
 			"name": "[concat(parameters('factoryName'), '/ROBERTO_WalterDev')]",
 			"type": "Microsoft.DataFactory/factories/linkedServices",
 			"apiVersion": "2018-06-01",
@@ -304,6 +114,34 @@
 					"password": {
 						"type": "SecureString",
 						"value": "[parameters('ROBERTO_WalterDev_password')]"
+					}
+				},
+				"connectVia": {
+					"referenceName": "CAES-ROBERTO-SHIR",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/integrationRuntimes/CAES-ROBERTO-SHIR')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ROBERTO_WalterProd')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "SqlServer",
+				"typeProperties": {
+					"server": "[parameters('ROBERTO_WalterProd_properties_typeProperties_server')]",
+					"database": "[parameters('ROBERTO_WalterProd_properties_typeProperties_database')]",
+					"encrypt": "mandatory",
+					"trustServerCertificate": true,
+					"authenticationType": "SQL",
+					"userName": "[parameters('ROBERTO_WalterProd_properties_typeProperties_userName')]",
+					"password": {
+						"type": "SecureString",
+						"value": "[parameters('ROBERTO_WalterProd_password')]"
 					}
 				},
 				"connectVia": {
@@ -569,6 +407,174 @@
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/linkedServices/ROBERTO_WalterDev')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/WalterProd_FacultyDeptPortfolio')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ROBERTO_WalterProd",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "SqlServerTable",
+				"schema": [
+					{
+						"name": "ProjectNumber",
+						"type": "nvarchar"
+					},
+					{
+						"name": "TaskNum",
+						"type": "nvarchar"
+					},
+					{
+						"name": "FundCode",
+						"type": "nvarchar"
+					},
+					{
+						"name": "ProgramCode",
+						"type": "nvarchar"
+					},
+					{
+						"name": "ActivityCode",
+						"type": "nvarchar"
+					},
+					{
+						"name": "ExpenditureCategoryName",
+						"type": "nvarchar"
+					},
+					{
+						"name": "ProjectOwningOrgCode",
+						"type": "nvarchar"
+					},
+					{
+						"name": "AwardNumber",
+						"type": "nvarchar"
+					},
+					{
+						"name": "AwardName",
+						"type": "nvarchar"
+					},
+					{
+						"name": "AwardType",
+						"type": "nvarchar"
+					},
+					{
+						"name": "AwardStartDate",
+						"type": "date"
+					},
+					{
+						"name": "AwardEndDate",
+						"type": "date"
+					},
+					{
+						"name": "AwardStatus",
+						"type": "nvarchar"
+					},
+					{
+						"name": "ProjectName",
+						"type": "nvarchar"
+					},
+					{
+						"name": "ProjectOwningOrg",
+						"type": "nvarchar"
+					},
+					{
+						"name": "ProjectType",
+						"type": "nvarchar"
+					},
+					{
+						"name": "ProjectStatus",
+						"type": "nvarchar"
+					},
+					{
+						"name": "TaskName",
+						"type": "nvarchar"
+					},
+					{
+						"name": "TaskStatus",
+						"type": "nvarchar"
+					},
+					{
+						"name": "Pm",
+						"type": "nvarchar"
+					},
+					{
+						"name": "Pa",
+						"type": "nvarchar"
+					},
+					{
+						"name": "Pi",
+						"type": "nvarchar"
+					},
+					{
+						"name": "Copi",
+						"type": "nvarchar"
+					},
+					{
+						"name": "FundDesc",
+						"type": "nvarchar"
+					},
+					{
+						"name": "PurposeCode",
+						"type": "nvarchar"
+					},
+					{
+						"name": "PurposeDesc",
+						"type": "nvarchar"
+					},
+					{
+						"name": "ProgramDesc",
+						"type": "nvarchar"
+					},
+					{
+						"name": "ActivityDesc",
+						"type": "nvarchar"
+					},
+					{
+						"name": "PpmBudget",
+						"type": "decimal",
+						"precision": 15,
+						"scale": 2
+					},
+					{
+						"name": "PpmCommitments",
+						"type": "decimal",
+						"precision": 15,
+						"scale": 2
+					},
+					{
+						"name": "PpmExpenses",
+						"type": "decimal",
+						"precision": 15,
+						"scale": 2
+					},
+					{
+						"name": "PpmBudBal",
+						"type": "decimal",
+						"precision": 15,
+						"scale": 2
+					},
+					{
+						"name": "LoadDate",
+						"type": "datetime2",
+						"scale": 3
+					},
+					{
+						"name": "LastUpdated",
+						"type": "datetime2",
+						"scale": 3
+					}
+				],
+				"typeProperties": {
+					"schema": "dbo",
+					"table": "FacultyDeptPortfolio"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ROBERTO_WalterProd')]"
 			]
 		},
 		{
