@@ -14,7 +14,6 @@ interface TaskBreakdownRow {
   balance: number;
   budget: number;
   commitments: number;
-  expenditureCategoryName: string;
   expenses: number;
   financialDepartment: string;
   financialDepartmentCode: string;
@@ -36,8 +35,7 @@ function buildRows(records: ProjectRecord[]): TaskBreakdownRow[] {
     const program = r.programCode ?? '';
     const activity = r.activityCode ?? '';
     const task = r.taskNum ?? '';
-    const expenditureCategory = r.expenditureCategoryName ?? '';
-    const key = `${task}|${fund}|${program}|${activity}|${expenditureCategory}`;
+    const key = `${task}|${fund}|${program}|${activity}`;
 
     const existing = map.get(key);
     if (existing) {
@@ -52,7 +50,6 @@ function buildRows(records: ProjectRecord[]): TaskBreakdownRow[] {
         balance: r.balance,
         budget: r.budget,
         commitments: r.commitments,
-        expenditureCategoryName: expenditureCategory,
         expenses: r.expenses,
         financialDepartment: r.projectOwningOrg,
         financialDepartmentCode: r.projectOwningOrgCode,
@@ -156,16 +153,6 @@ export function TaskBreakdown({ employeeId, projectNumber, records }: TaskBreakd
         ),
         header: 'Activity',
       }),
-      columnHelper.accessor('expenditureCategoryName', {
-        cell: (info) => <span>{info.getValue() || '-'}</span>,
-        header: () => (
-          <TooltipLabel
-            label="Expenditure Category"
-            placement="bottom"
-            tooltip={tooltipDefinitions.expenditureCategory}
-          />
-        ),
-      }),
       columnHelper.accessor('budget', {
         cell: (info) => (
           <span className="flex justify-end">
@@ -249,15 +236,16 @@ export function TaskBreakdown({ employeeId, projectNumber, records }: TaskBreakd
                 dept: row.financialDepartmentCode,
                 fund: row.fundCode,
                 program: row.programCode,
+                task: row.taskNum,
               }}
-              to="/projects/$employeeId/$projectNumber/transactions"
+              to="/projects/$employeeId/$projectNumber/expenditure-categories"
             >
-              GL Details
+              Details
             </Link>
           );
         },
         header: '',
-        id: 'glLink',
+        id: 'detailsLink',
       }),
     ],
     [employeeId, projectNumber, totals.balance, totals.budget, totals.commitments, totals.expenses]

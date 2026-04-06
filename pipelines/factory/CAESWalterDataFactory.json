@@ -1,0 +1,9 @@
+{
+	"name": "CAESWalterDataFactory",
+	"location": "eastus",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "09d05f1c-c5b0-4e04-a596-49a9794b7b14",
+		"tenantId": "a8046f64-66c0-4f00-9046-c8daf92ff62b"
+	}
+}

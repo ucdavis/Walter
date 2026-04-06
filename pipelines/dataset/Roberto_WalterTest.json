@@ -1,0 +1,12 @@
+{
+	"name": "Roberto_WalterTest",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "Roberto_WalterTest",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "SqlServerTable",
+		"schema": []
+	}
+}

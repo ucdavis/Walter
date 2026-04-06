@@ -1,0 +1,21 @@
+{
+	"name": "ROBERTO_WalterDev",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"annotations": [],
+		"type": "SqlServer",
+		"typeProperties": {
+			"server": "caes-roberto",
+			"database": "WalterDev",
+			"encrypt": "mandatory",
+			"trustServerCertificate": true,
+			"authenticationType": "SQL",
+			"userName": "walter_adf",
+			"encryptedCredential": "eyJDcmVkZW50aWFsSWQiOiJmY2QxNDI3My04ZGUxLTQzMDMtOWY5OC0yZWZhY2I4N2NmM2QiLCJWZXJzaW9uIjoiMi4wIiwiQ2xhc3NUeXBlIjoiTWljcm9zb2Z0LkRhdGFQcm94eS5Db3JlLkludGVyU2VydmljZURhdGFDb250cmFjdC5DcmVkZW50aWFsU1UwNkNZMTQifQ=="
+		},
+		"connectVia": {
+			"referenceName": "CAES-ROBERTO-SHIR",
+			"type": "IntegrationRuntimeReference"
+		}
+	}
+}
