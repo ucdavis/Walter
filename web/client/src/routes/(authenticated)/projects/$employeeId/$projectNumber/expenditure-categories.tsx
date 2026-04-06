@@ -73,7 +73,9 @@ function buildRows(
     }
   }
 
-  return Array.from(map.values());
+  return Array.from(map.values()).sort((a, b) =>
+    a.expenditureCategoryName.localeCompare(b.expenditureCategoryName)
+  );
 }
 
 const columnHelper = createColumnHelper<ExpenditureCategoryRow>();
