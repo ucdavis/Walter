@@ -231,11 +231,11 @@ describe('project detail page', () => {
     });
 
     try {
-      const label = await screen.findByText('Chart String Breakdown');
+      const label = await screen.findByText('Task Breakdown');
       await user.hover(label.parentElement as HTMLElement);
 
       expect(await screen.findByRole('tooltip')).toHaveTextContent(
-        tooltipDefinitions.chartStringBreakdown
+        tooltipDefinitions.taskBreakdown
       );
     } finally {
       cleanup();

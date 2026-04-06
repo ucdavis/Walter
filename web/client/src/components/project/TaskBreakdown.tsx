@@ -1,13 +1,14 @@
 import { useMemo } from 'react';
 import { Link } from '@tanstack/react-router';
 import { createColumnHelper } from '@tanstack/react-table';
+import { ExportDataButton } from '@/components/ExportDataButton.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import type { ProjectRecord } from '@/queries/project.ts';
 import { DataTable } from '@/shared/DataTable.tsx';
 import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
 import { tooltipDefinitions } from '@/shared/tooltips.ts';
 
-interface ChartStringRow {
+interface TaskBreakdownRow {
   activityCode: string;
   activityDesc: string;
   balance: number;
@@ -25,10 +26,10 @@ interface ChartStringRow {
   taskNum: string;
 }
 
-const columnHelper = createColumnHelper<ChartStringRow>();
+const columnHelper = createColumnHelper<TaskBreakdownRow>();
 
-function buildRows(records: ProjectRecord[]): ChartStringRow[] {
-  const map = new Map<string, ChartStringRow>();
+function buildRows(records: ProjectRecord[]): TaskBreakdownRow[] {
+  const map = new Map<string, TaskBreakdownRow>();
 
   for (const r of records) {
     const fund = r.fundCode ?? '';
@@ -68,13 +69,31 @@ function buildRows(records: ProjectRecord[]): ChartStringRow[] {
   return Array.from(map.values());
 }
 
-interface ChartStringBreakdownProps {
+const csvColumns = [
+  { header: 'Financial Dept Code', key: 'financialDepartmentCode' as const },
+  { header: 'Financial Dept', key: 'financialDepartment' as const },
+  { header: 'Task', key: 'taskNum' as const },
+  { header: 'Task Name', key: 'taskName' as const },
+  { header: 'Fund', key: 'fundCode' as const },
+  { header: 'Fund Description', key: 'fundDesc' as const },
+  { header: 'Program', key: 'programCode' as const },
+  { header: 'Program Description', key: 'programDesc' as const },
+  { header: 'Activity', key: 'activityCode' as const },
+  { header: 'Activity Description', key: 'activityDesc' as const },
+  { header: 'Expenditure Category', key: 'expenditureCategoryName' as const },
+  { format: 'currency' as const, header: 'Budget', key: 'budget' as const },
+  { format: 'currency' as const, header: 'Expenses', key: 'expenses' as const },
+  { format: 'currency' as const, header: 'Commitments', key: 'commitments' as const },
+  { format: 'currency' as const, header: 'Balance', key: 'balance' as const },
+];
+
+interface TaskBreakdownProps {
   employeeId: string;
   projectNumber: string;
   records: ProjectRecord[];
 }
 
-export function ChartStringBreakdown({ employeeId, projectNumber, records }: ChartStringBreakdownProps) {
+export function TaskBreakdown({ employeeId, projectNumber, records }: TaskBreakdownProps) {
   const rows = useMemo(() => buildRows(records), [records]);
 
   const totals = useMemo(
@@ -108,7 +127,14 @@ export function ChartStringBreakdown({ employeeId, projectNumber, records }: Cha
       }),
       columnHelper.accessor('taskNum', {
         cell: (info) => (
-          <span title={info.row.original.taskName}>{info.getValue()}</span>
+          <div>
+            <div>{info.getValue()}</div>
+            {info.row.original.taskName && (
+              <div className="text-xs text-base-content/80">
+                {info.row.original.taskName}
+              </div>
+            )}
+          </div>
         ),
         header: 'Task',
       }),
@@ -246,6 +272,13 @@ export function ChartStringBreakdown({ employeeId, projectNumber, records }: Cha
       columns={columns}
       data={rows}
       footerRowClassName="totaltr"
+      tableActions={
+        <ExportDataButton
+          columns={csvColumns}
+          data={rows}
+          filename={`task-breakdown-${projectNumber}.csv`}
+        />
+      }
     />
   );
 }

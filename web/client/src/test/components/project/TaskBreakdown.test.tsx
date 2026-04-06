@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
-import { ChartStringBreakdown } from '@/components/project/ChartStringBreakdown.tsx';
+import { TaskBreakdown } from '@/components/project/TaskBreakdown.tsx';
 import type { ProjectRecord } from '@/queries/project.ts';
 import { tooltipDefinitions } from '@/shared/tooltips.ts';
 
@@ -66,11 +66,11 @@ const createProject = (
   ...overrides,
 });
 
-describe('ChartStringBreakdown', () => {
+describe('TaskBreakdown', () => {
   it('shows a tooltip for the Expenditure Category table header', async () => {
     const user = userEvent.setup();
     render(
-      <ChartStringBreakdown
+      <TaskBreakdown
         employeeId="123"
         projectNumber="P1"
         records={[createProject()]}
@@ -88,7 +88,7 @@ describe('ChartStringBreakdown', () => {
   it('shows a tooltip for the Commitments table header', async () => {
     const user = userEvent.setup();
     render(
-      <ChartStringBreakdown
+      <TaskBreakdown
         employeeId="123"
         projectNumber="P1"
         records={[createProject()]}
@@ -115,7 +115,7 @@ describe('ChartStringBreakdown', () => {
   it('shows a tooltip for the Balance table header', async () => {
     const user = userEvent.setup();
     render(
-      <ChartStringBreakdown
+      <TaskBreakdown
         employeeId="123"
         projectNumber="P1"
         records={[createProject()]}

@@ -9,7 +9,7 @@ export const tooltipDefinitions = {
   burdenStructure:
     'Rule set that determines which costs receive indirect cost charges and how they are calculated.',
   cbr: 'Monthly composite benefit rate cost, including fringe/benefit burden.',
-  chartStringBreakdown:
+  taskBreakdown:
     'Summary of how project costs are organized by financial coding segments.',
   commitment:
     'Commitment / Encumbrance are funds set aside when a requisition is fully approved; it is automatically released when the associated purchase order is created (or when an approved requisition is canceled before PO creation).',
