@@ -6,6 +6,7 @@ import './main.css';
 
 // Import the generated route tree
 import { routeTree } from './routeTree.gen.ts';
+import { bootstrapRum } from '@/lib/rum.ts';
 
 const queryClient = new QueryClient();
 
@@ -32,6 +33,8 @@ declare module '@tanstack/react-router' {
 // Render the app
 const rootElement = document.getElementById('root')!;
 if (!rootElement.innerHTML) {
+  await bootstrapRum();
+
   const root = ReactDOM.createRoot(rootElement);
   root.render(
     <StrictMode>

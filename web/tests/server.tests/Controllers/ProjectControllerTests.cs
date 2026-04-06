@@ -75,6 +75,7 @@ public sealed class ProjectControllerTests
         public Task<IReadOnlyList<FacultyPortfolioRecord>> GetFacultyPortfolioAsync(
             IEnumerable<string> projectNumbers,
             string? applicationUser = null,
+            string? emulatingUser = null,
             CancellationToken ct = default)
         {
             throw new InvalidOperationException("Datamart should not be called for unauthorized users.");
@@ -83,6 +84,7 @@ public sealed class ProjectControllerTests
         public Task<IReadOnlyList<PositionBudgetRecord>> GetPositionBudgetsAsync(
             IEnumerable<string> projectNumbers,
             string? applicationUser = null,
+            string? emulatingUser = null,
             CancellationToken ct = default)
         {
             throw new InvalidOperationException("Datamart should not be called for unauthorized users.");
@@ -91,6 +93,7 @@ public sealed class ProjectControllerTests
         public Task<IReadOnlyList<GLPPMReconciliationRecord>> GetGLPPMReconciliationAsync(
             IEnumerable<string> projectNumbers,
             string? applicationUser = null,
+            string? emulatingUser = null,
             CancellationToken ct = default)
         {
             throw new InvalidOperationException("Datamart should not be called for unauthorized users.");
@@ -99,6 +102,7 @@ public sealed class ProjectControllerTests
         public Task<IReadOnlyList<GLTransactionRecord>> GetGLTransactionListingsAsync(
             IEnumerable<string> projectNumbers,
             string? applicationUser = null,
+            string? emulatingUser = null,
             CancellationToken ct = default)
         {
             throw new InvalidOperationException("Datamart should not be called for unauthorized users.");
