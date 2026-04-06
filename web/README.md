@@ -77,6 +77,7 @@ The backend telemetry setup lives in `server/Helpers/TelemetryHelper.cs`.
 
 - Logs are written to JSON console output and also exported over OTLP.
 - Traces and metrics include ASP.NET Core requests, outgoing HTTP calls, and SQL client activity.
+- Backend `service.version` is derived from the app build/version metadata, so you do not need to hardcode it in `OTEL_RESOURCE_ATTRIBUTES`.
 - The OTLP exporter is configured through the standard `OTEL_*` environment variables, for example:
   - `OTEL_EXPORTER_OTLP_ENDPOINT`
   - `OTEL_EXPORTER_OTLP_HEADERS`
@@ -84,6 +85,12 @@ The backend telemetry setup lives in `server/Helpers/TelemetryHelper.cs`.
   - `OTEL_RESOURCE_ATTRIBUTES`
 
 If your Elastic APM / OTLP endpoint is already ready, setting those environment variables is enough for the backend to start shipping telemetry.
+
+For Azure environments, a typical value is:
+
+```text
+OTEL_RESOURCE_ATTRIBUTES=service.name=walter,deployment.environment=test
+```
 
 ### Frontend RUM
 

@@ -43,7 +43,7 @@ public class SystemControllerTests
                 Environment = Environments.Development,
                 ServerUrl = "https://elastic.example",
                 ServiceName = "walter-web",
-                ServiceVersion = RumOptions.ResolveServiceVersion(),
+                ServiceVersion = AppVersionHelper.ResolveServiceVersion(),
                 TransactionSampleRate = 1d,
             });
     }
@@ -103,7 +103,7 @@ public class SystemControllerTests
                 Environment = Environments.Production,
                 ServerUrl = string.Empty,
                 ServiceName = "walter-web",
-                ServiceVersion = RumOptions.ResolveServiceVersion(),
+                ServiceVersion = AppVersionHelper.ResolveServiceVersion(),
                 TransactionSampleRate = 0.2d,
             });
     }

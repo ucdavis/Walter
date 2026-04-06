@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Reflection;
 
 namespace server.Helpers;
 
@@ -24,7 +23,7 @@ public sealed class RumOptions
             : Environment.Trim();
 
         var serviceVersion = string.IsNullOrWhiteSpace(ServiceVersion)
-            ? ResolveServiceVersion()
+            ? AppVersionHelper.ResolveServiceVersion()
             : ServiceVersion.Trim();
 
         var sampleRate = ResolveSampleRate(environment);
@@ -40,20 +39,6 @@ public sealed class RumOptions
             ServiceVersion = serviceVersion,
             TransactionSampleRate = sampleRate,
         };
-    }
-
-    internal static string ResolveServiceVersion()
-    {
-        var informationalVersion = Assembly.GetExecutingAssembly()
-            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
-            ?.InformationalVersion;
-
-        if (!string.IsNullOrWhiteSpace(informationalVersion))
-        {
-            return informationalVersion.Split('+')[0];
-        }
-
-        return Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "0.0.0";
     }
 
     internal double ResolveSampleRate(string environmentName)

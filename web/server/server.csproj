@@ -7,6 +7,11 @@
     <SpaRoot>..\client</SpaRoot>
     <SpaProxyLaunchCommand>npm run dev</SpaProxyLaunchCommand>
     <SpaProxyServerUrl>http://localhost:5174</SpaProxyServerUrl>
+    <Version Condition="'$(Version)' == '' and '$(BUILD_BUILDNUMBER)' != ''">$(BUILD_BUILDNUMBER)</Version>
+    <Version Condition="'$(Version)' == ''">0.1.0</Version>
+    <FileVersion Condition="'$(FileVersion)' == ''">$(Version)</FileVersion>
+    <AssemblyVersion Condition="'$(AssemblyVersion)' == ''">$(Version)</AssemblyVersion>
+    <InformationalVersion Condition="'$(InformationalVersion)' == ''">$(Version)</InformationalVersion>
   </PropertyGroup>
 
   <ItemGroup>
