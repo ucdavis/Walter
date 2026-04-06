@@ -61,17 +61,25 @@ describe('ProjectAdditionalInfo', () => {
     expect(screen.getByText('National Science Foundation')).toBeInTheDocument();
     expect(screen.getByText('Sponsor Award Number')).toBeInTheDocument();
     expect(screen.getByText('NSF-2024-001')).toBeInTheDocument();
-    expect(screen.getByText('Burden Schedule Rate')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Burden Schedule Rate' })
+    ).toBeInTheDocument();
     expect(screen.getByText('26.5%')).toBeInTheDocument();
-    expect(screen.getByText('Contract Administrator')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Contract Administrator' })
+    ).toBeInTheDocument();
     expect(screen.getByText('Admin, Carol')).toBeInTheDocument();
   });
 
   it('hides secondary fields and show more button for non-PMs', () => {
     render(<ProjectAdditionalInfo isProjectManager={false} summary={createSummary()} />);
 
-    expect(screen.queryByText('Award Close Date')).not.toBeInTheDocument();
-    expect(screen.queryByText('Billing Cycle')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Award Close Date' })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Billing Cycle' })
+    ).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /show more/i })).not.toBeInTheDocument();
   });
 
@@ -87,12 +95,16 @@ describe('ProjectAdditionalInfo', () => {
 
     await user.click(screen.getByRole('button', { name: 'Show more' }));
 
-    expect(screen.getByText('Award Close Date')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Award Close Date' })
+    ).toBeInTheDocument();
     expect(screen.getByText('Award PI')).toBeInTheDocument();
     expect(screen.getByText('Smith, Jane')).toBeInTheDocument();
-    expect(screen.getByText('Billing Cycle')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Billing Cycle' })).toBeInTheDocument();
     expect(screen.getByText('Monthly')).toBeInTheDocument();
-    expect(screen.getByText('Burden Structure')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Burden Structure' })
+    ).toBeInTheDocument();
     expect(screen.getByText('MTDC')).toBeInTheDocument();
   });
 
@@ -101,10 +113,12 @@ describe('ProjectAdditionalInfo', () => {
     render(<ProjectAdditionalInfo isProjectManager={true} summary={createSummary()} />);
 
     await user.click(screen.getByRole('button', { name: 'Show more' }));
-    expect(screen.getByText('Billing Cycle')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Billing Cycle' })).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Show less' }));
-    expect(screen.queryByText('Billing Cycle')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Billing Cycle' })
+    ).not.toBeInTheDocument();
   });
 
   it('displays em-dash for null values', () => {
@@ -137,28 +151,26 @@ describe('ProjectAdditionalInfo', () => {
     expect(screen.getByText('01.01.2024')).toBeInTheDocument();
   });
 
-  it('shows a tooltip for Burden Schedule Rate', async () => {
+  it('opens a drawer for Burden Schedule Rate', async () => {
     const user = userEvent.setup();
     render(<ProjectAdditionalInfo isProjectManager={false} summary={createSummary()} />);
 
-    const label = screen.getByText('Burden Schedule Rate');
-    await user.hover(label.parentElement as HTMLElement);
+    await user.click(screen.getByRole('button', { name: 'Burden Schedule Rate' }));
 
-    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+    expect(await screen.findByRole('dialog', { name: 'Burden Schedule Rate' })).toHaveTextContent(
       tooltipDefinitions.burdenScheduleRate
     );
   });
 
-  it('shows tooltips for secondary award fields after expansion', async () => {
+  it('opens drawers for secondary award fields after expansion', async () => {
     const user = userEvent.setup();
     render(<ProjectAdditionalInfo isProjectManager={true} summary={createSummary()} />);
 
     await user.click(screen.getByRole('button', { name: 'Show more' }));
 
-    const label = screen.getByText('Billing Cycle');
-    await user.hover(label.parentElement as HTMLElement);
+    await user.click(screen.getByRole('button', { name: 'Billing Cycle' }));
 
-    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+    expect(await screen.findByRole('dialog', { name: 'Billing Cycle' })).toHaveTextContent(
       tooltipDefinitions.billingCycle
     );
   });

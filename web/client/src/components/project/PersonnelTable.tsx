@@ -10,7 +10,7 @@ import { formatCurrency } from '@/lib/currency.ts';
 import { formatDate } from '@/lib/date.ts';
 import type { PersonnelRecord } from '@/queries/personnel.ts';
 import { DataTable } from '@/shared/DataTable.tsx';
-import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
+import { TooltipIconButton, TooltipLabel } from '@/shared/TooltipLabel.tsx';
 import { tooltipDefinitions } from '@/shared/tooltips.ts';
 
 function isEndingSoon(dateStr: string | null): boolean {
@@ -143,10 +143,11 @@ function DistributionSubtable({
             <th>Project</th>
             <th>
               <span className="flex justify-end w-full">
-                <TooltipLabel
-                  label="Dist %"
-                  placement="bottom"
-                  tooltip={tooltipDefinitions.distributionPercent}
+            <TooltipLabel
+              drawerStyle="compact"
+              label="Dist %"
+              placement="bottom"
+              tooltip={tooltipDefinitions.distributionPercent}
                 />
               </span>
             </th>
@@ -162,6 +163,7 @@ function DistributionSubtable({
             <th>
               <span className="flex justify-end w-full">
                 <TooltipLabel
+                  drawerStyle="compact"
                   label="CBR"
                   placement="bottom"
                   tooltip={tooltipDefinitions.cbr}
@@ -328,10 +330,11 @@ export function PersonnelTable({
           <span className="flex justify-end">{info.getValue()}</span>
         ),
         header: () => (
-          <span className="flex justify-end w-full">
-            <TooltipLabel
+          <span className="flex justify-end items-center gap-1 w-full">
+            <span>FTE</span>
+            <TooltipIconButton
+              drawerStyle="compact"
               label="FTE"
-              placement="bottom"
               tooltip={tooltipDefinitions.fte}
             />
           </span>
@@ -413,10 +416,11 @@ export function PersonnelTable({
             )
           : undefined,
         header: () => (
-          <span className="flex justify-end w-full">
-            <TooltipLabel
+          <span className="flex justify-end items-center gap-1 w-full">
+            <span>Monthly CBR</span>
+            <TooltipIconButton
+              drawerStyle="compact"
               label="Monthly CBR"
-              placement="bottom"
               tooltip={tooltipDefinitions.monthlyCbr}
             />
           </span>

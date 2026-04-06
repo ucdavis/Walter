@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { ChartStringBreakdown } from '@/components/project/ChartStringBreakdown.tsx';
 import type { ProjectRecord } from '@/queries/project.ts';
@@ -67,7 +67,7 @@ const createProject = (
 });
 
 describe('ChartStringBreakdown', () => {
-  it('shows a tooltip for the Commitments table header', async () => {
+  it('opens a drawer for the Commitments table header', async () => {
     const user = userEvent.setup();
     render(
       <ChartStringBreakdown
@@ -77,24 +77,51 @@ describe('ChartStringBreakdown', () => {
       />
     );
 
-    const commitmentsLabel = screen.getByText('Commitments');
-    const commitmentsTrigger = commitmentsLabel.parentElement as HTMLElement;
+    const commitmentsHeader = screen.getByRole('columnheader', {
+      name: /commitments/i,
+    });
+    const commitmentsTrigger = screen.getByRole('button', {
+      name: 'Open Commitments help',
+    });
 
-    expect(commitmentsTrigger).toHaveAttribute(
-      'data-tooltip-placement',
-      'bottom'
-    );
-    expect(commitmentsTrigger).toHaveAttribute('tabIndex', '0');
-    expect(commitmentsLabel).toHaveClass('tooltip-label');
+    expect(commitmentsHeader).toBeInTheDocument();
+    expect(commitmentsTrigger).toHaveAttribute('aria-haspopup', 'dialog');
 
-    await user.hover(commitmentsTrigger);
+    await user.click(commitmentsTrigger);
 
-    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+    expect(await screen.findByRole('dialog', { name: 'Commitments' })).toHaveTextContent(
       tooltipDefinitions.commitment
     );
   });
 
-  it('shows a tooltip for the Balance table header', async () => {
+  it('keeps sorting behavior on the Commitments header text', async () => {
+    const user = userEvent.setup();
+    render(
+      <ChartStringBreakdown
+        employeeId="123"
+        projectNumber="P1"
+        records={[
+          createProject({ commitments: 400, taskNum: 'T002' }),
+          createProject({ commitments: 1000, taskNum: 'T001' }),
+        ]}
+      />
+    );
+
+    const commitmentsHeader = screen.getByRole('columnheader', {
+      name: /commitments/i,
+    });
+
+    await user.click(commitmentsHeader);
+
+    expect(
+      screen.queryByRole('dialog', { name: 'Commitments' })
+    ).not.toBeInTheDocument();
+    expect(
+      within(commitmentsHeader).getByLabelText(/sorted/i)
+    ).toBeInTheDocument();
+  });
+
+  it('opens a drawer for the Balance table header', async () => {
     const user = userEvent.setup();
     render(
       <ChartStringBreakdown
@@ -104,18 +131,47 @@ describe('ChartStringBreakdown', () => {
       />
     );
 
-    const balanceHeaders = screen.getAllByText('Balance');
-    const balanceLabel = balanceHeaders[0];
-    const balanceTrigger = balanceLabel.parentElement as HTMLElement;
+    const balanceHeader = screen.getAllByRole('columnheader', { name: /balance/i })[0];
+    const balanceTrigger = screen.getAllByRole('button', {
+      name: 'Open Balance help',
+    })[0];
 
-    expect(balanceTrigger).toHaveAttribute('data-tooltip-placement', 'bottom');
-    expect(balanceTrigger).toHaveAttribute('tabIndex', '0');
-    expect(balanceLabel).toHaveClass('tooltip-label');
+    expect(balanceHeader).toBeInTheDocument();
+    expect(balanceTrigger).toHaveAttribute('aria-haspopup', 'dialog');
 
-    await user.hover(balanceTrigger);
+    await user.click(balanceTrigger);
 
-    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+    expect(await screen.findByRole('dialog', { name: 'Balance' })).toHaveTextContent(
       tooltipDefinitions.balance
     );
+  });
+
+  it('does not sort the column when dismissing header help', async () => {
+    const user = userEvent.setup();
+    render(
+      <ChartStringBreakdown
+        employeeId="123"
+        projectNumber="P1"
+        records={[createProject()]}
+      />
+    );
+
+    const commitmentsHeader = screen.getByRole('columnheader', {
+      name: /commitments/i,
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Open Commitments help' }));
+    expect(
+      await screen.findByRole('dialog', { name: 'Commitments' })
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Dismiss Commitments help' }));
+
+    expect(
+      screen.queryByRole('dialog', { name: 'Commitments' })
+    ).not.toBeInTheDocument();
+    expect(
+      within(commitmentsHeader).queryByLabelText(/sorted/i)
+    ).not.toBeInTheDocument();
   });
 });

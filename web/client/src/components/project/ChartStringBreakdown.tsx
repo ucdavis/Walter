@@ -4,7 +4,7 @@ import { createColumnHelper } from '@tanstack/react-table';
 import { formatCurrency } from '@/lib/currency.ts';
 import type { ProjectRecord } from '@/queries/project.ts';
 import { DataTable } from '@/shared/DataTable.tsx';
-import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
+import { TooltipIconButton } from '@/shared/TooltipLabel.tsx';
 import { tooltipDefinitions } from '@/shared/tooltips.ts';
 
 interface ChartStringRow {
@@ -165,10 +165,11 @@ export function ChartStringBreakdown({ employeeId, projectNumber, records }: Cha
           </span>
         ),
         header: () => (
-          <span className="flex justify-end w-full">
-            <TooltipLabel
+          <span className="flex justify-end items-center gap-1 w-full">
+            <span>Commitments</span>
+            <TooltipIconButton
+              drawerStyle="compact"
               label="Commitments"
-              placement="bottom"
               tooltip={tooltipDefinitions.commitment}
             />
           </span>
@@ -189,10 +190,11 @@ export function ChartStringBreakdown({ employeeId, projectNumber, records }: Cha
           </span>
         ),
         header: () => (
-          <span className="flex justify-end w-full">
-            <TooltipLabel
+          <span className="flex justify-end items-center gap-1 w-full">
+            <span>Balance</span>
+            <TooltipIconButton
+              drawerStyle="compact"
               label="Balance"
-              placement="bottom"
               tooltip={tooltipDefinitions.balance}
             />
           </span>
