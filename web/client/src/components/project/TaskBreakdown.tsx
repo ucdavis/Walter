@@ -77,7 +77,6 @@ const csvColumns = [
   { header: 'Program Description', key: 'programDesc' as const },
   { header: 'Activity', key: 'activityCode' as const },
   { header: 'Activity Description', key: 'activityDesc' as const },
-  { header: 'Expenditure Category', key: 'expenditureCategoryName' as const },
   { format: 'currency' as const, header: 'Budget', key: 'budget' as const },
   { format: 'currency' as const, header: 'Expenses', key: 'expenses' as const },
   { format: 'currency' as const, header: 'Commitments', key: 'commitments' as const },

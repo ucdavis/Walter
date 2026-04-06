@@ -178,7 +178,7 @@ export function SponsoredProjectsTable({
           );
         },
         footer: () => 'Totals',
-        header: 'Project Name',
+        header: 'Project',
         minSize: 250,
         size: 300,
       }),

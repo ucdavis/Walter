@@ -67,24 +67,6 @@ const createProject = (
 });
 
 describe('TaskBreakdown', () => {
-  it('shows a tooltip for the Expenditure Category table header', async () => {
-    const user = userEvent.setup();
-    render(
-      <TaskBreakdown
-        employeeId="123"
-        projectNumber="P1"
-        records={[createProject()]}
-      />
-    );
-
-    const label = screen.getByText('Expenditure Category');
-    await user.hover(label.parentElement as HTMLElement);
-
-    expect(await screen.findByRole('tooltip')).toHaveTextContent(
-      tooltipDefinitions.expenditureCategory
-    );
-  });
-
   it('shows a tooltip for the Commitments table header', async () => {
     const user = userEvent.setup();
     render(
