@@ -19,6 +19,11 @@ public interface IGraphService
         string query,
         CancellationToken cancellationToken = default);
 
+    Task<GraphUserProfile?> FindUserByEmailAsync(
+        ClaimsPrincipal principal,
+        string email,
+        CancellationToken cancellationToken = default);
+
     Task<GraphUserProfile?> GetUserProfileAsync(
         ClaimsPrincipal principal,
         string userObjectId,
@@ -187,6 +192,38 @@ public sealed class GraphService : IGraphService
         }
     }
 
+    public async Task<GraphUserProfile?> FindUserByEmailAsync(
+        ClaimsPrincipal principal,
+        string email,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            return null;
+        }
+
+        var graphClient = CreateGraphClient(principal);
+
+        // Try the provided address first, then known UC Davis domain aliases for exact-match resolution.
+        foreach (var candidateEmail in EnumerateEmailCandidates(email))
+        {
+            var user = await TryFindUserByExactEmailAsync(graphClient, candidateEmail, cancellationToken);
+            user ??= await TryFindUserBySearchAsync(principal, candidateEmail, cancellationToken);
+            if (user?.Id is null)
+            {
+                continue;
+            }
+
+            var profile = await TryGetUserProfileByIdAsync(graphClient, user.Id, cancellationToken);
+            if (profile is not null)
+            {
+                return profile;
+            }
+        }
+
+        return null;
+    }
+
     internal static IReadOnlyList<GraphUserSearchResult> BuildValidSearchResults(
         IList<User>? users)
     {
@@ -213,6 +250,123 @@ public sealed class GraphService : IGraphService
             .ToArray();
     }
 
+    internal static IReadOnlyList<string> EnumerateEmailCandidates(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            return Array.Empty<string>();
+        }
+
+        var normalized = email.Trim().ToLowerInvariant();
+        var candidates = new List<string> { normalized };
+
+        var atIndex = normalized.IndexOf('@');
+        if (atIndex <= 0 || atIndex == normalized.Length - 1)
+        {
+            return candidates;
+        }
+
+        var localPart = normalized[..atIndex];
+        var domain = normalized[(atIndex + 1)..];
+
+        // Health and other UC Davis subdomains often map back to a primary @ucdavis.edu Entra identity.
+        if (domain.EndsWith(".ucdavis.edu", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(domain, "ucdavis.edu", StringComparison.OrdinalIgnoreCase))
+        {
+            candidates.Add($"{localPart}@ucdavis.edu");
+        }
+
+        return candidates
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    internal static IReadOnlyList<string> EnumerateSearchTerms(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            return Array.Empty<string>();
+        }
+
+        var normalized = email.Trim().ToLowerInvariant();
+        var terms = new List<string> { normalized };
+
+        var atIndex = normalized.IndexOf('@');
+        if (atIndex > 0)
+        {
+            var localPart = normalized[..atIndex];
+            if (localPart.Length >= 3)
+            {
+                terms.Add(localPart);
+            }
+        }
+
+        return terms
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private async Task<User?> TryFindUserBySearchAsync(
+        ClaimsPrincipal principal,
+        string email,
+        CancellationToken cancellationToken = default)
+    {
+        foreach (var query in EnumerateSearchTerms(email))
+        {
+            var results = await SearchUsersAsync(principal, query, cancellationToken);
+            var matchingResult = results.FirstOrDefault(r =>
+                    string.Equals(r.Email?.Trim(), email, StringComparison.OrdinalIgnoreCase))
+                ?? results.FirstOrDefault(r => HasMatchingEmailLocalPart(r.Email, email));
+
+            if (matchingResult?.Id is null)
+            {
+                continue;
+            }
+
+            return new User
+            {
+                Id = matchingResult.Id,
+                Mail = matchingResult.Email,
+                UserPrincipalName = matchingResult.Email,
+                AccountEnabled = true,
+                UserType = "Member",
+            };
+        }
+
+        return null;
+    }
+
+    private static async Task<User?> TryFindUserByExactEmailAsync(
+        GraphServiceClient graphClient,
+        string email,
+        CancellationToken cancellationToken = default)
+    {
+        var escaped = email.Replace("'", "''");
+        var users = await graphClient.Users.GetAsync(requestConfiguration =>
+        {
+            requestConfiguration.Headers.Add("ConsistencyLevel", "eventual");
+            requestConfiguration.QueryParameters.Top = 5;
+            requestConfiguration.QueryParameters.Count = true;
+            requestConfiguration.QueryParameters.Select = new[]
+            {
+                "id",
+                "displayName",
+                "mail",
+                "userPrincipalName",
+                "accountEnabled",
+                "userType",
+            };
+            requestConfiguration.QueryParameters.Filter =
+                $"mail eq '{escaped}' or userPrincipalName eq '{escaped}'";
+        }, cancellationToken);
+
+        return users?.Value?
+            .Where(IsEligibleDirectoryUser)
+            .FirstOrDefault(u =>
+                string.Equals(u.Mail?.Trim(), email, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(u.UserPrincipalName?.Trim(), email, StringComparison.OrdinalIgnoreCase));
+    }
+
     private static bool HasExcludedEmailSuffix(string? email)
     {
         if (string.IsNullOrWhiteSpace(email))
@@ -221,6 +375,42 @@ public sealed class GraphService : IGraphService
         }
 
         return email.EndsWith(ExcludedEmailSuffix, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool HasMatchingEmailLocalPart(string? resultEmail, string candidateEmail)
+    {
+        var resultLocalPart = ExtractEmailLocalPart(resultEmail);
+        var candidateLocalPart = ExtractEmailLocalPart(candidateEmail);
+
+        return !string.IsNullOrWhiteSpace(resultLocalPart) &&
+               !string.IsNullOrWhiteSpace(candidateLocalPart) &&
+               string.Equals(resultLocalPart, candidateLocalPart, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string? ExtractEmailLocalPart(string? email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            return null;
+        }
+
+        var normalized = email.Trim();
+        var atIndex = normalized.IndexOf('@');
+        if (atIndex <= 0)
+        {
+            return null;
+        }
+
+        return normalized[..atIndex];
+    }
+
+    private static bool IsEligibleDirectoryUser(User user)
+    {
+        return !string.IsNullOrWhiteSpace(user.Id) &&
+               user.AccountEnabled != false &&
+               !string.Equals(user.UserType, "Guest", StringComparison.OrdinalIgnoreCase) &&
+               !HasExcludedEmailSuffix(user.Mail) &&
+               !HasExcludedEmailSuffix(user.UserPrincipalName);
     }
 
     public async Task<GraphUserProfile?> GetUserProfileAsync(

@@ -286,6 +286,19 @@ public sealed class SearchControllerTests
             return Task.FromResult(_searchResults);
         }
 
+        public Task<GraphUserProfile?> FindUserByEmailAsync(
+            ClaimsPrincipal principal,
+            string email,
+            CancellationToken cancellationToken = default)
+        {
+            var profile = _profiles.Values.FirstOrDefault(p =>
+                string.Equals(p.Email, email, StringComparison.OrdinalIgnoreCase) ||
+                GraphService.EnumerateEmailCandidates(email).Any(candidate =>
+                    string.Equals(p.Email, candidate, StringComparison.OrdinalIgnoreCase)));
+
+            return Task.FromResult(profile);
+        }
+
         public Task<GraphUserProfile?> GetUserProfileAsync(
             ClaimsPrincipal principal,
             string userObjectId,

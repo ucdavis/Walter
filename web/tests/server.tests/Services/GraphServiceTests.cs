@@ -94,4 +94,28 @@ public sealed class GraphServiceTests
         results.Select(x => x.Id).Should().ContainInOrder("a", "b", "c", "d", "e");
         results.First(x => x.Id == "a").Email.Should().Be("alpha@ucdavis.edu");
     }
+
+    [Fact]
+    public void EnumerateEmailCandidates_adds_ucdavis_alias_for_subdomains()
+    {
+        var candidates = GraphService.EnumerateEmailCandidates("giermasz@health.ucdavis.edu");
+
+        candidates.Should().ContainInOrder("giermasz@health.ucdavis.edu", "giermasz@ucdavis.edu");
+    }
+
+    [Fact]
+    public void EnumerateEmailCandidates_keeps_primary_domain_without_duplicates()
+    {
+        var candidates = GraphService.EnumerateEmailCandidates("alpha@ucdavis.edu");
+
+        candidates.Should().Equal("alpha@ucdavis.edu");
+    }
+
+    [Fact]
+    public void EnumerateSearchTerms_adds_local_part_for_email_queries()
+    {
+        var terms = GraphService.EnumerateSearchTerms("giermasz@health.ucdavis.edu");
+
+        terms.Should().ContainInOrder("giermasz@health.ucdavis.edu", "giermasz");
+    }
 }
