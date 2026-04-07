@@ -1,5 +1,5 @@
 import { ProjectAlerts } from '@/components/alerts/ProjectAlerts.tsx';
-import { ChartStringBreakdown } from '@/components/project/ChartStringBreakdown.tsx';
+import { TaskBreakdown } from '@/components/project/TaskBreakdown.tsx';
 import { ProjectDetails } from '@/components/project/ProjectDetails.tsx';
 import { FinancialDetails } from '@/components/project/FinancialDetails.tsx';
 import { PersonnelTable } from '@/components/project/PersonnelTable.tsx';
@@ -89,11 +89,11 @@ function ProjectContent({
         <h2 className="h2">
           <TooltipLabel
             label="Task Breakdown"
-            tooltip={tooltipDefinitions.chartStringBreakdown}
+            tooltip={tooltipDefinitions.taskBreakdown}
           />
         </h2>
         <div className="mt-4">
-          <ChartStringBreakdown employeeId={employeeId} projectNumber={summary.projectNumber} records={projectRecords} />
+          <TaskBreakdown employeeId={employeeId} projectNumber={summary.projectNumber} records={projectRecords} />
         </div>
       </section>
 

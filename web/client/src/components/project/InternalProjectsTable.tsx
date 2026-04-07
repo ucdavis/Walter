@@ -147,6 +147,7 @@ export function InternalProjectsTable({
         ),
         footer: () => '',
         header: 'Task',
+        minSize: 200,
       }),
       columnHelper.accessor('totalBudget', {
         cell: (info) => (
@@ -191,17 +192,17 @@ export function InternalProjectsTable({
         cell: (info) => {
           const value = info.getValue();
           return (
-            <span className={`flex justify-end ${value < 0 ? 'text-error' : ''}`}>
+            <span className={`flex justify-end w-full ${value < 0 ? 'text-error' : ''}`}>
               {formatCurrency(value)}
             </span>
           );
         },
         footer: () => (
-          <span className={`flex justify-end ${totals.totalBalance < 0 ? 'text-error' : ''}`}>
+          <span className={`flex justify-end w-full ${totals.totalBalance < 0 ? 'text-error' : ''}`}>
             {formatCurrency(totals.totalBalance)}
           </span>
         ),
-        header: () => <span className="flex justify-end">Balance</span>,
+        header: () => <span className="flex justify-end w-full">Balance</span>,
       }),
     ],
     [discrepancies, employeeId, totals.totalBalance, totals.totalBudget, totals.totalEncumbrance, totals.totalExpense]
