@@ -109,6 +109,35 @@ public class SystemControllerTests
     }
 
     [Fact]
+    public void GetRumConfig_falls_back_when_sample_rate_is_nan()
+    {
+        using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
+        var rumOptions = new RumOptions
+        {
+            Enabled = true,
+            ServerUrl = "https://elastic.example",
+            TransactionSampleRate = "NaN",
+        };
+
+        var (controller, _) = CreateController(ctx, rumOptions, Environments.Production);
+        controller.ControllerContext.HttpContext.Request.Scheme = "https";
+        controller.ControllerContext.HttpContext.Request.Host = new HostString("walter.example");
+
+        var result = controller.GetRumConfig();
+
+        result.Result.Should().BeOfType<OkObjectResult>()
+            .Which.Value.Should().BeEquivalentTo(new
+            {
+                Enabled = true,
+                Environment = Environments.Production,
+                ServerUrl = "https://elastic.example",
+                ServiceName = "walter-web",
+                ServiceVersion = AppVersionHelper.ResolveServiceVersion(),
+                TransactionSampleRate = 0.2d,
+            });
+    }
+
+    [Fact]
     public async Task Emulate_accepts_guid_identifier()
     {
         using AppDbContext ctx = TestDbContextFactory.CreateInMemory();

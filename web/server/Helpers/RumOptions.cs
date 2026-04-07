@@ -43,7 +43,10 @@ public sealed class RumOptions
 
     internal double ResolveSampleRate(string environmentName)
     {
-        if (double.TryParse(TransactionSampleRate, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed))
+        if (
+            double.TryParse(TransactionSampleRate, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed) &&
+            !double.IsNaN(parsed)
+        )
         {
             return Math.Clamp(parsed, 0d, 1d);
         }

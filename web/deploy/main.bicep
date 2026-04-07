@@ -87,10 +87,15 @@ resource webApp 'Microsoft.Web/sites@2024-11-01' = {
   }
 }
 
+var existingWebAppSettings = list(
+  resourceId('Microsoft.Web/sites/config', webApp.name, 'appsettings'),
+  '2024-11-01'
+).properties
+
 resource webAppSettings 'Microsoft.Web/sites/config@2024-11-01' = {
   name: 'appsettings'
   parent: webApp
-  properties: {
+  properties: union(existingWebAppSettings, {
     DB_CONNECTION: 'Server=tcp:${sqlServer.name}.database.windows.net,1433;Initial Catalog=${sqlDb.name};Persist Security Info=False;User ID=${sqlAdminLogin};Password=${sqlAdminPassword};MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;'
     Rum__Enabled: string(rumEnabled)
     Rum__Environment: rumEnvironment
@@ -98,5 +103,5 @@ resource webAppSettings 'Microsoft.Web/sites/config@2024-11-01' = {
     Rum__ServiceName: rumServiceName
     Rum__ServiceVersion: rumServiceVersion
     Rum__TransactionSampleRate: rumTransactionSampleRate
-  }
+  })
 }
