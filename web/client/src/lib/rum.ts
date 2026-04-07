@@ -77,6 +77,7 @@ export async function bootstrapRum(
 
       return rumAgent;
     } catch {
+      bootstrapPromise = null;
       return null;
     }
   })();
@@ -107,7 +108,7 @@ export function applyRumRouteMetadata(metadata: RumRouteMetadata): void {
   }
 
   rumAgent.setCustomContext?.({
-    pathname: metadata.pathname,
+    pathname: metadata.routeTemplate,
   });
 
   if (metadata.routeTemplate === '/' || transaction?.type === 'page-load') {

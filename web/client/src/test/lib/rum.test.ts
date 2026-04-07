@@ -57,6 +57,32 @@ describe('bootstrapRum', () => {
     expect(init).toHaveBeenCalledTimes(1);
   });
 
+  it('retries after a transient config fetch failure', async () => {
+    const agent = createFakeAgent();
+    const init = vi.fn(() => agent);
+    const fetchConfig = vi
+      .fn<() => Promise<RumPublicConfig | null>>()
+      .mockRejectedValueOnce(new Error('temporary failure'))
+      .mockResolvedValueOnce(enabledConfig);
+
+    const first = await bootstrapRum({
+      fetchConfig,
+      getOrigin: () => 'https://walter.example',
+      init,
+    });
+
+    const second = await bootstrapRum({
+      fetchConfig,
+      getOrigin: () => 'https://walter.example',
+      init,
+    });
+
+    expect(first).toBeNull();
+    expect(second).toBe(agent);
+    expect(fetchConfig).toHaveBeenCalledTimes(2);
+    expect(init).toHaveBeenCalledTimes(1);
+  });
+
   it('passes the expected config to Elastic and merges the current origin', async () => {
     const agent = createFakeAgent();
     const init = vi.fn(() => agent);
@@ -111,7 +137,7 @@ describe('bootstrapRum', () => {
       route_template: '/projects/$employeeId/$projectNumber',
     });
     expect(setCustomContext).toHaveBeenCalledWith({
-      pathname: '/projects/123/P456',
+      pathname: '/projects/$employeeId/$projectNumber',
     });
   });
 });
