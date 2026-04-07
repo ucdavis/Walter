@@ -31,13 +31,13 @@ async function renderHomeForRoles(roles: string[]) {
 }
 
 describe('header navigation access control', () => {
-  it('shows Projects, Personnel, and Reports for default users', async () => {
+  it('shows Projects and Personnel for default users', async () => {
     const { cleanup } = await renderHomeForRoles([]);
 
     try {
       expect(screen.getByRole('link', { name: 'Projects' })).toBeInTheDocument();
       expect(screen.getByRole('link', { name: 'Personnel' })).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: 'Reports' })).toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: 'Reports' })).not.toBeInTheDocument();
       expect(
         screen.queryByRole('link', { name: 'Principal Investigators' })
       ).not.toBeInTheDocument();
@@ -127,17 +127,33 @@ describe('header navigation access control', () => {
     }
   });
 
-  it('shows no top-level nav items for System users', async () => {
+  it('shows Projects and Personnel for System-only users (System role is purely additive)', async () => {
     const { cleanup } = await renderHomeForRoles(['System']);
 
     try {
+      expect(screen.getByRole('link', { name: 'Projects' })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Personnel' })).toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: 'Reports' })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('link', { name: 'Principal Investigators' })
+      ).not.toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: 'Admin' })).not.toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('shows Admin and Reports for System + Admin users', async () => {
+    const { cleanup } = await renderHomeForRoles(['System', 'Admin']);
+
+    try {
+      expect(screen.getByRole('link', { name: 'Admin' })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Reports' })).toBeInTheDocument();
       expect(screen.queryByRole('link', { name: 'Projects' })).not.toBeInTheDocument();
       expect(screen.queryByRole('link', { name: 'Personnel' })).not.toBeInTheDocument();
       expect(
         screen.queryByRole('link', { name: 'Principal Investigators' })
       ).not.toBeInTheDocument();
-      expect(screen.queryByRole('link', { name: 'Reports' })).not.toBeInTheDocument();
-      expect(screen.queryByRole('link', { name: 'Admin' })).not.toBeInTheDocument();
     } finally {
       cleanup();
     }

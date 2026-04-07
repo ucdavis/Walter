@@ -46,10 +46,10 @@ const hasNonSystemSpecialRole = (roles: readonly string[]) =>
   );
 
 const isDefaultNavUser = (roles: readonly string[]) =>
-  !hasSystemRole(roles) && !hasNonSystemSpecialRole(roles);
+  !hasNonSystemSpecialRole(roles);
 
 export const canAccessAdminDashboard = (roles: readonly string[]) =>
-  !hasSystemRole(roles) && hasRole(roles, ELEVATED_ROLES);
+  hasRole(roles, ELEVATED_ROLES);
 
 export const canAccessAdminUsers = (roles: readonly string[]) =>
   hasManagerRole(roles);
@@ -61,7 +61,7 @@ export const canAccessPersonnelNav = (roles: readonly string[]) =>
   isDefaultNavUser(roles);
 
 export const canAccessPrincipalInvestigatorsNav = (roles: readonly string[]) =>
-  !hasSystemRole(roles) && hasRole(roles, PI_NAV_ROLES);
+  hasRole(roles, PI_NAV_ROLES);
 
 export const canAccessReportsNav = (roles: readonly string[]) =>
-  !hasSystemRole(roles);
+  hasNonSystemSpecialRole(roles);

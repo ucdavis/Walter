@@ -53,7 +53,7 @@ describe('Accruals access control', () => {
 
       try {
         await screen.findByRole('heading', { name: 'W.A.L.T.E.R.' });
-        expect(screen.getByRole('link', { name: 'Reports' })).toBeInTheDocument();
+        expect(screen.queryByRole('link', { name: 'Reports' })).not.toBeInTheDocument();
         expect(screen.queryByRole('link', { name: 'Accruals' })).not.toBeInTheDocument();
       } finally {
         cleanup();
