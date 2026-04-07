@@ -1,5 +1,5 @@
--- Project summary from the Aggie Enterprise data warehouse.
--- Returns task-level data with expenditure category breakdown from the Faculty & Department Portfolio Report.
+-- Project summary combining local FacultyDeptPortfolio table with award metadata from AE DWH.
+-- Returns task-level data with expenditure category breakdown.
 CREATE PROCEDURE dbo.usp_GetProjectSummary
     @ProjectIds VARCHAR(MAX) = NULL,
     @StartDate DATE = NULL,
@@ -46,62 +46,36 @@ BEGIN
 
     EXEC dbo.usp_ParseProjectIdFilter @ProjectIds, @ProjectIdFilter OUTPUT;
 
-    SET @FilterClause = ' WHERE f.PROJECT_NUMBER IN (' + @ProjectIdFilter + ')';
+    SET @FilterClause = ' WHERE f.ProjectNumber IN (' + @ProjectIdFilter + ')';
 
     -- Add date overlap logic
     IF @StartDate IS NOT NULL
-        SET @FilterClause = @FilterClause + ' AND f.award_end_date >= ''' + CONVERT(VARCHAR(10), @StartDate, 120) + '''';
+        SET @FilterClause = @FilterClause + ' AND f.AwardEndDate >= ''' + CONVERT(VARCHAR(10), @StartDate, 120) + '''';
 
     IF @EndDate IS NOT NULL
-        SET @FilterClause = @FilterClause + ' AND f.award_start_date <= ''' + CONVERT(VARCHAR(10), @EndDate, 120) + '''';
+        SET @FilterClause = @FilterClause + ' AND f.AwardStartDate <= ''' + CONVERT(VARCHAR(10), @EndDate, 120) + '''';
 
-    -- Build Redshift query with LEFT JOIN to pgm_master_data
+    -- Build Redshift query for award metadata (pgm_master_data is still remote)
     SET @RedshiftQuery = '
-        WITH pgm AS (
-            SELECT
-                project_number, award_number,
-                close_date AS award_close_date,
-                LISTAGG(DISTINCT principal_investigator_person_name, ''; '') WITHIN GROUP (ORDER BY 1) AS award_pi,
-                billing_cycle, project_burden_schedule_base, project_burden_cost_rate,
-                cost_share_required_by_sponsor,
-                LISTAGG(DISTINCT grant_administrator, ''; '') WITHIN GROUP (ORDER BY 1) AS grant_administrator,
-                postrepperiod AS post_reporting_period,
-                primary_sponsor_name,
-                '''' AS project_fund,
-                LISTAGG(DISTINCT contractadmin, ''; '') WITHIN GROUP (ORDER BY 1) AS contract_administrator,
-                sponsor_award_number
-            FROM ae_dwh.pgm_master_data
-            WHERE project_number IN (' + @ProjectIdFilter + ')
-            GROUP BY
-                project_number, award_number, close_date, billing_cycle,
-                project_burden_schedule_base, project_burden_cost_rate,
-                cost_share_required_by_sponsor, postrepperiod, primary_sponsor_name,
-                sponsor_award_number
-        )
-        SELECT f.AWARD_NUMBER, f.AWARD_NAME, f.AWARD_TYPE, f.AWARD_START_DATE, f.AWARD_END_DATE, f.AWARD_STATUS,
-        f.PROJECT_NUMBER, f.PROJECT_NAME,
-        CASE WHEN POSITION('' - '' IN f.PRJ_OWNING_ORG) > 0
-            THEN LEFT(f.PRJ_OWNING_ORG, POSITION('' - '' IN f.PRJ_OWNING_ORG) - 1)
-            ELSE f.PRJ_OWNING_ORG END AS PROJECT_OWNING_ORG_CODE,
-        CASE WHEN POSITION('' - '' IN f.PRJ_OWNING_ORG) > 0
-            THEN SUBSTRING(f.PRJ_OWNING_ORG, POSITION('' - '' IN f.PRJ_OWNING_ORG) + 3, LEN(f.PRJ_OWNING_ORG))
-            ELSE f.PRJ_OWNING_ORG END AS PROJECT_OWNING_ORG,
-        f.PROJECT_TYPE, f.PROJECT_STATUS_CODE AS PROJECT_STATUS, f.TASK_NUM, f.TASK_NAME, f.TASK_STATUS,
-        f.PM, f.PA, f.PI, f.COPI, f.EXPENDITURE_CATEGORY_NAME,
-        f.FUND_CD AS FUND_CODE, f.FUND_DESC, f.PURPOSE_CD AS PURPOSE_CODE, f.PURPOSE_DESC,
-        f.PROGRAM_CD AS PROGRAM_CODE, f.PROGRAM_DESC, f.ACTIVITY_CD AS ACTIVITY_CODE, f.ACTIVITY_DESC,
-        f.CAT_BUDGET AS PPM_BUDGET, f.CAT_COMMITMENTS AS PPM_COMMITMENTS,
-        f.CAT_ITD_EXP AS PPM_EXPENSES, f.CAT_BUD_BAL AS PPM_BUD_BAL,
-        NULL AS GL_BEGINNING_BALANCE, NULL AS GL_REVENUE, NULL AS GL_EXPENSES,
-        p.award_close_date AS AWARD_CLOSE_DATE, p.award_pi AS AWARD_PI, p.billing_cycle AS BILLING_CYCLE,
-        p.project_burden_schedule_base AS PROJECT_BURDEN_SCHEDULE_BASE, p.project_burden_cost_rate AS PROJECT_BURDEN_COST_RATE,
-        p.cost_share_required_by_sponsor AS COST_SHARE_REQUIRED_BY_SPONSOR, p.grant_administrator AS GRANT_ADMINISTRATOR,
-        p.post_reporting_period AS POST_REPORTING_PERIOD,
-        p.primary_sponsor_name AS PRIMARY_SPONSOR_NAME, p.project_fund AS PROJECT_FUND,
-        p.contract_administrator AS CONTRACT_ADMINISTRATOR, p.sponsor_award_number AS SPONSOR_AWARD_NUMBER
-        FROM ae_dwh.ucd_faculty_rpt_t f
-        LEFT JOIN pgm p ON f.project_number = p.project_number AND f.award_number = p.award_number
-        ' + @FilterClause;
+        SELECT
+            project_number, award_number,
+            close_date AS award_close_date,
+            LISTAGG(DISTINCT principal_investigator_person_name, ''; '') WITHIN GROUP (ORDER BY 1) AS award_pi,
+            billing_cycle, project_burden_schedule_base, project_burden_cost_rate,
+            cost_share_required_by_sponsor,
+            LISTAGG(DISTINCT grant_administrator, ''; '') WITHIN GROUP (ORDER BY 1) AS grant_administrator,
+            postrepperiod AS post_reporting_period,
+            primary_sponsor_name,
+            '''' AS project_fund,
+            LISTAGG(DISTINCT contractadmin, ''; '') WITHIN GROUP (ORDER BY 1) AS contract_administrator,
+            sponsor_award_number
+        FROM ae_dwh.pgm_master_data
+        WHERE project_number IN (' + @ProjectIdFilter + ')
+        GROUP BY
+            project_number, award_number, close_date, billing_cycle,
+            project_burden_schedule_base, project_burden_cost_rate,
+            cost_share_required_by_sponsor, postrepperiod, primary_sponsor_name,
+            sponsor_award_number';
 
     -- Build parameters JSON for logging
     SET @ParametersJSON = (
@@ -113,10 +87,40 @@ BEGIN
         FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
     );
 
-    -- Execute via OPENQUERY
     BEGIN TRY
-        SET @TSQLCommand =
-            'SELECT * FROM OPENQUERY(' + @RedshiftLinkedServer + ', ''' + REPLACE(@RedshiftQuery, '''', '''''') + ''')';
+        -- Fetch award metadata from Redshift into temp table, then join with local FacultyDeptPortfolio
+        SET @TSQLCommand = '
+            SELECT * INTO #pgm FROM OPENQUERY(' + @RedshiftLinkedServer + ', ''' + REPLACE(@RedshiftQuery, '''', '''''') + ''');
+
+            SELECT f.AwardNumber AS AWARD_NUMBER, f.AwardName AS AWARD_NAME, f.AwardType AS AWARD_TYPE,
+                f.AwardStartDate AS AWARD_START_DATE, f.AwardEndDate AS AWARD_END_DATE, f.AwardStatus AS AWARD_STATUS,
+                f.ProjectNumber AS PROJECT_NUMBER, f.ProjectName AS PROJECT_NAME,
+                f.ProjectOwningOrgCode AS PROJECT_OWNING_ORG_CODE,
+                f.ProjectOwningOrg AS PROJECT_OWNING_ORG,
+                f.ProjectType AS PROJECT_TYPE, f.ProjectStatus AS PROJECT_STATUS,
+                f.TaskNum AS TASK_NUM, f.TaskName AS TASK_NAME, f.TaskStatus AS TASK_STATUS,
+                f.Pm AS PM, f.Pa AS PA, f.Pi AS PI, f.Copi AS COPI,
+                f.ExpenditureCategoryName AS EXPENDITURE_CATEGORY_NAME,
+                f.FundCode AS FUND_CODE, f.FundDesc AS FUND_DESC,
+                f.PurposeCode AS PURPOSE_CODE, f.PurposeDesc AS PURPOSE_DESC,
+                f.ProgramCode AS PROGRAM_CODE, f.ProgramDesc AS PROGRAM_DESC,
+                f.ActivityCode AS ACTIVITY_CODE, f.ActivityDesc AS ACTIVITY_DESC,
+                f.PpmBudget AS PPM_BUDGET, f.PpmCommitments AS PPM_COMMITMENTS,
+                f.PpmExpenses AS PPM_EXPENSES, f.PpmBudBal AS PPM_BUD_BAL,
+                CAST(NULL AS DECIMAL(15,2)) AS GL_BEGINNING_BALANCE,
+                CAST(NULL AS DECIMAL(15,2)) AS GL_REVENUE,
+                CAST(NULL AS DECIMAL(15,2)) AS GL_EXPENSES,
+                p.award_close_date AS AWARD_CLOSE_DATE, p.award_pi AS AWARD_PI, p.billing_cycle AS BILLING_CYCLE,
+                p.project_burden_schedule_base AS PROJECT_BURDEN_SCHEDULE_BASE,
+                p.project_burden_cost_rate AS PROJECT_BURDEN_COST_RATE,
+                p.cost_share_required_by_sponsor AS COST_SHARE_REQUIRED_BY_SPONSOR,
+                p.grant_administrator AS GRANT_ADMINISTRATOR,
+                p.post_reporting_period AS POST_REPORTING_PERIOD,
+                p.primary_sponsor_name AS PRIMARY_SPONSOR_NAME, p.project_fund AS PROJECT_FUND,
+                p.contract_administrator AS CONTRACT_ADMINISTRATOR, p.sponsor_award_number AS SPONSOR_AWARD_NUMBER
+            FROM dbo.FacultyDeptPortfolio f
+            LEFT JOIN #pgm p ON f.ProjectNumber = p.project_number AND f.AwardNumber = p.award_number
+            ' + @FilterClause;
 
         EXEC sp_executesql @TSQLCommand;
 

@@ -32,4 +32,8 @@ GRANT EXECUTE ON [dbo].[usp_SanitizeInputString] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_ValidateAggieEnterpriseProject] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_ValidateFinancialDept] TO [WalterAppRole];
 
+-- Grant pipeline role permissions on FacultyDeptPortfolio table
+GRANT INSERT, SELECT, UPDATE ON [dbo].[FacultyDeptPortfolio] TO [WalterPipelineRole];
+GRANT SELECT ON [dbo].[FacultyDeptPortfolio] TO [WalterAppRole];
+
 PRINT 'Post-deployment complete.'
