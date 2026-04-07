@@ -88,7 +88,7 @@ resource webApp 'Microsoft.Web/sites@2024-11-01' = {
 }
 
 var existingWebAppSettings = list(
-  resourceId('Microsoft.Web/sites/config', webApp.name, 'appsettings'),
+  '${webApp.id}/config/appsettings',
   '2024-11-01'
 ).properties
 
