@@ -5,11 +5,14 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Microsoft.Identity.Web;
 using Server.Controllers;
 using Server.Services;
 using Server.Tests;
+using server.Helpers;
 using server.core.Data;
 using server.core.Domain;
 
@@ -17,6 +20,94 @@ namespace server.tests.Controllers;
 
 public class SystemControllerTests
 {
+    [Fact]
+    public void GetRumConfig_returns_public_config_with_defaults()
+    {
+        using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
+        var rumOptions = new RumOptions
+        {
+            Enabled = true,
+            ServerUrl = "https://elastic.example",
+        };
+
+        var (controller, _) = CreateController(ctx, rumOptions, Environments.Development);
+        controller.ControllerContext.HttpContext.Request.Scheme = "https";
+        controller.ControllerContext.HttpContext.Request.Host = new HostString("walter.local");
+
+        var result = controller.GetRumConfig();
+
+        result.Result.Should().BeOfType<OkObjectResult>()
+            .Which.Value.Should().BeEquivalentTo(new
+            {
+                Enabled = true,
+                Environment = Environments.Development,
+                ServerUrl = "https://elastic.example",
+                ServiceName = "walter-web",
+                ServiceVersion = AppVersionHelper.ResolveServiceVersion(),
+                TransactionSampleRate = 1d,
+            });
+    }
+
+    [Fact]
+    public void GetRumConfig_clamps_and_parses_sample_rate_and_uses_configured_origins()
+    {
+        using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
+        var rumOptions = new RumOptions
+        {
+            Enabled = true,
+            Environment = "staging",
+            ServerUrl = "https://elastic.example",
+            ServiceName = "walter-rum",
+            ServiceVersion = "9.9.9",
+            TransactionSampleRate = "1.5",
+        };
+
+        var (controller, _) = CreateController(ctx, rumOptions, Environments.Production);
+        controller.ControllerContext.HttpContext.Request.Scheme = "https";
+        controller.ControllerContext.HttpContext.Request.Host = new HostString("walter.example");
+
+        var result = controller.GetRumConfig();
+
+        result.Result.Should().BeOfType<OkObjectResult>()
+            .Which.Value.Should().BeEquivalentTo(new
+            {
+                Enabled = true,
+                Environment = "staging",
+                ServerUrl = "https://elastic.example",
+                ServiceName = "walter-rum",
+                ServiceVersion = "9.9.9",
+                TransactionSampleRate = 1d,
+            });
+    }
+
+    [Fact]
+    public void GetRumConfig_disables_payload_when_server_url_is_missing_and_falls_back_for_invalid_sample_rate()
+    {
+        using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
+        var rumOptions = new RumOptions
+        {
+            Enabled = true,
+            TransactionSampleRate = "not-a-number",
+        };
+
+        var (controller, _) = CreateController(ctx, rumOptions, Environments.Production);
+        controller.ControllerContext.HttpContext.Request.Scheme = "https";
+        controller.ControllerContext.HttpContext.Request.Host = new HostString("walter.example");
+
+        var result = controller.GetRumConfig();
+
+        result.Result.Should().BeOfType<OkObjectResult>()
+            .Which.Value.Should().BeEquivalentTo(new
+            {
+                Enabled = false,
+                Environment = Environments.Production,
+                ServerUrl = string.Empty,
+                ServiceName = "walter-web",
+                ServiceVersion = AppVersionHelper.ResolveServiceVersion(),
+                TransactionSampleRate = 0.2d,
+            });
+    }
+
     [Fact]
     public async Task Emulate_accepts_guid_identifier()
     {
@@ -91,7 +182,10 @@ public class SystemControllerTests
         auth.SignedInPrincipal!.FindFirst(ClaimConstants.ObjectId)!.Value.Should().Be(user.Id.ToString());
     }
 
-    private static (SystemController Controller, FakeAuthenticationService Auth) CreateController(AppDbContext ctx)
+    private static (SystemController Controller, FakeAuthenticationService Auth) CreateController(
+        AppDbContext ctx,
+        RumOptions? rumOptions = null,
+        string environmentName = "Development")
     {
         var auth = new FakeAuthenticationService();
 
@@ -102,7 +196,10 @@ public class SystemControllerTests
         var httpContext = new DefaultHttpContext { RequestServices = sp };
 
         var userService = new UserService(NullLogger<UserService>.Instance, ctx);
-        var controller = new SystemController(userService)
+        var controller = new SystemController(
+            userService,
+            Options.Create(rumOptions ?? new RumOptions()),
+            new FakeHostEnvironment { EnvironmentName = environmentName })
         {
             ControllerContext = new ControllerContext { HttpContext = httpContext },
         };
@@ -147,5 +244,14 @@ public class SystemControllerTests
             SignedOut = true;
             return Task.CompletedTask;
         }
+    }
+
+    private sealed class FakeHostEnvironment : IHostEnvironment
+    {
+        public string EnvironmentName { get; set; } = Environments.Development;
+        public string ApplicationName { get; set; } = "server.tests";
+        public string ContentRootPath { get; set; } = AppContext.BaseDirectory;
+        public Microsoft.Extensions.FileProviders.IFileProvider ContentRootFileProvider { get; set; } =
+            null!;
     }
 }

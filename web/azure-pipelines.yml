@@ -50,10 +50,10 @@ stages:
           - script: dotnet restore $(solutionPath)
             displayName: Restore .NET solution
 
-          - script: dotnet test $(serverProjectPath) --configuration $(buildConfiguration) --logger trx
+          - script: dotnet test $(serverProjectPath) --configuration $(buildConfiguration) --logger trx /p:Version=$(Build.BuildNumber)
             displayName: Run server tests
 
-          - script: dotnet publish $(serverProjectPath) --configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)/server
+          - script: dotnet publish $(serverProjectPath) --configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)/server /p:Version=$(Build.BuildNumber)
             displayName: Publish server project
 
           - task: ArchiveFiles@2

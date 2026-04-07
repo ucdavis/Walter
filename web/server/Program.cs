@@ -55,6 +55,7 @@ builder.Services.AddAuthorizationPolicies();
 // app settings sections
 builder.Services.Configure<IamSettings>(builder.Configuration.GetSection("Iam"));
 builder.Services.Configure<FinancialSettings>(builder.Configuration.GetSection("Financial"));
+builder.Services.Configure<RumOptions>(builder.Configuration.GetSection("Rum"));
 
 builder.Services.AddControllers();
 

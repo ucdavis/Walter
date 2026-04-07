@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Hosting;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 
 namespace server.Helpers;
@@ -12,6 +13,8 @@ public static class TelemetryHelper
     /// </summary>
     public static void ConfigureLogging(ILoggingBuilder logging)
     {
+        var resourceBuilder = BuildResourceBuilder();
+
         logging.ClearProviders();
         logging.AddJsonConsole(options =>
         {
@@ -24,6 +27,7 @@ public static class TelemetryHelper
             logOptions.IncludeFormattedMessage = true; // keep original message
             logOptions.IncludeScopes = true;           // carry our scope props
             logOptions.ParseStateValues = true;        // structured state
+            logOptions.SetResourceBuilder(resourceBuilder);
             logOptions.AddOtlpExporter(); // configured via OTEL_* env vars / IConfiguration
         });
     }
@@ -34,10 +38,13 @@ public static class TelemetryHelper
     public static void ConfigureOpenTelemetry(IServiceCollection services, IHostEnvironment env)
     {
         Sampler sampler = env.IsDevelopment()
-            ? new AlwaysOnSampler()
-            : new TraceIdRatioBasedSampler(0.2);
+            ? new ParentBasedSampler(new AlwaysOnSampler())
+            : new ParentBasedSampler(new TraceIdRatioBasedSampler(0.2));
 
         services.AddOpenTelemetry()
+            .ConfigureResource(resource => resource.AddService(
+                serviceName: "walter",
+                serviceVersion: AppVersionHelper.ResolveServiceVersion()))
             .WithTracing(t => t
                     .SetSampler(sampler)
                     .AddAspNetCoreInstrumentation()
@@ -54,5 +61,13 @@ public static class TelemetryHelper
                     .AddSqlClientInstrumentation()
                     .AddOtlpExporter() // configured via OTEL_* env vars / IConfiguration
             );
+    }
+
+    private static ResourceBuilder BuildResourceBuilder()
+    {
+        return ResourceBuilder.CreateDefault()
+            .AddService(
+                serviceName: "walter",
+                serviceVersion: AppVersionHelper.ResolveServiceVersion());
     }
 }

@@ -23,6 +23,21 @@ param linuxFxVersion string = 'DOTNETCORE|8.0'
 @description('Whether to create a SQL firewall rule to allow access from Azure services (0.0.0.0).')
 param allowAzureServicesToSql bool = false
 
+@description('Whether Elastic RUM config should be published to the frontend.')
+param rumEnabled bool = false
+
+@description('Elastic APM RUM intake URL.')
+param rumServerUrl string = ''
+
+@description('Frontend service name reported to Elastic APM.')
+param rumServiceName string = 'walter-web'
+
+@description('Frontend service version reported to Elastic APM. Leave blank to fall back to the app assembly version.')
+param rumServiceVersion string = ''
+
+@description('Transaction sample rate for the browser agent. Use a string so App Settings preserve the exact value.')
+param rumTransactionSampleRate string = '0.2'
+
 var normalizedAppName = toLower(replace(replace(appName, ' ', '-'), '_', '-'))
 var normalizedEnv = toLower(replace(replace(env, ' ', '-'), '_', '-'))
 
@@ -64,6 +79,12 @@ module web './modules/webapp.bicep' = {
     linuxFxVersion: linuxFxVersion
     appSettings: {
       DB_CONNECTION: dbConnection
+      Rum__Enabled: string(rumEnabled)
+      Rum__Environment: empty(normalizedEnv) ? 'production' : normalizedEnv
+      Rum__ServerUrl: rumServerUrl
+      Rum__ServiceName: rumServiceName
+      Rum__ServiceVersion: rumServiceVersion
+      Rum__TransactionSampleRate: rumTransactionSampleRate
     }
   }
   dependsOn: [

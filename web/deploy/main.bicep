@@ -20,6 +20,24 @@ param sqlAdminLogin string = 'walter'
 @description('SQL admin password (used when creating a new server; ignored for existing one)')
 param sqlAdminPassword string
 
+@description('Whether Elastic RUM config should be published to the frontend.')
+param rumEnabled bool = false
+
+@description('Elastic APM RUM intake URL.')
+param rumServerUrl string = ''
+
+@description('Frontend service name reported to Elastic APM.')
+param rumServiceName string = 'walter-web'
+
+@description('Frontend service version reported to Elastic APM. Leave blank to fall back to the app assembly version.')
+param rumServiceVersion string = ''
+
+@description('Transaction sample rate for the browser agent. Use a string so App Settings preserve the exact value.')
+param rumTransactionSampleRate string = '0.2'
+
+@description('Frontend environment label reported to Elastic APM.')
+param rumEnvironment string = 'production'
+
 // SQL Server
 resource sqlServer 'Microsoft.Sql/servers@2024-05-01-preview' = {
   name: sqlServerName
@@ -66,5 +84,19 @@ resource webApp 'Microsoft.Web/sites@2024-11-01' = {
       linuxFxVersion: 'DOTNETCORE|8.0'
       minimumElasticInstanceCount: 1
     }
+  }
+}
+
+resource webAppSettings 'Microsoft.Web/sites/config@2024-11-01' = {
+  name: 'appsettings'
+  parent: webApp
+  properties: {
+    DB_CONNECTION: 'Server=tcp:${sqlServer.name}.database.windows.net,1433;Initial Catalog=${sqlDb.name};Persist Security Info=False;User ID=${sqlAdminLogin};Password=${sqlAdminPassword};MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;'
+    Rum__Enabled: string(rumEnabled)
+    Rum__Environment: rumEnvironment
+    Rum__ServerUrl: rumServerUrl
+    Rum__ServiceName: rumServiceName
+    Rum__ServiceVersion: rumServiceVersion
+    Rum__TransactionSampleRate: rumTransactionSampleRate
   }
 }

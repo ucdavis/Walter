@@ -67,6 +67,65 @@ You might also want to set the publisher domain to ucdavis.edu and fill in the o
 
 The health check endpoint (`/health`) is configured to return the status of the application and its dependencies. It includes a database health check to ensure the SQL Server connection is healthy. See [Health Checks](https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/health-checks?view=aspnetcore-9.0#entity-framework-core-dbcontext-probe).
 
+## Logging and Monitoring
+
+Walter sends backend logs, traces, and metrics to Elastic with OpenTelemetry, and it can also send frontend browser performance data to Elastic APM with Real User Monitoring (RUM).
+
+### Backend OpenTelemetry
+
+The backend telemetry setup lives in `server/Helpers/TelemetryHelper.cs`.
+
+- Logs are written to JSON console output and also exported over OTLP.
+- Traces and metrics include ASP.NET Core requests, outgoing HTTP calls, and SQL client activity.
+- Backend `service.version` is derived from the app build/version metadata, so you do not need to hardcode it in `OTEL_RESOURCE_ATTRIBUTES`.
+- The OTLP exporter is configured through the standard `OTEL_*` environment variables, for example:
+  - `OTEL_EXPORTER_OTLP_ENDPOINT`
+  - `OTEL_EXPORTER_OTLP_HEADERS`
+  - `OTEL_EXPORTER_OTLP_PROTOCOL`
+  - `OTEL_RESOURCE_ATTRIBUTES`
+
+If your Elastic APM / OTLP endpoint is already ready, setting those environment variables is enough for the backend to start shipping telemetry.
+
+For Azure environments, a typical value is:
+
+```text
+OTEL_RESOURCE_ATTRIBUTES=service.name=walter,deployment.environment=test
+```
+
+### Frontend RUM
+
+The frontend can send page-load, route-change, and browser request timing data to Elastic APM with the JavaScript RUM agent.
+
+To find the RUM server URL in Elastic:
+
+1. Open Kibana.
+2. Go to `Integrations`.
+3. Open `APM`.
+4. Open the installed APM integration or policy and copy the APM server URL from that setup.
+
+Use these environment variables for Walter:
+
+```text
+Rum__Enabled=true
+Rum__ServerUrl=https://<your-apm-endpoint>
+Rum__ServiceName=walter-web
+Rum__Environment=development
+Rum__TransactionSampleRate=1.0
+```
+
+Notes:
+
+- `Rum__ServiceName` should stay `walter-web`. That is the frontend service name Walter reports to Elastic.
+- Use `development` locally and `production` in deployed environments for `Rum__Environment`.
+- Use `1.0` sampling locally while bringing it up, and a lower value such as `0.2` in production.
+- If `Rum__Enabled=false`, the frontend agent does not initialize.
+
+Once configured, start the app and open Walter in the browser. To verify it is working:
+
+1. Open browser devtools and look for network requests to your Elastic APM host.
+2. In Kibana, open `Applications` and look for service `walter-web`.
+3. Open `User Experience` to inspect page performance such as page-load timing and Core Web Vitals.
+
 ## Development
 
 ### Backend Development

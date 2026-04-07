@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using Microsoft.Identity.Web;
 using server.core.Domain;
 using server.Helpers;
@@ -14,10 +15,24 @@ namespace Server.Controllers;
 public class SystemController : ApiControllerBase
 {
     private readonly IUserService _userService;
+    private readonly RumOptions _rumOptions;
+    private readonly IHostEnvironment _hostEnvironment;
 
-    public SystemController(IUserService userService)
+    public SystemController(
+        IUserService userService,
+        IOptions<RumOptions> rumOptions,
+        IHostEnvironment hostEnvironment)
     {
         _userService = userService;
+        _rumOptions = rumOptions.Value;
+        _hostEnvironment = hostEnvironment;
+    }
+
+    [AllowAnonymous]
+    [HttpGet("rum-config")]
+    public ActionResult<RumPublicConfig> GetRumConfig()
+    {
+        return Ok(_rumOptions.ToPublicConfig(_hostEnvironment));
     }
 
     [HttpGet("emulate/{identifier}")]
