@@ -408,18 +408,24 @@ public sealed class SearchController : ApiControllerBase
             PpmRole.ProjectManager,
             cancellationToken);
         var pmProject = pmResult.ReadData().PpmProjectByNumber;
-        var projectManager = pmProject?.TeamMembers?
+        var projectManagers = pmProject?.TeamMembers?
             .Where(m => m.RoleName == PpmRole.ProjectManager)
             .Where(m => !string.IsNullOrWhiteSpace(m.Person?.Email))
             .OrderBy(m => m.Name, StringComparer.OrdinalIgnoreCase)
-            .FirstOrDefault();
+            .ToArray() ?? [];
 
-        if (projectManager?.Person?.Email is { } pmEmail && !string.IsNullOrWhiteSpace(pmEmail))
+        foreach (var pm in projectManagers)
         {
-            var resolvedPmEmployeeId = await TryResolveEmployeeIdByEmailAsync(pmEmail, cancellationToken);
-            if (!string.IsNullOrWhiteSpace(resolvedPmEmployeeId))
+            var email = pm.Person?.Email;
+            if (string.IsNullOrWhiteSpace(email))
             {
-                return Ok(new ResolveProjectPiResponse(resolvedPmEmployeeId, normalizedProjectNumber));
+                continue;
+            }
+
+            var resolvedEmployeeId = await TryResolveEmployeeIdByEmailAsync(email, cancellationToken);
+            if (!string.IsNullOrWhiteSpace(resolvedEmployeeId))
+            {
+                return Ok(new ResolveProjectPiResponse(resolvedEmployeeId, normalizedProjectNumber));
             }
         }
 
