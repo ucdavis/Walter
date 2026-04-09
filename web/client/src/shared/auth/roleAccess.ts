@@ -16,7 +16,6 @@ const ELEVATED_ROLES = new Set<AppRole>([
 
 const PI_NAV_ROLES = new Set<AppRole>([
   ROLE_NAMES.financialViewer,
-  ROLE_NAMES.projectManager,
 ]);
 
 export const hasRole = (
