@@ -116,11 +116,22 @@ BEGIN
                     PARTITION BY POSITION_NBR
                     ORDER BY EFFDT DESC, EFFSEQ DESC
                 ) AS rnk
-            FROM caes_hcmods.PS_JOB_V
+            FROM caes_hcmods.PS_JOB_V j
             WHERE DML_IND != ''D''
               AND EFFDT <= TRUNC(SYSDATE)
               AND NOT (AUTO_END_FLG = ''Y'' AND EXPECTED_END_DATE < TRUNC(SYSDATE))
               AND POSITION_NBR IN (SELECT DISTINCT POSITION_NBR FROM LatestBudget)
+              /*Vacate positions where person has moved to a different position. PeopleSoft does NOT back-fill the old position-side history when an
+               employee transfers, so without this check a position may appear to be filled forever. */
+              AND NOT EXISTS (
+                  SELECT 1 FROM caes_hcmods.PS_JOB_V j2
+                  WHERE j2.EMPLID = j.EMPLID
+                    AND j2.EMPL_RCD = j.EMPL_RCD
+                    AND j2.DML_IND != ''D''
+                    AND j2.EFFDT <= TRUNC(SYSDATE)
+                    AND (j2.EFFDT > j.EFFDT
+                         OR (j2.EFFDT = j.EFFDT AND j2.EFFSEQ > j.EFFSEQ))
+              )
         ),
         LatestEmployee AS (
             SELECT
