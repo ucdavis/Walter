@@ -254,6 +254,7 @@ export function TaskBreakdown({ employeeId, projectNumber, records }: TaskBreakd
       columns={columns}
       data={rows}
       footerRowClassName="totaltr"
+      pagination="off"
       tableActions={
         <ExportDataButton
           columns={csvColumns}
