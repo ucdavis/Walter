@@ -41,7 +41,7 @@
 				"userProperties": [],
 				"typeProperties": {
 					"expression": {
-						"value": "@greater(int(activity('Count FP Projects').output.firstRow.fp_count), 40000)",
+						"value": "@less(int(activity('Count FP Projects').output.firstRow.fp_count), 40000)",
 						"type": "Expression"
 					},
 					"ifTrueActivities": [
