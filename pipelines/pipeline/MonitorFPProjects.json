@@ -1,0 +1,67 @@
+{
+	"name": "MonitorFPProjects",
+	"properties": {
+		"activities": [
+			{
+				"name": "Count FP Projects",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.01:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlServerSource",
+						"sqlReaderQuery": "select * from openquery(AE_Redshift_PROD, 'select count(*) as fp_count from ae_dwh.ucd_faculty_rpt_t where project_number like ''FP%''')",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Roberto_WalterDev",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Check FP Count",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Count FP Projects",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@less(int(activity('Count FP Projects').output.firstRow.fp_count), 40000)",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "ALERT FP Projects Missing",
+							"type": "Fail",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"message": {
+									"value": "@concat('ALERT: FP Projects count in ae_dwh.ucd_faculty_rpt_t is critically low! Current count: ', string(activity('Count FP Projects').output.firstRow.fp_count), '. Expected at least 40,000. The AE Data Warehouse may be missing Faculty Portfolio project data.')",
+									"type": "Expression"
+								},
+								"errorCode": "FP_PROJECTS_MISSING"
+							}
+						}
+					]
+				}
+			}
+		],
+		"annotations": []
+	}
+}
