@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { createColumnHelper } from '@tanstack/react-table';
 import { ExportDataButton } from '@/components/ExportDataButton.tsx';
@@ -23,6 +23,7 @@ interface TaskBreakdownRow {
   programDesc: string;
   taskName: string;
   taskNum: string;
+  taskStatus: string;
 }
 
 const columnHelper = createColumnHelper<TaskBreakdownRow>();
@@ -59,6 +60,7 @@ function buildRows(records: ProjectRecord[]): TaskBreakdownRow[] {
         programDesc: r.programDesc,
         taskName: r.taskName ?? '',
         taskNum: task,
+        taskStatus: r.taskStatus,
       });
     }
   }
@@ -89,8 +91,18 @@ interface TaskBreakdownProps {
   records: ProjectRecord[];
 }
 
+function isClosedTask(row: TaskBreakdownRow): boolean {
+  return row.taskStatus !== 'OPEN';
+}
+
 export function TaskBreakdown({ employeeId, projectNumber, records }: TaskBreakdownProps) {
-  const rows = useMemo(() => buildRows(records), [records]);
+  const [showClosed, setShowClosed] = useState(false);
+  const allRows = useMemo(() => buildRows(records), [records]);
+  const closedCount = useMemo(() => allRows.filter(isClosedTask).length, [allRows]);
+  const rows = useMemo(
+    () => (showClosed ? allRows : allRows.filter((r) => !isClosedTask(r))),
+    [allRows, showClosed]
+  );
 
   const totals = useMemo(
     () =>
@@ -245,7 +257,7 @@ export function TaskBreakdown({ employeeId, projectNumber, records }: TaskBreakd
     [employeeId, projectNumber, totals.balance, totals.budget, totals.commitments, totals.expenses]
   );
 
-  if (rows.length === 0) {
+  if (allRows.length === 0) {
     return null;
   }
 
@@ -256,11 +268,22 @@ export function TaskBreakdown({ employeeId, projectNumber, records }: TaskBreakd
       footerRowClassName="totaltr"
       pagination="off"
       tableActions={
-        <ExportDataButton
-          columns={csvColumns}
-          data={rows}
-          filename={`task-breakdown-${projectNumber}.csv`}
-        />
+        <>
+          {closedCount > 0 && (
+            <button
+              className={`btn btn-sm ${showClosed ? 'btn-active' : 'btn-default'}`}
+              onClick={() => setShowClosed(!showClosed)}
+              type="button"
+            >
+              {showClosed ? 'Hide' : 'Show'} closed ({closedCount})
+            </button>
+          )}
+          <ExportDataButton
+            columns={csvColumns}
+            data={rows}
+            filename={`task-breakdown-${projectNumber}.csv`}
+          />
+        </>
       }
     />
   );
