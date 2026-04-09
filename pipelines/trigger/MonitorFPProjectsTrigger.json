@@ -14,10 +14,13 @@
 		"type": "ScheduleTrigger",
 		"typeProperties": {
 			"recurrence": {
-				"frequency": "Hour",
-				"interval": 3,
-				"startTime": "2026-04-10T08:00:00",
-				"timeZone": "Eastern Standard Time"
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2026-04-10T10:00:00",
+				"timeZone": "Eastern Standard Time",
+				"schedule": {
+					"hours": [10, 13, 16, 19]
+				}
 			}
 		}
 	}
