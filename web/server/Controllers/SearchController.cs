@@ -400,6 +400,35 @@ public sealed class SearchController : ApiControllerBase
             }
         }
 
+        // Fallback: projects without a (resolvable) PI may still be navigable via their
+        // Project Manager. ProjectController.GetByEmployeeIdAsync includes orphaned PM-only
+        // projects in its response, so handing the by-number route a PM employeeId works.
+        var pmResult = await client.PpmProjectTeamMembers.ExecuteAsync(
+            normalizedProjectNumber,
+            PpmRole.ProjectManager,
+            cancellationToken);
+        var pmProject = pmResult.ReadData().PpmProjectByNumber;
+        var projectManagers = pmProject?.TeamMembers?
+            .Where(m => m.RoleName == PpmRole.ProjectManager)
+            .Where(m => !string.IsNullOrWhiteSpace(m.Person?.Email))
+            .OrderBy(m => m.Name, StringComparer.OrdinalIgnoreCase)
+            .ToArray() ?? [];
+
+        foreach (var pm in projectManagers)
+        {
+            var email = pm.Person?.Email;
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                continue;
+            }
+
+            var resolvedEmployeeId = await TryResolveEmployeeIdByEmailAsync(email, cancellationToken);
+            if (!string.IsNullOrWhiteSpace(resolvedEmployeeId))
+            {
+                return Ok(new ResolveProjectPiResponse(resolvedEmployeeId, normalizedProjectNumber));
+            }
+        }
+
         return NotFound();
     }
 
