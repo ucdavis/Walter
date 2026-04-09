@@ -124,7 +124,9 @@ export function TaskBreakdown({ employeeId, projectNumber, records }: TaskBreakd
         minSize: 200,
       }),
       columnHelper.accessor('financialDepartmentCode', {
-        cell: (info) => <span>{info.getValue()}</span>,
+        cell: (info) => (
+          <span title={info.row.original.financialDepartment}>{info.getValue()}</span>
+        ),
         header: 'Dept',
       }),
       columnHelper.accessor('fundCode', {
