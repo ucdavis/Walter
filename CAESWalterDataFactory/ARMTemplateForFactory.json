@@ -65,6 +65,82 @@
 	},
 	"resources": [
 		{
+			"name": "[concat(parameters('factoryName'), '/MonitorFPProjects')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Count FP Projects",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.01:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "SqlServerSource",
+								"sqlReaderQuery": "select * from openquery(AE_Redshift_PROD, 'select count(*) as fp_count from ae_dwh.ucd_faculty_rpt_t where project_number like ''FP%''')",
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "Roberto_WalterDev",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						}
+					},
+					{
+						"name": "Check FP Count",
+						"type": "IfCondition",
+						"dependsOn": [
+							{
+								"activity": "Count FP Projects",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"expression": {
+								"value": "@greater(int(activity('Count FP Projects').output.firstRow.fp_count), 40000)",
+								"type": "Expression"
+							},
+							"ifTrueActivities": [
+								{
+									"name": "ALERT FP Projects Missing",
+									"type": "Fail",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"message": {
+											"value": "@concat('ALERT: FP Projects count in ae_dwh.ucd_faculty_rpt_t is critically low! Current count: ', string(activity('Count FP Projects').output.firstRow.fp_count), '. Expected at least 40,000. The AE Data Warehouse may be missing Faculty Portfolio project data.')",
+											"type": "Expression"
+										},
+										"errorCode": "FP_PROJECTS_MISSING"
+									}
+								}
+							]
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/Roberto_WalterDev')]"
+			]
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/RefreshFacultyDeptPortfolio')]",
 			"type": "Microsoft.DataFactory/factories/pipelines",
 			"apiVersion": "2018-06-01",
@@ -2198,6 +2274,36 @@
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/pipelines/RefreshFacultyDeptPortfolio')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/MonitorFPProjectsTrigger')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Started",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "MonitorFPProjects",
+							"type": "PipelineReference"
+						},
+						"parameters": {}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Hour",
+						"interval": 3,
+						"startTime": "2026-04-10T08:00:00",
+						"timeZone": "Eastern Standard Time"
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/pipelines/MonitorFPProjects')]"
 			]
 		},
 		{
