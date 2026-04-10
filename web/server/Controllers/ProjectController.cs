@@ -39,18 +39,8 @@ public sealed class ProjectController : ApiControllerBase
         // of the requested employee's projects (covers both self-lookup and PM-views-PI)
         if (!hasFinancialAccess)
         {
-            Guid userId;
-            try
-            {
-                userId = User.GetUserId();
-            }
-            catch (InvalidOperationException)
-            {
-                return Unauthorized();
-            }
-
-            var currentUser = await _userService.GetByIdAsync(userId, cancellationToken);
-            var isOnProject = await IsOnProjectForEmployeeAsync(currentUser?.EmployeeId, employeeId, cancellationToken);
+            var currentEmployeeId = await GetCurrentEmployeeIdAsync(cancellationToken);
+            var isOnProject = await IsOnProjectForEmployeeAsync(currentEmployeeId, employeeId, cancellationToken);
 
             if (!isOnProject)
             {
@@ -160,18 +150,8 @@ public sealed class ProjectController : ApiControllerBase
                 return BadRequest("employeeId is required.");
             }
 
-            Guid userId;
-            try
-            {
-                userId = User.GetUserId();
-            }
-            catch (InvalidOperationException)
-            {
-                return Unauthorized();
-            }
-
-            var currentUser = await _userService.GetByIdAsync(userId, cancellationToken);
-            var isSelf = string.Equals(currentUser?.EmployeeId, employeeId, StringComparison.OrdinalIgnoreCase);
+            var currentEmployeeId = await GetCurrentEmployeeIdAsync(cancellationToken);
+            var isSelf = string.Equals(currentEmployeeId, employeeId, StringComparison.OrdinalIgnoreCase);
             if (!isSelf)
             {
                 return Forbid();
@@ -236,23 +216,20 @@ public sealed class ProjectController : ApiControllerBase
     [HttpGet("managed/{employeeId}")]
     public async Task<IActionResult> GetManagedFaculty(string employeeId, CancellationToken cancellationToken)
     {
-        // Any user can look up their own managed PIs (PM splash page)
-        Guid userId;
-        try
-        {
-            userId = User.GetUserId();
-        }
-        catch (InvalidOperationException)
-        {
-            return Unauthorized();
-        }
+        var hasFinancialAccess = (await _authorizationService.AuthorizeAsync(
+            User,
+            resource: null,
+            policyName: AuthorizationHelper.Policies.CanViewFinancials)).Succeeded;
 
-        var currentUser = await _userService.GetByIdAsync(userId, cancellationToken);
-        var isSelf = string.Equals(currentUser?.EmployeeId, employeeId, StringComparison.OrdinalIgnoreCase);
-
-        if (!isSelf)
+        if (!hasFinancialAccess)
         {
-            return Ok(Array.Empty<object>());
+            var currentEmployeeId = await GetCurrentEmployeeIdAsync(cancellationToken);
+            var isSelf = string.Equals(currentEmployeeId, employeeId, StringComparison.OrdinalIgnoreCase);
+
+            if (!isSelf)
+            {
+                return Ok(Array.Empty<object>());
+            }
         }
 
         var client = _financialApiService.GetClient();
@@ -322,6 +299,22 @@ public sealed class ProjectController : ApiControllerBase
         }
 
         return Ok(principalInvestigators);
+    }
+
+    private async Task<string?> GetCurrentEmployeeIdAsync(CancellationToken cancellationToken)
+    {
+        Guid userId;
+        try
+        {
+            userId = User.GetUserId();
+        }
+        catch (InvalidOperationException)
+        {
+            return null;
+        }
+
+        var currentUser = await _userService.GetByIdAsync(userId, cancellationToken);
+        return currentUser?.EmployeeId;
     }
 
     private async Task<HashSet<string>> GetAccessibleProjectNumbersForEmployeeAsync(
