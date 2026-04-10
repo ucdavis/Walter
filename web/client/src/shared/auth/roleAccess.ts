@@ -64,4 +64,4 @@ export const canAccessPrincipalInvestigatorsNav = (roles: readonly string[]) =>
   hasRole(roles, PI_NAV_ROLES);
 
 export const canAccessReportsNav = (roles: readonly string[]) =>
-  hasNonSystemSpecialRole(roles);
+  roles.includes(ROLE_NAMES.accrualViewer) || hasRole(roles, ELEVATED_ROLES);

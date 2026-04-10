@@ -36,7 +36,7 @@ describe('SearchButton', () => {
 
     expect(
       screen.getByRole('button', {
-        name: /Search PIs, Projects, Personnel\.\.\./i,
+        name: /Search projects, people, reports\.\.\./i,
       })
     ).toBeInTheDocument();
   });

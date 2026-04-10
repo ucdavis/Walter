@@ -61,7 +61,7 @@ describe('ProjectAdditionalInfo', () => {
     expect(screen.getByText('National Science Foundation')).toBeInTheDocument();
     expect(screen.getByText('Sponsor Award Number')).toBeInTheDocument();
     expect(screen.getByText('NSF-2024-001')).toBeInTheDocument();
-    expect(screen.getByText('Burden Schedule Rate')).toBeInTheDocument();
+    expect(screen.getByText('Indirect/Burden Rate')).toBeInTheDocument();
     expect(screen.getByText('26.5%')).toBeInTheDocument();
     expect(screen.getByText('Contract Administrator')).toBeInTheDocument();
     expect(screen.getByText('Admin, Carol')).toBeInTheDocument();
@@ -137,11 +137,11 @@ describe('ProjectAdditionalInfo', () => {
     expect(screen.getByText('01.01.2024')).toBeInTheDocument();
   });
 
-  it('shows a tooltip for Burden Schedule Rate', async () => {
+  it('shows a tooltip for Indirect/Burden Rate', async () => {
     const user = userEvent.setup();
     render(<ProjectAdditionalInfo isProjectManager={false} summary={createSummary()} />);
 
-    const label = screen.getByText('Burden Schedule Rate');
+    const label = screen.getByText('Indirect/Burden Rate');
     await user.hover(label.parentElement as HTMLElement);
 
     expect(await screen.findByRole('tooltip')).toHaveTextContent(

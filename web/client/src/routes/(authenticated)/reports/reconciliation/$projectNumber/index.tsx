@@ -48,18 +48,15 @@ function RouteComponent() {
     isPending: isReconciliationPending,
   } = useQuery(glPpmReconciliationQueryOptions([projectNumber]));
 
-  // Sort by discrepancy first (discrepancies at top), then by absolute difference
+  // Sort by fund, then program, then activity
   const sorted = useMemo(
     () =>
       [...(records ?? [])].sort((a, b) => {
-        const aDisc = hasDiscrepancy(a);
-        const bDisc = hasDiscrepancy(b);
-        if (aDisc !== bDisc) {
-          return aDisc ? -1 : 1;
-        }
-        const aDiff = Math.abs(a.glActualAmount + a.ppmItdExp);
-        const bDiff = Math.abs(b.glActualAmount + b.ppmItdExp);
-        return bDiff - aDiff;
+        const fundCmp = (a.fundCode ?? '').localeCompare(b.fundCode ?? '');
+        if (fundCmp !== 0) return fundCmp;
+        const progCmp = (a.programCode ?? '').localeCompare(b.programCode ?? '');
+        if (progCmp !== 0) return progCmp;
+        return (a.activityCode ?? '').localeCompare(b.activityCode ?? '');
       }),
     [records]
   );
