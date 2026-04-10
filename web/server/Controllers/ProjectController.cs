@@ -35,7 +35,8 @@ public sealed class ProjectController : ApiControllerBase
             resource: null,
             policyName: AuthorizationHelper.Policies.CanViewFinancials)).Succeeded;
 
-        // If no financial access, check if user is PI/PM on any project for this employee
+        // If no financial access, verify the current user is PI or PM on at least one
+        // of the requested employee's projects (covers both self-lookup and PM-views-PI)
         if (!hasFinancialAccess)
         {
             Guid userId;
@@ -49,16 +50,11 @@ public sealed class ProjectController : ApiControllerBase
             }
 
             var currentUser = await _userService.GetByIdAsync(userId, cancellationToken);
-            var isSelf = string.Equals(currentUser?.EmployeeId, employeeId, StringComparison.OrdinalIgnoreCase);
+            var isOnProject = await IsOnProjectForEmployeeAsync(currentUser?.EmployeeId, employeeId, cancellationToken);
 
-            if (!isSelf)
+            if (!isOnProject)
             {
-                // Check if the current user manages any project where the requested employee is PI
-                var hasAccess = await IsProjectManagerForPiAsync(currentUser?.EmployeeId, employeeId, cancellationToken);
-                if (!hasAccess)
-                {
-                    return Forbid();
-                }
+                return Forbid();
             }
         }
 
@@ -197,6 +193,7 @@ public sealed class ProjectController : ApiControllerBase
         return Ok(personnel);
     }
 
+    [Authorize(Policy = AuthorizationHelper.Policies.CanViewFinancials)]
     [HttpGet("transactions")]
     public async Task<IActionResult> GetTransactionsForProjectsAsync(
         CancellationToken cancellationToken,
@@ -206,39 +203,6 @@ public sealed class ProjectController : ApiControllerBase
             return Ok(Array.Empty<GLTransactionRecord>());
 
         var codes = projectCodes.Split(',', StringSplitOptions.RemoveEmptyEntries);
-
-        var hasFinancialAccess = (await _authorizationService.AuthorizeAsync(
-            User,
-            resource: null,
-            policyName: AuthorizationHelper.Policies.CanViewFinancials)).Succeeded;
-
-        if (!hasFinancialAccess)
-        {
-            Guid userId;
-            try
-            {
-                userId = User.GetUserId();
-            }
-            catch (InvalidOperationException)
-            {
-                return Unauthorized();
-            }
-
-            var currentUser = await _userService.GetByIdAsync(userId, cancellationToken);
-            if (string.IsNullOrWhiteSpace(currentUser?.EmployeeId))
-            {
-                return Forbid();
-            }
-
-            var accessibleProjectNumbers = await GetAccessibleProjectNumbersForEmployeeAsync(currentUser.EmployeeId, cancellationToken);
-            var requestedProjectNumbers = new HashSet<string>(codes, StringComparer.OrdinalIgnoreCase);
-
-            if (!requestedProjectNumbers.IsSubsetOf(accessibleProjectNumbers))
-            {
-                return Forbid();
-            }
-        }
-
         var applicationUser = User.GetUserIdentifier();
         var emulatingUser = User.GetEmulatingUser();
         var transactions = await _datamartService.GetGLTransactionListingsAsync(codes, applicationUser, emulatingUser, cancellationToken);
@@ -246,6 +210,7 @@ public sealed class ProjectController : ApiControllerBase
         return Ok(transactions);
     }
 
+    [Authorize(Policy = AuthorizationHelper.Policies.CanViewFinancials)]
     [HttpGet("gl-ppm-reconciliation")]
     public async Task<IActionResult> GetGLPPMReconciliationAsync(
         CancellationToken cancellationToken,
@@ -255,39 +220,6 @@ public sealed class ProjectController : ApiControllerBase
             return Ok(Array.Empty<GLPPMReconciliationRecord>());
 
         var codes = projectCodes.Split(',', StringSplitOptions.RemoveEmptyEntries);
-
-        var hasFinancialAccess = (await _authorizationService.AuthorizeAsync(
-            User,
-            resource: null,
-            policyName: AuthorizationHelper.Policies.CanViewFinancials)).Succeeded;
-
-        if (!hasFinancialAccess)
-        {
-            Guid userId;
-            try
-            {
-                userId = User.GetUserId();
-            }
-            catch (InvalidOperationException)
-            {
-                return Unauthorized();
-            }
-
-            var currentUser = await _userService.GetByIdAsync(userId, cancellationToken);
-            if (string.IsNullOrWhiteSpace(currentUser?.EmployeeId))
-            {
-                return Forbid();
-            }
-
-            var accessibleProjectNumbers = await GetAccessibleProjectNumbersForEmployeeAsync(currentUser.EmployeeId, cancellationToken);
-            var requestedProjectNumbers = new HashSet<string>(codes, StringComparer.OrdinalIgnoreCase);
-
-            if (!requestedProjectNumbers.IsSubsetOf(accessibleProjectNumbers))
-            {
-                return Forbid();
-            }
-        }
-
         var applicationUser = User.GetUserIdentifier();
         var emulatingUser = User.GetEmulatingUser();
         var reconciliation = await _datamartService.GetGLPPMReconciliationAsync(codes, applicationUser, emulatingUser, cancellationToken);
@@ -398,45 +330,43 @@ public sealed class ProjectController : ApiControllerBase
     {
         var client = _financialApiService.GetClient();
 
-        var piResultTask = client.PpmProjectByProjectTeamMemberEmployeeId.ExecuteAsync(
+        var piResult = await client.PpmProjectByProjectTeamMemberEmployeeId.ExecuteAsync(
             employeeId, PpmRole.PrincipalInvestigator, cancellationToken);
-        var pmResultTask = client.PpmProjectByProjectTeamMemberEmployeeId.ExecuteAsync(
-            employeeId, PpmRole.ProjectManager, cancellationToken);
+        var piData = piResult.ReadData();
 
-        await Task.WhenAll(piResultTask, pmResultTask);
-
-        var piData = (await piResultTask).ReadData();
-        var pmData = (await pmResultTask).ReadData();
-
-        var projectNumbers = piData.PpmProjectByProjectTeamMemberEmployeeId
-            .Concat(pmData.PpmProjectByProjectTeamMemberEmployeeId)
+        return piData.PpmProjectByProjectTeamMemberEmployeeId
             .Select(p => p.ProjectNumber?.Trim())
             .Where(p => !string.IsNullOrWhiteSpace(p))
             .Select(p => p!)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-        return projectNumbers;
     }
 
-    private async Task<bool> IsProjectManagerForPiAsync(
-        string? pmEmployeeId,
-        string piEmployeeId,
+    /// <summary>
+    /// Checks whether the current user is a PI or PM on any project where the
+    /// specified employee is a Principal Investigator.
+    /// </summary>
+    private async Task<bool> IsOnProjectForEmployeeAsync(
+        string? currentEmployeeId,
+        string employeeId,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(pmEmployeeId))
+        if (string.IsNullOrWhiteSpace(currentEmployeeId))
             return false;
+
+        // Self-lookup is always allowed
+        if (string.Equals(currentEmployeeId, employeeId, StringComparison.OrdinalIgnoreCase))
+            return true;
 
         var client = _financialApiService.GetClient();
 
-        // Get projects where the requested employee is PI
         var piResult = await client.PpmProjectByProjectTeamMemberEmployeeId.ExecuteAsync(
-            piEmployeeId, PpmRole.PrincipalInvestigator, cancellationToken);
+            employeeId, PpmRole.PrincipalInvestigator, cancellationToken);
         var piData = piResult.ReadData();
 
-        // Check if the current user is PM on any of those projects
+        // Check if the current user is PI or PM on any of those projects
         return piData.PpmProjectByProjectTeamMemberEmployeeId
             .Any(project => project.TeamMembers
-                .Any(m => m.RoleName == PpmRole.ProjectManager &&
-                          string.Equals(m.EmployeeId, pmEmployeeId, StringComparison.OrdinalIgnoreCase)));
+                .Any(m => (m.RoleName == PpmRole.PrincipalInvestigator || m.RoleName == PpmRole.ProjectManager) &&
+                          string.Equals(m.EmployeeId, currentEmployeeId, StringComparison.OrdinalIgnoreCase)));
     }
 }
