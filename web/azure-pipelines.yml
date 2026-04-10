@@ -102,20 +102,8 @@ stages:
     variables:
       - group: "WalterProd"
     jobs:
-      - job: Await_Manual_Go
-        displayName: Await go-ahead for production release
-        pool: server
-        steps:
-          - task: ManualValidation@1
-            inputs:
-              instructions: "Validate the Azure test site deployment. Approve to promote to production."
-              onTimeout: reject
-              notifyUsers: ''
-
       - deployment: Deploy_Prod
         displayName: Deploy to production web app
-        dependsOn: Await_Manual_Go
-        condition: succeeded('Await_Manual_Go')
         environment: Production
         strategy:
           runOnce:
