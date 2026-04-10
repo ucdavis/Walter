@@ -25,7 +25,7 @@ public static class AuthorizationHelper
                 policy.RequireRole(Role.Names.AccrualViewer));
 
             options.AddPolicy(Policies.CanViewFinancials, policy =>
-                policy.RequireRole(Role.Names.FinancialViewer, Role.Names.ProjectManager));
+                policy.RequireRole(Role.Names.FinancialViewer));
 
             options.AddPolicy(Policies.IsManager, policy =>
                 policy.RequireRole(Role.Names.Manager));
