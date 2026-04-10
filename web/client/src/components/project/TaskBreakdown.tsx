@@ -92,7 +92,7 @@ interface TaskBreakdownProps {
 }
 
 function isClosedTask(row: TaskBreakdownRow): boolean {
-  return row.taskStatus !== 'OPEN';
+  return row.taskStatus === 'Inactive';
 }
 
 export function TaskBreakdown({ employeeId, projectNumber, records }: TaskBreakdownProps) {
