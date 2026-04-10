@@ -35,23 +35,14 @@ public sealed class ProjectController : ApiControllerBase
             resource: null,
             policyName: AuthorizationHelper.Policies.CanViewFinancials)).Succeeded;
 
-        // if not, they must be requesting their own data (PI)
+        // If no financial access, verify the current user is PI or PM on at least one
+        // of the requested employee's projects (covers both self-lookup and PM-views-PI)
         if (!hasFinancialAccess)
         {
-            Guid userId;
-            try
-            {
-                userId = User.GetUserId();
-            }
-            catch (InvalidOperationException)
-            {
-                return Unauthorized();
-            }
+            var currentEmployeeId = await GetCurrentEmployeeIdAsync(cancellationToken);
+            var isOnProject = await IsOnAnyProjectForPiAsync(currentEmployeeId, employeeId, cancellationToken);
 
-            var currentUser = await _userService.GetByIdAsync(userId, cancellationToken);
-            var isSelf = string.Equals(currentUser?.EmployeeId, employeeId, StringComparison.OrdinalIgnoreCase);
-
-            if (!isSelf)
+            if (!isOnProject)
             {
                 return Forbid();
             }
@@ -159,19 +150,8 @@ public sealed class ProjectController : ApiControllerBase
                 return BadRequest("employeeId is required.");
             }
 
-            Guid userId;
-            try
-            {
-                userId = User.GetUserId();
-            }
-            catch (InvalidOperationException)
-            {
-                return Unauthorized();
-            }
-
-            var currentUser = await _userService.GetByIdAsync(userId, cancellationToken);
-            var isSelf = string.Equals(currentUser?.EmployeeId, employeeId, StringComparison.OrdinalIgnoreCase);
-            if (!isSelf)
+            var currentEmployeeId = await GetCurrentEmployeeIdAsync(cancellationToken);
+            if (!await IsOnAnyProjectForPiAsync(currentEmployeeId, employeeId, cancellationToken))
             {
                 return Forbid();
             }
@@ -242,7 +222,13 @@ public sealed class ProjectController : ApiControllerBase
 
         if (!hasFinancialAccess)
         {
-            return Ok(Array.Empty<object>());
+            var currentEmployeeId = await GetCurrentEmployeeIdAsync(cancellationToken);
+            var isSelf = string.Equals(currentEmployeeId, employeeId, StringComparison.OrdinalIgnoreCase);
+
+            if (!isSelf)
+            {
+                return Ok(Array.Empty<object>());
+            }
         }
 
         var client = _financialApiService.GetClient();
@@ -314,6 +300,22 @@ public sealed class ProjectController : ApiControllerBase
         return Ok(principalInvestigators);
     }
 
+    private async Task<string?> GetCurrentEmployeeIdAsync(CancellationToken cancellationToken)
+    {
+        Guid userId;
+        try
+        {
+            userId = User.GetUserId();
+        }
+        catch (InvalidOperationException)
+        {
+            return null;
+        }
+
+        var currentUser = await _userService.GetByIdAsync(userId, cancellationToken);
+        return currentUser?.EmployeeId;
+    }
+
     private async Task<HashSet<string>> GetAccessibleProjectNumbersForEmployeeAsync(
         string employeeId,
         CancellationToken cancellationToken)
@@ -329,5 +331,34 @@ public sealed class ProjectController : ApiControllerBase
             .Where(p => !string.IsNullOrWhiteSpace(p))
             .Select(p => p!)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Checks whether the current user is a PI or PM on any project where the
+    /// specified employee is a Principal Investigator.
+    /// </summary>
+    private async Task<bool> IsOnAnyProjectForPiAsync(
+        string? requesterEmployeeId,
+        string piEmployeeId,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(requesterEmployeeId))
+            return false;
+
+        // Self-lookup is always allowed
+        if (string.Equals(requesterEmployeeId, piEmployeeId, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        var client = _financialApiService.GetClient();
+
+        var piResult = await client.PpmProjectByProjectTeamMemberEmployeeId.ExecuteAsync(
+            piEmployeeId, PpmRole.PrincipalInvestigator, cancellationToken);
+        var piData = piResult.ReadData();
+
+        // Check if the requester is PI or PM on any of those projects
+        return piData.PpmProjectByProjectTeamMemberEmployeeId
+            .Any(project => project.TeamMembers
+                .Any(m => (m.RoleName == PpmRole.PrincipalInvestigator || m.RoleName == PpmRole.ProjectManager) &&
+                          string.Equals(m.EmployeeId, requesterEmployeeId, StringComparison.OrdinalIgnoreCase)));
     }
 }

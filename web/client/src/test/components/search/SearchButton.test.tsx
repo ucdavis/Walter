@@ -30,7 +30,7 @@ import { SearchButton } from '@/components/search/SearchButton.tsx';
 
 describe('SearchButton', () => {
   it('uses the financial search placeholder for users who can view financials', () => {
-    mockUser = { ...defaultUser, roles: ['ProjectManager'] };
+    mockUser = { ...defaultUser, roles: ['FinancialViewer'] };
 
     render(<SearchButton />);
 

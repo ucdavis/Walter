@@ -262,7 +262,7 @@ describe('CommandPaletteProvider', () => {
 
     server.use(
       http.get('/api/user/me', () =>
-        HttpResponse.json({ ...defaultUser, roles: ['ProjectManager'] })
+        HttpResponse.json({ ...defaultUser, roles: ['FinancialViewer'] })
       ),
       http.get('/api/search/catalog', () =>
         HttpResponse.json({ projects: [], reports: [] })
@@ -383,7 +383,7 @@ describe('CommandPaletteProvider', () => {
   it('shows start-typing helper text for financial users and limits project/people results to five', async () => {
     server.use(
       http.get('/api/user/me', () =>
-        HttpResponse.json({ ...defaultUser, roles: ['ProjectManager'] })
+        HttpResponse.json({ ...defaultUser, roles: ['FinancialViewer'] })
       ),
       http.get('/api/search/catalog', () =>
         HttpResponse.json({

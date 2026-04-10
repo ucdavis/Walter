@@ -1,9 +1,10 @@
-const FINANCIAL_SEARCH_ROLES = new Set([
-  'admin',
-  'financialviewer',
-  'projectmanager',
+import { ROLE_NAMES, type AppRole, hasRole } from '@/shared/auth/roleAccess.ts';
+
+const FINANCIAL_SEARCH_ROLES = new Set<AppRole>([
+  ROLE_NAMES.admin,
+  ROLE_NAMES.financialViewer,
 ]);
 
 export const canViewFinancials = (roles: readonly string[]) => {
-  return roles.some((role) => FINANCIAL_SEARCH_ROLES.has(role.toLowerCase()));
+  return hasRole(roles, FINANCIAL_SEARCH_ROLES);
 };
