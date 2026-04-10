@@ -40,7 +40,7 @@ public sealed class ProjectController : ApiControllerBase
         if (!hasFinancialAccess)
         {
             var currentEmployeeId = await GetCurrentEmployeeIdAsync(cancellationToken);
-            var isOnProject = await IsOnProjectForEmployeeAsync(currentEmployeeId, employeeId, cancellationToken);
+            var isOnProject = await IsOnAnyProjectForPiAsync(currentEmployeeId, employeeId, cancellationToken);
 
             if (!isOnProject)
             {
@@ -338,28 +338,28 @@ public sealed class ProjectController : ApiControllerBase
     /// Checks whether the current user is a PI or PM on any project where the
     /// specified employee is a Principal Investigator.
     /// </summary>
-    private async Task<bool> IsOnProjectForEmployeeAsync(
-        string? currentEmployeeId,
-        string employeeId,
+    private async Task<bool> IsOnAnyProjectForPiAsync(
+        string? requesterEmployeeId,
+        string piEmployeeId,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(currentEmployeeId))
+        if (string.IsNullOrWhiteSpace(requesterEmployeeId))
             return false;
 
         // Self-lookup is always allowed
-        if (string.Equals(currentEmployeeId, employeeId, StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(requesterEmployeeId, piEmployeeId, StringComparison.OrdinalIgnoreCase))
             return true;
 
         var client = _financialApiService.GetClient();
 
         var piResult = await client.PpmProjectByProjectTeamMemberEmployeeId.ExecuteAsync(
-            employeeId, PpmRole.PrincipalInvestigator, cancellationToken);
+            piEmployeeId, PpmRole.PrincipalInvestigator, cancellationToken);
         var piData = piResult.ReadData();
 
-        // Check if the current user is PI or PM on any of those projects
+        // Check if the requester is PI or PM on any of those projects
         return piData.PpmProjectByProjectTeamMemberEmployeeId
             .Any(project => project.TeamMembers
                 .Any(m => (m.RoleName == PpmRole.PrincipalInvestigator || m.RoleName == PpmRole.ProjectManager) &&
-                          string.Equals(m.EmployeeId, currentEmployeeId, StringComparison.OrdinalIgnoreCase)));
+                          string.Equals(m.EmployeeId, requesterEmployeeId, StringComparison.OrdinalIgnoreCase)));
     }
 }
