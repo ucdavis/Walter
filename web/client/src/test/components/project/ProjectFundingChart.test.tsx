@@ -66,7 +66,7 @@ const createProject = (
   sponsorAwardNumber: null,
   taskName: 'Task 1',
   taskNum: 'T001',
-  taskStatus: 'OPEN',
+  taskStatus: 'Active',
   ...overrides,
 });
 
