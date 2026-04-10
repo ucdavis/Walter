@@ -151,8 +151,7 @@ public sealed class ProjectController : ApiControllerBase
             }
 
             var currentEmployeeId = await GetCurrentEmployeeIdAsync(cancellationToken);
-            var isSelf = string.Equals(currentEmployeeId, employeeId, StringComparison.OrdinalIgnoreCase);
-            if (!isSelf)
+            if (!await IsOnAnyProjectForPiAsync(currentEmployeeId, employeeId, cancellationToken))
             {
                 return Forbid();
             }
