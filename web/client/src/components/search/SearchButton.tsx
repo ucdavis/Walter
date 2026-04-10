@@ -5,7 +5,7 @@ import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 
 const getDefaultPlaceholder = (roles: readonly string[]) => {
   return canViewFinancials(roles)
-    ? 'Search PIs, Projects, Personnel...'
+    ? 'Search projects, people, reports...'
     : 'Search projects and reports...';
 };
 

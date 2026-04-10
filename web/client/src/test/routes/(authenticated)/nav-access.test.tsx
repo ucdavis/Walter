@@ -95,14 +95,14 @@ describe('header navigation access control', () => {
     }
   });
 
-  it('shows Principal Investigators and Reports for FinancialViewer users', async () => {
+  it('shows Principal Investigators for FinancialViewer users (no Reports)', async () => {
     const { cleanup } = await renderHomeForRoles(['FinancialViewer']);
 
     try {
       expect(
         screen.getByRole('link', { name: 'Principal Investigators' })
       ).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: 'Reports' })).toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: 'Reports' })).not.toBeInTheDocument();
       expect(screen.queryByRole('link', { name: 'Projects' })).not.toBeInTheDocument();
       expect(screen.queryByRole('link', { name: 'Personnel' })).not.toBeInTheDocument();
       expect(screen.queryByRole('link', { name: 'Admin' })).not.toBeInTheDocument();
@@ -111,14 +111,14 @@ describe('header navigation access control', () => {
     }
   });
 
-  it('shows Principal Investigators and Reports for ProjectManager users', async () => {
+  it('shows Principal Investigators for ProjectManager users (no Reports)', async () => {
     const { cleanup } = await renderHomeForRoles(['ProjectManager']);
 
     try {
       expect(
         screen.getByRole('link', { name: 'Principal Investigators' })
       ).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: 'Reports' })).toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: 'Reports' })).not.toBeInTheDocument();
       expect(screen.queryByRole('link', { name: 'Projects' })).not.toBeInTheDocument();
       expect(screen.queryByRole('link', { name: 'Personnel' })).not.toBeInTheDocument();
       expect(screen.queryByRole('link', { name: 'Admin' })).not.toBeInTheDocument();

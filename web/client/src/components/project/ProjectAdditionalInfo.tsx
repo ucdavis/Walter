@@ -25,7 +25,7 @@ function buildPrimaryFields(summary: ProjectSummary): Field[] {
       value: summary.sponsorAwardNumber ?? '—',
     },
     {
-      label: 'Burden Schedule Rate',
+      label: 'Indirect/Burden Rate',
       tooltip: tooltipDefinitions.burdenScheduleRate,
       value: summary.projectBurdenCostRate
         ? `${Number.parseFloat((Number.parseFloat(summary.projectBurdenCostRate) * 100).toFixed(4))}%`
