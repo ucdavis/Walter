@@ -1,0 +1,112 @@
+{
+	"name": "RefreshEmployeeAccrualBalances",
+	"properties": {
+		"activities": [
+			{
+				"name": "Get Last As Of Date",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlServerSource",
+						"sqlReaderQuery": "SELECT ISNULL(MAX(AsOfDate), '1900-01-01') AS LastAsOfDate FROM dbo.EmployeeAccrualBalances",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Roberto_WalterDev",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Copy To Accruals Table",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Get Last As Of Date",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlServerSource",
+						"sqlReaderStoredProcedureName": "[dbo].[usp_GetEmployeeAccrualBalances]",
+						"storedProcedureParameters": {
+							"ApplicationName": {
+								"type": "String",
+								"value": "WalterDev_EmployeeAccrualBalances"
+							},
+							"ApplicationUser": {
+								"type": "String",
+								"value": "walter_adf"
+							},
+							"AsOfMinDate": {
+								"type": "DateTime",
+								"value": {
+									"value": "@{activity('Get Last As Of Date').output.firstRow.LastAsOfDate}",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"sink": {
+						"type": "SqlServerSink",
+						"writeBehavior": "upsert",
+						"upsertSettings": {
+							"useTempDB": true,
+							"keys": [
+								"EmployeeId",
+								"AsOfDate",
+								"PositionNumber"
+							]
+						},
+						"sqlWriterUseTableLock": false
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "Roberto_WalterDev",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "WalterDev_EmployeeAccrualBalances",
+						"type": "DatasetReference"
+					}
+				]
+			}
+		],
+		"annotations": []
+	}
+}

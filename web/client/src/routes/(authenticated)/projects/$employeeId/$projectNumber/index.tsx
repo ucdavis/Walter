@@ -70,6 +70,13 @@ function ProjectContent({
         <h3 className="subtitle">
           Data source: Faculty Department Portfolio Report (PPM)
         </h3>
+        {summary.isInternal && (
+          <p className="text-sm text-base-content/70 mt-2">
+            Totals for internal projects do not reflect transactions that have
+            occurred since the latest data refresh or manual updates that are
+            needed. Contact your fiscal officer with any questions.
+          </p>
+        )}
         <div className="mt-6">
           <ProjectAlerts
             employeeId={employeeId}
