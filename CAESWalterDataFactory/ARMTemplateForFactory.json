@@ -19,6 +19,10 @@
 			"type": "secureString",
 			"metadata": "Secure string for 'password' of 'Roberto_WalterTest'"
 		},
+		"Walter_Storage_accountKey": {
+			"type": "secureString",
+			"metadata": "Secure string for 'accountKey' of 'Walter_Storage'"
+		},
 		"CAESDOKVprod_properties_typeProperties_baseUrl": {
 			"type": "string",
 			"defaultValue": "https://CAES-DO-KV-prod-westUS2.vault.azure.net/"
@@ -58,6 +62,10 @@
 		"Roberto_WalterTest_properties_typeProperties_userName": {
 			"type": "string",
 			"defaultValue": "walter_adf"
+		},
+		"Walter_Storage_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://caeswalterstorage.dfs.core.windows.net/"
 		}
 	},
 	"variables": {
@@ -138,6 +146,153 @@
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/Roberto_WalterDev')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/RefreshEmployeeAccrualBalances')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Get Last As Of Date",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "SqlServerSource",
+								"sqlReaderQuery": "SELECT ISNULL(MAX(AsOfDate), '1900-01-01') AS LastAsOfDate FROM dbo.EmployeeAccrualBalances",
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "Roberto_WalterDev",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						}
+					},
+					{
+						"name": "Copy To Accruals Table",
+						"type": "Copy",
+						"dependsOn": [
+							{
+								"activity": "Get Last As Of Date",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "SqlServerSource",
+								"sqlReaderStoredProcedureName": "[[dbo].[usp_GetEmployeeAccrualBalances]",
+								"storedProcedureParameters": {
+									"ApplicationName": {
+										"type": "String",
+										"value": "WalterDev_EmployeeAccrualBalances"
+									},
+									"ApplicationUser": {
+										"type": "String",
+										"value": "walter_adf"
+									},
+									"AsOfMinDate": {
+										"type": "DateTime",
+										"value": {
+											"value": "@{activity('Get Last As Of Date').output.firstRow.LastAsOfDate}",
+											"type": "Expression"
+										}
+									}
+								},
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"sink": {
+								"type": "SqlServerSink",
+								"writeBehavior": "upsert",
+								"upsertSettings": {
+									"useTempDB": true,
+									"keys": [
+										"EmployeeId",
+										"AsOfDate",
+										"PositionNumber"
+									]
+								},
+								"sqlWriterUseTableLock": false
+							},
+							"enableStaging": false,
+							"translator": {
+								"type": "TabularTranslator",
+								"typeConversion": true,
+								"typeConversionSettings": {
+									"allowDataTruncation": true,
+									"treatBooleanAsNumber": false
+								}
+							}
+						},
+						"inputs": [
+							{
+								"referenceName": "Roberto_WalterDev",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "WalterDev_EmployeeAccrualBalances",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						]
+					},
+					{
+						"name": "Copy data1",
+						"type": "Copy",
+						"dependsOn": [
+							{
+								"activity": "Copy To Accruals Table",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"enableStaging": false
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/Roberto_WalterDev')]",
+				"[concat(variables('factoryId'), '/datasets/WalterDev_EmployeeAccrualBalances')]"
 			]
 		},
 		{
@@ -1646,6 +1801,197 @@
 			]
 		},
 		{
+			"name": "[concat(parameters('factoryName'), '/WalterDataLake')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "Walter_Storage",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "Parquet",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation"
+					},
+					"compressionCodec": "snappy"
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/Walter_Storage')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/WalterDev_EmployeeAccrualBalances')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ROBERTO_WalterDev",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "SqlServerTable",
+				"schema": [
+					{
+						"name": "ProjectNumber",
+						"type": "nvarchar"
+					},
+					{
+						"name": "TaskNum",
+						"type": "nvarchar"
+					},
+					{
+						"name": "FundCode",
+						"type": "nvarchar"
+					},
+					{
+						"name": "ProgramCode",
+						"type": "nvarchar"
+					},
+					{
+						"name": "ActivityCode",
+						"type": "nvarchar"
+					},
+					{
+						"name": "ExpenditureCategoryName",
+						"type": "nvarchar"
+					},
+					{
+						"name": "ProjectOwningOrgCode",
+						"type": "nvarchar"
+					},
+					{
+						"name": "AwardNumber",
+						"type": "nvarchar"
+					},
+					{
+						"name": "AwardName",
+						"type": "nvarchar"
+					},
+					{
+						"name": "AwardType",
+						"type": "nvarchar"
+					},
+					{
+						"name": "AwardStartDate",
+						"type": "date"
+					},
+					{
+						"name": "AwardEndDate",
+						"type": "date"
+					},
+					{
+						"name": "AwardStatus",
+						"type": "nvarchar"
+					},
+					{
+						"name": "ProjectName",
+						"type": "nvarchar"
+					},
+					{
+						"name": "ProjectOwningOrg",
+						"type": "nvarchar"
+					},
+					{
+						"name": "ProjectType",
+						"type": "nvarchar"
+					},
+					{
+						"name": "ProjectStatus",
+						"type": "nvarchar"
+					},
+					{
+						"name": "TaskName",
+						"type": "nvarchar"
+					},
+					{
+						"name": "TaskStatus",
+						"type": "nvarchar"
+					},
+					{
+						"name": "Pm",
+						"type": "nvarchar"
+					},
+					{
+						"name": "Pa",
+						"type": "nvarchar"
+					},
+					{
+						"name": "Pi",
+						"type": "nvarchar"
+					},
+					{
+						"name": "Copi",
+						"type": "nvarchar"
+					},
+					{
+						"name": "FundDesc",
+						"type": "nvarchar"
+					},
+					{
+						"name": "PurposeCode",
+						"type": "nvarchar"
+					},
+					{
+						"name": "PurposeDesc",
+						"type": "nvarchar"
+					},
+					{
+						"name": "ProgramDesc",
+						"type": "nvarchar"
+					},
+					{
+						"name": "ActivityDesc",
+						"type": "nvarchar"
+					},
+					{
+						"name": "PpmBudget",
+						"type": "decimal",
+						"precision": 15,
+						"scale": 2
+					},
+					{
+						"name": "PpmCommitments",
+						"type": "decimal",
+						"precision": 15,
+						"scale": 2
+					},
+					{
+						"name": "PpmExpenses",
+						"type": "decimal",
+						"precision": 15,
+						"scale": 2
+					},
+					{
+						"name": "PpmBudBal",
+						"type": "decimal",
+						"precision": 15,
+						"scale": 2
+					},
+					{
+						"name": "LoadDate",
+						"type": "datetime2",
+						"scale": 3
+					},
+					{
+						"name": "LastUpdated",
+						"type": "datetime2",
+						"scale": 3
+					}
+				],
+				"typeProperties": {
+					"schema": "dbo",
+					"table": "EmployeeAccrualBalances"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ROBERTO_WalterDev')]"
+			]
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/WalterDev_FacultyDeptPortfolio')]",
 			"type": "Microsoft.DataFactory/factories/datasets",
 			"apiVersion": "2018-06-01",
@@ -2247,6 +2593,23 @@
 			]
 		},
 		{
+			"name": "[concat(parameters('factoryName'), '/Walter_Storage')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobFS",
+				"typeProperties": {
+					"url": "[parameters('Walter_Storage_properties_typeProperties_url')]",
+					"accountKey": {
+						"type": "SecureString",
+						"value": "[parameters('Walter_Storage_accountKey')]"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/FacultyDeptReportTrigger')]",
 			"type": "Microsoft.DataFactory/factories/triggers",
 			"apiVersion": "2018-06-01",
@@ -2295,10 +2658,18 @@
 				"type": "ScheduleTrigger",
 				"typeProperties": {
 					"recurrence": {
-						"frequency": "Hour",
-						"interval": 3,
-						"startTime": "2026-04-10T08:00:00",
-						"timeZone": "Eastern Standard Time"
+						"frequency": "Day",
+						"interval": 1,
+						"startTime": "2026-04-10T10:00:00",
+						"timeZone": "Eastern Standard Time",
+						"schedule": {
+							"hours": [
+								10,
+								13,
+								16,
+								19
+							]
+						}
 					}
 				}
 			},

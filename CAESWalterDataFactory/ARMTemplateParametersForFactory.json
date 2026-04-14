@@ -14,6 +14,9 @@
 		"Roberto_WalterTest_password": {
 			"value": ""
 		},
+		"Walter_Storage_accountKey": {
+			"value": ""
+		},
 		"CAESDOKVprod_properties_typeProperties_baseUrl": {
 			"value": "https://CAES-DO-KV-prod-westUS2.vault.azure.net/"
 		},
@@ -43,6 +46,9 @@
 		},
 		"Roberto_WalterTest_properties_typeProperties_userName": {
 			"value": "walter_adf"
+		},
+		"Walter_Storage_properties_typeProperties_url": {
+			"value": "https://caeswalterstorage.dfs.core.windows.net/"
 		}
 	}
 }
