@@ -1,0 +1,12 @@
+{
+	"name": "Walter_Storage",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"annotations": [],
+		"type": "AzureBlobFS",
+		"typeProperties": {
+			"url": "https://caeswalterstorage.dfs.core.windows.net/",
+			"encryptedCredential": "ew0KICAiVmVyc2lvbiI6ICIyMDE3LTExLTMwIiwNCiAgIlByb3RlY3Rpb25Nb2RlIjogIktleSIsDQogICJTZWNyZXRDb250ZW50VHlwZSI6ICJQbGFpbnRleHQiLA0KICAiQ3JlZGVudGlhbElkIjogIkRBVEFGQUNUT1JZQDJFODY5QTc1LTlEMTAtNEJDQS1BQUM3LUJBQ0RCMEI5OTYzRV81MjFhMmZmMy1jYWViLTQ3OGItOWEwZC01MjQyNGM4OTE1ZTgiDQp9"
+		}
+	}
+}
