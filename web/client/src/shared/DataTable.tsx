@@ -271,6 +271,13 @@ export const DataTable = <TData extends object>({
           </div>
         ) : null}
 
+        {showPaginationControls ? (
+          <span className="text-sm text-base-content/70">
+            Showing {table.getRowModel().rows.length} of{' '}
+            {table.getFilteredRowModel().rows.length}
+          </span>
+        ) : null}
+
         <div
           className={
             isOverlayActive ? 'flex-1 min-h-0 overflow-auto' : 'overflow-x-auto'
