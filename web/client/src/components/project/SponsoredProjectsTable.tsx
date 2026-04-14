@@ -6,6 +6,8 @@ import { formatCurrency } from '@/lib/currency.ts';
 import { formatDate } from '@/lib/date.ts';
 import type { ProjectRecord } from '@/queries/project.ts';
 import { DataTable } from '@/shared/DataTable.tsx';
+import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
+import { tooltipDefinitions } from '@/shared/tooltips.ts';
 
 interface AggregatedProject {
   awardEndDate: string | null;
@@ -252,7 +254,15 @@ export function SponsoredProjectsTable({
             {formatCurrency(totals.totalEncumbrance)}
           </span>
         ),
-        header: () => <span className="flex justify-end">Commitment</span>,
+        header: () => (
+          <span className="flex justify-end w-full">
+            <TooltipLabel
+              label="Commitment"
+              placement="bottom"
+              tooltip={tooltipDefinitions.commitment}
+            />
+          </span>
+        ),
       }),
       columnHelper.accessor('totalBalance', {
         cell: (info) => {

@@ -6,6 +6,8 @@ import { ExportDataButton } from '@/components/ExportDataButton.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import type { ProjectRecord } from '@/queries/project.ts';
 import { DataTable } from '@/shared/DataTable.tsx';
+import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
+import { tooltipDefinitions } from '@/shared/tooltips.ts';
 
 interface AggregatedProject {
   displayName: string;
@@ -186,7 +188,15 @@ export function InternalProjectsTable({
             {formatCurrency(totals.totalEncumbrance)}
           </span>
         ),
-        header: () => <span className="flex justify-end">Commitment</span>,
+        header: () => (
+          <span className="flex justify-end w-full">
+            <TooltipLabel
+              label="Commitment"
+              placement="bottom"
+              tooltip={tooltipDefinitions.commitment}
+            />
+          </span>
+        ),
       }),
       columnHelper.accessor('totalBalance', {
         cell: (info) => {
