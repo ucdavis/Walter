@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { createColumnHelper } from '@tanstack/react-table';
 import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
@@ -19,10 +19,15 @@ interface AggregatedProject {
   projectStatusCode: string;
   taskName: string;
   taskNum: string;
+  taskStatus: string;
   totalBalance: number;
   totalBudget: number;
   totalEncumbrance: number;
   totalExpense: number;
+}
+
+function isInactiveTask(row: AggregatedProject): boolean {
+  return row.taskStatus === 'Inactive';
 }
 
 const columnHelper = createColumnHelper<AggregatedProject>();
@@ -50,6 +55,7 @@ function aggregateProjects(records: ProjectRecord[]): AggregatedProject[] {
         projectStatusCode: p.projectStatusCode,
         taskName: p.taskName,
         taskNum: p.taskNum,
+        taskStatus: p.taskStatus,
         totalBalance: p.balance,
         totalBudget: p.budget,
         totalEncumbrance: p.commitments,
@@ -87,7 +93,17 @@ export function InternalProjectsTable({
   employeeId,
   records,
 }: InternalProjectsTableProps) {
-  const projects = useMemo(() => aggregateProjects(records), [records]);
+  const [showInactive, setShowInactive] = useState(false);
+  const allProjects = useMemo(() => aggregateProjects(records), [records]);
+  const inactiveCount = useMemo(
+    () => allProjects.filter(isInactiveTask).length,
+    [allProjects]
+  );
+  const projects = useMemo(
+    () =>
+      showInactive ? allProjects : allProjects.filter((p) => !isInactiveTask(p)),
+    [allProjects, showInactive]
+  );
 
   const totals = useMemo(
     () =>
@@ -218,7 +234,7 @@ export function InternalProjectsTable({
     [discrepancies, employeeId, totals.totalBalance, totals.totalBudget, totals.totalEncumbrance, totals.totalExpense]
   );
 
-  if (projects.length === 0) {
+  if (allProjects.length === 0) {
     return <p className="text-base-content/70 mt-8">No projects found.</p>;
   }
 
@@ -231,7 +247,18 @@ export function InternalProjectsTable({
         globalFilter="left"
         initialState={{ pagination: { pageSize: 25 } }}
         tableActions={
-          <ExportDataButton columns={csvColumns} data={projects} filename="internal-projects.csv" />
+          <>
+            {inactiveCount > 0 && (
+              <button
+                className={`btn btn-sm ${showInactive ? 'btn-active' : 'btn-default'}`}
+                onClick={() => setShowInactive(!showInactive)}
+                type="button"
+              >
+                {showInactive ? 'Hide' : 'Show'} inactive ({inactiveCount})
+              </button>
+            )}
+            <ExportDataButton columns={csvColumns} data={projects} filename="internal-projects.csv" />
+          </>
         }
       />
     </div>
