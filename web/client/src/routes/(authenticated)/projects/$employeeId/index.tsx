@@ -136,6 +136,11 @@ function RouteComponent() {
       {internalProjects.length > 0 && (
         <section className="section-margin">
           <h2 className="h2">Internal Projects</h2>
+          <p className="text-sm text-base-content/70 mt-1">
+            Totals for internal projects do not reflect transactions that have
+            occurred since the latest data refresh or manual updates that are
+            needed. Contact your fiscal officer with any questions.
+          </p>
           <InternalProjectsTable
             discrepancies={discrepancies}
             employeeId={employeeId}
