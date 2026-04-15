@@ -99,10 +99,6 @@ describe('personnel page', () => {
       expect(
         screen.getByText('2 employees across 2 projects')
       ).toBeInTheDocument();
-
-      // Summary cards should show correct counts
-      const employeeCards = screen.getAllByText('2');
-      expect(employeeCards.length).toBeGreaterThanOrEqual(2); // In card and subtitle
     } finally {
       cleanup();
     }

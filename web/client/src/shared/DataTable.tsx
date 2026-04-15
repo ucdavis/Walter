@@ -131,14 +131,15 @@ export const DataTable = <TData extends object>({
   const hasExpandableRows = expandableRows.length > 0;
   const areAllExpandableRowsExpanded =
     hasExpandableRows && expandableRows.every((row) => row.getIsExpanded());
+  const showFooter = hasAnyFooter(columns);
+  const showPaginationControls =
+    pagination === 'on' || (pagination === 'auto' && table.getPageCount() > 1);
   const shouldShowToolbar =
     globalFilter !== 'none' ||
     expandable ||
     tableActions ||
+    showPaginationControls ||
     (rowExpansionEnabled && hasExpandableRows);
-  const showFooter = hasAnyFooter(columns);
-  const showPaginationControls =
-    pagination === 'on' || (pagination === 'auto' && table.getPageCount() > 1);
   const filterValue = table.getState().globalFilter ?? '';
   const hasFilterValue = filterValue !== '';
 
@@ -179,51 +180,57 @@ export const DataTable = <TData extends object>({
       >
         {shouldShowToolbar ? (
           <div className="grid grid-cols-[1fr_auto] items-center gap-2">
-            {globalFilter !== 'none' ? (
-              <label className="input input-bordered flex items-center gap-2 max-w-sm">
-                <svg
-                  className="h-[1em] opacity-50"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <g
-                    fill="none"
-                    stroke="currentColor"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2.5"
+            <div className="flex items-center gap-3 min-w-0">
+              {globalFilter !== 'none' ? (
+                <label className="input input-bordered flex items-center gap-2 max-w-sm flex-1">
+                  <svg
+                    className="h-[1em] opacity-50"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
                   >
-                    <circle cx="11" cy="11" r="8"></circle>
-                    <path d="m21 21-4.3-4.3"></path>
-                  </g>
-                </svg>
-                <input
-                  className="grow"
-                  onChange={(e) => table.setGlobalFilter(e.target.value)}
-                  placeholder={filterPlaceholder}
-                  type="text"
-                  value={filterValue}
-                />
-                {hasFilterValue ? (
-                  <button
-                    className="btn btn-ghost btn-sm btn-circle"
-                    onClick={() => table.setGlobalFilter('')}
-                    type="button"
-                  >
-                    <svg
-                      className="h-4 w-4"
-                      fill="currentColor"
-                      viewBox="0 0 16 16"
-                      xmlns="http://www.w3.org/2000/svg"
+                    <g
+                      fill="none"
+                      stroke="currentColor"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2.5"
                     >
-                      <path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z" />
-                    </svg>
-                  </button>
-                ) : null}
-              </label>
-            ) : (
-              <div />
-            )}
+                      <circle cx="11" cy="11" r="8"></circle>
+                      <path d="m21 21-4.3-4.3"></path>
+                    </g>
+                  </svg>
+                  <input
+                    className="grow"
+                    onChange={(e) => table.setGlobalFilter(e.target.value)}
+                    placeholder={filterPlaceholder}
+                    type="text"
+                    value={filterValue}
+                  />
+                  {hasFilterValue ? (
+                    <button
+                      className="btn btn-ghost btn-sm btn-circle"
+                      onClick={() => table.setGlobalFilter('')}
+                      type="button"
+                    >
+                      <svg
+                        className="h-4 w-4"
+                        fill="currentColor"
+                        viewBox="0 0 16 16"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z" />
+                      </svg>
+                    </button>
+                  ) : null}
+                </label>
+              ) : null}
+              {showPaginationControls ? (
+                <span className="text-sm text-base-content/70 whitespace-nowrap">
+                  Showing {table.getRowModel().rows.length} of{' '}
+                  {table.getFilteredRowModel().rows.length}
+                </span>
+              ) : null}
+            </div>
 
             <div className="flex items-center gap-2">
               {tableActions}

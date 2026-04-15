@@ -160,6 +160,7 @@ const glColumns = [
       </span>
     ),
     header: 'Date',
+    size: 80,
   }),
   glColumnHelper.display({
     cell: (info) => (
@@ -169,6 +170,7 @@ const glColumns = [
     ),
     header: 'Chart String',
     id: 'chartString',
+    size: 220,
   }),
   glColumnHelper.accessor('journalName', {
     cell: (info) => <span className="text-sm">{info.getValue() ?? '-'}</span>,
@@ -197,6 +199,7 @@ const glColumns = [
       </span>
     ),
     header: () => <span className="flex justify-end">Amount</span>,
+    size: 90,
   }),
 ];
 

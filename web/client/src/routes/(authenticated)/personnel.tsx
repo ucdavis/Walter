@@ -8,10 +8,6 @@ import { PageLoading } from '@/components/states/PageLoading.tsx';
 import { PageEmpty } from '@/components/states/PageEmpty.tsx';
 import { PageError } from '@/components/states/PageError.tsx';
 import { getErrorPresentation } from '@/lib/errorPresentation.ts';
-import {
-  ClipboardDocumentListIcon,
-  UsersIcon,
-} from '@heroicons/react/24/outline';
 
 export const Route = createFileRoute('/(authenticated)/personnel')({
   component: RouteComponent,
@@ -78,22 +74,6 @@ function RouteComponent() {
       <h3 className="subtitle">
         {uniqueEmployees} employees across {uniqueProjects} projects
       </h3>
-
-      {/* Summary Cards */}
-      <div className="fancy-data">
-        <dl className="grid items-stretch gap-6 md:gap-8 grid-cols-1 md:grid-cols-2">
-          <div>
-            <UsersIcon className="w-4 h-4" />
-            <dt className="stat-label">Personnel</dt>
-            <dd className="stat-value">{uniqueEmployees}</dd>
-          </div>
-          <div>
-            <ClipboardDocumentListIcon className="w-4 h-4" />
-            <dt className="stat-label">Projects</dt>
-            <dd className="stat-value">{uniqueProjects}</dd>
-          </div>
-        </dl>
-      </div>
 
       {/* Personnel Table */}
       <PersonnelTable data={data} />
