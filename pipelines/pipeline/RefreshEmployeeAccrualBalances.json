@@ -105,8 +105,84 @@
 						"type": "DatasetReference"
 					}
 				]
+			},
+			{
+				"name": "Copy Accruals to Data Lake",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Copy To Accruals Table",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlServerSource",
+						"sqlReaderQuery": {
+							"value": "SELECT *\nFROM dbo.EmployeeAccrualBalances\nWHERE AsOfDate > '@{activity('Get Last As Of Date').output.firstRow.LastAsOfDate}'",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"sink": {
+						"type": "ParquetSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings",
+							"copyBehavior": "FlattenHierarchy"
+						},
+						"formatSettings": {
+							"type": "ParquetWriteSettings"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "WalterDev_EmployeeAccrualBalances",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "DataLakeAccruals",
+						"type": "DatasetReference",
+						"parameters": {
+							"Year": {
+								"value": "@formatDateTime(utcNow(),'yyyy')",
+								"type": "Expression"
+							},
+							"Month": "@formatDateTime(utcNow(),'MM')",
+							"Day": "@formatDateTime(utcNow(),'dd')"
+						}
+					}
+				]
 			}
 		],
+		"parameters": {
+			"Year": {
+				"type": "String",
+				"defaultValue": "@{formatDateTime(utcNow(),'yyyy')}"
+			}
+		},
 		"annotations": []
 	}
 }
