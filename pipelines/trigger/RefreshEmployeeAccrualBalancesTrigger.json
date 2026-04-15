@@ -1,0 +1,32 @@
+{
+	"name": "RefreshEmployeeAccrualBalancesTrigger",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Started",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "RefreshEmployeeAccrualBalances",
+					"type": "PipelineReference"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2026-04-15T21:10:00",
+				"timeZone": "Eastern Standard Time",
+				"schedule": {
+					"minutes": [
+						5
+					],
+					"hours": [
+						10
+					]
+				}
+			}
+		}
+	}
+}
