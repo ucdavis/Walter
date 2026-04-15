@@ -1268,12 +1268,6 @@
 				"policy": {
 					"elapsedTimeMetric": {}
 				},
-				"parameters": {
-					"Year": {
-						"type": "String",
-						"defaultValue": "@{formatDateTime(utcNow(),'yyyy')}"
-					}
-				},
 				"annotations": []
 			},
 			"dependsOn": [
