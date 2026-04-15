@@ -262,7 +262,7 @@
 						]
 					},
 					{
-						"name": "Copy data1",
+						"name": "Copy Accruals to Data Lake",
 						"type": "Copy",
 						"dependsOn": [
 							{
@@ -281,18 +281,73 @@
 						},
 						"userProperties": [],
 						"typeProperties": {
-							"enableStaging": false
-						}
+							"source": {
+								"type": "SqlServerSource",
+								"sqlReaderQuery": {
+									"value": "SELECT *\nFROM dbo.EmployeeAccrualBalances\nWHERE AsOfDate > '@{activity('Get Last As Of Date').output.firstRow.LastAsOfDate}'",
+									"type": "Expression"
+								},
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"sink": {
+								"type": "ParquetSink",
+								"storeSettings": {
+									"type": "AzureBlobFSWriteSettings",
+									"copyBehavior": "FlattenHierarchy"
+								},
+								"formatSettings": {
+									"type": "ParquetWriteSettings"
+								}
+							},
+							"enableStaging": false,
+							"translator": {
+								"type": "TabularTranslator",
+								"typeConversion": true,
+								"typeConversionSettings": {
+									"allowDataTruncation": true,
+									"treatBooleanAsNumber": false
+								}
+							}
+						},
+						"inputs": [
+							{
+								"referenceName": "WalterDev_EmployeeAccrualBalances",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "DataLakeAccruals",
+								"type": "DatasetReference",
+								"parameters": {
+									"Year": {
+										"value": "@formatDateTime(utcNow(),'yyyy')",
+										"type": "Expression"
+									},
+									"Month": "@formatDateTime(utcNow(),'MM')",
+									"Day": "@formatDateTime(utcNow(),'dd')"
+								}
+							}
+						]
 					}
 				],
 				"policy": {
 					"elapsedTimeMetric": {}
 				},
+				"parameters": {
+					"Year": {
+						"type": "String",
+						"defaultValue": "@{formatDateTime(utcNow(),'yyyy')}"
+					}
+				},
 				"annotations": []
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/Roberto_WalterDev')]",
-				"[concat(variables('factoryId'), '/datasets/WalterDev_EmployeeAccrualBalances')]"
+				"[concat(variables('factoryId'), '/datasets/WalterDev_EmployeeAccrualBalances')]",
+				"[concat(variables('factoryId'), '/datasets/DataLakeAccruals')]"
 			]
 		},
 		{
@@ -1738,6 +1793,49 @@
 				"[concat(variables('factoryId'), '/datasets/WalterDev_FacultyDeptPortfolio')]",
 				"[concat(variables('factoryId'), '/datasets/Roberto_WalterProd')]",
 				"[concat(variables('factoryId'), '/datasets/WalterProd_FacultyDeptPortfolio')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/DataLakeAccruals')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "Walter_Storage",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"Year": {
+						"type": "string"
+					},
+					"Month": {
+						"type": "string"
+					},
+					"Day": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "Parquet",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": {
+							"value": "@{concat(dataset().Day, '.parquet')}",
+							"type": "Expression"
+						},
+						"folderPath": {
+							"value": "@{concat(dataset().Year, '/', dataset().Month)}",
+							"type": "Expression"
+						},
+						"fileSystem": "accruals"
+					},
+					"compressionCodec": "snappy"
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/Walter_Storage')]"
 			]
 		},
 		{
