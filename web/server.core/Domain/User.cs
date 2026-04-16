@@ -14,7 +14,7 @@ public class User
     public Guid Id { get; set; }
 
     /// <summary>
-    /// Kerberos ID - will be looked up via Entra.
+    /// Kerberos ID - will be looked up via IAM.
     /// </summary>
     [Required]
     [MaxLength(20)]

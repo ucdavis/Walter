@@ -8,6 +8,8 @@ namespace server.core.Services;
 public interface IIdentityService
 {
     Task<IamIdentity?> GetByIamId(string iamId);
+
+    Task<string?> GetKerberosByIamId(string iamId);
 }
 
 public sealed class IdentityService : IIdentityService
@@ -47,6 +49,24 @@ public sealed class IdentityService : IIdentityService
         // should only be one result for a given IAM ID, so just take the first
         var person = results.First();
         return new IamIdentity(person.IamId, person.EmployeeId, person.FullName);
+    }
+
+    public async Task<string?> GetKerberosByIamId(string iamId)
+    {
+        if (string.IsNullOrWhiteSpace(iamId))
+        {
+            throw new ArgumentException("IAM ID is required.", nameof(iamId));
+        }
+
+        var kerberosResponse = await _ietClient.Kerberos.Get(iamId);
+        var results = kerberosResponse.ResponseData?.Results;
+
+        if (results is null || results.Length == 0)
+        {
+            return null;
+        }
+
+        return results.First().UserId;
     }
 
 }

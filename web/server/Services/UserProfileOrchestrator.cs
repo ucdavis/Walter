@@ -46,17 +46,6 @@ public sealed class UserProfileOrchestrator : IUserProfileOrchestrator
 
         var attributes = await _attributeService.GetAttributesAsync(userObjectId, principal, cancellationToken);
 
-        var kerberos = !string.IsNullOrWhiteSpace(attributes?.Kerberos)
-            ? attributes!.Kerberos
-            : existingUser?.Kerberos;
-
-        if (string.IsNullOrWhiteSpace(kerberos))
-        {
-            throw new InvalidOperationException(existingUser == null
-                ? $"Kerberos extension attribute is missing for new user {userId}."
-                : $"Kerberos extension attribute missing for {userId} and no stored value was found.");
-        }
-
         if (attributes == null && existingUser != null)
         {
             _logger.LogWarning("Falling back to stored profile for user {UserId} because Entra attributes could not be loaded.", userId);
@@ -90,6 +79,21 @@ public sealed class UserProfileOrchestrator : IUserProfileOrchestrator
         else if (iamIdentity == null)
         {
             throw new InvalidOperationException($"IAM identity lookup failed for IAM ID '{iamId}'.");
+        }
+
+        string? kerberos = null;
+        try
+        {
+            kerberos = await _identityService.GetKerberosByIamId(iamId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to retrieve Kerberos for IAM ID '{IamId}'.", iamId);
+        }
+
+        if (string.IsNullOrWhiteSpace(kerberos))
+        {
+            throw new InvalidOperationException($"Kerberos lookup failed for IAM ID '{iamId}'.");
         }
 
         var employeeId = iamIdentity?.EmployeeId ?? existingUser?.EmployeeId;

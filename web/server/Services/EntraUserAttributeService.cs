@@ -13,7 +13,7 @@ public interface IEntraUserAttributeService
     Task<EntraUserAttributes?> GetAttributesAsync(string userId, ClaimsPrincipal principal, CancellationToken cancellationToken = default);
 }
 
-public record EntraUserAttributes(string? Kerberos, string? IamId);
+public record EntraUserAttributes(string? IamId);
 
 public class EntraUserAttributeService : IEntraUserAttributeService
 {
@@ -73,9 +73,7 @@ public class EntraUserAttributeService : IEntraUserAttributeService
                 return null;
             }
 
-            return new EntraUserAttributes(
-                Kerberos: extensions.ExtensionAttribute13,
-                IamId: extensions.ExtensionAttribute7);
+            return new EntraUserAttributes(IamId: extensions.ExtensionAttribute7);
         }
         catch (Exception ex)
         {
