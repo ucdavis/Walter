@@ -11,6 +11,10 @@ export const tooltipDefinitions = {
   cbr: 'Monthly composite benefit rate cost, including fringe/benefit burden.',
   taskBreakdown:
     'Summary of how project costs are organized by financial coding segments.',
+  totalBudget:
+    'Total PPM budget across all active and expired projects. Closed projects are excluded.',
+  totalBalance:
+    'Total remaining balance (budget minus expenses and commitments) across all active and expired projects. Closed projects are excluded.',
   commitment:
     'Commitment / Encumbrance are funds set aside when a requisition is fully approved; it is automatically released when the associated purchase order is created (or when an approved requisition is canceled before PO creation).',
   contractAdministrator:
