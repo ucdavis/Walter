@@ -19,6 +19,8 @@ import {
   UsersIcon,
 } from '@heroicons/react/24/outline';
 import { ProjectFundingChart } from '@/components/project/ProjectFundingChart.tsx';
+import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
+import { tooltipDefinitions } from '@/shared/tooltips.ts';
 
 export const Route = createFileRoute('/(authenticated)/projects/$employeeId/')({
   component: RouteComponent,
@@ -103,14 +105,24 @@ function RouteComponent() {
             </div>
             <div className="flex flex-col">
               <ClipboardDocumentCheckIcon className="w-4 h-4" />
-              <dt className="stat-label-lg">Total Budget</dt>
+              <dt className="stat-label-lg">
+                <TooltipLabel
+                  label="Total Budget"
+                  tooltip={tooltipDefinitions.totalBudget}
+                />
+              </dt>
               <dd className="stat-value-lg">
                 {summary ? <Currency value={summary.totals.budget} /> : '...'}
               </dd>
             </div>
             <div className="flex flex-col">
               <BanknotesIcon className="w-4 h-4" />
-              <dt className="stat-label-lg">Balance</dt>
+              <dt className="stat-label-lg">
+                <TooltipLabel
+                  label="Balance"
+                  tooltip={tooltipDefinitions.totalBalance}
+                />
+              </dt>
               <dd className="stat-value-lg">
                 {summary ? <Currency value={summary.totals.balance} /> : '...'}
               </dd>

@@ -57,25 +57,40 @@ BEGIN
 
     -- Build Redshift query for award metadata (pgm_master_data is still remote)
     SET @RedshiftQuery = '
+        WITH ranked AS (
+            SELECT *,
+                ROW_NUMBER() OVER (
+                    PARTITION BY project_number, award_number
+                    ORDER BY project_burden_cost_rate DESC NULLS LAST, contract_line_number ASC NULLS LAST
+                ) AS rn
+            FROM ae_dwh.pgm_master_data
+            WHERE project_number IN (' + @ProjectIdFilter + ')
+        ),
+        best AS (
+            SELECT * FROM ranked WHERE rn = 1
+        )
         SELECT
-            project_number, award_number,
-            close_date AS award_close_date,
-            LISTAGG(DISTINCT principal_investigator_person_name, ''; '') WITHIN GROUP (ORDER BY 1) AS award_pi,
-            billing_cycle, project_burden_schedule_base, project_burden_cost_rate,
-            cost_share_required_by_sponsor,
-            LISTAGG(DISTINCT grant_administrator, ''; '') WITHIN GROUP (ORDER BY 1) AS grant_administrator,
-            postrepperiod AS post_reporting_period,
-            primary_sponsor_name,
+            b.project_number, b.award_number,
+            b.close_date AS award_close_date,
+            LISTAGG(DISTINCT a.principal_investigator_person_name, ''; '') WITHIN GROUP (ORDER BY 1) AS award_pi,
+            b.billing_cycle,
+            b.project_burden_schedule_base,
+            b.project_burden_cost_rate,
+            b.cost_share_required_by_sponsor,
+            LISTAGG(DISTINCT a.grant_administrator, ''; '') WITHIN GROUP (ORDER BY 1) AS grant_administrator,
+            b.postrepperiod AS post_reporting_period,
+            b.primary_sponsor_name,
             '''' AS project_fund,
-            LISTAGG(DISTINCT contractadmin, ''; '') WITHIN GROUP (ORDER BY 1) AS contract_administrator,
-            sponsor_award_number
-        FROM ae_dwh.pgm_master_data
-        WHERE project_number IN (' + @ProjectIdFilter + ')
+            LISTAGG(DISTINCT a.contractadmin, ''; '') WITHIN GROUP (ORDER BY 1) AS contract_administrator,
+            b.sponsor_award_number
+        FROM best b
+        JOIN ae_dwh.pgm_master_data a
+            ON a.project_number = b.project_number AND a.award_number = b.award_number
         GROUP BY
-            project_number, award_number, close_date, billing_cycle,
-            project_burden_schedule_base, project_burden_cost_rate,
-            cost_share_required_by_sponsor, postrepperiod, primary_sponsor_name,
-            sponsor_award_number';
+            b.project_number, b.award_number, b.close_date, b.billing_cycle,
+            b.project_burden_schedule_base, b.project_burden_cost_rate,
+            b.cost_share_required_by_sponsor, b.postrepperiod, b.primary_sponsor_name,
+            b.sponsor_award_number';
 
     -- Build parameters JSON for logging
     SET @ParametersJSON = (
