@@ -42,7 +42,6 @@ public sealed class AdminUsersControllerTests
             Id: entraUserId.ToString(),
             DisplayName: "Graph User",
             Email: "graph.user@example.com",
-            Kerberos: "guser",
             IamId: "IAM-123");
 
         var controller = CreateController(ctx, grantingUser.Id, graphProfile);
@@ -58,7 +57,7 @@ public sealed class AdminUsersControllerTests
         firstPayload.Added.Should().BeTrue();
         firstPayload.User.Id.Should().Be(entraUserId);
         firstPayload.User.Roles.Should().Contain(Role.Names.AccrualViewer);
-        firstPayload.User.Kerberos.Should().Be(graphProfile.Kerberos);
+        firstPayload.User.Kerberos.Should().Be("guser");
         firstPayload.User.IamId.Should().Be(graphProfile.IamId);
         firstPayload.User.EmployeeId.Should().Be("E12345");
         firstPayload.User.Name.Should().Be("Iam FullName");
@@ -105,7 +104,6 @@ public sealed class AdminUsersControllerTests
             Id: entraUserId.ToString(),
             DisplayName: "Graph User",
             Email: "graph.user@example.com",
-            Kerberos: "guser",
             IamId: "IAM-123");
 
         var controller = CreateController(ctx, grantingUser.Id, graphProfile);
@@ -118,11 +116,55 @@ public sealed class AdminUsersControllerTests
         result.Result.Should().BeOfType<BadRequestObjectResult>();
     }
 
-    private static AdminUsersController CreateController(AppDbContext ctx, Guid grantingUserId, GraphUserProfile graphProfile)
+    [Fact]
+    public async Task AssignRole_rejects_when_iam_kerberos_is_missing()
+    {
+        using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
+
+        var grantingUser = new User
+        {
+            Id = Guid.NewGuid(),
+            Kerberos = "manager",
+            IamId = "IAM-MANAGER",
+            EmployeeId = "E-MANAGER",
+        };
+
+        ctx.Users.Add(grantingUser);
+        ctx.Roles.Add(new Role { Name = Role.Names.AccrualViewer });
+        await ctx.SaveChangesAsync();
+
+        var entraUserId = Guid.NewGuid();
+
+        var graphProfile = new GraphUserProfile(
+            Id: entraUserId.ToString(),
+            DisplayName: "Graph User",
+            Email: "graph.user@example.com",
+            IamId: "IAM-NO-KERB");
+
+        var controller = CreateController(
+            ctx,
+            grantingUser.Id,
+            graphProfile,
+            kerberosByIamId: new Dictionary<string, string?>());
+
+        var result = await controller.AssignRole(
+            entraUserId,
+            new AdminUsersController.AssignRoleRequest(Role.Names.AccrualViewer),
+            CancellationToken.None);
+
+        result.Result.Should().BeOfType<BadRequestObjectResult>()
+            .Which.Value.Should().Be("Kerberos is missing for IAM ID 'IAM-NO-KERB'.");
+    }
+
+    private static AdminUsersController CreateController(
+        AppDbContext ctx,
+        Guid grantingUserId,
+        GraphUserProfile graphProfile,
+        IReadOnlyDictionary<string, string?>? kerberosByIamId = null)
     {
         var graphService = new FakeGraphService(graphProfile);
         var userService = new UserService(NullLogger<UserService>.Instance, ctx);
-        var identityService = new FakeIdentityService();
+        var identityService = new FakeIdentityService(kerberosByIamId: kerberosByIamId);
 
         var controller = new AdminUsersController(
             graphService,
@@ -191,6 +233,16 @@ public sealed class AdminUsersControllerTests
 
     private sealed class FakeIdentityService : IIdentityService
     {
+        private readonly IReadOnlyDictionary<string, string?> _kerberosByIamId;
+
+        public FakeIdentityService(IReadOnlyDictionary<string, string?>? kerberosByIamId = null)
+        {
+            _kerberosByIamId = kerberosByIamId ?? new Dictionary<string, string?>
+            {
+                ["IAM-123"] = "guser",
+            };
+        }
+
         public Task<IamIdentity?> GetByIamId(string iamId)
         {
             if (iamId == "IAM-123")
@@ -198,7 +250,19 @@ public sealed class AdminUsersControllerTests
                 return Task.FromResult<IamIdentity?>(new IamIdentity(iamId, "E12345", "Iam FullName"));
             }
 
+            if (iamId == "IAM-NO-KERB")
+            {
+                return Task.FromResult<IamIdentity?>(new IamIdentity(iamId, "E12345", "Iam FullName"));
+            }
+
             return Task.FromResult<IamIdentity?>(null);
+        }
+
+        public Task<string?> GetKerberosByIamId(string iamId)
+        {
+            return Task.FromResult(_kerberosByIamId.TryGetValue(iamId, out var kerberos)
+                ? kerberos
+                : null);
         }
     }
 }

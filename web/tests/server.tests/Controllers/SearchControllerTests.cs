@@ -120,7 +120,7 @@ public sealed class SearchControllerTests
             authorizationService,
             graphService,
             new FakeIdentityService(),
-            roles: [Role.Names.ProjectManager]);
+            roles: [Role.Names.FinancialViewer]);
 
         var result = await controller.SearchPeople("spang", CancellationToken.None);
         var payload = result.Should().BeOfType<OkObjectResult>().Which.Value
@@ -149,7 +149,7 @@ public sealed class SearchControllerTests
             authorizationService,
             graphService,
             new FakeIdentityService(),
-            roles: [Role.Names.ProjectManager]);
+            roles: [Role.Names.FinancialViewer]);
 
         var result = await controller.SearchPeople("person", CancellationToken.None);
         var payload = result.Should().BeOfType<OkObjectResult>().Which.Value
@@ -171,7 +171,6 @@ public sealed class SearchControllerTests
                     Id: "id-esspang",
                     DisplayName: "Edward Spang",
                     Email: "esspang@ucdavis.edu",
-                    Kerberos: "esspang",
                     IamId: "IAM-ESSPANG"),
             });
         var identityService = new FakeIdentityService(
@@ -185,7 +184,7 @@ public sealed class SearchControllerTests
             authorizationService,
             graphService,
             identityService,
-            roles: [Role.Names.ProjectManager]);
+            roles: [Role.Names.FinancialViewer]);
 
         var result = await controller.ResolvePersonByDirectoryId("id-esspang", CancellationToken.None);
         var payload = result.Should().BeOfType<OkObjectResult>().Which.Value
@@ -324,6 +323,11 @@ public sealed class SearchControllerTests
             return Task.FromResult(_identities.TryGetValue(iamId, out var identity)
                 ? identity
                 : null);
+        }
+
+        public Task<string?> GetKerberosByIamId(string iamId)
+        {
+            return Task.FromResult<string?>(null);
         }
     }
 }

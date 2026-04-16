@@ -139,11 +139,6 @@ public sealed class AdminUsersController : ApiControllerBase
             return NotFound();
         }
 
-        if (string.IsNullOrWhiteSpace(profile.Kerberos))
-        {
-            return BadRequest("Kerberos extension attribute is missing for the selected user.");
-        }
-
         if (string.IsNullOrWhiteSpace(profile.IamId))
         {
             return BadRequest("IAMID extension attribute is missing for the selected user.");
@@ -170,10 +165,26 @@ public sealed class AdminUsersController : ApiControllerBase
             return BadRequest($"Employee ID is missing for IAM ID '{profile.IamId}'.");
         }
 
+        string? kerberos;
+        try
+        {
+            kerberos = await _identityService.GetKerberosByIamId(profile.IamId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to retrieve Kerberos for IAM ID '{IamId}'.", profile.IamId);
+            return StatusCode(StatusCodes.Status502BadGateway);
+        }
+
+        if (string.IsNullOrWhiteSpace(kerberos))
+        {
+            return BadRequest($"Kerberos is missing for IAM ID '{profile.IamId}'.");
+        }
+
         var userProfile = new UserProfileData
         {
             UserId = entraUserId,
-            Kerberos = profile.Kerberos,
+            Kerberos = kerberos,
             IamId = profile.IamId,
             EmployeeId = iamIdentity.EmployeeId,
             DisplayName = iamIdentity.FullName ?? profile.DisplayName,

@@ -38,7 +38,6 @@ public sealed record GraphUserProfile(
     string Id,
     string? DisplayName,
     string? Email,
-    string? Kerberos,
     string? IamId);
 
 public sealed class GraphService : IGraphService
@@ -457,7 +456,6 @@ public sealed class GraphService : IGraphService
                 Id: user.Id,
                 DisplayName: user.DisplayName,
                 Email: user.Mail ?? user.UserPrincipalName,
-                Kerberos: extensions?.ExtensionAttribute13,
                 IamId: extensions?.ExtensionAttribute7);
         }
         catch (ApiException ex) when (ex.ResponseStatusCode == 404)
