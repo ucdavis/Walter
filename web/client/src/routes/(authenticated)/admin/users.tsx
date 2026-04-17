@@ -7,6 +7,7 @@ import {
   removeRole,
   useAdminUserSearchQuery,
   useUserRolesQuery,
+  UserRolesResponse,
 } from '@/queries/adminUsers.ts';
 import { useDebouncedValue } from '@/lib/useDebouncedValue.ts';
 import { createFileRoute, Link, redirect } from '@tanstack/react-router';
@@ -58,7 +59,10 @@ function RouteComponent() {
       if (selectedUserId) {
         queryClient.setQueryData(
           ['admin', 'users', selectedUserId, 'roles'],
-          { roles: data.user.roles }
+          (old: UserRolesResponse | undefined) => ({
+            ...old,
+            roles: data.user.roles,
+          })
         );
       }
     },
@@ -70,7 +74,10 @@ function RouteComponent() {
       if (selectedUserId) {
         queryClient.setQueryData(
           ['admin', 'users', selectedUserId, 'roles'],
-          { roles: data.roles }
+          (old: UserRolesResponse | undefined) => ({
+            ...old,
+            roles: data.roles,
+          })
         );
       }
     },
