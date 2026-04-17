@@ -4,14 +4,20 @@ import { canAccessAdminUsers } from '@/shared/auth/roleAccess.ts';
 import {
   assignRole,
   AssignableRole,
+  removeRole,
   useAdminUserSearchQuery,
+  useUserRolesQuery,
 } from '@/queries/adminUsers.ts';
 import { useDebouncedValue } from '@/lib/useDebouncedValue.ts';
 import { createFileRoute, Link, redirect } from '@tanstack/react-router';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { HttpError } from '@/lib/api.ts';
-import { ArrowLeftIcon, UsersIcon } from '@heroicons/react/24/outline';
+import {
+  ArrowLeftIcon,
+  UsersIcon,
+  XMarkIcon,
+} from '@heroicons/react/24/outline';
 
 export const Route = createFileRoute('/(authenticated)/admin/users')({
   beforeLoad: async ({ context }: { context: RouterContext }) => {
@@ -42,12 +48,38 @@ function RouteComponent() {
     [searchResults, selectedUserId]
   );
 
+  const queryClient = useQueryClient();
+
+  const userRolesQuery = useUserRolesQuery(selectedUserId);
+
   const assignRoleMutation = useMutation({
     mutationFn: assignRole,
+    onSuccess: (data) => {
+      if (selectedUserId) {
+        queryClient.setQueryData(
+          ['admin', 'users', selectedUserId, 'roles'],
+          { roles: data.user.roles }
+        );
+      }
+    },
+  });
+
+  const removeRoleMutation = useMutation({
+    mutationFn: removeRole,
+    onSuccess: (data) => {
+      if (selectedUserId) {
+        queryClient.setQueryData(
+          ['admin', 'users', selectedUserId, 'roles'],
+          { roles: data.roles }
+        );
+      }
+    },
   });
 
   const assignError = assignRoleMutation.error;
   const assignSuccess = assignRoleMutation.data;
+  const removeError = removeRoleMutation.error;
+  const currentRoles = userRolesQuery.data?.roles ?? [];
 
   const searchError = searchQuery.error;
   const showQueryHint = query.trim().length > 0 && query.trim().length < 3;
@@ -87,6 +119,7 @@ function RouteComponent() {
                   setQuery(e.target.value);
                   setSelectedUserId(null);
                   assignRoleMutation.reset();
+                  removeRoleMutation.reset();
                 }}
                 placeholder="Type at least 3 characters…"
                 type="text"
@@ -142,6 +175,7 @@ function RouteComponent() {
                           onClick={() => {
                             setSelectedUserId(u.id);
                             assignRoleMutation.reset();
+                            removeRoleMutation.reset();
                           }}
                           type="button"
                         >
@@ -176,6 +210,79 @@ function RouteComponent() {
                 {selectedUser.email ? (
                   <div className="truncate text-sm text-base-content/80">
                     {selectedUser.email}
+                  </div>
+                ) : null}
+              </div>
+
+              <div>
+                <div className="label">
+                  <span className="label-text">Current roles</span>
+                </div>
+                {userRolesQuery.isLoading ? (
+                  <div className="flex items-center gap-3 text-sm text-base-content/70">
+                    <div className="loading loading-spinner loading-sm" />
+                    <span>Loading roles…</span>
+                  </div>
+                ) : userRolesQuery.error ? (
+                  <div className="alert alert-error">
+                    <span>
+                      Failed to load roles{' '}
+                      {userRolesQuery.error instanceof HttpError
+                        ? `(HTTP ${userRolesQuery.error.status})`
+                        : ''}
+                      .
+                    </span>
+                  </div>
+                ) : currentRoles.length === 0 ? (
+                  <div className="text-sm text-base-content/60">
+                    No roles assigned.
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {currentRoles.map((r) => {
+                      const isRemoving =
+                        removeRoleMutation.isPending &&
+                        removeRoleMutation.variables?.roleName === r;
+                      return (
+                        <span
+                          className="badge badge-neutral gap-1 pr-1"
+                          key={r}
+                        >
+                          {r}
+                          <button
+                            aria-label={`Remove role ${r}`}
+                            className="btn btn-circle btn-ghost btn-xs"
+                            disabled={removeRoleMutation.isPending}
+                            onClick={() => {
+                              removeRoleMutation.reset();
+                              removeRoleMutation.mutate({
+                                entraUserId: selectedUser.id,
+                                roleName: r,
+                              });
+                            }}
+                            type="button"
+                          >
+                            {isRemoving ? (
+                              <span className="loading loading-spinner loading-xs" />
+                            ) : (
+                              <XMarkIcon className="w-3 h-3" />
+                            )}
+                          </button>
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {removeError ? (
+                  <div className="alert alert-error mt-2">
+                    <span>
+                      Failed to remove role{' '}
+                      {removeError instanceof HttpError
+                        ? `(HTTP ${removeError.status})`
+                        : ''}
+                      .
+                    </span>
                   </div>
                 ) : null}
               </div>

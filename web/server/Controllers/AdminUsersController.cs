@@ -197,4 +197,60 @@ public sealed class AdminUsersController : ApiControllerBase
 
         return Ok(new AssignRoleResponse(responseUser, added));
     }
+
+    public sealed record UserRolesResponse(IReadOnlyList<string> Roles);
+
+    [HttpGet("{entraUserId:guid}/roles")]
+    public async Task<ActionResult<UserRolesResponse>> GetRoles(
+        Guid entraUserId,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (entraUserId == Guid.Empty)
+        {
+            return BadRequest("Entra user ID is required.");
+        }
+
+        var roles = await _userService.GetRolesForUser(entraUserId);
+        return Ok(new UserRolesResponse(roles));
+    }
+
+    public sealed record RemoveRoleRequest(string RoleName);
+
+    public sealed record RemoveRoleResponse(IReadOnlyList<string> Roles, bool Removed);
+
+    [HttpDelete("{entraUserId:guid}/roles")]
+    public async Task<ActionResult<RemoveRoleResponse>> RemoveRole(
+        Guid entraUserId,
+        [FromBody] RemoveRoleRequest request,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (entraUserId == Guid.Empty)
+        {
+            return BadRequest("Entra user ID is required.");
+        }
+
+        var roleName = request?.RoleName?.Trim();
+        if (string.IsNullOrWhiteSpace(roleName))
+        {
+            return BadRequest("Role name is required.");
+        }
+
+        bool removed;
+        try
+        {
+            removed = await _userService.RemoveRoleFromUserAsync(entraUserId, roleName, cancellationToken);
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Failed to remove role '{RoleName}' from user '{UserId}'.", roleName, entraUserId);
+            return NotFound(ex.Message);
+        }
+
+        var roles = await _userService.GetRolesForUser(entraUserId);
+        return Ok(new RemoveRoleResponse(roles, removed));
+    }
 }
