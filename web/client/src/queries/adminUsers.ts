@@ -84,6 +84,11 @@ export async function assignRole({
 
 export type UserRolesResponse = {
   roles: string[];
+  name?: string | null;
+  email?: string | null;
+  employeeId?: string | null;
+  kerberos?: string | null;
+  iamId?: string | null;
 };
 
 export type RemoveRoleResponse = {

@@ -198,7 +198,13 @@ public sealed class AdminUsersController : ApiControllerBase
         return Ok(new AssignRoleResponse(responseUser, added));
     }
 
-    public sealed record UserRolesResponse(IReadOnlyList<string> Roles);
+    public sealed record UserRolesResponse(
+        IReadOnlyList<string> Roles,
+        string? Name,
+        string? Email,
+        string? EmployeeId,
+        string? Kerberos,
+        string? IamId);
 
     [HttpGet("{entraUserId:guid}/roles")]
     public async Task<ActionResult<UserRolesResponse>> GetRoles(
@@ -213,7 +219,14 @@ public sealed class AdminUsersController : ApiControllerBase
         }
 
         var roles = await _userService.GetRolesForUser(entraUserId);
-        return Ok(new UserRolesResponse(roles));
+        var user = await _userService.GetByIdAsync(entraUserId, cancellationToken);
+        return Ok(new UserRolesResponse(
+            roles,
+            Name: user?.DisplayName,
+            Email: user?.Email,
+            EmployeeId: user?.EmployeeId,
+            Kerberos: user?.Kerberos,
+            IamId: user?.IamId));
     }
 
     public sealed record RemoveRoleRequest(string RoleName);

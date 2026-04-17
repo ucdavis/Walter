@@ -203,13 +203,37 @@ function RouteComponent() {
               <div className="rounded-box bg-primary/10 p-4">
                 <div className="text-sm font-semibold">Selected user</div>
                 <div className="mt-1 truncate">
-                  {selectedUser.displayName ||
+                  {userRolesQuery.data?.name ||
+                    selectedUser.displayName ||
                     selectedUser.email ||
                     selectedUser.id}
                 </div>
-                {selectedUser.email ? (
+                {(userRolesQuery.data?.email ?? selectedUser.email) ? (
                   <div className="truncate text-sm text-base-content/80">
-                    {selectedUser.email}
+                    {userRolesQuery.data?.email ?? selectedUser.email}
+                  </div>
+                ) : null}
+
+                {userRolesQuery.data?.employeeId ? (
+                  <div className="mt-3 grid gap-2 text-sm md:grid-cols-3">
+                    <div>
+                      <div className="font-semibold">Employee ID</div>
+                      <div className="truncate">
+                        {userRolesQuery.data.employeeId}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="font-semibold">Kerberos</div>
+                      <div className="truncate">
+                        {userRolesQuery.data.kerberos}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="font-semibold">IAMID</div>
+                      <div className="truncate">
+                        {userRolesQuery.data.iamId}
+                      </div>
+                    </div>
                   </div>
                 ) : null}
               </div>
@@ -340,62 +364,17 @@ function RouteComponent() {
               ) : null}
 
               {assignSuccess ? (
-                <>
-                  <div
-                    className={`alert ${
-                      assignSuccess.added ? 'alert-success' : 'alert-info'
-                    }`}
-                  >
-                    <span>
-                      {assignSuccess.added
-                        ? 'Role added.'
-                        : 'User already has that role.'}
-                    </span>
-                  </div>
-
-                  <div className="rounded-box bg-base-200 p-4">
-                    <div className="text-sm font-semibold">User</div>
-                    <div className="mt-1">{assignSuccess.user.name}</div>
-                    <div className="text-sm text-base-content/70">
-                      {assignSuccess.user.email}
-                    </div>
-
-                    <div className="mt-4 grid gap-2 text-sm md:grid-cols-2">
-                      <div>
-                        <div className="font-semibold">Employee ID</div>
-                        <div className="truncate">
-                          {assignSuccess.user.employeeId}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="font-semibold">Kerberos</div>
-                        <div className="truncate">
-                          {assignSuccess.user.kerberos}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="font-semibold">IAMID</div>
-                        <div className="truncate">
-                          {assignSuccess.user.iamId}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="font-semibold">Roles</div>
-                        <div className="mt-1 flex flex-wrap gap-2">
-                          {assignSuccess.user.roles.length ? (
-                            assignSuccess.user.roles.map((r) => (
-                              <span className="badge badge-neutral" key={r}>
-                                {r}
-                              </span>
-                            ))
-                          ) : (
-                            <span className="text-base-content/60">None</span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </>
+                <div
+                  className={`alert ${
+                    assignSuccess.added ? 'alert-success' : 'alert-info'
+                  }`}
+                >
+                  <span>
+                    {assignSuccess.added
+                      ? 'Role added.'
+                      : 'User already has that role.'}
+                  </span>
+                </div>
               ) : null}
             </div>
           ) : null}
