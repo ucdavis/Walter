@@ -88,6 +88,7 @@ const Header: React.FC = () => {
         ? [{ label: 'Reports', to: '/reports' } satisfies NavLinkItem]
         : []),
       ...(canViewAdminDashboard ? [{ label: 'Admin', to: '/admin' }] : []),
+      { label: 'Help', to: '/help' },
     ],
     [
       user.employeeId,

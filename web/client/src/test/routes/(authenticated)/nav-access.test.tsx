@@ -37,6 +37,7 @@ describe('header navigation access control', () => {
     try {
       expect(screen.getByRole('link', { name: 'Projects' })).toBeInTheDocument();
       expect(screen.getByRole('link', { name: 'Personnel' })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Help' })).toBeInTheDocument();
       expect(screen.queryByRole('link', { name: 'Reports' })).not.toBeInTheDocument();
       expect(
         screen.queryByRole('link', { name: 'Principal Investigators' })
@@ -53,6 +54,7 @@ describe('header navigation access control', () => {
     try {
       expect(screen.getByRole('link', { name: 'Admin' })).toBeInTheDocument();
       expect(screen.getByRole('link', { name: 'Reports' })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Help' })).toBeInTheDocument();
       expect(screen.queryByRole('link', { name: 'Projects' })).not.toBeInTheDocument();
       expect(screen.queryByRole('link', { name: 'Personnel' })).not.toBeInTheDocument();
       expect(
@@ -69,6 +71,7 @@ describe('header navigation access control', () => {
     try {
       expect(screen.getByRole('link', { name: 'Admin' })).toBeInTheDocument();
       expect(screen.getByRole('link', { name: 'Reports' })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Help' })).toBeInTheDocument();
       expect(screen.queryByRole('link', { name: 'Projects' })).not.toBeInTheDocument();
       expect(screen.queryByRole('link', { name: 'Personnel' })).not.toBeInTheDocument();
       expect(
@@ -84,6 +87,7 @@ describe('header navigation access control', () => {
 
     try {
       expect(screen.getByRole('link', { name: 'Reports' })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Help' })).toBeInTheDocument();
       expect(screen.queryByRole('link', { name: 'Projects' })).not.toBeInTheDocument();
       expect(screen.queryByRole('link', { name: 'Personnel' })).not.toBeInTheDocument();
       expect(
@@ -102,6 +106,7 @@ describe('header navigation access control', () => {
       expect(
         screen.getByRole('link', { name: 'Principal Investigators' })
       ).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Help' })).toBeInTheDocument();
       expect(screen.queryByRole('link', { name: 'Reports' })).not.toBeInTheDocument();
       expect(screen.queryByRole('link', { name: 'Projects' })).not.toBeInTheDocument();
       expect(screen.queryByRole('link', { name: 'Personnel' })).not.toBeInTheDocument();
@@ -118,6 +123,7 @@ describe('header navigation access control', () => {
       expect(
         screen.getByRole('link', { name: 'Principal Investigators' })
       ).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Help' })).toBeInTheDocument();
       expect(screen.queryByRole('link', { name: 'Reports' })).not.toBeInTheDocument();
       expect(screen.queryByRole('link', { name: 'Projects' })).not.toBeInTheDocument();
       expect(screen.queryByRole('link', { name: 'Personnel' })).not.toBeInTheDocument();
@@ -133,6 +139,7 @@ describe('header navigation access control', () => {
     try {
       expect(screen.getByRole('link', { name: 'Projects' })).toBeInTheDocument();
       expect(screen.getByRole('link', { name: 'Personnel' })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Help' })).toBeInTheDocument();
       expect(screen.queryByRole('link', { name: 'Reports' })).not.toBeInTheDocument();
       expect(
         screen.queryByRole('link', { name: 'Principal Investigators' })
@@ -149,6 +156,7 @@ describe('header navigation access control', () => {
     try {
       expect(screen.getByRole('link', { name: 'Admin' })).toBeInTheDocument();
       expect(screen.getByRole('link', { name: 'Reports' })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Help' })).toBeInTheDocument();
       expect(screen.queryByRole('link', { name: 'Projects' })).not.toBeInTheDocument();
       expect(screen.queryByRole('link', { name: 'Personnel' })).not.toBeInTheDocument();
       expect(
