@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { ComponentType, SVGProps } from 'react';
 import {
   ArrowLongLeftIcon,
@@ -236,6 +236,12 @@ export function VacationAccrualDepartmentDetail({
     useState<ClassificationFilter>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+
+  useEffect(() => {
+    setClassificationFilter('all');
+    setSearchTerm('');
+    setStatusFilter('all');
+  }, [data.departmentCode]);
 
   const asOfDate = data.asOfDate ? new Date(data.asOfDate) : null;
 
