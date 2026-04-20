@@ -78,6 +78,14 @@ public sealed class AccountController : Controller
                 safeReturnUrl: safeReturnUrl);
         }
 
+        if (normalizedAs == "accrual")
+        {
+            return await SignInAsUserAsync(
+                email: DevelopmentSeedData.AccrualViewerEmail,
+                kerberosFallback: DevelopmentSeedData.AccrualViewerKerberos,
+                safeReturnUrl: safeReturnUrl);
+        }
+
         return RenderChooserHtml(
             safeReturnUrl,
             error: $"Unknown login option '{asOption}'.");
@@ -145,6 +153,7 @@ public sealed class AccountController : Controller
         var encodedReturnUrlParam = Uri.EscapeDataString(safeReturnUrl);
         var piHref = $"/login?as=pi&returnUrl={encodedReturnUrlParam}";
         var pmHref = $"/login?as=pm&returnUrl={encodedReturnUrlParam}";
+        var accrualHref = $"/login?as=accrual&returnUrl={encodedReturnUrlParam}";
         var selfHref = $"/login?as=self&returnUrl={encodedReturnUrlParam}";
 
         var isAuthenticated = User.Identity?.IsAuthenticated == true;
@@ -187,6 +196,9 @@ public sealed class AccountController : Controller
         sb.Append("<li><a href=\"");
         sb.Append(HtmlEncoder.Encode(pmHref));
         sb.AppendLine("\">Login as PM (kkolson@ucdavis.edu)</a></li>");
+        sb.Append("<li><a href=\"");
+        sb.Append(HtmlEncoder.Encode(accrualHref));
+        sb.AppendLine("\">Login as Accrual Viewer (local dev)</a></li>");
         sb.Append("<li><a href=\"");
         sb.Append(HtmlEncoder.Encode(selfHref));
         sb.AppendLine("\">Login as self (Entra)</a></li>");

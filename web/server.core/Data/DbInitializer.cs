@@ -40,6 +40,7 @@ public class DbInitializer : IDbInitializer
         _logger.LogInformation("Seeding development data...");
 
         await AddRolesIfMissingAsync(ct);
+        await EnsureDevelopmentAccrualViewerAsync(ct);
 
         _logger.LogInformation("Development data seeded.");
     }
@@ -80,5 +81,53 @@ public class DbInitializer : IDbInitializer
         }
 
         await _db.SaveChangesAsync(ct);
+    }
+
+    private async Task EnsureDevelopmentAccrualViewerAsync(CancellationToken ct)
+    {
+        var user = await _db.Users
+            .SingleOrDefaultAsync(u => u.Id == DevelopmentSeedData.AccrualViewerUserId, ct);
+
+        if (user is null)
+        {
+            user = new User
+            {
+                Id = DevelopmentSeedData.AccrualViewerUserId,
+            };
+            _db.Users.Add(user);
+        }
+
+        user.Kerberos = DevelopmentSeedData.AccrualViewerKerberos;
+        user.IamId = DevelopmentSeedData.AccrualViewerIamId;
+        user.EmployeeId = DevelopmentSeedData.AccrualViewerEmployeeId;
+        user.DisplayName = DevelopmentSeedData.AccrualViewerDisplayName;
+        user.Email = DevelopmentSeedData.AccrualViewerEmail;
+        user.IsActive = true;
+
+        await _db.SaveChangesAsync(ct);
+
+        var accrualViewerRoleId = await _db.Roles
+            .Where(r => r.Name == Role.Names.AccrualViewer)
+            .Select(r => r.Id)
+            .SingleAsync(ct);
+
+        var hasPermission = await _db.Permissions.AnyAsync(p =>
+            p.UserId == user.Id &&
+            p.RoleId == accrualViewerRoleId &&
+            p.DeptCode == null, ct);
+
+        if (!hasPermission)
+        {
+            _db.Permissions.Add(new Permission
+            {
+                UserId = user.Id,
+                RoleId = accrualViewerRoleId,
+                DeptCode = null,
+                IncludeDescendants = true,
+                GrantedByUserId = null,
+            });
+
+            await _db.SaveChangesAsync(ct);
+        }
     }
 }

@@ -32,6 +32,7 @@ public sealed class AccountControllerTests
         content.ContentType.Should().Be("text/html");
         content.Content.Should().Contain("Login as PI (esspang@ucdavis.edu)");
         content.Content.Should().Contain("Login as PM (kkolson@ucdavis.edu)");
+        content.Content.Should().Contain("Login as Accrual Viewer (local dev)");
         content.Content.Should().Contain("Login as self (Entra)");
     }
 
@@ -40,7 +41,7 @@ public sealed class AccountControllerTests
     {
         using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
 
-        var (controller, auth, piUserId, _) = CreateControllerWithUsers(ctx, remoteIp: IPAddress.Loopback);
+        var (controller, auth, piUserId, _, _) = CreateControllerWithUsers(ctx, remoteIp: IPAddress.Loopback);
 
         var result = await controller.Login(returnUrl: "/x", asOption: "pi");
 
@@ -57,7 +58,7 @@ public sealed class AccountControllerTests
     {
         using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
 
-        var (controller, auth, _, pmUserId) = CreateControllerWithUsers(ctx, remoteIp: IPAddress.Loopback);
+        var (controller, auth, _, pmUserId, _) = CreateControllerWithUsers(ctx, remoteIp: IPAddress.Loopback);
 
         var result = await controller.Login(returnUrl: "/x", asOption: "pm");
 
@@ -67,6 +68,26 @@ public sealed class AccountControllerTests
         auth.SignedInPrincipal.Should().NotBeNull();
         auth.SignedInPrincipal!.FindFirst(ClaimConstants.ObjectId)!.Value.Should().Be(pmUserId.ToString());
         auth.SignedInPrincipal.FindFirst("kerberos")!.Value.Should().Be("kkolson");
+    }
+
+    [Fact]
+    public async Task Login_accrual_signs_in_with_seeded_dev_user()
+    {
+        using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
+
+        var (controller, auth, _, _, accrualUserId) = CreateControllerWithUsers(ctx, remoteIp: IPAddress.Loopback);
+
+        var result = await controller.Login(returnUrl: "/x", asOption: "accrual");
+
+        result.Should().BeOfType<RedirectResult>().Which.Url.Should().Be("/x");
+
+        auth.SignedInScheme.Should().Be(CookieAuthenticationDefaults.AuthenticationScheme);
+        auth.SignedInPrincipal.Should().NotBeNull();
+        auth.SignedInPrincipal!.FindFirst(ClaimConstants.ObjectId)!.Value.Should().Be(accrualUserId.ToString());
+        auth.SignedInPrincipal.FindFirst("kerberos")!.Value.Should().Be(DevelopmentSeedData.AccrualViewerKerberos);
+        auth.SignedInPrincipal.FindAll(ClaimTypes.Role).Select(c => c.Value)
+            .Should().ContainSingle()
+            .Which.Should().Be(Role.Names.AccrualViewer);
     }
 
     [Fact]
@@ -112,10 +133,11 @@ public sealed class AccountControllerTests
         };
     }
 
-    private static (AccountController Controller, FakeAuthenticationService Auth, Guid PiUserId, Guid PmUserId)
+    private static (AccountController Controller, FakeAuthenticationService Auth, Guid PiUserId, Guid PmUserId, Guid AccrualUserId)
         CreateControllerWithUsers(AppDbContext ctx, IPAddress remoteIp)
     {
         var testRole = new Role { Name = "TestRole" };
+        var accrualViewerRole = new Role { Name = Role.Names.AccrualViewer };
 
         var pi = new User
         {
@@ -137,13 +159,26 @@ public sealed class AccountControllerTests
             Email = "kkolson@ucdavis.edu",
         };
 
+        var accrual = new User
+        {
+            Id = DevelopmentSeedData.AccrualViewerUserId,
+            Kerberos = DevelopmentSeedData.AccrualViewerKerberos,
+            IamId = DevelopmentSeedData.AccrualViewerIamId,
+            EmployeeId = DevelopmentSeedData.AccrualViewerEmployeeId,
+            DisplayName = DevelopmentSeedData.AccrualViewerDisplayName,
+            Email = DevelopmentSeedData.AccrualViewerEmail,
+        };
+
         ctx.Roles.Add(testRole);
+        ctx.Roles.Add(accrualViewerRole);
         ctx.Users.Add(pi);
         ctx.Users.Add(pm);
+        ctx.Users.Add(accrual);
         ctx.SaveChanges();
 
         ctx.Permissions.Add(new Permission { UserId = pi.Id, RoleId = testRole.Id });
         ctx.Permissions.Add(new Permission { UserId = pm.Id, RoleId = testRole.Id });
+        ctx.Permissions.Add(new Permission { UserId = accrual.Id, RoleId = accrualViewerRole.Id });
         ctx.SaveChanges();
 
         var auth = new FakeAuthenticationService();
@@ -160,7 +195,7 @@ public sealed class AccountControllerTests
             ControllerContext = new ControllerContext { HttpContext = httpContext },
         };
 
-        return (controller, auth, pi.Id, pm.Id);
+        return (controller, auth, pi.Id, pm.Id, accrual.Id);
     }
 
     private sealed class FakeWebHostEnvironment : IWebHostEnvironment
