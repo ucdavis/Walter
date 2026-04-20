@@ -23,57 +23,22 @@ public static class AccrualOverviewCalculator
 
     public static AccrualOverviewResponse Build(IReadOnlyList<EmployeeAccrualBalanceRecord> records)
     {
-        var usableRecords = records
-            .Where(record => !string.IsNullOrWhiteSpace(record.EmployeeId))
-            .ToList();
-
-        if (usableRecords.Count == 0)
+        var context = PrepareContext(records);
+        if (context is null)
         {
             return new AccrualOverviewResponse();
         }
 
-        var monthlySnapshots = BuildMonthlySnapshots(usableRecords);
-        if (monthlySnapshots.Count == 0)
-        {
-            return new AccrualOverviewResponse();
-        }
-
-        var orderedMonths = monthlySnapshots
-            .OrderBy(kvp => kvp.Key)
-            .Select(kvp => kvp.Value)
-            .TakeLast(12)
-            .ToList();
-
-        var latestMonth = orderedMonths[^1];
+        var latestMonth = context.LatestMonth;
         var latestEmployees = latestMonth.Employees;
-        var ytdMonthCount = GetFiscalYearMonthCount(latestMonth.AsOfDate);
+        var orderedMonths = context.OrderedMonths;
+        var ytdMonthCount = context.YtdMonthCount;
         var monthlyLostCost = DecimalRound(latestEmployees.Sum(employee => employee.LostCostMonth));
         var totalCharges = latestEmployees.Sum(employee => employee.NormalMonthlyAccrual * employee.HourlyRate);
         var wasteRate = totalCharges > 0m
             ? DecimalRound((monthlyLostCost / totalCharges) * 100m, 1)
             : 0m;
-
-        var departmentBreakdown = latestEmployees
-            .GroupBy(employee => employee.Department, StringComparer.OrdinalIgnoreCase)
-            .Select(group =>
-            {
-                var employees = group.ToList();
-                var lostCostMonth = DecimalRound(employees.Sum(employee => employee.LostCostMonth));
-
-                return new AccrualDepartmentBreakdownRow
-                {
-                    AvgBalanceHours = DecimalRound(employees.Average(employee => employee.BalanceHours)),
-                    ApproachingCapCount = employees.Count(employee => employee.Status == AccrualStatus.Approaching),
-                    AtCapCount = employees.Count(employee => employee.Status == AccrualStatus.AtCap),
-                    Department = group.Key,
-                    Headcount = employees.Count,
-                    LostCostMonth = lostCostMonth,
-                    LostCostYtd = DecimalRound(lostCostMonth * ytdMonthCount),
-                };
-            })
-            .OrderByDescending(row => row.LostCostMonth)
-            .ThenBy(row => row.Department, StringComparer.OrdinalIgnoreCase)
-            .ToList();
+        var departmentBreakdown = BuildDepartmentBreakdown(latestEmployees, ytdMonthCount);
 
         return new AccrualOverviewResponse
         {
@@ -106,6 +71,93 @@ public static class AccrualOverviewCalculator
             WasteRate = wasteRate,
             YtdMonthCount = ytdMonthCount,
         };
+    }
+
+    public static AccrualDepartmentDetailResponse? BuildDepartmentDetail(
+        IReadOnlyList<EmployeeAccrualBalanceRecord> records,
+        string departmentCode)
+    {
+        if (string.IsNullOrWhiteSpace(departmentCode))
+        {
+            return null;
+        }
+
+        var context = PrepareContext(records);
+        if (context is null)
+        {
+            return null;
+        }
+
+        var latestEmployees = context.LatestMonth.Employees;
+        var departmentEmployees = latestEmployees
+            .Where(employee => string.Equals(
+                employee.DepartmentCode,
+                departmentCode,
+                StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(employee => employee.PctOfCap)
+            .ThenByDescending(employee => employee.LostCostMonth)
+            .ThenBy(employee => employee.EmployeeName, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (departmentEmployees.Count == 0)
+        {
+            return null;
+        }
+
+        var lostCostMonth = DecimalRound(departmentEmployees.Sum(employee => employee.LostCostMonth));
+
+        return new AccrualDepartmentDetailResponse
+        {
+            AsOfDate = context.LatestMonth.AsOfDate,
+            AvgBalanceHours = DecimalRound(departmentEmployees.Average(employee => employee.BalanceHours)),
+            ApproachingCapCount = departmentEmployees.Count(employee => employee.Status == AccrualStatus.Approaching),
+            AtCapCount = departmentEmployees.Count(employee => employee.Status == AccrualStatus.AtCap),
+            DepartmentCode = departmentEmployees[0].DepartmentCode,
+            DepartmentName = MostCommonValue(
+                departmentEmployees.Select(employee => employee.Department),
+                "Unknown Department"),
+            Departments = BuildDepartmentOptions(latestEmployees),
+            Employees = BuildDepartmentEmployeeRows(departmentEmployees),
+            Headcount = departmentEmployees.Count,
+            LostCostMonth = lostCostMonth,
+            LostCostYtd = DecimalRound(lostCostMonth * context.YtdMonthCount),
+            YtdMonthCount = context.YtdMonthCount,
+        };
+    }
+
+    private static CalculationContext? PrepareContext(IReadOnlyList<EmployeeAccrualBalanceRecord> records)
+    {
+        var usableRecords = records
+            .Where(record => !string.IsNullOrWhiteSpace(record.EmployeeId))
+            .ToList();
+
+        if (usableRecords.Count == 0)
+        {
+            return null;
+        }
+
+        var monthlySnapshots = BuildMonthlySnapshots(usableRecords);
+        if (monthlySnapshots.Count == 0)
+        {
+            return null;
+        }
+
+        var orderedMonths = monthlySnapshots
+            .OrderBy(kvp => kvp.Key)
+            .Select(kvp => kvp.Value)
+            .TakeLast(12)
+            .ToList();
+
+        if (orderedMonths.Count == 0)
+        {
+            return null;
+        }
+
+        var latestMonth = orderedMonths[^1];
+        return new CalculationContext(
+            latestMonth,
+            orderedMonths,
+            GetFiscalYearMonthCount(latestMonth.AsOfDate));
     }
 
     private static Dictionary<int, MonthlySnapshot> BuildMonthlySnapshots(
@@ -164,8 +216,15 @@ public static class AccrualOverviewCalculator
         IReadOnlyList<EmployeeAccrualBalanceRecord> historyRows,
         DateTime asOfDate)
     {
+        var employeeId = currentRows
+            .Select(row => row.EmployeeId)
+            .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)) ?? string.Empty;
+        var employeeName = MostCommonValue(currentRows.Select(row => row.EmployeeName), employeeId);
+        var departmentCode = MostCommonValue(currentRows.Select(row => row.Level5Dept), "UNKNOWN");
         var department = MostCommonValue(currentRows.Select(row => row.Level5DeptDesc), "Unknown Department");
-        var classDescription = MostCommonValue(currentRows.Select(row => row.EmployeeClassDescription), "Unknown");
+        var classification = NormalizeClassification(MostCommonValue(
+            currentRows.Select(row => row.EmployeeClassDescription),
+            "Unknown"));
         var balance = currentRows.Max(row => row.CalculatedBal ?? 0m);
         var accrualLimit = currentRows.Max(row => row.AccrualLimit ?? 0m);
         var percentage = currentRows.Max(row => row.AccrualPercentage ?? 0m);
@@ -174,6 +233,25 @@ public static class AccrualOverviewCalculator
         {
             percentage = (balance / accrualLimit) * 100m;
         }
+
+        percentage = DecimalRound(percentage, 1);
+
+        var monthlyHistory = historyRows
+            .GroupBy(row => GetMonthKey(row.AsOfDate))
+            .OrderBy(group => group.Key)
+            .Select(group =>
+            {
+                var latestDateInMonth = group.Max(row => row.AsOfDate);
+                var latestRows = group
+                    .Where(row => row.AsOfDate == latestDateInMonth)
+                    .ToList();
+
+                return new EmployeeMonthlyHistoryPoint(
+                    latestDateInMonth,
+                    latestRows.Max(row => row.AccrualHours ?? 0m),
+                    latestRows.Max(row => row.HoursTaken ?? 0m));
+            })
+            .ToList();
 
         var normalMonthlyAccrual = historyRows
             .Where(row => (row.AccrualHours ?? 0m) > 0m)
@@ -188,19 +266,101 @@ public static class AccrualOverviewCalculator
                 : DefaultMonthlyAccrual;
         }
 
-        var hourlyRate = GetHourlyRate(classDescription);
+        var recentHistory = monthlyHistory.TakeLast(6).ToList();
+        var avgMonthlyUsage = recentHistory.Count > 0
+            ? DecimalRound(recentHistory.Average(point => point.HoursTaken))
+            : 0m;
+        var hourlyRate = GetHourlyRate(classification);
         var status = GetStatus(percentage);
+        var monthsToCap = GetMonthsToCap(balance, accrualLimit, normalMonthlyAccrual, avgMonthlyUsage);
+        var lastVacationDate = monthlyHistory
+            .LastOrDefault(point => point.HoursTaken > 0m)
+            ?.AsOfDate;
 
         return new EmployeeSnapshot(
             asOfDate,
-            balance,
+            DecimalRound(balance),
+            classification,
             department,
+            departmentCode,
+            employeeId,
+            employeeName,
             hourlyRate,
+            lastVacationDate,
             status == AccrualStatus.AtCap
                 ? DecimalRound(normalMonthlyAccrual * hourlyRate)
                 : 0m,
-            normalMonthlyAccrual,
+            monthsToCap,
+            DecimalRound(normalMonthlyAccrual),
+            percentage,
+            DecimalRound(accrualLimit),
             status);
+    }
+
+    private static IReadOnlyList<AccrualDepartmentBreakdownRow> BuildDepartmentBreakdown(
+        IReadOnlyList<EmployeeSnapshot> latestEmployees,
+        int ytdMonthCount)
+    {
+        return latestEmployees
+            .GroupBy(employee => employee.DepartmentCode, StringComparer.OrdinalIgnoreCase)
+            .Select(group =>
+            {
+                var employees = group.ToList();
+                var lostCostMonth = DecimalRound(employees.Sum(employee => employee.LostCostMonth));
+
+                return new AccrualDepartmentBreakdownRow
+                {
+                    AvgBalanceHours = DecimalRound(employees.Average(employee => employee.BalanceHours)),
+                    ApproachingCapCount = employees.Count(employee => employee.Status == AccrualStatus.Approaching),
+                    AtCapCount = employees.Count(employee => employee.Status == AccrualStatus.AtCap),
+                    Department = MostCommonValue(
+                        employees.Select(employee => employee.Department),
+                        "Unknown Department"),
+                    DepartmentCode = group.Key,
+                    Headcount = employees.Count,
+                    LostCostMonth = lostCostMonth,
+                    LostCostYtd = DecimalRound(lostCostMonth * ytdMonthCount),
+                };
+            })
+            .OrderByDescending(row => row.LostCostMonth)
+            .ThenBy(row => row.Department, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static IReadOnlyList<AccrualDepartmentOption> BuildDepartmentOptions(
+        IReadOnlyList<EmployeeSnapshot> latestEmployees)
+    {
+        return latestEmployees
+            .GroupBy(employee => employee.DepartmentCode, StringComparer.OrdinalIgnoreCase)
+            .Select(group => new AccrualDepartmentOption
+            {
+                Code = group.Key,
+                Name = MostCommonValue(
+                    group.Select(employee => employee.Department),
+                    "Unknown Department"),
+            })
+            .OrderBy(option => option.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static IReadOnlyList<AccrualDepartmentEmployeeRow> BuildDepartmentEmployeeRows(
+        IReadOnlyList<EmployeeSnapshot> employees)
+    {
+        return employees
+            .Select(employee => new AccrualDepartmentEmployeeRow
+            {
+                AccrualHoursPerMonth = employee.NormalMonthlyAccrual,
+                BalanceHours = employee.BalanceHours,
+                CapHours = employee.CapHours,
+                Classification = employee.Classification,
+                EmployeeId = employee.EmployeeId,
+                EmployeeName = employee.EmployeeName,
+                LastVacationDate = employee.LastVacationDate,
+                LostCostMonth = employee.LostCostMonth,
+                MonthsToCap = employee.MonthsToCap,
+                PctOfCap = employee.PctOfCap,
+            })
+            .ToList();
     }
 
     private static decimal DecimalRound(decimal value, int decimals = 2)
@@ -220,10 +380,38 @@ public static class AccrualOverviewCalculator
         return (date.Year * 100) + date.Month;
     }
 
+    private static int? GetMonthsToCap(
+        decimal balance,
+        decimal accrualLimit,
+        decimal normalMonthlyAccrual,
+        decimal avgMonthlyUsage)
+    {
+        if (accrualLimit <= 0m)
+        {
+            return null;
+        }
+
+        if (balance >= accrualLimit)
+        {
+            return 0;
+        }
+
+        var netMonthlyAccrual = normalMonthlyAccrual - avgMonthlyUsage;
+        if (netMonthlyAccrual <= 0m)
+        {
+            return null;
+        }
+
+        return Math.Max(
+            0,
+            (int)Math.Round(
+                (accrualLimit - balance) / netMonthlyAccrual,
+                MidpointRounding.AwayFromZero));
+    }
+
     private static decimal GetHourlyRate(string employeeClassDescription)
     {
-        var normalizedClassification = NormalizeClassification(employeeClassDescription);
-        if (HourlyRates.TryGetValue(normalizedClassification, out var rate))
+        if (HourlyRates.TryGetValue(employeeClassDescription, out var rate))
         {
             return rate;
         }
@@ -304,11 +492,24 @@ public static class AccrualOverviewCalculator
     private sealed record EmployeeSnapshot(
         DateTime AsOfDate,
         decimal BalanceHours,
+        string Classification,
         string Department,
+        string DepartmentCode,
+        string EmployeeId,
+        string EmployeeName,
         decimal HourlyRate,
+        DateTime? LastVacationDate,
         decimal LostCostMonth,
+        int? MonthsToCap,
         decimal NormalMonthlyAccrual,
+        decimal PctOfCap,
+        decimal CapHours,
         AccrualStatus Status);
+
+    private sealed record EmployeeMonthlyHistoryPoint(
+        DateTime AsOfDate,
+        decimal AccrualHours,
+        decimal HoursTaken);
 
     private sealed class MonthlySnapshot
     {
@@ -322,4 +523,9 @@ public static class AccrualOverviewCalculator
         public List<EmployeeSnapshot> Employees { get; } = [];
         public string Label { get; }
     }
+
+    private sealed record CalculationContext(
+        MonthlySnapshot LatestMonth,
+        IReadOnlyList<MonthlySnapshot> OrderedMonths,
+        int YtdMonthCount);
 }

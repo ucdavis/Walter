@@ -198,7 +198,10 @@ public sealed class AccountController : Controller
         return Content(sb.ToString(), "text/html");
     }
 
-    private async Task<IActionResult> SignInAsUserAsync(string email, string kerberosFallback, string safeReturnUrl)
+    private async Task<IActionResult> SignInAsUserAsync(
+        string email,
+        string kerberosFallback,
+        string safeReturnUrl)
     {
         var normalizedEmail = email.Trim().ToLowerInvariant();
         var normalizedKerberos = kerberosFallback.Trim().ToLowerInvariant();

@@ -18,6 +18,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import { useNavigate } from '@tanstack/react-router';
 import { ColumnDef } from '@tanstack/react-table';
 import { ExportDataButton } from '@/components/ExportDataButton.tsx';
 import { PageEmpty } from '@/components/states/PageEmpty.tsx';
@@ -103,6 +104,8 @@ interface VacationAccrualOverviewProps {
 export function VacationAccrualOverview({
   data,
 }: VacationAccrualOverviewProps) {
+  const navigate = useNavigate();
+
   if (data.totalEmployees === 0) {
     return (
       <PageEmpty message="No vacation accrual balances are available for the overview yet." />
@@ -363,8 +366,8 @@ export function VacationAccrualOverview({
                     Department Breakdown
                   </h2>
                   <p className="mt-1 text-sm text-base-content/60">
-                    Drilldown comes next. This page starts with the
-                    college-level overview and live department rollup.
+                    Click a row to drill into the live employee breakdown for a
+                    department.
                   </p>
                 </div>
               </div>
@@ -381,6 +384,29 @@ export function VacationAccrualOverview({
                     pagination: { pageSize: 50 },
                     sorting: [{ desc: false, id: 'department' }],
                   }}
+                  getRowProps={(row) => ({
+                    className: 'cursor-pointer hover:bg-base-200',
+                    onClick: () =>
+                      navigate({
+                        params: {
+                          departmentCode: row.original.departmentCode,
+                        },
+                        to: '/accruals/department/$departmentCode',
+                      }),
+                    onKeyDown: (event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        void navigate({
+                          params: {
+                            departmentCode: row.original.departmentCode,
+                          },
+                          to: '/accruals/department/$departmentCode',
+                        });
+                      }
+                    },
+                    role: 'link',
+                    tabIndex: 0,
+                  })}
                   tableActions={
                     <ExportDataButton
                       columns={departmentCsvColumns}

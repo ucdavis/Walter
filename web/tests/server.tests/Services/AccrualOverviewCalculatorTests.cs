@@ -27,6 +27,7 @@ public sealed class AccrualOverviewCalculatorTests
             CreateRecord(
                 employeeId: "E001",
                 asOfDate: new DateTime(2026, 2, 28),
+                departmentCode: "030090",
                 department: "NUTRITION",
                 employeeClassDescription: "Academic: Faculty",
                 calculatedBal: 368m,
@@ -36,6 +37,7 @@ public sealed class AccrualOverviewCalculatorTests
             CreateRecord(
                 employeeId: "E001",
                 asOfDate: new DateTime(2026, 3, 14),
+                departmentCode: "030090",
                 department: "NUTRITION",
                 employeeClassDescription: "Academic: Faculty",
                 calculatedBal: 372m,
@@ -45,6 +47,7 @@ public sealed class AccrualOverviewCalculatorTests
             CreateRecord(
                 employeeId: "E001",
                 asOfDate: new DateTime(2026, 3, 31),
+                departmentCode: "030090",
                 department: "NUTRITION",
                 employeeClassDescription: "Academic: Faculty",
                 calculatedBal: 384m,
@@ -54,6 +57,7 @@ public sealed class AccrualOverviewCalculatorTests
             CreateRecord(
                 employeeId: "E001",
                 asOfDate: new DateTime(2026, 3, 31),
+                departmentCode: "030090",
                 department: "NUTRITION",
                 employeeClassDescription: "Academic: Faculty",
                 calculatedBal: 384m,
@@ -63,6 +67,7 @@ public sealed class AccrualOverviewCalculatorTests
             CreateRecord(
                 employeeId: "E001",
                 asOfDate: new DateTime(2026, 3, 31),
+                departmentCode: "030015",
                 department: "ENVIRONMENTAL TOXICOLOGY",
                 employeeClassDescription: "Academic: Faculty",
                 calculatedBal: 384m,
@@ -74,6 +79,7 @@ public sealed class AccrualOverviewCalculatorTests
             CreateRecord(
                 employeeId: "E002",
                 asOfDate: new DateTime(2026, 2, 28),
+                departmentCode: "030003",
                 department: "PLANT SCIENCES",
                 employeeClassDescription: "Staff: Career",
                 calculatedBal: 150m,
@@ -83,6 +89,7 @@ public sealed class AccrualOverviewCalculatorTests
             CreateRecord(
                 employeeId: "E002",
                 asOfDate: new DateTime(2026, 3, 31),
+                departmentCode: "030003",
                 department: "PLANT SCIENCES",
                 employeeClassDescription: "Staff: Career",
                 calculatedBal: 204m,
@@ -115,22 +122,115 @@ public sealed class AccrualOverviewCalculatorTests
 
         result.DepartmentBreakdown.Should().HaveCount(2);
         result.DepartmentBreakdown[0].Department.Should().Be("NUTRITION");
+        result.DepartmentBreakdown[0].DepartmentCode.Should().Be("030090");
         result.DepartmentBreakdown[0].Headcount.Should().Be(1);
         result.DepartmentBreakdown[0].LostCostMonth.Should().Be(936m);
         result.DepartmentBreakdown[0].AtCapCount.Should().Be(1);
         result.DepartmentBreakdown[1].Department.Should().Be("PLANT SCIENCES");
+        result.DepartmentBreakdown[1].DepartmentCode.Should().Be("030003");
         result.DepartmentBreakdown[1].ApproachingCapCount.Should().Be(1);
+    }
+
+    [Fact]
+    public void BuildDepartmentDetail_returns_summary_and_employees_for_department_code()
+    {
+        var records = new List<EmployeeAccrualBalanceRecord>
+        {
+            CreateRecord(
+                employeeId: "E001",
+                employeeName: "Gradziel,Thomas M",
+                asOfDate: new DateTime(2026, 1, 31),
+                departmentCode: "030003",
+                department: "PLANT SCIENCES",
+                employeeClassDescription: "Academic: Faculty",
+                calculatedBal: 368m,
+                accrualLimit: 384m,
+                accrualHours: 16m,
+                accrualPercentage: 95.8m,
+                hoursTaken: 8m),
+            CreateRecord(
+                employeeId: "E001",
+                employeeName: "Gradziel,Thomas M",
+                asOfDate: new DateTime(2026, 2, 28),
+                departmentCode: "030003",
+                department: "PLANT SCIENCES",
+                employeeClassDescription: "Academic: Faculty",
+                calculatedBal: 384m,
+                accrualLimit: 384m,
+                accrualHours: 0m,
+                accrualPercentage: 100m,
+                hoursTaken: 0m),
+            CreateRecord(
+                employeeId: "E002",
+                employeeName: "Saichaie,Amanda M",
+                asOfDate: new DateTime(2026, 1, 31),
+                departmentCode: "030003",
+                department: "PLANT SCIENCES",
+                employeeClassDescription: "Staff: Career",
+                calculatedBal: 280m,
+                accrualLimit: 384m,
+                accrualHours: 8m,
+                accrualPercentage: 72.9m,
+                hoursTaken: 0m),
+            CreateRecord(
+                employeeId: "E002",
+                employeeName: "Saichaie,Amanda M",
+                asOfDate: new DateTime(2026, 2, 28),
+                departmentCode: "030003",
+                department: "PLANT SCIENCES",
+                employeeClassDescription: "Staff: Career",
+                calculatedBal: 322m,
+                accrualLimit: 384m,
+                accrualHours: 8m,
+                accrualPercentage: 83.9m,
+                hoursTaken: 0m),
+            CreateRecord(
+                employeeId: "E003",
+                employeeName: "Other,Employee",
+                asOfDate: new DateTime(2026, 2, 28),
+                departmentCode: "030090",
+                department: "NUTRITION",
+                employeeClassDescription: "Staff: Career",
+                calculatedBal: 120m,
+                accrualLimit: 240m,
+                accrualHours: 10m,
+                accrualPercentage: 50m,
+                hoursTaken: 0m),
+        };
+
+        var result = AccrualOverviewCalculator.BuildDepartmentDetail(records, "030003");
+
+        result.Should().NotBeNull();
+        result!.DepartmentCode.Should().Be("030003");
+        result.DepartmentName.Should().Be("PLANT SCIENCES");
+        result.Headcount.Should().Be(2);
+        result.AtCapCount.Should().Be(1);
+        result.ApproachingCapCount.Should().Be(1);
+        result.LostCostMonth.Should().Be(1248m);
+        result.LostCostYtd.Should().Be(9984m);
+        result.Departments.Select(d => d.Code).Should().ContainInOrder("030090", "030003");
+        result.Employees.Should().HaveCount(2);
+        result.Employees[0].EmployeeName.Should().Be("Gradziel,Thomas M");
+        result.Employees[0].MonthsToCap.Should().Be(0);
+        result.Employees[0].LastVacationDate.Should().Be(new DateTime(2026, 1, 31));
+        result.Employees[0].LostCostMonth.Should().Be(1248m);
+        result.Employees[1].EmployeeId.Should().Be("E002");
+        result.Employees[1].MonthsToCap.Should().Be(8);
+        result.Employees[1].PctOfCap.Should().Be(83.9m);
     }
 
     private static EmployeeAccrualBalanceRecord CreateRecord(
         string employeeId,
+        string departmentCode,
         DateTime asOfDate,
         string department,
         string employeeClassDescription,
         decimal calculatedBal,
         decimal accrualLimit,
         decimal accrualHours,
-        decimal accrualPercentage)
+        decimal accrualPercentage,
+        string? employeeName = null,
+        decimal? hoursTaken = null)
     {
         return new EmployeeAccrualBalanceRecord
         {
@@ -141,6 +241,9 @@ public sealed class AccrualOverviewCalculatorTests
             CalculatedBal = calculatedBal,
             EmployeeClassDescription = employeeClassDescription,
             EmployeeId = employeeId,
+            EmployeeName = employeeName,
+            HoursTaken = hoursTaken,
+            Level5Dept = departmentCode,
             Level5DeptDesc = department,
             TypeLabel = "Vacation",
         };
