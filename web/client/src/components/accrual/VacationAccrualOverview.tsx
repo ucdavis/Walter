@@ -18,9 +18,15 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import { ColumnDef } from '@tanstack/react-table';
+import { ExportDataButton } from '@/components/ExportDataButton.tsx';
 import { PageEmpty } from '@/components/states/PageEmpty.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
-import type { AccrualOverviewResponse } from '@/queries/accrual.ts';
+import {
+  type AccrualDepartmentBreakdownRow,
+  type AccrualOverviewResponse,
+} from '@/queries/accrual.ts';
+import { DataTable } from '@/shared/DataTable.tsx';
 
 const asOfDateFormatter = new Intl.DateTimeFormat('en-US', {
   day: 'numeric',
@@ -40,6 +46,24 @@ const percentFormatter = (value: number) => `${value.toFixed(1)}%`;
 
 const hoursFormatter = (value: number) =>
   `${Math.round(value).toLocaleString('en-US')} hrs`;
+
+const departmentCsvColumns = [
+  { header: 'Department', key: 'department' as const },
+  { header: 'Headcount', key: 'headcount' as const },
+  { header: 'At Cap', key: 'atCapCount' as const },
+  { header: 'Near Cap', key: 'approachingCapCount' as const },
+  {
+    format: 'currency' as const,
+    header: 'Lost Cost/Mo',
+    key: 'lostCostMonth' as const,
+  },
+  {
+    format: 'currency' as const,
+    header: 'Lost Cost YTD',
+    key: 'lostCostYtd' as const,
+  },
+  { header: 'Avg Balance Hours', key: 'avgBalanceHours' as const },
+];
 
 type SummaryCardProps = {
   accentClassName: string;
@@ -86,6 +110,103 @@ export function VacationAccrualOverview({
   }
 
   const asOfDate = data.asOfDate ? new Date(data.asOfDate) : null;
+  const departmentColumns: ColumnDef<AccrualDepartmentBreakdownRow>[] = [
+    {
+      accessorKey: 'department',
+      footer: () => 'CAES Total',
+      header: 'Department',
+      minSize: 260,
+      size: 320,
+    },
+    {
+      accessorKey: 'headcount',
+      cell: (info) => (
+        <span className="flex justify-end w-full">
+          {info.getValue<number>().toLocaleString('en-US')}
+        </span>
+      ),
+      footer: () => (
+        <span className="flex justify-end w-full font-semibold">
+          {data.totalEmployees.toLocaleString('en-US')}
+        </span>
+      ),
+      header: () => <span className="flex justify-end w-full">Headcount</span>,
+      size: 120,
+    },
+    {
+      accessorKey: 'atCapCount',
+      cell: (info) => (
+        <span className="flex justify-end w-full text-error font-semibold">
+          {info.getValue<number>().toLocaleString('en-US')}
+        </span>
+      ),
+      footer: () => (
+        <span className="flex justify-end w-full text-error font-semibold">
+          {data.atCapCount.toLocaleString('en-US')}
+        </span>
+      ),
+      header: () => <span className="flex justify-end w-full">At Cap</span>,
+      size: 120,
+    },
+    {
+      accessorKey: 'approachingCapCount',
+      cell: (info) => (
+        <span className="flex justify-end w-full text-warning font-semibold">
+          {info.getValue<number>().toLocaleString('en-US')}
+        </span>
+      ),
+      footer: () => (
+        <span className="flex justify-end w-full text-warning font-semibold">
+          {data.approachingCapCount.toLocaleString('en-US')}
+        </span>
+      ),
+      header: () => <span className="flex justify-end w-full">Near Cap</span>,
+      size: 120,
+    },
+    {
+      accessorKey: 'lostCostMonth',
+      cell: (info) => (
+        <span className="flex justify-end w-full text-error font-semibold">
+          {formatCurrency(info.getValue<number>())}
+        </span>
+      ),
+      footer: () => (
+        <span className="flex justify-end w-full text-error font-semibold">
+          {formatCurrency(data.lostCostMonth)}
+        </span>
+      ),
+      header: () => <span className="flex justify-end w-full">Lost Cost/Mo</span>,
+      size: 160,
+    },
+    {
+      accessorKey: 'lostCostYtd',
+      cell: (info) => (
+        <span className="flex justify-end w-full text-error font-semibold">
+          {formatCurrency(info.getValue<number>())}
+        </span>
+      ),
+      footer: () => (
+        <span className="flex justify-end w-full text-error font-semibold">
+          {formatCurrency(data.lostCostYtd)}
+        </span>
+      ),
+      header: () => <span className="flex justify-end w-full">Lost Cost YTD</span>,
+      size: 170,
+    },
+    {
+      accessorKey: 'avgBalanceHours',
+      cell: (info) => (
+        <span className="flex justify-end w-full">
+          {hoursFormatter(info.getValue<number>())}
+        </span>
+      ),
+      footer: () => (
+        <span className="flex justify-end w-full text-base-content/55">-</span>
+      ),
+      header: () => <span className="flex justify-end w-full">Avg Balance</span>,
+      size: 140,
+    },
+  ];
 
   return (
     <main className="mt-8">
@@ -248,70 +369,27 @@ export function VacationAccrualOverview({
                 </div>
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="walter-table">
-                  <thead>
-                    <tr>
-                      <th className="w-[26%]">Department</th>
-                      <th className="w-[11%] text-right">Headcount</th>
-                      <th className="w-[10%] text-right">At Cap</th>
-                      <th className="w-[12%] text-right">Near Cap</th>
-                      <th className="w-[14%] text-right">Lost Cost/Mo</th>
-                      <th className="w-[14%] text-right">Lost Cost YTD</th>
-                      <th className="w-[13%] text-right">Avg Balance</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.departmentBreakdown.map((department) => (
-                      <tr key={department.department}>
-                        <td className="font-semibold">
-                          {department.department}
-                        </td>
-                        <td className="text-right">
-                          {department.headcount.toLocaleString('en-US')}
-                        </td>
-                        <td className="text-right text-error font-semibold">
-                          {department.atCapCount.toLocaleString('en-US')}
-                        </td>
-                        <td className="text-right text-warning font-semibold">
-                          {department.approachingCapCount.toLocaleString(
-                            'en-US'
-                          )}
-                        </td>
-                        <td className="text-right text-error font-semibold">
-                          {formatCurrency(department.lostCostMonth)}
-                        </td>
-                        <td className="text-right text-error font-semibold">
-                          {formatCurrency(department.lostCostYtd)}
-                        </td>
-                        <td className="text-right">
-                          {hoursFormatter(department.avgBalanceHours)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                  <tfoot>
-                    <tr className="totaltr bg-base-200/70">
-                      <td className="font-semibold">CAES Total</td>
-                      <td className="text-right font-semibold">
-                        {data.totalEmployees.toLocaleString('en-US')}
-                      </td>
-                      <td className="text-right text-error font-semibold">
-                        {data.atCapCount.toLocaleString('en-US')}
-                      </td>
-                      <td className="text-right text-warning font-semibold">
-                        {data.approachingCapCount.toLocaleString('en-US')}
-                      </td>
-                      <td className="text-right text-error font-semibold">
-                        {formatCurrency(data.lostCostMonth)}
-                      </td>
-                      <td className="text-right text-error font-semibold">
-                        {formatCurrency(data.lostCostYtd)}
-                      </td>
-                      <td className="text-right text-base-content/55">-</td>
-                    </tr>
-                  </tfoot>
-                </table>
+              <div className="px-5 pb-5">
+                <DataTable
+                  columns={departmentColumns}
+                  data={data.departmentBreakdown}
+                  defaultColumnSize={160}
+                  expandable={false}
+                  filterPlaceholder="Search departments..."
+                  footerRowClassName="totaltr bg-base-200/70"
+                  initialState={{
+                    pagination: { pageSize: 50 },
+                    sorting: [{ desc: false, id: 'department' }],
+                  }}
+                  tableActions={
+                    <ExportDataButton
+                      columns={departmentCsvColumns}
+                      data={data.departmentBreakdown}
+                      filename="vacation-accrual-department-breakdown.csv"
+                    />
+                  }
+                  tableClassName="table-zebra"
+                />
               </div>
             </div>
           </section>
