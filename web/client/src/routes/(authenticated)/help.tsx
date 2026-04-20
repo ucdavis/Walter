@@ -16,7 +16,7 @@ const supportLinks: SupportLink[] = [
   {
     description:
       'For questions, problems, or other help requests, contact the support team.',
-    href: 'https://caeshelp.ucdavis.edu',
+    href: 'https://caeshelp.ucdavis.edu/?appname=Walter',
     label: 'Help',
   },
   {
