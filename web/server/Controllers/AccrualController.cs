@@ -1,33 +1,29 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using server.Helpers;
+using server.Services;
 
 namespace Server.Controllers;
 
 [Authorize(Policy = AuthorizationHelper.Policies.CanViewAccruals)]
 public sealed class AccrualController : ApiControllerBase
 {
-    private readonly IWebHostEnvironment _env;
+    private readonly IDatamartService _datamartService;
 
-    public AccrualController(IWebHostEnvironment env)
+    public AccrualController(IDatamartService datamartService)
     {
-        _env = env;
+        _datamartService = datamartService;
     }
 
-
-    /// <summary>
-    /// Get all accruals. Requires AccrualViewer role.
-    /// </summary>
-    /// <param name="cancellationToken"></param>
-    /// <returns></returns>
-    [HttpGet]
-    public IActionResult Get(CancellationToken cancellationToken)
+    [HttpGet("overview")]
+    public async Task<IActionResult> GetOverviewAsync(CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var path = Path.Combine(_env.ContentRootPath, "Models", "AccrualFake.json");
-        var json = System.IO.File.ReadAllText(path);
+        var startDate = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1).AddMonths(-15);
+        var records = await _datamartService.GetEmployeeAccrualBalancesAsync(startDate, ct: cancellationToken);
+        var overview = AccrualOverviewCalculator.Build(records);
 
-        return Content(json, "application/json");
+        return Ok(overview);
     }
 }
