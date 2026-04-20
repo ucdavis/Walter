@@ -11,14 +11,13 @@ export const Route = createFileRoute('/(authenticated)/accruals/')({
   component: RouteComponent,
   loader: ({ context: { queryClient } }) =>
     queryClient.ensureQueryData(accrualOverviewQueryOptions()),
+  pendingComponent: () => (
+    <PageLoading message="Loading the vacation accrual overview..." />
+  ),
 });
 
 function RouteComponent() {
-  const { data, error, isError, isPending } = useAccrualOverviewQuery();
-
-  if (isPending) {
-    return <PageLoading message="Loading the vacation accrual overview..." />;
-  }
+  const { data, error, isError } = useAccrualOverviewQuery();
 
   if (isError) {
     return (
@@ -32,6 +31,10 @@ function RouteComponent() {
         </div>
       </main>
     );
+  }
+
+  if (!data) {
+    return <PageLoading message="Loading the vacation accrual overview..." />;
   }
 
   return <VacationAccrualOverview data={data} />;
