@@ -32,13 +32,16 @@ public static class AccrualOverviewCalculator
         var latestMonth = context.LatestMonth;
         var latestEmployees = latestMonth.Employees;
         var orderedMonths = context.OrderedMonths;
+        var fiscalYearMonths = GetFiscalYearMonths(orderedMonths, latestMonth.AsOfDate);
         var ytdMonthCount = context.YtdMonthCount;
         var monthlyLostCost = DecimalRound(latestEmployees.Sum(employee => employee.LostCostMonth));
+        var lostCostYtd = DecimalRound(
+            fiscalYearMonths.Sum(month => month.Employees.Sum(employee => employee.LostCostMonth)));
         var totalCharges = latestEmployees.Sum(employee => employee.NormalMonthlyAccrual * employee.HourlyRate);
         var wasteRate = totalCharges > 0m
             ? DecimalRound((monthlyLostCost / totalCharges) * 100m, 1)
             : 0m;
-        var departmentBreakdown = BuildDepartmentBreakdown(latestEmployees, ytdMonthCount);
+        var departmentBreakdown = BuildDepartmentBreakdown(latestEmployees, fiscalYearMonths);
 
         return new AccrualOverviewResponse
         {
@@ -57,7 +60,7 @@ public static class AccrualOverviewCalculator
                 })
                 .ToList(),
             LostCostMonth = monthlyLostCost,
-            LostCostYtd = DecimalRound(monthlyLostCost * ytdMonthCount),
+            LostCostYtd = lostCostYtd,
             MonthlyLostCost = orderedMonths
                 .Select(month => new AccrualLostCostTrendPoint
                 {
@@ -89,6 +92,7 @@ public static class AccrualOverviewCalculator
         }
 
         var latestEmployees = context.LatestMonth.Employees;
+        var fiscalYearMonths = GetFiscalYearMonths(context.OrderedMonths, context.LatestMonth.AsOfDate);
         var departmentEmployees = latestEmployees
             .Where(employee => string.Equals(
                 employee.DepartmentCode,
@@ -105,6 +109,7 @@ public static class AccrualOverviewCalculator
         }
 
         var lostCostMonth = DecimalRound(departmentEmployees.Sum(employee => employee.LostCostMonth));
+        var lostCostYtd = DecimalRound(SumDepartmentLostCost(fiscalYearMonths, departmentCode));
 
         return new AccrualDepartmentDetailResponse
         {
@@ -120,7 +125,7 @@ public static class AccrualOverviewCalculator
             Employees = BuildDepartmentEmployeeRows(departmentEmployees),
             Headcount = departmentEmployees.Count,
             LostCostMonth = lostCostMonth,
-            LostCostYtd = DecimalRound(lostCostMonth * context.YtdMonthCount),
+            LostCostYtd = lostCostYtd,
             YtdMonthCount = context.YtdMonthCount,
         };
     }
@@ -299,7 +304,7 @@ public static class AccrualOverviewCalculator
 
     private static IReadOnlyList<AccrualDepartmentBreakdownRow> BuildDepartmentBreakdown(
         IReadOnlyList<EmployeeSnapshot> latestEmployees,
-        int ytdMonthCount)
+        IReadOnlyList<MonthlySnapshot> fiscalYearMonths)
     {
         return latestEmployees
             .GroupBy(employee => employee.DepartmentCode, StringComparer.OrdinalIgnoreCase)
@@ -319,7 +324,7 @@ public static class AccrualOverviewCalculator
                     DepartmentCode = group.Key,
                     Headcount = employees.Count,
                     LostCostMonth = lostCostMonth,
-                    LostCostYtd = DecimalRound(lostCostMonth * ytdMonthCount),
+                    LostCostYtd = DecimalRound(SumDepartmentLostCost(fiscalYearMonths, group.Key)),
                 };
             })
             .OrderByDescending(row => row.LostCostMonth)
@@ -368,6 +373,16 @@ public static class AccrualOverviewCalculator
         return Math.Round(value, decimals, MidpointRounding.AwayFromZero);
     }
 
+    private static IReadOnlyList<MonthlySnapshot> GetFiscalYearMonths(
+        IReadOnlyList<MonthlySnapshot> orderedMonths,
+        DateTime latestAsOfDate)
+    {
+        var fiscalYear = GetFiscalYear(latestAsOfDate);
+        return orderedMonths
+            .Where(month => GetFiscalYear(month.AsOfDate) == fiscalYear)
+            .ToList();
+    }
+
     private static int GetFiscalYearMonthCount(DateTime asOfDate)
     {
         return asOfDate.Month >= 7
@@ -375,9 +390,26 @@ public static class AccrualOverviewCalculator
             : asOfDate.Month + 6;
     }
 
+    private static int GetFiscalYear(DateTime date)
+    {
+        return date.Month >= 7 ? date.Year + 1 : date.Year;
+    }
+
     private static int GetMonthKey(DateTime date)
     {
         return (date.Year * 100) + date.Month;
+    }
+
+    private static decimal SumDepartmentLostCost(
+        IReadOnlyList<MonthlySnapshot> fiscalYearMonths,
+        string departmentCode)
+    {
+        return fiscalYearMonths.Sum(month => month.Employees
+            .Where(employee => string.Equals(
+                employee.DepartmentCode,
+                departmentCode,
+                StringComparison.OrdinalIgnoreCase))
+            .Sum(employee => employee.LostCostMonth));
     }
 
     private static int? GetMonthsToCap(

@@ -106,7 +106,7 @@ public sealed class AccrualOverviewCalculatorTests
         result.AtCapCount.Should().Be(1);
         result.ApproachingCapCount.Should().Be(1);
         result.LostCostMonth.Should().Be(936m);
-        result.LostCostYtd.Should().Be(8424m);
+        result.LostCostYtd.Should().Be(936m);
         result.YtdMonthCount.Should().Be(9);
         result.WasteRate.Should().Be(74.2m);
 
@@ -125,9 +125,11 @@ public sealed class AccrualOverviewCalculatorTests
         result.DepartmentBreakdown[0].DepartmentCode.Should().Be("030090");
         result.DepartmentBreakdown[0].Headcount.Should().Be(1);
         result.DepartmentBreakdown[0].LostCostMonth.Should().Be(936m);
+        result.DepartmentBreakdown[0].LostCostYtd.Should().Be(936m);
         result.DepartmentBreakdown[0].AtCapCount.Should().Be(1);
         result.DepartmentBreakdown[1].Department.Should().Be("PLANT SCIENCES");
         result.DepartmentBreakdown[1].DepartmentCode.Should().Be("030003");
+        result.DepartmentBreakdown[1].LostCostYtd.Should().Be(0m);
         result.DepartmentBreakdown[1].ApproachingCapCount.Should().Be(1);
     }
 
@@ -207,7 +209,7 @@ public sealed class AccrualOverviewCalculatorTests
         result.AtCapCount.Should().Be(1);
         result.ApproachingCapCount.Should().Be(1);
         result.LostCostMonth.Should().Be(1248m);
-        result.LostCostYtd.Should().Be(9984m);
+        result.LostCostYtd.Should().Be(1248m);
         result.Departments.Select(d => d.Code).Should().ContainInOrder("030090", "030003");
         result.Employees.Should().HaveCount(2);
         result.Employees[0].EmployeeName.Should().Be("Gradziel,Thomas M");
