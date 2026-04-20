@@ -24,7 +24,7 @@ describe('help route', () => {
 
       const headings = screen.getAllByRole('heading', { level: 2 });
       expect(headings.map((heading) => heading.textContent)).toEqual([
-        'Knowledge Base',
+        'Knowledge Base (Coming Soon)',
         'Help',
         'Feedback',
       ]);
@@ -39,19 +39,22 @@ describe('help route', () => {
 
       expect(
         within(knowledgeBaseCard!).getByRole('link', {
-          name: 'Open Knowledge Base',
+          name: 'Open Knowledge Base (Coming Soon)',
         })
-      ).toHaveAttribute('href', 'https://computing.cas.ucdavis.edu');
+      ).toHaveAttribute(
+        'href',
+        'https://computing.caes.ucdavis.edu/documentation/walter'
+      );
       expect(
         within(helpCard!).getByRole('link', {
           name: 'Open Help',
         })
-      ).toHaveAttribute('href', 'https://aeshelp.ucdavis.edu');
+      ).toHaveAttribute('href', 'https://caeshelp.ucdavis.edu/?appname=Walter');
       expect(
         within(feedbackCard!).getByRole('link', {
           name: 'Open Feedback',
         })
-      ).toHaveAttribute('href', 'https://feedback.ucdavis.edu');
+      ).toHaveAttribute('href', 'https://feedback.ucdavis.edu/app/walter');
     } finally {
       cleanup();
     }
