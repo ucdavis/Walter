@@ -161,7 +161,7 @@ public static class AccrualOverviewCalculator
             return null;
         }
 
-        if (orderedMonths.Count > 1)
+        if (orderedMonths.Count > 1 && IsPartialMonthSnapshot(orderedMonths[^1].AsOfDate))
         {
             // Mid-month extracts can omit monthly-paid employees, so carry forward anyone who
             // existed last month but has not received a current-month row yet.
@@ -412,6 +412,12 @@ public static class AccrualOverviewCalculator
         }
 
         return mergedMonth;
+    }
+
+    // Detects whether the snapshot was taken before the month has fully closed.
+    private static bool IsPartialMonthSnapshot(DateTime asOfDate)
+    {
+        return asOfDate.Day < DateTime.DaysInMonth(asOfDate.Year, asOfDate.Month);
     }
 
     // Limits YTD calculations to months in the current fiscal year.

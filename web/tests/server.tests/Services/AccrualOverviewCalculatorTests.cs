@@ -188,6 +188,58 @@ public sealed class AccrualOverviewCalculatorTests
     }
 
     [Fact]
+    public void Build_does_not_carry_forward_previous_month_employees_into_month_end_snapshot()
+    {
+        var records = new List<EmployeeAccrualBalanceRecord>
+        {
+            CreateRecord(
+                employeeId: "E001",
+                employeeName: "Current,Employee",
+                asOfDate: new DateTime(2026, 3, 31),
+                departmentCode: "030003",
+                department: "PLANT SCIENCES",
+                employeeClassDescription: "Staff: Career",
+                calculatedBal: 200m,
+                accrualLimit: 240m,
+                accrualHours: 8m,
+                accrualPercentage: 83.3m),
+            CreateRecord(
+                employeeId: "E001",
+                employeeName: "Current,Employee",
+                asOfDate: new DateTime(2026, 4, 30),
+                departmentCode: "030003",
+                department: "PLANT SCIENCES",
+                employeeClassDescription: "Staff: Career",
+                calculatedBal: 208m,
+                accrualLimit: 240m,
+                accrualHours: 8m,
+                accrualPercentage: 86.7m),
+            CreateRecord(
+                employeeId: "E002",
+                employeeName: "Departed,Employee",
+                asOfDate: new DateTime(2026, 3, 31),
+                departmentCode: "030090",
+                department: "NUTRITION",
+                employeeClassDescription: "Academic: Faculty",
+                calculatedBal: 384m,
+                accrualLimit: 384m,
+                accrualHours: 16m,
+                accrualPercentage: 100m),
+        };
+
+        var result = AccrualOverviewCalculator.Build(records);
+
+        result.AsOfDate.Should().Be(new DateTime(2026, 4, 30));
+        result.TotalEmployees.Should().Be(1);
+        result.AtCapCount.Should().Be(0);
+        result.ApproachingCapCount.Should().Be(1);
+        result.LostCostMonth.Should().Be(0m);
+        result.EmployeeStatusOverTime[^1].AtCap.Should().Be(0);
+        result.DepartmentBreakdown.Should().ContainSingle();
+        result.DepartmentBreakdown[0].DepartmentCode.Should().Be("030003");
+    }
+
+    [Fact]
     public void BuildDepartmentDetail_returns_summary_and_employees_for_department_code()
     {
         var records = new List<EmployeeAccrualBalanceRecord>
