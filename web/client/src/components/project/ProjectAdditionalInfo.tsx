@@ -32,11 +32,6 @@ function buildPrimaryFields(summary: ProjectSummary): Field[] {
         ? `${Number.parseFloat((Number.parseFloat(summary.projectBurdenCostRate) * 100).toFixed(4))}%`
         : '—',
     },
-    {
-      label: 'Contract Administrator',
-      tooltip: tooltipDefinitions.contractAdministrator,
-      value: summary.contractAdministrator ?? '—',
-    },
   ];
 }
 
@@ -58,6 +53,11 @@ function buildSecondaryFields(summary: ProjectSummary): Field[] {
       label: 'Burden Structure',
       tooltip: tooltipDefinitions.burdenStructure,
       value: summary.projectBurdenScheduleBase?.split('-')[0].trim() || '—',
+    },
+    {
+      label: 'Contract Administrator',
+      tooltip: tooltipDefinitions.contractAdministrator,
+      value: summary.contractAdministrator ?? '—',
     },
     {
       label: 'Cost Share Required by Sponsor',

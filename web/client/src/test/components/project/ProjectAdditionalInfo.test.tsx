@@ -65,8 +65,6 @@ describe('ProjectAdditionalInfo', () => {
     expect(screen.getByText('NSF-2024-001')).toBeInTheDocument();
     expect(screen.getByText('Indirect/Burden Rate')).toBeInTheDocument();
     expect(screen.getByText('26.5%')).toBeInTheDocument();
-    expect(screen.getByText('Contract Administrator')).toBeInTheDocument();
-    expect(screen.getByText('Admin, Carol')).toBeInTheDocument();
   });
 
   it('hides secondary fields by default', () => {
@@ -89,6 +87,8 @@ describe('ProjectAdditionalInfo', () => {
     await user.click(screen.getByRole('button', { name: 'Show more' }));
 
     expect(screen.getByText('Award Close Date')).toBeInTheDocument();
+    expect(screen.getByText('Contract Administrator')).toBeInTheDocument();
+    expect(screen.getByText('Admin, Carol')).toBeInTheDocument();
     expect(screen.getByText('Billing Cycle')).toBeInTheDocument();
     expect(screen.getByText('Monthly')).toBeInTheDocument();
     expect(screen.getByText('Burden Structure')).toBeInTheDocument();
@@ -111,7 +111,7 @@ describe('ProjectAdditionalInfo', () => {
       <ProjectAdditionalInfo
         summary={createSummary({
           awardName: null,
-          contractAdministrator: null,
+          awardPi: null,
         })}
       />
     );
