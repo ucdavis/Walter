@@ -14,6 +14,7 @@ function buildPrimaryFields(summary: ProjectSummary): Field[] {
   return [
     { label: 'Award Number', value: summary.awardNumber ?? '—' },
     { label: 'Award Name', value: summary.awardName ?? '—' },
+    { label: 'Award PI', value: summary.awardPi ?? '—' },
     { label: 'Award Start Date', value: formatDate(summary.awardStartDate) },
     { label: 'Award End Date', value: formatDate(summary.awardEndDate) },
     {
@@ -46,7 +47,6 @@ function buildSecondaryFields(summary: ProjectSummary): Field[] {
       tooltip: tooltipDefinitions.awardCloseDate,
       value: formatDate(summary.awardCloseDate),
     },
-    { label: 'Award PI', value: summary.awardPi ?? '—' },
     { label: 'Award Status', value: summary.awardStatus ?? '—' },
     { label: 'Award Type', value: summary.awardType ?? '—' },
     {

@@ -56,6 +56,8 @@ describe('ProjectAdditionalInfo', () => {
     expect(screen.getByText('AWD-100')).toBeInTheDocument();
     expect(screen.getByText('Award Name')).toBeInTheDocument();
     expect(screen.getByText('Test Award')).toBeInTheDocument();
+    expect(screen.getByText('Award PI')).toBeInTheDocument();
+    expect(screen.getByText('Smith, Jane')).toBeInTheDocument();
     expect(screen.getByText('Award End Date')).toBeInTheDocument();
     expect(screen.getByText('Primary Sponsor Name')).toBeInTheDocument();
     expect(screen.getByText('National Science Foundation')).toBeInTheDocument();
@@ -87,8 +89,6 @@ describe('ProjectAdditionalInfo', () => {
     await user.click(screen.getByRole('button', { name: 'Show more' }));
 
     expect(screen.getByText('Award Close Date')).toBeInTheDocument();
-    expect(screen.getByText('Award PI')).toBeInTheDocument();
-    expect(screen.getByText('Smith, Jane')).toBeInTheDocument();
     expect(screen.getByText('Billing Cycle')).toBeInTheDocument();
     expect(screen.getByText('Monthly')).toBeInTheDocument();
     expect(screen.getByText('Burden Structure')).toBeInTheDocument();
