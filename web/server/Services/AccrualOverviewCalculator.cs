@@ -158,6 +158,13 @@ public static class AccrualOverviewCalculator
             return null;
         }
 
+        if (orderedMonths.Count > 1)
+        {
+            orderedMonths[^1] = BuildCarryForwardMonth(
+                currentMonth: orderedMonths[^1],
+                previousMonth: orderedMonths[^2]);
+        }
+
         var latestMonth = orderedMonths[^1];
         return new CalculationContext(
             latestMonth,
@@ -371,6 +378,28 @@ public static class AccrualOverviewCalculator
     private static decimal DecimalRound(decimal value, int decimals = 2)
     {
         return Math.Round(value, decimals, MidpointRounding.AwayFromZero);
+    }
+
+    private static MonthlySnapshot BuildCarryForwardMonth(
+        MonthlySnapshot currentMonth,
+        MonthlySnapshot previousMonth)
+    {
+        var mergedMonth = new MonthlySnapshot(currentMonth.AsOfDate, currentMonth.Label);
+        mergedMonth.Employees.AddRange(currentMonth.Employees);
+
+        var currentEmployeeIds = currentMonth.Employees
+            .Select(employee => employee.EmployeeId)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var employee in previousMonth.Employees)
+        {
+            if (!currentEmployeeIds.Contains(employee.EmployeeId))
+            {
+                mergedMonth.Employees.Add(employee);
+            }
+        }
+
+        return mergedMonth;
     }
 
     private static IReadOnlyList<MonthlySnapshot> GetFiscalYearMonths(

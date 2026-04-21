@@ -134,6 +134,60 @@ public sealed class AccrualOverviewCalculatorTests
     }
 
     [Fact]
+    public void Build_carries_forward_previous_month_employees_missing_from_latest_month()
+    {
+        var records = new List<EmployeeAccrualBalanceRecord>
+        {
+            CreateRecord(
+                employeeId: "E001",
+                employeeName: "Biweekly,Employee",
+                asOfDate: new DateTime(2026, 3, 31),
+                departmentCode: "030003",
+                department: "PLANT SCIENCES",
+                employeeClassDescription: "Staff: Career",
+                calculatedBal: 240m,
+                accrualLimit: 240m,
+                accrualHours: 8m,
+                accrualPercentage: 100m),
+            CreateRecord(
+                employeeId: "E001",
+                employeeName: "Biweekly,Employee",
+                asOfDate: new DateTime(2026, 4, 11),
+                departmentCode: "030003",
+                department: "PLANT SCIENCES",
+                employeeClassDescription: "Staff: Career",
+                calculatedBal: 240m,
+                accrualLimit: 240m,
+                accrualHours: 8m,
+                accrualPercentage: 100m),
+            CreateRecord(
+                employeeId: "E002",
+                employeeName: "Monthly,Employee",
+                asOfDate: new DateTime(2026, 3, 31),
+                departmentCode: "030090",
+                department: "NUTRITION",
+                employeeClassDescription: "Academic: Faculty",
+                calculatedBal: 384m,
+                accrualLimit: 384m,
+                accrualHours: 16m,
+                accrualPercentage: 100m),
+        };
+
+        var result = AccrualOverviewCalculator.Build(records);
+
+        result.AsOfDate.Should().Be(new DateTime(2026, 4, 11));
+        result.TotalEmployees.Should().Be(2);
+        result.AtCapCount.Should().Be(2);
+        result.LostCostMonth.Should().Be(1508m);
+        result.MonthlyLostCost.Should().HaveCount(2);
+        result.MonthlyLostCost[^1].LostCost.Should().Be(1508m);
+        result.EmployeeStatusOverTime[^1].AtCap.Should().Be(2);
+        result.DepartmentBreakdown.Should().HaveCount(2);
+        result.DepartmentBreakdown.Select(row => row.DepartmentCode)
+            .Should().BeEquivalentTo(["030003", "030090"]);
+    }
+
+    [Fact]
     public void BuildDepartmentDetail_returns_summary_and_employees_for_department_code()
     {
         var records = new List<EmployeeAccrualBalanceRecord>
@@ -219,6 +273,58 @@ public sealed class AccrualOverviewCalculatorTests
         result.Employees[1].EmployeeId.Should().Be("E002");
         result.Employees[1].MonthsToCap.Should().Be(8);
         result.Employees[1].PctOfCap.Should().Be(83.9m);
+    }
+
+    [Fact]
+    public void BuildDepartmentDetail_carries_forward_department_employee_missing_from_latest_month()
+    {
+        var records = new List<EmployeeAccrualBalanceRecord>
+        {
+            CreateRecord(
+                employeeId: "E001",
+                employeeName: "Biweekly,Employee",
+                asOfDate: new DateTime(2026, 3, 31),
+                departmentCode: "030003",
+                department: "PLANT SCIENCES",
+                employeeClassDescription: "Staff: Career",
+                calculatedBal: 200m,
+                accrualLimit: 240m,
+                accrualHours: 8m,
+                accrualPercentage: 83.3m),
+            CreateRecord(
+                employeeId: "E001",
+                employeeName: "Biweekly,Employee",
+                asOfDate: new DateTime(2026, 4, 11),
+                departmentCode: "030003",
+                department: "PLANT SCIENCES",
+                employeeClassDescription: "Staff: Career",
+                calculatedBal: 208m,
+                accrualLimit: 240m,
+                accrualHours: 8m,
+                accrualPercentage: 86.7m),
+            CreateRecord(
+                employeeId: "E002",
+                employeeName: "Monthly,Employee",
+                asOfDate: new DateTime(2026, 3, 31),
+                departmentCode: "030003",
+                department: "PLANT SCIENCES",
+                employeeClassDescription: "Academic: Faculty",
+                calculatedBal: 384m,
+                accrualLimit: 384m,
+                accrualHours: 16m,
+                accrualPercentage: 100m),
+        };
+
+        var result = AccrualOverviewCalculator.BuildDepartmentDetail(records, "030003");
+
+        result.Should().NotBeNull();
+        result!.AsOfDate.Should().Be(new DateTime(2026, 4, 11));
+        result.Headcount.Should().Be(2);
+        result.AtCapCount.Should().Be(1);
+        result.ApproachingCapCount.Should().Be(1);
+        result.Employees.Should().HaveCount(2);
+        result.Employees.Select(employee => employee.EmployeeName)
+            .Should().Contain(["Biweekly,Employee", "Monthly,Employee"]);
     }
 
     private static EmployeeAccrualBalanceRecord CreateRecord(
