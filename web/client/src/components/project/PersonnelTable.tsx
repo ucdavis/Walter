@@ -322,17 +322,14 @@ export function PersonnelTable({
         footer: showTotals ? () => 'Totals' : undefined,
         header: 'Position',
         id: 'positionProject',
-        minSize: 300,
-        size: 300,
+        minSize: 400,
+        size: 400,
         sortingFn: (a, b) =>
           safeText(a.original.name).localeCompare(safeText(b.original.name)),
       }),
       columnHelper.accessor('jobCode', {
         cell: (info) => info.getValue(),
         header: 'Job Code',
-        maxSize: 80,
-        minSize: 80,
-        size: 80,
       }),
       columnHelper.accessor('fte', {
         cell: (info) => (
@@ -378,6 +375,8 @@ export function PersonnelTable({
           );
         },
         header: () => <span className="flex justify-end w-full">End Date</span>,
+        minSize: 130,
+        size: 130,
       }),
       columnHelper.accessor('monthlyRate', {
         cell: (info) => (
