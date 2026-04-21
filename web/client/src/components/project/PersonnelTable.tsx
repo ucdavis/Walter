@@ -43,6 +43,7 @@ export interface AggregatedPosition {
   distributions: AggregatedDistribution[];
   employeeId: string;
   fte: number;
+  jobCode: string;
   jobEffectiveDate: string | null;
   jobEndDate: string | null;
   jobEndingSoon: boolean;
@@ -88,6 +89,7 @@ export function aggregateByPosition(
         distributions: [aggregateDistribution(record)],
         employeeId: record.employeeId,
         fte: record.fte,
+        jobCode: safeText(record.jobCode),
         jobEffectiveDate: record.jobEffectiveDate,
         jobEndDate: record.jobEndDate,
         jobEndingSoon: isEndingSoon(record.jobEndDate),
@@ -227,6 +229,7 @@ function getExportData(positions: AggregatedPosition[]) {
       fte: pos.fte,
       fundingEffectiveDate: dist.record.fundingEffectiveDate ?? '',
       fundingEndDate: dist.record.fundingEndDate ?? '',
+      jobCode: pos.jobCode,
       monthlyFringe: dist.monthlyFringe,
       monthlyRate: dist.monthlyRate,
       monthlyTotal: dist.monthlyTotal,
@@ -242,6 +245,7 @@ const personnelCsvColumns = [
   { header: 'Name', key: 'name' as const },
   { header: 'Position Number', key: 'positionNumber' as const },
   { header: 'Position', key: 'positionDescription' as const },
+  { header: 'Job Code', key: 'jobCode' as const },
   { header: 'FTE', key: 'fte' as const },
   { header: 'Project', key: 'projectDescription' as const },
   { header: 'Dist %', key: 'distributionPercent' as const },
@@ -322,6 +326,10 @@ export function PersonnelTable({
         size: 300,
         sortingFn: (a, b) =>
           safeText(a.original.name).localeCompare(safeText(b.original.name)),
+      }),
+      columnHelper.accessor('jobCode', {
+        cell: (info) => info.getValue(),
+        header: 'Job Code',
       }),
       columnHelper.accessor('fte', {
         cell: (info) => (
