@@ -45,8 +45,10 @@ function RouteComponent() {
   const isPrincipalInvestigator =
     !isProjectManager && (userProjectsQuery.data?.length ?? 0) > 0;
 
-  const { alerts: pmAlerts, isLoading: alertsLoading } =
-    usePiProjectAlerts(managedPis);
+  const { alerts: pmAlerts, isLoading: alertsLoading } = usePiProjectAlerts(
+    managedPis,
+    user.employeeId
+  );
 
   const sponsoredProjects = useMemo(
     () =>
@@ -71,13 +73,13 @@ function RouteComponent() {
 
   const discrepancies = useProjectDiscrepancies(internalProjectNumbers);
 
-  const piAlerts = useMemo(
-    () =>
-      isPrincipalInvestigator && userProjectsQuery.data
-        ? getProjectListAlerts(userProjectsQuery.data, user.employeeId)
-        : [],
-    [isPrincipalInvestigator, userProjectsQuery.data, user.employeeId]
-  );
+  const piAlerts = useMemo(() => {
+    if (!isPrincipalInvestigator || !userProjectsQuery.data) return [];
+    const piOnlyProjects = userProjectsQuery.data.filter(
+      (p) => p.pmEmployeeId !== user.employeeId
+    );
+    return getProjectListAlerts(piOnlyProjects, user.employeeId);
+  }, [isPrincipalInvestigator, userProjectsQuery.data, user.employeeId]);
 
   const allAlerts = isProjectManager ? pmAlerts : piAlerts;
 
@@ -224,7 +226,10 @@ function RouteComponent() {
       {selectedTab === 'alerts' && (
         <div aria-labelledby="tab-alerts" id="panel-alerts" role="tabpanel">
           {isProjectManager && (
-            <PiProjectAlerts managedPis={managedPis} />
+            <PiProjectAlerts
+              managedPis={managedPis}
+              pmEmployeeId={user.employeeId}
+            />
           )}
           {isPrincipalInvestigator && piAlerts.length > 0 && (
             <div className="mt-4 flex flex-col gap-4">

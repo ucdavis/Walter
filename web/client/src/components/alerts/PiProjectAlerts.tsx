@@ -19,7 +19,8 @@ export interface PiProjectAlertsState {
 }
 
 export function usePiProjectAlerts(
-  managedPis: ManagedPiRecord[]
+  managedPis: ManagedPiRecord[],
+  pmEmployeeId: string
 ): PiProjectAlertsState {
   const projectsQueries = useQueries({
     queries: managedPis.map((pi) => projectsDetailQueryOptions(pi.employeeId)),
@@ -37,7 +38,9 @@ export function usePiProjectAlerts(
     const pisWithProjects: PiWithProjects[] = managedPis.map((pi, index) => {
       const allProjects = projectsQueries[index]?.data ?? [];
       const projects = allProjects.filter(
-        (p) => !p.awardEndDate || new Date(p.awardEndDate) >= now
+        (p) =>
+          p.pmEmployeeId === pmEmployeeId &&
+          (!p.awardEndDate || new Date(p.awardEndDate) >= now)
       );
       const totalBudget = projects.reduce((sum, p) => sum + p.budget, 0);
       const totalBalance = projects.reduce((sum, p) => sum + p.balance, 0);
@@ -54,7 +57,7 @@ export function usePiProjectAlerts(
 
     return getPiProjectAlerts(pisWithProjects);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allLoaded, managedPis]);
+  }, [allLoaded, managedPis, pmEmployeeId]);
 
   return {
     alerts,
@@ -66,11 +69,17 @@ export function usePiProjectAlerts(
 
 interface PiProjectAlertsProps {
   managedPis: ManagedPiRecord[];
+  pmEmployeeId: string;
 }
 
-export function PiProjectAlerts({ managedPis }: PiProjectAlertsProps) {
-  const { alerts, isLoading, isError, error } =
-    usePiProjectAlerts(managedPis);
+export function PiProjectAlerts({
+  managedPis,
+  pmEmployeeId,
+}: PiProjectAlertsProps) {
+  const { alerts, isLoading, isError, error } = usePiProjectAlerts(
+    managedPis,
+    pmEmployeeId
+  );
 
   if (managedPis.length === 0) {
     return null;

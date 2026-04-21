@@ -136,7 +136,7 @@ function RouteComponent() {
           return (
             <span
               className={`flex font-proxima-bold justify-end ${
-                isDisc ? (diff < 0 ? 'text-error' : 'text-warning') : ''
+                isDisc ? 'text-info' : ''
               }`}
             >
               {formatCurrency(diff)}
@@ -211,17 +211,10 @@ function RouteComponent() {
               />
             }
             getRowProps={(row) => {
-              const r = row.original;
-              const diff = r.glActualAmount + r.ppmBudBal;
-              const isDisc = hasDiscrepancy(r);
-
-              if (!isDisc) {
+              if (!hasDiscrepancy(row.original)) {
                 return {};
               }
-
-              return {
-                className: diff < 0 ? 'bg-error/10' : 'bg-warning/10',
-              };
+              return { className: 'bg-info/10' };
             }}
             globalFilter="none"
             pagination="off"

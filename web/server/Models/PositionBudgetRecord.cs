@@ -25,6 +25,9 @@ public sealed class PositionBudgetRecord
     [JsonPropertyName("positionDescription")]
     public string? PositionDescription { get; set; }
 
+    [JsonPropertyName("jobCode")]
+    public string? JobCode { get; set; }
+
     [JsonPropertyName("monthlyRate")]
     public decimal? MonthlyRate { get; set; }
 

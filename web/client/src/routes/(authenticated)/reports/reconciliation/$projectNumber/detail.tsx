@@ -383,6 +383,14 @@ function RouteComponent() {
             {ppmRecord ? (
               <div className="stats shadow stats-vertical bg-base-200 lg:stats-horizontal w-full">
                 <div className="stat">
+                  <div className="uppercase font-proxima-bold text-accent">
+                    GL
+                  </div>
+                  <div className="text-2xl">
+                    {formatCurrency(ppmRecord.glActualAmount)}
+                  </div>
+                </div>
+                <div className="stat">
                   <div className="uppercase font-proxima-bold text-primary">
                     PPM
                   </div>
@@ -391,16 +399,6 @@ function RouteComponent() {
                   </div>
                 </div>
                 <div className="stat">
-                  <div className="uppercase font-proxima-bold text-accent">
-                    GL
-                  </div>
-                  <div className="text-2xl">
-                    {formatCurrency(ppmRecord.glActualAmount)}
-                  </div>
-                </div>
-                <div
-                  className={`stat${Math.abs(ppmRecord.glActualAmount + ppmRecord.ppmBudBal) > 0.005 ? ' bg-error/10' : ''}`}
-                >
                   <div className="uppercase font-proxima-bold text-dark-font/70">
                     Difference
                   </div>

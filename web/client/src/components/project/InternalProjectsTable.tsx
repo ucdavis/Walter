@@ -254,7 +254,7 @@ export function InternalProjectsTable({
                 onClick={() => setShowInactive(!showInactive)}
                 type="button"
               >
-                {showInactive ? 'Hide' : 'Show'} inactive ({inactiveCount})
+                {showInactive ? 'Hide' : 'Show'} inactive tasks ({inactiveCount})
               </button>
             )}
             <ExportDataButton columns={csvColumns} data={projects} filename="internal-projects.csv" />
