@@ -1,32 +1,101 @@
 import { useQuery } from '@tanstack/react-query';
 import { fetchJson } from '../lib/api.ts';
 
-export interface AccrualRecord {
-  ACCR_LIMIT: number;
-  ACCRUAL: number;
-  ADJUSTED: number;
-  APR_MAX_IND: string;
-  BUSINESS_EMAIL: string;
-  CURR_BAL: number;
-  DEPTID: string;
-  EMPL_CLASS: string;
-  EMPL_CLASS_DESCR: string;
-  EMPLID: string;
-  JOB_TITLE: string;
-  JOBCODE: string;
-  PREFERRED_NAME: string;
-  PREV_BAL: number;
-  TAKEN: number;
+export interface AccrualLostCostTrendPoint {
+  asOfDate: string;
+  label: string;
+  lostCost: number;
 }
 
-export const accrualsQueryOptions = () => ({
-  queryFn: async (): Promise<AccrualRecord[]> => {
-    return await fetchJson<AccrualRecord[]>('/api/accrual');
+export interface AccrualStatusTrendPoint {
+  active: number;
+  approaching: number;
+  asOfDate: string;
+  atCap: number;
+  label: string;
+}
+
+export interface AccrualDepartmentBreakdownRow {
+  avgBalanceHours: number;
+  approachingCapCount: number;
+  atCapCount: number;
+  department: string;
+  departmentCode: string;
+  headcount: number;
+  lostCostMonth: number;
+  lostCostYtd: number;
+}
+
+export interface AccrualDepartmentOption {
+  code: string;
+  name: string;
+}
+
+export interface AccrualDepartmentEmployeeRow {
+  accrualHoursPerMonth: number;
+  balanceHours: number;
+  capHours: number;
+  classification: string;
+  employeeId: string;
+  employeeName: string;
+  lastVacationDate: string | null;
+  lostCostMonth: number;
+  monthsToCap: number | null;
+  pctOfCap: number;
+}
+
+export interface AccrualDepartmentDetailResponse {
+  asOfDate: string;
+  avgBalanceHours: number;
+  approachingCapCount: number;
+  atCapCount: number;
+  departmentCode: string;
+  departmentName: string;
+  departments: AccrualDepartmentOption[];
+  employees: AccrualDepartmentEmployeeRow[];
+  headcount: number;
+  lostCostMonth: number;
+  lostCostYtd: number;
+  ytdMonthCount: number;
+}
+
+export interface AccrualOverviewResponse {
+  approachingCapCount: number;
+  asOfDate: string;
+  atCapCount: number;
+  departmentBreakdown: AccrualDepartmentBreakdownRow[];
+  employeeStatusOverTime: AccrualStatusTrendPoint[];
+  lostCostMonth: number;
+  lostCostYtd: number;
+  monthlyLostCost: AccrualLostCostTrendPoint[];
+  totalDepartments: number;
+  totalEmployees: number;
+  wasteRate: number;
+  ytdMonthCount: number;
+}
+
+export const accrualOverviewQueryOptions = () => ({
+  queryFn: async (): Promise<AccrualOverviewResponse> => {
+    return await fetchJson<AccrualOverviewResponse>('/api/accrual/overview');
   },
-  queryKey: ['accruals', 'all'] as const,
+  queryKey: ['accruals', 'overview'] as const,
   staleTime: 60 * 60 * 1000, // 1 hour
 });
 
-export const useAccrualsQuery = () => {
-  return useQuery(accrualsQueryOptions());
+export const useAccrualOverviewQuery = () => {
+  return useQuery(accrualOverviewQueryOptions());
+};
+
+export const accrualDepartmentDetailQueryOptions = (departmentCode: string) => ({
+  queryFn: async (): Promise<AccrualDepartmentDetailResponse> => {
+    return await fetchJson<AccrualDepartmentDetailResponse>(
+      `/api/accrual/department/${encodeURIComponent(departmentCode)}`
+    );
+  },
+  queryKey: ['accruals', 'department', departmentCode] as const,
+  staleTime: 60 * 60 * 1000, // 1 hour
+});
+
+export const useAccrualDepartmentDetailQuery = (departmentCode: string) => {
+  return useQuery(accrualDepartmentDetailQueryOptions(departmentCode));
 };

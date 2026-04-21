@@ -9,6 +9,9 @@ namespace server.Services;
 
 public interface IDatamartService
 {
+    Task<IReadOnlyList<EmployeeAccrualBalanceRecord>> GetEmployeeAccrualBalancesAsync(
+        DateTime startDate, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default);
+
     Task<IReadOnlyList<FacultyPortfolioRecord>> GetFacultyPortfolioAsync(
         IEnumerable<string> projectNumbers, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default);
 
@@ -52,6 +55,42 @@ public sealed class DatamartService : IDatamartService
         return await ExecuteSprocAsync<FacultyPortfolioRecord>(
             "dbo.usp_GetProjectSummary",
             new { ProjectIds = projectNumbersParam, ApplicationName = _appName, ApplicationUser = applicationUser, EmulatingUser = emulatingUser },
+            ct: ct);
+    }
+
+    public async Task<IReadOnlyList<EmployeeAccrualBalanceRecord>> GetEmployeeAccrualBalancesAsync(
+        DateTime startDate, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default)
+    {
+        const string sql = """
+            SELECT
+                EmployeeId,
+                AsOfDate,
+                EmployeeName,
+                EmployeeClassDescription,
+                PositionNumber,
+                Level5Dept,
+                Level5DeptDesc,
+                HoursTaken,
+                CalculatedBal,
+                AccrualLimit,
+                AccrualHours,
+                AccrualPercentage,
+                TypeLabel
+            FROM dbo.EmployeeAccrualBalances
+            WHERE TypeLabel = 'Vacation'
+              AND AsOfDate >= @StartDate
+            ORDER BY EmployeeId, AsOfDate, PositionNumber
+            """;
+
+        return await ExecuteQueryAsync<EmployeeAccrualBalanceRecord>(
+            sql,
+            new
+            {
+                StartDate = startDate,
+                ApplicationName = _appName,
+                ApplicationUser = applicationUser,
+                EmulatingUser = emulatingUser,
+            },
             ct: ct);
     }
 
@@ -100,6 +139,29 @@ public sealed class DatamartService : IDatamartService
                 commandText: sprocName,
                 parameters: parameters,
                 commandType: CommandType.StoredProcedure,
+                commandTimeout: commandTimeoutSeconds,
+                cancellationToken: ct2);
+
+            var rows = await conn.QueryAsync<T>(cmd);
+            return rows.AsList();
+        }, ct);
+    }
+
+    private async Task<IReadOnlyList<T>> ExecuteQueryAsync<T>(
+        string sql,
+        object? parameters = null,
+        int commandTimeoutSeconds = 60,
+        CancellationToken ct = default)
+    {
+        return await _retry.ExecuteAsync(async ct2 =>
+        {
+            await using var conn = new SqlConnection(_connectionString);
+            await conn.OpenAsync(ct2);
+
+            var cmd = new CommandDefinition(
+                commandText: sql,
+                parameters: parameters,
+                commandType: CommandType.Text,
                 commandTimeout: commandTimeoutSeconds,
                 cancellationToken: ct2);
 
