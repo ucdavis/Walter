@@ -398,9 +398,7 @@ function RouteComponent() {
                     {formatCurrency(ppmRecord.ppmBudBal)}
                   </div>
                 </div>
-                <div
-                  className={`stat${Math.abs(ppmRecord.glActualAmount + ppmRecord.ppmBudBal) > 0.005 ? ' bg-error/10' : ''}`}
-                >
+                <div className="stat">
                   <div className="uppercase font-proxima-bold text-dark-font/70">
                     Difference
                   </div>
