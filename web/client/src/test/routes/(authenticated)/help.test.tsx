@@ -24,7 +24,7 @@ describe('help route', () => {
 
       const headings = screen.getAllByRole('heading', { level: 2 });
       expect(headings.map((heading) => heading.textContent)).toEqual([
-        'Knowledge Base (Coming Soon)',
+        'Knowledge Base',
         'Help',
         'Feedback',
       ]);
@@ -39,7 +39,7 @@ describe('help route', () => {
 
       expect(
         within(knowledgeBaseCard!).getByRole('link', {
-          name: 'Open Knowledge Base (Coming Soon)',
+          name: 'Open Knowledge Base',
         })
       ).toHaveAttribute(
         'href',
