@@ -89,8 +89,8 @@ function ProjectContent({
       </section>
 
       <ProjectDetails summary={summary} />
-      <ProjectAdditionalInfo isProjectManager={isProjectManager} summary={summary} />
       <FinancialDetails summary={summary} />
+      <ProjectAdditionalInfo isProjectManager={isProjectManager} summary={summary} />
 
       <section className="section-margin">
         <h2 className="h2">
