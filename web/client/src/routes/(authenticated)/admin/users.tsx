@@ -61,6 +61,11 @@ function RouteComponent() {
           ['admin', 'users', selectedUserId, 'roles'],
           (old: UserRolesResponse | undefined) => ({
             ...old,
+            name: data.user.name,
+            email: data.user.email,
+            employeeId: data.user.employeeId,
+            kerberos: data.user.kerberos,
+            iamId: data.user.iamId,
             roles: data.user.roles,
           })
         );
