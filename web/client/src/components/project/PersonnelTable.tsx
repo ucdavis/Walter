@@ -330,6 +330,9 @@ export function PersonnelTable({
       columnHelper.accessor('jobCode', {
         cell: (info) => info.getValue(),
         header: 'Job Code',
+        maxSize: 80,
+        minSize: 80,
+        size: 80,
       }),
       columnHelper.accessor('fte', {
         cell: (info) => (
