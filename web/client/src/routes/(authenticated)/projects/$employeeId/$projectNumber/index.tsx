@@ -14,7 +14,6 @@ import {
   useProjectDiscrepancies,
 } from '@/queries/project.ts';
 
-import { useUser } from '@/shared/auth/UserContext.tsx';
 import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
 import { tooltipDefinitions } from '@/shared/tooltips.ts';
 import { useSuspenseQuery } from '@tanstack/react-query';
@@ -49,8 +48,6 @@ function ProjectContent({
   projectRecords: ProjectRecord[];
   summary: ProjectSummary;
 }) {
-  const user = useUser();
-  const isProjectManager = user.employeeId === summary.pmEmployeeId;
   const personnelQuery = usePersonnelQuery(employeeId, [summary.projectNumber]);
   const discrepancies = useProjectDiscrepancies(
     summary.isInternal ? [summary.projectNumber] : []
@@ -90,7 +87,7 @@ function ProjectContent({
 
       <ProjectDetails summary={summary} />
       <FinancialDetails summary={summary} />
-      <ProjectAdditionalInfo isProjectManager={isProjectManager} summary={summary} />
+      <ProjectAdditionalInfo summary={summary} />
 
       <section className="section-margin">
         <h2 className="h2">

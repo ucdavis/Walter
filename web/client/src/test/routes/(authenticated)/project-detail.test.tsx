@@ -102,42 +102,6 @@ describe('project detail page', () => {
     }
   });
 
-  it('shows Show more button only for project managers', async () => {
-    const projects = [createProject({ pmEmployeeId: '1000' })];
-    setupHandlers({ employeeId: '1000', name: 'PM User' }, projects);
-
-    const { cleanup } = renderRoute({
-      initialPath: '/projects/1000/P1',
-    });
-
-    try {
-      await screen.findByText('Award Information');
-      expect(
-        screen.getByRole('button', { name: 'Show more' })
-      ).toBeInTheDocument();
-    } finally {
-      cleanup();
-    }
-  });
-
-  it('hides Show more button for non-project managers', async () => {
-    const projects = [createProject({ pmEmployeeId: '2000' })];
-    setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);
-
-    const { cleanup } = renderRoute({
-      initialPath: '/projects/1000/P1',
-    });
-
-    try {
-      await screen.findByText('Award Information');
-      expect(
-        screen.queryByRole('button', { name: 'Show more' })
-      ).not.toBeInTheDocument();
-    } finally {
-      cleanup();
-    }
-  });
-
   it('hides Award Information and date fields for internal projects', async () => {
     const projects = [
       createProject({

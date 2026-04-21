@@ -82,12 +82,10 @@ function buildSecondaryFields(summary: ProjectSummary): Field[] {
 }
 
 interface ProjectAdditionalInfoProps {
-  isProjectManager: boolean;
   summary: ProjectSummary;
 }
 
 export function ProjectAdditionalInfo({
-  isProjectManager,
   summary,
 }: ProjectAdditionalInfoProps) {
   const [expanded, setExpanded] = React.useState(false);
@@ -131,7 +129,7 @@ export function ProjectAdditionalInfo({
             </div>
           ))}
 
-        {isProjectManager && secondaryFields.length > 0 && (
+        {secondaryFields.length > 0 && (
           <div className="md:col-span-2 mt-2">
             <button
               className="btn"
