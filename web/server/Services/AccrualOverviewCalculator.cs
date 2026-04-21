@@ -8,7 +8,6 @@ public static class AccrualOverviewCalculator
     // These rates are used to estimate the cost of lost vacation accrual for employees who are at or approaching their accrual cap.
     // Using data from Nephi 2026 -- should be replaced with actual data from the system when available.
     private const decimal DefaultAcademicRate = 70m;
-    private const decimal DefaultMonthlyAccrual = 16m;
     private const decimal DefaultStaffRate = 45m;
     private static readonly Dictionary<string, decimal> HourlyRates = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -280,9 +279,7 @@ public static class AccrualOverviewCalculator
 
         if (normalMonthlyAccrual <= 0m)
         {
-            normalMonthlyAccrual = accrualLimit > 0m
-                ? accrualLimit / 24m
-                : DefaultMonthlyAccrual;
+            normalMonthlyAccrual = GetNormalMonthlyAccrual(accrualLimit);
         }
 
         var recentHistory = monthlyHistory.TakeLast(6).ToList();
@@ -492,6 +489,20 @@ public static class AccrualOverviewCalculator
             (int)Math.Round(
                 (accrualLimit - balance) / netMonthlyAccrual,
                 MidpointRounding.AwayFromZero));
+    }
+
+    // Derives the standard monthly accrual from the employee's accrual cap tiers.
+    private static decimal GetNormalMonthlyAccrual(decimal accrualLimit)
+    {
+        return accrualLimit switch
+        {
+            >= 384m => 16m,
+            >= 368m => 15.33m,
+            >= 320m => 13.33m,
+            >= 288m => 12m,
+            >= 240m => 10m,
+            _ => 10m,
+        };
     }
 
     // Chooses an hourly rate bucket for lost-cost estimation.
