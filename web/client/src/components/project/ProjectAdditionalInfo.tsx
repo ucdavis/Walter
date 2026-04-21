@@ -78,7 +78,6 @@ function buildSecondaryFields(summary: ProjectSummary): Field[] {
       tooltip: tooltipDefinitions.postReportingPeriod,
       value: summary.postReportingPeriod ?? '—',
     },
-    { label: 'Project Fund', value: summary.projectFund ?? '—' },
   ];
 }
 
