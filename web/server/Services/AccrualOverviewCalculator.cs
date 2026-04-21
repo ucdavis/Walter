@@ -21,6 +21,7 @@ public static class AccrualOverviewCalculator
         ["SMG"] = 72m,
     };
 
+    // Builds the top-level overview response from the available accrual history.
     public static AccrualOverviewResponse Build(IReadOnlyList<EmployeeAccrualBalanceRecord> records)
     {
         var context = PrepareContext(records);
@@ -76,6 +77,7 @@ public static class AccrualOverviewCalculator
         };
     }
 
+    // Builds the department drilldown using the same merged latest snapshot as the overview.
     public static AccrualDepartmentDetailResponse? BuildDepartmentDetail(
         IReadOnlyList<EmployeeAccrualBalanceRecord> records,
         string departmentCode)
@@ -130,6 +132,7 @@ public static class AccrualOverviewCalculator
         };
     }
 
+    // Normalizes raw records into monthly snapshots and selects the latest view we should display.
     private static CalculationContext? PrepareContext(IReadOnlyList<EmployeeAccrualBalanceRecord> records)
     {
         var usableRecords = records
@@ -160,6 +163,8 @@ public static class AccrualOverviewCalculator
 
         if (orderedMonths.Count > 1)
         {
+            // Mid-month extracts can omit monthly-paid employees, so carry forward anyone who
+            // existed last month but has not received a current-month row yet.
             orderedMonths[^1] = BuildCarryForwardMonth(
                 currentMonth: orderedMonths[^1],
                 previousMonth: orderedMonths[^2]);
@@ -172,6 +177,7 @@ public static class AccrualOverviewCalculator
             GetFiscalYearMonthCount(latestMonth.AsOfDate));
     }
 
+    // Creates one employee snapshot per month using that employee's latest row within the month.
     private static Dictionary<int, MonthlySnapshot> BuildMonthlySnapshots(
         IReadOnlyList<EmployeeAccrualBalanceRecord> records)
     {
@@ -223,6 +229,7 @@ public static class AccrualOverviewCalculator
         return monthlySnapshots;
     }
 
+    // Collapses one employee's current-month rows plus prior history into the values shown in the UI.
     private static EmployeeSnapshot BuildEmployeeSnapshot(
         IReadOnlyList<EmployeeAccrualBalanceRecord> currentRows,
         IReadOnlyList<EmployeeAccrualBalanceRecord> historyRows,
@@ -309,6 +316,7 @@ public static class AccrualOverviewCalculator
             status);
     }
 
+    // Aggregates the latest snapshot into per-department summary rows.
     private static IReadOnlyList<AccrualDepartmentBreakdownRow> BuildDepartmentBreakdown(
         IReadOnlyList<EmployeeSnapshot> latestEmployees,
         IReadOnlyList<MonthlySnapshot> fiscalYearMonths)
@@ -339,6 +347,7 @@ public static class AccrualOverviewCalculator
             .ToList();
     }
 
+    // Produces the department selector options from the latest snapshot.
     private static IReadOnlyList<AccrualDepartmentOption> BuildDepartmentOptions(
         IReadOnlyList<EmployeeSnapshot> latestEmployees)
     {
@@ -355,6 +364,7 @@ public static class AccrualOverviewCalculator
             .ToList();
     }
 
+    // Maps internal employee snapshots to the department detail table rows.
     private static IReadOnlyList<AccrualDepartmentEmployeeRow> BuildDepartmentEmployeeRows(
         IReadOnlyList<EmployeeSnapshot> employees)
     {
@@ -375,11 +385,13 @@ public static class AccrualOverviewCalculator
             .ToList();
     }
 
+    // Applies the rounding convention used throughout the accrual UI.
     private static decimal DecimalRound(decimal value, int decimals = 2)
     {
         return Math.Round(value, decimals, MidpointRounding.AwayFromZero);
     }
 
+    // Merges the newest month with the immediately prior month to fill gaps in partial extracts.
     private static MonthlySnapshot BuildCarryForwardMonth(
         MonthlySnapshot currentMonth,
         MonthlySnapshot previousMonth)
@@ -402,6 +414,7 @@ public static class AccrualOverviewCalculator
         return mergedMonth;
     }
 
+    // Limits YTD calculations to months in the current fiscal year.
     private static IReadOnlyList<MonthlySnapshot> GetFiscalYearMonths(
         IReadOnlyList<MonthlySnapshot> orderedMonths,
         DateTime latestAsOfDate)
@@ -412,6 +425,7 @@ public static class AccrualOverviewCalculator
             .ToList();
     }
 
+    // Converts a date into the 1-12 fiscal month count used by the UI summary cards.
     private static int GetFiscalYearMonthCount(DateTime asOfDate)
     {
         return asOfDate.Month >= 7
@@ -419,16 +433,19 @@ public static class AccrualOverviewCalculator
             : asOfDate.Month + 6;
     }
 
+    // Maps a calendar date to its UC fiscal year.
     private static int GetFiscalYear(DateTime date)
     {
         return date.Month >= 7 ? date.Year + 1 : date.Year;
     }
 
+    // Buckets dates by calendar month for snapshot grouping.
     private static int GetMonthKey(DateTime date)
     {
         return (date.Year * 100) + date.Month;
     }
 
+    // Sums fiscal-year lost cost for a single department across the monthly snapshots.
     private static decimal SumDepartmentLostCost(
         IReadOnlyList<MonthlySnapshot> fiscalYearMonths,
         string departmentCode)
@@ -441,6 +458,7 @@ public static class AccrualOverviewCalculator
             .Sum(employee => employee.LostCostMonth));
     }
 
+    // Estimates how many months remain before the employee reaches their cap.
     private static int? GetMonthsToCap(
         decimal balance,
         decimal accrualLimit,
@@ -470,6 +488,7 @@ public static class AccrualOverviewCalculator
                 MidpointRounding.AwayFromZero));
     }
 
+    // Chooses an hourly rate bucket for lost-cost estimation.
     private static decimal GetHourlyRate(string employeeClassDescription)
     {
         if (HourlyRates.TryGetValue(employeeClassDescription, out var rate))
@@ -482,6 +501,7 @@ public static class AccrualOverviewCalculator
             : DefaultStaffRate;
     }
 
+    // Classifies employees into the status groupings shown in the overview and detail screens.
     private static AccrualStatus GetStatus(decimal percentage)
     {
         return percentage switch
@@ -492,6 +512,7 @@ public static class AccrualOverviewCalculator
         };
     }
 
+    // Picks the most common non-empty string from duplicated source rows.
     private static string MostCommonValue(IEnumerable<string?> values, string fallback)
     {
         return values
@@ -503,6 +524,7 @@ public static class AccrualOverviewCalculator
             .FirstOrDefault() ?? fallback;
     }
 
+    // Normalizes source job-class descriptions into the smaller set of UI/reporting buckets.
     private static string NormalizeClassification(string employeeClassDescription)
     {
         var lower = employeeClassDescription.ToLowerInvariant();
