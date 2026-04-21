@@ -4,14 +4,21 @@ import { canAccessAdminUsers } from '@/shared/auth/roleAccess.ts';
 import {
   assignRole,
   AssignableRole,
+  removeRole,
   useAdminUserSearchQuery,
+  useUserRolesQuery,
+  UserRolesResponse,
 } from '@/queries/adminUsers.ts';
 import { useDebouncedValue } from '@/lib/useDebouncedValue.ts';
 import { createFileRoute, Link, redirect } from '@tanstack/react-router';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { HttpError } from '@/lib/api.ts';
-import { ArrowLeftIcon, UsersIcon } from '@heroicons/react/24/outline';
+import {
+  ArrowLeftIcon,
+  UsersIcon,
+  XMarkIcon,
+} from '@heroicons/react/24/outline';
 
 export const Route = createFileRoute('/(authenticated)/admin/users')({
   beforeLoad: async ({ context }: { context: RouterContext }) => {
@@ -42,12 +49,49 @@ function RouteComponent() {
     [searchResults, selectedUserId]
   );
 
+  const queryClient = useQueryClient();
+
+  const userRolesQuery = useUserRolesQuery(selectedUserId);
+
   const assignRoleMutation = useMutation({
     mutationFn: assignRole,
+    onSuccess: (data) => {
+      if (selectedUserId) {
+        queryClient.setQueryData(
+          ['admin', 'users', selectedUserId, 'roles'],
+          (old: UserRolesResponse | undefined) => ({
+            ...old,
+            name: data.user.name,
+            email: data.user.email,
+            employeeId: data.user.employeeId,
+            kerberos: data.user.kerberos,
+            iamId: data.user.iamId,
+            roles: data.user.roles,
+          })
+        );
+      }
+    },
+  });
+
+  const removeRoleMutation = useMutation({
+    mutationFn: removeRole,
+    onSuccess: (data) => {
+      if (selectedUserId) {
+        queryClient.setQueryData(
+          ['admin', 'users', selectedUserId, 'roles'],
+          (old: UserRolesResponse | undefined) => ({
+            ...old,
+            roles: data.roles,
+          })
+        );
+      }
+    },
   });
 
   const assignError = assignRoleMutation.error;
   const assignSuccess = assignRoleMutation.data;
+  const removeError = removeRoleMutation.error;
+  const currentRoles = userRolesQuery.data?.roles ?? [];
 
   const searchError = searchQuery.error;
   const showQueryHint = query.trim().length > 0 && query.trim().length < 3;
@@ -87,6 +131,7 @@ function RouteComponent() {
                   setQuery(e.target.value);
                   setSelectedUserId(null);
                   assignRoleMutation.reset();
+                  removeRoleMutation.reset();
                 }}
                 placeholder="Type at least 3 characters…"
                 type="text"
@@ -142,6 +187,7 @@ function RouteComponent() {
                           onClick={() => {
                             setSelectedUserId(u.id);
                             assignRoleMutation.reset();
+                            removeRoleMutation.reset();
                           }}
                           type="button"
                         >
@@ -169,13 +215,110 @@ function RouteComponent() {
               <div className="rounded-box bg-primary/10 p-4">
                 <div className="text-sm font-semibold">Selected user</div>
                 <div className="mt-1 truncate">
-                  {selectedUser.displayName ||
+                  {userRolesQuery.data?.name ||
+                    selectedUser.displayName ||
                     selectedUser.email ||
                     selectedUser.id}
                 </div>
-                {selectedUser.email ? (
+                {(userRolesQuery.data?.email ?? selectedUser.email) ? (
                   <div className="truncate text-sm text-base-content/80">
-                    {selectedUser.email}
+                    {userRolesQuery.data?.email ?? selectedUser.email}
+                  </div>
+                ) : null}
+
+                {userRolesQuery.data?.employeeId ? (
+                  <div className="mt-3 grid gap-2 text-sm md:grid-cols-3">
+                    <div>
+                      <div className="font-semibold">Employee ID</div>
+                      <div className="truncate">
+                        {userRolesQuery.data.employeeId}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="font-semibold">Kerberos</div>
+                      <div className="truncate">
+                        {userRolesQuery.data.kerberos}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="font-semibold">IAMID</div>
+                      <div className="truncate">
+                        {userRolesQuery.data.iamId}
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+
+              <div>
+                <div className="label">
+                  <span className="label-text">Current roles</span>
+                </div>
+                {userRolesQuery.isLoading ? (
+                  <div className="flex items-center gap-3 text-sm text-base-content/70">
+                    <div className="loading loading-spinner loading-sm" />
+                    <span>Loading roles…</span>
+                  </div>
+                ) : userRolesQuery.error ? (
+                  <div className="alert alert-error">
+                    <span>
+                      Failed to load roles{' '}
+                      {userRolesQuery.error instanceof HttpError
+                        ? `(HTTP ${userRolesQuery.error.status})`
+                        : ''}
+                      .
+                    </span>
+                  </div>
+                ) : currentRoles.length === 0 ? (
+                  <div className="text-sm text-base-content/60">
+                    No roles assigned.
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {currentRoles.map((r) => {
+                      const isRemoving =
+                        removeRoleMutation.isPending &&
+                        removeRoleMutation.variables?.roleName === r;
+                      return (
+                        <span
+                          className="badge badge-neutral gap-1 pr-1"
+                          key={r}
+                        >
+                          {r}
+                          <button
+                            aria-label={`Remove role ${r}`}
+                            className="btn btn-circle btn-ghost btn-xs"
+                            disabled={removeRoleMutation.isPending}
+                            onClick={() => {
+                              removeRoleMutation.reset();
+                              removeRoleMutation.mutate({
+                                entraUserId: selectedUser.id,
+                                roleName: r,
+                              });
+                            }}
+                            type="button"
+                          >
+                            {isRemoving ? (
+                              <span className="loading loading-spinner loading-xs" />
+                            ) : (
+                              <XMarkIcon className="w-3 h-3" />
+                            )}
+                          </button>
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {removeError ? (
+                  <div className="alert alert-error mt-2">
+                    <span>
+                      Failed to remove role{' '}
+                      {removeError instanceof HttpError
+                        ? `(HTTP ${removeError.status})`
+                        : ''}
+                      .
+                    </span>
                   </div>
                 ) : null}
               </div>
@@ -233,62 +376,17 @@ function RouteComponent() {
               ) : null}
 
               {assignSuccess ? (
-                <>
-                  <div
-                    className={`alert ${
-                      assignSuccess.added ? 'alert-success' : 'alert-info'
-                    }`}
-                  >
-                    <span>
-                      {assignSuccess.added
-                        ? 'Role added.'
-                        : 'User already has that role.'}
-                    </span>
-                  </div>
-
-                  <div className="rounded-box bg-base-200 p-4">
-                    <div className="text-sm font-semibold">User</div>
-                    <div className="mt-1">{assignSuccess.user.name}</div>
-                    <div className="text-sm text-base-content/70">
-                      {assignSuccess.user.email}
-                    </div>
-
-                    <div className="mt-4 grid gap-2 text-sm md:grid-cols-2">
-                      <div>
-                        <div className="font-semibold">Employee ID</div>
-                        <div className="truncate">
-                          {assignSuccess.user.employeeId}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="font-semibold">Kerberos</div>
-                        <div className="truncate">
-                          {assignSuccess.user.kerberos}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="font-semibold">IAMID</div>
-                        <div className="truncate">
-                          {assignSuccess.user.iamId}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="font-semibold">Roles</div>
-                        <div className="mt-1 flex flex-wrap gap-2">
-                          {assignSuccess.user.roles.length ? (
-                            assignSuccess.user.roles.map((r) => (
-                              <span className="badge badge-neutral" key={r}>
-                                {r}
-                              </span>
-                            ))
-                          ) : (
-                            <span className="text-base-content/60">None</span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </>
+                <div
+                  className={`alert ${
+                    assignSuccess.added ? 'alert-success' : 'alert-info'
+                  }`}
+                >
+                  <span>
+                    {assignSuccess.added
+                      ? 'Role added.'
+                      : 'User already has that role.'}
+                  </span>
+                </div>
               ) : null}
             </div>
           ) : null}
