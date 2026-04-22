@@ -82,7 +82,12 @@ BEGIN
             b.primary_sponsor_name,
             '''' AS project_fund,
             LISTAGG(DISTINCT a.contractadmin, ''; '') WITHIN GROUP (ORDER BY 1) AS contract_administrator,
-            b.sponsor_award_number
+            b.sponsor_award_number,
+            b.flow_through_funds_primary_sponsor,
+            b.flow_through_funds_reference_award_name,
+            b.flow_through_funds_start_date,
+            b.flow_through_funds_end_date,
+            b.flow_through_funds_amount
         FROM best b
         JOIN ae_dwh.pgm_master_data a
             ON a.project_number = b.project_number AND a.award_number = b.award_number
@@ -90,7 +95,10 @@ BEGIN
             b.project_number, b.award_number, b.close_date, b.billing_cycle,
             b.project_burden_schedule_base, b.project_burden_cost_rate,
             b.cost_share_required_by_sponsor, b.postrepperiod, b.primary_sponsor_name,
-            b.sponsor_award_number';
+            b.sponsor_award_number,
+            b.flow_through_funds_primary_sponsor, b.flow_through_funds_reference_award_name,
+            b.flow_through_funds_start_date, b.flow_through_funds_end_date,
+            b.flow_through_funds_amount';
 
     -- Build parameters JSON for logging
     SET @ParametersJSON = (
@@ -132,7 +140,12 @@ BEGIN
                 p.grant_administrator AS GRANT_ADMINISTRATOR,
                 p.post_reporting_period AS POST_REPORTING_PERIOD,
                 p.primary_sponsor_name AS PRIMARY_SPONSOR_NAME, p.project_fund AS PROJECT_FUND,
-                p.contract_administrator AS CONTRACT_ADMINISTRATOR, p.sponsor_award_number AS SPONSOR_AWARD_NUMBER
+                p.contract_administrator AS CONTRACT_ADMINISTRATOR, p.sponsor_award_number AS SPONSOR_AWARD_NUMBER,
+                p.flow_through_funds_primary_sponsor     AS FLOW_THROUGH_FUNDS_PRIMARY_SPONSOR,
+                p.flow_through_funds_reference_award_name AS FLOW_THROUGH_FUNDS_REFERENCE_AWARD_NAME,
+                p.flow_through_funds_start_date          AS FLOW_THROUGH_FUNDS_START_DATE,
+                p.flow_through_funds_end_date            AS FLOW_THROUGH_FUNDS_END_DATE,
+                p.flow_through_funds_amount              AS FLOW_THROUGH_FUNDS_AMOUNT
             FROM dbo.FacultyDeptPortfolio f
             LEFT JOIN #pgm p ON f.ProjectNumber = p.project_number AND f.AwardNumber = p.award_number
             ' + @FilterClause;
