@@ -5,6 +5,9 @@ namespace server.Services;
 
 public static class AccrualOverviewCalculator
 {
+    private const decimal ApproachingThresholdPct = 80m;
+    private const decimal AtCapThresholdPct = 96m;
+
     // These rates are used to estimate the cost of lost vacation accrual for employees who are at or approaching their accrual cap.
     // Using data from Nephi 2026 -- should be replaced with actual data from the system when available.
     private const decimal DefaultAcademicRate = 70m;
@@ -498,6 +501,8 @@ public static class AccrualOverviewCalculator
         {
             >= 384m => 16m,
             >= 368m => 15.33m,
+            >= 352m => 14.67m,
+            >= 336m => 14m,
             >= 320m => 13.33m,
             >= 288m => 12m,
             >= 240m => 10m,
@@ -523,8 +528,8 @@ public static class AccrualOverviewCalculator
     {
         return percentage switch
         {
-            >= 100m => AccrualStatus.AtCap,
-            >= 80m => AccrualStatus.Approaching,
+            >= AtCapThresholdPct => AccrualStatus.AtCap,
+            >= ApproachingThresholdPct => AccrualStatus.Approaching,
             _ => AccrualStatus.Active,
         };
     }

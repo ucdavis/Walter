@@ -65,6 +65,9 @@ type StatusFilter = 'all' | 'approaching' | 'at-cap';
 type ClassificationFilter = 'all' | 'academic' | 'staff' | string;
 type EmployeeStatus = 'active' | 'approaching' | 'at-cap';
 
+const APPROACHING_THRESHOLD_PCT = 80;
+const AT_CAP_THRESHOLD_PCT = 96;
+
 function SummaryCard({
   accentClassName,
   description,
@@ -95,11 +98,11 @@ function isAcademicClassification(classification: string): boolean {
 function getEmployeeStatus(
   employee: AccrualDepartmentEmployeeRow
 ): EmployeeStatus {
-  if (employee.pctOfCap >= 100) {
+  if (employee.pctOfCap >= AT_CAP_THRESHOLD_PCT) {
     return 'at-cap';
   }
 
-  if (employee.pctOfCap >= 80) {
+  if (employee.pctOfCap >= APPROACHING_THRESHOLD_PCT) {
     return 'approaching';
   }
 
@@ -168,7 +171,11 @@ function CapProgressBar({
   pctOfCap: number;
 }) {
   const status =
-    pctOfCap >= 100 ? 'at-cap' : pctOfCap >= 80 ? 'approaching' : 'active';
+    pctOfCap >= AT_CAP_THRESHOLD_PCT
+      ? 'at-cap'
+      : pctOfCap >= APPROACHING_THRESHOLD_PCT
+        ? 'approaching'
+        : 'active';
   const fillClassName =
     status === 'at-cap'
       ? 'bg-error'
