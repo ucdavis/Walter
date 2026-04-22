@@ -4,7 +4,6 @@ import {
   ArrowLongLeftIcon,
   ChartBarIcon,
   FireIcon,
-  MagnifyingGlassIcon,
   NoSymbolIcon,
   UserGroupIcon,
   ClipboardDocumentListIcon,
@@ -46,7 +45,11 @@ const departmentEmployeeCsvColumns = [
   { header: '% of Cap', key: 'pctOfCap' as const },
   { header: 'Accrual/Mo', key: 'accrualHoursPerMonth' as const },
   { header: 'Months to Cap', key: 'monthsToCap' as const },
-  { format: 'date' as const, header: 'Last Vacation', key: 'lastVacationDate' as const },
+  {
+    format: 'date' as const,
+    header: 'Last Vacation',
+    key: 'lastVacationDate' as const,
+  },
   {
     format: 'currency' as const,
     header: 'Lost Cost/Mo',
@@ -133,11 +136,7 @@ function getStatusClassName(status: EmployeeStatus): string {
   return 'border-success/20 bg-success/10 text-success';
 }
 
-function ClassificationBadge({
-  classification,
-}: {
-  classification: string;
-}) {
+function ClassificationBadge({ classification }: { classification: string }) {
   let className = 'bg-success/10 text-success';
 
   if (classification === 'PSS') {
@@ -278,19 +277,25 @@ export function VacationAccrualDepartmentDetail({
 
   const classifications = useMemo(
     () =>
-      [...new Set(data.employees.map((employee) => employee.classification))].sort(
-        (left, right) => left.localeCompare(right)
-      ),
+      [
+        ...new Set(data.employees.map((employee) => employee.classification)),
+      ].sort((left, right) => left.localeCompare(right)),
     [data.employees]
   );
 
   const academicClassifications = useMemo(
-    () => classifications.filter((classification) => isAcademicClassification(classification)),
+    () =>
+      classifications.filter((classification) =>
+        isAcademicClassification(classification)
+      ),
     [classifications]
   );
 
   const staffClassifications = useMemo(
-    () => classifications.filter((classification) => !isAcademicClassification(classification)),
+    () =>
+      classifications.filter(
+        (classification) => !isAcademicClassification(classification)
+      ),
     [classifications]
   );
 
@@ -307,18 +312,24 @@ export function VacationAccrualDepartmentDetail({
         return false;
       }
 
-      if (classificationFilter === 'academic' &&
-          !isAcademicClassification(employee.classification)) {
+      if (
+        classificationFilter === 'academic' &&
+        !isAcademicClassification(employee.classification)
+      ) {
         return false;
       }
 
-      if (classificationFilter === 'staff' &&
-          isAcademicClassification(employee.classification)) {
+      if (
+        classificationFilter === 'staff' &&
+        isAcademicClassification(employee.classification)
+      ) {
         return false;
       }
 
-      if (!['all', 'academic', 'staff'].includes(classificationFilter) &&
-          employee.classification !== classificationFilter) {
+      if (
+        !['all', 'academic', 'staff'].includes(classificationFilter) &&
+        employee.classification !== classificationFilter
+      ) {
         return false;
       }
 
@@ -420,7 +431,8 @@ export function VacationAccrualDepartmentDetail({
     },
     {
       accessorKey: 'monthsToCap',
-      cell: (info) => renderProjectedMonths(info.row.original, statusThresholds),
+      cell: (info) =>
+        renderProjectedMonths(info.row.original, statusThresholds),
       header: 'Projected',
       size: 140,
     },
@@ -505,9 +517,14 @@ export function VacationAccrualDepartmentDetail({
                     As Of
                   </div>
                   <div className="text-lg font-semibold">
-                    {asOfDate ? asOfDateFormatter.format(asOfDate) : 'Unavailable'}
+                    {asOfDate
+                      ? asOfDateFormatter.format(asOfDate)
+                      : 'Unavailable'}
                   </div>
-                  <Link className="link link-primary text-sm font-semibold" to="/accruals/about">
+                  <Link
+                    className="link link-primary text-sm font-semibold"
+                    to="/accruals/about"
+                  >
                     About this report
                   </Link>
                 </div>
@@ -557,11 +574,13 @@ export function VacationAccrualDepartmentDetail({
             <div className="card-body gap-5 p-5">
               <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                 <div className="join">
-                  {([
-                    ['all', 'All'],
-                    ['approaching', 'Approaching'],
-                    ['at-cap', 'At Cap'],
-                  ] as const).map(([value, label]) => (
+                  {(
+                    [
+                      ['all', 'All'],
+                      ['approaching', 'Approaching'],
+                      ['at-cap', 'At Cap'],
+                    ] as const
+                  ).map(([value, label]) => (
                     <button
                       className={`btn btn-sm join-item ${
                         statusFilter === value ? 'btn-primary' : 'btn-ghost'
@@ -603,7 +622,22 @@ export function VacationAccrualDepartmentDetail({
                   </select>
 
                   <label className="input input-bordered input-sm flex items-center gap-2 w-full sm:w-72">
-                    <MagnifyingGlassIcon className="h-4 w-4 opacity-50" />
+                    <svg
+                      className="h-[1em] opacity-50"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <g
+                        fill="none"
+                        stroke="currentColor"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2.5"
+                      >
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <path d="m21 21-4.3-4.3"></path>
+                      </g>
+                    </svg>
                     <input
                       className="grow"
                       onChange={(event) => setSearchTerm(event.target.value)}
@@ -611,6 +645,22 @@ export function VacationAccrualDepartmentDetail({
                       type="text"
                       value={searchTerm}
                     />
+                    {searchTerm ? (
+                      <button
+                        className="btn btn-ghost btn-sm btn-circle"
+                        onClick={() => setSearchTerm('')}
+                        type="button"
+                      >
+                        <svg
+                          className="h-4 w-4"
+                          fill="currentColor"
+                          viewBox="0 0 16 16"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z" />
+                        </svg>
+                      </button>
+                    ) : null}
                   </label>
                 </div>
               </div>
@@ -628,6 +678,20 @@ export function VacationAccrualDepartmentDetail({
                 defaultColumnSize={140}
                 expandable={false}
                 footerRowClassName="totaltr bg-base-200/70"
+                getRowProps={(row) => {
+                  const status = getEmployeeStatus(
+                    row.original,
+                    statusThresholds
+                  );
+                  return {
+                    className:
+                      status === 'at-cap'
+                        ? 'bg-error/5'
+                        : status === 'approaching'
+                          ? 'bg-warning/5'
+                          : undefined,
+                  };
+                }}
                 globalFilter="none"
                 initialState={{
                   pagination: { pageSize: 50 },
@@ -640,17 +704,6 @@ export function VacationAccrualDepartmentDetail({
                     filename={`vacation-accrual-${data.departmentCode}.csv`}
                   />
                 }
-                getRowProps={(row) => {
-                  const status = getEmployeeStatus(row.original, statusThresholds);
-                  return {
-                    className:
-                      status === 'at-cap'
-                        ? 'bg-error/5'
-                        : status === 'approaching'
-                          ? 'bg-warning/5'
-                          : undefined,
-                  };
-                }}
                 tableClassName="table-zebra"
               />
             </div>

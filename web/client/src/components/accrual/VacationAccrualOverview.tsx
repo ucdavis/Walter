@@ -178,7 +178,9 @@ export function VacationAccrualOverview({
           {formatCurrency(data.lostCostMonth)}
         </span>
       ),
-      header: () => <span className="flex justify-end w-full">Lost Cost/Mo</span>,
+      header: () => (
+        <span className="flex justify-end w-full">Lost Cost/Mo</span>
+      ),
       size: 160,
     },
     {
@@ -193,7 +195,9 @@ export function VacationAccrualOverview({
           {formatCurrency(data.lostCostYtd)}
         </span>
       ),
-      header: () => <span className="flex justify-end w-full">Lost Cost YTD</span>,
+      header: () => (
+        <span className="flex justify-end w-full">Lost Cost YTD</span>
+      ),
       size: 170,
     },
     {
@@ -206,7 +210,9 @@ export function VacationAccrualOverview({
       footer: () => (
         <span className="flex justify-end w-full text-base-content/55">-</span>
       ),
-      header: () => <span className="flex justify-end w-full">Avg Balance</span>,
+      header: () => (
+        <span className="flex justify-end w-full">Avg Balance</span>
+      ),
       size: 140,
     },
   ];
@@ -230,9 +236,14 @@ export function VacationAccrualOverview({
                   As Of
                 </div>
                 <div className="text-lg font-semibold">
-                  {asOfDate ? asOfDateFormatter.format(asOfDate) : 'Unavailable'}
+                  {asOfDate
+                    ? asOfDateFormatter.format(asOfDate)
+                    : 'Unavailable'}
                 </div>
-                <Link className="link link-primary text-sm font-semibold" to="/accruals/about">
+                <Link
+                  className="link link-primary text-sm font-semibold"
+                  to="/accruals/about"
+                >
                   About this report
                 </Link>
               </div>
@@ -393,10 +404,6 @@ export function VacationAccrualOverview({
                   expandable={false}
                   filterPlaceholder="Search departments..."
                   footerRowClassName="totaltr bg-base-200/70"
-                  initialState={{
-                    pagination: { pageSize: 50 },
-                    sorting: [{ desc: false, id: 'department' }],
-                  }}
                   getRowProps={(row) => ({
                     className: 'cursor-pointer hover:bg-base-200',
                     onClick: () =>
@@ -420,6 +427,10 @@ export function VacationAccrualOverview({
                     role: 'link',
                     tabIndex: 0,
                   })}
+                  initialState={{
+                    pagination: { pageSize: 50 },
+                    sorting: [{ desc: false, id: 'department' }],
+                  }}
                   tableActions={
                     <ExportDataButton
                       columns={departmentCsvColumns}

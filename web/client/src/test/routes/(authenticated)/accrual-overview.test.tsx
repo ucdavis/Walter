@@ -471,6 +471,20 @@ describe('vacation accrual overview route', () => {
         await screen.findByText('Saichaie,Amanda M')
       ).toBeInTheDocument();
 
+      const employeeSearch = screen.getByPlaceholderText('Search by name or ID...');
+      await user.type(employeeSearch, 'Amanda');
+
+      expect(screen.getByText('Saichaie,Amanda M')).toBeInTheDocument();
+      expect(screen.queryByText('Gradziel,Thomas M')).not.toBeInTheDocument();
+
+      const clearSearchButton = within(
+        employeeSearch.parentElement as HTMLElement
+      ).getByRole('button');
+      await user.click(clearSearchButton);
+
+      expect(employeeSearch).toHaveValue('');
+      expect(screen.getByText('Gradziel,Thomas M')).toBeInTheDocument();
+
       const classificationSelect = screen.getAllByRole('combobox')[1];
       await user.selectOptions(classificationSelect, 'PSS');
 
