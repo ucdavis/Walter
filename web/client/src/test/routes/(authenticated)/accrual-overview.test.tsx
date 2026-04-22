@@ -169,6 +169,37 @@ describe('vacation accrual overview route', () => {
     }
   });
 
+  it('shows the route error state when the accrual assumptions prefetch fails', async () => {
+    server.use(
+      http.get('/api/user/me', () => HttpResponse.json(mockUser)),
+      http.get('/api/accrual/assumptions', () =>
+        HttpResponse.json(
+          { message: 'Assumptions unavailable' },
+          { status: 503 }
+        )
+      )
+    );
+
+    const { cleanup } = renderRoute({ initialPath: '/accruals/about' });
+
+    try {
+      expect(
+        await screen.findByRole('heading', { name: 'We could not reach the server' })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          'Try again in a moment. If the problem keeps happening, the service may be unavailable.'
+        )
+      ).toBeInTheDocument();
+      expect(screen.getByText('Assumptions unavailable')).toBeInTheDocument();
+      expect(
+        screen.getByRole('link', { name: /Back to overview/i })
+      ).toHaveAttribute('href', '/accruals');
+    } finally {
+      cleanup();
+    }
+  });
+
   it('navigates to the department drilldown when a department row is clicked', async () => {
     const user = userEvent.setup();
 
