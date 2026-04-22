@@ -427,7 +427,7 @@ export function VacationAccrualDepartmentDetail({
       <div className="container">
         <div className="mx-auto max-w-7xl space-y-8">
           <section className="space-y-4">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                 <Link
                   className="inline-flex items-center gap-2 text-sm font-medium text-primary no-underline"
@@ -459,11 +459,19 @@ export function VacationAccrualDepartmentDetail({
                 </select>
               </div>
 
-              {asOfDate ? (
-                <p className="text-sm text-base-content/60">
-                  As of {asOfDateFormatter.format(asOfDate)}
-                </p>
-              ) : null}
+              <div className="card bg-base-100 border border-main-border shadow-sm lg:min-w-64">
+                <div className="card-body gap-1 p-4">
+                  <div className="text-xs font-semibold tracking-[0.14em] uppercase text-base-content/55">
+                    As Of
+                  </div>
+                  <div className="text-lg font-semibold">
+                    {asOfDate ? asOfDateFormatter.format(asOfDate) : 'Unavailable'}
+                  </div>
+                  <Link className="link link-primary text-sm font-semibold" to="/accruals/about">
+                    About this report
+                  </Link>
+                </div>
+              </div>
             </div>
           </section>
 

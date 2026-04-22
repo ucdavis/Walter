@@ -18,7 +18,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { useNavigate } from '@tanstack/react-router';
+import { Link, useNavigate } from '@tanstack/react-router';
 import { ColumnDef } from '@tanstack/react-table';
 import { ExportDataButton } from '@/components/ExportDataButton.tsx';
 import { PageEmpty } from '@/components/states/PageEmpty.tsx';
@@ -215,15 +215,28 @@ export function VacationAccrualOverview({
     <main className="mt-8">
       <div className="container">
         <div className="mx-auto max-w-7xl space-y-8">
-          <section>
-            <h1 className="h1">Vacation Accrual Overview</h1>
-            <p className="mt-2 text-sm text-base-content/65">
-              {data.totalEmployees.toLocaleString('en-US')} employees across{' '}
-              {data.totalDepartments.toLocaleString('en-US')} departments
-              {asOfDate ? (
-                <> as of {asOfDateFormatter.format(asOfDate)}</>
-              ) : null}
-            </p>
+          <section className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <h1 className="h1">Vacation Accrual Overview</h1>
+              <p className="mt-2 text-sm text-base-content/65">
+                {data.totalEmployees.toLocaleString('en-US')} employees across{' '}
+                {data.totalDepartments.toLocaleString('en-US')} departments
+              </p>
+            </div>
+
+            <div className="card bg-base-100 border border-main-border shadow-sm lg:min-w-64">
+              <div className="card-body gap-1 p-4">
+                <div className="text-xs font-semibold tracking-[0.14em] uppercase text-base-content/55">
+                  As Of
+                </div>
+                <div className="text-lg font-semibold">
+                  {asOfDate ? asOfDateFormatter.format(asOfDate) : 'Unavailable'}
+                </div>
+                <Link className="link link-primary text-sm font-semibold" to="/accruals/about">
+                  About this report
+                </Link>
+              </div>
+            </div>
           </section>
 
           <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">

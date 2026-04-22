@@ -97,6 +97,35 @@ describe('vacation accrual overview route', () => {
       expect(screen.getByText('CAES Total')).toBeInTheDocument();
       expect(screen.getAllByText('$3,817.00')).toHaveLength(2);
       expect(screen.getByText('3.1%')).toBeInTheDocument();
+      expect(
+        screen.getByRole('link', { name: 'About this report' })
+      ).toHaveAttribute('href', '/accruals/about');
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('renders the accrual assumptions page', async () => {
+    server.use(http.get('/api/user/me', () => HttpResponse.json(mockUser)));
+
+    const { cleanup } = renderRoute({ initialPath: '/accruals/about' });
+
+    try {
+      expect(
+        await screen.findByRole('heading', { name: 'About This Report' })
+      ).toBeInTheDocument();
+      expect(screen.getByText('Lost Cost Formula')).toBeInTheDocument();
+      expect(screen.getByText('Status Thresholds')).toBeInTheDocument();
+      expect(screen.getByText('Benefits Loads')).toBeInTheDocument();
+      expect(screen.getByText('96.0% and above')).toBeInTheDocument();
+      expect(
+        screen.getByText('41% composite benefits load')
+      ).toBeInTheDocument();
+      expect(screen.getByText('$78.00/hr')).toBeInTheDocument();
+      expect(screen.getByText('14.67 hrs/month')).toBeInTheDocument();
+      expect(
+        screen.getByRole('link', { name: /Back to Overview/i })
+      ).toHaveAttribute('href', '/accruals');
     } finally {
       cleanup();
     }
@@ -206,6 +235,9 @@ describe('vacation accrual overview route', () => {
         await screen.findByRole('link', { name: /College Overview/i })
       ).toBeInTheDocument();
       expect(screen.getByLabelText('Department')).toHaveValue('030003');
+      expect(
+        screen.getByRole('link', { name: 'About this report' })
+      ).toHaveAttribute('href', '/accruals/about');
       expect(screen.getByText('Gradziel,Thomas M')).toBeInTheDocument();
       expect(screen.getByText('Saichaie,Amanda M')).toBeInTheDocument();
       expect(screen.queryByText('Preview')).not.toBeInTheDocument();

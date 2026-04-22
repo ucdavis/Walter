@@ -25,6 +25,7 @@ import { Route as authenticatedReportsIndexRouteImport } from './routes/(authent
 import { Route as authenticatedAdminIndexRouteImport } from './routes/(authenticated)/admin/index'
 import { Route as authenticatedAccrualsIndexRouteImport } from './routes/(authenticated)/accruals/index'
 import { Route as authenticatedAdminUsersRouteImport } from './routes/(authenticated)/admin/users'
+import { Route as authenticatedAccrualsAboutRouteImport } from './routes/(authenticated)/accruals/about'
 import { Route as authenticatedProjectsEmployeeIdRouteRouteImport } from './routes/(authenticated)/projects/$employeeId/route'
 import { Route as authenticatedProjectsEmployeeIdIndexRouteImport } from './routes/(authenticated)/projects/$employeeId/index'
 import { Route as authenticatedProjectsByNumberProjectNumberRouteImport } from './routes/(authenticated)/projects/by-number/$projectNumber'
@@ -117,6 +118,12 @@ const authenticatedAdminUsersRoute = authenticatedAdminUsersRouteImport.update({
   path: '/users',
   getParentRoute: () => authenticatedAdminRouteRoute,
 } as any)
+const authenticatedAccrualsAboutRoute =
+  authenticatedAccrualsAboutRouteImport.update({
+    id: '/accruals/about',
+    path: '/accruals/about',
+    getParentRoute: () => authenticatedRouteRoute,
+  } as any)
 const authenticatedProjectsEmployeeIdRouteRoute =
   authenticatedProjectsEmployeeIdRouteRouteImport.update({
     id: '/$employeeId',
@@ -181,6 +188,7 @@ export interface FileRoutesByFullPath {
   '/styles': typeof authenticatedStylesRoute
   '/': typeof authenticatedIndexRoute
   '/projects/$employeeId': typeof authenticatedProjectsEmployeeIdRouteRouteWithChildren
+  '/accruals/about': typeof authenticatedAccrualsAboutRoute
   '/admin/users': typeof authenticatedAdminUsersRoute
   '/accruals': typeof authenticatedAccrualsIndexRoute
   '/admin/': typeof authenticatedAdminIndexRoute
@@ -203,6 +211,7 @@ export interface FileRoutesByTo {
   '/principalInvestigators': typeof authenticatedPrincipalInvestigatorsRoute
   '/styles': typeof authenticatedStylesRoute
   '/': typeof authenticatedIndexRoute
+  '/accruals/about': typeof authenticatedAccrualsAboutRoute
   '/admin/users': typeof authenticatedAdminUsersRoute
   '/accruals': typeof authenticatedAccrualsIndexRoute
   '/admin': typeof authenticatedAdminIndexRoute
@@ -230,6 +239,7 @@ export interface FileRoutesById {
   '/(authenticated)/styles': typeof authenticatedStylesRoute
   '/(authenticated)/': typeof authenticatedIndexRoute
   '/(authenticated)/projects/$employeeId': typeof authenticatedProjectsEmployeeIdRouteRouteWithChildren
+  '/(authenticated)/accruals/about': typeof authenticatedAccrualsAboutRoute
   '/(authenticated)/admin/users': typeof authenticatedAdminUsersRoute
   '/(authenticated)/accruals/': typeof authenticatedAccrualsIndexRoute
   '/(authenticated)/admin/': typeof authenticatedAdminIndexRoute
@@ -257,6 +267,7 @@ export interface FileRouteTypes {
     | '/styles'
     | '/'
     | '/projects/$employeeId'
+    | '/accruals/about'
     | '/admin/users'
     | '/accruals'
     | '/admin/'
@@ -279,6 +290,7 @@ export interface FileRouteTypes {
     | '/principalInvestigators'
     | '/styles'
     | '/'
+    | '/accruals/about'
     | '/admin/users'
     | '/accruals'
     | '/admin'
@@ -305,6 +317,7 @@ export interface FileRouteTypes {
     | '/(authenticated)/styles'
     | '/(authenticated)/'
     | '/(authenticated)/projects/$employeeId'
+    | '/(authenticated)/accruals/about'
     | '/(authenticated)/admin/users'
     | '/(authenticated)/accruals/'
     | '/(authenticated)/admin/'
@@ -436,6 +449,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/users'
       preLoaderRoute: typeof authenticatedAdminUsersRouteImport
       parentRoute: typeof authenticatedAdminRouteRoute
+    }
+    '/(authenticated)/accruals/about': {
+      id: '/(authenticated)/accruals/about'
+      path: '/accruals/about'
+      fullPath: '/accruals/about'
+      preLoaderRoute: typeof authenticatedAccrualsAboutRouteImport
+      parentRoute: typeof authenticatedRouteRoute
     }
     '/(authenticated)/projects/$employeeId': {
       id: '/(authenticated)/projects/$employeeId'
@@ -579,6 +599,7 @@ interface authenticatedRouteRouteChildren {
   authenticatedReportsRoute: typeof authenticatedReportsRouteWithChildren
   authenticatedStylesRoute: typeof authenticatedStylesRoute
   authenticatedIndexRoute: typeof authenticatedIndexRoute
+  authenticatedAccrualsAboutRoute: typeof authenticatedAccrualsAboutRoute
   authenticatedAccrualsIndexRoute: typeof authenticatedAccrualsIndexRoute
   authenticatedAccrualsDepartmentDepartmentCodeRoute: typeof authenticatedAccrualsDepartmentDepartmentCodeRoute
 }
@@ -595,6 +616,7 @@ const authenticatedRouteRouteChildren: authenticatedRouteRouteChildren = {
   authenticatedReportsRoute: authenticatedReportsRouteWithChildren,
   authenticatedStylesRoute: authenticatedStylesRoute,
   authenticatedIndexRoute: authenticatedIndexRoute,
+  authenticatedAccrualsAboutRoute: authenticatedAccrualsAboutRoute,
   authenticatedAccrualsIndexRoute: authenticatedAccrualsIndexRoute,
   authenticatedAccrualsDepartmentDepartmentCodeRoute:
     authenticatedAccrualsDepartmentDepartmentCodeRoute,
