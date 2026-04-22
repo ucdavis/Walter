@@ -2,7 +2,10 @@ import { PageError } from '@/components/states/PageError.tsx';
 import { PageLoading } from '@/components/states/PageLoading.tsx';
 import { VacationAccrualDepartmentDetail } from '@/components/accrual/VacationAccrualDepartmentDetail.tsx';
 import { getErrorPresentation } from '@/lib/errorPresentation.ts';
-import { accrualDepartmentDetailQueryOptions } from '@/queries/accrual.ts';
+import {
+  accrualAssumptionsQueryOptions,
+  accrualDepartmentDetailQueryOptions,
+} from '@/queries/accrual.ts';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import {
   createFileRoute,
@@ -15,10 +18,12 @@ export const Route = createFileRoute(
 )({
   component: RouteComponent,
   errorComponent: RouteErrorBoundary,
-  loader: ({ context: { queryClient }, params: { departmentCode } }) =>
-    queryClient.ensureQueryData(
-      accrualDepartmentDetailQueryOptions(departmentCode)
-    ),
+  loader: async ({ context: { queryClient }, params: { departmentCode } }) => {
+    await Promise.all([
+      queryClient.ensureQueryData(accrualDepartmentDetailQueryOptions(departmentCode)),
+      queryClient.ensureQueryData(accrualAssumptionsQueryOptions()),
+    ]);
+  },
   pendingComponent: () => (
     <PageLoading message="Loading department accrual detail..." />
   ),
@@ -29,8 +34,11 @@ function RouteComponent() {
   const { data } = useSuspenseQuery(
     accrualDepartmentDetailQueryOptions(departmentCode)
   );
+  const { data: assumptions } = useSuspenseQuery(accrualAssumptionsQueryOptions());
 
-  return <VacationAccrualDepartmentDetail data={data} />;
+  return (
+    <VacationAccrualDepartmentDetail assumptions={assumptions} data={data} />
+  );
 }
 
 function RouteErrorBoundary({ error, reset }: ErrorComponentProps) {

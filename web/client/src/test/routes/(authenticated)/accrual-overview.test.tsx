@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/test/mswUtils.ts';
@@ -12,6 +12,38 @@ const mockUser = {
   kerberos: 'accruals',
   name: 'Accrual Viewer',
   roles: ['AccrualViewer'],
+};
+
+const mockAccrualAssumptions = {
+  approachingThresholdPct: 80,
+  atCapThresholdPct: 96,
+  benefitsRates: [
+    { label: 'FY Acad Admin', rate: 0.41 },
+    { label: 'FY Acad Coord', rate: 0.41 },
+    { label: 'FY Faculty', rate: 0.41 },
+    { label: 'All other classes', rate: 0.51 },
+  ],
+  fallbackAccrualTiers: [
+    { label: '384+ cap hours', monthlyAccrualHours: 16 },
+    { label: '368+ cap hours', monthlyAccrualHours: 15.33 },
+    { label: '352+ cap hours', monthlyAccrualHours: 14.67 },
+    { label: '336+ cap hours', monthlyAccrualHours: 14 },
+    { label: '320+ cap hours', monthlyAccrualHours: 13.33 },
+    { label: '288+ cap hours', monthlyAccrualHours: 12 },
+    { label: '240+ cap hours', monthlyAccrualHours: 10 },
+    { label: 'Below 240 cap hours', monthlyAccrualHours: 10 },
+  ],
+  hourlyRates: [
+    { label: 'FY Acad Admin', hourlyRate: 65 },
+    { label: 'FY Acad Coord', hourlyRate: 62 },
+    { label: 'FY Faculty', hourlyRate: 78 },
+    { label: 'FY Researcher', hourlyRate: 68 },
+    { label: 'MSP', hourlyRate: 52 },
+    { label: 'PSS', hourlyRate: 32.5 },
+    { label: 'SMG', hourlyRate: 72 },
+    { label: 'Fallback academic', hourlyRate: 70 },
+    { label: 'Fallback staff', hourlyRate: 45 },
+  ],
 };
 
 describe('vacation accrual overview route', () => {
@@ -109,37 +141,7 @@ describe('vacation accrual overview route', () => {
     server.use(
       http.get('/api/user/me', () => HttpResponse.json(mockUser)),
       http.get('/api/accrual/assumptions', () =>
-        HttpResponse.json({
-          approachingThresholdPct: 80,
-          atCapThresholdPct: 96,
-          benefitsRates: [
-            { label: 'FY Acad Admin', rate: 0.41 },
-            { label: 'FY Acad Coord', rate: 0.41 },
-            { label: 'FY Faculty', rate: 0.41 },
-            { label: 'All other classes', rate: 0.51 },
-          ],
-          fallbackAccrualTiers: [
-            { label: '384+ cap hours', monthlyAccrualHours: 16 },
-            { label: '368+ cap hours', monthlyAccrualHours: 15.33 },
-            { label: '352+ cap hours', monthlyAccrualHours: 14.67 },
-            { label: '336+ cap hours', monthlyAccrualHours: 14 },
-            { label: '320+ cap hours', monthlyAccrualHours: 13.33 },
-            { label: '288+ cap hours', monthlyAccrualHours: 12 },
-            { label: '240+ cap hours', monthlyAccrualHours: 10 },
-            { label: 'Below 240 cap hours', monthlyAccrualHours: 10 },
-          ],
-          hourlyRates: [
-            { label: 'FY Acad Admin', hourlyRate: 65 },
-            { label: 'FY Acad Coord', hourlyRate: 62 },
-            { label: 'FY Faculty', hourlyRate: 78 },
-            { label: 'FY Researcher', hourlyRate: 68 },
-            { label: 'MSP', hourlyRate: 52 },
-            { label: 'PSS', hourlyRate: 32.5 },
-            { label: 'SMG', hourlyRate: 72 },
-            { label: 'Fallback academic', hourlyRate: 70 },
-            { label: 'Fallback staff', hourlyRate: 45 },
-          ],
-        })
+        HttpResponse.json(mockAccrualAssumptions)
       )
     );
 
@@ -172,6 +174,9 @@ describe('vacation accrual overview route', () => {
 
     server.use(
       http.get('/api/user/me', () => HttpResponse.json(mockUser)),
+      http.get('/api/accrual/assumptions', () =>
+        HttpResponse.json(mockAccrualAssumptions)
+      ),
       http.get('/api/accrual/overview', () =>
         HttpResponse.json({
           approachingCapCount: 7,
@@ -287,6 +292,9 @@ describe('vacation accrual overview route', () => {
 
     server.use(
       http.get('/api/user/me', () => HttpResponse.json(mockUser)),
+      http.get('/api/accrual/assumptions', () =>
+        HttpResponse.json(mockAccrualAssumptions)
+      ),
       http.get('/api/accrual/overview', () =>
         HttpResponse.json({
           approachingCapCount: 7,
@@ -446,6 +454,89 @@ describe('vacation accrual overview route', () => {
           'No employees are available for this department in the current accrual snapshot.'
         )
       ).not.toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('uses the centralized threshold assumptions on the department detail page', async () => {
+    server.use(
+      http.get('/api/user/me', () => HttpResponse.json(mockUser)),
+      http.get('/api/accrual/assumptions', () =>
+        HttpResponse.json({
+          ...mockAccrualAssumptions,
+          approachingThresholdPct: 85,
+          atCapThresholdPct: 95,
+        })
+      ),
+      http.get('/api/accrual/department/:departmentCode', ({ params }) => {
+        if (params.departmentCode !== '030003') {
+          return HttpResponse.json({ message: 'Not found' }, { status: 404 });
+        }
+
+        return HttpResponse.json({
+          asOfDate: '2026-03-31T00:00:00',
+          avgBalanceHours: 178,
+          approachingCapCount: 1,
+          atCapCount: 1,
+          departmentCode: '030003',
+          departmentName: 'PLANT SCIENCES',
+          departments: [
+            {
+              code: '030003',
+              name: 'PLANT SCIENCES',
+            },
+          ],
+          employees: [
+            {
+              accrualHoursPerMonth: 16,
+              balanceHours: 365,
+              capHours: 384,
+              classification: 'FY Faculty',
+              employeeId: '10206082',
+              employeeName: 'Threshold,Casey',
+              lastVacationDate: '2026-01-31T00:00:00',
+              lostCostMonth: 1248,
+              monthsToCap: 1,
+              pctOfCap: 95,
+            },
+            {
+              accrualHoursPerMonth: 8,
+              balanceHours: 334,
+              capHours: 384,
+              classification: 'PSS',
+              employeeId: '10243193',
+              employeeName: 'Approach,Alex',
+              lastVacationDate: '2026-02-28T00:00:00',
+              lostCostMonth: 0,
+              monthsToCap: 2,
+              pctOfCap: 87,
+            },
+          ],
+          headcount: 2,
+          lostCostMonth: 1248,
+          lostCostYtd: 1248,
+          ytdMonthCount: 9,
+        });
+      })
+    );
+
+    const { cleanup } = renderRoute({
+      initialPath: '/accruals/department/030003',
+    });
+
+    try {
+      const atCapRow = (
+        await screen.findByText('Threshold,Casey')
+      ).closest('tr');
+      const approachingRow = screen.getByText('Approach,Alex').closest('tr');
+
+      expect(atCapRow).not.toBeNull();
+      expect(approachingRow).not.toBeNull();
+      expect(within(atCapRow!).getAllByText('At Cap').length).toBeGreaterThan(0);
+      expect(
+        within(approachingRow!).getAllByText('Approaching').length
+      ).toBeGreaterThan(0);
     } finally {
       cleanup();
     }

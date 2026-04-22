@@ -16,6 +16,7 @@ import { PageEmpty } from '@/components/states/PageEmpty.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import { formatDate } from '@/lib/date.ts';
 import {
+  type AccrualAssumptionsResponse,
   type AccrualDepartmentDetailResponse,
   type AccrualDepartmentEmployeeRow,
 } from '@/queries/accrual.ts';
@@ -65,8 +66,10 @@ type StatusFilter = 'all' | 'approaching' | 'at-cap';
 type ClassificationFilter = 'all' | 'academic' | 'staff' | string;
 type EmployeeStatus = 'active' | 'approaching' | 'at-cap';
 
-const APPROACHING_THRESHOLD_PCT = 80;
-const AT_CAP_THRESHOLD_PCT = 96;
+type StatusThresholds = Pick<
+  AccrualAssumptionsResponse,
+  'approachingThresholdPct' | 'atCapThresholdPct'
+>;
 
 function SummaryCard({
   accentClassName,
@@ -96,13 +99,14 @@ function isAcademicClassification(classification: string): boolean {
 }
 
 function getEmployeeStatus(
-  employee: AccrualDepartmentEmployeeRow
+  employee: AccrualDepartmentEmployeeRow,
+  thresholds: StatusThresholds
 ): EmployeeStatus {
-  if (employee.pctOfCap >= AT_CAP_THRESHOLD_PCT) {
+  if (employee.pctOfCap >= thresholds.atCapThresholdPct) {
     return 'at-cap';
   }
 
-  if (employee.pctOfCap >= APPROACHING_THRESHOLD_PCT) {
+  if (employee.pctOfCap >= thresholds.approachingThresholdPct) {
     return 'approaching';
   }
 
@@ -153,8 +157,14 @@ function ClassificationBadge({
   );
 }
 
-function StatusBadge({ employee }: { employee: AccrualDepartmentEmployeeRow }) {
-  const status = getEmployeeStatus(employee);
+function StatusBadge({
+  employee,
+  thresholds,
+}: {
+  employee: AccrualDepartmentEmployeeRow;
+  thresholds: StatusThresholds;
+}) {
+  const status = getEmployeeStatus(employee, thresholds);
 
   return (
     <span
@@ -167,13 +177,15 @@ function StatusBadge({ employee }: { employee: AccrualDepartmentEmployeeRow }) {
 
 function CapProgressBar({
   pctOfCap,
+  thresholds,
 }: {
   pctOfCap: number;
+  thresholds: StatusThresholds;
 }) {
   const status =
-    pctOfCap >= AT_CAP_THRESHOLD_PCT
+    pctOfCap >= thresholds.atCapThresholdPct
       ? 'at-cap'
-      : pctOfCap >= APPROACHING_THRESHOLD_PCT
+      : pctOfCap >= thresholds.approachingThresholdPct
         ? 'approaching'
         : 'active';
   const fillClassName =
@@ -210,8 +222,11 @@ function CapProgressBar({
   );
 }
 
-function renderProjectedMonths(employee: AccrualDepartmentEmployeeRow) {
-  const status = getEmployeeStatus(employee);
+function renderProjectedMonths(
+  employee: AccrualDepartmentEmployeeRow,
+  thresholds: StatusThresholds
+) {
+  const status = getEmployeeStatus(employee, thresholds);
   if (status === 'at-cap') {
     return <span className="font-semibold text-error">At Cap</span>;
   }
@@ -232,10 +247,12 @@ function renderProjectedMonths(employee: AccrualDepartmentEmployeeRow) {
 }
 
 interface VacationAccrualDepartmentDetailProps {
+  assumptions: AccrualAssumptionsResponse;
   data: AccrualDepartmentDetailResponse;
 }
 
 export function VacationAccrualDepartmentDetail({
+  assumptions,
   data,
 }: VacationAccrualDepartmentDetailProps) {
   const navigate = useNavigate();
@@ -251,6 +268,13 @@ export function VacationAccrualDepartmentDetail({
   }, [data.departmentCode]);
 
   const asOfDate = data.asOfDate ? new Date(data.asOfDate) : null;
+  const statusThresholds = useMemo(
+    () => ({
+      approachingThresholdPct: assumptions.approachingThresholdPct,
+      atCapThresholdPct: assumptions.atCapThresholdPct,
+    }),
+    [assumptions.approachingThresholdPct, assumptions.atCapThresholdPct]
+  );
 
   const classifications = useMemo(
     () =>
@@ -274,7 +298,7 @@ export function VacationAccrualDepartmentDetail({
     const normalizedSearchTerm = searchTerm.trim().toLowerCase();
 
     return data.employees.filter((employee) => {
-      const status = getEmployeeStatus(employee);
+      const status = getEmployeeStatus(employee, statusThresholds);
       if (statusFilter === 'at-cap' && status !== 'at-cap') {
         return false;
       }
@@ -307,7 +331,13 @@ export function VacationAccrualDepartmentDetail({
         employee.employeeId.toLowerCase().includes(normalizedSearchTerm)
       );
     });
-  }, [classificationFilter, data.employees, searchTerm, statusFilter]);
+  }, [
+    classificationFilter,
+    data.employees,
+    searchTerm,
+    statusFilter,
+    statusThresholds,
+  ]);
 
   const employeeColumns: ColumnDef<AccrualDepartmentEmployeeRow>[] = [
     {
@@ -336,8 +366,13 @@ export function VacationAccrualDepartmentDetail({
       size: 140,
     },
     {
-      accessorFn: (row) => getEmployeeStatus(row),
-      cell: (info) => <StatusBadge employee={info.row.original} />,
+      accessorFn: (row) => getEmployeeStatus(row, statusThresholds),
+      cell: (info) => (
+        <StatusBadge
+          employee={info.row.original}
+          thresholds={statusThresholds}
+        />
+      ),
       header: 'Status',
       id: 'status',
       size: 140,
@@ -364,7 +399,12 @@ export function VacationAccrualDepartmentDetail({
     },
     {
       accessorKey: 'pctOfCap',
-      cell: (info) => <CapProgressBar pctOfCap={info.getValue<number>()} />,
+      cell: (info) => (
+        <CapProgressBar
+          pctOfCap={info.getValue<number>()}
+          thresholds={statusThresholds}
+        />
+      ),
       header: '% of Cap',
       size: 180,
     },
@@ -380,7 +420,7 @@ export function VacationAccrualDepartmentDetail({
     },
     {
       accessorKey: 'monthsToCap',
-      cell: (info) => renderProjectedMonths(info.row.original),
+      cell: (info) => renderProjectedMonths(info.row.original, statusThresholds),
       header: 'Projected',
       size: 140,
     },
@@ -601,7 +641,7 @@ export function VacationAccrualDepartmentDetail({
                   />
                 }
                 getRowProps={(row) => {
-                  const status = getEmployeeStatus(row.original);
+                  const status = getEmployeeStatus(row.original, statusThresholds);
                   return {
                     className:
                       status === 'at-cap'
