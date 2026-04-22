@@ -12,6 +12,10 @@ import {
   useAccrualAssumptionsQuery,
 } from '@/queries/accrual.ts';
 
+interface SearchParams {
+  departmentCode?: string;
+}
+
 export const Route = createFileRoute('/(authenticated)/accruals/about')({
   loader: ({ context: { queryClient } }) =>
     queryClient.ensureQueryData(accrualAssumptionsQueryOptions()),
@@ -19,10 +23,14 @@ export const Route = createFileRoute('/(authenticated)/accruals/about')({
   pendingComponent: () => (
     <PageLoading message="Loading accrual assumptions..." />
   ),
+  validateSearch: (search: Record<string, unknown>): SearchParams => ({
+    departmentCode: (search.departmentCode as string) ?? undefined,
+  }),
   component: RouteComponent,
 });
 
 function RouteComponent() {
+  const { departmentCode } = Route.useSearch();
   const { data, error, isError } = useAccrualAssumptionsQuery();
 
   if (isError) {
@@ -43,10 +51,11 @@ function RouteComponent() {
     return <PageLoading message="Loading accrual assumptions..." />;
   }
 
-  return <VacationAccrualAbout data={data} />;
+  return <VacationAccrualAbout data={data} departmentCode={departmentCode} />;
 }
 
 function RouteErrorBoundary({ error, reset }: ErrorComponentProps) {
+  const { departmentCode } = Route.useSearch();
   const presentation = getErrorPresentation(error, {
     404: {
       message: 'Walter could not load the accrual assumptions.',
@@ -63,9 +72,19 @@ function RouteErrorBoundary({ error, reset }: ErrorComponentProps) {
               <button className="btn btn-primary" onClick={() => reset()} type="button">
                 Try again
               </button>
-              <Link className="btn btn-outline" to="/accruals">
-                Back to overview
-              </Link>
+              {departmentCode ? (
+                <Link
+                  className="btn btn-outline"
+                  params={{ departmentCode }}
+                  to="/accruals/department/$departmentCode"
+                >
+                  Back to department
+                </Link>
+              ) : (
+                <Link className="btn btn-outline" to="/accruals">
+                  Back to overview
+                </Link>
+              )}
             </>
           }
           detail={presentation.detail}

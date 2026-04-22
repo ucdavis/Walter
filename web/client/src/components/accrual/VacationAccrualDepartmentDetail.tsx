@@ -547,6 +547,7 @@ export function VacationAccrualDepartmentDetail({
                   </div>
                   <Link
                     className="link link-primary text-sm font-semibold"
+                    search={{ departmentCode: data.departmentCode }}
                     to="/accruals/about"
                   >
                     About this report

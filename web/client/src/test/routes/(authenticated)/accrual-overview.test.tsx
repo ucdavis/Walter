@@ -309,10 +309,34 @@ describe('vacation accrual overview route', () => {
       expect(screen.getByLabelText('Department')).toHaveValue('030003');
       expect(
         screen.getByRole('link', { name: 'About this report' })
-      ).toHaveAttribute('href', '/accruals/about');
+      ).toHaveAttribute('href', '/accruals/about?departmentCode=030003');
       expect(screen.getByText('Gradziel,Thomas M')).toBeInTheDocument();
       expect(screen.getByText('Saichaie,Amanda M')).toBeInTheDocument();
       expect(screen.queryByText('Preview')).not.toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('returns to the current department from the about page when department context is provided', async () => {
+    server.use(
+      http.get('/api/user/me', () => HttpResponse.json(mockUser)),
+      http.get('/api/accrual/assumptions', () =>
+        HttpResponse.json(mockAccrualAssumptions)
+      )
+    );
+
+    const { cleanup } = renderRoute({
+      initialPath: '/accruals/about?departmentCode=030003',
+    });
+
+    try {
+      expect(
+        await screen.findByRole('heading', { name: 'About This Report' })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('link', { name: /Back to Department/i })
+      ).toHaveAttribute('href', '/accruals/department/030003');
     } finally {
       cleanup();
     }

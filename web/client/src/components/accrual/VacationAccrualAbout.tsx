@@ -65,8 +65,10 @@ function AssumptionsTable({
 
 export function VacationAccrualAbout({
   data,
+  departmentCode,
 }: {
   data: AccrualAssumptionsResponse;
+  departmentCode?: string;
 }) {
   const thresholdRows: AssumptionRow[] = [
     {
@@ -118,10 +120,21 @@ export function VacationAccrualAbout({
               </div>
             </div>
 
-            <Link className="btn btn-outline" to="/accruals">
-              <ArrowLongLeftIcon className="h-4 w-4" />
-              Back to Overview
-            </Link>
+            {departmentCode ? (
+              <Link
+                className="btn btn-outline"
+                params={{ departmentCode }}
+                to="/accruals/department/$departmentCode"
+              >
+                <ArrowLongLeftIcon className="h-4 w-4" />
+                Back to Department
+              </Link>
+            ) : (
+              <Link className="btn btn-outline" to="/accruals">
+                <ArrowLongLeftIcon className="h-4 w-4" />
+                Back to Overview
+              </Link>
+            )}
           </section>
 
           <section className="grid gap-4 lg:grid-cols-3">
