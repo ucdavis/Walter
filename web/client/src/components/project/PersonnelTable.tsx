@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react';
-import { createColumnHelper, type Table } from '@tanstack/react-table';
+import { createColumnHelper } from '@tanstack/react-table';
 import {
   ChevronDownIcon,
   ChevronUpIcon,
   ClockIcon,
 } from '@heroicons/react/24/outline';
-import { ExportDataButton } from '@/components/ExportDataButton.tsx';
+import { TableExportActions } from '@/components/TableExportActions.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import { formatDate } from '@/lib/date.ts';
 import type { PersonnelRecord } from '@/queries/personnel.ts';
@@ -285,47 +285,6 @@ function isUnfilled(position: AggregatedPosition): boolean {
   return !position.name;
 }
 
-function renderTableActions(
-  table: Table<AggregatedPosition>,
-  positions: AggregatedPosition[],
-  showUnfilled: boolean,
-  toggleUnfilled: () => void,
-  unfilledCount: number
-) {
-  const hasActiveFilter =
-    String(table.getState().globalFilter ?? '').trim() !== '';
-  const filteredPositions = table
-    .getFilteredRowModel()
-    .rows.map((row) => row.original);
-
-  return (
-    <div className="flex flex-wrap items-center gap-2">
-      {unfilledCount > 0 && (
-        <button
-          className={`btn btn-sm ${showUnfilled ? 'btn-active' : 'btn-default'}`}
-          onClick={toggleUnfilled}
-          type="button"
-        >
-          {showUnfilled ? 'Hide' : 'Show'} unfilled ({unfilledCount})
-        </button>
-      )}
-      <ExportDataButton
-        columns={personnelCsvColumns}
-        data={getExportData(positions)}
-        filename="personnel.csv"
-      />
-      {hasActiveFilter ? (
-        <ExportDataButton
-          columns={personnelCsvColumns}
-          data={getExportData(filteredPositions)}
-          filename="personnel-filtered.csv"
-          label="Export filtered"
-        />
-      ) : null}
-    </div>
-  );
-}
-
 export function PersonnelTable({
   data,
   showTotals = true,
@@ -528,12 +487,25 @@ export function PersonnelTable({
         )}
         subComponentRowClassName="pivot-row"
         tableActions={(table) =>
-          renderTableActions(
-            table,
-            positions,
-            showUnfilled,
-            () => setShowUnfilled((current) => !current),
-            unfilledCount
+          (
+            <div className="flex flex-wrap items-center gap-2">
+              {unfilledCount > 0 && (
+                <button
+                  className={`btn btn-sm ${showUnfilled ? 'btn-active' : 'btn-default'}`}
+                  onClick={() => setShowUnfilled((current) => !current)}
+                  type="button"
+                >
+                  {showUnfilled ? 'Hide' : 'Show'} unfilled ({unfilledCount})
+                </button>
+              )}
+              <TableExportActions
+                baseFilename="personnel"
+                columns={personnelCsvColumns}
+                data={positions}
+                table={table}
+                toRows={getExportData}
+              />
+            </div>
           )
         }
       />
