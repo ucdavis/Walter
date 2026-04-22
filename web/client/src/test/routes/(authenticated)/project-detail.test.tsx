@@ -241,7 +241,7 @@ describe('project detail page', () => {
       expect(screen.getAllByText('Beta Soil Study')).toHaveLength(2);
       expect(screen.queryByText('Gamma Water Trial')).not.toBeInTheDocument();
 
-      await user.clear(screen.getAllByLabelText('Search projects')[0]);
+      await user.click(screen.getAllByLabelText('Clear project search')[0]);
 
       expect(screen.getAllByText('Gamma Water Trial')).toHaveLength(2);
     } finally {

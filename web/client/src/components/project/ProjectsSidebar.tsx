@@ -83,6 +83,7 @@ export function ProjectsSidebar() {
 
   const panelRef = useRef<HTMLDivElement | null>(null);
   const closeBtnRef = useRef<HTMLButtonElement | null>(null);
+  const hasSearchQuery = searchQuery !== '';
 
   useEffect(() => {
     // close panel when route selection changes (e.g., user navigates to a project)
@@ -178,12 +179,22 @@ export function ProjectsSidebar() {
 
                     <input
                       aria-label="Search projects"
-                      className="w-full h-9 pl-5 pr-3"
+                      className="w-full h-9 pl-5 pr-9"
                       onChange={(event) => setSearchQuery(event.target.value)}
                       placeholder="Search..."
                       type="text"
                       value={searchQuery}
                     />
+                    {hasSearchQuery ? (
+                      <button
+                        aria-label="Clear project search"
+                        className="absolute right-1 top-1/2 -translate-y-1/2 btn btn-ghost btn-sm btn-circle"
+                        onClick={() => setSearchQuery('')}
+                        type="button"
+                      >
+                        <XMarkIcon className="h-4 w-4" />
+                      </button>
+                    ) : null}
                   </div>
                 </div>
               )}
@@ -334,12 +345,22 @@ export function ProjectsSidebar() {
 
               <input
                 aria-label="Search projects"
-                className="w-full h-9 pl-5 pr-3"
+                className="w-full h-9 pl-5 pr-9"
                 onChange={(event) => setSearchQuery(event.target.value)}
                 placeholder="Search..."
                 type="text"
                 value={searchQuery}
               />
+              {hasSearchQuery ? (
+                <button
+                  aria-label="Clear project search"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 btn btn-ghost btn-sm btn-circle"
+                  onClick={() => setSearchQuery('')}
+                  type="button"
+                >
+                  <XMarkIcon className="h-4 w-4" />
+                </button>
+              ) : null}
             </div>
           </div>
 
