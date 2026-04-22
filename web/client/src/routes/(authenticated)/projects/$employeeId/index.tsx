@@ -26,6 +26,14 @@ export const Route = createFileRoute('/(authenticated)/projects/$employeeId/')({
   component: RouteComponent,
 });
 
+function formatLastFirstAsFirstLast(name: string): string {
+  const parts = name.split(',');
+  if (parts.length < 2) return name;
+  const last = parts[0].trim();
+  const first = parts.slice(1).join(',').trim();
+  return first ? `${first} ${last}` : last;
+}
+
 function RouteComponent() {
   const { employeeId } = Route.useParams();
   const { data: projects } = useSuspenseQuery(
@@ -87,7 +95,9 @@ function RouteComponent() {
     <main className="flex-1 min-w-0">
       <section className="mt-8 mb-2">
         <h1 className="h1">
-          {projects[0].pi ? `${projects[0].pi}'s Dashboard` : 'Dashboard'}
+          {projects[0].pi
+            ? `${formatLastFirstAsFirstLast(projects[0].pi)}'s Dashboard`
+            : 'Dashboard'}
         </h1>
       </section>
       <section className="section-margin">

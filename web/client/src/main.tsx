@@ -7,6 +7,7 @@ import './main.css';
 // Import the generated route tree
 import { routeTree } from './routeTree.gen.ts';
 import { bootstrapRum } from '@/lib/rum.ts';
+import { worker } from './mocks/browser.ts';
 
 const queryClient = new QueryClient();
 
@@ -37,12 +38,14 @@ if (!rootElement.innerHTML) {
     console.error('Failed to bootstrap RUM', error);
   });
 
-  const root = ReactDOM.createRoot(rootElement);
-  root.render(
-    <StrictMode>
-      <QueryClientProvider client={queryClient}>
-        <RouterProvider router={router} />
-      </QueryClientProvider>
-    </StrictMode>
-  );
+  void worker.start({ onUnhandledRequest: 'bypass' }).then(() => {
+    const root = ReactDOM.createRoot(rootElement);
+    root.render(
+      <StrictMode>
+        <QueryClientProvider client={queryClient}>
+          <RouterProvider router={router} />
+        </QueryClientProvider>
+      </StrictMode>
+    );
+  });
 }
