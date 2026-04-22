@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { ComponentType, SVGProps } from 'react';
 import {
   ArrowLongLeftIcon,
@@ -68,6 +68,12 @@ type SummaryCardProps = {
 type StatusFilter = 'all' | 'approaching' | 'at-cap';
 type ClassificationFilter = 'all' | 'academic' | 'staff' | string;
 type EmployeeStatus = 'active' | 'approaching' | 'at-cap';
+type DepartmentFilters = {
+  classificationFilter: ClassificationFilter;
+  departmentCode: string;
+  searchTerm: string;
+  statusFilter: StatusFilter;
+};
 
 type StatusThresholds = Pick<
   AccrualAssumptionsResponse,
@@ -245,6 +251,15 @@ function renderProjectedMonths(
   );
 }
 
+function createDepartmentFilters(departmentCode: string): DepartmentFilters {
+  return {
+    classificationFilter: 'all',
+    departmentCode,
+    searchTerm: '',
+    statusFilter: 'all',
+  };
+}
+
 interface VacationAccrualDepartmentDetailProps {
   assumptions: AccrualAssumptionsResponse;
   data: AccrualDepartmentDetailResponse;
@@ -255,16 +270,25 @@ export function VacationAccrualDepartmentDetail({
   data,
 }: VacationAccrualDepartmentDetailProps) {
   const navigate = useNavigate();
-  const [classificationFilter, setClassificationFilter] =
-    useState<ClassificationFilter>('all');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
-
-  useEffect(() => {
-    setClassificationFilter('all');
-    setSearchTerm('');
-    setStatusFilter('all');
-  }, [data.departmentCode]);
+  const [filters, setFilters] = useState<DepartmentFilters>(() =>
+    createDepartmentFilters(data.departmentCode)
+  );
+  const activeFilters =
+    filters.departmentCode === data.departmentCode
+      ? filters
+      : createDepartmentFilters(data.departmentCode);
+  const { classificationFilter, searchTerm, statusFilter } = activeFilters;
+  const updateFilters = (
+    updater: (current: DepartmentFilters) => DepartmentFilters
+  ) => {
+    setFilters((current) =>
+      updater(
+        current.departmentCode === data.departmentCode
+          ? current
+          : createDepartmentFilters(data.departmentCode)
+      )
+    );
+  };
 
   const asOfDate = data.asOfDate ? new Date(data.asOfDate) : null;
   const statusThresholds = useMemo(
@@ -586,7 +610,13 @@ export function VacationAccrualDepartmentDetail({
                         statusFilter === value ? 'btn-primary' : 'btn-ghost'
                       }`}
                       key={value}
-                      onClick={() => setStatusFilter(value)}
+                      onClick={() =>
+                        updateFilters((current) => ({
+                          ...current,
+                          departmentCode: data.departmentCode,
+                          statusFilter: value,
+                        }))
+                      }
                       type="button"
                     >
                       {label}
@@ -598,7 +628,11 @@ export function VacationAccrualDepartmentDetail({
                   <select
                     className="select select-bordered select-sm w-full sm:w-56"
                     onChange={(event) =>
-                      setClassificationFilter(event.target.value)
+                      updateFilters((current) => ({
+                        ...current,
+                        classificationFilter: event.target.value,
+                        departmentCode: data.departmentCode,
+                      }))
                     }
                     value={classificationFilter}
                   >
@@ -640,7 +674,13 @@ export function VacationAccrualDepartmentDetail({
                     </svg>
                     <input
                       className="grow"
-                      onChange={(event) => setSearchTerm(event.target.value)}
+                      onChange={(event) =>
+                        updateFilters((current) => ({
+                          ...current,
+                          departmentCode: data.departmentCode,
+                          searchTerm: event.target.value,
+                        }))
+                      }
                       placeholder="Search by name or ID..."
                       type="text"
                       value={searchTerm}
@@ -648,7 +688,13 @@ export function VacationAccrualDepartmentDetail({
                     {searchTerm ? (
                       <button
                         className="btn btn-ghost btn-sm btn-circle"
-                        onClick={() => setSearchTerm('')}
+                        onClick={() =>
+                          updateFilters((current) => ({
+                            ...current,
+                            departmentCode: data.departmentCode,
+                            searchTerm: '',
+                          }))
+                        }
                         type="button"
                       >
                         <svg
