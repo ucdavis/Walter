@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { formatDate } from '@/lib/date.ts';
 import {
   projectsDetailQueryOptions,
@@ -22,6 +22,14 @@ interface ProjectSummary {
   projectNumber: string;
   projectStatusCode: string;
   totalBalance: number;
+}
+
+function normalizeSearchValue(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase()
+    .trim();
 }
 
 function groupProjects(records: ProjectRecord[]): ProjectSummary[] {
@@ -71,6 +79,7 @@ export function ProjectsSidebar() {
 
   // desktop collapse (md+)
   const [collapsed, setCollapsed] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const panelRef = useRef<HTMLDivElement | null>(null);
   const closeBtnRef = useRef<HTMLButtonElement | null>(null);
@@ -91,16 +100,32 @@ export function ProjectsSidebar() {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  if (!projects?.length) {
-    return null;
-  }
+  const groupedProjects = useMemo(
+    () => groupProjects(projects ?? []),
+    [projects]
+  );
+  const normalizedSearchQuery = normalizeSearchValue(searchQuery);
+  const filteredProjects = useMemo(() => {
+    if (!normalizedSearchQuery) {
+      return groupedProjects;
+    }
 
-  const groupedProjects = groupProjects(projects);
+    return groupedProjects.filter((project) => {
+      const haystack = normalizeSearchValue(
+        `${project.projectNumber} ${project.displayName}`
+      );
+      return haystack.includes(normalizedSearchQuery);
+    });
+  }, [groupedProjects, normalizedSearchQuery]);
   const totalOverviewBalance = groupedProjects.reduce(
     (total, project) => total + project.totalBalance,
     0
   );
   const isAllProjectsActive = !projectNumber;
+
+  if (!projects?.length) {
+    return null;
+  }
 
   return (
     <>
@@ -128,7 +153,14 @@ export function ProjectsSidebar() {
                     collapsed ? 'Expand project list' : 'Collapse project list'
                   }
                   className="p-2 rounded-md cursor-pointer"
-                  onClick={() => setCollapsed((s) => !s)}
+                  onClick={() => {
+                    setCollapsed((isCollapsed) => {
+                      if (!isCollapsed) {
+                        setSearchQuery('');
+                      }
+                      return !isCollapsed;
+                    });
+                  }}
                 >
                   {collapsed ? (
                     <ChevronDoubleRightIcon className="w-4 h-4" />
@@ -147,8 +179,10 @@ export function ProjectsSidebar() {
                     <input
                       aria-label="Search projects"
                       className="w-full h-9 pl-5 pr-3"
+                      onChange={(event) => setSearchQuery(event.target.value)}
                       placeholder="Search..."
                       type="text"
+                      value={searchQuery}
                     />
                   </div>
                 </div>
@@ -183,13 +217,13 @@ export function ProjectsSidebar() {
               </Link>
 
               {/* Individual projects */}
-              {groupedProjects.map((project, index) => (
+              {filteredProjects.map((project) => (
                 <Link
                   className={linkClasses(
                     projectNumber === project.projectNumber,
                     project.projectStatusCode === 'ACTIVE'
                   )}
-                  key={index}
+                  key={project.projectNumber}
                   params={{ employeeId, projectNumber: project.projectNumber }}
                   title={
                     collapsed
@@ -225,6 +259,11 @@ export function ProjectsSidebar() {
                   )}
                 </Link>
               ))}
+              {searchQuery.trim() && filteredProjects.length === 0 ? (
+                <div className="px-3 py-4 text-sm text-dark-font/70">
+                  No matching projects.
+                </div>
+              ) : null}
             </div>
           </div>
         </div>
@@ -296,8 +335,10 @@ export function ProjectsSidebar() {
               <input
                 aria-label="Search projects"
                 className="w-full h-9 pl-5 pr-3"
+                onChange={(event) => setSearchQuery(event.target.value)}
                 placeholder="Search..."
                 type="text"
+                value={searchQuery}
               />
             </div>
           </div>
@@ -318,13 +359,13 @@ export function ProjectsSidebar() {
               </div>
             </Link>
 
-            {groupedProjects.map((project, index) => (
+            {filteredProjects.map((project) => (
               <Link
                 className={linkClasses(
                   projectNumber === project.projectNumber,
                   project.projectStatusCode === 'ACTIVE'
                 )}
-                key={index}
+                key={project.projectNumber}
                 onClick={() => setOpen(false)}
                 params={{ employeeId, projectNumber: project.projectNumber }}
                 to="/projects/$employeeId/$projectNumber"
@@ -342,6 +383,11 @@ export function ProjectsSidebar() {
                 </div>
               </Link>
             ))}
+            {searchQuery.trim() && filteredProjects.length === 0 ? (
+              <div className="px-3 py-4 text-sm text-dark-font/70">
+                No matching projects.
+              </div>
+            ) : null}
           </div>
         </div>
       </div>
