@@ -5,25 +5,12 @@ namespace server.Services;
 
 public static class AccrualOverviewCalculator
 {
-    private const decimal ApproachingThresholdPct = 80m;
-    private const decimal AtCapThresholdPct = 96m;
-    private const decimal FacultyLikeBenefitsRate = 0.41m;
-    private const decimal DefaultBenefitsRate = 0.51m;
+    private static readonly AccrualCalculationSettings Settings = AccrualCalculationSettings.Current;
 
-    // These rates are used to estimate the cost of lost vacation accrual for employees who are at or approaching their accrual cap.
-    // Using data from Nephi 2026 -- should be replaced with actual data from the system when available.
-    private const decimal DefaultAcademicRate = 70m;
-    private const decimal DefaultStaffRate = 45m;
-    private static readonly Dictionary<string, decimal> HourlyRates = new(StringComparer.OrdinalIgnoreCase)
+    public static AccrualAssumptionsResponse GetAssumptions()
     {
-        ["FY Acad Admin"] = 65m,
-        ["FY Acad Coord"] = 62m,
-        ["FY Faculty"] = 78m,
-        ["FY Researcher"] = 68m,
-        ["MSP"] = 52m,
-        ["PSS"] = 32.5m,
-        ["SMG"] = 72m,
-    };
+        return Settings.ToResponse();
+    }
 
     // Builds the top-level overview response from the available accrual history.
     public static AccrualOverviewResponse Build(IReadOnlyList<EmployeeAccrualBalanceRecord> records)
@@ -499,54 +486,39 @@ public static class AccrualOverviewCalculator
     // Derives the standard monthly accrual from the employee's accrual cap tiers.
     private static decimal GetNormalMonthlyAccrual(decimal accrualLimit)
     {
-        return accrualLimit switch
-        {
-            >= 384m => 16m,
-            >= 368m => 15.33m,
-            >= 352m => 14.67m,
-            >= 336m => 14m,
-            >= 320m => 13.33m,
-            >= 288m => 12m,
-            >= 240m => 10m,
-            _ => 10m,
-        };
+        return Settings.GetNormalMonthlyAccrual(accrualLimit);
     }
 
     // Chooses an hourly rate bucket for lost-cost estimation.
     private static decimal GetHourlyRate(string employeeClassDescription)
     {
-        if (HourlyRates.TryGetValue(employeeClassDescription, out var rate))
-        {
-            return rate;
-        }
-
-        return employeeClassDescription.Contains("Academic", StringComparison.OrdinalIgnoreCase)
-            ? DefaultAcademicRate
-            : DefaultStaffRate;
+        return Settings.GetHourlyRate(employeeClassDescription);
     }
 
-    // Applies the current parity rule: faculty-like classes use 41% benefits load, all others use 51%.
     private static decimal GetBenefitsRate(string classification)
     {
-        return string.Equals(classification, "FY Faculty", StringComparison.OrdinalIgnoreCase)
-            ? FacultyLikeBenefitsRate
-            : DefaultBenefitsRate;
+        return Settings.GetBenefitsRate(classification);
     }
 
     private static decimal GetLoadedHourlyRate(string classification, decimal hourlyRate)
     {
-        return hourlyRate * (1m + GetBenefitsRate(classification));
+        return Settings.GetLoadedHourlyRate(classification, hourlyRate);
     }
 
     // Classifies employees into the status groupings shown in the overview and detail screens.
     private static AccrualStatus GetStatus(decimal percentage)
     {
-        return percentage switch
+        if (percentage >= Settings.AtCapThresholdPct)
         {
-            >= AtCapThresholdPct => AccrualStatus.AtCap,
-            >= ApproachingThresholdPct => AccrualStatus.Approaching,
-            _ => AccrualStatus.Active,
-        };
+            return AccrualStatus.AtCap;
+        }
+
+        if (percentage >= Settings.ApproachingThresholdPct)
+        {
+            return AccrualStatus.Approaching;
+        }
+
+        return AccrualStatus.Active;
     }
 
     // Picks the most common non-empty string from duplicated source rows.

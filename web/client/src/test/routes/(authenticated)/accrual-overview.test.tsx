@@ -106,7 +106,42 @@ describe('vacation accrual overview route', () => {
   });
 
   it('renders the accrual assumptions page', async () => {
-    server.use(http.get('/api/user/me', () => HttpResponse.json(mockUser)));
+    server.use(
+      http.get('/api/user/me', () => HttpResponse.json(mockUser)),
+      http.get('/api/accrual/assumptions', () =>
+        HttpResponse.json({
+          approachingThresholdPct: 80,
+          atCapThresholdPct: 96,
+          benefitsRates: [
+            { label: 'FY Acad Admin', rate: 0.41 },
+            { label: 'FY Acad Coord', rate: 0.41 },
+            { label: 'FY Faculty', rate: 0.41 },
+            { label: 'All other classes', rate: 0.51 },
+          ],
+          fallbackAccrualTiers: [
+            { label: '384+ cap hours', monthlyAccrualHours: 16 },
+            { label: '368+ cap hours', monthlyAccrualHours: 15.33 },
+            { label: '352+ cap hours', monthlyAccrualHours: 14.67 },
+            { label: '336+ cap hours', monthlyAccrualHours: 14 },
+            { label: '320+ cap hours', monthlyAccrualHours: 13.33 },
+            { label: '288+ cap hours', monthlyAccrualHours: 12 },
+            { label: '240+ cap hours', monthlyAccrualHours: 10 },
+            { label: 'Below 240 cap hours', monthlyAccrualHours: 10 },
+          ],
+          hourlyRates: [
+            { label: 'FY Acad Admin', hourlyRate: 65 },
+            { label: 'FY Acad Coord', hourlyRate: 62 },
+            { label: 'FY Faculty', hourlyRate: 78 },
+            { label: 'FY Researcher', hourlyRate: 68 },
+            { label: 'MSP', hourlyRate: 52 },
+            { label: 'PSS', hourlyRate: 32.5 },
+            { label: 'SMG', hourlyRate: 72 },
+            { label: 'Fallback academic', hourlyRate: 70 },
+            { label: 'Fallback staff', hourlyRate: 45 },
+          ],
+        })
+      )
+    );
 
     const { cleanup } = renderRoute({ initialPath: '/accruals/about' });
 
@@ -118,8 +153,9 @@ describe('vacation accrual overview route', () => {
       expect(screen.getByText('Status Thresholds')).toBeInTheDocument();
       expect(screen.getByText('Benefits Loads')).toBeInTheDocument();
       expect(screen.getByText('96.0% and above')).toBeInTheDocument();
+      expect(screen.getAllByText('41% composite benefits load')).toHaveLength(3);
       expect(
-        screen.getByText('41% composite benefits load')
+        screen.getByText('51% composite benefits load')
       ).toBeInTheDocument();
       expect(screen.getByText('$78.00/hr')).toBeInTheDocument();
       expect(screen.getByText('14.67 hrs/month')).toBeInTheDocument();

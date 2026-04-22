@@ -31,6 +31,21 @@ export interface AccrualDepartmentOption {
   name: string;
 }
 
+export interface AccrualBenefitsRateRow {
+  label: string;
+  rate: number;
+}
+
+export interface AccrualFallbackAccrualTierRow {
+  label: string;
+  monthlyAccrualHours: number;
+}
+
+export interface AccrualHourlyRateRow {
+  hourlyRate: number;
+  label: string;
+}
+
 export interface AccrualDepartmentEmployeeRow {
   accrualHoursPerMonth: number;
   balanceHours: number;
@@ -74,6 +89,14 @@ export interface AccrualOverviewResponse {
   ytdMonthCount: number;
 }
 
+export interface AccrualAssumptionsResponse {
+  approachingThresholdPct: number;
+  atCapThresholdPct: number;
+  benefitsRates: AccrualBenefitsRateRow[];
+  fallbackAccrualTiers: AccrualFallbackAccrualTierRow[];
+  hourlyRates: AccrualHourlyRateRow[];
+}
+
 export const accrualOverviewQueryOptions = () => ({
   queryFn: async (): Promise<AccrualOverviewResponse> => {
     return await fetchJson<AccrualOverviewResponse>('/api/accrual/overview');
@@ -84,6 +107,18 @@ export const accrualOverviewQueryOptions = () => ({
 
 export const useAccrualOverviewQuery = () => {
   return useQuery(accrualOverviewQueryOptions());
+};
+
+export const accrualAssumptionsQueryOptions = () => ({
+  queryFn: async (): Promise<AccrualAssumptionsResponse> => {
+    return await fetchJson<AccrualAssumptionsResponse>('/api/accrual/assumptions');
+  },
+  queryKey: ['accruals', 'assumptions'] as const,
+  staleTime: 60 * 60 * 1000, // 1 hour
+});
+
+export const useAccrualAssumptionsQuery = () => {
+  return useQuery(accrualAssumptionsQueryOptions());
 };
 
 export const accrualDepartmentDetailQueryOptions = (departmentCode: string) => ({

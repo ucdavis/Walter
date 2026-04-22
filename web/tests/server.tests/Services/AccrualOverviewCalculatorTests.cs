@@ -18,6 +18,20 @@ public sealed class AccrualOverviewCalculatorTests
     }
 
     [Fact]
+    public void GetAssumptions_returns_centralized_settings()
+    {
+        var result = AccrualOverviewCalculator.GetAssumptions();
+
+        result.AtCapThresholdPct.Should().Be(96m);
+        result.ApproachingThresholdPct.Should().Be(80m);
+        result.BenefitsRates.Should().Contain(row => row.Label == "FY Faculty" && row.Rate == 0.41m);
+        result.BenefitsRates.Should().Contain(row => row.Label == "All other classes" && row.Rate == 0.51m);
+        result.HourlyRates.Should().Contain(row => row.Label == "FY Faculty" && row.HourlyRate == 78m);
+        result.FallbackAccrualTiers.Should().Contain(row => row.Label == "352+ cap hours" && row.MonthlyAccrualHours == 14.67m);
+        result.FallbackAccrualTiers.Should().Contain(row => row.Label == "Below 240 cap hours" && row.MonthlyAccrualHours == 10m);
+    }
+
+    [Fact]
     public void Build_uses_latest_month_snapshot_and_deduplicates_employee_rows()
     {
         var records = new List<EmployeeAccrualBalanceRecord>

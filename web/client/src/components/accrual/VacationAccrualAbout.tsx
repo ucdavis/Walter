@@ -6,45 +6,34 @@ import {
   InformationCircleIcon,
 } from '@heroicons/react/24/outline';
 import { Link } from '@tanstack/react-router';
+import { type AccrualAssumptionsResponse } from '@/queries/accrual.ts';
 
 type AssumptionRow = {
   label: string;
   value: string;
 };
 
-const thresholdRows: AssumptionRow[] = [
-  { label: 'At Cap', value: '96.0% and above' },
-  { label: 'Approaching Cap', value: '80.0% to 95.9%' },
-  { label: 'Active', value: 'Below 80.0%' },
-];
+const percentFormatter = new Intl.NumberFormat('en-US', {
+  maximumFractionDigits: 1,
+  minimumFractionDigits: 1,
+});
 
-const benefitsRows: AssumptionRow[] = [
-  { label: 'FY Faculty', value: '41% composite benefits load' },
-  { label: 'All other classes', value: '51% composite benefits load' },
-];
+const compactPercentFormatter = new Intl.NumberFormat('en-US', {
+  maximumFractionDigits: 1,
+  minimumFractionDigits: 0,
+});
 
-const hourlyRateRows: AssumptionRow[] = [
-  { label: 'FY Acad Admin', value: '$65.00/hr' },
-  { label: 'FY Acad Coord', value: '$62.00/hr' },
-  { label: 'FY Faculty', value: '$78.00/hr' },
-  { label: 'FY Researcher', value: '$68.00/hr' },
-  { label: 'MSP', value: '$52.00/hr' },
-  { label: 'PSS', value: '$32.50/hr' },
-  { label: 'SMG', value: '$72.00/hr' },
-  { label: 'Fallback academic', value: '$70.00/hr' },
-  { label: 'Fallback staff', value: '$45.00/hr' },
-];
+const currencyFormatter = new Intl.NumberFormat('en-US', {
+  currency: 'USD',
+  maximumFractionDigits: 2,
+  minimumFractionDigits: 2,
+  style: 'currency',
+});
 
-const accrualFallbackRows: AssumptionRow[] = [
-  { label: '384+ cap hours', value: '16.00 hrs/month' },
-  { label: '368+ cap hours', value: '15.33 hrs/month' },
-  { label: '352+ cap hours', value: '14.67 hrs/month' },
-  { label: '336+ cap hours', value: '14.00 hrs/month' },
-  { label: '320+ cap hours', value: '13.33 hrs/month' },
-  { label: '288+ cap hours', value: '12.00 hrs/month' },
-  { label: '240+ cap hours', value: '10.00 hrs/month' },
-  { label: 'Below 240 cap hours', value: '10.00 hrs/month' },
-];
+const hoursFormatter = new Intl.NumberFormat('en-US', {
+  maximumFractionDigits: 2,
+  minimumFractionDigits: 2,
+});
 
 function AssumptionsTable({
   rows,
@@ -74,7 +63,41 @@ function AssumptionsTable({
   );
 }
 
-export function VacationAccrualAbout() {
+export function VacationAccrualAbout({
+  data,
+}: {
+  data: AccrualAssumptionsResponse;
+}) {
+  const thresholdRows: AssumptionRow[] = [
+    {
+      label: 'At Cap',
+      value: `${percentFormatter.format(data.atCapThresholdPct)}% and above`,
+    },
+    {
+      label: 'Approaching Cap',
+      value: `${percentFormatter.format(data.approachingThresholdPct)}% to ${percentFormatter.format(data.atCapThresholdPct - 0.1)}%`,
+    },
+    {
+      label: 'Active',
+      value: `Below ${percentFormatter.format(data.approachingThresholdPct)}%`,
+    },
+  ];
+
+  const benefitsRows: AssumptionRow[] = data.benefitsRates.map((row) => ({
+    label: row.label,
+    value: `${compactPercentFormatter.format(row.rate * 100)}% composite benefits load`,
+  }));
+
+  const hourlyRateRows: AssumptionRow[] = data.hourlyRates.map((row) => ({
+    label: row.label,
+    value: `${currencyFormatter.format(row.hourlyRate)}/hr`,
+  }));
+
+  const accrualFallbackRows: AssumptionRow[] = data.fallbackAccrualTiers.map((row) => ({
+    label: row.label,
+    value: `${hoursFormatter.format(row.monthlyAccrualHours)} hrs/month`,
+  }));
+
   return (
     <main className="mt-8">
       <div className="container">

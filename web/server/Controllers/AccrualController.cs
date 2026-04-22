@@ -45,4 +45,10 @@ public sealed class AccrualController : ApiControllerBase
 
         return Ok(detail);
     }
+
+    [HttpGet("assumptions")]
+    public IActionResult GetAssumptions()
+    {
+        return Ok(AccrualOverviewCalculator.GetAssumptions());
+    }
 }
