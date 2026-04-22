@@ -1,15 +1,26 @@
-import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import {
   aggregateByPosition,
   PersonnelTable,
 } from '@/components/project/PersonnelTable.tsx';
+import { downloadExcelCsv } from '@/lib/csv.ts';
 import { PersonnelRecord } from '@/queries/personnel.ts';
 import { tooltipDefinitions } from '@/shared/tooltips.ts';
 
+vi.mock('@/lib/csv.ts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/csv.ts')>();
+
+  return {
+    ...actual,
+    downloadExcelCsv: vi.fn(),
+  };
+});
+
 afterEach(() => {
   cleanup();
+  vi.mocked(downloadExcelCsv).mockClear();
   document.body.style.overflow = '';
   document.body.style.paddingRight = '';
 });
@@ -330,5 +341,75 @@ describe('PersonnelTable', () => {
 
     expect(screen.getByText('Adams, Alice (1001) - PROF-FY')).toBeInTheDocument();
     expect(screen.queryByText('Baker, Bob (1002) - PROF-FY')).not.toBeInTheDocument();
+  });
+
+  it('shows the filtered export action only when a search filter is active', () => {
+    const records = [
+      createRecord({
+        employeeId: '1001',
+        name: 'Adams, Alice',
+        positionNumber: '40001111',
+        projectDescription: 'Sunny Project',
+      }),
+      createRecord({
+        employeeId: '1002',
+        name: 'Baker, Bob',
+        positionNumber: '40002222',
+        projectDescription: 'Rainy Project',
+      }),
+    ];
+
+    render(<PersonnelTable data={records} />);
+
+    expect(screen.getByRole('button', { name: 'Export' })).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Export filtered' })
+    ).not.toBeInTheDocument();
+
+    fireEvent.input(screen.getByPlaceholderText('Search all columns...'), {
+      target: { value: 'Sunny' },
+    });
+
+    expect(
+      screen.getByRole('button', { name: 'Export filtered' })
+    ).toBeInTheDocument();
+  });
+
+  it('exports only filtered personnel when the filtered export button is used', () => {
+    const records = [
+      createRecord({
+        employeeId: '1001',
+        fundingEffectiveDate: '2024-07-01',
+        name: 'Adams, Alice',
+        positionNumber: '40001111',
+        projectDescription: 'Sunny Project',
+      }),
+      createRecord({
+        employeeId: '1002',
+        name: 'Baker, Bob',
+        positionNumber: '40002222',
+        projectDescription: 'Rainy Project',
+      }),
+    ];
+
+    render(<PersonnelTable data={records} />);
+
+    fireEvent.input(screen.getByPlaceholderText('Search all columns...'), {
+      target: { value: 'Sunny' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Export filtered' }));
+
+    expect(downloadExcelCsv).toHaveBeenCalledTimes(1);
+
+    const csv = vi.mocked(downloadExcelCsv).mock.calls[0]?.[0];
+    const filename = vi.mocked(downloadExcelCsv).mock.calls[0]?.[1];
+
+    expect(csv).toContain('Adams, Alice');
+    expect(csv).toContain('Sunny Project');
+    expect(csv).not.toContain('Baker, Bob');
+    expect(csv).not.toContain('Rainy Project');
+    expect(csv).toContain('07/01/2024');
+    expect(filename).toBe('personnel-filtered.csv');
   });
 });

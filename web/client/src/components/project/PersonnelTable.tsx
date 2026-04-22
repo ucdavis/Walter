@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { createColumnHelper } from '@tanstack/react-table';
+import { createColumnHelper, type Table } from '@tanstack/react-table';
 import {
   ChevronDownIcon,
   ChevronUpIcon,
@@ -285,6 +285,47 @@ function isUnfilled(position: AggregatedPosition): boolean {
   return !position.name;
 }
 
+function renderTableActions(
+  table: Table<AggregatedPosition>,
+  positions: AggregatedPosition[],
+  showUnfilled: boolean,
+  toggleUnfilled: () => void,
+  unfilledCount: number
+) {
+  const hasActiveFilter =
+    String(table.getState().globalFilter ?? '').trim() !== '';
+  const filteredPositions = table
+    .getFilteredRowModel()
+    .rows.map((row) => row.original);
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      {unfilledCount > 0 && (
+        <button
+          className={`btn btn-sm ${showUnfilled ? 'btn-active' : 'btn-default'}`}
+          onClick={toggleUnfilled}
+          type="button"
+        >
+          {showUnfilled ? 'Hide' : 'Show'} unfilled ({unfilledCount})
+        </button>
+      )}
+      <ExportDataButton
+        columns={personnelCsvColumns}
+        data={getExportData(positions)}
+        filename="personnel.csv"
+      />
+      {hasActiveFilter ? (
+        <ExportDataButton
+          columns={personnelCsvColumns}
+          data={getExportData(filteredPositions)}
+          filename="personnel-filtered.csv"
+          label="Export filtered"
+        />
+      ) : null}
+    </div>
+  );
+}
+
 export function PersonnelTable({
   data,
   showTotals = true,
@@ -464,25 +505,6 @@ export function PersonnelTable({
     return <p className="text-base-content/70 mt-4">No personnel found.</p>;
   }
 
-  const tableActions = (
-    <>
-      {unfilledCount > 0 && (
-        <button
-          className={`btn btn-sm ${showUnfilled ? 'btn-active' : 'btn-default'}`}
-          onClick={() => setShowUnfilled(!showUnfilled)}
-          type="button"
-        >
-          {showUnfilled ? 'Hide' : 'Show'} unfilled ({unfilledCount})
-        </button>
-      )}
-      <ExportDataButton
-        columns={personnelCsvColumns}
-        data={getExportData(positions)}
-        filename="personnel.csv"
-      />
-    </>
-  );
-
   return (
     <div>
       <DataTable
@@ -505,7 +527,15 @@ export function PersonnelTable({
           <DistributionSubtable distributions={row.original.distributions} />
         )}
         subComponentRowClassName="pivot-row"
-        tableActions={tableActions}
+        tableActions={(table) =>
+          renderTableActions(
+            table,
+            positions,
+            showUnfilled,
+            () => setShowUnfilled((current) => !current),
+            unfilledCount
+          )
+        }
       />
     </div>
   );
