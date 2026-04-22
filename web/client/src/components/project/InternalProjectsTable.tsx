@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from '@tanstack/react-router';
-import { createColumnHelper } from '@tanstack/react-table';
+import { createColumnHelper, type Table } from '@tanstack/react-table';
 import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import { ExportDataButton } from '@/components/ExportDataButton.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
@@ -86,6 +86,47 @@ interface InternalProjectsTableProps {
   discrepancies?: Set<string>;
   employeeId: string;
   records: ProjectRecord[];
+}
+
+function renderTableActions(
+  table: Table<AggregatedProject>,
+  inactiveCount: number,
+  projects: AggregatedProject[],
+  showInactive: boolean,
+  toggleInactive: () => void
+) {
+  const hasActiveFilter =
+    String(table.getState().globalFilter ?? '').trim() !== '';
+  const filteredProjects = table
+    .getFilteredRowModel()
+    .rows.map((row) => row.original);
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      {inactiveCount > 0 && (
+        <button
+          className={`btn btn-sm ${showInactive ? 'btn-active' : 'btn-default'}`}
+          onClick={toggleInactive}
+          type="button"
+        >
+          {showInactive ? 'Hide' : 'Show'} inactive tasks ({inactiveCount})
+        </button>
+      )}
+      <ExportDataButton
+        columns={csvColumns}
+        data={projects}
+        filename="internal-projects.csv"
+      />
+      {hasActiveFilter ? (
+        <ExportDataButton
+          columns={csvColumns}
+          data={filteredProjects}
+          filename="internal-projects-filtered.csv"
+          label="Export filtered"
+        />
+      ) : null}
+    </div>
+  );
 }
 
 export function InternalProjectsTable({
@@ -246,19 +287,14 @@ export function InternalProjectsTable({
         footerRowClassName="totaltr"
         globalFilter="left"
         initialState={{ pagination: { pageSize: 25 } }}
-        tableActions={
-          <>
-            {inactiveCount > 0 && (
-              <button
-                className={`btn btn-sm ${showInactive ? 'btn-active' : 'btn-default'}`}
-                onClick={() => setShowInactive(!showInactive)}
-                type="button"
-              >
-                {showInactive ? 'Hide' : 'Show'} inactive tasks ({inactiveCount})
-              </button>
-            )}
-            <ExportDataButton columns={csvColumns} data={projects} filename="internal-projects.csv" />
-          </>
+        tableActions={(table) =>
+          renderTableActions(
+            table,
+            inactiveCount,
+            projects,
+            showInactive,
+            () => setShowInactive((current) => !current)
+          )
         }
       />
     </div>
