@@ -17,6 +17,7 @@ import {
   getSortedRowModel,
   InitialTableState,
   type Row,
+  type Table,
   useReactTable,
 } from '@tanstack/react-table';
 import { useExpandableOverlay } from '@/shared/hooks/useExpandableOverlay.ts';
@@ -27,6 +28,9 @@ import { useExpandableOverlay } from '@/shared/hooks/useExpandableOverlay.ts';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type DataTableColumnDef<TData extends object> = ColumnDef<TData, any>;
 type DataTableColumns<TData extends object> = Array<DataTableColumnDef<TData>>;
+type TableActionsRenderer<TData extends object> =
+  | ReactNode
+  | ((table: Table<TData>) => ReactNode);
 
 function hasAnyFooter<TData extends object>(
   columns: DataTableColumns<TData>
@@ -59,7 +63,7 @@ interface DataTableProps<TData extends object> {
   pagination?: 'auto' | 'on' | 'off'; // 'auto' shows controls only when needed; 'off' disables pagination entirely
   renderSubComponent?: (props: { row: Row<TData> }) => ReactNode;
   subComponentRowClassName?: string;
-  tableActions?: ReactNode;
+  tableActions?: TableActionsRenderer<TData>;
   tableClassName?: string;
 }
 
@@ -134,10 +138,12 @@ export const DataTable = <TData extends object>({
   const showFooter = hasAnyFooter(columns);
   const showPaginationControls =
     pagination === 'on' || (pagination === 'auto' && table.getPageCount() > 1);
+  const resolvedTableActions =
+    typeof tableActions === 'function' ? tableActions(table) : tableActions;
   const shouldShowToolbar =
     globalFilter !== 'none' ||
     expandable ||
-    tableActions ||
+    resolvedTableActions ||
     showPaginationControls ||
     (rowExpansionEnabled && hasExpandableRows);
   const filterValue = table.getState().globalFilter ?? '';
@@ -233,7 +239,7 @@ export const DataTable = <TData extends object>({
             </div>
 
             <div className="flex items-center gap-2">
-              {tableActions}
+              {resolvedTableActions}
               {rowExpansionEnabled && hasExpandableRows ? (
                 <button
                   aria-label={

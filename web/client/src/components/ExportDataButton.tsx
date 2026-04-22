@@ -6,6 +6,7 @@ interface ExportDataButtonProps<T> {
   columns: CsvColumn<T>[];
   data: T[];
   filename: string;
+  label?: string;
 }
 
 export function ExportDataButton<T>({
@@ -13,6 +14,7 @@ export function ExportDataButton<T>({
   columns,
   data,
   filename,
+  label = 'Export',
 }: ExportDataButtonProps<T>) {
   const handleExport = () => {
     const csv = toExcelCsv(data, columns);
@@ -26,7 +28,7 @@ export function ExportDataButton<T>({
       type="button"
     >
       <DocumentChartBarIcon className="w-4 h-4" />
-      Export
+      {label}
     </button>
   );
 }

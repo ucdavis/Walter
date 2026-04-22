@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { createColumnHelper } from '@tanstack/react-table';
-import { ExportDataButton } from '@/components/ExportDataButton.tsx';
+import { TableExportActions } from '@/components/TableExportActions.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import { formatDate } from '@/lib/date.ts';
 import type { ProjectRecord } from '@/queries/project.ts';
@@ -288,21 +288,6 @@ export function SponsoredProjectsTable({
     return <p className="text-base-content/70 mt-8">No projects found.</p>;
   }
 
-  const tableActions = (
-    <>
-      {expiredCount > 0 && (
-        <button
-          className={`btn btn-sm ${showExpired ? 'btn-active' : 'btn-default'}`}
-          onClick={() => setShowExpired(!showExpired)}
-          type="button"
-        >
-          {showExpired ? 'Hide' : 'Show'} expired ({expiredCount})
-        </button>
-      )}
-      <ExportDataButton columns={csvColumns} data={projects} filename="projects.csv" />
-    </>
-  );
-
   return (
     <div className="mt-4">
       <DataTable
@@ -311,7 +296,28 @@ export function SponsoredProjectsTable({
         footerRowClassName="totaltr"
         globalFilter="left"
         initialState={{ pagination: { pageSize: 25 } }}
-        tableActions={tableActions}
+        tableActions={(table) =>
+          (
+            <div className="flex flex-wrap items-center gap-2">
+              {expiredCount > 0 && (
+                <button
+                  className={`btn btn-sm ${showExpired ? 'btn-active' : 'btn-default'}`}
+                  onClick={() => setShowExpired((current) => !current)}
+                  type="button"
+                >
+                  {showExpired ? 'Hide' : 'Show'} expired ({expiredCount})
+                </button>
+              )}
+              <TableExportActions
+                baseFilename="projects"
+                columns={csvColumns}
+                data={projects}
+                table={table}
+                toRows={(rows) => rows}
+              />
+            </div>
+          )
+        }
       />
     </div>
   );

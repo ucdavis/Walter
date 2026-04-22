@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { createColumnHelper } from '@tanstack/react-table';
-import { ExportDataButton } from '@/components/ExportDataButton.tsx';
+import { TableExportActions } from '@/components/TableExportActions.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import type { ProjectRecord } from '@/queries/project.ts';
 import { DataTable } from '@/shared/DataTable.tsx';
@@ -267,23 +267,27 @@ export function TaskBreakdown({ employeeId, projectNumber, records }: TaskBreakd
       data={rows}
       footerRowClassName="totaltr"
       pagination="off"
-      tableActions={
-        <>
-          {closedCount > 0 && (
-            <button
-              className={`btn btn-sm ${showClosed ? 'btn-active' : 'btn-default'}`}
-              onClick={() => setShowClosed(!showClosed)}
-              type="button"
-            >
-              {showClosed ? 'Hide' : 'Show'} closed ({closedCount})
-            </button>
-          )}
-          <ExportDataButton
-            columns={csvColumns}
-            data={rows}
-            filename={`task-breakdown-${projectNumber}.csv`}
-          />
-        </>
+      tableActions={(table) =>
+        (
+          <div className="flex flex-wrap items-center gap-2">
+            {closedCount > 0 && (
+              <button
+                className={`btn btn-sm ${showClosed ? 'btn-active' : 'btn-default'}`}
+                onClick={() => setShowClosed((current) => !current)}
+                type="button"
+              >
+                {showClosed ? 'Hide' : 'Show'} closed ({closedCount})
+              </button>
+            )}
+            <TableExportActions
+              baseFilename={`task-breakdown-${projectNumber}`}
+              columns={csvColumns}
+              data={rows}
+              table={table}
+              toRows={(tableRows) => tableRows}
+            />
+          </div>
+        )
       }
     />
   );

@@ -5,7 +5,7 @@ import {
   ChevronUpIcon,
   ClockIcon,
 } from '@heroicons/react/24/outline';
-import { ExportDataButton } from '@/components/ExportDataButton.tsx';
+import { TableExportActions } from '@/components/TableExportActions.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import { formatDate } from '@/lib/date.ts';
 import type { PersonnelRecord } from '@/queries/personnel.ts';
@@ -464,25 +464,6 @@ export function PersonnelTable({
     return <p className="text-base-content/70 mt-4">No personnel found.</p>;
   }
 
-  const tableActions = (
-    <>
-      {unfilledCount > 0 && (
-        <button
-          className={`btn btn-sm ${showUnfilled ? 'btn-active' : 'btn-default'}`}
-          onClick={() => setShowUnfilled(!showUnfilled)}
-          type="button"
-        >
-          {showUnfilled ? 'Hide' : 'Show'} unfilled ({unfilledCount})
-        </button>
-      )}
-      <ExportDataButton
-        columns={personnelCsvColumns}
-        data={getExportData(positions)}
-        filename="personnel.csv"
-      />
-    </>
-  );
-
   return (
     <div>
       <DataTable
@@ -505,7 +486,28 @@ export function PersonnelTable({
           <DistributionSubtable distributions={row.original.distributions} />
         )}
         subComponentRowClassName="pivot-row"
-        tableActions={tableActions}
+        tableActions={(table) =>
+          (
+            <div className="flex flex-wrap items-center gap-2">
+              {unfilledCount > 0 && (
+                <button
+                  className={`btn btn-sm ${showUnfilled ? 'btn-active' : 'btn-default'}`}
+                  onClick={() => setShowUnfilled((current) => !current)}
+                  type="button"
+                >
+                  {showUnfilled ? 'Hide' : 'Show'} unfilled ({unfilledCount})
+                </button>
+              )}
+              <TableExportActions
+                baseFilename="personnel"
+                columns={personnelCsvColumns}
+                data={positions}
+                table={table}
+                toRows={getExportData}
+              />
+            </div>
+          )
+        }
       />
     </div>
   );

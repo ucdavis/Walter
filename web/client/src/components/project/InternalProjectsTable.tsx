@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { createColumnHelper } from '@tanstack/react-table';
 import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
-import { ExportDataButton } from '@/components/ExportDataButton.tsx';
+import { TableExportActions } from '@/components/TableExportActions.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import type { ProjectRecord } from '@/queries/project.ts';
 import { DataTable } from '@/shared/DataTable.tsx';
@@ -246,19 +246,27 @@ export function InternalProjectsTable({
         footerRowClassName="totaltr"
         globalFilter="left"
         initialState={{ pagination: { pageSize: 25 } }}
-        tableActions={
-          <>
-            {inactiveCount > 0 && (
-              <button
-                className={`btn btn-sm ${showInactive ? 'btn-active' : 'btn-default'}`}
-                onClick={() => setShowInactive(!showInactive)}
-                type="button"
-              >
-                {showInactive ? 'Hide' : 'Show'} inactive tasks ({inactiveCount})
-              </button>
-            )}
-            <ExportDataButton columns={csvColumns} data={projects} filename="internal-projects.csv" />
-          </>
+        tableActions={(table) =>
+          (
+            <div className="flex flex-wrap items-center gap-2">
+              {inactiveCount > 0 && (
+                <button
+                  className={`btn btn-sm ${showInactive ? 'btn-active' : 'btn-default'}`}
+                  onClick={() => setShowInactive((current) => !current)}
+                  type="button"
+                >
+                  {showInactive ? 'Hide' : 'Show'} inactive tasks ({inactiveCount})
+                </button>
+              )}
+              <TableExportActions
+                baseFilename="internal-projects"
+                columns={csvColumns}
+                data={projects}
+                table={table}
+                toRows={(rows) => rows}
+              />
+            </div>
+          )
         }
       />
     </div>
