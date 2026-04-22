@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from '@tanstack/react-router';
-import { createColumnHelper } from '@tanstack/react-table';
+import { createColumnHelper, type Table } from '@tanstack/react-table';
 import { ExportDataButton } from '@/components/ExportDataButton.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import { formatDate } from '@/lib/date.ts';
@@ -119,6 +119,47 @@ const csvColumns = [
 interface SponsoredProjectsTableProps {
   employeeId: string;
   records: ProjectRecord[];
+}
+
+function renderTableActions(
+  table: Table<AggregatedProject>,
+  expiredCount: number,
+  projects: AggregatedProject[],
+  showExpired: boolean,
+  toggleExpired: () => void
+) {
+  const hasActiveFilter =
+    String(table.getState().globalFilter ?? '').trim() !== '';
+  const filteredProjects = table
+    .getFilteredRowModel()
+    .rows.map((row) => row.original);
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      {expiredCount > 0 && (
+        <button
+          className={`btn btn-sm ${showExpired ? 'btn-active' : 'btn-default'}`}
+          onClick={toggleExpired}
+          type="button"
+        >
+          {showExpired ? 'Hide' : 'Show'} expired ({expiredCount})
+        </button>
+      )}
+      <ExportDataButton
+        columns={csvColumns}
+        data={projects}
+        filename="projects.csv"
+      />
+      {hasActiveFilter ? (
+        <ExportDataButton
+          columns={csvColumns}
+          data={filteredProjects}
+          filename="projects-filtered.csv"
+          label="Export filtered"
+        />
+      ) : null}
+    </div>
+  );
 }
 
 export function SponsoredProjectsTable({
@@ -288,21 +329,6 @@ export function SponsoredProjectsTable({
     return <p className="text-base-content/70 mt-8">No projects found.</p>;
   }
 
-  const tableActions = (
-    <>
-      {expiredCount > 0 && (
-        <button
-          className={`btn btn-sm ${showExpired ? 'btn-active' : 'btn-default'}`}
-          onClick={() => setShowExpired(!showExpired)}
-          type="button"
-        >
-          {showExpired ? 'Hide' : 'Show'} expired ({expiredCount})
-        </button>
-      )}
-      <ExportDataButton columns={csvColumns} data={projects} filename="projects.csv" />
-    </>
-  );
-
   return (
     <div className="mt-4">
       <DataTable
@@ -311,7 +337,15 @@ export function SponsoredProjectsTable({
         footerRowClassName="totaltr"
         globalFilter="left"
         initialState={{ pagination: { pageSize: 25 } }}
-        tableActions={tableActions}
+        tableActions={(table) =>
+          renderTableActions(
+            table,
+            expiredCount,
+            projects,
+            showExpired,
+            () => setShowExpired((current) => !current)
+          )
+        }
       />
     </div>
   );

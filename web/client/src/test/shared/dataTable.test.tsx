@@ -116,6 +116,36 @@ describe('DataTable tableActions', () => {
       screen.getByRole('button', { name: 'Custom Action' })
     ).toBeInTheDocument();
   });
+
+  it('renders tableActions from the live table state', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <DataTable
+        columns={columns}
+        data={[
+          { name: 'Row1', value: 1 },
+          { name: 'Row2', value: 2 },
+        ]}
+        expandable={false}
+        tableActions={(table) =>
+          table.getState().globalFilter ? (
+            <button type="button">Filtered Action</button>
+          ) : null
+        }
+      />
+    );
+
+    expect(
+      screen.queryByRole('button', { name: 'Filtered Action' })
+    ).not.toBeInTheDocument();
+
+    await user.type(screen.getByPlaceholderText('Search all columns...'), 'Row1');
+
+    expect(
+      screen.getByRole('button', { name: 'Filtered Action' })
+    ).toBeInTheDocument();
+  });
 });
 
 describe('DataTable row expansion', () => {
