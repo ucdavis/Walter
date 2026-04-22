@@ -7,6 +7,8 @@ public static class AccrualOverviewCalculator
 {
     private const decimal ApproachingThresholdPct = 80m;
     private const decimal AtCapThresholdPct = 96m;
+    private const decimal FacultyLikeBenefitsRate = 0.41m;
+    private const decimal DefaultBenefitsRate = 0.51m;
 
     // These rates are used to estimate the cost of lost vacation accrual for employees who are at or approaching their accrual cap.
     // Using data from Nephi 2026 -- should be replaced with actual data from the system when available.
@@ -307,7 +309,7 @@ public static class AccrualOverviewCalculator
             hourlyRate,
             lastVacationDate,
             status == AccrualStatus.AtCap
-                ? DecimalRound(normalMonthlyAccrual * hourlyRate)
+                ? DecimalRound(normalMonthlyAccrual * GetLoadedHourlyRate(classification, hourlyRate))
                 : 0m,
             monthsToCap,
             DecimalRound(normalMonthlyAccrual),
@@ -521,6 +523,19 @@ public static class AccrualOverviewCalculator
         return employeeClassDescription.Contains("Academic", StringComparison.OrdinalIgnoreCase)
             ? DefaultAcademicRate
             : DefaultStaffRate;
+    }
+
+    // Applies the current parity rule: faculty-like classes use 41% benefits load, all others use 51%.
+    private static decimal GetBenefitsRate(string classification)
+    {
+        return string.Equals(classification, "FY Faculty", StringComparison.OrdinalIgnoreCase)
+            ? FacultyLikeBenefitsRate
+            : DefaultBenefitsRate;
+    }
+
+    private static decimal GetLoadedHourlyRate(string classification, decimal hourlyRate)
+    {
+        return hourlyRate * (1m + GetBenefitsRate(classification));
     }
 
     // Classifies employees into the status groupings shown in the overview and detail screens.
