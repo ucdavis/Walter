@@ -1,4 +1,4 @@
-import type { ComponentType, SVGProps } from 'react';
+import type { ComponentType, MouseEvent, SVGProps } from 'react';
 import {
   ArrowTrendingDownIcon,
   ChartBarIcon,
@@ -113,9 +113,35 @@ export function VacationAccrualOverview({
   }
 
   const asOfDate = data.asOfDate ? new Date(data.asOfDate) : null;
+  const shouldSkipRowNavigation = (
+    event: MouseEvent<HTMLTableRowElement>
+  ): boolean => {
+    const interactiveTarget = (event.target as HTMLElement | null)?.closest(
+      'a, button, input, select, textarea, summary, [role="button"], [role="link"]'
+    );
+    if (interactiveTarget) {
+      return true;
+    }
+
+    const selection = window.getSelection();
+    return Boolean(selection && !selection.isCollapsed);
+  };
   const departmentColumns: ColumnDef<AccrualDepartmentBreakdownRow>[] = [
     {
       accessorKey: 'department',
+      cell: (info) => (
+        <div className="flex items-start">
+          <Link
+            aria-label={`Open ${info.getValue<string>()} department details`}
+            className="link link-hover text-inherit"
+            params={{ departmentCode: info.row.original.departmentCode }}
+            title="Open department details"
+            to="/accruals/department/$departmentCode"
+          >
+            {info.getValue<string>()}
+          </Link>
+        </div>
+      ),
       footer: () => 'CAES Total',
       header: 'Department',
       minSize: 260,
@@ -406,26 +432,18 @@ export function VacationAccrualOverview({
                   footerRowClassName="totaltr bg-base-200/70"
                   getRowProps={(row) => ({
                     className: 'cursor-pointer hover:bg-base-200',
-                    onClick: () =>
-                      navigate({
+                    onClick: (event) => {
+                      if (shouldSkipRowNavigation(event)) {
+                        return;
+                      }
+
+                      void navigate({
                         params: {
                           departmentCode: row.original.departmentCode,
                         },
                         to: '/accruals/department/$departmentCode',
-                      }),
-                    onKeyDown: (event) => {
-                      if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault();
-                        void navigate({
-                          params: {
-                            departmentCode: row.original.departmentCode,
-                          },
-                          to: '/accruals/department/$departmentCode',
-                        });
-                      }
+                      });
                     },
-                    role: 'link',
-                    tabIndex: 0,
                   })}
                   initialState={{
                     pagination: { pageSize: 50 },
