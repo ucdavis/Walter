@@ -1,4 +1,4 @@
-import type { ComponentType, SVGProps } from 'react';
+import type { ComponentType, MouseEvent, SVGProps } from 'react';
 import {
   ArrowTrendingDownIcon,
   ChartBarIcon,
@@ -18,7 +18,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { useNavigate } from '@tanstack/react-router';
+import { Link, useNavigate } from '@tanstack/react-router';
 import { ColumnDef } from '@tanstack/react-table';
 import { ExportDataButton } from '@/components/ExportDataButton.tsx';
 import { PageEmpty } from '@/components/states/PageEmpty.tsx';
@@ -113,9 +113,35 @@ export function VacationAccrualOverview({
   }
 
   const asOfDate = data.asOfDate ? new Date(data.asOfDate) : null;
+  const shouldSkipRowNavigation = (
+    event: MouseEvent<HTMLTableRowElement>
+  ): boolean => {
+    const interactiveTarget = (event.target as HTMLElement | null)?.closest(
+      'a, button, input, select, textarea, summary, [role="button"], [role="link"]'
+    );
+    if (interactiveTarget) {
+      return true;
+    }
+
+    const selection = window.getSelection();
+    return Boolean(selection && !selection.isCollapsed);
+  };
   const departmentColumns: ColumnDef<AccrualDepartmentBreakdownRow>[] = [
     {
       accessorKey: 'department',
+      cell: (info) => (
+        <div className="flex items-start">
+          <Link
+            aria-label={`Open ${info.getValue<string>()} department details`}
+            className="link link-hover text-inherit"
+            params={{ departmentCode: info.row.original.departmentCode }}
+            title="Open department details"
+            to="/accruals/department/$departmentCode"
+          >
+            {info.getValue<string>()}
+          </Link>
+        </div>
+      ),
       footer: () => 'CAES Total',
       header: 'Department',
       minSize: 260,
@@ -178,7 +204,9 @@ export function VacationAccrualOverview({
           {formatCurrency(data.lostCostMonth)}
         </span>
       ),
-      header: () => <span className="flex justify-end w-full">Lost Cost/Mo</span>,
+      header: () => (
+        <span className="flex justify-end w-full">Lost Cost/Mo</span>
+      ),
       size: 160,
     },
     {
@@ -193,7 +221,9 @@ export function VacationAccrualOverview({
           {formatCurrency(data.lostCostYtd)}
         </span>
       ),
-      header: () => <span className="flex justify-end w-full">Lost Cost YTD</span>,
+      header: () => (
+        <span className="flex justify-end w-full">Lost Cost YTD</span>
+      ),
       size: 170,
     },
     {
@@ -206,7 +236,9 @@ export function VacationAccrualOverview({
       footer: () => (
         <span className="flex justify-end w-full text-base-content/55">-</span>
       ),
-      header: () => <span className="flex justify-end w-full">Avg Balance</span>,
+      header: () => (
+        <span className="flex justify-end w-full">Avg Balance</span>
+      ),
       size: 140,
     },
   ];
@@ -215,15 +247,33 @@ export function VacationAccrualOverview({
     <main className="mt-8">
       <div className="container">
         <div className="mx-auto max-w-7xl space-y-8">
-          <section>
-            <h1 className="h1">Vacation Accrual Overview</h1>
-            <p className="mt-2 text-sm text-base-content/65">
-              {data.totalEmployees.toLocaleString('en-US')} employees across{' '}
-              {data.totalDepartments.toLocaleString('en-US')} departments
-              {asOfDate ? (
-                <> as of {asOfDateFormatter.format(asOfDate)}</>
-              ) : null}
-            </p>
+          <section className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <h1 className="h1">Vacation Accrual Overview</h1>
+              <p className="mt-2 text-sm text-base-content/65">
+                {data.totalEmployees.toLocaleString('en-US')} employees across{' '}
+                {data.totalDepartments.toLocaleString('en-US')} departments
+              </p>
+            </div>
+
+            <div className="card bg-base-100 border border-main-border shadow-sm lg:min-w-64">
+              <div className="card-body gap-1 p-4">
+                <div className="text-xs font-semibold tracking-[0.14em] uppercase text-base-content/55">
+                  As Of
+                </div>
+                <div className="text-lg font-semibold">
+                  {asOfDate
+                    ? asOfDateFormatter.format(asOfDate)
+                    : 'Unavailable'}
+                </div>
+                <Link
+                  className="link link-primary text-sm font-semibold"
+                  to="/accruals/about"
+                >
+                  About this report
+                </Link>
+              </div>
+            </div>
           </section>
 
           <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
@@ -380,33 +430,25 @@ export function VacationAccrualOverview({
                   expandable={false}
                   filterPlaceholder="Search departments..."
                   footerRowClassName="totaltr bg-base-200/70"
-                  initialState={{
-                    pagination: { pageSize: 50 },
-                    sorting: [{ desc: false, id: 'department' }],
-                  }}
                   getRowProps={(row) => ({
                     className: 'cursor-pointer hover:bg-base-200',
-                    onClick: () =>
-                      navigate({
+                    onClick: (event) => {
+                      if (shouldSkipRowNavigation(event)) {
+                        return;
+                      }
+
+                      void navigate({
                         params: {
                           departmentCode: row.original.departmentCode,
                         },
                         to: '/accruals/department/$departmentCode',
-                      }),
-                    onKeyDown: (event) => {
-                      if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault();
-                        void navigate({
-                          params: {
-                            departmentCode: row.original.departmentCode,
-                          },
-                          to: '/accruals/department/$departmentCode',
-                        });
-                      }
+                      });
                     },
-                    role: 'link',
-                    tabIndex: 0,
                   })}
+                  initialState={{
+                    pagination: { pageSize: 50 },
+                    sorting: [{ desc: false, id: 'department' }],
+                  }}
                   tableActions={
                     <ExportDataButton
                       columns={departmentCsvColumns}

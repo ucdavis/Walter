@@ -16,9 +16,9 @@ export interface AccrualStatusTrendPoint {
 }
 
 export interface AccrualDepartmentBreakdownRow {
-  avgBalanceHours: number;
   approachingCapCount: number;
   atCapCount: number;
+  avgBalanceHours: number;
   department: string;
   departmentCode: string;
   headcount: number;
@@ -29,6 +29,21 @@ export interface AccrualDepartmentBreakdownRow {
 export interface AccrualDepartmentOption {
   code: string;
   name: string;
+}
+
+export interface AccrualBenefitsRateRow {
+  label: string;
+  rate: number;
+}
+
+export interface AccrualFallbackAccrualTierRow {
+  label: string;
+  monthlyAccrualHours: number;
+}
+
+export interface AccrualHourlyRateRow {
+  hourlyRate: number;
+  label: string;
 }
 
 export interface AccrualDepartmentEmployeeRow {
@@ -45,10 +60,10 @@ export interface AccrualDepartmentEmployeeRow {
 }
 
 export interface AccrualDepartmentDetailResponse {
-  asOfDate: string;
-  avgBalanceHours: number;
   approachingCapCount: number;
+  asOfDate: string;
   atCapCount: number;
+  avgBalanceHours: number;
   departmentCode: string;
   departmentName: string;
   departments: AccrualDepartmentOption[];
@@ -74,6 +89,14 @@ export interface AccrualOverviewResponse {
   ytdMonthCount: number;
 }
 
+export interface AccrualAssumptionsResponse {
+  approachingThresholdPct: number;
+  atCapThresholdPct: number;
+  benefitsRates: AccrualBenefitsRateRow[];
+  fallbackAccrualTiers: AccrualFallbackAccrualTierRow[];
+  hourlyRates: AccrualHourlyRateRow[];
+}
+
 export const accrualOverviewQueryOptions = () => ({
   queryFn: async (): Promise<AccrualOverviewResponse> => {
     return await fetchJson<AccrualOverviewResponse>('/api/accrual/overview');
@@ -86,7 +109,23 @@ export const useAccrualOverviewQuery = () => {
   return useQuery(accrualOverviewQueryOptions());
 };
 
-export const accrualDepartmentDetailQueryOptions = (departmentCode: string) => ({
+export const accrualAssumptionsQueryOptions = () => ({
+  queryFn: async (): Promise<AccrualAssumptionsResponse> => {
+    return await fetchJson<AccrualAssumptionsResponse>(
+      '/api/accrual/assumptions'
+    );
+  },
+  queryKey: ['accruals', 'assumptions'] as const,
+  staleTime: 60 * 60 * 1000, // 1 hour
+});
+
+export const useAccrualAssumptionsQuery = () => {
+  return useQuery(accrualAssumptionsQueryOptions());
+};
+
+export const accrualDepartmentDetailQueryOptions = (
+  departmentCode: string
+) => ({
   queryFn: async (): Promise<AccrualDepartmentDetailResponse> => {
     return await fetchJson<AccrualDepartmentDetailResponse>(
       `/api/accrual/department/${encodeURIComponent(departmentCode)}`
