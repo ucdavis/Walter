@@ -1,10 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { ComponentType, SVGProps } from 'react';
 import {
   ArrowLongLeftIcon,
   ChartBarIcon,
   FireIcon,
-  MagnifyingGlassIcon,
   NoSymbolIcon,
   UserGroupIcon,
   ClipboardDocumentListIcon,
@@ -16,6 +15,7 @@ import { PageEmpty } from '@/components/states/PageEmpty.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import { formatDate } from '@/lib/date.ts';
 import {
+  type AccrualAssumptionsResponse,
   type AccrualDepartmentDetailResponse,
   type AccrualDepartmentEmployeeRow,
 } from '@/queries/accrual.ts';
@@ -45,7 +45,11 @@ const departmentEmployeeCsvColumns = [
   { header: '% of Cap', key: 'pctOfCap' as const },
   { header: 'Accrual/Mo', key: 'accrualHoursPerMonth' as const },
   { header: 'Months to Cap', key: 'monthsToCap' as const },
-  { format: 'date' as const, header: 'Last Vacation', key: 'lastVacationDate' as const },
+  {
+    format: 'date' as const,
+    header: 'Last Vacation',
+    key: 'lastVacationDate' as const,
+  },
   {
     format: 'currency' as const,
     header: 'Lost Cost/Mo',
@@ -64,6 +68,17 @@ type SummaryCardProps = {
 type StatusFilter = 'all' | 'approaching' | 'at-cap';
 type ClassificationFilter = 'all' | 'academic' | 'staff' | string;
 type EmployeeStatus = 'active' | 'approaching' | 'at-cap';
+type DepartmentFilters = {
+  classificationFilter: ClassificationFilter;
+  departmentCode: string;
+  searchTerm: string;
+  statusFilter: StatusFilter;
+};
+
+type StatusThresholds = Pick<
+  AccrualAssumptionsResponse,
+  'approachingThresholdPct' | 'atCapThresholdPct'
+>;
 
 function SummaryCard({
   accentClassName,
@@ -93,13 +108,14 @@ function isAcademicClassification(classification: string): boolean {
 }
 
 function getEmployeeStatus(
-  employee: AccrualDepartmentEmployeeRow
+  employee: AccrualDepartmentEmployeeRow,
+  thresholds: StatusThresholds
 ): EmployeeStatus {
-  if (employee.pctOfCap >= 100) {
+  if (employee.pctOfCap >= thresholds.atCapThresholdPct) {
     return 'at-cap';
   }
 
-  if (employee.pctOfCap >= 80) {
+  if (employee.pctOfCap >= thresholds.approachingThresholdPct) {
     return 'approaching';
   }
 
@@ -126,11 +142,7 @@ function getStatusClassName(status: EmployeeStatus): string {
   return 'border-success/20 bg-success/10 text-success';
 }
 
-function ClassificationBadge({
-  classification,
-}: {
-  classification: string;
-}) {
+function ClassificationBadge({ classification }: { classification: string }) {
   let className = 'bg-success/10 text-success';
 
   if (classification === 'PSS') {
@@ -150,8 +162,14 @@ function ClassificationBadge({
   );
 }
 
-function StatusBadge({ employee }: { employee: AccrualDepartmentEmployeeRow }) {
-  const status = getEmployeeStatus(employee);
+function StatusBadge({
+  employee,
+  thresholds,
+}: {
+  employee: AccrualDepartmentEmployeeRow;
+  thresholds: StatusThresholds;
+}) {
+  const status = getEmployeeStatus(employee, thresholds);
 
   return (
     <span
@@ -164,11 +182,17 @@ function StatusBadge({ employee }: { employee: AccrualDepartmentEmployeeRow }) {
 
 function CapProgressBar({
   pctOfCap,
+  thresholds,
 }: {
   pctOfCap: number;
+  thresholds: StatusThresholds;
 }) {
   const status =
-    pctOfCap >= 100 ? 'at-cap' : pctOfCap >= 80 ? 'approaching' : 'active';
+    pctOfCap >= thresholds.atCapThresholdPct
+      ? 'at-cap'
+      : pctOfCap >= thresholds.approachingThresholdPct
+        ? 'approaching'
+        : 'active';
   const fillClassName =
     status === 'at-cap'
       ? 'bg-error'
@@ -203,8 +227,11 @@ function CapProgressBar({
   );
 }
 
-function renderProjectedMonths(employee: AccrualDepartmentEmployeeRow) {
-  const status = getEmployeeStatus(employee);
+function renderProjectedMonths(
+  employee: AccrualDepartmentEmployeeRow,
+  thresholds: StatusThresholds
+) {
+  const status = getEmployeeStatus(employee, thresholds);
   if (status === 'at-cap') {
     return <span className="font-semibold text-error">At Cap</span>;
   }
@@ -224,42 +251,75 @@ function renderProjectedMonths(employee: AccrualDepartmentEmployeeRow) {
   );
 }
 
+function createDepartmentFilters(departmentCode: string): DepartmentFilters {
+  return {
+    classificationFilter: 'all',
+    departmentCode,
+    searchTerm: '',
+    statusFilter: 'all',
+  };
+}
+
 interface VacationAccrualDepartmentDetailProps {
+  assumptions: AccrualAssumptionsResponse;
   data: AccrualDepartmentDetailResponse;
 }
 
 export function VacationAccrualDepartmentDetail({
+  assumptions,
   data,
 }: VacationAccrualDepartmentDetailProps) {
   const navigate = useNavigate();
-  const [classificationFilter, setClassificationFilter] =
-    useState<ClassificationFilter>('all');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
-
-  useEffect(() => {
-    setClassificationFilter('all');
-    setSearchTerm('');
-    setStatusFilter('all');
-  }, [data.departmentCode]);
+  const [filters, setFilters] = useState<DepartmentFilters>(() =>
+    createDepartmentFilters(data.departmentCode)
+  );
+  const activeFilters =
+    filters.departmentCode === data.departmentCode
+      ? filters
+      : createDepartmentFilters(data.departmentCode);
+  const { classificationFilter, searchTerm, statusFilter } = activeFilters;
+  const updateFilters = (
+    updater: (current: DepartmentFilters) => DepartmentFilters
+  ) => {
+    setFilters((current) =>
+      updater(
+        current.departmentCode === data.departmentCode
+          ? current
+          : createDepartmentFilters(data.departmentCode)
+      )
+    );
+  };
 
   const asOfDate = data.asOfDate ? new Date(data.asOfDate) : null;
+  const statusThresholds = useMemo(
+    () => ({
+      approachingThresholdPct: assumptions.approachingThresholdPct,
+      atCapThresholdPct: assumptions.atCapThresholdPct,
+    }),
+    [assumptions.approachingThresholdPct, assumptions.atCapThresholdPct]
+  );
 
   const classifications = useMemo(
     () =>
-      [...new Set(data.employees.map((employee) => employee.classification))].sort(
-        (left, right) => left.localeCompare(right)
-      ),
+      [
+        ...new Set(data.employees.map((employee) => employee.classification)),
+      ].sort((left, right) => left.localeCompare(right)),
     [data.employees]
   );
 
   const academicClassifications = useMemo(
-    () => classifications.filter((classification) => isAcademicClassification(classification)),
+    () =>
+      classifications.filter((classification) =>
+        isAcademicClassification(classification)
+      ),
     [classifications]
   );
 
   const staffClassifications = useMemo(
-    () => classifications.filter((classification) => !isAcademicClassification(classification)),
+    () =>
+      classifications.filter(
+        (classification) => !isAcademicClassification(classification)
+      ),
     [classifications]
   );
 
@@ -267,7 +327,7 @@ export function VacationAccrualDepartmentDetail({
     const normalizedSearchTerm = searchTerm.trim().toLowerCase();
 
     return data.employees.filter((employee) => {
-      const status = getEmployeeStatus(employee);
+      const status = getEmployeeStatus(employee, statusThresholds);
       if (statusFilter === 'at-cap' && status !== 'at-cap') {
         return false;
       }
@@ -276,18 +336,24 @@ export function VacationAccrualDepartmentDetail({
         return false;
       }
 
-      if (classificationFilter === 'academic' &&
-          !isAcademicClassification(employee.classification)) {
+      if (
+        classificationFilter === 'academic' &&
+        !isAcademicClassification(employee.classification)
+      ) {
         return false;
       }
 
-      if (classificationFilter === 'staff' &&
-          isAcademicClassification(employee.classification)) {
+      if (
+        classificationFilter === 'staff' &&
+        isAcademicClassification(employee.classification)
+      ) {
         return false;
       }
 
-      if (!['all', 'academic', 'staff'].includes(classificationFilter) &&
-          employee.classification !== classificationFilter) {
+      if (
+        !['all', 'academic', 'staff'].includes(classificationFilter) &&
+        employee.classification !== classificationFilter
+      ) {
         return false;
       }
 
@@ -300,7 +366,13 @@ export function VacationAccrualDepartmentDetail({
         employee.employeeId.toLowerCase().includes(normalizedSearchTerm)
       );
     });
-  }, [classificationFilter, data.employees, searchTerm, statusFilter]);
+  }, [
+    classificationFilter,
+    data.employees,
+    searchTerm,
+    statusFilter,
+    statusThresholds,
+  ]);
 
   const employeeColumns: ColumnDef<AccrualDepartmentEmployeeRow>[] = [
     {
@@ -329,8 +401,13 @@ export function VacationAccrualDepartmentDetail({
       size: 140,
     },
     {
-      accessorFn: (row) => getEmployeeStatus(row),
-      cell: (info) => <StatusBadge employee={info.row.original} />,
+      accessorFn: (row) => getEmployeeStatus(row, statusThresholds),
+      cell: (info) => (
+        <StatusBadge
+          employee={info.row.original}
+          thresholds={statusThresholds}
+        />
+      ),
       header: 'Status',
       id: 'status',
       size: 140,
@@ -357,7 +434,12 @@ export function VacationAccrualDepartmentDetail({
     },
     {
       accessorKey: 'pctOfCap',
-      cell: (info) => <CapProgressBar pctOfCap={info.getValue<number>()} />,
+      cell: (info) => (
+        <CapProgressBar
+          pctOfCap={info.getValue<number>()}
+          thresholds={statusThresholds}
+        />
+      ),
       header: '% of Cap',
       size: 180,
     },
@@ -373,7 +455,8 @@ export function VacationAccrualDepartmentDetail({
     },
     {
       accessorKey: 'monthsToCap',
-      cell: (info) => renderProjectedMonths(info.row.original),
+      cell: (info) =>
+        renderProjectedMonths(info.row.original, statusThresholds),
       header: 'Projected',
       size: 140,
     },
@@ -420,7 +503,7 @@ export function VacationAccrualDepartmentDetail({
       <div className="container">
         <div className="mx-auto max-w-7xl space-y-8">
           <section className="space-y-4">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                 <Link
                   className="inline-flex items-center gap-2 text-sm font-medium text-primary no-underline"
@@ -452,11 +535,25 @@ export function VacationAccrualDepartmentDetail({
                 </select>
               </div>
 
-              {asOfDate ? (
-                <p className="text-sm text-base-content/60">
-                  As of {asOfDateFormatter.format(asOfDate)}
-                </p>
-              ) : null}
+              <div className="card bg-base-100 border border-main-border shadow-sm lg:min-w-64">
+                <div className="card-body gap-1 p-4">
+                  <div className="text-xs font-semibold tracking-[0.14em] uppercase text-base-content/55">
+                    As Of
+                  </div>
+                  <div className="text-lg font-semibold">
+                    {asOfDate
+                      ? asOfDateFormatter.format(asOfDate)
+                      : 'Unavailable'}
+                  </div>
+                  <Link
+                    className="link link-primary text-sm font-semibold"
+                    search={{ departmentCode: data.departmentCode }}
+                    to="/accruals/about"
+                  >
+                    About this report
+                  </Link>
+                </div>
+              </div>
             </div>
           </section>
 
@@ -502,17 +599,25 @@ export function VacationAccrualDepartmentDetail({
             <div className="card-body gap-5 p-5">
               <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                 <div className="join">
-                  {([
-                    ['all', 'All'],
-                    ['approaching', 'Approaching'],
-                    ['at-cap', 'At Cap'],
-                  ] as const).map(([value, label]) => (
+                  {(
+                    [
+                      ['all', 'All'],
+                      ['approaching', 'Approaching'],
+                      ['at-cap', 'At Cap'],
+                    ] as const
+                  ).map(([value, label]) => (
                     <button
                       className={`btn btn-sm join-item ${
                         statusFilter === value ? 'btn-primary' : 'btn-ghost'
                       }`}
                       key={value}
-                      onClick={() => setStatusFilter(value)}
+                      onClick={() =>
+                        updateFilters((current) => ({
+                          ...current,
+                          departmentCode: data.departmentCode,
+                          statusFilter: value,
+                        }))
+                      }
                       type="button"
                     >
                       {label}
@@ -524,7 +629,11 @@ export function VacationAccrualDepartmentDetail({
                   <select
                     className="select select-bordered select-sm w-full sm:w-56"
                     onChange={(event) =>
-                      setClassificationFilter(event.target.value)
+                      updateFilters((current) => ({
+                        ...current,
+                        classificationFilter: event.target.value,
+                        departmentCode: data.departmentCode,
+                      }))
                     }
                     value={classificationFilter}
                   >
@@ -548,14 +657,57 @@ export function VacationAccrualDepartmentDetail({
                   </select>
 
                   <label className="input input-bordered input-sm flex items-center gap-2 w-full sm:w-72">
-                    <MagnifyingGlassIcon className="h-4 w-4 opacity-50" />
+                    <svg
+                      className="h-[1em] opacity-50"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <g
+                        fill="none"
+                        stroke="currentColor"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2.5"
+                      >
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <path d="m21 21-4.3-4.3"></path>
+                      </g>
+                    </svg>
                     <input
                       className="grow"
-                      onChange={(event) => setSearchTerm(event.target.value)}
+                      onChange={(event) =>
+                        updateFilters((current) => ({
+                          ...current,
+                          departmentCode: data.departmentCode,
+                          searchTerm: event.target.value,
+                        }))
+                      }
                       placeholder="Search by name or ID..."
                       type="text"
                       value={searchTerm}
                     />
+                    {searchTerm ? (
+                      <button
+                        className="btn btn-ghost btn-sm btn-circle"
+                        onClick={() =>
+                          updateFilters((current) => ({
+                            ...current,
+                            departmentCode: data.departmentCode,
+                            searchTerm: '',
+                          }))
+                        }
+                        type="button"
+                      >
+                        <svg
+                          className="h-4 w-4"
+                          fill="currentColor"
+                          viewBox="0 0 16 16"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z" />
+                        </svg>
+                      </button>
+                    ) : null}
                   </label>
                 </div>
               </div>
@@ -573,6 +725,20 @@ export function VacationAccrualDepartmentDetail({
                 defaultColumnSize={140}
                 expandable={false}
                 footerRowClassName="totaltr bg-base-200/70"
+                getRowProps={(row) => {
+                  const status = getEmployeeStatus(
+                    row.original,
+                    statusThresholds
+                  );
+                  return {
+                    className:
+                      status === 'at-cap'
+                        ? 'bg-error/5'
+                        : status === 'approaching'
+                          ? 'bg-warning/5'
+                          : undefined,
+                  };
+                }}
                 globalFilter="none"
                 initialState={{
                   pagination: { pageSize: 50 },
@@ -585,17 +751,6 @@ export function VacationAccrualDepartmentDetail({
                     filename={`vacation-accrual-${data.departmentCode}.csv`}
                   />
                 }
-                getRowProps={(row) => {
-                  const status = getEmployeeStatus(row.original);
-                  return {
-                    className:
-                      status === 'at-cap'
-                        ? 'bg-error/5'
-                        : status === 'approaching'
-                          ? 'bg-warning/5'
-                          : undefined,
-                  };
-                }}
                 tableClassName="table-zebra"
               />
             </div>

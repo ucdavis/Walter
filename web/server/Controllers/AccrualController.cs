@@ -45,4 +45,11 @@ public sealed class AccrualController : ApiControllerBase
 
         return Ok(detail);
     }
+
+    [HttpGet("assumptions")]
+    public Task<IActionResult> GetAssumptionsAsync(CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult<IActionResult>(Ok(AccrualOverviewCalculator.GetAssumptions()));
+    }
 }
