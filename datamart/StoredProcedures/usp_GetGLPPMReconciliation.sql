@@ -52,7 +52,7 @@ BEGIN
             ACTIVITY_DESCRIPTION,
             SUM(ACTUAL_AMOUNT) AS GL_ACTUAL_AMOUNT
         FROM ae_dwh.transactional_listing_report
-        WHERE PROJECT IN (' + @ProjectIdFilter + ')'
+        WHERE PROJECT IN (' + @ProjectIdFilter + ') AND PERIOD_NAME <> ''Jun-23'''
         + CASE WHEN @ExcludedDocNumbers IS NOT NULL
                THEN ' AND ACCOUNTING_SEQUENCE_NUMBER NOT IN (' + @ExcludedDocNumbers + ')'
                ELSE ''
