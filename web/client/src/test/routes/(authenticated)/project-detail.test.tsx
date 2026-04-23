@@ -94,9 +94,7 @@ describe('project detail page', () => {
     });
 
     try {
-      expect(
-        await screen.findByText('Award Information')
-      ).toBeInTheDocument();
+      expect(await screen.findByText('Award Information')).toBeInTheDocument();
     } finally {
       cleanup();
     }
@@ -201,6 +199,51 @@ describe('project detail page', () => {
       expect(await screen.findByRole('tooltip')).toHaveTextContent(
         tooltipDefinitions.taskBreakdown
       );
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('filters sidebar projects without hiding All Projects', async () => {
+    const user = userEvent.setup();
+    const projects = [
+      createProject({
+        displayName: 'Alpha Orchard Grant',
+        projectName: 'Alpha Orchard Grant',
+        projectNumber: 'P-001',
+      }),
+      createProject({
+        displayName: 'Beta Soil Study',
+        projectName: 'Beta Soil Study',
+        projectNumber: 'P-002',
+      }),
+      createProject({
+        displayName: 'Gamma Water Trial',
+        projectName: 'Gamma Water Trial',
+        projectNumber: 'P-003',
+      }),
+    ];
+    setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);
+
+    const { cleanup } = renderRoute({
+      initialPath: '/projects/1000/P-001',
+    });
+
+    try {
+      await screen.findByText('Award Information');
+
+      expect(screen.getAllByText('All Projects')).toHaveLength(2);
+      expect(screen.getAllByText('Gamma Water Trial')).toHaveLength(2);
+
+      await user.type(screen.getAllByLabelText('Search projects')[0], 'beta');
+
+      expect(screen.getAllByText('All Projects')).toHaveLength(2);
+      expect(screen.getAllByText('Beta Soil Study')).toHaveLength(2);
+      expect(screen.queryByText('Gamma Water Trial')).not.toBeInTheDocument();
+
+      await user.click(screen.getAllByLabelText('Clear project search')[0]);
+
+      expect(screen.getAllByText('Gamma Water Trial')).toHaveLength(2);
     } finally {
       cleanup();
     }
