@@ -545,6 +545,14 @@ public sealed class SearchController : ApiControllerBase
             .OrderBy(pi => pi.Name)
             .ToArray();
 
+        if (!await HasFinancialAccessAsync())
+        {
+            principalInvestigators = await FilterAccessiblePrincipalInvestigatorsAsync(
+                employeeId,
+                principalInvestigators,
+                cancellationToken);
+        }
+
         return Ok(new SearchTeamMemberProjectsResponse(
             myProjects,
             myManagedProjects,
@@ -560,6 +568,53 @@ public sealed class SearchController : ApiControllerBase
             AuthorizationHelper.Policies.CanViewFinancials);
 
         return result.Succeeded;
+    }
+
+    // Keep the PI search results aligned with the route-level dashboard authorization.
+    private async Task<SearchPerson[]> FilterAccessiblePrincipalInvestigatorsAsync(
+        string requesterEmployeeId,
+        IReadOnlyList<SearchPerson> principalInvestigators,
+        CancellationToken cancellationToken)
+    {
+        if (principalInvestigators.Count == 0)
+        {
+            return [];
+        }
+
+        var client = _financialApiService.GetClient();
+        var accessibilityChecks = principalInvestigators.Select(async principalInvestigator =>
+        {
+            if (string.Equals(
+                principalInvestigator.EmployeeId,
+                requesterEmployeeId,
+                StringComparison.OrdinalIgnoreCase))
+            {
+                return (PrincipalInvestigator: principalInvestigator, IsAccessible: true);
+            }
+
+            var piResult = await client.PpmProjectByProjectTeamMemberEmployeeId.ExecuteAsync(
+                principalInvestigator.EmployeeId,
+                PpmRole.PrincipalInvestigator,
+                cancellationToken);
+            var piData = piResult.ReadData();
+
+            var isAccessible = piData.PpmProjectByProjectTeamMemberEmployeeId.Any(project =>
+                project.TeamMembers.Any(member =>
+                    (member.RoleName == PpmRole.PrincipalInvestigator ||
+                     member.RoleName == PpmRole.ProjectManager) &&
+                    string.Equals(
+                        member.EmployeeId,
+                        requesterEmployeeId,
+                        StringComparison.OrdinalIgnoreCase)));
+
+            return (PrincipalInvestigator: principalInvestigator, IsAccessible: isAccessible);
+        });
+
+        var results = await Task.WhenAll(accessibilityChecks);
+        return results
+            .Where(result => result.IsAccessible)
+            .Select(result => result.PrincipalInvestigator)
+            .ToArray();
     }
 
     private static string[] BuildKeywords(params string?[] values)

@@ -1,4 +1,6 @@
+using System.Reflection;
 using System.Security.Claims;
+using AggieEnterpriseApi;
 using FluentAssertions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -6,6 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Identity.Web;
 using Server.Controllers;
 using Server.Services;
 using Server.Tests;
@@ -13,6 +16,7 @@ using server.Helpers;
 using server.core.Domain;
 using server.core.Services;
 using server.core.Data;
+using StrawberryShake;
 
 namespace server.tests.Controllers;
 
@@ -211,6 +215,73 @@ public sealed class SearchControllerTests
         result.Should().BeOfType<ForbidResult>();
     }
 
+    [Fact]
+    public async Task GetProjectsWhereCurrentUserIsTeamMember_filters_inaccessible_principal_investigators_for_non_financial_users()
+    {
+        using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
+        var authorizationService = CreateAuthorizationService();
+        var userId = Guid.NewGuid();
+        const string requesterEmployeeId = "E-SELF";
+        const string visiblePiEmployeeId = "E-VISIBLE";
+        const string hiddenPiEmployeeId = "E-HIDDEN";
+
+        ctx.Users.Add(new User
+        {
+            Id = userId,
+            DisplayName = "Self PI",
+            Email = "self@example.com",
+            EmployeeId = requesterEmployeeId,
+            IamId = "IAM-SELF",
+            Kerberos = "self",
+        });
+        await ctx.SaveChangesAsync();
+
+        var controller = CreateController(
+            ctx,
+            authorizationService,
+            new FakeGraphService(),
+            new FakeIdentityService(),
+            roles: [],
+            financialApiService: new FakeFinancialApiService(new Dictionary<string, IReadOnlyList<IPpmProjectByProjectTeamMemberEmployeeId_PpmProjectByProjectTeamMemberEmployeeId>>(StringComparer.OrdinalIgnoreCase)
+            {
+                [Key(requesterEmployeeId, PpmRole.PrincipalInvestigator)] =
+                [
+                    CreateProject(
+                        "Shared Project",
+                        "P-100",
+                        (requesterEmployeeId, "Self PI", PpmRole.PrincipalInvestigator),
+                        (visiblePiEmployeeId, "Visible PI", PpmRole.PrincipalInvestigator),
+                        (hiddenPiEmployeeId, "Hidden PI", PpmRole.PrincipalInvestigator))
+                ],
+                [Key(requesterEmployeeId, PpmRole.ProjectManager)] = [],
+                [Key(visiblePiEmployeeId, PpmRole.PrincipalInvestigator)] =
+                [
+                    CreateProject(
+                        "Shared Project",
+                        "P-100",
+                        (requesterEmployeeId, "Self PI", PpmRole.PrincipalInvestigator),
+                        (visiblePiEmployeeId, "Visible PI", PpmRole.PrincipalInvestigator))
+                ],
+                [Key(hiddenPiEmployeeId, PpmRole.PrincipalInvestigator)] =
+                [
+                    CreateProject(
+                        "Unrelated Project",
+                        "P-999",
+                        (hiddenPiEmployeeId, "Hidden PI", PpmRole.PrincipalInvestigator))
+                ],
+            }),
+            userId: userId);
+
+        var result = await controller.GetProjectsWhereCurrentUserIsTeamMember(CancellationToken.None);
+        var payload = result.Should().BeOfType<OkObjectResult>().Which.Value
+            .Should().BeOfType<SearchController.SearchTeamMemberProjectsResponse>().Which;
+
+        payload.PrincipalInvestigators.Select(pi => pi.EmployeeId)
+            .Should().BeEquivalentTo([requesterEmployeeId, visiblePiEmployeeId]);
+        payload.PrincipalInvestigators.Select(pi => pi.Name)
+            .Should().NotContain("Hidden PI");
+    }
+
     private static IAuthorizationService CreateAuthorizationService()
     {
         var services = new ServiceCollection();
@@ -225,16 +296,18 @@ public sealed class SearchControllerTests
         IAuthorizationService authorizationService,
         IGraphService graphService,
         IIdentityService identityService,
-        IReadOnlyList<string> roles)
+        IReadOnlyList<string> roles,
+        server.Services.IFinancialApiService? financialApiService = null,
+        Guid? userId = null)
     {
         var httpContext = new DefaultHttpContext
         {
-            User = CreateUser(roles),
+            User = CreateUser(roles, userId),
         };
 
         return new SearchController(
             ctx,
-            new FakeFinancialApiService(),
+            financialApiService ?? new FakeFinancialApiService(),
             authorizationService,
             graphService,
             identityService,
@@ -246,15 +319,39 @@ public sealed class SearchControllerTests
 
     private sealed class FakeFinancialApiService : server.Services.IFinancialApiService
     {
+        private readonly IAggieEnterpriseClient _client;
+
+        public FakeFinancialApiService(
+            IReadOnlyDictionary<string, IReadOnlyList<IPpmProjectByProjectTeamMemberEmployeeId_PpmProjectByProjectTeamMemberEmployeeId>>? projectsByEmployeeAndRole = null)
+        {
+            var projectLookup = projectsByEmployeeAndRole
+                ?? new Dictionary<string, IReadOnlyList<IPpmProjectByProjectTeamMemberEmployeeId_PpmProjectByProjectTeamMemberEmployeeId>>(StringComparer.OrdinalIgnoreCase);
+
+            _client = CreateProxy<IAggieEnterpriseClient>((method, _) =>
+            {
+                if (method.Name == "get_PpmProjectByProjectTeamMemberEmployeeId")
+                {
+                    return new FakePpmProjectByProjectTeamMemberEmployeeIdQuery(projectLookup);
+                }
+
+                throw new NotImplementedException($"{method.Name} is not implemented for this test.");
+            });
+        }
+
         public AggieEnterpriseApi.IAggieEnterpriseClient GetClient()
         {
-            throw new NotImplementedException("Not needed for GetCatalog tests.");
+            return _client;
         }
     }
 
-    private static ClaimsPrincipal CreateUser(IReadOnlyList<string> roles)
+    private static ClaimsPrincipal CreateUser(IReadOnlyList<string> roles, Guid? userId = null)
     {
         var claims = roles.Select(r => new Claim(ClaimTypes.Role, r)).ToList();
+        if (userId.HasValue)
+        {
+            claims.Add(new Claim(ClaimConstants.ObjectId, userId.Value.ToString()));
+        }
+
         var identity = new ClaimsIdentity(claims, authenticationType: "Test");
         return new ClaimsPrincipal(identity);
     }
@@ -329,5 +426,144 @@ public sealed class SearchControllerTests
         {
             return Task.FromResult<string?>(null);
         }
+    }
+
+    private sealed class FakePpmProjectByProjectTeamMemberEmployeeIdQuery : IPpmProjectByProjectTeamMemberEmployeeIdQuery
+    {
+        private readonly IReadOnlyDictionary<string, IReadOnlyList<IPpmProjectByProjectTeamMemberEmployeeId_PpmProjectByProjectTeamMemberEmployeeId>> _projectsByEmployeeAndRole;
+
+        public FakePpmProjectByProjectTeamMemberEmployeeIdQuery(
+            IReadOnlyDictionary<string, IReadOnlyList<IPpmProjectByProjectTeamMemberEmployeeId_PpmProjectByProjectTeamMemberEmployeeId>> projectsByEmployeeAndRole)
+        {
+            _projectsByEmployeeAndRole = projectsByEmployeeAndRole;
+        }
+
+        public Type ResultType => typeof(IPpmProjectByProjectTeamMemberEmployeeIdResult);
+
+        public OperationRequest Create(IReadOnlyDictionary<string, object?>? variables)
+        {
+            return new OperationRequest(
+                "FakePpmProjectByProjectTeamMemberEmployeeId",
+                CreateProxy<IDocument>((_, _) => throw new NotImplementedException()),
+                variables ?? new Dictionary<string, object?>(),
+                new Dictionary<string, Upload?>(),
+                default);
+        }
+
+        public Task<IOperationResult<IPpmProjectByProjectTeamMemberEmployeeIdResult>> ExecuteAsync(
+            string employeeId,
+            string? roleName,
+            CancellationToken cancellationToken)
+        {
+            var key = Key(employeeId, roleName);
+            var projects = _projectsByEmployeeAndRole.TryGetValue(key, out var result)
+                ? result
+                : [];
+
+            return Task.FromResult<IOperationResult<IPpmProjectByProjectTeamMemberEmployeeIdResult>>(
+                new FakeOperationResult<IPpmProjectByProjectTeamMemberEmployeeIdResult>(
+                    new PpmProjectByProjectTeamMemberEmployeeIdResult(projects)));
+        }
+
+        public IObservable<IOperationResult<IPpmProjectByProjectTeamMemberEmployeeIdResult>> Watch(
+            string employeeId,
+            string? roleName,
+            ExecutionStrategy? strategy = null)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    private sealed class FakeOperationResult<TResultData> : IOperationResult<TResultData>
+        where TResultData : class
+    {
+        public FakeOperationResult(TResultData data)
+        {
+            Data = data;
+        }
+
+        public TResultData Data { get; }
+
+        public IOperationResultDataFactory<TResultData> DataFactory => null!;
+
+        object IOperationResult.Data => Data!;
+
+        object IOperationResult.DataFactory => DataFactory;
+
+        public IOperationResultDataInfo DataInfo => null!;
+
+        public Type DataType => typeof(TResultData);
+
+        public IReadOnlyList<IClientError> Errors => Array.Empty<IClientError>();
+
+        public IReadOnlyDictionary<string, object?> Extensions => new Dictionary<string, object?>();
+
+        public IReadOnlyDictionary<string, object?> ContextData => new Dictionary<string, object?>();
+
+        public IOperationResult<TResultData> WithData(TResultData data, IOperationResultDataInfo dataInfo)
+        {
+            return new FakeOperationResult<TResultData>(data);
+        }
+    }
+
+    private class InterfaceProxy<T> : DispatchProxy where T : class
+    {
+        public Func<MethodInfo, object?[]?, object?>? Handler { get; set; }
+
+        protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
+        {
+            if (targetMethod == null || Handler == null)
+            {
+                throw new NotImplementedException();
+            }
+
+            return Handler(targetMethod, args);
+        }
+    }
+
+    private static T CreateProxy<T>(Func<MethodInfo, object?[]?, object?> handler) where T : class
+    {
+        var proxy = DispatchProxy.Create<T, InterfaceProxy<T>>();
+        ((InterfaceProxy<T>)(object)proxy).Handler = handler;
+        return proxy;
+    }
+
+    private static string Key(string employeeId, string? roleName)
+    {
+        return $"{employeeId.Trim()}|{roleName?.Trim() ?? string.Empty}";
+    }
+
+    private static IPpmProjectByProjectTeamMemberEmployeeId_PpmProjectByProjectTeamMemberEmployeeId CreateProject(
+        string name,
+        string projectNumber,
+        params (string EmployeeId, string Name, string RoleName)[] teamMembers)
+    {
+        var members = teamMembers
+            .Select(member => CreateProxy<IPpmProjectByProjectTeamMemberEmployeeId_PpmProjectByProjectTeamMemberEmployeeId_TeamMembers>((method, _) =>
+            {
+                return method.Name switch
+                {
+                    "get_EmployeeId" => member.EmployeeId,
+                    "get_Name" => member.Name,
+                    "get_RoleName" => member.RoleName,
+                    _ => throw new NotImplementedException($"{method.Name} is not implemented for this test."),
+                };
+            }))
+            .ToArray();
+
+        return CreateProxy<IPpmProjectByProjectTeamMemberEmployeeId_PpmProjectByProjectTeamMemberEmployeeId>((method, _) =>
+        {
+            return method.Name switch
+            {
+                "get_Name" => name,
+                "get_ProjectNumber" => projectNumber,
+                "get_ProjectStartDate" => "2025-01-01",
+                "get_ProjectEndDate" => "2025-12-31",
+                "get_ProjectStatus" => "ACTIVE",
+                "get_TeamMembers" => members,
+                "get_Awards" => Array.Empty<object>(),
+                _ => throw new NotImplementedException($"{method.Name} is not implemented for this test."),
+            };
+        });
     }
 }
