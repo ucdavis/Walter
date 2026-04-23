@@ -168,6 +168,85 @@ describe('ProjectAdditionalInfo', () => {
     );
   });
 
+  it('hides the Flow-Through Funds subsection when the primary sponsor is null', async () => {
+    const user = userEvent.setup();
+    render(
+      <ProjectAdditionalInfo
+        isProjectManager={true}
+        summary={createSummary({
+          flowThroughFundsPrimarySponsor: null,
+          flowThroughFundsReferenceAwardName: 'Parent Award XYZ',
+          flowThroughFundsAmount: '500000',
+        })}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Show more' }));
+
+    expect(screen.queryByText('Flow-Through Funds')).not.toBeInTheDocument();
+    expect(screen.queryByText('Parent Award XYZ')).not.toBeInTheDocument();
+  });
+
+  it('hides the Flow-Through Funds subsection for non-PMs even when populated', () => {
+    render(
+      <ProjectAdditionalInfo
+        isProjectManager={false}
+        summary={createSummary({
+          flowThroughFundsPrimarySponsor: 'Harvard University',
+        })}
+      />
+    );
+
+    expect(screen.queryByText('Flow-Through Funds')).not.toBeInTheDocument();
+  });
+
+  it('renders the Flow-Through Funds subsection for PMs after Show more when populated', async () => {
+    const user = userEvent.setup();
+    render(
+      <ProjectAdditionalInfo
+        isProjectManager={true}
+        summary={createSummary({
+          flowThroughFundsPrimarySponsor: 'Harvard University',
+          flowThroughFundsReferenceAwardName: 'H-2024-001',
+          flowThroughFundsStartDate: '2024-07-01',
+          flowThroughFundsEndDate: '2027-06-30',
+          flowThroughFundsAmount: '1234567',
+        })}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Show more' }));
+
+    expect(screen.getByText('Flow-Through Funds')).toBeInTheDocument();
+    expect(screen.getByText('Harvard University')).toBeInTheDocument();
+    expect(screen.getByText('H-2024-001')).toBeInTheDocument();
+    expect(screen.getByText('07.01.2024')).toBeInTheDocument();
+    expect(screen.getByText('06.30.2027')).toBeInTheDocument();
+    expect(screen.getByText('$1,234,567.00')).toBeInTheDocument();
+  });
+
+  it('shows em-dash for individual null flow-through fields when subsection is rendered', async () => {
+    const user = userEvent.setup();
+    render(
+      <ProjectAdditionalInfo
+        isProjectManager={true}
+        summary={createSummary({
+          flowThroughFundsPrimarySponsor: 'Harvard University',
+          flowThroughFundsReferenceAwardName: null,
+          flowThroughFundsStartDate: null,
+          flowThroughFundsEndDate: null,
+          flowThroughFundsAmount: null,
+        })}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Show more' }));
+
+    expect(screen.getByText('Flow-Through Funds')).toBeInTheDocument();
+    expect(screen.getByText('Reference Award Name')).toBeInTheDocument();
+    expect(screen.getByText('Amount')).toBeInTheDocument();
+  });
+
   it('renders nothing when awardNumber is null (internal project)', () => {
     const { container } = render(
       <ProjectAdditionalInfo isProjectManager={false} summary={createSummary({ awardNumber: null })} />

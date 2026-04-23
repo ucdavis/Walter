@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatCurrency } from '@/lib/currency.ts';
 import { formatDate } from '@/lib/date.ts';
 import type { ProjectSummary } from '@/lib/projectSummary.ts';
 import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
@@ -82,6 +83,33 @@ function buildSecondaryFields(summary: ProjectSummary): Field[] {
   ];
 }
 
+function buildFlowThroughFields(summary: ProjectSummary): Field[] {
+  return [
+    {
+      label: 'Primary Sponsor',
+      value: summary.flowThroughFundsPrimarySponsor ?? '—',
+    },
+    {
+      label: 'Reference Award Name',
+      value: summary.flowThroughFundsReferenceAwardName ?? '—',
+    },
+    {
+      label: 'Start Date',
+      value: formatDate(summary.flowThroughFundsStartDate),
+    },
+    {
+      label: 'End Date',
+      value: formatDate(summary.flowThroughFundsEndDate),
+    },
+    {
+      label: 'Amount',
+      value: summary.flowThroughFundsAmount
+        ? formatCurrency(summary.flowThroughFundsAmount)
+        : '—',
+    },
+  ];
+}
+
 interface ProjectAdditionalInfoProps {
   isProjectManager: boolean;
   summary: ProjectSummary;
@@ -131,6 +159,23 @@ export function ProjectAdditionalInfo({
               <div>{field.value}</div>
             </div>
           ))}
+
+        {expanded && summary.flowThroughFundsPrimarySponsor && (
+          <div className="md:col-span-2 mt-4">
+            <h3 className="h3 mb-2">Flow-Through Funds</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2">
+              {buildFlowThroughFields(summary).map((field) => (
+                <div
+                  className="grid grid-cols-[max-content_1fr] gap-x-4"
+                  key={field.label}
+                >
+                  <div className="font-proxima-bold">{renderLabel(field)}</div>
+                  <div>{field.value}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {isProjectManager && secondaryFields.length > 0 && (
           <div className="md:col-span-2 mt-2">
