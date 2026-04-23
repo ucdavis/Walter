@@ -20,6 +20,7 @@ public sealed class SearchController : ApiControllerBase
     // Marks synthetic person IDs emitted by fallback search when Graph IDs are unavailable.
     private const string SyntheticEmployeeIdPrefix = "employee:";
     private const int SearchResultLimit = 5;
+    private const int PiAccessibilityCheckConcurrencyLimit = 4;
 
     private readonly AppDbContext _dbContext;
     private readonly IFinancialApiService _financialApiService;
@@ -582,6 +583,7 @@ public sealed class SearchController : ApiControllerBase
         }
 
         var client = _financialApiService.GetClient();
+        using var concurrencyGate = new SemaphoreSlim(PiAccessibilityCheckConcurrencyLimit);
         var accessibilityChecks = principalInvestigators.Select(async principalInvestigator =>
         {
             if (string.Equals(
@@ -592,22 +594,30 @@ public sealed class SearchController : ApiControllerBase
                 return (PrincipalInvestigator: principalInvestigator, IsAccessible: true);
             }
 
-            var piResult = await client.PpmProjectByProjectTeamMemberEmployeeId.ExecuteAsync(
-                principalInvestigator.EmployeeId,
-                PpmRole.PrincipalInvestigator,
-                cancellationToken);
-            var piData = piResult.ReadData();
+            await concurrencyGate.WaitAsync(cancellationToken);
+            try
+            {
+                var piResult = await client.PpmProjectByProjectTeamMemberEmployeeId.ExecuteAsync(
+                    principalInvestigator.EmployeeId,
+                    PpmRole.PrincipalInvestigator,
+                    cancellationToken);
+                var piData = piResult.ReadData();
 
-            var isAccessible = piData.PpmProjectByProjectTeamMemberEmployeeId.Any(project =>
-                project.TeamMembers.Any(member =>
-                    (member.RoleName == PpmRole.PrincipalInvestigator ||
-                     member.RoleName == PpmRole.ProjectManager) &&
-                    string.Equals(
-                        member.EmployeeId,
-                        requesterEmployeeId,
-                        StringComparison.OrdinalIgnoreCase)));
+                var isAccessible = piData.PpmProjectByProjectTeamMemberEmployeeId.Any(project =>
+                    project.TeamMembers.Any(member =>
+                        (member.RoleName == PpmRole.PrincipalInvestigator ||
+                         member.RoleName == PpmRole.ProjectManager) &&
+                        string.Equals(
+                            member.EmployeeId,
+                            requesterEmployeeId,
+                            StringComparison.OrdinalIgnoreCase)));
 
-            return (PrincipalInvestigator: principalInvestigator, IsAccessible: isAccessible);
+                return (PrincipalInvestigator: principalInvestigator, IsAccessible: isAccessible);
+            }
+            finally
+            {
+                concurrencyGate.Release();
+            }
         });
 
         var results = await Task.WhenAll(accessibilityChecks);

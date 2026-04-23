@@ -533,37 +533,49 @@ public sealed class SearchControllerTests
         return $"{employeeId.Trim()}|{roleName?.Trim() ?? string.Empty}";
     }
 
+    private sealed record TestProjectTeamMember(
+        string EmployeeId,
+        string Name,
+        string RoleName)
+        : IPpmProjectByProjectTeamMemberEmployeeId_PpmProjectByProjectTeamMemberEmployeeId_TeamMembers;
+
+    private sealed class TestProject : IPpmProjectByProjectTeamMemberEmployeeId_PpmProjectByProjectTeamMemberEmployeeId
+    {
+        public TestProject(
+            string name,
+            string projectNumber,
+            IReadOnlyList<IPpmProjectByProjectTeamMemberEmployeeId_PpmProjectByProjectTeamMemberEmployeeId_TeamMembers> teamMembers)
+        {
+            Name = name;
+            ProjectNumber = projectNumber;
+            TeamMembers = teamMembers;
+        }
+
+        public string Name { get; }
+
+        public string ProjectNumber { get; }
+
+        public string ProjectStartDate { get; } = "2025-01-01";
+
+        public string ProjectEndDate { get; } = "2025-12-31";
+
+        public string ProjectStatus { get; } = "ACTIVE";
+
+        public IReadOnlyList<IPpmProjectByProjectTeamMemberEmployeeId_PpmProjectByProjectTeamMemberEmployeeId_TeamMembers> TeamMembers { get; }
+    }
+
     private static IPpmProjectByProjectTeamMemberEmployeeId_PpmProjectByProjectTeamMemberEmployeeId CreateProject(
         string name,
         string projectNumber,
         params (string EmployeeId, string Name, string RoleName)[] teamMembers)
     {
         var members = teamMembers
-            .Select(member => CreateProxy<IPpmProjectByProjectTeamMemberEmployeeId_PpmProjectByProjectTeamMemberEmployeeId_TeamMembers>((method, _) =>
-            {
-                return method.Name switch
-                {
-                    "get_EmployeeId" => member.EmployeeId,
-                    "get_Name" => member.Name,
-                    "get_RoleName" => member.RoleName,
-                    _ => throw new NotImplementedException($"{method.Name} is not implemented for this test."),
-                };
-            }))
+            .Select(member => (IPpmProjectByProjectTeamMemberEmployeeId_PpmProjectByProjectTeamMemberEmployeeId_TeamMembers)new TestProjectTeamMember(
+                member.EmployeeId,
+                member.Name,
+                member.RoleName))
             .ToArray();
 
-        return CreateProxy<IPpmProjectByProjectTeamMemberEmployeeId_PpmProjectByProjectTeamMemberEmployeeId>((method, _) =>
-        {
-            return method.Name switch
-            {
-                "get_Name" => name,
-                "get_ProjectNumber" => projectNumber,
-                "get_ProjectStartDate" => "2025-01-01",
-                "get_ProjectEndDate" => "2025-12-31",
-                "get_ProjectStatus" => "ACTIVE",
-                "get_TeamMembers" => members,
-                "get_Awards" => Array.Empty<object>(),
-                _ => throw new NotImplementedException($"{method.Name} is not implemented for this test."),
-            };
-        });
+        return new TestProject(name, projectNumber, members);
     }
 }
