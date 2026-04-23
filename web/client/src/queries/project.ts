@@ -27,6 +27,11 @@ export interface ProjectRecord {
   costShareRequiredBySponsor: string | null;
   displayName: string;
   expenditureCategoryName: string | null;
+  flowThroughFundsAmount: string | null;
+  flowThroughFundsEndDate: string | null;
+  flowThroughFundsPrimarySponsor: string | null;
+  flowThroughFundsReferenceAwardName: string | null;
+  flowThroughFundsStartDate: string | null;
   fundCode: string | null;
   fundDesc: string;
   grantAdministrator: string | null;
