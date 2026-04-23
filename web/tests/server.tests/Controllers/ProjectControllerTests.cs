@@ -90,6 +90,15 @@ public sealed class ProjectControllerTests
             throw new InvalidOperationException("Datamart should not be called for unauthorized users.");
         }
 
+        public Task<IReadOnlyList<EmployeeAccrualBalanceRecord>> GetEmployeeAccrualBalancesAsync(
+            DateTime startDate,
+            string? applicationUser = null,
+            string? emulatingUser = null,
+            CancellationToken ct = default)
+        {
+            throw new InvalidOperationException("Datamart should not be called for unauthorized users.");
+        }
+
         public Task<IReadOnlyList<GLPPMReconciliationRecord>> GetGLPPMReconciliationAsync(
             IEnumerable<string> projectNumbers,
             string? applicationUser = null,

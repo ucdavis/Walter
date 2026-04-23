@@ -5,7 +5,7 @@ import {
   ChevronUpIcon,
   ClockIcon,
 } from '@heroicons/react/24/outline';
-import { ExportDataButton } from '@/components/ExportDataButton.tsx';
+import { TableExportActions } from '@/components/TableExportActions.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import { formatDate } from '@/lib/date.ts';
 import type { PersonnelRecord } from '@/queries/personnel.ts';
@@ -43,6 +43,7 @@ export interface AggregatedPosition {
   distributions: AggregatedDistribution[];
   employeeId: string;
   fte: number;
+  jobCode: string;
   jobEffectiveDate: string | null;
   jobEndDate: string | null;
   jobEndingSoon: boolean;
@@ -88,6 +89,7 @@ export function aggregateByPosition(
         distributions: [aggregateDistribution(record)],
         employeeId: record.employeeId,
         fte: record.fte,
+        jobCode: safeText(record.jobCode),
         jobEffectiveDate: record.jobEffectiveDate,
         jobEndDate: record.jobEndDate,
         jobEndingSoon: isEndingSoon(record.jobEndDate),
@@ -227,6 +229,7 @@ function getExportData(positions: AggregatedPosition[]) {
       fte: pos.fte,
       fundingEffectiveDate: dist.record.fundingEffectiveDate ?? '',
       fundingEndDate: dist.record.fundingEndDate ?? '',
+      jobCode: pos.jobCode,
       monthlyFringe: dist.monthlyFringe,
       monthlyRate: dist.monthlyRate,
       monthlyTotal: dist.monthlyTotal,
@@ -242,6 +245,7 @@ const personnelCsvColumns = [
   { header: 'Name', key: 'name' as const },
   { header: 'Position Number', key: 'positionNumber' as const },
   { header: 'Position', key: 'positionDescription' as const },
+  { header: 'Job Code', key: 'jobCode' as const },
   { header: 'FTE', key: 'fte' as const },
   { header: 'Project', key: 'projectDescription' as const },
   { header: 'Dist %', key: 'distributionPercent' as const },
@@ -318,10 +322,14 @@ export function PersonnelTable({
         footer: showTotals ? () => 'Totals' : undefined,
         header: 'Position',
         id: 'positionProject',
-        minSize: 300,
-        size: 300,
+        minSize: 400,
+        size: 400,
         sortingFn: (a, b) =>
           safeText(a.original.name).localeCompare(safeText(b.original.name)),
+      }),
+      columnHelper.accessor('jobCode', {
+        cell: (info) => info.getValue(),
+        header: 'Job Code',
       }),
       columnHelper.accessor('fte', {
         cell: (info) => (
@@ -367,6 +375,8 @@ export function PersonnelTable({
           );
         },
         header: () => <span className="flex justify-end w-full">End Date</span>,
+        minSize: 130,
+        size: 130,
       }),
       columnHelper.accessor('monthlyRate', {
         cell: (info) => (
@@ -454,25 +464,6 @@ export function PersonnelTable({
     return <p className="text-base-content/70 mt-4">No personnel found.</p>;
   }
 
-  const tableActions = (
-    <>
-      {unfilledCount > 0 && (
-        <button
-          className={`btn btn-sm ${showUnfilled ? 'btn-active' : 'btn-default'}`}
-          onClick={() => setShowUnfilled(!showUnfilled)}
-          type="button"
-        >
-          {showUnfilled ? 'Hide' : 'Show'} unfilled ({unfilledCount})
-        </button>
-      )}
-      <ExportDataButton
-        columns={personnelCsvColumns}
-        data={getExportData(positions)}
-        filename="personnel.csv"
-      />
-    </>
-  );
-
   return (
     <div>
       <DataTable
@@ -495,7 +486,28 @@ export function PersonnelTable({
           <DistributionSubtable distributions={row.original.distributions} />
         )}
         subComponentRowClassName="pivot-row"
-        tableActions={tableActions}
+        tableActions={(table) =>
+          (
+            <div className="flex flex-wrap items-center gap-2">
+              {unfilledCount > 0 && (
+                <button
+                  className={`btn btn-sm ${showUnfilled ? 'btn-active' : 'btn-default'}`}
+                  onClick={() => setShowUnfilled((current) => !current)}
+                  type="button"
+                >
+                  {showUnfilled ? 'Hide' : 'Show'} unfilled ({unfilledCount})
+                </button>
+              )}
+              <TableExportActions
+                baseFilename="personnel"
+                columns={personnelCsvColumns}
+                data={positions}
+                table={table}
+                toRows={getExportData}
+              />
+            </div>
+          )
+        }
       />
     </div>
   );

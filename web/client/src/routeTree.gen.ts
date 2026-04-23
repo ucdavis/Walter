@@ -25,9 +25,11 @@ import { Route as authenticatedReportsIndexRouteImport } from './routes/(authent
 import { Route as authenticatedAdminIndexRouteImport } from './routes/(authenticated)/admin/index'
 import { Route as authenticatedAccrualsIndexRouteImport } from './routes/(authenticated)/accruals/index'
 import { Route as authenticatedAdminUsersRouteImport } from './routes/(authenticated)/admin/users'
+import { Route as authenticatedAccrualsAboutRouteImport } from './routes/(authenticated)/accruals/about'
 import { Route as authenticatedProjectsEmployeeIdRouteRouteImport } from './routes/(authenticated)/projects/$employeeId/route'
 import { Route as authenticatedProjectsEmployeeIdIndexRouteImport } from './routes/(authenticated)/projects/$employeeId/index'
 import { Route as authenticatedProjectsByNumberProjectNumberRouteImport } from './routes/(authenticated)/projects/by-number/$projectNumber'
+import { Route as authenticatedAccrualsDepartmentDepartmentCodeRouteImport } from './routes/(authenticated)/accruals/department/$departmentCode'
 import { Route as authenticatedReportsReconciliationProjectNumberIndexRouteImport } from './routes/(authenticated)/reports/reconciliation/$projectNumber/index'
 import { Route as authenticatedProjectsEmployeeIdProjectNumberIndexRouteImport } from './routes/(authenticated)/projects/$employeeId/$projectNumber/index'
 import { Route as authenticatedReportsReconciliationProjectNumberDetailRouteImport } from './routes/(authenticated)/reports/reconciliation/$projectNumber/detail'
@@ -116,6 +118,12 @@ const authenticatedAdminUsersRoute = authenticatedAdminUsersRouteImport.update({
   path: '/users',
   getParentRoute: () => authenticatedAdminRouteRoute,
 } as any)
+const authenticatedAccrualsAboutRoute =
+  authenticatedAccrualsAboutRouteImport.update({
+    id: '/accruals/about',
+    path: '/accruals/about',
+    getParentRoute: () => authenticatedRouteRoute,
+  } as any)
 const authenticatedProjectsEmployeeIdRouteRoute =
   authenticatedProjectsEmployeeIdRouteRouteImport.update({
     id: '/$employeeId',
@@ -133,6 +141,12 @@ const authenticatedProjectsByNumberProjectNumberRoute =
     id: '/by-number/$projectNumber',
     path: '/by-number/$projectNumber',
     getParentRoute: () => authenticatedProjectsRouteRoute,
+  } as any)
+const authenticatedAccrualsDepartmentDepartmentCodeRoute =
+  authenticatedAccrualsDepartmentDepartmentCodeRouteImport.update({
+    id: '/accruals/department/$departmentCode',
+    path: '/accruals/department/$departmentCode',
+    getParentRoute: () => authenticatedRouteRoute,
   } as any)
 const authenticatedReportsReconciliationProjectNumberIndexRoute =
   authenticatedReportsReconciliationProjectNumberIndexRouteImport.update({
@@ -174,10 +188,12 @@ export interface FileRoutesByFullPath {
   '/styles': typeof authenticatedStylesRoute
   '/': typeof authenticatedIndexRoute
   '/projects/$employeeId': typeof authenticatedProjectsEmployeeIdRouteRouteWithChildren
+  '/accruals/about': typeof authenticatedAccrualsAboutRoute
   '/admin/users': typeof authenticatedAdminUsersRoute
   '/accruals': typeof authenticatedAccrualsIndexRoute
   '/admin/': typeof authenticatedAdminIndexRoute
   '/reports/': typeof authenticatedReportsIndexRoute
+  '/accruals/department/$departmentCode': typeof authenticatedAccrualsDepartmentDepartmentCodeRoute
   '/projects/by-number/$projectNumber': typeof authenticatedProjectsByNumberProjectNumberRoute
   '/projects/$employeeId/': typeof authenticatedProjectsEmployeeIdIndexRoute
   '/projects/$employeeId/$projectNumber/expenditure-categories': typeof authenticatedProjectsEmployeeIdProjectNumberExpenditureCategoriesRoute
@@ -195,10 +211,12 @@ export interface FileRoutesByTo {
   '/principalInvestigators': typeof authenticatedPrincipalInvestigatorsRoute
   '/styles': typeof authenticatedStylesRoute
   '/': typeof authenticatedIndexRoute
+  '/accruals/about': typeof authenticatedAccrualsAboutRoute
   '/admin/users': typeof authenticatedAdminUsersRoute
   '/accruals': typeof authenticatedAccrualsIndexRoute
   '/admin': typeof authenticatedAdminIndexRoute
   '/reports': typeof authenticatedReportsIndexRoute
+  '/accruals/department/$departmentCode': typeof authenticatedAccrualsDepartmentDepartmentCodeRoute
   '/projects/by-number/$projectNumber': typeof authenticatedProjectsByNumberProjectNumberRoute
   '/projects/$employeeId': typeof authenticatedProjectsEmployeeIdIndexRoute
   '/projects/$employeeId/$projectNumber/expenditure-categories': typeof authenticatedProjectsEmployeeIdProjectNumberExpenditureCategoriesRoute
@@ -221,10 +239,12 @@ export interface FileRoutesById {
   '/(authenticated)/styles': typeof authenticatedStylesRoute
   '/(authenticated)/': typeof authenticatedIndexRoute
   '/(authenticated)/projects/$employeeId': typeof authenticatedProjectsEmployeeIdRouteRouteWithChildren
+  '/(authenticated)/accruals/about': typeof authenticatedAccrualsAboutRoute
   '/(authenticated)/admin/users': typeof authenticatedAdminUsersRoute
   '/(authenticated)/accruals/': typeof authenticatedAccrualsIndexRoute
   '/(authenticated)/admin/': typeof authenticatedAdminIndexRoute
   '/(authenticated)/reports/': typeof authenticatedReportsIndexRoute
+  '/(authenticated)/accruals/department/$departmentCode': typeof authenticatedAccrualsDepartmentDepartmentCodeRoute
   '/(authenticated)/projects/by-number/$projectNumber': typeof authenticatedProjectsByNumberProjectNumberRoute
   '/(authenticated)/projects/$employeeId/': typeof authenticatedProjectsEmployeeIdIndexRoute
   '/(authenticated)/projects/$employeeId/$projectNumber/expenditure-categories': typeof authenticatedProjectsEmployeeIdProjectNumberExpenditureCategoriesRoute
@@ -247,10 +267,12 @@ export interface FileRouteTypes {
     | '/styles'
     | '/'
     | '/projects/$employeeId'
+    | '/accruals/about'
     | '/admin/users'
     | '/accruals'
     | '/admin/'
     | '/reports/'
+    | '/accruals/department/$departmentCode'
     | '/projects/by-number/$projectNumber'
     | '/projects/$employeeId/'
     | '/projects/$employeeId/$projectNumber/expenditure-categories'
@@ -268,10 +290,12 @@ export interface FileRouteTypes {
     | '/principalInvestigators'
     | '/styles'
     | '/'
+    | '/accruals/about'
     | '/admin/users'
     | '/accruals'
     | '/admin'
     | '/reports'
+    | '/accruals/department/$departmentCode'
     | '/projects/by-number/$projectNumber'
     | '/projects/$employeeId'
     | '/projects/$employeeId/$projectNumber/expenditure-categories'
@@ -293,10 +317,12 @@ export interface FileRouteTypes {
     | '/(authenticated)/styles'
     | '/(authenticated)/'
     | '/(authenticated)/projects/$employeeId'
+    | '/(authenticated)/accruals/about'
     | '/(authenticated)/admin/users'
     | '/(authenticated)/accruals/'
     | '/(authenticated)/admin/'
     | '/(authenticated)/reports/'
+    | '/(authenticated)/accruals/department/$departmentCode'
     | '/(authenticated)/projects/by-number/$projectNumber'
     | '/(authenticated)/projects/$employeeId/'
     | '/(authenticated)/projects/$employeeId/$projectNumber/expenditure-categories'
@@ -424,6 +450,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authenticatedAdminUsersRouteImport
       parentRoute: typeof authenticatedAdminRouteRoute
     }
+    '/(authenticated)/accruals/about': {
+      id: '/(authenticated)/accruals/about'
+      path: '/accruals/about'
+      fullPath: '/accruals/about'
+      preLoaderRoute: typeof authenticatedAccrualsAboutRouteImport
+      parentRoute: typeof authenticatedRouteRoute
+    }
     '/(authenticated)/projects/$employeeId': {
       id: '/(authenticated)/projects/$employeeId'
       path: '/$employeeId'
@@ -444,6 +477,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/projects/by-number/$projectNumber'
       preLoaderRoute: typeof authenticatedProjectsByNumberProjectNumberRouteImport
       parentRoute: typeof authenticatedProjectsRouteRoute
+    }
+    '/(authenticated)/accruals/department/$departmentCode': {
+      id: '/(authenticated)/accruals/department/$departmentCode'
+      path: '/accruals/department/$departmentCode'
+      fullPath: '/accruals/department/$departmentCode'
+      preLoaderRoute: typeof authenticatedAccrualsDepartmentDepartmentCodeRouteImport
+      parentRoute: typeof authenticatedRouteRoute
     }
     '/(authenticated)/reports/reconciliation/$projectNumber/': {
       id: '/(authenticated)/reports/reconciliation/$projectNumber/'
@@ -559,7 +599,9 @@ interface authenticatedRouteRouteChildren {
   authenticatedReportsRoute: typeof authenticatedReportsRouteWithChildren
   authenticatedStylesRoute: typeof authenticatedStylesRoute
   authenticatedIndexRoute: typeof authenticatedIndexRoute
+  authenticatedAccrualsAboutRoute: typeof authenticatedAccrualsAboutRoute
   authenticatedAccrualsIndexRoute: typeof authenticatedAccrualsIndexRoute
+  authenticatedAccrualsDepartmentDepartmentCodeRoute: typeof authenticatedAccrualsDepartmentDepartmentCodeRoute
 }
 
 const authenticatedRouteRouteChildren: authenticatedRouteRouteChildren = {
@@ -574,7 +616,10 @@ const authenticatedRouteRouteChildren: authenticatedRouteRouteChildren = {
   authenticatedReportsRoute: authenticatedReportsRouteWithChildren,
   authenticatedStylesRoute: authenticatedStylesRoute,
   authenticatedIndexRoute: authenticatedIndexRoute,
+  authenticatedAccrualsAboutRoute: authenticatedAccrualsAboutRoute,
   authenticatedAccrualsIndexRoute: authenticatedAccrualsIndexRoute,
+  authenticatedAccrualsDepartmentDepartmentCodeRoute:
+    authenticatedAccrualsDepartmentDepartmentCodeRoute,
 }
 
 const authenticatedRouteRouteWithChildren =

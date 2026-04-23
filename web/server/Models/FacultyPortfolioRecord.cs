@@ -34,13 +34,9 @@ public sealed class FacultyPortfolioRecord
         get
         {
             var projectName = ProjectName ?? "";
-            var cleanedName = string.IsNullOrEmpty(ProjectNumber)
+            return string.IsNullOrEmpty(ProjectNumber)
                 ? projectName.Trim()
                 : projectName.Replace(ProjectNumber, "").Trim();
-            var name = cleanedName;
-            if (ProjectType == "Internal" && !string.IsNullOrEmpty(TaskName))
-                name += $" - {TaskName}";
-            return name;
         }
     }
 
@@ -120,7 +116,7 @@ public sealed class FacultyPortfolioRecord
     public string? AwardType { get; set; }
 
     [JsonPropertyName("awardCloseDate")]
-    public string? AwardCloseDate { get; set; }
+    public DateTime? AwardCloseDate { get; set; }
 
     [JsonPropertyName("awardPi")]
     public string? AwardPi { get; set; }

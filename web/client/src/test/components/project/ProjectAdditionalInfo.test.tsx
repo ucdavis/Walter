@@ -49,18 +49,20 @@ const createSummary = (
 
 describe('ProjectAdditionalInfo', () => {
   it('renders the section heading', () => {
-    render(<ProjectAdditionalInfo isProjectManager={false} summary={createSummary()} />);
+    render(<ProjectAdditionalInfo summary={createSummary()} />);
 
     expect(screen.getByText('Award Information')).toBeInTheDocument();
   });
 
   it('shows primary award fields for all users', () => {
-    render(<ProjectAdditionalInfo isProjectManager={false} summary={createSummary()} />);
+    render(<ProjectAdditionalInfo summary={createSummary()} />);
 
     expect(screen.getByText('Award Number')).toBeInTheDocument();
     expect(screen.getByText('AWD-100')).toBeInTheDocument();
     expect(screen.getByText('Award Name')).toBeInTheDocument();
     expect(screen.getByText('Test Award')).toBeInTheDocument();
+    expect(screen.getByText('Award PI')).toBeInTheDocument();
+    expect(screen.getByText('Smith, Jane')).toBeInTheDocument();
     expect(screen.getByText('Award End Date')).toBeInTheDocument();
     expect(screen.getByText('Primary Sponsor Name')).toBeInTheDocument();
     expect(screen.getByText('National Science Foundation')).toBeInTheDocument();
@@ -68,33 +70,30 @@ describe('ProjectAdditionalInfo', () => {
     expect(screen.getByText('NSF-2024-001')).toBeInTheDocument();
     expect(screen.getByText('Indirect/Burden Rate')).toBeInTheDocument();
     expect(screen.getByText('26.5%')).toBeInTheDocument();
-    expect(screen.getByText('Contract Administrator')).toBeInTheDocument();
-    expect(screen.getByText('Admin, Carol')).toBeInTheDocument();
   });
 
-  it('hides secondary fields and show more button for non-PMs', () => {
-    render(<ProjectAdditionalInfo isProjectManager={false} summary={createSummary()} />);
+  it('hides secondary fields by default', () => {
+    render(<ProjectAdditionalInfo summary={createSummary()} />);
 
     expect(screen.queryByText('Award Close Date')).not.toBeInTheDocument();
     expect(screen.queryByText('Billing Cycle')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /show more/i })).not.toBeInTheDocument();
   });
 
-  it('shows Show more button for PMs', () => {
-    render(<ProjectAdditionalInfo isProjectManager={true} summary={createSummary()} />);
+  it('shows Show more button for all users', () => {
+    render(<ProjectAdditionalInfo summary={createSummary()} />);
 
     expect(screen.getByRole('button', { name: 'Show more' })).toBeInTheDocument();
   });
 
-  it('reveals hidden fields when PM clicks Show more', async () => {
+  it('reveals hidden fields when Show more is clicked', async () => {
     const user = userEvent.setup();
-    render(<ProjectAdditionalInfo isProjectManager={true} summary={createSummary()} />);
+    render(<ProjectAdditionalInfo summary={createSummary()} />);
 
     await user.click(screen.getByRole('button', { name: 'Show more' }));
 
     expect(screen.getByText('Award Close Date')).toBeInTheDocument();
-    expect(screen.getByText('Award PI')).toBeInTheDocument();
-    expect(screen.getByText('Smith, Jane')).toBeInTheDocument();
+    expect(screen.getByText('Contract Administrator')).toBeInTheDocument();
+    expect(screen.getByText('Admin, Carol')).toBeInTheDocument();
     expect(screen.getByText('Billing Cycle')).toBeInTheDocument();
     expect(screen.getByText('Monthly')).toBeInTheDocument();
     expect(screen.getByText('Burden Structure')).toBeInTheDocument();
@@ -103,7 +102,7 @@ describe('ProjectAdditionalInfo', () => {
 
   it('collapses fields when Show less is clicked', async () => {
     const user = userEvent.setup();
-    render(<ProjectAdditionalInfo isProjectManager={true} summary={createSummary()} />);
+    render(<ProjectAdditionalInfo summary={createSummary()} />);
 
     await user.click(screen.getByRole('button', { name: 'Show more' }));
     expect(screen.getByText('Billing Cycle')).toBeInTheDocument();
@@ -115,10 +114,9 @@ describe('ProjectAdditionalInfo', () => {
   it('displays em-dash for null values', () => {
     render(
       <ProjectAdditionalInfo
-        isProjectManager={false}
         summary={createSummary({
           awardName: null,
-          contractAdministrator: null,
+          awardPi: null,
         })}
       />
     );
@@ -130,7 +128,6 @@ describe('ProjectAdditionalInfo', () => {
   it('formats dates as MM.dd.yyyy', () => {
     render(
       <ProjectAdditionalInfo
-        isProjectManager={false}
         summary={createSummary({
           awardEndDate: '2026-12-31',
           awardStartDate: '2024-01-01',
@@ -144,7 +141,7 @@ describe('ProjectAdditionalInfo', () => {
 
   it('shows a tooltip for Indirect/Burden Rate', async () => {
     const user = userEvent.setup();
-    render(<ProjectAdditionalInfo isProjectManager={false} summary={createSummary()} />);
+    render(<ProjectAdditionalInfo summary={createSummary()} />);
 
     const label = screen.getByText('Indirect/Burden Rate');
     await user.hover(label.parentElement as HTMLElement);
@@ -156,7 +153,7 @@ describe('ProjectAdditionalInfo', () => {
 
   it('shows tooltips for secondary award fields after expansion', async () => {
     const user = userEvent.setup();
-    render(<ProjectAdditionalInfo isProjectManager={true} summary={createSummary()} />);
+    render(<ProjectAdditionalInfo summary={createSummary()} />);
 
     await user.click(screen.getByRole('button', { name: 'Show more' }));
 
@@ -172,7 +169,6 @@ describe('ProjectAdditionalInfo', () => {
     const user = userEvent.setup();
     render(
       <ProjectAdditionalInfo
-        isProjectManager={true}
         summary={createSummary({
           flowThroughFundsPrimarySponsor: null,
           flowThroughFundsReferenceAwardName: 'Parent Award XYZ',
@@ -187,10 +183,9 @@ describe('ProjectAdditionalInfo', () => {
     expect(screen.queryByText('Parent Award XYZ')).not.toBeInTheDocument();
   });
 
-  it('hides the Flow-Through Funds subsection for non-PMs even when populated', () => {
+  it('hides the Flow-Through Funds subsection until Show more is clicked', () => {
     render(
       <ProjectAdditionalInfo
-        isProjectManager={false}
         summary={createSummary({
           flowThroughFundsPrimarySponsor: 'Harvard University',
         })}
@@ -200,11 +195,10 @@ describe('ProjectAdditionalInfo', () => {
     expect(screen.queryByText('Flow-Through Funds')).not.toBeInTheDocument();
   });
 
-  it('renders the Flow-Through Funds subsection for PMs after Show more when populated', async () => {
+  it('renders the Flow-Through Funds subsection after Show more when populated', async () => {
     const user = userEvent.setup();
     render(
       <ProjectAdditionalInfo
-        isProjectManager={true}
         summary={createSummary({
           flowThroughFundsPrimarySponsor: 'Harvard University',
           flowThroughFundsReferenceAwardName: 'H-2024-001',
@@ -229,7 +223,6 @@ describe('ProjectAdditionalInfo', () => {
     const user = userEvent.setup();
     render(
       <ProjectAdditionalInfo
-        isProjectManager={true}
         summary={createSummary({
           flowThroughFundsPrimarySponsor: 'Harvard University',
           flowThroughFundsReferenceAwardName: null,
@@ -249,7 +242,7 @@ describe('ProjectAdditionalInfo', () => {
 
   it('renders nothing when awardNumber is null (internal project)', () => {
     const { container } = render(
-      <ProjectAdditionalInfo isProjectManager={false} summary={createSummary({ awardNumber: null })} />
+      <ProjectAdditionalInfo summary={createSummary({ awardNumber: null })} />
     );
 
     expect(container.innerHTML).toBe('');

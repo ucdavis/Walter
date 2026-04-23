@@ -81,3 +81,58 @@ export async function assignRole({
     signal
   );
 }
+
+export type UserRolesResponse = {
+  roles: string[];
+  name?: string | null;
+  email?: string | null;
+  employeeId?: string | null;
+  kerberos?: string | null;
+  iamId?: string | null;
+};
+
+export type RemoveRoleResponse = {
+  roles: string[];
+  removed: boolean;
+};
+
+export const userRolesQueryOptions = (entraUserId: string | null) => ({
+  enabled: !!entraUserId,
+  gcTime: 0,
+  queryFn: async ({
+    signal,
+  }: {
+    signal: AbortSignal;
+  }): Promise<UserRolesResponse> => {
+    return await fetchJson<UserRolesResponse>(
+      `/api/admin/users/${encodeURIComponent(entraUserId!)}/roles`,
+      {},
+      signal
+    );
+  },
+  queryKey: ['admin', 'users', entraUserId, 'roles'] as const,
+  staleTime: 0,
+});
+
+export const useUserRolesQuery = (entraUserId: string | null) => {
+  return useQuery(userRolesQueryOptions(entraUserId));
+};
+
+export async function removeRole({
+  entraUserId,
+  roleName,
+  signal,
+}: {
+  entraUserId: string;
+  roleName: string;
+  signal?: AbortSignal;
+}): Promise<RemoveRoleResponse> {
+  return await fetchJson<RemoveRoleResponse>(
+    `/api/admin/users/${encodeURIComponent(entraUserId)}/roles`,
+    {
+      method: 'DELETE',
+      body: JSON.stringify({ roleName }),
+    },
+    signal
+  );
+}

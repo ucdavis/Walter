@@ -11,7 +11,7 @@ const supportLinks: SupportLink[] = [
     description:
       'Search the knowledge base for guides, answers, and other documentation.',
     href: 'https://computing.caes.ucdavis.edu/documentation/walter',
-    label: 'Knowledge Base (Coming Soon)',
+    label: 'Knowledge Base',
   },
   {
     description:

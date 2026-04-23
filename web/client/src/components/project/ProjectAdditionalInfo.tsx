@@ -15,6 +15,7 @@ function buildPrimaryFields(summary: ProjectSummary): Field[] {
   return [
     { label: 'Award Number', value: summary.awardNumber ?? '—' },
     { label: 'Award Name', value: summary.awardName ?? '—' },
+    { label: 'Award PI', value: summary.awardPi ?? '—' },
     { label: 'Award Start Date', value: formatDate(summary.awardStartDate) },
     { label: 'Award End Date', value: formatDate(summary.awardEndDate) },
     {
@@ -32,11 +33,6 @@ function buildPrimaryFields(summary: ProjectSummary): Field[] {
         ? `${Number.parseFloat((Number.parseFloat(summary.projectBurdenCostRate) * 100).toFixed(4))}%`
         : '—',
     },
-    {
-      label: 'Contract Administrator',
-      tooltip: tooltipDefinitions.contractAdministrator,
-      value: summary.contractAdministrator ?? '—',
-    },
   ];
 }
 
@@ -47,7 +43,6 @@ function buildSecondaryFields(summary: ProjectSummary): Field[] {
       tooltip: tooltipDefinitions.awardCloseDate,
       value: formatDate(summary.awardCloseDate),
     },
-    { label: 'Award PI', value: summary.awardPi ?? '—' },
     { label: 'Award Status', value: summary.awardStatus ?? '—' },
     { label: 'Award Type', value: summary.awardType ?? '—' },
     {
@@ -59,6 +54,11 @@ function buildSecondaryFields(summary: ProjectSummary): Field[] {
       label: 'Burden Structure',
       tooltip: tooltipDefinitions.burdenStructure,
       value: summary.projectBurdenScheduleBase?.split('-')[0].trim() || '—',
+    },
+    {
+      label: 'Contract Administrator',
+      tooltip: tooltipDefinitions.contractAdministrator,
+      value: summary.contractAdministrator ?? '—',
     },
     {
       label: 'Cost Share Required by Sponsor',
@@ -79,7 +79,6 @@ function buildSecondaryFields(summary: ProjectSummary): Field[] {
       tooltip: tooltipDefinitions.postReportingPeriod,
       value: summary.postReportingPeriod ?? '—',
     },
-    { label: 'Project Fund', value: summary.projectFund ?? '—' },
   ];
 }
 
@@ -111,12 +110,10 @@ function buildFlowThroughFields(summary: ProjectSummary): Field[] {
 }
 
 interface ProjectAdditionalInfoProps {
-  isProjectManager: boolean;
   summary: ProjectSummary;
 }
 
 export function ProjectAdditionalInfo({
-  isProjectManager,
   summary,
 }: ProjectAdditionalInfoProps) {
   const [expanded, setExpanded] = React.useState(false);
@@ -177,7 +174,7 @@ export function ProjectAdditionalInfo({
           </div>
         )}
 
-        {isProjectManager && secondaryFields.length > 0 && (
+        {secondaryFields.length > 0 && (
           <div className="md:col-span-2 mt-2">
             <button
               className="btn"

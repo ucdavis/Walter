@@ -1,13 +1,26 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { InternalProjectsTable } from '@/components/project/InternalProjectsTable.tsx';
+import { downloadExcelCsv } from '@/lib/csv.ts';
 import type { ProjectRecord } from '@/queries/project.ts';
 
 vi.mock('@tanstack/react-router', () => ({
   Link: ({ children }: { children: React.ReactNode }) => <a>{children}</a>,
 }));
 
-afterEach(cleanup);
+vi.mock('@/lib/csv.ts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/csv.ts')>();
+
+  return {
+    ...actual,
+    downloadExcelCsv: vi.fn(),
+  };
+});
+
+afterEach(() => {
+  cleanup();
+  vi.mocked(downloadExcelCsv).mockClear();
+});
 
 const createProject = (
   overrides: Partial<ProjectRecord> = {}
@@ -139,5 +152,93 @@ describe('InternalProjectsTable', () => {
     expect(cells).toHaveLength(1);
     // Summed budget $8,000.00 appears in the row and the totals footer
     expect(screen.getAllByText('$8,000.00').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('shows the filtered export action only when a search filter is active', () => {
+    const projects = [
+      createProject({
+        displayName: 'P1: Sunny Project',
+        projectName: 'Sunny Project',
+        projectNumber: 'P1',
+        projectType: 'Internal',
+        taskName: 'Sunny Task',
+        taskNum: 'T001',
+      }),
+      createProject({
+        awardNumber: 'AWD002',
+        displayName: 'P2: Rainy Project',
+        projectName: 'Rainy Project',
+        projectNumber: 'P2',
+        projectType: 'Internal',
+        taskName: 'Rainy Task',
+        taskNum: 'T002',
+      }),
+    ];
+
+    render(
+      <InternalProjectsTable
+        discrepancies={new Set()}
+        employeeId="123"
+        records={projects}
+      />
+    );
+
+    expect(screen.getByRole('button', { name: 'Export' })).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Export filtered' })
+    ).not.toBeInTheDocument();
+
+    fireEvent.input(screen.getByPlaceholderText('Search all columns...'), {
+      target: { value: 'Sunny' },
+    });
+
+    expect(
+      screen.getByRole('button', { name: 'Export filtered' })
+    ).toBeInTheDocument();
+  });
+
+  it('exports only filtered internal projects when the filtered export button is used', () => {
+    const projects = [
+      createProject({
+        displayName: 'P1: Sunny Project',
+        projectName: 'Sunny Project',
+        projectNumber: 'P1',
+        projectType: 'Internal',
+        taskName: 'Sunny Task',
+        taskNum: 'T001',
+      }),
+      createProject({
+        awardNumber: 'AWD002',
+        displayName: 'P2: Rainy Project',
+        projectName: 'Rainy Project',
+        projectNumber: 'P2',
+        projectType: 'Internal',
+        taskName: 'Rainy Task',
+        taskNum: 'T002',
+      }),
+    ];
+
+    render(
+      <InternalProjectsTable
+        discrepancies={new Set()}
+        employeeId="123"
+        records={projects}
+      />
+    );
+
+    fireEvent.input(screen.getByPlaceholderText('Search all columns...'), {
+      target: { value: 'Sunny' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Export filtered' }));
+
+    expect(downloadExcelCsv).toHaveBeenCalledTimes(1);
+
+    const csv = vi.mocked(downloadExcelCsv).mock.calls[0]?.[0];
+    const filename = vi.mocked(downloadExcelCsv).mock.calls[0]?.[1];
+
+    expect(csv).toContain('Sunny Project');
+    expect(csv).not.toContain('Rainy Project');
+    expect(filename).toBe('internal-projects-filtered.csv');
   });
 });
