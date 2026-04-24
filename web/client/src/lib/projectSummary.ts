@@ -21,6 +21,11 @@ export interface ProjectSummary {
   copi: string | null;
   costShareRequiredBySponsor: string | null;
   displayName: string;
+  flowThroughFundsAmount: string | null;
+  flowThroughFundsEndDate: string | null;
+  flowThroughFundsPrimarySponsor: string | null;
+  flowThroughFundsReferenceAwardName: string | null;
+  flowThroughFundsStartDate: string | null;
   grantAdministrator: string | null;
   internalFundedProject: string | null;
   isInternal: boolean;
@@ -111,6 +116,11 @@ export const summarizeAllProjects = (
     copi: null,
     costShareRequiredBySponsor: null,
     displayName: DEFAULT_SUMMARY_NAME,
+    flowThroughFundsAmount: null,
+    flowThroughFundsEndDate: null,
+    flowThroughFundsPrimarySponsor: null,
+    flowThroughFundsReferenceAwardName: null,
+    flowThroughFundsStartDate: null,
     grantAdministrator: null,
     internalFundedProject: null,
     isInternal: false,
@@ -159,6 +169,11 @@ export const summarizeProjectByNumber = (
     copi: first.copi,
     costShareRequiredBySponsor: first.costShareRequiredBySponsor,
     displayName: first.displayName,
+    flowThroughFundsAmount: first.flowThroughFundsAmount,
+    flowThroughFundsEndDate: first.flowThroughFundsEndDate,
+    flowThroughFundsPrimarySponsor: first.flowThroughFundsPrimarySponsor,
+    flowThroughFundsReferenceAwardName: first.flowThroughFundsReferenceAwardName,
+    flowThroughFundsStartDate: first.flowThroughFundsStartDate,
     grantAdministrator: first.grantAdministrator,
     internalFundedProject: first.projectType
       ? first.projectType === 'Internal' ? 'Yes' : 'No'
