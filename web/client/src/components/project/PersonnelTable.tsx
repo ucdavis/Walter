@@ -153,20 +153,20 @@ function DistributionSubtable({
               </span>
             </th>
             <th>
-              <span className="flex justify-end w-full">Funding Effective</span>
+              <span className="flex justify-end w-full">Funding Eff. Date</span>
             </th>
             <th>
-              <span className="flex justify-end w-full">Funding End</span>
+              <span className="flex justify-end w-full">Funding End Date</span>
             </th>
             <th>
-              <span className="flex justify-end w-full">Salary</span>
+              <span className="flex justify-end w-full">Monthly Salary</span>
             </th>
             <th>
               <span className="flex justify-end w-full">
                 <TooltipLabel
-                  label="CBR"
+                  label="Monthly CBR"
                   placement="bottom"
-                  tooltip={tooltipDefinitions.cbr}
+                  tooltip={tooltipDefinitions.monthlyCbr}
                 />
               </span>
             </th>
