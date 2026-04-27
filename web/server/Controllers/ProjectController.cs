@@ -368,10 +368,17 @@ public sealed class ProjectController : ApiControllerBase
             piEmployeeId, PpmRole.PrincipalInvestigator, cancellationToken);
         var piData = piResult.ReadData();
 
-        // Check if the requester is PI or PM on any of those projects
+
+
+        // Check if the requester is PI or PM on any of those projects. It also now looks in the awards personnel in case the requester is only listed there as PI while not being on the project team directly
         return piData.PpmProjectByProjectTeamMemberEmployeeId
-            .Any(project => project.TeamMembers
-                .Any(m => (m.RoleName == PpmRole.PrincipalInvestigator || m.RoleName == PpmRole.ProjectManager) &&
-                          string.Equals(m.EmployeeId, requesterEmployeeId, StringComparison.OrdinalIgnoreCase)));
+            .Any(project =>
+                project.TeamMembers.Any(m =>
+                    (m.RoleName == PpmRole.PrincipalInvestigator || m.RoleName == PpmRole.ProjectManager) &&
+                    string.Equals(m.EmployeeId, requesterEmployeeId, StringComparison.OrdinalIgnoreCase)) ||
+                project.Awards.Any(award =>
+                    award.Personnel.Any(person =>
+                        person.RoleName == PpmRole.PrincipalInvestigator &&
+                        string.Equals(person.EmployeeId, requesterEmployeeId, StringComparison.OrdinalIgnoreCase))));
     }
 }

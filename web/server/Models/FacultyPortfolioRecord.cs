@@ -151,6 +151,21 @@ public sealed class FacultyPortfolioRecord
     [JsonPropertyName("sponsorAwardNumber")]
     public string? SponsorAwardNumber { get; set; }
 
+    [JsonPropertyName("flowThroughFundsPrimarySponsor")]
+    public string? FlowThroughFundsPrimarySponsor { get; set; }
+
+    [JsonPropertyName("flowThroughFundsReferenceAwardName")]
+    public string? FlowThroughFundsReferenceAwardName { get; set; }
+
+    [JsonPropertyName("flowThroughFundsStartDate")]
+    public DateTime? FlowThroughFundsStartDate { get; set; }
+
+    [JsonPropertyName("flowThroughFundsEndDate")]
+    public DateTime? FlowThroughFundsEndDate { get; set; }
+
+    [JsonPropertyName("flowThroughFundsAmount")]
+    public string? FlowThroughFundsAmount { get; set; }
+
     [JsonPropertyName("glBeginningBalance")]
     public decimal? GlBeginningBalance { get; set; }
 
