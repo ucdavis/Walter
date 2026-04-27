@@ -241,4 +241,41 @@ describe('InternalProjectsTable', () => {
     expect(csv).not.toContain('Rainy Project');
     expect(filename).toBe('internal-projects-filtered.csv');
   });
+
+  it('filters rows by project number', () => {
+    const projects = [
+      createProject({
+        displayName: 'Sunny Project',
+        projectName: 'Sunny Project',
+        projectNumber: 'KAOSUN001',
+        projectType: 'Internal',
+        taskNum: 'T001',
+      }),
+      createProject({
+        displayName: 'Rainy Project',
+        projectName: 'Rainy Project',
+        projectNumber: 'KAORAI002',
+        projectType: 'Internal',
+        taskNum: 'T002',
+      }),
+    ];
+
+    render(
+      <InternalProjectsTable
+        discrepancies={new Set()}
+        employeeId="123"
+        records={projects}
+      />
+    );
+
+    expect(screen.getByText('KAOSUN001')).toBeInTheDocument();
+    expect(screen.getByText('KAORAI002')).toBeInTheDocument();
+
+    fireEvent.input(screen.getByPlaceholderText('Search all columns...'), {
+      target: { value: 'KAOSUN' },
+    });
+
+    expect(screen.getByText('KAOSUN001')).toBeInTheDocument();
+    expect(screen.queryByText('KAORAI002')).not.toBeInTheDocument();
+  });
 });

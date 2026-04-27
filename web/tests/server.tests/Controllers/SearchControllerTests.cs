@@ -83,6 +83,48 @@ public sealed class SearchControllerTests
     }
 
     [Fact]
+    public async Task GetCatalog_excludes_all_reports_entry_when_user_has_no_reports()
+    {
+        using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
+        var authorizationService = CreateAuthorizationService();
+
+        var controller = CreateController(
+            ctx,
+            authorizationService,
+            new FakeGraphService(),
+            new FakeIdentityService(),
+            roles: []);
+
+        var result = await controller.GetCatalog(CancellationToken.None);
+
+        var catalog = result.Should().BeOfType<OkObjectResult>().Which.Value
+            .Should().BeOfType<SearchController.SearchCatalog>().Which;
+
+        catalog.Reports.Select(r => r.Id).Should().NotContain("reports");
+    }
+
+    [Fact]
+    public async Task GetCatalog_includes_all_reports_entry_when_user_can_view_accruals()
+    {
+        using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
+        var authorizationService = CreateAuthorizationService();
+
+        var controller = CreateController(
+            ctx,
+            authorizationService,
+            new FakeGraphService(),
+            new FakeIdentityService(),
+            roles: [server.core.Domain.Role.Names.AccrualViewer]);
+
+        var result = await controller.GetCatalog(CancellationToken.None);
+
+        var catalog = result.Should().BeOfType<OkObjectResult>().Which.Value
+            .Should().BeOfType<SearchController.SearchCatalog>().Which;
+
+        catalog.Reports.Select(r => r.Id).Should().Contain("reports");
+    }
+
+    [Fact]
     public async Task SearchPeople_returns_empty_for_non_financial_users()
     {
         using AppDbContext ctx = TestDbContextFactory.CreateInMemory();

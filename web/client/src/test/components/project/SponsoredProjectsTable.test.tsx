@@ -139,4 +139,32 @@ describe('SponsoredProjectsTable', () => {
     expect(csv).toContain('01/01/2024');
     expect(filename).toBe('projects-filtered.csv');
   });
+
+  it('filters rows by project number', () => {
+    const projects = [
+      createProject({
+        displayName: 'Sunny Project',
+        projectName: 'Sunny Project',
+        projectNumber: 'KAOSUN001',
+      }),
+      createProject({
+        awardNumber: 'AWD002',
+        displayName: 'Rainy Project',
+        projectName: 'Rainy Project',
+        projectNumber: 'KAORAI002',
+      }),
+    ];
+
+    render(<SponsoredProjectsTable employeeId="123" records={projects} />);
+
+    expect(screen.getByText('Sunny Project')).toBeInTheDocument();
+    expect(screen.getByText('Rainy Project')).toBeInTheDocument();
+
+    fireEvent.input(screen.getByPlaceholderText('Search all columns...'), {
+      target: { value: 'KAOSUN' },
+    });
+
+    expect(screen.getByText('Sunny Project')).toBeInTheDocument();
+    expect(screen.queryByText('Rainy Project')).not.toBeInTheDocument();
+  });
 });
