@@ -43,7 +43,11 @@ public sealed class ProjectControllerTests
         var result = await controller.GetManagedFaculty("1000", CancellationToken.None);
 
         var ok = result.Should().BeOfType<OkObjectResult>().Which;
-        ok.Value.Should().BeAssignableTo<IEnumerable<object>>().Which.Should().BeEmpty();
+        var envelope = ok.Value!;
+        var envelopeType = envelope.GetType();
+        envelopeType.GetProperty("projectManager")!.GetValue(envelope).Should().BeNull();
+        envelopeType.GetProperty("pis")!.GetValue(envelope)
+            .Should().BeAssignableTo<IEnumerable<object>>().Which.Should().BeEmpty();
     }
 
     private static IAuthorizationService CreateAuthorizationService()

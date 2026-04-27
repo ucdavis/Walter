@@ -1,6 +1,4 @@
-using System.Reflection;
 using System.Security.Claims;
-using AggieEnterpriseApi;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -11,7 +9,7 @@ using server.core.Data;
 using server.core.Domain;
 using server.core.Services;
 using server.Services;
-using StrawberryShake;
+using server.tests.Fakes;
 
 namespace server.tests.Services;
 
@@ -147,108 +145,4 @@ public sealed class UserProfileOrchestratorTests
         }
     }
 
-    private sealed class FakeFinancialApiService : IFinancialApiService
-    {
-        private readonly IAggieEnterpriseClient _client = CreateProxy<IAggieEnterpriseClient>((method, _) =>
-        {
-            if (method.Name == "get_PpmProjectByProjectTeamMemberEmployeeId")
-            {
-                return new FakePpmProjectByProjectTeamMemberEmployeeIdQuery();
-            }
-
-            throw new NotImplementedException($"{method.Name} is not implemented for this test.");
-        });
-
-        public IAggieEnterpriseClient GetClient()
-        {
-            return _client;
-        }
-    }
-
-    private sealed class FakePpmProjectByProjectTeamMemberEmployeeIdQuery : IPpmProjectByProjectTeamMemberEmployeeIdQuery
-    {
-        public Type ResultType => typeof(IPpmProjectByProjectTeamMemberEmployeeIdResult);
-
-        public OperationRequest Create(IReadOnlyDictionary<string, object?>? variables)
-        {
-            return new OperationRequest(
-                "FakePpmProjectByProjectTeamMemberEmployeeId",
-                CreateProxy<IDocument>((_, _) => throw new NotImplementedException()),
-                variables ?? new Dictionary<string, object?>(),
-                new Dictionary<string, Upload?>(),
-                default);
-        }
-
-        public Task<IOperationResult<IPpmProjectByProjectTeamMemberEmployeeIdResult>> ExecuteAsync(
-            string employeeId,
-            string? roleName,
-            CancellationToken cancellationToken)
-        {
-            var result = new PpmProjectByProjectTeamMemberEmployeeIdResult([]);
-            return Task.FromResult<IOperationResult<IPpmProjectByProjectTeamMemberEmployeeIdResult>>(
-                new FakeOperationResult<IPpmProjectByProjectTeamMemberEmployeeIdResult>(result));
-        }
-
-        public IObservable<IOperationResult<IPpmProjectByProjectTeamMemberEmployeeIdResult>> Watch(
-            string employeeId,
-            string? roleName,
-            ExecutionStrategy? strategy = null)
-        {
-            throw new NotImplementedException();
-        }
-    }
-
-    private sealed class FakeOperationResult<TResultData> : IOperationResult<TResultData>
-        where TResultData : class
-    {
-        public FakeOperationResult(TResultData data)
-        {
-            Data = data;
-        }
-
-        public TResultData Data { get; }
-
-        public IOperationResultDataFactory<TResultData> DataFactory => null!;
-
-        object IOperationResult.Data => Data!;
-
-        object IOperationResult.DataFactory => DataFactory;
-
-        public IOperationResultDataInfo DataInfo => null!;
-
-        public Type DataType => typeof(TResultData);
-
-        public IReadOnlyList<IClientError> Errors => Array.Empty<IClientError>();
-
-        public IReadOnlyDictionary<string, object?> Extensions => new Dictionary<string, object?>();
-
-        public IReadOnlyDictionary<string, object?> ContextData => new Dictionary<string, object?>();
-
-        public IOperationResult<TResultData> WithData(TResultData data, IOperationResultDataInfo dataInfo)
-        {
-            return new FakeOperationResult<TResultData>(data);
-        }
-    }
-
-    private class InterfaceProxy<T> : DispatchProxy where T : class
-    {
-        public Func<MethodInfo, object?[]?, object?>? Handler { get; set; }
-
-        protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
-        {
-            if (targetMethod == null || Handler == null)
-            {
-                throw new NotImplementedException();
-            }
-
-            return Handler(targetMethod, args);
-        }
-    }
-
-    private static T CreateProxy<T>(Func<MethodInfo, object?[]?, object?> handler) where T : class
-    {
-        var proxy = DispatchProxy.Create<T, InterfaceProxy<T>>();
-        ((InterfaceProxy<T>)(object)proxy).Handler = handler;
-        return proxy;
-    }
 }

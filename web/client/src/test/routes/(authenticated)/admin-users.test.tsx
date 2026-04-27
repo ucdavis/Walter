@@ -16,7 +16,7 @@ const createUser = (roles: string[]) => ({
 
 const registerHomeApis = () => {
   server.use(
-    http.get('/api/project/managed/:employeeId', () => HttpResponse.json([])),
+    http.get('/api/project/managed/:employeeId', () => HttpResponse.json({ pis: [], projectManager: null })),
     http.get('/api/project/:employeeId', () => HttpResponse.json([])),
     http.get('/api/project/personnel', () => HttpResponse.json([]))
   );
@@ -37,9 +37,9 @@ describe('/admin/users', () => {
         if (query.toLowerCase() === 'gra') {
           return HttpResponse.json([
             {
-              id: entraUserId,
               displayName: 'Graph User',
               email: 'graph.user@example.com',
+              id: entraUserId,
             },
           ]);
         }
@@ -74,7 +74,7 @@ describe('/admin/users', () => {
       await ue.type(screen.getByLabelText(/search by name or email/i), 'gra');
 
       const result = await screen.findByRole('button', {
-        name: /Graph User/i,
+        name: /graph user/i,
       });
       await ue.click(result);
 

@@ -46,6 +46,7 @@ export type SearchTeamMemberProjectsResponse = {
 export type ResolveDirectoryPersonResponse = {
   email?: string | null;
   employeeId: string;
+  isProjectManager: boolean;
   name: string;
 };
 

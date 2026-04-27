@@ -82,7 +82,7 @@ const setupHandlers = (
         roles: [],
       })
     ),
-    http.get('/api/project/managed/:employeeId', () => HttpResponse.json([])),
+    http.get('/api/project/managed/:employeeId', () => HttpResponse.json({ pis: [], projectManager: null })),
     http.get('/api/project/:employeeId', () => HttpResponse.json(projects)),
     http.get('/api/project/personnel', () => HttpResponse.json([])),
     http.get('/api/project/gl-ppm-reconciliation', () => HttpResponse.json([]))
@@ -142,7 +142,7 @@ describe('project detail page', () => {
           roles: [],
         })
       ),
-      http.get('/api/project/managed/:employeeId', () => HttpResponse.json([])),
+      http.get('/api/project/managed/:employeeId', () => HttpResponse.json({ pis: [], projectManager: null })),
       http.get('/api/project/:employeeId', ({ params }) => {
         if (params.employeeId === '10212674') {
           return HttpResponse.json(

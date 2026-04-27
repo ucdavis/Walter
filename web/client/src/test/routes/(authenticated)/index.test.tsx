@@ -48,9 +48,15 @@ describe('home route', () => {
       http.get('/api/project/managed/:employeeId', ({ params }) => {
         managedRequestCount += 1;
         if (params.employeeId !== user.employeeId) {
-          return HttpResponse.json([], { status: 400 });
+          return HttpResponse.json(
+            { pis: [], projectManager: null },
+            { status: 400 }
+          );
         }
-        return HttpResponse.json(managedPis);
+        return HttpResponse.json({
+          pis: managedPis,
+          projectManager: { employeeId: user.employeeId, name: user.name },
+        });
       }),
       http.get('/api/project/:employeeId', () => {
         // Return empty projects for each PI
@@ -107,7 +113,9 @@ describe('home route', () => {
 
     server.use(
       http.get('/api/user/me', () => HttpResponse.json(user)),
-      http.get('/api/project/managed/:employeeId', () => HttpResponse.json([])),
+      http.get('/api/project/managed/:employeeId', () =>
+        HttpResponse.json({ pis: [], projectManager: null })
+      ),
       http.get('/api/project/:employeeId', () => HttpResponse.json(projects)),
       http.get('/api/project/personnel', () => HttpResponse.json([]))
     );
@@ -163,7 +171,9 @@ describe('home route', () => {
 
     server.use(
       http.get('/api/user/me', () => HttpResponse.json(user)),
-      http.get('/api/project/managed/:employeeId', () => HttpResponse.json([])),
+      http.get('/api/project/managed/:employeeId', () =>
+        HttpResponse.json({ pis: [], projectManager: null })
+      ),
       http.get('/api/project/:employeeId', () => HttpResponse.json(projects)),
       http.get('/api/project/personnel', () => HttpResponse.json([]))
     );
@@ -196,7 +206,9 @@ describe('home route', () => {
 
     server.use(
       http.get('/api/user/me', () => HttpResponse.json(user)),
-      http.get('/api/project/managed/:employeeId', () => HttpResponse.json([])),
+      http.get('/api/project/managed/:employeeId', () =>
+        HttpResponse.json({ pis: [], projectManager: null })
+      ),
       http.get('/api/project/:employeeId', () => HttpResponse.json([])),
       http.get('/api/project/personnel', () => HttpResponse.json([])),
     );
@@ -242,7 +254,13 @@ describe('home route', () => {
 
     server.use(
       http.get('/api/project/managed/:employeeId', () =>
-        HttpResponse.json(managedPis)
+        HttpResponse.json({
+          pis: managedPis,
+          projectManager: {
+            employeeId: testUser.employeeId,
+            name: testUser.name,
+          },
+        })
       ),
       http.get('/api/project/:employeeId', () => HttpResponse.json(projects)),
       http.get('/api/user/me', () => HttpResponse.json(testUser)),

@@ -227,7 +227,11 @@ public sealed class ProjectController : ApiControllerBase
 
             if (!isSelf)
             {
-                return Ok(Array.Empty<object>());
+                return Ok(new
+                {
+                    projectManager = (object?)null,
+                    pis = Array.Empty<object>(),
+                });
             }
         }
 
@@ -241,6 +245,11 @@ public sealed class ProjectController : ApiControllerBase
 
         var data = result.ReadData();
         var managedProjects = data.PpmProjectByProjectTeamMemberEmployeeId;
+
+        // Look up the PM's name from any team they appear on
+        var pmMember = managedProjects
+            .SelectMany(p => p.TeamMembers)
+            .FirstOrDefault(m => m.EmployeeId == employeeId);
 
         // Find projects that have no PI assigned
         var orphanedProjectCount = managedProjects
@@ -266,11 +275,7 @@ public sealed class ProjectController : ApiControllerBase
         // Include the PM themselves for orphaned projects (no PI assigned)
         if (orphanedProjectCount > 0)
         {
-            var pmMember = managedProjects
-                .SelectMany(p => p.TeamMembers)
-                .FirstOrDefault(m => m.EmployeeId == employeeId);
-
-            var pmName = pmMember?.Name ?? "Unassigned PI";
+            var orphanedPiName = pmMember?.Name ?? "Unassigned PI";
 
             // Add or merge with existing entry if the PM is also a PI on other projects
             var existingEntry = principalInvestigators.FirstOrDefault(pi => pi.employeeId == employeeId);
@@ -288,7 +293,7 @@ public sealed class ProjectController : ApiControllerBase
             {
                 principalInvestigators.Add(new
                 {
-                    name = pmName,
+                    name = orphanedPiName,
                     employeeId,
                     projectCount = orphanedProjectCount
                 });
@@ -297,7 +302,15 @@ public sealed class ProjectController : ApiControllerBase
             principalInvestigators = principalInvestigators.OrderBy(pi => pi.name).ToList();
         }
 
-        return Ok(principalInvestigators);
+        return Ok(new
+        {
+            projectManager = new
+            {
+                employeeId,
+                name = pmMember?.Name,
+            },
+            pis = principalInvestigators,
+        });
     }
 
     private async Task<string?> GetCurrentEmployeeIdAsync(CancellationToken cancellationToken)

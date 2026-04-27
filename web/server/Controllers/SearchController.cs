@@ -81,7 +81,8 @@ public sealed class SearchController : ApiControllerBase
     public sealed record ResolveDirectoryPersonResponse(
         [property: JsonPropertyName("employeeId")] string EmployeeId,
         [property: JsonPropertyName("name")] string Name,
-        [property: JsonPropertyName("email")] string? Email);
+        [property: JsonPropertyName("email")] string? Email,
+        [property: JsonPropertyName("isProjectManager")] bool IsProjectManager);
 
     public sealed record ResolveProjectPiResponse(
         [property: JsonPropertyName("employeeId")] string EmployeeId,
@@ -220,7 +221,8 @@ public sealed class SearchController : ApiControllerBase
                 return NotFound();
             }
 
-            return Ok(new ResolveDirectoryPersonResponse(employeeId, employeeId, null));
+            var isPm = await IsProjectManagerAsync(employeeId, cancellationToken);
+            return Ok(new ResolveDirectoryPersonResponse(employeeId, employeeId, null, isPm));
         }
 
         GraphUserProfile? profile;
@@ -271,7 +273,17 @@ public sealed class SearchController : ApiControllerBase
                 ? identity.FullName
                 : profile.Email ?? identity.EmployeeId;
 
-        return Ok(new ResolveDirectoryPersonResponse(identity.EmployeeId, resolvedName, profile.Email));
+        var isProjectManager = await IsProjectManagerAsync(identity.EmployeeId, cancellationToken);
+
+        return Ok(new ResolveDirectoryPersonResponse(identity.EmployeeId, resolvedName, profile.Email, isProjectManager));
+    }
+
+    private async Task<bool> IsProjectManagerAsync(string employeeId, CancellationToken cancellationToken)
+    {
+        var pmResult = await _financialApiService.GetClient()
+            .PpmProjectByProjectTeamMemberEmployeeId
+            .ExecuteAsync(employeeId, PpmRole.ProjectManager, cancellationToken);
+        return pmResult.ReadData().PpmProjectByProjectTeamMemberEmployeeId.Any();
     }
 
     [HttpGet("projects")]

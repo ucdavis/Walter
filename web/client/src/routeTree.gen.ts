@@ -14,7 +14,6 @@ import { Route as authenticatedRouteRouteImport } from './routes/(authenticated)
 import { Route as authenticatedIndexRouteImport } from './routes/(authenticated)/index'
 import { Route as authenticatedStylesRouteImport } from './routes/(authenticated)/styles'
 import { Route as authenticatedReportsRouteImport } from './routes/(authenticated)/reports'
-import { Route as authenticatedPrincipalInvestigatorsRouteImport } from './routes/(authenticated)/principalInvestigators'
 import { Route as authenticatedPersonnelRouteImport } from './routes/(authenticated)/personnel'
 import { Route as authenticatedMeRouteImport } from './routes/(authenticated)/me'
 import { Route as authenticatedHelpRouteImport } from './routes/(authenticated)/help'
@@ -22,8 +21,10 @@ import { Route as authenticatedFormRouteImport } from './routes/(authenticated)/
 import { Route as authenticatedProjectsRouteRouteImport } from './routes/(authenticated)/projects/route'
 import { Route as authenticatedAdminRouteRouteImport } from './routes/(authenticated)/admin/route'
 import { Route as authenticatedReportsIndexRouteImport } from './routes/(authenticated)/reports/index'
+import { Route as authenticatedPrincipalInvestigatorsIndexRouteImport } from './routes/(authenticated)/principalInvestigators/index'
 import { Route as authenticatedAdminIndexRouteImport } from './routes/(authenticated)/admin/index'
 import { Route as authenticatedAccrualsIndexRouteImport } from './routes/(authenticated)/accruals/index'
+import { Route as authenticatedPrincipalInvestigatorsEmplidRouteImport } from './routes/(authenticated)/principalInvestigators/$emplid'
 import { Route as authenticatedAdminUsersRouteImport } from './routes/(authenticated)/admin/users'
 import { Route as authenticatedAccrualsAboutRouteImport } from './routes/(authenticated)/accruals/about'
 import { Route as authenticatedProjectsEmployeeIdRouteRouteImport } from './routes/(authenticated)/projects/$employeeId/route'
@@ -59,12 +60,6 @@ const authenticatedReportsRoute = authenticatedReportsRouteImport.update({
   path: '/reports',
   getParentRoute: () => authenticatedRouteRoute,
 } as any)
-const authenticatedPrincipalInvestigatorsRoute =
-  authenticatedPrincipalInvestigatorsRouteImport.update({
-    id: '/principalInvestigators',
-    path: '/principalInvestigators',
-    getParentRoute: () => authenticatedRouteRoute,
-  } as any)
 const authenticatedPersonnelRoute = authenticatedPersonnelRouteImport.update({
   id: '/personnel',
   path: '/personnel',
@@ -102,6 +97,12 @@ const authenticatedReportsIndexRoute =
     path: '/',
     getParentRoute: () => authenticatedReportsRoute,
   } as any)
+const authenticatedPrincipalInvestigatorsIndexRoute =
+  authenticatedPrincipalInvestigatorsIndexRouteImport.update({
+    id: '/principalInvestigators/',
+    path: '/principalInvestigators/',
+    getParentRoute: () => authenticatedRouteRoute,
+  } as any)
 const authenticatedAdminIndexRoute = authenticatedAdminIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -111,6 +112,12 @@ const authenticatedAccrualsIndexRoute =
   authenticatedAccrualsIndexRouteImport.update({
     id: '/accruals/',
     path: '/accruals/',
+    getParentRoute: () => authenticatedRouteRoute,
+  } as any)
+const authenticatedPrincipalInvestigatorsEmplidRoute =
+  authenticatedPrincipalInvestigatorsEmplidRouteImport.update({
+    id: '/principalInvestigators/$emplid',
+    path: '/principalInvestigators/$emplid',
     getParentRoute: () => authenticatedRouteRoute,
   } as any)
 const authenticatedAdminUsersRoute = authenticatedAdminUsersRouteImport.update({
@@ -183,15 +190,16 @@ export interface FileRoutesByFullPath {
   '/help': typeof authenticatedHelpRoute
   '/me': typeof authenticatedMeRoute
   '/personnel': typeof authenticatedPersonnelRoute
-  '/principalInvestigators': typeof authenticatedPrincipalInvestigatorsRoute
   '/reports': typeof authenticatedReportsRouteWithChildren
   '/styles': typeof authenticatedStylesRoute
   '/': typeof authenticatedIndexRoute
   '/projects/$employeeId': typeof authenticatedProjectsEmployeeIdRouteRouteWithChildren
   '/accruals/about': typeof authenticatedAccrualsAboutRoute
   '/admin/users': typeof authenticatedAdminUsersRoute
+  '/principalInvestigators/$emplid': typeof authenticatedPrincipalInvestigatorsEmplidRoute
   '/accruals': typeof authenticatedAccrualsIndexRoute
   '/admin/': typeof authenticatedAdminIndexRoute
+  '/principalInvestigators': typeof authenticatedPrincipalInvestigatorsIndexRoute
   '/reports/': typeof authenticatedReportsIndexRoute
   '/accruals/department/$departmentCode': typeof authenticatedAccrualsDepartmentDepartmentCodeRoute
   '/projects/by-number/$projectNumber': typeof authenticatedProjectsByNumberProjectNumberRoute
@@ -208,13 +216,14 @@ export interface FileRoutesByTo {
   '/help': typeof authenticatedHelpRoute
   '/me': typeof authenticatedMeRoute
   '/personnel': typeof authenticatedPersonnelRoute
-  '/principalInvestigators': typeof authenticatedPrincipalInvestigatorsRoute
   '/styles': typeof authenticatedStylesRoute
   '/': typeof authenticatedIndexRoute
   '/accruals/about': typeof authenticatedAccrualsAboutRoute
   '/admin/users': typeof authenticatedAdminUsersRoute
+  '/principalInvestigators/$emplid': typeof authenticatedPrincipalInvestigatorsEmplidRoute
   '/accruals': typeof authenticatedAccrualsIndexRoute
   '/admin': typeof authenticatedAdminIndexRoute
+  '/principalInvestigators': typeof authenticatedPrincipalInvestigatorsIndexRoute
   '/reports': typeof authenticatedReportsIndexRoute
   '/accruals/department/$departmentCode': typeof authenticatedAccrualsDepartmentDepartmentCodeRoute
   '/projects/by-number/$projectNumber': typeof authenticatedProjectsByNumberProjectNumberRoute
@@ -234,15 +243,16 @@ export interface FileRoutesById {
   '/(authenticated)/help': typeof authenticatedHelpRoute
   '/(authenticated)/me': typeof authenticatedMeRoute
   '/(authenticated)/personnel': typeof authenticatedPersonnelRoute
-  '/(authenticated)/principalInvestigators': typeof authenticatedPrincipalInvestigatorsRoute
   '/(authenticated)/reports': typeof authenticatedReportsRouteWithChildren
   '/(authenticated)/styles': typeof authenticatedStylesRoute
   '/(authenticated)/': typeof authenticatedIndexRoute
   '/(authenticated)/projects/$employeeId': typeof authenticatedProjectsEmployeeIdRouteRouteWithChildren
   '/(authenticated)/accruals/about': typeof authenticatedAccrualsAboutRoute
   '/(authenticated)/admin/users': typeof authenticatedAdminUsersRoute
+  '/(authenticated)/principalInvestigators/$emplid': typeof authenticatedPrincipalInvestigatorsEmplidRoute
   '/(authenticated)/accruals/': typeof authenticatedAccrualsIndexRoute
   '/(authenticated)/admin/': typeof authenticatedAdminIndexRoute
+  '/(authenticated)/principalInvestigators/': typeof authenticatedPrincipalInvestigatorsIndexRoute
   '/(authenticated)/reports/': typeof authenticatedReportsIndexRoute
   '/(authenticated)/accruals/department/$departmentCode': typeof authenticatedAccrualsDepartmentDepartmentCodeRoute
   '/(authenticated)/projects/by-number/$projectNumber': typeof authenticatedProjectsByNumberProjectNumberRoute
@@ -262,15 +272,16 @@ export interface FileRouteTypes {
     | '/help'
     | '/me'
     | '/personnel'
-    | '/principalInvestigators'
     | '/reports'
     | '/styles'
     | '/'
     | '/projects/$employeeId'
     | '/accruals/about'
     | '/admin/users'
+    | '/principalInvestigators/$emplid'
     | '/accruals'
     | '/admin/'
+    | '/principalInvestigators'
     | '/reports/'
     | '/accruals/department/$departmentCode'
     | '/projects/by-number/$projectNumber'
@@ -287,13 +298,14 @@ export interface FileRouteTypes {
     | '/help'
     | '/me'
     | '/personnel'
-    | '/principalInvestigators'
     | '/styles'
     | '/'
     | '/accruals/about'
     | '/admin/users'
+    | '/principalInvestigators/$emplid'
     | '/accruals'
     | '/admin'
+    | '/principalInvestigators'
     | '/reports'
     | '/accruals/department/$departmentCode'
     | '/projects/by-number/$projectNumber'
@@ -312,15 +324,16 @@ export interface FileRouteTypes {
     | '/(authenticated)/help'
     | '/(authenticated)/me'
     | '/(authenticated)/personnel'
-    | '/(authenticated)/principalInvestigators'
     | '/(authenticated)/reports'
     | '/(authenticated)/styles'
     | '/(authenticated)/'
     | '/(authenticated)/projects/$employeeId'
     | '/(authenticated)/accruals/about'
     | '/(authenticated)/admin/users'
+    | '/(authenticated)/principalInvestigators/$emplid'
     | '/(authenticated)/accruals/'
     | '/(authenticated)/admin/'
+    | '/(authenticated)/principalInvestigators/'
     | '/(authenticated)/reports/'
     | '/(authenticated)/accruals/department/$departmentCode'
     | '/(authenticated)/projects/by-number/$projectNumber'
@@ -373,13 +386,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authenticatedReportsRouteImport
       parentRoute: typeof authenticatedRouteRoute
     }
-    '/(authenticated)/principalInvestigators': {
-      id: '/(authenticated)/principalInvestigators'
-      path: '/principalInvestigators'
-      fullPath: '/principalInvestigators'
-      preLoaderRoute: typeof authenticatedPrincipalInvestigatorsRouteImport
-      parentRoute: typeof authenticatedRouteRoute
-    }
     '/(authenticated)/personnel': {
       id: '/(authenticated)/personnel'
       path: '/personnel'
@@ -429,6 +435,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authenticatedReportsIndexRouteImport
       parentRoute: typeof authenticatedReportsRoute
     }
+    '/(authenticated)/principalInvestigators/': {
+      id: '/(authenticated)/principalInvestigators/'
+      path: '/principalInvestigators'
+      fullPath: '/principalInvestigators'
+      preLoaderRoute: typeof authenticatedPrincipalInvestigatorsIndexRouteImport
+      parentRoute: typeof authenticatedRouteRoute
+    }
     '/(authenticated)/admin/': {
       id: '/(authenticated)/admin/'
       path: '/'
@@ -441,6 +454,13 @@ declare module '@tanstack/react-router' {
       path: '/accruals'
       fullPath: '/accruals'
       preLoaderRoute: typeof authenticatedAccrualsIndexRouteImport
+      parentRoute: typeof authenticatedRouteRoute
+    }
+    '/(authenticated)/principalInvestigators/$emplid': {
+      id: '/(authenticated)/principalInvestigators/$emplid'
+      path: '/principalInvestigators/$emplid'
+      fullPath: '/principalInvestigators/$emplid'
+      preLoaderRoute: typeof authenticatedPrincipalInvestigatorsEmplidRouteImport
       parentRoute: typeof authenticatedRouteRoute
     }
     '/(authenticated)/admin/users': {
@@ -595,12 +615,13 @@ interface authenticatedRouteRouteChildren {
   authenticatedHelpRoute: typeof authenticatedHelpRoute
   authenticatedMeRoute: typeof authenticatedMeRoute
   authenticatedPersonnelRoute: typeof authenticatedPersonnelRoute
-  authenticatedPrincipalInvestigatorsRoute: typeof authenticatedPrincipalInvestigatorsRoute
   authenticatedReportsRoute: typeof authenticatedReportsRouteWithChildren
   authenticatedStylesRoute: typeof authenticatedStylesRoute
   authenticatedIndexRoute: typeof authenticatedIndexRoute
   authenticatedAccrualsAboutRoute: typeof authenticatedAccrualsAboutRoute
+  authenticatedPrincipalInvestigatorsEmplidRoute: typeof authenticatedPrincipalInvestigatorsEmplidRoute
   authenticatedAccrualsIndexRoute: typeof authenticatedAccrualsIndexRoute
+  authenticatedPrincipalInvestigatorsIndexRoute: typeof authenticatedPrincipalInvestigatorsIndexRoute
   authenticatedAccrualsDepartmentDepartmentCodeRoute: typeof authenticatedAccrualsDepartmentDepartmentCodeRoute
 }
 
@@ -611,13 +632,15 @@ const authenticatedRouteRouteChildren: authenticatedRouteRouteChildren = {
   authenticatedHelpRoute: authenticatedHelpRoute,
   authenticatedMeRoute: authenticatedMeRoute,
   authenticatedPersonnelRoute: authenticatedPersonnelRoute,
-  authenticatedPrincipalInvestigatorsRoute:
-    authenticatedPrincipalInvestigatorsRoute,
   authenticatedReportsRoute: authenticatedReportsRouteWithChildren,
   authenticatedStylesRoute: authenticatedStylesRoute,
   authenticatedIndexRoute: authenticatedIndexRoute,
   authenticatedAccrualsAboutRoute: authenticatedAccrualsAboutRoute,
+  authenticatedPrincipalInvestigatorsEmplidRoute:
+    authenticatedPrincipalInvestigatorsEmplidRoute,
   authenticatedAccrualsIndexRoute: authenticatedAccrualsIndexRoute,
+  authenticatedPrincipalInvestigatorsIndexRoute:
+    authenticatedPrincipalInvestigatorsIndexRoute,
   authenticatedAccrualsDepartmentDepartmentCodeRoute:
     authenticatedAccrualsDepartmentDepartmentCodeRoute,
 }
