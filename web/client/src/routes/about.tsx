@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
+import { NotificationBanner } from '@/components/NotificationBanner.tsx';
 
 export const Route = createFileRoute('/about')({
   component: About,
@@ -7,6 +8,7 @@ export const Route = createFileRoute('/about')({
 function About() {
   return (
     <div className="min-h-dvh bg-white">
+      <NotificationBanner />
       <div className="flex min-h-dvh">
         <aside className="hidden w-72 walter-login-pattern shrink-0 md:block">
           <div className="h-full border-r border-main-border" />

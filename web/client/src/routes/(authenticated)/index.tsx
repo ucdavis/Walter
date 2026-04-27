@@ -4,6 +4,7 @@ import {
   usePiProjectAlerts,
 } from '@/components/alerts/PiProjectAlerts.tsx';
 import { AlertCard } from '@/components/alerts/ProjectAlerts.tsx';
+import { NotificationBanner } from '@/components/NotificationBanner.tsx';
 import { PrincipalInvestigatorsTable } from '@/components/project/PrincipalInvestigatorsTable.tsx';
 import { InternalProjectsTable } from '@/components/project/InternalProjectsTable.tsx';
 import { SponsoredProjectsTable } from '@/components/project/SponsoredProjectsTable.tsx';
@@ -144,6 +145,7 @@ function RouteComponent() {
 
   return (
     <div className="container">
+      <NotificationBanner />
       <div className="pt-10 pb-5 mx-auto w-full sm:max-w-[90%] md:max-w-[80%] xl:max-w-[66%]">
         <h1 className="text-2xl font-proxima-bold">W.A.L.T.E.R.</h1>
         <p className="uppercase">
