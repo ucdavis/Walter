@@ -13,6 +13,7 @@ using server.Helpers;
 using server.core.Domain;
 using server.core.Services;
 using server.core.Data;
+using server.tests.Fakes;
 
 namespace server.tests.Controllers;
 
@@ -192,6 +193,43 @@ public sealed class SearchControllerTests
 
         payload.EmployeeId.Should().Be("200123");
         payload.Name.Should().Be("Edward Spang");
+        payload.IsProjectManager.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ResolvePersonByDirectoryId_reports_is_project_manager_when_employee_manages_projects()
+    {
+        using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
+        var authorizationService = CreateAuthorizationService();
+        var graphService = new FakeGraphService(
+            profiles: new Dictionary<string, GraphUserProfile>
+            {
+                ["id-pm"] = new GraphUserProfile(
+                    Id: "id-pm",
+                    DisplayName: "Patty Manager",
+                    Email: "pmanager@ucdavis.edu",
+                    IamId: "IAM-PM"),
+            });
+        var identityService = new FakeIdentityService(
+            identities: new Dictionary<string, IamIdentity>
+            {
+                ["IAM-PM"] = new IamIdentity("IAM-PM", "PM-7001", "Patty Manager"),
+            });
+
+        var controller = CreateController(
+            ctx,
+            authorizationService,
+            graphService,
+            identityService,
+            roles: [Role.Names.FinancialViewer],
+            projectManagerEmployeeIds: ["PM-7001"]);
+
+        var result = await controller.ResolvePersonByDirectoryId("id-pm", CancellationToken.None);
+        var payload = result.Should().BeOfType<OkObjectResult>().Which.Value
+            .Should().BeOfType<SearchController.ResolveDirectoryPersonResponse>().Which;
+
+        payload.EmployeeId.Should().Be("PM-7001");
+        payload.IsProjectManager.Should().BeTrue();
     }
 
     [Fact]
@@ -225,7 +263,8 @@ public sealed class SearchControllerTests
         IAuthorizationService authorizationService,
         IGraphService graphService,
         IIdentityService identityService,
-        IReadOnlyList<string> roles)
+        IReadOnlyList<string> roles,
+        IEnumerable<string>? projectManagerEmployeeIds = null)
     {
         var httpContext = new DefaultHttpContext
         {
@@ -234,7 +273,7 @@ public sealed class SearchControllerTests
 
         return new SearchController(
             ctx,
-            new FakeFinancialApiService(),
+            new FakeFinancialApiService(projectManagerEmployeeIds ?? Array.Empty<string>()),
             authorizationService,
             graphService,
             identityService,
@@ -242,14 +281,6 @@ public sealed class SearchControllerTests
         {
             ControllerContext = new ControllerContext { HttpContext = httpContext },
         };
-    }
-
-    private sealed class FakeFinancialApiService : server.Services.IFinancialApiService
-    {
-        public AggieEnterpriseApi.IAggieEnterpriseClient GetClient()
-        {
-            throw new NotImplementedException("Not needed for GetCatalog tests.");
-        }
     }
 
     private static ClaimsPrincipal CreateUser(IReadOnlyList<string> roles)
