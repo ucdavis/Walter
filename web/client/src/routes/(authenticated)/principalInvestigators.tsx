@@ -29,9 +29,12 @@ export const Route = createFileRoute('/(authenticated)/principalInvestigators')(
 
 function RouteComponent() {
   const user = useUser();
-  const { error, isError, isPending, managedPis } = useManagedPisQuery(
-    user.employeeId
-  );
+  return <ManagedPisView employeeId={user.employeeId} />;
+}
+
+export function ManagedPisView({ employeeId }: { employeeId: string }) {
+  const { error, isError, isPending, managedPis, projectManagerName } =
+    useManagedPisQuery(employeeId);
 
   if (isPending) {
     return <PageLoading message="Fetching principal investigators..." />;
@@ -51,7 +54,7 @@ function RouteComponent() {
 
   if (managedPis.length === 0) {
     return (
-      <PageEmpty message="Looks like you don't have any principal investigators for Walter to fetch..." />
+      <PageEmpty message="Looks like there aren't any principal investigators for Walter to fetch..." />
     );
   }
 
@@ -60,9 +63,13 @@ function RouteComponent() {
     0
   );
 
+  const heading = projectManagerName
+    ? `Principal Investigators managed by ${projectManagerName}`
+    : 'Managed Principal Investigators';
+
   return (
     <div className="container">
-      <h1 className="h1 mt-8">Managed Principal Investigators</h1>
+      <h1 className="h1 mt-8">{heading}</h1>
       <h3 className="subtitle">
         {managedPis.length} investigators across {totalProjects} projects
       </h3>

@@ -15,7 +15,7 @@ const createUser = (roles: string[]) => ({
 
 const registerHomeApis = () => {
   server.use(
-    http.get('/api/project/managed/:employeeId', () => HttpResponse.json([])),
+    http.get('/api/project/managed/:employeeId', () => HttpResponse.json({ pis: [], projectManager: null })),
     http.get('/api/project/:employeeId', () => HttpResponse.json([])),
     http.get('/api/project/personnel', () => HttpResponse.json([]))
   );

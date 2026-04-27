@@ -21,7 +21,7 @@ describe('Accruals access control', () => {
           HttpResponse.json(createUser(['AccrualViewer']))
         ),
         http.get('/api/project/managed/:employeeId', () =>
-          HttpResponse.json([])
+          HttpResponse.json({ pis: [], projectManager: null })
         ),
         http.get('/api/project/:employeeId', () => HttpResponse.json([])),
         http.get('/api/project/personnel', () => HttpResponse.json([]))
@@ -43,7 +43,7 @@ describe('Accruals access control', () => {
       server.use(
         http.get('/api/user/me', () => HttpResponse.json(createUser([]))),
         http.get('/api/project/managed/:employeeId', () =>
-          HttpResponse.json([])
+          HttpResponse.json({ pis: [], projectManager: null })
         ),
         http.get('/api/project/:employeeId', () => HttpResponse.json([])),
         http.get('/api/project/personnel', () => HttpResponse.json([]))

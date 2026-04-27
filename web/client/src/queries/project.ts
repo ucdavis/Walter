@@ -118,6 +118,14 @@ export interface ManagedPiRecord {
   projectCount: number;
 }
 
+export interface ManagedPisEnvelope {
+  pis: ManagedPiRecord[];
+  projectManager: {
+    employeeId: string;
+    name: string | null;
+  } | null;
+}
+
 export const projectsDetailQueryOptions = (employeeId: string) => ({
   enabled: Boolean(employeeId),
   queryFn: async () => {
@@ -133,8 +141,8 @@ export const useProjectsDetailQuery = (employeeId: string) => {
 
 export const managedPisQueryOptions = (employeeId: string) => ({
   enabled: Boolean(employeeId),
-  queryFn: async (): Promise<ManagedPiRecord[]> => {
-    return await fetchJson<ManagedPiRecord[]>(
+  queryFn: async (): Promise<ManagedPisEnvelope> => {
+    return await fetchJson<ManagedPisEnvelope>(
       `/api/project/managed/${employeeId}`
     );
   },
@@ -158,7 +166,8 @@ export const useManagedPisQuery = (employeeId: string) => {
     error: managedPisResult.error,
     isError: managedPisResult.isError,
     isPending: managedPisResult.isPending,
-    managedPis: managedPisResult.data ?? [],
+    managedPis: managedPisResult.data?.pis ?? [],
+    projectManagerName: managedPisResult.data?.projectManager?.name ?? null,
   };
 };
 
