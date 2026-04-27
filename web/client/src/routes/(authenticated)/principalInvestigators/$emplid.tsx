@@ -1,5 +1,5 @@
 import { createFileRoute, redirect } from '@tanstack/react-router';
-import { ManagedPisView } from '@/routes/(authenticated)/principalInvestigators.tsx';
+import { ManagedPisView } from '@/routes/(authenticated)/principalInvestigators/index.tsx';
 import { RouterContext } from '@/main.tsx';
 import { meQueryOptions } from '@/queries/user.ts';
 import { ROLE_NAMES } from '@/shared/auth/roleAccess.ts';

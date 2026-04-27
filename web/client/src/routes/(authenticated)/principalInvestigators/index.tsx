@@ -14,18 +14,18 @@ import {
   UsersIcon,
 } from '@heroicons/react/24/outline';
 
-export const Route = createFileRoute('/(authenticated)/principalInvestigators')(
-  {
-    beforeLoad: async ({ context }: { context: RouterContext }) => {
-      const user = await context.queryClient.ensureQueryData(meQueryOptions());
+export const Route = createFileRoute(
+  '/(authenticated)/principalInvestigators/'
+)({
+  beforeLoad: async ({ context }: { context: RouterContext }) => {
+    const user = await context.queryClient.ensureQueryData(meQueryOptions());
 
-      if (!canAccessPrincipalInvestigatorsNav(user.roles)) {
-        throw redirect({ to: '/' });
-      }
-    },
-    component: RouteComponent,
-  }
-);
+    if (!canAccessPrincipalInvestigatorsNav(user.roles)) {
+      throw redirect({ to: '/' });
+    }
+  },
+  component: RouteComponent,
+});
 
 function RouteComponent() {
   const user = useUser();
