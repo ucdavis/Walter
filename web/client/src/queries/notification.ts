@@ -20,3 +20,13 @@ export const notificationQueryOptions = () => ({
 });
 
 export const useNotificationQuery = () => useQuery(notificationQueryOptions());
+
+export async function updateNotification(input: {
+  enabled: boolean;
+  message: string;
+}): Promise<NotificationData> {
+  return await fetchJson<NotificationData>('/api/notification', {
+    body: JSON.stringify(input),
+    method: 'PUT',
+  });
+}
