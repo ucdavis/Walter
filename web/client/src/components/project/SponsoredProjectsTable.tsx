@@ -158,10 +158,12 @@ export function SponsoredProjectsTable({
 
   const columns = useMemo(
     () => [
-      columnHelper.accessor('displayName', {
+      // Accessor concatenates name + number so the global filter matches on
+      // either — the cell visibly renders both, but TanStack only filters
+      // accessor values, not rendered output.
+      columnHelper.accessor((row) => `${row.displayName} ${row.projectNumber}`, {
         cell: (info) => {
-          const name = info.getValue();
-          const { projectNumber } = info.row.original;
+          const { displayName: name, projectNumber } = info.row.original;
           return (
             <Link
               className="link no-underline flex items-start gap-1"
@@ -181,6 +183,7 @@ export function SponsoredProjectsTable({
         },
         footer: () => 'Totals',
         header: 'Project',
+        id: 'displayName',
         minSize: 250,
         size: 300,
       }),

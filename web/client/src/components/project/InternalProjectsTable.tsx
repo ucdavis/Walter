@@ -121,10 +121,12 @@ export function InternalProjectsTable({
 
   const columns = useMemo(
     () => [
-      columnHelper.accessor('displayName', {
+      // Accessor concatenates name + number so the global filter matches on
+      // either — the cell visibly renders both, but TanStack only filters
+      // accessor values, not rendered output.
+      columnHelper.accessor((row) => `${row.displayName} ${row.projectNumber}`, {
         cell: (info) => {
-          const name = info.getValue();
-          const { projectNumber } = info.row.original;
+          const { displayName: name, projectNumber } = info.row.original;
           return (
             <div className="flex items-start gap-1">
               <Link
@@ -151,6 +153,7 @@ export function InternalProjectsTable({
         },
         footer: () => 'Totals',
         header: 'Project',
+        id: 'displayName',
       }),
       columnHelper.accessor('taskNum', {
         cell: (info) => (
