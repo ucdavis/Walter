@@ -14,6 +14,56 @@ const defaultUser = {
   roles: [],
 };
 
+const setUpPersonResolution = ({
+  isProjectManager,
+}: {
+  isProjectManager: boolean;
+}) => {
+  server.use(
+    http.get('/api/user/me', () =>
+      HttpResponse.json({ ...defaultUser, roles: ['FinancialViewer'] })
+    ),
+    http.get('/api/search/catalog', () =>
+      HttpResponse.json({ projects: [], reports: [] })
+    ),
+    http.get('/api/search/projects/team', () =>
+      HttpResponse.json({
+        myManagedProjects: [],
+        myProjects: [],
+        principalInvestigators: [],
+        projects: [],
+      })
+    ),
+    http.get('/api/search/projects', () => HttpResponse.json([])),
+    http.get('/api/search/people', () =>
+      HttpResponse.json([
+        {
+          email: 'patty@ucdavis.edu',
+          id: 'entra-patty',
+          keywords: ['Patty Manager'],
+          name: 'Patty Manager',
+        },
+      ])
+    ),
+    http.get('/api/search/people/resolve', () =>
+      HttpResponse.json({
+        email: 'patty@ucdavis.edu',
+        employeeId: 'PM-1',
+        isProjectManager,
+        name: 'Patty Manager',
+      })
+    ),
+    http.get('/api/project/managed/:employeeId', () =>
+      HttpResponse.json({
+        pis: [{ employeeId: '2001', name: 'PI One', projectCount: 1 }],
+        projectManager: { employeeId: 'PM-1', name: 'Patty Manager' },
+      })
+    ),
+    http.get('/api/project/:employeeId', () => HttpResponse.json([])),
+    http.get('/api/project/personnel', () => HttpResponse.json([]))
+  );
+};
+
 describe('CommandPaletteProvider', () => {
   it('opens via SearchButton click and autofocuses the input', async () => {
     server.use(
@@ -489,5 +539,63 @@ describe('CommandPaletteProvider', () => {
     } finally {
       cleanup();
     }
+  });
+
+  describe('selecting a person from search', () => {
+    it('navigates to the managed PIs page when the person is a project manager', async () => {
+      setUpPersonResolution({ isProjectManager: true });
+
+      const { cleanup, router } = renderRoute({ initialPath: '/styles' });
+
+      try {
+        await screen.findByText('Heading 1');
+
+        const user = userEvent.setup();
+        await user.click(screen.getByRole('button', { name: /search…/i }));
+
+        const input = await screen.findByPlaceholderText(
+          'Search projects, people, reports...'
+        );
+        await user.type(input, 'patty');
+
+        const result = await screen.findByText('Patty Manager');
+        await user.click(result);
+
+        await waitFor(() => {
+          expect(router.state.location.pathname).toBe(
+            '/principalInvestigators/PM-1'
+          );
+        });
+      } finally {
+        cleanup();
+      }
+    });
+
+    it('navigates to the projects page when the person is not a project manager', async () => {
+      setUpPersonResolution({ isProjectManager: false });
+
+      const { cleanup, router } = renderRoute({ initialPath: '/styles' });
+
+      try {
+        await screen.findByText('Heading 1');
+
+        const user = userEvent.setup();
+        await user.click(screen.getByRole('button', { name: /search…/i }));
+
+        const input = await screen.findByPlaceholderText(
+          'Search projects, people, reports...'
+        );
+        await user.type(input, 'patty');
+
+        const result = await screen.findByText('Patty Manager');
+        await user.click(result);
+
+        await waitFor(() => {
+          expect(router.state.location.pathname).toBe('/projects/PM-1');
+        });
+      } finally {
+        cleanup();
+      }
+    });
   });
 });

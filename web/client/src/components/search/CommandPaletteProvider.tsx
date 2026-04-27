@@ -416,10 +416,17 @@ function CommandPaletteDialog({
         const resolved = await resolveSearchPersonById({
           userId: item.directoryUserId,
         });
-        navigate({
-          params: { employeeId: resolved.employeeId },
-          to: '/projects/$employeeId/',
-        });
+        if (resolved.isProjectManager) {
+          navigate({
+            params: { emplid: resolved.employeeId },
+            to: '/principalInvestigators/$emplid',
+          });
+        } else {
+          navigate({
+            params: { employeeId: resolved.employeeId },
+            to: '/projects/$employeeId/',
+          });
+        }
         dialogRef.current?.close();
       } catch (error: unknown) {
         const status =
