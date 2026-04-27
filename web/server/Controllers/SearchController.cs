@@ -116,12 +116,17 @@ public sealed class SearchController : ApiControllerBase
             ["personnel", "payroll"]
         ));
 
-        reports.Add(new SearchReport(
-            "reports",
-            "All Reports",
-            "/reports",
-            ["reports", "all reports"]
-        ));
+        // Only surface "All Reports" if the user can actually see something on /reports.
+        // Today that means CanViewAccruals; revisit when more reports land on that page.
+        if (canViewAccruals.Succeeded)
+        {
+            reports.Add(new SearchReport(
+                "reports",
+                "All Reports",
+                "/reports",
+                ["reports", "all reports"]
+            ));
+        }
 
         return Ok(new SearchCatalog(Array.Empty<SearchProject>(), reports));
     }
