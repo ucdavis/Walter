@@ -26,6 +26,7 @@ import { Route as authenticatedAdminIndexRouteImport } from './routes/(authentic
 import { Route as authenticatedAccrualsIndexRouteImport } from './routes/(authenticated)/accruals/index'
 import { Route as authenticatedPrincipalInvestigatorsEmplidRouteImport } from './routes/(authenticated)/principalInvestigators/$emplid'
 import { Route as authenticatedAdminUsersRouteImport } from './routes/(authenticated)/admin/users'
+import { Route as authenticatedAdminNotificationRouteImport } from './routes/(authenticated)/admin/notification'
 import { Route as authenticatedAccrualsAboutRouteImport } from './routes/(authenticated)/accruals/about'
 import { Route as authenticatedProjectsEmployeeIdRouteRouteImport } from './routes/(authenticated)/projects/$employeeId/route'
 import { Route as authenticatedProjectsEmployeeIdIndexRouteImport } from './routes/(authenticated)/projects/$employeeId/index'
@@ -125,6 +126,12 @@ const authenticatedAdminUsersRoute = authenticatedAdminUsersRouteImport.update({
   path: '/users',
   getParentRoute: () => authenticatedAdminRouteRoute,
 } as any)
+const authenticatedAdminNotificationRoute =
+  authenticatedAdminNotificationRouteImport.update({
+    id: '/notification',
+    path: '/notification',
+    getParentRoute: () => authenticatedAdminRouteRoute,
+  } as any)
 const authenticatedAccrualsAboutRoute =
   authenticatedAccrualsAboutRouteImport.update({
     id: '/accruals/about',
@@ -195,6 +202,7 @@ export interface FileRoutesByFullPath {
   '/': typeof authenticatedIndexRoute
   '/projects/$employeeId': typeof authenticatedProjectsEmployeeIdRouteRouteWithChildren
   '/accruals/about': typeof authenticatedAccrualsAboutRoute
+  '/admin/notification': typeof authenticatedAdminNotificationRoute
   '/admin/users': typeof authenticatedAdminUsersRoute
   '/principalInvestigators/$emplid': typeof authenticatedPrincipalInvestigatorsEmplidRoute
   '/accruals': typeof authenticatedAccrualsIndexRoute
@@ -219,6 +227,7 @@ export interface FileRoutesByTo {
   '/styles': typeof authenticatedStylesRoute
   '/': typeof authenticatedIndexRoute
   '/accruals/about': typeof authenticatedAccrualsAboutRoute
+  '/admin/notification': typeof authenticatedAdminNotificationRoute
   '/admin/users': typeof authenticatedAdminUsersRoute
   '/principalInvestigators/$emplid': typeof authenticatedPrincipalInvestigatorsEmplidRoute
   '/accruals': typeof authenticatedAccrualsIndexRoute
@@ -248,6 +257,7 @@ export interface FileRoutesById {
   '/(authenticated)/': typeof authenticatedIndexRoute
   '/(authenticated)/projects/$employeeId': typeof authenticatedProjectsEmployeeIdRouteRouteWithChildren
   '/(authenticated)/accruals/about': typeof authenticatedAccrualsAboutRoute
+  '/(authenticated)/admin/notification': typeof authenticatedAdminNotificationRoute
   '/(authenticated)/admin/users': typeof authenticatedAdminUsersRoute
   '/(authenticated)/principalInvestigators/$emplid': typeof authenticatedPrincipalInvestigatorsEmplidRoute
   '/(authenticated)/accruals/': typeof authenticatedAccrualsIndexRoute
@@ -277,6 +287,7 @@ export interface FileRouteTypes {
     | '/'
     | '/projects/$employeeId'
     | '/accruals/about'
+    | '/admin/notification'
     | '/admin/users'
     | '/principalInvestigators/$emplid'
     | '/accruals'
@@ -301,6 +312,7 @@ export interface FileRouteTypes {
     | '/styles'
     | '/'
     | '/accruals/about'
+    | '/admin/notification'
     | '/admin/users'
     | '/principalInvestigators/$emplid'
     | '/accruals'
@@ -329,6 +341,7 @@ export interface FileRouteTypes {
     | '/(authenticated)/'
     | '/(authenticated)/projects/$employeeId'
     | '/(authenticated)/accruals/about'
+    | '/(authenticated)/admin/notification'
     | '/(authenticated)/admin/users'
     | '/(authenticated)/principalInvestigators/$emplid'
     | '/(authenticated)/accruals/'
@@ -470,6 +483,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authenticatedAdminUsersRouteImport
       parentRoute: typeof authenticatedAdminRouteRoute
     }
+    '/(authenticated)/admin/notification': {
+      id: '/(authenticated)/admin/notification'
+      path: '/notification'
+      fullPath: '/admin/notification'
+      preLoaderRoute: typeof authenticatedAdminNotificationRouteImport
+      parentRoute: typeof authenticatedAdminRouteRoute
+    }
     '/(authenticated)/accruals/about': {
       id: '/(authenticated)/accruals/about'
       path: '/accruals/about'
@@ -537,12 +557,14 @@ declare module '@tanstack/react-router' {
 }
 
 interface authenticatedAdminRouteRouteChildren {
+  authenticatedAdminNotificationRoute: typeof authenticatedAdminNotificationRoute
   authenticatedAdminUsersRoute: typeof authenticatedAdminUsersRoute
   authenticatedAdminIndexRoute: typeof authenticatedAdminIndexRoute
 }
 
 const authenticatedAdminRouteRouteChildren: authenticatedAdminRouteRouteChildren =
   {
+    authenticatedAdminNotificationRoute: authenticatedAdminNotificationRoute,
     authenticatedAdminUsersRoute: authenticatedAdminUsersRoute,
     authenticatedAdminIndexRoute: authenticatedAdminIndexRoute,
   }
