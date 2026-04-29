@@ -43,7 +43,6 @@ BEGIN
     DECLARE @Duration_MS INT;
     DECLARE @ErrorMsg NVARCHAR(MAX);
     DECLARE @ParametersJSON NVARCHAR(MAX);
-    DECLARE @ExcludedDocNumbers NVARCHAR(MAX);
 
     -- Sanitize ApplicationName for injection protection (whitelist: alphanumeric + spaces only)
     EXEC dbo.usp_SanitizeInputString @ApplicationName OUTPUT;
@@ -74,12 +73,12 @@ BEGIN
     IF @EndDate IS NOT NULL
         SET @FilterClause = @FilterClause + ' AND tlr.journal_acct_date <= ''' + CONVERT(VARCHAR(10), @EndDate, 120) + '''';
 
-    -- Exclude carryforward document numbers (same exclusion as usp_GetGLPPMReconciliation)
-    SELECT @ExcludedDocNumbers = STRING_AGG('''' + CAST(DocumentNumber AS VARCHAR(10)) + '''', ', ')
-    FROM dbo.CarryforwardDocumentNumbers;
-
-    IF @ExcludedDocNumbers IS NOT NULL
-        SET @FilterClause = @FilterClause + ' AND tlr.ACCOUNTING_SEQUENCE_NUMBER NOT IN (' + @ExcludedDocNumbers + ')';
+    -- Exclude carryforward 3XXXXXX activity except the one-time Jul-23 UCD conversion ASNs
+    -- (initial rollover from the legacy financial system). Same exclusion as usp_GetGLPPMReconciliation.
+    SET @FilterClause = @FilterClause + ' AND (
+            acc.parent_level_0_code NOT LIKE ''3%''
+            OR (tlr.PERIOD_NAME = ''Jul-23'' AND tlr.ACCOUNTING_SEQUENCE_NUMBER IN (''100009'',''100010'',''100307'',''103283'',''103284''))
+        )';
 
     -- Build Redshift query with explicit column list
     SET @RedshiftQuery = '

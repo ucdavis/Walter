@@ -22,7 +22,6 @@ BEGIN
     DECLARE @Duration_MS INT;
     DECLARE @ErrorMsg NVARCHAR(MAX);
     DECLARE @ParametersJSON NVARCHAR(MAX);
-    DECLARE @ExcludedDocNumbers NVARCHAR(MAX);
 
     -- Sanitize ApplicationName for injection protection (whitelist: alphanumeric + spaces only)
     EXEC dbo.usp_SanitizeInputString @ApplicationName OUTPUT;
@@ -34,30 +33,30 @@ BEGIN
     DECLARE @ProjectIdFilter NVARCHAR(MAX);
     EXEC dbo.usp_ParseProjectIdFilter @ProjectIds, @ProjectIdFilter OUTPUT;
 
-    -- Build comma-separated list of excluded document numbers from local table
-    SELECT @ExcludedDocNumbers = STRING_AGG('''' + CAST(DocumentNumber AS VARCHAR(10)) + '''', ', ')
-    FROM dbo.CarryforwardDocumentNumbers;
-
-    -- Build Redshift query for GL data (transactional_listing_report is still remote)
+    -- Build Redshift query for GL data (transactional_listing_report is still remote).
+    -- Exclude carryforward 3XXXXXX activity except the one-time Jul-23 UCD conversion ASNs
+    -- (initial rollover from the legacy financial system).
     SET @RedshiftQuery = '
         SELECT
-            FINANCIAL_DEPARTMENT,
-            PROJECT,
-            PROJECT_DESCRIPTION,
-            FUND,
-            FUND_DESCRIPTION,
-            PROGRAM,
-            PROGRAM_DESCRIPTION,
-            ACTIVITY,
-            ACTIVITY_DESCRIPTION,
-            SUM(ACTUAL_AMOUNT) AS GL_ACTUAL_AMOUNT
-        FROM ae_dwh.transactional_listing_report
-        WHERE PROJECT IN (' + @ProjectIdFilter + ') AND PERIOD_NAME <> ''Jun-23'''
-        + CASE WHEN @ExcludedDocNumbers IS NOT NULL
-               THEN ' AND ACCOUNTING_SEQUENCE_NUMBER NOT IN (' + @ExcludedDocNumbers + ')'
-               ELSE ''
-          END + '
-        GROUP BY FINANCIAL_DEPARTMENT, PROJECT, PROJECT_DESCRIPTION, FUND, FUND_DESCRIPTION, PROGRAM, PROGRAM_DESCRIPTION, ACTIVITY, ACTIVITY_DESCRIPTION';
+            tlr.FINANCIAL_DEPARTMENT,
+            tlr.PROJECT,
+            tlr.PROJECT_DESCRIPTION,
+            tlr.FUND,
+            tlr.FUND_DESCRIPTION,
+            tlr.PROGRAM,
+            tlr.PROGRAM_DESCRIPTION,
+            tlr.ACTIVITY,
+            tlr.ACTIVITY_DESCRIPTION,
+            SUM(tlr.ACTUAL_AMOUNT) AS GL_ACTUAL_AMOUNT
+        FROM ae_dwh.transactional_listing_report tlr
+        LEFT JOIN ae_dwh.erp_account acc ON tlr.ACCOUNT = acc.code
+        WHERE tlr.PROJECT IN (' + @ProjectIdFilter + ')
+          AND tlr.PERIOD_NAME <> ''Jun-23''
+          AND (
+              acc.parent_level_0_code NOT LIKE ''3%''
+              OR (tlr.PERIOD_NAME = ''Jul-23'' AND tlr.ACCOUNTING_SEQUENCE_NUMBER IN (''100009'',''100010'',''100307'',''103283'',''103284''))
+          )
+        GROUP BY tlr.FINANCIAL_DEPARTMENT, tlr.PROJECT, tlr.PROJECT_DESCRIPTION, tlr.FUND, tlr.FUND_DESCRIPTION, tlr.PROGRAM, tlr.PROGRAM_DESCRIPTION, tlr.ACTIVITY, tlr.ACTIVITY_DESCRIPTION';
 
     -- Build parameters JSON for logging
     SET @ParametersJSON = (
