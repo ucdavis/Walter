@@ -106,7 +106,6 @@ public sealed class ProjectController : ApiControllerBase
         return Ok(activeProjects);
     }
 
-    [Authorize(Policy = AuthorizationHelper.Policies.CanViewFinancials)]
     [HttpGet("byNumber")]
     public async Task<IActionResult> GetByProjectNumberAsync(
         CancellationToken cancellationToken,
@@ -116,6 +115,12 @@ public sealed class ProjectController : ApiControllerBase
             return Ok(Array.Empty<FacultyPortfolioRecord>());
 
         var codes = projectCodes.Split(',', StringSplitOptions.RemoveEmptyEntries);
+
+        if (!await CallerCanAccessProjectsAsync(codes, cancellationToken))
+        {
+            return Forbid();
+        }
+
         var applicationUser = User.GetUserIdentifier();
         var emulatingUser = User.GetEmulatingUser();
         var projects = await _datamartService.GetFacultyPortfolioAsync(codes, applicationUser, emulatingUser, cancellationToken);
@@ -172,7 +177,6 @@ public sealed class ProjectController : ApiControllerBase
         return Ok(personnel);
     }
 
-    [Authorize(Policy = AuthorizationHelper.Policies.CanViewFinancials)]
     [HttpGet("transactions")]
     public async Task<IActionResult> GetTransactionsForProjectsAsync(
         CancellationToken cancellationToken,
@@ -182,6 +186,12 @@ public sealed class ProjectController : ApiControllerBase
             return Ok(Array.Empty<GLTransactionRecord>());
 
         var codes = projectCodes.Split(',', StringSplitOptions.RemoveEmptyEntries);
+
+        if (!await CallerCanAccessProjectsAsync(codes, cancellationToken))
+        {
+            return Forbid();
+        }
+
         var applicationUser = User.GetUserIdentifier();
         var emulatingUser = User.GetEmulatingUser();
         var transactions = await _datamartService.GetGLTransactionListingsAsync(codes, applicationUser, emulatingUser, cancellationToken);
@@ -199,26 +209,9 @@ public sealed class ProjectController : ApiControllerBase
 
         var codes = projectCodes.Split(',', StringSplitOptions.RemoveEmptyEntries);
 
-        var hasFinancialAccess = (await _authorizationService.AuthorizeAsync(
-            User,
-            resource: null,
-            policyName: AuthorizationHelper.Policies.CanViewFinancials)).Succeeded;
-
-        if (!hasFinancialAccess)
+        if (!await CallerCanAccessProjectsAsync(codes, cancellationToken))
         {
-            var currentEmployeeId = await GetCurrentEmployeeIdAsync(cancellationToken);
-            if (string.IsNullOrWhiteSpace(currentEmployeeId))
-            {
-                return Forbid();
-            }
-
-            var accessibleProjectNumbers = await GetAccessibleProjectNumbersForEmployeeAsync(currentEmployeeId, cancellationToken);
-            var requestedProjectNumbers = new HashSet<string>(codes, StringComparer.OrdinalIgnoreCase);
-
-            if (!requestedProjectNumbers.IsSubsetOf(accessibleProjectNumbers))
-            {
-                return Forbid();
-            }
+            return Forbid();
         }
 
         var applicationUser = User.GetUserIdentifier();
@@ -349,6 +342,37 @@ public sealed class ProjectController : ApiControllerBase
 
         var currentUser = await _userService.GetByIdAsync(userId, cancellationToken);
         return currentUser?.EmployeeId;
+    }
+
+    /// <summary>
+    /// Returns true if the caller has CanViewFinancials, or if they are PI/PM
+    /// on every requested project. Used by endpoints that need to surface
+    /// project data to PMs viewing their PIs' projects.
+    /// </summary>
+    private async Task<bool> CallerCanAccessProjectsAsync(
+        string[] requestedProjectCodes,
+        CancellationToken cancellationToken)
+    {
+        var hasFinancialAccess = (await _authorizationService.AuthorizeAsync(
+            User,
+            resource: null,
+            policyName: AuthorizationHelper.Policies.CanViewFinancials)).Succeeded;
+
+        if (hasFinancialAccess)
+        {
+            return true;
+        }
+
+        var currentEmployeeId = await GetCurrentEmployeeIdAsync(cancellationToken);
+        if (string.IsNullOrWhiteSpace(currentEmployeeId))
+        {
+            return false;
+        }
+
+        var accessibleProjectNumbers = await GetAccessibleProjectNumbersForEmployeeAsync(currentEmployeeId, cancellationToken);
+        var requestedProjectNumbers = new HashSet<string>(requestedProjectCodes, StringComparer.OrdinalIgnoreCase);
+
+        return requestedProjectNumbers.IsSubsetOf(accessibleProjectNumbers);
     }
 
     private async Task<HashSet<string>> GetAccessibleProjectNumbersForEmployeeAsync(
