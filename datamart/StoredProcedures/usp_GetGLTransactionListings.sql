@@ -81,6 +81,8 @@ BEGIN
     IF @ExcludedDocNumbers IS NOT NULL
         SET @FilterClause = @FilterClause + ' AND tlr.ACCOUNTING_SEQUENCE_NUMBER NOT IN (' + @ExcludedDocNumbers + ')';
 
+    SET @FilterClause = @FilterClause + ' AND tlr.PERIOD_NAME <> ''Jun-23''';
+
     -- Build Redshift query with explicit column list
     SET @RedshiftQuery = '
         SELECT
