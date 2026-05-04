@@ -80,6 +80,8 @@ BEGIN
             OR (tlr.PERIOD_NAME = ''Jul-23'' AND tlr.ACCOUNTING_SEQUENCE_NUMBER IN (''100009'',''100010'',''100307'',''103283'',''103284''))
         )';
 
+    SET @FilterClause = @FilterClause + ' AND tlr.PERIOD_NAME <> ''Jun-23''';
+
     -- Build Redshift query with explicit column list
     SET @RedshiftQuery = '
         SELECT
