@@ -1,0 +1,33 @@
+{
+	"name": "MonitorUCPathConnectivity",
+	"properties": {
+		"activities": [
+			{
+				"name": "Check UCPath Connectivity",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlServerSource",
+						"sqlReaderQuery": "select * from openquery([AIT_BISTG_PRD-CAES_HCMODS_APPUSER], 'select 1 as connected from dual')",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Roberto_WalterProd",
+						"type": "DatasetReference"
+					}
+				}
+			}
+		],
+		"annotations": []
+	}
+}
