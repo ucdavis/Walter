@@ -1,0 +1,204 @@
+{
+  "name": "WalterTest_EmployeeAccrualBalances",
+  "properties": {
+    "linkedServiceName": {
+      "referenceName": "Roberto_WalterTest",
+      "type": "LinkedServiceReference"
+    },
+    "annotations": [],
+    "type": "SqlServerTable",
+    "schema": [
+      {
+        "name": "EmployeeId",
+        "type": "nvarchar"
+      },
+      {
+        "name": "AsOfDate",
+        "type": "date"
+      },
+      {
+        "name": "PositionNumber",
+        "type": "nvarchar"
+      },
+      {
+        "name": "EmployeeEmail",
+        "type": "nvarchar"
+      },
+      {
+        "name": "EmployeeName",
+        "type": "nvarchar"
+      },
+      {
+        "name": "UnionCode",
+        "type": "nvarchar"
+      },
+      {
+        "name": "UnionDescription",
+        "type": "nvarchar"
+      },
+      {
+        "name": "EmployeeClassCode",
+        "type": "nvarchar"
+      },
+      {
+        "name": "EmployeeClassDescription",
+        "type": "nvarchar"
+      },
+      {
+        "name": "JobCode",
+        "type": "nvarchar"
+      },
+      {
+        "name": "JobCodeDescription",
+        "type": "nvarchar"
+      },
+      {
+        "name": "ReportsToPositionNumber",
+        "type": "nvarchar"
+      },
+      {
+        "name": "ReportsToEmployeeId",
+        "type": "nvarchar"
+      },
+      {
+        "name": "ReportsToEmployeeName",
+        "type": "nvarchar"
+      },
+      {
+        "name": "HrStatus",
+        "type": "nvarchar"
+      },
+      {
+        "name": "EmployeeStatus",
+        "type": "nvarchar"
+      },
+      {
+        "name": "EmployeeStatusDescription",
+        "type": "nvarchar"
+      },
+      {
+        "name": "EmployeeType",
+        "type": "nvarchar"
+      },
+      {
+        "name": "EmployeeTypeDescription",
+        "type": "nvarchar"
+      },
+      {
+        "name": "TypeLabel",
+        "type": "nvarchar"
+      },
+      {
+        "name": "PrevBal",
+        "type": "decimal",
+        "precision": 10,
+        "scale": 2
+      },
+      {
+        "name": "HoursTaken",
+        "type": "decimal",
+        "precision": 10,
+        "scale": 2
+      },
+      {
+        "name": "AccrualHours",
+        "type": "decimal",
+        "precision": 10,
+        "scale": 2
+      },
+      {
+        "name": "AdjustedHours",
+        "type": "decimal",
+        "precision": 10,
+        "scale": 2
+      },
+      {
+        "name": "CalculatedBal",
+        "type": "decimal",
+        "precision": 10,
+        "scale": 2
+      },
+      {
+        "name": "AccrualLimit",
+        "type": "decimal",
+        "precision": 10,
+        "scale": 2
+      },
+      {
+        "name": "ApproachingMax",
+        "type": "nvarchar"
+      },
+      {
+        "name": "HoursOverUnderPolicyMax",
+        "type": "decimal",
+        "precision": 10,
+        "scale": 2
+      },
+      {
+        "name": "AccrualPercentage",
+        "type": "decimal",
+        "precision": 7,
+        "scale": 2
+      },
+      {
+        "name": "ExceptionalMaxVacationOnly",
+        "type": "int",
+        "precision": 10
+      },
+      {
+        "name": "Level1Dept",
+        "type": "nvarchar"
+      },
+      {
+        "name": "Level1DeptDesc",
+        "type": "nvarchar"
+      },
+      {
+        "name": "Level2Dept",
+        "type": "nvarchar"
+      },
+      {
+        "name": "Level2DeptDesc",
+        "type": "nvarchar"
+      },
+      {
+        "name": "Level3Dept",
+        "type": "nvarchar"
+      },
+      {
+        "name": "Level3DeptDesc",
+        "type": "nvarchar"
+      },
+      {
+        "name": "Level4Dept",
+        "type": "nvarchar"
+      },
+      {
+        "name": "Level4DeptDesc",
+        "type": "nvarchar"
+      },
+      {
+        "name": "Level5Dept",
+        "type": "nvarchar"
+      },
+      {
+        "name": "Level5DeptDesc",
+        "type": "nvarchar"
+      },
+      {
+        "name": "LoadDate",
+        "type": "datetime2",
+        "scale": 3
+      },
+      {
+        "name": "LastUpdated",
+        "type": "datetime2",
+        "scale": 3
+      }
+    ],
+    "typeProperties": {
+      "schema": "dbo",
+      "table": "EmployeeAccrualBalances"
+    }
+  }
+}
