@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using server.core.Data;
 using server.core.Domain;
 
@@ -79,10 +81,12 @@ public sealed class OutboundMessageQueue : IOutboundMessageQueue
     private const int LastErrorMaxLength = 2000;
 
     private readonly AppDbContext _ctx;
+    private readonly ILogger<OutboundMessageQueue> _logger;
 
-    public OutboundMessageQueue(AppDbContext ctx)
+    public OutboundMessageQueue(AppDbContext ctx, ILogger<OutboundMessageQueue>? logger = null)
     {
         _ctx = ctx;
+        _logger = logger ?? NullLogger<OutboundMessageQueue>.Instance;
     }
 
     /// <summary>
@@ -97,6 +101,7 @@ public sealed class OutboundMessageQueue : IOutboundMessageQueue
 
         if (messages.Count == 0)
         {
+            _logger.LogDebug("No outbound message drafts were provided for enqueue.");
             return new EnqueueOutboundMessagesResult(0, 0, []);
         }
 
@@ -157,6 +162,12 @@ public sealed class OutboundMessageQueue : IOutboundMessageQueue
             await _ctx.SaveChangesAsync(cancellationToken);
         }
 
+        _logger.LogInformation(
+            "Enqueued outbound messages. RequestedCount={RequestedCount} EnqueuedCount={EnqueuedCount} DuplicateCount={DuplicateCount}",
+            messages.Count,
+            newMessages.Count,
+            messages.Count - newMessages.Count);
+
         return new EnqueueOutboundMessagesResult(
             EnqueuedCount: newMessages.Count,
             DuplicateCount: messages.Count - newMessages.Count,
@@ -187,20 +198,24 @@ public sealed class OutboundMessageQueue : IOutboundMessageQueue
 
         if (_ctx.Database.IsSqlServer())
         {
-            return await ClaimWithSqlServerAsync(
+            var sqlServerMessages = await ClaimWithSqlServerAsync(
                 batchSize,
                 nowUtc,
                 lockedUntilUtc,
                 lockId,
                 cancellationToken);
+            LogClaimedMessages(sqlServerMessages, batchSize, lockedUntilUtc);
+            return sqlServerMessages;
         }
 
-        return await ClaimWithEfAsync(
+        var messages = await ClaimWithEfAsync(
             batchSize,
             nowUtc,
             lockedUntilUtc,
             lockId,
             cancellationToken);
+        LogClaimedMessages(messages, batchSize, lockedUntilUtc);
+        return messages;
     }
 
     /// <summary>
@@ -363,6 +378,14 @@ public sealed class OutboundMessageQueue : IOutboundMessageQueue
                     .SetProperty(message => message.LastError, lastError),
                     cancellationToken);
 
+            if (affected != 1)
+            {
+                _logger.LogWarning(
+                    "Failed to complete outbound message because the processing lock was not owned. MessageId={MessageId} TargetStatus={TargetStatus}",
+                    id,
+                    status);
+            }
+
             return affected == 1;
         }
 
@@ -373,6 +396,10 @@ public sealed class OutboundMessageQueue : IOutboundMessageQueue
 
         if (outboundMessage is null)
         {
+            _logger.LogWarning(
+                "Failed to complete outbound message because the processing lock was not owned. MessageId={MessageId} TargetStatus={TargetStatus}",
+                id,
+                status);
             return false;
         }
 
@@ -390,6 +417,26 @@ public sealed class OutboundMessageQueue : IOutboundMessageQueue
 
         await _ctx.SaveChangesAsync(cancellationToken);
         return true;
+    }
+
+    private void LogClaimedMessages(
+        IReadOnlyList<OutboundMessage> messages,
+        int batchSize,
+        DateTime lockedUntilUtc)
+    {
+        if (messages.Count == 0)
+        {
+            _logger.LogDebug(
+                "No due outbound messages were claimed. BatchSize={BatchSize}",
+                batchSize);
+            return;
+        }
+
+        _logger.LogInformation(
+            "Claimed outbound messages for processing. ClaimedCount={ClaimedCount} BatchSize={BatchSize} LockedUntilUtc={LockedUntilUtc}",
+            messages.Count,
+            batchSize,
+            lockedUntilUtc);
     }
 
     private static void ValidateDraft(OutboundMessageDraft message)

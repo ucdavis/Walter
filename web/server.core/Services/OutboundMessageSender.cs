@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using server.core.Domain;
 
 namespace server.core.Services;
@@ -34,17 +36,20 @@ public sealed class OutboundMessageSender : IOutboundMessageSender
     private readonly IOutboundMessageRenderer _renderer;
     private readonly IOutboundEmailClient _emailClient;
     private readonly OutboundMessageSenderOptions _options;
+    private readonly ILogger<OutboundMessageSender> _logger;
 
     public OutboundMessageSender(
         IOutboundMessageQueue queue,
         IOutboundMessageRenderer renderer,
         IOutboundEmailClient emailClient,
-        OutboundMessageSenderOptions? options = null)
+        OutboundMessageSenderOptions? options = null,
+        ILogger<OutboundMessageSender>? logger = null)
     {
         _queue = queue;
         _renderer = renderer;
         _emailClient = emailClient;
         _options = options ?? new OutboundMessageSenderOptions();
+        _logger = logger ?? NullLogger<OutboundMessageSender>.Instance;
         ValidateOptions(_options);
     }
 
@@ -61,6 +66,13 @@ public sealed class OutboundMessageSender : IOutboundMessageSender
             _options.LockDuration,
             cancellationToken);
 
+        if (messages.Count == 0)
+        {
+            _logger.LogDebug(
+                "Outbound message sender found no due messages. BatchSize={BatchSize}",
+                _options.BatchSize);
+        }
+
         var sentCount = 0;
         var retryCount = 0;
         var deadLetterCount = 0;
@@ -74,6 +86,10 @@ public sealed class OutboundMessageSender : IOutboundMessageSender
             if (lockId is null)
             {
                 lostLockCount++;
+                _logger.LogWarning(
+                    "Claimed outbound message was missing a lock token. MessageId={MessageId} NotificationType={NotificationType}",
+                    message.Id,
+                    message.NotificationType);
                 continue;
             }
 
@@ -108,12 +124,24 @@ public sealed class OutboundMessageSender : IOutboundMessageSender
                 else
                 {
                     lostLockCount++;
+                    _logger.LogWarning(
+                        "Outbound message was sent but could not be marked sent because its lock was lost. MessageId={MessageId} NotificationType={NotificationType}",
+                        message.Id,
+                        message.NotificationType);
                 }
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 if (ShouldDeadLetter(message))
                 {
+                    _logger.LogError(
+                        ex,
+                        "Outbound message failed and will be dead-lettered. MessageId={MessageId} NotificationType={NotificationType} AttemptNumber={AttemptNumber} MaxAttempts={MaxAttempts}",
+                        message.Id,
+                        message.NotificationType,
+                        message.AttemptCount + 1,
+                        _options.MaxAttempts);
+
                     if (await _queue.MarkDeadLetterAsync(
                         message.Id,
                         lockId.Value,
@@ -125,16 +153,29 @@ public sealed class OutboundMessageSender : IOutboundMessageSender
                     else
                     {
                         lostLockCount++;
+                        _logger.LogWarning(
+                            "Outbound message could not be marked dead-letter because its lock was lost. MessageId={MessageId} NotificationType={NotificationType}",
+                            message.Id,
+                            message.NotificationType);
                     }
 
                     continue;
                 }
 
+                var nextRetryUtc = CalculateNextRetryUtc(nowUtc, message.AttemptCount);
+                _logger.LogWarning(
+                    ex,
+                    "Outbound message failed and will be retried. MessageId={MessageId} NotificationType={NotificationType} AttemptNumber={AttemptNumber} NextRetryUtc={NextRetryUtc}",
+                    message.Id,
+                    message.NotificationType,
+                    message.AttemptCount + 1,
+                    nextRetryUtc);
+
                 if (await _queue.MarkRetryAsync(
                     message.Id,
                     lockId.Value,
                     ex.Message,
-                    CalculateNextRetryUtc(nowUtc, message.AttemptCount),
+                    nextRetryUtc,
                     cancellationToken))
                 {
                     retryCount++;
@@ -142,16 +183,33 @@ public sealed class OutboundMessageSender : IOutboundMessageSender
                 else
                 {
                     lostLockCount++;
+                    _logger.LogWarning(
+                        "Outbound message could not be marked retry because its lock was lost. MessageId={MessageId} NotificationType={NotificationType}",
+                        message.Id,
+                        message.NotificationType);
                 }
             }
         }
 
-        return new OutboundMessageSenderResult(
+        var result = new OutboundMessageSenderResult(
             ClaimedCount: messages.Count,
             SentCount: sentCount,
             RetryCount: retryCount,
             DeadLetterCount: deadLetterCount,
             LostLockCount: lostLockCount);
+
+        if (messages.Count > 0)
+        {
+            _logger.LogInformation(
+                "Processed outbound message batch. ClaimedCount={ClaimedCount} SentCount={SentCount} RetryCount={RetryCount} DeadLetterCount={DeadLetterCount} LostLockCount={LostLockCount}",
+                result.ClaimedCount,
+                result.SentCount,
+                result.RetryCount,
+                result.DeadLetterCount,
+                result.LostLockCount);
+        }
+
+        return result;
     }
 
     private bool ShouldDeadLetter(OutboundMessage message)

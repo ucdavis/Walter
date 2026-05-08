@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using server.core.Models;
 
 namespace server.core.Services;
@@ -46,17 +48,20 @@ public sealed class AccrualNotificationGenerator : IAccrualNotificationGenerator
     private readonly IAccrualViewerRecipientProvider _viewerRecipientProvider;
     private readonly AccrualNotificationMessageBuilder _messageBuilder;
     private readonly IOutboundMessageQueue _outboundMessageQueue;
+    private readonly ILogger<AccrualNotificationGenerator> _logger;
 
     public AccrualNotificationGenerator(
         IAccrualReportDataSource accrualReportDataSource,
         IAccrualViewerRecipientProvider viewerRecipientProvider,
         AccrualNotificationMessageBuilder messageBuilder,
-        IOutboundMessageQueue outboundMessageQueue)
+        IOutboundMessageQueue outboundMessageQueue,
+        ILogger<AccrualNotificationGenerator>? logger = null)
     {
         _accrualReportDataSource = accrualReportDataSource;
         _viewerRecipientProvider = viewerRecipientProvider;
         _messageBuilder = messageBuilder;
         _outboundMessageQueue = outboundMessageQueue;
+        _logger = logger ?? NullLogger<AccrualNotificationGenerator>.Instance;
     }
 
     /// <summary>
@@ -75,6 +80,11 @@ public sealed class AccrualNotificationGenerator : IAccrualNotificationGenerator
             throw new ArgumentException("Run ID is required.", nameof(options));
         }
 
+        _logger.LogInformation(
+            "Starting monthly accrual notification generation. RunId={RunId} DryRun={DryRun}",
+            runId,
+            options.DryRun);
+
         var records = await _accrualReportDataSource.GetEmployeeAccrualBalancesAsync(
             GetAccrualHistoryStartDate(nowUtc),
             ct: cancellationToken);
@@ -82,6 +92,11 @@ public sealed class AccrualNotificationGenerator : IAccrualNotificationGenerator
         var overview = AccrualOverviewCalculator.Build(records);
         if (overview.AsOfDate == default)
         {
+            _logger.LogInformation(
+                "Monthly accrual notification generation found no accrual snapshot. RunId={RunId} SourceRecordCount={SourceRecordCount}",
+                runId,
+                records.Count);
+
             return new AccrualNotificationGenerationResult
             {
                 RunId = runId,
@@ -101,8 +116,24 @@ public sealed class AccrualNotificationGenerator : IAccrualNotificationGenerator
             .Concat(viewerBuild.Skipped)
             .ToList();
 
+        _logger.LogInformation(
+            "Built monthly accrual notification drafts. RunId={RunId} SnapshotAsOfDate={SnapshotAsOfDate} SourceRecordCount={SourceRecordCount} EmployeeCandidateCount={EmployeeCandidateCount} ViewerRecipientCount={ViewerRecipientCount} DraftCount={DraftCount} SkippedCount={SkippedCount}",
+            runId,
+            overview.AsOfDate,
+            records.Count,
+            employeeCandidates.Count,
+            viewerRecipients.Count,
+            drafts.Count,
+            skipped.Count);
+
         if (options.DryRun)
         {
+            _logger.LogInformation(
+                "Completed dry-run accrual notification generation. RunId={RunId} DraftCount={DraftCount} SkippedCount={SkippedCount}",
+                runId,
+                drafts.Count,
+                skipped.Count);
+
             return new AccrualNotificationGenerationResult
             {
                 RunId = runId,
@@ -117,6 +148,13 @@ public sealed class AccrualNotificationGenerator : IAccrualNotificationGenerator
         }
 
         var enqueueResult = await _outboundMessageQueue.EnqueueAsync(drafts, nowUtc, cancellationToken);
+
+        _logger.LogInformation(
+            "Completed monthly accrual notification generation. RunId={RunId} EnqueuedCount={EnqueuedCount} DuplicateCount={DuplicateCount} SkippedCount={SkippedCount}",
+            runId,
+            enqueueResult.EnqueuedCount,
+            enqueueResult.DuplicateCount,
+            skipped.Count);
 
         return new AccrualNotificationGenerationResult
         {
