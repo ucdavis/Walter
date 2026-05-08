@@ -132,6 +132,21 @@ empl_type AS (
     WHERE x.fieldname = ''EMPL_TYPE'' AND x.effdt <= SYSDATE AND x.eff_status = ''A'' AND x.dml_ind <> ''D''
   ) WHERE rn = 1
 ),
+employee_email AS (
+  SELECT emplid, email_addr FROM (
+    SELECT e.emplid, e.email_addr,
+      ROW_NUMBER() OVER (
+        PARTITION BY e.emplid
+        ORDER BY
+          CASE WHEN e.pref_email_flag = ''Y'' THEN 1 ELSE 2 END,
+          e.upd_bt_dtm DESC NULLS LAST
+      ) AS rn
+    FROM caes_hcmods.ps_email_addresses_v e
+    WHERE e.dml_ind <> ''D''
+      AND e.e_addr_type = ''BUSN''
+      AND e.email_addr IS NOT NULL
+  ) WHERE rn = 1
+),
 empl_class_dim AS (
   SELECT setid, empl_class, descr FROM (
     SELECT ec.*, ROW_NUMBER() OVER (PARTITION BY ec.setid, ec.empl_class ORDER BY ec.effdt DESC) AS rn
@@ -223,6 +238,7 @@ SELECT
   j.employee_id                 AS "EmployeeId",
   j.position_number             AS "PositionNumber",
   j.employee_name               AS "EmployeeName",
+  ee.email_addr                 AS "EmployeeEmail",
   j.union_code                  AS "UnionCode",
   j.union_description           AS "UnionDescription",
   j.empl_class                  AS "EmployeeClassCode",
@@ -252,6 +268,7 @@ SELECT
   o.dept_ttl                    AS "Level5DeptDesc"
 FROM job_curr j
 JOIN org o ON j.department_id = o.dept_cd
+LEFT JOIN employee_email ee ON j.employee_id = ee.emplid
 LEFT JOIN reports_to r ON j.reports_to_position_number = r.position_number
 JOIN empl_type et ON j.empl_type = et.fieldvalue';
 
@@ -271,6 +288,7 @@ JOIN empl_type et ON j.empl_type = et.fieldvalue';
             EmployeeId                  NVARCHAR(11),
             PositionNumber              NVARCHAR(8),
             EmployeeName                NVARCHAR(100),
+            EmployeeEmail               NVARCHAR(320),
             UnionCode                   NVARCHAR(3),
             UnionDescription            NVARCHAR(50),
             EmployeeClassCode           NVARCHAR(3),
@@ -330,6 +348,7 @@ JOIN empl_type et ON j.empl_type = et.fieldvalue';
             a.AsOfDate,
             e.PositionNumber,
             e.EmployeeName,
+            e.EmployeeEmail,
             e.UnionCode,
             e.UnionDescription,
             e.EmployeeClassCode,
@@ -401,4 +420,3 @@ JOIN empl_type et ON j.empl_type = et.fieldvalue';
     END CATCH
 END;
 go
-
