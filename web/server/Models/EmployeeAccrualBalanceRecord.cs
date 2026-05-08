@@ -5,6 +5,7 @@ public sealed class EmployeeAccrualBalanceRecord
     public string EmployeeId { get; init; } = string.Empty;
     public DateTime AsOfDate { get; init; }
     public string? EmployeeName { get; init; }
+    public string? EmployeeEmail { get; init; }
     public string? EmployeeClassDescription { get; init; }
     public string? PositionNumber { get; init; }
     public string? Level5Dept { get; init; }

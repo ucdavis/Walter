@@ -66,6 +66,7 @@ public sealed class DatamartService : IDatamartService
                 EmployeeId,
                 AsOfDate,
                 EmployeeName,
+                EmployeeEmail,
                 EmployeeClassDescription,
                 PositionNumber,
                 Level5Dept,

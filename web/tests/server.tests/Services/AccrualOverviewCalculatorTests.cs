@@ -464,6 +464,214 @@ public sealed class AccrualOverviewCalculatorTests
     }
 
     [Fact]
+    public void BuildNotificationCandidates_returns_one_candidate_per_eligible_latest_employee()
+    {
+        var records = new List<EmployeeAccrualBalanceRecord>
+        {
+            CreateRecord(
+                employeeId: "E001",
+                employeeName: "AtCap,Employee",
+                employeeEmail: "old-atcap@example.com",
+                asOfDate: new DateTime(2026, 2, 28),
+                departmentCode: "030090",
+                department: "NUTRITION",
+                employeeClassDescription: "Academic: Faculty",
+                calculatedBal: 368m,
+                accrualLimit: 384m,
+                accrualHours: 16m,
+                accrualPercentage: 95.8m),
+            CreateRecord(
+                employeeId: "E001",
+                employeeName: "AtCap,Employee",
+                employeeEmail: null,
+                asOfDate: new DateTime(2026, 3, 31),
+                departmentCode: "030090",
+                department: "NUTRITION",
+                employeeClassDescription: "Academic: Faculty",
+                calculatedBal: 384m,
+                accrualLimit: 384m,
+                accrualHours: 0m,
+                accrualPercentage: 100m),
+            CreateRecord(
+                employeeId: "E001",
+                employeeName: "AtCap,Employee",
+                employeeEmail: "latest-atcap@example.com",
+                asOfDate: new DateTime(2026, 3, 31),
+                departmentCode: "030015",
+                department: "ENVIRONMENTAL TOXICOLOGY",
+                employeeClassDescription: "Academic: Faculty",
+                calculatedBal: 384m,
+                accrualLimit: 384m,
+                accrualHours: 0m,
+                accrualPercentage: 100m),
+            CreateRecord(
+                employeeId: "E002",
+                employeeName: "Approaching,Employee",
+                employeeEmail: "approaching@example.com",
+                asOfDate: new DateTime(2026, 3, 31),
+                departmentCode: "030003",
+                department: "PLANT SCIENCES",
+                employeeClassDescription: "Staff: Career",
+                calculatedBal: 204m,
+                accrualLimit: 240m,
+                accrualHours: 10m,
+                accrualPercentage: 85m),
+            CreateRecord(
+                employeeId: "E003",
+                employeeName: "Active,Employee",
+                employeeEmail: "active@example.com",
+                asOfDate: new DateTime(2026, 3, 31),
+                departmentCode: "030003",
+                department: "PLANT SCIENCES",
+                employeeClassDescription: "Staff: Career",
+                calculatedBal: 120m,
+                accrualLimit: 240m,
+                accrualHours: 10m,
+                accrualPercentage: 50m),
+        };
+
+        var result = AccrualOverviewCalculator.BuildNotificationCandidates(records);
+
+        result.Should().HaveCount(2);
+        result.Select(candidate => candidate.EmployeeId).Should().Equal("E001", "E002");
+
+        var atCap = result.Single(candidate => candidate.EmployeeId == "E001");
+        atCap.SnapshotAsOfDate.Should().Be(new DateTime(2026, 3, 31));
+        atCap.EmployeeAsOfDate.Should().Be(new DateTime(2026, 3, 31));
+        atCap.EmployeeEmail.Should().Be("latest-atcap@example.com");
+        atCap.Status.Should().Be(AccrualNotificationStatus.AtCap);
+        atCap.EmployeeGroup.Should().Be(AccrualEmployeeGroup.FacultyAcademic);
+        atCap.BalanceHours.Should().Be(384m);
+        atCap.CapHours.Should().Be(384m);
+        atCap.PctOfCap.Should().Be(100m);
+
+        var approaching = result.Single(candidate => candidate.EmployeeId == "E002");
+        approaching.Status.Should().Be(AccrualNotificationStatus.ApproachingCap);
+        approaching.EmployeeGroup.Should().Be(AccrualEmployeeGroup.Staff);
+        approaching.EmployeeEmail.Should().Be("approaching@example.com");
+    }
+
+    [Fact]
+    public void BuildNotificationCandidates_uses_most_recent_non_empty_email_from_employee_history()
+    {
+        var records = new List<EmployeeAccrualBalanceRecord>
+        {
+            CreateRecord(
+                employeeId: "E001",
+                employeeName: "Email,Employee",
+                employeeEmail: "first@example.com",
+                asOfDate: new DateTime(2026, 1, 31),
+                departmentCode: "030090",
+                department: "NUTRITION",
+                employeeClassDescription: "Academic: Faculty",
+                calculatedBal: 340m,
+                accrualLimit: 384m,
+                accrualHours: 16m,
+                accrualPercentage: 88.5m),
+            CreateRecord(
+                employeeId: "E001",
+                employeeName: "Email,Employee",
+                employeeEmail: " latest@example.com ",
+                asOfDate: new DateTime(2026, 2, 28),
+                departmentCode: "030090",
+                department: "NUTRITION",
+                employeeClassDescription: "Academic: Faculty",
+                calculatedBal: 368m,
+                accrualLimit: 384m,
+                accrualHours: 16m,
+                accrualPercentage: 95.8m),
+            CreateRecord(
+                employeeId: "E001",
+                employeeName: "Email,Employee",
+                employeeEmail: "",
+                asOfDate: new DateTime(2026, 3, 31),
+                departmentCode: "030090",
+                department: "NUTRITION",
+                employeeClassDescription: "Academic: Faculty",
+                calculatedBal: 384m,
+                accrualLimit: 384m,
+                accrualHours: 0m,
+                accrualPercentage: 100m),
+        };
+
+        var result = AccrualOverviewCalculator.BuildNotificationCandidates(records);
+
+        result.Should().ContainSingle();
+        result[0].EmployeeEmail.Should().Be("latest@example.com");
+    }
+
+    [Fact]
+    public void BuildNotificationCandidates_maps_employee_groups_from_normalized_classifications()
+    {
+        var records = new List<EmployeeAccrualBalanceRecord>
+        {
+            CreateRecord(
+                employeeId: "E001",
+                employeeName: "Faculty,Employee",
+                asOfDate: new DateTime(2026, 3, 31),
+                departmentCode: "030090",
+                department: "NUTRITION",
+                employeeClassDescription: "Academic: Faculty",
+                calculatedBal: 384m,
+                accrualLimit: 384m,
+                accrualHours: 0m,
+                accrualPercentage: 100m),
+            CreateRecord(
+                employeeId: "E002",
+                employeeName: "Staff,Employee",
+                asOfDate: new DateTime(2026, 3, 31),
+                departmentCode: "030003",
+                department: "PLANT SCIENCES",
+                employeeClassDescription: "Staff: Career",
+                calculatedBal: 240m,
+                accrualLimit: 240m,
+                accrualHours: 10m,
+                accrualPercentage: 100m),
+            CreateRecord(
+                employeeId: "E003",
+                employeeName: "Senior Manager,Employee",
+                asOfDate: new DateTime(2026, 3, 31),
+                departmentCode: "030003",
+                department: "PLANT SCIENCES",
+                employeeClassDescription: "Senior Management Group",
+                calculatedBal: 384m,
+                accrualLimit: 384m,
+                accrualHours: 16m,
+                accrualPercentage: 100m),
+            CreateRecord(
+                employeeId: "E004",
+                employeeName: "Unknown,Employee",
+                asOfDate: new DateTime(2026, 3, 31),
+                departmentCode: "030003",
+                department: "PLANT SCIENCES",
+                employeeClassDescription: "Mystery Classification",
+                calculatedBal: 384m,
+                accrualLimit: 384m,
+                accrualHours: 16m,
+                accrualPercentage: 100m),
+        };
+
+        var result = AccrualOverviewCalculator.BuildNotificationCandidates(records);
+
+        result.Should().Contain(candidate =>
+            candidate.EmployeeId == "E001" &&
+            candidate.Classification == "FY Faculty" &&
+            candidate.EmployeeGroup == AccrualEmployeeGroup.FacultyAcademic);
+        result.Should().Contain(candidate =>
+            candidate.EmployeeId == "E002" &&
+            candidate.Classification == "PSS" &&
+            candidate.EmployeeGroup == AccrualEmployeeGroup.Staff);
+        result.Should().Contain(candidate =>
+            candidate.EmployeeId == "E003" &&
+            candidate.Classification == "MSP" &&
+            candidate.EmployeeGroup == AccrualEmployeeGroup.Staff);
+        result.Should().Contain(candidate =>
+            candidate.EmployeeId == "E004" &&
+            candidate.Classification == "Mystery Classification" &&
+            candidate.EmployeeGroup == AccrualEmployeeGroup.Generic);
+    }
+
+    [Fact]
     public void BuildDepartmentDetail_uses_mid_tier_fallback_accrual_rates_when_current_history_has_no_positive_accrual()
     {
         var records = new List<EmployeeAccrualBalanceRecord>
@@ -519,6 +727,7 @@ public sealed class AccrualOverviewCalculatorTests
         decimal accrualHours,
         decimal accrualPercentage,
         string? employeeName = null,
+        string? employeeEmail = null,
         decimal? hoursTaken = null)
     {
         return new EmployeeAccrualBalanceRecord
@@ -529,6 +738,7 @@ public sealed class AccrualOverviewCalculatorTests
             AsOfDate = asOfDate,
             CalculatedBal = calculatedBal,
             EmployeeClassDescription = employeeClassDescription,
+            EmployeeEmail = employeeEmail,
             EmployeeId = employeeId,
             EmployeeName = employeeName,
             HoursTaken = hoursTaken,
