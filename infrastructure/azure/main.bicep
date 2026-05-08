@@ -17,6 +17,10 @@ param sqlAdminLogin string
 @description('SQL admin password')
 param sqlAdminPassword string
 
+@secure()
+@description('Datamart connection string used by web and notification worker Datamart integrations')
+param datamartConnectionString string
+
 @description('Runtime stack for Linux App Service')
 param linuxFxVersion string = 'DOTNETCORE|8.0'
 
@@ -90,6 +94,8 @@ module web './modules/webapp.bicep' = {
     linuxFxVersion: linuxFxVersion
     appSettings: {
       DB_CONNECTION: dbConnection
+      DM_CONNECTION: datamartConnectionString
+      Datamart__ApplicationName: empty(normalizedEnv) ? 'Walter-Production' : 'Walter-${normalizedEnv}'
       Rum__Enabled: string(rumEnabled)
       Rum__Environment: empty(normalizedEnv) ? 'production' : normalizedEnv
       Rum__ServerUrl: rumServerUrl
@@ -113,6 +119,8 @@ module notificationsFunction './modules/functionapp.bicep' = {
     linuxFxVersion: functionLinuxFxVersion
     appSettings: {
       DB_CONNECTION: dbConnection
+      DM_CONNECTION: datamartConnectionString
+      Datamart__ApplicationName: empty(normalizedEnv) ? 'Walter-Notifications-Production' : 'Walter-Notifications-${normalizedEnv}'
       NOTIFICATIONS_SENDER_SCHEDULE: notificationSenderSchedule
       NOTIFICATIONS_ACCRUAL_GENERATION_SCHEDULE: accrualNotificationSchedule
       Notifications__SenderEnabled: 'false'

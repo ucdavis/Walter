@@ -36,9 +36,9 @@ The worker currently uses:
 - `AccrualNotificationGenerator` for monthly accrual queue generation.
 - `PlaceholderOutboundMessageRenderer` for temporary email rendering.
 - `DisabledOutboundEmailClient`, which throws if sending is enabled before real email delivery is configured.
-- `UnconfiguredAccrualReportDataSource`, which throws if accrual generation is enabled before the Datamart adapter is moved into core.
+- `DatamartService` for accrual report data and other Datamart-backed queries.
 
-This means the deployed worker is safe by default. It can be deployed before real email and Datamart integrations are finished, but the corresponding enabled flag must remain `false`.
+This means the deployed worker is safe by default for email delivery. It can be deployed before real email integration is finished, but `Notifications__SenderEnabled` must remain `false` until email delivery is configured.
 
 ## Configuration
 
@@ -56,6 +56,8 @@ Required now:
 - `AzureWebJobsStorage`: required by the Azure Functions runtime.
 - `FUNCTIONS_WORKER_RUNTIME=dotnet-isolated`: required by the Azure Functions runtime.
 - `DB_CONNECTION`: app database connection string used by `AppDbContext`.
+- `DM_CONNECTION`: Datamart connection string used by `DatamartService`.
+- `Datamart__ApplicationName`: application name sent to Datamart for logging/auditing.
 - `NOTIFICATIONS_SENDER_SCHEDULE`: NCRONTAB schedule for sender processing.
 - `NOTIFICATIONS_ACCRUAL_GENERATION_SCHEDULE`: NCRONTAB schedule for monthly accrual generation.
 - `Notifications__SenderEnabled`: must be `true` before sender processing will run.
@@ -63,7 +65,6 @@ Required now:
 
 Expected future settings:
 
-- `DM_CONNECTION`: Datamart connection string for accrual report generation once the accrual Datamart adapter moves into `server.core`.
 - SMTP/SparkPost settings for the real outbound email client.
 - MJML/Razor template settings if needed by the final renderer.
 

@@ -1,8 +1,9 @@
 using AggieEnterpriseApi.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using server.core.Models;
+using server.core.Services;
 using server.Helpers;
-using server.Models;
 using server.Services;
 using Server.Services;
 

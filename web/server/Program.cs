@@ -10,9 +10,6 @@ using Server.Services;
 using server.core.Services;
 using server.Services;
 
-// Configure Dapper to map underscore column names to PascalCase properties
-Dapper.DefaultTypeMap.MatchNamesWithUnderscores = true;
-
 var builder = WebApplication.CreateBuilder(args);
 
 // setup configuration sources (last one wins)
@@ -56,6 +53,14 @@ builder.Services.AddAuthorizationPolicies();
 builder.Services.Configure<IamSettings>(builder.Configuration.GetSection("Iam"));
 builder.Services.Configure<FinancialSettings>(builder.Configuration.GetSection("Financial"));
 builder.Services.Configure<RumOptions>(builder.Configuration.GetSection("Rum"));
+builder.Services.Configure<DatamartOptions>(options =>
+{
+    options.ConnectionString = builder.Configuration["DM_CONNECTION"]
+        ?? builder.Configuration.GetConnectionString("Datamart")
+        ?? string.Empty;
+    options.ApplicationName = builder.Configuration["Datamart:ApplicationName"]
+        ?? $"Walter-{builder.Environment.EnvironmentName}";
+});
 
 builder.Services.AddControllers();
 

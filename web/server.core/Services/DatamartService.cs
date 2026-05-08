@@ -1,12 +1,20 @@
 using System.Data;
 using Dapper;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Options;
 using Polly;
 using Polly.Retry;
 using server.core.Models;
-using server.Models;
 
-namespace server.Services;
+namespace server.core.Services;
+
+public sealed class DatamartOptions
+{
+    public const string SectionName = "Datamart";
+
+    public string ConnectionString { get; set; } = string.Empty;
+    public string ApplicationName { get; set; } = "Walter";
+}
 
 public interface IDatamartService
 {
@@ -26,18 +34,29 @@ public interface IDatamartService
         IEnumerable<string> projectNumbers, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default);
 }
 
-public sealed class DatamartService : IDatamartService
+public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
 {
     private readonly string _connectionString;
     private readonly string _appName;
     private readonly AsyncRetryPolicy _retry;
 
-    public DatamartService(IConfiguration configuration, IWebHostEnvironment env)
+    static DatamartService()
     {
-        _connectionString = configuration["DM_CONNECTION"]
-            ?? throw new InvalidOperationException("DM_CONNECTION environment variable is required but not set or empty");
+        Dapper.DefaultTypeMap.MatchNamesWithUnderscores = true;
+    }
 
-        _appName = $"Walter-{env.EnvironmentName}";
+    public DatamartService(IOptions<DatamartOptions> options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+
+        var value = options.Value;
+        _connectionString = string.IsNullOrWhiteSpace(value.ConnectionString)
+            ? throw new InvalidOperationException("Datamart connection string is required. Set Datamart:ConnectionString or DM_CONNECTION.")
+            : value.ConnectionString;
+
+        _appName = string.IsNullOrWhiteSpace(value.ApplicationName)
+            ? "Walter"
+            : value.ApplicationName.Trim();
 
         _retry = Policy
             .Handle<SqlException>()

@@ -27,6 +27,14 @@ var host = new HostBuilder()
 
         services.Configure<NotificationWorkerOptions>(
             context.Configuration.GetSection(NotificationWorkerOptions.SectionName));
+        services.Configure<DatamartOptions>(options =>
+        {
+            options.ConnectionString = context.Configuration["DM_CONNECTION"]
+                ?? context.Configuration.GetConnectionString("Datamart")
+                ?? string.Empty;
+            options.ApplicationName = context.Configuration["Datamart:ApplicationName"]
+                ?? $"Walter-Notifications-{context.HostingEnvironment.EnvironmentName}";
+        });
 
         services.AddDbContextPool<AppDbContext>(options =>
             options.UseSqlServer(connectionString, sql => sql.MigrationsAssembly("server.core")));
@@ -35,7 +43,9 @@ var host = new HostBuilder()
         services.AddScoped<IAccrualViewerRecipientProvider, AccrualViewerRecipientProvider>();
         services.AddScoped<AccrualNotificationMessageBuilder>();
         services.AddScoped<IAccrualNotificationGenerator, AccrualNotificationGenerator>();
-        services.AddScoped<IAccrualReportDataSource, UnconfiguredAccrualReportDataSource>();
+        services.AddScoped<DatamartService>();
+        services.AddScoped<IDatamartService>(provider => provider.GetRequiredService<DatamartService>());
+        services.AddScoped<IAccrualReportDataSource>(provider => provider.GetRequiredService<DatamartService>());
 
         services.AddScoped<IOutboundMessageRenderer, PlaceholderOutboundMessageRenderer>();
         services.AddScoped<IOutboundEmailClient, DisabledOutboundEmailClient>();

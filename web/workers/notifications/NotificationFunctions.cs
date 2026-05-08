@@ -1,4 +1,5 @@
 using Microsoft.Azure.Functions.Worker;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using server.core.Services;
@@ -7,19 +8,16 @@ namespace Walter.Workers.Notifications;
 
 public sealed class NotificationFunctions
 {
-    private readonly IAccrualNotificationGenerator _accrualNotificationGenerator;
     private readonly ILogger<NotificationFunctions> _logger;
-    private readonly IOutboundMessageSender _outboundMessageSender;
     private readonly NotificationWorkerOptions _options;
+    private readonly IServiceProvider _serviceProvider;
 
     public NotificationFunctions(
-        IAccrualNotificationGenerator accrualNotificationGenerator,
-        IOutboundMessageSender outboundMessageSender,
+        IServiceProvider serviceProvider,
         IOptions<NotificationWorkerOptions> options,
         ILogger<NotificationFunctions> logger)
     {
-        _accrualNotificationGenerator = accrualNotificationGenerator;
-        _outboundMessageSender = outboundMessageSender;
+        _serviceProvider = serviceProvider;
         _options = options.Value;
         _logger = logger;
     }
@@ -35,7 +33,10 @@ public sealed class NotificationFunctions
             return;
         }
 
-        var result = await _accrualNotificationGenerator.GenerateMonthlyAsync(
+        await using var scope = _serviceProvider.CreateAsyncScope();
+        var accrualNotificationGenerator = scope.ServiceProvider.GetRequiredService<IAccrualNotificationGenerator>();
+
+        var result = await accrualNotificationGenerator.GenerateMonthlyAsync(
             DateTime.UtcNow,
             cancellationToken: cancellationToken);
 
@@ -60,7 +61,10 @@ public sealed class NotificationFunctions
             return;
         }
 
-        var result = await _outboundMessageSender.ProcessDueAsync(
+        await using var scope = _serviceProvider.CreateAsyncScope();
+        var outboundMessageSender = scope.ServiceProvider.GetRequiredService<IOutboundMessageSender>();
+
+        var result = await outboundMessageSender.ProcessDueAsync(
             DateTime.UtcNow,
             cancellationToken);
 

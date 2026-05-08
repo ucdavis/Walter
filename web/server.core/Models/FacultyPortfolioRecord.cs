@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace server.Models;
+namespace server.core.Models;
 
 /// <summary>
 /// Maps output from usp_GetFacultyDeptPortfolio stored procedure.
