@@ -34,8 +34,9 @@ BEGIN
     EXEC dbo.usp_ParseProjectIdFilter @ProjectIds, @ProjectIdFilter OUTPUT;
 
     -- Build Redshift query for GL data (transactional_listing_report is still remote).
-    -- Exclude carryforward 3XXXXXX activity except the one-time Jul-23 UCD conversion ASNs
-    -- (initial rollover from the legacy financial system).
+    -- Exclude carryforward 3XXXXXX activity with two exceptions:
+    --   1. Jul-23 one-time UCD conversion ASNs (initial rollover from legacy financial system)
+    --   2. Apr-24 UCD Conversion journal entries (balance correction adjustments)
     SET @RedshiftQuery = '
         SELECT
             tlr.FINANCIAL_DEPARTMENT,
@@ -55,6 +56,7 @@ BEGIN
           AND (
               acc.parent_level_0_code NOT LIKE ''3%''
               OR (tlr.PERIOD_NAME = ''Jul-23'' AND tlr.ACCOUNTING_SEQUENCE_NUMBER IN (''100009'',''100010'',''100307'',''103283'',''103284''))
+              OR (tlr.PERIOD_NAME = ''Apr-24'' AND tlr.JOURNAL_SOURCE = ''UCD Conversion'' AND tlr.JOURNAL_CATEGORY = ''UCD Conversion'')
           )
         GROUP BY tlr.FINANCIAL_DEPARTMENT, tlr.PROJECT, tlr.PROJECT_DESCRIPTION, tlr.FUND, tlr.FUND_DESCRIPTION, tlr.PROGRAM, tlr.PROGRAM_DESCRIPTION, tlr.ACTIVITY, tlr.ACTIVITY_DESCRIPTION';
 
