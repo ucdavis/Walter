@@ -345,140 +345,181 @@
 				"type": "SqlServerTable",
 				"schema": [
 					{
-						"name": "ProjectNumber",
+						"name": "EmployeeId",
 						"type": "nvarchar"
 					},
 					{
-						"name": "TaskNum",
-						"type": "nvarchar"
-					},
-					{
-						"name": "FundCode",
-						"type": "nvarchar"
-					},
-					{
-						"name": "ProgramCode",
-						"type": "nvarchar"
-					},
-					{
-						"name": "ActivityCode",
-						"type": "nvarchar"
-					},
-					{
-						"name": "ExpenditureCategoryName",
-						"type": "nvarchar"
-					},
-					{
-						"name": "ProjectOwningOrgCode",
-						"type": "nvarchar"
-					},
-					{
-						"name": "AwardNumber",
-						"type": "nvarchar"
-					},
-					{
-						"name": "AwardName",
-						"type": "nvarchar"
-					},
-					{
-						"name": "AwardType",
-						"type": "nvarchar"
-					},
-					{
-						"name": "AwardStartDate",
+						"name": "AsOfDate",
 						"type": "date"
 					},
 					{
-						"name": "AwardEndDate",
-						"type": "date"
-					},
-					{
-						"name": "AwardStatus",
+						"name": "PositionNumber",
 						"type": "nvarchar"
 					},
 					{
-						"name": "ProjectName",
+						"name": "EmployeeEmail",
 						"type": "nvarchar"
 					},
 					{
-						"name": "ProjectOwningOrg",
+						"name": "EmployeeName",
 						"type": "nvarchar"
 					},
 					{
-						"name": "ProjectType",
+						"name": "UnionCode",
 						"type": "nvarchar"
 					},
 					{
-						"name": "ProjectStatus",
+						"name": "UnionDescription",
 						"type": "nvarchar"
 					},
 					{
-						"name": "TaskName",
+						"name": "EmployeeClassCode",
 						"type": "nvarchar"
 					},
 					{
-						"name": "TaskStatus",
+						"name": "EmployeeClassDescription",
 						"type": "nvarchar"
 					},
 					{
-						"name": "Pm",
+						"name": "JobCode",
 						"type": "nvarchar"
 					},
 					{
-						"name": "Pa",
+						"name": "JobCodeDescription",
 						"type": "nvarchar"
 					},
 					{
-						"name": "Pi",
+						"name": "ReportsToPositionNumber",
 						"type": "nvarchar"
 					},
 					{
-						"name": "Copi",
+						"name": "ReportsToEmployeeId",
 						"type": "nvarchar"
 					},
 					{
-						"name": "FundDesc",
+						"name": "ReportsToEmployeeName",
 						"type": "nvarchar"
 					},
 					{
-						"name": "PurposeCode",
+						"name": "HrStatus",
 						"type": "nvarchar"
 					},
 					{
-						"name": "PurposeDesc",
+						"name": "EmployeeStatus",
 						"type": "nvarchar"
 					},
 					{
-						"name": "ProgramDesc",
+						"name": "EmployeeStatusDescription",
 						"type": "nvarchar"
 					},
 					{
-						"name": "ActivityDesc",
+						"name": "EmployeeType",
 						"type": "nvarchar"
 					},
 					{
-						"name": "PpmBudget",
+						"name": "EmployeeTypeDescription",
+						"type": "nvarchar"
+					},
+					{
+						"name": "TypeLabel",
+						"type": "nvarchar"
+					},
+					{
+						"name": "PrevBal",
 						"type": "decimal",
-						"precision": 15,
+						"precision": 10,
 						"scale": 2
 					},
 					{
-						"name": "PpmCommitments",
+						"name": "HoursTaken",
 						"type": "decimal",
-						"precision": 15,
+						"precision": 10,
 						"scale": 2
 					},
 					{
-						"name": "PpmExpenses",
+						"name": "AccrualHours",
 						"type": "decimal",
-						"precision": 15,
+						"precision": 10,
 						"scale": 2
 					},
 					{
-						"name": "PpmBudBal",
+						"name": "AdjustedHours",
 						"type": "decimal",
-						"precision": 15,
+						"precision": 10,
 						"scale": 2
+					},
+					{
+						"name": "CalculatedBal",
+						"type": "decimal",
+						"precision": 10,
+						"scale": 2
+					},
+					{
+						"name": "AccrualLimit",
+						"type": "decimal",
+						"precision": 10,
+						"scale": 2
+					},
+					{
+						"name": "ApproachingMax",
+						"type": "nvarchar"
+					},
+					{
+						"name": "HoursOverUnderPolicyMax",
+						"type": "decimal",
+						"precision": 10,
+						"scale": 2
+					},
+					{
+						"name": "AccrualPercentage",
+						"type": "decimal",
+						"precision": 7,
+						"scale": 2
+					},
+					{
+						"name": "ExceptionalMaxVacationOnly",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "Level1Dept",
+						"type": "nvarchar"
+					},
+					{
+						"name": "Level1DeptDesc",
+						"type": "nvarchar"
+					},
+					{
+						"name": "Level2Dept",
+						"type": "nvarchar"
+					},
+					{
+						"name": "Level2DeptDesc",
+						"type": "nvarchar"
+					},
+					{
+						"name": "Level3Dept",
+						"type": "nvarchar"
+					},
+					{
+						"name": "Level3DeptDesc",
+						"type": "nvarchar"
+					},
+					{
+						"name": "Level4Dept",
+						"type": "nvarchar"
+					},
+					{
+						"name": "Level4DeptDesc",
+						"type": "nvarchar"
+					},
+					{
+						"name": "Level5Dept",
+						"type": "nvarchar"
+					},
+					{
+						"name": "Level5DeptDesc",
+						"type": "nvarchar"
 					},
 					{
 						"name": "LoadDate",
@@ -1078,6 +1119,48 @@
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/Roberto_WalterDev')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/MonitorUCPathConnectivity')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Check UCPath Connectivity",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "SqlServerSource",
+								"sqlReaderQuery": "select * from openquery([AIT_BISTG_PRD-CAES_HCMODS_APPUSER], 'select 1 as connected from dual')",
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "Roberto_WalterProd",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/Roberto_WalterProd')]"
 			]
 		},
 		{
@@ -2719,36 +2802,6 @@
 				"[concat(variables('factoryId'), '/datasets/WalterDev_FacultyDeptPortfolio')]",
 				"[concat(variables('factoryId'), '/datasets/Roberto_WalterProd')]",
 				"[concat(variables('factoryId'), '/datasets/WalterProd_FacultyDeptPortfolio')]"
-			]
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/FacultyDeptReportTrigger')]",
-			"type": "Microsoft.DataFactory/factories/triggers",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"annotations": [],
-				"runtimeState": "Started",
-				"pipelines": [
-					{
-						"pipelineReference": {
-							"referenceName": "RefreshFacultyDeptPortfolio",
-							"type": "PipelineReference"
-						},
-						"parameters": {}
-					}
-				],
-				"type": "ScheduleTrigger",
-				"typeProperties": {
-					"recurrence": {
-						"frequency": "Day",
-						"interval": 1,
-						"startTime": "2026-04-04T10:00:00",
-						"timeZone": "Eastern Standard Time"
-					}
-				}
-			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/pipelines/RefreshFacultyDeptPortfolio')]"
 			]
 		}
 	]
