@@ -3,7 +3,7 @@ create table dbo.EmployeeAccrualBalances
     EmployeeId                 nvarchar(11) not null,
     AsOfDate                   date         not null,
     PositionNumber             nvarchar(8)  not null,
-    EmployeeEmail              nvarchar(100),
+    EmployeeEmail              nvarchar(320),
     EmployeeName               nvarchar(100),
     UnionCode                  nvarchar(3),
     UnionDescription           nvarchar(50),
