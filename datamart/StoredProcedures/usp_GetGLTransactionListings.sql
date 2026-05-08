@@ -73,11 +73,14 @@ BEGIN
     IF @EndDate IS NOT NULL
         SET @FilterClause = @FilterClause + ' AND tlr.journal_acct_date <= ''' + CONVERT(VARCHAR(10), @EndDate, 120) + '''';
 
-    -- Exclude carryforward 3XXXXXX activity except the one-time Jul-23 UCD conversion ASNs
-    -- (initial rollover from the legacy financial system). Same exclusion as usp_GetGLPPMReconciliation.
+    -- Exclude carryforward 3XXXXXX activity with two exceptions:
+    --   1. Jul-23 one-time UCD conversion ASNs (initial rollover from legacy financial system)
+    --   2. Apr-24 UCD Conversion journal entries (balance correction adjustments)
+    -- Same exclusion logic as usp_GetGLPPMReconciliation.
     SET @FilterClause = @FilterClause + ' AND (
             acc.parent_level_0_code NOT LIKE ''3%''
             OR (tlr.PERIOD_NAME = ''Jul-23'' AND tlr.ACCOUNTING_SEQUENCE_NUMBER IN (''100009'',''100010'',''100307'',''103283'',''103284''))
+            OR (tlr.PERIOD_NAME = ''Apr-24'' AND tlr.JOURNAL_SOURCE = ''UCD Conversion'' AND tlr.JOURNAL_CATEGORY = ''UCD Conversion'')
         )';
 
     SET @FilterClause = @FilterClause + ' AND tlr.PERIOD_NAME <> ''Jun-23''';
