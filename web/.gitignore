@@ -12,6 +12,7 @@ project.lock.json
 *.userosscache
 *.sln.docstates
 .env
+local.settings.json
 
 # Build results
 [Dd]ebug/
@@ -37,4 +38,3 @@ msbuild.wrn
 
 # Claude Code
 .claude/
-

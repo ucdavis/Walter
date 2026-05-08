@@ -10,6 +10,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "server.core", "server.core\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "server.tests", "tests\server.tests\server.tests.csproj", "{B82FA231-C20D-4EE0-BA76-0CF0E2015BE8}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workers", "workers", "{01056B0B-BDAD-4420-9373-6A98F4D3F231}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "notifications", "workers\notifications\notifications.csproj", "{EED9B147-C30B-4598-A34E-1FC8DF2F4160}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -32,11 +36,18 @@ Global
 		{B82FA231-C20D-4EE0-BA76-0CF0E2015BE8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B82FA231-C20D-4EE0-BA76-0CF0E2015BE8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B82FA231-C20D-4EE0-BA76-0CF0E2015BE8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EED9B147-C30B-4598-A34E-1FC8DF2F4160}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EED9B147-C30B-4598-A34E-1FC8DF2F4160}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EED9B147-C30B-4598-A34E-1FC8DF2F4160}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EED9B147-C30B-4598-A34E-1FC8DF2F4160}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {520BE29B-A73B-4A2E-8435-5F89CEADA2C5}
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{EED9B147-C30B-4598-A34E-1FC8DF2F4160} = {01056B0B-BDAD-4420-9373-6A98F4D3F231}
 	EndGlobalSection
 EndGlobal

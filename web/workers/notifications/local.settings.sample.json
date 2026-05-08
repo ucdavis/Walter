@@ -1,0 +1,12 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
+    "DB_CONNECTION": "Server=localhost,1433;Database=AppDb;User ID=sa;Password=LocalDev123!;Encrypt=False;TrustServerCertificate=True;",
+    "NOTIFICATIONS_SENDER_SCHEDULE": "0 */15 * * * *",
+    "NOTIFICATIONS_ACCRUAL_GENERATION_SCHEDULE": "0 0 9 1 * *",
+    "Notifications__SenderEnabled": "false",
+    "Notifications__AccrualGenerationEnabled": "false"
+  }
+}

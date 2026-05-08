@@ -20,6 +20,15 @@ param sqlAdminPassword string
 @description('Runtime stack for Linux App Service')
 param linuxFxVersion string = 'DOTNETCORE|8.0'
 
+@description('Runtime stack for Linux Azure Functions')
+param functionLinuxFxVersion string = 'DOTNET-ISOLATED|8.0'
+
+@description('Timer schedule for outbound message sending. NCRONTAB format with seconds.')
+param notificationSenderSchedule string = '0 */15 * * * *'
+
+@description('Timer schedule for monthly accrual notification generation. NCRONTAB format with seconds.')
+param accrualNotificationSchedule string = '0 0 9 1 * *'
+
 @description('Whether to create a SQL firewall rule to allow access from Azure services (0.0.0.0).')
 param allowAzureServicesToSql bool = false
 
@@ -48,6 +57,8 @@ var baseName = empty(normalizedEnv)
 var nameToken = toLower(substring(uniqueString(resourceGroup().id, normalizedAppName, normalizedEnv), 0, 6))
 
 var webAppName = 'web-${baseName}-${nameToken}'
+var functionAppName = 'func-${baseName}-${nameToken}'
+var functionStorageAccountName = 'st${nameToken}${substring(uniqueString(resourceGroup().id, normalizedAppName, normalizedEnv, 'functions'), 0, 8)}'
 var sqlServerName = 'sql-${baseName}-${nameToken}'
 var sqlDbName = normalizedAppName
 
@@ -92,9 +103,33 @@ module web './modules/webapp.bicep' = {
   ]
 }
 
+module notificationsFunction './modules/functionapp.bicep' = {
+  name: 'notificationsFunction'
+  params: {
+    location: location
+    functionAppName: functionAppName
+    storageAccountName: functionStorageAccountName
+    appServicePlanId: appServicePlanId
+    linuxFxVersion: functionLinuxFxVersion
+    appSettings: {
+      DB_CONNECTION: dbConnection
+      NOTIFICATIONS_SENDER_SCHEDULE: notificationSenderSchedule
+      NOTIFICATIONS_ACCRUAL_GENERATION_SCHEDULE: accrualNotificationSchedule
+      Notifications__SenderEnabled: 'false'
+      Notifications__AccrualGenerationEnabled: 'false'
+    }
+  }
+  dependsOn: [
+    sql
+  ]
+}
+
 output webAppId string = web.outputs.webAppId
+output functionAppId string = notificationsFunction.outputs.functionAppId
 output sqlServerFqdn string = sql.outputs.sqlServerFqdn
 output nameToken string = nameToken
 output webAppName string = webAppName
+output functionAppName string = notificationsFunction.outputs.functionAppName
+output functionStorageAccountName string = notificationsFunction.outputs.storageAccountName
 output sqlServerName string = sqlServerName
 output sqlDbName string = sqlDbName

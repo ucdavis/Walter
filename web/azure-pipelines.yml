@@ -15,6 +15,8 @@ variables:
   clientDir: "$(webDir)/client"
   solutionPath: "$(webDir)/app.sln"
   serverProjectPath: "$(webDir)/server/server.csproj"
+  serverTestsProjectPath: "$(webDir)/tests/server.tests/server.tests.csproj"
+  notificationsWorkerProjectPath: "$(webDir)/workers/notifications/notifications.csproj"
 
 stages:
   - stage: BuildAndTest
@@ -50,11 +52,14 @@ stages:
           - script: dotnet restore $(solutionPath)
             displayName: Restore .NET solution
 
-          - script: dotnet test $(serverProjectPath) --configuration $(buildConfiguration) --logger trx /p:Version=$(Build.BuildNumber)
+          - script: dotnet test $(serverTestsProjectPath) --configuration $(buildConfiguration) --logger trx /p:Version=$(Build.BuildNumber)
             displayName: Run server tests
 
           - script: dotnet publish $(serverProjectPath) --configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)/server /p:Version=$(Build.BuildNumber)
             displayName: Publish server project
+
+          - script: dotnet publish $(notificationsWorkerProjectPath) --configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)/notifications-worker /p:Version=$(Build.BuildNumber)
+            displayName: Publish notifications worker project
 
           - task: ArchiveFiles@2
             displayName: Create deployment package from Server Build
@@ -63,6 +68,15 @@ stages:
               includeRootFolder: false
               archiveType: zip
               archiveFile: $(Build.ArtifactStagingDirectory)/site.zip
+              replaceExistingArchive: true
+
+          - task: ArchiveFiles@2
+            displayName: Create deployment package from Notifications Worker Build
+            inputs:
+              rootFolderOrFile: $(Build.ArtifactStagingDirectory)/notifications-worker
+              includeRootFolder: false
+              archiveType: zip
+              archiveFile: $(Build.ArtifactStagingDirectory)/notifications-worker.zip
               replaceExistingArchive: true
 
           - publish: $(Build.ArtifactStagingDirectory)
@@ -95,6 +109,14 @@ stages:
                     appType: webAppLinux
                     package: $(Pipeline.Workspace)/$(artifactName)/site.zip
 
+                - task: AzureFunctionApp@2
+                  displayName: Deploy to test notifications function app
+                  inputs:
+                    azureSubscription: $(azureSubscriptionTest)
+                    appName: $(functionAppName)
+                    appType: functionAppLinux
+                    package: $(Pipeline.Workspace)/$(artifactName)/notifications-worker.zip
+
   - stage: DeployToProd
     displayName: Deploy to Production
     dependsOn: DeployToTest
@@ -120,3 +142,11 @@ stages:
                     appName: $(webAppName)
                     appType: webAppLinux
                     package: $(Pipeline.Workspace)/$(artifactName)/site.zip
+
+                - task: AzureFunctionApp@2
+                  displayName: Deploy to production notifications function app
+                  inputs:
+                    azureSubscription: $(azureSubscriptionProd)
+                    appName: $(functionAppName)
+                    appType: functionAppLinux
+                    package: $(Pipeline.Workspace)/$(artifactName)/notifications-worker.zip

@@ -24,6 +24,7 @@ Naming:
 Other:
   -l, --location                 Location used if resource group must be created (default: westus2)
       --linux-fx-version         App Service runtime stack (default: DOTNETCORE|8.0)
+      --function-linux-fx-version  Azure Functions runtime stack (default: DOTNET-ISOLATED|8.0)
       --allow-azure-services-to-sql  Adds SQL firewall rule AllowAzureServices (0.0.0.0)
       --what-if                  Run in what-if mode (no changes)
   -h, --help                     Show help
@@ -52,6 +53,7 @@ SQL_ADMIN_LOGIN_VALUE="${SQL_ADMIN_LOGIN:-}"
 SQL_ADMIN_PASSWORD_VALUE="${SQL_ADMIN_PASSWORD:-}"
 
 LINUX_FX_VERSION="DOTNETCORE|8.0"
+FUNCTION_LINUX_FX_VERSION="DOTNET-ISOLATED|8.0"
 ALLOW_AZURE_SERVICES_TO_SQL="false"
 WHAT_IF="false"
 
@@ -73,6 +75,8 @@ while [[ $# -gt 0 ]]; do
       SQL_ADMIN_PASSWORD_VALUE="${2:-}"; shift 2 ;;
     --linux-fx-version)
       LINUX_FX_VERSION="${2:-}"; shift 2 ;;
+    --function-linux-fx-version)
+      FUNCTION_LINUX_FX_VERSION="${2:-}"; shift 2 ;;
     --allow-azure-services-to-sql)
       ALLOW_AZURE_SERVICES_TO_SQL="true"; shift ;;
     --what-if)
@@ -138,6 +142,7 @@ AZ_PARAMS=(
   "sqlAdminLogin=${SQL_ADMIN_LOGIN_VALUE}"
   "sqlAdminPassword=${SQL_ADMIN_PASSWORD_VALUE}"
   "linuxFxVersion=${LINUX_FX_VERSION}"
+  "functionLinuxFxVersion=${FUNCTION_LINUX_FX_VERSION}"
   "allowAzureServicesToSql=${ALLOW_AZURE_SERVICES_TO_SQL}"
 )
 
