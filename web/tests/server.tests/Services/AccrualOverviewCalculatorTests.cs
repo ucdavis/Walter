@@ -1,6 +1,6 @@
 using FluentAssertions;
-using server.Models;
-using server.Services;
+using server.core.Models;
+using server.core.Services;
 
 namespace server.tests.Services;
 

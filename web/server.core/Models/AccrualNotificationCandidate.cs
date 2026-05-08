@@ -1,4 +1,4 @@
-namespace server.Models;
+namespace server.core.Models;
 
 public enum AccrualNotificationStatus
 {

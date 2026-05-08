@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Server.Controllers;
 using Server.Services;
+using server.core.Models;
 using server.Helpers;
 using server.Models;
 using server.Services;

@@ -1,8 +1,8 @@
 using System.Text.Json;
 using FluentAssertions;
 using server.core.Domain;
-using server.Services;
-using server.Models;
+using server.core.Models;
+using server.core.Services;
 using Server.Tests;
 
 namespace server.tests.Services;

@@ -3,6 +3,7 @@ using Dapper;
 using Microsoft.Data.SqlClient;
 using Polly;
 using Polly.Retry;
+using server.core.Models;
 using server.Models;
 
 namespace server.Services;

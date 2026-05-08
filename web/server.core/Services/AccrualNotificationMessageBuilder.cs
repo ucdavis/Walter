@@ -3,10 +3,9 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using server.core.Data;
 using server.core.Domain;
-using server.core.Services;
-using server.Models;
+using server.core.Models;
 
-namespace server.Services;
+namespace server.core.Services;
 
 public interface IAccrualViewerRecipientProvider
 {

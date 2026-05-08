@@ -1,7 +1,7 @@
 using System.Globalization;
-using server.Models;
+using server.core.Models;
 
-namespace server.Services;
+namespace server.core.Services;
 
 public static class AccrualOverviewCalculator
 {
