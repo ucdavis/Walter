@@ -9,140 +9,181 @@
 		"type": "SqlServerTable",
 		"schema": [
 			{
-				"name": "ProjectNumber",
+				"name": "EmployeeId",
 				"type": "nvarchar"
 			},
 			{
-				"name": "TaskNum",
-				"type": "nvarchar"
-			},
-			{
-				"name": "FundCode",
-				"type": "nvarchar"
-			},
-			{
-				"name": "ProgramCode",
-				"type": "nvarchar"
-			},
-			{
-				"name": "ActivityCode",
-				"type": "nvarchar"
-			},
-			{
-				"name": "ExpenditureCategoryName",
-				"type": "nvarchar"
-			},
-			{
-				"name": "ProjectOwningOrgCode",
-				"type": "nvarchar"
-			},
-			{
-				"name": "AwardNumber",
-				"type": "nvarchar"
-			},
-			{
-				"name": "AwardName",
-				"type": "nvarchar"
-			},
-			{
-				"name": "AwardType",
-				"type": "nvarchar"
-			},
-			{
-				"name": "AwardStartDate",
+				"name": "AsOfDate",
 				"type": "date"
 			},
 			{
-				"name": "AwardEndDate",
-				"type": "date"
-			},
-			{
-				"name": "AwardStatus",
+				"name": "PositionNumber",
 				"type": "nvarchar"
 			},
 			{
-				"name": "ProjectName",
+				"name": "EmployeeEmail",
 				"type": "nvarchar"
 			},
 			{
-				"name": "ProjectOwningOrg",
+				"name": "EmployeeName",
 				"type": "nvarchar"
 			},
 			{
-				"name": "ProjectType",
+				"name": "UnionCode",
 				"type": "nvarchar"
 			},
 			{
-				"name": "ProjectStatus",
+				"name": "UnionDescription",
 				"type": "nvarchar"
 			},
 			{
-				"name": "TaskName",
+				"name": "EmployeeClassCode",
 				"type": "nvarchar"
 			},
 			{
-				"name": "TaskStatus",
+				"name": "EmployeeClassDescription",
 				"type": "nvarchar"
 			},
 			{
-				"name": "Pm",
+				"name": "JobCode",
 				"type": "nvarchar"
 			},
 			{
-				"name": "Pa",
+				"name": "JobCodeDescription",
 				"type": "nvarchar"
 			},
 			{
-				"name": "Pi",
+				"name": "ReportsToPositionNumber",
 				"type": "nvarchar"
 			},
 			{
-				"name": "Copi",
+				"name": "ReportsToEmployeeId",
 				"type": "nvarchar"
 			},
 			{
-				"name": "FundDesc",
+				"name": "ReportsToEmployeeName",
 				"type": "nvarchar"
 			},
 			{
-				"name": "PurposeCode",
+				"name": "HrStatus",
 				"type": "nvarchar"
 			},
 			{
-				"name": "PurposeDesc",
+				"name": "EmployeeStatus",
 				"type": "nvarchar"
 			},
 			{
-				"name": "ProgramDesc",
+				"name": "EmployeeStatusDescription",
 				"type": "nvarchar"
 			},
 			{
-				"name": "ActivityDesc",
+				"name": "EmployeeType",
 				"type": "nvarchar"
 			},
 			{
-				"name": "PpmBudget",
+				"name": "EmployeeTypeDescription",
+				"type": "nvarchar"
+			},
+			{
+				"name": "TypeLabel",
+				"type": "nvarchar"
+			},
+			{
+				"name": "PrevBal",
 				"type": "decimal",
-				"precision": 15,
+				"precision": 10,
 				"scale": 2
 			},
 			{
-				"name": "PpmCommitments",
+				"name": "HoursTaken",
 				"type": "decimal",
-				"precision": 15,
+				"precision": 10,
 				"scale": 2
 			},
 			{
-				"name": "PpmExpenses",
+				"name": "AccrualHours",
 				"type": "decimal",
-				"precision": 15,
+				"precision": 10,
 				"scale": 2
 			},
 			{
-				"name": "PpmBudBal",
+				"name": "AdjustedHours",
 				"type": "decimal",
-				"precision": 15,
+				"precision": 10,
 				"scale": 2
+			},
+			{
+				"name": "CalculatedBal",
+				"type": "decimal",
+				"precision": 10,
+				"scale": 2
+			},
+			{
+				"name": "AccrualLimit",
+				"type": "decimal",
+				"precision": 10,
+				"scale": 2
+			},
+			{
+				"name": "ApproachingMax",
+				"type": "nvarchar"
+			},
+			{
+				"name": "HoursOverUnderPolicyMax",
+				"type": "decimal",
+				"precision": 10,
+				"scale": 2
+			},
+			{
+				"name": "AccrualPercentage",
+				"type": "decimal",
+				"precision": 7,
+				"scale": 2
+			},
+			{
+				"name": "ExceptionalMaxVacationOnly",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "Level1Dept",
+				"type": "nvarchar"
+			},
+			{
+				"name": "Level1DeptDesc",
+				"type": "nvarchar"
+			},
+			{
+				"name": "Level2Dept",
+				"type": "nvarchar"
+			},
+			{
+				"name": "Level2DeptDesc",
+				"type": "nvarchar"
+			},
+			{
+				"name": "Level3Dept",
+				"type": "nvarchar"
+			},
+			{
+				"name": "Level3DeptDesc",
+				"type": "nvarchar"
+			},
+			{
+				"name": "Level4Dept",
+				"type": "nvarchar"
+			},
+			{
+				"name": "Level4DeptDesc",
+				"type": "nvarchar"
+			},
+			{
+				"name": "Level5Dept",
+				"type": "nvarchar"
+			},
+			{
+				"name": "Level5DeptDesc",
+				"type": "nvarchar"
 			},
 			{
 				"name": "LoadDate",
