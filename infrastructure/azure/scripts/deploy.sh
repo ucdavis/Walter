@@ -34,13 +34,15 @@ Examples:
   SQL_ADMIN_PASSWORD='...' infrastructure/azure/scripts/deploy.sh \\
     -g walter-test --app-name walter --env test \\
     --app-service-plan-id "/subscriptions/.../serverfarms/DefaultPlan2" \\
-    --sql-admin-login walter
+    --sql-admin-login walter \\
+    --datamart-connection-string "$DM_CONNECTION"
 
   infrastructure/azure/scripts/deploy.sh \\
     -g walter --app-name walter --env production \\
     --app-service-plan-id "/subscriptions/.../serverfarms/DefaultPlan2" \\
     --sql-admin-login walter \\
-    --sql-admin-password '...'
+    --sql-admin-password '...' \\
+    --datamart-connection-string "Server=tcp:<server>.database.windows.net,1433;Database=<database>;User ID=<user>;Password=<password>;Encrypt=True;TrustServerCertificate=False;"
 EOF
 }
 

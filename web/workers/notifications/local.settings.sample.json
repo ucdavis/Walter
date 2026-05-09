@@ -3,7 +3,7 @@
   "Values": {
     "AzureWebJobsStorage": "UseDevelopmentStorage=true",
     "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
-    "DB_CONNECTION": "Server=localhost,1433;Database=AppDb;User ID=sa;Password=LocalDev123!;Encrypt=False;TrustServerCertificate=True;",
+    "DB_CONNECTION": "Server=localhost,1433;Database=AppDb;User ID=sa;Password=<password>;Encrypt=False;TrustServerCertificate=True;",
     "DM_CONNECTION": "",
     "Datamart__ApplicationName": "Walter-Notifications-Development",
     "NOTIFICATIONS_SENDER_SCHEDULE": "0 */15 * * * *",
