@@ -174,6 +174,168 @@ public sealed class OutboundMessageSenderTests
         reloaded.LockId.Should().BeNull();
     }
 
+    [Fact]
+    public async Task ProcessDueAsync_sends_without_renewing_when_lock_is_not_near_expiry()
+    {
+        var now = new DateTime(2026, 5, 7, 20, 0, 0, DateTimeKind.Utc);
+        var message = CreateMessage(now);
+        message.LockId = Guid.NewGuid();
+        message.LockedUntilUtc = now.AddMinutes(10);
+        var queue = new FakeOutboundMessageQueue
+        {
+            ClaimedMessages = [message],
+        };
+        var renderer = new CountingOutboundMessageRenderer();
+        var emailClient = new FakeOutboundEmailClient
+        {
+            ProviderMessageId = "provider-123",
+        };
+        var timeProvider = new FixedTimeProvider(now);
+        var sender = new OutboundMessageSender(
+            queue,
+            renderer,
+            emailClient,
+            new OutboundMessageSenderOptions
+            {
+                LockDuration = TimeSpan.FromMinutes(10),
+                LockRenewalThreshold = TimeSpan.FromMinutes(2),
+                TimeProvider = timeProvider,
+            });
+
+        var result = await sender.ProcessDueAsync(now);
+
+        result.Should().Be(new OutboundMessageSenderResult(
+            ClaimedCount: 1,
+            SentCount: 1,
+            RetryCount: 0,
+            DeadLetterCount: 0,
+            LostLockCount: 0));
+        queue.RenewLockCallCount.Should().Be(0);
+        queue.MarkSentCallCount.Should().Be(1);
+        renderer.RenderCallCount.Should().Be(1);
+        emailClient.Messages.Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task ProcessDueAsync_renews_before_send_when_lock_is_near_expiry()
+    {
+        var now = new DateTime(2026, 5, 7, 20, 0, 0, DateTimeKind.Utc);
+        var message = CreateMessage(now);
+        message.LockId = Guid.NewGuid();
+        message.LockedUntilUtc = now.AddSeconds(30);
+        var queue = new FakeOutboundMessageQueue
+        {
+            ClaimedMessages = [message],
+        };
+        var renderer = new CountingOutboundMessageRenderer();
+        var emailClient = new FakeOutboundEmailClient();
+        var timeProvider = new FixedTimeProvider(now);
+        var sender = new OutboundMessageSender(
+            queue,
+            renderer,
+            emailClient,
+            new OutboundMessageSenderOptions
+            {
+                LockDuration = TimeSpan.FromMinutes(10),
+                LockRenewalThreshold = TimeSpan.FromMinutes(2),
+                TimeProvider = timeProvider,
+            });
+
+        var result = await sender.ProcessDueAsync(now);
+
+        result.Should().Be(new OutboundMessageSenderResult(
+            ClaimedCount: 1,
+            SentCount: 1,
+            RetryCount: 0,
+            DeadLetterCount: 0,
+            LostLockCount: 0));
+        queue.RenewLockCallCount.Should().Be(1);
+        queue.RenewedLockedUntilUtc.Should().Be(now.AddMinutes(10));
+        queue.MarkSentCallCount.Should().Be(1);
+        renderer.RenderCallCount.Should().Be(1);
+        emailClient.Messages.Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task ProcessDueAsync_renews_using_current_time_for_later_batch_message()
+    {
+        var batchNow = new DateTime(2026, 5, 7, 20, 0, 0, DateTimeKind.Utc);
+        var renewalCheckNow = batchNow.AddMinutes(9);
+        var message = CreateMessage(batchNow);
+        message.LockId = Guid.NewGuid();
+        message.LockedUntilUtc = batchNow.AddMinutes(10);
+        var queue = new FakeOutboundMessageQueue
+        {
+            ClaimedMessages = [message],
+        };
+        var renderer = new CountingOutboundMessageRenderer();
+        var emailClient = new FakeOutboundEmailClient();
+        var timeProvider = new FixedTimeProvider(renewalCheckNow);
+        var sender = new OutboundMessageSender(
+            queue,
+            renderer,
+            emailClient,
+            new OutboundMessageSenderOptions
+            {
+                LockDuration = TimeSpan.FromMinutes(10),
+                LockRenewalThreshold = TimeSpan.FromMinutes(2),
+                TimeProvider = timeProvider,
+            });
+
+        var result = await sender.ProcessDueAsync(batchNow);
+
+        result.Should().Be(new OutboundMessageSenderResult(
+            ClaimedCount: 1,
+            SentCount: 1,
+            RetryCount: 0,
+            DeadLetterCount: 0,
+            LostLockCount: 0));
+        queue.RenewLockCallCount.Should().Be(1);
+        queue.RenewedLockedUntilUtc.Should().Be(renewalCheckNow.AddMinutes(10));
+        queue.MarkSentCallCount.Should().Be(1);
+        renderer.RenderCallCount.Should().Be(1);
+        emailClient.Messages.Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task ProcessDueAsync_skips_render_and_send_when_lock_renewal_fails()
+    {
+        var now = new DateTime(2026, 5, 7, 20, 0, 0, DateTimeKind.Utc);
+        var message = CreateMessage(now);
+        message.LockId = Guid.NewGuid();
+        message.LockedUntilUtc = now.AddSeconds(30);
+        var queue = new FakeOutboundMessageQueue
+        {
+            ClaimedMessages = [message],
+            RenewLockResult = false,
+        };
+        var renderer = new CountingOutboundMessageRenderer();
+        var emailClient = new FakeOutboundEmailClient();
+        var timeProvider = new FixedTimeProvider(now);
+        var sender = new OutboundMessageSender(
+            queue,
+            renderer,
+            emailClient,
+            new OutboundMessageSenderOptions
+            {
+                LockDuration = TimeSpan.FromMinutes(10),
+                TimeProvider = timeProvider,
+            });
+
+        var result = await sender.ProcessDueAsync(now);
+
+        result.Should().Be(new OutboundMessageSenderResult(
+            ClaimedCount: 1,
+            SentCount: 0,
+            RetryCount: 0,
+            DeadLetterCount: 0,
+            LostLockCount: 1));
+        queue.RenewLockCallCount.Should().Be(1);
+        queue.RenewedLockedUntilUtc.Should().BeAfter(now);
+        renderer.RenderCallCount.Should().Be(0);
+        emailClient.Messages.Should().BeEmpty();
+    }
+
     private static OutboundMessage CreateMessage(DateTime now, int attemptCount = 0)
     {
         return new OutboundMessage
@@ -204,6 +366,30 @@ public sealed class OutboundMessageSenderTests
         };
     }
 
+    private sealed class FixedTimeProvider(DateTime utcNow) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow()
+        {
+            return new DateTimeOffset(utcNow, TimeSpan.Zero);
+        }
+    }
+
+    private sealed class CountingOutboundMessageRenderer : IOutboundMessageRenderer
+    {
+        public int RenderCallCount { get; private set; }
+
+        public Task<RenderedOutboundMessage> RenderAsync(
+            OutboundMessage message,
+            CancellationToken cancellationToken = default)
+        {
+            RenderCallCount++;
+            return Task.FromResult(new RenderedOutboundMessage(
+                "subject",
+                "text body",
+                "<p>html body</p>"));
+        }
+    }
+
     private sealed class FakeOutboundEmailClient : IOutboundEmailClient
     {
         public List<OutboundEmailMessage> Messages { get; } = [];
@@ -223,6 +409,74 @@ public sealed class OutboundMessageSenderTests
             Messages.Add(message);
             AfterSend?.Invoke();
             return Task.FromResult(new OutboundEmailSendResult(ProviderMessageId));
+        }
+    }
+
+    private sealed class FakeOutboundMessageQueue : IOutboundMessageQueue
+    {
+        public IReadOnlyList<OutboundMessage> ClaimedMessages { get; init; } = [];
+        public bool RenewLockResult { get; init; } = true;
+        public bool MarkSentResult { get; init; } = true;
+        public int RenewLockCallCount { get; private set; }
+        public int MarkSentCallCount { get; private set; }
+        public DateTime? RenewedLockedUntilUtc { get; private set; }
+
+        public Task<EnqueueOutboundMessagesResult> EnqueueAsync(
+            IReadOnlyList<OutboundMessageDraft> messages,
+            DateTime nowUtc,
+            CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException();
+        }
+
+        public Task<IReadOnlyList<OutboundMessage>> ClaimAsync(
+            int batchSize,
+            DateTime nowUtc,
+            TimeSpan lockDuration,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(ClaimedMessages);
+        }
+
+        public Task<bool> RenewLockAsync(
+            long id,
+            Guid lockId,
+            DateTime lockedUntilUtc,
+            CancellationToken cancellationToken = default)
+        {
+            RenewLockCallCount++;
+            RenewedLockedUntilUtc = lockedUntilUtc;
+            return Task.FromResult(RenewLockResult);
+        }
+
+        public Task<bool> MarkSentAsync(
+            long id,
+            Guid lockId,
+            string? providerMessageId,
+            DateTime sentUtc,
+            CancellationToken cancellationToken = default)
+        {
+            MarkSentCallCount++;
+            return Task.FromResult(MarkSentResult);
+        }
+
+        public Task<bool> MarkRetryAsync(
+            long id,
+            Guid lockId,
+            string lastError,
+            DateTime notBeforeUtc,
+            CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException();
+        }
+
+        public Task<bool> MarkDeadLetterAsync(
+            long id,
+            Guid lockId,
+            string lastError,
+            CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException();
         }
     }
 }

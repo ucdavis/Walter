@@ -9,6 +9,8 @@ public sealed record OutboundMessageSenderOptions
     public int BatchSize { get; init; } = 500;
     public int MaxAttempts { get; init; } = 5;
     public TimeSpan LockDuration { get; init; } = TimeSpan.FromMinutes(15);
+    public TimeSpan LockRenewalThreshold { get; init; } = TimeSpan.FromMinutes(2);
+    public TimeProvider TimeProvider { get; init; } = TimeProvider.System;
     public TimeSpan RetryBaseDelay { get; init; } = TimeSpan.FromMinutes(15);
     public TimeSpan RetryMaxDelay { get; init; } = TimeSpan.FromHours(12);
 }
@@ -120,6 +122,25 @@ public sealed class OutboundMessageSender : IOutboundMessageSender
                 }
 
                 continue;
+            }
+
+            var renewalCheckUtc = _options.TimeProvider.GetUtcNow().UtcDateTime;
+            if (ShouldRenewLock(message, renewalCheckUtc))
+            {
+                var renewedLockedUntilUtc = renewalCheckUtc.Add(_options.LockDuration);
+                if (!await _queue.RenewLockAsync(
+                    message.Id,
+                    lockId.Value,
+                    renewedLockedUntilUtc,
+                    cancellationToken))
+                {
+                    lostLockCount++;
+                    _logger.LogWarning(
+                        "Outbound message will not be rendered or sent because its lock could not be renewed. MessageId={MessageId} NotificationType={NotificationType}",
+                        message.Id,
+                        message.NotificationType);
+                    continue;
+                }
             }
 
             try
@@ -241,6 +262,12 @@ public sealed class OutboundMessageSender : IOutboundMessageSender
         return message.AttemptCount + 1 >= _options.MaxAttempts;
     }
 
+    private bool ShouldRenewLock(OutboundMessage message, DateTime nowUtc)
+    {
+        return message.LockedUntilUtc is null ||
+            message.LockedUntilUtc <= nowUtc.Add(_options.LockRenewalThreshold);
+    }
+
     private DateTime CalculateNextRetryUtc(DateTime nowUtc, int currentAttemptCount)
     {
         // AttemptCount is incremented when the row is marked retry/dead, so calculate
@@ -268,6 +295,16 @@ public sealed class OutboundMessageSender : IOutboundMessageSender
         if (options.LockDuration <= TimeSpan.Zero)
         {
             throw new ArgumentOutOfRangeException(nameof(options), "Lock duration must be greater than zero.");
+        }
+
+        if (options.LockRenewalThreshold < TimeSpan.Zero)
+        {
+            throw new ArgumentOutOfRangeException(nameof(options), "Lock renewal threshold cannot be negative.");
+        }
+
+        if (options.TimeProvider is null)
+        {
+            throw new ArgumentOutOfRangeException(nameof(options), "Time provider is required.");
         }
 
         if (options.RetryBaseDelay <= TimeSpan.Zero)

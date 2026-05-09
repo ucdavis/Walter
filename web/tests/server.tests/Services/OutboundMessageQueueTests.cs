@@ -174,6 +174,47 @@ public sealed class OutboundMessageQueueTests
     }
 
     [Fact]
+    public async Task RenewLockAsync_extends_only_matching_processing_lock()
+    {
+        using var ctx = TestDbContextFactory.CreateInMemory();
+        var queue = new OutboundMessageQueue(ctx);
+        var lockId = Guid.NewGuid();
+        var originalLockedUntilUtc = new DateTime(2026, 5, 7, 20, 5, 0, DateTimeKind.Utc);
+        var renewedLockedUntilUtc = new DateTime(2026, 5, 7, 20, 20, 0, DateTimeKind.Utc);
+        var message = CreateMessage(
+            "renew-me",
+            OutboundMessage.Statuses.Processing,
+            DateTime.UtcNow.AddMinutes(-1),
+            DateTime.UtcNow.AddMinutes(-1),
+            lockId: lockId,
+            lockedUntilUtc: originalLockedUntilUtc);
+        var pendingMessage = CreateMessage(
+            "pending-renew",
+            OutboundMessage.Statuses.Pending,
+            DateTime.UtcNow.AddMinutes(-1),
+            DateTime.UtcNow.AddMinutes(-1),
+            lockId: lockId,
+            lockedUntilUtc: originalLockedUntilUtc);
+
+        ctx.OutboundMessages.AddRange(message, pendingMessage);
+        await ctx.SaveChangesAsync();
+
+        (await queue.RenewLockAsync(message.Id, Guid.NewGuid(), renewedLockedUntilUtc))
+            .Should().BeFalse();
+        (await queue.RenewLockAsync(pendingMessage.Id, lockId, renewedLockedUntilUtc))
+            .Should().BeFalse();
+
+        (await queue.RenewLockAsync(message.Id, lockId, renewedLockedUntilUtc))
+            .Should().BeTrue();
+
+        var reloaded = await ctx.OutboundMessages.ToDictionaryAsync(row => row.DedupeKey);
+        reloaded[message.DedupeKey].Status.Should().Be(OutboundMessage.Statuses.Processing);
+        reloaded[message.DedupeKey].LockId.Should().Be(lockId);
+        reloaded[message.DedupeKey].LockedUntilUtc.Should().Be(renewedLockedUntilUtc);
+        reloaded[pendingMessage.DedupeKey].LockedUntilUtc.Should().Be(originalLockedUntilUtc);
+    }
+
+    [Fact]
     public async Task MarkRetryAsync_sets_retry_state_and_sanitized_error()
     {
         using var ctx = TestDbContextFactory.CreateInMemory();

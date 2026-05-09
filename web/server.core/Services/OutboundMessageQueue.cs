@@ -26,6 +26,15 @@ public interface IOutboundMessageQueue
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Extends a processing lock if the worker still owns the lock.
+    /// </summary>
+    Task<bool> RenewLockAsync(
+        long id,
+        Guid lockId,
+        DateTime lockedUntilUtc,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Completes a locked message as sent if the worker still owns the lock.
     /// </summary>
     Task<bool> MarkSentAsync(
@@ -216,6 +225,58 @@ public sealed class OutboundMessageQueue : IOutboundMessageQueue
             cancellationToken);
         LogClaimedMessages(messages, batchSize, lockedUntilUtc);
         return messages;
+    }
+
+    /// <summary>
+    /// Extends a locked processing message so long-running rendering or delivery does not
+    /// let another worker reclaim the row mid-attempt.
+    /// </summary>
+    public async Task<bool> RenewLockAsync(
+        long id,
+        Guid lockId,
+        DateTime lockedUntilUtc,
+        CancellationToken cancellationToken = default)
+    {
+        if (_ctx.Database.IsRelational())
+        {
+            var affected = await _ctx.OutboundMessages
+                .Where(message =>
+                    message.Id == id &&
+                    message.LockId == lockId &&
+                    message.Status == OutboundMessage.Statuses.Processing)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(message => message.LockedUntilUtc, lockedUntilUtc),
+                    cancellationToken);
+
+            if (affected != 1)
+            {
+                _logger.LogWarning(
+                    "Failed to renew outbound message lock because the processing lock was not owned. MessageId={MessageId}",
+                    id);
+            }
+
+            return affected == 1;
+        }
+
+        var outboundMessage = await _ctx.OutboundMessages
+            .SingleOrDefaultAsync(
+                message =>
+                    message.Id == id &&
+                    message.LockId == lockId &&
+                    message.Status == OutboundMessage.Statuses.Processing,
+                cancellationToken);
+
+        if (outboundMessage is null)
+        {
+            _logger.LogWarning(
+                "Failed to renew outbound message lock because the processing lock was not owned. MessageId={MessageId}",
+                id);
+            return false;
+        }
+
+        outboundMessage.LockedUntilUtc = lockedUntilUtc;
+        await _ctx.SaveChangesAsync(cancellationToken);
+        return true;
     }
 
     /// <summary>

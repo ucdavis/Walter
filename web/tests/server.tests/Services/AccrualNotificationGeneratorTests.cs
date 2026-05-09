@@ -267,6 +267,15 @@ public sealed class AccrualNotificationGeneratorTests
             throw new NotSupportedException();
         }
 
+        public Task<bool> RenewLockAsync(
+            long id,
+            Guid lockId,
+            DateTime lockedUntilUtc,
+            CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException();
+        }
+
         public Task<bool> MarkSentAsync(
             long id,
             Guid lockId,
