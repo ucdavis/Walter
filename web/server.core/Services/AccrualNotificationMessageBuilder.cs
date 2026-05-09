@@ -139,6 +139,32 @@ public sealed class AccrualNotificationMessageBuilder
         var messages = new List<OutboundMessageDraft>();
         var skipped = new List<AccrualMessageSkip>();
 
+        var payload = new AccrualViewerReportPayload
+        {
+            ApproachingCapCount = overview.ApproachingCapCount,
+            AtCapCount = overview.AtCapCount,
+            DepartmentBreakdown = overview.DepartmentBreakdown
+                .Select(row => new AccrualViewerReportDepartmentPayload
+                {
+                    ApproachingCapCount = row.ApproachingCapCount,
+                    AtCapCount = row.AtCapCount,
+                    Department = row.Department,
+                    DepartmentCode = row.DepartmentCode,
+                    Headcount = row.Headcount,
+                    LostCostMonth = row.LostCostMonth,
+                    LostCostYtd = row.LostCostYtd,
+                })
+                .ToList(),
+            LostCostMonth = overview.LostCostMonth,
+            LostCostYtd = overview.LostCostYtd,
+            SnapshotAsOfDate = overview.AsOfDate,
+            TotalDepartments = overview.TotalDepartments,
+            TotalEmployees = overview.TotalEmployees,
+            WasteRate = overview.WasteRate,
+            YtdMonthCount = overview.YtdMonthCount,
+        };
+        var payloadJson = JsonSerializer.Serialize(payload, PayloadJsonOptions);
+
         foreach (var recipient in recipients)
         {
             var email = NormalizeEmail(recipient.Email);
@@ -151,31 +177,6 @@ public sealed class AccrualNotificationMessageBuilder
                 continue;
             }
 
-            var payload = new AccrualViewerReportPayload
-            {
-                ApproachingCapCount = overview.ApproachingCapCount,
-                AtCapCount = overview.AtCapCount,
-                DepartmentBreakdown = overview.DepartmentBreakdown
-                    .Select(row => new AccrualViewerReportDepartmentPayload
-                    {
-                        ApproachingCapCount = row.ApproachingCapCount,
-                        AtCapCount = row.AtCapCount,
-                        Department = row.Department,
-                        DepartmentCode = row.DepartmentCode,
-                        Headcount = row.Headcount,
-                        LostCostMonth = row.LostCostMonth,
-                        LostCostYtd = row.LostCostYtd,
-                    })
-                    .ToList(),
-                LostCostMonth = overview.LostCostMonth,
-                LostCostYtd = overview.LostCostYtd,
-                SnapshotAsOfDate = overview.AsOfDate,
-                TotalDepartments = overview.TotalDepartments,
-                TotalEmployees = overview.TotalEmployees,
-                WasteRate = overview.WasteRate,
-                YtdMonthCount = overview.YtdMonthCount,
-            };
-
             messages.Add(new OutboundMessageDraft
             {
                 RunId = runId,
@@ -187,7 +188,7 @@ public sealed class AccrualNotificationMessageBuilder
                 TemplateKey = ViewerReportTemplateKey,
                 TemplateVersion = TemplateVersion,
                 PayloadVersion = PayloadVersion,
-                PayloadJson = JsonSerializer.Serialize(payload, PayloadJsonOptions),
+                PayloadJson = payloadJson,
                 NotBeforeUtc = nowUtc,
             });
         }

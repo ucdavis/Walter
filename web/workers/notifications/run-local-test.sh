@@ -76,6 +76,11 @@ if ! command -v func >/dev/null 2>&1; then
 fi
 
 ensure_azurite() {
+  if ! command -v nc >/dev/null 2>&1; then
+    echo "netcat ('nc') is required to probe local Azurite ports 10000, 10001, and 10002." >&2
+    exit 1
+  fi
+
   azurite_ready() {
     nc -z localhost 10000 >/dev/null 2>&1 &&
       nc -z localhost 10001 >/dev/null 2>&1 &&

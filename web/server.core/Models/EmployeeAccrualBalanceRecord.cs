@@ -5,6 +5,10 @@ public sealed class EmployeeAccrualBalanceRecord
     public string EmployeeId { get; init; } = string.Empty;
     public DateTime AsOfDate { get; init; }
     public string? EmployeeName { get; init; }
+
+    /// <summary>
+    /// Employee email from the accrual source data; null or blank values cannot receive employee Accrual Notifications.
+    /// </summary>
     public string? EmployeeEmail { get; init; }
     public string? EmployeeClassDescription { get; init; }
     public string? PositionNumber { get; init; }

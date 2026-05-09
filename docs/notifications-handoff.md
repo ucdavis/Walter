@@ -30,7 +30,7 @@ Sender processing should remain disabled until real rendering and SMTP delivery 
 
 ## Local Validation
 
-A local accrual generation run successfully executed `GenerateMonthlyAccrualNotificationsAsync` and inserted rows into `OutboundMessages`.
+As of 2026-05-08, a local accrual generation run successfully executed `GenerateMonthlyAccrualNotificationsAsync` and inserted rows into `OutboundMessages`. These counts and skip reasons are an observation from that run and may change as source data, validation, or message-building rules change.
 
 Successful run:
 

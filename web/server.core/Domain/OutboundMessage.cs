@@ -158,12 +158,14 @@ public class OutboundMessage
         var entity = modelBuilder.Entity<OutboundMessage>();
 
         entity.HasIndex(m => m.DedupeKey).IsUnique();
+        // Claiming depends on finding due rows that are pending and not locked by another worker.
         entity.HasIndex(m => new { m.Status, m.NotBeforeUtc, m.LockedUntilUtc });
         entity.HasIndex(m => m.RunId);
         entity.HasIndex(m => m.NotificationType);
         entity.HasIndex(m => m.RecipientType);
         entity.HasIndex(m => m.CreatedUtc);
 
+        // Retained payloads can include recipient PII; keep retention and rendering paths intentional.
         entity.Property(m => m.PayloadJson).HasColumnType("nvarchar(max)");
     }
 }

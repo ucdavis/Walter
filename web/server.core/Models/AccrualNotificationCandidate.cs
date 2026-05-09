@@ -1,15 +1,39 @@
 namespace server.core.Models;
 
+/// <summary>
+/// Employee accrual risk status used to choose the Accrual Notification content.
+/// </summary>
 public enum AccrualNotificationStatus
 {
+    /// <summary>
+    /// Employee balance is at least 80% and below 96% of the accrual cap.
+    /// </summary>
     ApproachingCap,
+
+    /// <summary>
+    /// Employee balance is at least 96% of the accrual cap according to the report threshold.
+    /// </summary>
     AtCap,
 }
 
+/// <summary>
+/// Employee classification bucket used to choose the Accrual Notification template variant.
+/// </summary>
 public enum AccrualEmployeeGroup
 {
+    /// <summary>
+    /// Fiscal-year academic appointee classifications, including academic administrators, coordinators, faculty, and researchers.
+    /// </summary>
     FacultyAcademic,
+
+    /// <summary>
+    /// Staff classifications, including MSP, PSS, and SMG, that receive the staff Accrual Notification variant.
+    /// </summary>
     Staff,
+
+    /// <summary>
+    /// Fallback for unmapped classifications that should still receive the generic Accrual Notification variant.
+    /// </summary>
     Generic,
 }
 

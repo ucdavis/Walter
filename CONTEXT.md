@@ -60,7 +60,7 @@ _Avoid_: Admin, viewer
 
 > **Dev:** "Should we notify only employees whose balance is 100% of cap?"
 > **Domain expert:** "No. Use the report's **At Cap** threshold, which starts at 96%, notify employees who are **Approaching Cap**, and send the **Accrual Notification** again each month while the risk remains."
-
+>
 > **Dev:** "Should admins receive the **Accrual Viewer Report** because they can view accrual pages?"
 > **Domain expert:** "No. Only active users explicitly assigned the **Accrual Viewer** role receive it."
 

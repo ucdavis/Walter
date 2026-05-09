@@ -32,7 +32,7 @@ Resources are generated deterministically from `resourceGroup().id`, `appName`, 
 - SQL Server: `sql-<appName>-<env>-<token>` (globally unique)
 - SQL Database: `<appName>` (the DB name does **not** include env/token because it lives under the server)
 
-`env` is optional. If omitted, names become `web-<appName>-<token>` / `sql-<appName>-<token>`.
+`env` is optional. If omitted, names become `web-<appName>-<token>`, `func-<appName>-<token>`, and `sql-<appName>-<token>`; function storage remains `st<token><functions-token>`.
 
 ### Deploy
 

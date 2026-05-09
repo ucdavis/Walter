@@ -173,6 +173,26 @@ public sealed class AccrualNotificationMessageBuilderTests
     }
 
     [Fact]
+    public void BuildViewerReportMessages_reuses_recipient_invariant_payload()
+    {
+        var builder = new AccrualNotificationMessageBuilder();
+
+        var result = builder.BuildViewerReportMessages(
+            Guid.NewGuid(),
+            CreateOverview(),
+            [
+                new AccrualViewerRecipient(Guid.NewGuid(), "first@example.com", "First Viewer"),
+                new AccrualViewerRecipient(Guid.NewGuid(), "second@example.com", "Second Viewer"),
+            ],
+            new DateTime(2026, 5, 7, 20, 0, 0, DateTimeKind.Utc));
+
+        result.Messages.Should().HaveCount(2);
+        result.Messages.Select(message => message.PayloadJson)
+            .Should()
+            .OnlyContain(payloadJson => payloadJson == result.Messages[0].PayloadJson);
+    }
+
+    [Fact]
     public async Task AccrualViewerRecipientProvider_returns_only_active_explicit_accrual_viewers()
     {
         using var ctx = TestDbContextFactory.CreateInMemory();
