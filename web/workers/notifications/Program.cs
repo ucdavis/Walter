@@ -27,11 +27,20 @@ var host = new HostBuilder()
 
         services.Configure<NotificationWorkerOptions>(
             context.Configuration.GetSection(NotificationWorkerOptions.SectionName));
+
+        var datamartConnectionString = context.Configuration["DM_CONNECTION"]
+            ?? context.Configuration.GetConnectionString("Datamart");
+        var accrualGenerationEnabled = context.Configuration.GetValue<bool>("Notifications:AccrualGenerationEnabled");
+
+        if (accrualGenerationEnabled && string.IsNullOrWhiteSpace(datamartConnectionString))
+        {
+            throw new InvalidOperationException(
+                "DatamartOptions/DM_CONNECTION or ConnectionStrings:Datamart is required when Notifications__AccrualGenerationEnabled=true.");
+        }
+
         services.Configure<DatamartOptions>(options =>
         {
-            options.ConnectionString = context.Configuration["DM_CONNECTION"]
-                ?? context.Configuration.GetConnectionString("Datamart")
-                ?? string.Empty;
+            options.ConnectionString = datamartConnectionString ?? string.Empty;
             options.ApplicationName = context.Configuration["Datamart:ApplicationName"]
                 ?? $"Walter-Notifications-{context.HostingEnvironment.EnvironmentName}";
         });
