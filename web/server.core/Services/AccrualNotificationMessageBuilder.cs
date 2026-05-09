@@ -36,6 +36,7 @@ public sealed class AccrualViewerRecipientProvider : IAccrualViewerRecipientProv
         return await _ctx.Users
             .AsNoTracking()
             .Where(user => user.IsActive)
+            // Viewer reports require explicit AccrualViewer assignment, not admin or broader permission paths.
             .Where(user => user.Permissions.Any(permission =>
                 permission.Role != null &&
                 permission.Role.Name == Role.Names.AccrualViewer))
