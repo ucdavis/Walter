@@ -1,5 +1,6 @@
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using server.core.Domain;
 using server.core.Services;
 using Server.Tests;
@@ -63,6 +64,56 @@ public sealed class OutboundMessageQueueTests
         result.EnqueuedCount.Should().Be(1);
         result.DuplicateCount.Should().Be(1);
         ctx.OutboundMessages.Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task EnqueueAsync_recovers_from_concurrent_dedupe_key_conflict_and_preserves_valid_rows()
+    {
+        var databaseName = $"OutboundMessageQueueTests_{Guid.NewGuid():N}";
+        var connectionString = $"Data Source={databaseName};Mode=Memory;Cache=Shared";
+        using var keepAlive = TestDbContextFactory.CreateSqlite(connectionString);
+        var saveGate = new CoordinatedFirstSaveInterceptor(participantCount: 2);
+        var now = new DateTime(2026, 5, 7, 20, 0, 0, DateTimeKind.Utc);
+
+        await using var ctx1 = TestDbContextFactory.CreateSqlite(connectionString, saveGate);
+        await using var ctx2 = TestDbContextFactory.CreateSqlite(connectionString, saveGate);
+
+        var queue1 = new OutboundMessageQueue(ctx1);
+        var queue2 = new OutboundMessageQueue(ctx2);
+        var sharedDedupeKey = "accrual:employee:E001:2026-04-30";
+
+        var enqueue1 = queue1.EnqueueAsync(
+            [
+                CreateDraft(Guid.NewGuid(), sharedDedupeKey),
+                CreateDraft(Guid.NewGuid(), "accrual:employee:E002:2026-04-30"),
+            ],
+            now);
+        var enqueue2 = queue2.EnqueueAsync(
+            [
+                CreateDraft(Guid.NewGuid(), sharedDedupeKey),
+                CreateDraft(Guid.NewGuid(), "accrual:employee:E003:2026-04-30"),
+            ],
+            now.AddMinutes(1));
+
+        var results = await Task.WhenAll(enqueue1, enqueue2);
+
+        results.Sum(result => result.EnqueuedCount).Should().Be(3);
+        results.Sum(result => result.DuplicateCount).Should().Be(1);
+        results.Should().Contain(result => result.EnqueuedCount == 2 && result.DuplicateCount == 0);
+        results.Should().Contain(result => result.EnqueuedCount == 1 && result.DuplicateCount == 1);
+
+        await using var verifyCtx = TestDbContextFactory.CreateSqlite(connectionString);
+        var messages = await verifyCtx.OutboundMessages
+            .OrderBy(message => message.DedupeKey)
+            .ToListAsync();
+
+        messages.Select(message => message.DedupeKey).Should().Equal(
+            sharedDedupeKey,
+            "accrual:employee:E002:2026-04-30",
+            "accrual:employee:E003:2026-04-30");
+        results.SelectMany(result => result.EnqueuedIds)
+            .Should()
+            .BeEquivalentTo(messages.Select(message => message.Id));
     }
 
     [Fact]
@@ -322,5 +373,32 @@ public sealed class OutboundMessageQueueTests
             LockedUntilUtc = lockedUntilUtc,
             AttemptCount = attemptCount,
         };
+    }
+
+    private sealed class CoordinatedFirstSaveInterceptor : SaveChangesInterceptor
+    {
+        private readonly Barrier _barrier;
+        private int _remainingParticipants;
+
+        public CoordinatedFirstSaveInterceptor(int participantCount)
+        {
+            _barrier = new Barrier(participantCount);
+            _remainingParticipants = participantCount;
+        }
+
+        public override async ValueTask<InterceptionResult<int>> SavingChangesAsync(
+            DbContextEventData eventData,
+            InterceptionResult<int> result,
+            CancellationToken cancellationToken = default)
+        {
+            if (eventData.Context?.ChangeTracker.Entries<OutboundMessage>()
+                    .Any(entry => entry.State == EntityState.Added) == true &&
+                Interlocked.Decrement(ref _remainingParticipants) >= 0)
+            {
+                await Task.Run(() => _barrier.SignalAndWait(cancellationToken), cancellationToken);
+            }
+
+            return await base.SavingChangesAsync(eventData, result, cancellationToken);
+        }
     }
 }

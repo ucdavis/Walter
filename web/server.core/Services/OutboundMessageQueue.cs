@@ -1,3 +1,4 @@
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -88,6 +89,8 @@ public sealed record EnqueueOutboundMessagesResult(
 public sealed class OutboundMessageQueue : IOutboundMessageQueue
 {
     private const int LastErrorMaxLength = 2000;
+    private const int MaxDuplicateKeySaveAttempts = 3;
+    private const string DedupeKeyIndexName = "IX_OutboundMessages_DedupeKey";
 
     private readonly AppDbContext _ctx;
     private readonly ILogger<OutboundMessageQueue> _logger;
@@ -167,8 +170,7 @@ public sealed class OutboundMessageQueue : IOutboundMessageQueue
 
         if (newMessages.Count > 0)
         {
-            _ctx.OutboundMessages.AddRange(newMessages);
-            await _ctx.SaveChangesAsync(cancellationToken);
+            await SaveNewMessagesWithDuplicateRecoveryAsync(newMessages, cancellationToken);
         }
 
         _logger.LogInformation(
@@ -376,6 +378,128 @@ public sealed class OutboundMessageQueue : IOutboundMessageQueue
                 """)
             .AsNoTracking()
             .ToListAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Saves newly built rows while recovering from concurrent dedupe-key insert races.
+    /// </summary>
+    private async Task SaveNewMessagesWithDuplicateRecoveryAsync(
+        List<OutboundMessage> newMessages,
+        CancellationToken cancellationToken)
+    {
+        var pendingMessages = newMessages;
+
+        // The pre-query dedupe is advisory; the unique index is the final guard
+        // when two generators enqueue the same logical message at the same time.
+        for (var attempt = 1; attempt <= MaxDuplicateKeySaveAttempts && pendingMessages.Count > 0; attempt++)
+        {
+            _ctx.OutboundMessages.AddRange(pendingMessages);
+
+            try
+            {
+                await _ctx.SaveChangesAsync(cancellationToken);
+                return;
+            }
+            catch (DbUpdateException ex) when (IsDedupeKeyUniqueConstraintViolation(ex))
+            {
+                // EF keeps failed Added entities tracked after SaveChanges throws; detach
+                // them before retrying only the rows that did not lose the dedupe race.
+                DetachAddedMessages(pendingMessages);
+
+                var conflictingDedupeKeys = await FindExistingDedupeKeysAsync(pendingMessages, cancellationToken);
+                if (conflictingDedupeKeys.Count == 0 || attempt == MaxDuplicateKeySaveAttempts)
+                {
+                    throw;
+                }
+
+                // A concurrent enqueue won the same dedupe key after our pre-query.
+                // Remove only those rows and retry so unrelated valid rows still persist.
+                newMessages.RemoveAll(message => conflictingDedupeKeys.Contains(message.DedupeKey));
+                pendingMessages = pendingMessages
+                    .Where(message => !conflictingDedupeKeys.Contains(message.DedupeKey))
+                    .ToList();
+
+                _logger.LogInformation(
+                    "Recovered outbound enqueue duplicate-key conflict. DuplicateCount={DuplicateCount} RemainingCount={RemainingCount}",
+                    conflictingDedupeKeys.Count,
+                    pendingMessages.Count);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Finds dedupe keys that already persisted after a failed enqueue attempt.
+    /// </summary>
+    private async Task<HashSet<string>> FindExistingDedupeKeysAsync(
+        IReadOnlyList<OutboundMessage> messages,
+        CancellationToken cancellationToken)
+    {
+        var attemptedDedupeKeys = messages.Select(message => message.DedupeKey).ToList();
+        var existingDedupeKeys = await _ctx.OutboundMessages
+            .AsNoTracking()
+            .Where(message => attemptedDedupeKeys.Contains(message.DedupeKey))
+            .Select(message => message.DedupeKey)
+            .ToListAsync(cancellationToken);
+
+        return existingDedupeKeys.ToHashSet(StringComparer.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Detaches failed added entities so EF can retry only the remaining valid rows.
+    /// </summary>
+    private void DetachAddedMessages(IEnumerable<OutboundMessage> messages)
+    {
+        foreach (var message in messages)
+        {
+            var entry = _ctx.Entry(message);
+            if (entry.State == EntityState.Added)
+            {
+                entry.State = EntityState.Detached;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Determines whether a database update failed because the dedupe key already exists.
+    /// </summary>
+    private static bool IsDedupeKeyUniqueConstraintViolation(DbUpdateException exception)
+    {
+        return exception.InnerException switch
+        {
+            SqlException sqlException => IsSqlServerDedupeKeyUniqueConstraintViolation(sqlException),
+            { } innerException when IsSqliteDedupeKeyUniqueConstraintViolation(innerException) => true,
+            _ => false,
+        };
+    }
+
+    /// <summary>
+    /// Matches SQL Server duplicate-key errors for the outbound message dedupe index.
+    /// </summary>
+    private static bool IsSqlServerDedupeKeyUniqueConstraintViolation(SqlException exception)
+    {
+        return exception.Errors
+            .Cast<SqlError>()
+            .Any(error =>
+                (error.Number == 2601 || error.Number == 2627) &&
+                error.Message.Contains(DedupeKeyIndexName, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
+    /// Matches SQLite duplicate-key errors used by relational enqueue race tests.
+    /// </summary>
+    private static bool IsSqliteDedupeKeyUniqueConstraintViolation(Exception exception)
+    {
+        if (exception.GetType().FullName != "Microsoft.Data.Sqlite.SqliteException")
+        {
+            return false;
+        }
+
+        var sqliteErrorCode = exception.GetType().GetProperty("SqliteErrorCode")?.GetValue(exception);
+        var sqliteExtendedErrorCode = exception.GetType().GetProperty("SqliteExtendedErrorCode")?.GetValue(exception);
+
+        return sqliteErrorCode is 19 &&
+            sqliteExtendedErrorCode is 2067 &&
+            exception.Message.Contains("OutboundMessages.DedupeKey", StringComparison.OrdinalIgnoreCase);
     }
 
     private async Task<IReadOnlyList<OutboundMessage>> ClaimWithEfAsync(
