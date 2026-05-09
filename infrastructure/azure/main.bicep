@@ -27,6 +27,29 @@ param linuxFxVersion string = 'DOTNETCORE|8.0'
 @description('Runtime stack for Linux Azure Functions')
 param functionLinuxFxVersion string = 'DOTNET-ISOLATED|8.0'
 
+@description('Whether the notification Function App should keep workers always warm.')
+param functionAlwaysOn bool = true
+
+@minValue(0)
+@description('Minimum number of elastic workers assigned to the notification Function App.')
+param functionMinimumElasticInstanceCount int = 1
+
+@allowed([
+  'Enabled'
+  'Disabled'
+])
+@description('Whether the notification Function App accepts public network traffic. Disable only when deployments can reach the private SCM endpoint.')
+param functionPublicNetworkAccess string = 'Enabled'
+
+@description('Whether built-in App Service Authentication is enabled for the notification Function App.')
+param functionSiteAuthEnabled bool = false
+
+@description('Optional subnet resource ID for notification Function App VNet integration.')
+param functionVirtualNetworkSubnetId string = ''
+
+@description('Whether all notification Function App outbound traffic should route through VNet integration when functionVirtualNetworkSubnetId is supplied.')
+param functionVnetRouteAllEnabled bool = false
+
 @description('Timer schedule for outbound message sending. NCRONTAB format with seconds.')
 param notificationSenderSchedule string = '0 */15 * * * *'
 
@@ -117,6 +140,12 @@ module notificationsFunction './modules/functionapp.bicep' = {
     storageAccountName: functionStorageAccountName
     appServicePlanId: appServicePlanId
     linuxFxVersion: functionLinuxFxVersion
+    alwaysOn: functionAlwaysOn
+    minimumElasticInstanceCount: functionMinimumElasticInstanceCount
+    publicNetworkAccess: functionPublicNetworkAccess
+    siteAuthEnabled: functionSiteAuthEnabled
+    virtualNetworkSubnetId: functionVirtualNetworkSubnetId
+    vnetRouteAllEnabled: functionVnetRouteAllEnabled
     appSettings: {
       DB_CONNECTION: dbConnection
       DM_CONNECTION: datamartConnectionString

@@ -16,6 +16,29 @@ param linuxFxVersion string
 @description('App settings to apply to the function app')
 param appSettings object = {}
 
+@description('Whether the Function App should keep workers always warm')
+param alwaysOn bool = true
+
+@minValue(0)
+@description('Minimum number of elastic workers assigned to the Function App')
+param minimumElasticInstanceCount int = 1
+
+@allowed([
+  'Enabled'
+  'Disabled'
+])
+@description('Whether the Function App accepts public network traffic. Disable only when deployments can reach the private SCM endpoint')
+param publicNetworkAccess string = 'Enabled'
+
+@description('Whether built-in App Service Authentication is enabled for the Function App')
+param siteAuthEnabled bool = false
+
+@description('Optional subnet resource ID for Function App VNet integration')
+param virtualNetworkSubnetId string = ''
+
+@description('Whether all Function App outbound traffic should route through VNet integration when virtualNetworkSubnetId is supplied')
+param vnetRouteAllEnabled bool = false
+
 resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   name: storageAccountName
   location: location
@@ -36,14 +59,28 @@ resource functionApp 'Microsoft.Web/sites@2025-03-01' = {
   name: functionAppName
   location: location
   kind: 'functionapp,linux'
-  properties: {
+  properties: union({
     serverFarmId: appServicePlanId
     httpsOnly: true
+    publicNetworkAccess: publicNetworkAccess
     reserved: true
     siteConfig: {
-      alwaysOn: true
+      alwaysOn: alwaysOn
       linuxFxVersion: linuxFxVersion
-      minimumElasticInstanceCount: 1
+      minimumElasticInstanceCount: minimumElasticInstanceCount
+      vnetRouteAllEnabled: vnetRouteAllEnabled
+    }
+  }, empty(virtualNetworkSubnetId) ? {} : {
+    virtualNetworkSubnetId: virtualNetworkSubnetId
+  })
+}
+
+resource functionAppAuth 'Microsoft.Web/sites/config@2025-03-01' = {
+  name: 'authsettingsV2'
+  parent: functionApp
+  properties: {
+    platform: {
+      enabled: siteAuthEnabled
     }
   }
 }
