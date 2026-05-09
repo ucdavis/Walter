@@ -50,6 +50,42 @@ public sealed class OutboundMessageSenderTests
     }
 
     [Fact]
+    public async Task ProcessDueAsync_marks_message_sent_when_token_is_canceled_after_send_succeeds()
+    {
+        using var ctx = TestDbContextFactory.CreateInMemory();
+        var queue = new OutboundMessageQueue(ctx);
+        using var cts = new CancellationTokenSource();
+        var emailClient = new FakeOutboundEmailClient
+        {
+            ProviderMessageId = "provider-accepted",
+            AfterSend = cts.Cancel,
+        };
+        var sender = new OutboundMessageSender(
+            queue,
+            new PlaceholderOutboundMessageRenderer(),
+            emailClient,
+            new OutboundMessageSenderOptions { BatchSize = 500 });
+        var now = new DateTime(2026, 5, 7, 20, 0, 0, DateTimeKind.Utc);
+
+        ctx.OutboundMessages.Add(CreateMessage(now));
+        await ctx.SaveChangesAsync();
+
+        var result = await sender.ProcessDueAsync(now, cts.Token);
+
+        result.Should().Be(new OutboundMessageSenderResult(
+            ClaimedCount: 1,
+            SentCount: 1,
+            RetryCount: 0,
+            DeadLetterCount: 0,
+            LostLockCount: 0));
+
+        var reloaded = await ctx.OutboundMessages.SingleAsync();
+        reloaded.Status.Should().Be(OutboundMessage.Statuses.Sent);
+        reloaded.ProviderMessageId.Should().Be("provider-accepted");
+        reloaded.SentUtc.Should().Be(now);
+    }
+
+    [Fact]
     public async Task ProcessDueAsync_marks_retry_when_send_fails_before_max_attempts()
     {
         using var ctx = TestDbContextFactory.CreateInMemory();
@@ -173,6 +209,7 @@ public sealed class OutboundMessageSenderTests
         public List<OutboundEmailMessage> Messages { get; } = [];
         public string? ProviderMessageId { get; init; }
         public Exception? ExceptionToThrow { get; init; }
+        public Action? AfterSend { get; init; }
 
         public Task<OutboundEmailSendResult> SendAsync(
             OutboundEmailMessage message,
@@ -184,6 +221,7 @@ public sealed class OutboundMessageSenderTests
             }
 
             Messages.Add(message);
+            AfterSend?.Invoke();
             return Task.FromResult(new OutboundEmailSendResult(ProviderMessageId));
         }
     }

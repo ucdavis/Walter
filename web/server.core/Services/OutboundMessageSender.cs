@@ -141,7 +141,7 @@ public sealed class OutboundMessageSender : IOutboundMessageSender
                     lockId.Value,
                     sendResult.ProviderMessageId,
                     nowUtc,
-                    cancellationToken))
+                    CancellationToken.None))
                 {
                     sentCount++;
                 }
