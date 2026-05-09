@@ -117,7 +117,7 @@ public sealed class OutboundMessageSenderTests
             queue,
             new PlaceholderOutboundMessageRenderer(),
             emailClient,
-            new OutboundMessageSenderOptions { MaxAttempts = 1 });
+            new OutboundMessageSenderOptions { MaxAttempts = 3 });
         var now = new DateTime(2026, 5, 7, 20, 0, 0, DateTimeKind.Utc);
         var message = CreateMessage(now);
         message.Channel = "Slack";
@@ -127,9 +127,15 @@ public sealed class OutboundMessageSenderTests
 
         var result = await sender.ProcessDueAsync(now);
 
+        result.RetryCount.Should().Be(0);
         result.DeadLetterCount.Should().Be(1);
         emailClient.Messages.Should().BeEmpty();
-        (await ctx.OutboundMessages.SingleAsync()).Status.Should().Be(OutboundMessage.Statuses.DeadLetter);
+
+        var reloaded = await ctx.OutboundMessages.SingleAsync();
+        reloaded.Status.Should().Be(OutboundMessage.Statuses.DeadLetter);
+        reloaded.AttemptCount.Should().Be(1);
+        reloaded.LastError.Should().Be("Outbound channel 'Slack' is not supported.");
+        reloaded.LockId.Should().BeNull();
     }
 
     private static OutboundMessage CreateMessage(DateTime now, int attemptCount = 0)

@@ -93,13 +93,37 @@ public sealed class OutboundMessageSender : IOutboundMessageSender
                 continue;
             }
 
-            try
+            if (message.Channel != OutboundMessage.Channels.Email)
             {
-                if (message.Channel != OutboundMessage.Channels.Email)
+                var lastError = $"Outbound channel '{message.Channel}' is not supported.";
+                _logger.LogError(
+                    "Outbound message uses unsupported channel and will be dead-lettered. MessageId={MessageId} NotificationType={NotificationType} Channel={Channel}",
+                    message.Id,
+                    message.NotificationType,
+                    message.Channel);
+
+                if (await _queue.MarkDeadLetterAsync(
+                    message.Id,
+                    lockId.Value,
+                    lastError,
+                    cancellationToken))
                 {
-                    throw new NotSupportedException($"Outbound channel '{message.Channel}' is not supported.");
+                    deadLetterCount++;
+                }
+                else
+                {
+                    lostLockCount++;
+                    _logger.LogWarning(
+                        "Outbound message could not be marked dead-letter because its lock was lost. MessageId={MessageId} NotificationType={NotificationType}",
+                        message.Id,
+                        message.NotificationType);
                 }
 
+                continue;
+            }
+
+            try
+            {
                 var rendered = await _renderer.RenderAsync(message, cancellationToken);
                 var sendResult = await _emailClient.SendAsync(
                     new OutboundEmailMessage
