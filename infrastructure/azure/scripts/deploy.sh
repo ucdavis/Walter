@@ -7,12 +7,13 @@ TEMPLATE_FILE="${SCRIPT_DIR}/../main.bicep"
 usage() {
   cat <<'EOF'
 Usage:
-  infrastructure/azure/scripts/deploy.sh --resource-group <name> --app-service-plan-id <id> --sql-admin-login <login> [options]
+  infrastructure/azure/scripts/deploy.sh --resource-group <name> --app-service-plan-id <id> --sql-admin-login <login> --datamart-connection-string <connection> [options]
 
 Required:
   -g, --resource-group           Azure resource group name to deploy into
       --app-service-plan-id      Existing App Service Plan resource ID
       --sql-admin-login          SQL admin login name
+      --datamart-connection-string  Datamart connection string (or set env var DM_CONNECTION)
 
 SQL password:
       --sql-admin-password       SQL admin password (or set env var SQL_ADMIN_PASSWORD)
@@ -24,6 +25,7 @@ Naming:
 Other:
   -l, --location                 Location used if resource group must be created (default: westus2)
       --linux-fx-version         App Service runtime stack (default: DOTNETCORE|8.0)
+      --function-linux-fx-version  Azure Functions runtime stack (default: DOTNET-ISOLATED|8.0)
       --allow-azure-services-to-sql  Adds SQL firewall rule AllowAzureServices (0.0.0.0)
       --what-if                  Run in what-if mode (no changes)
   -h, --help                     Show help
@@ -32,13 +34,15 @@ Examples:
   SQL_ADMIN_PASSWORD='...' infrastructure/azure/scripts/deploy.sh \\
     -g walter-test --app-name walter --env test \\
     --app-service-plan-id "/subscriptions/.../serverfarms/DefaultPlan2" \\
-    --sql-admin-login walter
+    --sql-admin-login walter \\
+    --datamart-connection-string "$DM_CONNECTION"
 
   infrastructure/azure/scripts/deploy.sh \\
     -g walter --app-name walter --env production \\
     --app-service-plan-id "/subscriptions/.../serverfarms/DefaultPlan2" \\
     --sql-admin-login walter \\
-    --sql-admin-password '...'
+    --sql-admin-password '...' \\
+    --datamart-connection-string "Server=tcp:<server>.database.windows.net,1433;Database=<database>;User ID=<user>;Password=<password>;Encrypt=True;TrustServerCertificate=False;"
 EOF
 }
 
@@ -50,8 +54,10 @@ APP_NAME="walter"
 APP_SERVICE_PLAN_ID="${APP_SERVICE_PLAN_ID:-}"
 SQL_ADMIN_LOGIN_VALUE="${SQL_ADMIN_LOGIN:-}"
 SQL_ADMIN_PASSWORD_VALUE="${SQL_ADMIN_PASSWORD:-}"
+DATAMART_CONNECTION_STRING_VALUE="${DM_CONNECTION:-}"
 
 LINUX_FX_VERSION="DOTNETCORE|8.0"
+FUNCTION_LINUX_FX_VERSION="DOTNET-ISOLATED|8.0"
 ALLOW_AZURE_SERVICES_TO_SQL="false"
 WHAT_IF="false"
 
@@ -71,8 +77,12 @@ while [[ $# -gt 0 ]]; do
       SQL_ADMIN_LOGIN_VALUE="${2:-}"; shift 2 ;;
     --sql-admin-password)
       SQL_ADMIN_PASSWORD_VALUE="${2:-}"; shift 2 ;;
+    --datamart-connection-string)
+      DATAMART_CONNECTION_STRING_VALUE="${2:-}"; shift 2 ;;
     --linux-fx-version)
       LINUX_FX_VERSION="${2:-}"; shift 2 ;;
+    --function-linux-fx-version)
+      FUNCTION_LINUX_FX_VERSION="${2:-}"; shift 2 ;;
     --allow-azure-services-to-sql)
       ALLOW_AZURE_SERVICES_TO_SQL="true"; shift ;;
     --what-if)
@@ -100,6 +110,12 @@ fi
 
 if [[ -z "$SQL_ADMIN_LOGIN_VALUE" ]]; then
   echo "Missing required: --sql-admin-login" >&2
+  usage
+  exit 2
+fi
+
+if [[ -z "$DATAMART_CONNECTION_STRING_VALUE" ]]; then
+  echo "Missing required: --datamart-connection-string (or set DM_CONNECTION)" >&2
   usage
   exit 2
 fi
@@ -137,7 +153,9 @@ AZ_PARAMS=(
   "appServicePlanId=${APP_SERVICE_PLAN_ID}"
   "sqlAdminLogin=${SQL_ADMIN_LOGIN_VALUE}"
   "sqlAdminPassword=${SQL_ADMIN_PASSWORD_VALUE}"
+  "datamartConnectionString=${DATAMART_CONNECTION_STRING_VALUE}"
   "linuxFxVersion=${LINUX_FX_VERSION}"
+  "functionLinuxFxVersion=${FUNCTION_LINUX_FX_VERSION}"
   "allowAzureServicesToSql=${ALLOW_AZURE_SERVICES_TO_SQL}"
 )
 

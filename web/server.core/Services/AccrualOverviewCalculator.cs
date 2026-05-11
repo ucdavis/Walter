@@ -1,7 +1,7 @@
 using System.Globalization;
-using server.Models;
+using server.core.Models;
 
-namespace server.Services;
+namespace server.core.Services;
 
 public static class AccrualOverviewCalculator
 {
@@ -10,6 +10,45 @@ public static class AccrualOverviewCalculator
     public static AccrualAssumptionsResponse GetAssumptions()
     {
         return Settings.ToResponse();
+    }
+
+    // Builds the employee notification candidates from the same latest snapshot used by the accrual UI.
+    public static IReadOnlyList<AccrualNotificationCandidate> BuildNotificationCandidates(
+        IReadOnlyList<EmployeeAccrualBalanceRecord> records)
+    {
+        var context = PrepareContext(records);
+        if (context is null)
+        {
+            return [];
+        }
+
+        return context.LatestMonth.Employees
+            .Where(employee =>
+                employee.Status is AccrualStatus.Approaching or AccrualStatus.AtCap)
+            .OrderByDescending(employee => employee.PctOfCap)
+            .ThenBy(employee => employee.EmployeeName, StringComparer.OrdinalIgnoreCase)
+            .Select(employee => new AccrualNotificationCandidate
+            {
+                AccrualHoursPerMonth = employee.NormalMonthlyAccrual,
+                BalanceHours = employee.BalanceHours,
+                CapHours = employee.CapHours,
+                Classification = employee.Classification,
+                Department = employee.Department,
+                DepartmentCode = employee.DepartmentCode,
+                EmployeeAsOfDate = employee.AsOfDate,
+                EmployeeEmail = employee.EmployeeEmail,
+                EmployeeGroup = GetEmployeeGroup(employee.Classification),
+                EmployeeId = employee.EmployeeId,
+                EmployeeName = employee.EmployeeName,
+                LastVacationDate = employee.LastVacationDate,
+                MonthsToCap = employee.MonthsToCap,
+                PctOfCap = employee.PctOfCap,
+                SnapshotAsOfDate = context.LatestMonth.AsOfDate,
+                Status = employee.Status == AccrualStatus.AtCap
+                    ? AccrualNotificationStatus.AtCap
+                    : AccrualNotificationStatus.ApproachingCap,
+            })
+            .ToList();
     }
 
     // Builds the top-level overview response from the available accrual history.
@@ -230,6 +269,7 @@ public static class AccrualOverviewCalculator
             .Select(row => row.EmployeeId)
             .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)) ?? string.Empty;
         var employeeName = MostCommonValue(currentRows.Select(row => row.EmployeeName), employeeId);
+        var employeeEmail = MostRecentNonEmptyEmail(historyRows);
         var departmentCode = MostCommonValue(currentRows.Select(row => row.Level5Dept), "UNKNOWN");
         var department = MostCommonValue(currentRows.Select(row => row.Level5DeptDesc), "Unknown Department");
         var classification = NormalizeClassification(MostCommonValue(
@@ -291,6 +331,7 @@ public static class AccrualOverviewCalculator
             classification,
             department,
             departmentCode,
+            employeeEmail,
             employeeId,
             employeeName,
             hourlyRate,
@@ -574,6 +615,31 @@ public static class AccrualOverviewCalculator
         return employeeClassDescription;
     }
 
+    private static AccrualEmployeeGroup GetEmployeeGroup(string classification)
+    {
+        return classification switch
+        {
+            "FY Acad Admin" or
+            "FY Acad Coord" or
+            "FY Faculty" or
+            "FY Researcher" => AccrualEmployeeGroup.FacultyAcademic,
+            "PSS" or
+            "MSP" or
+            "SMG" => AccrualEmployeeGroup.Staff,
+            _ => AccrualEmployeeGroup.Generic,
+        };
+    }
+
+    // Uses the newest non-empty email seen for an employee, including earlier rows when the latest row is blank.
+    private static string? MostRecentNonEmptyEmail(IEnumerable<EmployeeAccrualBalanceRecord> rows)
+    {
+        return rows
+            .Where(row => !string.IsNullOrWhiteSpace(row.EmployeeEmail))
+            .OrderByDescending(row => row.AsOfDate)
+            .Select(row => row.EmployeeEmail!.Trim())
+            .FirstOrDefault();
+    }
+
     private enum AccrualStatus
     {
         Active,
@@ -587,6 +653,7 @@ public static class AccrualOverviewCalculator
         string Classification,
         string Department,
         string DepartmentCode,
+        string? EmployeeEmail,
         string EmployeeId,
         string EmployeeName,
         decimal HourlyRate,

@@ -12,7 +12,15 @@ Deployed by `infrastructure/azure/main.bicep`:
 
 - **Azure SQL Server** + **SQL Database** (Basic SKU by default)
 - **Azure App Service (Linux) Web App** (uses an existing App Service Plan you provide)
+- **Azure Functions App (Linux)** for scheduled notification work (uses the same existing App Service Plan)
+- **Storage Account** for the Azure Functions runtime
 - **App Setting**: `DB_CONNECTION` on the Web App (built from the SQL server/db + SQL login/password you pass at deploy time)
+- **App Setting**: `DM_CONNECTION` on the Web App for Datamart-backed reports
+- **App Setting**: `Datamart__ApplicationName` on the Web App for Datamart logging/auditing
+- **App Setting**: `DB_CONNECTION` on the Functions App for queue and notification generation access
+- **App Setting**: `DM_CONNECTION` on the Functions App for Datamart-backed accrual generation
+- **App Setting**: `Datamart__ApplicationName` on the Functions App for Datamart logging/auditing
+- Notification timer jobs are deployed disabled by default via `Notifications__SenderEnabled=false` and `Notifications__AccrualGenerationEnabled=false`
 - Optional: SQL firewall rule `AllowAzureServices` (`0.0.0.0`) when `allowAzureServicesToSql=true`
 
 ### Naming
@@ -20,10 +28,11 @@ Deployed by `infrastructure/azure/main.bicep`:
 Resources are generated deterministically from `resourceGroup().id`, `appName`, and `env`:
 
 - Web App: `web-<appName>-<env>-<token>`
+- Functions App: `func-<appName>-<env>-<token>`
 - SQL Server: `sql-<appName>-<env>-<token>` (globally unique)
 - SQL Database: `<appName>` (the DB name does **not** include env/token because it lives under the server)
 
-`env` is optional. If omitted, names become `web-<appName>-<token>` / `sql-<appName>-<token>`.
+`env` is optional. If omitted, names become `web-<appName>-<token>`, `func-<appName>-<token>`, and `sql-<appName>-<token>`; function storage remains `st<token><functions-token>`.
 
 ### Deploy
 
@@ -41,7 +50,8 @@ infrastructure/azure/scripts/deploy.sh \
   --app-name walter \
   --env test \
   --app-service-plan-id "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Web/serverfarms/<plan>" \
-  --sql-admin-login walter
+  --sql-admin-login walter \
+  --datamart-connection-string "$DM_CONNECTION"
 ```
 
 What-if mode (no changes):
@@ -53,6 +63,7 @@ infrastructure/azure/scripts/deploy.sh \
   --env test \
   --app-service-plan-id "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Web/serverfarms/<plan>" \
   --sql-admin-login walter \
+  --datamart-connection-string "$DM_CONNECTION" \
   --what-if
 ```
 
@@ -89,6 +100,7 @@ Notes:
 
 - By default it uses both “current” and “possible” outbound IPs. To only use current IPs, add `--current-only`.
 - It auto-discovers the web app + sql server by the naming prefix. If you have multiple matches, pass explicit names via `--web-app-name` and/or `--sql-server-name`.
+- Azure Pipelines deploys the Functions package using a `functionAppName` variable. Set it from the `functionAppName` Bicep output in the same variable group that provides `webAppName`.
 
 ### Troubleshooting
 

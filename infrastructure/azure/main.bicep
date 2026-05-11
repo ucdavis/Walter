@@ -17,8 +17,44 @@ param sqlAdminLogin string
 @description('SQL admin password')
 param sqlAdminPassword string
 
+@secure()
+@description('Datamart connection string used by web and notification worker Datamart integrations')
+param datamartConnectionString string
+
 @description('Runtime stack for Linux App Service')
 param linuxFxVersion string = 'DOTNETCORE|8.0'
+
+@description('Runtime stack for Linux Azure Functions')
+param functionLinuxFxVersion string = 'DOTNET-ISOLATED|8.0'
+
+@description('Whether the notification Function App should keep workers always warm.')
+param functionAlwaysOn bool = true
+
+@minValue(0)
+@description('Minimum number of elastic workers assigned to the notification Function App.')
+param functionMinimumElasticInstanceCount int = 1
+
+@allowed([
+  'Enabled'
+  'Disabled'
+])
+@description('Whether the notification Function App accepts public network traffic. Disable only when deployments can reach the private SCM endpoint.')
+param functionPublicNetworkAccess string = 'Enabled'
+
+@description('Whether built-in App Service Authentication is enabled for the notification Function App.')
+param functionSiteAuthEnabled bool = false
+
+@description('Optional subnet resource ID for notification Function App VNet integration.')
+param functionVirtualNetworkSubnetId string = ''
+
+@description('Whether all notification Function App outbound traffic should route through VNet integration when functionVirtualNetworkSubnetId is supplied.')
+param functionVnetRouteAllEnabled bool = false
+
+@description('Timer schedule for outbound message sending. NCRONTAB format with seconds.')
+param notificationSenderSchedule string = '0 */15 * * * *'
+
+@description('Timer schedule for monthly accrual notification generation. NCRONTAB format with seconds.')
+param accrualNotificationSchedule string = '0 0 9 1 * *'
 
 @description('Whether to create a SQL firewall rule to allow access from Azure services (0.0.0.0).')
 param allowAzureServicesToSql bool = false
@@ -48,6 +84,8 @@ var baseName = empty(normalizedEnv)
 var nameToken = toLower(substring(uniqueString(resourceGroup().id, normalizedAppName, normalizedEnv), 0, 6))
 
 var webAppName = 'web-${baseName}-${nameToken}'
+var functionAppName = 'func-${baseName}-${nameToken}'
+var functionStorageAccountName = 'st${nameToken}${substring(uniqueString(resourceGroup().id, normalizedAppName, normalizedEnv, 'functions'), 0, 8)}'
 var sqlServerName = 'sql-${baseName}-${nameToken}'
 var sqlDbName = normalizedAppName
 
@@ -79,6 +117,8 @@ module web './modules/webapp.bicep' = {
     linuxFxVersion: linuxFxVersion
     appSettings: {
       DB_CONNECTION: dbConnection
+      DM_CONNECTION: datamartConnectionString
+      Datamart__ApplicationName: empty(normalizedEnv) ? 'Walter-Production' : 'Walter-${normalizedEnv}'
       Rum__Enabled: string(rumEnabled)
       Rum__Environment: empty(normalizedEnv) ? 'production' : normalizedEnv
       Rum__ServerUrl: rumServerUrl
@@ -92,9 +132,41 @@ module web './modules/webapp.bicep' = {
   ]
 }
 
+module notificationsFunction './modules/functionapp.bicep' = {
+  name: 'notificationsFunction'
+  params: {
+    location: location
+    functionAppName: functionAppName
+    storageAccountName: functionStorageAccountName
+    appServicePlanId: appServicePlanId
+    linuxFxVersion: functionLinuxFxVersion
+    alwaysOn: functionAlwaysOn
+    minimumElasticInstanceCount: functionMinimumElasticInstanceCount
+    publicNetworkAccess: functionPublicNetworkAccess
+    siteAuthEnabled: functionSiteAuthEnabled
+    virtualNetworkSubnetId: functionVirtualNetworkSubnetId
+    vnetRouteAllEnabled: functionVnetRouteAllEnabled
+    appSettings: {
+      DB_CONNECTION: dbConnection
+      DM_CONNECTION: datamartConnectionString
+      Datamart__ApplicationName: empty(normalizedEnv) ? 'Walter-Notifications-Production' : 'Walter-Notifications-${normalizedEnv}'
+      NOTIFICATIONS_SENDER_SCHEDULE: notificationSenderSchedule
+      NOTIFICATIONS_ACCRUAL_GENERATION_SCHEDULE: accrualNotificationSchedule
+      Notifications__SenderEnabled: 'false'
+      Notifications__AccrualGenerationEnabled: 'false'
+    }
+  }
+  dependsOn: [
+    sql
+  ]
+}
+
 output webAppId string = web.outputs.webAppId
+output functionAppId string = notificationsFunction.outputs.functionAppId
 output sqlServerFqdn string = sql.outputs.sqlServerFqdn
 output nameToken string = nameToken
 output webAppName string = webAppName
+output functionAppName string = notificationsFunction.outputs.functionAppName
+output functionStorageAccountName string = notificationsFunction.outputs.storageAccountName
 output sqlServerName string = sqlServerName
 output sqlDbName string = sqlDbName

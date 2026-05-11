@@ -9,6 +9,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Role> Roles => Set<Role>();
     public DbSet<Permission> Permissions => Set<Permission>();
     public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<OutboundMessage> OutboundMessages => Set<OutboundMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -18,5 +19,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         Role.OnModelCreating(modelBuilder);
         Permission.OnModelCreating(modelBuilder);
         Notification.OnModelCreating(modelBuilder);
+        OutboundMessage.OnModelCreating(modelBuilder);
     }
 }
