@@ -33,6 +33,7 @@ CREATE TABLE dbo.FacultyDeptPortfolio
     PpmExpenses             DECIMAL(15, 2) DEFAULT 0             NOT NULL,
     PpmBudBal               DECIMAL(15, 2) DEFAULT 0             NOT NULL,
     LoadDate                DATETIME2(3),
+    LastSyncDate            DATETIME2(3),
     LastUpdated             DATETIME2(3)   DEFAULT SYSDATETIME() NOT NULL,
     CONSTRAINT PK_FacultyDeptPortfolio
         PRIMARY KEY CLUSTERED (ProjectNumber, TaskNum, FundCode, ProgramCode, ActivityCode, ExpenditureCategoryName, ProjectOwningOrgCode)

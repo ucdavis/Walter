@@ -37,7 +37,7 @@ GRANT SELECT ON [dbo].[FacultyDeptPortfolio] TO [WalterAppRole];
 GRANT SELECT ON [dbo].[EmployeeAccrualBalances] TO [WalterAppRole];
 
 -- Grant pipeline role permissions
-GRANT INSERT, SELECT, UPDATE ON [dbo].[FacultyDeptPortfolio] TO [WalterPipelineRole];
+GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[FacultyDeptPortfolio] TO [WalterPipelineRole];
 GRANT INSERT, SELECT, UPDATE ON [dbo].[EmployeeAccrualBalances] TO [WalterPipelineRole];
 
 
