@@ -11,6 +11,9 @@ pr:
   branches:
     include:
       - main
+  paths:
+    include:
+      - datamart/**
 
 pool:
   name: "Pazuzu Pool"
