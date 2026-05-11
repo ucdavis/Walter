@@ -4,6 +4,17 @@ trigger:
   branches:
     include:
       - main
+  paths:
+    include:
+      - web/**
+
+pr:
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - web/**
 
 variables:
   buildConfiguration: Release
