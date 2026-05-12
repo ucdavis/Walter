@@ -1516,8 +1516,6 @@
 				"name": "PROD Purge Stale Records",
 				"description": "Delete records that haven't been seen recently in the datamart.",
 				"type": "Script",
-				"state": "Inactive",
-				"onInactiveMarkAs": "Succeeded",
 				"dependsOn": [
 					{
 						"activity": "PROD Copy Faculty Report",
