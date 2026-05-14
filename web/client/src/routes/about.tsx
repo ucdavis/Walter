@@ -49,18 +49,7 @@ function About() {
             </Link>
           </div>
           <div className="mt-auto items-start">
-            <a
-              href="https://caes.ucdavis.edu"
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              <img
-                alt="CA&ES UC Davis Logo"
-                className="w-36 opacity-50"
-                src="/caes.svg"
-              />
-            </a>
-            <p className="text-sm text-dark-font/80 mt-4">
+            <p className="text-sm text-dark-font/80">
               © {new Date().getFullYear()} UC Regents, Davis campus. All rights
               reserved.
             </p>
