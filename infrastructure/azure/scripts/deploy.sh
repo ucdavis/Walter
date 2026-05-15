@@ -7,16 +7,18 @@ TEMPLATE_FILE="${SCRIPT_DIR}/../main.bicep"
 usage() {
   cat <<'EOF'
 Usage:
-  infrastructure/azure/scripts/deploy.sh --resource-group <name> --app-service-plan-id <id> --sql-admin-login <login> --datamart-connection-string <connection> [options]
+  infrastructure/azure/scripts/deploy.sh --resource-group <name> --app-service-plan-id <id> [options]
 
 Required:
   -g, --resource-group           Azure resource group name to deploy into
       --app-service-plan-id      Existing App Service Plan resource ID
-      --sql-admin-login          SQL admin login name
-      --datamart-connection-string  Datamart connection string (or set env var DM_CONNECTION)
 
-SQL password:
-      --sql-admin-password       SQL admin password (or set env var SQL_ADMIN_PASSWORD)
+SQL creation:
+      --sql-admin-login          SQL admin login name (required only when creating a new SQL server)
+      --sql-admin-password       SQL admin password (required only when creating a new SQL server, or when seeding a missing DB_CONNECTION for an existing server)
+
+App setting seeds:
+      --datamart-connection-string  Datamart connection string (required only when seeding a missing DM_CONNECTION, or set env var DM_CONNECTION)
 
 Naming:
       --app-name                 Application name used for generated names (default: walter)
@@ -43,6 +45,10 @@ Examples:
     --sql-admin-login walter \\
     --sql-admin-password '...' \\
     --datamart-connection-string "Server=tcp:<server>.database.windows.net,1433;Database=<database>;User ID=<user>;Password=<password>;Encrypt=True;TrustServerCertificate=False;"
+
+  infrastructure/azure/scripts/deploy.sh \\
+    -g walter-test --app-name walter --env test \\
+    --app-service-plan-id "/subscriptions/.../serverfarms/DefaultPlan2"
 EOF
 }
 
@@ -60,6 +66,8 @@ LINUX_FX_VERSION="DOTNETCORE|8.0"
 FUNCTION_LINUX_FX_VERSION="DOTNET-ISOLATED|8.0"
 ALLOW_AZURE_SERVICES_TO_SQL="false"
 WHAT_IF="false"
+CREATE_SQL_SERVER="true"
+SQL_SERVER_NAME_OVERRIDE=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -105,28 +113,6 @@ fi
 if [[ -z "$APP_SERVICE_PLAN_ID" ]]; then
   echo "Missing required: --app-service-plan-id" >&2
   usage
-  exit 2
-fi
-
-if [[ -z "$SQL_ADMIN_LOGIN_VALUE" ]]; then
-  echo "Missing required: --sql-admin-login" >&2
-  usage
-  exit 2
-fi
-
-if [[ -z "$DATAMART_CONNECTION_STRING_VALUE" ]]; then
-  echo "Missing required: --datamart-connection-string (or set DM_CONNECTION)" >&2
-  usage
-  exit 2
-fi
-
-if [[ -z "$SQL_ADMIN_PASSWORD_VALUE" ]]; then
-  read -r -s -p "SQL admin password: " SQL_ADMIN_PASSWORD_VALUE
-  echo
-fi
-
-if [[ -z "$SQL_ADMIN_PASSWORD_VALUE" ]]; then
-  echo "Missing required SQL password (pass --sql-admin-password or set SQL_ADMIN_PASSWORD)" >&2
   exit 2
 fi
 
@@ -189,6 +175,42 @@ seed_app_setting_if_missing() {
   fi
 }
 
+seed_db_connection_if_missing() {
+  local app_type="$1"
+  local app_name="$2"
+
+  if app_setting_exists "$app_type" "$app_name" "DB_CONNECTION"; then
+    echo "Preserving existing app setting 'DB_CONNECTION' on '${app_name}'."
+    return
+  fi
+
+  if [[ -z "$DB_CONNECTION_VALUE" ]]; then
+    echo "Skipping missing app setting 'DB_CONNECTION' on '${app_name}' because no SQL admin password was provided."
+    echo "Pass --sql-admin-password if this app needs DB_CONNECTION seeded."
+    return
+  fi
+
+  seed_app_setting_if_missing "$app_type" "$app_name" "DB_CONNECTION" "$DB_CONNECTION_VALUE"
+}
+
+seed_dm_connection_if_missing() {
+  local app_type="$1"
+  local app_name="$2"
+
+  if app_setting_exists "$app_type" "$app_name" "DM_CONNECTION"; then
+    echo "Preserving existing app setting 'DM_CONNECTION' on '${app_name}'."
+    return
+  fi
+
+  if [[ -z "$DATAMART_CONNECTION_STRING_VALUE" ]]; then
+    echo "Skipping missing app setting 'DM_CONNECTION' on '${app_name}' because no datamart connection string was provided."
+    echo "Pass --datamart-connection-string or set DM_CONNECTION if this app needs DM_CONNECTION seeded."
+    return
+  fi
+
+  seed_app_setting_if_missing "$app_type" "$app_name" "DM_CONNECTION" "$DATAMART_CONNECTION_STRING_VALUE"
+}
+
 if [[ "$(az group exists -n "$RESOURCE_GROUP")" != "true" ]]; then
   LOCATION="${LOCATION:-westus2}"
   echo "Creating resource group '${RESOURCE_GROUP}' in '${LOCATION}'..."
@@ -199,18 +221,82 @@ else
   fi
 fi
 
+NORMALIZED_APP_NAME="$(normalize_name "$APP_NAME")"
+NORMALIZED_ENV="$(normalize_name "$ENVIRONMENT")"
+if [[ -z "$NORMALIZED_ENV" ]]; then
+  BASE_NAME="$NORMALIZED_APP_NAME"
+else
+  BASE_NAME="${NORMALIZED_APP_NAME}-${NORMALIZED_ENV}"
+fi
+
+SQL_SERVER_NAME_PREFIX="sql-${BASE_NAME}-"
+SQL_SERVER_MATCHES="$(az sql server list \
+  --resource-group "$RESOURCE_GROUP" \
+  --query "[?starts_with(name, '${SQL_SERVER_NAME_PREFIX}')].name" \
+  -o tsv)"
+SQL_SERVER_MATCH_COUNT="$(printf '%s\n' "$SQL_SERVER_MATCHES" | sed '/^$/d' | wc -l | tr -d ' ')"
+
+if [[ "$SQL_SERVER_MATCH_COUNT" -gt 1 ]]; then
+  echo "Found multiple SQL servers matching '${SQL_SERVER_NAME_PREFIX}' in '${RESOURCE_GROUP}':" >&2
+  printf '%s\n' "$SQL_SERVER_MATCHES" >&2
+  echo "Refusing to guess which existing SQL server to use." >&2
+  exit 1
+elif [[ "$SQL_SERVER_MATCH_COUNT" == "1" ]]; then
+  CREATE_SQL_SERVER="false"
+  SQL_SERVER_NAME_OVERRIDE="$(printf '%s\n' "$SQL_SERVER_MATCHES" | sed '/^$/d' | head -n 1)"
+  EXISTING_SQL_ADMIN_LOGIN="$(az sql server show \
+    --resource-group "$RESOURCE_GROUP" \
+    --name "$SQL_SERVER_NAME_OVERRIDE" \
+    --query administratorLogin \
+    -o tsv)"
+
+  if [[ -n "$SQL_ADMIN_LOGIN_VALUE" && "$SQL_ADMIN_LOGIN_VALUE" != "$EXISTING_SQL_ADMIN_LOGIN" ]]; then
+    echo "Ignoring --sql-admin-login '${SQL_ADMIN_LOGIN_VALUE}' because existing SQL server '${SQL_SERVER_NAME_OVERRIDE}' uses '${EXISTING_SQL_ADMIN_LOGIN}'."
+  fi
+
+  SQL_ADMIN_LOGIN_VALUE="$EXISTING_SQL_ADMIN_LOGIN"
+  echo "Using existing SQL server '${SQL_SERVER_NAME_OVERRIDE}'. SQL admin login/password are not required for infrastructure deployment."
+else
+  if [[ -z "$SQL_ADMIN_LOGIN_VALUE" ]]; then
+    echo "Missing required: --sql-admin-login (needed because no existing SQL server matching '${SQL_SERVER_NAME_PREFIX}' was found)" >&2
+    usage
+    exit 2
+  fi
+
+  if [[ -z "$SQL_ADMIN_PASSWORD_VALUE" ]]; then
+    read -r -s -p "SQL admin password: " SQL_ADMIN_PASSWORD_VALUE
+    echo
+  fi
+
+  if [[ -z "$SQL_ADMIN_PASSWORD_VALUE" ]]; then
+    echo "Missing required SQL password (needed because SQL server '${SQL_SERVER_NAME_PREFIX}<token>' will be created)" >&2
+    exit 2
+  fi
+fi
+
 DEPLOYMENT_NAME="walter-${APP_NAME}${ENVIRONMENT:+-${ENVIRONMENT}}-$(date -u +%Y%m%d%H%M%S)"
 
 AZ_PARAMS=(
   "location=${LOCATION}"
   "appName=${APP_NAME}"
   "appServicePlanId=${APP_SERVICE_PLAN_ID}"
-  "sqlAdminLogin=${SQL_ADMIN_LOGIN_VALUE}"
-  "sqlAdminPassword=${SQL_ADMIN_PASSWORD_VALUE}"
+  "createSqlServer=${CREATE_SQL_SERVER}"
   "linuxFxVersion=${LINUX_FX_VERSION}"
   "functionLinuxFxVersion=${FUNCTION_LINUX_FX_VERSION}"
   "allowAzureServicesToSql=${ALLOW_AZURE_SERVICES_TO_SQL}"
 )
+
+if [[ -n "$SQL_SERVER_NAME_OVERRIDE" ]]; then
+  AZ_PARAMS+=("sqlServerNameOverride=${SQL_SERVER_NAME_OVERRIDE}")
+fi
+
+if [[ -n "$SQL_ADMIN_LOGIN_VALUE" ]]; then
+  AZ_PARAMS+=("sqlAdminLogin=${SQL_ADMIN_LOGIN_VALUE}")
+fi
+
+if [[ -n "$SQL_ADMIN_PASSWORD_VALUE" ]]; then
+  AZ_PARAMS+=("sqlAdminPassword=${SQL_ADMIN_PASSWORD_VALUE}")
+fi
 
 if [[ -n "$ENVIRONMENT" ]]; then
   AZ_PARAMS+=("env=${ENVIRONMENT}")
@@ -266,15 +352,19 @@ else
     RUM_ENVIRONMENT="$NORMALIZED_ENV"
   fi
 
-  DB_CONNECTION_VALUE="Server=tcp:${SQL_SERVER_FQDN},1433;Initial Catalog=${SQL_DB_NAME};Persist Security Info=False;User ID=${SQL_ADMIN_LOGIN_VALUE};Password=${SQL_ADMIN_PASSWORD_VALUE};MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
+  DB_CONNECTION_VALUE=""
+  if [[ -n "$SQL_ADMIN_LOGIN_VALUE" && -n "$SQL_ADMIN_PASSWORD_VALUE" ]]; then
+    DB_CONNECTION_VALUE="Server=tcp:${SQL_SERVER_FQDN},1433;Initial Catalog=${SQL_DB_NAME};Persist Security Info=False;User ID=${SQL_ADMIN_LOGIN_VALUE};Password=${SQL_ADMIN_PASSWORD_VALUE};MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
+  fi
+
   FUNCTION_STORAGE_CONNECTION="$(az storage account show-connection-string \
     --resource-group "$RESOURCE_GROUP" \
     --name "$FUNCTION_STORAGE_ACCOUNT_NAME" \
     --query connectionString \
     -o tsv)"
 
-  seed_app_setting_if_missing "webapp" "$WEB_APP_NAME" "DB_CONNECTION" "$DB_CONNECTION_VALUE"
-  seed_app_setting_if_missing "webapp" "$WEB_APP_NAME" "DM_CONNECTION" "$DATAMART_CONNECTION_STRING_VALUE"
+  seed_db_connection_if_missing "webapp" "$WEB_APP_NAME"
+  seed_dm_connection_if_missing "webapp" "$WEB_APP_NAME"
   seed_app_setting_if_missing "webapp" "$WEB_APP_NAME" "Datamart__ApplicationName" "$DATAMART_WEB_APP_NAME"
   seed_app_setting_if_missing "webapp" "$WEB_APP_NAME" "Rum__Enabled" "false"
   seed_app_setting_if_missing "webapp" "$WEB_APP_NAME" "Rum__Environment" "$RUM_ENVIRONMENT"
@@ -286,8 +376,8 @@ else
   seed_app_setting_if_missing "functionapp" "$FUNCTION_APP_NAME" "AzureWebJobsStorage" "$FUNCTION_STORAGE_CONNECTION"
   seed_app_setting_if_missing "functionapp" "$FUNCTION_APP_NAME" "FUNCTIONS_EXTENSION_VERSION" "~4"
   seed_app_setting_if_missing "functionapp" "$FUNCTION_APP_NAME" "FUNCTIONS_WORKER_RUNTIME" "dotnet-isolated"
-  seed_app_setting_if_missing "functionapp" "$FUNCTION_APP_NAME" "DB_CONNECTION" "$DB_CONNECTION_VALUE"
-  seed_app_setting_if_missing "functionapp" "$FUNCTION_APP_NAME" "DM_CONNECTION" "$DATAMART_CONNECTION_STRING_VALUE"
+  seed_db_connection_if_missing "functionapp" "$FUNCTION_APP_NAME"
+  seed_dm_connection_if_missing "functionapp" "$FUNCTION_APP_NAME"
   seed_app_setting_if_missing "functionapp" "$FUNCTION_APP_NAME" "Datamart__ApplicationName" "$DATAMART_FUNCTION_APP_NAME"
   seed_app_setting_if_missing "functionapp" "$FUNCTION_APP_NAME" "NOTIFICATIONS_SENDER_SCHEDULE" "0 */15 * * * *"
   seed_app_setting_if_missing "functionapp" "$FUNCTION_APP_NAME" "NOTIFICATIONS_ACCRUAL_GENERATION_SCHEDULE" "0 0 9 1 * *"

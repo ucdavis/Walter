@@ -11,11 +11,17 @@ param env string = ''
 param appServicePlanId string
 
 @description('SQL admin login name')
-param sqlAdminLogin string
+param sqlAdminLogin string = ''
 
 @secure()
 @description('SQL admin password')
-param sqlAdminPassword string
+param sqlAdminPassword string = ''
+
+@description('Whether to create the SQL logical server. Set false to use an existing generated SQL server.')
+param createSqlServer bool = true
+
+@description('Optional existing SQL logical server name. Leave blank to use the generated name.')
+param sqlServerNameOverride string = ''
 
 @description('Runtime stack for Linux App Service')
 param linuxFxVersion string = 'DOTNETCORE|8.0'
@@ -61,7 +67,8 @@ var nameToken = toLower(substring(uniqueString(resourceGroup().id, normalizedApp
 var webAppName = 'web-${baseName}-${nameToken}'
 var functionAppName = 'func-${baseName}-${nameToken}'
 var functionStorageAccountName = 'st${nameToken}${substring(uniqueString(resourceGroup().id, normalizedAppName, normalizedEnv, 'functions'), 0, 8)}'
-var sqlServerName = 'sql-${baseName}-${nameToken}'
+var generatedSqlServerName = 'sql-${baseName}-${nameToken}'
+var sqlServerName = empty(sqlServerNameOverride) ? generatedSqlServerName : sqlServerNameOverride
 var sqlDbName = normalizedAppName
 
 module sql './modules/sql.bicep' = {
@@ -69,6 +76,7 @@ module sql './modules/sql.bicep' = {
   params: {
     location: location
     sqlServerName: sqlServerName
+    createSqlServer: createSqlServer
     sqlAdminLogin: sqlAdminLogin
     sqlAdminPassword: sqlAdminPassword
     sqlDbName: sqlDbName
