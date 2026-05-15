@@ -135,6 +135,60 @@ if ! command -v az >/dev/null 2>&1; then
   exit 1
 fi
 
+normalize_name() {
+  printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | sed 's/[ _]/-/g'
+}
+
+app_setting_exists() {
+  local app_type="$1"
+  local app_name="$2"
+  local setting_name="$3"
+  local count
+
+  if [[ "$app_type" == "webapp" ]]; then
+    count="$(az webapp config appsettings list \
+      --resource-group "$RESOURCE_GROUP" \
+      --name "$app_name" \
+      --query "[?name=='${setting_name}'] | length(@)" \
+      -o tsv)"
+  else
+    count="$(az functionapp config appsettings list \
+      --resource-group "$RESOURCE_GROUP" \
+      --name "$app_name" \
+      --query "[?name=='${setting_name}'] | length(@)" \
+      -o tsv)"
+  fi
+
+  [[ "$count" != "0" ]]
+}
+
+seed_app_setting_if_missing() {
+  local app_type="$1"
+  local app_name="$2"
+  local setting_name="$3"
+  local setting_value="$4"
+
+  if app_setting_exists "$app_type" "$app_name" "$setting_name"; then
+    echo "Preserving existing app setting '${setting_name}' on '${app_name}'."
+    return
+  fi
+
+  echo "Adding missing app setting '${setting_name}' to '${app_name}'."
+  if [[ "$app_type" == "webapp" ]]; then
+    az webapp config appsettings set \
+      --resource-group "$RESOURCE_GROUP" \
+      --name "$app_name" \
+      --settings "${setting_name}=${setting_value}" \
+      >/dev/null
+  else
+    az functionapp config appsettings set \
+      --resource-group "$RESOURCE_GROUP" \
+      --name "$app_name" \
+      --settings "${setting_name}=${setting_value}" \
+      >/dev/null
+  fi
+}
+
 if [[ "$(az group exists -n "$RESOURCE_GROUP")" != "true" ]]; then
   LOCATION="${LOCATION:-westus2}"
   echo "Creating resource group '${RESOURCE_GROUP}' in '${LOCATION}'..."
@@ -153,7 +207,6 @@ AZ_PARAMS=(
   "appServicePlanId=${APP_SERVICE_PLAN_ID}"
   "sqlAdminLogin=${SQL_ADMIN_LOGIN_VALUE}"
   "sqlAdminPassword=${SQL_ADMIN_PASSWORD_VALUE}"
-  "datamartConnectionString=${DATAMART_CONNECTION_STRING_VALUE}"
   "linuxFxVersion=${LINUX_FX_VERSION}"
   "functionLinuxFxVersion=${FUNCTION_LINUX_FX_VERSION}"
   "allowAzureServicesToSql=${ALLOW_AZURE_SERVICES_TO_SQL}"
@@ -175,4 +228,69 @@ else
     --resource-group "$RESOURCE_GROUP" \
     --template-file "$TEMPLATE_FILE" \
     --parameters "${AZ_PARAMS[@]}"
+
+  WEB_APP_NAME="$(az deployment group show \
+    --name "$DEPLOYMENT_NAME" \
+    --resource-group "$RESOURCE_GROUP" \
+    --query "properties.outputs.webAppName.value" \
+    -o tsv)"
+  FUNCTION_APP_NAME="$(az deployment group show \
+    --name "$DEPLOYMENT_NAME" \
+    --resource-group "$RESOURCE_GROUP" \
+    --query "properties.outputs.functionAppName.value" \
+    -o tsv)"
+  FUNCTION_STORAGE_ACCOUNT_NAME="$(az deployment group show \
+    --name "$DEPLOYMENT_NAME" \
+    --resource-group "$RESOURCE_GROUP" \
+    --query "properties.outputs.functionStorageAccountName.value" \
+    -o tsv)"
+  SQL_SERVER_FQDN="$(az deployment group show \
+    --name "$DEPLOYMENT_NAME" \
+    --resource-group "$RESOURCE_GROUP" \
+    --query "properties.outputs.sqlServerFqdn.value" \
+    -o tsv)"
+  SQL_DB_NAME="$(az deployment group show \
+    --name "$DEPLOYMENT_NAME" \
+    --resource-group "$RESOURCE_GROUP" \
+    --query "properties.outputs.sqlDbName.value" \
+    -o tsv)"
+
+  NORMALIZED_ENV="$(normalize_name "$ENVIRONMENT")"
+  if [[ -z "$NORMALIZED_ENV" ]]; then
+    DATAMART_WEB_APP_NAME="Walter-Production"
+    DATAMART_FUNCTION_APP_NAME="Walter-Notifications-Production"
+    RUM_ENVIRONMENT="production"
+  else
+    DATAMART_WEB_APP_NAME="Walter-${NORMALIZED_ENV}"
+    DATAMART_FUNCTION_APP_NAME="Walter-Notifications-${NORMALIZED_ENV}"
+    RUM_ENVIRONMENT="$NORMALIZED_ENV"
+  fi
+
+  DB_CONNECTION_VALUE="Server=tcp:${SQL_SERVER_FQDN},1433;Initial Catalog=${SQL_DB_NAME};Persist Security Info=False;User ID=${SQL_ADMIN_LOGIN_VALUE};Password=${SQL_ADMIN_PASSWORD_VALUE};MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
+  FUNCTION_STORAGE_CONNECTION="$(az storage account show-connection-string \
+    --resource-group "$RESOURCE_GROUP" \
+    --name "$FUNCTION_STORAGE_ACCOUNT_NAME" \
+    --query connectionString \
+    -o tsv)"
+
+  seed_app_setting_if_missing "webapp" "$WEB_APP_NAME" "DB_CONNECTION" "$DB_CONNECTION_VALUE"
+  seed_app_setting_if_missing "webapp" "$WEB_APP_NAME" "DM_CONNECTION" "$DATAMART_CONNECTION_STRING_VALUE"
+  seed_app_setting_if_missing "webapp" "$WEB_APP_NAME" "Datamart__ApplicationName" "$DATAMART_WEB_APP_NAME"
+  seed_app_setting_if_missing "webapp" "$WEB_APP_NAME" "Rum__Enabled" "false"
+  seed_app_setting_if_missing "webapp" "$WEB_APP_NAME" "Rum__Environment" "$RUM_ENVIRONMENT"
+  seed_app_setting_if_missing "webapp" "$WEB_APP_NAME" "Rum__ServerUrl" ""
+  seed_app_setting_if_missing "webapp" "$WEB_APP_NAME" "Rum__ServiceName" "walter-web"
+  seed_app_setting_if_missing "webapp" "$WEB_APP_NAME" "Rum__ServiceVersion" ""
+  seed_app_setting_if_missing "webapp" "$WEB_APP_NAME" "Rum__TransactionSampleRate" "0.2"
+
+  seed_app_setting_if_missing "functionapp" "$FUNCTION_APP_NAME" "AzureWebJobsStorage" "$FUNCTION_STORAGE_CONNECTION"
+  seed_app_setting_if_missing "functionapp" "$FUNCTION_APP_NAME" "FUNCTIONS_EXTENSION_VERSION" "~4"
+  seed_app_setting_if_missing "functionapp" "$FUNCTION_APP_NAME" "FUNCTIONS_WORKER_RUNTIME" "dotnet-isolated"
+  seed_app_setting_if_missing "functionapp" "$FUNCTION_APP_NAME" "DB_CONNECTION" "$DB_CONNECTION_VALUE"
+  seed_app_setting_if_missing "functionapp" "$FUNCTION_APP_NAME" "DM_CONNECTION" "$DATAMART_CONNECTION_STRING_VALUE"
+  seed_app_setting_if_missing "functionapp" "$FUNCTION_APP_NAME" "Datamart__ApplicationName" "$DATAMART_FUNCTION_APP_NAME"
+  seed_app_setting_if_missing "functionapp" "$FUNCTION_APP_NAME" "NOTIFICATIONS_SENDER_SCHEDULE" "0 */15 * * * *"
+  seed_app_setting_if_missing "functionapp" "$FUNCTION_APP_NAME" "NOTIFICATIONS_ACCRUAL_GENERATION_SCHEDULE" "0 0 9 1 * *"
+  seed_app_setting_if_missing "functionapp" "$FUNCTION_APP_NAME" "Notifications__SenderEnabled" "false"
+  seed_app_setting_if_missing "functionapp" "$FUNCTION_APP_NAME" "Notifications__AccrualGenerationEnabled" "false"
 fi
