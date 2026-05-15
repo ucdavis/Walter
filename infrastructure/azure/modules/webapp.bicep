@@ -10,9 +10,6 @@ param appServicePlanId string
 @description('Runtime stack for Linux App Service')
 param linuxFxVersion string
 
-@description('App settings to apply to the web app (merged with existing by default)')
-param appSettings object = {}
-
 resource webApp 'Microsoft.Web/sites@2025-03-01' = {
   name: webAppName
   location: location
@@ -27,12 +24,6 @@ resource webApp 'Microsoft.Web/sites@2025-03-01' = {
       minimumElasticInstanceCount: 1
     }
   }
-}
-
-resource webAppSettings 'Microsoft.Web/sites/config@2025-03-01' = if (!empty(appSettings)) {
-  name: 'appsettings'
-  parent: webApp
-  properties: appSettings
 }
 
 output webAppId string = webApp.id

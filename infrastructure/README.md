@@ -14,14 +14,19 @@ Deployed by `infrastructure/azure/main.bicep`:
 - **Azure App Service (Linux) Web App** (uses an existing App Service Plan you provide)
 - **Azure Functions App (Linux)** for scheduled notification work (uses the same existing App Service Plan)
 - **Storage Account** for the Azure Functions runtime
-- **App Setting**: `DB_CONNECTION` on the Web App (built from the SQL server/db + SQL login/password you pass at deploy time)
+- Optional: SQL firewall rule `AllowAzureServices` (`0.0.0.0`) when `allowAzureServicesToSql=true`
+
+After the Bicep deployment succeeds, `infrastructure/azure/scripts/deploy.sh` seeds missing app settings only:
+
+- **App Setting**: `DB_CONNECTION` on the Web App (built from the SQL server/db + SQL login/password when a SQL password is provided)
 - **App Setting**: `DM_CONNECTION` on the Web App for Datamart-backed reports
 - **App Setting**: `Datamart__ApplicationName` on the Web App for Datamart logging/auditing
-- **App Setting**: `DB_CONNECTION` on the Functions App for queue and notification generation access
+- **App Setting**: `DB_CONNECTION` on the Functions App for queue and notification generation access when a SQL password is provided
 - **App Setting**: `DM_CONNECTION` on the Functions App for Datamart-backed accrual generation
 - **App Setting**: `Datamart__ApplicationName` on the Functions App for Datamart logging/auditing
-- Notification timer jobs are deployed disabled by default via `Notifications__SenderEnabled=false` and `Notifications__AccrualGenerationEnabled=false`
-- Optional: SQL firewall rule `AllowAzureServices` (`0.0.0.0`) when `allowAzureServicesToSql=true`
+- Notification timer jobs are seeded disabled by default via `Notifications__SenderEnabled=false` and `Notifications__AccrualGenerationEnabled=false`
+
+App settings are additive-only defaults. The deployment script creates these settings when they are missing, but preserves existing app setting keys and values on later runs. If `DB_CONNECTION` is missing, pass `--sql-admin-password` to seed that missing setting. If `DM_CONNECTION` is missing, pass `--datamart-connection-string` or set `DM_CONNECTION` to seed it.
 
 ### Naming
 
@@ -42,7 +47,17 @@ Prereqs:
 - You’re targeting the intended subscription (check with `az account show`)
 - An **existing App Service Plan** (Linux-capable) to host the Web App (you pass its resource ID)
 
-Deploy (creates the resource group if missing):
+Deploy against existing generated SQL infrastructure (creates the resource group if missing):
+
+```bash
+infrastructure/azure/scripts/deploy.sh \
+  -g rg-walter-test \
+  --app-name walter \
+  --env test \
+  --app-service-plan-id "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Web/serverfarms/<plan>"
+```
+
+Create new SQL infrastructure:
 
 ```bash
 infrastructure/azure/scripts/deploy.sh \
@@ -62,8 +77,6 @@ infrastructure/azure/scripts/deploy.sh \
   --app-name walter \
   --env test \
   --app-service-plan-id "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Web/serverfarms/<plan>" \
-  --sql-admin-login walter \
-  --datamart-connection-string "$DM_CONNECTION" \
   --what-if
 ```
 
