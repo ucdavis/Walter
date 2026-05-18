@@ -92,11 +92,11 @@ Important connection mapping:
 
 If these are reversed, generation fails or writes to the wrong database. One observed failure was `Invalid object name 'dbo.EmployeeAccrualBalances'` when `DM_CONNECTION` pointed at the app DB.
 
-## Current Placeholder Pieces
+## Current Sender Safety Pieces
 
 The worker is intentionally safe for delivery right now:
 
-- `PlaceholderOutboundMessageRenderer` exists only as a temporary renderer.
+- `AccrualOutboundMessageRenderer` renders the current accrual template keys from queued payload JSON.
 - `DisabledOutboundEmailClient` throws if sender processing is enabled.
 - `Notifications__SenderEnabled` should remain `false` until real delivery is implemented and configured.
 
@@ -104,14 +104,14 @@ The worker is intentionally safe for delivery right now:
 
 ### 1. Real Email Rendering
 
-Replace or extend `PlaceholderOutboundMessageRenderer` with production rendering for the current template keys:
+Initial Razor/MJML rendering is implemented for the current template keys:
 
 - `accrual.employee.faculty-academic.v1`
 - `accrual.employee.staff.v1`
 - `accrual.employee.generic.v1`
 - `accrual.viewer-report.v1`
 
-Rendering should be deterministic from `OutboundMessage.PayloadJson`, `TemplateKey`, `TemplateVersion`, and `PayloadVersion`. Avoid querying accrual source data again during rendering; the queued payload is the durable message contract.
+Rendering is deterministic from `OutboundMessage.PayloadJson`, `TemplateKey`, `TemplateVersion`, and `PayloadVersion`. The renderer does not query accrual source data again during rendering; the queued payload is the durable message contract.
 
 Expected rendering output:
 
@@ -119,13 +119,17 @@ Expected rendering output:
 - Plain text body
 - HTML body
 
-Recommended tests:
+Covered by focused renderer tests:
 
-- One rendering test per template key.
+- Rendering for the employee and viewer report templates.
 - Invalid or unsupported `TemplateKey` fails clearly and leaves the message retryable/dead-letterable through sender behavior.
 - Payload version mismatch is handled intentionally.
 - HTML encoding protects recipient names, departments, and other payload fields.
-- The viewer report template can handle many departments without unreadable output.
+
+Remaining rendering follow-up:
+
+- Confirm final employee and AccrualViewer wording with product owners.
+- Preview representative real payloads before enabling sender processing.
 
 ### 2. SMTP Email Sending
 

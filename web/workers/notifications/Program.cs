@@ -1,7 +1,9 @@
+using Mjml.Net;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Razor.Templating.Core;
 using server.core.Data;
 using server.core.Services;
 using Walter.Workers.Notifications;
@@ -27,6 +29,8 @@ var host = new HostBuilder()
 
         services.Configure<NotificationWorkerOptions>(
             context.Configuration.GetSection(NotificationWorkerOptions.SectionName));
+        services.Configure<AppOptions>(
+            context.Configuration.GetSection(AppOptions.SectionName));
 
         var datamartConnectionString = context.Configuration["DM_CONNECTION"]
             ?? context.Configuration.GetConnectionString("Datamart");
@@ -56,7 +60,10 @@ var host = new HostBuilder()
         services.AddScoped<IDatamartService>(provider => provider.GetRequiredService<DatamartService>());
         services.AddScoped<IAccrualReportDataSource>(provider => provider.GetRequiredService<DatamartService>());
 
-        services.AddScoped<IOutboundMessageRenderer, PlaceholderOutboundMessageRenderer>();
+        services.AddSingleton<MjmlRenderer>();
+        services.AddRazorTemplating();
+        services.AddScoped<INotificationRenderer, RazorMjmlNotificationRenderer>();
+        services.AddScoped<IOutboundMessageRenderer, AccrualOutboundMessageRenderer>();
         services.AddScoped<IOutboundEmailClient, DisabledOutboundEmailClient>();
         services.AddScoped<IOutboundMessageSender, OutboundMessageSender>();
         services.AddSingleton(new OutboundMessageSenderOptions());

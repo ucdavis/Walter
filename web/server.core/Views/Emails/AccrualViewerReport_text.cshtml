@@ -1,0 +1,34 @@
+@using server.core.Services
+@model server.core.Services.AccrualViewerReportTemplateModel
+@{
+    var payload = Model.Payload;
+    var departmentBreakdown = payload.DepartmentBreakdown
+        .OrderByDescending(row => row.LostCostMonth)
+        .ThenBy(row => row.Department)
+        .ToList();
+}
+Monthly Vacation Accrual Report
+
+Snapshot date: @AccrualEmailTemplateFormatting.Date(payload.SnapshotAsOfDate)
+Total employees: @payload.TotalEmployees.ToString("N0")
+Departments: @payload.TotalDepartments.ToString("N0")
+At cap: @payload.AtCapCount.ToString("N0")
+Approaching cap: @payload.ApproachingCapCount.ToString("N0")
+Lost cost this month: @AccrualEmailTemplateFormatting.Currency(payload.LostCostMonth)
+Lost cost fiscal year to date: @AccrualEmailTemplateFormatting.Currency(payload.LostCostYtd)
+Waste rate: @AccrualEmailTemplateFormatting.Percent(payload.WasteRate)
+
+Department breakdown:
+@foreach (var row in departmentBreakdown)
+{
+<text>- @Html.Raw(row.Department) (@Html.Raw(row.DepartmentCode)): @row.Headcount.ToString("N0") employees, @row.AtCapCount.ToString("N0") at cap, @row.ApproachingCapCount.ToString("N0") approaching, @AccrualEmailTemplateFormatting.Currency(row.LostCostMonth) month lost cost, @AccrualEmailTemplateFormatting.Currency(row.LostCostYtd) YTD lost cost
+</text>
+}
+@if (!string.IsNullOrWhiteSpace(Model.ButtonUrl))
+{
+<text>
+Open report: @Model.ButtonUrl
+</text>
+}
+
+This email was automatically generated. Please do not reply to it.

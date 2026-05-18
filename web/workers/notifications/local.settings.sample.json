@@ -5,6 +5,7 @@
     "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
     "DB_CONNECTION": "Server=localhost,1433;Database=AppDb;User ID=sa;Password=<password>;Encrypt=False;TrustServerCertificate=True;",
     "DM_CONNECTION": "",
+    "App__BaseUrl": "http://localhost:5166",
     "Datamart__ApplicationName": "Walter-Notifications-Development",
     "NOTIFICATIONS_SENDER_SCHEDULE": "0 */15 * * * *",
     "NOTIFICATIONS_ACCRUAL_GENERATION_SCHEDULE": "0 0 9 1 * *",
