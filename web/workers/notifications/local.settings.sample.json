@@ -10,6 +10,16 @@
     "NOTIFICATIONS_SENDER_SCHEDULE": "0 */15 * * * *",
     "NOTIFICATIONS_ACCRUAL_GENERATION_SCHEDULE": "0 0 9 1 * *",
     "Notifications__SenderEnabled": "false",
-    "Notifications__AccrualGenerationEnabled": "false"
+    "Notifications__AccrualGenerationEnabled": "false",
+    "Notifications__Smtp__Host": "",
+    "Notifications__Smtp__Port": "587",
+    "Notifications__Smtp__UserName": "",
+    "Notifications__Smtp__Password": "",
+    "Notifications__Smtp__FromAddress": "",
+    "Notifications__Smtp__FromDisplayName": "Walter",
+    "Notifications__Smtp__ReplyToAddress": "",
+    "Notifications__Smtp__ReplyToDisplayName": "",
+    "Notifications__Smtp__SecureSocketMode": "StartTls",
+    "Notifications__Smtp__TimeoutMilliseconds": "100000"
   }
 }

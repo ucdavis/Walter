@@ -26,7 +26,7 @@ Both worker paths are guarded by options:
 - `Notifications__AccrualGenerationEnabled`
 - `Notifications__SenderEnabled`
 
-Sender processing should remain disabled until real rendering and SMTP delivery are configured.
+Sender processing should remain disabled until SMTP delivery is configured and the rendered templates have been previewed against representative queued payloads.
 
 ## Local Validation
 
@@ -97,14 +97,17 @@ If these are reversed, generation fails or writes to the wrong database. One obs
 The worker is intentionally safe for delivery right now:
 
 - `AccrualOutboundMessageRenderer` renders the current accrual template keys from queued payload JSON.
-- `DisabledOutboundEmailClient` throws if sender processing is enabled.
-- `Notifications__SenderEnabled` should remain `false` until real delivery is implemented and configured.
+- Razor templates now produce both MJML-backed HTML bodies and plain-text fallback bodies.
+- Email subjects are generated in code because they are short routing outcomes rather than full body templates.
+- `DisabledOutboundEmailClient` remains the registered client while `Notifications__SenderEnabled=false`.
+- If `Notifications__SenderEnabled=true`, the worker validates SMTP settings at startup before it can claim queue rows.
+- `Notifications__SenderEnabled` should remain `false` until SMTP config and rendered template previews are validated.
 
 ## Main Follow-Up Work
 
 ### 1. Real Email Rendering
 
-Initial Razor/MJML rendering is implemented for the current template keys:
+Razor/MJML rendering is implemented for the current template keys:
 
 - `accrual.employee.faculty-academic.v1`
 - `accrual.employee.staff.v1`
@@ -115,50 +118,59 @@ Rendering is deterministic from `OutboundMessage.PayloadJson`, `TemplateKey`, `T
 
 Expected rendering output:
 
-- Subject
-- Plain text body
-- HTML body
+- Subject generated in `AccrualOutboundMessageRenderer`.
+- Plain text body rendered from `*_text.cshtml`.
+- HTML body rendered from `*_mjml.cshtml` through MJML compilation.
 
 Covered by focused renderer tests:
 
-- Rendering for the employee and viewer report templates.
+- Rendering for each employee template key and the viewer report template.
 - Invalid or unsupported `TemplateKey` fails clearly and leaves the message retryable/dead-letterable through sender behavior.
 - Payload version mismatch is handled intentionally.
 - HTML encoding protects recipient names, departments, and other payload fields.
+- Invalid or absent `App__BaseUrl` omits viewer report links instead of failing delivery.
 
 Remaining rendering follow-up:
 
 - Confirm final employee and AccrualViewer wording with product owners.
 - Preview representative real payloads before enabling sender processing.
+- Consider extracting rendering into a future `server.notifications` project if `server.core` needs to become lean again. See `docs/razor-email-rendering-tradeoff.md`.
 
 ### 2. SMTP Email Sending
 
-Implement a real `IOutboundEmailClient` backed by SMTP and wire it into the worker through configuration.
+SMTP delivery is implemented through `SmtpOutboundEmailClient` and MailKit.
 
-Likely settings:
+The worker registers the SMTP client only when `Notifications__SenderEnabled=true` and the SMTP configuration is complete. Missing or partial SMTP configuration fails worker startup instead of claiming and mutating queued messages.
 
-- SMTP host
-- SMTP port
-- Username
-- Password or secret reference
-- From address
-- From display name
-- TLS/SSL mode
-- Optional reply-to
+Current settings:
 
-Keep `DisabledOutboundEmailClient` available as the default when SMTP settings are absent or sender is disabled. Do not make a partial SMTP configuration silently send mail.
+- `Notifications__Smtp__Host`
+- `Notifications__Smtp__Port`
+- `Notifications__Smtp__UserName`
+- `Notifications__Smtp__Password`
+- `Notifications__Smtp__FromAddress`
+- `Notifications__Smtp__FromDisplayName`
+- `Notifications__Smtp__ReplyToAddress`
+- `Notifications__Smtp__ReplyToDisplayName`
+- `Notifications__Smtp__SecureSocketMode` (`Auto`, `None`, `StartTlsWhenAvailable`, `StartTls`, or `SslOnConnect`)
+- `Notifications__Smtp__TimeoutMilliseconds`
 
-Recommended sender tests:
+The client sends multipart text/HTML MIME messages, supports optional SMTP authentication, and stores the generated RFC `Message-Id` on the queue row after a successful send. The SMTP relay response is logged at debug level.
+
+Covered by focused SMTP/sender tests:
 
 - SMTP client receives expected recipient, subject, text body, and HTML body.
-- Provider message id is captured when available.
+- Generated message id is captured after successful send.
+- Missing credentials skip SMTP authentication.
+- Incomplete SMTP configuration fails clearly.
+- Invalid recipient email fails before opening an SMTP connection.
 - Transient SMTP failures produce retry status.
 - Permanent failures eventually dead-letter according to existing retry policy.
 - Sender disabled path does not claim or mutate messages.
 
 ### 3. Configuration And Deployment Readiness
 
-Add worker-specific configuration docs and deployment settings for rendering and SMTP.
+Add worker-specific configuration docs and deployment settings for SMTP.
 
 Confirm Azure Function App settings include:
 
@@ -166,6 +178,7 @@ Confirm Azure Function App settings include:
 - `FUNCTIONS_WORKER_RUNTIME=dotnet-isolated`
 - `DB_CONNECTION`
 - `DM_CONNECTION`
+- `App__BaseUrl` if viewer report emails should link back to Walter
 - `Datamart__ApplicationName`
 - `NOTIFICATIONS_ACCRUAL_GENERATION_SCHEDULE`
 - `NOTIFICATIONS_SENDER_SCHEDULE`
@@ -202,17 +215,17 @@ The successful run skipped 55 recipients due to invalid or missing email. Follow
 
 ### 6. Template/Product Decisions
 
-Before finalizing templates, confirm:
+Before enabling delivery, confirm:
 
 - Employee call to action differs by employee group only where intended.
 - Faculty Academic, Staff, and Generic wording matches the domain language in `CONTEXT.md`.
 - Viewer report content should include department breakdown, total impacted employees, lost cost, waste rate, and snapshot date.
-- Links should point back to the relevant Walter accrual reporting view if a stable route exists.
+- Viewer report links should point back to `/accruals` when `App__BaseUrl` is configured.
 
 ## Fresh Session Prompt
 
 If continuing in a fresh agent session, a useful prompt is:
 
 ```text
-Continue the Walter notifications work. Read docs/notifications-handoff.md, CONTEXT.md, and the worker/services under web/workers/notifications and web/server.core/Services. The next main tasks are production email rendering for the accrual template keys and SMTP-backed IOutboundEmailClient delivery, while keeping sender disabled by default until configured. Preserve dedupe behavior and add focused tests.
+Continue the Walter notifications work. Read docs/notifications-handoff.md, docs/razor-email-rendering-tradeoff.md, CONTEXT.md, and the worker/services under web/workers/notifications and web/server.core/Services. Razor/MJML rendering and SMTP-backed delivery are implemented, but Notifications__SenderEnabled should remain false until SMTP settings and rendered template previews are validated. The next main tasks are deployment configuration, representative payload preview, observability improvements, and final product wording checks. Preserve dedupe behavior and add focused tests.
 ```

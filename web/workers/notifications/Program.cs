@@ -34,6 +34,7 @@ var host = new HostBuilder()
 
         var datamartConnectionString = context.Configuration["DM_CONNECTION"]
             ?? context.Configuration.GetConnectionString("Datamart");
+        var senderEnabled = context.Configuration.GetValue<bool>("Notifications:SenderEnabled");
         var accrualGenerationEnabled = context.Configuration.GetValue<bool>("Notifications:AccrualGenerationEnabled");
 
         if (accrualGenerationEnabled && string.IsNullOrWhiteSpace(datamartConnectionString))
@@ -64,7 +65,29 @@ var host = new HostBuilder()
         services.AddRazorTemplating();
         services.AddScoped<INotificationRenderer, RazorMjmlNotificationRenderer>();
         services.AddScoped<IOutboundMessageRenderer, AccrualOutboundMessageRenderer>();
-        services.AddScoped<IOutboundEmailClient, DisabledOutboundEmailClient>();
+        services.Configure<SmtpOutboundEmailClientOptions>(
+            context.Configuration.GetSection(SmtpOutboundEmailClientOptions.SectionName));
+        var smtpOptions = new SmtpOutboundEmailClientOptions();
+        context.Configuration.GetSection(SmtpOutboundEmailClientOptions.SectionName).Bind(smtpOptions);
+
+        // Do not claim queue rows for delivery unless SMTP is fully configured.
+        if (senderEnabled)
+        {
+            var smtpValidationErrors = smtpOptions.ValidateForSending();
+            if (smtpValidationErrors.Count > 0)
+            {
+                throw new InvalidOperationException(
+                    "Notifications__SenderEnabled=true requires complete SMTP configuration: " +
+                    string.Join(" ", smtpValidationErrors));
+            }
+
+            services.AddScoped<IOutboundEmailClient, SmtpOutboundEmailClient>();
+        }
+        else
+        {
+            services.AddScoped<IOutboundEmailClient, DisabledOutboundEmailClient>();
+        }
+
         services.AddScoped<IOutboundMessageSender, OutboundMessageSender>();
         services.AddSingleton(new OutboundMessageSenderOptions());
     })
