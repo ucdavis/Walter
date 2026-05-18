@@ -218,7 +218,7 @@ public sealed class AccrualOutboundMessageRenderer : IOutboundMessageRenderer
     {
         var appBaseUri = _appOptions.TryGetBaseUri();
         // Email delivery should not fail because the optional app URL is absent or invalid.
-        var reportUrl = appBaseUri is null ? string.Empty : new Uri(appBaseUri, "/accruals").ToString();
+        var reportUrl = appBaseUri is null ? string.Empty : BuildViewerReportUrl(appBaseUri);
 
         return new AccrualViewerReportTemplateModel
         {
@@ -228,6 +228,18 @@ public sealed class AccrualOutboundMessageRenderer : IOutboundMessageRenderer
             LayoutWidth = "720px",
             Payload = payload,
         };
+    }
+
+    private static string BuildViewerReportUrl(Uri appBaseUri)
+    {
+        var builder = new UriBuilder(appBaseUri)
+        {
+            Path = $"{appBaseUri.AbsolutePath.TrimEnd('/')}/accruals",
+            Query = string.Empty,
+            Fragment = string.Empty,
+        };
+
+        return builder.Uri.ToString();
     }
 
     /// <summary>

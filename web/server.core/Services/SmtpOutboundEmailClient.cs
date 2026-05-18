@@ -80,6 +80,11 @@ public sealed record SmtpOutboundEmailClientOptions
             errors.Add($"{SectionName}:TimeoutMilliseconds must be greater than zero.");
         }
 
+        if (!Enum.IsDefined(typeof(SmtpSecureSocketMode), SecureSocketMode))
+        {
+            errors.Add($"{SectionName}:SecureSocketMode is invalid.");
+        }
+
         return errors;
     }
 }
@@ -135,16 +140,17 @@ public sealed class SmtpOutboundEmailClient : IOutboundEmailClient
             _options.TimeoutMilliseconds,
             cancellationToken);
 
-        if (!string.IsNullOrWhiteSpace(_options.UserName))
-        {
-            await transport.AuthenticateAsync(
-                _options.UserName.Trim(),
-                _options.Password!,
-                cancellationToken);
-        }
+        await AuthenticateIfConfiguredAsync(transport, cancellationToken);
 
-        var providerResponse = await transport.SendAsync(mimeMessage, cancellationToken);
-        await transport.DisconnectAsync(quit: true, cancellationToken);
+        string providerResponse;
+        try
+        {
+            providerResponse = await transport.SendAsync(mimeMessage, cancellationToken);
+        }
+        finally
+        {
+            await DisconnectAfterSendAttemptAsync(transport);
+        }
 
         _logger.LogDebug(
             "SMTP relay accepted outbound email. MessageId={MessageId} ProviderResponse={ProviderResponse}",
@@ -152,6 +158,38 @@ public sealed class SmtpOutboundEmailClient : IOutboundEmailClient
             providerResponse);
 
         return new OutboundEmailSendResult(mimeMessage.MessageId);
+    }
+
+    /// <summary>
+    /// Performs SMTP AUTH only when credentials are configured, preserving unauthenticated relay support without sending blank credentials.
+    /// </summary>
+    private async Task AuthenticateIfConfiguredAsync(
+        ISmtpEmailTransport transport,
+        CancellationToken cancellationToken)
+    {
+        // Some trusted relays accept unauthenticated SMTP; authenticate only when a complete credential pair is configured.
+        if (!string.IsNullOrWhiteSpace(_options.UserName))
+        {
+            await transport.AuthenticateAsync(
+                _options.UserName.Trim(),
+                _options.Password!,
+                cancellationToken);
+        }
+    }
+
+    /// <summary>
+    /// Releases the SMTP connection after a send attempt without surfacing post-send cancellation as delivery failure.
+    /// </summary>
+    private async Task DisconnectAfterSendAttemptAsync(ISmtpEmailTransport transport)
+    {
+        try
+        {
+            await transport.DisconnectAsync(quit: true, CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "SMTP disconnect failed after send attempt.");
+        }
     }
 
     private MimeMessage BuildMimeMessage(OutboundEmailMessage message)
@@ -206,15 +244,19 @@ public sealed class SmtpOutboundEmailClient : IOutboundEmailClient
         return mailboxAddress;
     }
 
+    /// <summary>
+    /// Maps configured TLS mode to MailKit, rejecting undefined values so configuration cannot silently downgrade TLS behavior.
+    /// </summary>
     private static SecureSocketOptions MapSecureSocketOptions(SmtpSecureSocketMode mode)
     {
         return mode switch
         {
+            SmtpSecureSocketMode.Auto => SecureSocketOptions.Auto,
             SmtpSecureSocketMode.None => SecureSocketOptions.None,
             SmtpSecureSocketMode.StartTlsWhenAvailable => SecureSocketOptions.StartTlsWhenAvailable,
             SmtpSecureSocketMode.StartTls => SecureSocketOptions.StartTls,
             SmtpSecureSocketMode.SslOnConnect => SecureSocketOptions.SslOnConnect,
-            _ => SecureSocketOptions.Auto,
+            _ => throw new InvalidOperationException("Unsupported SMTP secure socket mode."),
         };
     }
 }

@@ -57,12 +57,15 @@ Required now:
 - `FUNCTIONS_WORKER_RUNTIME=dotnet-isolated`: required by the Azure Functions runtime.
 - `DB_CONNECTION`: app database connection string used by `AppDbContext`.
 - `DM_CONNECTION`: Datamart connection string used by `DatamartService`.
-- `App__BaseUrl`: optional absolute Walter base URL used to add links to rendered emails.
 - `Datamart__ApplicationName`: application name sent to Datamart for logging/auditing.
 - `NOTIFICATIONS_SENDER_SCHEDULE`: NCRONTAB schedule for sender processing.
 - `NOTIFICATIONS_ACCRUAL_GENERATION_SCHEDULE`: NCRONTAB schedule for monthly accrual generation.
 - `Notifications__SenderEnabled`: must be `true` before sender processing will run.
 - `Notifications__AccrualGenerationEnabled`: must be `true` before monthly accrual generation will run.
+
+Optional:
+
+- `App__BaseUrl`: absolute Walter base URL used to add links to rendered emails.
 
 Expected future settings:
 

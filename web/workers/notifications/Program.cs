@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using Razor.Templating.Core;
 using server.core.Data;
 using server.core.Services;
@@ -31,6 +32,8 @@ var host = new HostBuilder()
             context.Configuration.GetSection(NotificationWorkerOptions.SectionName));
         services.Configure<AppOptions>(
             context.Configuration.GetSection(AppOptions.SectionName));
+        services.Configure<OutboundMessageSenderOptions>(
+            context.Configuration.GetSection(OutboundMessageSenderOptions.SectionName));
 
         var datamartConnectionString = context.Configuration["DM_CONNECTION"]
             ?? context.Configuration.GetConnectionString("Datamart");
@@ -89,7 +92,8 @@ var host = new HostBuilder()
         }
 
         services.AddScoped<IOutboundMessageSender, OutboundMessageSender>();
-        services.AddSingleton(new OutboundMessageSenderOptions());
+        services.AddSingleton(provider =>
+            provider.GetRequiredService<IOptions<OutboundMessageSenderOptions>>().Value);
     })
     .Build();
 

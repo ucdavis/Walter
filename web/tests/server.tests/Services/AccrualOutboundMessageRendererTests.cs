@@ -173,11 +173,11 @@ public sealed class AccrualOutboundMessageRendererTests
         var rendered = await renderer.RenderAsync(message);
 
         rendered.Subject.Should().Be("Monthly Vacation Accrual Report");
-        rendered.TextBody.Should().Contain("Open report: https://walter.example.edu/accruals");
+        rendered.TextBody.Should().Contain("Open report: https://walter.example.edu/root/accruals");
         rendered.HtmlBody.Should().Contain("Monthly Vacation Accrual Report");
         rendered.HtmlBody.Should().Contain("PLANT SCIENCES");
         rendered.HtmlBody.Should().Contain("$4,691");
-        rendered.HtmlBody.Should().Contain("https://walter.example.edu/accruals");
+        rendered.HtmlBody.Should().Contain("https://walter.example.edu/root/accruals");
         rendered.HtmlBody.Should().NotContain("<mjml");
     }
 

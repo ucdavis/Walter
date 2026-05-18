@@ -113,6 +113,52 @@ public sealed class SmtpOutboundEmailClientTests
     }
 
     [Fact]
+    public void Constructor_fails_when_secure_socket_mode_is_invalid()
+    {
+        var options = new SmtpOutboundEmailClientOptions
+        {
+            Host = "smtp.example.edu",
+            FromAddress = "walter@example.edu",
+            SecureSocketMode = (SmtpSecureSocketMode)999,
+        };
+
+        var act = () => new SmtpOutboundEmailClient(
+            options,
+            () => new FakeSmtpEmailTransport());
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*SecureSocketMode is invalid*");
+    }
+
+    [Fact]
+    public async Task SendAsync_uses_non_cancelable_disconnect_after_send_succeeds()
+    {
+        using var cancellation = new CancellationTokenSource();
+        var transport = new FakeSmtpEmailTransport
+        {
+            AfterSend = cancellation.Cancel,
+        };
+        var client = new SmtpOutboundEmailClient(
+            new SmtpOutboundEmailClientOptions
+            {
+                Host = "smtp.example.edu",
+                FromAddress = "walter@example.edu",
+            },
+            () => transport);
+
+        var result = await client.SendAsync(new OutboundEmailMessage
+        {
+            ToEmail = "person@example.edu",
+            Subject = "Subject",
+            TextBody = "Text",
+            HtmlBody = "<p>HTML</p>",
+        }, cancellation.Token);
+
+        result.ProviderMessageId.Should().NotBeNullOrWhiteSpace();
+        transport.DisconnectCancellationToken.CanBeCanceled.Should().BeFalse();
+    }
+
+    [Fact]
     public async Task SendAsync_fails_before_connecting_when_recipient_email_is_invalid()
     {
         var transport = new FakeSmtpEmailTransport();
@@ -148,8 +194,10 @@ public sealed class SmtpOutboundEmailClientTests
         public MimeMessage? SentMessage { get; private set; }
         public string SendResponse { get; init; } = "250 OK";
         public bool? DisconnectQuit { get; private set; }
+        public CancellationToken DisconnectCancellationToken { get; private set; }
         public int ConnectCallCount { get; private set; }
         public int AuthenticateCallCount { get; private set; }
+        public Action? AfterSend { get; init; }
 
         public Task ConnectAsync(
             string host,
@@ -182,6 +230,7 @@ public sealed class SmtpOutboundEmailClientTests
             CancellationToken cancellationToken)
         {
             SentMessage = message;
+            AfterSend?.Invoke();
             return Task.FromResult(SendResponse);
         }
 
@@ -190,6 +239,8 @@ public sealed class SmtpOutboundEmailClientTests
             CancellationToken cancellationToken)
         {
             DisconnectQuit = quit;
+            DisconnectCancellationToken = cancellationToken;
+            cancellationToken.ThrowIfCancellationRequested();
             return Task.CompletedTask;
         }
 

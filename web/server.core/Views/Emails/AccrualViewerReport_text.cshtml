@@ -21,10 +21,10 @@ Waste rate: @AccrualEmailTemplateFormatting.Percent(payload.WasteRate)
 Department breakdown:
 @foreach (var row in departmentBreakdown)
 {
-<text>- @Html.Raw(row.Department) (@Html.Raw(row.DepartmentCode)): @row.Headcount.ToString("N0") employees, @row.AtCapCount.ToString("N0") at cap, @row.ApproachingCapCount.ToString("N0") approaching, @AccrualEmailTemplateFormatting.Currency(row.LostCostMonth) month lost cost, @AccrualEmailTemplateFormatting.Currency(row.LostCostYtd) YTD lost cost
+<text>- @row.Department (@row.DepartmentCode): @row.Headcount.ToString("N0") employees, @row.AtCapCount.ToString("N0") at cap, @row.ApproachingCapCount.ToString("N0") approaching, @AccrualEmailTemplateFormatting.Currency(row.LostCostMonth) month lost cost, @AccrualEmailTemplateFormatting.Currency(row.LostCostYtd) YTD lost cost
 </text>
 }
-@if (!string.IsNullOrWhiteSpace(Model.ButtonUrl))
+@if (!string.IsNullOrWhiteSpace(Model.ButtonText) && !string.IsNullOrWhiteSpace(Model.ButtonUrl))
 {
 <text>
 Open report: @Model.ButtonUrl

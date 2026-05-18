@@ -6,6 +6,8 @@ namespace server.core.Services;
 
 public sealed record OutboundMessageSenderOptions
 {
+    public const string SectionName = "OutboundMessageSenderOptions";
+
     public int BatchSize { get; init; } = 500;
     public int MaxAttempts { get; init; } = 5;
     public TimeSpan LockDuration { get; init; } = TimeSpan.FromMinutes(15);
