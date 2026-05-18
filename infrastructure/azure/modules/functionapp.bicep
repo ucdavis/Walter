@@ -13,9 +13,6 @@ param appServicePlanId string
 @description('Runtime stack for Linux Azure Functions')
 param linuxFxVersion string
 
-@description('App settings to apply to the function app')
-param appSettings object = {}
-
 @description('Whether the Function App should keep workers always warm')
 param alwaysOn bool = true
 
@@ -53,8 +50,6 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   }
 }
 
-var storageConnection = 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${storageAccount.listKeys().keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
-
 resource functionApp 'Microsoft.Web/sites@2025-03-01' = {
   name: functionAppName
   location: location
@@ -83,16 +78,6 @@ resource functionAppAuth 'Microsoft.Web/sites/config@2025-03-01' = {
       enabled: siteAuthEnabled
     }
   }
-}
-
-resource functionAppSettings 'Microsoft.Web/sites/config@2025-03-01' = {
-  name: 'appsettings'
-  parent: functionApp
-  properties: union({
-    AzureWebJobsStorage: storageConnection
-    FUNCTIONS_EXTENSION_VERSION: '~4'
-    FUNCTIONS_WORKER_RUNTIME: 'dotnet-isolated'
-  }, appSettings)
 }
 
 output functionAppId string = functionApp.id
