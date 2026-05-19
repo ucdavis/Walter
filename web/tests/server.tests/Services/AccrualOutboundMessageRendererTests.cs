@@ -131,6 +131,7 @@ public sealed class AccrualOutboundMessageRendererTests
 
         var rendered = await renderer.RenderAsync(message);
 
+        rendered.Subject.Should().Be("Action Needed: Your Vacation Accrual is at 91.7% of Maximum");
         rendered.HtmlBody.Should().Contain(expectedMessage);
         rendered.TextBody.Should().Contain(expectedMessage);
     }
