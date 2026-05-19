@@ -5,7 +5,11 @@ import {
   hasSystemRole,
 } from '@/shared/auth/roleAccess.ts';
 import { useUser } from '@/shared/auth/UserContext.tsx';
-import { MegaphoneIcon, UsersIcon } from '@heroicons/react/24/outline';
+import {
+  EnvelopeIcon,
+  MegaphoneIcon,
+  UsersIcon,
+} from '@heroicons/react/24/outline';
 
 export const Route = createFileRoute('/(authenticated)/admin/')({
   component: RouteComponent,
@@ -62,10 +66,16 @@ function RouteComponent() {
             </Link>
           ) : null}
           {isAdmin ? (
-            <Link className="btn btn-primary btn-lg" to="/admin/notification">
-              <MegaphoneIcon className="w-4 h-4" />
-              Site Notification
-            </Link>
+            <>
+              <Link className="btn btn-primary btn-lg" to="/admin/notification">
+                <MegaphoneIcon className="w-4 h-4" />
+                Site Notification
+              </Link>
+              <Link className="btn btn-primary btn-lg" to="/admin/email-preview">
+                <EnvelopeIcon className="w-4 h-4" />
+                Email Preview
+              </Link>
+            </>
           ) : null}
         </div>
       </div>
