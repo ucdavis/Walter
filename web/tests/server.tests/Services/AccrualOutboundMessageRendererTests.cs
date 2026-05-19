@@ -43,11 +43,16 @@ public sealed class AccrualOutboundMessageRendererTests
         var rendered = await renderer.RenderAsync(message);
 
         rendered.Subject.Should().Be("Action Needed: Your Vacation Accrual is at 100% of Maximum");
-        rendered.TextBody.Should().Contain("Please work with your supervisor");
-        rendered.TextBody.Should().Contain("Balance: 240.0 hours");
+        rendered.TextBody.Should().Contain("Dear Staff Member,");
+        rendered.TextBody.Should().Contain("you will stop accruing vacation hours until your balance falls below the cap");
+        rendered.TextBody.Should().Contain("Open TRS Time Reporting");
+        rendered.TextBody.Should().Contain("https://trs.ucdavis.edu/timesheet");
+        rendered.TextBody.Should().Contain("240.0 hours");
         rendered.HtmlBody.Should().Contain("Walter");
-        rendered.HtmlBody.Should().Contain("Your vacation accrual balance is at the cap");
-        rendered.HtmlBody.Should().Contain("Please work with your supervisor");
+        rendered.HtmlBody.Should().Contain("Dear Staff Member,");
+        rendered.HtmlBody.Should().Contain("you will stop accruing vacation hours until your balance falls below the cap");
+        rendered.HtmlBody.Should().Contain("Open TRS Time Reporting");
+        rendered.HtmlBody.Should().Contain("https://trs.ucdavis.edu/timesheet");
         rendered.HtmlBody.Should().Contain("240.0 hours");
         rendered.HtmlBody.Should().NotContain("<mjml");
     }
@@ -79,8 +84,8 @@ public sealed class AccrualOutboundMessageRendererTests
         var rendered = await renderer.RenderAsync(message);
 
         rendered.HtmlBody.Should().Contain("Recipient &lt;Unsafe&gt;");
-        rendered.HtmlBody.Should().Contain("PLANT &lt;SCIENCES&gt;");
         rendered.HtmlBody.Should().NotContain("Recipient <Unsafe>");
+        rendered.HtmlBody.Should().NotContain("PLANT <SCIENCES>");
         rendered.HtmlBody.Should().NotContain("<script>alert('classification')</script>");
     }
 
@@ -88,15 +93,15 @@ public sealed class AccrualOutboundMessageRendererTests
     [InlineData(
         "accrual.employee.faculty-academic.v1",
         nameof(AccrualEmployeeGroup.FacultyAcademic),
-        "Faculty and academic appointees")]
+        "work with your department chair")]
     [InlineData(
         "accrual.employee.staff.v1",
         nameof(AccrualEmployeeGroup.Staff),
-        "Please work with your supervisor")]
+        "Please submit your leave request")]
     [InlineData(
         "accrual.employee.generic.v1",
         nameof(AccrualEmployeeGroup.Generic),
-        "Please review your vacation balance")]
+        "Your current vacation balance")]
     public async Task RenderAsync_renders_each_employee_template_key(
         string templateKey,
         string employeeGroup,
