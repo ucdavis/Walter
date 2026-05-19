@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using Microsoft.Extensions.Options;
 using server.core.Domain;
 
 namespace server.core.Services;
@@ -102,5 +103,191 @@ public sealed class PlaceholderOutboundMessageRenderer : IOutboundMessageRendere
         }
 
         return property.TryGetDecimal(out var value) ? value : null;
+    }
+}
+
+public sealed class AccrualOutboundMessageRenderer : IOutboundMessageRenderer
+{
+    private const int SupportedTemplateVersion = 1;
+    private const int SupportedPayloadVersion = 1;
+    private const string EmployeeHtmlTemplatePath = "/Views/Emails/AccrualEmployeeNotification_mjml.cshtml";
+    private const string EmployeeTextTemplatePath = "/Views/Emails/AccrualEmployeeNotification_text.cshtml";
+    private const string ViewerReportHtmlTemplatePath = "/Views/Emails/AccrualViewerReport_mjml.cshtml";
+    private const string ViewerReportTextTemplatePath = "/Views/Emails/AccrualViewerReport_text.cshtml";
+
+    private static readonly JsonSerializerOptions PayloadJsonOptions = new(JsonSerializerDefaults.Web);
+
+    private readonly INotificationRenderer _notificationRenderer;
+    private readonly AppOptions _appOptions;
+
+    public AccrualOutboundMessageRenderer(
+        INotificationRenderer notificationRenderer,
+        IOptions<AppOptions> appOptions)
+    {
+        _notificationRenderer = notificationRenderer;
+        _appOptions = appOptions.Value;
+    }
+
+    /// <summary>
+    /// Renders accrual notification messages from the durable queued payload only.
+    /// </summary>
+    public async Task<RenderedOutboundMessage> RenderAsync(
+        OutboundMessage message,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(message);
+        cancellationToken.ThrowIfCancellationRequested();
+        ValidateVersions(message);
+
+        return message.TemplateKey switch
+        {
+            "accrual.employee.faculty-academic.v1" or
+            "accrual.employee.staff.v1" or
+            "accrual.employee.generic.v1" => await RenderEmployeeAsync(message, cancellationToken),
+            AccrualNotificationMessageBuilder.ViewerReportTemplateKey => await RenderViewerReportAsync(
+                message,
+                cancellationToken),
+            _ => throw new InvalidOperationException(
+                $"Unsupported outbound message template key '{message.TemplateKey}'."),
+        };
+    }
+
+    private async Task<RenderedOutboundMessage> RenderEmployeeAsync(
+        OutboundMessage message,
+        CancellationToken cancellationToken)
+    {
+        var payload = DeserializePayload<AccrualEmployeeNotificationPayload>(message);
+        var model = BuildEmployeeModel(message, payload);
+        var text = await _notificationRenderer.RenderRazorAsync(
+            EmployeeTextTemplatePath,
+            model,
+            cancellationToken);
+        var html = await _notificationRenderer.RenderMjmlAsync(
+            EmployeeHtmlTemplatePath,
+            model,
+            cancellationToken);
+
+        return new RenderedOutboundMessage(
+            BuildEmployeeSubject(payload),
+            text,
+            html);
+    }
+
+    private async Task<RenderedOutboundMessage> RenderViewerReportAsync(
+        OutboundMessage message,
+        CancellationToken cancellationToken)
+    {
+        var payload = DeserializePayload<AccrualViewerReportPayload>(message);
+        var model = BuildViewerReportModel(payload);
+        var text = await _notificationRenderer.RenderRazorAsync(
+            ViewerReportTextTemplatePath,
+            model,
+            cancellationToken);
+        var html = await _notificationRenderer.RenderMjmlAsync(
+            ViewerReportHtmlTemplatePath,
+            model,
+            cancellationToken);
+
+        return new RenderedOutboundMessage(
+            "Monthly Vacation Accrual Report",
+            text,
+            html);
+    }
+
+    private AccrualEmployeeNotificationTemplateModel BuildEmployeeModel(
+        OutboundMessage message,
+        AccrualEmployeeNotificationPayload payload)
+    {
+        var variant = message.TemplateKey switch
+        {
+            "accrual.employee.faculty-academic.v1" => AccrualEmployeeNotificationVariant.FacultyAcademic,
+            "accrual.employee.staff.v1" => AccrualEmployeeNotificationVariant.Staff,
+            _ => AccrualEmployeeNotificationVariant.Generic,
+        };
+
+        return new AccrualEmployeeNotificationTemplateModel
+        {
+            AppName = _appOptions.Name,
+            GreetingName = NormalizeDisplayName(message.RecipientName) ?? payload.EmployeeName,
+            Payload = payload,
+            Variant = variant,
+        };
+    }
+
+    private AccrualViewerReportTemplateModel BuildViewerReportModel(AccrualViewerReportPayload payload)
+    {
+        var appBaseUri = _appOptions.TryGetBaseUri();
+        // Email delivery should not fail because the optional app URL is absent or invalid.
+        var reportUrl = appBaseUri is null ? string.Empty : BuildViewerReportUrl(appBaseUri);
+
+        return new AccrualViewerReportTemplateModel
+        {
+            AppName = _appOptions.Name,
+            ButtonText = string.IsNullOrWhiteSpace(reportUrl) ? string.Empty : "Open Accrual Report",
+            ButtonUrl = reportUrl,
+            LayoutWidth = "720px",
+            Payload = payload,
+        };
+    }
+
+    private static string BuildViewerReportUrl(Uri appBaseUri)
+    {
+        var builder = new UriBuilder(appBaseUri)
+        {
+            Path = $"{appBaseUri.AbsolutePath.TrimEnd('/')}/accruals",
+            Query = string.Empty,
+            Fragment = string.Empty,
+        };
+
+        return builder.Uri.ToString();
+    }
+
+    /// <summary>
+    /// Protects the queued message contract from being rendered by an incompatible template version.
+    /// </summary>
+    private static void ValidateVersions(OutboundMessage message)
+    {
+        if (message.TemplateVersion != SupportedTemplateVersion)
+        {
+            throw new InvalidOperationException(
+                $"Unsupported template version '{message.TemplateVersion}' for template '{message.TemplateKey}'.");
+        }
+
+        if (message.PayloadVersion != SupportedPayloadVersion)
+        {
+            throw new InvalidOperationException(
+                $"Unsupported payload version '{message.PayloadVersion}' for template '{message.TemplateKey}'.");
+        }
+    }
+
+    /// <summary>
+    /// Deserializes the retained payload JSON without reaching back to source systems during retries.
+    /// </summary>
+    private static TPayload DeserializePayload<TPayload>(OutboundMessage message)
+    {
+        try
+        {
+            return JsonSerializer.Deserialize<TPayload>(message.PayloadJson, PayloadJsonOptions)
+                ?? throw new InvalidOperationException(
+                    $"Payload JSON for template '{message.TemplateKey}' deserialized to null.");
+        }
+        catch (JsonException ex)
+        {
+            throw new InvalidOperationException(
+                $"Payload JSON for template '{message.TemplateKey}' is invalid.",
+                ex);
+        }
+    }
+
+    private static string? NormalizeDisplayName(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    }
+
+    private static string BuildEmployeeSubject(AccrualEmployeeNotificationPayload payload)
+    {
+        return payload.PctOfCap > 0m
+            ? $"Action Needed: Your Vacation Accrual is at {AccrualEmailTemplateFormatting.Percent(payload.PctOfCap)} of Maximum"
+            : "Action Needed: Your Vacation Accrual Balance";
     }
 }

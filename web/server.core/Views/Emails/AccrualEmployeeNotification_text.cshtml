@@ -1,0 +1,49 @@
+@using server.core.Models
+@using server.core.Services
+@model server.core.Services.AccrualEmployeeNotificationTemplateModel
+@{
+    var payload = Model.Payload;
+    var header = payload.Status switch
+    {
+        nameof(AccrualNotificationStatus.AtCap) => "Your vacation accrual balance is at the cap",
+        nameof(AccrualNotificationStatus.ApproachingCap) => "Your vacation accrual balance is approaching the cap",
+        _ => "Your vacation accrual balance needs review",
+    };
+    var primaryMessage = Model.Variant switch
+    {
+        AccrualEmployeeNotificationVariant.FacultyAcademic =>
+            "Faculty and academic appointees are expected to manage vacation usage so balances do not remain at or near the maximum accrual limit.",
+        AccrualEmployeeNotificationVariant.Staff =>
+            "Please work with your supervisor to plan vacation usage and keep your balance below the maximum accrual limit.",
+        _ =>
+            "Please review your vacation balance and plan usage as needed to keep your accruals below the maximum limit.",
+    };
+    var monthsToCap = payload.MonthsToCap switch
+    {
+        null => "Not projected",
+        <= 0 => "At cap now",
+        1 => "1 month",
+        var months => $"{months} months",
+    };
+    var lastVacationDate = payload.LastVacationDate is null
+        ? "No recent vacation date found"
+        : AccrualEmailTemplateFormatting.Date(payload.LastVacationDate.Value);
+}
+@header
+
+Hello @Html.Raw(Model.GreetingName),
+
+@primaryMessage
+
+Snapshot date: @AccrualEmailTemplateFormatting.Date(payload.SnapshotAsOfDate)
+Balance: @AccrualEmailTemplateFormatting.Hours(payload.BalanceHours)
+Cap: @AccrualEmailTemplateFormatting.Hours(payload.CapHours)
+Percent of cap: @AccrualEmailTemplateFormatting.Percent(payload.PctOfCap)
+Status: @AccrualEmailTemplateFormatting.Status(payload.Status)
+Monthly accrual: @AccrualEmailTemplateFormatting.Hours(payload.AccrualHoursPerMonth)
+Projected time to cap: @monthsToCap
+Last vacation date: @lastVacationDate
+Department: @Html.Raw(payload.Department) (@Html.Raw(payload.DepartmentCode))
+Classification: @Html.Raw(payload.Classification)
+
+This email was automatically generated. Please do not reply to it.

@@ -2,7 +2,7 @@
 
 Azure Functions isolated worker for Walter scheduled notification jobs.
 
-This project owns timer-triggered notification work that should not run inside the ASP.NET web app process. It references `server.core` for queueing, accrual notification generation, placeholder rendering, and outbound message sending.
+This project owns timer-triggered notification work that should not run inside the ASP.NET web app process. It references `server.core` for queueing, accrual notification generation, Razor/MJML rendering, and outbound message sending.
 
 ## Functions
 
@@ -34,7 +34,7 @@ The worker currently uses:
 
 - `OutboundMessageQueue` for queue persistence.
 - `AccrualNotificationGenerator` for monthly accrual queue generation.
-- `PlaceholderOutboundMessageRenderer` for temporary email rendering.
+- `AccrualOutboundMessageRenderer` with Razor/MJML templates for accrual email rendering.
 - `DisabledOutboundEmailClient`, which throws if sending is enabled before real email delivery is configured.
 - `DatamartService` for accrual report data and other Datamart-backed queries.
 
@@ -63,10 +63,13 @@ Required now:
 - `Notifications__SenderEnabled`: must be `true` before sender processing will run.
 - `Notifications__AccrualGenerationEnabled`: must be `true` before monthly accrual generation will run.
 
+Optional:
+
+- `App__BaseUrl`: absolute Walter base URL used to add links to rendered emails.
+
 Expected future settings:
 
 - SMTP/SparkPost settings for the real outbound email client.
-- MJML/Razor template settings if needed by the final renderer.
 
 ## Local Development
 
