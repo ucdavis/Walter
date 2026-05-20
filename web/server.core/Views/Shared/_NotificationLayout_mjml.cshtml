@@ -4,39 +4,65 @@
   <mj-head>
     <mj-preview>@Model.AppName notification</mj-preview>
     <mj-attributes>
-      <mj-all font-family="Helvetica, Arial, sans-serif" />
-      <mj-text color="#172033" font-size="16px" line-height="1.65" />
+      <mj-all font-family="proxima-nova, Arial, Helvetica, sans-serif" />
+      <mj-text color="#2f2f2f" font-size="16px" line-height="1.65" />
       <mj-button background-color="#0047ba"
                  color="#ffffff"
-                 border-radius="6px"
+                 border-radius="4px"
                  font-size="16px"
                  font-weight="600"
-                 inner-padding="14px 28px" />
+                 inner-padding="13px 24px" />
     </mj-attributes>
   </mj-head>
-  <mj-body background-color="#eef3f8"
+  <mj-body background-color="#fafafa"
            width="@(string.IsNullOrWhiteSpace(Model.LayoutWidth) ? "640px" : Model.LayoutWidth)">
-    <mj-section padding-top="32px" padding-bottom="14px">
+    <mj-section padding="26px 24px 14px 24px">
       <mj-column>
-        <mj-text align="center"
-                 font-size="28px"
-                 font-weight="700"
-                 color="#172033"
-                 padding="0px">
-          @Model.AppName
-        </mj-text>
+        <mj-table cellpadding="0" cellspacing="0" role="presentation" padding="0px">
+          <tr>
+            <td style="height:48px;line-height:0;mso-line-height-rule:exactly;padding:0 10px 0 0;vertical-align:middle;width:48px;">
+              @if (!string.IsNullOrWhiteSpace(Model.LogoUrl))
+              {
+              <img alt="" height="46" src="@Model.LogoUrl" style="border:0;display:block;height:46px;line-height:0;max-height:46px;max-width:46px;width:46px;" width="46" />
+              }
+            </td>
+            <td style="height:48px;padding:0;vertical-align:middle;">
+              <div style="color:#2f2f2f;font-size:22px;font-weight:700;line-height:1.2;">
+                @Model.AppName
+              </div>
+              <div style="color:#7c7c7c;font-size:12px;font-weight:700;letter-spacing:1.8px;line-height:1.5;text-transform:uppercase;">
+                Notification
+              </div>
+            </td>
+          </tr>
+        </mj-table>
       </mj-column>
     </mj-section>
 
-    <mj-section background-color="#ffffff" border-radius="8px" padding="0px">
+    <mj-section background-color="#0047ba" padding="0px">
+      <mj-column width="72%">
+        <mj-spacer height="4px" />
+      </mj-column>
+      <mj-column width="18%" background-color="#ffbf00">
+        <mj-spacer height="4px" />
+      </mj-column>
+      <mj-column width="10%" background-color="#c10230">
+        <mj-spacer height="4px" />
+      </mj-column>
+    </mj-section>
+
+    <mj-section background-color="#ffffff"
+                border="1px solid #e9e3ee"
+                border-radius="0 0 4px 4px"
+                padding="0px">
       <mj-column padding="0px">
         @RenderBody()
       </mj-column>
     </mj-section>
 
-    <mj-section padding-top="16px" padding-bottom="32px">
+    <mj-section padding="16px 24px 30px 24px">
       <mj-column>
-        <mj-text align="center" font-size="12px" line-height="1.5" color="#5d6b82">
+        <mj-text align="center" font-size="12px" line-height="1.5" color="#7c7c7c" padding="0px">
           This email was automatically generated. Please do not reply to it.
         </mj-text>
       </mj-column>
