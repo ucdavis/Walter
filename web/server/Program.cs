@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Mjml.Net;
+using Razor.Templating.Core;
 using server.core.Data;
 using server.HealthChecks;
 using server.Helpers;
@@ -53,6 +55,7 @@ builder.Services.AddAuthorizationPolicies();
 builder.Services.Configure<IamSettings>(builder.Configuration.GetSection("Iam"));
 builder.Services.Configure<FinancialSettings>(builder.Configuration.GetSection("Financial"));
 builder.Services.Configure<RumOptions>(builder.Configuration.GetSection("Rum"));
+builder.Services.Configure<AppOptions>(builder.Configuration.GetSection(AppOptions.SectionName));
 builder.Services.Configure<DatamartOptions>(options =>
 {
     options.ConnectionString = builder.Configuration["DM_CONNECTION"]
@@ -79,6 +82,10 @@ builder.Services.AddScoped<IEntraUserAttributeService, EntraUserAttributeService
 builder.Services.AddScoped<IGraphService, GraphService>();
 builder.Services.AddHttpClient<IIdentityService, IdentityService>();
 builder.Services.AddScoped<IUserProfileOrchestrator, UserProfileOrchestrator>();
+builder.Services.AddSingleton<MjmlRenderer>();
+builder.Services.AddRazorTemplating();
+builder.Services.AddScoped<INotificationRenderer, RazorMjmlNotificationRenderer>();
+builder.Services.AddScoped<IOutboundMessageRenderer, AccrualOutboundMessageRenderer>();
 // add auth policies here
 
 builder.Services.AddDbContextPool<AppDbContext>(o => o.UseSqlServer(conn, opt => opt.MigrationsAssembly("server.core")));

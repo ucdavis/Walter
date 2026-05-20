@@ -77,7 +77,7 @@ public sealed class PlaceholderOutboundMessageRenderer : IOutboundMessageRendere
             var pctOfCap = TryReadDecimal(formattedPayload, "pctOfCap");
             return pctOfCap is null
                 ? "Action Needed: Your Vacation Accrual Balance"
-                : $"Action Needed: Your Vacation Accrual is at {pctOfCap.Value:0}% of Maximum";
+                : $"Action Needed: Your Vacation Accrual is at {AccrualEmailTemplateFormatting.Percent(pctOfCap.Value)} of Maximum";
         }
 
         if (message.NotificationType == AccrualNotificationMessageBuilder.ViewerReportNotificationType)
@@ -209,6 +209,8 @@ public sealed class AccrualOutboundMessageRenderer : IOutboundMessageRenderer
         {
             AppName = _appOptions.Name,
             GreetingName = NormalizeDisplayName(message.RecipientName) ?? payload.EmployeeName,
+            LogoUrl = BuildAppAssetUrl(_appOptions.TryGetBaseUri(), "/apple-touch-icon.png")
+                ?? NotificationTemplateModelBase.DefaultLogoUrl,
             Payload = payload,
             Variant = variant,
         };
@@ -226,6 +228,8 @@ public sealed class AccrualOutboundMessageRenderer : IOutboundMessageRenderer
             ButtonText = string.IsNullOrWhiteSpace(reportUrl) ? string.Empty : "Open Accrual Report",
             ButtonUrl = reportUrl,
             LayoutWidth = "720px",
+            LogoUrl = BuildAppAssetUrl(appBaseUri, "/apple-touch-icon.png")
+                ?? NotificationTemplateModelBase.DefaultLogoUrl,
             Payload = payload,
         };
     }
@@ -235,6 +239,23 @@ public sealed class AccrualOutboundMessageRenderer : IOutboundMessageRenderer
         var builder = new UriBuilder(appBaseUri)
         {
             Path = $"{appBaseUri.AbsolutePath.TrimEnd('/')}/accruals",
+            Query = string.Empty,
+            Fragment = string.Empty,
+        };
+
+        return builder.Uri.ToString();
+    }
+
+    private static string? BuildAppAssetUrl(Uri? appBaseUri, string assetPath)
+    {
+        if (appBaseUri is null)
+        {
+            return null;
+        }
+
+        var builder = new UriBuilder(appBaseUri)
+        {
+            Path = $"{appBaseUri.AbsolutePath.TrimEnd('/')}/{assetPath.TrimStart('/')}",
             Query = string.Empty,
             Fragment = string.Empty,
         };
@@ -286,8 +307,6 @@ public sealed class AccrualOutboundMessageRenderer : IOutboundMessageRenderer
 
     private static string BuildEmployeeSubject(AccrualEmployeeNotificationPayload payload)
     {
-        return payload.PctOfCap > 0m
-            ? $"Action Needed: Your Vacation Accrual is at {AccrualEmailTemplateFormatting.Percent(payload.PctOfCap)} of Maximum"
-            : "Action Needed: Your Vacation Accrual Balance";
+        return $"Action Needed: Your Vacation Accrual is at {AccrualEmailTemplateFormatting.Percent(payload.PctOfCap)} of Maximum";
     }
 }

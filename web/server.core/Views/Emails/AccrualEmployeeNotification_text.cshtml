@@ -1,49 +1,44 @@
-@using server.core.Models
 @using server.core.Services
 @model server.core.Services.AccrualEmployeeNotificationTemplateModel
 @{
     var payload = Model.Payload;
-    var header = payload.Status switch
-    {
-        nameof(AccrualNotificationStatus.AtCap) => "Your vacation accrual balance is at the cap",
-        nameof(AccrualNotificationStatus.ApproachingCap) => "Your vacation accrual balance is approaching the cap",
-        _ => "Your vacation accrual balance needs review",
-    };
-    var primaryMessage = Model.Variant switch
-    {
-        AccrualEmployeeNotificationVariant.FacultyAcademic =>
-            "Faculty and academic appointees are expected to manage vacation usage so balances do not remain at or near the maximum accrual limit.",
-        AccrualEmployeeNotificationVariant.Staff =>
-            "Please work with your supervisor to plan vacation usage and keep your balance below the maximum accrual limit.",
-        _ =>
-            "Please review your vacation balance and plan usage as needed to keep your accruals below the maximum limit.",
-    };
-    var monthsToCap = payload.MonthsToCap switch
-    {
-        null => "Not projected",
-        <= 0 => "At cap now",
-        1 => "1 month",
-        var months => $"{months} months",
-    };
-    var lastVacationDate = payload.LastVacationDate is null
-        ? "No recent vacation date found"
-        : AccrualEmailTemplateFormatting.Date(payload.LastVacationDate.Value);
+    var balanceHours = AccrualEmailTemplateFormatting.Hours(payload.BalanceHours);
+    var capHours = AccrualEmailTemplateFormatting.Hours(payload.CapHours);
+    var pctOfCap = AccrualEmailTemplateFormatting.Percent(payload.PctOfCap);
+    const string trsUrl = "https://trs.ucdavis.edu/timesheet";
 }
-@header
+Dear @Html.Raw(Model.GreetingName),
 
-Hello @Html.Raw(Model.GreetingName),
+@if (Model.Variant == AccrualEmployeeNotificationVariant.FacultyAcademic)
+{
+<text>This is an automated notification from the CAES HR Office regarding your vacation accrual balance.
 
-@primaryMessage
+As a fiscal year academic appointee, your current vacation balance is @balanceHours, which is @pctOfCap of your maximum accrual cap of @capHours.
 
-Snapshot date: @AccrualEmailTemplateFormatting.Date(payload.SnapshotAsOfDate)
-Balance: @AccrualEmailTemplateFormatting.Hours(payload.BalanceHours)
-Cap: @AccrualEmailTemplateFormatting.Hours(payload.CapHours)
-Percent of cap: @AccrualEmailTemplateFormatting.Percent(payload.PctOfCap)
-Status: @AccrualEmailTemplateFormatting.Status(payload.Status)
-Monthly accrual: @AccrualEmailTemplateFormatting.Hours(payload.AccrualHoursPerMonth)
-Projected time to cap: @monthsToCap
-Last vacation date: @lastVacationDate
-Department: @Html.Raw(payload.Department) (@Html.Raw(payload.DepartmentCode))
-Classification: @Html.Raw(payload.Classification)
+Per UC policy (PPSM 2.210), vacation accrual stops entirely once the cap is reached. We recognize that research and teaching commitments can make scheduling time away challenging, but we strongly encourage you to work with your department chair to identify windows for vacation before your balance reaches the maximum.
+</text>
+}
+else if (Model.Variant == AccrualEmployeeNotificationVariant.Staff)
+{
+<text>This is an automated notification from the CAES HR Office. Your current vacation accrual balance is @balanceHours, which is @pctOfCap of your maximum accrual cap of @capHours.
 
-This email was automatically generated. Please do not reply to it.
+Per UC policy (PPSM 2.210), once your balance reaches the maximum, you will stop accruing vacation hours until your balance falls below the cap. We encourage you to plan and schedule vacation time to avoid losing accrual.
+
+Please submit your leave request at your earliest convenience:
+
+Open TRS Time Reporting →
+@trsUrl
+</text>
+}
+else
+{
+<text>This is an automated notification from the CAES HR Office regarding your vacation accrual balance.
+
+Your current vacation balance is @balanceHours, which is @pctOfCap of your maximum accrual cap of @capHours.
+
+Per UC policy (PPSM 2.210), once your balance reaches the maximum, you will stop accruing vacation hours until your balance falls below the cap. We encourage you to plan and schedule vacation time to avoid losing accrual.
+</text>
+}
+
+Best regards,
+CAES Human Resources

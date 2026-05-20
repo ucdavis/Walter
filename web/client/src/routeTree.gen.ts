@@ -27,6 +27,7 @@ import { Route as authenticatedAccrualsIndexRouteImport } from './routes/(authen
 import { Route as authenticatedPrincipalInvestigatorsEmplidRouteImport } from './routes/(authenticated)/principalInvestigators/$emplid'
 import { Route as authenticatedAdminUsersRouteImport } from './routes/(authenticated)/admin/users'
 import { Route as authenticatedAdminNotificationRouteImport } from './routes/(authenticated)/admin/notification'
+import { Route as authenticatedAdminEmailPreviewRouteImport } from './routes/(authenticated)/admin/email-preview'
 import { Route as authenticatedAccrualsAboutRouteImport } from './routes/(authenticated)/accruals/about'
 import { Route as authenticatedProjectsEmployeeIdRouteRouteImport } from './routes/(authenticated)/projects/$employeeId/route'
 import { Route as authenticatedProjectsEmployeeIdIndexRouteImport } from './routes/(authenticated)/projects/$employeeId/index'
@@ -132,6 +133,12 @@ const authenticatedAdminNotificationRoute =
     path: '/notification',
     getParentRoute: () => authenticatedAdminRouteRoute,
   } as any)
+const authenticatedAdminEmailPreviewRoute =
+  authenticatedAdminEmailPreviewRouteImport.update({
+    id: '/email-preview',
+    path: '/email-preview',
+    getParentRoute: () => authenticatedAdminRouteRoute,
+  } as any)
 const authenticatedAccrualsAboutRoute =
   authenticatedAccrualsAboutRouteImport.update({
     id: '/accruals/about',
@@ -202,6 +209,7 @@ export interface FileRoutesByFullPath {
   '/': typeof authenticatedIndexRoute
   '/projects/$employeeId': typeof authenticatedProjectsEmployeeIdRouteRouteWithChildren
   '/accruals/about': typeof authenticatedAccrualsAboutRoute
+  '/admin/email-preview': typeof authenticatedAdminEmailPreviewRoute
   '/admin/notification': typeof authenticatedAdminNotificationRoute
   '/admin/users': typeof authenticatedAdminUsersRoute
   '/principalInvestigators/$emplid': typeof authenticatedPrincipalInvestigatorsEmplidRoute
@@ -227,6 +235,7 @@ export interface FileRoutesByTo {
   '/styles': typeof authenticatedStylesRoute
   '/': typeof authenticatedIndexRoute
   '/accruals/about': typeof authenticatedAccrualsAboutRoute
+  '/admin/email-preview': typeof authenticatedAdminEmailPreviewRoute
   '/admin/notification': typeof authenticatedAdminNotificationRoute
   '/admin/users': typeof authenticatedAdminUsersRoute
   '/principalInvestigators/$emplid': typeof authenticatedPrincipalInvestigatorsEmplidRoute
@@ -257,6 +266,7 @@ export interface FileRoutesById {
   '/(authenticated)/': typeof authenticatedIndexRoute
   '/(authenticated)/projects/$employeeId': typeof authenticatedProjectsEmployeeIdRouteRouteWithChildren
   '/(authenticated)/accruals/about': typeof authenticatedAccrualsAboutRoute
+  '/(authenticated)/admin/email-preview': typeof authenticatedAdminEmailPreviewRoute
   '/(authenticated)/admin/notification': typeof authenticatedAdminNotificationRoute
   '/(authenticated)/admin/users': typeof authenticatedAdminUsersRoute
   '/(authenticated)/principalInvestigators/$emplid': typeof authenticatedPrincipalInvestigatorsEmplidRoute
@@ -287,6 +297,7 @@ export interface FileRouteTypes {
     | '/'
     | '/projects/$employeeId'
     | '/accruals/about'
+    | '/admin/email-preview'
     | '/admin/notification'
     | '/admin/users'
     | '/principalInvestigators/$emplid'
@@ -312,6 +323,7 @@ export interface FileRouteTypes {
     | '/styles'
     | '/'
     | '/accruals/about'
+    | '/admin/email-preview'
     | '/admin/notification'
     | '/admin/users'
     | '/principalInvestigators/$emplid'
@@ -341,6 +353,7 @@ export interface FileRouteTypes {
     | '/(authenticated)/'
     | '/(authenticated)/projects/$employeeId'
     | '/(authenticated)/accruals/about'
+    | '/(authenticated)/admin/email-preview'
     | '/(authenticated)/admin/notification'
     | '/(authenticated)/admin/users'
     | '/(authenticated)/principalInvestigators/$emplid'
@@ -490,6 +503,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authenticatedAdminNotificationRouteImport
       parentRoute: typeof authenticatedAdminRouteRoute
     }
+    '/(authenticated)/admin/email-preview': {
+      id: '/(authenticated)/admin/email-preview'
+      path: '/email-preview'
+      fullPath: '/admin/email-preview'
+      preLoaderRoute: typeof authenticatedAdminEmailPreviewRouteImport
+      parentRoute: typeof authenticatedAdminRouteRoute
+    }
     '/(authenticated)/accruals/about': {
       id: '/(authenticated)/accruals/about'
       path: '/accruals/about'
@@ -557,6 +577,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface authenticatedAdminRouteRouteChildren {
+  authenticatedAdminEmailPreviewRoute: typeof authenticatedAdminEmailPreviewRoute
   authenticatedAdminNotificationRoute: typeof authenticatedAdminNotificationRoute
   authenticatedAdminUsersRoute: typeof authenticatedAdminUsersRoute
   authenticatedAdminIndexRoute: typeof authenticatedAdminIndexRoute
@@ -564,6 +585,7 @@ interface authenticatedAdminRouteRouteChildren {
 
 const authenticatedAdminRouteRouteChildren: authenticatedAdminRouteRouteChildren =
   {
+    authenticatedAdminEmailPreviewRoute: authenticatedAdminEmailPreviewRoute,
     authenticatedAdminNotificationRoute: authenticatedAdminNotificationRoute,
     authenticatedAdminUsersRoute: authenticatedAdminUsersRoute,
     authenticatedAdminIndexRoute: authenticatedAdminIndexRoute,
