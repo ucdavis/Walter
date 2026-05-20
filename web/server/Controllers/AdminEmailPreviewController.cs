@@ -7,9 +7,10 @@ using server.core.Services;
 namespace Server.Controllers;
 
 [ApiController]
+[Route("api/[controller]")]
 [Route("api/admin/email-preview")]
 [Authorize(Roles = Role.Names.Admin)]
-public sealed class AdminEmailPreviewController : ControllerBase
+public sealed class AdminEmailPreviewController : ApiControllerBase
 {
     private const int MaxPayloadJsonLength = 256 * 1024;
 
