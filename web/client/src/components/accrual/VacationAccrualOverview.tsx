@@ -302,12 +302,12 @@ export function VacationAccrualOverview({
                 Icon={ExclamationTriangleIcon}
                 label="Approaching Cap"
                 value={data.approachingCapCount.toLocaleString('en-US')}
-              />
-              <SummaryMetric
-                accentClassName="text-secondary"
-                description="Lost cost over monthly accruals"
-                Icon={ArrowTrendingDownIcon}
-                label="Waste Rate"
+                />
+                <SummaryMetric
+                  accentClassName="text-warning"
+                  description="Lost cost over monthly accruals"
+                  Icon={ArrowTrendingDownIcon}
+                  label="Waste Rate"
                 value={percentFormatter(data.wasteRate)}
               />
             </dl>

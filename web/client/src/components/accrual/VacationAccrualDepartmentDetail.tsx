@@ -4,11 +4,12 @@ import {
   ArrowLongLeftIcon,
   CalendarDaysIcon,
   ChartBarIcon,
+  ChevronDownIcon,
+  ClipboardDocumentListIcon,
   InformationCircleIcon,
   FireIcon,
   NoSymbolIcon,
   UserGroupIcon,
-  ClipboardDocumentListIcon,
 } from '@heroicons/react/24/outline';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { ColumnDef } from '@tanstack/react-table';
@@ -272,6 +273,7 @@ export function VacationAccrualDepartmentDetail({
   data,
 }: VacationAccrualDepartmentDetailProps) {
   const navigate = useNavigate();
+  const [isDepartmentMenuOpen, setIsDepartmentMenuOpen] = useState(false);
   const [filters, setFilters] = useState<DepartmentFilters>(() =>
     createDepartmentFilters(data.departmentCode)
   );
@@ -290,6 +292,13 @@ export function VacationAccrualDepartmentDetail({
           : createDepartmentFilters(data.departmentCode)
       )
     );
+  };
+  const openDepartment = (departmentCode: string) => {
+    setIsDepartmentMenuOpen(false);
+    void navigate({
+      params: { departmentCode },
+      to: '/accruals/department/$departmentCode',
+    });
   };
 
   const asOfDate = data.asOfDate ? new Date(data.asOfDate) : null;
@@ -508,41 +517,71 @@ export function VacationAccrualDepartmentDetail({
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div className="min-w-0">
                 <Link
-                  className="inline-flex items-center gap-2 text-sm font-medium text-primary no-underline"
+                  className="inline-flex items-center gap-2 text-sm font-bold text-primary no-underline"
                   to="/accruals"
                 >
                   <ArrowLongLeftIcon className="h-4 w-4" />
                   College Overview
                 </Link>
-                <h1 className="h1 mt-3">{data.departmentName}</h1>
+                <div
+                  className="relative mt-3 w-fit max-w-full"
+                  onBlur={(event) => {
+                    const nextFocus = event.relatedTarget as Node | null;
+                    if (!event.currentTarget.contains(nextFocus)) {
+                      setIsDepartmentMenuOpen(false);
+                    }
+                  }}
+                >
+                  <h1 className="h1">
+                    <button
+                      aria-expanded={isDepartmentMenuOpen}
+                      aria-haspopup="listbox"
+                      aria-label={`Department: ${data.departmentName}`}
+                      className="inline-flex max-w-full cursor-pointer items-center gap-2 rounded-xs text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                      onClick={() =>
+                        setIsDepartmentMenuOpen((current) => !current)
+                      }
+                      type="button"
+                    >
+                      <span className="truncate">{data.departmentName}</span>
+                      <ChevronDownIcon className="h-6 w-6 shrink-0" />
+                    </button>
+                  </h1>
+
+                  {isDepartmentMenuOpen ? (
+                    <div
+                      aria-label="Department"
+                      className="absolute left-0 z-50 mt-2 max-h-80 w-max min-w-full max-w-[min(28rem,calc(100vw-2rem))] overflow-y-auto rounded-md border border-main-border bg-base-100 p-1 shadow-lg"
+                      role="listbox"
+                    >
+                      {data.departments.map((department) => (
+                        <button
+                          aria-selected={
+                            department.code === data.departmentCode
+                          }
+                          className={`block w-full rounded px-3 py-2 text-left text-sm ${
+                            department.code === data.departmentCode
+                              ? 'bg-base-200 font-semibold'
+                              : 'hover:bg-base-200'
+                          }`}
+                          key={department.code}
+                          onClick={() => openDepartment(department.code)}
+                          onMouseDown={(event) => event.preventDefault()}
+                          role="option"
+                          type="button"
+                        >
+                          {department.name}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
                 <h3 className="subtitle mt-2">
-                  Department {data.departmentCode} |{' '}
-                  {data.headcount.toLocaleString('en-US')} employees
+                  Department {data.departmentCode}
                 </h3>
               </div>
 
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <label className="sr-only" htmlFor="department-selector">
-                  Department
-                </label>
-                <select
-                  className="select select-bordered w-full max-w-md"
-                  id="department-selector"
-                  onChange={(event) =>
-                    navigate({
-                      params: { departmentCode: event.target.value },
-                      to: '/accruals/department/$departmentCode',
-                    })
-                  }
-                  value={data.departmentCode}
-                >
-                  {data.departments.map((department) => (
-                    <option key={department.code} value={department.code}>
-                      {department.name}
-                    </option>
-                  ))}
-                </select>
-
                 <Link
                   className="btn btn-default btn-sm"
                   search={{ departmentCode: data.departmentCode }}
@@ -604,136 +643,12 @@ export function VacationAccrualDepartmentDetail({
           </section>
 
           <section>
-            <div className="mb-4 flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-              <div>
-                <h2 className="h2">Employee Breakdown</h2>
-                <p className="mt-1">
-                  Filter the current department snapshot by cap status,
-                  classification, employee name, or employee ID.
-                </p>
-              </div>
-
-              <span className="text-sm text-base-content/60">
-                {filteredEmployees.length.toLocaleString('en-US')} employee
-                {filteredEmployees.length === 1 ? '' : 's'}
-              </span>
-            </div>
-
-            <div className="mb-5">
-              <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-                <div className="join">
-                  {(
-                    [
-                      ['all', 'All'],
-                      ['approaching', 'Approaching'],
-                      ['at-cap', 'At Cap'],
-                    ] as const
-                  ).map(([value, label]) => (
-                    <button
-                      className={`btn btn-sm join-item ${
-                        statusFilter === value ? 'btn-primary' : 'btn-ghost'
-                      }`}
-                      key={value}
-                      onClick={() =>
-                        updateFilters((current) => ({
-                          ...current,
-                          departmentCode: data.departmentCode,
-                          statusFilter: value,
-                        }))
-                      }
-                      type="button"
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                  <select
-                    className="select select-bordered select-sm w-full sm:w-56"
-                    onChange={(event) =>
-                      updateFilters((current) => ({
-                        ...current,
-                        classificationFilter: event.target.value,
-                        departmentCode: data.departmentCode,
-                      }))
-                    }
-                    value={classificationFilter}
-                  >
-                    <option value="all">All Classifications</option>
-                    {staffClassifications.length > 0 ? (
-                      <option value="staff">All Staff</option>
-                    ) : null}
-                    {staffClassifications.map((classification) => (
-                      <option key={classification} value={classification}>
-                        {classification}
-                      </option>
-                    ))}
-                    {academicClassifications.length > 0 ? (
-                      <option value="academic">All Academic</option>
-                    ) : null}
-                    {academicClassifications.map((classification) => (
-                      <option key={classification} value={classification}>
-                        {classification}
-                      </option>
-                    ))}
-                  </select>
-
-                  <label className="input input-bordered input-sm flex items-center gap-2 w-full sm:w-72">
-                    <svg
-                      className="h-[1em] opacity-50"
-                      viewBox="0 0 24 24"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <g
-                        fill="none"
-                        stroke="currentColor"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2.5"
-                      >
-                        <circle cx="11" cy="11" r="8"></circle>
-                        <path d="m21 21-4.3-4.3"></path>
-                      </g>
-                    </svg>
-                    <input
-                      className="grow"
-                      onChange={(event) =>
-                        updateFilters((current) => ({
-                          ...current,
-                          departmentCode: data.departmentCode,
-                          searchTerm: event.target.value,
-                        }))
-                      }
-                      placeholder="Search by name or ID..."
-                      type="text"
-                      value={searchTerm}
-                    />
-                    {searchTerm ? (
-                      <button
-                        className="btn btn-ghost btn-sm btn-circle"
-                        onClick={() =>
-                          updateFilters((current) => ({
-                            ...current,
-                            departmentCode: data.departmentCode,
-                            searchTerm: '',
-                          }))
-                        }
-                        type="button"
-                      >
-                        <svg
-                          className="h-4 w-4"
-                          fill="currentColor"
-                          viewBox="0 0 16 16"
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
-                          <path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z" />
-                        </svg>
-                      </button>
-                    ) : null}
-                  </label>
-                </div>
-              </div>
+            <div className="mb-4">
+              <h2 className="h2">Employee Breakdown</h2>
+              <p className="mt-1">
+                Filter the current department snapshot by cap status,
+                classification, employee name, or employee ID.
+              </p>
             </div>
 
             <DataTable
@@ -762,11 +677,130 @@ export function VacationAccrualDepartmentDetail({
                 sorting: [{ desc: true, id: 'pctOfCap' }],
               }}
               tableActions={
-                <ExportDataButton
-                  columns={departmentEmployeeCsvColumns}
-                  data={filteredEmployees}
-                  filename={`vacation-accrual-${data.departmentCode}.csv`}
-                />
+                <div className="flex w-full flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <div className="tabs tabs-box tabs-sm" role="tablist">
+                      {(
+                        [
+                          ['all', 'All'],
+                          ['approaching', 'Approaching'],
+                          ['at-cap', 'At Cap'],
+                        ] as const
+                      ).map(([value, label]) => (
+                        <button
+                          aria-selected={statusFilter === value}
+                          className={`tab ${
+                            statusFilter === value ? 'tab-active' : ''
+                          }`}
+                          key={value}
+                          onClick={() =>
+                            updateFilters((current) => ({
+                              ...current,
+                              departmentCode: data.departmentCode,
+                              statusFilter: value,
+                            }))
+                          }
+                          role="tab"
+                          type="button"
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+
+                    <select
+                      className="select select-bordered select-sm w-full sm:w-56"
+                      onChange={(event) =>
+                        updateFilters((current) => ({
+                          ...current,
+                          classificationFilter: event.target.value,
+                          departmentCode: data.departmentCode,
+                        }))
+                      }
+                      value={classificationFilter}
+                    >
+                      <option value="all">All Classifications</option>
+                      {staffClassifications.length > 0 ? (
+                        <option value="staff">All Staff</option>
+                      ) : null}
+                      {staffClassifications.map((classification) => (
+                        <option key={classification} value={classification}>
+                          {classification}
+                        </option>
+                      ))}
+                      {academicClassifications.length > 0 ? (
+                        <option value="academic">All Academic</option>
+                      ) : null}
+                      {academicClassifications.map((classification) => (
+                        <option key={classification} value={classification}>
+                          {classification}
+                        </option>
+                      ))}
+                    </select>
+
+                    <label className="input input-bordered input-sm flex items-center gap-2 w-full sm:w-72">
+                      <svg
+                        className="h-[1em] opacity-50"
+                        viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <g
+                          fill="none"
+                          stroke="currentColor"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2.5"
+                        >
+                          <circle cx="11" cy="11" r="8"></circle>
+                          <path d="m21 21-4.3-4.3"></path>
+                        </g>
+                      </svg>
+                      <input
+                        className="grow"
+                        onChange={(event) =>
+                          updateFilters((current) => ({
+                            ...current,
+                            departmentCode: data.departmentCode,
+                            searchTerm: event.target.value,
+                          }))
+                        }
+                        placeholder="Search by name or ID..."
+                        type="text"
+                        value={searchTerm}
+                      />
+                      {searchTerm ? (
+                        <button
+                          className="btn btn-ghost btn-sm btn-circle"
+                          onClick={() =>
+                            updateFilters((current) => ({
+                              ...current,
+                              departmentCode: data.departmentCode,
+                              searchTerm: '',
+                            }))
+                          }
+                          type="button"
+                        >
+                          <svg
+                            className="h-4 w-4"
+                            fill="currentColor"
+                            viewBox="0 0 16 16"
+                            xmlns="http://www.w3.org/2000/svg"
+                          >
+                            <path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z" />
+                          </svg>
+                        </button>
+                      ) : null}
+                    </label>
+                  </div>
+
+                  <div className="flex justify-end">
+                    <ExportDataButton
+                      columns={departmentEmployeeCsvColumns}
+                      data={filteredEmployees}
+                      filename={`vacation-accrual-${data.departmentCode}.csv`}
+                    />
+                  </div>
+                </div>
               }
               tableClassName="table-zebra"
             />

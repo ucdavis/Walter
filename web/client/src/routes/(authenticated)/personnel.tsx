@@ -71,7 +71,7 @@ function RouteComponent() {
   return (
     <div className="container">
       <h1 className="h1 mt-8">{user.name}&apos;s Personnel</h1>
-      <h3 className="subtitle">
+      <h3 className="subtitle mb-4">
         {uniqueEmployees} employees across {uniqueProjects} projects
       </h3>
 
