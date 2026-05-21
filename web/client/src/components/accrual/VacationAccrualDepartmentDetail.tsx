@@ -4,6 +4,7 @@ import {
   ArrowLongLeftIcon,
   CalendarDaysIcon,
   ChartBarIcon,
+  InformationCircleIcon,
   FireIcon,
   NoSymbolIcon,
   UserGroupIcon,
@@ -543,10 +544,11 @@ export function VacationAccrualDepartmentDetail({
                 </select>
 
                 <Link
-                  className="btn btn-outline btn-sm"
+                  className="btn btn-default btn-sm"
                   search={{ departmentCode: data.departmentCode }}
                   to="/accruals/about"
                 >
+                  <InformationCircleIcon className="h-4 w-4" />
                   About this report
                 </Link>
               </div>
@@ -605,7 +607,7 @@ export function VacationAccrualDepartmentDetail({
             <div className="mb-4 flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
               <div>
                 <h2 className="h2">Employee Breakdown</h2>
-                <p className="mt-1 text-sm text-base-content/60">
+                <p className="mt-1">
                   Filter the current department snapshot by cap status,
                   classification, employee name, or employee ID.
                 </p>

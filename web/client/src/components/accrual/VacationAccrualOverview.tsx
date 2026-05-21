@@ -5,6 +5,7 @@ import {
   ChartBarIcon,
   ExclamationTriangleIcon,
   FireIcon,
+  InformationCircleIcon,
   NoSymbolIcon,
 } from '@heroicons/react/24/outline';
 import {
@@ -248,210 +249,207 @@ export function VacationAccrualOverview({
   return (
     <main className="mt-8">
       <div className="container">
-        <div className="mx-auto max-w-7xl">
-          <section className="section-margin">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-              <div>
-                <h1 className="h1">Vacation Accrual Overview</h1>
-                <h3 className="subtitle mt-2">
-                  {data.totalEmployees.toLocaleString('en-US')} employees across{' '}
-                  {data.totalDepartments.toLocaleString('en-US')} departments
-                </h3>
+        <section className="section-margin">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <h1 className="h1">Vacation Accrual Overview</h1>
+              <h3 className="subtitle mt-2">
+                {data.totalEmployees.toLocaleString('en-US')} employees across{' '}
+                {data.totalDepartments.toLocaleString('en-US')} departments
+              </h3>
+            </div>
+
+            <Link className="btn btn-default btn-sm" to="/accruals/about">
+              <InformationCircleIcon className="h-4 w-4" />
+              About this report
+            </Link>
+          </div>
+
+          <div className="fancy-data">
+            <dl className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+              <SummaryMetric
+                description="Latest month-end snapshot"
+                Icon={CalendarDaysIcon}
+                label="As Of"
+                value={
+                  asOfDate ? asOfDateFormatter.format(asOfDate) : 'Unavailable'
+                }
+              />
+              <SummaryMetric
+                accentClassName="text-error"
+                description="Estimated unrecoverable accrual charges"
+                Icon={FireIcon}
+                label="Lost Cost (Month)"
+                value={formatCurrency(data.lostCostMonth)}
+              />
+              <SummaryMetric
+                accentClassName="text-error"
+                description={`${data.ytdMonthCount} fiscal month${data.ytdMonthCount === 1 ? '' : 's'}`}
+                Icon={ChartBarIcon}
+                label="Lost Cost (YTD)"
+                value={formatCurrency(data.lostCostYtd)}
+              />
+              <SummaryMetric
+                accentClassName="text-error"
+                description={`of ${data.totalEmployees.toLocaleString('en-US')} employees`}
+                Icon={NoSymbolIcon}
+                label="At Cap"
+                value={data.atCapCount.toLocaleString('en-US')}
+              />
+              <SummaryMetric
+                accentClassName="text-warning"
+                description="80% to 99% of maximum balance"
+                Icon={ExclamationTriangleIcon}
+                label="Approaching Cap"
+                value={data.approachingCapCount.toLocaleString('en-US')}
+              />
+              <SummaryMetric
+                accentClassName="text-secondary"
+                description="Lost cost over monthly accruals"
+                Icon={ArrowTrendingDownIcon}
+                label="Waste Rate"
+                value={percentFormatter(data.wasteRate)}
+              />
+            </dl>
+          </div>
+        </section>
+
+        <section className="section-margin">
+          <h2 className="h2">Accrual Trends</h2>
+          <div className="mt-4 grid gap-6 xl:grid-cols-2">
+            <article className="min-w-0">
+              <h3 className="h3">Monthly Lost Accrual Cost</h3>
+              <div className="mt-4 h-80">
+                <ResponsiveContainer height="100%" width="100%">
+                  <LineChart
+                    data={data.monthlyLostCost}
+                    margin={{ bottom: 8, left: 8, right: 16, top: 8 }}
+                  >
+                    <CartesianGrid stroke="#D8D8D8" strokeDasharray="3 3" />
+                    <XAxis dataKey="label" tick={{ fontSize: 12 }} />
+                    <YAxis
+                      tick={{ fontSize: 12 }}
+                      tickFormatter={axisCurrencyFormatter}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'white',
+                        border: '1px solid #E9E3EE',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                      }}
+                      formatter={(value: number) => [
+                        formatCurrency(value),
+                        'Lost cost',
+                      ]}
+                      labelFormatter={(label: string) => `Month: ${label}`}
+                    />
+                    <Line
+                      activeDot={{ r: 5 }}
+                      dataKey="lostCost"
+                      dot={{ fill: 'var(--color-error)', r: 3 }}
+                      name="Lost Cost"
+                      stroke="var(--color-error)"
+                      strokeWidth={2.5}
+                      type="monotone"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
               </div>
+            </article>
 
-              <Link className="btn btn-outline btn-sm" to="/accruals/about">
-                About this report
-              </Link>
-            </div>
-
-            <div className="fancy-data">
-              <dl className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-                <SummaryMetric
-                  description="Latest month-end snapshot"
-                  Icon={CalendarDaysIcon}
-                  label="As Of"
-                  value={
-                    asOfDate
-                      ? asOfDateFormatter.format(asOfDate)
-                      : 'Unavailable'
-                  }
-                />
-                <SummaryMetric
-                  accentClassName="text-error"
-                  description="Estimated unrecoverable accrual charges"
-                  Icon={FireIcon}
-                  label="Lost Cost (Month)"
-                  value={formatCurrency(data.lostCostMonth)}
-                />
-                <SummaryMetric
-                  accentClassName="text-error"
-                  description={`${data.ytdMonthCount} fiscal month${data.ytdMonthCount === 1 ? '' : 's'}`}
-                  Icon={ChartBarIcon}
-                  label="Lost Cost (YTD)"
-                  value={formatCurrency(data.lostCostYtd)}
-                />
-                <SummaryMetric
-                  accentClassName="text-error"
-                  description={`of ${data.totalEmployees.toLocaleString('en-US')} employees`}
-                  Icon={NoSymbolIcon}
-                  label="At Cap"
-                  value={data.atCapCount.toLocaleString('en-US')}
-                />
-                <SummaryMetric
-                  accentClassName="text-warning"
-                  description="80% to 99% of maximum balance"
-                  Icon={ExclamationTriangleIcon}
-                  label="Approaching Cap"
-                  value={data.approachingCapCount.toLocaleString('en-US')}
-                />
-                <SummaryMetric
-                  accentClassName="text-secondary"
-                  description="Lost cost over monthly accruals"
-                  Icon={ArrowTrendingDownIcon}
-                  label="Waste Rate"
-                  value={percentFormatter(data.wasteRate)}
-                />
-              </dl>
-            </div>
-          </section>
-
-          <section className="section-margin">
-            <h2 className="h2">Accrual Trends</h2>
-            <div className="mt-4 grid gap-6 xl:grid-cols-2">
-              <article className="min-w-0">
-                <h3 className="h3">Monthly Lost Accrual Cost</h3>
-                <div className="mt-4 h-80">
-                  <ResponsiveContainer height="100%" width="100%">
-                    <LineChart
-                      data={data.monthlyLostCost}
-                      margin={{ bottom: 8, left: 8, right: 16, top: 8 }}
-                    >
-                      <CartesianGrid stroke="#D8D8D8" strokeDasharray="3 3" />
-                      <XAxis dataKey="label" tick={{ fontSize: 12 }} />
-                      <YAxis
-                        tick={{ fontSize: 12 }}
-                        tickFormatter={axisCurrencyFormatter}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: 'white',
-                          border: '1px solid #E9E3EE',
-                          borderRadius: '6px',
-                          fontSize: '12px',
-                        }}
-                        formatter={(value: number) => [
-                          formatCurrency(value),
-                          'Lost cost',
-                        ]}
-                        labelFormatter={(label: string) => `Month: ${label}`}
-                      />
-                      <Line
-                        activeDot={{ r: 5 }}
-                        dataKey="lostCost"
-                        dot={{ fill: 'var(--color-error)', r: 3 }}
-                        name="Lost Cost"
-                        stroke="var(--color-error)"
-                        strokeWidth={2.5}
-                        type="monotone"
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </article>
-
-              <article className="min-w-0">
-                <h3 className="h3">Employee Accrual Status Over Time</h3>
-                <div className="mt-4 h-80">
-                  <ResponsiveContainer height="100%" width="100%">
-                    <BarChart
-                      data={data.employeeStatusOverTime}
-                      margin={{ bottom: 8, left: 8, right: 16, top: 8 }}
-                    >
-                      <CartesianGrid stroke="#D8D8D8" strokeDasharray="3 3" />
-                      <XAxis dataKey="label" tick={{ fontSize: 12 }} />
-                      <YAxis tick={{ fontSize: 12 }} />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: 'white',
-                          border: '1px solid #E9E3EE',
-                          borderRadius: '6px',
-                          fontSize: '12px',
-                        }}
-                      />
-                      <Legend />
-                      <Bar
-                        dataKey="active"
-                        fill="var(--color-success)"
-                        name="Active"
-                        stackId="status"
-                      />
-                      <Bar
-                        dataKey="approaching"
-                        fill="var(--color-warning)"
-                        name="Approaching"
-                        stackId="status"
-                      />
-                      <Bar
-                        dataKey="atCap"
-                        fill="var(--color-error)"
-                        name="At Cap"
-                        stackId="status"
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </article>
-            </div>
-          </section>
-
-          <section>
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <h2 className="h2">Department Breakdown</h2>
-                <p className="mt-1">
-                  Click a row to drill into the live employee breakdown for a
-                  department.
-                </p>
+            <article className="min-w-0">
+              <h3 className="h3">Employee Accrual Status Over Time</h3>
+              <div className="mt-4 h-80">
+                <ResponsiveContainer height="100%" width="100%">
+                  <BarChart
+                    data={data.employeeStatusOverTime}
+                    margin={{ bottom: 8, left: 8, right: 16, top: 8 }}
+                  >
+                    <CartesianGrid stroke="#D8D8D8" strokeDasharray="3 3" />
+                    <XAxis dataKey="label" tick={{ fontSize: 12 }} />
+                    <YAxis tick={{ fontSize: 12 }} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'white',
+                        border: '1px solid #E9E3EE',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                      }}
+                    />
+                    <Legend />
+                    <Bar
+                      dataKey="active"
+                      fill="var(--color-success)"
+                      name="Active"
+                      stackId="status"
+                    />
+                    <Bar
+                      dataKey="approaching"
+                      fill="var(--color-warning)"
+                      name="Approaching"
+                      stackId="status"
+                    />
+                    <Bar
+                      dataKey="atCap"
+                      fill="var(--color-error)"
+                      name="At Cap"
+                      stackId="status"
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
+            </article>
+          </div>
+        </section>
+
+        <section>
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <h2 className="h2">Department Breakdown</h2>
+              <p className="mt-1">
+                Click a row to drill into the live employee breakdown for a
+                department.
+              </p>
             </div>
+          </div>
 
-            <DataTable
-              columns={departmentColumns}
-              data={data.departmentBreakdown}
-              defaultColumnSize={160}
-              expandable={false}
-              filterPlaceholder="Search departments..."
-              footerRowClassName="totaltr bg-base-200/70"
-              getRowProps={(row) => ({
-                className: 'cursor-pointer hover:bg-base-200',
-                onClick: (event) => {
-                  if (shouldSkipRowNavigation(event)) {
-                    return;
-                  }
+          <DataTable
+            columns={departmentColumns}
+            data={data.departmentBreakdown}
+            defaultColumnSize={160}
+            expandable={false}
+            filterPlaceholder="Search departments..."
+            footerRowClassName="totaltr bg-base-200/70"
+            getRowProps={(row) => ({
+              className: 'cursor-pointer hover:bg-base-200',
+              onClick: (event) => {
+                if (shouldSkipRowNavigation(event)) {
+                  return;
+                }
 
-                  void navigate({
-                    params: {
-                      departmentCode: row.original.departmentCode,
-                    },
-                    to: '/accruals/department/$departmentCode',
-                  });
-                },
-              })}
-              initialState={{
-                pagination: { pageSize: 50 },
-                sorting: [{ desc: false, id: 'department' }],
-              }}
-              tableActions={
-                <ExportDataButton
-                  columns={departmentCsvColumns}
-                  data={data.departmentBreakdown}
-                  filename="vacation-accrual-department-breakdown.csv"
-                />
-              }
-              tableClassName="table-zebra"
-            />
-          </section>
-        </div>
+                void navigate({
+                  params: {
+                    departmentCode: row.original.departmentCode,
+                  },
+                  to: '/accruals/department/$departmentCode',
+                });
+              },
+            })}
+            initialState={{
+              pagination: { pageSize: 50 },
+              sorting: [{ desc: false, id: 'department' }],
+            }}
+            tableActions={
+              <ExportDataButton
+                columns={departmentCsvColumns}
+                data={data.departmentBreakdown}
+                filename="vacation-accrual-department-breakdown.csv"
+              />
+            }
+            tableClassName="table-zebra"
+          />
+        </section>
       </div>
     </main>
   );
