@@ -82,7 +82,7 @@ type StatusThresholds = Pick<
 >;
 
 function SummaryMetric({
-  accentClassName = 'text-base-content/70',
+  accentClassName = '',
   description,
   Icon,
   label,
@@ -90,9 +90,13 @@ function SummaryMetric({
 }: SummaryMetricProps) {
   return (
     <div className="flex min-w-0 flex-col">
-      <Icon className={`h-4 w-4 ${accentClassName}`} />
+      <Icon className="h-4 w-4" />
       <dt className="stat-label-lg">{label}</dt>
-      <dd className={`stat-value-lg break-words ${accentClassName}`}>
+      <dd
+        className={['stat-value-lg break-words', accentClassName]
+          .filter(Boolean)
+          .join(' ')}
+      >
         {value}
       </dd>
       <dd className="mt-1 text-sm text-base-content/65">{description}</dd>
