@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import type { ComponentType, SVGProps } from 'react';
 import {
   ArrowLongLeftIcon,
+  CalendarDaysIcon,
   ChartBarIcon,
   FireIcon,
   NoSymbolIcon,
@@ -57,8 +58,8 @@ const departmentEmployeeCsvColumns = [
   },
 ];
 
-type SummaryCardProps = {
-  accentClassName: string;
+type SummaryMetricProps = {
+  accentClassName?: string;
   description: string;
   Icon: ComponentType<SVGProps<SVGSVGElement>>;
   label: string;
@@ -80,26 +81,22 @@ type StatusThresholds = Pick<
   'approachingThresholdPct' | 'atCapThresholdPct'
 >;
 
-function SummaryCard({
-  accentClassName,
+function SummaryMetric({
+  accentClassName = 'text-base-content/70',
   description,
   Icon,
   label,
   value,
-}: SummaryCardProps) {
+}: SummaryMetricProps) {
   return (
-    <section className="card bg-base-100 border border-main-border shadow-sm">
-      <div className="card-body gap-3 p-5">
-        <div className="flex items-center gap-2 text-xs font-semibold tracking-[0.18em] uppercase text-base-content/60">
-          <Icon className={`h-4 w-4 ${accentClassName}`} />
-          <span>{label}</span>
-        </div>
-        <div className={`text-4xl font-semibold ${accentClassName}`}>
-          {value}
-        </div>
-        <p className="text-sm text-base-content/65">{description}</p>
-      </div>
-    </section>
+    <div className="flex min-w-0 flex-col">
+      <Icon className={`h-4 w-4 ${accentClassName}`} />
+      <dt className="stat-label-lg">{label}</dt>
+      <dd className={`stat-value-lg break-words ${accentClassName}`}>
+        {value}
+      </dd>
+      <dd className="mt-1 text-sm text-base-content/65">{description}</dd>
+    </div>
   );
 }
 
@@ -501,10 +498,10 @@ export function VacationAccrualDepartmentDetail({
   return (
     <main className="mt-8">
       <div className="container">
-        <div className="mx-auto max-w-7xl space-y-8">
-          <section className="space-y-4">
+        <div className="mx-auto max-w-7xl">
+          <section className="section-margin">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="min-w-0">
                 <Link
                   className="inline-flex items-center gap-2 text-sm font-medium text-primary no-underline"
                   to="/accruals"
@@ -512,7 +509,14 @@ export function VacationAccrualDepartmentDetail({
                   <ArrowLongLeftIcon className="h-4 w-4" />
                   College Overview
                 </Link>
-                <span className="hidden text-base-content/35 sm:inline">/</span>
+                <h1 className="h1 mt-3">{data.departmentName}</h1>
+                <h3 className="subtitle mt-2">
+                  Department {data.departmentCode} |{' '}
+                  {data.headcount.toLocaleString('en-US')} employees
+                </h3>
+              </div>
+
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                 <label className="sr-only" htmlFor="department-selector">
                   Department
                 </label>
@@ -533,70 +537,83 @@ export function VacationAccrualDepartmentDetail({
                     </option>
                   ))}
                 </select>
-              </div>
 
-              <div className="card bg-base-100 border border-main-border shadow-sm lg:min-w-64">
-                <div className="card-body gap-1 p-4">
-                  <div className="text-xs font-semibold tracking-[0.14em] uppercase text-base-content/55">
-                    As Of
-                  </div>
-                  <div className="text-lg font-semibold">
-                    {asOfDate
-                      ? asOfDateFormatter.format(asOfDate)
-                      : 'Unavailable'}
-                  </div>
-                  <Link
-                    className="link link-primary text-sm font-semibold"
-                    search={{ departmentCode: data.departmentCode }}
-                    to="/accruals/about"
-                  >
-                    About this report
-                  </Link>
-                </div>
+                <Link
+                  className="btn btn-outline btn-sm"
+                  search={{ departmentCode: data.departmentCode }}
+                  to="/accruals/about"
+                >
+                  About this report
+                </Link>
               </div>
+            </div>
+
+            <div className="fancy-data">
+              <dl className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                <SummaryMetric
+                  description="Latest month-end snapshot"
+                  Icon={CalendarDaysIcon}
+                  label="As Of"
+                  value={
+                    asOfDate
+                      ? asOfDateFormatter.format(asOfDate)
+                      : 'Unavailable'
+                  }
+                />
+                <SummaryMetric
+                  accentClassName="text-error"
+                  description="Estimated unrecoverable accrual charges"
+                  Icon={FireIcon}
+                  label="Lost Cost (Month)"
+                  value={formatCurrency(data.lostCostMonth)}
+                />
+                <SummaryMetric
+                  accentClassName="text-error"
+                  description={`${data.ytdMonthCount} fiscal month${data.ytdMonthCount === 1 ? '' : 's'}`}
+                  Icon={ChartBarIcon}
+                  label="Lost Cost (YTD)"
+                  value={formatCurrency(data.lostCostYtd)}
+                />
+                <SummaryMetric
+                  description={`${data.departmentName} employees`}
+                  Icon={UserGroupIcon}
+                  label="Headcount"
+                  value={data.headcount.toLocaleString('en-US')}
+                />
+                <SummaryMetric
+                  accentClassName="text-error"
+                  description="Employees at the vacation accrual cap"
+                  Icon={NoSymbolIcon}
+                  label="At Cap"
+                  value={data.atCapCount.toLocaleString('en-US')}
+                />
+                <SummaryMetric
+                  description="Average current vacation balance"
+                  Icon={ClipboardDocumentListIcon}
+                  label="Avg Balance"
+                  value={hoursFormatter(data.avgBalanceHours)}
+                />
+              </dl>
             </div>
           </section>
 
-          <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-            <SummaryCard
-              accentClassName="text-error"
-              description="Estimated unrecoverable accrual charges for the latest month-end snapshot."
-              Icon={FireIcon}
-              label="Lost Cost (Month)"
-              value={formatCurrency(data.lostCostMonth)}
-            />
-            <SummaryCard
-              accentClassName="text-error"
-              description={`Estimated fiscal year-to-date using ${data.ytdMonthCount} month${data.ytdMonthCount === 1 ? '' : 's'} of exposure.`}
-              Icon={ChartBarIcon}
-              label="Lost Cost (YTD)"
-              value={formatCurrency(data.lostCostYtd)}
-            />
-            <SummaryCard
-              accentClassName="text-base-content"
-              description={`${data.departmentName} employees in the current snapshot.`}
-              Icon={UserGroupIcon}
-              label="Headcount"
-              value={data.headcount.toLocaleString('en-US')}
-            />
-            <SummaryCard
-              accentClassName="text-error"
-              description="Employees currently at the vacation accrual cap."
-              Icon={NoSymbolIcon}
-              label="At Cap"
-              value={data.atCapCount.toLocaleString('en-US')}
-            />
-            <SummaryCard
-              accentClassName="text-base-content"
-              description="Average current vacation balance for the department."
-              Icon={ClipboardDocumentListIcon}
-              label="Avg Balance"
-              value={hoursFormatter(data.avgBalanceHours)}
-            />
-          </section>
+          <section>
+            <div className="mb-4 flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+              <div>
+                <h2 className="h2">Employee Breakdown</h2>
+                <p className="mt-1 text-sm text-base-content/60">
+                  Filter the current department snapshot by cap status,
+                  classification, employee name, or employee ID.
+                </p>
+              </div>
 
-          <section className="card bg-base-100 border border-main-border shadow-sm">
-            <div className="card-body gap-5 p-5">
+              <span className="text-sm text-base-content/60">
+                {filteredEmployees.length.toLocaleString('en-US')} employee
+                {filteredEmployees.length === 1 ? '' : 's'}
+              </span>
+            </div>
+
+            <div className="mb-5">
               <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                 <div className="join">
                   {(
@@ -711,49 +728,42 @@ export function VacationAccrualDepartmentDetail({
                   </label>
                 </div>
               </div>
-
-              <div className="flex justify-end">
-                <span className="text-sm text-base-content/60">
-                  {filteredEmployees.length.toLocaleString('en-US')} employee
-                  {filteredEmployees.length === 1 ? '' : 's'}
-                </span>
-              </div>
-
-              <DataTable
-                columns={employeeColumns}
-                data={filteredEmployees}
-                defaultColumnSize={140}
-                expandable={false}
-                footerRowClassName="totaltr bg-base-200/70"
-                getRowProps={(row) => {
-                  const status = getEmployeeStatus(
-                    row.original,
-                    statusThresholds
-                  );
-                  return {
-                    className:
-                      status === 'at-cap'
-                        ? 'bg-error/5'
-                        : status === 'approaching'
-                          ? 'bg-warning/5'
-                          : undefined,
-                  };
-                }}
-                globalFilter="none"
-                initialState={{
-                  pagination: { pageSize: 50 },
-                  sorting: [{ desc: true, id: 'pctOfCap' }],
-                }}
-                tableActions={
-                  <ExportDataButton
-                    columns={departmentEmployeeCsvColumns}
-                    data={filteredEmployees}
-                    filename={`vacation-accrual-${data.departmentCode}.csv`}
-                  />
-                }
-                tableClassName="table-zebra"
-              />
             </div>
+
+            <DataTable
+              columns={employeeColumns}
+              data={filteredEmployees}
+              defaultColumnSize={140}
+              expandable={false}
+              footerRowClassName="totaltr bg-base-200/70"
+              getRowProps={(row) => {
+                const status = getEmployeeStatus(
+                  row.original,
+                  statusThresholds
+                );
+                return {
+                  className:
+                    status === 'at-cap'
+                      ? 'bg-error/5'
+                      : status === 'approaching'
+                        ? 'bg-warning/5'
+                        : undefined,
+                };
+              }}
+              globalFilter="none"
+              initialState={{
+                pagination: { pageSize: 50 },
+                sorting: [{ desc: true, id: 'pctOfCap' }],
+              }}
+              tableActions={
+                <ExportDataButton
+                  columns={departmentEmployeeCsvColumns}
+                  data={filteredEmployees}
+                  filename={`vacation-accrual-${data.departmentCode}.csv`}
+                />
+              }
+              tableClassName="table-zebra"
+            />
           </section>
         </div>
       </div>
