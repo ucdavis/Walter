@@ -133,11 +133,11 @@
   }
 
   [cmdk-item] {
-    @apply flex cursor-default select-none items-center gap-2 rounded px-2 py-2;
+    @apply flex cursor-pointer select-none items-center gap-2 rounded px-2 py-2;
   }
 
   [cmdk-item][aria-disabled='true'] {
-    @apply opacity-60;
+    @apply cursor-default opacity-60;
   }
 
   [cmdk-item][data-selected='true'] {

@@ -306,7 +306,9 @@ describe('vacation accrual overview route', () => {
       expect(
         await screen.findByRole('link', { name: /College Overview/i })
       ).toBeInTheDocument();
-      expect(screen.getByLabelText('Department')).toHaveValue('030003');
+      expect(
+        screen.getByRole('button', { name: /department: plant sciences/i })
+      ).toBeInTheDocument();
       expect(
         screen.getByRole('link', { name: 'About this report' })
       ).toHaveAttribute('href', '/accruals/about?departmentCode=030003');
@@ -509,13 +511,16 @@ describe('vacation accrual overview route', () => {
       expect(employeeSearch).toHaveValue('');
       expect(screen.getByText('Gradziel,Thomas M')).toBeInTheDocument();
 
-      const classificationSelect = screen.getAllByRole('combobox')[1];
+      const classificationSelect = screen.getByRole('combobox');
       await user.selectOptions(classificationSelect, 'PSS');
 
       expect(screen.getByText('Saichaie,Amanda M')).toBeInTheDocument();
       expect(screen.queryByText('Gradziel,Thomas M')).not.toBeInTheDocument();
 
-      await user.selectOptions(screen.getByLabelText('Department'), '030090');
+      await user.click(
+        screen.getByRole('button', { name: /department: plant sciences/i })
+      );
+      await user.click(screen.getByRole('option', { name: 'NUTRITION' }));
 
       expect(await screen.findByText('Faculty,Nutrition')).toBeInTheDocument();
       expect(

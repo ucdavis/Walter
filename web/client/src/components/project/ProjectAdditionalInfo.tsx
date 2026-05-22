@@ -11,6 +11,9 @@ interface Field {
   value: string;
 }
 
+const fieldRowClassName =
+  'grid grid-cols-1 gap-x-4 gap-y-0.5 sm:grid-cols-[13rem_minmax(0,1fr)] xl:grid-cols-[15rem_minmax(0,1fr)]';
+
 function buildPrimaryFields(summary: ProjectSummary): Field[] {
   return [
     { label: 'Award Number', value: summary.awardNumber ?? '—' },
@@ -135,39 +138,30 @@ export function ProjectAdditionalInfo({
     <section className="section-margin">
       <h2 className="h2 mb-4">Award Information</h2>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2">
+      <div className="grid grid-cols-1 gap-x-4 gap-y-2 xl:grid-cols-2">
         {primaryFields.map((field) => (
-          <div
-            className="grid grid-cols-[max-content_1fr] gap-x-4"
-            key={field.label}
-          >
+          <div className={fieldRowClassName} key={field.label}>
             <div className="font-proxima-bold">{renderLabel(field)}</div>
-            <div>{field.value}</div>
+            <div className="min-w-0">{field.value}</div>
           </div>
         ))}
 
         {expanded &&
           secondaryFields.map((field) => (
-            <div
-              className="grid grid-cols-[max-content_1fr] gap-x-4"
-              key={field.label}
-            >
+            <div className={fieldRowClassName} key={field.label}>
               <div className="font-proxima-bold">{renderLabel(field)}</div>
-              <div>{field.value}</div>
+              <div className="min-w-0">{field.value}</div>
             </div>
           ))}
 
         {expanded && summary.flowThroughFundsPrimarySponsor && (
-          <div className="md:col-span-2 mt-4">
+          <div className="mt-4 xl:col-span-2">
             <h3 className="h3 mb-2">Flow-Through Funds</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2">
+            <div className="grid grid-cols-1 gap-x-4 gap-y-2 xl:grid-cols-2">
               {buildFlowThroughFields(summary).map((field) => (
-                <div
-                  className="grid grid-cols-[max-content_1fr] gap-x-4"
-                  key={field.label}
-                >
+                <div className={fieldRowClassName} key={field.label}>
                   <div className="font-proxima-bold">{renderLabel(field)}</div>
-                  <div>{field.value}</div>
+                  <div className="min-w-0">{field.value}</div>
                 </div>
               ))}
             </div>
@@ -175,7 +169,7 @@ export function ProjectAdditionalInfo({
         )}
 
         {secondaryFields.length > 0 && (
-          <div className="md:col-span-2 mt-2">
+          <div className="mt-2 xl:col-span-2">
             <button
               className="btn"
               onClick={() => setExpanded((v) => !v)}
