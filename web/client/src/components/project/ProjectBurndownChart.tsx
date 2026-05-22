@@ -47,17 +47,13 @@ function BurndownTooltip({ active, payload }: BurndownTooltipProps) {
       <p className="font-proxima-bold text-base mb-3">{point.label}</p>
       <dl className="space-y-2">
         <div className="flex justify-between gap-8">
-          <dt className="font-proxima-bold text-base-content/70">
-            Remaining Balance
-          </dt>
+          <dt className="font-proxima-bold">Remaining Balance</dt>
           <dd className="font-medium">
             {formatCurrency(point.remainingBalance)}
           </dd>
         </div>
         <div className="flex justify-between gap-8">
-          <dt className="font-proxima-bold text-base-content/70">
-            Projected Spend
-          </dt>
+          <dt className="font-proxima-bold">Projected Spend</dt>
           <dd className="font-medium">{formatCurrency(point.totalSpend)}</dd>
         </div>
       </dl>
