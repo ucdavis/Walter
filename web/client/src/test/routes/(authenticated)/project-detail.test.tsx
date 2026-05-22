@@ -87,8 +87,8 @@ const setupHandlers = (
     http.get('/api/project/managed/:employeeId', () =>
       HttpResponse.json({ pis: [], projectManager: null })
     ),
-    http.get('/api/project/:employeeId', () => HttpResponse.json(projects)),
     http.get('/api/project/personnel', () => HttpResponse.json(personnel)),
+    http.get('/api/project/:employeeId', () => HttpResponse.json(projects)),
     http.get('/api/project/gl-ppm-reconciliation', () => HttpResponse.json([]))
   );
 };
@@ -149,6 +149,7 @@ describe('project detail page', () => {
       http.get('/api/project/managed/:employeeId', () =>
         HttpResponse.json({ pis: [], projectManager: null })
       ),
+      http.get('/api/project/personnel', () => HttpResponse.json([])),
       http.get('/api/project/:employeeId', ({ params }) => {
         if (params.employeeId === '10212674') {
           return HttpResponse.json(
@@ -159,7 +160,6 @@ describe('project detail page', () => {
 
         return HttpResponse.json([]);
       }),
-      http.get('/api/project/personnel', () => HttpResponse.json([])),
       http.get('/api/project/gl-ppm-reconciliation', () =>
         HttpResponse.json([])
       )
@@ -195,8 +195,13 @@ describe('project detail page', () => {
   });
 
   it('shows the project burndown after personnel data loads', async () => {
+    const user = userEvent.setup();
     const projects = [
-      createProject({ balance: 100_000, pmEmployeeId: '2000' }),
+      createProject({
+        balance: 100_000,
+        pmEmployeeId: '2000',
+        projectNumber: 'P-BURNDOWN',
+      }),
     ];
     const personnel: PersonnelRecord[] = [
       {
@@ -204,30 +209,63 @@ describe('project detail page', () => {
         distributionPercent: 50,
         employeeId: '1001',
         fte: 1,
-        fundingEffectiveDate: '2026-01-01',
+        fundingEffectiveDate: null,
         fundingEndDate: null,
         jobCode: '001234',
-        jobEffectiveDate: '2025-01-01',
+        jobEffectiveDate: null,
         jobEndDate: null,
         monthlyRate: 10_000,
         name: 'Smith, Jane',
         positionDescription: 'Researcher',
         positionNumber: '40001234',
         projectDescription: 'Test Project',
-        projectId: 'P1',
+        projectId: 'P-BURNDOWN',
       },
     ];
     setupHandlers({ employeeId: '1000', name: 'PI User' }, projects, personnel);
 
     const { cleanup } = renderRoute({
-      initialPath: '/projects/1000/P1',
+      initialPath: '/projects/1000/P-BURNDOWN',
     });
 
     try {
-      expect(await screen.findByText('Project Burndown')).toBeInTheDocument();
+      const headingLabel = await screen.findByText(
+        'Project Burndown by Personnel Costs'
+      );
+      expect(headingLabel).toBeInTheDocument();
       expect(await screen.findByText('Starting Balance')).toBeInTheDocument();
       expect(screen.getByTestId('project-burndown-chart')).toBeInTheDocument();
       expect(screen.getByText('Projection')).toBeInTheDocument();
+
+      await user.hover(headingLabel.parentElement as HTMLElement);
+
+      expect(await screen.findByRole('tooltip')).toHaveTextContent(
+        tooltipDefinitions.projectBurndownPersonnelCosts
+      );
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('hides the project burndown when no personnel costs apply', async () => {
+    const projects = [
+      createProject({
+        balance: 100_000,
+        pmEmployeeId: '2000',
+        projectNumber: 'P-NO-PERSONNEL',
+      }),
+    ];
+    setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);
+
+    const { cleanup } = renderRoute({
+      initialPath: '/projects/1000/P-NO-PERSONNEL',
+    });
+
+    try {
+      await screen.findByText('No personnel found.');
+      expect(
+        screen.queryByText('Project Burndown by Personnel Costs')
+      ).not.toBeInTheDocument();
     } finally {
       cleanup();
     }

@@ -16,6 +16,8 @@ import {
 } from '@/lib/projectBurndown.ts';
 import type { ProjectSummary } from '@/lib/projectSummary.ts';
 import type { PersonnelRecord } from '@/queries/personnel.ts';
+import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
+import { tooltipDefinitions } from '@/shared/tooltips.ts';
 
 interface ProjectBurndownSectionProps {
   isError: boolean;
@@ -45,13 +47,17 @@ function BurndownTooltip({ active, payload }: BurndownTooltipProps) {
       <p className="font-proxima-bold text-base mb-3">{point.label}</p>
       <dl className="space-y-2">
         <div className="flex justify-between gap-8">
-          <dt className="text-base-content/70">Remaining Balance</dt>
+          <dt className="font-proxima-bold text-base-content/70">
+            Remaining Balance
+          </dt>
           <dd className="font-medium">
             {formatCurrency(point.remainingBalance)}
           </dd>
         </div>
         <div className="flex justify-between gap-8">
-          <dt className="text-base-content/70">Projected Spend</dt>
+          <dt className="font-proxima-bold text-base-content/70">
+            Projected Spend
+          </dt>
           <dd className="font-medium">{formatCurrency(point.totalSpend)}</dd>
         </div>
       </dl>
@@ -126,10 +132,22 @@ export function ProjectBurndownSection({
   const padding = Math.max((maxBalance - minBalance) * 0.1, 1000);
   const projectedEnd =
     points.at(-1)?.remainingBalance ?? summary.totals.balance;
+  const hasApplicablePersonnelCosts = points.some(
+    (point) => point.personnel.length > 0
+  );
+
+  if (!isLoading && !isError && !hasApplicablePersonnelCosts) {
+    return null;
+  }
 
   return (
     <section className="section-margin">
-      <h2 className="h2">Project Burndown</h2>
+      <h2 className="h2">
+        <TooltipLabel
+          label="Project Burndown by Personnel Costs"
+          tooltip={tooltipDefinitions.projectBurndownPersonnelCosts}
+        />
+      </h2>
 
       {isLoading && (
         <div className="fancy-data min-h-64 flex items-center justify-center text-base-content/70">

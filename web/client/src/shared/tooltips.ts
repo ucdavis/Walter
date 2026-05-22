@@ -2,19 +2,12 @@ export const tooltipDefinitions = {
   awardCloseDate:
     'Final closeout date after which charges can no longer be posted to the award.',
   balance: 'Balance is your total budget minus expenses and commitments',
-  billingCycle:
-    'How often the system is set to generate sponsor billing.',
+  billingCycle: 'How often the system is set to generate sponsor billing.',
   burdenScheduleRate:
     'Indirect cost rate setup used to calculate burden on eligible expenses.',
   burdenStructure:
     'Rule set that determines which costs receive indirect cost charges and how they are calculated.',
   cbr: 'Monthly composite benefit rate cost, including fringe/benefit burden.',
-  taskBreakdown:
-    'Summary of how project costs are organized by financial coding segments.',
-  totalBudget:
-    'Total PPM budget across all active and expired projects. Closed projects are excluded.',
-  totalBalance:
-    'Total remaining balance (budget minus expenses and commitments) across all active and expired projects. Closed projects are excluded.',
   commitment:
     'Commitment / Encumbrance are funds set aside when a requisition is fully approved; it is automatically released when the associated purchase order is created (or when an approved requisition is canceled before PO creation).',
   contractAdministrator:
@@ -32,6 +25,14 @@ export const tooltipDefinitions = {
     'Monthly composite benefit rate cost, including fringe/benefit burden.',
   postReportingPeriod:
     'Number of days after the award end date allowed for reporting and closeout activity.',
+  projectBurndownPersonnelCosts:
+    'Projects the current balance forward by subtracting projected monthly personnel costs through the earlier of 12 months or the project end date.',
+  taskBreakdown:
+    'Summary of how project costs are organized by financial coding segments.',
+  totalBalance:
+    'Total remaining balance (budget minus expenses and commitments) across all active and expired projects. Closed projects are excluded.',
+  totalBudget:
+    'Total PPM budget across all active and expired projects. Closed projects are excluded.',
 } as const;
 
 export type TooltipDefinitionKey = keyof typeof tooltipDefinitions;
