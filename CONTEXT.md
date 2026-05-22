@@ -44,6 +44,14 @@ _Avoid_: Admin report, manager report
 A user role whose members can inspect accrual reporting and receive the monthly **Accrual Viewer Report**.
 _Avoid_: Admin, viewer
 
+**Project Burndown**:
+A forward-looking projection of a project's remaining balance through a selected horizon, reduced by expected future costs.
+_Avoid_: Historical spend report, transaction history
+
+**Projected Personnel Cost**:
+The expected monthly project cost for a personnel funding distribution, including distributed salary and composite benefit rate costs.
+_Avoid_: Salary only, headcount cost
+
 ## Relationships
 
 - An **Accrual Snapshot** classifies each employee as active, **Approaching Cap**, or **At Cap**
@@ -55,6 +63,11 @@ _Avoid_: Admin, viewer
 - An active **Accrual Viewer** receives the monthly **Accrual Viewer Report**
 - A scheduled notification run does not create new **Accrual Notifications** when the latest **Accrual Snapshot** has already been notified
 - Employees with unmapped classifications receive the **Generic** employee-group variant
+- A **Project Burndown** starts from the latest reported project balance
+- A **Project Burndown** may use historical costs to estimate future costs, but it does not report historical spend as its purpose
+- A **Project Burndown** includes **Projected Personnel Cost** when personnel are expected to remain funded by the project during the projected month
+- **Projected Personnel Cost** is counted for a full projected month when the personnel funding and job windows overlap any part of that month
+- **Projected Personnel Cost** includes active funded open positions even when no employee is assigned
 
 ## Example dialogue
 
@@ -69,3 +82,5 @@ _Avoid_: Admin, viewer
 - "At cap" can sound like exactly 100% of the cap; resolved: **At Cap** follows the report threshold and starts at 96%.
 - Multiple accrual rows for the same employee can carry different emails; resolved: use the most recent non-empty employee email.
 - "Faculty" can exclude academic researchers or coordinators; resolved: **Faculty Academic** includes fiscal-year academic appointee classifications used by the accrual report.
+- "Burndown" can sound like historical spend; resolved: **Project Burndown** is a forecast of remaining balance, even when historical actuals inform the forecast.
+- Partial-month personnel funding can imply daily proration; resolved: **Projected Personnel Cost** counts the full projected month when funding and job windows overlap any part of that month.
