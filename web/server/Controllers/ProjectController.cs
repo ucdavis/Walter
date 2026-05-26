@@ -95,6 +95,13 @@ public sealed class ProjectController : ApiControllerBase
             .Where(p => p.ProjectStatus == "ACTIVE")
             .ToList();
 
+        // Resolve the dashboard owner's name from PPM team-member data
+        // (the URL employee is guaranteed to appear as a team member on at least one
+        // returned project since the GraphQL queries filtered on them).
+        var ownerName = graphProjects.Concat(orphanedProjects)
+            .SelectMany(p => p.TeamMembers)
+            .FirstOrDefault(m => m.EmployeeId == employeeId)?.Name;
+
         // Join PM employee ID from GraphQL data
         foreach (var project in activeProjects)
         {
@@ -102,6 +109,7 @@ public sealed class ProjectController : ApiControllerBase
             {
                 project.PmEmployeeId = pmEmployeeId;
             }
+            project.OwnerName = ownerName;
         }
 
         return Ok(activeProjects);

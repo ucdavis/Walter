@@ -194,4 +194,11 @@ public sealed class FacultyPortfolioRecord
     /// </summary>
     [JsonPropertyName("pmEmployeeId")]
     public string? PmEmployeeId { get; set; }
+
+    /// <summary>
+    /// Display name of the employee whose dashboard this record is being fetched for,
+    /// resolved from PPM team-member data rather than the faculty dept report.
+    /// </summary>
+    [JsonPropertyName("ownerName")]
+    public string? OwnerName { get; set; }
 }
