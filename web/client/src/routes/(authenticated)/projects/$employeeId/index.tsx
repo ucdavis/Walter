@@ -83,11 +83,19 @@ function RouteComponent() {
     );
   }
 
+  // PPM gives the owner name as "Last, First"; show it as "First Last".
+  const ownerName = projects[0].ownerName;
+  const ownerDisplayName = ownerName?.includes(',')
+    ? `${ownerName.slice(ownerName.indexOf(',') + 1).trim()} ${ownerName
+        .slice(0, ownerName.indexOf(','))
+        .trim()}`
+    : ownerName;
+
   return (
     <main className="flex-1 min-w-0">
       <section className="mt-8 mb-2">
         <h1 className="h1">
-          {projects[0].pi ? `${projects[0].pi}'s Dashboard` : 'Dashboard'}
+          {ownerDisplayName ? `${ownerDisplayName}'s Dashboard` : 'Dashboard'}
         </h1>
       </section>
       <section className="section-margin">

@@ -39,6 +39,7 @@ export interface ProjectRecord {
   pi: string | null;
   pm: string | null;
   pmEmployeeId: string | null;
+  ownerName: string | null;
   postReportingPeriod: string | null;
   primarySponsorName: string | null;
   programCode: string | null;

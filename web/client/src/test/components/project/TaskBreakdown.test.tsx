@@ -81,6 +81,7 @@ const createProject = (
   taskName: 'Task 1',
   taskNum: 'T001',
   taskStatus: 'Active',
+  ownerName: null,
   ...overrides,
 });
 
