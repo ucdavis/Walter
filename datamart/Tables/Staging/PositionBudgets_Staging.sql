@@ -1,0 +1,33 @@
+create table dbo.PositionBudgets_Staging
+(
+    College              nvarchar(10)  not null,
+    FiscalYear           smallint,
+    PositionNumber       nvarchar(8)   not null,
+    AccountCode          nvarchar(25)  not null,
+    DistributionPercent  decimal(10, 4),
+    FundingEndDate       date,
+    FundingEffectiveDate date,
+    UcPercentPay         decimal(10, 4),
+    NaturalAccount       nvarchar(10),
+    FinancialDept        nvarchar(10),
+    ProjectId            nvarchar(15),
+    Task                 nvarchar(15),
+    FundCode             nvarchar(10),
+    ProgramCode          nvarchar(10),
+    Purpose              nvarchar(10),
+    Activity             nvarchar(10),
+    Award                nvarchar(15),
+    JobEffectiveDate     date,
+    JobEffectiveSequence smallint,
+    EmployeeId           nvarchar(11),
+    MonthlyRate          decimal(12, 2),
+    ExpectedEndDate      date,
+    Fte                  decimal(7, 6),
+    CompFrequency        nvarchar(5),
+    TerminationDate      date,
+    Name                 nvarchar(100),
+    PositionDescription  nvarchar(100),
+    JobCode              nvarchar(10),
+    LoadedAt             datetime2(3)  not null
+)
+go
