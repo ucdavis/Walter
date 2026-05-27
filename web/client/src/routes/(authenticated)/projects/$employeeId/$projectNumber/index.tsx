@@ -107,7 +107,6 @@ function ProjectContent({
 
       <section className="section-margin">
         <h2 className="h2">Personnel</h2>
-        <p>test</p>
         {personnelQuery.isPending && (
           <p className="text-base-content/70 mt-4">Loading personnel...</p>
         )}
