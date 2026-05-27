@@ -212,6 +212,8 @@ public sealed class AccrualOutboundMessageRenderer : IOutboundMessageRenderer
             LogoUrl = BuildAppAssetUrl(_appOptions.TryGetBaseUri(), "/apple-touch-icon.png")
                 ?? NotificationTemplateModelBase.DefaultLogoUrl,
             Payload = payload,
+            UniversityLogoUrl = BuildAppAssetUrl(_appOptions.TryGetBaseUri(), "/ucdavis.svg")
+                ?? NotificationTemplateModelBase.DefaultUniversityLogoUrl,
             Variant = variant,
         };
     }
@@ -231,6 +233,8 @@ public sealed class AccrualOutboundMessageRenderer : IOutboundMessageRenderer
             LogoUrl = BuildAppAssetUrl(appBaseUri, "/apple-touch-icon.png")
                 ?? NotificationTemplateModelBase.DefaultLogoUrl,
             Payload = payload,
+            UniversityLogoUrl = BuildAppAssetUrl(appBaseUri, "/ucdavis.svg")
+                ?? NotificationTemplateModelBase.DefaultUniversityLogoUrl,
         };
     }
 
