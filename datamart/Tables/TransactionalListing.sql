@@ -1,5 +1,6 @@
 CREATE TABLE dbo.TransactionalListing
 (
+    TransactionalListingId          BIGINT          IDENTITY(1, 1) NOT NULL,
     Entity                          NVARCHAR(20),
     EntityDescription               NVARCHAR(200),
     Fund                            NVARCHAR(20),
@@ -17,7 +18,6 @@ CREATE TABLE dbo.TransactionalListing
     Activity                        NVARCHAR(20),
     ActivityDescription             NVARCHAR(200),
     DocumentType                    NVARCHAR(50),
-    DocumentNumber                  NVARCHAR(50)                          NOT NULL,
     AccountingSequenceNumber        NVARCHAR(50),
     TrackingNo                      NVARCHAR(100),
     Reference                       NVARCHAR(200),
@@ -32,15 +32,42 @@ CREATE TABLE dbo.TransactionalListing
     BatchStatus                     NVARCHAR(50),
     ActualFlag                      NVARCHAR(10),
     EncumbranceTypeCode             NVARCHAR(50),
-    ActualAmount                    DECIMAL(18, 2)                        NOT NULL DEFAULT 0,
-    CommitmentAmount                DECIMAL(18, 2)                        NOT NULL DEFAULT 0,
-    ObligationAmount                DECIMAL(18, 2)                        NOT NULL DEFAULT 0,
-    LoadedAt                        DATETIME2(3)                          NOT NULL
+    ActualAmount                    DECIMAL(18, 2)  NOT NULL DEFAULT 0,
+    CommitmentAmount                DECIMAL(18, 2)  NOT NULL DEFAULT 0,
+    ObligationAmount                DECIMAL(18, 2)  NOT NULL DEFAULT 0,
+    LoadedAt                        DATETIME2(3)    NOT NULL,
+    -- ChartStringKey is the diff grain. AE source rows often have null
+    -- AccountingSequenceNumber (encumbrances/POs), so we can't key off that.
+    -- The 8-column chart string is always populated and gives us stable
+    -- buckets to aggregate, diff, and replace by. COALESCE keeps NULL
+    -- segments from producing NULL keys.
+    ChartStringKey AS
+    (
+        CONCAT(
+            COALESCE(Entity, ''),               N'-',
+            COALESCE(Fund, ''),                 N'-',
+            COALESCE(FinancialDepartment, ''),  N'-',
+            COALESCE(Account, ''),              N'-',
+            COALESCE(Purpose, ''),              N'-',
+            COALESCE(Program, ''),              N'-',
+            COALESCE(Project, ''),              N'-',
+            COALESCE(Activity, '')
+        )
+    ) PERSISTED,
+    CONSTRAINT PK_TransactionalListing
+        PRIMARY KEY CLUSTERED (TransactionalListingId)
 );
 GO
 
--- Clustered index on DocumentNumber: supports the live-aggregate GROUP BY in
--- usp_DiffTransactionalListing and the doc-level DELETE in usp_SwapTransactionalListing.
-CREATE CLUSTERED INDEX IX_TransactionalListing_DocumentNumber
-    ON dbo.TransactionalListing (DocumentNumber);
+-- Diff and swap path: aggregate / DELETE / scan-from-staging all hit ChartStringKey.
+-- INCLUDE the three amount columns so the diff's per-chart-string aggregate
+-- query is satisfied entirely by this index.
+CREATE NONCLUSTERED INDEX IX_TransactionalListing_ChartStringKey
+    ON dbo.TransactionalListing (ChartStringKey)
+    INCLUDE (ActualAmount, CommitmentAmount, ObligationAmount);
+GO
+
+-- Consumer reads: every TL consumer sproc filters by Project.
+CREATE NONCLUSTERED INDEX IX_TransactionalListing_Project
+    ON dbo.TransactionalListing (Project);
 GO

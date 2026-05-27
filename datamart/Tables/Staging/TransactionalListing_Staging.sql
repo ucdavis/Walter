@@ -17,7 +17,6 @@ CREATE TABLE dbo.TransactionalListing_Staging
     Activity                        NVARCHAR(20),
     ActivityDescription             NVARCHAR(200),
     DocumentType                    NVARCHAR(50),
-    DocumentNumber                  NVARCHAR(50)                          NOT NULL,
     AccountingSequenceNumber        NVARCHAR(50),
     TrackingNo                      NVARCHAR(100),
     Reference                       NVARCHAR(200),
@@ -32,16 +31,9 @@ CREATE TABLE dbo.TransactionalListing_Staging
     BatchStatus                     NVARCHAR(50),
     ActualFlag                      NVARCHAR(10),
     EncumbranceTypeCode             NVARCHAR(50),
-    ActualAmount                    DECIMAL(18, 2)                        NOT NULL DEFAULT 0,
-    CommitmentAmount                DECIMAL(18, 2)                        NOT NULL DEFAULT 0,
-    ObligationAmount                DECIMAL(18, 2)                        NOT NULL DEFAULT 0,
-    LoadedAt                        DATETIME2(3)                          NOT NULL
+    ActualAmount                    DECIMAL(18, 2)  NOT NULL DEFAULT 0,
+    CommitmentAmount                DECIMAL(18, 2)  NOT NULL DEFAULT 0,
+    ObligationAmount                DECIMAL(18, 2)  NOT NULL DEFAULT 0,
+    LoadedAt                        DATETIME2(3)    NOT NULL
 );
-GO
-
--- Clustered index on DocumentNumber matches the production table so the
--- swap's "DELETE WHERE DocumentNumber IN (SELECT DocumentNumber FROM Staging)"
--- and "INSERT ... FROM Staging" both scan efficiently.
-CREATE CLUSTERED INDEX IX_TransactionalListing_Staging_DocumentNumber
-    ON dbo.TransactionalListing_Staging (DocumentNumber);
 GO
