@@ -18,7 +18,6 @@ BEGIN
     DECLARE @OracleQuery NVARCHAR(MAX);
     DECLARE @RedshiftQuery NVARCHAR(MAX);
     DECLARE @TSQLCommand NVARCHAR(MAX);
-    DECLARE @LinkedServerName SYSNAME = '[AIT_BISTG_PRD-CAES_HCMODS_APPUSER]';
     DECLARE @RedshiftLinkedServer SYSNAME = '[AE_Redshift_PROD]';
     DECLARE @StartTime DATETIME2 = SYSDATETIME();
     DECLARE @RowCount INT;
@@ -40,12 +39,15 @@ BEGIN
     DECLARE @ProjectIdFilter NVARCHAR(MAX);
     EXEC dbo.usp_ParseProjectIdFilter @ProjectIds, @ProjectIdFilter OUTPUT;
 
-    -- Build Oracle query joining budget and position data
+    -- Build Oracle query joining budget and position data.
     -- Use two-stage approach for performance:
     --   1. CandidatePositions: Fast lookup to find positions with ANY budget entry for the project.
     --      This limits the number of records pulled in subsequent CTEs to improve performance
     --   2. RankedBudget: Get all budget entries for just those positions and rank them
     --   3. LatestBudget: Filter to positions whose LATEST entry is still in the project
+    -- CandidatePositions stays an in-Oracle subquery (IN (SELECT ...)) so large position sets do
+    -- not hit Oracle's 1000-item IN-list limit (ORA-01795). The query is executed via EXEC ... AT
+    -- (see below) so it is not subject to OPENQUERY's 8000-character string-literal limit.
     SET @OracleQuery = '
         WITH CandidatePositions AS (
             SELECT DISTINCT budget.POSITION_NBR
@@ -208,7 +210,6 @@ BEGIN
         FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
     );
 
-    -- Execute via OPENQUERY, join with CompositeBenefitRates and Redshift project names
     BEGIN TRY
         -- Create temp table for Oracle results
         CREATE TABLE #PositionBudgets (
@@ -241,13 +242,12 @@ BEGIN
             JOBCODE VARCHAR(6)
         );
 
-        -- Insert Oracle data into temp table
-        SET @TSQLCommand =
-            'INSERT INTO #PositionBudgets
-             SELECT oq.*
-             FROM OPENQUERY(' + @LinkedServerName + ', ''' + REPLACE(@OracleQuery, '''', '''''') + ''') oq';
-
-        EXEC sp_executesql @TSQLCommand;
+        -- Insert Oracle data into temp table via EXEC ... AT. Unlike OPENQUERY, the query text is
+        -- sent to the linked server as an RPC parameter, so it is NOT capped at 8000 characters --
+        -- which is what broke this proc for large project sets. Requires 'rpc out' = true on the
+        -- linked server (sp_serveroption '...','rpc out','true').
+        INSERT INTO #PositionBudgets
+        EXEC (@OracleQuery) AT [AIT_BISTG_PRD-CAES_HCMODS_APPUSER];
 
         -- TODO: Replace this temp table approach with a local Projects table populated via ETL
         -- Create temp table for project names from Redshift
