@@ -32,9 +32,21 @@ const csvColumns = [
   { header: 'Program Description', key: 'programDescription' as const },
   { header: 'Activity', key: 'activityCode' as const },
   { header: 'Activity Description', key: 'activityDescription' as const },
-  { format: 'currency' as const, header: 'GL Balance', key: 'glActualAmount' as const },
-  { format: 'currency' as const, header: 'PPM Balance', key: 'ppmBudBal' as const },
-  { format: 'currency' as const, header: 'Remaining Balance', key: 'remainingBalance' as const },
+  {
+    format: 'currency' as const,
+    header: 'GL Balance',
+    key: 'glActualAmount' as const,
+  },
+  {
+    format: 'currency' as const,
+    header: 'PPM Balance',
+    key: 'ppmBudBal' as const,
+  },
+  {
+    format: 'currency' as const,
+    header: 'Remaining Balance',
+    key: 'remainingBalance' as const,
+  },
 ];
 
 const columnHelper = createColumnHelper<GLPPMReconciliationRecord>();
@@ -53,9 +65,15 @@ function RouteComponent() {
     () =>
       [...(records ?? [])].sort((a, b) => {
         const fundCmp = (a.fundCode ?? '').localeCompare(b.fundCode ?? '');
-        if (fundCmp !== 0) return fundCmp;
-        const progCmp = (a.programCode ?? '').localeCompare(b.programCode ?? '');
-        if (progCmp !== 0) return progCmp;
+        if (fundCmp !== 0) {
+          return fundCmp;
+        }
+        const progCmp = (a.programCode ?? '').localeCompare(
+          b.programCode ?? ''
+        );
+        if (progCmp !== 0) {
+          return progCmp;
+        }
         return (a.activityCode ?? '').localeCompare(b.activityCode ?? '');
       }),
     [records]
@@ -179,8 +197,24 @@ function RouteComponent() {
       <section className="mt-8 mb-10">
         <h1 className="h1">GL/PPM Reconciliation</h1>
         <h3 className="subtitle">{projectNumber}</h3>
-
         <p>Comparing General Ledger balances to PPM balances</p>
+        <p className="max-w-150 text-sm text-base-content/70 mt-3 mb-1">
+          Known Issue: GL and PPM balances below can differ from the UCD PPM to
+          GL Non-Sponsored Projects Reconciliation Report because either
+        </p>
+        <ol className="list-decimal pl-4 space-y-1 text-sm text-base-content/70">
+          <li>
+            The timing of the WALTER and Datamart daily data refreshes is
+            different or
+          </li>
+          <li>
+            Certain transactions involving natural account 300001 are excluded
+            in WALTER.
+          </li>
+        </ol>
+        <p className="text-sm text-base-content/70">
+          We are actively researching these discrepancies to correct them.
+        </p>
       </section>
 
       {isReconciliationPending ? (
@@ -203,13 +237,6 @@ function RouteComponent() {
             columns={columns}
             data={sorted}
             expandable={false}
-            tableActions={
-              <ExportDataButton
-                columns={csvColumns}
-                data={sorted}
-                filename={`reconciliation-${projectNumber}.csv`}
-              />
-            }
             getRowProps={(row) => {
               if (!hasDiscrepancy(row.original)) {
                 return {};
@@ -218,6 +245,13 @@ function RouteComponent() {
             }}
             globalFilter="none"
             pagination="off"
+            tableActions={
+              <ExportDataButton
+                columns={csvColumns}
+                data={sorted}
+                filename={`reconciliation-${projectNumber}.csv`}
+              />
+            }
           />
         </>
       )}

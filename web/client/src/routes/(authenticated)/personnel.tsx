@@ -74,7 +74,11 @@ function RouteComponent() {
       <h3 className="subtitle mb-4">
         {uniqueEmployees} employees across {uniqueProjects} projects
       </h3>
-
+      <p className="max-w-prose mb-4 text-sm text-base-content/70">
+        The list of employees below is limited to UCPath records that can be
+        accessed by WALTER. Additional information will be displayed once
+        available.
+      </p>
       {/* Personnel Table */}
       <PersonnelTable data={data} />
     </div>
