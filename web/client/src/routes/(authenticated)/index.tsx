@@ -75,7 +75,9 @@ function RouteComponent() {
   const discrepancies = useProjectDiscrepancies(internalProjectNumbers);
 
   const piAlerts = useMemo(() => {
-    if (!isPrincipalInvestigator || !userProjectsQuery.data) return [];
+    if (!isPrincipalInvestigator || !userProjectsQuery.data) {
+      return [];
+    }
     const piOnlyProjects = userProjectsQuery.data.filter(
       (p) => p.pmEmployeeId !== user.employeeId
     );
@@ -198,7 +200,11 @@ function RouteComponent() {
         )}
 
         {showProjectsTab && selectedTab === 'projects' && (
-          <div aria-labelledby="tab-projects" id="panel-projects" role="tabpanel">
+          <div
+            aria-labelledby="tab-projects"
+            id="panel-projects"
+            role="tabpanel"
+          >
             {sponsoredProjects.length > 0 && (
               <div className="mt-4">
                 <h2 className="h2">Sponsored Projects</h2>
@@ -211,10 +217,11 @@ function RouteComponent() {
             {internalProjects.length > 0 && (
               <div className="mt-4">
                 <h2 className="h2">Internal Projects</h2>
-                <p className="text-sm text-base-content/70 mt-1">
+                <p className="max-w-prose mb-4 text-sm text-base-content/70">
                   Totals for internal projects do not reflect transactions that
                   have occurred since the latest data refresh or manual updates
-                  that are needed. Contact your fiscal officer with any questions.
+                  that are needed. Contact your fiscal officer with any
+                  questions.
                 </p>
                 <InternalProjectsTable
                   discrepancies={discrepancies}
