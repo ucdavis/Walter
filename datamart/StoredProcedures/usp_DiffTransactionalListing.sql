@@ -1,10 +1,10 @@
 -- <summary>
 -- Computes the set of chart strings whose aggregates (row count + amount sums)
 -- differ between Walter's current TransactionalListing and the live source on
--- Redshift. Emits a count and a quoted IN-list string for use as a Fabric
--- pipeline parameter. The full-outer-join classifies a chart string as
--- changed if it is new in source, missing from source (deleted), or has any
--- aggregate divergence.
+-- Redshift. Returns a single-row result set with the count and a quoted
+-- IN-list string -- consumed by a Fabric Lookup activity. The full-outer-join
+-- classifies a chart string as changed if it is new in source, missing from
+-- source (deleted), or has any aggregate divergence.
 --
 -- Source aggregates are pulled via OPENQUERY against [AE_Redshift_PROD]. The
 -- query is static and produces one row per chart string (~98K rows for ~2.2M
@@ -16,15 +16,13 @@
 -- sproc does no first-run handling.
 -- </summary>
 create procedure dbo.usp_DiffTransactionalListing
-    @ChangedChartStringCount   int           output,
-    @ChangedChartStringsInList nvarchar(max) output
 as
 begin
     set nocount on;
     set xact_abort on;
 
-    set @ChangedChartStringCount   = 0;
-    set @ChangedChartStringsInList = N'';
+    declare @ChangedChartStringCount   int           = 0;
+    declare @ChangedChartStringsInList nvarchar(max) = N'';
 
     declare @SourceAggs table
     (
@@ -87,5 +85,9 @@ begin
 
     if @ChangedChartStringsInList is null
         set @ChangedChartStringsInList = N'';
+
+    select
+        @ChangedChartStringCount   as ChangedChartStringCount,
+        @ChangedChartStringsInList as ChangedChartStringsInList;
 end
 go
