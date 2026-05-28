@@ -39,17 +39,6 @@ function RouteComponent() {
     [projects]
   );
 
-  const internalProjectNumbers = useMemo(
-    () => [
-      ...new Set(
-        (projects ?? [])
-          .filter((p) => p.projectType === 'Internal')
-          .map((p) => p.projectNumber)
-      ),
-    ],
-    [projects]
-  );
-
   const internalProjects = useMemo(
     () => (projects ?? []).filter((p) => p.projectType === 'Internal'),
     [projects]
@@ -61,19 +50,25 @@ function RouteComponent() {
   );
 
   const user = useUser();
-  const discrepancies = useProjectDiscrepancies(internalProjectNumbers);
-  const visibleDiscrepancies = useMemo(() => {
-    const visible = new Set<string>();
-    for (const p of internalProjects) {
-      if (
-        discrepancies.has(p.projectNumber) &&
-        canViewProjectDiscrepancy(user.roles, p.pmEmployeeId, user.employeeId)
-      ) {
-        visible.add(p.projectNumber);
-      }
-    }
-    return visible;
-  }, [discrepancies, internalProjects, user.employeeId, user.roles]);
+  const authorizedDiscrepancyProjectNumbers = useMemo(
+    () => [
+      ...new Set(
+        internalProjects
+          .filter((p) =>
+            canViewProjectDiscrepancy(
+              user.roles,
+              p.pmEmployeeId,
+              user.employeeId
+            )
+          )
+          .map((p) => p.projectNumber)
+      ),
+    ],
+    [internalProjects, user.employeeId, user.roles]
+  );
+  const visibleDiscrepancies = useProjectDiscrepancies(
+    authorizedDiscrepancyProjectNumbers
+  );
 
   const summary = useMemo(
     () => (projects?.length ? summarizeAllProjects(projects) : null),
