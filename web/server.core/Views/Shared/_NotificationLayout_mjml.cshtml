@@ -16,9 +16,11 @@
     const string FooterPadding = "16px 24px 30px 24px";
     const string FooterTextPadding = "0px";
     const string FooterLogoPadding = "14px 0 0 0";
-    const string FooterLogoWidth = "125px";
+    const string FooterLogoWidth = "100";
 
     var cardBorder = $"1px solid {CardBorderColor}";
+    var hasAppHomeUrl = !string.IsNullOrWhiteSpace(Model.AppHomeUrl);
+    var hasUniversityHomeUrl = !string.IsNullOrWhiteSpace(Model.UniversityHomeUrl);
 }
 <!doctype html>
 <mjml>
@@ -45,15 +47,38 @@
             <td style="height:48px;line-height:0;mso-line-height-rule:exactly;padding:@(HeaderLogoPadding);vertical-align:middle;width:48px;">
               @if (!string.IsNullOrWhiteSpace(Model.LogoUrl))
               {
+                if (hasAppHomeUrl)
+                {
+              <a href="@Model.AppHomeUrl" style="display:block;text-decoration:none;">
+                <img alt="" height="46" src="@Model.LogoUrl" style="border:0;display:block;height:46px;line-height:0;max-height:46px;max-width:46px;width:46px;" width="46" />
+              </a>
+                }
+                else
+                {
               <img alt="" height="46" src="@Model.LogoUrl" style="border:0;display:block;height:46px;line-height:0;max-height:46px;max-width:46px;width:46px;" width="46" />
+                }
               }
             </td>
             <td style="height:48px;padding:0;vertical-align:middle;">
               <div style="color:@(PrimaryTextColor);font-size:22px;font-weight:400;line-height:1.2;">
+                @if (hasAppHomeUrl)
+                {
+                <a href="@Model.AppHomeUrl" style="color:@(PrimaryTextColor);text-decoration:none;">@Model.AppName</a>
+                }
+                else
+                {
                 @Model.AppName
+                }
               </div>
               <div style="color:@(SecondaryTextColor);font-size:12px;font-weight:700;letter-spacing:1.8px;line-height:1.5;text-transform:uppercase;">
+                @if (hasAppHomeUrl)
+                {
+                <a href="@Model.AppHomeUrl" style="color:@(SecondaryTextColor);text-decoration:none;">Notification</a>
+                }
+                else
+                {
                 Notification
+                }
               </div>
             </td>
           </tr>
@@ -91,7 +116,16 @@
         <mj-table cellpadding="0" cellspacing="0" role="presentation" padding="@FooterLogoPadding">
           <tr>
             <td align="center">
-              <img alt="UC Davis" src="@Model.UniversityLogoUrl" width="@FooterLogoWidth" style="border:0;display:block;height:auto;line-height:100%;max-width:@(FooterLogoWidth)px;opacity:.75;outline:none;text-decoration:none;width:@(FooterLogoWidth)px;" />
+              @if (hasUniversityHomeUrl)
+              {
+              <a href="@Model.UniversityHomeUrl" style="display:inline-block;text-decoration:none;">
+                <img alt="UC Davis" src="@Model.UniversityLogoUrl" width="@FooterLogoWidth" style="border:0;display:block;height:auto;line-height:100%;max-width:@(FooterLogoWidth)px;opacity:.55;outline:none;text-decoration:none;width:@(FooterLogoWidth)px;" />
+              </a>
+              }
+              else
+              {
+              <img alt="UC Davis" src="@Model.UniversityLogoUrl" width="@FooterLogoWidth" style="border:0;display:block;height:auto;line-height:100%;max-width:@(FooterLogoWidth)px;opacity:.55;outline:none;text-decoration:none;width:@(FooterLogoWidth)px;" />
+              }
             </td>
           </tr>
         </mj-table>
