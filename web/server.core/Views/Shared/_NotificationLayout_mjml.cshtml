@@ -1,70 +1,135 @@
 @model server.core.Services.NotificationTemplateModelBase
+
+@{
+    const string PrimaryTextColor = "#1f1f1f";
+    const string SecondaryTextColor = "#848484";
+    const string BrandColor = "#0047ba";
+    const string BodyBackgroundColor = "#fafafa";
+    const string CardBackgroundColor = "#ffffff";
+    const string CardBorderColor = "#e9e3ee";
+
+    const string HeaderPadding = "24px 0 10px 0";
+    const string HeaderLogoPadding = "0 10px 0 0";
+    const string ButtonInnerPadding = "13px 24px";
+    const string MainSectionPadding = "0px";
+    const string MainColumnPadding = "0px";
+    const string FooterPadding = "16px 24px 30px 24px";
+    const string FooterTextPadding = "0px";
+    const string FooterLogoPadding = "14px 0 0 0";
+    const string FooterLogoWidth = "100";
+
+    var cardBorder = $"1px solid {CardBorderColor}";
+    var hasAppHomeUrl = !string.IsNullOrWhiteSpace(Model.AppHomeUrl);
+    var hasUniversityHomeUrl = !string.IsNullOrWhiteSpace(Model.UniversityHomeUrl);
+}
 <!doctype html>
 <mjml>
   <mj-head>
     <mj-preview>@Model.AppName notification</mj-preview>
     <mj-attributes>
       <mj-all font-family="proxima-nova, Arial, Helvetica, sans-serif" />
-      <mj-text color="#2f2f2f" font-size="16px" line-height="1.65" />
-      <mj-button background-color="#0047ba"
+      <mj-text color="@PrimaryTextColor" font-size="16px" line-height="1.65" />
+      <mj-button background-color="@BrandColor"
                  color="#ffffff"
                  border-radius="4px"
                  font-size="16px"
                  font-weight="600"
-                 inner-padding="13px 24px" />
+                 inner-padding="@ButtonInnerPadding" />
     </mj-attributes>
   </mj-head>
-  <mj-body background-color="#fafafa"
+  <mj-body background-color="@BodyBackgroundColor"
            width="@(string.IsNullOrWhiteSpace(Model.LayoutWidth) ? "640px" : Model.LayoutWidth)">
-    <mj-section padding="26px 24px 14px 24px">
+    @* Header *@
+    <mj-section padding="@HeaderPadding">
       <mj-column>
-        <mj-table cellpadding="0" cellspacing="0" role="presentation" padding="0px">
+        <mj-table cellpadding="0" cellspacing="0" role="presentation" padding="@MainSectionPadding">
           <tr>
-            <td style="height:48px;line-height:0;mso-line-height-rule:exactly;padding:0 10px 0 0;vertical-align:middle;width:48px;">
+            <td style="height:48px;line-height:0;mso-line-height-rule:exactly;padding:@(HeaderLogoPadding);vertical-align:middle;width:48px;">
               @if (!string.IsNullOrWhiteSpace(Model.LogoUrl))
               {
+                if (hasAppHomeUrl)
+                {
+              <a href="@Model.AppHomeUrl" style="display:block;text-decoration:none;">
+                <img alt="" height="46" src="@Model.LogoUrl" style="border:0;display:block;height:46px;line-height:0;max-height:46px;max-width:46px;width:46px;" width="46" />
+              </a>
+                }
+                else
+                {
               <img alt="" height="46" src="@Model.LogoUrl" style="border:0;display:block;height:46px;line-height:0;max-height:46px;max-width:46px;width:46px;" width="46" />
+                }
               }
             </td>
             <td style="height:48px;padding:0;vertical-align:middle;">
-              <div style="color:#2f2f2f;font-size:22px;font-weight:700;line-height:1.2;">
+              <div style="color:@(PrimaryTextColor);font-size:22px;font-weight:400;line-height:1.2;">
+                @if (hasAppHomeUrl)
+                {
+                <a href="@Model.AppHomeUrl" style="color:@(PrimaryTextColor);text-decoration:none;">@Model.AppName</a>
+                }
+                else
+                {
                 @Model.AppName
+                }
               </div>
-              <div style="color:#7c7c7c;font-size:12px;font-weight:700;letter-spacing:1.8px;line-height:1.5;text-transform:uppercase;">
-                Notification
+              <div style="color:@(SecondaryTextColor);font-size:12px;font-weight:700;letter-spacing:1.8px;line-height:1.5;text-transform:uppercase;">
+                @if (hasAppHomeUrl)
+                {
+                <a href="@Model.AppHomeUrl" style="color:@(SecondaryTextColor);text-decoration:none;">Notification</a>
+                }
+                else
+                {
+                <text>Notification</text>
+                }
               </div>
             </td>
           </tr>
         </mj-table>
       </mj-column>
     </mj-section>
-
-    <mj-section background-color="#0047ba" padding="0px">
-      <mj-column width="72%">
-        <mj-spacer height="4px" />
-      </mj-column>
-      <mj-column width="18%" background-color="#ffbf00">
-        <mj-spacer height="4px" />
-      </mj-column>
-      <mj-column width="10%" background-color="#c10230">
+    @* Main Section *@
+    <mj-section background-color="@BrandColor"
+                border-left="@cardBorder"
+                border-radius="4px 4px 0 0"
+                border-right="@cardBorder"
+                padding="@MainSectionPadding">
+      <mj-column padding="@MainColumnPadding">
         <mj-spacer height="4px" />
       </mj-column>
     </mj-section>
-
-    <mj-section background-color="#ffffff"
-                border="1px solid #e9e3ee"
+    <mj-section background-color="@CardBackgroundColor"
+                border-bottom="@cardBorder"
+                border-left="@cardBorder"
                 border-radius="0 0 4px 4px"
-                padding="0px">
-      <mj-column padding="0px">
+                border-right="@cardBorder"
+                padding="@MainSectionPadding">
+      <mj-column padding="@MainColumnPadding">
         @RenderBody()
       </mj-column>
     </mj-section>
 
-    <mj-section padding="16px 24px 30px 24px">
+    <mj-section padding="@FooterPadding">
       <mj-column>
-        <mj-text align="center" font-size="12px" line-height="1.5" color="#7c7c7c" padding="0px">
+        <mj-text align="center" font-size="12px" line-height="1.5" color="@SecondaryTextColor" padding="@FooterTextPadding">
           This email was automatically generated. Please do not reply to it.
         </mj-text>
+        @if (!string.IsNullOrWhiteSpace(Model.UniversityLogoUrl))
+        {
+        <mj-table cellpadding="0" cellspacing="0" role="presentation" padding="@FooterLogoPadding">
+          <tr>
+            <td align="center">
+              @if (hasUniversityHomeUrl)
+              {
+              <a href="@Model.UniversityHomeUrl" style="display:inline-block;text-decoration:none;">
+                <img alt="UC Davis" src="@Model.UniversityLogoUrl" width="@FooterLogoWidth" style="border:0;display:block;height:auto;line-height:100%;max-width:@(FooterLogoWidth)px;opacity:.55;outline:none;text-decoration:none;width:@(FooterLogoWidth)px;" />
+              </a>
+              }
+              else
+              {
+              <img alt="UC Davis" src="@Model.UniversityLogoUrl" width="@FooterLogoWidth" style="border:0;display:block;height:auto;line-height:100%;max-width:@(FooterLogoWidth)px;opacity:.55;outline:none;text-decoration:none;width:@(FooterLogoWidth)px;" />
+              }
+            </td>
+          </tr>
+        </mj-table>
+        }
       </mj-column>
     </mj-section>
   </mj-body>

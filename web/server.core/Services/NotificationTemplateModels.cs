@@ -4,13 +4,19 @@ namespace server.core.Services;
 
 public abstract class NotificationTemplateModelBase
 {
+    public static string DefaultAppHomeUrl => "https://walter.ucdavis.edu";
     public static string DefaultLogoUrl => "/apple-touch-icon.png";
+    public static string DefaultUniversityHomeUrl => "https://ucdavis.edu";
+    public static string DefaultUniversityLogoUrl => "/ucdavis.svg";
 
     public string AppName { get; init; } = "Walter";
+    public string? AppHomeUrl { get; init; } = DefaultAppHomeUrl;
     public string ButtonText { get; init; } = string.Empty;
     public string ButtonUrl { get; init; } = string.Empty;
     public string? LogoUrl { get; init; } = DefaultLogoUrl;
     public string? LayoutWidth { get; init; }
+    public string? UniversityHomeUrl { get; init; } = DefaultUniversityHomeUrl;
+    public string? UniversityLogoUrl { get; init; } = DefaultUniversityLogoUrl;
 }
 
 public sealed class NotificationButtonModel
