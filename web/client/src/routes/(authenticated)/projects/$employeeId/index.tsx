@@ -8,6 +8,7 @@ import {
 } from '@/queries/project.ts';
 import { usePersonnelQuery } from '@/queries/personnel.ts';
 import { summarizeAllProjects } from '@/lib/projectSummary.ts';
+import { useHasRole, useUser } from '@/shared/auth/UserContext.tsx';
 import { Currency } from '@/shared/Currency.tsx';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
@@ -58,7 +59,24 @@ function RouteComponent() {
     [projects]
   );
 
+  const user = useUser();
+  const isFinancialViewer = useHasRole('FinancialViewer');
   const discrepancies = useProjectDiscrepancies(internalProjectNumbers);
+  const visibleDiscrepancies = useMemo(() => {
+    if (isFinancialViewer) {
+      return discrepancies;
+    }
+    const visible = new Set<string>();
+    for (const p of internalProjects) {
+      if (
+        p.pmEmployeeId === user.employeeId &&
+        discrepancies.has(p.projectNumber)
+      ) {
+        visible.add(p.projectNumber);
+      }
+    }
+    return visible;
+  }, [discrepancies, internalProjects, isFinancialViewer, user.employeeId]);
 
   const summary = useMemo(
     () => (projects?.length ? summarizeAllProjects(projects) : null),
@@ -162,7 +180,7 @@ function RouteComponent() {
             needed. Contact your fiscal officer with any questions.
           </p>
           <InternalProjectsTable
-            discrepancies={discrepancies}
+            discrepancies={visibleDiscrepancies}
             employeeId={employeeId}
             records={internalProjects}
           />
