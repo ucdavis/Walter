@@ -14,7 +14,8 @@ import {
   useProjectDiscrepancies,
 } from '@/queries/project.ts';
 
-import { useHasRole, useUser } from '@/shared/auth/UserContext.tsx';
+import { canViewProjectDiscrepancy } from '@/shared/auth/roleAccess.ts';
+import { useUser } from '@/shared/auth/UserContext.tsx';
 import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
 import { tooltipDefinitions } from '@/shared/tooltips.ts';
 import { useSuspenseQuery } from '@tanstack/react-query';
@@ -51,9 +52,11 @@ function ProjectContent({
 }) {
   const personnelQuery = usePersonnelQuery(employeeId, [summary.projectNumber]);
   const user = useUser();
-  const isFinancialViewer = useHasRole('FinancialViewer');
-  const canSeeDiscrepancy =
-    isFinancialViewer || summary.pmEmployeeId === user.employeeId;
+  const canSeeDiscrepancy = canViewProjectDiscrepancy(
+    user.roles,
+    summary.pmEmployeeId,
+    user.employeeId
+  );
   const discrepancies = useProjectDiscrepancies(
     summary.isInternal && canSeeDiscrepancy ? [summary.projectNumber] : []
   );

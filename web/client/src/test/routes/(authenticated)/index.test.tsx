@@ -339,7 +339,10 @@ describe('home route', () => {
 
     try {
       await user.click(await screen.findByRole('tab', { name: 'Projects' }));
-      expect(await screen.findByText('P1: Internal One')).toBeInTheDocument();
+      await screen.findByText('Internal Projects');
+
+      // Give the reconciliation query a window to fire if the gate failed.
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       expect(
         screen.queryByTitle('GL/PPM reconciliation discrepancy')

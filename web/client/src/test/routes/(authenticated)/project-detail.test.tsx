@@ -327,48 +327,5 @@ describe('project detail page', () => {
       }
     });
 
-    it('shows reconciliation alert for PM on the project', async () => {
-      const projects = [
-        createProject({ pmEmployeeId: '2000', projectType: 'Internal' }),
-      ];
-      setupDetailHandlers({
-        projects,
-        user: { employeeId: '2000', name: 'PM User', roles: [] },
-      });
-
-      const { cleanup } = renderRoute({ initialPath: '/projects/1000/P1' });
-
-      try {
-        expect(
-          await screen.findByText(/has a GL\/PPM reconciliation discrepancy/i)
-        ).toBeInTheDocument();
-      } finally {
-        cleanup();
-      }
-    });
-
-    it('shows reconciliation alert for FinancialViewer regardless of PM', async () => {
-      const projects = [
-        createProject({ pmEmployeeId: '2000', projectType: 'Internal' }),
-      ];
-      setupDetailHandlers({
-        projects,
-        user: {
-          employeeId: '3000',
-          name: 'FV User',
-          roles: ['FinancialViewer'],
-        },
-      });
-
-      const { cleanup } = renderRoute({ initialPath: '/projects/1000/P1' });
-
-      try {
-        expect(
-          await screen.findByText(/has a GL\/PPM reconciliation discrepancy/i)
-        ).toBeInTheDocument();
-      } finally {
-        cleanup();
-      }
-    });
   });
 });

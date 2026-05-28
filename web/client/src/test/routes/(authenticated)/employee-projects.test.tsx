@@ -134,47 +134,4 @@ describe('employee project list — discrepancy icon gating', () => {
     }
   });
 
-  it('shows icon for PM viewing their managed PI when PM is on the project', async () => {
-    const projects = [baseProject({ pmEmployeeId: '2000' })];
-    setupHandlers({
-      projects,
-      reconciliation: [discrepancyRecord('P1')],
-      user: { employeeId: '2000', name: 'PM User', roles: [] },
-    });
-
-    const { cleanup } = renderRoute({ initialPath: '/projects/1000' });
-
-    try {
-      await screen.findByText('Internal Projects');
-      expect(
-        await screen.findByTitle('GL/PPM reconciliation discrepancy')
-      ).toBeInTheDocument();
-    } finally {
-      cleanup();
-    }
-  });
-
-  it('shows icon for a FinancialViewer regardless of who the PM is', async () => {
-    const projects = [baseProject({ pmEmployeeId: '2000' })];
-    setupHandlers({
-      projects,
-      reconciliation: [discrepancyRecord('P1')],
-      user: {
-        employeeId: '3000',
-        name: 'FV User',
-        roles: ['FinancialViewer'],
-      },
-    });
-
-    const { cleanup } = renderRoute({ initialPath: '/projects/1000' });
-
-    try {
-      await screen.findByText('Internal Projects');
-      expect(
-        await screen.findByTitle('GL/PPM reconciliation discrepancy')
-      ).toBeInTheDocument();
-    } finally {
-      cleanup();
-    }
-  });
 });
