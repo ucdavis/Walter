@@ -296,6 +296,62 @@ describe('home route', () => {
       cleanup();
     }
   });
+
+  it('does not show GL/PPM discrepancy icon or fetch reconciliation for PIs on home', async () => {
+    const testUser = {
+      email: 'pi@example.com',
+      employeeId: '1000',
+      id: 'user-1',
+      kerberos: 'piuser',
+      name: 'PI User',
+      roles: [],
+    };
+
+    // Internal project where the viewer is the PI; someone else is PM.
+    const projects = [
+      {
+        awardEndDate: null,
+        balance: 1000,
+        displayName: 'P1: Internal One',
+        pmEmployeeId: '2000',
+        projectName: 'Internal One',
+        projectNumber: 'P1',
+        projectType: 'Internal',
+      },
+    ];
+
+    let reconciliationCalls = 0;
+    server.use(
+      http.get('/api/user/me', () => HttpResponse.json(testUser)),
+      http.get('/api/project/managed/:employeeId', () =>
+        HttpResponse.json({ pis: [], projectManager: null })
+      ),
+      http.get('/api/project/:employeeId', () => HttpResponse.json(projects)),
+      http.get('/api/project/personnel', () => HttpResponse.json([])),
+      http.get('/api/project/gl-ppm-reconciliation', () => {
+        reconciliationCalls += 1;
+        return HttpResponse.json([]);
+      })
+    );
+
+    const user = userEvent.setup();
+    const { cleanup } = renderRoute({ initialPath: '/' });
+
+    try {
+      await user.click(await screen.findByRole('tab', { name: 'Projects' }));
+      await screen.findByText('Internal Projects');
+
+      // Give the reconciliation query a window to fire if the gate failed.
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      expect(
+        screen.queryByTitle('GL/PPM reconciliation discrepancy')
+      ).not.toBeInTheDocument();
+      expect(reconciliationCalls).toBe(0);
+    } finally {
+      cleanup();
+    }
+  });
 });
 
 describe('getPiProjectAlerts', () => {

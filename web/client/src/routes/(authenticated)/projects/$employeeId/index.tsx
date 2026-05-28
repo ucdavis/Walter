@@ -8,6 +8,8 @@ import {
 } from '@/queries/project.ts';
 import { usePersonnelQuery } from '@/queries/personnel.ts';
 import { summarizeAllProjects } from '@/lib/projectSummary.ts';
+import { canViewProjectDiscrepancy } from '@/shared/auth/roleAccess.ts';
+import { useUser } from '@/shared/auth/UserContext.tsx';
 import { Currency } from '@/shared/Currency.tsx';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
@@ -37,17 +39,6 @@ function RouteComponent() {
     [projects]
   );
 
-  const internalProjectNumbers = useMemo(
-    () => [
-      ...new Set(
-        (projects ?? [])
-          .filter((p) => p.projectType === 'Internal')
-          .map((p) => p.projectNumber)
-      ),
-    ],
-    [projects]
-  );
-
   const internalProjects = useMemo(
     () => (projects ?? []).filter((p) => p.projectType === 'Internal'),
     [projects]
@@ -58,7 +49,26 @@ function RouteComponent() {
     [projects]
   );
 
-  const discrepancies = useProjectDiscrepancies(internalProjectNumbers);
+  const user = useUser();
+  const authorizedDiscrepancyProjectNumbers = useMemo(
+    () => [
+      ...new Set(
+        internalProjects
+          .filter((p) =>
+            canViewProjectDiscrepancy(
+              user.roles,
+              p.pmEmployeeId,
+              user.employeeId
+            )
+          )
+          .map((p) => p.projectNumber)
+      ),
+    ],
+    [internalProjects, user.employeeId, user.roles]
+  );
+  const visibleDiscrepancies = useProjectDiscrepancies(
+    authorizedDiscrepancyProjectNumbers
+  );
 
   const summary = useMemo(
     () => (projects?.length ? summarizeAllProjects(projects) : null),
@@ -162,7 +172,7 @@ function RouteComponent() {
             needed. Contact your fiscal officer with any questions.
           </p>
           <InternalProjectsTable
-            discrepancies={discrepancies}
+            discrepancies={visibleDiscrepancies}
             employeeId={employeeId}
             records={internalProjects}
           />
