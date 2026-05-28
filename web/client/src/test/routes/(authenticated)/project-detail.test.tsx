@@ -254,4 +254,121 @@ describe('project detail page', () => {
       cleanup();
     }
   });
+
+  describe('GL/PPM reconciliation alert gating', () => {
+    const discrepantReconciliation = [
+      {
+        activityCode: null,
+        activityDescription: null,
+        financialDepartment: 'DEPT',
+        fundCode: null,
+        fundDescription: null,
+        glActualAmount: -100,
+        ppmBudBal: 0,
+        ppmFundCode: 'PPMFUND',
+        ppmFundDescription: null,
+        programCode: null,
+        programDescription: null,
+        project: 'P1',
+        projectDescription: null,
+        remainingBalance: -100,
+      },
+    ];
+
+    const setupDetailHandlers = ({
+      projects,
+      user,
+    }: {
+      projects: ProjectRecord[];
+      user: { employeeId: string; name: string; roles: string[] };
+    }) => {
+      server.use(
+        http.get('/api/user/me', () =>
+          HttpResponse.json({
+            email: `${user.name.toLowerCase()}@example.com`,
+            employeeId: user.employeeId,
+            id: 'user-1',
+            kerberos: user.name.toLowerCase(),
+            name: user.name,
+            roles: user.roles,
+          })
+        ),
+        http.get('/api/project/managed/:employeeId', () =>
+          HttpResponse.json({ pis: [], projectManager: null })
+        ),
+        http.get('/api/project/:employeeId', () =>
+          HttpResponse.json(projects)
+        ),
+        http.get('/api/project/personnel', () => HttpResponse.json([])),
+        http.get('/api/project/gl-ppm-reconciliation', () =>
+          HttpResponse.json(discrepantReconciliation)
+        )
+      );
+    };
+
+    it('hides reconciliation alert for PI viewing own internal project', async () => {
+      const projects = [
+        createProject({ pmEmployeeId: '2000', projectType: 'Internal' }),
+      ];
+      setupDetailHandlers({
+        projects,
+        user: { employeeId: '1000', name: 'PI User', roles: [] },
+      });
+
+      const { cleanup } = renderRoute({ initialPath: '/projects/1000/P1' });
+
+      try {
+        await screen.findByText('Project Number');
+        expect(
+          screen.queryByText(/has a GL\/PPM reconciliation discrepancy/i)
+        ).not.toBeInTheDocument();
+      } finally {
+        cleanup();
+      }
+    });
+
+    it('shows reconciliation alert for PM on the project', async () => {
+      const projects = [
+        createProject({ pmEmployeeId: '2000', projectType: 'Internal' }),
+      ];
+      setupDetailHandlers({
+        projects,
+        user: { employeeId: '2000', name: 'PM User', roles: [] },
+      });
+
+      const { cleanup } = renderRoute({ initialPath: '/projects/1000/P1' });
+
+      try {
+        expect(
+          await screen.findByText(/has a GL\/PPM reconciliation discrepancy/i)
+        ).toBeInTheDocument();
+      } finally {
+        cleanup();
+      }
+    });
+
+    it('shows reconciliation alert for FinancialViewer regardless of PM', async () => {
+      const projects = [
+        createProject({ pmEmployeeId: '2000', projectType: 'Internal' }),
+      ];
+      setupDetailHandlers({
+        projects,
+        user: {
+          employeeId: '3000',
+          name: 'FV User',
+          roles: ['FinancialViewer'],
+        },
+      });
+
+      const { cleanup } = renderRoute({ initialPath: '/projects/1000/P1' });
+
+      try {
+        expect(
+          await screen.findByText(/has a GL\/PPM reconciliation discrepancy/i)
+        ).toBeInTheDocument();
+      } finally {
+        cleanup();
+      }
+    });
+  });
 });
