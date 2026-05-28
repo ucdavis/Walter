@@ -49,7 +49,7 @@ public sealed class AccrualOutboundMessageRendererTests
         rendered.TextBody.Should().Contain("https://trs.ucdavis.edu/timesheet");
         rendered.TextBody.Should().Contain("240.0 hours");
         rendered.HtmlBody.Should().Contain("Walter");
-        rendered.HtmlBody.Should().Contain("Dear Staff Member,");
+        rendered.HtmlBody.Should().Contain("Dear <strong>Staff Member</strong>,");
         rendered.HtmlBody.Should().Contain("you will stop accruing vacation hours until your balance falls below the cap");
         rendered.HtmlBody.Should().Contain("Open TRS Time Reporting");
         rendered.HtmlBody.Should().Contain("https://trs.ucdavis.edu/timesheet");
