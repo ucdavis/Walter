@@ -13,7 +13,6 @@ import { getProjectListAlerts } from '@/lib/projectAlerts.ts';
 import {
   useManagedPisQuery,
   projectsDetailQueryOptions,
-  useProjectDiscrepancies,
 } from '@/queries/project.ts';
 import { useUser } from '@/shared/auth/UserContext.tsx';
 import { createFileRoute } from '@tanstack/react-router';
@@ -66,13 +65,6 @@ function RouteComponent() {
       ),
     [userProjectsQuery.data]
   );
-
-  const internalProjectNumbers = useMemo(
-    () => [...new Set(internalProjects.map((p) => p.projectNumber))],
-    [internalProjects]
-  );
-
-  const discrepancies = useProjectDiscrepancies(internalProjectNumbers);
 
   const piAlerts = useMemo(() => {
     if (!isPrincipalInvestigator || !userProjectsQuery.data) {
@@ -224,7 +216,6 @@ function RouteComponent() {
                   questions.
                 </p>
                 <InternalProjectsTable
-                  discrepancies={discrepancies}
                   employeeId={user.employeeId}
                   records={internalProjects}
                 />
