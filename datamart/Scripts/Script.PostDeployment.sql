@@ -46,6 +46,7 @@ GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[PositionBudgets_Staging] TO [Walt
 GRANT EXECUTE ON [dbo].[usp_SwapPositionBudgets] TO [WalterPipelineRole];
 GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[TransactionalListing] TO [WalterPipelineRole];
 GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[TransactionalListing_Staging] TO [WalterPipelineRole];
+GRANT INSERT, SELECT, DELETE ON [dbo].[TransactionalListing_ChangedKeys] TO [WalterPipelineRole];
 GRANT EXECUTE ON [dbo].[usp_DiffTransactionalListing] TO [WalterPipelineRole];
 GRANT EXECUTE ON [dbo].[usp_SwapTransactionalListing] TO [WalterPipelineRole];
 

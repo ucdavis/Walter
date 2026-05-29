@@ -59,7 +59,10 @@ begin
         group by 1
     ');
 
-    truncate table dbo.TransactionalListing_ChangedKeys;
+    -- Must stay a DELETE: the pipeline role has only EXECUTE on this proc, and
+    -- ownership chaining covers DML but not TRUNCATE (which needs ALTER on the
+    -- table). A TRUNCATE here fails for the pipeline role with error 1088.
+    delete from dbo.TransactionalListing_ChangedKeys;
 
     with WalterAggs as
     (
