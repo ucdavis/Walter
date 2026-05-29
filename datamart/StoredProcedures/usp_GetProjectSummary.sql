@@ -27,7 +27,6 @@ BEGIN
 
     DECLARE @RedshiftQuery NVARCHAR(MAX);
     DECLARE @TSQLCommand NVARCHAR(MAX);
-    DECLARE @RedshiftLinkedServer SYSNAME = '[AE_Redshift_PROD]';
     DECLARE @FilterClause NVARCHAR(MAX) = '';
     DECLARE @StartTime DATETIME2 = SYSDATETIME();
     DECLARE @RowCount INT;
@@ -72,16 +71,16 @@ BEGIN
         SELECT
             b.project_number, b.award_number,
             b.close_date AS award_close_date,
-            LISTAGG(DISTINCT a.principal_investigator_person_name, ''; '') WITHIN GROUP (ORDER BY 1) AS award_pi,
+            CAST(LISTAGG(DISTINCT a.principal_investigator_person_name, ''; '') WITHIN GROUP (ORDER BY 1) AS VARCHAR(4000)) AS award_pi,
             b.billing_cycle,
             b.project_burden_schedule_base,
             b.project_burden_cost_rate,
             b.cost_share_required_by_sponsor,
-            LISTAGG(DISTINCT a.grant_administrator, ''; '') WITHIN GROUP (ORDER BY 1) AS grant_administrator,
+            CAST(LISTAGG(DISTINCT a.grant_administrator, ''; '') WITHIN GROUP (ORDER BY 1) AS VARCHAR(4000)) AS grant_administrator,
             b.postrepperiod AS post_reporting_period,
             b.primary_sponsor_name,
-            '''' AS project_fund,
-            LISTAGG(DISTINCT a.contractadmin, ''; '') WITHIN GROUP (ORDER BY 1) AS contract_administrator,
+            CAST('''' AS VARCHAR(10)) AS project_fund,
+            CAST(LISTAGG(DISTINCT a.contractadmin, ''; '') WITHIN GROUP (ORDER BY 1) AS VARCHAR(4000)) AS contract_administrator,
             b.sponsor_award_number,
             b.flow_through_funds_primary_sponsor,
             b.flow_through_funds_reference_award_name,
@@ -111,10 +110,37 @@ BEGIN
     );
 
     BEGIN TRY
-        -- Fetch award metadata from Redshift into temp table, then join with local FacultyDeptPortfolio
-        SET @TSQLCommand = '
-            SELECT * INTO #pgm FROM OPENQUERY(' + @RedshiftLinkedServer + ', ''' + REPLACE(@RedshiftQuery, '''', '''''') + ''');
+        -- Fetch award metadata from Redshift into a temp table, then join with local FacultyDeptPortfolio.
+        -- #pgm is pre-created with an explicit column list because INSERT ... EXEC cannot use SELECT INTO.
+        -- The Redshift query is sent via EXEC ... AT (RPC), whose query text has no 8000-character limit.
+        -- [AE_Redshift_PROD] must have rpc out = true and remote proc transaction promotion = false.
+        CREATE TABLE #pgm (
+            project_number                          NVARCHAR(50),
+            award_number                            NVARCHAR(240),
+            award_close_date                        DATE,
+            award_pi                                NVARCHAR(4000),
+            billing_cycle                           NVARCHAR(100),
+            project_burden_schedule_base            NVARCHAR(60),
+            project_burden_cost_rate                NUMERIC(22, 5),
+            cost_share_required_by_sponsor          NVARCHAR(4),
+            grant_administrator                     NVARCHAR(4000),
+            post_reporting_period                   NVARCHAR(160),
+            primary_sponsor_name                    NVARCHAR(720),
+            project_fund                            NVARCHAR(10),
+            contract_administrator                  NVARCHAR(4000),
+            sponsor_award_number                    NVARCHAR(60),
+            flow_through_funds_primary_sponsor      NVARCHAR(720),
+            flow_through_funds_reference_award_name NVARCHAR(200),
+            flow_through_funds_start_date           DATE,
+            flow_through_funds_end_date             DATE,
+            flow_through_funds_amount               NUMERIC(38, 2)
+        );
 
+        INSERT INTO #pgm
+        EXEC (@RedshiftQuery) AT [AE_Redshift_PROD];
+
+        -- Join the Redshift award metadata with the local FacultyDeptPortfolio.
+        SET @TSQLCommand = '
             SELECT f.AwardNumber AS AWARD_NUMBER, f.AwardName AS AWARD_NAME, f.AwardType AS AWARD_TYPE,
                 f.AwardStartDate AS AWARD_START_DATE, f.AwardEndDate AS AWARD_END_DATE, f.AwardStatus AS AWARD_STATUS,
                 f.ProjectNumber AS PROJECT_NUMBER, f.ProjectName AS PROJECT_NAME,
