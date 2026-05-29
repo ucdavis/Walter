@@ -1,8 +1,9 @@
 -- <summary>
 -- Computes the set of chart strings whose aggregates (row count + amount sums)
 -- differ between Walter's current TransactionalListing and the live source on
--- Redshift. Emits a count and a quoted IN-list string for use as a Fabric
--- pipeline parameter. The full-outer-join classifies a chart string as
+-- Redshift, persists them to dbo.TransactionalListing_ChangedKeys, and returns
+-- a count + quoted IN-list string as a single-row result set for the Fabric
+-- pipeline Lookup activity. The full-outer-join classifies a chart string as
 -- changed if it is new in source, missing from source (deleted), or has any
 -- aggregate divergence.
 --
@@ -12,19 +13,20 @@
 -- rows query (with the potentially large dynamic IN-list) is executed by the
 -- Fabric Copy activity using the IR's direct Redshift connection.
 --
+-- The changed keys are written to dbo.TransactionalListing_ChangedKeys so the
+-- later usp_SwapTransactionalListing can read them directly rather than re-
+-- parsing a string parameter. The returned IN-list is for the Copy activity
+-- only; quotename output is cast to nvarchar(max) before string_agg so the
+-- aggregate does not overflow at high cardinality (the cause of error 9829).
+--
 -- Initial bulk load of dbo.TransactionalListing is performed offline. This
 -- sproc does no first-run handling.
 -- </summary>
 create procedure dbo.usp_DiffTransactionalListing
-    @ChangedChartStringCount   int           output,
-    @ChangedChartStringsInList nvarchar(max) output
 as
 begin
     set nocount on;
     set xact_abort on;
-
-    set @ChangedChartStringCount   = 0;
-    set @ChangedChartStringsInList = N'';
 
     declare @SourceAggs table
     (
@@ -57,6 +59,8 @@ begin
         group by 1
     ');
 
+    truncate table dbo.TransactionalListing_ChangedKeys;
+
     with WalterAggs as
     (
         select
@@ -80,12 +84,22 @@ begin
            or w.SumCommitment   <> s.SumCommitment
            or w.SumObligation   <> s.SumObligation
     )
+    insert into dbo.TransactionalListing_ChangedKeys (ChartStringKey)
+    select ChartStringKey from Changed;
+
+    declare @ChangedChartStringCount   int           = 0;
+    declare @ChangedChartStringsInList nvarchar(max) = N'';
+
     select
         @ChangedChartStringCount   = count(*),
-        @ChangedChartStringsInList = string_agg(quotename(ChartStringKey, ''''), ',')
-    from Changed;
+        @ChangedChartStringsInList = string_agg(cast(quotename(ChartStringKey, '''') as nvarchar(max)), ',')
+    from dbo.TransactionalListing_ChangedKeys;
 
     if @ChangedChartStringsInList is null
         set @ChangedChartStringsInList = N'';
+
+    select
+        @ChangedChartStringCount   as ChangedChartStringCount,
+        @ChangedChartStringsInList as ChangedChartStringsInList;
 end
 go
