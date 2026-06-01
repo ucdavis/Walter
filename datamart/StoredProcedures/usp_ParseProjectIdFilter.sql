@@ -35,7 +35,10 @@ BEGIN
     DEALLOCATE ProjectCursor;
 
     -- Build IN clause filter string (e.g., 'K30GS7777','K30GS8888')
-    SELECT @ProjectIdFilter = STRING_AGG('''' + ProjectId + '''', ',')
+    -- CAST the element to NVARCHAR(MAX) so STRING_AGG returns a LOB result; with a non-MAX
+    -- input the aggregate caps at 8000 bytes and silently truncates large project lists,
+    -- producing a malformed IN clause.
+    SELECT @ProjectIdFilter = STRING_AGG(CAST('''' + ProjectId + '''' AS NVARCHAR(MAX)), ',')
     FROM @ValidatedProjects;
 END;
 GO
