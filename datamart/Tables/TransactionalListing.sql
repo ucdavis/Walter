@@ -36,34 +36,16 @@ CREATE TABLE dbo.TransactionalListing
     CommitmentAmount                DECIMAL(18, 2)  NOT NULL DEFAULT 0,
     ObligationAmount                DECIMAL(18, 2)  NOT NULL DEFAULT 0,
     LoadedAt                        DATETIME2(3)    NOT NULL,
-    -- ChartStringKey is the diff grain. AE source rows often have null
-    -- AccountingSequenceNumber (encumbrances/POs), so we can't key off that.
-    -- The 8-column chart string is always populated and gives us stable
-    -- buckets to aggregate, diff, and replace by. COALESCE keeps NULL
-    -- segments from producing NULL keys.
-    ChartStringKey AS
-    (
-        CONCAT(
-            COALESCE(Entity, ''),               N'-',
-            COALESCE(Fund, ''),                 N'-',
-            COALESCE(FinancialDepartment, ''),  N'-',
-            COALESCE(Account, ''),              N'-',
-            COALESCE(Purpose, ''),              N'-',
-            COALESCE(Program, ''),              N'-',
-            COALESCE(Project, ''),              N'-',
-            COALESCE(Activity, '')
-        )
-    ) PERSISTED,
     CONSTRAINT PK_TransactionalListing
         PRIMARY KEY CLUSTERED (TransactionalListingId)
 );
 GO
 
--- Diff and swap path: aggregate / DELETE / scan-from-staging all hit ChartStringKey.
--- INCLUDE the three amount columns so the diff's per-chart-string aggregate
--- query is satisfied entirely by this index.
-CREATE NONCLUSTERED INDEX IX_TransactionalListing_ChartStringKey
-    ON dbo.TransactionalListing (ChartStringKey)
+-- Diff and swap path: the diff aggregates by PeriodName and the swap DELETEs the
+-- changed periods by PeriodName. INCLUDE the three amount columns so the diff's
+-- per-period aggregate query is satisfied entirely by this index.
+CREATE NONCLUSTERED INDEX IX_TransactionalListing_PeriodName
+    ON dbo.TransactionalListing (PeriodName)
     INCLUDE (ActualAmount, CommitmentAmount, ObligationAmount);
 GO
 

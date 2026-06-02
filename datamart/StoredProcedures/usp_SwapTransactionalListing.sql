@@ -1,32 +1,37 @@
 -- <summary>
--- Atomically replaces all rows for the changed chart strings in
--- dbo.TransactionalListing with the rows currently in
--- dbo.TransactionalListing_Staging.
+-- Atomically replaces every row for the changed PERIODS in dbo.TransactionalListing
+-- with the rows currently in dbo.TransactionalListing_Staging.
 --
--- The set of chart strings to replace is read from
--- dbo.TransactionalListing_ChangedKeys (populated by usp_DiffTransactionalListing
--- earlier in the same pipeline run) -- no string parameter / STRING_SPLIT needed.
---
--- Deleted chart strings (in ChangedKeys but absent from staging, because the
--- source no longer has rows for them) are removed by the DELETE step; the INSERT
--- naturally skips them because staging has no rows for those keys. Atomicity is
--- enforced by SET XACT_ABORT ON and a single explicit transaction.
+-- @ChangedPeriodsInList is the quoted, comma-separated list emitted by
+-- usp_DiffTransactionalListing (e.g. '2026-05','2026-06'), parsed back via
+-- STRING_SPLIT. Replacing whole periods is self-correcting: inserts, updates,
+-- deletes, and reclasses within a changed period are all reconciled. Periods that
+-- vanished from the source (changed, but with no staging rows) are removed by the
+-- DELETE; the INSERT naturally adds nothing for them. Atomicity is enforced by
+-- SET XACT_ABORT ON and a single explicit transaction.
 -- </summary>
 create procedure dbo.usp_SwapTransactionalListing
+    @ChangedPeriodsInList nvarchar(max)
 as
 begin
     set nocount on;
     set xact_abort on;
 
-    if not exists (select 1 from dbo.TransactionalListing_ChangedKeys)
+    if @ChangedPeriodsInList is null or len(@ChangedPeriodsInList) = 0
         return;
+
+    declare @ChangedPeriods table (PeriodName nvarchar(20) not null primary key);
+
+    insert into @ChangedPeriods (PeriodName)
+    select trim('''' from value)
+    from string_split(@ChangedPeriodsInList, ',')
+    where len(value) > 0;
 
     begin transaction;
 
     delete tl
     from dbo.TransactionalListing tl
-    inner join dbo.TransactionalListing_ChangedKeys c
-        on c.ChartStringKey = tl.ChartStringKey;
+    inner join @ChangedPeriods p on p.PeriodName = tl.PeriodName;
 
     insert into dbo.TransactionalListing
     (
