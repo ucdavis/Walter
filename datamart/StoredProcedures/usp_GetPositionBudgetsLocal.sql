@@ -13,66 +13,62 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    -- Validate: ProjectIds is required
-    IF @ProjectIds IS NULL
-    BEGIN
-        RAISERROR('@ProjectIds must be provided', 16, 1);
-        RETURN;
-    END;
-
     DECLARE @StartTime DATETIME2 = SYSDATETIME();
     DECLARE @RowCount INT;
     DECLARE @Duration_MS INT;
     DECLARE @ErrorMsg NVARCHAR(MAX);
     DECLARE @ParametersJSON NVARCHAR(MAX);
     DECLARE @FiscalYearNum SMALLINT = NULL;
+    DECLARE @ValidatedProjects TABLE (ProjectId VARCHAR(15));
+    DECLARE @ProjectId VARCHAR(15);
 
     -- Sanitize ApplicationName / ApplicationUser for logging
     EXEC dbo.usp_SanitizeInputString @ApplicationName OUTPUT;
     EXEC dbo.usp_SanitizeInputString @ApplicationUser OUTPUT;
 
-    -- Convert FiscalYear to SMALLINT to match the column type; only applied when supplied
-    IF @FiscalYear IS NOT NULL AND LEN(LTRIM(RTRIM(@FiscalYear))) > 0
-        SET @FiscalYearNum = CAST(@FiscalYear AS SMALLINT);
-
-    -- Parse and validate ProjectIds (mirrors usp_ParseProjectIdFilter, but kept as a
-    -- table for a static IN clause -- no dynamic SQL is needed for the local query).
-    DECLARE @ValidatedProjects TABLE (ProjectId VARCHAR(15));
-
-    INSERT INTO @ValidatedProjects (ProjectId)
-    SELECT TRIM(value)
-    FROM STRING_SPLIT(@ProjectIds, ',')
-    WHERE TRIM(value) <> '' AND LOWER(TRIM(value)) <> 'null';
-
-    IF NOT EXISTS (SELECT 1 FROM @ValidatedProjects)
-    BEGIN
-        RAISERROR('No valid project IDs provided', 16, 1);
-        RETURN;
-    END;
-
-    DECLARE @ProjectId VARCHAR(15);
-    DECLARE ProjectCursor CURSOR FOR
-        SELECT ProjectId FROM @ValidatedProjects;
-    OPEN ProjectCursor;
-    FETCH NEXT FROM ProjectCursor INTO @ProjectId;
-    WHILE @@FETCH_STATUS = 0
-    BEGIN
-        EXEC dbo.usp_ValidateAggieEnterpriseProject @ProjectId;
-        FETCH NEXT FROM ProjectCursor INTO @ProjectId;
-    END;
-    CLOSE ProjectCursor;
-    DEALLOCATE ProjectCursor;
-
-    -- Build parameters JSON for logging
-    SET @ParametersJSON = (
-        SELECT
-            @ProjectIds AS ProjectIds,
-            @FiscalYear AS FiscalYear,
-            COALESCE(@ApplicationName, APP_NAME()) AS ApplicationName
-        FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
-    );
-
     BEGIN TRY
+        -- Build parameters JSON first so input/validation failures are logged by the CATCH below
+        SET @ParametersJSON = (
+            SELECT
+                @ProjectIds AS ProjectIds,
+                @FiscalYear AS FiscalYear,
+                COALESCE(@ApplicationName, APP_NAME()) AS ApplicationName
+            FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
+        );
+
+        -- Validate: ProjectIds is required
+        IF @ProjectIds IS NULL
+            RAISERROR('@ProjectIds must be provided', 16, 1);
+
+        -- Convert FiscalYear to SMALLINT to match the column type; only applied when supplied
+        IF @FiscalYear IS NOT NULL AND LEN(LTRIM(RTRIM(@FiscalYear))) > 0
+            SET @FiscalYearNum = CAST(@FiscalYear AS SMALLINT);
+
+        -- Parse and validate ProjectIds (mirrors usp_ParseProjectIdFilter, but kept as a
+        -- table for a static join -- no dynamic SQL is needed for the local query).
+        -- DISTINCT so duplicate ids in @ProjectIds cannot multiply the joined budget rows.
+        INSERT INTO @ValidatedProjects (ProjectId)
+        SELECT DISTINCT TRIM(value)
+        FROM STRING_SPLIT(@ProjectIds, ',')
+        WHERE TRIM(value) <> '' AND LOWER(TRIM(value)) <> 'null';
+
+        IF NOT EXISTS (SELECT 1 FROM @ValidatedProjects)
+            RAISERROR('No valid project IDs provided', 16, 1);
+
+        -- LOCAL cursor: auto-deallocated when the proc unwinds (incl. via THROW), so a
+        -- mid-loop validation failure cannot leak it across calls.
+        DECLARE ProjectCursor CURSOR LOCAL FOR
+            SELECT ProjectId FROM @ValidatedProjects;
+        OPEN ProjectCursor;
+        FETCH NEXT FROM ProjectCursor INTO @ProjectId;
+        WHILE @@FETCH_STATUS = 0
+        BEGIN
+            EXEC dbo.usp_ValidateAggieEnterpriseProject @ProjectId;
+            FETCH NEXT FROM ProjectCursor INTO @ProjectId;
+        END;
+        CLOSE ProjectCursor;
+        DEALLOCATE ProjectCursor;
+
         SELECT
             pb.FiscalYear AS FISCAL_YEAR,
             pb.PositionNumber AS POSITION_NUMBER,
