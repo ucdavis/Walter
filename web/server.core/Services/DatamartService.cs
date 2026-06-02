@@ -12,8 +12,24 @@ public sealed class DatamartOptions
 {
     public const string SectionName = "Datamart";
 
+    /// <summary>Live UCPath data warehouse via Oracle linked server (dbo.usp_GetPositionBudgets).</summary>
+    public const string UCPathDWHSource = "UCPathDWH";
+
+    /// <summary>Local ETL-populated dbo.PositionBudgets table (dbo.usp_GetPositionBudgetsLocal).</summary>
+    public const string LocalSource = "Local";
+
     public string ConnectionString { get; set; } = string.Empty;
     public string ApplicationName { get; set; } = "Walter";
+
+    /// <summary>
+    /// Which backing source position budgets are read from. Defaults to the live UCPath
+    /// data warehouse; set Datamart:PositionBudgetsSource=Local (env Datamart__PositionBudgetsSource)
+    /// to cut an environment over to the local table.
+    /// </summary>
+    public string PositionBudgetsSource { get; set; } = UCPathDWHSource;
+
+    public bool UsePositionBudgetsLocalTable =>
+        string.Equals(PositionBudgetsSource?.Trim(), LocalSource, StringComparison.OrdinalIgnoreCase);
 }
 
 public interface IDatamartService
@@ -38,6 +54,7 @@ public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
 {
     private readonly string _connectionString;
     private readonly string _appName;
+    private readonly string _positionBudgetsSproc;
     private readonly AsyncRetryPolicy _retry;
 
     static DatamartService()
@@ -57,6 +74,11 @@ public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
         _appName = string.IsNullOrWhiteSpace(value.ApplicationName)
             ? "Walter"
             : value.ApplicationName.Trim();
+
+        // Feature flag: read position budgets from the local ETL table or the live UCPath DWH.
+        _positionBudgetsSproc = value.UsePositionBudgetsLocalTable
+            ? "dbo.usp_GetPositionBudgetsLocal"
+            : "dbo.usp_GetPositionBudgets";
 
         _retry = Policy
             .Handle<SqlException>()
@@ -120,7 +142,7 @@ public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
     {
         var projectNumbersParam = string.Join(",", projectNumbers);
         return await ExecuteSprocAsync<PositionBudgetRecord>(
-            "dbo.usp_GetPositionBudgets",
+            _positionBudgetsSproc,
             new { ProjectIds = projectNumbersParam, ApplicationName = _appName, ApplicationUser = applicationUser, EmulatingUser = emulatingUser },
             ct: ct);
     }
