@@ -38,6 +38,7 @@ public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
 {
     private readonly string _connectionString;
     private readonly string _appName;
+    private readonly string _positionBudgetsSproc;
     private readonly AsyncRetryPolicy _retry;
 
     static DatamartService()
@@ -45,9 +46,10 @@ public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
         Dapper.DefaultTypeMap.MatchNamesWithUnderscores = true;
     }
 
-    public DatamartService(IOptions<DatamartOptions> options)
+    public DatamartService(IOptions<DatamartOptions> options, IOptions<PositionBudgetsOptions> positionBudgetsOptions)
     {
         ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(positionBudgetsOptions);
 
         var value = options.Value;
         _connectionString = string.IsNullOrWhiteSpace(value.ConnectionString)
@@ -57,6 +59,11 @@ public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
         _appName = string.IsNullOrWhiteSpace(value.ApplicationName)
             ? "Walter"
             : value.ApplicationName.Trim();
+
+        // Feature flag: read position budgets from the local ETL table or the live UCPath DWH.
+        _positionBudgetsSproc = positionBudgetsOptions.Value.UseLocalTable
+            ? "dbo.usp_GetPositionBudgetsLocal"
+            : "dbo.usp_GetPositionBudgets";
 
         _retry = Policy
             .Handle<SqlException>()
@@ -120,7 +127,7 @@ public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
     {
         var projectNumbersParam = string.Join(",", projectNumbers);
         return await ExecuteSprocAsync<PositionBudgetRecord>(
-            "dbo.usp_GetPositionBudgets",
+            _positionBudgetsSproc,
             new { ProjectIds = projectNumbersParam, ApplicationName = _appName, ApplicationUser = applicationUser, EmulatingUser = emulatingUser },
             ct: ct);
     }
