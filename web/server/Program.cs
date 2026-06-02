@@ -56,7 +56,6 @@ builder.Services.Configure<IamSettings>(builder.Configuration.GetSection("Iam"))
 builder.Services.Configure<FinancialSettings>(builder.Configuration.GetSection("Financial"));
 builder.Services.Configure<RumOptions>(builder.Configuration.GetSection("Rum"));
 builder.Services.Configure<AppOptions>(builder.Configuration.GetSection(AppOptions.SectionName));
-builder.Services.Configure<PositionBudgetsOptions>(builder.Configuration.GetSection(PositionBudgetsOptions.SectionName));
 builder.Services.Configure<DatamartOptions>(options =>
 {
     options.ConnectionString = builder.Configuration["DM_CONNECTION"]
@@ -64,6 +63,8 @@ builder.Services.Configure<DatamartOptions>(options =>
         ?? string.Empty;
     options.ApplicationName = builder.Configuration["Datamart:ApplicationName"]
         ?? $"Walter-{builder.Environment.EnvironmentName}";
+    options.PositionBudgetsSource = builder.Configuration["Datamart:PositionBudgetsSource"]
+        ?? DatamartOptions.UCPathDWHSource;
 });
 
 builder.Services.AddControllers();
