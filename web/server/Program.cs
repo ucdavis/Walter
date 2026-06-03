@@ -63,6 +63,8 @@ builder.Services.Configure<DatamartOptions>(options =>
         ?? string.Empty;
     options.ApplicationName = builder.Configuration["Datamart:ApplicationName"]
         ?? $"Walter-{builder.Environment.EnvironmentName}";
+    options.PositionBudgetsSource = builder.Configuration["Datamart:PositionBudgetsSource"]
+        ?? DatamartOptions.UCPathDWHSource;
 });
 
 builder.Services.AddControllers();
