@@ -41,6 +41,7 @@ GRANT SELECT ON [dbo].[Projects] TO [WalterAppRole];
 GRANT SELECT ON [dbo].[PpmAwards] TO [WalterAppRole];
 GRANT SELECT ON [dbo].[PpmPeople] TO [WalterAppRole];
 GRANT SELECT ON [dbo].[PpmPersonRoles] TO [WalterAppRole];
+GRANT SELECT ON [dbo].[PpmProjects] TO [WalterAppRole];
 
 -- Grant pipeline role permissions
 GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[FacultyDeptPortfolio] TO [WalterPipelineRole];
@@ -52,6 +53,7 @@ GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[Projects] TO [WalterPipelineRole]
 GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[PpmAwards] TO [WalterPipelineRole];
 GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[PpmPeople] TO [WalterPipelineRole];
 GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[PpmPersonRoles] TO [WalterPipelineRole];
+GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[PpmProjects] TO [WalterPipelineRole];
 
 
 
