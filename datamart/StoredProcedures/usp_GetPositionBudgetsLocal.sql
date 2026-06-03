@@ -90,15 +90,11 @@ BEGIN
             pb.JobEffectiveDate AS JOB_EFFECTIVE_DATE,
             pb.JobEffectiveSequence AS JOB_SEQUENCE,
             pb.EmployeeId AS EMPLOYEE_ID,
-            -- MonthlyRate is stored as-loaded from PS_JOB_V and is inconsistent across comp
-            -- frequencies:
-            --   Hourly (H): already the 1.0 FTE monthly equivalent (hourly_rate * std_hours)
-            --   All others (UC_FY, UC_9M, M, etc.): FTE-adjusted (actual pay, not 1.0 FTE rate)
-            -- Normalize to 1.0 FTE so the client can compute actual salary as MONTHLY_RATE * FTE
-            CASE
-                WHEN pb.CompFrequency = 'H' THEN pb.MonthlyRate
-                ELSE pb.MonthlyRate / NULLIF(pb.Fte, 0)
-            END AS MONTHLY_RATE,
+            -- MonthlyRate in dbo.PositionBudgets is already the 1.0-FTE monthly rate (the ETL
+            -- lands the normalized figure, unlike PS_JOB_V.MONTHLY_RT which the live proc must
+            -- divide by FTE). Return it as-is so the client computes actual salary as
+            -- MONTHLY_RATE * FTE, matching usp_GetPositionBudgets's output.
+            pb.MonthlyRate AS MONTHLY_RATE,
             pb.ExpectedEndDate AS JOB_END_DATE,
             pb.Fte AS FTE,
             pb.Name AS NAME,
