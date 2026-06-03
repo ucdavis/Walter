@@ -11,8 +11,7 @@ CREATE TABLE [dbo].[PpmPersonRoles]
     [job_title]          VARCHAR(256)     NULL,
     [role_name]          VARCHAR(64)      NOT NULL,
     [start_date]         DATE             NOT NULL,
-    [end_date]           DATE             NULL,
-    [synced_at]          DATETIMEOFFSET(7) NOT NULL
+    [end_date]           DATE             NULL
 );
 GO
 

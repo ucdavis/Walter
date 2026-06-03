@@ -35,7 +35,6 @@ CREATE TABLE [dbo].[PpmProjects]
     [gl_posting_activity_code]      VARCHAR(10)       NULL,
     [primary_project_manager_email] VARCHAR(128)      NULL,
     [primary_project_manager_name]  VARCHAR(128)      NULL,
-    [synced_at]                     DATETIMEOFFSET(7) NOT NULL,
     CONSTRAINT [PK_PpmProjects]
         PRIMARY KEY CLUSTERED ([project_number])
 );

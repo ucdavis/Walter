@@ -14,7 +14,6 @@ CREATE TABLE [dbo].[PpmAwards]
     [award_owning_organization_name]    VARCHAR(128)     NOT NULL,
     [business_unit_name]                VARCHAR(64)      NOT NULL,
     [last_update_datetime]              DATETIME2(3)     NOT NULL,
-    [synced_at]                         DATETIMEOFFSET(7) NOT NULL,
     CONSTRAINT [PK_PpmAwards]
         PRIMARY KEY CLUSTERED ([ppm_award_number])
 );
