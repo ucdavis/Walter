@@ -30,6 +30,7 @@ GRANT EXECUTE ON [dbo].[usp_HealthCheck_SchemaValidation] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_LogProcedureExecution] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_ParseProjectIdFilter] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_SanitizeInputString] TO [WalterAppRole];
+GRANT EXECUTE ON [dbo].[usp_SwapStagingTable] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_ValidateAggieEnterpriseProject] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_ValidateFinancialDept] TO [WalterAppRole];
 
