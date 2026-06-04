@@ -25,6 +25,7 @@ BEGIN
 
     INSERT INTO @AllowedTables ([TableName])
     VALUES
+        (N'People'),
         (N'PpmAwards'),
         (N'PpmPeople'),
         (N'PpmPersonRoles'),
