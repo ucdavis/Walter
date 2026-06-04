@@ -1,4 +1,4 @@
-CREATE TABLE [dbo].[People]
+CREATE TABLE [dbo].[People_Staging]
 (
     [IamId]             CHAR(10)     NOT NULL,
     [EmployeeId]        CHAR(8)      NULL,
@@ -27,13 +27,6 @@ CREATE TABLE [dbo].[People]
     [LastRunId]         CHAR(36)     NULL,
     [SourceEndpoint]    VARCHAR(128) NULL,
     [PromotedAt]        DATETIME2(6) NULL,
-    [PromotionRunId]    CHAR(36)     NULL,
-    CONSTRAINT [PK_People]
-        PRIMARY KEY CLUSTERED ([IamId])
-)
-GO
-
-CREATE NONCLUSTERED INDEX [IX_People_EmployeeId]
-    ON [dbo].[People] ([EmployeeId])
-    WHERE [EmployeeId] IS NOT NULL
+    [PromotionRunId]    CHAR(36)     NULL
+);
 GO
