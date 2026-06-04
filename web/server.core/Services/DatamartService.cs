@@ -104,8 +104,10 @@ public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
         """;
 
     private const string SearchablePersonWhere = """
-        WHERE NULLIF(LTRIM(RTRIM(IamId)), '') IS NOT NULL
-          AND NULLIF(LTRIM(RTRIM(EmployeeId)), '') IS NOT NULL
+        WHERE IamId IS NOT NULL
+          AND IamId <> ''
+          AND EmployeeId IS NOT NULL
+          AND EmployeeId <> ''
         """;
 
     private readonly string _connectionString;
@@ -212,7 +214,7 @@ public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
         const string sql = $"""
             {SearchablePersonSelect}
             {SearchablePersonWhere}
-              AND LTRIM(RTRIM(IamId)) = @IamId
+              AND IamId = @IamId
             """;
 
         var results = await ExecuteQueryAsync<SearchablePersonRecord>(
@@ -234,7 +236,7 @@ public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
         const string sql = $"""
             {SearchablePersonSelect}
             {SearchablePersonWhere}
-              AND LTRIM(RTRIM(EmployeeId)) = @EmployeeId
+              AND EmployeeId = @EmployeeId
             """;
 
         var results = await ExecuteQueryAsync<SearchablePersonRecord>(
@@ -261,7 +263,7 @@ public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
         const string sql = $"""
             {SearchablePersonSelect}
             {SearchablePersonWhere}
-              AND LTRIM(RTRIM(EmployeeId)) IN @EmployeeIds
+              AND EmployeeId IN @EmployeeIds
             """;
 
         return await ExecuteQueryAsync<SearchablePersonRecord>(
