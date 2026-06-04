@@ -20,20 +20,20 @@ function RouteComponent() {
   });
 
   useEffect(() => {
-    const employeeId = resolvePiQuery.data?.employeeId;
-    if (!employeeId) {
+    const iamId = resolvePiQuery.data?.iamId;
+    if (!iamId) {
       return;
     }
 
     navigate({
       params: {
-        employeeId,
+        iamId,
         projectNumber,
       },
       replace: true,
-      to: '/projects/$employeeId/$projectNumber/',
+      to: '/projects/$iamId/$projectNumber/',
     });
-  }, [navigate, projectNumber, resolvePiQuery.data?.employeeId]);
+  }, [navigate, projectNumber, resolvePiQuery.data?.iamId]);
 
   if (resolvePiQuery.isPending) {
     return <PageLoading message={`Finding project owner for ${projectNumber}...`} />;
@@ -51,7 +51,7 @@ function RouteComponent() {
           {isNotFound ? (
             <p>
               We found project <span className="font-mono">{projectNumber}</span>{' '}
-              but could not resolve a principal investigator employee ID.
+              but could not resolve an IAM ID for its project owner.
             </p>
           ) : (
             <p>

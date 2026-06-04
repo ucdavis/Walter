@@ -120,6 +120,7 @@ export interface GLPPMReconciliationRecord {
 
 export interface ManagedPiRecord {
   employeeId: string;
+  iamId: string | null;
   name: string;
   projectCount: number;
 }
@@ -128,36 +129,38 @@ export interface ManagedPisEnvelope {
   pis: ManagedPiRecord[];
   projectManager: {
     employeeId: string;
+    iamId: string;
     name: string | null;
   } | null;
 }
 
-export const projectsDetailQueryOptions = (employeeId: string) => ({
-  enabled: Boolean(employeeId),
+export const projectsDetailQueryOptions = (iamId: string) => ({
+  enabled: Boolean(iamId),
   queryFn: async () => {
-    return await fetchJson<ProjectRecord[]>(`/api/project/${employeeId}`);
+    return await fetchJson<ProjectRecord[]>(`/api/project/by-iam/${iamId}`);
   },
-  queryKey: ['projects', employeeId] as const,
+  queryKey: ['projects', 'by-iam', iamId] as const,
   staleTime: 60 * 60 * 1000, // 1 hour
 });
 
-export const useProjectsDetailQuery = (employeeId: string) => {
-  return useQuery(projectsDetailQueryOptions(employeeId));
+export const useProjectsDetailQuery = (iamId: string) => {
+  return useQuery(projectsDetailQueryOptions(iamId));
 };
 
-export const managedPisQueryOptions = (employeeId: string) => ({
-  enabled: Boolean(employeeId),
+export const managedPisQueryOptions = (iamId: string) => ({
+  enabled: Boolean(iamId),
   queryFn: async (): Promise<ManagedPisEnvelope> => {
     return await fetchJson<ManagedPisEnvelope>(
-      `/api/project/managed/${employeeId}`
+      `/api/project/managed/by-iam/${iamId}`
     );
   },
-  queryKey: ['projects', 'managed', employeeId] as const,
+  queryKey: ['projects', 'managed', 'by-iam', iamId] as const,
   staleTime: 5 * 60 * 1000, // 5 minutes
 });
 
 export interface PiWithProjects {
   employeeId: string;
+  iamId: string | null;
   name: string;
   projectCount: number;
   projects: ProjectRecord[];
@@ -165,8 +168,8 @@ export interface PiWithProjects {
   totalBudget: number;
 }
 
-export const useManagedPisQuery = (employeeId: string) => {
-  const managedPisResult = useQuery(managedPisQueryOptions(employeeId));
+export const useManagedPisQuery = (iamId: string) => {
+  const managedPisResult = useQuery(managedPisQueryOptions(iamId));
 
   return {
     error: managedPisResult.error,

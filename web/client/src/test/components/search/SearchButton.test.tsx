@@ -7,6 +7,7 @@ const openMock = vi.fn();
 const defaultUser: User = {
   email: 'user@example.com',
   employeeId: '12345',
+  iamId: '1000012345',
   id: '1',
   kerberos: 'user',
   name: 'Test User',

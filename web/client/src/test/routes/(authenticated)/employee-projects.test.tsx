@@ -102,10 +102,10 @@ const setupHandlers = ({
         roles: user.roles,
       })
     ),
-    http.get('/api/project/managed/:employeeId', () =>
+    http.get('/api/project/managed/by-iam/:iamId', () =>
       HttpResponse.json({ pis: [], projectManager: null })
     ),
-    http.get('/api/project/:employeeId', () => HttpResponse.json(projects)),
+    http.get('/api/project/by-iam/:iamId', () => HttpResponse.json(projects)),
     http.get('/api/project/personnel', () => HttpResponse.json([])),
     http.get('/api/project/gl-ppm-reconciliation', () =>
       HttpResponse.json(reconciliation)

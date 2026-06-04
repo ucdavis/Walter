@@ -1,5 +1,4 @@
 import {
-  resolveSearchPersonById,
   type SearchCatalog,
   type SearchDirectoryPerson,
   type SearchPerson,
@@ -12,7 +11,6 @@ import {
 } from '@/queries/search.ts';
 import { canViewFinancials } from '@/components/search/searchAccess.ts';
 import { useUser } from '@/shared/auth/UserContext.tsx';
-import { HttpError } from '@/lib/api.ts';
 import { useDebouncedValue } from '@/lib/useDebouncedValue.ts';
 import { useNavigate } from '@tanstack/react-router';
 import { Command } from 'cmdk';
@@ -69,10 +67,11 @@ type NavigateSearchItem = {
 
 type ResolvePersonSearchItem = {
   category: 'People';
-  directoryUserId: string;
+  iamId: string;
   id: string;
+  isProjectManager: boolean;
   keywords: string[];
-  kind: 'resolvePerson';
+  kind: 'person';
   label: string;
   secondary?: string;
 };
@@ -135,7 +134,7 @@ const filterAndSort = <T extends { keywords: string[]; label: string }>(
 
 const projectToItem = (
   project: SearchProject,
-  currentEmployeeId: string,
+  currentIamId: string,
   financialSearch: boolean
 ): NavigateSearchItem => {
   if (financialSearch) {
@@ -160,11 +159,11 @@ const projectToItem = (
     kind: 'navigate',
     label: project.projectName,
     params: {
-      employeeId: project.projectPiEmployeeId ?? currentEmployeeId,
+      iamId: project.projectPiIamId ?? currentIamId,
       projectNumber: project.projectNumber,
     },
     secondary: project.projectNumber,
-    to: '/projects/$employeeId/$projectNumber/',
+    to: '/projects/$iamId/$projectNumber/',
   };
 };
 
@@ -181,23 +180,23 @@ const principalInvestigatorToItem = (
   person: SearchPerson
 ): NavigateSearchItem => ({
   category: 'PIs',
-  id: `pi:${person.employeeId}`,
+  id: `pi:${person.iamId}`,
   keywords: person.keywords,
   kind: 'navigate',
   label: person.name,
-  params: { employeeId: person.employeeId },
-  secondary: person.employeeId,
-  to: '/projects/$employeeId/',
+  params: { iamId: person.iamId },
+  to: '/projects/$iamId/',
 });
 
 const directoryPersonToItem = (
   person: SearchDirectoryPerson
 ): ResolvePersonSearchItem => ({
   category: 'People',
-  directoryUserId: person.id,
-  id: `person:${person.id}`,
+  iamId: person.iamId,
+  id: `person:${person.iamId}`,
+  isProjectManager: person.isProjectManager,
   keywords: person.keywords,
-  kind: 'resolvePerson',
+  kind: 'person',
   label: person.name,
   secondary: person.email ?? undefined,
 });
@@ -244,8 +243,6 @@ function CommandPaletteDialog({
 
   const [paletteKey, setPaletteKey] = useState(0);
   const [query, setQuery] = useState('');
-  const [selectionError, setSelectionError] = useState<string | null>(null);
-  const [isResolvingPerson, setIsResolvingPerson] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   const hasFinancialSearchAccess = canViewFinancials(user.roles);
@@ -256,8 +253,8 @@ function CommandPaletteDialog({
   const catalogQuery = useSearchCatalogQuery({ enabled: isOpen });
 
   const teamProjectsQuery = useSearchTeamMemberProjectsQuery({
-    employeeId: user.employeeId,
-    enabled: isOpen, // if we want to preload on page open later, // user.employeeId.trim().length > 0,
+    enabled: isOpen,
+    iamId: user.iamId,
   });
 
   const financialProjectsQuery = useSearchFinancialProjectsQuery({
@@ -278,22 +275,22 @@ function CommandPaletteDialog({
       teamProjectsQuery.data?.projects ??
       [];
     const raw = rawProjects.map((p) =>
-      projectToItem(p, user.employeeId, false)
+      projectToItem(p, user.iamId, false)
     );
     return filterAndSort(raw, query);
   }, [
     query,
     teamProjectsQuery.data?.myProjects,
     teamProjectsQuery.data?.projects,
-    user.employeeId,
+    user.iamId,
   ]);
 
   const myManagedProjects = useMemo(() => {
     const raw = (teamProjectsQuery.data?.myManagedProjects ?? []).map((p) =>
-      projectToItem(p, user.employeeId, false)
+      projectToItem(p, user.iamId, false)
     );
     return filterAndSort(raw, query);
-  }, [query, teamProjectsQuery.data?.myManagedProjects, user.employeeId]);
+  }, [query, teamProjectsQuery.data?.myManagedProjects, user.iamId]);
 
   const allProjects = useMemo(() => {
     if (!hasFinancialSearchAccess) {
@@ -304,7 +301,7 @@ function CommandPaletteDialog({
       [...myProjects, ...myManagedProjects].map((p) => p.id)
     );
     const raw = (financialProjectsQuery.data ?? []).map((p) =>
-      projectToItem(p, user.employeeId, true)
+      projectToItem(p, user.iamId, true)
     );
 
     return filterAndSort(raw, query)
@@ -316,7 +313,7 @@ function CommandPaletteDialog({
     myManagedProjects,
     myProjects,
     query,
-    user.employeeId,
+    user.iamId,
   ]);
 
   const reports = useMemo(() => {
@@ -382,9 +379,7 @@ function CommandPaletteDialog({
     !hasAnyResults;
 
   const closeAndReset = useCallback(() => {
-    setIsResolvingPerson(false);
     setQuery('');
-    setSelectionError(null);
     setPaletteKey((k) => k + 1);
     onClose();
   }, [onClose]);
@@ -403,40 +398,24 @@ function CommandPaletteDialog({
 
   const onSelectItem = useCallback(
     async (item: SearchItem) => {
-      setSelectionError(null);
-
       if (item.kind === 'navigate') {
         navigate({ params: item.params, to: item.to });
         dialogRef.current?.close();
         return;
       }
 
-      setIsResolvingPerson(true);
-      try {
-        const resolved = await resolveSearchPersonById({
-          userId: item.directoryUserId,
+      if (item.isProjectManager) {
+        navigate({
+          params: { iamId: item.iamId },
+          to: '/principalInvestigators/$iamId',
         });
-        if (resolved.isProjectManager) {
-          navigate({
-            params: { emplid: resolved.employeeId },
-            to: '/principalInvestigators/$emplid',
-          });
-        } else {
-          navigate({
-            params: { employeeId: resolved.employeeId },
-            to: '/projects/$employeeId/',
-          });
-        }
-        dialogRef.current?.close();
-      } catch (error: unknown) {
-        const status =
-          error instanceof HttpError && error.status
-            ? ` (HTTP ${error.status})`
-            : '';
-        setSelectionError(`Unable to open selected person${status}.`);
-      } finally {
-        setIsResolvingPerson(false);
+      } else {
+        navigate({
+          params: { iamId: item.iamId },
+          to: '/projects/$iamId/',
+        });
       }
+      dialogRef.current?.close();
     },
     [dialogRef, navigate]
   );
@@ -483,7 +462,6 @@ function CommandPaletteDialog({
               className="input input-bordered w-full"
               onValueChange={(value) => {
                 setQuery(value);
-                setSelectionError(null);
               }}
               placeholder="Search projects, people, reports..."
               ref={inputRef}
@@ -492,21 +470,6 @@ function CommandPaletteDialog({
           </div>
 
           <Command.List>
-            {isResolvingPerson ? (
-              <div className="px-4 py-2 text-sm text-base-content/70">
-                <div className="flex items-center gap-2">
-                  <div className="loading loading-spinner loading-xs" />
-                  <span>Resolving person...</span>
-                </div>
-              </div>
-            ) : null}
-
-            {selectionError ? (
-              <div className="px-4 py-2 text-sm text-error">
-                {selectionError}
-              </div>
-            ) : null}
-
             {showFinancialStartTypingHint ? (
               <div className="px-4 py-2 text-sm text-base-content/60">
                 Start typing to search all projects and people.

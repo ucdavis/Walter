@@ -15,12 +15,12 @@ export const Route = createFileRoute('/(authenticated)/personnel')({
 
 function RouteComponent() {
   const user = useUser();
-  const userProjectsQuery = useProjectsDetailQuery(user.employeeId);
+  const userProjectsQuery = useProjectsDetailQuery(user.iamId);
   const projectCodes = useMemo(() => {
     const projects = userProjectsQuery.data ?? [];
     return [...new Set(projects.map((p) => p.projectNumber))];
   }, [userProjectsQuery.data]);
-  const personnelQuery = usePersonnelQuery(user.employeeId, projectCodes);
+  const personnelQuery = usePersonnelQuery(user.iamId, projectCodes);
 
   const isLoading =
     userProjectsQuery.isPending ||

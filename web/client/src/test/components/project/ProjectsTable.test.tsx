@@ -90,7 +90,7 @@ describe('InternalProjectsTable', () => {
     render(
       <InternalProjectsTable
         discrepancies={new Set(['P1'])}
-        employeeId="123"
+        iamId="1000000123"
         records={projects}
       />
     );
@@ -106,7 +106,7 @@ describe('InternalProjectsTable', () => {
     render(
       <InternalProjectsTable
         discrepancies={new Set()}
-        employeeId="123"
+        iamId="1000000123"
         records={projects}
       />
     );
@@ -125,7 +125,7 @@ describe('InternalProjectsTable', () => {
     render(
       <InternalProjectsTable
         discrepancies={new Set()}
-        employeeId="123"
+        iamId="1000000123"
         records={projects}
       />
     );
@@ -143,7 +143,7 @@ describe('InternalProjectsTable', () => {
     render(
       <InternalProjectsTable
         discrepancies={new Set()}
-        employeeId="123"
+        iamId="1000000123"
         records={projects}
       />
     );
@@ -179,7 +179,7 @@ describe('InternalProjectsTable', () => {
     render(
       <InternalProjectsTable
         discrepancies={new Set()}
-        employeeId="123"
+        iamId="1000000123"
         records={projects}
       />
     );
@@ -222,7 +222,7 @@ describe('InternalProjectsTable', () => {
     render(
       <InternalProjectsTable
         discrepancies={new Set()}
-        employeeId="123"
+        iamId="1000000123"
         records={projects}
       />
     );
@@ -264,7 +264,7 @@ describe('InternalProjectsTable', () => {
     render(
       <InternalProjectsTable
         discrepancies={new Set()}
-        employeeId="123"
+        iamId="1000000123"
         records={projects}
       />
     );

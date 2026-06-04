@@ -21,7 +21,7 @@ function AlertIcon({ type }: { type: Alert['type'] }) {
 interface AlertCardProps {
   alert: Alert;
   balance: number;
-  linkParams?: { employeeId: string; projectNumber: string };
+  linkParams?: { iamId: string; projectNumber: string };
 }
 
 export function AlertCard({ alert, balance, linkParams }: AlertCardProps) {
@@ -58,7 +58,7 @@ export function AlertCard({ alert, balance, linkParams }: AlertCardProps) {
         className={`alert alert-${alert.severity} alert-soft`}
         params={linkParams}
         role="alert"
-        to="/projects/$employeeId/$projectNumber/"
+        to="/projects/$iamId/$projectNumber/"
       >
         {content}
       </Link>
@@ -73,15 +73,15 @@ export function AlertCard({ alert, balance, linkParams }: AlertCardProps) {
 }
 
 interface ProjectAlertsProps {
-  employeeId?: string;
   hasReconciliationDiscrepancy?: boolean;
+  iamId?: string;
   prefix?: string;
   summary: ProjectSummary;
 }
 
 export function ProjectAlerts({
-  employeeId,
   hasReconciliationDiscrepancy,
+  iamId,
   prefix,
   summary,
 }: ProjectAlertsProps) {
@@ -100,8 +100,8 @@ export function ProjectAlerts({
     return null;
   }
 
-  const linkParams = employeeId
-    ? { employeeId, projectNumber: summary.projectNumber }
+  const linkParams = iamId
+    ? { iamId, projectNumber: summary.projectNumber }
     : undefined;
 
   return (

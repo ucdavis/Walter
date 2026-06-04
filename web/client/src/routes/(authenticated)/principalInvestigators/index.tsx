@@ -29,12 +29,12 @@ export const Route = createFileRoute(
 
 function RouteComponent() {
   const user = useUser();
-  return <ManagedPisView employeeId={user.employeeId} />;
+  return <ManagedPisView iamId={user.iamId} />;
 }
 
-export function ManagedPisView({ employeeId }: { employeeId: string }) {
+export function ManagedPisView({ iamId }: { iamId: string }) {
   const { error, isError, isPending, managedPis, projectManagerName } =
-    useManagedPisQuery(employeeId);
+    useManagedPisQuery(iamId);
 
   if (isPending) {
     return <PageLoading message="Fetching principal investigators..." />;

@@ -34,6 +34,36 @@ public sealed class DatamartOptions
 
 public interface IDatamartService
 {
+    /// <summary>
+    /// Searches People records that have both an IAM ID for navigation and an Employee ID for downstream project data.
+    /// </summary>
+    Task<IReadOnlyList<SearchablePersonRecord>> SearchPeopleAsync(
+        string query, int limit, CancellationToken ct = default);
+
+    /// <summary>
+    /// Resolves a public IAM ID to the corresponding People record when downstream services require Employee ID.
+    /// </summary>
+    Task<SearchablePersonRecord?> GetSearchablePersonByIamIdAsync(
+        string iamId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Resolves a downstream Employee ID to a People record when Walter needs to decide whether a Person can be navigated by IAM ID.
+    /// </summary>
+    Task<SearchablePersonRecord?> GetSearchablePersonByEmployeeIdAsync(
+        string employeeId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Resolves downstream Employee IDs to People records in batches for project team navigation.
+    /// </summary>
+    Task<IReadOnlyList<SearchablePersonRecord>> GetSearchablePeopleByEmployeeIdsAsync(
+        IEnumerable<string> employeeIds, CancellationToken ct = default);
+
+    /// <summary>
+    /// Resolves an email address from downstream project data to a People record when PPM does not provide Employee ID.
+    /// </summary>
+    Task<SearchablePersonRecord?> GetSearchablePersonByEmailAsync(
+        string email, CancellationToken ct = default);
+
     Task<IReadOnlyList<EmployeeAccrualBalanceRecord>> GetEmployeeAccrualBalancesAsync(
         DateTime startDate, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default);
 
@@ -52,6 +82,32 @@ public interface IDatamartService
 
 public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
 {
+    private const string SearchablePersonSelect = """
+        SELECT
+            LTRIM(RTRIM(IamId)) AS IamId,
+            LTRIM(RTRIM(EmployeeId)) AS EmployeeId,
+            COALESCE(
+                NULLIF(LTRIM(RTRIM(FullName)), ''),
+                NULLIF(LTRIM(RTRIM(CONCAT(
+                    COALESCE(NULLIF(LTRIM(RTRIM(FirstName)), ''), ''),
+                    CASE
+                        WHEN NULLIF(LTRIM(RTRIM(FirstName)), '') IS NOT NULL
+                         AND NULLIF(LTRIM(RTRIM(LastName)), '') IS NOT NULL THEN ' '
+                        ELSE ''
+                    END,
+                    COALESCE(NULLIF(LTRIM(RTRIM(LastName)), ''), '')
+                ))), ''),
+                LTRIM(RTRIM(IamId))
+            ) AS Name,
+            NULLIF(LTRIM(RTRIM(Email)), '') AS Email
+        FROM dbo.People
+        """;
+
+    private const string SearchablePersonWhere = """
+        WHERE NULLIF(LTRIM(RTRIM(IamId)), '') IS NOT NULL
+          AND NULLIF(LTRIM(RTRIM(EmployeeId)), '') IS NOT NULL
+        """;
+
     private readonly string _connectionString;
     private readonly string _appName;
     private readonly string _positionBudgetsSproc;
@@ -98,6 +154,142 @@ public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
             "dbo.usp_GetProjectSummary",
             new { ProjectIds = projectNumbersParam, ApplicationName = _appName, ApplicationUser = applicationUser, EmulatingUser = emulatingUser },
             ct: ct);
+    }
+
+    public async Task<IReadOnlyList<SearchablePersonRecord>> SearchPeopleAsync(
+        string query, int limit, CancellationToken ct = default)
+    {
+        var normalizedQuery = query.Trim();
+        if (normalizedQuery.Length < 3 || limit <= 0)
+        {
+            return Array.Empty<SearchablePersonRecord>();
+        }
+
+        const string sql = $"""
+            {SearchablePersonSelect}
+            {SearchablePersonWhere}
+              AND (
+                   FullName LIKE @LikeQuery
+                OR FirstName LIKE @LikeQuery
+                OR LastName LIKE @LikeQuery
+                OR Email LIKE @LikeQuery
+                OR UserId LIKE @LikeQuery
+                OR IamId LIKE @LikeQuery
+              )
+            ORDER BY
+                CASE
+                    WHEN FullName LIKE @StartsWithQuery THEN 0
+                    WHEN Email LIKE @StartsWithQuery THEN 1
+                    ELSE 2
+                END,
+                FullName,
+                Email,
+                IamId
+            OFFSET 0 ROWS FETCH NEXT @Limit ROWS ONLY
+            """;
+
+        return await ExecuteQueryAsync<SearchablePersonRecord>(
+            sql,
+            new
+            {
+                LikeQuery = $"%{normalizedQuery}%",
+                StartsWithQuery = $"{normalizedQuery}%",
+                Limit = limit,
+                ApplicationName = _appName,
+            },
+            ct: ct);
+    }
+
+    public async Task<SearchablePersonRecord?> GetSearchablePersonByIamIdAsync(
+        string iamId, CancellationToken ct = default)
+    {
+        var normalizedIamId = iamId.Trim();
+        if (string.IsNullOrWhiteSpace(normalizedIamId))
+        {
+            return null;
+        }
+
+        const string sql = $"""
+            {SearchablePersonSelect}
+            {SearchablePersonWhere}
+              AND LTRIM(RTRIM(IamId)) = @IamId
+            """;
+
+        var results = await ExecuteQueryAsync<SearchablePersonRecord>(
+            sql,
+            new { IamId = normalizedIamId, ApplicationName = _appName },
+            ct: ct);
+        return results.FirstOrDefault();
+    }
+
+    public async Task<SearchablePersonRecord?> GetSearchablePersonByEmployeeIdAsync(
+        string employeeId, CancellationToken ct = default)
+    {
+        var normalizedEmployeeId = employeeId.Trim();
+        if (string.IsNullOrWhiteSpace(normalizedEmployeeId))
+        {
+            return null;
+        }
+
+        const string sql = $"""
+            {SearchablePersonSelect}
+            {SearchablePersonWhere}
+              AND LTRIM(RTRIM(EmployeeId)) = @EmployeeId
+            """;
+
+        var results = await ExecuteQueryAsync<SearchablePersonRecord>(
+            sql,
+            new { EmployeeId = normalizedEmployeeId, ApplicationName = _appName },
+            ct: ct);
+        return results.FirstOrDefault();
+    }
+
+    public async Task<IReadOnlyList<SearchablePersonRecord>> GetSearchablePeopleByEmployeeIdsAsync(
+        IEnumerable<string> employeeIds, CancellationToken ct = default)
+    {
+        var normalizedEmployeeIds = employeeIds
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Select(id => id.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (normalizedEmployeeIds.Length == 0)
+        {
+            return Array.Empty<SearchablePersonRecord>();
+        }
+
+        const string sql = $"""
+            {SearchablePersonSelect}
+            {SearchablePersonWhere}
+              AND LTRIM(RTRIM(EmployeeId)) IN @EmployeeIds
+            """;
+
+        return await ExecuteQueryAsync<SearchablePersonRecord>(
+            sql,
+            new { EmployeeIds = normalizedEmployeeIds, ApplicationName = _appName },
+            ct: ct);
+    }
+
+    public async Task<SearchablePersonRecord?> GetSearchablePersonByEmailAsync(
+        string email, CancellationToken ct = default)
+    {
+        var normalizedEmail = email.Trim();
+        if (string.IsNullOrWhiteSpace(normalizedEmail))
+        {
+            return null;
+        }
+
+        const string sql = $"""
+            {SearchablePersonSelect}
+            {SearchablePersonWhere}
+              AND LOWER(LTRIM(RTRIM(Email))) = @Email
+            """;
+
+        var results = await ExecuteQueryAsync<SearchablePersonRecord>(
+            sql,
+            new { Email = normalizedEmail.ToLowerInvariant(), ApplicationName = _appName },
+            ct: ct);
+        return results.FirstOrDefault();
     }
 
     public async Task<IReadOnlyList<EmployeeAccrualBalanceRecord>> GetEmployeeAccrualBalancesAsync(

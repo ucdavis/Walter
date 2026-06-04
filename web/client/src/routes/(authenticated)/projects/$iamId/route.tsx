@@ -11,11 +11,11 @@ import { PageError } from '@/components/states/PageError.tsx';
 import { getErrorPresentation } from '@/lib/errorPresentation.ts';
 import { useUser } from '@/shared/auth/UserContext.tsx';
 
-export const Route = createFileRoute('/(authenticated)/projects/$employeeId')({
+export const Route = createFileRoute('/(authenticated)/projects/$iamId')({
   component: RouteComponent,
   errorComponent: ProjectsErrorBoundary,
-  loader: ({ context: { queryClient }, params: { employeeId } }) =>
-    queryClient.ensureQueryData(projectsDetailQueryOptions(employeeId)),
+  loader: ({ context: { queryClient }, params: { iamId } }) =>
+    queryClient.ensureQueryData(projectsDetailQueryOptions(iamId)),
   pendingComponent: () => <PageLoading message="Fetching projects..." />,
 });
 
@@ -63,8 +63,8 @@ function ProjectsErrorBoundary({ error, reset }: ErrorComponentProps) {
               </button>
               <Link
                 className="btn btn-outline"
-                params={{ employeeId: user.employeeId }}
-                to="/projects/$employeeId"
+                params={{ iamId: user.iamId }}
+                to="/projects/$iamId"
               >
                 Open your projects
               </Link>

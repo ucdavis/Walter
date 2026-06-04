@@ -46,7 +46,7 @@ function AuthenticatedErrorContent({
   const isForbiddenProjectPortfolio =
     error instanceof HttpError &&
     error.status === 403 &&
-    /^\/api\/project\/[^/]+$/.test(error.url);
+    /^\/api\/project\/by-iam\/[^/]+$/.test(error.url);
 
   const presentation = getErrorPresentation(
     error,
@@ -68,8 +68,8 @@ function AuthenticatedErrorContent({
       </button>
       <Link
         className="btn btn-outline"
-        params={{ employeeId: user.employeeId }}
-        to="/projects/$employeeId"
+        params={{ iamId: user.iamId }}
+        to="/projects/$iamId"
       >
         Open your projects
       </Link>

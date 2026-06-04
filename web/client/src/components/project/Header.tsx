@@ -68,8 +68,8 @@ const Header: React.FC = () => {
         ? [
             {
               label: 'Projects',
-              params: { employeeId: user.employeeId },
-              to: '/projects/$employeeId',
+              params: { iamId: user.iamId },
+              to: '/projects/$iamId',
             } satisfies NavLinkItem,
           ]
         : []),
@@ -91,7 +91,7 @@ const Header: React.FC = () => {
       { label: 'Help', to: '/help' },
     ],
     [
-      user.employeeId,
+      user.iamId,
       canViewProjects,
       canViewPersonnel,
       canViewPrincipalInvestigators,

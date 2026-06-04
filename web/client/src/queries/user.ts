@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 export type User = {
   email: string;
   employeeId: string;
+  iamId: string;
   id: string;
   kerberos: string;
   name: string;
