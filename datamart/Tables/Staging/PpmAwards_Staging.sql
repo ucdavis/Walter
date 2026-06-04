@@ -1,18 +1,18 @@
 CREATE TABLE [dbo].[PpmAwards_Staging]
 (
-    [ppm_award_number]                  VARCHAR(15)   NOT NULL,
-    [oracle_award_id]                   BIGINT        NULL,
-    [sponsor_award_number]              VARCHAR(60)   NOT NULL,
-    [name]                              VARCHAR(512)  NOT NULL,
-    [description]                       VARCHAR(4000) NULL,
-    [award_status]                      VARCHAR(30)   NOT NULL,
-    [award_type]                        VARCHAR(8)    NULL,
-    [award_type_name]                   VARCHAR(64)   NOT NULL,
-    [start_date]                        DATE          NOT NULL,
-    [end_date]                          DATE          NOT NULL,
-    [close_date]                        DATE          NOT NULL,
-    [award_owning_organization_name]    VARCHAR(128)  NOT NULL,
-    [business_unit_name]                VARCHAR(64)   NOT NULL,
-    [last_update_datetime]              DATETIME2(3)  NOT NULL
+    [PpmAwardNumber]                  VARCHAR(15)   NOT NULL,
+    [OracleAwardId]                   BIGINT        NULL,
+    [SponsorAwardNumber]              VARCHAR(60)   NOT NULL,
+    [Name]                            VARCHAR(512)  NOT NULL,
+    [Description]                     VARCHAR(4000) NULL,
+    [AwardStatus]                     VARCHAR(30)   NOT NULL,
+    [AwardType]                       VARCHAR(8)    NULL,
+    [AwardTypeName]                   VARCHAR(64)   NOT NULL,
+    [StartDate]                       DATE          NOT NULL,
+    [EndDate]                         DATE          NOT NULL,
+    [CloseDate]                       DATE          NOT NULL,
+    [AwardOwningOrganizationName]     VARCHAR(128)  NOT NULL,
+    [BusinessUnitName]                VARCHAR(64)   NOT NULL,
+    [LastUpdateDateTime]              DATETIME2(3)  NOT NULL
 );
 GO

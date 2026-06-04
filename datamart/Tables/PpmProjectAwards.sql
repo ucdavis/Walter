@@ -1,13 +1,13 @@
 CREATE TABLE [dbo].[PpmProjectAwards]
 (
-    [project_number]    VARCHAR(15) NOT NULL,
-    [ppm_award_number]  VARCHAR(15) NOT NULL,
+    [ProjectNumber]   VARCHAR(15) NOT NULL,
+    [PpmAwardNumber]  VARCHAR(15) NOT NULL,
     CONSTRAINT [PK_PpmProjectAwards]
-        PRIMARY KEY CLUSTERED ([project_number], [ppm_award_number])
+        PRIMARY KEY CLUSTERED ([ProjectNumber], [PpmAwardNumber])
 );
 GO
 
-CREATE NONCLUSTERED INDEX [IX_PpmProjectAwards_ppm_award_number]
-    ON [dbo].[PpmProjectAwards] ([ppm_award_number])
-    INCLUDE ([project_number]);
+CREATE NONCLUSTERED INDEX [IX_PpmProjectAwards_PpmAwardNumber]
+    ON [dbo].[PpmProjectAwards] ([PpmAwardNumber])
+    INCLUDE ([ProjectNumber]);
 GO

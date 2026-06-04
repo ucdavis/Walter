@@ -1,6 +1,6 @@
 CREATE TABLE [dbo].[PpmProjectAwards_Staging]
 (
-    [project_number]    VARCHAR(15) NOT NULL,
-    [ppm_award_number]  VARCHAR(15) NOT NULL
+    [ProjectNumber]   VARCHAR(15) NOT NULL,
+    [PpmAwardNumber]  VARCHAR(15) NOT NULL
 );
 GO

@@ -1,26 +1,26 @@
 CREATE TABLE [dbo].[PpmPersonRoles]
 (
-    [scope_type]         VARCHAR(16)      NOT NULL,
-    [source]             VARCHAR(32)      NOT NULL,
-    [project_number]     VARCHAR(15)      NOT NULL,
-    [ppm_award_number]   VARCHAR(15)      NULL,
-    [person_id]          BIGINT           NULL,
-    [employee_id]        VARCHAR(16)      NOT NULL,
-    [email]              VARCHAR(128)     NOT NULL,
-    [name]               VARCHAR(128)     NOT NULL,
-    [job_title]          VARCHAR(256)     NULL,
-    [role_name]          VARCHAR(64)      NOT NULL,
-    [start_date]         DATE             NOT NULL,
-    [end_date]           DATE             NULL
+    [ScopeType]       VARCHAR(16)  NOT NULL,
+    [Source]          VARCHAR(32)  NOT NULL,
+    [ProjectNumber]   VARCHAR(15)  NOT NULL,
+    [PpmAwardNumber]  VARCHAR(15)  NULL,
+    [PersonId]        BIGINT       NULL,
+    [EmployeeId]      VARCHAR(16)  NOT NULL,
+    [Email]           VARCHAR(128) NOT NULL,
+    [Name]            VARCHAR(128) NOT NULL,
+    [JobTitle]        VARCHAR(256) NULL,
+    [RoleName]        VARCHAR(64)  NOT NULL,
+    [StartDate]       DATE         NOT NULL,
+    [EndDate]         DATE         NULL
 );
 GO
 
-CREATE NONCLUSTERED INDEX [IX_PpmPersonRoles_project_number_role_name]
-    ON [dbo].[PpmPersonRoles] ([project_number], [role_name])
-    INCLUDE ([scope_type], [ppm_award_number], [employee_id], [name], [email], [start_date], [end_date]);
+CREATE NONCLUSTERED INDEX [IX_PpmPersonRoles_ProjectNumber_RoleName]
+    ON [dbo].[PpmPersonRoles] ([ProjectNumber], [RoleName])
+    INCLUDE ([ScopeType], [PpmAwardNumber], [EmployeeId], [Name], [Email], [StartDate], [EndDate]);
 GO
 
-CREATE NONCLUSTERED INDEX [IX_PpmPersonRoles_employee_id_role_name]
-    ON [dbo].[PpmPersonRoles] ([employee_id], [role_name])
-    INCLUDE ([scope_type], [project_number], [ppm_award_number], [name], [email], [start_date], [end_date]);
+CREATE NONCLUSTERED INDEX [IX_PpmPersonRoles_EmployeeId_RoleName]
+    ON [dbo].[PpmPersonRoles] ([EmployeeId], [RoleName])
+    INCLUDE ([ScopeType], [ProjectNumber], [PpmAwardNumber], [Name], [Email], [StartDate], [EndDate]);
 GO

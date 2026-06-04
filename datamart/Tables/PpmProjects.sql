@@ -1,51 +1,51 @@
 CREATE TABLE [dbo].[PpmProjects]
 (
-    [project_number]                VARCHAR(15)       NOT NULL,
-    [oracle_project_id]             BIGINT            NULL,
-    [name]                          VARCHAR(512)      NOT NULL,
-    [description]                   VARCHAR(1024)     NULL,
-    [project_start_date]            DATE              NOT NULL,
-    [project_end_date]              DATE              NOT NULL,
-    [project_completion_date]       DATE              NULL,
-    [project_status]                VARCHAR(32)       NOT NULL,
-    [project_status_code]           VARCHAR(32)       NOT NULL,
-    [project_organization_name]     VARCHAR(128)      NOT NULL,
-    [business_unit_name]            VARCHAR(64)       NOT NULL,
-    [legal_entity_name]             VARCHAR(64)       NOT NULL,
-    [legal_entity_code]             VARCHAR(8)        NOT NULL,
-    [project_type_name]             VARCHAR(64)       NOT NULL,
-    [source_application_code]       VARCHAR(32)       NULL,
-    [source_project_reference]      VARCHAR(128)      NULL,
-    [project_category]              VARCHAR(16)       NOT NULL,
-    [sponsored_project]             BIT              NULL,
-    [billing_enabled]               BIT              NULL,
-    [capitalization_enabled]        BIT              NULL,
-    [template_project]              BIT              NULL,
-    [last_update_datetime]          DATETIME2(3)      NOT NULL,
-    [last_update_user_id]           VARCHAR(32)       NOT NULL,
-    [project_budgeted]              BIT              NULL,
-    [has_budgetary_control]         BIT              NULL,
-    [gl_info_at_task_level]         BIT              NULL,
-    [gl_posting_entity_code]        VARCHAR(8)        NOT NULL,
-    [gl_posting_fund_code]          VARCHAR(10)       NULL,
-    [gl_posting_department_code]    VARCHAR(10)       NOT NULL,
-    [gl_posting_purpose_code]       VARCHAR(8)        NULL,
-    [gl_posting_program_code]       VARCHAR(8)        NULL,
-    [gl_posting_project_code]       VARCHAR(15)       NOT NULL,
-    [gl_posting_activity_code]      VARCHAR(10)       NULL,
-    [primary_project_manager_email] VARCHAR(128)      NULL,
-    [primary_project_manager_name]  VARCHAR(128)      NULL,
+    [ProjectNumber]                VARCHAR(15)   NOT NULL,
+    [OracleProjectId]              BIGINT        NULL,
+    [Name]                         VARCHAR(512)  NOT NULL,
+    [Description]                  VARCHAR(1024) NULL,
+    [ProjectStartDate]             DATE          NOT NULL,
+    [ProjectEndDate]               DATE          NOT NULL,
+    [ProjectCompletionDate]        DATE          NULL,
+    [ProjectStatus]                VARCHAR(32)   NOT NULL,
+    [ProjectStatusCode]            VARCHAR(32)   NOT NULL,
+    [ProjectOrganizationName]      VARCHAR(128)  NOT NULL,
+    [BusinessUnitName]             VARCHAR(64)   NOT NULL,
+    [LegalEntityName]              VARCHAR(64)   NOT NULL,
+    [LegalEntityCode]              VARCHAR(8)    NOT NULL,
+    [ProjectTypeName]              VARCHAR(64)   NOT NULL,
+    [SourceApplicationCode]        VARCHAR(32)   NULL,
+    [SourceProjectReference]       VARCHAR(128)  NULL,
+    [ProjectCategory]              VARCHAR(16)   NOT NULL,
+    [SponsoredProject]             BIT           NULL,
+    [BillingEnabled]               BIT           NULL,
+    [CapitalizationEnabled]        BIT           NULL,
+    [TemplateProject]              BIT           NULL,
+    [LastUpdateDateTime]           DATETIME2(3)  NOT NULL,
+    [LastUpdateUserId]             VARCHAR(32)   NOT NULL,
+    [ProjectBudgeted]              BIT           NULL,
+    [HasBudgetaryControl]          BIT           NULL,
+    [GlInfoAtTaskLevel]            BIT           NULL,
+    [GlPostingEntityCode]          VARCHAR(8)    NOT NULL,
+    [GlPostingFundCode]            VARCHAR(10)   NULL,
+    [GlPostingDepartmentCode]      VARCHAR(10)   NOT NULL,
+    [GlPostingPurposeCode]         VARCHAR(8)    NULL,
+    [GlPostingProgramCode]         VARCHAR(8)    NULL,
+    [GlPostingProjectCode]         VARCHAR(15)   NOT NULL,
+    [GlPostingActivityCode]        VARCHAR(10)   NULL,
+    [PrimaryProjectManagerEmail]   VARCHAR(128)  NULL,
+    [PrimaryProjectManagerName]    VARCHAR(128)  NULL,
     CONSTRAINT [PK_PpmProjects]
-        PRIMARY KEY CLUSTERED ([project_number])
+        PRIMARY KEY CLUSTERED ([ProjectNumber])
 );
 GO
 
-CREATE NONCLUSTERED INDEX [IX_PpmProjects_project_status]
-    ON [dbo].[PpmProjects] ([project_status])
-    INCLUDE ([project_number], [name], [project_start_date], [project_end_date], [primary_project_manager_name]);
+CREATE NONCLUSTERED INDEX [IX_PpmProjects_ProjectStatus]
+    ON [dbo].[PpmProjects] ([ProjectStatus])
+    INCLUDE ([ProjectNumber], [Name], [ProjectStartDate], [ProjectEndDate], [PrimaryProjectManagerName]);
 GO
 
-CREATE NONCLUSTERED INDEX [IX_PpmProjects_gl_posting_project_code]
-    ON [dbo].[PpmProjects] ([gl_posting_project_code])
-    INCLUDE ([project_number], [name], [project_status]);
+CREATE NONCLUSTERED INDEX [IX_PpmProjects_GlPostingProjectCode]
+    ON [dbo].[PpmProjects] ([GlPostingProjectCode])
+    INCLUDE ([ProjectNumber], [Name], [ProjectStatus]);
 GO
