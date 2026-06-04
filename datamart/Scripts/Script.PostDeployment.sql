@@ -38,6 +38,11 @@ GRANT SELECT ON [dbo].[FacultyDeptPortfolio] TO [WalterAppRole];
 GRANT SELECT ON [dbo].[EmployeeAccrualBalances] TO [WalterAppRole];
 GRANT SELECT ON [dbo].[PositionBudgets] TO [WalterAppRole];
 GRANT SELECT ON [dbo].[Projects] TO [WalterAppRole];
+GRANT SELECT ON [dbo].[PpmAwards] TO [WalterAppRole];
+GRANT SELECT ON [dbo].[PpmPeople] TO [WalterAppRole];
+GRANT SELECT ON [dbo].[PpmPersonRoles] TO [WalterAppRole];
+GRANT SELECT ON [dbo].[PpmProjects] TO [WalterAppRole];
+GRANT SELECT ON [dbo].[PpmProjectAwards] TO [WalterAppRole];
 
 -- Grant pipeline role permissions
 GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[FacultyDeptPortfolio] TO [WalterPipelineRole];
@@ -45,7 +50,18 @@ GRANT INSERT, SELECT, UPDATE ON [dbo].[EmployeeAccrualBalances] TO [WalterPipeli
 GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[PositionBudgets] TO [WalterPipelineRole];
 GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[PositionBudgets_Staging] TO [WalterPipelineRole];
 GRANT EXECUTE ON [dbo].[usp_SwapPositionBudgets] TO [WalterPipelineRole];
+GRANT EXECUTE ON [dbo].[usp_SwapStagingTable] TO [WalterPipelineRole];
 GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[Projects] TO [WalterPipelineRole];
+GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[PpmAwards] TO [WalterPipelineRole];
+GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[PpmPeople] TO [WalterPipelineRole];
+GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[PpmPersonRoles] TO [WalterPipelineRole];
+GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[PpmProjects] TO [WalterPipelineRole];
+GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[PpmProjectAwards] TO [WalterPipelineRole];
+GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[PpmAwards_Staging] TO [WalterPipelineRole];
+GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[PpmPeople_Staging] TO [WalterPipelineRole];
+GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[PpmPersonRoles_Staging] TO [WalterPipelineRole];
+GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[PpmProjects_Staging] TO [WalterPipelineRole];
+GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[PpmProjectAwards_Staging] TO [WalterPipelineRole];
 
 
 
