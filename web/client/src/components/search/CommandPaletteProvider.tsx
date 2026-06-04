@@ -286,9 +286,11 @@ function CommandPaletteDialog({
   ]);
 
   const myManagedProjects = useMemo(() => {
-    const raw = (teamProjectsQuery.data?.myManagedProjects ?? []).map((p) =>
-      projectToItem(p, user.iamId, false)
-    );
+    const raw = (teamProjectsQuery.data?.myManagedProjects ?? [])
+      // Managed project detail links need the PI portfolio route.
+      // The PM portfolio route only contains PM-only orphaned projects.
+      .filter((p) => Boolean(p.projectPiIamId))
+      .map((p) => projectToItem(p, user.iamId, false));
     return filterAndSort(raw, query);
   }, [query, teamProjectsQuery.data?.myManagedProjects, user.iamId]);
 

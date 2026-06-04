@@ -460,6 +460,7 @@ describe('CommandPaletteProvider', () => {
         HttpResponse.json({
           myManagedProjects: Array.from({ length: 6 }, (_, i) => ({
             keywords: [`MANAGED-${i + 1}`],
+            projectPiIamId: `IAM-MANAGED-PI-${i + 1}`,
             projectName: `Managed Project ${i + 1}`,
             projectNumber: `MANAGED-${i + 1}`,
           })),
@@ -546,6 +547,54 @@ describe('CommandPaletteProvider', () => {
       await waitFor(() =>
         expect(screen.queryByText('Spang Person 6')).not.toBeInTheDocument()
       );
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('hides managed projects that do not have a PI IAM ID', async () => {
+    server.use(
+      http.get('/api/user/me', () => HttpResponse.json(defaultUser)),
+      http.get('/api/search/catalog', () =>
+        HttpResponse.json({ projects: [], reports: [] })
+      ),
+      http.get('/api/search/projects/team', () =>
+        HttpResponse.json({
+          myManagedProjects: [
+            {
+              keywords: ['resolved', 'Resolved Managed Project'],
+              projectPiIamId: 'IAM-PI-2001',
+              projectName: 'Resolved Managed Project',
+              projectNumber: 'RESOLVED-001',
+            },
+            {
+              keywords: ['unresolved', 'Unresolved Managed Project'],
+              projectPiIamId: null,
+              projectName: 'Unresolved Managed Project',
+              projectNumber: 'UNRESOLVED-001',
+            },
+          ],
+          myProjects: [],
+          principalInvestigators: [],
+          projects: [],
+        })
+      )
+    );
+
+    const { cleanup } = renderRoute({ initialPath: '/styles' });
+
+    try {
+      await screen.findByText('Heading 1');
+      const user = userEvent.setup();
+
+      await user.click(screen.getByRole('button', { name: /search…/i }));
+
+      expect(
+        await screen.findByText('Resolved Managed Project')
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByText('Unresolved Managed Project')
+      ).not.toBeInTheDocument();
     } finally {
       cleanup();
     }
