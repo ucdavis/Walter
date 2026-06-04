@@ -47,19 +47,20 @@ public sealed class ProjectController : ApiControllerBase
     [HttpGet("by-iam/{iamId}")]
     public async Task<IActionResult> GetByIamIdAsync(string iamId, CancellationToken cancellationToken)
     {
-        var person = await _datamartService.GetSearchablePersonByIamIdAsync(iamId, cancellationToken);
-        if (person is null)
-        {
-            return NotFound();
-        }
-
-        var employeeId = person.EmployeeId;
-
         // Check if the user has financial access
         var hasFinancialAccess = (await _authorizationService.AuthorizeAsync(
             User,
             resource: null,
             policyName: AuthorizationHelper.Policies.CanViewFinancials)).Succeeded;
+
+        var person = await _datamartService.GetSearchablePersonByIamIdAsync(iamId, cancellationToken);
+        if (person is null)
+        {
+            // Non-financial callers should not be able to distinguish unknown IAM IDs from inaccessible portfolios.
+            return hasFinancialAccess ? NotFound() : Forbid();
+        }
+
+        var employeeId = person.EmployeeId;
 
         // If no financial access, verify the current user is PI or PM on at least one
         // of the requested employee's projects (covers both self-lookup and PM-views-PI)
@@ -192,7 +193,8 @@ public sealed class ProjectController : ApiControllerBase
             var person = await _datamartService.GetSearchablePersonByIamIdAsync(iamId, cancellationToken);
             if (person is null)
             {
-                return NotFound();
+                // Keep missing IAM IDs indistinguishable from inaccessible personnel for restricted callers.
+                return Forbid();
             }
 
             var currentEmployeeId = await GetCurrentEmployeeIdAsync(cancellationToken);
@@ -270,17 +272,19 @@ public sealed class ProjectController : ApiControllerBase
     [HttpGet("managed/by-iam/{iamId}")]
     public async Task<IActionResult> GetManagedFaculty(string iamId, CancellationToken cancellationToken)
     {
-        var projectManagerPerson = await _datamartService.GetSearchablePersonByIamIdAsync(iamId, cancellationToken);
-        if (projectManagerPerson is null)
-        {
-            return NotFound();
-        }
-
-        var employeeId = projectManagerPerson.EmployeeId;
         var hasFinancialAccess = (await _authorizationService.AuthorizeAsync(
             User,
             resource: null,
             policyName: AuthorizationHelper.Policies.CanViewFinancials)).Succeeded;
+
+        var projectManagerPerson = await _datamartService.GetSearchablePersonByIamIdAsync(iamId, cancellationToken);
+        if (projectManagerPerson is null)
+        {
+            // Match the non-self response below so restricted callers cannot enumerate IAM IDs.
+            return hasFinancialAccess ? NotFound() : EmptyManagedFacultyResult();
+        }
+
+        var employeeId = projectManagerPerson.EmployeeId;
 
         if (!hasFinancialAccess)
         {
@@ -289,11 +293,7 @@ public sealed class ProjectController : ApiControllerBase
 
             if (!isSelf)
             {
-                return Ok(new
-                {
-                    projectManager = (object?)null,
-                    pis = Array.Empty<object>(),
-                });
+                return EmptyManagedFacultyResult();
             }
         }
 
@@ -385,6 +385,15 @@ public sealed class ProjectController : ApiControllerBase
         return Ok(new ManagedPisEnvelope(
             new ManagedPisProjectManager(employeeId, projectManagerPerson.IamId, pmMember?.Name),
             managedPiRecords));
+    }
+
+    private IActionResult EmptyManagedFacultyResult()
+    {
+        return Ok(new
+        {
+            projectManager = (object?)null,
+            pis = Array.Empty<object>(),
+        });
     }
 
     private async Task<string?> GetCurrentEmployeeIdAsync(CancellationToken cancellationToken)

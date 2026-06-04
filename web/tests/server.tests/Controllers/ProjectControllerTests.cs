@@ -58,6 +58,92 @@ public sealed class ProjectControllerTests
     }
 
     [Fact]
+    public async Task GetByIamId_returns_forbid_for_unknown_iam_when_user_lacks_financial_access()
+    {
+        using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
+        var authorizationService = CreateAuthorizationService();
+
+        var controller = new ProjectController(
+            new ThrowingFinancialApiService(),
+            new ResolvingDatamartService(),
+            authorizationService,
+            new UserService(NullLogger<UserService>.Instance, ctx))
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext
+                {
+                    User = CreateUser(roles: []),
+                },
+            },
+        };
+
+        var result = await controller.GetByIamIdAsync("UNKNOWN-IAM", CancellationToken.None);
+
+        result.Should().BeOfType<ForbidResult>();
+    }
+
+    [Fact]
+    public async Task GetPersonnelForProjects_returns_forbid_for_unknown_iam_when_user_lacks_financial_access()
+    {
+        using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
+        var authorizationService = CreateAuthorizationService();
+
+        var controller = new ProjectController(
+            new ThrowingFinancialApiService(),
+            new ResolvingDatamartService(),
+            authorizationService,
+            new UserService(NullLogger<UserService>.Instance, ctx))
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext
+                {
+                    User = CreateUser(roles: []),
+                },
+            },
+        };
+
+        var result = await controller.GetPersonnelForProjects(
+            CancellationToken.None,
+            iamId: "UNKNOWN-IAM",
+            projectCodes: "PROJ-001");
+
+        result.Should().BeOfType<ForbidResult>();
+    }
+
+    [Fact]
+    public async Task GetManagedFaculty_returns_empty_array_for_unknown_iam_when_user_lacks_financial_access()
+    {
+        using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
+        var authorizationService = CreateAuthorizationService();
+
+        var controller = new ProjectController(
+            new ThrowingFinancialApiService(),
+            new ResolvingDatamartService(),
+            authorizationService,
+            new UserService(NullLogger<UserService>.Instance, ctx))
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext
+                {
+                    User = CreateUser(roles: []),
+                },
+            },
+        };
+
+        var result = await controller.GetManagedFaculty("UNKNOWN-IAM", CancellationToken.None);
+
+        var ok = result.Should().BeOfType<OkObjectResult>().Which;
+        var envelope = ok.Value!;
+        var envelopeType = envelope.GetType();
+        envelopeType.GetProperty("projectManager")!.GetValue(envelope).Should().BeNull();
+        envelopeType.GetProperty("pis")!.GetValue(envelope)
+            .Should().BeAssignableTo<IEnumerable<object>>().Which.Should().BeEmpty();
+    }
+
+    [Fact]
     public void Project_routes_do_not_expose_employee_id_lookup_contracts()
     {
         var templates = typeof(ProjectController)
@@ -101,9 +187,9 @@ public sealed class ProjectControllerTests
 
     private sealed class ResolvingDatamartService : IDatamartService
     {
-        private readonly SearchablePersonRecord _person;
+        private readonly SearchablePersonRecord? _person;
 
-        public ResolvingDatamartService(SearchablePersonRecord person)
+        public ResolvingDatamartService(SearchablePersonRecord? person = null)
         {
             _person = person;
         }
@@ -120,7 +206,8 @@ public sealed class ProjectControllerTests
             string iamId,
             CancellationToken ct = default)
         {
-            return Task.FromResult(string.Equals(iamId, _person.IamId, StringComparison.OrdinalIgnoreCase)
+            return Task.FromResult(_person is not null &&
+                string.Equals(iamId, _person.IamId, StringComparison.OrdinalIgnoreCase)
                 ? _person
                 : null);
         }
@@ -129,7 +216,8 @@ public sealed class ProjectControllerTests
             string employeeId,
             CancellationToken ct = default)
         {
-            return Task.FromResult(string.Equals(employeeId, _person.EmployeeId, StringComparison.OrdinalIgnoreCase)
+            return Task.FromResult(_person is not null &&
+                string.Equals(employeeId, _person.EmployeeId, StringComparison.OrdinalIgnoreCase)
                 ? _person
                 : null);
         }
@@ -139,7 +227,7 @@ public sealed class ProjectControllerTests
             CancellationToken ct = default)
         {
             return Task.FromResult<IReadOnlyList<SearchablePersonRecord>>(
-                employeeIds.Contains(_person.EmployeeId, StringComparer.OrdinalIgnoreCase)
+                _person is not null && employeeIds.Contains(_person.EmployeeId, StringComparer.OrdinalIgnoreCase)
                     ? new[] { _person }
                     : Array.Empty<SearchablePersonRecord>());
         }
