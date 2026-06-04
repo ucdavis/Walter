@@ -155,7 +155,7 @@ BEGIN
         END;
 
         SET @Sql =
-            N'TRUNCATE TABLE ' + @TargetTable + N';
+            N'DELETE FROM ' + @TargetTable + N';
 INSERT INTO ' + @TargetTable + N' (' + @ColumnList + N')
 SELECT ' + @ColumnList + N'
 FROM ' + @StagingTable + N';
