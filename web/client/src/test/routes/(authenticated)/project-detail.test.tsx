@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
+import type { PersonnelRecord } from '@/queries/personnel.ts';
 import type { ProjectRecord } from '@/queries/project.ts';
 import { server } from '@/test/mswUtils.ts';
 import { renderRoute } from '@/test/routerUtils.tsx';
@@ -70,7 +71,8 @@ const createProject = (
 
 const setupHandlers = (
   user: { employeeId: string; name: string },
-  projects: ProjectRecord[]
+  projects: ProjectRecord[],
+  personnel: PersonnelRecord[] = []
 ) => {
   server.use(
     http.get('/api/user/me', () =>
@@ -83,9 +85,11 @@ const setupHandlers = (
         roles: [],
       })
     ),
-    http.get('/api/project/managed/:employeeId', () => HttpResponse.json({ pis: [], projectManager: null })),
+    http.get('/api/project/managed/:employeeId', () =>
+      HttpResponse.json({ pis: [], projectManager: null })
+    ),
+    http.get('/api/project/personnel', () => HttpResponse.json(personnel)),
     http.get('/api/project/:employeeId', () => HttpResponse.json(projects)),
-    http.get('/api/project/personnel', () => HttpResponse.json([])),
     http.get('/api/project/gl-ppm-reconciliation', () => HttpResponse.json([]))
   );
 };
@@ -143,7 +147,10 @@ describe('project detail page', () => {
           roles: [],
         })
       ),
-      http.get('/api/project/managed/:employeeId', () => HttpResponse.json({ pis: [], projectManager: null })),
+      http.get('/api/project/managed/:employeeId', () =>
+        HttpResponse.json({ pis: [], projectManager: null })
+      ),
+      http.get('/api/project/personnel', () => HttpResponse.json([])),
       http.get('/api/project/:employeeId', ({ params }) => {
         if (params.employeeId === '10212674') {
           return HttpResponse.json(
@@ -154,7 +161,6 @@ describe('project detail page', () => {
 
         return HttpResponse.json([]);
       }),
-      http.get('/api/project/personnel', () => HttpResponse.json([])),
       http.get('/api/project/gl-ppm-reconciliation', () =>
         HttpResponse.json([])
       )
@@ -183,6 +189,83 @@ describe('project detail page', () => {
       ).toBeInTheDocument();
       expect(
         screen.queryByText('We could not reach the server')
+      ).not.toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('shows the project burndown after personnel data loads', async () => {
+    const user = userEvent.setup();
+    const projects = [
+      createProject({
+        balance: 100_000,
+        pmEmployeeId: '2000',
+        projectNumber: 'P-BURNDOWN',
+      }),
+    ];
+    const personnel: PersonnelRecord[] = [
+      {
+        compositeBenefitRate: 0.4,
+        distributionPercent: 50,
+        employeeId: '1001',
+        fte: 1,
+        fundingEffectiveDate: null,
+        fundingEndDate: null,
+        jobCode: '001234',
+        jobEffectiveDate: null,
+        jobEndDate: null,
+        monthlyRate: 10_000,
+        name: 'Smith, Jane',
+        positionDescription: 'Researcher',
+        positionNumber: '40001234',
+        projectDescription: 'Test Project',
+        projectId: 'P-BURNDOWN',
+      },
+    ];
+    setupHandlers({ employeeId: '1000', name: 'PI User' }, projects, personnel);
+
+    const { cleanup } = renderRoute({
+      initialPath: '/projects/1000/P-BURNDOWN',
+    });
+
+    try {
+      const headingLabel = await screen.findByText(
+        'Project Burndown by Personnel Costs'
+      );
+      expect(headingLabel).toBeInTheDocument();
+      expect(await screen.findByText('Starting Balance')).toBeInTheDocument();
+      expect(screen.getByTestId('project-burndown-chart')).toBeInTheDocument();
+      expect(screen.getByText('Projection')).toBeInTheDocument();
+
+      await user.hover(headingLabel.parentElement as HTMLElement);
+
+      expect(await screen.findByRole('tooltip')).toHaveTextContent(
+        tooltipDefinitions.projectBurndownPersonnelCosts
+      );
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('hides the project burndown when no personnel costs apply', async () => {
+    const projects = [
+      createProject({
+        balance: 100_000,
+        pmEmployeeId: '2000',
+        projectNumber: 'P-NO-PERSONNEL',
+      }),
+    ];
+    setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);
+
+    const { cleanup } = renderRoute({
+      initialPath: '/projects/1000/P-NO-PERSONNEL',
+    });
+
+    try {
+      await screen.findByText('No personnel found.');
+      expect(
+        screen.queryByText('Project Burndown by Personnel Costs')
       ).not.toBeInTheDocument();
     } finally {
       cleanup();

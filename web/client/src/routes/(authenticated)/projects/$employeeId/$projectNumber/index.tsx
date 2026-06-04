@@ -2,6 +2,7 @@ import { ProjectAlerts } from '@/components/alerts/ProjectAlerts.tsx';
 import { TaskBreakdown } from '@/components/project/TaskBreakdown.tsx';
 import { ProjectDetails } from '@/components/project/ProjectDetails.tsx';
 import { FinancialDetails } from '@/components/project/FinancialDetails.tsx';
+import { ProjectBurndownSection } from '@/components/project/ProjectBurndownChart.tsx';
 import { PersonnelTable } from '@/components/project/PersonnelTable.tsx';
 import { usePersonnelQuery } from '@/queries/personnel.ts';
 import {
@@ -95,6 +96,12 @@ function ProjectContent({
 
       <ProjectDetails summary={summary} />
       <FinancialDetails summary={summary} />
+      <ProjectBurndownSection
+        isError={personnelQuery.isError}
+        isLoading={personnelQuery.isPending}
+        personnel={personnelQuery.data}
+        summary={summary}
+      />
       <ProjectAdditionalInfo summary={summary} />
 
       <section className="section-margin">
