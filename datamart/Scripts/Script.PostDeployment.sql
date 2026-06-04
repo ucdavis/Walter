@@ -50,6 +50,7 @@ GRANT INSERT, SELECT, UPDATE ON [dbo].[EmployeeAccrualBalances] TO [WalterPipeli
 GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[PositionBudgets] TO [WalterPipelineRole];
 GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[PositionBudgets_Staging] TO [WalterPipelineRole];
 GRANT EXECUTE ON [dbo].[usp_SwapPositionBudgets] TO [WalterPipelineRole];
+GRANT EXECUTE ON [dbo].[usp_SwapStagingTable] TO [WalterPipelineRole];
 GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[Projects] TO [WalterPipelineRole];
 GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[PpmAwards] TO [WalterPipelineRole];
 GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[PpmPeople] TO [WalterPipelineRole];
