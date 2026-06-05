@@ -7,6 +7,7 @@ import { renderRoute } from '@/test/routerUtils.tsx';
 const createUser = (roles: string[]) => ({
   email: 'test@example.com',
   employeeId: '1000',
+  iamId: 'IAM-1000',
   id: 'user-1',
   kerberos: 'testuser',
   name: 'Test User',
@@ -20,10 +21,10 @@ describe('Accruals access control', () => {
         http.get('/api/user/me', () =>
           HttpResponse.json(createUser(['AccrualViewer']))
         ),
-        http.get('/api/project/managed/:employeeId', () =>
+        http.get('/api/project/managed/by-iam/:iamId', () =>
           HttpResponse.json({ pis: [], projectManager: null })
         ),
-        http.get('/api/project/:employeeId', () => HttpResponse.json([])),
+        http.get('/api/project/by-iam/:iamId', () => HttpResponse.json([])),
         http.get('/api/project/personnel', () => HttpResponse.json([]))
       );
 
@@ -42,10 +43,10 @@ describe('Accruals access control', () => {
     it('hides Accruals link for default users', async () => {
       server.use(
         http.get('/api/user/me', () => HttpResponse.json(createUser([]))),
-        http.get('/api/project/managed/:employeeId', () =>
+        http.get('/api/project/managed/by-iam/:iamId', () =>
           HttpResponse.json({ pis: [], projectManager: null })
         ),
-        http.get('/api/project/:employeeId', () => HttpResponse.json([])),
+        http.get('/api/project/by-iam/:iamId', () => HttpResponse.json([])),
         http.get('/api/project/personnel', () => HttpResponse.json([]))
       );
 

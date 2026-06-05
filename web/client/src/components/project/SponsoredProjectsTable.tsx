@@ -117,12 +117,12 @@ const csvColumns = [
 ];
 
 interface SponsoredProjectsTableProps {
-  employeeId: string;
+  iamId: string;
   records: ProjectRecord[];
 }
 
 export function SponsoredProjectsTable({
-  employeeId,
+  iamId,
   records,
 }: SponsoredProjectsTableProps) {
   const [showExpired, setShowExpired] = useState(false);
@@ -167,8 +167,8 @@ export function SponsoredProjectsTable({
           return (
             <Link
               className="link no-underline flex items-start gap-1"
-              params={{ employeeId, projectNumber }}
-              to="/projects/$employeeId/$projectNumber/"
+              params={{ iamId, projectNumber }}
+              to="/projects/$iamId/$projectNumber/"
             >
               <div className="min-w-0">
                 <div className="text-xs text-base-content/70 no-underline">
@@ -284,7 +284,7 @@ export function SponsoredProjectsTable({
         header: () => <span className="flex justify-end">Balance</span>,
       }),
     ],
-    [employeeId, totals.totalBalance, totals.totalBudget, totals.totalEncumbrance, totals.totalExpense]
+    [iamId, totals.totalBalance, totals.totalBudget, totals.totalEncumbrance, totals.totalExpense]
   );
 
   if (allProjects.length === 0) {

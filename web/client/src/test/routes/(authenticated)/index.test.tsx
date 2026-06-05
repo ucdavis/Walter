@@ -18,6 +18,7 @@ const createPi = (
   }>
 ): PiWithProjects => ({
   employeeId,
+  iamId: `IAM-${employeeId}`,
   name: `PI ${employeeId}`,
   projectCount: projects.length,
   projects: projects as PiWithProjects['projects'],
@@ -28,13 +29,14 @@ const createPi = (
 describe('home route', () => {
   it('renders managed investigators dashboard when user manages investigators', async () => {
     const managedPis = [
-      { employeeId: '2001', name: 'PI One', projectCount: 2 },
-      { employeeId: '2002', name: 'PI Two', projectCount: 1 },
+      { employeeId: '2001', iamId: 'IAM-2001', name: 'PI One', projectCount: 2 },
+      { employeeId: '2002', iamId: 'IAM-2002', name: 'PI Two', projectCount: 1 },
     ];
 
     const user = {
       email: 'alpha@example.com',
       employeeId: '1000',
+      iamId: 'IAM-1000',
       id: 'user-1',
       kerberos: 'alpha',
       name: 'Alpha User',
@@ -45,9 +47,9 @@ describe('home route', () => {
     let userRequestCount = 0;
 
     server.use(
-      http.get('/api/project/managed/:employeeId', ({ params }) => {
+      http.get('/api/project/managed/by-iam/:iamId', ({ params }) => {
         managedRequestCount += 1;
-        if (params.employeeId !== user.employeeId) {
+        if (params.iamId !== user.iamId) {
           return HttpResponse.json(
             { pis: [], projectManager: null },
             { status: 400 }
@@ -55,10 +57,14 @@ describe('home route', () => {
         }
         return HttpResponse.json({
           pis: managedPis,
-          projectManager: { employeeId: user.employeeId, name: user.name },
+          projectManager: {
+            employeeId: user.employeeId,
+            iamId: user.iamId,
+            name: user.name,
+          },
         });
       }),
-      http.get('/api/project/:employeeId', () => {
+      http.get('/api/project/by-iam/:iamId', () => {
         // Return empty projects for each PI
         return HttpResponse.json([]);
       }),
@@ -88,6 +94,7 @@ describe('home route', () => {
     const user = {
       email: 'alpha@example.com',
       employeeId: '1000',
+      iamId: 'IAM-1000',
       id: 'user-1',
       kerberos: 'alpha',
       name: 'Alpha User',
@@ -113,10 +120,10 @@ describe('home route', () => {
 
     server.use(
       http.get('/api/user/me', () => HttpResponse.json(user)),
-      http.get('/api/project/managed/:employeeId', () =>
+      http.get('/api/project/managed/by-iam/:iamId', () =>
         HttpResponse.json({ pis: [], projectManager: null })
       ),
-      http.get('/api/project/:employeeId', () => HttpResponse.json(projects)),
+      http.get('/api/project/by-iam/:iamId', () => HttpResponse.json(projects)),
       http.get('/api/project/personnel', () => HttpResponse.json([]))
     );
 
@@ -138,6 +145,7 @@ describe('home route', () => {
     const user = {
       email: 'alpha@example.com',
       employeeId: '1000',
+      iamId: 'IAM-1000',
       id: 'user-1',
       kerberos: 'alpha',
       name: 'Alpha User',
@@ -171,10 +179,10 @@ describe('home route', () => {
 
     server.use(
       http.get('/api/user/me', () => HttpResponse.json(user)),
-      http.get('/api/project/managed/:employeeId', () =>
+      http.get('/api/project/managed/by-iam/:iamId', () =>
         HttpResponse.json({ pis: [], projectManager: null })
       ),
-      http.get('/api/project/:employeeId', () => HttpResponse.json(projects)),
+      http.get('/api/project/by-iam/:iamId', () => HttpResponse.json(projects)),
       http.get('/api/project/personnel', () => HttpResponse.json([]))
     );
 
@@ -198,6 +206,7 @@ describe('home route', () => {
     const user = {
       email: 'alpha@example.com',
       employeeId: '1000',
+      iamId: 'IAM-1000',
       id: 'user-1',
       kerberos: 'alpha',
       name: 'Alpha User',
@@ -206,10 +215,10 @@ describe('home route', () => {
 
     server.use(
       http.get('/api/user/me', () => HttpResponse.json(user)),
-      http.get('/api/project/managed/:employeeId', () =>
+      http.get('/api/project/managed/by-iam/:iamId', () =>
         HttpResponse.json({ pis: [], projectManager: null })
       ),
-      http.get('/api/project/:employeeId', () => HttpResponse.json([])),
+      http.get('/api/project/by-iam/:iamId', () => HttpResponse.json([])),
       http.get('/api/project/personnel', () => HttpResponse.json([])),
     );
 
@@ -230,7 +239,7 @@ describe('home route', () => {
 
   it('switches between PIs and Alerts tabs', async () => {
     const managedPis = [
-      { employeeId: '2001', name: 'PI One', projectCount: 2 },
+      { employeeId: '2001', iamId: 'IAM-2001', name: 'PI One', projectCount: 2 },
     ];
 
     const projects = [
@@ -246,6 +255,7 @@ describe('home route', () => {
     const testUser = {
       email: 'alpha@example.com',
       employeeId: '1000',
+      iamId: 'IAM-1000',
       id: 'user-1',
       kerberos: 'alpha',
       name: 'Alpha User',
@@ -253,16 +263,17 @@ describe('home route', () => {
     };
 
     server.use(
-      http.get('/api/project/managed/:employeeId', () =>
+      http.get('/api/project/managed/by-iam/:iamId', () =>
         HttpResponse.json({
           pis: managedPis,
           projectManager: {
             employeeId: testUser.employeeId,
+            iamId: testUser.iamId,
             name: testUser.name,
           },
         })
       ),
-      http.get('/api/project/:employeeId', () => HttpResponse.json(projects)),
+      http.get('/api/project/by-iam/:iamId', () => HttpResponse.json(projects)),
       http.get('/api/user/me', () => HttpResponse.json(testUser)),
       http.get('/api/project/personnel', () => HttpResponse.json([]))
     );
@@ -301,6 +312,7 @@ describe('home route', () => {
     const testUser = {
       email: 'pi@example.com',
       employeeId: '1000',
+      iamId: 'IAM-1000',
       id: 'user-1',
       kerberos: 'piuser',
       name: 'PI User',
@@ -323,10 +335,10 @@ describe('home route', () => {
     let reconciliationCalls = 0;
     server.use(
       http.get('/api/user/me', () => HttpResponse.json(testUser)),
-      http.get('/api/project/managed/:employeeId', () =>
+      http.get('/api/project/managed/by-iam/:iamId', () =>
         HttpResponse.json({ pis: [], projectManager: null })
       ),
-      http.get('/api/project/:employeeId', () => HttpResponse.json(projects)),
+      http.get('/api/project/by-iam/:iamId', () => HttpResponse.json(projects)),
       http.get('/api/project/personnel', () => HttpResponse.json([])),
       http.get('/api/project/gl-ppm-reconciliation', () => {
         reconciliationCalls += 1;

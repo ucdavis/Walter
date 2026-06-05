@@ -7,6 +7,7 @@ import { renderRoute } from '@/test/routerUtils.tsx';
 const createUser = (roles: string[]) => ({
   email: 'test@example.com',
   employeeId: '1000',
+  iamId: 'IAM-1000',
   id: 'user-1',
   kerberos: 'testuser',
   name: 'Test User',
@@ -20,10 +21,10 @@ const emptyManagedResponse = {
 
 const managedResponse = (name: string | null = 'Test User') => ({
   pis: [
-    { employeeId: '2001', name: 'PI One', projectCount: 2 },
-    { employeeId: '2002', name: 'PI Two', projectCount: 1 },
+    { employeeId: '2001', iamId: 'IAM-2001', name: 'PI One', projectCount: 2 },
+    { employeeId: '2002', iamId: 'IAM-2002', name: 'PI Two', projectCount: 1 },
   ],
-  projectManager: { employeeId: '1000', name },
+  projectManager: { employeeId: '1000', iamId: 'IAM-1000', name },
 });
 
 describe('principal investigators route', () => {
@@ -32,7 +33,7 @@ describe('principal investigators route', () => {
       http.get('/api/user/me', () =>
         HttpResponse.json(createUser(['FinancialViewer']))
       ),
-      http.get('/api/project/managed/:employeeId', () =>
+      http.get('/api/project/managed/by-iam/:iamId', () =>
         HttpResponse.json(managedResponse())
       )
     );
@@ -60,7 +61,7 @@ describe('principal investigators route', () => {
       http.get('/api/user/me', () =>
         HttpResponse.json(createUser(['FinancialViewer']))
       ),
-      http.get('/api/project/managed/:employeeId', () =>
+      http.get('/api/project/managed/by-iam/:iamId', () =>
         HttpResponse.json(managedResponse(null))
       )
     );
@@ -83,7 +84,7 @@ describe('principal investigators route', () => {
       http.get('/api/user/me', () =>
         HttpResponse.json(createUser(['ProjectManager']))
       ),
-      http.get('/api/project/managed/:employeeId', () =>
+      http.get('/api/project/managed/by-iam/:iamId', () =>
         HttpResponse.json(emptyManagedResponse)
       )
     );
@@ -101,13 +102,52 @@ describe('principal investigators route', () => {
     }
   });
 
+  it('links managed investigators only when an IAM ID is present', async () => {
+    server.use(
+      http.get('/api/user/me', () =>
+        HttpResponse.json(createUser(['FinancialViewer']))
+      ),
+      http.get('/api/project/managed/by-iam/:iamId', () =>
+        HttpResponse.json({
+          pis: [
+            {
+              employeeId: '2001',
+              iamId: 'IAM-PI-ONE',
+              name: 'PI One',
+              projectCount: 2,
+            },
+            {
+              employeeId: '2002',
+              iamId: null,
+              name: 'PI Two',
+              projectCount: 1,
+            },
+          ],
+          projectManager: { employeeId: '1000', iamId: 'IAM-1000', name: 'Test User' },
+        })
+      )
+    );
+
+    const { cleanup } = renderRoute({
+      initialPath: '/principalInvestigators',
+    });
+
+    try {
+      const linkedPi = await screen.findByRole('link', { name: 'PI One' });
+      expect(linkedPi).toHaveAttribute('href', '/projects/IAM-PI-ONE');
+      expect(screen.getByText('PI Two').closest('a')).toBeNull();
+    } finally {
+      cleanup();
+    }
+  });
+
   it('redirects unauthorized users back to home', async () => {
     server.use(
       http.get('/api/user/me', () => HttpResponse.json(createUser([]))),
-      http.get('/api/project/managed/:employeeId', () =>
+      http.get('/api/project/managed/by-iam/:iamId', () =>
         HttpResponse.json(emptyManagedResponse)
       ),
-      http.get('/api/project/:employeeId', () => HttpResponse.json([])),
+      http.get('/api/project/by-iam/:iamId', () => HttpResponse.json([])),
       http.get('/api/project/personnel', () => HttpResponse.json([]))
     );
 
@@ -127,22 +167,22 @@ describe('principal investigators route', () => {
   });
 });
 
-describe('principal investigators $emplid route', () => {
+describe('principal investigators $iamId route', () => {
   it('allows a FinancialViewer to view another PM', async () => {
     server.use(
       http.get('/api/user/me', () =>
         HttpResponse.json(createUser(['FinancialViewer']))
       ),
-      http.get('/api/project/managed/:employeeId', () =>
+      http.get('/api/project/managed/by-iam/:iamId', () =>
         HttpResponse.json({
-          pis: [{ employeeId: '2001', name: 'PI One', projectCount: 2 }],
-          projectManager: { employeeId: '9999', name: 'Other PM' },
+          pis: [{ employeeId: '2001', iamId: 'IAM-2001', name: 'PI One', projectCount: 2 }],
+          projectManager: { employeeId: '9999', iamId: 'IAM-9999', name: 'Other PM' },
         })
       )
     );
 
     const { cleanup } = renderRoute({
-      initialPath: '/principalInvestigators/9999',
+      initialPath: '/principalInvestigators/IAM-9999',
     });
 
     try {
@@ -155,18 +195,18 @@ describe('principal investigators $emplid route', () => {
     }
   });
 
-  it('allows a user to view their own managed PIs via $emplid', async () => {
+  it('allows a user to view their own managed PIs via $iamId', async () => {
     server.use(
       http.get('/api/user/me', () =>
         HttpResponse.json(createUser(['ProjectManager']))
       ),
-      http.get('/api/project/managed/:employeeId', () =>
+      http.get('/api/project/managed/by-iam/:iamId', () =>
         HttpResponse.json(managedResponse())
       )
     );
 
     const { cleanup } = renderRoute({
-      initialPath: '/principalInvestigators/1000',
+      initialPath: '/principalInvestigators/IAM-1000',
     });
 
     try {
@@ -183,15 +223,15 @@ describe('principal investigators $emplid route', () => {
       http.get('/api/user/me', () =>
         HttpResponse.json(createUser(['ProjectManager']))
       ),
-      http.get('/api/project/managed/:employeeId', () =>
+      http.get('/api/project/managed/by-iam/:iamId', () =>
         HttpResponse.json(emptyManagedResponse)
       ),
-      http.get('/api/project/:employeeId', () => HttpResponse.json([])),
+      http.get('/api/project/by-iam/:iamId', () => HttpResponse.json([])),
       http.get('/api/project/personnel', () => HttpResponse.json([]))
     );
 
     const { cleanup } = renderRoute({
-      initialPath: '/principalInvestigators/9999',
+      initialPath: '/principalInvestigators/IAM-9999',
     });
 
     try {

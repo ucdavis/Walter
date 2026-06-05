@@ -5,15 +5,15 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Server.Controllers;
-using Server.Services;
 using Server.Tests;
 using server.Helpers;
-using server.core.Domain;
-using server.core.Services;
 using server.core.Data;
+using server.core.Domain;
+using server.core.Models;
+using server.core.Services;
 using server.tests.Fakes;
+using server.Services;
 
 namespace server.tests.Controllers;
 
@@ -28,8 +28,6 @@ public sealed class SearchControllerTests
         var controller = CreateController(
             ctx,
             authorizationService,
-            new FakeGraphService(),
-            new FakeIdentityService(),
             roles: []);
 
         var result = await controller.GetCatalog(CancellationToken.None);
@@ -49,9 +47,7 @@ public sealed class SearchControllerTests
         var controller = CreateController(
             ctx,
             authorizationService,
-            new FakeGraphService(),
-            new FakeIdentityService(),
-            roles: [server.core.Domain.Role.Names.AccrualViewer]);
+            roles: [Role.Names.AccrualViewer]);
 
         var result = await controller.GetCatalog(CancellationToken.None);
 
@@ -70,9 +66,7 @@ public sealed class SearchControllerTests
         var controller = CreateController(
             ctx,
             authorizationService,
-            new FakeGraphService(),
-            new FakeIdentityService(),
-            roles: [server.core.Domain.Role.Names.Admin]);
+            roles: [Role.Names.Admin]);
 
         var result = await controller.GetCatalog(CancellationToken.None);
 
@@ -91,8 +85,6 @@ public sealed class SearchControllerTests
         var controller = CreateController(
             ctx,
             authorizationService,
-            new FakeGraphService(),
-            new FakeIdentityService(),
             roles: []);
 
         var result = await controller.GetCatalog(CancellationToken.None);
@@ -112,9 +104,7 @@ public sealed class SearchControllerTests
         var controller = CreateController(
             ctx,
             authorizationService,
-            new FakeGraphService(),
-            new FakeIdentityService(),
-            roles: [server.core.Domain.Role.Names.AccrualViewer]);
+            roles: [Role.Names.AccrualViewer]);
 
         var result = await controller.GetCatalog(CancellationToken.None);
 
@@ -129,14 +119,21 @@ public sealed class SearchControllerTests
     {
         using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
         var authorizationService = CreateAuthorizationService();
-        var graphService = new FakeGraphService(
-            searchResults: [new GraphUserSearchResult("id-1", "Elisabeth Forrestel", "elisabeth.forrestel@ucdavis.edu")]);
 
         var controller = CreateController(
             ctx,
             authorizationService,
-            graphService,
-            new FakeIdentityService(),
+            datamartService: new FakeDatamartService(
+                searchPeople:
+                [
+                    new SearchablePersonRecord
+                    {
+                        IamId = "1000000001",
+                        EmployeeId = "E0000001",
+                        Name = "Elisabeth Forrestel",
+                        Email = "elisabeth.forrestel@ucdavis.edu",
+                    },
+                ]),
             roles: []);
 
         var result = await controller.SearchPeople("elis", CancellationToken.None);
@@ -147,31 +144,74 @@ public sealed class SearchControllerTests
     }
 
     [Fact]
-    public async Task SearchPeople_returns_graph_results_for_financial_users()
+    public async Task SearchPeople_returns_datamart_people_for_financial_users()
     {
         using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
         var authorizationService = CreateAuthorizationService();
-        var graphService = new FakeGraphService(
-            searchResults:
-            [
-                new GraphUserSearchResult("id-1", "Elisabeth Forrestel", "elisabeth.forrestel@ucdavis.edu"),
-                new GraphUserSearchResult("id-2", "Edward Spang", "esspang@ucdavis.edu"),
-            ]);
 
         var controller = CreateController(
             ctx,
             authorizationService,
-            graphService,
-            new FakeIdentityService(),
+            datamartService: new FakeDatamartService(
+                searchPeople:
+                [
+                    new SearchablePersonRecord
+                    {
+                        IamId = "1000000001",
+                        EmployeeId = "E0000001",
+                        Name = "Elisabeth Forrestel",
+                        Email = "elisabeth.forrestel@ucdavis.edu",
+                    },
+                    new SearchablePersonRecord
+                    {
+                        IamId = "1000000002",
+                        EmployeeId = "E0000002",
+                        Name = "Edward Spang",
+                        Email = "esspang@ucdavis.edu",
+                    },
+                ]),
             roles: [Role.Names.FinancialViewer]);
 
         var result = await controller.SearchPeople("spang", CancellationToken.None);
         var payload = result.Should().BeOfType<OkObjectResult>().Which.Value
             .Should().BeAssignableTo<IReadOnlyList<SearchController.SearchDirectoryPerson>>().Which;
 
-        payload.Should().HaveCount(2);
+        payload.Should().ContainSingle();
+        payload.Select(p => p.IamId).Should().Contain("1000000002");
+        payload.Select(p => p.Id).Should().Contain("1000000002");
         payload.Select(p => p.Name).Should().Contain("Edward Spang");
         payload.SelectMany(p => p.Keywords).Should().Contain("esspang@ucdavis.edu");
+        payload.SelectMany(p => p.Keywords).Should().NotContain("E0000002");
+    }
+
+    [Fact]
+    public async Task SearchPeople_reports_is_project_manager_when_person_manages_projects()
+    {
+        using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
+        var authorizationService = CreateAuthorizationService();
+
+        var controller = CreateController(
+            ctx,
+            authorizationService,
+            datamartService: new FakeDatamartService(
+                searchPeople:
+                [
+                    new SearchablePersonRecord
+                    {
+                        IamId = "1000000003",
+                        EmployeeId = "PM000003",
+                        Name = "Patty Manager",
+                        Email = "patty@ucdavis.edu",
+                    },
+                ]),
+            roles: [Role.Names.FinancialViewer],
+            projectManagerEmployeeIds: ["PM000003"]);
+
+        var result = await controller.SearchPeople("patty", CancellationToken.None);
+        var payload = result.Should().BeOfType<OkObjectResult>().Which.Value
+            .Should().BeAssignableTo<IReadOnlyList<SearchController.SearchDirectoryPerson>>().Which;
+
+        payload.Should().ContainSingle().Which.IsProjectManager.Should().BeTrue();
     }
 
     [Fact]
@@ -179,19 +219,20 @@ public sealed class SearchControllerTests
     {
         using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
         var authorizationService = CreateAuthorizationService();
-        var graphService = new FakeGraphService(
-            searchResults: Enumerable.Range(1, 7)
-                .Select(i => new GraphUserSearchResult(
-                    $"id-{i}",
-                    $"Person {i}",
-                    $"person{i}@ucdavis.edu"))
-                .ToArray());
 
         var controller = CreateController(
             ctx,
             authorizationService,
-            graphService,
-            new FakeIdentityService(),
+            datamartService: new FakeDatamartService(
+                searchPeople: Enumerable.Range(1, 7)
+                    .Select(i => new SearchablePersonRecord
+                    {
+                        IamId = $"100000000{i}",
+                        EmployeeId = $"E000000{i}",
+                        Name = $"Person {i}",
+                        Email = $"person{i}@ucdavis.edu",
+                    })
+                    .ToArray()),
             roles: [Role.Names.FinancialViewer]);
 
         var result = await controller.SearchPeople("person", CancellationToken.None);
@@ -199,96 +240,150 @@ public sealed class SearchControllerTests
             .Should().BeAssignableTo<IReadOnlyList<SearchController.SearchDirectoryPerson>>().Which;
 
         payload.Should().HaveCount(5);
-        payload.Select(p => p.Id).Should().ContainInOrder("id-1", "id-2", "id-3", "id-4", "id-5");
+        payload.Select(p => p.IamId).Should().ContainInOrder(
+            "1000000001",
+            "1000000002",
+            "1000000003",
+            "1000000004",
+            "1000000005");
     }
 
     [Fact]
-    public async Task ResolvePersonByDirectoryId_returns_employee_id_when_identity_is_found()
+    public async Task ResolveProjectPi_returns_pi_iam_id_when_pi_email_resolves()
     {
         using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
         var authorizationService = CreateAuthorizationService();
-        var graphService = new FakeGraphService(
-            profiles: new Dictionary<string, GraphUserProfile>
-            {
-                ["id-esspang"] = new GraphUserProfile(
-                    Id: "id-esspang",
-                    DisplayName: "Edward Spang",
-                    Email: "esspang@ucdavis.edu",
-                    IamId: "IAM-ESSPANG"),
-            });
-        var identityService = new FakeIdentityService(
-            identities: new Dictionary<string, IamIdentity>
-            {
-                ["IAM-ESSPANG"] = new IamIdentity("IAM-ESSPANG", "200123", "Edward Spang"),
-            });
 
         var controller = CreateController(
             ctx,
             authorizationService,
-            graphService,
-            identityService,
+            datamartService: new FakeDatamartService(
+                searchPeople:
+                [
+                    new SearchablePersonRecord
+                    {
+                        IamId = "IAM-PI",
+                        EmployeeId = "EPI",
+                        Name = "Pat PI",
+                        Email = "pi@ucdavis.edu",
+                    },
+                    new SearchablePersonRecord
+                    {
+                        IamId = "IAM-PM",
+                        EmployeeId = "EPM",
+                        Name = "Morgan PM",
+                        Email = "pm@ucdavis.edu",
+                    },
+                ]),
+            financialApiService: new FakeFinancialApiService(
+                [],
+                new Dictionary<string, IReadOnlyList<FakeFinancialProjectTeamMember>>
+                {
+                    ["ABC123"] =
+                    [
+                        new FakeFinancialProjectTeamMember(
+                            PpmRole.PrincipalInvestigator,
+                            "Pat PI",
+                            "pi@ucdavis.edu"),
+                        new FakeFinancialProjectTeamMember(
+                            PpmRole.ProjectManager,
+                            "Morgan PM",
+                            "pm@ucdavis.edu"),
+                    ],
+                }),
             roles: [Role.Names.FinancialViewer]);
 
-        var result = await controller.ResolvePersonByDirectoryId("id-esspang", CancellationToken.None);
-        var payload = result.Should().BeOfType<OkObjectResult>().Which.Value
-            .Should().BeOfType<SearchController.ResolveDirectoryPersonResponse>().Which;
+        var result = await controller.ResolveProjectPi("abc123", CancellationToken.None);
 
-        payload.EmployeeId.Should().Be("200123");
-        payload.Name.Should().Be("Edward Spang");
-        payload.IsProjectManager.Should().BeFalse();
+        var payload = result.Should().BeOfType<OkObjectResult>().Which.Value
+            .Should().BeOfType<SearchController.ResolveProjectPiResponse>().Which;
+        payload.IamId.Should().Be("IAM-PI");
+        payload.ProjectNumber.Should().Be("ABC123");
     }
 
     [Fact]
-    public async Task ResolvePersonByDirectoryId_reports_is_project_manager_when_employee_manages_projects()
+    public async Task ResolveProjectPi_falls_back_to_pm_when_project_is_orphaned()
     {
         using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
         var authorizationService = CreateAuthorizationService();
-        var graphService = new FakeGraphService(
-            profiles: new Dictionary<string, GraphUserProfile>
-            {
-                ["id-pm"] = new GraphUserProfile(
-                    Id: "id-pm",
-                    DisplayName: "Patty Manager",
-                    Email: "pmanager@ucdavis.edu",
-                    IamId: "IAM-PM"),
-            });
-        var identityService = new FakeIdentityService(
-            identities: new Dictionary<string, IamIdentity>
-            {
-                ["IAM-PM"] = new IamIdentity("IAM-PM", "PM-7001", "Patty Manager"),
-            });
 
         var controller = CreateController(
             ctx,
             authorizationService,
-            graphService,
-            identityService,
-            roles: [Role.Names.FinancialViewer],
-            projectManagerEmployeeIds: ["PM-7001"]);
+            datamartService: new FakeDatamartService(
+                searchPeople:
+                [
+                    new SearchablePersonRecord
+                    {
+                        IamId = "IAM-PM",
+                        EmployeeId = "EPM",
+                        Name = "Morgan PM",
+                        Email = "pm@ucdavis.edu",
+                    },
+                ]),
+            financialApiService: new FakeFinancialApiService(
+                [],
+                new Dictionary<string, IReadOnlyList<FakeFinancialProjectTeamMember>>
+                {
+                    ["ABC123"] =
+                    [
+                        new FakeFinancialProjectTeamMember(
+                            PpmRole.ProjectManager,
+                            "Morgan PM",
+                            "pm@ucdavis.edu"),
+                    ],
+                }),
+            roles: [Role.Names.FinancialViewer]);
 
-        var result = await controller.ResolvePersonByDirectoryId("id-pm", CancellationToken.None);
+        var result = await controller.ResolveProjectPi("ABC123", CancellationToken.None);
+
         var payload = result.Should().BeOfType<OkObjectResult>().Which.Value
-            .Should().BeOfType<SearchController.ResolveDirectoryPersonResponse>().Which;
-
-        payload.EmployeeId.Should().Be("PM-7001");
-        payload.IsProjectManager.Should().BeTrue();
+            .Should().BeOfType<SearchController.ResolveProjectPiResponse>().Which;
+        payload.IamId.Should().Be("IAM-PM");
+        payload.ProjectNumber.Should().Be("ABC123");
     }
 
     [Fact]
-    public async Task ResolvePersonByDirectoryId_forbids_non_financial_users()
+    public async Task ResolveProjectPi_does_not_fallback_to_pm_when_pi_exists_but_cannot_resolve()
     {
         using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
         var authorizationService = CreateAuthorizationService();
+
         var controller = CreateController(
             ctx,
             authorizationService,
-            new FakeGraphService(),
-            new FakeIdentityService(),
-            roles: []);
+            datamartService: new FakeDatamartService(
+                searchPeople:
+                [
+                    new SearchablePersonRecord
+                    {
+                        IamId = "IAM-PM",
+                        EmployeeId = "EPM",
+                        Name = "Morgan PM",
+                        Email = "pm@ucdavis.edu",
+                    },
+                ]),
+            financialApiService: new FakeFinancialApiService(
+                [],
+                new Dictionary<string, IReadOnlyList<FakeFinancialProjectTeamMember>>
+                {
+                    ["ABC123"] =
+                    [
+                        new FakeFinancialProjectTeamMember(
+                            PpmRole.PrincipalInvestigator,
+                            "Pat PI",
+                            "missing-pi@ucdavis.edu"),
+                        new FakeFinancialProjectTeamMember(
+                            PpmRole.ProjectManager,
+                            "Morgan PM",
+                            "pm@ucdavis.edu"),
+                    ],
+                }),
+            roles: [Role.Names.FinancialViewer]);
 
-        var result = await controller.ResolvePersonByDirectoryId("id-1", CancellationToken.None);
+        var result = await controller.ResolveProjectPi("ABC123", CancellationToken.None);
 
-        result.Should().BeOfType<ForbidResult>();
+        result.Should().BeOfType<NotFoundResult>();
     }
 
     private static IAuthorizationService CreateAuthorizationService()
@@ -303,9 +398,9 @@ public sealed class SearchControllerTests
     private static SearchController CreateController(
         AppDbContext ctx,
         IAuthorizationService authorizationService,
-        IGraphService graphService,
-        IIdentityService identityService,
         IReadOnlyList<string> roles,
+        IDatamartService? datamartService = null,
+        IFinancialApiService? financialApiService = null,
         IEnumerable<string>? projectManagerEmployeeIds = null)
     {
         var httpContext = new DefaultHttpContext
@@ -315,11 +410,9 @@ public sealed class SearchControllerTests
 
         return new SearchController(
             ctx,
-            new FakeFinancialApiService(projectManagerEmployeeIds ?? Array.Empty<string>()),
+            financialApiService ?? new FakeFinancialApiService(projectManagerEmployeeIds ?? Array.Empty<string>()),
             authorizationService,
-            graphService,
-            identityService,
-            NullLogger<SearchController>.Instance)
+            datamartService ?? new FakeDatamartService())
         {
             ControllerContext = new ControllerContext { HttpContext = httpContext },
         };
@@ -332,75 +425,109 @@ public sealed class SearchControllerTests
         return new ClaimsPrincipal(identity);
     }
 
-    private sealed class FakeGraphService : IGraphService
+    private sealed class FakeDatamartService : IDatamartService
     {
-        private readonly IReadOnlyList<GraphUserSearchResult> _searchResults;
-        private readonly IReadOnlyDictionary<string, GraphUserProfile> _profiles;
+        private readonly IReadOnlyList<SearchablePersonRecord> _searchPeople;
 
-        public FakeGraphService(
-            IReadOnlyList<GraphUserSearchResult>? searchResults = null,
-            IReadOnlyDictionary<string, GraphUserProfile>? profiles = null)
+        public FakeDatamartService(IReadOnlyList<SearchablePersonRecord>? searchPeople = null)
         {
-            _searchResults = searchResults ?? [];
-            _profiles = profiles ?? new Dictionary<string, GraphUserProfile>();
+            _searchPeople = searchPeople ?? [];
         }
 
-        public Task<GraphUserPhoto?> GetMePhotoAsync(ClaimsPrincipal principal, CancellationToken cancellationToken = default)
-        {
-            return Task.FromResult<GraphUserPhoto?>(null);
-        }
-
-        public Task<IReadOnlyList<GraphUserSearchResult>> SearchUsersAsync(
-            ClaimsPrincipal principal,
+        public Task<IReadOnlyList<SearchablePersonRecord>> SearchPeopleAsync(
             string query,
-            CancellationToken cancellationToken = default)
+            int limit,
+            CancellationToken ct = default)
         {
-            return Task.FromResult(_searchResults);
+            IEnumerable<SearchablePersonRecord> people = _searchPeople;
+            if (!string.IsNullOrWhiteSpace(query))
+            {
+                var normalizedQuery = query.Trim();
+                people = people.Where(p =>
+                    p.Name.Contains(normalizedQuery, StringComparison.OrdinalIgnoreCase) ||
+                    (p.Email?.Contains(normalizedQuery, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    p.IamId.Contains(normalizedQuery, StringComparison.OrdinalIgnoreCase));
+            }
+
+            return Task.FromResult<IReadOnlyList<SearchablePersonRecord>>(people.Take(limit).ToArray());
         }
 
-        public Task<GraphUserProfile?> FindUserByEmailAsync(
-            ClaimsPrincipal principal,
+        public Task<SearchablePersonRecord?> GetSearchablePersonByIamIdAsync(
+            string iamId,
+            CancellationToken ct = default)
+        {
+            return Task.FromResult(_searchPeople.FirstOrDefault(p =>
+                string.Equals(p.IamId, iamId, StringComparison.OrdinalIgnoreCase)));
+        }
+
+        public Task<SearchablePersonRecord?> GetSearchablePersonByEmployeeIdAsync(
+            string employeeId,
+            CancellationToken ct = default)
+        {
+            return Task.FromResult(_searchPeople.FirstOrDefault(p =>
+                string.Equals(p.EmployeeId, employeeId, StringComparison.OrdinalIgnoreCase)));
+        }
+
+        public Task<IReadOnlyList<SearchablePersonRecord>> GetSearchablePeopleByEmployeeIdsAsync(
+            IEnumerable<string> employeeIds,
+            CancellationToken ct = default)
+        {
+            var employeeIdSet = employeeIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
+            return Task.FromResult<IReadOnlyList<SearchablePersonRecord>>(
+                _searchPeople.Where(p => employeeIdSet.Contains(p.EmployeeId)).ToArray());
+        }
+
+        public Task<SearchablePersonRecord?> GetSearchablePersonByEmailAsync(
             string email,
-            CancellationToken cancellationToken = default)
+            CancellationToken ct = default)
         {
-            var profile = _profiles.Values.FirstOrDefault(p =>
-                string.Equals(p.Email, email, StringComparison.OrdinalIgnoreCase) ||
-                GraphService.EnumerateEmailCandidates(email).Any(candidate =>
-                    string.Equals(p.Email, candidate, StringComparison.OrdinalIgnoreCase)));
-
-            return Task.FromResult(profile);
+            return Task.FromResult(_searchPeople.FirstOrDefault(p =>
+                string.Equals(p.Email, email, StringComparison.OrdinalIgnoreCase)));
         }
 
-        public Task<GraphUserProfile?> GetUserProfileAsync(
-            ClaimsPrincipal principal,
-            string userObjectId,
-            CancellationToken cancellationToken = default)
+        public Task<IReadOnlyList<EmployeeAccrualBalanceRecord>> GetEmployeeAccrualBalancesAsync(
+            DateTime startDate,
+            string? applicationUser = null,
+            string? emulatingUser = null,
+            CancellationToken ct = default)
         {
-            return Task.FromResult(_profiles.TryGetValue(userObjectId, out var profile)
-                ? profile
-                : null);
-        }
-    }
-
-    private sealed class FakeIdentityService : IIdentityService
-    {
-        private readonly IReadOnlyDictionary<string, IamIdentity> _identities;
-
-        public FakeIdentityService(IReadOnlyDictionary<string, IamIdentity>? identities = null)
-        {
-            _identities = identities ?? new Dictionary<string, IamIdentity>();
+            throw new NotImplementedException();
         }
 
-        public Task<IamIdentity?> GetByIamId(string iamId)
+        public Task<IReadOnlyList<FacultyPortfolioRecord>> GetFacultyPortfolioAsync(
+            IEnumerable<string> projectNumbers,
+            string? applicationUser = null,
+            string? emulatingUser = null,
+            CancellationToken ct = default)
         {
-            return Task.FromResult(_identities.TryGetValue(iamId, out var identity)
-                ? identity
-                : null);
+            throw new NotImplementedException();
         }
 
-        public Task<string?> GetKerberosByIamId(string iamId)
+        public Task<IReadOnlyList<PositionBudgetRecord>> GetPositionBudgetsAsync(
+            IEnumerable<string> projectNumbers,
+            string? applicationUser = null,
+            string? emulatingUser = null,
+            CancellationToken ct = default)
         {
-            return Task.FromResult<string?>(null);
+            throw new NotImplementedException();
+        }
+
+        public Task<IReadOnlyList<GLPPMReconciliationRecord>> GetGLPPMReconciliationAsync(
+            IEnumerable<string> projectNumbers,
+            string? applicationUser = null,
+            string? emulatingUser = null,
+            CancellationToken ct = default)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<IReadOnlyList<GLTransactionRecord>> GetGLTransactionListingsAsync(
+            IEnumerable<string> projectNumbers,
+            string? applicationUser = null,
+            string? emulatingUser = null,
+            CancellationToken ct = default)
+        {
+            throw new NotImplementedException();
         }
     }
 }

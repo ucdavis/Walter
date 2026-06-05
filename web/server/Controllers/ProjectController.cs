@@ -1,6 +1,7 @@
 using AggieEnterpriseApi.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Text.Json.Serialization;
 using server.core.Models;
 using server.core.Services;
 using server.Helpers;
@@ -15,6 +16,22 @@ public sealed class ProjectController : ApiControllerBase
     private readonly IDatamartService _datamartService;
     private readonly IAuthorizationService _authorizationService;
     private readonly IUserService _userService;
+
+    public sealed record ManagedPiRecord(
+        [property: JsonPropertyName("employeeId")] string EmployeeId,
+        [property: JsonPropertyName("iamId")] string? IamId,
+        [property: JsonPropertyName("name")] string Name,
+        [property: JsonPropertyName("projectCount")] int ProjectCount);
+
+    public sealed record ManagedPisProjectManager(
+        [property: JsonPropertyName("employeeId")] string EmployeeId,
+        [property: JsonPropertyName("iamId")] string IamId,
+        [property: JsonPropertyName("name")] string? Name);
+
+    public sealed record ManagedPisEnvelope(
+        [property: JsonPropertyName("projectManager")] ManagedPisProjectManager? ProjectManager,
+        [property: JsonPropertyName("pis")] IReadOnlyList<ManagedPiRecord> Pis);
+
     public ProjectController(
         IFinancialApiService financialApiService,
         IDatamartService datamartService,
@@ -27,14 +44,23 @@ public sealed class ProjectController : ApiControllerBase
         _userService = userService;
     }
 
-    [HttpGet("{employeeId}")]
-    public async Task<IActionResult> GetByEmployeeIdAsync(string employeeId, CancellationToken cancellationToken)
+    [HttpGet("by-iam/{iamId}")]
+    public async Task<IActionResult> GetByIamIdAsync(string iamId, CancellationToken cancellationToken)
     {
         // Check if the user has financial access
         var hasFinancialAccess = (await _authorizationService.AuthorizeAsync(
             User,
             resource: null,
             policyName: AuthorizationHelper.Policies.CanViewFinancials)).Succeeded;
+
+        var person = await _datamartService.GetSearchablePersonByIamIdAsync(iamId, cancellationToken);
+        if (person is null)
+        {
+            // Non-financial callers should not be able to distinguish unknown IAM IDs from inaccessible portfolios.
+            return hasFinancialAccess ? NotFound() : Forbid();
+        }
+
+        var employeeId = person.EmployeeId;
 
         // If no financial access, verify the current user is PI or PM on at least one
         // of the requested employee's projects (covers both self-lookup and PM-views-PI)
@@ -140,7 +166,7 @@ public sealed class ProjectController : ApiControllerBase
     [HttpGet("personnel")]
     public async Task<IActionResult> GetPersonnelForProjects(
         CancellationToken cancellationToken,
-        [FromQuery] string? employeeId = null,
+        [FromQuery] string? iamId = null,
         [FromQuery] string? projectCodes = null)
     {
         if (string.IsNullOrWhiteSpace(projectCodes))
@@ -159,18 +185,25 @@ public sealed class ProjectController : ApiControllerBase
 
         if (!hasFinancialAccess)
         {
-            if (string.IsNullOrWhiteSpace(employeeId))
+            if (string.IsNullOrWhiteSpace(iamId))
             {
-                return BadRequest("employeeId is required.");
+                return BadRequest("iamId is required.");
+            }
+
+            var person = await _datamartService.GetSearchablePersonByIamIdAsync(iamId, cancellationToken);
+            if (person is null)
+            {
+                // Keep missing IAM IDs indistinguishable from inaccessible personnel for restricted callers.
+                return Forbid();
             }
 
             var currentEmployeeId = await GetCurrentEmployeeIdAsync(cancellationToken);
-            if (!await IsOnAnyProjectForPiAsync(currentEmployeeId, employeeId, cancellationToken))
+            if (!await IsOnAnyProjectForPiAsync(currentEmployeeId, person.EmployeeId, cancellationToken))
             {
                 return Forbid();
             }
 
-            var accessibleProjectNumbers = await GetAccessibleProjectNumbersForEmployeeAsync(employeeId, cancellationToken);
+            var accessibleProjectNumbers = await GetAccessibleProjectNumbersForEmployeeAsync(person.EmployeeId, cancellationToken);
             var requestedProjectNumbers = new HashSet<string>(codes, StringComparer.OrdinalIgnoreCase);
 
             if (!requestedProjectNumbers.IsSubsetOf(accessibleProjectNumbers))
@@ -231,18 +264,27 @@ public sealed class ProjectController : ApiControllerBase
     }
 
     /// <summary>
-    /// Gets a unique list of Principal Investigators for all projects managed by the specified employee.
+    /// Gets a unique list of Principal Investigators for all projects managed by the specified Person.
     /// </summary>
-    /// <param name="employeeId">The employee ID of the Project Manager</param>
+    /// <param name="iamId">The IAM ID of the Project Manager</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>A unique list of Principal Investigators with their name and employee ID</returns>
-    [HttpGet("managed/{employeeId}")]
-    public async Task<IActionResult> GetManagedFaculty(string employeeId, CancellationToken cancellationToken)
+    /// <returns>A unique list of Principal Investigators with Employee ID for transitional logic and nullable IAM ID for navigation.</returns>
+    [HttpGet("managed/by-iam/{iamId}")]
+    public async Task<IActionResult> GetManagedFaculty(string iamId, CancellationToken cancellationToken)
     {
         var hasFinancialAccess = (await _authorizationService.AuthorizeAsync(
             User,
             resource: null,
             policyName: AuthorizationHelper.Policies.CanViewFinancials)).Succeeded;
+
+        var projectManagerPerson = await _datamartService.GetSearchablePersonByIamIdAsync(iamId, cancellationToken);
+        if (projectManagerPerson is null)
+        {
+            // Match the non-self response below so restricted callers cannot enumerate IAM IDs.
+            return hasFinancialAccess ? NotFound() : EmptyManagedFacultyResult();
+        }
+
+        var employeeId = projectManagerPerson.EmployeeId;
 
         if (!hasFinancialAccess)
         {
@@ -251,11 +293,7 @@ public sealed class ProjectController : ApiControllerBase
 
             if (!isSelf)
             {
-                return Ok(new
-                {
-                    projectManager = (object?)null,
-                    pis = Array.Empty<object>(),
-                });
+                return EmptyManagedFacultyResult();
             }
         }
 
@@ -326,15 +364,34 @@ public sealed class ProjectController : ApiControllerBase
             principalInvestigators = principalInvestigators.OrderBy(pi => pi.name).ToList();
         }
 
-        return Ok(new
-        {
-            projectManager = new
+        var peopleByEmployeeId = (await _datamartService.GetSearchablePeopleByEmployeeIdsAsync(
+                principalInvestigators.Select(pi => pi.employeeId).Append(employeeId),
+                cancellationToken))
+            .ToDictionary(p => p.EmployeeId, StringComparer.OrdinalIgnoreCase);
+
+        var managedPiRecords = principalInvestigators
+            .Select(pi =>
             {
-                employeeId,
-                name = pmMember?.Name,
-            },
-            pis = principalInvestigators,
-        });
+                peopleByEmployeeId.TryGetValue(pi.employeeId, out var person);
+                return new ManagedPiRecord(
+                    pi.employeeId,
+                    person?.IamId,
+                    pi.name,
+                    pi.projectCount);
+            })
+            .OrderBy(pi => pi.Name, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        return Ok(new ManagedPisEnvelope(
+            new ManagedPisProjectManager(employeeId, projectManagerPerson.IamId, pmMember?.Name),
+            managedPiRecords));
+    }
+
+    private IActionResult EmptyManagedFacultyResult()
+    {
+        return Ok(new ManagedPisEnvelope(
+            ProjectManager: null,
+            Pis: Array.Empty<ManagedPiRecord>()));
     }
 
     private async Task<string?> GetCurrentEmployeeIdAsync(CancellationToken cancellationToken)

@@ -95,7 +95,7 @@ describe('SponsoredProjectsTable', () => {
       }),
     ];
 
-    render(<SponsoredProjectsTable employeeId="123" records={projects} />);
+    render(<SponsoredProjectsTable iamId="1000000123" records={projects} />);
 
     expect(screen.getByRole('button', { name: 'Export' })).toBeInTheDocument();
     expect(
@@ -122,7 +122,7 @@ describe('SponsoredProjectsTable', () => {
       }),
     ];
 
-    render(<SponsoredProjectsTable employeeId="123" records={projects} />);
+    render(<SponsoredProjectsTable iamId="1000000123" records={projects} />);
 
     fireEvent.input(screen.getByPlaceholderText('Search all columns...'), {
       target: { value: 'Sunny' },
@@ -156,7 +156,7 @@ describe('SponsoredProjectsTable', () => {
       }),
     ];
 
-    render(<SponsoredProjectsTable employeeId="123" records={projects} />);
+    render(<SponsoredProjectsTable iamId="1000000123" records={projects} />);
 
     expect(screen.getByText('Sunny Project')).toBeInTheDocument();
     expect(screen.getByText('Rainy Project')).toBeInTheDocument();

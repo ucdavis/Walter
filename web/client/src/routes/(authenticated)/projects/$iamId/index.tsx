@@ -24,14 +24,14 @@ import { ProjectFundingChart } from '@/components/project/ProjectFundingChart.ts
 import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
 import { tooltipDefinitions } from '@/shared/tooltips.ts';
 
-export const Route = createFileRoute('/(authenticated)/projects/$employeeId/')({
+export const Route = createFileRoute('/(authenticated)/projects/$iamId/')({
   component: RouteComponent,
 });
 
 function RouteComponent() {
-  const { employeeId } = Route.useParams();
+  const { iamId } = Route.useParams();
   const { data: projects } = useSuspenseQuery(
-    projectsDetailQueryOptions(employeeId)
+    projectsDetailQueryOptions(iamId)
   );
 
   const projectNumbers = useMemo(
@@ -75,7 +75,7 @@ function RouteComponent() {
     [projects]
   );
 
-  const personnelQuery = usePersonnelQuery(employeeId, projectNumbers);
+  const personnelQuery = usePersonnelQuery(iamId, projectNumbers);
   const personnelCount = useMemo(() => {
     if (!personnelQuery.data) {
       return null;
@@ -157,7 +157,7 @@ function RouteComponent() {
         <section className="section-margin">
           <h2 className="h2">Sponsored Projects</h2>
           <SponsoredProjectsTable
-            employeeId={employeeId}
+            iamId={iamId}
             records={sponsoredProjects}
           />
         </section>
@@ -173,14 +173,14 @@ function RouteComponent() {
           </p>
           <InternalProjectsTable
             discrepancies={visibleDiscrepancies}
-            employeeId={employeeId}
+            iamId={iamId}
             records={internalProjects}
           />
         </section>
       )}
 
       <PersonnelSection
-        employeeId={employeeId}
+        iamId={iamId}
         projectNumbers={projectNumbers}
       />
     </main>

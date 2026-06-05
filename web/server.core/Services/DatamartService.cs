@@ -34,6 +34,36 @@ public sealed class DatamartOptions
 
 public interface IDatamartService
 {
+    /// <summary>
+    /// Searches People records that have both an IAM ID for navigation and an Employee ID for downstream project data.
+    /// </summary>
+    Task<IReadOnlyList<SearchablePersonRecord>> SearchPeopleAsync(
+        string query, int limit, CancellationToken ct = default);
+
+    /// <summary>
+    /// Resolves a public IAM ID to the corresponding People record when downstream services require Employee ID.
+    /// </summary>
+    Task<SearchablePersonRecord?> GetSearchablePersonByIamIdAsync(
+        string iamId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Resolves a downstream Employee ID to a People record when Walter needs to decide whether a Person can be navigated by IAM ID.
+    /// </summary>
+    Task<SearchablePersonRecord?> GetSearchablePersonByEmployeeIdAsync(
+        string employeeId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Resolves downstream Employee IDs to People records in batches for project team navigation.
+    /// </summary>
+    Task<IReadOnlyList<SearchablePersonRecord>> GetSearchablePeopleByEmployeeIdsAsync(
+        IEnumerable<string> employeeIds, CancellationToken ct = default);
+
+    /// <summary>
+    /// Resolves an email address from downstream project data to a People record when PPM does not provide Employee ID.
+    /// </summary>
+    Task<SearchablePersonRecord?> GetSearchablePersonByEmailAsync(
+        string email, CancellationToken ct = default);
+
     Task<IReadOnlyList<EmployeeAccrualBalanceRecord>> GetEmployeeAccrualBalancesAsync(
         DateTime startDate, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default);
 
@@ -52,6 +82,8 @@ public interface IDatamartService
 
 public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
 {
+    private const string GetSearchablePeopleSproc = "dbo.usp_GetSearchablePeople";
+
     private readonly string _connectionString;
     private readonly string _appName;
     private readonly string _positionBudgetsSproc;
@@ -98,6 +130,95 @@ public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
             "dbo.usp_GetProjectSummary",
             new { ProjectIds = projectNumbersParam, ApplicationName = _appName, ApplicationUser = applicationUser, EmulatingUser = emulatingUser },
             ct: ct);
+    }
+
+    public async Task<IReadOnlyList<SearchablePersonRecord>> SearchPeopleAsync(
+        string query, int limit, CancellationToken ct = default)
+    {
+        const int MaxSearchPeopleLimit = 100;
+        var normalizedQuery = query.Trim();
+        if (normalizedQuery.Length < 3 || limit <= 0)
+        {
+            return Array.Empty<SearchablePersonRecord>();
+        }
+        var boundedLimit = Math.Min(limit, MaxSearchPeopleLimit);
+
+        return await ExecuteSprocAsync<SearchablePersonRecord>(
+            GetSearchablePeopleSproc,
+            new
+            {
+                SearchQuery = normalizedQuery,
+                Limit = boundedLimit,
+            },
+            ct: ct);
+    }
+
+    public async Task<SearchablePersonRecord?> GetSearchablePersonByIamIdAsync(
+        string iamId, CancellationToken ct = default)
+    {
+        var normalizedIamId = iamId.Trim();
+        if (string.IsNullOrWhiteSpace(normalizedIamId))
+        {
+            return null;
+        }
+
+        var results = await ExecuteSprocAsync<SearchablePersonRecord>(
+            GetSearchablePeopleSproc,
+            new { IamId = normalizedIamId },
+            ct: ct);
+        return results.FirstOrDefault();
+    }
+
+    public async Task<SearchablePersonRecord?> GetSearchablePersonByEmployeeIdAsync(
+        string employeeId, CancellationToken ct = default)
+    {
+        var normalizedEmployeeId = employeeId.Trim();
+        if (string.IsNullOrWhiteSpace(normalizedEmployeeId))
+        {
+            return null;
+        }
+
+        var results = await ExecuteSprocAsync<SearchablePersonRecord>(
+            GetSearchablePeopleSproc,
+            new { EmployeeId = normalizedEmployeeId },
+            ct: ct);
+        return results.FirstOrDefault();
+    }
+
+    public async Task<IReadOnlyList<SearchablePersonRecord>> GetSearchablePeopleByEmployeeIdsAsync(
+        IEnumerable<string> employeeIds, CancellationToken ct = default)
+    {
+        var normalizedEmployeeIds = employeeIds
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Select(id => id.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (normalizedEmployeeIds.Length == 0)
+        {
+            return Array.Empty<SearchablePersonRecord>();
+        }
+
+        return await ExecuteSprocAsync<SearchablePersonRecord>(
+            GetSearchablePeopleSproc,
+            new { EmployeeIds = string.Join(",", normalizedEmployeeIds) },
+            ct: ct);
+    }
+
+    public async Task<SearchablePersonRecord?> GetSearchablePersonByEmailAsync(
+        string email, CancellationToken ct = default)
+    {
+        var normalizedEmail = email.Trim();
+        if (string.IsNullOrWhiteSpace(normalizedEmail))
+        {
+            return null;
+        }
+
+        var results = await ExecuteSprocAsync<SearchablePersonRecord>(
+            GetSearchablePeopleSproc,
+            new { Email = normalizedEmail.ToLowerInvariant() },
+            ct: ct);
+        return results.FirstOrDefault();
     }
 
     public async Task<IReadOnlyList<EmployeeAccrualBalanceRecord>> GetEmployeeAccrualBalancesAsync(

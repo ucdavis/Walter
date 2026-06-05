@@ -84,13 +84,13 @@ const csvColumns = [
 
 interface InternalProjectsTableProps {
   discrepancies?: Set<string>;
-  employeeId: string;
+  iamId: string;
   records: ProjectRecord[];
 }
 
 export function InternalProjectsTable({
   discrepancies,
-  employeeId,
+  iamId,
   records,
 }: InternalProjectsTableProps) {
   const [showInactive, setShowInactive] = useState(false);
@@ -131,9 +131,9 @@ export function InternalProjectsTable({
             <div className="flex items-start gap-1">
               <Link
                 className="link no-underline min-w-0"
-                params={{ employeeId, projectNumber }}
+                params={{ iamId, projectNumber }}
                 title={name}
-                to="/projects/$employeeId/$projectNumber/"
+                to="/projects/$iamId/$projectNumber/"
               >
                 {projectNumber}
               </Link>
@@ -234,7 +234,7 @@ export function InternalProjectsTable({
         header: () => <span className="flex justify-end w-full">Balance</span>,
       }),
     ],
-    [discrepancies, employeeId, totals.totalBalance, totals.totalBudget, totals.totalEncumbrance, totals.totalExpense]
+    [discrepancies, iamId, totals.totalBalance, totals.totalBudget, totals.totalEncumbrance, totals.totalExpense]
   );
 
   if (allProjects.length === 0) {

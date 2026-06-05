@@ -44,8 +44,29 @@ _Avoid_: Admin report, manager report
 A user role whose members can inspect accrual reporting and receive the monthly **Accrual Viewer Report**.
 _Avoid_: Admin, viewer
 
+**Person**:
+A campus identity that may be associated with employee, student, external, and contact information. A **Person** is distinct from a Walter user account and from a project role such as Principal Investigator or Project Manager.
+_Avoid_: Walter Person, Employee, User
+
+**IAM ID**:
+The stable campus identity identifier Walter uses when referring to a **Person** in navigation and client-facing person lookups.
+_Avoid_: Employee ID, directory ID
+
+**Employee ID**:
+The employment identifier Walter uses only when a downstream financial or personnel source requires it for a **Person**.
+_Avoid_: IAM ID, public person identifier
+
+**Searchable Person**:
+A **Person** Walter can include in people search because they have both an **IAM ID** and an **Employee ID**.
+_Avoid_: Directory user, employee-only result
+
 ## Relationships
 
+- Walter refers to a **Person** by **IAM ID** in navigation and client-facing person lookups
+- Walter uses **Employee ID** only when a downstream source requires an employment identifier
+- A **Person** can be displayed from downstream project or personnel data without being navigable when Walter cannot identify their **IAM ID**
+- Project lookup can navigate to a **Person** only when Walter can identify their **IAM ID**
+- People search includes **Searchable People**
 - An **Accrual Snapshot** classifies each employee as active, **Approaching Cap**, or **At Cap**
 - An **Accrual Snapshot** identifies the employee recipient email for each employee row
 - Employees who are **Approaching Cap** or **At Cap** are eligible for accrual notifications

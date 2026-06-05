@@ -13,15 +13,26 @@ namespace server.tests.Fakes;
 public sealed class FakeFinancialApiService : IFinancialApiService
 {
     private readonly HashSet<string> _projectManagerEmployeeIds;
+    private readonly Dictionary<string, IReadOnlyList<FakeFinancialProjectTeamMember>> _projectTeamMembersByProjectNumber;
 
     public FakeFinancialApiService()
         : this(Array.Empty<string>()) { }
 
     public FakeFinancialApiService(IEnumerable<string> projectManagerEmployeeIds)
+        : this(projectManagerEmployeeIds, null) { }
+
+    public FakeFinancialApiService(
+        IEnumerable<string> projectManagerEmployeeIds,
+        IReadOnlyDictionary<string, IReadOnlyList<FakeFinancialProjectTeamMember>>? projectTeamMembersByProjectNumber)
     {
         _projectManagerEmployeeIds = new HashSet<string>(
             projectManagerEmployeeIds,
             StringComparer.OrdinalIgnoreCase);
+        _projectTeamMembersByProjectNumber = projectTeamMembersByProjectNumber is null
+            ? new Dictionary<string, IReadOnlyList<FakeFinancialProjectTeamMember>>(StringComparer.OrdinalIgnoreCase)
+            : new Dictionary<string, IReadOnlyList<FakeFinancialProjectTeamMember>>(
+                projectTeamMembersByProjectNumber,
+                StringComparer.OrdinalIgnoreCase);
     }
 
     public IAggieEnterpriseClient GetClient()
@@ -33,10 +44,20 @@ public sealed class FakeFinancialApiService : IFinancialApiService
                 return new FakePpmProjectByProjectTeamMemberEmployeeIdQuery(_projectManagerEmployeeIds);
             }
 
+            if (method.Name == "get_PpmProjectTeamMembers")
+            {
+                return new FakePpmProjectTeamMembersQuery(_projectTeamMembersByProjectNumber);
+            }
+
             throw new NotImplementedException($"{method.Name} is not implemented for this fake.");
         });
     }
 }
+
+public sealed record FakeFinancialProjectTeamMember(
+    string RoleName,
+    string Name,
+    string? Email);
 
 internal sealed class FakePpmProjectByProjectTeamMemberEmployeeIdQuery : IPpmProjectByProjectTeamMemberEmployeeIdQuery
 {
@@ -83,6 +104,85 @@ internal sealed class FakePpmProjectByProjectTeamMemberEmployeeIdQuery : IPpmPro
         ExecutionStrategy? strategy = null)
     {
         throw new NotImplementedException();
+    }
+}
+
+internal sealed class FakePpmProjectTeamMembersQuery : IPpmProjectTeamMembersQuery
+{
+    private readonly IReadOnlyDictionary<string, IReadOnlyList<FakeFinancialProjectTeamMember>> _projectTeamMembersByProjectNumber;
+
+    public FakePpmProjectTeamMembersQuery(
+        IReadOnlyDictionary<string, IReadOnlyList<FakeFinancialProjectTeamMember>> projectTeamMembersByProjectNumber)
+    {
+        _projectTeamMembersByProjectNumber = projectTeamMembersByProjectNumber;
+    }
+
+    public Type ResultType => typeof(IPpmProjectTeamMembersResult);
+
+    public OperationRequest Create(IReadOnlyDictionary<string, object?>? variables)
+    {
+        return new OperationRequest(
+            "FakePpmProjectTeamMembers",
+            ProxyFactory.CreateProxy<IDocument>((_, _) => throw new NotImplementedException()),
+            variables ?? new Dictionary<string, object?>(),
+            new Dictionary<string, Upload?>(),
+            default);
+    }
+
+    public Task<IOperationResult<IPpmProjectTeamMembersResult>> ExecuteAsync(
+        string projectNumber,
+        string? roleName,
+        CancellationToken cancellationToken)
+    {
+        _projectTeamMembersByProjectNumber.TryGetValue(projectNumber, out var allMembers);
+        var members = (allMembers ?? [])
+            .Where(member => roleName is null || string.Equals(member.RoleName, roleName, StringComparison.OrdinalIgnoreCase))
+            .Select(CreateTeamMember)
+            .ToArray();
+
+        var project = ProxyFactory.CreateProxy<IPpmProjectTeamMembers_PpmProjectByNumber>((method, _) =>
+            method.Name switch
+            {
+                "get_TeamMembers" => members,
+                _ => throw new NotImplementedException($"{method.Name} is not implemented for this fake."),
+            });
+        var result = ProxyFactory.CreateProxy<IPpmProjectTeamMembersResult>((method, _) =>
+            method.Name switch
+            {
+                "get_PpmProjectByNumber" => project,
+                _ => throw new NotImplementedException($"{method.Name} is not implemented for this fake."),
+            });
+
+        return Task.FromResult<IOperationResult<IPpmProjectTeamMembersResult>>(
+            new FakeOperationResult<IPpmProjectTeamMembersResult>(result));
+    }
+
+    public IObservable<IOperationResult<IPpmProjectTeamMembersResult>> Watch(
+        string projectNumber,
+        string? roleName,
+        ExecutionStrategy? strategy = null)
+    {
+        throw new NotImplementedException();
+    }
+
+    private static IPpmProjectTeamMembers_PpmProjectByNumber_TeamMembers CreateTeamMember(
+        FakeFinancialProjectTeamMember member)
+    {
+        var person = ProxyFactory.CreateProxy<IPpmProjectTeamMembers_PpmProjectByNumber_TeamMembers_Person>((method, _) =>
+            method.Name switch
+            {
+                "get_Email" => member.Email,
+                _ => throw new NotImplementedException($"{method.Name} is not implemented for this fake."),
+            });
+
+        return ProxyFactory.CreateProxy<IPpmProjectTeamMembers_PpmProjectByNumber_TeamMembers>((method, _) =>
+            method.Name switch
+            {
+                "get_Name" => member.Name,
+                "get_Person" => person,
+                "get_RoleName" => member.RoleName,
+                _ => throw new NotImplementedException($"{method.Name} is not implemented for this fake."),
+            });
     }
 }
 

@@ -12,6 +12,7 @@ const createPi = (
   }>
 ): PiWithProjects => ({
   employeeId,
+  iamId: `IAM-${employeeId}`,
   name: `PI ${employeeId}`,
   projectCount: projects.length,
   projects: projects as PiWithProjects['projects'],

@@ -31,15 +31,15 @@ function RouteComponent() {
   const [activeTab, setActiveTab] = useState<Tab>('pis');
   const user = useUser();
   const { error, isError, isPending, managedPis } = useManagedPisQuery(
-    user.employeeId
+    user.iamId
   );
 
   const isProjectManager = managedPis.length > 0;
 
   const userProjectsQuery = useQuery({
-    ...projectsDetailQueryOptions(user.employeeId),
+    ...projectsDetailQueryOptions(user.iamId),
     enabled:
-      Boolean(user.employeeId) && !isPending && !isError && !isProjectManager,
+      Boolean(user.iamId) && !isPending && !isError && !isProjectManager,
   });
 
   const isPrincipalInvestigator =
@@ -201,7 +201,7 @@ function RouteComponent() {
               <div className="mt-4">
                 <h2 className="h2">Sponsored Projects</h2>
                 <SponsoredProjectsTable
-                  employeeId={user.employeeId}
+                  iamId={user.iamId}
                   records={sponsoredProjects}
                 />
               </div>
@@ -216,7 +216,7 @@ function RouteComponent() {
                   questions.
                 </p>
                 <InternalProjectsTable
-                  employeeId={user.employeeId}
+                  iamId={user.iamId}
                   records={internalProjects}
                 />
               </div>
@@ -240,7 +240,7 @@ function RouteComponent() {
                     balance={alert.balance}
                     key={alert.id}
                     linkParams={{
-                      employeeId: alert.piEmployeeId,
+                      iamId: user.iamId,
                       projectNumber: alert.projectNumber,
                     }}
                   />

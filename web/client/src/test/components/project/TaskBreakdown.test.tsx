@@ -90,7 +90,7 @@ describe('TaskBreakdown', () => {
     const user = userEvent.setup();
     render(
       <TaskBreakdown
-        employeeId="123"
+        iamId="1000000123"
         projectNumber="P1"
         records={[createProject()]}
       />
@@ -117,7 +117,7 @@ describe('TaskBreakdown', () => {
     const user = userEvent.setup();
     render(
       <TaskBreakdown
-        employeeId="123"
+        iamId="1000000123"
         projectNumber="P1"
         records={[createProject()]}
       />
@@ -141,7 +141,7 @@ describe('TaskBreakdown', () => {
   it('shows the filtered export action only when a search filter is active', () => {
     render(
       <TaskBreakdown
-        employeeId="123"
+        iamId="1000000123"
         projectNumber="P1"
         records={[
           createProject({
@@ -179,7 +179,7 @@ describe('TaskBreakdown', () => {
   it('exports only filtered task breakdown rows when the filtered export button is used', () => {
     render(
       <TaskBreakdown
-        employeeId="123"
+        iamId="1000000123"
         projectNumber="P1"
         records={[
           createProject({
