@@ -106,7 +106,7 @@ export function ProjectAlerts({
   if (reconciliationStatus === 'balanced') {
     alerts.push({
       id: `reconciliation-balanced-${summary.projectNumber}`,
-      message: `${prefix ?? ''}GL PPM is Balanced, click here to view.`,
+      message: `${prefix ?? ''}GL/PPM is Balanced, click here to view.`,
       severity: 'success',
       type: 'reconciliation-balanced',
     });
