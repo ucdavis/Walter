@@ -201,7 +201,14 @@ job_curr AS (
     j.reports_to AS reports_to_position_number,
     j.union_cd AS union_code, ud.descr AS union_description,
     ecd.descr AS employee_class_description, jd.descr AS job_code_description,
-    n.name AS employee_name
+    n.name AS employee_name,
+    CASE
+      WHEN j.comp_frequency = ''H'' THEN j.comprate
+      WHEN NVL(j.fte, 0) = 0 THEN 0
+      WHEN j.comp_frequency = ''UC_9M'' THEN (j.comprate / j.fte) / (2088 / 9)
+      WHEN j.comp_frequency = ''UC_11'' THEN (j.comprate / j.fte) / (2088 / 11)
+      ELSE (j.comprate / j.fte) / 174
+    END AS hourly_rate_fte
   FROM (
     SELECT j.*, ROW_NUMBER() OVER (PARTITION BY j.emplid, j.empl_rcd ORDER BY j.effdt DESC, j.effseq DESC) AS rn
     FROM caes_hcmods.ps_job_v j
@@ -256,6 +263,7 @@ SELECT
        WHEN ''W'' THEN ''Short Work Break'' ELSE ''Other'' END AS "EmployeeStatusDescription",
   j.empl_type                   AS "EmployeeType",
   et.xlatlongname               AS "EmployeeTypeDescription",
+  j.hourly_rate_fte             AS "HourlyRateFTE",
   o.org_cd                      AS "Level1Dept",
   o.org_ttl                     AS "Level1DeptDesc",
   o.div_cd                      AS "Level2Dept",
@@ -303,6 +311,7 @@ JOIN empl_type et ON j.empl_type = et.fieldvalue';
             EmployeeStatusDescription   NVARCHAR(30),
             EmployeeType                NVARCHAR(1),
             EmployeeTypeDescription     NVARCHAR(50),
+            HourlyRateFTE               DECIMAL(12, 4),
             Level1Dept                  NVARCHAR(10),
             Level1DeptDesc              NVARCHAR(100),
             Level2Dept                  NVARCHAR(10),
@@ -363,6 +372,7 @@ JOIN empl_type et ON j.empl_type = et.fieldvalue';
             e.EmployeeStatusDescription,
             e.EmployeeType,
             e.EmployeeTypeDescription,
+            e.HourlyRateFTE,
             @TypeLabel AS TypeLabel,
             a.PrevBal,
             a.HoursTaken,

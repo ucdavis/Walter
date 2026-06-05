@@ -85,6 +85,12 @@
         "type": "nvarchar"
       },
       {
+        "name": "HourlyRateFTE",
+        "type": "decimal",
+        "precision": 12,
+        "scale": 4
+      },
+      {
         "name": "TypeLabel",
         "type": "nvarchar"
       },
