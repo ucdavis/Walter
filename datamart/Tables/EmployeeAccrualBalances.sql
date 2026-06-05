@@ -19,6 +19,7 @@ create table dbo.EmployeeAccrualBalances
     EmployeeStatusDescription  nvarchar(30),
     EmployeeType               nvarchar,
     EmployeeTypeDescription    nvarchar(50),
+    HourlyRateFTE              decimal(12, 4),
     TypeLabel                  nvarchar(50),
     PrevBal                    decimal(10, 2),
     HoursTaken                 decimal(10, 2),
