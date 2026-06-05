@@ -43,16 +43,6 @@ const departmentEmployeeCsvColumns = [
   { header: 'Employee', key: 'employeeName' as const },
   { header: 'ID', key: 'employeeId' as const },
   { header: 'Class', key: 'classification' as const },
-  { header: 'Balance Hours', key: 'balanceHours' as const },
-  { header: 'Cap Hours', key: 'capHours' as const },
-  { header: '% of Cap', key: 'pctOfCap' as const },
-  { header: 'Accrual/Mo', key: 'accrualHoursPerMonth' as const },
-  { header: 'Months to Cap', key: 'monthsToCap' as const },
-  {
-    format: 'date' as const,
-    header: 'Last Vacation',
-    key: 'lastVacationDate' as const,
-  },
   {
     format: 'currency' as const,
     header: 'Lost Cost/Mo',
@@ -62,6 +52,16 @@ const departmentEmployeeCsvColumns = [
     format: 'currency' as const,
     header: 'Proj. Loss FYTD',
     key: 'lostCostYtd' as const,
+  },
+  { header: 'Balance Hours', key: 'balanceHours' as const },
+  { header: 'Cap Hours', key: 'capHours' as const },
+  { header: '% of Cap', key: 'pctOfCap' as const },
+  { header: 'Accrual/Mo', key: 'accrualHoursPerMonth' as const },
+  { header: 'Months to Cap', key: 'monthsToCap' as const },
+  {
+    format: 'date' as const,
+    header: 'Last Vacation',
+    key: 'lastVacationDate' as const,
   },
 ];
 
@@ -429,6 +429,48 @@ export function VacationAccrualDepartmentDetail({
       size: 140,
     },
     {
+      accessorKey: 'lostCostMonth',
+      cell: (info) => {
+        const value = info.getValue<number>();
+        return (
+          <span
+            className={`flex justify-end w-full ${value > 0 ? 'font-semibold text-error' : 'text-base-content/55'}`}
+          >
+            {value > 0 ? formatCurrency(value) : '—'}
+          </span>
+        );
+      },
+      footer: () => (
+        <span className="flex justify-end w-full font-semibold text-error">
+          {formatCurrency(data.lostCostMonth)}
+        </span>
+      ),
+      header: () => <span className="flex justify-end w-full">Lost $</span>,
+      size: 140,
+    },
+    {
+      accessorKey: 'lostCostYtd',
+      cell: (info) => {
+        const value = info.getValue<number>();
+        return (
+          <span
+            className={`flex justify-end w-full ${value > 0 ? 'font-semibold text-error' : 'text-base-content/55'}`}
+          >
+            {value > 0 ? formatCurrency(value) : '—'}
+          </span>
+        );
+      },
+      footer: () => (
+        <span className="flex justify-end w-full font-semibold text-error">
+          {formatCurrency(data.lostCostYtd)}
+        </span>
+      ),
+      header: () => (
+        <span className="flex justify-end w-full">Proj. Loss FYTD</span>
+      ),
+      size: 160,
+    },
+    {
       accessorKey: 'balanceHours',
       cell: (info) => (
         <span className="flex justify-end w-full font-semibold">
@@ -485,48 +527,6 @@ export function VacationAccrualDepartmentDetail({
       ),
       header: 'Last Vacation',
       size: 140,
-    },
-    {
-      accessorKey: 'lostCostMonth',
-      cell: (info) => {
-        const value = info.getValue<number>();
-        return (
-          <span
-            className={`flex justify-end w-full ${value > 0 ? 'font-semibold text-error' : 'text-base-content/55'}`}
-          >
-            {value > 0 ? formatCurrency(value) : '—'}
-          </span>
-        );
-      },
-      footer: () => (
-        <span className="flex justify-end w-full font-semibold text-error">
-          {formatCurrency(data.lostCostMonth)}
-        </span>
-      ),
-      header: () => <span className="flex justify-end w-full">Lost $</span>,
-      size: 140,
-    },
-    {
-      accessorKey: 'lostCostYtd',
-      cell: (info) => {
-        const value = info.getValue<number>();
-        return (
-          <span
-            className={`flex justify-end w-full ${value > 0 ? 'font-semibold text-error' : 'text-base-content/55'}`}
-          >
-            {value > 0 ? formatCurrency(value) : '—'}
-          </span>
-        );
-      },
-      footer: () => (
-        <span className="flex justify-end w-full font-semibold text-error">
-          {formatCurrency(data.lostCostYtd)}
-        </span>
-      ),
-      header: () => (
-        <span className="flex justify-end w-full">Proj. Loss FYTD</span>
-      ),
-      size: 160,
     },
   ];
 
@@ -643,7 +643,7 @@ export function VacationAccrualDepartmentDetail({
                   accentClassName="text-error"
                   description={`${data.ytdMonthCount} fiscal month${data.ytdMonthCount === 1 ? '' : 's'}`}
                   Icon={ChartBarIcon}
-                  label="Lost Cost (YTD)"
+                  label="Lost Cost (FYTD)"
                   value={formatCurrency(data.lostCostYtd)}
                 />
                 <SummaryMetric
