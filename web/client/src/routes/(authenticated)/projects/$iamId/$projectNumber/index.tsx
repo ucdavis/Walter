@@ -89,10 +89,8 @@ function ProjectContent({
         )}
         <div className="mt-6">
           <ProjectAlerts
-            hasReconciliationDiscrepancy={discrepancies.has(
-              summary.projectNumber
-            )}
             iamId={iamId}
+            reconciliationStatus={reconciliationStatus}
             summary={summary}
           />
         </div>

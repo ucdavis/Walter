@@ -80,14 +80,14 @@ export function AlertCard({ alert, balance, linkParams }: AlertCardProps) {
 }
 
 interface ProjectAlertsProps {
-  employeeId?: string;
+  iamId?: string;
   prefix?: string;
   reconciliationStatus?: 'balanced' | 'discrepancy';
   summary: ProjectSummary;
 }
 
 export function ProjectAlerts({
-  employeeId,
+  iamId,
   prefix,
   reconciliationStatus,
   summary,
