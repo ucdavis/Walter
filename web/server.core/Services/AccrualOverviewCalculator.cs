@@ -154,7 +154,7 @@ public static class AccrualOverviewCalculator
                 departmentEmployees.Select(employee => employee.Department),
                 "Unknown Department"),
             Departments = BuildDepartmentOptions(latestEmployees),
-            Employees = BuildDepartmentEmployeeRows(departmentEmployees),
+            Employees = BuildDepartmentEmployeeRows(departmentEmployees, fiscalYearMonths),
             Headcount = departmentEmployees.Count,
             LostCostMonth = lostCostMonth,
             LostCostYtd = lostCostYtd,
@@ -318,7 +318,7 @@ public static class AccrualOverviewCalculator
         var avgMonthlyUsage = recentHistory.Count > 0
             ? DecimalRound(recentHistory.Average(point => point.HoursTaken))
             : 0m;
-        var hourlyRate = GetHourlyRate(classification);
+        var hourlyRate = GetHourlyRate(classification, currentRows);
         var status = GetStatus(percentage);
         var monthsToCap = GetMonthsToCap(balance, accrualLimit, normalMonthlyAccrual, avgMonthlyUsage);
         var lastVacationDate = monthlyHistory
@@ -396,7 +396,8 @@ public static class AccrualOverviewCalculator
 
     // Maps internal employee snapshots to the department detail table rows.
     private static IReadOnlyList<AccrualDepartmentEmployeeRow> BuildDepartmentEmployeeRows(
-        IReadOnlyList<EmployeeSnapshot> employees)
+        IReadOnlyList<EmployeeSnapshot> employees,
+        IReadOnlyList<MonthlySnapshot> fiscalYearMonths)
     {
         return employees
             .Select(employee => new AccrualDepartmentEmployeeRow
@@ -409,6 +410,7 @@ public static class AccrualOverviewCalculator
                 EmployeeName = employee.EmployeeName,
                 LastVacationDate = employee.LastVacationDate,
                 LostCostMonth = employee.LostCostMonth,
+                LostCostYtd = DecimalRound(SumEmployeeLostCost(fiscalYearMonths, employee.EmployeeId)),
                 MonthsToCap = employee.MonthsToCap,
                 PctOfCap = employee.PctOfCap,
             })
@@ -494,6 +496,19 @@ public static class AccrualOverviewCalculator
             .Sum(employee => employee.LostCostMonth));
     }
 
+    // Sums fiscal-year lost cost for a single employee across deduplicated monthly snapshots.
+    private static decimal SumEmployeeLostCost(
+        IReadOnlyList<MonthlySnapshot> fiscalYearMonths,
+        string employeeId)
+    {
+        return fiscalYearMonths.Sum(month => month.Employees
+            .Where(employee => string.Equals(
+                employee.EmployeeId,
+                employeeId,
+                StringComparison.OrdinalIgnoreCase))
+            .Sum(employee => employee.LostCostMonth));
+    }
+
     // Estimates how many months remain before the employee reaches their cap.
     private static int? GetMonthsToCap(
         decimal balance,
@@ -530,9 +545,22 @@ public static class AccrualOverviewCalculator
         return Settings.GetNormalMonthlyAccrual(accrualLimit);
     }
 
-    // Chooses an hourly rate bucket for lost-cost estimation.
-    private static decimal GetHourlyRate(string employeeClassDescription)
+    // Uses the source FTE hourly rate when available, falling back to the class bucket assumptions.
+    private static decimal GetHourlyRate(
+        string employeeClassDescription,
+        IEnumerable<EmployeeAccrualBalanceRecord> currentRows)
     {
+        var sourceHourlyRate = currentRows
+            .Select(row => row.HourlyRateFTE ?? 0m)
+            .Where(rate => rate > 0m)
+            .DefaultIfEmpty()
+            .Max();
+
+        if (sourceHourlyRate > 0m)
+        {
+            return sourceHourlyRate;
+        }
+
         return Settings.GetHourlyRate(employeeClassDescription);
     }
 

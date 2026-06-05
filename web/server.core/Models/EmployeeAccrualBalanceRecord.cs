@@ -14,6 +14,7 @@ public sealed class EmployeeAccrualBalanceRecord
     public string? PositionNumber { get; init; }
     public string? Level5Dept { get; init; }
     public string? Level5DeptDesc { get; init; }
+    public decimal? HourlyRateFTE { get; init; }
     public decimal? HoursTaken { get; init; }
     public decimal? CalculatedBal { get; init; }
     public decimal? AccrualLimit { get; init; }

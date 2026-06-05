@@ -58,6 +58,11 @@ const departmentEmployeeCsvColumns = [
     header: 'Lost Cost/Mo',
     key: 'lostCostMonth' as const,
   },
+  {
+    format: 'currency' as const,
+    header: 'Proj. Loss FYTD',
+    key: 'lostCostYtd' as const,
+  },
 ];
 
 type SummaryMetricProps = {
@@ -500,6 +505,28 @@ export function VacationAccrualDepartmentDetail({
       ),
       header: () => <span className="flex justify-end w-full">Lost $</span>,
       size: 140,
+    },
+    {
+      accessorKey: 'lostCostYtd',
+      cell: (info) => {
+        const value = info.getValue<number>();
+        return (
+          <span
+            className={`flex justify-end w-full ${value > 0 ? 'font-semibold text-error' : 'text-base-content/55'}`}
+          >
+            {value > 0 ? formatCurrency(value) : '—'}
+          </span>
+        );
+      },
+      footer: () => (
+        <span className="flex justify-end w-full font-semibold text-error">
+          {formatCurrency(data.lostCostYtd)}
+        </span>
+      ),
+      header: () => (
+        <span className="flex justify-end w-full">Proj. Loss FYTD</span>
+      ),
+      size: 160,
     },
   ];
 
