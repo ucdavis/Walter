@@ -31,6 +31,7 @@ public sealed class AccrualNotificationMessageBuilderTests
             EmployeeId = "E001",
             EmployeeName = "Staff Member",
             LastVacationDate = new DateTime(2026, 2, 28),
+            LostCostMonth = 500m,
             MonthsToCap = 0,
             PctOfCap = 100m,
             SnapshotAsOfDate = new DateTime(2026, 4, 30),
@@ -63,13 +64,13 @@ public sealed class AccrualNotificationMessageBuilderTests
         payload.EmployeeGroup.Should().Be(nameof(AccrualEmployeeGroup.Staff));
         payload.Status.Should().Be(nameof(AccrualNotificationStatus.AtCap));
         payload.BalanceHours.Should().Be(240m);
+        payload.LostCostMonth.Should().Be(500m);
         payload.LastVacationDate.Should().Be(new DateTime(2026, 2, 28));
     }
 
     [Theory]
     [InlineData(AccrualEmployeeGroup.FacultyAcademic, "accrual.employee.faculty-academic.v1")]
     [InlineData(AccrualEmployeeGroup.Staff, "accrual.employee.staff.v1")]
-    [InlineData(AccrualEmployeeGroup.Generic, "accrual.employee.generic.v1")]
     public void BuildEmployeeMessages_chooses_template_key_by_employee_group(
         AccrualEmployeeGroup employeeGroup,
         string expectedTemplateKey)

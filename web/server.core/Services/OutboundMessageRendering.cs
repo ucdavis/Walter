@@ -142,8 +142,7 @@ public sealed class AccrualOutboundMessageRenderer : IOutboundMessageRenderer
         return message.TemplateKey switch
         {
             "accrual.employee.faculty-academic.v1" or
-            "accrual.employee.staff.v1" or
-            "accrual.employee.generic.v1" => await RenderEmployeeAsync(message, cancellationToken),
+            "accrual.employee.staff.v1" => await RenderEmployeeAsync(message, cancellationToken),
             AccrualNotificationMessageBuilder.ViewerReportTemplateKey => await RenderViewerReportAsync(
                 message,
                 cancellationToken),
@@ -202,12 +201,16 @@ public sealed class AccrualOutboundMessageRenderer : IOutboundMessageRenderer
         {
             "accrual.employee.faculty-academic.v1" => AccrualEmployeeNotificationVariant.FacultyAcademic,
             "accrual.employee.staff.v1" => AccrualEmployeeNotificationVariant.Staff,
-            _ => AccrualEmployeeNotificationVariant.Generic,
+            _ => throw new InvalidOperationException(
+                $"Unsupported employee outbound message template key '{message.TemplateKey}'."),
         };
 
         return new AccrualEmployeeNotificationTemplateModel
         {
             AppName = _appOptions.Name,
+            AutomaticFooterText = variant == AccrualEmployeeNotificationVariant.FacultyAcademic
+                ? "Replies to this email are routed to AggieService for processing."
+                : "This email was automatically generated. Please do not reply to it.",
             GreetingName = NormalizeDisplayName(message.RecipientName) ?? payload.EmployeeName,
             LogoUrl = BuildAppAssetUrl(_appOptions.TryGetBaseUri(), "/apple-touch-icon.png")
                 ?? NotificationTemplateModelBase.DefaultLogoUrl,

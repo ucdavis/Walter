@@ -41,6 +41,7 @@ public static class AccrualOverviewCalculator
                 EmployeeId = employee.EmployeeId,
                 EmployeeName = employee.EmployeeName,
                 LastVacationDate = employee.LastVacationDate,
+                LostCostMonth = employee.LostCostMonth,
                 MonthsToCap = employee.MonthsToCap,
                 PctOfCap = employee.PctOfCap,
                 SnapshotAsOfDate = context.LatestMonth.AsOfDate,
@@ -654,7 +655,7 @@ public static class AccrualOverviewCalculator
             "PSS" or
             "MSP" or
             "SMG" => AccrualEmployeeGroup.Staff,
-            _ => AccrualEmployeeGroup.Generic,
+            _ => AccrualEmployeeGroup.Staff,
         };
     }
 

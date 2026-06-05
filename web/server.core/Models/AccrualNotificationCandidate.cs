@@ -30,11 +30,6 @@ public enum AccrualEmployeeGroup
     /// Staff classifications, including MSP, PSS, and SMG, that receive the staff Accrual Notification variant.
     /// </summary>
     Staff,
-
-    /// <summary>
-    /// Fallback for unmapped classifications that should still receive the generic Accrual Notification variant.
-    /// </summary>
-    Generic,
 }
 
 public sealed class AccrualNotificationCandidate
@@ -53,6 +48,7 @@ public sealed class AccrualNotificationCandidate
     public decimal CapHours { get; init; }
     public decimal PctOfCap { get; init; }
     public decimal AccrualHoursPerMonth { get; init; }
+    public decimal LostCostMonth { get; init; }
     public int? MonthsToCap { get; init; }
     public DateTime? LastVacationDate { get; init; }
 }

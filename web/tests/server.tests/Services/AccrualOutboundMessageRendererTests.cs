@@ -34,6 +34,7 @@ public sealed class AccrualOutboundMessageRendererTests
                 EmployeeId = "E001",
                 EmployeeName = "Staff Member",
                 LastVacationDate = new DateTime(2026, 2, 28),
+                LostCostMonth = 500m,
                 MonthsToCap = 0,
                 PctOfCap = 100m,
                 SnapshotAsOfDate = new DateTime(2026, 4, 30),
@@ -44,16 +45,20 @@ public sealed class AccrualOutboundMessageRendererTests
 
         rendered.Subject.Should().Be("Action Needed: Your Vacation Accrual is at 100% of Maximum");
         rendered.TextBody.Should().Contain("Dear Staff Member,");
-        rendered.TextBody.Should().Contain("you will stop accruing vacation hours until your balance falls below the cap");
+        rendered.TextBody.Should().Contain("You will not accrue additional hours until your balance falls below the cap");
+        rendered.TextBody.Should().Contain("Hours to Take");
+        rendered.TextBody.Should().Contain("$500");
         rendered.TextBody.Should().Contain("Open TRS Time Reporting");
         rendered.TextBody.Should().Contain("https://trs.ucdavis.edu/timesheet");
-        rendered.TextBody.Should().Contain("240.0 hours");
+        rendered.TextBody.Should().Contain("of 240 hrs");
         rendered.HtmlBody.Should().Contain("Walter");
-        rendered.HtmlBody.Should().Contain("Dear <strong>Staff Member</strong>,");
-        rendered.HtmlBody.Should().Contain("you will stop accruing vacation hours until your balance falls below the cap");
+        rendered.HtmlBody.Should().Contain("Dear Staff Member,");
+        rendered.HtmlBody.Should().Contain("You will not accrue additional hours until your balance falls below the cap");
+        rendered.HtmlBody.Should().Contain("Hours to Take");
+        rendered.HtmlBody.Should().Contain("$500");
         rendered.HtmlBody.Should().Contain("Open TRS Time Reporting");
         rendered.HtmlBody.Should().Contain("https://trs.ucdavis.edu/timesheet");
-        rendered.HtmlBody.Should().Contain("240.0 hours");
+        rendered.HtmlBody.Should().Contain("of 240 hrs");
         rendered.HtmlBody.Should().NotContain("<mjml");
     }
 
@@ -62,7 +67,7 @@ public sealed class AccrualOutboundMessageRendererTests
     {
         var renderer = CreateRenderer();
         var message = CreateEmployeeMessage(
-            "accrual.employee.generic.v1",
+            "accrual.employee.staff.v1",
             new AccrualEmployeeNotificationPayload
             {
                 AccrualHoursPerMonth = 8m,
@@ -72,7 +77,7 @@ public sealed class AccrualOutboundMessageRendererTests
                 Department = "PLANT <SCIENCES>",
                 DepartmentCode = "030003",
                 EmployeeAsOfDate = new DateTime(2026, 4, 30),
-                EmployeeGroup = nameof(AccrualEmployeeGroup.Generic),
+                EmployeeGroup = nameof(AccrualEmployeeGroup.Staff),
                 EmployeeId = "E001",
                 EmployeeName = "Employee <Unsafe>",
                 PctOfCap = 83.3m,
@@ -93,15 +98,11 @@ public sealed class AccrualOutboundMessageRendererTests
     [InlineData(
         "accrual.employee.faculty-academic.v1",
         nameof(AccrualEmployeeGroup.FacultyAcademic),
-        "work with your department chair")]
+        "fiscal year academic appointee")]
     [InlineData(
         "accrual.employee.staff.v1",
         nameof(AccrualEmployeeGroup.Staff),
-        "Please submit your leave request")]
-    [InlineData(
-        "accrual.employee.generic.v1",
-        nameof(AccrualEmployeeGroup.Generic),
-        "Your current vacation balance")]
+        "Open TRS Time Reporting")]
     public async Task RenderAsync_renders_each_employee_template_key(
         string templateKey,
         string employeeGroup,
@@ -122,6 +123,7 @@ public sealed class AccrualOutboundMessageRendererTests
                 EmployeeGroup = employeeGroup,
                 EmployeeId = "E001",
                 EmployeeName = "Employee One",
+                LostCostMonth = 500m,
                 MonthsToCap = 2,
                 PctOfCap = 91.7m,
                 SnapshotAsOfDate = new DateTime(2026, 4, 30),

@@ -622,11 +622,13 @@ public sealed class AccrualOverviewCalculatorTests
         atCap.BalanceHours.Should().Be(384m);
         atCap.CapHours.Should().Be(384m);
         atCap.PctOfCap.Should().Be(100m);
+        atCap.LostCostMonth.Should().Be(1759.68m);
 
         var approaching = result.Single(candidate => candidate.EmployeeId == "E002");
         approaching.Status.Should().Be(AccrualNotificationStatus.ApproachingCap);
         approaching.EmployeeGroup.Should().Be(AccrualEmployeeGroup.Staff);
         approaching.EmployeeEmail.Should().Be("approaching@example.com");
+        approaching.LostCostMonth.Should().Be(0m);
     }
 
     [Fact]
@@ -746,7 +748,7 @@ public sealed class AccrualOverviewCalculatorTests
         result.Should().Contain(candidate =>
             candidate.EmployeeId == "E004" &&
             candidate.Classification == "Mystery Classification" &&
-            candidate.EmployeeGroup == AccrualEmployeeGroup.Generic);
+            candidate.EmployeeGroup == AccrualEmployeeGroup.Staff);
     }
 
     [Fact]
