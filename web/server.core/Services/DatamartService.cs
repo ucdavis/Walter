@@ -82,33 +82,7 @@ public interface IDatamartService
 
 public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
 {
-    private const string SearchablePersonSelect = """
-        SELECT
-            LTRIM(RTRIM(IamId)) AS IamId,
-            LTRIM(RTRIM(EmployeeId)) AS EmployeeId,
-            COALESCE(
-                NULLIF(LTRIM(RTRIM(FullName)), ''),
-                NULLIF(LTRIM(RTRIM(CONCAT(
-                    COALESCE(NULLIF(LTRIM(RTRIM(FirstName)), ''), ''),
-                    CASE
-                        WHEN NULLIF(LTRIM(RTRIM(FirstName)), '') IS NOT NULL
-                         AND NULLIF(LTRIM(RTRIM(LastName)), '') IS NOT NULL THEN ' '
-                        ELSE ''
-                    END,
-                    COALESCE(NULLIF(LTRIM(RTRIM(LastName)), ''), '')
-                ))), ''),
-                LTRIM(RTRIM(IamId))
-            ) AS Name,
-            NULLIF(LTRIM(RTRIM(Email)), '') AS Email
-        FROM dbo.People
-        """;
-
-    private const string SearchablePersonWhere = """
-        WHERE IamId IS NOT NULL
-          AND IamId <> ''
-          AND EmployeeId IS NOT NULL
-          AND EmployeeId <> ''
-        """;
+    private const string GetSearchablePeopleSproc = "dbo.usp_GetSearchablePeople";
 
     private readonly string _connectionString;
     private readonly string _appName;
@@ -169,37 +143,12 @@ public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
         }
         var boundedLimit = Math.Min(limit, MaxSearchPeopleLimit);
 
-        const string sql = $"""
-            {SearchablePersonSelect}
-            {SearchablePersonWhere}
-              AND (
-                   FullName LIKE @LikeQuery
-                OR FirstName LIKE @LikeQuery
-                OR LastName LIKE @LikeQuery
-                OR Email LIKE @LikeQuery
-                OR UserId LIKE @LikeQuery
-                OR IamId LIKE @LikeQuery
-              )
-            ORDER BY
-                CASE
-                    WHEN FullName LIKE @StartsWithQuery THEN 0
-                    WHEN Email LIKE @StartsWithQuery THEN 1
-                    ELSE 2
-                END,
-                FullName,
-                Email,
-                IamId
-            OFFSET 0 ROWS FETCH NEXT @Limit ROWS ONLY
-            """;
-
-        return await ExecuteQueryAsync<SearchablePersonRecord>(
-            sql,
+        return await ExecuteSprocAsync<SearchablePersonRecord>(
+            GetSearchablePeopleSproc,
             new
             {
-                LikeQuery = $"%{normalizedQuery}%",
-                StartsWithQuery = $"{normalizedQuery}%",
+                SearchQuery = normalizedQuery,
                 Limit = boundedLimit,
-                ApplicationName = _appName,
             },
             ct: ct);
     }
@@ -213,15 +162,9 @@ public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
             return null;
         }
 
-        const string sql = $"""
-            {SearchablePersonSelect}
-            {SearchablePersonWhere}
-              AND IamId = @IamId
-            """;
-
-        var results = await ExecuteQueryAsync<SearchablePersonRecord>(
-            sql,
-            new { IamId = normalizedIamId, ApplicationName = _appName },
+        var results = await ExecuteSprocAsync<SearchablePersonRecord>(
+            GetSearchablePeopleSproc,
+            new { IamId = normalizedIamId },
             ct: ct);
         return results.FirstOrDefault();
     }
@@ -235,15 +178,9 @@ public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
             return null;
         }
 
-        const string sql = $"""
-            {SearchablePersonSelect}
-            {SearchablePersonWhere}
-              AND EmployeeId = @EmployeeId
-            """;
-
-        var results = await ExecuteQueryAsync<SearchablePersonRecord>(
-            sql,
-            new { EmployeeId = normalizedEmployeeId, ApplicationName = _appName },
+        var results = await ExecuteSprocAsync<SearchablePersonRecord>(
+            GetSearchablePeopleSproc,
+            new { EmployeeId = normalizedEmployeeId },
             ct: ct);
         return results.FirstOrDefault();
     }
@@ -262,15 +199,9 @@ public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
             return Array.Empty<SearchablePersonRecord>();
         }
 
-        const string sql = $"""
-            {SearchablePersonSelect}
-            {SearchablePersonWhere}
-              AND EmployeeId IN @EmployeeIds
-            """;
-
-        return await ExecuteQueryAsync<SearchablePersonRecord>(
-            sql,
-            new { EmployeeIds = normalizedEmployeeIds, ApplicationName = _appName },
+        return await ExecuteSprocAsync<SearchablePersonRecord>(
+            GetSearchablePeopleSproc,
+            new { EmployeeIds = string.Join(",", normalizedEmployeeIds) },
             ct: ct);
     }
 
@@ -283,15 +214,9 @@ public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
             return null;
         }
 
-        const string sql = $"""
-            {SearchablePersonSelect}
-            {SearchablePersonWhere}
-              AND LOWER(LTRIM(RTRIM(Email))) = @Email
-            """;
-
-        var results = await ExecuteQueryAsync<SearchablePersonRecord>(
-            sql,
-            new { Email = normalizedEmail.ToLowerInvariant(), ApplicationName = _appName },
+        var results = await ExecuteSprocAsync<SearchablePersonRecord>(
+            GetSearchablePeopleSproc,
+            new { Email = normalizedEmail.ToLowerInvariant() },
             ct: ct);
         return results.FirstOrDefault();
     }
