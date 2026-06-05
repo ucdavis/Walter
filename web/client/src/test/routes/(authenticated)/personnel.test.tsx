@@ -7,6 +7,7 @@ import { renderRoute } from '@/test/routerUtils.tsx';
 const mockUser = {
   email: 'test@example.com',
   employeeId: '1000',
+  iamId: 'IAM-1000',
   id: 'user-1',
   kerberos: 'testuser',
   name: 'Test User',
@@ -86,7 +87,7 @@ describe('personnel page', () => {
       http.get('/api/user/me', () => HttpResponse.json(mockUser)),
       // Personnel handler must be before :employeeId to avoid conflict
       http.get('/api/project/personnel', () => HttpResponse.json(personnel)),
-      http.get('/api/project/:employeeId', () => HttpResponse.json(projects))
+      http.get('/api/project/by-iam/:iamId', () => HttpResponse.json(projects))
     );
 
     const { cleanup } = renderRoute({ initialPath: '/personnel' });

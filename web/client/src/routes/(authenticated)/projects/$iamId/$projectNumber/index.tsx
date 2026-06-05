@@ -23,7 +23,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import ProjectAdditionalInfo from '@/components/project/ProjectAdditionalInfo.tsx';
 
 export const Route = createFileRoute(
-  '/(authenticated)/projects/$employeeId/$projectNumber/'
+  '/(authenticated)/projects/$iamId/$projectNumber/'
 )({
   component: RouteComponent,
 });
@@ -42,15 +42,15 @@ const ProjectNotFound = ({ projectNumber }: { projectNumber: string }) => (
 );
 
 function ProjectContent({
-  employeeId,
+  iamId,
   projectRecords,
   summary,
 }: {
-  employeeId: string;
+  iamId: string;
   projectRecords: ProjectRecord[];
   summary: ProjectSummary;
 }) {
-  const personnelQuery = usePersonnelQuery(employeeId, [summary.projectNumber]);
+  const personnelQuery = usePersonnelQuery(iamId, [summary.projectNumber]);
   const user = useUser();
   const canSeeDiscrepancy = canViewProjectDiscrepancy(
     user.roles,
@@ -89,8 +89,10 @@ function ProjectContent({
         )}
         <div className="mt-6">
           <ProjectAlerts
-            employeeId={employeeId}
-            reconciliationStatus={reconciliationStatus}
+            hasReconciliationDiscrepancy={discrepancies.has(
+              summary.projectNumber
+            )}
+            iamId={iamId}
             summary={summary}
           />
         </div>
@@ -109,7 +111,7 @@ function ProjectContent({
         </h2>
         <div className="mt-4">
           <TaskBreakdown
-            employeeId={employeeId}
+            iamId={iamId}
             projectNumber={summary.projectNumber}
             records={projectRecords}
           />
@@ -133,9 +135,9 @@ function ProjectContent({
 }
 
 function RouteComponent() {
-  const { employeeId, projectNumber } = Route.useParams();
+  const { iamId, projectNumber } = Route.useParams();
   const { data: projects } = useSuspenseQuery(
-    projectsDetailQueryOptions(employeeId)
+    projectsDetailQueryOptions(iamId)
   );
   const summary = summarizeProjectByNumber(projects, projectNumber);
 
@@ -149,7 +151,7 @@ function RouteComponent() {
 
   return (
     <ProjectContent
-      employeeId={employeeId}
+      iamId={iamId}
       projectRecords={projectRecords}
       summary={summary}
     />

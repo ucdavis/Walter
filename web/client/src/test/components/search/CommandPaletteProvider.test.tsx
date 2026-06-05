@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 const defaultUser = {
   email: 'alpha@example.com',
   employeeId: '1000',
+  iamId: 'IAM-1000',
   id: 'user-1',
   kerberos: 'alpha',
   name: 'Alpha User',
@@ -39,27 +40,32 @@ const setUpPersonResolution = ({
       HttpResponse.json([
         {
           email: 'patty@ucdavis.edu',
-          id: 'entra-patty',
+          id: 'IAM-PATTY',
+          iamId: 'IAM-PATTY',
+          isProjectManager,
           keywords: ['Patty Manager'],
           name: 'Patty Manager',
         },
       ])
     ),
-    http.get('/api/search/people/resolve', () =>
+    http.get('/api/project/managed/by-iam/:iamId', () =>
       HttpResponse.json({
-        email: 'patty@ucdavis.edu',
-        employeeId: 'PM-1',
-        isProjectManager,
-        name: 'Patty Manager',
+        pis: [
+          {
+            employeeId: '2001',
+            iamId: 'IAM-2001',
+            name: 'PI One',
+            projectCount: 1,
+          },
+        ],
+        projectManager: {
+          employeeId: 'PM-1',
+          iamId: 'IAM-PATTY',
+          name: 'Patty Manager',
+        },
       })
     ),
-    http.get('/api/project/managed/:employeeId', () =>
-      HttpResponse.json({
-        pis: [{ employeeId: '2001', name: 'PI One', projectCount: 1 }],
-        projectManager: { employeeId: 'PM-1', name: 'Patty Manager' },
-      })
-    ),
-    http.get('/api/project/:employeeId', () => HttpResponse.json([])),
+    http.get('/api/project/by-iam/:iamId', () => HttpResponse.json([])),
     http.get('/api/project/personnel', () => HttpResponse.json([]))
   );
 };
@@ -172,7 +178,7 @@ describe('CommandPaletteProvider', () => {
           myProjects: [
             {
               keywords: ['P-001', 'Alpha'],
-              projectPiEmployeeId: '2001',
+              projectPiIamId: 'IAM-2001',
               projectName: 'Project Alpha',
               projectNumber: 'P-001',
             },
@@ -181,7 +187,7 @@ describe('CommandPaletteProvider', () => {
           projects: [
             {
               keywords: ['P-001', 'Alpha'],
-              projectPiEmployeeId: '2001',
+              projectPiIamId: 'IAM-2001',
               projectName: 'Project Alpha',
               projectNumber: 'P-001',
             },
@@ -280,8 +286,8 @@ describe('CommandPaletteProvider', () => {
           myProjects: [],
           principalInvestigators: [
             {
-              employeeId: '2001',
-              keywords: ['Alice', '2001'],
+              iamId: 'IAM-2001',
+              keywords: ['Alice'],
               name: 'Alice Example',
             },
           ],
@@ -323,7 +329,7 @@ describe('CommandPaletteProvider', () => {
           myManagedProjects: [
             {
               keywords: ['seeded', 'Seeded PM Project', 'SEED-001'],
-              projectPiEmployeeId: '2001',
+              projectPiIamId: 'IAM-2001',
               projectName: 'Seeded PM Project',
               projectNumber: 'SEED-001',
             },
@@ -331,28 +337,28 @@ describe('CommandPaletteProvider', () => {
           myProjects: [
             {
               keywords: ['seeded', 'Seeded PI Project', 'SEED-PI-001'],
-              projectPiEmployeeId: '2002',
+              projectPiIamId: 'IAM-2002',
               projectName: 'Seeded PI Project',
               projectNumber: 'SEED-PI-001',
             },
           ],
           principalInvestigators: [
             {
-              employeeId: '2001',
-              keywords: ['Alice Example', '2001'],
+              iamId: 'IAM-2001',
+              keywords: ['Alice Example'],
               name: 'Alice Example',
             },
           ],
           projects: [
             {
               keywords: ['seeded', 'Seeded PM Project', 'SEED-001'],
-              projectPiEmployeeId: '2001',
+              projectPiIamId: 'IAM-2001',
               projectName: 'Seeded PM Project',
               projectNumber: 'SEED-001',
             },
             {
               keywords: ['seeded', 'Seeded PI Project', 'SEED-PI-001'],
-              projectPiEmployeeId: '2002',
+              projectPiIamId: 'IAM-2002',
               projectName: 'Seeded PI Project',
               projectNumber: 'SEED-PI-001',
             },
@@ -382,7 +388,9 @@ describe('CommandPaletteProvider', () => {
           return HttpResponse.json([
             {
               email: 'esspang@ucdavis.edu',
-              id: 'entra-esspang',
+              id: 'IAM-ESSPANG',
+              iamId: 'IAM-ESSPANG',
+              isProjectManager: false,
               keywords: ['Edward Spang', 'esspang@ucdavis.edu'],
               name: 'Edward Spang',
             },
@@ -452,6 +460,7 @@ describe('CommandPaletteProvider', () => {
         HttpResponse.json({
           myManagedProjects: Array.from({ length: 6 }, (_, i) => ({
             keywords: [`MANAGED-${i + 1}`],
+            projectPiIamId: `IAM-MANAGED-PI-${i + 1}`,
             projectName: `Managed Project ${i + 1}`,
             projectNumber: `MANAGED-${i + 1}`,
           })),
@@ -461,7 +470,7 @@ describe('CommandPaletteProvider', () => {
             projectNumber: `MINE-${i + 1}`,
           })),
           principalInvestigators: Array.from({ length: 6 }, (_, i) => ({
-            employeeId: `PI-${i + 1}`,
+            iamId: `IAM-PI-${i + 1}`,
             keywords: [`PI ${i + 1}`],
             name: `PI ${i + 1}`,
           })),
@@ -493,7 +502,9 @@ describe('CommandPaletteProvider', () => {
         return HttpResponse.json(
           Array.from({ length: 6 }, (_, i) => ({
             email: `spang${i + 1}@ucdavis.edu`,
-            id: `entra-spang-${i + 1}`,
+            id: `IAM-SPANG-${i + 1}`,
+            iamId: `IAM-SPANG-${i + 1}`,
+            isProjectManager: false,
             keywords: [`Spang ${i + 1}`],
             name: `Spang Person ${i + 1}`,
           }))
@@ -541,6 +552,54 @@ describe('CommandPaletteProvider', () => {
     }
   });
 
+  it('hides managed projects that do not have a PI IAM ID', async () => {
+    server.use(
+      http.get('/api/user/me', () => HttpResponse.json(defaultUser)),
+      http.get('/api/search/catalog', () =>
+        HttpResponse.json({ projects: [], reports: [] })
+      ),
+      http.get('/api/search/projects/team', () =>
+        HttpResponse.json({
+          myManagedProjects: [
+            {
+              keywords: ['resolved', 'Resolved Managed Project'],
+              projectPiIamId: 'IAM-PI-2001',
+              projectName: 'Resolved Managed Project',
+              projectNumber: 'RESOLVED-001',
+            },
+            {
+              keywords: ['unresolved', 'Unresolved Managed Project'],
+              projectPiIamId: null,
+              projectName: 'Unresolved Managed Project',
+              projectNumber: 'UNRESOLVED-001',
+            },
+          ],
+          myProjects: [],
+          principalInvestigators: [],
+          projects: [],
+        })
+      )
+    );
+
+    const { cleanup } = renderRoute({ initialPath: '/styles' });
+
+    try {
+      await screen.findByText('Heading 1');
+      const user = userEvent.setup();
+
+      await user.click(screen.getByRole('button', { name: /search…/i }));
+
+      expect(
+        await screen.findByText('Resolved Managed Project')
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByText('Unresolved Managed Project')
+      ).not.toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+
   describe('selecting a person from search', () => {
     it('navigates to the managed PIs page when the person is a project manager', async () => {
       setUpPersonResolution({ isProjectManager: true });
@@ -563,7 +622,7 @@ describe('CommandPaletteProvider', () => {
 
         await waitFor(() => {
           expect(router.state.location.pathname).toBe(
-            '/principalInvestigators/PM-1'
+            '/principalInvestigators/IAM-PATTY'
           );
         });
       } finally {
@@ -591,7 +650,7 @@ describe('CommandPaletteProvider', () => {
         await user.click(result);
 
         await waitFor(() => {
-          expect(router.state.location.pathname).toBe('/projects/PM-1');
+          expect(router.state.location.pathname).toBe('/projects/IAM-PATTY');
         });
       } finally {
         cleanup();

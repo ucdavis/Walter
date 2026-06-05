@@ -8,6 +8,7 @@ import { renderRoute } from '@/test/routerUtils.tsx';
 const createUser = (roles: string[]) => ({
   email: 'test@example.com',
   employeeId: '1000',
+  iamId: 'IAM-1000',
   id: 'user-1',
   kerberos: 'testuser',
   name: 'Test User',
@@ -16,8 +17,10 @@ const createUser = (roles: string[]) => ({
 
 const registerHomeApis = () => {
   server.use(
-    http.get('/api/project/managed/:employeeId', () => HttpResponse.json([])),
-    http.get('/api/project/:employeeId', () => HttpResponse.json([])),
+    http.get('/api/project/managed/by-iam/:iamId', () =>
+      HttpResponse.json({ pis: [], projectManager: null })
+    ),
+    http.get('/api/project/by-iam/:iamId', () => HttpResponse.json([])),
     http.get('/api/project/personnel', () => HttpResponse.json([]))
   );
 };

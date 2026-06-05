@@ -83,8 +83,8 @@ const setupHandlers = (
         roles: [],
       })
     ),
-    http.get('/api/project/managed/:employeeId', () => HttpResponse.json({ pis: [], projectManager: null })),
-    http.get('/api/project/:employeeId', () => HttpResponse.json(projects)),
+    http.get('/api/project/managed/by-iam/:iamId', () => HttpResponse.json({ pis: [], projectManager: null })),
+    http.get('/api/project/by-iam/:iamId', () => HttpResponse.json(projects)),
     http.get('/api/project/personnel', () => HttpResponse.json([])),
     http.get('/api/project/gl-ppm-reconciliation', () => HttpResponse.json([]))
   );
@@ -143,9 +143,9 @@ describe('project detail page', () => {
           roles: [],
         })
       ),
-      http.get('/api/project/managed/:employeeId', () => HttpResponse.json({ pis: [], projectManager: null })),
-      http.get('/api/project/:employeeId', ({ params }) => {
-        if (params.employeeId === '10212674') {
+      http.get('/api/project/managed/by-iam/:iamId', () => HttpResponse.json({ pis: [], projectManager: null })),
+      http.get('/api/project/by-iam/:iamId', ({ params }) => {
+        if (params.iamId === '10212674') {
           return HttpResponse.json(
             { message: 'You are not allowed to view this portfolio.' },
             { status: 403 }
@@ -295,10 +295,10 @@ describe('project detail page', () => {
             roles: user.roles,
           })
         ),
-        http.get('/api/project/managed/:employeeId', () =>
+        http.get('/api/project/managed/by-iam/:iamId', () =>
           HttpResponse.json({ pis: [], projectManager: null })
         ),
-        http.get('/api/project/:employeeId', () =>
+        http.get('/api/project/by-iam/:iamId', () =>
           HttpResponse.json(projects)
         ),
         http.get('/api/project/personnel', () => HttpResponse.json([])),

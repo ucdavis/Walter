@@ -5,18 +5,18 @@ import { meQueryOptions } from '@/queries/user.ts';
 import { ROLE_NAMES } from '@/shared/auth/roleAccess.ts';
 
 export const Route = createFileRoute(
-  '/(authenticated)/principalInvestigators/$emplid'
+  '/(authenticated)/principalInvestigators/$iamId'
 )({
   beforeLoad: async ({
     context,
-    params: { emplid },
+    params: { iamId },
   }: {
     context: RouterContext;
-    params: { emplid: string };
+    params: { iamId: string };
   }) => {
     const user = await context.queryClient.ensureQueryData(meQueryOptions());
     const isFinancialViewer = user.roles.includes(ROLE_NAMES.financialViewer);
-    const isSelf = emplid === user.employeeId;
+    const isSelf = iamId === user.iamId;
 
     if (!isFinancialViewer && !isSelf) {
       throw redirect({ to: '/' });
@@ -26,6 +26,6 @@ export const Route = createFileRoute(
 });
 
 function RouteComponent() {
-  const { emplid } = Route.useParams();
-  return <ManagedPisView employeeId={emplid} />;
+  const { iamId } = Route.useParams();
+  return <ManagedPisView iamId={iamId} />;
 }

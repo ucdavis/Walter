@@ -6,8 +6,8 @@ const TEAM_SEARCH_GC_TIME_MS = 30 * 60 * 1000;
 
 export type SearchProject = {
   keywords: string[];
-  projectPiEmployeeId?: string | null;
   projectName: string;
+  projectPiIamId?: string | null;
   projectNumber: string;
 };
 
@@ -24,14 +24,16 @@ export type SearchCatalog = {
 };
 
 export type SearchPerson = {
-  employeeId: string;
+  iamId: string;
   keywords: string[];
   name: string;
 };
 
 export type SearchDirectoryPerson = {
   email?: string | null;
+  iamId: string;
   id: string;
+  isProjectManager: boolean;
   keywords: string[];
   name: string;
 };
@@ -43,15 +45,8 @@ export type SearchTeamMemberProjectsResponse = {
   projects: SearchProject[];
 };
 
-export type ResolveDirectoryPersonResponse = {
-  email?: string | null;
-  employeeId: string;
-  isProjectManager: boolean;
-  name: string;
-};
-
 export type ResolveProjectPiResponse = {
-  employeeId: string;
+  iamId: string;
   projectNumber: string;
 };
 
@@ -72,7 +67,7 @@ export const useSearchCatalogQuery = ({ enabled }: { enabled: boolean }) => {
   });
 };
 
-export const searchTeamMemberProjectsQueryOptions = (employeeId: string) => ({
+export const searchTeamMemberProjectsQueryOptions = (iamId: string) => ({
   gcTime: TEAM_SEARCH_GC_TIME_MS,
   queryFn: async ({
     signal,
@@ -85,20 +80,20 @@ export const searchTeamMemberProjectsQueryOptions = (employeeId: string) => ({
       signal
     );
   },
-  queryKey: ['search', 'projects', 'team', employeeId] as const,
+  queryKey: ['search', 'projects', 'team', iamId] as const,
   refetchOnWindowFocus: false,
   staleTime: TEAM_SEARCH_STALE_TIME_MS,
 });
 
 export const useSearchTeamMemberProjectsQuery = ({
-  employeeId,
   enabled,
+  iamId,
 }: {
-  employeeId: string;
   enabled: boolean;
+  iamId: string;
 }) => {
   return useQuery({
-    ...searchTeamMemberProjectsQueryOptions(employeeId),
+    ...searchTeamMemberProjectsQueryOptions(iamId),
     enabled,
   });
 };
@@ -223,22 +218,3 @@ export const useResolveProjectPiQuery = ({
     enabled: enabled && options.enabled,
   });
 };
-
-export async function resolveSearchPersonById({
-  signal,
-  userId,
-}: {
-  signal?: AbortSignal;
-  userId: string;
-}): Promise<ResolveDirectoryPersonResponse> {
-  const id = userId.trim();
-  if (!id) {
-    throw new Error('userId is required');
-  }
-
-  return await fetchJson<ResolveDirectoryPersonResponse>(
-    `/api/search/people/resolve?userId=${encodeURIComponent(id)}`,
-    {},
-    signal
-  );
-}

@@ -86,7 +86,7 @@ const csvColumns = [
 ];
 
 interface TaskBreakdownProps {
-  employeeId: string;
+  iamId: string;
   projectNumber: string;
   records: ProjectRecord[];
 }
@@ -95,7 +95,7 @@ function isClosedTask(row: TaskBreakdownRow): boolean {
   return row.taskStatus === 'Inactive';
 }
 
-export function TaskBreakdown({ employeeId, projectNumber, records }: TaskBreakdownProps) {
+export function TaskBreakdown({ iamId, projectNumber, records }: TaskBreakdownProps) {
   const [showClosed, setShowClosed] = useState(false);
   const allRows = useMemo(() => buildRows(records), [records]);
   const closedCount = useMemo(() => allRows.filter(isClosedTask).length, [allRows]);
@@ -236,7 +236,7 @@ export function TaskBreakdown({ employeeId, projectNumber, records }: TaskBreakd
           return (
             <Link
               className="link font-semibold text-sm whitespace-nowrap"
-              params={{ employeeId, projectNumber }}
+              params={{ iamId, projectNumber }}
               search={{
                 activity: row.activityCode,
                 dept: row.financialDepartmentCode,
@@ -244,7 +244,7 @@ export function TaskBreakdown({ employeeId, projectNumber, records }: TaskBreakd
                 program: row.programCode,
                 task: row.taskNum,
               }}
-              to="/projects/$employeeId/$projectNumber/expenditure-categories"
+              to="/projects/$iamId/$projectNumber/expenditure-categories"
             >
               Details
             </Link>
@@ -254,7 +254,7 @@ export function TaskBreakdown({ employeeId, projectNumber, records }: TaskBreakd
         id: 'detailsLink',
       }),
     ],
-    [employeeId, projectNumber, totals.balance, totals.budget, totals.commitments, totals.expenses]
+    [iamId, projectNumber, totals.balance, totals.budget, totals.commitments, totals.expenses]
   );
 
   if (allRows.length === 0) {

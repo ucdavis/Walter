@@ -7,7 +7,7 @@ export const Route = createFileRoute('/(authenticated)/projects')({
   component: RouteComponent,
   loader: async ({ context: { queryClient } }) => {
     const user = await queryClient.ensureQueryData(meQueryOptions());
-    return queryClient.ensureQueryData(managedPisQueryOptions(user.employeeId));
+    return queryClient.ensureQueryData(managedPisQueryOptions(user.iamId));
   },
   pendingComponent: () => (
     <PageLoading message="Fetching Managed Investigators..." />

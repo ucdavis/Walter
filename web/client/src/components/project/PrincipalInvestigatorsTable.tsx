@@ -7,15 +7,22 @@ const columnHelper = createColumnHelper<ManagedPiRecord>();
 
 const columns = [
   columnHelper.accessor('name', {
-    cell: (info) => (
-      <Link
-        className="link"
-        params={{ employeeId: info.row.original.employeeId }}
-        to="/projects/$employeeId/"
-      >
-        {info.getValue()}
-      </Link>
-    ),
+    cell: (info) => {
+      const iamId = info.row.original.iamId;
+      if (!iamId) {
+        return <span>{info.getValue()}</span>;
+      }
+
+      return (
+        <Link
+          className="link"
+          params={{ iamId }}
+          to="/projects/$iamId/"
+        >
+          {info.getValue()}
+        </Link>
+      );
+    },
     header: 'PI Name',
   }),
 ];

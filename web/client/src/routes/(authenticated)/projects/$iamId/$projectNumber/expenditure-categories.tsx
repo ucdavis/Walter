@@ -18,7 +18,7 @@ interface SearchParams {
 }
 
 export const Route = createFileRoute(
-  '/(authenticated)/projects/$employeeId/$projectNumber/expenditure-categories'
+  '/(authenticated)/projects/$iamId/$projectNumber/expenditure-categories'
 )({
   component: RouteComponent,
   validateSearch: (search: Record<string, unknown>): SearchParams => ({
@@ -89,11 +89,11 @@ const csvColumns = [
 ];
 
 function RouteComponent() {
-  const { employeeId, projectNumber } = Route.useParams();
+  const { iamId, projectNumber } = Route.useParams();
   const search = Route.useSearch();
 
   const { data: projects } = useSuspenseQuery(
-    projectsDetailQueryOptions(employeeId)
+    projectsDetailQueryOptions(iamId)
   );
 
   const rows = useMemo(
@@ -213,8 +213,8 @@ function RouteComponent() {
       <section className="mt-8 mb-6">
         <Link
           className="btn btn-sm mb-4"
-          params={{ employeeId, projectNumber }}
-          to="/projects/$employeeId/$projectNumber/"
+          params={{ iamId, projectNumber }}
+          to="/projects/$iamId/$projectNumber/"
         >
           Back to Project
         </Link>

@@ -22,20 +22,23 @@ export function usePiProjectAlerts(
   managedPis: ManagedPiRecord[],
   pmEmployeeId: string
 ): PiProjectAlertsState {
+  const navigablePis = useMemo(
+    () => managedPis.filter((pi) => Boolean(pi.iamId)),
+    [managedPis]
+  );
   const projectsQueries = useQueries({
-    queries: managedPis.map((pi) => projectsDetailQueryOptions(pi.employeeId)),
+    queries: navigablePis.map((pi) => projectsDetailQueryOptions(pi.iamId!)),
   });
 
   const firstError = projectsQueries.find((q) => q.isError);
   const allLoaded = projectsQueries.every((q) => q.isSuccess);
   const isLoading =
-    managedPis.length > 0 && !allLoaded && !firstError;
+    navigablePis.length > 0 && !allLoaded && !firstError;
 
-  const alerts = useMemo(() => {
-    if (!allLoaded || managedPis.length === 0) return [];
-
+  let alerts: PiProjectAlert[] = [];
+  if (allLoaded && navigablePis.length > 0) {
     const now = new Date();
-    const pisWithProjects: PiWithProjects[] = managedPis.map((pi, index) => {
+    const pisWithProjects: PiWithProjects[] = navigablePis.map((pi, index) => {
       const allProjects = projectsQueries[index]?.data ?? [];
       const projects = allProjects.filter(
         (p) =>
@@ -47,6 +50,7 @@ export function usePiProjectAlerts(
 
       return {
         employeeId: pi.employeeId,
+        iamId: pi.iamId,
         name: pi.name,
         projectCount: projects.length,
         projects,
@@ -55,9 +59,8 @@ export function usePiProjectAlerts(
       };
     });
 
-    return getPiProjectAlerts(pisWithProjects);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allLoaded, managedPis, pmEmployeeId]);
+    alerts = getPiProjectAlerts(pisWithProjects);
+  }
 
   return {
     alerts,
@@ -76,7 +79,7 @@ export function PiProjectAlerts({
   managedPis,
   pmEmployeeId,
 }: PiProjectAlertsProps) {
-  const { alerts, isLoading, isError, error } = usePiProjectAlerts(
+  const { alerts, error, isError, isLoading } = usePiProjectAlerts(
     managedPis,
     pmEmployeeId
   );
@@ -109,19 +112,27 @@ export function PiProjectAlerts({
     return <p className="mt-4 text-base-content/60">No alerts</p>;
   }
 
+  const iamIdByEmployeeId = new Map(
+    managedPis
+      .filter((pi) => pi.iamId)
+      .map((pi) => [pi.employeeId, pi.iamId!])
+  );
+
   return (
     <div className="mt-4 flex flex-col gap-4">
-      {alerts.map((alert) => (
-        <AlertCard
-          alert={alert}
-          balance={alert.balance}
-          key={alert.id}
-          linkParams={{
-            employeeId: alert.piEmployeeId,
-            projectNumber: alert.projectNumber,
-          }}
-        />
-      ))}
+      {alerts.map((alert) => {
+        const iamId = iamIdByEmployeeId.get(alert.piEmployeeId);
+        return (
+          <AlertCard
+            alert={alert}
+            balance={alert.balance}
+            key={alert.id}
+            linkParams={
+              iamId ? { iamId, projectNumber: alert.projectNumber } : undefined
+            }
+          />
+        );
+      })}
     </div>
   );
 }

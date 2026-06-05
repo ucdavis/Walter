@@ -69,9 +69,9 @@ const linkClasses = (isActive: boolean, isActiveStatus: boolean) =>
   ].join(' ');
 
 export function ProjectsSidebar() {
-  const { employeeId, projectNumber } = useParams({ strict: false });
+  const { iamId, projectNumber } = useParams({ strict: false });
   const { data: projects } = useSuspenseQuery(
-    projectsDetailQueryOptions(employeeId)
+    projectsDetailQueryOptions(iamId)
   );
 
   // mobile drawer
@@ -205,9 +205,9 @@ export function ProjectsSidebar() {
               <Link
                 aria-label={collapsed ? 'All Projects' : undefined}
                 className={linkClasses(isAllProjectsActive, false)}
-                params={{ employeeId }}
+                params={{ iamId }}
                 title={collapsed ? 'All Projects' : undefined}
-                to="/projects/$employeeId"
+                to="/projects/$iamId"
                 viewTransition={{ types: ['slide-right'] }}
               >
                 {collapsed ? (
@@ -235,13 +235,13 @@ export function ProjectsSidebar() {
                     project.projectStatusCode === 'ACTIVE'
                   )}
                   key={project.projectNumber}
-                  params={{ employeeId, projectNumber: project.projectNumber }}
+                  params={{ iamId, projectNumber: project.projectNumber }}
                   title={
                     collapsed
                       ? `${project.displayName} • ${project.projectNumber}`
                       : project.displayName
                   }
-                  to="/projects/$employeeId/$projectNumber"
+                  to="/projects/$iamId/$projectNumber"
                   viewTransition={{ types: ['slide-left'] }}
                 >
                   {collapsed ? (
@@ -367,8 +367,8 @@ export function ProjectsSidebar() {
           <div className="space-y-1 overflow-y-auto max-h-[calc(100vh-120px)]">
             <Link
               className={linkClasses(isAllProjectsActive, false)}
-              params={{ employeeId }}
-              to="/projects/$employeeId"
+              params={{ iamId }}
+              to="/projects/$iamId"
               viewTransition={{ types: ['slide-right'] }}
             >
               <div className="flex justify-between items-start mb-1">
@@ -388,8 +388,8 @@ export function ProjectsSidebar() {
                 )}
                 key={project.projectNumber}
                 onClick={() => setOpen(false)}
-                params={{ employeeId, projectNumber: project.projectNumber }}
-                to="/projects/$employeeId/$projectNumber"
+                params={{ iamId, projectNumber: project.projectNumber }}
+                to="/projects/$iamId/$projectNumber"
                 viewTransition={{ types: ['slide-left'] }}
               >
                 <div className="text-xs text-dark-font/50">
