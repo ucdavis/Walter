@@ -60,7 +60,7 @@ function ProjectContent({
   const reconciliationState = useProjectDiscrepancyState(
     canSeeDiscrepancy ? [summary.projectNumber] : []
   );
-  const reconciliationStatus = reconciliationState.isSuccess
+  const reconciliationStatus = reconciliationState.hasData
     ? reconciliationState.discrepancies.has(summary.projectNumber)
       ? 'discrepancy'
       : 'balanced'

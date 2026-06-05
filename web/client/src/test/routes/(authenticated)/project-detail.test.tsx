@@ -308,30 +308,47 @@ describe('project detail page', () => {
       );
     };
 
-    it.each(['Internal', 'Sponsored'])(
+    it.each(['Internal', 'Sponsored'] as const)(
       'shows balanced reconciliation alert for authorized project managers on %s project details',
       async (projectType) => {
+        const projectNumber = `P-${projectType}`;
         const projects = [
-          createProject({ pmEmployeeId: '1000', projectType }),
+          createProject({
+            pmEmployeeId: '1000',
+            projectNumber,
+            projectType,
+          }),
         ];
         setupDetailHandlers({
           projects,
           reconciliation: [],
-          user: { employeeId: '1000', name: 'PM User', roles: [] },
+          user: {
+            employeeId: '1000',
+            name: 'PM User',
+            roles: [],
+          },
         });
 
-        const { cleanup } = renderRoute({ initialPath: '/projects/1000/P1' });
+        const { cleanup } = renderRoute({
+          initialPath: `/projects/1000/${projectNumber}`,
+        });
 
         try {
+          expect(
+            await screen.findByText('Project Number', {}, { timeout: 3000 })
+          ).toBeInTheDocument();
+
           const message = await screen.findByText(
-            'GL PPM is Balanced, click here to view.'
+            'GL/PPM is Balanced, click here to view.',
+            {},
+            { timeout: 3000 }
           );
           const alert = message.closest('[role="alert"]');
 
           expect(alert).toHaveClass('alert-success');
           expect(message.closest('a')).toHaveAttribute(
             'href',
-            '/reports/reconciliation/P1'
+            `/reports/reconciliation/${projectNumber}`
           );
         } finally {
           cleanup();

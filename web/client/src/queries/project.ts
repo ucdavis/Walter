@@ -245,6 +245,7 @@ export function useProjectDiscrepancyState(projectCodes: string[]) {
 
   return {
     discrepancies,
+    hasData: query.data !== undefined,
     isError: query.isError,
     isLoading: query.isLoading,
     isSuccess: query.isSuccess,
