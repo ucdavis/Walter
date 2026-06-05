@@ -18,7 +18,9 @@ public interface IOutboundMessageRenderer
 public sealed record RenderedOutboundMessage(
     string Subject,
     string TextBody,
-    string HtmlBody);
+    string HtmlBody,
+    string? ReplyToEmail = null,
+    string? ReplyToName = null);
 
 public sealed class PlaceholderOutboundMessageRenderer : IOutboundMessageRenderer
 {
@@ -112,6 +114,8 @@ public sealed class AccrualOutboundMessageRenderer : IOutboundMessageRenderer
     private const int SupportedPayloadVersion = 1;
     private const string EmployeeHtmlTemplatePath = "/Views/Emails/AccrualEmployeeNotification_mjml.cshtml";
     private const string EmployeeTextTemplatePath = "/Views/Emails/AccrualEmployeeNotification_text.cshtml";
+    private const string FacultyAccrualReplyToEmail = "aggieservice@ucdavis.edu";
+    private const string FacultyAccrualReplyToName = "AggieService";
     private const string ViewerReportHtmlTemplatePath = "/Views/Emails/AccrualViewerReport_mjml.cshtml";
     private const string ViewerReportTextTemplatePath = "/Views/Emails/AccrualViewerReport_text.cshtml";
 
@@ -169,7 +173,13 @@ public sealed class AccrualOutboundMessageRenderer : IOutboundMessageRenderer
         return new RenderedOutboundMessage(
             BuildEmployeeSubject(payload),
             text,
-            html);
+            html,
+            model.Variant == AccrualEmployeeNotificationVariant.FacultyAcademic
+                ? FacultyAccrualReplyToEmail
+                : null,
+            model.Variant == AccrualEmployeeNotificationVariant.FacultyAcademic
+                ? FacultyAccrualReplyToName
+                : null);
     }
 
     private async Task<RenderedOutboundMessage> RenderViewerReportAsync(

@@ -14,6 +14,8 @@ public sealed record OutboundEmailMessage
 {
     public required string ToEmail { get; init; }
     public string? ToName { get; init; }
+    public string? ReplyToEmail { get; init; }
+    public string? ReplyToName { get; init; }
     public required string Subject { get; init; }
     public required string TextBody { get; init; }
     public required string HtmlBody { get; init; }

@@ -44,6 +44,8 @@ public sealed class AccrualOutboundMessageRendererTests
         var rendered = await renderer.RenderAsync(message);
 
         rendered.Subject.Should().Be("Action Needed: Your Vacation Accrual is at 100% of Maximum");
+        rendered.ReplyToEmail.Should().BeNull();
+        rendered.ReplyToName.Should().BeNull();
         rendered.TextBody.Should().Contain("Dear Staff Member,");
         rendered.TextBody.Should().Contain("You will not accrue additional hours until your balance falls below the cap");
         rendered.TextBody.Should().Contain("Hours to Take");
@@ -60,6 +62,55 @@ public sealed class AccrualOutboundMessageRendererTests
         rendered.HtmlBody.Should().Contain("https://trs.ucdavis.edu/timesheet");
         rendered.HtmlBody.Should().Contain("of 240 hrs");
         rendered.HtmlBody.Should().NotContain("<mjml");
+    }
+
+    [Fact]
+    public async Task RenderAsync_sets_aggieservice_reply_to_for_faculty_employee_template_only()
+    {
+        var renderer = CreateRenderer();
+        var facultyMessage = CreateEmployeeMessage(
+            "accrual.employee.faculty-academic.v1",
+            new AccrualEmployeeNotificationPayload
+            {
+                AccrualHoursPerMonth = 16m,
+                BalanceHours = 384m,
+                CapHours = 384m,
+                Classification = "FY Faculty",
+                EmployeeGroup = nameof(AccrualEmployeeGroup.FacultyAcademic),
+                EmployeeId = "E001",
+                EmployeeName = "Faculty Member",
+                LostCostMonth = 1344m,
+                PctOfCap = 100m,
+                SnapshotAsOfDate = new DateTime(2026, 4, 30),
+                Status = nameof(AccrualNotificationStatus.AtCap),
+            },
+            recipientName: "Faculty Member");
+
+        var staffMessage = CreateEmployeeMessage(
+            "accrual.employee.staff.v1",
+            new AccrualEmployeeNotificationPayload
+            {
+                AccrualHoursPerMonth = 10m,
+                BalanceHours = 236.9m,
+                CapHours = 240m,
+                Classification = "PSS",
+                EmployeeGroup = nameof(AccrualEmployeeGroup.Staff),
+                EmployeeId = "E002",
+                EmployeeName = "Staff Member",
+                LostCostMonth = 500m,
+                PctOfCap = 98.7m,
+                SnapshotAsOfDate = new DateTime(2026, 4, 30),
+                Status = nameof(AccrualNotificationStatus.AtCap),
+            },
+            recipientName: "Staff Member");
+
+        var facultyRendered = await renderer.RenderAsync(facultyMessage);
+        var staffRendered = await renderer.RenderAsync(staffMessage);
+
+        facultyRendered.ReplyToEmail.Should().Be("aggieservice@ucdavis.edu");
+        facultyRendered.ReplyToName.Should().Be("AggieService");
+        staffRendered.ReplyToEmail.Should().BeNull();
+        staffRendered.ReplyToName.Should().BeNull();
     }
 
     [Fact]

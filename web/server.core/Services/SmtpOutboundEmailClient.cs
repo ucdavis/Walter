@@ -209,12 +209,19 @@ public sealed class SmtpOutboundEmailClient : IOutboundEmailClient
             message.ToEmail,
             nameof(message.ToEmail)));
 
-        if (!string.IsNullOrWhiteSpace(_options.ReplyToAddress))
+        var replyToAddress = string.IsNullOrWhiteSpace(message.ReplyToEmail)
+            ? _options.ReplyToAddress
+            : message.ReplyToEmail;
+        var replyToDisplayName = string.IsNullOrWhiteSpace(message.ReplyToEmail)
+            ? _options.ReplyToDisplayName
+            : message.ReplyToName;
+
+        if (!string.IsNullOrWhiteSpace(replyToAddress))
         {
             mimeMessage.ReplyTo.Add(CreateMailboxAddress(
-                _options.ReplyToDisplayName,
-                _options.ReplyToAddress,
-                $"{SmtpOutboundEmailClientOptions.SectionName}:ReplyToAddress"));
+                replyToDisplayName,
+                replyToAddress,
+                nameof(message.ReplyToEmail)));
         }
 
         mimeMessage.Body = new BodyBuilder

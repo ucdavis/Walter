@@ -69,6 +69,37 @@ public sealed class SmtpOutboundEmailClientTests
     }
 
     [Fact]
+    public async Task SendAsync_uses_message_reply_to_override_when_present()
+    {
+        var transport = new FakeSmtpEmailTransport();
+        var client = new SmtpOutboundEmailClient(
+            new SmtpOutboundEmailClientOptions
+            {
+                Host = "smtp.example.edu",
+                FromAddress = "walter@example.edu",
+                ReplyToAddress = "help@example.edu",
+                ReplyToDisplayName = "Walter Support",
+            },
+            () => transport);
+
+        await client.SendAsync(new OutboundEmailMessage
+        {
+            ToEmail = "person@example.edu",
+            ReplyToEmail = "aggieservice@ucdavis.edu",
+            ReplyToName = "AggieService",
+            Subject = "Subject",
+            TextBody = "Text",
+            HtmlBody = "<p>HTML</p>",
+        });
+
+        transport.SentMessage.Should().NotBeNull();
+        transport.SentMessage!.ReplyTo.Mailboxes.Should().ContainSingle()
+            .Which.Should().Match<MailboxAddress>(address =>
+                address.Name == "AggieService" &&
+                address.Address == "aggieservice@ucdavis.edu");
+    }
+
+    [Fact]
     public async Task SendAsync_skips_authentication_when_credentials_are_absent()
     {
         var transport = new FakeSmtpEmailTransport();
