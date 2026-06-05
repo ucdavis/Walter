@@ -176,7 +176,7 @@ public sealed class SearchControllerTests
         var payload = result.Should().BeOfType<OkObjectResult>().Which.Value
             .Should().BeAssignableTo<IReadOnlyList<SearchController.SearchDirectoryPerson>>().Which;
 
-        payload.Should().HaveCount(2);
+        payload.Should().ContainSingle();
         payload.Select(p => p.IamId).Should().Contain("1000000002");
         payload.Select(p => p.Id).Should().Contain("1000000002");
         payload.Select(p => p.Name).Should().Contain("Edward Spang");
@@ -439,7 +439,17 @@ public sealed class SearchControllerTests
             int limit,
             CancellationToken ct = default)
         {
-            return Task.FromResult<IReadOnlyList<SearchablePersonRecord>>(_searchPeople.Take(limit).ToArray());
+            IEnumerable<SearchablePersonRecord> people = _searchPeople;
+            if (!string.IsNullOrWhiteSpace(query))
+            {
+                var normalizedQuery = query.Trim();
+                people = people.Where(p =>
+                    p.Name.Contains(normalizedQuery, StringComparison.OrdinalIgnoreCase) ||
+                    (p.Email?.Contains(normalizedQuery, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    p.IamId.Contains(normalizedQuery, StringComparison.OrdinalIgnoreCase));
+            }
+
+            return Task.FromResult<IReadOnlyList<SearchablePersonRecord>>(people.Take(limit).ToArray());
         }
 
         public Task<SearchablePersonRecord?> GetSearchablePersonByIamIdAsync(

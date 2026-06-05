@@ -50,11 +50,9 @@ public sealed class ProjectControllerTests
         var result = await controller.GetManagedFaculty("IAM-PM", CancellationToken.None);
 
         var ok = result.Should().BeOfType<OkObjectResult>().Which;
-        var envelope = ok.Value!;
-        var envelopeType = envelope.GetType();
-        envelopeType.GetProperty("projectManager")!.GetValue(envelope).Should().BeNull();
-        envelopeType.GetProperty("pis")!.GetValue(envelope)
-            .Should().BeAssignableTo<IEnumerable<object>>().Which.Should().BeEmpty();
+        var envelope = ok.Value.Should().BeOfType<ProjectController.ManagedPisEnvelope>().Which;
+        envelope.ProjectManager.Should().BeNull();
+        envelope.Pis.Should().BeEmpty();
     }
 
     [Fact]
@@ -136,11 +134,9 @@ public sealed class ProjectControllerTests
         var result = await controller.GetManagedFaculty("UNKNOWN-IAM", CancellationToken.None);
 
         var ok = result.Should().BeOfType<OkObjectResult>().Which;
-        var envelope = ok.Value!;
-        var envelopeType = envelope.GetType();
-        envelopeType.GetProperty("projectManager")!.GetValue(envelope).Should().BeNull();
-        envelopeType.GetProperty("pis")!.GetValue(envelope)
-            .Should().BeAssignableTo<IEnumerable<object>>().Which.Should().BeEmpty();
+        var envelope = ok.Value.Should().BeOfType<ProjectController.ManagedPisEnvelope>().Which;
+        envelope.ProjectManager.Should().BeNull();
+        envelope.Pis.Should().BeEmpty();
     }
 
     [Fact]
@@ -157,8 +153,8 @@ public sealed class ProjectControllerTests
 
         templates.Should().Contain("by-iam/{iamId}");
         templates.Should().Contain("managed/by-iam/{iamId}");
-        templates.Should().NotContain("{employeeId}");
-        templates.Should().NotContain("managed/{employeeId}");
+        templates.Should().OnlyContain(template =>
+            !template.Contains("employeeId", StringComparison.OrdinalIgnoreCase));
     }
 
     private static IAuthorizationService CreateAuthorizationService()

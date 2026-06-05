@@ -137,7 +137,10 @@ export interface ManagedPisEnvelope {
 export const projectsDetailQueryOptions = (iamId: string) => ({
   enabled: Boolean(iamId),
   queryFn: async () => {
-    return await fetchJson<ProjectRecord[]>(`/api/project/by-iam/${iamId}`);
+    const encodedIamId = encodeURIComponent(iamId);
+    return await fetchJson<ProjectRecord[]>(
+      `/api/project/by-iam/${encodedIamId}`
+    );
   },
   queryKey: ['projects', 'by-iam', iamId] as const,
   staleTime: 60 * 60 * 1000, // 1 hour
@@ -150,8 +153,9 @@ export const useProjectsDetailQuery = (iamId: string) => {
 export const managedPisQueryOptions = (iamId: string) => ({
   enabled: Boolean(iamId),
   queryFn: async (): Promise<ManagedPisEnvelope> => {
+    const encodedIamId = encodeURIComponent(iamId);
     return await fetchJson<ManagedPisEnvelope>(
-      `/api/project/managed/by-iam/${iamId}`
+      `/api/project/managed/by-iam/${encodedIamId}`
     );
   },
   queryKey: ['projects', 'managed', 'by-iam', iamId] as const,

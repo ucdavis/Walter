@@ -460,6 +460,7 @@ public sealed class SearchController : ApiControllerBase
         return people.ToDictionary(p => p.EmployeeId, StringComparer.OrdinalIgnoreCase);
     }
 
+    /// <summary>Returns true only when the current user satisfies the financial-data access policy.</summary>
     private async Task<bool> HasFinancialAccessAsync()
     {
         var result = await _authorizationService.AuthorizeAsync(

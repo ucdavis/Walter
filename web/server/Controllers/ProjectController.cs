@@ -389,11 +389,9 @@ public sealed class ProjectController : ApiControllerBase
 
     private IActionResult EmptyManagedFacultyResult()
     {
-        return Ok(new
-        {
-            projectManager = (object?)null,
-            pis = Array.Empty<object>(),
-        });
+        return Ok(new ManagedPisEnvelope(
+            ProjectManager: null,
+            Pis: Array.Empty<ManagedPiRecord>()));
     }
 
     private async Task<string?> GetCurrentEmployeeIdAsync(CancellationToken cancellationToken)

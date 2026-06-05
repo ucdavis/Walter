@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 const createUser = (roles: string[]) => ({
   email: 'test@example.com',
   employeeId: '1000',
+  iamId: 'IAM-1000',
   id: 'user-1',
   kerberos: 'testuser',
   name: 'Test User',

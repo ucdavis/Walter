@@ -89,13 +89,14 @@ const setupHandlers = ({
 }: {
   projects: ProjectRecord[];
   reconciliation: ReturnType<typeof discrepancyRecord>[];
-  user: { employeeId: string; name: string; roles: string[] };
+  user: { employeeId: string; iamId: string; name: string; roles: string[] };
 }) => {
   server.use(
     http.get('/api/user/me', () =>
       HttpResponse.json({
         email: `${user.name.toLowerCase()}@example.com`,
         employeeId: user.employeeId,
+        iamId: user.iamId,
         id: 'user-1',
         kerberos: user.name.toLowerCase(),
         name: user.name,
@@ -119,10 +120,15 @@ describe('employee project list — discrepancy icon gating', () => {
     setupHandlers({
       projects,
       reconciliation: [discrepancyRecord('P1')],
-      user: { employeeId: '1000', name: 'PI User', roles: [] },
+      user: {
+        employeeId: '1000',
+        iamId: 'IAM-1000',
+        name: 'PI User',
+        roles: [],
+      },
     });
 
-    const { cleanup } = renderRoute({ initialPath: '/projects/1000' });
+    const { cleanup } = renderRoute({ initialPath: '/projects/IAM-1000' });
 
     try {
       await screen.findByText('Internal Projects');
@@ -133,5 +139,4 @@ describe('employee project list — discrepancy icon gating', () => {
       cleanup();
     }
   });
-
 });

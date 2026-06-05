@@ -161,11 +161,13 @@ public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
     public async Task<IReadOnlyList<SearchablePersonRecord>> SearchPeopleAsync(
         string query, int limit, CancellationToken ct = default)
     {
+        const int MaxSearchPeopleLimit = 100;
         var normalizedQuery = query.Trim();
         if (normalizedQuery.Length < 3 || limit <= 0)
         {
             return Array.Empty<SearchablePersonRecord>();
         }
+        var boundedLimit = Math.Min(limit, MaxSearchPeopleLimit);
 
         const string sql = $"""
             {SearchablePersonSelect}
@@ -196,7 +198,7 @@ public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
             {
                 LikeQuery = $"%{normalizedQuery}%",
                 StartsWithQuery = $"{normalizedQuery}%",
-                Limit = limit,
+                Limit = boundedLimit,
                 ApplicationName = _appName,
             },
             ct: ct);
