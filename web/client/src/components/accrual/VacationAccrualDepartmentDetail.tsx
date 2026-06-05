@@ -548,7 +548,7 @@ export function VacationAccrualDepartmentDetail({
                   to="/accruals"
                 >
                   <ArrowLongLeftIcon className="h-4 w-4" />
-                  College Overview
+                  Department Selector
                 </Link>
                 <div
                   className="relative mt-3 w-fit max-w-full"

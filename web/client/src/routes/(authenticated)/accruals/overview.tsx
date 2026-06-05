@@ -2,17 +2,17 @@ import {
   accrualOverviewQueryOptions,
   useAccrualOverviewQuery,
 } from '@/queries/accrual.ts';
-import { VacationAccrualDepartmentSelector } from '@/components/accrual/VacationAccrualDepartmentSelector.tsx';
+import { VacationAccrualOverview } from '@/components/accrual/VacationAccrualOverview.tsx';
 import { PageError } from '@/components/states/PageError.tsx';
 import { PageLoading } from '@/components/states/PageLoading.tsx';
 import { createFileRoute } from '@tanstack/react-router';
 
-export const Route = createFileRoute('/(authenticated)/accruals/')({
+export const Route = createFileRoute('/(authenticated)/accruals/overview')({
   component: RouteComponent,
   loader: ({ context: { queryClient } }) =>
     queryClient.ensureQueryData(accrualOverviewQueryOptions()),
   pendingComponent: () => (
-    <PageLoading message="Loading vacation accrual departments..." />
+    <PageLoading message="Loading the vacation accrual overview..." />
   ),
 });
 
@@ -25,8 +25,8 @@ function RouteComponent() {
         <div className="container">
           <PageError
             detail={error.message}
-            message="Walter could not load the vacation accrual departments."
-            title="Department selection unavailable"
+            message="Walter could not load the vacation accrual overview."
+            title="Overview unavailable"
           />
         </div>
       </main>
@@ -34,8 +34,8 @@ function RouteComponent() {
   }
 
   if (!data) {
-    return <PageLoading message="Loading vacation accrual departments..." />;
+    return <PageLoading message="Loading the vacation accrual overview..." />;
   }
 
-  return <VacationAccrualDepartmentSelector data={data} />;
+  return <VacationAccrualOverview data={data} />;
 }

@@ -64,7 +64,7 @@ function RouteErrorBoundary({ error, reset }: ErrorComponentProps) {
                 Try again
               </button>
               <Link className="btn btn-outline" to="/accruals">
-                Back to overview
+                Back to departments
               </Link>
             </>
           }

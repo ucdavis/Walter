@@ -28,6 +28,7 @@ import { Route as authenticatedPrincipalInvestigatorsIamIdRouteImport } from './
 import { Route as authenticatedAdminUsersRouteImport } from './routes/(authenticated)/admin/users'
 import { Route as authenticatedAdminNotificationRouteImport } from './routes/(authenticated)/admin/notification'
 import { Route as authenticatedAdminEmailPreviewRouteImport } from './routes/(authenticated)/admin/email-preview'
+import { Route as authenticatedAccrualsOverviewRouteImport } from './routes/(authenticated)/accruals/overview'
 import { Route as authenticatedAccrualsAboutRouteImport } from './routes/(authenticated)/accruals/about'
 import { Route as authenticatedProjectsIamIdRouteRouteImport } from './routes/(authenticated)/projects/$iamId/route'
 import { Route as authenticatedProjectsIamIdIndexRouteImport } from './routes/(authenticated)/projects/$iamId/index'
@@ -139,6 +140,12 @@ const authenticatedAdminEmailPreviewRoute =
     path: '/email-preview',
     getParentRoute: () => authenticatedAdminRouteRoute,
   } as any)
+const authenticatedAccrualsOverviewRoute =
+  authenticatedAccrualsOverviewRouteImport.update({
+    id: '/accruals/overview',
+    path: '/accruals/overview',
+    getParentRoute: () => authenticatedRouteRoute,
+  } as any)
 const authenticatedAccrualsAboutRoute =
   authenticatedAccrualsAboutRouteImport.update({
     id: '/accruals/about',
@@ -209,6 +216,7 @@ export interface FileRoutesByFullPath {
   '/': typeof authenticatedIndexRoute
   '/projects/$iamId': typeof authenticatedProjectsIamIdRouteRouteWithChildren
   '/accruals/about': typeof authenticatedAccrualsAboutRoute
+  '/accruals/overview': typeof authenticatedAccrualsOverviewRoute
   '/admin/email-preview': typeof authenticatedAdminEmailPreviewRoute
   '/admin/notification': typeof authenticatedAdminNotificationRoute
   '/admin/users': typeof authenticatedAdminUsersRoute
@@ -235,6 +243,7 @@ export interface FileRoutesByTo {
   '/styles': typeof authenticatedStylesRoute
   '/': typeof authenticatedIndexRoute
   '/accruals/about': typeof authenticatedAccrualsAboutRoute
+  '/accruals/overview': typeof authenticatedAccrualsOverviewRoute
   '/admin/email-preview': typeof authenticatedAdminEmailPreviewRoute
   '/admin/notification': typeof authenticatedAdminNotificationRoute
   '/admin/users': typeof authenticatedAdminUsersRoute
@@ -266,6 +275,7 @@ export interface FileRoutesById {
   '/(authenticated)/': typeof authenticatedIndexRoute
   '/(authenticated)/projects/$iamId': typeof authenticatedProjectsIamIdRouteRouteWithChildren
   '/(authenticated)/accruals/about': typeof authenticatedAccrualsAboutRoute
+  '/(authenticated)/accruals/overview': typeof authenticatedAccrualsOverviewRoute
   '/(authenticated)/admin/email-preview': typeof authenticatedAdminEmailPreviewRoute
   '/(authenticated)/admin/notification': typeof authenticatedAdminNotificationRoute
   '/(authenticated)/admin/users': typeof authenticatedAdminUsersRoute
@@ -297,6 +307,7 @@ export interface FileRouteTypes {
     | '/'
     | '/projects/$iamId'
     | '/accruals/about'
+    | '/accruals/overview'
     | '/admin/email-preview'
     | '/admin/notification'
     | '/admin/users'
@@ -323,6 +334,7 @@ export interface FileRouteTypes {
     | '/styles'
     | '/'
     | '/accruals/about'
+    | '/accruals/overview'
     | '/admin/email-preview'
     | '/admin/notification'
     | '/admin/users'
@@ -353,6 +365,7 @@ export interface FileRouteTypes {
     | '/(authenticated)/'
     | '/(authenticated)/projects/$iamId'
     | '/(authenticated)/accruals/about'
+    | '/(authenticated)/accruals/overview'
     | '/(authenticated)/admin/email-preview'
     | '/(authenticated)/admin/notification'
     | '/(authenticated)/admin/users'
@@ -510,6 +523,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authenticatedAdminEmailPreviewRouteImport
       parentRoute: typeof authenticatedAdminRouteRoute
     }
+    '/(authenticated)/accruals/overview': {
+      id: '/(authenticated)/accruals/overview'
+      path: '/accruals/overview'
+      fullPath: '/accruals/overview'
+      preLoaderRoute: typeof authenticatedAccrualsOverviewRouteImport
+      parentRoute: typeof authenticatedRouteRoute
+    }
     '/(authenticated)/accruals/about': {
       id: '/(authenticated)/accruals/about'
       path: '/accruals/about'
@@ -662,6 +682,7 @@ interface authenticatedRouteRouteChildren {
   authenticatedStylesRoute: typeof authenticatedStylesRoute
   authenticatedIndexRoute: typeof authenticatedIndexRoute
   authenticatedAccrualsAboutRoute: typeof authenticatedAccrualsAboutRoute
+  authenticatedAccrualsOverviewRoute: typeof authenticatedAccrualsOverviewRoute
   authenticatedPrincipalInvestigatorsIamIdRoute: typeof authenticatedPrincipalInvestigatorsIamIdRoute
   authenticatedAccrualsIndexRoute: typeof authenticatedAccrualsIndexRoute
   authenticatedPrincipalInvestigatorsIndexRoute: typeof authenticatedPrincipalInvestigatorsIndexRoute
@@ -679,6 +700,7 @@ const authenticatedRouteRouteChildren: authenticatedRouteRouteChildren = {
   authenticatedStylesRoute: authenticatedStylesRoute,
   authenticatedIndexRoute: authenticatedIndexRoute,
   authenticatedAccrualsAboutRoute: authenticatedAccrualsAboutRoute,
+  authenticatedAccrualsOverviewRoute: authenticatedAccrualsOverviewRoute,
   authenticatedPrincipalInvestigatorsIamIdRoute:
     authenticatedPrincipalInvestigatorsIamIdRoute,
   authenticatedAccrualsIndexRoute: authenticatedAccrualsIndexRoute,
