@@ -217,11 +217,14 @@ export const glPpmReconciliationQueryOptions = (projectCodes: string[]) => ({
  * Non-blocking hook that fetches reconciliation data and returns a Set of
  * project numbers that have GL/PPM discrepancies (actuals only).
  */
-export function useProjectDiscrepancies(projectCodes: string[]): Set<string> {
-  const { data } = useQuery(glPpmReconciliationQueryOptions(projectCodes));
+export function useProjectDiscrepancyState(projectCodes: string[]) {
+  const query = useQuery(glPpmReconciliationQueryOptions(projectCodes));
 
-  return useMemo(() => {
-    if (!data) return new Set<string>();
+  const discrepancies = useMemo(() => {
+    const data = query.data;
+    if (!data) {
+      return new Set<string>();
+    }
 
     // Sum glActualAmount + ppmBudBal per project,
     // matching the per-row formula on the reconciliation page.
@@ -238,5 +241,16 @@ export function useProjectDiscrepancies(projectCodes: string[]): Set<string> {
       }
     }
     return result;
-  }, [data]);
+  }, [query.data]);
+
+  return {
+    discrepancies,
+    isError: query.isError,
+    isLoading: query.isLoading,
+    isSuccess: query.isSuccess,
+  };
+}
+
+export function useProjectDiscrepancies(projectCodes: string[]): Set<string> {
+  return useProjectDiscrepancyState(projectCodes).discrepancies;
 }

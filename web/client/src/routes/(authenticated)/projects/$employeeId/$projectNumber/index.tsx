@@ -11,7 +11,7 @@ import {
 import {
   type ProjectRecord,
   projectsDetailQueryOptions,
-  useProjectDiscrepancies,
+  useProjectDiscrepancyState,
 } from '@/queries/project.ts';
 
 import { canViewProjectDiscrepancy } from '@/shared/auth/roleAccess.ts';
@@ -57,9 +57,14 @@ function ProjectContent({
     summary.pmEmployeeId,
     user.employeeId
   );
-  const discrepancies = useProjectDiscrepancies(
-    summary.isInternal && canSeeDiscrepancy ? [summary.projectNumber] : []
+  const reconciliationState = useProjectDiscrepancyState(
+    canSeeDiscrepancy ? [summary.projectNumber] : []
   );
+  const reconciliationStatus = reconciliationState.isSuccess
+    ? reconciliationState.discrepancies.has(summary.projectNumber)
+      ? 'discrepancy'
+      : 'balanced'
+    : undefined;
 
   return (
     <main className="flex-1 min-w-0">
@@ -85,9 +90,7 @@ function ProjectContent({
         <div className="mt-6">
           <ProjectAlerts
             employeeId={employeeId}
-            hasReconciliationDiscrepancy={discrepancies.has(
-              summary.projectNumber
-            )}
+            reconciliationStatus={reconciliationStatus}
             summary={summary}
           />
         </div>

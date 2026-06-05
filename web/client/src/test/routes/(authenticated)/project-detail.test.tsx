@@ -277,9 +277,11 @@ describe('project detail page', () => {
 
     const setupDetailHandlers = ({
       projects,
+      reconciliation = discrepantReconciliation,
       user,
     }: {
       projects: ProjectRecord[];
+      reconciliation?: typeof discrepantReconciliation;
       user: { employeeId: string; name: string; roles: string[] };
     }) => {
       server.use(
@@ -301,10 +303,41 @@ describe('project detail page', () => {
         ),
         http.get('/api/project/personnel', () => HttpResponse.json([])),
         http.get('/api/project/gl-ppm-reconciliation', () =>
-          HttpResponse.json(discrepantReconciliation)
+          HttpResponse.json(reconciliation)
         )
       );
     };
+
+    it.each(['Internal', 'Sponsored'])(
+      'shows balanced reconciliation alert for authorized project managers on %s project details',
+      async (projectType) => {
+        const projects = [
+          createProject({ pmEmployeeId: '1000', projectType }),
+        ];
+        setupDetailHandlers({
+          projects,
+          reconciliation: [],
+          user: { employeeId: '1000', name: 'PM User', roles: [] },
+        });
+
+        const { cleanup } = renderRoute({ initialPath: '/projects/1000/P1' });
+
+        try {
+          const message = await screen.findByText(
+            'GL PPM is Balanced, click here to view.'
+          );
+          const alert = message.closest('[role="alert"]');
+
+          expect(alert).toHaveClass('alert-success');
+          expect(message.closest('a')).toHaveAttribute(
+            'href',
+            '/reports/reconciliation/P1'
+          );
+        } finally {
+          cleanup();
+        }
+      }
+    );
 
     it('hides reconciliation alert for PI viewing own internal project', async () => {
       const projects = [
@@ -320,7 +353,10 @@ describe('project detail page', () => {
       try {
         await screen.findByText('Project Number');
         expect(
-          screen.queryByText(/has a GL\/PPM reconciliation discrepancy/i)
+          screen.queryByText(/has a gl\/ppm reconciliation discrepancy/i)
+        ).not.toBeInTheDocument();
+        expect(
+          screen.queryByText(/gl ppm is balanced/i)
         ).not.toBeInTheDocument();
       } finally {
         cleanup();

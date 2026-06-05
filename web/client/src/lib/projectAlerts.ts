@@ -7,8 +7,13 @@ import type { PiWithProjects, ProjectRecord } from '@/queries/project.ts';
 export interface Alert {
   id: string;
   message: string;
-  severity: 'error' | 'warning';
-  type: 'negative-balance' | 'low-budget' | 'ending-soon' | 'reconciliation-issue';
+  severity: 'error' | 'success' | 'warning';
+  type:
+    | 'negative-balance'
+    | 'low-budget'
+    | 'ending-soon'
+    | 'reconciliation-issue'
+    | 'reconciliation-balanced';
 }
 
 /**
@@ -88,7 +93,9 @@ export function getPiProjectAlerts(
 
     for (const [projectNumber, records] of projectMap) {
       const summary = summarizeProjectByNumber(records, projectNumber);
-      if (!summary) continue;
+      if (!summary) {
+        continue;
+      }
 
       const projectAlerts = getAlertsForProject(
         summary,
@@ -137,7 +144,9 @@ export function getProjectListAlerts(
   const alerts: PiProjectAlert[] = [];
   for (const [projectNumber, records] of byNumber) {
     const summary = summarizeProjectByNumber(records, projectNumber);
-    if (!summary) continue;
+    if (!summary) {
+      continue;
+    }
 
     for (const alert of getAlertsForProject(
       summary,
