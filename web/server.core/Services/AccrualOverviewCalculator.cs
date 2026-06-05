@@ -411,7 +411,10 @@ public static class AccrualOverviewCalculator
                 EmployeeName = employee.EmployeeName,
                 LastVacationDate = employee.LastVacationDate,
                 LostCostMonth = employee.LostCostMonth,
-                LostCostYtd = DecimalRound(SumEmployeeLostCost(fiscalYearMonths, employee.EmployeeId)),
+                LostCostYtd = DecimalRound(SumEmployeeLostCost(
+                    fiscalYearMonths,
+                    employee.EmployeeId,
+                    employee.DepartmentCode)),
                 MonthsToCap = employee.MonthsToCap,
                 PctOfCap = employee.PctOfCap,
             })
@@ -497,16 +500,22 @@ public static class AccrualOverviewCalculator
             .Sum(employee => employee.LostCostMonth));
     }
 
-    // Sums fiscal-year lost cost for a single employee across deduplicated monthly snapshots.
+    // Sums fiscal-year lost cost for a single employee within the displayed department.
     private static decimal SumEmployeeLostCost(
         IReadOnlyList<MonthlySnapshot> fiscalYearMonths,
-        string employeeId)
+        string employeeId,
+        string departmentCode)
     {
         return fiscalYearMonths.Sum(month => month.Employees
-            .Where(employee => string.Equals(
-                employee.EmployeeId,
-                employeeId,
-                StringComparison.OrdinalIgnoreCase))
+            .Where(employee =>
+                string.Equals(
+                    employee.EmployeeId,
+                    employeeId,
+                    StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(
+                    employee.DepartmentCode,
+                    departmentCode,
+                    StringComparison.OrdinalIgnoreCase))
             .Sum(employee => employee.LostCostMonth));
     }
 

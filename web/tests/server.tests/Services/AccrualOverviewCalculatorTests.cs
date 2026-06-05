@@ -395,6 +395,46 @@ public sealed class AccrualOverviewCalculatorTests
     }
 
     [Fact]
+    public void BuildDepartmentDetail_scopes_employee_projected_loss_to_current_department()
+    {
+        var records = new List<EmployeeAccrualBalanceRecord>
+        {
+            CreateRecord(
+                employeeId: "E001",
+                employeeName: "Moved,Employee",
+                asOfDate: new DateTime(2025, 7, 31),
+                departmentCode: "030003",
+                department: "PLANT SCIENCES",
+                employeeClassDescription: "Staff: Career",
+                calculatedBal: 240m,
+                accrualLimit: 240m,
+                accrualHours: 10m,
+                accrualPercentage: 100m),
+            CreateRecord(
+                employeeId: "E001",
+                employeeName: "Moved,Employee",
+                asOfDate: new DateTime(2025, 8, 31),
+                departmentCode: "030090",
+                department: "NUTRITION",
+                employeeClassDescription: "Staff: Career",
+                calculatedBal: 240m,
+                accrualLimit: 240m,
+                accrualHours: 10m,
+                accrualPercentage: 100m),
+        };
+
+        var result = AccrualOverviewCalculator.BuildDepartmentDetail(records, "030090");
+
+        result.Should().NotBeNull();
+        result!.LostCostMonth.Should().Be(490.75m);
+        result.LostCostYtd.Should().Be(490.75m);
+        result.Employees.Should().ContainSingle(employee =>
+            employee.EmployeeId == "E001" &&
+            employee.LostCostMonth == 490.75m &&
+            employee.LostCostYtd == 490.75m);
+    }
+
+    [Fact]
     public void BuildDepartmentDetail_carries_forward_department_employee_missing_from_latest_month()
     {
         var records = new List<EmployeeAccrualBalanceRecord>
