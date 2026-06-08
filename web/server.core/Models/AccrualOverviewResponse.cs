@@ -76,6 +76,7 @@ public sealed class AccrualDepartmentEmployeeRow
     public string EmployeeName { get; init; } = string.Empty;
     public DateTime? LastVacationDate { get; init; }
     public decimal LostCostMonth { get; init; }
+    public decimal LostCostYtd { get; init; }
     public int? MonthsToCap { get; init; }
     public decimal PctOfCap { get; init; }
 }

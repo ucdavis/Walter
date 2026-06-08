@@ -17,16 +17,16 @@ interface SearchParams {
 }
 
 export const Route = createFileRoute('/(authenticated)/accruals/about')({
+  component: RouteComponent,
+  errorComponent: RouteErrorBoundary,
   loader: ({ context: { queryClient } }) =>
     queryClient.ensureQueryData(accrualAssumptionsQueryOptions()),
-  errorComponent: RouteErrorBoundary,
   pendingComponent: () => (
     <PageLoading message="Loading accrual assumptions..." />
   ),
   validateSearch: (search: Record<string, unknown>): SearchParams => ({
     departmentCode: (search.departmentCode as string) ?? undefined,
   }),
-  component: RouteComponent,
 });
 
 function RouteComponent() {
@@ -81,7 +81,7 @@ function RouteErrorBoundary({ error, reset }: ErrorComponentProps) {
                   Back to department
                 </Link>
               ) : (
-                <Link className="btn btn-outline" to="/accruals">
+                <Link className="btn btn-outline" to="/accruals/overview">
                   Back to overview
                 </Link>
               )}

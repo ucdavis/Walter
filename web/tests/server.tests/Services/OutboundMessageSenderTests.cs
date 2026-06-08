@@ -50,6 +50,34 @@ public sealed class OutboundMessageSenderTests
     }
 
     [Fact]
+    public async Task ProcessDueAsync_passes_rendered_reply_to_override_to_email_client()
+    {
+        using var ctx = TestDbContextFactory.CreateInMemory();
+        var queue = new OutboundMessageQueue(ctx);
+        var emailClient = new FakeOutboundEmailClient();
+        var sender = new OutboundMessageSender(
+            queue,
+            new CountingOutboundMessageRenderer
+            {
+                ReplyToEmail = "aggieservice@ucdavis.edu",
+                ReplyToName = "AggieService",
+            },
+            emailClient,
+            new OutboundMessageSenderOptions { BatchSize = 500 });
+        var now = new DateTime(2026, 5, 7, 20, 0, 0, DateTimeKind.Utc);
+
+        ctx.OutboundMessages.Add(CreateMessage(now));
+        await ctx.SaveChangesAsync();
+
+        await sender.ProcessDueAsync(now);
+
+        emailClient.Messages.Should().ContainSingle()
+            .Which.Should().Match<OutboundEmailMessage>(message =>
+                message.ReplyToEmail == "aggieservice@ucdavis.edu" &&
+                message.ReplyToName == "AggieService");
+    }
+
+    [Fact]
     public async Task ProcessDueAsync_marks_message_sent_when_token_is_canceled_after_send_succeeds()
     {
         using var ctx = TestDbContextFactory.CreateInMemory();
@@ -377,6 +405,8 @@ public sealed class OutboundMessageSenderTests
     private sealed class CountingOutboundMessageRenderer : IOutboundMessageRenderer
     {
         public int RenderCallCount { get; private set; }
+        public string? ReplyToEmail { get; init; }
+        public string? ReplyToName { get; init; }
 
         public Task<RenderedOutboundMessage> RenderAsync(
             OutboundMessage message,
@@ -386,7 +416,9 @@ public sealed class OutboundMessageSenderTests
             return Task.FromResult(new RenderedOutboundMessage(
                 "subject",
                 "text body",
-                "<p>html body</p>"));
+                "<p>html body</p>",
+                ReplyToEmail,
+                ReplyToName));
         }
     }
 

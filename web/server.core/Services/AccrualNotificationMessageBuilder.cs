@@ -99,6 +99,7 @@ public sealed class AccrualNotificationMessageBuilder
                 EmployeeId = candidate.EmployeeId,
                 EmployeeName = candidate.EmployeeName,
                 LastVacationDate = candidate.LastVacationDate,
+                LostCostMonth = candidate.LostCostMonth,
                 MonthsToCap = candidate.MonthsToCap,
                 PctOfCap = candidate.PctOfCap,
                 SnapshotAsOfDate = candidate.SnapshotAsOfDate,
@@ -213,7 +214,8 @@ public sealed class AccrualNotificationMessageBuilder
         {
             AccrualEmployeeGroup.FacultyAcademic => "accrual.employee.faculty-academic.v1",
             AccrualEmployeeGroup.Staff => "accrual.employee.staff.v1",
-            _ => "accrual.employee.generic.v1",
+            _ => throw new InvalidOperationException(
+                $"Unsupported accrual employee group '{employeeGroup}'."),
         };
     }
 
@@ -279,6 +281,7 @@ public sealed class AccrualEmployeeNotificationPayload
     public decimal CapHours { get; init; }
     public decimal PctOfCap { get; init; }
     public decimal AccrualHoursPerMonth { get; init; }
+    public decimal LostCostMonth { get; init; }
     public int? MonthsToCap { get; init; }
     public DateTime? LastVacationDate { get; init; }
 }

@@ -2,7 +2,6 @@ import {
   ArrowLongLeftIcon,
   CalculatorIcon,
   ChartBarIcon,
-  CurrencyDollarIcon,
   InformationCircleIcon,
 } from '@heroicons/react/24/outline';
 import { Link } from '@tanstack/react-router';
@@ -21,18 +20,6 @@ const percentFormatter = new Intl.NumberFormat('en-US', {
 const compactPercentFormatter = new Intl.NumberFormat('en-US', {
   maximumFractionDigits: 1,
   minimumFractionDigits: 0,
-});
-
-const currencyFormatter = new Intl.NumberFormat('en-US', {
-  currency: 'USD',
-  maximumFractionDigits: 2,
-  minimumFractionDigits: 2,
-  style: 'currency',
-});
-
-const hoursFormatter = new Intl.NumberFormat('en-US', {
-  maximumFractionDigits: 2,
-  minimumFractionDigits: 2,
 });
 
 function AssumptionsTable({
@@ -90,16 +77,6 @@ export function VacationAccrualAbout({
     value: `${compactPercentFormatter.format(row.rate * 100)}% composite benefits load`,
   }));
 
-  const hourlyRateRows: AssumptionRow[] = data.hourlyRates.map((row) => ({
-    label: row.label,
-    value: `${currencyFormatter.format(row.hourlyRate)}/hr`,
-  }));
-
-  const accrualFallbackRows: AssumptionRow[] = data.fallbackAccrualTiers.map((row) => ({
-    label: row.label,
-    value: `${hoursFormatter.format(row.monthlyAccrualHours)} hrs/month`,
-  }));
-
   return (
     <main className="mt-8">
       <div className="container">
@@ -130,7 +107,7 @@ export function VacationAccrualAbout({
                 Back to Department
               </Link>
             ) : (
-              <Link className="btn btn-outline" to="/accruals">
+              <Link className="btn btn-outline" to="/accruals/overview">
                 <ArrowLongLeftIcon className="h-4 w-4" />
                 Back to Overview
               </Link>
@@ -179,37 +156,7 @@ export function VacationAccrualAbout({
             <AssumptionsTable rows={benefitsRows} title="Benefits Loads" />
           </section>
 
-          <section className="grid gap-4 xl:grid-cols-2">
-            <AssumptionsTable
-              rows={hourlyRateRows}
-              title="Hourly Rate Assumptions"
-            />
-            <AssumptionsTable
-              rows={accrualFallbackRows}
-              title="Monthly Accrual Fallback Tiers"
-            />
-          </section>
-
-          <section className="grid gap-4 lg:grid-cols-2">
-            <section className="card bg-base-100 border border-main-border shadow-sm">
-              <div className="card-body gap-4">
-                <div className="flex items-center gap-2 text-sm font-semibold tracking-[0.14em] uppercase text-base-content/60">
-                  <CurrencyDollarIcon className="h-5 w-5 text-secondary" />
-                  <span>Rate Selection</span>
-                </div>
-                <p className="text-sm text-base-content/75">
-                  The report normalizes each employee into a reporting class,
-                  then applies the corresponding hourly-rate bucket. If a class
-                  does not match a configured bucket, the report falls back to
-                  an academic default or a staff default.
-                </p>
-                <p className="text-sm text-base-content/75">
-                  Benefits load is then layered on top of the base hourly rate
-                  using the assumptions shown above.
-                </p>
-              </div>
-            </section>
-
+          <section>
             <section className="card bg-base-100 border border-main-border shadow-sm">
               <div className="card-body gap-4">
                 <div className="flex items-center gap-2 text-sm font-semibold tracking-[0.14em] uppercase text-base-content/60">
@@ -218,9 +165,8 @@ export function VacationAccrualAbout({
                 </div>
                 <p className="text-sm text-base-content/75">
                   Monthly accrual hours come from the latest positive accrual
-                  history when available. If that history is missing or zero,
-                  the report falls back to the cap-based tier table shown on
-                  this page.
+                  history when available. The department detail shows the
+                  employee-level accrual and cap values that drive the report.
                 </p>
                 <p className="text-sm text-base-content/75">
                   Waste rate on the overview is shown as lost cost divided by

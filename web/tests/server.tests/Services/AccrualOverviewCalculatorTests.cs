@@ -336,9 +336,102 @@ public sealed class AccrualOverviewCalculatorTests
         result.Employees[0].MonthsToCap.Should().Be(0);
         result.Employees[0].LastVacationDate.Should().Be(new DateTime(2026, 1, 31));
         result.Employees[0].LostCostMonth.Should().Be(1759.68m);
+        result.Employees[0].LostCostYtd.Should().Be(1759.68m);
         result.Employees[1].EmployeeId.Should().Be("E002");
         result.Employees[1].MonthsToCap.Should().Be(8);
         result.Employees[1].PctOfCap.Should().Be(83.9m);
+        result.Employees[1].LostCostYtd.Should().Be(0m);
+    }
+
+    [Fact]
+    public void BuildDepartmentDetail_sums_employee_projected_loss_from_fiscal_year_start()
+    {
+        var records = new List<EmployeeAccrualBalanceRecord>
+        {
+            CreateRecord(
+                employeeId: "E001",
+                employeeName: "Fiscal,Employee",
+                asOfDate: new DateTime(2025, 6, 30),
+                departmentCode: "030003",
+                department: "PLANT SCIENCES",
+                employeeClassDescription: "Staff: Career",
+                calculatedBal: 240m,
+                accrualLimit: 240m,
+                accrualHours: 10m,
+                accrualPercentage: 100m),
+            CreateRecord(
+                employeeId: "E001",
+                employeeName: "Fiscal,Employee",
+                asOfDate: new DateTime(2025, 7, 31),
+                departmentCode: "030003",
+                department: "PLANT SCIENCES",
+                employeeClassDescription: "Staff: Career",
+                calculatedBal: 240m,
+                accrualLimit: 240m,
+                accrualHours: 10m,
+                accrualPercentage: 100m),
+            CreateRecord(
+                employeeId: "E001",
+                employeeName: "Fiscal,Employee",
+                asOfDate: new DateTime(2025, 8, 31),
+                departmentCode: "030003",
+                department: "PLANT SCIENCES",
+                employeeClassDescription: "Staff: Career",
+                calculatedBal: 240m,
+                accrualLimit: 240m,
+                accrualHours: 10m,
+                accrualPercentage: 100m),
+        };
+
+        var result = AccrualOverviewCalculator.BuildDepartmentDetail(records, "030003");
+
+        result.Should().NotBeNull();
+        result!.LostCostMonth.Should().Be(490.75m);
+        result.LostCostYtd.Should().Be(981.50m);
+        result.Employees.Should().ContainSingle(employee =>
+            employee.EmployeeId == "E001" &&
+            employee.LostCostMonth == 490.75m &&
+            employee.LostCostYtd == 981.50m);
+    }
+
+    [Fact]
+    public void BuildDepartmentDetail_scopes_employee_projected_loss_to_current_department()
+    {
+        var records = new List<EmployeeAccrualBalanceRecord>
+        {
+            CreateRecord(
+                employeeId: "E001",
+                employeeName: "Moved,Employee",
+                asOfDate: new DateTime(2025, 7, 31),
+                departmentCode: "030003",
+                department: "PLANT SCIENCES",
+                employeeClassDescription: "Staff: Career",
+                calculatedBal: 240m,
+                accrualLimit: 240m,
+                accrualHours: 10m,
+                accrualPercentage: 100m),
+            CreateRecord(
+                employeeId: "E001",
+                employeeName: "Moved,Employee",
+                asOfDate: new DateTime(2025, 8, 31),
+                departmentCode: "030090",
+                department: "NUTRITION",
+                employeeClassDescription: "Staff: Career",
+                calculatedBal: 240m,
+                accrualLimit: 240m,
+                accrualHours: 10m,
+                accrualPercentage: 100m),
+        };
+
+        var result = AccrualOverviewCalculator.BuildDepartmentDetail(records, "030090");
+
+        result.Should().NotBeNull();
+        result!.LostCostMonth.Should().Be(490.75m);
+        result.LostCostYtd.Should().Be(490.75m);
+        result.Employees.Should().ContainSingle(employee =>
+            employee.EmployeeId == "E001" &&
+            employee.LostCostMonth == 490.75m &&
+            employee.LostCostYtd == 490.75m);
     }
 
     [Fact]
@@ -464,6 +557,31 @@ public sealed class AccrualOverviewCalculatorTests
     }
 
     [Fact]
+    public void Build_uses_source_hourly_rate_with_existing_benefit_load_for_lost_cost()
+    {
+        var records = new List<EmployeeAccrualBalanceRecord>
+        {
+            CreateRecord(
+                employeeId: "E001",
+                employeeName: "Rate,Employee",
+                asOfDate: new DateTime(2026, 3, 31),
+                departmentCode: "030090",
+                department: "NUTRITION",
+                employeeClassDescription: "Academic: Faculty",
+                calculatedBal: 384m,
+                accrualLimit: 384m,
+                accrualHours: 16m,
+                accrualPercentage: 100m,
+                hourlyRateFTE: 100m),
+        };
+
+        var result = AccrualOverviewCalculator.Build(records);
+
+        result.LostCostMonth.Should().Be(2256m);
+        result.DepartmentBreakdown.Should().ContainSingle(row => row.LostCostMonth == 2256m);
+    }
+
+    [Fact]
     public void BuildNotificationCandidates_returns_one_candidate_per_eligible_latest_employee()
     {
         var records = new List<EmployeeAccrualBalanceRecord>
@@ -544,11 +662,13 @@ public sealed class AccrualOverviewCalculatorTests
         atCap.BalanceHours.Should().Be(384m);
         atCap.CapHours.Should().Be(384m);
         atCap.PctOfCap.Should().Be(100m);
+        atCap.LostCostMonth.Should().Be(1759.68m);
 
         var approaching = result.Single(candidate => candidate.EmployeeId == "E002");
         approaching.Status.Should().Be(AccrualNotificationStatus.ApproachingCap);
         approaching.EmployeeGroup.Should().Be(AccrualEmployeeGroup.Staff);
         approaching.EmployeeEmail.Should().Be("approaching@example.com");
+        approaching.LostCostMonth.Should().Be(0m);
     }
 
     [Fact]
@@ -668,7 +788,7 @@ public sealed class AccrualOverviewCalculatorTests
         result.Should().Contain(candidate =>
             candidate.EmployeeId == "E004" &&
             candidate.Classification == "Mystery Classification" &&
-            candidate.EmployeeGroup == AccrualEmployeeGroup.Generic);
+            candidate.EmployeeGroup == AccrualEmployeeGroup.Staff);
     }
 
     [Fact]
@@ -728,7 +848,8 @@ public sealed class AccrualOverviewCalculatorTests
         decimal accrualPercentage,
         string? employeeName = null,
         string? employeeEmail = null,
-        decimal? hoursTaken = null)
+        decimal? hoursTaken = null,
+        decimal? hourlyRateFTE = null)
     {
         return new EmployeeAccrualBalanceRecord
         {
@@ -741,6 +862,7 @@ public sealed class AccrualOverviewCalculatorTests
             EmployeeEmail = employeeEmail,
             EmployeeId = employeeId,
             EmployeeName = employeeName,
+            HourlyRateFTE = hourlyRateFTE,
             HoursTaken = hoursTaken,
             Level5Dept = departmentCode,
             Level5DeptDesc = department,

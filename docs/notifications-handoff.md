@@ -111,7 +111,6 @@ Razor/MJML rendering is implemented for the current template keys:
 
 - `accrual.employee.faculty-academic.v1`
 - `accrual.employee.staff.v1`
-- `accrual.employee.generic.v1`
 - `accrual.viewer-report.v1`
 
 Rendering is deterministic from `OutboundMessage.PayloadJson`, `TemplateKey`, `TemplateVersion`, and `PayloadVersion`. The renderer does not query accrual source data again during rendering; the queued payload is the durable message contract.

@@ -55,6 +55,7 @@ export interface AccrualDepartmentEmployeeRow {
   employeeName: string;
   lastVacationDate: string | null;
   lostCostMonth: number;
+  lostCostYtd: number;
   monthsToCap: number | null;
   pctOfCap: number;
 }

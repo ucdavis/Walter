@@ -4,56 +4,124 @@
 @{
     Layout = "/Views/Shared/_NotificationLayout_mjml.cshtml";
     var payload = Model.Payload;
-    var balanceHours = AccrualEmailTemplateFormatting.Hours(payload.BalanceHours);
-    var capHours = AccrualEmailTemplateFormatting.Hours(payload.CapHours);
+    var isAtCap = string.Equals(payload.Status, "AtCap", StringComparison.OrdinalIgnoreCase);
+    var balanceHours = AccrualEmailTemplateFormatting.HoursValue(payload.BalanceHours);
+    var capHours = AccrualEmailTemplateFormatting.HoursAbbreviation(payload.CapHours);
     var pctOfCap = AccrualEmailTemplateFormatting.Percent(payload.PctOfCap);
+    var hoursToTake = Math.Max(0m, payload.BalanceHours + payload.AccrualHoursPerMonth - payload.CapHours);
+    var hoursToTakeText = AccrualEmailTemplateFormatting.HoursUnit(hoursToTake);
+    var lostCostMonth = AccrualEmailTemplateFormatting.Currency(payload.LostCostMonth);
+    var lostCostYear = AccrualEmailTemplateFormatting.Currency(payload.LostCostMonth * 12m);
+    var capStatus = isAtCap ? "at maximum" : "near maximum";
+    const string aggieServiceUrl = "https://aggieservice.ucdavis.edu";
     const string trsUrl = "https://trs.ucdavis.edu/timesheet";
 }
 
-<mj-section padding="18px 16px">
+<mj-section padding="34px 34px 16px 34px">
   <mj-column>
-    <mj-text padding="0px 0px 12px 0px">
-      Dear <strong>@Model.GreetingName</strong>,
+    <mj-text padding="0px 0px 10px 0px">
+      Dear @Model.GreetingName,
     </mj-text>
     @if (Model.Variant == AccrualEmployeeNotificationVariant.FacultyAcademic)
     {
-      <mj-text padding="0px 0px 16px 0px">
-        This is an automated notification from the CAES HR Office regarding your vacation accrual balance.
+      <mj-text padding="0px">
+        @if (isAtCap)
+        {
+          <text>As a fiscal year academic appointee, per UC policy (PPSM 2.210), vacation accrual stops entirely once the cap is reached. Your accruals are currently at maximum, and your funding source absorbs the cost of hours you would otherwise earn.</text>
+        }
+        else
+        {
+          <text>As a fiscal year academic appointee, per UC policy (PPSM 2.210), vacation accrual stops entirely once the cap is reached. Your accruals are nearing maximum, and your funding source will absorb the cost of hours you would otherwise earn if the cap is reached.</text>
+        }
       </mj-text>
-      <mj-text padding="0px 0px 16px 0px">
-        As a fiscal year academic appointee, your current vacation balance is @balanceHours, which is @pctOfCap of your maximum accrual cap of @capHours.
-      </mj-text>
-      <mj-text padding="0px 0px 16px 0px">
-        Per UC policy (PPSM 2.210), vacation accrual stops entirely once the cap is reached. We recognize that research and teaching commitments can make scheduling time away challenging, but we strongly encourage you to work with your department chair to identify windows for vacation before your balance reaches the maximum.
-      </mj-text>
-    }
-    else if (Model.Variant == AccrualEmployeeNotificationVariant.Staff)
-    {
-      <mj-text padding="0px 0px 16px 0px">
-        This is an automated notification from the CAES HR Office. Your current vacation accrual balance is @balanceHours, which is @pctOfCap of your maximum accrual cap of @capHours.
-      </mj-text>
-      <mj-text padding="0px 0px 16px 0px">
-        Per UC policy (PPSM 2.210), once your balance reaches the maximum, you will stop accruing vacation hours until your balance falls below the cap. We encourage you to plan and schedule vacation time to avoid losing accrual.
-      </mj-text>
-      <mj-text padding="0px 0px 16px 0px">
-        Please submit your leave request at your earliest convenience:
-      </mj-text>
-      <mj-button href="@trsUrl" padding="0px 0px 22px 0px" align="left">
-        Open TRS Time Reporting &rarr;
-      </mj-button>
     }
     else
     {
-      <mj-text padding="0px 0px 16px 0px">
-        This is an automated notification from the CAES HR Office regarding your vacation accrual balance.
-      </mj-text>
-      <mj-text padding="0px 0px 16px 0px">
-        Your current vacation balance is @balanceHours, which is @pctOfCap of your maximum accrual cap of @capHours.
-      </mj-text>
-      <mj-text padding="0px 0px 16px 0px">
-        Per UC policy (PPSM 2.210), once your balance reaches the maximum, you will stop accruing vacation hours until your balance falls below the cap. We encourage you to plan and schedule vacation time to avoid losing accrual.
+      <mj-text padding="0px">
+        @if (isAtCap)
+        {
+          <text>Per UC policy (PPSM 2.210), your vacation accruals are currently at maximum because your balance has reached the cap. You will not accrue additional hours until your balance falls below the cap.</text>
+        }
+        else
+        {
+          <text>Per UC policy (PPSM 2.210), your vacation accruals are nearing maximum. You will not accrue additional hours once your balance reaches the cap, until your balance falls below the cap.</text>
+        }
       </mj-text>
     }
+  </mj-column>
+</mj-section>
+
+<mj-section padding="0px 34px 22px 34px">
+  <mj-column>
+    <mj-table cellpadding="0" cellspacing="0" role="presentation" padding="0px">
+      <tr>
+        <td style="border:1px solid #dde5ee;border-radius:12px;padding:22px 26px;">
+          <table cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:collapse;width:100%;">
+            <tr>
+              <td style="padding:0 12px 0 0;vertical-align:top;width:25%;">
+                <div style="color:#6b778a;font-size:12px;font-weight:700;letter-spacing:1.2px;line-height:1.4;text-transform:uppercase;">Balance</div>
+                <div style="color:#172033;font-size:30px;font-weight:700;line-height:1.2;margin-top:12px;">@balanceHours</div>
+                <div style="color:#64748b;font-size:16px;line-height:1.5;margin-top:6px;">of @capHours</div>
+              </td>
+              <td style="padding:0 12px;vertical-align:top;width:25%;">
+                <div style="color:#6b778a;font-size:12px;font-weight:700;letter-spacing:1.2px;line-height:1.4;text-transform:uppercase;">% of Cap</div>
+                <div style="color:#dc2626;font-size:30px;font-weight:700;line-height:1.2;margin-top:12px;">@pctOfCap</div>
+                <div style="color:#64748b;font-size:16px;line-height:1.5;margin-top:6px;">@capStatus</div>
+              </td>
+              <td style="padding:0 12px;vertical-align:top;width:25%;">
+                <div style="color:#176b93;font-size:12px;font-weight:700;letter-spacing:1.2px;line-height:1.4;text-transform:uppercase;">Hours to Take</div>
+                <div style="color:#176b93;font-size:30px;font-weight:700;line-height:1.2;margin-top:12px;">@AccrualEmailTemplateFormatting.HoursValue(hoursToTake)</div>
+                <div style="color:#64748b;font-size:16px;line-height:1.5;margin-top:6px;">next month</div>
+              </td>
+              <td style="padding:0 0 0 12px;vertical-align:top;width:25%;">
+                <div style="color:#dc2626;font-size:12px;font-weight:700;letter-spacing:1.2px;line-height:1.4;text-transform:uppercase;">Lost Accrual</div>
+                <div style="color:#dc2626;font-size:30px;font-weight:700;line-height:1.2;margin-top:12px;">@lostCostMonth</div>
+                <div style="color:#64748b;font-size:16px;line-height:1.5;margin-top:6px;">/mo &middot; @lostCostYear/yr</div>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </mj-table>
+  </mj-column>
+</mj-section>
+
+<mj-section padding="0px 34px 24px 34px">
+  <mj-column>
+    <mj-table cellpadding="0" cellspacing="0" role="presentation" padding="0px">
+      <tr>
+        <td style="border:1px solid #dde5ee;border-radius:12px;padding:22px 26px;">
+          <div style="color:#6b778a;font-size:14px;font-weight:700;letter-spacing:1.2px;line-height:1.4;margin-bottom:16px;text-transform:uppercase;">Take Action</div>
+          <div style="background-color:#e7f3f8;border-left:4px solid #1f7899;border-radius:8px;color:#172033;font-size:17px;line-height:1.6;padding:18px 20px;">
+            To stay below your maximum and avoid losing accrual, please plan to use <strong>@hoursToTakeText</strong> of vacation in the coming month.
+          </div>
+          @if (Model.Variant == AccrualEmployeeNotificationVariant.FacultyAcademic)
+          {
+            <div style="margin-top:18px;">
+              <a href="@aggieServiceUrl" style="background-color:#1f7899;border-radius:8px;color:#ffffff;display:inline-block;font-size:16px;font-weight:700;line-height:1.2;padding:16px 22px;text-decoration:none;">Open AggieService &rarr;</a>
+            </div>
+            <div style="border-top:1px solid #dde5ee;color:#172033;font-size:16px;line-height:1.6;margin-top:20px;padding-top:18px;">
+              <strong style="color:#176b93;">Or reply to this email</strong> with the hours and dates you've already taken (e.g., "8 hours on March 17"). Please submit only hours you've taken - not planned hours. Your reply goes directly to AggieService for processing.
+            </div>
+          }
+          else
+          {
+            <div style="margin-top:18px;">
+              <a href="@trsUrl" style="background-color:#1f7899;border-radius:8px;color:#ffffff;display:inline-block;font-size:16px;font-weight:700;line-height:1.2;padding:16px 22px;text-decoration:none;">Open TRS Time Reporting &rarr;</a>
+            </div>
+            <div style="color:#64748b;font-size:15px;line-height:1.5;margin-top:8px;">@trsUrl</div>
+          }
+        </td>
+      </tr>
+    </mj-table>
+  </mj-column>
+</mj-section>
+
+<mj-section padding="0px 34px 34px 34px">
+  <mj-column>
+    <mj-text color="#64748b" padding="0px 0px 18px 0px">
+      You may also donate vacation hours to the Catastrophic Leave program to support a colleague facing a serious illness or injury.
+    </mj-text>
     <mj-text padding="0px">
       Best regards,<br />
       CAES Human Resources

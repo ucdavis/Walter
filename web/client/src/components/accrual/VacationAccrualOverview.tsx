@@ -1,5 +1,6 @@
 import type { ComponentType, MouseEvent, SVGProps } from 'react';
 import {
+  ArrowLongLeftIcon,
   ArrowTrendingDownIcon,
   CalendarDaysIcon,
   ChartBarIcon,
@@ -62,7 +63,7 @@ const departmentCsvColumns = [
   },
   {
     format: 'currency' as const,
-    header: 'Lost Cost YTD',
+    header: 'Lost Cost FYTD',
     key: 'lostCostYtd' as const,
   },
   { header: 'Avg Balance Hours', key: 'avgBalanceHours' as const },
@@ -225,7 +226,7 @@ export function VacationAccrualOverview({
         </span>
       ),
       header: () => (
-        <span className="flex justify-end w-full">Lost Cost YTD</span>
+        <span className="flex justify-end w-full">Lost Cost FYTD</span>
       ),
       size: 170,
     },
@@ -252,6 +253,13 @@ export function VacationAccrualOverview({
         <section className="section-margin">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
+              <Link
+                className="mb-3 inline-flex items-center gap-2 text-sm font-bold text-primary no-underline"
+                to="/accruals"
+              >
+                <ArrowLongLeftIcon className="h-4 w-4" />
+                Department Selector
+              </Link>
               <h1 className="h1">Vacation Accrual Overview</h1>
               <h3 className="subtitle mt-2">
                 {data.totalEmployees.toLocaleString('en-US')} employees across{' '}
@@ -286,7 +294,7 @@ export function VacationAccrualOverview({
                 accentClassName="text-error"
                 description={`${data.ytdMonthCount} fiscal month${data.ytdMonthCount === 1 ? '' : 's'}`}
                 Icon={ChartBarIcon}
-                label="Lost Cost (YTD)"
+                label="Lost Cost (FYTD)"
                 value={formatCurrency(data.lostCostYtd)}
               />
               <SummaryMetric

@@ -153,6 +153,8 @@ public sealed class OutboundMessageSender : IOutboundMessageSender
                     {
                         ToEmail = message.RecipientEmail,
                         ToName = message.RecipientName,
+                        ReplyToEmail = rendered.ReplyToEmail,
+                        ReplyToName = rendered.ReplyToName,
                         Subject = rendered.Subject,
                         TextBody = rendered.TextBody,
                         HtmlBody = rendered.HtmlBody,

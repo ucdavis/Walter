@@ -232,6 +232,7 @@ public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
                 EmployeeEmail,
                 EmployeeClassDescription,
                 PositionNumber,
+                HourlyRateFTE,
                 Level5Dept,
                 Level5DeptDesc,
                 HoursTaken,

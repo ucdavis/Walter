@@ -47,6 +47,74 @@ const mockAccrualAssumptions = {
 };
 
 describe('vacation accrual overview route', () => {
+  it('renders the department selector with departments alphabetized and the overview option last', async () => {
+    server.use(
+      http.get('/api/user/me', () => HttpResponse.json(mockUser)),
+      http.get('/api/accrual/overview', () =>
+        HttpResponse.json({
+          approachingCapCount: 7,
+          asOfDate: '2026-03-31T00:00:00',
+          atCapCount: 3,
+          departmentBreakdown: [
+            {
+              approachingCapCount: 4,
+              atCapCount: 2,
+              avgBalanceHours: 178,
+              department: 'PLANT SCIENCES',
+              departmentCode: '030003',
+              headcount: 21,
+              lostCostMonth: 2_496,
+              lostCostYtd: 22_464,
+            },
+            {
+              approachingCapCount: 3,
+              atCapCount: 1,
+              avgBalanceHours: 143,
+              department: 'NUTRITION',
+              departmentCode: '030090',
+              headcount: 12,
+              lostCostMonth: 1_321,
+              lostCostYtd: 11_889,
+            },
+          ],
+          employeeStatusOverTime: [],
+          lostCostMonth: 3_817,
+          lostCostYtd: 34_353,
+          monthlyLostCost: [],
+          totalDepartments: 2,
+          totalEmployees: 33,
+          wasteRate: 3.1,
+          ytdMonthCount: 9,
+        })
+      )
+    );
+
+    const { cleanup } = renderRoute({ initialPath: '/accruals' });
+
+    try {
+      expect(
+        await screen.findByRole('heading', { name: 'Select a Department' })
+      ).toBeInTheDocument();
+
+      const selector = screen
+        .getByRole('heading', { name: 'Select a Department' })
+        .closest('section');
+      expect(selector).not.toBeNull();
+
+      const links = within(selector!).getAllByRole('link');
+      expect(links.map((link) => link.textContent)).toEqual([
+        expect.stringContaining('NUTRITION'),
+        expect.stringContaining('PLANT SCIENCES'),
+        expect.stringContaining('All departments overview'),
+      ]);
+      expect(links[0]).toHaveAttribute('href', '/accruals/department/030090');
+      expect(links[1]).toHaveAttribute('href', '/accruals/department/030003');
+      expect(links[2]).toHaveAttribute('href', '/accruals/overview');
+    } finally {
+      cleanup();
+    }
+  });
+
   it('renders the college overview cards, charts, and table', async () => {
     server.use(
       http.get('/api/user/me', () => HttpResponse.json(mockUser)),
@@ -115,7 +183,7 @@ describe('vacation accrual overview route', () => {
       ),
     );
 
-    const { cleanup } = renderRoute({ initialPath: '/accruals' });
+    const { cleanup } = renderRoute({ initialPath: '/accruals/overview' });
 
     try {
       expect(
@@ -129,6 +197,9 @@ describe('vacation accrual overview route', () => {
       expect(screen.getByText('CAES Total')).toBeInTheDocument();
       expect(screen.getAllByText('$3,817.00')).toHaveLength(2);
       expect(screen.getByText('3.1%')).toBeInTheDocument();
+      expect(
+        screen.getByRole('link', { name: 'Department Selector' })
+      ).toHaveAttribute('href', '/accruals');
       expect(
         screen.getByRole('link', { name: 'About this report' })
       ).toHaveAttribute('href', '/accruals/about');
@@ -159,11 +230,15 @@ describe('vacation accrual overview route', () => {
       expect(
         screen.getByText('51% composite benefits load')
       ).toBeInTheDocument();
-      expect(screen.getByText('$78.00/hr')).toBeInTheDocument();
-      expect(screen.getByText('14.67 hrs/month')).toBeInTheDocument();
+      expect(
+        screen.queryByText('Hourly Rate Assumptions')
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByText('Monthly Accrual Fallback Tiers')
+      ).not.toBeInTheDocument();
       expect(
         screen.getByRole('link', { name: /Back to Overview/i })
-      ).toHaveAttribute('href', '/accruals');
+      ).toHaveAttribute('href', '/accruals/overview');
     } finally {
       cleanup();
     }
@@ -194,7 +269,7 @@ describe('vacation accrual overview route', () => {
       expect(screen.getByText('Assumptions unavailable')).toBeInTheDocument();
       expect(
         screen.getByRole('link', { name: /Back to overview/i })
-      ).toHaveAttribute('href', '/accruals');
+      ).toHaveAttribute('href', '/accruals/overview');
     } finally {
       cleanup();
     }
@@ -294,7 +369,7 @@ describe('vacation accrual overview route', () => {
       })
     );
 
-    const { cleanup } = renderRoute({ initialPath: '/accruals' });
+    const { cleanup } = renderRoute({ initialPath: '/accruals/overview' });
 
     try {
       const departmentCell = await screen.findByText('PLANT SCIENCES');
@@ -304,8 +379,8 @@ describe('vacation accrual overview route', () => {
       await user.click(departmentRow!);
 
       expect(
-        await screen.findByRole('link', { name: /College Overview/i })
-      ).toBeInTheDocument();
+        await screen.findByRole('link', { name: 'Department Selector' })
+      ).toHaveAttribute('href', '/accruals');
       expect(
         screen.getByRole('button', { name: /department: plant sciences/i })
       ).toBeInTheDocument();
@@ -484,7 +559,7 @@ describe('vacation accrual overview route', () => {
       })
     );
 
-    const { cleanup } = renderRoute({ initialPath: '/accruals' });
+    const { cleanup } = renderRoute({ initialPath: '/accruals/overview' });
 
     try {
       const departmentCell = await screen.findByText('PLANT SCIENCES');

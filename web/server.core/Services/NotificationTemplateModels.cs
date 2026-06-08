@@ -13,6 +13,7 @@ public abstract class NotificationTemplateModelBase
     public string? AppHomeUrl { get; init; } = DefaultAppHomeUrl;
     public string ButtonText { get; init; } = string.Empty;
     public string ButtonUrl { get; init; } = string.Empty;
+    public string AutomaticFooterText { get; init; } = "This email was automatically generated. Please do not reply to it.";
     public string? LogoUrl { get; init; } = DefaultLogoUrl;
     public string? LayoutWidth { get; init; }
     public string? UniversityHomeUrl { get; init; } = DefaultUniversityHomeUrl;
@@ -35,7 +36,6 @@ public enum AccrualEmployeeNotificationVariant
 {
     FacultyAcademic,
     Staff,
-    Generic,
 }
 
 public sealed class AccrualEmployeeNotificationTemplateModel : NotificationTemplateModelBase
@@ -60,6 +60,23 @@ public static class AccrualEmailTemplateFormatting
     public static string Hours(decimal value)
     {
         return $"{value:N1} hours";
+    }
+
+    public static string HoursValue(decimal value)
+    {
+        return decimal.Remainder(value, 1m) == 0m
+            ? value.ToString("N0", System.Globalization.CultureInfo.InvariantCulture)
+            : value.ToString("N1", System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    public static string HoursUnit(decimal value)
+    {
+        return $"{HoursValue(value)} {(value == 1m ? "hour" : "hours")}";
+    }
+
+    public static string HoursAbbreviation(decimal value)
+    {
+        return $"{HoursValue(value)} hrs";
     }
 
     public static string Percent(decimal value)
