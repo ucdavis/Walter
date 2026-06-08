@@ -3,12 +3,16 @@ import { getAlertsForProject, type Alert } from '@/lib/projectAlerts.ts';
 import type { ProjectSummary } from '@/lib/projectSummary.ts';
 import {
   CalendarIcon,
+  CheckCircleIcon,
   ExclamationCircleIcon,
   ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline';
 import { Link } from '@tanstack/react-router';
 
 function AlertIcon({ type }: { type: Alert['type'] }) {
+  if (type === 'reconciliation-balanced') {
+    return <CheckCircleIcon className="h-5 w-5" />;
+  }
   if (type === 'ending-soon') {
     return <CalendarIcon className="h-5 w-5" />;
   }
@@ -16,6 +20,10 @@ function AlertIcon({ type }: { type: Alert['type'] }) {
     return <ExclamationCircleIcon className="h-5 w-5" />;
   }
   return <ExclamationTriangleIcon className="h-5 w-5" />;
+}
+
+function isReconciliationAlert(type: Alert['type']) {
+  return type === 'reconciliation-issue' || type === 'reconciliation-balanced';
 }
 
 interface AlertCardProps {
@@ -39,8 +47,7 @@ export function AlertCard({ alert, balance, linkParams }: AlertCardProps) {
   );
 
   if (linkParams) {
-    // Link to reconciliation page for reconciliation alerts
-    if (alert.type === 'reconciliation-issue') {
+    if (isReconciliationAlert(alert.type)) {
       return (
         <Link
           className={`alert alert-${alert.severity} alert-soft`}
@@ -73,26 +80,35 @@ export function AlertCard({ alert, balance, linkParams }: AlertCardProps) {
 }
 
 interface ProjectAlertsProps {
-  hasReconciliationDiscrepancy?: boolean;
   iamId?: string;
   prefix?: string;
+  reconciliationStatus?: 'balanced' | 'discrepancy';
   summary: ProjectSummary;
 }
 
 export function ProjectAlerts({
-  hasReconciliationDiscrepancy,
   iamId,
   prefix,
+  reconciliationStatus,
   summary,
 }: ProjectAlertsProps) {
   const alerts = getAlertsForProject(summary, prefix);
 
-  if (hasReconciliationDiscrepancy) {
+  if (reconciliationStatus === 'discrepancy') {
     alerts.push({
       id: `reconciliation-issue-${summary.projectNumber}`,
-      message: `${prefix ?? 'This project '}has a GL/PPM reconciliation discrepancy`,
+      message: `${prefix ?? 'This project '}has a GL/PPM reconciliation discrepancy. Click here to view details.`,
       severity: 'warning',
       type: 'reconciliation-issue',
+    });
+  }
+
+  if (reconciliationStatus === 'balanced') {
+    alerts.push({
+      id: `reconciliation-balanced-${summary.projectNumber}`,
+      message: `${prefix ?? ''}GL/PPM is Balanced. Click here to view.`,
+      severity: 'success',
+      type: 'reconciliation-balanced',
     });
   }
 

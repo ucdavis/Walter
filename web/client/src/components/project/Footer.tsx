@@ -18,7 +18,19 @@ const Footer: React.FC = () => {
         </div>
 
         {/* Right */}
-        <div className="flex-1" />
+        <div className="flex-1 flex justify-end">
+          <a
+            href="https://ucdavis.edu"
+            rel="noopener noreferrer"
+            target="_blank"
+          >
+            <img
+              alt="UC Davis"
+              className="h-5 w-auto max-w-[116px] sm:h-6 opacity-55"
+              src="/ucdavis.svg"
+            />
+          </a>
+        </div>
       </div>
     </footer>
   );
