@@ -97,7 +97,7 @@ export function ProjectAlerts({
   if (reconciliationStatus === 'discrepancy') {
     alerts.push({
       id: `reconciliation-issue-${summary.projectNumber}`,
-      message: `${prefix ?? 'This project '}has a GL/PPM reconciliation discrepancy click here to view details.`,
+      message: `${prefix ?? 'This project '}has a GL/PPM reconciliation discrepancy. Click here to view details.`,
       severity: 'warning',
       type: 'reconciliation-issue',
     });
