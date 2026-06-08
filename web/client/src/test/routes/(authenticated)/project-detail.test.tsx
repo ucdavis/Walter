@@ -339,7 +339,7 @@ describe('project detail page', () => {
           ).toBeInTheDocument();
 
           const message = await screen.findByText(
-            'GL/PPM is Balanced, click here to view.',
+            'GL/PPM is Balanced. Click here to view.',
             {},
             { timeout: 3000 }
           );
