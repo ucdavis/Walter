@@ -233,18 +233,12 @@ export function useProjectDiscrepancyState(projectCodes: string[]) {
       return new Set<string>();
     }
 
-    // Sum glActualAmount + ppmBudBal per project,
+    // Flag a project if any chart string row is out of balance,
     // matching the per-row formula on the reconciliation page.
-    const byProject = new Map<string, number>();
-    for (const r of data) {
-      const diff = r.glActualAmount + r.ppmBudBal;
-      byProject.set(r.project, (byProject.get(r.project) ?? 0) + diff);
-    }
-
     const result = new Set<string>();
-    for (const [project, total] of byProject) {
-      if (Math.abs(total) > 0.005) {
-        result.add(project);
+    for (const r of data) {
+      if (Math.abs(r.glActualAmount + r.ppmBudBal) > 0.005) {
+        result.add(r.project);
       }
     }
     return result;
