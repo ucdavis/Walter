@@ -80,14 +80,11 @@ export function VacationAccrualAbout({
   return (
     <main className="mt-8">
       <div className="container">
-        <div className="mx-auto max-w-6xl space-y-8">
+        <div className="mx-auto space-y-8">
           <section className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div className="space-y-3">
-              <div className="badge badge-outline badge-primary">
-                Vacation Accruals
-              </div>
               <div className="space-y-2">
-                <h1 className="h1">About This Report</h1>
+                <h1 className="h1">About This Vacation Accrual Reports</h1>
                 <p className="max-w-3xl text-lg text-base-content/70">
                   This page summarizes the current assumptions behind the
                   vacation accrual overview, with a focus on how estimated lost

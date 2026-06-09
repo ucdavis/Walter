@@ -90,13 +90,6 @@ export function VacationAccrualDepartmentSelector({
 
   const departments = sortDepartments(data.departmentBreakdown);
   const departmentRows: DepartmentSelectorRow[] = [
-    {
-      department: 'View All',
-      departmentCode: '',
-      employees: data.totalEmployees,
-      kind: 'overview',
-      subtitle: 'All departments overview',
-    },
     ...departments.map((department) => ({
       department: department.department,
       departmentCode: department.departmentCode,
@@ -104,12 +97,19 @@ export function VacationAccrualDepartmentSelector({
       kind: 'department' as const,
       subtitle: department.departmentCode,
     })),
+    {
+      department: 'View All',
+      departmentCode: '',
+      employees: data.totalEmployees,
+      kind: 'overview',
+      subtitle: 'All departments overview',
+    },
   ];
 
   return (
     <main className="mt-8">
       <div className="container">
-        <div className="mx-auto max-w-5xl">
+        <div className="mx-auto">
           <section className="section-margin">
             <div className="space-y-2">
               <h1 className="h1">Vacation accruals</h1>
@@ -125,7 +125,11 @@ export function VacationAccrualDepartmentSelector({
                 defaultColumnSize={220}
                 filterPlaceholder="Search departments..."
                 globalFilter="left"
-                initialState={{ pagination: { pageSize: 25 } }}
+                initialState={{
+                  pagination: {
+                    pageSize: departmentRows.length,
+                  },
+                }}
                 tableClassName="table-cardgrid"
               />
             </div>
