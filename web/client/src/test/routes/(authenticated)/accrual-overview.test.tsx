@@ -47,7 +47,7 @@ const mockAccrualAssumptions = {
 };
 
 describe('vacation accrual overview route', () => {
-  it('renders the department selector with departments alphabetized and the overview option last', async () => {
+  it('renders the department selector cards with View All first and departments alphabetized', async () => {
     server.use(
       http.get('/api/user/me', () => HttpResponse.json(mockUser)),
       http.get('/api/accrual/overview', () =>
@@ -95,7 +95,7 @@ describe('vacation accrual overview route', () => {
       expect(await screen.findByText('View All')).toBeInTheDocument();
 
       const selector = screen
-        .getByRole('heading', { name: 'Select a Department' })
+        .getByRole('heading', { name: 'Vacation accruals' })
         .closest('section');
       expect(selector).not.toBeNull();
 
