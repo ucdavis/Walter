@@ -134,6 +134,7 @@ function DistributionSubtable({
         <colgroup>
           <col className="walter-subtable-col-primary" />
           <col className="walter-subtable-col-secondary" />
+          <col className="walter-subtable-col-secondary" />
           <col className="walter-subtable-col-equal" />
           <col className="walter-subtable-col-equal" />
           <col className="walter-subtable-col-equal" />
@@ -143,6 +144,7 @@ function DistributionSubtable({
         <thead>
           <tr>
             <th>Project</th>
+            <th>Task</th>
             <th>
               <span className="flex justify-end w-full">
                 <TooltipLabel
@@ -185,6 +187,11 @@ function DistributionSubtable({
                 >
                   {dist.record.projectDescription}
                 </span>
+              </td>
+              <td className="text-sm">
+                {dist.record.projectType === 'Internal'
+                  ? safeText(dist.record.task)
+                  : '—'}
               </td>
               <td className="text-right text-sm">
                 {dist.record.distributionPercent}%
@@ -237,6 +244,10 @@ function getExportData(positions: AggregatedPosition[]) {
       positionDescription: pos.positionDescription,
       positionNumber: pos.positionNumber,
       projectDescription: dist.record.projectDescription,
+      task:
+        dist.record.projectType === 'Internal'
+          ? safeText(dist.record.task)
+          : '',
     }))
   );
 }
@@ -248,6 +259,7 @@ const personnelCsvColumns = [
   { header: 'Job Code', key: 'jobCode' as const },
   { header: 'FTE', key: 'fte' as const },
   { header: 'Project', key: 'projectDescription' as const },
+  { header: 'Task', key: 'task' as const },
   { header: 'Dist %', key: 'distributionPercent' as const },
   {
     format: 'date' as const,
