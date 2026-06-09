@@ -282,6 +282,7 @@ BEGIN
             pb.PROJECT_ID,
             pn.DESCRIPTION AS PROJECT_DESCRIPTION,
             pb.TASK,
+            fp.ProjectType AS PROJECT_TYPE,
             pb.FUND_CODE,
             pb.PROGRAM_CODE,
             pb.PURPOSE,
@@ -308,6 +309,13 @@ BEGIN
         FROM #PositionBudgets pb
         LEFT JOIN #ProjectNames pn ON pb.PROJECT_ID = pn.CODE
         LEFT JOIN dbo.CompositeBenefitRates cbr ON pb.JOBCODE = cbr.JobCode
+        -- ProjectType is a project-level attribute; collapse the per-task/fund portfolio rows
+        -- to one row per project so the join cannot multiply funding distributions.
+        LEFT JOIN (
+            SELECT ProjectNumber, MAX(ProjectType) AS ProjectType
+            FROM dbo.FacultyDeptPortfolio
+            GROUP BY ProjectNumber
+        ) fp ON pb.PROJECT_ID = fp.ProjectNumber
         ORDER BY pb.POSITION_NBR;
 
         SET @RowCount = @@ROWCOUNT;
