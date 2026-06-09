@@ -92,9 +92,7 @@ describe('vacation accrual overview route', () => {
     const { cleanup } = renderRoute({ initialPath: '/accruals' });
 
     try {
-      expect(
-        await screen.findByRole('heading', { name: 'Select a Department' })
-      ).toBeInTheDocument();
+      expect(await screen.findByText('View All')).toBeInTheDocument();
 
       const selector = screen
         .getByRole('heading', { name: 'Select a Department' })
@@ -103,13 +101,18 @@ describe('vacation accrual overview route', () => {
 
       const links = within(selector!).getAllByRole('link');
       expect(links.map((link) => link.textContent)).toEqual([
+        expect.stringContaining('View All'),
         expect.stringContaining('NUTRITION'),
         expect.stringContaining('PLANT SCIENCES'),
-        expect.stringContaining('All departments overview'),
       ]);
-      expect(links[0]).toHaveAttribute('href', '/accruals/department/030090');
-      expect(links[1]).toHaveAttribute('href', '/accruals/department/030003');
-      expect(links[2]).toHaveAttribute('href', '/accruals/overview');
+      expect(links[0]).toHaveTextContent('33 employees');
+      expect(links[1]).toHaveTextContent('12 employees');
+      expect(links[2]).toHaveTextContent('21 employees');
+      expect(links[1]).toHaveTextContent('030090');
+      expect(links[1]).not.toHaveTextContent('Department 030090');
+      expect(links[0]).toHaveAttribute('href', '/accruals/overview');
+      expect(links[1]).toHaveAttribute('href', '/accruals/department/030090');
+      expect(links[2]).toHaveAttribute('href', '/accruals/department/030003');
     } finally {
       cleanup();
     }
