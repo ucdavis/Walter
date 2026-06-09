@@ -84,7 +84,7 @@ export function VacationAccrualAbout({
           <section className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div className="space-y-3">
               <div className="space-y-2">
-                <h1 className="h1">About This Vacation Accrual Reports</h1>
+                <h1 className="h1">About This Vacation Accrual Report</h1>
                 <p className="max-w-3xl text-lg text-base-content/70">
                   This page summarizes the current assumptions behind the
                   vacation accrual overview, with a focus on how estimated lost

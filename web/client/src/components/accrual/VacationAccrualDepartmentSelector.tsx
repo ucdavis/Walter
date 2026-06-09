@@ -48,7 +48,7 @@ const departmentColumns: ColumnDef<DepartmentSelectorRow>[] = [
       const content = (
         <span className="flex min-h-28 flex-col justify-between gap-4">
           <span className="space-y-1">
-            <span className="block text-sm text-base-content/60">
+            <span className="block text-sm text-base-content/70">
               {row.subtitle}
             </span>
             <span className="block font-proxima-bold text-lg leading-tight">
