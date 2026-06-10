@@ -55,6 +55,7 @@ const createProject = (
   fundCode: 'FUND1',
   fundDesc: 'Federal',
   grantAdministrator: null,
+  ownerName: null,
   pa: null,
   pi: 'PI Name',
   pm: null,
@@ -81,7 +82,6 @@ const createProject = (
   taskName: 'Task 1',
   taskNum: 'T001',
   taskStatus: 'Active',
-  ownerName: null,
   ...overrides,
 });
 
@@ -91,6 +91,7 @@ describe('TaskBreakdown', () => {
     render(
       <TaskBreakdown
         iamId="1000000123"
+        isInternal={false}
         projectNumber="P1"
         records={[createProject()]}
       />
@@ -118,6 +119,7 @@ describe('TaskBreakdown', () => {
     render(
       <TaskBreakdown
         iamId="1000000123"
+        isInternal={false}
         projectNumber="P1"
         records={[createProject()]}
       />
@@ -138,10 +140,45 @@ describe('TaskBreakdown', () => {
     );
   });
 
+  it('links each task to Finjector for internal projects', () => {
+    render(
+      <TaskBreakdown
+        iamId="1000000123"
+        isInternal={true}
+        projectNumber="P1"
+        records={[createProject({ taskNum: 'T001' })]}
+      />
+    );
+
+    const link = screen.getByRole('link', { name: /T001/ });
+    expect(link).toHaveAttribute(
+      'href',
+      'https://finjector.ucdavis.edu/details/P1-T001-ORG001-522201/'
+    );
+    expect(link).toHaveAttribute('target', '_blank');
+  });
+
+  it('does not link tasks to Finjector for sponsored projects', () => {
+    render(
+      <TaskBreakdown
+        iamId="1000000123"
+        isInternal={false}
+        projectNumber="P1"
+        records={[createProject({ taskNum: 'T001' })]}
+      />
+    );
+
+    expect(
+      screen.queryByRole('link', { name: /T001/ })
+    ).not.toBeInTheDocument();
+    expect(screen.getByText('T001')).toBeInTheDocument();
+  });
+
   it('shows the filtered export action only when a search filter is active', () => {
     render(
       <TaskBreakdown
         iamId="1000000123"
+        isInternal={false}
         projectNumber="P1"
         records={[
           createProject({
@@ -180,6 +217,7 @@ describe('TaskBreakdown', () => {
     render(
       <TaskBreakdown
         iamId="1000000123"
+        isInternal={false}
         projectNumber="P1"
         records={[
           createProject({

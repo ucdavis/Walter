@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { createColumnHelper } from '@tanstack/react-table';
+import { FinjectorLink } from '@/components/project/FinjectorLink.tsx';
 import { TableExportActions } from '@/components/TableExportActions.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import type { ProjectRecord } from '@/queries/project.ts';
@@ -87,6 +88,8 @@ const csvColumns = [
 
 interface TaskBreakdownProps {
   iamId: string;
+  /** Internal projects link each task to Finjector; sponsored projects link at the project level instead. */
+  isInternal: boolean;
   projectNumber: string;
   records: ProjectRecord[];
 }
@@ -95,7 +98,12 @@ function isClosedTask(row: TaskBreakdownRow): boolean {
   return row.taskStatus === 'Inactive';
 }
 
-export function TaskBreakdown({ iamId, projectNumber, records }: TaskBreakdownProps) {
+export function TaskBreakdown({
+  iamId,
+  isInternal,
+  projectNumber,
+  records,
+}: TaskBreakdownProps) {
   const [showClosed, setShowClosed] = useState(false);
   const allRows = useMemo(() => buildRows(records), [records]);
   const closedCount = useMemo(() => allRows.filter(isClosedTask).length, [allRows]);
@@ -123,7 +131,19 @@ export function TaskBreakdown({ iamId, projectNumber, records }: TaskBreakdownPr
       columnHelper.accessor('taskNum', {
         cell: (info) => (
           <div>
-            <div>{info.getValue()}</div>
+            <div>
+              {isInternal ? (
+                <FinjectorLink
+                  org={info.row.original.financialDepartmentCode}
+                  project={projectNumber}
+                  task={info.getValue()}
+                >
+                  {info.getValue()}
+                </FinjectorLink>
+              ) : (
+                info.getValue()
+              )}
+            </div>
             {info.row.original.taskName && (
               <div className="text-xs text-base-content/80">
                 {info.row.original.taskName}
@@ -254,7 +274,7 @@ export function TaskBreakdown({ iamId, projectNumber, records }: TaskBreakdownPr
         id: 'detailsLink',
       }),
     ],
-    [iamId, projectNumber, totals.balance, totals.budget, totals.commitments, totals.expenses]
+    [iamId, isInternal, projectNumber, totals.balance, totals.budget, totals.commitments, totals.expenses]
   );
 
   if (allRows.length === 0) {
