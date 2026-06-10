@@ -124,7 +124,9 @@ stages:
               & $sqlPackage /Action:Publish `
                 /SourceFile:$dacpac `
                 /TargetConnectionString:$connectionString `
-                /p:IncludeCompositeObjects=true
+                /p:IncludeCompositeObjects=true `
+                /p:DropObjectsNotInSource=true `
+                /p:DoNotDropObjectTypes="Users;Logins;RoleMembership;Permissions"
 
               if ($LASTEXITCODE -ne 0) {
                 Write-Error "Deployment failed"
@@ -167,7 +169,9 @@ stages:
                 /SourceFile:$dacpac `
                 /TargetConnectionString:$connectionString `
                 /OutputPath:$outputScript `
-                /p:IncludeCompositeObjects=true
+                /p:IncludeCompositeObjects=true `
+                /p:DropObjectsNotInSource=true `
+                /p:DoNotDropObjectTypes="Users;Logins;RoleMembership;Permissions"
 
               if ($LASTEXITCODE -ne 0) {
                 Write-Error "Script generation failed"
@@ -219,7 +223,9 @@ stages:
                     & $sqlPackage /Action:Publish `
                       /SourceFile:$dacpac `
                       /TargetConnectionString:$connectionString `
-                      /p:IncludeCompositeObjects=true
+                      /p:IncludeCompositeObjects=true `
+                      /p:DropObjectsNotInSource=true `
+                      /p:DoNotDropObjectTypes="Users;Logins;RoleMembership;Permissions"
 
                     if ($LASTEXITCODE -ne 0) {
                       Write-Error "Production deployment failed"
