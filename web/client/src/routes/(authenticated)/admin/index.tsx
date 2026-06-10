@@ -35,14 +35,14 @@ function RouteComponent() {
             <div>
               <dt className="stat-label">Current Role</dt>
               <dd className="stat-value">{currentRole}</dd>
-              <dd className="mt-2 text-sm text-dark-font/70">
+              <dd className="mt-2 text-sm text-base-content/70">
                 Access is determined by role assignments from the user profile.
               </dd>
             </div>
             <div>
               <dt className="stat-label">Dashboard</dt>
               <dd className="stat-value">Enabled</dd>
-              <dd className="mt-2 text-sm text-dark-font/70">
+              <dd className="mt-2 text-sm text-base-content/70">
                 You can access administrative dashboard pages.
               </dd>
             </div>
@@ -51,7 +51,7 @@ function RouteComponent() {
               <dd className="stat-value">
                 {showUsersPageLink ? 'Enabled' : 'Not enabled'}
               </dd>
-              <dd className="mt-2 text-sm text-dark-font/70">
+              <dd className="mt-2 text-sm text-base-content/70">
                 Managers can access the admin users page.
               </dd>
             </div>
@@ -71,7 +71,10 @@ function RouteComponent() {
                 <MegaphoneIcon className="w-4 h-4" />
                 Site Notification
               </Link>
-              <Link className="btn btn-primary btn-lg" to="/admin/email-preview">
+              <Link
+                className="btn btn-primary btn-lg"
+                to="/admin/email-preview"
+              >
                 <EnvelopeIcon className="w-4 h-4" />
                 Email Preview
               </Link>

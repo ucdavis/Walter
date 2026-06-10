@@ -6,7 +6,7 @@ const Footer: React.FC = () => {
       <div className="container flex items-center justify-between">
         {/* Left */}
         <div className="flex-1 flex items-center">
-          <p className="text-sm text-dark-font/80">
+          <p className="text-sm text-base-content/70">
             © {new Date().getFullYear()} UC Regents, Davis campus. All rights
             reserved.
           </p>
@@ -14,7 +14,7 @@ const Footer: React.FC = () => {
 
         {/* Center */}
         <div className="flex-1 flex justify-center">
-          <WalterLogo className="w-8 h-8 text-dark-font/80" />
+          <WalterLogo className="w-8 h-8 text-base-content/70" />
         </div>
 
         {/* Right */}

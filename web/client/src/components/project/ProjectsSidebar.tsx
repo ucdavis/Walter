@@ -27,7 +27,7 @@ interface ProjectSummary {
 function normalizeSearchValue(value: string): string {
   return value
     .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, '')
+    .replaceAll(/\p{Diacritic}/gu, '')
     .toLowerCase()
     .trim();
 }
@@ -175,7 +175,7 @@ export function ProjectsSidebar() {
               {!collapsed && (
                 <div className="px-4 py-1">
                   <div className="relative">
-                    <MagnifyingGlassIcon className="w-4 h-4 absolute left-0 top-1/2 -translate-y-1/2 pointer-events-none text-dark-font/55" />
+                    <MagnifyingGlassIcon className="w-4 h-4 absolute left-0 top-1/2 -translate-y-1/2 pointer-events-none text-base-content/55" />
 
                     <input
                       aria-label="Search projects"
@@ -212,7 +212,7 @@ export function ProjectsSidebar() {
               >
                 {collapsed ? (
                   <div className="flex items-center justify-center py-2">
-                    <HomeIcon className="w-5 h-5 text-dark-font/70" />
+                    <HomeIcon className="w-5 h-5 text-base-content/70" />
                     <span className="sr-only">All Projects</span>
                   </div>
                 ) : (
@@ -220,7 +220,7 @@ export function ProjectsSidebar() {
                     <div className="flex justify-between items-start mb-1">
                       <span className="text-base">All Projects</span>
                     </div>
-                    <div className="flex justify-between text-sm items-center text-dark-font/70">
+                    <div className="flex justify-between text-sm items-center text-base-content/70">
                       <Currency value={totalOverviewBalance} />
                     </div>
                   </>
@@ -246,13 +246,13 @@ export function ProjectsSidebar() {
                 >
                   {collapsed ? (
                     <div className="flex flex-col gap-1 py-1">
-                      <div className="text-xs leading-tight text-dark-font/70">
+                      <div className="text-xs leading-tight text-base-content/70">
                         {project.projectNumber}
                       </div>
                     </div>
                   ) : (
                     <>
-                      <div className="text-xs text-dark-font/80">
+                      <div className="text-xs text-base-content/70">
                         {project.projectNumber}
                       </div>
                       <div className="flex justify-between items-start mb-1">
@@ -260,7 +260,7 @@ export function ProjectsSidebar() {
                           {project.displayName}
                         </span>
                       </div>
-                      <div className="flex text-sm justify-between items-center text-dark-font/60">
+                      <div className="flex text-sm justify-between items-center text-base-content/70">
                         <Currency value={project.totalBalance} />
                         <span>
                           {formatDate(project.awardEndDate, 'No end date')}
@@ -271,7 +271,7 @@ export function ProjectsSidebar() {
                 </Link>
               ))}
               {searchQuery.trim() && filteredProjects.length === 0 ? (
-                <div className="px-3 py-4 text-sm text-dark-font/70">
+                <div className="px-3 py-4 text-sm text-base-content/70">
                   No matching projects.
                 </div>
               ) : null}
@@ -325,7 +325,7 @@ export function ProjectsSidebar() {
               <h3 className="text-sm font-medium uppercase">Project List</h3>
             </div>
             <div className="flex items-center gap-2">
-              <div className="text-sm text-dark-font/70">
+              <div className="text-sm text-base-content/70">
                 <Currency value={totalOverviewBalance} />
               </div>
               <button
@@ -341,7 +341,7 @@ export function ProjectsSidebar() {
 
           <div className="px-4 py-1 border-b border-main-border">
             <div className="relative">
-              <MagnifyingGlassIcon className="w-4 h-4 absolute left-0 top-1/2 -translate-y-1/2 pointer-events-none text-dark-font/55" />
+              <MagnifyingGlassIcon className="w-4 h-4 absolute left-0 top-1/2 -translate-y-1/2 pointer-events-none text-base-content/55" />
 
               <input
                 aria-label="Search projects"
@@ -374,7 +374,7 @@ export function ProjectsSidebar() {
               <div className="flex justify-between items-start mb-1">
                 <span className="text-base">All Projects</span>
               </div>
-              <div className="flex justify-between text-sm items-center text-dark-font/70">
+              <div className="flex justify-between text-sm items-center text-base-content/70">
                 <Currency value={totalOverviewBalance} />
                 <span>total proj #</span>
               </div>
@@ -392,20 +392,20 @@ export function ProjectsSidebar() {
                 to="/projects/$iamId/$projectNumber"
                 viewTransition={{ types: ['slide-left'] }}
               >
-                <div className="text-xs text-dark-font/50">
+                <div className="text-xs text-base-content/50">
                   {project.projectNumber}
                 </div>
                 <div className="flex justify-between items-start mb-1">
                   <span className="text-base">{project.displayName}</span>
                 </div>
-                <div className="flex text-sm justify-between items-center text-dark-font/70">
+                <div className="flex text-sm justify-between items-center text-base-content/70">
                   <Currency value={project.totalBalance} />
                   <span>{formatDate(project.awardEndDate, 'No end date')}</span>
                 </div>
               </Link>
             ))}
             {searchQuery.trim() && filteredProjects.length === 0 ? (
-              <div className="px-3 py-4 text-sm text-dark-font/70">
+              <div className="px-3 py-4 text-sm text-base-content/70">
                 No matching projects.
               </div>
             ) : null}

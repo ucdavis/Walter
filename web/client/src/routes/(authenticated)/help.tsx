@@ -37,7 +37,7 @@ function RouteComponent() {
       <div className="max-w-3xl space-y-6 pt-16 pb-8 md:pt-20">
         <div className="space-y-2">
           <h1 className="h1">Help</h1>
-          <p className="text-lg text-dark-font/80">
+          <p className="text-lg text-base-content/80">
             If you need support, the knowledge base is the best place to start.
             You can also submit a help request or share feedback with the team.
           </p>

@@ -39,8 +39,10 @@ export interface ProjectSummary {
   projectBurdenScheduleBase: string | null;
   projectFund: string | null;
   projectNumber: string;
+  projectOwningOrgCode: string | null;
   projectStatusCode: string | null;
   sponsorAwardNumber: string | null;
+  taskNum: string | null;
   totals: ProjectTotals;
 }
 
@@ -134,8 +136,10 @@ export const summarizeAllProjects = (
     projectBurdenScheduleBase: null,
     projectFund: null,
     projectNumber: DEFAULT_SUMMARY_NUMBER,
+    projectOwningOrgCode: null,
     projectStatusCode: 'ACTIVE',
     sponsorAwardNumber: null,
+    taskNum: null,
     totals,
   };
 };
@@ -189,8 +193,10 @@ export const summarizeProjectByNumber = (
     projectBurdenScheduleBase: first.projectBurdenScheduleBase,
     projectFund: first.projectFund,
     projectNumber: first.projectNumber,
+    projectOwningOrgCode: first.projectOwningOrgCode,
     projectStatusCode: first.projectStatusCode,
     sponsorAwardNumber: first.sponsorAwardNumber,
+    taskNum: first.taskNum,
     totals,
   };
 };

@@ -231,6 +231,7 @@ function RouteComponent() {
             columns={columns}
             data={rows}
             footerRowClassName="totaltr"
+            globalFilter="left"
             tableActions={
               <ExportDataButton
                 columns={csvColumns}
