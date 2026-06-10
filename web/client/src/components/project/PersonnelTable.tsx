@@ -144,7 +144,7 @@ function DistributionSubtable({
         <thead>
           <tr>
             <th>Project</th>
-            <th>Task</th>
+            <th className="text-right">Task</th>
             <th>
               <span className="flex justify-end w-full">
                 <TooltipLabel
@@ -188,7 +188,7 @@ function DistributionSubtable({
                   {dist.record.projectDescription}
                 </span>
               </td>
-              <td className="text-sm">
+              <td className="text-right text-sm">
                 {dist.record.projectType === 'Internal'
                   ? safeText(dist.record.task)
                   : '—'}

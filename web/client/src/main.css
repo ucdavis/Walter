@@ -242,7 +242,7 @@
   padding: 4px 0;
 }
 .walter-table.walter-subtable td {
-  padding: 8px 8px;
+  padding: 8px 0;
 }
 .walter-table.walter-subtable td:first-child {
   padding-left: 0;
