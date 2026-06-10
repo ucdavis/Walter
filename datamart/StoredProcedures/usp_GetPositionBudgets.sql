@@ -314,6 +314,7 @@ BEGIN
         LEFT JOIN (
             SELECT ProjectNumber, MAX(ProjectType) AS ProjectType
             FROM dbo.FacultyDeptPortfolio
+            WHERE ProjectNumber IN (SELECT PROJECT_ID FROM #PositionBudgets)
             GROUP BY ProjectNumber
         ) fp ON pb.PROJECT_ID = fp.ProjectNumber
         ORDER BY pb.POSITION_NBR;

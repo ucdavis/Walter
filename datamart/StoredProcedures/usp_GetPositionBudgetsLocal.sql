@@ -112,6 +112,7 @@ BEGIN
         LEFT JOIN (
             SELECT ProjectNumber, MAX(ProjectType) AS ProjectType
             FROM dbo.FacultyDeptPortfolio
+            WHERE ProjectNumber IN (SELECT ProjectId FROM @ValidatedProjects)
             GROUP BY ProjectNumber
         ) fp ON pb.ProjectId = fp.ProjectNumber
         WHERE (@FiscalYearNum IS NULL OR pb.FiscalYear = @FiscalYearNum)
