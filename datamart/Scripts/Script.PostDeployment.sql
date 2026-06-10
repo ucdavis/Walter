@@ -15,19 +15,13 @@ PRINT 'Applying post-deployment scripts...'
 -- Grant permissions to application role
 PRINT 'Granting WalterAppRole permissions...'
 GRANT EXECUTE ON [dbo].[usp_GetFacultyDeptPortfolio] TO [WalterAppRole];
-GRANT EXECUTE ON [dbo].[usp_GetFacultyDeptPortfolioElzar] TO [WalterAppRole];
-GRANT EXECUTE ON [dbo].[usp_GetPPMProjectSummaryElzar] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_GetProjectSummary] TO [WalterAppRole];
-GRANT EXECUTE ON [dbo].[usp_GetGLProjectSummaryElzar] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_GetGLPPMReconciliation] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_GetGLTransactionListings] TO [WalterAppRole];
-GRANT EXECUTE ON [dbo].[usp_GetLaborLedgerData] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_GetPositionBudgets] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_GetPositionBudgetsLocal] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_GetSearchablePeople] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_HealthCheck_Connectivity] TO [WalterAppRole];
-GRANT EXECUTE ON [dbo].[usp_HealthCheck_RowCounts] TO [WalterAppRole];
-GRANT EXECUTE ON [dbo].[usp_HealthCheck_SchemaValidation] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_LogProcedureExecution] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_ParseProjectIdFilter] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_SanitizeInputString] TO [WalterAppRole];
