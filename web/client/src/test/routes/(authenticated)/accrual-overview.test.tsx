@@ -47,7 +47,7 @@ const mockAccrualAssumptions = {
 };
 
 describe('vacation accrual overview route', () => {
-  it('renders the department selector with departments alphabetized and the overview option last', async () => {
+  it('renders the department selector cards with View All first and departments alphabetized', async () => {
     server.use(
       http.get('/api/user/me', () => HttpResponse.json(mockUser)),
       http.get('/api/accrual/overview', () =>
@@ -92,24 +92,27 @@ describe('vacation accrual overview route', () => {
     const { cleanup } = renderRoute({ initialPath: '/accruals' });
 
     try {
-      expect(
-        await screen.findByRole('heading', { name: 'Select a Department' })
-      ).toBeInTheDocument();
+      expect(await screen.findByText('View All')).toBeInTheDocument();
 
       const selector = screen
-        .getByRole('heading', { name: 'Select a Department' })
+        .getByRole('heading', { name: 'Vacation accruals' })
         .closest('section');
       expect(selector).not.toBeNull();
 
       const links = within(selector!).getAllByRole('link');
       expect(links.map((link) => link.textContent)).toEqual([
+        expect.stringContaining('View All'),
         expect.stringContaining('NUTRITION'),
         expect.stringContaining('PLANT SCIENCES'),
-        expect.stringContaining('All departments overview'),
       ]);
-      expect(links[0]).toHaveAttribute('href', '/accruals/department/030090');
-      expect(links[1]).toHaveAttribute('href', '/accruals/department/030003');
-      expect(links[2]).toHaveAttribute('href', '/accruals/overview');
+      expect(links[0]).toHaveTextContent('33 employees');
+      expect(links[1]).toHaveTextContent('12 employees');
+      expect(links[2]).toHaveTextContent('21 employees');
+      expect(links[1]).toHaveTextContent('030090');
+      expect(links[1]).not.toHaveTextContent('Department 030090');
+      expect(links[0]).toHaveAttribute('href', '/accruals/overview');
+      expect(links[1]).toHaveAttribute('href', '/accruals/department/030090');
+      expect(links[2]).toHaveAttribute('href', '/accruals/department/030003');
     } finally {
       cleanup();
     }
@@ -570,6 +573,14 @@ describe('vacation accrual overview route', () => {
 
       expect(
         await screen.findByText('Saichaie,Amanda M')
+      ).toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', { name: /expand table/i }));
+      expect(screen.getByTestId('datatable-backdrop')).toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', { name: /collapse table/i }));
+      expect(
+        screen.getByRole('button', { name: /expand table/i })
       ).toBeInTheDocument();
 
       const employeeSearch = screen.getByPlaceholderText('Search by name or ID...');

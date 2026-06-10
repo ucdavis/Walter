@@ -56,7 +56,7 @@
   @apply text-2xl font-proxima-bold;
 }
 .h3 {
-  @apply text-base font-proxima-bold uppercase text-base-content/60;
+  @apply text-base font-proxima-bold uppercase text-base-content/70;
 }
 .stat-value {
   @apply text-lg font-medium;
@@ -96,7 +96,7 @@
     @apply mt-4 mb-8 px-6 py-4 border rounded-md bg-light-bg-200 border-main-border;
   }
   .nav-link {
-    @apply border-b-2 border-base-200 transition text-base-content/60 hover:text-base-content;
+    @apply border-b-2 border-base-200 transition text-base-content/70 hover:text-base-content;
   }
 
   .nav-link[data-status='active'] {
@@ -129,7 +129,7 @@
   }
 
   [cmdk-group-heading] {
-    @apply px-2 py-2 text-xs uppercase text-base-content/60;
+    @apply px-2 py-2 text-xs uppercase text-base-content/70;
   }
 
   [cmdk-item] {
