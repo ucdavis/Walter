@@ -539,7 +539,7 @@ export function VacationAccrualDepartmentDetail({
   return (
     <main className="mt-8">
       <div className="container">
-        <div className="mx-auto max-w-7xl">
+        <div className="mx-auto">
           <section className="section-margin">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div className="min-w-0">
@@ -682,7 +682,6 @@ export function VacationAccrualDepartmentDetail({
               columns={employeeColumns}
               data={filteredEmployees}
               defaultColumnSize={140}
-              expandable={false}
               footerRowClassName="totaltr bg-base-200/70"
               getRowProps={(row) => {
                 const status = getEmployeeStatus(

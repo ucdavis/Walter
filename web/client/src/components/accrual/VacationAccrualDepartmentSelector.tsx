@@ -1,17 +1,22 @@
-import {
-  ArrowRightIcon,
-  BuildingOffice2Icon,
-  Squares2X2Icon,
-} from '@heroicons/react/24/outline';
 import { Link } from '@tanstack/react-router';
+import { type ColumnDef } from '@tanstack/react-table';
 import { PageEmpty } from '@/components/states/PageEmpty.tsx';
 import {
   type AccrualDepartmentBreakdownRow,
   type AccrualOverviewResponse,
 } from '@/queries/accrual.ts';
+import { DataTable } from '@/shared/DataTable.tsx';
 
 interface VacationAccrualDepartmentSelectorProps {
   data: AccrualOverviewResponse;
+}
+
+interface DepartmentSelectorRow {
+  department: string;
+  departmentCode: string;
+  employees: number;
+  kind: 'department' | 'overview';
+  subtitle: string;
 }
 
 function sortDepartments(
@@ -31,6 +36,49 @@ function sortDepartments(
   });
 }
 
+const departmentColumns: ColumnDef<DepartmentSelectorRow>[] = [
+  {
+    accessorFn: (row) =>
+      `${row.department} ${row.departmentCode} ${row.employees}`,
+    cell: (info) => {
+      const row = info.row.original;
+      const employeeLabel = `${row.employees.toLocaleString('en-US')} employee${
+        row.employees === 1 ? '' : 's'
+      }`;
+      const content = (
+        <span className="flex min-h-28 flex-col justify-between gap-4">
+          <span className="space-y-1">
+            <span className="block text-sm text-base-content/70">
+              {row.subtitle}
+            </span>
+            <span className="block font-proxima-bold text-lg leading-tight">
+              {row.department}
+            </span>
+          </span>
+          <span className="block text-sm font-semibold text-base-content/75">
+            {employeeLabel}
+          </span>
+        </span>
+      );
+
+      if (row.kind === 'overview') {
+        return <Link to="/accruals/overview">{content}</Link>;
+      }
+
+      return (
+        <Link
+          params={{ departmentCode: row.departmentCode }}
+          to="/accruals/department/$departmentCode"
+        >
+          {content}
+        </Link>
+      );
+    },
+    header: 'Department',
+    id: 'department',
+  },
+];
+
 export function VacationAccrualDepartmentSelector({
   data,
 }: VacationAccrualDepartmentSelectorProps) {
@@ -41,68 +89,49 @@ export function VacationAccrualDepartmentSelector({
   }
 
   const departments = sortDepartments(data.departmentBreakdown);
+  const departmentRows: DepartmentSelectorRow[] = [
+    ...departments.map((department) => ({
+      department: department.department,
+      departmentCode: department.departmentCode,
+      employees: department.headcount,
+      kind: 'department' as const,
+      subtitle: department.departmentCode,
+    })),
+    {
+      department: 'View All',
+      departmentCode: '',
+      employees: data.totalEmployees,
+      kind: 'overview',
+      subtitle: 'All departments overview',
+    },
+  ];
 
   return (
     <main className="mt-8">
       <div className="container">
-        <div className="mx-auto max-w-5xl">
+        <div className="mx-auto">
           <section className="section-margin">
             <div className="space-y-2">
-              <div className="badge badge-outline badge-primary">
-                Vacation Accruals
-              </div>
-              <h1 className="h1">Select a Department</h1>
+              <h1 className="h1">Vacation accruals</h1>
               <p className="max-w-3xl text-lg text-base-content/70">
                 Choose a department to open its vacation accrual detail.
               </p>
             </div>
 
-            <div className="mt-8 overflow-hidden rounded-md border border-main-border bg-base-100">
-              <div className="divide-y divide-main-border">
-                {departments.map((department) => (
-                  <Link
-                    className="group flex min-h-16 items-center gap-4 px-4 py-3 text-base-content no-underline transition-colors hover:bg-base-200 focus:outline-none focus-visible:bg-base-200"
-                    key={department.departmentCode}
-                    params={{ departmentCode: department.departmentCode }}
-                    to="/accruals/department/$departmentCode"
-                  >
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-primary/10 text-primary">
-                      <BuildingOffice2Icon className="h-5 w-5" />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate font-proxima-bold text-lg">
-                        {department.department}
-                      </span>
-                      <span className="text-sm text-base-content/60">
-                        Department {department.departmentCode}
-                      </span>
-                    </span>
-                    <span className="hidden text-sm text-base-content/60 sm:block">
-                      {department.headcount.toLocaleString('en-US')}{' '}
-                      employees
-                    </span>
-                    <ArrowRightIcon className="h-5 w-5 shrink-0 text-base-content/45 transition-transform group-hover:translate-x-1" />
-                  </Link>
-                ))}
-
-                <Link
-                  className="group flex min-h-16 items-center gap-4 bg-base-200/70 px-4 py-3 text-base-content no-underline transition-colors hover:bg-base-300 focus:outline-none focus-visible:bg-base-300"
-                  to="/accruals/overview"
-                >
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-secondary/20 text-base-content">
-                    <Squares2X2Icon className="h-5 w-5" />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block font-proxima-bold text-lg">
-                      All departments overview
-                    </span>
-                    <span className="text-sm text-base-content/60">
-                      Open the college-wide accrual summary
-                    </span>
-                  </span>
-                  <ArrowRightIcon className="h-5 w-5 shrink-0 text-base-content/45 transition-transform group-hover:translate-x-1" />
-                </Link>
-              </div>
+            <div className="mt-8">
+              <DataTable
+                columns={departmentColumns}
+                data={departmentRows}
+                defaultColumnSize={220}
+                filterPlaceholder="Search departments..."
+                globalFilter="left"
+                initialState={{
+                  pagination: {
+                    pageSize: departmentRows.length,
+                  },
+                }}
+                tableClassName="table-cardgrid"
+              />
             </div>
           </section>
         </div>
