@@ -2,7 +2,9 @@ import {
   ArrowLongLeftIcon,
   CalculatorIcon,
   ChartBarIcon,
+  CheckCircleIcon,
   InformationCircleIcon,
+  ScaleIcon,
 } from '@heroicons/react/24/outline';
 import { Link } from '@tanstack/react-router';
 import { type AccrualAssumptionsResponse } from '@/queries/accrual.ts';
@@ -30,23 +32,43 @@ function AssumptionsTable({
   title: string;
 }) {
   return (
-    <section className="card bg-base-100 border border-main-border shadow-sm">
-      <div className="card-body gap-4">
-        <h2 className="card-title">{title}</h2>
-        <div className="overflow-x-auto">
-          <table className="table table-zebra">
-            <tbody>
-              {rows.map((row) => (
-                <tr key={row.label}>
-                  <th className="font-semibold">{row.label}</th>
-                  <td>{row.value}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+    <section>
+      <h2 className="h2">{title}</h2>
+      <div className="fancy-data">
+        <table className="table walter-table walter-subtable">
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.label}>
+                <th className="w-1/2 font-semibold">{row.label}</th>
+                <td>{row.value}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </section>
+  );
+}
+
+function ReportNote({
+  children,
+  Icon,
+  iconClassName,
+  title,
+}: {
+  children: string;
+  Icon: typeof CalculatorIcon;
+  iconClassName: string;
+  title: string;
+}) {
+  return (
+    <div className="flex min-w-0 gap-3">
+      <Icon className={`mt-1 h-5 w-5 shrink-0 ${iconClassName}`} />
+      <div>
+        <h3 className="stat-label-lg">{title}</h3>
+        <p className="mt-1 text-sm text-base-content/70">{children}</p>
+      </div>
+    </div>
   );
 }
 
@@ -76,104 +98,109 @@ export function VacationAccrualAbout({
     label: row.label,
     value: `${compactPercentFormatter.format(row.rate * 100)}% composite benefits load`,
   }));
+  const backLink = departmentCode ? (
+    <Link
+      className="mb-3 inline-flex items-center gap-2 text-sm font-bold text-primary no-underline"
+      params={{ departmentCode }}
+      to="/accruals/department/$departmentCode"
+    >
+      <ArrowLongLeftIcon className="h-4 w-4" />
+      Back to Department
+    </Link>
+  ) : (
+    <Link
+      className="mb-3 inline-flex items-center gap-2 text-sm font-bold text-primary no-underline"
+      to="/accruals/overview"
+    >
+      <ArrowLongLeftIcon className="h-4 w-4" />
+      Back to Overview
+    </Link>
+  );
 
   return (
     <main className="mt-8">
       <div className="container">
-        <div className="mx-auto space-y-8">
-          <section className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-            <div className="space-y-3">
-              <div className="space-y-2">
-                <h1 className="h1">About This Vacation Accrual Report</h1>
-                <p className="max-w-3xl text-lg text-base-content/70">
-                  This page summarizes the current assumptions behind the
-                  vacation accrual overview, with a focus on how estimated lost
-                  cost is calculated for employees who are near or at their
-                  accrual cap.
-                </p>
+        <section className="section-margin">
+          {backLink}
+          <div className="space-y-2">
+            <h1 className="h1">About This Report</h1>
+            <h3 className="subtitle">
+              Vacation accrual assumptions and cost model
+            </h3>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            <ReportNote
+              Icon={CalculatorIcon}
+              iconClassName="text-primary"
+              title="Cost Model"
+            >
+              monthly accrual hours x hourly rate x (1 + benefits load)
+            </ReportNote>
+            <ReportNote
+              Icon={ScaleIcon}
+              iconClassName="text-error"
+              title="At Cap Threshold"
+            >
+              {`${percentFormatter.format(data.atCapThresholdPct)}% and above is treated as at cap.`}
+            </ReportNote>
+            <ReportNote
+              Icon={InformationCircleIcon}
+              iconClassName="text-info"
+              title="Scope"
+            >
+              These assumptions make the report directionally useful; they do
+              not replace detailed payroll accounting.
+            </ReportNote>
+          </div>
+        </section>
+
+        <section className="section-margin">
+          <div className="mb-4">
+            <h2 className="h2">Lost Cost Formula</h2>
+            <p className="mt-1">
+              Lost cost per employee is estimated only when the employee is
+              classified as at cap.
+            </p>
+          </div>
+
+          <div className="grid gap-6 grid-cols-1">
+            <div>
+              <div className="rounded bg-base-100 px-4 py-3 font-mono text-sm md:text-base">
+                monthly accrual hours x hourly rate x (1 + benefits load)
               </div>
+              <p className="mt-4 text-sm text-base-content/70">
+                The report treats this as an estimated unrecoverable accrual
+                cost for the latest month-end snapshot. It is a planning
+                estimate, not a payroll posting.
+              </p>
             </div>
 
-            {departmentCode ? (
-              <Link
-                className="btn btn-outline"
-                params={{ departmentCode }}
-                to="/accruals/department/$departmentCode"
-              >
-                <ArrowLongLeftIcon className="h-4 w-4" />
-                Back to Department
-              </Link>
-            ) : (
-              <Link className="btn btn-outline" to="/accruals/overview">
-                <ArrowLongLeftIcon className="h-4 w-4" />
-                Back to Overview
-              </Link>
-            )}
-          </section>
-
-          <section className="grid gap-4 lg:grid-cols-3">
-            <section className="card bg-base-100 border border-main-border shadow-sm lg:col-span-2">
-              <div className="card-body gap-4">
-                <div className="flex items-center gap-2 text-sm font-semibold tracking-[0.14em] uppercase text-base-content/60">
-                  <CalculatorIcon className="h-5 w-5 text-primary" />
-                  <span>Lost Cost Formula</span>
-                </div>
-                <p className="text-base-content/75">
-                  Lost cost per employee is estimated only when the employee is
-                  classified as at cap.
-                </p>
-                <div className="rounded-box bg-base-200/60 px-5 py-4 font-mono text-sm md:text-base">
-                  monthly accrual hours × hourly rate × (1 + benefits load)
-                </div>
-                <p className="text-sm text-base-content/70">
-                  The report treats this as an estimated unrecoverable accrual
-                  cost for the latest month-end snapshot. It is a planning
-                  estimate, not a payroll posting.
-                </p>
+            <div className="space-y-3 text-sm text-base-content/75">
+              <div className="flex gap-2">
+                <CheckCircleIcon className="mt-0.5 h-4 w-4 shrink-0 text-success" />
+                <span>
+                  Monthly accrual hours come from the latest positive accrual
+                  history when available.
+                </span>
               </div>
-            </section>
-
-            <section className="card bg-base-100 border border-main-border shadow-sm">
-              <div className="card-body gap-4">
-                <div className="flex items-center gap-2 text-sm font-semibold tracking-[0.14em] uppercase text-base-content/60">
-                  <InformationCircleIcon className="h-5 w-5 text-info" />
-                  <span>Scope</span>
-                </div>
-                <p className="text-sm text-base-content/75">
-                  Current assumptions apply to the accrual report only. They are
-                  intended to make the report understandable and directionally
-                  useful, not to replace detailed payroll accounting.
-                </p>
+              <div className="flex gap-2">
+                <ChartBarIcon className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+                <span>
+                  Waste rate is lost cost divided by estimated monthly accrual
+                  charges.
+                </span>
               </div>
-            </section>
-          </section>
+            </div>
+          </div>
+        </section>
 
-          <section className="grid gap-4 xl:grid-cols-2">
+        <section className="section-margin">
+          <div className="grid gap-8 xl:grid-cols-2">
             <AssumptionsTable rows={thresholdRows} title="Status Thresholds" />
             <AssumptionsTable rows={benefitsRows} title="Benefits Loads" />
-          </section>
-
-          <section>
-            <section className="card bg-base-100 border border-main-border shadow-sm">
-              <div className="card-body gap-4">
-                <div className="flex items-center gap-2 text-sm font-semibold tracking-[0.14em] uppercase text-base-content/60">
-                  <ChartBarIcon className="h-5 w-5 text-accent" />
-                  <span>Other Notes</span>
-                </div>
-                <p className="text-sm text-base-content/75">
-                  Monthly accrual hours come from the latest positive accrual
-                  history when available. The department detail shows the
-                  employee-level accrual and cap values that drive the report.
-                </p>
-                <p className="text-sm text-base-content/75">
-                  Waste rate on the overview is shown as lost cost divided by
-                  estimated monthly accrual charges. Because lost cost includes
-                  benefits load, that percentage can exceed 100% in some cases.
-                </p>
-              </div>
-            </section>
-          </section>
-        </div>
+          </div>
+        </section>
       </div>
     </main>
   );

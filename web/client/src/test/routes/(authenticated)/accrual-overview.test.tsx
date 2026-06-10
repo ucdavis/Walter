@@ -575,6 +575,14 @@ describe('vacation accrual overview route', () => {
         await screen.findByText('Saichaie,Amanda M')
       ).toBeInTheDocument();
 
+      await user.click(screen.getByRole('button', { name: /expand table/i }));
+      expect(screen.getByTestId('datatable-backdrop')).toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', { name: /collapse table/i }));
+      expect(
+        screen.getByRole('button', { name: /expand table/i })
+      ).toBeInTheDocument();
+
       const employeeSearch = screen.getByPlaceholderText('Search by name or ID...');
       await user.type(employeeSearch, 'Amanda');
 

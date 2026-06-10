@@ -682,7 +682,6 @@ export function VacationAccrualDepartmentDetail({
               columns={employeeColumns}
               data={filteredEmployees}
               defaultColumnSize={140}
-              expandable={false}
               footerRowClassName="totaltr bg-base-200/70"
               getRowProps={(row) => {
                 const status = getEmployeeStatus(
