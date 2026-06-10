@@ -38,8 +38,7 @@ function RouteComponent() {
 
   const userProjectsQuery = useQuery({
     ...projectsDetailQueryOptions(user.iamId),
-    enabled:
-      Boolean(user.iamId) && !isPending && !isError && !isProjectManager,
+    enabled: Boolean(user.iamId) && !isPending && !isError && !isProjectManager,
   });
 
   const isPrincipalInvestigator =
@@ -248,7 +247,7 @@ function RouteComponent() {
               </div>
             )}
             {isPrincipalInvestigator && piAlerts.length === 0 && (
-              <p className="mt-4 text-base-content/60">No alerts</p>
+              <p className="mt-4 text-base-content/70">No alerts</p>
             )}
           </div>
         )}

@@ -1,4 +1,4 @@
-import { ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline';
+import { CurrencyDollarIcon } from '@heroicons/react/24/outline';
 import { buildFinjectorUrl } from '@/lib/finjector.ts';
 
 interface FinjectorLinkProps {
@@ -35,7 +35,7 @@ export function FinjectorLink({
       title="View chart string in Finjector"
     >
       {children}
-      <ArrowTopRightOnSquareIcon aria-hidden="true" className="w-4 h-4" />
+      <CurrencyDollarIcon aria-hidden="true" className="w-4 h-4" />
     </a>
   );
 }

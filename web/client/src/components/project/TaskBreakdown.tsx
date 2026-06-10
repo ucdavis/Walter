@@ -82,7 +82,11 @@ const csvColumns = [
   { header: 'Activity Description', key: 'activityDesc' as const },
   { format: 'currency' as const, header: 'Budget', key: 'budget' as const },
   { format: 'currency' as const, header: 'Expenses', key: 'expenses' as const },
-  { format: 'currency' as const, header: 'Commitments', key: 'commitments' as const },
+  {
+    format: 'currency' as const,
+    header: 'Commitments',
+    key: 'commitments' as const,
+  },
   { format: 'currency' as const, header: 'Balance', key: 'balance' as const },
 ];
 
@@ -106,7 +110,10 @@ export function TaskBreakdown({
 }: TaskBreakdownProps) {
   const [showClosed, setShowClosed] = useState(false);
   const allRows = useMemo(() => buildRows(records), [records]);
-  const closedCount = useMemo(() => allRows.filter(isClosedTask).length, [allRows]);
+  const closedCount = useMemo(
+    () => allRows.filter(isClosedTask).length,
+    [allRows]
+  );
   const rows = useMemo(
     () => (showClosed ? allRows : allRows.filter((r) => !isClosedTask(r))),
     [allRows, showClosed]
@@ -157,7 +164,9 @@ export function TaskBreakdown({
       }),
       columnHelper.accessor('financialDepartmentCode', {
         cell: (info) => (
-          <span title={info.row.original.financialDepartment}>{info.getValue()}</span>
+          <span title={info.row.original.financialDepartment}>
+            {info.getValue()}
+          </span>
         ),
         header: 'Dept',
       }),
@@ -230,13 +239,17 @@ export function TaskBreakdown({
         cell: (info) => {
           const value = info.getValue();
           return (
-            <span className={`flex justify-end ${value < 0 ? 'text-error' : ''}`}>
+            <span
+              className={`flex justify-end ${value < 0 ? 'text-error' : ''}`}
+            >
               {formatCurrency(value)}
             </span>
           );
         },
         footer: () => (
-          <span className={`flex justify-end ${totals.balance < 0 ? 'text-error' : ''}`}>
+          <span
+            className={`flex justify-end ${totals.balance < 0 ? 'text-error' : ''}`}
+          >
             {formatCurrency(totals.balance)}
           </span>
         ),
@@ -254,27 +267,37 @@ export function TaskBreakdown({
         cell: (info) => {
           const row = info.row.original;
           return (
-            <Link
-              className="link font-semibold text-sm whitespace-nowrap"
-              params={{ iamId, projectNumber }}
-              search={{
-                activity: row.activityCode,
-                dept: row.financialDepartmentCode,
-                fund: row.fundCode,
-                program: row.programCode,
-                task: row.taskNum,
-              }}
-              to="/projects/$iamId/$projectNumber/expenditure-categories"
-            >
-              Details
-            </Link>
+            <div className="flex justify-end w-full">
+              <Link
+                className="link font-semibold text-sm whitespace-nowrap"
+                params={{ iamId, projectNumber }}
+                search={{
+                  activity: row.activityCode,
+                  dept: row.financialDepartmentCode,
+                  fund: row.fundCode,
+                  program: row.programCode,
+                  task: row.taskNum,
+                }}
+                to="/projects/$iamId/$projectNumber/expenditure-categories"
+              >
+                Details
+              </Link>
+            </div>
           );
         },
-        header: '',
+        header: () => <span className="flex justify-end w-full">More</span>,
         id: 'detailsLink',
       }),
     ],
-    [iamId, isInternal, projectNumber, totals.balance, totals.budget, totals.commitments, totals.expenses]
+    [
+      iamId,
+      isInternal,
+      projectNumber,
+      totals.balance,
+      totals.budget,
+      totals.commitments,
+      totals.expenses,
+    ]
   );
 
   if (allRows.length === 0) {
@@ -286,29 +309,28 @@ export function TaskBreakdown({
       columns={columns}
       data={rows}
       footerRowClassName="totaltr"
+      globalFilter="left"
       pagination="off"
-      tableActions={(table) =>
-        (
-          <div className="flex flex-wrap items-center gap-2">
-            {closedCount > 0 && (
-              <button
-                className={`btn btn-sm ${showClosed ? 'btn-active' : 'btn-default'}`}
-                onClick={() => setShowClosed((current) => !current)}
-                type="button"
-              >
-                {showClosed ? 'Hide' : 'Show'} closed ({closedCount})
-              </button>
-            )}
-            <TableExportActions
-              baseFilename={`task-breakdown-${projectNumber}`}
-              columns={csvColumns}
-              data={rows}
-              table={table}
-              toRows={(tableRows) => tableRows}
-            />
-          </div>
-        )
-      }
+      tableActions={(table) => (
+        <div className="flex flex-wrap items-center gap-2">
+          {closedCount > 0 && (
+            <button
+              className={`btn btn-sm ${showClosed ? 'btn-active' : 'btn-default'}`}
+              onClick={() => setShowClosed((current) => !current)}
+              type="button"
+            >
+              {showClosed ? 'Hide' : 'Show'} closed ({closedCount})
+            </button>
+          )}
+          <TableExportActions
+            baseFilename={`task-breakdown-${projectNumber}`}
+            columns={csvColumns}
+            data={rows}
+            table={table}
+            toRows={(tableRows) => tableRows}
+          />
+        </div>
+      )}
     />
   );
 }

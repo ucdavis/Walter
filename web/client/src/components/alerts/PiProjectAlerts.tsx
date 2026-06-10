@@ -32,8 +32,7 @@ export function usePiProjectAlerts(
 
   const firstError = projectsQueries.find((q) => q.isError);
   const allLoaded = projectsQueries.every((q) => q.isSuccess);
-  const isLoading =
-    navigablePis.length > 0 && !allLoaded && !firstError;
+  const isLoading = navigablePis.length > 0 && !allLoaded && !firstError;
 
   let alerts: PiProjectAlert[] = [];
   if (allLoaded && navigablePis.length > 0) {
@@ -91,9 +90,7 @@ export function PiProjectAlerts({
   if (isError) {
     return (
       <div className="alert alert-error mt-8">
-        <span>
-          Unable to load alerts: {error?.message ?? 'Unknown error'}
-        </span>
+        <span>Unable to load alerts: {error?.message ?? 'Unknown error'}</span>
       </div>
     );
   }
@@ -109,13 +106,11 @@ export function PiProjectAlerts({
   }
 
   if (alerts.length === 0) {
-    return <p className="mt-4 text-base-content/60">No alerts</p>;
+    return <p className="mt-4 text-base-content/70">No alerts</p>;
   }
 
   const iamIdByEmployeeId = new Map(
-    managedPis
-      .filter((pi) => pi.iamId)
-      .map((pi) => [pi.employeeId, pi.iamId!])
+    managedPis.filter((pi) => pi.iamId).map((pi) => [pi.employeeId, pi.iamId!])
   );
 
   return (

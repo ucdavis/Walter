@@ -117,7 +117,7 @@ export function VacationAccrualAbout({
           <section className="grid gap-4 lg:grid-cols-3">
             <section className="card bg-base-100 border border-main-border shadow-sm lg:col-span-2">
               <div className="card-body gap-4">
-                <div className="flex items-center gap-2 text-sm font-semibold tracking-[0.14em] uppercase text-base-content/60">
+                <div className="flex items-center gap-2 text-sm font-semibold tracking-[0.14em] uppercase text-base-content/70">
                   <CalculatorIcon className="h-5 w-5 text-primary" />
                   <span>Lost Cost Formula</span>
                 </div>
@@ -138,7 +138,7 @@ export function VacationAccrualAbout({
 
             <section className="card bg-base-100 border border-main-border shadow-sm">
               <div className="card-body gap-4">
-                <div className="flex items-center gap-2 text-sm font-semibold tracking-[0.14em] uppercase text-base-content/60">
+                <div className="flex items-center gap-2 text-sm font-semibold tracking-[0.14em] uppercase text-base-content/70">
                   <InformationCircleIcon className="h-5 w-5 text-info" />
                   <span>Scope</span>
                 </div>
@@ -159,7 +159,7 @@ export function VacationAccrualAbout({
           <section>
             <section className="card bg-base-100 border border-main-border shadow-sm">
               <div className="card-body gap-4">
-                <div className="flex items-center gap-2 text-sm font-semibold tracking-[0.14em] uppercase text-base-content/60">
+                <div className="flex items-center gap-2 text-sm font-semibold tracking-[0.14em] uppercase text-base-content/70">
                   <ChartBarIcon className="h-5 w-5 text-accent" />
                   <span>Other Notes</span>
                 </div>

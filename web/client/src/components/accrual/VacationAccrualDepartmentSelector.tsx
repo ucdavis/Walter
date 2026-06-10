@@ -73,13 +73,12 @@ export function VacationAccrualDepartmentSelector({
                       <span className="block truncate font-proxima-bold text-lg">
                         {department.department}
                       </span>
-                      <span className="text-sm text-base-content/60">
+                      <span className="text-sm text-base-content/70">
                         Department {department.departmentCode}
                       </span>
                     </span>
-                    <span className="hidden text-sm text-base-content/60 sm:block">
-                      {department.headcount.toLocaleString('en-US')}{' '}
-                      employees
+                    <span className="hidden text-sm text-base-content/70 sm:block">
+                      {department.headcount.toLocaleString('en-US')} employees
                     </span>
                     <ArrowRightIcon className="h-5 w-5 shrink-0 text-base-content/45 transition-transform group-hover:translate-x-1" />
                   </Link>
@@ -96,7 +95,7 @@ export function VacationAccrualDepartmentSelector({
                     <span className="block font-proxima-bold text-lg">
                       All departments overview
                     </span>
-                    <span className="text-sm text-base-content/60">
+                    <span className="text-sm text-base-content/70">
                       Open the college-wide accrual summary
                     </span>
                   </span>
