@@ -310,13 +310,18 @@ describe('project detail page', () => {
       });
       expect(personnelToggle).toHaveAttribute('aria-pressed', 'true');
 
-      const suppliesToggle = screen.getByRole('button', {
-        name: '04 - Supplies',
+      const nonPersonnelToggle = screen.getByRole('button', {
+        name: 'Non-Personnel',
       });
-      expect(suppliesToggle).toHaveAttribute('aria-pressed', 'false');
+      expect(nonPersonnelToggle).toHaveAttribute('aria-pressed', 'true');
 
-      await user.click(suppliesToggle);
-      expect(suppliesToggle).toHaveAttribute('aria-pressed', 'true');
+      // Only the two rollup series are offered; no per-category buttons.
+      expect(
+        screen.queryByRole('button', { name: '04 - Supplies' })
+      ).not.toBeInTheDocument();
+
+      await user.click(nonPersonnelToggle);
+      expect(nonPersonnelToggle).toHaveAttribute('aria-pressed', 'false');
     } finally {
       cleanup();
     }

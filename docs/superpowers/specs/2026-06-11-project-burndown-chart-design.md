@@ -67,7 +67,6 @@ rendering out of the math.
   build line series:
   - **Personnel** = '01 - Salaries and Wages' + '02 - Fringe Benefits' summed.
   - **Non-Personnel** = all other categories summed.
-  - One series per individual category.
   Each point carries month label, kind, remaining, actualAmount,
   projectedAmount. Footer stats: Current Balance (Σ remainingNow across
   categories), Projected End (total remaining at the final projected month),
@@ -79,9 +78,8 @@ rendering out of the math.
   - Dashed zero reference line; palette-colored lines per series (no
     red-below-zero recolor — noisy with multiple lines; the zero line carries
     the deficit signal).
-  - Toggle chips below the chart: `[Personnel] [Non-Personnel]` then one per
-    individual category, sorted. Multi-toggle; default on = Personnel +
-    Non-Personnel.
+  - Toggle chips below the chart: `[Personnel]` and `[Non-Personnel]` only.
+    Multi-toggle; both on by default.
   - Tooltip: month plus each visible series' remaining and spend.
   - Stats footer: Current Balance, Projected End, Projection horizon.
 - **Placement**: project detail route
@@ -104,6 +102,8 @@ shows a local error message in the section on query failure.
 
 ## Out of scope
 
+- Per-category series and toggle buttons (too many categories; the API still
+  returns per-category data, so they can be added later without API changes).
 - Per-category monthly table view.
 - User-selectable horizon.
 - Changes to the sproc or datamart (PR #304 owns those).

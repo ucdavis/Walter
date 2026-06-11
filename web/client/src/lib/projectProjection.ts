@@ -17,7 +17,6 @@ export interface ProjectionPoint {
 }
 
 export interface ProjectionSeries {
-  isRollup: boolean;
   key: string;
   points: ProjectionPoint[];
 }
@@ -57,15 +56,11 @@ export function buildProjectionSeries(
 ): ProjectionSeries[] {
   const personnel = result.periods.filter((p) => p.isPersonnel === 1);
   const nonPersonnel = result.periods.filter((p) => p.isPersonnel !== 1);
-  const categories = [
-    ...new Set(result.periods.map((p) => p.expenditureCategory)),
-  ].sort();
 
   const series: ProjectionSeries[] = [];
 
   if (personnel.length > 0) {
     series.push({
-      isRollup: true,
       key: PERSONNEL_SERIES,
       points: toPoints(personnel),
     });
@@ -73,19 +68,8 @@ export function buildProjectionSeries(
 
   if (nonPersonnel.length > 0) {
     series.push({
-      isRollup: true,
       key: NON_PERSONNEL_SERIES,
       points: toPoints(nonPersonnel),
-    });
-  }
-
-  for (const category of categories) {
-    series.push({
-      isRollup: false,
-      key: category,
-      points: toPoints(
-        result.periods.filter((p) => p.expenditureCategory === category)
-      ),
     });
   }
 

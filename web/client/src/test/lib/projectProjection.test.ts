@@ -117,18 +117,13 @@ const sampleResult = (): ProjectProjectionResult => ({
 });
 
 describe('buildProjectionSeries', () => {
-  it('orders series as Personnel, Non-Personnel, then individual categories', () => {
+  it('builds only the Personnel and Non-Personnel rollup series', () => {
     const series = buildProjectionSeries(sampleResult());
 
     expect(series.map((s) => s.key)).toEqual([
       PERSONNEL_SERIES,
       NON_PERSONNEL_SERIES,
-      '01 - Salaries and Wages',
-      '02 - Fringe Benefits',
-      '04 - Supplies',
     ]);
-    expect(series[0].isRollup).toBe(true);
-    expect(series[2].isRollup).toBe(false);
   });
 
   it('sums personnel categories into the Personnel rollup per month', () => {
@@ -161,13 +156,6 @@ describe('buildProjectionSeries', () => {
       projectedAmount: 10,
       remaining: 60,
     });
-  });
-
-  it('builds an individual series per category', () => {
-    const series = buildProjectionSeries(sampleResult());
-    const fringe = series.find((s) => s.key === '02 - Fringe Benefits');
-
-    expect(fringe?.points.map((p) => p.remaining)).toEqual([150, 130, 110]);
   });
 
   it('returns no rollup series when the grid is empty', () => {
