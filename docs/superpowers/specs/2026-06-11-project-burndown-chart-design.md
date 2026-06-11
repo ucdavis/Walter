@@ -84,7 +84,8 @@ rendering out of the math.
   - Stats footer: Current Balance, Projected End, Projection horizon.
 - **Placement**: project detail route
   (`routes/(authenticated)/projects/$iamId/$projectNumber/index.tsx`), after
-  `FinancialDetails`, before `ProjectAdditionalInfo`.
+  `FinancialDetails`, before `ProjectAdditionalInfo`. Sponsored projects only —
+  the section (and its query) is skipped when `summary.isInternal`.
 - **States**: local loading and error states inside the section; section hidden
   entirely when the sproc returns no period rows. Never blocks the rest of the
   page.

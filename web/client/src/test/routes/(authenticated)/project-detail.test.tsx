@@ -332,6 +332,34 @@ describe('project detail page', () => {
     }
   });
 
+  it('hides the project burndown for internal projects', async () => {
+    const projects = [
+      createProject({
+        awardEndDate: null,
+        awardNumber: null,
+        awardStartDate: null,
+        pmEmployeeId: '2000',
+        projectType: 'Internal',
+      }),
+    ];
+    setupHandlers(
+      { employeeId: '1000', name: 'PI User' },
+      projects,
+      burndownProjection
+    );
+
+    const { cleanup } = renderRoute({
+      initialPath: '/projects/1000/P1',
+    });
+
+    try {
+      await screen.findByText('Financial Details');
+      expect(screen.queryByText('Project Burndown')).not.toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+
   it('hides the project burndown when the projection has no periods', async () => {
     const projects = [createProject({ pmEmployeeId: '2000' })];
     setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);

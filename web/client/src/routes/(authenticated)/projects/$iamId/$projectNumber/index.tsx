@@ -99,7 +99,9 @@ function ProjectContent({
 
       <ProjectDetails summary={summary} />
       <FinancialDetails summary={summary} />
-      <ProjectBurndownSection projectNumber={summary.projectNumber} />
+      {!summary.isInternal && (
+        <ProjectBurndownSection projectNumber={summary.projectNumber} />
+      )}
       <ProjectAdditionalInfo summary={summary} />
 
       <section className="section-margin">
