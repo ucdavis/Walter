@@ -263,6 +263,27 @@ public sealed class ProjectController : ApiControllerBase
         return Ok(reconciliation);
     }
 
+    [HttpGet("projection/{projectNumber}")]
+    public async Task<IActionResult> GetProjectionAsync(string projectNumber, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(projectNumber))
+        {
+            return BadRequest("projectNumber is required.");
+        }
+
+        if (!await CallerCanAccessProjectsAsync(new[] { projectNumber }, cancellationToken))
+        {
+            return Forbid();
+        }
+
+        var applicationUser = User.GetUserIdentifier();
+        var emulatingUser = User.GetEmulatingUser();
+        var projection = await _datamartService.GetProjectProjectionAsync(
+            projectNumber, applicationUser, emulatingUser, cancellationToken);
+
+        return Ok(projection);
+    }
+
     /// <summary>
     /// Gets a unique list of Principal Investigators for all projects managed by the specified Person.
     /// </summary>

@@ -78,6 +78,13 @@ public interface IDatamartService
 
     Task<IReadOnlyList<GLTransactionRecord>> GetGLTransactionListingsAsync(
         IEnumerable<string> projectNumbers, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default);
+
+    /// <summary>
+    /// Per-expenditure-category budget burndown for a single project: the budget header
+    /// plus a period x category grid of actuals, projections, and running remaining.
+    /// </summary>
+    Task<ProjectProjectionResult> GetProjectProjectionAsync(
+        string projectNumber, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default);
 }
 
 public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
@@ -287,6 +294,34 @@ public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
             "dbo.usp_GetGLTransactionListings",
             new { ProjectIds = projectNumbersParam, ApplicationName = _appName, ApplicationUser = applicationUser, EmulatingUser = emulatingUser },
             ct: ct);
+    }
+
+    public async Task<ProjectProjectionResult> GetProjectProjectionAsync(
+        string projectNumber, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default)
+    {
+        // The sproc returns two result sets, which ExecuteSprocAsync cannot consume.
+        return await _retry.ExecuteAsync(async ct2 =>
+        {
+            await using var conn = new SqlConnection(_connectionString);
+            await conn.OpenAsync(ct2);
+
+            var cmd = new CommandDefinition(
+                commandText: "dbo.usp_GetProjectProjection",
+                parameters: new { ProjectId = projectNumber, ApplicationName = _appName, ApplicationUser = applicationUser, EmulatingUser = emulatingUser },
+                commandType: CommandType.StoredProcedure,
+                commandTimeout: 60,
+                cancellationToken: ct2);
+
+            await using var grid = await conn.QueryMultipleAsync(cmd);
+            var categories = (await grid.ReadAsync<ProjectProjectionCategory>()).AsList();
+            var periods = (await grid.ReadAsync<ProjectProjectionPeriod>()).AsList();
+
+            return new ProjectProjectionResult
+            {
+                Categories = categories,
+                Periods = periods,
+            };
+        }, ct);
     }
 
     private async Task<IReadOnlyList<T>> ExecuteSprocAsync<T>(

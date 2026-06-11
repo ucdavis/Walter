@@ -15,6 +15,7 @@ using server.Helpers;
 using server.Services;
 using Server.Tests;
 using server.core.Data;
+using server.core.Domain;
 
 namespace server.tests.Controllers;
 
@@ -140,6 +141,92 @@ public sealed class ProjectControllerTests
     }
 
     [Fact]
+    public async Task GetProjection_returns_forbid_when_user_lacks_financial_access()
+    {
+        using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
+        var authorizationService = CreateAuthorizationService();
+
+        var controller = new ProjectController(
+            new ThrowingFinancialApiService(),
+            new ResolvingDatamartService(),
+            authorizationService,
+            new UserService(NullLogger<UserService>.Instance, ctx))
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext
+                {
+                    User = CreateUser(roles: []),
+                },
+            },
+        };
+
+        var result = await controller.GetProjectionAsync("PROJ-001", CancellationToken.None);
+
+        result.Should().BeOfType<ForbidResult>();
+    }
+
+    [Fact]
+    public async Task GetProjection_returns_envelope_for_financial_viewer()
+    {
+        using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
+        var authorizationService = CreateAuthorizationService();
+
+        var projection = new ProjectProjectionResult
+        {
+            Categories = new[]
+            {
+                new ProjectProjectionCategory
+                {
+                    ExpenditureCategory = "01 - Salaries and Wages",
+                    IsPersonnel = 1,
+                    Budget = 500m,
+                    SpentToDate = 100m,
+                    Committed = 0m,
+                    RemainingNow = 400m,
+                },
+            },
+            Periods = new[]
+            {
+                new ProjectProjectionPeriod
+                {
+                    Month = "2026-06",
+                    DisplayPeriod = "Jun-26",
+                    Kind = "blended",
+                    ExpenditureCategory = "01 - Salaries and Wages",
+                    IsPersonnel = 1,
+                    ActualAmount = 0m,
+                    ProjectedAmount = 50m,
+                    Remaining = 350m,
+                },
+            },
+        };
+
+        var controller = new ProjectController(
+            new ThrowingFinancialApiService(),
+            new ResolvingDatamartService(projection: projection),
+            authorizationService,
+            new UserService(NullLogger<UserService>.Instance, ctx))
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext
+                {
+                    User = CreateUser(roles: [Role.Names.FinancialViewer]),
+                },
+            },
+        };
+
+        var result = await controller.GetProjectionAsync("PROJ-001", CancellationToken.None);
+
+        var ok = result.Should().BeOfType<OkObjectResult>().Which;
+        var envelope = ok.Value.Should().BeOfType<ProjectProjectionResult>().Which;
+        envelope.Categories.Should().HaveCount(1);
+        envelope.Periods.Should().HaveCount(1);
+        envelope.Periods[0].Remaining.Should().Be(350m);
+    }
+
+    [Fact]
     public void Project_routes_do_not_expose_employee_id_lookup_contracts()
     {
         var templates = typeof(ProjectController)
@@ -184,10 +271,14 @@ public sealed class ProjectControllerTests
     private sealed class ResolvingDatamartService : IDatamartService
     {
         private readonly SearchablePersonRecord? _person;
+        private readonly ProjectProjectionResult? _projection;
 
-        public ResolvingDatamartService(SearchablePersonRecord? person = null)
+        public ResolvingDatamartService(
+            SearchablePersonRecord? person = null,
+            ProjectProjectionResult? projection = null)
         {
             _person = person;
+            _projection = projection;
         }
 
         public Task<IReadOnlyList<SearchablePersonRecord>> SearchPeopleAsync(
@@ -278,6 +369,17 @@ public sealed class ProjectControllerTests
             CancellationToken ct = default)
         {
             throw new InvalidOperationException("Datamart should not be called for unauthorized users.");
+        }
+
+        public Task<ProjectProjectionResult> GetProjectProjectionAsync(
+            string projectNumber,
+            string? applicationUser = null,
+            string? emulatingUser = null,
+            CancellationToken ct = default)
+        {
+            return _projection is not null
+                ? Task.FromResult(_projection)
+                : throw new InvalidOperationException("Datamart should not be called for unauthorized users.");
         }
     }
 }
