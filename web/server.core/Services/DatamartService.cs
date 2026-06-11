@@ -30,6 +30,12 @@ public sealed class DatamartOptions
 
     public bool UsePositionBudgetsLocalTable =>
         string.Equals(PositionBudgetsSource?.Trim(), LocalSource, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Local testing only: serve generated project projection data instead of
+    /// calling dbo.usp_GetProjectProjection (which may not exist locally).
+    /// </summary>
+    public bool UseFakeProjectProjection { get; set; }
 }
 
 public interface IDatamartService
@@ -94,6 +100,7 @@ public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
     private readonly string _connectionString;
     private readonly string _appName;
     private readonly string _positionBudgetsSproc;
+    private readonly bool _useFakeProjectProjection;
     private readonly AsyncRetryPolicy _retry;
 
     static DatamartService()
@@ -118,6 +125,8 @@ public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
         _positionBudgetsSproc = value.UsePositionBudgetsLocalTable
             ? "dbo.usp_GetPositionBudgetsLocal"
             : "dbo.usp_GetPositionBudgets";
+
+        _useFakeProjectProjection = value.UseFakeProjectProjection;
 
         _retry = Policy
             .Handle<SqlException>()
@@ -299,6 +308,11 @@ public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
     public async Task<ProjectProjectionResult> GetProjectProjectionAsync(
         string projectNumber, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default)
     {
+        if (_useFakeProjectProjection)
+        {
+            return ProjectProjectionTestData.Generate(DateTime.Today);
+        }
+
         // The sproc returns two result sets, which ExecuteSprocAsync cannot consume.
         return await _retry.ExecuteAsync(async ct2 =>
         {
