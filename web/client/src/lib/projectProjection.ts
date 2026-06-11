@@ -6,6 +6,7 @@ import type {
 
 export const PERSONNEL_SERIES = 'Personnel';
 export const NON_PERSONNEL_SERIES = 'Non-Personnel';
+export const ALL_EXPENSES_SERIES = 'All Expenses';
 
 export interface ProjectionPoint {
   actualAmount: number;
@@ -70,6 +71,13 @@ export function buildProjectionSeries(
     series.push({
       key: NON_PERSONNEL_SERIES,
       points: toPoints(nonPersonnel),
+    });
+  }
+
+  if (result.periods.length > 0) {
+    series.push({
+      key: ALL_EXPENSES_SERIES,
+      points: toPoints(result.periods),
     });
   }
 

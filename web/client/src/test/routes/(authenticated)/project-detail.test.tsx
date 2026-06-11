@@ -315,6 +315,11 @@ describe('project detail page', () => {
       });
       expect(nonPersonnelToggle).toHaveAttribute('aria-pressed', 'true');
 
+      const allExpensesToggle = screen.getByRole('button', {
+        name: 'All Expenses',
+      });
+      expect(allExpensesToggle).toHaveAttribute('aria-pressed', 'false');
+
       // Only the two rollup series are offered; no per-category buttons.
       expect(
         screen.queryByRole('button', { name: '04 - Supplies' })

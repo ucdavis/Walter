@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ALL_EXPENSES_SERIES,
   buildProjectionSeries,
   getProjectionStats,
   NON_PERSONNEL_SERIES,
@@ -117,12 +118,22 @@ const sampleResult = (): ProjectProjectionResult => ({
 });
 
 describe('buildProjectionSeries', () => {
-  it('builds only the Personnel and Non-Personnel rollup series', () => {
+  it('builds the Personnel, Non-Personnel, and All Expenses rollup series', () => {
     const series = buildProjectionSeries(sampleResult());
 
     expect(series.map((s) => s.key)).toEqual([
       PERSONNEL_SERIES,
       NON_PERSONNEL_SERIES,
+      ALL_EXPENSES_SERIES,
+    ]);
+  });
+
+  it('sums every category into the All Expenses rollup', () => {
+    const series = buildProjectionSeries(sampleResult());
+    const allExpenses = series.find((s) => s.key === ALL_EXPENSES_SERIES);
+
+    expect(allExpenses?.points.map((p) => p.remaining)).toEqual([
+      630, 550, 470,
     ]);
   });
 
