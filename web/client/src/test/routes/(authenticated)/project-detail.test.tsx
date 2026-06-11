@@ -305,28 +305,30 @@ describe('project detail page', () => {
       expect(screen.getByText('Project Burndown')).toBeInTheDocument();
       expect(screen.getByText('Current Balance')).toBeInTheDocument();
 
+      // Single-select: All Expenses is first and selected by default.
+      const allExpensesToggle = screen.getByRole('button', {
+        name: 'All Expenses',
+      });
+      expect(allExpensesToggle).toHaveAttribute('aria-pressed', 'true');
+
       const personnelToggle = screen.getByRole('button', {
         name: 'Personnel',
       });
-      expect(personnelToggle).toHaveAttribute('aria-pressed', 'true');
+      expect(personnelToggle).toHaveAttribute('aria-pressed', 'false');
 
       const nonPersonnelToggle = screen.getByRole('button', {
         name: 'Non-Personnel',
       });
-      expect(nonPersonnelToggle).toHaveAttribute('aria-pressed', 'true');
+      expect(nonPersonnelToggle).toHaveAttribute('aria-pressed', 'false');
 
-      const allExpensesToggle = screen.getByRole('button', {
-        name: 'All Expenses',
-      });
-      expect(allExpensesToggle).toHaveAttribute('aria-pressed', 'false');
-
-      // Only the two rollup series are offered; no per-category buttons.
+      // Only the rollup series are offered; no per-category buttons.
       expect(
         screen.queryByRole('button', { name: '04 - Supplies' })
       ).not.toBeInTheDocument();
 
       await user.click(nonPersonnelToggle);
-      expect(nonPersonnelToggle).toHaveAttribute('aria-pressed', 'false');
+      expect(nonPersonnelToggle).toHaveAttribute('aria-pressed', 'true');
+      expect(allExpensesToggle).toHaveAttribute('aria-pressed', 'false');
     } finally {
       cleanup();
     }

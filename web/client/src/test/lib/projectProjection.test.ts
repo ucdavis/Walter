@@ -119,13 +119,13 @@ const sampleResult = (): ProjectProjectionResult => ({
 });
 
 describe('buildProjectionSeries', () => {
-  it('builds the Personnel, Non-Personnel, and All Expenses rollup series', () => {
+  it('builds the All Expenses, Personnel, and Non-Personnel rollup series', () => {
     const series = buildProjectionSeries(sampleResult());
 
     expect(series.map((s) => s.key)).toEqual([
+      ALL_EXPENSES_SERIES,
       PERSONNEL_SERIES,
       NON_PERSONNEL_SERIES,
-      ALL_EXPENSES_SERIES,
     ]);
   });
 

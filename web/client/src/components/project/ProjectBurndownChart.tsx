@@ -11,11 +11,10 @@ import {
 } from 'recharts';
 import { formatCurrency } from '@/lib/currency.ts';
 import {
+  ALL_EXPENSES_SERIES,
   buildProjectionSeries,
   getMonthlyCategorySpend,
   getProjectionStats,
-  NON_PERSONNEL_SERIES,
-  PERSONNEL_SERIES,
   type CategorySpend,
   type ProjectionSeries,
 } from '@/lib/projectProjection.ts';
@@ -171,32 +170,18 @@ export function ProjectBurndownSection({
     () => (result ? getMonthlyCategorySpend(result) : new Map()),
     [result]
   );
-  const [visibleKeys, setVisibleKeys] = useState<ReadonlySet<string>>(
-    new Set([PERSONNEL_SERIES, NON_PERSONNEL_SERIES])
-  );
+  const [selectedKey, setSelectedKey] = useState(ALL_EXPENSES_SERIES);
 
   if (projectionQuery.isSuccess && series.length === 0) {
     return null;
   }
 
-  const toggleSeries = (key: string) => {
-    setVisibleKeys((current) => {
-      const next = new Set(current);
-      if (next.has(key)) {
-        next.delete(key);
-      } else {
-        next.add(key);
-      }
-      return next;
-    });
-  };
-
   const visibleSeries = series
     .map((entry, index) => ({ color: seriesColor(index), key: entry.key }))
-    .filter(({ key }) => visibleKeys.has(key));
+    .filter(({ key }) => key === selectedKey);
 
   const visibleBalances = series
-    .filter(({ key }) => visibleKeys.has(key))
+    .filter(({ key }) => key === selectedKey)
     .flatMap(({ points }) => points.map((point) => point.remaining));
   const minBalance = Math.min(0, ...visibleBalances);
   const maxBalance = Math.max(0, ...visibleBalances);
@@ -291,13 +276,13 @@ export function ProjectBurndownSection({
 
           <div className="mt-4 flex flex-wrap gap-2">
             {series.map((entry, index) => {
-              const isVisible = visibleKeys.has(entry.key);
+              const isSelected = entry.key === selectedKey;
               return (
                 <button
-                  aria-pressed={isVisible}
-                  className={`btn btn-xs ${isVisible ? '' : 'btn-outline'}`}
+                  aria-pressed={isSelected}
+                  className={`btn btn-xs ${isSelected ? 'btn-outline' : 'btn-ghost'}`}
                   key={entry.key}
-                  onClick={() => toggleSeries(entry.key)}
+                  onClick={() => setSelectedKey(entry.key)}
                   type="button"
                 >
                   <span

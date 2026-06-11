@@ -78,8 +78,9 @@ rendering out of the math.
   - Dashed zero reference line; palette-colored lines per series (no
     red-below-zero recolor — noisy with multiple lines; the zero line carries
     the deficit signal).
-  - Toggle chips below the chart: `[Personnel]` and `[Non-Personnel]` only.
-    Multi-toggle; both on by default.
+  - Toggle chips below the chart: `[All Expenses] [Personnel] [Non-Personnel]`.
+    Single-select — one series shown at a time; All Expenses is the default.
+    The selected toggle is outlined, unselected ones are ghost buttons.
   - Tooltip: month plus each visible series' remaining and spend.
   - Stats footer: Current Balance, Projected End, Projection horizon.
 - **Placement**: project detail route

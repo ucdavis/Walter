@@ -65,6 +65,13 @@ export function buildProjectionSeries(
 
   const series: ProjectionSeries[] = [];
 
+  if (result.periods.length > 0) {
+    series.push({
+      key: ALL_EXPENSES_SERIES,
+      points: toPoints(result.periods),
+    });
+  }
+
   if (personnel.length > 0) {
     series.push({
       key: PERSONNEL_SERIES,
@@ -76,13 +83,6 @@ export function buildProjectionSeries(
     series.push({
       key: NON_PERSONNEL_SERIES,
       points: toPoints(nonPersonnel),
-    });
-  }
-
-  if (result.periods.length > 0) {
-    series.push({
-      key: ALL_EXPENSES_SERIES,
-      points: toPoints(result.periods),
     });
   }
 
