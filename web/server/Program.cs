@@ -63,8 +63,140 @@ builder.Services.Configure<DatamartOptions>(options =>
         ?? string.Empty;
     options.ApplicationName = builder.Configuration["Datamart:ApplicationName"]
         ?? $"Walter-{builder.Environment.EnvironmentName}";
-    options.PositionBudgetsSource = builder.Configuration["Datamart:PositionBudgetsSource"]
-        ?? DatamartOptions.UCPathDWHSource;
+});
+builder.Services.Configure<ProcurementAssistantOptions>(options =>
+{
+    options.ElasticsearchBaseUrl = builder.Configuration[$"{ProcurementAssistantOptions.SectionName}:ElasticsearchBaseUrl"]
+        ?? builder.Configuration["PROCUREMENT_ELASTICSEARCH_BASE_URL"]
+        ?? builder.Configuration["ELASTICSEARCH_BASE_URL"]
+        ?? string.Empty;
+    options.ElasticsearchApiKey = builder.Configuration[$"{ProcurementAssistantOptions.SectionName}:ElasticsearchApiKey"]
+        ?? builder.Configuration["PROCUREMENT_ELASTICSEARCH_API_KEY"]
+        ?? builder.Configuration["ELASTICSEARCH_API_KEY"]
+        ?? string.Empty;
+    options.ElasticsearchUsername = builder.Configuration[$"{ProcurementAssistantOptions.SectionName}:ElasticsearchUsername"]
+        ?? builder.Configuration["PoSearch:ElasticUsername"]
+        ?? builder.Configuration["PoSearch__ElasticUsername"]
+        ?? builder.Configuration["PROCUREMENT_ELASTICSEARCH_USERNAME"]
+        ?? builder.Configuration["ELASTICSEARCH_USERNAME"]
+        ?? string.Empty;
+    options.ElasticsearchPassword = builder.Configuration[$"{ProcurementAssistantOptions.SectionName}:ElasticsearchPassword"]
+        ?? builder.Configuration["PoSearch:ElasticPassword"]
+        ?? builder.Configuration["PoSearch__ElasticPassword"]
+        ?? builder.Configuration["PROCUREMENT_ELASTICSEARCH_PASSWORD"]
+        ?? builder.Configuration["ELASTICSEARCH_PASSWORD"]
+        ?? string.Empty;
+    options.SupplierIndexName = builder.Configuration[$"{ProcurementAssistantOptions.SectionName}:SupplierIndexName"]
+        ?? builder.Configuration["PROCUREMENT_SUPPLIER_INDEX_NAME"]
+        ?? options.SupplierIndexName;
+    options.LineItemIndexName = builder.Configuration[$"{ProcurementAssistantOptions.SectionName}:LineItemIndexName"]
+        ?? builder.Configuration["PROCUREMENT_LINE_ITEM_INDEX_NAME"]
+        ?? options.LineItemIndexName;
+    options.ItemGroupIndexName = builder.Configuration[$"{ProcurementAssistantOptions.SectionName}:ItemGroupIndexName"]
+        ?? builder.Configuration["PROCUREMENT_ITEM_GROUP_INDEX_NAME"]
+        ?? options.ItemGroupIndexName;
+    options.SupplierTermsAggregationField = builder.Configuration[$"{ProcurementAssistantOptions.SectionName}:SupplierTermsAggregationField"]
+        ?? builder.Configuration["PROCUREMENT_SUPPLIER_TERMS_AGGREGATION_FIELD"]
+        ?? options.SupplierTermsAggregationField;
+    options.CategoryTermsAggregationField = builder.Configuration[$"{ProcurementAssistantOptions.SectionName}:CategoryTermsAggregationField"]
+        ?? builder.Configuration["PROCUREMENT_CATEGORY_TERMS_AGGREGATION_FIELD"]
+        ?? options.CategoryTermsAggregationField;
+    options.DateField = builder.Configuration[$"{ProcurementAssistantOptions.SectionName}:DateField"]
+        ?? builder.Configuration["PROCUREMENT_DATE_FIELD"]
+        ?? options.DateField;
+    options.ItemGroupNameField = builder.Configuration[$"{ProcurementAssistantOptions.SectionName}:ItemGroupNameField"]
+        ?? builder.Configuration["PROCUREMENT_ITEM_GROUP_NAME_FIELD"]
+        ?? options.ItemGroupNameField;
+    options.ItemGroupNameNormField = builder.Configuration[$"{ProcurementAssistantOptions.SectionName}:ItemGroupNameNormField"]
+        ?? builder.Configuration["PROCUREMENT_ITEM_GROUP_NAME_NORM_FIELD"]
+        ?? options.ItemGroupNameNormField;
+    options.ItemGroupDescriptionField = builder.Configuration[$"{ProcurementAssistantOptions.SectionName}:ItemGroupDescriptionField"]
+        ?? builder.Configuration["PROCUREMENT_ITEM_GROUP_DESCRIPTION_FIELD"]
+        ?? options.ItemGroupDescriptionField;
+    options.ItemGroupDescriptionNormField = builder.Configuration[$"{ProcurementAssistantOptions.SectionName}:ItemGroupDescriptionNormField"]
+        ?? builder.Configuration["PROCUREMENT_ITEM_GROUP_DESCRIPTION_NORM_FIELD"]
+        ?? options.ItemGroupDescriptionNormField;
+    options.ItemGroupVectorTextField = builder.Configuration[$"{ProcurementAssistantOptions.SectionName}:ItemGroupVectorTextField"]
+        ?? builder.Configuration["PROCUREMENT_ITEM_GROUP_VECTOR_TEXT_FIELD"]
+        ?? options.ItemGroupVectorTextField;
+    options.ItemGroupEmbeddingField = builder.Configuration[$"{ProcurementAssistantOptions.SectionName}:ItemGroupEmbeddingField"]
+        ?? builder.Configuration["PROCUREMENT_ITEM_GROUP_EMBEDDING_FIELD"]
+        ?? options.ItemGroupEmbeddingField;
+    options.ItemGroupAmountField = builder.Configuration[$"{ProcurementAssistantOptions.SectionName}:ItemGroupAmountField"]
+        ?? builder.Configuration["PROCUREMENT_ITEM_GROUP_AMOUNT_FIELD"]
+        ?? options.ItemGroupAmountField;
+    options.ItemGroupLineCountField = builder.Configuration[$"{ProcurementAssistantOptions.SectionName}:ItemGroupLineCountField"]
+        ?? builder.Configuration["PROCUREMENT_ITEM_GROUP_LINE_COUNT_FIELD"]
+        ?? options.ItemGroupLineCountField;
+    options.LineItemEmbeddingField = builder.Configuration[$"{ProcurementAssistantOptions.SectionName}:LineItemEmbeddingField"]
+        ?? builder.Configuration["PROCUREMENT_LINE_ITEM_EMBEDDING_FIELD"]
+        ?? options.LineItemEmbeddingField;
+    options.EnableHybridSearch = bool.TryParse(
+        builder.Configuration[$"{ProcurementAssistantOptions.SectionName}:EnableHybridSearch"]
+            ?? builder.Configuration["PROCUREMENT_ENABLE_HYBRID_SEARCH"],
+        out var enableHybridSearch)
+        ? enableHybridSearch
+        : options.EnableHybridSearch;
+    options.OpenAiApiKey = builder.Configuration[$"{ProcurementAssistantOptions.SectionName}:OpenAiApiKey"]
+        ?? builder.Configuration["OPENAI_API_KEY"]
+        ?? builder.Configuration["OpenAI:ApiKey"]
+        ?? string.Empty;
+    options.OpenAiBaseUrl = builder.Configuration[$"{ProcurementAssistantOptions.SectionName}:OpenAiBaseUrl"]
+        ?? builder.Configuration["OPENAI_BASE_URL"]
+        ?? builder.Configuration["OpenAI:BaseUrl"]
+        ?? "https://api.openai.com/v1";
+    options.OpenAiChatModel = builder.Configuration[$"{ProcurementAssistantOptions.SectionName}:OpenAiChatModel"]
+        ?? builder.Configuration["OPENAI_CHAT_MODEL"]
+        ?? builder.Configuration["OpenAI:ChatModel"]
+        ?? options.OpenAiChatModel;
+    options.OpenAiEmbeddingModel = builder.Configuration[$"{ProcurementAssistantOptions.SectionName}:OpenAiEmbeddingModel"]
+        ?? builder.Configuration["OPENAI_EMBEDDING_MODEL"]
+        ?? "text-embedding-3-small";
+    options.OpenAiReasoningEffort = builder.Configuration[$"{ProcurementAssistantOptions.SectionName}:OpenAiReasoningEffort"]
+        ?? builder.Configuration["OPENAI_REASONING_EFFORT"]
+        ?? builder.Configuration["OpenAI:ReasoningEffort"]
+        ?? options.OpenAiReasoningEffort;
+    options.DefaultSearchSize = int.TryParse(
+        builder.Configuration[$"{ProcurementAssistantOptions.SectionName}:DefaultSearchSize"],
+        out var defaultSearchSize)
+        ? defaultSearchSize
+        : options.DefaultSearchSize;
+    options.DefaultAggregationSize = int.TryParse(
+        builder.Configuration[$"{ProcurementAssistantOptions.SectionName}:DefaultAggregationSize"],
+        out var defaultAggregationSize)
+        ? defaultAggregationSize
+        : options.DefaultAggregationSize;
+    options.MaxAgentSteps = int.TryParse(
+        builder.Configuration[$"{ProcurementAssistantOptions.SectionName}:MaxAgentSteps"],
+        out var maxAgentSteps)
+        ? maxAgentSteps
+        : options.MaxAgentSteps;
+
+    var queryAliasGroups = builder.Configuration
+        .GetSection($"{ProcurementAssistantOptions.SectionName}:QueryAliasGroups")
+        .Get<string[][]>();
+    if (queryAliasGroups is { Length: > 0 })
+    {
+        options.QueryAliasGroups = queryAliasGroups;
+    }
+
+    var queryAliasGroupsByKey = builder.Configuration
+        .GetSection($"{ProcurementAssistantOptions.SectionName}:QueryAliasGroupsByKey")
+        .Get<Dictionary<string, string[]>>();
+    if (queryAliasGroupsByKey is { Count: > 0 })
+    {
+        options.QueryAliasGroupsByKey = new Dictionary<string, string[]>(
+            queryAliasGroupsByKey,
+            StringComparer.OrdinalIgnoreCase);
+    }
+
+    var supplierComparisonExpansionGroups = builder.Configuration
+        .GetSection($"{ProcurementAssistantOptions.SectionName}:SupplierComparisonExpansionGroups")
+        .Get<Dictionary<string, string[]>>();
+    if (supplierComparisonExpansionGroups is { Count: > 0 })
+    {
+        options.SupplierComparisonExpansionGroups = supplierComparisonExpansionGroups;
+    }
 });
 
 builder.Services.AddControllers();
@@ -76,6 +208,28 @@ builder.Services.AddResponseCaching();
 // add singleton services here
 builder.Services.AddSingleton<IFinancialApiService, FinancialApiService>();
 builder.Services.AddSingleton<IDatamartService, DatamartService>();
+builder.Services.AddHttpClient<IProcurementSearchGateway, ElasticsearchProcurementSearchGateway>(client =>
+{
+    client.Timeout = TimeSpan.FromMinutes(2);
+});
+builder.Services.AddHttpClient<IProcurementEmbeddingService, OpenAiProcurementEmbeddingService>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
+builder.Services.AddHttpClient<IProcurementAgentModelClient, OpenAiProcurementAgentModelClient>(client =>
+{
+    client.Timeout = TimeSpan.FromMinutes(2);
+});
+builder.Services.AddScoped<IProcurementAliasCatalog, ProcurementAliasCatalog>();
+builder.Services.AddScoped<IProcurementQueryParser, ProcurementQueryParser>();
+builder.Services.AddScoped<IProcurementAssistantService>(serviceProvider =>
+    new ProcurementAssistantService(
+        serviceProvider.GetRequiredService<IProcurementSearchGateway>(),
+        serviceProvider.GetRequiredService<IProcurementEmbeddingService>(),
+        serviceProvider.GetRequiredService<IProcurementAgentModelClient>(),
+        serviceProvider.GetRequiredService<IProcurementQueryParser>(),
+        serviceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<ProcurementAssistantOptions>>(),
+        serviceProvider.GetRequiredService<ILogger<ProcurementAssistantService>>()));
 
 // add scoped services here
 builder.Services.AddScoped<IDbInitializer, DbInitializer>();

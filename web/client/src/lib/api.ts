@@ -17,11 +17,14 @@ export async function fetchJson<T>(
   init: RequestInit & { skipRedirectOn401?: boolean } = {},
   signal?: AbortSignal
 ): Promise<T> {
+  const isFormData =
+    typeof FormData !== 'undefined' && init.body instanceof FormData;
+
   const res = await fetch(url, {
     credentials: 'same-origin', // front/back proxy on same domain and during prod it's same origin too
     headers: {
       Accept: 'application/json',
-      ...(init.body ? { 'Content-Type': 'application/json' } : {}),
+      ...(init.body && !isFormData ? { 'Content-Type': 'application/json' } : {}),
       ...init.headers,
     },
     signal, // for cancellation/abort

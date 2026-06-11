@@ -17,6 +17,14 @@ export function Reports() {
 
     if (canViewAccruals) {
       availableReports.push({
+        id: 'spend-analysis',
+        title: 'Spend Intelligence Workspace',
+        url: '/reports/spend-analysis',
+      });
+    }
+
+    if (canViewAccruals) {
+      availableReports.push({
         id: 'accruals',
         title: 'Employee Vacation Accruals',
         url: '/accruals',
