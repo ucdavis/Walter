@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   ALL_EXPENSES_SERIES,
   buildProjectionSeries,
+  getMonthlyCategorySpend,
   getProjectionStats,
   NON_PERSONNEL_SERIES,
   PERSONNEL_SERIES,
@@ -173,6 +174,43 @@ describe('buildProjectionSeries', () => {
     const series = buildProjectionSeries({ categories: [], periods: [] });
 
     expect(series).toEqual([]);
+  });
+});
+
+describe('getMonthlyCategorySpend', () => {
+  it('lists each category spend (actual + projected) per month, sorted', () => {
+    const spendByMonth = getMonthlyCategorySpend(sampleResult());
+
+    expect(spendByMonth.get('2026-05')).toEqual([
+      { expenditureCategory: '01 - Salaries and Wages', spend: 50 },
+      { expenditureCategory: '02 - Fringe Benefits', spend: 20 },
+      { expenditureCategory: '04 - Supplies', spend: 10 },
+    ]);
+    expect(spendByMonth.get('2026-06')).toEqual([
+      { expenditureCategory: '01 - Salaries and Wages', spend: 50 },
+      { expenditureCategory: '02 - Fringe Benefits', spend: 20 },
+      { expenditureCategory: '04 - Supplies', spend: 10 },
+    ]);
+  });
+
+  it('omits categories with no spend in a month', () => {
+    const result = sampleResult();
+    // Zero out July fringe so it should disappear from that month only.
+    for (const p of result.periods) {
+      if (
+        p.month === '2026-07' &&
+        p.expenditureCategory === '02 - Fringe Benefits'
+      ) {
+        p.projectedAmount = 0;
+      }
+    }
+
+    const spendByMonth = getMonthlyCategorySpend(result);
+
+    expect(spendByMonth.get('2026-07')).toEqual([
+      { expenditureCategory: '01 - Salaries and Wages', spend: 50 },
+      { expenditureCategory: '04 - Supplies', spend: 10 },
+    ]);
   });
 });
 

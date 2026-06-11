@@ -12,9 +12,11 @@ import {
 import { formatCurrency } from '@/lib/currency.ts';
 import {
   buildProjectionSeries,
+  getMonthlyCategorySpend,
   getProjectionStats,
   NON_PERSONNEL_SERIES,
   PERSONNEL_SERIES,
+  type CategorySpend,
   type ProjectionSeries,
 } from '@/lib/projectProjection.ts';
 import { useProjectProjectionQuery } from '@/queries/projectProjection.ts';
@@ -68,12 +70,14 @@ function seriesColor(index: number) {
 
 interface BurndownTooltipProps {
   active?: boolean;
+  categorySpendByMonth: Map<string, CategorySpend[]>;
   payload?: Array<{ payload?: ChartRow }>;
   visibleSeries: Array<{ color: string; key: string }>;
 }
 
 function BurndownTooltip({
   active,
+  categorySpendByMonth,
   payload,
   visibleSeries,
 }: BurndownTooltipProps) {
@@ -82,6 +86,8 @@ function BurndownTooltip({
   if (!active || !row) {
     return null;
   }
+
+  const categorySpend = categorySpendByMonth.get(String(row.month)) ?? [];
 
   return (
     <div className="rounded-md border border-main-border bg-base-100 p-4 text-sm shadow-lg">
@@ -120,6 +126,25 @@ function BurndownTooltip({
           );
         })}
       </dl>
+
+      {categorySpend.length > 0 && (
+        <div className="mt-3 border-t border-main-border pt-3">
+          <p className="font-proxima-bold mb-2">Expenses by Category</p>
+          <div className="space-y-1">
+            {categorySpend.map(({ expenditureCategory, spend }) => (
+              <div
+                className="flex justify-between gap-8"
+                key={expenditureCategory}
+              >
+                <span className="truncate" title={expenditureCategory}>
+                  {expenditureCategory}
+                </span>
+                <span className="font-medium">{formatCurrency(spend)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -140,6 +165,10 @@ export function ProjectBurndownSection({
   const chartRows = useMemo(() => buildChartRows(series), [series]);
   const stats = useMemo(
     () => (result ? getProjectionStats(result) : null),
+    [result]
+  );
+  const categorySpendByMonth = useMemo(
+    () => (result ? getMonthlyCategorySpend(result) : new Map()),
     [result]
   );
   const [visibleKeys, setVisibleKeys] = useState<ReadonlySet<string>>(
@@ -219,7 +248,12 @@ export function ProjectBurndownSection({
                   y={0}
                 />
                 <Tooltip
-                  content={<BurndownTooltip visibleSeries={visibleSeries} />}
+                  content={
+                    <BurndownTooltip
+                      categorySpendByMonth={categorySpendByMonth}
+                      visibleSeries={visibleSeries}
+                    />
+                  }
                 />
                 {visibleSeries.map(({ color, key }) => (
                   <Line

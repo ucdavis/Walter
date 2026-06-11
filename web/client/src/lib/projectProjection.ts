@@ -28,6 +28,11 @@ export interface ProjectionStats {
   projectedMonths: number;
 }
 
+export interface CategorySpend {
+  expenditureCategory: string;
+  spend: number;
+}
+
 function toPoints(periods: ProjectProjectionPeriod[]): ProjectionPoint[] {
   const byMonth = new Map<string, ProjectionPoint>();
 
@@ -82,6 +87,34 @@ export function buildProjectionSeries(
   }
 
   return series;
+}
+
+export function getMonthlyCategorySpend(
+  result: ProjectProjectionResult
+): Map<string, CategorySpend[]> {
+  const byMonth = new Map<string, CategorySpend[]>();
+
+  for (const period of result.periods) {
+    const spend = period.actualAmount + period.projectedAmount;
+    if (spend === 0) {
+      continue;
+    }
+
+    const entries = byMonth.get(period.month) ?? [];
+    entries.push({
+      expenditureCategory: period.expenditureCategory,
+      spend,
+    });
+    byMonth.set(period.month, entries);
+  }
+
+  for (const entries of byMonth.values()) {
+    entries.sort((a, b) =>
+      a.expenditureCategory.localeCompare(b.expenditureCategory)
+    );
+  }
+
+  return byMonth;
 }
 
 export function getProjectionStats(
