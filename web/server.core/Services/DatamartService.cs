@@ -30,12 +30,6 @@ public sealed class DatamartOptions
 
     public bool UsePositionBudgetsLocalTable =>
         string.Equals(PositionBudgetsSource?.Trim(), LocalSource, StringComparison.OrdinalIgnoreCase);
-
-    /// <summary>
-    /// Local testing only: serve generated project projection data instead of
-    /// calling dbo.usp_GetProjectProjection (which may not exist locally).
-    /// </summary>
-    public bool UseFakeProjectProjection { get; set; }
 }
 
 public interface IDatamartService
@@ -100,7 +94,6 @@ public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
     private readonly string _connectionString;
     private readonly string _appName;
     private readonly string _positionBudgetsSproc;
-    private readonly bool _useFakeProjectProjection;
     private readonly AsyncRetryPolicy _retry;
 
     static DatamartService()
@@ -125,8 +118,6 @@ public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
         _positionBudgetsSproc = value.UsePositionBudgetsLocalTable
             ? "dbo.usp_GetPositionBudgetsLocal"
             : "dbo.usp_GetPositionBudgets";
-
-        _useFakeProjectProjection = value.UseFakeProjectProjection;
 
         _retry = Policy
             .Handle<SqlException>()
@@ -305,37 +296,13 @@ public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
             ct: ct);
     }
 
-    public async Task<ProjectProjectionResult> GetProjectProjectionAsync(
+    public Task<ProjectProjectionResult> GetProjectProjectionAsync(
         string projectNumber, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default)
     {
-        if (_useFakeProjectProjection)
-        {
-            return ProjectProjectionTestData.Generate(DateTime.Today);
-        }
-
-        // The sproc returns two result sets, which ExecuteSprocAsync cannot consume.
-        return await _retry.ExecuteAsync(async ct2 =>
-        {
-            await using var conn = new SqlConnection(_connectionString);
-            await conn.OpenAsync(ct2);
-
-            var cmd = new CommandDefinition(
-                commandText: "dbo.usp_GetProjectProjection",
-                parameters: new { ProjectId = projectNumber, ApplicationName = _appName, ApplicationUser = applicationUser, EmulatingUser = emulatingUser },
-                commandType: CommandType.StoredProcedure,
-                commandTimeout: 60,
-                cancellationToken: ct2);
-
-            await using var grid = await conn.QueryMultipleAsync(cmd);
-            var categories = (await grid.ReadAsync<ProjectProjectionCategory>()).AsList();
-            var periods = (await grid.ReadAsync<ProjectProjectionPeriod>()).AsList();
-
-            return new ProjectProjectionResult
-            {
-                Categories = categories,
-                Periods = periods,
-            };
-        }, ct);
+        // TEMP: hardcoded test data while the burndown UI is built out locally.
+        // Restore the dbo.usp_GetProjectProjection call (commit 70ee007a)
+        // before merge.
+        return Task.FromResult(ProjectProjectionTestData.Generate(DateTime.Today));
     }
 
     private async Task<IReadOnlyList<T>> ExecuteSprocAsync<T>(
