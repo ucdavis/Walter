@@ -406,6 +406,8 @@ internal sealed class ProcurementElasticsearchRequestFactory
                     },
                 });
 
+            var normalizedPhrase = ProcurementQueryText.Normalize(phrase);
+
             should.Add(new
             {
                 match_phrase = new Dictionary<string, object?>
@@ -413,12 +415,16 @@ internal sealed class ProcurementElasticsearchRequestFactory
                     [_options.ItemGroupNameNormField] = new
                     {
                         boost = 10,
-                        query = ProcurementQueryText.Normalize(phrase),
+                        query = normalizedPhrase,
                     },
                 },
             });
 
-            if (!string.IsNullOrWhiteSpace(_options.ItemGroupDescriptionNormField))
+            if (!string.IsNullOrWhiteSpace(_options.ItemGroupDescriptionNormField) &&
+                !string.Equals(
+                    _options.ItemGroupDescriptionNormField,
+                    _options.ItemGroupNameNormField,
+                    StringComparison.OrdinalIgnoreCase))
             {
                 should.Add(new
                 {
@@ -427,7 +433,7 @@ internal sealed class ProcurementElasticsearchRequestFactory
                         [_options.ItemGroupDescriptionNormField] = new
                         {
                             boost = 7,
-                            query = ProcurementQueryText.Normalize(phrase),
+                            query = normalizedPhrase,
                         },
                     },
                 });
@@ -442,7 +448,7 @@ internal sealed class ProcurementElasticsearchRequestFactory
                         [_options.CategoryNameNormField] = new
                         {
                             boost = 6,
-                            query = ProcurementQueryText.Normalize(phrase),
+                            query = normalizedPhrase,
                         },
                     },
                 });

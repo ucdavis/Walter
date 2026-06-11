@@ -56,7 +56,9 @@ internal sealed record ProcurementAgentCompletionRequest(
     string Model,
     IReadOnlyList<ProcurementAgentMessage> Messages,
     IReadOnlyList<ProcurementAgentToolDefinition> Tools,
-    string? ReasoningEffort = null);
+    string? ReasoningEffort = null,
+    string? ResponseFormatName = null,
+    object? ResponseFormatJsonSchema = null);
 
 internal sealed class ProcurementAgentCompletionResult
 {
@@ -320,6 +322,43 @@ public sealed class ProcurementToolCallTrace
     [JsonPropertyName("topResultIds")]
     public IReadOnlyList<string> TopResultIds { get; init; } = [];
 }
+
+internal sealed class ProcurementRerankResponse
+{
+    [JsonPropertyName("rankings")]
+    public IReadOnlyList<ProcurementRerankRanking> Rankings { get; init; } = [];
+}
+
+internal sealed class ProcurementRerankRanking
+{
+    [JsonPropertyName("candidateNumber")]
+    public int CandidateNumber { get; init; }
+
+    [JsonPropertyName("keep")]
+    public bool Keep { get; init; }
+
+    [JsonPropertyName("reason")]
+    public string Reason { get; init; } = string.Empty;
+
+    [JsonPropertyName("score")]
+    public int Score { get; init; }
+}
+
+internal sealed record ProcurementRerankCandidate(
+    int CandidateNumber,
+    string CandidateSetId,
+    string CandidateKind,
+    string ResultId,
+    string SearchMode,
+    string SourceQuery,
+    string Title,
+    string Body,
+    string? SupplierNumber,
+    string? SupplierName,
+    string? CategoryName,
+    decimal? Amount,
+    double SearchScore,
+    object SourceData);
 
 internal sealed record ProcurementResolvedSupplier(
     string SupplierNumber,

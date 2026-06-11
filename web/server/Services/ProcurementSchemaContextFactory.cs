@@ -28,9 +28,9 @@ internal static class ProcurementSchemaContextFactory
                 "Treat the final intent label as a UI summary, not as the retrieval plan.",
                 "Choose the starting point based on the evidence you need: supplier summary for supplier identity, rollup item groups for most non-supplier exploration and aggregation, and line items for concrete example rows.",
                 "Use hybrid rollup search when the user asks about a concept, synonym, or broad item and lexical matches might be incomplete.",
-                "Search tools return candidate matches. Validate candidates before treating them as evidence when retrieval is broad, fuzzy, alias-expanded, semantic, or aggregated.",
-                "Use rollup aggregations after you have a validated evidence set or at least a tightly anchored filter set; broad aggregates alone are not proof.",
-                "Prefer validated evidence rows before naming a supplier or category as the answer to a concrete question.",
+                "Search tools return candidate matches. Re-rank broad or fuzzy candidate sets before treating retrieval order as evidence.",
+                "Use rollup aggregations after you have a reranked evidence set or at least a tightly anchored filter set; broad aggregates alone are not proof.",
+                "Prefer reranked evidence rows before naming a supplier or category as the answer to a concrete question.",
                 "If the first retrieval looks broad or semantically adjacent, refine the query, add filters, or explain the ambiguity.",
             },
             filterFieldAliases = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)

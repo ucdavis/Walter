@@ -14,6 +14,42 @@ internal sealed class ProcurementAliasCatalog : IProcurementAliasCatalog
     private static readonly IReadOnlyDictionary<string, string[]> DefaultQueryAliasGroups =
         new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
         {
+            ["art_supplies"] =
+            [
+                "art supplies",
+                "arts and crafts",
+                "craft supplies",
+                "drawing supplies",
+                "colored pencils",
+                "crayola",
+                "air dry clay",
+                "modeling clay",
+                "acrylic paint",
+                "watercolor",
+                "mini canvas",
+                "canvas",
+                "paint brushes",
+                "brush markers",
+                "dot markers",
+                "sharpie",
+                "dry erase markers",
+                "scrapbook supplies",
+                "sketchbook",
+                "easel",
+            ],
+            ["gravel_materials"] =
+            [
+                "gravel",
+                "gravel base",
+                "pea gravel",
+                "washed gravel",
+                "compaction gravel",
+                "class 2 ab",
+                "aggregate base",
+                "road base",
+                "crushed rock",
+                "decomposed granite",
+            ],
             ["gift_cards"] = ["giftcard", "giftcards", "gift card", "gift cards", "egift card", "egift cards", "merchant gift cards", "prepaid cards", "incentive cards"],
             ["office_furniture"] = ["office furniture", "office furnishings", "office chair", "office chairs", "filing cabinet", "filing cabinets"],
             ["horse_feed"] = ["horse feed", "hay", "grain", "livestock feed"],

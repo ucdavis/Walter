@@ -98,8 +98,12 @@ internal sealed class OpenAiProcurementAgentModelClient : IProcurementAgentModel
         {
             ["model"] = request.Model,
             ["messages"] = request.Messages.Select(BuildMessagePayload).ToArray(),
-            ["tool_choice"] = "auto",
-            ["tools"] = request.Tools.Select(tool => new
+        };
+
+        if (request.Tools.Count > 0)
+        {
+            payload["tool_choice"] = "auto";
+            payload["tools"] = request.Tools.Select(tool => new
             {
                 type = "function",
                 function = new
@@ -108,8 +112,23 @@ internal sealed class OpenAiProcurementAgentModelClient : IProcurementAgentModel
                     description = tool.Description,
                     parameters = tool.ParametersJsonSchema,
                 },
-            }).ToArray(),
-        };
+            }).ToArray();
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.ResponseFormatName) &&
+            request.ResponseFormatJsonSchema is not null)
+        {
+            payload["response_format"] = new
+            {
+                type = "json_schema",
+                json_schema = new
+                {
+                    name = request.ResponseFormatName,
+                    strict = true,
+                    schema = request.ResponseFormatJsonSchema,
+                },
+            };
+        }
 
         if (includeReasoningEffort && !string.IsNullOrWhiteSpace(request.ReasoningEffort))
         {

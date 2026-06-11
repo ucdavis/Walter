@@ -201,5 +201,5 @@ internal sealed class ProcurementSearchSpecFactory
     }
 
     private static bool ResolveFuzzyMatching(string searchMode) =>
-        !string.Equals(searchMode, "exact", StringComparison.OrdinalIgnoreCase);
+        string.Equals(searchMode, "fuzzy", StringComparison.OrdinalIgnoreCase);
 }
