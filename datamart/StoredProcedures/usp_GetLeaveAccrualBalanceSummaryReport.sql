@@ -208,6 +208,8 @@ accrual AS (
             ELSE 0
         END AS accrual_percentage
     FROM caes_hcmods.ps_uc_am_ss_tbl_v u
+    -- UCP-022 outputs both Pin_Number from balances and GP_Pin_Number from the lookup;
+    -- they should match because of this join, but both are preserved for report parity.
     JOIN pin p
       ON p.pin_num = u.pin_num
     WHERE u.dml_ind <> ''D''
