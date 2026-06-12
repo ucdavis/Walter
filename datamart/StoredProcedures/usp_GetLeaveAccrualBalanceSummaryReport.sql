@@ -8,7 +8,7 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    -- Implements the UCP-022 leave accrual and balance summary report query.
+    -- Implements the UCP-022 leave accrual and balance summary report query, plus hourly pay rate
     IF (@AsOfDates IS NULL AND @AsOfMinDate IS NULL)
        OR (@AsOfDates IS NOT NULL AND @AsOfMinDate IS NOT NULL)
     BEGIN
@@ -121,7 +121,14 @@ job_current AS (
         ec.descr AS employee_class_description,
         jc.descr AS job_code_description,
         n.emplid AS name_employee_id,
-        n.name AS employee_name
+        n.name AS employee_name,
+        CASE
+            WHEN j.comp_frequency = ''H'' THEN j.comprate
+            WHEN NVL(j.fte, 0) = 0 THEN 0
+            WHEN j.comp_frequency = ''UC_9M'' THEN (j.comprate / j.fte) / (2088 / 9)
+            WHEN j.comp_frequency = ''UC_11'' THEN (j.comprate / j.fte) / (2088 / 11)
+            ELSE (j.comprate / j.fte) / 174
+        END AS hourly_rate_fte
     FROM caes_hcmods.ucd_dm_ps_job_current_v j
     JOIN caes_hcmods.ucd_dm_ps_empl_class_v ec
       ON j.empl_class = ec.empl_class
@@ -236,6 +243,7 @@ SELECT
     j.job_code_description AS "Job_Code_Description",
     j.name_employee_id AS "Name_Employee_ID",
     j.employee_name AS "Employee_Name",
+    j.hourly_rate_fte AS "Hourly_Rate_FTE",
     o.department_code AS "Department_Code",
     o.department_ttl AS "Department_TTL",
     o.sub_division_ttl AS "Sub_Division_TTL",
@@ -320,6 +328,7 @@ GROUP BY
     j.job_code_description,
     j.name_employee_id,
     j.employee_name,
+    j.hourly_rate_fte,
     o.department_code,
     o.department_ttl,
     o.sub_division_ttl,
