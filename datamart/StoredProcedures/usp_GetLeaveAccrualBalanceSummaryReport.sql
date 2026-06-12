@@ -8,7 +8,8 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    -- Implements the UCP-022 leave accrual and balance summary report query, plus hourly pay rate
+    -- Implements the UCP-022 leave accrual and balance summary report query, plus hourly pay rate.
+    -- This report returns all leave accrual types; vacation-only consumers must filter Pin_Number = 260259.
     IF (@AsOfDates IS NULL AND @AsOfMinDate IS NULL)
        OR (@AsOfDates IS NOT NULL AND @AsOfMinDate IS NOT NULL)
     BEGIN

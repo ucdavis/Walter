@@ -1,3 +1,5 @@
+-- UCP-022 now returns all leave accrual types; pipeline loads into this
+-- vacation-specific table must filter report rows to Pin_Number = 260259.
 create table dbo.EmployeeVacationAccrualBalances
 (
     EmployeeId                 nvarchar(11) not null,
