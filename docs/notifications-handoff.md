@@ -88,9 +88,9 @@ During validation, the VS Code Azurite extension was listening on these ports bu
 Important connection mapping:
 
 - `DB_CONNECTION` is the app database where `OutboundMessages`, users, roles, and permissions live.
-- `DM_CONNECTION` is the accrual data source where `dbo.EmployeeAccrualBalances` lives.
+- `DM_CONNECTION` is the accrual data source where `dbo.EmployeeVacationAccrualBalances` lives.
 
-If these are reversed, generation fails or writes to the wrong database. One observed failure was `Invalid object name 'dbo.EmployeeAccrualBalances'` when `DM_CONNECTION` pointed at the app DB.
+If these are reversed, generation fails or writes to the wrong database. One observed failure was `Invalid object name 'dbo.EmployeeVacationAccrualBalances'` when `DM_CONNECTION` pointed at the app DB.
 
 ## Current Sender Safety Pieces
 

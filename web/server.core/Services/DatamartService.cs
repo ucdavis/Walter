@@ -241,7 +241,7 @@ public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
                 AccrualHours,
                 AccrualPercentage,
                 TypeLabel
-            FROM dbo.EmployeeAccrualBalances
+            FROM dbo.EmployeeVacationAccrualBalances
             WHERE TypeLabel = 'Vacation'
               AND AsOfDate >= @StartDate
             ORDER BY EmployeeId, AsOfDate, PositionNumber

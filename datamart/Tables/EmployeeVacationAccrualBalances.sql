@@ -1,4 +1,4 @@
-create table dbo.EmployeeAccrualBalances
+create table dbo.EmployeeVacationAccrualBalances
 (
     EmployeeId                 nvarchar(11) not null,
     AsOfDate                   date         not null,
@@ -43,7 +43,7 @@ create table dbo.EmployeeAccrualBalances
     Level5DeptDesc             nvarchar(100),
     LoadDate                   datetime2(3),
     LastUpdated                datetime2(3) not null,
-    constraint PK_EmployeeAccrualBalances
+    constraint PK_EmployeeVacationAccrualBalances
         primary key (EmployeeId, AsOfDate, PositionNumber)
 )
 go
