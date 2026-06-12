@@ -1,4 +1,4 @@
-CREATE PROCEDURE dbo.usp_GetLeaveAccrualBalanceSummaryReport
+CREATE PROCEDURE dbo.usp_GetCaesVacationAccrualBalanceSummaryReport
     @AsOfDates VARCHAR(MAX) = NULL,
     @AsOfMinDate DATE = NULL,
     @ApplicationName NVARCHAR(128) = NULL,
@@ -8,8 +8,9 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    -- Implements the UCP-022 leave accrual and balance summary report query, plus hourly pay rate.
-    -- This report returns all leave accrual types; vacation-only consumers must filter Pin_Number = 260259.
+    -- Implements the CAES UCP-022 vacation accrual and balance summary report query, plus hourly pay rate.
+    -- Restricts results to CAES rows: business unit DVCMP and school division 01.
+    -- Pin 260259 is the vacation accrual pin; filtering on it removes all non-vacation leave rows.
     IF (@AsOfDates IS NULL AND @AsOfMinDate IS NULL)
        OR (@AsOfDates IS NOT NULL AND @AsOfMinDate IS NOT NULL)
     BEGIN
@@ -20,11 +21,11 @@ BEGIN
     EXEC dbo.usp_SanitizeInputString @ApplicationName OUTPUT;
     EXEC dbo.usp_SanitizeInputString @ApplicationUser OUTPUT;
 
-    DECLARE @AsOfFilter NVARCHAR(MAX);
+    DECLARE @AsOfDatePredicate NVARCHAR(MAX);
 
     IF @AsOfMinDate IS NOT NULL
     BEGIN
-        SET @AsOfFilter = N'>= DATE ''' + CONVERT(VARCHAR(10), @AsOfMinDate, 120) + N'''';
+        SET @AsOfDatePredicate = N'u.asofdate >= DATE ''' + CONVERT(VARCHAR(10), @AsOfMinDate, 120) + N'''';
     END
     ELSE
     BEGIN
@@ -68,7 +69,7 @@ BEGIN
             RETURN;
         END;
 
-        SET @AsOfFilter = N'IN (' + @DateList + N')';
+        SET @AsOfDatePredicate = N'TRUNC(CAST(u.asofdate AS DATE)) IN (' + @DateList + N')';
     END;
 
     DECLARE @OracleQuery NVARCHAR(MAX) = N'';
@@ -140,6 +141,7 @@ job_current AS (
     LEFT JOIN caes_hcmods.ucd_dm_ps_union_v ud
       ON j.union_cd = ud.union_cd
     WHERE j.effdt <= SYSDATE
+      AND j.business_unit = ''DVCMP''
       AND j.empl_status IN (''A'', ''L'', ''P'', ''W'')
 ),';
 
@@ -157,6 +159,8 @@ org AS (
         o.sub_div_l4_cd AS sub_division_l4_code,
         o.sub_div_l4_ttl AS sub_division_l4_ttl
     FROM caes_hcmods.ucd_organization_d_v o
+    WHERE o.div_cd = ''DVCMP''
+      AND o.sub_div_cd = ''01''
 ),
 reports_to AS (
     SELECT DISTINCT
@@ -208,12 +212,11 @@ accrual AS (
             ELSE 0
         END AS accrual_percentage
     FROM caes_hcmods.ps_uc_am_ss_tbl_v u
-    -- UCP-022 outputs both Pin_Number from balances and GP_Pin_Number from the lookup;
-    -- they should match because of this join, but both are preserved for report parity.
     JOIN pin p
       ON p.pin_num = u.pin_num
     WHERE u.dml_ind <> ''D''
-      AND TRUNC(CAST(u.asofdate AS DATE)) ' + @AsOfFilter + N'
+      AND u.pin_num = 260259
+      AND ' + @AsOfDatePredicate + N'
     GROUP BY
         u.emplid,
         u.asofdate,
@@ -384,7 +387,7 @@ GROUP BY
         SET @Duration_MS = DATEDIFF(MILLISECOND, @StartTime, SYSDATETIME());
 
         EXEC dbo.usp_LogProcedureExecution
-            @ProcedureName = 'dbo.usp_GetLeaveAccrualBalanceSummaryReport',
+            @ProcedureName = 'dbo.usp_GetCaesVacationAccrualBalanceSummaryReport',
             @Duration_MS = @Duration_MS,
             @RowCount = @RowCount,
             @Parameters = @ParametersJSON,
@@ -398,7 +401,7 @@ GROUP BY
         SET @ErrorMsg = ERROR_MESSAGE();
 
         EXEC dbo.usp_LogProcedureExecution
-            @ProcedureName = 'dbo.usp_GetLeaveAccrualBalanceSummaryReport',
+            @ProcedureName = 'dbo.usp_GetCaesVacationAccrualBalanceSummaryReport',
             @Duration_MS = @Duration_MS,
             @Parameters = @ParametersJSON,
             @ApplicationName = @ApplicationName,
