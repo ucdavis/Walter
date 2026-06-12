@@ -77,10 +77,7 @@ BEGIN
         SET @AsOfFilter = N'IN (' + @DateList + N')';
     END;
 
-    DECLARE @OracleEmployees  NVARCHAR(MAX);
-    DECLARE @OracleAccruals   NVARCHAR(MAX);
-    DECLARE @TSQLCommand      NVARCHAR(MAX);
-    DECLARE @LinkedServerName SYSNAME = N'[AIT_BISTG_PRD-CAES_HCMODS_APPUSER]';
+    DECLARE @OracleQuery      NVARCHAR(MAX) = N'';
     DECLARE @StartTime        DATETIME2 = SYSDATETIME();
     DECLARE @RowCount         INT;
     DECLARE @Duration_MS      INT;
@@ -88,199 +85,271 @@ BEGIN
     DECLARE @ParametersJSON   NVARCHAR(MAX);
 
     -- ============================================================
-    -- Oracle Query A: Accrual balances from ps_uc_am_ss_tbl_v
+    -- Oracle Query: Employee, organization, and accrual balances
     -- ============================================================
-    SET @OracleAccruals = N'
-SELECT
-  u.emplid AS "EmployeeId",
-  TRUNC(CAST(u.asofdate AS DATE)) AS "AsOfDate",
-  SUM(u.uc_prev_bal) AS "PrevBal",
-  SUM(u.uc_prd_taken) AS "HoursTaken",
-  SUM(u.uc_prd_accrual) AS "AccrualHours",
-  SUM(u.uc_prd_adjusted) AS "AdjustedHours",
-  SUM(u.uc_curr_bal) AS "CalculatedBal",
-  SUM(u.uc_accr_limit) AS "AccrualLimit",
-  DECODE(u.uc_apr_max_ind, ''0'', ''N'', ''Y'') AS "ApproachingMax",
-  CASE WHEN SUM(u.uc_accr_limit) <= 0 THEN 0
-       ELSE SUM(u.uc_accr_limit) - SUM(u.uc_curr_bal) END AS "HoursOverUnderPolicyMax",
-  CASE WHEN SUM(u.uc_accr_limit) <> 0
-       THEN TRUNC((SUM(u.uc_curr_bal) / NULLIF(SUM(u.uc_accr_limit), 0)) * 100, 2)
-       ELSE 0 END AS "AccrualPercentage",
-  CASE WHEN SUM(u.uc_accr_limit) <= 384 THEN 1 ELSE 0 END AS "ExceptionalMaxVacationOnly"
-FROM caes_hcmods.ps_uc_am_ss_tbl_v u
-WHERE u.dml_ind <> ''D''
-  AND u.pin_num = ' + CAST(@PinNumber AS NVARCHAR(20)) + N'
-  AND TRUNC(CAST(u.asofdate AS DATE)) ' + @AsOfFilter + N'
-GROUP BY u.emplid, TRUNC(CAST(u.asofdate AS DATE)), u.uc_apr_max_ind';
-
-    -- ============================================================
-    -- Oracle Query B: Employee/position/org data
-    -- Built from segments to stay under NVARCHAR literal limits
-    -- ============================================================
-    DECLARE @EmpCte_Dim  NVARCHAR(MAX);
-    DECLARE @EmpCte_Pos  NVARCHAR(MAX);
-    DECLARE @EmpCte_Job  NVARCHAR(MAX);
-    DECLARE @EmpCte_Org  NVARCHAR(MAX);
-    DECLARE @EmpSelect   NVARCHAR(MAX);
-
-    SET @EmpCte_Dim = N'
+    SET @OracleQuery = @OracleQuery + N'
 WITH
+busn_email AS (
+    SELECT
+        employee_id,
+        email_address
+    FROM (
+        SELECT
+            e.emplid AS employee_id,
+            e.email_addr AS email_address,
+            ROW_NUMBER() OVER (
+                PARTITION BY e.emplid
+                ORDER BY
+                    CASE WHEN e.pref_email_flag = ''Y'' THEN 1 ELSE 2 END,
+                    e.upd_bt_dtm DESC NULLS LAST,
+                    e.email_addr
+            ) AS rn
+        FROM caes_hcmods.ps_email_addresses_v e
+        WHERE e.dml_ind <> ''D''
+          AND e.e_addr_type = ''BUSN''
+          AND e.email_addr IS NOT NULL
+    )
+    WHERE rn = 1
+),
 empl_type AS (
-  SELECT fieldvalue, xlatlongname FROM (
-    SELECT x.*, ROW_NUMBER() OVER (PARTITION BY fieldname, fieldvalue ORDER BY effdt DESC) AS rn
-    FROM caes_hcmods.psxlatitem_v x
-    WHERE x.fieldname = ''EMPL_TYPE'' AND x.effdt <= SYSDATE AND x.eff_status = ''A'' AND x.dml_ind <> ''D''
-  ) WHERE rn = 1
-),
-employee_email AS (
-  SELECT emplid, email_addr FROM (
-    SELECT e.emplid, e.email_addr,
-      ROW_NUMBER() OVER (
-        PARTITION BY e.emplid
-        ORDER BY
-          CASE WHEN e.pref_email_flag = ''Y'' THEN 1 ELSE 2 END,
-          e.upd_bt_dtm DESC NULLS LAST
-      ) AS rn
-    FROM caes_hcmods.ps_email_addresses_v e
-    WHERE e.dml_ind <> ''D''
-      AND e.e_addr_type = ''BUSN''
-      AND e.email_addr IS NOT NULL
-  ) WHERE rn = 1
-),
-empl_class_dim AS (
-  SELECT setid, empl_class, descr FROM (
-    SELECT ec.*, ROW_NUMBER() OVER (PARTITION BY ec.setid, ec.empl_class ORDER BY ec.effdt DESC) AS rn
-    FROM caes_hcmods.ps_empl_class_tbl_v ec
-    WHERE ec.effdt <= SYSDATE AND ec.eff_status = ''A'' AND ec.dml_ind <> ''D''
-  ) WHERE rn = 1
-),
-jobcode_dim AS (
-  SELECT setid, jobcode, descr FROM (
-    SELECT jc.*, ROW_NUMBER() OVER (PARTITION BY jc.setid, jc.jobcode ORDER BY jc.effdt DESC) AS rn
-    FROM caes_hcmods.ps_jobcode_tbl_v jc
-    WHERE jc.effdt <= SYSDATE AND jc.eff_status = ''A'' AND jc.dml_ind <> ''D''
-  ) WHERE rn = 1
-),
-union_dim AS (
-  SELECT union_cd, descr FROM (
-    SELECT u.*, ROW_NUMBER() OVER (PARTITION BY u.union_cd ORDER BY u.effdt DESC) AS rn
-    FROM caes_hcmods.ps_union_tbl_v u
-    WHERE u.effdt <= SYSDATE AND u.eff_status = ''A'' AND u.dml_ind <> ''D''
-  ) WHERE rn = 1
+    SELECT
+        xlat_field_name,
+        xlat_field_value,
+        xlat_long_name,
+        xlat_short_name
+    FROM (
+        SELECT
+            x.fieldname AS xlat_field_name,
+            x.fieldvalue AS xlat_field_value,
+            x.xlatlongname AS xlat_long_name,
+            x.xlatshortname AS xlat_short_name,
+            ROW_NUMBER() OVER (
+                PARTITION BY x.fieldname, x.fieldvalue
+                ORDER BY x.effdt DESC
+            ) AS rn
+        FROM caes_hcmods.psxlatitem_v x
+        WHERE x.fieldname = ''EMPL_TYPE''
+          AND x.effdt <= SYSDATE
+          AND x.eff_status = ''A''
+          AND x.dml_ind <> ''D''
+    )
+    WHERE rn = 1
 ),';
 
-    SET @EmpCte_Pos = N'
-latest_position_data AS (
-  SELECT position_nbr FROM (
-    SELECT p.position_nbr,
-      ROW_NUMBER() OVER (PARTITION BY p.position_nbr ORDER BY p.effdt DESC) AS rn,
-      p.eff_status
-    FROM caes_hcmods.ps_position_data_v p
-    WHERE p.dml_ind <> ''D'' AND p.effdt <= TRUNC(SYSDATE)
-  ) WHERE rn = 1 AND eff_status = ''A''
-),
-latest_position AS (
-  SELECT position_nbr, emplid FROM (
-    SELECT j.position_nbr,
-      CASE WHEN j.empl_status NOT IN (''T'', ''R'') THEN j.emplid END AS emplid,
-      CASE WHEN j.empl_status NOT IN (''T'', ''R'') THEN 1 ELSE 0 END AS is_active,
-      DENSE_RANK() OVER (PARTITION BY j.position_nbr ORDER BY j.effdt DESC, j.effseq DESC) AS rnk
-    FROM caes_hcmods.ps_job_v j
-    WHERE j.dml_ind <> ''D'' AND j.effdt <= TRUNC(SYSDATE)
-      AND NOT (j.auto_end_flg = ''Y'' AND j.expected_end_date < TRUNC(SYSDATE))
-      AND TRIM(j.position_nbr) IS NOT NULL
-  ) WHERE rnk = 1 AND is_active = 1 AND emplid IS NOT NULL
-),';
-
-    SET @EmpCte_Job = N'
-job_curr AS (
-  SELECT
-    j.emplid AS employee_id, j.empl_status, j.empl_class, j.empl_type,
-    j.deptid AS department_id, j.hr_status,
-    j.jobcode AS job_code, j.position_nbr AS position_number,
-    j.reports_to AS reports_to_position_number,
-    j.union_cd AS union_code, ud.descr AS union_description,
-    ecd.descr AS employee_class_description, jd.descr AS job_code_description,
-    n.name AS employee_name,
-    CASE
-      WHEN j.comp_frequency = ''H'' THEN j.comprate
-      WHEN NVL(j.fte, 0) = 0 THEN 0
-      WHEN j.comp_frequency = ''UC_9M'' THEN (j.comprate / j.fte) / (2088 / 9)
-      WHEN j.comp_frequency = ''UC_11'' THEN (j.comprate / j.fte) / (2088 / 11)
-      ELSE (j.comprate / j.fte) / 174
-    END AS hourly_rate_fte
-  FROM (
-    SELECT j.*, ROW_NUMBER() OVER (PARTITION BY j.emplid, j.empl_rcd ORDER BY j.effdt DESC, j.effseq DESC) AS rn
-    FROM caes_hcmods.ps_job_v j
-    WHERE j.effdt <= SYSDATE AND j.dml_ind <> ''D''
+    SET @OracleQuery = @OracleQuery + N'
+job_current AS (
+    SELECT DISTINCT
+        j.emplid AS employee_id,
+        j.empl_status AS employee_status,
+        j.empl_class AS employee_class,
+        j.empl_type AS employee_type,
+        j.deptid AS department_id,
+        j.hr_status AS hr_status,
+        j.jobcode AS job_code,
+        j.position_nbr AS position_number,
+        j.reports_to AS reports_to,
+        j.union_cd AS union_code,
+        ud.descr AS union_description,
+        ec.descr AS employee_class_description,
+        jc.descr AS job_code_description,
+        n.name AS employee_name,
+        CASE
+            WHEN j.comp_frequency = ''H'' THEN j.comprate
+            WHEN NVL(j.fte, 0) = 0 THEN 0
+            WHEN j.comp_frequency = ''UC_9M'' THEN (j.comprate / j.fte) / (2088 / 9)
+            WHEN j.comp_frequency = ''UC_11'' THEN (j.comprate / j.fte) / (2088 / 11)
+            ELSE (j.comprate / j.fte) / 174
+        END AS hourly_rate_fte
+    FROM caes_hcmods.ucd_dm_ps_job_current_v j
+    JOIN caes_hcmods.ucd_dm_ps_empl_class_v ec
+      ON j.empl_class = ec.empl_class
+    JOIN caes_hcmods.ucd_dm_ps_jobcode_v jc
+      ON j.jobcode = jc.jobcode
+    JOIN caes_hcmods.ucd_ps_names_v n
+      ON j.emplid = n.emplid
+    LEFT JOIN caes_hcmods.ucd_dm_ps_union_v ud
+      ON j.union_cd = ud.union_cd
+    WHERE j.effdt <= SYSDATE
       AND j.business_unit = ''' + @BusinessUnit + N'''
       AND j.empl_status IN (''A'', ''L'', ''P'', ''W'')
-  ) j
-  JOIN latest_position lp ON j.position_nbr = lp.position_nbr AND j.emplid = lp.emplid
-  JOIN latest_position_data pd ON j.position_nbr = pd.position_nbr
-  JOIN caes_hcmods.ucd_ps_names_v n ON j.emplid = n.emplid
-  JOIN empl_class_dim ecd ON j.setid_empl_class = ecd.setid AND j.empl_class = ecd.empl_class
-  JOIN jobcode_dim jd ON j.setid_jobcode = jd.setid AND j.jobcode = jd.jobcode
-  LEFT JOIN union_dim ud ON j.union_cd = ud.union_cd
-  WHERE j.rn = 1
 ),';
 
-    SET @EmpCte_Org = N'
+    SET @OracleQuery = @OracleQuery + N'
 org AS (
-  SELECT DISTINCT
-    org_cd, org_ttl, div_cd, div_ttl, sub_div_cd, sub_div_ttl,
-    sub_div_l4_cd, sub_div_l4_ttl, dept_cd, dept_ttl
-  FROM caes_hcmods.ucd_organization_d_v
-  WHERE div_cd = ''' + @BusinessUnit + N''' AND sub_div_cd = ''' + @SchoolDivision + N'''
+    SELECT DISTINCT
+        o.dept_cd AS department_code,
+        o.dept_ttl AS department_ttl,
+        o.sub_div_cd AS sub_division_code,
+        o.sub_div_ttl AS sub_division_ttl,
+        o.div_cd AS division_code,
+        o.div_ttl AS division_ttl,
+        o.org_cd AS organization_code,
+        o.org_ttl AS organization_ttl,
+        o.sub_div_l4_cd AS sub_division_l4_code,
+        o.sub_div_l4_ttl AS sub_division_l4_ttl
+    FROM caes_hcmods.ucd_organization_d_v o
+    WHERE o.div_cd = ''' + @BusinessUnit + N'''
+      AND o.sub_div_cd = ''' + @SchoolDivision + N'''
+),
+caes_employee_ids AS (
+    SELECT DISTINCT
+        j.employee_id
+    FROM job_current j
+    JOIN org o
+      ON j.department_id = o.department_code
 ),
 reports_to AS (
-  SELECT j.position_number, j.employee_id AS rt_emplid, n.name AS rt_name
-  FROM job_curr j
-  JOIN caes_hcmods.ucd_ps_names_v n ON j.employee_id = n.emplid
-  WHERE j.hr_status = ''A'' AND TRIM(j.position_number) IS NOT NULL
+    SELECT DISTINCT
+        j.emplid AS employee_id,
+        j.empl_rcd AS employee_record,
+        j.hr_status AS hr_status,
+        j.effdt AS effective_date,
+        j.effseq AS effective_seq,
+        j.position_nbr AS position_number,
+        j.reports_to AS reports_to,
+        n.name AS name
+    FROM caes_hcmods.ucd_dm_ps_job_current_v j
+    JOIN caes_hcmods.ucd_ps_names_v n
+      ON j.emplid = n.emplid
+    WHERE j.effdt <= SYSDATE
+      AND TRIM(j.position_nbr) IS NOT NULL
+      AND j.hr_status = ''A''
+),';
+
+    SET @OracleQuery = @OracleQuery + N'
+accrual AS (
+    SELECT
+        u.emplid AS employee_id,
+        u.asofdate AS asofdate,
+        TRUNC(CAST(u.asofdate AS DATE)) AS as_of_date,
+        u.pin_num AS pin_number,
+        SUM(u.uc_prev_bal) AS uc_prev_bal,
+        SUM(u.uc_prd_taken) AS uc_prd_taken,
+        SUM(u.uc_prd_accrual) AS uc_prd_accrual,
+        SUM(u.uc_prd_adjusted) AS uc_prd_adjusted,
+        SUM(u.uc_curr_bal) AS uc_curr_bal,
+        SUM(u.uc_accr_limit) AS uc_accr_limit,
+        u.uc_apr_max_ind AS uc_apr_max_ind,
+        DECODE(u.uc_apr_max_ind, ''0'', ''N'', ''Y'') AS uc_apr_max_ind2,
+        CASE
+            WHEN SUM(u.uc_accr_limit) <= 0 THEN 0
+            ELSE SUM(u.uc_accr_limit) - SUM(u.uc_curr_bal)
+        END AS hours_over_policy_max,
+        CASE
+            WHEN SUM(u.uc_accr_limit) <> 0
+                THEN TRUNC((SUM(u.uc_curr_bal) / NULLIF(SUM(u.uc_accr_limit), 0)) * 100, 2)
+            ELSE 0
+        END AS accrual_percentage,
+        CASE
+            WHEN SUM(u.uc_accr_limit) <= 384 THEN 1
+            ELSE 0
+        END AS exceptional_max_vacation_only
+    FROM caes_hcmods.ps_uc_am_ss_tbl_v u
+    JOIN caes_employee_ids ce
+      ON ce.employee_id = u.emplid
+    WHERE u.dml_ind <> ''D''
+      AND u.pin_num = ' + CAST(@PinNumber AS NVARCHAR(20)) + N'
+      AND TRUNC(CAST(u.asofdate AS DATE)) ' + @AsOfFilter + N'
+    GROUP BY
+        u.emplid,
+        u.asofdate,
+        u.pin_num,
+        u.uc_apr_max_ind,
+        DECODE(u.uc_apr_max_ind, ''0'', ''N'', ''Y''),
+        TRUNC(CAST(u.asofdate AS DATE))
 )';
 
-    SET @EmpSelect = N'
+    SET @OracleQuery = @OracleQuery + N'
 SELECT
-  j.employee_id                 AS "EmployeeId",
-  j.position_number             AS "PositionNumber",
-  j.employee_name               AS "EmployeeName",
-  ee.email_addr                 AS "EmployeeEmail",
-  j.union_code                  AS "UnionCode",
-  j.union_description           AS "UnionDescription",
-  j.empl_class                  AS "EmployeeClassCode",
-  j.employee_class_description  AS "EmployeeClassDescription",
-  j.job_code                    AS "JobCode",
-  j.job_code_description        AS "JobCodeDescription",
-  j.reports_to_position_number  AS "ReportsToPositionNumber",
-  r.rt_emplid                   AS "ReportsToEmployeeId",
-  r.rt_name                     AS "ReportsToEmployeeName",
-  j.hr_status                   AS "HrStatus",
-  j.empl_status                 AS "EmployeeStatus",
-  CASE j.empl_status WHEN ''A'' THEN ''Active''
-       WHEN ''L'' THEN ''Unpaid Leave of Absence''
-       WHEN ''P'' THEN ''Paid Leave of Absence''
-       WHEN ''W'' THEN ''Short Work Break'' ELSE ''Other'' END AS "EmployeeStatusDescription",
-  j.empl_type                   AS "EmployeeType",
-  et.xlatlongname               AS "EmployeeTypeDescription",
-  j.hourly_rate_fte             AS "HourlyRateFTE",
-  o.org_cd                      AS "Level1Dept",
-  o.org_ttl                     AS "Level1DeptDesc",
-  o.div_cd                      AS "Level2Dept",
-  o.div_ttl                     AS "Level2DeptDesc",
-  o.sub_div_cd                  AS "Level3Dept",
-  o.sub_div_ttl                 AS "Level3DeptDesc",
-  o.sub_div_l4_cd               AS "Level4Dept",
-  o.sub_div_l4_ttl              AS "Level4DeptDesc",
-  o.dept_cd                     AS "Level5Dept",
-  o.dept_ttl                    AS "Level5DeptDesc"
-FROM job_curr j
-JOIN org o ON j.department_id = o.dept_cd
-LEFT JOIN employee_email ee ON j.employee_id = ee.emplid
-LEFT JOIN reports_to r ON j.reports_to_position_number = r.position_number
-JOIN empl_type et ON j.empl_type = et.fieldvalue';
-
-    SET @OracleEmployees = @EmpCte_Dim + @EmpCte_Pos + @EmpCte_Job + @EmpCte_Org + @EmpSelect;
+    j.employee_id AS "EmployeeId",
+    a.as_of_date AS "AsOfDate",
+    j.position_number AS "PositionNumber",
+    j.employee_name AS "EmployeeName",
+    ee.email_address AS "EmployeeEmail",
+    j.union_code AS "UnionCode",
+    j.union_description AS "UnionDescription",
+    j.employee_class AS "EmployeeClassCode",
+    j.employee_class_description AS "EmployeeClassDescription",
+    j.job_code AS "JobCode",
+    j.job_code_description AS "JobCodeDescription",
+    j.reports_to AS "ReportsToPositionNumber",
+    rt.employee_id AS "ReportsToEmployeeId",
+    rt.name AS "ReportsToEmployeeName",
+    j.hr_status AS "HrStatus",
+    j.employee_status AS "EmployeeStatus",
+    CASE
+        WHEN j.employee_status = ''A'' THEN ''Active''
+        WHEN j.employee_status = ''L'' THEN ''Unpaid Leave of Absence''
+        WHEN j.employee_status = ''P'' THEN ''Paid Leave of Absence''
+        WHEN j.employee_status = ''W'' THEN ''Short Work Break''
+        ELSE ''Other''
+    END AS "EmployeeStatusDescription",
+    j.employee_type AS "EmployeeType",
+    et.xlat_long_name AS "EmployeeTypeDescription",
+    j.hourly_rate_fte AS "HourlyRateFTE",
+    ''' + @TypeLabel + N''' AS "TypeLabel",
+    SUM(a.uc_prev_bal) AS "PrevBal",
+    SUM(a.uc_prd_taken) AS "HoursTaken",
+    SUM(a.uc_prd_accrual) AS "AccrualHours",
+    SUM(a.uc_prd_adjusted) AS "AdjustedHours",
+    SUM(a.uc_curr_bal) AS "CalculatedBal",
+    SUM(a.uc_accr_limit) AS "AccrualLimit",
+    a.uc_apr_max_ind2 AS "ApproachingMax",
+    SUM(a.hours_over_policy_max) AS "HoursOverUnderPolicyMax",
+    SUM(a.accrual_percentage) AS "AccrualPercentage",
+    MAX(a.exceptional_max_vacation_only) AS "ExceptionalMaxVacationOnly",
+    o.organization_code AS "Level1Dept",
+    o.organization_ttl AS "Level1DeptDesc",
+    o.division_code AS "Level2Dept",
+    o.division_ttl AS "Level2DeptDesc",
+    o.sub_division_code AS "Level3Dept",
+    o.sub_division_ttl AS "Level3DeptDesc",
+    o.sub_division_l4_code AS "Level4Dept",
+    o.sub_division_l4_ttl AS "Level4DeptDesc",
+    o.department_code AS "Level5Dept",
+    o.department_ttl AS "Level5DeptDesc"
+FROM job_current j
+JOIN org o
+  ON j.department_id = o.department_code
+LEFT JOIN reports_to rt
+  ON j.reports_to = rt.position_number
+JOIN accrual a
+  ON j.employee_id = a.employee_id
+JOIN empl_type et
+  ON j.employee_type = et.xlat_field_value
+LEFT JOIN busn_email ee
+  ON j.employee_id = ee.employee_id
+GROUP BY
+    j.employee_id,
+    a.as_of_date,
+    j.position_number,
+    j.employee_name,
+    ee.email_address,
+    j.union_code,
+    j.union_description,
+    j.employee_class,
+    j.employee_class_description,
+    j.job_code,
+    j.job_code_description,
+    j.reports_to,
+    rt.employee_id,
+    rt.name,
+    j.hr_status,
+    j.employee_status,
+    j.employee_type,
+    et.xlat_long_name,
+    j.hourly_rate_fte,
+    a.uc_apr_max_ind2,
+    o.organization_code,
+    o.organization_ttl,
+    o.division_code,
+    o.division_ttl,
+    o.sub_division_code,
+    o.sub_division_ttl,
+    o.sub_division_l4_code,
+    o.sub_division_l4_ttl,
+    o.department_code,
+    o.department_ttl';
 
     SET @ParametersJSON = (
         SELECT
@@ -291,9 +360,9 @@ JOIN empl_type et ON j.empl_type = et.fieldvalue';
     );
 
     BEGIN TRY
-        -- Temp tables
-        CREATE TABLE #Employees (
+        CREATE TABLE #EmployeeAccrualBalances (
             EmployeeId                  NVARCHAR(11),
+            AsOfDate                    DATE,
             PositionNumber              NVARCHAR(8),
             EmployeeName                NVARCHAR(100),
             EmployeeEmail               NVARCHAR(320),
@@ -312,6 +381,17 @@ JOIN empl_type et ON j.empl_type = et.fieldvalue';
             EmployeeType                NVARCHAR(1),
             EmployeeTypeDescription     NVARCHAR(50),
             HourlyRateFTE               DECIMAL(12, 4),
+            TypeLabel                   NVARCHAR(50),
+            PrevBal                     DECIMAL(10, 2),
+            HoursTaken                  DECIMAL(10, 2),
+            AccrualHours                DECIMAL(10, 2),
+            AdjustedHours               DECIMAL(10, 2),
+            CalculatedBal               DECIMAL(10, 2),
+            AccrualLimit                DECIMAL(10, 2),
+            ApproachingMax              NVARCHAR(1),
+            HoursOverUnderPolicyMax     DECIMAL(10, 2),
+            AccrualPercentage           DECIMAL(7, 2),
+            ExceptionalMaxVacationOnly  INT,
             Level1Dept                  NVARCHAR(10),
             Level1DeptDesc              NVARCHAR(100),
             Level2Dept                  NVARCHAR(10),
@@ -324,80 +404,54 @@ JOIN empl_type et ON j.empl_type = et.fieldvalue';
             Level5DeptDesc              NVARCHAR(100)
         );
 
-        CREATE TABLE #Accruals (
-            EmployeeId                  NVARCHAR(11),
-            AsOfDate                    DATE,
-            PrevBal                     DECIMAL(10, 2),
-            HoursTaken                  DECIMAL(10, 2),
-            AccrualHours                DECIMAL(10, 2),
-            AdjustedHours               DECIMAL(10, 2),
-            CalculatedBal               DECIMAL(10, 2),
-            AccrualLimit                DECIMAL(10, 2),
-            ApproachingMax              NVARCHAR(1),
-            HoursOverUnderPolicyMax     DECIMAL(10, 2),
-            AccrualPercentage           DECIMAL(7, 2),
-            ExceptionalMaxVacationOnly  INT
-        );
+        -- The query exceeds OPENQUERY's 8000-character literal limit, so send it as an RPC parameter.
+        INSERT INTO #EmployeeAccrualBalances
+        EXEC (@OracleQuery) AT [AIT_BISTG_PRD-CAES_HCMODS_APPUSER];
 
-        -- Pull employee/position/org data
-        SET @TSQLCommand =
-            N'INSERT INTO #Employees SELECT * FROM OPENQUERY(' + @LinkedServerName + N', '''
-            + REPLACE(@OracleEmployees, N'''', N'''''') + N''')';
-        EXEC sp_executesql @TSQLCommand;
-
-        -- Pull accrual balances
-        SET @TSQLCommand =
-            N'INSERT INTO #Accruals SELECT * FROM OPENQUERY(' + @LinkedServerName + N', '''
-            + REPLACE(@OracleAccruals, N'''', N'''''') + N''')';
-        EXEC sp_executesql @TSQLCommand;
-
-        -- Join locally, return final result set
         SELECT
-            e.EmployeeId,
-            a.AsOfDate,
-            e.PositionNumber,
-            e.EmployeeName,
-            e.EmployeeEmail,
-            e.UnionCode,
-            e.UnionDescription,
-            e.EmployeeClassCode,
-            e.EmployeeClassDescription,
-            e.JobCode,
-            e.JobCodeDescription,
-            e.ReportsToPositionNumber,
-            e.ReportsToEmployeeId,
-            e.ReportsToEmployeeName,
-            e.HrStatus,
-            e.EmployeeStatus,
-            e.EmployeeStatusDescription,
-            e.EmployeeType,
-            e.EmployeeTypeDescription,
-            e.HourlyRateFTE,
-            @TypeLabel AS TypeLabel,
-            a.PrevBal,
-            a.HoursTaken,
-            a.AccrualHours,
-            a.AdjustedHours,
-            a.CalculatedBal,
-            a.AccrualLimit,
-            a.ApproachingMax,
-            a.HoursOverUnderPolicyMax,
-            a.AccrualPercentage,
-            a.ExceptionalMaxVacationOnly,
-            e.Level1Dept, e.Level1DeptDesc,
-            e.Level2Dept, e.Level2DeptDesc,
-            e.Level3Dept, e.Level3DeptDesc,
-            e.Level4Dept, e.Level4DeptDesc,
-            e.Level5Dept, e.Level5DeptDesc
-        FROM #Employees e
-        JOIN #Accruals a ON e.EmployeeId = a.EmployeeId
-        ORDER BY e.EmployeeId, a.AsOfDate, e.PositionNumber;
+            EmployeeId,
+            AsOfDate,
+            PositionNumber,
+            EmployeeName,
+            EmployeeEmail,
+            UnionCode,
+            UnionDescription,
+            EmployeeClassCode,
+            EmployeeClassDescription,
+            JobCode,
+            JobCodeDescription,
+            ReportsToPositionNumber,
+            ReportsToEmployeeId,
+            ReportsToEmployeeName,
+            HrStatus,
+            EmployeeStatus,
+            EmployeeStatusDescription,
+            EmployeeType,
+            EmployeeTypeDescription,
+            HourlyRateFTE,
+            TypeLabel,
+            PrevBal,
+            HoursTaken,
+            AccrualHours,
+            AdjustedHours,
+            CalculatedBal,
+            AccrualLimit,
+            ApproachingMax,
+            HoursOverUnderPolicyMax,
+            AccrualPercentage,
+            ExceptionalMaxVacationOnly,
+            Level1Dept, Level1DeptDesc,
+            Level2Dept, Level2DeptDesc,
+            Level3Dept, Level3DeptDesc,
+            Level4Dept, Level4DeptDesc,
+            Level5Dept, Level5DeptDesc
+        FROM #EmployeeAccrualBalances
+        ORDER BY EmployeeId, AsOfDate, PositionNumber;
 
         SET @RowCount = @@ROWCOUNT;
         SET @Duration_MS = DATEDIFF(MILLISECOND, @StartTime, SYSDATETIME());
 
-        DROP TABLE #Employees;
-        DROP TABLE #Accruals;
+        DROP TABLE #EmployeeAccrualBalances;
 
         EXEC [dbo].[usp_LogProcedureExecution]
             @ProcedureName = 'dbo.usp_GetEmployeeAccrualBalances',
@@ -413,8 +467,7 @@ JOIN empl_type et ON j.empl_type = et.fieldvalue';
         SET @Duration_MS = DATEDIFF(MILLISECOND, @StartTime, SYSDATETIME());
         SET @ErrorMsg = ERROR_MESSAGE();
 
-        IF OBJECT_ID('tempdb..#Employees') IS NOT NULL DROP TABLE #Employees;
-        IF OBJECT_ID('tempdb..#Accruals') IS NOT NULL DROP TABLE #Accruals;
+        IF OBJECT_ID('tempdb..#EmployeeAccrualBalances') IS NOT NULL DROP TABLE #EmployeeAccrualBalances;
 
         EXEC [dbo].[usp_LogProcedureExecution]
             @ProcedureName = 'dbo.usp_GetEmployeeAccrualBalances',
