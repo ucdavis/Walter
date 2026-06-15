@@ -10,6 +10,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Permission> Permissions => Set<Permission>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<OutboundMessage> OutboundMessages => Set<OutboundMessage>();
+    public DbSet<GLReconciliationInclusion> GLReconciliationInclusions => Set<GLReconciliationInclusion>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -20,5 +21,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         Permission.OnModelCreating(modelBuilder);
         Notification.OnModelCreating(modelBuilder);
         OutboundMessage.OnModelCreating(modelBuilder);
+        GLReconciliationInclusion.OnModelCreating(modelBuilder);
     }
 }
