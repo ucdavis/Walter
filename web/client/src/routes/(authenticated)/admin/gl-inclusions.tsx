@@ -185,6 +185,7 @@ function RouteComponent() {
               <input
                 className="input input-bordered w-full"
                 id="gl-note"
+                maxLength={500}
                 onChange={(e) => setNote(e.target.value)}
                 placeholder="Reason for inclusion"
                 type="text"

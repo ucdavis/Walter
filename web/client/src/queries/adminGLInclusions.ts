@@ -38,7 +38,7 @@ export const useAddGLInclusion = () => {
 
 export const useRemoveGLInclusion = () => {
   const queryClient = useQueryClient();
-  return useMutation({
+  const mutation = useMutation({
     mutationFn: async (asn: string) => {
       const res = await fetch(
         `/api/admin/gl-reconciliation-inclusions/${encodeURIComponent(asn)}`,
@@ -46,6 +46,10 @@ export const useRemoveGLInclusion = () => {
       );
       if (!res.ok) throw new Error("Failed to remove inclusion");
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: QUERY_KEY }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEY });
+      mutation.reset();
+    },
   });
+  return mutation;
 };
