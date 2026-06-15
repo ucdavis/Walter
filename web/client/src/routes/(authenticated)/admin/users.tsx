@@ -43,7 +43,10 @@ function RouteComponent() {
     query: debouncedQuery,
   });
 
-  const searchResults = useMemo(() => searchQuery.data ?? [], [searchQuery.data]);
+  const searchResults = useMemo(
+    () => searchQuery.data ?? [],
+    [searchQuery.data]
+  );
   const selectedUser = useMemo(
     () => searchResults.find((u) => u.id === selectedUserId) ?? null,
     [searchResults, selectedUserId]
@@ -61,11 +64,11 @@ function RouteComponent() {
           ['admin', 'users', selectedUserId, 'roles'],
           (old: UserRolesResponse | undefined) => ({
             ...old,
-            name: data.user.name,
             email: data.user.email,
             employeeId: data.user.employeeId,
-            kerberos: data.user.kerberos,
             iamId: data.user.iamId,
+            kerberos: data.user.kerberos,
+            name: data.user.name,
             roles: data.user.roles,
           })
         );
@@ -194,7 +197,7 @@ function RouteComponent() {
                           <div className="min-w-0">
                             <div className="truncate">{label}</div>
                             {secondary ? (
-                              <div className="truncate text-xs text-base-content/60">
+                              <div className="truncate text-xs text-base-content/70">
                                 {secondary}
                               </div>
                             ) : null}
@@ -270,7 +273,7 @@ function RouteComponent() {
                     </span>
                   </div>
                 ) : currentRoles.length === 0 ? (
-                  <div className="text-sm text-base-content/60">
+                  <div className="text-sm text-base-content/70">
                     No roles assigned.
                   </div>
                 ) : (

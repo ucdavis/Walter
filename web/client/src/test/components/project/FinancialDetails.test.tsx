@@ -41,8 +41,10 @@ const createSummary = (
   projectBurdenScheduleBase: 'MTDC-Rev 001',
   projectFund: null,
   projectNumber: 'K30ABC123',
+  projectOwningOrgCode: null,
   projectStatusCode: 'ACTIVE',
   sponsorAwardNumber: 'NSF-2024-001',
+  taskNum: null,
   totals: { balance: 4000, budget: 10_000, encumbrance: 1000, expense: 5000 },
   ...overrides,
 });

@@ -41,10 +41,52 @@ const createSummary = (
   projectBurdenScheduleBase: 'MTDC-Rev 001',
   projectFund: null,
   projectNumber: 'K30ABC123',
+  projectOwningOrgCode: null,
   projectStatusCode: 'ACTIVE',
   sponsorAwardNumber: 'NSF-2024-001',
+  taskNum: null,
   totals: { balance: 4000, budget: 10_000, encumbrance: 1000, expense: 5000 },
   ...overrides,
+});
+
+describe('ProjectDetails Finjector link', () => {
+  it('links the project number to Finjector for sponsored projects', () => {
+    render(
+      <ProjectDetails
+        summary={createSummary({
+          isInternal: false,
+          projectNumber: 'K30BND3F03',
+          projectOwningOrgCode: 'AENM002',
+          taskNum: 'RATEEX',
+        })}
+      />
+    );
+
+    const link = screen.getByRole('link', { name: /K30BND3F03/ });
+    expect(link).toHaveAttribute(
+      'href',
+      'https://finjector.ucdavis.edu/details/K30BND3F03-RATEEX-AENM002-522201/'
+    );
+    expect(link).toHaveAttribute('target', '_blank');
+  });
+
+  it('does not link the project number for internal projects', () => {
+    render(
+      <ProjectDetails
+        summary={createSummary({
+          isInternal: true,
+          projectNumber: 'FPAENM2341',
+          projectOwningOrgCode: 'AENM002',
+          taskNum: 'BIOIDV',
+        })}
+      />
+    );
+
+    expect(
+      screen.queryByRole('link', { name: /FPAENM2341/ })
+    ).not.toBeInTheDocument();
+    expect(screen.getByText('FPAENM2341')).toBeInTheDocument();
+  });
 });
 
 describe('ProjectDetails', () => {

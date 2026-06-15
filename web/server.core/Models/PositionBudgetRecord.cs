@@ -22,6 +22,14 @@ public sealed class PositionBudgetRecord
     [JsonPropertyName("projectDescription")]
     public string? ProjectDescription { get; set; }
 
+    /// <summary>Project-Task chartfield segment (PRODUCT). Surfaced so funding entries on internal projects can show which task is being charged.</summary>
+    [JsonPropertyName("task")]
+    public string? Task { get; set; }
+
+    /// <summary>Project classification from FacultyDeptPortfolio (e.g. "Internal"); drives whether the client shows the Task on a funding entry.</summary>
+    [JsonPropertyName("projectType")]
+    public string? ProjectType { get; set; }
+
     [JsonPropertyName("positionDescription")]
     public string? PositionDescription { get; set; }
 

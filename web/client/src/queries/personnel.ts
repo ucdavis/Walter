@@ -17,6 +17,8 @@ export interface PersonnelRecord {
   positionNumber: string;
   projectId: string;
   projectDescription: string;
+  projectType: string | null;
+  task: string | null;
 }
 
 export const personnelQueryOptions = (

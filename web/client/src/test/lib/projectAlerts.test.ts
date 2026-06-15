@@ -36,8 +36,10 @@ const createSummary = (
   projectBurdenScheduleBase: null,
   projectFund: null,
   projectNumber: 'TEST-001',
+  projectOwningOrgCode: null,
   projectStatusCode: 'ACTIVE',
   sponsorAwardNumber: null,
+  taskNum: null,
   totals: { balance: 5000, budget: 10000, encumbrance: 0, expense: 5000 },
   ...overrides,
 });

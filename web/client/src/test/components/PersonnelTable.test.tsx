@@ -43,6 +43,8 @@ const createRecord = (
   positionNumber: '40001234',
   projectDescription: 'Test Project',
   projectId: 'PROJ1',
+  projectType: null,
+  task: null,
   ...overrides,
 });
 
@@ -229,6 +231,37 @@ describe('PersonnelTable', () => {
 
     expect(screen.getByText('Project')).toBeInTheDocument();
     expect(screen.getByText('Test Project')).toBeInTheDocument();
+  });
+
+  it('shows the Task on internal-project funding entries and a dash otherwise', async () => {
+    const user = userEvent.setup();
+    const records = [
+      createRecord({
+        positionNumber: '40001234',
+        projectDescription: 'Internal Ops',
+        projectId: 'PROJ1',
+        projectType: 'Internal',
+        task: '441000',
+      }),
+      createRecord({
+        positionNumber: '40001234',
+        projectDescription: 'NSF Grant',
+        projectId: 'PROJ2',
+        projectType: 'Sponsored',
+        task: '778100',
+      }),
+    ];
+
+    render(<PersonnelTable data={records} />);
+
+    await user.click(
+      screen.getByRole('cell', { name: 'Smith, John (1001) - PROF-FY' })
+    );
+
+    // Internal project surfaces its task; sponsored project hides it behind a dash.
+    expect(screen.getByText('441000')).toBeInTheDocument();
+    expect(screen.queryByText('778100')).not.toBeInTheDocument();
+    expect(screen.getByText('—')).toBeInTheDocument();
   });
 
   it('shows a tooltip on the Monthly CBR header', async () => {

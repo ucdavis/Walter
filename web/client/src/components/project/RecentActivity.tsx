@@ -80,7 +80,7 @@ function Card({
           <div className="grid grid-cols-2 gap-2 pt-2">
             {model.footer.map((f) => (
               <div key={f.label}>
-                <div className="text-xs font-semibold text-base-content/60">
+                <div className="text-xs font-semibold text-base-content/70">
                   {f.label}
                 </div>
                 <div className="text-sm font-semibold">{f.value}</div>

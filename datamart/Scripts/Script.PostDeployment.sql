@@ -16,6 +16,9 @@ PRINT 'Applying post-deployment scripts...'
 PRINT 'Granting WalterAppRole permissions...'
 GRANT EXECUTE ON [dbo].[usp_GetFacultyDeptPortfolio] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_GetProjectSummary] TO [WalterAppRole];
+
+GRANT EXECUTE ON [dbo].[usp_GetProjectProjection] TO [WalterAppRole];
+
 GRANT EXECUTE ON [dbo].[usp_GetGLPPMReconciliation] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_GetGLTransactionListings] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_GetPositionBudgets] TO [WalterAppRole];
@@ -40,6 +43,8 @@ GRANT SELECT ON [dbo].[PpmPeople] TO [WalterAppRole];
 GRANT SELECT ON [dbo].[PpmPersonRoles] TO [WalterAppRole];
 GRANT SELECT ON [dbo].[PpmProjects] TO [WalterAppRole];
 GRANT SELECT ON [dbo].[PpmProjectAwards] TO [WalterAppRole];
+GRANT SELECT ON [dbo].[GlProjectMonthlyActuals] TO [WalterAppRole];
+GRANT SELECT ON [dbo].[ExpenditureTypeByAccount] TO [WalterAppRole];
 
 -- Grant pipeline role permissions
 GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[FacultyDeptPortfolio] TO [WalterPipelineRole];
@@ -61,6 +66,11 @@ GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[PpmPeople_Staging] TO [WalterPipe
 GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[PpmPersonRoles_Staging] TO [WalterPipelineRole];
 GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[PpmProjects_Staging] TO [WalterPipelineRole];
 GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[PpmProjectAwards_Staging] TO [WalterPipelineRole];
+-- AE_DWH copy job loads GlProjectMonthlyActuals_Staging, then usp_SwapStagingTable snapshot-swaps
+-- it into the final table. The final-table DML grant is required because the swap runs dynamic SQL,
+-- which does not honor ownership chaining.
+GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[GlProjectMonthlyActuals] TO [WalterPipelineRole];
+GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[GlProjectMonthlyActuals_Staging] TO [WalterPipelineRole];
 
 
 

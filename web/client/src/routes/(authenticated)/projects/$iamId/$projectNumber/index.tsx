@@ -110,6 +110,7 @@ function ProjectContent({
         <div className="mt-4">
           <TaskBreakdown
             iamId={iamId}
+            isInternal={summary.isInternal}
             projectNumber={summary.projectNumber}
             records={projectRecords}
           />
@@ -117,7 +118,7 @@ function ProjectContent({
       </section>
 
       <section className="section-margin">
-        <h2 className="h2">Personnel</h2>
+        <h2 className="h2 mb-2">Personnel</h2>
         {personnelQuery.isPending && (
           <p className="text-base-content/70 mt-4">Loading personnel...</p>
         )}
