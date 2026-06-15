@@ -16,6 +16,7 @@ public sealed class ProjectController : ApiControllerBase
     private readonly IDatamartService _datamartService;
     private readonly IAuthorizationService _authorizationService;
     private readonly IUserService _userService;
+    private readonly IGLReconciliationInclusionsService _glInclusionsService;
 
     public sealed record ManagedPiRecord(
         [property: JsonPropertyName("employeeId")] string EmployeeId,
@@ -36,12 +37,14 @@ public sealed class ProjectController : ApiControllerBase
         IFinancialApiService financialApiService,
         IDatamartService datamartService,
         IAuthorizationService authorizationService,
-        IUserService userService)
+        IUserService userService,
+        IGLReconciliationInclusionsService glInclusionsService)
     {
         _financialApiService = financialApiService;
         _datamartService = datamartService;
         _authorizationService = authorizationService;
         _userService = userService;
+        _glInclusionsService = glInclusionsService;
     }
 
     [HttpGet("by-iam/{iamId}")]
@@ -236,7 +239,9 @@ public sealed class ProjectController : ApiControllerBase
 
         var applicationUser = User.GetUserIdentifier();
         var emulatingUser = User.GetEmulatingUser();
-        var transactions = await _datamartService.GetGLTransactionListingsAsync(codes, applicationUser, emulatingUser, cancellationToken);
+        var inclusions = await _glInclusionsService.GetInclusionsAsync(cancellationToken);
+        var includedAsns = inclusions.Select(x => x.AccountingSequenceNumber);
+        var transactions = await _datamartService.GetGLTransactionListingsAsync(codes, applicationUser, emulatingUser, includedAsns, cancellationToken);
 
         return Ok(transactions);
     }
@@ -258,7 +263,9 @@ public sealed class ProjectController : ApiControllerBase
 
         var applicationUser = User.GetUserIdentifier();
         var emulatingUser = User.GetEmulatingUser();
-        var reconciliation = await _datamartService.GetGLPPMReconciliationAsync(codes, applicationUser, emulatingUser, cancellationToken);
+        var inclusions = await _glInclusionsService.GetInclusionsAsync(cancellationToken);
+        var includedAsns = inclusions.Select(x => x.AccountingSequenceNumber);
+        var reconciliation = await _datamartService.GetGLPPMReconciliationAsync(codes, applicationUser, emulatingUser, includedAsns, cancellationToken);
 
         return Ok(reconciliation);
     }

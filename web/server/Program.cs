@@ -80,6 +80,7 @@ builder.Services.AddSingleton<IDatamartService, DatamartService>();
 // add scoped services here
 builder.Services.AddScoped<IDbInitializer, DbInitializer>();
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IGLReconciliationInclusionsService, GLReconciliationInclusionsService>();
 builder.Services.AddScoped<IEntraUserAttributeService, EntraUserAttributeService>();
 builder.Services.AddScoped<IGraphService, GraphService>();
 builder.Services.AddHttpClient<IIdentityService, IdentityService>();

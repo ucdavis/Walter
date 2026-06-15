@@ -516,6 +516,7 @@ public sealed class SearchControllerTests
             IEnumerable<string> projectNumbers,
             string? applicationUser = null,
             string? emulatingUser = null,
+            IEnumerable<string>? includedAsns = null,
             CancellationToken ct = default)
         {
             throw new NotImplementedException();
@@ -525,6 +526,7 @@ public sealed class SearchControllerTests
             IEnumerable<string> projectNumbers,
             string? applicationUser = null,
             string? emulatingUser = null,
+            IEnumerable<string>? includedAsns = null,
             CancellationToken ct = default)
         {
             throw new NotImplementedException();

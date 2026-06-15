@@ -15,6 +15,7 @@ using server.Helpers;
 using server.Services;
 using Server.Tests;
 using server.core.Data;
+using server.core.Domain;
 
 namespace server.tests.Controllers;
 
@@ -36,7 +37,8 @@ public sealed class ProjectControllerTests
                     Name = "Project Manager",
                 }),
             authorizationService,
-            new UserService(NullLogger<UserService>.Instance, ctx))
+            new UserService(NullLogger<UserService>.Instance, ctx),
+            new EmptyGLInclusionsService())
         {
             ControllerContext = new ControllerContext
             {
@@ -65,7 +67,8 @@ public sealed class ProjectControllerTests
             new ThrowingFinancialApiService(),
             new ResolvingDatamartService(),
             authorizationService,
-            new UserService(NullLogger<UserService>.Instance, ctx))
+            new UserService(NullLogger<UserService>.Instance, ctx),
+            new EmptyGLInclusionsService())
         {
             ControllerContext = new ControllerContext
             {
@@ -91,7 +94,8 @@ public sealed class ProjectControllerTests
             new ThrowingFinancialApiService(),
             new ResolvingDatamartService(),
             authorizationService,
-            new UserService(NullLogger<UserService>.Instance, ctx))
+            new UserService(NullLogger<UserService>.Instance, ctx),
+            new EmptyGLInclusionsService())
         {
             ControllerContext = new ControllerContext
             {
@@ -120,7 +124,8 @@ public sealed class ProjectControllerTests
             new ThrowingFinancialApiService(),
             new ResolvingDatamartService(),
             authorizationService,
-            new UserService(NullLogger<UserService>.Instance, ctx))
+            new UserService(NullLogger<UserService>.Instance, ctx),
+            new EmptyGLInclusionsService())
         {
             ControllerContext = new ControllerContext
             {
@@ -171,6 +176,18 @@ public sealed class ProjectControllerTests
         var claims = roles.Select(r => new Claim(ClaimTypes.Role, r)).ToList();
         var identity = new ClaimsIdentity(claims, authenticationType: "Test");
         return new ClaimsPrincipal(identity);
+    }
+
+    private sealed class EmptyGLInclusionsService : IGLReconciliationInclusionsService
+    {
+        public Task<IReadOnlyList<GLReconciliationInclusion>> GetInclusionsAsync(CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<GLReconciliationInclusion>>(Array.Empty<GLReconciliationInclusion>());
+
+        public Task<GLReconciliationInclusion> AddInclusionAsync(string asn, string? note, string createdBy, CancellationToken ct = default)
+            => throw new NotImplementedException();
+
+        public Task<bool> RemoveInclusionAsync(string asn, CancellationToken ct = default)
+            => throw new NotImplementedException();
     }
 
     private sealed class ThrowingFinancialApiService : IFinancialApiService
@@ -266,6 +283,7 @@ public sealed class ProjectControllerTests
             IEnumerable<string> projectNumbers,
             string? applicationUser = null,
             string? emulatingUser = null,
+            IEnumerable<string>? includedAsns = null,
             CancellationToken ct = default)
         {
             throw new InvalidOperationException("Datamart should not be called for unauthorized users.");
@@ -275,6 +293,7 @@ public sealed class ProjectControllerTests
             IEnumerable<string> projectNumbers,
             string? applicationUser = null,
             string? emulatingUser = null,
+            IEnumerable<string>? includedAsns = null,
             CancellationToken ct = default)
         {
             throw new InvalidOperationException("Datamart should not be called for unauthorized users.");

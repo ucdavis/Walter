@@ -74,10 +74,12 @@ public interface IDatamartService
         IEnumerable<string> projectNumbers, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default);
 
     Task<IReadOnlyList<GLPPMReconciliationRecord>> GetGLPPMReconciliationAsync(
-        IEnumerable<string> projectNumbers, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default);
+        IEnumerable<string> projectNumbers, string? applicationUser = null, string? emulatingUser = null,
+        IEnumerable<string>? includedAsns = null, CancellationToken ct = default);
 
     Task<IReadOnlyList<GLTransactionRecord>> GetGLTransactionListingsAsync(
-        IEnumerable<string> projectNumbers, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default);
+        IEnumerable<string> projectNumbers, string? applicationUser = null, string? emulatingUser = null,
+        IEnumerable<string>? includedAsns = null, CancellationToken ct = default);
 }
 
 public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
@@ -270,23 +272,52 @@ public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
     }
 
     public async Task<IReadOnlyList<GLPPMReconciliationRecord>> GetGLPPMReconciliationAsync(
-        IEnumerable<string> projectNumbers, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default)
+        IEnumerable<string> projectNumbers, string? applicationUser = null, string? emulatingUser = null,
+        IEnumerable<string>? includedAsns = null, CancellationToken ct = default)
     {
         var projectNumbersParam = string.Join(",", projectNumbers);
         return await ExecuteSprocAsync<GLPPMReconciliationRecord>(
             "dbo.usp_GetGLPPMReconciliation",
-            new { ProjectIds = projectNumbersParam, ApplicationName = _appName, ApplicationUser = applicationUser, EmulatingUser = emulatingUser },
+            new
+            {
+                ProjectIds = projectNumbersParam,
+                ApplicationName = _appName,
+                ApplicationUser = applicationUser,
+                EmulatingUser = emulatingUser,
+                IncludedASNs = FormatAsnListForOpenQuery(includedAsns),
+            },
             ct: ct);
     }
 
     public async Task<IReadOnlyList<GLTransactionRecord>> GetGLTransactionListingsAsync(
-        IEnumerable<string> projectNumbers, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default)
+        IEnumerable<string> projectNumbers, string? applicationUser = null, string? emulatingUser = null,
+        IEnumerable<string>? includedAsns = null, CancellationToken ct = default)
     {
         var projectNumbersParam = string.Join(",", projectNumbers);
         return await ExecuteSprocAsync<GLTransactionRecord>(
             "dbo.usp_GetGLTransactionListings",
-            new { ProjectIds = projectNumbersParam, ApplicationName = _appName, ApplicationUser = applicationUser, EmulatingUser = emulatingUser },
+            new
+            {
+                ProjectIds = projectNumbersParam,
+                ApplicationName = _appName,
+                ApplicationUser = applicationUser,
+                EmulatingUser = emulatingUser,
+                IncludedASNs = FormatAsnListForOpenQuery(includedAsns),
+            },
             ct: ct);
+    }
+
+    /// <summary>
+    /// Formats ASNs for injection into a Redshift OPENQUERY string template.
+    /// Each ASN is wrapped in doubled single-quotes (e.g. ''173421'') so that after
+    /// REPLACE(query, '''', '''''') the result is valid Redshift string literals.
+    /// Returns null when the list is empty; the sproc interprets null as no inclusions.
+    /// </summary>
+    private static string? FormatAsnListForOpenQuery(IEnumerable<string>? asns)
+    {
+        if (asns is null) return null;
+        var list = string.Join(",", asns.Select(a => $"''{a}''"));
+        return list.Length > 0 ? list : null;
     }
 
     private async Task<IReadOnlyList<T>> ExecuteSprocAsync<T>(
