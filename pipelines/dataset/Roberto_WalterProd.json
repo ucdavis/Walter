@@ -2,15 +2,15 @@
 	"name": "Roberto_WalterProd",
 	"properties": {
 		"linkedServiceName": {
-			"referenceName": "ROBERTO_WalterDev",
+			"referenceName": "ROBERTO_WalterProd",
 			"type": "LinkedServiceReference"
 		},
 		"annotations": [],
 		"type": "SqlServerTable",
 		"schema": [],
 		"typeProperties": {
-			"schema": "dbo",
-			"table": "test"
+			"schema": "WalterProd",
+			"table": ""
 		}
 	}
 }
