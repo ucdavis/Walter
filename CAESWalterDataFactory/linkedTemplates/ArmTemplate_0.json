@@ -421,6 +421,12 @@
 						"type": "nvarchar"
 					},
 					{
+						"name": "HourlyRateFTE",
+						"type": "decimal",
+						"precision": 12,
+						"scale": 4
+					},
+					{
 						"name": "TypeLabel",
 						"type": "nvarchar"
 					},
@@ -710,6 +716,221 @@
 			]
 		},
 		{
+			"name": "[concat(parameters('factoryName'), '/WalterProd_EmployeeAccrualBalances')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ROBERTO_WalterProd",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "SqlServerTable",
+				"schema": [
+					{
+						"name": "EmployeeId",
+						"type": "nvarchar"
+					},
+					{
+						"name": "AsOfDate",
+						"type": "date"
+					},
+					{
+						"name": "PositionNumber",
+						"type": "nvarchar"
+					},
+					{
+						"name": "EmployeeEmail",
+						"type": "nvarchar"
+					},
+					{
+						"name": "EmployeeName",
+						"type": "nvarchar"
+					},
+					{
+						"name": "UnionCode",
+						"type": "nvarchar"
+					},
+					{
+						"name": "UnionDescription",
+						"type": "nvarchar"
+					},
+					{
+						"name": "EmployeeClassCode",
+						"type": "nvarchar"
+					},
+					{
+						"name": "EmployeeClassDescription",
+						"type": "nvarchar"
+					},
+					{
+						"name": "JobCode",
+						"type": "nvarchar"
+					},
+					{
+						"name": "JobCodeDescription",
+						"type": "nvarchar"
+					},
+					{
+						"name": "ReportsToPositionNumber",
+						"type": "nvarchar"
+					},
+					{
+						"name": "ReportsToEmployeeId",
+						"type": "nvarchar"
+					},
+					{
+						"name": "ReportsToEmployeeName",
+						"type": "nvarchar"
+					},
+					{
+						"name": "HrStatus",
+						"type": "nvarchar"
+					},
+					{
+						"name": "EmployeeStatus",
+						"type": "nvarchar"
+					},
+					{
+						"name": "EmployeeStatusDescription",
+						"type": "nvarchar"
+					},
+					{
+						"name": "EmployeeType",
+						"type": "nvarchar"
+					},
+					{
+						"name": "EmployeeTypeDescription",
+						"type": "nvarchar"
+					},
+					{
+						"name": "HourlyRateFTE",
+						"type": "decimal",
+						"precision": 12,
+						"scale": 4
+					},
+					{
+						"name": "TypeLabel",
+						"type": "nvarchar"
+					},
+					{
+						"name": "PrevBal",
+						"type": "decimal",
+						"precision": 10,
+						"scale": 2
+					},
+					{
+						"name": "HoursTaken",
+						"type": "decimal",
+						"precision": 10,
+						"scale": 2
+					},
+					{
+						"name": "AccrualHours",
+						"type": "decimal",
+						"precision": 10,
+						"scale": 2
+					},
+					{
+						"name": "AdjustedHours",
+						"type": "decimal",
+						"precision": 10,
+						"scale": 2
+					},
+					{
+						"name": "CalculatedBal",
+						"type": "decimal",
+						"precision": 10,
+						"scale": 2
+					},
+					{
+						"name": "AccrualLimit",
+						"type": "decimal",
+						"precision": 10,
+						"scale": 2
+					},
+					{
+						"name": "ApproachingMax",
+						"type": "nvarchar"
+					},
+					{
+						"name": "HoursOverUnderPolicyMax",
+						"type": "decimal",
+						"precision": 10,
+						"scale": 2
+					},
+					{
+						"name": "AccrualPercentage",
+						"type": "decimal",
+						"precision": 7,
+						"scale": 2
+					},
+					{
+						"name": "ExceptionalMaxVacationOnly",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "Level1Dept",
+						"type": "nvarchar"
+					},
+					{
+						"name": "Level1DeptDesc",
+						"type": "nvarchar"
+					},
+					{
+						"name": "Level2Dept",
+						"type": "nvarchar"
+					},
+					{
+						"name": "Level2DeptDesc",
+						"type": "nvarchar"
+					},
+					{
+						"name": "Level3Dept",
+						"type": "nvarchar"
+					},
+					{
+						"name": "Level3DeptDesc",
+						"type": "nvarchar"
+					},
+					{
+						"name": "Level4Dept",
+						"type": "nvarchar"
+					},
+					{
+						"name": "Level4DeptDesc",
+						"type": "nvarchar"
+					},
+					{
+						"name": "Level5Dept",
+						"type": "nvarchar"
+					},
+					{
+						"name": "Level5DeptDesc",
+						"type": "nvarchar"
+					},
+					{
+						"name": "LoadDate",
+						"type": "datetime2",
+						"scale": 3
+					},
+					{
+						"name": "LastUpdated",
+						"type": "datetime2",
+						"scale": 3
+					}
+				],
+				"typeProperties": {
+					"schema": "dbo",
+					"table": "EmployeeAccrualBalances"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ROBERTO_WalterProd')]"
+			]
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/WalterProd_FacultyDeptPortfolio')]",
 			"type": "Microsoft.DataFactory/factories/datasets",
 			"apiVersion": "2018-06-01",
@@ -964,6 +1185,12 @@
 					{
 						"name": "EmployeeTypeDescription",
 						"type": "nvarchar"
+					},
+					{
+						"name": "HourlyRateFTE",
+						"type": "decimal",
+						"precision": 12,
+						"scale": 4
 					},
 					{
 						"name": "TypeLabel",
@@ -1370,202 +1597,6 @@
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/Roberto_WalterProd')]"
-			]
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/RefreshEmployeeAccrualBalances')]",
-			"type": "Microsoft.DataFactory/factories/pipelines",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"activities": [
-					{
-						"name": "Get Last As Of Date",
-						"type": "Lookup",
-						"dependsOn": [],
-						"policy": {
-							"timeout": "0.12:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"source": {
-								"type": "SqlServerSource",
-								"sqlReaderQuery": "SELECT ISNULL(MAX(AsOfDate), '1900-01-01') AS LastAsOfDate FROM dbo.EmployeeAccrualBalances",
-								"queryTimeout": "02:00:00",
-								"partitionOption": "None"
-							},
-							"dataset": {
-								"referenceName": "Roberto_WalterDev",
-								"type": "DatasetReference",
-								"parameters": {}
-							}
-						}
-					},
-					{
-						"name": "Copy To Accruals Table",
-						"type": "Copy",
-						"dependsOn": [
-							{
-								"activity": "Get Last As Of Date",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "0.12:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"source": {
-								"type": "SqlServerSource",
-								"sqlReaderStoredProcedureName": "[[dbo].[usp_GetEmployeeAccrualBalances]",
-								"storedProcedureParameters": {
-									"ApplicationName": {
-										"type": "String",
-										"value": "WalterDev_EmployeeAccrualBalances"
-									},
-									"ApplicationUser": {
-										"type": "String",
-										"value": "walter_adf"
-									},
-									"AsOfMinDate": {
-										"type": "DateTime",
-										"value": {
-											"value": "@{activity('Get Last As Of Date').output.firstRow.LastAsOfDate}",
-											"type": "Expression"
-										}
-									}
-								},
-								"queryTimeout": "02:00:00",
-								"partitionOption": "None"
-							},
-							"sink": {
-								"type": "SqlServerSink",
-								"writeBehavior": "upsert",
-								"upsertSettings": {
-									"useTempDB": true,
-									"keys": [
-										"EmployeeId",
-										"AsOfDate",
-										"PositionNumber"
-									]
-								},
-								"sqlWriterUseTableLock": false
-							},
-							"enableStaging": false,
-							"translator": {
-								"type": "TabularTranslator",
-								"typeConversion": true,
-								"typeConversionSettings": {
-									"allowDataTruncation": true,
-									"treatBooleanAsNumber": false
-								}
-							}
-						},
-						"inputs": [
-							{
-								"referenceName": "Roberto_WalterDev",
-								"type": "DatasetReference",
-								"parameters": {}
-							}
-						],
-						"outputs": [
-							{
-								"referenceName": "WalterDev_EmployeeAccrualBalances",
-								"type": "DatasetReference",
-								"parameters": {}
-							}
-						]
-					},
-					{
-						"name": "Copy Accruals to Data Lake",
-						"type": "Copy",
-						"dependsOn": [
-							{
-								"activity": "Copy To Accruals Table",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "0.12:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"source": {
-								"type": "SqlServerSource",
-								"sqlReaderQuery": {
-									"value": "SELECT *\nFROM dbo.EmployeeAccrualBalances\nWHERE AsOfDate > '@{activity('Get Last As Of Date').output.firstRow.LastAsOfDate}'",
-									"type": "Expression"
-								},
-								"queryTimeout": "02:00:00",
-								"partitionOption": "None"
-							},
-							"sink": {
-								"type": "ParquetSink",
-								"storeSettings": {
-									"type": "AzureBlobFSWriteSettings",
-									"copyBehavior": "FlattenHierarchy"
-								},
-								"formatSettings": {
-									"type": "ParquetWriteSettings"
-								}
-							},
-							"enableStaging": false,
-							"translator": {
-								"type": "TabularTranslator",
-								"typeConversion": true,
-								"typeConversionSettings": {
-									"allowDataTruncation": true,
-									"treatBooleanAsNumber": false
-								}
-							}
-						},
-						"inputs": [
-							{
-								"referenceName": "WalterDev_EmployeeAccrualBalances",
-								"type": "DatasetReference",
-								"parameters": {}
-							}
-						],
-						"outputs": [
-							{
-								"referenceName": "DataLakeAccruals",
-								"type": "DatasetReference",
-								"parameters": {
-									"Year": {
-										"value": "@formatDateTime(utcNow(),'yyyy')",
-										"type": "Expression"
-									},
-									"Month": "@formatDateTime(utcNow(),'MM')",
-									"Day": "@formatDateTime(utcNow(),'dd')"
-								}
-							}
-						]
-					}
-				],
-				"policy": {
-					"elapsedTimeMetric": {}
-				},
-				"annotations": []
-			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/datasets/Roberto_WalterDev')]",
-				"[concat(variables('factoryId'), '/datasets/WalterDev_EmployeeAccrualBalances')]",
-				"[concat(variables('factoryId'), '/datasets/DataLakeAccruals')]"
 			]
 		}
 	]
