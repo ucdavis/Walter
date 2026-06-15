@@ -5,7 +5,8 @@ CREATE PROCEDURE dbo.usp_GetGLTransactionListings
     @EndDate DATE = NULL,
     @ApplicationName NVARCHAR(128) = NULL,
     @ApplicationUser NVARCHAR(256) = NULL,
-    @EmulatingUser NVARCHAR(256) = NULL
+    @EmulatingUser NVARCHAR(256) = NULL,
+    @IncludedASNs NVARCHAR(MAX) = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -60,6 +61,11 @@ BEGIN
     IF @ProjectIds IS NOT NULL
         EXEC dbo.usp_ParseProjectIdFilter @ProjectIds, @ProjectIdFilter OUTPUT;
 
+    DECLARE @AsnClause NVARCHAR(MAX) = CASE
+        WHEN @IncludedASNs IS NULL OR LEN(LTRIM(RTRIM(@IncludedASNs))) = 0 THEN '''''-1'''''
+        ELSE @IncludedASNs
+    END;
+
     -- Build filter clause based on which parameter was provided
     IF @FinancialDept IS NOT NULL
         SET @FilterClause = ' WHERE tlr.financial_department = ''' + @FinancialDept + '''';
@@ -83,7 +89,7 @@ BEGIN
             acc.parent_level_0_code NOT LIKE ''3%''
             OR (tlr.PERIOD_NAME = ''Jul-23'' AND tlr.ACCOUNTING_SEQUENCE_NUMBER IN (''100009'',''100010'',''100307'',''103283'',''103284''))
             OR (tlr.PERIOD_NAME = ''Apr-24'' AND tlr.JOURNAL_SOURCE = ''UCD Conversion'' AND tlr.JOURNAL_CATEGORY = ''UCD Conversion'')
-            OR tlr.ACCOUNTING_SEQUENCE_NUMBER IN (''173421'',''288176'',''292363'',''338926'',''341705'',''341722'',''398465'',''413247'',''419608'',''434173'',''438836'',''441285'')
+            OR tlr.ACCOUNTING_SEQUENCE_NUMBER IN (' + @AsnClause + ')
         )';
 
     SET @FilterClause = @FilterClause + ' AND tlr.PERIOD_NAME <> ''Jun-23''';
