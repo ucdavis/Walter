@@ -47,93 +47,82 @@ export function SpendAnalysisWorkbench() {
   }
 
   return (
-    <section className="py-8 md:py-10">
-      <div className="rounded-[2rem] border border-main-border bg-[radial-gradient(circle_at_top_left,_rgba(2,87,151,0.12),_transparent_38%),linear-gradient(135deg,_rgba(244,194,0,0.16),_rgba(250,250,250,0.98)_42%,_rgba(0,150,136,0.08))] p-6 shadow-sm md:p-8">
-        <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
-          <div className="max-w-3xl">
-            <h1 className="text-4xl font-proxima-bold text-primary">
-              Spend Intelligence Console
-            </h1>
-            <p className="mt-3 max-w-2xl text-base leading-7 text-base-content/75">
-              Ask procurement questions about suppliers, items, categories, and
-              spend. Walter now uses model-driven tool selection to answer questions about purchasing data.
-            </p>
+    <section className="mt-8 mb-10">
+      <div className="max-w-4xl">
+        <h1 className="h1">Spend Intelligence Workspace</h1>
+        <p className="subtitle mt-1">PURCHASING ASSISTANT</p>
+        <p className="mt-3 max-w-3xl text-base leading-7 text-base-content/80">
+          Walter uses AI to answer questions about purchasing data. Responses may contain inaccuracies and should be verified before making business decisions.
+        </p>
           </div>
-
-          
-        </div>
-      </div>
 
       <section
-        className="mt-6 rounded-[2rem] border border-base-300 bg-[linear-gradient(135deg,rgba(11,110,79,0.08),rgba(241,143,1,0.12),rgba(255,255,255,0.9))] p-6 shadow-sm"
+        className="card bg-base-100 border border-main-border shadow-sm mt-6"
         id="procurement-assistant"
       >
-        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-          <div className="max-w-3xl space-y-2">
-            <p className="text-sm font-semibold uppercase tracking-[0.22em] text-base-content/60">
-              Procurement Assistant
-            </p>
-            <div className="space-y-2">
-              <h2 className="h2 mb-0">Ask a Question</h2>
+        <div className="card-body gap-5">
+          <div className="max-w-3xl">
+            <h2 className="h2">Ask a Question</h2>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {EXAMPLE_QUESTIONS.map((example) => (
+              <button
+                className="btn btn-sm btn-outline"
+                key={example}
+                onClick={() => {
+                  setQuestion(example);
+                  handleSubmit(example);
+                }}
+                type="button"
+              >
+                {example}
+              </button>
+            ))}
+          </div>
+
+          <div className="rounded-md border border-main-border bg-base-200 p-4">
+            <label className="form-control gap-3">
+              <textarea
+                className="textarea textarea-bordered min-h-28 w-full text-base"
+                onChange={(event) => setQuestion(event.target.value)}
+                placeholder="Try: What suppliers do we use for merchant gift cards?"
+                value={question}
+              />
+            </label>
+
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-base-content/70">
+                 Ask questions about suppliers, purchases, categories, and spend.
+              </p>
+              <button
+                className="btn btn-primary"
+                disabled={mutation.isPending || !question.trim()}
+                onClick={() => handleSubmit(question)}
+                type="button"
+              >
+                {mutation.isPending
+                  ? 'Running query...'
+                  : 'Run procurement query'}
+              </button>
             </div>
           </div>
+
+          {mutation.isError ? (
+            <div className="alert alert-error">
+              <span>{getErrorMessage(mutation.error)}</span>
+            </div>
+          ) : null}
+
+          {mutation.data ? (
+            <SpendAnalysisResults response={mutation.data} />
+          ) : (
+            <div className="rounded-md border border-dashed border-main-border bg-base-200/70 p-6 text-base-content/70">
+              Run a sample question to preview the answer card, charts, table,
+              and tool trace.
+            </div>
+          )}
         </div>
-
-        <div className="mt-5 flex flex-wrap gap-2">
-          {EXAMPLE_QUESTIONS.map((example) => (
-            <button
-              className="btn btn-sm btn-outline rounded-full"
-              key={example}
-              onClick={() => {
-                setQuestion(example);
-                handleSubmit(example);
-              }}
-              type="button"
-            >
-              {example}
-            </button>
-          ))}
-        </div>
-
-        <div className="mt-5 rounded-[1.5rem] border border-base-300 bg-base-100/90 p-4">
-          <label className="form-control gap-3">
-            <textarea
-              className="textarea textarea-bordered min-h-28 w-full text-base"
-              onChange={(event) => setQuestion(event.target.value)}
-              placeholder="Try: What suppliers do we use for merchant gift cards?"
-              value={question}
-            />
-          </label>
-
-          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-base-content/70">
-              Ask a question about your procurement data.
-            </p>
-            <button
-              className="btn btn-primary"
-              disabled={mutation.isPending || !question.trim()}
-              onClick={() => handleSubmit(question)}
-              type="button"
-            >
-              {mutation.isPending ? 'Running query…' : 'Run procurement query'}
-            </button>
-          </div>
-        </div>
-
-        {mutation.isError ? (
-          <div className="alert alert-error mt-5">
-            <span>{getErrorMessage(mutation.error)}</span>
-          </div>
-        ) : null}
-
-        {mutation.data ? (
-          <SpendAnalysisResults response={mutation.data} />
-        ) : (
-          <div className="mt-5 rounded-[1.5rem] border border-dashed border-base-300 bg-base-100/70 p-6 text-base-content/70">
-            Run a sample question to preview the answer card, charts, table,
-            and tool trace.
-          </div>
-        )}
       </section>
     </section>
   );
@@ -144,54 +133,53 @@ function SpendAnalysisResults({
 }: {
   response: SpendAnalysisResponse;
 }) {
+  const supportingTable = response.supportingTable;
+
   return (
     <div className="mt-6 space-y-5">
-      <div className="rounded-[1.5rem] bg-base-100 p-5 shadow-sm ring-1 ring-base-300">
-        <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
-          <div className="space-y-2">
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-base-content/60">
-              Answer
-            </p>
-            <h3 className="text-2xl font-semibold leading-tight">
-              {response.answerText}
-            </h3>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            <div className="badge badge-neutral">{response.intent}</div>
-            <div className="badge badge-outline">
-              confidence: {response.confidence}
+      <section className="card bg-base-100 border border-main-border shadow-sm">
+        <div className="card-body gap-5">
+          <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+            <div className="space-y-2">
+              <h2 className="h2">Answer</h2>
+              <p className="text-lg leading-7 text-base-content/85">
+                {response.answerText}
+              </p>
             </div>
-            {response.entity ? (
-              <div className="badge badge-outline">
-                {response.entity.type}: {response.entity.value}
-              </div>
-            ) : null}
-            {!response.isConfigured ? (
-              <div className="badge badge-warning">Needs configuration</div>
-            ) : null}
-          </div>
-        </div>
 
-        <div className="mt-5 grid gap-3 md:grid-cols-3">
-          {response.summaryCards.map((card) => (
-            <div
-              className="rounded-2xl border border-base-300 bg-base-200/60 p-4"
-              key={card.label}
-            >
-              <div className="text-sm font-medium text-base-content/65">
-                {card.label}
+            <div className="flex flex-wrap gap-2">
+              <div className="badge badge-neutral">{response.intent}</div>
+              <div className="badge badge-outline">
+                confidence: {response.confidence}
               </div>
-              <div className="mt-2 text-2xl font-semibold">{card.value}</div>
-              {card.description ? (
-                <div className="mt-2 text-sm text-base-content/70">
-                  {card.description}
+              {response.entity ? (
+                <div className="badge badge-outline">
+                  {response.entity.type}: {response.entity.value}
                 </div>
               ) : null}
+              {!response.isConfigured ? (
+                <div className="badge badge-warning">Needs configuration</div>
+              ) : null}
             </div>
-          ))}
+          </div>
+
+          <div className="fancy-data mb-0 mt-0">
+            <dl className="grid gap-6 md:grid-cols-3">
+              {response.summaryCards.map((card) => (
+                <div key={card.label}>
+                  <dt className="stat-label">{card.label}</dt>
+                  <dd className="stat-value-lg mt-2">{card.value}</dd>
+                  {card.description ? (
+                    <dd className="mt-2 text-sm text-base-content/70">
+                      {card.description}
+                    </dd>
+                  ) : null}
+                </div>
+              ))}
+            </dl>
+          </div>
         </div>
-      </div>
+      </section>
 
       {response.charts.length ? (
         <div className="grid gap-4 xl:grid-cols-2">
@@ -201,34 +189,34 @@ function SpendAnalysisResults({
         </div>
       ) : null}
 
-      {response.supportingTable ? (
-        <div className="rounded-[1.5rem] border border-base-300 bg-base-100 p-5 shadow-sm">
-          <h3 className="text-xl font-semibold">
-            {response.supportingTable.title}
-          </h3>
-          <div className="mt-4 overflow-x-auto">
-            <table className="table table-zebra">
-              <thead>
-                <tr>
-                  {response.supportingTable.columns.map((column) => (
-                    <th className="whitespace-nowrap" key={column}>
-                      {column}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {response.supportingTable.rows.map((row, rowIndex) => (
-                  <tr key={`${response.supportingTable.title}-${rowIndex}`}>
-                    {response.supportingTable.columns.map((column) => (
-                      <td key={column}>{row[column] ?? ''}</td>
+      {supportingTable ? (
+        <section className="card bg-base-100 border border-main-border shadow-sm">
+          <div className="card-body">
+            <h2 className="h2">{supportingTable.title}</h2>
+            <div className="mt-4 overflow-x-auto">
+              <table className="table walter-table">
+                <thead>
+                  <tr>
+                    {supportingTable.columns.map((column) => (
+                      <th className="whitespace-nowrap" key={column}>
+                        {column}
+                      </th>
                     ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {supportingTable.rows.map((row, rowIndex) => (
+                    <tr key={`${supportingTable.title}-${rowIndex}`}>
+                      {supportingTable.columns.map((column) => (
+                        <td key={column}>{row[column] ?? ''}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+        </section>
       ) : null}
 
       {response.confirmedFindings.length ||
@@ -251,22 +239,24 @@ function SpendAnalysisResults({
       ) : null}
 
       <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
-        <div className="rounded-[1.5rem] border border-base-300 bg-base-100 p-5 shadow-sm">
-          <h3 className="text-xl font-semibold">Audit Summary</h3>
-          <ul className="mt-4 space-y-2 text-sm leading-6 text-base-content/80">
-            {response.auditSummary.map((line) => (
-              <li key={line}>{line}</li>
-            ))}
-          </ul>
-        </div>
+        <section className="card bg-base-100 border border-main-border shadow-sm">
+          <div className="card-body">
+            <h2 className="h2">Audit Summary</h2>
+            <ul className="mt-4 space-y-2 text-sm leading-6 text-base-content/80">
+              {response.auditSummary.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+          </div>
+        </section>
 
-        <details className="rounded-[1.5rem] border border-base-300 bg-base-100 p-5 shadow-sm">
-          <summary className="cursor-pointer text-xl font-semibold">
+        <details className="card bg-base-100 border border-main-border shadow-sm">
+          <summary className="cursor-pointer px-6 pt-6 text-2xl font-proxima-bold">
             Query Trace
           </summary>
 
           {response.trace ? (
-            <div className="mt-4 space-y-4">
+            <div className="space-y-4 px-6 pb-6 pt-4">
               <div className="text-sm text-base-content/75">
                 Intent: {response.trace.inferredIntent}
               </div>
@@ -283,7 +273,7 @@ function SpendAnalysisResults({
 
               {response.trace.evidenceAssessments.map((assessment) => (
                 <div
-                  className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4"
+                  className="rounded-md border border-main-border bg-base-200 p-4"
                   key={assessment.assessmentId}
                 >
                   <div className="font-semibold">
@@ -309,7 +299,7 @@ function SpendAnalysisResults({
 
               {response.trace.toolCalls.map((toolCall, index) => (
                 <div
-                  className="rounded-2xl border border-base-300 bg-base-200/50 p-4"
+                  className="rounded-md border border-main-border bg-base-200 p-4"
                   key={`${toolCall.toolName}-${index}`}
                 >
                   <div className="font-semibold">{toolCall.toolName}</div>
@@ -325,14 +315,14 @@ function SpendAnalysisResults({
                   <div className="mt-1 text-xs text-base-content/65">
                     Top result IDs: {toolCall.topResultIds.join(', ') || 'none'}
                   </div>
-                  <pre className="mt-3 overflow-x-auto rounded-xl bg-neutral p-3 text-xs text-neutral-content">
+                  <pre className="mt-3 overflow-x-auto rounded-md bg-neutral p-3 text-xs text-neutral-content">
                     {toolCall.payloadJson}
                   </pre>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="mt-4 text-sm text-base-content/70">
+            <p className="px-6 pb-6 pt-4 text-sm text-base-content/70">
               Trace output is not available for this response.
             </p>
           )}
@@ -342,26 +332,22 @@ function SpendAnalysisResults({
   );
 }
 
-function FindingsCard({
-  items,
-  title,
-}: {
-  items: string[];
-  title: string;
-}) {
+function FindingsCard({ items, title }: { items: string[]; title: string }) {
   if (!items.length) {
     return null;
   }
 
   return (
-    <div className="rounded-[1.5rem] border border-base-300 bg-base-100 p-5 shadow-sm">
-      <h3 className="text-xl font-semibold">{title}</h3>
-      <ul className="mt-4 space-y-2 text-sm leading-6 text-base-content/80">
-        {items.map((item) => (
-          <li key={item}>{item}</li>
-        ))}
-      </ul>
-    </div>
+    <section className="card bg-base-100 border border-main-border shadow-sm">
+      <div className="card-body">
+        <h2 className="h2">{title}</h2>
+        <ul className="mt-4 space-y-2 text-sm leading-6 text-base-content/80">
+          {items.map((item) => (
+            <li key={item}>{item}</li>
+          ))}
+        </ul>
+      </div>
+    </section>
   );
 }
 
@@ -371,34 +357,16 @@ function SpendAnalysisChartCard({
   chart: SpendAnalysisChartPayload;
 }) {
   return (
-    <div className="rounded-[1.5rem] border border-base-300 bg-base-100 p-5 shadow-sm">
-      <h3 className="text-xl font-semibold">{chart.title}</h3>
-      <div className="mt-4 h-80">
-        <ResponsiveContainer height="100%" width="100%">
-          {renderChart(chart)}
-        </ResponsiveContainer>
+    <section className="card bg-base-100 border border-main-border shadow-sm">
+      <div className="card-body">
+        <h2 className="h2">{chart.title}</h2>
+        <div className="mt-4 h-80">
+          <ResponsiveContainer height="100%" width="100%">
+            {renderChart(chart)}
+          </ResponsiveContainer>
+        </div>
       </div>
-    </div>
-  );
-}
-
-function SummaryChip({
-  label,
-  note,
-  value,
-}: {
-  label: string;
-  note: string;
-  value: string;
-}) {
-  return (
-    <div className="rounded-[1.25rem] border border-base-300 bg-base-100/85 px-4 py-3 shadow-sm">
-      <div className="text-xs font-semibold uppercase tracking-[0.18em] text-base-content/55">
-        {label}
-      </div>
-      <div className="mt-2 text-lg font-semibold text-base-content">{value}</div>
-      <div className="mt-1 text-sm text-base-content/70">{note}</div>
-    </div>
+    </section>
   );
 }
 
