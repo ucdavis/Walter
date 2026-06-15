@@ -35,7 +35,7 @@ BEGIN
     EXEC dbo.usp_ParseProjectIdFilter @ProjectIds, @ProjectIdFilter OUTPUT;
 
     DECLARE @AsnClause NVARCHAR(MAX) = CASE
-        WHEN @IncludedASNs IS NULL OR LEN(LTRIM(RTRIM(@IncludedASNs))) = 0 THEN '''''-1'''''
+        WHEN @IncludedASNs IS NULL OR LEN(LTRIM(RTRIM(@IncludedASNs))) = 0 THEN '''-1'''
         ELSE @IncludedASNs
     END;
 
