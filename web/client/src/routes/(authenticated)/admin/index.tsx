@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
 import {
   canAccessAdminUsers,
+  canAccessAdminGLInclusions,
   hasAdminRole,
   hasSystemRole,
 } from '@/shared/auth/roleAccess.ts';
@@ -8,6 +9,7 @@ import { useUser } from '@/shared/auth/UserContext.tsx';
 import {
   EnvelopeIcon,
   MegaphoneIcon,
+  TableCellsIcon,
   UsersIcon,
 } from '@heroicons/react/24/outline';
 
@@ -20,6 +22,7 @@ function RouteComponent() {
   const isAdmin = hasAdminRole(user.roles);
   const isSystem = hasSystemRole(user.roles);
   const showUsersPageLink = canAccessAdminUsers(user.roles);
+  const showGLInclusionsLink = canAccessAdminGLInclusions(user.roles);
   const currentRole = isAdmin ? 'Admin' : isSystem ? 'System' : 'Manager';
 
   return (
@@ -63,6 +66,12 @@ function RouteComponent() {
             <Link className="btn btn-primary btn-lg" to="/admin/users">
               <UsersIcon className="w-4 h-4" />
               User Management
+            </Link>
+          ) : null}
+          {showGLInclusionsLink ? (
+            <Link className="btn btn-primary btn-lg" to="/admin/gl-inclusions">
+              <TableCellsIcon className="w-4 h-4" />
+              GL Reconciliation Inclusions
             </Link>
           ) : null}
           {isAdmin ? (
