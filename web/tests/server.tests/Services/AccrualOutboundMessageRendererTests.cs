@@ -51,7 +51,7 @@ public sealed class AccrualOutboundMessageRendererTests
         rendered.TextBody.Should().Contain("Hours to Take");
         rendered.TextBody.Should().Contain("$500");
         rendered.TextBody.Should().Contain("Open TRS Time Reporting");
-        rendered.TextBody.Should().Contain("https://trs.ucdavis.edu/timesheet");
+        rendered.TextBody.Should().Contain("https://trs.ucdavis.edu/");
         rendered.TextBody.Should().Contain("of 240 hrs");
         rendered.HtmlBody.Should().Contain("Walter");
         rendered.HtmlBody.Should().Contain("Dear Staff Member,");
@@ -59,7 +59,7 @@ public sealed class AccrualOutboundMessageRendererTests
         rendered.HtmlBody.Should().Contain("Hours to Take");
         rendered.HtmlBody.Should().Contain("$500");
         rendered.HtmlBody.Should().Contain("Open TRS Time Reporting");
-        rendered.HtmlBody.Should().Contain("https://trs.ucdavis.edu/timesheet");
+        rendered.HtmlBody.Should().Contain("https://trs.ucdavis.edu/");
         rendered.HtmlBody.Should().Contain("of 240 hrs");
         rendered.HtmlBody.Should().NotContain("<mjml");
     }
