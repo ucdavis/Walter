@@ -74,3 +74,6 @@ export const canViewProjectDiscrepancy = (
   roles.includes(ROLE_NAMES.admin) ||
   roles.includes(ROLE_NAMES.financialViewer) ||
   projectPmEmployeeId === userEmployeeId;
+
+export const canAccessAdminGLInclusions = (roles: readonly string[]) =>
+  hasRole(roles, ELEVATED_ROLES);
