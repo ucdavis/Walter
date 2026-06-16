@@ -10,18 +10,18 @@
         .ToList();
 }
 
-<mj-section padding="34px 34px 12px 34px">
+<mj-section padding="@NotificationEmailLayoutSpacing.ContentPadding">
   <mj-column>
     <mj-text font-size="25px" font-weight="700" line-height="1.3" padding-bottom="10px">
       Monthly Vacation Accrual Report
     </mj-text>
-    <mj-text padding="0px 0px 16px 0px">
+    <mj-text padding="0px">
       Snapshot date: @AccrualEmailTemplateFormatting.Date(payload.SnapshotAsOfDate). Walter found @payload.AtCapCount.ToString("N0") employees at the vacation accrual cap and @payload.ApproachingCapCount.ToString("N0") approaching the cap.
     </mj-text>
   </mj-column>
 </mj-section>
 
-<mj-section padding="0px 34px 20px 34px">
+<mj-section padding="@NotificationEmailLayoutSpacing.ContentPadding">
   <mj-column width="50%">
     <mj-text color="#5d6b82" font-size="12px" font-weight="700" padding="0px 0px 4px 0px" text-transform="uppercase">
       Lost Cost This Month
@@ -40,7 +40,7 @@
   </mj-column>
 </mj-section>
 
-<mj-section padding="0px 34px 24px 34px">
+<mj-section padding="@NotificationEmailLayoutSpacing.ContentPadding">
   <mj-column>
     <mj-table cellpadding="0" cellspacing="0" font-size="13px" line-height="1.45" role="presentation" padding="0px">
       <tr style="border-bottom:1px solid #d8e1ec;">
@@ -69,7 +69,7 @@
   </mj-column>
 </mj-section>
 
-<mj-section padding="0px 34px 26px 34px">
+<mj-section padding="@NotificationEmailLayoutSpacing.ContentPadding">
   <mj-column>
     <mj-text color="#5d6b82" font-size="14px" padding="0px">
       Totals: @payload.TotalEmployees.ToString("N0") employees across @payload.TotalDepartments.ToString("N0") departments. Waste rate: @AccrualEmailTemplateFormatting.Percent(payload.WasteRate) across @payload.YtdMonthCount.ToString("N0") fiscal year months.

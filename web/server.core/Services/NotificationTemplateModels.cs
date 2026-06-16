@@ -20,6 +20,15 @@ public abstract class NotificationTemplateModelBase
     public string? UniversityLogoUrl { get; init; } = DefaultUniversityLogoUrl;
 }
 
+public static class NotificationEmailLayoutSpacing
+{
+    public const string ContentPadding = "12px";
+    public const string HeaderPadding = "24px 0 10px 0";
+    public const string MainSectionPadding = "0px";
+    public const string MainColumnPadding = "0px";
+    public const string FooterLogoSectionPadding = "0px 24px 30px 24px";
+}
+
 public sealed class NotificationButtonModel
 {
     public NotificationButtonModel(string text, string url)

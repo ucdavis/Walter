@@ -1,8 +1,9 @@
+@using server.core.Services
 @model server.core.Services.NotificationButtonModel
 
-<mj-section background-color="#ffffff" padding="0px 0px 28px 0px">
+<mj-section background-color="#ffffff" padding="@NotificationEmailLayoutSpacing.ContentPadding">
   <mj-column>
-    <mj-divider border-color="#e9e3ee" padding="0px 28px 20px 28px" />
+    <mj-divider border-color="#e9e3ee" padding="0px 0px 24px 0px" />
     <mj-button href="@Model.Url" padding="0px 24px">
       @Model.Text
     </mj-button>

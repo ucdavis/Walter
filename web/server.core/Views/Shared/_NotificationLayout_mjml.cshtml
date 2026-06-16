@@ -1,3 +1,4 @@
+@using server.core.Services
 @model server.core.Services.NotificationTemplateModelBase
 
 @{
@@ -8,12 +9,8 @@
     const string CardBackgroundColor = "#ffffff";
     const string CardBorderColor = "#e9e3ee";
 
-    const string HeaderPadding = "24px 0 10px 0";
     const string HeaderLogoPadding = "0 10px 0 0";
     const string ButtonInnerPadding = "13px 24px";
-    const string MainSectionPadding = "0px";
-    const string MainColumnPadding = "0px";
-    const string FooterPadding = "16px 24px 30px 24px";
     const string FooterTextPadding = "0px";
     const string FooterLogoPadding = "14px 0 0 0";
     const string FooterLogoWidth = "100";
@@ -40,9 +37,9 @@
   <mj-body background-color="@BodyBackgroundColor"
            width="@(string.IsNullOrWhiteSpace(Model.LayoutWidth) ? "640px" : Model.LayoutWidth)">
     @* Header *@
-    <mj-section padding="@HeaderPadding">
+    <mj-section padding="@NotificationEmailLayoutSpacing.HeaderPadding">
       <mj-column>
-        <mj-table cellpadding="0" cellspacing="0" role="presentation" padding="@MainSectionPadding">
+        <mj-table cellpadding="0" cellspacing="0" role="presentation" padding="@NotificationEmailLayoutSpacing.MainSectionPadding">
           <tr>
             <td style="height:48px;line-height:0;mso-line-height-rule:exactly;padding:@(HeaderLogoPadding);vertical-align:middle;width:48px;">
               @if (!string.IsNullOrWhiteSpace(Model.LogoUrl))
@@ -90,8 +87,8 @@
                 border-left="@cardBorder"
                 border-radius="4px 4px 0 0"
                 border-right="@cardBorder"
-                padding="@MainSectionPadding">
-      <mj-column padding="@MainColumnPadding">
+                padding="@NotificationEmailLayoutSpacing.MainSectionPadding">
+      <mj-column padding="@NotificationEmailLayoutSpacing.MainColumnPadding">
         <mj-spacer height="4px" />
       </mj-column>
     </mj-section>
@@ -100,22 +97,26 @@
                 border-left="@cardBorder"
                 border-radius="0 0 4px 4px"
                 border-right="@cardBorder"
-                padding="@MainSectionPadding">
-      <mj-column padding="@MainColumnPadding">
+                padding="@NotificationEmailLayoutSpacing.MainSectionPadding">
+      <mj-column padding="@NotificationEmailLayoutSpacing.MainColumnPadding">
         @RenderBody()
       </mj-column>
     </mj-section>
 
-    <mj-section padding="@FooterPadding">
+    @if (!string.IsNullOrWhiteSpace(Model.AutomaticFooterText))
+    {
+    <mj-section padding="@NotificationEmailLayoutSpacing.ContentPadding">
       <mj-column>
-        @if (!string.IsNullOrWhiteSpace(Model.AutomaticFooterText))
-        {
         <mj-text align="center" font-size="12px" line-height="1.5" color="@SecondaryTextColor" padding="@FooterTextPadding">
           @Model.AutomaticFooterText
         </mj-text>
-        }
-        @if (!string.IsNullOrWhiteSpace(Model.UniversityLogoUrl))
-        {
+      </mj-column>
+    </mj-section>
+    }
+    @if (!string.IsNullOrWhiteSpace(Model.UniversityLogoUrl))
+    {
+    <mj-section padding="@NotificationEmailLayoutSpacing.FooterLogoSectionPadding">
+      <mj-column>
         <mj-table cellpadding="0" cellspacing="0" role="presentation" padding="@FooterLogoPadding">
           <tr>
             <td align="center">
@@ -132,8 +133,8 @@
             </td>
           </tr>
         </mj-table>
-        }
       </mj-column>
     </mj-section>
+    }
   </mj-body>
 </mjml>
