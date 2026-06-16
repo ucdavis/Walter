@@ -55,6 +55,12 @@ public sealed class AccrualOutboundMessageRendererTests
         rendered.TextBody.Should().Contain("of 240 hrs");
         rendered.HtmlBody.Should().Contain("Walter");
         rendered.HtmlBody.Should().Contain("Dear <strong>Staff Member</strong>,");
+        rendered.HtmlBody.Should().Contain("supported-color-schemes");
+        rendered.HtmlBody.Should().Contain("prefers-color-scheme: dark");
+        rendered.HtmlBody.Should().Contain("/walter.svg");
+        rendered.HtmlBody.Should().Contain("/walter-dark.svg");
+        rendered.HtmlBody.Should().Contain("/ucdavis.svg");
+        rendered.HtmlBody.Should().Contain("/ucdavis-dark.svg");
         rendered.HtmlBody.Should().Contain("You will not accrue additional hours until your balance falls below the cap");
         rendered.HtmlBody.Should().Contain("Hours to Take");
         rendered.HtmlBody.Should().Contain("$500");
