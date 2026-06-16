@@ -46,7 +46,7 @@ public sealed class AccrualOutboundMessageRendererTests
         rendered.Subject.Should().Be("Action Needed: Your Vacation Accrual is at 100% of Maximum");
         rendered.ReplyToEmail.Should().BeNull();
         rendered.ReplyToName.Should().BeNull();
-        rendered.TextBody.Should().Contain("Dear Staff Member,");
+        rendered.TextBody.Should().Contain("Dear **Staff Member**,");
         rendered.TextBody.Should().Contain("You will not accrue additional hours until your balance falls below the cap");
         rendered.TextBody.Should().Contain("Hours to Take");
         rendered.TextBody.Should().Contain("$500");
@@ -54,7 +54,7 @@ public sealed class AccrualOutboundMessageRendererTests
         rendered.TextBody.Should().Contain("https://trs.ucdavis.edu/timesheet");
         rendered.TextBody.Should().Contain("of 240 hrs");
         rendered.HtmlBody.Should().Contain("Walter");
-        rendered.HtmlBody.Should().Contain("Dear Staff Member,");
+        rendered.HtmlBody.Should().Contain("Dear <strong>Staff Member</strong>,");
         rendered.HtmlBody.Should().Contain("You will not accrue additional hours until your balance falls below the cap");
         rendered.HtmlBody.Should().Contain("Hours to Take");
         rendered.HtmlBody.Should().Contain("$500");
