@@ -17,14 +17,14 @@
     const string trsUrl = "https://trs.ucdavis.edu/";
 }
 
-<mj-section padding="@NotificationEmailLayoutSpacing.ContentPadding">
+<mj-section mj-class="content-section">
   <mj-column>
-    <mj-text css-class="dm-text" padding="0px 0px 10px 0px">
+    <mj-text css-class="dm-text" mj-class="content-text-with-bottom-space">
       Dear <strong>@Model.GreetingName</strong>,
     </mj-text>
     @if (Model.Variant == AccrualEmployeeNotificationVariant.FacultyAcademic)
     {
-      <mj-text css-class="dm-text" padding="0px">
+      <mj-text css-class="dm-text" mj-class="content-text">
         @if (isAtCap)
         {
           <text>As a fiscal year academic appointee, per UC policy (PPSM 2.210), vacation accrual stops entirely once the cap is reached. Your accruals are currently at maximum, and your funding source absorbs the cost of hours you would otherwise earn.</text>
@@ -37,7 +37,7 @@
     }
     else
     {
-      <mj-text css-class="dm-text" padding="0px">
+      <mj-text css-class="dm-text" mj-class="content-text">
         @if (isAtCap)
         {
           <text>Per UC policy (PPSM 2.210), your vacation accruals are currently at maximum because your balance has reached the cap. You will not accrue additional hours until your balance falls below the cap.</text>
@@ -51,92 +51,92 @@
   </mj-column>
 </mj-section>
 
-<mj-section background-color="#f7f8fa" border="1px solid #d8dde6" border-radius="6px" css-class="dm-panel" padding="@NotificationEmailLayoutSpacing.ContentPadding">
+<mj-section css-class="dm-panel" mj-class="metric-panel">
   <mj-group width="50%">
-    <mj-column padding="10px 0px" vertical-align="top" width="50%">
-      <mj-text color="#1f1f1f" css-class="dm-text" font-size="12px" font-weight="700" line-height="1.35" padding="0px" text-transform="uppercase">
+    <mj-column mj-class="metric-column">
+      <mj-text css-class="dm-text" mj-class="metric-label">
         Balance
       </mj-text>
-      <mj-text color="#1f1f1f" css-class="dm-text" font-size="22px" font-weight="500" line-height="1.25" padding="0px">
+      <mj-text css-class="dm-text" mj-class="metric-value">
         @balanceHours
       </mj-text>
-      <mj-text color="#5f6670" css-class="dm-muted" font-size="13px" line-height="1.45" padding="0px">
+      <mj-text css-class="dm-muted" mj-class="metric-note">
         of @capHours
       </mj-text>
     </mj-column>
-    <mj-column padding="10px 0px" vertical-align="top" width="50%">
-      <mj-text color="#1f1f1f" css-class="dm-text" font-size="12px" font-weight="700" line-height="1.35" padding="0px" text-transform="uppercase">
+    <mj-column mj-class="metric-column">
+      <mj-text css-class="dm-text" mj-class="metric-label">
         % to Cap
       </mj-text>
-      <mj-text color="#1f1f1f" css-class="dm-text" font-size="22px" font-weight="500" line-height="1.25" padding="0px">
+      <mj-text css-class="dm-text" mj-class="metric-value">
         @pctOfCap
       </mj-text>
-      <mj-text color="#5f6670" css-class="dm-muted" font-size="13px" line-height="1.45" padding="0px">
+      <mj-text css-class="dm-muted" mj-class="metric-note">
         @capStatus
       </mj-text>
     </mj-column>
   </mj-group>
   <mj-group width="50%">
-    <mj-column padding="10px 0px" vertical-align="top" width="50%">
-      <mj-text color="#1f1f1f" css-class="dm-text" font-size="12px" font-weight="700" line-height="1.35" padding="0px" text-transform="uppercase">
+    <mj-column mj-class="metric-column">
+      <mj-text css-class="dm-text" mj-class="metric-label">
         Hours to Take
       </mj-text>
-      <mj-text color="#1f1f1f" css-class="dm-text" font-size="22px" font-weight="500" line-height="1.25" padding="0px">
+      <mj-text css-class="dm-text" mj-class="metric-value">
         @AccrualEmailTemplateFormatting.HoursValue(hoursToTake)
       </mj-text>
-      <mj-text color="#5f6670" css-class="dm-muted" font-size="13px" line-height="1.45" padding="0px">
+      <mj-text css-class="dm-muted" mj-class="metric-note">
         next month
       </mj-text>
     </mj-column>
-    <mj-column padding="10px 0px" vertical-align="top" width="50%">
-      <mj-text color="#1f1f1f" css-class="dm-text" font-size="12px" font-weight="700" line-height="1.35" padding="0px" text-transform="uppercase">
+    <mj-column mj-class="metric-column">
+      <mj-text css-class="dm-text" mj-class="metric-label">
         Lost Accrual
       </mj-text>
-      <mj-text color="#1f1f1f" css-class="dm-text" font-size="22px" font-weight="500" line-height="1.25" padding="0px">
+      <mj-text css-class="dm-text" mj-class="metric-value">
         @lostCostMonth
       </mj-text>
-      <mj-text color="#5f6670" css-class="dm-muted" font-size="13px" line-height="1.45" padding="0px">
+      <mj-text css-class="dm-muted" mj-class="metric-note">
         /mo &middot; @lostCostYear/yr
       </mj-text>
     </mj-column>
   </mj-group>
 </mj-section>
 
-<mj-section border-bottom="1px solid #d8dde6" border-top="1px solid #d8dde6" css-class="dm-border" padding="@NotificationEmailLayoutSpacing.ContentPadding">
+<mj-section css-class="dm-border" mj-class="bordered-content-section">
   <mj-column>
-    <mj-text css-class="dm-text" font-size="14px" font-weight="700" letter-spacing="1.2px" line-height="1.4" padding="10px 0px 8px 0px" text-transform="uppercase">
+    <mj-text css-class="dm-text" mj-class="section-eyebrow">
       Take Action
     </mj-text>
-    <mj-text background-color="#e7f3f8" border-left="4px solid #0047ba" border-radius="8px" color="#172033" css-class="dm-callout dm-text" font-size="17px" line-height="1.6" padding="0px">
+    <mj-text css-class="dm-callout dm-text" mj-class="callout-text">
       To stay below your maximum and avoid losing accrual, please plan to use <strong>@hoursToTakeText</strong> of vacation in the coming month.
     </mj-text>
     @if (Model.Variant == AccrualEmployeeNotificationVariant.FacultyAcademic)
     {
-      <mj-button align="center" background-color="#0047ba" border-radius="8px" css-class="dm-button" font-size="16px" font-weight="700" href="@aggieServiceUrl" inner-padding="16px 22px" line-height="1.2" padding="18px 0px 0px 0px" width="100%">
+      <mj-button css-class="dm-button" href="@aggieServiceUrl" mj-class="full-width-action-button">
         Open AggieService &rarr;
       </mj-button>
-      <mj-text border-top="1px solid #dde5ee" color="#172033" css-class="dm-border dm-text" font-size="16px" line-height="1.6" padding="18px 0px 0px 0px">
+      <mj-text css-class="dm-border dm-text" mj-class="reply-note">
         <strong>Or reply to this email</strong> with the hours and dates you've already taken (e.g., "8 hours on March 17"). Please submit only hours you've taken - not planned hours. Your reply goes directly to AggieService for processing.
       </mj-text>
     }
     else
     {
-      <mj-button align="center" background-color="#0047ba" border-radius="8px" css-class="dm-button" font-size="16px" font-weight="700" href="@trsUrl" inner-padding="16px 22px" line-height="1.2" padding="18px 0px 0px 0px" width="100%">
+      <mj-button css-class="dm-button" href="@trsUrl" mj-class="full-width-action-button">
         Open TRS Time Reporting &rarr;
       </mj-button>
-      <mj-text css-class="dm-muted" font-size="15px" line-height="1.5" padding="8px 0px 0px 0px">
+      <mj-text css-class="dm-muted" mj-class="link-note">
         @trsUrl
       </mj-text>
     }
   </mj-column>
 </mj-section>
 
-<mj-section padding="@NotificationEmailLayoutSpacing.ContentPadding">
+<mj-section mj-class="content-section">
   <mj-column>
-    <mj-text color="#64748b" css-class="dm-muted" padding="0px 0px 18px 0px">
+    <mj-text css-class="dm-muted" mj-class="secondary-note">
       You may also donate vacation hours to the Catastrophic Leave program to support a colleague facing a serious illness or injury.
     </mj-text>
-    <mj-text css-class="dm-text" padding="0px">
+    <mj-text css-class="dm-text" mj-class="content-text">
       Best regards,<br />
       CAES Human Resources
     </mj-text>

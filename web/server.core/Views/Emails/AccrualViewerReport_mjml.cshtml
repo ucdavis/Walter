@@ -10,37 +10,37 @@
         .ToList();
 }
 
-<mj-section padding="@NotificationEmailLayoutSpacing.ContentPadding">
+<mj-section mj-class="content-section">
   <mj-column>
-    <mj-text css-class="dm-text" font-size="25px" font-weight="700" line-height="1.3" padding-bottom="10px">
+    <mj-text css-class="dm-text" mj-class="report-title">
       Monthly Vacation Accrual Report
     </mj-text>
-    <mj-text css-class="dm-text" padding="0px">
+    <mj-text css-class="dm-text" mj-class="content-text">
       Snapshot date: @AccrualEmailTemplateFormatting.Date(payload.SnapshotAsOfDate). Walter found @payload.AtCapCount.ToString("N0") employees at the vacation accrual cap and @payload.ApproachingCapCount.ToString("N0") approaching the cap.
     </mj-text>
   </mj-column>
 </mj-section>
 
-<mj-section padding="@NotificationEmailLayoutSpacing.ContentPadding">
-  <mj-column width="50%">
-    <mj-text color="#5d6b82" css-class="dm-muted" font-size="12px" font-weight="700" padding="0px 0px 4px 0px" text-transform="uppercase">
+<mj-section mj-class="content-section">
+  <mj-column mj-class="report-half-column">
+    <mj-text css-class="dm-muted" mj-class="report-metric-label">
       Lost Cost This Month
     </mj-text>
-    <mj-text css-class="dm-text" font-size="24px" font-weight="700" padding="0px 0px 14px 0px">
+    <mj-text css-class="dm-text" mj-class="report-metric-value">
       @AccrualEmailTemplateFormatting.Currency(payload.LostCostMonth)
     </mj-text>
   </mj-column>
-  <mj-column width="50%">
-    <mj-text color="#5d6b82" css-class="dm-muted" font-size="12px" font-weight="700" padding="0px 0px 4px 0px" text-transform="uppercase">
+  <mj-column mj-class="report-half-column">
+    <mj-text css-class="dm-muted" mj-class="report-metric-label">
       Fiscal YTD Lost Cost
     </mj-text>
-    <mj-text css-class="dm-text" font-size="24px" font-weight="700" padding="0px 0px 14px 0px">
+    <mj-text css-class="dm-text" mj-class="report-metric-value">
       @AccrualEmailTemplateFormatting.Currency(payload.LostCostYtd)
     </mj-text>
   </mj-column>
 </mj-section>
 
-<mj-section padding="@NotificationEmailLayoutSpacing.ContentPadding">
+<mj-section mj-class="content-section">
   <mj-column>
     <mj-table cellpadding="0" cellspacing="0" css-class="dm-table" font-size="13px" line-height="1.45" role="presentation" padding="0px">
       <tr style="border-bottom:1px solid #d8e1ec;">
@@ -69,9 +69,9 @@
   </mj-column>
 </mj-section>
 
-<mj-section padding="@NotificationEmailLayoutSpacing.ContentPadding">
+<mj-section mj-class="content-section">
   <mj-column>
-    <mj-text color="#5d6b82" css-class="dm-muted" font-size="14px" padding="0px">
+    <mj-text css-class="dm-muted" mj-class="report-summary">
       Totals: @payload.TotalEmployees.ToString("N0") employees across @payload.TotalDepartments.ToString("N0") departments. Waste rate: @AccrualEmailTemplateFormatting.Percent(payload.WasteRate) across @payload.YtdMonthCount.ToString("N0") fiscal year months.
     </mj-text>
   </mj-column>

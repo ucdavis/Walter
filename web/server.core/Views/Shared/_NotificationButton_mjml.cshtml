@@ -1,10 +1,10 @@
 @using server.core.Services
 @model server.core.Services.NotificationButtonModel
 
-<mj-section background-color="#ffffff" css-class="dm-card" padding="@NotificationEmailLayoutSpacing.ContentPadding">
+<mj-section css-class="dm-card" mj-class="button-section">
   <mj-column>
-    <mj-divider border-color="#e9e3ee" padding="0px 0px 24px 0px" />
-    <mj-button css-class="dm-button" href="@Model.Url" padding="0px 24px">
+    <mj-divider mj-class="button-divider" />
+    <mj-button css-class="dm-button" href="@Model.Url" mj-class="button-link">
       @Model.Text
     </mj-button>
   </mj-column>
