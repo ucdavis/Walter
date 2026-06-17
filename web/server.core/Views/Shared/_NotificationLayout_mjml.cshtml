@@ -10,6 +10,8 @@
     const string CardBorderColor = "#e9e3ee";
 
     const string HeaderLogoPadding = "0 10px 0 0";
+    const string HeaderLogoWidth = "46";
+    const string HeaderDarkLogoWidth = "40";
     const string ButtonInnerPadding = "13px 24px";
     const string FooterTextPadding = "0px";
     const string FooterLogoPadding = "14px 0 0 0";
@@ -292,21 +294,21 @@
                 if (hasAppHomeUrl)
                 {
               <a class="light-logo" href="@Model.AppHomeUrl" style="display:block;text-decoration:none;">
-                <img alt="" height="46" src="@Model.LogoUrl" style="border:0;display:block;height:46px;line-height:0;max-height:46px;max-width:46px;width:46px;" width="46" />
+                <img alt="" src="@Model.LogoUrl" width="@HeaderLogoWidth" style="border:0;display:block;height:auto;line-height:0;max-width:@(HeaderLogoWidth)px;width:@(HeaderLogoWidth)px;" />
               </a>
                   if (!string.IsNullOrWhiteSpace(Model.DarkLogoUrl))
                   {
               <a class="dark-logo" href="@Model.AppHomeUrl" style="display:none;mso-hide:all;text-decoration:none;">
-                <img alt="" height="46" src="@Model.DarkLogoUrl" style="border:0;display:block;height:46px;line-height:0;max-height:46px;max-width:46px;width:46px;" width="46" />
+                <img alt="" src="@Model.DarkLogoUrl" width="@HeaderDarkLogoWidth" style="border:0;display:block;height:auto;line-height:0;max-width:@(HeaderDarkLogoWidth)px;width:@(HeaderDarkLogoWidth)px;" />
               </a>
                   }
                 }
                 else
                 {
-              <img alt="" class="light-logo" height="46" src="@Model.LogoUrl" style="border:0;display:block;height:46px;line-height:0;max-height:46px;max-width:46px;width:46px;" width="46" />
+              <img alt="" class="light-logo" src="@Model.LogoUrl" width="@HeaderLogoWidth" style="border:0;display:block;height:auto;line-height:0;max-width:@(HeaderLogoWidth)px;width:@(HeaderLogoWidth)px;" />
                   if (!string.IsNullOrWhiteSpace(Model.DarkLogoUrl))
                   {
-              <img alt="" class="dark-logo" height="46" src="@Model.DarkLogoUrl" style="border:0;display:none;height:46px;line-height:0;max-height:46px;max-width:46px;mso-hide:all;width:46px;" width="46" />
+              <img alt="" class="dark-logo" src="@Model.DarkLogoUrl" width="@HeaderDarkLogoWidth" style="border:0;display:none;height:auto;line-height:0;max-width:@(HeaderDarkLogoWidth)px;mso-hide:all;width:@(HeaderDarkLogoWidth)px;" />
                   }
                 }
               }

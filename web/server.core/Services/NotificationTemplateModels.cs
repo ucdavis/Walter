@@ -5,11 +5,11 @@ namespace server.core.Services;
 public abstract class NotificationTemplateModelBase
 {
     public static string DefaultAppHomeUrl => "https://walter.ucdavis.edu";
-    public static string DefaultLogoUrl => "/walter.svg";
-    public static string DefaultDarkLogoUrl => "/walter-dark.svg";
+    public static string DefaultLogoUrl => "/walter.png";
+    public static string DefaultDarkLogoUrl => "/walter-dark.png";
     public static string DefaultUniversityHomeUrl => "https://ucdavis.edu";
-    public static string DefaultUniversityLogoUrl => "/ucdavis.svg";
-    public static string DefaultDarkUniversityLogoUrl => "/ucdavis-dark.svg";
+    public static string DefaultUniversityLogoUrl => "/ucdavis.png";
+    public static string DefaultDarkUniversityLogoUrl => "/ucdavis-dark.png";
 
     public string AppName { get; init; } = "Walter";
     public string? AppHomeUrl { get; init; } = DefaultAppHomeUrl;
