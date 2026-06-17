@@ -23,6 +23,10 @@
 <mjml>
   <mj-head>
     <mj-preview>@Model.AppName notification</mj-preview>
+    <mj-raw>
+      <meta name="color-scheme" content="light dark" />
+      <meta name="supported-color-schemes" content="light dark" />
+    </mj-raw>
     <mj-attributes>
       <mj-all font-family="proxima-nova, Arial, Helvetica, sans-serif" />
       <mj-text color="@PrimaryTextColor" font-size="16px" line-height="1.65" />
@@ -33,8 +37,166 @@
                  font-weight="600"
                  inner-padding="@ButtonInnerPadding" />
     </mj-attributes>
+    <mj-style>
+      :root {
+        color-scheme: light dark;
+        supported-color-schemes: light dark;
+      }
+
+      .dark-logo {
+        display: none !important;
+        mso-hide: all !important;
+        max-height: 0 !important;
+        overflow: hidden !important;
+      }
+
+      @@media (prefers-color-scheme: dark) {
+        body,
+        .dm-body {
+          background-color: #111827 !important;
+        }
+
+        .dm-card,
+        .dm-card > table,
+        .dm-card td {
+          background-color: #1f2937 !important;
+          border-color: #485466 !important;
+        }
+
+        .dm-panel,
+        .dm-panel > table,
+        .dm-panel td {
+          background-color: #273243 !important;
+          border-color: #485466 !important;
+        }
+
+        .dm-callout,
+        .dm-callout > table,
+        .dm-callout td {
+          background-color: #1e3a5f !important;
+          border-color: #6aa7ff !important;
+        }
+
+        .dm-border,
+        .dm-border > table,
+        .dm-border td {
+          border-color: #485466 !important;
+        }
+
+        .dm-text div,
+        .dm-text a,
+        .dm-title,
+        .dm-title a {
+          color: #f3f4f6 !important;
+        }
+
+        .dm-muted div,
+        .dm-muted span,
+        .dm-muted a {
+          color: #cbd5e1 !important;
+        }
+
+        .dm-button a {
+          background-color: #2563eb !important;
+          color: #ffffff !important;
+        }
+
+        .dm-table table,
+        .dm-table th,
+        .dm-table td,
+        .dm-table span {
+          color: #f3f4f6 !important;
+          border-color: #485466 !important;
+        }
+
+        .light-logo {
+          display: none !important;
+          mso-hide: all !important;
+          max-height: 0 !important;
+          overflow: hidden !important;
+        }
+
+        .dark-logo {
+          display: block !important;
+          max-height: none !important;
+          overflow: visible !important;
+        }
+      }
+
+      [data-ogsc] body,
+      [data-ogsc] .dm-body {
+        background-color: #111827 !important;
+      }
+
+      [data-ogsc] .dm-card,
+      [data-ogsc] .dm-card > table,
+      [data-ogsc] .dm-card td {
+        background-color: #1f2937 !important;
+        border-color: #485466 !important;
+      }
+
+      [data-ogsc] .dm-panel,
+      [data-ogsc] .dm-panel > table,
+      [data-ogsc] .dm-panel td {
+        background-color: #273243 !important;
+        border-color: #485466 !important;
+      }
+
+      [data-ogsc] .dm-callout,
+      [data-ogsc] .dm-callout > table,
+      [data-ogsc] .dm-callout td {
+        background-color: #1e3a5f !important;
+        border-color: #6aa7ff !important;
+      }
+
+      [data-ogsc] .dm-border,
+      [data-ogsc] .dm-border > table,
+      [data-ogsc] .dm-border td {
+        border-color: #485466 !important;
+      }
+
+      [data-ogsc] .dm-text div,
+      [data-ogsc] .dm-text a,
+      [data-ogsc] .dm-title,
+      [data-ogsc] .dm-title a {
+        color: #f3f4f6 !important;
+      }
+
+      [data-ogsc] .dm-muted div,
+      [data-ogsc] .dm-muted span,
+      [data-ogsc] .dm-muted a {
+        color: #cbd5e1 !important;
+      }
+
+      [data-ogsc] .dm-button a {
+        background-color: #2563eb !important;
+        color: #ffffff !important;
+      }
+
+      [data-ogsc] .dm-table table,
+      [data-ogsc] .dm-table th,
+      [data-ogsc] .dm-table td,
+      [data-ogsc] .dm-table span {
+        color: #f3f4f6 !important;
+        border-color: #485466 !important;
+      }
+
+      [data-ogsc] .light-logo {
+        display: none !important;
+        mso-hide: all !important;
+        max-height: 0 !important;
+        overflow: hidden !important;
+      }
+
+      [data-ogsc] .dark-logo {
+        display: block !important;
+        max-height: none !important;
+        overflow: visible !important;
+      }
+    </mj-style>
   </mj-head>
   <mj-body background-color="@BodyBackgroundColor"
+           css-class="dm-body"
            width="@(string.IsNullOrWhiteSpace(Model.LayoutWidth) ? "640px" : Model.LayoutWidth)">
     @* Header *@
     <mj-section padding="@NotificationEmailLayoutSpacing.HeaderPadding">
@@ -46,31 +208,41 @@
               {
                 if (hasAppHomeUrl)
                 {
-              <a href="@Model.AppHomeUrl" style="display:block;text-decoration:none;">
+              <a class="light-logo" href="@Model.AppHomeUrl" style="display:block;text-decoration:none;">
                 <img alt="" height="46" src="@Model.LogoUrl" style="border:0;display:block;height:46px;line-height:0;max-height:46px;max-width:46px;width:46px;" width="46" />
               </a>
+                  if (!string.IsNullOrWhiteSpace(Model.DarkLogoUrl))
+                  {
+              <a class="dark-logo" href="@Model.AppHomeUrl" style="display:none;mso-hide:all;text-decoration:none;">
+                <img alt="" height="46" src="@Model.DarkLogoUrl" style="border:0;display:block;height:46px;line-height:0;max-height:46px;max-width:46px;width:46px;" width="46" />
+              </a>
+                  }
                 }
                 else
                 {
-              <img alt="" height="46" src="@Model.LogoUrl" style="border:0;display:block;height:46px;line-height:0;max-height:46px;max-width:46px;width:46px;" width="46" />
+              <img alt="" class="light-logo" height="46" src="@Model.LogoUrl" style="border:0;display:block;height:46px;line-height:0;max-height:46px;max-width:46px;width:46px;" width="46" />
+                  if (!string.IsNullOrWhiteSpace(Model.DarkLogoUrl))
+                  {
+              <img alt="" class="dark-logo" height="46" src="@Model.DarkLogoUrl" style="border:0;display:none;height:46px;line-height:0;max-height:46px;max-width:46px;mso-hide:all;width:46px;" width="46" />
+                  }
                 }
               }
             </td>
             <td style="height:48px;padding:0;vertical-align:middle;">
-              <div style="color:@(PrimaryTextColor);font-size:22px;font-weight:400;line-height:1.2;">
+              <div class="dm-title" style="color:@(PrimaryTextColor);font-size:22px;font-weight:400;line-height:1.2;">
                 @if (hasAppHomeUrl)
                 {
-                <a href="@Model.AppHomeUrl" style="color:@(PrimaryTextColor);text-decoration:none;">@Model.AppName</a>
+                <a class="dm-title" href="@Model.AppHomeUrl" style="color:@(PrimaryTextColor);text-decoration:none;">@Model.AppName</a>
                 }
                 else
                 {
                 @Model.AppName
                 }
               </div>
-              <div style="color:@(SecondaryTextColor);font-size:12px;font-weight:700;letter-spacing:1.8px;line-height:1.5;text-transform:uppercase;">
+              <div class="dm-muted" style="color:@(SecondaryTextColor);font-size:12px;font-weight:700;letter-spacing:1.8px;line-height:1.5;text-transform:uppercase;">
                 @if (hasAppHomeUrl)
                 {
-                <a href="@Model.AppHomeUrl" style="color:@(SecondaryTextColor);text-decoration:none;">Notification</a>
+                <a class="dm-muted" href="@Model.AppHomeUrl" style="color:@(SecondaryTextColor);text-decoration:none;">Notification</a>
                 }
                 else
                 {
@@ -97,6 +269,7 @@
                 border-left="@cardBorder"
                 border-radius="0 0 4px 4px"
                 border-right="@cardBorder"
+                css-class="dm-card"
                 padding="@NotificationEmailLayoutSpacing.MainSectionPadding">
       <mj-column padding="@NotificationEmailLayoutSpacing.MainColumnPadding">
         @RenderBody()
@@ -107,7 +280,7 @@
     {
     <mj-section padding="@NotificationEmailLayoutSpacing.ContentPadding">
       <mj-column>
-        <mj-text align="center" font-size="12px" line-height="1.5" color="@SecondaryTextColor" padding="@FooterTextPadding">
+        <mj-text align="center" css-class="dm-muted" font-size="12px" line-height="1.5" color="@SecondaryTextColor" padding="@FooterTextPadding">
           @Model.AutomaticFooterText
         </mj-text>
       </mj-column>
@@ -122,13 +295,23 @@
             <td align="center">
               @if (hasUniversityHomeUrl)
               {
-              <a href="@Model.UniversityHomeUrl" style="display:inline-block;text-decoration:none;">
+              <a class="light-logo" href="@Model.UniversityHomeUrl" style="display:inline-block;text-decoration:none;">
                 <img alt="UC Davis" src="@Model.UniversityLogoUrl" width="@FooterLogoWidth" style="border:0;display:block;height:auto;line-height:100%;max-width:@(FooterLogoWidth)px;opacity:.55;outline:none;text-decoration:none;width:@(FooterLogoWidth)px;" />
               </a>
+                if (!string.IsNullOrWhiteSpace(Model.DarkUniversityLogoUrl))
+                {
+              <a class="dark-logo" href="@Model.UniversityHomeUrl" style="display:none;mso-hide:all;text-decoration:none;">
+                <img alt="UC Davis" src="@Model.DarkUniversityLogoUrl" width="@FooterLogoWidth" style="border:0;display:block;height:auto;line-height:100%;max-width:@(FooterLogoWidth)px;opacity:.75;outline:none;text-decoration:none;width:@(FooterLogoWidth)px;" />
+              </a>
+                }
               }
               else
               {
-              <img alt="UC Davis" src="@Model.UniversityLogoUrl" width="@FooterLogoWidth" style="border:0;display:block;height:auto;line-height:100%;max-width:@(FooterLogoWidth)px;opacity:.55;outline:none;text-decoration:none;width:@(FooterLogoWidth)px;" />
+              <img alt="UC Davis" class="light-logo" src="@Model.UniversityLogoUrl" width="@FooterLogoWidth" style="border:0;display:block;height:auto;line-height:100%;max-width:@(FooterLogoWidth)px;opacity:.55;outline:none;text-decoration:none;width:@(FooterLogoWidth)px;" />
+                if (!string.IsNullOrWhiteSpace(Model.DarkUniversityLogoUrl))
+                {
+              <img alt="UC Davis" class="dark-logo" src="@Model.DarkUniversityLogoUrl" width="@FooterLogoWidth" style="border:0;display:none;height:auto;line-height:100%;max-width:@(FooterLogoWidth)px;mso-hide:all;opacity:.75;outline:none;text-decoration:none;width:@(FooterLogoWidth)px;" />
+                }
               }
             </td>
           </tr>
