@@ -93,8 +93,9 @@ export function ProjectAlerts({
   summary,
 }: ProjectAlertsProps) {
   const alerts = getAlertsForProject(summary, prefix);
+  const showReconciliationStatus = summary.isInternal;
 
-  if (reconciliationStatus === 'discrepancy') {
+  if (showReconciliationStatus && reconciliationStatus === 'discrepancy') {
     alerts.push({
       id: `reconciliation-issue-${summary.projectNumber}`,
       message: `${prefix ?? 'This project '}has a GL/PPM reconciliation discrepancy. Click here to view details.`,
@@ -103,7 +104,7 @@ export function ProjectAlerts({
     });
   }
 
-  if (reconciliationStatus === 'balanced') {
+  if (showReconciliationStatus && reconciliationStatus === 'balanced') {
     alerts.push({
       id: `reconciliation-balanced-${summary.projectNumber}`,
       message: `${prefix ?? ''}GL/PPM is Balanced. Click here to view.`,
