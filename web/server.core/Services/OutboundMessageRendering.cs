@@ -222,11 +222,15 @@ public sealed class AccrualOutboundMessageRenderer : IOutboundMessageRenderer
                 ? "Replies to this email are routed to AggieService for processing."
                 : "This email was automatically generated. Please do not reply to it.",
             GreetingName = NormalizeDisplayName(message.RecipientName) ?? payload.EmployeeName,
-            LogoUrl = BuildAppAssetUrl(_appOptions.TryGetBaseUri(), "/apple-touch-icon.png")
+            LogoUrl = BuildAppAssetUrl(_appOptions.TryGetBaseUri(), "/walter.png")
                 ?? NotificationTemplateModelBase.DefaultLogoUrl,
+            DarkLogoUrl = BuildAppAssetUrl(_appOptions.TryGetBaseUri(), "/walter-dark.png")
+                ?? NotificationTemplateModelBase.DefaultDarkLogoUrl,
             Payload = payload,
-            UniversityLogoUrl = BuildAppAssetUrl(_appOptions.TryGetBaseUri(), "/ucdavis.svg")
+            UniversityLogoUrl = BuildAppAssetUrl(_appOptions.TryGetBaseUri(), "/ucdavis.png")
                 ?? NotificationTemplateModelBase.DefaultUniversityLogoUrl,
+            DarkUniversityLogoUrl = BuildAppAssetUrl(_appOptions.TryGetBaseUri(), "/ucdavis-dark.png")
+                ?? NotificationTemplateModelBase.DefaultDarkUniversityLogoUrl,
             Variant = variant,
         };
     }
@@ -243,11 +247,15 @@ public sealed class AccrualOutboundMessageRenderer : IOutboundMessageRenderer
             ButtonText = string.IsNullOrWhiteSpace(reportUrl) ? string.Empty : "Open Accrual Report",
             ButtonUrl = reportUrl,
             LayoutWidth = "720px",
-            LogoUrl = BuildAppAssetUrl(appBaseUri, "/apple-touch-icon.png")
+            LogoUrl = BuildAppAssetUrl(appBaseUri, "/walter.png")
                 ?? NotificationTemplateModelBase.DefaultLogoUrl,
+            DarkLogoUrl = BuildAppAssetUrl(appBaseUri, "/walter-dark.png")
+                ?? NotificationTemplateModelBase.DefaultDarkLogoUrl,
             Payload = payload,
-            UniversityLogoUrl = BuildAppAssetUrl(appBaseUri, "/ucdavis.svg")
+            UniversityLogoUrl = BuildAppAssetUrl(appBaseUri, "/ucdavis.png")
                 ?? NotificationTemplateModelBase.DefaultUniversityLogoUrl,
+            DarkUniversityLogoUrl = BuildAppAssetUrl(appBaseUri, "/ucdavis-dark.png")
+                ?? NotificationTemplateModelBase.DefaultDarkUniversityLogoUrl,
         };
     }
 

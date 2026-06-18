@@ -12,9 +12,9 @@
     var lostCostYear = AccrualEmailTemplateFormatting.Currency(payload.LostCostMonth * 12m);
     var capStatus = isAtCap ? "at maximum" : "near maximum";
     const string aggieServiceUrl = "https://aggieservice.ucdavis.edu";
-    const string trsUrl = "https://trs.ucdavis.edu/timesheet";
+    const string trsUrl = "https://trs.ucdavis.edu/";
 }
-Dear @Html.Raw(Model.GreetingName),
+Dear **@Html.Raw(Model.GreetingName)**,
 
 @if (Model.Variant == AccrualEmployeeNotificationVariant.FacultyAcademic)
 {

@@ -529,53 +529,108 @@ describe('project detail page', () => {
       );
     };
 
-    it.each(['Internal', 'Sponsored'] as const)(
-      'shows balanced reconciliation alert for authorized project managers on %s project details',
-      async (projectType) => {
-        const projectNumber = `P-${projectType}`;
-        const projects = [
-          createProject({
-            pmEmployeeId: '1000',
-            projectNumber,
-            projectType,
-          }),
-        ];
-        setupDetailHandlers({
-          projects,
-          reconciliation: [],
-          user: {
-            employeeId: '1000',
-            name: 'PM User',
-            roles: [],
-          },
-        });
+    it('shows balanced reconciliation alert for authorized project managers on internal project details', async () => {
+      const projectNumber = 'P-Internal';
+      const projects = [
+        createProject({
+          pmEmployeeId: '1000',
+          projectNumber,
+          projectType: 'Internal',
+        }),
+      ];
+      setupDetailHandlers({
+        projects,
+        reconciliation: [],
+        user: {
+          employeeId: '1000',
+          name: 'PM User',
+          roles: [],
+        },
+      });
 
-        const { cleanup } = renderRoute({
-          initialPath: `/projects/1000/${projectNumber}`,
-        });
+      const { cleanup } = renderRoute({
+        initialPath: `/projects/1000/${projectNumber}`,
+      });
 
-        try {
-          expect(
-            await screen.findByText('Project Number', {}, { timeout: 3000 })
-          ).toBeInTheDocument();
+      try {
+        expect(
+          await screen.findByText('Project Number', {}, { timeout: 3000 })
+        ).toBeInTheDocument();
 
-          const message = await screen.findByText(
-            'GL/PPM is Balanced. Click here to view.',
-            {},
-            { timeout: 3000 }
-          );
-          const alert = message.closest('[role="alert"]');
+        const message = await screen.findByText(
+          'GL/PPM is Balanced. Click here to view.',
+          {},
+          { timeout: 3000 }
+        );
+        const alert = message.closest('[role="alert"]');
 
-          expect(alert).toHaveClass('alert-success');
-          expect(message.closest('a')).toHaveAttribute(
-            'href',
-            `/reports/reconciliation/${projectNumber}`
-          );
-        } finally {
-          cleanup();
-        }
+        expect(alert).toHaveClass('alert-success');
+        expect(message.closest('a')).toHaveAttribute(
+          'href',
+          `/reports/reconciliation/${projectNumber}`
+        );
+      } finally {
+        cleanup();
       }
-    );
+    });
+
+    it('hides balanced reconciliation alert on sponsored project details', async () => {
+      const projects = [
+        createProject({
+          pmEmployeeId: '1000',
+          projectType: 'Sponsored',
+        }),
+      ];
+      setupDetailHandlers({
+        projects,
+        reconciliation: [],
+        user: {
+          employeeId: '1000',
+          name: 'PM User',
+          roles: [],
+        },
+      });
+
+      const { cleanup } = renderRoute({ initialPath: '/projects/1000/P1' });
+
+      try {
+        await screen.findByText('Project Number');
+        expect(
+          screen.queryByText('GL/PPM is Balanced. Click here to view.')
+        ).not.toBeInTheDocument();
+      } finally {
+        cleanup();
+      }
+    });
+
+    it('hides discrepancy reconciliation alert on sponsored project details', async () => {
+      const projects = [
+        createProject({
+          pmEmployeeId: '1000',
+          projectType: 'Sponsored',
+        }),
+      ];
+      setupDetailHandlers({
+        projects,
+        reconciliation: discrepantReconciliation,
+        user: {
+          employeeId: '1000',
+          name: 'PM User',
+          roles: [],
+        },
+      });
+
+      const { cleanup } = renderRoute({ initialPath: '/projects/1000/P1' });
+
+      try {
+        await screen.findByText('Project Number');
+        expect(
+          screen.queryByText(/has a gl\/ppm reconciliation discrepancy/i)
+        ).not.toBeInTheDocument();
+      } finally {
+        cleanup();
+      }
+    });
 
     it('hides reconciliation alert for PI viewing own internal project', async () => {
       const projects = [
@@ -600,6 +655,5 @@ describe('project detail page', () => {
         cleanup();
       }
     });
-
   });
 });

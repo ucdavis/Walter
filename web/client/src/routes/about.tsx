@@ -49,7 +49,7 @@ function About() {
             </Link>
           </div>
           <div className="mt-auto items-start">
-            <p className="text-sm text-dark-font/80">
+            <p className="text-sm text-base-content/80">
               © {new Date().getFullYear()} UC Regents, Davis campus. All rights
               reserved.
             </p>

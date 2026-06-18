@@ -1,5 +1,6 @@
 import { formatDate } from '@/lib/date.ts';
 import type { ProjectSummary } from '@/lib/projectSummary.ts';
+import { FinjectorLink } from '@/components/project/FinjectorLink.tsx';
 import { Currency } from '@/shared/Currency.tsx';
 import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
 import { tooltipDefinitions } from '@/shared/tooltips.ts';
@@ -27,7 +28,21 @@ export function ProjectDetails({ summary }: ProjectDetailsProps) {
           <div className="flex flex-col">
             <IdentificationIcon className="w-4 h-4" />
             <dt className="stat-label">Project Number</dt>
-            <dd className="stat-value">{summary.projectNumber}</dd>
+            <dd className="stat-value">
+              {/* Sponsored projects link to Finjector at the project level; internal
+                  projects link per task in the Task Breakdown instead. */}
+              {summary.isInternal ? (
+                summary.projectNumber
+              ) : (
+                <FinjectorLink
+                  org={summary.projectOwningOrgCode}
+                  project={summary.projectNumber}
+                  task={summary.taskNum}
+                >
+                  {summary.projectNumber}
+                </FinjectorLink>
+              )}
+            </dd>
           </div>
           {summary.awardStartDate && (
             <div className="flex flex-col">

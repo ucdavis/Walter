@@ -1,3 +1,4 @@
+@using server.core.Services
 @model server.core.Services.NotificationTemplateModelBase
 
 @{
@@ -8,12 +9,10 @@
     const string CardBackgroundColor = "#ffffff";
     const string CardBorderColor = "#e9e3ee";
 
-    const string HeaderPadding = "24px 0 10px 0";
-    const string HeaderLogoPadding = "0 10px 0 0";
+    const string HeaderLogoPadding = "0 10px 0 18px";
+    const string HeaderLogoWidth = "46";
+    const string HeaderDarkLogoWidth = "40";
     const string ButtonInnerPadding = "13px 24px";
-    const string MainSectionPadding = "0px";
-    const string MainColumnPadding = "0px";
-    const string FooterPadding = "16px 24px 30px 24px";
     const string FooterTextPadding = "0px";
     const string FooterLogoPadding = "14px 0 0 0";
     const string FooterLogoWidth = "100";
@@ -26,6 +25,10 @@
 <mjml>
   <mj-head>
     <mj-preview>@Model.AppName notification</mj-preview>
+    <mj-raw>
+      <meta name="color-scheme" content="light dark" />
+      <meta name="supported-color-schemes" content="light dark" />
+    </mj-raw>
     <mj-attributes>
       <mj-all font-family="proxima-nova, Arial, Helvetica, sans-serif" />
       <mj-text color="@PrimaryTextColor" font-size="16px" line-height="1.65" />
@@ -35,45 +38,323 @@
                  font-size="16px"
                  font-weight="600"
                  inner-padding="@ButtonInnerPadding" />
+      <mj-class name="content-section" padding="@NotificationEmailLayoutSpacing.ContentPadding" />
+      <mj-class name="content-text" padding="0px" />
+      <mj-class name="content-text-with-bottom-space" padding="0px 0px 10px 0px" />
+      <mj-class name="metric-panel"
+                background-color="#f7f8fa"
+                border="1px solid #d8dde6"
+                border-radius="6px"
+                padding="@NotificationEmailLayoutSpacing.ContentPadding" />
+      <mj-class name="metric-column" padding="10px 0px" vertical-align="top" width="50%" />
+      <mj-class name="metric-label"
+                color="@PrimaryTextColor"
+                font-size="12px"
+                font-weight="700"
+                line-height="1.35"
+                padding="0px"
+                text-transform="uppercase" />
+      <mj-class name="metric-value"
+                color="@PrimaryTextColor"
+                font-size="22px"
+                font-weight="500"
+                line-height="1.25"
+                padding="0px" />
+      <mj-class name="metric-note"
+                color="#5f6670"
+                font-size="13px"
+                line-height="1.45"
+                padding="0px" />
+      <mj-class name="bordered-content-section"
+                border-bottom="1px solid #d8dde6"
+                border-top="1px solid #d8dde6"
+                padding="@NotificationEmailLayoutSpacing.ContentPadding" />
+      <mj-class name="section-eyebrow"
+                font-size="14px"
+                font-weight="700"
+                letter-spacing="1.2px"
+                line-height="1.4"
+                padding="10px 0px 8px 0px"
+                text-transform="uppercase" />
+      <mj-class name="callout-text"
+                background-color="#e7f3f8"
+                border-left="4px solid @BrandColor"
+                border-radius="8px"
+                color="#172033"
+                font-size="17px"
+                line-height="1.6"
+                padding="0px" />
+      <mj-class name="full-width-action-button"
+                align="center"
+                background-color="@BrandColor"
+                border-radius="8px"
+                font-size="16px"
+                font-weight="700"
+                inner-padding="16px 22px"
+                line-height="1.2"
+                padding="18px 0px 0px 0px"
+                width="100%" />
+      <mj-class name="reply-note"
+                border-top="1px solid #dde5ee"
+                color="#172033"
+                font-size="16px"
+                line-height="1.6"
+                padding="18px 0px 0px 0px" />
+      <mj-class name="link-note" font-size="15px" line-height="1.5" padding="8px 0px 0px 0px" />
+      <mj-class name="secondary-note" color="#64748b" padding="0px 0px 18px 0px" />
+      <mj-class name="report-title" font-size="25px" font-weight="700" line-height="1.3" padding-bottom="10px" />
+      <mj-class name="report-half-column" width="50%" />
+      <mj-class name="report-metric-label"
+                color="#5d6b82"
+                font-size="12px"
+                font-weight="700"
+                padding="0px 0px 4px 0px"
+                text-transform="uppercase" />
+      <mj-class name="report-metric-value" font-size="24px" font-weight="700" padding="0px 0px 14px 0px" />
+      <mj-class name="report-summary" color="#5d6b82" font-size="14px" padding="0px" />
+      <mj-class name="button-section" background-color="@CardBackgroundColor" padding="@NotificationEmailLayoutSpacing.ContentPadding" />
+      <mj-class name="button-divider" border-color="@CardBorderColor" padding="0px 0px 24px 0px" />
+      <mj-class name="button-link" padding="0px 24px" />
+      <mj-class name="automatic-footer-text"
+                align="center"
+                color="@SecondaryTextColor"
+                font-size="12px"
+                line-height="1.5"
+                padding="@FooterTextPadding" />
     </mj-attributes>
+    <mj-style>
+      :root {
+        color-scheme: light dark;
+        supported-color-schemes: light dark;
+      }
+
+      .dark-logo {
+        display: none !important;
+        mso-hide: all !important;
+        max-height: 0 !important;
+        overflow: hidden !important;
+      }
+
+      .dm-button table,
+      .dm-button td {
+        width: 100% !important;
+      }
+
+      .dm-button a {
+        box-sizing: border-box !important;
+        display: block !important;
+        width: 100% !important;
+      }
+
+      @@media (prefers-color-scheme: dark) {
+        body,
+        .dm-body {
+          background-color: #111827 !important;
+        }
+
+        .dm-card,
+        .dm-card > table,
+        .dm-card td {
+          background-color: #1f2937 !important;
+          border-color: #485466 !important;
+        }
+
+        .dm-panel,
+        .dm-panel > table,
+        .dm-panel td {
+          background-color: #273243 !important;
+          border-color: #485466 !important;
+        }
+
+        .dm-callout,
+        .dm-callout > table,
+        .dm-callout td {
+          background-color: #1e3a5f !important;
+          border-color: #6aa7ff !important;
+        }
+
+        .dm-border,
+        .dm-border > table,
+        .dm-border td {
+          border-color: #485466 !important;
+        }
+
+        .dm-text div,
+        .dm-text a,
+        .dm-title,
+        .dm-title a {
+          color: #f3f4f6 !important;
+        }
+
+        .dm-muted div,
+        .dm-muted span,
+        .dm-muted a {
+          color: #cbd5e1 !important;
+        }
+
+        .dm-button table,
+        .dm-button td {
+          width: 100% !important;
+        }
+
+        .dm-button a {
+          background-color: #2563eb !important;
+          box-sizing: border-box !important;
+          color: #ffffff !important;
+          display: block !important;
+          width: 100% !important;
+        }
+
+        .dm-table table,
+        .dm-table th,
+        .dm-table td,
+        .dm-table span {
+          color: #f3f4f6 !important;
+          border-color: #485466 !important;
+        }
+
+        .light-logo {
+          display: none !important;
+          mso-hide: all !important;
+          max-height: 0 !important;
+          overflow: hidden !important;
+        }
+
+        .dark-logo {
+          display: block !important;
+          max-height: none !important;
+          overflow: visible !important;
+        }
+      }
+
+      [data-ogsc] body,
+      [data-ogsc] .dm-body {
+        background-color: #111827 !important;
+      }
+
+      [data-ogsc] .dm-card,
+      [data-ogsc] .dm-card > table,
+      [data-ogsc] .dm-card td {
+        background-color: #1f2937 !important;
+        border-color: #485466 !important;
+      }
+
+      [data-ogsc] .dm-panel,
+      [data-ogsc] .dm-panel > table,
+      [data-ogsc] .dm-panel td {
+        background-color: #273243 !important;
+        border-color: #485466 !important;
+      }
+
+      [data-ogsc] .dm-callout,
+      [data-ogsc] .dm-callout > table,
+      [data-ogsc] .dm-callout td {
+        background-color: #1e3a5f !important;
+        border-color: #6aa7ff !important;
+      }
+
+      [data-ogsc] .dm-border,
+      [data-ogsc] .dm-border > table,
+      [data-ogsc] .dm-border td {
+        border-color: #485466 !important;
+      }
+
+      [data-ogsc] .dm-text div,
+      [data-ogsc] .dm-text a,
+      [data-ogsc] .dm-title,
+      [data-ogsc] .dm-title a {
+        color: #f3f4f6 !important;
+      }
+
+      [data-ogsc] .dm-muted div,
+      [data-ogsc] .dm-muted span,
+      [data-ogsc] .dm-muted a {
+        color: #cbd5e1 !important;
+      }
+
+      [data-ogsc] .dm-button table,
+      [data-ogsc] .dm-button td {
+        width: 100% !important;
+      }
+
+      [data-ogsc] .dm-button a {
+        background-color: #2563eb !important;
+        box-sizing: border-box !important;
+        color: #ffffff !important;
+        display: block !important;
+        width: 100% !important;
+      }
+
+      [data-ogsc] .dm-table table,
+      [data-ogsc] .dm-table th,
+      [data-ogsc] .dm-table td,
+      [data-ogsc] .dm-table span {
+        color: #f3f4f6 !important;
+        border-color: #485466 !important;
+      }
+
+      [data-ogsc] .light-logo {
+        display: none !important;
+        mso-hide: all !important;
+        max-height: 0 !important;
+        overflow: hidden !important;
+      }
+
+      [data-ogsc] .dark-logo {
+        display: block !important;
+        max-height: none !important;
+        overflow: visible !important;
+      }
+    </mj-style>
   </mj-head>
   <mj-body background-color="@BodyBackgroundColor"
+           css-class="dm-body"
            width="@(string.IsNullOrWhiteSpace(Model.LayoutWidth) ? "640px" : Model.LayoutWidth)">
     @* Header *@
-    <mj-section padding="@HeaderPadding">
+    <mj-section padding="@NotificationEmailLayoutSpacing.HeaderPadding">
       <mj-column>
-        <mj-table cellpadding="0" cellspacing="0" role="presentation" padding="@MainSectionPadding">
+        <mj-table cellpadding="0" cellspacing="0" role="presentation" padding="@NotificationEmailLayoutSpacing.MainSectionPadding">
           <tr>
             <td style="height:48px;line-height:0;mso-line-height-rule:exactly;padding:@(HeaderLogoPadding);vertical-align:middle;width:48px;">
               @if (!string.IsNullOrWhiteSpace(Model.LogoUrl))
               {
                 if (hasAppHomeUrl)
                 {
-              <a href="@Model.AppHomeUrl" style="display:block;text-decoration:none;">
-                <img alt="" height="46" src="@Model.LogoUrl" style="border:0;display:block;height:46px;line-height:0;max-height:46px;max-width:46px;width:46px;" width="46" />
+              <a class="light-logo" href="@Model.AppHomeUrl" style="display:block;text-decoration:none;">
+                <img alt="" src="@Model.LogoUrl" width="@HeaderLogoWidth" style="border:0;display:block;height:auto;line-height:0;max-width:@(HeaderLogoWidth)px;width:@(HeaderLogoWidth)px;" />
               </a>
+                  if (!string.IsNullOrWhiteSpace(Model.DarkLogoUrl))
+                  {
+              <a class="dark-logo" href="@Model.AppHomeUrl" style="display:none;mso-hide:all;text-decoration:none;">
+                <img alt="" src="@Model.DarkLogoUrl" width="@HeaderDarkLogoWidth" style="border:0;display:block;height:auto;line-height:0;max-width:@(HeaderDarkLogoWidth)px;width:@(HeaderDarkLogoWidth)px;" />
+              </a>
+                  }
                 }
                 else
                 {
-              <img alt="" height="46" src="@Model.LogoUrl" style="border:0;display:block;height:46px;line-height:0;max-height:46px;max-width:46px;width:46px;" width="46" />
+              <img alt="" class="light-logo" src="@Model.LogoUrl" width="@HeaderLogoWidth" style="border:0;display:block;height:auto;line-height:0;max-width:@(HeaderLogoWidth)px;width:@(HeaderLogoWidth)px;" />
+                  if (!string.IsNullOrWhiteSpace(Model.DarkLogoUrl))
+                  {
+              <img alt="" class="dark-logo" src="@Model.DarkLogoUrl" width="@HeaderDarkLogoWidth" style="border:0;display:none;height:auto;line-height:0;max-width:@(HeaderDarkLogoWidth)px;mso-hide:all;width:@(HeaderDarkLogoWidth)px;" />
+                  }
                 }
               }
             </td>
             <td style="height:48px;padding:0;vertical-align:middle;">
-              <div style="color:@(PrimaryTextColor);font-size:22px;font-weight:400;line-height:1.2;">
+              <div class="dm-title" style="color:@(PrimaryTextColor);font-size:22px;font-weight:400;line-height:1.2;">
                 @if (hasAppHomeUrl)
                 {
-                <a href="@Model.AppHomeUrl" style="color:@(PrimaryTextColor);text-decoration:none;">@Model.AppName</a>
+                <a class="dm-title" href="@Model.AppHomeUrl" style="color:@(PrimaryTextColor);text-decoration:none;">@Model.AppName</a>
                 }
                 else
                 {
                 @Model.AppName
                 }
               </div>
-              <div style="color:@(SecondaryTextColor);font-size:12px;font-weight:700;letter-spacing:1.8px;line-height:1.5;text-transform:uppercase;">
+              <div class="dm-muted" style="color:@(SecondaryTextColor);font-size:12px;font-weight:700;letter-spacing:1.8px;line-height:1.5;text-transform:uppercase;">
                 @if (hasAppHomeUrl)
                 {
-                <a href="@Model.AppHomeUrl" style="color:@(SecondaryTextColor);text-decoration:none;">Notification</a>
+                <a class="dm-muted" href="@Model.AppHomeUrl" style="color:@(SecondaryTextColor);text-decoration:none;">Notification</a>
                 }
                 else
                 {
@@ -90,8 +371,8 @@
                 border-left="@cardBorder"
                 border-radius="4px 4px 0 0"
                 border-right="@cardBorder"
-                padding="@MainSectionPadding">
-      <mj-column padding="@MainColumnPadding">
+                padding="@NotificationEmailLayoutSpacing.MainSectionPadding">
+      <mj-column padding="@NotificationEmailLayoutSpacing.MainColumnPadding">
         <mj-spacer height="4px" />
       </mj-column>
     </mj-section>
@@ -100,40 +381,55 @@
                 border-left="@cardBorder"
                 border-radius="0 0 4px 4px"
                 border-right="@cardBorder"
-                padding="@MainSectionPadding">
-      <mj-column padding="@MainColumnPadding">
+                css-class="dm-card"
+                padding="@NotificationEmailLayoutSpacing.MainSectionPadding">
+      <mj-column padding="@NotificationEmailLayoutSpacing.MainColumnPadding">
         @RenderBody()
       </mj-column>
     </mj-section>
 
-    <mj-section padding="@FooterPadding">
+    @if (!string.IsNullOrWhiteSpace(Model.AutomaticFooterText))
+    {
+    <mj-section mj-class="content-section">
       <mj-column>
-        @if (!string.IsNullOrWhiteSpace(Model.AutomaticFooterText))
-        {
-        <mj-text align="center" font-size="12px" line-height="1.5" color="@SecondaryTextColor" padding="@FooterTextPadding">
+        <mj-text css-class="dm-muted" mj-class="automatic-footer-text">
           @Model.AutomaticFooterText
         </mj-text>
-        }
-        @if (!string.IsNullOrWhiteSpace(Model.UniversityLogoUrl))
-        {
+      </mj-column>
+    </mj-section>
+    }
+    @if (!string.IsNullOrWhiteSpace(Model.UniversityLogoUrl))
+    {
+    <mj-section padding="@NotificationEmailLayoutSpacing.FooterLogoSectionPadding">
+      <mj-column>
         <mj-table cellpadding="0" cellspacing="0" role="presentation" padding="@FooterLogoPadding">
           <tr>
             <td align="center">
               @if (hasUniversityHomeUrl)
               {
-              <a href="@Model.UniversityHomeUrl" style="display:inline-block;text-decoration:none;">
+              <a class="light-logo" href="@Model.UniversityHomeUrl" style="display:inline-block;text-decoration:none;">
                 <img alt="UC Davis" src="@Model.UniversityLogoUrl" width="@FooterLogoWidth" style="border:0;display:block;height:auto;line-height:100%;max-width:@(FooterLogoWidth)px;opacity:.55;outline:none;text-decoration:none;width:@(FooterLogoWidth)px;" />
               </a>
+                if (!string.IsNullOrWhiteSpace(Model.DarkUniversityLogoUrl))
+                {
+              <a class="dark-logo" href="@Model.UniversityHomeUrl" style="display:none;mso-hide:all;text-decoration:none;">
+                <img alt="UC Davis" src="@Model.DarkUniversityLogoUrl" width="@FooterLogoWidth" style="border:0;display:block;height:auto;line-height:100%;max-width:@(FooterLogoWidth)px;opacity:.75;outline:none;text-decoration:none;width:@(FooterLogoWidth)px;" />
+              </a>
+                }
               }
               else
               {
-              <img alt="UC Davis" src="@Model.UniversityLogoUrl" width="@FooterLogoWidth" style="border:0;display:block;height:auto;line-height:100%;max-width:@(FooterLogoWidth)px;opacity:.55;outline:none;text-decoration:none;width:@(FooterLogoWidth)px;" />
+              <img alt="UC Davis" class="light-logo" src="@Model.UniversityLogoUrl" width="@FooterLogoWidth" style="border:0;display:block;height:auto;line-height:100%;max-width:@(FooterLogoWidth)px;opacity:.55;outline:none;text-decoration:none;width:@(FooterLogoWidth)px;" />
+                if (!string.IsNullOrWhiteSpace(Model.DarkUniversityLogoUrl))
+                {
+              <img alt="UC Davis" class="dark-logo" src="@Model.DarkUniversityLogoUrl" width="@FooterLogoWidth" style="border:0;display:none;height:auto;line-height:100%;max-width:@(FooterLogoWidth)px;mso-hide:all;opacity:.75;outline:none;text-decoration:none;width:@(FooterLogoWidth)px;" />
+                }
               }
             </td>
           </tr>
         </mj-table>
-        }
       </mj-column>
     </mj-section>
+    }
   </mj-body>
 </mjml>

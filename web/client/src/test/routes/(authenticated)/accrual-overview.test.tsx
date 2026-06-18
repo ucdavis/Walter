@@ -101,18 +101,18 @@ describe('vacation accrual overview route', () => {
 
       const links = within(selector!).getAllByRole('link');
       expect(links.map((link) => link.textContent)).toEqual([
-        expect.stringContaining('View All'),
         expect.stringContaining('NUTRITION'),
         expect.stringContaining('PLANT SCIENCES'),
+        expect.stringContaining('View All'),
       ]);
-      expect(links[0]).toHaveTextContent('33 employees');
-      expect(links[1]).toHaveTextContent('12 employees');
-      expect(links[2]).toHaveTextContent('21 employees');
-      expect(links[1]).toHaveTextContent('030090');
-      expect(links[1]).not.toHaveTextContent('Department 030090');
-      expect(links[0]).toHaveAttribute('href', '/accruals/overview');
-      expect(links[1]).toHaveAttribute('href', '/accruals/department/030090');
-      expect(links[2]).toHaveAttribute('href', '/accruals/department/030003');
+      expect(links[0]).toHaveTextContent('12 employees');
+      expect(links[1]).toHaveTextContent('21 employees');
+      expect(links[2]).toHaveTextContent('33 employees');
+      expect(links[0]).toHaveTextContent('030090');
+      expect(links[0]).not.toHaveTextContent('Department 030090');
+      expect(links[0]).toHaveAttribute('href', '/accruals/department/030090');
+      expect(links[1]).toHaveAttribute('href', '/accruals/department/030003');
+      expect(links[2]).toHaveAttribute('href', '/accruals/overview');
     } finally {
       cleanup();
     }

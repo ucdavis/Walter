@@ -5,9 +5,11 @@ namespace server.core.Services;
 public abstract class NotificationTemplateModelBase
 {
     public static string DefaultAppHomeUrl => "https://walter.ucdavis.edu";
-    public static string DefaultLogoUrl => "/apple-touch-icon.png";
+    public static string DefaultLogoUrl => "/walter.png";
+    public static string DefaultDarkLogoUrl => "/walter-dark.png";
     public static string DefaultUniversityHomeUrl => "https://ucdavis.edu";
-    public static string DefaultUniversityLogoUrl => "/ucdavis.svg";
+    public static string DefaultUniversityLogoUrl => "/ucdavis.png";
+    public static string DefaultDarkUniversityLogoUrl => "/ucdavis-dark.png";
 
     public string AppName { get; init; } = "Walter";
     public string? AppHomeUrl { get; init; } = DefaultAppHomeUrl;
@@ -15,9 +17,20 @@ public abstract class NotificationTemplateModelBase
     public string ButtonUrl { get; init; } = string.Empty;
     public string AutomaticFooterText { get; init; } = "This email was automatically generated. Please do not reply to it.";
     public string? LogoUrl { get; init; } = DefaultLogoUrl;
+    public string? DarkLogoUrl { get; init; } = DefaultDarkLogoUrl;
     public string? LayoutWidth { get; init; }
     public string? UniversityHomeUrl { get; init; } = DefaultUniversityHomeUrl;
     public string? UniversityLogoUrl { get; init; } = DefaultUniversityLogoUrl;
+    public string? DarkUniversityLogoUrl { get; init; } = DefaultDarkUniversityLogoUrl;
+}
+
+public static class NotificationEmailLayoutSpacing
+{
+    public const string ContentPadding = "12px";
+    public const string HeaderPadding = "24px 0 10px 0";
+    public const string MainSectionPadding = "0px";
+    public const string MainColumnPadding = "0px";
+    public const string FooterLogoSectionPadding = "0px 24px 30px 24px";
 }
 
 public sealed class NotificationButtonModel

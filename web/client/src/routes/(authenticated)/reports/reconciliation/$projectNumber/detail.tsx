@@ -339,8 +339,8 @@ function RouteComponent() {
     'all' | 'revenue' | 'expense'
   >('all');
 
-  const glTransactions = (transactions ?? []).filter(
-    (t) => matchesGL(t, search)
+  const glTransactions = (transactions ?? []).filter((t) =>
+    matchesGL(t, search)
   );
 
   const filteredGlTransactions = glTransactions.filter((t) => {
@@ -399,7 +399,7 @@ function RouteComponent() {
                   </div>
                 </div>
                 <div className="stat">
-                  <div className="uppercase font-proxima-bold text-dark-font/70">
+                  <div className="uppercase font-proxima-bold text-base-content/70">
                     Difference
                   </div>
                   <div className="text-2xl font-proxima-bold">
