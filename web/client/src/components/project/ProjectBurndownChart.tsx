@@ -15,6 +15,8 @@ import {
   buildProjectionSeries,
   getMonthlyCategorySpend,
   getProjectionStats,
+  NON_PERSONNEL_SERIES,
+  PERSONNEL_SERIES,
   type CategorySpend,
   type ProjectionSeries,
 } from '@/lib/projectProjection.ts';
@@ -24,17 +26,20 @@ import { tooltipDefinitions } from '@/shared/tooltips.ts';
 
 const SERIES_COLORS = [
   'var(--color-primary)',
-  '#f97316',
-  '#3b82f6',
-  '#14b8a6',
-  '#8b5cf6',
-  '#ef4444',
-  '#84cc16',
-  '#0ea5e9',
-  '#eab308',
+  'var(--color-ucd-redbud)',
+  'var(--color-ucd-arboretum)',
+  'var(--color-ucd-tahoe)',
+  'var(--color-ucd-cabernet)',
+  'var(--color-ucd-doubledecker)',
+  'var(--color-ucd-quad)',
+  'var(--color-ucd-putahcreek)',
+  'var(--color-ucd-gold)',
 ];
 const GRID_COLOR = 'var(--color-main-border)';
 const ZERO_LINE_COLOR = 'var(--color-error)';
+const SALARIES_CATEGORY_PREFIX = '01';
+const SALARIES_CATEGORY_COLOR = 'var(--color-ucd-redbud)';
+const OTHER_CATEGORY_COLOR = 'var(--color-ucd-arboretum)';
 
 type ChartRow = { label: string; month: string } & Record<
   string,
@@ -67,10 +72,38 @@ function seriesColor(index: number) {
   return SERIES_COLORS[index % SERIES_COLORS.length];
 }
 
+function categorySpendColor(expenditureCategory: string) {
+  return expenditureCategory.trim().startsWith(SALARIES_CATEGORY_PREFIX)
+    ? SALARIES_CATEGORY_COLOR
+    : OTHER_CATEGORY_COLOR;
+}
+
+function isSalariesCategory(expenditureCategory: string) {
+  return expenditureCategory.trim().startsWith(SALARIES_CATEGORY_PREFIX);
+}
+
+function filterCategorySpend(
+  categorySpend: CategorySpend[],
+  selectedKey: string
+) {
+  if (selectedKey === PERSONNEL_SERIES) {
+    return [];
+  }
+
+  if (selectedKey === NON_PERSONNEL_SERIES) {
+    return categorySpend.filter(
+      ({ expenditureCategory }) => !isSalariesCategory(expenditureCategory)
+    );
+  }
+
+  return categorySpend;
+}
+
 interface BurndownTooltipProps {
   active?: boolean;
   categorySpendByMonth: Map<string, CategorySpend[]>;
   payload?: Array<{ payload?: ChartRow }>;
+  selectedKey: string;
   visibleSeries: Array<{ color: string; key: string }>;
 }
 
@@ -78,6 +111,7 @@ function BurndownTooltip({
   active,
   categorySpendByMonth,
   payload,
+  selectedKey,
   visibleSeries,
 }: BurndownTooltipProps) {
   const row = payload?.find((item) => item.payload)?.payload;
@@ -86,7 +120,10 @@ function BurndownTooltip({
     return null;
   }
 
-  const categorySpend = categorySpendByMonth.get(String(row.month)) ?? [];
+  const categorySpend = filterCategorySpend(
+    categorySpendByMonth.get(String(row.month)) ?? [],
+    selectedKey
+  );
 
   return (
     <div className="rounded-md border border-main-border bg-base-100 p-4 text-sm shadow-lg">
@@ -132,11 +169,20 @@ function BurndownTooltip({
           <div className="space-y-1">
             {categorySpend.map(({ expenditureCategory, spend }) => (
               <div
-                className="flex justify-between gap-8"
+                className="flex items-center justify-between gap-8"
                 key={expenditureCategory}
               >
-                <span className="truncate" title={expenditureCategory}>
-                  {expenditureCategory}
+                <span
+                  className="flex min-w-0 items-center gap-2"
+                  title={expenditureCategory}
+                >
+                  <span
+                    className="inline-block h-3 w-3 shrink-0 rounded-sm"
+                    style={{
+                      backgroundColor: categorySpendColor(expenditureCategory),
+                    }}
+                  />
+                  <span className="truncate">{expenditureCategory}</span>
                 </span>
                 <span className="font-medium">{formatCurrency(spend)}</span>
               </div>
@@ -189,7 +235,7 @@ export function ProjectBurndownSection({
 
   return (
     <section className="section-margin">
-      <h2 className="h2">
+      <h2 className="h2 mb-3">
         <TooltipLabel
           label="Project Burndown"
           tooltip={tooltipDefinitions.projectBurndown}
@@ -197,9 +243,7 @@ export function ProjectBurndownSection({
       </h2>
 
       {projectionQuery.isPending && (
-        <p className="text-base-content/70 mt-4">
-          Loading project burndown...
-        </p>
+        <p className="text-base-content/70 mt-4">Loading project burndown...</p>
       )}
 
       {projectionQuery.isError && (
@@ -207,7 +251,7 @@ export function ProjectBurndownSection({
       )}
 
       {projectionQuery.isSuccess && series.length > 0 && (
-        <div className="fancy-data">
+        <div>
           <div className="h-80" data-testid="project-burndown-chart">
             <ResponsiveContainer height="100%" width="100%">
               <LineChart
@@ -236,6 +280,7 @@ export function ProjectBurndownSection({
                   content={
                     <BurndownTooltip
                       categorySpendByMonth={categorySpendByMonth}
+                      selectedKey={selectedKey}
                       visibleSeries={visibleSeries}
                     />
                   }
@@ -274,19 +319,20 @@ export function ProjectBurndownSection({
             </ResponsiveContainer>
           </div>
 
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="tabs tabs-box mt-4 inline-flex" role="tablist">
             {series.map((entry, index) => {
               const isSelected = entry.key === selectedKey;
               return (
                 <button
-                  aria-pressed={isSelected}
-                  className={`btn btn-xs ${isSelected ? 'btn-outline' : 'btn-ghost'}`}
+                  aria-selected={isSelected}
+                  className={`tab ${isSelected ? 'tab-active' : ''}`}
                   key={entry.key}
                   onClick={() => setSelectedKey(entry.key)}
+                  role="tab"
                   type="button"
                 >
                   <span
-                    className="inline-block h-3 w-3 rounded-sm"
+                    className="inline-block h-3 w-3 rounded-sm mr-2"
                     style={{ backgroundColor: seriesColor(index) }}
                   />
                   {entry.key}

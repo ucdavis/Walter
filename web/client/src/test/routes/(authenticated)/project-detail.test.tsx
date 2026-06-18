@@ -285,7 +285,7 @@ describe('project detail page', () => {
     ],
   };
 
-  it('shows the project burndown with category toggles when projection data exists', async () => {
+  it('shows the project burndown with category tabs when projection data exists', async () => {
     const user = userEvent.setup();
     const projects = [createProject({ pmEmployeeId: '2000' })];
     setupHandlers(
@@ -306,29 +306,29 @@ describe('project detail page', () => {
       expect(screen.getByText('Current Balance')).toBeInTheDocument();
 
       // Single-select: All Expenses is first and selected by default.
-      const allExpensesToggle = screen.getByRole('button', {
+      const allExpensesTab = screen.getByRole('tab', {
         name: 'All Expenses',
       });
-      expect(allExpensesToggle).toHaveAttribute('aria-pressed', 'true');
+      expect(allExpensesTab).toHaveAttribute('aria-selected', 'true');
 
-      const personnelToggle = screen.getByRole('button', {
+      const personnelTab = screen.getByRole('tab', {
         name: 'Personnel',
       });
-      expect(personnelToggle).toHaveAttribute('aria-pressed', 'false');
+      expect(personnelTab).toHaveAttribute('aria-selected', 'false');
 
-      const nonPersonnelToggle = screen.getByRole('button', {
+      const nonPersonnelTab = screen.getByRole('tab', {
         name: 'Non-Personnel',
       });
-      expect(nonPersonnelToggle).toHaveAttribute('aria-pressed', 'false');
+      expect(nonPersonnelTab).toHaveAttribute('aria-selected', 'false');
 
-      // Only the rollup series are offered; no per-category buttons.
+      // Only the rollup series are offered; no per-category tabs.
       expect(
-        screen.queryByRole('button', { name: '04 - Supplies' })
+        screen.queryByRole('tab', { name: '04 - Supplies' })
       ).not.toBeInTheDocument();
 
-      await user.click(nonPersonnelToggle);
-      expect(nonPersonnelToggle).toHaveAttribute('aria-pressed', 'true');
-      expect(allExpensesToggle).toHaveAttribute('aria-pressed', 'false');
+      await user.click(nonPersonnelTab);
+      expect(nonPersonnelTab).toHaveAttribute('aria-selected', 'true');
+      expect(allExpensesTab).toHaveAttribute('aria-selected', 'false');
     } finally {
       cleanup();
     }
