@@ -1,6 +1,7 @@
 'use no memo';
 
 import { useState } from 'react';
+import { AdjustmentsVerticalIcon } from '@heroicons/react/24/outline';
 import {
   Bar,
   BarChart,
@@ -52,23 +53,20 @@ export function SpendAnalysisWorkbench() {
         <h1 className="h1">Spend Intelligence Workspace</h1>
         <p className="subtitle mt-1">PURCHASING ASSISTANT</p>
         <p className="mt-3 max-w-3xl text-base leading-7 text-base-content/80">
-          Walter uses AI to answer questions about purchasing data. Responses may contain inaccuracies and should be verified before making business decisions.
+          Walter uses AI to answer questions about purchasing data. Responses
+          may contain inaccuracies and should be verified before making business
+          decisions.
         </p>
-          </div>
+      </div>
 
-      <section
-        className="card bg-base-100 border border-main-border shadow-sm mt-6"
-        id="procurement-assistant"
-      >
-        <div className="card-body gap-5">
-          <div className="max-w-3xl">
-            <h2 className="h2">Ask a Question</h2>
-          </div>
+      <section id="procurement-assistant">
+        <div className="gap-5 border-t border-main-border mt-4 py-6">
+          <h2 className="max-w-3xl h2 mb-4">Ask a Question</h2>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 mb-4">
             {EXAMPLE_QUESTIONS.map((example) => (
               <button
-                className="btn btn-sm btn-outline"
+                className="btn btn-sm btn-default"
                 key={example}
                 onClick={() => {
                   setQuestion(example);
@@ -93,7 +91,7 @@ export function SpendAnalysisWorkbench() {
 
             <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm text-base-content/70">
-                 Ask questions about suppliers, purchases, categories, and spend.
+                Ask questions about suppliers, purchases, categories, and spend.
               </p>
               <button
                 className="btn btn-primary"
@@ -101,6 +99,7 @@ export function SpendAnalysisWorkbench() {
                 onClick={() => handleSubmit(question)}
                 type="button"
               >
+                <AdjustmentsVerticalIcon className="h-5 w-5" />
                 {mutation.isPending
                   ? 'Running query...'
                   : 'Run procurement query'}
@@ -137,14 +136,12 @@ function SpendAnalysisResults({
 
   return (
     <div className="mt-6 space-y-5">
-      <section className="card bg-base-100 border border-main-border shadow-sm">
-        <div className="card-body gap-5">
+      <section className="border-l-4 border-primary-color/50 pl-5 py-4 px-2 my-8 bg-primary-color/10">
+        <div className="gap-5">
           <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
             <div className="space-y-2">
               <h2 className="h2">Answer</h2>
-              <p className="text-lg leading-7 text-base-content/85">
-                {response.answerText}
-              </p>
+              <p className="text-lg leading-7 mb-4">{response.answerText}</p>
             </div>
 
             <div className="flex flex-wrap gap-2">
