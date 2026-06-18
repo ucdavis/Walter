@@ -1,6 +1,6 @@
 -- Monthly per-expenditure-category budget burndown for a single project.
 -- Returns two result sets:
---   1. Per-category budget header (budget, spent-to-date, committed, current remaining).
+--   1. Per-category budget header (budget, spent-to-date, committed, current remaining, award end date).
 --   2. Period x category grid: 3 trailing actual months, the current (blended) month, and 12
 --      projected months, each with actual spend, projected spend, and the running budget
 --      remaining (burndown).
@@ -74,7 +74,8 @@ BEGIN
                SUM(f.PpmBudget)      AS Budget,
                SUM(f.PpmExpenses)    AS SpentToDate,
                SUM(f.PpmCommitments) AS Committed,
-               SUM(f.PpmBudBal)      AS RemainingNow
+               SUM(f.PpmBudBal)      AS RemainingNow,
+               MAX(f.AwardEndDate)   AS AwardEndDate   -- project-level; same on every category row
         INTO #budget
         FROM dbo.FacultyDeptPortfolio f
         WHERE f.ProjectNumber = @ProjectId
@@ -91,33 +92,49 @@ BEGIN
               UNION SELECT '01 - Salaries and Wages'
               UNION SELECT '02 - Fringe Benefits') c;
 
-        /* Personnel projection for the current + future months. Salary is this project's share:
-           MonthlyRate (1.0-FTE rate) * Fte * DistributionPercent. Fringe loads CBR + vacation
-           accrual (both stored as fractions). A position contributes only while its funding
-           window is open and its job has not ended; a NULL end date means funded indefinitely. */
+        /* Personnel projection for the current + future months. Mirrors the personnel table on
+           the page (usp_GetPositionBudgetsLocal): every funding line for the project, with no
+           funding- or job-end-date gating, projected flat across the whole horizon (the award
+           end date is returned separately for the chart to mark). Salary is this project's share:
+           MonthlyRate (1.0-FTE rate) * Fte * DistributionPercent. Fringe loads CBR only (the CBR
+           is stored as a fraction); vacation accrual is excluded for now, matching the page. */
         DROP TABLE IF EXISTS #pers;
         SELECT p.MonthStart,
                SUM(pb.MonthlyRate * pb.Fte * pb.DistributionPercent / 100.0) AS Salary,
                SUM(pb.MonthlyRate * pb.Fte * pb.DistributionPercent / 100.0
-                   * (COALESCE(cbr.CBR, 0) + COALESCE(cbr.VacationAccrual, 0))) AS Fringe
+                   * COALESCE(cbr.CBR, 0)) AS Fringe
         INTO #pers
         FROM #periods p
         JOIN dbo.PositionBudgets pb ON pb.ProjectId = @ProjectId
-           AND (pb.FundingEffectiveDate IS NULL OR pb.FundingEffectiveDate <= EOMONTH(p.MonthStart))
-           AND (pb.FundingEndDate       IS NULL OR pb.FundingEndDate       >= p.MonthStart)
-           AND (pb.ExpectedEndDate      IS NULL OR pb.ExpectedEndDate      >= p.MonthStart)
         LEFT JOIN dbo.CompositeBenefitRates cbr ON cbr.JobCode = pb.JobCode
         WHERE p.Kind IN ('blended','projected')
         GROUP BY p.MonthStart;
 
-        /* Non-personnel projection = average of the 3 trailing actual months (divided by 3 even
-           when a category posted in fewer of them). */
+        /* Trailing actual months to average over: from the first month with GL data through the
+           most recent actual month (0-3). A zero-spend month after activity has begun counts as a
+           real zero; months before the project started posting do not dilute the run-rate (e.g.
+           data two months ago and nothing last month still averages over 2 months). */
+        DECLARE @FirstActualMonth DATE = (
+            SELECT MIN(p.MonthStart)
+            FROM #gl g
+            JOIN #periods p ON p.DisplayPeriod = g.PeriodName AND p.Kind = 'actual'
+        );
+        DECLARE @ActualMonths INT = (
+            SELECT COUNT(*)
+            FROM #periods p
+            WHERE p.Kind = 'actual' AND p.MonthStart >= @FirstActualMonth
+        );
+
+        /* Non-personnel projection = average spend per trailing actual month that has data.
+           Equipment ('04 - Equipment and Facilities') is excluded: it is lumpy/one-time and a
+           run-rate would over-project it. It still shows its actuals and stays in the burndown. */
         DROP TABLE IF EXISTS #navg;
-        SELECT g.ExpenditureCategory, SUM(g.ActualAmount) / 3.0 AS AvgAmount
+        SELECT g.ExpenditureCategory, SUM(g.ActualAmount) / NULLIF(@ActualMonths, 0) AS AvgAmount
         INTO #navg
         FROM #gl g
         JOIN #periods p ON p.DisplayPeriod = g.PeriodName AND p.Kind = 'actual'
         JOIN #cats c ON c.ExpenditureCategory = g.ExpenditureCategory AND c.IsPersonnel = 0
+        WHERE g.ExpenditureCategory <> '04 - Equipment and Facilities'
         GROUP BY g.ExpenditureCategory;
 
         /* Spend per period x category. Current month: non-personnel = booked actuals + prorated
@@ -144,11 +161,13 @@ BEGIN
         LEFT JOIN #pers pr ON pr.MonthStart = p.MonthStart
         LEFT JOIN #navg na ON na.ExpenditureCategory = c.ExpenditureCategory;
 
-        /* Result 1: per-category budget header. */
+        /* Result 1: per-category budget header. AwardEndDate is project-level (same on each row)
+           so the chart can draw the award-end reference line. */
         SELECT b.ExpenditureCategory,
                CASE WHEN b.ExpenditureCategory IN ('01 - Salaries and Wages','02 - Fringe Benefits')
                     THEN 1 ELSE 0 END AS IsPersonnel,
-               b.Budget, b.SpentToDate, b.Committed, b.RemainingNow
+               b.Budget, b.SpentToDate, b.Committed, b.RemainingNow,
+               b.AwardEndDate
         FROM #budget b
         ORDER BY b.ExpenditureCategory;
 
