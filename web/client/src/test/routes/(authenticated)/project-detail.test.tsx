@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import type { ProjectRecord } from '@/queries/project.ts';
+import type { ProjectProjectionResult } from '@/queries/projectProjection.ts';
 import { server } from '@/test/mswUtils.ts';
 import { renderRoute } from '@/test/routerUtils.tsx';
 import { tooltipDefinitions } from '@/shared/tooltips.ts';
@@ -38,6 +39,7 @@ const createProject = (
   fundCode: null,
   fundDesc: 'Federal',
   grantAdministrator: null,
+  ownerName: null,
   pa: null,
   pi: 'PI Name',
   pm: 'PM Name',
@@ -64,13 +66,18 @@ const createProject = (
   taskName: 'Task 1',
   taskNum: 'T001',
   taskStatus: 'Active',
-  ownerName: null,
   ...overrides,
 });
 
+const emptyProjection: ProjectProjectionResult = {
+  categories: [],
+  periods: [],
+};
+
 const setupHandlers = (
   user: { employeeId: string; name: string },
-  projects: ProjectRecord[]
+  projects: ProjectRecord[],
+  projection: ProjectProjectionResult = emptyProjection
 ) => {
   server.use(
     http.get('/api/user/me', () =>
@@ -86,6 +93,9 @@ const setupHandlers = (
     http.get('/api/project/managed/by-iam/:iamId', () => HttpResponse.json({ pis: [], projectManager: null })),
     http.get('/api/project/by-iam/:iamId', () => HttpResponse.json(projects)),
     http.get('/api/project/personnel', () => HttpResponse.json([])),
+    http.get('/api/project/projection/:projectNumber', () =>
+      HttpResponse.json(projection)
+    ),
     http.get('/api/project/gl-ppm-reconciliation', () => HttpResponse.json([]))
   );
 };
@@ -155,6 +165,9 @@ describe('project detail page', () => {
         return HttpResponse.json([]);
       }),
       http.get('/api/project/personnel', () => HttpResponse.json([])),
+      http.get('/api/project/projection/:projectNumber', () =>
+        HttpResponse.json(emptyProjection)
+      ),
       http.get('/api/project/gl-ppm-reconciliation', () =>
         HttpResponse.json([])
       )
@@ -184,6 +197,186 @@ describe('project detail page', () => {
       expect(
         screen.queryByText('We could not reach the server')
       ).not.toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+
+  const burndownProjection: ProjectProjectionResult = {
+    categories: [
+      {
+        budget: 500,
+        committed: 0,
+        expenditureCategory: '01 - Salaries and Wages',
+        isPersonnel: 1,
+        remainingNow: 400,
+        spentToDate: 100,
+      },
+      {
+        budget: 100,
+        committed: 0,
+        expenditureCategory: '04 - Supplies',
+        isPersonnel: 0,
+        remainingNow: 80,
+        spentToDate: 20,
+      },
+    ],
+    periods: [
+      {
+        actualAmount: 50,
+        displayPeriod: 'May-26',
+        expenditureCategory: '01 - Salaries and Wages',
+        isPersonnel: 1,
+        kind: 'actual',
+        month: '2026-05',
+        projectedAmount: 0,
+        remaining: 400,
+      },
+      {
+        actualAmount: 0,
+        displayPeriod: 'Jun-26',
+        expenditureCategory: '01 - Salaries and Wages',
+        isPersonnel: 1,
+        kind: 'blended',
+        month: '2026-06',
+        projectedAmount: 50,
+        remaining: 350,
+      },
+      {
+        actualAmount: 0,
+        displayPeriod: 'Jul-26',
+        expenditureCategory: '01 - Salaries and Wages',
+        isPersonnel: 1,
+        kind: 'projected',
+        month: '2026-07',
+        projectedAmount: 50,
+        remaining: 300,
+      },
+      {
+        actualAmount: 10,
+        displayPeriod: 'May-26',
+        expenditureCategory: '04 - Supplies',
+        isPersonnel: 0,
+        kind: 'actual',
+        month: '2026-05',
+        projectedAmount: 0,
+        remaining: 80,
+      },
+      {
+        actualAmount: 0,
+        displayPeriod: 'Jun-26',
+        expenditureCategory: '04 - Supplies',
+        isPersonnel: 0,
+        kind: 'blended',
+        month: '2026-06',
+        projectedAmount: 5,
+        remaining: 75,
+      },
+      {
+        actualAmount: 0,
+        displayPeriod: 'Jul-26',
+        expenditureCategory: '04 - Supplies',
+        isPersonnel: 0,
+        kind: 'projected',
+        month: '2026-07',
+        projectedAmount: 10,
+        remaining: 65,
+      },
+    ],
+  };
+
+  it('shows the project burndown with category toggles when projection data exists', async () => {
+    const user = userEvent.setup();
+    const projects = [createProject({ pmEmployeeId: '2000' })];
+    setupHandlers(
+      { employeeId: '1000', name: 'PI User' },
+      projects,
+      burndownProjection
+    );
+
+    const { cleanup } = renderRoute({
+      initialPath: '/projects/1000/P1',
+    });
+
+    try {
+      expect(
+        await screen.findByTestId('project-burndown-chart')
+      ).toBeInTheDocument();
+      expect(screen.getByText('Project Burndown')).toBeInTheDocument();
+      expect(screen.getByText('Current Balance')).toBeInTheDocument();
+
+      // Single-select: All Expenses is first and selected by default.
+      const allExpensesToggle = screen.getByRole('button', {
+        name: 'All Expenses',
+      });
+      expect(allExpensesToggle).toHaveAttribute('aria-pressed', 'true');
+
+      const personnelToggle = screen.getByRole('button', {
+        name: 'Personnel',
+      });
+      expect(personnelToggle).toHaveAttribute('aria-pressed', 'false');
+
+      const nonPersonnelToggle = screen.getByRole('button', {
+        name: 'Non-Personnel',
+      });
+      expect(nonPersonnelToggle).toHaveAttribute('aria-pressed', 'false');
+
+      // Only the rollup series are offered; no per-category buttons.
+      expect(
+        screen.queryByRole('button', { name: '04 - Supplies' })
+      ).not.toBeInTheDocument();
+
+      await user.click(nonPersonnelToggle);
+      expect(nonPersonnelToggle).toHaveAttribute('aria-pressed', 'true');
+      expect(allExpensesToggle).toHaveAttribute('aria-pressed', 'false');
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('hides the project burndown for internal projects', async () => {
+    const projects = [
+      createProject({
+        awardEndDate: null,
+        awardNumber: null,
+        awardStartDate: null,
+        pmEmployeeId: '2000',
+        projectType: 'Internal',
+      }),
+    ];
+    setupHandlers(
+      { employeeId: '1000', name: 'PI User' },
+      projects,
+      burndownProjection
+    );
+
+    const { cleanup } = renderRoute({
+      initialPath: '/projects/1000/P1',
+    });
+
+    try {
+      await screen.findByText('Financial Details');
+      expect(screen.queryByText('Project Burndown')).not.toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('hides the project burndown when the projection has no periods', async () => {
+    const projects = [createProject({ pmEmployeeId: '2000' })];
+    setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);
+
+    const { cleanup } = renderRoute({
+      initialPath: '/projects/1000/P1',
+    });
+
+    try {
+      await screen.findByText('Award Information');
+      // The section renders a loading state until the projection query
+      // resolves, so wait for it to settle and disappear.
+      await waitFor(() =>
+        expect(screen.queryByText('Project Burndown')).not.toBeInTheDocument()
+      );
     } finally {
       cleanup();
     }
@@ -302,6 +495,9 @@ describe('project detail page', () => {
           HttpResponse.json(projects)
         ),
         http.get('/api/project/personnel', () => HttpResponse.json([])),
+        http.get('/api/project/projection/:projectNumber', () =>
+          HttpResponse.json(emptyProjection)
+        ),
         http.get('/api/project/gl-ppm-reconciliation', () =>
           HttpResponse.json(reconciliation)
         )
