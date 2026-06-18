@@ -12,8 +12,10 @@ import {
 import { formatCurrency } from '@/lib/currency.ts';
 import {
   ALL_EXPENSES_SERIES,
+  buildNonPersonnelCategorySeries,
   buildProjectionSeries,
   getMonthlyCategorySpend,
+  getProjectionTransitionMonth,
   getProjectionStats,
   NON_PERSONNEL_SERIES,
   PERSONNEL_SERIES,
@@ -37,6 +39,7 @@ const SERIES_COLORS = [
 ];
 const GRID_COLOR = 'var(--color-main-border)';
 const ZERO_LINE_COLOR = 'var(--color-error)';
+const PROJECTION_TRANSITION_LINE_COLOR = 'var(--color-base-content)';
 const SALARIES_CATEGORY_PREFIX = '01';
 const SALARIES_CATEGORY_COLOR = 'var(--color-ucd-redbud)';
 const OTHER_CATEGORY_COLOR = 'var(--color-ucd-arboretum)';
@@ -45,6 +48,11 @@ type ChartRow = { label: string; month: string } & Record<
   string,
   number | string | null
 >;
+type VisibleSeries = {
+  color: string;
+  key: string;
+  strokeWidth?: number;
+};
 
 // Each series renders as two lines sharing a color: a solid one over the
 // actual + blended months and a dashed one over blended + projected. Both
@@ -72,6 +80,14 @@ function seriesColor(index: number) {
   return SERIES_COLORS[index % SERIES_COLORS.length];
 }
 
+function subcategorySeriesColor(index: number) {
+  return seriesColor(index + 3);
+}
+
+function categoryDisplayName(expenditureCategory: string) {
+  return expenditureCategory.replace(/^\d+\s*-\s*/, '');
+}
+
 function categorySpendColor(expenditureCategory: string) {
   return expenditureCategory.trim().startsWith(SALARIES_CATEGORY_PREFIX)
     ? SALARIES_CATEGORY_COLOR
@@ -84,10 +100,18 @@ function isSalariesCategory(expenditureCategory: string) {
 
 function filterCategorySpend(
   categorySpend: CategorySpend[],
+  selectedNonPersonnelCategory: string | null,
   selectedKey: string
 ) {
   if (selectedKey === PERSONNEL_SERIES) {
     return [];
+  }
+
+  if (selectedNonPersonnelCategory) {
+    return categorySpend.filter(
+      ({ expenditureCategory }) =>
+        expenditureCategory === selectedNonPersonnelCategory
+    );
   }
 
   if (selectedKey === NON_PERSONNEL_SERIES) {
@@ -103,14 +127,16 @@ interface BurndownTooltipProps {
   active?: boolean;
   categorySpendByMonth: Map<string, CategorySpend[]>;
   payload?: Array<{ payload?: ChartRow }>;
+  selectedNonPersonnelCategory: string | null;
   selectedKey: string;
-  visibleSeries: Array<{ color: string; key: string }>;
+  visibleSeries: VisibleSeries[];
 }
 
 function BurndownTooltip({
   active,
   categorySpendByMonth,
   payload,
+  selectedNonPersonnelCategory,
   selectedKey,
   visibleSeries,
 }: BurndownTooltipProps) {
@@ -122,6 +148,7 @@ function BurndownTooltip({
 
   const categorySpend = filterCategorySpend(
     categorySpendByMonth.get(String(row.month)) ?? [],
+    selectedNonPersonnelCategory,
     selectedKey
   );
 
@@ -207,7 +234,26 @@ export function ProjectBurndownSection({
     () => (result ? buildProjectionSeries(result) : []),
     [result]
   );
-  const chartRows = useMemo(() => buildChartRows(series), [series]);
+  const nonPersonnelCategorySeries = useMemo(
+    () => (result ? buildNonPersonnelCategorySeries(result) : []),
+    [result]
+  );
+  const chartSeries = useMemo(
+    () => [...series, ...nonPersonnelCategorySeries],
+    [nonPersonnelCategorySeries, series]
+  );
+  const chartRows = useMemo(() => buildChartRows(chartSeries), [chartSeries]);
+  const labelsByMonth = useMemo(
+    () => new Map(chartRows.map((row) => [row.month, row.label])),
+    [chartRows]
+  );
+  const projectionTransitionMonth = useMemo(
+    () => (result ? getProjectionTransitionMonth(result) : null),
+    [result]
+  );
+  const showProjectionTransitionLine =
+    projectionTransitionMonth !== null &&
+    labelsByMonth.has(projectionTransitionMonth);
   const stats = useMemo(
     () => (result ? getProjectionStats(result) : null),
     [result]
@@ -217,21 +263,52 @@ export function ProjectBurndownSection({
     [result]
   );
   const [selectedKey, setSelectedKey] = useState(ALL_EXPENSES_SERIES);
+  const [selectedNonPersonnelCategory, setSelectedNonPersonnelCategory] =
+    useState<string | null>(null);
+  const activeSelectedNonPersonnelCategory =
+    selectedNonPersonnelCategory &&
+    nonPersonnelCategorySeries.some(
+      (entry) => entry.key === selectedNonPersonnelCategory
+    )
+      ? selectedNonPersonnelCategory
+      : null;
 
   if (projectionQuery.isSuccess && series.length === 0) {
     return null;
   }
 
-  const visibleSeries = series
+  const selectedRollupSeries: VisibleSeries[] = series
     .map((entry, index) => ({ color: seriesColor(index), key: entry.key }))
     .filter(({ key }) => key === selectedKey);
+  const visibleSeries: VisibleSeries[] =
+    selectedKey === NON_PERSONNEL_SERIES
+      ? activeSelectedNonPersonnelCategory
+        ? nonPersonnelCategorySeries
+            .map((entry, index) => ({
+              color: subcategorySeriesColor(index),
+              key: entry.key,
+            }))
+            .filter(({ key }) => key === activeSelectedNonPersonnelCategory)
+        : [
+            ...selectedRollupSeries,
+            ...nonPersonnelCategorySeries.map((entry, index) => ({
+              color: subcategorySeriesColor(index),
+              key: entry.key,
+              strokeWidth: 1.75,
+            })),
+          ]
+      : selectedRollupSeries;
 
-  const visibleBalances = series
-    .filter(({ key }) => key === selectedKey)
+  const visibleBalances = chartSeries
+    .filter(({ key }) => visibleSeries.some((entry) => entry.key === key))
     .flatMap(({ points }) => points.map((point) => point.remaining));
   const minBalance = Math.min(0, ...visibleBalances);
   const maxBalance = Math.max(0, ...visibleBalances);
   const padding = Math.max((maxBalance - minBalance) * 0.1, 1000);
+  const chartTitle =
+    selectedKey === NON_PERSONNEL_SERIES && activeSelectedNonPersonnelCategory
+      ? `${NON_PERSONNEL_SERIES}: ${categoryDisplayName(activeSelectedNonPersonnelCategory)}`
+      : selectedKey;
 
   return (
     <section className="section-margin">
@@ -252,6 +329,8 @@ export function ProjectBurndownSection({
 
       {projectionQuery.isSuccess && series.length > 0 && (
         <div>
+          <h3 className="font-proxima-bold mb-2 text-base">{chartTitle}</h3>
+
           <div className="h-80" data-testid="project-burndown-chart">
             <ResponsiveContainer height="100%" width="100%">
               <LineChart
@@ -260,8 +339,11 @@ export function ProjectBurndownSection({
               >
                 <CartesianGrid stroke={GRID_COLOR} strokeDasharray="3 3" />
                 <XAxis
-                  dataKey="label"
+                  dataKey="month"
                   tick={{ fill: 'currentColor', fontSize: 12 }}
+                  tickFormatter={(value: string) =>
+                    labelsByMonth.get(value) ?? value
+                  }
                 />
                 <YAxis
                   domain={[minBalance - padding, maxBalance + padding]}
@@ -276,16 +358,28 @@ export function ProjectBurndownSection({
                   strokeDasharray="5 5"
                   y={0}
                 />
+                {showProjectionTransitionLine && (
+                  <ReferenceLine
+                    stroke={PROJECTION_TRANSITION_LINE_COLOR}
+                    strokeOpacity={0.28}
+                    strokeDasharray="3 5"
+                    strokeWidth={1.5}
+                    x={projectionTransitionMonth}
+                  />
+                )}
                 <Tooltip
                   content={
                     <BurndownTooltip
                       categorySpendByMonth={categorySpendByMonth}
+                      selectedNonPersonnelCategory={
+                        activeSelectedNonPersonnelCategory
+                      }
                       selectedKey={selectedKey}
                       visibleSeries={visibleSeries}
                     />
                   }
                 />
-                {visibleSeries.map(({ color, key }) => (
+                {visibleSeries.map(({ color, key, strokeWidth }) => (
                   <Line
                     activeDot={{ r: 5 }}
                     connectNulls={false}
@@ -295,11 +389,11 @@ export function ProjectBurndownSection({
                     key={`${key}::solid`}
                     name={key}
                     stroke={color}
-                    strokeWidth={2.5}
+                    strokeWidth={strokeWidth ?? 2.5}
                     type="monotone"
                   />
                 ))}
-                {visibleSeries.map(({ color, key }) => (
+                {visibleSeries.map(({ color, key, strokeWidth }) => (
                   <Line
                     activeDot={{ r: 5 }}
                     connectNulls={false}
@@ -311,7 +405,7 @@ export function ProjectBurndownSection({
                     name={key}
                     stroke={color}
                     strokeDasharray="6 4"
-                    strokeWidth={2.5}
+                    strokeWidth={strokeWidth ?? 2.5}
                     type="monotone"
                   />
                 ))}
@@ -327,7 +421,12 @@ export function ProjectBurndownSection({
                   aria-selected={isSelected}
                   className={`tab ${isSelected ? 'tab-active' : ''}`}
                   key={entry.key}
-                  onClick={() => setSelectedKey(entry.key)}
+                  onClick={() => {
+                    setSelectedKey(entry.key);
+                    if (entry.key !== NON_PERSONNEL_SERIES) {
+                      setSelectedNonPersonnelCategory(null);
+                    }
+                  }}
                   role="tab"
                   type="button"
                 >
@@ -340,6 +439,40 @@ export function ProjectBurndownSection({
               );
             })}
           </div>
+
+          {selectedKey === NON_PERSONNEL_SERIES &&
+            nonPersonnelCategorySeries.length > 0 && (
+              <div
+                aria-label="Non-personnel subcategories"
+                className="tabs tabs-box mt-2 flex w-fit flex-wrap"
+                role="tablist"
+              >
+                {nonPersonnelCategorySeries.map((entry, index) => {
+                  const isSelected =
+                    activeSelectedNonPersonnelCategory === entry.key;
+                  return (
+                    <button
+                      aria-selected={isSelected}
+                      className={`tab ${isSelected ? 'tab-active' : ''}`}
+                      key={entry.key}
+                      onClick={() =>
+                        setSelectedNonPersonnelCategory(
+                          isSelected ? null : entry.key
+                        )
+                      }
+                      role="tab"
+                      type="button"
+                    >
+                      <span
+                        className="inline-block h-3 w-3 rounded-sm mr-2"
+                        style={{ backgroundColor: subcategorySeriesColor(index) }}
+                      />
+                      {entry.key}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
 
           {stats && (
             <div className="mt-4 grid gap-4 text-sm md:grid-cols-3">

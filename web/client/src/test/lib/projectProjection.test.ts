@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   ALL_EXPENSES_SERIES,
+  buildNonPersonnelCategorySeries,
   buildProjectionSeries,
   getMonthlyCategorySpend,
+  getProjectionTransitionMonth,
   getProjectionStats,
   NON_PERSONNEL_SERIES,
   PERSONNEL_SERIES,
@@ -52,6 +54,14 @@ const sampleResult = (): ProjectProjectionResult => ({
       remainingNow: 80,
       spentToDate: 20,
     },
+    {
+      budget: 60,
+      committed: 0,
+      expenditureCategory: '07 - Fellowships',
+      isPersonnel: 0,
+      remainingNow: 45,
+      spentToDate: 15,
+    },
   ],
   periods: [
     // May = actual, Jun = blended, Jul = projected; one row per category per month.
@@ -79,6 +89,15 @@ const sampleResult = (): ProjectProjectionResult => ({
       month: '2026-05',
       remaining: 80,
     }),
+    period({
+      actualAmount: 5,
+      displayPeriod: 'May-26',
+      expenditureCategory: '07 - Fellowships',
+      isPersonnel: 0,
+      kind: 'actual',
+      month: '2026-05',
+      remaining: 45,
+    }),
     period({ kind: 'blended', projectedAmount: 50, remaining: 350 }),
     period({
       expenditureCategory: '02 - Fringe Benefits',
@@ -93,6 +112,13 @@ const sampleResult = (): ProjectProjectionResult => ({
       kind: 'blended',
       projectedAmount: 5,
       remaining: 70,
+    }),
+    period({
+      expenditureCategory: '07 - Fellowships',
+      isPersonnel: 0,
+      kind: 'blended',
+      projectedAmount: 5,
+      remaining: 40,
     }),
     period({
       displayPeriod: 'Jul-26',
@@ -115,7 +141,30 @@ const sampleResult = (): ProjectProjectionResult => ({
       projectedAmount: 10,
       remaining: 60,
     }),
+    period({
+      displayPeriod: 'Jul-26',
+      expenditureCategory: '07 - Fellowships',
+      isPersonnel: 0,
+      month: '2026-07',
+      projectedAmount: 5,
+      remaining: 35,
+    }),
   ],
+});
+
+describe('getProjectionTransitionMonth', () => {
+  it('returns the blended month where the chart changes from solid to dotted', () => {
+    expect(getProjectionTransitionMonth(sampleResult())).toBe('2026-06');
+  });
+
+  it('returns null when no blended month exists', () => {
+    const result = sampleResult();
+    result.periods = result.periods.filter(
+      (period) => period.kind !== 'blended'
+    );
+
+    expect(getProjectionTransitionMonth(result)).toBeNull();
+  });
 });
 
 describe('buildProjectionSeries', () => {
@@ -134,7 +183,7 @@ describe('buildProjectionSeries', () => {
     const allExpenses = series.find((s) => s.key === ALL_EXPENSES_SERIES);
 
     expect(allExpenses?.points.map((p) => p.remaining)).toEqual([
-      630, 550, 470,
+      675, 590, 505,
     ]);
   });
 
@@ -165,8 +214,8 @@ describe('buildProjectionSeries', () => {
 
     expect(nonPersonnel?.points[2]).toMatchObject({
       month: '2026-07',
-      projectedAmount: 10,
-      remaining: 60,
+      projectedAmount: 15,
+      remaining: 95,
     });
   });
 
@@ -174,6 +223,20 @@ describe('buildProjectionSeries', () => {
     const series = buildProjectionSeries({ categories: [], periods: [] });
 
     expect(series).toEqual([]);
+  });
+});
+
+describe('buildNonPersonnelCategorySeries', () => {
+  it('builds one series for each active non-personnel category', () => {
+    const series = buildNonPersonnelCategorySeries(sampleResult());
+
+    expect(series.map((s) => s.key)).toEqual([
+      '04 - Supplies',
+      '07 - Fellowships',
+    ]);
+    expect(series[0].points.map((point) => point.remaining)).toEqual([
+      80, 70, 60,
+    ]);
   });
 });
 
@@ -185,11 +248,13 @@ describe('getMonthlyCategorySpend', () => {
       { expenditureCategory: '01 - Salaries and Wages', spend: 50 },
       { expenditureCategory: '02 - Fringe Benefits', spend: 20 },
       { expenditureCategory: '04 - Supplies', spend: 10 },
+      { expenditureCategory: '07 - Fellowships', spend: 5 },
     ]);
     expect(spendByMonth.get('2026-06')).toEqual([
       { expenditureCategory: '01 - Salaries and Wages', spend: 50 },
       { expenditureCategory: '02 - Fringe Benefits', spend: 20 },
       { expenditureCategory: '04 - Supplies', spend: 10 },
+      { expenditureCategory: '07 - Fellowships', spend: 5 },
     ]);
   });
 
@@ -210,17 +275,18 @@ describe('getMonthlyCategorySpend', () => {
     expect(spendByMonth.get('2026-07')).toEqual([
       { expenditureCategory: '01 - Salaries and Wages', spend: 50 },
       { expenditureCategory: '04 - Supplies', spend: 10 },
+      { expenditureCategory: '07 - Fellowships', spend: 5 },
     ]);
   });
 });
 
 describe('getProjectionStats', () => {
   it('sums current balance from the category header', () => {
-    expect(getProjectionStats(sampleResult()).currentBalance).toBe(630);
+    expect(getProjectionStats(sampleResult()).currentBalance).toBe(675);
   });
 
   it('sums remaining across categories at the final month', () => {
-    expect(getProjectionStats(sampleResult()).projectedEnd).toBe(470);
+    expect(getProjectionStats(sampleResult()).projectedEnd).toBe(505);
   });
 
   it('counts distinct projected months', () => {

@@ -220,6 +220,14 @@ describe('project detail page', () => {
         remainingNow: 80,
         spentToDate: 20,
       },
+      {
+        budget: 60,
+        committed: 0,
+        expenditureCategory: '07 - Fellowships',
+        isPersonnel: 0,
+        remainingNow: 45,
+        spentToDate: 15,
+      },
     ],
     periods: [
       {
@@ -263,6 +271,16 @@ describe('project detail page', () => {
         remaining: 80,
       },
       {
+        actualAmount: 5,
+        displayPeriod: 'May-26',
+        expenditureCategory: '07 - Fellowships',
+        isPersonnel: 0,
+        kind: 'actual',
+        month: '2026-05',
+        projectedAmount: 0,
+        remaining: 45,
+      },
+      {
         actualAmount: 0,
         displayPeriod: 'Jun-26',
         expenditureCategory: '04 - Supplies',
@@ -274,6 +292,16 @@ describe('project detail page', () => {
       },
       {
         actualAmount: 0,
+        displayPeriod: 'Jun-26',
+        expenditureCategory: '07 - Fellowships',
+        isPersonnel: 0,
+        kind: 'blended',
+        month: '2026-06',
+        projectedAmount: 5,
+        remaining: 40,
+      },
+      {
+        actualAmount: 0,
         displayPeriod: 'Jul-26',
         expenditureCategory: '04 - Supplies',
         isPersonnel: 0,
@@ -281,6 +309,16 @@ describe('project detail page', () => {
         month: '2026-07',
         projectedAmount: 10,
         remaining: 65,
+      },
+      {
+        actualAmount: 0,
+        displayPeriod: 'Jul-26',
+        expenditureCategory: '07 - Fellowships',
+        isPersonnel: 0,
+        kind: 'projected',
+        month: '2026-07',
+        projectedAmount: 5,
+        remaining: 35,
       },
     ],
   };
@@ -329,6 +367,25 @@ describe('project detail page', () => {
       await user.click(nonPersonnelTab);
       expect(nonPersonnelTab).toHaveAttribute('aria-selected', 'true');
       expect(allExpensesTab).toHaveAttribute('aria-selected', 'false');
+      expect(
+        screen.getByRole('heading', { name: 'Non-Personnel' })
+      ).toBeInTheDocument();
+
+      const suppliesTab = screen.getByRole('tab', {
+        name: '04 - Supplies',
+      });
+      const fellowshipsTab = screen.getByRole('tab', {
+        name: '07 - Fellowships',
+      });
+      expect(suppliesTab).toHaveAttribute('aria-selected', 'false');
+      expect(fellowshipsTab).toHaveAttribute('aria-selected', 'false');
+
+      await user.click(suppliesTab);
+      expect(suppliesTab).toHaveAttribute('aria-selected', 'true');
+      expect(fellowshipsTab).toHaveAttribute('aria-selected', 'false');
+      expect(
+        screen.getByRole('heading', { name: 'Non-Personnel: Supplies' })
+      ).toBeInTheDocument();
     } finally {
       cleanup();
     }

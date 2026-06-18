@@ -33,6 +33,14 @@ export interface CategorySpend {
   spend: number;
 }
 
+export function getProjectionTransitionMonth(
+  result: ProjectProjectionResult
+): string | null {
+  return (
+    result.periods.find((period) => period.kind === 'blended')?.month ?? null
+  );
+}
+
 function toPoints(periods: ProjectProjectionPeriod[]): ProjectionPoint[] {
   const byMonth = new Map<string, ProjectionPoint>();
 
@@ -87,6 +95,29 @@ export function buildProjectionSeries(
   }
 
   return series;
+}
+
+export function buildNonPersonnelCategorySeries(
+  result: ProjectProjectionResult
+): ProjectionSeries[] {
+  const byCategory = new Map<string, ProjectProjectionPeriod[]>();
+
+  for (const period of result.periods) {
+    if (period.isPersonnel === 1) {
+      continue;
+    }
+
+    const periods = byCategory.get(period.expenditureCategory) ?? [];
+    periods.push(period);
+    byCategory.set(period.expenditureCategory, periods);
+  }
+
+  return [...byCategory.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, periods]) => ({
+      key,
+      points: toPoints(periods),
+    }));
 }
 
 export function getMonthlyCategorySpend(
