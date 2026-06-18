@@ -137,6 +137,23 @@ public class SystemControllerTests
             });
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void GetFeatures_reflects_the_configured_flag(bool projectionsEnabled)
+    {
+        using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
+
+        var (controller, _) = CreateController(
+            ctx,
+            featureFlags: new FeatureFlagOptions { ProjectionsEnabled = projectionsEnabled });
+
+        var result = controller.GetFeatures();
+
+        result.Result.Should().BeOfType<OkObjectResult>()
+            .Which.Value.Should().BeEquivalentTo(new ClientFeatures(projectionsEnabled));
+    }
+
     [Fact]
     public async Task Emulate_accepts_guid_identifier()
     {
@@ -214,7 +231,8 @@ public class SystemControllerTests
     private static (SystemController Controller, FakeAuthenticationService Auth) CreateController(
         AppDbContext ctx,
         RumOptions? rumOptions = null,
-        string environmentName = "Development")
+        string environmentName = "Development",
+        FeatureFlagOptions? featureFlags = null)
     {
         var auth = new FakeAuthenticationService();
 
@@ -228,6 +246,7 @@ public class SystemControllerTests
         var controller = new SystemController(
             userService,
             Options.Create(rumOptions ?? new RumOptions()),
+            Options.Create(featureFlags ?? new FeatureFlagOptions()),
             new FakeHostEnvironment { EnvironmentName = environmentName })
         {
             ControllerContext = new ControllerContext { HttpContext = httpContext },

@@ -9,6 +9,9 @@ const defaultHandlers = [
   http.get('/api/notification', () =>
     HttpResponse.json({ enabled: false, message: '', updatedOn: null })
   ),
+  http.get('/api/system/features', () =>
+    HttpResponse.json({ projectionsEnabled: true })
+  ),
 ];
 
 // Create a shared MSW server instance that can be used across all tests

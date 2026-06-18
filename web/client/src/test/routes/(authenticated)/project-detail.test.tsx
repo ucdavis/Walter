@@ -362,6 +362,31 @@ describe('project detail page', () => {
     }
   });
 
+  it('hides the project burndown when the projections feature flag is off', async () => {
+    const projects = [createProject({ pmEmployeeId: '2000' })];
+    setupHandlers(
+      { employeeId: '1000', name: 'PI User' },
+      projects,
+      burndownProjection
+    );
+    server.use(
+      http.get('/api/system/features', () =>
+        HttpResponse.json({ projectionsEnabled: false })
+      )
+    );
+
+    const { cleanup } = renderRoute({
+      initialPath: '/projects/1000/P1',
+    });
+
+    try {
+      await screen.findByText('Financial Details');
+      expect(screen.queryByText('Project Burndown')).not.toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+
   it('hides the project burndown when the projection has no periods', async () => {
     const projects = [createProject({ pmEmployeeId: '2000' })];
     setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);
