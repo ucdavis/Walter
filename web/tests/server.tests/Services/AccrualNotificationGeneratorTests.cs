@@ -8,7 +8,7 @@ namespace server.tests.Services;
 public sealed class AccrualNotificationGeneratorTests
 {
     [Fact]
-    public async Task GenerateMonthlyAsync_builds_and_enqueues_employee_and_viewer_messages()
+    public async Task GenerateMonthlyAsync_builds_and_enqueues_employee_messages()
     {
         var now = new DateTime(2026, 5, 7, 20, 0, 0, DateTimeKind.Utc);
         var runId = Guid.NewGuid();
@@ -54,27 +54,25 @@ public sealed class AccrualNotificationGeneratorTests
         result.RunId.Should().Be(runId);
         result.SnapshotAsOfDate.Should().Be(new DateTime(2026, 4, 30));
         result.EmployeeCandidateCount.Should().Be(2);
-        result.ViewerRecipientCount.Should().Be(2);
-        result.DraftCount.Should().Be(2);
-        result.SkippedCount.Should().Be(2);
-        result.EnqueuedCount.Should().Be(2);
+        result.ViewerRecipientCount.Should().Be(0);
+        result.DraftCount.Should().Be(1);
+        result.SkippedCount.Should().Be(1);
+        result.EnqueuedCount.Should().Be(1);
         result.DuplicateCount.Should().Be(0);
 
         queue.EnqueueCalled.Should().BeTrue();
         queue.NowUtc.Should().Be(now);
-        queue.Messages.Should().HaveCount(2);
+        queue.Messages.Should().ContainSingle();
         queue.Messages.Should().Contain(message =>
             message.RunId == runId &&
             message.NotificationType == AccrualNotificationMessageBuilder.EmployeeNotificationType &&
             message.RecipientType == OutboundMessage.RecipientTypes.Employee &&
             message.DedupeKey == "accrual:employee:E001:2026-04-30");
-        queue.Messages.Should().Contain(message =>
-            message.RunId == runId &&
-            message.NotificationType == AccrualNotificationMessageBuilder.ViewerReportNotificationType &&
-            message.RecipientType == OutboundMessage.RecipientTypes.AccrualViewer &&
-            message.DedupeKey == $"accrual:viewer-report:{viewerId}:2026-04-30");
+        queue.Messages.Should().NotContain(message =>
+            message.NotificationType == AccrualNotificationMessageBuilder.ViewerReportNotificationType);
+        viewerProvider.CallCount.Should().Be(0);
         result.Skipped.Select(skip => skip.RecipientType).Should().BeEquivalentTo(
-            [OutboundMessage.RecipientTypes.Employee, OutboundMessage.RecipientTypes.AccrualViewer]);
+            [OutboundMessage.RecipientTypes.Employee]);
     }
 
     [Fact]
@@ -102,10 +100,11 @@ public sealed class AccrualNotificationGeneratorTests
             new AccrualNotificationGenerationOptions { DryRun = true });
 
         result.Status.Should().Be(AccrualNotificationGenerationStatus.DryRun);
-        result.DraftCount.Should().Be(2);
+        result.DraftCount.Should().Be(1);
         result.EnqueuedCount.Should().Be(0);
         result.DuplicateCount.Should().Be(0);
         queue.EnqueueCalled.Should().BeFalse();
+        viewerProvider.CallCount.Should().Be(0);
     }
 
     [Fact]

@@ -44,6 +44,8 @@ public enum AccrualNotificationGenerationStatus
 
 public sealed class AccrualNotificationGenerator : IAccrualNotificationGenerator
 {
+    private const bool GenerateViewerReportEmails = false;
+
     private readonly IAccrualReportDataSource _accrualReportDataSource;
     private readonly IAccrualViewerRecipientProvider _viewerRecipientProvider;
     private readonly AccrualNotificationMessageBuilder _messageBuilder;
@@ -105,10 +107,14 @@ public sealed class AccrualNotificationGenerator : IAccrualNotificationGenerator
         }
 
         var employeeCandidates = AccrualOverviewCalculator.BuildNotificationCandidates(records);
-        var viewerRecipients = await _viewerRecipientProvider.GetActiveAccrualViewersAsync(cancellationToken);
+        IReadOnlyList<AccrualViewerRecipient> viewerRecipients = GenerateViewerReportEmails
+            ? await _viewerRecipientProvider.GetActiveAccrualViewersAsync(cancellationToken)
+            : [];
 
         var employeeBuild = _messageBuilder.BuildEmployeeMessages(runId, employeeCandidates, nowUtc);
-        var viewerBuild = _messageBuilder.BuildViewerReportMessages(runId, overview, viewerRecipients, nowUtc);
+        var viewerBuild = GenerateViewerReportEmails
+            ? _messageBuilder.BuildViewerReportMessages(runId, overview, viewerRecipients, nowUtc)
+            : new AccrualMessageBuildResult([], []);
         var drafts = employeeBuild.Messages
             .Concat(viewerBuild.Messages)
             .ToList();
