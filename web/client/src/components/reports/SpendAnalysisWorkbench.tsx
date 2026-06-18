@@ -61,7 +61,7 @@ export function SpendAnalysisWorkbench() {
 
       <section id="procurement-assistant">
         <div className="gap-5 border-t border-main-border mt-4 py-6">
-          <h2 className="max-w-3xl h2 mb-4">Ask a Question</h2>
+          <h2 className="max-w-3xl h2 mb-4">Walter fetch me...</h2>
 
           <div className="flex flex-wrap gap-2 mb-4">
             {EXAMPLE_QUESTIONS.map((example) => (
@@ -116,7 +116,7 @@ export function SpendAnalysisWorkbench() {
           {mutation.data ? (
             <SpendAnalysisResults response={mutation.data} />
           ) : (
-            <div className="rounded-md border border-dashed border-main-border bg-base-200/70 p-6 text-base-content/70">
+            <div className="rounded-md border border-dashed border-main-border bg-base-200/70 p-6 text-base-content/70 mt-2">
               Run a sample question to preview the answer card, charts, table,
               and tool trace.
             </div>
@@ -136,7 +136,7 @@ function SpendAnalysisResults({
 
   return (
     <div className="mt-6 space-y-5">
-      <section className="border-l-4 border-primary-color/50 pl-5 py-4 px-2 my-8 bg-primary-color/10">
+      <section className="border-l-4 border-primary-color/50 py-4 px-5 my-8 bg-primary-color/10">
         <div className="gap-5">
           <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
             <div className="space-y-2">
@@ -145,17 +145,21 @@ function SpendAnalysisResults({
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <div className="badge badge-neutral">{response.intent}</div>
-              <div className="badge badge-outline">
+              <div className="badge badge-neutral badge-sm">
+                {response.intent}
+              </div>
+              <div className="badge badge-outline badge-sm">
                 confidence: {response.confidence}
               </div>
               {response.entity ? (
-                <div className="badge badge-outline">
+                <div className="badge badge-outline badge-sm">
                   {response.entity.type}: {response.entity.value}
                 </div>
               ) : null}
               {!response.isConfigured ? (
-                <div className="badge badge-warning">Needs configuration</div>
+                <div className="badge badge-warning badge-sm">
+                  Needs configuration
+                </div>
               ) : null}
             </div>
           </div>
@@ -187,7 +191,7 @@ function SpendAnalysisResults({
       ) : null}
 
       {supportingTable ? (
-        <section className="card bg-base-100 border border-main-border shadow-sm">
+        <section className="card bg-base-100 border border-main-border">
           <div className="card-body">
             <h2 className="h2">{supportingTable.title}</h2>
             <div className="mt-4 overflow-x-auto">
@@ -236,7 +240,7 @@ function SpendAnalysisResults({
       ) : null}
 
       <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
-        <section className="card bg-base-100 border border-main-border shadow-sm">
+        <section className="card bg-base-100 border border-main-border">
           <div className="card-body">
             <h2 className="h2">Audit Summary</h2>
             <ul className="mt-4 space-y-2 text-sm leading-6 text-base-content/80">
@@ -247,7 +251,7 @@ function SpendAnalysisResults({
           </div>
         </section>
 
-        <details className="card bg-base-100 border border-main-border shadow-sm">
+        <details className="card bg-base-100 border border-main-border">
           <summary className="cursor-pointer px-6 pt-6 text-2xl font-proxima-bold">
             Query Trace
           </summary>
@@ -335,7 +339,7 @@ function FindingsCard({ items, title }: { items: string[]; title: string }) {
   }
 
   return (
-    <section className="card bg-base-100 border border-main-border shadow-sm">
+    <section className="card bg-base-100 border border-main-border">
       <div className="card-body">
         <h2 className="h2">{title}</h2>
         <ul className="mt-4 space-y-2 text-sm leading-6 text-base-content/80">
@@ -354,7 +358,7 @@ function SpendAnalysisChartCard({
   chart: SpendAnalysisChartPayload;
 }) {
   return (
-    <section className="card bg-base-100 border border-main-border shadow-sm">
+    <section className="card bg-base-100 border border-main-border">
       <div className="card-body">
         <h2 className="h2">{chart.title}</h2>
         <div className="mt-4 h-80">
