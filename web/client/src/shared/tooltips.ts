@@ -9,12 +9,6 @@ export const tooltipDefinitions = {
   burdenStructure:
     'Rule set that determines which costs receive indirect cost charges and how they are calculated.',
   cbr: 'Monthly composite benefit rate cost, including fringe/benefit burden.',
-  taskBreakdown:
-    'Summary of how project costs are organized by financial coding segments.',
-  totalBudget:
-    'Total PPM budget across all active and expired projects. Closed projects are excluded.',
-  totalBalance:
-    'Total remaining balance (budget minus expenses and commitments) across all active and expired projects. Closed projects are excluded.',
   commitment:
     'Commitment / Encumbrance are funds set aside when a requisition is fully approved; it is automatically released when the associated purchase order is created (or when an approved requisition is canceled before PO creation).',
   contractAdministrator:
@@ -32,6 +26,14 @@ export const tooltipDefinitions = {
     'Monthly composite benefit rate cost, including fringe/benefit burden.',
   postReportingPeriod:
     'Number of days after the award end date allowed for reporting and closeout activity.',
+  projectBurndown:
+    'Remaining budget by expenditure category: three months of actuals, the current month, and twelve projected months based on personnel budgets and recent non-personnel spending.',
+  taskBreakdown:
+    'Summary of how project costs are organized by financial coding segments.',
+  totalBalance:
+    'Total remaining balance (budget minus expenses and commitments) across all active and expired projects. Closed projects are excluded.',
+  totalBudget:
+    'Total PPM budget across all active and expired projects. Closed projects are excluded.',
 } as const;
 
 export type TooltipDefinitionKey = keyof typeof tooltipDefinitions;

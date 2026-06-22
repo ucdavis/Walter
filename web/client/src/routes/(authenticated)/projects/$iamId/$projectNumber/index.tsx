@@ -2,8 +2,10 @@ import { ProjectAlerts } from '@/components/alerts/ProjectAlerts.tsx';
 import { TaskBreakdown } from '@/components/project/TaskBreakdown.tsx';
 import { ProjectDetails } from '@/components/project/ProjectDetails.tsx';
 import { FinancialDetails } from '@/components/project/FinancialDetails.tsx';
+import { ProjectBurndownSection } from '@/components/project/ProjectBurndownChart.tsx';
 import { PersonnelTable } from '@/components/project/PersonnelTable.tsx';
 import { usePersonnelQuery } from '@/queries/personnel.ts';
+import { useFeatureFlagsQuery } from '@/queries/featureFlags.ts';
 import {
   summarizeProjectByNumber,
   type ProjectSummary,
@@ -51,6 +53,7 @@ function ProjectContent({
   summary: ProjectSummary;
 }) {
   const personnelQuery = usePersonnelQuery(iamId, [summary.projectNumber]);
+  const { data: featureFlags } = useFeatureFlagsQuery();
   const user = useUser();
   const canSeeDiscrepancy = canViewProjectDiscrepancy(
     user.roles,
@@ -98,6 +101,9 @@ function ProjectContent({
 
       <ProjectDetails summary={summary} />
       <FinancialDetails summary={summary} />
+      {!summary.isInternal && featureFlags?.projectionsEnabled && (
+        <ProjectBurndownSection projectNumber={summary.projectNumber} />
+      )}
       <ProjectAdditionalInfo summary={summary} />
 
       <section className="section-margin">

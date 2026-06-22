@@ -529,5 +529,14 @@ public sealed class SearchControllerTests
         {
             throw new NotImplementedException();
         }
+
+        public Task<ProjectProjectionResult> GetProjectProjectionAsync(
+            string projectNumber,
+            string? applicationUser = null,
+            string? emulatingUser = null,
+            CancellationToken ct = default)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

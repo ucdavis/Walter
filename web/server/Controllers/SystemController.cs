@@ -16,15 +16,18 @@ public class SystemController : ApiControllerBase
 {
     private readonly IUserService _userService;
     private readonly RumOptions _rumOptions;
+    private readonly FeatureFlagOptions _featureFlags;
     private readonly IHostEnvironment _hostEnvironment;
 
     public SystemController(
         IUserService userService,
         IOptions<RumOptions> rumOptions,
+        IOptions<FeatureFlagOptions> featureFlags,
         IHostEnvironment hostEnvironment)
     {
         _userService = userService;
         _rumOptions = rumOptions.Value;
+        _featureFlags = featureFlags.Value;
         _hostEnvironment = hostEnvironment;
     }
 
@@ -33,6 +36,17 @@ public class SystemController : ApiControllerBase
     public ActionResult<RumPublicConfig> GetRumConfig()
     {
         return Ok(_rumOptions.ToPublicConfig(_hostEnvironment));
+    }
+
+    /// <summary>
+    /// Environment feature flags the SPA reads at load to decide which optional features to show.
+    /// Anonymous + non-sensitive, mirroring rum-config.
+    /// </summary>
+    [AllowAnonymous]
+    [HttpGet("features")]
+    public ActionResult<ClientFeatures> GetFeatures()
+    {
+        return Ok(new ClientFeatures(_featureFlags.ProjectionsEnabled));
     }
 
     [HttpGet("emulate/{identifier}")]
@@ -107,3 +121,6 @@ public class SystemController : ApiControllerBase
         return Ok("Emulation ended. Please log in again.");
     }
 }
+
+/// <summary>Environment feature flags surfaced to the SPA via GET /api/system/features.</summary>
+public sealed record ClientFeatures(bool ProjectionsEnabled);
