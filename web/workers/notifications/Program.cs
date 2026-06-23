@@ -1,16 +1,36 @@
 using Mjml.Net;
+using Microsoft.Azure.Functions.Worker.OpenTelemetry;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using OpenTelemetry;
+using OpenTelemetry.Logs;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 using Razor.Templating.Core;
 using server.core.Data;
 using server.core.Services;
+using System.Diagnostics;
+using System.Reflection;
 using Walter.Workers.Notifications;
 
 var host = new HostBuilder()
     .ConfigureFunctionsWorkerDefaults()
+    .ConfigureLogging(logging =>
+    {
+        logging.AddOpenTelemetry(logOptions =>
+        {
+            logOptions.IncludeFormattedMessage = true;
+            logOptions.IncludeScopes = true;
+            logOptions.ParseStateValues = true;
+            logOptions.SetResourceBuilder(BuildResourceBuilder());
+            logOptions.AddOtlpExporter();
+        });
+    })
     .ConfigureAppConfiguration((context, config) =>
     {
         config
@@ -27,6 +47,27 @@ var host = new HostBuilder()
         {
             throw new InvalidOperationException("No database connection string configured. Set DB_CONNECTION.");
         }
+
+        var sampler = context.HostingEnvironment.IsDevelopment()
+            ? new ParentBasedSampler(new AlwaysOnSampler())
+            : new ParentBasedSampler(new TraceIdRatioBasedSampler(0.2));
+
+        services.AddOpenTelemetry()
+            .ConfigureResource(resource => resource.AddService(
+                serviceName: "walter-notifications",
+                serviceVersion: ResolveServiceVersion()))
+            .UseFunctionsWorkerDefaults()
+            .WithTracing(tracing => tracing
+                .SetSampler(sampler)
+                .AddHttpClientInstrumentation()
+                .AddSqlClientInstrumentation(options =>
+                {
+                    options.RecordException = true;
+                }))
+            .WithMetrics(metrics => metrics
+                .AddHttpClientInstrumentation()
+                .AddSqlClientInstrumentation())
+            .UseOtlpExporter();
 
         services.Configure<NotificationWorkerOptions>(
             context.Configuration.GetSection(NotificationWorkerOptions.SectionName));
@@ -98,3 +139,32 @@ var host = new HostBuilder()
     .Build();
 
 await host.RunAsync();
+
+static ResourceBuilder BuildResourceBuilder()
+{
+    return ResourceBuilder.CreateDefault()
+        .AddService(
+            serviceName: "walter-notifications",
+            serviceVersion: ResolveServiceVersion());
+}
+
+static string ResolveServiceVersion()
+{
+    var assembly = Assembly.GetExecutingAssembly();
+    var informationalVersion = assembly
+        .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+        ?.InformationalVersion;
+
+    if (!string.IsNullOrWhiteSpace(informationalVersion))
+    {
+        return informationalVersion;
+    }
+
+    var assemblyLocation = assembly.Location;
+    if (string.IsNullOrEmpty(assemblyLocation))
+    {
+        return assembly.GetName().Version?.ToString() ?? "unknown";
+    }
+
+    return FileVersionInfo.GetVersionInfo(assemblyLocation).ProductVersion ?? "unknown";
+}
