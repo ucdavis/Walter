@@ -83,7 +83,7 @@ BEGIN
             acc.parent_level_0_code NOT LIKE ''3%''
             OR (tlr.PERIOD_NAME = ''Jul-23'' AND tlr.ACCOUNTING_SEQUENCE_NUMBER IN (''100009'',''100010'',''100307'',''103283'',''103284''))
             OR (tlr.PERIOD_NAME = ''Apr-24'' AND tlr.JOURNAL_SOURCE = ''UCD Conversion'' AND tlr.JOURNAL_CATEGORY = ''UCD Conversion'')
-            OR tlr.ACCOUNTING_SEQUENCE_NUMBER IN (''173421'',''288176'',''292363'',''338926'',''341705'',''341722'',''398465'',''413247'',''419608'',''434173'',''438836'',''441285'')
+            OR tlr.ACCOUNTING_SEQUENCE_NUMBER IN (''173421'',''176082'',''180522'',''181673'',''270037'',''274316'',''288176'',''292363'',''338926'',''341705'',''341722'',''398465'',''413247'',''419608'',''434173'',''438836'',''441285'')
         )';
 
     SET @FilterClause = @FilterClause + ' AND tlr.PERIOD_NAME <> ''Jun-23''';
