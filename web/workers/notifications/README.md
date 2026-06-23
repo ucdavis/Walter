@@ -62,6 +62,11 @@ Required now:
 - `NOTIFICATIONS_ACCRUAL_GENERATION_SCHEDULE`: NCRONTAB schedule for monthly accrual generation.
 - `Notifications__SenderEnabled`: must be `true` before sender processing will run.
 - `Notifications__AccrualGenerationEnabled`: must be `true` before monthly accrual generation will run.
+- `OTEL_EXPORTER_OTLP_ENDPOINT`: OTLP endpoint used for worker and Functions host telemetry.
+- `OTEL_EXPORTER_OTLP_HEADERS`: OTLP authentication headers.
+- `OTEL_EXPORTER_OTLP_PROTOCOL`: OTLP protocol, typically `grpc`.
+- `OTEL_SERVICE_NAME`: stable service name for the Function App, typically `walter-notifications`.
+- `OTEL_RESOURCE_ATTRIBUTES`: additional resource attributes, for example `deployment.environment=test`.
 
 Optional:
 
