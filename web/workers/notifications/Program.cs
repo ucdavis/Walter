@@ -160,5 +160,11 @@ static string ResolveServiceVersion()
         return informationalVersion;
     }
 
-    return FileVersionInfo.GetVersionInfo(assembly.Location).ProductVersion ?? "unknown";
+    var assemblyLocation = assembly.Location;
+    if (string.IsNullOrEmpty(assemblyLocation))
+    {
+        return assembly.GetName().Version?.ToString() ?? "unknown";
+    }
+
+    return FileVersionInfo.GetVersionInfo(assemblyLocation).ProductVersion ?? "unknown";
 }
