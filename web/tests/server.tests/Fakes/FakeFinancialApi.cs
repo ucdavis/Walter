@@ -57,6 +57,7 @@ public sealed class FakeFinancialApiService : IFinancialApiService
 public sealed record FakeFinancialProjectTeamMember(
     string RoleName,
     string Name,
+    string EmployeeId,
     string? Email);
 
 internal sealed class FakePpmProjectByProjectTeamMemberEmployeeIdQuery : IPpmProjectByProjectTeamMemberEmployeeIdQuery
@@ -172,6 +173,7 @@ internal sealed class FakePpmProjectTeamMembersQuery : IPpmProjectTeamMembersQue
             method.Name switch
             {
                 "get_Email" => member.Email,
+                "get_EmployeeId" => member.EmployeeId,
                 _ => throw new NotImplementedException($"{method.Name} is not implemented for this fake."),
             });
 
