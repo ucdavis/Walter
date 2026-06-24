@@ -19,3 +19,5 @@ Thumbs.db
 walter/bin/
 walter/obj/
 walter/**/*.user
+
+.vs/
