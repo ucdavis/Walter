@@ -249,7 +249,7 @@ public sealed class SearchControllerTests
     }
 
     [Fact]
-    public async Task ResolveProjectPi_returns_pi_iam_id_when_pi_email_resolves()
+    public async Task ResolveProjectPi_returns_pi_iam_id_when_pi_employee_id_resolves()
     {
         using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
         var authorizationService = CreateAuthorizationService();
@@ -284,10 +284,12 @@ public sealed class SearchControllerTests
                         new FakeFinancialProjectTeamMember(
                             PpmRole.PrincipalInvestigator,
                             "Pat PI",
+                            "EPI",
                             "pi@ucdavis.edu"),
                         new FakeFinancialProjectTeamMember(
                             PpmRole.ProjectManager,
                             "Morgan PM",
+                            "EPM",
                             "pm@ucdavis.edu"),
                     ],
                 }),
@@ -330,6 +332,7 @@ public sealed class SearchControllerTests
                         new FakeFinancialProjectTeamMember(
                             PpmRole.ProjectManager,
                             "Morgan PM",
+                            "EPM",
                             "pm@ucdavis.edu"),
                     ],
                 }),
@@ -372,10 +375,12 @@ public sealed class SearchControllerTests
                         new FakeFinancialProjectTeamMember(
                             PpmRole.PrincipalInvestigator,
                             "Pat PI",
+                            "EPI-MISSING",
                             "missing-pi@ucdavis.edu"),
                         new FakeFinancialProjectTeamMember(
                             PpmRole.ProjectManager,
                             "Morgan PM",
+                            "EPM",
                             "pm@ucdavis.edu"),
                     ],
                 }),
