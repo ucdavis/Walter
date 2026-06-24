@@ -418,20 +418,19 @@ public sealed class SearchController : ApiControllerBase
         var teamMembers = project?.TeamMembers?
             .Where(m => m.RoleName == roleName)
             .ToArray() ?? [];
-        var membersWithEmail = teamMembers
-            .Where(m => !string.IsNullOrWhiteSpace(m.Person?.Email))
+        var membersWithEmployeeId = teamMembers
+            .Where(m => !string.IsNullOrWhiteSpace(m.Person?.EmployeeId))
             .OrderBy(m => m.Name, StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
-        foreach (var member in membersWithEmail)
+        foreach (var member in membersWithEmployeeId)
         {
-            var email = member.Person?.Email;
-            if (string.IsNullOrWhiteSpace(email))
+            var employeeId = member.Person?.EmployeeId;
+            if (string.IsNullOrWhiteSpace(employeeId))
             {
                 continue;
             }
-
-            var person = await _datamartService.GetSearchablePersonByEmailAsync(email, cancellationToken);
+            var person = await _datamartService.GetSearchablePersonByEmployeeIdAsync(employeeId, cancellationToken);
             if (!string.IsNullOrWhiteSpace(person?.IamId))
             {
                 return new TeamMemberIamResolution(person.IamId, teamMembers.Length > 0);
