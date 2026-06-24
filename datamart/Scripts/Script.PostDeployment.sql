@@ -21,6 +21,7 @@ GRANT EXECUTE ON [dbo].[usp_GetProjectProjection] TO [WalterAppRole];
 
 GRANT EXECUTE ON [dbo].[usp_GetGLPPMReconciliation] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_GetGLTransactionListings] TO [WalterAppRole];
+GRANT EXECUTE ON [dbo].[usp_GetGlSegmentSummary] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_GetPositionBudgets] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_GetPositionBudgetsLocal] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_GetSearchablePeople] TO [WalterAppRole];
@@ -45,6 +46,7 @@ GRANT SELECT ON [dbo].[PpmProjects] TO [WalterAppRole];
 GRANT SELECT ON [dbo].[PpmProjectAwards] TO [WalterAppRole];
 GRANT SELECT ON [dbo].[GlProjectMonthlyActuals] TO [WalterAppRole];
 GRANT SELECT ON [dbo].[ExpenditureTypeByAccount] TO [WalterAppRole];
+GRANT SELECT ON [dbo].[GlSegmentMonthlyActuals] TO [WalterAppRole];
 
 -- Grant pipeline role permissions
 GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[FacultyDeptPortfolio] TO [WalterPipelineRole];
