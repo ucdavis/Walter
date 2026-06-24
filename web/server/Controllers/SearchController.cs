@@ -256,7 +256,7 @@ public sealed class SearchController : ApiControllerBase
         }
 
         var client = _financialApiService.GetClient();
-        var piResolution = await ResolveFirstTeamMemberIamIdByEmailAsync(
+        var piResolution = await ResolveFirstTeamMemberIamIdByEmployeeIdAsync(
             client,
             normalizedProjectNumber,
             PpmRole.PrincipalInvestigator,
@@ -272,7 +272,7 @@ public sealed class SearchController : ApiControllerBase
             return NotFound();
         }
 
-        var pmResolution = await ResolveFirstTeamMemberIamIdByEmailAsync(
+        var pmResolution = await ResolveFirstTeamMemberIamIdByEmployeeIdAsync(
             client,
             normalizedProjectNumber,
             PpmRole.ProjectManager,
@@ -404,7 +404,7 @@ public sealed class SearchController : ApiControllerBase
 
     private sealed record TeamMemberIamResolution(string? IamId, bool HasTeamMembers);
 
-    private async Task<TeamMemberIamResolution> ResolveFirstTeamMemberIamIdByEmailAsync(
+    private async Task<TeamMemberIamResolution> ResolveFirstTeamMemberIamIdByEmployeeIdAsync(
         IAggieEnterpriseClient client,
         string projectNumber,
         string roleName,
