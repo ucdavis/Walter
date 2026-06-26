@@ -41,8 +41,10 @@ create table dbo.EmployeeAccrualBalances
     Level4DeptDesc             nvarchar(100),
     Level5Dept                 nvarchar(10),
     Level5DeptDesc             nvarchar(100),
-    LoadDate                   datetime2(3),
-    LastUpdated                datetime2(3) not null,
+    LoadDate                   datetime2(3)
+        constraint DF_EmployeeAccrualBalances_LoadDate default sysutcdatetime(),
+    LastUpdated                datetime2(3) not null
+        constraint DF_EmployeeAccrualBalances_LastUpdated default sysutcdatetime(),
     constraint PK_EmployeeAccrualBalances
         primary key (EmployeeId, AsOfDate, PositionNumber)
 )
