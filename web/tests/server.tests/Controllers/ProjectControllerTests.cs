@@ -272,13 +272,19 @@ public sealed class ProjectControllerTests
     {
         private readonly SearchablePersonRecord? _person;
         private readonly ProjectProjectionResult? _projection;
+        private readonly IReadOnlyList<FinancialSummaryRow> _summaryRows;
+        private readonly IReadOnlyList<FinancialSummaryOption> _options;
 
         public ResolvingDatamartService(
             SearchablePersonRecord? person = null,
-            ProjectProjectionResult? projection = null)
+            ProjectProjectionResult? projection = null,
+            IReadOnlyList<FinancialSummaryRow>? summaryRows = null,
+            IReadOnlyList<FinancialSummaryOption>? options = null)
         {
             _person = person;
             _projection = projection;
+            _summaryRows = summaryRows ?? Array.Empty<FinancialSummaryRow>();
+            _options = options ?? Array.Empty<FinancialSummaryOption>();
         }
 
         public Task<IReadOnlyList<SearchablePersonRecord>> SearchPeopleAsync(
@@ -381,5 +387,19 @@ public sealed class ProjectControllerTests
                 ? Task.FromResult(_projection)
                 : throw new InvalidOperationException("Datamart should not be called for unauthorized users.");
         }
+
+        public Task<IReadOnlyList<FinancialSummaryRow>> GetGlSegmentSummaryAsync(
+            FinancialSummaryQuery query,
+            string? applicationUser = null,
+            string? emulatingUser = null,
+            CancellationToken ct = default)
+            => Task.FromResult(_summaryRows);
+
+        public Task<IReadOnlyList<FinancialSummaryOption>> GetGlSegmentFilterOptionsAsync(
+            FinancialSummaryOptionsQuery query,
+            string? applicationUser = null,
+            string? emulatingUser = null,
+            CancellationToken ct = default)
+            => Task.FromResult(_options);
     }
 }

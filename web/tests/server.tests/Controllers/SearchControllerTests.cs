@@ -538,5 +538,19 @@ public sealed class SearchControllerTests
         {
             throw new NotImplementedException();
         }
+
+        public Task<IReadOnlyList<FinancialSummaryRow>> GetGlSegmentSummaryAsync(
+            FinancialSummaryQuery query,
+            string? applicationUser = null,
+            string? emulatingUser = null,
+            CancellationToken ct = default)
+            => throw new NotImplementedException();
+
+        public Task<IReadOnlyList<FinancialSummaryOption>> GetGlSegmentFilterOptionsAsync(
+            FinancialSummaryOptionsQuery query,
+            string? applicationUser = null,
+            string? emulatingUser = null,
+            CancellationToken ct = default)
+            => throw new NotImplementedException();
     }
 }

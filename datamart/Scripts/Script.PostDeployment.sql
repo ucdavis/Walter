@@ -22,6 +22,7 @@ GRANT EXECUTE ON [dbo].[usp_GetProjectProjection] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_GetGLPPMReconciliation] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_GetGLTransactionListings] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_GetGlSegmentSummary] TO [WalterAppRole];
+GRANT EXECUTE ON [dbo].[usp_GetGlSegmentSummaryFilterOptions] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_GetPositionBudgets] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_GetPositionBudgetsLocal] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_GetSearchablePeople] TO [WalterAppRole];
