@@ -48,6 +48,9 @@ GRANT SELECT ON [dbo].[PpmProjectAwards] TO [WalterAppRole];
 GRANT SELECT ON [dbo].[GlProjectMonthlyActuals] TO [WalterAppRole];
 GRANT SELECT ON [dbo].[ExpenditureTypeByAccount] TO [WalterAppRole];
 GRANT SELECT ON [dbo].[GlSegmentMonthlyActuals] TO [WalterAppRole];
+GRANT SELECT ON [dbo].[ErpFundHierarchy] TO [WalterAppRole];
+GRANT SELECT ON [dbo].[ErpActivityHierarchy] TO [WalterAppRole];
+GRANT SELECT ON [dbo].[ErpAccountHierarchy] TO [WalterAppRole];
 
 -- Grant pipeline role permissions
 GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[FacultyDeptPortfolio] TO [WalterPipelineRole];
@@ -74,6 +77,11 @@ GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[PpmProjectAwards_Staging] TO [Wal
 -- which does not honor ownership chaining.
 GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[GlProjectMonthlyActuals] TO [WalterPipelineRole];
 GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[GlProjectMonthlyActuals_Staging] TO [WalterPipelineRole];
+-- Chart-string hierarchy dimensions for the financial summary report (loaded out-of-band for now;
+-- pipeline will maintain them later).
+GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[ErpFundHierarchy] TO [WalterPipelineRole];
+GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[ErpActivityHierarchy] TO [WalterPipelineRole];
+GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[ErpAccountHierarchy] TO [WalterPipelineRole];
 
 
 

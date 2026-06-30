@@ -27,6 +27,45 @@ public sealed class FinancialSummaryRow
     [JsonPropertyName("naturalAccount")] public string? NaturalAccount { get; set; }
     [JsonPropertyName("naturalAccountName")] public string? NaturalAccountName { get; set; }
 
+    // Flattened chart-string ancestor levels (0 = top rollup .. 5 = nearest parent), joined from the
+    // dbo.Erp*Hierarchy dimensions. Only populated for the levels selected as group-by dimensions.
+    [JsonPropertyName("fundParentLevel0Code")] public string? FundParentLevel0Code { get; set; }
+    [JsonPropertyName("fundParentLevel0Name")] public string? FundParentLevel0Name { get; set; }
+    [JsonPropertyName("fundParentLevel1Code")] public string? FundParentLevel1Code { get; set; }
+    [JsonPropertyName("fundParentLevel1Name")] public string? FundParentLevel1Name { get; set; }
+    [JsonPropertyName("fundParentLevel2Code")] public string? FundParentLevel2Code { get; set; }
+    [JsonPropertyName("fundParentLevel2Name")] public string? FundParentLevel2Name { get; set; }
+    [JsonPropertyName("fundParentLevel3Code")] public string? FundParentLevel3Code { get; set; }
+    [JsonPropertyName("fundParentLevel3Name")] public string? FundParentLevel3Name { get; set; }
+    [JsonPropertyName("fundParentLevel4Code")] public string? FundParentLevel4Code { get; set; }
+    [JsonPropertyName("fundParentLevel4Name")] public string? FundParentLevel4Name { get; set; }
+    [JsonPropertyName("fundParentLevel5Code")] public string? FundParentLevel5Code { get; set; }
+    [JsonPropertyName("fundParentLevel5Name")] public string? FundParentLevel5Name { get; set; }
+    [JsonPropertyName("activityParentLevel0Code")] public string? ActivityParentLevel0Code { get; set; }
+    [JsonPropertyName("activityParentLevel0Name")] public string? ActivityParentLevel0Name { get; set; }
+    [JsonPropertyName("activityParentLevel1Code")] public string? ActivityParentLevel1Code { get; set; }
+    [JsonPropertyName("activityParentLevel1Name")] public string? ActivityParentLevel1Name { get; set; }
+    [JsonPropertyName("activityParentLevel2Code")] public string? ActivityParentLevel2Code { get; set; }
+    [JsonPropertyName("activityParentLevel2Name")] public string? ActivityParentLevel2Name { get; set; }
+    [JsonPropertyName("activityParentLevel3Code")] public string? ActivityParentLevel3Code { get; set; }
+    [JsonPropertyName("activityParentLevel3Name")] public string? ActivityParentLevel3Name { get; set; }
+    [JsonPropertyName("activityParentLevel4Code")] public string? ActivityParentLevel4Code { get; set; }
+    [JsonPropertyName("activityParentLevel4Name")] public string? ActivityParentLevel4Name { get; set; }
+    [JsonPropertyName("activityParentLevel5Code")] public string? ActivityParentLevel5Code { get; set; }
+    [JsonPropertyName("activityParentLevel5Name")] public string? ActivityParentLevel5Name { get; set; }
+    [JsonPropertyName("naturalAccountParentLevel0Code")] public string? NaturalAccountParentLevel0Code { get; set; }
+    [JsonPropertyName("naturalAccountParentLevel0Name")] public string? NaturalAccountParentLevel0Name { get; set; }
+    [JsonPropertyName("naturalAccountParentLevel1Code")] public string? NaturalAccountParentLevel1Code { get; set; }
+    [JsonPropertyName("naturalAccountParentLevel1Name")] public string? NaturalAccountParentLevel1Name { get; set; }
+    [JsonPropertyName("naturalAccountParentLevel2Code")] public string? NaturalAccountParentLevel2Code { get; set; }
+    [JsonPropertyName("naturalAccountParentLevel2Name")] public string? NaturalAccountParentLevel2Name { get; set; }
+    [JsonPropertyName("naturalAccountParentLevel3Code")] public string? NaturalAccountParentLevel3Code { get; set; }
+    [JsonPropertyName("naturalAccountParentLevel3Name")] public string? NaturalAccountParentLevel3Name { get; set; }
+    [JsonPropertyName("naturalAccountParentLevel4Code")] public string? NaturalAccountParentLevel4Code { get; set; }
+    [JsonPropertyName("naturalAccountParentLevel4Name")] public string? NaturalAccountParentLevel4Name { get; set; }
+    [JsonPropertyName("naturalAccountParentLevel5Code")] public string? NaturalAccountParentLevel5Code { get; set; }
+    [JsonPropertyName("naturalAccountParentLevel5Name")] public string? NaturalAccountParentLevel5Name { get; set; }
+
     [JsonPropertyName("income")] public decimal Income { get; set; }
     [JsonPropertyName("expense")] public decimal Expense { get; set; }
     [JsonPropertyName("net")] public decimal Net { get; set; }
