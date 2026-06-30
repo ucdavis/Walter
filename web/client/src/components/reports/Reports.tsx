@@ -11,6 +11,7 @@ type Report = {
 
 export function Reports() {
   const canViewAccruals = useHasRole('AccrualViewer');
+  const canViewFinancialSummary = useHasRole('FinancialSummaryViewer');
 
   const reports = useMemo(() => {
     const availableReports: Report[] = [];
@@ -23,8 +24,16 @@ export function Reports() {
       });
     }
 
+    if (canViewFinancialSummary) {
+      availableReports.push({
+        id: 'financial-summary',
+        title: 'College / Department Financial Summary',
+        url: '/reports/financial-summary',
+      });
+    }
+
     return availableReports;
-  }, [canViewAccruals]);
+  }, [canViewAccruals, canViewFinancialSummary]);
 
   if (reports.length === 0) {
     return (
