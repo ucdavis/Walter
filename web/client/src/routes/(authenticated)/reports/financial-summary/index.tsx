@@ -2,16 +2,6 @@ import { useMemo, useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { createColumnHelper } from '@tanstack/react-table';
 import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Legend,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
-import {
   useFinancialSummaryQuery,
   useFinancialSummaryOptions,
   type FinancialSummaryOption,
@@ -21,13 +11,13 @@ import {
 import {
   DIMENSIONS,
   activeColumns,
-  buildChartData,
   rowGroupLabel,
 } from '@/lib/financialSummary.ts';
 import {
   MultiSelectFilter,
   type FilterOption,
 } from '@/shared/MultiSelectFilter.tsx';
+import { FinancialSummaryChart } from '@/components/reports/FinancialSummaryChart.tsx';
 import { DataTable } from '@/shared/DataTable.tsx';
 import { ExportDataButton } from '@/components/ExportDataButton.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
@@ -114,10 +104,6 @@ function RouteComponent() {
   );
 
   const { data: rows = [], isError, isFetching } = useFinancialSummaryQuery(query);
-  const chartData = useMemo(
-    () => buildChartData(rows, dimensions),
-    [rows, dimensions]
-  );
 
   const deptOptions = useFinancialSummaryOptions('FinancialDept', {});
   const fundOptions = useFinancialSummaryOptions('Fund', query, department.length > 0);
@@ -394,39 +380,7 @@ function RouteComponent() {
       ) : (
         <>
           {/* Chart */}
-          <div className="h-80 mb-6">
-            <ResponsiveContainer height="100%" width="100%">
-              <BarChart
-                data={chartData}
-                margin={{ bottom: 8, left: 8, right: 24, top: 16 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis
-                  dataKey="label"
-                  tick={{ fill: 'currentColor', fontSize: 12 }}
-                />
-                <YAxis
-                  tick={{ fill: 'currentColor', fontSize: 12 }}
-                  tickFormatter={(v: number) =>
-                    `$${(v / 1000).toFixed(0)}k`
-                  }
-                />
-                <Tooltip />
-                <Legend />
-                <Bar
-                  dataKey="income"
-                  fill="var(--color-success)"
-                  name="Income"
-                />
-                <Bar
-                  dataKey="expense"
-                  fill="var(--color-error)"
-                  name="Expense"
-                />
-                <Bar dataKey="net" fill="var(--color-primary)" name="Net" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          <FinancialSummaryChart dimensions={dimensions} rows={rows} />
 
           {/* Table */}
           <DataTable
