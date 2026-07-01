@@ -12,6 +12,7 @@ import {
   DIMENSIONS,
   activeColumns,
   rowGroupLabel,
+  sortRowsByTime,
 } from '@/lib/financialSummary.ts';
 import {
   MultiSelectFilter,
@@ -63,6 +64,10 @@ const DIMENSION_GROUPS = [
     ),
     label: 'Natural Account',
   },
+  {
+    dims: DIMENSIONS.filter((d) => d.key === 'Period' || d.key === 'FiscalYear'),
+    label: 'Time',
+  },
 ];
 
 // Group-by picker options, flattened from DIMENSION_GROUPS into grouped FilterOptions.
@@ -104,6 +109,11 @@ function RouteComponent() {
   );
 
   const { data: rows = [], isError, isFetching } = useFinancialSummaryQuery(query);
+  // Chronological order when grouped by a single time dimension; sproc order otherwise.
+  const displayRows = useMemo(
+    () => sortRowsByTime(rows, dimensions),
+    [rows, dimensions]
+  );
 
   const deptOptions = useFinancialSummaryOptions('FinancialDept', {});
   const fundOptions = useFinancialSummaryOptions('Fund', query, department.length > 0);
@@ -380,18 +390,18 @@ function RouteComponent() {
       ) : (
         <>
           {/* Chart */}
-          <FinancialSummaryChart dimensions={dimensions} rows={rows} />
+          <FinancialSummaryChart dimensions={dimensions} rows={displayRows} />
 
           {/* Table */}
           <DataTable
             columns={columns}
-            data={rows}
+            data={displayRows}
             globalFilter="none"
             pagination="off"
             tableActions={
               <ExportDataButton
                 columns={csvColumns}
-                data={rows}
+                data={displayRows}
                 filename="financial-summary.csv"
               />
             }

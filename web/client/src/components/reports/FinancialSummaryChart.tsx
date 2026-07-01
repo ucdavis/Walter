@@ -11,24 +11,20 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { buildChartData, type ChartDatum } from '@/lib/financialSummary.ts';
+import {
+  buildChartData,
+  periodSortKey,
+  soleTimeDimension,
+  type ChartDatum,
+} from '@/lib/financialSummary.ts';
 import type { FinancialSummaryRow } from '@/queries/financialSummary.ts';
 import { formatCurrency } from '@/lib/currency.ts';
 
 // Category charts get unreadable past ~15 bars, so cap and roll the rest into one "Other" row.
 const TOP_N = 15;
-const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
 
 const currencyAxis = (v: number) => `$${Math.round(v / 1000)}k`;
 const tooltipValue = (v: number | string) => formatCurrency(Number(v));
-
-// 'Mon-YY' -> sortable month ordinal; NaN when the label isn't a period string.
-const periodSortKey = (label: string): number => {
-  const m = /^([A-Za-z]{3})-(\d{2})$/.exec(label.trim());
-  if (!m) {return Number.NaN;}
-  const month = MONTHS.indexOf(m[1].toLowerCase());
-  return month < 0 ? Number.NaN : (2000 + Number(m[2])) * 12 + month;
-};
 
 // Truncate long category labels on the (horizontal) bar axis; full text stays in the tooltip.
 function CategoryTick({
@@ -78,11 +74,7 @@ export function FinancialSummaryChart({
   );
 
   // Trend only makes sense when time is the sole grouping; mixed groupings stay bars.
-  const timeDimension =
-    dimensions.length === 1 &&
-    (dimensions[0] === 'Period' || dimensions[0] === 'FiscalYear')
-      ? dimensions[0]
-      : null;
+  const timeDimension = soleTimeDimension(dimensions);
 
   const lineData = useMemo(() => {
     if (!timeDimension) {return [];}

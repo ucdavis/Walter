@@ -66,6 +66,10 @@ public sealed class FinancialSummaryRow
     [JsonPropertyName("naturalAccountParentLevel5Code")] public string? NaturalAccountParentLevel5Code { get; set; }
     [JsonPropertyName("naturalAccountParentLevel5Name")] public string? NaturalAccountParentLevel5Name { get; set; }
 
+    // Time dimensions; populated only when grouped by Period / FiscalYear.
+    [JsonPropertyName("periodName")] public string? PeriodName { get; set; }
+    [JsonPropertyName("fiscalYear")] public short? FiscalYear { get; set; }
+
     [JsonPropertyName("income")] public decimal Income { get; set; }
     [JsonPropertyName("expense")] public decimal Expense { get; set; }
     [JsonPropertyName("net")] public decimal Net { get; set; }

@@ -36,17 +36,64 @@ export const DIMENSIONS: DimensionDef[] = [
   { codeField: 'naturalAccountParentLevel3Code', key: 'NaturalAccountParentLevel3', label: 'Natural Account ▸ L3', nameField: 'naturalAccountParentLevel3Name' },
   { codeField: 'naturalAccountParentLevel4Code', key: 'NaturalAccountParentLevel4', label: 'Natural Account ▸ L4', nameField: 'naturalAccountParentLevel4Name' },
   { codeField: 'naturalAccountParentLevel5Code', key: 'NaturalAccountParentLevel5', label: 'Natural Account ▸ L5 near', nameField: 'naturalAccountParentLevel5Name' },
+  // Time dimensions: single-value facets (code === name), drawn as a trend line when grouped alone.
+  { codeField: 'periodName', key: 'Period', label: 'Period', nameField: 'periodName' },
+  { codeField: 'fiscalYear', key: 'FiscalYear', label: 'Fiscal Year', nameField: 'fiscalYear' },
 ];
 
 export const activeColumns = (dimensions: string[]): DimensionDef[] =>
   DIMENSIONS.filter((d) => dimensions.includes(d.key));
+
+const MONTHS = [
+  'jan', 'feb', 'mar', 'apr', 'may', 'jun',
+  'jul', 'aug', 'sep', 'oct', 'nov', 'dec',
+];
+
+// 'Mon-YY' -> sortable month ordinal; NaN when the label isn't a period string.
+export const periodSortKey = (label: string): number => {
+  const m = /^([A-Za-z]{3})-(\d{2})$/.exec(label.trim());
+  if (!m) {
+    return Number.NaN;
+  }
+  const month = MONTHS.indexOf(m[1].toLowerCase());
+  return month < 0 ? Number.NaN : (2000 + Number(m[2])) * 12 + month;
+};
+
+// The time dimension when it is the sole grouping (matches the chart's trend-line rule); else null.
+export const soleTimeDimension = (dimensions: string[]): string | null =>
+  dimensions.length === 1 &&
+  (dimensions[0] === 'Period' || dimensions[0] === 'FiscalYear')
+    ? dimensions[0]
+    : null;
+
+// Order rows chronologically when grouped by a single time dimension; otherwise leave sproc order.
+export const sortRowsByTime = (
+  rows: FinancialSummaryRow[],
+  dimensions: string[]
+): FinancialSummaryRow[] => {
+  const dim = soleTimeDimension(dimensions);
+  if (!dim) {
+    return rows;
+  }
+  const keyOf = (r: FinancialSummaryRow) => {
+    if (dim === 'FiscalYear') {
+      return Number(r.fiscalYear ?? 0);
+    }
+    const k = periodSortKey(String(r.periodName ?? ''));
+    return Number.isNaN(k) ? 0 : k;
+  };
+  return [...rows].sort((a, b) => keyOf(a) - keyOf(b));
+};
 
 export const rowGroupLabel = (row: FinancialSummaryRow, dimensions: string[]): string =>
   activeColumns(dimensions)
     .map((d) => {
       const code = row[d.codeField] ?? '';
       const name = row[d.nameField] ?? '';
-      return name ? `${code} — ${name}` : String(code);
+      // Collapse single-value facets (Period, FiscalYear) where name just repeats the code.
+      return name && String(name) !== String(code)
+        ? `${code} — ${name}`
+        : String(code);
     })
     .join(' · ');
 

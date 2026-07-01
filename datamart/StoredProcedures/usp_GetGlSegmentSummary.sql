@@ -57,7 +57,10 @@ BEGIN
         ('NaturalAccountParentLevel2','NaturalAccountParentLevel2Code','NaturalAccountParentLevel2Name',24),
         ('NaturalAccountParentLevel3','NaturalAccountParentLevel3Code','NaturalAccountParentLevel3Name',25),
         ('NaturalAccountParentLevel4','NaturalAccountParentLevel4Code','NaturalAccountParentLevel4Name',26),
-        ('NaturalAccountParentLevel5','NaturalAccountParentLevel5Code','NaturalAccountParentLevel5Name',27);
+        ('NaturalAccountParentLevel5','NaturalAccountParentLevel5Code','NaturalAccountParentLevel5Name',27),
+        -- Time dimensions: single-column facets, so CodeCol = NameCol (the label collapses client-side).
+        ('Period','PeriodName','PeriodName',28),
+        ('FiscalYear','FiscalYear','FiscalYear',29);
 
     DECLARE @SelectedDims TABLE (CodeCol SYSNAME, NameCol SYSNAME, SortOrder INT);
     INSERT INTO @SelectedDims (CodeCol, NameCol, SortOrder)
