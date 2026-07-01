@@ -80,8 +80,9 @@ const GROUP_BY_OPTIONS: FilterOption[] = DIMENSION_GROUPS.flatMap((g) =>
   g.dims.map((d) => ({ group: g.label, label: d.label, value: d.key }))
 );
 
+// Collapse to a single value when the name just repeats the code (e.g. Period, FiscalYear).
 const optionLabel = (o: FinancialSummaryOption): string =>
-  o.name ? `${o.code} — ${o.name}` : o.code;
+  o.name && o.name !== o.code ? `${o.code} — ${o.name}` : o.code;
 
 // Map filter-option rows to FilterOptions; hierarchy facets surface the rollup level as a hint.
 const toFilterOptions = (
