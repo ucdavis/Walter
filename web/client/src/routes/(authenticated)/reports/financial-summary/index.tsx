@@ -98,7 +98,7 @@ const toFilterOptions = (
   }));
 
 function RouteComponent() {
-  const [department, setDepartment] = useState<string | null>(null);
+  const [department, setDepartment] = useState<string[]>([]);
   const [filters, setFilters] = useState<FinancialSummaryFilters>({});
   const [dimensions, setDimensions] = useState<string[]>([]);
   const [timeMode, setTimeMode] = useState<'year' | 'period'>('year');
@@ -107,7 +107,7 @@ function RouteComponent() {
     () => ({
       dimensions,
       ...filters,
-      financialDepartments: department ? [department] : undefined,
+      financialDepartments: department.length > 0 ? department : undefined,
     }),
     [dimensions, filters, department]
   );
@@ -119,14 +119,14 @@ function RouteComponent() {
   );
 
   const deptOptions = useFinancialSummaryOptions('FinancialDept', {});
-  const fundOptions = useFinancialSummaryOptions('Fund', query, !!department);
-  const programOptions = useFinancialSummaryOptions('Program', query, !!department);
-  const activityOptions = useFinancialSummaryOptions('Activity', query, !!department);
-  const projectOptions = useFinancialSummaryOptions('Project', query, !!department);
+  const fundOptions = useFinancialSummaryOptions('Fund', query, department.length > 0);
+  const programOptions = useFinancialSummaryOptions('Program', query, department.length > 0);
+  const activityOptions = useFinancialSummaryOptions('Activity', query, department.length > 0);
+  const projectOptions = useFinancialSummaryOptions('Project', query, department.length > 0);
   const naturalAccountOptions = useFinancialSummaryOptions(
     'NaturalAccount',
     query,
-    !!department
+    department.length > 0
   );
   const fiscalYearOptions = useFinancialSummaryOptions('FiscalYear', query);
   const periodOptions = useFinancialSummaryOptions('Period', query);
@@ -198,8 +198,10 @@ function RouteComponent() {
     }));
   };
 
-  const handleDeptChange = (code: string | null) => {
-    setDepartment(code);
+  // Department drives the scope of every other facet, so changing the selection
+  // clears the dependent filters to avoid keeping now-out-of-scope values.
+  const handleDeptChange = (codes: string[]) => {
+    setDepartment(codes);
     setFilters({});
   };
 
@@ -223,19 +225,18 @@ function RouteComponent() {
 
       {/* Filter controls */}
       <section className="mb-6 grid items-start gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {/* Department — single select, always enabled */}
+        {/* Department — multi-select, always enabled; gates the other facets */}
         <div className="form-control">
           <label className="label">
             <span className="label-text font-medium">Department</span>
           </label>
           <MultiSelectFilter
             loading={deptOptions.isPending}
-            multiple={false}
-            onChange={(vals) => handleDeptChange(vals[0] ?? null)}
+            onChange={handleDeptChange}
             options={toFilterOptions(deptOptions.data)}
-            placeholder="Pick a department…"
+            placeholder="Pick departments…"
             searchPlaceholder="Search departments…"
-            selected={department ? [department] : []}
+            selected={department}
           />
         </div>
 
@@ -245,7 +246,7 @@ function RouteComponent() {
             <span className="label-text font-medium">Fund</span>
           </label>
           <MultiSelectFilter
-            disabled={!department}
+            disabled={department.length === 0}
             loading={fundOptions.isFetching}
             onChange={(vals) => setFilter('funds', vals)}
             options={toFilterOptions(fundOptions.data, true)}
@@ -261,7 +262,7 @@ function RouteComponent() {
             <span className="label-text font-medium">Program</span>
           </label>
           <MultiSelectFilter
-            disabled={!department}
+            disabled={department.length === 0}
             loading={programOptions.isFetching}
             onChange={(vals) => setFilter('programs', vals)}
             options={toFilterOptions(programOptions.data)}
@@ -277,7 +278,7 @@ function RouteComponent() {
             <span className="label-text font-medium">Activity</span>
           </label>
           <MultiSelectFilter
-            disabled={!department}
+            disabled={department.length === 0}
             loading={activityOptions.isFetching}
             onChange={(vals) => setFilter('activities', vals)}
             options={toFilterOptions(activityOptions.data, true)}
@@ -293,7 +294,7 @@ function RouteComponent() {
             <span className="label-text font-medium">Project</span>
           </label>
           <MultiSelectFilter
-            disabled={!department}
+            disabled={department.length === 0}
             loading={projectOptions.isFetching}
             onChange={(vals) => setFilter('projects', vals)}
             options={toFilterOptions(projectOptions.data)}
@@ -309,7 +310,7 @@ function RouteComponent() {
             <span className="label-text font-medium">Natural Account</span>
           </label>
           <MultiSelectFilter
-            disabled={!department}
+            disabled={department.length === 0}
             loading={naturalAccountOptions.isFetching}
             onChange={(vals) => setFilter('naturalAccounts', vals)}
             options={toFilterOptions(naturalAccountOptions.data, true)}
