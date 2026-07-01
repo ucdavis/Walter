@@ -14,6 +14,7 @@ import {
 import {
   useFinancialSummaryQuery,
   useFinancialSummaryOptions,
+  type FinancialSummaryOption,
   type FinancialSummaryRow,
   type FinancialSummaryFilters,
 } from '@/queries/financialSummary.ts';
@@ -23,6 +24,10 @@ import {
   buildChartData,
   rowGroupLabel,
 } from '@/lib/financialSummary.ts';
+import {
+  MultiSelectFilter,
+  type FilterOption,
+} from '@/shared/MultiSelectFilter.tsx';
 import { DataTable } from '@/shared/DataTable.tsx';
 import { ExportDataButton } from '@/components/ExportDataButton.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
@@ -70,9 +75,27 @@ const DIMENSION_GROUPS = [
   },
 ];
 
-function getSelectedValues(e: React.ChangeEvent<HTMLSelectElement>): string[] {
-  return Array.from(e.target.selectedOptions, (opt) => opt.value);
-}
+// Group-by picker options, flattened from DIMENSION_GROUPS into grouped FilterOptions.
+const GROUP_BY_OPTIONS: FilterOption[] = DIMENSION_GROUPS.flatMap((g) =>
+  g.dims.map((d) => ({ group: g.label, label: d.label, value: d.key }))
+);
+
+const optionLabel = (o: FinancialSummaryOption): string =>
+  o.name ? `${o.code} — ${o.name}` : o.code;
+
+// Map filter-option rows to FilterOptions; hierarchy facets surface the rollup level as a hint.
+const toFilterOptions = (
+  opts: FinancialSummaryOption[] | undefined,
+  hierarchy = false
+): FilterOption[] =>
+  (opts ?? []).map((o) => ({
+    hint:
+      hierarchy && o.level && o.level !== 'Leaf'
+        ? `L${o.level} rollup`
+        : undefined,
+    label: optionLabel(o),
+    value: o.code,
+  }));
 
 function RouteComponent() {
   const [department, setDepartment] = useState<string | null>(null);
@@ -199,24 +222,21 @@ function RouteComponent() {
       </section>
 
       {/* Filter controls */}
-      <section className="mb-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <section className="mb-6 grid items-start gap-4 md:grid-cols-2 lg:grid-cols-3">
         {/* Department — single select, always enabled */}
         <div className="form-control">
           <label className="label">
             <span className="label-text font-medium">Department</span>
           </label>
-          <select
-            className="select select-bordered w-full"
-            onChange={(e) => handleDeptChange(e.target.value || null)}
-            value={department ?? ''}
-          >
-            <option value="">Pick a department…</option>
-            {(deptOptions.data ?? []).map((opt) => (
-              <option key={opt.code} value={opt.code}>
-                {opt.code} — {opt.name}
-              </option>
-            ))}
-          </select>
+          <MultiSelectFilter
+            loading={deptOptions.isPending}
+            multiple={false}
+            onChange={(vals) => handleDeptChange(vals[0] ?? null)}
+            options={toFilterOptions(deptOptions.data)}
+            placeholder="Pick a department…"
+            searchPlaceholder="Search departments…"
+            selected={department ? [department] : []}
+          />
         </div>
 
         {/* Fund — hierarchy-aware multi-select, disabled until department chosen */}
@@ -224,24 +244,15 @@ function RouteComponent() {
           <label className="label">
             <span className="label-text font-medium">Fund</span>
           </label>
-          <select
-            className="select select-bordered w-full"
+          <MultiSelectFilter
             disabled={!department}
-            multiple
-            onChange={(e) => setFilter('funds', getSelectedValues(e))}
-            size={4}
-            value={filters.funds ?? []}
-          >
-            {(fundOptions.data ?? []).map((opt) => (
-              <option key={opt.code} value={opt.code}>
-                {opt.code}
-                {opt.level && opt.level !== 'Leaf'
-                  ? ` (L${opt.level} rollup)`
-                  : ''}{' '}
-                — {opt.name}
-              </option>
-            ))}
-          </select>
+            loading={fundOptions.isFetching}
+            onChange={(vals) => setFilter('funds', vals)}
+            options={toFilterOptions(fundOptions.data, true)}
+            placeholder="Any fund"
+            searchPlaceholder="Search funds…"
+            selected={filters.funds ?? []}
+          />
         </div>
 
         {/* Program — multi-select, disabled until department chosen */}
@@ -249,20 +260,15 @@ function RouteComponent() {
           <label className="label">
             <span className="label-text font-medium">Program</span>
           </label>
-          <select
-            className="select select-bordered w-full"
+          <MultiSelectFilter
             disabled={!department}
-            multiple
-            onChange={(e) => setFilter('programs', getSelectedValues(e))}
-            size={4}
-            value={filters.programs ?? []}
-          >
-            {(programOptions.data ?? []).map((opt) => (
-              <option key={opt.code} value={opt.code}>
-                {opt.code} — {opt.name}
-              </option>
-            ))}
-          </select>
+            loading={programOptions.isFetching}
+            onChange={(vals) => setFilter('programs', vals)}
+            options={toFilterOptions(programOptions.data)}
+            placeholder="Any program"
+            searchPlaceholder="Search programs…"
+            selected={filters.programs ?? []}
+          />
         </div>
 
         {/* Activity — hierarchy-aware multi-select, disabled until department chosen */}
@@ -270,24 +276,15 @@ function RouteComponent() {
           <label className="label">
             <span className="label-text font-medium">Activity</span>
           </label>
-          <select
-            className="select select-bordered w-full"
+          <MultiSelectFilter
             disabled={!department}
-            multiple
-            onChange={(e) => setFilter('activities', getSelectedValues(e))}
-            size={4}
-            value={filters.activities ?? []}
-          >
-            {(activityOptions.data ?? []).map((opt) => (
-              <option key={opt.code} value={opt.code}>
-                {opt.code}
-                {opt.level && opt.level !== 'Leaf'
-                  ? ` (L${opt.level} rollup)`
-                  : ''}{' '}
-                — {opt.name}
-              </option>
-            ))}
-          </select>
+            loading={activityOptions.isFetching}
+            onChange={(vals) => setFilter('activities', vals)}
+            options={toFilterOptions(activityOptions.data, true)}
+            placeholder="Any activity"
+            searchPlaceholder="Search activities…"
+            selected={filters.activities ?? []}
+          />
         </div>
 
         {/* Project — multi-select, disabled until department chosen */}
@@ -295,20 +292,15 @@ function RouteComponent() {
           <label className="label">
             <span className="label-text font-medium">Project</span>
           </label>
-          <select
-            className="select select-bordered w-full"
+          <MultiSelectFilter
             disabled={!department}
-            multiple
-            onChange={(e) => setFilter('projects', getSelectedValues(e))}
-            size={4}
-            value={filters.projects ?? []}
-          >
-            {(projectOptions.data ?? []).map((opt) => (
-              <option key={opt.code} value={opt.code}>
-                {opt.code} — {opt.name}
-              </option>
-            ))}
-          </select>
+            loading={projectOptions.isFetching}
+            onChange={(vals) => setFilter('projects', vals)}
+            options={toFilterOptions(projectOptions.data)}
+            placeholder="Any project"
+            searchPlaceholder="Search projects…"
+            selected={filters.projects ?? []}
+          />
         </div>
 
         {/* Natural Account — hierarchy-aware multi-select, disabled until department chosen */}
@@ -316,24 +308,15 @@ function RouteComponent() {
           <label className="label">
             <span className="label-text font-medium">Natural Account</span>
           </label>
-          <select
-            className="select select-bordered w-full"
+          <MultiSelectFilter
             disabled={!department}
-            multiple
-            onChange={(e) => setFilter('naturalAccounts', getSelectedValues(e))}
-            size={4}
-            value={filters.naturalAccounts ?? []}
-          >
-            {(naturalAccountOptions.data ?? []).map((opt) => (
-              <option key={opt.code} value={opt.code}>
-                {opt.code}
-                {opt.level && opt.level !== 'Leaf'
-                  ? ` (L${opt.level} rollup)`
-                  : ''}{' '}
-                — {opt.name}
-              </option>
-            ))}
-          </select>
+            loading={naturalAccountOptions.isFetching}
+            onChange={(vals) => setFilter('naturalAccounts', vals)}
+            options={toFilterOptions(naturalAccountOptions.data, true)}
+            placeholder="Any natural account"
+            searchPlaceholder="Search natural accounts…"
+            selected={filters.naturalAccounts ?? []}
+          />
         </div>
 
         {/* Group-by — multi-select over all 27 DIMENSIONS, grouped by segment */}
@@ -341,23 +324,13 @@ function RouteComponent() {
           <label className="label">
             <span className="label-text font-medium">Group by</span>
           </label>
-          <select
-            className="select select-bordered w-full"
-            multiple
-            onChange={(e) => setDimensions(getSelectedValues(e))}
-            size={6}
-            value={dimensions}
-          >
-            {DIMENSION_GROUPS.map((group) => (
-              <optgroup key={group.label} label={group.label}>
-                {group.dims.map((d) => (
-                  <option key={d.key} value={d.key}>
-                    {d.label}
-                  </option>
-                ))}
-              </optgroup>
-            ))}
-          </select>
+          <MultiSelectFilter
+            onChange={setDimensions}
+            options={GROUP_BY_OPTIONS}
+            placeholder="Choose segments…"
+            searchPlaceholder="Search segments…"
+            selected={dimensions}
+          />
         </div>
 
         {/* Time — year/period toggle with multi-select */}
@@ -386,33 +359,23 @@ function RouteComponent() {
             </button>
           </div>
           {timeMode === 'year' ? (
-            <select
-              className="select select-bordered w-full"
-              multiple
-              onChange={(e) => setFilter('fiscalYears', getSelectedValues(e))}
-              size={4}
-              value={filters.fiscalYears ?? []}
-            >
-              {(fiscalYearOptions.data ?? []).map((opt) => (
-                <option key={opt.code} value={opt.code}>
-                  {opt.name || opt.code}
-                </option>
-              ))}
-            </select>
+            <MultiSelectFilter
+              loading={fiscalYearOptions.isFetching}
+              onChange={(vals) => setFilter('fiscalYears', vals)}
+              options={toFilterOptions(fiscalYearOptions.data)}
+              placeholder="All fiscal years"
+              searchPlaceholder="Search fiscal years…"
+              selected={filters.fiscalYears ?? []}
+            />
           ) : (
-            <select
-              className="select select-bordered w-full"
-              multiple
-              onChange={(e) => setFilter('periods', getSelectedValues(e))}
-              size={4}
-              value={filters.periods ?? []}
-            >
-              {sortedPeriodOptions.map((opt) => (
-                <option key={opt.code} value={opt.code}>
-                  {opt.name || opt.code}
-                </option>
-              ))}
-            </select>
+            <MultiSelectFilter
+              loading={periodOptions.isFetching}
+              onChange={(vals) => setFilter('periods', vals)}
+              options={toFilterOptions(sortedPeriodOptions)}
+              placeholder="All periods"
+              searchPlaceholder="Search periods…"
+              selected={filters.periods ?? []}
+            />
           )}
         </div>
       </section>
