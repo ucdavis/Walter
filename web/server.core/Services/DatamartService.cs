@@ -85,6 +85,14 @@ public interface IDatamartService
     /// </summary>
     Task<ProjectProjectionResult> GetProjectProjectionAsync(
         string projectNumber, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default);
+
+    /// <summary>Income/expense/net grouped by the caller-selected chart-string segments.</summary>
+    Task<IReadOnlyList<FinancialSummaryRow>> GetGlSegmentSummaryAsync(
+        FinancialSummaryQuery query, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default);
+
+    /// <summary>Scoped picker options for one financial-summary filter facet.</summary>
+    Task<IReadOnlyList<FinancialSummaryOption>> GetGlSegmentFilterOptionsAsync(
+        FinancialSummaryOptionsQuery query, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default);
 }
 
 public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
@@ -322,6 +330,59 @@ public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
                 Periods = periods,
             };
         }, ct);
+    }
+
+    private static string? ToCsvParam(string[]? values)
+    {
+        if (values is null) return null;
+        var cleaned = values.Where(v => !string.IsNullOrWhiteSpace(v)).Select(v => v.Trim()).ToArray();
+        return cleaned.Length == 0 ? null : string.Join(",", cleaned);
+    }
+
+    public async Task<IReadOnlyList<FinancialSummaryRow>> GetGlSegmentSummaryAsync(
+        FinancialSummaryQuery query, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default)
+    {
+        return await ExecuteSprocAsync<FinancialSummaryRow>(
+            "dbo.usp_GetGlSegmentSummary",
+            new
+            {
+                Dimensions = ToCsvParam(query.Dimensions),
+                FinancialDepartments = ToCsvParam(query.FinancialDepartments),
+                Funds = ToCsvParam(query.Funds),
+                Programs = ToCsvParam(query.Programs),
+                Activities = ToCsvParam(query.Activities),
+                Projects = ToCsvParam(query.Projects),
+                NaturalAccounts = ToCsvParam(query.NaturalAccounts),
+                FiscalYears = ToCsvParam(query.FiscalYears),
+                Periods = ToCsvParam(query.Periods),
+                ApplicationName = _appName,
+                ApplicationUser = applicationUser,
+                EmulatingUser = emulatingUser,
+            },
+            ct: ct);
+    }
+
+    public async Task<IReadOnlyList<FinancialSummaryOption>> GetGlSegmentFilterOptionsAsync(
+        FinancialSummaryOptionsQuery query, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default)
+    {
+        return await ExecuteSprocAsync<FinancialSummaryOption>(
+            "dbo.usp_GetGlSegmentSummaryFilterOptions",
+            new
+            {
+                Segment = query.Segment,
+                FinancialDepartments = ToCsvParam(query.FinancialDepartments),
+                Funds = ToCsvParam(query.Funds),
+                Programs = ToCsvParam(query.Programs),
+                Activities = ToCsvParam(query.Activities),
+                Projects = ToCsvParam(query.Projects),
+                NaturalAccounts = ToCsvParam(query.NaturalAccounts),
+                FiscalYears = ToCsvParam(query.FiscalYears),
+                Periods = ToCsvParam(query.Periods),
+                ApplicationName = _appName,
+                ApplicationUser = applicationUser,
+                EmulatingUser = emulatingUser,
+            },
+            ct: ct);
     }
 
     private async Task<IReadOnlyList<T>> ExecuteSprocAsync<T>(
