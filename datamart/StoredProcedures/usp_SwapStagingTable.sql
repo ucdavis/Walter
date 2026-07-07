@@ -26,6 +26,7 @@ BEGIN
     INSERT INTO @AllowedTables ([TableName])
     VALUES
         (N'GlProjectMonthlyActuals'),
+        (N'GlSummaryBalances'),
         (N'People'),
         (N'PpmAwards'),
         (N'PpmPeople'),
