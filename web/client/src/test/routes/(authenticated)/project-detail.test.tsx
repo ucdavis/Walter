@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import type { ProjectRecord } from '@/queries/project.ts';
@@ -323,7 +323,30 @@ describe('project detail page', () => {
     ],
   };
 
-  it('shows the project burndown with category tabs when projection data exists', async () => {
+  it('links sponsored projects to the projections page when projections are enabled', async () => {
+    const projects = [createProject({ pmEmployeeId: '2000' })];
+    setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);
+
+    const { cleanup } = renderRoute({
+      initialPath: '/projects/1000/P1',
+    });
+
+    try {
+      const link = await screen.findByRole('link', { name: 'Projections' });
+      const detailsSection = screen
+        .getByText('Project Number')
+        .closest('section') as HTMLElement;
+
+      expect(within(detailsSection).getByRole('link', { name: 'Projections' }))
+        .toBe(link);
+      expect(link).toHaveAttribute('href', '/projections/1000/P1');
+      expect(screen.queryByText('Project Burndown')).not.toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('shows the project burndown with category tabs on the projections page', async () => {
     const user = userEvent.setup();
     const projects = [createProject({ pmEmployeeId: '2000' })];
     setupHandlers(
@@ -333,10 +356,13 @@ describe('project detail page', () => {
     );
 
     const { cleanup } = renderRoute({
-      initialPath: '/projects/1000/P1',
+      initialPath: '/projections/1000/P1',
     });
 
     try {
+      expect(
+        await screen.findByRole('heading', { name: 'Projections' })
+      ).toBeInTheDocument();
       expect(
         await screen.findByTestId('project-burndown-chart')
       ).toBeInTheDocument();
@@ -391,7 +417,7 @@ describe('project detail page', () => {
     }
   });
 
-  it('hides the project burndown for internal projects', async () => {
+  it('hides the projections link for internal projects', async () => {
     const projects = [
       createProject({
         awardEndDate: null,
@@ -413,13 +439,16 @@ describe('project detail page', () => {
 
     try {
       await screen.findByText('Financial Details');
+      expect(
+        screen.queryByRole('link', { name: 'Projections' })
+      ).not.toBeInTheDocument();
       expect(screen.queryByText('Project Burndown')).not.toBeInTheDocument();
     } finally {
       cleanup();
     }
   });
 
-  it('hides the project burndown when the projections feature flag is off', async () => {
+  it('hides the projections link when the projections feature flag is off', async () => {
     const projects = [createProject({ pmEmployeeId: '2000' })];
     setupHandlers(
       { employeeId: '1000', name: 'PI User' },
@@ -438,22 +467,25 @@ describe('project detail page', () => {
 
     try {
       await screen.findByText('Financial Details');
+      expect(
+        screen.queryByRole('link', { name: 'Projections' })
+      ).not.toBeInTheDocument();
       expect(screen.queryByText('Project Burndown')).not.toBeInTheDocument();
     } finally {
       cleanup();
     }
   });
 
-  it('hides the project burndown when the projection has no periods', async () => {
+  it('hides the project burndown on the projections page when the projection has no periods', async () => {
     const projects = [createProject({ pmEmployeeId: '2000' })];
     setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);
 
     const { cleanup } = renderRoute({
-      initialPath: '/projects/1000/P1',
+      initialPath: '/projections/1000/P1',
     });
 
     try {
-      await screen.findByText('Award Information');
+      await screen.findByRole('heading', { name: 'Projections' });
       // The section renders a loading state until the projection query
       // resolves, so wait for it to settle and disappear.
       await waitFor(() =>

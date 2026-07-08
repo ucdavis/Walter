@@ -2,7 +2,6 @@ import { ProjectAlerts } from '@/components/alerts/ProjectAlerts.tsx';
 import { TaskBreakdown } from '@/components/project/TaskBreakdown.tsx';
 import { ProjectDetails } from '@/components/project/ProjectDetails.tsx';
 import { FinancialDetails } from '@/components/project/FinancialDetails.tsx';
-import { ProjectBurndownSection } from '@/components/project/ProjectBurndownChart.tsx';
 import { PersonnelTable } from '@/components/project/PersonnelTable.tsx';
 import { usePersonnelQuery } from '@/queries/personnel.ts';
 import { useFeatureFlagsQuery } from '@/queries/featureFlags.ts';
@@ -21,7 +20,8 @@ import { useUser } from '@/shared/auth/UserContext.tsx';
 import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
 import { tooltipDefinitions } from '@/shared/tooltips.ts';
 import { useSuspenseQuery } from '@tanstack/react-query';
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, Link } from '@tanstack/react-router';
+import { ChartBarIcon } from '@heroicons/react/24/outline';
 import ProjectAdditionalInfo from '@/components/project/ProjectAdditionalInfo.tsx';
 
 export const Route = createFileRoute(
@@ -99,11 +99,22 @@ function ProjectContent({
         </div>
       </section>
 
-      <ProjectDetails summary={summary} />
+      <ProjectDetails
+        actions={
+          !summary.isInternal && featureFlags?.projectionsEnabled ? (
+            <Link
+              className="btn btn-primary btn-sm"
+              params={{ iamId, projectNumber: summary.projectNumber }}
+              to="/projections/$iamId/$projectNumber"
+            >
+              <ChartBarIcon className="h-4 w-4" />
+              Projections
+            </Link>
+          ) : null
+        }
+        summary={summary}
+      />
       <FinancialDetails summary={summary} />
-      {!summary.isInternal && featureFlags?.projectionsEnabled && (
-        <ProjectBurndownSection projectNumber={summary.projectNumber} />
-      )}
       <ProjectAdditionalInfo summary={summary} />
 
       <section className="section-margin">
