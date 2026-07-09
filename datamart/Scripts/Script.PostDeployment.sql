@@ -44,6 +44,7 @@ GRANT SELECT ON [dbo].[PpmPersonRoles] TO [WalterAppRole];
 GRANT SELECT ON [dbo].[PpmProjects] TO [WalterAppRole];
 GRANT SELECT ON [dbo].[PpmProjectAwards] TO [WalterAppRole];
 GRANT SELECT ON [dbo].[GlProjectMonthlyActuals] TO [WalterAppRole];
+GRANT SELECT ON [dbo].[GlSummaryBalances] TO [WalterAppRole];
 GRANT SELECT ON [dbo].[ExpenditureTypeByAccount] TO [WalterAppRole];
 
 -- Grant pipeline role permissions
@@ -71,6 +72,10 @@ GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[PpmProjectAwards_Staging] TO [Wal
 -- which does not honor ownership chaining.
 GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[GlProjectMonthlyActuals] TO [WalterPipelineRole];
 GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[GlProjectMonthlyActuals_Staging] TO [WalterPipelineRole];
+-- pl_gl_balances_loader loads GlSummaryBalances_Staging (pre-copy DELETE + bulk insert), then
+-- usp_SwapStagingTable snapshot-swaps it into GlSummaryBalances — same dynamic-SQL caveat as above.
+GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[GlSummaryBalances] TO [WalterPipelineRole];
+GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[GlSummaryBalances_Staging] TO [WalterPipelineRole];
 
 
 
