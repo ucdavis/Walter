@@ -48,8 +48,12 @@ function buildRows(
   filters: ExpenditureCategoryFilters = {}
 ): ExpenditureCategoryRow[] {
   const filtered = records.filter((r) => {
-    if (filters.task && (r.taskNum ?? '') !== filters.task) return false;
-    if (filters.fund && (r.fundCode ?? '') !== filters.fund) return false;
+    if (filters.task && (r.taskNum ?? '') !== filters.task) {
+      return false;
+    }
+    if (filters.fund && (r.fundCode ?? '') !== filters.fund) {
+      return false;
+    }
     if (filters.program && (r.programCode ?? '') !== filters.program) {
       return false;
     }
