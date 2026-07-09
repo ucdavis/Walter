@@ -74,13 +74,9 @@ function RouteComponent() {
             <ArrowLeftIcon className="h-4 w-4" />
             Back to Project Details
           </Link>
-          <h1 className="h1">Project Financial Projections</h1>
-          <div className="mt-4">
-            <span className="badge font-proxima-bold badge-sm badge-info">
-              Sponsored
-            </span>
-          </div>
-          <h2 className="subtitle max-w-3xl">{summary.displayName}</h2>
+
+          <h1 className="h1">Financial Projections</h1>
+          <h2 className="subtitle max-w-5xl">{summary.displayName}</h2>
         </section>
 
         {projectionsAvailable ? (
