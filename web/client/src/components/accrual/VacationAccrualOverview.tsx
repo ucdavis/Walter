@@ -267,7 +267,7 @@ export function VacationAccrualOverview({
               </h3>
             </div>
 
-            <Link className="btn btn-default btn-sm" to="/accruals/about">
+            <Link className="btn btn-sm" to="/accruals/about">
               <InformationCircleIcon className="h-4 w-4" />
               About this report
             </Link>
@@ -310,12 +310,12 @@ export function VacationAccrualOverview({
                 Icon={ExclamationTriangleIcon}
                 label="Approaching Cap"
                 value={data.approachingCapCount.toLocaleString('en-US')}
-                />
-                <SummaryMetric
-                  accentClassName="text-warning"
-                  description="Lost cost over monthly accruals"
-                  Icon={ArrowTrendingDownIcon}
-                  label="Waste Rate"
+              />
+              <SummaryMetric
+                accentClassName="text-warning"
+                description="Lost cost over monthly accruals"
+                Icon={ArrowTrendingDownIcon}
+                label="Waste Rate"
                 value={percentFormatter(data.wasteRate)}
               />
             </dl>

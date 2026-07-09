@@ -103,7 +103,7 @@ function ProjectContent({
         actions={
           !summary.isInternal && featureFlags?.projectionsEnabled ? (
             <Link
-              className="btn btn-default btn-block btn-lg"
+              className="btn btn-block btn-lg"
               params={{ iamId, projectNumber: summary.projectNumber }}
               to="/projections/$iamId/$projectNumber"
             >

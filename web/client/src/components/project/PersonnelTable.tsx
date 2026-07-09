@@ -503,7 +503,7 @@ export function PersonnelTable({
             <div className="flex flex-wrap items-center gap-2">
               {unfilledCount > 0 && (
                 <button
-                  className={`btn btn-sm ${showUnfilled ? 'btn-active' : 'btn-default'}`}
+                  className={`btn btn-sm${showUnfilled ? ' btn-active' : ''}`}
                   onClick={() => setShowUnfilled((current) => !current)}
                   type="button"
                 >

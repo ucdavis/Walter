@@ -40,7 +40,7 @@ function RouteComponent() {
 
         {/* Buttons */}
         <section className="space-x-2">
-          <button className="btn btn-default">Default</button>
+          <button className="btn">Default</button>
           <button className="btn btn-primary">Primary</button>
           <button className="btn btn-secondary">Secondary</button>
 
