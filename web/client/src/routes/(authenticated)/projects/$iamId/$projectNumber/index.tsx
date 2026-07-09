@@ -84,7 +84,7 @@ function ProjectContent({
           Data source: Faculty Department Portfolio Report (PPM)
         </h3>
         {summary.isInternal && (
-          <p className="max-w-prose mb-4 text-sm text-base-content/70">
+          <p className="max-w-3xl mb-2">
             Totals for internal projects do not reflect transactions that have
             occurred since the latest data refresh or manual updates that are
             needed. Contact your fiscal officer with any questions.

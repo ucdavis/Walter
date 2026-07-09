@@ -222,7 +222,7 @@ function RouteComponent() {
               {internalProjects.length > 0 && (
                 <div className="mt-4">
                   <h2 className="h2">Internal Projects</h2>
-                  <p className="max-w-prose mb-4 text-sm text-base-content/70">
+                  <p className="max-w-3xl mb-2">
                     Totals for internal projects do not reflect transactions
                     that have occurred since the latest data refresh or manual
                     updates that are needed. Contact your fiscal officer with

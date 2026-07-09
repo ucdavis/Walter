@@ -305,7 +305,7 @@ export function ProjectBurndownSection({
 
   return (
     <>
-      <section className="mt-8 pb-4 border-b border-main-border">
+      <section className="mt-8 pb-4">
         <h2 className="h2 mb-1">Project Burndown</h2>
         <p className="max-w-3xl mb-6">{tooltipDefinitions.projectBurndown}</p>
 
