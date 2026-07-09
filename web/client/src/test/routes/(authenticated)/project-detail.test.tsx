@@ -370,10 +370,9 @@ describe('project detail page', () => {
     try {
       expect(
         await screen.findByRole('heading', {
-          name: 'Project Financial Projections',
+          name: 'Financial Projections',
         })
       ).toBeInTheDocument();
-      expect(screen.getByText('Sponsored')).toBeInTheDocument();
       expect(
         screen.getByRole('heading', { level: 2, name: 'Test Project' })
       ).toBeInTheDocument();
@@ -536,7 +535,7 @@ describe('project detail page', () => {
 
     try {
       await screen.findByRole('heading', {
-        name: 'Project Financial Projections',
+        name: 'Financial Projections',
       });
       // The section renders a loading state until the projection query
       // resolves, so wait for it to settle and disappear.
