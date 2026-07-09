@@ -15,12 +15,40 @@ export const PROJECT_SERIES_COLORS = [
   { color: 'var(--color-ucd-rose)', name: '99 Uncategorized' },
 ] as const;
 
-export const PROJECT_PERSONNEL_COLOR = PROJECT_SERIES_COLORS[1].color;
+const NON_PERSONNEL_SERIES_COLOR_START = 3;
+const PROJECT_NON_PERSONNEL_CATEGORY_COLORS = PROJECT_SERIES_COLORS.slice(
+  NON_PERSONNEL_SERIES_COLOR_START
+);
+
+function projectSeriesColorByName(name: string) {
+  const entry = PROJECT_SERIES_COLORS.find((color) => color.name === name);
+
+  if (!entry) {
+    throw new Error(`Missing project chart color for "${name}".`);
+  }
+
+  return entry.color;
+}
+
+function wrapColorIndex(index: number, length: number) {
+  return ((index % length) + length) % length;
+}
+
+export const PROJECT_PERSONNEL_COLOR = projectSeriesColorByName('Personnel');
 
 export function projectSeriesColor(index: number) {
   return PROJECT_SERIES_COLORS[index % PROJECT_SERIES_COLORS.length].color;
 }
 
 export function projectNonPersonnelCategoryColor(index: number) {
-  return projectSeriesColor(index + 3);
+  const entry =
+    PROJECT_NON_PERSONNEL_CATEGORY_COLORS[
+      wrapColorIndex(index, PROJECT_NON_PERSONNEL_CATEGORY_COLORS.length)
+    ];
+
+  if (!entry) {
+    throw new Error('Missing project chart colors for non-personnel categories.');
+  }
+
+  return entry.color;
 }
