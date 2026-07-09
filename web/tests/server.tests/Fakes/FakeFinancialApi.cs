@@ -14,6 +14,7 @@ public sealed class FakeFinancialApiService : IFinancialApiService
 {
     private readonly HashSet<string> _projectManagerEmployeeIds;
     private readonly Dictionary<string, IReadOnlyList<FakeFinancialProjectTeamMember>> _projectTeamMembersByProjectNumber;
+    private readonly IReadOnlyList<FakeFinancialProject> _projects;
 
     public FakeFinancialApiService()
         : this(Array.Empty<string>()) { }
@@ -23,7 +24,8 @@ public sealed class FakeFinancialApiService : IFinancialApiService
 
     public FakeFinancialApiService(
         IEnumerable<string> projectManagerEmployeeIds,
-        IReadOnlyDictionary<string, IReadOnlyList<FakeFinancialProjectTeamMember>>? projectTeamMembersByProjectNumber)
+        IReadOnlyDictionary<string, IReadOnlyList<FakeFinancialProjectTeamMember>>? projectTeamMembersByProjectNumber,
+        IReadOnlyList<FakeFinancialProject>? projects = null)
     {
         _projectManagerEmployeeIds = new HashSet<string>(
             projectManagerEmployeeIds,
@@ -33,6 +35,7 @@ public sealed class FakeFinancialApiService : IFinancialApiService
             : new Dictionary<string, IReadOnlyList<FakeFinancialProjectTeamMember>>(
                 projectTeamMembersByProjectNumber,
                 StringComparer.OrdinalIgnoreCase);
+        _projects = projects ?? Array.Empty<FakeFinancialProject>();
     }
 
     public IAggieEnterpriseClient GetClient()
@@ -41,7 +44,7 @@ public sealed class FakeFinancialApiService : IFinancialApiService
         {
             if (method.Name == "get_PpmProjectByProjectTeamMemberEmployeeId")
             {
-                return new FakePpmProjectByProjectTeamMemberEmployeeIdQuery(_projectManagerEmployeeIds);
+                return new FakePpmProjectByProjectTeamMemberEmployeeIdQuery(_projectManagerEmployeeIds, _projects);
             }
 
             if (method.Name == "get_PpmProjectTeamMembers")
@@ -60,13 +63,26 @@ public sealed record FakeFinancialProjectTeamMember(
     string EmployeeId,
     string? Email);
 
+/// <summary>
+/// A synthetic PPM project for <see cref="FakeFinancialApiService"/>. Award personnel model the
+/// people on the project's awards (the real query matches team members OR award personnel).
+/// </summary>
+public sealed record FakeFinancialProject(
+    string ProjectNumber,
+    IReadOnlyList<FakeFinancialProjectTeamMember> TeamMembers,
+    IReadOnlyList<FakeFinancialProjectTeamMember> AwardPersonnel);
+
 internal sealed class FakePpmProjectByProjectTeamMemberEmployeeIdQuery : IPpmProjectByProjectTeamMemberEmployeeIdQuery
 {
     private readonly ISet<string> _projectManagerEmployeeIds;
+    private readonly IReadOnlyList<FakeFinancialProject> _projects;
 
-    public FakePpmProjectByProjectTeamMemberEmployeeIdQuery(ISet<string> projectManagerEmployeeIds)
+    public FakePpmProjectByProjectTeamMemberEmployeeIdQuery(
+        ISet<string> projectManagerEmployeeIds,
+        IReadOnlyList<FakeFinancialProject> projects)
     {
         _projectManagerEmployeeIds = projectManagerEmployeeIds;
+        _projects = projects;
     }
 
     public Type ResultType => typeof(IPpmProjectByProjectTeamMemberEmployeeIdResult);
@@ -86,17 +102,82 @@ internal sealed class FakePpmProjectByProjectTeamMemberEmployeeIdQuery : IPpmPro
         string? roleName,
         CancellationToken cancellationToken)
     {
+        // Mirrors the real query: a project matches if the person has the role as a
+        // project team member OR as award personnel (verified against the live API).
+        var matchedProjects = _projects
+            .Where(project =>
+                project.TeamMembers.Concat(project.AwardPersonnel).Any(person =>
+                    string.Equals(person.EmployeeId, employeeId, StringComparison.OrdinalIgnoreCase) &&
+                    (roleName is null || string.Equals(person.RoleName, roleName, StringComparison.OrdinalIgnoreCase))))
+            .Select(CreateProject);
+
         var isPmLookup = roleName == PpmRole.ProjectManager
             && _projectManagerEmployeeIds.Contains(employeeId);
 
         var projects = isPmLookup
-            ? new[] { ProxyFactory.CreateProxy<IPpmProjectByProjectTeamMemberEmployeeId_PpmProjectByProjectTeamMemberEmployeeId>(
-                (_, _) => throw new NotImplementedException("Fake project items do not expose fields.")) }
-            : Array.Empty<IPpmProjectByProjectTeamMemberEmployeeId_PpmProjectByProjectTeamMemberEmployeeId>();
+            ? matchedProjects.Append(ProxyFactory.CreateProxy<IPpmProjectByProjectTeamMemberEmployeeId_PpmProjectByProjectTeamMemberEmployeeId>(
+                (_, _) => throw new NotImplementedException("Fake project items do not expose fields."))).ToArray()
+            : matchedProjects.ToArray();
 
         var result = new PpmProjectByProjectTeamMemberEmployeeIdResult(projects);
         return Task.FromResult<IOperationResult<IPpmProjectByProjectTeamMemberEmployeeIdResult>>(
             new FakeOperationResult<IPpmProjectByProjectTeamMemberEmployeeIdResult>(result));
+    }
+
+    private static IPpmProjectByProjectTeamMemberEmployeeId_PpmProjectByProjectTeamMemberEmployeeId CreateProject(
+        FakeFinancialProject project)
+    {
+        var teamMembers = project.TeamMembers.Select(CreateTeamMember).ToArray();
+        var awards = new[] { CreateAward(project.AwardPersonnel) };
+
+        return ProxyFactory.CreateProxy<IPpmProjectByProjectTeamMemberEmployeeId_PpmProjectByProjectTeamMemberEmployeeId>((method, _) =>
+            method.Name switch
+            {
+                "get_ProjectNumber" => project.ProjectNumber,
+                "get_ProjectStatus" => "ACTIVE",
+                "get_TeamMembers" => teamMembers,
+                "get_Awards" => awards,
+                _ => throw new NotImplementedException($"{method.Name} is not implemented for this fake."),
+            });
+    }
+
+    private static IPpmProjectByProjectTeamMemberEmployeeId_PpmProjectByProjectTeamMemberEmployeeId_TeamMembers CreateTeamMember(
+        FakeFinancialProjectTeamMember member)
+    {
+        return ProxyFactory.CreateProxy<IPpmProjectByProjectTeamMemberEmployeeId_PpmProjectByProjectTeamMemberEmployeeId_TeamMembers>((method, _) =>
+            method.Name switch
+            {
+                "get_EmployeeId" => member.EmployeeId,
+                "get_Name" => member.Name,
+                "get_RoleName" => member.RoleName,
+                _ => throw new NotImplementedException($"{method.Name} is not implemented for this fake."),
+            });
+    }
+
+    private static IPpmProjectByProjectTeamMemberEmployeeId_PpmProjectByProjectTeamMemberEmployeeId_Awards CreateAward(
+        IReadOnlyList<FakeFinancialProjectTeamMember> personnel)
+    {
+        var awardPersonnel = personnel.Select(CreateAwardPerson).ToArray();
+
+        return ProxyFactory.CreateProxy<IPpmProjectByProjectTeamMemberEmployeeId_PpmProjectByProjectTeamMemberEmployeeId_Awards>((method, _) =>
+            method.Name switch
+            {
+                "get_Personnel" => awardPersonnel,
+                _ => throw new NotImplementedException($"{method.Name} is not implemented for this fake."),
+            });
+    }
+
+    private static IPpmProjectByProjectTeamMemberEmployeeId_PpmProjectByProjectTeamMemberEmployeeId_Awards_Personnel CreateAwardPerson(
+        FakeFinancialProjectTeamMember person)
+    {
+        return ProxyFactory.CreateProxy<IPpmProjectByProjectTeamMemberEmployeeId_PpmProjectByProjectTeamMemberEmployeeId_Awards_Personnel>((method, _) =>
+            method.Name switch
+            {
+                "get_EmployeeId" => person.EmployeeId,
+                "get_Name" => person.Name,
+                "get_RoleName" => person.RoleName,
+                _ => throw new NotImplementedException($"{method.Name} is not implemented for this fake."),
+            });
     }
 
     public IObservable<IOperationResult<IPpmProjectByProjectTeamMemberEmployeeIdResult>> Watch(
