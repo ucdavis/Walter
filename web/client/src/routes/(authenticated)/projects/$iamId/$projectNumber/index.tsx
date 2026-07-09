@@ -1,4 +1,5 @@
 import { ProjectAlerts } from '@/components/alerts/ProjectAlerts.tsx';
+import { ExpenditureCategoryBreakdown } from '@/components/project/ExpenditureCategoryBreakdown.tsx';
 import { TaskBreakdown } from '@/components/project/TaskBreakdown.tsx';
 import { ProjectDetails } from '@/components/project/ProjectDetails.tsx';
 import { FinancialDetails } from '@/components/project/FinancialDetails.tsx';
@@ -107,20 +108,34 @@ function ProjectContent({
       <ProjectAdditionalInfo summary={summary} />
 
       <section className="section-margin">
-        <h2 className="h2">
-          <TooltipLabel
-            label="Task Breakdown"
-            tooltip={tooltipDefinitions.taskBreakdown}
-          />
-        </h2>
-        <div className="mt-4">
-          <TaskBreakdown
-            iamId={iamId}
-            isInternal={summary.isInternal}
-            projectNumber={summary.projectNumber}
-            records={projectRecords}
-          />
-        </div>
+        {summary.isInternal ? (
+          <>
+            <h2 className="h2">
+              <TooltipLabel
+                label="Task Breakdown"
+                tooltip={tooltipDefinitions.taskBreakdown}
+              />
+            </h2>
+            <div className="mt-4">
+              <TaskBreakdown
+                iamId={iamId}
+                isInternal={summary.isInternal}
+                projectNumber={summary.projectNumber}
+                records={projectRecords}
+              />
+            </div>
+          </>
+        ) : (
+          <>
+            <h2 className="h2">Expenditure Category Breakdown</h2>
+            <div className="mt-4">
+              <ExpenditureCategoryBreakdown
+                projectNumber={summary.projectNumber}
+                records={projectRecords}
+              />
+            </div>
+          </>
+        )}
       </section>
 
       <section className="section-margin">
