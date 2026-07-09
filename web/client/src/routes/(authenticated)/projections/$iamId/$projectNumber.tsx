@@ -72,7 +72,7 @@ function RouteComponent() {
             to="/projects/$iamId/$projectNumber"
           >
             <ArrowLeftIcon className="h-4 w-4" />
-            Back to Project
+            Back to Project Details
           </Link>
           <div className="mb-1">
             <span
@@ -81,7 +81,7 @@ function RouteComponent() {
               {summary.isInternal ? 'Internal' : 'Sponsored'}
             </span>
           </div>
-          <h1 className="h1">Projections</h1>
+          <h1 className="h1">Project Financial Projections</h1>
           <h3 className="subtitle">{summary.displayName}</h3>
         </section>
 

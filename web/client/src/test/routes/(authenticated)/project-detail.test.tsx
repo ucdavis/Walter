@@ -214,10 +214,10 @@ describe('project detail page', () => {
       },
       {
         budget: 100,
-        committed: 0,
+        committed: 10,
         expenditureCategory: '04 - Supplies',
         isPersonnel: 0,
-        remainingNow: 80,
+        remainingNow: 70,
         spentToDate: 20,
       },
       {
@@ -348,7 +348,15 @@ describe('project detail page', () => {
 
   it('shows the project burndown with category tabs on the projections page', async () => {
     const user = userEvent.setup();
-    const projects = [createProject({ pmEmployeeId: '2000' })];
+    const projects = [
+      createProject({ pmEmployeeId: '2000' }),
+      createProject({
+        displayName: 'Switchable Projection Project',
+        pmEmployeeId: '2000',
+        projectName: 'Switchable Projection Project',
+        projectNumber: 'P2',
+      }),
+    ];
     setupHandlers(
       { employeeId: '1000', name: 'PI User' },
       projects,
@@ -361,13 +369,52 @@ describe('project detail page', () => {
 
     try {
       expect(
-        await screen.findByRole('heading', { name: 'Projections' })
+        await screen.findByRole('heading', {
+          name: 'Project Financial Projections',
+        })
       ).toBeInTheDocument();
+      expect(screen.getByText('Sponsored')).toBeInTheDocument();
       expect(
         await screen.findByTestId('project-burndown-chart')
       ).toBeInTheDocument();
       expect(screen.getByText('Project Burndown')).toBeInTheDocument();
+      expect(
+        screen.getByText(tooltipDefinitions.projectBurndown)
+      ).toBeInTheDocument();
       expect(screen.getByText('Current Balance')).toBeInTheDocument();
+      const expenditureProgress = screen.getByTestId(
+        'project-expenditure-progress'
+      );
+      expect(
+        within(expenditureProgress).getByRole('heading', {
+          name: 'Project Expenditure Progress',
+        })
+      ).toBeInTheDocument();
+      expect(
+        within(expenditureProgress).getByText(
+          'Expenses, commitments, and available balance by expenditure category.'
+        )
+      ).toBeInTheDocument();
+      expect(
+        within(expenditureProgress).getByText('Supplies')
+      ).toBeInTheDocument();
+      expect(
+        within(expenditureProgress).getByText('$10.00 committed')
+      ).toBeInTheDocument();
+      expect(
+        within(expenditureProgress).getByText('$70.00 (70%) available')
+      ).toBeInTheDocument();
+      expect(
+        within(expenditureProgress).getByRole('img', {
+          name: /Supplies: \$20\.00 spent, \$10\.00 committed, \$70\.00 \(70%\) available, \$100\.00 budget/,
+        })
+      ).toBeInTheDocument();
+      for (const label of screen.getAllByText('Switchable Projection Project')) {
+        expect(label.closest('a')).toHaveAttribute(
+          'href',
+          '/projects/1000/P2'
+        );
+      }
 
       // Single-select: All Expenses is first and selected by default.
       const allExpensesTab = screen.getByRole('tab', {
@@ -485,12 +532,17 @@ describe('project detail page', () => {
     });
 
     try {
-      await screen.findByRole('heading', { name: 'Projections' });
+      await screen.findByRole('heading', {
+        name: 'Project Financial Projections',
+      });
       // The section renders a loading state until the projection query
       // resolves, so wait for it to settle and disappear.
       await waitFor(() =>
         expect(screen.queryByText('Project Burndown')).not.toBeInTheDocument()
       );
+      expect(
+        screen.queryByText('Project Expenditure Progress')
+      ).not.toBeInTheDocument();
     } finally {
       cleanup();
     }

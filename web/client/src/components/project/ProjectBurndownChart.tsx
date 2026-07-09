@@ -9,7 +9,12 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import { ProjectExpenditureProgress } from '@/components/project/ProjectExpenditureProgress.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
+import {
+  projectNonPersonnelCategoryColor,
+  projectSeriesColor,
+} from '@/components/project/projectChartColors.ts';
 import {
   ALL_EXPENSES_SERIES,
   buildNonPersonnelCategorySeries,
@@ -23,26 +28,15 @@ import {
   type ProjectionSeries,
 } from '@/lib/projectProjection.ts';
 import { useProjectProjectionQuery } from '@/queries/projectProjection.ts';
-import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
 import { tooltipDefinitions } from '@/shared/tooltips.ts';
 
-const SERIES_COLORS = [
-  'var(--color-primary)',
-  'var(--color-ucd-redbud)',
-  'var(--color-ucd-arboretum)',
-  'var(--color-ucd-tahoe)',
-  'var(--color-ucd-cabernet)',
-  'var(--color-ucd-doubledecker)',
-  'var(--color-ucd-quad)',
-  'var(--color-ucd-putahcreek)',
-  'var(--color-ucd-gold)',
-];
 const GRID_COLOR = 'var(--color-main-border)';
 const ZERO_LINE_COLOR = 'var(--color-error)';
 const PROJECTION_TRANSITION_LINE_COLOR = 'var(--color-base-content)';
 const SALARIES_CATEGORY_PREFIX = '01';
 const SALARIES_CATEGORY_COLOR = 'var(--color-ucd-redbud)';
 const OTHER_CATEGORY_COLOR = 'var(--color-ucd-arboretum)';
+const CHART_TOOLTIP_Z_INDEX = 60;
 
 type ChartRow = { label: string; month: string } & Record<
   string,
@@ -74,14 +68,6 @@ function buildChartRows(series: ProjectionSeries[]): ChartRow[] {
   }
 
   return [...rows.values()].sort((a, b) => a.month.localeCompare(b.month));
-}
-
-function seriesColor(index: number) {
-  return SERIES_COLORS[index % SERIES_COLORS.length];
-}
-
-function subcategorySeriesColor(index: number) {
-  return seriesColor(index + 3);
 }
 
 function categoryDisplayName(expenditureCategory: string) {
@@ -127,8 +113,8 @@ interface BurndownTooltipProps {
   active?: boolean;
   categorySpendByMonth: Map<string, CategorySpend[]>;
   payload?: Array<{ payload?: ChartRow }>;
-  selectedNonPersonnelCategory: string | null;
   selectedKey: string;
+  selectedNonPersonnelCategory: string | null;
   visibleSeries: VisibleSeries[];
 }
 
@@ -136,8 +122,8 @@ function BurndownTooltip({
   active,
   categorySpendByMonth,
   payload,
-  selectedNonPersonnelCategory,
   selectedKey,
+  selectedNonPersonnelCategory,
   visibleSeries,
 }: BurndownTooltipProps) {
   const row = payload?.find((item) => item.payload)?.payload;
@@ -278,21 +264,24 @@ export function ProjectBurndownSection({
   }
 
   const selectedRollupSeries: VisibleSeries[] = series
-    .map((entry, index) => ({ color: seriesColor(index), key: entry.key }))
+    .map((entry, index) => ({
+      color: projectSeriesColor(index),
+      key: entry.key,
+    }))
     .filter(({ key }) => key === selectedKey);
   const visibleSeries: VisibleSeries[] =
     selectedKey === NON_PERSONNEL_SERIES
       ? activeSelectedNonPersonnelCategory
         ? nonPersonnelCategorySeries
             .map((entry, index) => ({
-              color: subcategorySeriesColor(index),
+              color: projectNonPersonnelCategoryColor(index),
               key: entry.key,
             }))
             .filter(({ key }) => key === activeSelectedNonPersonnelCategory)
         : [
             ...selectedRollupSeries,
             ...nonPersonnelCategorySeries.map((entry, index) => ({
-              color: subcategorySeriesColor(index),
+              color: projectNonPersonnelCategoryColor(index),
               key: entry.key,
               strokeWidth: 1.75,
             })),
@@ -311,197 +300,208 @@ export function ProjectBurndownSection({
       : selectedKey;
 
   return (
-    <section className="section-margin">
-      <h2 className="h2 mb-3">
-        <TooltipLabel
-          label="Project Burndown"
-          tooltip={tooltipDefinitions.projectBurndown}
-        />
-      </h2>
+    <>
+      <section className="section-margin mt-8 mb-4 pb-8 border-b border-main-border">
+        <h2 className="h2 mb-1">Project Burndown</h2>
+        <p className="max-w-3xl mb-6">{tooltipDefinitions.projectBurndown}</p>
 
-      {projectionQuery.isPending && (
-        <p className="text-base-content/70 mt-4">Loading project burndown...</p>
-      )}
+        {projectionQuery.isPending && (
+          <p className="text-base-content/70 mt-4">
+            Loading project burndown...
+          </p>
+        )}
 
-      {projectionQuery.isError && (
-        <p className="text-error mt-4">Error loading project burndown.</p>
-      )}
+        {projectionQuery.isError && (
+          <p className="text-error mt-4">Error loading project burndown.</p>
+        )}
 
-      {projectionQuery.isSuccess && series.length > 0 && (
-        <div>
-          <h3 className="font-proxima-bold mb-2 text-base">{chartTitle}</h3>
-
-          <div className="h-80" data-testid="project-burndown-chart">
-            <ResponsiveContainer height="100%" width="100%">
-              <LineChart
-                data={chartRows}
-                margin={{ bottom: 8, left: 8, right: 24, top: 16 }}
-              >
-                <CartesianGrid stroke={GRID_COLOR} strokeDasharray="3 3" />
-                <XAxis
-                  dataKey="month"
-                  tick={{ fill: 'currentColor', fontSize: 12 }}
-                  tickFormatter={(value: string) =>
-                    labelsByMonth.get(value) ?? value
-                  }
-                />
-                <YAxis
-                  domain={[minBalance - padding, maxBalance + padding]}
-                  tick={{ fill: 'currentColor', fontSize: 12 }}
-                  tickFormatter={(value: number) =>
-                    `$${(value / 1000).toFixed(0)}k`
-                  }
-                />
-                <ReferenceLine
-                  ifOverflow="extendDomain"
-                  stroke={ZERO_LINE_COLOR}
-                  strokeDasharray="5 5"
-                  y={0}
-                />
-                {showProjectionTransitionLine && (
-                  <ReferenceLine
-                    stroke={PROJECTION_TRANSITION_LINE_COLOR}
-                    strokeOpacity={0.28}
-                    strokeDasharray="3 5"
-                    strokeWidth={1.5}
-                    x={projectionTransitionMonth}
-                  />
-                )}
-                <Tooltip
-                  content={
-                    <BurndownTooltip
-                      categorySpendByMonth={categorySpendByMonth}
-                      selectedNonPersonnelCategory={
-                        activeSelectedNonPersonnelCategory
-                      }
-                      selectedKey={selectedKey}
-                      visibleSeries={visibleSeries}
-                    />
-                  }
-                />
-                {visibleSeries.map(({ color, key, strokeWidth }) => (
-                  <Line
-                    activeDot={{ r: 5 }}
-                    connectNulls={false}
-                    dataKey={`${key}::solid`}
-                    dot={{ fill: color, r: 3 }}
-                    isAnimationActive={false}
-                    key={`${key}::solid`}
-                    name={key}
-                    stroke={color}
-                    strokeWidth={strokeWidth ?? 2.5}
-                    type="monotone"
-                  />
-                ))}
-                {visibleSeries.map(({ color, key, strokeWidth }) => (
-                  <Line
-                    activeDot={{ r: 5 }}
-                    connectNulls={false}
-                    dataKey={`${key}::dashed`}
-                    dot={{ fill: color, r: 3 }}
-                    isAnimationActive={false}
-                    key={`${key}::dashed`}
-                    legendType="none"
-                    name={key}
-                    stroke={color}
-                    strokeDasharray="6 4"
-                    strokeWidth={strokeWidth ?? 2.5}
-                    type="monotone"
-                  />
-                ))}
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-
-          <div className="tabs tabs-box mt-4 inline-flex" role="tablist">
-            {series.map((entry, index) => {
-              const isSelected = entry.key === selectedKey;
-              return (
-                <button
-                  aria-selected={isSelected}
-                  className={`tab ${isSelected ? 'tab-active' : ''}`}
-                  key={entry.key}
-                  onClick={() => {
-                    setSelectedKey(entry.key);
-                    if (entry.key !== NON_PERSONNEL_SERIES) {
-                      setSelectedNonPersonnelCategory(null);
+        {projectionQuery.isSuccess && series.length > 0 && (
+          <div>
+            {stats && (
+              <div className="mb-6 flex gap-10 text-sm md:grid-cols-3">
+                <div>
+                  <p className="stat-label">Current Balance</p>
+                  <p className="stat-value">
+                    {formatCurrency(stats.currentBalance)}
+                  </p>
+                </div>
+                <div>
+                  <p className="stat-label">Projected End</p>
+                  <p
+                    className={
+                      stats.projectedEnd < 0
+                        ? 'stat-value text-error'
+                        : 'stat-value'
                     }
-                  }}
-                  role="tab"
-                  type="button"
-                >
-                  <span
-                    className="inline-block h-3 w-3 rounded-sm mr-2"
-                    style={{ backgroundColor: seriesColor(index) }}
-                  />
-                  {entry.key}
-                </button>
-              );
-            })}
-          </div>
-
-          {selectedKey === NON_PERSONNEL_SERIES &&
-            nonPersonnelCategorySeries.length > 0 && (
-              <div
-                aria-label="Non-personnel subcategories"
-                className="tabs tabs-box mt-2 flex w-fit flex-wrap"
-                role="tablist"
-              >
-                {nonPersonnelCategorySeries.map((entry, index) => {
-                  const isSelected =
-                    activeSelectedNonPersonnelCategory === entry.key;
-                  return (
-                    <button
-                      aria-selected={isSelected}
-                      className={`tab ${isSelected ? 'tab-active' : ''}`}
-                      key={entry.key}
-                      onClick={() =>
-                        setSelectedNonPersonnelCategory(
-                          isSelected ? null : entry.key
-                        )
-                      }
-                      role="tab"
-                      type="button"
-                    >
-                      <span
-                        className="inline-block h-3 w-3 rounded-sm mr-2"
-                        style={{ backgroundColor: subcategorySeriesColor(index) }}
-                      />
-                      {entry.key}
-                    </button>
-                  );
-                })}
+                  >
+                    {formatCurrency(stats.projectedEnd)}
+                  </p>
+                </div>
+                <div>
+                  <p className="stat-label">Projection</p>
+                  <p className="stat-value">{stats.projectedMonths} months</p>
+                </div>
               </div>
             )}
 
-          {stats && (
-            <div className="mt-4 grid gap-4 text-sm md:grid-cols-3">
-              <div>
-                <p className="stat-label">Current Balance</p>
-                <p className="stat-value">
-                  {formatCurrency(stats.currentBalance)}
-                </p>
-              </div>
-              <div>
-                <p className="stat-label">Projected End</p>
-                <p
-                  className={
-                    stats.projectedEnd < 0
-                      ? 'stat-value text-error'
-                      : 'stat-value'
-                  }
+            <h3 className="font-proxima-bold mb-2 text-base">{chartTitle}</h3>
+
+            <div className="h-80" data-testid="project-burndown-chart">
+              <ResponsiveContainer height="100%" width="100%">
+                <LineChart
+                  data={chartRows}
+                  margin={{ bottom: 8, left: 8, right: 24, top: 16 }}
                 >
-                  {formatCurrency(stats.projectedEnd)}
-                </p>
-              </div>
-              <div>
-                <p className="stat-label">Projection</p>
-                <p className="stat-value">{stats.projectedMonths} months</p>
-              </div>
+                  <CartesianGrid stroke={GRID_COLOR} strokeDasharray="3 3" />
+                  <XAxis
+                    dataKey="month"
+                    tick={{ fill: 'currentColor', fontSize: 12 }}
+                    tickFormatter={(value: string) =>
+                      labelsByMonth.get(value) ?? value
+                    }
+                  />
+                  <YAxis
+                    domain={[minBalance - padding, maxBalance + padding]}
+                    tick={{ fill: 'currentColor', fontSize: 12 }}
+                    tickFormatter={(value: number) =>
+                      `$${(value / 1000).toFixed(0)}k`
+                    }
+                  />
+                  <ReferenceLine
+                    ifOverflow="extendDomain"
+                    stroke={ZERO_LINE_COLOR}
+                    strokeDasharray="5 5"
+                    y={0}
+                  />
+                  {showProjectionTransitionLine && (
+                    <ReferenceLine
+                      stroke={PROJECTION_TRANSITION_LINE_COLOR}
+                      strokeDasharray="3 5"
+                      strokeOpacity={0.28}
+                      strokeWidth={1.5}
+                      x={projectionTransitionMonth}
+                    />
+                  )}
+                  <Tooltip
+                    content={
+                      <BurndownTooltip
+                        categorySpendByMonth={categorySpendByMonth}
+                        selectedKey={selectedKey}
+                        selectedNonPersonnelCategory={
+                          activeSelectedNonPersonnelCategory
+                        }
+                        visibleSeries={visibleSeries}
+                      />
+                    }
+                    wrapperStyle={{ zIndex: CHART_TOOLTIP_Z_INDEX }}
+                  />
+                  {visibleSeries.map(({ color, key, strokeWidth }) => (
+                    <Line
+                      activeDot={{ r: 5 }}
+                      connectNulls={false}
+                      dataKey={`${key}::solid`}
+                      dot={{ fill: color, r: 3 }}
+                      isAnimationActive={false}
+                      key={`${key}::solid`}
+                      name={key}
+                      stroke={color}
+                      strokeWidth={strokeWidth ?? 2.5}
+                      type="monotone"
+                    />
+                  ))}
+                  {visibleSeries.map(({ color, key, strokeWidth }) => (
+                    <Line
+                      activeDot={{ r: 5 }}
+                      connectNulls={false}
+                      dataKey={`${key}::dashed`}
+                      dot={{ fill: color, r: 3 }}
+                      isAnimationActive={false}
+                      key={`${key}::dashed`}
+                      legendType="none"
+                      name={key}
+                      stroke={color}
+                      strokeDasharray="6 4"
+                      strokeWidth={strokeWidth ?? 2.5}
+                      type="monotone"
+                    />
+                  ))}
+                </LineChart>
+              </ResponsiveContainer>
             </div>
-          )}
-        </div>
+
+            <div className="tabs tabs-box mt-4 inline-flex" role="tablist">
+              {series.map((entry, index) => {
+                const isSelected = entry.key === selectedKey;
+                return (
+                  <button
+                    aria-selected={isSelected}
+                    className={`tab ${isSelected ? 'tab-active' : ''}`}
+                    key={entry.key}
+                    onClick={() => {
+                      setSelectedKey(entry.key);
+                      if (entry.key !== NON_PERSONNEL_SERIES) {
+                        setSelectedNonPersonnelCategory(null);
+                      }
+                    }}
+                    role="tab"
+                    type="button"
+                  >
+                    <span
+                      className="inline-block h-3 w-3 rounded-sm mr-2"
+                      style={{ backgroundColor: projectSeriesColor(index) }}
+                    />
+                    {entry.key}
+                  </button>
+                );
+              })}
+            </div>
+
+            {nonPersonnelCategorySeries.length > 0 && (
+              <div className="mt-2 min-h-12">
+                {selectedKey === NON_PERSONNEL_SERIES && (
+                  <div
+                    aria-label="Non-personnel subcategories"
+                    className="tabs tabs-box flex w-fit flex-wrap"
+                    role="tablist"
+                  >
+                    {nonPersonnelCategorySeries.map((entry, index) => {
+                      const isSelected =
+                        activeSelectedNonPersonnelCategory === entry.key;
+                      return (
+                        <button
+                          aria-selected={isSelected}
+                          className={`tab ${isSelected ? 'tab-active' : ''}`}
+                          key={entry.key}
+                          onClick={() =>
+                            setSelectedNonPersonnelCategory(
+                              isSelected ? null : entry.key
+                            )
+                          }
+                          role="tab"
+                          type="button"
+                        >
+                          <span
+                            className="inline-block h-3 w-3 rounded-sm mr-2"
+                            style={{
+                              backgroundColor:
+                                projectNonPersonnelCategoryColor(index),
+                            }}
+                          />
+                          {entry.key}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </section>
+
+      {projectionQuery.isSuccess && series.length > 0 && (
+        <ProjectExpenditureProgress categories={result.categories} />
       )}
-    </section>
+    </>
   );
 }
