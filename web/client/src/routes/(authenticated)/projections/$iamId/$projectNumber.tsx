@@ -75,7 +75,7 @@ function RouteComponent() {
             Back to Project Details
           </Link>
           <h1 className="h1">Project Financial Projections</h1>
-          <div className="mb-1">
+          <div className="mt-4">
             <span className="badge font-proxima-bold badge-sm badge-info">
               Sponsored
             </span>
