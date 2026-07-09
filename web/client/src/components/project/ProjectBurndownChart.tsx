@@ -12,6 +12,7 @@ import {
 import { ProjectExpenditureProgress } from '@/components/project/ProjectExpenditureProgress.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import {
+  PROJECT_PERSONNEL_COLOR,
   projectNonPersonnelCategoryColor,
   projectSeriesColor,
 } from '@/components/project/projectChartColors.ts';
@@ -33,9 +34,6 @@ import { tooltipDefinitions } from '@/shared/tooltips.ts';
 const GRID_COLOR = 'var(--color-main-border)';
 const ZERO_LINE_COLOR = 'var(--color-error)';
 const PROJECTION_TRANSITION_LINE_COLOR = 'var(--color-base-content)';
-const SALARIES_CATEGORY_PREFIX = '01';
-const SALARIES_CATEGORY_COLOR = 'var(--color-ucd-redbud)';
-const OTHER_CATEGORY_COLOR = 'var(--color-ucd-arboretum)';
 const CHART_TOOLTIP_Z_INDEX = 60;
 
 type ChartRow = { label: string; month: string } & Record<
@@ -74,22 +72,15 @@ function categoryDisplayName(expenditureCategory: string) {
   return expenditureCategory.replace(/^\d+\s*-\s*/, '');
 }
 
-function categorySpendColor(expenditureCategory: string) {
-  return expenditureCategory.trim().startsWith(SALARIES_CATEGORY_PREFIX)
-    ? SALARIES_CATEGORY_COLOR
-    : OTHER_CATEGORY_COLOR;
-}
-
-function isSalariesCategory(expenditureCategory: string) {
-  return expenditureCategory.trim().startsWith(SALARIES_CATEGORY_PREFIX);
-}
-
 function filterCategorySpend(
   categorySpend: CategorySpend[],
   selectedNonPersonnelCategory: string | null,
   selectedKey: string
 ) {
-  if (selectedKey === PERSONNEL_SERIES) {
+  if (
+    selectedKey === PERSONNEL_SERIES ||
+    selectedKey === NON_PERSONNEL_SERIES
+  ) {
     return [];
   }
 
@@ -100,18 +91,24 @@ function filterCategorySpend(
     );
   }
 
-  if (selectedKey === NON_PERSONNEL_SERIES) {
-    return categorySpend.filter(
-      ({ expenditureCategory }) => !isSalariesCategory(expenditureCategory)
-    );
-  }
-
   return categorySpend;
+}
+
+function buildCategorySpendColors(
+  nonPersonnelCategorySeries: ProjectionSeries[]
+) {
+  return new Map(
+    nonPersonnelCategorySeries.map((entry, index) => [
+      entry.key,
+      projectNonPersonnelCategoryColor(index),
+    ])
+  );
 }
 
 interface BurndownTooltipProps {
   active?: boolean;
   categorySpendByMonth: Map<string, CategorySpend[]>;
+  categorySpendColors: Map<string, string>;
   payload?: Array<{ payload?: ChartRow }>;
   selectedKey: string;
   selectedNonPersonnelCategory: string | null;
@@ -121,6 +118,7 @@ interface BurndownTooltipProps {
 function BurndownTooltip({
   active,
   categorySpendByMonth,
+  categorySpendColors,
   payload,
   selectedKey,
   selectedNonPersonnelCategory,
@@ -192,7 +190,9 @@ function BurndownTooltip({
                   <span
                     className="inline-block h-3 w-3 shrink-0 rounded-sm"
                     style={{
-                      backgroundColor: categorySpendColor(expenditureCategory),
+                      backgroundColor:
+                        categorySpendColors.get(expenditureCategory) ??
+                        PROJECT_PERSONNEL_COLOR,
                     }}
                   />
                   <span className="truncate">{expenditureCategory}</span>
@@ -223,6 +223,10 @@ export function ProjectBurndownSection({
   const nonPersonnelCategorySeries = useMemo(
     () => (result ? buildNonPersonnelCategorySeries(result) : []),
     [result]
+  );
+  const categorySpendColors = useMemo(
+    () => buildCategorySpendColors(nonPersonnelCategorySeries),
+    [nonPersonnelCategorySeries]
   );
   const chartSeries = useMemo(
     () => [...series, ...nonPersonnelCategorySeries],
@@ -386,6 +390,7 @@ export function ProjectBurndownSection({
                     content={
                       <BurndownTooltip
                         categorySpendByMonth={categorySpendByMonth}
+                        categorySpendColors={categorySpendColors}
                         selectedKey={selectedKey}
                         selectedNonPersonnelCategory={
                           activeSelectedNonPersonnelCategory
