@@ -301,7 +301,7 @@ export function ProjectBurndownSection({
 
   return (
     <>
-      <section className="section-margin mt-8 mb-4 pb-8 border-b border-main-border">
+      <section className="mt-8 pb-4 border-b border-main-border">
         <h2 className="h2 mb-1">Project Burndown</h2>
         <p className="max-w-3xl mb-6">{tooltipDefinitions.projectBurndown}</p>
 

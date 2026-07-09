@@ -145,7 +145,7 @@ export function ProjectExpenditureProgress({
   return (
     <section
       aria-labelledby="project-expenditure-progress-heading"
-      className="mt-2 mb-4 border-b border-main-border pb-8"
+      className="mt-8 border-b border-main-border pb-8"
       data-testid="project-expenditure-progress"
     >
       <h2 className="h2 mb-1" id="project-expenditure-progress-heading">
