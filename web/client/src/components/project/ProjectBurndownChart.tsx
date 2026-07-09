@@ -499,7 +499,7 @@ export function ProjectBurndownSection({
         )}
       </section>
 
-      {projectionQuery.isSuccess && series.length > 0 && (
+      {projectionQuery.isSuccess && result && series.length > 0 && (
         <ProjectExpenditureProgress categories={result.categories} />
       )}
     </>

@@ -375,6 +375,9 @@ describe('project detail page', () => {
       ).toBeInTheDocument();
       expect(screen.getByText('Sponsored')).toBeInTheDocument();
       expect(
+        screen.getByRole('heading', { level: 2, name: 'Test Project' })
+      ).toBeInTheDocument();
+      expect(
         await screen.findByTestId('project-burndown-chart')
       ).toBeInTheDocument();
       expect(screen.getByText('Project Burndown')).toBeInTheDocument();

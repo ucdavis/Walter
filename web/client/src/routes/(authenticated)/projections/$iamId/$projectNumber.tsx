@@ -65,7 +65,7 @@ function RouteComponent() {
   return (
     <ProjectPortfolioLayout>
       <main className="flex-1 min-w-0">
-        <section className="mt-8 mb-2">
+        <section className="mt-8 mb-6">
           <Link
             className="btn btn-sm mb-4"
             params={{ iamId, projectNumber: summary.projectNumber }}
@@ -74,15 +74,13 @@ function RouteComponent() {
             <ArrowLeftIcon className="h-4 w-4" />
             Back to Project Details
           </Link>
+          <h1 className="h1">Project Financial Projections</h1>
           <div className="mb-1">
-            <span
-              className={`badge font-proxima-bold badge-sm ${summary.isInternal ? 'badge-accent' : 'badge-info'}`}
-            >
-              {summary.isInternal ? 'Internal' : 'Sponsored'}
+            <span className="badge font-proxima-bold badge-sm badge-info">
+              Sponsored
             </span>
           </div>
-          <h1 className="h1">Project Financial Projections</h1>
-          <h3 className="subtitle">{summary.displayName}</h3>
+          <h2 className="subtitle max-w-3xl">{summary.displayName}</h2>
         </section>
 
         {projectionsAvailable ? (
