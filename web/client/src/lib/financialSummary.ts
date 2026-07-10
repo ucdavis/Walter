@@ -1,4 +1,5 @@
 import type { FinancialSummaryRow } from '@/queries/financialSummary.ts';
+import type { LabelSegments } from '@/queries/financialSummaryLabels.ts';
 
 export interface DimensionDef {
   codeField: keyof FinancialSummaryRow;
@@ -44,3 +45,26 @@ export const rowGroupLabel = (row: FinancialSummaryRow, dimensions: string[]): s
         : String(code);
     })
     .join(' · ');
+
+// A label's key is the exact segment combination its row displayed when written: the selected
+// dimensions supply which segments are set, the row supplies the codes, all others stay ''.
+export const rowLabelSegments = (
+  row: FinancialSummaryRow,
+  dimensions: string[]
+): LabelSegments => {
+  const segments: LabelSegments = {
+    account: '',
+    activity: '',
+    dept: '',
+    fund: '',
+    project: '',
+    purpose: '',
+  };
+  for (const d of activeColumns(dimensions)) {
+    segments[d.codeField as keyof LabelSegments] = String(row[d.codeField] ?? '');
+  }
+  return segments;
+};
+
+export const labelKeyOf = (s: LabelSegments): string =>
+  [s.dept, s.fund, s.account, s.purpose, s.project, s.activity].join('|');

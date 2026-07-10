@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { createColumnHelper } from '@tanstack/react-table';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   useFinancialSummaryQuery,
   useFinancialSummaryOptions,
@@ -9,10 +10,18 @@ import {
   type FinancialSummaryFilters,
 } from '@/queries/financialSummary.ts';
 import {
+  financialSummaryLabelsQueryKey,
+  upsertFinancialSummaryLabel,
+  useFinancialSummaryLabels,
+  type LabelSegments,
+} from '@/queries/financialSummaryLabels.ts';
+import {
   DIMENSIONS,
   MEASURES,
   activeColumns,
+  labelKeyOf,
   rowGroupLabel,
+  rowLabelSegments,
   type MeasureDef,
 } from '@/lib/financialSummary.ts';
 import {
@@ -22,6 +31,7 @@ import {
 import { DataTable } from '@/shared/DataTable.tsx';
 import { ExportDataButton } from '@/components/ExportDataButton.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
+import { formatDate } from '@/lib/date.ts';
 
 export const Route = createFileRoute(
   '/(authenticated)/reports/financial-summary/'
@@ -29,7 +39,55 @@ export const Route = createFileRoute(
   component: RouteComponent,
 });
 
-const columnHelper = createColumnHelper<FinancialSummaryRow>();
+// Report row enriched with its shared label (matched by exact segment-combination key).
+type LabeledRow = FinancialSummaryRow & { label: string };
+
+const columnHelper = createColumnHelper<LabeledRow>();
+
+// Inline-editable cell for the shared Label column: save on blur/Enter, empty text deletes.
+// Uncontrolled input remounted (via key on the call site) when the saved label changes.
+// Hovering a saved label shows who wrote it and when.
+function LabelCell({
+  label,
+  provenance,
+  segments,
+}: {
+  label: string;
+  provenance?: string;
+  segments: LabelSegments;
+}) {
+  const queryClient = useQueryClient();
+  const mutation = useMutation({
+    mutationFn: (text: string) =>
+      upsertFinancialSummaryLabel({ ...segments, text }),
+    onSettled: () =>
+      queryClient.invalidateQueries({ queryKey: financialSummaryLabelsQueryKey }),
+  });
+
+  return (
+    <input
+      className={`input input-sm input-ghost w-full min-w-40 ${
+        mutation.isError ? 'input-error' : ''
+      }`}
+      defaultValue={label}
+      maxLength={500}
+      onBlur={(e) => {
+        const text = e.target.value.trim();
+        if (text !== label) {
+          mutation.mutate(text);
+        }
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          e.currentTarget.blur();
+        }
+      }}
+      placeholder="Add label…"
+      title={mutation.isError ? 'Failed to save label' : provenance}
+      type="text"
+    />
+  );
+}
 
 const GROUP_BY_OPTIONS: FilterOption[] = DIMENSIONS.map((d) => ({
   label: d.label,
@@ -68,6 +126,23 @@ function RouteComponent() {
   );
 
   const { data: rows = [], isError, isFetching } = useFinancialSummaryQuery(query);
+  const { data: labels = [] } = useFinancialSummaryLabels();
+
+  // Match shared labels to rows by exact segment-combination key.
+  const labelsByKey = useMemo(
+    () => new Map(labels.map((l) => [labelKeyOf(l), l])),
+    [labels]
+  );
+  const labeledRows = useMemo(
+    () =>
+      rows.map(
+        (r): LabeledRow => ({
+          ...r,
+          label: labelsByKey.get(labelKeyOf(rowLabelSegments(r, dimensions)))?.text ?? '',
+        })
+      ),
+    [rows, labelsByKey, dimensions]
+  );
 
   const deptOptions = useFinancialSummaryOptions('Dept', {});
   const fundOptions = useFinancialSummaryOptions('Fund', query, department.length > 0);
@@ -117,8 +192,27 @@ function RouteComponent() {
         ),
         header: () => <span className="flex justify-end">{m.label}</span>,
       });
-    return [...dimCols, ...MEASURES.map(measure)];
-  }, [cols, totals]);
+    const labelCol = columnHelper.accessor('label', {
+      cell: (info) => {
+        const segments = rowLabelSegments(info.row.original, dimensions);
+        const saved = labelsByKey.get(labelKeyOf(segments));
+        return (
+          <LabelCell
+            key={`${labelKeyOf(segments)}:${info.getValue()}`}
+            label={info.getValue()}
+            provenance={
+              saved
+                ? `Added by ${saved.updatedBy ?? 'unknown'} on ${formatDate(saved.updatedAt)}`
+                : undefined
+            }
+            segments={segments}
+          />
+        );
+      },
+      header: 'Label',
+    });
+    return [...dimCols, ...MEASURES.map(measure), labelCol];
+  }, [cols, totals, dimensions, labelsByKey]);
 
   const csvColumns = useMemo(
     () => [
@@ -131,6 +225,7 @@ function RouteComponent() {
         header: m.label,
         key: m.key,
       })),
+      { header: 'Label', key: 'label' as const },
     ],
     [cols]
   );
@@ -295,13 +390,13 @@ function RouteComponent() {
       ) : (
         <DataTable
           columns={columns}
-          data={rows}
+          data={labeledRows}
           globalFilter="none"
           pagination="off"
           tableActions={
             <ExportDataButton
               columns={csvColumns}
-              data={rows}
+              data={labeledRows}
               filename="financial-summary.csv"
             />
           }

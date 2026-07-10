@@ -3,6 +3,8 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Server.Controllers;
+using Server.Tests;
+using server.core.Data;
 using server.core.Domain;
 using server.core.Models;
 using server.core.Services;
@@ -14,10 +16,8 @@ public sealed class FinancialSummaryControllerTests
     [Fact]
     public async Task Query_returns_bad_request_when_no_dimensions()
     {
-        var controller = new FinancialSummaryController(new ResolvingDatamartService())
-        {
-            ControllerContext = MakeContext(),
-        };
+        using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
+        var controller = MakeController(ctx);
 
         var result = await controller.QueryAsync(new FinancialSummaryQuery { Dimensions = Array.Empty<string>() }, CancellationToken.None);
 
@@ -31,10 +31,8 @@ public sealed class FinancialSummaryControllerTests
         {
             new() { Fund = "13U00", FundDesc = "General", Revenue = 100m, Expenses = 40m, EndingBalance = 60m },
         };
-        var controller = new FinancialSummaryController(new ResolvingDatamartService(summaryRows: rows))
-        {
-            ControllerContext = MakeContext(),
-        };
+        using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
+        var controller = MakeController(ctx, new ResolvingDatamartService(summaryRows: rows));
 
         var result = await controller.QueryAsync(new FinancialSummaryQuery { Dimensions = new[] { "Fund" } }, CancellationToken.None);
 
@@ -45,14 +43,93 @@ public sealed class FinancialSummaryControllerTests
     [Fact]
     public async Task Options_returns_bad_request_when_segment_missing()
     {
-        var controller = new FinancialSummaryController(new ResolvingDatamartService())
-        {
-            ControllerContext = MakeContext(),
-        };
+        using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
+        var controller = MakeController(ctx);
 
         var result = await controller.OptionsAsync(new FinancialSummaryOptionsQuery { Segment = "" }, CancellationToken.None);
 
         result.Should().BeOfType<BadRequestObjectResult>();
+    }
+
+    [Fact]
+    public async Task UpsertLabel_rejects_all_empty_segments()
+    {
+        using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
+        var controller = MakeController(ctx);
+
+        var result = await controller.UpsertLabelAsync(
+            new FinancialSummaryController.UpsertLabelRequest(null, "", "  ", null, null, null, "some text"),
+            CancellationToken.None);
+
+        result.Should().BeOfType<BadRequestObjectResult>();
+        ctx.FinancialSummaryLabels.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task UpsertLabel_creates_then_updates_then_deletes()
+    {
+        using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
+        var controller = MakeController(ctx);
+
+        var create = await controller.UpsertLabelAsync(
+            new FinancialSummaryController.UpsertLabelRequest(null, "13U00", null, null, null, null, "summer employment 2026"),
+            CancellationToken.None);
+        create.Should().BeOfType<OkObjectResult>();
+        ctx.FinancialSummaryLabels.Should().ContainSingle(l => l.Fund == "13U00" && l.Text == "summer employment 2026");
+
+        var update = await controller.UpsertLabelAsync(
+            new FinancialSummaryController.UpsertLabelRequest(null, "13U00", null, null, null, null, "updated"),
+            CancellationToken.None);
+        update.Should().BeOfType<OkObjectResult>();
+        ctx.FinancialSummaryLabels.Should().ContainSingle(l => l.Fund == "13U00" && l.Text == "updated");
+
+        var delete = await controller.UpsertLabelAsync(
+            new FinancialSummaryController.UpsertLabelRequest(null, "13U00", null, null, null, null, "  "),
+            CancellationToken.None);
+        delete.Should().BeOfType<NoContentResult>();
+        ctx.FinancialSummaryLabels.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task UpsertLabel_treats_different_segment_combinations_as_distinct()
+    {
+        using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
+        var controller = MakeController(ctx);
+
+        await controller.UpsertLabelAsync(
+            new FinancialSummaryController.UpsertLabelRequest(null, "13U00", null, null, null, null, "fund only"),
+            CancellationToken.None);
+        await controller.UpsertLabelAsync(
+            new FinancialSummaryController.UpsertLabelRequest("ADNO001", "13U00", null, null, null, null, "dept and fund"),
+            CancellationToken.None);
+
+        ctx.FinancialSummaryLabels.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task GetLabels_returns_the_shared_layer()
+    {
+        using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
+        var controller = MakeController(ctx);
+        await controller.UpsertLabelAsync(
+            new FinancialSummaryController.UpsertLabelRequest(null, "13U00", null, null, null, null, "summer employment 2026"),
+            CancellationToken.None);
+
+        var result = await controller.GetLabelsAsync(CancellationToken.None);
+
+        var ok = result.Result.Should().BeOfType<OkObjectResult>().Which;
+        var labels = ok.Value.Should().BeAssignableTo<IReadOnlyList<FinancialSummaryController.LabelResponse>>().Which;
+        labels.Should().ContainSingle(l => l.Fund == "13U00" && l.Text == "summer employment 2026");
+    }
+
+    private static FinancialSummaryController MakeController(
+        AppDbContext ctx,
+        IDatamartService? datamart = null)
+    {
+        return new FinancialSummaryController(datamart ?? new ResolvingDatamartService(), ctx)
+        {
+            ControllerContext = MakeContext(),
+        };
     }
 
     private static ControllerContext MakeContext()
