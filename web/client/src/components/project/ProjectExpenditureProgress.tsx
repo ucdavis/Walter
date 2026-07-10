@@ -4,10 +4,22 @@ import {
   projectNonPersonnelCategoryColor,
 } from '@/components/project/projectChartColors.ts';
 import { formatCurrency } from '@/lib/currency.ts';
+import {
+  getBudgetProgressSummary,
+  getTimeProgressSummary,
+  type BudgetProgressSummary,
+  type TimeProgressSummary,
+} from '@/lib/projectProgress.ts';
 import type { ProjectProjectionCategory } from '@/queries/projectProjection.ts';
 
 const CATEGORY_PROGRESS_DESCRIPTION =
   'Expenses, commitments, and available balance by expenditure category.';
+const TIME_ELAPSED_COLOR = 'var(--color-secondary)';
+const BUDGET_SPENT_COLOR = 'var(--color-primary)';
+const AXIS_MAX_PERCENT = 120;
+const BAR_MAX_PERCENT = 100;
+const BAR_TRACK_WIDTH_PERCENT = (BAR_MAX_PERCENT / AXIS_MAX_PERCENT) * 100;
+const AXIS_TICKS = [0, 20, 40, 60, 80, 100, 120] as const;
 
 type CategoryProgressSegment = {
   color: string;
@@ -28,7 +40,26 @@ type CategoryProgressRow = {
   total: number;
 };
 
+type PacingProgressSegment = {
+  color: string;
+  label: string;
+  secondaryText?: string;
+  text?: string;
+  textClassName?: string;
+  width: number;
+};
+
+type PacingProgressRow = {
+  ariaLabel: string;
+  detailText: string;
+  segments: PacingProgressSegment[];
+  title: string;
+  totalText: string;
+};
+
 interface ProjectExpenditureProgressProps {
+  awardEndDate: string | null;
+  awardStartDate: string | null;
   categories: ProjectProjectionCategory[];
 }
 
@@ -63,6 +94,148 @@ function progressWidth(value: number, total: number) {
 
 function formatPercent(value: number, total: number) {
   return total > 0 ? `${Math.round((value / total) * 100)}%` : '0%';
+}
+
+function formatPacingPercent(value: number) {
+  return `${Math.round(value)}%`;
+}
+
+function formatMonthCount(value: number) {
+  return `${value} ${value === 1 ? 'month' : 'months'}`;
+}
+
+function ScaledProgressBar({
+  ariaLabel,
+  segments,
+}: {
+  ariaLabel: string;
+  segments: Array<{ color: string; label: string; width: number }>;
+}) {
+  return (
+    <div className="relative">
+      <div
+        aria-label={ariaLabel}
+        className="flex h-3 overflow-hidden rounded-sm bg-base-300"
+        role="img"
+        style={{ width: `${BAR_TRACK_WIDTH_PERCENT}%` }}
+      >
+        {segments
+          .filter((segment) => segment.width > 0)
+          .map((segment) => (
+            <span
+              aria-hidden="true"
+              className="block h-full"
+              key={segment.label}
+              style={{
+                backgroundColor: segment.color,
+                width: `${segment.width}%`,
+              }}
+            />
+          ))}
+      </div>
+    </div>
+  );
+}
+
+function PacingProgressAxis() {
+  return (
+    <div
+      aria-hidden="true"
+      className="relative mt-2 h-10 border-t border-main-border text-[12px] text-current"
+      data-testid="budget-vs-time-axis"
+    >
+      {AXIS_TICKS.map((tick) => (
+        <span
+          className="absolute top-0 -translate-x-1/2 pt-1 before:absolute before:top-0 before:left-1/2 before:h-1.5 before:border-l before:border-main-border"
+          key={tick}
+          style={{ left: `${(tick / AXIS_MAX_PERCENT) * 100}%` }}
+        >
+          {tick}%
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function getTimeProgressRow(progress: TimeProgressSummary): PacingProgressRow {
+  const elapsedText = `${formatMonthCount(progress.elapsedMonths)} past`;
+  const remainingUnit = progress.remainingMonths === 1 ? 'month' : 'months';
+  const remainingText = `${progress.remainingMonths} (${formatPacingPercent(progress.remainingPercent)}) ${remainingUnit} remaining`;
+  const totalText = `${formatMonthCount(progress.totalMonths)} total`;
+
+  return {
+    ariaLabel: `Time: ${elapsedText}, ${remainingText}, ${totalText}`,
+    detailText: `${elapsedText} | ${remainingText}`,
+    segments: [
+      {
+        color: TIME_ELAPSED_COLOR,
+        label: 'Past',
+        secondaryText: remainingText,
+        text: elapsedText,
+        width: progress.elapsedPercent,
+      },
+      {
+        color: availableColor(TIME_ELAPSED_COLOR),
+        label: 'Remaining',
+        textClassName: 'text-base-content/80',
+        width: progress.remainingPercent,
+      },
+    ],
+    title: 'Time',
+    totalText,
+  };
+}
+
+function getBudgetProgressRow(
+  progress: BudgetProgressSummary
+): PacingProgressRow {
+  const spentText = `${formatCurrency(progress.spent)} spent`;
+  const remainingText = `${formatCurrency(progress.remaining)} (${formatPacingPercent(progress.remainingPercent)}) remaining`;
+  const budgetText = `${formatCurrency(progress.budget)} budget`;
+  const overrunText =
+    progress.overrun > 0
+      ? `${formatCurrency(progress.overrun)} over budget`
+      : null;
+
+  return {
+    ariaLabel: `All Expenses: ${spentText}, ${remainingText}${overrunText ? `, ${overrunText}` : ''}, ${budgetText}`,
+    detailText: `${spentText} | ${remainingText}`,
+    segments: [
+      {
+        color: BUDGET_SPENT_COLOR,
+        label: 'Spent',
+        secondaryText: remainingText,
+        text: spentText,
+        width: progress.spentPercent,
+      },
+      {
+        color: availableColor(BUDGET_SPENT_COLOR),
+        label: 'Remaining',
+        textClassName: 'text-base-content/80',
+        width: progress.remainingPercent,
+      },
+    ],
+    title: 'All Expenses',
+    totalText: budgetText,
+  };
+}
+
+function getBurnRateStatus({
+  budgetProgress,
+  timeProgress,
+}: {
+  budgetProgress: BudgetProgressSummary;
+  timeProgress: TimeProgressSummary;
+}) {
+  if (budgetProgress.spentPercent > timeProgress.elapsedPercent) {
+    return 'Above pacing';
+  }
+
+  if (budgetProgress.spentPercent < timeProgress.elapsedPercent) {
+    return 'Under pacing';
+  }
+
+  return 'On pacing';
 }
 
 function buildCategoryProgressRows(
@@ -131,14 +304,38 @@ function buildCategoryProgressRows(
 }
 
 export function ProjectExpenditureProgress({
+  awardEndDate,
+  awardStartDate,
   categories,
 }: ProjectExpenditureProgressProps) {
   const rows = useMemo(
     () => buildCategoryProgressRows(categories),
     [categories]
   );
+  const timeProgress = useMemo(
+    () => getTimeProgressSummary(awardStartDate, awardEndDate),
+    [awardEndDate, awardStartDate]
+  );
+  const budgetProgress = useMemo(
+    () => getBudgetProgressSummary(categories),
+    [categories]
+  );
+  const hasBudgetData =
+    budgetProgress.budget !== 0 || budgetProgress.spent !== 0;
+  const pacingRows = useMemo(
+    () =>
+      [
+        timeProgress ? getTimeProgressRow(timeProgress) : null,
+        hasBudgetData ? getBudgetProgressRow(budgetProgress) : null,
+      ].filter((row): row is PacingProgressRow => row !== null),
+    [budgetProgress, hasBudgetData, timeProgress]
+  );
+  const burnRateStatus =
+    timeProgress && hasBudgetData
+      ? getBurnRateStatus({ budgetProgress, timeProgress })
+      : null;
 
-  if (rows.length === 0) {
+  if (rows.length === 0 && !timeProgress && !hasBudgetData) {
     return null;
   }
 
@@ -153,60 +350,89 @@ export function ProjectExpenditureProgress({
       </h2>
       <p className="mb-6 max-w-3xl">{CATEGORY_PROGRESS_DESCRIPTION}</p>
 
-      <ul className="space-y-4">
-        {rows.map((row) => {
-          const isOverBudget = row.overrun > 0;
-          const balanceText = isOverBudget
-            ? `${formatCurrency(row.overrun)} over`
-            : `${formatCurrency(row.available)} (${formatPercent(
-                row.available,
-                row.total
-              )}) available`;
+      {burnRateStatus && (
+        <div className="mb-6 text-sm">
+          <p className="stat-label">Burn Rate Status</p>
+          <p className="stat-value">{burnRateStatus}</p>
+        </div>
+      )}
 
-          return (
-            <li className="space-y-2" key={row.expenditureCategory}>
-              <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+      <div className="relative" data-testid="budget-vs-time-chart">
+        {timeProgress && (
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute top-0 bottom-10 z-10 w-0 -translate-x-1/2 border-l-2 border-dashed border-base-content/35"
+            data-testid="budget-vs-time-current-month-marker"
+            style={{
+              left: `${(timeProgress.elapsedPercent / AXIS_MAX_PERCENT) * 100}%`,
+            }}
+          />
+        )}
+
+        <ul className="space-y-4">
+          {pacingRows.map((row) => (
+            <li className="space-y-2 mb-4" key={row.title}>
+              <div
+                className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between"
+                style={{ width: `${BAR_TRACK_WIDTH_PERCENT}%` }}
+              >
                 <div className="min-w-0">
-                  <p className="font-proxima-bold truncate mt-1">
-                    {row.displayName}
-                  </p>
-                  <p className="flex mt-1 flex-wrap gap-x-3 gap-y-1 text-sm text-base-content/80">
-                    <span
-                      className={
-                        isOverBudget ? 'font-extrabold text-error' : undefined
-                      }
-                    >
-                      {balanceText}
-                    </span>{' '}
-                    |<span>{formatCurrency(row.spent)} spent</span>
-                    <span>{formatCurrency(row.committed)} committed</span>
+                  <p className="font-proxima-bold truncate">{row.title}</p>
+                  <p className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-base-content/80">
+                    {row.detailText}
                   </p>
                 </div>
-                <p className="text-sm font-medium">
-                  {formatCurrency(row.budget)} budget
-                </p>
+                <p className="self-end text-sm mr-2">{row.totalText}</p>
               </div>
-              <div
-                aria-label={`${row.displayName}: ${formatCurrency(row.spent)} spent, ${formatCurrency(row.committed)} committed, ${balanceText}, ${formatCurrency(row.budget)} budget`}
-                className="flex h-3 w-full overflow-hidden rounded-sm bg-base-300"
-                role="img"
-              >
-                {row.segments.map((segment) => (
-                  <span
-                    aria-hidden="true"
-                    className="block h-full"
-                    key={segment.label}
-                    style={{
-                      backgroundColor: segment.color,
-                      width: `${segment.width}%`,
-                    }}
-                  />
-                ))}
-              </div>
+              <ScaledProgressBar
+                ariaLabel={row.ariaLabel}
+                segments={row.segments}
+              />
             </li>
-          );
-        })}
-      </ul>
+          ))}
+
+          {rows.map((row) => {
+            const isOverBudget = row.overrun > 0;
+            const balanceText = isOverBudget
+              ? `${formatCurrency(row.overrun)} over`
+              : `${formatCurrency(row.available)} (${formatPercent(
+                  row.available,
+                  row.total
+                )}) available`;
+
+            return (
+              <li className="space-y-2" key={row.expenditureCategory}>
+                <div
+                  className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between"
+                  style={{ width: `${BAR_TRACK_WIDTH_PERCENT}%` }}
+                >
+                  <div className="min-w-0">
+                    <p className="font-proxima-bold truncate mt-1">
+                      {row.displayName}
+                    </p>
+                    <p className="flex mt-1 flex-wrap gap-x-3 gap-y-1 text-sm text-base-content/80">
+                      <span className={isOverBudget ? 'text-error' : undefined}>
+                        {balanceText}
+                      </span>{' '}
+                      |<span>{formatCurrency(row.spent)} spent</span>
+                      <span>{formatCurrency(row.committed)} committed</span>
+                    </p>
+                  </div>
+                  <p className="self-end text-sm mr-2">
+                    {formatCurrency(row.budget)} budget
+                  </p>
+                </div>
+                <ScaledProgressBar
+                  ariaLabel={`${row.displayName}: ${formatCurrency(row.spent)} spent, ${formatCurrency(row.committed)} committed, ${balanceText}, ${formatCurrency(row.budget)} budget`}
+                  segments={row.segments}
+                />
+              </li>
+            );
+          })}
+        </ul>
+
+        <PacingProgressAxis />
+      </div>
     </section>
   );
 }
