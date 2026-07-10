@@ -412,15 +412,21 @@ public sealed class ProjectControllerTests
         private readonly SearchablePersonRecord? _person;
         private readonly ProjectProjectionResult? _projection;
         private readonly IReadOnlyList<FacultyPortfolioRecord>? _portfolio;
+        private readonly IReadOnlyList<FinancialSummaryRow> _summaryRows;
+        private readonly IReadOnlyList<FinancialSummaryOption> _options;
 
         public ResolvingDatamartService(
             SearchablePersonRecord? person = null,
             ProjectProjectionResult? projection = null,
-            IReadOnlyList<FacultyPortfolioRecord>? portfolio = null)
+            IReadOnlyList<FacultyPortfolioRecord>? portfolio = null,
+            IReadOnlyList<FinancialSummaryRow>? summaryRows = null,
+            IReadOnlyList<FinancialSummaryOption>? options = null)
         {
             _person = person;
             _projection = projection;
             _portfolio = portfolio;
+            _summaryRows = summaryRows ?? Array.Empty<FinancialSummaryRow>();
+            _options = options ?? Array.Empty<FinancialSummaryOption>();
         }
 
         public Task<IReadOnlyList<SearchablePersonRecord>> SearchPeopleAsync(
@@ -530,5 +536,19 @@ public sealed class ProjectControllerTests
                 ? Task.FromResult(_projection)
                 : throw new InvalidOperationException("Datamart should not be called for unauthorized users.");
         }
+
+        public Task<IReadOnlyList<FinancialSummaryRow>> GetGlBalanceSummaryAsync(
+            FinancialSummaryQuery query,
+            string? applicationUser = null,
+            string? emulatingUser = null,
+            CancellationToken ct = default)
+            => Task.FromResult(_summaryRows);
+
+        public Task<IReadOnlyList<FinancialSummaryOption>> GetGlBalanceFilterOptionsAsync(
+            FinancialSummaryOptionsQuery query,
+            string? applicationUser = null,
+            string? emulatingUser = null,
+            CancellationToken ct = default)
+            => Task.FromResult(_options);
     }
 }

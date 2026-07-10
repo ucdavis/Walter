@@ -41,6 +41,7 @@ public sealed class DbInitializerTests
                 Role.Names.AccrualViewer,
                 Role.Names.FinancialViewer,
                 Role.Names.ProjectManager,
+                Role.Names.FinancialSummaryViewer,
             ]);
 
         var permissions = await ctx.Permissions

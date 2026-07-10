@@ -21,6 +21,8 @@ GRANT EXECUTE ON [dbo].[usp_GetProjectProjection] TO [WalterAppRole];
 
 GRANT EXECUTE ON [dbo].[usp_GetGLPPMReconciliation] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_GetGLTransactionListings] TO [WalterAppRole];
+GRANT EXECUTE ON [dbo].[usp_GetGlBalanceSummary] TO [WalterAppRole];
+GRANT EXECUTE ON [dbo].[usp_GetGlBalanceSummaryFilterOptions] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_GetPositionBudgets] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_GetPositionBudgetsLocal] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_GetSearchablePeople] TO [WalterAppRole];
@@ -46,6 +48,10 @@ GRANT SELECT ON [dbo].[PpmProjectAwards] TO [WalterAppRole];
 GRANT SELECT ON [dbo].[GlProjectMonthlyActuals] TO [WalterAppRole];
 GRANT SELECT ON [dbo].[GlSummaryBalances] TO [WalterAppRole];
 GRANT SELECT ON [dbo].[ExpenditureTypeByAccount] TO [WalterAppRole];
+-- The financial summary sprocs read these via dynamic SQL, which does not honor ownership chaining.
+GRANT SELECT ON [dbo].[ErpFinDeptHierarchy] TO [WalterAppRole];
+GRANT SELECT ON [dbo].[ErpFundHierarchy] TO [WalterAppRole];
+GRANT SELECT ON [dbo].[ErpAccountHierarchy] TO [WalterAppRole];
 
 -- Grant pipeline role permissions
 GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[FacultyDeptPortfolio] TO [WalterPipelineRole];
@@ -76,6 +82,11 @@ GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[GlProjectMonthlyActuals_Staging] 
 -- usp_SwapStagingTable snapshot-swaps it into GlSummaryBalances — same dynamic-SQL caveat as above.
 GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[GlSummaryBalances] TO [WalterPipelineRole];
 GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[GlSummaryBalances_Staging] TO [WalterPipelineRole];
+-- Chart-string hierarchy dimensions for the financial summary report (loaded out-of-band for now;
+-- pipeline will maintain them later).
+GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[ErpFinDeptHierarchy] TO [WalterPipelineRole];
+GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[ErpFundHierarchy] TO [WalterPipelineRole];
+GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[ErpAccountHierarchy] TO [WalterPipelineRole];
 
 
 

@@ -340,6 +340,7 @@ function RouteComponent() {
                 >
                   <option value="AccrualViewer">AccrualViewer</option>
                   <option value="FinancialViewer">FinancialViewer</option>
+                  <option value="FinancialSummaryViewer">Financial Summary Viewer</option>
                   <option value="Manager">Manager</option>
                 </select>
               </div>
