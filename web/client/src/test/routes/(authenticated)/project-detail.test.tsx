@@ -418,9 +418,10 @@ describe('project detail page', () => {
       const budgetVsTimeAxis = within(expenditureProgress).getByTestId(
         'budget-vs-time-axis'
       );
-      for (const tick of ['0%', '20%', '40%', '60%', '80%', '100%', '120%']) {
+      for (const tick of ['0%', '20%', '40%', '60%', '80%', '100%']) {
         expect(within(budgetVsTimeAxis).getByText(tick)).toBeInTheDocument();
       }
+      expect(within(budgetVsTimeAxis).queryByText('120%')).not.toBeInTheDocument();
       expect(
         within(expenditureProgress).getByTestId(
           'budget-vs-time-current-month-marker'

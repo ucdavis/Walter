@@ -16,10 +16,10 @@ const CATEGORY_PROGRESS_DESCRIPTION =
   'Expenses, commitments, and available balance by expenditure category.';
 const TIME_ELAPSED_COLOR = 'var(--color-secondary)';
 const BUDGET_SPENT_COLOR = 'var(--color-primary)';
-const AXIS_MAX_PERCENT = 120;
+const AXIS_MAX_PERCENT = 100;
 const BAR_MAX_PERCENT = 100;
 const BAR_TRACK_WIDTH_PERCENT = (BAR_MAX_PERCENT / AXIS_MAX_PERCENT) * 100;
-const AXIS_TICKS = [0, 20, 40, 60, 80, 100, 120] as const;
+const AXIS_TICKS = [0, 20, 40, 60, 80, 100] as const;
 
 type CategoryProgressSegment = {
   color: string;
