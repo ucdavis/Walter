@@ -384,6 +384,61 @@ describe('project detail page', () => {
         screen.getByText(tooltipDefinitions.projectBurndown)
       ).toBeInTheDocument();
       expect(screen.getByText('Current Balance')).toBeInTheDocument();
+      const projectProgress = screen.getByTestId('project-projection-progress');
+      const burndownHeading = screen.getByRole('heading', {
+        name: 'Project Burndown',
+      });
+      expect(
+        projectProgress.compareDocumentPosition(burndownHeading) &
+          Node.DOCUMENT_POSITION_FOLLOWING
+      ).toBeTruthy();
+      expect(
+        within(projectProgress).getByRole('heading', {
+          name: 'Budget vs Time Pacing',
+        })
+      ).toBeInTheDocument();
+      expect(
+        within(projectProgress).getByText(
+          'Time elapsed and budget spent against the project plan.'
+        )
+      ).toBeInTheDocument();
+      expect(
+        within(projectProgress).getByText('Status')
+      ).toBeInTheDocument();
+      expect(
+        within(projectProgress).getByText('Burn rate is ABOVE pacing')
+      ).toBeInTheDocument();
+      expect(
+        within(projectProgress).getByText('Time')
+      ).toBeInTheDocument();
+      expect(
+        within(projectProgress).getByText('Budget')
+      ).toBeInTheDocument();
+      expect(
+        within(projectProgress).getByTestId('budget-vs-time-chart')
+      ).toBeInTheDocument();
+      const budgetVsTimeAxis = within(projectProgress).getByTestId(
+        'budget-vs-time-axis'
+      );
+      for (const tick of ['0%', '20%', '40%', '60%', '80%', '100%', '120%']) {
+        expect(within(budgetVsTimeAxis).getByText(tick)).toBeInTheDocument();
+      }
+      expect(
+        within(projectProgress).getByTestId(
+          'budget-vs-time-current-month-marker'
+        )
+      ).toBeInTheDocument();
+      expect(
+        within(projectProgress).getByText('912 months total')
+      ).toBeInTheDocument();
+      expect(
+        within(projectProgress).getByText('$660.00 budget')
+      ).toBeInTheDocument();
+      expect(
+        within(projectProgress).getByRole('img', {
+          name: /Budget: \$135\.00 spent, \$525\.00 \(80%\) remaining, \$660\.00 budget/,
+        })
+      ).toBeInTheDocument();
       const expenditureProgress = screen.getByTestId(
         'project-expenditure-progress'
       );

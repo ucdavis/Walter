@@ -80,7 +80,11 @@ function RouteComponent() {
         </section>
 
         {projectionsAvailable ? (
-          <ProjectBurndownSection projectNumber={summary.projectNumber} />
+          <ProjectBurndownSection
+            awardEndDate={summary.awardEndDate}
+            awardStartDate={summary.awardStartDate}
+            projectNumber={summary.projectNumber}
+          />
         ) : (
           <PageEmpty message="Projections are not available for this project." />
         )}
