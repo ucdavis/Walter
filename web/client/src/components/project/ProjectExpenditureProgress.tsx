@@ -351,7 +351,7 @@ export function ProjectExpenditureProgress({
         {summaryBudgetText && summaryMonthsText && (
           <>
             <br />
-            Remaining budget is{' '}
+            Available budget is{' '}
             <strong
               className={budgetProgress.overrun > 0 ? 'text-error' : undefined}
             >
