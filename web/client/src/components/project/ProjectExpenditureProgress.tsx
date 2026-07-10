@@ -52,6 +52,7 @@ type PacingProgressSegment = {
 type PacingProgressRow = {
   ariaLabel: string;
   primaryText: string;
+  remainingClassName?: string;
   remainingText: string;
   segments: PacingProgressSegment[];
   title: string;
@@ -109,7 +110,7 @@ function getBudgetRemainingText(progress: BudgetProgressSummary) {
   const remainingPercent = formatPacingPercent(progress.remainingPercent);
 
   return progress.overrun > 0
-    ? `${formatCurrency(progress.overrun)} over budget (${remainingPercent})`
+    ? `${formatCurrency(progress.overrun)} over`
     : `${formatCurrency(progress.remaining)} (${remainingPercent})`;
 }
 
@@ -150,7 +151,7 @@ function PacingProgressAxis() {
   return (
     <div
       aria-hidden="true"
-      className="relative mt-2 h-10 border-t border-main-border text-[12px] text-current"
+      className="relative mt-2 h-14 border-t border-main-border text-[12px] text-current"
       data-testid="budget-vs-time-axis"
     >
       {AXIS_TICKS.map((tick) => (
@@ -162,6 +163,9 @@ function PacingProgressAxis() {
           {tick}%
         </span>
       ))}
+      <span className="absolute bottom-1 left-1/2 -translate-x-1/2 font-proxima-bold uppercase">
+        Time
+      </span>
     </div>
   );
 }
@@ -201,7 +205,8 @@ function getBudgetProgressRow(
   progress: BudgetProgressSummary
 ): PacingProgressRow {
   const spentText = `${formatCurrency(progress.spent)} (${formatPacingPercent(progress.spentPercent)}) spent`;
-  const remainingText = `${formatCurrency(progress.remaining)} (${formatPacingPercent(progress.remainingPercent)}) remaining`;
+  const committedText = `${formatCurrency(progress.committed)} (${formatPacingPercent(progress.committedPercent)}) committed`;
+  const remainingText = getBudgetRemainingText(progress);
   const budgetText = `${formatCurrency(progress.budget)} budget`;
   const overrunText =
     progress.overrun > 0
@@ -209,8 +214,9 @@ function getBudgetProgressRow(
       : null;
 
   return {
-    ariaLabel: `All Expenses: ${spentText}, ${remainingText}${overrunText ? `, ${overrunText}` : ''}, ${budgetText}`,
-    primaryText: spentText,
+    ariaLabel: `All Expenses: ${spentText}, ${committedText}, ${remainingText}${overrunText ? `, ${overrunText}` : ''}, ${budgetText}`,
+    primaryText: `${spentText} | ${committedText}`,
+    remainingClassName: progress.overrun > 0 ? 'text-error' : undefined,
     remainingText,
     segments: [
       {
@@ -219,6 +225,11 @@ function getBudgetProgressRow(
         secondaryText: remainingText,
         text: spentText,
         width: progress.spentPercent,
+      },
+      {
+        color: commitmentColor(BUDGET_SPENT_COLOR),
+        label: 'Committed',
+        width: progress.committedPercent,
       },
       {
         color: availableColor(BUDGET_SPENT_COLOR),
@@ -388,7 +399,11 @@ export function ProjectExpenditureProgress({
                 </div>
                 <div className="mt-1 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-sm text-base-content/80">
                   <p>{row.primaryText}</p>
-                  <p className="ml-auto text-right">{row.remainingText}</p>
+                  <p
+                    className={`ml-auto text-right mr-2${row.remainingClassName ? ` ${row.remainingClassName}` : ''}`}
+                  >
+                    {row.remainingText}
+                  </p>
                 </div>
               </div>
               <ScaledProgressBar
@@ -436,8 +451,8 @@ export function ProjectExpenditureProgress({
                     <p
                       className={
                         isOverBudget
-                          ? 'ml-auto text-right text-error'
-                          : 'ml-auto text-right'
+                          ? 'ml-auto text-right mr-2 text-error'
+                          : 'ml-auto text-right mr-2'
                       }
                     >
                       {balanceText}

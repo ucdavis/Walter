@@ -20,19 +20,21 @@ const category = (
 describe('getBudgetProgressSummary', () => {
   it('summarizes budget spent and remaining from projection categories', () => {
     const progress = getBudgetProgressSummary([
-      category({ budget: 500, spentToDate: 100 }),
-      category({ budget: 100, committed: 10, spentToDate: 20 }),
-      category({ budget: 60, spentToDate: 15 }),
+      category({ budget: 500, remainingNow: 400, spentToDate: 100 }),
+      category({ budget: 100, committed: 10, remainingNow: 70, spentToDate: 20 }),
+      category({ budget: 60, remainingNow: 45, spentToDate: 15 }),
     ]);
 
     expect(progress).toMatchObject({
       budget: 660,
+      committed: 10,
       overrun: 0,
-      remaining: 525,
+      remaining: 515,
       spent: 135,
     });
     expect(progress.spentPercent).toBeCloseTo(20.45, 2);
-    expect(progress.remainingPercent).toBeCloseTo(79.55, 2);
+    expect(progress.committedPercent).toBeCloseTo(1.52, 2);
+    expect(progress.remainingPercent).toBeCloseTo(78.03, 2);
   });
 
   it('caps remaining at zero when spending exceeds budget', () => {
@@ -42,6 +44,7 @@ describe('getBudgetProgressSummary', () => {
 
     expect(progress).toMatchObject({
       budget: 100,
+      committed: 0,
       overrun: 25,
       remaining: 0,
       spent: 125,

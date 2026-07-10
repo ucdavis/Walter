@@ -2,6 +2,8 @@ import type { ProjectProjectionCategory } from '@/queries/projectProjection.ts';
 
 export interface BudgetProgressSummary {
   budget: number;
+  committed: number;
+  committedPercent: number;
   overrun: number;
   remaining: number;
   remainingPercent: number;
@@ -60,12 +62,27 @@ export function getBudgetProgressSummary(
     (sum, category) => sum + nonnegative(category.spentToDate),
     0
   );
-  const remaining = Math.max(0, budget - spent);
-  const total = Math.max(budget, spent, 1);
+  const committed = categories.reduce(
+    (sum, category) => sum + nonnegative(category.committed),
+    0
+  );
+  const remaining = categories.reduce(
+    (sum, category) => sum + nonnegative(category.remainingNow),
+    0
+  );
+  const balanceOverrun = categories.reduce(
+    (sum, category) =>
+      sum + (category.remainingNow < 0 ? Math.abs(category.remainingNow) : 0),
+    0
+  );
+  const overrun = Math.max(balanceOverrun, spent + committed - budget, 0);
+  const total = Math.max(budget, spent + committed + remaining, 1);
 
   return {
     budget,
-    overrun: Math.max(0, spent - budget),
+    committed,
+    committedPercent: progressPercent(committed, total),
+    overrun,
     remaining,
     remainingPercent: progressPercent(remaining, total),
     spent,

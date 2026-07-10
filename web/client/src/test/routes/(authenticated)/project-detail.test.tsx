@@ -401,17 +401,13 @@ describe('project detail page', () => {
         )
       ).toBeInTheDocument();
       expect(
-        within(expenditureProgress).getByText(/Remaining budget is/)
+        within(expenditureProgress).getByText(/Available budget is/)
       ).toBeInTheDocument();
-      expect(
-        within(expenditureProgress).getByText('$525.00 (80%)')
-      ).toBeInTheDocument();
+      expect(within(expenditureProgress).getAllByText('$515.00 (78%)')).toHaveLength(2);
       expect(
         within(expenditureProgress).getByText('882 months (97%)')
       ).toBeInTheDocument();
-      expect(
-        within(expenditureProgress).getByText('Time')
-      ).toBeInTheDocument();
+      expect(within(expenditureProgress).getAllByText('Time').length).toBe(2);
       expect(
         within(expenditureProgress).getByText('All Expenses')
       ).toBeInTheDocument();
@@ -424,6 +420,7 @@ describe('project detail page', () => {
       for (const tick of ['0%', '20%', '40%', '60%', '80%', '100%']) {
         expect(within(budgetVsTimeAxis).getByText(tick)).toBeInTheDocument();
       }
+      expect(within(budgetVsTimeAxis).getByText('Time')).toBeInTheDocument();
       expect(within(budgetVsTimeAxis).queryByText('120%')).not.toBeInTheDocument();
       expect(
         within(expenditureProgress).getByTestId(
@@ -443,11 +440,13 @@ describe('project detail page', () => {
         within(expenditureProgress).getByText('$660.00 budget')
       ).toBeInTheDocument();
       expect(
-        within(expenditureProgress).getByText('$135.00 (20%) spent')
+        within(expenditureProgress).getByText(
+          '$135.00 (20%) spent | $10.00 (2%) committed'
+        )
       ).toBeInTheDocument();
       expect(
         within(expenditureProgress).getByRole('img', {
-          name: /All Expenses: \$135\.00 \(20%\) spent, \$525\.00 \(80%\) remaining, \$660\.00 budget/,
+          name: /All Expenses: \$135\.00 \(20%\) spent, \$10\.00 \(2%\) committed, \$515\.00 \(78%\), \$660\.00 budget/,
         })
       ).toBeInTheDocument();
       expect(
