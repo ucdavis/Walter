@@ -83,15 +83,25 @@ function aggregateProjects(records: ProjectRecord[]): AggregatedProject[] {
 }
 
 function isExpired(project: AggregatedProject): boolean {
-  if (!project.awardEndDate) return false;
+  if (!project.awardEndDate) {
+    return false;
+  }
+
   return new Date(project.awardEndDate) < new Date();
 }
 
 function sortByEndDate(projects: AggregatedProject[]): AggregatedProject[] {
   return [...projects].sort((a, b) => {
-    if (!a.awardEndDate && !b.awardEndDate) return 0;
-    if (!a.awardEndDate) return -1;
-    if (!b.awardEndDate) return 1;
+    if (!a.awardEndDate && !b.awardEndDate) {
+      return 0;
+    }
+    if (!a.awardEndDate) {
+      return -1;
+    }
+    if (!b.awardEndDate) {
+      return 1;
+    }
+
     return new Date(a.awardEndDate).getTime() - new Date(b.awardEndDate).getTime();
   });
 }
@@ -304,7 +314,7 @@ export function SponsoredProjectsTable({
             <div className="flex flex-wrap items-center gap-2">
               {expiredCount > 0 && (
                 <button
-                  className={`btn btn-sm ${showExpired ? 'btn-active' : 'btn-default'}`}
+                  className={`btn btn-sm${showExpired ? ' btn-active' : ''}`}
                   onClick={() => setShowExpired((current) => !current)}
                   type="button"
                 >
