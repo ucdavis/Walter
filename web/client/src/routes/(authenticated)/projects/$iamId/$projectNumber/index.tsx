@@ -108,7 +108,7 @@ function ProjectContent({
               to="/projections/$iamId/$projectNumber"
             >
               <ChartBarIcon className="h-4 w-4" />
-              Projections
+              View Visualizations
             </Link>
           ) : null
         }

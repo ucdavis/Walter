@@ -397,14 +397,17 @@ describe('project detail page', () => {
       ).toBeInTheDocument();
       expect(
         within(expenditureProgress).getByText(
-          'Expenses, commitments, and available balance by expenditure category.'
+          /Expenses, commitments, and available balance by expenditure category\./
         )
       ).toBeInTheDocument();
       expect(
-        within(expenditureProgress).getByText('Burn Rate Status')
+        within(expenditureProgress).getByText(/Remaining budget is/)
       ).toBeInTheDocument();
       expect(
-        within(expenditureProgress).getByText('Above pacing')
+        within(expenditureProgress).getByText('$525.00 (80%)')
+      ).toBeInTheDocument();
+      expect(
+        within(expenditureProgress).getByText('882 months (97%)')
       ).toBeInTheDocument();
       expect(
         within(expenditureProgress).getByText('Time')
@@ -431,15 +434,27 @@ describe('project detail page', () => {
         within(expenditureProgress).getByText('912 months total')
       ).toBeInTheDocument();
       expect(
+        within(expenditureProgress).getByText('30 (3%) months past')
+      ).toBeInTheDocument();
+      expect(
+        within(expenditureProgress).getByText('882 (97%) months remaining')
+      ).toBeInTheDocument();
+      expect(
         within(expenditureProgress).getByText('$660.00 budget')
       ).toBeInTheDocument();
       expect(
+        within(expenditureProgress).getByText('$135.00 (20%) spent')
+      ).toBeInTheDocument();
+      expect(
         within(expenditureProgress).getByRole('img', {
-          name: /All Expenses: \$135\.00 spent, \$525\.00 \(80%\) remaining, \$660\.00 budget/,
+          name: /All Expenses: \$135\.00 \(20%\) spent, \$525\.00 \(80%\) remaining, \$660\.00 budget/,
         })
       ).toBeInTheDocument();
       expect(
         within(expenditureProgress).getByText('Supplies')
+      ).toBeInTheDocument();
+      expect(
+        within(expenditureProgress).getByText('$20.00 (20%) spent')
       ).toBeInTheDocument();
       expect(
         within(expenditureProgress).getByText('$10.00 committed')
@@ -449,7 +464,7 @@ describe('project detail page', () => {
       ).toBeInTheDocument();
       expect(
         within(expenditureProgress).getByRole('img', {
-          name: /Supplies: \$20\.00 spent, \$10\.00 committed, \$70\.00 \(70%\) available, \$100\.00 budget/,
+          name: /Supplies: \$20\.00 \(20%\) spent, \$10\.00 committed, \$70\.00 \(70%\) available, \$100\.00 budget/,
         })
       ).toBeInTheDocument();
       for (const label of screen.getAllByText('Switchable Projection Project')) {
