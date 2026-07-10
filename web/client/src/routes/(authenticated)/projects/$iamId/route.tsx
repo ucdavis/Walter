@@ -4,7 +4,7 @@ import {
   Link,
   Outlet,
 } from '@tanstack/react-router';
-import { ProjectsSidebar } from '@/components/project/ProjectsSidebar.tsx';
+import { ProjectPortfolioLayout } from '@/components/project/ProjectPortfolioLayout.tsx';
 import { projectsDetailQueryOptions } from '@/queries/project.ts';
 import { PageLoading } from '@/components/states/PageLoading.tsx';
 import { PageError } from '@/components/states/PageError.tsx';
@@ -19,22 +19,11 @@ export const Route = createFileRoute('/(authenticated)/projects/$iamId')({
   pendingComponent: () => <PageLoading message="Fetching projects..." />,
 });
 
-function ProjectsLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="container">
-      <div className="flex flex-col md:flex-row gap-0 md:gap-8">
-        <ProjectsSidebar />
-        {children}
-      </div>
-    </div>
-  );
-}
-
 function RouteComponent() {
   return (
-    <ProjectsLayout>
+    <ProjectPortfolioLayout>
       <Outlet />
-    </ProjectsLayout>
+    </ProjectPortfolioLayout>
   );
 }
 
@@ -49,7 +38,7 @@ function ProjectsErrorBoundary({ error, reset }: ErrorComponentProps) {
   });
 
   return (
-    <ProjectsLayout>
+    <ProjectPortfolioLayout>
       <main className="flex-1 min-w-0">
         <PageError
           actions={
@@ -76,6 +65,6 @@ function ProjectsErrorBoundary({ error, reset }: ErrorComponentProps) {
           title={presentation.title}
         />
       </main>
-    </ProjectsLayout>
+    </ProjectPortfolioLayout>
   );
 }

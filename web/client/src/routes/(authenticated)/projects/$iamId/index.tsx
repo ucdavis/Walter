@@ -156,17 +156,14 @@ function RouteComponent() {
       {sponsoredProjects.length > 0 && (
         <section className="section-margin">
           <h2 className="h2">Sponsored Projects</h2>
-          <SponsoredProjectsTable
-            iamId={iamId}
-            records={sponsoredProjects}
-          />
+          <SponsoredProjectsTable iamId={iamId} records={sponsoredProjects} />
         </section>
       )}
 
       {internalProjects.length > 0 && (
         <section className="section-margin">
           <h2 className="h2">Internal Projects</h2>
-          <p className="max-w-prose mb-4 text-sm text-base-content/70">
+          <p className="max-w-3xl mb-2">
             Totals for internal projects do not reflect transactions that have
             occurred since the latest data refresh or manual updates that are
             needed. Contact your fiscal officer with any questions.
@@ -179,10 +176,7 @@ function RouteComponent() {
         </section>
       )}
 
-      <PersonnelSection
-        iamId={iamId}
-        projectNumbers={projectNumbers}
-      />
+      <PersonnelSection iamId={iamId} projectNumbers={projectNumbers} />
     </main>
   );
 }

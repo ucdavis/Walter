@@ -315,7 +315,7 @@ export function TaskBreakdown({
         <div className="flex flex-wrap items-center gap-2">
           {closedCount > 0 && (
             <button
-              className={`btn btn-sm ${showClosed ? 'btn-active' : 'btn-default'}`}
+              className={`btn btn-sm${showClosed ? ' btn-active' : ''}`}
               onClick={() => setShowClosed((current) => !current)}
               type="button"
             >

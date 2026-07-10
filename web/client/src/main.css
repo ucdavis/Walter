@@ -6,7 +6,7 @@
   --color-light-bg-100: oklch(100% 0 0);
   --color-light-bg-200: #fafafa;
   --color-light-bg-300: #e9e9e9;
-  --color-main-border: #e9e3ee;
+  --color-main-border: #dfdfdf;
 
   --font-proxima-bold: 'proxima-nova-b', sans-serif;
 
@@ -167,7 +167,7 @@
 @media (min-width: 1025px) {
   .container {
     width: 90%;
-    max-width: 1440px;
+    max-width: 1600px;
   }
 }
 

@@ -16,6 +16,7 @@ using server.Services;
 using Server.Tests;
 using server.core.Data;
 using server.core.Domain;
+using server.tests.Fakes;
 
 namespace server.tests.Controllers;
 
@@ -227,6 +228,125 @@ public sealed class ProjectControllerTests
     }
 
     [Fact]
+    public async Task GetByIamId_forbids_requester_who_is_only_award_pi_on_target_pi_project()
+    {
+        using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
+        var requester = SeedUser(ctx, employeeId: "EAWARDPI");
+
+        var controller = CreatePortfolioController(
+            ctx,
+            targetPerson: new SearchablePersonRecord { IamId = "IAM-PI", EmployeeId = "EPI", Name = "Target PI" },
+            projects: [TargetPiProjectWithAwardPi(awardPiEmployeeId: "EAWARDPI")],
+            user: CreateUser(roles: [], objectId: requester.Id));
+
+        var result = await controller.GetByIamIdAsync("IAM-PI", CancellationToken.None);
+
+        result.Should().BeOfType<ForbidResult>();
+    }
+
+    [Fact]
+    public async Task GetPersonnelForProjects_forbids_requester_who_is_only_award_pi_on_target_pi_project()
+    {
+        using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
+        var requester = SeedUser(ctx, employeeId: "EAWARDPI");
+
+        var controller = CreatePortfolioController(
+            ctx,
+            targetPerson: new SearchablePersonRecord { IamId = "IAM-PI", EmployeeId = "EPI", Name = "Target PI" },
+            projects: [TargetPiProjectWithAwardPi(awardPiEmployeeId: "EAWARDPI")],
+            user: CreateUser(roles: [], objectId: requester.Id));
+
+        var result = await controller.GetPersonnelForProjects(
+            CancellationToken.None,
+            iamId: "IAM-PI",
+            projectCodes: "SP001");
+
+        result.Should().BeOfType<ForbidResult>();
+    }
+
+    [Fact]
+    public async Task GetByIamId_allows_team_project_manager_of_target_pi()
+    {
+        using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
+        var requester = SeedUser(ctx, employeeId: "EPM");
+
+        var controller = CreatePortfolioController(
+            ctx,
+            targetPerson: new SearchablePersonRecord { IamId = "IAM-PI", EmployeeId = "EPI", Name = "Target PI" },
+            projects: [TargetPiProjectWithAwardPi(awardPiEmployeeId: "EAWARDPI")],
+            user: CreateUser(roles: [], objectId: requester.Id),
+            portfolio: [new FacultyPortfolioRecord { ProjectNumber = "SP001", ProjectStatus = "ACTIVE" }]);
+
+        var result = await controller.GetByIamIdAsync("IAM-PI", CancellationToken.None);
+
+        var projects = result.Should().BeOfType<OkObjectResult>().Which.Value
+            .Should().BeAssignableTo<IEnumerable<FacultyPortfolioRecord>>().Which;
+        projects.Should().ContainSingle(p => p.ProjectNumber == "SP001");
+    }
+
+    [Fact]
+    public async Task GetByIamId_self_lookup_includes_projects_where_user_is_award_pi()
+    {
+        using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
+        var requester = SeedUser(ctx, employeeId: "EAWARDPI");
+
+        var controller = CreatePortfolioController(
+            ctx,
+            targetPerson: new SearchablePersonRecord { IamId = "IAM-AWARDPI", EmployeeId = "EAWARDPI", Name = "Award PI" },
+            projects: [TargetPiProjectWithAwardPi(awardPiEmployeeId: "EAWARDPI")],
+            user: CreateUser(roles: [], objectId: requester.Id),
+            portfolio: [new FacultyPortfolioRecord { ProjectNumber = "SP001", ProjectStatus = "ACTIVE" }]);
+
+        var result = await controller.GetByIamIdAsync("IAM-AWARDPI", CancellationToken.None);
+
+        var projects = result.Should().BeOfType<OkObjectResult>().Which.Value
+            .Should().BeAssignableTo<IEnumerable<FacultyPortfolioRecord>>().Which;
+        projects.Should().ContainSingle(p => p.ProjectNumber == "SP001");
+    }
+
+    /// <summary>
+    /// A project owned by team PI "EPI" (with team PM "EPM") whose award lists the given
+    /// employee as award PI without them being on the project team.
+    /// </summary>
+    private static FakeFinancialProject TargetPiProjectWithAwardPi(string awardPiEmployeeId)
+    {
+        return new FakeFinancialProject(
+            ProjectNumber: "SP001",
+            TeamMembers:
+            [
+                new FakeFinancialProjectTeamMember(PpmRole.PrincipalInvestigator, "Target PI", "EPI", null),
+                new FakeFinancialProjectTeamMember(PpmRole.ProjectManager, "Team PM", "EPM", null),
+            ],
+            AwardPersonnel:
+            [
+                new FakeFinancialProjectTeamMember(PpmRole.PrincipalInvestigator, "Award PI", awardPiEmployeeId, null),
+            ]);
+    }
+
+    private ProjectController CreatePortfolioController(
+        AppDbContext ctx,
+        SearchablePersonRecord targetPerson,
+        IReadOnlyList<FakeFinancialProject> projects,
+        ClaimsPrincipal user,
+        IReadOnlyList<FacultyPortfolioRecord>? portfolio = null)
+    {
+        return new ProjectController(
+            new FakeFinancialApiService(
+                projectManagerEmployeeIds: [],
+                projectTeamMembersByProjectNumber: null,
+                projects: projects),
+            new ResolvingDatamartService(targetPerson, portfolio: portfolio),
+            CreateAuthorizationService(),
+            new UserService(NullLogger<UserService>.Instance, ctx))
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext { User = user },
+            },
+        };
+    }
+
+    [Fact]
     public void Project_routes_do_not_expose_employee_id_lookup_contracts()
     {
         var templates = typeof(ProjectController)
@@ -253,11 +373,30 @@ public sealed class ProjectControllerTests
         return provider.GetRequiredService<IAuthorizationService>();
     }
 
-    private static ClaimsPrincipal CreateUser(IReadOnlyList<string> roles)
+    private static ClaimsPrincipal CreateUser(IReadOnlyList<string> roles, Guid? objectId = null)
     {
         var claims = roles.Select(r => new Claim(ClaimTypes.Role, r)).ToList();
+        if (objectId is not null)
+        {
+            claims.Add(new Claim(Microsoft.Identity.Web.ClaimConstants.ObjectId, objectId.Value.ToString()));
+        }
+
         var identity = new ClaimsIdentity(claims, authenticationType: "Test");
         return new ClaimsPrincipal(identity);
+    }
+
+    private static User SeedUser(AppDbContext ctx, string employeeId)
+    {
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Kerberos = "testuser",
+            IamId = $"IAM-{employeeId}",
+            EmployeeId = employeeId,
+        };
+        ctx.Users.Add(user);
+        ctx.SaveChanges();
+        return user;
     }
 
     private sealed class ThrowingFinancialApiService : IFinancialApiService
@@ -272,13 +411,16 @@ public sealed class ProjectControllerTests
     {
         private readonly SearchablePersonRecord? _person;
         private readonly ProjectProjectionResult? _projection;
+        private readonly IReadOnlyList<FacultyPortfolioRecord>? _portfolio;
 
         public ResolvingDatamartService(
             SearchablePersonRecord? person = null,
-            ProjectProjectionResult? projection = null)
+            ProjectProjectionResult? projection = null,
+            IReadOnlyList<FacultyPortfolioRecord>? portfolio = null)
         {
             _person = person;
             _projection = projection;
+            _portfolio = portfolio;
         }
 
         public Task<IReadOnlyList<SearchablePersonRecord>> SearchPeopleAsync(
@@ -332,7 +474,14 @@ public sealed class ProjectControllerTests
             string? emulatingUser = null,
             CancellationToken ct = default)
         {
-            throw new InvalidOperationException("Datamart should not be called for unauthorized users.");
+            if (_portfolio is null)
+            {
+                throw new InvalidOperationException("Datamart should not be called for unauthorized users.");
+            }
+
+            var requested = new HashSet<string>(projectNumbers, StringComparer.OrdinalIgnoreCase);
+            return Task.FromResult<IReadOnlyList<FacultyPortfolioRecord>>(
+                _portfolio.Where(p => requested.Contains(p.ProjectNumber)).ToList());
         }
 
         public Task<IReadOnlyList<PositionBudgetRecord>> GetPositionBudgetsAsync(

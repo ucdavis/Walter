@@ -86,11 +86,6 @@ export function ProjectsSidebar() {
   const hasSearchQuery = searchQuery !== '';
 
   useEffect(() => {
-    // close panel when route selection changes (e.g., user navigates to a project)
-    setOpen(false);
-  }, [projectNumber]);
-
-  useEffect(() => {
     // handle escape to close
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') {
@@ -301,7 +296,7 @@ export function ProjectsSidebar() {
         aria-hidden={!open}
         className="fixed inset-0 z-50 md:hidden pointer-events-none"
         id="projects-drawer"
-        {...(!open ? ({ inert: '' } as any) : {})}
+        inert={!open ? true : undefined}
       >
         {/* overlay */}
         <div
@@ -367,6 +362,7 @@ export function ProjectsSidebar() {
           <div className="space-y-1 overflow-y-auto max-h-[calc(100vh-120px)]">
             <Link
               className={linkClasses(isAllProjectsActive, false)}
+              onClick={() => setOpen(false)}
               params={{ iamId }}
               to="/projects/$iamId"
               viewTransition={{ types: ['slide-right'] }}
