@@ -10,11 +10,11 @@ import {
   type DepartmentBalancesFilters,
 } from '@/queries/departmentBalances.ts';
 import {
-  departmentBalanceLabelsQueryKey,
-  upsertDepartmentBalanceLabel,
-  useDepartmentBalanceLabels,
+  chartStringLabelsQueryKey,
+  upsertChartStringLabel,
+  useChartStringLabels,
   type LabelSegments,
-} from '@/queries/departmentBalanceLabels.ts';
+} from '@/queries/chartStringLabels.ts';
 import {
   DIMENSIONS,
   MEASURES,
@@ -59,9 +59,9 @@ function LabelCell({
   const queryClient = useQueryClient();
   const mutation = useMutation({
     mutationFn: (text: string) =>
-      upsertDepartmentBalanceLabel({ ...segments, text }),
+      upsertChartStringLabel({ ...segments, text }),
     onSettled: () =>
-      queryClient.invalidateQueries({ queryKey: departmentBalanceLabelsQueryKey }),
+      queryClient.invalidateQueries({ queryKey: chartStringLabelsQueryKey }),
   });
 
   return (
@@ -126,7 +126,7 @@ function RouteComponent() {
   );
 
   const { data: rows = [], isError, isFetching } = useDepartmentBalancesQuery(query);
-  const { data: labels = [] } = useDepartmentBalanceLabels();
+  const { data: labels = [] } = useChartStringLabels();
 
   // Match shared labels to rows by exact segment-combination key.
   const labelsByKey = useMemo(

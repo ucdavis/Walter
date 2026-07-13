@@ -1,5 +1,5 @@
 import type { DepartmentBalanceRow } from '@/queries/departmentBalances.ts';
-import type { LabelSegments } from '@/queries/departmentBalanceLabels.ts';
+import type { LabelSegments } from '@/queries/chartStringLabels.ts';
 
 export interface DimensionDef {
   codeField: keyof DepartmentBalanceRow;

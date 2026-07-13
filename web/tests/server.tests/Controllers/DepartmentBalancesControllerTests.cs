@@ -3,8 +3,6 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Server.Controllers;
-using Server.Tests;
-using server.core.Data;
 using server.core.Domain;
 using server.core.Models;
 using server.core.Services;
@@ -16,8 +14,7 @@ public sealed class DepartmentBalancesControllerTests
     [Fact]
     public async Task Query_returns_bad_request_when_no_dimensions()
     {
-        using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
-        var controller = MakeController(ctx);
+        var controller = MakeController();
 
         var result = await controller.QueryAsync(new DepartmentBalancesQuery { Dimensions = Array.Empty<string>() }, CancellationToken.None);
 
@@ -31,8 +28,7 @@ public sealed class DepartmentBalancesControllerTests
         {
             new() { Fund = "13U00", FundDesc = "General", Revenue = 100m, Expenses = 40m, EndingBalance = 60m },
         };
-        using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
-        var controller = MakeController(ctx, new ResolvingDatamartService(summaryRows: rows));
+        var controller = MakeController(new ResolvingDatamartService(summaryRows: rows));
 
         var result = await controller.QueryAsync(new DepartmentBalancesQuery { Dimensions = new[] { "Fund" } }, CancellationToken.None);
 
@@ -43,102 +39,23 @@ public sealed class DepartmentBalancesControllerTests
     [Fact]
     public async Task Options_returns_bad_request_when_segment_missing()
     {
-        using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
-        var controller = MakeController(ctx);
+        var controller = MakeController();
 
         var result = await controller.OptionsAsync(new DepartmentBalancesOptionsQuery { Segment = "" }, CancellationToken.None);
 
         result.Should().BeOfType<BadRequestObjectResult>();
     }
 
-    [Fact]
-    public async Task UpsertLabel_rejects_all_empty_segments()
+    private static DepartmentBalancesController MakeController(IDatamartService? datamart = null)
     {
-        using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
-        var controller = MakeController(ctx);
-
-        var result = await controller.UpsertLabelAsync(
-            new DepartmentBalancesController.UpsertLabelRequest(null, "", "  ", null, null, null, "some text"),
-            CancellationToken.None);
-
-        result.Should().BeOfType<BadRequestObjectResult>();
-        ctx.DepartmentBalanceLabels.Should().BeEmpty();
-    }
-
-    [Fact]
-    public async Task UpsertLabel_creates_then_updates_then_deletes()
-    {
-        using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
-        var controller = MakeController(ctx);
-
-        var create = await controller.UpsertLabelAsync(
-            new DepartmentBalancesController.UpsertLabelRequest(null, "13U00", null, null, null, null, "summer employment 2026"),
-            CancellationToken.None);
-        create.Should().BeOfType<OkObjectResult>();
-        ctx.DepartmentBalanceLabels.Should().ContainSingle(l => l.Fund == "13U00" && l.Text == "summer employment 2026");
-
-        var update = await controller.UpsertLabelAsync(
-            new DepartmentBalancesController.UpsertLabelRequest(null, "13U00", null, null, null, null, "updated"),
-            CancellationToken.None);
-        update.Should().BeOfType<OkObjectResult>();
-        ctx.DepartmentBalanceLabels.Should().ContainSingle(l => l.Fund == "13U00" && l.Text == "updated");
-
-        var delete = await controller.UpsertLabelAsync(
-            new DepartmentBalancesController.UpsertLabelRequest(null, "13U00", null, null, null, null, "  "),
-            CancellationToken.None);
-        delete.Should().BeOfType<NoContentResult>();
-        ctx.DepartmentBalanceLabels.Should().BeEmpty();
-    }
-
-    [Fact]
-    public async Task UpsertLabel_treats_different_segment_combinations_as_distinct()
-    {
-        using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
-        var controller = MakeController(ctx);
-
-        await controller.UpsertLabelAsync(
-            new DepartmentBalancesController.UpsertLabelRequest(null, "13U00", null, null, null, null, "fund only"),
-            CancellationToken.None);
-        await controller.UpsertLabelAsync(
-            new DepartmentBalancesController.UpsertLabelRequest("ADNO001", "13U00", null, null, null, null, "dept and fund"),
-            CancellationToken.None);
-
-        ctx.DepartmentBalanceLabels.Should().HaveCount(2);
-    }
-
-    [Fact]
-    public async Task GetLabels_returns_the_shared_layer()
-    {
-        using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
-        var controller = MakeController(ctx);
-        await controller.UpsertLabelAsync(
-            new DepartmentBalancesController.UpsertLabelRequest(null, "13U00", null, null, null, null, "summer employment 2026"),
-            CancellationToken.None);
-
-        var result = await controller.GetLabelsAsync(CancellationToken.None);
-
-        var ok = result.Result.Should().BeOfType<OkObjectResult>().Which;
-        var labels = ok.Value.Should().BeAssignableTo<IReadOnlyList<DepartmentBalancesController.LabelResponse>>().Which;
-        labels.Should().ContainSingle(l => l.Fund == "13U00" && l.Text == "summer employment 2026");
-    }
-
-    private static DepartmentBalancesController MakeController(
-        AppDbContext ctx,
-        IDatamartService? datamart = null)
-    {
-        return new DepartmentBalancesController(datamart ?? new ResolvingDatamartService(), ctx)
+        return new DepartmentBalancesController(datamart ?? new ResolvingDatamartService())
         {
-            ControllerContext = MakeContext(),
-        };
-    }
-
-    private static ControllerContext MakeContext()
-    {
-        return new ControllerContext
-        {
-            HttpContext = new DefaultHttpContext
+            ControllerContext = new ControllerContext
             {
-                User = CreateUser(roles: [Role.Names.DepartmentViewer]),
+                HttpContext = new DefaultHttpContext
+                {
+                    User = CreateUser(roles: [Role.Names.DepartmentViewer]),
+                },
             },
         };
     }

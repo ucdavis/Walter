@@ -6,13 +6,13 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace server.core.Migrations
 {
     /// <inheritdoc />
-    public partial class AddDepartmentBalanceLabels : Migration
+    public partial class AddChartStringLabels : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
-                name: "DepartmentBalanceLabels",
+                name: "ChartStringLabels",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
@@ -29,12 +29,12 @@ namespace server.core.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_DepartmentBalanceLabels", x => x.Id);
+                    table.PrimaryKey("PK_ChartStringLabels", x => x.Id);
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_DepartmentBalanceLabels_Dept_Fund_Account_Purpose_Project_Activity",
-                table: "DepartmentBalanceLabels",
+                name: "IX_ChartStringLabels_Dept_Fund_Account_Purpose_Project_Activity",
+                table: "ChartStringLabels",
                 columns: new[] { "Dept", "Fund", "Account", "Purpose", "Project", "Activity" },
                 unique: true);
         }
@@ -43,7 +43,7 @@ namespace server.core.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "DepartmentBalanceLabels");
+                name: "ChartStringLabels");
         }
     }
 }
