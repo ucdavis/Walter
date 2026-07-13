@@ -116,7 +116,16 @@ const toFilterOptions = (
   opts: DepartmentBalanceOption[] | undefined,
   hierarchy = false
 ): FilterOption[] => {
-  const mapped = (opts ?? []).map((o) => ({
+  // Dedupe by code, preferring the leaf row — AE's padded parent levels can surface
+  // the same code at several "levels" (mirrors the options sproc's dedupe).
+  const byCode = new Map<string, DepartmentBalanceOption>();
+  for (const o of opts ?? []) {
+    const existing = byCode.get(o.code);
+    if (!existing || (existing.level !== 'Leaf' && o.level === 'Leaf')) {
+      byCode.set(o.code, o);
+    }
+  }
+  const mapped = [...byCode.values()].map((o) => ({
     group: hierarchy
       ? o.level === 'Leaf'
         ? 'Values'
