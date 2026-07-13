@@ -32,10 +32,21 @@ import { DataTable } from '@/shared/DataTable.tsx';
 import { ExportDataButton } from '@/components/ExportDataButton.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import { formatDate } from '@/lib/date.ts';
+import { canAccessDepartmentBalances } from '@/shared/auth/roleAccess.ts';
+import { meQueryOptions } from '@/queries/user.ts';
+import { RouterContext } from '@/main.tsx';
+import { redirect } from '@tanstack/react-router';
 
 export const Route = createFileRoute(
   '/(authenticated)/reports/department-balances/'
 )({
+  beforeLoad: async ({ context }: { context: RouterContext }) => {
+    const user = await context.queryClient.ensureQueryData(meQueryOptions());
+
+    if (!canAccessDepartmentBalances(user.roles)) {
+      throw redirect({ to: '/' });
+    }
+  },
   component: RouteComponent,
 });
 

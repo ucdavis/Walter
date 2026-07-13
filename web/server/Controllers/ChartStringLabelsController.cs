@@ -78,7 +78,14 @@ public sealed class ChartStringLabelsController : ApiControllerBase
             if (label is not null)
             {
                 _ctx.ChartStringLabels.Remove(label);
-                await _ctx.SaveChangesAsync(cancellationToken);
+                try
+                {
+                    await _ctx.SaveChangesAsync(cancellationToken);
+                }
+                catch (DbUpdateConcurrencyException)
+                {
+                    // Already deleted by a concurrent request; the outcome the caller wanted.
+                }
             }
             return NoContent();
         }
@@ -100,7 +107,29 @@ public sealed class ChartStringLabelsController : ApiControllerBase
         label.Text = text;
         label.UpdatedBy = User.GetUserIdentifier();
         label.UpdatedAt = DateTime.UtcNow;
-        await _ctx.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _ctx.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException) when (_ctx.Entry(label).State == EntityState.Added)
+        {
+            // A concurrent request inserted the same key first (unique index). Last write
+            // wins: re-read the winner's row and apply this request's text to it.
+            _ctx.Entry(label).State = EntityState.Detached;
+            var existing = await _ctx.ChartStringLabels.FirstOrDefaultAsync(
+                l => l.Dept == dept && l.Fund == fund && l.Account == account
+                     && l.Purpose == purpose && l.Project == project && l.Activity == activity,
+                cancellationToken);
+            if (existing is null)
+            {
+                throw;
+            }
+            existing.Text = text;
+            existing.UpdatedBy = User.GetUserIdentifier();
+            existing.UpdatedAt = DateTime.UtcNow;
+            await _ctx.SaveChangesAsync(cancellationToken);
+            label = existing;
+        }
 
         return Ok(new LabelResponse(
             label.Dept, label.Fund, label.Account, label.Purpose, label.Project, label.Activity,
