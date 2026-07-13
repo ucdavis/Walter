@@ -108,19 +108,33 @@ const GROUP_BY_OPTIONS: FilterOption[] = DIMENSIONS.map((d) => ({
 const optionLabel = (o: DepartmentBalanceOption): string =>
   o.name && o.name !== o.code ? `${o.code} — ${o.name}` : o.code;
 
-// Map filter-option rows to FilterOptions; hierarchy facets surface the rollup level as a hint.
+// Map filter-option rows to FilterOptions. Hierarchy facets split into two groups —
+// "Rollups" (picking one selects its whole subtree) and "Values" — alphabetical within
+// each. AE's parent-level numbers are positional padding over ragged trees, so the
+// level itself is never shown.
 const toFilterOptions = (
   opts: DepartmentBalanceOption[] | undefined,
   hierarchy = false
-): FilterOption[] =>
-  (opts ?? []).map((o) => ({
-    hint:
-      hierarchy && o.level && o.level !== 'Leaf'
-        ? `L${o.level} rollup`
-        : undefined,
+): FilterOption[] => {
+  const mapped = (opts ?? []).map((o) => ({
+    group: hierarchy
+      ? o.level === 'Leaf'
+        ? 'Values'
+        : 'Rollups'
+      : undefined,
     label: optionLabel(o),
     value: o.code,
   }));
+  if (!hierarchy) {
+    return mapped;
+  }
+  const byLabel = (a: FilterOption, b: FilterOption) =>
+    a.label.localeCompare(b.label);
+  return [
+    ...mapped.filter((o) => o.group === 'Rollups').sort(byLabel),
+    ...mapped.filter((o) => o.group === 'Values').sort(byLabel),
+  ];
+};
 
 function RouteComponent() {
   const [department, setDepartment] = useState<string[]>([]);
