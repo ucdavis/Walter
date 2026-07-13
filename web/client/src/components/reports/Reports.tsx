@@ -11,7 +11,7 @@ type Report = {
 
 export function Reports() {
   const canViewAccruals = useHasRole('AccrualViewer');
-  const canViewFinancialSummary = useHasRole('FinancialSummaryViewer');
+  const canViewFinancialSummary = useHasRole('DepartmentViewer');
 
   const reports = useMemo(() => {
     const availableReports: Report[] = [];

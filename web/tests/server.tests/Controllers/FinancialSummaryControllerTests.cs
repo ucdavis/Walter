@@ -138,7 +138,7 @@ public sealed class FinancialSummaryControllerTests
         {
             HttpContext = new DefaultHttpContext
             {
-                User = CreateUser(roles: [Role.Names.FinancialSummaryViewer]),
+                User = CreateUser(roles: [Role.Names.DepartmentViewer]),
             },
         };
     }

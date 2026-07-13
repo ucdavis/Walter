@@ -35,7 +35,7 @@ public static class AuthorizationHelper
                 policy.RequireRole(Role.Names.System));
 
             options.AddPolicy(Policies.CanViewFinancialSummary, policy =>
-                policy.RequireRole(Role.Names.FinancialSummaryViewer));
+                policy.RequireRole(Role.Names.DepartmentViewer));
         });
 
         services.AddSingleton<IAuthorizationHandler, AdminBypassHandler>();

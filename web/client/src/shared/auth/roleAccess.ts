@@ -1,7 +1,7 @@
 export const ROLE_NAMES = {
   accrualViewer: 'AccrualViewer',
   admin: 'Admin',
-  financialSummaryViewer: 'FinancialSummaryViewer',
+  departmentViewer: 'DepartmentViewer',
   financialViewer: 'FinancialViewer',
   manager: 'Manager',
   projectManager: 'ProjectManager',
@@ -65,10 +65,10 @@ export const canAccessPrincipalInvestigatorsNav = (roles: readonly string[]) =>
   hasRole(roles, PI_NAV_ROLES);
 
 export const canAccessReportsNav = (roles: readonly string[]) =>
-  roles.includes(ROLE_NAMES.accrualViewer) || roles.includes(ROLE_NAMES.financialSummaryViewer) || hasRole(roles, ELEVATED_ROLES);
+  roles.includes(ROLE_NAMES.accrualViewer) || roles.includes(ROLE_NAMES.departmentViewer) || hasRole(roles, ELEVATED_ROLES);
 
 export const canAccessFinancialSummary = (roles: readonly string[]) =>
-  roles.includes(ROLE_NAMES.financialSummaryViewer);
+  roles.includes(ROLE_NAMES.departmentViewer);
 
 export const canViewProjectDiscrepancy = (
   roles: readonly string[],

@@ -7,7 +7,7 @@ type UserRole =
   | 'Manager'
   | 'AccrualViewer'
   | 'FinancialViewer'
-  | 'FinancialSummaryViewer'
+  | 'DepartmentViewer'
   | 'ProjectManager';
 
 /**

@@ -69,7 +69,7 @@ public class DbInitializer : IDbInitializer
             Role.Names.AccrualViewer,
             Role.Names.FinancialViewer,
             Role.Names.ProjectManager,
-            Role.Names.FinancialSummaryViewer
+            Role.Names.DepartmentViewer
         };
 
         foreach (var roleName in rolesToEnsure)
