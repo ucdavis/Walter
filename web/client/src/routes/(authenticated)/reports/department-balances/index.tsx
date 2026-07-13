@@ -3,18 +3,18 @@ import { createFileRoute } from '@tanstack/react-router';
 import { createColumnHelper } from '@tanstack/react-table';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  useFinancialSummaryQuery,
-  useFinancialSummaryOptions,
-  type FinancialSummaryOption,
-  type FinancialSummaryRow,
-  type FinancialSummaryFilters,
-} from '@/queries/financialSummary.ts';
+  useDepartmentBalancesQuery,
+  useDepartmentBalanceOptions,
+  type DepartmentBalanceOption,
+  type DepartmentBalanceRow,
+  type DepartmentBalancesFilters,
+} from '@/queries/departmentBalances.ts';
 import {
-  financialSummaryLabelsQueryKey,
-  upsertFinancialSummaryLabel,
-  useFinancialSummaryLabels,
+  departmentBalanceLabelsQueryKey,
+  upsertDepartmentBalanceLabel,
+  useDepartmentBalanceLabels,
   type LabelSegments,
-} from '@/queries/financialSummaryLabels.ts';
+} from '@/queries/departmentBalanceLabels.ts';
 import {
   DIMENSIONS,
   MEASURES,
@@ -23,7 +23,7 @@ import {
   rowGroupLabel,
   rowLabelSegments,
   type MeasureDef,
-} from '@/lib/financialSummary.ts';
+} from '@/lib/departmentBalances.ts';
 import {
   MultiSelectFilter,
   type FilterOption,
@@ -34,13 +34,13 @@ import { formatCurrency } from '@/lib/currency.ts';
 import { formatDate } from '@/lib/date.ts';
 
 export const Route = createFileRoute(
-  '/(authenticated)/reports/financial-summary/'
+  '/(authenticated)/reports/department-balances/'
 )({
   component: RouteComponent,
 });
 
 // Report row enriched with its shared label (matched by exact segment-combination key).
-type LabeledRow = FinancialSummaryRow & { label: string };
+type LabeledRow = DepartmentBalanceRow & { label: string };
 
 const columnHelper = createColumnHelper<LabeledRow>();
 
@@ -59,9 +59,9 @@ function LabelCell({
   const queryClient = useQueryClient();
   const mutation = useMutation({
     mutationFn: (text: string) =>
-      upsertFinancialSummaryLabel({ ...segments, text }),
+      upsertDepartmentBalanceLabel({ ...segments, text }),
     onSettled: () =>
-      queryClient.invalidateQueries({ queryKey: financialSummaryLabelsQueryKey }),
+      queryClient.invalidateQueries({ queryKey: departmentBalanceLabelsQueryKey }),
   });
 
   return (
@@ -94,12 +94,12 @@ const GROUP_BY_OPTIONS: FilterOption[] = DIMENSIONS.map((d) => ({
   value: d.key,
 }));
 
-const optionLabel = (o: FinancialSummaryOption): string =>
+const optionLabel = (o: DepartmentBalanceOption): string =>
   o.name && o.name !== o.code ? `${o.code} — ${o.name}` : o.code;
 
 // Map filter-option rows to FilterOptions; hierarchy facets surface the rollup level as a hint.
 const toFilterOptions = (
-  opts: FinancialSummaryOption[] | undefined,
+  opts: DepartmentBalanceOption[] | undefined,
   hierarchy = false
 ): FilterOption[] =>
   (opts ?? []).map((o) => ({
@@ -113,7 +113,7 @@ const toFilterOptions = (
 
 function RouteComponent() {
   const [department, setDepartment] = useState<string[]>([]);
-  const [filters, setFilters] = useState<FinancialSummaryFilters>({});
+  const [filters, setFilters] = useState<DepartmentBalancesFilters>({});
   const [dimensions, setDimensions] = useState<string[]>([]);
 
   const query = useMemo(
@@ -125,8 +125,8 @@ function RouteComponent() {
     [dimensions, filters, department]
   );
 
-  const { data: rows = [], isError, isFetching } = useFinancialSummaryQuery(query);
-  const { data: labels = [] } = useFinancialSummaryLabels();
+  const { data: rows = [], isError, isFetching } = useDepartmentBalancesQuery(query);
+  const { data: labels = [] } = useDepartmentBalanceLabels();
 
   // Match shared labels to rows by exact segment-combination key.
   const labelsByKey = useMemo(
@@ -144,14 +144,14 @@ function RouteComponent() {
     [rows, labelsByKey, dimensions]
   );
 
-  const deptOptions = useFinancialSummaryOptions('Dept', {});
-  const fundOptions = useFinancialSummaryOptions('Fund', query, department.length > 0);
-  const accountOptions = useFinancialSummaryOptions('Account', query, department.length > 0);
-  const purposeOptions = useFinancialSummaryOptions('Purpose', query, department.length > 0);
-  const projectOptions = useFinancialSummaryOptions('Project', query, department.length > 0);
-  const activityOptions = useFinancialSummaryOptions('Activity', query, department.length > 0);
+  const deptOptions = useDepartmentBalanceOptions('Dept', {});
+  const fundOptions = useDepartmentBalanceOptions('Fund', query, department.length > 0);
+  const accountOptions = useDepartmentBalanceOptions('Account', query, department.length > 0);
+  const purposeOptions = useDepartmentBalanceOptions('Purpose', query, department.length > 0);
+  const projectOptions = useDepartmentBalanceOptions('Project', query, department.length > 0);
+  const activityOptions = useDepartmentBalanceOptions('Activity', query, department.length > 0);
   // Single current-period snapshot; drives the "balances as of" header.
-  const periodOptions = useFinancialSummaryOptions('Period', {});
+  const periodOptions = useDepartmentBalanceOptions('Period', {});
   const asOfPeriod = periodOptions.data?.[0]?.code;
 
   const cols = useMemo(() => activeColumns(dimensions), [dimensions]);
@@ -230,7 +230,7 @@ function RouteComponent() {
     [cols]
   );
 
-  const setFilter = <K extends keyof FinancialSummaryFilters>(
+  const setFilter = <K extends keyof DepartmentBalancesFilters>(
     key: K,
     values: string[]
   ) => {
@@ -254,7 +254,7 @@ function RouteComponent() {
   return (
     <main className="container">
       <section className="mt-8 mb-6">
-        <h1 className="h1">College / Department Financial Summary</h1>
+        <h1 className="h1">Department Balances</h1>
         <p className="text-base-content/70">
           Current balances by chart-string segment
           {asOfPeriod ? ` — as of ${asOfPeriod}` : ''}.
@@ -266,14 +266,14 @@ function RouteComponent() {
         {/* Department — hierarchy-aware multi-select, always enabled; gates the other facets */}
         <div className="form-control">
           <label className="label">
-            <span className="label-text font-medium">Department</span>
+            <span className="label-text font-medium">Financial Department</span>
           </label>
           <MultiSelectFilter
             loading={deptOptions.isPending}
             onChange={handleDeptChange}
             options={toFilterOptions(deptOptions.data, true)}
-            placeholder="Pick departments…"
-            searchPlaceholder="Search departments…"
+            placeholder="Pick financial departments…"
+            searchPlaceholder="Search financial departments…"
             selected={department}
           />
         </div>
@@ -377,16 +377,16 @@ function RouteComponent() {
       {/* Results area */}
       {department.length === 0 ? (
         <p className="text-base-content/70 mt-4">
-          Pick one or more departments to get started.
+          Pick one or more financial departments to get started.
         </p>
       ) : dimensions.length === 0 ? (
         <p className="text-base-content/70 mt-4">
           Choose one or more group-by segments to see results.
         </p>
       ) : isFetching ? (
-        <p className="text-base-content/80 mt-4">Loading financial summary…</p>
+        <p className="text-base-content/80 mt-4">Loading department balances…</p>
       ) : isError ? (
-        <p className="text-error mt-4">Error loading financial summary.</p>
+        <p className="text-error mt-4">Error loading department balances.</p>
       ) : (
         <DataTable
           columns={columns}
@@ -397,7 +397,7 @@ function RouteComponent() {
             <ExportDataButton
               columns={csvColumns}
               data={labeledRows}
-              filename="financial-summary.csv"
+              filename="department-balances.csv"
             />
           }
         />

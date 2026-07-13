@@ -544,15 +544,15 @@ public sealed class SearchControllerTests
             throw new NotImplementedException();
         }
 
-        public Task<IReadOnlyList<FinancialSummaryRow>> GetGlBalanceSummaryAsync(
-            FinancialSummaryQuery query,
+        public Task<IReadOnlyList<DepartmentBalanceRow>> GetGlBalanceSummaryAsync(
+            DepartmentBalancesQuery query,
             string? applicationUser = null,
             string? emulatingUser = null,
             CancellationToken ct = default)
             => throw new NotImplementedException();
 
-        public Task<IReadOnlyList<FinancialSummaryOption>> GetGlBalanceFilterOptionsAsync(
-            FinancialSummaryOptionsQuery query,
+        public Task<IReadOnlyList<DepartmentBalanceOption>> GetGlBalanceFilterOptionsAsync(
+            DepartmentBalancesOptionsQuery query,
             string? applicationUser = null,
             string? emulatingUser = null,
             CancellationToken ct = default)

@@ -10,7 +10,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Permission> Permissions => Set<Permission>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<OutboundMessage> OutboundMessages => Set<OutboundMessage>();
-    public DbSet<FinancialSummaryLabel> FinancialSummaryLabels => Set<FinancialSummaryLabel>();
+    public DbSet<DepartmentBalanceLabel> DepartmentBalanceLabels => Set<DepartmentBalanceLabel>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -21,6 +21,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         Permission.OnModelCreating(modelBuilder);
         Notification.OnModelCreating(modelBuilder);
         OutboundMessage.OnModelCreating(modelBuilder);
-        FinancialSummaryLabel.OnModelCreating(modelBuilder);
+        DepartmentBalanceLabel.OnModelCreating(modelBuilder);
     }
 }

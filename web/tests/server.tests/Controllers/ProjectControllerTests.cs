@@ -412,21 +412,21 @@ public sealed class ProjectControllerTests
         private readonly SearchablePersonRecord? _person;
         private readonly ProjectProjectionResult? _projection;
         private readonly IReadOnlyList<FacultyPortfolioRecord>? _portfolio;
-        private readonly IReadOnlyList<FinancialSummaryRow> _summaryRows;
-        private readonly IReadOnlyList<FinancialSummaryOption> _options;
+        private readonly IReadOnlyList<DepartmentBalanceRow> _summaryRows;
+        private readonly IReadOnlyList<DepartmentBalanceOption> _options;
 
         public ResolvingDatamartService(
             SearchablePersonRecord? person = null,
             ProjectProjectionResult? projection = null,
             IReadOnlyList<FacultyPortfolioRecord>? portfolio = null,
-            IReadOnlyList<FinancialSummaryRow>? summaryRows = null,
-            IReadOnlyList<FinancialSummaryOption>? options = null)
+            IReadOnlyList<DepartmentBalanceRow>? summaryRows = null,
+            IReadOnlyList<DepartmentBalanceOption>? options = null)
         {
             _person = person;
             _projection = projection;
             _portfolio = portfolio;
-            _summaryRows = summaryRows ?? Array.Empty<FinancialSummaryRow>();
-            _options = options ?? Array.Empty<FinancialSummaryOption>();
+            _summaryRows = summaryRows ?? Array.Empty<DepartmentBalanceRow>();
+            _options = options ?? Array.Empty<DepartmentBalanceOption>();
         }
 
         public Task<IReadOnlyList<SearchablePersonRecord>> SearchPeopleAsync(
@@ -537,15 +537,15 @@ public sealed class ProjectControllerTests
                 : throw new InvalidOperationException("Datamart should not be called for unauthorized users.");
         }
 
-        public Task<IReadOnlyList<FinancialSummaryRow>> GetGlBalanceSummaryAsync(
-            FinancialSummaryQuery query,
+        public Task<IReadOnlyList<DepartmentBalanceRow>> GetGlBalanceSummaryAsync(
+            DepartmentBalancesQuery query,
             string? applicationUser = null,
             string? emulatingUser = null,
             CancellationToken ct = default)
             => Task.FromResult(_summaryRows);
 
-        public Task<IReadOnlyList<FinancialSummaryOption>> GetGlBalanceFilterOptionsAsync(
-            FinancialSummaryOptionsQuery query,
+        public Task<IReadOnlyList<DepartmentBalanceOption>> GetGlBalanceFilterOptionsAsync(
+            DepartmentBalancesOptionsQuery query,
             string? applicationUser = null,
             string? emulatingUser = null,
             CancellationToken ct = default)

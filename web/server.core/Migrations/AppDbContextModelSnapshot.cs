@@ -22,7 +22,7 @@ namespace server.core.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
-            modelBuilder.Entity("server.core.Domain.FinancialSummaryLabel", b =>
+            modelBuilder.Entity("server.core.Domain.DepartmentBalanceLabel", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -77,7 +77,7 @@ namespace server.core.Migrations
                     b.HasIndex("Dept", "Fund", "Account", "Purpose", "Project", "Activity")
                         .IsUnique();
 
-                    b.ToTable("FinancialSummaryLabels");
+                    b.ToTable("DepartmentBalanceLabels");
                 });
 
             modelBuilder.Entity("server.core.Domain.Notification", b =>

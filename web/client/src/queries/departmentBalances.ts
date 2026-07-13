@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { fetchJson } from '@/lib/api.ts';
 
-export interface FinancialSummaryRow {
+export interface DepartmentBalanceRow {
   account?: string | null;
   accountDesc?: string | null;
   activity?: string | null;
@@ -24,14 +24,14 @@ export interface FinancialSummaryRow {
   revenue: number;
 }
 
-export interface FinancialSummaryOption {
+export interface DepartmentBalanceOption {
   code: string;
   /** Hierarchy level for Dept/Fund/Account facets: 'Leaf' or '0'..'5' (0 = top rollup); null otherwise. */
   level?: string | null;
   name: string;
 }
 
-export interface FinancialSummaryFilters {
+export interface DepartmentBalancesFilters {
   accounts?: string[];
   activities?: string[];
   financialDepartments?: string[];
@@ -40,7 +40,7 @@ export interface FinancialSummaryFilters {
   purposes?: string[];
 }
 
-export interface FinancialSummaryQuery extends FinancialSummaryFilters {
+export interface DepartmentBalancesQuery extends DepartmentBalancesFilters {
   dimensions: string[];
 }
 
@@ -50,23 +50,23 @@ export type OptionsSegment =
 const postJson = <T,>(url: string, body: unknown) =>
   fetchJson<T>(url, { body: JSON.stringify(body), method: 'POST' });
 
-export const useFinancialSummaryQuery = (query: FinancialSummaryQuery) =>
+export const useDepartmentBalancesQuery = (query: DepartmentBalancesQuery) =>
   useQuery({
     enabled: query.dimensions.length > 0,
-    queryFn: () => postJson<FinancialSummaryRow[]>('/api/financialsummary/query', query),
-    queryKey: ['financial-summary', query] as const,
+    queryFn: () => postJson<DepartmentBalanceRow[]>('/api/departmentbalances/query', query),
+    queryKey: ['department-balances', query] as const,
     staleTime: 60 * 60 * 1000,
   });
 
-export const useFinancialSummaryOptions = (
+export const useDepartmentBalanceOptions = (
   segment: OptionsSegment,
-  context: FinancialSummaryFilters,
+  context: DepartmentBalancesFilters,
   enabled = true
 ) =>
   useQuery({
     enabled,
     queryFn: () =>
-      postJson<FinancialSummaryOption[]>('/api/financialsummary/options', { segment, ...context }),
-    queryKey: ['financial-summary-options', segment, context] as const,
+      postJson<DepartmentBalanceOption[]>('/api/departmentbalances/options', { segment, ...context }),
+    queryKey: ['department-balances-options', segment, context] as const,
     staleTime: 60 * 60 * 1000,
   });

@@ -3,7 +3,7 @@ import { fetchJson } from '@/lib/api.ts';
 
 /** One shared label: an explanation of a chart-string segment combination.
  * Empty string in a segment field means it is not part of the label's key. */
-export interface FinancialSummaryLabelDto {
+export interface DepartmentBalanceLabelDto {
   account: string;
   activity: string;
   dept: string;
@@ -24,19 +24,19 @@ export interface LabelSegments {
   purpose: string;
 }
 
-export const financialSummaryLabelsQueryKey = ['financial-summary-labels'] as const;
+export const departmentBalanceLabelsQueryKey = ['department-balances-labels'] as const;
 
-export const useFinancialSummaryLabels = () =>
+export const useDepartmentBalanceLabels = () =>
   useQuery({
     queryFn: () =>
-      fetchJson<FinancialSummaryLabelDto[]>('/api/financialsummary/labels'),
-    queryKey: financialSummaryLabelsQueryKey,
+      fetchJson<DepartmentBalanceLabelDto[]>('/api/departmentbalances/labels'),
+    queryKey: departmentBalanceLabelsQueryKey,
     staleTime: 60_000,
   });
 
 /** Non-empty text creates/updates the label for the exact combination; empty text deletes it. */
-export const upsertFinancialSummaryLabel = (input: LabelSegments & { text: string }) =>
-  fetchJson<FinancialSummaryLabelDto | undefined>('/api/financialsummary/labels', {
+export const upsertDepartmentBalanceLabel = (input: LabelSegments & { text: string }) =>
+  fetchJson<DepartmentBalanceLabelDto | undefined>('/api/departmentbalances/labels', {
     body: JSON.stringify(input),
     method: 'PUT',
   });

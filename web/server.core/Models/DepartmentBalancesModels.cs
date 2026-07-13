@@ -6,7 +6,7 @@ namespace server.core.Models;
 /// One grouped row from usp_GetGlBalanceSummary. Only the dimensions selected for the query are
 /// populated; the rest stay null (Dapper leaves columns absent from the dynamic result set at default).
 /// </summary>
-public sealed class FinancialSummaryRow
+public sealed class DepartmentBalanceRow
 {
     [JsonPropertyName("dept")] public string? Dept { get; set; }
     [JsonPropertyName("deptDesc")] public string? DeptDesc { get; set; }
@@ -33,7 +33,7 @@ public sealed class FinancialSummaryRow
 }
 
 /// <summary>One picker option from usp_GetGlBalanceSummaryFilterOptions.</summary>
-public sealed class FinancialSummaryOption
+public sealed class DepartmentBalanceOption
 {
     [JsonPropertyName("code")] public string Code { get; set; } = "";
     [JsonPropertyName("name")] public string Name { get; set; } = "";
@@ -42,7 +42,7 @@ public sealed class FinancialSummaryOption
 }
 
 /// <summary>POST body for the grouped summary query.</summary>
-public sealed class FinancialSummaryQuery
+public sealed class DepartmentBalancesQuery
 {
     public string[] Dimensions { get; set; } = Array.Empty<string>();
     public string[]? FinancialDepartments { get; set; }
@@ -54,7 +54,7 @@ public sealed class FinancialSummaryQuery
 }
 
 /// <summary>POST body for a single picker's options.</summary>
-public sealed class FinancialSummaryOptionsQuery
+public sealed class DepartmentBalancesOptionsQuery
 {
     public string Segment { get; set; } = "";
     public string[]? FinancialDepartments { get; set; }

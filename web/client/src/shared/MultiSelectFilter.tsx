@@ -45,7 +45,7 @@ interface MultiSelectFilterProps {
 /**
  * Searchable dropdown with type-ahead and removable chips. daisyUI styling for the
  * look, cmdk for the search/filter/keyboard behavior, floating-ui for positioning.
- * Used by the financial-summary filter panel for both single (department) and
+ * Used by the department-balances filter panel for both single (department) and
  * multi (fund/activity/etc.) facets.
  */
 export function MultiSelectFilter({

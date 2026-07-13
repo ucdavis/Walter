@@ -9,20 +9,20 @@ using server.Helpers;
 
 namespace Server.Controllers;
 
-[Authorize(Policy = AuthorizationHelper.Policies.CanViewFinancialSummary)]
-public sealed class FinancialSummaryController : ApiControllerBase
+[Authorize(Policy = AuthorizationHelper.Policies.CanViewDepartmentBalances)]
+public sealed class DepartmentBalancesController : ApiControllerBase
 {
     private readonly IDatamartService _datamartService;
     private readonly AppDbContext _ctx;
 
-    public FinancialSummaryController(IDatamartService datamartService, AppDbContext ctx)
+    public DepartmentBalancesController(IDatamartService datamartService, AppDbContext ctx)
     {
         _datamartService = datamartService;
         _ctx = ctx;
     }
 
     [HttpPost("query")]
-    public async Task<IActionResult> QueryAsync([FromBody] FinancialSummaryQuery query, CancellationToken cancellationToken)
+    public async Task<IActionResult> QueryAsync([FromBody] DepartmentBalancesQuery query, CancellationToken cancellationToken)
     {
         if (query is null || query.Dimensions is null || query.Dimensions.Length == 0)
         {
@@ -35,7 +35,7 @@ public sealed class FinancialSummaryController : ApiControllerBase
     }
 
     [HttpPost("options")]
-    public async Task<IActionResult> OptionsAsync([FromBody] FinancialSummaryOptionsQuery query, CancellationToken cancellationToken)
+    public async Task<IActionResult> OptionsAsync([FromBody] DepartmentBalancesOptionsQuery query, CancellationToken cancellationToken)
     {
         if (query is null || string.IsNullOrWhiteSpace(query.Segment))
         {
@@ -58,7 +58,7 @@ public sealed class FinancialSummaryController : ApiControllerBase
     [HttpGet("labels")]
     public async Task<ActionResult<IReadOnlyList<LabelResponse>>> GetLabelsAsync(CancellationToken cancellationToken)
     {
-        var labels = await _ctx.FinancialSummaryLabels
+        var labels = await _ctx.DepartmentBalanceLabels
             .AsNoTracking()
             .Select(l => new LabelResponse(
                 l.Dept, l.Fund, l.Account, l.Purpose, l.Project, l.Activity, l.Text, l.UpdatedBy, l.UpdatedAt))
@@ -89,12 +89,12 @@ public sealed class FinancialSummaryController : ApiControllerBase
         }
 
         var text = (request.Text ?? "").Trim();
-        if (text.Length > FinancialSummaryLabel.TextMaxLength)
+        if (text.Length > DepartmentBalanceLabel.TextMaxLength)
         {
-            return BadRequest($"Label exceeds {FinancialSummaryLabel.TextMaxLength} characters.");
+            return BadRequest($"Label exceeds {DepartmentBalanceLabel.TextMaxLength} characters.");
         }
 
-        var label = await _ctx.FinancialSummaryLabels.FirstOrDefaultAsync(
+        var label = await _ctx.DepartmentBalanceLabels.FirstOrDefaultAsync(
             l => l.Dept == dept && l.Fund == fund && l.Account == account
                  && l.Purpose == purpose && l.Project == project && l.Activity == activity,
             cancellationToken);
@@ -103,7 +103,7 @@ public sealed class FinancialSummaryController : ApiControllerBase
         {
             if (label is not null)
             {
-                _ctx.FinancialSummaryLabels.Remove(label);
+                _ctx.DepartmentBalanceLabels.Remove(label);
                 await _ctx.SaveChangesAsync(cancellationToken);
             }
             return NoContent();
@@ -111,7 +111,7 @@ public sealed class FinancialSummaryController : ApiControllerBase
 
         if (label is null)
         {
-            label = new FinancialSummaryLabel
+            label = new DepartmentBalanceLabel
             {
                 Dept = dept,
                 Fund = fund,
@@ -120,7 +120,7 @@ public sealed class FinancialSummaryController : ApiControllerBase
                 Project = project,
                 Activity = activity,
             };
-            _ctx.FinancialSummaryLabels.Add(label);
+            _ctx.DepartmentBalanceLabels.Add(label);
         }
 
         label.Text = text;

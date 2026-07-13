@@ -11,7 +11,7 @@ public static class AuthorizationHelper
         public const string CanViewFinancials = nameof(CanViewFinancials);
         public const string IsManager = nameof(IsManager);
         public const string IsSystem = nameof(IsSystem);
-        public const string CanViewFinancialSummary = nameof(CanViewFinancialSummary);
+        public const string CanViewDepartmentBalances = nameof(CanViewDepartmentBalances);
     }
 
     /// <summary>
@@ -34,7 +34,7 @@ public static class AuthorizationHelper
             options.AddPolicy(Policies.IsSystem, policy =>
                 policy.RequireRole(Role.Names.System));
 
-            options.AddPolicy(Policies.CanViewFinancialSummary, policy =>
+            options.AddPolicy(Policies.CanViewDepartmentBalances, policy =>
                 policy.RequireRole(Role.Names.DepartmentViewer));
         });
 

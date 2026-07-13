@@ -6,10 +6,10 @@ import {
   labelKeyOf,
   rowGroupLabel,
   rowLabelSegments,
-} from '@/lib/financialSummary.ts';
-import type { FinancialSummaryRow } from '@/queries/financialSummary.ts';
+} from '@/lib/departmentBalances.ts';
+import type { DepartmentBalanceRow } from '@/queries/departmentBalances.ts';
 
-const row = (overrides: Partial<FinancialSummaryRow>): FinancialSummaryRow => ({
+const row = (overrides: Partial<DepartmentBalanceRow>): DepartmentBalanceRow => ({
   assets: 0, endingBalance: 0, expenses: 0, liabilities: 0, netPosition: 0, revenue: 0,
   ...overrides,
 });

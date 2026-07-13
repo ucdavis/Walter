@@ -11,7 +11,7 @@ type Report = {
 
 export function Reports() {
   const canViewAccruals = useHasRole('AccrualViewer');
-  const canViewFinancialSummary = useHasRole('DepartmentViewer');
+  const canViewDepartmentBalances = useHasRole('DepartmentViewer');
 
   const reports = useMemo(() => {
     const availableReports: Report[] = [];
@@ -24,16 +24,16 @@ export function Reports() {
       });
     }
 
-    if (canViewFinancialSummary) {
+    if (canViewDepartmentBalances) {
       availableReports.push({
-        id: 'financial-summary',
-        title: 'College / Department Financial Summary',
-        url: '/reports/financial-summary',
+        id: 'department-balances',
+        title: 'Department Balances',
+        url: '/reports/department-balances',
       });
     }
 
     return availableReports;
-  }, [canViewAccruals, canViewFinancialSummary]);
+  }, [canViewAccruals, canViewDepartmentBalances]);
 
   if (reports.length === 0) {
     return (

@@ -87,12 +87,12 @@ public interface IDatamartService
         string projectNumber, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default);
 
     /// <summary>Current-period balance measures grouped by the caller-selected chart-string segments.</summary>
-    Task<IReadOnlyList<FinancialSummaryRow>> GetGlBalanceSummaryAsync(
-        FinancialSummaryQuery query, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default);
+    Task<IReadOnlyList<DepartmentBalanceRow>> GetGlBalanceSummaryAsync(
+        DepartmentBalancesQuery query, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default);
 
-    /// <summary>Scoped picker options for one financial-summary filter facet.</summary>
-    Task<IReadOnlyList<FinancialSummaryOption>> GetGlBalanceFilterOptionsAsync(
-        FinancialSummaryOptionsQuery query, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default);
+    /// <summary>Scoped picker options for one department-balances filter facet.</summary>
+    Task<IReadOnlyList<DepartmentBalanceOption>> GetGlBalanceFilterOptionsAsync(
+        DepartmentBalancesOptionsQuery query, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default);
 }
 
 public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
@@ -339,10 +339,10 @@ public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
         return cleaned.Length == 0 ? null : string.Join(",", cleaned);
     }
 
-    public async Task<IReadOnlyList<FinancialSummaryRow>> GetGlBalanceSummaryAsync(
-        FinancialSummaryQuery query, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default)
+    public async Task<IReadOnlyList<DepartmentBalanceRow>> GetGlBalanceSummaryAsync(
+        DepartmentBalancesQuery query, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default)
     {
-        return await ExecuteSprocAsync<FinancialSummaryRow>(
+        return await ExecuteSprocAsync<DepartmentBalanceRow>(
             "dbo.usp_GetGlBalanceSummary",
             new
             {
@@ -360,10 +360,10 @@ public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
             ct: ct);
     }
 
-    public async Task<IReadOnlyList<FinancialSummaryOption>> GetGlBalanceFilterOptionsAsync(
-        FinancialSummaryOptionsQuery query, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default)
+    public async Task<IReadOnlyList<DepartmentBalanceOption>> GetGlBalanceFilterOptionsAsync(
+        DepartmentBalancesOptionsQuery query, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default)
     {
-        return await ExecuteSprocAsync<FinancialSummaryOption>(
+        return await ExecuteSprocAsync<DepartmentBalanceOption>(
             "dbo.usp_GetGlBalanceSummaryFilterOptions",
             new
             {

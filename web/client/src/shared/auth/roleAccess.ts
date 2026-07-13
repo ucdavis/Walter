@@ -67,7 +67,7 @@ export const canAccessPrincipalInvestigatorsNav = (roles: readonly string[]) =>
 export const canAccessReportsNav = (roles: readonly string[]) =>
   roles.includes(ROLE_NAMES.accrualViewer) || roles.includes(ROLE_NAMES.departmentViewer) || hasRole(roles, ELEVATED_ROLES);
 
-export const canAccessFinancialSummary = (roles: readonly string[]) =>
+export const canAccessDepartmentBalances = (roles: readonly string[]) =>
   roles.includes(ROLE_NAMES.departmentViewer);
 
 export const canViewProjectDiscrepancy = (

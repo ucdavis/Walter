@@ -12,8 +12,8 @@ using server.core.Data;
 namespace server.core.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260710191436_AddFinancialSummaryLabels")]
-    partial class AddFinancialSummaryLabels
+    [Migration("20260713140248_AddDepartmentBalanceLabels")]
+    partial class AddDepartmentBalanceLabels
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -25,7 +25,7 @@ namespace server.core.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
-            modelBuilder.Entity("server.core.Domain.FinancialSummaryLabel", b =>
+            modelBuilder.Entity("server.core.Domain.DepartmentBalanceLabel", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -80,7 +80,7 @@ namespace server.core.Migrations
                     b.HasIndex("Dept", "Fund", "Account", "Purpose", "Project", "Activity")
                         .IsUnique();
 
-                    b.ToTable("FinancialSummaryLabels");
+                    b.ToTable("DepartmentBalanceLabels");
                 });
 
             modelBuilder.Entity("server.core.Domain.Notification", b =>

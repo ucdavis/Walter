@@ -11,7 +11,7 @@ using server.core.Services;
 
 namespace server.tests.Controllers;
 
-public sealed class FinancialSummaryControllerTests
+public sealed class DepartmentBalancesControllerTests
 {
     [Fact]
     public async Task Query_returns_bad_request_when_no_dimensions()
@@ -19,7 +19,7 @@ public sealed class FinancialSummaryControllerTests
         using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
         var controller = MakeController(ctx);
 
-        var result = await controller.QueryAsync(new FinancialSummaryQuery { Dimensions = Array.Empty<string>() }, CancellationToken.None);
+        var result = await controller.QueryAsync(new DepartmentBalancesQuery { Dimensions = Array.Empty<string>() }, CancellationToken.None);
 
         result.Should().BeOfType<BadRequestObjectResult>();
     }
@@ -27,14 +27,14 @@ public sealed class FinancialSummaryControllerTests
     [Fact]
     public async Task Query_returns_rows_for_valid_request()
     {
-        var rows = new List<FinancialSummaryRow>
+        var rows = new List<DepartmentBalanceRow>
         {
             new() { Fund = "13U00", FundDesc = "General", Revenue = 100m, Expenses = 40m, EndingBalance = 60m },
         };
         using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
         var controller = MakeController(ctx, new ResolvingDatamartService(summaryRows: rows));
 
-        var result = await controller.QueryAsync(new FinancialSummaryQuery { Dimensions = new[] { "Fund" } }, CancellationToken.None);
+        var result = await controller.QueryAsync(new DepartmentBalancesQuery { Dimensions = new[] { "Fund" } }, CancellationToken.None);
 
         var ok = result.Should().BeOfType<OkObjectResult>().Which;
         ok.Value.Should().BeEquivalentTo(rows);
@@ -46,7 +46,7 @@ public sealed class FinancialSummaryControllerTests
         using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
         var controller = MakeController(ctx);
 
-        var result = await controller.OptionsAsync(new FinancialSummaryOptionsQuery { Segment = "" }, CancellationToken.None);
+        var result = await controller.OptionsAsync(new DepartmentBalancesOptionsQuery { Segment = "" }, CancellationToken.None);
 
         result.Should().BeOfType<BadRequestObjectResult>();
     }
@@ -58,11 +58,11 @@ public sealed class FinancialSummaryControllerTests
         var controller = MakeController(ctx);
 
         var result = await controller.UpsertLabelAsync(
-            new FinancialSummaryController.UpsertLabelRequest(null, "", "  ", null, null, null, "some text"),
+            new DepartmentBalancesController.UpsertLabelRequest(null, "", "  ", null, null, null, "some text"),
             CancellationToken.None);
 
         result.Should().BeOfType<BadRequestObjectResult>();
-        ctx.FinancialSummaryLabels.Should().BeEmpty();
+        ctx.DepartmentBalanceLabels.Should().BeEmpty();
     }
 
     [Fact]
@@ -72,22 +72,22 @@ public sealed class FinancialSummaryControllerTests
         var controller = MakeController(ctx);
 
         var create = await controller.UpsertLabelAsync(
-            new FinancialSummaryController.UpsertLabelRequest(null, "13U00", null, null, null, null, "summer employment 2026"),
+            new DepartmentBalancesController.UpsertLabelRequest(null, "13U00", null, null, null, null, "summer employment 2026"),
             CancellationToken.None);
         create.Should().BeOfType<OkObjectResult>();
-        ctx.FinancialSummaryLabels.Should().ContainSingle(l => l.Fund == "13U00" && l.Text == "summer employment 2026");
+        ctx.DepartmentBalanceLabels.Should().ContainSingle(l => l.Fund == "13U00" && l.Text == "summer employment 2026");
 
         var update = await controller.UpsertLabelAsync(
-            new FinancialSummaryController.UpsertLabelRequest(null, "13U00", null, null, null, null, "updated"),
+            new DepartmentBalancesController.UpsertLabelRequest(null, "13U00", null, null, null, null, "updated"),
             CancellationToken.None);
         update.Should().BeOfType<OkObjectResult>();
-        ctx.FinancialSummaryLabels.Should().ContainSingle(l => l.Fund == "13U00" && l.Text == "updated");
+        ctx.DepartmentBalanceLabels.Should().ContainSingle(l => l.Fund == "13U00" && l.Text == "updated");
 
         var delete = await controller.UpsertLabelAsync(
-            new FinancialSummaryController.UpsertLabelRequest(null, "13U00", null, null, null, null, "  "),
+            new DepartmentBalancesController.UpsertLabelRequest(null, "13U00", null, null, null, null, "  "),
             CancellationToken.None);
         delete.Should().BeOfType<NoContentResult>();
-        ctx.FinancialSummaryLabels.Should().BeEmpty();
+        ctx.DepartmentBalanceLabels.Should().BeEmpty();
     }
 
     [Fact]
@@ -97,13 +97,13 @@ public sealed class FinancialSummaryControllerTests
         var controller = MakeController(ctx);
 
         await controller.UpsertLabelAsync(
-            new FinancialSummaryController.UpsertLabelRequest(null, "13U00", null, null, null, null, "fund only"),
+            new DepartmentBalancesController.UpsertLabelRequest(null, "13U00", null, null, null, null, "fund only"),
             CancellationToken.None);
         await controller.UpsertLabelAsync(
-            new FinancialSummaryController.UpsertLabelRequest("ADNO001", "13U00", null, null, null, null, "dept and fund"),
+            new DepartmentBalancesController.UpsertLabelRequest("ADNO001", "13U00", null, null, null, null, "dept and fund"),
             CancellationToken.None);
 
-        ctx.FinancialSummaryLabels.Should().HaveCount(2);
+        ctx.DepartmentBalanceLabels.Should().HaveCount(2);
     }
 
     [Fact]
@@ -112,21 +112,21 @@ public sealed class FinancialSummaryControllerTests
         using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
         var controller = MakeController(ctx);
         await controller.UpsertLabelAsync(
-            new FinancialSummaryController.UpsertLabelRequest(null, "13U00", null, null, null, null, "summer employment 2026"),
+            new DepartmentBalancesController.UpsertLabelRequest(null, "13U00", null, null, null, null, "summer employment 2026"),
             CancellationToken.None);
 
         var result = await controller.GetLabelsAsync(CancellationToken.None);
 
         var ok = result.Result.Should().BeOfType<OkObjectResult>().Which;
-        var labels = ok.Value.Should().BeAssignableTo<IReadOnlyList<FinancialSummaryController.LabelResponse>>().Which;
+        var labels = ok.Value.Should().BeAssignableTo<IReadOnlyList<DepartmentBalancesController.LabelResponse>>().Which;
         labels.Should().ContainSingle(l => l.Fund == "13U00" && l.Text == "summer employment 2026");
     }
 
-    private static FinancialSummaryController MakeController(
+    private static DepartmentBalancesController MakeController(
         AppDbContext ctx,
         IDatamartService? datamart = null)
     {
-        return new FinancialSummaryController(datamart ?? new ResolvingDatamartService(), ctx)
+        return new DepartmentBalancesController(datamart ?? new ResolvingDatamartService(), ctx)
         {
             ControllerContext = MakeContext(),
         };
@@ -152,26 +152,26 @@ public sealed class FinancialSummaryControllerTests
 
     private sealed class ResolvingDatamartService : IDatamartService
     {
-        private readonly IReadOnlyList<FinancialSummaryRow> _summaryRows;
-        private readonly IReadOnlyList<FinancialSummaryOption> _options;
+        private readonly IReadOnlyList<DepartmentBalanceRow> _summaryRows;
+        private readonly IReadOnlyList<DepartmentBalanceOption> _options;
 
         public ResolvingDatamartService(
-            IReadOnlyList<FinancialSummaryRow>? summaryRows = null,
-            IReadOnlyList<FinancialSummaryOption>? options = null)
+            IReadOnlyList<DepartmentBalanceRow>? summaryRows = null,
+            IReadOnlyList<DepartmentBalanceOption>? options = null)
         {
-            _summaryRows = summaryRows ?? Array.Empty<FinancialSummaryRow>();
-            _options = options ?? Array.Empty<FinancialSummaryOption>();
+            _summaryRows = summaryRows ?? Array.Empty<DepartmentBalanceRow>();
+            _options = options ?? Array.Empty<DepartmentBalanceOption>();
         }
 
-        public Task<IReadOnlyList<FinancialSummaryRow>> GetGlBalanceSummaryAsync(
-            FinancialSummaryQuery query,
+        public Task<IReadOnlyList<DepartmentBalanceRow>> GetGlBalanceSummaryAsync(
+            DepartmentBalancesQuery query,
             string? applicationUser = null,
             string? emulatingUser = null,
             CancellationToken ct = default)
             => Task.FromResult(_summaryRows);
 
-        public Task<IReadOnlyList<FinancialSummaryOption>> GetGlBalanceFilterOptionsAsync(
-            FinancialSummaryOptionsQuery query,
+        public Task<IReadOnlyList<DepartmentBalanceOption>> GetGlBalanceFilterOptionsAsync(
+            DepartmentBalancesOptionsQuery query,
             string? applicationUser = null,
             string? emulatingUser = null,
             CancellationToken ct = default)
@@ -193,21 +193,21 @@ public sealed class FinancialSummaryControllerTests
             => Task.FromResult<SearchablePersonRecord?>(null);
 
         public Task<IReadOnlyList<EmployeeAccrualBalanceRecord>> GetEmployeeAccrualBalancesAsync(DateTime startDate, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default)
-            => throw new InvalidOperationException("Not needed for FinancialSummaryController tests.");
+            => throw new InvalidOperationException("Not needed for DepartmentBalancesController tests.");
 
         public Task<IReadOnlyList<FacultyPortfolioRecord>> GetFacultyPortfolioAsync(IEnumerable<string> projectNumbers, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default)
-            => throw new InvalidOperationException("Not needed for FinancialSummaryController tests.");
+            => throw new InvalidOperationException("Not needed for DepartmentBalancesController tests.");
 
         public Task<IReadOnlyList<PositionBudgetRecord>> GetPositionBudgetsAsync(IEnumerable<string> projectNumbers, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default)
-            => throw new InvalidOperationException("Not needed for FinancialSummaryController tests.");
+            => throw new InvalidOperationException("Not needed for DepartmentBalancesController tests.");
 
         public Task<IReadOnlyList<GLPPMReconciliationRecord>> GetGLPPMReconciliationAsync(IEnumerable<string> projectNumbers, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default)
-            => throw new InvalidOperationException("Not needed for FinancialSummaryController tests.");
+            => throw new InvalidOperationException("Not needed for DepartmentBalancesController tests.");
 
         public Task<IReadOnlyList<GLTransactionRecord>> GetGLTransactionListingsAsync(IEnumerable<string> projectNumbers, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default)
-            => throw new InvalidOperationException("Not needed for FinancialSummaryController tests.");
+            => throw new InvalidOperationException("Not needed for DepartmentBalancesController tests.");
 
         public Task<ProjectProjectionResult> GetProjectProjectionAsync(string projectNumber, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default)
-            => throw new InvalidOperationException("Not needed for FinancialSummaryController tests.");
+            => throw new InvalidOperationException("Not needed for DepartmentBalancesController tests.");
     }
 }

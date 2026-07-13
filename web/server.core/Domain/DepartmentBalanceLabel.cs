@@ -9,7 +9,7 @@ namespace server.core.Domain;
 /// segment is not part of the label's key; at least one segment must be set. One label per
 /// combination — everyone with report access shares the same layer.
 /// </summary>
-public class FinancialSummaryLabel
+public class DepartmentBalanceLabel
 {
     public const int TextMaxLength = 500;
 
@@ -44,7 +44,7 @@ public class FinancialSummaryLabel
 
     internal static void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.Entity<FinancialSummaryLabel>()
+        modelBuilder.Entity<DepartmentBalanceLabel>()
             .HasIndex(l => new { l.Dept, l.Fund, l.Account, l.Purpose, l.Project, l.Activity })
             .IsUnique();
     }
