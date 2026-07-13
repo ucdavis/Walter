@@ -67,8 +67,10 @@ export const canAccessPrincipalInvestigatorsNav = (roles: readonly string[]) =>
 export const canAccessReportsNav = (roles: readonly string[]) =>
   roles.includes(ROLE_NAMES.accrualViewer) || roles.includes(ROLE_NAMES.departmentViewer) || hasRole(roles, ELEVATED_ROLES);
 
+// Mirrors the server's CanViewDepartmentBalances policy, where AdminBypassHandler
+// lets Admin through every policy.
 export const canAccessDepartmentBalances = (roles: readonly string[]) =>
-  roles.includes(ROLE_NAMES.departmentViewer);
+  hasAdminRole(roles) || roles.includes(ROLE_NAMES.departmentViewer);
 
 export const canViewProjectDiscrepancy = (
   roles: readonly string[],
