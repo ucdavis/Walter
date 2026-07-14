@@ -447,7 +447,7 @@ function RouteComponent() {
       </section>
 
       {/* Applied selections, Shopify-style: consolidated removable chips */}
-      <aside className="card border-base-300 bg-base-100 shrink-0 self-start border lg:w-72">
+      <aside className="card border-base-300 bg-base-100 shrink-0 self-start border lg:w-2/5">
         <div className="card-body gap-3 p-4">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-medium">Active selections</h2>
@@ -463,57 +463,61 @@ function RouteComponent() {
           </div>
           {hasSelections ? (
             <>
-              {activeFilterChips.length > 0 ? (
-                <div>
-                  <h3 className="text-base-content/60 text-xs font-semibold tracking-wide uppercase">
-                    Filters
-                  </h3>
-                  <div className="mt-1 flex flex-wrap gap-1">
+              <div>
+                <h3 className="text-base-content/60 text-xs font-semibold tracking-wide uppercase">
+                  Filters
+                </h3>
+                {activeFilterChips.length > 0 ? (
+                  <div className="mt-2 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
                     {activeFilterChips.map((c) => (
                       <span
-                        className="badge badge-outline max-w-full gap-1"
+                        className="border-base-300 bg-base-200/50 flex min-w-0 items-center justify-between gap-2 rounded-lg border px-2.5 py-1.5 text-sm"
                         key={c.key}
                         title={c.title}
                       >
                         <span className="truncate">{c.display}</span>
                         <button
                           aria-label={`Remove ${c.display}`}
-                          className="hover:text-base-content/60"
+                          className="text-base-content/50 hover:text-base-content shrink-0"
                           onClick={c.onRemove}
                           type="button"
                         >
-                          <XMarkIcon className="h-3 w-3" />
+                          <XMarkIcon className="h-4 w-4" />
                         </button>
                       </span>
                     ))}
                   </div>
-                </div>
-              ) : null}
-              {groupByChips.length > 0 ? (
-                <div>
-                  <h3 className="text-base-content/60 text-xs font-semibold tracking-wide uppercase">
-                    Grouped by
-                  </h3>
-                  <div className="mt-1 flex flex-wrap gap-1">
+                ) : (
+                  <p className="text-base-content/50 mt-2 text-sm">No filters applied.</p>
+                )}
+              </div>
+              <div className="border-base-300 border-t pt-3">
+                <h3 className="text-primary text-xs font-semibold tracking-wide uppercase">
+                  Display fields
+                </h3>
+                {groupByChips.length > 0 ? (
+                  <div className="mt-2 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
                     {groupByChips.map((c) => (
                       <span
-                        className="badge badge-primary max-w-full gap-1"
+                        className="border-primary/40 bg-primary/10 text-primary flex min-w-0 items-center justify-between gap-2 rounded-lg border px-2.5 py-1.5 text-sm font-medium"
                         key={c.key}
                       >
                         <span className="truncate">{c.display}</span>
                         <button
                           aria-label={`Remove ${c.display}`}
-                          className="hover:text-primary-content/70"
+                          className="text-primary/60 hover:text-primary shrink-0"
                           onClick={c.onRemove}
                           type="button"
                         >
-                          <XMarkIcon className="h-3 w-3" />
+                          <XMarkIcon className="h-4 w-4" />
                         </button>
                       </span>
                     ))}
                   </div>
-                </div>
-              ) : null}
+                ) : (
+                  <p className="text-base-content/50 mt-2 text-sm">No display fields chosen.</p>
+                )}
+              </div>
             </>
           ) : (
             <p className="text-base-content/60 text-sm">Nothing selected yet.</p>
