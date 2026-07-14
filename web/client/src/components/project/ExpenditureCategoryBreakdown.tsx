@@ -1,34 +1,19 @@
 import { useMemo } from 'react';
-import { createFileRoute, Link } from '@tanstack/react-router';
-import { useSuspenseQuery } from '@tanstack/react-query';
 import { createColumnHelper } from '@tanstack/react-table';
 import { ExportDataButton } from '@/components/ExportDataButton.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
-import { type ProjectRecord, projectsDetailQueryOptions } from '@/queries/project.ts';
+import type { ProjectRecord } from '@/queries/project.ts';
 import { DataTable } from '@/shared/DataTable.tsx';
 import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
 import { tooltipDefinitions } from '@/shared/tooltips.ts';
 
-interface SearchParams {
+export interface ExpenditureCategoryFilters {
   activity?: string;
   dept?: string;
   fund?: string;
   program?: string;
   task?: string;
 }
-
-export const Route = createFileRoute(
-  '/(authenticated)/projects/$iamId/$projectNumber/expenditure-categories'
-)({
-  component: RouteComponent,
-  validateSearch: (search: Record<string, unknown>): SearchParams => ({
-    activity: (search.activity as string) ?? undefined,
-    dept: (search.dept as string) ?? undefined,
-    fund: (search.fund as string) ?? undefined,
-    program: (search.program as string) ?? undefined,
-    task: (search.task as string) ?? undefined,
-  }),
-});
 
 interface ExpenditureCategoryRow {
   balance: number;
@@ -38,18 +23,46 @@ interface ExpenditureCategoryRow {
   expenses: number;
 }
 
+interface ExpenditureCategoryBreakdownProps {
+  filters?: ExpenditureCategoryFilters;
+  projectNumber: string;
+  records: ProjectRecord[];
+}
+
+const columnHelper = createColumnHelper<ExpenditureCategoryRow>();
+
+const csvColumns = [
+  { header: 'Expenditure Category', key: 'expenditureCategoryName' as const },
+  { format: 'currency' as const, header: 'Budget', key: 'budget' as const },
+  { format: 'currency' as const, header: 'Expenses', key: 'expenses' as const },
+  {
+    format: 'currency' as const,
+    header: 'Commitments',
+    key: 'commitments' as const,
+  },
+  { format: 'currency' as const, header: 'Balance', key: 'balance' as const },
+];
+
 function buildRows(
   records: ProjectRecord[],
-  projectNumber: string,
-  search: SearchParams
+  filters: ExpenditureCategoryFilters = {}
 ): ExpenditureCategoryRow[] {
   const filtered = records.filter((r) => {
-    if (r.projectNumber !== projectNumber) return false;
-    if (search.task && (r.taskNum ?? '') !== search.task) return false;
-    if (search.fund && (r.fundCode ?? '') !== search.fund) return false;
-    if (search.program && (r.programCode ?? '') !== search.program) return false;
-    if (search.activity && (r.activityCode ?? '') !== search.activity) return false;
-    if (search.dept && (r.projectOwningOrgCode ?? '') !== search.dept) return false;
+    if (filters.task && (r.taskNum ?? '') !== filters.task) {
+      return false;
+    }
+    if (filters.fund && (r.fundCode ?? '') !== filters.fund) {
+      return false;
+    }
+    if (filters.program && (r.programCode ?? '') !== filters.program) {
+      return false;
+    }
+    if (filters.activity && (r.activityCode ?? '') !== filters.activity) {
+      return false;
+    }
+    if (filters.dept && (r.projectOwningOrgCode ?? '') !== filters.dept) {
+      return false;
+    }
     return true;
   });
 
@@ -78,28 +91,12 @@ function buildRows(
   );
 }
 
-const columnHelper = createColumnHelper<ExpenditureCategoryRow>();
-
-const csvColumns = [
-  { header: 'Expenditure Category', key: 'expenditureCategoryName' as const },
-  { format: 'currency' as const, header: 'Budget', key: 'budget' as const },
-  { format: 'currency' as const, header: 'Expenses', key: 'expenses' as const },
-  { format: 'currency' as const, header: 'Commitments', key: 'commitments' as const },
-  { format: 'currency' as const, header: 'Balance', key: 'balance' as const },
-];
-
-function RouteComponent() {
-  const { iamId, projectNumber } = Route.useParams();
-  const search = Route.useSearch();
-
-  const { data: projects } = useSuspenseQuery(
-    projectsDetailQueryOptions(iamId)
-  );
-
-  const rows = useMemo(
-    () => buildRows(projects, projectNumber, search),
-    [projects, projectNumber, search]
-  );
+export function ExpenditureCategoryBreakdown({
+  filters,
+  projectNumber,
+  records,
+}: ExpenditureCategoryBreakdownProps) {
+  const rows = useMemo(() => buildRows(records, filters), [filters, records]);
 
   const totals = useMemo(
     () =>
@@ -180,13 +177,17 @@ function RouteComponent() {
         cell: (info) => {
           const value = info.getValue();
           return (
-            <span className={`flex justify-end ${value < 0 ? 'text-error' : ''}`}>
+            <span
+              className={`flex justify-end ${value < 0 ? 'text-error' : ''}`}
+            >
               {formatCurrency(value)}
             </span>
           );
         },
         footer: () => (
-          <span className={`flex justify-end ${totals.balance < 0 ? 'text-error' : ''}`}>
+          <span
+            className={`flex justify-end ${totals.balance < 0 ? 'text-error' : ''}`}
+          >
             {formatCurrency(totals.balance)}
           </span>
         ),
@@ -204,44 +205,27 @@ function RouteComponent() {
     [totals.balance, totals.budget, totals.commitments, totals.expenses]
   );
 
-  const keyLabel = [search.task, search.dept, search.fund, search.program, search.activity]
-    .filter(Boolean)
-    .join(' / ');
+  if (rows.length === 0) {
+    return (
+      <p className="text-base-content/70 mt-4">
+        No expenditure category data found.
+      </p>
+    );
+  }
 
   return (
-    <main className="flex-1 min-w-0">
-      <section className="mt-8 mb-6">
-        <Link
-          className="btn btn-sm mb-4"
-          params={{ iamId, projectNumber }}
-          to="/projects/$iamId/$projectNumber/"
-        >
-          Back to Project
-        </Link>
-        <h1 className="h1">Expenditure Category Breakdown</h1>
-        <h3 className="subtitle">Data source: Faculty Department Portfolio Report (PPM)</h3>
-        {keyLabel && <p className="subtitle">{keyLabel}</p>}
-      </section>
-
-      {rows.length === 0 ? (
-        <p className="text-base-content/70 mt-4">No expenditure category data found.</p>
-      ) : (
-        <section className="mb-8">
-          <DataTable
-            columns={columns}
-            data={rows}
-            footerRowClassName="totaltr"
-            globalFilter="left"
-            tableActions={
-              <ExportDataButton
-                columns={csvColumns}
-                data={rows}
-                filename={`expenditure-categories-${projectNumber}.csv`}
-              />
-            }
-          />
-        </section>
-      )}
-    </main>
+    <DataTable
+      columns={columns}
+      data={rows}
+      footerRowClassName="totaltr"
+      globalFilter="left"
+      tableActions={
+        <ExportDataButton
+          columns={csvColumns}
+          data={rows}
+          filename={`expenditure-categories-${projectNumber}.csv`}
+        />
+      }
+    />
   );
 }
