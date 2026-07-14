@@ -6,10 +6,6 @@ import { downloadExcelCsv } from '@/lib/csv.ts';
 import type { ProjectRecord } from '@/queries/project.ts';
 import { tooltipDefinitions } from '@/shared/tooltips.ts';
 
-vi.mock('@tanstack/react-router', () => ({
-  Link: ({ children }: { children: React.ReactNode }) => <a>{children}</a>,
-}));
-
 vi.mock('@/lib/csv.ts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/csv.ts')>();
 
@@ -90,7 +86,6 @@ describe('TaskBreakdown', () => {
     const user = userEvent.setup();
     render(
       <TaskBreakdown
-        iamId="1000000123"
         isInternal={false}
         projectNumber="P1"
         records={[createProject()]}
@@ -118,7 +113,6 @@ describe('TaskBreakdown', () => {
     const user = userEvent.setup();
     render(
       <TaskBreakdown
-        iamId="1000000123"
         isInternal={false}
         projectNumber="P1"
         records={[createProject()]}
@@ -143,7 +137,6 @@ describe('TaskBreakdown', () => {
   it('links each task to Finjector for internal projects', () => {
     render(
       <TaskBreakdown
-        iamId="1000000123"
         isInternal={true}
         projectNumber="P1"
         records={[createProject({ taskNum: 'T001' })]}
@@ -161,7 +154,6 @@ describe('TaskBreakdown', () => {
   it('does not link tasks to Finjector for sponsored projects', () => {
     render(
       <TaskBreakdown
-        iamId="1000000123"
         isInternal={false}
         projectNumber="P1"
         records={[createProject({ taskNum: 'T001' })]}
@@ -177,7 +169,6 @@ describe('TaskBreakdown', () => {
   it('shows the filtered export action only when a search filter is active', () => {
     render(
       <TaskBreakdown
-        iamId="1000000123"
         isInternal={false}
         projectNumber="P1"
         records={[
@@ -216,7 +207,6 @@ describe('TaskBreakdown', () => {
   it('exports only filtered task breakdown rows when the filtered export button is used', () => {
     render(
       <TaskBreakdown
-        iamId="1000000123"
         isInternal={false}
         projectNumber="P1"
         records={[

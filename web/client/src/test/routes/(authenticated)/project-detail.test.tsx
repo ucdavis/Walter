@@ -90,7 +90,9 @@ const setupHandlers = (
         roles: [],
       })
     ),
-    http.get('/api/project/managed/by-iam/:iamId', () => HttpResponse.json({ pis: [], projectManager: null })),
+    http.get('/api/project/managed/by-iam/:iamId', () =>
+      HttpResponse.json({ pis: [], projectManager: null })
+    ),
     http.get('/api/project/by-iam/:iamId', () => HttpResponse.json(projects)),
     http.get('/api/project/personnel', () => HttpResponse.json([])),
     http.get('/api/project/projection/:projectNumber', () =>
@@ -153,7 +155,9 @@ describe('project detail page', () => {
           roles: [],
         })
       ),
-      http.get('/api/project/managed/by-iam/:iamId', () => HttpResponse.json({ pis: [], projectManager: null })),
+      http.get('/api/project/managed/by-iam/:iamId', () =>
+        HttpResponse.json({ pis: [], projectManager: null })
+      ),
       http.get('/api/project/by-iam/:iamId', ({ params }) => {
         if (params.iamId === '10212674') {
           return HttpResponse.json(
@@ -491,6 +495,9 @@ describe('project detail page', () => {
       expect(
         screen.queryByRole('link', { name: 'Projections' })
       ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('link', { name: 'Details' })
+      ).not.toBeInTheDocument();
       expect(screen.queryByText('Project Burndown')).not.toBeInTheDocument();
     } finally {
       cleanup();
@@ -552,7 +559,9 @@ describe('project detail page', () => {
 
   it('shows a tooltip for the Task Breakdown section heading', async () => {
     const user = userEvent.setup();
-    const projects = [createProject({ pmEmployeeId: '2000' })];
+    const projects = [
+      createProject({ pmEmployeeId: '2000', projectType: 'Internal' }),
+    ];
     setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);
 
     const { cleanup } = renderRoute({
@@ -566,6 +575,52 @@ describe('project detail page', () => {
       expect(await screen.findByRole('tooltip')).toHaveTextContent(
         tooltipDefinitions.taskBreakdown
       );
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('shows expenditure categories instead of task breakdown for sponsored projects', async () => {
+    const projects = [
+      createProject({
+        balance: 1200,
+        budget: 3000,
+        commitments: 300,
+        expenditureCategoryName: '01 - Salaries and Wages',
+        expenses: 1500,
+        pmEmployeeId: '2000',
+      }),
+      createProject({
+        balance: 2800,
+        budget: 7000,
+        commitments: 700,
+        expenditureCategoryName: '03 - Supplies / Services / Other Expenses',
+        expenses: 3500,
+        pmEmployeeId: '2000',
+        taskName: 'Task 2',
+        taskNum: 'T002',
+      }),
+    ];
+    setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);
+
+    const { cleanup } = renderRoute({
+      initialPath: '/projects/1000/P1',
+    });
+
+    try {
+      expect(
+        await screen.findByRole('heading', {
+          name: 'Expenditure Category Breakdown',
+        })
+      ).toBeInTheDocument();
+      expect(screen.queryByText('Task Breakdown')).not.toBeInTheDocument();
+      expect(screen.getByText('01 - Salaries and Wages')).toBeInTheDocument();
+      expect(
+        screen.getByText('03 - Supplies / Services / Other Expenses')
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('link', { name: 'Details' })
+      ).not.toBeInTheDocument();
     } finally {
       cleanup();
     }
