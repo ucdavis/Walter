@@ -208,6 +208,7 @@ function RouteComponent() {
         footer: i === 0 ? () => <span className="font-semibold">Total</span> : undefined,
         header: d.label,
         id: d.key,
+        size: 220,
       })
     );
     const measure = (m: MeasureDef) =>
@@ -242,6 +243,7 @@ function RouteComponent() {
         );
       },
       header: 'Label',
+      size: 260,
     });
     return [...dimCols, ...MEASURES.map(measure), labelCol];
   }, [cols, totals, dimensions, labelsByKey]);
