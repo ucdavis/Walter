@@ -9,7 +9,6 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { ProjectExpenditureProgress } from '@/components/project/ProjectExpenditureProgress.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import {
   PROJECT_PERSONNEL_COLOR,
@@ -425,7 +424,6 @@ export function ProjectBurndownSection({
   return (
     <>
       <section className="mt-8 pb-4">
-        <h2 className="h2 mb-1">Project Burndown</h2>
         <p className="max-w-3xl mb-6">{tooltipDefinitions.projectBurndown}</p>
 
         {projectionQuery.isPending && (
@@ -635,13 +633,6 @@ export function ProjectBurndownSection({
         )}
       </section>
 
-      {projectionQuery.isSuccess && result && series.length > 0 && (
-        <ProjectExpenditureProgress
-          awardEndDate={awardEndDate}
-          awardStartDate={awardStartDate}
-          categories={result.categories}
-        />
-      )}
     </>
   );
 }

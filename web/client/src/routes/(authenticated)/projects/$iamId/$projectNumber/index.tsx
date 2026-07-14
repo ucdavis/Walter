@@ -21,7 +21,10 @@ import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
 import { tooltipDefinitions } from '@/shared/tooltips.ts';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { ChartBarIcon } from '@heroicons/react/24/outline';
+import {
+  ChartBarIcon,
+  PresentationChartLineIcon,
+} from '@heroicons/react/24/outline';
 import ProjectAdditionalInfo from '@/components/project/ProjectAdditionalInfo.tsx';
 
 export const Route = createFileRoute(
@@ -102,14 +105,24 @@ function ProjectContent({
       <ProjectDetails
         actions={
           !summary.isInternal && featureFlags?.projectionsEnabled ? (
-            <Link
-              className="btn btn-block btn-lg"
-              params={{ iamId, projectNumber: summary.projectNumber }}
-              to="/projections/$iamId/$projectNumber"
-            >
-              <ChartBarIcon className="h-4 w-4" />
-              View Visualizations
-            </Link>
+            <>
+              <Link
+                className="btn btn-lg"
+                params={{ iamId, projectNumber: summary.projectNumber }}
+                to="/expenditureprogress/$iamId/$projectNumber"
+              >
+                <ChartBarIcon className="h-4 w-4" />
+                Expenditure Progress
+              </Link>
+              <button
+                className="btn btn-lg"
+                disabled
+                type="button"
+              >
+                <PresentationChartLineIcon className="h-4 w-4" />
+                Project Burndown (coming soon)
+              </button>
+            </>
           ) : null
         }
         summary={summary}

@@ -11,7 +11,10 @@ import {
   type BudgetProgressSummary,
   type TimeProgressSummary,
 } from '@/lib/projectProgress.ts';
-import type { ProjectProjectionCategory } from '@/queries/projectProjection.ts';
+import {
+  useProjectProjectionQuery,
+  type ProjectProjectionCategory,
+} from '@/queries/projectProjection.ts';
 
 const CATEGORY_PROGRESS_DESCRIPTION =
   'Expenses, commitments, and available balance by expenditure category.';
@@ -64,6 +67,12 @@ interface ProjectExpenditureProgressProps {
   awardEndDate: string | null;
   awardStartDate: string | null;
   categories: ProjectProjectionCategory[];
+}
+
+interface ProjectExpenditureProgressSectionProps {
+  awardEndDate: string | null;
+  awardStartDate: string | null;
+  projectNumber: string;
 }
 
 function categoryDisplayName(expenditureCategory: string) {
@@ -347,13 +356,10 @@ export function ProjectExpenditureProgress({
 
   return (
     <section
-      aria-labelledby="project-expenditure-progress-heading"
+      aria-label="Project Expenditure Progress"
       className="mt-8 pb-8"
       data-testid="project-expenditure-progress"
     >
-      <h2 className="h2 mb-1" id="project-expenditure-progress-heading">
-        Project Expenditure Progress
-      </h2>
       <p className="mb-6 max-w-3xl">
         {CATEGORY_PROGRESS_DESCRIPTION}
         {summaryBudgetText && summaryMonthsText && (
@@ -475,5 +481,37 @@ export function ProjectExpenditureProgress({
         <PacingProgressAxis />
       </div>
     </section>
+  );
+}
+
+export function ProjectExpenditureProgressSection({
+  awardEndDate,
+  awardStartDate,
+  projectNumber,
+}: ProjectExpenditureProgressSectionProps) {
+  const projectionQuery = useProjectProjectionQuery(projectNumber);
+
+  if (projectionQuery.isPending) {
+    return (
+      <p className="text-base-content/70 mt-4">
+        Loading project expenditure progress...
+      </p>
+    );
+  }
+
+  if (projectionQuery.isError) {
+    return (
+      <p className="text-error mt-4">
+        Error loading project expenditure progress.
+      </p>
+    );
+  }
+
+  return (
+    <ProjectExpenditureProgress
+      awardEndDate={awardEndDate}
+      awardStartDate={awardStartDate}
+      categories={projectionQuery.data.categories}
+    />
   );
 }

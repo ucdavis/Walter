@@ -1,4 +1,4 @@
-import { ProjectBurndownSection } from '@/components/project/ProjectBurndownChart.tsx';
+import { ProjectExpenditureProgressSection } from '@/components/project/ProjectExpenditureProgress.tsx';
 import { ProjectPortfolioLayout } from '@/components/project/ProjectPortfolioLayout.tsx';
 import { PageEmpty } from '@/components/states/PageEmpty.tsx';
 import { PageError } from '@/components/states/PageError.tsx';
@@ -17,7 +17,7 @@ import {
 } from '@tanstack/react-router';
 
 export const Route = createFileRoute(
-  '/(authenticated)/projections/$iamId/$projectNumber'
+  '/(authenticated)/expenditureprogress/$iamId/$projectNumber'
 )({
   component: RouteComponent,
   errorComponent: ProjectionsErrorBoundary,
@@ -75,12 +75,12 @@ function RouteComponent() {
             Back to Project Details
           </Link>
 
-          <h1 className="h1">Financial Projections</h1>
+          <h1 className="h1">Expenditure Progress</h1>
           <h2 className="subtitle max-w-5xl">{summary.displayName}</h2>
         </section>
 
         {projectionsAvailable ? (
-          <ProjectBurndownSection
+          <ProjectExpenditureProgressSection
             awardEndDate={summary.awardEndDate}
             awardStartDate={summary.awardStartDate}
             projectNumber={summary.projectNumber}
