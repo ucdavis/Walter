@@ -334,7 +334,12 @@ function RouteComponent() {
 
       {/* Filter controls + applied-selections panel */}
       <div className="mb-6 flex flex-col gap-4 lg:flex-row">
-      <section className="grid flex-1 items-start gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="flex flex-1 flex-col gap-6">
+      <section>
+        <h2 className="text-base-content/60 mb-2 text-xs font-semibold tracking-wide uppercase">
+          Filters
+        </h2>
+        <div className="grid items-start gap-4 md:grid-cols-2 lg:grid-cols-3">
         {/* Department — hierarchy-aware multi-select, always enabled; gates the other facets */}
         <div className="form-control">
           <label className="label">
@@ -430,21 +435,28 @@ function RouteComponent() {
           />
         </div>
 
-        {/* Group-by — multi-select over the child-level segments, disabled until department chosen */}
-        <div className="form-control">
-          <label className="label">
-            <span className="label-text font-medium">Group by</span>
-          </label>
-          <MultiSelectFilter
-            disabled={department.length === 0}
-            onChange={setDimensions}
-            options={GROUP_BY_OPTIONS}
-            placeholder="Choose segments…"
-            searchPlaceholder="Search segments…"
-            selected={dimensions}
-          />
         </div>
       </section>
+
+      {/* Field selections — which child-level segments the results are grouped/displayed by */}
+      <section>
+        <h2 className="text-primary mb-2 text-xs font-semibold tracking-wide uppercase">
+          Field selections
+        </h2>
+        <div className="grid items-start gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="form-control">
+            <MultiSelectFilter
+              disabled={department.length === 0}
+              onChange={setDimensions}
+              options={GROUP_BY_OPTIONS}
+              placeholder="Choose fields…"
+              searchPlaceholder="Search fields…"
+              selected={dimensions}
+            />
+          </div>
+        </div>
+      </section>
+      </div>
 
       {/* Applied selections, Shopify-style: consolidated removable chips */}
       <aside className="card border-base-300 bg-base-100 shrink-0 self-start border lg:w-2/5">
