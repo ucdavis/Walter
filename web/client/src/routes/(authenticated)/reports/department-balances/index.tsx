@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { createColumnHelper } from '@tanstack/react-table';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -302,23 +302,28 @@ function RouteComponent() {
     { key: 'activities', label: 'Activity', options: activityOptions.data },
   ];
 
-  const activeFilterChips = [
-    ...department.map((v) => ({
-      display: `Financial Department: ${v}`,
-      key: `financialDepartments:${v}`,
-      onRemove: () => handleDeptChange(department.filter((x) => x !== v)),
-      title: nameOf(deptOptions.data, v),
-    })),
-    ...segmentFilterDefs.flatMap((def) =>
-      (filters[def.key] ?? []).map((v) => ({
-        display: `${def.label}: ${v}`,
-        key: `${def.key}:${v}`,
+  // One row per segment; values within a row are OR'd, rows combine with AND.
+  const filterRows = [
+    {
+      key: 'financialDepartments',
+      label: 'Financial Department',
+      values: department.map((v) => ({
+        code: v,
+        name: nameOf(deptOptions.data, v),
+        onRemove: () => handleDeptChange(department.filter((x) => x !== v)),
+      })),
+    },
+    ...segmentFilterDefs.map((def) => ({
+      key: def.key,
+      label: def.label,
+      values: (filters[def.key] ?? []).map((v) => ({
+        code: v,
+        name: nameOf(def.options, v),
         onRemove: () =>
           setFilter(def.key, (filters[def.key] ?? []).filter((x) => x !== v)),
-        title: nameOf(def.options, v),
-      }))
-    ),
-  ];
+      })),
+    })),
+  ].filter((row) => row.values.length > 0);
 
   const groupByChips = cols.map((d) => ({
     display: d.label,
@@ -326,7 +331,7 @@ function RouteComponent() {
     onRemove: () => setDimensions(dimensions.filter((k) => k !== d.key)),
   }));
 
-  const hasSelections = activeFilterChips.length > 0 || groupByChips.length > 0;
+  const hasSelections = filterRows.length > 0 || groupByChips.length > 0;
 
   return (
     <main className="container">
@@ -481,24 +486,42 @@ function RouteComponent() {
                 <h3 className="text-base-content/60 text-xs font-semibold tracking-wide uppercase">
                   Filters
                 </h3>
-                {activeFilterChips.length > 0 ? (
-                  <div className="mt-2 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
-                    {activeFilterChips.map((c) => (
-                      <span
-                        className="border-base-300 bg-base-200/50 flex min-w-0 items-center justify-between gap-2 rounded-lg border px-2.5 py-1.5 text-sm"
-                        key={c.key}
-                        title={c.title}
-                      >
-                        <span className="truncate">{c.display}</span>
-                        <button
-                          aria-label={`Remove ${c.display}`}
-                          className="text-base-content/50 hover:text-base-content shrink-0"
-                          onClick={c.onRemove}
-                          type="button"
-                        >
-                          <XMarkIcon className="h-4 w-4" />
-                        </button>
-                      </span>
+                {filterRows.length > 0 ? (
+                  <div className="mt-2 flex flex-col gap-1.5">
+                    {filterRows.map((row, i) => (
+                      <Fragment key={row.key}>
+                        {i > 0 ? (
+                          <div className="text-base-content/40 pl-1 text-xs font-semibold">
+                            AND
+                          </div>
+                        ) : null}
+                        <div className="border-base-300 bg-base-200/50 flex flex-wrap items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-sm">
+                          <span className="font-medium">{row.label}:</span>
+                          {row.values.map((v, j) => (
+                            <Fragment key={v.code}>
+                              {j > 0 ? (
+                                <span className="text-base-content/50 text-xs italic">
+                                  or
+                                </span>
+                              ) : null}
+                              <span
+                                className="badge badge-outline max-w-full gap-1"
+                                title={v.name}
+                              >
+                                <span className="truncate">{v.code}</span>
+                                <button
+                                  aria-label={`Remove ${row.label} ${v.code}`}
+                                  className="text-base-content/50 hover:text-base-content shrink-0"
+                                  onClick={v.onRemove}
+                                  type="button"
+                                >
+                                  <XMarkIcon className="h-3 w-3" />
+                                </button>
+                              </span>
+                            </Fragment>
+                          ))}
+                        </div>
+                      </Fragment>
                     ))}
                   </div>
                 ) : (
