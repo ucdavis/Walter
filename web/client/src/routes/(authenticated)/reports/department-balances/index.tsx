@@ -184,9 +184,6 @@ function RouteComponent() {
   const purposeOptions = useDepartmentBalanceOptions('Purpose', query, department.length > 0);
   const projectOptions = useDepartmentBalanceOptions('Project', query, department.length > 0);
   const activityOptions = useDepartmentBalanceOptions('Activity', query, department.length > 0);
-  // Single current-period snapshot; drives the "balances as of" header.
-  const periodOptions = useDepartmentBalanceOptions('Period', {});
-  const asOfPeriod = periodOptions.data?.[0]?.code;
 
   const cols = useMemo(() => activeColumns(dimensions), [dimensions]);
 
@@ -289,10 +286,6 @@ function RouteComponent() {
     <main className="container">
       <section className="mt-8 mb-6">
         <h1 className="h1">Department Balances</h1>
-        <p className="text-base-content/70">
-          Current balances by chart-string segment
-          {asOfPeriod ? ` — as of ${asOfPeriod}` : ''}.
-        </p>
       </section>
 
       {/* Filter controls */}
