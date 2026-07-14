@@ -495,6 +495,9 @@ describe('project detail page', () => {
       expect(
         screen.queryByRole('link', { name: 'Projections' })
       ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('link', { name: 'Details' })
+      ).not.toBeInTheDocument();
       expect(screen.queryByText('Project Burndown')).not.toBeInTheDocument();
     } finally {
       cleanup();

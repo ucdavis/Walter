@@ -129,7 +129,6 @@ function ProjectContent({
             </h2>
             <div className="mt-4">
               <TaskBreakdown
-                iamId={iamId}
                 isInternal={summary.isInternal}
                 projectNumber={summary.projectNumber}
                 records={projectRecords}
