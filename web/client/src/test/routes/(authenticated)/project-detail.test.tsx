@@ -450,11 +450,12 @@ describe('project detail page', () => {
           'budget-vs-time-current-month-marker'
         )
       ).toBeInTheDocument();
+      expect(within(expenditureProgress).getByText('Today')).toBeInTheDocument();
       expect(
         within(expenditureProgress).getByText('912 months total')
       ).toBeInTheDocument();
       expect(
-        within(expenditureProgress).getByText('30 (3%) months past')
+        within(expenditureProgress).getByText('30 (3%) months completed')
       ).toBeInTheDocument();
       expect(
         within(expenditureProgress).getByText('882 (97%) months remaining')
@@ -463,9 +464,10 @@ describe('project detail page', () => {
         within(expenditureProgress).getByText('$660.00 budget')
       ).toBeInTheDocument();
       expect(
-        within(expenditureProgress).getByText(
-          '$135.00 (20%) spent | $10.00 (2%) committed'
-        )
+        within(expenditureProgress).getByText('$135.00 (20%) spent')
+      ).toBeInTheDocument();
+      expect(
+        within(expenditureProgress).getByText('$10.00 (2%) committed')
       ).toBeInTheDocument();
       expect(
         within(expenditureProgress).getByRole('img', {

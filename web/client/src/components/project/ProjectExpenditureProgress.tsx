@@ -56,6 +56,7 @@ type PacingProgressSegment = {
 type PacingProgressRow = {
   ariaLabel: string;
   primaryText: string;
+  primaryTextDetail?: string;
   remainingClassName?: string;
   remainingText: string;
   segments: PacingProgressSegment[];
@@ -184,7 +185,7 @@ function PacingProgressAxis() {
 
 function getTimeProgressRow(progress: TimeProgressSummary): PacingProgressRow {
   const elapsedUnit = progress.elapsedMonths === 1 ? 'month' : 'months';
-  const elapsedText = `${progress.elapsedMonths} (${formatPacingPercent(progress.elapsedPercent)}) ${elapsedUnit} past`;
+  const elapsedText = `${progress.elapsedMonths} (${formatPacingPercent(progress.elapsedPercent)}) ${elapsedUnit} completed`;
   const remainingUnit = progress.remainingMonths === 1 ? 'month' : 'months';
   const remainingText = `${progress.remainingMonths} (${formatPacingPercent(progress.remainingPercent)}) ${remainingUnit} remaining`;
   const totalText = `${formatMonthCount(progress.totalMonths)} total`;
@@ -227,7 +228,8 @@ function getBudgetProgressRow(
 
   return {
     ariaLabel: `All Expenses: ${spentText}, ${committedText}, ${remainingText}${overrunText ? `, ${overrunText}` : ''}, ${budgetText}`,
-    primaryText: `${spentText} | ${committedText}`,
+    primaryText: spentText,
+    primaryTextDetail: committedText,
     remainingClassName:
       progress.overrun > 0 ? 'font-proxima-bold text-error' : undefined,
     remainingText,
@@ -349,6 +351,9 @@ export function ProjectExpenditureProgress({
         timeProgress.remainingPercent
       )})`
     : null;
+  const currentMonthMarkerLeft = timeProgress
+    ? `${(timeProgress.elapsedPercent / AXIS_MAX_PERCENT) * 100}%`
+    : null;
 
   if (rows.length === 0 && !timeProgress && !hasBudgetData) {
     return null;
@@ -377,15 +382,21 @@ export function ProjectExpenditureProgress({
       </p>
 
       <div className="relative" data-testid="budget-vs-time-chart">
-        {timeProgress && (
-          <span
-            aria-hidden="true"
-            className="pointer-events-none absolute top-0 bottom-10 z-10 w-0 -translate-x-1/2 border-l-2 border-dashed border-base-content/35"
-            data-testid="budget-vs-time-current-month-marker"
-            style={{
-              left: `${(timeProgress.elapsedPercent / AXIS_MAX_PERCENT) * 100}%`,
-            }}
-          />
+        {currentMonthMarkerLeft && (
+          <>
+            <span
+              className="pointer-events-none absolute top-0 z-20 -translate-x-1/2 -translate-y-full pb-1 text-xs text-base-content"
+              style={{ left: currentMonthMarkerLeft }}
+            >
+              Today
+            </span>
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute top-0 bottom-10 z-10 w-0 -translate-x-1/2 border-l-2 border-dashed border-base-content/35"
+              data-testid="budget-vs-time-current-month-marker"
+              style={{ left: currentMonthMarkerLeft }}
+            />
+          </>
         )}
 
         <ul className="space-y-4">
@@ -401,7 +412,15 @@ export function ProjectExpenditureProgress({
                   <p className="text-sm">{row.totalText}</p>
                 </div>
                 <div className="mt-1 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-sm text-base-content/80">
-                  <p>{row.primaryText}</p>
+                  {row.primaryTextDetail ? (
+                    <p className="flex flex-wrap gap-x-3 gap-y-1">
+                      <span>{row.primaryText}</span>
+                      <span>|</span>
+                      <span>{row.primaryTextDetail}</span>
+                    </p>
+                  ) : (
+                    <p>{row.primaryText}</p>
+                  )}
                   <p
                     className={`ml-auto text-right mr-2${row.remainingClassName ? ` ${row.remainingClassName}` : ''}`}
                   >
