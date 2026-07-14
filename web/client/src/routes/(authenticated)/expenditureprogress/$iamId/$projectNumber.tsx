@@ -20,14 +20,16 @@ export const Route = createFileRoute(
   '/(authenticated)/expenditureprogress/$iamId/$projectNumber'
 )({
   component: RouteComponent,
-  errorComponent: ProjectionsErrorBoundary,
+  errorComponent: ExpenditureProgressErrorBoundary,
   loader: async ({ context: { queryClient }, params: { iamId } }) => {
     await Promise.all([
       queryClient.ensureQueryData(projectsDetailQueryOptions(iamId)),
       queryClient.ensureQueryData(featureFlagsQueryOptions()),
     ]);
   },
-  pendingComponent: () => <PageLoading message="Fetching projections..." />,
+  pendingComponent: () => (
+    <PageLoading message="Fetching expenditure progress..." />
+  ),
 });
 
 const ProjectNotFound = ({ projectNumber }: { projectNumber: string }) => (
@@ -93,7 +95,10 @@ function RouteComponent() {
   );
 }
 
-function ProjectionsErrorBoundary({ error, reset }: ErrorComponentProps) {
+function ExpenditureProgressErrorBoundary({
+  error,
+  reset,
+}: ErrorComponentProps) {
   const user = useUser();
   const presentation = getErrorPresentation(error, {
     403: {

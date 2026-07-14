@@ -323,7 +323,7 @@ describe('project detail page', () => {
     ],
   };
 
-  it('links sponsored projects to expenditure progress and burndown pages when projections are enabled', async () => {
+  it('shows an expenditure progress link and disabled burndown action when projections are enabled', async () => {
     const projects = [createProject({ pmEmployeeId: '2000' })];
     setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);
 
@@ -365,7 +365,7 @@ describe('project detail page', () => {
     }
   });
 
-  it('shows expenditure progress on the projections page', async () => {
+  it('shows expenditure progress on the expenditure progress page', async () => {
     const projects = [
       createProject({ pmEmployeeId: '2000' }),
       createProject({
@@ -597,7 +597,7 @@ describe('project detail page', () => {
     }
   });
 
-  it('hides projection links for internal projects', async () => {
+  it('hides visualization actions for internal projects', async () => {
     const projects = [
       createProject({
         awardEndDate: null,
@@ -633,7 +633,7 @@ describe('project detail page', () => {
     }
   });
 
-  it('hides projection links when the projections feature flag is off', async () => {
+  it('hides visualization actions when the projections feature flag is off', async () => {
     const projects = [createProject({ pmEmployeeId: '2000' })];
     setupHandlers(
       { employeeId: '1000', name: 'PI User' },
@@ -666,7 +666,7 @@ describe('project detail page', () => {
     }
   });
 
-  it('shows time progress on the projections page when category data is empty', async () => {
+  it('shows time progress on the expenditure progress page when category data is empty', async () => {
     const projects = [createProject({ pmEmployeeId: '2000' })];
     setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);
 
