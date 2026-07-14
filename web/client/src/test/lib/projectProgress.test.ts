@@ -21,7 +21,12 @@ describe('getBudgetProgressSummary', () => {
   it('summarizes budget spent and remaining from projection categories', () => {
     const progress = getBudgetProgressSummary([
       category({ budget: 500, remainingNow: 400, spentToDate: 100 }),
-      category({ budget: 100, committed: 10, remainingNow: 70, spentToDate: 20 }),
+      category({
+        budget: 100,
+        committed: 10,
+        remainingNow: 70,
+        spentToDate: 20,
+      }),
       category({ budget: 60, remainingNow: 45, spentToDate: 15 }),
     ]);
 
@@ -49,7 +54,31 @@ describe('getBudgetProgressSummary', () => {
       remaining: 0,
       spent: 125,
     });
-    expect(progress.spentPercent).toBe(100);
+    expect(progress.spentPercent).toBe(125);
+    expect(progress.overrunPercent).toBe(25);
+    expect(progress.remainingPercent).toBe(0);
+  });
+
+  it('rolls lower-category overruns into aggregate spent progress', () => {
+    const progress = getBudgetProgressSummary([
+      category({
+        budget: 60_000,
+        remainingNow: 20_000,
+        spentToDate: 40_000,
+      }),
+      category({
+        budget: 3100,
+        remainingNow: -16_648.39,
+        spentToDate: 18_128.21,
+      }),
+    ]);
+
+    expect(progress.budget).toBe(63_100);
+    expect(progress.overrun).toBeCloseTo(16_648.39, 2);
+    expect(progress.overrunPercent).toBeCloseTo(26.38, 2);
+    expect(progress.remaining).toBe(0);
+    expect(progress.spent).toBeCloseTo(79_748.39, 2);
+    expect(progress.spentPercent).toBeCloseTo(126.38, 2);
     expect(progress.remainingPercent).toBe(0);
   });
 });
@@ -102,8 +131,6 @@ describe('getTimeProgressSummary', () => {
   it('returns null when dates are missing or invalid', () => {
     expect(getTimeProgressSummary(null, '2024-12-31')).toBeNull();
     expect(getTimeProgressSummary('2024-01-01', null)).toBeNull();
-    expect(
-      getTimeProgressSummary('2024-12-31', '2024-01-01')
-    ).toBeNull();
+    expect(getTimeProgressSummary('2024-12-31', '2024-01-01')).toBeNull();
   });
 });

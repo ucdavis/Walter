@@ -33,6 +33,37 @@ export interface CategorySpend {
   spend: number;
 }
 
+function parseMonthIndex(month: string) {
+  const match = /^(\d{4})-(\d{2})$/.exec(month);
+
+  if (!match) {
+    return null;
+  }
+
+  return Number(match[1]) * 12 + Number(match[2]) - 1;
+}
+
+function getMonthFromDate(value: string | null) {
+  if (!value) {
+    return null;
+  }
+
+  const dateOnlyMatch = /^(\d{4})-(\d{2})-\d{2}/.exec(value);
+  if (dateOnlyMatch) {
+    return `${dateOnlyMatch[1]}-${dateOnlyMatch[2]}`;
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+
+  return `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(
+    2,
+    '0'
+  )}`;
+}
+
 export function getProjectionTransitionMonth(
   result: ProjectProjectionResult
 ): string | null {
@@ -148,21 +179,83 @@ export function getMonthlyCategorySpend(
   return byMonth;
 }
 
+function sumRemainingAtMonth(result: ProjectProjectionResult, month: string) {
+  return result.periods
+    .filter((p) => p.month === month)
+    .reduce((sum, p) => sum + p.remaining, 0);
+}
+
+function getProjectedEnd(
+  result: ProjectProjectionResult,
+  currentBalance: number,
+  awardEndDate: string | null
+) {
+  const months = [...new Set(result.periods.map((p) => p.month))].sort();
+  const lastMonth = months.at(-1);
+  const targetMonth = getMonthFromDate(awardEndDate);
+
+  if (lastMonth === undefined) {
+    return currentBalance;
+  }
+
+  if (!targetMonth) {
+    return sumRemainingAtMonth(result, lastMonth);
+  }
+
+  if (months.includes(targetMonth)) {
+    return sumRemainingAtMonth(result, targetMonth);
+  }
+
+  const targetMonthIndex = parseMonthIndex(targetMonth);
+  const lastMonthIndex = parseMonthIndex(lastMonth);
+
+  if (targetMonthIndex === null || lastMonthIndex === null) {
+    return sumRemainingAtMonth(result, lastMonth);
+  }
+
+  if (targetMonthIndex < lastMonthIndex) {
+    const nearestMonth =
+      months
+        .filter((month) => {
+          const index = parseMonthIndex(month);
+          return index !== null && index <= targetMonthIndex;
+        })
+        .at(-1) ?? months[0];
+
+    return sumRemainingAtMonth(result, nearestMonth);
+  }
+
+  const extraProjectedMonths = targetMonthIndex - lastMonthIndex;
+  const byCategory = new Map<string, ProjectProjectionPeriod[]>();
+
+  for (const period of result.periods) {
+    const periods = byCategory.get(period.expenditureCategory) ?? [];
+    periods.push(period);
+    byCategory.set(period.expenditureCategory, periods);
+  }
+
+  return [...byCategory.values()].reduce((sum, periods) => {
+    const lastRemaining =
+      periods.find((period) => period.month === lastMonth)?.remaining ?? 0;
+    const recurringSpend =
+      periods
+        .filter((period) => period.kind === 'projected')
+        .sort((a, b) => a.month.localeCompare(b.month))
+        .at(-1)?.projectedAmount ?? 0;
+
+    return sum + lastRemaining - recurringSpend * extraProjectedMonths;
+  }, 0);
+}
+
 export function getProjectionStats(
-  result: ProjectProjectionResult
+  result: ProjectProjectionResult,
+  awardEndDate: string | null = null
 ): ProjectionStats {
   const currentBalance = result.categories.reduce(
     (sum, category) => sum + category.remainingNow,
     0
   );
-  const months = [...new Set(result.periods.map((p) => p.month))].sort();
-  const lastMonth = months.at(-1);
-  const projectedEnd =
-    lastMonth === undefined
-      ? currentBalance
-      : result.periods
-          .filter((p) => p.month === lastMonth)
-          .reduce((sum, p) => sum + p.remaining, 0);
+  const projectedEnd = getProjectedEnd(result, currentBalance, awardEndDate);
   const projectedMonths = new Set(
     result.periods.filter((p) => p.kind === 'projected').map((p) => p.month)
   ).size;

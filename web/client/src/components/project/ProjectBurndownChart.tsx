@@ -35,6 +35,7 @@ const GRID_COLOR = 'var(--color-main-border)';
 const ZERO_LINE_COLOR = 'var(--color-error)';
 const PROJECTION_TRANSITION_LINE_COLOR = 'var(--color-base-content)';
 const CHART_TOOLTIP_Z_INDEX = 60;
+const Y_AXIS_TICK_COUNT = 6;
 
 type ChartRow = { label: string; month: string } & Record<
   string,
@@ -44,6 +45,18 @@ type VisibleSeries = {
   color: string;
   key: string;
   strokeWidth?: number;
+};
+type AxisTickProps = {
+  payload?: { value?: number | string };
+  x?: number;
+  y?: number;
+};
+type ReferenceLineLabelProps = {
+  labelText: string;
+  viewBox?: {
+    x?: number;
+    y?: number;
+  };
 };
 
 // Each series renders as two lines sharing a color: a solid one over the
@@ -70,6 +83,99 @@ function buildChartRows(series: ProjectionSeries[]): ChartRow[] {
 
 function categoryDisplayName(expenditureCategory: string) {
   return expenditureCategory.replace(/^\d+\s*-\s*/, '');
+}
+
+export function formatBalanceAxisTick(value: number) {
+  if (value === 0) {
+    return '$0';
+  }
+
+  const sign = value < 0 ? '-' : '';
+  return `${sign}$${(Math.abs(value) / 1000).toFixed(0)}k`;
+}
+
+function getNiceTickStep(rawStep: number) {
+  const exponent = Math.floor(Math.log10(rawStep));
+  const magnitude = 10 ** exponent;
+  const normalized = rawStep / magnitude;
+  const niceNormalized =
+    normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10;
+
+  return niceNormalized * magnitude;
+}
+
+export function buildBalanceAxisTicks(min: number, max: number) {
+  if (min === max) {
+    return [min];
+  }
+
+  const rawStep = (max - min) / (Y_AXIS_TICK_COUNT - 1);
+  const step = getNiceTickStep(rawStep);
+  const firstTick = Math.floor(min / step) * step;
+  const lastTick = Math.ceil(max / step) * step;
+  const ticks: number[] = [];
+
+  for (let tick = firstTick; tick <= lastTick + step / 2; tick += step) {
+    ticks.push(Number(tick.toFixed(6)));
+  }
+
+  if (!ticks.includes(0)) {
+    ticks.push(0);
+  }
+
+  return ticks.sort((a, b) => a - b);
+}
+
+export function BalanceYAxisTick({ payload, x = 0, y = 0 }: AxisTickProps) {
+  const value = Number(payload?.value ?? 0);
+
+  return (
+    <text
+      dy={4}
+      fill={value < 0 ? 'var(--color-error)' : 'currentColor'}
+      fontSize={12}
+      textAnchor="end"
+      x={x}
+      y={y}
+    >
+      {formatBalanceAxisTick(value)}
+    </text>
+  );
+}
+
+export function VerticalMarkerLabel({
+  labelText,
+  viewBox,
+}: ReferenceLineLabelProps) {
+  const x = Number(viewBox?.x ?? 0);
+  const y = Number(viewBox?.y ?? 0) - 6;
+
+  return (
+    <text fill="currentColor" fontSize={12} textAnchor="middle" x={x} y={y}>
+      {labelText}
+    </text>
+  );
+}
+
+export function getAwardEndMonth(awardEndDate: string | null) {
+  if (!awardEndDate) {
+    return null;
+  }
+
+  const dateOnlyMatch = /^(\d{4})-(\d{2})-\d{2}/.exec(awardEndDate);
+  if (dateOnlyMatch) {
+    return `${dateOnlyMatch[1]}-${dateOnlyMatch[2]}`;
+  }
+
+  const parsed = new Date(awardEndDate);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+
+  return `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(
+    2,
+    '0'
+  )}`;
 }
 
 function filterCategorySpend(
@@ -248,9 +354,15 @@ export function ProjectBurndownSection({
   const showProjectionTransitionLine =
     projectionTransitionMonth !== null &&
     labelsByMonth.has(projectionTransitionMonth);
+  const awardEndMonth = useMemo(
+    () => getAwardEndMonth(awardEndDate),
+    [awardEndDate]
+  );
+  const showAwardEndLine =
+    awardEndMonth !== null && labelsByMonth.has(awardEndMonth);
   const stats = useMemo(
-    () => (result ? getProjectionStats(result) : null),
-    [result]
+    () => (result ? getProjectionStats(result, awardEndDate) : null),
+    [awardEndDate, result]
   );
   const categorySpendByMonth = useMemo(
     () => (result ? getMonthlyCategorySpend(result) : new Map()),
@@ -302,6 +414,9 @@ export function ProjectBurndownSection({
   const minBalance = Math.min(0, ...visibleBalances);
   const maxBalance = Math.max(0, ...visibleBalances);
   const padding = Math.max((maxBalance - minBalance) * 0.1, 1000);
+  const yDomainMin = minBalance < 0 ? minBalance - padding : 0;
+  const yDomainMax = maxBalance > 0 ? maxBalance + padding : 0;
+  const yAxisTicks = buildBalanceAxisTicks(yDomainMin, yDomainMax);
   const chartTitle =
     selectedKey === NON_PERSONNEL_SERIES && activeSelectedNonPersonnelCategory
       ? `${NON_PERSONNEL_SERIES}: ${categoryDisplayName(activeSelectedNonPersonnelCategory)}`
@@ -369,11 +484,12 @@ export function ProjectBurndownSection({
                     }
                   />
                   <YAxis
-                    domain={[minBalance - padding, maxBalance + padding]}
-                    tick={{ fill: 'currentColor', fontSize: 12 }}
-                    tickFormatter={(value: number) =>
-                      `$${(value / 1000).toFixed(0)}k`
-                    }
+                    domain={[
+                      yAxisTicks[0] ?? yDomainMin,
+                      yAxisTicks.at(-1) ?? yDomainMax,
+                    ]}
+                    tick={<BalanceYAxisTick />}
+                    ticks={yAxisTicks}
                   />
                   <ReferenceLine
                     ifOverflow="extendDomain"
@@ -383,11 +499,22 @@ export function ProjectBurndownSection({
                   />
                   {showProjectionTransitionLine && (
                     <ReferenceLine
+                      label={<VerticalMarkerLabel labelText="Today" />}
                       stroke={PROJECTION_TRANSITION_LINE_COLOR}
                       strokeDasharray="3 5"
                       strokeOpacity={0.28}
                       strokeWidth={1.5}
                       x={projectionTransitionMonth}
+                    />
+                  )}
+                  {showAwardEndLine && (
+                    <ReferenceLine
+                      label={<VerticalMarkerLabel labelText="Project End" />}
+                      stroke={PROJECTION_TRANSITION_LINE_COLOR}
+                      strokeDasharray="3 5"
+                      strokeOpacity={0.28}
+                      strokeWidth={1.5}
+                      x={awardEndMonth}
                     />
                   )}
                   <Tooltip

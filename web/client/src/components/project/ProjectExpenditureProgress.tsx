@@ -5,6 +5,7 @@ import {
 } from '@/components/project/projectChartColors.ts';
 import { formatCurrency } from '@/lib/currency.ts';
 import {
+  getCategoryBudgetProgress,
   getBudgetProgressSummary,
   getTimeProgressSummary,
   type BudgetProgressSummary,
@@ -86,10 +87,6 @@ function availableColor(color: string) {
   return `color-mix(in srgb, ${color} 24%, var(--color-base-300))`;
 }
 
-function nonnegative(value: number) {
-  return Math.max(0, value);
-}
-
 function progressWidth(value: number, total: number) {
   return total > 0 ? (value / total) * 100 : 0;
 }
@@ -109,9 +106,15 @@ function formatMonthCount(value: number) {
 function getBudgetRemainingText(progress: BudgetProgressSummary) {
   const remainingPercent = formatPacingPercent(progress.remainingPercent);
 
-  return progress.overrun > 0
-    ? `${formatCurrency(progress.overrun)} over`
-    : `${formatCurrency(progress.remaining)} (${remainingPercent})`;
+  if (progress.overrun > 0) {
+    return progress.budget > 0
+      ? `${formatCurrency(progress.overrun)} (${formatPacingPercent(
+          progress.overrunPercent
+        )}) over`
+      : `${formatCurrency(progress.overrun)} over`;
+  }
+
+  return `${formatCurrency(progress.remaining)} (${remainingPercent})`;
 }
 
 function ScaledProgressBar({
@@ -216,7 +219,8 @@ function getBudgetProgressRow(
   return {
     ariaLabel: `All Expenses: ${spentText}, ${committedText}, ${remainingText}${overrunText ? `, ${overrunText}` : ''}, ${budgetText}`,
     primaryText: `${spentText} | ${committedText}`,
-    remainingClassName: progress.overrun > 0 ? 'text-error' : undefined,
+    remainingClassName:
+      progress.overrun > 0 ? 'font-proxima-bold text-error' : undefined,
     remainingText,
     segments: [
       {
@@ -258,14 +262,8 @@ function buildCategoryProgressRows(
     )
     .sort((a, b) => a.expenditureCategory.localeCompare(b.expenditureCategory))
     .map((category) => {
-      const available = nonnegative(category.remainingNow);
-      const committed = nonnegative(category.committed);
-      const spent = nonnegative(category.spentToDate);
-      const total = Math.max(
-        nonnegative(category.budget),
-        spent + committed + available,
-        1
-      );
+      const { available, budget, committed, overrun, spent, total } =
+        getCategoryBudgetProgress(category);
       const baseColor = categoryColor(category, nonPersonnelIndex);
 
       if (category.isPersonnel !== 1) {
@@ -295,12 +293,11 @@ function buildCategoryProgressRows(
 
       return {
         available,
-        budget: category.budget,
+        budget,
         committed,
         displayName: categoryDisplayName(category.expenditureCategory),
         expenditureCategory: category.expenditureCategory,
-        overrun:
-          category.remainingNow < 0 ? Math.abs(category.remainingNow) : 0,
+        overrun,
         segments,
         spent,
         total,
@@ -416,13 +413,20 @@ export function ProjectExpenditureProgress({
           <p className="font-proxima-bold mt-8 mb-2 uppercase">Details</p>
           {rows.map((row) => {
             const isOverBudget = row.overrun > 0;
+            const percentTotal =
+              isOverBudget && row.budget > 0 ? row.budget : row.total;
             const spentText = `${formatCurrency(row.spent)} (${formatPercent(
               row.spent,
-              row.total
+              percentTotal
             )}) spent`;
             const committedText = `${formatCurrency(row.committed)} committed`;
             const balanceText = isOverBudget
-              ? `${formatCurrency(row.overrun)} over`
+              ? row.budget > 0
+                ? `${formatCurrency(row.overrun)} (${formatPercent(
+                    row.overrun,
+                    percentTotal
+                  )}) over`
+                : `${formatCurrency(row.overrun)} over`
               : `${formatCurrency(row.available)} (${formatPercent(
                   row.available,
                   row.total
@@ -451,7 +455,7 @@ export function ProjectExpenditureProgress({
                     <p
                       className={
                         isOverBudget
-                          ? 'ml-auto text-right mr-2 text-error'
+                          ? 'ml-auto text-right mr-2 font-proxima-bold text-error'
                           : 'ml-auto text-right mr-2'
                       }
                     >

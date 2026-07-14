@@ -289,6 +289,18 @@ describe('getProjectionStats', () => {
     expect(getProjectionStats(sampleResult()).projectedEnd).toBe(505);
   });
 
+  it('sums remaining across categories at the award end month when it is in the grid', () => {
+    expect(getProjectionStats(sampleResult(), '2026-06-30').projectedEnd).toBe(
+      590
+    );
+  });
+
+  it('projects beyond the returned grid to the award end month', () => {
+    expect(getProjectionStats(sampleResult(), '2026-09-30').projectedEnd).toBe(
+      335
+    );
+  });
+
   it('counts distinct projected months', () => {
     expect(getProjectionStats(sampleResult()).projectedMonths).toBe(1);
   });

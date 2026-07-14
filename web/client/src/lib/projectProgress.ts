@@ -5,10 +5,20 @@ export interface BudgetProgressSummary {
   committed: number;
   committedPercent: number;
   overrun: number;
+  overrunPercent: number;
   remaining: number;
   remainingPercent: number;
   spent: number;
   spentPercent: number;
+}
+
+export interface CategoryBudgetProgress {
+  available: number;
+  budget: number;
+  committed: number;
+  overrun: number;
+  spent: number;
+  total: number;
 }
 
 export interface TimeProgressSummary {
@@ -25,6 +35,32 @@ function nonnegative(value: number) {
 
 function progressPercent(value: number, total: number) {
   return total > 0 ? (value / total) * 100 : 0;
+}
+
+function hasBudgetProgressData(category: ProjectProjectionCategory) {
+  return (
+    category.budget !== 0 ||
+    category.committed !== 0 ||
+    category.remainingNow !== 0 ||
+    category.spentToDate !== 0
+  );
+}
+
+export function getCategoryBudgetProgress(
+  category: ProjectProjectionCategory
+): CategoryBudgetProgress {
+  const available = nonnegative(category.remainingNow);
+  const budget = nonnegative(category.budget);
+  const committed = nonnegative(category.committed);
+  const spent = nonnegative(category.spentToDate);
+  const overrun = Math.max(
+    category.remainingNow < 0 ? Math.abs(category.remainingNow) : 0,
+    spent + committed - budget,
+    0
+  );
+  const total = Math.max(budget + overrun, spent + committed + available, 1);
+
+  return { available, budget, committed, overrun, spent, total };
 }
 
 function monthIndex(date: Date) {
@@ -54,39 +90,51 @@ function clamp(value: number, min: number, max: number) {
 export function getBudgetProgressSummary(
   categories: ProjectProjectionCategory[]
 ): BudgetProgressSummary {
-  const budget = categories.reduce(
-    (sum, category) => sum + nonnegative(category.budget),
+  const categoryProgress = categories
+    .filter(hasBudgetProgressData)
+    .map(getCategoryBudgetProgress);
+  const budget = categoryProgress.reduce(
+    (sum, category) => sum + category.budget,
     0
   );
-  const spent = categories.reduce(
-    (sum, category) => sum + nonnegative(category.spentToDate),
+  const spent = categoryProgress.reduce(
+    (sum, category) => sum + category.spent,
     0
   );
-  const committed = categories.reduce(
-    (sum, category) => sum + nonnegative(category.committed),
+  const committed = categoryProgress.reduce(
+    (sum, category) => sum + category.committed,
     0
   );
-  const remaining = categories.reduce(
-    (sum, category) => sum + nonnegative(category.remainingNow),
+  const remaining = categoryProgress.reduce(
+    (sum, category) => sum + category.available,
     0
   );
-  const balanceOverrun = categories.reduce(
-    (sum, category) =>
-      sum + (category.remainingNow < 0 ? Math.abs(category.remainingNow) : 0),
+  const overrun = categoryProgress.reduce(
+    (sum, category) => sum + category.overrun,
     0
   );
-  const overrun = Math.max(balanceOverrun, spent + committed - budget, 0);
-  const total = Math.max(budget, spent + committed + remaining, 1);
+  const displaySpent =
+    overrun > 0 ? Math.max(spent, budget + overrun - committed) : spent;
+  const displayRemaining = overrun > 0 ? 0 : remaining;
+  const total =
+    overrun > 0
+      ? Math.max(displaySpent + committed, 1)
+      : Math.max(
+          categoryProgress.reduce((sum, category) => sum + category.total, 0),
+          1
+        );
+  const percentTotal = overrun > 0 && budget > 0 ? budget : total;
 
   return {
     budget,
     committed,
-    committedPercent: progressPercent(committed, total),
+    committedPercent: progressPercent(committed, percentTotal),
     overrun,
-    remaining,
-    remainingPercent: progressPercent(remaining, total),
-    spent,
-    spentPercent: progressPercent(spent, total),
+    overrunPercent: progressPercent(overrun, percentTotal),
+    remaining: displayRemaining,
+    remainingPercent: progressPercent(displayRemaining, percentTotal),
+    spent: displaySpent,
+    spentPercent: progressPercent(displaySpent, percentTotal),
   };
 }
 
