@@ -32,6 +32,7 @@ import { DataTable } from '@/shared/DataTable.tsx';
 import { ExportDataButton } from '@/components/ExportDataButton.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import { formatDate } from '@/lib/date.ts';
+import { XMarkIcon } from '@heroicons/react/20/solid';
 import { canAccessDepartmentBalances } from '@/shared/auth/roleAccess.ts';
 import { meQueryOptions } from '@/queries/user.ts';
 import { RouterContext } from '@/main.tsx';
@@ -282,14 +283,58 @@ function RouteComponent() {
     }
   };
 
+  // Applied-selections panel: every active filter value and group-by field as a
+  // removable chip, consolidated to the right of the filter controls.
+  const nameOf = (opts: DepartmentBalanceOption[] | undefined, code: string) =>
+    opts?.find((o) => o.code === code)?.name;
+
+  const segmentFilterDefs: {
+    key: Exclude<keyof DepartmentBalancesFilters, 'financialDepartments'>;
+    label: string;
+    options: DepartmentBalanceOption[] | undefined;
+  }[] = [
+    { key: 'funds', label: 'Fund', options: fundOptions.data },
+    { key: 'accounts', label: 'Account', options: accountOptions.data },
+    { key: 'purposes', label: 'Purpose', options: purposeOptions.data },
+    { key: 'projects', label: 'Project', options: projectOptions.data },
+    { key: 'activities', label: 'Activity', options: activityOptions.data },
+  ];
+
+  const activeFilterChips = [
+    ...department.map((v) => ({
+      display: `Financial Department: ${v}`,
+      key: `financialDepartments:${v}`,
+      onRemove: () => handleDeptChange(department.filter((x) => x !== v)),
+      title: nameOf(deptOptions.data, v),
+    })),
+    ...segmentFilterDefs.flatMap((def) =>
+      (filters[def.key] ?? []).map((v) => ({
+        display: `${def.label}: ${v}`,
+        key: `${def.key}:${v}`,
+        onRemove: () =>
+          setFilter(def.key, (filters[def.key] ?? []).filter((x) => x !== v)),
+        title: nameOf(def.options, v),
+      }))
+    ),
+  ];
+
+  const groupByChips = cols.map((d) => ({
+    display: d.label,
+    key: d.key,
+    onRemove: () => setDimensions(dimensions.filter((k) => k !== d.key)),
+  }));
+
+  const hasSelections = activeFilterChips.length > 0 || groupByChips.length > 0;
+
   return (
     <main className="container">
       <section className="mt-8 mb-6">
         <h1 className="h1">Department Balances</h1>
       </section>
 
-      {/* Filter controls */}
-      <section className="mb-6 grid items-start gap-4 md:grid-cols-2 lg:grid-cols-3">
+      {/* Filter controls + applied-selections panel */}
+      <div className="mb-6 flex flex-col gap-4 lg:flex-row">
+      <section className="grid flex-1 items-start gap-4 md:grid-cols-2 lg:grid-cols-3">
         {/* Department — hierarchy-aware multi-select, always enabled; gates the other facets */}
         <div className="form-control">
           <label className="label">
@@ -400,6 +445,82 @@ function RouteComponent() {
           />
         </div>
       </section>
+
+      {/* Applied selections, Shopify-style: consolidated removable chips */}
+      <aside className="card border-base-300 bg-base-100 shrink-0 self-start border lg:w-72">
+        <div className="card-body gap-3 p-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-medium">Active selections</h2>
+            {hasSelections ? (
+              <button
+                className="btn btn-ghost btn-xs"
+                onClick={() => handleDeptChange([])}
+                type="button"
+              >
+                Clear all
+              </button>
+            ) : null}
+          </div>
+          {hasSelections ? (
+            <>
+              {activeFilterChips.length > 0 ? (
+                <div>
+                  <h3 className="text-base-content/60 text-xs font-semibold tracking-wide uppercase">
+                    Filters
+                  </h3>
+                  <div className="mt-1 flex flex-wrap gap-1">
+                    {activeFilterChips.map((c) => (
+                      <span
+                        className="badge badge-outline max-w-full gap-1"
+                        key={c.key}
+                        title={c.title}
+                      >
+                        <span className="truncate">{c.display}</span>
+                        <button
+                          aria-label={`Remove ${c.display}`}
+                          className="hover:text-base-content/60"
+                          onClick={c.onRemove}
+                          type="button"
+                        >
+                          <XMarkIcon className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+              {groupByChips.length > 0 ? (
+                <div>
+                  <h3 className="text-base-content/60 text-xs font-semibold tracking-wide uppercase">
+                    Grouped by
+                  </h3>
+                  <div className="mt-1 flex flex-wrap gap-1">
+                    {groupByChips.map((c) => (
+                      <span
+                        className="badge badge-primary max-w-full gap-1"
+                        key={c.key}
+                      >
+                        <span className="truncate">{c.display}</span>
+                        <button
+                          aria-label={`Remove ${c.display}`}
+                          className="hover:text-primary-content/70"
+                          onClick={c.onRemove}
+                          type="button"
+                        >
+                          <XMarkIcon className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </>
+          ) : (
+            <p className="text-base-content/60 text-sm">Nothing selected yet.</p>
+          )}
+        </div>
+      </aside>
+      </div>
 
       {/* Results area */}
       {department.length === 0 ? (
