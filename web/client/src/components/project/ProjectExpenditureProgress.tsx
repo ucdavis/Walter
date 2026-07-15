@@ -1,4 +1,5 @@
-import { useMemo } from 'react';
+import { useId, useMemo, useState } from 'react';
+import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
 import {
   PROJECT_PERSONNEL_COLOR,
   projectNonPersonnelCategoryColor,
@@ -321,6 +322,8 @@ export function ProjectExpenditureProgress({
   awardStartDate,
   categories,
 }: ProjectExpenditureProgressProps) {
+  const detailsId = useId();
+  const [areDetailsExpanded, setAreDetailsExpanded] = useState(true);
   const rows = useMemo(
     () => buildCategoryProgressRows(categories),
     [categories]
@@ -375,8 +378,8 @@ export function ProjectExpenditureProgress({
           <>
             <br />
             {budgetProgress.overrun > 0
-              ? 'Budget is '
-              : 'Available budget is '}
+              ? 'Balance is '
+              : 'Available balance is '}
             <strong
               className={budgetProgress.overrun > 0 ? 'text-error' : undefined}
             >
@@ -451,68 +454,90 @@ export function ProjectExpenditureProgress({
 
           {rows.length > 0 && (
             <div>
-              <p className="font-proxima-bold mt-8 mb-2 uppercase">Details</p>
-              <ul className="space-y-4">
-                {rows.map((row) => {
-                  const isOverBudget = row.overrun > 0;
-                  const percentTotal =
-                    isOverBudget && row.budget > 0 ? row.budget : row.total;
-                  const spentText = `${formatCurrency(row.spent)} (${formatPercent(
-                    row.spent,
-                    percentTotal
-                  )}) spent`;
-                  const committedText = `${formatCurrency(row.committed)} committed`;
-                  const balanceText = isOverBudget
-                    ? row.budget > 0
-                      ? `${formatCurrency(row.overrun)} (${formatPercent(
-                          row.overrun,
-                          percentTotal
-                        )}) over`
-                      : `${formatCurrency(row.overrun)} over`
-                    : `${formatCurrency(row.available)} (${formatPercent(
-                        row.available,
-                        row.total
-                      )}) available`;
+              <div className="mt-8 mb-2 flex flex-wrap items-center justify-start gap-2">
+                <p className="font-proxima-bold uppercase">Details</p>
+                <button
+                  aria-controls={detailsId}
+                  aria-expanded={areDetailsExpanded}
+                  className="btn btn-ghost btn-sm"
+                  onClick={() =>
+                    setAreDetailsExpanded((isExpanded) => !isExpanded)
+                  }
+                  type="button"
+                >
+                  {areDetailsExpanded ? (
+                    <ChevronUpIcon className="h-4 w-4" />
+                  ) : (
+                    <ChevronDownIcon className="h-4 w-4" />
+                  )}
+                  {areDetailsExpanded ? 'Hide details' : 'Show details'}
+                </button>
+              </div>
+              <div id={detailsId}>
+                {areDetailsExpanded && (
+                  <ul className="space-y-4">
+                    {rows.map((row) => {
+                      const isOverBudget = row.overrun > 0;
+                      const percentTotal =
+                        isOverBudget && row.budget > 0 ? row.budget : row.total;
+                      const spentText = `${formatCurrency(row.spent)} (${formatPercent(
+                        row.spent,
+                        percentTotal
+                      )}) spent`;
+                      const committedText = `${formatCurrency(row.committed)} committed`;
+                      const balanceText = isOverBudget
+                        ? row.budget > 0
+                          ? `${formatCurrency(row.overrun)} (${formatPercent(
+                              row.overrun,
+                              percentTotal
+                            )}) over`
+                          : `${formatCurrency(row.overrun)} over`
+                        : `${formatCurrency(row.available)} (${formatPercent(
+                            row.available,
+                            row.total
+                          )}) available`;
 
-                  return (
-                    <li className="space-y-2" key={row.expenditureCategory}>
-                      <div
-                        className="min-w-0"
-                        style={{ width: `${BAR_TRACK_WIDTH_PERCENT}%` }}
-                      >
-                        <div className="flex min-w-0 flex-wrap items-baseline gap-x-2">
-                          <p className="font-proxima-bold truncate mt-1">
-                            {row.displayName}
-                          </p>
-                          <p className="text-sm">
-                            {formatCurrency(row.budget)} budget
-                          </p>
-                        </div>
-                        <div className="mt-1 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-sm text-base-content/80">
-                          <p className="flex flex-wrap gap-x-3 gap-y-1">
-                            <span>{spentText}</span>
-                            <span>|</span>
-                            <span>{committedText}</span>
-                          </p>
-                          <p
-                            className={
-                              isOverBudget
-                                ? 'ml-auto text-right mr-2 font-proxima-bold text-error'
-                                : 'ml-auto text-right mr-2'
-                            }
+                      return (
+                        <li className="space-y-2" key={row.expenditureCategory}>
+                          <div
+                            className="min-w-0"
+                            style={{ width: `${BAR_TRACK_WIDTH_PERCENT}%` }}
                           >
-                            {balanceText}
-                          </p>
-                        </div>
-                      </div>
-                      <ScaledProgressBar
-                        ariaLabel={`${row.displayName}: ${spentText}, ${committedText}, ${balanceText}, ${formatCurrency(row.budget)} budget`}
-                        segments={row.segments}
-                      />
-                    </li>
-                  );
-                })}
-              </ul>
+                            <div className="flex min-w-0 flex-wrap items-baseline gap-x-2">
+                              <p className="font-proxima-bold truncate mt-1">
+                                {row.displayName}
+                              </p>
+                              <p className="text-sm">
+                                {formatCurrency(row.budget)} budget
+                              </p>
+                            </div>
+                            <div className="mt-1 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-sm text-base-content/80">
+                              <p className="flex flex-wrap gap-x-3 gap-y-1">
+                                <span>{spentText}</span>
+                                <span>|</span>
+                                <span>{committedText}</span>
+                              </p>
+                              <p
+                                className={
+                                  isOverBudget
+                                    ? 'ml-auto text-right mr-2 font-proxima-bold text-error'
+                                    : 'ml-auto text-right mr-2'
+                                }
+                              >
+                                {balanceText}
+                              </p>
+                            </div>
+                          </div>
+                          <ScaledProgressBar
+                            ariaLabel={`${row.displayName}: ${spentText}, ${committedText}, ${balanceText}, ${formatCurrency(row.budget)} budget`}
+                            segments={row.segments}
+                          />
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
             </div>
           )}
         </div>

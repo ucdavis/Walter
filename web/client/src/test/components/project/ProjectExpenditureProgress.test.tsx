@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { ProjectExpenditureProgress } from '@/components/project/ProjectExpenditureProgress.tsx';
 import type { ProjectProjectionCategory } from '@/queries/projectProjection.ts';
 
@@ -86,5 +87,47 @@ describe('ProjectExpenditureProgress', () => {
         name: /Travel: \$250\.00 \(100%\) spent, \$0\.00 committed, \$250\.00 over, \$0\.00 budget/,
       })
     ).toBeInTheDocument();
+  });
+
+  it('collapses and expands the category details', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <ProjectExpenditureProgress
+        awardEndDate={null}
+        awardStartDate={null}
+        categories={[
+          category({
+            budget: 100,
+            committed: 10,
+            expenditureCategory: '04 - Supplies',
+            isPersonnel: 0,
+            remainingNow: 70,
+            spentToDate: 20,
+          }),
+        ]}
+      />
+    );
+
+    const hideDetailsButton = screen.getByRole('button', {
+      name: /hide details/i,
+    });
+    expect(hideDetailsButton).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByText('Supplies')).toBeInTheDocument();
+
+    await user.click(hideDetailsButton);
+
+    const showDetailsButton = screen.getByRole('button', {
+      name: /show details/i,
+    });
+    expect(showDetailsButton).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByText('Supplies')).not.toBeInTheDocument();
+
+    await user.click(showDetailsButton);
+
+    expect(
+      screen.getByRole('button', { name: /hide details/i })
+    ).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByText('Supplies')).toBeInTheDocument();
   });
 });

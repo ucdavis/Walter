@@ -423,7 +423,7 @@ describe('project detail page', () => {
         )
       ).toBeInTheDocument();
       expect(
-        within(expenditureProgress).getByText(/Available budget is/)
+        within(expenditureProgress).getByText(/Available balance is/)
       ).toBeInTheDocument();
       expect(
         within(expenditureProgress).getAllByText('$515.00 (78%)')
