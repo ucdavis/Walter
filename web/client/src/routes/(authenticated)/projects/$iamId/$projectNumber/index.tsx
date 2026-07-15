@@ -105,24 +105,30 @@ function ProjectContent({
 
       <ProjectDetails
         actions={
-          !summary.isInternal && featureFlags?.projectionsEnabled ? (
+          !summary.isInternal &&
+          (featureFlags?.expenditureProgressEnabled ||
+            featureFlags?.burndownEnabled) ? (
             <>
-              <Link
-                className="btn btn-lg"
-                params={{ iamId, projectNumber: summary.projectNumber }}
-                to="/expenditureprogress/$iamId/$projectNumber"
-              >
-                <ChartBarIcon className="h-4 w-4" />
-                Expenditure Progress
-              </Link>
-              <button
-                className="btn btn-lg"
-                disabled
-                type="button"
-              >
-                <PresentationChartLineIcon className="h-4 w-4" />
-                Project Burndown (coming soon)
-              </button>
+              {featureFlags?.expenditureProgressEnabled && (
+                <Link
+                  className="btn btn-lg"
+                  params={{ iamId, projectNumber: summary.projectNumber }}
+                  to="/expenditureprogress/$iamId/$projectNumber"
+                >
+                  <ChartBarIcon className="h-4 w-4" />
+                  Expenditure Progress
+                </Link>
+              )}
+              {featureFlags?.burndownEnabled && (
+                <button
+                  className="btn btn-lg"
+                  disabled
+                  type="button"
+                >
+                  <PresentationChartLineIcon className="h-4 w-4" />
+                  Project Burndown (coming soon)
+                </button>
+              )}
             </>
           ) : null
         }
