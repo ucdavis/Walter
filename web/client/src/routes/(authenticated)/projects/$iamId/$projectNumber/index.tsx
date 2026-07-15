@@ -1,8 +1,8 @@
 import { ProjectAlerts } from '@/components/alerts/ProjectAlerts.tsx';
+import { ExpenditureCategoryBreakdown } from '@/components/project/ExpenditureCategoryBreakdown.tsx';
 import { TaskBreakdown } from '@/components/project/TaskBreakdown.tsx';
 import { ProjectDetails } from '@/components/project/ProjectDetails.tsx';
 import { FinancialDetails } from '@/components/project/FinancialDetails.tsx';
-import { ProjectBurndownSection } from '@/components/project/ProjectBurndownChart.tsx';
 import { PersonnelTable } from '@/components/project/PersonnelTable.tsx';
 import { usePersonnelQuery } from '@/queries/personnel.ts';
 import { useFeatureFlagsQuery } from '@/queries/featureFlags.ts';
@@ -21,7 +21,11 @@ import { useUser } from '@/shared/auth/UserContext.tsx';
 import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
 import { tooltipDefinitions } from '@/shared/tooltips.ts';
 import { useSuspenseQuery } from '@tanstack/react-query';
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, Link } from '@tanstack/react-router';
+import {
+  ChartBarIcon,
+  PresentationChartLineIcon,
+} from '@heroicons/react/24/outline';
 import ProjectAdditionalInfo from '@/components/project/ProjectAdditionalInfo.tsx';
 
 export const Route = createFileRoute(
@@ -84,7 +88,7 @@ function ProjectContent({
           Data source: Faculty Department Portfolio Report (PPM)
         </h3>
         {summary.isInternal && (
-          <p className="max-w-prose mb-4 text-sm text-base-content/70">
+          <p className="max-w-3xl mb-2">
             Totals for internal projects do not reflect transactions that have
             occurred since the latest data refresh or manual updates that are
             needed. Contact your fiscal officer with any questions.
@@ -99,28 +103,68 @@ function ProjectContent({
         </div>
       </section>
 
-      <ProjectDetails summary={summary} />
+      <ProjectDetails
+        actions={
+          !summary.isInternal &&
+          (featureFlags?.expenditureProgressEnabled ||
+            featureFlags?.burndownEnabled) ? (
+            <>
+              {featureFlags?.expenditureProgressEnabled && (
+                <Link
+                  className="btn btn-lg"
+                  params={{ iamId, projectNumber: summary.projectNumber }}
+                  to="/expenditureprogress/$iamId/$projectNumber"
+                >
+                  <ChartBarIcon className="h-4 w-4" />
+                  Expenditure Progress
+                </Link>
+              )}
+              {featureFlags?.burndownEnabled && (
+                <button
+                  className="btn btn-lg"
+                  disabled
+                  type="button"
+                >
+                  <PresentationChartLineIcon className="h-4 w-4" />
+                  Project Burndown (coming soon)
+                </button>
+              )}
+            </>
+          ) : null
+        }
+        summary={summary}
+      />
       <FinancialDetails summary={summary} />
-      {!summary.isInternal && featureFlags?.projectionsEnabled && (
-        <ProjectBurndownSection projectNumber={summary.projectNumber} />
-      )}
       <ProjectAdditionalInfo summary={summary} />
 
       <section className="section-margin">
-        <h2 className="h2">
-          <TooltipLabel
-            label="Task Breakdown"
-            tooltip={tooltipDefinitions.taskBreakdown}
-          />
-        </h2>
-        <div className="mt-4">
-          <TaskBreakdown
-            iamId={iamId}
-            isInternal={summary.isInternal}
-            projectNumber={summary.projectNumber}
-            records={projectRecords}
-          />
-        </div>
+        {summary.isInternal ? (
+          <>
+            <h2 className="h2">
+              <TooltipLabel
+                label="Task Breakdown"
+                tooltip={tooltipDefinitions.taskBreakdown}
+              />
+            </h2>
+            <div className="mt-4">
+              <TaskBreakdown
+                isInternal={summary.isInternal}
+                projectNumber={summary.projectNumber}
+                records={projectRecords}
+              />
+            </div>
+          </>
+        ) : (
+          <>
+            <h2 className="h2">Expenditure Category Breakdown</h2>
+            <div className="mt-4">
+              <ExpenditureCategoryBreakdown
+                projectNumber={summary.projectNumber}
+                records={projectRecords}
+              />
+            </div>
+          </>
+        )}
       </section>
 
       <section className="section-margin">

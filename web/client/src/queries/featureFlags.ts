@@ -2,7 +2,8 @@ import { fetchJson } from '../lib/api.ts';
 import { useQuery } from '@tanstack/react-query';
 
 export type FeatureFlags = {
-  projectionsEnabled: boolean;
+  burndownEnabled: boolean;
+  expenditureProgressEnabled: boolean;
 };
 
 export const featureFlagsQueryOptions = () => ({

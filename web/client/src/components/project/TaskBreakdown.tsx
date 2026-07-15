@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import { Link } from '@tanstack/react-router';
 import { createColumnHelper } from '@tanstack/react-table';
 import { FinjectorLink } from '@/components/project/FinjectorLink.tsx';
 import { TableExportActions } from '@/components/TableExportActions.tsx';
@@ -91,7 +90,6 @@ const csvColumns = [
 ];
 
 interface TaskBreakdownProps {
-  iamId: string;
   /** Internal projects link each task to Finjector; sponsored projects link at the project level instead. */
   isInternal: boolean;
   projectNumber: string;
@@ -103,7 +101,6 @@ function isClosedTask(row: TaskBreakdownRow): boolean {
 }
 
 export function TaskBreakdown({
-  iamId,
   isInternal,
   projectNumber,
   records,
@@ -263,34 +260,8 @@ export function TaskBreakdown({
           </span>
         ),
       }),
-      columnHelper.display({
-        cell: (info) => {
-          const row = info.row.original;
-          return (
-            <div className="flex justify-end w-full">
-              <Link
-                className="link font-semibold text-sm whitespace-nowrap"
-                params={{ iamId, projectNumber }}
-                search={{
-                  activity: row.activityCode,
-                  dept: row.financialDepartmentCode,
-                  fund: row.fundCode,
-                  program: row.programCode,
-                  task: row.taskNum,
-                }}
-                to="/projects/$iamId/$projectNumber/expenditure-categories"
-              >
-                Details
-              </Link>
-            </div>
-          );
-        },
-        header: () => <span className="flex justify-end w-full">More</span>,
-        id: 'detailsLink',
-      }),
     ],
     [
-      iamId,
       isInternal,
       projectNumber,
       totals.balance,
@@ -315,7 +286,7 @@ export function TaskBreakdown({
         <div className="flex flex-wrap items-center gap-2">
           {closedCount > 0 && (
             <button
-              className={`btn btn-sm ${showClosed ? 'btn-active' : 'btn-default'}`}
+              className={`btn btn-sm${showClosed ? ' btn-active' : ''}`}
               onClick={() => setShowClosed((current) => !current)}
               type="button"
             >

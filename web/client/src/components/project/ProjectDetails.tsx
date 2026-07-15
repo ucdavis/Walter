@@ -4,6 +4,7 @@ import { FinjectorLink } from '@/components/project/FinjectorLink.tsx';
 import { Currency } from '@/shared/Currency.tsx';
 import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
 import { tooltipDefinitions } from '@/shared/tooltips.ts';
+import type { ReactNode } from 'react';
 import {
   AcademicCapIcon,
   BanknotesIcon,
@@ -15,12 +16,13 @@ import {
 import { ClockIcon } from '@heroicons/react/24/outline';
 
 interface ProjectDetailsProps {
+  actions?: ReactNode;
   summary: ProjectSummary;
 }
 
 const displayValue = (value: string | null) => value ?? 'Not provided';
 
-export function ProjectDetails({ summary }: ProjectDetailsProps) {
+export function ProjectDetails({ actions, summary }: ProjectDetailsProps) {
   return (
     <section className="section-margin">
       <div className="fancy-data mt-4">
@@ -99,6 +101,9 @@ export function ProjectDetails({ summary }: ProjectDetailsProps) {
           </div>
         </dl>
       </div>
+      {actions ? (
+        <div className="mt-4 flex flex-wrap gap-2">{actions}</div>
+      ) : null}
     </section>
   );
 }

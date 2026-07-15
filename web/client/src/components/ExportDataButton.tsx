@@ -23,7 +23,7 @@ export function ExportDataButton<T>({
 
   return (
     <button
-      className={`btn btn-sm btn-default ${className}`}
+      className={['btn', 'btn-sm', className].filter(Boolean).join(' ')}
       onClick={handleExport}
       type="button"
     >

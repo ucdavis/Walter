@@ -610,7 +610,7 @@ export function VacationAccrualDepartmentDetail({
 
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                 <Link
-                  className="btn btn-default btn-sm"
+                  className="btn btn-sm"
                   search={{ departmentCode: data.departmentCode }}
                   to="/accruals/about"
                 >

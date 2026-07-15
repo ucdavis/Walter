@@ -76,10 +76,26 @@ const csvColumns = [
   { header: 'Owning Org', key: 'projectOwningOrg' as const },
   { header: 'PI', key: 'pi' as const },
   { header: 'PM', key: 'pm' as const },
-  { format: 'currency' as const, header: 'Budget', key: 'totalBudget' as const },
-  { format: 'currency' as const, header: 'Expense', key: 'totalExpense' as const },
-  { format: 'currency' as const, header: 'Commitment', key: 'totalEncumbrance' as const },
-  { format: 'currency' as const, header: 'Balance', key: 'totalBalance' as const },
+  {
+    format: 'currency' as const,
+    header: 'Budget',
+    key: 'totalBudget' as const,
+  },
+  {
+    format: 'currency' as const,
+    header: 'Expense',
+    key: 'totalExpense' as const,
+  },
+  {
+    format: 'currency' as const,
+    header: 'Commitment',
+    key: 'totalEncumbrance' as const,
+  },
+  {
+    format: 'currency' as const,
+    header: 'Balance',
+    key: 'totalBalance' as const,
+  },
 ];
 
 interface InternalProjectsTableProps {
@@ -101,7 +117,9 @@ export function InternalProjectsTable({
   );
   const projects = useMemo(
     () =>
-      showInactive ? allProjects : allProjects.filter((p) => !isInactiveTask(p)),
+      showInactive
+        ? allProjects
+        : allProjects.filter((p) => !isInactiveTask(p)),
     [allProjects, showInactive]
   );
 
@@ -114,7 +132,12 @@ export function InternalProjectsTable({
           totalEncumbrance: acc.totalEncumbrance + p.totalEncumbrance,
           totalExpense: acc.totalExpense + p.totalExpense,
         }),
-        { totalBalance: 0, totalBudget: 0, totalEncumbrance: 0, totalExpense: 0 }
+        {
+          totalBalance: 0,
+          totalBudget: 0,
+          totalEncumbrance: 0,
+          totalExpense: 0,
+        }
       ),
     [projects]
   );
@@ -124,37 +147,40 @@ export function InternalProjectsTable({
       // Accessor concatenates name + number so the global filter matches on
       // either — the cell visibly renders both, but TanStack only filters
       // accessor values, not rendered output.
-      columnHelper.accessor((row) => `${row.displayName} ${row.projectNumber}`, {
-        cell: (info) => {
-          const { displayName: name, projectNumber } = info.row.original;
-          return (
-            <div className="flex items-start gap-1">
-              <Link
-                className="link no-underline min-w-0"
-                params={{ iamId, projectNumber }}
-                title={name}
-                to="/projects/$iamId/$projectNumber/"
-              >
-                {projectNumber}
-              </Link>
-              {discrepancies?.has(projectNumber) && (
+      columnHelper.accessor(
+        (row) => `${row.displayName} ${row.projectNumber}`,
+        {
+          cell: (info) => {
+            const { displayName: name, projectNumber } = info.row.original;
+            return (
+              <div className="flex items-start gap-1">
                 <Link
-                  params={{ projectNumber }}
-                  to="/reports/reconciliation/$projectNumber/"
+                  className="link no-underline min-w-0"
+                  params={{ iamId, projectNumber }}
+                  title={name}
+                  to="/projects/$iamId/$projectNumber/"
                 >
-                  <ExclamationTriangleIcon
-                    className="h-5 w-5 shrink-0 text-warning self-end"
-                    title="GL/PPM reconciliation discrepancy"
-                  />
+                  {projectNumber}
                 </Link>
-              )}
-            </div>
-          );
-        },
-        footer: () => 'Totals',
-        header: 'Project',
-        id: 'displayName',
-      }),
+                {discrepancies?.has(projectNumber) && (
+                  <Link
+                    params={{ projectNumber }}
+                    to="/reports/reconciliation/$projectNumber/"
+                  >
+                    <ExclamationTriangleIcon
+                      className="h-5 w-5 shrink-0 text-warning self-end"
+                      title="GL/PPM reconciliation discrepancy"
+                    />
+                  </Link>
+                )}
+              </div>
+            );
+          },
+          footer: () => 'Totals',
+          header: 'Project',
+          id: 'displayName',
+        }
+      ),
       columnHelper.accessor('taskNum', {
         cell: (info) => (
           <div>
@@ -221,20 +247,31 @@ export function InternalProjectsTable({
         cell: (info) => {
           const value = info.getValue();
           return (
-            <span className={`flex justify-end w-full ${value < 0 ? 'text-error' : ''}`}>
+            <span
+              className={`flex justify-end w-full ${value < 0 ? 'text-error' : ''}`}
+            >
               {formatCurrency(value)}
             </span>
           );
         },
         footer: () => (
-          <span className={`flex justify-end w-full ${totals.totalBalance < 0 ? 'text-error' : ''}`}>
+          <span
+            className={`flex justify-end w-full ${totals.totalBalance < 0 ? 'text-error' : ''}`}
+          >
             {formatCurrency(totals.totalBalance)}
           </span>
         ),
         header: () => <span className="flex justify-end w-full">Balance</span>,
       }),
     ],
-    [discrepancies, iamId, totals.totalBalance, totals.totalBudget, totals.totalEncumbrance, totals.totalExpense]
+    [
+      discrepancies,
+      iamId,
+      totals.totalBalance,
+      totals.totalBudget,
+      totals.totalEncumbrance,
+      totals.totalExpense,
+    ]
   );
 
   if (allProjects.length === 0) {
@@ -249,28 +286,26 @@ export function InternalProjectsTable({
         footerRowClassName="totaltr"
         globalFilter="left"
         initialState={{ pagination: { pageSize: 25 } }}
-        tableActions={(table) =>
-          (
-            <div className="flex flex-wrap items-center gap-2">
-              {inactiveCount > 0 && (
-                <button
-                  className={`btn btn-sm ${showInactive ? 'btn-active' : 'btn-default'}`}
-                  onClick={() => setShowInactive((current) => !current)}
-                  type="button"
-                >
-                  {showInactive ? 'Hide' : 'Show'} inactive tasks ({inactiveCount})
-                </button>
-              )}
-              <TableExportActions
-                baseFilename="internal-projects"
-                columns={csvColumns}
-                data={projects}
-                table={table}
-                toRows={(rows) => rows}
-              />
-            </div>
-          )
-        }
+        tableActions={(table) => (
+          <div className="flex flex-wrap items-center gap-2">
+            {inactiveCount > 0 && (
+              <button
+                className={`btn btn-sm${showInactive ? ' btn-active' : ''}`}
+                onClick={() => setShowInactive((current) => !current)}
+                type="button"
+              >
+                {`${showInactive ? 'Hide' : 'Show'} inactive tasks (${inactiveCount})`}
+              </button>
+            )}
+            <TableExportActions
+              baseFilename="internal-projects"
+              columns={csvColumns}
+              data={projects}
+              table={table}
+              toRows={(rows) => rows}
+            />
+          </div>
+        )}
       />
     </div>
   );
