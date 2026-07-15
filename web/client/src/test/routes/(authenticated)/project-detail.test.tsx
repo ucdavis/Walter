@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { screen, waitFor, within } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import { screen, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import type { ProjectRecord } from '@/queries/project.ts';
@@ -327,7 +327,7 @@ describe('project detail page', () => {
     ],
   };
 
-  it('links sponsored projects to the projections page when projections are enabled', async () => {
+  it('shows an expenditure progress link and disabled burndown action when projections are enabled', async () => {
     const projects = [createProject({ pmEmployeeId: '2000' })];
     setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);
 
@@ -336,21 +336,177 @@ describe('project detail page', () => {
     });
 
     try {
-      const link = await screen.findByRole('link', { name: 'Projections' });
+      const expenditureProgressLink = await screen.findByRole('link', {
+        name: 'Expenditure Progress',
+      });
+      const burndownButton = screen.getByRole('button', {
+        name: 'Project Burndown (coming soon)',
+      });
       const detailsSection = screen
         .getByText('Project Number')
         .closest('section') as HTMLElement;
 
-      expect(within(detailsSection).getByRole('link', { name: 'Projections' }))
-        .toBe(link);
-      expect(link).toHaveAttribute('href', '/projections/1000/P1');
-      expect(screen.queryByText('Project Burndown')).not.toBeInTheDocument();
+      expect(
+        within(detailsSection).getByRole('link', {
+          name: 'Expenditure Progress',
+        })
+      ).toBe(expenditureProgressLink);
+      expect(
+        within(detailsSection).getByRole('button', {
+          name: 'Project Burndown (coming soon)',
+        })
+      ).toBe(burndownButton);
+      expect(expenditureProgressLink).toHaveAttribute(
+        'href',
+        '/expenditureprogress/1000/P1'
+      );
+      expect(burndownButton).toBeDisabled();
+      expect(
+        screen.queryByTestId('project-burndown-chart')
+      ).not.toBeInTheDocument();
     } finally {
       cleanup();
     }
   });
 
-  it('shows the project burndown with category tabs on the projections page', async () => {
+  it('shows expenditure progress on the expenditure progress page', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 6, 15));
+
+    const projects = [
+      createProject({ pmEmployeeId: '2000' }),
+      createProject({
+        displayName: 'Switchable Projection Project',
+        pmEmployeeId: '2000',
+        projectName: 'Switchable Projection Project',
+        projectNumber: 'P2',
+      }),
+    ];
+    setupHandlers(
+      { employeeId: '1000', name: 'PI User' },
+      projects,
+      burndownProjection
+    );
+
+    const { cleanup } = renderRoute({
+      initialPath: '/expenditureprogress/1000/P1',
+    });
+
+    try {
+      expect(
+        await screen.findByRole('heading', {
+          name: 'Expenditure Progress',
+        })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('heading', { level: 2, name: 'Test Project' })
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByTestId('project-burndown-chart')
+      ).not.toBeInTheDocument();
+      expect(screen.queryByText('Project Burndown')).not.toBeInTheDocument();
+
+      const expenditureProgress = await screen.findByTestId(
+        'project-expenditure-progress'
+      );
+      expect(
+        within(expenditureProgress).queryByRole('heading', {
+          name: 'Project Expenditure Progress',
+        })
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByRole('region', { name: 'Project Expenditure Progress' })
+      ).toBe(expenditureProgress);
+      expect(
+        within(expenditureProgress).getByText(
+          /Expenses, commitments, and available balance by expenditure category\./
+        )
+      ).toBeInTheDocument();
+      expect(
+        within(expenditureProgress).getByText(/Available balance is/)
+      ).toBeInTheDocument();
+      expect(
+        within(expenditureProgress).getAllByText('$515.00 (78%)')
+      ).toHaveLength(2);
+      expect(
+        within(expenditureProgress).getByText('882 months (97%)')
+      ).toBeInTheDocument();
+      expect(within(expenditureProgress).getAllByText('Time').length).toBe(2);
+      expect(
+        within(expenditureProgress).getByText('All Expenses')
+      ).toBeInTheDocument();
+      expect(
+        within(expenditureProgress).getByTestId('budget-vs-time-chart')
+      ).toBeInTheDocument();
+      const budgetVsTimeAxis = within(expenditureProgress).getByTestId(
+        'budget-vs-time-axis'
+      );
+      for (const tick of ['0%', '20%', '40%', '60%', '80%', '100%']) {
+        expect(within(budgetVsTimeAxis).getByText(tick)).toBeInTheDocument();
+      }
+      expect(within(budgetVsTimeAxis).getByText('Time')).toBeInTheDocument();
+      expect(
+        within(budgetVsTimeAxis).queryByText('120%')
+      ).not.toBeInTheDocument();
+      expect(
+        within(expenditureProgress).getByTestId(
+          'budget-vs-time-current-month-marker'
+        )
+      ).toBeInTheDocument();
+      expect(within(expenditureProgress).getByText('Today')).toBeInTheDocument();
+      expect(
+        within(expenditureProgress).getByText('912 months total')
+      ).toBeInTheDocument();
+      expect(
+        within(expenditureProgress).getByText('30 (3%) months completed')
+      ).toBeInTheDocument();
+      expect(
+        within(expenditureProgress).getByText('882 (97%) months remaining')
+      ).toBeInTheDocument();
+      expect(
+        within(expenditureProgress).getByText('$660.00 budget')
+      ).toBeInTheDocument();
+      expect(
+        within(expenditureProgress).getByText('$135.00 (20%) spent')
+      ).toBeInTheDocument();
+      expect(
+        within(expenditureProgress).getByText('$10.00 (2%) committed')
+      ).toBeInTheDocument();
+      expect(
+        within(expenditureProgress).getByRole('img', {
+          name: /All Expenses: \$135\.00 \(20%\) spent, \$10\.00 \(2%\) committed, \$515\.00 \(78%\), \$660\.00 budget/,
+        })
+      ).toBeInTheDocument();
+      expect(
+        within(expenditureProgress).getByText('Supplies')
+      ).toBeInTheDocument();
+      expect(
+        within(expenditureProgress).getByText('$20.00 (20%) spent')
+      ).toBeInTheDocument();
+      expect(
+        within(expenditureProgress).getByText('$10.00 committed')
+      ).toBeInTheDocument();
+      expect(
+        within(expenditureProgress).getByText('$70.00 (70%) available')
+      ).toBeInTheDocument();
+      expect(
+        within(expenditureProgress).getByRole('img', {
+          name: /Supplies: \$20\.00 \(20%\) spent, \$10\.00 committed, \$70\.00 \(70%\) available, \$100\.00 budget/,
+        })
+      ).toBeInTheDocument();
+      for (const label of screen.getAllByText('Switchable Projection Project')) {
+        expect(label.closest('a')).toHaveAttribute(
+          'href',
+          '/projects/1000/P2'
+        );
+      }
+    } finally {
+      cleanup();
+      vi.useRealTimers();
+    }
+  });
+
+  it('shows the project burndown with category tabs on the burndown page', async () => {
     const user = userEvent.setup();
     const projects = [
       createProject({ pmEmployeeId: '2000' }),
@@ -368,13 +524,13 @@ describe('project detail page', () => {
     );
 
     const { cleanup } = renderRoute({
-      initialPath: '/projections/1000/P1',
+      initialPath: '/projectburndown/1000/P1',
     });
 
     try {
       expect(
         await screen.findByRole('heading', {
-          name: 'Financial Projections',
+          name: 'Project Burndown',
         })
       ).toBeInTheDocument();
       expect(
@@ -383,38 +539,19 @@ describe('project detail page', () => {
       expect(
         await screen.findByTestId('project-burndown-chart')
       ).toBeInTheDocument();
-      expect(screen.getByText('Project Burndown')).toBeInTheDocument();
+      expect(
+        screen.queryByRole('heading', {
+          level: 2,
+          name: 'Project Burndown',
+        })
+      ).not.toBeInTheDocument();
       expect(
         screen.getByText(tooltipDefinitions.projectBurndown)
       ).toBeInTheDocument();
       expect(screen.getByText('Current Balance')).toBeInTheDocument();
-      const expenditureProgress = screen.getByTestId(
-        'project-expenditure-progress'
-      );
       expect(
-        within(expenditureProgress).getByRole('heading', {
-          name: 'Project Expenditure Progress',
-        })
-      ).toBeInTheDocument();
-      expect(
-        within(expenditureProgress).getByText(
-          'Expenses, commitments, and available balance by expenditure category.'
-        )
-      ).toBeInTheDocument();
-      expect(
-        within(expenditureProgress).getByText('Supplies')
-      ).toBeInTheDocument();
-      expect(
-        within(expenditureProgress).getByText('$10.00 committed')
-      ).toBeInTheDocument();
-      expect(
-        within(expenditureProgress).getByText('$70.00 (70%) available')
-      ).toBeInTheDocument();
-      expect(
-        within(expenditureProgress).getByRole('img', {
-          name: /Supplies: \$20\.00 spent, \$10\.00 committed, \$70\.00 \(70%\) available, \$100\.00 budget/,
-        })
-      ).toBeInTheDocument();
+        screen.queryByTestId('project-expenditure-progress')
+      ).not.toBeInTheDocument();
       for (const label of screen.getAllByText('Switchable Projection Project')) {
         expect(label.closest('a')).toHaveAttribute(
           'href',
@@ -470,7 +607,7 @@ describe('project detail page', () => {
     }
   });
 
-  it('hides the projections link for internal projects', async () => {
+  it('hides visualization actions for internal projects', async () => {
     const projects = [
       createProject({
         awardEndDate: null,
@@ -493,7 +630,12 @@ describe('project detail page', () => {
     try {
       await screen.findByText('Financial Details');
       expect(
-        screen.queryByRole('link', { name: 'Projections' })
+        screen.queryByRole('link', { name: 'Expenditure Progress' })
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', {
+          name: 'Project Burndown (coming soon)',
+        })
       ).not.toBeInTheDocument();
       expect(
         screen.queryByRole('link', { name: 'Details' })
@@ -504,7 +646,7 @@ describe('project detail page', () => {
     }
   });
 
-  it('hides the projections link when the projections feature flag is off', async () => {
+  it('hides visualization actions when the feature flags are off', async () => {
     const projects = [createProject({ pmEmployeeId: '2000' })];
     setupHandlers(
       { employeeId: '1000', name: 'PI User' },
@@ -513,7 +655,10 @@ describe('project detail page', () => {
     );
     server.use(
       http.get('/api/system/features', () =>
-        HttpResponse.json({ projectionsEnabled: false })
+        HttpResponse.json({
+          burndownEnabled: false,
+          expenditureProgressEnabled: false,
+        })
       )
     );
 
@@ -524,7 +669,12 @@ describe('project detail page', () => {
     try {
       await screen.findByText('Financial Details');
       expect(
-        screen.queryByRole('link', { name: 'Projections' })
+        screen.queryByRole('link', { name: 'Expenditure Progress' })
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', {
+          name: 'Project Burndown (coming soon)',
+        })
       ).not.toBeInTheDocument();
       expect(screen.queryByText('Project Burndown')).not.toBeInTheDocument();
     } finally {
@@ -532,28 +682,40 @@ describe('project detail page', () => {
     }
   });
 
-  it('hides the project burndown on the projections page when the projection has no periods', async () => {
+  it('shows time progress on the expenditure progress page when category data is empty', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 6, 15));
+
     const projects = [createProject({ pmEmployeeId: '2000' })];
     setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);
 
     const { cleanup } = renderRoute({
-      initialPath: '/projections/1000/P1',
+      initialPath: '/expenditureprogress/1000/P1',
     });
 
     try {
       await screen.findByRole('heading', {
-        name: 'Financial Projections',
+        name: 'Expenditure Progress',
       });
-      // The section renders a loading state until the projection query
-      // resolves, so wait for it to settle and disappear.
-      await waitFor(() =>
-        expect(screen.queryByText('Project Burndown')).not.toBeInTheDocument()
+      const expenditureProgress = await screen.findByTestId(
+        'project-expenditure-progress'
       );
       expect(
-        screen.queryByText('Project Expenditure Progress')
+        within(expenditureProgress).queryByRole('heading', {
+          name: 'Project Expenditure Progress',
+        })
       ).not.toBeInTheDocument();
+      expect(within(expenditureProgress).getAllByText('Time').length).toBe(2);
+      expect(
+        within(expenditureProgress).getByText('912 months total')
+      ).toBeInTheDocument();
+      expect(
+        within(expenditureProgress).queryByText('All Expenses')
+      ).not.toBeInTheDocument();
+      expect(screen.queryByText('Project Burndown')).not.toBeInTheDocument();
     } finally {
       cleanup();
+      vi.useRealTimers();
     }
   });
 

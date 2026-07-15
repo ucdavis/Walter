@@ -1,4 +1,4 @@
-import { ProjectBurndownSection } from '@/components/project/ProjectBurndownChart.tsx';
+import { ProjectExpenditureProgressSection } from '@/components/project/ProjectExpenditureProgress.tsx';
 import { ProjectPortfolioLayout } from '@/components/project/ProjectPortfolioLayout.tsx';
 import { PageEmpty } from '@/components/states/PageEmpty.tsx';
 import { PageError } from '@/components/states/PageError.tsx';
@@ -17,17 +17,19 @@ import {
 } from '@tanstack/react-router';
 
 export const Route = createFileRoute(
-  '/(authenticated)/projections/$iamId/$projectNumber'
+  '/(authenticated)/expenditureprogress/$iamId/$projectNumber'
 )({
   component: RouteComponent,
-  errorComponent: ProjectionsErrorBoundary,
+  errorComponent: ExpenditureProgressErrorBoundary,
   loader: async ({ context: { queryClient }, params: { iamId } }) => {
     await Promise.all([
       queryClient.ensureQueryData(projectsDetailQueryOptions(iamId)),
       queryClient.ensureQueryData(featureFlagsQueryOptions()),
     ]);
   },
-  pendingComponent: () => <PageLoading message="Fetching projections..." />,
+  pendingComponent: () => (
+    <PageLoading message="Fetching expenditure progress..." />
+  ),
 });
 
 const ProjectNotFound = ({ projectNumber }: { projectNumber: string }) => (
@@ -59,8 +61,8 @@ function RouteComponent() {
     );
   }
 
-  const projectionsAvailable =
-    !summary.isInternal && featureFlags.projectionsEnabled;
+  const expenditureProgressAvailable =
+    !summary.isInternal && featureFlags.expenditureProgressEnabled;
 
   return (
     <ProjectPortfolioLayout>
@@ -75,12 +77,16 @@ function RouteComponent() {
             Back to Project Details
           </Link>
 
-          <h1 className="h1">Financial Projections</h1>
+          <h1 className="h1">Expenditure Progress</h1>
           <h2 className="subtitle max-w-5xl">{summary.displayName}</h2>
         </section>
 
-        {projectionsAvailable ? (
-          <ProjectBurndownSection projectNumber={summary.projectNumber} />
+        {expenditureProgressAvailable ? (
+          <ProjectExpenditureProgressSection
+            awardEndDate={summary.awardEndDate}
+            awardStartDate={summary.awardStartDate}
+            projectNumber={summary.projectNumber}
+          />
         ) : (
           <PageEmpty message="Projections are not available for this project." />
         )}
@@ -89,7 +95,10 @@ function RouteComponent() {
   );
 }
 
-function ProjectionsErrorBoundary({ error, reset }: ErrorComponentProps) {
+function ExpenditureProgressErrorBoundary({
+  error,
+  reset,
+}: ErrorComponentProps) {
   const user = useUser();
   const presentation = getErrorPresentation(error, {
     403: {
