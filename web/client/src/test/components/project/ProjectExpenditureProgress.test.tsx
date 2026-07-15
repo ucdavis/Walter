@@ -42,7 +42,10 @@ describe('ProjectExpenditureProgress', () => {
     );
 
     expect(
-      screen.getByText('$79,748.39 (126%) spent | $0.00 (0%) committed')
+      screen.getByText('$79,748.39 (126%) spent')
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('$0.00 (0%) committed')
     ).toBeInTheDocument();
     expect(screen.getByText('$16,648.39 (26%) over')).toHaveClass(
       'font-proxima-bold'
