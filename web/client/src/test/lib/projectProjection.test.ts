@@ -301,6 +301,15 @@ describe('getProjectionStats', () => {
     );
   });
 
+  it('ignores malformed award end dates when choosing projected end', () => {
+    expect(getProjectionStats(sampleResult(), '2026-13-30').projectedEnd).toBe(
+      505
+    );
+    expect(
+      getProjectionStats(sampleResult(), '2026-02-31T00:00:00Z').projectedEnd
+    ).toBe(505);
+  });
+
   it('counts distinct projected months', () => {
     expect(getProjectionStats(sampleResult()).projectedMonths).toBe(1);
   });

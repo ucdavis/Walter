@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { screen, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
@@ -370,6 +370,9 @@ describe('project detail page', () => {
   });
 
   it('shows expenditure progress on the expenditure progress page', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 6, 15));
+
     const projects = [
       createProject({ pmEmployeeId: '2000' }),
       createProject({
@@ -499,6 +502,7 @@ describe('project detail page', () => {
       }
     } finally {
       cleanup();
+      vi.useRealTimers();
     }
   });
 
@@ -676,6 +680,9 @@ describe('project detail page', () => {
   });
 
   it('shows time progress on the expenditure progress page when category data is empty', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 6, 15));
+
     const projects = [createProject({ pmEmployeeId: '2000' })];
     setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);
 
@@ -705,6 +712,7 @@ describe('project detail page', () => {
       expect(screen.queryByText('Project Burndown')).not.toBeInTheDocument();
     } finally {
       cleanup();
+      vi.useRealTimers();
     }
   });
 

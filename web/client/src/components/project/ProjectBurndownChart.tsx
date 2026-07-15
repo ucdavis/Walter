@@ -33,6 +33,7 @@ import { tooltipDefinitions } from '@/shared/tooltips.ts';
 const GRID_COLOR = 'var(--color-main-border)';
 const ZERO_LINE_COLOR = 'var(--color-error)';
 const PROJECTION_TRANSITION_LINE_COLOR = 'var(--color-base-content)';
+const AWARD_END_LINE_COLOR = 'var(--color-accent)';
 const CHART_TOOLTIP_Z_INDEX = 60;
 const Y_AXIS_TICK_COUNT = 6;
 
@@ -508,9 +509,9 @@ export function ProjectBurndownSection({
                   {showAwardEndLine && (
                     <ReferenceLine
                       label={<VerticalMarkerLabel labelText="Project End" />}
-                      stroke={PROJECTION_TRANSITION_LINE_COLOR}
-                      strokeDasharray="3 5"
-                      strokeOpacity={0.28}
+                      stroke={AWARD_END_LINE_COLOR}
+                      strokeDasharray="8 4"
+                      strokeOpacity={0.42}
                       strokeWidth={1.5}
                       x={awardEndMonth}
                     />

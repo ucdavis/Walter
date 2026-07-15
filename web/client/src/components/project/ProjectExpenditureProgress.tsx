@@ -334,7 +334,11 @@ export function ProjectExpenditureProgress({
     [categories]
   );
   const hasBudgetData =
-    budgetProgress.budget !== 0 || budgetProgress.spent !== 0;
+    budgetProgress.budget !== 0 ||
+    budgetProgress.committed !== 0 ||
+    budgetProgress.overrun !== 0 ||
+    budgetProgress.remaining !== 0 ||
+    budgetProgress.spent !== 0;
   const pacingRows = useMemo(
     () =>
       [
@@ -370,7 +374,9 @@ export function ProjectExpenditureProgress({
         {summaryBudgetText && summaryMonthsText && (
           <>
             <br />
-            Available budget is{' '}
+            {budgetProgress.overrun > 0
+              ? 'Budget is '
+              : 'Available budget is '}
             <strong
               className={budgetProgress.overrun > 0 ? 'text-error' : undefined}
             >
@@ -399,103 +405,117 @@ export function ProjectExpenditureProgress({
           </>
         )}
 
-        <ul className="space-y-4">
-          <p className="font-proxima-bold uppercase mb-2">Summary</p>
-          {pacingRows.map((row) => (
-            <li className="space-y-2" key={row.title}>
-              <div
-                className="min-w-0"
-                style={{ width: `${BAR_TRACK_WIDTH_PERCENT}%` }}
-              >
-                <div className="flex min-w-0 flex-wrap items-baseline gap-x-2">
-                  <p className="font-proxima-bold truncate">{row.title}</p>
-                  <p className="text-sm">{row.totalText}</p>
-                </div>
-                <div className="mt-1 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-sm text-base-content/80">
-                  {row.primaryTextDetail ? (
-                    <p className="flex flex-wrap gap-x-3 gap-y-1">
-                      <span>{row.primaryText}</span>
-                      <span>|</span>
-                      <span>{row.primaryTextDetail}</span>
-                    </p>
-                  ) : (
-                    <p>{row.primaryText}</p>
-                  )}
-                  <p
-                    className={`ml-auto text-right mr-2${row.remainingClassName ? ` ${row.remainingClassName}` : ''}`}
-                  >
-                    {row.remainingText}
-                  </p>
-                </div>
-              </div>
-              <ScaledProgressBar
-                ariaLabel={row.ariaLabel}
-                segments={row.segments}
-              />
-            </li>
-          ))}
-
-          <p className="font-proxima-bold mt-8 mb-2 uppercase">Details</p>
-          {rows.map((row) => {
-            const isOverBudget = row.overrun > 0;
-            const percentTotal =
-              isOverBudget && row.budget > 0 ? row.budget : row.total;
-            const spentText = `${formatCurrency(row.spent)} (${formatPercent(
-              row.spent,
-              percentTotal
-            )}) spent`;
-            const committedText = `${formatCurrency(row.committed)} committed`;
-            const balanceText = isOverBudget
-              ? row.budget > 0
-                ? `${formatCurrency(row.overrun)} (${formatPercent(
-                    row.overrun,
-                    percentTotal
-                  )}) over`
-                : `${formatCurrency(row.overrun)} over`
-              : `${formatCurrency(row.available)} (${formatPercent(
-                  row.available,
-                  row.total
-                )}) available`;
-
-            return (
-              <li className="space-y-2" key={row.expenditureCategory}>
-                <div
-                  className="min-w-0"
-                  style={{ width: `${BAR_TRACK_WIDTH_PERCENT}%` }}
-                >
-                  <div className="flex min-w-0 flex-wrap items-baseline gap-x-2">
-                    <p className="font-proxima-bold truncate mt-1">
-                      {row.displayName}
-                    </p>
-                    <p className="text-sm">
-                      {formatCurrency(row.budget)} budget
-                    </p>
-                  </div>
-                  <div className="mt-1 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-sm text-base-content/80">
-                    <p className="flex flex-wrap gap-x-3 gap-y-1">
-                      <span>{spentText}</span>
-                      <span>|</span>
-                      <span>{committedText}</span>
-                    </p>
-                    <p
-                      className={
-                        isOverBudget
-                          ? 'ml-auto text-right mr-2 font-proxima-bold text-error'
-                          : 'ml-auto text-right mr-2'
-                      }
+        <div className="space-y-4">
+          {pacingRows.length > 0 && (
+            <div>
+              <p className="font-proxima-bold uppercase mb-2">Summary</p>
+              <ul className="space-y-4">
+                {pacingRows.map((row) => (
+                  <li className="space-y-2" key={row.title}>
+                    <div
+                      className="min-w-0"
+                      style={{ width: `${BAR_TRACK_WIDTH_PERCENT}%` }}
                     >
-                      {balanceText}
-                    </p>
-                  </div>
-                </div>
-                <ScaledProgressBar
-                  ariaLabel={`${row.displayName}: ${spentText}, ${committedText}, ${balanceText}, ${formatCurrency(row.budget)} budget`}
-                  segments={row.segments}
-                />
-              </li>
-            );
-          })}
-        </ul>
+                      <div className="flex min-w-0 flex-wrap items-baseline gap-x-2">
+                        <p className="font-proxima-bold truncate">
+                          {row.title}
+                        </p>
+                        <p className="text-sm">{row.totalText}</p>
+                      </div>
+                      <div className="mt-1 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-sm text-base-content/80">
+                        {row.primaryTextDetail ? (
+                          <p className="flex flex-wrap gap-x-3 gap-y-1">
+                            <span>{row.primaryText}</span>
+                            <span>|</span>
+                            <span>{row.primaryTextDetail}</span>
+                          </p>
+                        ) : (
+                          <p>{row.primaryText}</p>
+                        )}
+                        <p
+                          className={`ml-auto text-right mr-2${row.remainingClassName ? ` ${row.remainingClassName}` : ''}`}
+                        >
+                          {row.remainingText}
+                        </p>
+                      </div>
+                    </div>
+                    <ScaledProgressBar
+                      ariaLabel={row.ariaLabel}
+                      segments={row.segments}
+                    />
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {rows.length > 0 && (
+            <div>
+              <p className="font-proxima-bold mt-8 mb-2 uppercase">Details</p>
+              <ul className="space-y-4">
+                {rows.map((row) => {
+                  const isOverBudget = row.overrun > 0;
+                  const percentTotal =
+                    isOverBudget && row.budget > 0 ? row.budget : row.total;
+                  const spentText = `${formatCurrency(row.spent)} (${formatPercent(
+                    row.spent,
+                    percentTotal
+                  )}) spent`;
+                  const committedText = `${formatCurrency(row.committed)} committed`;
+                  const balanceText = isOverBudget
+                    ? row.budget > 0
+                      ? `${formatCurrency(row.overrun)} (${formatPercent(
+                          row.overrun,
+                          percentTotal
+                        )}) over`
+                      : `${formatCurrency(row.overrun)} over`
+                    : `${formatCurrency(row.available)} (${formatPercent(
+                        row.available,
+                        row.total
+                      )}) available`;
+
+                  return (
+                    <li className="space-y-2" key={row.expenditureCategory}>
+                      <div
+                        className="min-w-0"
+                        style={{ width: `${BAR_TRACK_WIDTH_PERCENT}%` }}
+                      >
+                        <div className="flex min-w-0 flex-wrap items-baseline gap-x-2">
+                          <p className="font-proxima-bold truncate mt-1">
+                            {row.displayName}
+                          </p>
+                          <p className="text-sm">
+                            {formatCurrency(row.budget)} budget
+                          </p>
+                        </div>
+                        <div className="mt-1 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-sm text-base-content/80">
+                          <p className="flex flex-wrap gap-x-3 gap-y-1">
+                            <span>{spentText}</span>
+                            <span>|</span>
+                            <span>{committedText}</span>
+                          </p>
+                          <p
+                            className={
+                              isOverBudget
+                                ? 'ml-auto text-right mr-2 font-proxima-bold text-error'
+                                : 'ml-auto text-right mr-2'
+                            }
+                          >
+                            {balanceText}
+                          </p>
+                        </div>
+                      </div>
+                      <ScaledProgressBar
+                        ariaLabel={`${row.displayName}: ${spentText}, ${committedText}, ${balanceText}, ${formatCurrency(row.budget)} budget`}
+                        segments={row.segments}
+                      />
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
+        </div>
 
         <PacingProgressAxis />
       </div>

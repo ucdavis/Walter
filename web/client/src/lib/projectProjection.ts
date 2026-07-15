@@ -33,6 +33,18 @@ export interface CategorySpend {
   spend: number;
 }
 
+function isValidMonth(month: number) {
+  return month >= 1 && month <= 12;
+}
+
+function isValidCalendarDate(year: number, month: number, day: number) {
+  if (!isValidMonth(month) || day < 1) {
+    return false;
+  }
+
+  return day <= new Date(year, month, 0).getDate();
+}
+
 function parseMonthIndex(month: string) {
   const match = /^(\d{4})-(\d{2})$/.exec(month);
 
@@ -40,7 +52,13 @@ function parseMonthIndex(month: string) {
     return null;
   }
 
-  return Number(match[1]) * 12 + Number(match[2]) - 1;
+  const parsedMonth = Number(match[2]);
+
+  if (!isValidMonth(parsedMonth)) {
+    return null;
+  }
+
+  return Number(match[1]) * 12 + parsedMonth - 1;
 }
 
 function getMonthFromDate(value: string | null) {
@@ -48,9 +66,15 @@ function getMonthFromDate(value: string | null) {
     return null;
   }
 
-  const dateOnlyMatch = /^(\d{4})-(\d{2})-\d{2}/.exec(value);
-  if (dateOnlyMatch) {
-    return `${dateOnlyMatch[1]}-${dateOnlyMatch[2]}`;
+  const dateMatch = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
+  const year = Number(dateMatch?.[1]);
+  const month = Number(dateMatch?.[2]);
+  const day = Number(dateMatch?.[3]);
+
+  if (dateMatch) {
+    return isValidCalendarDate(year, month, day)
+      ? `${dateMatch[1]}-${dateMatch[2]}`
+      : null;
   }
 
   const parsed = new Date(value);

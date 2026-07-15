@@ -132,5 +132,9 @@ describe('getTimeProgressSummary', () => {
     expect(getTimeProgressSummary(null, '2024-12-31')).toBeNull();
     expect(getTimeProgressSummary('2024-01-01', null)).toBeNull();
     expect(getTimeProgressSummary('2024-12-31', '2024-01-01')).toBeNull();
+    expect(getTimeProgressSummary('2024-02-31', '2024-12-31')).toBeNull();
+    expect(
+      getTimeProgressSummary('2024-01-01', '2024-13-31T00:00:00Z')
+    ).toBeNull();
   });
 });
