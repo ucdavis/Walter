@@ -61,8 +61,8 @@ function RouteComponent() {
     );
   }
 
-  const projectionsAvailable =
-    !summary.isInternal && featureFlags.projectionsEnabled;
+  const burndownAvailable =
+    !summary.isInternal && featureFlags.burndownEnabled;
 
   return (
     <ProjectPortfolioLayout>
@@ -81,7 +81,7 @@ function RouteComponent() {
           <h2 className="subtitle max-w-5xl">{summary.displayName}</h2>
         </section>
 
-        {projectionsAvailable ? (
+        {burndownAvailable ? (
           <ProjectBurndownSection
             awardEndDate={summary.awardEndDate}
             awardStartDate={summary.awardStartDate}

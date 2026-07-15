@@ -646,7 +646,7 @@ describe('project detail page', () => {
     }
   });
 
-  it('hides visualization actions when the projections feature flag is off', async () => {
+  it('hides visualization actions when the feature flags are off', async () => {
     const projects = [createProject({ pmEmployeeId: '2000' })];
     setupHandlers(
       { employeeId: '1000', name: 'PI User' },
@@ -655,7 +655,10 @@ describe('project detail page', () => {
     );
     server.use(
       http.get('/api/system/features', () =>
-        HttpResponse.json({ projectionsEnabled: false })
+        HttpResponse.json({
+          burndownEnabled: false,
+          expenditureProgressEnabled: false,
+        })
       )
     );
 

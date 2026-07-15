@@ -138,20 +138,26 @@ public class SystemControllerTests
     }
 
     [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public void GetFeatures_reflects_the_configured_flag(bool projectionsEnabled)
+    [InlineData(true, true)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(false, false)]
+    public void GetFeatures_reflects_the_configured_flags(bool burndownEnabled, bool expenditureProgressEnabled)
     {
         using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
 
         var (controller, _) = CreateController(
             ctx,
-            featureFlags: new FeatureFlagOptions { ProjectionsEnabled = projectionsEnabled });
+            featureFlags: new FeatureFlagOptions
+            {
+                BurndownEnabled = burndownEnabled,
+                ExpenditureProgressEnabled = expenditureProgressEnabled,
+            });
 
         var result = controller.GetFeatures();
 
         result.Result.Should().BeOfType<OkObjectResult>()
-            .Which.Value.Should().BeEquivalentTo(new ClientFeatures(projectionsEnabled));
+            .Which.Value.Should().BeEquivalentTo(new ClientFeatures(burndownEnabled, expenditureProgressEnabled));
     }
 
     [Fact]

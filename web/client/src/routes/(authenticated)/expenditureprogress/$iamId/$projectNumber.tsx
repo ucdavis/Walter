@@ -61,8 +61,8 @@ function RouteComponent() {
     );
   }
 
-  const projectionsAvailable =
-    !summary.isInternal && featureFlags.projectionsEnabled;
+  const expenditureProgressAvailable =
+    !summary.isInternal && featureFlags.expenditureProgressEnabled;
 
   return (
     <ProjectPortfolioLayout>
@@ -81,7 +81,7 @@ function RouteComponent() {
           <h2 className="subtitle max-w-5xl">{summary.displayName}</h2>
         </section>
 
-        {projectionsAvailable ? (
+        {expenditureProgressAvailable ? (
           <ProjectExpenditureProgressSection
             awardEndDate={summary.awardEndDate}
             awardStartDate={summary.awardStartDate}
