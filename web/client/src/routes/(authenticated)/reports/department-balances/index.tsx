@@ -238,16 +238,16 @@ function RouteComponent() {
     const measure = (m: MeasureDef) =>
       columnHelper.accessor(m.key, {
         cell: (info) => (
-          <span className="flex justify-end">
+          <span className="block w-full text-right tabular-nums">
             {formatCurrency(info.getValue())}
           </span>
         ),
         footer: () => (
-          <span className="flex justify-end font-semibold">
+          <span className="block w-full text-right font-semibold tabular-nums">
             {formatCurrency(totals[m.key])}
           </span>
         ),
-        header: () => <span className="flex justify-end">{m.label}</span>,
+        header: () => <span className="block w-full text-right">{m.label}</span>,
       });
     const labelCol = columnHelper.accessor('label', {
       cell: (info) => {
@@ -269,7 +269,7 @@ function RouteComponent() {
       header: 'Label',
       size: 260,
     });
-    return [...dimCols, ...MEASURES.map(measure), labelCol];
+    return [...dimCols, labelCol, ...MEASURES.map(measure)];
   }, [cols, totals, dimensions, labelsByKey]);
 
   const csvColumns = useMemo(
