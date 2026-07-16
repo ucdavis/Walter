@@ -20,6 +20,15 @@ const PROJECT_NON_PERSONNEL_CATEGORY_COLORS = PROJECT_SERIES_COLORS.slice(
   NON_PERSONNEL_SERIES_COLOR_START
 );
 
+type ProjectCategoryColorSource = {
+  budget: number;
+  committed: number;
+  expenditureCategory: string;
+  isPersonnel: number;
+  remainingNow: number;
+  spentToDate: number;
+};
+
 function projectSeriesColorByName(name: string) {
   const entry = PROJECT_SERIES_COLORS.find((color) => color.name === name);
 
@@ -51,4 +60,41 @@ export function projectNonPersonnelCategoryColor(index: number) {
   }
 
   return entry.color;
+}
+
+export function hasProjectCategoryProgressData(
+  category: ProjectCategoryColorSource
+) {
+  return (
+    category.budget !== 0 ||
+    category.committed !== 0 ||
+    category.remainingNow !== 0 ||
+    category.spentToDate !== 0
+  );
+}
+
+export function buildProjectCategoryColorMap(
+  categories: ProjectCategoryColorSource[]
+) {
+  let nonPersonnelIndex = 0;
+  const colorsByCategory = new Map<string, string>();
+
+  for (const category of categories
+    .filter(hasProjectCategoryProgressData)
+    .sort((a, b) =>
+      a.expenditureCategory.localeCompare(b.expenditureCategory)
+    )) {
+    if (category.isPersonnel === 1) {
+      colorsByCategory.set(category.expenditureCategory, PROJECT_PERSONNEL_COLOR);
+      continue;
+    }
+
+    colorsByCategory.set(
+      category.expenditureCategory,
+      projectNonPersonnelCategoryColor(nonPersonnelIndex)
+    );
+    nonPersonnelIndex += 1;
+  }
+
+  return colorsByCategory;
 }

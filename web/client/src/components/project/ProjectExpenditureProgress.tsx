@@ -1,8 +1,8 @@
 import { useId, useMemo, useState } from 'react';
 import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
 import {
-  PROJECT_PERSONNEL_COLOR,
-  projectNonPersonnelCategoryColor,
+  buildProjectCategoryColorMap,
+  hasProjectCategoryProgressData,
 } from '@/components/project/projectChartColors.ts';
 import { formatCurrency } from '@/lib/currency.ts';
 import {
@@ -79,15 +79,6 @@ interface ProjectExpenditureProgressSectionProps {
 
 function categoryDisplayName(expenditureCategory: string) {
   return expenditureCategory.replace(/^\d+\s*-\s*/, '');
-}
-
-function categoryColor(
-  category: ProjectProjectionCategory,
-  nonPersonnelIndex: number
-) {
-  return category.isPersonnel === 1
-    ? PROJECT_PERSONNEL_COLOR
-    : projectNonPersonnelCategoryColor(nonPersonnelIndex);
 }
 
 function commitmentColor(color: string) {
@@ -262,25 +253,17 @@ function getBudgetProgressRow(
 function buildCategoryProgressRows(
   categories: ProjectProjectionCategory[]
 ): CategoryProgressRow[] {
-  let nonPersonnelIndex = 0;
+  const categoryColors = buildProjectCategoryColorMap(categories);
 
   return categories
-    .filter(
-      (category) =>
-        category.budget !== 0 ||
-        category.committed !== 0 ||
-        category.remainingNow !== 0 ||
-        category.spentToDate !== 0
-    )
+    .filter(hasProjectCategoryProgressData)
     .sort((a, b) => a.expenditureCategory.localeCompare(b.expenditureCategory))
     .map((category) => {
       const { available, budget, committed, overrun, spent, total } =
         getCategoryBudgetProgress(category);
-      const baseColor = categoryColor(category, nonPersonnelIndex);
-
-      if (category.isPersonnel !== 1) {
-        nonPersonnelIndex += 1;
-      }
+      const baseColor =
+        categoryColors.get(category.expenditureCategory) ??
+        'var(--color-primary)';
 
       const segments = [
         {

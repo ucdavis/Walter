@@ -12,6 +12,7 @@ import {
 import { formatCurrency } from '@/lib/currency.ts';
 import {
   PROJECT_PERSONNEL_COLOR,
+  buildProjectCategoryColorMap,
   projectNonPersonnelCategoryColor,
   projectSeriesColor,
 } from '@/components/project/projectChartColors.ts';
@@ -200,17 +201,6 @@ function filterCategorySpend(
   return categorySpend;
 }
 
-function buildCategorySpendColors(
-  nonPersonnelCategorySeries: ProjectionSeries[]
-) {
-  return new Map(
-    nonPersonnelCategorySeries.map((entry, index) => [
-      entry.key,
-      projectNonPersonnelCategoryColor(index),
-    ])
-  );
-}
-
 interface BurndownTooltipProps {
   active?: boolean;
   categorySpendByMonth: Map<string, CategorySpend[]>;
@@ -334,9 +324,9 @@ export function ProjectBurndownSection({
     () => (result ? buildNonPersonnelCategorySeries(result) : []),
     [result]
   );
-  const categorySpendColors = useMemo(
-    () => buildCategorySpendColors(nonPersonnelCategorySeries),
-    [nonPersonnelCategorySeries]
+  const categoryColors = useMemo(
+    () => (result ? buildProjectCategoryColorMap(result.categories) : new Map()),
+    [result]
   );
   const chartSeries = useMemo(
     () => [...series, ...nonPersonnelCategorySeries],
@@ -378,6 +368,12 @@ export function ProjectBurndownSection({
     )
       ? selectedNonPersonnelCategory
       : null;
+  const nonPersonnelCategoryColor = (
+    expenditureCategory: string,
+    fallbackIndex: number
+  ) =>
+    categoryColors.get(expenditureCategory) ??
+    projectNonPersonnelCategoryColor(fallbackIndex);
 
   if (projectionQuery.isSuccess && series.length === 0) {
     return null;
@@ -394,14 +390,14 @@ export function ProjectBurndownSection({
       ? activeSelectedNonPersonnelCategory
         ? nonPersonnelCategorySeries
             .map((entry, index) => ({
-              color: projectNonPersonnelCategoryColor(index),
+              color: nonPersonnelCategoryColor(entry.key, index),
               key: entry.key,
             }))
             .filter(({ key }) => key === activeSelectedNonPersonnelCategory)
         : [
             ...selectedRollupSeries,
             ...nonPersonnelCategorySeries.map((entry, index) => ({
-              color: projectNonPersonnelCategoryColor(index),
+              color: nonPersonnelCategoryColor(entry.key, index),
               key: entry.key,
               strokeWidth: 1.75,
             })),
@@ -520,7 +516,7 @@ export function ProjectBurndownSection({
                     content={
                       <BurndownTooltip
                         categorySpendByMonth={categorySpendByMonth}
-                        categorySpendColors={categorySpendColors}
+                        categorySpendColors={categoryColors}
                         selectedKey={selectedKey}
                         selectedNonPersonnelCategory={
                           activeSelectedNonPersonnelCategory
@@ -619,7 +615,7 @@ export function ProjectBurndownSection({
                             className="inline-block h-3 w-3 rounded-sm mr-2"
                             style={{
                               backgroundColor:
-                                projectNonPersonnelCategoryColor(index),
+                                nonPersonnelCategoryColor(entry.key, index),
                             }}
                           />
                           {entry.key}
