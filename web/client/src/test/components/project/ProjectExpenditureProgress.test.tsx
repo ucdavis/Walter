@@ -19,44 +19,66 @@ const category = (
 });
 
 describe('ProjectExpenditureProgress', () => {
-  it('shows aggregate overruns as spent budget and a full summary bar', () => {
+  it('nets detail balances in the aggregate expense summary', () => {
     render(
       <ProjectExpenditureProgress
         awardEndDate={null}
         awardStartDate={null}
         categories={[
           category({
-            budget: 60_000,
+            budget: 45_830,
             expenditureCategory: '01 - Salaries and Wages',
-            remainingNow: 20_000,
-            spentToDate: 40_000,
+            remainingNow: -2841.36,
+            spentToDate: 48_671.36,
           }),
           category({
-            budget: 3100,
-            expenditureCategory: '04 - Supplies',
+            budget: 26_437,
+            expenditureCategory: '02 - Fringe Benefits',
+            remainingNow: 9872.77,
+            spentToDate: 16_564.23,
+          }),
+          category({
+            budget: 0,
+            expenditureCategory: '03 - Supplies / Services / Other Expenses',
             isPersonnel: 0,
-            remainingNow: -16_648.39,
-            spentToDate: 18_128.21,
+            remainingNow: -5411.86,
+            spentToDate: 5411.86,
+          }),
+          category({
+            budget: 0,
+            expenditureCategory: '04 - Travel',
+            isPersonnel: 0,
+            remainingNow: -44.22,
+            spentToDate: 44.22,
+          }),
+          category({
+            budget: 0,
+            expenditureCategory: '05 - Fellowship & Scholarships',
+            isPersonnel: 0,
+            remainingNow: 2067.91,
+            spentToDate: 0,
+          }),
+          category({
+            budget: 26_667,
+            expenditureCategory: '06 - Indirect Costs',
+            isPersonnel: 0,
+            remainingNow: -2753.19,
+            spentToDate: 29_420.19,
           }),
         ]}
       />
     );
 
     expect(
-      screen.getByText('$79,748.39 (126%) spent')
+      screen.getByText('$100,111.86 (99%) spent')
     ).toBeInTheDocument();
     expect(
       screen.getByText('$0.00 (0%) committed')
     ).toBeInTheDocument();
-    expect(screen.getByText('$16,648.39 (26%) over')).toHaveClass(
-      'font-proxima-bold'
-    );
-    expect(screen.getByText('$16,648.39 (537%) over')).toHaveClass(
-      'font-proxima-bold'
-    );
+    expect(screen.getByText('$890.05 (1%)')).not.toHaveClass('text-error');
     expect(
       screen.getByRole('img', {
-        name: /All Expenses: \$79,748\.39 \(126%\) spent, \$0\.00 \(0%\) committed, \$16,648\.39 \(26%\) over/,
+        name: /All Expenses: \$100,111\.86 \(99%\) spent, \$0\.00 \(0%\) committed, \$890\.05 \(1%\), \$98,934\.00 budget/,
       })
     ).toBeInTheDocument();
   });

@@ -59,27 +59,79 @@ describe('getBudgetProgressSummary', () => {
     expect(progress.remainingPercent).toBe(0);
   });
 
-  it('rolls lower-category overruns into aggregate spent progress', () => {
+  it('nets category surpluses against category overruns in aggregate balance', () => {
     const progress = getBudgetProgressSummary([
       category({
-        budget: 60_000,
-        remainingNow: 20_000,
-        spentToDate: 40_000,
+        budget: 1000,
+        remainingNow: 100,
+        spentToDate: 900,
       }),
       category({
-        budget: 3100,
-        remainingNow: -16_648.39,
-        spentToDate: 18_128.21,
+        budget: 100,
+        remainingNow: -50,
+        spentToDate: 150,
       }),
     ]);
 
-    expect(progress.budget).toBe(63_100);
-    expect(progress.overrun).toBeCloseTo(16_648.39, 2);
-    expect(progress.overrunPercent).toBeCloseTo(26.38, 2);
-    expect(progress.remaining).toBe(0);
-    expect(progress.spent).toBeCloseTo(79_748.39, 2);
-    expect(progress.spentPercent).toBeCloseTo(126.38, 2);
-    expect(progress.remainingPercent).toBe(0);
+    expect(progress.budget).toBe(1100);
+    expect(progress.overrun).toBe(0);
+    expect(progress.overrunPercent).toBe(0);
+    expect(progress.remaining).toBe(50);
+    expect(progress.spent).toBe(1050);
+    expect(progress.spentPercent).toBeCloseTo(95.45, 2);
+    expect(progress.remainingPercent).toBeCloseTo(4.55, 2);
+  });
+
+  it('matches aggregate expense and balance totals to the detail rows', () => {
+    const progress = getBudgetProgressSummary([
+      category({
+        budget: 45_830,
+        remainingNow: -2841.36,
+        spentToDate: 48_671.36,
+      }),
+      category({
+        budget: 26_437,
+        expenditureCategory: '02 - Fringe Benefits',
+        remainingNow: 9872.77,
+        spentToDate: 16_564.23,
+      }),
+      category({
+        budget: 0,
+        expenditureCategory: '03 - Supplies / Services / Other Expenses',
+        isPersonnel: 0,
+        remainingNow: -5411.86,
+        spentToDate: 5411.86,
+      }),
+      category({
+        budget: 0,
+        expenditureCategory: '04 - Travel',
+        isPersonnel: 0,
+        remainingNow: -44.22,
+        spentToDate: 44.22,
+      }),
+      category({
+        budget: 0,
+        expenditureCategory: '05 - Fellowship & Scholarships',
+        isPersonnel: 0,
+        remainingNow: 2067.91,
+        spentToDate: 0,
+      }),
+      category({
+        budget: 26_667,
+        expenditureCategory: '06 - Indirect Costs',
+        isPersonnel: 0,
+        remainingNow: -2753.19,
+        spentToDate: 29_420.19,
+      }),
+    ]);
+
+    expect(progress.budget).toBe(98_934);
+    expect(progress.committed).toBe(0);
+    expect(progress.overrun).toBe(0);
+    expect(progress.remaining).toBeCloseTo(890.05, 2);
+    expect(progress.spent).toBeCloseTo(100_111.86, 2);
+    expect(progress.spentPercent).toBeCloseTo(99.12, 2);
+    expect(progress.remainingPercent).toBeCloseTo(0.88, 2);
   });
 });
 

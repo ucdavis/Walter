@@ -118,24 +118,13 @@ export function getBudgetProgressSummary(
     (sum, category) => sum + category.committed,
     0
   );
-  const remaining = categoryProgress.reduce(
-    (sum, category) => sum + category.available,
+  const netRemaining = categoryProgress.reduce(
+    (sum, category) => sum + category.available - category.overrun,
     0
   );
-  const overrun = categoryProgress.reduce(
-    (sum, category) => sum + category.overrun,
-    0
-  );
-  const displaySpent =
-    overrun > 0 ? Math.max(spent, budget + overrun - committed) : spent;
-  const displayRemaining = overrun > 0 ? 0 : remaining;
-  const total =
-    overrun > 0
-      ? Math.max(displaySpent + committed, 1)
-      : Math.max(
-          categoryProgress.reduce((sum, category) => sum + category.total, 0),
-          1
-        );
+  const overrun = nonnegative(-netRemaining);
+  const remaining = nonnegative(netRemaining);
+  const total = Math.max(spent + committed + remaining, budget + overrun, 1);
   const percentTotal = overrun > 0 && budget > 0 ? budget : total;
 
   return {
@@ -144,10 +133,10 @@ export function getBudgetProgressSummary(
     committedPercent: progressPercent(committed, percentTotal),
     overrun,
     overrunPercent: progressPercent(overrun, percentTotal),
-    remaining: displayRemaining,
-    remainingPercent: progressPercent(displayRemaining, percentTotal),
-    spent: displaySpent,
-    spentPercent: progressPercent(displaySpent, percentTotal),
+    remaining,
+    remainingPercent: progressPercent(remaining, percentTotal),
+    spent,
+    spentPercent: progressPercent(spent, percentTotal),
   };
 }
 
