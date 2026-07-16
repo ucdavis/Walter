@@ -113,7 +113,8 @@ export function MultiSelectFilter({
     );
   };
 
-  const remove = (value: string) => onChange(selected.filter((v) => v !== value));
+  const remove = (value: string) =>
+    onChange(selected.filter((v) => v !== value));
 
   const groups = useMemo(() => {
     const map = new Map<string, FilterOption[]>();
@@ -141,7 +142,7 @@ export function MultiSelectFilter({
         ) : (
           selected.map((v) => (
             <span
-              className="badge badge-primary badge-sm max-w-full gap-1"
+              className="badge badge-primary badge-soft max-w-full gap-1"
               key={v}
             >
               <span className="truncate">{labelFor(v)}</span>
@@ -166,7 +167,11 @@ export function MultiSelectFilter({
 
       {open ? (
         <FloatingPortal>
-          <FloatingFocusManager context={context} initialFocus={inputRef} modal={false}>
+          <FloatingFocusManager
+            context={context}
+            initialFocus={inputRef}
+            modal={false}
+          >
             <div
               className="z-50 overflow-hidden rounded-box border border-base-300 bg-base-100 shadow-lg"
               ref={setFloating}

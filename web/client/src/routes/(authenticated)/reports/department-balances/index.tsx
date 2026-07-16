@@ -32,7 +32,7 @@ import { DataTable } from '@/shared/DataTable.tsx';
 import { ExportDataButton } from '@/components/ExportDataButton.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import { formatDate } from '@/lib/date.ts';
-import { XMarkIcon } from '@heroicons/react/20/solid';
+import { TrashIcon, XMarkIcon } from '@heroicons/react/20/solid';
 import { canAccessDepartmentBalances } from '@/shared/auth/roleAccess.ts';
 import { meQueryOptions } from '@/queries/user.ts';
 import { RouterContext } from '@/main.tsx';
@@ -70,8 +70,7 @@ function LabelCell({
 }) {
   const queryClient = useQueryClient();
   const mutation = useMutation({
-    mutationFn: (text: string) =>
-      upsertChartStringLabel({ ...segments, text }),
+    mutationFn: (text: string) => upsertChartStringLabel({ ...segments, text }),
     onSettled: () =>
       queryClient.invalidateQueries({ queryKey: chartStringLabelsQueryKey }),
   });
@@ -127,11 +126,7 @@ const toFilterOptions = (
     }
   }
   const mapped = [...byCode.values()].map((o) => ({
-    group: hierarchy
-      ? o.level === 'Leaf'
-        ? 'Values'
-        : 'Rollups'
-      : undefined,
+    group: hierarchy ? (o.level === 'Leaf' ? 'Values' : 'Rollups') : undefined,
     label: optionLabel(o),
     value: o.code,
   }));
@@ -160,7 +155,11 @@ function RouteComponent() {
     [dimensions, filters, department]
   );
 
-  const { data: rows = [], isError, isFetching } = useDepartmentBalancesQuery(query);
+  const {
+    data: rows = [],
+    isError,
+    isFetching,
+  } = useDepartmentBalancesQuery(query);
   const { data: labels = [] } = useChartStringLabels();
 
   // Match shared labels to rows by exact segment-combination key.
@@ -173,18 +172,40 @@ function RouteComponent() {
       rows.map(
         (r): LabeledRow => ({
           ...r,
-          label: labelsByKey.get(labelKeyOf(rowLabelSegments(r, dimensions)))?.text ?? '',
+          label:
+            labelsByKey.get(labelKeyOf(rowLabelSegments(r, dimensions)))
+              ?.text ?? '',
         })
       ),
     [rows, labelsByKey, dimensions]
   );
 
   const deptOptions = useDepartmentBalanceOptions('Dept', {});
-  const fundOptions = useDepartmentBalanceOptions('Fund', query, department.length > 0);
-  const accountOptions = useDepartmentBalanceOptions('Account', query, department.length > 0);
-  const purposeOptions = useDepartmentBalanceOptions('Purpose', query, department.length > 0);
-  const projectOptions = useDepartmentBalanceOptions('Project', query, department.length > 0);
-  const activityOptions = useDepartmentBalanceOptions('Activity', query, department.length > 0);
+  const fundOptions = useDepartmentBalanceOptions(
+    'Fund',
+    query,
+    department.length > 0
+  );
+  const accountOptions = useDepartmentBalanceOptions(
+    'Account',
+    query,
+    department.length > 0
+  );
+  const purposeOptions = useDepartmentBalanceOptions(
+    'Purpose',
+    query,
+    department.length > 0
+  );
+  const projectOptions = useDepartmentBalanceOptions(
+    'Project',
+    query,
+    department.length > 0
+  );
+  const activityOptions = useDepartmentBalanceOptions(
+    'Activity',
+    query,
+    department.length > 0
+  );
 
   const cols = useMemo(() => activeColumns(dimensions), [dimensions]);
 
@@ -205,7 +226,10 @@ function RouteComponent() {
     const dimCols = cols.map((d, i) =>
       columnHelper.accessor((row) => rowGroupLabel(row, [d.key]), {
         cell: (info) => <span>{info.getValue()}</span>,
-        footer: i === 0 ? () => <span className="font-semibold">Total</span> : undefined,
+        footer:
+          i === 0
+            ? () => <span className="font-semibold">Total</span>
+            : undefined,
         header: d.label,
         id: d.key,
         size: 220,
@@ -302,28 +326,32 @@ function RouteComponent() {
     { key: 'activities', label: 'Activity', options: activityOptions.data },
   ];
 
+  const financialDepartmentRow = {
+    key: 'financialDepartments',
+    label: 'Financial Department',
+    values: department.map((v) => ({
+      code: v,
+      name: nameOf(deptOptions.data, v),
+      onRemove: () => handleDeptChange(department.filter((x) => x !== v)),
+    })),
+  };
+
   // One row per segment; values within a row are OR'd, rows combine with AND.
-  const filterRows = [
-    {
-      key: 'financialDepartments',
-      label: 'Financial Department',
-      values: department.map((v) => ({
-        code: v,
-        name: nameOf(deptOptions.data, v),
-        onRemove: () => handleDeptChange(department.filter((x) => x !== v)),
-      })),
-    },
-    ...segmentFilterDefs.map((def) => ({
+  const dataFilterRows = segmentFilterDefs
+    .map((def) => ({
       key: def.key,
       label: def.label,
       values: (filters[def.key] ?? []).map((v) => ({
         code: v,
         name: nameOf(def.options, v),
         onRemove: () =>
-          setFilter(def.key, (filters[def.key] ?? []).filter((x) => x !== v)),
+          setFilter(
+            def.key,
+            (filters[def.key] ?? []).filter((x) => x !== v)
+          ),
       })),
-    })),
-  ].filter((row) => row.values.length > 0);
+    }))
+    .filter((row) => row.values.length > 0);
 
   const groupByChips = cols.map((d) => ({
     display: d.label,
@@ -331,249 +359,302 @@ function RouteComponent() {
     onRemove: () => setDimensions(dimensions.filter((k) => k !== d.key)),
   }));
 
-  const hasSelections = filterRows.length > 0 || groupByChips.length > 0;
+  const hasSelections =
+    financialDepartmentRow.values.length > 0 ||
+    dataFilterRows.length > 0 ||
+    groupByChips.length > 0;
 
   return (
     <main className="container">
       <section className="mt-8 mb-6">
         <h1 className="h1">Department Balances</h1>
+        <p className="text-lg max-w-3xl">
+          To create a department balance report, select a financial department,
+          apply data filters and choose table columns to display
+        </p>
       </section>
 
       {/* Filter controls + applied-selections panel */}
-      <div className="mb-6 flex flex-col gap-4 lg:flex-row">
-      <div className="flex flex-1 flex-col gap-6">
-      <section>
-        <h2 className="text-base-content/60 mb-2 text-xs font-semibold tracking-wide uppercase">
-          Filters
-        </h2>
-        <div className="grid items-start gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {/* Department — hierarchy-aware multi-select, always enabled; gates the other facets */}
-        <div className="form-control">
-          <label className="label">
-            <span className="label-text font-medium">Financial Department</span>
-          </label>
-          <MultiSelectFilter
-            loading={deptOptions.isPending}
-            onChange={handleDeptChange}
-            options={toFilterOptions(deptOptions.data, true)}
-            placeholder="Pick financial departments…"
-            searchPlaceholder="Search financial departments…"
-            selected={department}
-          />
-        </div>
-
-        {/* Fund — hierarchy-aware multi-select, disabled until department chosen */}
-        <div className="form-control">
-          <label className="label">
-            <span className="label-text font-medium">Fund</span>
-          </label>
-          <MultiSelectFilter
-            disabled={department.length === 0}
-            loading={fundOptions.isFetching}
-            onChange={(vals) => setFilter('funds', vals)}
-            options={toFilterOptions(fundOptions.data, true)}
-            placeholder="Any fund"
-            searchPlaceholder="Search funds…"
-            selected={filters.funds ?? []}
-          />
-        </div>
-
-        {/* Account — hierarchy-aware multi-select, disabled until department chosen */}
-        <div className="form-control">
-          <label className="label">
-            <span className="label-text font-medium">Account</span>
-          </label>
-          <MultiSelectFilter
-            disabled={department.length === 0}
-            loading={accountOptions.isFetching}
-            onChange={(vals) => setFilter('accounts', vals)}
-            options={toFilterOptions(accountOptions.data, true)}
-            placeholder="Any account"
-            searchPlaceholder="Search accounts…"
-            selected={filters.accounts ?? []}
-          />
-        </div>
-
-        {/* Purpose — multi-select, disabled until department chosen */}
-        <div className="form-control">
-          <label className="label">
-            <span className="label-text font-medium">Purpose</span>
-          </label>
-          <MultiSelectFilter
-            disabled={department.length === 0}
-            loading={purposeOptions.isFetching}
-            onChange={(vals) => setFilter('purposes', vals)}
-            options={toFilterOptions(purposeOptions.data)}
-            placeholder="Any purpose"
-            searchPlaceholder="Search purposes…"
-            selected={filters.purposes ?? []}
-          />
-        </div>
-
-        {/* Project — multi-select, disabled until department chosen */}
-        <div className="form-control">
-          <label className="label">
-            <span className="label-text font-medium">Project</span>
-          </label>
-          <MultiSelectFilter
-            disabled={department.length === 0}
-            loading={projectOptions.isFetching}
-            onChange={(vals) => setFilter('projects', vals)}
-            options={toFilterOptions(projectOptions.data)}
-            placeholder="Any project"
-            searchPlaceholder="Search projects…"
-            selected={filters.projects ?? []}
-          />
-        </div>
-
-        {/* Activity — multi-select, disabled until department chosen */}
-        <div className="form-control">
-          <label className="label">
-            <span className="label-text font-medium">Activity</span>
-          </label>
-          <MultiSelectFilter
-            disabled={department.length === 0}
-            loading={activityOptions.isFetching}
-            onChange={(vals) => setFilter('activities', vals)}
-            options={toFilterOptions(activityOptions.data)}
-            placeholder="Any activity"
-            searchPlaceholder="Search activities…"
-            selected={filters.activities ?? []}
-          />
-        </div>
-
-        </div>
-      </section>
-
-      {/* Field selections — which child-level segments the results are grouped/displayed by */}
-      <section>
-        <h2 className="text-primary mb-2 text-xs font-semibold tracking-wide uppercase">
-          Field selections
-        </h2>
-        <div className="grid items-start gap-4 md:grid-cols-2 lg:grid-cols-3">
-          <div className="form-control">
-            <MultiSelectFilter
-              disabled={department.length === 0}
-              onChange={setDimensions}
-              options={GROUP_BY_OPTIONS}
-              placeholder="Choose fields…"
-              searchPlaceholder="Search fields…"
-              selected={dimensions}
-            />
-          </div>
-        </div>
-      </section>
-      </div>
-
-      {/* Applied selections, Shopify-style: consolidated removable chips */}
-      <aside className="card border-base-300 bg-base-100 shrink-0 self-start border lg:w-2/5">
-        <div className="card-body gap-3 p-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-medium">Active selections</h2>
-            {hasSelections ? (
-              <button
-                className="btn btn-ghost btn-xs"
-                onClick={() => handleDeptChange([])}
-                type="button"
-              >
-                Clear all
-              </button>
-            ) : null}
-          </div>
-          {hasSelections ? (
-            <>
-              <div>
-                <h3 className="text-base-content/60 text-xs font-semibold tracking-wide uppercase">
-                  Filters
-                </h3>
-                {filterRows.length > 0 ? (
-                  <div className="mt-2 flex flex-col gap-1.5">
-                    {filterRows.map((row, i) => (
-                      <Fragment key={row.key}>
-                        {i > 0 ? (
-                          <div className="text-base-content/40 pl-1 text-xs font-semibold">
-                            AND
-                          </div>
-                        ) : null}
-                        <div className="border-base-300 bg-base-200/50 flex flex-wrap items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-sm">
-                          <span className="font-medium">{row.label}:</span>
-                          {row.values.map((v, j) => (
-                            <Fragment key={v.code}>
-                              {j > 0 ? (
-                                <span className="text-base-content/50 text-xs italic">
-                                  or
-                                </span>
-                              ) : null}
-                              <span
-                                className="badge badge-outline max-w-full gap-1"
-                                title={v.name}
-                              >
-                                <span className="truncate">{v.code}</span>
-                                <button
-                                  aria-label={`Remove ${row.label} ${v.code}`}
-                                  className="text-base-content/50 hover:text-base-content shrink-0"
-                                  onClick={v.onRemove}
-                                  type="button"
-                                >
-                                  <XMarkIcon className="h-3 w-3" />
-                                </button>
-                              </span>
-                            </Fragment>
-                          ))}
-                        </div>
-                      </Fragment>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-base-content/50 mt-2 text-sm">No filters applied.</p>
-                )}
+      <div className="mb-6 flex flex-col gap-12 lg:flex-row">
+        <div className="flex flex-1 flex-col gap-6">
+          <section>
+            <h2 className="text-xl font-proxima-bold">Financial Department</h2>
+            <p className="mb-4">search and choose financial department(s)</p>
+            <div className="grid items-start gap-4 md:grid-cols-2">
+              {/* Department — hierarchy-aware multi-select, always enabled; gates the other facets */}
+              <div className="flex flex-col gap-2">
+                <label className="sr-only">Financial Department</label>
+                <MultiSelectFilter
+                  loading={deptOptions.isPending}
+                  onChange={handleDeptChange}
+                  options={toFilterOptions(deptOptions.data, true)}
+                  placeholder="Pick financial departments…"
+                  searchPlaceholder="Search financial departments…"
+                  selected={department}
+                />
               </div>
-              <div className="border-base-300 border-t pt-3">
-                <h3 className="text-primary text-xs font-semibold tracking-wide uppercase">
-                  Display fields
-                </h3>
-                {groupByChips.length > 0 ? (
-                  <div className="mt-2 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
-                    {groupByChips.map((c) => (
+            </div>
+          </section>
+
+          <section>
+            <h2 className="mt-4 text-xl font-proxima-bold">Data Filters</h2>
+            <p className="mb-4">
+              Choose from Chartstring segment what you want your report to
+              contain, Leave blank to exclude
+            </p>
+            <div className="grid items-start gap-4 md:grid-cols-2">
+              {/* Fund — hierarchy-aware multi-select, disabled until department chosen */}
+              <div className="flex flex-col gap-2">
+                <label className="text-sm uppercase font-proxima-bold">
+                  Fund
+                </label>
+                <MultiSelectFilter
+                  disabled={department.length === 0}
+                  loading={fundOptions.isFetching}
+                  onChange={(vals) => setFilter('funds', vals)}
+                  options={toFilterOptions(fundOptions.data, true)}
+                  placeholder="Any fund"
+                  searchPlaceholder="Search funds…"
+                  selected={filters.funds ?? []}
+                />
+              </div>
+
+              {/* Account — hierarchy-aware multi-select, disabled until department chosen */}
+              <div className="flex flex-col gap-2">
+                <label className="text-sm uppercase font-proxima-bold">
+                  Account
+                </label>
+                <MultiSelectFilter
+                  disabled={department.length === 0}
+                  loading={accountOptions.isFetching}
+                  onChange={(vals) => setFilter('accounts', vals)}
+                  options={toFilterOptions(accountOptions.data, true)}
+                  placeholder="Any account"
+                  searchPlaceholder="Search accounts…"
+                  selected={filters.accounts ?? []}
+                />
+              </div>
+
+              {/* Purpose — multi-select, disabled until department chosen */}
+              <div className="flex flex-col gap-2">
+                <label className="text-sm uppercase font-proxima-bold">
+                  Purpose
+                </label>
+                <MultiSelectFilter
+                  disabled={department.length === 0}
+                  loading={purposeOptions.isFetching}
+                  onChange={(vals) => setFilter('purposes', vals)}
+                  options={toFilterOptions(purposeOptions.data)}
+                  placeholder="Any purpose"
+                  searchPlaceholder="Search purposes…"
+                  selected={filters.purposes ?? []}
+                />
+              </div>
+
+              {/* Project — multi-select, disabled until department chosen */}
+              <div className="flex flex-col gap-2">
+                <label className="text-sm uppercase font-proxima-bold">
+                  Project
+                </label>
+                <MultiSelectFilter
+                  disabled={department.length === 0}
+                  loading={projectOptions.isFetching}
+                  onChange={(vals) => setFilter('projects', vals)}
+                  options={toFilterOptions(projectOptions.data)}
+                  placeholder="Any project"
+                  searchPlaceholder="Search projects…"
+                  selected={filters.projects ?? []}
+                />
+              </div>
+
+              {/* Activity — multi-select, disabled until department chosen */}
+              <div className="flex flex-col gap-2">
+                <label className="text-sm uppercase font-proxima-bold">
+                  Activity
+                </label>
+                <MultiSelectFilter
+                  disabled={department.length === 0}
+                  loading={activityOptions.isFetching}
+                  onChange={(vals) => setFilter('activities', vals)}
+                  options={toFilterOptions(activityOptions.data)}
+                  placeholder="Any activity"
+                  searchPlaceholder="Search activities…"
+                  selected={filters.activities ?? []}
+                />
+              </div>
+            </div>
+          </section>
+
+          {/* Field selections — which child-level segments the results are grouped/displayed by */}
+          <section>
+            <h2 className="mt-4 text-xl font-proxima-bold">Table Fields</h2>
+            <p className="mb-4">
+              Choose which table fields you want to display on the report
+            </p>
+            <div className="grid items-start gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <div className="flex flex-col gap-2">
+                <MultiSelectFilter
+                  disabled={department.length === 0}
+                  onChange={setDimensions}
+                  options={GROUP_BY_OPTIONS}
+                  placeholder="Choose fields…"
+                  searchPlaceholder="Search fields…"
+                  selected={dimensions}
+                />
+              </div>
+            </div>
+          </section>
+        </div>
+
+        {/* Applied selections, Shopify-style: consolidated removable chips */}
+        <aside className="border-main-border shrink-0 self-start overflow-hidden rounded-sm border bg-white lg:w-2/5">
+          <div className="bg-light-bg-200 border-main-border border-b px-4 py-2">
+            <div className="flex items-center justify-between">
+              <h2 className="text-primary-font text-sm uppercase">
+                Active selections
+              </h2>
+              {hasSelections ? (
+                <button
+                  className="btn btn-ghost btn-xs"
+                  onClick={() => handleDeptChange([])}
+                  type="button"
+                >
+                  <TrashIcon className="h-3.5 w-3.5" />
+                  Clear all
+                </button>
+              ) : null}
+            </div>
+          </div>
+          <div className="flex flex-col gap-4 p-4">
+            <div>
+              <h3 className="text-sm uppercase font-proxima-bold">
+                Financial Dept
+              </h3>
+              {financialDepartmentRow.values.length > 0 ? (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {financialDepartmentRow.values.map((v, j) => (
+                    <Fragment key={v.code}>
+                      {j > 0 ? (
+                        <span className="text-base-content/50 text-xs italic">
+                          or
+                        </span>
+                      ) : null}
                       <span
-                        className="border-primary/40 bg-primary/10 text-primary flex min-w-0 items-center justify-between gap-2 rounded-lg border px-2.5 py-1.5 text-sm font-medium"
-                        key={c.key}
+                        className="badge badge-info badge-soft max-w-full gap-1"
+                        title={v.name}
                       >
-                        <span className="truncate">{c.display}</span>
+                        <span className="truncate">{v.code}</span>
                         <button
-                          aria-label={`Remove ${c.display}`}
-                          className="text-primary/60 hover:text-primary shrink-0"
-                          onClick={c.onRemove}
+                          aria-label={`Remove ${financialDepartmentRow.label} ${v.code}`}
+                          className="text-base-content/50 hover:text-base-content shrink-0"
+                          onClick={v.onRemove}
                           type="button"
                         >
-                          <XMarkIcon className="h-4 w-4" />
+                          <XMarkIcon className="h-3 w-3" />
                         </button>
                       </span>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-base-content/50 mt-2 text-sm">No display fields chosen.</p>
-                )}
-              </div>
-            </>
-          ) : (
-            <p className="text-base-content/60 text-sm">Nothing selected yet.</p>
-          )}
-        </div>
-      </aside>
+                    </Fragment>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-base-content/50 mt-2 text-sm">
+                  No financial department selected.
+                </p>
+              )}
+            </div>
+            <div className="border-main-border border-t pt-4">
+              <h3 className="text-sm uppercase font-proxima-bold">
+                Data Filters
+              </h3>
+              {dataFilterRows.length > 0 ? (
+                <div className="mt-2 flex flex-col gap-1.5">
+                  {dataFilterRows.map((row, i) => (
+                    <Fragment key={row.key}>
+                      {i > 0 ? (
+                        <div className="text-base-content/40 pl-1 text-xs font-semibold">
+                          AND
+                        </div>
+                      ) : null}
+                      <div className="border-base-300 bg-base-200/50 flex flex-wrap items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-sm">
+                        <span className="font-medium">{row.label}:</span>
+                        {row.values.map((v, j) => (
+                          <Fragment key={v.code}>
+                            {j > 0 ? (
+                              <span className="text-base-content/50 text-xs italic">
+                                or
+                              </span>
+                            ) : null}
+                            <span
+                              className="badge badge-info badge-soft max-w-full gap-1"
+                              title={v.name}
+                            >
+                              <span className="truncate">{v.code}</span>
+                              <button
+                                aria-label={`Remove ${row.label} ${v.code}`}
+                                className="text-base-content/50 hover:text-base-content shrink-0"
+                                onClick={v.onRemove}
+                                type="button"
+                              >
+                                <XMarkIcon className="h-3 w-3" />
+                              </button>
+                            </span>
+                          </Fragment>
+                        ))}
+                      </div>
+                    </Fragment>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-base-content/50 mt-2 text-sm">
+                  No data filters applied.
+                </p>
+              )}
+            </div>
+            <div className="border-main-border border-t pt-4">
+              <h3 className="text-sm uppercase font-proxima-bold">
+                Table Fields
+              </h3>
+              {groupByChips.length > 0 ? (
+                <div className="mt-2 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+                  {groupByChips.map((c) => (
+                    <span
+                      className="badge badge-info badge-soft max-w-full gap-1"
+                      key={c.key}
+                    >
+                      <span className="truncate">{c.display}</span>
+                      <button
+                        aria-label={`Remove ${c.display}`}
+                        className="text-primary/60 hover:text-primary shrink-0"
+                        onClick={c.onRemove}
+                        type="button"
+                      >
+                        <XMarkIcon className="h-4 w-4" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-base-content/50 mt-2 text-sm">
+                  No table fields chosen.
+                </p>
+              )}
+            </div>
+          </div>
+        </aside>
       </div>
 
       {/* Results area */}
+      <h2 className="h2 mt-16 border-t border-main-border pt-8">
+        Report results
+      </h2>
       {department.length === 0 ? (
-        <p className="text-base-content/70 mt-4">
-          Pick one or more financial departments to get started.
-        </p>
+        <p className="mt-2">No data to show.</p>
       ) : dimensions.length === 0 ? (
-        <p className="text-base-content/70 mt-4">
+        <p className="mt-2">
           Choose one or more group-by segments to see results.
         </p>
       ) : isFetching ? (
-        <p className="text-base-content/80 mt-4">Loading department balances…</p>
+        <p className="mt-2">Loading department balances…</p>
       ) : isError ? (
         <p className="text-error mt-4">Error loading department balances.</p>
       ) : (
