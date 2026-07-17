@@ -11,9 +11,7 @@ import {
 } from 'recharts';
 import { formatCurrency } from '@/lib/currency.ts';
 import {
-  PROJECT_PERSONNEL_COLOR,
-  buildProjectCategoryColorMap,
-  projectNonPersonnelCategoryColor,
+  projectExpenditureCategoryColor,
   projectSeriesColor,
 } from '@/components/project/projectChartColors.ts';
 import {
@@ -204,7 +202,6 @@ function filterCategorySpend(
 interface BurndownTooltipProps {
   active?: boolean;
   categorySpendByMonth: Map<string, CategorySpend[]>;
-  categorySpendColors: Map<string, string>;
   payload?: Array<{ payload?: ChartRow }>;
   selectedKey: string;
   selectedNonPersonnelCategory: string | null;
@@ -214,7 +211,6 @@ interface BurndownTooltipProps {
 function BurndownTooltip({
   active,
   categorySpendByMonth,
-  categorySpendColors,
   payload,
   selectedKey,
   selectedNonPersonnelCategory,
@@ -287,8 +283,7 @@ function BurndownTooltip({
                     className="inline-block h-3 w-3 shrink-0 rounded-sm"
                     style={{
                       backgroundColor:
-                        categorySpendColors.get(expenditureCategory) ??
-                        PROJECT_PERSONNEL_COLOR,
+                        projectExpenditureCategoryColor(expenditureCategory),
                     }}
                   />
                   <span className="truncate">{expenditureCategory}</span>
@@ -322,10 +317,6 @@ export function ProjectBurndownSection({
   );
   const nonPersonnelCategorySeries = useMemo(
     () => (result ? buildNonPersonnelCategorySeries(result) : []),
-    [result]
-  );
-  const categoryColors = useMemo(
-    () => (result ? buildProjectCategoryColorMap(result.categories) : new Map()),
     [result]
   );
   const chartSeries = useMemo(
@@ -368,20 +359,14 @@ export function ProjectBurndownSection({
     )
       ? selectedNonPersonnelCategory
       : null;
-  const nonPersonnelCategoryColor = (
-    expenditureCategory: string,
-    fallbackIndex: number
-  ) =>
-    categoryColors.get(expenditureCategory) ??
-    projectNonPersonnelCategoryColor(fallbackIndex);
 
   if (projectionQuery.isSuccess && series.length === 0) {
     return null;
   }
 
   const selectedRollupSeries: VisibleSeries[] = series
-    .map((entry, index) => ({
-      color: projectSeriesColor(index),
+    .map((entry) => ({
+      color: projectSeriesColor(entry.key),
       key: entry.key,
     }))
     .filter(({ key }) => key === selectedKey);
@@ -389,15 +374,15 @@ export function ProjectBurndownSection({
     selectedKey === NON_PERSONNEL_SERIES
       ? activeSelectedNonPersonnelCategory
         ? nonPersonnelCategorySeries
-            .map((entry, index) => ({
-              color: nonPersonnelCategoryColor(entry.key, index),
+            .map((entry) => ({
+              color: projectExpenditureCategoryColor(entry.key),
               key: entry.key,
             }))
             .filter(({ key }) => key === activeSelectedNonPersonnelCategory)
         : [
             ...selectedRollupSeries,
-            ...nonPersonnelCategorySeries.map((entry, index) => ({
-              color: nonPersonnelCategoryColor(entry.key, index),
+            ...nonPersonnelCategorySeries.map((entry) => ({
+              color: projectExpenditureCategoryColor(entry.key),
               key: entry.key,
               strokeWidth: 1.75,
             })),
@@ -516,7 +501,6 @@ export function ProjectBurndownSection({
                     content={
                       <BurndownTooltip
                         categorySpendByMonth={categorySpendByMonth}
-                        categorySpendColors={categoryColors}
                         selectedKey={selectedKey}
                         selectedNonPersonnelCategory={
                           activeSelectedNonPersonnelCategory
@@ -561,7 +545,7 @@ export function ProjectBurndownSection({
             </div>
 
             <div className="tabs tabs-box mt-4 inline-flex" role="tablist">
-              {series.map((entry, index) => {
+              {series.map((entry) => {
                 const isSelected = entry.key === selectedKey;
                 return (
                   <button
@@ -579,7 +563,7 @@ export function ProjectBurndownSection({
                   >
                     <span
                       className="inline-block h-3 w-3 rounded-sm mr-2"
-                      style={{ backgroundColor: projectSeriesColor(index) }}
+                      style={{ backgroundColor: projectSeriesColor(entry.key) }}
                     />
                     {entry.key}
                   </button>
@@ -595,7 +579,7 @@ export function ProjectBurndownSection({
                     className="tabs tabs-box flex w-fit flex-wrap"
                     role="tablist"
                   >
-                    {nonPersonnelCategorySeries.map((entry, index) => {
+                    {nonPersonnelCategorySeries.map((entry) => {
                       const isSelected =
                         activeSelectedNonPersonnelCategory === entry.key;
                       return (
@@ -615,7 +599,7 @@ export function ProjectBurndownSection({
                             className="inline-block h-3 w-3 rounded-sm mr-2"
                             style={{
                               backgroundColor:
-                                nonPersonnelCategoryColor(entry.key, index),
+                                projectExpenditureCategoryColor(entry.key),
                             }}
                           />
                           {entry.key}
