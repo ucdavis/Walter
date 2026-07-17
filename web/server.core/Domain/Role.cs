@@ -15,8 +15,7 @@ public class Role
         public const string AccrualViewer = "AccrualViewer";
         public const string FinancialViewer = "FinancialViewer";
         public const string ProjectManager = "ProjectManager";
-
-
+        public const string DepartmentViewer = "DepartmentViewer";
     }
 
     [Key]

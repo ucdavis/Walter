@@ -50,3 +50,11 @@ export async function fetchJson<T>(
   }
   return data as T;
 }
+
+// POST convenience wrapper; inherits fetchJson's error handling and auth redirection
+export const postJson = <T,>(
+  url: string,
+  body: unknown,
+  signal?: AbortSignal
+): Promise<T> =>
+  fetchJson<T>(url, { body: JSON.stringify(body), method: 'POST' }, signal);

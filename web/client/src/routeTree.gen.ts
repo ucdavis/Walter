@@ -31,6 +31,7 @@ import { Route as authenticatedAdminEmailPreviewRouteImport } from './routes/(au
 import { Route as authenticatedAccrualsOverviewRouteImport } from './routes/(authenticated)/accruals/overview'
 import { Route as authenticatedAccrualsAboutRouteImport } from './routes/(authenticated)/accruals/about'
 import { Route as authenticatedProjectsIamIdRouteRouteImport } from './routes/(authenticated)/projects/$iamId/route'
+import { Route as authenticatedReportsDepartmentBalancesIndexRouteImport } from './routes/(authenticated)/reports/department-balances/index'
 import { Route as authenticatedProjectsIamIdIndexRouteImport } from './routes/(authenticated)/projects/$iamId/index'
 import { Route as authenticatedProjectsByNumberProjectNumberRouteImport } from './routes/(authenticated)/projects/by-number/$projectNumber'
 import { Route as authenticatedProjectburndownIamIdProjectNumberRouteImport } from './routes/(authenticated)/projectburndown/$iamId/$projectNumber'
@@ -159,6 +160,12 @@ const authenticatedProjectsIamIdRouteRoute =
     path: '/$iamId',
     getParentRoute: () => authenticatedProjectsRouteRoute,
   } as any)
+const authenticatedReportsDepartmentBalancesIndexRoute =
+  authenticatedReportsDepartmentBalancesIndexRouteImport.update({
+    id: '/department-balances/',
+    path: '/department-balances/',
+    getParentRoute: () => authenticatedReportsRoute,
+  } as any)
 const authenticatedProjectsIamIdIndexRoute =
   authenticatedProjectsIamIdIndexRouteImport.update({
     id: '/',
@@ -235,6 +242,7 @@ export interface FileRoutesByFullPath {
   '/projectburndown/$iamId/$projectNumber': typeof authenticatedProjectburndownIamIdProjectNumberRoute
   '/projects/by-number/$projectNumber': typeof authenticatedProjectsByNumberProjectNumberRoute
   '/projects/$iamId/': typeof authenticatedProjectsIamIdIndexRoute
+  '/reports/department-balances': typeof authenticatedReportsDepartmentBalancesIndexRoute
   '/reports/reconciliation/$projectNumber/detail': typeof authenticatedReportsReconciliationProjectNumberDetailRoute
   '/projects/$iamId/$projectNumber': typeof authenticatedProjectsIamIdProjectNumberIndexRoute
   '/reports/reconciliation/$projectNumber': typeof authenticatedReportsReconciliationProjectNumberIndexRoute
@@ -263,6 +271,7 @@ export interface FileRoutesByTo {
   '/projectburndown/$iamId/$projectNumber': typeof authenticatedProjectburndownIamIdProjectNumberRoute
   '/projects/by-number/$projectNumber': typeof authenticatedProjectsByNumberProjectNumberRoute
   '/projects/$iamId': typeof authenticatedProjectsIamIdIndexRoute
+  '/reports/department-balances': typeof authenticatedReportsDepartmentBalancesIndexRoute
   '/reports/reconciliation/$projectNumber/detail': typeof authenticatedReportsReconciliationProjectNumberDetailRoute
   '/projects/$iamId/$projectNumber': typeof authenticatedProjectsIamIdProjectNumberIndexRoute
   '/reports/reconciliation/$projectNumber': typeof authenticatedReportsReconciliationProjectNumberIndexRoute
@@ -296,6 +305,7 @@ export interface FileRoutesById {
   '/(authenticated)/projectburndown/$iamId/$projectNumber': typeof authenticatedProjectburndownIamIdProjectNumberRoute
   '/(authenticated)/projects/by-number/$projectNumber': typeof authenticatedProjectsByNumberProjectNumberRoute
   '/(authenticated)/projects/$iamId/': typeof authenticatedProjectsIamIdIndexRoute
+  '/(authenticated)/reports/department-balances/': typeof authenticatedReportsDepartmentBalancesIndexRoute
   '/(authenticated)/reports/reconciliation/$projectNumber/detail': typeof authenticatedReportsReconciliationProjectNumberDetailRoute
   '/(authenticated)/projects/$iamId/$projectNumber/': typeof authenticatedProjectsIamIdProjectNumberIndexRoute
   '/(authenticated)/reports/reconciliation/$projectNumber/': typeof authenticatedReportsReconciliationProjectNumberIndexRoute
@@ -329,6 +339,7 @@ export interface FileRouteTypes {
     | '/projectburndown/$iamId/$projectNumber'
     | '/projects/by-number/$projectNumber'
     | '/projects/$iamId/'
+    | '/reports/department-balances'
     | '/reports/reconciliation/$projectNumber/detail'
     | '/projects/$iamId/$projectNumber'
     | '/reports/reconciliation/$projectNumber'
@@ -357,6 +368,7 @@ export interface FileRouteTypes {
     | '/projectburndown/$iamId/$projectNumber'
     | '/projects/by-number/$projectNumber'
     | '/projects/$iamId'
+    | '/reports/department-balances'
     | '/reports/reconciliation/$projectNumber/detail'
     | '/projects/$iamId/$projectNumber'
     | '/reports/reconciliation/$projectNumber'
@@ -389,6 +401,7 @@ export interface FileRouteTypes {
     | '/(authenticated)/projectburndown/$iamId/$projectNumber'
     | '/(authenticated)/projects/by-number/$projectNumber'
     | '/(authenticated)/projects/$iamId/'
+    | '/(authenticated)/reports/department-balances/'
     | '/(authenticated)/reports/reconciliation/$projectNumber/detail'
     | '/(authenticated)/projects/$iamId/$projectNumber/'
     | '/(authenticated)/reports/reconciliation/$projectNumber/'
@@ -555,6 +568,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authenticatedProjectsIamIdRouteRouteImport
       parentRoute: typeof authenticatedProjectsRouteRoute
     }
+    '/(authenticated)/reports/department-balances/': {
+      id: '/(authenticated)/reports/department-balances/'
+      path: '/department-balances'
+      fullPath: '/reports/department-balances'
+      preLoaderRoute: typeof authenticatedReportsDepartmentBalancesIndexRouteImport
+      parentRoute: typeof authenticatedReportsRoute
+    }
     '/(authenticated)/projects/$iamId/': {
       id: '/(authenticated)/projects/$iamId/'
       path: '/'
@@ -671,12 +691,15 @@ const authenticatedProjectsRouteRouteWithChildren =
 
 interface authenticatedReportsRouteChildren {
   authenticatedReportsIndexRoute: typeof authenticatedReportsIndexRoute
+  authenticatedReportsDepartmentBalancesIndexRoute: typeof authenticatedReportsDepartmentBalancesIndexRoute
   authenticatedReportsReconciliationProjectNumberDetailRoute: typeof authenticatedReportsReconciliationProjectNumberDetailRoute
   authenticatedReportsReconciliationProjectNumberIndexRoute: typeof authenticatedReportsReconciliationProjectNumberIndexRoute
 }
 
 const authenticatedReportsRouteChildren: authenticatedReportsRouteChildren = {
   authenticatedReportsIndexRoute: authenticatedReportsIndexRoute,
+  authenticatedReportsDepartmentBalancesIndexRoute:
+    authenticatedReportsDepartmentBalancesIndexRoute,
   authenticatedReportsReconciliationProjectNumberDetailRoute:
     authenticatedReportsReconciliationProjectNumberDetailRoute,
   authenticatedReportsReconciliationProjectNumberIndexRoute:

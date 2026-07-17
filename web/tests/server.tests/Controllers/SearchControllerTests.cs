@@ -543,5 +543,19 @@ public sealed class SearchControllerTests
         {
             throw new NotImplementedException();
         }
+
+        public Task<IReadOnlyList<DepartmentBalanceRow>> GetGlBalanceSummaryAsync(
+            DepartmentBalancesQuery query,
+            string? applicationUser = null,
+            string? emulatingUser = null,
+            CancellationToken ct = default)
+            => throw new NotImplementedException();
+
+        public Task<IReadOnlyList<DepartmentBalanceOption>> GetGlBalanceFilterOptionsAsync(
+            DepartmentBalancesOptionsQuery query,
+            string? applicationUser = null,
+            string? emulatingUser = null,
+            CancellationToken ct = default)
+            => throw new NotImplementedException();
     }
 }

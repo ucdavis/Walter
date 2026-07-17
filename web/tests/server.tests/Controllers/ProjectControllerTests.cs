@@ -412,15 +412,21 @@ public sealed class ProjectControllerTests
         private readonly SearchablePersonRecord? _person;
         private readonly ProjectProjectionResult? _projection;
         private readonly IReadOnlyList<FacultyPortfolioRecord>? _portfolio;
+        private readonly IReadOnlyList<DepartmentBalanceRow> _summaryRows;
+        private readonly IReadOnlyList<DepartmentBalanceOption> _options;
 
         public ResolvingDatamartService(
             SearchablePersonRecord? person = null,
             ProjectProjectionResult? projection = null,
-            IReadOnlyList<FacultyPortfolioRecord>? portfolio = null)
+            IReadOnlyList<FacultyPortfolioRecord>? portfolio = null,
+            IReadOnlyList<DepartmentBalanceRow>? summaryRows = null,
+            IReadOnlyList<DepartmentBalanceOption>? options = null)
         {
             _person = person;
             _projection = projection;
             _portfolio = portfolio;
+            _summaryRows = summaryRows ?? Array.Empty<DepartmentBalanceRow>();
+            _options = options ?? Array.Empty<DepartmentBalanceOption>();
         }
 
         public Task<IReadOnlyList<SearchablePersonRecord>> SearchPeopleAsync(
@@ -530,5 +536,19 @@ public sealed class ProjectControllerTests
                 ? Task.FromResult(_projection)
                 : throw new InvalidOperationException("Datamart should not be called for unauthorized users.");
         }
+
+        public Task<IReadOnlyList<DepartmentBalanceRow>> GetGlBalanceSummaryAsync(
+            DepartmentBalancesQuery query,
+            string? applicationUser = null,
+            string? emulatingUser = null,
+            CancellationToken ct = default)
+            => Task.FromResult(_summaryRows);
+
+        public Task<IReadOnlyList<DepartmentBalanceOption>> GetGlBalanceFilterOptionsAsync(
+            DepartmentBalancesOptionsQuery query,
+            string? applicationUser = null,
+            string? emulatingUser = null,
+            CancellationToken ct = default)
+            => Task.FromResult(_options);
     }
 }

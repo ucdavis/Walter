@@ -1,5 +1,22 @@
 import { describe, expect, it } from 'vitest';
-import { canViewProjectDiscrepancy } from '@/shared/auth/roleAccess.ts';
+import {
+  canAccessDepartmentBalances,
+  canViewProjectDiscrepancy,
+} from '@/shared/auth/roleAccess.ts';
+
+describe('canAccessDepartmentBalances', () => {
+  it('allows a DepartmentViewer', () => {
+    expect(canAccessDepartmentBalances(['DepartmentViewer'])).toBe(true);
+  });
+
+  it('allows an Admin (mirrors the server AdminBypassHandler)', () => {
+    expect(canAccessDepartmentBalances(['Admin'])).toBe(true);
+  });
+
+  it('denies other roles', () => {
+    expect(canAccessDepartmentBalances(['Manager', 'AccrualViewer'])).toBe(false);
+  });
+});
 
 describe('canViewProjectDiscrepancy', () => {
   it('allows the PM listed on the project to see it', () => {
