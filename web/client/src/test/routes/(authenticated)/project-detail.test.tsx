@@ -162,6 +162,38 @@ describe('project detail page', () => {
     }
   });
 
+  it('shows the ended-award alert above other project alerts', async () => {
+    const projects = [
+      createProject({
+        awardEndDate: '2000-01-15',
+        balance: -500,
+        pmEmployeeId: '2000',
+        ppmBudBal: -500,
+      }),
+    ];
+    setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);
+
+    const { cleanup } = renderRoute({
+      initialPath: '/projects/1000/P1',
+    });
+
+    try {
+      const awardEndedMessage = await screen.findByText(
+        'Award ended on 01/15/2000'
+      );
+      const negativeBalanceMessage = await screen.findByText(
+        /has a negative balance/i
+      );
+
+      expect(
+        awardEndedMessage.compareDocumentPosition(negativeBalanceMessage) &
+          Node.DOCUMENT_POSITION_FOLLOWING
+      ).toBeTruthy();
+    } finally {
+      cleanup();
+    }
+  });
+
   it('does not show an ended-award alert for invalid award end dates', async () => {
     const projects = [
       createProject({ awardEndDate: '2000-02-31', pmEmployeeId: '2000' }),

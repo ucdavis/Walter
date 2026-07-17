@@ -122,22 +122,10 @@ function ProjectContent({
       : 'balanced'
     : undefined;
   const awardEndedAlertText = getAwardEndedAlertText(summary.awardEndDate);
-  const awardEndedAlertColorClass = summary.isInternal
-    ? 'alert-accent'
-    : 'alert-info';
 
   return (
     <main className="flex-1 min-w-0">
-      {awardEndedAlertText ? (
-        <div
-          className={`alert alert-soft ${awardEndedAlertColorClass} mt-8`}
-          role="alert"
-        >
-          {awardEndedAlertText}
-        </div>
-      ) : null}
-
-      <section className={`${awardEndedAlertText ? 'mt-4' : 'mt-8'} mb-2`}>
+      <section className="mt-8 mb-2">
         <div className="mb-1">
           <span
             className={`badge font-proxima-bold badge-sm ${summary.isInternal ? 'badge-accent' : 'badge-info'}`}
@@ -158,6 +146,16 @@ function ProjectContent({
         )}
         <div className="mt-6">
           <ProjectAlerts
+            awardEndedAlert={
+              awardEndedAlertText
+                ? {
+                    colorClass: summary.isInternal
+                      ? 'alert-accent'
+                      : 'alert-info',
+                    message: awardEndedAlertText,
+                  }
+                : undefined
+            }
             iamId={iamId}
             reconciliationStatus={reconciliationStatus}
             summary={summary}

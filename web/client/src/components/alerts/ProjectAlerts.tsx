@@ -80,6 +80,10 @@ export function AlertCard({ alert, balance, linkParams }: AlertCardProps) {
 }
 
 interface ProjectAlertsProps {
+  awardEndedAlert?: {
+    colorClass: 'alert-accent' | 'alert-info';
+    message: string;
+  };
   iamId?: string;
   prefix?: string;
   reconciliationStatus?: 'balanced' | 'discrepancy';
@@ -87,6 +91,7 @@ interface ProjectAlertsProps {
 }
 
 export function ProjectAlerts({
+  awardEndedAlert,
   iamId,
   prefix,
   reconciliationStatus,
@@ -113,7 +118,7 @@ export function ProjectAlerts({
     });
   }
 
-  if (alerts.length === 0) {
+  if (!awardEndedAlert && alerts.length === 0) {
     return null;
   }
 
@@ -123,6 +128,14 @@ export function ProjectAlerts({
 
   return (
     <div className="flex flex-col gap-3">
+      {awardEndedAlert ? (
+        <div
+          className={`alert alert-soft ${awardEndedAlert.colorClass}`}
+          role="alert"
+        >
+          {awardEndedAlert.message}
+        </div>
+      ) : null}
       {alerts.map((alert) => (
         <AlertCard
           alert={alert}
