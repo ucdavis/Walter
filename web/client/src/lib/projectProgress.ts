@@ -1,3 +1,4 @@
+import { parseProjectDate } from '@/lib/date.ts';
 import type { ProjectProjectionCategory } from '@/queries/projectProjection.ts';
 
 export interface BudgetProgressSummary {
@@ -65,35 +66,6 @@ export function getCategoryBudgetProgress(
 
 function monthIndex(date: Date) {
   return date.getFullYear() * 12 + date.getMonth();
-}
-
-function isValidCalendarDate(year: number, month: number, day: number) {
-  if (month < 1 || month > 12 || day < 1) {
-    return false;
-  }
-
-  return day <= new Date(year, month, 0).getDate();
-}
-
-function parseProjectDate(value: string | null) {
-  if (!value) {
-    return null;
-  }
-
-  const dateMatch = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
-  const year = Number(dateMatch?.[1]);
-  const month = Number(dateMatch?.[2]);
-  const day = Number(dateMatch?.[3]);
-
-  if (dateMatch && !isValidCalendarDate(year, month, day)) {
-    return null;
-  }
-
-  const parsed =
-    dateMatch && value === dateMatch[0]
-      ? new Date(year, month - 1, day)
-      : new Date(value);
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
 function clamp(value: number, min: number, max: number) {

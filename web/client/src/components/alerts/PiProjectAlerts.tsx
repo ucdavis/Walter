@@ -4,6 +4,7 @@ import {
   getPiProjectAlerts,
   type PiProjectAlert,
 } from '@/lib/projectAlerts.ts';
+import { parseProjectDate } from '@/lib/date.ts';
 import {
   projectsDetailQueryOptions,
   type ManagedPiRecord,
@@ -39,11 +40,19 @@ export function usePiProjectAlerts(
     const now = new Date();
     const pisWithProjects: PiWithProjects[] = navigablePis.map((pi, index) => {
       const allProjects = projectsQueries[index]?.data ?? [];
-      const projects = allProjects.filter(
-        (p) =>
-          p.pmEmployeeId === pmEmployeeId &&
-          (!p.awardEndDate || new Date(p.awardEndDate) >= now)
-      );
+      const projects = allProjects.filter((p) => {
+        if (p.pmEmployeeId !== pmEmployeeId) {
+          return false;
+        }
+
+        if (!p.awardEndDate) {
+          return true;
+        }
+
+        const awardEndDate = parseProjectDate(p.awardEndDate);
+
+        return awardEndDate ? awardEndDate >= now : false;
+      });
       const totalBudget = projects.reduce((sum, p) => sum + p.budget, 0);
       const totalBalance = projects.reduce((sum, p) => sum + p.balance, 0);
 

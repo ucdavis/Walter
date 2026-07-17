@@ -3,7 +3,7 @@ import { Link } from '@tanstack/react-router';
 import { createColumnHelper } from '@tanstack/react-table';
 import { TableExportActions } from '@/components/TableExportActions.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
-import { formatDate } from '@/lib/date.ts';
+import { formatDate, parseProjectDate } from '@/lib/date.ts';
 import type { ProjectRecord } from '@/queries/project.ts';
 import { DataTable } from '@/shared/DataTable.tsx';
 import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
@@ -83,11 +83,9 @@ function aggregateProjects(records: ProjectRecord[]): AggregatedProject[] {
 }
 
 function isExpired(project: AggregatedProject): boolean {
-  if (!project.awardEndDate) {
-    return false;
-  }
+  const awardEndDate = parseProjectDate(project.awardEndDate);
 
-  return new Date(project.awardEndDate) < new Date();
+  return awardEndDate ? awardEndDate < new Date() : false;
 }
 
 function sortByEndDate(projects: AggregatedProject[]): AggregatedProject[] {
@@ -102,7 +100,20 @@ function sortByEndDate(projects: AggregatedProject[]): AggregatedProject[] {
       return 1;
     }
 
-    return new Date(a.awardEndDate).getTime() - new Date(b.awardEndDate).getTime();
+    const aEndDate = parseProjectDate(a.awardEndDate);
+    const bEndDate = parseProjectDate(b.awardEndDate);
+
+    if (!aEndDate && !bEndDate) {
+      return 0;
+    }
+    if (!aEndDate) {
+      return -1;
+    }
+    if (!bEndDate) {
+      return 1;
+    }
+
+    return aEndDate.getTime() - bEndDate.getTime();
   });
 }
 
@@ -209,8 +220,8 @@ export function SponsoredProjectsTable({
         cell: (info) => {
           const value = info.getValue();
           let colorClass = '';
-          if (value) {
-            const endDate = new Date(value);
+          const endDate = parseProjectDate(value);
+          if (endDate) {
             const now = new Date();
             if (endDate < now) {
               colorClass = 'text-error';

@@ -11,6 +11,7 @@ import {
 } from 'recharts';
 import { ChevronDownIcon } from '@heroicons/react/24/outline';
 import { formatCurrency } from '@/lib/currency.ts';
+import { getProjectMonth } from '@/lib/date.ts';
 import {
   projectExpenditureCategoryColor,
   projectSeriesColor,
@@ -86,14 +87,6 @@ function isValidMonth(month: number) {
   return month >= 1 && month <= 12;
 }
 
-function isValidCalendarDate(year: number, month: number, day: number) {
-  if (!isValidMonth(month) || day < 1) {
-    return false;
-  }
-
-  return day <= new Date(year, month, 0).getDate();
-}
-
 function parseMonthIndex(month: string) {
   const match = /^(\d{4})-(\d{2})$/.exec(month);
   const parsedMonth = Number(match?.[2]);
@@ -124,30 +117,7 @@ function formatMonthLabel(month: string) {
 }
 
 export function getAwardMonth(awardDate: string | null) {
-  if (!awardDate) {
-    return null;
-  }
-
-  const dateOnlyMatch = /^(\d{4})-(\d{2})-(\d{2})/.exec(awardDate);
-  const year = Number(dateOnlyMatch?.[1]);
-  const month = Number(dateOnlyMatch?.[2]);
-  const day = Number(dateOnlyMatch?.[3]);
-
-  if (dateOnlyMatch) {
-    return isValidCalendarDate(year, month, day)
-      ? `${dateOnlyMatch[1]}-${dateOnlyMatch[2]}`
-      : null;
-  }
-
-  const parsed = new Date(awardDate);
-  if (Number.isNaN(parsed.getTime())) {
-    return null;
-  }
-
-  return `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(
-    2,
-    '0'
-  )}`;
+  return getProjectMonth(awardDate);
 }
 
 // Each series renders as two lines sharing a color: a solid one over the
