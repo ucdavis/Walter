@@ -616,7 +616,15 @@ export function ProjectBurndownSection({
   return (
     <>
       <section className="mt-2 pb-4">
-        <p className="max-w-3xl mb-12">{tooltipDefinitions.projectBurndown}</p>
+        <div className="mb-6 max-w-3xl">
+          <p>{tooltipDefinitions.projectBurndown}</p>
+          <p className="mt-2 text-sm text-muted">
+            Indirect Costs (F&amp;A) are assessed based on the approved budget.
+            If budget amounts or allocations change, the indirect costs
+            assessed may also change. Please check with your account manager
+            for project-specific details.
+          </p>
+        </div>
 
         {projectionQuery.isPending && (
           <p className="text-base-content/70 mt-4">
@@ -631,9 +639,9 @@ export function ProjectBurndownSection({
         {projectionQuery.isSuccess && series.length > 0 && (
           <div>
             {stats && (
-              <div className="relative z-50 mb-6 flex flex-wrap gap-10 text-sm">
+              <div className="relative z-50 mb-6 text-sm">
                 <div
-                  className="relative z-[100]"
+                  className="relative z-[100] mb-4"
                   onBlur={(event) => {
                     const nextFocus = event.relatedTarget as Node | null;
                     if (!event.currentTarget.contains(nextFocus)) {
@@ -691,29 +699,33 @@ export function ProjectBurndownSection({
                     </div>
                   ) : null}
                 </div>
-                <div className="relative z-50">
-                  <p className="stat-label">Starting Balance</p>
-                  <p className="stat-value">
-                    {formatCurrency(stats.startingBalance)}
-                  </p>
-                </div>
-                <div>
-                  <p className="stat-label">Current Balance</p>
-                  <p className={getBalanceStatClassName(stats.currentBalance)}>
-                    {formatCurrency(stats.currentBalance)}
-                  </p>
-                </div>
-                <div>
-                  <p className="stat-label">Projected End</p>
-                  <p
-                    className={
-                      stats.projectedEnd < 0
-                        ? 'stat-value text-error'
-                        : 'stat-value'
-                    }
-                  >
-                    {formatCurrency(stats.projectedEnd)}
-                  </p>
+                <div className="flex flex-wrap gap-10">
+                  <div className="relative z-50">
+                    <p className="stat-label">Starting Balance</p>
+                    <p className="stat-value">
+                      {formatCurrency(stats.startingBalance)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="stat-label">Current Balance</p>
+                    <p
+                      className={getBalanceStatClassName(stats.currentBalance)}
+                    >
+                      {formatCurrency(stats.currentBalance)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="stat-label">Projected End</p>
+                    <p
+                      className={
+                        stats.projectedEnd < 0
+                          ? 'stat-value text-error'
+                          : 'stat-value'
+                      }
+                    >
+                      {formatCurrency(stats.projectedEnd)}
+                    </p>
+                  </div>
                 </div>
               </div>
             )}

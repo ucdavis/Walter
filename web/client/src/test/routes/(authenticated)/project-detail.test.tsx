@@ -118,6 +118,50 @@ describe('project detail page', () => {
     }
   });
 
+  it('shows a soft sponsored-color alert when the award ended in the past', async () => {
+    const projects = [
+      createProject({ awardEndDate: '2000-01-15', pmEmployeeId: '2000' }),
+    ];
+    setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);
+
+    const { cleanup } = renderRoute({
+      initialPath: '/projects/1000/P1',
+    });
+
+    try {
+      const message = await screen.findByText('Award ended on 01/15/2000');
+      const alert = message.closest('[role="alert"]');
+
+      expect(alert).toHaveClass('alert-soft', 'alert-info');
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('shows a soft internal-color alert when an internal project ended in the past', async () => {
+    const projects = [
+      createProject({
+        awardEndDate: '2000-01-15',
+        pmEmployeeId: '2000',
+        projectType: 'Internal',
+      }),
+    ];
+    setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);
+
+    const { cleanup } = renderRoute({
+      initialPath: '/projects/1000/P1',
+    });
+
+    try {
+      const message = await screen.findByText('Award ended on 01/15/2000');
+      const alert = message.closest('[role="alert"]');
+
+      expect(alert).toHaveClass('alert-soft', 'alert-accent');
+    } finally {
+      cleanup();
+    }
+  });
+
   it('hides Award Information and date fields for internal projects', async () => {
     const projects = [
       createProject({
@@ -570,6 +614,11 @@ describe('project detail page', () => {
       ).not.toBeInTheDocument();
       expect(
         screen.getByText(tooltipDefinitions.projectBurndown)
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          /Indirect Costs \(F&A\) are assessed based on the approved budget\./
+        )
       ).toBeInTheDocument();
       expect(
         screen.getByRole('link', { name: 'Expenditure Progress' })

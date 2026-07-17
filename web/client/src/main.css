@@ -73,6 +73,9 @@
 .subtitle {
   @apply text-lg font-proxima-bold uppercase text-base-content/70;
 }
+.text-muted {
+  @apply text-base-content/70;
+}
 .section-margin {
   @apply mb-20;
 }

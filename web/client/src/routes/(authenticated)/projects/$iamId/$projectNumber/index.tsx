@@ -22,6 +22,7 @@ import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
 import { tooltipDefinitions } from '@/shared/tooltips.ts';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, Link } from '@tanstack/react-router';
+import { format } from 'date-fns';
 import {
   ChartBarIcon,
   PresentationChartLineIcon,
@@ -46,6 +47,50 @@ const ProjectNotFound = ({ projectNumber }: { projectNumber: string }) => (
     </section>
   </main>
 );
+
+function parseAwardEndDate(value: string | null) {
+  if (!value) {
+    return null;
+  }
+
+  const dateOnlyMatch = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
+
+  if (dateOnlyMatch) {
+    const year = Number(dateOnlyMatch[1]);
+    const monthIndex = Number(dateOnlyMatch[2]) - 1;
+    const day = Number(dateOnlyMatch[3]);
+    const date = new Date(year, monthIndex, day);
+
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  const parsed = new Date(value);
+
+  return Number.isNaN(parsed.getTime())
+    ? null
+    : new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+}
+
+export function getAwardEndedAlertText(
+  awardEndDate: string | null,
+  today = new Date()
+) {
+  const endDate = parseAwardEndDate(awardEndDate);
+
+  if (!endDate) {
+    return null;
+  }
+
+  const todayDateOnly = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate()
+  );
+
+  return endDate < todayDateOnly
+    ? `Award ended on ${format(endDate, 'MM/dd/yyyy')}`
+    : null;
+}
 
 function ProjectContent({
   iamId,
@@ -72,10 +117,23 @@ function ProjectContent({
       ? 'discrepancy'
       : 'balanced'
     : undefined;
+  const awardEndedAlertText = getAwardEndedAlertText(summary.awardEndDate);
+  const awardEndedAlertColorClass = summary.isInternal
+    ? 'alert-accent'
+    : 'alert-info';
 
   return (
     <main className="flex-1 min-w-0">
-      <section className="mt-8 mb-2">
+      {awardEndedAlertText ? (
+        <div
+          className={`alert alert-soft ${awardEndedAlertColorClass} mt-8`}
+          role="alert"
+        >
+          {awardEndedAlertText}
+        </div>
+      ) : null}
+
+      <section className={`${awardEndedAlertText ? 'mt-4' : 'mt-8'} mb-2`}>
         <div className="mb-1">
           <span
             className={`badge font-proxima-bold badge-sm ${summary.isInternal ? 'badge-accent' : 'badge-info'}`}
