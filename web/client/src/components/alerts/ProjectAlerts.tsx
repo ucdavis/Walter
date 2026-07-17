@@ -1,5 +1,9 @@
 import { formatCurrency } from '@/lib/currency.ts';
-import { getAlertsForProject, type Alert } from '@/lib/projectAlerts.ts';
+import {
+  getAlertsForProject,
+  getAwardEndedAlert,
+  type Alert,
+} from '@/lib/projectAlerts.ts';
 import type { ProjectSummary } from '@/lib/projectSummary.ts';
 import {
   CalendarIcon,
@@ -13,7 +17,7 @@ function AlertIcon({ type }: { type: Alert['type'] }) {
   if (type === 'reconciliation-balanced') {
     return <CheckCircleIcon className="h-5 w-5" />;
   }
-  if (type === 'ending-soon') {
+  if (type === 'award-ended' || type === 'ending-soon') {
     return <CalendarIcon className="h-5 w-5" />;
   }
   if (type === 'negative-balance' || type === 'reconciliation-issue') {
@@ -93,7 +97,12 @@ export function ProjectAlerts({
   summary,
 }: ProjectAlertsProps) {
   const alerts = getAlertsForProject(summary, prefix);
+  const awardEndedAlert = getAwardEndedAlert(summary);
   const showReconciliationStatus = summary.isInternal;
+
+  if (awardEndedAlert) {
+    alerts.unshift(awardEndedAlert);
+  }
 
   if (showReconciliationStatus && reconciliationStatus === 'discrepancy') {
     alerts.push({

@@ -3,12 +3,22 @@ import { cleanup, render, screen } from '@testing-library/react';
 import {
   BalanceYAxisTick,
   VerticalMarkerLabel,
+  buildChartRows,
   buildBalanceAxisTicks,
   formatBalanceAxisTick,
-  getAwardEndMonth,
+  getAwardEndMonthIndex,
+  getBalanceStatClassName,
+  getRollingStartMonthIndex,
+  getTimelineEndMonthIndex,
+  getTimelineProjectionDate,
+  getVerticalMarkerStroke,
+  getVerticalMarkerStrokeOpacity,
 } from '@/components/project/ProjectBurndownChart.tsx';
+import type { ProjectionSeries } from '@/lib/projectProjection.ts';
 
 afterEach(cleanup);
+
+const monthIndex = (year: number, month: number) => year * 12 + month - 1;
 
 describe('ProjectBurndownChart axis helpers', () => {
   it('formats zero as dollars and compactly formats positive and negative ticks', () => {
@@ -36,23 +46,162 @@ describe('ProjectBurndownChart axis helpers', () => {
     expect(screen.getByText('$12k')).toHaveAttribute('fill', 'currentColor');
   });
 
-  it('renders a label above a vertical marker', () => {
+  it('colors negative balance stats with the error text class', () => {
+    expect(getBalanceStatClassName(-1)).toBe('stat-value text-error');
+    expect(getBalanceStatClassName(0)).toBe('stat-value');
+    expect(getBalanceStatClassName(1)).toBe('stat-value');
+  });
+
+  it('uses error color for negative vertical markers and neutral grey otherwise', () => {
+    expect(getVerticalMarkerStroke(-1)).toBe('var(--color-error)');
+    expect(getVerticalMarkerStroke(0)).toBe('var(--color-base-content)');
+    expect(getVerticalMarkerStroke(1)).toBe('var(--color-base-content)');
+    expect(getVerticalMarkerStrokeOpacity(-1)).toBe(0.7);
+    expect(getVerticalMarkerStrokeOpacity(1)).toBe(0.28);
+  });
+
+  it('renders a centered label above a vertical marker by default', () => {
     render(
       <svg>
-        <VerticalMarkerLabel labelText="Project End" viewBox={{ x: 40, y: 20 }} />
+        <VerticalMarkerLabel labelText="Today" viewBox={{ x: 40, y: 20 }} />
+      </svg>
+    );
+
+    const label = screen.getByText('Today');
+
+    expect(label).toHaveAttribute('x', '40');
+    expect(label).toHaveAttribute('y', '14');
+    expect(label).toHaveAttribute('text-anchor', 'middle');
+  });
+
+  it('right-aligns a vertical marker label inside the marker line', () => {
+    render(
+      <svg>
+        <VerticalMarkerLabel
+          align="end"
+          labelText="Project End"
+          viewBox={{ x: 40, y: 20 }}
+        />
       </svg>
     );
 
     const label = screen.getByText('Project End');
 
-    expect(label).toHaveAttribute('x', '40');
+    expect(label).toHaveAttribute('x', '36');
     expect(label).toHaveAttribute('y', '14');
+    expect(label).toHaveAttribute('text-anchor', 'end');
   });
 
-  it('gets the award end month from date-only or date-time values', () => {
-    expect(getAwardEndMonth('2026-07-31')).toBe('2026-07');
-    expect(getAwardEndMonth('2026-08-15T00:00:00Z')).toBe('2026-08');
-    expect(getAwardEndMonth(null)).toBeNull();
-    expect(getAwardEndMonth('not-a-date')).toBeNull();
+  it('gets award month indexes from date-only or date-time values', () => {
+    expect(getAwardEndMonthIndex('2026-07-31')).toBe(monthIndex(2026, 7));
+    expect(getAwardEndMonthIndex('2026-08-15T00:00:00Z')).toBe(
+      monthIndex(2026, 8)
+    );
+    expect(getAwardEndMonthIndex('2026-02-31')).toBeNull();
+    expect(getAwardEndMonthIndex(null)).toBeNull();
+  });
+
+  it('gets the rolling x-axis start three months before the reference month', () => {
+    expect(getRollingStartMonthIndex(monthIndex(2026, 6))).toBe(
+      monthIndex(2026, 3)
+    );
+    expect(getRollingStartMonthIndex(monthIndex(2026, 1))).toBe(
+      monthIndex(2025, 10)
+    );
+    expect(getRollingStartMonthIndex(null)).toBeNull();
+  });
+
+  it('gets timeline end months from project end or fixed projection windows', () => {
+    expect(
+      getTimelineEndMonthIndex(
+        'project-end',
+        monthIndex(2026, 7),
+        monthIndex(2026, 6)
+      )
+    ).toBe(monthIndex(2026, 7));
+    expect(
+      getTimelineEndMonthIndex(
+        '12-months',
+        monthIndex(2026, 7),
+        monthIndex(2026, 6)
+      )
+    ).toBe(monthIndex(2027, 6));
+    expect(
+      getTimelineEndMonthIndex(
+        '18-months',
+        monthIndex(2026, 7),
+        monthIndex(2026, 6)
+      )
+    ).toBe(monthIndex(2027, 12));
+    expect(
+      getTimelineEndMonthIndex(
+        '24-months',
+        monthIndex(2026, 7),
+        monthIndex(2026, 6)
+      )
+    ).toBe(monthIndex(2028, 6));
+    expect(
+      getTimelineEndMonthIndex('12-months', monthIndex(2026, 7), null)
+    ).toBeNull();
+  });
+
+  it('gets the projection target date for the selected timeline', () => {
+    expect(
+      getTimelineProjectionDate(
+        'project-end',
+        '2026-07-31',
+        monthIndex(2026, 6)
+      )
+    ).toBe('2026-07-31');
+    expect(
+      getTimelineProjectionDate('12-months', '2026-07-31', monthIndex(2026, 6))
+    ).toBe('2027-06-01');
+    expect(
+      getTimelineProjectionDate('12-months', '2026-07-31', null)
+    ).toBeNull();
+  });
+
+  it('pads chart rows so the x-axis spans the rolling start through project end', () => {
+    const series: ProjectionSeries[] = [
+      {
+        key: 'All Expenses',
+        points: [
+          {
+            actualAmount: 10,
+            displayPeriod: 'May-26',
+            kind: 'actual',
+            month: '2026-05',
+            projectedAmount: 0,
+            remaining: 90,
+          },
+          {
+            actualAmount: 0,
+            displayPeriod: 'Sep-26',
+            kind: 'projected',
+            month: '2026-09',
+            projectedAmount: 10,
+            remaining: 70,
+          },
+        ],
+      },
+    ];
+
+    const rows = buildChartRows(
+      series,
+      getRollingStartMonthIndex(monthIndex(2026, 6)),
+      monthIndex(2026, 7)
+    );
+
+    expect(rows.map((row) => row.month)).toEqual([
+      '2026-03',
+      '2026-04',
+      '2026-05',
+      '2026-06',
+      '2026-07',
+    ]);
+    expect(rows.map((row) => row.month)).not.toContain('2026-09');
+    expect(rows[0].label).toBe('Mar-26');
+    expect(rows.at(-1)?.label).toBe('Jul-26');
+    expect(rows[2]['All Expenses::solid']).toBe(90);
   });
 });

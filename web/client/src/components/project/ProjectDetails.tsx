@@ -22,6 +22,12 @@ interface ProjectDetailsProps {
 
 const displayValue = (value: string | null) => value ?? 'Not provided';
 
+const hasTimeline = (summary: ProjectSummary) =>
+  Boolean(summary.awardStartDate || summary.awardEndDate);
+
+const formatTimeline = (summary: ProjectSummary) =>
+  `${formatDate(summary.awardStartDate)} - ${formatDate(summary.awardEndDate)}`;
+
 export function ProjectDetails({ actions, summary }: ProjectDetailsProps) {
   return (
     <section className="section-margin">
@@ -46,18 +52,11 @@ export function ProjectDetails({ actions, summary }: ProjectDetailsProps) {
               )}
             </dd>
           </div>
-          {summary.awardStartDate && (
+          {hasTimeline(summary) && (
             <div className="flex flex-col">
               <ClockIcon className="w-4 h-4" />
-              <dt className="stat-label">Project Start</dt>
-              <dd className="stat-value">{formatDate(summary.awardStartDate)}</dd>
-            </div>
-          )}
-          {summary.awardEndDate && (
-            <div className="flex flex-col">
-              <ClockIcon className="w-4 h-4" />
-              <dt className="stat-label">Project End</dt>
-              <dd className="stat-value">{formatDate(summary.awardEndDate)}</dd>
+              <dt className="stat-label">Timeline</dt>
+              <dd className="stat-value">{formatTimeline(summary)}</dd>
             </div>
           )}
 

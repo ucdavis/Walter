@@ -1,3 +1,4 @@
+import { getProjectMonth } from '@/lib/date.ts';
 import type {
   ProjectionPeriodKind,
   ProjectProjectionPeriod,
@@ -26,6 +27,7 @@ export interface ProjectionStats {
   currentBalance: number;
   projectedEnd: number;
   projectedMonths: number;
+  startingBalance: number;
 }
 
 export interface CategorySpend {
@@ -35,14 +37,6 @@ export interface CategorySpend {
 
 function isValidMonth(month: number) {
   return month >= 1 && month <= 12;
-}
-
-function isValidCalendarDate(year: number, month: number, day: number) {
-  if (!isValidMonth(month) || day < 1) {
-    return false;
-  }
-
-  return day <= new Date(year, month, 0).getDate();
 }
 
 function parseMonthIndex(month: string) {
@@ -59,33 +53,6 @@ function parseMonthIndex(month: string) {
   }
 
   return Number(match[1]) * 12 + parsedMonth - 1;
-}
-
-function getMonthFromDate(value: string | null) {
-  if (!value) {
-    return null;
-  }
-
-  const dateMatch = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
-  const year = Number(dateMatch?.[1]);
-  const month = Number(dateMatch?.[2]);
-  const day = Number(dateMatch?.[3]);
-
-  if (dateMatch) {
-    return isValidCalendarDate(year, month, day)
-      ? `${dateMatch[1]}-${dateMatch[2]}`
-      : null;
-  }
-
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return null;
-  }
-
-  return `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(
-    2,
-    '0'
-  )}`;
 }
 
 export function getProjectionTransitionMonth(
@@ -216,7 +183,7 @@ function getProjectedEnd(
 ) {
   const months = [...new Set(result.periods.map((p) => p.month))].sort();
   const lastMonth = months.at(-1);
-  const targetMonth = getMonthFromDate(awardEndDate);
+  const targetMonth = getProjectMonth(awardEndDate);
 
   if (lastMonth === undefined) {
     return currentBalance;
@@ -275,6 +242,10 @@ export function getProjectionStats(
   result: ProjectProjectionResult,
   awardEndDate: string | null = null
 ): ProjectionStats {
+  const startingBalance = result.categories.reduce(
+    (sum, category) => sum + category.budget,
+    0
+  );
   const currentBalance = result.categories.reduce(
     (sum, category) => sum + category.remainingNow,
     0
@@ -284,5 +255,5 @@ export function getProjectionStats(
     result.periods.filter((p) => p.kind === 'projected').map((p) => p.month)
   ).size;
 
-  return { currentBalance, projectedEnd, projectedMonths };
+  return { currentBalance, projectedEnd, projectedMonths, startingBalance };
 }

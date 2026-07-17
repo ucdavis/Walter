@@ -8,7 +8,10 @@ import { summarizeProjectByNumber } from '@/lib/projectSummary.ts';
 import { featureFlagsQueryOptions } from '@/queries/featureFlags.ts';
 import { projectsDetailQueryOptions } from '@/queries/project.ts';
 import { useUser } from '@/shared/auth/UserContext.tsx';
-import { ArrowLeftIcon } from '@heroicons/react/24/outline';
+import {
+  ChartBarIcon,
+  ClipboardDocumentListIcon,
+} from '@heroicons/react/24/outline';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import {
   createFileRoute,
@@ -61,21 +64,32 @@ function RouteComponent() {
     );
   }
 
-  const burndownAvailable =
-    !summary.isInternal && featureFlags.burndownEnabled;
+  const burndownAvailable = !summary.isInternal && featureFlags.burndownEnabled;
 
   return (
     <ProjectPortfolioLayout>
       <main className="flex-1 min-w-0">
-        <section className="mt-8 mb-6">
-          <Link
-            className="btn btn-sm mb-4"
-            params={{ iamId, projectNumber: summary.projectNumber }}
-            to="/projects/$iamId/$projectNumber"
-          >
-            <ArrowLeftIcon className="h-4 w-4" />
-            Back to Project Details
-          </Link>
+        <section className="mt-8 mb-2">
+          <div className="mb-4 flex flex-wrap gap-2">
+            <Link
+              className="btn btn-sm"
+              params={{ iamId, projectNumber: summary.projectNumber }}
+              to="/projects/$iamId/$projectNumber"
+            >
+              <ClipboardDocumentListIcon className="h-4 w-4" />
+              Project Details
+            </Link>
+            {!summary.isInternal && featureFlags.expenditureProgressEnabled ? (
+              <Link
+                className="btn btn-sm"
+                params={{ iamId, projectNumber: summary.projectNumber }}
+                to="/expenditureprogress/$iamId/$projectNumber"
+              >
+                <ChartBarIcon className="h-4 w-4" />
+                Expenditure Progress
+              </Link>
+            ) : null}
+          </div>
 
           <h1 className="h1">Project Burndown</h1>
           <h2 className="subtitle max-w-5xl">{summary.displayName}</h2>
@@ -95,10 +109,7 @@ function RouteComponent() {
   );
 }
 
-function ProjectBurndownErrorBoundary({
-  error,
-  reset,
-}: ErrorComponentProps) {
+function ProjectBurndownErrorBoundary({ error, reset }: ErrorComponentProps) {
   const user = useUser();
   const presentation = getErrorPresentation(error, {
     403: {

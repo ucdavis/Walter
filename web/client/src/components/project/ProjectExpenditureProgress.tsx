@@ -356,7 +356,7 @@ export function ProjectExpenditureProgress({
   return (
     <section
       aria-label="Project Expenditure Progress"
-      className="mt-8 pb-8"
+      className="mt-2 pb-4"
       data-testid="project-expenditure-progress"
     >
       <p className="mb-6 max-w-3xl">
