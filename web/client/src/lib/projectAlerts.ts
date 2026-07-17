@@ -3,17 +3,72 @@ import {
   type ProjectSummary,
 } from '@/lib/projectSummary.ts';
 import type { PiWithProjects, ProjectRecord } from '@/queries/project.ts';
+import { format } from 'date-fns';
 
 export interface Alert {
   id: string;
   message: string;
-  severity: 'error' | 'success' | 'warning';
+  severity: 'accent' | 'error' | 'info' | 'success' | 'warning';
   type:
+    | 'award-ended'
     | 'negative-balance'
     | 'low-budget'
     | 'ending-soon'
     | 'reconciliation-issue'
     | 'reconciliation-balanced';
+}
+
+function parseAwardEndDate(value: string | null) {
+  if (!value) {
+    return null;
+  }
+
+  const dateOnlyMatch = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
+
+  if (dateOnlyMatch) {
+    const year = Number(dateOnlyMatch[1]);
+    const monthIndex = Number(dateOnlyMatch[2]) - 1;
+    const day = Number(dateOnlyMatch[3]);
+    const date = new Date(year, monthIndex, day);
+    const isSameCalendarDate =
+      date.getFullYear() === year &&
+      date.getMonth() === monthIndex &&
+      date.getDate() === day;
+
+    return Number.isNaN(date.getTime()) || !isSameCalendarDate ? null : date;
+  }
+
+  const parsed = new Date(value);
+
+  return Number.isNaN(parsed.getTime())
+    ? null
+    : new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+}
+
+export function getAwardEndedAlert(
+  summary: ProjectSummary,
+  today = new Date()
+): Alert | null {
+  const endDate = parseAwardEndDate(summary.awardEndDate);
+
+  if (!endDate) {
+    return null;
+  }
+
+  const todayDateOnly = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate()
+  );
+
+  return endDate < todayDateOnly
+    ? {
+        id: `award-ended-${summary.projectNumber}`,
+        message: `Award ended on ${format(endDate, 'MM/dd/yyyy')}`,
+        severity: summary.isInternal ? 'accent' : 'info',
+        type: 'award-ended',
+      }
+    : null;
 }
 
 /**

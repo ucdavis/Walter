@@ -1,5 +1,9 @@
 import { formatCurrency } from '@/lib/currency.ts';
-import { getAlertsForProject, type Alert } from '@/lib/projectAlerts.ts';
+import {
+  getAlertsForProject,
+  getAwardEndedAlert,
+  type Alert,
+} from '@/lib/projectAlerts.ts';
 import type { ProjectSummary } from '@/lib/projectSummary.ts';
 import {
   CalendarIcon,
@@ -13,7 +17,7 @@ function AlertIcon({ type }: { type: Alert['type'] }) {
   if (type === 'reconciliation-balanced') {
     return <CheckCircleIcon className="h-5 w-5" />;
   }
-  if (type === 'ending-soon') {
+  if (type === 'award-ended' || type === 'ending-soon') {
     return <CalendarIcon className="h-5 w-5" />;
   }
   if (type === 'negative-balance' || type === 'reconciliation-issue') {
@@ -80,10 +84,6 @@ export function AlertCard({ alert, balance, linkParams }: AlertCardProps) {
 }
 
 interface ProjectAlertsProps {
-  awardEndedAlert?: {
-    colorClass: 'alert-accent' | 'alert-info';
-    message: string;
-  };
   iamId?: string;
   prefix?: string;
   reconciliationStatus?: 'balanced' | 'discrepancy';
@@ -91,14 +91,18 @@ interface ProjectAlertsProps {
 }
 
 export function ProjectAlerts({
-  awardEndedAlert,
   iamId,
   prefix,
   reconciliationStatus,
   summary,
 }: ProjectAlertsProps) {
   const alerts = getAlertsForProject(summary, prefix);
+  const awardEndedAlert = getAwardEndedAlert(summary);
   const showReconciliationStatus = summary.isInternal;
+
+  if (awardEndedAlert) {
+    alerts.unshift(awardEndedAlert);
+  }
 
   if (showReconciliationStatus && reconciliationStatus === 'discrepancy') {
     alerts.push({
@@ -118,7 +122,7 @@ export function ProjectAlerts({
     });
   }
 
-  if (!awardEndedAlert && alerts.length === 0) {
+  if (alerts.length === 0) {
     return null;
   }
 
@@ -128,14 +132,6 @@ export function ProjectAlerts({
 
   return (
     <div className="flex flex-col gap-3">
-      {awardEndedAlert ? (
-        <div
-          className={`alert alert-soft ${awardEndedAlert.colorClass}`}
-          role="alert"
-        >
-          {awardEndedAlert.message}
-        </div>
-      ) : null}
       {alerts.map((alert) => (
         <AlertCard
           alert={alert}
