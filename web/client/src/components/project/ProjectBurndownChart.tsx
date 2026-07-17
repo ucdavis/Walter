@@ -37,6 +37,7 @@ const ERROR_MARKER_OPACITY = 0.7;
 const NEUTRAL_MARKER_OPACITY = 0.28;
 const CHART_TOOLTIP_Z_INDEX = 60;
 const Y_AXIS_TICK_COUNT = 6;
+const DENSE_TIMELINE_TICK_ANGLE = -35;
 const MONTH_LABELS = [
   'Jan',
   'Feb',
@@ -96,14 +97,15 @@ function monthFromIndex(index: number) {
   return `${year}-${String(month).padStart(2, '0')}`;
 }
 
-function formatMonthLabel(month: string) {
-  const monthNumber = Number(month.slice(5, 7));
+function formatMonthLabel(index: number) {
+  const year = Math.floor(index / 12);
+  const month = index % 12;
 
-  return `${MONTH_LABELS[monthNumber - 1]}-${month.slice(2, 4)}`;
+  return `${MONTH_LABELS[month]}-${String(year).slice(-2)}`;
 }
 
-export function getAwardMonth(awardDate: string | null) {
-  return awardDate?.slice(0, 7) ?? null;
+export function getAwardEndMonthIndex(awardEndDate: string | null) {
+  return awardEndDate ? getMonthIndex(awardEndDate.slice(0, 7)) : null;
 }
 
 // Each series renders as two lines sharing a color: a solid one over the
@@ -111,8 +113,8 @@ export function getAwardMonth(awardDate: string | null) {
 // include the blended (current) month so the segments connect there.
 export function buildChartRows(
   series: ProjectionSeries[],
-  startMonth: string | null = null,
-  endMonth: string | null = null
+  startMonthIndex: number | null = null,
+  endMonthIndex: number | null = null
 ): ChartRow[] {
   const rows = new Map<string, ChartRow>();
 
@@ -129,16 +131,15 @@ export function buildChartRows(
     }
   }
 
-  const months = [...rows.keys()].sort();
-  const firstMonth = startMonth ?? months[0];
-  const lastMonth = endMonth ?? months.at(-1);
+  const monthIndexes = [...rows.keys()]
+    .map(getMonthIndex)
+    .sort((a, b) => a - b);
+  const firstMonthIndex = startMonthIndex ?? monthIndexes[0];
+  const lastMonthIndex = endMonthIndex ?? monthIndexes.at(-1);
 
-  if (!firstMonth || !lastMonth) {
+  if (firstMonthIndex === undefined || lastMonthIndex === undefined) {
     return [...rows.values()].sort((a, b) => a.month.localeCompare(b.month));
   }
-
-  const firstMonthIndex = getMonthIndex(firstMonth);
-  const lastMonthIndex = getMonthIndex(lastMonth);
 
   if (firstMonthIndex <= lastMonthIndex) {
     for (let index = firstMonthIndex; index <= lastMonthIndex; index += 1) {
@@ -146,7 +147,7 @@ export function buildChartRows(
       rows.set(
         month,
         rows.get(month) ??
-          ({ label: formatMonthLabel(month), month } as ChartRow)
+          ({ label: formatMonthLabel(index), month } as ChartRow)
       );
     }
   }
@@ -161,19 +162,16 @@ export function buildChartRows(
 
   return sortedRows.filter((row) => {
     const monthIndex = getMonthIndex(row.month);
-    return (
-      monthIndex >= firstMonthIndex &&
-      monthIndex <= lastMonthIndex
-    );
+    return monthIndex >= firstMonthIndex && monthIndex <= lastMonthIndex;
   });
 }
 
-export function getRollingStartMonth(referenceMonth: string | null) {
-  if (!referenceMonth) {
+export function getRollingStartMonthIndex(referenceMonthIndex: number | null) {
+  if (referenceMonthIndex === null) {
     return null;
   }
 
-  return monthFromIndex(getMonthIndex(referenceMonth) - 3);
+  return referenceMonthIndex - 3;
 }
 
 function getTimelineMonthCount(timeline: TimelineOption) {
@@ -189,36 +187,42 @@ function getTimelineMonthCount(timeline: TimelineOption) {
   }
 }
 
-export function getTimelineEndMonth(
+export function getTimelineEndMonthIndex(
   timeline: TimelineOption,
-  projectEndMonth: string | null,
-  referenceMonth: string | null
+  projectEndMonthIndex: number | null,
+  referenceMonthIndex: number | null
 ) {
   const timelineMonthCount = getTimelineMonthCount(timeline);
 
   if (timelineMonthCount === null) {
-    return projectEndMonth;
+    return projectEndMonthIndex;
   }
 
-  if (!referenceMonth) {
+  if (referenceMonthIndex === null) {
     return null;
   }
 
-  return monthFromIndex(getMonthIndex(referenceMonth) + timelineMonthCount);
+  return referenceMonthIndex + timelineMonthCount;
 }
 
 export function getTimelineProjectionDate(
   timeline: TimelineOption,
   awardEndDate: string | null,
-  referenceMonth: string | null
+  referenceMonthIndex: number | null
 ) {
   if (timeline === 'project-end') {
     return awardEndDate;
   }
 
-  const timelineEndMonth = getTimelineEndMonth(timeline, null, referenceMonth);
+  const timelineEndMonthIndex = getTimelineEndMonthIndex(
+    timeline,
+    null,
+    referenceMonthIndex
+  );
 
-  return timelineEndMonth ? `${timelineEndMonth}-01` : null;
+  return timelineEndMonthIndex === null
+    ? null
+    : `${monthFromIndex(timelineEndMonthIndex)}-01`;
 }
 
 function categoryDisplayName(expenditureCategory: string) {
@@ -314,10 +318,6 @@ export function VerticalMarkerLabel({
       {labelText}
     </text>
   );
-}
-
-export function getAwardEndMonth(awardEndDate: string | null) {
-  return getAwardMonth(awardEndDate);
 }
 
 function filterCategorySpend(
@@ -468,39 +468,56 @@ export function ProjectBurndownSection({
   const [selectedTimeline, setSelectedTimeline] =
     useState<TimelineOption>('project-end');
   const [isTimelineMenuOpen, setIsTimelineMenuOpen] = useState(false);
-  const awardEndMonth = useMemo(
-    () => getAwardEndMonth(awardEndDate),
+  const awardEndMonthIndex = useMemo(
+    () => getAwardEndMonthIndex(awardEndDate),
     [awardEndDate]
+  );
+  const awardEndMonth = useMemo(
+    () =>
+      awardEndMonthIndex === null ? null : monthFromIndex(awardEndMonthIndex),
+    [awardEndMonthIndex]
   );
   const projectionTransitionMonth = useMemo(
     () => (result ? getProjectionTransitionMonth(result) : null),
     [result]
   );
-  const rollingStartMonth = useMemo(
-    () => getRollingStartMonth(projectionTransitionMonth),
+  const projectionTransitionMonthIndex = useMemo(
+    () =>
+      projectionTransitionMonth
+        ? getMonthIndex(projectionTransitionMonth)
+        : null,
     [projectionTransitionMonth]
   );
-  const timelineEndMonth = useMemo(
+  const rollingStartMonthIndex = useMemo(
+    () => getRollingStartMonthIndex(projectionTransitionMonthIndex),
+    [projectionTransitionMonthIndex]
+  );
+  const timelineEndMonthIndex = useMemo(
     () =>
-      getTimelineEndMonth(
+      getTimelineEndMonthIndex(
         selectedTimeline,
-        awardEndMonth,
-        projectionTransitionMonth
+        awardEndMonthIndex,
+        projectionTransitionMonthIndex
       ),
-    [awardEndMonth, projectionTransitionMonth, selectedTimeline]
+    [awardEndMonthIndex, projectionTransitionMonthIndex, selectedTimeline]
   );
   const timelineProjectionDate = useMemo(
     () =>
       getTimelineProjectionDate(
         selectedTimeline,
         awardEndDate,
-        projectionTransitionMonth
+        projectionTransitionMonthIndex
       ),
-    [awardEndDate, projectionTransitionMonth, selectedTimeline]
+    [awardEndDate, projectionTransitionMonthIndex, selectedTimeline]
   );
   const chartRows = useMemo(
-    () => buildChartRows(chartSeries, rollingStartMonth, timelineEndMonth),
-    [chartSeries, rollingStartMonth, timelineEndMonth]
+    () =>
+      buildChartRows(
+        chartSeries,
+        rollingStartMonthIndex,
+        timelineEndMonthIndex
+      ),
+    [chartSeries, rollingStartMonthIndex, timelineEndMonthIndex]
   );
   const labelsByMonth = useMemo(
     () => new Map(chartRows.map((row) => [row.month, row.label])),
@@ -580,6 +597,7 @@ export function ProjectBurndownSection({
   const selectedTimelineLabel =
     TIMELINE_OPTIONS.find((option) => option.value === selectedTimeline)
       ?.label ?? TIMELINE_OPTIONS[0].label;
+  const useDenseXAxisTicks = selectedTimeline === '24-months';
 
   return (
     <>
@@ -588,9 +606,9 @@ export function ProjectBurndownSection({
           <p>{tooltipDefinitions.projectBurndown}</p>
           <p className="mt-2 text-sm text-muted">
             Indirect Costs (F&amp;A) are assessed based on the approved budget.
-            If budget amounts or allocations change, the indirect costs
-            assessed may also change. Please check with your account manager
-            for project-specific details.
+            If budget amounts or allocations change, the indirect costs assessed
+            may also change. Please check with your account manager for
+            project-specific details.
           </p>
         </div>
 
@@ -708,12 +726,20 @@ export function ProjectBurndownSection({
                 >
                   <CartesianGrid stroke={GRID_COLOR} strokeDasharray="3 3" />
                   <XAxis
+                    angle={useDenseXAxisTicks ? DENSE_TIMELINE_TICK_ANGLE : 0}
                     dataKey="month"
-                    interval="preserveStartEnd"
-                    tick={{ fill: 'currentColor', fontSize: 12 }}
+                    height={useDenseXAxisTicks ? 56 : undefined}
+                    interval={useDenseXAxisTicks ? 0 : 'preserveStartEnd'}
+                    minTickGap={useDenseXAxisTicks ? 0 : undefined}
+                    tick={{
+                      fill: 'currentColor',
+                      fontSize: useDenseXAxisTicks ? 10 : 12,
+                      textAnchor: useDenseXAxisTicks ? 'end' : 'middle',
+                    }}
                     tickFormatter={(value: string) =>
                       labelsByMonth.get(value) ?? value
                     }
+                    tickMargin={useDenseXAxisTicks ? 10 : undefined}
                   />
                   <YAxis
                     domain={[

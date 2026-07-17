@@ -6,10 +6,10 @@ import {
   buildChartRows,
   buildBalanceAxisTicks,
   formatBalanceAxisTick,
-  getAwardEndMonth,
+  getAwardEndMonthIndex,
   getBalanceStatClassName,
-  getRollingStartMonth,
-  getTimelineEndMonth,
+  getRollingStartMonthIndex,
+  getTimelineEndMonthIndex,
   getTimelineProjectionDate,
   getVerticalMarkerStroke,
   getVerticalMarkerStrokeOpacity,
@@ -17,6 +17,8 @@ import {
 import type { ProjectionSeries } from '@/lib/projectProjection.ts';
 
 afterEach(cleanup);
+
+const monthIndex = (year: number, month: number) => year * 12 + month - 1;
 
 describe('ProjectBurndownChart axis helpers', () => {
   it('formats zero as dollars and compactly formats positive and negative ticks', () => {
@@ -90,40 +92,68 @@ describe('ProjectBurndownChart axis helpers', () => {
     expect(label).toHaveAttribute('text-anchor', 'end');
   });
 
-  it('gets award months from date-only or date-time values', () => {
-    expect(getAwardEndMonth('2026-07-31')).toBe('2026-07');
-    expect(getAwardEndMonth('2026-08-15T00:00:00Z')).toBe('2026-08');
-    expect(getAwardEndMonth(null)).toBeNull();
+  it('gets award month indexes from date-only or date-time values', () => {
+    expect(getAwardEndMonthIndex('2026-07-31')).toBe(monthIndex(2026, 7));
+    expect(getAwardEndMonthIndex('2026-08-15T00:00:00Z')).toBe(
+      monthIndex(2026, 8)
+    );
+    expect(getAwardEndMonthIndex(null)).toBeNull();
   });
 
   it('gets the rolling x-axis start three months before the reference month', () => {
-    expect(getRollingStartMonth('2026-06')).toBe('2026-03');
-    expect(getRollingStartMonth('2026-01')).toBe('2025-10');
-    expect(getRollingStartMonth(null)).toBeNull();
+    expect(getRollingStartMonthIndex(monthIndex(2026, 6))).toBe(
+      monthIndex(2026, 3)
+    );
+    expect(getRollingStartMonthIndex(monthIndex(2026, 1))).toBe(
+      monthIndex(2025, 10)
+    );
+    expect(getRollingStartMonthIndex(null)).toBeNull();
   });
 
   it('gets timeline end months from project end or fixed projection windows', () => {
-    expect(getTimelineEndMonth('project-end', '2026-07', '2026-06')).toBe(
-      '2026-07'
-    );
-    expect(getTimelineEndMonth('12-months', '2026-07', '2026-06')).toBe(
-      '2027-06'
-    );
-    expect(getTimelineEndMonth('18-months', '2026-07', '2026-06')).toBe(
-      '2027-12'
-    );
-    expect(getTimelineEndMonth('24-months', '2026-07', '2026-06')).toBe(
-      '2028-06'
-    );
-    expect(getTimelineEndMonth('12-months', '2026-07', null)).toBeNull();
+    expect(
+      getTimelineEndMonthIndex(
+        'project-end',
+        monthIndex(2026, 7),
+        monthIndex(2026, 6)
+      )
+    ).toBe(monthIndex(2026, 7));
+    expect(
+      getTimelineEndMonthIndex(
+        '12-months',
+        monthIndex(2026, 7),
+        monthIndex(2026, 6)
+      )
+    ).toBe(monthIndex(2027, 6));
+    expect(
+      getTimelineEndMonthIndex(
+        '18-months',
+        monthIndex(2026, 7),
+        monthIndex(2026, 6)
+      )
+    ).toBe(monthIndex(2027, 12));
+    expect(
+      getTimelineEndMonthIndex(
+        '24-months',
+        monthIndex(2026, 7),
+        monthIndex(2026, 6)
+      )
+    ).toBe(monthIndex(2028, 6));
+    expect(
+      getTimelineEndMonthIndex('12-months', monthIndex(2026, 7), null)
+    ).toBeNull();
   });
 
   it('gets the projection target date for the selected timeline', () => {
     expect(
-      getTimelineProjectionDate('project-end', '2026-07-31', '2026-06')
+      getTimelineProjectionDate(
+        'project-end',
+        '2026-07-31',
+        monthIndex(2026, 6)
+      )
     ).toBe('2026-07-31');
     expect(
-      getTimelineProjectionDate('12-months', '2026-07-31', '2026-06')
+      getTimelineProjectionDate('12-months', '2026-07-31', monthIndex(2026, 6))
     ).toBe('2027-06-01');
     expect(
       getTimelineProjectionDate('12-months', '2026-07-31', null)
@@ -157,8 +187,8 @@ describe('ProjectBurndownChart axis helpers', () => {
 
     const rows = buildChartRows(
       series,
-      getRollingStartMonth('2026-06'),
-      '2026-07'
+      getRollingStartMonthIndex(monthIndex(2026, 6)),
+      monthIndex(2026, 7)
     );
 
     expect(rows.map((row) => row.month)).toEqual([
