@@ -11,7 +11,6 @@ import {
 } from 'recharts';
 import { ChevronDownIcon } from '@heroicons/react/24/outline';
 import { formatCurrency } from '@/lib/currency.ts';
-import { getProjectMonth } from '@/lib/date.ts';
 import {
   projectExpenditureCategoryColor,
   projectSeriesColor,
@@ -83,19 +82,11 @@ type ReferenceLineLabelProps = {
 };
 export type TimelineOption = (typeof TIMELINE_OPTIONS)[number]['value'];
 
-function isValidMonth(month: number) {
-  return month >= 1 && month <= 12;
-}
+function getMonthIndex(month: string) {
+  const year = Number(month.slice(0, 4));
+  const monthNumber = Number(month.slice(5, 7));
 
-function parseMonthIndex(month: string) {
-  const match = /^(\d{4})-(\d{2})$/.exec(month);
-  const parsedMonth = Number(match?.[2]);
-
-  if (!match || !isValidMonth(parsedMonth)) {
-    return null;
-  }
-
-  return Number(match[1]) * 12 + parsedMonth - 1;
+  return year * 12 + monthNumber - 1;
 }
 
 function monthFromIndex(index: number) {
@@ -106,18 +97,13 @@ function monthFromIndex(index: number) {
 }
 
 function formatMonthLabel(month: string) {
-  const match = /^(\d{4})-(\d{2})$/.exec(month);
-  const parsedMonth = Number(match?.[2]);
+  const monthNumber = Number(month.slice(5, 7));
 
-  if (!match || !isValidMonth(parsedMonth)) {
-    return month;
-  }
-
-  return `${MONTH_LABELS[parsedMonth - 1]}-${match[1].slice(-2)}`;
+  return `${MONTH_LABELS[monthNumber - 1]}-${month.slice(2, 4)}`;
 }
 
 export function getAwardMonth(awardDate: string | null) {
-  return getProjectMonth(awardDate);
+  return awardDate?.slice(0, 7) ?? null;
 }
 
 // Each series renders as two lines sharing a color: a solid one over the
@@ -146,14 +132,15 @@ export function buildChartRows(
   const months = [...rows.keys()].sort();
   const firstMonth = startMonth ?? months[0];
   const lastMonth = endMonth ?? months.at(-1);
-  const firstMonthIndex = firstMonth ? parseMonthIndex(firstMonth) : null;
-  const lastMonthIndex = lastMonth ? parseMonthIndex(lastMonth) : null;
 
-  if (
-    firstMonthIndex !== null &&
-    lastMonthIndex !== null &&
-    firstMonthIndex <= lastMonthIndex
-  ) {
+  if (!firstMonth || !lastMonth) {
+    return [...rows.values()].sort((a, b) => a.month.localeCompare(b.month));
+  }
+
+  const firstMonthIndex = getMonthIndex(firstMonth);
+  const lastMonthIndex = getMonthIndex(lastMonth);
+
+  if (firstMonthIndex <= lastMonthIndex) {
     for (let index = firstMonthIndex; index <= lastMonthIndex; index += 1) {
       const month = monthFromIndex(index);
       rows.set(
@@ -168,18 +155,13 @@ export function buildChartRows(
     a.month.localeCompare(b.month)
   );
 
-  if (
-    firstMonthIndex === null ||
-    lastMonthIndex === null ||
-    firstMonthIndex > lastMonthIndex
-  ) {
+  if (firstMonthIndex > lastMonthIndex) {
     return sortedRows;
   }
 
   return sortedRows.filter((row) => {
-    const monthIndex = parseMonthIndex(row.month);
+    const monthIndex = getMonthIndex(row.month);
     return (
-      monthIndex !== null &&
       monthIndex >= firstMonthIndex &&
       monthIndex <= lastMonthIndex
     );
@@ -191,11 +173,7 @@ export function getRollingStartMonth(referenceMonth: string | null) {
     return null;
   }
 
-  const referenceMonthIndex = parseMonthIndex(referenceMonth);
-
-  return referenceMonthIndex === null
-    ? null
-    : monthFromIndex(referenceMonthIndex - 3);
+  return monthFromIndex(getMonthIndex(referenceMonth) - 3);
 }
 
 function getTimelineMonthCount(timeline: TimelineOption) {
@@ -222,13 +200,11 @@ export function getTimelineEndMonth(
     return projectEndMonth;
   }
 
-  const referenceMonthIndex = referenceMonth
-    ? parseMonthIndex(referenceMonth)
-    : null;
+  if (!referenceMonth) {
+    return null;
+  }
 
-  return referenceMonthIndex === null
-    ? null
-    : monthFromIndex(referenceMonthIndex + timelineMonthCount);
+  return monthFromIndex(getMonthIndex(referenceMonth) + timelineMonthCount);
 }
 
 export function getTimelineProjectionDate(

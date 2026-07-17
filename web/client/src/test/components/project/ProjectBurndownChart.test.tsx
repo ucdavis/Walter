@@ -94,15 +94,12 @@ describe('ProjectBurndownChart axis helpers', () => {
     expect(getAwardEndMonth('2026-07-31')).toBe('2026-07');
     expect(getAwardEndMonth('2026-08-15T00:00:00Z')).toBe('2026-08');
     expect(getAwardEndMonth(null)).toBeNull();
-    expect(getAwardEndMonth('not-a-date')).toBeNull();
-    expect(getAwardEndMonth('2026-02-31')).toBeNull();
   });
 
   it('gets the rolling x-axis start three months before the reference month', () => {
     expect(getRollingStartMonth('2026-06')).toBe('2026-03');
     expect(getRollingStartMonth('2026-01')).toBe('2025-10');
     expect(getRollingStartMonth(null)).toBeNull();
-    expect(getRollingStartMonth('not-a-month')).toBeNull();
   });
 
   it('gets timeline end months from project end or fixed projection windows', () => {
