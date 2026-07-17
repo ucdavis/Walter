@@ -32,9 +32,24 @@ import { tooltipDefinitions } from '@/shared/tooltips.ts';
 const GRID_COLOR = 'var(--color-main-border)';
 const ZERO_LINE_COLOR = 'var(--color-error)';
 const PROJECTION_TRANSITION_LINE_COLOR = 'var(--color-base-content)';
+const AWARD_START_LINE_COLOR = 'var(--color-secondary)';
 const AWARD_END_LINE_COLOR = 'var(--color-accent)';
 const CHART_TOOLTIP_Z_INDEX = 60;
 const Y_AXIS_TICK_COUNT = 6;
+const MONTH_LABELS = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+];
 
 type ChartRow = { label: string; month: string } & Record<
   string,
@@ -58,10 +73,82 @@ type ReferenceLineLabelProps = {
   };
 };
 
+function isValidMonth(month: number) {
+  return month >= 1 && month <= 12;
+}
+
+function isValidCalendarDate(year: number, month: number, day: number) {
+  if (!isValidMonth(month) || day < 1) {
+    return false;
+  }
+
+  return day <= new Date(year, month, 0).getDate();
+}
+
+function parseMonthIndex(month: string) {
+  const match = /^(\d{4})-(\d{2})$/.exec(month);
+  const parsedMonth = Number(match?.[2]);
+
+  if (!match || !isValidMonth(parsedMonth)) {
+    return null;
+  }
+
+  return Number(match[1]) * 12 + parsedMonth - 1;
+}
+
+function monthFromIndex(index: number) {
+  const year = Math.floor(index / 12);
+  const month = (index % 12) + 1;
+
+  return `${year}-${String(month).padStart(2, '0')}`;
+}
+
+function formatMonthLabel(month: string) {
+  const match = /^(\d{4})-(\d{2})$/.exec(month);
+  const parsedMonth = Number(match?.[2]);
+
+  if (!match || !isValidMonth(parsedMonth)) {
+    return month;
+  }
+
+  return `${MONTH_LABELS[parsedMonth - 1]}-${match[1].slice(-2)}`;
+}
+
+export function getAwardMonth(awardDate: string | null) {
+  if (!awardDate) {
+    return null;
+  }
+
+  const dateOnlyMatch = /^(\d{4})-(\d{2})-(\d{2})/.exec(awardDate);
+  const year = Number(dateOnlyMatch?.[1]);
+  const month = Number(dateOnlyMatch?.[2]);
+  const day = Number(dateOnlyMatch?.[3]);
+
+  if (dateOnlyMatch) {
+    return isValidCalendarDate(year, month, day)
+      ? `${dateOnlyMatch[1]}-${dateOnlyMatch[2]}`
+      : null;
+  }
+
+  const parsed = new Date(awardDate);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+
+  return `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(
+    2,
+    '0'
+  )}`;
+}
+
 // Each series renders as two lines sharing a color: a solid one over the
 // actual + blended months and a dashed one over blended + projected. Both
 // include the blended (current) month so the segments connect there.
-function buildChartRows(series: ProjectionSeries[]): ChartRow[] {
+export function buildChartRows(
+  series: ProjectionSeries[],
+  startMonth: string | null = null,
+  endMonth: string | null = null
+): ChartRow[] {
   const rows = new Map<string, ChartRow>();
 
   for (const { key, points } of series) {
@@ -74,6 +161,27 @@ function buildChartRows(series: ProjectionSeries[]): ChartRow[] {
       row[`${key}::dashed`] = point.kind === 'actual' ? null : point.remaining;
       row[`${key}::spend`] = point.actualAmount + point.projectedAmount;
       rows.set(point.month, row);
+    }
+  }
+
+  const months = [...rows.keys()].sort();
+  const firstMonth = startMonth ?? months[0];
+  const lastMonth = endMonth ?? months.at(-1);
+  const firstMonthIndex = firstMonth ? parseMonthIndex(firstMonth) : null;
+  const lastMonthIndex = lastMonth ? parseMonthIndex(lastMonth) : null;
+
+  if (
+    firstMonthIndex !== null &&
+    lastMonthIndex !== null &&
+    firstMonthIndex <= lastMonthIndex
+  ) {
+    for (let index = firstMonthIndex; index <= lastMonthIndex; index += 1) {
+      const month = monthFromIndex(index);
+      rows.set(
+        month,
+        rows.get(month) ??
+          ({ label: formatMonthLabel(month), month } as ChartRow)
+      );
     }
   }
 
@@ -156,25 +264,12 @@ export function VerticalMarkerLabel({
   );
 }
 
+export function getAwardStartMonth(awardStartDate: string | null) {
+  return getAwardMonth(awardStartDate);
+}
+
 export function getAwardEndMonth(awardEndDate: string | null) {
-  if (!awardEndDate) {
-    return null;
-  }
-
-  const dateOnlyMatch = /^(\d{4})-(\d{2})-\d{2}/.exec(awardEndDate);
-  if (dateOnlyMatch) {
-    return `${dateOnlyMatch[1]}-${dateOnlyMatch[2]}`;
-  }
-
-  const parsed = new Date(awardEndDate);
-  if (Number.isNaN(parsed.getTime())) {
-    return null;
-  }
-
-  return `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(
-    2,
-    '0'
-  )}`;
+  return getAwardMonth(awardEndDate);
 }
 
 function filterCategorySpend(
@@ -323,7 +418,18 @@ export function ProjectBurndownSection({
     () => [...series, ...nonPersonnelCategorySeries],
     [nonPersonnelCategorySeries, series]
   );
-  const chartRows = useMemo(() => buildChartRows(chartSeries), [chartSeries]);
+  const awardStartMonth = useMemo(
+    () => getAwardStartMonth(awardStartDate),
+    [awardStartDate]
+  );
+  const awardEndMonth = useMemo(
+    () => getAwardEndMonth(awardEndDate),
+    [awardEndDate]
+  );
+  const chartRows = useMemo(
+    () => buildChartRows(chartSeries, awardStartMonth, awardEndMonth),
+    [awardEndMonth, awardStartMonth, chartSeries]
+  );
   const labelsByMonth = useMemo(
     () => new Map(chartRows.map((row) => [row.month, row.label])),
     [chartRows]
@@ -335,10 +441,8 @@ export function ProjectBurndownSection({
   const showProjectionTransitionLine =
     projectionTransitionMonth !== null &&
     labelsByMonth.has(projectionTransitionMonth);
-  const awardEndMonth = useMemo(
-    () => getAwardEndMonth(awardEndDate),
-    [awardEndDate]
-  );
+  const showAwardStartLine =
+    awardStartMonth !== null && labelsByMonth.has(awardStartMonth);
   const showAwardEndLine =
     awardEndMonth !== null && labelsByMonth.has(awardEndMonth);
   const stats = useMemo(
@@ -458,6 +562,7 @@ export function ProjectBurndownSection({
                   <CartesianGrid stroke={GRID_COLOR} strokeDasharray="3 3" />
                   <XAxis
                     dataKey="month"
+                    interval="preserveStartEnd"
                     tick={{ fill: 'currentColor', fontSize: 12 }}
                     tickFormatter={(value: string) =>
                       labelsByMonth.get(value) ?? value
@@ -485,6 +590,16 @@ export function ProjectBurndownSection({
                       strokeOpacity={0.28}
                       strokeWidth={1.5}
                       x={projectionTransitionMonth}
+                    />
+                  )}
+                  {showAwardStartLine && (
+                    <ReferenceLine
+                      label={<VerticalMarkerLabel labelText="Project Start" />}
+                      stroke={AWARD_START_LINE_COLOR}
+                      strokeDasharray="8 4"
+                      strokeOpacity={0.42}
+                      strokeWidth={1.5}
+                      x={awardStartMonth}
                     />
                   )}
                   {showAwardEndLine && (

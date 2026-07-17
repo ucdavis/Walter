@@ -3,10 +3,13 @@ import { cleanup, render, screen } from '@testing-library/react';
 import {
   BalanceYAxisTick,
   VerticalMarkerLabel,
+  buildChartRows,
   buildBalanceAxisTicks,
   formatBalanceAxisTick,
+  getAwardStartMonth,
   getAwardEndMonth,
 } from '@/components/project/ProjectBurndownChart.tsx';
+import type { ProjectionSeries } from '@/lib/projectProjection.ts';
 
 afterEach(cleanup);
 
@@ -49,10 +52,43 @@ describe('ProjectBurndownChart axis helpers', () => {
     expect(label).toHaveAttribute('y', '14');
   });
 
-  it('gets the award end month from date-only or date-time values', () => {
+  it('gets award months from date-only or date-time values', () => {
+    expect(getAwardStartMonth('2026-04-01')).toBe('2026-04');
     expect(getAwardEndMonth('2026-07-31')).toBe('2026-07');
     expect(getAwardEndMonth('2026-08-15T00:00:00Z')).toBe('2026-08');
     expect(getAwardEndMonth(null)).toBeNull();
     expect(getAwardEndMonth('not-a-date')).toBeNull();
+    expect(getAwardEndMonth('2026-02-31')).toBeNull();
+  });
+
+  it('pads chart rows so the x-axis spans project start through end', () => {
+    const series: ProjectionSeries[] = [
+      {
+        key: 'All Expenses',
+        points: [
+          {
+            actualAmount: 10,
+            displayPeriod: 'May-26',
+            kind: 'actual',
+            month: '2026-05',
+            projectedAmount: 0,
+            remaining: 90,
+          },
+        ],
+      },
+    ];
+
+    const rows = buildChartRows(series, '2026-03', '2026-07');
+
+    expect(rows.map((row) => row.month)).toEqual([
+      '2026-03',
+      '2026-04',
+      '2026-05',
+      '2026-06',
+      '2026-07',
+    ]);
+    expect(rows[0].label).toBe('Mar-26');
+    expect(rows.at(-1)?.label).toBe('Jul-26');
+    expect(rows[2]['All Expenses::solid']).toBe(90);
   });
 });
