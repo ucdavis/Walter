@@ -12,7 +12,7 @@ import {
 import { formatCurrency } from '@/lib/currency.ts';
 import {
   PROJECT_PERSONNEL_COLOR,
-  projectNonPersonnelCategoryColor,
+  projectExpenditureCategoryColor,
   projectSeriesColor,
 } from '@/components/project/projectChartColors.ts';
 import {
@@ -204,9 +204,9 @@ function buildCategorySpendColors(
   nonPersonnelCategorySeries: ProjectionSeries[]
 ) {
   return new Map(
-    nonPersonnelCategorySeries.map((entry, index) => [
+    nonPersonnelCategorySeries.map((entry) => [
       entry.key,
-      projectNonPersonnelCategoryColor(index),
+      projectExpenditureCategoryColor(entry.key),
     ])
   );
 }
@@ -384,8 +384,8 @@ export function ProjectBurndownSection({
   }
 
   const selectedRollupSeries: VisibleSeries[] = series
-    .map((entry, index) => ({
-      color: projectSeriesColor(index),
+    .map((entry) => ({
+      color: projectSeriesColor(entry.key),
       key: entry.key,
     }))
     .filter(({ key }) => key === selectedKey);
@@ -393,15 +393,15 @@ export function ProjectBurndownSection({
     selectedKey === NON_PERSONNEL_SERIES
       ? activeSelectedNonPersonnelCategory
         ? nonPersonnelCategorySeries
-            .map((entry, index) => ({
-              color: projectNonPersonnelCategoryColor(index),
+            .map((entry) => ({
+              color: projectExpenditureCategoryColor(entry.key),
               key: entry.key,
             }))
             .filter(({ key }) => key === activeSelectedNonPersonnelCategory)
         : [
             ...selectedRollupSeries,
-            ...nonPersonnelCategorySeries.map((entry, index) => ({
-              color: projectNonPersonnelCategoryColor(index),
+            ...nonPersonnelCategorySeries.map((entry) => ({
+              color: projectExpenditureCategoryColor(entry.key),
               key: entry.key,
               strokeWidth: 1.75,
             })),
@@ -565,7 +565,7 @@ export function ProjectBurndownSection({
             </div>
 
             <div className="tabs tabs-box mt-4 inline-flex" role="tablist">
-              {series.map((entry, index) => {
+              {series.map((entry) => {
                 const isSelected = entry.key === selectedKey;
                 return (
                   <button
@@ -583,7 +583,7 @@ export function ProjectBurndownSection({
                   >
                     <span
                       className="inline-block h-3 w-3 rounded-sm mr-2"
-                      style={{ backgroundColor: projectSeriesColor(index) }}
+                      style={{ backgroundColor: projectSeriesColor(entry.key) }}
                     />
                     {entry.key}
                   </button>
@@ -599,7 +599,7 @@ export function ProjectBurndownSection({
                     className="tabs tabs-box flex w-fit flex-wrap"
                     role="tablist"
                   >
-                    {nonPersonnelCategorySeries.map((entry, index) => {
+                    {nonPersonnelCategorySeries.map((entry) => {
                       const isSelected =
                         activeSelectedNonPersonnelCategory === entry.key;
                       return (
@@ -619,7 +619,7 @@ export function ProjectBurndownSection({
                             className="inline-block h-3 w-3 rounded-sm mr-2"
                             style={{
                               backgroundColor:
-                                projectNonPersonnelCategoryColor(index),
+                                projectExpenditureCategoryColor(entry.key),
                             }}
                           />
                           {entry.key}
