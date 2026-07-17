@@ -3,7 +3,7 @@ import {
   type ProjectSummary,
 } from '@/lib/projectSummary.ts';
 import type { PiWithProjects, ProjectRecord } from '@/queries/project.ts';
-import { parseProjectDate } from '@/lib/date.ts';
+import { getLocalDateOnly, parseProjectDate } from '@/lib/date.ts';
 import { format } from 'date-fns';
 
 export interface Alert {
@@ -29,11 +29,7 @@ export function getAwardEndedAlert(
     return null;
   }
 
-  const todayDateOnly = new Date(
-    today.getFullYear(),
-    today.getMonth(),
-    today.getDate()
-  );
+  const todayDateOnly = getLocalDateOnly(today);
 
   return endDate < todayDateOnly
     ? {
@@ -158,7 +154,7 @@ export function getProjectListAlerts(
   projects: ProjectRecord[],
   employeeId: string
 ): PiProjectAlert[] {
-  const now = new Date();
+  const today = getLocalDateOnly();
   const active = projects.filter((p) => {
     if (!p.awardEndDate) {
       return true;
@@ -166,7 +162,7 @@ export function getProjectListAlerts(
 
     const awardEndDate = parseProjectDate(p.awardEndDate);
 
-    return awardEndDate ? awardEndDate >= now : false;
+    return awardEndDate ? awardEndDate >= today : false;
   });
 
   const byNumber = new Map<string, ProjectRecord[]>();

@@ -20,6 +20,7 @@ vi.mock('@/lib/csv.ts', async (importOriginal) => {
 afterEach(() => {
   cleanup();
   vi.mocked(downloadExcelCsv).mockClear();
+  vi.useRealTimers();
 });
 
 const createProject = (
@@ -167,5 +168,34 @@ describe('SponsoredProjectsTable', () => {
 
     expect(screen.getByText('Sunny Project')).toBeInTheDocument();
     expect(screen.queryByText('Rainy Project')).not.toBeInTheDocument();
+  });
+
+  it('keeps projects ending today visible for the full day', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 6, 17, 15));
+
+    const projects = [
+      createProject({
+        awardEndDate: '2026-07-17',
+        displayName: 'Ends Today',
+        projectName: 'Ends Today',
+        projectNumber: 'TODAY',
+      }),
+      createProject({
+        awardEndDate: '2026-07-16',
+        awardNumber: 'AWD002',
+        displayName: 'Ended Yesterday',
+        projectName: 'Ended Yesterday',
+        projectNumber: 'YDAY',
+      }),
+    ];
+
+    render(<SponsoredProjectsTable iamId="1000000123" records={projects} />);
+
+    expect(screen.getByText('Ends Today')).toBeInTheDocument();
+    expect(screen.queryByText('Ended Yesterday')).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Show expired (1)' })
+    ).toBeInTheDocument();
   });
 });

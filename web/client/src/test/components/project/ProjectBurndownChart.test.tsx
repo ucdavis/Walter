@@ -97,6 +97,7 @@ describe('ProjectBurndownChart axis helpers', () => {
     expect(getAwardEndMonthIndex('2026-08-15T00:00:00Z')).toBe(
       monthIndex(2026, 8)
     );
+    expect(getAwardEndMonthIndex('2026-02-31')).toBeNull();
     expect(getAwardEndMonthIndex(null)).toBeNull();
   });
 

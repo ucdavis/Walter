@@ -11,6 +11,7 @@ import {
 } from 'recharts';
 import { ChevronDownIcon } from '@heroicons/react/24/outline';
 import { formatCurrency } from '@/lib/currency.ts';
+import { getProjectMonth } from '@/lib/date.ts';
 import {
   projectExpenditureCategoryColor,
   projectSeriesColor,
@@ -105,7 +106,8 @@ function formatMonthLabel(index: number) {
 }
 
 export function getAwardEndMonthIndex(awardEndDate: string | null) {
-  return awardEndDate ? getMonthIndex(awardEndDate.slice(0, 7)) : null;
+  const awardEndMonth = getProjectMonth(awardEndDate);
+  return awardEndMonth ? getMonthIndex(awardEndMonth) : null;
 }
 
 // Each series renders as two lines sharing a color: a solid one over the
@@ -590,10 +592,9 @@ export function ProjectBurndownSection({
       ? `${NON_PERSONNEL_SERIES}: ${categoryDisplayName(activeSelectedNonPersonnelCategory)}`
       : selectedKey;
   const currentBalanceForMarker = stats?.currentBalance ?? 0;
-  const projectEndForMarker = useMemo(
-    () => (result ? getProjectionStats(result, awardEndDate).projectedEnd : 0),
-    [awardEndDate, result]
-  );
+  const projectEndForMarker = result
+    ? getProjectionStats(result, awardEndDate).projectedEnd
+    : 0;
   const selectedTimelineLabel =
     TIMELINE_OPTIONS.find((option) => option.value === selectedTimeline)
       ?.label ?? TIMELINE_OPTIONS[0].label;

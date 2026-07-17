@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { formatDate, getProjectMonth, parseProjectDate } from '@/lib/date.ts';
+import {
+  formatDate,
+  getLocalDateOnly,
+  getProjectMonth,
+  parseProjectDate,
+} from '@/lib/date.ts';
 
 describe('formatDate', () => {
   it('formats date as MM.DD.YYYY', () => {
@@ -30,6 +35,23 @@ describe('parseProjectDate', () => {
   it('rejects invalid calendar dates', () => {
     expect(parseProjectDate('2025-02-31')).toBeNull();
     expect(parseProjectDate('not-a-date')).toBeNull();
+  });
+
+  it('rejects malformed suffixes after ISO calendar dates', () => {
+    expect(parseProjectDate('2025-01-15-invalid')).toBeNull();
+  });
+});
+
+describe('getLocalDateOnly', () => {
+  it('normalizes a date to local midnight', () => {
+    const date = getLocalDateOnly(new Date(2025, 0, 15, 14, 30, 45));
+
+    expect(date.getFullYear()).toBe(2025);
+    expect(date.getMonth()).toBe(0);
+    expect(date.getDate()).toBe(15);
+    expect(date.getHours()).toBe(0);
+    expect(date.getMinutes()).toBe(0);
+    expect(date.getSeconds()).toBe(0);
   });
 });
 

@@ -1,6 +1,6 @@
 import { format, parseISO } from 'date-fns';
 
-const ISO_DATE_PREFIX = /^(\d{4})-(\d{2})-(\d{2})/;
+const ISO_DATE_PREFIX = /^(\d{4})-(\d{2})-(\d{2})(?=$|T)/;
 
 function isValidCalendarDate(year: number, month: number, day: number) {
   if (month < 1 || month > 12 || day < 1) {
@@ -29,6 +29,10 @@ export function parseProjectDate(value: string | null) {
   const parsed = parseISO(value);
 
   return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+export function getLocalDateOnly(value = new Date()) {
+  return new Date(value.getFullYear(), value.getMonth(), value.getDate());
 }
 
 export function getProjectMonth(value: string | null) {

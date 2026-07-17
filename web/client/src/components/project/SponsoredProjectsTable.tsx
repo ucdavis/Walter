@@ -3,7 +3,7 @@ import { Link } from '@tanstack/react-router';
 import { createColumnHelper } from '@tanstack/react-table';
 import { TableExportActions } from '@/components/TableExportActions.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
-import { formatDate, parseProjectDate } from '@/lib/date.ts';
+import { formatDate, getLocalDateOnly, parseProjectDate } from '@/lib/date.ts';
 import type { ProjectRecord } from '@/queries/project.ts';
 import { DataTable } from '@/shared/DataTable.tsx';
 import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
@@ -85,7 +85,7 @@ function aggregateProjects(records: ProjectRecord[]): AggregatedProject[] {
 function isExpired(project: AggregatedProject): boolean {
   const awardEndDate = parseProjectDate(project.awardEndDate);
 
-  return awardEndDate ? awardEndDate < new Date() : false;
+  return awardEndDate ? awardEndDate < getLocalDateOnly() : false;
 }
 
 function sortByEndDate(projects: AggregatedProject[]): AggregatedProject[] {
@@ -222,13 +222,12 @@ export function SponsoredProjectsTable({
           let colorClass = '';
           const endDate = parseProjectDate(value);
           if (endDate) {
-            const now = new Date();
-            if (endDate < now) {
+            if (isExpired(info.row.original)) {
               colorClass = 'text-error';
             } else {
-              const ninetyDaysFromNow = new Date();
-              ninetyDaysFromNow.setDate(ninetyDaysFromNow.getDate() + 90);
-              if (endDate <= ninetyDaysFromNow) {
+              const ninetyDaysFromToday = getLocalDateOnly();
+              ninetyDaysFromToday.setDate(ninetyDaysFromToday.getDate() + 90);
+              if (endDate <= ninetyDaysFromToday) {
                 colorClass = 'text-warning';
               }
             }
