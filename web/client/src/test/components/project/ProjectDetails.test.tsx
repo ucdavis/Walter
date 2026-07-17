@@ -90,6 +90,15 @@ describe('ProjectDetails Finjector link', () => {
 });
 
 describe('ProjectDetails', () => {
+  it('shows project dates as a timeline', () => {
+    render(<ProjectDetails summary={createSummary()} />);
+
+    expect(screen.getByText('Timeline')).toBeInTheDocument();
+    expect(screen.getByText('01.01.2024 - 12.31.2026')).toBeInTheDocument();
+    expect(screen.queryByText('Project Start')).not.toBeInTheDocument();
+    expect(screen.queryByText('Project End')).not.toBeInTheDocument();
+  });
+
   it('shows a tooltip for Balance in the main summary card', async () => {
     const user = userEvent.setup();
     render(<ProjectDetails summary={createSummary()} />);

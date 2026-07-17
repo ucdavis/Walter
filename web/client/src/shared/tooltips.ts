@@ -27,7 +27,7 @@ export const tooltipDefinitions = {
   postReportingPeriod:
     'Number of days after the award end date allowed for reporting and closeout activity.',
   projectBurndown:
-    'Remaining budget by expenditure category: three months of actuals, the current month, and twelve projected months based on personnel budgets and recent non-personnel spending.',
+    "Choose a timeline to view project's remaining budget, with three months of actuals, and the current month. Use the toggles to view All Expense vs Personnel vs Non-Personnel.",
   taskBreakdown:
     'Summary of how project costs are organized by financial coding segments.',
   totalBalance:

@@ -9,6 +9,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import { ChevronDownIcon } from '@heroicons/react/24/outline';
 import { formatCurrency } from '@/lib/currency.ts';
 import {
   projectExpenditureCategoryColor,
@@ -31,9 +32,9 @@ import { tooltipDefinitions } from '@/shared/tooltips.ts';
 
 const GRID_COLOR = 'var(--color-main-border)';
 const ZERO_LINE_COLOR = 'var(--color-error)';
-const PROJECTION_TRANSITION_LINE_COLOR = 'var(--color-base-content)';
-const AWARD_START_LINE_COLOR = 'var(--color-secondary)';
-const AWARD_END_LINE_COLOR = 'var(--color-accent)';
+const VERTICAL_MARKER_LINE_COLOR = 'var(--color-base-content)';
+const ERROR_MARKER_OPACITY = 0.7;
+const NEUTRAL_MARKER_OPACITY = 0.28;
 const CHART_TOOLTIP_Z_INDEX = 60;
 const Y_AXIS_TICK_COUNT = 6;
 const MONTH_LABELS = [
@@ -50,6 +51,12 @@ const MONTH_LABELS = [
   'Nov',
   'Dec',
 ];
+const TIMELINE_OPTIONS = [
+  { label: 'Project End', value: 'project-end' },
+  { label: '12 months', value: '12-months' },
+  { label: '18 months', value: '18-months' },
+  { label: '24 months', value: '24-months' },
+] as const;
 
 type ChartRow = { label: string; month: string } & Record<
   string,
@@ -66,12 +73,14 @@ type AxisTickProps = {
   y?: number;
 };
 type ReferenceLineLabelProps = {
+  align?: 'center' | 'end';
   labelText: string;
   viewBox?: {
     x?: number;
     y?: number;
   };
 };
+export type TimelineOption = (typeof TIMELINE_OPTIONS)[number]['value'];
 
 function isValidMonth(month: number) {
   return month >= 1 && month <= 12;
@@ -188,6 +197,65 @@ export function buildChartRows(
   return [...rows.values()].sort((a, b) => a.month.localeCompare(b.month));
 }
 
+export function getRollingStartMonth(referenceMonth: string | null) {
+  if (!referenceMonth) {
+    return null;
+  }
+
+  const referenceMonthIndex = parseMonthIndex(referenceMonth);
+
+  return referenceMonthIndex === null
+    ? null
+    : monthFromIndex(referenceMonthIndex - 3);
+}
+
+function getTimelineMonthCount(timeline: TimelineOption) {
+  switch (timeline) {
+    case '12-months':
+      return 12;
+    case '18-months':
+      return 18;
+    case '24-months':
+      return 24;
+    default:
+      return null;
+  }
+}
+
+export function getTimelineEndMonth(
+  timeline: TimelineOption,
+  projectEndMonth: string | null,
+  referenceMonth: string | null
+) {
+  const timelineMonthCount = getTimelineMonthCount(timeline);
+
+  if (timelineMonthCount === null) {
+    return projectEndMonth;
+  }
+
+  const referenceMonthIndex = referenceMonth
+    ? parseMonthIndex(referenceMonth)
+    : null;
+
+  return referenceMonthIndex === null
+    ? null
+    : monthFromIndex(referenceMonthIndex + timelineMonthCount);
+}
+
+export function getTimelineProjectionDate(
+  timeline: TimelineOption,
+  awardEndDate: string | null,
+  referenceMonth: string | null
+) {
+  if (timeline === 'project-end') {
+    return awardEndDate;
+  }
+
+  const timelineEndMonth = getTimelineEndMonth(timeline, null, referenceMonth);
+
+  return timelineEndMonth ? `${timelineEndMonth}-01` : null;
+}
+
 function categoryDisplayName(expenditureCategory: string) {
   return expenditureCategory.replace(/^\d+\s*-\s*/, '');
 }
@@ -250,22 +318,37 @@ export function BalanceYAxisTick({ payload, x = 0, y = 0 }: AxisTickProps) {
   );
 }
 
+export function getBalanceStatClassName(value: number) {
+  return value < 0 ? 'stat-value text-error' : 'stat-value';
+}
+
+export function getVerticalMarkerStroke(value: number) {
+  return value < 0 ? ZERO_LINE_COLOR : VERTICAL_MARKER_LINE_COLOR;
+}
+
+export function getVerticalMarkerStrokeOpacity(value: number) {
+  return value < 0 ? ERROR_MARKER_OPACITY : NEUTRAL_MARKER_OPACITY;
+}
+
 export function VerticalMarkerLabel({
+  align = 'center',
   labelText,
   viewBox,
 }: ReferenceLineLabelProps) {
-  const x = Number(viewBox?.x ?? 0);
+  const x = Number(viewBox?.x ?? 0) + (align === 'end' ? -4 : 0);
   const y = Number(viewBox?.y ?? 0) - 6;
 
   return (
-    <text fill="currentColor" fontSize={12} textAnchor="middle" x={x} y={y}>
+    <text
+      fill="currentColor"
+      fontSize={12}
+      textAnchor={align === 'end' ? 'end' : 'middle'}
+      x={x}
+      y={y}
+    >
       {labelText}
     </text>
   );
-}
-
-export function getAwardStartMonth(awardStartDate: string | null) {
-  return getAwardMonth(awardStartDate);
 }
 
 export function getAwardEndMonth(awardEndDate: string | null) {
@@ -401,7 +484,6 @@ interface ProjectBurndownSectionProps {
 
 export function ProjectBurndownSection({
   awardEndDate,
-  awardStartDate,
   projectNumber,
 }: ProjectBurndownSectionProps) {
   const projectionQuery = useProjectProjectionQuery(projectNumber);
@@ -418,36 +500,55 @@ export function ProjectBurndownSection({
     () => [...series, ...nonPersonnelCategorySeries],
     [nonPersonnelCategorySeries, series]
   );
-  const awardStartMonth = useMemo(
-    () => getAwardStartMonth(awardStartDate),
-    [awardStartDate]
-  );
+  const [selectedTimeline, setSelectedTimeline] =
+    useState<TimelineOption>('project-end');
+  const [isTimelineMenuOpen, setIsTimelineMenuOpen] = useState(false);
   const awardEndMonth = useMemo(
     () => getAwardEndMonth(awardEndDate),
     [awardEndDate]
-  );
-  const chartRows = useMemo(
-    () => buildChartRows(chartSeries, awardStartMonth, awardEndMonth),
-    [awardEndMonth, awardStartMonth, chartSeries]
-  );
-  const labelsByMonth = useMemo(
-    () => new Map(chartRows.map((row) => [row.month, row.label])),
-    [chartRows]
   );
   const projectionTransitionMonth = useMemo(
     () => (result ? getProjectionTransitionMonth(result) : null),
     [result]
   );
+  const rollingStartMonth = useMemo(
+    () => getRollingStartMonth(projectionTransitionMonth),
+    [projectionTransitionMonth]
+  );
+  const timelineEndMonth = useMemo(
+    () =>
+      getTimelineEndMonth(
+        selectedTimeline,
+        awardEndMonth,
+        projectionTransitionMonth
+      ),
+    [awardEndMonth, projectionTransitionMonth, selectedTimeline]
+  );
+  const timelineProjectionDate = useMemo(
+    () =>
+      getTimelineProjectionDate(
+        selectedTimeline,
+        awardEndDate,
+        projectionTransitionMonth
+      ),
+    [awardEndDate, projectionTransitionMonth, selectedTimeline]
+  );
+  const chartRows = useMemo(
+    () => buildChartRows(chartSeries, rollingStartMonth, timelineEndMonth),
+    [chartSeries, rollingStartMonth, timelineEndMonth]
+  );
+  const labelsByMonth = useMemo(
+    () => new Map(chartRows.map((row) => [row.month, row.label])),
+    [chartRows]
+  );
   const showProjectionTransitionLine =
     projectionTransitionMonth !== null &&
     labelsByMonth.has(projectionTransitionMonth);
-  const showAwardStartLine =
-    awardStartMonth !== null && labelsByMonth.has(awardStartMonth);
   const showAwardEndLine =
     awardEndMonth !== null && labelsByMonth.has(awardEndMonth);
   const stats = useMemo(
-    () => (result ? getProjectionStats(result, awardEndDate) : null),
-    [awardEndDate, result]
+    () => (result ? getProjectionStats(result, timelineProjectionDate) : null),
+    [result, timelineProjectionDate]
   );
   const categorySpendByMonth = useMemo(
     () => (result ? getMonthlyCategorySpend(result) : new Map()),
@@ -506,11 +607,16 @@ export function ProjectBurndownSection({
     selectedKey === NON_PERSONNEL_SERIES && activeSelectedNonPersonnelCategory
       ? `${NON_PERSONNEL_SERIES}: ${categoryDisplayName(activeSelectedNonPersonnelCategory)}`
       : selectedKey;
+  const currentBalanceForMarker = stats?.currentBalance ?? 0;
+  const projectedEndForMarker = stats?.projectedEnd ?? 0;
+  const selectedTimelineLabel =
+    TIMELINE_OPTIONS.find((option) => option.value === selectedTimeline)
+      ?.label ?? TIMELINE_OPTIONS[0].label;
 
   return (
     <>
-      <section className="mt-8 pb-4">
-        <p className="max-w-3xl mb-6">{tooltipDefinitions.projectBurndown}</p>
+      <section className="mt-2 pb-4">
+        <p className="max-w-3xl mb-12">{tooltipDefinitions.projectBurndown}</p>
 
         {projectionQuery.isPending && (
           <p className="text-base-content/70 mt-4">
@@ -525,10 +631,75 @@ export function ProjectBurndownSection({
         {projectionQuery.isSuccess && series.length > 0 && (
           <div>
             {stats && (
-              <div className="mb-6 flex gap-10 text-sm md:grid-cols-3">
+              <div className="relative z-50 mb-6 flex flex-wrap gap-10 text-sm">
+                <div
+                  className="relative z-[100]"
+                  onBlur={(event) => {
+                    const nextFocus = event.relatedTarget as Node | null;
+                    if (!event.currentTarget.contains(nextFocus)) {
+                      setIsTimelineMenuOpen(false);
+                    }
+                  }}
+                >
+                  <span
+                    className="stat-label block"
+                    id="burndown-timeline-label"
+                  >
+                    Timeline
+                  </span>
+                  <button
+                    aria-controls="burndown-timeline-menu"
+                    aria-expanded={isTimelineMenuOpen}
+                    aria-haspopup="listbox"
+                    aria-labelledby="burndown-timeline-label burndown-timeline-trigger"
+                    className="inline-flex items-center gap-1 text-base font-normal"
+                    id="burndown-timeline-trigger"
+                    onClick={() => setIsTimelineMenuOpen((current) => !current)}
+                    role="combobox"
+                    type="button"
+                  >
+                    {selectedTimelineLabel}
+                    <ChevronDownIcon className="h-4 w-4" />
+                  </button>
+                  {isTimelineMenuOpen ? (
+                    <div
+                      aria-labelledby="burndown-timeline-label"
+                      className="absolute left-0 top-full z-100 mt-1 min-w-36 rounded-md border border-main-border bg-base-100 p-1 shadow-lg"
+                      id="burndown-timeline-menu"
+                      role="listbox"
+                    >
+                      {TIMELINE_OPTIONS.map((option) => (
+                        <button
+                          aria-selected={option.value === selectedTimeline}
+                          className={`block w-full rounded px-3 py-2 text-left text-sm ${
+                            option.value === selectedTimeline
+                              ? 'bg-base-200 font-semibold'
+                              : 'hover:bg-base-200'
+                          }`}
+                          key={option.value}
+                          onClick={() => {
+                            setSelectedTimeline(option.value);
+                            setIsTimelineMenuOpen(false);
+                          }}
+                          onMouseDown={(event) => event.preventDefault()}
+                          role="option"
+                          type="button"
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+                <div className="relative z-50">
+                  <p className="stat-label">Starting Balance</p>
+                  <p className="stat-value">
+                    {formatCurrency(stats.startingBalance)}
+                  </p>
+                </div>
                 <div>
                   <p className="stat-label">Current Balance</p>
-                  <p className="stat-value">
+                  <p className={getBalanceStatClassName(stats.currentBalance)}>
                     {formatCurrency(stats.currentBalance)}
                   </p>
                 </div>
@@ -543,10 +714,6 @@ export function ProjectBurndownSection({
                   >
                     {formatCurrency(stats.projectedEnd)}
                   </p>
-                </div>
-                <div>
-                  <p className="stat-label">Projection</p>
-                  <p className="stat-value">{stats.projectedMonths} months</p>
                 </div>
               </div>
             )}
@@ -585,29 +752,28 @@ export function ProjectBurndownSection({
                   {showProjectionTransitionLine && (
                     <ReferenceLine
                       label={<VerticalMarkerLabel labelText="Today" />}
-                      stroke={PROJECTION_TRANSITION_LINE_COLOR}
+                      stroke={getVerticalMarkerStroke(currentBalanceForMarker)}
                       strokeDasharray="3 5"
-                      strokeOpacity={0.28}
+                      strokeOpacity={getVerticalMarkerStrokeOpacity(
+                        currentBalanceForMarker
+                      )}
                       strokeWidth={1.5}
                       x={projectionTransitionMonth}
                     />
                   )}
-                  {showAwardStartLine && (
-                    <ReferenceLine
-                      label={<VerticalMarkerLabel labelText="Project Start" />}
-                      stroke={AWARD_START_LINE_COLOR}
-                      strokeDasharray="8 4"
-                      strokeOpacity={0.42}
-                      strokeWidth={1.5}
-                      x={awardStartMonth}
-                    />
-                  )}
                   {showAwardEndLine && (
                     <ReferenceLine
-                      label={<VerticalMarkerLabel labelText="Project End" />}
-                      stroke={AWARD_END_LINE_COLOR}
+                      label={
+                        <VerticalMarkerLabel
+                          align="end"
+                          labelText="Project End"
+                        />
+                      }
+                      stroke={getVerticalMarkerStroke(projectedEndForMarker)}
                       strokeDasharray="8 4"
-                      strokeOpacity={0.42}
+                      strokeOpacity={getVerticalMarkerStrokeOpacity(
+                        projectedEndForMarker
+                      )}
                       strokeWidth={1.5}
                       x={awardEndMonth}
                     />
@@ -713,8 +879,9 @@ export function ProjectBurndownSection({
                           <span
                             className="inline-block h-3 w-3 rounded-sm mr-2"
                             style={{
-                              backgroundColor:
-                                projectExpenditureCategoryColor(entry.key),
+                              backgroundColor: projectExpenditureCategoryColor(
+                                entry.key
+                              ),
                             }}
                           />
                           {entry.key}
@@ -728,7 +895,6 @@ export function ProjectBurndownSection({
           </div>
         )}
       </section>
-
     </>
   );
 }

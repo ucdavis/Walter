@@ -1,6 +1,6 @@
 import type { ComponentType, MouseEvent, SVGProps } from 'react';
 import {
-  ArrowLongLeftIcon,
+  ArrowLeftIcon,
   ArrowTrendingDownIcon,
   CalendarDaysIcon,
   ChartBarIcon,
@@ -254,10 +254,10 @@ export function VacationAccrualOverview({
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <Link
-                className="mb-3 inline-flex items-center gap-2 text-sm font-bold text-primary no-underline"
+                className="btn btn-sm mb-4"
                 to="/accruals"
               >
-                <ArrowLongLeftIcon className="h-4 w-4" />
+                <ArrowLeftIcon className="h-4 w-4" />
                 Department Selector
               </Link>
               <h1 className="h1">Vacation Accrual Overview</h1>

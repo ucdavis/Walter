@@ -136,6 +136,7 @@ describe('project detail page', () => {
     try {
       await screen.findByText('Project Number');
       expect(screen.queryByText('Award Information')).not.toBeInTheDocument();
+      expect(screen.queryByText('Timeline')).not.toBeInTheDocument();
       expect(screen.queryByText('Project Start')).not.toBeInTheDocument();
       expect(screen.queryByText('Project End')).not.toBeInTheDocument();
     } finally {
@@ -381,6 +382,13 @@ describe('project detail page', () => {
         projectName: 'Switchable Projection Project',
         projectNumber: 'P2',
       }),
+      createProject({
+        displayName: 'Internal Operations Project',
+        pmEmployeeId: '2000',
+        projectName: 'Internal Operations Project',
+        projectNumber: 'P3',
+        projectType: 'Internal',
+      }),
     ];
     setupHandlers(
       { employeeId: '1000', name: 'PI User' },
@@ -404,7 +412,9 @@ describe('project detail page', () => {
       expect(
         screen.queryByTestId('project-burndown-chart')
       ).not.toBeInTheDocument();
-      expect(screen.queryByText('Project Burndown')).not.toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: 'Project Burndown (coming soon)' })
+      ).toBeDisabled();
 
       const expenditureProgress = await screen.findByTestId(
         'project-expenditure-progress'
@@ -497,7 +507,13 @@ describe('project detail page', () => {
       for (const label of screen.getAllByText('Switchable Projection Project')) {
         expect(label.closest('a')).toHaveAttribute(
           'href',
-          '/projects/1000/P2'
+          '/expenditureprogress/1000/P2'
+        );
+      }
+      for (const label of screen.getAllByText('Internal Operations Project')) {
+        expect(label.closest('a')).toHaveAttribute(
+          'href',
+          '/projects/1000/P3'
         );
       }
     } finally {
@@ -515,6 +531,13 @@ describe('project detail page', () => {
         pmEmployeeId: '2000',
         projectName: 'Switchable Projection Project',
         projectNumber: 'P2',
+      }),
+      createProject({
+        displayName: 'Internal Operations Project',
+        pmEmployeeId: '2000',
+        projectName: 'Internal Operations Project',
+        projectNumber: 'P3',
+        projectType: 'Internal',
       }),
     ];
     setupHandlers(
@@ -548,14 +571,35 @@ describe('project detail page', () => {
       expect(
         screen.getByText(tooltipDefinitions.projectBurndown)
       ).toBeInTheDocument();
+      expect(
+        screen.getByRole('link', { name: 'Expenditure Progress' })
+      ).toHaveAttribute('href', '/expenditureprogress/1000/P1');
+      expect(screen.getByText('Starting Balance')).toBeInTheDocument();
+      expect(screen.getByText('$660.00')).toBeInTheDocument();
       expect(screen.getByText('Current Balance')).toBeInTheDocument();
+      const timelineSelect = screen.getByRole('combobox', {
+        name: 'Timeline',
+      });
+      expect(timelineSelect).toHaveTextContent('Project End');
+      expect(screen.queryByText('Projection')).not.toBeInTheDocument();
+
+      await user.click(timelineSelect);
+      await user.click(screen.getByRole('option', { name: '12 months' }));
+      expect(timelineSelect).toHaveTextContent('12 months');
+      expect(await screen.findByText('-$315.00')).toBeInTheDocument();
       expect(
         screen.queryByTestId('project-expenditure-progress')
       ).not.toBeInTheDocument();
       for (const label of screen.getAllByText('Switchable Projection Project')) {
         expect(label.closest('a')).toHaveAttribute(
           'href',
-          '/projects/1000/P2'
+          '/projectburndown/1000/P2'
+        );
+      }
+      for (const label of screen.getAllByText('Internal Operations Project')) {
+        expect(label.closest('a')).toHaveAttribute(
+          'href',
+          '/projects/1000/P3'
         );
       }
 
@@ -712,7 +756,9 @@ describe('project detail page', () => {
       expect(
         within(expenditureProgress).queryByText('All Expenses')
       ).not.toBeInTheDocument();
-      expect(screen.queryByText('Project Burndown')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('project-burndown-chart')
+      ).not.toBeInTheDocument();
     } finally {
       cleanup();
       vi.useRealTimers();

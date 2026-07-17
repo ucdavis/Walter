@@ -281,6 +281,10 @@ describe('getMonthlyCategorySpend', () => {
 });
 
 describe('getProjectionStats', () => {
+  it('sums starting balance from the category budget', () => {
+    expect(getProjectionStats(sampleResult()).startingBalance).toBe(860);
+  });
+
   it('sums current balance from the category header', () => {
     expect(getProjectionStats(sampleResult()).currentBalance).toBe(675);
   });

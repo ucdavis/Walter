@@ -26,6 +26,7 @@ export interface ProjectionStats {
   currentBalance: number;
   projectedEnd: number;
   projectedMonths: number;
+  startingBalance: number;
 }
 
 export interface CategorySpend {
@@ -275,6 +276,10 @@ export function getProjectionStats(
   result: ProjectProjectionResult,
   awardEndDate: string | null = null
 ): ProjectionStats {
+  const startingBalance = result.categories.reduce(
+    (sum, category) => sum + category.budget,
+    0
+  );
   const currentBalance = result.categories.reduce(
     (sum, category) => sum + category.remainingNow,
     0
@@ -284,5 +289,5 @@ export function getProjectionStats(
     result.periods.filter((p) => p.kind === 'projected').map((p) => p.month)
   ).size;
 
-  return { currentBalance, projectedEnd, projectedMonths };
+  return { currentBalance, projectedEnd, projectedMonths, startingBalance };
 }
