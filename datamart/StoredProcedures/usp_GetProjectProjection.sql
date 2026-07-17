@@ -1,8 +1,9 @@
 -- Monthly per-expenditure-category budget burndown for a single project.
 -- Returns two result sets:
 --   1. Per-category budget header (budget, spent-to-date, committed, current remaining, award end date).
---   2. Period x category grid: 3 trailing actual months, the current (blended) month, and 12
---      projected months, each with actual spend, projected spend, and the running budget
+--   2. Period x category grid: 3 trailing actual months, the current (blended) month, and
+--      projected months through the award end date (12 when the award end date is unknown),
+--      each with actual spend, projected spend, and the running budget
 --      remaining (burndown).
 -- All inputs are local: GL actuals from dbo.GlProjectMonthlyActuals, the natural-account ->
 -- category crosswalk from dbo.ExpenditureTypeByAccount, personnel from dbo.PositionBudgets +
@@ -23,8 +24,8 @@ BEGIN
     DECLARE @ParametersJSON NVARCHAR(MAX);
 
     -- "Now" anchors the whole window: 3 trailing actual months, the current (blended) month,
-    -- and 12 projected months. Current-month non-personnel projection is prorated by the days
-    -- remaining in the month.
+    -- and projected months through the award end date. Current-month non-personnel projection
+    -- is prorated by the days remaining in the month.
     DECLARE @Today          DATE = CAST(GETDATE() AS DATE);
     DECLARE @CurrMonthStart DATE = DATEFROMPARTS(YEAR(@Today), MONTH(@Today), 1);
     DECLARE @DaysInMonth    INT  = DAY(EOMONTH(@Today));
@@ -43,14 +44,36 @@ BEGIN
 
         EXEC dbo.usp_ValidateAggieEnterpriseProject @ProjectId;
 
-        /* Period dimension: offsets -3..+12 from the current month. */
+        /* Horizon end: project through the award end date's month; when the award end date
+           is unknown, fall back to 12 projected months. A past/current end date yields no
+           projected months (history + the blended current month only). */
+        DECLARE @AwardEndDate DATE = (
+            SELECT MAX(f.AwardEndDate)
+            FROM dbo.FacultyDeptPortfolio f
+            WHERE f.ProjectNumber = @ProjectId
+        );
+        DECLARE @ProjMonths INT =
+            CASE WHEN @AwardEndDate IS NULL THEN 12
+                 ELSE DATEDIFF(MONTH, @CurrMonthStart,
+                               DATEFROMPARTS(YEAR(@AwardEndDate), MONTH(@AwardEndDate), 1))
+            END;
+        IF @ProjMonths < 0 SET @ProjMonths = 0;
+
+        /* Period dimension: 3 trailing actual months (n = -3..-1), the blended current month
+           (n = 0), and projected months (n = 1..@ProjMonths). The tally reads from
+           sys.all_objects, which bounds even a corrupt far-future end date to a finite window. */
         DROP TABLE IF EXISTS #periods;
+        ;WITH n AS (
+            SELECT TOP (@ProjMonths + 4)
+                   ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) - 4 AS n
+            FROM sys.all_objects
+        )
         SELECT
-            DATEADD(MONTH, n, @CurrMonthStart) AS MonthStart,
-            FORMAT(DATEADD(MONTH, n, @CurrMonthStart), 'MMM-yy') AS DisplayPeriod,
-            CASE WHEN n < 0 THEN 'actual' WHEN n = 0 THEN 'blended' ELSE 'projected' END AS Kind
+            DATEADD(MONTH, n.n, @CurrMonthStart) AS MonthStart,
+            FORMAT(DATEADD(MONTH, n.n, @CurrMonthStart), 'MMM-yy') AS DisplayPeriod,
+            CASE WHEN n.n < 0 THEN 'actual' WHEN n.n = 0 THEN 'blended' ELSE 'projected' END AS Kind
         INTO #periods
-        FROM (VALUES (-3),(-2),(-1),(0),(1),(2),(3),(4),(5),(6),(7),(8),(9),(10),(11),(12)) v(n);
+        FROM n;
 
         /* GL actuals, filtered to expense accounts (parent rollup '5%') and mapped from natural
            account to expenditure category. Unmapped expense accounts fall into
