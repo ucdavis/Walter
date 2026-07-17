@@ -19,6 +19,19 @@ const NON_PERSONNEL_SERIES_COLOR_START = 3;
 const PROJECT_NON_PERSONNEL_CATEGORY_COLORS = PROJECT_SERIES_COLORS.slice(
   NON_PERSONNEL_SERIES_COLOR_START
 );
+const PROJECT_NON_PERSONNEL_CATEGORY_CODES = [
+  '03',
+  '04',
+  '05',
+  '06',
+  '07',
+  '08',
+  '09',
+  '99',
+] as const;
+const PROJECT_NON_PERSONNEL_CATEGORY_CODE_LIST: readonly string[] = [
+  ...PROJECT_NON_PERSONNEL_CATEGORY_CODES,
+];
 
 type ProjectCategoryColorSource = {
   budget: number;
@@ -43,6 +56,22 @@ function wrapColorIndex(index: number, length: number) {
   return ((index % length) + length) % length;
 }
 
+function stableCategoryIndex(expenditureCategory: string) {
+  const code = /^\s*(\d{2})\s*-/.exec(expenditureCategory)?.[1];
+  const codeIndex = PROJECT_NON_PERSONNEL_CATEGORY_CODE_LIST.indexOf(
+    code ?? ''
+  );
+
+  if (codeIndex >= 0) {
+    return codeIndex;
+  }
+
+  return [...expenditureCategory].reduce(
+    (hash, character) => hash + character.charCodeAt(0),
+    0
+  );
+}
+
 export const PROJECT_PERSONNEL_COLOR = projectSeriesColorByName('Personnel');
 
 export function projectSeriesColor(index: number) {
@@ -62,6 +91,14 @@ export function projectNonPersonnelCategoryColor(index: number) {
   return entry.color;
 }
 
+export function projectNonPersonnelCategoryColorByCategory(
+  expenditureCategory: string
+) {
+  return projectNonPersonnelCategoryColor(
+    stableCategoryIndex(expenditureCategory)
+  );
+}
+
 export function hasProjectCategoryProgressData(
   category: ProjectCategoryColorSource
 ) {
@@ -76,7 +113,6 @@ export function hasProjectCategoryProgressData(
 export function buildProjectCategoryColorMap(
   categories: ProjectCategoryColorSource[]
 ) {
-  let nonPersonnelIndex = 0;
   const colorsByCategory = new Map<string, string>();
 
   for (const category of categories
@@ -91,9 +127,8 @@ export function buildProjectCategoryColorMap(
 
     colorsByCategory.set(
       category.expenditureCategory,
-      projectNonPersonnelCategoryColor(nonPersonnelIndex)
+      projectNonPersonnelCategoryColorByCategory(category.expenditureCategory)
     );
-    nonPersonnelIndex += 1;
   }
 
   return colorsByCategory;
