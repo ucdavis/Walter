@@ -1,7 +1,7 @@
-import { fetchJson } from '@/lib/api.ts';
+import { fetchJson, postJson } from '@/lib/api.ts';
 import { useQuery } from '@tanstack/react-query';
 
-export type AssignableRole = 'Manager' | 'AccrualViewer' | 'FinancialViewer';
+export type AssignableRole = 'Manager' | 'AccrualViewer' | 'FinancialViewer' | 'DepartmentViewer';
 
 export type AdminUserSearchResult = {
   id: string;
@@ -72,12 +72,9 @@ export async function assignRole({
   roleName: AssignableRole;
   signal?: AbortSignal;
 }): Promise<AssignRoleResponse> {
-  return await fetchJson<AssignRoleResponse>(
+  return await postJson<AssignRoleResponse>(
     `/api/admin/users/${encodeURIComponent(entraUserId)}/roles`,
-    {
-      method: 'POST',
-      body: JSON.stringify({ roleName }),
-    },
+    { roleName },
     signal
   );
 }

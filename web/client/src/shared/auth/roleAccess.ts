@@ -1,6 +1,7 @@
 export const ROLE_NAMES = {
   accrualViewer: 'AccrualViewer',
   admin: 'Admin',
+  departmentViewer: 'DepartmentViewer',
   financialViewer: 'FinancialViewer',
   manager: 'Manager',
   projectManager: 'ProjectManager',
@@ -64,7 +65,12 @@ export const canAccessPrincipalInvestigatorsNav = (roles: readonly string[]) =>
   hasRole(roles, PI_NAV_ROLES);
 
 export const canAccessReportsNav = (roles: readonly string[]) =>
-  roles.includes(ROLE_NAMES.accrualViewer) || hasRole(roles, ELEVATED_ROLES);
+  roles.includes(ROLE_NAMES.accrualViewer) || roles.includes(ROLE_NAMES.departmentViewer) || hasRole(roles, ELEVATED_ROLES);
+
+// Mirrors the server's CanViewDepartmentBalances policy, where AdminBypassHandler
+// lets Admin through every policy.
+export const canAccessDepartmentBalances = (roles: readonly string[]) =>
+  hasAdminRole(roles) || roles.includes(ROLE_NAMES.departmentViewer);
 
 export const canViewProjectDiscrepancy = (
   roles: readonly string[],

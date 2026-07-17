@@ -85,6 +85,14 @@ public interface IDatamartService
     /// </summary>
     Task<ProjectProjectionResult> GetProjectProjectionAsync(
         string projectNumber, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default);
+
+    /// <summary>Current-period balance measures grouped by the caller-selected chart-string segments.</summary>
+    Task<IReadOnlyList<DepartmentBalanceRow>> GetGlBalanceSummaryAsync(
+        DepartmentBalancesQuery query, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default);
+
+    /// <summary>Scoped picker options for one department-balances filter facet.</summary>
+    Task<IReadOnlyList<DepartmentBalanceOption>> GetGlBalanceFilterOptionsAsync(
+        DepartmentBalancesOptionsQuery query, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default);
 }
 
 public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
@@ -322,6 +330,55 @@ public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
                 Periods = periods,
             };
         }, ct);
+    }
+
+    private static string? ToCsvParam(string[]? values)
+    {
+        if (values is null) return null;
+        var cleaned = values.Where(v => !string.IsNullOrWhiteSpace(v)).Select(v => v.Trim()).ToArray();
+        return cleaned.Length == 0 ? null : string.Join(",", cleaned);
+    }
+
+    public async Task<IReadOnlyList<DepartmentBalanceRow>> GetGlBalanceSummaryAsync(
+        DepartmentBalancesQuery query, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default)
+    {
+        return await ExecuteSprocAsync<DepartmentBalanceRow>(
+            "dbo.usp_GetGlBalanceSummary",
+            new
+            {
+                Dimensions = ToCsvParam(query.Dimensions),
+                FinancialDepartments = ToCsvParam(query.FinancialDepartments),
+                Funds = ToCsvParam(query.Funds),
+                Accounts = ToCsvParam(query.Accounts),
+                Purposes = ToCsvParam(query.Purposes),
+                Projects = ToCsvParam(query.Projects),
+                Activities = ToCsvParam(query.Activities),
+                ApplicationName = _appName,
+                ApplicationUser = applicationUser,
+                EmulatingUser = emulatingUser,
+            },
+            ct: ct);
+    }
+
+    public async Task<IReadOnlyList<DepartmentBalanceOption>> GetGlBalanceFilterOptionsAsync(
+        DepartmentBalancesOptionsQuery query, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default)
+    {
+        return await ExecuteSprocAsync<DepartmentBalanceOption>(
+            "dbo.usp_GetGlBalanceSummaryFilterOptions",
+            new
+            {
+                Segment = query.Segment,
+                FinancialDepartments = ToCsvParam(query.FinancialDepartments),
+                Funds = ToCsvParam(query.Funds),
+                Accounts = ToCsvParam(query.Accounts),
+                Purposes = ToCsvParam(query.Purposes),
+                Projects = ToCsvParam(query.Projects),
+                Activities = ToCsvParam(query.Activities),
+                ApplicationName = _appName,
+                ApplicationUser = applicationUser,
+                EmulatingUser = emulatingUser,
+            },
+            ct: ct);
     }
 
     private async Task<IReadOnlyList<T>> ExecuteSprocAsync<T>(
