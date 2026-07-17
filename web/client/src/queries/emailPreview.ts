@@ -1,4 +1,4 @@
-import { fetchJson } from '@/lib/api.ts';
+import { postJson } from '@/lib/api.ts';
 
 export type EmailPreviewRequest = {
   notificationType: string;
@@ -18,8 +18,8 @@ export type EmailPreviewResponse = {
 export async function renderEmailPreview(
   input: EmailPreviewRequest
 ): Promise<EmailPreviewResponse> {
-  return await fetchJson<EmailPreviewResponse>('/api/admin/email-preview/render', {
-    body: JSON.stringify(input),
-    method: 'POST',
-  });
+  return await postJson<EmailPreviewResponse>(
+    '/api/admin/email-preview/render',
+    input
+  );
 }

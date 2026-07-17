@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { fetchJson } from '@/lib/api.ts';
+import { postJson } from '@/lib/api.ts';
 
 export interface DepartmentBalanceRow {
   account?: string | null;
@@ -46,9 +46,6 @@ export interface DepartmentBalancesQuery extends DepartmentBalancesFilters {
 
 export type OptionsSegment =
   | 'Dept' | 'Fund' | 'Account' | 'Purpose' | 'Project' | 'Activity' | 'Period';
-
-const postJson = <T,>(url: string, body: unknown) =>
-  fetchJson<T>(url, { body: JSON.stringify(body), method: 'POST' });
 
 export const useDepartmentBalancesQuery = (query: DepartmentBalancesQuery) =>
   useQuery({
