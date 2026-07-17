@@ -162,6 +162,24 @@ describe('project detail page', () => {
     }
   });
 
+  it('does not show an ended-award alert for invalid award end dates', async () => {
+    const projects = [
+      createProject({ awardEndDate: '2000-02-31', pmEmployeeId: '2000' }),
+    ];
+    setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);
+
+    const { cleanup } = renderRoute({
+      initialPath: '/projects/1000/P1',
+    });
+
+    try {
+      await screen.findByText('Project Number');
+      expect(screen.queryByText(/Award ended on/)).not.toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+
   it('hides Award Information and date fields for internal projects', async () => {
     const projects = [
       createProject({

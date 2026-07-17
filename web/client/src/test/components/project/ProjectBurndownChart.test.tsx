@@ -146,6 +146,14 @@ describe('ProjectBurndownChart axis helpers', () => {
             projectedAmount: 0,
             remaining: 90,
           },
+          {
+            actualAmount: 0,
+            displayPeriod: 'Sep-26',
+            kind: 'projected',
+            month: '2026-09',
+            projectedAmount: 10,
+            remaining: 70,
+          },
         ],
       },
     ];
@@ -163,6 +171,7 @@ describe('ProjectBurndownChart axis helpers', () => {
       '2026-06',
       '2026-07',
     ]);
+    expect(rows.map((row) => row.month)).not.toContain('2026-09');
     expect(rows[0].label).toBe('Mar-26');
     expect(rows.at(-1)?.label).toBe('Jul-26');
     expect(rows[2]['All Expenses::solid']).toBe(90);

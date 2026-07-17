@@ -60,8 +60,12 @@ function parseAwardEndDate(value: string | null) {
     const monthIndex = Number(dateOnlyMatch[2]) - 1;
     const day = Number(dateOnlyMatch[3]);
     const date = new Date(year, monthIndex, day);
+    const isSameCalendarDate =
+      date.getFullYear() === year &&
+      date.getMonth() === monthIndex &&
+      date.getDate() === day;
 
-    return Number.isNaN(date.getTime()) ? null : date;
+    return Number.isNaN(date.getTime()) || !isSameCalendarDate ? null : date;
   }
 
   const parsed = new Date(value);

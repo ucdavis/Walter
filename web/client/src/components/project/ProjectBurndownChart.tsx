@@ -194,7 +194,26 @@ export function buildChartRows(
     }
   }
 
-  return [...rows.values()].sort((a, b) => a.month.localeCompare(b.month));
+  const sortedRows = [...rows.values()].sort((a, b) =>
+    a.month.localeCompare(b.month)
+  );
+
+  if (
+    firstMonthIndex === null ||
+    lastMonthIndex === null ||
+    firstMonthIndex > lastMonthIndex
+  ) {
+    return sortedRows;
+  }
+
+  return sortedRows.filter((row) => {
+    const monthIndex = parseMonthIndex(row.month);
+    return (
+      monthIndex !== null &&
+      monthIndex >= firstMonthIndex &&
+      monthIndex <= lastMonthIndex
+    );
+  });
 }
 
 export function getRollingStartMonth(referenceMonth: string | null) {
@@ -608,7 +627,10 @@ export function ProjectBurndownSection({
       ? `${NON_PERSONNEL_SERIES}: ${categoryDisplayName(activeSelectedNonPersonnelCategory)}`
       : selectedKey;
   const currentBalanceForMarker = stats?.currentBalance ?? 0;
-  const projectedEndForMarker = stats?.projectedEnd ?? 0;
+  const projectEndForMarker = useMemo(
+    () => (result ? getProjectionStats(result, awardEndDate).projectedEnd : 0),
+    [awardEndDate, result]
+  );
   const selectedTimelineLabel =
     TIMELINE_OPTIONS.find((option) => option.value === selectedTimeline)
       ?.label ?? TIMELINE_OPTIONS[0].label;
@@ -781,10 +803,10 @@ export function ProjectBurndownSection({
                           labelText="Project End"
                         />
                       }
-                      stroke={getVerticalMarkerStroke(projectedEndForMarker)}
+                      stroke={getVerticalMarkerStroke(projectEndForMarker)}
                       strokeDasharray="8 4"
                       strokeOpacity={getVerticalMarkerStrokeOpacity(
-                        projectedEndForMarker
+                        projectEndForMarker
                       )}
                       strokeWidth={1.5}
                       x={awardEndMonth}
