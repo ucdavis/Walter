@@ -29,25 +29,79 @@
   --color-primary: var(--color-primary-color);
   --color-primary-content: var(--color-light-font);
 
-  --color-secondary: var(--color-secondary-color);
+  --color-secondary: #765800;
   --color-secondary-content: var(--color-light-font);
 
-  --color-error: var(--color-error-color);
+  --color-error: #b0002a;
   --color-error-content: var(--color-light-font);
 
-  --color-info: var(--color-info-color);
+  --color-info: #006b80;
   --color-info-content: var(--color-light-font);
 
-  --color-accent: var(--color-accent-color);
+  --color-accent: #9a4b00;
   --color-accent-content: var(--color-light-font);
 
-  --color-success: var(--color-success-color);
+  --color-success: #28751f;
   --color-success-content: var(--color-light-font);
 
-  --color-warning: var(--color-warning-color);
+  --color-warning: #855900;
   --color-warning-content: var(--color-light-font);
+
+  --color-neutral: #263447;
+  --color-neutral-content: #f8fafc;
+
+  --color-main-border: #dfdfdf;
+  --color-chart-grid: #c9ced6;
+  --color-login-pattern: #f3f6fc;
 }
+
+@plugin "daisyui/theme" {
+  name: 'walter-dark';
+  color-scheme: dark;
+
+  --color-base-100: #101722;
+  --color-base-200: #182231;
+  --color-base-300: #253247;
+  --color-base-content: #edf2f7;
+
+  --color-primary: #7ab8ff;
+  --color-primary-content: #07111f;
+
+  --color-secondary: #ffcc4d;
+  --color-secondary-content: #17130a;
+
+  --color-error: #ff8a9f;
+  --color-error-content: #20070c;
+
+  --color-info: #65d4e8;
+  --color-info-content: #061719;
+
+  --color-accent: #ffad66;
+  --color-accent-content: #1d0d03;
+
+  --color-success: #83d475;
+  --color-success-content: #091707;
+
+  --color-warning: #ffc66b;
+  --color-warning-content: #1b1103;
+
+  --color-neutral: #dce5f0;
+  --color-neutral-content: #101722;
+
+  --color-main-border: #34445a;
+  --color-chart-grid: #41526a;
+  --color-login-pattern: #172538;
+}
+
 @import './animations.css';
+
+html {
+  background-color: var(--color-base-100);
+}
+
+body {
+  @apply bg-base-100 text-base-content;
+}
 
 .h1 {
   @apply text-3xl font-proxima-bold;
@@ -96,14 +150,14 @@
   }
 
   .fancy-data {
-    @apply mt-4 mb-8 px-6 py-4 border rounded-md bg-light-bg-200 border-main-border;
+    @apply mt-4 mb-8 px-6 py-4 border rounded-md bg-base-200 border-main-border;
   }
   .nav-link {
     @apply border-b-2 border-base-200 transition text-base-content/70 hover:text-base-content;
   }
 
   .nav-link[data-status='active'] {
-    @apply text-base-content border-primary-color;
+    @apply text-base-content border-primary;
   }
 
   .tooltip-trigger {
@@ -186,13 +240,13 @@
   border-bottom: 1px solid var(--color-main-border);
   font-size: 0.9rem;
   font-family: var(--font-proxima-bold);
-  color: var(--color-dark-font);
+  color: var(--color-base-content);
   white-space: normal;
 }
 
 .walter-table td {
   padding: 12px 8px;
-  color: var(--color-dark-font);
+  color: var(--color-base-content);
   white-space: normal;
   overflow-wrap: anywhere;
 }
@@ -206,7 +260,7 @@
   border-bottom: 1px solid var(--color-main-border);
   font-size: 0.9rem;
   font-family: var(--font-proxima-bold);
-  color: var(--color-dark-font);
+  color: var(--color-base-content);
 }
 
 .walter-table.table-cardgrid {
@@ -274,7 +328,7 @@
 .textarea {
   &:focus,
   &:focus-within {
-    outline: 2px solid var(--color-primary-color);
+    outline: 2px solid var(--color-primary);
     outline-offset: 1px;
     isolation: isolate;
     z-index: 1;
@@ -284,6 +338,29 @@
 .tab {
   &:focus-visible,
   &:is(label:has(:checked:focus-visible)) {
-    outline: 2px solid var(--color-primary-color);
+    outline: 2px solid var(--color-primary);
   }
+}
+
+.recharts-cartesian-axis-tick-value {
+  fill: var(--color-base-content);
+}
+
+.recharts-cartesian-axis-line,
+.recharts-cartesian-axis-tick-line {
+  stroke: var(--color-base-content);
+  opacity: 0.55;
+}
+
+.recharts-legend-item-text {
+  color: var(--color-base-content) !important;
+}
+
+.uc-davis-logo {
+  opacity: 0.55;
+}
+
+[data-theme='walter-dark'] .uc-davis-logo {
+  filter: brightness(0) invert(1);
+  opacity: 0.78;
 }

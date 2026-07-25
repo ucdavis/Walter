@@ -507,8 +507,8 @@ function RouteComponent() {
         </div>
 
         {/* Applied selections, Shopify-style: consolidated removable chips */}
-        <aside className="border-main-border shrink-0 self-start overflow-hidden rounded-sm border bg-white lg:w-2/5">
-          <div className="bg-light-bg-200 border-main-border border-b px-4 py-2">
+        <aside className="border-main-border shrink-0 self-start overflow-hidden rounded-sm border bg-base-100 lg:w-2/5">
+          <div className="bg-base-200 border-main-border border-b px-4 py-2">
             <div className="flex items-center justify-between">
               <h2 className="text-primary-font text-sm uppercase">
                 Active selections

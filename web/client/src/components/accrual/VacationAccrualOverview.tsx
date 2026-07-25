@@ -333,7 +333,10 @@ export function VacationAccrualOverview({
                     data={data.monthlyLostCost}
                     margin={{ bottom: 8, left: 8, right: 16, top: 8 }}
                   >
-                    <CartesianGrid stroke="#D8D8D8" strokeDasharray="3 3" />
+                    <CartesianGrid
+                      stroke="var(--color-chart-grid)"
+                      strokeDasharray="3 3"
+                    />
                     <XAxis dataKey="label" tick={{ fontSize: 12 }} />
                     <YAxis
                       tick={{ fontSize: 12 }}
@@ -341,9 +344,10 @@ export function VacationAccrualOverview({
                     />
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: 'white',
-                        border: '1px solid #E9E3EE',
+                        backgroundColor: 'var(--color-base-100)',
+                        border: '1px solid var(--color-main-border)',
                         borderRadius: '6px',
+                        color: 'var(--color-base-content)',
                         fontSize: '12px',
                       }}
                       formatter={(value: number) => [
@@ -374,14 +378,18 @@ export function VacationAccrualOverview({
                     data={data.employeeStatusOverTime}
                     margin={{ bottom: 8, left: 8, right: 16, top: 8 }}
                   >
-                    <CartesianGrid stroke="#D8D8D8" strokeDasharray="3 3" />
+                    <CartesianGrid
+                      stroke="var(--color-chart-grid)"
+                      strokeDasharray="3 3"
+                    />
                     <XAxis dataKey="label" tick={{ fontSize: 12 }} />
                     <YAxis tick={{ fontSize: 12 }} />
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: 'white',
-                        border: '1px solid #E9E3EE',
+                        backgroundColor: 'var(--color-base-100)',
+                        border: '1px solid var(--color-main-border)',
                         borderRadius: '6px',
+                        color: 'var(--color-base-content)',
                         fontSize: '12px',
                       }}
                     />
