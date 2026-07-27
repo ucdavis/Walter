@@ -1,11 +1,14 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { ProjectDetails } from '@/components/project/ProjectDetails.tsx';
 import type { ProjectSummary } from '@/lib/projectSummary.ts';
 import { tooltipDefinitions } from '@/shared/tooltips.ts';
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+});
 
 const createSummary = (
   overrides: Partial<ProjectSummary> = {}
@@ -49,54 +52,84 @@ const createSummary = (
   ...overrides,
 });
 
-describe('ProjectDetails Finjector link', () => {
-  it('links the project number to Finjector for sponsored projects', () => {
-    render(
-      <ProjectDetails
-        summary={createSummary({
-          isInternal: false,
-          projectNumber: 'K30BND3F03',
-          projectOwningOrgCode: 'AENM002',
-          taskNum: 'RATEEX',
-        })}
-      />
-    );
-
-    const link = screen.getByRole('link', { name: /K30BND3F03/ });
-    expect(link).toHaveAttribute(
-      'href',
-      'https://finjector.ucdavis.edu/details/K30BND3F03-RATEEX-AENM002-522201/'
-    );
-    expect(link).toHaveAttribute('target', '_blank');
-  });
-
-  it('does not link the project number for internal projects', () => {
-    render(
-      <ProjectDetails
-        summary={createSummary({
-          isInternal: true,
-          projectNumber: 'FPAENM2341',
-          projectOwningOrgCode: 'AENM002',
-          taskNum: 'BIOIDV',
-        })}
-      />
-    );
-
-    expect(
-      screen.queryByRole('link', { name: /FPAENM2341/ })
-    ).not.toBeInTheDocument();
-    expect(screen.getByText('FPAENM2341')).toBeInTheDocument();
-  });
-});
-
 describe('ProjectDetails', () => {
-  it('shows project dates as a timeline', () => {
+  it('leaves project identity and status out of the summary card', () => {
     render(<ProjectDetails summary={createSummary()} />);
 
-    expect(screen.getByText('Timeline')).toBeInTheDocument();
-    expect(screen.getByText('01.01.2024 - 12.31.2026')).toBeInTheDocument();
-    expect(screen.queryByText('Project Start')).not.toBeInTheDocument();
-    expect(screen.queryByText('Project End')).not.toBeInTheDocument();
+    expect(screen.queryByText('Project Number')).not.toBeInTheDocument();
+    expect(screen.queryByText('Status')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: /K30ABC123/ })
+    ).not.toBeInTheDocument();
+  });
+
+  it('shows financial values, all-expense progress, and project timeline details', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2025, 0, 15));
+
+    render(<ProjectDetails summary={createSummary()} />);
+
+    expect(screen.getByText('Balance')).toBeInTheDocument();
+    expect(screen.getByText('Budget')).toBeInTheDocument();
+    expect(screen.getByText('Expense')).toBeInTheDocument();
+    expect(screen.getByText('Commitment')).toBeInTheDocument();
+    expect(screen.getByText('$4,000.00').closest('dd')).toHaveClass(
+      'text-info'
+    );
+    expect(screen.getAllByText('$10,000.00')[0]).toBeInTheDocument();
+    expect(screen.getByText('$5,000.00')).toBeInTheDocument();
+    expect(screen.getByText('$1,000.00')).toBeInTheDocument();
+    const progressBar = screen.getByRole('img', {
+      name: /All Expenses: \$5,000\.00 \(50%\) spent, \$1,000\.00 \(10%\) committed, \$4,000\.00 \(40%\), \$10,000\.00 budget/,
+    });
+    expect(progressBar).toBeInTheDocument();
+    expect(progressBar.firstElementChild).toHaveStyle({
+      backgroundColor: 'var(--color-info)',
+    });
+    expect(screen.queryByText('All Expenses')).not.toBeInTheDocument();
+    expect(screen.getByText('Project Start')).toBeInTheDocument();
+    expect(screen.getByText('Project End')).toBeInTheDocument();
+    expect(screen.getByText('01.01.2024')).toBeInTheDocument();
+    expect(screen.getByText('12.31.2026')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('img', {
+        name: /Time: 12 \(33%\) months completed, 24 \(67%\) months remaining/,
+      })
+    ).not.toBeInTheDocument();
+  });
+
+  it('uses internal color for internal project balances and progress bars', () => {
+    render(<ProjectDetails summary={createSummary({ isInternal: true })} />);
+
+    expect(screen.getByText('$4,000.00').closest('dd')).toHaveClass(
+      'text-accent'
+    );
+
+    const progressBar = screen.getByRole('img', {
+      name: /All Expenses:/,
+    });
+    expect(progressBar.firstElementChild).toHaveStyle({
+      backgroundColor: 'var(--color-accent)',
+    });
+  });
+
+  it('keeps negative balance values red', () => {
+    render(
+      <ProjectDetails
+        summary={createSummary({
+          totals: {
+            balance: -500,
+            budget: 10_000,
+            encumbrance: 1000,
+            expense: 9500,
+          },
+        })}
+      />
+    );
+
+    expect(screen.getByText('-$500.00').closest('dd')).toHaveClass(
+      'text-error'
+    );
   });
 
   it('shows a tooltip for Balance in the main summary card', async () => {
