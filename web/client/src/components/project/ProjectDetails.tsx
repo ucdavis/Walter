@@ -58,19 +58,22 @@ function getSummaryBudgetProgress(
   const spent = nonnegative(summary.totals.expense);
   const overrun = Math.max(nonnegative(-summary.totals.balance), 0);
   const remaining = nonnegative(summary.totals.balance);
-  const total = Math.max(spent + committed + remaining, budget + overrun, 1);
-  const percentTotal = overrun > 0 && budget > 0 ? budget : total;
+  const total = Math.max(
+    spent + committed + remaining + overrun,
+    budget + overrun,
+    1
+  );
 
   return {
     budget,
     committed,
-    committedPercent: progressPercent(committed, percentTotal),
+    committedPercent: progressPercent(committed, total),
     overrun,
-    overrunPercent: progressPercent(overrun, percentTotal),
+    overrunPercent: progressPercent(overrun, total),
     remaining,
-    remainingPercent: progressPercent(remaining, percentTotal),
+    remainingPercent: progressPercent(remaining, total),
     spent,
-    spentPercent: progressPercent(spent, percentTotal),
+    spentPercent: progressPercent(spent, total),
   };
 }
 
@@ -159,6 +162,11 @@ function AllExpensesProgress({
             color: availableColor(baseColor),
             label: 'Remaining',
             width: progress.remainingPercent,
+          },
+          {
+            color: 'var(--color-error)',
+            label: 'Overrun',
+            width: progress.overrunPercent,
           },
         ]}
       />

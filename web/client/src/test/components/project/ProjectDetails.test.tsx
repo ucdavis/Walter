@@ -130,6 +130,19 @@ describe('ProjectDetails', () => {
     expect(screen.getByText('-$500.00').closest('dd')).toHaveClass(
       'text-error'
     );
+    const progressBar = screen.getByRole('img', {
+      name: /All Expenses: \$9,500\.00 \(86%\) spent, \$1,000\.00 \(9%\) committed, \$500\.00 \(5%\) over, \$500\.00 over budget, \$10,000\.00 budget/,
+    });
+    const segmentWidths = [...progressBar.children].map((segment) =>
+      Number((segment as HTMLElement).style.width.replace('%', ''))
+    );
+
+    expect(
+      segmentWidths.reduce((sum, width) => sum + width, 0)
+    ).toBeLessThanOrEqual(100);
+    expect(progressBar.lastElementChild).toHaveStyle({
+      backgroundColor: 'var(--color-error)',
+    });
   });
 
   it('shows a tooltip for Balance in the main summary card', async () => {
