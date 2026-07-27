@@ -4,9 +4,10 @@ import {
   projectsDetailQueryOptions,
   ProjectRecord,
 } from '@/queries/project.ts';
+import { featureFlagsQueryOptions } from '@/queries/featureFlags.ts';
 import { Currency } from '@/shared/Currency.tsx';
 import { useSuspenseQuery } from '@tanstack/react-query';
-import { Link, useParams } from '@tanstack/react-router';
+import { Link, useParams, useRouterState } from '@tanstack/react-router';
 import {
   ClipboardDocumentListIcon,
   MagnifyingGlassIcon,
@@ -19,10 +20,16 @@ import {
 interface ProjectSummary {
   awardEndDate: string | null;
   displayName: string;
+  isInternal: boolean;
   projectNumber: string;
   projectStatusCode: string;
   totalBalance: number;
 }
+
+type ProjectSidebarRoute =
+  | '/expenditureprogress/$iamId/$projectNumber'
+  | '/projectburndown/$iamId/$projectNumber'
+  | '/projects/$iamId/$projectNumber';
 
 function normalizeSearchValue(value: string): string {
   return value
@@ -42,6 +49,7 @@ function groupProjects(records: ProjectRecord[]): ProjectSummary[] {
       map[key] = {
         awardEndDate: rec.awardEndDate,
         displayName: rec.displayName,
+        isInternal: rec.projectType === 'Internal',
         projectNumber: rec.projectNumber,
         projectStatusCode: rec.projectStatusCode,
         totalBalance: 0,
@@ -61,6 +69,33 @@ function groupProjects(records: ProjectRecord[]): ProjectSummary[] {
   return Object.values(map);
 }
 
+function getProjectSidebarRoute(
+  currentPathname: string,
+  featureFlags: {
+    burndownEnabled: boolean;
+    expenditureProgressEnabled: boolean;
+  },
+  project: ProjectSummary
+): ProjectSidebarRoute {
+  if (
+    currentPathname.startsWith('/expenditureprogress/') &&
+    !project.isInternal &&
+    featureFlags.expenditureProgressEnabled
+  ) {
+    return '/expenditureprogress/$iamId/$projectNumber';
+  }
+
+  if (
+    currentPathname.startsWith('/projectburndown/') &&
+    !project.isInternal &&
+    featureFlags.burndownEnabled
+  ) {
+    return '/projectburndown/$iamId/$projectNumber';
+  }
+
+  return '/projects/$iamId/$projectNumber';
+}
+
 const linkClasses = (isActive: boolean, isActiveStatus: boolean) =>
   [
     'block mb-0 text-left px-3 py-2 transition-colors border-b border-main-border',
@@ -73,6 +108,10 @@ export function ProjectsSidebar() {
   const { data: projects } = useSuspenseQuery(
     projectsDetailQueryOptions(iamId)
   );
+  const { data: featureFlags } = useSuspenseQuery(featureFlagsQueryOptions());
+  const currentPathname = useRouterState({
+    select: (state) => state.location.pathname,
+  });
 
   // mobile drawer
   const [open, setOpen] = useState(false);
@@ -118,6 +157,8 @@ export function ProjectsSidebar() {
     0
   );
   const isAllProjectsActive = !projectNumber;
+  const getProjectRoute = (project: ProjectSummary) =>
+    getProjectSidebarRoute(currentPathname, featureFlags, project);
 
   if (!projects?.length) {
     return null;
@@ -132,9 +173,9 @@ export function ProjectsSidebar() {
           collapsed ? 'w-24' : 'w-68',
         ].join(' ')}
       >
-        <div className="sticky top-24 mt-8">
-          <div className="bg-white rounded-sm border border-main-border overflow-hidden">
-            <div className="bg-light-bg-200 border-b border-main-border">
+        <div className="sticky top-24 mt-8 h-[calc(100dvh-13.5rem)] min-h-0">
+          <div className="bg-white rounded-sm border border-main-border overflow-hidden h-full flex flex-col">
+            <div className="bg-light-bg-200 border-b border-main-border shrink-0">
               <div className="px-4 py-2 border-b border-main-border flex items-center justify-between">
                 {!collapsed ? (
                   <h2 className="text-primary-font text-sm uppercase">
@@ -195,7 +236,7 @@ export function ProjectsSidebar() {
               )}
             </div>
 
-            <div className="space-y-1 max-h-[650px] overflow-y-auto">
+            <div className="space-y-1 min-h-0 flex-1 overflow-y-auto">
               {/* All Projects */}
               <Link
                 aria-label={collapsed ? 'All Projects' : undefined}
@@ -236,7 +277,7 @@ export function ProjectsSidebar() {
                       ? `${project.displayName} • ${project.projectNumber}`
                       : project.displayName
                   }
-                  to="/projects/$iamId/$projectNumber"
+                  to={getProjectRoute(project)}
                   viewTransition={{ types: ['slide-left'] }}
                 >
                   {collapsed ? (
@@ -385,7 +426,7 @@ export function ProjectsSidebar() {
                 key={project.projectNumber}
                 onClick={() => setOpen(false)}
                 params={{ iamId, projectNumber: project.projectNumber }}
-                to="/projects/$iamId/$projectNumber"
+                to={getProjectRoute(project)}
                 viewTransition={{ types: ['slide-left'] }}
               >
                 <div className="text-xs text-base-content/50">

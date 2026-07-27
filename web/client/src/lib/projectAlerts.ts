@@ -3,17 +3,42 @@ import {
   type ProjectSummary,
 } from '@/lib/projectSummary.ts';
 import type { PiWithProjects, ProjectRecord } from '@/queries/project.ts';
+import { getLocalDateOnly, parseProjectDate } from '@/lib/date.ts';
+import { format } from 'date-fns';
 
 export interface Alert {
   id: string;
   message: string;
-  severity: 'error' | 'success' | 'warning';
+  severity: 'accent' | 'error' | 'info' | 'success' | 'warning';
   type:
+    | 'award-ended'
     | 'negative-balance'
     | 'low-budget'
     | 'ending-soon'
     | 'reconciliation-issue'
     | 'reconciliation-balanced';
+}
+
+export function getAwardEndedAlert(
+  summary: ProjectSummary,
+  today = new Date()
+): Alert | null {
+  const endDate = parseProjectDate(summary.awardEndDate);
+
+  if (!endDate) {
+    return null;
+  }
+
+  const todayDateOnly = getLocalDateOnly(today);
+
+  return endDate < todayDateOnly
+    ? {
+        id: `award-ended-${summary.projectNumber}`,
+        message: `Award ended on ${format(endDate, 'MM/dd/yyyy')}`,
+        severity: summary.isInternal ? 'accent' : 'info',
+        type: 'award-ended',
+      }
+    : null;
 }
 
 /**
@@ -49,8 +74,8 @@ export function getAlertsForProject(
   }
 
   // Check if project ends within 3 months (warning)
-  if (summary.awardEndDate) {
-    const endDate = new Date(summary.awardEndDate);
+  const endDate = parseProjectDate(summary.awardEndDate);
+  if (endDate) {
     const now = new Date();
     const threeMonthsFromNow = new Date();
     threeMonthsFromNow.setMonth(threeMonthsFromNow.getMonth() + 3);
@@ -129,10 +154,16 @@ export function getProjectListAlerts(
   projects: ProjectRecord[],
   employeeId: string
 ): PiProjectAlert[] {
-  const now = new Date();
-  const active = projects.filter(
-    (p) => !p.awardEndDate || new Date(p.awardEndDate) >= now
-  );
+  const today = getLocalDateOnly();
+  const active = projects.filter((p) => {
+    if (!p.awardEndDate) {
+      return true;
+    }
+
+    const awardEndDate = parseProjectDate(p.awardEndDate);
+
+    return awardEndDate ? awardEndDate >= today : false;
+  });
 
   const byNumber = new Map<string, ProjectRecord[]>();
   for (const p of active) {

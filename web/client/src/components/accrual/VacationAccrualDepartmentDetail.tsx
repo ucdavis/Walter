@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { ComponentType, SVGProps } from 'react';
 import {
-  ArrowLongLeftIcon,
+  ArrowLeftIcon,
   CalendarDaysIcon,
   ChartBarIcon,
   ChevronDownIcon,
@@ -544,10 +544,10 @@ export function VacationAccrualDepartmentDetail({
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div className="min-w-0">
                 <Link
-                  className="inline-flex items-center gap-2 text-sm font-bold text-primary no-underline"
+                  className="btn btn-sm mb-4"
                   to="/accruals"
                 >
-                  <ArrowLongLeftIcon className="h-4 w-4" />
+                  <ArrowLeftIcon className="h-4 w-4" />
                   Department Selector
                 </Link>
                 <div

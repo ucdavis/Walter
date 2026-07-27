@@ -1,6 +1,10 @@
-import { describe, expect, it } from 'vitest';
-import { getAlertsForProject } from '@/lib/projectAlerts.ts';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import {
+  getAlertsForProject,
+  getProjectListAlerts,
+} from '@/lib/projectAlerts.ts';
 import type { ProjectSummary } from '@/lib/projectSummary.ts';
+import type { ProjectRecord } from '@/queries/project.ts';
 
 const createSummary = (
   overrides: Partial<ProjectSummary> = {}
@@ -42,6 +46,53 @@ const createSummary = (
   taskNum: null,
   totals: { balance: 5000, budget: 10000, encumbrance: 0, expense: 5000 },
   ...overrides,
+});
+
+const createProject = (overrides: Partial<ProjectRecord> = {}): ProjectRecord =>
+  ({
+    awardCloseDate: null,
+    awardEndDate: '2030-12-31',
+    awardName: null,
+    awardNumber: 'AWD001',
+    awardPi: null,
+    awardStartDate: '2020-01-01',
+    awardStatus: null,
+    awardType: null,
+    balance: 5000,
+    billingCycle: null,
+    budget: 10000,
+    commitments: 0,
+    contractAdministrator: null,
+    copi: null,
+    costShareRequiredBySponsor: null,
+    displayName: 'TEST-001: Test Project',
+    expenses: 5000,
+    flowThroughFundsAmount: null,
+    flowThroughFundsEndDate: null,
+    flowThroughFundsPrimarySponsor: null,
+    flowThroughFundsReferenceAwardName: null,
+    flowThroughFundsStartDate: null,
+    grantAdministrator: null,
+    pa: null,
+    pi: null,
+    pm: null,
+    pmEmployeeId: null,
+    postReportingPeriod: null,
+    primarySponsorName: null,
+    projectBurdenCostRate: null,
+    projectBurdenScheduleBase: null,
+    projectFund: null,
+    projectNumber: 'TEST-001',
+    projectOwningOrgCode: null,
+    projectStatusCode: 'ACTIVE',
+    projectType: 'Sponsored',
+    sponsorAwardNumber: null,
+    taskNum: null,
+    ...overrides,
+  }) as ProjectRecord;
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 describe('getAlertsForProject', () => {
@@ -118,6 +169,39 @@ describe('getAlertsForProject', () => {
       const alerts = getAlertsForProject(summary);
 
       expect(alerts.find((a) => a.type === 'ending-soon')).toBeUndefined();
+    });
+  });
+});
+
+describe('getProjectListAlerts', () => {
+  it('keeps projects ending today active when building alerts', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 6, 17, 15));
+
+    const alerts = getProjectListAlerts(
+      [
+        createProject({
+          awardEndDate: '2026-07-17',
+          balance: -500,
+          displayName: 'Ends Today',
+          expenses: 10_500,
+          projectNumber: 'TODAY',
+        }),
+        createProject({
+          awardEndDate: '2026-07-16',
+          balance: -700,
+          displayName: 'Ended Yesterday',
+          expenses: 10_700,
+          projectNumber: 'YDAY',
+        }),
+      ],
+      '1000000123'
+    );
+
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0]).toMatchObject({
+      projectNumber: 'TODAY',
+      type: 'negative-balance',
     });
   });
 });
