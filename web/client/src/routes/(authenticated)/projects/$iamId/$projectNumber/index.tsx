@@ -56,6 +56,20 @@ const formatStatusLabel = (status: string | null) =>
         .replaceAll(/\b\w/g, (letter) => letter.toUpperCase())
     : 'Not provided';
 
+const normalizeStatusCode = (status: string | null) =>
+  status?.trim().toUpperCase() ?? '';
+
+const projectStatusDotClassByCode: Record<string, string> = {
+  ACTIVE: 'bg-success',
+  CLOSED: 'bg-base-content/30',
+  EXPIRED: 'bg-warning',
+  INACTIVE: 'bg-base-content/30',
+};
+
+const getProjectStatusDotClassName = (status: string | null) =>
+  projectStatusDotClassByCode[normalizeStatusCode(status)] ??
+  'bg-base-content/30';
+
 function ProjectContent({
   iamId,
   projectRecords,
@@ -110,7 +124,7 @@ function ProjectContent({
           <span className="inline-flex items-center gap-2">
             <span
               aria-hidden="true"
-              className="h-2.5 w-2.5 rounded-full bg-success"
+              className={`h-2.5 w-2.5 rounded-full ${getProjectStatusDotClassName(summary.projectStatusCode)}`}
             />
             {formatStatusLabel(summary.projectStatusCode)}
           </span>

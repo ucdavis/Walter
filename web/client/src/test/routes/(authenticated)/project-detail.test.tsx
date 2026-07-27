@@ -130,7 +130,9 @@ describe('project detail page', () => {
         'https://finjector.ucdavis.edu/details/P1-T001-ORG001-522201/'
       );
       expect(finjectorLink).toHaveAttribute('target', '_blank');
-      expect(within(topSection).getByText('Active')).toBeInTheDocument();
+      const status = within(topSection).getByText('Active');
+      expect(status).toBeInTheDocument();
+      expect(status.querySelector('span')).toHaveClass('bg-success');
       expect(
         within(topSection).getByText('Sponsored Project')
       ).toBeInTheDocument();
@@ -139,6 +141,25 @@ describe('project detail page', () => {
           '- Source: Faculty Department Portfolio Report (PPM)'
         )
       ).toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('uses a neutral status dot for unknown project statuses', async () => {
+    const projects = [
+      createProject({ pmEmployeeId: '2000', projectStatusCode: 'ON_HOLD' }),
+    ];
+    setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);
+
+    const { cleanup } = renderRoute({
+      initialPath: '/projects/1000/P1',
+    });
+
+    try {
+      const status = await screen.findByText('On Hold');
+
+      expect(status.querySelector('span')).toHaveClass('bg-base-content/30');
     } finally {
       cleanup();
     }
