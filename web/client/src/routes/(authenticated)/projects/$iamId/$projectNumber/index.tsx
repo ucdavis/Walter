@@ -127,7 +127,7 @@ function ProjectContent({
         </div>
         {summary.isInternal && (
           <div
-            className="alert alert-soft alert-warning mt-4 max-w-3xl"
+            className="alert alert-soft alert-accent mt-4 max-w-3xl"
             role="alert"
           >
             Totals for internal projects do not reflect transactions that have
