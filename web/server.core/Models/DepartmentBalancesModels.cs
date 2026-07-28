@@ -45,6 +45,9 @@ public sealed class DepartmentBalanceOption
 public sealed class DepartmentBalancesQuery
 {
     public string[] Dimensions { get; set; } = Array.Empty<string>();
+
+    /// <summary>Required accounting period, e.g. "Jul-26".</summary>
+    public string? PeriodName { get; set; }
     public string[]? FinancialDepartments { get; set; }
     public string[]? Funds { get; set; }
     public string[]? Accounts { get; set; }
@@ -57,6 +60,9 @@ public sealed class DepartmentBalancesQuery
 public sealed class DepartmentBalancesOptionsQuery
 {
     public string Segment { get; set; } = "";
+
+    /// <summary>Accounting period, e.g. "Jul-26". Required unless Segment is "Period".</summary>
+    public string? PeriodName { get; set; }
     public string[]? FinancialDepartments { get; set; }
     public string[]? Funds { get; set; }
     public string[]? Accounts { get; set; }
