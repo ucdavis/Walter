@@ -1,6 +1,7 @@
 @import 'tailwindcss';
-@plugin "daisyui";
 @import '@ucdavis/gunrock-tailwind/imports.css';
+@import './animations.css';
+@plugin "daisyui";
 
 @theme {
   --color-light-bg-100: oklch(100% 0 0);
@@ -96,8 +97,6 @@
   --color-chart-default-tooltip-border: #34445a;
   --color-interaction-hover: #182231;
 }
-
-@import './animations.css';
 
 [data-theme='walter-dark'] {
   background-color: var(--color-base-100);
