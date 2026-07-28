@@ -175,9 +175,8 @@ export function ProjectChart({
           <Tooltip
             contentStyle={{
               backgroundColor: 'var(--color-base-100)',
-              border: '1px solid var(--color-main-border)',
+              border: '1px solid var(--color-chart-tooltip-border)',
               borderRadius: '6px',
-              color: 'var(--color-base-content)',
               fontSize: '12px',
             }}
             formatter={(value: number) => [formatCurrency(value), 'Balance']}
@@ -185,8 +184,8 @@ export function ProjectChart({
           <Line
             activeDot={{ r: 6 }}
             dataKey="value"
-            dot={{ fill: 'var(--color-primary)', r: 4 }}
-            stroke="var(--color-primary)"
+            dot={{ fill: 'var(--color-chart-primary)', r: 4 }}
+            stroke="var(--color-chart-primary)"
             strokeWidth={2}
             type="monotone"
           />

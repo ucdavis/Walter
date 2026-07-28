@@ -118,8 +118,9 @@ export function ProjectFundingChart({ projects }: ProjectFundingChartProps) {
                     <Tooltip
                       contentStyle={{
                         backgroundColor: 'var(--color-base-100)',
-                        border: '1px solid var(--color-main-border)',
-                        color: 'var(--color-base-content)',
+                        border:
+                          '1px solid var(--color-chart-default-tooltip-border)',
+                        color: 'inherit',
                       }}
                       cursor={false}
                       formatter={(value: number, key: string) => [

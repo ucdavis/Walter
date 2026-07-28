@@ -345,9 +345,8 @@ export function VacationAccrualOverview({
                     <Tooltip
                       contentStyle={{
                         backgroundColor: 'var(--color-base-100)',
-                        border: '1px solid var(--color-main-border)',
+                        border: '1px solid var(--color-chart-tooltip-border)',
                         borderRadius: '6px',
-                        color: 'var(--color-base-content)',
                         fontSize: '12px',
                       }}
                       formatter={(value: number) => [
@@ -387,9 +386,8 @@ export function VacationAccrualOverview({
                     <Tooltip
                       contentStyle={{
                         backgroundColor: 'var(--color-base-100)',
-                        border: '1px solid var(--color-main-border)',
+                        border: '1px solid var(--color-chart-tooltip-border)',
                         borderRadius: '6px',
-                        color: 'var(--color-base-content)',
                         fontSize: '12px',
                       }}
                     />

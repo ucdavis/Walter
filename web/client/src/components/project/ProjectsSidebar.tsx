@@ -99,8 +99,8 @@ function getProjectSidebarRoute(
 const linkClasses = (isActive: boolean, isActiveStatus: boolean) =>
   [
     'block mb-0 text-left px-3 py-2 transition-colors border-b border-main-border',
-    isActive ? 'bg-primary/15' : 'hover:bg-base-200',
-    isActiveStatus ? 'bg-base-100' : 'hover:bg-base-200',
+    isActive ? 'bg-primary/10' : 'hover:bg-interaction-hover',
+    isActiveStatus ? 'bg-base-100' : 'hover:bg-interaction-hover',
   ].join(' ');
 
 export function ProjectsSidebar() {

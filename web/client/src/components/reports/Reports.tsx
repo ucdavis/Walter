@@ -67,7 +67,7 @@ export function Reports() {
         {reports.map((report) => (
           <li key={report.id}>
             <Link
-              className="border-main-border group block h-full rounded-sm border bg-base-100 p-5 transition hover:bg-base-200 hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+              className="border-main-border group block h-full rounded-sm border bg-base-100 p-5 transition hover:bg-interaction-hover hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
               to={report.url}
             >
               <div className="flex h-full flex-col gap-4">
