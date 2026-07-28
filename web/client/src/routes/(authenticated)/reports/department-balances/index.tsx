@@ -145,14 +145,20 @@ function RouteComponent() {
   const [department, setDepartment] = useState<string[]>([]);
   const [filters, setFilters] = useState<DepartmentBalancesFilters>({});
   const [dimensions, setDimensions] = useState<string[]>([]);
+  const [period, setPeriod] = useState('');
+
+  const periodOptions = useDepartmentBalanceOptions('Period', {});
+  // Server orders periods newest first; the first option is the current close.
+  const effectivePeriod = period || periodOptions.data?.[0]?.code;
 
   const query = useMemo(
     () => ({
       dimensions,
       ...filters,
       financialDepartments: department.length > 0 ? department : undefined,
+      periodName: effectivePeriod,
     }),
-    [dimensions, filters, department]
+    [dimensions, filters, department, effectivePeriod]
   );
 
   const {
@@ -180,7 +186,11 @@ function RouteComponent() {
     [rows, labelsByKey, dimensions]
   );
 
-  const deptOptions = useDepartmentBalanceOptions('Dept', {});
+  const deptOptions = useDepartmentBalanceOptions(
+    'Dept',
+    { periodName: effectivePeriod },
+    Boolean(effectivePeriod)
+  );
   const fundOptions = useDepartmentBalanceOptions(
     'Fund',
     query,
@@ -288,7 +298,9 @@ function RouteComponent() {
     [cols]
   );
 
-  const setFilter = <K extends keyof DepartmentBalancesFilters>(
+  const setFilter = <
+    K extends Exclude<keyof DepartmentBalancesFilters, 'periodName'>,
+  >(
     key: K,
     values: string[]
   ) => {
@@ -315,7 +327,10 @@ function RouteComponent() {
     opts?.find((o) => o.code === code)?.name;
 
   const segmentFilterDefs: {
-    key: Exclude<keyof DepartmentBalancesFilters, 'financialDepartments'>;
+    key: Exclude<
+      keyof DepartmentBalancesFilters,
+      'financialDepartments' | 'periodName'
+    >;
     label: string;
     options: DepartmentBalanceOption[] | undefined;
   }[] = [
@@ -379,11 +394,39 @@ function RouteComponent() {
         <div className="flex flex-1 flex-col gap-6">
           <section>
             <h2 className="text-xl font-proxima-bold">Financial Department</h2>
-            <p className="mb-4">search and choose financial department(s)</p>
+            <p className="mb-4">
+              choose the accounting period, then search and choose financial
+              department(s)
+            </p>
             <div className="grid items-start gap-4 md:grid-cols-2">
+              {/* Accounting period: required single choice, newest first, defaults to current close */}
+              <div className="flex flex-col gap-2">
+                <label
+                  className="text-sm uppercase font-proxima-bold"
+                  htmlFor="period-select"
+                >
+                  Period
+                </label>
+                <select
+                  className="select w-full"
+                  disabled={periodOptions.isPending}
+                  id="period-select"
+                  onChange={(e) => setPeriod(e.target.value)}
+                  value={effectivePeriod ?? ''}
+                >
+                  {(periodOptions.data ?? []).map((o) => (
+                    <option key={o.code} value={o.code}>
+                      {o.code}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               {/* Department — hierarchy-aware multi-select, always enabled; gates the other facets */}
               <div className="flex flex-col gap-2">
-                <label className="sr-only">Financial Department</label>
+                <label className="text-sm uppercase font-proxima-bold">
+                  Financial Department
+                </label>
                 <MultiSelectFilter
                   loading={deptOptions.isPending}
                   onChange={handleDeptChange}
@@ -645,7 +688,7 @@ function RouteComponent() {
 
       {/* Results area */}
       <h2 className="h2 mt-16 border-t border-main-border pt-8">
-        Report results
+        Report results{effectivePeriod ? ` as of ${effectivePeriod}` : ''}
       </h2>
       {department.length === 0 ? (
         <p className="mt-2">No data to show.</p>
@@ -667,7 +710,7 @@ function RouteComponent() {
             <ExportDataButton
               columns={csvColumns}
               data={labeledRows}
-              filename="department-balances.csv"
+              filename={`department-balances-${effectivePeriod ?? 'current'}.csv`}
             />
           }
         />

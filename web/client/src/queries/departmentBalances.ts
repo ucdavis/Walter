@@ -36,6 +36,7 @@ export interface DepartmentBalancesFilters {
   activities?: string[];
   financialDepartments?: string[];
   funds?: string[];
+  periodName?: string;
   projects?: string[];
   purposes?: string[];
 }
@@ -49,7 +50,7 @@ export type OptionsSegment =
 
 export const useDepartmentBalancesQuery = (query: DepartmentBalancesQuery) =>
   useQuery({
-    enabled: query.dimensions.length > 0,
+    enabled: query.dimensions.length > 0 && Boolean(query.periodName),
     queryFn: () => postJson<DepartmentBalanceRow[]>('/api/departmentbalances/query', query),
     queryKey: ['department-balances', query] as const,
     staleTime: 60 * 60 * 1000,
