@@ -83,7 +83,7 @@ describe('ProjectAdditionalInfo', () => {
       'Smith, Jane',
       '01.01.2024',
     ]) {
-      expect(screen.getByText(value).closest('dt')).toHaveClass('stat-value');
+      expect(screen.getByText(value).closest('dd')).toHaveClass('stat-value');
     }
   });
 
@@ -96,7 +96,7 @@ describe('ProjectAdditionalInfo', () => {
       'NSF-2024-001',
       '26.5%',
     ]) {
-      expect(screen.getByText(value).closest('dt')).toHaveClass('stat-value');
+      expect(screen.getByText(value).closest('dd')).toHaveClass('stat-value');
     }
   });
 

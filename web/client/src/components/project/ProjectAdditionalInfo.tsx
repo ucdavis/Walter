@@ -166,10 +166,10 @@ export function ProjectAdditionalInfo({ summary }: ProjectAdditionalInfoProps) {
       <dl className="grid grid-cols-1 gap-4 mb-6 sm:grid-cols-2 xl:grid-cols-4">
         {featuredFields.map((field) => (
           <div key={field.label}>
-            <dd className="stat-label">{renderLabel(field)}</dd>
-            <dt className="stat-value min-w-0 break-words">
+            <dt className="stat-label">{renderLabel(field)}</dt>
+            <dd className="stat-value min-w-0 break-words">
               <StatValue field={field} />
-            </dt>
+            </dd>
           </div>
         ))}
       </dl>
@@ -177,10 +177,10 @@ export function ProjectAdditionalInfo({ summary }: ProjectAdditionalInfoProps) {
       <dl className="grid grid-cols-1 gap-4 mb-6 sm:grid-cols-2 xl:grid-cols-4">
         {primaryFields.map((field) => (
           <div key={field.label}>
-            <dd className="stat-label">{renderLabel(field)}</dd>
-            <dt className="stat-value min-w-0 break-words">
+            <dt className="stat-label">{renderLabel(field)}</dt>
+            <dd className="stat-value min-w-0 break-words">
               <StatValue field={field} />
-            </dt>
+            </dd>
           </div>
         ))}
       </dl>
