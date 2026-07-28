@@ -1,13 +1,13 @@
--- Flexible current-balance summary for college/department financial reporting. Returns balance
--- measures (assets, liabilities, net position, revenue, expenses, ending balance) summed over
--- dbo.GlSummaryBalances -- the nightly current-period snapshot -- grouped by a caller-selected set
--- of chart string segments (@Dimensions, child level only) and constrained by optional per-segment
--- filters. The Dept, Fund, and Account filters are hierarchy-aware: a supplied code matches the leaf
--- OR any ancestor level (ancestor codes come from the dbo.Erp*Hierarchy dimension tables joined
--- here). Purpose, Project, and Activity filters match the leaf code exactly. Dimension keys are
--- resolved through a whitelist so only known column names reach the dynamic SQL; filter values stay
--- parameterized. Every result row also carries the snapshot's PeriodName so clients can show
--- "balances as of <period>".
+-- Flexible balance summary for college/department financial reporting. Returns balance measures
+-- (assets, liabilities, net position, revenue, expenses, ending balance) summed over
+-- dbo.GlSummaryBalances for the required @PeriodName snapshot (the table holds one snapshot per
+-- accounting period), grouped by a caller-selected set of chart string segments (@Dimensions,
+-- child level only) and constrained by optional per-segment filters. The Dept, Fund, and Account
+-- filters are hierarchy-aware: a supplied code matches the leaf OR any ancestor level (ancestor
+-- codes come from the dbo.Erp*Hierarchy dimension tables joined here). Purpose, Project, and
+-- Activity filters match the leaf code exactly. Dimension keys are resolved through a whitelist so
+-- only known column names reach the dynamic SQL; filter values stay parameterized. Every result
+-- row also carries PeriodName, echoing the requested period for "balances as of <period>" display.
 CREATE PROCEDURE dbo.usp_GetGlBalanceSummary
     @Dimensions           VARCHAR(MAX),               -- required: CSV of segment keys
     @FinancialDepartments VARCHAR(MAX) = NULL,
@@ -16,6 +16,7 @@ CREATE PROCEDURE dbo.usp_GetGlBalanceSummary
     @Purposes             VARCHAR(MAX) = NULL,
     @Projects             VARCHAR(MAX) = NULL,
     @Activities           VARCHAR(MAX) = NULL,
+    @PeriodName           VARCHAR(10),                -- required: accounting period, e.g. 'Jul-26'
     @ApplicationName      NVARCHAR(128) = NULL,
     @ApplicationUser      NVARCHAR(256) = NULL,
     @EmulatingUser        NVARCHAR(256) = NULL
@@ -55,6 +56,9 @@ BEGIN
     IF @InputCount <> (SELECT COUNT(*) FROM @SelectedDims)
     BEGIN RAISERROR('@Dimensions contains one or more invalid segment keys', 16, 1); RETURN; END;
 
+    IF @PeriodName IS NULL OR LTRIM(RTRIM(@PeriodName)) = ''
+    BEGIN RAISERROR('@PeriodName is required', 16, 1); RETURN; END;
+
     EXEC dbo.usp_SanitizeInputString @ApplicationName OUTPUT;
     EXEC dbo.usp_SanitizeInputString @ApplicationUser OUTPUT;
 
@@ -71,7 +75,7 @@ BEGIN
 
     -- Optional filters (values remain parameterized). Dept/Fund/Account are hierarchy-aware:
     -- a supplied code matches the leaf OR any ancestor level.
-    DECLARE @Where NVARCHAR(MAX) = N' WHERE 1 = 1';
+    DECLARE @Where NVARCHAR(MAX) = N' WHERE PeriodName = @p_Period';
     IF @FinancialDepartments IS NOT NULL
         SET @Where += N' AND (Dept IN (SELECT value FROM STRING_SPLIT(@p_Depts, '',''))
                            OR DeptParentLevel0Code IN (SELECT value FROM STRING_SPLIT(@p_Depts, '',''))
@@ -147,16 +151,18 @@ BEGIN
     SET @ParametersJSON = (
         SELECT @Dimensions AS Dimensions, @FinancialDepartments AS FinancialDepartments,
                @Funds AS Funds, @Accounts AS Accounts, @Purposes AS Purposes,
-               @Projects AS Projects, @Activities AS Activities,
+               @Projects AS Projects, @Activities AS Activities, @PeriodName AS PeriodName,
                COALESCE(@ApplicationName, APP_NAME()) AS ApplicationName
         FOR JSON PATH, WITHOUT_ARRAY_WRAPPER);
 
     BEGIN TRY
         EXEC sp_executesql @Sql,
             N'@p_Depts VARCHAR(MAX), @p_Funds VARCHAR(MAX), @p_Accounts VARCHAR(MAX),
-              @p_Purposes VARCHAR(MAX), @p_Projects VARCHAR(MAX), @p_Activities VARCHAR(MAX)',
+              @p_Purposes VARCHAR(MAX), @p_Projects VARCHAR(MAX), @p_Activities VARCHAR(MAX),
+              @p_Period VARCHAR(10)',
             @p_Depts = @FinancialDepartments, @p_Funds = @Funds, @p_Accounts = @Accounts,
-            @p_Purposes = @Purposes, @p_Projects = @Projects, @p_Activities = @Activities;
+            @p_Purposes = @Purposes, @p_Projects = @Projects, @p_Activities = @Activities,
+            @p_Period = @PeriodName;
 
         SET @RowCount = @@ROWCOUNT;
         SET @Duration_MS = DATEDIFF(MILLISECOND, @StartTime, SYSDATETIME());
