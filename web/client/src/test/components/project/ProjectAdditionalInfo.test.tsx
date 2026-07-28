@@ -74,6 +74,80 @@ describe('ProjectAdditionalInfo', () => {
     expect(screen.getByText('26.5%')).toBeInTheDocument();
   });
 
+  it('features key award fields as stat values', () => {
+    render(<ProjectAdditionalInfo summary={createSummary()} />);
+
+    for (const value of [
+      'AWD-100',
+      'Test Award',
+      'Smith, Jane',
+      '01.01.2024',
+    ]) {
+      expect(screen.getByText(value).closest('dt')).toHaveClass('stat-value');
+    }
+  });
+
+  it('features remaining primary award fields as stat values', () => {
+    render(<ProjectAdditionalInfo summary={createSummary()} />);
+
+    for (const value of [
+      '12.31.2026',
+      'National Science Foundation',
+      'NSF-2024-001',
+      '26.5%',
+    ]) {
+      expect(screen.getByText(value).closest('dt')).toHaveClass('stat-value');
+    }
+  });
+
+  it('truncates the award name and reveals the full name in a tooltip', async () => {
+    const user = userEvent.setup();
+    const awardName =
+      'Long Running Multidisciplinary Sponsored Award for Regional Climate Resilience and Agricultural Water Systems';
+
+    render(
+      <ProjectAdditionalInfo
+        summary={createSummary({
+          awardName,
+        })}
+      />
+    );
+
+    const awardNameValue = screen.getByText(awardName);
+
+    expect(awardNameValue).toHaveClass('truncate');
+    expect(awardNameValue).toHaveClass('tooltip-label');
+
+    await user.hover(awardNameValue.parentElement as HTMLElement);
+
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(awardName);
+  });
+
+  it('truncates the primary sponsor name and reveals the full name in a tooltip', async () => {
+    const user = userEvent.setup();
+    const primarySponsorName =
+      'United States Department of Agriculture National Institute of Food and Agriculture';
+
+    render(
+      <ProjectAdditionalInfo
+        summary={createSummary({
+          primarySponsorName,
+        })}
+      />
+    );
+
+    const sponsorNameValue = screen.getByText(primarySponsorName);
+
+    expect(sponsorNameValue).toHaveClass('truncate');
+    expect(sponsorNameValue).toHaveClass('tooltip-label');
+
+    await user.hover(sponsorNameValue.parentElement as HTMLElement);
+
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+      primarySponsorName
+    );
+  });
+
   it('hides secondary fields by default', () => {
     render(<ProjectAdditionalInfo summary={createSummary()} />);
 
@@ -84,7 +158,9 @@ describe('ProjectAdditionalInfo', () => {
   it('shows Show more button for all users', () => {
     render(<ProjectAdditionalInfo summary={createSummary()} />);
 
-    expect(screen.getByRole('button', { name: 'Show more' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Show more' })
+    ).toBeInTheDocument();
   });
 
   it('reveals hidden fields when Show more is clicked', async () => {
@@ -172,9 +248,9 @@ describe('ProjectAdditionalInfo', () => {
     render(
       <ProjectAdditionalInfo
         summary={createSummary({
+          flowThroughFundsAmount: '500000',
           flowThroughFundsPrimarySponsor: null,
           flowThroughFundsReferenceAwardName: 'Parent Award XYZ',
-          flowThroughFundsAmount: '500000',
         })}
       />
     );
@@ -202,11 +278,11 @@ describe('ProjectAdditionalInfo', () => {
     render(
       <ProjectAdditionalInfo
         summary={createSummary({
+          flowThroughFundsAmount: '1234567',
+          flowThroughFundsEndDate: '2027-06-30',
           flowThroughFundsPrimarySponsor: 'Harvard University',
           flowThroughFundsReferenceAwardName: 'H-2024-001',
           flowThroughFundsStartDate: '2024-07-01',
-          flowThroughFundsEndDate: '2027-06-30',
-          flowThroughFundsAmount: '1234567',
         })}
       />
     );
@@ -226,11 +302,11 @@ describe('ProjectAdditionalInfo', () => {
     render(
       <ProjectAdditionalInfo
         summary={createSummary({
+          flowThroughFundsAmount: null,
+          flowThroughFundsEndDate: null,
           flowThroughFundsPrimarySponsor: 'Harvard University',
           flowThroughFundsReferenceAwardName: null,
           flowThroughFundsStartDate: null,
-          flowThroughFundsEndDate: null,
-          flowThroughFundsAmount: null,
         })}
       />
     );

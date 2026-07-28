@@ -135,7 +135,6 @@ function ProjectContent({
         summary={summary}
       />
       <FinancialDetails summary={summary} />
-      <ProjectAdditionalInfo summary={summary} />
 
       <section className="section-margin">
         {summary.isInternal ? (
@@ -166,6 +165,8 @@ function ProjectContent({
           </>
         )}
       </section>
+
+      <ProjectAdditionalInfo summary={summary} />
 
       <section className="section-margin">
         <h2 className="h2 mb-2">Personnel</h2>

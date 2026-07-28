@@ -8,6 +8,7 @@ import { tooltipDefinitions } from '@/shared/tooltips.ts';
 interface Field {
   label: string;
   tooltip?: string;
+  truncateWithTooltip?: boolean;
   value: string;
 }
 
@@ -16,13 +17,10 @@ const fieldRowClassName =
 
 function buildPrimaryFields(summary: ProjectSummary): Field[] {
   return [
-    { label: 'Award Number', value: summary.awardNumber ?? '—' },
-    { label: 'Award Name', value: summary.awardName ?? '—' },
-    { label: 'Award PI', value: summary.awardPi ?? '—' },
-    { label: 'Award Start Date', value: formatDate(summary.awardStartDate) },
     { label: 'Award End Date', value: formatDate(summary.awardEndDate) },
     {
       label: 'Primary Sponsor Name',
+      truncateWithTooltip: true,
       value: summary.primarySponsorName ?? '—',
     },
     {
@@ -37,6 +35,34 @@ function buildPrimaryFields(summary: ProjectSummary): Field[] {
         : '—',
     },
   ];
+}
+
+function buildFeaturedFields(summary: ProjectSummary): Field[] {
+  return [
+    { label: 'Award Number', value: summary.awardNumber ?? '—' },
+    {
+      label: 'Award Name',
+      truncateWithTooltip: true,
+      value: summary.awardName ?? '—',
+    },
+    { label: 'Award PI', value: summary.awardPi ?? '—' },
+    { label: 'Award Start Date', value: formatDate(summary.awardStartDate) },
+  ];
+}
+
+function StatValue({ field }: { field: Field }) {
+  if (field.truncateWithTooltip && field.value !== '—') {
+    return (
+      <TooltipLabel
+        className="min-w-0 max-w-full"
+        label={field.value}
+        labelClassName="block max-w-full truncate"
+        tooltip={field.value}
+      />
+    );
+  }
+
+  return field.value;
 }
 
 function buildSecondaryFields(summary: ProjectSummary): Field[] {
@@ -116,9 +142,7 @@ interface ProjectAdditionalInfoProps {
   summary: ProjectSummary;
 }
 
-export function ProjectAdditionalInfo({
-  summary,
-}: ProjectAdditionalInfoProps) {
+export function ProjectAdditionalInfo({ summary }: ProjectAdditionalInfoProps) {
   const [expanded, setExpanded] = React.useState(false);
 
   if (!summary.awardNumber) {
@@ -126,6 +150,7 @@ export function ProjectAdditionalInfo({
   }
 
   const primaryFields = buildPrimaryFields(summary);
+  const featuredFields = buildFeaturedFields(summary);
   const secondaryFields = buildSecondaryFields(summary);
   const renderLabel = (field: Field) =>
     field.tooltip ? (
@@ -138,14 +163,29 @@ export function ProjectAdditionalInfo({
     <section className="section-margin">
       <h2 className="h2 mb-4">Award Information</h2>
 
-      <div className="grid grid-cols-1 gap-x-4 gap-y-2 xl:grid-cols-2">
-        {primaryFields.map((field) => (
-          <div className={fieldRowClassName} key={field.label}>
-            <div className="font-proxima-bold">{renderLabel(field)}</div>
-            <div className="min-w-0">{field.value}</div>
+      <dl className="grid grid-cols-1 gap-4 mb-6 sm:grid-cols-2 xl:grid-cols-4">
+        {featuredFields.map((field) => (
+          <div key={field.label}>
+            <dd className="stat-label">{renderLabel(field)}</dd>
+            <dt className="stat-value min-w-0 break-words">
+              <StatValue field={field} />
+            </dt>
           </div>
         ))}
+      </dl>
 
+      <dl className="grid grid-cols-1 gap-4 mb-6 sm:grid-cols-2 xl:grid-cols-4">
+        {primaryFields.map((field) => (
+          <div key={field.label}>
+            <dd className="stat-label">{renderLabel(field)}</dd>
+            <dt className="stat-value min-w-0 break-words">
+              <StatValue field={field} />
+            </dt>
+          </div>
+        ))}
+      </dl>
+
+      <div className="grid grid-cols-1 gap-x-4 gap-y-2 xl:grid-cols-2">
         {expanded &&
           secondaryFields.map((field) => (
             <div className={fieldRowClassName} key={field.label}>
