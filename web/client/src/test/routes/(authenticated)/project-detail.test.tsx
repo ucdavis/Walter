@@ -422,7 +422,7 @@ describe('project detail page', () => {
     ],
   };
 
-  it('shows an expenditure progress link and disabled burndown action when projections are enabled', async () => {
+  it('shows expenditure progress and burndown links when projections are enabled', async () => {
     const projects = [createProject({ pmEmployeeId: '2000' })];
     setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);
 
@@ -434,8 +434,8 @@ describe('project detail page', () => {
       const expenditureProgressLink = await screen.findByRole('link', {
         name: 'Expenditure Progress',
       });
-      const burndownButton = screen.getByRole('button', {
-        name: 'Project Burndown (coming soon)',
+      const burndownLink = screen.getByRole('link', {
+        name: 'Project Burndown',
       });
       const detailsSection = screen
         .getByText('Project Number')
@@ -447,15 +447,15 @@ describe('project detail page', () => {
         })
       ).toBe(expenditureProgressLink);
       expect(
-        within(detailsSection).getByRole('button', {
-          name: 'Project Burndown (coming soon)',
+        within(detailsSection).getByRole('link', {
+          name: 'Project Burndown',
         })
-      ).toBe(burndownButton);
+      ).toBe(burndownLink);
       expect(expenditureProgressLink).toHaveAttribute(
         'href',
         '/expenditureprogress/1000/P1'
       );
-      expect(burndownButton).toBeDisabled();
+      expect(burndownLink).toHaveAttribute('href', '/projectburndown/1000/P1');
       expect(
         screen.queryByTestId('project-burndown-chart')
       ).not.toBeInTheDocument();
@@ -507,8 +507,8 @@ describe('project detail page', () => {
         screen.queryByTestId('project-burndown-chart')
       ).not.toBeInTheDocument();
       expect(
-        screen.getByRole('button', { name: 'Project Burndown (coming soon)' })
-      ).toBeDisabled();
+        screen.getByRole('link', { name: 'Project Burndown' })
+      ).toHaveAttribute('href', '/projectburndown/1000/P1');
 
       const expenditureProgress = await screen.findByTestId(
         'project-expenditure-progress'
@@ -776,8 +776,8 @@ describe('project detail page', () => {
         screen.queryByRole('link', { name: 'Expenditure Progress' })
       ).not.toBeInTheDocument();
       expect(
-        screen.queryByRole('button', {
-          name: 'Project Burndown (coming soon)',
+        screen.queryByRole('link', {
+          name: 'Project Burndown',
         })
       ).not.toBeInTheDocument();
       expect(
@@ -815,8 +815,8 @@ describe('project detail page', () => {
         screen.queryByRole('link', { name: 'Expenditure Progress' })
       ).not.toBeInTheDocument();
       expect(
-        screen.queryByRole('button', {
-          name: 'Project Burndown (coming soon)',
+        screen.queryByRole('link', {
+          name: 'Project Burndown',
         })
       ).not.toBeInTheDocument();
       expect(screen.queryByText('Project Burndown')).not.toBeInTheDocument();

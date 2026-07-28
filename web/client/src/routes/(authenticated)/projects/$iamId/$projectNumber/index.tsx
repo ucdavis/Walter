@@ -120,14 +120,14 @@ function ProjectContent({
                 </Link>
               )}
               {featureFlags?.burndownEnabled && (
-                <button
+                <Link
                   className="btn btn-lg"
-                  disabled
-                  type="button"
+                  params={{ iamId, projectNumber: summary.projectNumber }}
+                  to="/projectburndown/$iamId/$projectNumber"
                 >
                   <PresentationChartLineIcon className="h-4 w-4" />
-                  Project Burndown (coming soon)
-                </button>
+                  Project Burndown
+                </Link>
               )}
             </>
           ) : null
