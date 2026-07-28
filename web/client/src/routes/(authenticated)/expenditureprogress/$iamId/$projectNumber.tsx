@@ -81,10 +81,14 @@ function RouteComponent() {
               Project Details
             </Link>
             {!summary.isInternal && featureFlags.burndownEnabled ? (
-              <button className="btn btn-sm" disabled type="button">
+              <Link
+                className="btn btn-sm"
+                params={{ iamId, projectNumber: summary.projectNumber }}
+                to="/projectburndown/$iamId/$projectNumber"
+              >
                 <PresentationChartLineIcon className="h-4 w-4" />
-                Project Burndown (coming soon)
-              </button>
+                Project Burndown
+              </Link>
             ) : null}
           </div>
 
