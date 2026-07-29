@@ -93,6 +93,46 @@ public sealed class UserProfileOrchestratorTests
         attributeService.CallCount.Should().Be(1);
     }
 
+    [Fact]
+    public async Task EnsureUserProfileAsync_trims_stored_iam_before_lookup_and_persistence()
+    {
+        using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
+
+        var existingUser = new User
+        {
+            Id = Guid.NewGuid(),
+            Kerberos = "storedkerb",
+            IamId = " IAM-123 ",
+            EmployeeId = "E12345",
+            DisplayName = "Existing User",
+            Email = "existing@ucdavis.edu",
+        };
+
+        ctx.Roles.Add(new Role { Name = Role.Names.ProjectManager });
+        ctx.Users.Add(existingUser);
+        await ctx.SaveChangesAsync();
+
+        var orchestrator = new UserProfileOrchestrator(
+            new FakeEntraUserAttributeService(null),
+            new FakeIdentityService(
+                iamIdentity: new IamIdentity("IAM-123", "E12345", "Iam FullName"),
+                kerberosByIamId: new Dictionary<string, string?> { ["IAM-123"] = "guser" }),
+            new UserService(NullLogger<UserService>.Instance, ctx),
+            new FakeFinancialApiService(),
+            NullLogger<UserProfileOrchestrator>.Instance);
+
+        var profile = await orchestrator.EnsureUserProfileAsync(
+            existingUser.Id,
+            existingUser.Id.ToString(),
+            CreatePrincipal(existingUser.Id, existingUser.Email!),
+            CancellationToken.None);
+
+        profile.IamId.Should().Be("IAM-123");
+
+        var persistedUser = await ctx.Users.SingleAsync(u => u.Id == existingUser.Id);
+        persistedUser.IamId.Should().Be("IAM-123");
+    }
+
     private static ClaimsPrincipal CreatePrincipal(Guid userId, string email, string? iamId = null)
     {
         var claims = new List<Claim>

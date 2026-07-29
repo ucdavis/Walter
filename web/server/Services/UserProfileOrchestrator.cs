@@ -57,7 +57,7 @@ public sealed class UserProfileOrchestrator : IUserProfileOrchestrator
 
             iamId = !string.IsNullOrWhiteSpace(attributes?.IamId)
                 ? attributes!.IamId.Trim()
-                : existingUser?.IamId;
+                : existingUser?.IamId?.Trim();
         }
 
         if (string.IsNullOrWhiteSpace(iamId))
