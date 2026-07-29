@@ -136,15 +136,18 @@ BEGIN
             LEFT JOIN dbo.ErpAccountHierarchy nah ON a.Account = nah.Code
         )';
 
+    -- Credit-normal measures (liabilities, net position, revenue, ending balance) are stored with
+    -- raw GL signs (credits negative); they are negated here so every measure reads naturally:
+    -- positive = funds available, negative ending balance = overdraft.
     DECLARE @Sql NVARCHAR(MAX) = @Src + N'
         SELECT ' + @SelectCols + N',
-                 MAX(PeriodName)      AS PeriodName,
-                 SUM(AssetAmt)        AS Assets,
-                 SUM(LiabAmt)         AS Liabilities,
-                 SUM(OwnersEquityAmt) AS NetPosition,
-                 SUM(RevenueAmt)      AS Revenue,
-                 SUM(ExpenseAmt)      AS Expenses,
-                 SUM(EndBal)          AS EndingBalance
+                 MAX(PeriodName)       AS PeriodName,
+                 SUM(AssetAmt)         AS Assets,
+                 SUM(-LiabAmt)         AS Liabilities,
+                 SUM(-OwnersEquityAmt) AS NetPosition,
+                 SUM(-RevenueAmt)      AS Revenue,
+                 SUM(ExpenseAmt)       AS Expenses,
+                 SUM(-EndBal)          AS EndingBalance
           FROM src' + @Where +
         N' GROUP BY ' + @GroupCols + N' ORDER BY ' + @GroupCols + N';';
 
