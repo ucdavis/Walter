@@ -245,15 +245,22 @@ function RouteComponent() {
         size: 220,
       })
     );
+    // A negative ending balance is an overdraft (measures arrive natural-sign), shown in red.
+    const overdraft = (m: MeasureDef, value: number) =>
+      m.key === 'endingBalance' && value < 0 ? ' text-error' : '';
     const measure = (m: MeasureDef) =>
       columnHelper.accessor(m.key, {
         cell: (info) => (
-          <span className="block w-full text-right tabular-nums">
+          <span
+            className={`block w-full text-right tabular-nums${overdraft(m, info.getValue())}`}
+          >
             {formatCurrency(info.getValue())}
           </span>
         ),
         footer: () => (
-          <span className="block w-full text-right font-semibold tabular-nums">
+          <span
+            className={`block w-full text-right font-semibold tabular-nums${overdraft(m, totals[m.key])}`}
+          >
             {formatCurrency(totals[m.key])}
           </span>
         ),
