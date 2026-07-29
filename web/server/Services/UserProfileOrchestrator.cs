@@ -44,16 +44,21 @@ public sealed class UserProfileOrchestrator : IUserProfileOrchestrator
 
         var existingUser = await _userService.GetByIdAsync(userId, cancellationToken);
 
-        var attributes = await _attributeService.GetAttributesAsync(userObjectId, principal, cancellationToken);
+        var iamId = principal.GetIamId();
 
-        if (attributes == null && existingUser != null)
+        if (string.IsNullOrWhiteSpace(iamId))
         {
-            _logger.LogWarning("Falling back to stored profile for user {UserId} because Entra attributes could not be loaded.", userId);
-        }
+            var attributes = await _attributeService.GetAttributesAsync(userObjectId, principal, cancellationToken);
 
-        var iamId = !string.IsNullOrWhiteSpace(attributes?.IamId)
-            ? attributes!.IamId
-            : existingUser?.IamId;
+            if (attributes == null && existingUser != null)
+            {
+                _logger.LogWarning("Falling back to stored profile for user {UserId} because Entra attributes could not be loaded.", userId);
+            }
+
+            iamId = !string.IsNullOrWhiteSpace(attributes?.IamId)
+                ? attributes!.IamId.Trim()
+                : existingUser?.IamId;
+        }
 
         if (string.IsNullOrWhiteSpace(iamId))
         {
