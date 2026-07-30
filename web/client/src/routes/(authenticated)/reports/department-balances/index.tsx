@@ -374,7 +374,6 @@ function RouteComponent() {
       <div className={`mb-6 ${criteriaOpen ? '' : 'hidden'}`}>
         <div className="flex flex-col gap-6">
           <section>
-            <h2 className="text-xl font-proxima-bold">Financial Department</h2>
             <p className="mb-4">
               choose the accounting period, then search and choose financial
               department(s); both are required (
