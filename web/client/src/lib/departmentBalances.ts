@@ -11,8 +11,8 @@ export interface DimensionDef {
 // Child-level chart-string segments only; hierarchy participates in filtering, never grouping.
 export const DIMENSIONS: DimensionDef[] = [
   { codeField: 'entity', descField: 'entityDesc', key: 'Entity', label: 'Entity' },
-  { codeField: 'dept', descField: 'deptDesc', key: 'Dept', label: 'Financial Department' },
   { codeField: 'fund', descField: 'fundDesc', key: 'Fund', label: 'Fund' },
+  { codeField: 'dept', descField: 'deptDesc', key: 'Dept', label: 'Financial Department' },
   { codeField: 'account', descField: 'accountDesc', key: 'Account', label: 'Account' },
   { codeField: 'purpose', descField: 'purposeDesc', key: 'Purpose', label: 'Purpose' },
   { codeField: 'program', descField: 'programDesc', key: 'Program', label: 'Program' },

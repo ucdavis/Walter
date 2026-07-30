@@ -35,8 +35,8 @@ BEGIN
     DECLARE @AllowedDims TABLE (DimKey VARCHAR(50) PRIMARY KEY, CodeCol SYSNAME, DescCol SYSNAME, SortOrder INT);
     INSERT INTO @AllowedDims (DimKey, CodeCol, DescCol, SortOrder) VALUES
         ('Entity',   'Entity',   'EntityDesc',   1),
-        ('Dept',     'Dept',     'DeptDesc',     2),
-        ('Fund',     'Fund',     'FundDesc',     3),
+        ('Fund',     'Fund',     'FundDesc',     2),
+        ('Dept',     'Dept',     'DeptDesc',     3),
         ('Account',  'Account',  'AccountDesc',  4),
         ('Purpose',  'Purpose',  'PurposeDesc',  5),
         ('Program',  'Program',  'ProgramDesc',  6),

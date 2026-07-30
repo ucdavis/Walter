@@ -17,7 +17,7 @@ const row = (overrides: Partial<DepartmentBalanceRow>): DepartmentBalanceRow => 
 describe('DIMENSIONS', () => {
   it('exposes the eight child-level segments', () => {
     expect(DIMENSIONS.map((d) => d.key)).toEqual([
-      'Entity', 'Dept', 'Fund', 'Account', 'Purpose', 'Program', 'Project', 'Activity',
+      'Entity', 'Fund', 'Dept', 'Account', 'Purpose', 'Program', 'Project', 'Activity',
     ]);
   });
 });
@@ -32,8 +32,8 @@ describe('MEASURES', () => {
 
 describe('activeColumns', () => {
   it('returns only the selected dimensions in catalog order', () => {
-    const cols = activeColumns(['Fund', 'Dept']);
-    expect(cols.map((c) => c.key)).toEqual(['Dept', 'Fund']);
+    const cols = activeColumns(['Dept', 'Fund']);
+    expect(cols.map((c) => c.key)).toEqual(['Fund', 'Dept']);
   });
 });
 
