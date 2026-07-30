@@ -178,7 +178,15 @@ export function MultiSelectFilter({
               style={floatingStyles}
               {...getFloatingProps()}
             >
-              <Command className="flex max-h-80 flex-col" loop>
+              {/* Plain case-insensitive substring match; cmdk's default fuzzy
+                  matching surfaces too many unrelated codes. */}
+              <Command
+                className="flex max-h-80 flex-col"
+                filter={(value, search) =>
+                  value.toLowerCase().includes(search.toLowerCase()) ? 1 : 0
+                }
+                loop
+              >
                 <div className="border-b border-base-200 p-2">
                   <Command.Input
                     className="input input-sm input-bordered w-full"
