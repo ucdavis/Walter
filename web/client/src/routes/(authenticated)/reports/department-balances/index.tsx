@@ -115,7 +115,7 @@ const optionLabel = (o: DepartmentBalanceOption): string =>
 
 // Map filter-option rows to FilterOptions, alphabetical by name (code as fallback) so
 // the list scans by description rather than code. Hierarchy facets split into two
-// groups — "Rollups" (picking one selects its whole subtree) and "Values". AE's
+// groups — "Parent" (picking one selects its whole subtree) and "Child". AE's
 // parent-level numbers are positional padding over ragged trees, so the level itself
 // is never shown.
 const toFilterOptions = (
@@ -136,7 +136,7 @@ const toFilterOptions = (
       sensitivity: 'base',
     });
   const mapped = [...byCode.values()].sort(byName).map((o) => ({
-    group: hierarchy ? (o.level === 'Leaf' ? 'Values' : 'Rollups') : undefined,
+    group: hierarchy ? (o.level === 'Leaf' ? 'Child' : 'Parent') : undefined,
     label: optionLabel(o),
     value: o.code,
   }));
@@ -144,8 +144,8 @@ const toFilterOptions = (
     return mapped;
   }
   return [
-    ...mapped.filter((o) => o.group === 'Rollups'),
-    ...mapped.filter((o) => o.group === 'Values'),
+    ...mapped.filter((o) => o.group === 'Parent'),
+    ...mapped.filter((o) => o.group === 'Child'),
   ];
 };
 
