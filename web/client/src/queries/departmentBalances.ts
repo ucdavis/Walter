@@ -10,11 +10,15 @@ export interface DepartmentBalanceRow {
   dept?: string | null;
   deptDesc?: string | null;
   endingBalance: number;
+  entity?: string | null;
+  entityDesc?: string | null;
   expenses: number;
   fund?: string | null;
   fundDesc?: string | null;
   liabilities: number;
   netPosition: number;
+  program?: string | null;
+  programDesc?: string | null;
   /** The snapshot's accounting period ("balances as of"); always populated. */
   periodName?: string | null;
   project?: string | null;
@@ -34,9 +38,11 @@ export interface DepartmentBalanceOption {
 export interface DepartmentBalancesFilters {
   accounts?: string[];
   activities?: string[];
+  entities?: string[];
   financialDepartments?: string[];
   funds?: string[];
   periodName?: string;
+  programs?: string[];
   projects?: string[];
   purposes?: string[];
 }
@@ -46,7 +52,8 @@ export interface DepartmentBalancesQuery extends DepartmentBalancesFilters {
 }
 
 export type OptionsSegment =
-  | 'Dept' | 'Fund' | 'Account' | 'Purpose' | 'Project' | 'Activity' | 'Period';
+  | 'Entity' | 'Dept' | 'Fund' | 'Account' | 'Purpose' | 'Program'
+  | 'Project' | 'Activity' | 'Period';
 
 export const useDepartmentBalancesQuery = (query: DepartmentBalancesQuery) =>
   useQuery({

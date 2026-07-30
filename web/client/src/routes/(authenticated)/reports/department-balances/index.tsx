@@ -190,6 +190,11 @@ function RouteComponent() {
     { periodName: effectivePeriod },
     Boolean(effectivePeriod)
   );
+  const entityOptions = useDepartmentBalanceOptions(
+    'Entity',
+    query,
+    department.length > 0
+  );
   const fundOptions = useDepartmentBalanceOptions(
     'Fund',
     query,
@@ -202,6 +207,11 @@ function RouteComponent() {
   );
   const purposeOptions = useDepartmentBalanceOptions(
     'Purpose',
+    query,
+    department.length > 0
+  );
+  const programOptions = useDepartmentBalanceOptions(
+    'Program',
     query,
     department.length > 0
   );
@@ -417,6 +427,22 @@ function RouteComponent() {
               contain, Leave blank to exclude
             </p>
             <div className="grid items-start gap-4 md:grid-cols-2">
+              {/* Entity — multi-select, disabled until department chosen */}
+              <div className="flex flex-col gap-2">
+                <label className="text-sm uppercase font-proxima-bold">
+                  Entity
+                </label>
+                <MultiSelectFilter
+                  disabled={department.length === 0}
+                  loading={entityOptions.isFetching}
+                  onChange={(vals) => setFilter('entities', vals)}
+                  options={toFilterOptions(entityOptions.data)}
+                  placeholder="Any entity"
+                  searchPlaceholder="Search entities…"
+                  selected={filters.entities ?? []}
+                />
+              </div>
+
               {/* Fund — hierarchy-aware multi-select, disabled until department chosen */}
               <div className="flex flex-col gap-2">
                 <label className="text-sm uppercase font-proxima-bold">
@@ -462,6 +488,22 @@ function RouteComponent() {
                   placeholder="Any purpose"
                   searchPlaceholder="Search purposes…"
                   selected={filters.purposes ?? []}
+                />
+              </div>
+
+              {/* Program — multi-select, disabled until department chosen */}
+              <div className="flex flex-col gap-2">
+                <label className="text-sm uppercase font-proxima-bold">
+                  Program
+                </label>
+                <MultiSelectFilter
+                  disabled={department.length === 0}
+                  loading={programOptions.isFetching}
+                  onChange={(vals) => setFilter('programs', vals)}
+                  options={toFilterOptions(programOptions.data)}
+                  placeholder="Any program"
+                  searchPlaceholder="Search programs…"
+                  selected={filters.programs ?? []}
                 />
               </div>
 

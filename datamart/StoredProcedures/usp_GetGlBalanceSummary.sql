@@ -4,16 +4,18 @@
 -- accounting period), grouped by a caller-selected set of chart string segments (@Dimensions,
 -- child level only) and constrained by optional per-segment filters. The Dept, Fund, and Account
 -- filters are hierarchy-aware: a supplied code matches the leaf OR any ancestor level (ancestor
--- codes come from the dbo.Erp*Hierarchy dimension tables joined here). Purpose, Project, and
--- Activity filters match the leaf code exactly. Dimension keys are resolved through a whitelist so
+-- codes come from the dbo.Erp*Hierarchy dimension tables joined here). Entity, Purpose, Program,
+-- Project, and Activity filters match the leaf code exactly. Dimension keys are resolved through a whitelist so
 -- only known column names reach the dynamic SQL; filter values stay parameterized. Every result
 -- row also carries PeriodName, echoing the requested period for "balances as of <period>" display.
 CREATE PROCEDURE dbo.usp_GetGlBalanceSummary
     @Dimensions           VARCHAR(MAX),               -- required: CSV of segment keys
+    @Entities             VARCHAR(MAX) = NULL,
     @FinancialDepartments VARCHAR(MAX) = NULL,
     @Funds                VARCHAR(MAX) = NULL,
     @Accounts             VARCHAR(MAX) = NULL,
     @Purposes             VARCHAR(MAX) = NULL,
+    @Programs             VARCHAR(MAX) = NULL,
     @Projects             VARCHAR(MAX) = NULL,
     @Activities           VARCHAR(MAX) = NULL,
     @PeriodName           VARCHAR(10),                -- required: accounting period, e.g. 'Jul-26'
@@ -32,12 +34,14 @@ BEGIN
     -- the dynamic SQL (injection guard).
     DECLARE @AllowedDims TABLE (DimKey VARCHAR(50) PRIMARY KEY, CodeCol SYSNAME, DescCol SYSNAME, SortOrder INT);
     INSERT INTO @AllowedDims (DimKey, CodeCol, DescCol, SortOrder) VALUES
-        ('Dept',     'Dept',     'DeptDesc',     1),
-        ('Fund',     'Fund',     'FundDesc',     2),
-        ('Account',  'Account',  'AccountDesc',  3),
-        ('Purpose',  'Purpose',  'PurposeDesc',  4),
-        ('Project',  'Project',  'ProjectDesc',  5),
-        ('Activity', 'Activity', 'ActivityDesc', 6);
+        ('Entity',   'Entity',   'EntityDesc',   1),
+        ('Dept',     'Dept',     'DeptDesc',     2),
+        ('Fund',     'Fund',     'FundDesc',     3),
+        ('Account',  'Account',  'AccountDesc',  4),
+        ('Purpose',  'Purpose',  'PurposeDesc',  5),
+        ('Program',  'Program',  'ProgramDesc',  6),
+        ('Project',  'Project',  'ProjectDesc',  7),
+        ('Activity', 'Activity', 'ActivityDesc', 8);
 
     DECLARE @SelectedDims TABLE (CodeCol SYSNAME, DescCol SYSNAME, SortOrder INT);
     INSERT INTO @SelectedDims (CodeCol, DescCol, SortOrder)
@@ -76,6 +80,8 @@ BEGIN
     -- Optional filters (values remain parameterized). Dept/Fund/Account are hierarchy-aware:
     -- a supplied code matches the leaf OR any ancestor level.
     DECLARE @Where NVARCHAR(MAX) = N' WHERE PeriodName = @p_Period';
+    IF @Entities IS NOT NULL
+        SET @Where += N' AND Entity IN (SELECT value FROM STRING_SPLIT(@p_Entities, '',''))';
     IF @FinancialDepartments IS NOT NULL
         SET @Where += N' AND (Dept IN (SELECT value FROM STRING_SPLIT(@p_Depts, '',''))
                            OR DeptParentLevel0Code IN (SELECT value FROM STRING_SPLIT(@p_Depts, '',''))
@@ -102,6 +108,8 @@ BEGIN
                            OR AccountParentLevel5Code IN (SELECT value FROM STRING_SPLIT(@p_Accounts, '','')))';
     IF @Purposes IS NOT NULL
         SET @Where += N' AND Purpose IN (SELECT value FROM STRING_SPLIT(@p_Purposes, '',''))';
+    IF @Programs IS NOT NULL
+        SET @Where += N' AND Program IN (SELECT value FROM STRING_SPLIT(@p_Programs, '',''))';
     IF @Projects IS NOT NULL
         SET @Where += N' AND Project IN (SELECT value FROM STRING_SPLIT(@p_Projects, '',''))';
     IF @Activities IS NOT NULL
@@ -152,19 +160,23 @@ BEGIN
         N' GROUP BY ' + @GroupCols + N' ORDER BY ' + @GroupCols + N';';
 
     SET @ParametersJSON = (
-        SELECT @Dimensions AS Dimensions, @FinancialDepartments AS FinancialDepartments,
+        SELECT @Dimensions AS Dimensions, @Entities AS Entities,
+               @FinancialDepartments AS FinancialDepartments,
                @Funds AS Funds, @Accounts AS Accounts, @Purposes AS Purposes,
-               @Projects AS Projects, @Activities AS Activities, @PeriodName AS PeriodName,
+               @Programs AS Programs, @Projects AS Projects, @Activities AS Activities,
+               @PeriodName AS PeriodName,
                COALESCE(@ApplicationName, APP_NAME()) AS ApplicationName
         FOR JSON PATH, WITHOUT_ARRAY_WRAPPER);
 
     BEGIN TRY
         EXEC sp_executesql @Sql,
-            N'@p_Depts VARCHAR(MAX), @p_Funds VARCHAR(MAX), @p_Accounts VARCHAR(MAX),
-              @p_Purposes VARCHAR(MAX), @p_Projects VARCHAR(MAX), @p_Activities VARCHAR(MAX),
+            N'@p_Entities VARCHAR(MAX), @p_Depts VARCHAR(MAX), @p_Funds VARCHAR(MAX),
+              @p_Accounts VARCHAR(MAX), @p_Purposes VARCHAR(MAX), @p_Programs VARCHAR(MAX),
+              @p_Projects VARCHAR(MAX), @p_Activities VARCHAR(MAX),
               @p_Period VARCHAR(10)',
-            @p_Depts = @FinancialDepartments, @p_Funds = @Funds, @p_Accounts = @Accounts,
-            @p_Purposes = @Purposes, @p_Projects = @Projects, @p_Activities = @Activities,
+            @p_Entities = @Entities, @p_Depts = @FinancialDepartments, @p_Funds = @Funds,
+            @p_Accounts = @Accounts, @p_Purposes = @Purposes, @p_Programs = @Programs,
+            @p_Projects = @Projects, @p_Activities = @Activities,
             @p_Period = @PeriodName;
 
         SET @RowCount = @@ROWCOUNT;

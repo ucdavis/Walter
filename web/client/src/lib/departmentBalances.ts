@@ -10,10 +10,12 @@ export interface DimensionDef {
 
 // Child-level chart-string segments only; hierarchy participates in filtering, never grouping.
 export const DIMENSIONS: DimensionDef[] = [
+  { codeField: 'entity', descField: 'entityDesc', key: 'Entity', label: 'Entity' },
   { codeField: 'dept', descField: 'deptDesc', key: 'Dept', label: 'Financial Department' },
   { codeField: 'fund', descField: 'fundDesc', key: 'Fund', label: 'Fund' },
   { codeField: 'account', descField: 'accountDesc', key: 'Account', label: 'Account' },
   { codeField: 'purpose', descField: 'purposeDesc', key: 'Purpose', label: 'Purpose' },
+  { codeField: 'program', descField: 'programDesc', key: 'Program', label: 'Program' },
   { codeField: 'project', descField: 'projectDesc', key: 'Project', label: 'Project' },
   { codeField: 'activity', descField: 'activityDesc', key: 'Activity', label: 'Activity' },
 ];
@@ -48,6 +50,7 @@ export const rowGroupLabel = (row: DepartmentBalanceRow, dimensions: string[]): 
 
 // A label's key is the exact segment combination its row displayed when written: the selected
 // dimensions supply which segments are set, the row supplies the codes, all others stay ''.
+// Entity and Program are not part of the shared label key, so they never contribute.
 export const rowLabelSegments = (
   row: DepartmentBalanceRow,
   dimensions: string[]
@@ -61,7 +64,9 @@ export const rowLabelSegments = (
     purpose: '',
   };
   for (const d of activeColumns(dimensions)) {
-    segments[d.codeField as keyof LabelSegments] = String(row[d.codeField] ?? '');
+    if (d.codeField in segments) {
+      segments[d.codeField as keyof LabelSegments] = String(row[d.codeField] ?? '');
+    }
   }
   return segments;
 };
