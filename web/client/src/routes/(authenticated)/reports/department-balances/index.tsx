@@ -32,7 +32,12 @@ import { DataTable } from '@/shared/DataTable.tsx';
 import { ExportDataButton } from '@/components/ExportDataButton.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import { formatDate } from '@/lib/date.ts';
-import { TrashIcon, XMarkIcon } from '@heroicons/react/20/solid';
+import {
+  ChevronDownIcon,
+  ChevronUpIcon,
+  TrashIcon,
+  XMarkIcon,
+} from '@heroicons/react/20/solid';
 import { canAccessDepartmentBalances } from '@/shared/auth/roleAccess.ts';
 import { meQueryOptions } from '@/queries/user.ts';
 import { RouterContext } from '@/main.tsx';
@@ -146,6 +151,7 @@ function RouteComponent() {
   const [filters, setFilters] = useState<DepartmentBalancesFilters>({});
   const [dimensions, setDimensions] = useState<string[]>([]);
   const [period, setPeriod] = useState('');
+  const [criteriaOpen, setCriteriaOpen] = useState(true);
 
   const periodOptions = useDepartmentBalanceOptions('Period', {});
   // Server orders periods newest first; the first option is the current close.
@@ -396,8 +402,33 @@ function RouteComponent() {
         </p>
       </section>
 
+      {/* Report criteria: collapsible so the results table can take the full viewport */}
+      <div className="mb-2 flex items-center gap-2">
+        <h2 className="text-xl font-proxima-bold">Report Criteria</h2>
+        <button
+          aria-expanded={criteriaOpen}
+          className="btn btn-ghost btn-sm"
+          onClick={() => setCriteriaOpen((open) => !open)}
+          type="button"
+        >
+          {criteriaOpen ? (
+            <>
+              <ChevronUpIcon className="h-4 w-4" />
+              Hide
+            </>
+          ) : (
+            <>
+              <ChevronDownIcon className="h-4 w-4" />
+              Show
+            </>
+          )}
+        </button>
+      </div>
+
       {/* Filter controls + applied-selections panel */}
-      <div className="mb-6 flex flex-col gap-12 lg:flex-row">
+      <div
+        className={`mb-6 flex-col gap-12 lg:flex-row ${criteriaOpen ? 'flex' : 'hidden'}`}
+      >
         <div className="flex flex-1 flex-col gap-6">
           <section>
             <h2 className="text-xl font-proxima-bold">Financial Department</h2>
