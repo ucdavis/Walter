@@ -345,7 +345,10 @@ export function ExpenditureCategoryBreakdown({
     [totals.balance, totals.budget, totals.commitments, totals.expenses]
   );
 
-  if (rows.length === 0) {
+  if (
+    rows.length === 0 &&
+    (view === 'table' || progressCategories.length === 0)
+  ) {
     return (
       <p className="text-base-content/70 mt-4">
         No expenditure category data found.
