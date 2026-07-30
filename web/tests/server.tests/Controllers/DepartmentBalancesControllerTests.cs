@@ -30,10 +30,40 @@ public sealed class DepartmentBalancesControllerTests
         };
         var controller = MakeController(new ResolvingDatamartService(summaryRows: rows));
 
-        var result = await controller.QueryAsync(new DepartmentBalancesQuery { Dimensions = new[] { "Fund" } }, CancellationToken.None);
+        var result = await controller.QueryAsync(new DepartmentBalancesQuery { Dimensions = new[] { "Fund" }, PeriodName = "Jun-26" }, CancellationToken.None);
 
         var ok = result.Should().BeOfType<OkObjectResult>().Which;
         ok.Value.Should().BeEquivalentTo(rows);
+    }
+
+    [Fact]
+    public async Task Query_returns_bad_request_when_period_missing()
+    {
+        var controller = MakeController();
+
+        var result = await controller.QueryAsync(new DepartmentBalancesQuery { Dimensions = new[] { "Fund" } }, CancellationToken.None);
+
+        result.Should().BeOfType<BadRequestObjectResult>();
+    }
+
+    [Fact]
+    public async Task Options_returns_bad_request_when_period_missing_for_segment_facet()
+    {
+        var controller = MakeController();
+
+        var result = await controller.OptionsAsync(new DepartmentBalancesOptionsQuery { Segment = "Fund" }, CancellationToken.None);
+
+        result.Should().BeOfType<BadRequestObjectResult>();
+    }
+
+    [Fact]
+    public async Task Options_allows_missing_period_for_period_facet()
+    {
+        var controller = MakeController();
+
+        var result = await controller.OptionsAsync(new DepartmentBalancesOptionsQuery { Segment = "Period" }, CancellationToken.None);
+
+        result.Should().BeOfType<OkObjectResult>();
     }
 
     [Fact]

@@ -1,36 +1,36 @@
-import { ProjectAlerts } from '@/components/alerts/ProjectAlerts.tsx';
-import { ExpenditureCategoryBreakdown } from '@/components/project/ExpenditureCategoryBreakdown.tsx';
-import { FinjectorLink } from '@/components/project/FinjectorLink.tsx';
-import { TaskBreakdown } from '@/components/project/TaskBreakdown.tsx';
-import { ProjectDetails } from '@/components/project/ProjectDetails.tsx';
-import { PersonnelTable } from '@/components/project/PersonnelTable.tsx';
-import { usePersonnelQuery } from '@/queries/personnel.ts';
-import { useFeatureFlagsQuery } from '@/queries/featureFlags.ts';
+import { ProjectAlerts } from "@/components/alerts/ProjectAlerts.tsx";
+import { ExpenditureCategoryBreakdown } from "@/components/project/ExpenditureCategoryBreakdown.tsx";
+import { FinjectorLink } from "@/components/project/FinjectorLink.tsx";
+import { TaskBreakdown } from "@/components/project/TaskBreakdown.tsx";
+import { ProjectDetails } from "@/components/project/ProjectDetails.tsx";
+import { PersonnelTable } from "@/components/project/PersonnelTable.tsx";
+import { usePersonnelQuery } from "@/queries/personnel.ts";
+import { useFeatureFlagsQuery } from "@/queries/featureFlags.ts";
 import {
   summarizeProjectByNumber,
   type ProjectSummary,
-} from '@/lib/projectSummary.ts';
+} from "@/lib/projectSummary.ts";
 import {
   type ProjectRecord,
   projectsDetailQueryOptions,
   useProjectDiscrepancyState,
-} from '@/queries/project.ts';
+} from "@/queries/project.ts";
 
-import { canViewProjectDiscrepancy } from '@/shared/auth/roleAccess.ts';
-import { useUser } from '@/shared/auth/UserContext.tsx';
-import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
-import { tooltipDefinitions } from '@/shared/tooltips.ts';
-import { buildFinjectorUrl } from '@/lib/finjector.ts';
-import { useSuspenseQuery } from '@tanstack/react-query';
-import { createFileRoute, Link } from '@tanstack/react-router';
+import { canViewProjectDiscrepancy } from "@/shared/auth/roleAccess.ts";
+import { useUser } from "@/shared/auth/UserContext.tsx";
+import { TooltipLabel } from "@/shared/TooltipLabel.tsx";
+import { tooltipDefinitions } from "@/shared/tooltips.ts";
+import { buildFinjectorUrl } from "@/lib/finjector.ts";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   ChartBarIcon,
   PresentationChartLineIcon,
-} from '@heroicons/react/24/outline';
-import ProjectAdditionalInfo from '@/components/project/ProjectAdditionalInfo.tsx';
+} from "@heroicons/react/24/outline";
+import ProjectAdditionalInfo from "@/components/project/ProjectAdditionalInfo.tsx";
 
 export const Route = createFileRoute(
-  '/(authenticated)/projects/$iamId/$projectNumber/'
+  "/(authenticated)/projects/$iamId/$projectNumber/",
 )({
   component: RouteComponent,
 });
@@ -40,7 +40,7 @@ const ProjectNotFound = ({ projectNumber }: { projectNumber: string }) => (
     <section className="card p-4 mt-8 max-w-prose">
       <h1 className="text-2xl font-semibold mb-3">Project not found</h1>
       <p className=" mb-6">
-        We couldn&apos;t find any data for project{' '}
+        We couldn&apos;t find any data for project{" "}
         <span className="font-mono">{projectNumber}</span>.<br /> It may have
         been archived or you might not have access.
       </p>
@@ -51,24 +51,24 @@ const ProjectNotFound = ({ projectNumber }: { projectNumber: string }) => (
 const formatStatusLabel = (status: string | null) =>
   status
     ? status
-        .replaceAll(/[_-]+/g, ' ')
+        .replaceAll(/[_-]+/g, " ")
         .toLowerCase()
         .replaceAll(/\b\w/g, (letter) => letter.toUpperCase())
-    : 'Not provided';
+    : "Not provided";
 
 const normalizeStatusCode = (status: string | null) =>
-  status?.trim().toUpperCase() ?? '';
+  status?.trim().toUpperCase() ?? "";
 
 const projectStatusDotClassByCode: Record<string, string> = {
-  ACTIVE: 'bg-success',
-  CLOSED: 'bg-base-content/30',
-  EXPIRED: 'bg-warning',
-  INACTIVE: 'bg-base-content/30',
+  ACTIVE: "bg-success",
+  CLOSED: "bg-base-content/30",
+  EXPIRED: "bg-warning",
+  INACTIVE: "bg-base-content/30",
 };
 
 const getProjectStatusDotClassName = (status: string | null) =>
   projectStatusDotClassByCode[normalizeStatusCode(status)] ??
-  'bg-base-content/30';
+  "bg-base-content/30";
 
 function ProjectContent({
   iamId,
@@ -85,20 +85,20 @@ function ProjectContent({
   const canSeeDiscrepancy = canViewProjectDiscrepancy(
     user.roles,
     summary.pmEmployeeId,
-    user.employeeId
+    user.employeeId,
   );
   const reconciliationState = useProjectDiscrepancyState(
-    summary.isInternal && canSeeDiscrepancy ? [summary.projectNumber] : []
+    summary.isInternal && canSeeDiscrepancy ? [summary.projectNumber] : [],
   );
   const reconciliationStatus = reconciliationState.hasData
     ? reconciliationState.discrepancies.has(summary.projectNumber)
-      ? 'discrepancy'
-      : 'balanced'
+      ? "discrepancy"
+      : "balanced"
     : undefined;
   const finjectorUrl = buildFinjectorUrl(
     summary.projectNumber,
     summary.taskNum,
-    summary.projectOwningOrgCode
+    summary.projectOwningOrgCode,
   );
 
   return (
@@ -131,9 +131,9 @@ function ProjectContent({
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1">
           <span
-            className={`badge font-proxima-bold badge-sm ${summary.isInternal ? 'badge-accent' : 'badge-info'}`}
+            className={`badge font-proxima-bold badge-sm ${summary.isInternal ? "badge-accent" : "badge-info"}`}
           >
-            {summary.isInternal ? 'Internal Project' : 'Sponsored Project'}
+            {summary.isInternal ? "Internal Project" : "Sponsored Project"}
           </span>
           <span className="text-sm text-base-content/70">
             - Source: Faculty Department Portfolio Report (PPM)
@@ -189,7 +189,7 @@ function ProjectContent({
         }
         summary={summary}
       />
-      <ProjectAdditionalInfo summary={summary} />
+      <FinancialDetails summary={summary} />
 
       <section className="section-margin">
         {summary.isInternal ? (
@@ -221,6 +221,8 @@ function ProjectContent({
         )}
       </section>
 
+      <ProjectAdditionalInfo summary={summary} />
+
       <section className="section-margin">
         <h2 className="h2 mb-2">Personnel</h2>
         {personnelQuery.isPending && (
@@ -240,7 +242,7 @@ function ProjectContent({
 function RouteComponent() {
   const { iamId, projectNumber } = Route.useParams();
   const { data: projects } = useSuspenseQuery(
-    projectsDetailQueryOptions(iamId)
+    projectsDetailQueryOptions(iamId),
   );
   const summary = summarizeProjectByNumber(projects, projectNumber);
 
@@ -249,7 +251,7 @@ function RouteComponent() {
   }
 
   const projectRecords = projects.filter(
-    (p) => p.projectNumber === projectNumber
+    (p) => p.projectNumber === projectNumber,
   );
 
   return (

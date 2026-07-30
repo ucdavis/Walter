@@ -645,7 +645,9 @@ describe('project detail page', () => {
           'budget-vs-time-current-month-marker'
         )
       ).toBeInTheDocument();
-      expect(within(expenditureProgress).getByText('Today')).toBeInTheDocument();
+      expect(
+        within(expenditureProgress).getByText('Today')
+      ).toBeInTheDocument();
       expect(
         within(expenditureProgress).getByText('912 months total')
       ).toBeInTheDocument();
@@ -686,17 +688,16 @@ describe('project detail page', () => {
           name: /Supplies: \$20\.00 \(20%\) spent, \$10\.00 committed, \$70\.00 \(70%\) available, \$100\.00 budget/,
         })
       ).toBeInTheDocument();
-      for (const label of screen.getAllByText('Switchable Projection Project')) {
+      for (const label of screen.getAllByText(
+        'Switchable Projection Project'
+      )) {
         expect(label.closest('a')).toHaveAttribute(
           'href',
           '/expenditureprogress/1000/P2'
         );
       }
       for (const label of screen.getAllByText('Internal Operations Project')) {
-        expect(label.closest('a')).toHaveAttribute(
-          'href',
-          '/projects/1000/P3'
-        );
+        expect(label.closest('a')).toHaveAttribute('href', '/projects/1000/P3');
       }
     } finally {
       cleanup();
@@ -777,17 +778,16 @@ describe('project detail page', () => {
       expect(
         screen.queryByTestId('project-expenditure-progress')
       ).not.toBeInTheDocument();
-      for (const label of screen.getAllByText('Switchable Projection Project')) {
+      for (const label of screen.getAllByText(
+        'Switchable Projection Project'
+      )) {
         expect(label.closest('a')).toHaveAttribute(
           'href',
           '/projectburndown/1000/P2'
         );
       }
       for (const label of screen.getAllByText('Internal Operations Project')) {
-        expect(label.closest('a')).toHaveAttribute(
-          'href',
-          '/projects/1000/P3'
-        );
+        expect(label.closest('a')).toHaveAttribute('href', '/projects/1000/P3');
       }
 
       // Single-select: All Expenses is first and selected by default.
@@ -1016,6 +1016,38 @@ describe('project detail page', () => {
       expect(
         screen.queryByRole('link', { name: 'Details' })
       ).not.toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('places Award Information below the breakdown and above Personnel', async () => {
+    const projects = [createProject({ pmEmployeeId: '2000' })];
+    setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);
+
+    const { cleanup } = renderRoute({
+      initialPath: '/projects/1000/P1',
+    });
+
+    try {
+      const breakdownHeading = await screen.findByRole('heading', {
+        name: 'Expenditure Category Breakdown',
+      });
+      const awardHeading = screen.getByRole('heading', {
+        name: 'Award Information',
+      });
+      const personnelHeading = screen.getByRole('heading', {
+        name: 'Personnel',
+      });
+
+      expect(
+        breakdownHeading.compareDocumentPosition(awardHeading) &
+          Node.DOCUMENT_POSITION_FOLLOWING
+      ).toBeTruthy();
+      expect(
+        awardHeading.compareDocumentPosition(personnelHeading) &
+          Node.DOCUMENT_POSITION_FOLLOWING
+      ).toBeTruthy();
     } finally {
       cleanup();
     }

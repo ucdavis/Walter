@@ -24,6 +24,11 @@ public sealed class DepartmentBalancesController : ApiControllerBase
             return BadRequest("At least one group-by dimension is required.");
         }
 
+        if (string.IsNullOrWhiteSpace(query.PeriodName))
+        {
+            return BadRequest("PeriodName is required.");
+        }
+
         var rows = await _datamartService.GetGlBalanceSummaryAsync(
             query, User.GetUserIdentifier(), User.GetEmulatingUser(), cancellationToken);
         return Ok(rows);
@@ -35,6 +40,12 @@ public sealed class DepartmentBalancesController : ApiControllerBase
         if (query is null || string.IsNullOrWhiteSpace(query.Segment))
         {
             return BadRequest("Segment is required.");
+        }
+
+        if (!string.Equals(query.Segment, "Period", StringComparison.OrdinalIgnoreCase)
+            && string.IsNullOrWhiteSpace(query.PeriodName))
+        {
+            return BadRequest("PeriodName is required.");
         }
 
         var options = await _datamartService.GetGlBalanceFilterOptionsAsync(
