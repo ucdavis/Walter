@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { createColumnHelper } from '@tanstack/react-table';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -32,12 +32,7 @@ import { DataTable } from '@/shared/DataTable.tsx';
 import { ExportDataButton } from '@/components/ExportDataButton.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import { formatDate } from '@/lib/date.ts';
-import {
-  ChevronDownIcon,
-  ChevronUpIcon,
-  TrashIcon,
-  XMarkIcon,
-} from '@heroicons/react/20/solid';
+import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/20/solid';
 import { canAccessDepartmentBalances } from '@/shared/auth/roleAccess.ts';
 import { meQueryOptions } from '@/queries/user.ts';
 import { RouterContext } from '@/main.tsx';
@@ -104,11 +99,6 @@ function LabelCell({
     />
   );
 }
-
-const GROUP_BY_OPTIONS: FilterOption[] = DIMENSIONS.map((d) => ({
-  label: d.label,
-  value: d.key,
-}));
 
 const optionLabel = (o: DepartmentBalanceOption): string =>
   o.name && o.name !== o.code ? `${o.code} — ${o.name}` : o.code;
@@ -337,64 +327,6 @@ function RouteComponent() {
     }
   };
 
-  // Applied-selections panel: every active filter value and group-by field as a
-  // removable chip, consolidated to the right of the filter controls.
-  const nameOf = (opts: DepartmentBalanceOption[] | undefined, code: string) =>
-    opts?.find((o) => o.code === code)?.name;
-
-  const segmentFilterDefs: {
-    key: Exclude<
-      keyof DepartmentBalancesFilters,
-      'financialDepartments' | 'periodName'
-    >;
-    label: string;
-    options: DepartmentBalanceOption[] | undefined;
-  }[] = [
-    { key: 'funds', label: 'Fund', options: fundOptions.data },
-    { key: 'accounts', label: 'Account', options: accountOptions.data },
-    { key: 'purposes', label: 'Purpose', options: purposeOptions.data },
-    { key: 'projects', label: 'Project', options: projectOptions.data },
-    { key: 'activities', label: 'Activity', options: activityOptions.data },
-  ];
-
-  const financialDepartmentRow = {
-    key: 'financialDepartments',
-    label: 'Financial Department',
-    values: department.map((v) => ({
-      code: v,
-      name: nameOf(deptOptions.data, v),
-      onRemove: () => handleDeptChange(department.filter((x) => x !== v)),
-    })),
-  };
-
-  // One row per segment; values within a row are OR'd, rows combine with AND.
-  const dataFilterRows = segmentFilterDefs
-    .map((def) => ({
-      key: def.key,
-      label: def.label,
-      values: (filters[def.key] ?? []).map((v) => ({
-        code: v,
-        name: nameOf(def.options, v),
-        onRemove: () =>
-          setFilter(
-            def.key,
-            (filters[def.key] ?? []).filter((x) => x !== v)
-          ),
-      })),
-    }))
-    .filter((row) => row.values.length > 0);
-
-  const groupByChips = cols.map((d) => ({
-    display: d.label,
-    key: d.key,
-    onRemove: () => setDimensions(dimensions.filter((k) => k !== d.key)),
-  }));
-
-  const hasSelections =
-    financialDepartmentRow.values.length > 0 ||
-    dataFilterRows.length > 0 ||
-    groupByChips.length > 0;
-
   return (
     <main className="container">
       <section className="mt-8 mb-6">
@@ -428,11 +360,9 @@ function RouteComponent() {
         </button>
       </div>
 
-      {/* Filter controls + applied-selections panel */}
-      <div
-        className={`mb-6 flex-col gap-12 lg:flex-row ${criteriaOpen ? 'flex' : 'hidden'}`}
-      >
-        <div className="flex flex-1 flex-col gap-6">
+      {/* Filter controls */}
+      <div className={`mb-6 ${criteriaOpen ? '' : 'hidden'}`}>
+        <div className="flex flex-col gap-6">
           <section>
             <h2 className="text-xl font-proxima-bold">Financial Department</h2>
             <p className="mb-4">
@@ -575,156 +505,32 @@ function RouteComponent() {
             <p className="mb-4">
               Choose which table fields you want to display on the report
             </p>
-            <div className="grid items-start gap-4 md:grid-cols-2 lg:grid-cols-3">
-              <div className="flex flex-col gap-2">
-                <MultiSelectFilter
-                  disabled={department.length === 0}
-                  onChange={setDimensions}
-                  options={GROUP_BY_OPTIONS}
-                  placeholder="Choose fields…"
-                  searchPlaceholder="Search fields…"
-                  selected={dimensions}
-                />
-              </div>
+            <div className="grid gap-x-4 gap-y-1 sm:grid-cols-2 lg:grid-cols-4">
+              {DIMENSIONS.map((d) => (
+                <label
+                  className="label cursor-pointer justify-start gap-3"
+                  key={d.key}
+                >
+                  <input
+                    checked={dimensions.includes(d.key)}
+                    className="checkbox checkbox-primary checkbox-sm"
+                    disabled={department.length === 0}
+                    onChange={(e) =>
+                      setDimensions(
+                        e.target.checked
+                          ? [...dimensions, d.key]
+                          : dimensions.filter((k) => k !== d.key)
+                      )
+                    }
+                    type="checkbox"
+                  />
+                  <span className="label-text">{d.label}</span>
+                </label>
+              ))}
             </div>
           </section>
         </div>
 
-        {/* Applied selections, Shopify-style: consolidated removable chips */}
-        <aside className="border-main-border shrink-0 self-start overflow-hidden rounded-sm border bg-white lg:w-2/5">
-          <div className="bg-light-bg-200 border-main-border border-b px-4 py-2">
-            <div className="flex items-center justify-between">
-              <h2 className="text-primary-font text-sm uppercase">
-                Active selections
-              </h2>
-              {hasSelections ? (
-                <button
-                  className="btn btn-ghost btn-xs"
-                  onClick={() => handleDeptChange([])}
-                  type="button"
-                >
-                  <TrashIcon className="h-3.5 w-3.5" />
-                  Clear all
-                </button>
-              ) : null}
-            </div>
-          </div>
-          <div className="flex flex-col gap-4 p-4">
-            <div>
-              <h3 className="text-sm uppercase font-proxima-bold">
-                Financial Dept
-              </h3>
-              {financialDepartmentRow.values.length > 0 ? (
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {financialDepartmentRow.values.map((v, j) => (
-                    <Fragment key={v.code}>
-                      {j > 0 ? (
-                        <span className="text-base-content/50 text-xs italic">
-                          or
-                        </span>
-                      ) : null}
-                      <span
-                        className="badge badge-info badge-soft max-w-full gap-1"
-                        title={v.name}
-                      >
-                        <span className="truncate">{v.code}</span>
-                        <button
-                          aria-label={`Remove ${financialDepartmentRow.label} ${v.code}`}
-                          className="text-base-content/50 hover:text-base-content shrink-0"
-                          onClick={v.onRemove}
-                          type="button"
-                        >
-                          <XMarkIcon className="h-3 w-3" />
-                        </button>
-                      </span>
-                    </Fragment>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-base-content/50 mt-2 text-sm">
-                  No financial department selected.
-                </p>
-              )}
-            </div>
-            <div className="border-main-border border-t pt-4">
-              <h3 className="text-sm uppercase font-proxima-bold">
-                Data Filters
-              </h3>
-              {dataFilterRows.length > 0 ? (
-                <div className="mt-2 flex flex-col gap-1.5">
-                  {dataFilterRows.map((row, i) => (
-                    <Fragment key={row.key}>
-                      {i > 0 ? (
-                        <div className="text-base-content/40 pl-1 text-xs font-semibold">
-                          AND
-                        </div>
-                      ) : null}
-                      <div className="border-base-300 bg-base-200/50 flex flex-wrap items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-sm">
-                        <span className="font-medium">{row.label}:</span>
-                        {row.values.map((v, j) => (
-                          <Fragment key={v.code}>
-                            {j > 0 ? (
-                              <span className="text-base-content/50 text-xs italic">
-                                or
-                              </span>
-                            ) : null}
-                            <span
-                              className="badge badge-info badge-soft max-w-full gap-1"
-                              title={v.name}
-                            >
-                              <span className="truncate">{v.code}</span>
-                              <button
-                                aria-label={`Remove ${row.label} ${v.code}`}
-                                className="text-base-content/50 hover:text-base-content shrink-0"
-                                onClick={v.onRemove}
-                                type="button"
-                              >
-                                <XMarkIcon className="h-3 w-3" />
-                              </button>
-                            </span>
-                          </Fragment>
-                        ))}
-                      </div>
-                    </Fragment>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-base-content/50 mt-2 text-sm">
-                  No data filters applied.
-                </p>
-              )}
-            </div>
-            <div className="border-main-border border-t pt-4">
-              <h3 className="text-sm uppercase font-proxima-bold">
-                Table Fields
-              </h3>
-              {groupByChips.length > 0 ? (
-                <div className="mt-2 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
-                  {groupByChips.map((c) => (
-                    <span
-                      className="badge badge-info badge-soft max-w-full gap-1"
-                      key={c.key}
-                    >
-                      <span className="truncate">{c.display}</span>
-                      <button
-                        aria-label={`Remove ${c.display}`}
-                        className="text-primary/60 hover:text-primary shrink-0"
-                        onClick={c.onRemove}
-                        type="button"
-                      >
-                        <XMarkIcon className="h-4 w-4" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-base-content/50 mt-2 text-sm">
-                  No table fields chosen.
-                </p>
-              )}
-            </div>
-          </div>
-        </aside>
       </div>
 
       {/* Results area */}
