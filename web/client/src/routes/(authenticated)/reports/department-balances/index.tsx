@@ -377,7 +377,11 @@ function RouteComponent() {
             <h2 className="text-xl font-proxima-bold">Financial Department</h2>
             <p className="mb-4">
               choose the accounting period, then search and choose financial
-              department(s)
+              department(s); both are required (
+              <span aria-hidden="true" className="text-error">
+                *
+              </span>
+              )
             </p>
             <div className="grid items-start gap-4 md:grid-cols-2">
               {/* Accounting period: required single choice, newest first, defaults to current close */}
@@ -386,7 +390,10 @@ function RouteComponent() {
                   className="text-sm uppercase font-proxima-bold"
                   htmlFor="period-select"
                 >
-                  Period
+                  Period{' '}
+                  <span aria-hidden="true" className="text-error">
+                    *
+                  </span>
                 </label>
                 <select
                   className="select w-full"
@@ -406,7 +413,10 @@ function RouteComponent() {
               {/* Department — hierarchy-aware multi-select, always enabled; gates the other facets */}
               <div className="flex flex-col gap-2">
                 <label className="text-sm uppercase font-proxima-bold">
-                  Financial Department
+                  Financial Department{' '}
+                  <span aria-hidden="true" className="text-error">
+                    *
+                  </span>
                 </label>
                 <MultiSelectFilter
                   loading={deptOptions.isPending}
