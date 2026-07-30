@@ -36,6 +36,8 @@ interface ExpenditureCategoryRow {
 }
 
 interface ExpenditureCategoryBreakdownProps {
+  awardEndDate?: string | null;
+  awardStartDate?: string | null;
   filters?: ExpenditureCategoryFilters;
   progressEnabled?: boolean;
   projectNumber: string;
@@ -215,6 +217,8 @@ function ExpandableProgressView({
 }
 
 export function ExpenditureCategoryBreakdown({
+  awardEndDate,
+  awardStartDate,
   filters,
   progressEnabled = false,
   projectNumber,
@@ -392,7 +396,11 @@ export function ExpenditureCategoryBreakdown({
         leadingActions={tableViewButton}
         trailingActions={exportButton}
       >
-        <ProjectExpenditureProgressCategories categories={progressCategories} />
+        <ProjectExpenditureProgressCategories
+          awardEndDate={awardEndDate}
+          awardStartDate={awardStartDate}
+          categories={progressCategories}
+        />
       </ExpandableProgressView>
     );
   }

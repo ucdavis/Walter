@@ -145,6 +145,8 @@ function ProjectContent({
             </p>
             <div className="mt-4">
               <ExpenditureCategoryBreakdown
+                awardEndDate={summary.awardEndDate}
+                awardStartDate={summary.awardStartDate}
                 progressEnabled={featureFlags?.expenditureProgressEnabled}
                 projectNumber={summary.projectNumber}
                 records={projectRecords}

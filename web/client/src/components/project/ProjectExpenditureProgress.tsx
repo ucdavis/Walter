@@ -369,14 +369,40 @@ function CategoryProgressRows({ rows }: { rows: CategoryProgressRow[] }) {
 }
 
 export function ProjectExpenditureProgressCategories({
+  awardEndDate,
+  awardStartDate,
   categories,
 }: {
+  awardEndDate?: string | null;
+  awardStartDate?: string | null;
   categories: ProjectProjectionCategory[];
 }) {
   const rows = useMemo(
     () => buildCategoryProgressRows(categories),
     [categories]
   );
+  const timeProgress = useMemo(
+    () => getTimeProgressSummary(awardStartDate ?? null, awardEndDate ?? null),
+    [awardEndDate, awardStartDate]
+  );
+  const budgetProgress = useMemo(
+    () => getBudgetProgressSummary(categories),
+    [categories]
+  );
+  const hasBudgetData =
+    budgetProgress.budget !== 0 ||
+    budgetProgress.committed !== 0 ||
+    budgetProgress.overrun !== 0 ||
+    budgetProgress.remaining !== 0 ||
+    budgetProgress.spent !== 0;
+  const summaryBudgetText = hasBudgetData
+    ? getBudgetRemainingText(budgetProgress)
+    : null;
+  const summaryMonthsText = timeProgress
+    ? `${formatMonthCount(timeProgress.remainingMonths)} (${formatPacingPercent(
+        timeProgress.remainingPercent
+      )})`
+    : null;
 
   if (rows.length === 0) {
     return (
@@ -391,6 +417,17 @@ export function ProjectExpenditureProgressCategories({
       className="relative"
       data-testid="project-expenditure-progress-categories"
     >
+      {summaryBudgetText && summaryMonthsText && (
+        <p className="mb-4 max-w-3xl">
+          {budgetProgress.overrun > 0 ? 'Balance is ' : 'Available balance is '}
+          <strong
+            className={budgetProgress.overrun > 0 ? 'text-error' : undefined}
+          >
+            {summaryBudgetText}
+          </strong>
+          , with <strong>{summaryMonthsText}</strong> remaining.
+        </p>
+      )}
       <CategoryProgressRows rows={rows} />
       <PacingProgressAxis />
     </div>
