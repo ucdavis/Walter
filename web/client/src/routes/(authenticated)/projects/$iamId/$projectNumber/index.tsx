@@ -22,10 +22,7 @@ import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
 import { tooltipDefinitions } from '@/shared/tooltips.ts';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, Link } from '@tanstack/react-router';
-import {
-  ChartBarIcon,
-  PresentationChartLineIcon,
-} from '@heroicons/react/24/outline';
+import { PresentationChartLineIcon } from '@heroicons/react/24/outline';
 import ProjectAdditionalInfo from '@/components/project/ProjectAdditionalInfo.tsx';
 
 export const Route = createFileRoute(
@@ -105,30 +102,16 @@ function ProjectContent({
 
       <ProjectDetails
         actions={
-          !summary.isInternal &&
-          (featureFlags?.expenditureProgressEnabled ||
-            featureFlags?.burndownEnabled) ? (
+          !summary.isInternal && featureFlags?.burndownEnabled ? (
             <>
-              {featureFlags?.expenditureProgressEnabled && (
-                <Link
-                  className="btn btn-lg"
-                  params={{ iamId, projectNumber: summary.projectNumber }}
-                  to="/expenditureprogress/$iamId/$projectNumber"
-                >
-                  <ChartBarIcon className="h-4 w-4" />
-                  Expenditure Progress
-                </Link>
-              )}
-              {featureFlags?.burndownEnabled && (
-                <Link
-                  className="btn btn-lg"
-                  params={{ iamId, projectNumber: summary.projectNumber }}
-                  to="/projectburndown/$iamId/$projectNumber"
-                >
-                  <PresentationChartLineIcon className="h-4 w-4" />
-                  Project Burndown
-                </Link>
-              )}
+              <Link
+                className="btn btn-lg"
+                params={{ iamId, projectNumber: summary.projectNumber }}
+                to="/projectburndown/$iamId/$projectNumber"
+              >
+                <PresentationChartLineIcon className="h-4 w-4" />
+                Project Burndown
+              </Link>
             </>
           ) : null
         }
@@ -156,8 +139,13 @@ function ProjectContent({
         ) : (
           <>
             <h2 className="h2">Expenditure Category Breakdown</h2>
+            <p className="mt-2 max-w-3xl text-base-content/80">
+              Expenses, commitments, and available balance by expenditure
+              category.
+            </p>
             <div className="mt-4">
               <ExpenditureCategoryBreakdown
+                progressEnabled={featureFlags?.expenditureProgressEnabled}
                 projectNumber={summary.projectNumber}
                 records={projectRecords}
               />

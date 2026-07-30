@@ -1,9 +1,21 @@
-import { useMemo } from 'react';
+import { type ReactNode, useMemo, useState } from 'react';
 import { createColumnHelper } from '@tanstack/react-table';
+import {
+  ArrowsPointingInIcon,
+  ArrowsPointingOutIcon,
+  ChartBarIcon,
+  TableCellsIcon,
+} from '@heroicons/react/24/outline';
 import { ExportDataButton } from '@/components/ExportDataButton.tsx';
+import { ProjectExpenditureProgressCategories } from '@/components/project/ProjectExpenditureProgress.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import type { ProjectRecord } from '@/queries/project.ts';
+import {
+  useProjectProjectionQuery,
+  type ProjectProjectionCategory,
+} from '@/queries/projectProjection.ts';
 import { DataTable } from '@/shared/DataTable.tsx';
+import { useExpandableOverlay } from '@/shared/hooks/useExpandableOverlay.ts';
 import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
 import { tooltipDefinitions } from '@/shared/tooltips.ts';
 
@@ -25,6 +37,7 @@ interface ExpenditureCategoryRow {
 
 interface ExpenditureCategoryBreakdownProps {
   filters?: ExpenditureCategoryFilters;
+  progressEnabled?: boolean;
   projectNumber: string;
   records: ProjectRecord[];
 }
@@ -42,6 +55,8 @@ const csvColumns = [
   },
   { format: 'currency' as const, header: 'Balance', key: 'balance' as const },
 ];
+
+const personnelCategoryPattern = /salaries|wages|fringe/i;
 
 function buildRows(
   records: ProjectRecord[],
@@ -91,12 +106,137 @@ function buildRows(
   );
 }
 
+function buildProgressCategories(
+  rows: ExpenditureCategoryRow[]
+): ProjectProjectionCategory[] {
+  return rows.map((row) => ({
+    budget: row.budget,
+    committed: row.commitments,
+    expenditureCategory: row.expenditureCategoryName || 'Uncategorized',
+    isPersonnel: personnelCategoryPattern.test(row.expenditureCategoryName)
+      ? 1
+      : 0,
+    remainingNow: row.balance,
+    spentToDate: row.expenses,
+  }));
+}
+
+function ExpandableProgressView({
+  children,
+  leadingActions,
+  trailingActions,
+}: {
+  children: ReactNode;
+  leadingActions: ReactNode;
+  trailingActions: ReactNode;
+}) {
+  const {
+    canAnimateRect,
+    closeExpanded,
+    containerRef,
+    expandButtonRef,
+    handleContainerTransitionEnd,
+    isOverlayActive,
+    overlayStyle,
+    placeholderHeight,
+    placeholderRef,
+    prefersReducedMotion,
+    toggleExpanded,
+  } = useExpandableOverlay({
+    enabled: true,
+  });
+
+  return (
+    <>
+      {isOverlayActive ? (
+        <div
+          aria-hidden="true"
+          className="fixed inset-0 bg-black/40 z-90"
+          data-testid="expenditure-progress-backdrop"
+          onClick={closeExpanded}
+        />
+      ) : null}
+
+      {isOverlayActive ? (
+        <div
+          aria-hidden="true"
+          ref={placeholderRef}
+          style={{ height: placeholderHeight ?? undefined }}
+        />
+      ) : null}
+
+      <div
+        className={[
+          'flex flex-col gap-4 w-full',
+          isOverlayActive
+            ? [
+                'fixed z-100 bg-base-100 rounded-box shadow-xl p-4 min-h-0',
+                prefersReducedMotion || !canAnimateRect
+                  ? 'transition-none'
+                  : 'transition-[top,left,width,height] duration-300 ease-in-out',
+              ].join(' ')
+            : '',
+        ].join(' ')}
+        onTransitionEnd={handleContainerTransitionEnd}
+        ref={containerRef}
+        style={overlayStyle}
+      >
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">{leadingActions}</div>
+          <div className="flex items-center gap-2">
+            {trailingActions}
+            <button
+              aria-label={isOverlayActive ? 'Collapse graph' : 'Expand graph'}
+              className="btn btn-sm btn-square"
+              onClick={toggleExpanded}
+              ref={expandButtonRef}
+              title={isOverlayActive ? 'Collapse graph' : 'Expand graph'}
+              type="button"
+            >
+              {isOverlayActive ? (
+                <ArrowsPointingInIcon className="h-5 w-5" />
+              ) : (
+                <ArrowsPointingOutIcon className="h-5 w-5" />
+              )}
+            </button>
+          </div>
+        </div>
+
+        <div
+          className={
+            isOverlayActive ? 'flex-1 min-h-0 overflow-auto' : 'overflow-x-auto'
+          }
+        >
+          {children}
+        </div>
+      </div>
+    </>
+  );
+}
+
 export function ExpenditureCategoryBreakdown({
   filters,
+  progressEnabled = false,
   projectNumber,
   records,
 }: ExpenditureCategoryBreakdownProps) {
+  const [selectedView, setSelectedView] = useState<
+    'progress' | 'table' | null
+  >(null);
+  const view = progressEnabled ? (selectedView ?? 'progress') : 'table';
   const rows = useMemo(() => buildRows(records, filters), [filters, records]);
+  const fallbackProgressCategories = useMemo(
+    () => buildProgressCategories(rows),
+    [rows]
+  );
+  const projectionQuery = useProjectProjectionQuery(
+    projectNumber,
+    progressEnabled
+  );
+  const progressCategories =
+    projectionQuery.isSuccess && projectionQuery.data.categories.length > 0
+      ? projectionQuery.data.categories
+      : fallbackProgressCategories;
 
   const totals = useMemo(
     () =>
@@ -213,19 +353,55 @@ export function ExpenditureCategoryBreakdown({
     );
   }
 
+  const exportButton = (
+    <ExportDataButton
+      columns={csvColumns}
+      data={rows}
+      filename={`expenditure-categories-${projectNumber}.csv`}
+    />
+  );
+
+  const tableViewButton = progressEnabled ? (
+    <button
+      className="btn btn-sm"
+      onClick={() => setSelectedView('table')}
+      type="button"
+    >
+      <TableCellsIcon className="h-4 w-4" />
+      Table View
+    </button>
+  ) : null;
+
+  const graphViewButton = progressEnabled ? (
+    <button
+      className="btn btn-sm"
+      onClick={() => setSelectedView('progress')}
+      type="button"
+    >
+      <ChartBarIcon className="h-4 w-4" />
+      Graph View
+    </button>
+  ) : null;
+
+  if (progressEnabled && view === 'progress') {
+    return (
+      <ExpandableProgressView
+        leadingActions={tableViewButton}
+        trailingActions={exportButton}
+      >
+        <ProjectExpenditureProgressCategories categories={progressCategories} />
+      </ExpandableProgressView>
+    );
+  }
+
   return (
     <DataTable
       columns={columns}
       data={rows}
       footerRowClassName="totaltr"
-      globalFilter="left"
-      tableActions={
-        <ExportDataButton
-          columns={csvColumns}
-          data={rows}
-          filename={`expenditure-categories-${projectNumber}.csv`}
-        />
-      }
+      globalFilter="none"
+      tableActions={exportButton}
+      tableLeadingActions={graphViewButton}
     />
   );
 }
