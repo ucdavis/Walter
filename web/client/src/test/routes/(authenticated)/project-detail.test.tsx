@@ -1021,7 +1021,7 @@ describe('project detail page', () => {
     }
   });
 
-  it('places Award Information below the breakdown and above Personnel', async () => {
+  it('places Award Information below Personnel', async () => {
     const projects = [createProject({ pmEmployeeId: '2000' })];
     setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);
 
@@ -1045,7 +1045,7 @@ describe('project detail page', () => {
           Node.DOCUMENT_POSITION_FOLLOWING
       ).toBeTruthy();
       expect(
-        awardHeading.compareDocumentPosition(personnelHeading) &
+        personnelHeading.compareDocumentPosition(awardHeading) &
           Node.DOCUMENT_POSITION_FOLLOWING
       ).toBeTruthy();
     } finally {

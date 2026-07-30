@@ -189,7 +189,6 @@ function ProjectContent({
         }
         summary={summary}
       />
-      <FinancialDetails summary={summary} />
 
       <section className="section-margin">
         {summary.isInternal ? (
@@ -221,8 +220,6 @@ function ProjectContent({
         )}
       </section>
 
-      <ProjectAdditionalInfo summary={summary} />
-
       <section className="section-margin">
         <h2 className="h2 mb-2">Personnel</h2>
         {personnelQuery.isPending && (
@@ -235,6 +232,8 @@ function ProjectContent({
           <PersonnelTable data={personnelQuery.data ?? []} showTotals={false} />
         )}
       </section>
+
+      <ProjectAdditionalInfo summary={summary} />
     </main>
   );
 }
