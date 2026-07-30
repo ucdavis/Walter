@@ -341,10 +341,6 @@ function RouteComponent() {
     <main className="container">
       <section className="mt-8 mb-6">
         <h1 className="h1">Department Balances</h1>
-        <p className="text-lg max-w-3xl">
-          To create a department balance report, select a financial department,
-          apply data filters and choose table columns to display
-        </p>
       </section>
 
       {/* Report criteria: collapsible so the results table can take the full viewport */}
@@ -374,14 +370,6 @@ function RouteComponent() {
       <div className={`mb-6 ${criteriaOpen ? '' : 'hidden'}`}>
         <div className="flex flex-col gap-6">
           <section>
-            <p className="mb-4">
-              choose the accounting period, then search and choose financial
-              department(s); both are required (
-              <span aria-hidden="true" className="text-error">
-                *
-              </span>
-              )
-            </p>
             <div className="grid items-start gap-4 md:grid-cols-2">
               {/* Accounting period: required single choice, newest first, defaults to current close */}
               <div className="flex flex-col gap-2">
@@ -430,11 +418,9 @@ function RouteComponent() {
           </section>
 
           <section>
-            <h2 className="mt-4 text-xl font-proxima-bold">Data Filters</h2>
-            <p className="mb-4">
-              Choose from Chartstring segment what you want your report to
-              contain, Leave blank to exclude
-            </p>
+            <h2 className="mt-4 mb-4 text-xl font-proxima-bold">
+              Data Filters
+            </h2>
             <div className="grid items-start gap-4 md:grid-cols-2">
               {/* Entity — multi-select, disabled until department chosen */}
               <div className="flex flex-col gap-2">
@@ -552,10 +538,9 @@ function RouteComponent() {
 
           {/* Field selections — which child-level segments the results are grouped/displayed by */}
           <section>
-            <h2 className="mt-4 text-xl font-proxima-bold">Table Fields</h2>
-            <p className="mb-4">
-              Choose which table fields you want to display on the report
-            </p>
+            <h2 className="mt-4 mb-4 text-xl font-proxima-bold">
+              Table Fields
+            </h2>
             <div className="grid gap-x-4 gap-y-1 sm:grid-cols-2 lg:grid-cols-4">
               {DIMENSIONS.map((d) => (
                 <label
