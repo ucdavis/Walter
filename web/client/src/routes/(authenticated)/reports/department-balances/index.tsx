@@ -113,10 +113,11 @@ const GROUP_BY_OPTIONS: FilterOption[] = DIMENSIONS.map((d) => ({
 const optionLabel = (o: DepartmentBalanceOption): string =>
   o.name && o.name !== o.code ? `${o.code} — ${o.name}` : o.code;
 
-// Map filter-option rows to FilterOptions. Hierarchy facets split into two groups —
-// "Rollups" (picking one selects its whole subtree) and "Values" — alphabetical within
-// each. AE's parent-level numbers are positional padding over ragged trees, so the
-// level itself is never shown.
+// Map filter-option rows to FilterOptions, alphabetical by name (code as fallback) so
+// the list scans by description rather than code. Hierarchy facets split into two
+// groups — "Rollups" (picking one selects its whole subtree) and "Values". AE's
+// parent-level numbers are positional padding over ragged trees, so the level itself
+// is never shown.
 const toFilterOptions = (
   opts: DepartmentBalanceOption[] | undefined,
   hierarchy = false
@@ -130,7 +131,11 @@ const toFilterOptions = (
       byCode.set(o.code, o);
     }
   }
-  const mapped = [...byCode.values()].map((o) => ({
+  const byName = (a: DepartmentBalanceOption, b: DepartmentBalanceOption) =>
+    (a.name || a.code).localeCompare(b.name || b.code, undefined, {
+      sensitivity: 'base',
+    });
+  const mapped = [...byCode.values()].sort(byName).map((o) => ({
     group: hierarchy ? (o.level === 'Leaf' ? 'Values' : 'Rollups') : undefined,
     label: optionLabel(o),
     value: o.code,
@@ -138,11 +143,9 @@ const toFilterOptions = (
   if (!hierarchy) {
     return mapped;
   }
-  const byLabel = (a: FilterOption, b: FilterOption) =>
-    a.label.localeCompare(b.label);
   return [
-    ...mapped.filter((o) => o.group === 'Rollups').sort(byLabel),
-    ...mapped.filter((o) => o.group === 'Values').sort(byLabel),
+    ...mapped.filter((o) => o.group === 'Rollups'),
+    ...mapped.filter((o) => o.group === 'Values'),
   ];
 };
 
