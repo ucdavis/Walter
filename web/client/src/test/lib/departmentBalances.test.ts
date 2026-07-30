@@ -25,7 +25,7 @@ describe('DIMENSIONS', () => {
 describe('MEASURES', () => {
   it('exposes only the displayed measures in display order', () => {
     expect(MEASURES.map((m) => m.key)).toEqual([
-      'revenue', 'expenses', 'endingBalance',
+      'netPosition', 'revenue', 'expenses', 'endingBalance',
     ]);
   });
 });

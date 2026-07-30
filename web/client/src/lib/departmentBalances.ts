@@ -19,13 +19,14 @@ export const DIMENSIONS: DimensionDef[] = [
 ];
 
 export interface MeasureDef {
-  key: 'revenue' | 'expenses' | 'endingBalance';
+  key: 'netPosition' | 'revenue' | 'expenses' | 'endingBalance';
   label: string;
 }
 
-// Displayed measures only; the API also returns assets/liabilities/net position,
+// Displayed measures only; the API also returns assets/liabilities,
 // which the report intentionally omits.
 export const MEASURES: MeasureDef[] = [
+  { key: 'netPosition', label: 'Net Position' },
   { key: 'revenue', label: 'Revenue' },
   { key: 'expenses', label: 'Expenses' },
   { key: 'endingBalance', label: 'Ending Balance' },
