@@ -133,18 +133,6 @@ function AllExpensesProgress({
 
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-sm text-base-content/80">
-        <p className="flex flex-wrap gap-x-3 gap-y-1">
-          <span>{spentText}</span>
-          <span aria-hidden="true">|</span>
-          <span>{committedText}</span>
-        </p>
-        <p
-          className={`ml-auto text-right${progress.overrun > 0 ? ' font-proxima-bold text-error' : ''}`}
-        >
-          {remainingText}
-        </p>
-      </div>
       <PacingProgressBar
         ariaLabel={`All Expenses: ${spentText}, ${committedText}, ${remainingText}${overrunText ? `, ${overrunText}` : ''}, ${budgetText}`}
         segments={[
@@ -170,6 +158,18 @@ function AllExpensesProgress({
           },
         ]}
       />
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-sm text-base-content/80">
+        <p className="flex flex-wrap gap-x-3 gap-y-1">
+          <span>{spentText}</span>
+          <span aria-hidden="true">|</span>
+          <span>{committedText}</span>
+        </p>
+        <p
+          className={`ml-auto text-right${progress.overrun > 0 ? ' font-proxima-bold text-error' : ''}`}
+        >
+          {remainingText}
+        </p>
+      </div>
     </div>
   );
 }
@@ -186,56 +186,21 @@ export function ProjectDetails({ actions, summary }: ProjectDetailsProps) {
         ? 'text-accent'
         : 'text-info'
   }`;
+  const renderBalanceDetail = (className = 'flex flex-col') => (
+    <div className={className}>
+      <BanknotesIcon className="w-4 h-4" />
+      <dt className="stat-label">
+        <TooltipLabel label="Balance" tooltip={tooltipDefinitions.balance} />
+      </dt>
+      <dd className={balanceClassName}>
+        <Currency value={summary.totals.balance} />
+      </dd>
+    </div>
+  );
 
   return (
     <section className="section-margin">
       <div className="fancy-data mt-4 space-y-4">
-        <dl className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="flex flex-col">
-            <BanknotesIcon className="w-4 h-4" />
-            <dt className="stat-label">
-              <TooltipLabel
-                label="Balance"
-                tooltip={tooltipDefinitions.balance}
-              />
-            </dt>
-            <dd className={balanceClassName}>
-              <Currency value={summary.totals.balance} />
-            </dd>
-          </div>
-          <div className="flex flex-col">
-            <ClipboardDocumentCheckIcon className="w-4 h-4" />
-            <dt className="stat-label">Budget</dt>
-            <dd className="stat-value">
-              <Currency value={summary.totals.budget} />
-            </dd>
-          </div>
-          <div className="flex flex-col">
-            <BanknotesIcon className="w-4 h-4" />
-            <dt className="stat-label">Expense</dt>
-            <dd className="stat-value">
-              <Currency value={summary.totals.expense} />
-            </dd>
-          </div>
-          <div className="flex flex-col">
-            <ClipboardDocumentCheckIcon className="w-4 h-4" />
-            <dt className="stat-label">
-              <TooltipLabel
-                label="Commitment"
-                tooltip={tooltipDefinitions.commitment}
-              />
-            </dt>
-            <dd className="stat-value">
-              <Currency value={summary.totals.encumbrance} />
-            </dd>
-          </div>
-        </dl>
-
-        <AllExpensesProgress
-          baseColor={projectColor}
-          progress={budgetProgress}
-        />
-
         <dl className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {hasProjectDates(summary) && (
             <>
@@ -255,17 +220,76 @@ export function ProjectDetails({ actions, summary }: ProjectDetailsProps) {
               </div>
             </>
           )}
-          <div className="flex flex-col">
-            <UserIcon className="w-4 h-4" />
-            <dt className="stat-label">Project Manager</dt>
-            <dd className="stat-value">{displayValue(summary.pm)}</dd>
-          </div>
-          <div className="flex flex-col">
-            <AcademicCapIcon className="w-4 h-4" />
-            <dt className="stat-label">Principal Investigator</dt>
-            <dd className="stat-value">{displayValue(summary.pi)}</dd>
-          </div>
+          {!summary.isInternal && (
+            <>
+              <div className="flex flex-col">
+                <AcademicCapIcon className="w-4 h-4" />
+                <dt className="stat-label">Principal Investigator</dt>
+                <dd className="stat-value">{displayValue(summary.pi)}</dd>
+              </div>
+              <div className="flex flex-col">
+                <UserIcon className="w-4 h-4" />
+                <dt className="stat-label">Project Manager</dt>
+                <dd className="stat-value">{displayValue(summary.pm)}</dd>
+              </div>
+            </>
+          )}
         </dl>
+
+        {summary.isInternal && (
+          <dl className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="flex flex-col">
+              <AcademicCapIcon className="w-4 h-4" />
+              <dt className="stat-label">Principal Investigator</dt>
+              <dd className="stat-value">{displayValue(summary.pi)}</dd>
+            </div>
+            <div className="flex flex-col">
+              <UserIcon className="w-4 h-4" />
+              <dt className="stat-label">Project Manager</dt>
+              <dd className="stat-value">{displayValue(summary.pm)}</dd>
+            </div>
+            {renderBalanceDetail('flex flex-col lg:col-start-4')}
+          </dl>
+        )}
+
+        {!summary.isInternal && (
+          <>
+            <dl className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="flex flex-col">
+                <ClipboardDocumentCheckIcon className="w-4 h-4" />
+                <dt className="stat-label">Budget</dt>
+                <dd className="stat-value">
+                  <Currency value={summary.totals.budget} />
+                </dd>
+              </div>
+              <div className="flex flex-col">
+                <BanknotesIcon className="w-4 h-4" />
+                <dt className="stat-label">Expense</dt>
+                <dd className="stat-value">
+                  <Currency value={summary.totals.expense} />
+                </dd>
+              </div>
+              <div className="flex flex-col">
+                <ClipboardDocumentCheckIcon className="w-4 h-4" />
+                <dt className="stat-label">
+                  <TooltipLabel
+                    label="Commitment"
+                    tooltip={tooltipDefinitions.commitment}
+                  />
+                </dt>
+                <dd className="stat-value">
+                  <Currency value={summary.totals.encumbrance} />
+                </dd>
+              </div>
+              {renderBalanceDetail()}
+            </dl>
+
+            <AllExpensesProgress
+              baseColor={projectColor}
+              progress={budgetProgress}
+            />
+          </>
+        )}
       </div>
       {actions ? (
         <div className="mt-4 flex flex-wrap gap-2">{actions}</div>

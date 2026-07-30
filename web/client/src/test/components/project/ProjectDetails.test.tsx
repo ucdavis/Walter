@@ -73,6 +73,24 @@ describe('ProjectDetails', () => {
     expect(screen.getByText('Budget')).toBeInTheDocument();
     expect(screen.getByText('Expense')).toBeInTheDocument();
     expect(screen.getByText('Commitment')).toBeInTheDocument();
+    expect(
+      screen
+        .getByText('Budget')
+        .compareDocumentPosition(screen.getByText('Expense')) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+    expect(
+      screen
+        .getByText('Expense')
+        .compareDocumentPosition(screen.getByText('Commitment')) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+    expect(
+      screen
+        .getByText('Commitment')
+        .compareDocumentPosition(screen.getByText('Balance')) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
     expect(screen.getByText('$4,000.00').closest('dd')).toHaveClass(
       'text-info'
     );
@@ -83,6 +101,11 @@ describe('ProjectDetails', () => {
       name: /All Expenses: \$5,000\.00 \(50%\) spent, \$1,000\.00 \(10%\) committed, \$4,000\.00 \(40%\), \$10,000\.00 budget/,
     });
     expect(progressBar).toBeInTheDocument();
+    expect(
+      progressBar.compareDocumentPosition(
+        screen.getByText('$5,000.00 (50%) spent')
+      ) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
     expect(progressBar.firstElementChild).toHaveStyle({
       backgroundColor: 'var(--color-info)',
     });
@@ -92,25 +115,58 @@ describe('ProjectDetails', () => {
     expect(screen.getByText('01.01.2024')).toBeInTheDocument();
     expect(screen.getByText('12.31.2026')).toBeInTheDocument();
     expect(
+      screen
+        .getByText('Project Start')
+        .compareDocumentPosition(screen.getByText('Balance')) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+    expect(
+      screen
+        .getByText('Principal Investigator')
+        .compareDocumentPosition(screen.getByText('Project Manager')) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+    expect(
       screen.queryByRole('img', {
         name: /Time: 12 \(33%\) months completed, 24 \(67%\) months remaining/,
       })
     ).not.toBeInTheDocument();
   });
 
-  it('uses internal color for internal project balances and progress bars', () => {
+  it('shows only balance from the financial values for internal projects', () => {
     render(<ProjectDetails summary={createSummary({ isInternal: true })} />);
 
+    expect(screen.getByText('Project Start')).toBeInTheDocument();
+    expect(screen.getByText('Project End')).toBeInTheDocument();
+    expect(screen.getByText('Principal Investigator')).toBeInTheDocument();
+    expect(screen.getByText('Project Manager')).toBeInTheDocument();
+    expect(screen.getByText('Balance')).toBeInTheDocument();
     expect(screen.getByText('$4,000.00').closest('dd')).toHaveClass(
       'text-accent'
     );
-
-    const progressBar = screen.getByRole('img', {
-      name: /All Expenses:/,
-    });
-    expect(progressBar.firstElementChild).toHaveStyle({
-      backgroundColor: 'var(--color-accent)',
-    });
+    expect(screen.getByText('Balance').closest('div')).toHaveClass(
+      'lg:col-start-4'
+    );
+    expect(
+      screen
+        .getByText('Project Manager')
+        .compareDocumentPosition(screen.getByText('Balance')) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+    expect(
+      screen
+        .getByText('Principal Investigator')
+        .compareDocumentPosition(screen.getByText('Project Manager')) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+    expect(screen.queryByText('Budget')).not.toBeInTheDocument();
+    expect(screen.queryByText('Expense')).not.toBeInTheDocument();
+    expect(screen.queryByText('Commitment')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('img', {
+        name: /All Expenses:/,
+      })
+    ).not.toBeInTheDocument();
   });
 
   it('keeps negative balance values red', () => {
