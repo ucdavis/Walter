@@ -340,7 +340,7 @@ function RouteComponent() {
   return (
     <main className="container">
       <section className="mt-8 mb-6">
-        <h1 className="h1">Department Balances</h1>
+        <h1 className="h1">GL Balance Review</h1>
       </section>
 
       {/* Report criteria: collapsible so the results table can take the full viewport */}

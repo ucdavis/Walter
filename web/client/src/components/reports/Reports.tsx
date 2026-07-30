@@ -40,7 +40,7 @@ export function Reports() {
           'Filter chartstring segments, choose table fields, and export department balance results.',
         Icon: BanknotesIcon,
         id: 'department-balances',
-        title: 'Department Balances',
+        title: 'GL Balance Review',
         url: '/reports/department-balances',
       });
     }
