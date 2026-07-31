@@ -4,7 +4,9 @@
 -- flattened list across every level: the leaf plus the six ancestor levels (0 = top rollup ... 5 =
 -- nearest parent) sourced from the dbo.Erp*Hierarchy dimension tables joined in the `src` CTE, so a
 -- user can pick an ancestor code and filter to its whole subtree. Entity/Purpose/Program/Project/
--- Activity return leaf values only. Every facet except Period is scoped to the required @PeriodName snapshot; the
+-- Activity return leaf values only. Hierarchy-aware scoping filters expand supplied codes to their
+-- subtree's leaf codes against the dimension tables, then filter the fact rows by leaf code; only
+-- the hierarchy facet enumeration itself needs the `src` CTE's joins. Every facet except Period is scoped to the required @PeriodName snapshot; the
 -- Period facet itself returns every loaded accounting period, newest first, so clients can default
 -- to the current close. Segment keys are whitelist-resolved (injection guard); filter values stay
 -- parameterized.
@@ -53,38 +55,68 @@ BEGIN
     EXEC dbo.usp_SanitizeInputString @ApplicationName OUTPUT;
     EXEC dbo.usp_SanitizeInputString @ApplicationUser OUTPUT;
 
-    -- Shared scoping predicate (values parameterized). Excludes the facet being populated so it
-    -- shows every value still reachable given the other selections. Dept/Fund/Account are
-    -- hierarchy-aware: a supplied code matches the leaf OR any ancestor level.
+    -- Hierarchy-aware scoping filters (Dept/Fund/Account): expand each supplied code list to its
+    -- subtree's leaf codes ONCE, into a typed #temp table the dynamic SQL semi-joins against
+    -- (mirrors usp_GetGlBalanceSummary; inlining the expansion forced a varchar(max) UNION that
+    -- re-scanned the hierarchy table per fact row). The expansion is skipped for the facet being
+    -- populated, which is excluded from scoping so it shows every reachable value.
+    IF @Segment <> 'Dept' AND @FinancialDepartments IS NOT NULL
+    BEGIN
+        CREATE TABLE #DeptCodes (Code VARCHAR(20) NOT NULL PRIMARY KEY);
+        INSERT INTO #DeptCodes (Code)
+        SELECT CAST(value AS VARCHAR(20)) FROM STRING_SPLIT(@FinancialDepartments, ',')
+        UNION
+        SELECT Code FROM dbo.ErpFinDeptHierarchy
+        WHERE ParentLevel0Code IN (SELECT value FROM STRING_SPLIT(@FinancialDepartments, ','))
+           OR ParentLevel1Code IN (SELECT value FROM STRING_SPLIT(@FinancialDepartments, ','))
+           OR ParentLevel2Code IN (SELECT value FROM STRING_SPLIT(@FinancialDepartments, ','))
+           OR ParentLevel3Code IN (SELECT value FROM STRING_SPLIT(@FinancialDepartments, ','))
+           OR ParentLevel4Code IN (SELECT value FROM STRING_SPLIT(@FinancialDepartments, ','))
+           OR ParentLevel5Code IN (SELECT value FROM STRING_SPLIT(@FinancialDepartments, ','));
+    END;
+    IF @Segment <> 'Fund' AND @Funds IS NOT NULL
+    BEGIN
+        CREATE TABLE #FundCodes (Code VARCHAR(20) NOT NULL PRIMARY KEY);
+        INSERT INTO #FundCodes (Code)
+        SELECT CAST(value AS VARCHAR(20)) FROM STRING_SPLIT(@Funds, ',')
+        UNION
+        SELECT Code FROM dbo.ErpFundHierarchy
+        WHERE ParentLevel0Code IN (SELECT value FROM STRING_SPLIT(@Funds, ','))
+           OR ParentLevel1Code IN (SELECT value FROM STRING_SPLIT(@Funds, ','))
+           OR ParentLevel2Code IN (SELECT value FROM STRING_SPLIT(@Funds, ','))
+           OR ParentLevel3Code IN (SELECT value FROM STRING_SPLIT(@Funds, ','))
+           OR ParentLevel4Code IN (SELECT value FROM STRING_SPLIT(@Funds, ','))
+           OR ParentLevel5Code IN (SELECT value FROM STRING_SPLIT(@Funds, ','));
+    END;
+    IF @Segment <> 'Account' AND @Accounts IS NOT NULL
+    BEGIN
+        CREATE TABLE #AccountCodes (Code VARCHAR(20) NOT NULL PRIMARY KEY);
+        INSERT INTO #AccountCodes (Code)
+        SELECT CAST(value AS VARCHAR(20)) FROM STRING_SPLIT(@Accounts, ',')
+        UNION
+        SELECT Code FROM dbo.ErpAccountHierarchy
+        WHERE ParentLevel0Code IN (SELECT value FROM STRING_SPLIT(@Accounts, ','))
+           OR ParentLevel1Code IN (SELECT value FROM STRING_SPLIT(@Accounts, ','))
+           OR ParentLevel2Code IN (SELECT value FROM STRING_SPLIT(@Accounts, ','))
+           OR ParentLevel3Code IN (SELECT value FROM STRING_SPLIT(@Accounts, ','))
+           OR ParentLevel4Code IN (SELECT value FROM STRING_SPLIT(@Accounts, ','))
+           OR ParentLevel5Code IN (SELECT value FROM STRING_SPLIT(@Accounts, ','));
+    END;
+
+    -- Shared scoping predicate (values parameterized; leaf-only segments stay STRING_SPLIT INs).
+    -- Excludes the facet being populated so it shows every value still reachable given the other
+    -- selections.
     DECLARE @Where NVARCHAR(MAX) = N' WHERE 1 = 1';
     IF @Segment <> 'Period'
         SET @Where += N' AND PeriodName = @p_Period';
     IF @Segment <> 'Entity' AND @Entities IS NOT NULL
         SET @Where += N' AND Entity IN (SELECT value FROM STRING_SPLIT(@p_Entities, '',''))';
     IF @Segment <> 'Dept' AND @FinancialDepartments IS NOT NULL
-        SET @Where += N' AND (Dept IN (SELECT value FROM STRING_SPLIT(@p_Depts, '',''))
-                           OR DeptParentLevel0Code IN (SELECT value FROM STRING_SPLIT(@p_Depts, '',''))
-                           OR DeptParentLevel1Code IN (SELECT value FROM STRING_SPLIT(@p_Depts, '',''))
-                           OR DeptParentLevel2Code IN (SELECT value FROM STRING_SPLIT(@p_Depts, '',''))
-                           OR DeptParentLevel3Code IN (SELECT value FROM STRING_SPLIT(@p_Depts, '',''))
-                           OR DeptParentLevel4Code IN (SELECT value FROM STRING_SPLIT(@p_Depts, '',''))
-                           OR DeptParentLevel5Code IN (SELECT value FROM STRING_SPLIT(@p_Depts, '','')))';
+        SET @Where += N' AND Dept IN (SELECT Code FROM #DeptCodes)';
     IF @Segment <> 'Fund' AND @Funds IS NOT NULL
-        SET @Where += N' AND (Fund IN (SELECT value FROM STRING_SPLIT(@p_Funds, '',''))
-                           OR FundParentLevel0Code IN (SELECT value FROM STRING_SPLIT(@p_Funds, '',''))
-                           OR FundParentLevel1Code IN (SELECT value FROM STRING_SPLIT(@p_Funds, '',''))
-                           OR FundParentLevel2Code IN (SELECT value FROM STRING_SPLIT(@p_Funds, '',''))
-                           OR FundParentLevel3Code IN (SELECT value FROM STRING_SPLIT(@p_Funds, '',''))
-                           OR FundParentLevel4Code IN (SELECT value FROM STRING_SPLIT(@p_Funds, '',''))
-                           OR FundParentLevel5Code IN (SELECT value FROM STRING_SPLIT(@p_Funds, '','')))';
+        SET @Where += N' AND Fund IN (SELECT Code FROM #FundCodes)';
     IF @Segment <> 'Account' AND @Accounts IS NOT NULL
-        SET @Where += N' AND (Account IN (SELECT value FROM STRING_SPLIT(@p_Accounts, '',''))
-                           OR AccountParentLevel0Code IN (SELECT value FROM STRING_SPLIT(@p_Accounts, '',''))
-                           OR AccountParentLevel1Code IN (SELECT value FROM STRING_SPLIT(@p_Accounts, '',''))
-                           OR AccountParentLevel2Code IN (SELECT value FROM STRING_SPLIT(@p_Accounts, '',''))
-                           OR AccountParentLevel3Code IN (SELECT value FROM STRING_SPLIT(@p_Accounts, '',''))
-                           OR AccountParentLevel4Code IN (SELECT value FROM STRING_SPLIT(@p_Accounts, '',''))
-                           OR AccountParentLevel5Code IN (SELECT value FROM STRING_SPLIT(@p_Accounts, '','')))';
+        SET @Where += N' AND Account IN (SELECT Code FROM #AccountCodes)';
     IF @Segment <> 'Purpose' AND @Purposes IS NOT NULL
         SET @Where += N' AND Purpose IN (SELECT value FROM STRING_SPLIT(@p_Purposes, '',''))';
     IF @Segment <> 'Program' AND @Programs IS NOT NULL
@@ -94,9 +126,9 @@ BEGIN
     IF @Segment <> 'Activity' AND @Activities IS NOT NULL
         SET @Where += N' AND Activity IN (SELECT value FROM STRING_SPLIT(@p_Activities, '',''))';
 
-    -- Source CTE: fact rows joined to the hierarchy dimensions, ancestor levels surfaced as flat
-    -- <Segment>ParentLevelN.. columns (same shape as usp_GetGlBalanceSummary, plus names for the
-    -- flattened option lists).
+    -- Source CTE for the hierarchy facets only: fact rows joined to the hierarchy dimensions,
+    -- ancestor levels surfaced as flat <Segment>ParentLevelN.. code+name columns so the option
+    -- lists can flatten every level. The other branches query the fact table directly.
     DECLARE @Src NVARCHAR(MAX) = N'
         WITH src AS (
             SELECT a.*,
@@ -159,23 +191,23 @@ BEGIN
     ELSE IF @Segment = 'Period'
     BEGIN
         -- Every loaded accounting period, newest first ('Mon-YY' sorted by real date, not text).
-        SET @Sql = @Src + N'
+        SET @Sql = N'
             SELECT Code, Name, Level
             FROM (
                 SELECT DISTINCT PeriodName AS Code, CAST(PeriodName AS NVARCHAR(MAX)) AS Name, CAST(NULL AS VARCHAR(4)) AS Level
-                FROM src' + @Where + N'
+                FROM dbo.GlSummaryBalances' + @Where + N'
             ) p
             ORDER BY TRY_CONVERT(date, ''01 '' + REPLACE(Code, ''-'', '' 20''), 106) DESC;';
     END
     ELSE
     BEGIN
-        -- Leaf-only segment facet (Purpose/Project/Activity): no hierarchy.
+        -- Leaf-only segment facet (Entity/Purpose/Program/Project/Activity): no hierarchy.
         DECLARE @CodeCol SYSNAME, @DescCol SYSNAME;
         SELECT @CodeCol = CodeCol, @DescCol = DescCol FROM @Allowed WHERE Segment = @Segment;
-        SET @Sql = @Src + N'
+        SET @Sql = N'
             SELECT DISTINCT ' + QUOTENAME(@CodeCol) + N' AS Code, ' + QUOTENAME(@DescCol) + N' AS Name,
                             CAST(NULL AS VARCHAR(4)) AS Level
-            FROM src' + @Where + N' ORDER BY Code;';
+            FROM dbo.GlSummaryBalances' + @Where + N' ORDER BY Code;';
     END
 
     SET @ParametersJSON = (
@@ -188,12 +220,10 @@ BEGIN
 
     BEGIN TRY
         EXEC sp_executesql @Sql,
-            N'@p_Entities VARCHAR(MAX), @p_Depts VARCHAR(MAX), @p_Funds VARCHAR(MAX),
-              @p_Accounts VARCHAR(MAX), @p_Purposes VARCHAR(MAX), @p_Programs VARCHAR(MAX),
+            N'@p_Entities VARCHAR(MAX), @p_Purposes VARCHAR(MAX), @p_Programs VARCHAR(MAX),
               @p_Projects VARCHAR(MAX), @p_Activities VARCHAR(MAX),
               @p_Period VARCHAR(10)',
-            @p_Entities = @Entities, @p_Depts = @FinancialDepartments, @p_Funds = @Funds,
-            @p_Accounts = @Accounts, @p_Purposes = @Purposes, @p_Programs = @Programs,
+            @p_Entities = @Entities, @p_Purposes = @Purposes, @p_Programs = @Programs,
             @p_Projects = @Projects, @p_Activities = @Activities,
             @p_Period = @PeriodName;
 
