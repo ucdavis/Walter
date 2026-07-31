@@ -385,6 +385,58 @@ export function ProjectExpenditureProgressCategories({
     () => getTimeProgressSummary(awardStartDate ?? null, awardEndDate ?? null),
     [awardEndDate, awardStartDate]
   );
+  const currentMonthMarkerLeft = timeProgress
+    ? `${(timeProgress.elapsedPercent / AXIS_MAX_PERCENT) * 100}%`
+    : null;
+
+  if (rows.length === 0) {
+    return (
+      <p className="text-base-content/70 mt-4">
+        No expenditure category data found.
+      </p>
+    );
+  }
+
+  return (
+    <div
+      className="relative"
+      data-testid="project-expenditure-progress-categories"
+    >
+      {currentMonthMarkerLeft && (
+        <>
+          <span
+            className="pointer-events-none absolute top-0 z-20 -translate-x-full pr-1 text-xs text-base-content"
+            style={{ left: currentMonthMarkerLeft }}
+          >
+            Today
+          </span>
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute top-0 bottom-10 z-10 w-0 -translate-x-1/2 border-l-2 border-dashed border-base-content/35"
+            data-testid="budget-vs-time-current-month-marker"
+            style={{ left: currentMonthMarkerLeft }}
+          />
+        </>
+      )}
+      <CategoryProgressRows rows={rows} />
+      <PacingProgressAxis />
+    </div>
+  );
+}
+
+export function ProjectExpenditureProgressSummary({
+  awardEndDate,
+  awardStartDate,
+  categories,
+}: {
+  awardEndDate?: string | null;
+  awardStartDate?: string | null;
+  categories: ProjectProjectionCategory[];
+}) {
+  const timeProgress = useMemo(
+    () => getTimeProgressSummary(awardStartDate ?? null, awardEndDate ?? null),
+    [awardEndDate, awardStartDate]
+  );
   const budgetProgress = useMemo(
     () => getBudgetProgressSummary(categories),
     [categories]
@@ -404,33 +456,20 @@ export function ProjectExpenditureProgressCategories({
       )})`
     : null;
 
-  if (rows.length === 0) {
-    return (
-      <p className="text-base-content/70 mt-4">
-        No expenditure category data found.
-      </p>
-    );
+  if (!summaryBudgetText || !summaryMonthsText) {
+    return null;
   }
 
   return (
-    <div
-      className="relative"
-      data-testid="project-expenditure-progress-categories"
-    >
-      {summaryBudgetText && summaryMonthsText && (
-        <p className="mb-4 max-w-3xl">
-          {budgetProgress.overrun > 0 ? 'Balance is ' : 'Available balance is '}
-          <strong
-            className={budgetProgress.overrun > 0 ? 'text-error' : undefined}
-          >
-            {summaryBudgetText}
-          </strong>
-          , with <strong>{summaryMonthsText}</strong> remaining.
-        </p>
-      )}
-      <CategoryProgressRows rows={rows} />
-      <PacingProgressAxis />
-    </div>
+    <p className="max-w-3xl">
+      {budgetProgress.overrun > 0 ? 'Balance is ' : 'Available balance is '}
+      <strong
+        className={budgetProgress.overrun > 0 ? 'text-error' : undefined}
+      >
+        {summaryBudgetText}
+      </strong>
+      , with <strong>{summaryMonthsText}</strong> remaining.
+    </p>
   );
 }
 
@@ -511,7 +550,7 @@ export function ProjectExpenditureProgress({
         {currentMonthMarkerLeft && (
           <>
             <span
-              className="pointer-events-none absolute top-0 z-20 -translate-x-1/2 -translate-y-full pb-1 text-xs text-base-content"
+              className="pointer-events-none absolute top-0 z-20 -translate-x-full pr-1 text-xs text-base-content"
               style={{ left: currentMonthMarkerLeft }}
             >
               Today

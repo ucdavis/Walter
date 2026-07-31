@@ -61,7 +61,9 @@ function prefersReducedMotionEnabled(): boolean {
 
 interface UseExpandableOverlayOptions {
   enabled: boolean;
+  initiallyExpanded?: boolean;
   marginPx?: number;
+  onOverlayActiveChange?: (isActive: boolean) => void;
 }
 
 interface UseExpandableOverlayResult {
@@ -83,12 +85,18 @@ interface UseExpandableOverlayResult {
 // Handles table overlay expansion/collapse state, transitions, and keyboard behavior.
 export function useExpandableOverlay({
   enabled,
+  initiallyExpanded = false,
   marginPx = DEFAULT_MARGIN_PX,
+  onOverlayActiveChange,
 }: UseExpandableOverlayOptions): UseExpandableOverlayResult {
   const prefersReducedMotion = useMemo(() => prefersReducedMotionEnabled(), []);
 
-  const [expandPhase, setExpandPhase] = useState<ExpandPhase>('inline');
-  const [overlayRect, setOverlayRect] = useState<OverlayRect | null>(null);
+  const [expandPhase, setExpandPhase] = useState<ExpandPhase>(() =>
+    enabled && initiallyExpanded ? 'expanded' : 'inline'
+  );
+  const [overlayRect, setOverlayRect] = useState<OverlayRect | null>(() =>
+    enabled && initiallyExpanded ? getExpandedRect(marginPx) : null
+  );
   const [placeholderHeight, setPlaceholderHeight] = useState<number | null>(
     null
   );
@@ -116,8 +124,9 @@ export function useExpandableOverlay({
     setOverlayRect(null);
     setPlaceholderHeight(null);
     setCanAnimateRect(false);
+    onOverlayActiveChange?.(false);
     expandButtonRef.current?.focus();
-  }, []);
+  }, [onOverlayActiveChange]);
 
   // Expands from inline bounds to viewport bounds.
   const openExpanded = useCallback(() => {
@@ -132,6 +141,7 @@ export function useExpandableOverlay({
 
     const fromRect = rectFromDomRect(container.getBoundingClientRect());
     setPlaceholderHeight(container.offsetHeight);
+    onOverlayActiveChange?.(true);
 
     if (prefersReducedMotion || !isUsableRect(fromRect)) {
       setCanAnimateRect(false);
@@ -156,7 +166,13 @@ export function useExpandableOverlay({
       frameIdsRef.current.push(secondFrameId);
     });
     frameIdsRef.current.push(firstFrameId);
-  }, [cancelScheduledFrames, enabled, marginPx, prefersReducedMotion]);
+  }, [
+    cancelScheduledFrames,
+    enabled,
+    marginPx,
+    onOverlayActiveChange,
+    prefersReducedMotion,
+  ]);
 
   // Collapses from viewport bounds back to the placeholder location.
   const closeExpanded = useCallback(() => {

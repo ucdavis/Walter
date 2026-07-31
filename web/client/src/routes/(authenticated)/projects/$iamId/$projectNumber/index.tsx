@@ -139,11 +139,11 @@ function ProjectContent({
         ) : (
           <>
             <h2 className="h2">Expenditure Category Breakdown</h2>
-            <p className="mt-2 max-w-3xl text-base-content/80">
+            <p className="mt-2 max-w-3xl">
               Expenses, commitments, and available balance by expenditure
               category.
             </p>
-            <div className="mt-4">
+            <div className="mt-2">
               <ExpenditureCategoryBreakdown
                 awardEndDate={summary.awardEndDate}
                 awardStartDate={summary.awardStartDate}

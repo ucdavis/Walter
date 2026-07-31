@@ -59,7 +59,9 @@ interface DataTableProps<TData extends object> {
   getRowCanExpand?: (row: Row<TData>) => boolean; // Default is `() => true` when `renderSubComponent` is provided
   getRowProps?: (row: Row<TData>) => HTMLAttributes<HTMLTableRowElement>;
   globalFilter?: 'left' | 'right' | 'none'; // Controls the position of the search box
+  initiallyExpanded?: boolean;
   initialState?: InitialTableState; // Optional initial state for the table, use for stuff like setting page size or sorting
+  onOverlayActiveChange?: (isActive: boolean) => void;
   pagination?: 'auto' | 'on' | 'off'; // 'auto' shows controls only when needed; 'off' disables pagination entirely
   renderSubComponent?: (props: { row: Row<TData> }) => ReactNode;
   subComponentRowClassName?: string;
@@ -79,7 +81,9 @@ export const DataTable = <TData extends object>({
   getRowCanExpand,
   getRowProps,
   globalFilter = 'right',
+  initiallyExpanded = false,
   initialState,
+  onOverlayActiveChange,
   pagination = 'auto',
   renderSubComponent,
   subComponentRowClassName,
@@ -131,6 +135,8 @@ export const DataTable = <TData extends object>({
     toggleExpanded,
   } = useExpandableOverlay({
     enabled: expandable,
+    initiallyExpanded,
+    onOverlayActiveChange,
   });
 
   const expandableRows = rowExpansionEnabled

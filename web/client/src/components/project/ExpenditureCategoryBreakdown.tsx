@@ -7,7 +7,10 @@ import {
   TableCellsIcon,
 } from '@heroicons/react/24/outline';
 import { ExportDataButton } from '@/components/ExportDataButton.tsx';
-import { ProjectExpenditureProgressCategories } from '@/components/project/ProjectExpenditureProgress.tsx';
+import {
+  ProjectExpenditureProgressCategories,
+  ProjectExpenditureProgressSummary,
+} from '@/components/project/ProjectExpenditureProgress.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import type { ProjectRecord } from '@/queries/project.ts';
 import {
@@ -125,11 +128,15 @@ function buildProgressCategories(
 
 function ExpandableProgressView({
   children,
+  initiallyExpanded,
   leadingActions,
+  onOverlayActiveChange,
   trailingActions,
 }: {
   children: ReactNode;
+  initiallyExpanded: boolean;
   leadingActions: ReactNode;
+  onOverlayActiveChange: (isActive: boolean) => void;
   trailingActions: ReactNode;
 }) {
   const {
@@ -146,6 +153,8 @@ function ExpandableProgressView({
     toggleExpanded,
   } = useExpandableOverlay({
     enabled: true,
+    initiallyExpanded,
+    onOverlayActiveChange,
   });
 
   return (
@@ -227,6 +236,7 @@ export function ExpenditureCategoryBreakdown({
   const [selectedView, setSelectedView] = useState<
     'progress' | 'table' | null
   >(null);
+  const [isExpanded, setIsExpanded] = useState(false);
   const view = progressEnabled ? (selectedView ?? 'progress') : 'table';
   const rows = useMemo(() => buildRows(records, filters), [filters, records]);
   const fallbackProgressCategories = useMemo(
@@ -392,16 +402,25 @@ export function ExpenditureCategoryBreakdown({
 
   if (progressEnabled && view === 'progress') {
     return (
-      <ExpandableProgressView
-        leadingActions={tableViewButton}
-        trailingActions={exportButton}
-      >
-        <ProjectExpenditureProgressCategories
+      <div className="space-y-4">
+        <ProjectExpenditureProgressSummary
           awardEndDate={awardEndDate}
           awardStartDate={awardStartDate}
           categories={progressCategories}
         />
-      </ExpandableProgressView>
+        <ExpandableProgressView
+          initiallyExpanded={isExpanded}
+          leadingActions={tableViewButton}
+          onOverlayActiveChange={setIsExpanded}
+          trailingActions={exportButton}
+        >
+          <ProjectExpenditureProgressCategories
+            awardEndDate={awardEndDate}
+            awardStartDate={awardStartDate}
+            categories={progressCategories}
+          />
+        </ExpandableProgressView>
+      </div>
     );
   }
 
@@ -411,6 +430,8 @@ export function ExpenditureCategoryBreakdown({
       data={rows}
       footerRowClassName="totaltr"
       globalFilter="none"
+      initiallyExpanded={isExpanded}
+      onOverlayActiveChange={setIsExpanded}
       tableActions={exportButton}
       tableLeadingActions={graphViewButton}
     />

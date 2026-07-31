@@ -1,9 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { http, HttpResponse } from 'msw';
 import type { ReactNode } from 'react';
 import { ExpenditureCategoryBreakdown } from '@/components/project/ExpenditureCategoryBreakdown.tsx';
+import type { ProjectRecord } from '@/queries/project.ts';
 import { server } from '@/test/mswUtils.ts';
 
 afterEach(cleanup);
@@ -100,5 +101,77 @@ describe('ExpenditureCategoryBreakdown', () => {
 
     expect(summary).toBeInTheDocument();
     expect(summary.querySelector('strong')).toHaveClass('text-error');
+    expect(
+      summary.compareDocumentPosition(
+        screen.getByRole('button', { name: 'Table View' })
+      ) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+    expect(screen.getByText('Today')).toBeInTheDocument();
+    expect(
+      screen.getByTestId('budget-vs-time-current-month-marker')
+    ).toBeInTheDocument();
+  });
+
+  it('keeps the table expanded when switching from the expanded graph', () => {
+    server.use(
+      http.get('/api/project/projection/:projectNumber', () =>
+        HttpResponse.json({ categories: [], periods: [] })
+      )
+    );
+
+    renderWithQueryClient(
+      <ExpenditureCategoryBreakdown
+        progressEnabled={true}
+        projectNumber="P1"
+        records={[
+          {
+            balance: 70,
+            budget: 100,
+            commitments: 10,
+            expenditureCategoryName: '04 - Supplies',
+            expenses: 20,
+          } as ProjectRecord,
+        ]}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Expand graph' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Table View' }));
+
+    expect(
+      screen.getByRole('button', { name: 'Collapse table' })
+    ).toBeInTheDocument();
+  });
+
+  it('keeps the graph expanded when switching from the expanded table', () => {
+    server.use(
+      http.get('/api/project/projection/:projectNumber', () =>
+        HttpResponse.json({ categories: [], periods: [] })
+      )
+    );
+
+    renderWithQueryClient(
+      <ExpenditureCategoryBreakdown
+        progressEnabled={true}
+        projectNumber="P1"
+        records={[
+          {
+            balance: 70,
+            budget: 100,
+            commitments: 10,
+            expenditureCategoryName: '04 - Supplies',
+            expenses: 20,
+          } as ProjectRecord,
+        ]}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Table View' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Expand table' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Graph View' }));
+
+    expect(
+      screen.getByRole('button', { name: 'Collapse graph' })
+    ).toBeInTheDocument();
   });
 });
