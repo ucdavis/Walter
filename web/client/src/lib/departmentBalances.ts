@@ -21,18 +21,25 @@ export const DIMENSIONS: DimensionDef[] = [
 ];
 
 export interface MeasureDef {
-  key: 'netPosition' | 'revenue' | 'expenses' | 'endingBalance';
+  key: 'assets' | 'liabilities' | 'netPosition' | 'revenue' | 'expenses' | 'endingBalance';
   label: string;
 }
 
-// Displayed measures only; the API also returns assets/liabilities,
-// which the report intentionally omits.
+// Measures always displayed; assets/liabilities are opt-in via the report's toggle.
 export const MEASURES: MeasureDef[] = [
   { key: 'netPosition', label: 'Net Position' },
   { key: 'revenue', label: 'Revenue' },
   { key: 'expenses', label: 'Expenses' },
   { key: 'endingBalance', label: 'Ending Balance' },
 ];
+
+export const BALANCE_SHEET_MEASURES: MeasureDef[] = [
+  { key: 'assets', label: 'Assets' },
+  { key: 'liabilities', label: 'Liabilities' },
+];
+
+export const activeMeasures = (includeBalanceSheet: boolean): MeasureDef[] =>
+  includeBalanceSheet ? [...BALANCE_SHEET_MEASURES, ...MEASURES] : MEASURES;
 
 export const activeColumns = (dimensions: string[]): DimensionDef[] =>
   DIMENSIONS.filter((d) => dimensions.includes(d.key));

@@ -17,8 +17,8 @@ import {
 } from '@/queries/chartStringLabels.ts';
 import {
   DIMENSIONS,
-  MEASURES,
   activeColumns,
+  activeMeasures,
   labelKeyOf,
   rowGroupLabel,
   rowLabelSegments,
@@ -149,6 +149,7 @@ function RouteComponent() {
   const [dimensions, setDimensions] = useState<string[]>([]);
   const [period, setPeriod] = useState('');
   const [criteriaOpen, setCriteriaOpen] = useState(true);
+  const [showBalanceSheet, setShowBalanceSheet] = useState(false);
 
   const periodOptions = useDepartmentBalanceOptions('Period', {});
   // Server orders periods newest first; the first option is the current close.
@@ -231,19 +232,23 @@ function RouteComponent() {
   );
 
   const cols = useMemo(() => activeColumns(dimensions), [dimensions]);
+  const measures = useMemo(
+    () => activeMeasures(showBalanceSheet),
+    [showBalanceSheet]
+  );
 
   const totals = useMemo(() => {
-    const sums = Object.fromEntries(MEASURES.map((m) => [m.key, 0])) as Record<
+    const sums = Object.fromEntries(measures.map((m) => [m.key, 0])) as Record<
       MeasureDef['key'],
       number
     >;
     for (const r of rows) {
-      for (const m of MEASURES) {
+      for (const m of measures) {
         sums[m.key] += r[m.key];
       }
     }
     return sums;
-  }, [rows]);
+  }, [rows, measures]);
 
   const columns = useMemo(() => {
     const dimCols = cols.map((d, i) =>
@@ -299,8 +304,8 @@ function RouteComponent() {
       header: 'Label',
       size: 260,
     });
-    return [...dimCols, labelCol, ...MEASURES.map(measure)];
-  }, [cols, totals, dimensions, labelsByKey]);
+    return [...dimCols, labelCol, ...measures.map(measure)];
+  }, [cols, totals, dimensions, labelsByKey, measures]);
 
   const csvColumns = useMemo(
     () => [
@@ -308,14 +313,14 @@ function RouteComponent() {
         { header: `${d.label} Code`, key: d.codeField },
         { header: `${d.label} Description`, key: d.descField },
       ]),
-      ...MEASURES.map((m) => ({
+      ...measures.map((m) => ({
         format: 'currency' as const,
         header: m.label,
         key: m.key,
       })),
       { header: 'Label', key: 'label' as const },
     ],
-    [cols]
+    [cols, measures]
   );
 
   const setFilter = <
@@ -586,6 +591,17 @@ function RouteComponent() {
                 </label>
               ))}
             </div>
+            {/* Assets/liabilities columns are opt-in; the other measures always show */}
+            <label className="label mt-2 cursor-pointer justify-start gap-3">
+              <input
+                checked={showBalanceSheet}
+                className="toggle toggle-primary toggle-sm"
+                disabled={department.length === 0}
+                onChange={(e) => setShowBalanceSheet(e.target.checked)}
+                type="checkbox"
+              />
+              <span className="label-text">Show assets and liabilities</span>
+            </label>
           </section>
         </div>
 

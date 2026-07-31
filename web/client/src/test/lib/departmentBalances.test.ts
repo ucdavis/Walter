@@ -3,6 +3,7 @@ import {
   DIMENSIONS,
   MEASURES,
   activeColumns,
+  activeMeasures,
   labelKeyOf,
   rowGroupLabel,
   rowLabelSegments,
@@ -27,6 +28,18 @@ describe('MEASURES', () => {
     expect(MEASURES.map((m) => m.key)).toEqual([
       'netPosition', 'revenue', 'expenses', 'endingBalance',
     ]);
+  });
+});
+
+describe('activeMeasures', () => {
+  it('prepends assets and liabilities when the balance-sheet toggle is on', () => {
+    expect(activeMeasures(true).map((m) => m.key)).toEqual([
+      'assets', 'liabilities', 'netPosition', 'revenue', 'expenses', 'endingBalance',
+    ]);
+  });
+
+  it('returns only the always-on measures when the toggle is off', () => {
+    expect(activeMeasures(false)).toEqual(MEASURES);
   });
 });
 
