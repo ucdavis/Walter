@@ -609,7 +609,7 @@ function RouteComponent() {
         <DataTable
           columns={columns}
           data={labeledRows}
-          globalFilter="none"
+          filterPlaceholder="Filter results..."
           pagination="off"
           tableActions={
             <ExportDataButton
