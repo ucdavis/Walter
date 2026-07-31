@@ -375,6 +375,15 @@ function RouteComponent() {
             </>
           )}
         </button>
+        <button
+          className="btn btn-ghost btn-sm ml-auto"
+          disabled={department.length === 0 && dimensions.length === 0}
+          onClick={() => handleDeptChange([])}
+          type="button"
+        >
+          <TrashIcon className="h-3.5 w-3.5" />
+          Clear all criteria
+        </button>
       </div>
 
       {/* Filter controls */}
@@ -558,15 +567,6 @@ function RouteComponent() {
                 type="button"
               >
                 Select all
-              </button>
-              <button
-                className="btn btn-ghost btn-sm"
-                disabled={department.length === 0 && dimensions.length === 0}
-                onClick={() => handleDeptChange([])}
-                type="button"
-              >
-                <TrashIcon className="h-3.5 w-3.5" />
-                Clear all criteria
               </button>
             </div>
             <div className="grid gap-x-4 gap-y-1 sm:grid-cols-2 lg:grid-cols-4">
