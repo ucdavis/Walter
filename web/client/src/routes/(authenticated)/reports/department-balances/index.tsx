@@ -107,9 +107,9 @@ function LabelCell({
 const optionLabel = (o: DepartmentBalanceOption): string =>
   o.name && o.name !== o.code ? `${o.code} — ${o.name}` : o.code;
 
-// Map filter-option rows to FilterOptions, alphabetical by name (code as fallback) so
-// the list scans by description rather than code. Hierarchy facets split into two
-// groups — "Parent" (picking one selects its whole subtree) and "Child". AE's
+// Map filter-option rows to FilterOptions, sorted by the displayed label (code first,
+// numbers before letters, digits compared numerically). Hierarchy facets split into
+// two groups — "Parent" (picking one selects its whole subtree) and "Child". AE's
 // parent-level numbers are positional padding over ragged trees, so the level itself
 // is never shown.
 const toFilterOptions = (
@@ -125,11 +125,12 @@ const toFilterOptions = (
       byCode.set(o.code, o);
     }
   }
-  const byName = (a: DepartmentBalanceOption, b: DepartmentBalanceOption) =>
-    (a.name || a.code).localeCompare(b.name || b.code, undefined, {
+  const byLabel = (a: DepartmentBalanceOption, b: DepartmentBalanceOption) =>
+    optionLabel(a).localeCompare(optionLabel(b), undefined, {
+      numeric: true,
       sensitivity: 'base',
     });
-  const mapped = [...byCode.values()].sort(byName).map((o) => ({
+  const mapped = [...byCode.values()].sort(byLabel).map((o) => ({
     group: hierarchy ? (o.level === 'Leaf' ? 'Child' : 'Parent') : undefined,
     label: optionLabel(o),
     value: o.code,
