@@ -351,6 +351,10 @@ function RouteComponent() {
   const disabledHint =
     department.length === 0 ? 'Select a financial department first' : undefined;
 
+  const hasDataFilters = Object.values(filters).some(
+    (v) => Array.isArray(v) && v.length > 0
+  );
+
   return (
     <main className="container">
       <section className="mt-8 mb-6">
@@ -445,6 +449,13 @@ function RouteComponent() {
             <h2 className="mt-4 mb-4 text-xl font-proxima-bold">
               Data Filters
             </h2>
+            {department.length > 0 && !hasDataFilters ? (
+              <div className="alert alert-warning alert-soft mb-4" role="alert">
+                Without data filters, this report includes everything in the
+                selected department(s) and may be slow to load. Add filters to
+                narrow it.
+              </div>
+            ) : null}
             <div className="grid items-start gap-4 md:grid-cols-2">
               {/* Entity — multi-select, disabled until department chosen */}
               <div className="flex flex-col gap-2" title={disabledHint}>
