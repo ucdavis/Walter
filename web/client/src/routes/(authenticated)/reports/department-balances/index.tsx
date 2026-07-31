@@ -341,6 +341,7 @@ function RouteComponent() {
     <main className="container">
       <section className="mt-8 mb-6">
         <h1 className="h1">GL Balance Review</h1>
+        <h3 className="subtitle">Data source: GL Summary Balances</h3>
       </section>
 
       {/* Report criteria: collapsible so the results table can take the full viewport */}
