@@ -138,7 +138,7 @@ describe('project detail page', () => {
       ).toBeInTheDocument();
       expect(
         within(topSection).getByText(
-          '- Source: Faculty Department Portfolio Report (PPM)'
+          'Source: Faculty & Department Portfolio Report (PPM)'
         )
       ).toBeInTheDocument();
     } finally {

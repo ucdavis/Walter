@@ -1,5 +1,6 @@
 import { formatDate } from '@/lib/date.ts';
 import { formatCurrency } from '@/lib/currency.ts';
+import { ProjectProgressBar } from '@/components/project/ProjectProgressBar.tsx';
 import type { ProjectSummary } from '@/lib/projectSummary.ts';
 import { type BudgetProgressSummary } from '@/lib/projectProgress.ts';
 import { Currency } from '@/shared/Currency.tsx';
@@ -25,17 +26,6 @@ const SPONSORED_PROJECT_COLOR = 'var(--color-info)';
 
 const hasProjectDates = (summary: ProjectSummary) =>
   Boolean(summary.awardStartDate || summary.awardEndDate);
-
-interface PacingProgressSegment {
-  color: string;
-  label: string;
-  width: number;
-}
-
-interface PacingProgressBarProps {
-  ariaLabel: string;
-  segments: PacingProgressSegment[];
-}
 
 const nonnegative = (value: number) => Math.max(0, value);
 
@@ -91,30 +81,6 @@ function getBudgetRemainingText(progress: BudgetProgressSummary) {
   )})`;
 }
 
-function PacingProgressBar({ ariaLabel, segments }: PacingProgressBarProps) {
-  return (
-    <div
-      aria-label={ariaLabel}
-      className="flex h-3 overflow-hidden rounded-sm bg-base-300"
-      role="img"
-    >
-      {segments
-        .filter((segment) => segment.width > 0)
-        .map((segment) => (
-          <span
-            aria-hidden="true"
-            className="block h-full"
-            key={segment.label}
-            style={{
-              backgroundColor: segment.color,
-              width: `${segment.width}%`,
-            }}
-          />
-        ))}
-    </div>
-  );
-}
-
 function AllExpensesProgress({
   baseColor,
   progress,
@@ -133,7 +99,7 @@ function AllExpensesProgress({
 
   return (
     <div className="space-y-2">
-      <PacingProgressBar
+      <ProjectProgressBar
         ariaLabel={`All Expenses: ${spentText}, ${committedText}, ${remainingText}${overrunText ? `, ${overrunText}` : ''}, ${budgetText}`}
         segments={[
           {
