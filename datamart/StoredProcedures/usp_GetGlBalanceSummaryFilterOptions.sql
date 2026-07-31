@@ -4,9 +4,10 @@
 -- flattened list across every level: the leaf plus the six ancestor levels (0 = top rollup ... 5 =
 -- nearest parent) sourced from the dbo.Erp*Hierarchy dimension tables joined in the `src` CTE, so a
 -- user can pick an ancestor code and filter to its whole subtree. Purpose/Project/Activity return
--- leaf values only. The Period facet returns the snapshot's current period (single row) for
--- "balances as of <period>" display. Segment keys are whitelist-resolved (injection guard); filter
--- values stay parameterized.
+-- leaf values only. Every facet except Period is scoped to the required @PeriodName snapshot; the
+-- Period facet itself returns every loaded accounting period, newest first, so clients can default
+-- to the current close. Segment keys are whitelist-resolved (injection guard); filter values stay
+-- parameterized.
 CREATE PROCEDURE dbo.usp_GetGlBalanceSummaryFilterOptions
     @Segment              VARCHAR(50),                -- required: which facet to populate
     @FinancialDepartments VARCHAR(MAX) = NULL,
@@ -15,6 +16,7 @@ CREATE PROCEDURE dbo.usp_GetGlBalanceSummaryFilterOptions
     @Purposes             VARCHAR(MAX) = NULL,
     @Projects             VARCHAR(MAX) = NULL,
     @Activities           VARCHAR(MAX) = NULL,
+    @PeriodName           VARCHAR(10) = NULL,         -- required except for the Period facet, e.g. 'Jul-26'
     @ApplicationName      NVARCHAR(128) = NULL,
     @ApplicationUser      NVARCHAR(256) = NULL,
     @EmulatingUser        NVARCHAR(256) = NULL
@@ -41,6 +43,9 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM @Allowed WHERE Segment = @Segment)
     BEGIN RAISERROR('@Segment is required and must be a known facet key', 16, 1); RETURN; END;
 
+    IF @Segment <> 'Period' AND (@PeriodName IS NULL OR LTRIM(RTRIM(@PeriodName)) = '')
+    BEGIN RAISERROR('@PeriodName is required for this segment', 16, 1); RETURN; END;
+
     EXEC dbo.usp_SanitizeInputString @ApplicationName OUTPUT;
     EXEC dbo.usp_SanitizeInputString @ApplicationUser OUTPUT;
 
@@ -48,6 +53,8 @@ BEGIN
     -- shows every value still reachable given the other selections. Dept/Fund/Account are
     -- hierarchy-aware: a supplied code matches the leaf OR any ancestor level.
     DECLARE @Where NVARCHAR(MAX) = N' WHERE 1 = 1';
+    IF @Segment <> 'Period'
+        SET @Where += N' AND PeriodName = @p_Period';
     IF @Segment <> 'Dept' AND @FinancialDepartments IS NOT NULL
         SET @Where += N' AND (Dept IN (SELECT value FROM STRING_SPLIT(@p_Depts, '',''))
                            OR DeptParentLevel0Code IN (SELECT value FROM STRING_SPLIT(@p_Depts, '',''))
@@ -143,10 +150,14 @@ BEGIN
     END
     ELSE IF @Segment = 'Period'
     BEGIN
-        -- Single current-period snapshot: one row for "balances as of <period>" display.
+        -- Every loaded accounting period, newest first ('Mon-YY' sorted by real date, not text).
         SET @Sql = @Src + N'
-            SELECT DISTINCT PeriodName AS Code, CAST(PeriodName AS NVARCHAR(MAX)) AS Name, CAST(NULL AS VARCHAR(4)) AS Level
-            FROM src' + @Where + N' ORDER BY Code;';
+            SELECT Code, Name, Level
+            FROM (
+                SELECT DISTINCT PeriodName AS Code, CAST(PeriodName AS NVARCHAR(MAX)) AS Name, CAST(NULL AS VARCHAR(4)) AS Level
+                FROM src' + @Where + N'
+            ) p
+            ORDER BY TRY_CONVERT(date, ''01 '' + REPLACE(Code, ''-'', '' 20''), 106) DESC;';
     END
     ELSE
     BEGIN
@@ -162,16 +173,18 @@ BEGIN
     SET @ParametersJSON = (
         SELECT @Segment AS Segment, @FinancialDepartments AS FinancialDepartments, @Funds AS Funds,
                @Accounts AS Accounts, @Purposes AS Purposes, @Projects AS Projects,
-               @Activities AS Activities,
+               @Activities AS Activities, @PeriodName AS PeriodName,
                COALESCE(@ApplicationName, APP_NAME()) AS ApplicationName
         FOR JSON PATH, WITHOUT_ARRAY_WRAPPER);
 
     BEGIN TRY
         EXEC sp_executesql @Sql,
             N'@p_Depts VARCHAR(MAX), @p_Funds VARCHAR(MAX), @p_Accounts VARCHAR(MAX),
-              @p_Purposes VARCHAR(MAX), @p_Projects VARCHAR(MAX), @p_Activities VARCHAR(MAX)',
+              @p_Purposes VARCHAR(MAX), @p_Projects VARCHAR(MAX), @p_Activities VARCHAR(MAX),
+              @p_Period VARCHAR(10)',
             @p_Depts = @FinancialDepartments, @p_Funds = @Funds, @p_Accounts = @Accounts,
-            @p_Purposes = @Purposes, @p_Projects = @Projects, @p_Activities = @Activities;
+            @p_Purposes = @Purposes, @p_Projects = @Projects, @p_Activities = @Activities,
+            @p_Period = @PeriodName;
 
         SET @RowCount = @@ROWCOUNT;
         SET @Duration_MS = DATEDIFF(MILLISECOND, @StartTime, SYSDATETIME());
