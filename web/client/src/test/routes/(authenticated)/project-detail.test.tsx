@@ -103,6 +103,68 @@ const setupHandlers = (
 };
 
 describe('project detail page', () => {
+  it('shows project identity, Finjector action, status, and source in the top section', async () => {
+    const projects = [createProject({ pmEmployeeId: '2000' })];
+    setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);
+
+    const { cleanup } = renderRoute({
+      initialPath: '/projects/1000/P1',
+    });
+
+    try {
+      const heading = await screen.findByRole('heading', {
+        level: 1,
+        name: 'Test Project',
+      });
+      expect(heading).toBeInTheDocument();
+
+      const topSection = heading.closest('section') as HTMLElement;
+      const projectNumber = within(topSection).getByText('P1');
+      expect(projectNumber.closest('a')).toBeNull();
+
+      const finjectorLink = within(topSection).getByRole('link', {
+        name: /Open in Finjector/,
+      });
+      expect(finjectorLink).toHaveAttribute(
+        'href',
+        'https://finjector.ucdavis.edu/details/P1-T001-ORG001-522201/'
+      );
+      expect(finjectorLink).toHaveAttribute('target', '_blank');
+      const status = within(topSection).getByText('Active');
+      expect(status).toBeInTheDocument();
+      expect(status.querySelector('span')).toHaveClass('bg-success');
+      expect(
+        within(topSection).getByText('Sponsored Project')
+      ).toBeInTheDocument();
+      expect(
+        within(topSection).getByText(
+          'Source: Faculty & Department Portfolio Report (PPM)'
+        )
+      ).toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('uses a neutral status dot for unknown project statuses', async () => {
+    const projects = [
+      createProject({ pmEmployeeId: '2000', projectStatusCode: 'ON_HOLD' }),
+    ];
+    setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);
+
+    const { cleanup } = renderRoute({
+      initialPath: '/projects/1000/P1',
+    });
+
+    try {
+      const status = await screen.findByText('On Hold');
+
+      expect(status.querySelector('span')).toHaveClass('bg-base-content/30');
+    } finally {
+      cleanup();
+    }
+  });
+
   it('shows Award Information for all users', async () => {
     const projects = [createProject({ pmEmployeeId: '2000' })];
     setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);
@@ -162,6 +224,33 @@ describe('project detail page', () => {
     }
   });
 
+  it('shows the internal totals warning as a soft accent alert', async () => {
+    const projects = [
+      createProject({
+        awardEndDate: null,
+        awardStartDate: null,
+        pmEmployeeId: '2000',
+        projectType: 'Internal',
+      }),
+    ];
+    setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);
+
+    const { cleanup } = renderRoute({
+      initialPath: '/projects/1000/P1',
+    });
+
+    try {
+      const message = await screen.findByText(
+        /totals for internal projects do not reflect transactions/i
+      );
+      const alert = message.closest('[role="alert"]');
+
+      expect(alert).toHaveClass('alert-soft', 'alert-accent');
+    } finally {
+      cleanup();
+    }
+  });
+
   it('shows the ended-award alert above other project alerts', async () => {
     const projects = [
       createProject({
@@ -205,7 +294,7 @@ describe('project detail page', () => {
     });
 
     try {
-      await screen.findByText('Project Number');
+      await screen.findByText('Project Manager');
       expect(screen.queryByText(/Award ended on/)).not.toBeInTheDocument();
     } finally {
       cleanup();
@@ -228,9 +317,8 @@ describe('project detail page', () => {
     });
 
     try {
-      await screen.findByText('Project Number');
+      await screen.findByText('Project Manager');
       expect(screen.queryByText('Award Information')).not.toBeInTheDocument();
-      expect(screen.queryByText('Timeline')).not.toBeInTheDocument();
       expect(screen.queryByText('Project Start')).not.toBeInTheDocument();
       expect(screen.queryByText('Project End')).not.toBeInTheDocument();
     } finally {
@@ -438,7 +526,7 @@ describe('project detail page', () => {
         name: 'Project Burndown',
       });
       const detailsSection = screen
-        .getByText('Project Number')
+        .getByText('Project Start')
         .closest('section') as HTMLElement;
 
       expect(
@@ -771,7 +859,7 @@ describe('project detail page', () => {
     });
 
     try {
-      await screen.findByText('Financial Details');
+      await screen.findByText('Project Manager');
       expect(
         screen.queryByRole('link', { name: 'Expenditure Progress' })
       ).not.toBeInTheDocument();
@@ -810,7 +898,7 @@ describe('project detail page', () => {
     });
 
     try {
-      await screen.findByText('Financial Details');
+      await screen.findByText('Project Manager');
       expect(
         screen.queryByRole('link', { name: 'Expenditure Progress' })
       ).not.toBeInTheDocument();
@@ -933,7 +1021,7 @@ describe('project detail page', () => {
     }
   });
 
-  it('places Award Information below the breakdown and above Personnel', async () => {
+  it('places Award Information below Personnel', async () => {
     const projects = [createProject({ pmEmployeeId: '2000' })];
     setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);
 
@@ -957,7 +1045,7 @@ describe('project detail page', () => {
           Node.DOCUMENT_POSITION_FOLLOWING
       ).toBeTruthy();
       expect(
-        awardHeading.compareDocumentPosition(personnelHeading) &
+        personnelHeading.compareDocumentPosition(awardHeading) &
           Node.DOCUMENT_POSITION_FOLLOWING
       ).toBeTruthy();
     } finally {
@@ -1091,7 +1179,7 @@ describe('project detail page', () => {
 
       try {
         expect(
-          await screen.findByText('Project Number', {}, { timeout: 3000 })
+          await screen.findByText('Project Manager', {}, { timeout: 3000 })
         ).toBeInTheDocument();
 
         const message = await screen.findByText(
@@ -1131,7 +1219,7 @@ describe('project detail page', () => {
       const { cleanup } = renderRoute({ initialPath: '/projects/1000/P1' });
 
       try {
-        await screen.findByText('Project Number');
+        await screen.findByText('Project Manager');
         expect(
           screen.queryByText('GL/PPM is Balanced. Click here to view.')
         ).not.toBeInTheDocument();
@@ -1160,7 +1248,7 @@ describe('project detail page', () => {
       const { cleanup } = renderRoute({ initialPath: '/projects/1000/P1' });
 
       try {
-        await screen.findByText('Project Number');
+        await screen.findByText('Project Manager');
         expect(
           screen.queryByText(/has a gl\/ppm reconciliation discrepancy/i)
         ).not.toBeInTheDocument();
@@ -1181,7 +1269,7 @@ describe('project detail page', () => {
       const { cleanup } = renderRoute({ initialPath: '/projects/1000/P1' });
 
       try {
-        await screen.findByText('Project Number');
+        await screen.findByText('Project Manager');
         expect(
           screen.queryByText(/has a gl\/ppm reconciliation discrepancy/i)
         ).not.toBeInTheDocument();

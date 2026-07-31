@@ -1,6 +1,10 @@
 import { useId, useMemo, useState } from 'react';
 import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
 import { projectExpenditureCategoryColor } from '@/components/project/projectChartColors.ts';
+import {
+  ProjectProgressBar,
+  type ProjectProgressBarSegment,
+} from '@/components/project/ProjectProgressBar.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import {
   getCategoryBudgetProgress,
@@ -23,11 +27,8 @@ const BAR_MAX_PERCENT = 100;
 const BAR_TRACK_WIDTH_PERCENT = (BAR_MAX_PERCENT / AXIS_MAX_PERCENT) * 100;
 const AXIS_TICKS = [0, 20, 40, 60, 80, 100] as const;
 
-type CategoryProgressSegment = {
-  color: string;
-  label: string;
+type CategoryProgressSegment = ProjectProgressBarSegment & {
   value: number;
-  width: number;
 };
 
 type CategoryProgressRow = {
@@ -42,13 +43,10 @@ type CategoryProgressRow = {
   total: number;
 };
 
-type PacingProgressSegment = {
-  color: string;
-  label: string;
+type PacingProgressSegment = ProjectProgressBarSegment & {
   secondaryText?: string;
   text?: string;
   textClassName?: string;
-  width: number;
 };
 
 type PacingProgressRow = {
@@ -134,26 +132,11 @@ function ScaledProgressBar({
 }) {
   return (
     <div className="relative">
-      <div
-        aria-label={ariaLabel}
-        className="flex h-3 overflow-hidden rounded-sm bg-base-300"
-        role="img"
+      <ProjectProgressBar
+        ariaLabel={ariaLabel}
+        segments={segments}
         style={{ width: `${BAR_TRACK_WIDTH_PERCENT}%` }}
-      >
-        {segments
-          .filter((segment) => segment.width > 0)
-          .map((segment) => (
-            <span
-              aria-hidden="true"
-              className="block h-full"
-              key={segment.label}
-              style={{
-                backgroundColor: segment.color,
-                width: `${segment.width}%`,
-              }}
-            />
-          ))}
-      </div>
+      />
     </div>
   );
 }
