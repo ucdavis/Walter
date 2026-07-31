@@ -347,6 +347,10 @@ function RouteComponent() {
     }
   };
 
+  // Native tooltip for the controls that stay disabled until a department is chosen.
+  const disabledHint =
+    department.length === 0 ? 'Select a financial department first' : undefined;
+
   return (
     <main className="container">
       <section className="mt-8 mb-6">
@@ -443,7 +447,7 @@ function RouteComponent() {
             </h2>
             <div className="grid items-start gap-4 md:grid-cols-2">
               {/* Entity — multi-select, disabled until department chosen */}
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2" title={disabledHint}>
                 <label className="text-sm uppercase font-proxima-bold">
                   Entity
                 </label>
@@ -459,7 +463,7 @@ function RouteComponent() {
               </div>
 
               {/* Fund — hierarchy-aware multi-select, disabled until department chosen */}
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2" title={disabledHint}>
                 <label className="text-sm uppercase font-proxima-bold">
                   Fund
                 </label>
@@ -475,7 +479,7 @@ function RouteComponent() {
               </div>
 
               {/* Account — hierarchy-aware multi-select, disabled until department chosen */}
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2" title={disabledHint}>
                 <label className="text-sm uppercase font-proxima-bold">
                   Account
                 </label>
@@ -491,7 +495,7 @@ function RouteComponent() {
               </div>
 
               {/* Purpose — multi-select, disabled until department chosen */}
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2" title={disabledHint}>
                 <label className="text-sm uppercase font-proxima-bold">
                   Purpose
                 </label>
@@ -507,7 +511,7 @@ function RouteComponent() {
               </div>
 
               {/* Program — multi-select, disabled until department chosen */}
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2" title={disabledHint}>
                 <label className="text-sm uppercase font-proxima-bold">
                   Program
                 </label>
@@ -523,7 +527,7 @@ function RouteComponent() {
               </div>
 
               {/* Project — multi-select, disabled until department chosen */}
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2" title={disabledHint}>
                 <label className="text-sm uppercase font-proxima-bold">
                   Project
                 </label>
@@ -539,7 +543,7 @@ function RouteComponent() {
               </div>
 
               {/* Activity — multi-select, disabled until department chosen */}
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2" title={disabledHint}>
                 <label className="text-sm uppercase font-proxima-bold">
                   Activity
                 </label>
@@ -564,6 +568,7 @@ function RouteComponent() {
                 className="btn btn-ghost btn-sm"
                 disabled={department.length === 0}
                 onClick={() => setDimensions(DIMENSIONS.map((d) => d.key))}
+                title={disabledHint}
                 type="button"
               >
                 Select all
@@ -574,6 +579,7 @@ function RouteComponent() {
                 <label
                   className="label cursor-pointer justify-start gap-3"
                   key={d.key}
+                  title={disabledHint}
                 >
                   <input
                     checked={dimensions.includes(d.key)}
@@ -593,7 +599,10 @@ function RouteComponent() {
               ))}
             </div>
             {/* Assets/liabilities columns are opt-in; the other measures always show */}
-            <label className="label mt-2 cursor-pointer justify-start gap-3">
+            <label
+              className="label mt-2 cursor-pointer justify-start gap-3"
+              title={disabledHint}
+            >
               <input
                 checked={showBalanceSheet}
                 className="toggle toggle-primary toggle-sm"
