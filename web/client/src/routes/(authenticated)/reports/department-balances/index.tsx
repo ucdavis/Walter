@@ -619,7 +619,7 @@ function RouteComponent() {
 
       {/* Results area */}
       <h2 className="h2 mt-16 border-t border-main-border pt-8">
-        Report results{effectivePeriod ? ` as of ${effectivePeriod}` : ''}
+        Balances{effectivePeriod ? ` as of ${effectivePeriod}` : ''}
       </h2>
       {department.length === 0 ? (
         <p className="mt-2">No data to show.</p>
