@@ -32,7 +32,11 @@ import { DataTable } from '@/shared/DataTable.tsx';
 import { ExportDataButton } from '@/components/ExportDataButton.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import { formatDate } from '@/lib/date.ts';
-import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/20/solid';
+import {
+  ChevronDownIcon,
+  ChevronUpIcon,
+  TrashIcon,
+} from '@heroicons/react/20/solid';
 import { canAccessDepartmentBalances } from '@/shared/auth/roleAccess.ts';
 import { meQueryOptions } from '@/queries/user.ts';
 import { RouterContext } from '@/main.tsx';
@@ -539,9 +543,26 @@ function RouteComponent() {
 
           {/* Field selections — which child-level segments the results are grouped/displayed by */}
           <section>
-            <h2 className="mt-4 mb-4 text-xl font-proxima-bold">
-              Table Fields
-            </h2>
+            <div className="mt-4 mb-4 flex flex-wrap items-center gap-2">
+              <h2 className="text-xl font-proxima-bold">Display Fields</h2>
+              <button
+                className="btn btn-ghost btn-sm"
+                disabled={department.length === 0}
+                onClick={() => setDimensions(DIMENSIONS.map((d) => d.key))}
+                type="button"
+              >
+                Select all
+              </button>
+              <button
+                className="btn btn-ghost btn-sm"
+                disabled={department.length === 0 && dimensions.length === 0}
+                onClick={() => handleDeptChange([])}
+                type="button"
+              >
+                <TrashIcon className="h-3.5 w-3.5" />
+                Clear all criteria
+              </button>
+            </div>
             <div className="grid gap-x-4 gap-y-1 sm:grid-cols-2 lg:grid-cols-4">
               {DIMENSIONS.map((d) => (
                 <label
