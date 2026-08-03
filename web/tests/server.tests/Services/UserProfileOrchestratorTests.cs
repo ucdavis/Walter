@@ -16,17 +16,18 @@ namespace server.tests.Services;
 public sealed class UserProfileOrchestratorTests
 {
     [Fact]
-    public async Task EnsureUserProfileAsync_uses_iam_kerberos_and_persists_user()
+    public async Task EnsureUserProfileAsync_uses_token_iam_without_loading_graph_attributes()
     {
         using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
         ctx.Roles.Add(new Role { Name = Role.Names.ProjectManager });
         await ctx.SaveChangesAsync();
 
         var userId = Guid.NewGuid();
-        var principal = CreatePrincipal(userId, "person@ucdavis.edu");
+        var principal = CreatePrincipal(userId, "person@ucdavis.edu", "IAM-123");
+        var attributeService = new FakeEntraUserAttributeService(new EntraUserAttributes("GRAPH-IAM"));
 
         var orchestrator = new UserProfileOrchestrator(
-            new FakeEntraUserAttributeService(new EntraUserAttributes("IAM-123")),
+            attributeService,
             new FakeIdentityService(
                 iamIdentity: new IamIdentity("IAM-123", "E12345", "Iam FullName"),
                 kerberosByIamId: new Dictionary<string, string?> { ["IAM-123"] = "guser" }),
@@ -50,6 +51,7 @@ public sealed class UserProfileOrchestratorTests
         user.Kerberos.Should().Be("guser");
         user.IamId.Should().Be("IAM-123");
         user.EmployeeId.Should().Be("E12345");
+        attributeService.CallCount.Should().Be(0);
     }
 
     [Fact]
@@ -70,8 +72,9 @@ public sealed class UserProfileOrchestratorTests
         ctx.Users.Add(existingUser);
         await ctx.SaveChangesAsync();
 
+        var attributeService = new FakeEntraUserAttributeService(new EntraUserAttributes("IAM-123"));
         var orchestrator = new UserProfileOrchestrator(
-            new FakeEntraUserAttributeService(new EntraUserAttributes("IAM-123")),
+            attributeService,
             new FakeIdentityService(
                 iamIdentity: new IamIdentity("IAM-123", "E12345", "Iam FullName"),
                 kerberosByIamId: new Dictionary<string, string?>()),
@@ -87,16 +90,63 @@ public sealed class UserProfileOrchestratorTests
 
         await act.Should().ThrowAsync<InvalidOperationException>()
             .WithMessage("Kerberos lookup failed for IAM ID 'IAM-123'.");
+        attributeService.CallCount.Should().Be(1);
     }
 
-    private static ClaimsPrincipal CreatePrincipal(Guid userId, string email)
+    [Fact]
+    public async Task EnsureUserProfileAsync_trims_stored_iam_before_lookup_and_persistence()
     {
-        var identity = new ClaimsIdentity(
-        [
+        using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
+
+        var existingUser = new User
+        {
+            Id = Guid.NewGuid(),
+            Kerberos = "storedkerb",
+            IamId = " IAM-123 ",
+            EmployeeId = "E12345",
+            DisplayName = "Existing User",
+            Email = "existing@ucdavis.edu",
+        };
+
+        ctx.Roles.Add(new Role { Name = Role.Names.ProjectManager });
+        ctx.Users.Add(existingUser);
+        await ctx.SaveChangesAsync();
+
+        var orchestrator = new UserProfileOrchestrator(
+            new FakeEntraUserAttributeService(null),
+            new FakeIdentityService(
+                iamIdentity: new IamIdentity("IAM-123", "E12345", "Iam FullName"),
+                kerberosByIamId: new Dictionary<string, string?> { ["IAM-123"] = "guser" }),
+            new UserService(NullLogger<UserService>.Instance, ctx),
+            new FakeFinancialApiService(),
+            NullLogger<UserProfileOrchestrator>.Instance);
+
+        var profile = await orchestrator.EnsureUserProfileAsync(
+            existingUser.Id,
+            existingUser.Id.ToString(),
+            CreatePrincipal(existingUser.Id, existingUser.Email!),
+            CancellationToken.None);
+
+        profile.IamId.Should().Be("IAM-123");
+
+        var persistedUser = await ctx.Users.SingleAsync(u => u.Id == existingUser.Id);
+        persistedUser.IamId.Should().Be("IAM-123");
+    }
+
+    private static ClaimsPrincipal CreatePrincipal(Guid userId, string email, string? iamId = null)
+    {
+        var claims = new List<Claim>
+        {
             new Claim(ClaimConstants.ObjectId, userId.ToString()),
             new Claim("preferred_username", email),
-        ],
-            authenticationType: "Test");
+        };
+
+        if (iamId is not null)
+        {
+            claims.Add(new Claim("ucdPersonIAMID", iamId));
+        }
+
+        var identity = new ClaimsIdentity(claims, authenticationType: "Test");
 
         return new ClaimsPrincipal(identity);
     }
@@ -110,11 +160,14 @@ public sealed class UserProfileOrchestratorTests
             _attributes = attributes;
         }
 
+        public int CallCount { get; private set; }
+
         public Task<EntraUserAttributes?> GetAttributesAsync(
             string userId,
             ClaimsPrincipal principal,
             CancellationToken cancellationToken = default)
         {
+            CallCount++;
             return Task.FromResult(_attributes);
         }
     }

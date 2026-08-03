@@ -6,6 +6,8 @@ namespace server.Helpers;
 
 public static class ClaimsPrincipalExtensions
 {
+    private const string IamIdClaimType = "ucdPersonIAMID";
+
     /// <summary>
     /// Returns the authenticated user's object ID as a GUID.
     /// Falls back to the legacy OID claim if needed.
@@ -40,6 +42,15 @@ public static class ClaimsPrincipalExtensions
         return principal.FindFirstValue("kerberos")
             ?? principal.FindFirstValue(ClaimTypes.Email)
             ?? principal.FindFirstValue("preferred_username"); // email w/ our entra setup
+    }
+
+    /// <summary>
+    /// Returns the authenticated user's IAM ID when Entra includes it in the validated token.
+    /// </summary>
+    public static string? GetIamId(this ClaimsPrincipal principal)
+    {
+        ArgumentNullException.ThrowIfNull(principal);
+        return principal.FindFirst(IamIdClaimType)?.Value?.Trim();
     }
 
     /// <summary>
