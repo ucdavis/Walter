@@ -1,6 +1,9 @@
 import { ProjectAlerts } from '@/components/alerts/ProjectAlerts.tsx';
 import { ExpenditureCategoryBreakdown } from '@/components/project/ExpenditureCategoryBreakdown.tsx';
-import { FinjectorLink } from '@/components/project/FinjectorLink.tsx';
+import {
+  ChartStringCopyButton,
+  FinjectorLink,
+} from '@/components/project/FinjectorLink.tsx';
 import { TaskBreakdown } from '@/components/project/TaskBreakdown.tsx';
 import { ProjectDetails } from '@/components/project/ProjectDetails.tsx';
 import { PersonnelTable } from '@/components/project/PersonnelTable.tsx';
@@ -110,13 +113,20 @@ function ProjectContent({
             {summary.projectNumber}
           </span>
           {!summary.isInternal && finjectorUrl && (
-            <FinjectorLink
-              org={summary.projectOwningOrgCode}
-              project={summary.projectNumber}
-              task={summary.taskNum}
-            >
-              Open in Finjector
-            </FinjectorLink>
+            <span className="inline-flex items-center gap-1">
+              <FinjectorLink
+                org={summary.projectOwningOrgCode}
+                project={summary.projectNumber}
+                task={summary.taskNum}
+              >
+                Open in Finjector
+              </FinjectorLink>
+              <ChartStringCopyButton
+                org={summary.projectOwningOrgCode}
+                project={summary.projectNumber}
+                task={summary.taskNum}
+              />
+            </span>
           )}
           <span aria-hidden="true" className="text-base-content/40">
             |

@@ -130,6 +130,9 @@ describe('project detail page', () => {
         'https://finjector.ucdavis.edu/details/P1-T001-ORG001-522201/'
       );
       expect(finjectorLink).toHaveAttribute('target', '_blank');
+      expect(
+        within(topSection).getByRole('button', { name: 'Copy chartstring' })
+      ).toBeInTheDocument();
       const status = within(topSection).getByText('Active');
       expect(status).toBeInTheDocument();
       expect(status.querySelector('span')).toHaveClass('bg-success');
