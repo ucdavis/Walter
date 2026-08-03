@@ -299,19 +299,19 @@
 			"apiVersion": "2018-06-01",
 			"properties": {
 				"linkedServiceName": {
-					"referenceName": "ROBERTO_WalterDev",
+					"referenceName": "ROBERTO_WalterProd",
 					"type": "LinkedServiceReference"
 				},
 				"annotations": [],
 				"type": "SqlServerTable",
 				"schema": [],
 				"typeProperties": {
-					"schema": "dbo",
-					"table": "test"
+					"schema": "WalterProd",
+					"table": ""
 				}
 			},
 			"dependsOn": [
-				"[concat(variables('factoryId'), '/linkedServices/ROBERTO_WalterDev')]"
+				"[concat(variables('factoryId'), '/linkedServices/ROBERTO_WalterProd')]"
 			]
 		},
 		{

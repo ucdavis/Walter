@@ -19,7 +19,7 @@
 			"properties": {
 				"activities": [
 					{
-						"name": "Get Last As Of Date",
+						"name": "Get Last As Of Date DEV",
 						"type": "Lookup",
 						"dependsOn": [],
 						"policy": {
@@ -45,11 +45,11 @@
 						}
 					},
 					{
-						"name": "Copy To Accruals Table",
+						"name": "Copy To Accruals Table DEV",
 						"type": "Copy",
 						"dependsOn": [
 							{
-								"activity": "Get Last As Of Date",
+								"activity": "Get Last As Of Date DEV",
 								"dependencyConditions": [
 									"Succeeded"
 								]
@@ -79,7 +79,7 @@
 									"AsOfMinDate": {
 										"type": "DateTime",
 										"value": {
-											"value": "@{activity('Get Last As Of Date').output.firstRow.LastAsOfDate}",
+											"value": "@{activity('Get Last As Of Date DEV').output.firstRow.LastAsOfDate}",
 											"type": "Expression"
 										}
 									}
@@ -130,7 +130,7 @@
 						"type": "Copy",
 						"dependsOn": [
 							{
-								"activity": "Copy To Accruals Table",
+								"activity": "Copy To Accruals Table DEV",
 								"dependencyConditions": [
 									"Succeeded"
 								]
@@ -148,7 +148,7 @@
 							"source": {
 								"type": "SqlServerSource",
 								"sqlReaderQuery": {
-									"value": "SELECT *\nFROM dbo.EmployeeAccrualBalances\nWHERE AsOfDate > '@{activity('Get Last As Of Date').output.firstRow.LastAsOfDate}'",
+									"value": "SELECT *\nFROM dbo.EmployeeAccrualBalances\nWHERE AsOfDate > '@{activity('Get Last As Of Date DEV').output.firstRow.LastAsOfDate}'",
 									"type": "Expression"
 								},
 								"queryTimeout": "02:00:00",
@@ -201,7 +201,13 @@
 						"type": "Copy",
 						"dependsOn": [
 							{
-								"activity": "Get Last As Of Date",
+								"activity": "Copy To Accruals Table TEST",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "Get Last As Of Date PROD",
 								"dependencyConditions": [
 									"Succeeded"
 								]
@@ -222,7 +228,7 @@
 								"storedProcedureParameters": {
 									"ApplicationName": {
 										"type": "String",
-										"value": "WalterDev_EmployeeAccrualBalances"
+										"value": "WalterProd_EmployeeAccrualBalances"
 									},
 									"ApplicationUser": {
 										"type": "String",
@@ -231,7 +237,7 @@
 									"AsOfMinDate": {
 										"type": "DateTime",
 										"value": {
-											"value": "@{activity('Get Last As Of Date').output.firstRow.LastAsOfDate}",
+											"value": "@{activity('Get Last As Of Date PROD').output.firstRow.LastAsOfDate}",
 											"type": "Expression"
 										}
 									}
@@ -264,7 +270,7 @@
 						},
 						"inputs": [
 							{
-								"referenceName": "Roberto_WalterDev",
+								"referenceName": "Roberto_WalterProd",
 								"type": "DatasetReference",
 								"parameters": {}
 							}
@@ -276,6 +282,145 @@
 								"parameters": {}
 							}
 						]
+					},
+					{
+						"name": "Copy To Accruals Table TEST",
+						"type": "Copy",
+						"dependsOn": [
+							{
+								"activity": "Copy To Accruals Table DEV",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "Get Last As Of Date TEST",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "SqlServerSource",
+								"sqlReaderStoredProcedureName": "[[dbo].[usp_GetEmployeeAccrualBalances]",
+								"storedProcedureParameters": {
+									"ApplicationName": {
+										"type": "String",
+										"value": "WalterTest_EmployeeAccrualBalances"
+									},
+									"ApplicationUser": {
+										"type": "String",
+										"value": "walter_adf"
+									},
+									"AsOfMinDate": {
+										"type": "DateTime",
+										"value": {
+											"value": "@{activity('Get Last As Of Date TEST').output.firstRow.LastAsOfDate}",
+											"type": "Expression"
+										}
+									}
+								},
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"sink": {
+								"type": "SqlServerSink",
+								"writeBehavior": "upsert",
+								"upsertSettings": {
+									"useTempDB": true,
+									"keys": [
+										"EmployeeId",
+										"AsOfDate",
+										"PositionNumber"
+									]
+								},
+								"sqlWriterUseTableLock": false
+							},
+							"enableStaging": false,
+							"translator": {
+								"type": "TabularTranslator",
+								"typeConversion": true,
+								"typeConversionSettings": {
+									"allowDataTruncation": true,
+									"treatBooleanAsNumber": false
+								}
+							}
+						},
+						"inputs": [
+							{
+								"referenceName": "Roberto_WalterTest",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "WalterTest_EmployeeAccrualBalances",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						]
+					},
+					{
+						"name": "Get Last As Of Date TEST",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "SqlServerSource",
+								"sqlReaderQuery": "SELECT ISNULL(MAX(AsOfDate), '1900-01-01') AS LastAsOfDate FROM dbo.EmployeeAccrualBalances",
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "Roberto_WalterTest",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						}
+					},
+					{
+						"name": "Get Last As Of Date PROD",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "SqlServerSource",
+								"sqlReaderQuery": "SELECT ISNULL(MAX(AsOfDate), '1900-01-01') AS LastAsOfDate FROM dbo.EmployeeAccrualBalances",
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "Roberto_WalterProd",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						}
 					}
 				],
 				"policy": {
@@ -1966,7 +2111,7 @@
 			"apiVersion": "2018-06-01",
 			"properties": {
 				"annotations": [],
-				"runtimeState": "Stopped",
+				"runtimeState": "Started",
 				"pipelines": [
 					{
 						"pipelineReference": {
