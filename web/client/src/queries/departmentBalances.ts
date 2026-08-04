@@ -17,10 +17,10 @@ export interface DepartmentBalanceRow {
   fundDesc?: string | null;
   liabilities: number;
   netPosition: number;
-  program?: string | null;
-  programDesc?: string | null;
   /** The snapshot's accounting period ("balances as of"); always populated. */
   periodName?: string | null;
+  program?: string | null;
+  programDesc?: string | null;
   project?: string | null;
   projectDesc?: string | null;
   purpose?: string | null;
