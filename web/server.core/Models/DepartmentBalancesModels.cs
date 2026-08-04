@@ -8,6 +8,8 @@ namespace server.core.Models;
 /// </summary>
 public sealed class DepartmentBalanceRow
 {
+    [JsonPropertyName("entity")] public string? Entity { get; set; }
+    [JsonPropertyName("entityDesc")] public string? EntityDesc { get; set; }
     [JsonPropertyName("dept")] public string? Dept { get; set; }
     [JsonPropertyName("deptDesc")] public string? DeptDesc { get; set; }
     [JsonPropertyName("fund")] public string? Fund { get; set; }
@@ -16,6 +18,8 @@ public sealed class DepartmentBalanceRow
     [JsonPropertyName("accountDesc")] public string? AccountDesc { get; set; }
     [JsonPropertyName("purpose")] public string? Purpose { get; set; }
     [JsonPropertyName("purposeDesc")] public string? PurposeDesc { get; set; }
+    [JsonPropertyName("program")] public string? Program { get; set; }
+    [JsonPropertyName("programDesc")] public string? ProgramDesc { get; set; }
     [JsonPropertyName("project")] public string? Project { get; set; }
     [JsonPropertyName("projectDesc")] public string? ProjectDesc { get; set; }
     [JsonPropertyName("activity")] public string? Activity { get; set; }
@@ -48,10 +52,12 @@ public sealed class DepartmentBalancesQuery
 
     /// <summary>Required accounting period, e.g. "Jul-26".</summary>
     public string? PeriodName { get; set; }
+    public string[]? Entities { get; set; }
     public string[]? FinancialDepartments { get; set; }
     public string[]? Funds { get; set; }
     public string[]? Accounts { get; set; }
     public string[]? Purposes { get; set; }
+    public string[]? Programs { get; set; }
     public string[]? Projects { get; set; }
     public string[]? Activities { get; set; }
 }
@@ -63,10 +69,12 @@ public sealed class DepartmentBalancesOptionsQuery
 
     /// <summary>Accounting period, e.g. "Jul-26". Required unless Segment is "Period".</summary>
     public string? PeriodName { get; set; }
+    public string[]? Entities { get; set; }
     public string[]? FinancialDepartments { get; set; }
     public string[]? Funds { get; set; }
     public string[]? Accounts { get; set; }
     public string[]? Purposes { get; set; }
+    public string[]? Programs { get; set; }
     public string[]? Projects { get; set; }
     public string[]? Activities { get; set; }
 }

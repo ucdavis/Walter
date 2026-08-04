@@ -1,8 +1,8 @@
 import { ProjectAlerts } from '@/components/alerts/ProjectAlerts.tsx';
 import { ExpenditureCategoryBreakdown } from '@/components/project/ExpenditureCategoryBreakdown.tsx';
+import { FinjectorLink } from '@/components/project/FinjectorLink.tsx';
 import { TaskBreakdown } from '@/components/project/TaskBreakdown.tsx';
 import { ProjectDetails } from '@/components/project/ProjectDetails.tsx';
-import { FinancialDetails } from '@/components/project/FinancialDetails.tsx';
 import { PersonnelTable } from '@/components/project/PersonnelTable.tsx';
 import { usePersonnelQuery } from '@/queries/personnel.ts';
 import { useFeatureFlagsQuery } from '@/queries/featureFlags.ts';
@@ -20,6 +20,7 @@ import { canViewProjectDiscrepancy } from '@/shared/auth/roleAccess.ts';
 import { useUser } from '@/shared/auth/UserContext.tsx';
 import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
 import { tooltipDefinitions } from '@/shared/tooltips.ts';
+import { buildFinjectorUrl } from '@/lib/finjector.ts';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, Link } from '@tanstack/react-router';
 import {
@@ -47,6 +48,28 @@ const ProjectNotFound = ({ projectNumber }: { projectNumber: string }) => (
   </main>
 );
 
+const formatStatusLabel = (status: string | null) =>
+  status
+    ? status
+        .replaceAll(/[_-]+/g, ' ')
+        .toLowerCase()
+        .replaceAll(/\b\w/g, (letter) => letter.toUpperCase())
+    : 'Not provided';
+
+const normalizeStatusCode = (status: string | null) =>
+  status?.trim().toUpperCase() ?? '';
+
+const projectStatusDotClassByCode: Record<string, string> = {
+  ACTIVE: 'bg-success',
+  CLOSED: 'bg-base-content/30',
+  EXPIRED: 'bg-warning',
+  INACTIVE: 'bg-base-content/30',
+};
+
+const getProjectStatusDotClassName = (status: string | null) =>
+  projectStatusDotClassByCode[normalizeStatusCode(status)] ??
+  'bg-base-content/30';
+
 function ProjectContent({
   iamId,
   projectRecords,
@@ -72,27 +95,59 @@ function ProjectContent({
       ? 'discrepancy'
       : 'balanced'
     : undefined;
+  const finjectorUrl = buildFinjectorUrl(
+    summary.projectNumber,
+    summary.taskNum,
+    summary.projectOwningOrgCode
+  );
 
   return (
     <main className="flex-1 min-w-0">
       <section className="mt-8 mb-2">
-        <div className="mb-1">
+        <h1 className="h1 max-w-4xl">{summary.displayName}</h1>
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-base text-base-content/80">
+          <span className="font-proxima-bold text-base-content">
+            {summary.projectNumber}
+          </span>
+          {!summary.isInternal && finjectorUrl && (
+            <FinjectorLink
+              org={summary.projectOwningOrgCode}
+              project={summary.projectNumber}
+              task={summary.taskNum}
+            >
+              Open in Finjector
+            </FinjectorLink>
+          )}
+          <span aria-hidden="true" className="text-base-content/40">
+            |
+          </span>
+          <span className="inline-flex items-center gap-2">
+            <span
+              aria-hidden="true"
+              className={`h-2.5 w-2.5 rounded-full ${getProjectStatusDotClassName(summary.projectStatusCode)}`}
+            />
+            {formatStatusLabel(summary.projectStatusCode)}
+          </span>
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1">
           <span
             className={`badge font-proxima-bold badge-sm ${summary.isInternal ? 'badge-accent' : 'badge-info'}`}
           >
-            {summary.isInternal ? 'Internal' : 'Sponsored'}
+            {summary.isInternal ? 'Internal Project' : 'Sponsored Project'}
+          </span>
+          <span className="text-sm text-base-content/70">
+            Source: Faculty & Department Portfolio Report (PPM)
           </span>
         </div>
-        <h1 className="h1">{summary.displayName}</h1>
-        <h3 className="subtitle">
-          Data source: Faculty Department Portfolio Report (PPM)
-        </h3>
         {summary.isInternal && (
-          <p className="max-w-3xl mb-2">
+          <div
+            className="alert alert-soft alert-accent mt-4 max-w-3xl"
+            role="alert"
+          >
             Totals for internal projects do not reflect transactions that have
             occurred since the latest data refresh or manual updates that are
             needed. Contact your fiscal officer with any questions.
-          </p>
+          </div>
         )}
         <div className="mt-6">
           <ProjectAlerts
@@ -134,7 +189,6 @@ function ProjectContent({
         }
         summary={summary}
       />
-      <FinancialDetails summary={summary} />
 
       <section className="section-margin">
         {summary.isInternal ? (
@@ -166,8 +220,6 @@ function ProjectContent({
         )}
       </section>
 
-      <ProjectAdditionalInfo summary={summary} />
-
       <section className="section-margin">
         <h2 className="h2 mb-2">Personnel</h2>
         {personnelQuery.isPending && (
@@ -180,6 +232,8 @@ function ProjectContent({
           <PersonnelTable data={personnelQuery.data ?? []} showTotals={false} />
         )}
       </section>
+
+      <ProjectAdditionalInfo summary={summary} />
     </main>
   );
 }
