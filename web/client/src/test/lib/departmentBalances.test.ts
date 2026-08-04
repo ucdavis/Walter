@@ -3,6 +3,7 @@ import {
   DIMENSIONS,
   MEASURES,
   activeColumns,
+  activeMeasures,
   labelKeyOf,
   rowGroupLabel,
   rowLabelSegments,
@@ -15,9 +16,9 @@ const row = (overrides: Partial<DepartmentBalanceRow>): DepartmentBalanceRow => 
 });
 
 describe('DIMENSIONS', () => {
-  it('exposes the six child-level segments', () => {
+  it('exposes the eight child-level segments', () => {
     expect(DIMENSIONS.map((d) => d.key)).toEqual([
-      'Dept', 'Fund', 'Account', 'Purpose', 'Project', 'Activity',
+      'Entity', 'Fund', 'Dept', 'Account', 'Purpose', 'Program', 'Project', 'Activity',
     ]);
   });
 });
@@ -25,15 +26,27 @@ describe('DIMENSIONS', () => {
 describe('MEASURES', () => {
   it('exposes only the displayed measures in display order', () => {
     expect(MEASURES.map((m) => m.key)).toEqual([
-      'revenue', 'expenses', 'endingBalance',
+      'netPosition', 'revenue', 'expenses', 'endingBalance',
     ]);
+  });
+});
+
+describe('activeMeasures', () => {
+  it('prepends assets and liabilities when the balance-sheet toggle is on', () => {
+    expect(activeMeasures(true).map((m) => m.key)).toEqual([
+      'assets', 'liabilities', 'netPosition', 'revenue', 'expenses', 'endingBalance',
+    ]);
+  });
+
+  it('returns only the always-on measures when the toggle is off', () => {
+    expect(activeMeasures(false)).toEqual(MEASURES);
   });
 });
 
 describe('activeColumns', () => {
   it('returns only the selected dimensions in catalog order', () => {
-    const cols = activeColumns(['Fund', 'Dept']);
-    expect(cols.map((c) => c.key)).toEqual(['Dept', 'Fund']);
+    const cols = activeColumns(['Dept', 'Fund']);
+    expect(cols.map((c) => c.key)).toEqual(['Fund', 'Dept']);
   });
 });
 
@@ -53,6 +66,17 @@ describe('rowGroupLabel', () => {
 });
 
 describe('rowLabelSegments', () => {
+  it('ignores segments outside the label key (entity, program)', () => {
+    const segments = rowLabelSegments(
+      row({ entity: '3110', fund: '13U00', program: '150' }),
+      ['Entity', 'Fund', 'Program']
+    );
+    expect(segments).toEqual({
+      account: '', activity: '', dept: '', fund: '13U00', project: '', purpose: '',
+    });
+  });
+
+
   it('keys a single-dimension row on just that segment', () => {
     const segments = rowLabelSegments(row({ fund: '13U00' }), ['Fund']);
     expect(segments).toEqual({
