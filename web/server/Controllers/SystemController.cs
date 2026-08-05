@@ -64,7 +64,6 @@ public class SystemController : ApiControllerBase
     [HttpGet("emulate/{identifier}")]
     public async Task<IActionResult> Emulate(
         string identifier,
-        [FromQuery] bool provisionIfMissing = false,
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(identifier))
@@ -95,7 +94,7 @@ public class SystemController : ApiControllerBase
             userId = user?.Id ?? Guid.Empty;
         }
 
-        if (user == null && provisionIfMissing)
+        if (user == null)
         {
             user = await ProvisionEmulationUserAsync(
                 normalizedIdentifier,

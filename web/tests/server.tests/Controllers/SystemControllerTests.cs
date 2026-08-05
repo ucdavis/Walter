@@ -238,12 +238,11 @@ public class SystemControllerTests
     }
 
     [Fact]
-    public async Task Emulate_does_not_provision_missing_user_without_opt_in()
+    public async Task Emulate_returns_not_found_when_missing_guid_user_cannot_be_provisioned()
     {
         using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
         var targetUserId = Guid.NewGuid();
-        var graphService = new FakeGraphService(
-            new GraphUserProfile(targetUserId.ToString(), "Never Logged In", "new@example.com", "IAM-NEW"));
+        var graphService = new FakeGraphService();
         var profileOrchestrator = new FakeUserProfileOrchestrator(ctx);
         var (controller, _) = CreateController(
             ctx,
@@ -253,12 +252,12 @@ public class SystemControllerTests
         var result = await controller.Emulate(targetUserId.ToString());
 
         result.Should().BeOfType<NotFoundObjectResult>();
-        graphService.GetByIdCallCount.Should().Be(0);
+        graphService.GetByIdCallCount.Should().Be(1);
         profileOrchestrator.CallCount.Should().Be(0);
     }
 
     [Fact]
-    public async Task Emulate_provisions_missing_guid_user_when_opted_in()
+    public async Task Emulate_provisions_missing_guid_user()
     {
         using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
         var targetUserId = Guid.NewGuid();
@@ -270,7 +269,7 @@ public class SystemControllerTests
             graphService: graphService,
             profileOrchestrator: profileOrchestrator);
 
-        var result = await controller.Emulate(targetUserId.ToString(), provisionIfMissing: true);
+        var result = await controller.Emulate(targetUserId.ToString());
 
         result.Should().BeOfType<RedirectResult>().Which.Url.Should().Be("/");
         graphService.GetByIdCallCount.Should().Be(1);
@@ -282,7 +281,7 @@ public class SystemControllerTests
     }
 
     [Fact]
-    public async Task Emulate_provisions_missing_employee_id_user_when_opted_in()
+    public async Task Emulate_provisions_missing_employee_id_user()
     {
         using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
         var targetUserId = Guid.NewGuid();
@@ -303,7 +302,7 @@ public class SystemControllerTests
             datamartService: datamartService,
             profileOrchestrator: profileOrchestrator);
 
-        var result = await controller.Emulate(person.EmployeeId, provisionIfMissing: true);
+        var result = await controller.Emulate(person.EmployeeId);
 
         result.Should().BeOfType<RedirectResult>().Which.Url.Should().Be("/");
         datamartService.GetByEmployeeIdCallCount.Should().Be(1);
