@@ -42,7 +42,7 @@ export function FinjectorLink({
     >
       {children}
       <span className="tooltip tooltip-bottom" data-tip="Open in Finjector">
-        <span className="inline-flex rounded p-1 hover:bg-base-200">
+        <span className="btn btn-ghost btn-xs">
           <ArrowTopRightOnSquareIcon aria-hidden="true" className="w-4 h-4" />
         </span>
       </span>

@@ -151,10 +151,16 @@ describe('TaskBreakdown', () => {
     expect(link).toHaveAttribute('target', '_blank');
     const iconTooltip = link.querySelector('[data-tip="Open in Finjector"]');
     expect(iconTooltip).toHaveClass('tooltip', 'tooltip-bottom');
-    expect(iconTooltip?.firstElementChild).toHaveClass('hover:bg-base-200');
-    expect(
-      screen.getByRole('button', { name: 'Copy chartstring' })
-    ).toBeInTheDocument();
+    expect(iconTooltip?.firstElementChild).toHaveClass(
+      'btn',
+      'btn-ghost',
+      'btn-xs'
+    );
+    expect(screen.getByRole('button', { name: 'Copy chartstring' })).toHaveClass(
+      'btn',
+      'btn-ghost',
+      'btn-xs'
+    );
   });
 
   it('does not link tasks to Finjector for sponsored projects', () => {
