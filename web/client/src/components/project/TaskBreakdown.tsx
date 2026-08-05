@@ -155,13 +155,12 @@ export function TaskBreakdown({
               <div>
                 {isInternal ? (
                   <span className="inline-flex items-center gap-1">
+                    {info.row.original.taskNum}
                     <FinjectorLink
                       org={info.row.original.financialDepartmentCode}
                       project={projectNumber}
                       task={info.row.original.taskNum}
-                    >
-                      {info.row.original.taskNum}
-                    </FinjectorLink>
+                    />
                     <ChartStringCopyButton
                       org={info.row.original.financialDepartmentCode}
                       project={projectNumber}
@@ -177,13 +176,31 @@ export function TaskBreakdown({
                   {info.row.original.taskName}
                 </div>
               )}
-              <div className="text-xs text-base-content/80">
-                {[
-                  info.row.original.financialDepartmentCode,
-                  info.row.original.fundCode,
-                  info.row.original.programCode,
-                  info.row.original.activityCode,
-                ].join(' ')}
+              <div className="flex flex-wrap gap-x-2 text-xs text-base-content/80">
+                {info.row.original.financialDepartmentCode && (
+                  <TooltipLabel
+                    label={info.row.original.financialDepartmentCode}
+                    tooltip={info.row.original.financialDepartment}
+                  />
+                )}
+                {info.row.original.fundCode && (
+                  <TooltipLabel
+                    label={info.row.original.fundCode}
+                    tooltip="Fund"
+                  />
+                )}
+                {info.row.original.programCode && (
+                  <TooltipLabel
+                    label={info.row.original.programCode}
+                    tooltip="Program"
+                  />
+                )}
+                {info.row.original.activityCode && (
+                  <TooltipLabel
+                    label={info.row.original.activityCode}
+                    tooltip="Activity"
+                  />
+                )}
               </div>
             </div>
           ),

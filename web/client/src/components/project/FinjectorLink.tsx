@@ -9,17 +9,17 @@ import {
 import { useEffect, useRef, useState } from 'react';
 
 interface FinjectorLinkProps {
-  /** Text shown as the link label (e.g. the project number or task code). */
-  children: React.ReactNode;
+  /** Optional text shown as the link label (e.g. the project number or task code). */
+  children?: React.ReactNode;
   org: string | null | undefined;
   project: string | null | undefined;
   task: string | null | undefined;
 }
 
 /**
- * Renders its children as a link to the Finjector chart-string details, with a
- * trailing external-link icon. Falls back to plain text when the chart string
- * can't be built (a required segment is missing).
+ * Renders an external-link control to the Finjector chart-string details.
+ * Children, when provided, act as its visible label. Falls back to plain text
+ * when the chart string can't be built (a required segment is missing).
  */
 export function FinjectorLink({
   children,
@@ -35,6 +35,7 @@ export function FinjectorLink({
 
   return (
     <a
+      aria-label={children ? undefined : 'Open in Finjector'}
       className="link inline-flex items-center gap-1"
       href={url}
       rel="noopener noreferrer"
