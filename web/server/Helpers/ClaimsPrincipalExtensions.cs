@@ -6,7 +6,7 @@ namespace server.Helpers;
 
 public static class ClaimsPrincipalExtensions
 {
-    private const string IamIdClaimType = "ucdPersonIAMID";
+    public const string IamIdClaimType = "ucdPersonIAMID";
 
     /// <summary>
     /// Returns the authenticated user's object ID as a GUID.
