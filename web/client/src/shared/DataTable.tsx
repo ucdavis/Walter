@@ -21,6 +21,7 @@ import {
   useReactTable,
 } from '@tanstack/react-table';
 import { useExpandableOverlay } from '@/shared/hooks/useExpandableOverlay.ts';
+import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
 
 // TanStack Table types `TableOptions.columns` as `ColumnDef<TData, any>[]` because
 // tables commonly mix column value types (string/number/etc) in a single array.
@@ -268,44 +269,64 @@ export const DataTable = <TData extends object>({
               {globalFilter === 'right' ? globalFilterControl : null}
               {resolvedTableActions}
               {rowExpansionEnabled && hasExpandableRows ? (
-                <button
-                  aria-label={
+                <TooltipLabel
+                  asChild
+                  label={
+                    <button
+                      aria-label={
+                        areAllExpandableRowsExpanded
+                          ? 'Collapse all rows'
+                          : 'Expand all rows'
+                      }
+                      className="btn btn-sm"
+                      onClick={() =>
+                        table.toggleAllRowsExpanded(
+                          !areAllExpandableRowsExpanded
+                        )
+                      }
+                      type="button"
+                    >
+                      {areAllExpandableRowsExpanded
+                        ? 'Collapse all'
+                        : 'Expand all'}
+                    </button>
+                  }
+                  tooltip={
                     areAllExpandableRowsExpanded
                       ? 'Collapse all rows'
                       : 'Expand all rows'
                   }
-                  className="btn btn-sm"
-                  onClick={() =>
-                    table.toggleAllRowsExpanded(!areAllExpandableRowsExpanded)
-                  }
-                  title={
-                    areAllExpandableRowsExpanded
-                      ? 'Collapse all rows'
-                      : 'Expand all rows'
-                  }
-                  type="button"
-                >
-                  {areAllExpandableRowsExpanded ? 'Collapse all' : 'Expand all'}
-                </button>
+                />
               ) : null}
 
               {expandable ? (
-                <button
-                  aria-label={
-                    isOverlayActive ? 'Collapse table' : 'Expand table'
+                <TooltipLabel
+                  asChild
+                  label={
+                    <button
+                      aria-label={
+                        isOverlayActive ? 'Collapse table' : 'Expand table'
+                      }
+                      className="btn btn-sm btn-square"
+                      onClick={toggleExpanded}
+                      ref={expandButtonRef}
+                      type="button"
+                    >
+                      {isOverlayActive ? (
+                        <ArrowsPointingInIcon
+                          aria-hidden="true"
+                          className="h-5 w-5"
+                        />
+                      ) : (
+                        <ArrowsPointingOutIcon
+                          aria-hidden="true"
+                          className="h-5 w-5"
+                        />
+                      )}
+                    </button>
                   }
-                  className="btn btn-sm btn-square"
-                  onClick={toggleExpanded}
-                  ref={expandButtonRef}
-                  title={isOverlayActive ? 'Collapse table' : 'Expand table'}
-                  type="button"
-                >
-                  {isOverlayActive ? (
-                    <ArrowsPointingInIcon className="h-5 w-5" />
-                  ) : (
-                    <ArrowsPointingOutIcon className="h-5 w-5" />
-                  )}
-                </button>
+                  tooltip={isOverlayActive ? 'Collapse table' : 'Expand table'}
+                />
               ) : null}
             </div>
           </div>

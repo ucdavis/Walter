@@ -154,24 +154,38 @@ export function InternalProjectsTable({
             const { displayName: name, projectNumber } = info.row.original;
             return (
               <div className="flex items-start gap-1">
-                <Link
-                  className="link no-underline min-w-0"
-                  params={{ iamId, projectNumber }}
-                  title={name}
-                  to="/projects/$iamId/$projectNumber/"
-                >
-                  {projectNumber}
-                </Link>
+                <TooltipLabel
+                  asChild
+                  label={
+                    <Link
+                      className="link no-underline min-w-0"
+                      params={{ iamId, projectNumber }}
+                      to="/projects/$iamId/$projectNumber/"
+                    >
+                      {projectNumber}
+                    </Link>
+                  }
+                  tooltip={name}
+                />
                 {discrepancies?.has(projectNumber) && (
-                  <Link
-                    params={{ projectNumber }}
-                    to="/reports/reconciliation/$projectNumber/"
-                  >
-                    <ExclamationTriangleIcon
-                      className="h-5 w-5 shrink-0 text-warning self-end"
-                      title="GL/PPM reconciliation discrepancy"
-                    />
-                  </Link>
+                  <TooltipLabel
+                    asChild
+                    label={
+                      <Link
+                        aria-label={
+                          tooltipDefinitions.reconciliationDiscrepancy
+                        }
+                        params={{ projectNumber }}
+                        to="/reports/reconciliation/$projectNumber/"
+                      >
+                        <ExclamationTriangleIcon
+                          aria-hidden="true"
+                          className="h-5 w-5 shrink-0 text-warning self-end"
+                        />
+                      </Link>
+                    }
+                    tooltip={tooltipDefinitions.reconciliationDiscrepancy}
+                  />
                 )}
               </div>
             );

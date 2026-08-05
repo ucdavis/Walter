@@ -161,27 +161,41 @@ export function TaskBreakdown({
       }),
       columnHelper.accessor('financialDepartmentCode', {
         cell: (info) => (
-          <span title={info.row.original.financialDepartment}>
-            {info.getValue()}
-          </span>
+          <TooltipLabel
+            label={info.getValue()}
+            placement="bottom"
+            tooltip={info.row.original.financialDepartment}
+          />
         ),
         header: 'Dept',
       }),
       columnHelper.accessor('fundCode', {
         cell: (info) => (
-          <span title={info.row.original.fundDesc}>{info.getValue()}</span>
+          <TooltipLabel
+            label={info.getValue()}
+            placement="bottom"
+            tooltip={info.row.original.fundDesc}
+          />
         ),
         header: 'Fund',
       }),
       columnHelper.accessor('programCode', {
         cell: (info) => (
-          <span title={info.row.original.programDesc}>{info.getValue()}</span>
+          <TooltipLabel
+            label={info.getValue()}
+            placement="bottom"
+            tooltip={info.row.original.programDesc}
+          />
         ),
         header: 'Program',
       }),
       columnHelper.accessor('activityCode', {
         cell: (info) => (
-          <span title={info.row.original.activityDesc}>{info.getValue()}</span>
+          <TooltipLabel
+            label={info.getValue()}
+            placement="bottom"
+            tooltip={info.row.original.activityDesc}
+          />
         ),
         header: 'Activity',
       }),

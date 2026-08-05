@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { type ReactNode, useMemo, useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { createColumnHelper } from '@tanstack/react-table';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -28,6 +28,8 @@ import {
   MultiSelectFilter,
   type FilterOption,
 } from '@/shared/MultiSelectFilter.tsx';
+import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
+import { tooltipDefinitions } from '@/shared/tooltips.ts';
 import { DataTable } from '@/shared/DataTable.tsx';
 import { ExportDataButton } from '@/components/ExportDataButton.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
@@ -80,26 +82,55 @@ function LabelCell({
   });
 
   return (
-    <input
-      className={`input input-sm input-ghost w-full min-w-40 ${
-        mutation.isError ? 'input-error' : ''
-      }`}
-      defaultValue={label}
-      maxLength={500}
-      onBlur={(e) => {
-        const text = e.target.value.trim();
-        if (text !== label) {
-          mutation.mutate(text);
-        }
-      }}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter') {
-          e.currentTarget.blur();
-        }
-      }}
-      placeholder="Add label…"
-      title={mutation.isError ? 'Failed to save label' : provenance}
-      type="text"
+    <TooltipLabel
+      asChild
+      label={
+        <input
+          className={`input input-sm input-ghost w-full min-w-40 ${
+            mutation.isError ? 'input-error' : ''
+          }`}
+          defaultValue={label}
+          maxLength={500}
+          onBlur={(e) => {
+            const text = e.target.value.trim();
+            if (text !== label) {
+              mutation.mutate(text);
+            }
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.currentTarget.blur();
+            }
+          }}
+          placeholder="Add label…"
+          type="text"
+        />
+      }
+      tooltip={
+        mutation.isError ? tooltipDefinitions.failedToSaveLabel : provenance
+      }
+    />
+  );
+}
+function DisabledCriteriaFilter({
+  children,
+  disabledHint,
+}: {
+  children: ReactNode;
+  disabledHint?: string;
+}) {
+  return (
+    <TooltipLabel
+      asChild
+      label={
+        <div
+          className="flex flex-col gap-2"
+          tabIndex={disabledHint ? 0 : undefined}
+        >
+          {children}
+        </div>
+      }
+      tooltip={disabledHint}
     />
   );
 }
@@ -283,7 +314,9 @@ function RouteComponent() {
             {formatCurrency(totals[m.key])}
           </span>
         ),
-        header: () => <span className="block w-full text-right">{m.label}</span>,
+        header: () => (
+          <span className="block w-full text-right">{m.label}</span>
+        ),
       });
     const labelCol = columnHelper.accessor('label', {
       cell: (info) => {
@@ -347,9 +380,11 @@ function RouteComponent() {
     }
   };
 
-  // Native tooltip for the controls that stay disabled until a department is chosen.
+  // Disabled controls cannot receive focus, so their wrappers expose the prerequisite.
   const disabledHint =
-    department.length === 0 ? 'Select a financial department first' : undefined;
+    department.length === 0
+      ? tooltipDefinitions.selectFinancialDepartmentFirst
+      : undefined;
 
   const hasDataFilters = Object.values(filters).some(
     (v) => Array.isArray(v) && v.length > 0
@@ -458,7 +493,7 @@ function RouteComponent() {
             ) : null}
             <div className="grid items-start gap-4 md:grid-cols-2">
               {/* Entity — multi-select, disabled until department chosen */}
-              <div className="flex flex-col gap-2" title={disabledHint}>
+              <DisabledCriteriaFilter disabledHint={disabledHint}>
                 <label className="text-sm uppercase font-proxima-bold">
                   Entity
                 </label>
@@ -471,10 +506,10 @@ function RouteComponent() {
                   searchPlaceholder="Search entities…"
                   selected={filters.entities ?? []}
                 />
-              </div>
+              </DisabledCriteriaFilter>
 
               {/* Fund — hierarchy-aware multi-select, disabled until department chosen */}
-              <div className="flex flex-col gap-2" title={disabledHint}>
+              <DisabledCriteriaFilter disabledHint={disabledHint}>
                 <label className="text-sm uppercase font-proxima-bold">
                   Fund
                 </label>
@@ -487,10 +522,10 @@ function RouteComponent() {
                   searchPlaceholder="Search funds…"
                   selected={filters.funds ?? []}
                 />
-              </div>
+              </DisabledCriteriaFilter>
 
               {/* Account — hierarchy-aware multi-select, disabled until department chosen */}
-              <div className="flex flex-col gap-2" title={disabledHint}>
+              <DisabledCriteriaFilter disabledHint={disabledHint}>
                 <label className="text-sm uppercase font-proxima-bold">
                   Account
                 </label>
@@ -503,10 +538,10 @@ function RouteComponent() {
                   searchPlaceholder="Search accounts…"
                   selected={filters.accounts ?? []}
                 />
-              </div>
+              </DisabledCriteriaFilter>
 
               {/* Purpose — multi-select, disabled until department chosen */}
-              <div className="flex flex-col gap-2" title={disabledHint}>
+              <DisabledCriteriaFilter disabledHint={disabledHint}>
                 <label className="text-sm uppercase font-proxima-bold">
                   Purpose
                 </label>
@@ -519,10 +554,10 @@ function RouteComponent() {
                   searchPlaceholder="Search purposes…"
                   selected={filters.purposes ?? []}
                 />
-              </div>
+              </DisabledCriteriaFilter>
 
               {/* Program — multi-select, disabled until department chosen */}
-              <div className="flex flex-col gap-2" title={disabledHint}>
+              <DisabledCriteriaFilter disabledHint={disabledHint}>
                 <label className="text-sm uppercase font-proxima-bold">
                   Program
                 </label>
@@ -535,10 +570,10 @@ function RouteComponent() {
                   searchPlaceholder="Search programs…"
                   selected={filters.programs ?? []}
                 />
-              </div>
+              </DisabledCriteriaFilter>
 
               {/* Project — multi-select, disabled until department chosen */}
-              <div className="flex flex-col gap-2" title={disabledHint}>
+              <DisabledCriteriaFilter disabledHint={disabledHint}>
                 <label className="text-sm uppercase font-proxima-bold">
                   Project
                 </label>
@@ -551,10 +586,10 @@ function RouteComponent() {
                   searchPlaceholder="Search projects…"
                   selected={filters.projects ?? []}
                 />
-              </div>
+              </DisabledCriteriaFilter>
 
               {/* Activity — multi-select, disabled until department chosen */}
-              <div className="flex flex-col gap-2" title={disabledHint}>
+              <DisabledCriteriaFilter disabledHint={disabledHint}>
                 <label className="text-sm uppercase font-proxima-bold">
                   Activity
                 </label>
@@ -567,7 +602,7 @@ function RouteComponent() {
                   searchPlaceholder="Search activities…"
                   selected={filters.activities ?? []}
                 />
-              </div>
+              </DisabledCriteriaFilter>
             </div>
           </section>
 
@@ -575,57 +610,71 @@ function RouteComponent() {
           <section>
             <div className="mt-4 mb-4 flex flex-wrap items-center gap-2">
               <h2 className="text-xl font-proxima-bold">Display Fields</h2>
-              <button
-                className="btn btn-ghost btn-sm"
-                disabled={department.length === 0}
-                onClick={() => setDimensions(DIMENSIONS.map((d) => d.key))}
-                title={disabledHint}
-                type="button"
-              >
-                Select all
-              </button>
+              <TooltipLabel
+                label={
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    disabled={department.length === 0}
+                    onClick={() => setDimensions(DIMENSIONS.map((d) => d.key))}
+                    type="button"
+                  >
+                    Select all
+                  </button>
+                }
+                labelClassName="no-underline"
+                tooltip={disabledHint}
+              />
             </div>
             <div className="grid gap-x-4 gap-y-1 sm:grid-cols-2 lg:grid-cols-4">
               {DIMENSIONS.map((d) => (
-                <label
-                  className="label cursor-pointer justify-start gap-3"
+                <TooltipLabel
+                  className="w-full"
                   key={d.key}
-                  title={disabledHint}
-                >
-                  <input
-                    checked={dimensions.includes(d.key)}
-                    className="checkbox checkbox-primary checkbox-sm"
-                    disabled={department.length === 0}
-                    onChange={(e) =>
-                      setDimensions(
-                        e.target.checked
-                          ? [...dimensions, d.key]
-                          : dimensions.filter((k) => k !== d.key)
-                      )
-                    }
-                    type="checkbox"
-                  />
-                  <span className="label-text">{d.label}</span>
-                </label>
+                  label={
+                    <label className="label cursor-pointer justify-start gap-3">
+                      <input
+                        checked={dimensions.includes(d.key)}
+                        className="checkbox checkbox-primary checkbox-sm"
+                        disabled={department.length === 0}
+                        onChange={(e) =>
+                          setDimensions(
+                            e.target.checked
+                              ? [...dimensions, d.key]
+                              : dimensions.filter((k) => k !== d.key)
+                          )
+                        }
+                        type="checkbox"
+                      />
+                      <span className="label-text">{d.label}</span>
+                    </label>
+                  }
+                  labelClassName="w-full no-underline"
+                  tooltip={disabledHint}
+                />
               ))}
             </div>
             {/* Assets/liabilities columns are opt-in; the other measures always show */}
-            <label
-              className="label mt-2 cursor-pointer justify-start gap-3"
-              title={disabledHint}
-            >
-              <input
-                checked={showBalanceSheet}
-                className="toggle toggle-primary toggle-sm"
-                disabled={department.length === 0}
-                onChange={(e) => setShowBalanceSheet(e.target.checked)}
-                type="checkbox"
-              />
-              <span className="label-text">Show assets and liabilities</span>
-            </label>
+            <TooltipLabel
+              className="w-full"
+              label={
+                <label className="label mt-2 cursor-pointer justify-start gap-3">
+                  <input
+                    checked={showBalanceSheet}
+                    className="toggle toggle-primary toggle-sm"
+                    disabled={department.length === 0}
+                    onChange={(e) => setShowBalanceSheet(e.target.checked)}
+                    type="checkbox"
+                  />
+                  <span className="label-text">
+                    Show assets and liabilities
+                  </span>
+                </label>
+              }
+              labelClassName="w-full no-underline"
+              tooltip={disabledHint}
+            />
           </section>
         </div>
-
       </div>
 
       {/* Results area */}

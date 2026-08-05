@@ -9,6 +9,7 @@ import {
 import { ExportDataButton } from '@/components/ExportDataButton.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import { DataTable } from '@/shared/DataTable.tsx';
+import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
 
 export const Route = createFileRoute(
   '/(authenticated)/reports/reconciliation/$projectNumber/'
@@ -92,41 +93,51 @@ function RouteComponent() {
       }),
       columnHelper.accessor('project', {
         cell: (info) => (
-          <span title={info.row.original.projectDescription ?? undefined}>
-            {info.getValue()}
-          </span>
+          <TooltipLabel
+            label={info.getValue()}
+            placement="bottom"
+            tooltip={info.row.original.projectDescription ?? undefined}
+          />
         ),
         header: 'Project',
       }),
       columnHelper.accessor('fundCode', {
         cell: (info) => (
-          <span title={info.row.original.fundDescription ?? undefined}>
-            {info.getValue() ?? '-'}
-          </span>
+          <TooltipLabel
+            label={info.getValue() ?? '-'}
+            placement="bottom"
+            tooltip={info.row.original.fundDescription ?? undefined}
+          />
         ),
         header: 'GL Fund',
       }),
       columnHelper.accessor('ppmFundCode', {
         cell: (info) => (
-          <span title={info.row.original.ppmFundDescription ?? undefined}>
-            {info.getValue()}
-          </span>
+          <TooltipLabel
+            label={info.getValue()}
+            placement="bottom"
+            tooltip={info.row.original.ppmFundDescription ?? undefined}
+          />
         ),
         header: 'PPM Fund',
       }),
       columnHelper.accessor('programCode', {
         cell: (info) => (
-          <span title={info.row.original.programDescription ?? undefined}>
-            {info.getValue() ?? '-'}
-          </span>
+          <TooltipLabel
+            label={info.getValue() ?? '-'}
+            placement="bottom"
+            tooltip={info.row.original.programDescription ?? undefined}
+          />
         ),
         header: 'Program',
       }),
       columnHelper.accessor('activityCode', {
         cell: (info) => (
-          <span title={info.row.original.activityDescription ?? undefined}>
-            {info.getValue() ?? '-'}
-          </span>
+          <TooltipLabel
+            label={info.getValue() ?? '-'}
+            placement="bottom"
+            tooltip={info.row.original.activityDescription ?? undefined}
+          />
         ),
         header: 'Activity',
       }),

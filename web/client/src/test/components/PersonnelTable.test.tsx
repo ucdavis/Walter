@@ -6,6 +6,7 @@ import {
   PersonnelTable,
 } from '@/components/project/PersonnelTable.tsx';
 import { downloadExcelCsv } from '@/lib/csv.ts';
+import { formatDate } from '@/lib/date.ts';
 import { PersonnelRecord } from '@/queries/personnel.ts';
 import { tooltipDefinitions } from '@/shared/tooltips.ts';
 
@@ -202,7 +203,7 @@ describe('PersonnelTable', () => {
     expect(screen.getByText('No personnel found.')).toBeInTheDocument();
   });
 
-  it('shows ending soon indicator for dates within 3 months', () => {
+  it('shows ending soon indicator for dates within 3 months', async () => {
     const twoMonthsFromNow = new Date();
     twoMonthsFromNow.setMonth(twoMonthsFromNow.getMonth() + 2);
 
@@ -214,7 +215,14 @@ describe('PersonnelTable', () => {
 
     render(<PersonnelTable data={records} />);
 
-    expect(screen.getByTitle('Ending within 3 months')).toBeInTheDocument();
+    const trigger = screen.getByText(
+      formatDate(twoMonthsFromNow.toISOString(), '')
+    );
+    fireEvent.focus(trigger);
+
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+      tooltipDefinitions.endingWithinThreeMonths
+    );
   });
 
   it('renders an expanded distributions subtable with headers', async () => {

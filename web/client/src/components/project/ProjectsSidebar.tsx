@@ -6,6 +6,7 @@ import {
 } from '@/queries/project.ts';
 import { featureFlagsQueryOptions } from '@/queries/featureFlags.ts';
 import { Currency } from '@/shared/Currency.tsx';
+import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { Link, useParams, useRouterState } from '@tanstack/react-router';
 import {
@@ -238,73 +239,88 @@ export function ProjectsSidebar() {
 
             <div className="space-y-1 min-h-0 flex-1 overflow-y-auto">
               {/* All Projects */}
-              <Link
-                aria-label={collapsed ? 'All Projects' : undefined}
-                className={linkClasses(isAllProjectsActive, false)}
-                params={{ iamId }}
-                title={collapsed ? 'All Projects' : undefined}
-                to="/projects/$iamId"
-                viewTransition={{ types: ['slide-right'] }}
-              >
-                {collapsed ? (
-                  <div className="flex items-center justify-center py-2">
-                    <HomeIcon className="w-5 h-5 text-base-content/70" />
-                    <span className="sr-only">All Projects</span>
-                  </div>
-                ) : (
-                  <>
-                    <div className="flex justify-between items-start mb-1">
-                      <span className="text-base">All Projects</span>
-                    </div>
-                    <div className="flex justify-between text-sm items-center text-base-content/70">
-                      <Currency value={totalOverviewBalance} />
-                    </div>
-                  </>
-                )}
-              </Link>
+              <TooltipLabel
+                asChild
+                label={
+                  <Link
+                    aria-label={collapsed ? 'All Projects' : undefined}
+                    className={linkClasses(isAllProjectsActive, false)}
+                    params={{ iamId }}
+                    to="/projects/$iamId"
+                    viewTransition={{ types: ['slide-right'] }}
+                  >
+                    {collapsed ? (
+                      <div className="flex items-center justify-center py-2">
+                        <HomeIcon
+                          aria-hidden="true"
+                          className="w-5 h-5 text-base-content/70"
+                        />
+                        <span className="sr-only">All Projects</span>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex justify-between items-start mb-1">
+                          <span className="text-base">All Projects</span>
+                        </div>
+                        <div className="flex justify-between text-sm items-center text-base-content/70">
+                          <Currency value={totalOverviewBalance} />
+                        </div>
+                      </>
+                    )}
+                  </Link>
+                }
+                placement="right"
+                tooltip={collapsed ? 'All Projects' : undefined}
+              />
 
               {/* Individual projects */}
               {filteredProjects.map((project) => (
-                <Link
-                  className={linkClasses(
-                    projectNumber === project.projectNumber,
-                    project.projectStatusCode === 'ACTIVE'
-                  )}
+                <TooltipLabel
+                  asChild
                   key={project.projectNumber}
-                  params={{ iamId, projectNumber: project.projectNumber }}
-                  title={
+                  label={
+                    <Link
+                      className={linkClasses(
+                        projectNumber === project.projectNumber,
+                        project.projectStatusCode === 'ACTIVE'
+                      )}
+                      params={{ iamId, projectNumber: project.projectNumber }}
+                      to={getProjectRoute(project)}
+                      viewTransition={{ types: ['slide-left'] }}
+                    >
+                      {collapsed ? (
+                        <div className="flex flex-col gap-1 py-1">
+                          <div className="text-xs leading-tight text-base-content/70">
+                            {project.projectNumber}
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="text-xs text-base-content/70">
+                            {project.projectNumber}
+                          </div>
+                          <div className="flex justify-between items-start mb-1">
+                            <span className="text-base truncate">
+                              {project.displayName}
+                            </span>
+                          </div>
+                          <div className="flex text-sm justify-between items-center text-base-content/70">
+                            <Currency value={project.totalBalance} />
+                            <span>
+                              {formatDate(project.awardEndDate, 'No end date')}
+                            </span>
+                          </div>
+                        </>
+                      )}
+                    </Link>
+                  }
+                  placement="right"
+                  tooltip={
                     collapsed
                       ? `${project.displayName} • ${project.projectNumber}`
                       : project.displayName
                   }
-                  to={getProjectRoute(project)}
-                  viewTransition={{ types: ['slide-left'] }}
-                >
-                  {collapsed ? (
-                    <div className="flex flex-col gap-1 py-1">
-                      <div className="text-xs leading-tight text-base-content/70">
-                        {project.projectNumber}
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="text-xs text-base-content/70">
-                        {project.projectNumber}
-                      </div>
-                      <div className="flex justify-between items-start mb-1">
-                        <span className="text-base truncate">
-                          {project.displayName}
-                        </span>
-                      </div>
-                      <div className="flex text-sm justify-between items-center text-base-content/70">
-                        <Currency value={project.totalBalance} />
-                        <span>
-                          {formatDate(project.awardEndDate, 'No end date')}
-                        </span>
-                      </div>
-                    </>
-                  )}
-                </Link>
+                />
               ))}
               {searchQuery.trim() && filteredProjects.length === 0 ? (
                 <div className="px-3 py-4 text-sm text-base-content/70">

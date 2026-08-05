@@ -1,5 +1,5 @@
-import type { CSSProperties } from 'react';
-import { useId, useState } from 'react';
+import type { CSSProperties, HTMLAttributes, ReactNode, Ref } from 'react';
+import { cloneElement, isValidElement, useState } from 'react';
 import {
   autoUpdate,
   arrow,
@@ -13,17 +13,25 @@ import {
   useHover,
   useInteractions,
   useRole,
+  useMergeRefs,
 } from '@floating-ui/react';
 
+type TooltipChildProps = HTMLAttributes<HTMLElement> & {
+  'data-tooltip-placement'?: string;
+  ref?: Ref<HTMLElement>;
+};
+
 interface TooltipLabelProps {
+  asChild?: boolean;
   className?: string;
-  label: string;
+  label: ReactNode;
   labelClassName?: string;
   placement?: 'bottom' | 'left' | 'right' | 'top';
-  tooltip: string;
+  tooltip?: string;
 }
 
 export function TooltipLabel({
+  asChild = false,
   className,
   label,
   labelClassName,
@@ -32,7 +40,6 @@ export function TooltipLabel({
 }: TooltipLabelProps) {
   const [open, setOpen] = useState(false);
   const [arrowElement, setArrowElement] = useState<HTMLDivElement | null>(null);
-  const tooltipId = useId();
   const {
     context,
     floatingStyles,
@@ -51,13 +58,15 @@ export function TooltipLabel({
     placement,
     whileElementsMounted: autoUpdate,
   });
+  const enabled = Boolean(tooltip);
   const hover = useHover(context, {
     delay: { close: 0, open: 150 },
+    enabled,
     move: false,
   });
-  const focus = useFocus(context);
-  const dismiss = useDismiss(context);
-  const role = useRole(context, { role: 'tooltip' });
+  const focus = useFocus(context, { enabled });
+  const dismiss = useDismiss(context, { enabled });
+  const role = useRole(context, { enabled, role: 'tooltip' });
   const { getFloatingProps, getReferenceProps } = useInteractions([
     hover,
     focus,
@@ -66,6 +75,14 @@ export function TooltipLabel({
   ]);
 
   const triggerClasses = ['tooltip-trigger'];
+  const child =
+    asChild && isValidElement<TooltipChildProps>(label) ? label : null;
+  const referenceRef = useMergeRefs([setReference, child?.props.ref]);
+
+  if (!tooltip) {
+    return <>{label}</>;
+  }
+
   const labelClasses = ['tooltip-label'];
 
   if (className) {
@@ -81,7 +98,9 @@ export function TooltipLabel({
     right: 'left',
     top: 'bottom',
   } as const;
-  const basePlacement = resolvedPlacement.split('-')[0] as keyof typeof staticSideByPlacement;
+  const basePlacement = resolvedPlacement.split(
+    '-'
+  )[0] as keyof typeof staticSideByPlacement;
   const staticSide = staticSideByPlacement[basePlacement];
   const arrowStyle: CSSProperties = {};
 
@@ -95,24 +114,35 @@ export function TooltipLabel({
 
   arrowStyle[staticSide] = '-5px';
 
+  const reference = child ? (
+    cloneElement(child, {
+      ...getReferenceProps({
+        ...child.props,
+        ref: referenceRef,
+      }),
+      'data-tooltip-placement': placement,
+    })
+  ) : (
+    <span
+      {...getReferenceProps({
+        className: triggerClasses.join(' '),
+        tabIndex: 0,
+      })}
+      data-tooltip-placement={placement}
+      ref={setReference}
+    >
+      <span className={labelClasses.join(' ')}>{label}</span>
+    </span>
+  );
+
   return (
     <>
-      <span
-        {...getReferenceProps({
-          className: triggerClasses.join(' '),
-          tabIndex: 0,
-        })}
-        data-tooltip-placement={placement}
-        ref={setReference}
-      >
-        <span className={labelClasses.join(' ')}>{label}</span>
-      </span>
+      {reference}
       {open ? (
         <FloatingPortal>
           <div
             {...getFloatingProps({
               className: 'floating-tooltip',
-              id: tooltipId,
               style: floatingStyles,
             })}
             ref={setFloating}

@@ -28,6 +28,7 @@ import {
   type CategorySpend,
   type ProjectionSeries,
 } from '@/lib/projectProjection.ts';
+import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
 import { useProjectProjectionQuery } from '@/queries/projectProjection.ts';
 import { tooltipDefinitions } from '@/shared/tooltips.ts';
 
@@ -420,19 +421,25 @@ function BurndownTooltip({
                 className="flex items-center justify-between gap-8"
                 key={expenditureCategory}
               >
-                <span
-                  className="flex min-w-0 items-center gap-2"
-                  title={expenditureCategory}
-                >
-                  <span
-                    className="inline-block h-3 w-3 shrink-0 rounded-sm"
-                    style={{
-                      backgroundColor:
-                        projectExpenditureCategoryColor(expenditureCategory),
-                    }}
-                  />
-                  <span className="truncate">{expenditureCategory}</span>
-                </span>
+                <TooltipLabel
+                  className="min-w-0"
+                  label={
+                    <>
+                      <span
+                        className="inline-block h-3 w-3 shrink-0 rounded-sm"
+                        style={{
+                          backgroundColor:
+                            projectExpenditureCategoryColor(
+                              expenditureCategory
+                            ),
+                        }}
+                      />
+                      <span className="truncate">{expenditureCategory}</span>
+                    </>
+                  }
+                  labelClassName="flex min-w-0 items-center gap-2 no-underline"
+                  tooltip={expenditureCategory}
+                />
                 <span className="font-medium">{formatCurrency(spend)}</span>
               </div>
             ))}

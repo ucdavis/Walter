@@ -133,7 +133,7 @@ describe('employee project list — discrepancy icon gating', () => {
     try {
       await screen.findByText('Internal Projects');
       expect(
-        screen.queryByTitle('GL/PPM reconciliation discrepancy')
+        screen.queryByLabelText('GL/PPM reconciliation discrepancy')
       ).not.toBeInTheDocument();
     } finally {
       cleanup();

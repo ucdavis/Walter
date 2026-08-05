@@ -1,5 +1,7 @@
 import { CurrencyDollarIcon } from '@heroicons/react/24/outline';
 import { buildFinjectorUrl } from '@/lib/finjector.ts';
+import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
+import { tooltipDefinitions } from '@/shared/tooltips.ts';
 
 interface FinjectorLinkProps {
   /** Text shown as the link label (e.g. the project number or task code). */
@@ -27,15 +29,20 @@ export function FinjectorLink({
   }
 
   return (
-    <a
-      className="link inline-flex items-center gap-1"
-      href={url}
-      rel="noopener noreferrer"
-      target="_blank"
-      title="View chart string in Finjector"
-    >
-      {children}
-      <CurrencyDollarIcon aria-hidden="true" className="w-4 h-4" />
-    </a>
+    <TooltipLabel
+      asChild
+      label={
+        <a
+          className="link inline-flex items-center gap-1"
+          href={url}
+          rel="noopener noreferrer"
+          target="_blank"
+        >
+          {children}
+          <CurrencyDollarIcon aria-hidden="true" className="w-4 h-4" />
+        </a>
+      }
+      tooltip={tooltipDefinitions.viewChartStringInFinjector}
+    />
   );
 }
