@@ -1,14 +1,21 @@
 # Web App Template
 
-A full-stack web application template featuring a .NET 8 backend with React/Vite frontend, using OIDC authentication with Microsoft Entra ID.
+A full-stack web application template featuring a .NET 10 backend with React/Vite frontend, using OIDC authentication with Microsoft Entra ID.
 
 ## Architecture
 
-- **Backend**: .NET 8 Web API with ASP.NET Core
+- **Backend**: .NET 10 Web API with ASP.NET Core
 - **Frontend**: React 19 with Vite, TypeScript, and TanStack Router/Query/Table
 - **Authentication**: OIDC with Microsoft Entra ID (Azure AD)
 - **Styling**: Tailwind CSS
 - **Development**: Hot reload for both frontend and backend
+
+## Prerequisites
+
+- .NET 10 SDK. `global.json` pins the 10.0.300 feature band and rolls forward to its latest installed patch.
+- .NET 10 ASP.NET Core Runtime on framework-dependent web hosts.
+- Azure Functions runtime 4.x with the `DOTNET-ISOLATED|10.0` Linux stack for the notifications worker.
+- Node.js 22 or later.
 
 ## Quick Start
 
@@ -65,7 +72,7 @@ You might also want to set the publisher domain to ucdavis.edu and fill in the o
 
 ### Health check
 
-The health check endpoint (`/health`) is configured to return the status of the application and its dependencies. It includes a database health check to ensure the SQL Server connection is healthy. See [Health Checks](https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/health-checks?view=aspnetcore-9.0#entity-framework-core-dbcontext-probe).
+The health check endpoint (`/health`) is configured to return the status of the application and its dependencies. It includes a database health check to ensure the SQL Server connection is healthy. See [Health Checks](https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/health-checks?view=aspnetcore-10.0#entity-framework-core-dbcontext-probe).
 
 ## Logging and Monitoring
 
