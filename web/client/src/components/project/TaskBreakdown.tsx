@@ -1,6 +1,9 @@
 import { useMemo, useState } from 'react';
 import { createColumnHelper } from '@tanstack/react-table';
-import { FinjectorLink } from '@/components/project/FinjectorLink.tsx';
+import {
+  ChartStringCopyButton,
+  FinjectorLink,
+} from '@/components/project/FinjectorLink.tsx';
 import { TableExportActions } from '@/components/TableExportActions.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import type { ProjectRecord } from '@/queries/project.ts';
@@ -137,13 +140,20 @@ export function TaskBreakdown({
           <div>
             <div>
               {isInternal ? (
-                <FinjectorLink
-                  org={info.row.original.financialDepartmentCode}
-                  project={projectNumber}
-                  task={info.getValue()}
-                >
-                  {info.getValue()}
-                </FinjectorLink>
+                <span className="inline-flex items-center gap-1">
+                  <FinjectorLink
+                    org={info.row.original.financialDepartmentCode}
+                    project={projectNumber}
+                    task={info.getValue()}
+                  >
+                    {info.getValue()}
+                  </FinjectorLink>
+                  <ChartStringCopyButton
+                    org={info.row.original.financialDepartmentCode}
+                    project={projectNumber}
+                    task={info.getValue()}
+                  />
+                </span>
               ) : (
                 info.getValue()
               )}

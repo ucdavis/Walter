@@ -149,6 +149,9 @@ describe('TaskBreakdown', () => {
       'https://finjector.ucdavis.edu/details/P1-T001-ORG001-522201/'
     );
     expect(link).toHaveAttribute('target', '_blank');
+    expect(
+      screen.getByRole('button', { name: 'Copy chartstring' })
+    ).toBeInTheDocument();
   });
 
   it('does not link tasks to Finjector for sponsored projects', () => {
