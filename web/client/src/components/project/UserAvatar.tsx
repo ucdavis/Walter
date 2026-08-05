@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { IdentificationIcon } from '@heroicons/react/24/outline';
 import { useUser } from '@/shared/auth/UserContext.tsx';
 
 const toTokens = (value: string) =>
@@ -64,12 +65,24 @@ export const UserAvatar: React.FC = () => {
     [user.name, user.kerberos]
   );
   const [showPhoto, setShowPhoto] = useState(true);
-  const hoverName = user.name || user.kerberos || '';
+  const userName = user.name || user.kerberos || '';
+  const hoverName = user.isEmulating ? `Emulating ${userName}` : userName;
   const shouldLinkToLogin =
+    !user.isEmulating &&
     typeof window !== 'undefined' &&
     isLocalLoopbackHost(window.location.hostname);
 
-  const avatar = !showPhoto ? (
+  const avatar = user.isEmulating ? (
+    <div className="avatar avatar-placeholder">
+      <div
+        aria-label={hoverName}
+        className="bg-warning text-warning-content flex w-10 items-center justify-center rounded-full"
+        role="img"
+      >
+        <IdentificationIcon aria-hidden="true" className="h-6 w-6" />
+      </div>
+    </div>
+  ) : !showPhoto ? (
     <div className="avatar avatar-placeholder">
       <div className="bg-neutral text-neutral-content w-10 rounded-full">
         <span>{initials}</span>

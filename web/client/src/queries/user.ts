@@ -6,6 +6,7 @@ export type User = {
   employeeId: string;
   iamId: string;
   id: string;
+  isEmulating: boolean;
   kerberos: string;
   name: string;
   roles: string[];

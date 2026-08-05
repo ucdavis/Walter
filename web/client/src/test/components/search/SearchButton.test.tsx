@@ -9,6 +9,7 @@ const defaultUser: User = {
   employeeId: '12345',
   iamId: '1000012345',
   id: '1',
+  isEmulating: false,
   kerberos: 'user',
   name: 'Test User',
   roles: [],

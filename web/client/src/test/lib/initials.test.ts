@@ -1,5 +1,31 @@
-import { describe, expect, it } from 'vitest';
-import { getInitials, isLocalLoopbackHost } from '@/components/project/UserAvatar.tsx';
+import { createElement } from 'react';
+import { cleanup, render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { User } from '@/queries/user.ts';
+
+const defaultUser: User = {
+  email: 'user@example.com',
+  employeeId: '12345',
+  iamId: '1000012345',
+  id: '1',
+  isEmulating: false,
+  kerberos: 'user',
+  name: 'Test User',
+  roles: [],
+};
+let mockUser = defaultUser;
+
+vi.mock('@/shared/auth/UserContext.tsx', () => ({
+  useUser: () => mockUser,
+}));
+
+import {
+  getInitials,
+  isLocalLoopbackHost,
+  UserAvatar,
+} from '@/components/project/UserAvatar.tsx';
+
+afterEach(cleanup);
 
 describe('getInitials', () => {
   it('uses first + last name for multi-part names', () => {
@@ -31,5 +57,33 @@ describe('isLocalLoopbackHost', () => {
   it('returns false for non-loopback hosts', () => {
     expect(isLocalLoopbackHost('example.com')).toBe(false);
     expect(isLocalLoopbackHost('192.168.1.10')).toBe(false);
+  });
+});
+
+describe('UserAvatar', () => {
+  beforeEach(() => {
+    mockUser = defaultUser;
+  });
+
+  it('shows the profile photo when not emulating', () => {
+    render(createElement(UserAvatar));
+
+    expect(screen.getByRole('img', { name: 'User avatar' })).toHaveAttribute(
+      'src',
+      '/api/user/me/photo'
+    );
+  });
+
+  it('replaces the profile photo with an emulation icon', () => {
+    mockUser = { ...defaultUser, isEmulating: true };
+
+    render(createElement(UserAvatar));
+
+    expect(
+      screen.getByRole('img', { name: 'Emulating Test User' })
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('img', { name: 'User avatar' })
+    ).not.toBeInTheDocument();
   });
 });
