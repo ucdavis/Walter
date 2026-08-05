@@ -400,17 +400,17 @@ export function ExpenditureCategoryBreakdown({
   if (progressEnabled && view === 'progress') {
     return (
       <div className="space-y-4">
-        <ProjectExpenditureProgressSummary
-          awardEndDate={awardEndDate}
-          awardStartDate={awardStartDate}
-          categories={progressCategories}
-        />
         <ExpandableProgressView
           initiallyExpanded={isExpanded}
           leadingActions={tableViewButton}
           onOverlayActiveChange={setIsExpanded}
           trailingActions={exportButton}
         >
+          <ProjectExpenditureProgressSummary
+            awardEndDate={awardEndDate}
+            awardStartDate={awardStartDate}
+            categories={progressCategories}
+          />
           <ProjectExpenditureProgressCategories
             awardEndDate={awardEndDate}
             awardStartDate={awardStartDate}

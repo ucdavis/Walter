@@ -139,7 +139,7 @@ describe('ExpenditureCategoryBreakdown', () => {
     expect(
       summary.compareDocumentPosition(
         screen.getByRole('button', { name: 'Table View' })
-      ) & Node.DOCUMENT_POSITION_FOLLOWING
+      ) & Node.DOCUMENT_POSITION_PRECEDING
     ).toBeTruthy();
     expect(screen.getByText('Today')).toBeInTheDocument();
     expect(
