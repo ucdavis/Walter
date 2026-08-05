@@ -56,6 +56,7 @@ public class UserController : ApiControllerBase
             EmployeeId = user.EmployeeId,
             Kerberos = user.Kerberos,
             Roles = roles,
+            IsEmulating = User.GetEmulatingUser() is not null,
         };
 
         return Ok(userInfo);
