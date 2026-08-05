@@ -48,8 +48,8 @@ describe('useExpandableOverlay', () => {
     vi.spyOn(
       HTMLElement.prototype,
       'getBoundingClientRect'
-    ).mockImplementation(function () {
-      const height = Number.parseFloat((this as HTMLElement).style.height);
+    ).mockImplementation(function (this: HTMLElement) {
+      const height = Number.parseFloat(this.style.height);
 
       return {
         bottom: 20 + height,
