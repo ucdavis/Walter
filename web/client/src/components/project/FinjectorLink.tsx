@@ -39,10 +39,13 @@ export function FinjectorLink({
       href={url}
       rel="noopener noreferrer"
       target="_blank"
-      title="View chart string in Finjector"
     >
       {children}
-      <ArrowTopRightOnSquareIcon aria-hidden="true" className="w-4 h-4" />
+      <span className="tooltip tooltip-bottom" data-tip="Open in Finjector">
+        <span className="inline-flex rounded p-1 hover:bg-base-200">
+          <ArrowTopRightOnSquareIcon aria-hidden="true" className="w-4 h-4" />
+        </span>
+      </span>
     </a>
   );
 }

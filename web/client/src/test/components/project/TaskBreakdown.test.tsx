@@ -149,6 +149,9 @@ describe('TaskBreakdown', () => {
       'https://finjector.ucdavis.edu/details/P1-T001-ORG001-522201/'
     );
     expect(link).toHaveAttribute('target', '_blank');
+    const iconTooltip = link.querySelector('[data-tip="Open in Finjector"]');
+    expect(iconTooltip).toHaveClass('tooltip', 'tooltip-bottom');
+    expect(iconTooltip?.firstElementChild).toHaveClass('hover:bg-base-200');
     expect(
       screen.getByRole('button', { name: 'Copy chartstring' })
     ).toBeInTheDocument();
@@ -167,6 +170,27 @@ describe('TaskBreakdown', () => {
       screen.queryByRole('link', { name: /T001/ })
     ).not.toBeInTheDocument();
     expect(screen.getByText('T001')).toBeInTheDocument();
+  });
+
+  it('shows chartstring values in the Task column instead of separate columns', () => {
+    render(
+      <TaskBreakdown
+        isInternal={false}
+        projectNumber="P1"
+        records={[createProject({ activityCode: 'ACT1' })]}
+      />
+    );
+
+    expect(screen.getByText('ORG001 FUND1 PROG1 ACT1')).toHaveClass(
+      'text-xs',
+      'text-base-content/80'
+    );
+
+    for (const header of ['Dept', 'Fund', 'Program', 'Activity']) {
+      expect(
+        screen.queryByRole('columnheader', { name: header })
+      ).not.toBeInTheDocument();
+    }
   });
 
   it('shows the filtered export action only when a search filter is active', () => {

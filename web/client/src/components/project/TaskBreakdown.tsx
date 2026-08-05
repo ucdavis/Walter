@@ -135,66 +135,64 @@ export function TaskBreakdown({
 
   const columns = useMemo(
     () => [
-      columnHelper.accessor('taskNum', {
-        cell: (info) => (
-          <div>
+      columnHelper.accessor(
+        (row) =>
+          [
+            row.taskNum,
+            row.taskName,
+            row.financialDepartmentCode,
+            row.financialDepartment,
+            row.fundCode,
+            row.fundDesc,
+            row.programCode,
+            row.programDesc,
+            row.activityCode,
+            row.activityDesc,
+          ].join(' '),
+        {
+          cell: (info) => (
             <div>
-              {isInternal ? (
-                <span className="inline-flex items-center gap-1">
-                  <FinjectorLink
-                    org={info.row.original.financialDepartmentCode}
-                    project={projectNumber}
-                    task={info.getValue()}
-                  >
-                    {info.getValue()}
-                  </FinjectorLink>
-                  <ChartStringCopyButton
-                    org={info.row.original.financialDepartmentCode}
-                    project={projectNumber}
-                    task={info.getValue()}
-                  />
-                </span>
-              ) : (
-                info.getValue()
-              )}
-            </div>
-            {info.row.original.taskName && (
-              <div className="text-xs text-base-content/80">
-                {info.row.original.taskName}
+              <div>
+                {isInternal ? (
+                  <span className="inline-flex items-center gap-1">
+                    <FinjectorLink
+                      org={info.row.original.financialDepartmentCode}
+                      project={projectNumber}
+                      task={info.row.original.taskNum}
+                    >
+                      {info.row.original.taskNum}
+                    </FinjectorLink>
+                    <ChartStringCopyButton
+                      org={info.row.original.financialDepartmentCode}
+                      project={projectNumber}
+                      task={info.row.original.taskNum}
+                    />
+                  </span>
+                ) : (
+                  info.row.original.taskNum
+                )}
               </div>
-            )}
-          </div>
-        ),
-        footer: () => 'Totals',
-        header: 'Task',
-        minSize: 200,
-      }),
-      columnHelper.accessor('financialDepartmentCode', {
-        cell: (info) => (
-          <span title={info.row.original.financialDepartment}>
-            {info.getValue()}
-          </span>
-        ),
-        header: 'Dept',
-      }),
-      columnHelper.accessor('fundCode', {
-        cell: (info) => (
-          <span title={info.row.original.fundDesc}>{info.getValue()}</span>
-        ),
-        header: 'Fund',
-      }),
-      columnHelper.accessor('programCode', {
-        cell: (info) => (
-          <span title={info.row.original.programDesc}>{info.getValue()}</span>
-        ),
-        header: 'Program',
-      }),
-      columnHelper.accessor('activityCode', {
-        cell: (info) => (
-          <span title={info.row.original.activityDesc}>{info.getValue()}</span>
-        ),
-        header: 'Activity',
-      }),
+              {info.row.original.taskName && (
+                <div className="text-xs text-base-content/80">
+                  {info.row.original.taskName}
+                </div>
+              )}
+              <div className="text-xs text-base-content/80">
+                {[
+                  info.row.original.financialDepartmentCode,
+                  info.row.original.fundCode,
+                  info.row.original.programCode,
+                  info.row.original.activityCode,
+                ].join(' ')}
+              </div>
+            </div>
+          ),
+          footer: () => 'Totals',
+          header: 'Task',
+          id: 'taskNum',
+          minSize: 200,
+        }
+      ),
       columnHelper.accessor('budget', {
         cell: (info) => (
           <span className="flex justify-end">
