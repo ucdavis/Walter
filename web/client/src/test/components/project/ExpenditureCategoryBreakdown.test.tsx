@@ -60,6 +60,41 @@ describe('ExpenditureCategoryBreakdown', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('keeps Graph View available in Table View when rows are empty', async () => {
+    server.use(
+      http.get('/api/project/projection/:projectNumber', () =>
+        HttpResponse.json({
+          categories: [
+            {
+              budget: 100,
+              committed: 10,
+              expenditureCategory: '04 - Projection Supplies',
+              isPersonnel: 0,
+              remainingNow: 70,
+              spentToDate: 20,
+            },
+          ],
+          periods: [],
+        })
+      )
+    );
+
+    renderWithQueryClient(
+      <ExpenditureCategoryBreakdown
+        progressEnabled={true}
+        projectNumber="P1"
+        records={[]}
+      />
+    );
+
+    await screen.findByText('Projection Supplies');
+    fireEvent.click(screen.getByRole('button', { name: 'Table View' }));
+
+    expect(
+      screen.getByRole('button', { name: 'Graph View' })
+    ).toBeInTheDocument();
+  });
+
   it('shows the balance and time remaining summary in progress view', async () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date(2026, 7, 1));
