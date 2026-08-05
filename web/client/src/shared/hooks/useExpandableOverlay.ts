@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -90,25 +91,50 @@ export function useExpandableOverlay({
   onOverlayActiveChange,
 }: UseExpandableOverlayOptions): UseExpandableOverlayResult {
   const prefersReducedMotion = useMemo(() => prefersReducedMotionEnabled(), []);
-
-  const [expandPhase, setExpandPhase] = useState<ExpandPhase>(() =>
-    enabled && initiallyExpanded ? 'expanded' : 'inline'
-  );
-  const [overlayRect, setOverlayRect] = useState<OverlayRect | null>(() =>
-    enabled && initiallyExpanded ? getExpandedRect(marginPx) : null
-  );
-  const [placeholderHeight, setPlaceholderHeight] = useState<number | null>(
-    null
-  );
-  const [canAnimateRect, setCanAnimateRect] = useState(false);
+  const initialOverlayOptionsRef = useRef({
+    enabled,
+    initiallyExpanded,
+    marginPx,
+  });
+  const hasInitializedInitialExpansionRef = useRef(false);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const placeholderRef = useRef<HTMLDivElement | null>(null);
   const expandButtonRef = useRef<HTMLButtonElement | null>(null);
   const frameIdsRef = useRef<number[]>([]);
 
+  const [expandPhase, setExpandPhase] = useState<ExpandPhase>('inline');
+  const [overlayRect, setOverlayRect] = useState<OverlayRect | null>(null);
+  const [placeholderHeight, setPlaceholderHeight] = useState<number | null>(
+    null
+  );
+  const [canAnimateRect, setCanAnimateRect] = useState(false);
+
   const isOverlayActive = expandPhase !== 'inline';
   useLockBodyScroll(isOverlayActive);
+
+  // Measure inline bounds before applying fixed geometry so closing can animate back.
+  useLayoutEffect(() => {
+    const { enabled, initiallyExpanded, marginPx } =
+      initialOverlayOptionsRef.current;
+    if (
+      hasInitializedInitialExpansionRef.current ||
+      !enabled ||
+      !initiallyExpanded
+    ) {
+      return;
+    }
+
+    const container = containerRef.current;
+    if (!container) {
+      return;
+    }
+
+    hasInitializedInitialExpansionRef.current = true;
+    setPlaceholderHeight(container.offsetHeight);
+    setOverlayRect(getExpandedRect(marginPx));
+    setExpandPhase('expanded');
+  }, []);
 
   // Stops any queued RAF callbacks so stale animations cannot run.
   const cancelScheduledFrames = useCallback(() => {
