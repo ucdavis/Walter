@@ -28,7 +28,7 @@ var host = new HostBuilder()
             logOptions.IncludeScopes = true;
             logOptions.ParseStateValues = true;
             logOptions.SetResourceBuilder(BuildResourceBuilder());
-            logOptions.AddOtlpExporter();
+            // UseOtlpExporter below registers OTLP export for logs, traces, and metrics together.
         });
     })
     .ConfigureAppConfiguration((context, config) =>
