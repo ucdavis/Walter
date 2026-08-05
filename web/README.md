@@ -193,7 +193,7 @@ You can update individual packages or you can use the `--upgrade` flag to update
 dotnet-outdated --upgrade --version-lock Major
 ```
 
-If you update `Microsoft.EntityFrameworkCore.Design` or another package that a tool depends on, you'll want to update that tool as well to match, ex: `dotnet tool update dotnet-ef --local --version 8.0.21`. That will update it for you but also set the value in our `dotnet-tools.json` so it's consistent for everyone.
+If you update `Microsoft.EntityFrameworkCore.Design` or another package that a tool depends on, you'll want to update that tool as well to match, ex: `dotnet tool update dotnet-ef --local --version 10.0.9`. That will update it for you but also set the value in our `dotnet-tools.json` so it's consistent for everyone.
 
 And as always, after updating dependencies, make sure to run `dotnet build` and `dotnet test` to verify everything is working.
 

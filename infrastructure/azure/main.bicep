@@ -24,10 +24,10 @@ param createSqlServer bool = true
 param sqlServerNameOverride string = ''
 
 @description('Runtime stack for Linux App Service')
-param linuxFxVersion string = 'DOTNETCORE|8.0'
+param linuxFxVersion string = 'DOTNETCORE|10.0'
 
 @description('Runtime stack for Linux Azure Functions')
-param functionLinuxFxVersion string = 'DOTNET-ISOLATED|8.0'
+param functionLinuxFxVersion string = 'DOTNET-ISOLATED|10.0'
 
 @description('Whether the notification Function App should keep workers always warm.')
 param functionAlwaysOn bool = true
