@@ -1,7 +1,10 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
-import { ProjectExpenditureProgress } from '@/components/project/ProjectExpenditureProgress.tsx';
+import {
+  ProjectExpenditureProgress,
+  ProjectExpenditureProgressCategories,
+} from '@/components/project/ProjectExpenditureProgress.tsx';
 import type { ProjectProjectionCategory } from '@/queries/projectProjection.ts';
 
 afterEach(cleanup);
@@ -19,6 +22,41 @@ const category = (
 });
 
 describe('ProjectExpenditureProgress', () => {
+  it('keeps Today labels inset when no award time has elapsed', () => {
+    const categories = [
+      category({
+        budget: 100,
+        committed: 10,
+        remainingNow: 70,
+        spentToDate: 20,
+      }),
+    ];
+
+    render(
+      <>
+        <ProjectExpenditureProgress
+          awardEndDate="2100-12-31"
+          awardStartDate="2100-01-01"
+          categories={categories}
+        />
+        <ProjectExpenditureProgressCategories
+          awardEndDate="2100-12-31"
+          awardStartDate="2100-01-01"
+          categories={categories}
+        />
+      </>
+    );
+
+    for (const label of screen.getAllByText('Today')) {
+      expect(label).toHaveStyle({ left: 'max(2.5rem, 0%)' });
+    }
+    for (const marker of screen.getAllByTestId(
+      'budget-vs-time-current-month-marker'
+    )) {
+      expect(marker).toHaveStyle({ left: '0%' });
+    }
+  });
+
   it('nets detail balances in the aggregate expense summary', () => {
     render(
       <ProjectExpenditureProgress

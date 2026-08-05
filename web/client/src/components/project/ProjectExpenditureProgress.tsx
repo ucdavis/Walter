@@ -406,7 +406,7 @@ export function ProjectExpenditureProgressCategories({
         <>
           <span
             className="pointer-events-none absolute top-0 z-20 -translate-x-full pr-1 text-xs text-base-content"
-            style={{ left: currentMonthMarkerLeft }}
+            style={{ left: `max(2.5rem, ${currentMonthMarkerLeft})` }}
           >
             Today
           </span>
@@ -551,7 +551,7 @@ export function ProjectExpenditureProgress({
           <>
             <span
               className="pointer-events-none absolute top-0 z-20 -translate-x-full pr-1 text-xs text-base-content"
-              style={{ left: currentMonthMarkerLeft }}
+              style={{ left: `max(2.5rem, ${currentMonthMarkerLeft})` }}
             >
               Today
             </span>
