@@ -101,12 +101,17 @@ BEGIN
             pb.Name AS NAME,
             pb.PositionDescription AS POSITION_DESCRIPTION,
             pb.JobCode AS JOB_CODE,
-            cbr.VacationAccrual AS VACATION_ACCRUAL,
-            cbr.CBR AS COMPOSITE_BENEFIT_RATE
+            ucd.VacationAccrual AS VACATION_ACCRUAL,
+            -- ANR-funded entries (financial dept under ANR division node 9AAES0D, always at
+            -- ParentLevel3) use the ANR rate set; no cross-set fallback, so a job code with no
+            -- ANR row yields NULL exactly like a job code missing from the UCD set.
+            CASE WHEN fd.ParentLevel3Code = '9AAES0D' THEN anr.CBR ELSE ucd.CBR END AS COMPOSITE_BENEFIT_RATE
         FROM dbo.PositionBudgets pb
         JOIN @ValidatedProjects vp ON pb.ProjectId = vp.ProjectId
         LEFT JOIN dbo.Projects p ON pb.ProjectId = p.Code
-        LEFT JOIN dbo.CompositeBenefitRates cbr ON pb.JobCode = cbr.JobCode
+        LEFT JOIN dbo.CompositeBenefitRates ucd ON ucd.RateSet = 'UCD' AND pb.JobCode = ucd.JobCode
+        LEFT JOIN dbo.CompositeBenefitRates anr ON anr.RateSet = 'ANR' AND pb.JobCode = anr.JobCode
+        LEFT JOIN dbo.ErpFinDeptHierarchy fd ON fd.Code = pb.FinancialDept
         -- ProjectType is a project-level attribute; collapse the per-task/fund portfolio rows
         -- to one row per project so the join cannot multiply funding distributions.
         LEFT JOIN (
