@@ -510,7 +510,7 @@ describe('project detail page', () => {
     ],
   };
 
-  it('shows expenditure progress and burndown links when projections are enabled', async () => {
+  it('shows the merged expenditure progress and burndown link when projections are enabled', async () => {
     const projects = [createProject({ pmEmployeeId: '2000' })];
     setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);
 
@@ -519,10 +519,7 @@ describe('project detail page', () => {
     });
 
     try {
-      const expenditureProgressLink = await screen.findByRole('link', {
-        name: 'Expenditure Progress',
-      });
-      const burndownLink = screen.getByRole('link', {
+      const burndownLink = await screen.findByRole('link', {
         name: 'Project Burndown',
       });
       const detailsSection = screen
@@ -531,22 +528,37 @@ describe('project detail page', () => {
 
       expect(
         within(detailsSection).getByRole('link', {
-          name: 'Expenditure Progress',
-        })
-      ).toBe(expenditureProgressLink);
-      expect(
-        within(detailsSection).getByRole('link', {
           name: 'Project Burndown',
         })
       ).toBe(burndownLink);
-      expect(expenditureProgressLink).toHaveAttribute(
-        'href',
-        '/expenditureprogress/1000/P1'
-      );
-      expect(burndownLink).toHaveAttribute('href', '/projectburndown/1000/P1');
+      expect(
+        screen.queryByRole('link', { name: 'Expenditure Progress' })
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByTestId('project-expenditure-progress-categories')
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: 'Table View' })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: 'Export' })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: 'Expand graph' })
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: 'Graph View' })
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: 'Expand table' })
+      ).not.toBeInTheDocument();
       expect(
         screen.queryByTestId('project-burndown-chart')
       ).not.toBeInTheDocument();
+      expect(burndownLink).toHaveAttribute(
+        'href',
+        '/projectburndown/1000/P1'
+      );
     } finally {
       cleanup();
     }
@@ -976,6 +988,7 @@ describe('project detail page', () => {
   });
 
   it('shows expenditure categories instead of task breakdown for sponsored projects', async () => {
+    const user = userEvent.setup();
     const projects = [
       createProject({
         balance: 1200,
@@ -1009,9 +1022,36 @@ describe('project detail page', () => {
         })
       ).toBeInTheDocument();
       expect(screen.queryByText('Task Breakdown')).not.toBeInTheDocument();
+      expect(
+        screen.getByTestId('project-expenditure-progress-categories')
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          'Expenses, commitments, and available balance by expenditure category.'
+        )
+      ).toBeInTheDocument();
+      expect(screen.getByText('Salaries and Wages')).toBeInTheDocument();
+      expect(
+        screen.getByText('Supplies / Services / Other Expenses')
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByText('01 - Salaries and Wages')
+      ).not.toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', { name: 'Table View' }));
+
+      expect(
+        screen.queryByPlaceholderText('Search all columns...')
+      ).not.toBeInTheDocument();
       expect(screen.getByText('01 - Salaries and Wages')).toBeInTheDocument();
       expect(
         screen.getByText('03 - Supplies / Services / Other Expenses')
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: 'Graph View' })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: 'Expand table' })
       ).toBeInTheDocument();
       expect(
         screen.queryByRole('link', { name: 'Details' })

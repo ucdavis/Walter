@@ -59,12 +59,16 @@ interface DataTableProps<TData extends object> {
   getRowCanExpand?: (row: Row<TData>) => boolean; // Default is `() => true` when `renderSubComponent` is provided
   getRowProps?: (row: Row<TData>) => HTMLAttributes<HTMLTableRowElement>;
   globalFilter?: 'left' | 'right' | 'none'; // Controls the position of the search box
+  initiallyExpanded?: boolean;
   initialState?: InitialTableState; // Optional initial state for the table, use for stuff like setting page size or sorting
+  onOverlayActiveChange?: (isActive: boolean) => void;
   pagination?: 'auto' | 'on' | 'off'; // 'auto' shows controls only when needed; 'off' disables pagination entirely
   renderSubComponent?: (props: { row: Row<TData> }) => ReactNode;
   subComponentRowClassName?: string;
   tableActions?: TableActionsRenderer<TData>;
+  tableActionsAlignment?: 'end' | 'start';
   tableClassName?: string;
+  tableLeadingActions?: TableActionsRenderer<TData>;
 }
 
 export const DataTable = <TData extends object>({
@@ -77,12 +81,16 @@ export const DataTable = <TData extends object>({
   getRowCanExpand,
   getRowProps,
   globalFilter = 'right',
+  initiallyExpanded = false,
   initialState,
+  onOverlayActiveChange,
   pagination = 'auto',
   renderSubComponent,
   subComponentRowClassName,
   tableActions,
+  tableActionsAlignment = 'end',
   tableClassName,
+  tableLeadingActions,
 }: DataTableProps<TData>) => {
   const rowExpansionEnabled = renderSubComponent !== undefined;
 
@@ -127,6 +135,8 @@ export const DataTable = <TData extends object>({
     toggleExpanded,
   } = useExpandableOverlay({
     enabled: expandable,
+    initiallyExpanded,
+    onOverlayActiveChange,
   });
 
   const expandableRows = rowExpansionEnabled
@@ -140,16 +150,23 @@ export const DataTable = <TData extends object>({
     pagination === 'on' || (pagination === 'auto' && table.getPageCount() > 1);
   const resolvedTableActions =
     typeof tableActions === 'function' ? tableActions(table) : tableActions;
+  const resolvedTableLeadingActions =
+    typeof tableLeadingActions === 'function'
+      ? tableLeadingActions(table)
+      : tableLeadingActions;
   const shouldShowToolbar =
     globalFilter !== 'none' ||
     expandable ||
     resolvedTableActions ||
+    resolvedTableLeadingActions ||
     showPaginationControls ||
     (rowExpansionEnabled && hasExpandableRows);
   const filterValue = table.getState().globalFilter ?? '';
   const hasFilterValue = filterValue !== '';
   const hasLeadingToolbarContent =
-    globalFilter === 'left' || showPaginationControls;
+    globalFilter === 'left' ||
+    Boolean(resolvedTableLeadingActions) ||
+    showPaginationControls;
   const hasTrailingToolbarContent =
     globalFilter === 'right' ||
     Boolean(resolvedTableActions) ||
@@ -240,11 +257,16 @@ export const DataTable = <TData extends object>({
             className={
               hasLeadingToolbarContent
                 ? 'grid grid-cols-[1fr_auto] items-center gap-2'
-                : 'flex items-center justify-end gap-2'
+                : `flex items-center gap-2 ${
+                    tableActionsAlignment === 'start'
+                      ? 'justify-start'
+                      : 'justify-end'
+                  }`
             }
           >
             {hasLeadingToolbarContent ? (
               <div className="flex items-center gap-3 min-w-0">
+                {resolvedTableLeadingActions}
                 {globalFilter === 'left' ? globalFilterControl : null}
                 {showPaginationControls ? (
                   <span className="text-sm text-base-content/70 whitespace-nowrap">
@@ -260,7 +282,9 @@ export const DataTable = <TData extends object>({
                 'flex items-center gap-2',
                 hasLeadingToolbarContent || !hasTrailingToolbarContent
                   ? ''
-                  : 'w-full justify-end',
+                  : tableActionsAlignment === 'start'
+                    ? 'w-full justify-start'
+                    : 'w-full justify-end',
               ]
                 .filter(Boolean)
                 .join(' ')}

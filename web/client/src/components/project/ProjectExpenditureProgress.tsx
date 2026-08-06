@@ -287,6 +287,175 @@ function buildCategoryProgressRows(
     });
 }
 
+function CategoryProgressRows({ rows }: { rows: CategoryProgressRow[] }) {
+  return (
+    <ul className="space-y-4">
+      {rows.map((row) => {
+        const isOverBudget = row.overrun > 0;
+        const percentTotal =
+          isOverBudget && row.budget > 0 ? row.budget : row.total;
+        const spentText = `${formatCurrency(row.spent)} (${formatPercent(
+          row.spent,
+          percentTotal
+        )}) spent`;
+        const committedText = `${formatCurrency(row.committed)} committed`;
+        const balanceText = isOverBudget
+          ? row.budget > 0
+            ? `${formatCurrency(row.overrun)} (${formatPercent(
+                row.overrun,
+                percentTotal
+              )}) over`
+            : `${formatCurrency(row.overrun)} over`
+          : `${formatCurrency(row.available)} (${formatPercent(
+              row.available,
+              row.total
+            )}) available`;
+
+        return (
+          <li className="space-y-2" key={row.expenditureCategory}>
+            <div
+              className="min-w-0"
+              style={{ width: `${BAR_TRACK_WIDTH_PERCENT}%` }}
+            >
+              <div className="flex min-w-0 flex-wrap items-baseline gap-x-2">
+                <p className="font-proxima-bold truncate mt-1">
+                  {row.displayName}
+                </p>
+                <p className="text-sm">{formatCurrency(row.budget)} budget</p>
+              </div>
+              <div className="mt-1 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-sm text-base-content/80">
+                <p className="flex flex-wrap gap-x-3 gap-y-1">
+                  <span>{spentText}</span>
+                  <span>|</span>
+                  <span>{committedText}</span>
+                </p>
+                <p
+                  className={
+                    isOverBudget
+                      ? 'ml-auto text-right mr-2 font-proxima-bold text-error'
+                      : 'ml-auto text-right mr-2'
+                  }
+                >
+                  {balanceText}
+                </p>
+              </div>
+            </div>
+            <ScaledProgressBar
+              ariaLabel={`${row.displayName}: ${spentText}, ${committedText}, ${balanceText}, ${formatCurrency(row.budget)} budget`}
+              segments={row.segments}
+            />
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+export function ProjectExpenditureProgressCategories({
+  awardEndDate,
+  awardStartDate,
+  categories,
+}: {
+  awardEndDate?: string | null;
+  awardStartDate?: string | null;
+  categories: ProjectProjectionCategory[];
+}) {
+  const rows = useMemo(
+    () => buildCategoryProgressRows(categories),
+    [categories]
+  );
+  const timeProgress = useMemo(
+    () => getTimeProgressSummary(awardStartDate ?? null, awardEndDate ?? null),
+    [awardEndDate, awardStartDate]
+  );
+  const currentMonthMarkerLeft = timeProgress
+    ? `${(timeProgress.elapsedPercent / AXIS_MAX_PERCENT) * 100}%`
+    : null;
+
+  if (rows.length === 0) {
+    return (
+      <p className="text-base-content/70 mt-4">
+        No expenditure category data found.
+      </p>
+    );
+  }
+
+  return (
+    <div
+      className="relative"
+      data-testid="project-expenditure-progress-categories"
+    >
+      {currentMonthMarkerLeft && (
+        <>
+          <span
+            className="pointer-events-none absolute top-0 z-20 -translate-x-full pr-1 text-xs text-base-content"
+            style={{ left: `max(2.5rem, ${currentMonthMarkerLeft})` }}
+          >
+            Today
+          </span>
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute top-0 bottom-10 z-10 w-0 -translate-x-1/2 border-l-2 border-dashed border-base-content/35"
+            data-testid="budget-vs-time-current-month-marker"
+            style={{ left: currentMonthMarkerLeft }}
+          />
+        </>
+      )}
+      <CategoryProgressRows rows={rows} />
+      <PacingProgressAxis />
+    </div>
+  );
+}
+
+export function ProjectExpenditureProgressSummary({
+  awardEndDate,
+  awardStartDate,
+  categories,
+}: {
+  awardEndDate?: string | null;
+  awardStartDate?: string | null;
+  categories: ProjectProjectionCategory[];
+}) {
+  const timeProgress = useMemo(
+    () => getTimeProgressSummary(awardStartDate ?? null, awardEndDate ?? null),
+    [awardEndDate, awardStartDate]
+  );
+  const budgetProgress = useMemo(
+    () => getBudgetProgressSummary(categories),
+    [categories]
+  );
+  const hasBudgetData =
+    budgetProgress.budget !== 0 ||
+    budgetProgress.committed !== 0 ||
+    budgetProgress.overrun !== 0 ||
+    budgetProgress.remaining !== 0 ||
+    budgetProgress.spent !== 0;
+  const summaryBudgetText = hasBudgetData
+    ? getBudgetRemainingText(budgetProgress)
+    : null;
+  const summaryMonthsText = timeProgress
+    ? `${formatMonthCount(timeProgress.remainingMonths)} (${formatPacingPercent(
+        timeProgress.remainingPercent
+      )})`
+    : null;
+
+  if (!summaryBudgetText || !summaryMonthsText) {
+    return null;
+  }
+
+  return (
+    <p className="max-w-3xl">
+      {budgetProgress.overrun > 0 ? 'Balance is ' : 'Available balance is '}
+      <strong
+        className={budgetProgress.overrun > 0 ? 'text-error' : undefined}
+      >
+        {summaryBudgetText}
+      </strong>
+      , with <strong>{summaryMonthsText}</strong> remaining.
+    </p>
+  );
+}
+
 export function ProjectExpenditureProgress({
   awardEndDate,
   awardStartDate,
@@ -364,8 +533,8 @@ export function ProjectExpenditureProgress({
         {currentMonthMarkerLeft && (
           <>
             <span
-              className="pointer-events-none absolute top-0 z-20 -translate-x-1/2 -translate-y-full pb-1 text-xs text-base-content"
-              style={{ left: currentMonthMarkerLeft }}
+              className="pointer-events-none absolute top-0 z-20 -translate-x-full pr-1 text-xs text-base-content"
+              style={{ left: `max(2.5rem, ${currentMonthMarkerLeft})` }}
             >
               Today
             </span>
@@ -445,67 +614,7 @@ export function ProjectExpenditureProgress({
               </div>
               <div id={detailsId}>
                 {areDetailsExpanded && (
-                  <ul className="space-y-4">
-                    {rows.map((row) => {
-                      const isOverBudget = row.overrun > 0;
-                      const percentTotal =
-                        isOverBudget && row.budget > 0 ? row.budget : row.total;
-                      const spentText = `${formatCurrency(row.spent)} (${formatPercent(
-                        row.spent,
-                        percentTotal
-                      )}) spent`;
-                      const committedText = `${formatCurrency(row.committed)} committed`;
-                      const balanceText = isOverBudget
-                        ? row.budget > 0
-                          ? `${formatCurrency(row.overrun)} (${formatPercent(
-                              row.overrun,
-                              percentTotal
-                            )}) over`
-                          : `${formatCurrency(row.overrun)} over`
-                        : `${formatCurrency(row.available)} (${formatPercent(
-                            row.available,
-                            row.total
-                          )}) available`;
-
-                      return (
-                        <li className="space-y-2" key={row.expenditureCategory}>
-                          <div
-                            className="min-w-0"
-                            style={{ width: `${BAR_TRACK_WIDTH_PERCENT}%` }}
-                          >
-                            <div className="flex min-w-0 flex-wrap items-baseline gap-x-2">
-                              <p className="font-proxima-bold truncate mt-1">
-                                {row.displayName}
-                              </p>
-                              <p className="text-sm">
-                                {formatCurrency(row.budget)} budget
-                              </p>
-                            </div>
-                            <div className="mt-1 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-sm text-base-content/80">
-                              <p className="flex flex-wrap gap-x-3 gap-y-1">
-                                <span>{spentText}</span>
-                                <span>|</span>
-                                <span>{committedText}</span>
-                              </p>
-                              <p
-                                className={
-                                  isOverBudget
-                                    ? 'ml-auto text-right mr-2 font-proxima-bold text-error'
-                                    : 'ml-auto text-right mr-2'
-                                }
-                              >
-                                {balanceText}
-                              </p>
-                            </div>
-                          </div>
-                          <ScaledProgressBar
-                            ariaLabel={`${row.displayName}: ${spentText}, ${committedText}, ${balanceText}, ${formatCurrency(row.budget)} budget`}
-                            segments={row.segments}
-                          />
-                        </li>
-                      );
-                    })}
-                  </ul>
+                  <CategoryProgressRows rows={rows} />
                 )}
               </div>
             </div>

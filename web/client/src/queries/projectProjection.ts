@@ -28,8 +28,11 @@ export interface ProjectProjectionResult {
   periods: ProjectProjectionPeriod[];
 }
 
-export const projectProjectionQueryOptions = (projectNumber: string) => ({
-  enabled: Boolean(projectNumber),
+export const projectProjectionQueryOptions = (
+  projectNumber: string,
+  enabled = true
+) => ({
+  enabled: enabled && Boolean(projectNumber),
   queryFn: async (): Promise<ProjectProjectionResult> => {
     return await fetchJson<ProjectProjectionResult>(
       `/api/project/projection/${encodeURIComponent(projectNumber)}`
@@ -39,6 +42,9 @@ export const projectProjectionQueryOptions = (projectNumber: string) => ({
   staleTime: 60 * 60 * 1000, // 1 hour
 });
 
-export const useProjectProjectionQuery = (projectNumber: string) => {
-  return useQuery(projectProjectionQueryOptions(projectNumber));
+export const useProjectProjectionQuery = (
+  projectNumber: string,
+  enabled = true
+) => {
+  return useQuery(projectProjectionQueryOptions(projectNumber, enabled));
 };
