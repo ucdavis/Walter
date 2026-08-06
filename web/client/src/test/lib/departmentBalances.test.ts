@@ -4,7 +4,10 @@ import {
   MEASURES,
   activeColumns,
   activeMeasures,
+  joinCodeList,
   labelKeyOf,
+  parseCodeList,
+  parseFieldList,
   rowGroupLabel,
   rowLabelSegments,
 } from '@/lib/departmentBalances.ts';
@@ -118,5 +121,67 @@ describe('labelKeyOf', () => {
     const a = rowLabelSegments(row({ fund: '13U00' }), ['Fund']);
     const b = rowLabelSegments(row({ dept: '13U00' }), ['Dept']);
     expect(labelKeyOf(a)).not.toBe(labelKeyOf(b));
+  });
+});
+
+describe('parseCodeList', () => {
+  it('splits a comma-joined string into codes', () => {
+    expect(parseCodeList('13U00,1100')).toEqual(['13U00', '1100']);
+  });
+
+  it('trims whitespace and drops empty entries', () => {
+    expect(parseCodeList(' 13U00 , ,1100,')).toEqual(['13U00', '1100']);
+  });
+
+  it('drops duplicate codes', () => {
+    expect(parseCodeList('1100,1100,1200')).toEqual(['1100', '1200']);
+  });
+
+  it('returns an empty list for missing or non-scalar values', () => {
+    expect(parseCodeList(undefined)).toEqual([]);
+    expect(parseCodeList(null)).toEqual([]);
+    expect(parseCodeList({ funds: '1100' })).toEqual([]);
+  });
+
+  it('accepts a numeric value the URL parser produced for an all-digit code', () => {
+    expect(parseCodeList(1100)).toEqual(['1100']);
+  });
+
+  it('accepts up to 500 distinct codes', () => {
+    const list = Array.from({ length: 500 }, (_, i) => `C${i}`).join(',');
+    expect(parseCodeList(list)).toHaveLength(500);
+  });
+
+  it('throws past 500 distinct codes rather than silently truncating', () => {
+    const huge = Array.from({ length: 501 }, (_, i) => `C${i}`).join(',');
+    expect(() => parseCodeList(huge)).toThrow('Too many codes');
+  });
+});
+
+describe('joinCodeList', () => {
+  it('joins codes with commas', () => {
+    expect(joinCodeList(['13U00', '1100'])).toBe('13U00,1100');
+  });
+
+  it('returns undefined for an empty list so the param drops from the URL', () => {
+    expect(joinCodeList([])).toBeUndefined();
+  });
+
+  it('round-trips through parseCodeList', () => {
+    expect(parseCodeList(joinCodeList(['A', 'B']))).toEqual(['A', 'B']);
+  });
+});
+
+describe('parseFieldList', () => {
+  it('keeps known dimension keys', () => {
+    expect(parseFieldList('Fund,Account')).toEqual(['Fund', 'Account']);
+  });
+
+  it('drops unknown keys', () => {
+    expect(parseFieldList('Fund,Bogus')).toEqual(['Fund']);
+  });
+
+  it('canonicalizes case for hand-edited links', () => {
+    expect(parseFieldList('fund,ACCOUNT')).toEqual(['Fund', 'Account']);
   });
 });
