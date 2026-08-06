@@ -1,6 +1,9 @@
 import { useMemo, useState } from 'react';
 import { createColumnHelper } from '@tanstack/react-table';
-import { FinjectorLink } from '@/components/project/FinjectorLink.tsx';
+import {
+  ChartStringCopyButton,
+  FinjectorLink,
+} from '@/components/project/FinjectorLink.tsx';
 import { TableExportActions } from '@/components/TableExportActions.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import type { ProjectRecord } from '@/queries/project.ts';
@@ -132,59 +135,81 @@ export function TaskBreakdown({
 
   const columns = useMemo(
     () => [
-      columnHelper.accessor('taskNum', {
-        cell: (info) => (
-          <div>
+      columnHelper.accessor(
+        (row) =>
+          [
+            row.taskNum,
+            row.taskName,
+            row.financialDepartmentCode,
+            row.financialDepartment,
+            row.fundCode,
+            row.fundDesc,
+            row.programCode,
+            row.programDesc,
+            row.activityCode,
+            row.activityDesc,
+          ].join(' '),
+        {
+          cell: (info) => (
             <div>
-              {isInternal ? (
-                <FinjectorLink
-                  org={info.row.original.financialDepartmentCode}
-                  project={projectNumber}
-                  task={info.getValue()}
-                >
-                  {info.getValue()}
-                </FinjectorLink>
-              ) : (
-                info.getValue()
-              )}
-            </div>
-            {info.row.original.taskName && (
-              <div className="text-xs text-base-content/80">
-                {info.row.original.taskName}
+              <div>
+                {isInternal ? (
+                  <span className="inline-flex items-center gap-1">
+                    {info.row.original.taskNum}
+                    <FinjectorLink
+                      org={info.row.original.financialDepartmentCode}
+                      project={projectNumber}
+                      task={info.row.original.taskNum}
+                    />
+                    <ChartStringCopyButton
+                      org={info.row.original.financialDepartmentCode}
+                      project={projectNumber}
+                      task={info.row.original.taskNum}
+                    />
+                  </span>
+                ) : (
+                  info.row.original.taskNum
+                )}
               </div>
-            )}
-          </div>
-        ),
-        footer: () => 'Totals',
-        header: 'Task',
-        minSize: 200,
-      }),
-      columnHelper.accessor('financialDepartmentCode', {
-        cell: (info) => (
-          <span title={info.row.original.financialDepartment}>
-            {info.getValue()}
-          </span>
-        ),
-        header: 'Dept',
-      }),
-      columnHelper.accessor('fundCode', {
-        cell: (info) => (
-          <span title={info.row.original.fundDesc}>{info.getValue()}</span>
-        ),
-        header: 'Fund',
-      }),
-      columnHelper.accessor('programCode', {
-        cell: (info) => (
-          <span title={info.row.original.programDesc}>{info.getValue()}</span>
-        ),
-        header: 'Program',
-      }),
-      columnHelper.accessor('activityCode', {
-        cell: (info) => (
-          <span title={info.row.original.activityDesc}>{info.getValue()}</span>
-        ),
-        header: 'Activity',
-      }),
+              {info.row.original.taskName && (
+                <div className="text-xs text-base-content/80">
+                  {info.row.original.taskName}
+                </div>
+              )}
+              <div className="flex flex-wrap gap-x-2 text-xs text-base-content/80">
+                {info.row.original.financialDepartmentCode && (
+                  <TooltipLabel
+                    label={info.row.original.financialDepartmentCode}
+                    tooltip={info.row.original.financialDepartment}
+                  />
+                )}
+                {info.row.original.fundCode && (
+                  <TooltipLabel
+                    label={info.row.original.fundCode}
+                    tooltip="Fund"
+                  />
+                )}
+                {info.row.original.programCode && (
+                  <TooltipLabel
+                    label={info.row.original.programCode}
+                    tooltip="Program"
+                  />
+                )}
+                {info.row.original.activityCode && (
+                  <TooltipLabel
+                    label={info.row.original.activityCode}
+                    tooltip="Activity"
+                  />
+                )}
+              </div>
+            </div>
+          ),
+          footer: () => 'Totals',
+          header: 'Task',
+          id: 'taskNum',
+          minSize: 200,
+        }
+      ),
       columnHelper.accessor('budget', {
         cell: (info) => (
           <span className="flex justify-end">
