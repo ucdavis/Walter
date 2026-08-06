@@ -181,12 +181,14 @@ function DistributionSubtable({
           {distributions.map((dist, idx) => (
             <tr key={idx}>
               <td className="text-sm">
-                <span
-                  className="block truncate"
-                  title={dist.record.projectDescription}
-                >
-                  {dist.record.projectDescription}
-                </span>
+                <TooltipLabel
+                  className="block min-w-0"
+                  focusable={false}
+                  label={dist.record.projectDescription}
+                  labelClassName="block truncate"
+                  placement="bottom"
+                  tooltip={dist.record.projectDescription}
+                />
               </td>
               <td className="text-right text-sm">
                 {dist.record.projectType === 'Internal'
@@ -201,13 +203,20 @@ function DistributionSubtable({
               </td>
               <td className="text-right text-sm">
                 {dist.fundingEndingSoon ? (
-                  <span
-                    className="text-error inline-flex items-center gap-1"
-                    title="Ending within 3 months"
-                  >
-                    <ClockIcon className="w-3 h-3" />
-                    {formatDate(dist.record.fundingEndDate, '')}
-                  </span>
+                  <TooltipLabel
+                    asChild
+                    label={
+                      <span
+                        className="text-error inline-flex items-center gap-1"
+                        tabIndex={0}
+                      >
+                        <ClockIcon aria-hidden="true" className="w-3 h-3" />
+                        {formatDate(dist.record.fundingEndDate, '')}
+                      </span>
+                    }
+                    placement="bottom"
+                    tooltip={tooltipDefinitions.endingWithinThreeMonths}
+                  />
                 ) : (
                   formatDate(dist.record.fundingEndDate, '')
                 )}
@@ -373,13 +382,20 @@ export function PersonnelTable({
           return (
             <span className="flex justify-end">
               {jobEndingSoon ? (
-                <span
-                  className="text-error inline-flex items-center gap-1"
-                  title="Ending within 3 months"
-                >
-                  <ClockIcon className="w-4 h-4" />
-                  {formatDate(jobEndDate, '')}
-                </span>
+                <TooltipLabel
+                  asChild
+                  label={
+                    <span
+                      className="text-error inline-flex items-center gap-1"
+                      tabIndex={0}
+                    >
+                      <ClockIcon aria-hidden="true" className="w-4 h-4" />
+                      {formatDate(jobEndDate, '')}
+                    </span>
+                  }
+                  placement="bottom"
+                  tooltip={tooltipDefinitions.endingWithinThreeMonths}
+                />
               ) : (
                 formatDate(jobEndDate, '')
               )}
@@ -498,28 +514,26 @@ export function PersonnelTable({
           <DistributionSubtable distributions={row.original.distributions} />
         )}
         subComponentRowClassName="pivot-row"
-        tableActions={(table) =>
-          (
-            <div className="flex flex-wrap items-center gap-2">
-              {unfilledCount > 0 && (
-                <button
-                  className={`btn btn-sm${showUnfilled ? ' btn-active' : ''}`}
-                  onClick={() => setShowUnfilled((current) => !current)}
-                  type="button"
-                >
-                  {showUnfilled ? 'Hide' : 'Show'} unfilled ({unfilledCount})
-                </button>
-              )}
-              <TableExportActions
-                baseFilename="personnel"
-                columns={personnelCsvColumns}
-                data={positions}
-                table={table}
-                toRows={getExportData}
-              />
-            </div>
-          )
-        }
+        tableActions={(table) => (
+          <div className="flex flex-wrap items-center gap-2">
+            {unfilledCount > 0 && (
+              <button
+                className={`btn btn-sm${showUnfilled ? ' btn-active' : ''}`}
+                onClick={() => setShowUnfilled((current) => !current)}
+                type="button"
+              >
+                {showUnfilled ? 'Hide' : 'Show'} unfilled ({unfilledCount})
+              </button>
+            )}
+            <TableExportActions
+              baseFilename="personnel"
+              columns={personnelCsvColumns}
+              data={positions}
+              table={table}
+              toRows={getExportData}
+            />
+          </div>
+        )}
       />
     </div>
   );

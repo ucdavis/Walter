@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { IdentificationIcon } from '@heroicons/react/24/outline';
+import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
 import { useUser } from '@/shared/auth/UserContext.tsx';
 
 const toTokens = (value: string) =>
@@ -111,12 +112,12 @@ export const UserAvatar: React.FC = () => {
   );
 
   return (
-    <div
-      className="tooltip tooltip-left md:tooltip-bottom"
-      data-tip={hoverName}
-      title={hoverName}
-    >
-      {avatarContent}
-    </div>
+    <TooltipLabel
+      asChild={shouldLinkToLogin}
+      label={avatarContent}
+      labelClassName="no-underline"
+      placement="bottom"
+      tooltip={hoverName}
+    />
   );
 };

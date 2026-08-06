@@ -7,6 +7,7 @@ import {
   Tooltip,
 } from 'recharts';
 import { formatCurrency } from '@/lib/currency.ts';
+import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
 import type { ProjectRecord } from '@/queries/project.ts';
 
 const FUNDING_COLORS: Record<string, string> = {
@@ -145,18 +146,23 @@ export function ProjectFundingChart({ projects }: ProjectFundingChartProps) {
             >
               {positiveKeys.map((key, index) => {
                 const pct = Math.round(percents[index]);
+                const valueLabel = `${formatCurrency(totalsByType[key])} (${pct}%)`;
+
                 return (
                   <div
                     className="min-w-0 px-1"
                     key={key}
-                    style={{ flex: `${percents[index]} 0 0%`, minWidth: '120px' }}
+                    style={{
+                      flex: `${percents[index]} 0 0%`,
+                      minWidth: '120px',
+                    }}
                   >
-                    <div
-                      className="truncate"
-                      title={`${formatCurrency(totalsByType[key])} (${pct}%)`}
-                    >
-                      {formatCurrency(totalsByType[key])} ({pct}%)
-                    </div>
+                    <TooltipLabel
+                      className="block min-w-0"
+                      label={valueLabel}
+                      labelClassName="block truncate no-underline"
+                      tooltip={valueLabel}
+                    />
                   </div>
                 );
               })}
@@ -166,7 +172,9 @@ export function ProjectFundingChart({ projects }: ProjectFundingChartProps) {
       )}
       {negativeEntries.length > 0 && (
         <div className="mt-4 text-sm text-base-content/70">
-          <p className="font-medium mb-1">Negative balances (not shown above):</p>
+          <p className="font-medium mb-1">
+            Negative balances (not shown above):
+          </p>
           <ul className="list-disc list-inside">
             {negativeEntries.map(([key, value]) => (
               <li key={key}>

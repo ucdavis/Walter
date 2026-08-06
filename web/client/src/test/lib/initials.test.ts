@@ -1,5 +1,6 @@
 import { createElement } from 'react';
 import { cleanup, render, screen } from '@testing-library/react';
+import { userEvent } from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { User } from '@/queries/user.ts';
 
@@ -65,13 +66,22 @@ describe('UserAvatar', () => {
     mockUser = defaultUser;
   });
 
-  it('shows the profile photo when not emulating', () => {
-    render(createElement(UserAvatar));
+  it('shows the profile photo with one styled tooltip', async () => {
+    const user = userEvent.setup();
+    const { container } = render(createElement(UserAvatar));
 
     expect(screen.getByRole('img', { name: 'User avatar' })).toHaveAttribute(
       'src',
       '/api/user/me/photo'
     );
+    const tooltipTrigger = container.querySelector<HTMLElement>(
+      '[data-tooltip-placement="bottom"]'
+    );
+    expect(tooltipTrigger).not.toHaveAttribute('title');
+
+    await user.hover(tooltipTrigger!);
+
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Test User');
   });
 
   it('replaces the profile photo with an emulation icon', () => {

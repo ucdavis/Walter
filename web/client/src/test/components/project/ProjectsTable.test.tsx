@@ -5,7 +5,7 @@ import { downloadExcelCsv } from '@/lib/csv.ts';
 import type { ProjectRecord } from '@/queries/project.ts';
 
 vi.mock('@tanstack/react-router', () => ({
-  Link: ({ children }: { children: React.ReactNode }) => <a>{children}</a>,
+  Link: ({ children, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement>) => <a href="#" {...props}>{children}</a>,
 }));
 
 vi.mock('@/lib/csv.ts', async (importOriginal) => {
@@ -96,7 +96,7 @@ describe('InternalProjectsTable', () => {
     );
 
     expect(
-      screen.getByTitle('GL/PPM reconciliation discrepancy')
+      screen.getByLabelText('GL/PPM reconciliation discrepancy')
     ).toBeInTheDocument();
   });
 
@@ -112,7 +112,7 @@ describe('InternalProjectsTable', () => {
     );
 
     expect(
-      screen.queryByTitle('GL/PPM reconciliation discrepancy')
+      screen.queryByLabelText('GL/PPM reconciliation discrepancy')
     ).not.toBeInTheDocument();
   });
 

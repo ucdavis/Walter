@@ -115,7 +115,7 @@
   }
 
   .floating-tooltip {
-    @apply pointer-events-none z-[200] max-w-sm rounded bg-neutral px-2 py-1 text-sm leading-tight text-neutral-content shadow-lg;
+    @apply z-[200] max-w-sm rounded bg-neutral px-2 py-1 text-sm leading-tight text-neutral-content shadow-lg;
     position: relative;
   }
 

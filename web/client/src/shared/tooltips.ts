@@ -2,8 +2,7 @@ export const tooltipDefinitions = {
   awardCloseDate:
     'Final closeout date after which charges can no longer be posted to the award.',
   balance: 'Balance is your total budget minus expenses and commitments',
-  billingCycle:
-    'How often the system is set to generate sponsor billing.',
+  billingCycle: 'How often the system is set to generate sponsor billing.',
   burdenScheduleRate:
     'Indirect cost rate setup used to calculate burden on eligible expenses.',
   burdenStructure:
@@ -17,23 +16,29 @@ export const tooltipDefinitions = {
     'Indicates whether the sponsor requires the university to contribute part of the project cost.',
   distributionPercent:
     "Distribution percent shows what share of the position's effort and pay is charged to this funding line.",
+  endingWithinThreeMonths: 'Ending within 3 months',
   expenditureCategory:
     'High-level grouping of costs, such as labor, travel, or supplier costs.',
+  failedToSaveLabel: 'Failed to save label',
   fte: 'Full-Time Equivalent (FTE) equals one employee working 100% time.',
   grantAdministrator:
     'Research admin contact for award setup and ongoing award administration.',
   monthlyCbr:
     'Monthly composite benefit rate cost, including fringe/benefit burden.',
+  openDepartmentDetails: 'Open department details',
   postReportingPeriod:
     'Number of days after the award end date allowed for reporting and closeout activity.',
   projectBurndown:
     "Choose a timeline to view the project's remaining budget, including three months of actuals and the current month. Use the toggles to view All Expenses, Personnel, or Non-Personnel.",
+  reconciliationDiscrepancy: 'GL/PPM reconciliation discrepancy',
+  selectFinancialDepartmentFirst: 'Select a financial department first',
   taskBreakdown:
     'Summary of how project costs are organized by financial coding segments.',
   totalBalance:
     'Total remaining balance (budget minus expenses and commitments) across all active and expired projects. Closed projects are excluded.',
   totalBudget:
     'Total PPM budget across all active and expired projects. Closed projects are excluded.',
+  viewChartStringInFinjector: 'View chart string in Finjector',
 } as const;
 
 export type TooltipDefinitionKey = keyof typeof tooltipDefinitions;

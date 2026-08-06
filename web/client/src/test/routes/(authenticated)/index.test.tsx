@@ -357,7 +357,7 @@ describe('home route', () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
 
       expect(
-        screen.queryByTitle('GL/PPM reconciliation discrepancy')
+        screen.queryByLabelText('GL/PPM reconciliation discrepancy')
       ).not.toBeInTheDocument();
       expect(reconciliationCalls).toBe(0);
     } finally {

@@ -31,6 +31,8 @@ import {
   type AccrualOverviewResponse,
 } from '@/queries/accrual.ts';
 import { DataTable } from '@/shared/DataTable.tsx';
+import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
+import { tooltipDefinitions } from '@/shared/tooltips.ts';
 
 const asOfDateFormatter = new Intl.DateTimeFormat('en-US', {
   day: 'numeric',
@@ -135,15 +137,20 @@ export function VacationAccrualOverview({
       accessorKey: 'department',
       cell: (info) => (
         <div className="flex items-start">
-          <Link
-            aria-label={`Open ${info.getValue<string>()} department details`}
-            className="link link-hover text-inherit"
-            params={{ departmentCode: info.row.original.departmentCode }}
-            title="Open department details"
-            to="/accruals/department/$departmentCode"
-          >
-            {info.getValue<string>()}
-          </Link>
+          <TooltipLabel
+            asChild
+            label={
+              <Link
+                aria-label={`Open ${info.getValue<string>()} department details`}
+                className="link link-hover text-inherit"
+                params={{ departmentCode: info.row.original.departmentCode }}
+                to="/accruals/department/$departmentCode"
+              >
+                {info.getValue<string>()}
+              </Link>
+            }
+            tooltip={tooltipDefinitions.openDepartmentDetails}
+          />
         </div>
       ),
       footer: () => 'CAES Total',
@@ -253,10 +260,7 @@ export function VacationAccrualOverview({
         <section className="section-margin">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
-              <Link
-                className="btn btn-sm mb-4"
-                to="/accruals"
-              >
+              <Link className="btn btn-sm mb-4" to="/accruals">
                 <ArrowLeftIcon className="h-4 w-4" />
                 Department Selector
               </Link>

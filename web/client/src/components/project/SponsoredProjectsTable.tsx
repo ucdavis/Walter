@@ -129,12 +129,32 @@ const csvColumns = [
   { header: 'Award Number', key: 'awardNumber' as const },
   { header: 'Award Type', key: 'awardType' as const },
   { header: 'Award Status', key: 'awardStatus' as const },
-  { format: 'date' as const, header: 'Effective Date', key: 'awardStartDate' as const },
+  {
+    format: 'date' as const,
+    header: 'Effective Date',
+    key: 'awardStartDate' as const,
+  },
   { format: 'date' as const, header: 'End Date', key: 'awardEndDate' as const },
-  { format: 'currency' as const, header: 'Budget', key: 'totalBudget' as const },
-  { format: 'currency' as const, header: 'Expense', key: 'totalExpense' as const },
-  { format: 'currency' as const, header: 'Commitment', key: 'totalEncumbrance' as const },
-  { format: 'currency' as const, header: 'Balance', key: 'totalBalance' as const },
+  {
+    format: 'currency' as const,
+    header: 'Budget',
+    key: 'totalBudget' as const,
+  },
+  {
+    format: 'currency' as const,
+    header: 'Expense',
+    key: 'totalExpense' as const,
+  },
+  {
+    format: 'currency' as const,
+    header: 'Commitment',
+    key: 'totalEncumbrance' as const,
+  },
+  {
+    format: 'currency' as const,
+    header: 'Balance',
+    key: 'totalBalance' as const,
+  },
 ];
 
 interface SponsoredProjectsTableProps {
@@ -159,7 +179,8 @@ export function SponsoredProjectsTable({
   );
 
   const projects = useMemo(
-    () => (showExpired ? allProjects : allProjects.filter((p) => !isExpired(p))),
+    () =>
+      showExpired ? allProjects : allProjects.filter((p) => !isExpired(p)),
     [allProjects, showExpired]
   );
 
@@ -172,7 +193,12 @@ export function SponsoredProjectsTable({
           totalEncumbrance: acc.totalEncumbrance + p.totalEncumbrance,
           totalExpense: acc.totalExpense + p.totalExpense,
         }),
-        { totalBalance: 0, totalBudget: 0, totalEncumbrance: 0, totalExpense: 0 }
+        {
+          totalBalance: 0,
+          totalBudget: 0,
+          totalEncumbrance: 0,
+          totalExpense: 0,
+        }
       ),
     [projects]
   );
@@ -182,32 +208,39 @@ export function SponsoredProjectsTable({
       // Accessor concatenates name + number so the global filter matches on
       // either — the cell visibly renders both, but TanStack only filters
       // accessor values, not rendered output.
-      columnHelper.accessor((row) => `${row.displayName} ${row.projectNumber}`, {
-        cell: (info) => {
-          const { displayName: name, projectNumber } = info.row.original;
-          return (
-            <Link
-              className="link no-underline flex items-start gap-1"
-              params={{ iamId, projectNumber }}
-              to="/projects/$iamId/$projectNumber/"
-            >
-              <div className="min-w-0">
-                <div className="text-xs text-base-content/70 no-underline">
-                  {projectNumber}
-                </div>
-                <div className="truncate underline" title={name}>
-                  {name}
-                </div>
-              </div>
-            </Link>
-          );
-        },
-        footer: () => 'Totals',
-        header: 'Project',
-        id: 'displayName',
-        minSize: 250,
-        size: 300,
-      }),
+      columnHelper.accessor(
+        (row) => `${row.displayName} ${row.projectNumber}`,
+        {
+          cell: (info) => {
+            const { displayName: name, projectNumber } = info.row.original;
+            return (
+              <TooltipLabel
+                asChild
+                label={
+                  <Link
+                    className="link no-underline flex items-start gap-1"
+                    params={{ iamId, projectNumber }}
+                    to="/projects/$iamId/$projectNumber/"
+                  >
+                    <div className="min-w-0">
+                      <div className="text-xs text-base-content/70 no-underline">
+                        {projectNumber}
+                      </div>
+                      <div className="truncate underline">{name}</div>
+                    </div>
+                  </Link>
+                }
+                tooltip={name}
+              />
+            );
+          },
+          footer: () => 'Totals',
+          header: 'Project',
+          id: 'displayName',
+          minSize: 250,
+          size: 300,
+        }
+      ),
       columnHelper.accessor('awardStartDate', {
         cell: (info) => (
           <span className="flex justify-end">
@@ -291,20 +324,30 @@ export function SponsoredProjectsTable({
         cell: (info) => {
           const value = info.getValue();
           return (
-            <span className={`flex justify-end ${value < 0 ? 'text-error' : ''}`}>
+            <span
+              className={`flex justify-end ${value < 0 ? 'text-error' : ''}`}
+            >
               {formatCurrency(value)}
             </span>
           );
         },
         footer: () => (
-          <span className={`flex justify-end ${totals.totalBalance < 0 ? 'text-error' : ''}`}>
+          <span
+            className={`flex justify-end ${totals.totalBalance < 0 ? 'text-error' : ''}`}
+          >
             {formatCurrency(totals.totalBalance)}
           </span>
         ),
         header: () => <span className="flex justify-end">Balance</span>,
       }),
     ],
-    [iamId, totals.totalBalance, totals.totalBudget, totals.totalEncumbrance, totals.totalExpense]
+    [
+      iamId,
+      totals.totalBalance,
+      totals.totalBudget,
+      totals.totalEncumbrance,
+      totals.totalExpense,
+    ]
   );
 
   if (allProjects.length === 0) {
@@ -319,28 +362,26 @@ export function SponsoredProjectsTable({
         footerRowClassName="totaltr"
         globalFilter="left"
         initialState={{ pagination: { pageSize: 25 } }}
-        tableActions={(table) =>
-          (
-            <div className="flex flex-wrap items-center gap-2">
-              {expiredCount > 0 && (
-                <button
-                  className={`btn btn-sm${showExpired ? ' btn-active' : ''}`}
-                  onClick={() => setShowExpired((current) => !current)}
-                  type="button"
-                >
-                  {showExpired ? 'Hide' : 'Show'} expired ({expiredCount})
-                </button>
-              )}
-              <TableExportActions
-                baseFilename="projects"
-                columns={csvColumns}
-                data={projects}
-                table={table}
-                toRows={(rows) => rows}
-              />
-            </div>
-          )
-        }
+        tableActions={(table) => (
+          <div className="flex flex-wrap items-center gap-2">
+            {expiredCount > 0 && (
+              <button
+                className={`btn btn-sm${showExpired ? ' btn-active' : ''}`}
+                onClick={() => setShowExpired((current) => !current)}
+                type="button"
+              >
+                {showExpired ? 'Hide' : 'Show'} expired ({expiredCount})
+              </button>
+            )}
+            <TableExportActions
+              baseFilename="projects"
+              columns={csvColumns}
+              data={projects}
+              table={table}
+              toRows={(rows) => rows}
+            />
+          </div>
+        )}
       />
     </div>
   );
