@@ -55,10 +55,10 @@ stages:
             workingDirectory: $(clientDir)
 
           - task: UseDotNet@2
-            displayName: Use .NET SDK 8.0
+            displayName: Use .NET SDK 10.0
             inputs:
               packageType: sdk
-              version: 8.0.x
+              version: 10.0.x
 
           - script: dotnet restore $(solutionPath)
             displayName: Restore .NET solution

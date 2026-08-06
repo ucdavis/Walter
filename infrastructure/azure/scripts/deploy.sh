@@ -26,8 +26,8 @@ Naming:
 
 Other:
   -l, --location                 Location used if resource group must be created (default: westus2)
-      --linux-fx-version         App Service runtime stack (default: DOTNETCORE|8.0)
-      --function-linux-fx-version  Azure Functions runtime stack (default: DOTNET-ISOLATED|8.0)
+      --linux-fx-version         App Service runtime stack (default: DOTNETCORE|10.0)
+      --function-linux-fx-version  Azure Functions runtime stack (default: DOTNET-ISOLATED|10.0)
       --allow-azure-services-to-sql  Adds SQL firewall rule AllowAzureServices (0.0.0.0)
       --what-if                  Run in what-if mode (no changes)
   -h, --help                     Show help
@@ -62,8 +62,8 @@ SQL_ADMIN_LOGIN_VALUE="${SQL_ADMIN_LOGIN:-}"
 SQL_ADMIN_PASSWORD_VALUE="${SQL_ADMIN_PASSWORD:-}"
 DATAMART_CONNECTION_STRING_VALUE="${DM_CONNECTION:-}"
 
-LINUX_FX_VERSION="DOTNETCORE|8.0"
-FUNCTION_LINUX_FX_VERSION="DOTNET-ISOLATED|8.0"
+LINUX_FX_VERSION="DOTNETCORE|10.0"
+FUNCTION_LINUX_FX_VERSION="DOTNET-ISOLATED|10.0"
 ALLOW_AZURE_SERVICES_TO_SQL="false"
 WHAT_IF="false"
 CREATE_SQL_SERVER="true"

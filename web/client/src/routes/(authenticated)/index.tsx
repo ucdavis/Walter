@@ -9,10 +9,6 @@ import { PrincipalInvestigatorsTable } from '@/components/project/PrincipalInves
 import { InternalProjectsTable } from '@/components/project/InternalProjectsTable.tsx';
 import { SponsoredProjectsTable } from '@/components/project/SponsoredProjectsTable.tsx';
 import { SearchButton } from '@/components/search/SearchButton.tsx';
-import {
-  LeftHomeDoodles,
-  RightHomeDoodles,
-} from '@/components/home/HomeDoodles.tsx';
 import { getProjectListAlerts } from '@/lib/projectAlerts.ts';
 import {
   useManagedPisQuery,
@@ -144,15 +140,6 @@ function RouteComponent() {
     <>
       <NotificationBanner />
       <div className="relative">
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 top-0 hidden h-56 overflow-hidden select-none lg:block"
-        >
-          <div className="container relative h-full">
-            <LeftHomeDoodles className="absolute left-[-100px] -top-5 w-[300px] max-w-none" />
-            <RightHomeDoodles className="absolute right-[-100px] -top-10 w-[265px] max-w-none" />
-          </div>
-        </div>
         <div className="container relative">
           <div className="pt-24 pb-5 mx-auto w-full sm:max-w-[90%] md:max-w-[80%] xl:max-w-[66%]">
             <h1 className="text-2xl font-proxima-bold">W.A.L.T.E.R.</h1>

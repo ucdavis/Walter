@@ -19,7 +19,10 @@ import {
   DIMENSIONS,
   activeColumns,
   activeMeasures,
+  joinCodeList,
   labelKeyOf,
+  parseCodeList,
+  parseFieldList,
   rowGroupLabel,
   rowLabelSegments,
   type MeasureDef,
@@ -44,6 +47,21 @@ import { meQueryOptions } from '@/queries/user.ts';
 import { RouterContext } from '@/main.tsx';
 import { redirect } from '@tanstack/react-router';
 
+// Report criteria live in the URL so a configured report can be shared as a link.
+// Code lists are comma-joined strings (see parseCodeList).
+interface ReportSearch {
+  accounts?: string;
+  activities?: string;
+  depts?: string;
+  entities?: string;
+  fields?: string;
+  funds?: string;
+  period?: string;
+  programs?: string;
+  projects?: string;
+  purposes?: string;
+}
+
 export const Route = createFileRoute(
   '/(authenticated)/reports/department-balances/'
 )({
@@ -55,6 +73,24 @@ export const Route = createFileRoute(
     }
   },
   component: RouteComponent,
+  validateSearch: (search: Record<string, unknown>): ReportSearch => {
+    const clean = (v: unknown) => joinCodeList(parseCodeList(v));
+    return {
+      accounts: clean(search.accounts),
+      activities: clean(search.activities),
+      depts: clean(search.depts),
+      entities: clean(search.entities),
+      fields: joinCodeList(parseFieldList(search.fields)),
+      funds: clean(search.funds),
+      period:
+        typeof search.period === 'string' && search.period.trim() !== ''
+          ? search.period.trim()
+          : undefined,
+      programs: clean(search.programs),
+      projects: clean(search.projects),
+      purposes: clean(search.purposes),
+    };
+  },
 });
 
 // Report row enriched with its shared label (matched by exact segment-combination key).
@@ -176,16 +212,56 @@ const toFilterOptions = (
 };
 
 function RouteComponent() {
-  const [department, setDepartment] = useState<string[]>([]);
-  const [filters, setFilters] = useState<DepartmentBalancesFilters>({});
-  const [dimensions, setDimensions] = useState<string[]>([]);
-  const [period, setPeriod] = useState('');
+  const search = Route.useSearch();
+  const navigate = Route.useNavigate();
   const [criteriaOpen, setCriteriaOpen] = useState(true);
   const [showBalanceSheet, setShowBalanceSheet] = useState(false);
 
+  // Selections are derived from the (sanitized) URL; setters below navigate with
+  // replace so filter tweaks don't pile up history entries.
+  const department = useMemo(() => parseCodeList(search.depts), [search.depts]);
+  const dimensions = useMemo(() => parseFieldList(search.fields), [search.fields]);
+  const filters = useMemo<DepartmentBalancesFilters>(() => {
+    const list = (v?: string) => {
+      const codes = parseCodeList(v);
+      return codes.length > 0 ? codes : undefined;
+    };
+    return {
+      accounts: list(search.accounts),
+      activities: list(search.activities),
+      entities: list(search.entities),
+      funds: list(search.funds),
+      programs: list(search.programs),
+      projects: list(search.projects),
+      purposes: list(search.purposes),
+    };
+  }, [
+    search.accounts,
+    search.activities,
+    search.entities,
+    search.funds,
+    search.programs,
+    search.projects,
+    search.purposes,
+  ]);
+
+  const setDimensions = (keys: string[]) => {
+    void navigate({
+      replace: true,
+      search: (prev: ReportSearch) => ({ ...prev, fields: joinCodeList(keys) }),
+    });
+  };
+
+  const setPeriod = (value: string) => {
+    void navigate({
+      replace: true,
+      search: (prev: ReportSearch) => ({ ...prev, period: value || undefined }),
+    });
+  };
+
   const periodOptions = useDepartmentBalanceOptions('Period', {});
   // Server orders periods newest first; the first option is the current close.
-  const effectivePeriod = period || periodOptions.data?.[0]?.code;
+  const effectivePeriod = search.period ?? periodOptions.data?.[0]?.code;
 
   const query = useMemo(
     () => ({
@@ -358,26 +434,32 @@ function RouteComponent() {
   );
 
   const setFilter = <
-    K extends Exclude<keyof DepartmentBalancesFilters, 'periodName'>,
+    K extends Exclude<
+      keyof DepartmentBalancesFilters,
+      'financialDepartments' | 'periodName'
+    >,
   >(
     key: K,
     values: string[]
   ) => {
-    setFilters((prev) => ({
-      ...prev,
-      [key]: values.length > 0 ? values : undefined,
-    }));
+    void navigate({
+      replace: true,
+      search: (prev: ReportSearch) => ({ ...prev, [key]: joinCodeList(values) }),
+    });
   };
 
   // Department drives the scope of every other facet, so changing the selection
   // clears the dependent filters to avoid keeping now-out-of-scope values. Clearing
   // it entirely also resets the group-by, since results are always department-scoped.
   const handleDeptChange = (codes: string[]) => {
-    setDepartment(codes);
-    setFilters({});
-    if (codes.length === 0) {
-      setDimensions([]);
-    }
+    void navigate({
+      replace: true,
+      search: (prev: ReportSearch) => ({
+        depts: joinCodeList(codes),
+        fields: codes.length > 0 ? prev.fields : undefined,
+        period: prev.period,
+      }),
+    });
   };
 
   // Disabled controls cannot receive focus, so their wrappers expose the prerequisite.

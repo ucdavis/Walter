@@ -80,3 +80,31 @@ export const rowLabelSegments = (
 
 export const labelKeyOf = (s: LabelSegments): string =>
   [s.dept, s.fund, s.account, s.purpose, s.project, s.activity].join('|');
+
+const MAX_CODES_PER_PARAM = 500;
+
+export const parseCodeList = (value: unknown): string[] => {
+  if (typeof value !== 'string' && typeof value !== 'number') {
+    return [];
+  }
+  const codes = [
+    ...new Set(
+      String(value)
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+    ),
+  ];
+  if (codes.length > MAX_CODES_PER_PARAM) {
+    throw new Error(`Too many codes in URL parameter (${codes.length} > ${MAX_CODES_PER_PARAM}).`);
+  }
+  return codes;
+};
+
+export const joinCodeList = (values: string[]): string | undefined =>
+  values.length > 0 ? values.join(',') : undefined;
+
+export const parseFieldList = (value: unknown): string[] =>
+  parseCodeList(value)
+    .map((k) => DIMENSIONS.find((d) => d.key.toLowerCase() === k.toLowerCase())?.key)
+    .filter((k): k is string => k !== undefined);

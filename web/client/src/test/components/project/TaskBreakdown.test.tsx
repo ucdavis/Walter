@@ -134,7 +134,7 @@ describe('TaskBreakdown', () => {
     );
   });
 
-  it('links each task to Finjector for internal projects', () => {
+  it('shows a Finjector action beside each internal task', () => {
     render(
       <TaskBreakdown
         isInternal={true}
@@ -143,12 +143,24 @@ describe('TaskBreakdown', () => {
       />
     );
 
-    const link = screen.getByRole('link', { name: /T001/ });
+    expect(screen.getByText('T001').closest('a')).toBeNull();
+
+    const link = screen.getByRole('link', { name: 'Open in Finjector' });
     expect(link).toHaveAttribute(
       'href',
       'https://finjector.ucdavis.edu/details/P1-T001-ORG001-522201/'
     );
     expect(link).toHaveAttribute('target', '_blank');
+    const iconTooltip = link.querySelector('[data-tip="Open in Finjector"]');
+    expect(iconTooltip).toHaveClass('tooltip', 'tooltip-bottom');
+    expect(iconTooltip?.firstElementChild).toHaveClass(
+      'btn',
+      'btn-ghost',
+      'btn-xs'
+    );
+    expect(
+      screen.getByRole('button', { name: 'Copy chartstring' })
+    ).toHaveClass('btn', 'btn-ghost', 'btn-xs');
   });
 
   it('does not link tasks to Finjector for sponsored projects', () => {
@@ -164,6 +176,55 @@ describe('TaskBreakdown', () => {
       screen.queryByRole('link', { name: /T001/ })
     ).not.toBeInTheDocument();
     expect(screen.getByText('T001')).toBeInTheDocument();
+  });
+
+  it('shows chartstring values in the Task column instead of separate columns', () => {
+    render(
+      <TaskBreakdown
+        isInternal={false}
+        projectNumber="P1"
+        records={[createProject({ activityCode: 'ACT1' })]}
+      />
+    );
+
+    expect(screen.getByText('ORG001').parentElement?.parentElement).toHaveClass(
+      'text-xs',
+      'text-base-content/80'
+    );
+
+    for (const value of ['ORG001', 'FUND1', 'PROG1', 'ACT1']) {
+      expect(screen.getByText(value)).toHaveClass('tooltip-label');
+    }
+
+    for (const header of ['Dept', 'Fund', 'Program', 'Activity']) {
+      expect(
+        screen.queryByRole('columnheader', { name: header })
+      ).not.toBeInTheDocument();
+    }
+  });
+
+  it('shows chartfield details when hovering values in the Task column', async () => {
+    const user = userEvent.setup();
+    render(
+      <TaskBreakdown
+        isInternal={false}
+        projectNumber="P1"
+        records={[
+          createProject({
+            activityCode: 'ACT1',
+            projectOwningOrg: 'Animal Science Department',
+          }),
+        ]}
+      />
+    );
+
+    await user.hover(screen.getByText('ORG001').parentElement as HTMLElement);
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+      'Animal Science Department'
+    );
+
+    await user.hover(screen.getByText('FUND1').parentElement as HTMLElement);
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Fund');
   });
 
   it('shows the filtered export action only when a search filter is active', () => {

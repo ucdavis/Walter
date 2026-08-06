@@ -4,6 +4,13 @@ Azure Functions isolated worker for Walter scheduled notification jobs.
 
 This project owns timer-triggered notification work that should not run inside the ASP.NET web app process. It references `server.core` for queueing, accrual notification generation, Razor/MJML rendering, and outbound message sending.
 
+## Runtime Requirements
+
+- .NET 10 SDK for local builds and publishing.
+- Azure Functions runtime 4.x.
+- Linux Functions stack `DOTNET-ISOLATED|10.0`.
+- `FUNCTIONS_WORKER_RUNTIME=dotnet-isolated` and `FUNCTIONS_EXTENSION_VERSION=~4` in the Function App settings.
+
 ## Functions
 
 - `GenerateMonthlyAccrualNotificationsAsync`
@@ -54,6 +61,7 @@ Configuration sources:
 Required now:
 
 - `AzureWebJobsStorage`: required by the Azure Functions runtime.
+- `FUNCTIONS_EXTENSION_VERSION=~4`: required Azure Functions host major version.
 - `FUNCTIONS_WORKER_RUNTIME=dotnet-isolated`: required by the Azure Functions runtime.
 - `DB_CONNECTION`: app database connection string used by `AppDbContext`.
 - `DM_CONNECTION`: Datamart connection string used by `DatamartService`.
@@ -92,5 +100,7 @@ To keep local runs inert, leave both enabled flags set to `false`. To test a spe
 `web/azure-pipelines.yml` publishes this project into `notifications-worker.zip` and deploys it with `AzureFunctionApp@2`.
 
 Infrastructure in `infrastructure/azure/main.bicep` creates a separate Linux Function App on the same existing App Service Plan as the web app, plus the storage account required by the Functions runtime.
+
+.NET 10 Functions aren't supported on the Linux Consumption plan. Walter keeps the worker on the same existing App Service Plan as the web app, which avoids that unsupported hosting configuration.
 
 The pipeline expects a `functionAppName` variable in the same variable group that provides `webAppName`.
