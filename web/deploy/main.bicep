@@ -70,7 +70,7 @@ resource sqlDb 'Microsoft.Sql/servers/databases@2024-05-01-preview' = {
   }
 }
 
-// Web app (Linux, .NET 8)
+// Web app (Linux, .NET 10)
 resource webApp 'Microsoft.Web/sites@2024-11-01' = {
   name: webAppName
   location: location
@@ -81,7 +81,7 @@ resource webApp 'Microsoft.Web/sites@2024-11-01' = {
     
     // Keep siteConfig *minimal* so you don't accidentally clobber settings.
     siteConfig: {
-      linuxFxVersion: 'DOTNETCORE|8.0'
+      linuxFxVersion: 'DOTNETCORE|10.0'
       minimumElasticInstanceCount: 1
     }
   }
