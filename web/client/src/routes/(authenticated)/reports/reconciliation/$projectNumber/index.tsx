@@ -94,8 +94,12 @@ function RouteComponent() {
       columnHelper.accessor('project', {
         cell: (info) => (
           <TooltipLabel
+            focusable={false}
             label={info.getValue()}
             placement="bottom"
+            screenReaderLabel={
+              info.row.original.projectDescription ?? undefined
+            }
             tooltip={info.row.original.projectDescription ?? undefined}
           />
         ),
@@ -104,8 +108,10 @@ function RouteComponent() {
       columnHelper.accessor('fundCode', {
         cell: (info) => (
           <TooltipLabel
+            focusable={false}
             label={info.getValue() ?? '-'}
             placement="bottom"
+            screenReaderLabel={info.row.original.fundDescription ?? undefined}
             tooltip={info.row.original.fundDescription ?? undefined}
           />
         ),
@@ -114,8 +120,12 @@ function RouteComponent() {
       columnHelper.accessor('ppmFundCode', {
         cell: (info) => (
           <TooltipLabel
+            focusable={false}
             label={info.getValue()}
             placement="bottom"
+            screenReaderLabel={
+              info.row.original.ppmFundDescription ?? undefined
+            }
             tooltip={info.row.original.ppmFundDescription ?? undefined}
           />
         ),
@@ -124,8 +134,12 @@ function RouteComponent() {
       columnHelper.accessor('programCode', {
         cell: (info) => (
           <TooltipLabel
+            focusable={false}
             label={info.getValue() ?? '-'}
             placement="bottom"
+            screenReaderLabel={
+              info.row.original.programDescription ?? undefined
+            }
             tooltip={info.row.original.programDescription ?? undefined}
           />
         ),
@@ -134,8 +148,12 @@ function RouteComponent() {
       columnHelper.accessor('activityCode', {
         cell: (info) => (
           <TooltipLabel
+            focusable={false}
             label={info.getValue() ?? '-'}
             placement="bottom"
+            screenReaderLabel={
+              info.row.original.activityDescription ?? undefined
+            }
             tooltip={info.row.original.activityDescription ?? undefined}
           />
         ),

@@ -24,18 +24,27 @@ type TooltipChildProps = HTMLAttributes<HTMLElement> & {
 interface TooltipLabelProps {
   asChild?: boolean;
   className?: string;
+  /**
+   * Keeps repeated display values, such as table cells, out of the Tab order
+   * while retaining their hover tooltip. Pair with screenReaderLabel when the
+   * tooltip adds context that must be available to assistive technology.
+   */
+  focusable?: boolean;
   label: ReactNode;
   labelClassName?: string;
   placement?: 'bottom' | 'left' | 'right' | 'top';
+  screenReaderLabel?: string;
   tooltip?: string;
 }
 
 export function TooltipLabel({
   asChild = false,
   className,
+  focusable = true,
   label,
   labelClassName,
   placement = 'top',
+  screenReaderLabel,
   tooltip,
 }: TooltipLabelProps) {
   const [open, setOpen] = useState(false);
@@ -126,12 +135,15 @@ export function TooltipLabel({
     <span
       {...getReferenceProps({
         className: triggerClasses.join(' '),
-        tabIndex: 0,
+        tabIndex: focusable ? 0 : undefined,
       })}
       data-tooltip-placement={placement}
       ref={setReference}
     >
       <span className={labelClasses.join(' ')}>{label}</span>
+      {screenReaderLabel ? (
+        <span className="sr-only">{screenReaderLabel}</span>
+      ) : null}
     </span>
   );
 

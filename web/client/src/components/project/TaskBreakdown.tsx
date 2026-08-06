@@ -162,8 +162,10 @@ export function TaskBreakdown({
       columnHelper.accessor('financialDepartmentCode', {
         cell: (info) => (
           <TooltipLabel
+            focusable={false}
             label={info.getValue()}
             placement="bottom"
+            screenReaderLabel={info.row.original.financialDepartment}
             tooltip={info.row.original.financialDepartment}
           />
         ),
@@ -172,8 +174,10 @@ export function TaskBreakdown({
       columnHelper.accessor('fundCode', {
         cell: (info) => (
           <TooltipLabel
+            focusable={false}
             label={info.getValue()}
             placement="bottom"
+            screenReaderLabel={info.row.original.fundDesc}
             tooltip={info.row.original.fundDesc}
           />
         ),
@@ -182,8 +186,10 @@ export function TaskBreakdown({
       columnHelper.accessor('programCode', {
         cell: (info) => (
           <TooltipLabel
+            focusable={false}
             label={info.getValue()}
             placement="bottom"
+            screenReaderLabel={info.row.original.programDesc}
             tooltip={info.row.original.programDesc}
           />
         ),
@@ -192,8 +198,10 @@ export function TaskBreakdown({
       columnHelper.accessor('activityCode', {
         cell: (info) => (
           <TooltipLabel
+            focusable={false}
             label={info.getValue()}
             placement="bottom"
+            screenReaderLabel={info.row.original.activityDesc}
             tooltip={info.row.original.activityDesc}
           />
         ),

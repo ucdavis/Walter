@@ -183,6 +183,7 @@ function DistributionSubtable({
               <td className="text-sm">
                 <TooltipLabel
                   className="block min-w-0"
+                  focusable={false}
                   label={dist.record.projectDescription}
                   labelClassName="block truncate"
                   placement="bottom"

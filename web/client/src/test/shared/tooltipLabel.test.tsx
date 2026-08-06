@@ -55,4 +55,38 @@ describe('TooltipLabel', () => {
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
     expect(screen.getByText('Balance').parentElement).toHaveFocus();
   });
+
+  it('keeps repeated display values out of the Tab order when requested', async () => {
+    const user = userEvent.setup();
+    render(
+      <>
+        <button type="button">Before</button>
+        <TooltipLabel
+          focusable={false}
+          label="Department 123"
+          screenReaderLabel="Department of Example Studies"
+          tooltip="Department of Example Studies"
+        />
+        <button type="button">After</button>
+      </>
+    );
+
+    const trigger = screen.getByText('Department 123')
+      .parentElement as HTMLElement;
+
+    await user.tab();
+    expect(screen.getByRole('button', { name: 'Before' })).toHaveFocus();
+
+    await user.tab();
+    expect(screen.getByRole('button', { name: 'After' })).toHaveFocus();
+
+    expect(screen.getByText('Department of Example Studies')).toHaveClass(
+      'sr-only'
+    );
+
+    await user.hover(trigger);
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+      'Department of Example Studies'
+    );
+  });
 });
