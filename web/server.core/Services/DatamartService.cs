@@ -347,10 +347,12 @@ public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
             new
             {
                 Dimensions = ToCsvParam(query.Dimensions),
+                Entities = ToCsvParam(query.Entities),
                 FinancialDepartments = ToCsvParam(query.FinancialDepartments),
                 Funds = ToCsvParam(query.Funds),
                 Accounts = ToCsvParam(query.Accounts),
                 Purposes = ToCsvParam(query.Purposes),
+                Programs = ToCsvParam(query.Programs),
                 Projects = ToCsvParam(query.Projects),
                 Activities = ToCsvParam(query.Activities),
                 PeriodName = query.PeriodName,
@@ -369,10 +371,12 @@ public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
             new
             {
                 Segment = query.Segment,
+                Entities = ToCsvParam(query.Entities),
                 FinancialDepartments = ToCsvParam(query.FinancialDepartments),
                 Funds = ToCsvParam(query.Funds),
                 Accounts = ToCsvParam(query.Accounts),
                 Purposes = ToCsvParam(query.Purposes),
+                Programs = ToCsvParam(query.Programs),
                 Projects = ToCsvParam(query.Projects),
                 Activities = ToCsvParam(query.Activities),
                 PeriodName = query.PeriodName,

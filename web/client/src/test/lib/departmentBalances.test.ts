@@ -3,7 +3,11 @@ import {
   DIMENSIONS,
   MEASURES,
   activeColumns,
+  activeMeasures,
+  joinCodeList,
   labelKeyOf,
+  parseCodeList,
+  parseFieldList,
   rowGroupLabel,
   rowLabelSegments,
 } from '@/lib/departmentBalances.ts';
@@ -15,9 +19,9 @@ const row = (overrides: Partial<DepartmentBalanceRow>): DepartmentBalanceRow => 
 });
 
 describe('DIMENSIONS', () => {
-  it('exposes the six child-level segments', () => {
+  it('exposes the eight child-level segments', () => {
     expect(DIMENSIONS.map((d) => d.key)).toEqual([
-      'Dept', 'Fund', 'Account', 'Purpose', 'Project', 'Activity',
+      'Entity', 'Fund', 'Dept', 'Account', 'Purpose', 'Program', 'Project', 'Activity',
     ]);
   });
 });
@@ -25,15 +29,27 @@ describe('DIMENSIONS', () => {
 describe('MEASURES', () => {
   it('exposes only the displayed measures in display order', () => {
     expect(MEASURES.map((m) => m.key)).toEqual([
-      'revenue', 'expenses', 'endingBalance',
+      'netPosition', 'revenue', 'expenses', 'endingBalance',
     ]);
+  });
+});
+
+describe('activeMeasures', () => {
+  it('prepends assets and liabilities when the balance-sheet toggle is on', () => {
+    expect(activeMeasures(true).map((m) => m.key)).toEqual([
+      'assets', 'liabilities', 'netPosition', 'revenue', 'expenses', 'endingBalance',
+    ]);
+  });
+
+  it('returns only the always-on measures when the toggle is off', () => {
+    expect(activeMeasures(false)).toEqual(MEASURES);
   });
 });
 
 describe('activeColumns', () => {
   it('returns only the selected dimensions in catalog order', () => {
-    const cols = activeColumns(['Fund', 'Dept']);
-    expect(cols.map((c) => c.key)).toEqual(['Dept', 'Fund']);
+    const cols = activeColumns(['Dept', 'Fund']);
+    expect(cols.map((c) => c.key)).toEqual(['Fund', 'Dept']);
   });
 });
 
@@ -53,6 +69,17 @@ describe('rowGroupLabel', () => {
 });
 
 describe('rowLabelSegments', () => {
+  it('ignores segments outside the label key (entity, program)', () => {
+    const segments = rowLabelSegments(
+      row({ entity: '3110', fund: '13U00', program: '150' }),
+      ['Entity', 'Fund', 'Program']
+    );
+    expect(segments).toEqual({
+      account: '', activity: '', dept: '', fund: '13U00', project: '', purpose: '',
+    });
+  });
+
+
   it('keys a single-dimension row on just that segment', () => {
     const segments = rowLabelSegments(row({ fund: '13U00' }), ['Fund']);
     expect(segments).toEqual({
@@ -94,5 +121,67 @@ describe('labelKeyOf', () => {
     const a = rowLabelSegments(row({ fund: '13U00' }), ['Fund']);
     const b = rowLabelSegments(row({ dept: '13U00' }), ['Dept']);
     expect(labelKeyOf(a)).not.toBe(labelKeyOf(b));
+  });
+});
+
+describe('parseCodeList', () => {
+  it('splits a comma-joined string into codes', () => {
+    expect(parseCodeList('13U00,1100')).toEqual(['13U00', '1100']);
+  });
+
+  it('trims whitespace and drops empty entries', () => {
+    expect(parseCodeList(' 13U00 , ,1100,')).toEqual(['13U00', '1100']);
+  });
+
+  it('drops duplicate codes', () => {
+    expect(parseCodeList('1100,1100,1200')).toEqual(['1100', '1200']);
+  });
+
+  it('returns an empty list for missing or non-scalar values', () => {
+    expect(parseCodeList(undefined)).toEqual([]);
+    expect(parseCodeList(null)).toEqual([]);
+    expect(parseCodeList({ funds: '1100' })).toEqual([]);
+  });
+
+  it('accepts a numeric value the URL parser produced for an all-digit code', () => {
+    expect(parseCodeList(1100)).toEqual(['1100']);
+  });
+
+  it('accepts up to 500 distinct codes', () => {
+    const list = Array.from({ length: 500 }, (_, i) => `C${i}`).join(',');
+    expect(parseCodeList(list)).toHaveLength(500);
+  });
+
+  it('throws past 500 distinct codes rather than silently truncating', () => {
+    const huge = Array.from({ length: 501 }, (_, i) => `C${i}`).join(',');
+    expect(() => parseCodeList(huge)).toThrow('Too many codes');
+  });
+});
+
+describe('joinCodeList', () => {
+  it('joins codes with commas', () => {
+    expect(joinCodeList(['13U00', '1100'])).toBe('13U00,1100');
+  });
+
+  it('returns undefined for an empty list so the param drops from the URL', () => {
+    expect(joinCodeList([])).toBeUndefined();
+  });
+
+  it('round-trips through parseCodeList', () => {
+    expect(parseCodeList(joinCodeList(['A', 'B']))).toEqual(['A', 'B']);
+  });
+});
+
+describe('parseFieldList', () => {
+  it('keeps known dimension keys', () => {
+    expect(parseFieldList('Fund,Account')).toEqual(['Fund', 'Account']);
+  });
+
+  it('drops unknown keys', () => {
+    expect(parseFieldList('Fund,Bogus')).toEqual(['Fund']);
+  });
+
+  it('canonicalizes case for hand-edited links', () => {
+    expect(parseFieldList('fund,ACCOUNT')).toEqual(['Fund', 'Account']);
   });
 });
