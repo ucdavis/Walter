@@ -638,7 +638,7 @@ describe('project detail page', () => {
       expect(
         within(expenditureProgress).getByText('882 months (97%)')
       ).toBeInTheDocument();
-      expect(within(expenditureProgress).getAllByText('Time').length).toBe(2);
+      expect(within(expenditureProgress).getAllByText('Time')).toHaveLength(1);
       expect(
         within(expenditureProgress).getByText('All Expenses')
       ).toBeInTheDocument();
@@ -651,7 +651,7 @@ describe('project detail page', () => {
       for (const tick of ['0%', '20%', '40%', '60%', '80%', '100%']) {
         expect(within(budgetVsTimeAxis).getByText(tick)).toBeInTheDocument();
       }
-      expect(within(budgetVsTimeAxis).getByText('Time')).toBeInTheDocument();
+      expect(within(budgetVsTimeAxis).queryByText('Time')).not.toBeInTheDocument();
       expect(
         within(budgetVsTimeAxis).queryByText('120%')
       ).not.toBeInTheDocument();
@@ -951,7 +951,7 @@ describe('project detail page', () => {
           name: 'Project Expenditure Progress',
         })
       ).not.toBeInTheDocument();
-      expect(within(expenditureProgress).getAllByText('Time').length).toBe(2);
+      expect(within(expenditureProgress).getAllByText('Time')).toHaveLength(1);
       expect(
         within(expenditureProgress).getByText('912 months total')
       ).toBeInTheDocument();
