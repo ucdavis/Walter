@@ -52,6 +52,7 @@ GRANT SELECT ON [dbo].[ExpenditureTypeByAccount] TO [WalterAppRole];
 GRANT SELECT ON [dbo].[ErpFinDeptHierarchy] TO [WalterAppRole];
 GRANT SELECT ON [dbo].[ErpFundHierarchy] TO [WalterAppRole];
 GRANT SELECT ON [dbo].[ErpAccountHierarchy] TO [WalterAppRole];
+GRANT SELECT ON [dbo].[ChartStringSegment] TO [WalterAppRole];
 
 -- Grant pipeline role permissions
 GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[FacultyDeptPortfolio] TO [WalterPipelineRole];
@@ -87,6 +88,8 @@ GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[GlSummaryBalances_Staging] TO [Wa
 GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[ErpFinDeptHierarchy] TO [WalterPipelineRole];
 GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[ErpFundHierarchy] TO [WalterPipelineRole];
 GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[ErpAccountHierarchy] TO [WalterPipelineRole];
+-- pl_aedwh_loader upserts the unified CoA segment dimension on (SegmentName, Code).
+GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[ChartStringSegment] TO [WalterPipelineRole];
 
 
 
