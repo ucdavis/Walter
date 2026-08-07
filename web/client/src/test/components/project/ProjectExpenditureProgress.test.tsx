@@ -55,6 +55,9 @@ describe('ProjectExpenditureProgress', () => {
     )) {
       expect(marker).toHaveStyle({ left: '0%' });
     }
+    for (const axis of screen.getAllByTestId('budget-vs-time-axis')) {
+      expect(axis).not.toHaveTextContent('Time');
+    }
   });
 
   it('nets detail balances in the aggregate expense summary', () => {

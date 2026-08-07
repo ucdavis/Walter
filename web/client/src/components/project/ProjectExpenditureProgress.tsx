@@ -157,9 +157,6 @@ function PacingProgressAxis() {
           {tick}%
         </span>
       ))}
-      <span className="absolute bottom-1 left-1/2 -translate-x-1/2 font-proxima-bold uppercase">
-        Time
-      </span>
     </div>
   );
 }

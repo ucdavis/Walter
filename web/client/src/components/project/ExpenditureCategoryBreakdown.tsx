@@ -178,7 +178,7 @@ function ExpandableProgressView({
 
       <div
         className={[
-          'flex flex-col gap-4 w-full',
+          'flex min-w-0 flex-col gap-4 w-full',
           isOverlayActive
             ? [
                 'fixed z-100 bg-base-100 rounded-box shadow-xl p-4 min-h-0',
@@ -215,7 +215,9 @@ function ExpandableProgressView({
 
         <div
           className={
-            isOverlayActive ? 'flex-1 min-h-0 overflow-auto' : 'overflow-x-auto'
+            isOverlayActive
+              ? 'min-w-0 flex-1 min-h-0 overflow-y-auto'
+              : 'min-w-0'
           }
         >
           {children}
