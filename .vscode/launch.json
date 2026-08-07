@@ -6,7 +6,7 @@
       "type": "coreclr",
       "request": "launch",
       "preLaunchTask": "build (web server)",
-      "program": "${workspaceFolder}/web/server/bin/Debug/net8.0/server.dll",
+      "program": "${workspaceFolder}/web/server/bin/Debug/net10.0/server.dll",
       "args": [],
       "cwd": "${workspaceFolder}/web/server",
       "stopAtEntry": false,
