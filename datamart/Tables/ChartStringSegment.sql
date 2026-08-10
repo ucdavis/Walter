@@ -1,9 +1,11 @@
 -- Unified chart-of-accounts segment dimension: one row per segment value across all eight
 -- Aggie Enterprise CoA segments (Entity, Fund, Financial Department, Account, Purpose,
 -- Program, Project, Activity). Sourced from ae_dwh.erp_* by the Fabric pl_aedwh_loader
--- pipeline (bronze -> silver union -> upsert here on SegmentName, Code). Codes retired
--- from source linger, same accepted behavior as dbo.Projects; Projects also remains the
--- richer project-specific dimension.
+-- pipeline (bronze -> silver union -> upsert here on SegmentName, Code). The source exposes
+-- parent codes only; parent names are resolved in the loader by self-joining the segment on
+-- code = parent_level_N_code, so names here are snapshot-consistent with their codes. Codes
+-- retired from source linger, same accepted behavior as dbo.Projects; Projects also remains
+-- the richer project-specific dimension.
 create table dbo.ChartStringSegment
 (
     SegmentName      nvarchar(120) not null,  -- source segment_name, e.g. 'UCD Project'
@@ -11,11 +13,17 @@ create table dbo.ChartStringSegment
     Description      nvarchar(255) null,
     HierarchyDepth   int           null,
     ParentLevel0Code nvarchar(15)  null,      -- topmost rollup
+    ParentLevel0Name nvarchar(255) null,
     ParentLevel1Code nvarchar(15)  null,
+    ParentLevel1Name nvarchar(255) null,
     ParentLevel2Code nvarchar(15)  null,
+    ParentLevel2Name nvarchar(255) null,
     ParentLevel3Code nvarchar(15)  null,
+    ParentLevel3Name nvarchar(255) null,
     ParentLevel4Code nvarchar(15)  null,      -- nearest parent above the leaf
+    ParentLevel4Name nvarchar(255) null,
     ParentLevel5Code nvarchar(15)  null,
+    ParentLevel5Name nvarchar(255) null,
     LoadedAt         datetime2(3)  not null,
     constraint PK_ChartStringSegment
         primary key (SegmentName, Code)
