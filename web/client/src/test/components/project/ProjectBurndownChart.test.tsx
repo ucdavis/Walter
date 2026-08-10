@@ -8,9 +8,11 @@ import {
   formatBalanceAxisTick,
   getAwardEndMonthIndex,
   getBalanceStatClassName,
+  getCurrentMonthIndex,
   getRollingStartMonthIndex,
   getTimelineEndMonthIndex,
   getTimelineProjectionDate,
+  isProjectExpired,
   getVerticalMarkerStroke,
   getVerticalMarkerStrokeOpacity,
 } from '@/components/project/ProjectBurndownChart.tsx';
@@ -99,6 +101,25 @@ describe('ProjectBurndownChart axis helpers', () => {
     );
     expect(getAwardEndMonthIndex('2026-02-31')).toBeNull();
     expect(getAwardEndMonthIndex(null)).toBeNull();
+  });
+
+  it('computes the month index for a date', () => {
+    expect(getCurrentMonthIndex(new Date(2026, 7, 6))).toBe(
+      monthIndex(2026, 8)
+    );
+  });
+
+  it('detects expired projects from an award end month before the current month', () => {
+    expect(isProjectExpired(monthIndex(2026, 7), monthIndex(2026, 8))).toBe(
+      true
+    );
+    expect(isProjectExpired(monthIndex(2026, 8), monthIndex(2026, 8))).toBe(
+      false
+    );
+    expect(isProjectExpired(monthIndex(2026, 9), monthIndex(2026, 8))).toBe(
+      false
+    );
+    expect(isProjectExpired(null, monthIndex(2026, 8))).toBe(false);
   });
 
   it('gets the rolling x-axis start three months before the reference month', () => {

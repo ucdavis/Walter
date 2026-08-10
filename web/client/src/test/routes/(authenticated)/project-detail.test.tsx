@@ -838,6 +838,79 @@ describe('project detail page', () => {
     }
   });
 
+  it('hides projection UI for expired projects on the burndown page', async () => {
+    const projects = [
+      createProject({ awardEndDate: '2026-05-31', pmEmployeeId: '2000' }),
+    ];
+    const expiredProjection: ProjectProjectionResult = {
+      categories: [
+        {
+          budget: 500,
+          committed: 0,
+          expenditureCategory: '01 - Salaries and Wages',
+          isPersonnel: 1,
+          remainingNow: 400,
+          spentToDate: 100,
+        },
+      ],
+      periods: [
+        {
+          actualAmount: 40,
+          displayPeriod: 'Mar-26',
+          expenditureCategory: '01 - Salaries and Wages',
+          isPersonnel: 1,
+          kind: 'actual',
+          month: '2026-03',
+          projectedAmount: 0,
+          remaining: 470,
+        },
+        {
+          actualAmount: 30,
+          displayPeriod: 'Apr-26',
+          expenditureCategory: '01 - Salaries and Wages',
+          isPersonnel: 1,
+          kind: 'actual',
+          month: '2026-04',
+          projectedAmount: 0,
+          remaining: 440,
+        },
+        {
+          actualAmount: 40,
+          displayPeriod: 'May-26',
+          expenditureCategory: '01 - Salaries and Wages',
+          isPersonnel: 1,
+          kind: 'actual',
+          month: '2026-05',
+          projectedAmount: 0,
+          remaining: 400,
+        },
+      ],
+    };
+    setupHandlers(
+      { employeeId: '1000', name: 'PI User' },
+      projects,
+      expiredProjection
+    );
+
+    const { cleanup } = renderRoute({
+      initialPath: '/projectburndown/1000/P1',
+    });
+
+    try {
+      expect(
+        await screen.findByTestId('project-burndown-chart')
+      ).toBeInTheDocument();
+      expect(screen.getByText('Starting Balance')).toBeInTheDocument();
+      expect(screen.getByText('Current Balance')).toBeInTheDocument();
+      expect(screen.queryByText('Projected End')).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('combobox', { name: 'Timeline' })
+      ).not.toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+
   it('hides visualization actions for internal projects', async () => {
     const projects = [
       createProject({
