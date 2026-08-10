@@ -120,16 +120,22 @@ BEGIN
            funding- or job-end-date gating, projected flat across the whole horizon (the award
            end date is returned separately for the chart to mark). Salary is this project's share:
            MonthlyRate (1.0-FTE rate) * Fte * DistributionPercent. Fringe loads CBR only (the CBR
-           is stored as a fraction); vacation accrual is excluded for now, matching the page. */
+           is stored as a fraction); vacation accrual is excluded for now, matching the page.
+           ANR-funded entries (financial dept under ANR division node 9AAES0D, always at
+           ParentLevel3) use the ANR rate set; no cross-set fallback. */
         DROP TABLE IF EXISTS #pers;
         SELECT p.MonthStart,
                SUM(pb.MonthlyRate * pb.Fte * pb.DistributionPercent / 100.0) AS Salary,
                SUM(pb.MonthlyRate * pb.Fte * pb.DistributionPercent / 100.0
-                   * COALESCE(cbr.CBR, 0)) AS Fringe
+                   * COALESCE(CASE WHEN fd.ParentLevel3Code = '9AAES0D'
+                                   THEN anr.CBR ELSE ucd.CBR END, 0)) AS Fringe
         INTO #pers
         FROM #periods p
         JOIN dbo.PositionBudgets pb ON pb.ProjectId = @ProjectId
-        LEFT JOIN dbo.CompositeBenefitRates cbr ON cbr.JobCode = pb.JobCode
+        LEFT JOIN dbo.CompositeBenefitRates ucd ON ucd.RateSet = 'UCD' AND ucd.JobCode = pb.JobCode
+        LEFT JOIN dbo.CompositeBenefitRates anr ON anr.RateSet = 'ANR' AND anr.JobCode = pb.JobCode
+        LEFT JOIN dbo.ChartStringSegment fd
+            ON fd.SegmentName = 'UCD Financial Department' AND fd.Code = pb.FinancialDept
         WHERE p.Kind IN ('blended','projected')
         GROUP BY p.MonthStart;
 
