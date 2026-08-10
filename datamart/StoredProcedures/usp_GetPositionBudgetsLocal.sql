@@ -111,7 +111,8 @@ BEGIN
         LEFT JOIN dbo.Projects p ON pb.ProjectId = p.Code
         LEFT JOIN dbo.CompositeBenefitRates ucd ON ucd.RateSet = 'UCD' AND pb.JobCode = ucd.JobCode
         LEFT JOIN dbo.CompositeBenefitRates anr ON anr.RateSet = 'ANR' AND pb.JobCode = anr.JobCode
-        LEFT JOIN dbo.ErpFinDeptHierarchy fd ON fd.Code = pb.FinancialDept
+        LEFT JOIN dbo.ChartStringSegment fd
+            ON fd.SegmentName = 'UCD Financial Department' AND fd.Code = pb.FinancialDept
         -- ProjectType is a project-level attribute; collapse the per-task/fund portfolio rows
         -- to one row per project so the join cannot multiply funding distributions.
         LEFT JOIN (

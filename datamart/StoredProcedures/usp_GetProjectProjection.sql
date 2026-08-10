@@ -134,7 +134,8 @@ BEGIN
         JOIN dbo.PositionBudgets pb ON pb.ProjectId = @ProjectId
         LEFT JOIN dbo.CompositeBenefitRates ucd ON ucd.RateSet = 'UCD' AND ucd.JobCode = pb.JobCode
         LEFT JOIN dbo.CompositeBenefitRates anr ON anr.RateSet = 'ANR' AND anr.JobCode = pb.JobCode
-        LEFT JOIN dbo.ErpFinDeptHierarchy fd ON fd.Code = pb.FinancialDept
+        LEFT JOIN dbo.ChartStringSegment fd
+            ON fd.SegmentName = 'UCD Financial Department' AND fd.Code = pb.FinancialDept
         WHERE p.Kind IN ('blended','projected')
         GROUP BY p.MonthStart;
 
