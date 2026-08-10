@@ -28,6 +28,8 @@ variables:
   serverProjectPath: "$(webDir)/server/server.csproj"
   serverTestsProjectPath: "$(webDir)/tests/server.tests/server.tests.csproj"
   notificationsWorkerProjectPath: "$(webDir)/workers/notifications/notifications.csproj"
+  # Keep this aligned with functionLinuxFxVersion in infrastructure/azure/main.bicep.
+  notificationsRuntimeStack: "DOTNET-ISOLATED|10.0"
 
 stages:
   - stage: BuildAndTest
@@ -126,6 +128,7 @@ stages:
                     azureSubscription: $(azureSubscriptionTest)
                     appName: $(functionAppName)
                     appType: functionAppLinux
+                    runtimeStack: $(notificationsRuntimeStack)
                     package: $(Pipeline.Workspace)/$(artifactName)/notifications-worker.zip
 
   - stage: DeployToProd
@@ -160,4 +163,5 @@ stages:
                     azureSubscription: $(azureSubscriptionProd)
                     appName: $(functionAppName)
                     appType: functionAppLinux
+                    runtimeStack: $(notificationsRuntimeStack)
                     package: $(Pipeline.Workspace)/$(artifactName)/notifications-worker.zip
