@@ -111,6 +111,18 @@ export function getAwardEndMonthIndex(awardEndDate: string | null) {
   return awardEndMonth ? getMonthIndex(awardEndMonth) : null;
 }
 
+export function getCurrentMonthIndex(now: Date = new Date()) {
+  return now.getFullYear() * 12 + now.getMonth();
+}
+
+// Expired = award end month strictly before the current month.
+export function isProjectExpired(
+  awardEndMonthIndex: number | null,
+  currentMonthIndex: number
+) {
+  return awardEndMonthIndex !== null && awardEndMonthIndex < currentMonthIndex;
+}
+
 // Each series renders as two lines sharing a color: a solid one over the
 // actual + blended months and a dashed one over blended + projected. Both
 // include the blended (current) month so the segments connect there.
@@ -481,6 +493,10 @@ export function ProjectBurndownSection({
     () => getAwardEndMonthIndex(awardEndDate),
     [awardEndDate]
   );
+  const isExpired = isProjectExpired(
+    awardEndMonthIndex,
+    getCurrentMonthIndex()
+  );
   const awardEndMonth = useMemo(
     () =>
       awardEndMonthIndex === null ? null : monthFromIndex(awardEndMonthIndex),
@@ -501,14 +517,22 @@ export function ProjectBurndownSection({
     () => getRollingStartMonthIndex(projectionTransitionMonthIndex),
     [projectionTransitionMonthIndex]
   );
+  // Expired projects never clip the x-axis: the sproc's window is shown as-is.
   const timelineEndMonthIndex = useMemo(
     () =>
-      getTimelineEndMonthIndex(
-        selectedTimeline,
-        awardEndMonthIndex,
-        projectionTransitionMonthIndex
-      ),
-    [awardEndMonthIndex, projectionTransitionMonthIndex, selectedTimeline]
+      isExpired
+        ? null
+        : getTimelineEndMonthIndex(
+            selectedTimeline,
+            awardEndMonthIndex,
+            projectionTransitionMonthIndex
+          ),
+    [
+      awardEndMonthIndex,
+      isExpired,
+      projectionTransitionMonthIndex,
+      selectedTimeline,
+    ]
   );
   const timelineProjectionDate = useMemo(
     () =>
@@ -634,6 +658,7 @@ export function ProjectBurndownSection({
           <div>
             {stats && (
               <div className="relative z-50 mb-6 text-sm">
+                {!isExpired && (
                 <div
                   className="relative z-[100] mb-4"
                   onBlur={(event) => {
@@ -693,6 +718,7 @@ export function ProjectBurndownSection({
                     </div>
                   ) : null}
                 </div>
+                )}
                 <div className="flex flex-wrap gap-10">
                   <div className="relative z-50">
                     <p className="stat-label">Starting Balance</p>
@@ -708,18 +734,20 @@ export function ProjectBurndownSection({
                       {formatCurrency(stats.currentBalance)}
                     </p>
                   </div>
-                  <div>
-                    <p className="stat-label">Projected End</p>
-                    <p
-                      className={
-                        stats.projectedEnd < 0
-                          ? 'stat-value text-error'
-                          : 'stat-value'
-                      }
-                    >
-                      {formatCurrency(stats.projectedEnd)}
-                    </p>
-                  </div>
+                  {!isExpired && (
+                    <div>
+                      <p className="stat-label">Projected End</p>
+                      <p
+                        className={
+                          stats.projectedEnd < 0
+                            ? 'stat-value text-error'
+                            : 'stat-value'
+                        }
+                      >
+                        {formatCurrency(stats.projectedEnd)}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
