@@ -151,6 +151,39 @@ public sealed class AccrualOutboundMessageRendererTests
         rendered.HtmlBody.Should().NotContain("<script>alert('classification')</script>");
     }
 
+    [Fact]
+    public async Task RenderAsync_encourages_time_away_when_no_hours_are_required_next_month()
+    {
+        var renderer = CreateRenderer();
+        var message = CreateEmployeeMessage(
+            "accrual.employee.staff.v1",
+            new AccrualEmployeeNotificationPayload
+            {
+                AccrualHoursPerMonth = 10m,
+                BalanceHours = 200m,
+                CapHours = 240m,
+                Classification = "PSS",
+                EmployeeGroup = nameof(AccrualEmployeeGroup.Staff),
+                EmployeeId = "E001",
+                EmployeeName = "Staff Member",
+                PctOfCap = 83.3m,
+                SnapshotAsOfDate = new DateTime(2026, 4, 30),
+                Status = nameof(AccrualNotificationStatus.ApproachingCap),
+            });
+
+        var rendered = await renderer.RenderAsync(message);
+
+        const string zeroHoursMessage = "No vacation hours are required next month to stay below your maximum.";
+        const string encouragement = "consider taking some time off next month if you can";
+        rendered.TextBody.Should().Contain(zeroHoursMessage);
+        rendered.TextBody.Should().Contain(encouragement);
+        rendered.TextBody.Should().NotContain("plan to use 0 hours");
+        rendered.HtmlBody.Should().Contain(zeroHoursMessage);
+        rendered.HtmlBody.Should().Contain(encouragement);
+        rendered.HtmlBody.Should().NotContain("plan to use <strong>0 hours</strong>");
+        rendered.HtmlBody.Should().NotContain("<mjml");
+    }
+
     [Theory]
     [InlineData(
         "accrual.employee.faculty-academic.v1",

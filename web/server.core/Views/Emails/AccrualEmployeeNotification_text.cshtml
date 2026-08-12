@@ -59,7 +59,16 @@ Lost Accrual
 /mo - @lostCostYear/yr
 
 Take Action
-To stay below your maximum and avoid losing accrual, please plan to use @hoursToTakeText of vacation in the coming month.
+@if (hoursToTake == 0m)
+{
+<text>No vacation hours are required next month to stay below your maximum. Still, consider taking some time off next month if you can—it is a great opportunity to recharge while keeping your balance comfortably below the cap.
+</text>
+}
+else
+{
+<text>To stay below your maximum and avoid losing accrual, please plan to use @hoursToTakeText of vacation in the coming month.
+</text>
+}
 
 @if (Model.Variant == AccrualEmployeeNotificationVariant.FacultyAcademic)
 {
