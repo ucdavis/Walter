@@ -567,6 +567,22 @@ describe('project detail page', () => {
     }
   });
 
+  it('hides the burndown link for expired projects', async () => {
+    const projects = [createProject({ awardEndDate: '2000-01-01' })];
+    setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);
+
+    const { cleanup } = renderRoute({ initialPath: '/projects/1000/P1' });
+
+    try {
+      await screen.findByRole('heading', { level: 1, name: 'Test Project' });
+      expect(
+        screen.queryByRole('link', { name: /Project Burndown/ })
+      ).not.toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+
   it('shows expenditure progress on the expenditure progress page', async () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date(2026, 6, 15));

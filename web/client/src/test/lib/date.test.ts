@@ -3,6 +3,7 @@ import {
   formatDate,
   getLocalDateOnly,
   getProjectMonth,
+  isAwardExpired,
   parseProjectDate,
 } from '@/lib/date.ts';
 
@@ -64,5 +65,16 @@ describe('getProjectMonth', () => {
   it('returns null for missing or invalid date values', () => {
     expect(getProjectMonth(null)).toBeNull();
     expect(getProjectMonth('2025-02-31')).toBeNull();
+  });
+});
+
+describe('isAwardExpired', () => {
+  it('is true when the award end date is before today', () => {
+    expect(isAwardExpired('2000-01-01')).toBe(true);
+  });
+
+  it('is false for today-or-later or missing award end dates', () => {
+    expect(isAwardExpired('2099-12-31')).toBe(false);
+    expect(isAwardExpired(null)).toBe(false);
   });
 });

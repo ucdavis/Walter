@@ -23,6 +23,7 @@ import { canViewProjectDiscrepancy } from '@/shared/auth/roleAccess.ts';
 import { useUser } from '@/shared/auth/UserContext.tsx';
 import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
 import { tooltipDefinitions } from '@/shared/tooltips.ts';
+import { isAwardExpired } from '@/lib/date.ts';
 import { buildFinjectorUrl } from '@/lib/finjector.ts';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, Link } from '@tanstack/react-router';
@@ -167,7 +168,9 @@ function ProjectContent({
 
       <ProjectDetails
         actions={
-          !summary.isInternal && featureFlags?.burndownEnabled ? (
+          !summary.isInternal &&
+          featureFlags?.burndownEnabled &&
+          !isAwardExpired(summary.awardEndDate) ? (
             <>
               <Link
                 className="btn btn-lg"

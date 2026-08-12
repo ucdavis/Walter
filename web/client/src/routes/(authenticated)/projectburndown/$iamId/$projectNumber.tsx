@@ -3,6 +3,7 @@ import { ProjectPortfolioLayout } from '@/components/project/ProjectPortfolioLay
 import { PageEmpty } from '@/components/states/PageEmpty.tsx';
 import { PageError } from '@/components/states/PageError.tsx';
 import { PageLoading } from '@/components/states/PageLoading.tsx';
+import { isAwardExpired } from '@/lib/date.ts';
 import { getErrorPresentation } from '@/lib/errorPresentation.ts';
 import { summarizeProjectByNumber } from '@/lib/projectSummary.ts';
 import { featureFlagsQueryOptions } from '@/queries/featureFlags.ts';
@@ -64,7 +65,9 @@ function RouteComponent() {
     );
   }
 
-  const burndownAvailable = !summary.isInternal && featureFlags.burndownEnabled;
+  const expired = isAwardExpired(summary.awardEndDate);
+  const burndownAvailable =
+    !summary.isInternal && featureFlags.burndownEnabled && !expired;
 
   return (
     <ProjectPortfolioLayout>
@@ -95,7 +98,9 @@ function RouteComponent() {
           <h2 className="subtitle max-w-5xl">{summary.displayName}</h2>
         </section>
 
-        {burndownAvailable ? (
+        {expired ? (
+          <PageEmpty message="Project burndown is not available for expired projects." />
+        ) : burndownAvailable ? (
           <ProjectBurndownSection
             awardEndDate={summary.awardEndDate}
             awardStartDate={summary.awardStartDate}
