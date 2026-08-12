@@ -3,7 +3,12 @@ import { Link } from '@tanstack/react-router';
 import { createColumnHelper } from '@tanstack/react-table';
 import { TableExportActions } from '@/components/TableExportActions.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
-import { formatDate, getLocalDateOnly, parseProjectDate } from '@/lib/date.ts';
+import {
+  formatDate,
+  getLocalDateOnly,
+  isAwardExpired,
+  parseProjectDate,
+} from '@/lib/date.ts';
 import type { ProjectRecord } from '@/queries/project.ts';
 import { DataTable } from '@/shared/DataTable.tsx';
 import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
@@ -83,9 +88,7 @@ function aggregateProjects(records: ProjectRecord[]): AggregatedProject[] {
 }
 
 function isExpired(project: AggregatedProject): boolean {
-  const awardEndDate = parseProjectDate(project.awardEndDate);
-
-  return awardEndDate ? awardEndDate < getLocalDateOnly() : false;
+  return isAwardExpired(project.awardEndDate);
 }
 
 function sortByEndDate(projects: AggregatedProject[]): AggregatedProject[] {

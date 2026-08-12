@@ -3,6 +3,7 @@ import { ProjectPortfolioLayout } from '@/components/project/ProjectPortfolioLay
 import { PageEmpty } from '@/components/states/PageEmpty.tsx';
 import { PageError } from '@/components/states/PageError.tsx';
 import { PageLoading } from '@/components/states/PageLoading.tsx';
+import { isAwardExpired } from '@/lib/date.ts';
 import { getErrorPresentation } from '@/lib/errorPresentation.ts';
 import { summarizeProjectByNumber } from '@/lib/projectSummary.ts';
 import { featureFlagsQueryOptions } from '@/queries/featureFlags.ts';
@@ -80,7 +81,9 @@ function RouteComponent() {
               <ClipboardDocumentListIcon className="h-4 w-4" />
               Project Details
             </Link>
-            {!summary.isInternal && featureFlags.burndownEnabled ? (
+            {!summary.isInternal &&
+            featureFlags.burndownEnabled &&
+            !isAwardExpired(summary.awardEndDate) ? (
               <Link
                 className="btn btn-sm"
                 params={{ iamId, projectNumber: summary.projectNumber }}

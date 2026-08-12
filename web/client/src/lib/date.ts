@@ -35,6 +35,11 @@ export function getLocalDateOnly(value = new Date()) {
   return new Date(value.getFullYear(), value.getMonth(), value.getDate());
 }
 
+export function isAwardExpired(awardEndDate: string | null) {
+  const parsed = parseProjectDate(awardEndDate);
+  return parsed ? parsed < getLocalDateOnly() : false;
+}
+
 export function getProjectMonth(value: string | null) {
   const date = parseProjectDate(value);
 
