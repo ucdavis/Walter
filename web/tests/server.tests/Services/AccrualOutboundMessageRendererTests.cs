@@ -173,13 +173,18 @@ public sealed class AccrualOutboundMessageRendererTests
 
         var rendered = await renderer.RenderAsync(message);
 
-        const string zeroHoursMessage = "No vacation hours are required next month to stay below your maximum.";
-        const string encouragement = "consider taking some time off next month if you can";
-        rendered.TextBody.Should().Contain(zeroHoursMessage);
+        const string projectionLeadIn = "While your vacation balance";
+        const string projectionOutcome = "reach its maximum next month";
+        const string encouragement = "consider taking some time off if you can";
+        rendered.TextBody.Should().Contain(projectionLeadIn);
+        rendered.TextBody.Should().Contain(projectionOutcome);
         rendered.TextBody.Should().Contain(encouragement);
+        rendered.TextBody.Should().NotContain("required");
         rendered.TextBody.Should().NotContain("plan to use 0 hours");
-        rendered.HtmlBody.Should().Contain(zeroHoursMessage);
+        rendered.HtmlBody.Should().Contain(projectionLeadIn);
+        rendered.HtmlBody.Should().Contain(projectionOutcome);
         rendered.HtmlBody.Should().Contain(encouragement);
+        rendered.HtmlBody.Should().NotContain("required");
         rendered.HtmlBody.Should().NotContain("plan to use <strong>0 hours</strong>");
         rendered.HtmlBody.Should().NotContain("<mjml");
     }
