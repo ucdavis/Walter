@@ -151,6 +151,44 @@ public sealed class AccrualOutboundMessageRendererTests
         rendered.HtmlBody.Should().NotContain("<script>alert('classification')</script>");
     }
 
+    [Fact]
+    public async Task RenderAsync_encourages_time_away_when_no_hours_are_required_next_month()
+    {
+        var renderer = CreateRenderer();
+        var message = CreateEmployeeMessage(
+            "accrual.employee.staff.v1",
+            new AccrualEmployeeNotificationPayload
+            {
+                AccrualHoursPerMonth = 10m,
+                BalanceHours = 200m,
+                CapHours = 240m,
+                Classification = "PSS",
+                EmployeeGroup = nameof(AccrualEmployeeGroup.Staff),
+                EmployeeId = "E001",
+                EmployeeName = "Staff Member",
+                PctOfCap = 83.3m,
+                SnapshotAsOfDate = new DateTime(2026, 4, 30),
+                Status = nameof(AccrualNotificationStatus.ApproachingCap),
+            });
+
+        var rendered = await renderer.RenderAsync(message);
+
+        const string projectionLeadIn = "While your vacation balance";
+        const string projectionOutcome = "reach its maximum next month";
+        const string encouragement = "consider taking some time off if you can";
+        rendered.TextBody.Should().Contain(projectionLeadIn);
+        rendered.TextBody.Should().Contain(projectionOutcome);
+        rendered.TextBody.Should().Contain(encouragement);
+        rendered.TextBody.Should().NotContain("required");
+        rendered.TextBody.Should().NotContain("plan to use 0 hours");
+        rendered.HtmlBody.Should().Contain(projectionLeadIn);
+        rendered.HtmlBody.Should().Contain(projectionOutcome);
+        rendered.HtmlBody.Should().Contain(encouragement);
+        rendered.HtmlBody.Should().NotContain("required");
+        rendered.HtmlBody.Should().NotContain("plan to use <strong>0 hours</strong>");
+        rendered.HtmlBody.Should().NotContain("<mjml");
+    }
+
     [Theory]
     [InlineData(
         "accrual.employee.faculty-academic.v1",

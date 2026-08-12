@@ -108,7 +108,14 @@
       Take Action
     </mj-text>
     <mj-text css-class="dm-callout dm-text" mj-class="callout-text">
-      To stay below your maximum and avoid losing accrual, please plan to use <strong>@hoursToTakeText</strong> of vacation in the coming month.
+      @if (hoursToTake == 0m)
+      {
+        <text>While your vacation balance won't reach its maximum next month, consider taking some time off if you can—it's a great opportunity to recharge and keep your balance comfortably below the cap.</text>
+      }
+      else
+      {
+        <text>To stay below your maximum and avoid losing accrual, please plan to use <strong>@hoursToTakeText</strong> of vacation in the coming month.</text>
+      }
     </mj-text>
     @if (Model.Variant == AccrualEmployeeNotificationVariant.FacultyAcademic)
     {
