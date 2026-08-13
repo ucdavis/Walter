@@ -379,20 +379,21 @@ export function ProjectExpenditureProgressCategories({
 
   return (
     <div
-      className="relative"
+      className="relative pt-5"
       data-testid="project-expenditure-progress-categories"
     >
       {currentMonthMarkerLeft && (
         <>
           <span
             className="pointer-events-none absolute top-0 z-20 -translate-x-full pr-1 text-xs text-base-content"
+            data-testid="budget-vs-time-current-month-label"
             style={{ left: `max(2.5rem, ${currentMonthMarkerLeft})` }}
           >
             Today
           </span>
           <span
             aria-hidden="true"
-            className="pointer-events-none absolute top-0 bottom-10 z-10 w-0 -translate-x-1/2 border-l-2 border-dashed border-base-content/35"
+            className="pointer-events-none absolute top-5 bottom-10 z-10 w-0 -translate-x-1/2 border-l-2 border-dashed border-base-content/35"
             data-testid="budget-vs-time-current-month-marker"
             style={{ left: currentMonthMarkerLeft }}
           />
@@ -526,18 +527,19 @@ export function ProjectExpenditureProgress({
         )}
       </p>
 
-      <div className="relative" data-testid="budget-vs-time-chart">
+      <div className="relative pt-5" data-testid="budget-vs-time-chart">
         {currentMonthMarkerLeft && (
           <>
             <span
-              className="pointer-events-none absolute top-0 z-20 -translate-x-full pr-1 text-xs text-base-content"
+            className="pointer-events-none absolute top-0 z-20 -translate-x-full pr-1 text-xs text-base-content"
+            data-testid="budget-vs-time-current-month-label"
               style={{ left: `max(2.5rem, ${currentMonthMarkerLeft})` }}
             >
               Today
             </span>
             <span
               aria-hidden="true"
-              className="pointer-events-none absolute top-0 bottom-10 z-10 w-0 -translate-x-1/2 border-l-2 border-dashed border-base-content/35"
+            className="pointer-events-none absolute top-5 bottom-10 z-10 w-0 -translate-x-1/2 border-l-2 border-dashed border-base-content/35"
               data-testid="budget-vs-time-current-month-marker"
               style={{ left: currentMonthMarkerLeft }}
             />

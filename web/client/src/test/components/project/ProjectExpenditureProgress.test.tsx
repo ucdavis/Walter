@@ -49,11 +49,13 @@ describe('ProjectExpenditureProgress', () => {
 
     for (const label of screen.getAllByText('Today')) {
       expect(label).toHaveStyle({ left: 'max(2.5rem, 0%)' });
+      expect(label).toHaveClass('top-0');
     }
     for (const marker of screen.getAllByTestId(
       'budget-vs-time-current-month-marker'
     )) {
       expect(marker).toHaveStyle({ left: '0%' });
+      expect(marker).toHaveClass('top-5');
     }
     for (const axis of screen.getAllByTestId('budget-vs-time-axis')) {
       expect(axis).not.toHaveTextContent('Time');
