@@ -232,7 +232,7 @@ function ProjectContent({
           <p className="text-error mt-4">Error loading personnel.</p>
         )}
         {personnelQuery.isSuccess && (
-          <PersonnelTable data={personnelQuery.data ?? []} showTotals={false} />
+          <PersonnelTable data={personnelQuery.data ?? []} />
         )}
       </section>
 
