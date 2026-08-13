@@ -1,6 +1,7 @@
 @import 'tailwindcss';
-@plugin "daisyui";
 @import '@ucdavis/gunrock-tailwind/imports.css';
+@import './animations.css';
+@plugin "daisyui";
 
 @theme {
   --color-light-bg-100: oklch(100% 0 0);
@@ -46,8 +47,65 @@
 
   --color-warning: var(--color-warning-color);
   --color-warning-content: var(--color-light-font);
+
+  --color-chart-grid: #d8d8d8;
+  --color-chart-primary: #0047ba;
+  --color-chart-tooltip-border: #e9e3ee;
+  --color-chart-default-tooltip-border: #ccc;
+  --color-interaction-hover: #f2f6fc;
+  --color-login-pattern: #f3f6fc;
 }
-@import './animations.css';
+
+@plugin "daisyui/theme" {
+  name: 'walter-dark';
+  color-scheme: dark;
+
+  --color-base-100: #101722;
+  --color-base-200: #182231;
+  --color-base-300: #253247;
+  --color-base-content: #edf2f7;
+
+  --color-primary: #7ab8ff;
+  --color-primary-content: #07111f;
+
+  --color-secondary: #ffcc4d;
+  --color-secondary-content: #17130a;
+
+  --color-error: #ff8a9f;
+  --color-error-content: #20070c;
+
+  --color-info: #65d4e8;
+  --color-info-content: #061719;
+
+  --color-accent: #ffad66;
+  --color-accent-content: #1d0d03;
+
+  --color-success: #83d475;
+  --color-success-content: #091707;
+
+  --color-warning: #ffc66b;
+  --color-warning-content: #1b1103;
+
+  --color-neutral: #dce5f0;
+  --color-neutral-content: #101722;
+
+  --color-main-border: #34445a;
+  --color-chart-grid: #41526a;
+  --color-login-pattern: #172538;
+  --color-chart-primary: #7ab8ff;
+  --color-chart-tooltip-border: #34445a;
+  --color-chart-default-tooltip-border: #34445a;
+  --color-interaction-hover: #182231;
+}
+
+[data-theme='walter-dark'] {
+  background-color: var(--color-base-100);
+}
+
+[data-theme='walter-dark'] body {
+  background-color: var(--color-base-100);
+  color: var(--color-base-content);
+}
 
 .h1 {
   @apply text-3xl font-proxima-bold;
@@ -96,14 +154,14 @@
   }
 
   .fancy-data {
-    @apply mt-4 mb-8 px-6 py-4 border rounded-md bg-light-bg-200 border-main-border;
+    @apply mt-4 mb-8 px-6 py-4 border rounded-md bg-base-200 border-main-border;
   }
   .nav-link {
     @apply border-b-2 border-base-200 transition text-base-content/70 hover:text-base-content;
   }
 
   .nav-link[data-status='active'] {
-    @apply text-base-content border-primary-color;
+    @apply text-base-content border-primary;
   }
 
   .tooltip-trigger {
@@ -186,13 +244,13 @@
   border-bottom: 1px solid var(--color-main-border);
   font-size: 0.9rem;
   font-family: var(--font-proxima-bold);
-  color: var(--color-dark-font);
+  color: var(--color-base-content);
   white-space: normal;
 }
 
 .walter-table td {
   padding: 12px 8px;
-  color: var(--color-dark-font);
+  color: var(--color-base-content);
   white-space: normal;
   overflow-wrap: anywhere;
 }
@@ -206,7 +264,7 @@
   border-bottom: 1px solid var(--color-main-border);
   font-size: 0.9rem;
   font-family: var(--font-proxima-bold);
-  color: var(--color-dark-font);
+  color: var(--color-base-content);
 }
 
 .walter-table.table-cardgrid {
@@ -274,7 +332,7 @@
 .textarea {
   &:focus,
   &:focus-within {
-    outline: 2px solid var(--color-primary-color);
+    outline: 2px solid var(--color-primary);
     outline-offset: 1px;
     isolation: isolate;
     z-index: 1;
@@ -284,6 +342,34 @@
 .tab {
   &:focus-visible,
   &:is(label:has(:checked:focus-visible)) {
-    outline: 2px solid var(--color-primary-color);
+    outline: 2px solid var(--color-primary);
   }
+}
+
+[data-theme='walter-dark'] .recharts-cartesian-axis-tick-value {
+  fill: var(--color-base-content);
+}
+
+[data-theme='walter-dark'] .recharts-cartesian-axis-line,
+[data-theme='walter-dark'] .recharts-cartesian-axis-tick-line {
+  stroke: var(--color-base-content);
+  opacity: 0.55;
+}
+
+[data-theme='walter-dark'] .recharts-legend-item-text {
+  color: var(--color-base-content) !important;
+}
+[data-theme='walter-dark'] .recharts-default-tooltip {
+  background-color: var(--color-base-100) !important;
+  border: 1px solid var(--color-main-border) !important;
+  color: var(--color-base-content) !important;
+}
+
+.uc-davis-logo {
+  opacity: 0.55;
+}
+
+[data-theme='walter-dark'] .uc-davis-logo {
+  filter: brightness(0) invert(1);
+  opacity: 0.78;
 }

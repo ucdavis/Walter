@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { NotificationBanner } from '@/components/NotificationBanner.tsx';
+import WalterLogo from '@/shared/WalterLogo.tsx';
 
 export const Route = createFileRoute('/about')({
   component: About,
@@ -7,7 +8,7 @@ export const Route = createFileRoute('/about')({
 
 function About() {
   return (
-    <div className="min-h-dvh bg-white">
+    <div className="min-h-dvh bg-base-100">
       <NotificationBanner />
       <div className="flex min-h-dvh">
         <aside className="hidden w-72 walter-login-pattern shrink-0 md:block">
@@ -16,7 +17,7 @@ function About() {
 
         <main className="flex flex-col p-10 mt-6 flex-1">
           <div className="flex w-full max-w-xl flex-col md:mt-10 sm:max-w-[90%] md:max-w-[80%] xl:max-w-[50%]">
-            <img alt="Dog outline logo" className="w-8" src="/walter.svg" />
+            <WalterLogo aria-label="Dog outline logo" className="h-10 w-8" />
             <h1 className="text-2xl font-proxima-bold">W.A.L.T.E.R.</h1>
             <p className="uppercase">
               warehouse analytics and ledger tools for enterprise reporting

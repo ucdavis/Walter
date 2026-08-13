@@ -117,6 +117,12 @@ export function ProjectFundingChart({ projects }: ProjectFundingChartProps) {
                     <YAxis dataKey="name" hide type="category" />
 
                     <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'var(--color-base-100)',
+                        border:
+                          '1px solid var(--color-chart-default-tooltip-border)',
+                        color: 'inherit',
+                      }}
                       cursor={false}
                       formatter={(value: number, key: string) => [
                         `${formatCurrency(totalsByType[key])} (${value.toFixed(0)}%)`,
