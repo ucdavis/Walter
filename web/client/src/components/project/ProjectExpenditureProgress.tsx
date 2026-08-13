@@ -13,10 +13,7 @@ import {
   type BudgetProgressSummary,
   type TimeProgressSummary,
 } from '@/lib/projectProgress.ts';
-import {
-  useProjectProjectionQuery,
-  type ProjectProjectionCategory,
-} from '@/queries/projectProjection.ts';
+import type { ProjectProjectionCategory } from '@/queries/projectProjection.ts';
 
 const CATEGORY_PROGRESS_DESCRIPTION =
   'Expenses, commitments, and available balance by expenditure category.';
@@ -64,12 +61,6 @@ interface ProjectExpenditureProgressProps {
   awardEndDate: string | null;
   awardStartDate: string | null;
   categories: ProjectProjectionCategory[];
-}
-
-interface ProjectExpenditureProgressSectionProps {
-  awardEndDate: string | null;
-  awardStartDate: string | null;
-  projectNumber: string;
 }
 
 function categoryDisplayName(expenditureCategory: string) {
@@ -623,37 +614,5 @@ export function ProjectExpenditureProgress({
         <PacingProgressAxis />
       </div>
     </section>
-  );
-}
-
-export function ProjectExpenditureProgressSection({
-  awardEndDate,
-  awardStartDate,
-  projectNumber,
-}: ProjectExpenditureProgressSectionProps) {
-  const projectionQuery = useProjectProjectionQuery(projectNumber);
-
-  if (projectionQuery.isPending) {
-    return (
-      <p className="text-base-content/70 mt-4">
-        Loading project expenditure progress...
-      </p>
-    );
-  }
-
-  if (projectionQuery.isError) {
-    return (
-      <p className="text-error mt-4">
-        Error loading project expenditure progress.
-      </p>
-    );
-  }
-
-  return (
-    <ProjectExpenditureProgress
-      awardEndDate={awardEndDate}
-      awardStartDate={awardStartDate}
-      categories={projectionQuery.data.categories}
-    />
   );
 }
