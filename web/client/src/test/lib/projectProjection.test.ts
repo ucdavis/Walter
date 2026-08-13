@@ -238,6 +238,38 @@ describe('buildNonPersonnelCategorySeries', () => {
       80, 70, 60,
     ]);
   });
+
+  it('omits categories that are zero for the entire series', () => {
+    const result = sampleResult();
+    result.periods.push(
+      period({
+        displayPeriod: 'May-26',
+        expenditureCategory: '99 - Uncategorized',
+        isPersonnel: 0,
+        kind: 'actual',
+        month: '2026-05',
+      }),
+      period({
+        expenditureCategory: '99 - Uncategorized',
+        isPersonnel: 0,
+        kind: 'blended',
+        month: '2026-06',
+      }),
+      period({
+        displayPeriod: 'Jul-26',
+        expenditureCategory: '99 - Uncategorized',
+        isPersonnel: 0,
+        month: '2026-07',
+      })
+    );
+
+    const series = buildNonPersonnelCategorySeries(result);
+
+    expect(series.map((s) => s.key)).toEqual([
+      '04 - Supplies',
+      '07 - Fellowships',
+    ]);
+  });
 });
 
 describe('getMonthlyCategorySpend', () => {
