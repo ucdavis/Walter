@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
 import {
+  Area,
   CartesianGrid,
+  ComposedChart,
   Line,
-  LineChart,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
@@ -40,6 +41,8 @@ const NEUTRAL_MARKER_OPACITY = 0.28;
 const CHART_TOOLTIP_Z_INDEX = 60;
 const Y_AXIS_TICK_COUNT = 6;
 const DENSE_TIMELINE_TICK_ANGLE = -35;
+const NON_PERSONNEL_CATEGORY_STROKE_WIDTH = 1.75;
+const NON_PERSONNEL_TOTAL_FILL_OPACITY = 0.1;
 const MONTH_LABELS = [
   'Jan',
   'Feb',
@@ -129,6 +132,7 @@ export function buildChartRows(
       row[`${key}::solid`] =
         point.kind === 'projected' ? null : point.remaining;
       row[`${key}::dashed`] = point.kind === 'actual' ? null : point.remaining;
+      row[`${key}::area`] = point.remaining;
       row[`${key}::spend`] = point.actualAmount + point.projectedAmount;
       rows.set(point.month, row);
     }
@@ -580,7 +584,7 @@ export function ProjectBurndownSection({
             ...nonPersonnelCategorySeries.map((entry) => ({
               color: projectExpenditureCategoryColor(entry.key),
               key: entry.key,
-              strokeWidth: 1.75,
+              strokeWidth: NON_PERSONNEL_CATEGORY_STROKE_WIDTH,
             })),
           ]
       : selectedRollupSeries;
@@ -606,6 +610,9 @@ export function ProjectBurndownSection({
     TIMELINE_OPTIONS.find((option) => option.value === selectedTimeline)
       ?.label ?? TIMELINE_OPTIONS[0].label;
   const useDenseXAxisTicks = selectedTimeline === '24-months';
+  const showNonPersonnelTotalArea =
+    selectedKey === NON_PERSONNEL_SERIES &&
+    activeSelectedNonPersonnelCategory === null;
 
   return (
     <>
@@ -728,10 +735,21 @@ export function ProjectBurndownSection({
 
             <div className="h-80" data-testid="project-burndown-chart">
               <ResponsiveContainer height="100%" width="100%">
-                <LineChart
+                <ComposedChart
                   data={chartRows}
                   margin={{ bottom: 8, left: 8, right: 24, top: 16 }}
                 >
+                  {showNonPersonnelTotalArea && (
+                    <Area
+                      baseValue={yDomainMin}
+                      dataKey={`${NON_PERSONNEL_SERIES}::area`}
+                      fill={projectSeriesColor(NON_PERSONNEL_SERIES)}
+                      fillOpacity={NON_PERSONNEL_TOTAL_FILL_OPACITY}
+                      isAnimationActive={false}
+                      stroke="none"
+                      type="monotone"
+                    />
+                  )}
                   <CartesianGrid stroke={GRID_COLOR} strokeDasharray="3 3" />
                   <XAxis
                     angle={useDenseXAxisTicks ? DENSE_TIMELINE_TICK_ANGLE : 0}
@@ -835,7 +853,7 @@ export function ProjectBurndownSection({
                       type="monotone"
                     />
                   ))}
-                </LineChart>
+                </ComposedChart>
               </ResponsiveContainer>
             </div>
 

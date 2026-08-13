@@ -203,5 +203,6 @@ describe('ProjectBurndownChart axis helpers', () => {
     expect(rows[0].label).toBe('Mar-26');
     expect(rows.at(-1)?.label).toBe('Jul-26');
     expect(rows[2]['All Expenses::solid']).toBe(90);
+    expect(rows[2]['All Expenses::area']).toBe(90);
   });
 });

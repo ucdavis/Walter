@@ -12,7 +12,13 @@ describe('project chart colors', () => {
       '01 - Salaries and Wages': PROJECT_SERIES_COLORS.Personnel,
       '02 - Fringe Benefits': PROJECT_SERIES_COLORS.Personnel,
       '03 - Supplies / Services / Other Expenses': 'var(--color-ucd-tahoe)',
+      '04 - Equipment and Facilities': 'var(--color-ucd-recpool)',
+      '05 - Contracts (Subrecipients)': 'var(--color-ucd-sunflower)',
+      '06 - UC Multi-Campus': 'var(--color-ucd-sage)',
+      '07 - Travel': 'var(--color-ucd-rain)',
+      '08 - Fellowship & Scholarships': 'var(--color-ucd-strawberry)',
       '09 - Indirect Costs': 'var(--color-ucd-farmersmarket)',
+      '99 - Uncategorized': 'var(--color-ucd-rose)',
     });
   });
 
@@ -40,8 +46,10 @@ describe('project chart colors', () => {
       PROJECT_SERIES_COLORS['All Expenses']
     );
     expect(projectSeriesColor('Personnel')).toBe(PROJECT_SERIES_COLORS.Personnel);
+    expect(projectSeriesColor('Personnel')).toBe('var(--color-ucd-quad)');
     expect(projectSeriesColor('Non-Personnel')).toBe(
       PROJECT_SERIES_COLORS['Non-Personnel']
     );
+    expect(projectSeriesColor('Non-Personnel')).toBe('var(--color-ucd-pinot)');
   });
 });
