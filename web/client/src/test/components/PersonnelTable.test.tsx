@@ -272,11 +272,11 @@ describe('PersonnelTable', () => {
     expect(screen.getByText('—')).toBeInTheDocument();
   });
 
-  it('shows a tooltip on the Monthly CBR header', async () => {
+  it('shows a tooltip on the Mo. CBR header', async () => {
     const user = userEvent.setup();
     render(<PersonnelTable data={[createRecord()]} />);
 
-    const label = screen.getByText('Monthly CBR');
+    const label = screen.getByText('Mo. CBR');
     await user.hover(label.parentElement as HTMLElement);
 
     expect(await screen.findByRole('tooltip')).toHaveTextContent(
@@ -302,7 +302,7 @@ describe('PersonnelTable', () => {
 
     // Two occurrences after expand: outer header and subtable header. Hover
     // the subtable's (last) one.
-    const cbrLabels = screen.getAllByText('Monthly CBR');
+    const cbrLabels = screen.getAllByText('Mo. CBR');
     await user.hover(cbrLabels[cbrLabels.length - 1].parentElement as HTMLElement);
     expect(await screen.findByRole('tooltip')).toHaveTextContent(
       tooltipDefinitions.monthlyCbr
