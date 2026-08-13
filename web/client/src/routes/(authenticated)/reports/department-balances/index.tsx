@@ -378,14 +378,14 @@ function RouteComponent() {
       columnHelper.accessor(m.key, {
         cell: (info) => (
           <span
-            className={`block w-full text-right tabular-nums${overdraft(m, info.getValue())}`}
+            className={`block w-full text-right tabular-nums whitespace-nowrap${overdraft(m, info.getValue())}`}
           >
             {formatCurrency(info.getValue())}
           </span>
         ),
         footer: () => (
           <span
-            className={`block w-full text-right font-semibold tabular-nums${overdraft(m, totals[m.key])}`}
+            className={`block w-full text-right font-semibold tabular-nums whitespace-nowrap${overdraft(m, totals[m.key])}`}
           >
             {formatCurrency(totals[m.key])}
           </span>
