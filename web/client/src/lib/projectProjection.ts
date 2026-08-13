@@ -139,7 +139,15 @@ export function buildNonPersonnelCategorySeries(
     .map(([key, periods]) => ({
       key,
       points: toPoints(periods),
-    }));
+    }))
+    .filter(({ points }) =>
+      points.some(
+        (point) =>
+          point.actualAmount !== 0 ||
+          point.projectedAmount !== 0 ||
+          point.remaining !== 0
+      )
+    );
 }
 
 export function getMonthlyCategorySpend(
