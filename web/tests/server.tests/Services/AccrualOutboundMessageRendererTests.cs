@@ -113,7 +113,7 @@ public sealed class AccrualOutboundMessageRendererTests
         var facultyRendered = await renderer.RenderAsync(facultyMessage);
         var staffRendered = await renderer.RenderAsync(staffMessage);
 
-        facultyRendered.ReplyToEmail.Should().Be("aggieservice@ucdavis.edu");
+        facultyRendered.ReplyToEmail.Should().Be("disscrequest@ucdavis.edu");
         facultyRendered.ReplyToName.Should().Be("AggieService");
         staffRendered.ReplyToEmail.Should().BeNull();
         staffRendered.ReplyToName.Should().BeNull();
