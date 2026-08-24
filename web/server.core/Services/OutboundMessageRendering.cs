@@ -114,7 +114,7 @@ public sealed class AccrualOutboundMessageRenderer : IOutboundMessageRenderer
     private const int SupportedPayloadVersion = 1;
     private const string EmployeeHtmlTemplatePath = "/Views/Emails/AccrualEmployeeNotification_mjml.cshtml";
     private const string EmployeeTextTemplatePath = "/Views/Emails/AccrualEmployeeNotification_text.cshtml";
-    private const string FacultyAccrualReplyToEmail = "aggieservice@ucdavis.edu";
+    private const string FacultyAccrualReplyToEmail = "disscrequest@ucdavis.edu";
     private const string FacultyAccrualReplyToName = "AggieService";
     private const string ViewerReportHtmlTemplatePath = "/Views/Emails/AccrualViewerReport_mjml.cshtml";
     private const string ViewerReportTextTemplatePath = "/Views/Emails/AccrualViewerReport_text.cshtml";
