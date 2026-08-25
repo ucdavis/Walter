@@ -40,15 +40,27 @@ function RouteComponent() {
   }
 
   if (resolvePiQuery.isError) {
-    const isNotFound =
-      resolvePiQuery.error instanceof HttpError &&
-      resolvePiQuery.error.status === 404;
+    const status =
+      resolvePiQuery.error instanceof HttpError
+        ? resolvePiQuery.error.status
+        : null;
+    const isForbidden = status === 403;
+    const isNotFound = status === 404;
 
     return (
       <main className="container mt-8">
         <section className="card p-4 max-w-prose">
-          <h1 className="text-2xl font-semibold mb-3">Project not found</h1>
-          {isNotFound ? (
+          <h1 className="text-2xl font-semibold mb-3">
+            {isForbidden
+              ? 'You do not have access to this project'
+              : 'Project not found'}
+          </h1>
+          {isForbidden ? (
+            <p>
+              You do not have permission to open project{' '}
+              <span className="font-mono">{projectNumber}</span>.
+            </p>
+          ) : isNotFound ? (
             <p>
               We found project <span className="font-mono">{projectNumber}</span>{' '}
               but could not resolve an IAM ID for its project owner.
