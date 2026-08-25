@@ -11,8 +11,8 @@ describe('project by number route', () => {
         HttpResponse.json({
           email: 'pi@example.com',
           employeeId: '1000',
-          id: 'user-1',
           iamId: 'IAM-PI',
+          id: 'user-1',
           kerberos: 'piuser',
           name: 'PI User',
           roles: [],
@@ -33,11 +33,13 @@ describe('project by number route', () => {
     try {
       expect(
         await screen.findByRole('heading', {
-          name: 'You do not have access to this project',
+          name: 'Project unavailable',
         })
       ).toBeInTheDocument();
       expect(
-        screen.getByText(/You do not have permission to open project/)
+        screen.getByText(
+          /could not be found, or you do not have permission to open it\./
+        )
       ).toBeInTheDocument();
       expect(
         screen.queryByRole('heading', { name: 'Project not found' })

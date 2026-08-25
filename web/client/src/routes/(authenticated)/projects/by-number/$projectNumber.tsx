@@ -51,14 +51,12 @@ function RouteComponent() {
       <main className="container mt-8">
         <section className="card p-4 max-w-prose">
           <h1 className="text-2xl font-semibold mb-3">
-            {isForbidden
-              ? 'You do not have access to this project'
-              : 'Project not found'}
+            {isForbidden ? 'Project unavailable' : 'Project not found'}
           </h1>
           {isForbidden ? (
             <p>
-              You do not have permission to open project{' '}
-              <span className="font-mono">{projectNumber}</span>.
+              Project <span className="font-mono">{projectNumber}</span> could not
+              be found, or you do not have permission to open it.
             </p>
           ) : isNotFound ? (
             <p>
