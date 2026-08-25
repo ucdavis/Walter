@@ -103,20 +103,38 @@ function isClosedTask(row: TaskBreakdownRow): boolean {
   return row.taskStatus === 'Inactive';
 }
 
+// Half-cent tolerance so floating-point residue that displays as $0.00 counts as zero.
+function isZeroAmount(value: number): boolean {
+  return Math.abs(value) < 0.005;
+}
+
+function isZeroBalanceTask(row: TaskBreakdownRow): boolean {
+  return (
+    isZeroAmount(row.budget) &&
+    isZeroAmount(row.expenses) &&
+    isZeroAmount(row.commitments) &&
+    isZeroAmount(row.balance)
+  );
+}
+
+function isHiddenByDefault(row: TaskBreakdownRow): boolean {
+  return isClosedTask(row) || isZeroBalanceTask(row);
+}
+
 export function TaskBreakdown({
   isInternal,
   projectNumber,
   records,
 }: TaskBreakdownProps) {
-  const [showClosed, setShowClosed] = useState(false);
+  const [showAll, setShowAll] = useState(false);
   const allRows = useMemo(() => buildRows(records), [records]);
-  const closedCount = useMemo(
-    () => allRows.filter(isClosedTask).length,
+  const hiddenCount = useMemo(
+    () => allRows.filter(isHiddenByDefault).length,
     [allRows]
   );
   const rows = useMemo(
-    () => (showClosed ? allRows : allRows.filter((r) => !isClosedTask(r))),
-    [allRows, showClosed]
+    () => (showAll ? allRows : allRows.filter((r) => !isHiddenByDefault(r))),
+    [allRows, showAll]
   );
 
   const totals = useMemo(
@@ -169,6 +187,11 @@ export function TaskBreakdown({
                   </span>
                 ) : (
                   info.row.original.taskNum
+                )}
+                {isClosedTask(info.row.original) && (
+                  <span className="badge badge-sm badge-neutral ms-2">
+                    Closed
+                  </span>
                 )}
               </div>
               {info.row.original.taskName && (
@@ -309,13 +332,15 @@ export function TaskBreakdown({
       pagination="off"
       tableActions={(table) => (
         <div className="flex flex-wrap items-center gap-2">
-          {closedCount > 0 && (
+          {hiddenCount > 0 && (
             <button
-              className={`btn btn-sm${showClosed ? ' btn-active' : ''}`}
-              onClick={() => setShowClosed((current) => !current)}
+              className={`btn btn-sm${showAll ? ' btn-active' : ''}`}
+              onClick={() => setShowAll((current) => !current)}
               type="button"
             >
-              {showClosed ? 'Hide' : 'Show'} closed ({closedCount})
+              {showAll
+                ? 'Hide closed & zero balance'
+                : `Show all tasks (${hiddenCount})`}
             </button>
           )}
           <TableExportActions
