@@ -340,7 +340,7 @@ export function TaskBreakdown({
             >
               {showAll
                 ? 'Hide closed & zero balance'
-                : `Show all tasks (${hiddenCount})`}
+                : `Show hidden tasks (${hiddenCount})`}
             </button>
           )}
           <TableExportActions
