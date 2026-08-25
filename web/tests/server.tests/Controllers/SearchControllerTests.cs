@@ -391,6 +391,140 @@ public sealed class SearchControllerTests
         result.Should().BeOfType<NotFoundResult>();
     }
 
+    [Theory]
+    [InlineData(PpmRole.PrincipalInvestigator, "EPI")]
+    [InlineData(PpmRole.ProjectManager, "EPM")]
+    public async Task ResolveProjectPi_allows_assigned_pi_or_pm_without_financial_access(
+        string callerProjectRole,
+        string callerEmployeeId)
+    {
+        using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
+        var userId = Guid.NewGuid();
+        ctx.Users.Add(new User
+        {
+            Id = userId,
+            Kerberos = "projectuser",
+            IamId = "IAM-CALLER",
+            EmployeeId = callerEmployeeId,
+        });
+        await ctx.SaveChangesAsync();
+
+        var authorizationService = CreateAuthorizationService();
+        IReadOnlyList<string> roles = callerProjectRole == PpmRole.ProjectManager
+            ? [Role.Names.ProjectManager]
+            : [];
+        var controller = CreateController(
+            ctx,
+            authorizationService,
+            datamartService: new FakeDatamartService(
+                searchPeople:
+                [
+                    new SearchablePersonRecord
+                    {
+                        IamId = "IAM-PI",
+                        EmployeeId = "EPI",
+                        Name = "Pat PI",
+                        Email = "pi@ucdavis.edu",
+                    },
+                    new SearchablePersonRecord
+                    {
+                        IamId = "IAM-PM",
+                        EmployeeId = "EPM",
+                        Name = "Morgan PM",
+                        Email = "pm@ucdavis.edu",
+                    },
+                ]),
+            financialApiService: new FakeFinancialApiService(
+                [],
+                new Dictionary<string, IReadOnlyList<FakeFinancialProjectTeamMember>>
+                {
+                    ["ABC123"] =
+                    [
+                        new FakeFinancialProjectTeamMember(
+                            PpmRole.PrincipalInvestigator,
+                            "Pat PI",
+                            "EPI",
+                            "pi@ucdavis.edu"),
+                        new FakeFinancialProjectTeamMember(
+                            PpmRole.ProjectManager,
+                            "Morgan PM",
+                            "EPM",
+                            "pm@ucdavis.edu"),
+                    ],
+                }),
+            roles: roles,
+            userId: userId);
+
+        var result = await controller.ResolveProjectPi("abc123", CancellationToken.None);
+
+        var payload = result.Should().BeOfType<OkObjectResult>().Which.Value
+            .Should().BeOfType<SearchController.ResolveProjectPiResponse>().Which;
+        payload.IamId.Should().Be("IAM-PI");
+        payload.ProjectNumber.Should().Be("ABC123");
+    }
+
+    [Fact]
+    public async Task ResolveProjectPi_forbids_project_manager_not_assigned_to_requested_project()
+    {
+        using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
+        var userId = Guid.NewGuid();
+        ctx.Users.Add(new User
+        {
+            Id = userId,
+            Kerberos = "otherpm",
+            IamId = "IAM-OTHER-PM",
+            EmployeeId = "EOTHER",
+        });
+        await ctx.SaveChangesAsync();
+
+        var authorizationService = CreateAuthorizationService();
+        var controller = CreateController(
+            ctx,
+            authorizationService,
+            datamartService: new FakeDatamartService(
+                searchPeople:
+                [
+                    new SearchablePersonRecord
+                    {
+                        IamId = "IAM-PI",
+                        EmployeeId = "EPI",
+                        Name = "Pat PI",
+                        Email = "pi@ucdavis.edu",
+                    },
+                    new SearchablePersonRecord
+                    {
+                        IamId = "IAM-PM",
+                        EmployeeId = "EPM",
+                        Name = "Morgan PM",
+                        Email = "pm@ucdavis.edu",
+                    },
+                ]),
+            financialApiService: new FakeFinancialApiService(
+                [],
+                new Dictionary<string, IReadOnlyList<FakeFinancialProjectTeamMember>>
+                {
+                    ["ABC123"] =
+                    [
+                        new FakeFinancialProjectTeamMember(
+                            PpmRole.PrincipalInvestigator,
+                            "Pat PI",
+                            "EPI",
+                            "pi@ucdavis.edu"),
+                        new FakeFinancialProjectTeamMember(
+                            PpmRole.ProjectManager,
+                            "Morgan PM",
+                            "EPM",
+                            "pm@ucdavis.edu"),
+                    ],
+                }),
+            roles: [Role.Names.ProjectManager],
+            userId: userId);
+
+        var result = await controller.ResolveProjectPi("ABC123", CancellationToken.None);
+
+        result.Should().BeOfType<ForbidResult>();
+    }
+
     private static IAuthorizationService CreateAuthorizationService()
     {
         var services = new ServiceCollection();
@@ -406,11 +540,12 @@ public sealed class SearchControllerTests
         IReadOnlyList<string> roles,
         IDatamartService? datamartService = null,
         IFinancialApiService? financialApiService = null,
-        IEnumerable<string>? projectManagerEmployeeIds = null)
+        IEnumerable<string>? projectManagerEmployeeIds = null,
+        Guid? userId = null)
     {
         var httpContext = new DefaultHttpContext
         {
-            User = CreateUser(roles),
+            User = CreateUser(roles, userId),
         };
 
         return new SearchController(
@@ -423,9 +558,14 @@ public sealed class SearchControllerTests
         };
     }
 
-    private static ClaimsPrincipal CreateUser(IReadOnlyList<string> roles)
+    private static ClaimsPrincipal CreateUser(IReadOnlyList<string> roles, Guid? userId = null)
     {
         var claims = roles.Select(r => new Claim(ClaimTypes.Role, r)).ToList();
+        if (userId.HasValue)
+        {
+            claims.Add(new Claim(Microsoft.Identity.Web.ClaimConstants.ObjectId, userId.Value.ToString()));
+        }
+
         var identity = new ClaimsIdentity(claims, authenticationType: "Test");
         return new ClaimsPrincipal(identity);
     }

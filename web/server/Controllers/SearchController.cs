@@ -244,15 +244,21 @@ public sealed class SearchController : ApiControllerBase
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (!await HasFinancialAccessAsync())
-        {
-            return Forbid();
-        }
-
         var normalizedProjectNumber = projectNumber?.Trim().ToUpperInvariant();
         if (string.IsNullOrWhiteSpace(normalizedProjectNumber))
         {
             return BadRequest("projectNumber is required.");
+        }
+
+        var hasFinancialAccess = await HasFinancialAccessAsync();
+        var callerEmployeeId = hasFinancialAccess
+            ? null
+            : await GetCurrentEmployeeIdAsync(cancellationToken);
+
+        // Restricted callers may resolve only projects where PPM lists them as the PI or PM.
+        if (!hasFinancialAccess && string.IsNullOrWhiteSpace(callerEmployeeId))
+        {
+            return Forbid();
         }
 
         var client = _financialApiService.GetClient();
@@ -260,7 +266,24 @@ public sealed class SearchController : ApiControllerBase
             client,
             normalizedProjectNumber,
             PpmRole.PrincipalInvestigator,
+            callerEmployeeId,
             cancellationToken);
+
+        TeamMemberIamResolution? pmResolution = null;
+        if (!hasFinancialAccess && !piResolution.IncludesCaller)
+        {
+            pmResolution = await ResolveFirstTeamMemberIamIdByEmployeeIdAsync(
+                client,
+                normalizedProjectNumber,
+                PpmRole.ProjectManager,
+                callerEmployeeId,
+                cancellationToken);
+
+            if (!pmResolution.IncludesCaller)
+            {
+                return Forbid();
+            }
+        }
 
         if (!string.IsNullOrWhiteSpace(piResolution.IamId))
         {
@@ -272,10 +295,11 @@ public sealed class SearchController : ApiControllerBase
             return NotFound();
         }
 
-        var pmResolution = await ResolveFirstTeamMemberIamIdByEmployeeIdAsync(
+        pmResolution ??= await ResolveFirstTeamMemberIamIdByEmployeeIdAsync(
             client,
             normalizedProjectNumber,
             PpmRole.ProjectManager,
+            callerEmployeeId,
             cancellationToken);
 
         if (!string.IsNullOrWhiteSpace(pmResolution.IamId))
@@ -402,12 +426,20 @@ public sealed class SearchController : ApiControllerBase
             principalInvestigators));
     }
 
-    private sealed record TeamMemberIamResolution(string? IamId, bool HasTeamMembers);
+    private sealed record TeamMemberIamResolution(
+        string? IamId,
+        bool HasTeamMembers,
+        bool IncludesCaller);
 
+    /// <summary>
+    /// Resolves the first IAM ID for a project role and reports whether the caller is explicitly
+    /// listed in that role. Only project team members participate in this authorization check.
+    /// </summary>
     private async Task<TeamMemberIamResolution> ResolveFirstTeamMemberIamIdByEmployeeIdAsync(
         IAggieEnterpriseClient client,
         string projectNumber,
         string roleName,
+        string? callerEmployeeId,
         CancellationToken cancellationToken)
     {
         var result = await client.PpmProjectTeamMembers.ExecuteAsync(
@@ -418,6 +450,11 @@ public sealed class SearchController : ApiControllerBase
         var teamMembers = project?.TeamMembers?
             .Where(m => m.RoleName == roleName)
             .ToArray() ?? [];
+        var includesCaller = !string.IsNullOrWhiteSpace(callerEmployeeId) &&
+            teamMembers.Any(m => string.Equals(
+                m.Person?.EmployeeId,
+                callerEmployeeId,
+                StringComparison.OrdinalIgnoreCase));
         var membersWithEmployeeId = teamMembers
             .Where(m => !string.IsNullOrWhiteSpace(m.Person?.EmployeeId))
             .OrderBy(m => m.Name, StringComparer.OrdinalIgnoreCase)
@@ -433,11 +470,11 @@ public sealed class SearchController : ApiControllerBase
             var person = await _datamartService.GetSearchablePersonByEmployeeIdAsync(employeeId, cancellationToken);
             if (!string.IsNullOrWhiteSpace(person?.IamId))
             {
-                return new TeamMemberIamResolution(person.IamId, teamMembers.Length > 0);
+                return new TeamMemberIamResolution(person.IamId, teamMembers.Length > 0, includesCaller);
             }
         }
 
-        return new TeamMemberIamResolution(null, teamMembers.Length > 0);
+        return new TeamMemberIamResolution(null, teamMembers.Length > 0, includesCaller);
     }
 
     private async Task<IReadOnlyDictionary<string, SearchablePersonRecord>> GetPeopleByEmployeeIdAsync(
@@ -468,6 +505,29 @@ public sealed class SearchController : ApiControllerBase
             AuthorizationHelper.Policies.CanViewFinancials);
 
         return result.Succeeded;
+    }
+
+    /// <summary>
+    /// Resolves the authenticated user's employee ID used for project-team authorization.
+    /// Missing claims or profiles must fail closed rather than granting project lookup access.
+    /// </summary>
+    private async Task<string?> GetCurrentEmployeeIdAsync(CancellationToken cancellationToken)
+    {
+        Guid userId;
+        try
+        {
+            userId = User.GetUserId();
+        }
+        catch (InvalidOperationException)
+        {
+            return null;
+        }
+
+        return await _dbContext.Users
+            .AsNoTracking()
+            .Where(u => u.Id == userId)
+            .Select(u => u.EmployeeId)
+            .SingleOrDefaultAsync(cancellationToken);
     }
 
     private static string? GetFirstPiEmployeeId(
