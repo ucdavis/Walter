@@ -161,19 +161,19 @@ function DistributionSubtable({
               <span className="flex justify-end w-full">Funding End Date</span>
             </th>
             <th>
-              <span className="flex justify-end w-full">Monthly Salary</span>
+              <span className="flex justify-end w-full">Mo. Salary</span>
             </th>
             <th>
               <span className="flex justify-end w-full">
                 <TooltipLabel
-                  label="Monthly CBR"
+                  label="Mo. CBR"
                   placement="bottom"
                   tooltip={tooltipDefinitions.monthlyCbr}
                 />
               </span>
             </th>
             <th>
-              <span className="flex justify-end w-full">Monthly Total</span>
+              <span className="flex justify-end w-full">Mo. Total</span>
             </th>
           </tr>
         </thead>
@@ -299,17 +299,13 @@ const personnelCsvColumns = [
 
 interface PersonnelTableProps {
   data: PersonnelRecord[];
-  showTotals?: boolean;
 }
 
 function isUnfilled(position: AggregatedPosition): boolean {
   return !position.name;
 }
 
-export function PersonnelTable({
-  data,
-  showTotals = true,
-}: PersonnelTableProps) {
+export function PersonnelTable({ data }: PersonnelTableProps) {
   const [showUnfilled, setShowUnfilled] = useState(false);
   const allPositions = useMemo(() => aggregateByPosition(data), [data]);
   const unfilledCount = useMemo(
@@ -340,7 +336,7 @@ export function PersonnelTable({
             {safeText(row.original.positionDescription)}
           </div>
         ),
-        footer: showTotals ? () => 'Totals' : undefined,
+        footer: () => 'Totals',
         header: 'Position',
         id: 'positionProject',
         minSize: 400,
@@ -412,22 +408,20 @@ export function PersonnelTable({
             {formatCurrency(info.getValue())}
           </span>
         ),
-        footer: showTotals
-          ? ({ table }) => (
-              <span className="flex justify-end w-full">
-                {formatCurrency(
-                  table
-                    .getFilteredRowModel()
-                    .rows.reduce(
-                      (sum, row) => sum + row.original.monthlyRate,
-                      0
-                    )
-                )}
-              </span>
-            )
-          : undefined,
+        footer: ({ table }) => (
+          <span className="flex justify-end w-full">
+            {formatCurrency(
+              table
+                .getFilteredRowModel()
+                .rows.reduce(
+                  (sum, row) => sum + row.original.monthlyRate,
+                  0
+                )
+            )}
+          </span>
+        ),
         header: () => (
-          <span className="flex justify-end w-full">Monthly Salary</span>
+          <span className="flex justify-end w-full">Mo. Salary</span>
         ),
       }),
       columnHelper.accessor('monthlyFringe', {
@@ -436,24 +430,22 @@ export function PersonnelTable({
             {formatCurrency(info.getValue())}
           </span>
         ),
-        footer: showTotals
-          ? ({ table }) => (
-              <span className="flex justify-end w-full">
-                {formatCurrency(
-                  table
-                    .getFilteredRowModel()
-                    .rows.reduce(
-                      (sum, row) => sum + row.original.monthlyFringe,
-                      0
-                    )
-                )}
-              </span>
-            )
-          : undefined,
+        footer: ({ table }) => (
+          <span className="flex justify-end w-full">
+            {formatCurrency(
+              table
+                .getFilteredRowModel()
+                .rows.reduce(
+                  (sum, row) => sum + row.original.monthlyFringe,
+                  0
+                )
+            )}
+          </span>
+        ),
         header: () => (
           <span className="flex justify-end w-full">
             <TooltipLabel
-              label="Monthly CBR"
+              label="Mo. CBR"
               placement="bottom"
               tooltip={tooltipDefinitions.monthlyCbr}
             />
@@ -466,26 +458,24 @@ export function PersonnelTable({
             {formatCurrency(info.getValue())}
           </span>
         ),
-        footer: showTotals
-          ? ({ table }) => (
-              <span className="flex justify-end w-full">
-                {formatCurrency(
-                  table
-                    .getFilteredRowModel()
-                    .rows.reduce(
-                      (sum, row) => sum + row.original.monthlyTotal,
-                      0
-                    )
-                )}
-              </span>
-            )
-          : undefined,
+        footer: ({ table }) => (
+          <span className="flex justify-end w-full">
+            {formatCurrency(
+              table
+                .getFilteredRowModel()
+                .rows.reduce(
+                  (sum, row) => sum + row.original.monthlyTotal,
+                  0
+                )
+            )}
+          </span>
+        ),
         header: () => (
-          <span className="flex justify-end w-full">Monthly Total</span>
+          <span className="flex justify-end w-full">Mo. Total</span>
         ),
       }),
     ],
-    [showTotals]
+    []
   );
 
   if (positions.length === 0) {

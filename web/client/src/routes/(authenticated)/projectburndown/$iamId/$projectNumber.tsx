@@ -9,10 +9,7 @@ import { summarizeProjectByNumber } from '@/lib/projectSummary.ts';
 import { featureFlagsQueryOptions } from '@/queries/featureFlags.ts';
 import { projectsDetailQueryOptions } from '@/queries/project.ts';
 import { useUser } from '@/shared/auth/UserContext.tsx';
-import {
-  ChartBarIcon,
-  ClipboardDocumentListIcon,
-} from '@heroicons/react/24/outline';
+import { ClipboardDocumentListIcon } from '@heroicons/react/24/outline';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import {
   createFileRoute,
@@ -82,16 +79,6 @@ function RouteComponent() {
               <ClipboardDocumentListIcon className="h-4 w-4" />
               Project Details
             </Link>
-            {!summary.isInternal && featureFlags.expenditureProgressEnabled ? (
-              <Link
-                className="btn btn-sm"
-                params={{ iamId, projectNumber: summary.projectNumber }}
-                to="/expenditureprogress/$iamId/$projectNumber"
-              >
-                <ChartBarIcon className="h-4 w-4" />
-                Expenditure Progress
-              </Link>
-            ) : null}
           </div>
 
           <h1 className="h1">Project Burndown</h1>

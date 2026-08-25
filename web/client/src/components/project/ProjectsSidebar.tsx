@@ -28,7 +28,6 @@ interface ProjectSummary {
 }
 
 type ProjectSidebarRoute =
-  | '/expenditureprogress/$iamId/$projectNumber'
   | '/projectburndown/$iamId/$projectNumber'
   | '/projects/$iamId/$projectNumber';
 
@@ -74,18 +73,9 @@ function getProjectSidebarRoute(
   currentPathname: string,
   featureFlags: {
     burndownEnabled: boolean;
-    expenditureProgressEnabled: boolean;
   },
   project: ProjectSummary
 ): ProjectSidebarRoute {
-  if (
-    currentPathname.startsWith('/expenditureprogress/') &&
-    !project.isInternal &&
-    featureFlags.expenditureProgressEnabled
-  ) {
-    return '/expenditureprogress/$iamId/$projectNumber';
-  }
-
   if (
     currentPathname.startsWith('/projectburndown/') &&
     !project.isInternal &&
