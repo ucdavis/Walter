@@ -538,22 +538,22 @@ describe('project detail page', () => {
         screen.queryByRole('link', { name: 'Expenditure Progress' })
       ).not.toBeInTheDocument();
       expect(
-        screen.getByTestId('project-expenditure-progress-categories')
-      ).toBeInTheDocument();
-      expect(
-        screen.getByRole('button', { name: 'Table View' })
+        screen.getByRole('button', { name: 'Graph View' })
       ).toBeInTheDocument();
       expect(
         screen.getByRole('button', { name: 'Export' })
       ).toBeInTheDocument();
       expect(
-        screen.getByRole('button', { name: 'Expand graph' })
+        screen.getByRole('button', { name: 'Expand table' })
       ).toBeInTheDocument();
       expect(
-        screen.queryByRole('button', { name: 'Graph View' })
+        screen.queryByRole('button', { name: 'Table View' })
       ).not.toBeInTheDocument();
       expect(
-        screen.queryByRole('button', { name: 'Expand table' })
+        screen.queryByRole('button', { name: 'Expand graph' })
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('project-expenditure-progress-categories')
       ).not.toBeInTheDocument();
       expect(
         screen.queryByTestId('project-burndown-chart')
@@ -1042,23 +1042,10 @@ describe('project detail page', () => {
       ).toBeInTheDocument();
       expect(screen.queryByText('Task Breakdown')).not.toBeInTheDocument();
       expect(
-        screen.getByTestId('project-expenditure-progress-categories')
-      ).toBeInTheDocument();
-      expect(
         screen.getByText(
           'Expenses, commitments, and available balance by expenditure category.'
         )
       ).toBeInTheDocument();
-      expect(screen.getByText('Salaries and Wages')).toBeInTheDocument();
-      expect(
-        screen.getByText('Supplies / Services / Other Expenses')
-      ).toBeInTheDocument();
-      expect(
-        screen.queryByText('01 - Salaries and Wages')
-      ).not.toBeInTheDocument();
-
-      await user.click(screen.getByRole('button', { name: 'Table View' }));
-
       expect(
         screen.queryByPlaceholderText('Search all columns...')
       ).not.toBeInTheDocument();
@@ -1067,14 +1054,27 @@ describe('project detail page', () => {
         screen.getByText('03 - Supplies / Services / Other Expenses')
       ).toBeInTheDocument();
       expect(
-        screen.getByRole('button', { name: 'Graph View' })
-      ).toBeInTheDocument();
-      expect(
         screen.getByRole('button', { name: 'Expand table' })
       ).toBeInTheDocument();
       expect(
         screen.queryByRole('link', { name: 'Details' })
       ).not.toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', { name: 'Graph View' }));
+
+      expect(
+        screen.getByTestId('project-expenditure-progress-categories')
+      ).toBeInTheDocument();
+      expect(screen.getByText('Salaries and Wages')).toBeInTheDocument();
+      expect(
+        screen.getByText('Supplies / Services / Other Expenses')
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByText('01 - Salaries and Wages')
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: 'Table View' })
+      ).toBeInTheDocument();
     } finally {
       cleanup();
     }
