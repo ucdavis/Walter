@@ -189,7 +189,7 @@ export function TaskBreakdown({
                   info.row.original.taskNum
                 )}
                 {isClosedTask(info.row.original) && (
-                  <span className="badge badge-sm badge-neutral ms-2">
+                  <span className="badge badge-sm badge-soft badge-neutral ms-2">
                     Closed
                   </span>
                 )}
@@ -328,6 +328,9 @@ export function TaskBreakdown({
       columns={columns}
       data={rows}
       footerRowClassName="totaltr"
+      getRowProps={(row) =>
+        isClosedTask(row.original) ? { className: 'bg-base-200/80' } : {}
+      }
       globalFilter="left"
       pagination="off"
       tableActions={(table) => (
@@ -340,7 +343,7 @@ export function TaskBreakdown({
             >
               {showAll
                 ? 'Hide closed & zero balance'
-                : `Show all tasks (${hiddenCount})`}
+                : `Show hidden tasks (${hiddenCount})`}
             </button>
           )}
           <TableExportActions

@@ -106,7 +106,7 @@ describe('TaskBreakdown', () => {
 
     expect(screen.getByText('444000')).toBeInTheDocument();
     expect(
-      screen.queryByRole('button', { name: /show all tasks/i })
+      screen.queryByRole('button', { name: /show hidden tasks/i })
     ).not.toBeInTheDocument();
   });
 
@@ -139,14 +139,17 @@ describe('TaskBreakdown', () => {
       }),
     ]);
 
-    const toggle = screen.getByRole('button', { name: /show all tasks/i });
-    expect(toggle).toHaveTextContent('Show all tasks (2)');
+    const toggle = screen.getByRole('button', { name: /show hidden tasks/i });
+    expect(toggle).toHaveTextContent('Show hidden tasks (2)');
 
     await user.click(toggle);
 
     expect(screen.getByText('442000')).toBeInTheDocument();
     expect(screen.getByText('443000')).toBeInTheDocument();
     expect(screen.getByText('Closed')).toBeInTheDocument();
+    expect(screen.getByText('442000').closest('tr')).toHaveClass(
+      'bg-base-200/80'
+    );
     expect(
       screen.getByRole('button', { name: /hide closed & zero balance/i })
     ).toBeInTheDocument();
@@ -156,7 +159,7 @@ describe('TaskBreakdown', () => {
     renderTable([createRecord({ taskNum: '441000' })]);
 
     expect(
-      screen.queryByRole('button', { name: /show all tasks/i })
+      screen.queryByRole('button', { name: /show hidden tasks/i })
     ).not.toBeInTheDocument();
   });
 
