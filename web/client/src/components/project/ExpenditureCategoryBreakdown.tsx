@@ -239,7 +239,7 @@ export function ExpenditureCategoryBreakdown({
     'progress' | 'table' | null
   >(null);
   const [isExpanded, setIsExpanded] = useState(false);
-  const view = progressEnabled ? (selectedView ?? 'progress') : 'table';
+  const view = progressEnabled ? (selectedView ?? 'table') : 'table';
   const rows = useMemo(() => buildRows(records, filters), [filters, records]);
   const fallbackProgressCategories = useMemo(
     () => buildProgressCategories(rows),

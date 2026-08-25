@@ -54,13 +54,15 @@ describe('ExpenditureCategoryBreakdown', () => {
       />
     );
 
+    fireEvent.click(await screen.findByRole('button', { name: 'Graph View' }));
+
     expect(await screen.findByText('Projection Supplies')).toBeInTheDocument();
     expect(
       screen.queryByText('No expenditure category data found.')
     ).not.toBeInTheDocument();
   });
 
-  it('keeps Graph View available in Table View when rows are empty', async () => {
+  it('keeps Graph View available in the default Table View when rows are empty', async () => {
     server.use(
       http.get('/api/project/projection/:projectNumber', () =>
         HttpResponse.json({
@@ -87,6 +89,7 @@ describe('ExpenditureCategoryBreakdown', () => {
       />
     );
 
+    fireEvent.click(await screen.findByRole('button', { name: 'Graph View' }));
     await screen.findByText('Projection Supplies');
     fireEvent.click(screen.getByRole('button', { name: 'Table View' }));
 
@@ -126,6 +129,8 @@ describe('ExpenditureCategoryBreakdown', () => {
         records={[]}
       />
     );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Graph View' }));
 
     const summary = await screen.findByText(
       (_, element) =>
@@ -170,6 +175,7 @@ describe('ExpenditureCategoryBreakdown', () => {
       />
     );
 
+    fireEvent.click(screen.getByRole('button', { name: 'Graph View' }));
     fireEvent.click(screen.getByRole('button', { name: 'Expand graph' }));
     fireEvent.click(screen.getByRole('button', { name: 'Table View' }));
 
@@ -201,7 +207,6 @@ describe('ExpenditureCategoryBreakdown', () => {
       />
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Table View' }));
     fireEvent.click(screen.getByRole('button', { name: 'Expand table' }));
     fireEvent.click(screen.getByRole('button', { name: 'Graph View' }));
 
