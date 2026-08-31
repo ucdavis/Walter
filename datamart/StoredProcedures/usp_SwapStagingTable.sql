@@ -28,6 +28,7 @@ BEGIN
         (N'GlProjectMonthlyActuals'),
         (N'GlSummaryBalances'),
         (N'People'),
+        (N'PositionBudgets'),
         (N'PpmAwards'),
         (N'PpmPeople'),
         (N'PpmPersonRoles'),
