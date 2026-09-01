@@ -304,7 +304,7 @@ function RouteComponent() {
             <div>
               <h2 className="text-lg font-semibold">HTML</h2>
               <iframe
-                className="mt-2 h-[640px] w-full rounded border border-main-border bg-white"
+                className="mt-2 h-[640px] w-full rounded border border-main-border bg-base-100"
                 sandbox=""
                 srcDoc={preview?.htmlBody ?? ''}
                 title="Email HTML preview"

@@ -90,8 +90,8 @@ function getProjectSidebarRoute(
 const linkClasses = (isActive: boolean, isActiveStatus: boolean) =>
   [
     'block mb-0 text-left px-3 py-2 transition-colors border-b border-main-border',
-    isActive ? 'bg-primary-color/10' : 'hover:bg-[#F2F6FC]',
-    isActiveStatus ? 'bg-base-100' : 'hover:bg-[#F2F6FC]',
+    isActive ? 'bg-primary/10' : 'hover:bg-interaction-hover',
+    isActiveStatus ? 'bg-base-100' : 'hover:bg-interaction-hover',
   ].join(' ');
 
 export function ProjectsSidebar() {
@@ -165,8 +165,8 @@ export function ProjectsSidebar() {
         ].join(' ')}
       >
         <div className="sticky top-24 mt-8 h-[calc(100dvh-13.5rem)] min-h-0">
-          <div className="bg-white rounded-sm border border-main-border overflow-hidden h-full flex flex-col">
-            <div className="bg-light-bg-200 border-b border-main-border shrink-0">
+          <div className="bg-base-100 rounded-sm border border-main-border overflow-hidden h-full flex flex-col">
+            <div className="bg-base-200 border-b border-main-border shrink-0">
               <div className="px-4 py-2 border-b border-main-border flex items-center justify-between">
                 {!collapsed ? (
                   <h2 className="text-primary-font text-sm uppercase">
@@ -357,7 +357,7 @@ export function ProjectsSidebar() {
         <div
           aria-label="Project List"
           aria-modal="true"
-          className={`fixed top-0 left-0 h-full w-[78%] max-w-xs bg-white border-r border-main-border shadow-lg transform transition-transform duration-200 pointer-events-auto
+          className={`fixed top-0 left-0 h-full w-[78%] max-w-xs bg-base-100 border-r border-main-border shadow-lg transform transition-transform duration-200 pointer-events-auto
             ${open ? 'translate-x-0' : '-translate-x-full'}`}
           ref={panelRef}
           role="dialog"
