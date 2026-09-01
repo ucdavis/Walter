@@ -59,6 +59,8 @@ public sealed class AccrualOutboundMessageRendererTests
         rendered.HtmlBody.Should().Contain("prefers-color-scheme: dark");
         rendered.HtmlBody.Should().Contain("/walter.png");
         rendered.HtmlBody.Should().Contain("/walter-dark.png");
+        rendered.HtmlBody.Should().Contain("height=\"46\" src=\"/walter.png\" width=\"46\"");
+        rendered.HtmlBody.Should().Contain("height=\"46\" src=\"/walter-dark.png\" width=\"40\"");
         rendered.HtmlBody.Should().Contain("/ucdavis.png");
         rendered.HtmlBody.Should().Contain("/ucdavis-dark.png");
         rendered.HtmlBody.Should().Contain("You will not accrue additional hours until your balance falls below the cap");

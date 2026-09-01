@@ -12,6 +12,7 @@
     const string HeaderLogoPadding = "0 10px 0 18px";
     const string HeaderLogoWidth = "46";
     const string HeaderDarkLogoWidth = "40";
+    const string HeaderLogoHeight = "46";
     const string ButtonInnerPadding = "13px 24px";
     const string FooterTextPadding = "0px";
     const string FooterLogoPadding = "14px 0 0 0";
@@ -316,26 +317,27 @@
         <mj-table cellpadding="0" cellspacing="0" role="presentation" padding="@NotificationEmailLayoutSpacing.MainSectionPadding">
           <tr>
             <td style="height:48px;line-height:0;mso-line-height-rule:exactly;padding:@(HeaderLogoPadding);vertical-align:middle;width:48px;">
+              @* Outlook for Windows requires explicit image dimensions to avoid clipping PNGs inside this fixed-height row. *@
               @if (!string.IsNullOrWhiteSpace(Model.LogoUrl))
               {
                 if (hasAppHomeUrl)
                 {
               <a class="light-logo" href="@Model.AppHomeUrl" style="display:block;text-decoration:none;">
-                <img alt="" src="@Model.LogoUrl" width="@HeaderLogoWidth" style="border:0;display:block;height:auto;line-height:0;max-width:@(HeaderLogoWidth)px;width:@(HeaderLogoWidth)px;" />
+                <img alt="" height="@HeaderLogoHeight" src="@Model.LogoUrl" width="@HeaderLogoWidth" style="border:0;display:block;height:@(HeaderLogoHeight)px;line-height:0;max-height:@(HeaderLogoHeight)px;max-width:@(HeaderLogoWidth)px;width:@(HeaderLogoWidth)px;" />
               </a>
                   if (!string.IsNullOrWhiteSpace(Model.DarkLogoUrl))
                   {
               <a class="dark-logo" href="@Model.AppHomeUrl" style="display:none;mso-hide:all;text-decoration:none;">
-                <img alt="" src="@Model.DarkLogoUrl" width="@HeaderDarkLogoWidth" style="border:0;display:block;height:auto;line-height:0;max-width:@(HeaderDarkLogoWidth)px;width:@(HeaderDarkLogoWidth)px;" />
+                <img alt="" height="@HeaderLogoHeight" src="@Model.DarkLogoUrl" width="@HeaderDarkLogoWidth" style="border:0;display:block;height:@(HeaderLogoHeight)px;line-height:0;max-height:@(HeaderLogoHeight)px;max-width:@(HeaderDarkLogoWidth)px;width:@(HeaderDarkLogoWidth)px;" />
               </a>
                   }
                 }
                 else
                 {
-              <img alt="" class="light-logo" src="@Model.LogoUrl" width="@HeaderLogoWidth" style="border:0;display:block;height:auto;line-height:0;max-width:@(HeaderLogoWidth)px;width:@(HeaderLogoWidth)px;" />
+              <img alt="" class="light-logo" height="@HeaderLogoHeight" src="@Model.LogoUrl" width="@HeaderLogoWidth" style="border:0;display:block;height:@(HeaderLogoHeight)px;line-height:0;max-height:@(HeaderLogoHeight)px;max-width:@(HeaderLogoWidth)px;width:@(HeaderLogoWidth)px;" />
                   if (!string.IsNullOrWhiteSpace(Model.DarkLogoUrl))
                   {
-              <img alt="" class="dark-logo" src="@Model.DarkLogoUrl" width="@HeaderDarkLogoWidth" style="border:0;display:none;height:auto;line-height:0;max-width:@(HeaderDarkLogoWidth)px;mso-hide:all;width:@(HeaderDarkLogoWidth)px;" />
+              <img alt="" class="dark-logo" height="@HeaderLogoHeight" src="@Model.DarkLogoUrl" width="@HeaderDarkLogoWidth" style="border:0;display:none;height:@(HeaderLogoHeight)px;line-height:0;max-height:@(HeaderLogoHeight)px;max-width:@(HeaderDarkLogoWidth)px;mso-hide:all;width:@(HeaderDarkLogoWidth)px;" />
                   }
                 }
               }
