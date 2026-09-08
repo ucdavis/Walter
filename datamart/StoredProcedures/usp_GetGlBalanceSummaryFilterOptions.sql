@@ -154,9 +154,9 @@ BEGIN
                 nah.ParentLevel4Code AS AccountParentLevel4Code, nah.ParentLevel4Name AS AccountParentLevel4Name,
                 nah.ParentLevel5Code AS AccountParentLevel5Code, nah.ParentLevel5Name AS AccountParentLevel5Name
             FROM dbo.GlSummaryBalances a
-            LEFT JOIN dbo.ChartStringSegment dh  ON dh.SegmentName  = N'UCD Financial Department' AND dh.Code  = a.Dept
-            LEFT JOIN dbo.ChartStringSegment fh  ON fh.SegmentName  = N'UCD Fund'                 AND fh.Code  = a.Fund
-            LEFT JOIN dbo.ChartStringSegment nah ON nah.SegmentName = N'UCD Account'              AND nah.Code = a.Account
+            LEFT JOIN dbo.ChartStringSegment dh  ON dh.SegmentName  = N''UCD Financial Department'' AND dh.Code  = a.Dept
+            LEFT JOIN dbo.ChartStringSegment fh  ON fh.SegmentName  = N''UCD Fund''                 AND fh.Code  = a.Fund
+            LEFT JOIN dbo.ChartStringSegment nah ON nah.SegmentName = N''UCD Account''              AND nah.Code = a.Account
         )';
 
     DECLARE @Sql NVARCHAR(MAX);
