@@ -6,13 +6,18 @@ corresponding final table.
 <remarks>
 This procedure is intended for ETL-managed tables where dbo.<TableName>_Staging
 has already been fully loaded and validated by the pipeline. Empty staging tables
-are rejected so an upstream load failure cannot wipe the final table. Future
+are rejected so an upstream load failure cannot wipe the final table, and a staging
+load smaller than @MinRowRatio of the current final table is rejected so a partial
+upstream load (for example, a freshly seeded environment) cannot silently shrink it.
+Callers doing an intentional reduction pass a lower ratio, or 0 to skip the check.
+The shrink check does not apply when the final table is empty (first load). Future
 tables should be added to the allowlist only after confirming that final/staging
 schemas match and replace-all semantics are correct.
 </remarks>
 */
 CREATE PROCEDURE [dbo].[usp_SwapStagingTable]
-    @TableName SYSNAME
+    @TableName SYSNAME,
+    @MinRowRatio DECIMAL(4, 3) = 0.900
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -54,7 +59,9 @@ BEGIN
     DECLARE @ColumnList NVARCHAR(MAX);
     DECLARE @Sql NVARCHAR(MAX);
     DECLARE @StagingRowCount BIGINT;
+    DECLARE @TargetRowCount BIGINT;
     DECLARE @InsertedRows BIGINT;
+    DECLARE @ShrinkMessage NVARCHAR(400);
     DECLARE @LockResult INT;
     DECLARE @LockResource NVARCHAR(255) = N'usp_SwapStagingTable:' + @TargetTable;
 
@@ -157,6 +164,27 @@ BEGIN
             THROW 51005, 'The staging table is empty; target table was not changed.', 1;
         END;
 
+        SET @Sql = N'SELECT @Rows = COUNT_BIG(*) FROM ' + @TargetTable + N';';
+
+        EXEC sys.sp_executesql
+            @Sql,
+            N'@Rows BIGINT OUTPUT',
+            @Rows = @TargetRowCount OUTPUT;
+
+        -- Shrink guard: a replace-all load that drops well below the current row count
+        -- is far more likely an incomplete upstream load than a real population change.
+        IF @TargetRowCount > 0
+            AND @StagingRowCount < CEILING(@TargetRowCount * @MinRowRatio)
+        BEGIN
+            ROLLBACK TRANSACTION;
+            SET @ShrinkMessage =
+                N'The staging table has ' + CAST(@StagingRowCount AS NVARCHAR(20))
+                + N' rows but the target table has ' + CAST(@TargetRowCount AS NVARCHAR(20))
+                + N' (minimum allowed ratio ' + CAST(@MinRowRatio AS NVARCHAR(6))
+                + N'); target table was not changed.';
+            THROW 51006, @ShrinkMessage, 1;
+        END;
+
         SET @Sql =
             N'DELETE FROM ' + @TargetTable + N';
 INSERT INTO ' + @TargetTable + N' (' + @ColumnList + N')
@@ -174,6 +202,7 @@ SET @Rows = @@ROWCOUNT;';
         SELECT
             @TableName AS [TableName],
             @StagingTableName AS [StagingTableName],
+            @TargetRowCount AS [PreviousRowCount],
             @InsertedRows AS [InsertedRowCount];
     END TRY
     BEGIN CATCH
