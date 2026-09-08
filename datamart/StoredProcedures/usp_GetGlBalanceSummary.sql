@@ -4,7 +4,7 @@
 -- accounting period), grouped by a caller-selected set of chart string segments (@Dimensions,
 -- child level only) and constrained by optional per-segment filters. The Dept, Fund, and Account
 -- filters are hierarchy-aware: supplied codes are expanded to their whole subtree against the
--- dbo.Erp*Hierarchy dimension tables (a code matches directly or via any ancestor level), then the
+-- dbo.ChartStringSegment dimension (a code matches directly or via any ancestor level), then the
 -- fact rows are filtered by a plain leaf-code semi-join. Entity, Purpose, Program, Project, and
 -- Activity filters match the leaf code exactly. Dimension keys are resolved through a whitelist so
 -- only known column names reach the dynamic SQL; filter values stay parameterized. Every result
@@ -90,13 +90,14 @@ BEGIN
         INSERT INTO #DeptCodes (Code)
         SELECT CAST(value AS VARCHAR(20)) FROM STRING_SPLIT(@FinancialDepartments, ',')
         UNION
-        SELECT Code FROM dbo.ErpFinDeptHierarchy
-        WHERE ParentLevel0Code IN (SELECT value FROM STRING_SPLIT(@FinancialDepartments, ','))
-           OR ParentLevel1Code IN (SELECT value FROM STRING_SPLIT(@FinancialDepartments, ','))
-           OR ParentLevel2Code IN (SELECT value FROM STRING_SPLIT(@FinancialDepartments, ','))
-           OR ParentLevel3Code IN (SELECT value FROM STRING_SPLIT(@FinancialDepartments, ','))
-           OR ParentLevel4Code IN (SELECT value FROM STRING_SPLIT(@FinancialDepartments, ','))
-           OR ParentLevel5Code IN (SELECT value FROM STRING_SPLIT(@FinancialDepartments, ','));
+        SELECT Code FROM dbo.ChartStringSegment
+        WHERE SegmentName = N'UCD Financial Department'
+          AND (ParentLevel0Code IN (SELECT value FROM STRING_SPLIT(@FinancialDepartments, ','))
+            OR ParentLevel1Code IN (SELECT value FROM STRING_SPLIT(@FinancialDepartments, ','))
+            OR ParentLevel2Code IN (SELECT value FROM STRING_SPLIT(@FinancialDepartments, ','))
+            OR ParentLevel3Code IN (SELECT value FROM STRING_SPLIT(@FinancialDepartments, ','))
+            OR ParentLevel4Code IN (SELECT value FROM STRING_SPLIT(@FinancialDepartments, ','))
+            OR ParentLevel5Code IN (SELECT value FROM STRING_SPLIT(@FinancialDepartments, ',')));
     END;
     IF @Funds IS NOT NULL
     BEGIN
@@ -104,13 +105,14 @@ BEGIN
         INSERT INTO #FundCodes (Code)
         SELECT CAST(value AS VARCHAR(20)) FROM STRING_SPLIT(@Funds, ',')
         UNION
-        SELECT Code FROM dbo.ErpFundHierarchy
-        WHERE ParentLevel0Code IN (SELECT value FROM STRING_SPLIT(@Funds, ','))
-           OR ParentLevel1Code IN (SELECT value FROM STRING_SPLIT(@Funds, ','))
-           OR ParentLevel2Code IN (SELECT value FROM STRING_SPLIT(@Funds, ','))
-           OR ParentLevel3Code IN (SELECT value FROM STRING_SPLIT(@Funds, ','))
-           OR ParentLevel4Code IN (SELECT value FROM STRING_SPLIT(@Funds, ','))
-           OR ParentLevel5Code IN (SELECT value FROM STRING_SPLIT(@Funds, ','));
+        SELECT Code FROM dbo.ChartStringSegment
+        WHERE SegmentName = N'UCD Fund'
+          AND (ParentLevel0Code IN (SELECT value FROM STRING_SPLIT(@Funds, ','))
+            OR ParentLevel1Code IN (SELECT value FROM STRING_SPLIT(@Funds, ','))
+            OR ParentLevel2Code IN (SELECT value FROM STRING_SPLIT(@Funds, ','))
+            OR ParentLevel3Code IN (SELECT value FROM STRING_SPLIT(@Funds, ','))
+            OR ParentLevel4Code IN (SELECT value FROM STRING_SPLIT(@Funds, ','))
+            OR ParentLevel5Code IN (SELECT value FROM STRING_SPLIT(@Funds, ',')));
     END;
     IF @Accounts IS NOT NULL
     BEGIN
@@ -118,13 +120,14 @@ BEGIN
         INSERT INTO #AccountCodes (Code)
         SELECT CAST(value AS VARCHAR(20)) FROM STRING_SPLIT(@Accounts, ',')
         UNION
-        SELECT Code FROM dbo.ErpAccountHierarchy
-        WHERE ParentLevel0Code IN (SELECT value FROM STRING_SPLIT(@Accounts, ','))
-           OR ParentLevel1Code IN (SELECT value FROM STRING_SPLIT(@Accounts, ','))
-           OR ParentLevel2Code IN (SELECT value FROM STRING_SPLIT(@Accounts, ','))
-           OR ParentLevel3Code IN (SELECT value FROM STRING_SPLIT(@Accounts, ','))
-           OR ParentLevel4Code IN (SELECT value FROM STRING_SPLIT(@Accounts, ','))
-           OR ParentLevel5Code IN (SELECT value FROM STRING_SPLIT(@Accounts, ','));
+        SELECT Code FROM dbo.ChartStringSegment
+        WHERE SegmentName = N'UCD Account'
+          AND (ParentLevel0Code IN (SELECT value FROM STRING_SPLIT(@Accounts, ','))
+            OR ParentLevel1Code IN (SELECT value FROM STRING_SPLIT(@Accounts, ','))
+            OR ParentLevel2Code IN (SELECT value FROM STRING_SPLIT(@Accounts, ','))
+            OR ParentLevel3Code IN (SELECT value FROM STRING_SPLIT(@Accounts, ','))
+            OR ParentLevel4Code IN (SELECT value FROM STRING_SPLIT(@Accounts, ','))
+            OR ParentLevel5Code IN (SELECT value FROM STRING_SPLIT(@Accounts, ',')));
     END;
 
     -- Optional filters (values remain parameterized; leaf-only segments stay STRING_SPLIT INs).
