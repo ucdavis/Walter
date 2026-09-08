@@ -795,7 +795,9 @@ export function ProjectBurndownSection({
                   />
                   {showProjectionTransitionLine && (
                     <ReferenceLine
-                      label={<VerticalMarkerLabel labelText="Today" />}
+                      label={
+                        <VerticalMarkerLabel align="end" labelText="Today" />
+                      }
                       stroke={getVerticalMarkerStroke(currentBalanceForMarker)}
                       strokeDasharray="3 5"
                       strokeOpacity={getVerticalMarkerStrokeOpacity(
