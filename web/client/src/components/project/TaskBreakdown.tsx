@@ -329,7 +329,9 @@ export function TaskBreakdown({
       data={rows}
       footerRowClassName="totaltr"
       getRowProps={(row) =>
-        isClosedTask(row.original) ? { className: 'bg-base-200/80' } : {}
+        isHiddenByDefault(row.original)
+          ? { className: 'bg-base-300/80' }
+          : {}
       }
       globalFilter="left"
       pagination="off"

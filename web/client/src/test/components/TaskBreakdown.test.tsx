@@ -148,7 +148,10 @@ describe('TaskBreakdown', () => {
     expect(screen.getByText('443000')).toBeInTheDocument();
     expect(screen.getByText('Closed')).toBeInTheDocument();
     expect(screen.getByText('442000').closest('tr')).toHaveClass(
-      'bg-base-200/80'
+      'bg-base-300/80'
+    );
+    expect(screen.getByText('443000').closest('tr')).toHaveClass(
+      'bg-base-300/80'
     );
     expect(
       screen.getByRole('button', { name: /hide closed & zero balance/i })

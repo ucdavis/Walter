@@ -171,17 +171,24 @@ export function ProjectFundingChart({ projects }: ProjectFundingChartProps) {
         </>
       )}
       {negativeEntries.length > 0 && (
-        <div className="mt-4 text-sm text-base-content/70">
-          <p className="font-medium mb-1">
-            Negative balances (not shown above):
-          </p>
-          <ul className="list-disc list-inside">
-            {negativeEntries.map(([key, value]) => (
-              <li key={key}>
-                {key}: {formatCurrency(value)}
-              </li>
+        <div className="mt-4 text-base">
+          <p className="font-medium mb-1">Negative balances:</p>
+          <div className="space-y-1">
+            {negativeEntries.map(([key, value], index) => (
+              <p key={key}>
+                <span
+                  className="font-proxima-bold"
+                  style={{ color: getFundingColor(key, index) }}
+                >
+                  {key}
+                </span>
+                :{' '}
+                <span className="font-proxima-bold text-error">
+                  {formatCurrency(value)}
+                </span>
+              </p>
             ))}
-          </ul>
+          </div>
         </div>
       )}
     </div>

@@ -363,6 +363,9 @@ export function SponsoredProjectsTable({
         columns={columns}
         data={projects}
         footerRowClassName="totaltr"
+        getRowProps={(row) =>
+          isExpired(row.original) ? { className: 'bg-base-300/80' } : {}
+        }
         globalFilter="left"
         initialState={{ pagination: { pageSize: 25 } }}
         tableActions={(table) => (

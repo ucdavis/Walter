@@ -40,6 +40,9 @@ const NEUTRAL_MARKER_OPACITY = 0.28;
 const CHART_TOOLTIP_Z_INDEX = 60;
 const Y_AXIS_TICK_COUNT = 6;
 const DENSE_TIMELINE_TICK_ANGLE = -35;
+const DEFAULT_MARKER_LABEL_OFFSET = -6;
+const STAGGERED_MARKER_LABEL_OFFSET = -22;
+const STAGGERED_MARKER_LABEL_TOP_MARGIN = 32;
 const MONTH_LABELS = [
   'Jan',
   'Feb',
@@ -78,6 +81,7 @@ type AxisTickProps = {
 type ReferenceLineLabelProps = {
   align?: 'center' | 'end';
   labelText: string;
+  verticalOffset?: number;
   viewBox?: {
     x?: number;
     y?: number;
@@ -305,10 +309,11 @@ export function getVerticalMarkerStrokeOpacity(value: number) {
 export function VerticalMarkerLabel({
   align = 'center',
   labelText,
+  verticalOffset = DEFAULT_MARKER_LABEL_OFFSET,
   viewBox,
 }: ReferenceLineLabelProps) {
   const x = Number(viewBox?.x ?? 0) + (align === 'end' ? -4 : 0);
-  const y = Number(viewBox?.y ?? 0) - 6;
+  const y = Number(viewBox?.y ?? 0) + verticalOffset;
 
   return (
     <text
@@ -320,6 +325,17 @@ export function VerticalMarkerLabel({
     >
       {labelText}
     </text>
+  );
+}
+
+export function shouldStaggerMarkerLabels(
+  projectionTransitionMonthIndex: number | null,
+  awardEndMonthIndex: number | null
+) {
+  return (
+    projectionTransitionMonthIndex !== null &&
+    awardEndMonthIndex !== null &&
+    Math.abs(projectionTransitionMonthIndex - awardEndMonthIndex) <= 1
   );
 }
 
@@ -537,6 +553,13 @@ export function ProjectBurndownSection({
     labelsByMonth.has(projectionTransitionMonth);
   const showAwardEndLine =
     awardEndMonth !== null && labelsByMonth.has(awardEndMonth);
+  const staggerMarkerLabels =
+    showProjectionTransitionLine &&
+    showAwardEndLine &&
+    shouldStaggerMarkerLabels(
+      projectionTransitionMonthIndex,
+      awardEndMonthIndex
+    );
   const stats = useMemo(
     () => (result ? getProjectionStats(result, timelineProjectionDate) : null),
     [result, timelineProjectionDate]
@@ -730,7 +753,14 @@ export function ProjectBurndownSection({
               <ResponsiveContainer height="100%" width="100%">
                 <LineChart
                   data={chartRows}
-                  margin={{ bottom: 8, left: 8, right: 24, top: 16 }}
+                  margin={{
+                    bottom: 8,
+                    left: 8,
+                    right: 24,
+                    top: staggerMarkerLabels
+                      ? STAGGERED_MARKER_LABEL_TOP_MARGIN
+                      : 16,
+                  }}
                 >
                   <CartesianGrid stroke={GRID_COLOR} strokeDasharray="3 3" />
                   <XAxis
@@ -781,6 +811,11 @@ export function ProjectBurndownSection({
                         <VerticalMarkerLabel
                           align="end"
                           labelText="Project End"
+                          verticalOffset={
+                            staggerMarkerLabels
+                              ? STAGGERED_MARKER_LABEL_OFFSET
+                              : undefined
+                          }
                         />
                       }
                       stroke={getVerticalMarkerStroke(projectEndForMarker)}

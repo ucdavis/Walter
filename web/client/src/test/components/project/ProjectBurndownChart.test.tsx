@@ -13,6 +13,7 @@ import {
   getTimelineProjectionDate,
   getVerticalMarkerStroke,
   getVerticalMarkerStrokeOpacity,
+  shouldStaggerMarkerLabels,
 } from '@/components/project/ProjectBurndownChart.tsx';
 import type { ProjectionSeries } from '@/lib/projectProjection.ts';
 
@@ -90,6 +91,27 @@ describe('ProjectBurndownChart axis helpers', () => {
     expect(label).toHaveAttribute('x', '36');
     expect(label).toHaveAttribute('y', '14');
     expect(label).toHaveAttribute('text-anchor', 'end');
+  });
+
+  it('supports vertically staggering a marker label', () => {
+    render(
+      <svg>
+        <VerticalMarkerLabel
+          labelText="Project End"
+          verticalOffset={-22}
+          viewBox={{ x: 40, y: 32 }}
+        />
+      </svg>
+    );
+
+    expect(screen.getByText('Project End')).toHaveAttribute('y', '10');
+  });
+
+  it('staggers marker labels only when their months overlap or are adjacent', () => {
+    expect(shouldStaggerMarkerLabels(monthIndex(2026, 6), monthIndex(2026, 6))).toBe(true);
+    expect(shouldStaggerMarkerLabels(monthIndex(2026, 6), monthIndex(2026, 7))).toBe(true);
+    expect(shouldStaggerMarkerLabels(monthIndex(2026, 6), monthIndex(2026, 8))).toBe(false);
+    expect(shouldStaggerMarkerLabels(monthIndex(2026, 6), null)).toBe(false);
   });
 
   it('gets award month indexes from date-only or date-time values', () => {

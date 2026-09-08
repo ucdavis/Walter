@@ -198,4 +198,29 @@ describe('SponsoredProjectsTable', () => {
       screen.getByRole('button', { name: 'Show expired (1)' })
     ).toBeInTheDocument();
   });
+
+  it('darkens expired projects when they are shown', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 6, 17, 15));
+
+    render(
+      <SponsoredProjectsTable
+        iamId="1000000123"
+        records={[
+          createProject({
+            awardEndDate: '2026-07-16',
+            displayName: 'Ended Yesterday',
+            projectName: 'Ended Yesterday',
+            projectNumber: 'YDAY',
+          }),
+        ]}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Show expired (1)' }));
+
+    expect(screen.getByText('Ended Yesterday').closest('tr')).toHaveClass(
+      'bg-base-300/80'
+    );
+  });
 });
