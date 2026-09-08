@@ -15,8 +15,8 @@ This project owns timer-triggered notification work that should not run inside t
 
 - `GenerateMonthlyAccrualNotificationsAsync`
   - Timer setting: `NOTIFICATIONS_ACCRUAL_GENERATION_SCHEDULE`
-  - Default schedule: `0 0 9 1 * *`
-  - Meaning: 9:00 UTC on the first day of each month.
+  - Default schedule: `0 0 9 2 * *`
+  - Meaning: 9:00 UTC on the second day of each month.
   - Builds monthly accrual employee messages and Accrual Viewer report messages.
 - `ProcessOutboundMessagesAsync`
   - Timer setting: `NOTIFICATIONS_SENDER_SCHEDULE`
