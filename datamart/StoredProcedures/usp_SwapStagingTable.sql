@@ -70,11 +70,6 @@ BEGIN
         THROW 51001, 'The target table or staging table does not exist.', 1;
     END;
 
-    IF @MinRowRatio IS NULL OR @MinRowRatio < 0 OR @MinRowRatio > 1
-    BEGIN
-        THROW 51007, 'MinRowRatio must be between 0 and 1.', 1;
-    END;
-
     IF EXISTS
     (
         SELECT 1
