@@ -279,4 +279,29 @@ describe('InternalProjectsTable', () => {
     expect(screen.getByText('KAOSUN001')).toBeInTheDocument();
     expect(screen.queryByText('KAORAI002')).not.toBeInTheDocument();
   });
+
+  it('darkens inactive tasks when they are shown', () => {
+    render(
+      <InternalProjectsTable
+        discrepancies={new Set()}
+        iamId="1000000123"
+        records={[
+          createProject({
+            projectType: 'Internal',
+            taskName: 'Inactive Task',
+            taskNum: 'T002',
+            taskStatus: 'Inactive',
+          }),
+        ]}
+      />
+    );
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Show inactive tasks (1)' })
+    );
+
+    expect(screen.getByText('T002').closest('tr')).toHaveClass(
+      'bg-base-300/80'
+    );
+  });
 });

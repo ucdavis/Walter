@@ -105,8 +105,12 @@ describe('ProjectFundingChart', () => {
     expect(screen.getByText('Sponsored')).toBeInTheDocument();
 
     // Internal should only appear in the negative section, not the legend
-    expect(screen.getByText('Negative balances (not shown above):')).toBeInTheDocument();
-    expect(screen.getByText(/Internal:.*-\$3,000/)).toBeInTheDocument();
+    expect(screen.getByText('Negative balances:')).toBeInTheDocument();
+    const internalLabel = screen.getByText('Internal');
+    const internalBalance = screen.getByText(/-\$3,000/);
+    expect(internalLabel).toHaveClass('font-proxima-bold');
+    expect(internalLabel).toHaveStyle({ color: 'var(--color-accent)' });
+    expect(internalBalance).toHaveClass('font-proxima-bold', 'text-error');
   });
 
   it('clamps per-type, not per-project', () => {
@@ -124,7 +128,7 @@ describe('ProjectFundingChart', () => {
     expect(screen.getByText('Internal')).toBeInTheDocument();
     expect(screen.getByText('Sponsored')).toBeInTheDocument();
     expect(
-      screen.queryByText('Negative balances (not shown above):')
+      screen.queryByText('Negative balances:')
     ).not.toBeInTheDocument();
   });
 
@@ -142,9 +146,16 @@ describe('ProjectFundingChart', () => {
     expect(screen.queryByText(/\$.*\(\d+%\)/)).not.toBeInTheDocument();
 
     // Negative section present
-    expect(screen.getByText('Negative balances (not shown above):')).toBeInTheDocument();
-    expect(screen.getByText(/Internal:.*-\$1,000/)).toBeInTheDocument();
-    expect(screen.getByText(/Sponsored:.*-\$2,000/)).toBeInTheDocument();
+    expect(screen.getByText('Negative balances:')).toBeInTheDocument();
+    const internalLabel = screen.getByText('Internal');
+    const sponsoredLabel = screen.getByText('Sponsored');
+    const internalBalance = screen.getByText(/-\$1,000/);
+    const sponsoredBalance = screen.getByText(/-\$2,000/);
+    expect(internalLabel).toHaveStyle({ color: 'var(--color-accent)' });
+    expect(sponsoredLabel).toHaveClass('font-proxima-bold');
+    expect(sponsoredLabel).toHaveStyle({ color: 'var(--color-info)' });
+    expect(internalBalance).toHaveClass('font-proxima-bold', 'text-error');
+    expect(sponsoredBalance).toHaveClass('font-proxima-bold', 'text-error');
   });
 
   it('does not show the negative section when all types are positive', () => {
@@ -158,7 +169,7 @@ describe('ProjectFundingChart', () => {
     );
 
     expect(
-      screen.queryByText('Negative balances (not shown above):')
+      screen.queryByText('Negative balances:')
     ).not.toBeInTheDocument();
   });
 
@@ -175,7 +186,7 @@ describe('ProjectFundingChart', () => {
     expect(screen.getByText('Sponsored')).toBeInTheDocument();
     // Zero-balance Internal should not appear in legend or negative section
     expect(
-      screen.queryByText('Negative balances (not shown above):')
+      screen.queryByText('Negative balances:')
     ).not.toBeInTheDocument();
   });
 });
