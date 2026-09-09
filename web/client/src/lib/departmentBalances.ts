@@ -58,9 +58,12 @@ export const rowGroupLabel = (row: DepartmentBalanceRow, dimensions: string[]): 
 // A label's key is the exact segment combination its row displayed when written: the selected
 // dimensions supply which segments are set, the row supplies the codes, all others stay ''.
 // Entity and Program are not part of the shared label key, so they never contribute.
+// Dept is always part of the key so departments never share labels: when it is not displayed,
+// the single criteria department fills it in.
 export const rowLabelSegments = (
   row: DepartmentBalanceRow,
-  dimensions: string[]
+  dimensions: string[],
+  criteriaDepartments: string[] = []
 ): LabelSegments => {
   const segments: LabelSegments = {
     account: '',
@@ -75,8 +78,15 @@ export const rowLabelSegments = (
       segments[d.codeField as keyof LabelSegments] = String(row[d.codeField] ?? '');
     }
   }
+  if (!dimensions.includes('Dept') && criteriaDepartments.length === 1) {
+    segments.dept = criteriaDepartments[0];
+  }
   return segments;
 };
+
+// Labels need an unambiguous department: either displayed per row or a single criteria selection.
+export const canLabelRows = (dimensions: string[], criteriaDepartments: string[]): boolean =>
+  dimensions.includes('Dept') || criteriaDepartments.length === 1;
 
 export const labelKeyOf = (s: LabelSegments): string =>
   [s.dept, s.fund, s.account, s.purpose, s.project, s.activity].join('|');

@@ -19,6 +19,7 @@ import {
   DIMENSIONS,
   activeColumns,
   activeMeasures,
+  canLabelRows,
   joinCodeList,
   labelKeyOf,
   parseCodeList,
@@ -102,10 +103,12 @@ const columnHelper = createColumnHelper<LabeledRow>();
 // Uncontrolled input remounted (via key on the call site) when the saved label changes.
 // Hovering a saved label shows who wrote it and when.
 function LabelCell({
+  disabled,
   label,
   provenance,
   segments,
 }: {
+  disabled?: boolean;
   label: string;
   provenance?: string;
   segments: LabelSegments;
@@ -126,6 +129,7 @@ function LabelCell({
             mutation.isError ? 'input-error' : ''
           }`}
           defaultValue={label}
+          disabled={disabled}
           maxLength={500}
           onBlur={(e) => {
             const text = e.target.value.trim();
@@ -138,12 +142,16 @@ function LabelCell({
               e.currentTarget.blur();
             }
           }}
-          placeholder="Add label…"
+          placeholder={disabled ? '' : 'Add label…'}
           type="text"
         />
       }
       tooltip={
-        mutation.isError ? tooltipDefinitions.failedToSaveLabel : provenance
+        disabled
+          ? tooltipDefinitions.selectSingleDepartmentToLabel
+          : mutation.isError
+            ? tooltipDefinitions.failedToSaveLabel
+            : provenance
       }
     />
   );
@@ -291,12 +299,14 @@ function RouteComponent() {
         (r): LabeledRow => ({
           ...r,
           label:
-            labelsByKey.get(labelKeyOf(rowLabelSegments(r, dimensions)))
-              ?.text ?? '',
+            labelsByKey.get(
+              labelKeyOf(rowLabelSegments(r, dimensions, department))
+            )?.text ?? '',
         })
       ),
-    [rows, labelsByKey, dimensions]
+    [rows, labelsByKey, dimensions, department]
   );
+  const labelsEnabled = canLabelRows(dimensions, department);
 
   const deptOptions = useDepartmentBalanceOptions(
     'Dept',
@@ -391,15 +401,26 @@ function RouteComponent() {
           </span>
         ),
         header: () => (
-          <span className="block w-full text-right">{m.label}</span>
+          <span className="flex justify-end w-full">
+            {m.key === 'endingBalance' ? (
+              <TooltipLabel
+                label={m.label}
+                placement="bottom"
+                tooltip={tooltipDefinitions.endingBalanceSign}
+              />
+            ) : (
+              m.label
+            )}
+          </span>
         ),
       });
     const labelCol = columnHelper.accessor('label', {
       cell: (info) => {
-        const segments = rowLabelSegments(info.row.original, dimensions);
+        const segments = rowLabelSegments(info.row.original, dimensions, department);
         const saved = labelsByKey.get(labelKeyOf(segments));
         return (
           <LabelCell
+            disabled={!labelsEnabled}
             key={`${labelKeyOf(segments)}:${info.getValue()}`}
             label={info.getValue()}
             provenance={
@@ -411,11 +432,17 @@ function RouteComponent() {
           />
         );
       },
-      header: 'Label',
+      header: () => (
+        <TooltipLabel
+          label="Label"
+          placement="bottom"
+          tooltip={tooltipDefinitions.chartStringLabel}
+        />
+      ),
       size: 260,
     });
     return [...dimCols, labelCol, ...measures.map(measure)];
-  }, [cols, totals, dimensions, labelsByKey, measures]);
+  }, [cols, totals, dimensions, department, labelsEnabled, labelsByKey, measures]);
 
   const csvColumns = useMemo(
     () => [
@@ -763,6 +790,12 @@ function RouteComponent() {
       <h2 className="h2 mt-16 border-t border-main-border pt-8">
         Balances{effectivePeriod ? ` as of ${effectivePeriod}` : ''}
       </h2>
+      <p className="mt-2 text-sm">
+        Financial balances are presented using a sign convention that differs
+        from Aggie Enterprise General Ledger reporting. Positive amounts
+        indicate credits and available funding; negative amounts indicate
+        debits and overdrafts.
+      </p>
       {department.length === 0 ? (
         <p className="mt-2">No data to show.</p>
       ) : dimensions.length === 0 ? (
