@@ -401,7 +401,17 @@ function RouteComponent() {
           </span>
         ),
         header: () => (
-          <span className="block w-full text-right">{m.label}</span>
+          <span className="flex justify-end w-full">
+            {m.key === 'endingBalance' ? (
+              <TooltipLabel
+                label={m.label}
+                placement="bottom"
+                tooltip={tooltipDefinitions.endingBalanceSign}
+              />
+            ) : (
+              m.label
+            )}
+          </span>
         ),
       });
     const labelCol = columnHelper.accessor('label', {
@@ -422,7 +432,13 @@ function RouteComponent() {
           />
         );
       },
-      header: 'Label',
+      header: () => (
+        <TooltipLabel
+          label="Label"
+          placement="bottom"
+          tooltip={tooltipDefinitions.chartStringLabel}
+        />
+      ),
       size: 260,
     });
     return [...dimCols, labelCol, ...measures.map(measure)];
@@ -774,6 +790,12 @@ function RouteComponent() {
       <h2 className="h2 mt-16 border-t border-main-border pt-8">
         Balances{effectivePeriod ? ` as of ${effectivePeriod}` : ''}
       </h2>
+      <p className="mt-2 text-sm">
+        Financial balances are presented using a sign convention that differs
+        from Aggie Enterprise General Ledger reporting. Positive amounts
+        indicate credits and available funding; negative amounts indicate
+        debits and overdrafts.
+      </p>
       {department.length === 0 ? (
         <p className="mt-2">No data to show.</p>
       ) : dimensions.length === 0 ? (

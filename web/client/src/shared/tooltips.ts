@@ -8,6 +8,8 @@ export const tooltipDefinitions = {
   burdenStructure:
     'Rule set that determines which costs receive indirect cost charges and how they are calculated.',
   cbr: 'Monthly composite benefit rate cost, including fringe/benefit burden.',
+  chartStringLabel:
+    'Labels are saved and displayed for the combination of Display Fields within the Financial Department(s) shown here. NOTE: All users will see the label for the combination of fields.',
   commitment:
     'Commitment / Encumbrance are funds set aside when a requisition is fully approved; it is automatically released when the associated purchase order is created (or when an approved requisition is canceled before PO creation).',
   contractAdministrator:
@@ -16,6 +18,8 @@ export const tooltipDefinitions = {
     'Indicates whether the sponsor requires the university to contribute part of the project cost.',
   distributionPercent:
     "Distribution percent shows what share of the position's effort and pay is charged to this funding line.",
+  endingBalanceSign:
+    'Negative (red) amounts indicate overdrafts. This report reverses the sign convention used in Aggie Enterprise GL Summary Balance reports.',
   endingWithinThreeMonths: 'Ending within 3 months',
   expenditureCategory:
     'High-level grouping of costs, such as labor, travel, or supplier costs.',
