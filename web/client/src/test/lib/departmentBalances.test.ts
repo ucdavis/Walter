@@ -9,6 +9,7 @@ import {
   parseCodeList,
   parseFieldList,
   rowGroupLabel,
+  canLabelRows,
   rowLabelSegments,
 } from '@/lib/departmentBalances.ts';
 import type { DepartmentBalanceRow } from '@/queries/departmentBalances.ts';
@@ -102,6 +103,41 @@ describe('rowLabelSegments', () => {
     expect(rowLabelSegments(r, ['Fund', 'Dept'])).toEqual(
       rowLabelSegments(r, ['Dept', 'Fund'])
     );
+  });
+
+  it('keys on the single criteria department when Dept is not displayed', () => {
+    const segments = rowLabelSegments(row({ fund: '13U00' }), ['Fund'], ['ADNO001']);
+    expect(segments).toEqual({
+      account: '', activity: '', dept: 'ADNO001', fund: '13U00', project: '', purpose: '',
+    });
+  });
+
+  it('prefers the displayed Dept code over the criteria department', () => {
+    const segments = rowLabelSegments(
+      row({ dept: 'ADNO002', fund: '13U00' }),
+      ['Dept', 'Fund'],
+      ['AAES00C']
+    );
+    expect(segments.dept).toBe('ADNO002');
+  });
+
+  it('leaves dept empty when several criteria departments are selected and Dept is hidden', () => {
+    const segments = rowLabelSegments(row({ fund: '13U00' }), ['Fund'], ['ADNO001', 'ADNO002']);
+    expect(segments.dept).toBe('');
+  });
+});
+
+describe('canLabelRows', () => {
+  it('allows labels when Dept is displayed', () => {
+    expect(canLabelRows(['Dept', 'Fund'], ['ADNO001', 'ADNO002'])).toBe(true);
+  });
+
+  it('allows labels when exactly one criteria department is selected', () => {
+    expect(canLabelRows(['Fund'], ['ADNO001'])).toBe(true);
+  });
+
+  it('blocks labels when Dept is hidden and several departments are selected', () => {
+    expect(canLabelRows(['Fund'], ['ADNO001', 'ADNO002'])).toBe(false);
   });
 });
 

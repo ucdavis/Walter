@@ -32,6 +32,8 @@ export const tooltipDefinitions = {
     "Choose a timeline to view the project's remaining budget, including three months of actuals and the current month. Use the toggles to view All Expenses, Personnel, or Non-Personnel.",
   reconciliationDiscrepancy: 'GL/PPM reconciliation discrepancy',
   selectFinancialDepartmentFirst: 'Select a financial department first',
+  selectSingleDepartmentToLabel:
+    'Display Financial Department or select a single financial department to add labels',
   taskBreakdown:
     'Summary of how project costs are organized by financial coding segments.',
   totalBalance:

@@ -19,6 +19,7 @@ import {
   DIMENSIONS,
   activeColumns,
   activeMeasures,
+  canLabelRows,
   joinCodeList,
   labelKeyOf,
   parseCodeList,
@@ -102,10 +103,12 @@ const columnHelper = createColumnHelper<LabeledRow>();
 // Uncontrolled input remounted (via key on the call site) when the saved label changes.
 // Hovering a saved label shows who wrote it and when.
 function LabelCell({
+  disabled,
   label,
   provenance,
   segments,
 }: {
+  disabled?: boolean;
   label: string;
   provenance?: string;
   segments: LabelSegments;
@@ -126,6 +129,7 @@ function LabelCell({
             mutation.isError ? 'input-error' : ''
           }`}
           defaultValue={label}
+          disabled={disabled}
           maxLength={500}
           onBlur={(e) => {
             const text = e.target.value.trim();
@@ -138,12 +142,16 @@ function LabelCell({
               e.currentTarget.blur();
             }
           }}
-          placeholder="Add label…"
+          placeholder={disabled ? '' : 'Add label…'}
           type="text"
         />
       }
       tooltip={
-        mutation.isError ? tooltipDefinitions.failedToSaveLabel : provenance
+        disabled
+          ? tooltipDefinitions.selectSingleDepartmentToLabel
+          : mutation.isError
+            ? tooltipDefinitions.failedToSaveLabel
+            : provenance
       }
     />
   );
@@ -291,12 +299,14 @@ function RouteComponent() {
         (r): LabeledRow => ({
           ...r,
           label:
-            labelsByKey.get(labelKeyOf(rowLabelSegments(r, dimensions)))
-              ?.text ?? '',
+            labelsByKey.get(
+              labelKeyOf(rowLabelSegments(r, dimensions, department))
+            )?.text ?? '',
         })
       ),
-    [rows, labelsByKey, dimensions]
+    [rows, labelsByKey, dimensions, department]
   );
+  const labelsEnabled = canLabelRows(dimensions, department);
 
   const deptOptions = useDepartmentBalanceOptions(
     'Dept',
@@ -396,10 +406,11 @@ function RouteComponent() {
       });
     const labelCol = columnHelper.accessor('label', {
       cell: (info) => {
-        const segments = rowLabelSegments(info.row.original, dimensions);
+        const segments = rowLabelSegments(info.row.original, dimensions, department);
         const saved = labelsByKey.get(labelKeyOf(segments));
         return (
           <LabelCell
+            disabled={!labelsEnabled}
             key={`${labelKeyOf(segments)}:${info.getValue()}`}
             label={info.getValue()}
             provenance={
@@ -415,7 +426,7 @@ function RouteComponent() {
       size: 260,
     });
     return [...dimCols, labelCol, ...measures.map(measure)];
-  }, [cols, totals, dimensions, labelsByKey, measures]);
+  }, [cols, totals, dimensions, department, labelsEnabled, labelsByKey, measures]);
 
   const csvColumns = useMemo(
     () => [
