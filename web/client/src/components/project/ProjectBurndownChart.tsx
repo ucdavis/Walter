@@ -71,7 +71,6 @@ type ChartRow = { label: string; month: string } & Record<
 type VisibleSeries = {
   color: string;
   key: string;
-  strokeWidth?: number;
 };
 type AxisTickProps = {
   payload?: { value?: number | string };
@@ -590,22 +589,13 @@ export function ProjectBurndownSection({
     }))
     .filter(({ key }) => key === selectedKey);
   const visibleSeries: VisibleSeries[] =
-    selectedKey === NON_PERSONNEL_SERIES
-      ? activeSelectedNonPersonnelCategory
-        ? nonPersonnelCategorySeries
-            .map((entry) => ({
-              color: projectExpenditureCategoryColor(entry.key),
-              key: entry.key,
-            }))
-            .filter(({ key }) => key === activeSelectedNonPersonnelCategory)
-        : [
-            ...selectedRollupSeries,
-            ...nonPersonnelCategorySeries.map((entry) => ({
-              color: projectExpenditureCategoryColor(entry.key),
-              key: entry.key,
-              strokeWidth: 1.75,
-            })),
-          ]
+    selectedKey === NON_PERSONNEL_SERIES && activeSelectedNonPersonnelCategory
+      ? nonPersonnelCategorySeries
+          .map((entry) => ({
+            color: projectExpenditureCategoryColor(entry.key),
+            key: entry.key,
+          }))
+          .filter(({ key }) => key === activeSelectedNonPersonnelCategory)
       : selectedRollupSeries;
 
   const visibleBalances = chartSeries
@@ -636,10 +626,9 @@ export function ProjectBurndownSection({
         <div className="mb-6 max-w-3xl">
           <p>{tooltipDefinitions.projectBurndown}</p>
           <p className="mt-2 text-sm text-muted">
-            Indirect Costs (F&amp;A) are assessed based on the approved budget.
-            If budget amounts or allocations change, the indirect costs assessed
-            may also change. Please check with your account manager for
-            project-specific details.
+            Indirect Costs (F&amp;A) are assessed based on the approved award. If
+            spending varies from approved award, ICR may be affected, please
+            see your fiscal officer for specifics.
           </p>
         </div>
 
@@ -842,7 +831,7 @@ export function ProjectBurndownSection({
                     }
                     wrapperStyle={{ zIndex: CHART_TOOLTIP_Z_INDEX }}
                   />
-                  {visibleSeries.map(({ color, key, strokeWidth }) => (
+                  {visibleSeries.map(({ color, key }) => (
                     <Line
                       activeDot={{ r: 5 }}
                       connectNulls={false}
@@ -852,11 +841,11 @@ export function ProjectBurndownSection({
                       key={`${key}::solid`}
                       name={key}
                       stroke={color}
-                      strokeWidth={strokeWidth ?? 2.5}
+                      strokeWidth={2.5}
                       type="monotone"
                     />
                   ))}
-                  {visibleSeries.map(({ color, key, strokeWidth }) => (
+                  {visibleSeries.map(({ color, key }) => (
                     <Line
                       activeDot={{ r: 5 }}
                       connectNulls={false}
@@ -868,7 +857,7 @@ export function ProjectBurndownSection({
                       name={key}
                       stroke={color}
                       strokeDasharray="6 4"
-                      strokeWidth={strokeWidth ?? 2.5}
+                      strokeWidth={2.5}
                       type="monotone"
                     />
                   ))}
