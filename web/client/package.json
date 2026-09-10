@@ -10,7 +10,8 @@
     "lint:fix": "eslint . --fix",
     "preview": "vite preview",
     "test": "vitest",
-    "test:watch": "vitest --watch"
+    "test:watch": "vitest --watch",
+    "demo": "vite --mode demo --host 127.0.0.1 --port 5175 --strictPort"
   },
   "dependencies": {
     "@elastic/apm-rum": "^5.17.0",

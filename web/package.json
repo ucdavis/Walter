@@ -3,7 +3,8 @@
   "private": true,
   "scripts": {
     "start": "dotnet watch --project server/server.csproj",
-    "kill-ports": "npx kill-port 5166 5174"
+    "kill-ports": "npx kill-port 5166 5174",
+    "demo": "npm --prefix client run demo"
   },
   "devDependencies": {
     "npm-run-all": "^4.1.5"
