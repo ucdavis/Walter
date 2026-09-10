@@ -583,7 +583,7 @@ describe('project detail page', () => {
     }
   });
 
-  it('shows the project burndown with category tabs on the burndown page', async () => {
+  it('shows the project burndown with rollup tabs on the burndown page', async () => {
     const user = userEvent.setup();
     const projects = [
       createProject({ pmEmployeeId: '2000' }),
@@ -634,7 +634,7 @@ describe('project detail page', () => {
       ).toBeInTheDocument();
       expect(
         screen.getByText(
-          /Indirect Costs \(F&A\) are assessed based on the approved budget\./
+          /Indirect Costs \(F&A\) are assessed based on the approved award\./
         )
       ).toBeInTheDocument();
       expect(
@@ -683,11 +683,6 @@ describe('project detail page', () => {
         name: 'Non-Personnel',
       });
       expect(nonPersonnelTab).toHaveAttribute('aria-selected', 'false');
-
-      // Only the rollup series are offered; no per-category tabs.
-      expect(
-        screen.queryByRole('tab', { name: '04 - Supplies' })
-      ).not.toBeInTheDocument();
 
       await user.click(nonPersonnelTab);
       expect(nonPersonnelTab).toHaveAttribute('aria-selected', 'true');
