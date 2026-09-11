@@ -1,0 +1,132 @@
+import { monthAt, type DemoData } from '@/demo/data.ts';
+import {
+  monthsBetweenInclusive,
+  type FundingSource,
+  type MonthlyAllocation,
+  type Person,
+} from '@/components/projections/projection.ts';
+
+export type ProjectionDemoPlan = {
+  allocations: MonthlyAllocation[];
+  asOf: string;
+  fundingSources: FundingSource[];
+  ownerName: string;
+  people: Person[];
+  planningEndDate: string;
+};
+
+const colors = [
+  '#2f7f79',
+  '#62a94b',
+  '#ed9451',
+  '#9470c8',
+  '#5f7fd3',
+  '#bb6283',
+  '#8b793a',
+  '#4e929e',
+  '#697d57',
+];
+
+export function createProjectionDemoPlan(data: DemoData): ProjectionDemoPlan {
+  const planningEndDate = `${monthAt(data.asOf, 13)}-28`;
+  const sources = new Map<string, FundingSource>();
+  const projectSourceIds = new Map<string, string>();
+
+  for (const row of data.projects) {
+    if (
+      row.projectStatusCode !== 'ACTIVE' ||
+      (row.awardEndDate && row.awardEndDate.slice(0, 7) < data.asOf)
+    ) {
+      continue;
+    }
+
+    // Internal funds belong to individual tasks. Sponsored categories share
+    // one award balance, so they must not become separate funding sources.
+    const internal = row.projectType === 'Internal';
+    const id = internal
+      ? `${row.projectNumber}-${row.taskNum}`
+      : row.projectNumber;
+    projectSourceIds.set(`${row.projectNumber}-${row.taskNum}`, id);
+    let source = sources.get(id);
+    if (!source) {
+      source = {
+        color: colors[sources.size % colors.length],
+        description: internal
+          ? `${row.projectNumber} · ${row.taskNum} · ${row.fundCode}`
+          : row.projectNumber,
+        endDate: row.awardEndDate ?? planningEndDate,
+        id,
+        indirectRate: Number(row.projectBurdenCostRate ?? 0) * 100,
+        name: internal ? (row.taskName ?? row.taskNum ?? id) : row.displayName,
+        // The balance is already net of actuals and commitments. Starting at
+        // the snapshot avoids charging historical personnel costs a second time.
+        startDate:
+          row.awardStartDate && row.awardStartDate.slice(0, 7) > data.asOf
+            ? row.awardStartDate
+            : `${data.asOf}-01`,
+        startingBalance: 0,
+      };
+      sources.set(id, source);
+    }
+    source.startingBalance =
+      Math.round((source.startingBalance + row.balance) * 100) / 100;
+  }
+
+  const people = new Map<string, Person>();
+  const allocations: MonthlyAllocation[] = [];
+  for (const appointment of data.personnel) {
+    const sourceId = projectSourceIds.get(
+      `${appointment.projectId}-${appointment.task}`
+    );
+    const source = sourceId ? sources.get(sourceId) : undefined;
+    if (!source) {
+      continue;
+    }
+
+    const startMonth = [
+      data.asOf,
+      source.startDate.slice(0, 7),
+      appointment.fundingEffectiveDate?.slice(0, 7),
+      appointment.jobEffectiveDate?.slice(0, 7),
+    ]
+      .filter(Boolean)
+      .sort()
+      .at(-1)!;
+    const endMonth = [
+      source.endDate.slice(0, 7),
+      appointment.fundingEndDate?.slice(0, 7),
+      appointment.jobEndDate?.slice(0, 7),
+    ]
+      .filter(Boolean)
+      .sort()[0]!;
+    if (startMonth > endMonth) {
+      continue;
+    }
+
+    people.set(appointment.employeeId, {
+      annualSalary: appointment.monthlyRate * 12,
+      fringeRate: appointment.compositeBenefitRate * 100,
+      id: appointment.employeeId,
+      name: appointment.name,
+    });
+    for (const month of monthsBetweenInclusive(startMonth, endMonth)) {
+      allocations.push({
+        fundingSourceId: source.id,
+        month,
+        // Annual salary is the full-time rate. Carry FTE in the allocation
+        // once, matching monthlyRate * fte * distributionPercent in Walter.
+        percent: appointment.fte * appointment.distributionPercent,
+        personId: appointment.employeeId,
+      });
+    }
+  }
+
+  return {
+    allocations,
+    asOf: data.asOf,
+    fundingSources: [...sources.values()],
+    ownerName: data.user.name,
+    people: [...people.values()],
+    planningEndDate,
+  };
+}

@@ -1,0 +1,21 @@
+.projection-lab {
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+.projection-lab :is(button, input, select):focus-visible {
+  outline: 2px solid #0f766e;
+  outline-offset: 2px;
+}
+
+.projection-lab input {
+  min-width: 0;
+  width: 100%;
+}
+
+.projection-lab dialog::backdrop {
+  background: rgb(31 42 46 / 30%);
+}
+
+.projection-lab .projection-range {
+  accent-color: #0f766e;
+}

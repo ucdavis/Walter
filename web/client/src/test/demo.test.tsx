@@ -149,6 +149,28 @@ describe('synthetic portfolio accounting', () => {
 });
 
 describe('demo API and real screens', () => {
+  it('does not expose ProjectionLab outside demo mode', async () => {
+    server.use(...createDemoHandlers(data));
+    const { cleanup } = renderRoute({
+      initialPath: `/projections/${DEMO_IAM_ID}`,
+    });
+    try {
+      expect(
+        await screen.findByText(
+          'ProjectionLab is available in the local demo portfolio.'
+        )
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('heading', { name: 'ProjectionLab' })
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('link', { name: 'Projections' })
+      ).not.toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+
   it('filters project requests and rejects unimplemented API reads and writes', async () => {
     server.use(...createDemoHandlers(data));
     const response = await fetch(

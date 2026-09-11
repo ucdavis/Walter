@@ -24,6 +24,7 @@ import { Route as authenticatedReportsIndexRouteImport } from './routes/(authent
 import { Route as authenticatedPrincipalInvestigatorsIndexRouteImport } from './routes/(authenticated)/principalInvestigators/index'
 import { Route as authenticatedAdminIndexRouteImport } from './routes/(authenticated)/admin/index'
 import { Route as authenticatedAccrualsIndexRouteImport } from './routes/(authenticated)/accruals/index'
+import { Route as authenticatedProjectionsIamIdRouteImport } from './routes/(authenticated)/projections/$iamId'
 import { Route as authenticatedPrincipalInvestigatorsIamIdRouteImport } from './routes/(authenticated)/principalInvestigators/$iamId'
 import { Route as authenticatedAdminUsersRouteImport } from './routes/(authenticated)/admin/users'
 import { Route as authenticatedAdminNotificationRouteImport } from './routes/(authenticated)/admin/notification'
@@ -116,6 +117,12 @@ const authenticatedAccrualsIndexRoute =
   authenticatedAccrualsIndexRouteImport.update({
     id: '/accruals/',
     path: '/accruals/',
+    getParentRoute: () => authenticatedRouteRoute,
+  } as any)
+const authenticatedProjectionsIamIdRoute =
+  authenticatedProjectionsIamIdRouteImport.update({
+    id: '/projections/$iamId',
+    path: '/projections/$iamId',
     getParentRoute: () => authenticatedRouteRoute,
   } as any)
 const authenticatedPrincipalInvestigatorsIamIdRoute =
@@ -226,6 +233,7 @@ export interface FileRoutesByFullPath {
   '/admin/notification': typeof authenticatedAdminNotificationRoute
   '/admin/users': typeof authenticatedAdminUsersRoute
   '/principalInvestigators/$iamId': typeof authenticatedPrincipalInvestigatorsIamIdRoute
+  '/projections/$iamId': typeof authenticatedProjectionsIamIdRoute
   '/accruals': typeof authenticatedAccrualsIndexRoute
   '/admin/': typeof authenticatedAdminIndexRoute
   '/principalInvestigators': typeof authenticatedPrincipalInvestigatorsIndexRoute
@@ -254,6 +262,7 @@ export interface FileRoutesByTo {
   '/admin/notification': typeof authenticatedAdminNotificationRoute
   '/admin/users': typeof authenticatedAdminUsersRoute
   '/principalInvestigators/$iamId': typeof authenticatedPrincipalInvestigatorsIamIdRoute
+  '/projections/$iamId': typeof authenticatedProjectionsIamIdRoute
   '/accruals': typeof authenticatedAccrualsIndexRoute
   '/admin': typeof authenticatedAdminIndexRoute
   '/principalInvestigators': typeof authenticatedPrincipalInvestigatorsIndexRoute
@@ -287,6 +296,7 @@ export interface FileRoutesById {
   '/(authenticated)/admin/notification': typeof authenticatedAdminNotificationRoute
   '/(authenticated)/admin/users': typeof authenticatedAdminUsersRoute
   '/(authenticated)/principalInvestigators/$iamId': typeof authenticatedPrincipalInvestigatorsIamIdRoute
+  '/(authenticated)/projections/$iamId': typeof authenticatedProjectionsIamIdRoute
   '/(authenticated)/accruals/': typeof authenticatedAccrualsIndexRoute
   '/(authenticated)/admin/': typeof authenticatedAdminIndexRoute
   '/(authenticated)/principalInvestigators/': typeof authenticatedPrincipalInvestigatorsIndexRoute
@@ -320,6 +330,7 @@ export interface FileRouteTypes {
     | '/admin/notification'
     | '/admin/users'
     | '/principalInvestigators/$iamId'
+    | '/projections/$iamId'
     | '/accruals'
     | '/admin/'
     | '/principalInvestigators'
@@ -348,6 +359,7 @@ export interface FileRouteTypes {
     | '/admin/notification'
     | '/admin/users'
     | '/principalInvestigators/$iamId'
+    | '/projections/$iamId'
     | '/accruals'
     | '/admin'
     | '/principalInvestigators'
@@ -380,6 +392,7 @@ export interface FileRouteTypes {
     | '/(authenticated)/admin/notification'
     | '/(authenticated)/admin/users'
     | '/(authenticated)/principalInvestigators/$iamId'
+    | '/(authenticated)/projections/$iamId'
     | '/(authenticated)/accruals/'
     | '/(authenticated)/admin/'
     | '/(authenticated)/principalInvestigators/'
@@ -504,6 +517,13 @@ declare module '@tanstack/react-router' {
       path: '/accruals'
       fullPath: '/accruals'
       preLoaderRoute: typeof authenticatedAccrualsIndexRouteImport
+      parentRoute: typeof authenticatedRouteRoute
+    }
+    '/(authenticated)/projections/$iamId': {
+      id: '/(authenticated)/projections/$iamId'
+      path: '/projections/$iamId'
+      fullPath: '/projections/$iamId'
+      preLoaderRoute: typeof authenticatedProjectionsIamIdRouteImport
       parentRoute: typeof authenticatedRouteRoute
     }
     '/(authenticated)/principalInvestigators/$iamId': {
@@ -702,6 +722,7 @@ interface authenticatedRouteRouteChildren {
   authenticatedAccrualsAboutRoute: typeof authenticatedAccrualsAboutRoute
   authenticatedAccrualsOverviewRoute: typeof authenticatedAccrualsOverviewRoute
   authenticatedPrincipalInvestigatorsIamIdRoute: typeof authenticatedPrincipalInvestigatorsIamIdRoute
+  authenticatedProjectionsIamIdRoute: typeof authenticatedProjectionsIamIdRoute
   authenticatedAccrualsIndexRoute: typeof authenticatedAccrualsIndexRoute
   authenticatedPrincipalInvestigatorsIndexRoute: typeof authenticatedPrincipalInvestigatorsIndexRoute
   authenticatedAccrualsDepartmentDepartmentCodeRoute: typeof authenticatedAccrualsDepartmentDepartmentCodeRoute
@@ -722,6 +743,7 @@ const authenticatedRouteRouteChildren: authenticatedRouteRouteChildren = {
   authenticatedAccrualsOverviewRoute: authenticatedAccrualsOverviewRoute,
   authenticatedPrincipalInvestigatorsIamIdRoute:
     authenticatedPrincipalInvestigatorsIamIdRoute,
+  authenticatedProjectionsIamIdRoute: authenticatedProjectionsIamIdRoute,
   authenticatedAccrualsIndexRoute: authenticatedAccrualsIndexRoute,
   authenticatedPrincipalInvestigatorsIndexRoute:
     authenticatedPrincipalInvestigatorsIndexRoute,

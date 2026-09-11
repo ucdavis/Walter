@@ -168,20 +168,32 @@ function ProjectContent({
 
       <ProjectDetails
         actions={
-          !summary.isInternal &&
-          featureFlags?.burndownEnabled &&
-          !isAwardExpired(summary.awardEndDate) ? (
-            <>
+          <>
+            {import.meta.env.MODE === 'demo' && (
               <Link
                 className="btn btn-lg"
-                params={{ iamId, projectNumber: summary.projectNumber }}
-                to="/projectburndown/$iamId/$projectNumber"
+                params={{ iamId }}
+                to="/projections/$iamId"
               >
                 <PresentationChartLineIcon className="h-4 w-4" />
-                Project Burndown
+                Projections
               </Link>
-            </>
-          ) : null
+            )}
+            {!summary.isInternal &&
+            featureFlags?.burndownEnabled &&
+            !isAwardExpired(summary.awardEndDate) ? (
+              <>
+                <Link
+                  className="btn btn-lg"
+                  params={{ iamId, projectNumber: summary.projectNumber }}
+                  to="/projectburndown/$iamId/$projectNumber"
+                >
+                  <PresentationChartLineIcon className="h-4 w-4" />
+                  Project Burndown
+                </Link>
+              </>
+            ) : null}
+          </>
         }
         summary={summary}
       />

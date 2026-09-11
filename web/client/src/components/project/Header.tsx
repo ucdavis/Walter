@@ -73,6 +73,15 @@ const Header: React.FC = () => {
             } satisfies NavLinkItem,
           ]
         : []),
+      ...(import.meta.env.MODE === 'demo'
+        ? [
+            {
+              label: 'Projections',
+              params: { iamId: user.iamId },
+              to: '/projections/$iamId',
+            } satisfies NavLinkItem,
+          ]
+        : []),
       ...(canViewPersonnel
         ? [{ label: 'Personnel', to: '/personnel' } satisfies NavLinkItem]
         : []),
