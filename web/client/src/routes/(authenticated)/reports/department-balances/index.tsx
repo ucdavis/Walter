@@ -496,8 +496,12 @@ function RouteComponent() {
 
   // Department drives the scope of every other facet, so changing the selection
   // clears the dependent filters to avoid keeping now-out-of-scope values. Clearing
-  // it entirely also resets the group-by, since results are always department-scoped.
+  // it entirely also resets the group-by and optional balance-sheet measures, since
+  // results are always department-scoped.
   const handleDeptChange = (codes: string[]) => {
+    if (codes.length === 0) {
+      setShowBalanceSheet(false);
+    }
     void navigate({
       replace: true,
       search: (prev: ReportSearch) => ({
