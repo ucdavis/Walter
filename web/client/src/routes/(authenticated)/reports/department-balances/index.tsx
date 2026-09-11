@@ -223,12 +223,16 @@ function RouteComponent() {
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
   const [criteriaOpen, setCriteriaOpen] = useState(true);
+  const [filtersScrolled, setFiltersScrolled] = useState(false);
   const [showBalanceSheet, setShowBalanceSheet] = useState(false);
 
   // Selections are derived from the (sanitized) URL; setters below navigate with
   // replace so filter tweaks don't pile up history entries.
   const department = useMemo(() => parseCodeList(search.depts), [search.depts]);
-  const dimensions = useMemo(() => parseFieldList(search.fields), [search.fields]);
+  const dimensions = useMemo(
+    () => parseFieldList(search.fields),
+    [search.fields]
+  );
   const filters = useMemo<DepartmentBalancesFilters>(() => {
     const list = (v?: string) => {
       const codes = parseCodeList(v);
@@ -416,7 +420,11 @@ function RouteComponent() {
       });
     const labelCol = columnHelper.accessor('label', {
       cell: (info) => {
-        const segments = rowLabelSegments(info.row.original, dimensions, department);
+        const segments = rowLabelSegments(
+          info.row.original,
+          dimensions,
+          department
+        );
         const saved = labelsByKey.get(labelKeyOf(segments));
         return (
           <LabelCell
@@ -442,7 +450,15 @@ function RouteComponent() {
       size: 260,
     });
     return [...dimCols, labelCol, ...measures.map(measure)];
-  }, [cols, totals, dimensions, department, labelsEnabled, labelsByKey, measures]);
+  }, [
+    cols,
+    totals,
+    dimensions,
+    department,
+    labelsEnabled,
+    labelsByKey,
+    measures,
+  ]);
 
   const csvColumns = useMemo(
     () => [
@@ -471,7 +487,10 @@ function RouteComponent() {
   ) => {
     void navigate({
       replace: true,
-      search: (prev: ReportSearch) => ({ ...prev, [key]: joinCodeList(values) }),
+      search: (prev: ReportSearch) => ({
+        ...prev,
+        [key]: joinCodeList(values),
+      }),
     });
   };
 
@@ -506,321 +525,393 @@ function RouteComponent() {
         <h3 className="subtitle">Data source: GL Summary Balances</h3>
       </section>
 
-      {/* Report criteria: collapsible so the results table can take the full viewport */}
-      <div className="mb-2 flex items-center gap-2">
-        <h2 className="text-xl font-proxima-bold">Report Criteria</h2>
-        <button
-          aria-expanded={criteriaOpen}
-          className="btn btn-ghost btn-sm"
-          onClick={() => setCriteriaOpen((open) => !open)}
-          type="button"
+      <div
+        className={`grid items-start gap-6 xl:gap-8 ${
+          criteriaOpen
+            ? 'xl:grid-cols-[22rem_minmax(0,1fr)]'
+            : 'xl:grid-cols-[auto_minmax(0,1fr)]'
+        }`}
+      >
+        {/* Filters remain adjacent to the output so it is clear where criteria apply. */}
+        <aside
+          aria-label="Report filters"
+          className="xl:sticky xl:top-4"
         >
-          {criteriaOpen ? (
-            <>
-              <ChevronUpIcon className="h-4 w-4" />
-              Hide
-            </>
-          ) : (
-            <>
-              <ChevronDownIcon className="h-4 w-4" />
-              Show
-            </>
-          )}
-        </button>
-        <button
-          className="btn btn-ghost btn-sm ml-auto"
-          disabled={department.length === 0 && dimensions.length === 0}
-          onClick={() => handleDeptChange([])}
-          type="button"
-        >
-          <TrashIcon className="h-3.5 w-3.5" />
-          Clear all criteria
-        </button>
-      </div>
-
-      {/* Filter controls */}
-      <div className={`mb-6 ${criteriaOpen ? '' : 'hidden'}`}>
-        <div className="flex flex-col gap-6">
-          <section>
-            <div className="grid items-start gap-4 md:grid-cols-2">
-              {/* Accounting period: required single choice, newest first, defaults to current close */}
-              <div className="flex flex-col gap-2">
-                <label
-                  className="text-sm uppercase font-proxima-bold"
-                  htmlFor="period-select"
+          <div
+            className="rounded-box border border-main-border bg-base-100 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto"
+            onScroll={(event) => {
+              const scrolled = event.currentTarget.scrollTop > 0;
+              setFiltersScrolled((current) =>
+                current === scrolled ? current : scrolled
+              );
+            }}
+          >
+            <div
+              className={`flex items-center gap-2 bg-base-100 px-4 py-3 xl:sticky xl:top-0 xl:z-10 ${
+                filtersScrolled ? 'border-b border-main-border' : ''
+              }`}
+            >
+              <h2 className="text-xl font-proxima-bold">Filters</h2>
+              <button
+                aria-expanded={criteriaOpen}
+                className="btn btn-ghost btn-sm"
+                onClick={() => {
+                  setCriteriaOpen((open) => !open);
+                  setFiltersScrolled(false);
+                }}
+                type="button"
+              >
+                {criteriaOpen ? (
+                  <>
+                    <ChevronUpIcon className="h-4 w-4" />
+                    Hide
+                  </>
+                ) : (
+                  <>
+                    <ChevronDownIcon className="h-4 w-4" />
+                    Show
+                  </>
+                )}
+              </button>
+              {criteriaOpen ? (
+                <button
+                  className="btn btn-ghost btn-sm ml-auto"
+                  disabled={department.length === 0 && dimensions.length === 0}
+                  onClick={() => handleDeptChange([])}
+                  type="button"
                 >
-                  Period{' '}
-                  <span aria-hidden="true" className="text-error">
-                    *
-                  </span>
-                </label>
-                <select
-                  className="select w-full"
-                  disabled={periodOptions.isPending}
-                  id="period-select"
-                  onChange={(e) => setPeriod(e.target.value)}
-                  value={effectivePeriod ?? ''}
-                >
-                  {(periodOptions.data ?? []).map((o) => (
-                    <option key={o.code} value={o.code}>
-                      {o.code}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Department — hierarchy-aware multi-select, always enabled; gates the other facets */}
-              <div className="flex flex-col gap-2">
-                <label className="text-sm uppercase font-proxima-bold">
-                  Financial Department{' '}
-                  <span aria-hidden="true" className="text-error">
-                    *
-                  </span>
-                </label>
-                <MultiSelectFilter
-                  loading={deptOptions.isPending}
-                  onChange={handleDeptChange}
-                  options={toFilterOptions(deptOptions.data, true)}
-                  placeholder="Pick financial departments…"
-                  searchPlaceholder="Search financial departments…"
-                  selected={department}
-                />
-              </div>
+                  <TrashIcon className="h-3.5 w-3.5" />
+                  Clear all
+                </button>
+              ) : null}
             </div>
-          </section>
 
-          <section>
-            <h2 className="mt-4 mb-4 text-xl font-proxima-bold">
-              Data Filters
-            </h2>
-            {department.length > 0 && !hasDataFilters ? (
-              <div className="alert alert-warning alert-soft mb-4" role="alert">
-                Without data filters, this report includes everything in the
-                selected department(s) and may be slow to load. Add filters to
-                narrow it.
+            {criteriaOpen ? (
+              <div className="flex flex-col gap-6 p-4 pt-5">
+                <section>
+                  <div className="grid items-start gap-4">
+                    {/* Accounting period: required single choice, newest first, defaults to current close */}
+                    <div className="flex flex-col gap-2">
+                      <label
+                        className="text-sm uppercase font-proxima-bold"
+                        htmlFor="period-select"
+                      >
+                        Period{' '}
+                        <span aria-hidden="true" className="text-error">
+                          *
+                        </span>
+                      </label>
+                      <select
+                        className="select w-full"
+                        disabled={periodOptions.isPending}
+                        id="period-select"
+                        onChange={(e) => setPeriod(e.target.value)}
+                        value={effectivePeriod ?? ''}
+                      >
+                        {(periodOptions.data ?? []).map((o) => (
+                          <option key={o.code} value={o.code}>
+                            {o.code}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Department — hierarchy-aware multi-select, always enabled; gates the other facets */}
+                    <div className="flex flex-col gap-2">
+                      <label className="text-sm uppercase font-proxima-bold">
+                        Financial Department{' '}
+                        <span aria-hidden="true" className="text-error">
+                          *
+                        </span>
+                      </label>
+                      <MultiSelectFilter
+                        loading={deptOptions.isPending}
+                        onChange={handleDeptChange}
+                        options={toFilterOptions(deptOptions.data, true)}
+                        placeholder="Pick financial departments…"
+                        searchPlaceholder="Search financial departments…"
+                        selected={department}
+                      />
+                    </div>
+                  </div>
+                </section>
+
+                <section>
+                  <h2 className="mt-4 mb-4 text-xl font-proxima-bold">
+                    Data Filters
+                  </h2>
+                  {department.length > 0 && !hasDataFilters ? (
+                    <div
+                      className="alert alert-warning alert-soft mb-4"
+                      role="alert"
+                    >
+                      Without data filters, this report includes everything in
+                      the selected department(s) and may be slow to load. Add
+                      filters to narrow it.
+                    </div>
+                  ) : null}
+                  <div className="grid items-start gap-4">
+                    {/* Entity — multi-select, disabled until department chosen */}
+                    <DisabledCriteriaFilter disabledHint={disabledHint}>
+                      <label className="text-sm uppercase font-proxima-bold">
+                        Entity
+                      </label>
+                      <MultiSelectFilter
+                        disabled={department.length === 0}
+                        loading={entityOptions.isFetching}
+                        onChange={(vals) => setFilter('entities', vals)}
+                        options={toFilterOptions(entityOptions.data)}
+                        placeholder="Any entity"
+                        searchPlaceholder="Search entities…"
+                        selected={filters.entities ?? []}
+                      />
+                    </DisabledCriteriaFilter>
+
+                    {/* Fund — hierarchy-aware multi-select, disabled until department chosen */}
+                    <DisabledCriteriaFilter disabledHint={disabledHint}>
+                      <label className="text-sm uppercase font-proxima-bold">
+                        Fund
+                      </label>
+                      <MultiSelectFilter
+                        disabled={department.length === 0}
+                        loading={fundOptions.isFetching}
+                        onChange={(vals) => setFilter('funds', vals)}
+                        options={toFilterOptions(fundOptions.data, true)}
+                        placeholder="Any fund"
+                        searchPlaceholder="Search funds…"
+                        selected={filters.funds ?? []}
+                      />
+                    </DisabledCriteriaFilter>
+
+                    {/* Account — hierarchy-aware multi-select, disabled until department chosen */}
+                    <DisabledCriteriaFilter disabledHint={disabledHint}>
+                      <label className="text-sm uppercase font-proxima-bold">
+                        Account
+                      </label>
+                      <MultiSelectFilter
+                        disabled={department.length === 0}
+                        loading={accountOptions.isFetching}
+                        onChange={(vals) => setFilter('accounts', vals)}
+                        options={toFilterOptions(accountOptions.data, true)}
+                        placeholder="Any account"
+                        searchPlaceholder="Search accounts…"
+                        selected={filters.accounts ?? []}
+                      />
+                    </DisabledCriteriaFilter>
+
+                    {/* Purpose — multi-select, disabled until department chosen */}
+                    <DisabledCriteriaFilter disabledHint={disabledHint}>
+                      <label className="text-sm uppercase font-proxima-bold">
+                        Purpose
+                      </label>
+                      <MultiSelectFilter
+                        disabled={department.length === 0}
+                        loading={purposeOptions.isFetching}
+                        onChange={(vals) => setFilter('purposes', vals)}
+                        options={toFilterOptions(purposeOptions.data)}
+                        placeholder="Any purpose"
+                        searchPlaceholder="Search purposes…"
+                        selected={filters.purposes ?? []}
+                      />
+                    </DisabledCriteriaFilter>
+
+                    {/* Program — multi-select, disabled until department chosen */}
+                    <DisabledCriteriaFilter disabledHint={disabledHint}>
+                      <label className="text-sm uppercase font-proxima-bold">
+                        Program
+                      </label>
+                      <MultiSelectFilter
+                        disabled={department.length === 0}
+                        loading={programOptions.isFetching}
+                        onChange={(vals) => setFilter('programs', vals)}
+                        options={toFilterOptions(programOptions.data)}
+                        placeholder="Any program"
+                        searchPlaceholder="Search programs…"
+                        selected={filters.programs ?? []}
+                      />
+                    </DisabledCriteriaFilter>
+
+                    {/* Project — multi-select, disabled until department chosen */}
+                    <DisabledCriteriaFilter disabledHint={disabledHint}>
+                      <label className="text-sm uppercase font-proxima-bold">
+                        Project
+                      </label>
+                      <MultiSelectFilter
+                        disabled={department.length === 0}
+                        loading={projectOptions.isFetching}
+                        onChange={(vals) => setFilter('projects', vals)}
+                        options={toFilterOptions(projectOptions.data)}
+                        placeholder="Any project"
+                        searchPlaceholder="Search projects…"
+                        selected={filters.projects ?? []}
+                      />
+                    </DisabledCriteriaFilter>
+
+                    {/* Activity — multi-select, disabled until department chosen */}
+                    <DisabledCriteriaFilter disabledHint={disabledHint}>
+                      <label className="text-sm uppercase font-proxima-bold">
+                        Activity
+                      </label>
+                      <MultiSelectFilter
+                        disabled={department.length === 0}
+                        loading={activityOptions.isFetching}
+                        onChange={(vals) => setFilter('activities', vals)}
+                        options={toFilterOptions(activityOptions.data)}
+                        placeholder="Any activity"
+                        searchPlaceholder="Search activities…"
+                        selected={filters.activities ?? []}
+                      />
+                    </DisabledCriteriaFilter>
+                  </div>
+                </section>
+
+                {/* Field selections — which child-level segments the results are grouped/displayed by */}
+                <section>
+                  <div className="mt-4 mb-4 flex flex-wrap items-center gap-2">
+                    <h2 className="text-xl font-proxima-bold">
+                      Display Fields
+                    </h2>
+                    <TooltipLabel
+                      label={
+                        <button
+                          className="btn btn-ghost btn-sm"
+                          disabled={department.length === 0}
+                          onClick={() =>
+                            setDimensions(DIMENSIONS.map((d) => d.key))
+                          }
+                          type="button"
+                        >
+                          Select all
+                        </button>
+                      }
+                      labelClassName="no-underline"
+                      tooltip={disabledHint}
+                    />
+                  </div>
+                  <div className="grid gap-x-4 gap-y-1 sm:grid-cols-2">
+                    {DIMENSIONS.map((d) => (
+                      <TooltipLabel
+                        className="w-full"
+                        key={d.key}
+                        label={
+                          <label className="label cursor-pointer justify-start gap-3">
+                            <input
+                              checked={dimensions.includes(d.key)}
+                              className="checkbox checkbox-primary checkbox-sm"
+                              disabled={department.length === 0}
+                              onChange={(e) =>
+                                setDimensions(
+                                  e.target.checked
+                                    ? [...dimensions, d.key]
+                                    : dimensions.filter((k) => k !== d.key)
+                                )
+                              }
+                              type="checkbox"
+                            />
+                            <span className="label-text" title={d.label}>
+                              {d.key === 'Dept' ? 'Fin. Dept.' : d.label}
+                            </span>
+                          </label>
+                        }
+                        labelClassName="w-full no-underline"
+                        tooltip={disabledHint}
+                      />
+                    ))}
+                  </div>
+                  {/* Assets/liabilities columns are opt-in; the other measures always show */}
+                  <TooltipLabel
+                    className="w-full"
+                    label={
+                      <label className="label mt-2 cursor-pointer justify-start gap-3">
+                        <input
+                          checked={showBalanceSheet}
+                          className="toggle toggle-primary toggle-sm"
+                          disabled={department.length === 0}
+                          onChange={(e) =>
+                            setShowBalanceSheet(e.target.checked)
+                          }
+                          type="checkbox"
+                        />
+                        <span className="label-text">
+                          Show assets and liabilities
+                        </span>
+                      </label>
+                    }
+                    labelClassName="w-full no-underline"
+                    tooltip={disabledHint}
+                  />
+                </section>
               </div>
             ) : null}
-            <div className="grid items-start gap-4 md:grid-cols-2">
-              {/* Entity — multi-select, disabled until department chosen */}
-              <DisabledCriteriaFilter disabledHint={disabledHint}>
-                <label className="text-sm uppercase font-proxima-bold">
-                  Entity
-                </label>
-                <MultiSelectFilter
-                  disabled={department.length === 0}
-                  loading={entityOptions.isFetching}
-                  onChange={(vals) => setFilter('entities', vals)}
-                  options={toFilterOptions(entityOptions.data)}
-                  placeholder="Any entity"
-                  searchPlaceholder="Search entities…"
-                  selected={filters.entities ?? []}
-                />
-              </DisabledCriteriaFilter>
+          </div>
+        </aside>
 
-              {/* Fund — hierarchy-aware multi-select, disabled until department chosen */}
-              <DisabledCriteriaFilter disabledHint={disabledHint}>
-                <label className="text-sm uppercase font-proxima-bold">
-                  Fund
-                </label>
-                <MultiSelectFilter
-                  disabled={department.length === 0}
-                  loading={fundOptions.isFetching}
-                  onChange={(vals) => setFilter('funds', vals)}
-                  options={toFilterOptions(fundOptions.data, true)}
-                  placeholder="Any fund"
-                  searchPlaceholder="Search funds…"
-                  selected={filters.funds ?? []}
-                />
-              </DisabledCriteriaFilter>
-
-              {/* Account — hierarchy-aware multi-select, disabled until department chosen */}
-              <DisabledCriteriaFilter disabledHint={disabledHint}>
-                <label className="text-sm uppercase font-proxima-bold">
-                  Account
-                </label>
-                <MultiSelectFilter
-                  disabled={department.length === 0}
-                  loading={accountOptions.isFetching}
-                  onChange={(vals) => setFilter('accounts', vals)}
-                  options={toFilterOptions(accountOptions.data, true)}
-                  placeholder="Any account"
-                  searchPlaceholder="Search accounts…"
-                  selected={filters.accounts ?? []}
-                />
-              </DisabledCriteriaFilter>
-
-              {/* Purpose — multi-select, disabled until department chosen */}
-              <DisabledCriteriaFilter disabledHint={disabledHint}>
-                <label className="text-sm uppercase font-proxima-bold">
-                  Purpose
-                </label>
-                <MultiSelectFilter
-                  disabled={department.length === 0}
-                  loading={purposeOptions.isFetching}
-                  onChange={(vals) => setFilter('purposes', vals)}
-                  options={toFilterOptions(purposeOptions.data)}
-                  placeholder="Any purpose"
-                  searchPlaceholder="Search purposes…"
-                  selected={filters.purposes ?? []}
-                />
-              </DisabledCriteriaFilter>
-
-              {/* Program — multi-select, disabled until department chosen */}
-              <DisabledCriteriaFilter disabledHint={disabledHint}>
-                <label className="text-sm uppercase font-proxima-bold">
-                  Program
-                </label>
-                <MultiSelectFilter
-                  disabled={department.length === 0}
-                  loading={programOptions.isFetching}
-                  onChange={(vals) => setFilter('programs', vals)}
-                  options={toFilterOptions(programOptions.data)}
-                  placeholder="Any program"
-                  searchPlaceholder="Search programs…"
-                  selected={filters.programs ?? []}
-                />
-              </DisabledCriteriaFilter>
-
-              {/* Project — multi-select, disabled until department chosen */}
-              <DisabledCriteriaFilter disabledHint={disabledHint}>
-                <label className="text-sm uppercase font-proxima-bold">
-                  Project
-                </label>
-                <MultiSelectFilter
-                  disabled={department.length === 0}
-                  loading={projectOptions.isFetching}
-                  onChange={(vals) => setFilter('projects', vals)}
-                  options={toFilterOptions(projectOptions.data)}
-                  placeholder="Any project"
-                  searchPlaceholder="Search projects…"
-                  selected={filters.projects ?? []}
-                />
-              </DisabledCriteriaFilter>
-
-              {/* Activity — multi-select, disabled until department chosen */}
-              <DisabledCriteriaFilter disabledHint={disabledHint}>
-                <label className="text-sm uppercase font-proxima-bold">
-                  Activity
-                </label>
-                <MultiSelectFilter
-                  disabled={department.length === 0}
-                  loading={activityOptions.isFetching}
-                  onChange={(vals) => setFilter('activities', vals)}
-                  options={toFilterOptions(activityOptions.data)}
-                  placeholder="Any activity"
-                  searchPlaceholder="Search activities…"
-                  selected={filters.activities ?? []}
-                />
-              </DisabledCriteriaFilter>
+        <section aria-labelledby="results-heading" className="min-w-0">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-main-border pb-4">
+            <div>
+              <h2 className="h2" id="results-heading">
+                Results{effectivePeriod ? ` as of ${effectivePeriod}` : ''}
+              </h2>
+              <p className="mt-1 text-sm text-base-content/70">
+                Filters update these results automatically.
+              </p>
             </div>
-          </section>
-
-          {/* Field selections — which child-level segments the results are grouped/displayed by */}
-          <section>
-            <div className="mt-4 mb-4 flex flex-wrap items-center gap-2">
-              <h2 className="text-xl font-proxima-bold">Display Fields</h2>
-              <TooltipLabel
-                label={
-                  <button
-                    className="btn btn-ghost btn-sm"
-                    disabled={department.length === 0}
-                    onClick={() => setDimensions(DIMENSIONS.map((d) => d.key))}
-                    type="button"
-                  >
-                    Select all
-                  </button>
+            {department.length > 0 &&
+            dimensions.length > 0 &&
+            !isFetching &&
+            !isError ? (
+              <p aria-live="polite" className="text-sm text-base-content/70">
+                Showing {labeledRows.length}{' '}
+                {labeledRows.length === 1 ? 'row' : 'rows'}
+              </p>
+            ) : null}
+          </div>
+          <p className="mt-4 text-sm">
+            Financial balances are presented using a sign convention that
+            differs from Aggie Enterprise General Ledger reporting. Positive
+            amounts indicate credits and available funding; negative amounts
+            indicate debits and overdrafts.
+          </p>
+          {department.length === 0 ? (
+            <div className="alert alert-info alert-soft mt-4" role="status">
+              Select a financial department in Filters to see balances here.
+            </div>
+          ) : dimensions.length === 0 ? (
+            <div className="alert alert-info alert-soft mt-4" role="status">
+              Choose one or more Display Fields in Filters to see results here.
+            </div>
+          ) : isFetching ? (
+            <div
+              aria-live="polite"
+              className="alert alert-info alert-soft mt-4"
+              role="status"
+            >
+              Updating results…
+            </div>
+          ) : isError ? (
+            <div className="alert alert-error alert-soft mt-4" role="alert">
+              Unable to load department balances. Try changing the filters or
+              refreshing the page.
+            </div>
+          ) : (
+            <div className="mt-4">
+              <DataTable
+                columns={columns}
+                data={labeledRows}
+                filterPlaceholder="Filter results..."
+                pagination="off"
+                tableActions={
+                  <ExportDataButton
+                    columns={csvColumns}
+                    data={labeledRows}
+                    filename={`department-balances-${effectivePeriod ?? 'current'}.csv`}
+                  />
                 }
-                labelClassName="no-underline"
-                tooltip={disabledHint}
               />
             </div>
-            <div className="grid gap-x-4 gap-y-1 sm:grid-cols-2 lg:grid-cols-4">
-              {DIMENSIONS.map((d) => (
-                <TooltipLabel
-                  className="w-full"
-                  key={d.key}
-                  label={
-                    <label className="label cursor-pointer justify-start gap-3">
-                      <input
-                        checked={dimensions.includes(d.key)}
-                        className="checkbox checkbox-primary checkbox-sm"
-                        disabled={department.length === 0}
-                        onChange={(e) =>
-                          setDimensions(
-                            e.target.checked
-                              ? [...dimensions, d.key]
-                              : dimensions.filter((k) => k !== d.key)
-                          )
-                        }
-                        type="checkbox"
-                      />
-                      <span className="label-text">{d.label}</span>
-                    </label>
-                  }
-                  labelClassName="w-full no-underline"
-                  tooltip={disabledHint}
-                />
-              ))}
-            </div>
-            {/* Assets/liabilities columns are opt-in; the other measures always show */}
-            <TooltipLabel
-              className="w-full"
-              label={
-                <label className="label mt-2 cursor-pointer justify-start gap-3">
-                  <input
-                    checked={showBalanceSheet}
-                    className="toggle toggle-primary toggle-sm"
-                    disabled={department.length === 0}
-                    onChange={(e) => setShowBalanceSheet(e.target.checked)}
-                    type="checkbox"
-                  />
-                  <span className="label-text">
-                    Show assets and liabilities
-                  </span>
-                </label>
-              }
-              labelClassName="w-full no-underline"
-              tooltip={disabledHint}
-            />
-          </section>
-        </div>
+          )}
+        </section>
       </div>
-
-      {/* Results area */}
-      <h2 className="h2 mt-16 border-t border-main-border pt-8">
-        Balances{effectivePeriod ? ` as of ${effectivePeriod}` : ''}
-      </h2>
-      <p className="mt-2 text-sm">
-        Financial balances are presented using a sign convention that differs
-        from Aggie Enterprise General Ledger reporting. Positive amounts
-        indicate credits and available funding; negative amounts indicate
-        debits and overdrafts.
-      </p>
-      {department.length === 0 ? (
-        <p className="mt-2">No data to show.</p>
-      ) : dimensions.length === 0 ? (
-        <p className="mt-2">
-          Choose one or more group-by segments to see results.
-        </p>
-      ) : isFetching ? (
-        <p className="mt-2">Loading department balances…</p>
-      ) : isError ? (
-        <p className="text-error mt-4">Error loading department balances.</p>
-      ) : (
-        <DataTable
-          columns={columns}
-          data={labeledRows}
-          filterPlaceholder="Filter results..."
-          pagination="off"
-          tableActions={
-            <ExportDataButton
-              columns={csvColumns}
-              data={labeledRows}
-              filename={`department-balances-${effectivePeriod ?? 'current'}.csv`}
-            />
-          }
-        />
-      )}
     </main>
   );
 }
