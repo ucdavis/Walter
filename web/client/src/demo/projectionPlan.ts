@@ -30,7 +30,6 @@ const colors = [
 export function createProjectionDemoPlan(data: DemoData): ProjectionDemoPlan {
   const planningEndDate = `${monthAt(data.asOf, 13)}-28`;
   const sources = new Map<string, FundingSource>();
-  const projectSourceIds = new Map<string, string>();
 
   for (const row of data.projects) {
     if (
@@ -40,24 +39,18 @@ export function createProjectionDemoPlan(data: DemoData): ProjectionDemoPlan {
       continue;
     }
 
-    // Internal funds belong to individual tasks. Sponsored categories share
-    // one award balance, so they must not become separate funding sources.
-    const internal = row.projectType === 'Internal';
-    const id = internal
-      ? `${row.projectNumber}-${row.taskNum}`
-      : row.projectNumber;
-    projectSourceIds.set(`${row.projectNumber}-${row.taskNum}`, id);
+    // Combine every task and expenditure category into the project's available
+    // balance so each project has one editable funding row.
+    const id = row.projectNumber;
     let source = sources.get(id);
     if (!source) {
       source = {
         color: colors[sources.size % colors.length],
-        description: internal
-          ? `${row.projectNumber} · ${row.taskNum} · ${row.fundCode}`
-          : row.projectNumber,
+        description: row.projectNumber,
         endDate: row.awardEndDate ?? planningEndDate,
         id,
         indirectRate: Number(row.projectBurdenCostRate ?? 0) * 100,
-        name: internal ? (row.taskName ?? row.taskNum ?? id) : row.displayName,
+        name: row.displayName,
         // The balance is already net of actuals and commitments. Starting at
         // the snapshot avoids charging historical personnel costs a second time.
         startDate:
@@ -75,10 +68,7 @@ export function createProjectionDemoPlan(data: DemoData): ProjectionDemoPlan {
   const people = new Map<string, Person>();
   const allocations: MonthlyAllocation[] = [];
   for (const appointment of data.personnel) {
-    const sourceId = projectSourceIds.get(
-      `${appointment.projectId}-${appointment.task}`
-    );
-    const source = sourceId ? sources.get(sourceId) : undefined;
+    const source = sources.get(appointment.projectId);
     if (!source) {
       continue;
     }

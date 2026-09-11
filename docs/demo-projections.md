@@ -17,13 +17,12 @@ historical expenses again.
 
 | Planner field | Demo data |
 | --- | --- |
-| Sponsored funding source | One row per active project, summing category balances |
-| Internal funding source | One row per task, keeping its fund and task identifiers |
+| Funding source | One row per active project, summing all task and category balances |
 | Starting balance | Available balance after actual expenses and commitments |
 | Indirect percentage | Project burden rate multiplied by 100 |
 | Annual salary | Full-time monthly rate multiplied by 12 |
 | Fringe percentage | Composite benefit rate multiplied by 100 |
-| Monthly allocation | FTE multiplied by distribution percentage, assigned to its project and task |
+| Monthly allocation | FTE multiplied by distribution percentage, assigned to its project |
 | Allocation dates | Snapshot onward, intersected with job, funding, and project dates |
 | Undated internal funds | Planning horizon through the snapshot month plus 13 months |
 

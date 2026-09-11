@@ -4,23 +4,24 @@ import { createProjectionDemoPlan } from '@/demo/projectionPlan.ts';
 import { projectPlan } from '@/components/projections/projection.ts';
 
 describe('ProjectionLab demo data', () => {
-  it('reconciles the active project and fund balances for different demo snapshots', () => {
+  it('combines all tasks and categories into one funding balance per active project', () => {
     for (const [seed, asOf] of [
       [42, '2026-09'],
       [107, '2027-12'],
     ] as const) {
       const data = createDemoData(seed, asOf);
       const plan = createProjectionDemoPlan(data);
-      expect(plan.fundingSources).toHaveLength(9);
+      expect(plan.fundingSources.map((source) => source.id)).toEqual([
+        'DEMOSPN001',
+        'DEMOINT001',
+      ]);
       expect(plan.people).toHaveLength(6);
       expect(
         plan.fundingSources.some((source) => source.id.startsWith('DEMOCLO'))
       ).toBe(false);
       for (const source of plan.fundingSources) {
-        const rows = data.projects.filter((row) =>
-          row.projectType === 'Internal'
-            ? `${row.projectNumber}-${row.taskNum}` === source.id
-            : row.projectNumber === source.id
+        const rows = data.projects.filter(
+          (row) => row.projectNumber === source.id
         );
         expect(Math.round(source.startingBalance * 100)).toBe(
           rows.reduce((total, row) => total + Math.round(row.balance * 100), 0)
@@ -30,7 +31,7 @@ describe('ProjectionLab demo data', () => {
     }
   });
 
-  it('assigns each person to the same project and internal task as the personnel table', () => {
+  it('assigns each person to the same project as the personnel table', () => {
     const data = createDemoData(42, '2026-09');
     const plan = createProjectionDemoPlan(data);
     const result = projectPlan(plan);
@@ -43,16 +44,12 @@ describe('ProjectionLab demo data', () => {
       const allocations = plan.allocations.filter(
         (allocation) => allocation.personId === appointment.employeeId
       );
-      const sourceId =
-        appointment.projectId === 'DEMOINT001'
-          ? `${appointment.projectId}-${appointment.task}`
-          : appointment.projectId;
       expect(allocations).toHaveLength(11);
       expect(allocations[0].month).toBe('2026-09');
       expect(allocations.at(-1)?.month).toBe('2027-07');
       expect(
         allocations.every(
-          (allocation) => allocation.fundingSourceId === sourceId
+          (allocation) => allocation.fundingSourceId === appointment.projectId
         )
       ).toBe(true);
       const drawdown = result.drawdowns.find(
