@@ -1,6 +1,15 @@
 <!doctype html>
 <html lang="en" data-theme="walter">
   <head>
+    <script>
+      try {
+        if (localStorage.getItem('walter-color-theme') === 'dark') {
+          document.documentElement.dataset.theme = 'walter-dark';
+        }
+      } catch {
+        // Keep the default light theme when storage is unavailable.
+      }
+    </script>
     <title>Walter | UC Davis</title>
     <meta
       name="description"

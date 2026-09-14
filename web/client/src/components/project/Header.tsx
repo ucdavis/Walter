@@ -114,7 +114,7 @@ const Header: React.FC = () => {
   ]);
 
   return (
-    <header className="bg-light-bg-200 border-b py-4 border-main-border sticky top-0 z-50">
+    <header className="bg-base-200 border-b py-4 border-main-border sticky top-0 z-50">
       <div className="container flex items-center justify-between">
         <div className="flex items-center gap-4 min-w-0">
           <Link
@@ -161,7 +161,7 @@ const Header: React.FC = () => {
       {/* Mobile slide-down menu */}
       <div
         aria-hidden={!mobileOpen}
-        className={`md:hidden bg-light-bg-200 overflow-hidden
+        className={`md:hidden bg-base-200 overflow-hidden
           transition-[height,opacity] duration-300 ease-out
           ${mobileOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}
         inert={!mobileOpen}
