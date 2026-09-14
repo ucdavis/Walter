@@ -146,10 +146,10 @@ BEGIN
     IF @Activities IS NOT NULL
         SET @Where += N' AND Activity IN (SELECT value FROM STRING_SPLIT(@p_Activities, '',''))';
 
-    -- Credit-normal measures (liabilities, net position, revenue, ending balance) are stored with
-    -- raw GL signs (credits negative); they are negated here so every measure reads naturally:
-    -- positive = funds available, negative ending balance = overdraft. The hierarchy tables are
-    -- only touched by the #temp expansions above; grouping is leaf-only, so the fact table needs
+    -- Measures are stored with raw GL signs (credits negative). Every measure except Assets is
+    -- negated so the report reads with one sign convention: positive = funds available, spending
+    -- (Expenses) negative, negative ending balance = overdraft. The hierarchy tables are only
+    -- touched by the #temp expansions above; grouping is leaf-only, so the fact table needs
     -- no joins.
     DECLARE @Sql NVARCHAR(MAX) = N'
         SELECT ' + @SelectCols + N',
@@ -158,7 +158,7 @@ BEGIN
                  SUM(-LiabAmt)         AS Liabilities,
                  SUM(-OwnersEquityAmt) AS NetPosition,
                  SUM(-RevenueAmt)      AS Revenue,
-                 SUM(ExpenseAmt)       AS Expenses,
+                 SUM(-ExpenseAmt)      AS Expenses,
                  SUM(-EndBal)          AS EndingBalance
           FROM dbo.GlSummaryBalances' + @Where +
         N' GROUP BY ' + @GroupCols + N' ORDER BY ' + @GroupCols + N';';
