@@ -1,5 +1,10 @@
 import '@/components/projections/projectionLab.css';
 import { useProjectionDialog } from '@/components/projections/useProjectionDialog.ts';
+import ProjectionCopilot from '@/components/projections/ProjectionCopilot.tsx';
+import {
+  planKey,
+  type ProjectionPlan,
+} from '@/components/projections/scenarios.ts';
 import { Link } from '@tanstack/react-router';
 import type { ProjectionDemoPlan } from '@/demo/projectionPlan.ts';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -95,6 +100,16 @@ export default function ProjectionLab({
   const [fundingSources, setFundingSources] = useState(initialFundingSources);
   const [people, setPeople] = useState(initialPeople);
   const [allocations, setAllocations] = useState(initialAllocations);
+  const [copilotSession, setCopilotSession] = useState(0);
+  const [undoScenario, setUndoScenario] = useState<{
+    after: string;
+    before: ProjectionPlan;
+    title: string;
+  } | null>(null);
+  const plan = useMemo(
+    () => ({ allocations, fundingSources, people }),
+    [allocations, fundingSources, people]
+  );
   const [sourceDraft, setSourceDraft] = useState({
     endDate: initialPlan.planningEndDate,
     indirectRate: 0,
@@ -351,6 +366,31 @@ export default function ProjectionLab({
     setAllocations(initialAllocations);
     setAllocationEditor(null);
     setAddDialog(null);
+    setUndoScenario(null);
+    setCopilotSession((session) => session + 1);
+  }
+
+  function applyScenario(next: ProjectionPlan, title: string) {
+    setUndoScenario({
+      after: planKey(next),
+      before: structuredClone(plan),
+      title,
+    });
+    setFundingSources(next.fundingSources);
+    setPeople(next.people);
+    setAllocations(next.allocations);
+    setAllocationEditor(null);
+  }
+
+  function undoLastScenario() {
+    // Undo must not discard manual edits made after applying the proposal.
+    if (!undoScenario || undoScenario.after !== planKey(plan)) {
+      return;
+    }
+    setFundingSources(undoScenario.before.fundingSources);
+    setPeople(undoScenario.before.people);
+    setAllocations(undoScenario.before.allocations);
+    setUndoScenario(null);
   }
 
   return (
@@ -395,7 +435,7 @@ export default function ProjectionLab({
         </div>
       </header>
 
-      <div className="mx-auto max-w-[1760px] space-y-5 px-5 py-5 lg:px-8">
+      <div className="mx-auto max-w-[1960px] space-y-5 px-5 py-5 lg:px-8">
         <p className="text-sm text-[#667277]">
           Demo plan from {initialPlan.asOf}. Starting balances are after
           expenses and commitments. Only future salary, fringe, and indirect
@@ -408,34 +448,51 @@ export default function ProjectionLab({
           totalDrawdown={totalDrawdown}
         />
 
-        <section className="min-w-0 space-y-5">
-          {(projection.invalidAllocations.length > 0 ||
-            projection.allocationValidations.some(
-              (validation) => validation.overAllocated
-            )) && (
-            <ValidationPanel
-              personById={personById}
+        <div className="projection-workspace">
+          <section className="min-w-0 space-y-5">
+            {(projection.invalidAllocations.length > 0 ||
+              projection.allocationValidations.some(
+                (validation) => validation.overAllocated
+              )) && (
+              <ValidationPanel
+                personById={personById}
+                projection={projection}
+                sourceById={sourceById}
+              />
+            )}
+
+            <Timeline
+              allocations={allocations}
+              fundingSources={fundingSources}
+              months={months}
+              onAddFundingSource={() => setAddDialog('funding-source')}
+              onAddPerson={() => setAddDialog('person')}
+              onPersonChange={updatePerson}
+              onPersonDelete={deletePerson}
+              onPersonMonthClick={openAllocationEditor}
+              onSourceChange={updateFundingSource}
+              onSourceDelete={deleteFundingSource}
+              people={people}
               projection={projection}
               sourceById={sourceById}
             />
-          )}
-
-          <Timeline
-            allocations={allocations}
-            fundingSources={fundingSources}
-            months={months}
-            onAddFundingSource={() => setAddDialog('funding-source')}
-            onAddPerson={() => setAddDialog('person')}
-            onPersonChange={updatePerson}
-            onPersonDelete={deletePerson}
-            onPersonMonthClick={openAllocationEditor}
-            onSourceChange={updateFundingSource}
-            onSourceDelete={deleteFundingSource}
-            people={people}
-            projection={projection}
-            sourceById={sourceById}
+          </section>
+          <ProjectionCopilot
+            asOf={initialPlan.asOf}
+            key={copilotSession}
+            onApply={applyScenario}
+            onUndo={undoLastScenario}
+            plan={plan}
+            undo={
+              undoScenario
+                ? {
+                    available: undoScenario.after === planKey(plan),
+                    title: undoScenario.title,
+                  }
+                : null
+            }
           />
-        </section>
+        </div>
       </div>
 
       {addDialog && (
@@ -508,7 +565,7 @@ function SummaryCard({
   return (
     <section className="rounded-lg border border-[#d8ddd6] bg-white p-4 shadow-sm">
       <h2 className="mb-3 text-2xl font-semibold">Plan health</h2>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Metric label="Remaining" value={formatCompactCurrency(totalBalance)} />
         <Metric label="Drawdown" value={formatCompactCurrency(totalDrawdown)} />
         <Metric

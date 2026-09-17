@@ -19,3 +19,184 @@
 .projection-lab .projection-range {
   accent-color: #0f766e;
 }
+
+.projection-lab .projection-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 370px;
+  gap: 20px;
+  align-items: start;
+}
+
+.projection-lab .projection-copilot {
+  min-width: 0;
+  border: 1px solid #d8ddd6;
+  border-radius: 10px;
+  background: white;
+}
+
+.projection-lab .projection-copilot-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 15px 16px;
+  border-bottom: 1px solid #dce4de;
+}
+
+.projection-lab .projection-eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #64736b;
+}
+
+.projection-lab .projection-insight {
+  border-left-width: 3px;
+  padding-left: 12px;
+}
+.projection-lab .projection-text-button {
+  color: #215d57;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+}
+.projection-lab .projection-text-button:hover {
+  text-decoration: underline;
+}
+.projection-lab .projection-conversation {
+  max-height: 480px;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+}
+.projection-lab .projection-message {
+  margin-top: 16px;
+  padding: 12px 0;
+}
+.projection-lab .projection-user-message {
+  background: #f0f5f2;
+  border-radius: 8px;
+  padding: 12px;
+}
+.projection-lab .projection-proposal {
+  padding: 14px;
+  margin-top: 16px;
+  background: #f2f8f5;
+  border: 1px solid #bcd4c7;
+  border-radius: 8px;
+}
+.projection-lab .projection-compose {
+  border: 1px solid #bacbc2;
+  border-radius: 8px;
+  padding: 10px;
+  background: white;
+}
+.projection-lab .projection-compose textarea {
+  width: 100%;
+  resize: vertical;
+  font-size: 14px;
+  min-height: 60px;
+  margin-bottom: 8px;
+}
+.projection-lab .projection-compose textarea:focus-visible {
+  outline: 2px solid #0f766e;
+  outline-offset: 3px;
+}
+
+.projection-lab .projection-primary-button,
+.projection-lab .projection-secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 9px 12px;
+  border: 1px solid #215d57;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.projection-lab .projection-primary-button {
+  background: #215d57;
+  color: white;
+}
+.projection-lab .projection-primary-button:hover {
+  background: #164f48;
+}
+.projection-lab .projection-secondary-button {
+  background: white;
+  color: #215d57;
+  border-color: #b7cdc2;
+}
+.projection-lab .projection-secondary-button:hover {
+  background: #edf5ef;
+}
+.projection-lab .projection-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  color: #65776c;
+  border-radius: 6px;
+}
+.projection-lab .projection-icon-button:hover {
+  background: #e8f0eb;
+}
+.projection-lab .projection-copilot button:disabled,
+.projection-lab .projection-comparison-dialog button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.projection-lab .projection-field {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  font-size: 11px;
+  font-weight: 500;
+  color: #64736b;
+}
+.projection-lab .projection-field :is(input, select) {
+  width: 100%;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid #cbd6ce;
+  border-radius: 5px;
+  background: white;
+  color: #23382c;
+  font-size: 13px;
+  font-weight: 400;
+}
+.projection-lab .projection-comparison-dialog {
+  width: min(1200px, calc(100vw - 32px));
+  max-width: none;
+  max-height: calc(100dvh - 40px);
+  margin: auto;
+  padding: 0;
+  overflow: auto;
+  border: 1px solid #cbd5cd;
+  border-radius: 12px;
+  background: white;
+  color: #1f2a2e;
+}
+
+@media (max-width: 1199px) {
+  .projection-lab .projection-workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .projection-lab .projection-copilot {
+    grid-row: 1;
+  }
+  .projection-lab .projection-conversation {
+    max-height: 360px;
+  }
+}
+
+@media (pointer: coarse) {
+  .projection-lab .projection-copilot :is(button, input, select),
+  .projection-lab .projection-comparison-dialog :is(button, input, select) {
+    min-height: 44px;
+  }
+  .projection-lab .projection-field :is(input, select),
+  .projection-lab .projection-compose textarea {
+    font-size: 16px;
+  }
+}

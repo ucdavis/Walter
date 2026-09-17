@@ -31,3 +31,56 @@ Drawdown includes salary, fringe, and indirect costs. It excludes future
 non-personnel expenses. A negative balance is shown as a deficit; it does not
 prevent editing. Allocation totals above 100% and allocations outside funding
 dates cannot be saved. Removing all funding splits clears the selected months.
+
+## Projection copilot
+
+The copilot sits beside the timeline. **What stands out** shows calculated
+shortfalls and available balances immediately, and updates as the plan changes.
+**Explain the gap**, **Explore a hire**, and the question box send the current
+demo plan to OpenAI. Answers can include a temporary proposal. **Explore
+scenario** opens an expanded comparison of that same proposal; edits there also
+update the compact preview. **Apply to plan** updates the timeline. **Undo change**
+restores the previous plan unless you have made another manual edit afterward.
+Resetting the plan clears the conversation and proposals.
+
+The demo defaults to `gpt-5.6-luna` with low reasoning effort. Its Vite server
+reads `OPENAI_API_KEY` from the process environment or `web/client/.env.demo.local`.
+It also supports the existing `OpenAI__ApiKey` in `web/server/.env` as a fallback.
+Override the model with `PROJECTION_AI_MODEL` in the client demo environment file.
+Restart `npm run demo` after changing these settings. Keep these variables
+unprefixed: a `VITE_` prefix would expose them to the browser.
+
+```dotenv
+OPENAI_API_KEY=your-local-key
+PROJECTION_AI_MODEL=gpt-5.6-luna
+```
+
+The local-only `/__demo/projections/chat` handler keeps credentials on the server.
+It uses the OpenAI Responses API with a `preview_scenario` function, which
+validates proposed edits and runs the same projection engine as the browser.
+Calculated effects return to the model before it explains the proposal. The
+model cannot apply a plan. Changed plans invalidate outstanding proposals, and
+responses arriving after a manual edit are rejected as stale. API failures show
+an error with Retry; there is no simulated AI fallback. Requests use `store: false`;
+the current demo plan and recent conversation are still sent to OpenAI for each
+question. This handler is absent from normal development and production builds.
+
+Supported changes are new hires, allocation splits over a month range, full-time
+salary/fringe changes, and funding balance/rate/date changes. Salary changes apply
+to all of a person's allocations. Funding balance changes apply at the start of
+the fund; they do not model a later deposit. Purchases and future non-personnel
+expenses remain outside the projection model. Grant eligibility is an explicit
+assumption, not inferred from an available balance.
+
+For a quick demo:
+
+1. Choose **Explain the gap** for Morgan Reed support.
+2. Ask: “Preview a grad student named Casey at 50%, January through June 2027,
+   on Pollinator funding, with $98,400 full-time annual salary and 2% fringe.
+   Assume eligible grant work.”
+3. Ask: “What about only three months, starting in January?”
+4. Open **Explore scenario**, adjust assumptions, then **Apply to plan** and
+   **Undo change**.
+
+Dates in the example assume the September 2026 demo snapshot. Use dates within
+the current funding window if the snapshot has changed.

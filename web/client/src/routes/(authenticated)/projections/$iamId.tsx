@@ -1,6 +1,11 @@
-import ProjectionLab from '@/components/projections/ProjectionLab.tsx';
+import { lazy, Suspense } from 'react';
 import { PageEmpty } from '@/components/states/PageEmpty.tsx';
 import { createFileRoute, notFound } from '@tanstack/react-router';
+
+const ProjectionLab =
+  import.meta.env.MODE === 'demo'
+    ? lazy(() => import('@/components/projections/ProjectionLab.tsx'))
+    : null;
 
 export const Route = createFileRoute('/(authenticated)/projections/$iamId')({
   component: ProjectionsPage,
@@ -30,5 +35,9 @@ export const Route = createFileRoute('/(authenticated)/projections/$iamId')({
 function ProjectionsPage() {
   const plan = Route.useLoaderData();
   const { iamId } = Route.useParams();
-  return <ProjectionLab iamId={iamId} initialPlan={plan} key={iamId} />;
+  return ProjectionLab ? (
+    <Suspense fallback={<p className="p-6">Loading projections…</p>}>
+      <ProjectionLab iamId={iamId} initialPlan={plan} key={iamId} />
+    </Suspense>
+  ) : null;
 }

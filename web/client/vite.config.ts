@@ -5,6 +5,7 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { env } from 'node:process';
 import { demoVitePlugin } from './demoVitePlugin.ts';
+import { projectionAiPlugin } from './projectionAiPlugin.ts';
 import { tanstackRouter } from '@tanstack/router-plugin/vite';
 
 const target = env.ASPNETCORE_URLS
@@ -19,7 +20,7 @@ export default defineConfig(({ command, mode }) => {
   }
   return {
     plugins: [
-      ...(demo ? [demoVitePlugin()] : []),
+      ...(demo ? [projectionAiPlugin(), demoVitePlugin()] : []),
       tanstackRouter({
         autoCodeSplitting: true,
         target: 'react',
