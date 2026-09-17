@@ -539,10 +539,10 @@ function RouteComponent() {
         {/* Filters remain adjacent to the output so it is clear where criteria apply. */}
         <aside
           aria-label="Report filters"
-          className="xl:sticky xl:top-4"
+          className="min-w-0 xl:sticky xl:top-4"
         >
           <div
-            className="rounded-box border border-main-border bg-base-100 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto"
+            className="rounded-box overflow-x-hidden border border-main-border bg-base-100 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto"
             onScroll={(event) => {
               const scrolled = event.currentTarget.scrollTop > 0;
               setFiltersScrolled((current) =>
