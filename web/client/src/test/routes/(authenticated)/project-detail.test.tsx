@@ -706,6 +706,12 @@ describe('project detail page', () => {
       expect(
         screen.getByRole('heading', { name: 'Non-Personnel: Supplies' })
       ).toBeInTheDocument();
+
+      await user.click(nonPersonnelTab);
+      expect(suppliesTab).toHaveAttribute('aria-selected', 'false');
+      expect(
+        screen.getByRole('heading', { name: 'Non-Personnel' })
+      ).toBeInTheDocument();
     } finally {
       cleanup();
     }

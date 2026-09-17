@@ -875,9 +875,7 @@ export function ProjectBurndownSection({
                     key={entry.key}
                     onClick={() => {
                       setSelectedKey(entry.key);
-                      if (entry.key !== NON_PERSONNEL_SERIES) {
-                        setSelectedNonPersonnelCategory(null);
-                      }
+                      setSelectedNonPersonnelCategory(null);
                     }}
                     role="tab"
                     type="button"
