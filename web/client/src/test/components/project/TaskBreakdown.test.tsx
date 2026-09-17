@@ -178,7 +178,7 @@ describe('TaskBreakdown', () => {
     expect(screen.getByText('T001')).toBeInTheDocument();
   });
 
-  it('shows chartstring values in the Task column instead of separate columns', () => {
+  it('shows chartstring values in separate columns', () => {
     render(
       <TaskBreakdown
         isInternal={false}
@@ -187,23 +187,16 @@ describe('TaskBreakdown', () => {
       />
     );
 
-    expect(screen.getByText('ORG001').parentElement?.parentElement).toHaveClass(
-      'text-xs',
-      'text-base-content/80'
-    );
-
     for (const value of ['ORG001', 'FUND1', 'PROG1', 'ACT1']) {
       expect(screen.getByText(value)).toHaveClass('tooltip-label');
     }
 
     for (const header of ['Dept', 'Fund', 'Program', 'Activity']) {
-      expect(
-        screen.queryByRole('columnheader', { name: header })
-      ).not.toBeInTheDocument();
+      expect(screen.getByRole('columnheader', { name: header })).toBeVisible();
     }
   });
 
-  it('shows chartfield details when hovering values in the Task column', async () => {
+  it('shows chartfield details when hovering their table cells', async () => {
     const user = userEvent.setup();
     render(
       <TaskBreakdown
@@ -224,7 +217,7 @@ describe('TaskBreakdown', () => {
     );
 
     await user.hover(screen.getByText('FUND1').parentElement as HTMLElement);
-    expect(await screen.findByRole('tooltip')).toHaveTextContent('Fund');
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Federal');
   });
 
   it('shows the filtered export action only when a search filter is active', () => {
