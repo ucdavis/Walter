@@ -5,6 +5,8 @@
 --      projected months through the award end date (12 when the award end date is unknown),
 --      each with actual spend, projected spend, and the running budget
 --      remaining (burndown).
+--      For expired projects (award end month before the current month), result set 2 is
+--      instead the last 3 award months, all actual, with no blended or projected periods.
 -- All inputs are local: GL actuals from dbo.GlProjectMonthlyActuals, the natural-account ->
 -- category crosswalk from dbo.ExpenditureTypeByAccount, personnel from dbo.PositionBudgets +
 -- dbo.CompositeBenefitRates, and the budget baseline from dbo.FacultyDeptPortfolio.
@@ -52,26 +54,40 @@ BEGIN
             FROM dbo.FacultyDeptPortfolio f
             WHERE f.ProjectNumber = @ProjectId
         );
+        DECLARE @AwardEndMonth DATE =
+            CASE WHEN @AwardEndDate IS NOT NULL
+                 THEN DATEFROMPARTS(YEAR(@AwardEndDate), MONTH(@AwardEndDate), 1)
+            END;
+        /* Expired = award end month strictly before the current month. The window re-anchors
+           at the award end month: its last 3 months, all actual, no blended/projected periods. */
+        DECLARE @IsExpired BIT =
+            CASE WHEN @AwardEndMonth IS NOT NULL AND @AwardEndMonth < @CurrMonthStart
+                 THEN 1 ELSE 0 END;
         DECLARE @ProjMonths INT =
             CASE WHEN @AwardEndDate IS NULL THEN 12
-                 ELSE DATEDIFF(MONTH, @CurrMonthStart,
-                               DATEFROMPARTS(YEAR(@AwardEndDate), MONTH(@AwardEndDate), 1))
+                 ELSE DATEDIFF(MONTH, @CurrMonthStart, @AwardEndMonth)
             END;
         IF @ProjMonths < 0 SET @ProjMonths = 0;
 
-        /* Period dimension: 3 trailing actual months (n = -3..-1), the blended current month
-           (n = 0), and projected months (n = 1..@ProjMonths). The tally reads from
-           sys.all_objects, which bounds even a corrupt far-future end date to a finite window. */
+        DECLARE @AnchorMonth DATE = CASE WHEN @IsExpired = 1 THEN @AwardEndMonth ELSE @CurrMonthStart END;
+        DECLARE @PeriodCount INT  = CASE WHEN @IsExpired = 1 THEN 3 ELSE @ProjMonths + 4 END;
+        DECLARE @NOffset     INT  = CASE WHEN @IsExpired = 1 THEN 3 ELSE 4 END;
+
+        /* Period dimension. Active: 3 trailing actual months (n = -3..-1), the blended current
+           month (n = 0), and projected months (n = 1..@ProjMonths). Expired: n = -2..0 anchored
+           at the award end month, all actual. The tally reads from sys.all_objects, which bounds
+           even a corrupt far-future end date to a finite window. */
         DROP TABLE IF EXISTS #periods;
         ;WITH n AS (
-            SELECT TOP (@ProjMonths + 4)
-                   ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) - 4 AS n
+            SELECT TOP (@PeriodCount)
+                   ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) - @NOffset AS n
             FROM sys.all_objects
         )
         SELECT
-            DATEADD(MONTH, n.n, @CurrMonthStart) AS MonthStart,
-            FORMAT(DATEADD(MONTH, n.n, @CurrMonthStart), 'MMM-yy') AS DisplayPeriod,
-            CASE WHEN n.n < 0 THEN 'actual' WHEN n.n = 0 THEN 'blended' ELSE 'projected' END AS Kind
+            DATEADD(MONTH, n.n, @AnchorMonth) AS MonthStart,
+            FORMAT(DATEADD(MONTH, n.n, @AnchorMonth), 'MMM-yy') AS DisplayPeriod,
+            CASE WHEN @IsExpired = 1 THEN 'actual'
+                 WHEN n.n < 0 THEN 'actual' WHEN n.n = 0 THEN 'blended' ELSE 'projected' END AS Kind
         INTO #periods
         FROM n;
 
