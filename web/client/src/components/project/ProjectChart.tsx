@@ -163,7 +163,10 @@ export function ProjectChart({
     <div>
       <ResponsiveContainer height={468} width="100%">
         <LineChart data={data}>
-          <CartesianGrid stroke="#D8D8D8" strokeDasharray="3 3" />
+          <CartesianGrid
+            stroke="var(--color-chart-grid)"
+            strokeDasharray="3 3"
+          />
           <XAxis dataKey="date" tick={{ fontSize: 12 }} />
           <YAxis
             tick={{ fontSize: 12 }}
@@ -171,8 +174,8 @@ export function ProjectChart({
           />
           <Tooltip
             contentStyle={{
-              backgroundColor: 'white',
-              border: '1px solid #E9E3EE',
+              backgroundColor: 'var(--color-base-100)',
+              border: '1px solid var(--color-chart-tooltip-border)',
               borderRadius: '6px',
               fontSize: '12px',
             }}
@@ -181,21 +184,21 @@ export function ProjectChart({
           <Line
             activeDot={{ r: 6 }}
             dataKey="value"
-            dot={{ fill: '#0047BA', r: 4 }}
-            stroke="#0047BA"
+            dot={{ fill: 'var(--color-chart-primary)', r: 4 }}
+            stroke="var(--color-chart-primary)"
             strokeWidth={2}
             type="monotone"
           />
         </LineChart>
       </ResponsiveContainer>
-      <div className="flex justify-between px-6 mt-4 mb-8 border rounded-md bg-light-bg-200 border-main-border py-4">
+      <div className="flex justify-between px-6 mt-4 mb-8 border rounded-md bg-base-200 border-main-border py-4">
         <div>
           <p className="h5">Starting</p>
           <p className="h4">{formatCurrency(startBalance)}</p>
         </div>
         <div className="text-center">
           <p className="h5">Current ({currentPoint?.date ?? 'N/A'})</p>
-          <p className="text-primary-color text-lg">
+          <p className="text-primary text-lg">
             {formatCurrency(currentPoint?.value ?? 0)}
           </p>
         </div>
