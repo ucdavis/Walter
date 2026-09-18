@@ -35,11 +35,12 @@ function buildRows(records: ProjectRecord[]): TaskBreakdownRow[] {
   const map = new Map<string, TaskBreakdownRow>();
 
   for (const r of records) {
+    const financialDepartmentCode = r.projectOwningOrgCode ?? '';
     const fund = r.fundCode ?? '';
     const program = r.programCode ?? '';
     const activity = r.activityCode ?? '';
     const task = r.taskNum ?? '';
-    const key = `${task}|${fund}|${program}|${activity}`;
+    const key = `${task}|${financialDepartmentCode}|${fund}|${program}|${activity}`;
 
     const existing = map.get(key);
     if (existing) {
@@ -56,7 +57,7 @@ function buildRows(records: ProjectRecord[]): TaskBreakdownRow[] {
         commitments: r.commitments,
         expenses: r.expenses,
         financialDepartment: r.projectOwningOrg,
-        financialDepartmentCode: r.projectOwningOrgCode,
+        financialDepartmentCode,
         fundCode: fund,
         fundDesc: r.fundDesc,
         programCode: program,
@@ -154,19 +155,7 @@ export function TaskBreakdown({
   const columns = useMemo(
     () => [
       columnHelper.accessor(
-        (row) =>
-          [
-            row.taskNum,
-            row.taskName,
-            row.financialDepartmentCode,
-            row.financialDepartment,
-            row.fundCode,
-            row.fundDesc,
-            row.programCode,
-            row.programDesc,
-            row.activityCode,
-            row.activityDesc,
-          ].join(' '),
+        (row) => [row.taskNum, row.taskName].join(' '),
         {
           cell: (info) => (
             <div>
@@ -199,32 +188,6 @@ export function TaskBreakdown({
                   {info.row.original.taskName}
                 </div>
               )}
-              <div className="flex flex-wrap gap-x-2 text-xs text-base-content/80">
-                {info.row.original.financialDepartmentCode && (
-                  <TooltipLabel
-                    label={info.row.original.financialDepartmentCode}
-                    tooltip={info.row.original.financialDepartment}
-                  />
-                )}
-                {info.row.original.fundCode && (
-                  <TooltipLabel
-                    label={info.row.original.fundCode}
-                    tooltip="Fund"
-                  />
-                )}
-                {info.row.original.programCode && (
-                  <TooltipLabel
-                    label={info.row.original.programCode}
-                    tooltip="Program"
-                  />
-                )}
-                {info.row.original.activityCode && (
-                  <TooltipLabel
-                    label={info.row.original.activityCode}
-                    tooltip="Activity"
-                  />
-                )}
-              </div>
             </div>
           ),
           footer: () => 'Totals',
@@ -233,6 +196,50 @@ export function TaskBreakdown({
           minSize: 200,
         }
       ),
+      columnHelper.accessor('financialDepartmentCode', {
+        cell: (info) =>
+          info.getValue() ? (
+            <TooltipLabel
+              focusable={false}
+              label={info.getValue()}
+              tooltip={info.row.original.financialDepartment}
+            />
+          ) : null,
+        header: 'Dept',
+      }),
+      columnHelper.accessor('fundCode', {
+        cell: (info) =>
+          info.getValue() ? (
+            <TooltipLabel
+              focusable={false}
+              label={info.getValue()}
+              tooltip={info.row.original.fundDesc}
+            />
+          ) : null,
+        header: 'Fund',
+      }),
+      columnHelper.accessor('programCode', {
+        cell: (info) =>
+          info.getValue() ? (
+            <TooltipLabel
+              focusable={false}
+              label={info.getValue()}
+              tooltip={info.row.original.programDesc}
+            />
+          ) : null,
+        header: 'Program',
+      }),
+      columnHelper.accessor('activityCode', {
+        cell: (info) =>
+          info.getValue() ? (
+            <TooltipLabel
+              focusable={false}
+              label={info.getValue()}
+              tooltip={info.row.original.activityDesc}
+            />
+          ) : null,
+        header: 'Activity',
+      }),
       columnHelper.accessor('budget', {
         cell: (info) => (
           <span className="flex justify-end">
