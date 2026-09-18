@@ -38,6 +38,7 @@ GRANT EXECUTE ON [dbo].[usp_ValidateFinancialDept] TO [WalterAppRole];
 GRANT SELECT ON [dbo].[FacultyDeptPortfolio] TO [WalterAppRole];
 GRANT SELECT ON [dbo].[EmployeeAccrualBalances] TO [WalterAppRole];
 GRANT SELECT ON [dbo].[PositionBudgets] TO [WalterAppRole];
+GRANT SELECT ON [dbo].[PositionBudgetsCognos] TO [WalterAppRole];
 GRANT SELECT ON [dbo].[Projects] TO [WalterAppRole];
 GRANT SELECT ON [dbo].[People] TO [WalterAppRole];
 GRANT SELECT ON [dbo].[PpmAwards] TO [WalterAppRole];
@@ -60,6 +61,10 @@ GRANT INSERT, SELECT, UPDATE ON [dbo].[EmployeeAccrualBalances] TO [WalterPipeli
 GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[PositionBudgets] TO [WalterPipelineRole];
 GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[PositionBudgets_Staging] TO [WalterPipelineRole];
 GRANT EXECUTE ON [dbo].[usp_SwapPositionBudgets] TO [WalterPipelineRole];
+-- pl_ucp_funding_entry_loader loads PositionBudgetsCognos_Staging (pre-copy DELETE + bulk insert),
+-- then usp_SwapStagingTable snapshot-swaps it into PositionBudgetsCognos.
+GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[PositionBudgetsCognos] TO [WalterPipelineRole];
+GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[PositionBudgetsCognos_Staging] TO [WalterPipelineRole];
 GRANT EXECUTE ON [dbo].[usp_SwapStagingTable] TO [WalterPipelineRole];
 GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[Projects] TO [WalterPipelineRole];
 GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[People] TO [WalterPipelineRole];

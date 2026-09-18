@@ -34,6 +34,7 @@ BEGIN
         (N'GlSummaryBalances'),
         (N'People'),
         (N'PositionBudgets'),
+        (N'PositionBudgetsCognos'),
         (N'PpmAwards'),
         (N'PpmPeople'),
         (N'PpmPersonRoles'),
