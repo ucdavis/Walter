@@ -127,6 +127,10 @@ Notes:
 - Use `1.0` sampling locally while bringing it up, and a lower value such as `0.2` in production.
 - If `Rum__Enabled=false`, the frontend agent does not initialize.
 
+The frontend fetches RUM settings from `/api/system/rum-config` at page startup. After changing App Service settings, restart the app and reload the browser. No frontend rebuild is needed.
+
+Source-map generation and upload are not configured yet. Readable production stack traces need that separate build step.
+
 Once configured, start the app and open Walter in the browser. To verify it is working:
 
 1. Open browser devtools and look for network requests to your Elastic APM host.

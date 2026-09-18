@@ -33,8 +33,8 @@ declare module '@tanstack/react-router' {
 // Render the app
 const rootElement = document.getElementById('root')!;
 if (!rootElement.innerHTML) {
-  void bootstrapRum().catch((error: unknown) => {
-    console.error('Failed to bootstrap RUM', error);
+  void bootstrapRum({
+    routeTemplates: router.flatRoutes.map((route) => route.fullPath),
   });
 
   const root = ReactDOM.createRoot(rootElement);

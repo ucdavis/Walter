@@ -55,6 +55,54 @@ describe('bootstrapRum', () => {
     expect(second).toBe(agent);
     expect(fetchConfig).toHaveBeenCalledTimes(1);
     expect(init).toHaveBeenCalledTimes(1);
+    expect(agent.addFilter).toHaveBeenCalledTimes(1);
+  });
+
+  it('replays the latest route when config arrives after the router resolves', async () => {
+    let resolveConfig!: (config: RumPublicConfig) => void;
+    const configPromise = new Promise<RumPublicConfig>((resolve) => {
+      resolveConfig = resolve;
+    });
+    const addLabels = vi.fn();
+    const agent = createFakeAgent({
+      currentTransaction: { addLabels, name: 'Unknown', type: 'page-load' },
+    });
+    const init = vi.fn(() => agent);
+    const pending = bootstrapRum({ fetchConfig: () => configPromise, init });
+
+    applyRumRouteMetadata({
+      pathname: '/',
+      routeGroup: 'home',
+      routeTemplate: '/',
+    });
+    applyRumRouteMetadata({
+      pathname: '/projects/123/P456',
+      routeGroup: 'projects',
+      routeTemplate: '/projects/$iamId/$projectNumber',
+    });
+    expect(init).not.toHaveBeenCalled();
+
+    resolveConfig(enabledConfig);
+    await pending;
+
+    expect(init).toHaveBeenCalledWith(
+      expect.objectContaining({
+        pageLoadTransactionName: '/projects/$iamId/$projectNumber',
+      })
+    );
+    expect(agent.currentTransaction?.name).toBe(
+      '/projects/$iamId/$projectNumber'
+    );
+    expect(addLabels).toHaveBeenCalledWith({
+      route_group: 'projects',
+      route_template: '/projects/$iamId/$projectNumber',
+    });
+    expect(agent.setCustomContext).toHaveBeenCalledWith({
+      pathname: '/projects/$iamId/$projectNumber',
+    });
+    expect(agent.setInitialPageLoadName).toHaveBeenCalledWith(
+      '/projects/$iamId/$projectNumber'
+    );
   });
 
   it('retries after a transient config fetch failure', async () => {
@@ -173,6 +221,7 @@ function createFakeAgent(overrides?: {
   setCustomContext?: ReturnType<typeof vi.fn>;
 }) {
   const agent = {
+    addFilter: vi.fn(),
     addLabels: vi.fn(),
     currentTransaction: overrides?.currentTransaction,
     getCurrentTransaction: vi.fn(() => agent.currentTransaction),
