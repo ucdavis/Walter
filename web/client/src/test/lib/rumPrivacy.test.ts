@@ -112,6 +112,7 @@ describe('RUM payload privacy', () => {
     'https://other.example/assets/report.js?v=2',
     '/reports?filter=a%20b&filter=c+d&empty=&flag#section?tab=details',
     '/reports?question=why?now#details',
+    '/#/reports?code=P456&period=2026-08',
     'webpack:///src/report.ts',
     'src/report.ts',
     '',
@@ -151,6 +152,23 @@ describe('RUM payload privacy', () => {
       '/signin-oidc?state=correlation',
     ],
     ['/callback#code=secret-auth-code', '/callback'],
+    ['/#/callback?code=secret-auth-code', '/#/callback'],
+    [
+      '/#/signin-oidc?code=secret-auth-code&state=correlation',
+      '/#/signin-oidc?state=correlation',
+    ],
+    [
+      '/#/oauth2/authorize?code=secret-auth-code&period=2026-08',
+      '/#/oauth2/authorize?period=2026-08',
+    ],
+    [
+      '/reports?code=P456#/callback?code=secret-auth-code&state=correlation',
+      '/reports?code=P456#/callback?state=correlation',
+    ],
+    [
+      `${origin}/#/CALLBACK/?code=secret-auth-code&state=correlation`,
+      `${origin}/#/CALLBACK/?state=correlation`,
+    ],
     [
       '/reports?code=P456&authorization_code=secret-auth-code',
       '/reports?code=P456',
@@ -163,6 +181,42 @@ describe('RUM payload privacy', () => {
     };
     filter(payload);
     expect(payload.transactions[0].context.page.url).toBe(expected);
+  });
+
+  it.each([
+    ['Failed request /api/report?token=secret', 'Failed request /api/report'],
+    [
+      'Failed request /api/report?period=2026-08&token=secret&fund=123 while loading',
+      'Failed request /api/report?period=2026-08&fund=123 while loading',
+    ],
+    [
+      'Failed request //alice:secret@other.example/api/report?api_key=secret&fund=123',
+      'Failed request //other.example/api/report?fund=123',
+    ],
+    [
+      'Failed request "/api/report?token=secret&fund=123"',
+      'Failed request "/api/report?fund=123"',
+    ],
+    [
+      'Failed /api/report?token=secret then https://other.example/report?token=secret&fund=123',
+      'Failed /api/report then https://other.example/report?fund=123',
+    ],
+    [
+      'Failed callback /#/callback?code=secret&state=correlation',
+      'Failed callback /#/callback?state=correlation',
+    ],
+    [
+      'Failed src/report.ts at webpack:///src/report.ts for /reports?code=P456&fund=123',
+      'Failed src/report.ts at webpack:///src/report.ts for /reports?code=P456&fund=123',
+    ],
+  ])('filters embedded URLs in error messages: %s', (message, expected) => {
+    const payload = {
+      errors: [{ exception: { message, type: 'Error' } }],
+      transactions: [],
+    };
+    filter(payload);
+    expect(payload.errors[0].exception.message).toBe(expected);
+    expect(JSON.stringify(payload)).not.toContain('secret');
   });
 
   it('keeps request names relative and does not normalize non-navigation transactions', () => {

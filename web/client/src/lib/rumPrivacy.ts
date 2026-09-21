@@ -2,6 +2,9 @@ import type { ApmBase } from '@elastic/apm-rum';
 
 type RumFilter = Parameters<ApmBase['addFilter']>[0];
 
+const authCallbackPath =
+  /\/(?:signin-oidc|callback|oauth2?\/(?:authorize|token))\/?$/i;
+
 const urlFields = new Set([
   'url',
   'referer',
@@ -38,6 +41,7 @@ export function createRumPrivacyFilter(
     (left, right) => left.split('$').length - right.split('$').length
   );
 
+  /** Remove URL credentials while preserving report parameters and URL encoding. */
   const sanitizeUrl = (value: string): string => {
     const hashIndex = value.indexOf('#');
     const beforeHash = hashIndex < 0 ? value : value.slice(0, hashIndex);
@@ -47,15 +51,16 @@ export function createRumPrivacyFilter(
     let isAuthCallback = false;
     try {
       const { pathname } = new URL(base, origin);
-      isAuthCallback =
-        /\/(?:signin-oidc|callback|oauth2?\/(?:authorize|token))\/?$/i.test(
-          pathname
-        );
+      isAuthCallback = authCallbackPath.test(pathname);
     } catch {
       // Even malformed URLs can have recognizable secret query parameters.
     }
 
-    const filterParameters = (parameters: string): string =>
+    /** Treat code as a credential only in an authentication callback. */
+    const filterParameters = (
+      parameters: string,
+      authCallback = isAuthCallback
+    ): string =>
       parameters
         .split('&')
         .filter((part) => {
@@ -63,7 +68,7 @@ export function createRumPrivacyFilter(
           const normalized = name.replaceAll(/[_-]/g, '').toLowerCase();
           return (
             !secretParameters.has(normalized) &&
-            !(isAuthCallback && normalized === 'code')
+            !(authCallback && normalized === 'code')
           );
         })
         .join('&');
@@ -75,9 +80,12 @@ export function createRumPrivacyFilter(
     // OAuth responses may put credentials in a fragment, including hash-router queries.
     const hashQuery = cleanHash.indexOf('?');
     if (hashQuery >= 0) {
-      const parameters = filterParameters(cleanHash.slice(hashQuery + 1));
-      cleanHash =
-        cleanHash.slice(0, hashQuery) + (parameters ? `?${parameters}` : '');
+      const hashPath = cleanHash.slice(0, hashQuery);
+      const parameters = filterParameters(
+        cleanHash.slice(hashQuery + 1),
+        isAuthCallback || authCallbackPath.test(hashPath)
+      );
+      cleanHash = hashPath + (parameters ? `?${parameters}` : '');
     } else if (cleanHash.includes('=')) {
       cleanHash = filterParameters(cleanHash);
     }
@@ -88,6 +96,7 @@ export function createRumPrivacyFilter(
     );
   };
 
+  /** Scrub URLs in request names and error text without discarding diagnostic text. */
   const sanitizeText = (value: string): string => {
     const request = /^(get|post|put|patch|delete|head|options)\s+(.+)$/i.exec(
       value
@@ -98,9 +107,14 @@ export function createRumPrivacyFilter(
     if (value.startsWith('/')) {
       return sanitizeUrl(value);
     }
-    return value.replaceAll(/https?:\/\/[^\s"'<>]+/gi, sanitizeUrl);
+    // The boundary keeps slashes inside filenames from starting a relative URL.
+    return value.replaceAll(
+      /https?:\/\/[^\s"'<>]+|(?<![\w/])\/[^\s"'<>]+/gi,
+      sanitizeUrl
+    );
   };
 
+  /** Scrub nested event fields before the agent serializes the payload. */
   const scrub = (value: unknown): void => {
     if (Array.isArray(value)) {
       value.forEach(scrub);
