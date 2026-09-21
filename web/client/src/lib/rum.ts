@@ -15,6 +15,7 @@ interface RumAgent {
   getCurrentTransaction?: () => RumTransaction | undefined;
   setCustomContext?: (context: Record<string, unknown>) => void;
   setInitialPageLoadName?: (name: string) => void;
+  setUserContext: (context: { id: string }) => void;
 }
 
 export interface RumPublicConfig {
@@ -47,6 +48,7 @@ interface BootstrapRumDependencies {
 let bootstrapPromise: Promise<RumAgent | null> | null = null;
 let rumAgent: RumAgent | null = null;
 let latestRouteMetadata: RumRouteMetadata | null = null;
+let latestIamId = '';
 
 export async function bootstrapRum(
   dependencies: BootstrapRumDependencies = {}
@@ -85,6 +87,7 @@ export async function bootstrapRum(
       }) as RumAgent;
 
       rumAgent.addFilter(createRumPrivacyFilter(origin, routeTemplates));
+      applyRumUserIdentity(latestIamId);
       if (latestRouteMetadata) {
         applyRumRouteMetadata(latestRouteMetadata);
       }
@@ -97,6 +100,14 @@ export async function bootstrapRum(
   })();
 
   return bootstrapPromise;
+}
+
+export function applyRumUserIdentity(iamId?: string | null): void {
+  // Keep the latest identity while runtime configuration is still loading.
+  latestIamId = iamId?.trim() ?? '';
+  // Elastic shallow-merges context and ignores null/undefined IDs. An empty
+  // string overwrites the previous ID when the user is no longer available.
+  rumAgent?.setUserContext({ id: latestIamId });
 }
 
 export function applyRumRouteMetadata(metadata: RumRouteMetadata): void {
@@ -153,6 +164,7 @@ export function resetRumForTests(): void {
   bootstrapPromise = null;
   rumAgent = null;
   latestRouteMetadata = null;
+  latestIamId = '';
 }
 
 async function loadRumConfig(): Promise<RumPublicConfig | null> {

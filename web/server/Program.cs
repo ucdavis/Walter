@@ -173,10 +173,10 @@ else
 
 
 app.UseAuthentication();
-app.UseAuthorization();
 
-// enrich every log with request context
+// Enrich authorization failures as well as controller logs after authentication.
 app.UseRequestContextLogging();
+app.UseAuthorization();
 
 // app.UseHttpLogging(); // if you want extra logging. It's a little overkill though with the current logging setup
 
