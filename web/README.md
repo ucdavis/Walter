@@ -129,6 +129,10 @@ Notes:
 
 The frontend fetches RUM settings from `/api/system/rum-config` at page startup. After changing App Service settings, restart the app and reload the browser. No frontend rebuild is needed.
 
+Browser RUM uses the existing `/api/user/me` IAM ID as its user context and clears it when the authenticated user provider leaves the page. Events captured before identity is available may remain anonymous. Backend request traces and log scopes use `user.id` for the authenticated `ucdPersonIAMID` claim. Backend log `user.id` previously held the Entra GUID; new request telemetry no longer includes that GUID.
+
+Backend enrichment does not perform identity lookups. Requests without the IAM claim, including sign-ins that resolved IAM ID through profile fallbacks and some emulation sessions, omit the trace tag and have a null log scope value. Enrichment runs before authorization so authenticated denied requests are covered. These are event attributes, not metric dimensions. After deployment, verify an ordinary authenticated request in Elastic and inspect the exported RUM, OTLP trace, and log fields before assuming their indexed field paths match.
+
 Source-map generation and upload are not configured yet. Readable production stack traces need that separate build step.
 
 Once configured, start the app and open Walter in the browser. To verify it is working:

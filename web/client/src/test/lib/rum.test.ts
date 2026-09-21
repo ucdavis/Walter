@@ -1,6 +1,8 @@
+import { init as initApm } from '@elastic/apm-rum';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   applyRumRouteMetadata,
+  applyRumUserIdentity,
   bootstrapRum,
   resetRumForTests,
   resolveRumRouteMetadata,
@@ -190,6 +192,136 @@ describe('bootstrapRum', () => {
   });
 });
 
+describe('RUM user identity', () => {
+  beforeEach(() => resetRumForTests());
+
+  it('applies identity already available before bootstrap', async () => {
+    const agent = createFakeAgent();
+    applyRumUserIdentity(' 001234567 ');
+    await bootstrapRum({
+      fetchConfig: async () => enabledConfig,
+      init: () => agent,
+    });
+    expect(agent.setUserContext).toHaveBeenLastCalledWith({ id: '001234567' });
+  });
+
+  it('replays only the latest identity while configuration is loading', async () => {
+    const agent = createFakeAgent();
+    let resolveConfig!: (config: RumPublicConfig) => void;
+    const configPromise = new Promise<RumPublicConfig>((resolve) => {
+      resolveConfig = resolve;
+    });
+    const pending = bootstrapRum({
+      fetchConfig: () => configPromise,
+      init: () => agent,
+    });
+    applyRumUserIdentity('001234567');
+    applyRumUserIdentity('009876543');
+    expect(agent.setUserContext).not.toHaveBeenCalled();
+    resolveConfig(enabledConfig);
+    await pending;
+    expect(agent.setUserContext).toHaveBeenCalledExactlyOnceWith({
+      id: '009876543',
+    });
+  });
+
+  it('does not replay an identity cleared during startup', async () => {
+    const agent = createFakeAgent();
+    applyRumUserIdentity('001234567');
+    applyRumUserIdentity(null);
+    await bootstrapRum({
+      fetchConfig: async () => enabledConfig,
+      init: () => agent,
+    });
+    expect(agent.setUserContext).toHaveBeenCalledExactlyOnceWith({ id: '' });
+  });
+
+  it('adds and replaces identity after initialization', async () => {
+    const agent = createFakeAgent();
+    await bootstrapRum({
+      fetchConfig: async () => enabledConfig,
+      init: () => agent,
+    });
+    expect(agent.setUserContext).toHaveBeenLastCalledWith({ id: '' });
+    applyRumUserIdentity('001234567');
+    expect(agent.setUserContext).toHaveBeenLastCalledWith({ id: '001234567' });
+    applyRumUserIdentity('009876543');
+    expect(agent.setUserContext).toHaveBeenLastCalledWith({ id: '009876543' });
+  });
+
+  it.each([null, undefined, '', '   '])(
+    'clears identity for %s',
+    async (missing) => {
+      const agent = createFakeAgent();
+      await bootstrapRum({
+        fetchConfig: async () => enabledConfig,
+        init: () => agent,
+      });
+      applyRumUserIdentity('001234567');
+      applyRumUserIdentity(missing);
+      expect(agent.setUserContext).toHaveBeenLastCalledWith({ id: '' });
+    }
+  );
+
+  it('does not initialize a disabled agent when identity changes', async () => {
+    const init = vi.fn();
+    applyRumUserIdentity('001234567');
+    await bootstrapRum({
+      fetchConfig: async () => ({ ...enabledConfig, enabled: false }),
+      init,
+    });
+    applyRumUserIdentity('009876543');
+    applyRumUserIdentity(null);
+    expect(init).not.toHaveBeenCalled();
+  });
+
+  it('overwrites the installed Elastic agent identity when clearing', async () => {
+    // Use the real context implementation without instrumentation or network intake.
+    const agent = initApm({ active: false, logLevel: 'error' });
+    const config = agent.serviceFactory.getService('ConfigService') as {
+      get: (key: string) => { user: { id: string } };
+    };
+    await bootstrapRum({
+      fetchConfig: async () => enabledConfig,
+      init: () => agent,
+    });
+    applyRumUserIdentity('001234567');
+    expect(config.get('context').user.id).toBe('001234567');
+    applyRumUserIdentity(null);
+    expect(config.get('context').user.id).toBe('');
+  });
+
+  it('keeps user context and report selections while filtering credentials', async () => {
+    const agent = createFakeAgent();
+    await bootstrapRum({
+      fetchConfig: async () => enabledConfig,
+      init: () => agent,
+    });
+    applyRumUserIdentity('001234567');
+    const filter = agent.addFilter.mock.calls[0][0];
+    const payload = {
+      transactions: [
+        {
+          context: {
+            page: {
+              url: 'https://walter.example/reports?period=202609&depts=ABCD&token=secret',
+            },
+            user: { id: '001234567' },
+          },
+          name: '/reports',
+          type: 'route-change',
+        },
+      ],
+    };
+    const filtered = filter(payload);
+    expect(filtered.transactions[0].context.user).toEqual({ id: '001234567' });
+    const url = new URL(filtered.transactions[0].context.page.url);
+    expect(url.searchParams.get('period')).toBe('202609');
+    expect(url.searchParams.get('depts')).toBe('ABCD');
+    expect(url.searchParams.get('token')).not.toBe('secret');
+  });
+});
+
 describe('resolveRumRouteMetadata', () => {
   it('uses the leaf route full path and derives a route group', () => {
     expect(
@@ -227,6 +359,7 @@ function createFakeAgent(overrides?: {
     getCurrentTransaction: vi.fn(() => agent.currentTransaction),
     setCustomContext: overrides?.setCustomContext ?? vi.fn(),
     setInitialPageLoadName: vi.fn(),
+    setUserContext: vi.fn(),
   };
 
   return agent;

@@ -1,5 +1,6 @@
 import { useMeQuery, User } from '@/queries/user.ts';
-import { createContext, useContext } from 'react';
+import { applyRumUserIdentity } from '@/lib/rum.ts';
+import { createContext, useContext, useEffect } from 'react';
 
 type UserRole =
   | 'Admin'
@@ -23,6 +24,12 @@ const UserContext = createContext<User | undefined>(undefined);
  */
 export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   const { data, error, isLoading } = useMeQuery();
+  const iamId = error ? undefined : data?.iamId;
+
+  useEffect(() => {
+    applyRumUserIdentity(iamId);
+    return () => applyRumUserIdentity(null);
+  }, [iamId]);
 
   if (isLoading) {
     return (
@@ -76,6 +83,8 @@ export const useUser = () => {
  */
 export const useHasRole = (...roles: UserRole[]) => {
   const user = useUser();
-  if (user.roles.includes('Admin')) return true;
+  if (user.roles.includes('Admin')) {
+    return true;
+  }
   return roles.some((role) => user.roles.includes(role));
 };
