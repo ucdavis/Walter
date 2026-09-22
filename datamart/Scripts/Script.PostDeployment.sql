@@ -38,6 +38,7 @@ GRANT EXECUTE ON [dbo].[usp_ValidateFinancialDept] TO [WalterAppRole];
 GRANT SELECT ON [dbo].[FacultyDeptPortfolio] TO [WalterAppRole];
 GRANT SELECT ON [dbo].[EmployeeAccrualBalances] TO [WalterAppRole];
 GRANT SELECT ON [dbo].[PositionBudgets] TO [WalterAppRole];
+GRANT SELECT ON [dbo].[PPMProjectCosts] TO [WalterAppRole];
 GRANT SELECT ON [dbo].[Projects] TO [WalterAppRole];
 GRANT SELECT ON [dbo].[People] TO [WalterAppRole];
 GRANT SELECT ON [dbo].[PpmAwards] TO [WalterAppRole];
@@ -61,6 +62,12 @@ GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[PositionBudgets] TO [WalterPipeli
 GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[PositionBudgets_Staging] TO [WalterPipelineRole];
 GRANT EXECUTE ON [dbo].[usp_SwapPositionBudgets] TO [WalterPipelineRole];
 GRANT EXECUTE ON [dbo].[usp_SwapStagingTable] TO [WalterPipelineRole];
+-- pl_ppm_project_costs_loader loads PPMProjectCosts_Staging (pre-copy DELETE + bulk insert of
+-- that night's rows only), then usp_MergeStagingByScope replaces those (SourcePartition,
+-- AccountingPeriod) scopes in PPMProjectCosts. Never swapped; accumulates history.
+GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[PPMProjectCosts] TO [WalterPipelineRole];
+GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[PPMProjectCosts_Staging] TO [WalterPipelineRole];
+GRANT EXECUTE ON [dbo].[usp_MergeStagingByScope] TO [WalterPipelineRole];
 GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[Projects] TO [WalterPipelineRole];
 GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[People] TO [WalterPipelineRole];
 GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[People_Staging] TO [WalterPipelineRole];
