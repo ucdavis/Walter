@@ -14,11 +14,11 @@ from staging are never touched, so closed periods survive once they leave the
 source window. The same rule is applied upstream in the Fabric silver table, so
 final and silver stay identical without ever being compared.
 
-Each table is allowlisted together with the exact scope-column list it may be
-merged on; the caller must pass that list verbatim (order and spelling), so the
-dynamic SQL is built only from allowlisted identifiers. Empty staging tables are
-rejected so an upstream load failure cannot silently no-op. Final/staging
-schemas must match exactly, as for the swap proc.
+Only allowlisted tables may be merged. The scope columns are the caller's
+choice (comma-separated), but each must exist on the target table and be NOT
+NULL, and the dynamic SQL uses only those verified, QUOTENAME'd column names.
+Empty staging tables are rejected so an upstream load failure cannot silently
+no-op. Final/staging schemas must match exactly, as for the swap proc.
 </remarks>
 */
 CREATE PROCEDURE [dbo].[usp_MergeStagingByScope]
@@ -29,29 +29,32 @@ BEGIN
     SET NOCOUNT ON;
     SET XACT_ABORT ON;
 
-    DECLARE @AllowedScopes TABLE
+    DECLARE @AllowedTables TABLE
     (
-        [TableName]    SYSNAME       NOT NULL,
-        [ScopeColumns] NVARCHAR(400) NOT NULL,
-        PRIMARY KEY ([TableName], [ScopeColumns])
+        [TableName] SYSNAME NOT NULL PRIMARY KEY
     );
 
-    INSERT INTO @AllowedScopes ([TableName], [ScopeColumns])
+    INSERT INTO @AllowedTables ([TableName])
     VALUES
-        (N'PPMProjectCosts', N'SourcePartition,AccountingPeriod');
-
-    -- Normalize the caller's list (spaces are the only tolerated variation).
-    SET @ScopeColumns = REPLACE(@ScopeColumns, N' ', N'');
+        (N'PPMProjectCosts');
 
     IF NOT EXISTS
     (
         SELECT 1
-        FROM @AllowedScopes
+        FROM @AllowedTables
         WHERE [TableName] = @TableName
-          AND [ScopeColumns] = @ScopeColumns
     )
     BEGIN
-        THROW 52000, 'The requested table/scope combination is not allowlisted for scoped merges.', 1;
+        THROW 52000, 'The requested table is not allowlisted for scoped merges.', 1;
+    END;
+
+    -- Normalize the caller's list: trim spaces, drop empty entries.
+    SET @ScopeColumns = REPLACE(@ScopeColumns, N' ', N'');
+
+    IF @ScopeColumns IS NULL OR @ScopeColumns = N'' OR @ScopeColumns LIKE N'%,,%'
+        OR @ScopeColumns LIKE N',%' OR @ScopeColumns LIKE N'%,'
+    BEGIN
+        THROW 52007, 'At least one scope column is required (comma-separated, no empty entries).', 1;
     END;
 
     DECLARE @SchemaName SYSNAME = N'dbo';
@@ -131,7 +134,9 @@ BEGIN
     END;
 
     -- Scope columns must exist on the target and be NOT NULL (a NULL scope value
-    -- would never match and its rows could never be replaced).
+    -- would never match and its rows could never be replaced). This is also the
+    -- injection guard: only names found in sys.columns reach the dynamic SQL,
+    -- and they are QUOTENAME'd below.
     IF EXISTS
     (
         SELECT 1
