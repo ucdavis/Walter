@@ -1,6 +1,6 @@
 -- Landing table for pl_ppm_project_costs_loader: the Copy activity clears it
 -- (pre-copy DELETE) and bulk-inserts ONLY the rows touched by that night's
--- run (the silver run table), then usp_MergePPMProjectCosts applies them to
+-- run (the silver run table), then usp_MergeStagingByScope applies them to
 -- PPMProjectCosts by (SourcePartition, AccountingPeriod) scope. Never holds
 -- the full history. Column list must match PPMProjectCosts byte for byte.
 create table dbo.PPMProjectCosts_Staging

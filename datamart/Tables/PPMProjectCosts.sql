@@ -1,7 +1,8 @@
 -- PPM expenditure-item detail for CAES departments from the nightly Cognos
 -- "PPM Project Expenses" emails (five emails, one per financial-department
 -- level-D partition), landed in the CAES Datamart (Fabric) and loaded here by
--- pl_ppm_project_costs_loader via PPMProjectCosts_Staging + usp_MergePPMProjectCosts.
+-- pl_ppm_project_costs_loader via PPMProjectCosts_Staging + usp_MergeStagingByScope
+-- (scope SourcePartition, AccountingPeriod).
 --
 -- The report is a sliding window over the OPEN accounting periods. Each run
 -- deletes and re-inserts only the (SourcePartition, AccountingPeriod) pairs
