@@ -18,18 +18,27 @@ public sealed class DatamartOptions
     /// <summary>Local ETL-populated dbo.PositionBudgets table (dbo.usp_GetPositionBudgetsLocal).</summary>
     public const string LocalSource = "Local";
 
+    /// <summary>Campus-wide dbo.PositionBudgetsCognos table from the UCP-391 Funding Entry report (dbo.usp_GetPositionBudgetsCognos).</summary>
+    public const string CognosSource = "Cognos";
+
     public string ConnectionString { get; set; } = string.Empty;
     public string ApplicationName { get; set; } = "Walter";
 
     /// <summary>
     /// Which backing source position budgets are read from. Defaults to the live UCPath
-    /// data warehouse; set Datamart:PositionBudgetsSource=Local (env Datamart__PositionBudgetsSource)
-    /// to cut an environment over to the local table.
+    /// data warehouse; set Datamart:PositionBudgetsSource=Local or Cognos (env
+    /// Datamart__PositionBudgetsSource) to cut an environment over. Unrecognized values fall
+    /// back to the default.
     /// </summary>
     public string PositionBudgetsSource { get; set; } = UCPathDWHSource;
 
-    public bool UsePositionBudgetsLocalTable =>
-        string.Equals(PositionBudgetsSource?.Trim(), LocalSource, StringComparison.OrdinalIgnoreCase);
+    /// <summary>Stored procedure the personnel section reads, per <see cref="PositionBudgetsSource"/>.</summary>
+    public string PositionBudgetsSproc => PositionBudgetsSource?.Trim().ToLowerInvariant() switch
+    {
+        "local" => "dbo.usp_GetPositionBudgetsLocal",
+        "cognos" => "dbo.usp_GetPositionBudgetsCognos",
+        _ => "dbo.usp_GetPositionBudgets",
+    };
 }
 
 public interface IDatamartService
@@ -122,10 +131,8 @@ public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
             ? "Walter"
             : value.ApplicationName.Trim();
 
-        // Feature flag: read position budgets from the local ETL table or the live UCPath DWH.
-        _positionBudgetsSproc = value.UsePositionBudgetsLocalTable
-            ? "dbo.usp_GetPositionBudgetsLocal"
-            : "dbo.usp_GetPositionBudgets";
+        // Feature flag: which source the personnel section reads position budgets from.
+        _positionBudgetsSproc = value.PositionBudgetsSproc;
 
         _retry = Policy
             .Handle<SqlException>()
