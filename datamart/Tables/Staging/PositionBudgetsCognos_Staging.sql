@@ -5,10 +5,10 @@ create table dbo.PositionBudgetsCognos_Staging
     College              nvarchar(100) not null,
     FiscalYear           smallint,
     PositionNumber       nvarchar(8)   not null,
-    AccountCode          nvarchar(25)  not null,
+    ComboCode            nvarchar(25)  not null,
     DistributionPercent  decimal(10, 4),
     FundingEndDate       date,
-    FundingEffectiveDate date,
+    FundingEffectiveDate date          not null,
     UcPercentPay         decimal(10, 4),
     NaturalAccount       nvarchar(10),
     FinancialDept        nvarchar(10),
@@ -21,7 +21,7 @@ create table dbo.PositionBudgetsCognos_Staging
     Award                nvarchar(15),
     JobEffectiveDate     date,
     JobEffectiveSequence smallint,
-    EmployeeId           nvarchar(11),
+    EmployeeId           nvarchar(11)  not null,
     MonthlyRate          decimal(12, 2),
     ExpectedEndDate      date,
     Fte                  decimal(7, 6),
@@ -30,6 +30,7 @@ create table dbo.PositionBudgetsCognos_Staging
     Name                 nvarchar(100),
     PositionDescription  nvarchar(100),
     JobCode              nvarchar(10),
+    IsFuture             bit           not null,
     LoadedAt             datetime2(3)  not null
 )
 go
