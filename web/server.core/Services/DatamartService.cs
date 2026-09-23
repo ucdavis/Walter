@@ -25,7 +25,8 @@ public sealed class DatamartOptions
     public string ApplicationName { get; set; } = "Walter";
 
     /// <summary>
-    /// Which backing source position budgets are read from. Defaults to the live UCPath
+    /// Which backing source position budgets are read from, for both the personnel section and
+    /// burndown projections (which read local PositionBudgets unless Cognos). Defaults to the live UCPath
     /// data warehouse; set Datamart:PositionBudgetsSource=Local or Cognos (env
     /// Datamart__PositionBudgetsSource) to cut an environment over. Unrecognized values fall
     /// back to the default.
@@ -39,6 +40,10 @@ public sealed class DatamartOptions
         "cognos" => "dbo.usp_GetPositionBudgetsCognos",
         _ => "dbo.usp_GetPositionBudgets",
     };
+
+    /// <summary>Whether burndown projections read personnel from PositionBudgetsCognos instead of PositionBudgets.</summary>
+    public bool UseCognosPositionBudgets =>
+        string.Equals(PositionBudgetsSource?.Trim(), CognosSource, StringComparison.OrdinalIgnoreCase);
 }
 
 public interface IDatamartService
@@ -111,6 +116,7 @@ public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
     private readonly string _connectionString;
     private readonly string _appName;
     private readonly string _positionBudgetsSproc;
+    private readonly bool _useCognosPositionBudgets;
     private readonly AsyncRetryPolicy _retry;
 
     static DatamartService()
@@ -133,6 +139,7 @@ public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
 
         // Feature flag: which source the personnel section reads position budgets from.
         _positionBudgetsSproc = value.PositionBudgetsSproc;
+        _useCognosPositionBudgets = value.UseCognosPositionBudgets;
 
         _retry = Policy
             .Handle<SqlException>()
@@ -320,9 +327,17 @@ public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
             await using var conn = new SqlConnection(_connectionString);
             await conn.OpenAsync(ct2);
 
+            var parameters = new DynamicParameters(
+                new { ProjectId = projectNumber, ApplicationName = _appName, ApplicationUser = applicationUser, EmulatingUser = emulatingUser });
+            // Sent only when on, so the call works against the sproc before @PersonnelSource deploys.
+            if (_useCognosPositionBudgets)
+            {
+                parameters.Add("PersonnelSource", DatamartOptions.CognosSource);
+            }
+
             var cmd = new CommandDefinition(
                 commandText: "dbo.usp_GetProjectProjection",
-                parameters: new { ProjectId = projectNumber, ApplicationName = _appName, ApplicationUser = applicationUser, EmulatingUser = emulatingUser },
+                parameters: parameters,
                 commandType: CommandType.StoredProcedure,
                 commandTimeout: 60,
                 cancellationToken: ct2);

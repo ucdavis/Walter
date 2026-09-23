@@ -19,4 +19,17 @@ public sealed class DatamartOptionsTests
 
         options.PositionBudgetsSproc.Should().Be(expected);
     }
+
+    [Theory]
+    [InlineData("Cognos", true)]
+    [InlineData(" cognos ", true)]
+    [InlineData("Local", false)]
+    [InlineData("UCPathDWH", false)]
+    [InlineData("", false)]
+    public void UseCognosPositionBudgets_is_true_only_for_cognos(string source, bool expected)
+    {
+        var options = new DatamartOptions { PositionBudgetsSource = source };
+
+        options.UseCognosPositionBudgets.Should().Be(expected);
+    }
 }
