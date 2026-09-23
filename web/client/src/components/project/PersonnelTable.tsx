@@ -43,6 +43,8 @@ export interface AggregatedPosition {
   distributions: AggregatedDistribution[];
   employeeId: string;
   fte: number;
+  /** No current entry; shown only with future entries and excluded from totals. */
+  isFutureOnly: boolean;
   jobCode: string;
   jobEffectiveDate: string | null;
   jobEndDate: string | null;
@@ -75,8 +77,13 @@ export function aggregateByPosition(
   data: PersonnelRecord[]
 ): AggregatedPosition[] {
   const positionMap = new Map<string, AggregatedPosition>();
+  // Current entries first so position-level figures come from the entry in effect.
+  const ordered = [
+    ...data.filter((r) => !r.isFuture),
+    ...data.filter((r) => r.isFuture),
+  ];
 
-  for (const record of data) {
+  for (const record of ordered) {
     const key = `${record.employeeId}-${record.positionNumber}`;
     const existing = positionMap.get(key);
 
@@ -89,6 +96,7 @@ export function aggregateByPosition(
         distributions: [aggregateDistribution(record)],
         employeeId: record.employeeId,
         fte: record.fte,
+        isFutureOnly: record.isFuture,
         jobCode: safeText(record.jobCode),
         jobEffectiveDate: record.jobEffectiveDate,
         jobEndDate: record.jobEndDate,
@@ -199,6 +207,7 @@ function DistributionSubtable({
                 {dist.record.distributionPercent}%
               </td>
               <td className="text-right text-sm">
+                {dist.record.isFuture && <FutureBadge />}
                 {formatDate(dist.record.fundingEffectiveDate, '')}
               </td>
               <td className="text-right text-sm">
@@ -238,6 +247,12 @@ function DistributionSubtable({
   );
 }
 
+function FutureBadge() {
+  return (
+    <span className="badge badge-soft badge-info badge-sm mr-2">Future</span>
+  );
+}
+
 function getExportData(positions: AggregatedPosition[]) {
   return positions.flatMap((pos) =>
     pos.distributions.map((dist) => ({
@@ -245,6 +260,7 @@ function getExportData(positions: AggregatedPosition[]) {
       fte: pos.fte,
       fundingEffectiveDate: dist.record.fundingEffectiveDate ?? '',
       fundingEndDate: dist.record.fundingEndDate ?? '',
+      future: dist.record.isFuture ? 'Yes' : '',
       jobCode: pos.jobCode,
       monthlyFringe: dist.monthlyFringe,
       monthlyRate: dist.monthlyRate,
@@ -280,6 +296,7 @@ const personnelCsvColumns = [
     header: 'End Date',
     key: 'fundingEndDate' as const,
   },
+  { header: 'Future', key: 'future' as const },
   {
     format: 'currency' as const,
     header: 'Monthly Salary (Distributed)',
@@ -301,21 +318,30 @@ interface PersonnelTableProps {
   data: PersonnelRecord[];
 }
 
-function isUnfilled(position: AggregatedPosition): boolean {
-  return !position.name;
+function sumCurrent(
+  rows: { original: AggregatedPosition }[],
+  pick: (position: AggregatedPosition) => number
+): number {
+  return rows.reduce(
+    (sum, row) => (row.original.isFutureOnly ? sum : sum + pick(row.original)),
+    0
+  );
 }
 
 export function PersonnelTable({ data }: PersonnelTableProps) {
-  const [showUnfilled, setShowUnfilled] = useState(false);
-  const allPositions = useMemo(() => aggregateByPosition(data), [data]);
-  const unfilledCount = useMemo(
-    () => allPositions.filter(isUnfilled).length,
-    [allPositions]
+  const [showFuture, setShowFuture] = useState(false);
+  // Unfilled positions (legacy sources only) stay hidden.
+  const filledData = useMemo(() => data.filter((r) => r.name), [data]);
+  const futureCount = useMemo(
+    () => filledData.filter((r) => r.isFuture).length,
+    [filledData]
   );
   const positions = useMemo(
     () =>
-      showUnfilled ? allPositions : allPositions.filter((p) => !isUnfilled(p)),
-    [allPositions, showUnfilled]
+      aggregateByPosition(
+        showFuture ? filledData : filledData.filter((r) => !r.isFuture)
+      ),
+    [filledData, showFuture]
   );
 
   const columns = useMemo(
@@ -330,6 +356,7 @@ export function PersonnelTable({ data }: PersonnelTableProps) {
                 <ChevronDownIcon className="w-4 h-4" />
               )
             ) : null}
+            {row.original.isFutureOnly && <FutureBadge />}
             {row.original.name
               ? `${row.original.name} (${row.original.employeeId}) - `
               : ''}
@@ -411,12 +438,7 @@ export function PersonnelTable({ data }: PersonnelTableProps) {
         footer: ({ table }) => (
           <span className="flex justify-end w-full">
             {formatCurrency(
-              table
-                .getFilteredRowModel()
-                .rows.reduce(
-                  (sum, row) => sum + row.original.monthlyRate,
-                  0
-                )
+              sumCurrent(table.getFilteredRowModel().rows, (p) => p.monthlyRate)
             )}
           </span>
         ),
@@ -433,12 +455,10 @@ export function PersonnelTable({ data }: PersonnelTableProps) {
         footer: ({ table }) => (
           <span className="flex justify-end w-full">
             {formatCurrency(
-              table
-                .getFilteredRowModel()
-                .rows.reduce(
-                  (sum, row) => sum + row.original.monthlyFringe,
-                  0
-                )
+              sumCurrent(
+                table.getFilteredRowModel().rows,
+                (p) => p.monthlyFringe
+              )
             )}
           </span>
         ),
@@ -461,12 +481,10 @@ export function PersonnelTable({ data }: PersonnelTableProps) {
         footer: ({ table }) => (
           <span className="flex justify-end w-full">
             {formatCurrency(
-              table
-                .getFilteredRowModel()
-                .rows.reduce(
-                  (sum, row) => sum + row.original.monthlyTotal,
-                  0
-                )
+              sumCurrent(
+                table.getFilteredRowModel().rows,
+                (p) => p.monthlyTotal
+              )
             )}
           </span>
         ),
@@ -506,13 +524,13 @@ export function PersonnelTable({ data }: PersonnelTableProps) {
         subComponentRowClassName="pivot-row"
         tableActions={(table) => (
           <div className="flex flex-wrap items-center gap-2">
-            {unfilledCount > 0 && (
+            {futureCount > 0 && (
               <button
-                className={`btn btn-sm${showUnfilled ? ' btn-active' : ''}`}
-                onClick={() => setShowUnfilled((current) => !current)}
+                className={`btn btn-sm${showFuture ? ' btn-active' : ''}`}
+                onClick={() => setShowFuture((current) => !current)}
                 type="button"
               >
-                {showUnfilled ? 'Hide' : 'Show'} unfilled ({unfilledCount})
+                {showFuture ? 'Hide' : 'Show'} future entries ({futureCount})
               </button>
             )}
             <TableExportActions

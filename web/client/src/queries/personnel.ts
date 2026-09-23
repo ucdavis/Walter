@@ -8,6 +8,8 @@ export interface PersonnelRecord {
   fte: number;
   fundingEffectiveDate: string | null;
   fundingEndDate: string | null;
+  /** Funding entry effective after the last load (Cognos source only). */
+  isFuture: boolean;
   jobCode: string | null;
   jobEffectiveDate: string | null;
   jobEndDate: string | null;

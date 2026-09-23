@@ -35,6 +35,7 @@ const createRecord = (
   fte: 1.0,
   fundingEffectiveDate: '2025-07-01T00:00:00.000Z',
   fundingEndDate: '2026-12-31T00:00:00.000Z',
+  isFuture: false,
   jobCode: '001234',
   jobEffectiveDate: '2020-01-01T00:00:00.000Z',
   jobEndDate: null,
@@ -118,6 +119,28 @@ describe('aggregateByPosition', () => {
     expect(dist2.monthlyTotal).toBeCloseTo(1120);
   });
 
+  it('takes position figures from the current entry when a future entry comes first', () => {
+    const records = [
+      createRecord({ fte: 1, isFuture: true, monthlyRate: 9000 }),
+      createRecord({ fte: 0.5, monthlyRate: 4000 }),
+    ];
+
+    const [position] = aggregateByPosition(records);
+
+    expect(position.monthlyRate).toBe(2000);
+    expect(position.isFutureOnly).toBe(false);
+    expect(position.distributions.map((d) => d.record.isFuture)).toEqual([
+      false,
+      true,
+    ]);
+  });
+
+  it('marks positions with only future entries', () => {
+    const [position] = aggregateByPosition([createRecord({ isFuture: true })]);
+
+    expect(position.isFutureOnly).toBe(true);
+  });
+
   it('separates same position number for different employees', () => {
     const records = [
       createRecord({ employeeId: '1001', positionNumber: '40001234' }),
@@ -142,7 +165,9 @@ describe('PersonnelTable', () => {
 
     render(<PersonnelTable data={records} />);
 
-    expect(screen.getByText('Smith, John (1001) - PROF-FY')).toBeInTheDocument();
+    expect(
+      screen.getByText('Smith, John (1001) - PROF-FY')
+    ).toBeInTheDocument();
   });
 
   it('displays FTE column', () => {
@@ -286,7 +311,11 @@ describe('PersonnelTable', () => {
 
   it('shows tooltips in the funding distribution subtable', async () => {
     const user = userEvent.setup();
-    render(<PersonnelTable data={[createRecord({ projectDescription: 'Test Project' })]} />);
+    render(
+      <PersonnelTable
+        data={[createRecord({ projectDescription: 'Test Project' })]}
+      />
+    );
 
     await user.click(
       screen.getByRole('cell', { name: 'Smith, John (1001) - PROF-FY' })
@@ -303,13 +332,15 @@ describe('PersonnelTable', () => {
     // Two occurrences after expand: outer header and subtable header. Hover
     // the subtable's (last) one.
     const cbrLabels = screen.getAllByText('Mo. CBR');
-    await user.hover(cbrLabels[cbrLabels.length - 1].parentElement as HTMLElement);
+    await user.hover(
+      cbrLabels[cbrLabels.length - 1].parentElement as HTMLElement
+    );
     expect(await screen.findByRole('tooltip')).toHaveTextContent(
       tooltipDefinitions.monthlyCbr
     );
   });
 
-  it('hides unfilled positions by default', () => {
+  it('hides unfilled positions without offering a toggle', () => {
     const records = [
       createRecord({ name: 'Smith, John', positionNumber: '40001234' }),
       createRecord({
@@ -322,43 +353,84 @@ describe('PersonnelTable', () => {
 
     render(<PersonnelTable data={records} />);
 
-    expect(screen.getByText('Smith, John (1001) - PROF-FY')).toBeInTheDocument();
-    expect(screen.queryByText(/STDT 3/)).not.toBeInTheDocument();
-  });
-
-  it('shows unfilled positions when toggle is clicked', async () => {
-    const user = userEvent.setup();
-    const records = [
-      createRecord({ name: 'Smith, John', positionNumber: '40001234' }),
-      createRecord({
-        employeeId: '',
-        name: '',
-        positionDescription: 'STDT 3',
-        positionNumber: '40005678',
-      }),
-    ];
-
-    render(<PersonnelTable data={records} />);
-
-    const toggle = screen.getByRole('button', { name: /show unfilled/i });
-    expect(toggle).toHaveTextContent('Show unfilled (1)');
-
-    await user.click(toggle);
-
-    expect(screen.getByText(/STDT 3/)).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: /hide unfilled/i })
+      screen.getByText('Smith, John (1001) - PROF-FY')
     ).toBeInTheDocument();
-  });
-
-  it('does not show unfilled toggle when no unfilled positions exist', () => {
-    const records = [createRecord({ name: 'Smith, John' })];
-
-    render(<PersonnelTable data={records} />);
-
+    expect(screen.queryByText(/STDT 3/)).not.toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: /unfilled/i })
     ).not.toBeInTheDocument();
+  });
+
+  it('does not show the future toggle when no future entries exist', () => {
+    render(<PersonnelTable data={[createRecord()]} />);
+
+    expect(
+      screen.queryByRole('button', { name: /future entries/i })
+    ).not.toBeInTheDocument();
+  });
+
+  it('hides future entries by default and shows them when toggled', async () => {
+    const user = userEvent.setup();
+    const records = [
+      createRecord({ projectDescription: 'Current Project' }),
+      createRecord({
+        fundingEffectiveDate: '2099-01-01T00:00:00.000Z',
+        isFuture: true,
+        monthlyRate: 9000,
+        projectDescription: 'Future Project',
+      }),
+    ];
+
+    render(<PersonnelTable data={records} />);
+
+    const toggle = screen.getByRole('button', { name: /show future entries/i });
+    expect(toggle).toHaveTextContent('Show future entries (1)');
+
+    await user.click(
+      screen.getByRole('cell', { name: 'Smith, John (1001) - PROF-FY' })
+    );
+    expect(screen.getByText('Current Project')).toBeInTheDocument();
+    expect(screen.queryByText('Future Project')).not.toBeInTheDocument();
+
+    await user.click(toggle);
+
+    expect(screen.getByText('Future Project')).toBeInTheDocument();
+    expect(screen.getByText('Future')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /hide future entries/i })
+    ).toBeInTheDocument();
+  });
+
+  it('keeps totals on current entries when future entries are shown', async () => {
+    const user = userEvent.setup();
+    const records = [
+      createRecord({ monthlyRate: 5000 }),
+      createRecord({
+        fundingEffectiveDate: '2099-01-01T00:00:00.000Z',
+        isFuture: true,
+        monthlyRate: 9000,
+      }),
+      createRecord({
+        employeeId: '1003',
+        isFuture: true,
+        monthlyRate: 7000,
+        name: 'New, Hire',
+        positionNumber: '40009999',
+      }),
+    ];
+
+    render(<PersonnelTable data={records} />);
+    await user.click(
+      screen.getByRole('button', { name: /show future entries/i })
+    );
+
+    expect(screen.getByText(/New, Hire \(1003\)/)).toBeInTheDocument();
+    // Footer: only the current 5000 salary and 2000 CBR count.
+    const footer = screen.getByText('Totals').closest('tr') as HTMLElement;
+    expect(footer).toHaveTextContent('$5,000.00');
+    expect(footer).toHaveTextContent('$2,000.00');
+    expect(footer).toHaveTextContent('$7,000.00');
   });
 
   it('renders only filtered data when passed filtered records', () => {
@@ -382,8 +454,12 @@ describe('PersonnelTable', () => {
 
     render(<PersonnelTable data={filtered} />);
 
-    expect(screen.getByText('Adams, Alice (1001) - PROF-FY')).toBeInTheDocument();
-    expect(screen.queryByText('Baker, Bob (1002) - PROF-FY')).not.toBeInTheDocument();
+    expect(
+      screen.getByText('Adams, Alice (1001) - PROF-FY')
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText('Baker, Bob (1002) - PROF-FY')
+    ).not.toBeInTheDocument();
   });
 
   it('shows the filtered export action only when a search filter is active', () => {
