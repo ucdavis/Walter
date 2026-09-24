@@ -25,6 +25,7 @@ GRANT EXECUTE ON [dbo].[usp_GetGlBalanceSummary] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_GetGlBalanceSummaryFilterOptions] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_GetPositionBudgets] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_GetPositionBudgetsLocal] TO [WalterAppRole];
+GRANT EXECUTE ON [dbo].[usp_GetPositionBudgetsCognos] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_GetSearchablePeople] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_HealthCheck_Connectivity] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_LogProcedureExecution] TO [WalterAppRole];

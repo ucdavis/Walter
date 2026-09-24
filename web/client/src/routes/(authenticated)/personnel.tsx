@@ -62,9 +62,9 @@ function RouteComponent() {
   }
 
   const data = personnelQuery.data ?? [];
-  const filledData = data.filter((r) => r.name);
+  const filledData = data.filter((r) => r.name && !r.isFuture);
 
-  // Calculate summary stats (exclude unfilled positions)
+  // Calculate summary stats (exclude unfilled positions and future entries)
   const uniqueEmployees = new Set(filledData.map((r) => r.employeeId)).size;
   const uniqueProjects = new Set(filledData.map((r) => r.projectId)).size;
 

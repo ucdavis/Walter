@@ -81,7 +81,9 @@ function RouteComponent() {
       return null;
     }
     return new Set(
-      personnelQuery.data.filter((p) => p.name).map((p) => p.employeeId)
+      personnelQuery.data
+        .filter((p) => p.name && !p.isFuture)
+        .map((p) => p.employeeId)
     ).size;
   }, [personnelQuery.data]);
 

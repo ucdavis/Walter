@@ -6,10 +6,12 @@
 --      each with actual spend, projected spend, and the running budget
 --      remaining (burndown).
 -- All inputs are local: GL actuals from dbo.GlProjectMonthlyActuals, the natural-account ->
--- category crosswalk from dbo.ExpenditureTypeByAccount, personnel from dbo.PositionBudgets +
+-- category crosswalk from dbo.ExpenditureTypeByAccount, personnel from dbo.PositionBudgets
+-- (or dbo.PositionBudgetsCognos current entries when @PersonnelSource = 'Cognos') +
 -- dbo.CompositeBenefitRates, and the budget baseline from dbo.FacultyDeptPortfolio.
 CREATE PROCEDURE dbo.usp_GetProjectProjection
     @ProjectId       NVARCHAR(15),
+    @PersonnelSource NVARCHAR(20)  = NULL,
     @ApplicationName NVARCHAR(128) = NULL,
     @ApplicationUser NVARCHAR(256) = NULL,
     @EmulatingUser   NVARCHAR(256) = NULL
@@ -38,6 +40,7 @@ BEGIN
         -- Build parameters JSON before validation so a bad project id is still logged by the CATCH.
         SET @ParametersJSON = (
             SELECT @ProjectId AS ProjectId,
+                   @PersonnelSource AS PersonnelSource,
                    COALESCE(@ApplicationName, APP_NAME()) AS ApplicationName
             FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
         );
@@ -116,7 +119,8 @@ BEGIN
               UNION SELECT '02 - Fringe Benefits') c;
 
         /* Personnel projection for the current + future months. Mirrors the personnel table on
-           the page (usp_GetPositionBudgetsLocal): every funding line for the project, with no
+           the page (usp_GetPositionBudgetsLocal, or usp_GetPositionBudgetsCognos with future
+           entries hidden when @PersonnelSource = 'Cognos'): every funding line for the project, with no
            funding- or job-end-date gating, projected flat across the whole horizon (the award
            end date is returned separately for the chart to mark). Salary is this project's share:
            MonthlyRate (1.0-FTE rate) * Fte * DistributionPercent. Fringe loads CBR only (the CBR
@@ -128,7 +132,15 @@ BEGIN
                    * COALESCE(cbr.CBR, 0)) AS Fringe
         INTO #pers
         FROM #periods p
-        JOIN dbo.PositionBudgets pb ON pb.ProjectId = @ProjectId
+        JOIN (
+            SELECT ProjectId, MonthlyRate, Fte, DistributionPercent, JobCode
+            FROM dbo.PositionBudgets
+            WHERE ISNULL(@PersonnelSource, N'') <> N'Cognos'
+            UNION ALL
+            SELECT ProjectId, MonthlyRate, Fte, DistributionPercent, JobCode
+            FROM dbo.PositionBudgetsCognos
+            WHERE @PersonnelSource = N'Cognos' AND IsFuture = 0
+        ) pb ON pb.ProjectId = @ProjectId
         LEFT JOIN dbo.CompositeBenefitRates cbr ON cbr.JobCode = pb.JobCode
         WHERE p.Kind IN ('blended','projected')
         GROUP BY p.MonthStart;

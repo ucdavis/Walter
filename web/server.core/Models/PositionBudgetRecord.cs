@@ -59,4 +59,8 @@ public sealed class PositionBudgetRecord
 
     [JsonPropertyName("fundingEndDate")]
     public DateTime? FundingEndDate { get; set; }
+
+    /// <summary>True when the funding entry is effective after the last load (Cognos source only; always false otherwise).</summary>
+    [JsonPropertyName("isFuture")]
+    public bool IsFuture { get; set; }
 }
