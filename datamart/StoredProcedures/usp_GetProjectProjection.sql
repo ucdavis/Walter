@@ -1,9 +1,9 @@
 -- Monthly per-expenditure-category budget burndown for a single project.
 -- Returns two result sets:
 --   1. Per-category budget header (budget, spent-to-date, committed, current remaining, award end date).
---   2. Period x category grid: 3 trailing actual months, the current (blended) month, and
---      projected months through the award end date (12 when the award end date is unknown),
---      each with actual spend, projected spend, and the running budget
+--   2. Period x category grid: @HistoryMonths (3 or 6) trailing actual months, the current
+--      (blended) month, and projected months through the award end date (12 when the award
+--      end date is unknown), each with actual spend, projected spend, and the running budget
 --      remaining (burndown).
 -- All inputs are local: GL actuals from dbo.GlProjectMonthlyActuals, the natural-account ->
 -- category crosswalk from dbo.ExpenditureTypeByAccount, personnel from dbo.PositionBudgets
@@ -12,6 +12,7 @@
 CREATE PROCEDURE dbo.usp_GetProjectProjection
     @ProjectId       NVARCHAR(15),
     @PersonnelSource NVARCHAR(20)  = NULL,
+    @HistoryMonths   INT           = 3,
     @ApplicationName NVARCHAR(128) = NULL,
     @ApplicationUser NVARCHAR(256) = NULL,
     @EmulatingUser   NVARCHAR(256) = NULL
@@ -25,9 +26,9 @@ BEGIN
     DECLARE @ErrorMsg       NVARCHAR(MAX);
     DECLARE @ParametersJSON NVARCHAR(MAX);
 
-    -- "Now" anchors the whole window: 3 trailing actual months, the current (blended) month,
-    -- and projected months through the award end date. Current-month non-personnel projection
-    -- is prorated by the days remaining in the month.
+    -- "Now" anchors the whole window: @HistoryMonths trailing actual months, the current
+    -- (blended) month, and projected months through the award end date. Current-month
+    -- non-personnel projection is prorated by the days remaining in the month.
     DECLARE @Today          DATE = CAST(GETDATE() AS DATE);
     DECLARE @CurrMonthStart DATE = DATEFROMPARTS(YEAR(@Today), MONTH(@Today), 1);
     DECLARE @DaysInMonth    INT  = DAY(EOMONTH(@Today));
@@ -41,11 +42,15 @@ BEGIN
         SET @ParametersJSON = (
             SELECT @ProjectId AS ProjectId,
                    @PersonnelSource AS PersonnelSource,
+                   @HistoryMonths AS HistoryMonths,
                    COALESCE(@ApplicationName, APP_NAME()) AS ApplicationName
             FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
         );
 
         EXEC dbo.usp_ValidateAggieEnterpriseProject @ProjectId;
+
+        IF @HistoryMonths IS NULL OR @HistoryMonths NOT IN (3, 6)
+            THROW 50000, 'HistoryMonths must be 3 or 6.', 1;
 
         /* Horizon end: project through the award end date's month; when the award end date
            is unknown, fall back to 12 projected months. A past/current end date yields no
@@ -62,13 +67,14 @@ BEGIN
             END;
         IF @ProjMonths < 0 SET @ProjMonths = 0;
 
-        /* Period dimension: 3 trailing actual months (n = -3..-1), the blended current month
-           (n = 0), and projected months (n = 1..@ProjMonths). The tally reads from
-           sys.all_objects, which bounds even a corrupt far-future end date to a finite window. */
+        /* Period dimension: @HistoryMonths trailing actual months (n = -@HistoryMonths..-1), the
+           blended current month (n = 0), and projected months (n = 1..@ProjMonths). The tally
+           reads from sys.all_objects, which bounds even a corrupt far-future end date to a finite
+           window. */
         DROP TABLE IF EXISTS #periods;
         ;WITH n AS (
-            SELECT TOP (@ProjMonths + 4)
-                   ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) - 4 AS n
+            SELECT TOP (@ProjMonths + @HistoryMonths + 1)
+                   ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) - (@HistoryMonths + 1) AS n
             FROM sys.all_objects
         )
         SELECT
@@ -146,9 +152,10 @@ BEGIN
         GROUP BY p.MonthStart;
 
         /* Trailing actual months to average over: from the first month with GL data through the
-           most recent actual month (0-3). A zero-spend month after activity has begun counts as a
-           real zero; months before the project started posting do not dilute the run-rate (e.g.
-           data two months ago and nothing last month still averages over 2 months). */
+           most recent actual month (0-@HistoryMonths). A zero-spend month after activity has
+           begun counts as a real zero; months before the project started posting do not dilute
+           the run-rate (e.g. data two months ago and nothing last month still averages over
+           2 months). */
         DECLARE @FirstActualMonth DATE = (
             SELECT MIN(p.MonthStart)
             FROM #gl g

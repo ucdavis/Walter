@@ -677,6 +677,7 @@ public sealed class SearchControllerTests
 
         public Task<ProjectProjectionResult> GetProjectProjectionAsync(
             string projectNumber,
+            int historyMonths,
             string? applicationUser = null,
             string? emulatingUser = null,
             CancellationToken ct = default)

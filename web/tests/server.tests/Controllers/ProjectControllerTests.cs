@@ -228,6 +228,51 @@ public sealed class ProjectControllerTests
     }
 
     [Fact]
+    public async Task GetProjection_passes_history_months_to_datamart()
+    {
+        using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
+        var datamart = new ResolvingDatamartService(projection: new ProjectProjectionResult());
+        var controller = CreateProjectionController(ctx, datamart);
+
+        var result = await controller.GetProjectionAsync("PROJ-001", CancellationToken.None, historyMonths: 6);
+
+        result.Should().BeOfType<OkObjectResult>();
+        datamart.LastHistoryMonths.Should().Be(6);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(4)]
+    [InlineData(12)]
+    public async Task GetProjection_rejects_unsupported_history_months(int historyMonths)
+    {
+        using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
+        var datamart = new ResolvingDatamartService(projection: new ProjectProjectionResult());
+        var controller = CreateProjectionController(ctx, datamart);
+
+        var result = await controller.GetProjectionAsync("PROJ-001", CancellationToken.None, historyMonths);
+
+        result.Should().BeOfType<BadRequestObjectResult>();
+        datamart.LastHistoryMonths.Should().BeNull();
+    }
+
+    private static ProjectController CreateProjectionController(AppDbContext ctx, ResolvingDatamartService datamart)
+        => new(
+            new ThrowingFinancialApiService(),
+            datamart,
+            CreateAuthorizationService(),
+            new UserService(NullLogger<UserService>.Instance, ctx))
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext
+                {
+                    User = CreateUser(roles: [Role.Names.FinancialViewer]),
+                },
+            },
+        };
+
+    [Fact]
     public async Task GetByIamId_forbids_requester_who_is_only_award_pi_on_target_pi_project()
     {
         using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
@@ -415,6 +460,8 @@ public sealed class ProjectControllerTests
         private readonly IReadOnlyList<DepartmentBalanceRow> _summaryRows;
         private readonly IReadOnlyList<DepartmentBalanceOption> _options;
 
+        public int? LastHistoryMonths { get; private set; }
+
         public ResolvingDatamartService(
             SearchablePersonRecord? person = null,
             ProjectProjectionResult? projection = null,
@@ -528,10 +575,12 @@ public sealed class ProjectControllerTests
 
         public Task<ProjectProjectionResult> GetProjectProjectionAsync(
             string projectNumber,
+            int historyMonths,
             string? applicationUser = null,
             string? emulatingUser = null,
             CancellationToken ct = default)
         {
+            LastHistoryMonths = historyMonths;
             return _projection is not null
                 ? Task.FromResult(_projection)
                 : throw new InvalidOperationException("Datamart should not be called for unauthorized users.");

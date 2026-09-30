@@ -3,6 +3,9 @@ import { fetchJson } from '@/lib/api.ts';
 
 export type ProjectionPeriodKind = 'actual' | 'blended' | 'projected';
 
+/** Trailing actual months shown and averaged for the non-personnel run-rate. */
+export type ProjectionHistoryMonths = 3 | 6;
+
 export interface ProjectProjectionCategory {
   budget: number;
   committed: number;
@@ -30,21 +33,25 @@ export interface ProjectProjectionResult {
 
 export const projectProjectionQueryOptions = (
   projectNumber: string,
-  enabled = true
+  enabled = true,
+  historyMonths: ProjectionHistoryMonths = 3
 ) => ({
   enabled: enabled && Boolean(projectNumber),
   queryFn: async (): Promise<ProjectProjectionResult> => {
     return await fetchJson<ProjectProjectionResult>(
-      `/api/project/projection/${encodeURIComponent(projectNumber)}`
+      `/api/project/projection/${encodeURIComponent(projectNumber)}?historyMonths=${historyMonths}`
     );
   },
-  queryKey: ['project-projection', projectNumber] as const,
+  queryKey: ['project-projection', projectNumber, historyMonths] as const,
   staleTime: 60 * 60 * 1000, // 1 hour
 });
 
 export const useProjectProjectionQuery = (
   projectNumber: string,
-  enabled = true
+  enabled = true,
+  historyMonths: ProjectionHistoryMonths = 3
 ) => {
-  return useQuery(projectProjectionQueryOptions(projectNumber, enabled));
+  return useQuery(
+    projectProjectionQueryOptions(projectNumber, enabled, historyMonths)
+  );
 };
