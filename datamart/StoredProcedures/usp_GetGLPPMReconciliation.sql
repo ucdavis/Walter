@@ -72,7 +72,8 @@ BEGIN
     );
 
     BEGIN TRY
-        -- Fetch GL data from Redshift into temp table, then join with local FacultyDeptPortfolio
+        -- Fetch GL data from Redshift into temp table, then full join with local FacultyDeptPortfolio
+        -- so PPM tasks with no GL activity (e.g. budget but no revenue yet) still appear.
         SET @TSQLCommand = '
             SELECT * INTO #gl_summary FROM OPENQUERY(' + @RedshiftLinkedServer + ', ''' + REPLACE(@RedshiftQuery, '''', '''''') + ''');
 
@@ -94,11 +95,12 @@ BEGIN
                 COALESCE(ppm.PPM_BUD_BAL, 0) AS PPM_BUD_BAL,
                 COALESCE(gl.GL_ACTUAL_AMOUNT, 0) + (COALESCE(ppm.PPM_BUDGET, 0) - COALESCE(ppm.PPM_ITD_EXP, 0)) AS REMAINING_BALANCE,
                 CASE
-                    WHEN ppm.ProjectNumber IS NOT NULL THEN ''Both''
-                    ELSE ''GL Only''
+                    WHEN gl.PROJECT IS NOT NULL AND ppm.ProjectNumber IS NOT NULL THEN ''Both''
+                    WHEN gl.PROJECT IS NOT NULL THEN ''GL Only''
+                    ELSE ''PPM Only''
                 END AS DATA_SOURCE
             FROM #gl_summary gl
-            LEFT OUTER JOIN (
+            FULL OUTER JOIN (
                 SELECT
                     ProjectOwningOrgCode,
                     ProjectNumber,
