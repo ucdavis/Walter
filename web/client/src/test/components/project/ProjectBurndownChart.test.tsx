@@ -1,12 +1,15 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { http, HttpResponse } from 'msw';
 import {
   BalanceYAxisTick,
+  ProjectBurndownSection,
   VerticalMarkerLabel,
   buildChartRows,
   buildBalanceAxisTicks,
   formatBalanceAxisTick,
-  getAwardEndMonthIndex,
+  getDateMonthIndex,
   getBalanceStatClassName,
   getRollingStartMonthIndex,
   getTimelineEndMonthIndex,
@@ -16,6 +19,8 @@ import {
   shouldStaggerMarkerLabels,
 } from '@/components/project/ProjectBurndownChart.tsx';
 import type { ProjectionSeries } from '@/lib/projectProjection.ts';
+import type { ProjectProjectionResult } from '@/queries/projectProjection.ts';
+import { server } from '@/test/mswUtils.ts';
 
 afterEach(cleanup);
 
@@ -108,19 +113,23 @@ describe('ProjectBurndownChart axis helpers', () => {
   });
 
   it('staggers marker labels only when their months overlap or are adjacent', () => {
-    expect(shouldStaggerMarkerLabels(monthIndex(2026, 6), monthIndex(2026, 6))).toBe(true);
-    expect(shouldStaggerMarkerLabels(monthIndex(2026, 6), monthIndex(2026, 7))).toBe(true);
-    expect(shouldStaggerMarkerLabels(monthIndex(2026, 6), monthIndex(2026, 8))).toBe(false);
+    expect(
+      shouldStaggerMarkerLabels(monthIndex(2026, 6), monthIndex(2026, 6))
+    ).toBe(true);
+    expect(
+      shouldStaggerMarkerLabels(monthIndex(2026, 6), monthIndex(2026, 7))
+    ).toBe(true);
+    expect(
+      shouldStaggerMarkerLabels(monthIndex(2026, 6), monthIndex(2026, 8))
+    ).toBe(false);
     expect(shouldStaggerMarkerLabels(monthIndex(2026, 6), null)).toBe(false);
   });
 
   it('gets award month indexes from date-only or date-time values', () => {
-    expect(getAwardEndMonthIndex('2026-07-31')).toBe(monthIndex(2026, 7));
-    expect(getAwardEndMonthIndex('2026-08-15T00:00:00Z')).toBe(
-      monthIndex(2026, 8)
-    );
-    expect(getAwardEndMonthIndex('2026-02-31')).toBeNull();
-    expect(getAwardEndMonthIndex(null)).toBeNull();
+    expect(getDateMonthIndex('2026-07-31')).toBe(monthIndex(2026, 7));
+    expect(getDateMonthIndex('2026-08-15T00:00:00Z')).toBe(monthIndex(2026, 8));
+    expect(getDateMonthIndex('2026-02-31')).toBeNull();
+    expect(getDateMonthIndex(null)).toBeNull();
   });
 
   it('gets the rolling x-axis start three months before the reference month', () => {
@@ -131,6 +140,31 @@ describe('ProjectBurndownChart axis helpers', () => {
       monthIndex(2025, 10)
     );
     expect(getRollingStartMonthIndex(null)).toBeNull();
+  });
+
+  it('gets the rolling x-axis start six months back when six months of history is selected', () => {
+    expect(getRollingStartMonthIndex(monthIndex(2026, 6), 6)).toBe(
+      monthIndex(2025, 12)
+    );
+    expect(getRollingStartMonthIndex(null, 6)).toBeNull();
+  });
+
+  it('gets the rolling x-axis start twelve months back when twelve months of history is selected', () => {
+    expect(getRollingStartMonthIndex(monthIndex(2026, 6), 12)).toBe(
+      monthIndex(2025, 6)
+    );
+  });
+
+  it('does not start the rolling x-axis before the award start month', () => {
+    expect(
+      getRollingStartMonthIndex(monthIndex(2026, 6), 12, monthIndex(2026, 2))
+    ).toBe(monthIndex(2026, 2));
+    expect(
+      getRollingStartMonthIndex(monthIndex(2026, 6), 3, monthIndex(2025, 1))
+    ).toBe(monthIndex(2026, 3));
+    expect(
+      getRollingStartMonthIndex(monthIndex(2026, 6), 12, monthIndex(2026, 9))
+    ).toBe(monthIndex(2025, 6));
   });
 
   it('gets timeline end months from project end or fixed projection windows', () => {
@@ -225,5 +259,76 @@ describe('ProjectBurndownChart axis helpers', () => {
     expect(rows[0].label).toBe('Mar-26');
     expect(rows.at(-1)?.label).toBe('Jul-26');
     expect(rows[2]['All Expenses::solid']).toBe(90);
+  });
+});
+
+describe('ProjectBurndownSection history', () => {
+  const projection: ProjectProjectionResult = {
+    categories: [
+      {
+        budget: 1000,
+        committed: 0,
+        expenditureCategory: '01 - Salaries and Wages',
+        isPersonnel: 1,
+        remainingNow: 800,
+        spentToDate: 200,
+      },
+    ],
+    periods: [
+      {
+        actualAmount: 100,
+        displayPeriod: 'May-26',
+        expenditureCategory: '01 - Salaries and Wages',
+        isPersonnel: 1,
+        kind: 'actual',
+        month: '2026-05',
+        projectedAmount: 0,
+        remaining: 800,
+      },
+      {
+        actualAmount: 0,
+        displayPeriod: 'Jun-26',
+        expenditureCategory: '01 - Salaries and Wages',
+        isPersonnel: 1,
+        kind: 'blended',
+        month: '2026-06',
+        projectedAmount: 100,
+        remaining: 700,
+      },
+    ],
+  };
+
+  it('requests six months of history when selected', async () => {
+    const requestedHistoryMonths: (string | null)[] = [];
+    server.use(
+      http.get('/api/project/projection/:projectNumber', ({ request }) => {
+        requestedHistoryMonths.push(
+          new URL(request.url).searchParams.get('historyMonths')
+        );
+        return HttpResponse.json(projection);
+      })
+    );
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <ProjectBurndownSection
+          awardEndDate="2027-06-30"
+          awardStartDate="2024-01-01"
+          projectNumber="P1"
+        />
+      </QueryClientProvider>
+    );
+
+    const historySelect = await screen.findByRole('combobox', {
+      name: /History/,
+    });
+    fireEvent.click(historySelect);
+    fireEvent.click(screen.getByRole('option', { name: '6 months' }));
+
+    await expect.poll(() => requestedHistoryMonths).toEqual(['3', '6']);
+    expect(historySelect).toHaveTextContent('6 months');
   });
 });

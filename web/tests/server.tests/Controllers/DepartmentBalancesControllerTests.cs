@@ -154,7 +154,7 @@ public sealed class DepartmentBalancesControllerTests
         public Task<IReadOnlyList<GLTransactionRecord>> GetGLTransactionListingsAsync(IEnumerable<string> projectNumbers, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default)
             => throw new InvalidOperationException("Not needed for DepartmentBalancesController tests.");
 
-        public Task<ProjectProjectionResult> GetProjectProjectionAsync(string projectNumber, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default)
+        public Task<ProjectProjectionResult> GetProjectProjectionAsync(string projectNumber, int historyMonths, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default)
             => throw new InvalidOperationException("Not needed for DepartmentBalancesController tests.");
     }
 }

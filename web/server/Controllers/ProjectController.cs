@@ -264,11 +264,17 @@ public sealed class ProjectController : ApiControllerBase
     }
 
     [HttpGet("projection/{projectNumber}")]
-    public async Task<IActionResult> GetProjectionAsync(string projectNumber, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetProjectionAsync(
+        string projectNumber, CancellationToken cancellationToken, [FromQuery] int historyMonths = 3)
     {
         if (string.IsNullOrWhiteSpace(projectNumber))
         {
             return BadRequest("projectNumber is required.");
+        }
+
+        if (historyMonths is not (3 or 6 or 12))
+        {
+            return BadRequest("historyMonths must be 3, 6, or 12.");
         }
 
         if (!await CallerCanAccessProjectsAsync(new[] { projectNumber }, cancellationToken))
@@ -279,7 +285,7 @@ public sealed class ProjectController : ApiControllerBase
         var applicationUser = User.GetUserIdentifier();
         var emulatingUser = User.GetEmulatingUser();
         var projection = await _datamartService.GetProjectProjectionAsync(
-            projectNumber, applicationUser, emulatingUser, cancellationToken);
+            projectNumber, historyMonths, applicationUser, emulatingUser, cancellationToken);
 
         return Ok(projection);
     }

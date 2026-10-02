@@ -96,9 +96,11 @@ public interface IDatamartService
     /// <summary>
     /// Per-expenditure-category budget burndown for a single project: the budget header
     /// plus a period x category grid of actuals, projections, and running remaining.
+    /// <paramref name="historyMonths"/> (3, 6, or 12) sets both the trailing actual months returned
+    /// and the window the non-personnel run-rate averages over.
     /// </summary>
     Task<ProjectProjectionResult> GetProjectProjectionAsync(
-        string projectNumber, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default);
+        string projectNumber, int historyMonths, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default);
 
     /// <summary>Current-period balance measures grouped by the caller-selected chart-string segments.</summary>
     Task<IReadOnlyList<DepartmentBalanceRow>> GetGlBalanceSummaryAsync(
@@ -319,7 +321,7 @@ public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
     }
 
     public async Task<ProjectProjectionResult> GetProjectProjectionAsync(
-        string projectNumber, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default)
+        string projectNumber, int historyMonths, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default)
     {
         // The sproc returns two result sets, which ExecuteSprocAsync cannot consume.
         return await _retry.ExecuteAsync(async ct2 =>
@@ -333,6 +335,11 @@ public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
             if (_useCognosPositionBudgets)
             {
                 parameters.Add("PersonnelSource", DatamartOptions.CognosSource);
+            }
+            // Sent only when non-default, so the call works against the sproc before @HistoryMonths deploys.
+            if (historyMonths != 3)
+            {
+                parameters.Add("HistoryMonths", historyMonths);
             }
 
             var cmd = new CommandDefinition(
