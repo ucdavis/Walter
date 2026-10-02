@@ -272,9 +272,9 @@ public sealed class ProjectController : ApiControllerBase
             return BadRequest("projectNumber is required.");
         }
 
-        if (historyMonths is not (3 or 6))
+        if (historyMonths is not (3 or 6 or 12))
         {
-            return BadRequest("historyMonths must be 3 or 6.");
+            return BadRequest("historyMonths must be 3, 6, or 12.");
         }
 
         if (!await CallerCanAccessProjectsAsync(new[] { projectNumber }, cancellationToken))

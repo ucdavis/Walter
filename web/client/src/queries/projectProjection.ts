@@ -4,7 +4,7 @@ import { fetchJson } from '@/lib/api.ts';
 export type ProjectionPeriodKind = 'actual' | 'blended' | 'projected';
 
 /** Trailing actual months shown and averaged for the non-personnel run-rate. */
-export type ProjectionHistoryMonths = 3 | 6;
+export type ProjectionHistoryMonths = 3 | 6 | 12;
 
 export interface ProjectProjectionCategory {
   budget: number;

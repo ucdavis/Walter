@@ -227,23 +227,25 @@ public sealed class ProjectControllerTests
         envelope.Periods[0].Remaining.Should().Be(350m);
     }
 
-    [Fact]
-    public async Task GetProjection_passes_history_months_to_datamart()
+    [Theory]
+    [InlineData(6)]
+    [InlineData(12)]
+    public async Task GetProjection_passes_history_months_to_datamart(int historyMonths)
     {
         using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
         var datamart = new ResolvingDatamartService(projection: new ProjectProjectionResult());
         var controller = CreateProjectionController(ctx, datamart);
 
-        var result = await controller.GetProjectionAsync("PROJ-001", CancellationToken.None, historyMonths: 6);
+        var result = await controller.GetProjectionAsync("PROJ-001", CancellationToken.None, historyMonths);
 
         result.Should().BeOfType<OkObjectResult>();
-        datamart.LastHistoryMonths.Should().Be(6);
+        datamart.LastHistoryMonths.Should().Be(historyMonths);
     }
 
     [Theory]
     [InlineData(0)]
     [InlineData(4)]
-    [InlineData(12)]
+    [InlineData(24)]
     public async Task GetProjection_rejects_unsupported_history_months(int historyMonths)
     {
         using AppDbContext ctx = TestDbContextFactory.CreateInMemory();

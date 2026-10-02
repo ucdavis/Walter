@@ -151,6 +151,12 @@ describe('ProjectBurndownChart axis helpers', () => {
     expect(getRollingStartMonthIndex(null, 6)).toBeNull();
   });
 
+  it('gets the rolling x-axis start twelve months back when twelve months of history is selected', () => {
+    expect(getRollingStartMonthIndex(monthIndex(2026, 6), 12)).toBe(
+      monthIndex(2025, 6)
+    );
+  });
+
   it('gets timeline end months from project end or fixed projection windows', () => {
     expect(
       getTimelineEndMonthIndex(

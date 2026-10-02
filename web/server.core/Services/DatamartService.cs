@@ -96,7 +96,7 @@ public interface IDatamartService
     /// <summary>
     /// Per-expenditure-category budget burndown for a single project: the budget header
     /// plus a period x category grid of actuals, projections, and running remaining.
-    /// <paramref name="historyMonths"/> (3 or 6) sets both the trailing actual months returned
+    /// <paramref name="historyMonths"/> (3, 6, or 12) sets both the trailing actual months returned
     /// and the window the non-personnel run-rate averages over.
     /// </summary>
     Task<ProjectProjectionResult> GetProjectProjectionAsync(

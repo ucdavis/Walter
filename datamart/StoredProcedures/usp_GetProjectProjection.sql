@@ -1,7 +1,7 @@
 -- Monthly per-expenditure-category budget burndown for a single project.
 -- Returns two result sets:
 --   1. Per-category budget header (budget, spent-to-date, committed, current remaining, award end date).
---   2. Period x category grid: @HistoryMonths (3 or 6) trailing actual months, the current
+--   2. Period x category grid: @HistoryMonths (3, 6, or 12) trailing actual months, the current
 --      (blended) month, and projected months through the award end date (12 when the award
 --      end date is unknown), each with actual spend, projected spend, and the running budget
 --      remaining (burndown).
@@ -49,8 +49,8 @@ BEGIN
 
         EXEC dbo.usp_ValidateAggieEnterpriseProject @ProjectId;
 
-        IF @HistoryMonths IS NULL OR @HistoryMonths NOT IN (3, 6)
-            THROW 50000, 'HistoryMonths must be 3 or 6.', 1;
+        IF @HistoryMonths IS NULL OR @HistoryMonths NOT IN (3, 6, 12)
+            THROW 50000, 'HistoryMonths must be 3, 6, or 12.', 1;
 
         /* Horizon end: project through the award end date's month; when the award end date
            is unknown, fall back to 12 projected months. A past/current end date yields no
