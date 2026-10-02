@@ -9,7 +9,7 @@ import {
   buildChartRows,
   buildBalanceAxisTicks,
   formatBalanceAxisTick,
-  getAwardEndMonthIndex,
+  getDateMonthIndex,
   getBalanceStatClassName,
   getRollingStartMonthIndex,
   getTimelineEndMonthIndex,
@@ -126,12 +126,10 @@ describe('ProjectBurndownChart axis helpers', () => {
   });
 
   it('gets award month indexes from date-only or date-time values', () => {
-    expect(getAwardEndMonthIndex('2026-07-31')).toBe(monthIndex(2026, 7));
-    expect(getAwardEndMonthIndex('2026-08-15T00:00:00Z')).toBe(
-      monthIndex(2026, 8)
-    );
-    expect(getAwardEndMonthIndex('2026-02-31')).toBeNull();
-    expect(getAwardEndMonthIndex(null)).toBeNull();
+    expect(getDateMonthIndex('2026-07-31')).toBe(monthIndex(2026, 7));
+    expect(getDateMonthIndex('2026-08-15T00:00:00Z')).toBe(monthIndex(2026, 8));
+    expect(getDateMonthIndex('2026-02-31')).toBeNull();
+    expect(getDateMonthIndex(null)).toBeNull();
   });
 
   it('gets the rolling x-axis start three months before the reference month', () => {
@@ -155,6 +153,18 @@ describe('ProjectBurndownChart axis helpers', () => {
     expect(getRollingStartMonthIndex(monthIndex(2026, 6), 12)).toBe(
       monthIndex(2025, 6)
     );
+  });
+
+  it('does not start the rolling x-axis before the award start month', () => {
+    expect(
+      getRollingStartMonthIndex(monthIndex(2026, 6), 12, monthIndex(2026, 2))
+    ).toBe(monthIndex(2026, 2));
+    expect(
+      getRollingStartMonthIndex(monthIndex(2026, 6), 3, monthIndex(2025, 1))
+    ).toBe(monthIndex(2026, 3));
+    expect(
+      getRollingStartMonthIndex(monthIndex(2026, 6), 12, monthIndex(2026, 9))
+    ).toBe(monthIndex(2025, 6));
   });
 
   it('gets timeline end months from project end or fixed projection windows', () => {

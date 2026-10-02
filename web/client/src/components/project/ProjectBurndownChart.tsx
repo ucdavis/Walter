@@ -121,9 +121,9 @@ function formatMonthLabel(index: number) {
   return `${MONTH_LABELS[month]}-${String(year).slice(-2)}`;
 }
 
-export function getAwardEndMonthIndex(awardEndDate: string | null) {
-  const awardEndMonth = getProjectMonth(awardEndDate);
-  return awardEndMonth ? getMonthIndex(awardEndMonth) : null;
+export function getDateMonthIndex(date: string | null) {
+  const month = getProjectMonth(date);
+  return month ? getMonthIndex(month) : null;
 }
 
 // Each series renders as two lines sharing a color: a solid one over the
@@ -184,15 +184,26 @@ export function buildChartRows(
   });
 }
 
+// History never reaches back before the award start month.
 export function getRollingStartMonthIndex(
   referenceMonthIndex: number | null,
-  historyMonths: ProjectionHistoryMonths = 3
+  historyMonths: ProjectionHistoryMonths = 3,
+  awardStartMonthIndex: number | null = null
 ) {
   if (referenceMonthIndex === null) {
     return null;
   }
 
-  return referenceMonthIndex - historyMonths;
+  const historyStartMonthIndex = referenceMonthIndex - historyMonths;
+
+  if (
+    awardStartMonthIndex === null ||
+    awardStartMonthIndex > referenceMonthIndex
+  ) {
+    return historyStartMonthIndex;
+  }
+
+  return Math.max(historyStartMonthIndex, awardStartMonthIndex);
 }
 
 function getTimelineMonthCount(timeline: TimelineOption) {
@@ -568,6 +579,7 @@ interface ProjectBurndownSectionProps {
 
 export function ProjectBurndownSection({
   awardEndDate,
+  awardStartDate,
   projectNumber,
 }: ProjectBurndownSectionProps) {
   const [selectedHistoryMonths, setSelectedHistoryMonths] =
@@ -597,7 +609,7 @@ export function ProjectBurndownSection({
   const [selectedTimeline, setSelectedTimeline] =
     useState<TimelineOption>('project-end');
   const awardEndMonthIndex = useMemo(
-    () => getAwardEndMonthIndex(awardEndDate),
+    () => getDateMonthIndex(awardEndDate),
     [awardEndDate]
   );
   const awardEndMonth = useMemo(
@@ -616,13 +628,22 @@ export function ProjectBurndownSection({
         : null,
     [projectionTransitionMonth]
   );
+  const awardStartMonthIndex = useMemo(
+    () => getDateMonthIndex(awardStartDate),
+    [awardStartDate]
+  );
   const rollingStartMonthIndex = useMemo(
     () =>
       getRollingStartMonthIndex(
         projectionTransitionMonthIndex,
-        selectedHistoryMonths
+        selectedHistoryMonths,
+        awardStartMonthIndex
       ),
-    [projectionTransitionMonthIndex, selectedHistoryMonths]
+    [
+      awardStartMonthIndex,
+      projectionTransitionMonthIndex,
+      selectedHistoryMonths,
+    ]
   );
   const timelineEndMonthIndex = useMemo(
     () =>
