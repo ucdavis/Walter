@@ -4,7 +4,7 @@ type WalterDreamProps = React.SVGProps<SVGSVGElement> & {
 
 export const WalterDream = ({ className, ...props }: WalterDreamProps) => (
   <svg
-    className={`walter-dream text-[#1f1f1f] ${className ?? ''}`}
+    className={`walter-dream text-base-content ${className ?? ''}`}
     height="459px"
     version="1.1"
     viewBox="0 0 369 459"
