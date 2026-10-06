@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 export type FeatureFlags = {
   burndownEnabled: boolean;
   expenditureProgressEnabled: boolean;
+  projectCostsEnabled: boolean;
 };
 
 export const featureFlagsQueryOptions = () => ({

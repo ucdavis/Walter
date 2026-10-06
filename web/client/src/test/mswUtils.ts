@@ -10,7 +10,11 @@ const defaultHandlers = [
     HttpResponse.json({ enabled: false, message: '', updatedOn: null })
   ),
   http.get('/api/system/features', () =>
-    HttpResponse.json({ burndownEnabled: true, expenditureProgressEnabled: true })
+    HttpResponse.json({
+      burndownEnabled: true,
+      expenditureProgressEnabled: true,
+      projectCostsEnabled: true,
+    })
   ),
 ];
 

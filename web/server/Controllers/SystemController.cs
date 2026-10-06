@@ -58,7 +58,8 @@ public class SystemController : ApiControllerBase
     {
         return Ok(new ClientFeatures(
             _featureFlags.BurndownEnabled,
-            _featureFlags.ExpenditureProgressEnabled));
+            _featureFlags.ExpenditureProgressEnabled,
+            _featureFlags.ProjectCostsEnabled));
     }
 
     [HttpGet("emulate/{identifier}")]
@@ -229,4 +230,7 @@ public class SystemController : ApiControllerBase
 }
 
 /// <summary>Environment feature flags surfaced to the SPA via GET /api/system/features.</summary>
-public sealed record ClientFeatures(bool BurndownEnabled, bool ExpenditureProgressEnabled);
+public sealed record ClientFeatures(
+    bool BurndownEnabled,
+    bool ExpenditureProgressEnabled,
+    bool ProjectCostsEnabled);
