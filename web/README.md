@@ -272,9 +272,8 @@ Then you'll need to setup Env Settings, basically mirror the `.env` file. Rememb
 
 ## Imported PPM project search
 
-Project search uses AE GraphQL by default. Set `Datamart:UsePpmProjectSearch`
-to `true` in local user secrets, or set the environment variable
-`Datamart__UsePpmProjectSearch=true`, to read `dbo.PpmProjects` through the
+Project search uses AE GraphQL by default. Set the environment variable
+`Datamart__UsePpmProjectSearch=true` to read `dbo.PpmProjects` through the
 existing `DM_CONNECTION`. Set it to `false` or remove it, then restart the
 server, to return to GraphQL.
 
