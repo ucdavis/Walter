@@ -269,7 +269,3 @@ When setting up a new Azure environment, you'll need:
 You'll then need to allow the App Service to access the SQL Database by configuring the firewall rules to allow Azure services. I've included a script in `deploy/test/set-sql-firewall.sh` that can help with this.
 
 Then you'll need to setup Env Settings, basically mirror the `.env` file. Remember to set the correct connection string for your database.
-
-This is the first slice of [#429](https://github.com/ucdavis/Walter/issues/429).
-Review its local results before extending the migration to membership,
-authorization, or role synchronization.
