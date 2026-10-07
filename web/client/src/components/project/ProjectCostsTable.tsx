@@ -297,8 +297,6 @@ export function ProjectCostsTable() {
       return isWithinTimeline && matchesCategory;
     });
   }, [selectedCategories, selectedTimeline]);
-  const hasSelectedCategories = selectedCategories.length > 0;
-
   const toggleCategory = (category: string) => {
     setSelectedCategories((current) =>
       current.includes(category)
@@ -339,6 +337,16 @@ export function ProjectCostsTable() {
             className="tabs tabs-box flex w-fit flex-wrap"
             role="group"
           >
+            <button
+              aria-pressed={selectedCategories.length === 0}
+              className={`tab ${
+                selectedCategories.length === 0 ? 'tab-active' : ''
+              }`}
+              onClick={() => setSelectedCategories([])}
+              type="button"
+            >
+              All Categories
+            </button>
             {projectCostCategories.map((category) => {
               const isSelected = selectedCategories.includes(category);
 
@@ -362,14 +370,6 @@ export function ProjectCostsTable() {
               );
             })}
           </div>
-          <button
-            className="btn btn-sm"
-            disabled={!hasSelectedCategories}
-            onClick={() => setSelectedCategories([])}
-            type="button"
-          >
-            Clear
-          </button>
         </div>
       </div>
       <DataTable

@@ -168,7 +168,7 @@ describe('project costs page', () => {
     }
   });
 
-  it('filters by multiple expenditure categories and clears the selection', async () => {
+  it('filters by multiple expenditure categories and resets to all categories', async () => {
     const user = userEvent.setup();
     setupHandlers([createProject()]);
 
@@ -184,12 +184,15 @@ describe('project costs page', () => {
       const indirectCostsFilter = within(table).getByRole('button', {
         name: '09 - Indirect Costs',
       });
-      const clearFilter = within(table).getByRole('button', { name: 'Clear' });
+      const allCategoriesFilter = within(table).getByRole('button', {
+        name: 'All Categories',
+      });
 
-      expect(clearFilter).toBeDisabled();
+      expect(allCategoriesFilter).toHaveAttribute('aria-pressed', 'true');
 
       await user.click(travelFilter);
       expect(travelFilter).toHaveAttribute('aria-pressed', 'true');
+      expect(allCategoriesFilter).toHaveAttribute('aria-pressed', 'false');
       expect(screen.getAllByText('Travel Reimbursement')).toHaveLength(2);
       expect(
         screen.queryByText('Payroll Distribution')
@@ -200,8 +203,8 @@ describe('project costs page', () => {
       expect(screen.getAllByText('Indirect Cost Allocation')).toHaveLength(3);
       expect(screen.getAllByText('Travel Reimbursement')).toHaveLength(2);
 
-      await user.click(clearFilter);
-      expect(clearFilter).toBeDisabled();
+      await user.click(allCategoriesFilter);
+      expect(allCategoriesFilter).toHaveAttribute('aria-pressed', 'true');
       expect(travelFilter).toHaveAttribute('aria-pressed', 'false');
       expect(indirectCostsFilter).toHaveAttribute('aria-pressed', 'false');
       expect(screen.getAllByText('Payroll Distribution')).toHaveLength(3);
