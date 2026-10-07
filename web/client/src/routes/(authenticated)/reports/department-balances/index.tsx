@@ -555,7 +555,7 @@ function RouteComponent() {
                 filtersScrolled ? 'border-b border-main-border' : ''
               }`}
             >
-              <h2 className="text-xl font-proxima-bold">Filters</h2>
+              <h2 className="text-xl font-sans font-bold">Filters</h2>
               <button
                 aria-expanded={criteriaOpen}
                 className="btn btn-ghost btn-sm"
@@ -597,7 +597,7 @@ function RouteComponent() {
                     {/* Accounting period: required single choice, newest first, defaults to current close */}
                     <div className="flex flex-col gap-2">
                       <label
-                        className="text-sm uppercase font-proxima-bold"
+                        className="text-sm uppercase font-sans font-bold"
                         htmlFor="period-select"
                       >
                         Period{' '}
@@ -622,7 +622,7 @@ function RouteComponent() {
 
                     {/* Department — hierarchy-aware multi-select, always enabled; gates the other facets */}
                     <div className="flex flex-col gap-2">
-                      <label className="text-sm uppercase font-proxima-bold">
+                      <label className="text-sm uppercase font-sans font-bold">
                         Financial Department{' '}
                         <span aria-hidden="true" className="text-error">
                           *
@@ -641,7 +641,7 @@ function RouteComponent() {
                 </section>
 
                 <section>
-                  <h2 className="mt-4 mb-4 text-xl font-proxima-bold">
+                  <h2 className="mt-4 mb-4 text-xl font-sans font-bold">
                     Data Filters
                   </h2>
                   {department.length > 0 && !hasDataFilters ? (
@@ -657,7 +657,7 @@ function RouteComponent() {
                   <div className="grid items-start gap-4">
                     {/* Entity — multi-select, disabled until department chosen */}
                     <DisabledCriteriaFilter disabledHint={disabledHint}>
-                      <label className="text-sm uppercase font-proxima-bold">
+                      <label className="text-sm uppercase font-sans font-bold">
                         Entity
                       </label>
                       <MultiSelectFilter
@@ -673,7 +673,7 @@ function RouteComponent() {
 
                     {/* Fund — hierarchy-aware multi-select, disabled until department chosen */}
                     <DisabledCriteriaFilter disabledHint={disabledHint}>
-                      <label className="text-sm uppercase font-proxima-bold">
+                      <label className="text-sm uppercase font-sans font-bold">
                         Fund
                       </label>
                       <MultiSelectFilter
@@ -689,7 +689,7 @@ function RouteComponent() {
 
                     {/* Account — hierarchy-aware multi-select, disabled until department chosen */}
                     <DisabledCriteriaFilter disabledHint={disabledHint}>
-                      <label className="text-sm uppercase font-proxima-bold">
+                      <label className="text-sm uppercase font-sans font-bold">
                         Account
                       </label>
                       <MultiSelectFilter
@@ -705,7 +705,7 @@ function RouteComponent() {
 
                     {/* Purpose — multi-select, disabled until department chosen */}
                     <DisabledCriteriaFilter disabledHint={disabledHint}>
-                      <label className="text-sm uppercase font-proxima-bold">
+                      <label className="text-sm uppercase font-sans font-bold">
                         Purpose
                       </label>
                       <MultiSelectFilter
@@ -721,7 +721,7 @@ function RouteComponent() {
 
                     {/* Program — multi-select, disabled until department chosen */}
                     <DisabledCriteriaFilter disabledHint={disabledHint}>
-                      <label className="text-sm uppercase font-proxima-bold">
+                      <label className="text-sm uppercase font-sans font-bold">
                         Program
                       </label>
                       <MultiSelectFilter
@@ -737,7 +737,7 @@ function RouteComponent() {
 
                     {/* Project — multi-select, disabled until department chosen */}
                     <DisabledCriteriaFilter disabledHint={disabledHint}>
-                      <label className="text-sm uppercase font-proxima-bold">
+                      <label className="text-sm uppercase font-sans font-bold">
                         Project
                       </label>
                       <MultiSelectFilter
@@ -753,7 +753,7 @@ function RouteComponent() {
 
                     {/* Activity — multi-select, disabled until department chosen */}
                     <DisabledCriteriaFilter disabledHint={disabledHint}>
-                      <label className="text-sm uppercase font-proxima-bold">
+                      <label className="text-sm uppercase font-sans font-bold">
                         Activity
                       </label>
                       <MultiSelectFilter
@@ -772,7 +772,7 @@ function RouteComponent() {
                 {/* Field selections — which child-level segments the results are grouped/displayed by */}
                 <section>
                   <div className="mt-4 mb-4 flex flex-wrap items-center gap-2">
-                    <h2 className="text-xl font-proxima-bold">
+                    <h2 className="text-xl font-sans font-bold">
                       Display Fields
                     </h2>
                     <TooltipLabel

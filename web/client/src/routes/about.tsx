@@ -17,7 +17,7 @@ function About() {
         <main className="flex flex-col p-10 mt-6 flex-1">
           <div className="flex w-full max-w-xl flex-col md:mt-10 sm:max-w-[90%] md:max-w-[80%] xl:max-w-[50%]">
             <img alt="Dog outline logo" className="w-8" src="/walter.svg" />
-            <h1 className="text-2xl font-proxima-bold">W.A.L.T.E.R.</h1>
+            <h1 className="text-2xl font-sans font-bold">W.A.L.T.E.R.</h1>
             <p className="uppercase">
               warehouse analytics and ledger tools for enterprise reporting
             </p>

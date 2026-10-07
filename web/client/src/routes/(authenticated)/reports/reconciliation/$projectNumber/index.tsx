@@ -182,7 +182,7 @@ function RouteComponent() {
           const isDisc = hasDiscrepancy(row);
           return (
             <span
-              className={`flex font-proxima-bold justify-end ${
+              className={`flex font-sans font-bold justify-end ${
                 isDisc ? 'text-info' : ''
               }`}
             >

@@ -23,7 +23,6 @@ interface ProjectSummary {
   displayName: string;
   isInternal: boolean;
   projectNumber: string;
-  projectStatusCode: string;
   totalBalance: number;
 }
 
@@ -52,7 +51,6 @@ function groupProjects(records: ProjectRecord[]): ProjectSummary[] {
         displayName: rec.displayName,
         isInternal: rec.projectType === 'Internal',
         projectNumber: rec.projectNumber,
-        projectStatusCode: rec.projectStatusCode,
         totalBalance: 0,
       };
     }
@@ -96,12 +94,28 @@ function getProjectSidebarRoute(
   return '/projects/$iamId/$projectNumber';
 }
 
-const linkClasses = (isActive: boolean, isActiveStatus: boolean) =>
-  [
-    'block mb-0 text-left px-3 py-2 transition-colors border-b border-main-border',
-    isActive ? 'bg-primary-color/10' : 'hover:bg-[#F2F6FC]',
-    isActiveStatus ? 'bg-base-100' : 'hover:bg-[#F2F6FC]',
+const linkClasses = (isActive: boolean, isInternal?: boolean) => {
+  const activeClasses =
+    isInternal === undefined
+      ? 'border-l-primary bg-primary/10'
+      : isInternal
+        ? 'border-l-accent bg-accent/10'
+        : 'border-l-info bg-info/10';
+  const hoverClasses =
+    isInternal === undefined
+      ? 'hover:bg-primary/5'
+      : isInternal
+        ? 'hover:bg-accent/5'
+        : 'hover:bg-info/5';
+
+  return [
+    'block mb-0 border-b border-l-4 border-l-transparent border-main-border px-3 py-2 text-left transition-colors',
+    isActive ? activeClasses : hoverClasses,
   ].join(' ');
+};
+
+const projectNumberClasses = (isInternal: boolean) =>
+  isInternal ? 'text-accent' : 'text-info';
 
 export function ProjectsSidebar() {
   const { iamId, projectNumber } = useParams({ strict: false });
@@ -243,7 +257,7 @@ export function ProjectsSidebar() {
                 label={
                   <Link
                     aria-label={collapsed ? 'All Projects' : undefined}
-                    className={linkClasses(isAllProjectsActive, false)}
+                    className={linkClasses(isAllProjectsActive)}
                     params={{ iamId }}
                     to="/projects/$iamId"
                     viewTransition={{ types: ['slide-right'] }}
@@ -261,7 +275,7 @@ export function ProjectsSidebar() {
                         <div className="flex justify-between items-start mb-1">
                           <span className="text-base">All Projects</span>
                         </div>
-                        <div className="flex justify-between text-sm items-center text-base-content/70">
+                        <div className="flex justify-between text-sm items-center text-base-content/60">
                           <Currency value={totalOverviewBalance} />
                         </div>
                       </>
@@ -281,7 +295,7 @@ export function ProjectsSidebar() {
                     <Link
                       className={linkClasses(
                         projectNumber === project.projectNumber,
-                        project.projectStatusCode === 'ACTIVE'
+                        project.isInternal
                       )}
                       params={{ iamId, projectNumber: project.projectNumber }}
                       to={getProjectRoute(project)}
@@ -289,13 +303,17 @@ export function ProjectsSidebar() {
                     >
                       {collapsed ? (
                         <div className="flex flex-col gap-1 py-1">
-                          <div className="text-xs leading-tight text-base-content/70">
+                          <div
+                            className={`text-xs leading-tight ${projectNumberClasses(project.isInternal)}`}
+                          >
                             {project.projectNumber}
                           </div>
                         </div>
                       ) : (
                         <>
-                          <div className="text-xs text-base-content/70">
+                          <div
+                            className={`text-xs ${projectNumberClasses(project.isInternal)}`}
+                          >
                             {project.projectNumber}
                           </div>
                           <div className="flex justify-between items-start mb-1">
@@ -303,7 +321,7 @@ export function ProjectsSidebar() {
                               {project.displayName}
                             </span>
                           </div>
-                          <div className="flex text-sm justify-between items-center text-base-content/70">
+                          <div className="flex text-sm justify-between items-center text-base-content/60">
                             <Currency value={project.totalBalance} />
                             <span>
                               {formatDate(project.awardEndDate, 'No end date')}
@@ -417,7 +435,7 @@ export function ProjectsSidebar() {
 
           <div className="space-y-1 overflow-y-auto max-h-[calc(100vh-120px)]">
             <Link
-              className={linkClasses(isAllProjectsActive, false)}
+              className={linkClasses(isAllProjectsActive)}
               onClick={() => setOpen(false)}
               params={{ iamId }}
               to="/projects/$iamId"
@@ -426,7 +444,7 @@ export function ProjectsSidebar() {
               <div className="flex justify-between items-start mb-1">
                 <span className="text-base">All Projects</span>
               </div>
-              <div className="flex justify-between text-sm items-center text-base-content/70">
+              <div className="flex justify-between text-sm items-center text-base-content/60">
                 <Currency value={totalOverviewBalance} />
                 <span>total proj #</span>
               </div>
@@ -436,7 +454,7 @@ export function ProjectsSidebar() {
               <Link
                 className={linkClasses(
                   projectNumber === project.projectNumber,
-                  project.projectStatusCode === 'ACTIVE'
+                  project.isInternal
                 )}
                 key={project.projectNumber}
                 onClick={() => setOpen(false)}
@@ -444,13 +462,15 @@ export function ProjectsSidebar() {
                 to={getProjectRoute(project)}
                 viewTransition={{ types: ['slide-left'] }}
               >
-                <div className="text-xs text-base-content/50">
+                <div
+                  className={`text-xs ${projectNumberClasses(project.isInternal)}`}
+                >
                   {project.projectNumber}
                 </div>
                 <div className="flex justify-between items-start mb-1">
                   <span className="text-base">{project.displayName}</span>
                 </div>
-                <div className="flex text-sm justify-between items-center text-base-content/70">
+                <div className="flex text-sm justify-between items-center text-base-content/60">
                   <Currency value={project.totalBalance} />
                   <span>{formatDate(project.awardEndDate, 'No end date')}</span>
                 </div>

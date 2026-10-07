@@ -131,7 +131,7 @@ function AllExpensesProgress({
           <span>{committedText}</span>
         </p>
         <p
-          className={`ml-auto text-right${progress.overrun > 0 ? ' font-proxima-bold text-error' : ''}`}
+          className={`ml-auto text-right${progress.overrun > 0 ? ' font-sans font-bold text-error' : ''}`}
         >
           {remainingText}
         </p>
@@ -145,7 +145,7 @@ export function ProjectDetails({ actions, summary }: ProjectDetailsProps) {
   const projectColor = summary.isInternal
     ? INTERNAL_PROJECT_COLOR
     : SPONSORED_PROJECT_COLOR;
-  const balanceClassName = `text-3xl font-proxima-bold ${
+  const balanceClassName = `text-3xl font-sans font-bold ${
     summary.totals.balance < 0
       ? 'text-error'
       : summary.isInternal

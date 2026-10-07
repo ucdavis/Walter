@@ -189,7 +189,7 @@ export function ProjectAdditionalInfo({ summary }: ProjectAdditionalInfoProps) {
         {expanded &&
           secondaryFields.map((field) => (
             <div className={fieldRowClassName} key={field.label}>
-              <div className="font-proxima-bold">{renderLabel(field)}</div>
+              <div className="font-sans font-bold">{renderLabel(field)}</div>
               <div className="min-w-0">{field.value}</div>
             </div>
           ))}
@@ -200,7 +200,7 @@ export function ProjectAdditionalInfo({ summary }: ProjectAdditionalInfoProps) {
             <div className="grid grid-cols-1 gap-x-4 gap-y-2 xl:grid-cols-2">
               {buildFlowThroughFields(summary).map((field) => (
                 <div className={fieldRowClassName} key={field.label}>
-                  <div className="font-proxima-bold">{renderLabel(field)}</div>
+                  <div className="font-sans font-bold">{renderLabel(field)}</div>
                   <div className="min-w-0">{field.value}</div>
                 </div>
               ))}

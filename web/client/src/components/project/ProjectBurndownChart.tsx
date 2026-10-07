@@ -417,7 +417,7 @@ function BurndownTooltip({
 
   return (
     <div className="rounded-md border border-main-border bg-base-100 p-4 text-sm shadow-lg">
-      <p className="font-proxima-bold text-base mb-2">{row.label}</p>
+      <p className="font-sans font-bold text-base mb-2">{row.label}</p>
       <dl className="space-y-2">
         {visibleSeries.map(({ color, key }) => {
           const remaining = (row[`${key}::dashed`] ?? row[`${key}::solid`]) as
@@ -432,7 +432,7 @@ function BurndownTooltip({
 
           return (
             <div key={key}>
-              <dt className="font-proxima-bold flex items-center gap-2">
+              <dt className="font-sans font-bold flex items-center gap-2">
                 <span
                   className="inline-block h-3 w-3 rounded-sm"
                   style={{ backgroundColor: color }}
@@ -455,7 +455,7 @@ function BurndownTooltip({
 
       {categorySpend.length > 0 && (
         <div className="mt-3 border-t border-main-border pt-3">
-          <p className="font-proxima-bold mb-2">Expenses by Category</p>
+          <p className="font-sans font-bold mb-2">Expenses by Category</p>
           <div className="space-y-1">
             {categorySpend.map(({ expenditureCategory, spend }) => (
               <div
@@ -819,7 +819,7 @@ export function ProjectBurndownSection({
               </div>
             )}
 
-            <h3 className="font-proxima-bold mb-2 text-base">{chartTitle}</h3>
+            <h3 className="font-sans font-bold mb-2 text-base">{chartTitle}</h3>
 
             <div className="h-80" data-testid="project-burndown-chart">
               <ResponsiveContainer height="100%" width="100%">

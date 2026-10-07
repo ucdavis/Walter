@@ -115,7 +115,7 @@ function ProjectContent({
       <section className="mt-8 mb-2">
         <h1 className="h1 max-w-4xl">{summary.displayName}</h1>
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-base text-base-content/80">
-          <span className="font-proxima-bold text-base-content">
+          <span className="font-sans font-bold text-base-content">
             {summary.projectNumber}
           </span>
           {!summary.isInternal && finjectorUrl && (
@@ -147,7 +147,7 @@ function ProjectContent({
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1">
           <span
-            className={`badge font-proxima-bold badge-sm ${summary.isInternal ? 'badge-accent' : 'badge-info'}`}
+            className={`badge font-sans font-bold badge-sm ${summary.isInternal ? 'badge-accent' : 'badge-info'}`}
           >
             {summary.isInternal ? 'Internal Project' : 'Sponsored Project'}
           </span>
