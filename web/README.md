@@ -269,3 +269,30 @@ When setting up a new Azure environment, you'll need:
 You'll then need to allow the App Service to access the SQL Database by configuring the firewall rules to allow Azure services. I've included a script in `deploy/test/set-sql-firewall.sh` that can help with this.
 
 Then you'll need to setup Env Settings, basically mirror the `.env` file. Remember to set the correct connection string for your database.
+
+## Imported PPM project search
+
+Project search uses AE GraphQL by default. Set `Datamart:UsePpmProjectSearch`
+to `true` in local user secrets, or set the environment variable
+`Datamart__UsePpmProjectSearch=true`, to read `dbo.PpmProjects` through the
+existing `DM_CONNECTION`. Set it to `false` or remove it, then restart the
+server, to return to GraphQL.
+
+This switch affects only `GET /api/search/projects`. Both sources share the
+existing financial-access gate, query normalization, result mapping,
+deduplication, case-insensitive name ordering, and five-result limit. Imported
+search includes all matching project statuses and dates. Spaces become `%`;
+`%` and `_` retain their wildcard meaning, while brackets are literal. Database
+failures propagate as errors rather than silently switching sources.
+
+To validate locally, compare both modes under the same caller roles using
+exact project numbers, partial numbers, names containing spaces, lowercase and
+trimmed variants, empty/short inputs, and no matches. FinancialViewer and Admin
+can search; authenticated callers without financial access receive an empty
+list. Verify the search picker and project navigation as well as the HTTP
+payload. Recheck imported data freshness before comparing live results, since
+snapshot lag can differ from an implementation regression.
+
+This is the first slice of [#429](https://github.com/ucdavis/Walter/issues/429).
+Review its local results before extending the migration to membership,
+authorization, or role synchronization.

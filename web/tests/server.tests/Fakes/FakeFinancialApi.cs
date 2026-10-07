@@ -2,6 +2,7 @@ using System.Reflection;
 using AggieEnterpriseApi;
 using server.Helpers;
 using server.Services;
+using server.core.Models;
 using StrawberryShake;
 
 namespace server.tests.Fakes;
@@ -38,6 +39,11 @@ public sealed class FakeFinancialApiService : IFinancialApiService
         _projects = projects ?? Array.Empty<FakeFinancialProject>();
     }
 
+    public IReadOnlyList<ProjectSearchRecord> SearchByName { get; init; } = [];
+    public IReadOnlyList<ProjectSearchRecord> SearchByNumber { get; init; } = [];
+    public ProjectSearchRecord? ExactProject { get; init; }
+    public List<(string? Name, string? Number, string Exact, CancellationToken Token)> SearchQueries { get; } = [];
+
     public IAggieEnterpriseClient GetClient()
     {
         return ProxyFactory.CreateProxy<IAggieEnterpriseClient>((method, _) =>
@@ -45,6 +51,41 @@ public sealed class FakeFinancialApiService : IFinancialApiService
             if (method.Name == "get_PpmProjectByProjectTeamMemberEmployeeId")
             {
                 return new FakePpmProjectByProjectTeamMemberEmployeeIdQuery(_projectManagerEmployeeIds, _projects);
+            }
+
+            if (method.Name == "get_PpmProjectSearch")
+            {
+                return ProxyFactory.CreateProxy<IPpmProjectSearchQuery>((queryMethod, args) =>
+                {
+                    if (queryMethod.Name != "ExecuteAsync") throw new NotImplementedException();
+                    var filter = (PpmProjectFilterInput)args![0]!;
+                    SearchQueries.Add((filter.Name?.Contains, filter.ProjectNumber?.Contains, (string)args[1]!, (CancellationToken)args[2]!));
+                    var projects = filter.Name is not null ? SearchByName : SearchByNumber;
+                    var data = projects.Select(p => ProxyFactory.CreateProxy<IPpmProjectSearch_PpmProjectSearch_Data>((m, _) => m.Name switch
+                    {
+                        "get_ProjectNumber" => p.ProjectNumber,
+                        "get_Name" => p.ProjectName,
+                        _ => throw new NotImplementedException(m.Name),
+                    })).ToArray();
+                    var search = ProxyFactory.CreateProxy<IPpmProjectSearch_PpmProjectSearch>((m, _) => m.Name switch
+                    {
+                        "get_Data" => data,
+                        _ => throw new NotImplementedException(m.Name),
+                    });
+                    var exact = ExactProject is null ? null : ProxyFactory.CreateProxy<IPpmProjectSearch_PpmProjectByNumber>((m, _) => m.Name switch
+                    {
+                        "get_ProjectNumber" => ExactProject.ProjectNumber,
+                        "get_Name" => ExactProject.ProjectName,
+                        _ => throw new NotImplementedException(m.Name),
+                    });
+                    var result = ProxyFactory.CreateProxy<IPpmProjectSearchResult>((m, _) => m.Name switch
+                    {
+                        "get_PpmProjectSearch" => search,
+                        "get_PpmProjectByNumber" => exact,
+                        _ => throw new NotImplementedException(m.Name),
+                    });
+                    return Task.FromResult<IOperationResult<IPpmProjectSearchResult>>(new FakeOperationResult<IPpmProjectSearchResult>(result));
+                });
             }
 
             if (method.Name == "get_PpmProjectTeamMembers")

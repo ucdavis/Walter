@@ -478,6 +478,10 @@ public sealed class ProjectControllerTests
             _options = options ?? Array.Empty<DepartmentBalanceOption>();
         }
 
+        public Task<IReadOnlyList<ProjectSearchRecord>> SearchProjectsAsync(
+            string fuzzyQuery, string exactProjectNumber, CancellationToken ct = default)
+            => throw new NotImplementedException();
+
         public Task<IReadOnlyList<SearchablePersonRecord>> SearchPeopleAsync(
             string query,
             int limit,

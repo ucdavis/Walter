@@ -124,6 +124,10 @@ public sealed class DepartmentBalancesControllerTests
             CancellationToken ct = default)
             => Task.FromResult(_options);
 
+        public Task<IReadOnlyList<ProjectSearchRecord>> SearchProjectsAsync(
+            string fuzzyQuery, string exactProjectNumber, CancellationToken ct = default)
+            => throw new NotImplementedException();
+
         public Task<IReadOnlyList<SearchablePersonRecord>> SearchPeopleAsync(string query, int limit, CancellationToken ct = default)
             => Task.FromResult<IReadOnlyList<SearchablePersonRecord>>(Array.Empty<SearchablePersonRecord>());
 

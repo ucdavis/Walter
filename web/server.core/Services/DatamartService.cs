@@ -21,6 +21,9 @@ public sealed class DatamartOptions
     /// <summary>Campus-wide dbo.PositionBudgetsCognos table from the UCP-391 Funding Entry report (dbo.usp_GetPositionBudgetsCognos).</summary>
     public const string CognosSource = "Cognos";
 
+    /// <summary>Opt in only project search to the imported PPM snapshot. False keeps GraphQL as the default and rollback source.</summary>
+    public bool UsePpmProjectSearch { get; set; }
+
     public string ConnectionString { get; set; } = string.Empty;
     public string ApplicationName { get; set; } = "Walter";
 
@@ -48,6 +51,10 @@ public sealed class DatamartOptions
 
 public interface IDatamartService
 {
+    /// <summary>Returns imported project-search candidates, without status or date filters. The caller owns ordering and the result limit.</summary>
+    Task<IReadOnlyList<ProjectSearchRecord>> SearchProjectsAsync(
+        string fuzzyQuery, string exactProjectNumber, CancellationToken ct = default);
+
     /// <summary>
     /// Searches People records that have both an IAM ID for navigation and an Employee ID for downstream project data.
     /// </summary>
@@ -151,6 +158,24 @@ public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
                 sleepDurationProvider: attempt =>
                     TimeSpan.FromMilliseconds(200 * Math.Pow(2, attempt))
             );
+    }
+
+    /// <summary>Searches the imported PPM snapshot with the existing AE percent/underscore wildcard semantics.</summary>
+    public Task<IReadOnlyList<ProjectSearchRecord>> SearchProjectsAsync(
+        string fuzzyQuery, string exactProjectNumber, CancellationToken ct = default)
+    {
+        // SQL Server adds bracket patterns to LIKE; AE treats brackets literally.
+        var pattern = "%" + fuzzyQuery.Replace("[", "[[]", StringComparison.Ordinal) + "%";
+        return ExecuteQueryAsync<ProjectSearchRecord>("""
+            SELECT ProjectNumber, Name AS ProjectName
+            FROM dbo.PpmProjects
+            WHERE Name COLLATE Latin1_General_100_CI_AS LIKE @Pattern
+               OR ProjectNumber COLLATE Latin1_General_100_CI_AS LIKE @Pattern
+               OR ProjectNumber COLLATE Latin1_General_100_CI_AS = @ExactProjectNumber
+            ORDER BY CASE WHEN ProjectNumber COLLATE Latin1_General_100_CI_AS = @ExactProjectNumber THEN 0
+                          WHEN Name COLLATE Latin1_General_100_CI_AS LIKE @Pattern THEN 1 ELSE 2 END,
+                     Name, ProjectNumber
+            """, new { Pattern = pattern, ExactProjectNumber = exactProjectNumber }, ct: ct);
     }
 
     public async Task<IReadOnlyList<FacultyPortfolioRecord>> GetFacultyPortfolioAsync(
