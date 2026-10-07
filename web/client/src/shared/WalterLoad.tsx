@@ -4,7 +4,7 @@ type WalterLoadProps = React.SVGProps<SVGSVGElement> & {
 
 export const WalterLoad = ({ className, ...props }: WalterLoadProps) => (
   <svg
-    className={`walter-loading text-[#1f1f1f] ${className ?? ''}`}
+    className={`walter-loading text-base-content ${className ?? ''}`}
     height="459px"
     version="1.1"
     viewBox="0 0 369 459"
@@ -28,7 +28,7 @@ export const WalterLoad = ({ className, ...props }: WalterLoadProps) => (
         transform="translate(165.041, 331.3374) rotate(4965) translate(-165.041, -331.3374)"
       ></path>
       <polygon
-        fill="#FFFFFF"
+        fill="var(--color-base-100)"
         id="walter-coverup"
         points="138.150391 301.850586 185.235572 314.648456 173 348 120.830078 359.574219 84.2832031 365.775391 91.4414063 301.850586 109.586001 286.286133"
       ></polygon>
