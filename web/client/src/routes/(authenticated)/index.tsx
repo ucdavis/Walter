@@ -142,7 +142,7 @@ function RouteComponent() {
       <div className="relative">
         <div className="container relative">
           <div className="pt-24 pb-5 mx-auto w-full sm:max-w-[90%] md:max-w-[80%] xl:max-w-[66%]">
-            <h1 className="text-2xl font-proxima-bold">W.A.L.T.E.R.</h1>
+            <h1 className="text-2xl font-sans font-bold">W.A.L.T.E.R.</h1>
             <p className="uppercase">
               warehouse analytics and ledger tools for enterprise reporting
             </p>

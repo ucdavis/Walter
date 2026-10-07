@@ -51,7 +51,7 @@ const departmentColumns: ColumnDef<DepartmentSelectorRow>[] = [
             <span className="block text-sm text-base-content/70">
               {row.subtitle}
             </span>
-            <span className="block font-proxima-bold text-lg leading-tight">
+            <span className="block font-sans font-bold text-lg leading-tight">
               {row.department}
             </span>
           </span>

@@ -202,7 +202,7 @@ function CategoryProgressRows({ rows }: { rows: CategoryProgressRow[] }) {
               style={{ width: `${BAR_TRACK_WIDTH_PERCENT}%` }}
             >
               <div className="flex min-w-0 flex-wrap items-baseline gap-x-2">
-                <p className="font-proxima-bold truncate mt-1">
+                <p className="font-sans font-bold truncate mt-1">
                   {row.displayName}
                 </p>
                 <p className="text-sm">{formatCurrency(row.budget)} budget</p>
@@ -216,7 +216,7 @@ function CategoryProgressRows({ rows }: { rows: CategoryProgressRow[] }) {
                 <p
                   className={
                     isOverBudget
-                      ? 'ml-auto text-right mr-2 font-proxima-bold text-error'
+                      ? 'ml-auto text-right mr-2 font-sans font-bold text-error'
                       : 'ml-auto text-right mr-2'
                   }
                 >
