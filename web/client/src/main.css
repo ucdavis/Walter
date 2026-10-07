@@ -57,7 +57,7 @@
   @apply text-base font-sans font-bold uppercase text-base-content/70;
 }
 .stat-value {
-  @apply text-lg font-medium;
+  @apply text-lg font-normal;
 }
 .stat-label {
   @apply font-sans font-bold;
