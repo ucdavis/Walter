@@ -99,14 +99,7 @@ function RouteComponent() {
 
         {featureFlags.projectCostsEnabled ? (
           <section className="section-margin">
-            <h2 className="h2">Cost transactions</h2>
-            <p className="mt-2 max-w-3xl text-base-content/80">
-              Sample cost transactions are shown while the project-cost data
-              integration is in progress.
-            </p>
-            <div className="mt-4">
-              <ProjectCostsTable />
-            </div>
+            <ProjectCostsTable />
           </section>
         ) : (
           <PageEmpty message="Project costs are not available in this environment." />

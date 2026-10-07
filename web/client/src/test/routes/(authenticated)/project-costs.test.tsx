@@ -101,11 +101,6 @@ describe('project costs page', () => {
       expect(
         screen.getByRole('heading', { level: 2, name: 'Test Project' })
       ).toBeInTheDocument();
-      expect(
-        screen.getByText(
-          'Sample cost transactions are shown while the project-cost data integration is in progress.'
-        )
-      ).toBeInTheDocument();
       const table = screen.getByTestId('project-costs-table');
       expect(table).toBeInTheDocument();
       expect(
@@ -132,6 +127,12 @@ describe('project costs page', () => {
       expect(
         screen.getByRole('link', { name: 'Project Burndown' })
       ).toHaveAttribute('href', '/projectburndown/1000/P1');
+      expect(
+        screen.getByRole('button', { name: 'Export' })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: 'Entire project' })
+      ).toHaveAttribute('aria-pressed', 'true');
     } finally {
       cleanup();
     }
@@ -189,7 +190,7 @@ describe('project costs page', () => {
 
       await user.click(travelFilter);
       expect(travelFilter).toHaveAttribute('aria-pressed', 'true');
-      expect(screen.getByText('Travel Reimbursement')).toBeInTheDocument();
+      expect(screen.getAllByText('Travel Reimbursement')).toHaveLength(2);
       expect(
         screen.queryByText('Payroll Distribution')
       ).not.toBeInTheDocument();
@@ -197,13 +198,48 @@ describe('project costs page', () => {
       await user.click(indirectCostsFilter);
       expect(indirectCostsFilter).toHaveAttribute('aria-pressed', 'true');
       expect(screen.getAllByText('Indirect Cost Allocation')).toHaveLength(3);
-      expect(screen.getByText('Travel Reimbursement')).toBeInTheDocument();
+      expect(screen.getAllByText('Travel Reimbursement')).toHaveLength(2);
 
       await user.click(clearFilter);
       expect(clearFilter).toBeDisabled();
       expect(travelFilter).toHaveAttribute('aria-pressed', 'false');
       expect(indirectCostsFilter).toHaveAttribute('aria-pressed', 'false');
       expect(screen.getAllByText('Payroll Distribution')).toHaveLength(3);
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('filters to the selected trailing timeline', async () => {
+    const user = userEvent.setup();
+    setupHandlers([createProject()]);
+
+    const { cleanup } = renderRoute({
+      initialPath: '/projectcosts/1000/P1',
+    });
+
+    try {
+      await screen.findByTestId('project-costs-table');
+      expect(screen.getByText('Prior Period Allocation')).toBeInTheDocument();
+
+      const threeMonths = screen.getByRole('button', { name: '3mo' });
+      await user.click(threeMonths);
+      expect(threeMonths).toHaveAttribute('aria-pressed', 'true');
+      expect(
+        screen.queryByText('Prior Period Allocation')
+      ).not.toBeInTheDocument();
+      expect(screen.getAllByText('Payroll Distribution')).toHaveLength(3);
+      expect(screen.getAllByText('Benefits Allocation')).toHaveLength(3);
+
+      const sixMonths = screen.getByRole('button', { name: '6mo' });
+      await user.click(sixMonths);
+      expect(sixMonths).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.getAllByText('Benefits Allocation')).toHaveLength(4);
+
+      const nineMonths = screen.getByRole('button', { name: '9mo' });
+      await user.click(nineMonths);
+      expect(nineMonths).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.getByText('Prior Period Allocation')).toBeInTheDocument();
     } finally {
       cleanup();
     }
