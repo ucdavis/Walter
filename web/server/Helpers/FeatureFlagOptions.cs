@@ -14,4 +14,7 @@ public sealed class FeatureFlagOptions
 
     /// <summary>Whether the expenditure progress feature is exposed in the UI.</summary>
     public bool ExpenditureProgressEnabled { get; set; }
+
+    /// <summary>Whether the project costs preview is exposed in the UI.</summary>
+    public bool ProjectCostsEnabled { get; set; }
 }

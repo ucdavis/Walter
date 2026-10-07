@@ -27,7 +27,10 @@ import { isAwardExpired } from '@/lib/date.ts';
 import { buildFinjectorUrl } from '@/lib/finjector.ts';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { PresentationChartLineIcon } from '@heroicons/react/24/outline';
+import {
+  PresentationChartLineIcon,
+  TableCellsIcon,
+} from '@heroicons/react/24/outline';
 import ProjectAdditionalInfo from '@/components/project/ProjectAdditionalInfo.tsx';
 
 export const Route = createFileRoute(
@@ -101,6 +104,11 @@ function ProjectContent({
     summary.taskNum,
     summary.projectOwningOrgCode
   );
+  const showProjectBurndown =
+    !summary.isInternal &&
+    featureFlags?.burndownEnabled &&
+    !isAwardExpired(summary.awardEndDate);
+  const showProjectCosts = featureFlags?.projectCostsEnabled;
 
   return (
     <main className="flex-1 min-w-0">
@@ -168,18 +176,28 @@ function ProjectContent({
 
       <ProjectDetails
         actions={
-          !summary.isInternal &&
-          featureFlags?.burndownEnabled &&
-          !isAwardExpired(summary.awardEndDate) ? (
+          showProjectBurndown || showProjectCosts ? (
             <>
-              <Link
-                className="btn btn-lg"
-                params={{ iamId, projectNumber: summary.projectNumber }}
-                to="/projectburndown/$iamId/$projectNumber"
-              >
-                <PresentationChartLineIcon className="h-4 w-4" />
-                Project Burndown
-              </Link>
+              {showProjectBurndown ? (
+                <Link
+                  className="btn btn-lg"
+                  params={{ iamId, projectNumber: summary.projectNumber }}
+                  to="/projectburndown/$iamId/$projectNumber"
+                >
+                  <PresentationChartLineIcon className="h-4 w-4" />
+                  Project Burndown
+                </Link>
+              ) : null}
+              {showProjectCosts ? (
+                <Link
+                  className="btn btn-lg"
+                  params={{ iamId, projectNumber: summary.projectNumber }}
+                  to="/projectcosts/$iamId/$projectNumber"
+                >
+                  <TableCellsIcon className="h-4 w-4" />
+                  Project Costs
+                </Link>
+              ) : null}
             </>
           ) : null
         }

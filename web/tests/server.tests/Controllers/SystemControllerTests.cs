@@ -141,11 +141,14 @@ public class SystemControllerTests
     }
 
     [Theory]
-    [InlineData(true, true)]
-    [InlineData(true, false)]
-    [InlineData(false, true)]
-    [InlineData(false, false)]
-    public void GetFeatures_reflects_the_configured_flags(bool burndownEnabled, bool expenditureProgressEnabled)
+    [InlineData(true, true, true)]
+    [InlineData(true, false, false)]
+    [InlineData(false, true, false)]
+    [InlineData(false, false, true)]
+    public void GetFeatures_reflects_the_configured_flags(
+        bool burndownEnabled,
+        bool expenditureProgressEnabled,
+        bool projectCostsEnabled)
     {
         using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
 
@@ -155,12 +158,16 @@ public class SystemControllerTests
             {
                 BurndownEnabled = burndownEnabled,
                 ExpenditureProgressEnabled = expenditureProgressEnabled,
+                ProjectCostsEnabled = projectCostsEnabled,
             });
 
         var result = controller.GetFeatures();
 
         result.Result.Should().BeOfType<OkObjectResult>()
-            .Which.Value.Should().BeEquivalentTo(new ClientFeatures(burndownEnabled, expenditureProgressEnabled));
+            .Which.Value.Should().BeEquivalentTo(new ClientFeatures(
+                burndownEnabled,
+                expenditureProgressEnabled,
+                projectCostsEnabled));
     }
 
     [Fact]

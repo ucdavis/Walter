@@ -1,4 +1,4 @@
-import { ProjectBurndownSection } from '@/components/project/ProjectBurndownChart.tsx';
+import { ProjectCostsTable } from '@/components/project/ProjectCostsTable.tsx';
 import { ProjectPortfolioLayout } from '@/components/project/ProjectPortfolioLayout.tsx';
 import { PageEmpty } from '@/components/states/PageEmpty.tsx';
 import { PageError } from '@/components/states/PageError.tsx';
@@ -11,7 +11,7 @@ import { projectsDetailQueryOptions } from '@/queries/project.ts';
 import { useUser } from '@/shared/auth/UserContext.tsx';
 import {
   ClipboardDocumentListIcon,
-  TableCellsIcon,
+  PresentationChartLineIcon,
 } from '@heroicons/react/24/outline';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import {
@@ -21,19 +21,17 @@ import {
 } from '@tanstack/react-router';
 
 export const Route = createFileRoute(
-  '/(authenticated)/projectburndown/$iamId/$projectNumber'
+  '/(authenticated)/projectcosts/$iamId/$projectNumber'
 )({
   component: RouteComponent,
-  errorComponent: ProjectBurndownErrorBoundary,
+  errorComponent: ProjectCostsErrorBoundary,
   loader: async ({ context: { queryClient }, params: { iamId } }) => {
     await Promise.all([
       queryClient.ensureQueryData(projectsDetailQueryOptions(iamId)),
       queryClient.ensureQueryData(featureFlagsQueryOptions()),
     ]);
   },
-  pendingComponent: () => (
-    <PageLoading message="Fetching project burndown chart..." />
-  ),
+  pendingComponent: () => <PageLoading message="Fetching project costs..." />,
 });
 
 const ProjectNotFound = ({ projectNumber }: { projectNumber: string }) => (
@@ -65,9 +63,10 @@ function RouteComponent() {
     );
   }
 
-  const expired = isAwardExpired(summary.awardEndDate);
   const burndownAvailable =
-    !summary.isInternal && featureFlags.burndownEnabled && !expired;
+    !summary.isInternal &&
+    featureFlags.burndownEnabled &&
+    !isAwardExpired(summary.awardEndDate);
 
   return (
     <ProjectPortfolioLayout>
@@ -82,44 +81,39 @@ function RouteComponent() {
               <ClipboardDocumentListIcon className="h-4 w-4" />
               Project Details
             </Link>
-            {featureFlags.projectCostsEnabled ? (
+            {burndownAvailable ? (
               <Link
                 className="btn btn-sm"
                 params={{ iamId, projectNumber: summary.projectNumber }}
-                to="/projectcosts/$iamId/$projectNumber"
+                to="/projectburndown/$iamId/$projectNumber"
               >
-                <TableCellsIcon className="h-4 w-4" />
-                Project Costs
+                <PresentationChartLineIcon className="h-4 w-4" />
+                Project Burndown
               </Link>
             ) : null}
           </div>
 
-          <h1 className="h1">Project Burndown</h1>
+          <h1 className="h1">Project Costs</h1>
           <h2 className="subtitle max-w-5xl">{summary.displayName}</h2>
         </section>
 
-        {expired ? (
-          <PageEmpty message="Project burndown is not available for expired projects." />
-        ) : burndownAvailable ? (
-          <ProjectBurndownSection
-            awardEndDate={summary.awardEndDate}
-            awardStartDate={summary.awardStartDate}
-            projectNumber={summary.projectNumber}
-          />
+        {featureFlags.projectCostsEnabled ? (
+          <section className="section-margin">
+            <ProjectCostsTable />
+          </section>
         ) : (
-          <PageEmpty message="Projections are not available for this project." />
+          <PageEmpty message="Project costs are not available in this environment." />
         )}
       </main>
     </ProjectPortfolioLayout>
   );
 }
 
-function ProjectBurndownErrorBoundary({ error, reset }: ErrorComponentProps) {
+function ProjectCostsErrorBoundary({ error, reset }: ErrorComponentProps) {
   const user = useUser();
   const presentation = getErrorPresentation(error, {
     403: {
-      message:
-        'Walter can only show project projections you are allowed to open.',
+      message: 'Walter can only show project costs you are allowed to open.',
       title: 'You do not have access to this project',
     },
   });

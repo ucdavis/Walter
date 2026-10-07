@@ -29,6 +29,7 @@ interface ProjectSummary {
 
 type ProjectSidebarRoute =
   | '/projectburndown/$iamId/$projectNumber'
+  | '/projectcosts/$iamId/$projectNumber'
   | '/projects/$iamId/$projectNumber';
 
 function normalizeSearchValue(value: string): string {
@@ -73,9 +74,17 @@ function getProjectSidebarRoute(
   currentPathname: string,
   featureFlags: {
     burndownEnabled: boolean;
+    projectCostsEnabled: boolean;
   },
   project: ProjectSummary
 ): ProjectSidebarRoute {
+  if (
+    currentPathname.startsWith('/projectcosts/') &&
+    featureFlags.projectCostsEnabled
+  ) {
+    return '/projectcosts/$iamId/$projectNumber';
+  }
+
   if (
     currentPathname.startsWith('/projectburndown/') &&
     !project.isInternal &&
