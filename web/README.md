@@ -270,32 +270,6 @@ You'll then need to allow the App Service to access the SQL Database by configur
 
 Then you'll need to setup Env Settings, basically mirror the `.env` file. Remember to set the correct connection string for your database.
 
-## Imported PPM project search
-
-Project search uses AE GraphQL by default. Set the environment variable
-`Datamart__UsePpmProjectSearch=true` to read `dbo.PpmProjects` through the
-existing `DM_CONNECTION`. Set it to `false` or remove it, then restart the
-server, to return to GraphQL.
-
-This switch affects only `GET /api/search/projects`. Both sources share the
-existing financial-access gate, query normalization, result mapping,
-deduplication, case-insensitive name ordering, and five-result limit. Imported
-search considers all project statuses and dates, but SQL returns at most 20
-candidates, including an exact-number match first, then ordered by name and
-project number. The controller applies its existing ordering and returns five.
-Broad queries can select a different subset from GraphQL because SQL bounds
-candidates before the final .NET sort. Spaces become `%`;
-`%` and `_` retain their wildcard meaning, while brackets are literal. Database
-failures propagate as errors rather than silently switching sources.
-
-To validate locally, compare both modes under the same caller roles using
-exact project numbers, partial numbers, names containing spaces, lowercase and
-trimmed variants, empty/short inputs, and no matches. FinancialViewer and Admin
-can search; authenticated callers without financial access receive an empty
-list. Verify the search picker and project navigation as well as the HTTP
-payload. Recheck imported data freshness before comparing live results, since
-snapshot lag can differ from an implementation regression.
-
 This is the first slice of [#429](https://github.com/ucdavis/Walter/issues/429).
 Review its local results before extending the migration to membership,
 authorization, or role synchronization.
