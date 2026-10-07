@@ -280,7 +280,11 @@ server, to return to GraphQL.
 This switch affects only `GET /api/search/projects`. Both sources share the
 existing financial-access gate, query normalization, result mapping,
 deduplication, case-insensitive name ordering, and five-result limit. Imported
-search includes all matching project statuses and dates. Spaces become `%`;
+search considers all project statuses and dates, but SQL returns at most 20
+candidates, including an exact-number match first, then ordered by name and
+project number. The controller applies its existing ordering and returns five.
+Broad queries can select a different subset from GraphQL because SQL bounds
+candidates before the final .NET sort. Spaces become `%`;
 `%` and `_` retain their wildcard meaning, while brackets are literal. Database
 failures propagate as errors rather than silently switching sources.
 
