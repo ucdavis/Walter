@@ -1,5 +1,4 @@
 using System.Security.Claims;
-using AggieEnterpriseApi.Extensions;
 using server.core.Domain;
 using server.core.Services;
 using server.Helpers;
@@ -17,20 +16,20 @@ public sealed class UserProfileOrchestrator : IUserProfileOrchestrator
     private readonly IEntraUserAttributeService _attributeService;
     private readonly IIdentityService _identityService;
     private readonly IUserService _userService;
-    private readonly IFinancialApiService _financialApiService;
+    private readonly PpmPortfolioService _portfolioService;
     private readonly ILogger<UserProfileOrchestrator> _logger;
 
     public UserProfileOrchestrator(
         IEntraUserAttributeService attributeService,
         IIdentityService identityService,
         IUserService userService,
-        IFinancialApiService financialApiService,
+        PpmPortfolioService portfolioService,
         ILogger<UserProfileOrchestrator> logger)
     {
         _attributeService = attributeService;
         _identityService = identityService;
         _userService = userService;
-        _financialApiService = financialApiService;
+        _portfolioService = portfolioService;
         _logger = logger;
     }
 
@@ -125,15 +124,12 @@ public sealed class UserProfileOrchestrator : IUserProfileOrchestrator
         return profile;
     }
 
+    /// <summary>Synchronizes the persisted PM role from project or award membership in the configured source.</summary>
     private async Task SyncProjectManagerRoleAsync(Guid userId, string employeeId, CancellationToken cancellationToken)
     {
-        var client = _financialApiService.GetClient();
-
-        var pmResultTask = client.PpmProjectByProjectTeamMemberEmployeeId.ExecuteAsync(
-            employeeId, PpmRole.ProjectManager, cancellationToken);
-
-        var pmData = (await pmResultTask).ReadData();
-        var isProjectManager = pmData.PpmProjectByProjectTeamMemberEmployeeId.Any();
+        // Resolve membership before changing persisted permissions. Source failures must not become removals.
+        var projectManagers = await _portfolioService.GetProjectManagerEmployeeIdsAsync([employeeId], cancellationToken);
+        var isProjectManager = projectManagers.Contains(employeeId);
 
         if (isProjectManager)
         {
