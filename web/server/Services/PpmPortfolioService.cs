@@ -26,7 +26,7 @@ public sealed class PpmPortfolioService(
             .ToArray();
     }
 
-    /// <summary>Returns actual project-team members for navigation, excluding award personnel.</summary>
+    /// <inheritdoc cref="IPpmPortfolioReader.GetProjectTeamAsync" />
     public async Task<IReadOnlyList<PpmTeamMember>> GetProjectTeamAsync(string projectNumber, string roleName, CancellationToken ct)
     {
         if (!flags.Value.UseGraphQLAPI)
