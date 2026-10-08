@@ -21,9 +21,6 @@ public sealed class DatamartOptions
     /// <summary>Campus-wide dbo.PositionBudgetsCognos table from the UCP-391 Funding Entry report (dbo.usp_GetPositionBudgetsCognos).</summary>
     public const string CognosSource = "Cognos";
 
-    /// <summary>Opt in only project search to the imported PPM snapshot. False keeps GraphQL as the default and rollback source.</summary>
-    public bool UsePpmProjectSearch { get; set; }
-
     public string ConnectionString { get; set; } = string.Empty;
     public string ApplicationName { get; set; } = "Walter";
 

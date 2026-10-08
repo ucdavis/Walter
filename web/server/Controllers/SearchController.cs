@@ -21,20 +21,20 @@ public sealed class SearchController : ApiControllerBase
     private readonly IFinancialApiService _financialApiService;
     private readonly IAuthorizationService _authorizationService;
     private readonly IDatamartService _datamartService;
-    private readonly bool _usePpmProjectSearch;
+    private readonly bool _useGraphQLAPI;
 
     public SearchController(
         AppDbContext dbContext,
         IFinancialApiService financialApiService,
         IAuthorizationService authorizationService,
         IDatamartService datamartService,
-        IOptions<DatamartOptions> datamartOptions)
+        IOptions<FeatureFlagOptions> featureFlags)
     {
         _dbContext = dbContext;
         _financialApiService = financialApiService;
         _authorizationService = authorizationService;
         _datamartService = datamartService;
-        _usePpmProjectSearch = datamartOptions.Value.UsePpmProjectSearch;
+        _useGraphQLAPI = featureFlags.Value.UseGraphQLAPI;
     }
 
     public sealed record SearchProject(
@@ -180,9 +180,9 @@ public sealed class SearchController : ApiControllerBase
 
         var fuzzyQuery = ToFuzzyQuery(normalizedQuery);
         var exactLookupQuery = ToUpperTrim(normalizedQuery);
-        var candidates = _usePpmProjectSearch
-            ? await _datamartService.SearchProjectsAsync(fuzzyQuery, exactLookupQuery, cancellationToken)
-            : await SearchGraphQlProjectsAsync(fuzzyQuery, exactLookupQuery, cancellationToken);
+        var candidates = _useGraphQLAPI
+            ? await SearchGraphQlProjectsAsync(fuzzyQuery, exactLookupQuery, cancellationToken)
+            : await _datamartService.SearchProjectsAsync(fuzzyQuery, exactLookupQuery, cancellationToken);
 
         var results = candidates
             .Where(p => !string.IsNullOrWhiteSpace(p.ProjectNumber))

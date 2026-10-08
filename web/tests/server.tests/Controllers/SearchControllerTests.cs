@@ -20,6 +20,12 @@ namespace server.tests.Controllers;
 
 public sealed class SearchControllerTests
 {
+    [Fact]
+    public void Feature_flags_default_to_legacy_GraphQL_search()
+    {
+        new FeatureFlagOptions().UseGraphQLAPI.Should().BeTrue();
+    }
+
     [Theory]
     [InlineData(false, Role.Names.Admin)]
     [InlineData(true, Role.Names.Admin)]
@@ -34,7 +40,7 @@ public sealed class SearchControllerTests
         ProjectSearchRecord[] byNumber = [new("D", "delta"), new("E", "Echo"), new("F", "Foxtrot")];
         var financial = new FakeFinancialApiService { ExactProject = exact, SearchByName = byName, SearchByNumber = byNumber };
         var datamart = new FakeDatamartService { Projects = new[] { exact }.Concat(byName).Concat(byNumber).ToArray() };
-        var controller = CreateController(ctx, CreateAuthorizationService(), [role], datamart, financial, usePpmProjectSearch: imported);
+        var controller = CreateController(ctx, CreateAuthorizationService(), [role], datamart, financial, useGraphQLAPI: !imported);
 
         var result = await controller.SearchProjects("  ab c  ", cts.Token);
 
@@ -68,7 +74,7 @@ public sealed class SearchControllerTests
         using var ctx = TestDbContextFactory.CreateInMemory();
         var financial = new FakeFinancialApiService();
         var datamart = new FakeDatamartService();
-        var controller = CreateController(ctx, CreateAuthorizationService(), [role], datamart, financial, usePpmProjectSearch: imported);
+        var controller = CreateController(ctx, CreateAuthorizationService(), [role], datamart, financial, useGraphQLAPI: !imported);
 
         var result = await controller.SearchProjects(query, CancellationToken.None);
 
@@ -83,7 +89,7 @@ public sealed class SearchControllerTests
     public async Task SearchProjects_returns_empty_when_source_has_no_matches(bool imported)
     {
         using var ctx = TestDbContextFactory.CreateInMemory();
-        var controller = CreateController(ctx, CreateAuthorizationService(), [Role.Names.FinancialViewer], usePpmProjectSearch: imported);
+        var controller = CreateController(ctx, CreateAuthorizationService(), [Role.Names.FinancialViewer], useGraphQLAPI: !imported);
         var result = await controller.SearchProjects("NO MATCH", CancellationToken.None);
         result.Should().BeOfType<OkObjectResult>().Which.Value.Should().BeOfType<SearchController.SearchProject[]>().Which.Should().BeEmpty();
     }
@@ -98,7 +104,7 @@ public sealed class SearchControllerTests
         cts.Cancel();
         var financial = new FakeFinancialApiService();
         var datamart = new FakeDatamartService();
-        var controller = CreateController(ctx, CreateAuthorizationService(), [Role.Names.Admin], datamart, financial, usePpmProjectSearch: imported);
+        var controller = CreateController(ctx, CreateAuthorizationService(), [Role.Names.Admin], datamart, financial, useGraphQLAPI: !imported);
         var act = () => controller.SearchProjects("ABC", cts.Token);
         await act.Should().ThrowAsync<OperationCanceledException>();
         financial.SearchQueries.Should().BeEmpty();
@@ -111,7 +117,7 @@ public sealed class SearchControllerTests
         using var ctx = TestDbContextFactory.CreateInMemory();
         var financial = new FakeFinancialApiService();
         var datamart = new FakeDatamartService { ProjectSearchError = new TimeoutException("source unavailable") };
-        var controller = CreateController(ctx, CreateAuthorizationService(), [Role.Names.Admin], datamart, financial, usePpmProjectSearch: true);
+        var controller = CreateController(ctx, CreateAuthorizationService(), [Role.Names.Admin], datamart, financial, useGraphQLAPI: false);
         var act = () => controller.SearchProjects("ABC", CancellationToken.None);
         await act.Should().ThrowAsync<TimeoutException>();
         financial.SearchQueries.Should().BeEmpty();
@@ -640,7 +646,7 @@ public sealed class SearchControllerTests
         IFinancialApiService? financialApiService = null,
         IEnumerable<string>? projectManagerEmployeeIds = null,
         Guid? userId = null,
-        bool usePpmProjectSearch = false)
+        bool useGraphQLAPI = true)
     {
         var httpContext = new DefaultHttpContext
         {
@@ -652,7 +658,7 @@ public sealed class SearchControllerTests
             financialApiService ?? new FakeFinancialApiService(projectManagerEmployeeIds ?? Array.Empty<string>()),
             authorizationService,
             datamartService ?? new FakeDatamartService(),
-            Options.Create(new DatamartOptions { UsePpmProjectSearch = usePpmProjectSearch }))
+            Options.Create(new FeatureFlagOptions { UseGraphQLAPI = useGraphQLAPI }))
         {
             ControllerContext = new ControllerContext { HttpContext = httpContext },
         };
