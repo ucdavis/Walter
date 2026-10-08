@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { createColumnHelper } from '@tanstack/react-table';
 import { TableExportActions } from '@/components/TableExportActions.tsx';
+import { projectCostCategories } from '@/components/project/projectCostCategories.ts';
 import { projectExpenditureCategoryColor } from '@/components/project/projectChartColors.ts';
 import { formatCurrency } from '@/lib/currency.ts';
 import type { CsvColumn } from '@/lib/csv.ts';
@@ -173,9 +174,6 @@ const accountingPeriodMonthIndexes: Record<string, number> = {
   Oct: 9,
   Sep: 8,
 };
-const projectCostCategories = [
-  ...new Set(projectCostRecords.map((record) => record.expenditureCategory)),
-];
 const projectCostTimelineOptions = [
   { label: 'Entire project', value: 'entire-project' },
   { label: '3mo', value: '3-months' },

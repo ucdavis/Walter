@@ -11,6 +11,7 @@ import {
   ProjectExpenditureProgressCategories,
   ProjectExpenditureProgressSummary,
 } from '@/components/project/ProjectExpenditureProgress.tsx';
+import { hasProjectCostCategory } from '@/components/project/projectCostCategories.ts';
 import { formatCurrency } from '@/lib/currency.ts';
 import type { ProjectRecord } from '@/queries/project.ts';
 import {
@@ -144,7 +145,11 @@ function ExpensesValue({
 }) {
   const formattedValue = formatCurrency(value);
 
-  if (!projectCostsEnabled || !iamId) {
+  if (
+    !projectCostsEnabled ||
+    !iamId ||
+    (category && !hasProjectCostCategory(category))
+  ) {
     return <span>{formattedValue}</span>;
   }
 

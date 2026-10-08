@@ -611,6 +611,34 @@ describe('project detail page', () => {
     }
   });
 
+  it('does not link categories that the project-cost preview cannot display', async () => {
+    const projects = [
+      createProject({
+        expenditureCategoryName: '04 - Equipment and Facilities',
+      }),
+    ];
+    setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);
+
+    const { cleanup } = renderRoute({
+      initialPath: '/projects/1000/P1',
+    });
+
+    try {
+      await screen.findByRole('heading', { level: 1, name: 'Test Project' });
+
+      expect(
+        screen.queryByRole('link', {
+          name: 'View project costs for 04 - Equipment and Facilities',
+        })
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByRole('link', { name: 'View all project costs' })
+      ).toHaveAttribute('href', '/projectcosts/1000/P1');
+    } finally {
+      cleanup();
+    }
+  });
+
   it('hides the burndown link for expired projects', async () => {
     const projects = [createProject({ awardEndDate: '2000-01-01' })];
     setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);
