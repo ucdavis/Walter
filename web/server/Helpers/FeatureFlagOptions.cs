@@ -9,7 +9,7 @@ public sealed class FeatureFlagOptions
 {
     public const string SectionName = "FeatureFlags";
 
-    /// <summary>Keep legacy GraphQL search, portfolio, and authorization reads by default; false reads the imported datamart snapshot. Login role synchronization remains on GraphQL.</summary>
+    /// <summary>Keep legacy GraphQL reads by default; false uses the imported datamart snapshot for search, portfolios, authorization, and login/emulation role synchronization.</summary>
     public bool UseGraphQLAPI { get; set; } = true;
 
     /// <summary>Whether the project burndown feature is exposed in the UI.</summary>
