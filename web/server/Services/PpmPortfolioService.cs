@@ -6,7 +6,7 @@ using server.Helpers;
 
 namespace server.Services;
 
-/// <summary>Switches portfolio display reads between GraphQL and the imported snapshot. Authorization and role sync retain their own legacy reads.</summary>
+/// <summary>Switches portfolio, authorization, and role synchronization membership reads between GraphQL and the imported snapshot.</summary>
 public sealed class PpmPortfolioService(
     IFinancialApiService financialApi,
     IPpmPortfolioReader reader,
@@ -26,7 +26,7 @@ public sealed class PpmPortfolioService(
             .ToArray();
     }
 
-    /// <summary>Returns actual project-team members for navigation, excluding award personnel.</summary>
+    /// <inheritdoc cref="IPpmPortfolioReader.GetProjectTeamAsync" />
     public async Task<IReadOnlyList<PpmTeamMember>> GetProjectTeamAsync(string projectNumber, string roleName, CancellationToken ct)
     {
         if (!flags.Value.UseGraphQLAPI)
@@ -39,7 +39,7 @@ public sealed class PpmPortfolioService(
             .ToArray() ?? [];
     }
 
-    /// <summary>Returns PM badge membership; imported mode queries the requested employees in batches.</summary>
+    /// <summary>Returns PM membership for badges and role synchronization; imported mode queries the requested employees in batches.</summary>
     public async Task<IReadOnlySet<string>> GetProjectManagerEmployeeIdsAsync(IEnumerable<string> employeeIds, CancellationToken ct)
     {
         if (!flags.Value.UseGraphQLAPI)
