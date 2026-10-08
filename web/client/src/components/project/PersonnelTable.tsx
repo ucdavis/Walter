@@ -8,6 +8,7 @@ import {
 import { TableExportActions } from '@/components/TableExportActions.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import { formatDate } from '@/lib/date.ts';
+import { unsplitExclusionNote } from '@/lib/unsplit.ts';
 import type { PersonnelRecord } from '@/queries/personnel.ts';
 import { DataTable } from '@/shared/DataTable.tsx';
 import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
@@ -37,6 +38,8 @@ export interface AggregatedDistribution {
   monthlyRate: number;
   monthlyTotal: number;
   record: PersonnelRecord;
+  /** Unsplit line: amounts are 0 and must not be shown. */
+  salaryUnknown: boolean;
 }
 
 export interface AggregatedPosition {
@@ -56,17 +59,29 @@ export interface AggregatedPosition {
   name: string;
   positionDescription: string;
   positionNumber: string;
+  /**
+   * Pay is split across earn codes but there is no UCP-310 data to split it,
+   * so no salary can be attributed to the project: amounts are 0, hidden, and
+   * left out of totals.
+   */
+  salaryUnknown: boolean;
+}
+
+function isSalaryUnknown(record: PersonnelRecord): boolean {
+  return record.earnCodeStatus === 'Unsplit';
 }
 
 function aggregateDistribution(
   record: PersonnelRecord
 ): AggregatedDistribution {
+  const salaryUnknown = isSalaryUnknown(record);
   // Cognos lines carry their earn code's share of pay; other sources have none.
-  const monthlyRate =
-    record.monthlyRate *
-    (record.earnCodeShare ?? 1) *
-    record.fte *
-    (record.distributionPercent / 100);
+  const monthlyRate = salaryUnknown
+    ? 0
+    : record.monthlyRate *
+      (record.earnCodeShare ?? 1) *
+      record.fte *
+      (record.distributionPercent / 100);
   const monthlyFringe = monthlyRate * record.compositeBenefitRate;
   return {
     fundingEndingSoon: isEndingSoon(record.fundingEndDate),
@@ -74,6 +89,7 @@ function aggregateDistribution(
     monthlyRate,
     monthlyTotal: monthlyRate + monthlyFringe,
     record,
+    salaryUnknown,
   };
 }
 
@@ -94,7 +110,8 @@ export function aggregateByPosition(
     if (existing) {
       existing.distributions.push(aggregateDistribution(record));
     } else {
-      const monthlyRate = record.monthlyRate * record.fte;
+      const salaryUnknown = isSalaryUnknown(record);
+      const monthlyRate = salaryUnknown ? 0 : record.monthlyRate * record.fte;
       const monthlyFringe = monthlyRate * record.compositeBenefitRate;
       positionMap.set(key, {
         distributions: [aggregateDistribution(record)],
@@ -112,6 +129,7 @@ export function aggregateByPosition(
         name: safeText(record.name),
         positionDescription: safeText(record.positionDescription),
         positionNumber: safeText(record.positionNumber),
+        salaryUnknown,
       });
     }
   }
@@ -236,13 +254,13 @@ function DistributionSubtable({
                 )}
               </td>
               <td className="text-right text-sm">
-                {formatCurrency(dist.monthlyRate)}
+                {formatAmount(dist.monthlyRate, dist.salaryUnknown)}
               </td>
               <td className="text-right text-sm">
-                {formatCurrency(dist.monthlyFringe)}
+                {formatAmount(dist.monthlyFringe, dist.salaryUnknown)}
               </td>
               <td className="text-right text-sm">
-                {formatCurrency(dist.monthlyTotal)}
+                {formatAmount(dist.monthlyTotal, dist.salaryUnknown)}
               </td>
             </tr>
           ))}
@@ -279,6 +297,11 @@ function EarnCodeLabel({ record }: { record: PersonnelRecord }) {
   );
 }
 
+/** Unsplit amounts are unknown, not zero: show a dash. */
+function formatAmount(value: number, salaryUnknown: boolean): string {
+  return salaryUnknown ? '—' : formatCurrency(value);
+}
+
 function FutureBadge() {
   return (
     <span className="badge badge-soft badge-info badge-sm mr-2">Future</span>
@@ -295,9 +318,9 @@ function getExportData(positions: AggregatedPosition[]) {
       fundingEndDate: dist.record.fundingEndDate ?? '',
       future: dist.record.isFuture ? 'Yes' : '',
       jobCode: pos.jobCode,
-      monthlyFringe: dist.monthlyFringe,
-      monthlyRate: dist.monthlyRate,
-      monthlyTotal: dist.monthlyTotal,
+      monthlyFringe: dist.salaryUnknown ? null : dist.monthlyFringe,
+      monthlyRate: dist.salaryUnknown ? null : dist.monthlyRate,
+      monthlyTotal: dist.salaryUnknown ? null : dist.monthlyTotal,
       name: pos.name,
       positionDescription: pos.positionDescription,
       positionNumber: pos.positionNumber,
@@ -357,9 +380,21 @@ function sumCurrent(
   pick: (position: AggregatedPosition) => number
 ): number {
   return rows.reduce(
-    (sum, row) => (row.original.isFutureOnly ? sum : sum + pick(row.original)),
+    (sum, row) =>
+      row.original.isFutureOnly || row.original.salaryUnknown
+        ? sum
+        : sum + pick(row.original),
     0
   );
+}
+
+/** Distinct people whose current salary can't be attributed (Unsplit). */
+function countSalaryUnknownPeople(positions: AggregatedPosition[]): number {
+  return new Set(
+    positions
+      .filter((p) => p.salaryUnknown && !p.isFutureOnly)
+      .map((p) => p.employeeId)
+  ).size;
 }
 
 export function PersonnelTable({ data }: PersonnelTableProps) {
@@ -466,7 +501,7 @@ export function PersonnelTable({ data }: PersonnelTableProps) {
       columnHelper.accessor('monthlyRate', {
         cell: (info) => (
           <span className="flex justify-end w-full">
-            {formatCurrency(info.getValue())}
+            {formatAmount(info.getValue(), info.row.original.salaryUnknown)}
           </span>
         ),
         footer: ({ table }) => (
@@ -483,7 +518,7 @@ export function PersonnelTable({ data }: PersonnelTableProps) {
       columnHelper.accessor('monthlyFringe', {
         cell: (info) => (
           <span className="flex justify-end w-full">
-            {formatCurrency(info.getValue())}
+            {formatAmount(info.getValue(), info.row.original.salaryUnknown)}
           </span>
         ),
         footer: ({ table }) => (
@@ -509,7 +544,7 @@ export function PersonnelTable({ data }: PersonnelTableProps) {
       columnHelper.accessor('monthlyTotal', {
         cell: (info) => (
           <span className="flex justify-end w-full">
-            {formatCurrency(info.getValue())}
+            {formatAmount(info.getValue(), info.row.original.salaryUnknown)}
           </span>
         ),
         footer: ({ table }) => (
@@ -528,6 +563,11 @@ export function PersonnelTable({ data }: PersonnelTableProps) {
       }),
     ],
     []
+  );
+
+  const salaryUnknownPeople = useMemo(
+    () => countSalaryUnknownPeople(positions),
+    [positions]
   );
 
   if (positions.length === 0) {
@@ -577,6 +617,11 @@ export function PersonnelTable({ data }: PersonnelTableProps) {
           </div>
         )}
       />
+      {salaryUnknownPeople > 0 && (
+        <p className="mt-2 text-sm text-warning">
+          {unsplitExclusionNote('Totals', salaryUnknownPeople)}
+        </p>
+      )}
     </div>
   );
 }

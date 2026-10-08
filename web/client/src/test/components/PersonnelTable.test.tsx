@@ -178,6 +178,15 @@ describe('aggregateByPosition', () => {
     expect(position.distributions[0].monthlyRate).toBe(2000);
   });
 
+  it('marks unsplit positions and their lines as salary unknown', () => {
+    const [position] = aggregateByPosition([
+      createRecord({ earnCodeShare: null, earnCodeStatus: 'Unsplit' }),
+    ]);
+
+    expect(position.salaryUnknown).toBe(true);
+    expect(position.distributions[0].salaryUnknown).toBe(true);
+  });
+
   it('marks positions with only future entries', () => {
     const [position] = aggregateByPosition([createRecord({ isFuture: true })]);
 
@@ -266,6 +275,61 @@ describe('PersonnelTable', () => {
     expect(screen.getByText('$12,600.00')).toBeInTheDocument();
   });
 
+  it('hides salary for unsplit people and leaves them out of totals with a warning', () => {
+    const records = [
+      createRecord({
+        compositeBenefitRate: 0.4,
+        earnCodeShare: 1,
+        earnCodeStatus: 'BaseOnly',
+        employeeId: '1001',
+        monthlyRate: 5000,
+        positionNumber: '40001234',
+      }),
+      createRecord({
+        compositeBenefitRate: 0.4,
+        earnCodeShare: null,
+        earnCodeStatus: 'Unsplit',
+        employeeId: '1002',
+        monthlyRate: 4000,
+        name: 'Doe, Jane',
+        positionNumber: '40005678',
+      }),
+    ];
+
+    render(<PersonnelTable data={records} />);
+
+    // 5000 shows on Smith's row and in the footer; Doe's 4000 shows nowhere.
+    expect(screen.getAllByText('$5,000.00')).toHaveLength(2);
+    expect(screen.queryByText('$4,000.00')).not.toBeInTheDocument();
+    expect(screen.queryByText('$9,000.00')).not.toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /Totals exclude 1 person whose pay can't be split by earn code/
+      )
+    ).toBeInTheDocument();
+  });
+
+  it('exports no amounts for unsplit people', () => {
+    render(
+      <PersonnelTable
+        data={[
+          createRecord({
+            earnCodeShare: null,
+            earnCodeStatus: 'Unsplit',
+            monthlyRate: 4321,
+          }),
+        ]}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Export' }));
+
+    const csv = vi.mocked(downloadExcelCsv).mock.calls[0]?.[0];
+    expect(csv).toContain('Smith, John');
+    expect(csv).not.toContain('4,321');
+    expect(csv).not.toContain('4321');
+  });
+
   it('shows empty state when no data', () => {
     render(<PersonnelTable data={[]} />);
     expect(screen.getByText('No personnel found.')).toBeInTheDocument();
@@ -352,7 +416,7 @@ describe('PersonnelTable', () => {
       }),
       createRecord({
         earnCode: 'REG',
-        earnCodeShare: 1,
+        earnCodeShare: null,
         earnCodeStatus: 'Unsplit',
         projectDescription: 'Dept Funds',
         projectId: 'PROJ2',

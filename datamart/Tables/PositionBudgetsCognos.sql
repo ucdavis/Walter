@@ -15,7 +15,9 @@
 -- MonthlyRate * EarnCodeShare * Fte * DistributionPercent / 100. MonthlyRate
 -- stays the full 1.0-FTE rate on every line. EarnCodeStatus: BaseOnly (only
 -- HSR/REG/default funding), Split (shares from the 310), Unsplit (other earn
--- codes funded but no 310 for the person: whole rate on base pay).
+-- codes funded but no 310 for the person). Unsplit lines have a NULL share:
+-- their salary cannot be attributed to a project, so it is not shown or
+-- projected.
 create table dbo.PositionBudgetsCognos
 (
     College              nvarchar(100) not null,
@@ -49,7 +51,7 @@ create table dbo.PositionBudgetsCognos
     IsFuture             bit           not null,
     EarnCode             nvarchar(5)   not null
         constraint DF_PositionBudgetsCognos_EarnCode default (''),
-    EarnCodeShare        decimal(9, 8) not null
+    EarnCodeShare        decimal(9, 8) null
         constraint DF_PositionBudgetsCognos_EarnCodeShare default (1),
     EarnCodeStatus       nvarchar(10)  not null
         constraint DF_PositionBudgetsCognos_EarnCodeStatus default ('BaseOnly'),

@@ -101,8 +101,8 @@ BEGIN
             cbr.CBR AS COMPOSITE_BENEFIT_RATE,
             pb.IsFuture AS IS_FUTURE,
             pb.EarnCode AS EARN_CODE,
-            -- Share of the person's pay for this earn code (1 when not split);
-            -- the client multiplies it into the line salary.
+            -- Share of the person's pay for this earn code (1 when not split,
+            -- NULL when Unsplit); the client multiplies it into the line salary.
             pb.EarnCodeShare AS EARN_CODE_SHARE,
             pb.EarnCodeStatus AS EARN_CODE_STATUS
         FROM dbo.PositionBudgetsCognos pb

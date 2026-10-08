@@ -35,7 +35,7 @@ create table dbo.PositionBudgetsCognos_Staging
     -- the last load, and keep a pipeline without these mappings loading.
     EarnCode             nvarchar(5)   not null
         constraint DF_PositionBudgetsCognos_Staging_EarnCode default (''),
-    EarnCodeShare        decimal(9, 8) not null
+    EarnCodeShare        decimal(9, 8) null
         constraint DF_PositionBudgetsCognos_Staging_EarnCodeShare default (1),
     EarnCodeStatus       nvarchar(10)  not null
         constraint DF_PositionBudgetsCognos_Staging_EarnCodeStatus default ('BaseOnly'),

@@ -34,6 +34,7 @@ import {
   type ProjectionHistoryMonths,
   projectProjectionQueryOptions,
 } from '@/queries/projectProjection.ts';
+import { unsplitExclusionNote } from '@/lib/unsplit.ts';
 import { tooltipDefinitions } from '@/shared/tooltips.ts';
 
 const GRID_COLOR = 'var(--color-main-border)';
@@ -745,6 +746,7 @@ export function ProjectBurndownSection({
     ? getProjectionStats(result, awardEndDate).projectedEnd
     : 0;
   const useDenseXAxisTicks = selectedTimeline === '24-months';
+  const unsplitPeople = result?.categories[0]?.unsplitPeople ?? 0;
 
   return (
     <>
@@ -756,6 +758,11 @@ export function ProjectBurndownSection({
             If spending varies from approved award, ICR may be affected, please
             see your fiscal officer for specifics.
           </p>
+          {unsplitPeople > 0 && (
+            <p className="mt-2 text-sm text-warning">
+              {unsplitExclusionNote('Projected salaries', unsplitPeople)}
+            </p>
+          )}
         </div>
 
         {projectionQuery.isPending && (

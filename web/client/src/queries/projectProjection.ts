@@ -13,6 +13,8 @@ export interface ProjectProjectionCategory {
   isPersonnel: number;
   remainingNow: number;
   spentToDate: number;
+  /** People left out of projected salaries: pay split across earn codes is unknown (no UCP-310). Same on every row; Cognos source only. */
+  unsplitPeople?: number | null;
 }
 
 export interface ProjectProjectionPeriod {

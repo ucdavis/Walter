@@ -331,4 +331,47 @@ describe('ProjectBurndownSection history', () => {
     await expect.poll(() => requestedHistoryMonths).toEqual(['3', '6']);
     expect(historySelect).toHaveTextContent('6 months');
   });
+
+  const renderSection = (result: ProjectProjectionResult) => {
+    server.use(
+      http.get('/api/project/projection/:projectNumber', () =>
+        HttpResponse.json(result)
+      )
+    );
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <ProjectBurndownSection
+          awardEndDate="2027-06-30"
+          awardStartDate="2024-01-01"
+          projectNumber="P1"
+        />
+      </QueryClientProvider>
+    );
+  };
+
+  it('says when projected salaries leave out unsplit people', async () => {
+    renderSection({
+      ...projection,
+      categories: projection.categories.map((c) => ({
+        ...c,
+        unsplitPeople: 2,
+      })),
+    });
+
+    expect(
+      await screen.findByText(
+        /Projected salaries exclude 2 people whose pay can't be split by earn code/
+      )
+    ).toBeInTheDocument();
+  });
+
+  it('shows no exclusion note when nobody is unsplit', async () => {
+    renderSection(projection);
+
+    await screen.findByRole('combobox', { name: /History/ });
+    expect(screen.queryByText(/Projected salaries exclude/)).not.toBeInTheDocument();
+  });
 });
