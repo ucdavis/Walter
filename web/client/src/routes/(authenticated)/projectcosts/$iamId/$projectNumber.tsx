@@ -1,4 +1,5 @@
 import { ProjectCostsTable } from '@/components/project/ProjectCostsTable.tsx';
+import { hasProjectCostCategory } from '@/components/project/projectCostCategories.ts';
 import { ProjectPortfolioLayout } from '@/components/project/ProjectPortfolioLayout.tsx';
 import { PageEmpty } from '@/components/states/PageEmpty.tsx';
 import { PageError } from '@/components/states/PageError.tsx';
@@ -24,16 +25,19 @@ interface ProjectCostsSearch {
   category?: string;
 }
 
+function parseCategory(value: unknown) {
+  const category = typeof value === 'string' ? value.trim() : '';
+
+  return category && hasProjectCostCategory(category) ? category : undefined;
+}
+
 export const Route = createFileRoute(
   '/(authenticated)/projectcosts/$iamId/$projectNumber'
 )({
   component: RouteComponent,
   errorComponent: ProjectCostsErrorBoundary,
   validateSearch: (search: Record<string, unknown>): ProjectCostsSearch => ({
-    category:
-      typeof search.category === 'string' && search.category.trim() !== ''
-        ? search.category.trim()
-        : undefined,
+    category: parseCategory(search.category),
   }),
   // Keep validation ahead of the loader so TanStack Router infers the search type.
   loader: async ({ context: { queryClient }, params: { iamId } }) => {

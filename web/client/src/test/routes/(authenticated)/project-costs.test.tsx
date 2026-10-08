@@ -234,6 +234,26 @@ describe('project costs page', () => {
     }
   });
 
+  it('ignores unsupported expenditure categories in the URL', async () => {
+    setupHandlers([createProject()]);
+
+    const { cleanup } = renderRoute({
+      initialPath:
+        '/projectcosts/1000/P1?category=04%20-%20Equipment%20and%20Facilities',
+    });
+
+    try {
+      const table = await screen.findByTestId('project-costs-table');
+
+      expect(
+        within(table).getByRole('button', { name: 'All Categories' })
+      ).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.getAllByText('Payroll Distribution')).toHaveLength(3);
+    } finally {
+      cleanup();
+    }
+  });
+
   it('filters to the selected trailing timeline', async () => {
     const user = userEvent.setup();
     setupHandlers([createProject()]);
