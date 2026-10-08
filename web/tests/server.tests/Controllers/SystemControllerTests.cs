@@ -18,6 +18,8 @@ using server.core.Data;
 using server.core.Domain;
 using server.core.Models;
 using server.core.Services;
+using server.Services;
+using server.tests.Fakes;
 
 namespace server.tests.Controllers;
 
@@ -317,6 +319,55 @@ public class SystemControllerTests
         profileOrchestrator.Principal!.FindFirst(server.Helpers.ClaimsPrincipalExtensions.IamIdClaimType)!
             .Value.Should().Be(person.IamId);
         auth.SignedInPrincipal!.FindFirst(ClaimConstants.ObjectId)!.Value.Should().Be(targetUserId.ToString());
+    }
+
+    [Theory]
+    [InlineData(true, true)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(false, false)]
+    public async Task Emulate_provisions_pm_role_using_configured_source(bool legacy, bool isPm)
+    {
+        using var ctx = TestDbContextFactory.CreateInMemory();
+        ctx.Roles.Add(new Role { Name = Role.Names.ProjectManager });
+        await ctx.SaveChangesAsync();
+        var id = Guid.NewGuid();
+        IReadOnlyList<FakeFinancialProject> projects = isPm
+            ? [new("P1", [], [new(PpmRole.ProjectManager, "Manager", "E-PM", null)])]
+            : [];
+        var service = new PpmPortfolioService(
+            legacy ? new FakeFinancialApiService([], null, projects) : new UnusedFinancialApiService(),
+            legacy ? new FakePpmPortfolioReader { Error = new Exception("Imported reader must not be used") } : new FakePpmPortfolioReader(projects),
+            Options.Create(new FeatureFlagOptions { UseGraphQLAPI = legacy }));
+        var orchestrator = new UserProfileOrchestrator(new UnusedAttributeService(), new EmulationIdentityService(),
+            new UserService(NullLogger<UserService>.Instance, ctx), service, NullLogger<UserProfileOrchestrator>.Instance);
+        var (controller, auth) = CreateController(ctx,
+            graphService: new FakeGraphService(new GraphUserProfile(id.ToString(), "Manager", "pm@example.com", "IAM-PM")),
+            profileOrchestrator: orchestrator);
+
+        (await controller.Emulate(id.ToString())).Should().BeOfType<RedirectResult>();
+        auth.SignedInPrincipal!.IsInRole(Role.Names.ProjectManager).Should().Be(isPm);
+        (await ctx.Permissions.CountAsync()).Should().Be(isPm ? 1 : 0);
+        (await ctx.Users.SingleAsync()).EmployeeId.Should().Be("E-PM");
+    }
+
+    private sealed class UnusedFinancialApiService : IFinancialApiService
+    {
+        public AggieEnterpriseApi.IAggieEnterpriseClient GetClient()
+            => throw new InvalidOperationException("GraphQL must not be used.");
+    }
+
+    private sealed class UnusedAttributeService : IEntraUserAttributeService
+    {
+        public Task<EntraUserAttributes?> GetAttributesAsync(string userId, ClaimsPrincipal principal, CancellationToken cancellationToken = default)
+            => throw new InvalidOperationException("Emulation provides the target IAM claim.");
+    }
+
+    private sealed class EmulationIdentityService : IIdentityService
+    {
+        public Task<IamIdentity?> GetByIamId(string iamId)
+            => Task.FromResult<IamIdentity?>(new IamIdentity(iamId, "E-PM", "Manager"));
+        public Task<string?> GetKerberosByIamId(string iamId) => Task.FromResult<string?>("manager");
     }
 
     private static (SystemController Controller, FakeAuthenticationService Auth) CreateController(

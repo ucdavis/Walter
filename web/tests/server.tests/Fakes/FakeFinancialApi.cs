@@ -44,6 +44,11 @@ public sealed class FakeFinancialApiService : IFinancialApiService
     public ProjectSearchRecord? ExactProject { get; init; }
     public List<(string? Name, string? Number, string Exact, CancellationToken Token)> SearchQueries { get; } = [];
 
+    public FakePpmPortfolioReader CreatePortfolioReader() => new(
+        _projects.Concat(_projectTeamMembersByProjectNumber.Select(p => new FakeFinancialProject(p.Key, p.Value, [])))
+            .Concat(_projectManagerEmployeeIds.Select(id => new FakeFinancialProject("PM-" + id,
+                [new FakeFinancialProjectTeamMember(PpmRole.ProjectManager, id, id, null)], []))).ToArray());
+
     public IAggieEnterpriseClient GetClient()
     {
         return ProxyFactory.CreateProxy<IAggieEnterpriseClient>((method, _) =>
@@ -175,6 +180,7 @@ internal sealed class FakePpmProjectByProjectTeamMemberEmployeeIdQuery : IPpmPro
             method.Name switch
             {
                 "get_ProjectNumber" => project.ProjectNumber,
+                "get_Name" => project.ProjectNumber,
                 "get_ProjectStatus" => "ACTIVE",
                 "get_TeamMembers" => teamMembers,
                 "get_Awards" => awards,
