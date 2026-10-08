@@ -389,10 +389,10 @@ public sealed class ProjectControllerTests
     public static IEnumerable<object[]> ProjectAccessCases()
     {
         foreach (var legacy in new[] { true, false })
-        foreach (var endpoint in new[] { "byNumber", "personnel", "transactions", "reconciliation", "projection" })
-        foreach (var membership in new[] { "team-pi", "team-pm", "award-pi", "award-pm", "administrator", "none" })
-        foreach (var forbidden in new[] { false, true })
-            yield return [legacy, endpoint, membership, forbidden];
+            foreach (var endpoint in new[] { "byNumber", "personnel", "transactions", "reconciliation", "projection" })
+                foreach (var membership in new[] { "team-pi", "team-pm", "award-pi", "award-pm", "administrator", "none" })
+                    foreach (var forbidden in new[] { false, true })
+                        yield return [legacy, endpoint, membership, forbidden];
     }
 
     [Theory]
