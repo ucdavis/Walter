@@ -6,7 +6,7 @@ using server.Helpers;
 
 namespace server.Services;
 
-/// <summary>Switches portfolio display reads between GraphQL and the imported snapshot. Authorization and role sync retain their own legacy reads.</summary>
+/// <summary>Switches portfolio and authorization membership reads between GraphQL and the imported snapshot. Login role synchronization retains its own legacy reads.</summary>
 public sealed class PpmPortfolioService(
     IFinancialApiService financialApi,
     IPpmPortfolioReader reader,

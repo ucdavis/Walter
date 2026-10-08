@@ -414,7 +414,7 @@ public sealed class SearchController : ApiControllerBase
 
     /// <summary>
     /// Resolves the first IAM ID for a project role and reports whether the caller is explicitly
-    /// listed in that role. Authorization always uses GraphQL project-team membership in this slice.
+    /// listed in that role, using the configured membership source.
     /// </summary>
     private async Task<TeamMemberIamResolution> ResolveFirstTeamMemberIamIdByEmployeeIdAsync(
         string projectNumber,
@@ -423,21 +423,9 @@ public sealed class SearchController : ApiControllerBase
         CancellationToken cancellationToken)
     {
         var teamMembers = await _portfolioService.GetProjectTeamAsync(projectNumber, roleName, cancellationToken);
-        var includesCaller = false;
-        if (!string.IsNullOrWhiteSpace(callerEmployeeId))
-        {
-            // This slice changes navigation data only. Restricted access still requires a live GraphQL team role.
-            if (_useGraphQLAPI)
-            {
-                includesCaller = teamMembers.Any(m => string.Equals(m.EmployeeId, callerEmployeeId, StringComparison.OrdinalIgnoreCase));
-            }
-            else
-            {
-                var legacy = await _financialApiService.GetClient().PpmProjectTeamMembers.ExecuteAsync(projectNumber, roleName, cancellationToken);
-                includesCaller = legacy.ReadData().PpmProjectByNumber?.TeamMembers?.Any(m =>
-                    m.RoleName == roleName && string.Equals(m.Person?.EmployeeId, callerEmployeeId, StringComparison.OrdinalIgnoreCase)) == true;
-            }
-        }
+        // Award personnel cannot authorize project-team navigation.
+        var includesCaller = !string.IsNullOrWhiteSpace(callerEmployeeId) &&
+            teamMembers.Any(m => string.Equals(m.EmployeeId, callerEmployeeId, StringComparison.OrdinalIgnoreCase));
         var membersWithEmployeeId = teamMembers
             .Where(m => !string.IsNullOrWhiteSpace(m.EmployeeId))
             .OrderBy(m => m.Name, StringComparer.OrdinalIgnoreCase)

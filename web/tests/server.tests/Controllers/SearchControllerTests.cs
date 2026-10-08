@@ -517,11 +517,13 @@ public sealed class SearchControllerTests
     }
 
     [Theory]
-    [InlineData(PpmRole.PrincipalInvestigator, "EPI")]
-    [InlineData(PpmRole.ProjectManager, "EPM")]
+    [InlineData(PpmRole.PrincipalInvestigator, "EPI", true)]
+    [InlineData(PpmRole.PrincipalInvestigator, "EPI", false)]
+    [InlineData(PpmRole.ProjectManager, "EPM", true)]
+    [InlineData(PpmRole.ProjectManager, "EPM", false)]
     public async Task ResolveProjectPi_allows_assigned_pi_or_pm_without_financial_access(
         string callerProjectRole,
-        string callerEmployeeId)
+        string callerEmployeeId, bool useGraphQLAPI)
     {
         using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
         var userId = Guid.NewGuid();
@@ -541,6 +543,7 @@ public sealed class SearchControllerTests
         var controller = CreateController(
             ctx,
             authorizationService,
+            useGraphQLAPI: useGraphQLAPI,
             datamartService: new FakeDatamartService(
                 searchPeople:
                 [
@@ -694,8 +697,10 @@ public sealed class SearchControllerTests
         result.PrincipalInvestigators.Select(p => p.IamId).Should().Equal("IAM-A", "IAM-Z");
     }
 
-    [Fact]
-    public async Task Imported_team_membership_cannot_grant_resolve_access_when_GraphQL_denies_it()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Resolve_access_uses_selected_membership_source(bool useGraphQLAPI)
     {
         using var ctx = TestDbContextFactory.CreateInMemory();
         var id = Guid.NewGuid();
@@ -704,8 +709,17 @@ public sealed class SearchControllerTests
         var reader = new FakePpmPortfolioReader([new("P1", [new(PpmRole.PrincipalInvestigator, "Self", "SELF", null)], [])]);
         var controller = CreateController(ctx, CreateAuthorizationService(), [],
             new FakeDatamartService([new SearchablePersonRecord { IamId = "IAM-SELF", EmployeeId = "SELF", Name = "Self" }]),
-            new FakeFinancialApiService(), userId: id, useGraphQLAPI: false, portfolioReader: reader);
-        (await controller.ResolveProjectPi("P1", default)).Should().BeOfType<ForbidResult>();
+            useGraphQLAPI ? new FakeFinancialApiService() : new ThrowingFinancialApiService(),
+            userId: id, useGraphQLAPI: useGraphQLAPI, portfolioReader: reader);
+        var result = await controller.ResolveProjectPi("P1", default);
+        if (useGraphQLAPI) result.Should().BeOfType<ForbidResult>();
+        else result.Should().BeOfType<OkObjectResult>();
+    }
+
+    private sealed class ThrowingFinancialApiService : IFinancialApiService
+    {
+        public AggieEnterpriseApi.IAggieEnterpriseClient GetClient()
+            => throw new InvalidOperationException("GraphQL must not be called in imported mode.");
     }
 
     private static SearchController CreateController(

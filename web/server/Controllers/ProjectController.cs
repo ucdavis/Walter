@@ -1,4 +1,3 @@
-using AggieEnterpriseApi.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Text.Json.Serialization;
@@ -12,7 +11,6 @@ namespace Server.Controllers;
 
 public sealed class ProjectController : ApiControllerBase
 {
-    private readonly IFinancialApiService _financialApiService;
     private readonly IDatamartService _datamartService;
     private readonly IAuthorizationService _authorizationService;
     private readonly IUserService _userService;
@@ -34,13 +32,11 @@ public sealed class ProjectController : ApiControllerBase
         [property: JsonPropertyName("pis")] IReadOnlyList<ManagedPiRecord> Pis);
 
     public ProjectController(
-        IFinancialApiService financialApiService,
         IDatamartService datamartService,
         IAuthorizationService authorizationService,
         IUserService userService,
         PpmPortfolioService portfolioService)
     {
-        _financialApiService = financialApiService;
         _datamartService = datamartService;
         _authorizationService = authorizationService;
         _userService = userService;
@@ -450,24 +446,20 @@ public sealed class ProjectController : ApiControllerBase
         return requestedProjectNumbers.IsSubsetOf(accessibleProjectNumbers);
     }
 
+    /// <summary>Includes both project and award PI/PM roles for individual project access.</summary>
     private async Task<HashSet<string>> GetAccessibleProjectNumbersForEmployeeAsync(
         string employeeId,
         CancellationToken cancellationToken)
     {
-        var client = _financialApiService.GetClient();
-
-        var piResultTask = client.PpmProjectByProjectTeamMemberEmployeeId.ExecuteAsync(
+        var piResultTask = _portfolioService.GetEmployeeProjectsAsync(
             employeeId, PpmRole.PrincipalInvestigator, cancellationToken);
-        var pmResultTask = client.PpmProjectByProjectTeamMemberEmployeeId.ExecuteAsync(
+        var pmResultTask = _portfolioService.GetEmployeeProjectsAsync(
             employeeId, PpmRole.ProjectManager, cancellationToken);
 
         await Task.WhenAll(piResultTask, pmResultTask);
 
-        var piData = (await piResultTask).ReadData();
-        var pmData = (await pmResultTask).ReadData();
-
-        return piData.PpmProjectByProjectTeamMemberEmployeeId
-            .Concat(pmData.PpmProjectByProjectTeamMemberEmployeeId)
+        return (await piResultTask)
+            .Concat(await pmResultTask)
             .Select(p => p.ProjectNumber?.Trim())
             .Where(p => !string.IsNullOrWhiteSpace(p))
             .Select(p => p!)
@@ -490,16 +482,13 @@ public sealed class ProjectController : ApiControllerBase
         if (string.Equals(requesterEmployeeId, piEmployeeId, StringComparison.OrdinalIgnoreCase))
             return true;
 
-        var client = _financialApiService.GetClient();
-
-        var piResult = await client.PpmProjectByProjectTeamMemberEmployeeId.ExecuteAsync(
+        var projects = await _portfolioService.GetEmployeeProjectsAsync(
             piEmployeeId, PpmRole.PrincipalInvestigator, cancellationToken);
-        var piData = piResult.ReadData();
 
         // The requester must be a project team member (PI or PM) on at least one of the
         // target's projects. Being award PI on a covering award is intentionally not
         // sufficient: it must not grant access to the target PI's portfolio (issue #335).
-        return piData.PpmProjectByProjectTeamMemberEmployeeId
+        return projects
             .Any(project =>
                 project.TeamMembers.Any(m =>
                     (m.RoleName == PpmRole.PrincipalInvestigator || m.RoleName == PpmRole.ProjectManager) &&
