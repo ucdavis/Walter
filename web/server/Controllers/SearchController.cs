@@ -22,19 +22,22 @@ public sealed class SearchController : ApiControllerBase
     private readonly IAuthorizationService _authorizationService;
     private readonly IDatamartService _datamartService;
     private readonly bool _useGraphQLAPI;
+    private readonly PpmPortfolioService _portfolioService;
 
     public SearchController(
         AppDbContext dbContext,
         IFinancialApiService financialApiService,
         IAuthorizationService authorizationService,
         IDatamartService datamartService,
-        IOptions<FeatureFlagOptions> featureFlags)
+        IOptions<FeatureFlagOptions> featureFlags,
+        PpmPortfolioService portfolioService)
     {
         _dbContext = dbContext;
         _financialApiService = financialApiService;
         _authorizationService = authorizationService;
         _datamartService = datamartService;
         _useGraphQLAPI = featureFlags.Value.UseGraphQLAPI;
+        _portfolioService = portfolioService;
     }
 
     public sealed record SearchProject(
@@ -138,10 +141,11 @@ public sealed class SearchController : ApiControllerBase
         }
 
         var people = await _datamartService.SearchPeopleAsync(normalizedQuery, SearchResultLimit, cancellationToken);
+        var pmEmployeeIds = await _portfolioService.GetProjectManagerEmployeeIdsAsync(people.Select(p => p.EmployeeId), cancellationToken);
         var results = new List<SearchDirectoryPerson>(people.Count);
         foreach (var person in people)
         {
-            var isProjectManager = await IsProjectManagerAsync(person.EmployeeId, cancellationToken);
+            var isProjectManager = pmEmployeeIds.Contains(person.EmployeeId);
             results.Add(new SearchDirectoryPerson(
                 person.IamId,
                 person.IamId,
@@ -152,14 +156,6 @@ public sealed class SearchController : ApiControllerBase
         }
 
         return Ok(results);
-    }
-
-    private async Task<bool> IsProjectManagerAsync(string employeeId, CancellationToken cancellationToken)
-    {
-        var pmResult = await _financialApiService.GetClient()
-            .PpmProjectByProjectTeamMemberEmployeeId
-            .ExecuteAsync(employeeId, PpmRole.ProjectManager, cancellationToken);
-        return pmResult.ReadData().PpmProjectByProjectTeamMemberEmployeeId.Any();
     }
 
     [HttpGet("projects")]
@@ -261,9 +257,7 @@ public sealed class SearchController : ApiControllerBase
             return Forbid();
         }
 
-        var client = _financialApiService.GetClient();
         var piResolution = await ResolveFirstTeamMemberIamIdByEmployeeIdAsync(
-            client,
             normalizedProjectNumber,
             PpmRole.PrincipalInvestigator,
             callerEmployeeId,
@@ -273,7 +267,6 @@ public sealed class SearchController : ApiControllerBase
         if (!hasFinancialAccess && !piResolution.IncludesCaller)
         {
             pmResolution = await ResolveFirstTeamMemberIamIdByEmployeeIdAsync(
-                client,
                 normalizedProjectNumber,
                 PpmRole.ProjectManager,
                 callerEmployeeId,
@@ -296,7 +289,6 @@ public sealed class SearchController : ApiControllerBase
         }
 
         pmResolution ??= await ResolveFirstTeamMemberIamIdByEmployeeIdAsync(
-            client,
             normalizedProjectNumber,
             PpmRole.ProjectManager,
             callerEmployeeId,
@@ -339,30 +331,19 @@ public sealed class SearchController : ApiControllerBase
             return BadRequest("Current user is missing EmployeeId.");
         }
 
-        var client = _financialApiService.GetClient();
-
-        var piResultTask = client.PpmProjectByProjectTeamMemberEmployeeId.ExecuteAsync(
-            employeeId,
-            PpmRole.PrincipalInvestigator,
-            cancellationToken);
-
-        var pmResultTask = client.PpmProjectByProjectTeamMemberEmployeeId.ExecuteAsync(
-            employeeId,
-            PpmRole.ProjectManager,
-            cancellationToken);
-
-        await Task.WhenAll(piResultTask, pmResultTask);
-
-        var piData = piResultTask.Result.ReadData();
-        var pmData = pmResultTask.Result.ReadData();
+        var piTask = _portfolioService.GetEmployeeProjectsAsync(employeeId, PpmRole.PrincipalInvestigator, cancellationToken);
+        var pmTask = _portfolioService.GetEmployeeProjectsAsync(employeeId, PpmRole.ProjectManager, cancellationToken);
+        await Task.WhenAll(piTask, pmTask);
+        var piProjects = await piTask;
+        var pmProjects = await pmTask;
         var peopleByEmployeeId = await GetPeopleByEmployeeIdAsync(
-            piData.PpmProjectByProjectTeamMemberEmployeeId
-                .Concat(pmData.PpmProjectByProjectTeamMemberEmployeeId)
+            piProjects
+                .Concat(pmProjects)
                 .SelectMany(p => p.TeamMembers)
                 .Select(m => m.EmployeeId),
             cancellationToken);
 
-        var myProjects = piData.PpmProjectByProjectTeamMemberEmployeeId
+        var myProjects = piProjects
             .GroupBy(p => p.ProjectNumber, StringComparer.OrdinalIgnoreCase)
             .Select(g =>
             {
@@ -378,7 +359,7 @@ public sealed class SearchController : ApiControllerBase
             .OrderBy(p => p.ProjectName)
             .ToArray();
 
-        var myManagedProjects = pmData.PpmProjectByProjectTeamMemberEmployeeId
+        var myManagedProjects = pmProjects
             .GroupBy(p => p.ProjectNumber, StringComparer.OrdinalIgnoreCase)
             .Select(g =>
             {
@@ -401,8 +382,8 @@ public sealed class SearchController : ApiControllerBase
             .OrderBy(p => p.ProjectName)
             .ToArray();
 
-        var principalInvestigators = piData.PpmProjectByProjectTeamMemberEmployeeId
-            .Concat(pmData.PpmProjectByProjectTeamMemberEmployeeId)
+        var principalInvestigators = piProjects
+            .Concat(pmProjects)
             .SelectMany(project => project.TeamMembers)
             .Where(member => member.RoleName == PpmRole.PrincipalInvestigator)
             .Where(member => !string.IsNullOrWhiteSpace(member.EmployeeId))
@@ -433,36 +414,38 @@ public sealed class SearchController : ApiControllerBase
 
     /// <summary>
     /// Resolves the first IAM ID for a project role and reports whether the caller is explicitly
-    /// listed in that role. Only project team members participate in this authorization check.
+    /// listed in that role. Authorization always uses GraphQL project-team membership in this slice.
     /// </summary>
     private async Task<TeamMemberIamResolution> ResolveFirstTeamMemberIamIdByEmployeeIdAsync(
-        IAggieEnterpriseClient client,
         string projectNumber,
         string roleName,
         string? callerEmployeeId,
         CancellationToken cancellationToken)
     {
-        var result = await client.PpmProjectTeamMembers.ExecuteAsync(
-            projectNumber,
-            roleName,
-            cancellationToken);
-        var project = result.ReadData().PpmProjectByNumber;
-        var teamMembers = project?.TeamMembers?
-            .Where(m => m.RoleName == roleName)
-            .ToArray() ?? [];
-        var includesCaller = !string.IsNullOrWhiteSpace(callerEmployeeId) &&
-            teamMembers.Any(m => string.Equals(
-                m.Person?.EmployeeId,
-                callerEmployeeId,
-                StringComparison.OrdinalIgnoreCase));
+        var teamMembers = await _portfolioService.GetProjectTeamAsync(projectNumber, roleName, cancellationToken);
+        var includesCaller = false;
+        if (!string.IsNullOrWhiteSpace(callerEmployeeId))
+        {
+            // This slice changes navigation data only. Restricted access still requires a live GraphQL team role.
+            if (_useGraphQLAPI)
+            {
+                includesCaller = teamMembers.Any(m => string.Equals(m.EmployeeId, callerEmployeeId, StringComparison.OrdinalIgnoreCase));
+            }
+            else
+            {
+                var legacy = await _financialApiService.GetClient().PpmProjectTeamMembers.ExecuteAsync(projectNumber, roleName, cancellationToken);
+                includesCaller = legacy.ReadData().PpmProjectByNumber?.TeamMembers?.Any(m =>
+                    m.RoleName == roleName && string.Equals(m.Person?.EmployeeId, callerEmployeeId, StringComparison.OrdinalIgnoreCase)) == true;
+            }
+        }
         var membersWithEmployeeId = teamMembers
-            .Where(m => !string.IsNullOrWhiteSpace(m.Person?.EmployeeId))
+            .Where(m => !string.IsNullOrWhiteSpace(m.EmployeeId))
             .OrderBy(m => m.Name, StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
         foreach (var member in membersWithEmployeeId)
         {
-            var employeeId = member.Person?.EmployeeId;
+            var employeeId = member.EmployeeId;
             if (string.IsNullOrWhiteSpace(employeeId))
             {
                 continue;
@@ -470,11 +453,11 @@ public sealed class SearchController : ApiControllerBase
             var person = await _datamartService.GetSearchablePersonByEmployeeIdAsync(employeeId, cancellationToken);
             if (!string.IsNullOrWhiteSpace(person?.IamId))
             {
-                return new TeamMemberIamResolution(person.IamId, teamMembers.Length > 0, includesCaller);
+                return new TeamMemberIamResolution(person.IamId, teamMembers.Count > 0, includesCaller);
             }
         }
 
-        return new TeamMemberIamResolution(null, teamMembers.Length > 0, includesCaller);
+        return new TeamMemberIamResolution(null, teamMembers.Count > 0, includesCaller);
     }
 
     private async Task<IReadOnlyDictionary<string, SearchablePersonRecord>> GetPeopleByEmployeeIdAsync(
@@ -531,7 +514,7 @@ public sealed class SearchController : ApiControllerBase
     }
 
     private static string? GetFirstPiEmployeeId(
-        IEnumerable<IPpmProjectByProjectTeamMemberEmployeeId_PpmProjectByProjectTeamMemberEmployeeId_TeamMembers> members)
+        IEnumerable<PpmTeamMember> members)
     {
         return members
             .Where(m => m.RoleName == PpmRole.PrincipalInvestigator)

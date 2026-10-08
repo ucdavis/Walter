@@ -16,6 +16,7 @@ public sealed class ProjectController : ApiControllerBase
     private readonly IDatamartService _datamartService;
     private readonly IAuthorizationService _authorizationService;
     private readonly IUserService _userService;
+    private readonly PpmPortfolioService _portfolioService;
 
     public sealed record ManagedPiRecord(
         [property: JsonPropertyName("employeeId")] string EmployeeId,
@@ -36,12 +37,14 @@ public sealed class ProjectController : ApiControllerBase
         IFinancialApiService financialApiService,
         IDatamartService datamartService,
         IAuthorizationService authorizationService,
-        IUserService userService)
+        IUserService userService,
+        PpmPortfolioService portfolioService)
     {
         _financialApiService = financialApiService;
         _datamartService = datamartService;
         _authorizationService = authorizationService;
         _userService = userService;
+        _portfolioService = portfolioService;
     }
 
     [HttpGet("by-iam/{iamId}")]
@@ -75,29 +78,18 @@ public sealed class ProjectController : ApiControllerBase
             }
         }
 
-        var client = _financialApiService.GetClient();
+        var piTask = _portfolioService.GetEmployeeProjectsAsync(employeeId, PpmRole.PrincipalInvestigator, cancellationToken);
+        var pmTask = _portfolioService.GetEmployeeProjectsAsync(employeeId, PpmRole.ProjectManager, cancellationToken);
+        await Task.WhenAll(piTask, pmTask);
+        var piProjects = await piTask;
+        var managedProjects = await pmTask;
 
-        // Query projects where the specified employee is a Principal Investigator
-        var piResultTask = client.PpmProjectByProjectTeamMemberEmployeeId.ExecuteAsync(
-            employeeId, PpmRole.PrincipalInvestigator, cancellationToken);
-
-        // Also query projects where the employee is a Project Manager (to find orphaned projects with no PI)
-        var pmResultTask = client.PpmProjectByProjectTeamMemberEmployeeId.ExecuteAsync(
-            employeeId, PpmRole.ProjectManager, cancellationToken);
-
-        await Task.WhenAll(piResultTask, pmResultTask);
-
-        var piData = (await piResultTask).ReadData();
-        var graphProjects = piData.PpmProjectByProjectTeamMemberEmployeeId;
-
-        // Find orphaned projects where this employee is PM but no PI is assigned
-        var pmData = (await pmResultTask).ReadData();
-        var managedProjects = pmData.PpmProjectByProjectTeamMemberEmployeeId;
+        // PM projects without a project PI belong in the PM's own portfolio.
         var orphanedProjects = managedProjects
             .Where(p => !p.TeamMembers.Any(m => m.RoleName == PpmRole.PrincipalInvestigator))
             .ToList();
 
-        var piProjectNumbers = graphProjects.Select(p => p.ProjectNumber).Distinct();
+        var piProjectNumbers = piProjects.Select(p => p.ProjectNumber).Distinct();
         var orphanedProjectNumbers = orphanedProjects.Select(p => p.ProjectNumber).Distinct();
         var projectNumbers = piProjectNumbers.Union(orphanedProjectNumbers).ToList();
 
@@ -105,7 +97,7 @@ public sealed class ProjectController : ApiControllerBase
             return Ok(Array.Empty<FacultyPortfolioRecord>());
 
         // Build lookup for PM employee ID by project number (from both PI and orphaned projects)
-        var pmByProject = graphProjects
+        var pmByProject = piProjects
             .Concat(orphanedProjects)
             .GroupBy(p => p.ProjectNumber)
             .ToDictionary(
@@ -121,14 +113,12 @@ public sealed class ProjectController : ApiControllerBase
             .Where(p => p.ProjectStatus == "ACTIVE")
             .ToList();
 
-        // Resolve the dashboard owner's name from PPM team-member data
-        // (the URL employee is guaranteed to appear as a team member on at least one
-        // returned project since the GraphQL queries filtered on them).
-        var ownerName = graphProjects.Concat(orphanedProjects)
+        // Award-only owners may not appear on a project team; preserve the nullable owner name.
+        var ownerName = piProjects.Concat(orphanedProjects)
             .SelectMany(p => p.TeamMembers)
             .FirstOrDefault(m => m.EmployeeId == employeeId)?.Name;
 
-        // Join PM employee ID from GraphQL data
+        // Join PM employee ID from project-team data
         foreach (var project in activeProjects)
         {
             if (pmByProject.TryGetValue(project.ProjectNumber, out var pmEmployeeId))
@@ -324,16 +314,8 @@ public sealed class ProjectController : ApiControllerBase
             }
         }
 
-        var client = _financialApiService.GetClient();
-
-        // Query projects where the specified employee is a Project Manager
-        var result = await client.PpmProjectByProjectTeamMemberEmployeeId.ExecuteAsync(
-            employeeId,
-            PpmRole.ProjectManager,
-            cancellationToken);
-
-        var data = result.ReadData();
-        var managedProjects = data.PpmProjectByProjectTeamMemberEmployeeId;
+        var managedProjects = await _portfolioService.GetEmployeeProjectsAsync(
+            employeeId, PpmRole.ProjectManager, cancellationToken);
 
         // Look up the PM's name from any team they appear on
         var pmMember = managedProjects

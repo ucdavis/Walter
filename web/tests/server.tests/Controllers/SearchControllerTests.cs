@@ -218,8 +218,10 @@ public sealed class SearchControllerTests
         catalog.Reports.Select(r => r.Id).Should().Contain("reports");
     }
 
-    [Fact]
-    public async Task SearchPeople_returns_empty_for_non_financial_users()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task SearchPeople_returns_empty_for_non_financial_users(bool useGraphQLAPI)
     {
         using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
         var authorizationService = CreateAuthorizationService();
@@ -227,6 +229,7 @@ public sealed class SearchControllerTests
         var controller = CreateController(
             ctx,
             authorizationService,
+            useGraphQLAPI: useGraphQLAPI,
             datamartService: new FakeDatamartService(
                 searchPeople:
                 [
@@ -247,8 +250,10 @@ public sealed class SearchControllerTests
         payload.Should().BeEmpty();
     }
 
-    [Fact]
-    public async Task SearchPeople_returns_datamart_people_for_financial_users()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task SearchPeople_returns_datamart_people_for_financial_users(bool useGraphQLAPI)
     {
         using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
         var authorizationService = CreateAuthorizationService();
@@ -256,6 +261,7 @@ public sealed class SearchControllerTests
         var controller = CreateController(
             ctx,
             authorizationService,
+            useGraphQLAPI: useGraphQLAPI,
             datamartService: new FakeDatamartService(
                 searchPeople:
                 [
@@ -288,8 +294,10 @@ public sealed class SearchControllerTests
         payload.SelectMany(p => p.Keywords).Should().NotContain("E0000002");
     }
 
-    [Fact]
-    public async Task SearchPeople_reports_is_project_manager_when_person_manages_projects()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task SearchPeople_reports_is_project_manager_when_person_manages_projects(bool useGraphQLAPI)
     {
         using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
         var authorizationService = CreateAuthorizationService();
@@ -297,6 +305,7 @@ public sealed class SearchControllerTests
         var controller = CreateController(
             ctx,
             authorizationService,
+            useGraphQLAPI: useGraphQLAPI,
             datamartService: new FakeDatamartService(
                 searchPeople:
                 [
@@ -318,8 +327,10 @@ public sealed class SearchControllerTests
         payload.Should().ContainSingle().Which.IsProjectManager.Should().BeTrue();
     }
 
-    [Fact]
-    public async Task SearchPeople_limits_results_to_top_five_for_financial_users()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task SearchPeople_limits_results_to_top_five_for_financial_users(bool useGraphQLAPI)
     {
         using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
         var authorizationService = CreateAuthorizationService();
@@ -327,6 +338,7 @@ public sealed class SearchControllerTests
         var controller = CreateController(
             ctx,
             authorizationService,
+            useGraphQLAPI: useGraphQLAPI,
             datamartService: new FakeDatamartService(
                 searchPeople: Enumerable.Range(1, 7)
                     .Select(i => new SearchablePersonRecord
@@ -352,8 +364,10 @@ public sealed class SearchControllerTests
             "1000000005");
     }
 
-    [Fact]
-    public async Task ResolveProjectPi_returns_pi_iam_id_when_pi_employee_id_resolves()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task ResolveProjectPi_returns_pi_iam_id_when_pi_employee_id_resolves(bool useGraphQLAPI)
     {
         using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
         var authorizationService = CreateAuthorizationService();
@@ -361,6 +375,7 @@ public sealed class SearchControllerTests
         var controller = CreateController(
             ctx,
             authorizationService,
+            useGraphQLAPI: useGraphQLAPI,
             datamartService: new FakeDatamartService(
                 searchPeople:
                 [
@@ -407,8 +422,10 @@ public sealed class SearchControllerTests
         payload.ProjectNumber.Should().Be("ABC123");
     }
 
-    [Fact]
-    public async Task ResolveProjectPi_falls_back_to_pm_when_project_is_orphaned()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task ResolveProjectPi_falls_back_to_pm_when_project_is_orphaned(bool useGraphQLAPI)
     {
         using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
         var authorizationService = CreateAuthorizationService();
@@ -416,6 +433,7 @@ public sealed class SearchControllerTests
         var controller = CreateController(
             ctx,
             authorizationService,
+            useGraphQLAPI: useGraphQLAPI,
             datamartService: new FakeDatamartService(
                 searchPeople:
                 [
@@ -450,8 +468,10 @@ public sealed class SearchControllerTests
         payload.ProjectNumber.Should().Be("ABC123");
     }
 
-    [Fact]
-    public async Task ResolveProjectPi_does_not_fallback_to_pm_when_pi_exists_but_cannot_resolve()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task ResolveProjectPi_does_not_fallback_to_pm_when_pi_exists_but_cannot_resolve(bool useGraphQLAPI)
     {
         using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
         var authorizationService = CreateAuthorizationService();
@@ -459,6 +479,7 @@ public sealed class SearchControllerTests
         var controller = CreateController(
             ctx,
             authorizationService,
+            useGraphQLAPI: useGraphQLAPI,
             datamartService: new FakeDatamartService(
                 searchPeople:
                 [
@@ -567,8 +588,10 @@ public sealed class SearchControllerTests
         payload.ProjectNumber.Should().Be("ABC123");
     }
 
-    [Fact]
-    public async Task ResolveProjectPi_forbids_project_manager_not_assigned_to_requested_project()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task ResolveProjectPi_forbids_project_manager_not_assigned_to_requested_project(bool useGraphQLAPI)
     {
         using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
         var userId = Guid.NewGuid();
@@ -585,6 +608,7 @@ public sealed class SearchControllerTests
         var controller = CreateController(
             ctx,
             authorizationService,
+            useGraphQLAPI: useGraphQLAPI,
             datamartService: new FakeDatamartService(
                 searchPeople:
                 [
@@ -638,6 +662,52 @@ public sealed class SearchControllerTests
         return provider.GetRequiredService<IAuthorizationService>();
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Team_projects_preserve_award_inclusion_deduplication_and_pi_navigation(bool useGraphQLAPI)
+    {
+        using var ctx = TestDbContextFactory.CreateInMemory();
+        var userId = Guid.NewGuid();
+        ctx.Users.Add(new User { Id = userId, Kerberos = "fixture", IamId = "IAM-SELF", EmployeeId = "SELF" });
+        await ctx.SaveChangesAsync();
+        FakeFinancialProject[] projects =
+        [
+            new("P1", [new(PpmRole.PrincipalInvestigator, "Zed", "Z", null),
+                new(PpmRole.PrincipalInvestigator, "Alice", "A", null),
+                new(PpmRole.ProjectManager, "Self", "SELF", null)],
+                [new(PpmRole.PrincipalInvestigator, "Self", "SELF", null)]),
+            new("P2", [new(PpmRole.PrincipalInvestigator, "Unmapped", "MISSING", null)],
+                [new(PpmRole.PrincipalInvestigator, "Self", "SELF", null)])
+        ];
+        var controller = CreateController(ctx, CreateAuthorizationService(), [],
+            new FakeDatamartService([new SearchablePersonRecord { IamId = "IAM-A", EmployeeId = "A", Name = "Alice" },
+                new SearchablePersonRecord { IamId = "IAM-Z", EmployeeId = "Z", Name = "Zed" }]),
+            new FakeFinancialApiService([], null, projects), userId: userId, useGraphQLAPI: useGraphQLAPI);
+        var result = (await controller.GetProjectsWhereCurrentUserIsTeamMember(default)).Should().BeOfType<OkObjectResult>().Which.Value
+            .Should().BeOfType<SearchController.SearchTeamMemberProjectsResponse>().Which;
+        result.MyProjects.Select(p => p.ProjectNumber).Should().Equal("P1", "P2");
+        result.MyManagedProjects.Should().ContainSingle().Which.ProjectNumber.Should().Be("P1");
+        result.Projects.Should().HaveCount(2);
+        result.Projects[0].ProjectPiIamId.Should().Be("IAM-A");
+        result.Projects[1].ProjectPiIamId.Should().BeNull();
+        result.PrincipalInvestigators.Select(p => p.IamId).Should().Equal("IAM-A", "IAM-Z");
+    }
+
+    [Fact]
+    public async Task Imported_team_membership_cannot_grant_resolve_access_when_GraphQL_denies_it()
+    {
+        using var ctx = TestDbContextFactory.CreateInMemory();
+        var id = Guid.NewGuid();
+        ctx.Users.Add(new User { Id = id, Kerberos = "fixture", IamId = "IAM-SELF", EmployeeId = "SELF" });
+        await ctx.SaveChangesAsync();
+        var reader = new FakePpmPortfolioReader([new("P1", [new(PpmRole.PrincipalInvestigator, "Self", "SELF", null)], [])]);
+        var controller = CreateController(ctx, CreateAuthorizationService(), [],
+            new FakeDatamartService([new SearchablePersonRecord { IamId = "IAM-SELF", EmployeeId = "SELF", Name = "Self" }]),
+            new FakeFinancialApiService(), userId: id, useGraphQLAPI: false, portfolioReader: reader);
+        (await controller.ResolveProjectPi("P1", default)).Should().BeOfType<ForbidResult>();
+    }
+
     private static SearchController CreateController(
         AppDbContext ctx,
         IAuthorizationService authorizationService,
@@ -646,19 +716,25 @@ public sealed class SearchControllerTests
         IFinancialApiService? financialApiService = null,
         IEnumerable<string>? projectManagerEmployeeIds = null,
         Guid? userId = null,
-        bool useGraphQLAPI = true)
+        bool useGraphQLAPI = true,
+        IPpmPortfolioReader? portfolioReader = null)
     {
         var httpContext = new DefaultHttpContext
         {
             User = CreateUser(roles, userId),
         };
 
+        financialApiService ??= new FakeFinancialApiService(projectManagerEmployeeIds ?? []);
+        portfolioReader ??= (financialApiService as FakeFinancialApiService)?.CreatePortfolioReader() ?? new FakePpmPortfolioReader();
+
         return new SearchController(
             ctx,
             financialApiService ?? new FakeFinancialApiService(projectManagerEmployeeIds ?? Array.Empty<string>()),
             authorizationService,
             datamartService ?? new FakeDatamartService(),
-            Options.Create(new FeatureFlagOptions { UseGraphQLAPI = useGraphQLAPI }))
+            Options.Create(new FeatureFlagOptions { UseGraphQLAPI = useGraphQLAPI }),
+            new PpmPortfolioService(financialApiService ?? new FakeFinancialApiService(projectManagerEmployeeIds ?? []),
+                portfolioReader ?? new FakePpmPortfolioReader(), Options.Create(new FeatureFlagOptions { UseGraphQLAPI = useGraphQLAPI })))
         {
             ControllerContext = new ControllerContext { HttpContext = httpContext },
         };

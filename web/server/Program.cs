@@ -82,7 +82,10 @@ builder.Services.AddResponseCaching();
 
 // add singleton services here
 builder.Services.AddSingleton<IFinancialApiService, FinancialApiService>();
-builder.Services.AddSingleton<IDatamartService, DatamartService>();
+builder.Services.AddSingleton<DatamartService>();
+builder.Services.AddSingleton<IDatamartService>(sp => sp.GetRequiredService<DatamartService>());
+builder.Services.AddSingleton<IPpmPortfolioReader>(sp => sp.GetRequiredService<DatamartService>());
+builder.Services.AddScoped<PpmPortfolioService>();
 
 // add scoped services here
 builder.Services.AddScoped<IDbInitializer, DbInitializer>();

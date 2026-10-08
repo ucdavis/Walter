@@ -38,7 +38,8 @@ public sealed class ProjectControllerTests
                     Name = "Project Manager",
                 }),
             authorizationService,
-            new UserService(NullLogger<UserService>.Instance, ctx))
+            new UserService(NullLogger<UserService>.Instance, ctx),
+            new PpmPortfolioService(new ThrowingFinancialApiService(), new FakePpmPortfolioReader(), Microsoft.Extensions.Options.Options.Create(new FeatureFlagOptions())))
         {
             ControllerContext = new ControllerContext
             {
@@ -67,7 +68,8 @@ public sealed class ProjectControllerTests
             new ThrowingFinancialApiService(),
             new ResolvingDatamartService(),
             authorizationService,
-            new UserService(NullLogger<UserService>.Instance, ctx))
+            new UserService(NullLogger<UserService>.Instance, ctx),
+            new PpmPortfolioService(new ThrowingFinancialApiService(), new FakePpmPortfolioReader(), Microsoft.Extensions.Options.Options.Create(new FeatureFlagOptions())))
         {
             ControllerContext = new ControllerContext
             {
@@ -93,7 +95,8 @@ public sealed class ProjectControllerTests
             new ThrowingFinancialApiService(),
             new ResolvingDatamartService(),
             authorizationService,
-            new UserService(NullLogger<UserService>.Instance, ctx))
+            new UserService(NullLogger<UserService>.Instance, ctx),
+            new PpmPortfolioService(new ThrowingFinancialApiService(), new FakePpmPortfolioReader(), Microsoft.Extensions.Options.Options.Create(new FeatureFlagOptions())))
         {
             ControllerContext = new ControllerContext
             {
@@ -122,7 +125,8 @@ public sealed class ProjectControllerTests
             new ThrowingFinancialApiService(),
             new ResolvingDatamartService(),
             authorizationService,
-            new UserService(NullLogger<UserService>.Instance, ctx))
+            new UserService(NullLogger<UserService>.Instance, ctx),
+            new PpmPortfolioService(new ThrowingFinancialApiService(), new FakePpmPortfolioReader(), Microsoft.Extensions.Options.Options.Create(new FeatureFlagOptions())))
         {
             ControllerContext = new ControllerContext
             {
@@ -151,7 +155,8 @@ public sealed class ProjectControllerTests
             new ThrowingFinancialApiService(),
             new ResolvingDatamartService(),
             authorizationService,
-            new UserService(NullLogger<UserService>.Instance, ctx))
+            new UserService(NullLogger<UserService>.Instance, ctx),
+            new PpmPortfolioService(new ThrowingFinancialApiService(), new FakePpmPortfolioReader(), Microsoft.Extensions.Options.Options.Create(new FeatureFlagOptions())))
         {
             ControllerContext = new ControllerContext
             {
@@ -207,7 +212,8 @@ public sealed class ProjectControllerTests
             new ThrowingFinancialApiService(),
             new ResolvingDatamartService(projection: projection),
             authorizationService,
-            new UserService(NullLogger<UserService>.Instance, ctx))
+            new UserService(NullLogger<UserService>.Instance, ctx),
+            new PpmPortfolioService(new ThrowingFinancialApiService(), new FakePpmPortfolioReader(), Microsoft.Extensions.Options.Options.Create(new FeatureFlagOptions())))
         {
             ControllerContext = new ControllerContext
             {
@@ -263,7 +269,8 @@ public sealed class ProjectControllerTests
             new ThrowingFinancialApiService(),
             datamart,
             CreateAuthorizationService(),
-            new UserService(NullLogger<UserService>.Instance, ctx))
+            new UserService(NullLogger<UserService>.Instance, ctx),
+            new PpmPortfolioService(new ThrowingFinancialApiService(), new FakePpmPortfolioReader(), Microsoft.Extensions.Options.Options.Create(new FeatureFlagOptions())))
         {
             ControllerContext = new ControllerContext
             {
@@ -274,14 +281,17 @@ public sealed class ProjectControllerTests
             },
         };
 
-    [Fact]
-    public async Task GetByIamId_forbids_requester_who_is_only_award_pi_on_target_pi_project()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task GetByIamId_forbids_requester_who_is_only_award_pi_on_target_pi_project(bool useGraphQLAPI)
     {
         using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
         var requester = SeedUser(ctx, employeeId: "EAWARDPI");
 
         var controller = CreatePortfolioController(
             ctx,
+            useGraphQLAPI: useGraphQLAPI,
             targetPerson: new SearchablePersonRecord { IamId = "IAM-PI", EmployeeId = "EPI", Name = "Target PI" },
             projects: [TargetPiProjectWithAwardPi(awardPiEmployeeId: "EAWARDPI")],
             user: CreateUser(roles: [], objectId: requester.Id));
@@ -291,14 +301,17 @@ public sealed class ProjectControllerTests
         result.Should().BeOfType<ForbidResult>();
     }
 
-    [Fact]
-    public async Task GetPersonnelForProjects_forbids_requester_who_is_only_award_pi_on_target_pi_project()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task GetPersonnelForProjects_forbids_requester_who_is_only_award_pi_on_target_pi_project(bool useGraphQLAPI)
     {
         using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
         var requester = SeedUser(ctx, employeeId: "EAWARDPI");
 
         var controller = CreatePortfolioController(
             ctx,
+            useGraphQLAPI: useGraphQLAPI,
             targetPerson: new SearchablePersonRecord { IamId = "IAM-PI", EmployeeId = "EPI", Name = "Target PI" },
             projects: [TargetPiProjectWithAwardPi(awardPiEmployeeId: "EAWARDPI")],
             user: CreateUser(roles: [], objectId: requester.Id));
@@ -311,14 +324,17 @@ public sealed class ProjectControllerTests
         result.Should().BeOfType<ForbidResult>();
     }
 
-    [Fact]
-    public async Task GetByIamId_allows_team_project_manager_of_target_pi()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task GetByIamId_allows_team_project_manager_of_target_pi(bool useGraphQLAPI)
     {
         using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
         var requester = SeedUser(ctx, employeeId: "EPM");
 
         var controller = CreatePortfolioController(
             ctx,
+            useGraphQLAPI: useGraphQLAPI,
             targetPerson: new SearchablePersonRecord { IamId = "IAM-PI", EmployeeId = "EPI", Name = "Target PI" },
             projects: [TargetPiProjectWithAwardPi(awardPiEmployeeId: "EAWARDPI")],
             user: CreateUser(roles: [], objectId: requester.Id),
@@ -331,14 +347,17 @@ public sealed class ProjectControllerTests
         projects.Should().ContainSingle(p => p.ProjectNumber == "SP001");
     }
 
-    [Fact]
-    public async Task GetByIamId_self_lookup_includes_projects_where_user_is_award_pi()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task GetByIamId_self_lookup_includes_projects_where_user_is_award_pi(bool useGraphQLAPI)
     {
         using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
         var requester = SeedUser(ctx, employeeId: "EAWARDPI");
 
         var controller = CreatePortfolioController(
             ctx,
+            useGraphQLAPI: useGraphQLAPI,
             targetPerson: new SearchablePersonRecord { IamId = "IAM-AWARDPI", EmployeeId = "EAWARDPI", Name = "Award PI" },
             projects: [TargetPiProjectWithAwardPi(awardPiEmployeeId: "EAWARDPI")],
             user: CreateUser(roles: [], objectId: requester.Id),
@@ -349,6 +368,29 @@ public sealed class ProjectControllerTests
         var projects = result.Should().BeOfType<OkObjectResult>().Which.Value
             .Should().BeAssignableTo<IEnumerable<FacultyPortfolioRecord>>().Which;
         projects.Should().ContainSingle(p => p.ProjectNumber == "SP001");
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Managed_faculty_preserves_missing_iam_and_merges_orphans_with_pm_pi_entry(bool useGraphQLAPI)
+    {
+        using var ctx = TestDbContextFactory.CreateInMemory();
+        FakeFinancialProjectTeamMember pm = new(PpmRole.ProjectManager, "Manager", "PM", null);
+        var controller = CreatePortfolioController(ctx,
+            new SearchablePersonRecord { IamId = "IAM-PM", EmployeeId = "PM", Name = "Manager" },
+            [
+                new("ORPHAN", [pm], []),
+                new("SHARED", [pm, new(PpmRole.PrincipalInvestigator, "Manager", "PM", null),
+                    new(PpmRole.PrincipalInvestigator, "Unmapped", "UNMAPPED", null)], [])
+            ], CreateUser([Role.Names.FinancialViewer]), useGraphQLAPI: useGraphQLAPI);
+
+        var result = (await controller.GetManagedFaculty("IAM-PM", default)).Should().BeOfType<OkObjectResult>().Which.Value
+            .Should().BeOfType<ProjectController.ManagedPisEnvelope>().Which;
+        result.ProjectManager!.Name.Should().Be("Manager");
+        result.Pis.Should().HaveCount(2);
+        result.Pis.Should().Contain(p => p.EmployeeId == "PM" && p.ProjectCount == 2 && p.IamId == "IAM-PM");
+        result.Pis.Should().Contain(p => p.EmployeeId == "UNMAPPED" && p.ProjectCount == 1 && p.IamId == null);
     }
 
     /// <summary>
@@ -375,7 +417,8 @@ public sealed class ProjectControllerTests
         SearchablePersonRecord targetPerson,
         IReadOnlyList<FakeFinancialProject> projects,
         ClaimsPrincipal user,
-        IReadOnlyList<FacultyPortfolioRecord>? portfolio = null)
+        IReadOnlyList<FacultyPortfolioRecord>? portfolio = null,
+        bool useGraphQLAPI = true)
     {
         return new ProjectController(
             new FakeFinancialApiService(
@@ -384,7 +427,8 @@ public sealed class ProjectControllerTests
                 projects: projects),
             new ResolvingDatamartService(targetPerson, portfolio: portfolio),
             CreateAuthorizationService(),
-            new UserService(NullLogger<UserService>.Instance, ctx))
+            new UserService(NullLogger<UserService>.Instance, ctx),
+            new PpmPortfolioService(new FakeFinancialApiService([], null, projects), new FakePpmPortfolioReader(projects), Microsoft.Extensions.Options.Options.Create(new FeatureFlagOptions { UseGraphQLAPI = useGraphQLAPI })))
         {
             ControllerContext = new ControllerContext
             {

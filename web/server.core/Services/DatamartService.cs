@@ -115,7 +115,7 @@ public interface IDatamartService
         DepartmentBalancesOptionsQuery query, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default);
 }
 
-public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
+public sealed class DatamartService : IDatamartService, IPpmPortfolioReader, IAccrualReportDataSource
 {
     private const string GetSearchablePeopleSproc = "dbo.usp_GetSearchablePeople";
 
@@ -173,6 +173,71 @@ public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
             ORDER BY CASE WHEN ProjectNumber COLLATE Latin1_General_100_CI_AS = @ExactProjectNumber THEN 0 ELSE 1 END,
                      Name COLLATE Latin1_General_100_CI_AS, ProjectNumber
             """, new { Pattern = pattern, ExactProjectNumber = exactProjectNumber }, ct: ct);
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<PpmProjectMembership>> GetEmployeeProjectsAsync(
+        string employeeId, string roleName, CancellationToken ct = default)
+    {
+        // Award roles select projects, but only project roles populate the returned team.
+        var rows = await ExecuteQueryAsync<ProjectMembershipRow>("""
+            SELECT DISTINCT p.ProjectNumber, p.Name AS ProjectName,
+                   t.EmployeeId, t.Name AS MemberName, t.RoleName
+            FROM dbo.PpmProjects p
+            LEFT JOIN dbo.PpmPersonRoles t ON t.ProjectNumber = p.ProjectNumber AND t.ScopeType = 'PROJECT'
+            WHERE EXISTS (
+                SELECT 1 FROM dbo.PpmPersonRoles r
+                WHERE r.ProjectNumber = p.ProjectNumber AND r.EmployeeId = @EmployeeId
+                  AND r.RoleName = @RoleName AND r.ScopeType IN ('PROJECT', 'AWARD'))
+            ORDER BY p.ProjectNumber, t.Name, t.EmployeeId, t.RoleName
+            """, new { EmployeeId = employeeId, RoleName = roleName }, ct: ct);
+        return rows.GroupBy(r => r.ProjectNumber)
+            .Select(g => new PpmProjectMembership(g.Key, g.First().ProjectName,
+                g.Where(r => r.RoleName is not null)
+                    .Select(r => new PpmTeamMember(r.EmployeeId ?? string.Empty, r.MemberName ?? string.Empty, r.RoleName!))
+                    .ToArray()))
+            .ToArray();
+    }
+
+    /// <inheritdoc />
+    public Task<IReadOnlyList<PpmTeamMember>> GetProjectTeamAsync(
+        string projectNumber, string roleName, CancellationToken ct = default) =>
+        ExecuteQueryAsync<PpmTeamMember>("""
+            SELECT DISTINCT r.EmployeeId, r.Name, r.RoleName
+            FROM dbo.PpmPersonRoles r
+            INNER JOIN dbo.PpmProjects p ON p.ProjectNumber = r.ProjectNumber
+            WHERE r.ProjectNumber = @ProjectNumber AND r.ScopeType = 'PROJECT' AND r.RoleName = @RoleName
+            ORDER BY r.Name, r.EmployeeId
+            """, new { ProjectNumber = projectNumber, RoleName = roleName }, ct: ct);
+
+    /// <inheritdoc />
+    public async Task<IReadOnlySet<string>> GetProjectManagerEmployeeIdsAsync(
+        IEnumerable<string> employeeIds, CancellationToken ct = default)
+    {
+        ct.ThrowIfCancellationRequested();
+        var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        // Chunk parameter lists below SQL Server's parameter limit, even outside the five-person search UI.
+        foreach (var batch in employeeIds.Where(id => !string.IsNullOrWhiteSpace(id)).Distinct(StringComparer.OrdinalIgnoreCase).Chunk(500))
+        {
+            var ids = await ExecuteQueryAsync<string>("""
+                SELECT DISTINCT r.EmployeeId
+                FROM dbo.PpmPersonRoles r
+                INNER JOIN dbo.PpmProjects p ON p.ProjectNumber = r.ProjectNumber
+                WHERE r.EmployeeId IN @EmployeeIds AND r.RoleName = 'Project Manager'
+                  AND r.ScopeType IN ('PROJECT', 'AWARD')
+                """, new { EmployeeIds = batch }, ct: ct);
+            result.UnionWith(ids);
+        }
+        return result;
+    }
+
+    private sealed class ProjectMembershipRow
+    {
+        public string ProjectNumber { get; set; } = string.Empty;
+        public string ProjectName { get; set; } = string.Empty;
+        public string? EmployeeId { get; set; }
+        public string? MemberName { get; set; }
+        public string? RoleName { get; set; }
     }
 
     public async Task<IReadOnlyList<FacultyPortfolioRecord>> GetFacultyPortfolioAsync(
