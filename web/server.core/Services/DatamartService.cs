@@ -48,6 +48,10 @@ public sealed class DatamartOptions
 
 public interface IDatamartService
 {
+    /// <summary>Returns up to 20 imported project-search candidates, without status or date filters. The caller owns final ordering and the display limit.</summary>
+    Task<IReadOnlyList<ProjectSearchRecord>> SearchProjectsAsync(
+        string fuzzyQuery, string exactProjectNumber, CancellationToken ct = default);
+
     /// <summary>
     /// Searches People records that have both an IAM ID for navigation and an Employee ID for downstream project data.
     /// </summary>
@@ -151,6 +155,24 @@ public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
                 sleepDurationProvider: attempt =>
                     TimeSpan.FromMilliseconds(200 * Math.Pow(2, attempt))
             );
+    }
+
+    /// <summary>Searches the imported PPM snapshot with the existing AE percent/underscore wildcard semantics.</summary>
+    public Task<IReadOnlyList<ProjectSearchRecord>> SearchProjectsAsync(
+        string fuzzyQuery, string exactProjectNumber, CancellationToken ct = default)
+    {
+        // SQL Server adds bracket patterns to LIKE; AE treats brackets literally.
+        var pattern = "%" + fuzzyQuery.Replace("[", "[[]", StringComparison.Ordinal) + "%";
+        // Bound wildcard searches before transfer; retain an exact match before filling the candidate pool.
+        return ExecuteQueryAsync<ProjectSearchRecord>("""
+            SELECT TOP (20) ProjectNumber, Name AS ProjectName
+            FROM dbo.PpmProjects
+            WHERE Name COLLATE Latin1_General_100_CI_AS LIKE @Pattern
+               OR ProjectNumber COLLATE Latin1_General_100_CI_AS LIKE @Pattern
+               OR ProjectNumber COLLATE Latin1_General_100_CI_AS = @ExactProjectNumber
+            ORDER BY CASE WHEN ProjectNumber COLLATE Latin1_General_100_CI_AS = @ExactProjectNumber THEN 0 ELSE 1 END,
+                     Name COLLATE Latin1_General_100_CI_AS, ProjectNumber
+            """, new { Pattern = pattern, ExactProjectNumber = exactProjectNumber }, ct: ct);
     }
 
     public async Task<IReadOnlyList<FacultyPortfolioRecord>> GetFacultyPortfolioAsync(

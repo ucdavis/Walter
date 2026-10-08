@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Server.Controllers;
 using Server.Tests;
 using server.Helpers;
@@ -19,6 +20,109 @@ namespace server.tests.Controllers;
 
 public sealed class SearchControllerTests
 {
+    [Fact]
+    public void Feature_flags_default_to_legacy_GraphQL_search()
+    {
+        new FeatureFlagOptions().UseGraphQLAPI.Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData(false, Role.Names.Admin)]
+    [InlineData(true, Role.Names.Admin)]
+    [InlineData(false, Role.Names.FinancialViewer)]
+    [InlineData(true, Role.Names.FinancialViewer)]
+    public async Task SearchProjects_preserves_normalization_merge_order_keywords_and_limit(bool imported, string role)
+    {
+        using var ctx = TestDbContextFactory.CreateInMemory();
+        using var cts = new CancellationTokenSource();
+        var exact = new ProjectSearchRecord("ABC", "Bravo");
+        ProjectSearchRecord[] byName = [new("abc", "Duplicate"), new("", "Ignore"), new("Z", "Zulu"), new("A", "alpha"), new("C", "Charlie")];
+        ProjectSearchRecord[] byNumber = [new("D", "delta"), new("E", "Echo"), new("F", "Foxtrot")];
+        var financial = new FakeFinancialApiService { ExactProject = exact, SearchByName = byName, SearchByNumber = byNumber };
+        var datamart = new FakeDatamartService { Projects = new[] { exact }.Concat(byName).Concat(byNumber).ToArray() };
+        var controller = CreateController(ctx, CreateAuthorizationService(), [role], datamart, financial, useGraphQLAPI: !imported);
+
+        var result = await controller.SearchProjects("  ab c  ", cts.Token);
+
+        var projects = result.Should().BeOfType<OkObjectResult>().Which.Value.Should().BeOfType<SearchController.SearchProject[]>().Which;
+        projects.Select(p => p.ProjectNumber).Should().Equal("A", "ABC", "C", "D", "E");
+        projects[1].Keywords.Should().Equal("Bravo", "ABC");
+        projects.Should().OnlyContain(p => p.ProjectPiIamId == null);
+        if (imported)
+        {
+            financial.SearchQueries.Should().BeEmpty();
+            datamart.ProjectQueries.Should().Equal(("ab%c", "AB C", cts.Token));
+        }
+        else
+        {
+            datamart.ProjectQueries.Should().BeEmpty();
+            financial.SearchQueries.Should().Equal(("ab%c", null, "AB C", cts.Token), (null, "ab%c", "AB C", cts.Token));
+        }
+    }
+
+    [Theory]
+    [InlineData(false, null, Role.Names.FinancialViewer)]
+    [InlineData(true, null, Role.Names.FinancialViewer)]
+    [InlineData(false, "  ", Role.Names.FinancialViewer)]
+    [InlineData(true, "  ", Role.Names.FinancialViewer)]
+    [InlineData(false, " ab ", Role.Names.FinancialViewer)]
+    [InlineData(true, " ab ", Role.Names.FinancialViewer)]
+    [InlineData(false, "ABC", "Restricted")]
+    [InlineData(true, "ABC", "Restricted")]
+    public async Task SearchProjects_skips_both_sources_for_short_or_restricted_requests(bool imported, string? query, string role)
+    {
+        using var ctx = TestDbContextFactory.CreateInMemory();
+        var financial = new FakeFinancialApiService();
+        var datamart = new FakeDatamartService();
+        var controller = CreateController(ctx, CreateAuthorizationService(), [role], datamart, financial, useGraphQLAPI: !imported);
+
+        var result = await controller.SearchProjects(query, CancellationToken.None);
+
+        result.Should().BeOfType<OkObjectResult>().Which.Value.Should().BeAssignableTo<IEnumerable<SearchController.SearchProject>>().Which.Should().BeEmpty();
+        financial.SearchQueries.Should().BeEmpty();
+        datamart.ProjectQueries.Should().BeEmpty();
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task SearchProjects_returns_empty_when_source_has_no_matches(bool imported)
+    {
+        using var ctx = TestDbContextFactory.CreateInMemory();
+        var controller = CreateController(ctx, CreateAuthorizationService(), [Role.Names.FinancialViewer], useGraphQLAPI: !imported);
+        var result = await controller.SearchProjects("NO MATCH", CancellationToken.None);
+        result.Should().BeOfType<OkObjectResult>().Which.Value.Should().BeOfType<SearchController.SearchProject[]>().Which.Should().BeEmpty();
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task SearchProjects_honors_cancellation_before_reading_either_source(bool imported)
+    {
+        using var ctx = TestDbContextFactory.CreateInMemory();
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+        var financial = new FakeFinancialApiService();
+        var datamart = new FakeDatamartService();
+        var controller = CreateController(ctx, CreateAuthorizationService(), [Role.Names.Admin], datamart, financial, useGraphQLAPI: !imported);
+        var act = () => controller.SearchProjects("ABC", cts.Token);
+        await act.Should().ThrowAsync<OperationCanceledException>();
+        financial.SearchQueries.Should().BeEmpty();
+        datamart.ProjectQueries.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task SearchProjects_propagates_database_failure_without_falling_back_to_GraphQL()
+    {
+        using var ctx = TestDbContextFactory.CreateInMemory();
+        var financial = new FakeFinancialApiService();
+        var datamart = new FakeDatamartService { ProjectSearchError = new TimeoutException("source unavailable") };
+        var controller = CreateController(ctx, CreateAuthorizationService(), [Role.Names.Admin], datamart, financial, useGraphQLAPI: false);
+        var act = () => controller.SearchProjects("ABC", CancellationToken.None);
+        await act.Should().ThrowAsync<TimeoutException>();
+        financial.SearchQueries.Should().BeEmpty();
+    }
+
     [Fact]
     public async Task GetCatalog_excludes_accruals_report_when_not_authorized()
     {
@@ -541,7 +645,8 @@ public sealed class SearchControllerTests
         IDatamartService? datamartService = null,
         IFinancialApiService? financialApiService = null,
         IEnumerable<string>? projectManagerEmployeeIds = null,
-        Guid? userId = null)
+        Guid? userId = null,
+        bool useGraphQLAPI = true)
     {
         var httpContext = new DefaultHttpContext
         {
@@ -552,7 +657,8 @@ public sealed class SearchControllerTests
             ctx,
             financialApiService ?? new FakeFinancialApiService(projectManagerEmployeeIds ?? Array.Empty<string>()),
             authorizationService,
-            datamartService ?? new FakeDatamartService())
+            datamartService ?? new FakeDatamartService(),
+            Options.Create(new FeatureFlagOptions { UseGraphQLAPI = useGraphQLAPI }))
         {
             ControllerContext = new ControllerContext { HttpContext = httpContext },
         };
@@ -577,6 +683,18 @@ public sealed class SearchControllerTests
         public FakeDatamartService(IReadOnlyList<SearchablePersonRecord>? searchPeople = null)
         {
             _searchPeople = searchPeople ?? [];
+        }
+
+        public IReadOnlyList<ProjectSearchRecord> Projects { get; init; } = [];
+        public List<(string Fuzzy, string Exact, CancellationToken Token)> ProjectQueries { get; } = [];
+        public Exception? ProjectSearchError { get; init; }
+
+        public Task<IReadOnlyList<ProjectSearchRecord>> SearchProjectsAsync(
+            string fuzzyQuery, string exactProjectNumber, CancellationToken ct = default)
+        {
+            ProjectQueries.Add((fuzzyQuery, exactProjectNumber, ct));
+            if (ProjectSearchError is not null) throw ProjectSearchError;
+            return Task.FromResult(Projects);
         }
 
         public Task<IReadOnlyList<SearchablePersonRecord>> SearchPeopleAsync(

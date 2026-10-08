@@ -56,6 +56,12 @@ builder.Services.Configure<IamSettings>(builder.Configuration.GetSection("Iam"))
 builder.Services.Configure<FinancialSettings>(builder.Configuration.GetSection("Financial"));
 builder.Services.Configure<RumOptions>(builder.Configuration.GetSection("Rum"));
 builder.Services.Configure<FeatureFlagOptions>(builder.Configuration.GetSection(FeatureFlagOptions.SectionName));
+builder.Services.PostConfigure<FeatureFlagOptions>(options =>
+{
+    // Preserve the single-underscore environment key used for the GraphQL rollout switch.
+    options.UseGraphQLAPI = builder.Configuration.GetValue<bool?>("FeatureFlags_UseGraphQLAPI")
+        ?? options.UseGraphQLAPI;
+});
 builder.Services.Configure<AppOptions>(builder.Configuration.GetSection(AppOptions.SectionName));
 builder.Services.Configure<DatamartOptions>(options =>
 {
