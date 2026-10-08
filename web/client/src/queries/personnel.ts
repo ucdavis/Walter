@@ -4,6 +4,12 @@ import { fetchJson } from '@/lib/api.ts';
 export interface PersonnelRecord {
   compositeBenefitRate: number;
   distributionPercent: number;
+  /** 391 earn code of this funding line ('' = default distribution). Cognos source only. */
+  earnCode?: string | null;
+  /** This earn code's share of the person's pay (1 when not split). Cognos source only. */
+  earnCodeShare?: number | null;
+  /** BaseOnly | Split | Unsplit. Cognos source only. */
+  earnCodeStatus?: string | null;
   employeeId: string;
   fte: number;
   fundingEffectiveDate: string | null;

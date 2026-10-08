@@ -44,6 +44,8 @@ export const tooltipDefinitions = {
     'Total remaining balance (budget minus expenses and commitments) across all active and expired projects. Closed projects are excluded.',
   totalBudget:
     'Total PPM budget across all active and expired projects. Closed projects are excluded.',
+  unsplitEarnCodes:
+    'Part of this pay is funded under other earn codes, but no UCP-310 compensation data is available to split it, so the whole salary is shown on this line.',
   viewChartStringInFinjector: 'View chart string in Finjector',
 } as const;
 

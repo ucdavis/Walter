@@ -61,8 +61,12 @@ export interface AggregatedPosition {
 function aggregateDistribution(
   record: PersonnelRecord
 ): AggregatedDistribution {
+  // Cognos lines carry their earn code's share of pay; other sources have none.
   const monthlyRate =
-    record.monthlyRate * record.fte * (record.distributionPercent / 100);
+    record.monthlyRate *
+    (record.earnCodeShare ?? 1) *
+    record.fte *
+    (record.distributionPercent / 100);
   const monthlyFringe = monthlyRate * record.compositeBenefitRate;
   return {
     fundingEndingSoon: isEndingSoon(record.fundingEndDate),
@@ -204,6 +208,7 @@ function DistributionSubtable({
                   : '—'}
               </td>
               <td className="text-right text-sm">
+                <EarnCodeLabel record={dist.record} />
                 {dist.record.distributionPercent}%
               </td>
               <td className="text-right text-sm">
@@ -247,6 +252,33 @@ function DistributionSubtable({
   );
 }
 
+function EarnCodeLabel({ record }: { record: PersonnelRecord }) {
+  return (
+    <>
+      {record.earnCode && (
+        <span className="badge badge-ghost badge-sm mr-2">
+          {record.earnCode}
+        </span>
+      )}
+      {record.earnCodeStatus === 'Unsplit' && (
+        <TooltipLabel
+          asChild
+          label={
+            <span
+              className="badge badge-soft badge-warning badge-sm mr-2"
+              tabIndex={0}
+            >
+              Unsplit
+            </span>
+          }
+          placement="bottom"
+          tooltip={tooltipDefinitions.unsplitEarnCodes}
+        />
+      )}
+    </>
+  );
+}
+
 function FutureBadge() {
   return (
     <span className="badge badge-soft badge-info badge-sm mr-2">Future</span>
@@ -257,6 +289,7 @@ function getExportData(positions: AggregatedPosition[]) {
   return positions.flatMap((pos) =>
     pos.distributions.map((dist) => ({
       distributionPercent: dist.record.distributionPercent,
+      earnCode: dist.record.earnCode ?? '',
       fte: pos.fte,
       fundingEffectiveDate: dist.record.fundingEffectiveDate ?? '',
       fundingEndDate: dist.record.fundingEndDate ?? '',
@@ -286,6 +319,7 @@ const personnelCsvColumns = [
   { header: 'Project', key: 'projectDescription' as const },
   { header: 'Task', key: 'task' as const },
   { header: 'Dist %', key: 'distributionPercent' as const },
+  { header: 'Earn Code', key: 'earnCode' as const },
   {
     format: 'date' as const,
     header: 'Eff. Date',

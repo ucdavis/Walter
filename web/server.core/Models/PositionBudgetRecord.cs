@@ -63,4 +63,16 @@ public sealed class PositionBudgetRecord
     /// <summary>True when the funding entry is effective after the last load (Cognos source only; always false otherwise).</summary>
     [JsonPropertyName("isFuture")]
     public bool IsFuture { get; set; }
+
+    /// <summary>391 earn code of the funding line ("" = default distribution). Cognos source only.</summary>
+    [JsonPropertyName("earnCode")]
+    public string? EarnCode { get; set; }
+
+    /// <summary>Share of the person's pay for this earn code, from the UCP-310 (1 when not split). The client multiplies it into the line salary. Cognos source only.</summary>
+    [JsonPropertyName("earnCodeShare")]
+    public decimal? EarnCodeShare { get; set; }
+
+    /// <summary>BaseOnly, Split, or Unsplit (other earn codes funded but no UCP-310 to split by). Cognos source only.</summary>
+    [JsonPropertyName("earnCodeStatus")]
+    public string? EarnCodeStatus { get; set; }
 }
