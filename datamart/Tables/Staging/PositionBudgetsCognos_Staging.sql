@@ -31,6 +31,9 @@ create table dbo.PositionBudgetsCognos_Staging
     PositionDescription  nvarchar(100),
     JobCode              nvarchar(10),
     IsFuture             bit           not null,
+    EarnCode             nvarchar(5)   not null,
+    EarnCodeShare        decimal(9, 8) not null,
+    EarnCodeStatus       nvarchar(10)  not null,
     LoadedAt             datetime2(3)  not null
 )
 go

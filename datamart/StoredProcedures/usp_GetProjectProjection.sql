@@ -130,7 +130,8 @@ BEGIN
            funding- or job-end-date gating, projected flat across the whole horizon (the award
            end date is returned separately for the chart to mark). Salary is this project's share:
            MonthlyRate (1.0-FTE rate) * Fte * DistributionPercent. Fringe loads CBR only (the CBR
-           is stored as a fraction); vacation accrual is excluded for now, matching the page. */
+           is stored as a fraction); vacation accrual is excluded for now, matching the page. Cognos lines carry
+           EarnCodeShare (share of pay for the line's earn code), applied here. */
         DROP TABLE IF EXISTS #pers;
         SELECT p.MonthStart,
                SUM(pb.MonthlyRate * pb.Fte * pb.DistributionPercent / 100.0) AS Salary,
@@ -143,7 +144,7 @@ BEGIN
             FROM dbo.PositionBudgets
             WHERE ISNULL(@PersonnelSource, N'') <> N'Cognos'
             UNION ALL
-            SELECT ProjectId, MonthlyRate, Fte, DistributionPercent, JobCode
+            SELECT ProjectId, MonthlyRate * EarnCodeShare AS MonthlyRate, Fte, DistributionPercent, JobCode
             FROM dbo.PositionBudgetsCognos
             WHERE @PersonnelSource = N'Cognos' AND IsFuture = 0
         ) pb ON pb.ProjectId = @ProjectId

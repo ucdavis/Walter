@@ -9,6 +9,13 @@
 -- was after the load date (IsFuture = 0 is the entry in effect at load).
 -- UcPercentPay, NaturalAccount, TerminationDate and JobEffectiveSequence have
 -- no Cognos source and are always null.
+-- One row per earn code per combo: EarnCode is the 391 earn code ('' for the
+-- default distribution); EarnCodeShare is that earn code's share of the
+-- person's pay from the UCP-310 (1 when not split), so a line's salary is
+-- MonthlyRate * EarnCodeShare * Fte * DistributionPercent / 100. MonthlyRate
+-- stays the full 1.0-FTE rate on every line. EarnCodeStatus: BaseOnly (only
+-- HSR/REG/default funding), Split (shares from the 310), Unsplit (other earn
+-- codes funded but no 310 for the person: whole rate on base pay).
 create table dbo.PositionBudgetsCognos
 (
     College              nvarchar(100) not null,
@@ -40,14 +47,20 @@ create table dbo.PositionBudgetsCognos
     PositionDescription  nvarchar(100),
     JobCode              nvarchar(10),
     IsFuture             bit           not null,
+    EarnCode             nvarchar(5)   not null
+        constraint DF_PositionBudgetsCognos_EarnCode default (''),
+    EarnCodeShare        decimal(9, 8) not null
+        constraint DF_PositionBudgetsCognos_EarnCodeShare default (1),
+    EarnCodeStatus       nvarchar(10)  not null
+        constraint DF_PositionBudgetsCognos_EarnCodeStatus default ('BaseOnly'),
     LoadedAt             datetime2(3)  not null,
     constraint PK_PositionBudgetsCognos
-        primary key (PositionNumber, ComboCode, EmployeeId, FundingEffectiveDate)
+        primary key (PositionNumber, ComboCode, EmployeeId, FundingEffectiveDate, EarnCode)
 )
 go
 
--- At most one current entry per position/combo/employee; future entries may stack.
+-- At most one current entry per position/combo/employee/earn code; future entries may stack.
 create unique nonclustered index UX_PositionBudgetsCognos_Current
-    on dbo.PositionBudgetsCognos (PositionNumber, ComboCode, EmployeeId)
+    on dbo.PositionBudgetsCognos (PositionNumber, ComboCode, EmployeeId, EarnCode)
     where IsFuture = 0
 go

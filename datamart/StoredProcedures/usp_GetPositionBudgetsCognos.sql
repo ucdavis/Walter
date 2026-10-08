@@ -99,7 +99,12 @@ BEGIN
             pb.JobCode AS JOB_CODE,
             cbr.VacationAccrual AS VACATION_ACCRUAL,
             cbr.CBR AS COMPOSITE_BENEFIT_RATE,
-            pb.IsFuture AS IS_FUTURE
+            pb.IsFuture AS IS_FUTURE,
+            pb.EarnCode AS EARN_CODE,
+            -- Share of the person's pay for this earn code (1 when not split);
+            -- the client multiplies it into the line salary.
+            pb.EarnCodeShare AS EARN_CODE_SHARE,
+            pb.EarnCodeStatus AS EARN_CODE_STATUS
         FROM dbo.PositionBudgetsCognos pb
         JOIN @ValidatedProjects vp ON pb.ProjectId = vp.ProjectId
         LEFT JOIN dbo.Projects p ON pb.ProjectId = p.Code
@@ -113,7 +118,7 @@ BEGIN
             GROUP BY ProjectNumber
         ) fp ON pb.ProjectId = fp.ProjectNumber
         WHERE (@FiscalYearNum IS NULL OR pb.FiscalYear = @FiscalYearNum)
-        ORDER BY pb.PositionNumber;
+        ORDER BY pb.PositionNumber, pb.EarnCode;
 
         SET @RowCount = @@ROWCOUNT;
         SET @Duration_MS = DATEDIFF(MILLISECOND, @StartTime, SYSDATETIME());
