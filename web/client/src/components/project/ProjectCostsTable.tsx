@@ -222,8 +222,10 @@ function sumBurdenedCost(rows: { original: ProjectCostRecord }[]) {
   return rows.reduce((total, row) => total + row.original.burdenedCost, 0);
 }
 
-export function ProjectCostsTable() {
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+export function ProjectCostsTable({ category }: { category?: string }) {
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(() =>
+    category ? [category] : []
+  );
   const [selectedTimeline, setSelectedTimeline] =
     useState<ProjectCostTimeline>('entire-project');
   const columns = useMemo(

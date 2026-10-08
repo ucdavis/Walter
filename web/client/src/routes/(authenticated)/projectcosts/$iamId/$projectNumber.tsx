@@ -20,11 +20,22 @@ import {
   Link,
 } from '@tanstack/react-router';
 
+interface ProjectCostsSearch {
+  category?: string;
+}
+
 export const Route = createFileRoute(
   '/(authenticated)/projectcosts/$iamId/$projectNumber'
 )({
   component: RouteComponent,
   errorComponent: ProjectCostsErrorBoundary,
+  validateSearch: (search: Record<string, unknown>): ProjectCostsSearch => ({
+    category:
+      typeof search.category === 'string' && search.category.trim() !== ''
+        ? search.category.trim()
+        : undefined,
+  }),
+  // Keep validation ahead of the loader so TanStack Router infers the search type.
   loader: async ({ context: { queryClient }, params: { iamId } }) => {
     await Promise.all([
       queryClient.ensureQueryData(projectsDetailQueryOptions(iamId)),
@@ -49,6 +60,7 @@ const ProjectNotFound = ({ projectNumber }: { projectNumber: string }) => (
 
 function RouteComponent() {
   const { iamId, projectNumber } = Route.useParams();
+  const { category } = Route.useSearch();
   const { data: projects } = useSuspenseQuery(
     projectsDetailQueryOptions(iamId)
   );
@@ -99,7 +111,7 @@ function RouteComponent() {
 
         {featureFlags.projectCostsEnabled ? (
           <section className="section-margin">
-            <ProjectCostsTable />
+            <ProjectCostsTable category={category} key={category ?? 'all'} />
           </section>
         ) : (
           <PageEmpty message="Project costs are not available in this environment." />
