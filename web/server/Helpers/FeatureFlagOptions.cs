@@ -9,7 +9,11 @@ public sealed class FeatureFlagOptions
 {
     public const string SectionName = "FeatureFlags";
 
-    /// <summary>Keep legacy GraphQL reads by default; false uses the imported datamart snapshot for search, portfolios, authorization, and login/emulation role synchronization.</summary>
+    /// <summary>
+    /// Uses legacy AE GraphQL PPM reads by default. False uses imported datamart data for
+    /// project search, portfolios, authorization, and PM role synchronization during
+    /// login or new-user emulation provisioning.
+    /// </summary>
     public bool UseGraphQLAPI { get; set; } = true;
 
     /// <summary>Whether the project burndown feature is exposed in the UI.</summary>
