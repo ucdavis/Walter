@@ -45,7 +45,7 @@ export const tooltipDefinitions = {
   totalBudget:
     'Total PPM budget across all active and expired projects. Closed projects are excluded.',
   unsplitEarnCodes:
-    'Part of this pay is funded under other earn codes, but no UCP-310 compensation data is available to split it, so the whole salary is shown on this line.',
+    'Part of this pay is funded under other earn codes, but there is no UCP-310 compensation data to split it, so no salary is shown for this person and they are left out of totals and projections.',
   viewChartStringInFinjector: 'View chart string in Finjector',
 } as const;
 

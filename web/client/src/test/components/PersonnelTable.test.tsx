@@ -433,6 +433,25 @@ describe('PersonnelTable', () => {
     expect(screen.getByText('Unsplit')).toBeInTheDocument();
   });
 
+  it('explains on the Unsplit badge that no salary is shown', async () => {
+    const user = userEvent.setup();
+    render(
+      <PersonnelTable
+        data={[
+          createRecord({ earnCodeShare: null, earnCodeStatus: 'Unsplit' }),
+        ]}
+      />
+    );
+    await user.click(
+      screen.getByRole('cell', { name: 'Smith, John (1001) - PROF-FY' })
+    );
+
+    await user.hover(screen.getByText('Unsplit'));
+    const tooltip = await screen.findByRole('tooltip');
+    expect(tooltip).toHaveTextContent(/no salary is shown/i);
+    expect(tooltip).not.toHaveTextContent(/whole salary is shown/i);
+  });
+
   it('shows no earn code label when the source has none', async () => {
     const user = userEvent.setup();
     render(<PersonnelTable data={[createRecord()]} />);
