@@ -213,6 +213,47 @@ describe('project costs page', () => {
     }
   });
 
+  it('filters by the expenditure category in the URL', async () => {
+    setupHandlers([createProject()]);
+
+    const { cleanup } = renderRoute({
+      initialPath: '/projectcosts/1000/P1?category=07%20-%20Travel',
+    });
+
+    try {
+      const table = await screen.findByTestId('project-costs-table');
+      const travelFilter = within(table).getByRole('button', {
+        name: '07 - Travel',
+      });
+
+      expect(travelFilter).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.getAllByText('Travel Reimbursement')).toHaveLength(2);
+      expect(screen.queryByText('Payroll Distribution')).not.toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('ignores unsupported expenditure categories in the URL', async () => {
+    setupHandlers([createProject()]);
+
+    const { cleanup } = renderRoute({
+      initialPath:
+        '/projectcosts/1000/P1?category=04%20-%20Equipment%20and%20Facilities',
+    });
+
+    try {
+      const table = await screen.findByTestId('project-costs-table');
+
+      expect(
+        within(table).getByRole('button', { name: 'All Categories' })
+      ).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.getAllByText('Payroll Distribution')).toHaveLength(3);
+    } finally {
+      cleanup();
+    }
+  });
+
   it('filters to the selected trailing timeline', async () => {
     const user = userEvent.setup();
     setupHandlers([createProject()]);

@@ -11,6 +11,7 @@ import {
   ProjectExpenditureProgressCategories,
   ProjectExpenditureProgressSummary,
 } from '@/components/project/ProjectExpenditureProgress.tsx';
+import { hasProjectCostCategory } from '@/components/project/projectCostCategories.ts';
 import { formatCurrency } from '@/lib/currency.ts';
 import type { ProjectRecord } from '@/queries/project.ts';
 import {
@@ -21,6 +22,7 @@ import { DataTable } from '@/shared/DataTable.tsx';
 import { useExpandableOverlay } from '@/shared/hooks/useExpandableOverlay.ts';
 import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
 import { tooltipDefinitions } from '@/shared/tooltips.ts';
+import { Link } from '@tanstack/react-router';
 
 export interface ExpenditureCategoryFilters {
   activity?: string;
@@ -42,7 +44,9 @@ interface ExpenditureCategoryBreakdownProps {
   awardEndDate?: string | null;
   awardStartDate?: string | null;
   filters?: ExpenditureCategoryFilters;
+  iamId?: string;
   progressEnabled?: boolean;
+  projectCostsEnabled?: boolean;
   projectNumber: string;
   records: ProjectRecord[];
 }
@@ -124,6 +128,48 @@ function buildProgressCategories(
     remainingNow: row.balance,
     spentToDate: row.expenses,
   }));
+}
+
+function ExpensesValue({
+  category,
+  iamId,
+  projectCostsEnabled,
+  projectNumber,
+  value,
+}: {
+  category?: string;
+  iamId?: string;
+  projectCostsEnabled: boolean;
+  projectNumber: string;
+  value: number;
+}) {
+  const formattedValue = formatCurrency(value);
+
+  if (
+    !projectCostsEnabled ||
+    !iamId ||
+    (category && !hasProjectCostCategory(category))
+  ) {
+    return <span>{formattedValue}</span>;
+  }
+
+  const hasCategory = Boolean(category);
+
+  return (
+    <Link
+      aria-label={
+        hasCategory
+          ? `View project costs for ${category}`
+          : 'View all project costs'
+      }
+      className="link underline underline-offset-2"
+      params={{ iamId, projectNumber }}
+      search={hasCategory ? { category } : {}}
+      to="/projectcosts/$iamId/$projectNumber"
+    >
+      {formattedValue}
+    </Link>
+  );
 }
 
 function ExpandableProgressView({
@@ -231,7 +277,9 @@ export function ExpenditureCategoryBreakdown({
   awardEndDate,
   awardStartDate,
   filters,
+  iamId,
   progressEnabled = false,
+  projectCostsEnabled = false,
   projectNumber,
   records,
 }: ExpenditureCategoryBreakdownProps) {
@@ -298,12 +346,23 @@ export function ExpenditureCategoryBreakdown({
       columnHelper.accessor('expenses', {
         cell: (info) => (
           <span className="flex justify-end">
-            {formatCurrency(info.getValue())}
+            <ExpensesValue
+              category={info.row.original.expenditureCategoryName}
+              iamId={iamId}
+              projectCostsEnabled={projectCostsEnabled}
+              projectNumber={projectNumber}
+              value={info.getValue()}
+            />
           </span>
         ),
         footer: () => (
           <span className="flex justify-end">
-            {formatCurrency(totals.expenses)}
+            <ExpensesValue
+              iamId={iamId}
+              projectCostsEnabled={projectCostsEnabled}
+              projectNumber={projectNumber}
+              value={totals.expenses}
+            />
           </span>
         ),
         header: () => <span className="flex justify-end">Expenses</span>,
@@ -358,7 +417,15 @@ export function ExpenditureCategoryBreakdown({
         ),
       }),
     ],
-    [totals.balance, totals.budget, totals.commitments, totals.expenses]
+    [
+      iamId,
+      projectCostsEnabled,
+      projectNumber,
+      totals.balance,
+      totals.budget,
+      totals.commitments,
+      totals.expenses,
+    ]
   );
 
   if (rows.length === 0 && progressCategories.length === 0) {

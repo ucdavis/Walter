@@ -573,6 +573,72 @@ describe('project detail page', () => {
     }
   });
 
+  it('links expense values to their project-cost category filter', async () => {
+    const user = userEvent.setup();
+    const projects = [
+      createProject({ expenditureCategoryName: '07 - Travel' }),
+    ];
+    setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);
+
+    const { cleanup } = renderRoute({
+      initialPath: '/projects/1000/P1',
+    });
+
+    try {
+      const categoryExpenseLink = await screen.findByRole('link', {
+        name: 'View project costs for 07 - Travel',
+      });
+      const totalExpensesLink = screen.getByRole('link', {
+        name: 'View all project costs',
+      });
+
+      expect(categoryExpenseLink).toHaveAttribute(
+        'href',
+        '/projectcosts/1000/P1?category=07+-+Travel'
+      );
+      expect(totalExpensesLink).toHaveAttribute('href', '/projectcosts/1000/P1');
+
+      await user.click(categoryExpenseLink);
+
+      const projectCostsTable = await screen.findByTestId('project-costs-table');
+      expect(
+        within(projectCostsTable).getByRole('button', {
+          name: '07 - Travel',
+        })
+      ).toHaveAttribute('aria-pressed', 'true');
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('does not link categories that the project-cost preview cannot display', async () => {
+    const projects = [
+      createProject({
+        expenditureCategoryName: '04 - Equipment and Facilities',
+      }),
+    ];
+    setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);
+
+    const { cleanup } = renderRoute({
+      initialPath: '/projects/1000/P1',
+    });
+
+    try {
+      await screen.findByRole('heading', { level: 1, name: 'Test Project' });
+
+      expect(
+        screen.queryByRole('link', {
+          name: 'View project costs for 04 - Equipment and Facilities',
+        })
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByRole('link', { name: 'View all project costs' })
+      ).toHaveAttribute('href', '/projectcosts/1000/P1');
+    } finally {
+      cleanup();
+    }
+  });
+
   it('hides the burndown link for expired projects', async () => {
     const projects = [createProject({ awardEndDate: '2000-01-01' })];
     setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);
@@ -769,7 +835,12 @@ describe('project detail page', () => {
   });
 
   it('hides visualization actions when the feature flags are off', async () => {
-    const projects = [createProject({ pmEmployeeId: '2000' })];
+    const projects = [
+      createProject({
+        expenditureCategoryName: '07 - Travel',
+        pmEmployeeId: '2000',
+      }),
+    ];
     setupHandlers(
       { employeeId: '1000', name: 'PI User' },
       projects,
@@ -801,6 +872,14 @@ describe('project detail page', () => {
       ).not.toBeInTheDocument();
       expect(
         screen.queryByRole('link', { name: 'Project Costs' })
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('link', {
+          name: 'View project costs for 07 - Travel',
+        })
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('link', { name: 'View all project costs' })
       ).not.toBeInTheDocument();
       expect(screen.queryByText('Project Burndown')).not.toBeInTheDocument();
     } finally {

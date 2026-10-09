@@ -232,7 +232,9 @@ function ProjectContent({
               <ExpenditureCategoryBreakdown
                 awardEndDate={summary.awardEndDate}
                 awardStartDate={summary.awardStartDate}
+                iamId={iamId}
                 progressEnabled={featureFlags?.expenditureProgressEnabled}
+                projectCostsEnabled={showProjectCosts}
                 projectNumber={summary.projectNumber}
                 records={projectRecords}
               />
