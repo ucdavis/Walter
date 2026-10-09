@@ -31,6 +31,9 @@ const createRecord = (
 ): PersonnelRecord => ({
   compositeBenefitRate: 0.4,
   distributionPercent: 100,
+  earnCode: null,
+  earnCodeShare: null,
+  earnCodeStatus: null,
   employeeId: '1001',
   fte: 1.0,
   fundingEffectiveDate: '2025-07-01T00:00:00.000Z',
@@ -135,6 +138,55 @@ describe('aggregateByPosition', () => {
     ]);
   });
 
+  it('applies the earn code share to line salary but not position salary', () => {
+    const records = [
+      createRecord({
+        distributionPercent: 100,
+        earnCode: 'REG',
+        earnCodeShare: 0.8,
+        earnCodeStatus: 'Split',
+        fte: 0.5,
+        monthlyRate: 10_000,
+        projectId: 'PROJ1',
+      }),
+      createRecord({
+        distributionPercent: 50,
+        earnCode: 'NNC',
+        earnCodeShare: 0.2,
+        earnCodeStatus: 'Split',
+        fte: 0.5,
+        monthlyRate: 10_000,
+        projectId: 'PROJ2',
+      }),
+    ];
+
+    const [position] = aggregateByPosition(records);
+
+    // Position salary is the whole job: 10_000 * 0.5
+    expect(position.monthlyRate).toBe(5000);
+    // REG line: 10000 * 0.8 * 0.5 * 100%
+    expect(position.distributions[0].monthlyRate).toBeCloseTo(4000);
+    // NNC line: 10000 * 0.2 * 0.5 * 50%
+    expect(position.distributions[1].monthlyRate).toBeCloseTo(500);
+  });
+
+  it('treats a missing earn code share as 1', () => {
+    const [position] = aggregateByPosition([
+      createRecord({ distributionPercent: 50, fte: 1, monthlyRate: 4000 }),
+    ]);
+
+    expect(position.distributions[0].monthlyRate).toBe(2000);
+  });
+
+  it('marks unsplit positions and their lines as salary unknown', () => {
+    const [position] = aggregateByPosition([
+      createRecord({ earnCodeShare: null, earnCodeStatus: 'Unsplit' }),
+    ]);
+
+    expect(position.salaryUnknown).toBe(true);
+    expect(position.distributions[0].salaryUnknown).toBe(true);
+  });
+
   it('marks positions with only future entries', () => {
     const [position] = aggregateByPosition([createRecord({ isFuture: true })]);
 
@@ -223,6 +275,61 @@ describe('PersonnelTable', () => {
     expect(screen.getByText('$12,600.00')).toBeInTheDocument();
   });
 
+  it('hides salary for unsplit people and leaves them out of totals with a warning', () => {
+    const records = [
+      createRecord({
+        compositeBenefitRate: 0.4,
+        earnCodeShare: 1,
+        earnCodeStatus: 'BaseOnly',
+        employeeId: '1001',
+        monthlyRate: 5000,
+        positionNumber: '40001234',
+      }),
+      createRecord({
+        compositeBenefitRate: 0.4,
+        earnCodeShare: null,
+        earnCodeStatus: 'Unsplit',
+        employeeId: '1002',
+        monthlyRate: 4000,
+        name: 'Doe, Jane',
+        positionNumber: '40005678',
+      }),
+    ];
+
+    render(<PersonnelTable data={records} />);
+
+    // 5000 shows on Smith's row and in the footer; Doe's 4000 shows nowhere.
+    expect(screen.getAllByText('$5,000.00')).toHaveLength(2);
+    expect(screen.queryByText('$4,000.00')).not.toBeInTheDocument();
+    expect(screen.queryByText('$9,000.00')).not.toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /Totals exclude 1 person whose pay can't be split by earn code/
+      )
+    ).toBeInTheDocument();
+  });
+
+  it('exports no amounts for unsplit people', () => {
+    render(
+      <PersonnelTable
+        data={[
+          createRecord({
+            earnCodeShare: null,
+            earnCodeStatus: 'Unsplit',
+            monthlyRate: 4321,
+          }),
+        ]}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Export' }));
+
+    const csv = vi.mocked(downloadExcelCsv).mock.calls[0]?.[0];
+    expect(csv).toContain('Smith, John');
+    expect(csv).not.toContain('4,321');
+    expect(csv).not.toContain('4321');
+  });
+
   it('shows empty state when no data', () => {
     render(<PersonnelTable data={[]} />);
     expect(screen.getByText('No personnel found.')).toBeInTheDocument();
@@ -295,6 +402,65 @@ describe('PersonnelTable', () => {
     expect(screen.getByText('441000')).toBeInTheDocument();
     expect(screen.queryByText('778100')).not.toBeInTheDocument();
     expect(screen.getByText('—')).toBeInTheDocument();
+  });
+
+  it('labels earn codes and marks unsplit lines', async () => {
+    const user = userEvent.setup();
+    const records = [
+      createRecord({
+        earnCode: 'NNC',
+        earnCodeShare: 0.2,
+        earnCodeStatus: 'Split',
+        projectDescription: 'Grant A',
+        projectId: 'PROJ1',
+      }),
+      createRecord({
+        earnCode: 'REG',
+        earnCodeShare: null,
+        earnCodeStatus: 'Unsplit',
+        projectDescription: 'Dept Funds',
+        projectId: 'PROJ2',
+      }),
+    ];
+
+    render(<PersonnelTable data={records} />);
+    await user.click(
+      screen.getByRole('cell', { name: 'Smith, John (1001) - PROF-FY' })
+    );
+
+    expect(screen.getByText('NNC')).toBeInTheDocument();
+    expect(screen.getByText('REG')).toBeInTheDocument();
+    expect(screen.getByText('Unsplit')).toBeInTheDocument();
+  });
+
+  it('explains on the Unsplit badge that no salary is shown', async () => {
+    const user = userEvent.setup();
+    render(
+      <PersonnelTable
+        data={[
+          createRecord({ earnCodeShare: null, earnCodeStatus: 'Unsplit' }),
+        ]}
+      />
+    );
+    await user.click(
+      screen.getByRole('cell', { name: 'Smith, John (1001) - PROF-FY' })
+    );
+
+    await user.hover(screen.getByText('Unsplit'));
+    const tooltip = await screen.findByRole('tooltip');
+    expect(tooltip).toHaveTextContent(/no salary is shown/i);
+    expect(tooltip).not.toHaveTextContent(/whole salary is shown/i);
+  });
+
+  it('shows no earn code label when the source has none', async () => {
+    const user = userEvent.setup();
+    render(<PersonnelTable data={[createRecord()]} />);
+    await user.click(
+      screen.getByRole('cell', { name: 'Smith, John (1001) - PROF-FY' })
+    );
+
+    expect(screen.queryByText('Unsplit')).not.toBeInTheDocument();
+    expect(screen.queryByText('REG')).not.toBeInTheDocument();
   });
 
   it('shows a tooltip on the Mo. CBR header', async () => {

@@ -130,7 +130,17 @@ BEGIN
            funding- or job-end-date gating, projected flat across the whole horizon (the award
            end date is returned separately for the chart to mark). Salary is this project's share:
            MonthlyRate (1.0-FTE rate) * Fte * DistributionPercent. Fringe loads CBR only (the CBR
-           is stored as a fraction); vacation accrual is excluded for now, matching the page. */
+           is stored as a fraction); vacation accrual is excluded for now, matching the page. Cognos lines carry
+           EarnCodeShare (share of pay for the line's earn code), applied here. Unsplit lines
+           (NULL share: pay split across earn codes is unknown) are left out and counted in
+           @UnsplitPeople so the page can say the projection excludes them. */
+        DECLARE @UnsplitPeople INT = (
+            SELECT COUNT(DISTINCT EmployeeId)
+            FROM dbo.PositionBudgetsCognos
+            WHERE @PersonnelSource = N'Cognos' AND IsFuture = 0
+              AND ProjectId = @ProjectId AND EarnCodeShare IS NULL
+        );
+
         DROP TABLE IF EXISTS #pers;
         SELECT p.MonthStart,
                SUM(pb.MonthlyRate * pb.Fte * pb.DistributionPercent / 100.0) AS Salary,
@@ -143,9 +153,10 @@ BEGIN
             FROM dbo.PositionBudgets
             WHERE ISNULL(@PersonnelSource, N'') <> N'Cognos'
             UNION ALL
-            SELECT ProjectId, MonthlyRate, Fte, DistributionPercent, JobCode
+            SELECT ProjectId, MonthlyRate * EarnCodeShare AS MonthlyRate, Fte, DistributionPercent, JobCode
             FROM dbo.PositionBudgetsCognos
             WHERE @PersonnelSource = N'Cognos' AND IsFuture = 0
+              AND EarnCodeShare IS NOT NULL
         ) pb ON pb.ProjectId = @ProjectId
         LEFT JOIN dbo.CompositeBenefitRates cbr ON cbr.JobCode = pb.JobCode
         WHERE p.Kind IN ('blended','projected')
@@ -203,13 +214,15 @@ BEGIN
         LEFT JOIN #pers pr ON pr.MonthStart = p.MonthStart
         LEFT JOIN #navg na ON na.ExpenditureCategory = c.ExpenditureCategory;
 
-        /* Result 1: per-category budget header. AwardEndDate is project-level (same on each row)
-           so the chart can draw the award-end reference line. */
+        /* Result 1: per-category budget header. AwardEndDate and UnsplitPeople are project-level
+           (same on each row): the chart draws the award-end reference line and notes how many
+           people the personnel projection leaves out. */
         SELECT b.ExpenditureCategory,
                CASE WHEN b.ExpenditureCategory IN ('01 - Salaries and Wages','02 - Fringe Benefits')
                     THEN 1 ELSE 0 END AS IsPersonnel,
                b.Budget, b.SpentToDate, b.Committed, b.RemainingNow,
-               b.AwardEndDate
+               b.AwardEndDate,
+               @UnsplitPeople AS UnsplitPeople
         FROM #budget b
         ORDER BY b.ExpenditureCategory;
 
