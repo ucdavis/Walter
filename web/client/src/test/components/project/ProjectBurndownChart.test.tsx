@@ -363,7 +363,7 @@ describe('ProjectBurndownSection history', () => {
 
     expect(
       await screen.findByText(
-        /Projected salaries exclude 2 people whose pay can't be split by earn code/
+        'Projected salaries exclude 2 people whose funding entry info is not available.'
       )
     ).toBeInTheDocument();
   });
