@@ -35,8 +35,9 @@ create table dbo.PositionBudgetsCognos_Staging
     -- the last load, and keep a pipeline without these mappings loading.
     EarnCode             nvarchar(5)   not null
         constraint DF_PositionBudgetsCognos_Staging_EarnCode default (''),
-    EarnCodeShare        decimal(9, 8) null
-        constraint DF_PositionBudgetsCognos_Staging_EarnCodeShare default (1),
+    -- No default: NULL means Unsplit, and the copy's bulk insert would turn a
+    -- NULL into the default.
+    EarnCodeShare        decimal(9, 8) null,
     EarnCodeStatus       nvarchar(10)  not null
         constraint DF_PositionBudgetsCognos_Staging_EarnCodeStatus default ('BaseOnly'),
     LoadedAt             datetime2(3)  not null

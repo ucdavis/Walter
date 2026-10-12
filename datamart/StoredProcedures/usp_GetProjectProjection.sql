@@ -132,13 +132,13 @@ BEGIN
            MonthlyRate (1.0-FTE rate) * Fte * DistributionPercent. Fringe loads CBR only (the CBR
            is stored as a fraction); vacation accrual is excluded for now, matching the page. Cognos lines carry
            EarnCodeShare (share of pay for the line's earn code), applied here. Unsplit lines
-           (NULL share: pay split across earn codes is unknown) are left out and counted in
+           (pay split across earn codes is unknown) are left out by status and counted in
            @UnsplitPeople so the page can say the projection excludes them. */
         DECLARE @UnsplitPeople INT = (
             SELECT COUNT(DISTINCT EmployeeId)
             FROM dbo.PositionBudgetsCognos
             WHERE @PersonnelSource = N'Cognos' AND IsFuture = 0
-              AND ProjectId = @ProjectId AND EarnCodeShare IS NULL
+              AND ProjectId = @ProjectId AND EarnCodeStatus = N'Unsplit'
         );
 
         DROP TABLE IF EXISTS #pers;
@@ -156,7 +156,7 @@ BEGIN
             SELECT ProjectId, MonthlyRate * EarnCodeShare AS MonthlyRate, Fte, DistributionPercent, JobCode
             FROM dbo.PositionBudgetsCognos
             WHERE @PersonnelSource = N'Cognos' AND IsFuture = 0
-              AND EarnCodeShare IS NOT NULL
+              AND EarnCodeStatus <> N'Unsplit'
         ) pb ON pb.ProjectId = @ProjectId
         LEFT JOIN dbo.CompositeBenefitRates cbr ON cbr.JobCode = pb.JobCode
         WHERE p.Kind IN ('blended','projected')

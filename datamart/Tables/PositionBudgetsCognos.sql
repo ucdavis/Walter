@@ -51,8 +51,9 @@ create table dbo.PositionBudgetsCognos
     IsFuture             bit           not null,
     EarnCode             nvarchar(5)   not null
         constraint DF_PositionBudgetsCognos_EarnCode default (''),
-    EarnCodeShare        decimal(9, 8) null
-        constraint DF_PositionBudgetsCognos_EarnCodeShare default (1),
+    -- No default: NULL means Unsplit, and the copy's bulk insert would turn a
+    -- NULL into the default.
+    EarnCodeShare        decimal(9, 8) null,
     EarnCodeStatus       nvarchar(10)  not null
         constraint DF_PositionBudgetsCognos_EarnCodeStatus default ('BaseOnly'),
     LoadedAt             datetime2(3)  not null,
