@@ -37,16 +37,22 @@ export interface ProjectSummary {
   primarySponsorName: string | null;
   projectBurdenCostRate: string | null;
   projectBurdenScheduleBase: string | null;
+  projectEndDate: string | null;
   projectFund: string | null;
   projectNumber: string;
   projectOwningOrgCode: string | null;
+  projectStartDate: string | null;
   projectStatusCode: string | null;
   sponsorAwardNumber: string | null;
   taskNum: string | null;
   totals: ProjectTotals;
 }
 
-type DateKey = 'awardStartDate' | 'awardEndDate';
+type DateKey =
+  | 'awardStartDate'
+  | 'awardEndDate'
+  | 'projectStartDate'
+  | 'projectEndDate';
 
 const DEFAULT_SUMMARY_NAME = 'All Projects Dashboard';
 const DEFAULT_SUMMARY_NUMBER = 'MULTIPLE';
@@ -134,9 +140,11 @@ export const summarizeAllProjects = (
     primarySponsorName: null,
     projectBurdenCostRate: null,
     projectBurdenScheduleBase: null,
+    projectEndDate: findLatestDate(records, 'projectEndDate'),
     projectFund: null,
     projectNumber: DEFAULT_SUMMARY_NUMBER,
     projectOwningOrgCode: null,
+    projectStartDate: findEarliestDate(records, 'projectStartDate'),
     projectStatusCode: 'ACTIVE',
     sponsorAwardNumber: null,
     taskNum: null,
@@ -191,9 +199,11 @@ export const summarizeProjectByNumber = (
     primarySponsorName: first.primarySponsorName,
     projectBurdenCostRate: first.projectBurdenCostRate,
     projectBurdenScheduleBase: first.projectBurdenScheduleBase,
+    projectEndDate: findLatestDate(filtered, 'projectEndDate'),
     projectFund: first.projectFund,
     projectNumber: first.projectNumber,
     projectOwningOrgCode: first.projectOwningOrgCode,
+    projectStartDate: findEarliestDate(filtered, 'projectStartDate'),
     projectStatusCode: first.projectStatusCode,
     sponsorAwardNumber: first.sponsorAwardNumber,
     taskNum: first.taskNum,
