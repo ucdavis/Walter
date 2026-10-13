@@ -1,4 +1,5 @@
--- Project summary combining local FacultyDeptPortfolio table with award metadata from AE DWH.
+-- Project summary combining local FacultyDeptPortfolio table with award metadata from AE DWH
+-- and project dates from PpmProjects.
 -- Returns task-level data with expenditure category breakdown.
 CREATE PROCEDURE dbo.usp_GetProjectSummary
     @ProjectIds VARCHAR(MAX) = NULL,
@@ -147,6 +148,7 @@ BEGIN
                 f.ProjectOwningOrgCode AS PROJECT_OWNING_ORG_CODE,
                 f.ProjectOwningOrg AS PROJECT_OWNING_ORG,
                 f.ProjectType AS PROJECT_TYPE, f.ProjectStatus AS PROJECT_STATUS,
+                pp.ProjectStartDate AS PROJECT_START_DATE, pp.ProjectEndDate AS PROJECT_END_DATE,
                 f.TaskNum AS TASK_NUM, f.TaskName AS TASK_NAME, f.TaskStatus AS TASK_STATUS,
                 f.Pm AS PM, f.Pa AS PA, f.Pi AS PI, f.Copi AS COPI,
                 f.ExpenditureCategoryName AS EXPENDITURE_CATEGORY_NAME,
@@ -174,6 +176,7 @@ BEGIN
                 p.flow_through_funds_amount              AS FLOW_THROUGH_FUNDS_AMOUNT
             FROM dbo.FacultyDeptPortfolio f
             LEFT JOIN #pgm p ON f.ProjectNumber = p.project_number AND f.AwardNumber = p.award_number
+            LEFT JOIN dbo.PpmProjects pp ON pp.ProjectNumber = CAST(f.ProjectNumber AS VARCHAR(15))
             ' + @FilterClause;
 
         EXEC sp_executesql @TSQLCommand;

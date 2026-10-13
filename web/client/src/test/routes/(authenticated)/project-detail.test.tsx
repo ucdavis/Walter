@@ -54,11 +54,13 @@ const createProject = (
   programDesc: 'Program',
   projectBurdenCostRate: null,
   projectBurdenScheduleBase: null,
+  projectEndDate: '2099-12-31',
   projectFund: null,
   projectName: 'Test Project',
   projectNumber: 'P1',
   projectOwningOrg: 'ORG001',
   projectOwningOrgCode: 'ORG001',
+  projectStartDate: '2024-01-01',
   projectStatusCode: 'ACTIVE',
   projectType: 'Sponsored',
   purposeDesc: 'Research',
@@ -304,7 +306,7 @@ describe('project detail page', () => {
     }
   });
 
-  it('hides Award Information and date fields for internal projects', async () => {
+  it('hides Award Information but shows project dates for internal projects', async () => {
     const projects = [
       createProject({
         awardEndDate: null,
@@ -322,8 +324,8 @@ describe('project detail page', () => {
     try {
       await screen.findByText('Project Manager');
       expect(screen.queryByText('Award Information')).not.toBeInTheDocument();
-      expect(screen.queryByText('Project Start')).not.toBeInTheDocument();
-      expect(screen.queryByText('Project End')).not.toBeInTheDocument();
+      expect(screen.getByText('Project Start')).toBeInTheDocument();
+      expect(screen.getByText('Project End')).toBeInTheDocument();
     } finally {
       cleanup();
     }

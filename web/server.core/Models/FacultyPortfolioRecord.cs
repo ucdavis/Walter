@@ -19,6 +19,12 @@ public sealed class FacultyPortfolioRecord
     [JsonPropertyName("awardEndDate")]
     public DateTime? AwardEndDate { get; set; }
 
+    [JsonPropertyName("projectStartDate")]
+    public DateTime? ProjectStartDate { get; set; }
+
+    [JsonPropertyName("projectEndDate")]
+    public DateTime? ProjectEndDate { get; set; }
+
     [JsonPropertyName("projectNumber")]
     public string ProjectNumber { get; set; } = "";
 

@@ -46,11 +46,13 @@ export interface ProjectRecord {
   programDesc: string;
   projectBurdenCostRate: string | null;
   projectBurdenScheduleBase: string | null;
+  projectEndDate: string | null;
   projectFund: string | null;
   projectName: string;
   projectNumber: string;
   projectOwningOrg: string;
   projectOwningOrgCode: string;
+  projectStartDate: string | null;
   projectStatusCode: string;
   projectType: string;
   purposeDesc: string;

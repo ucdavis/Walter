@@ -25,7 +25,7 @@ const INTERNAL_PROJECT_COLOR = 'var(--color-accent)';
 const SPONSORED_PROJECT_COLOR = 'var(--color-info)';
 
 const hasProjectDates = (summary: ProjectSummary) =>
-  Boolean(summary.awardStartDate || summary.awardEndDate);
+  Boolean(summary.projectStartDate || summary.projectEndDate);
 
 const nonnegative = (value: number) => Math.max(0, value);
 
@@ -174,14 +174,14 @@ export function ProjectDetails({ actions, summary }: ProjectDetailsProps) {
                 <CalendarDaysIcon className="w-4 h-4" />
                 <dt className="stat-label">Project Start</dt>
                 <dd className="stat-value">
-                  {formatDate(summary.awardStartDate)}
+                  {formatDate(summary.projectStartDate)}
                 </dd>
               </div>
               <div className="flex flex-col">
                 <CalendarDaysIcon className="w-4 h-4" />
                 <dt className="stat-label">Project End</dt>
                 <dd className="stat-value">
-                  {formatDate(summary.awardEndDate)}
+                  {formatDate(summary.projectEndDate)}
                 </dd>
               </div>
             </>
