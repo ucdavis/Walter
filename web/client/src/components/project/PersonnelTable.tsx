@@ -8,7 +8,10 @@ import {
 import { TableExportActions } from '@/components/TableExportActions.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import { formatDate } from '@/lib/date.ts';
-import { unsplitExclusionNote } from '@/lib/unsplit.ts';
+import {
+  FUNDING_INFO_UNAVAILABLE,
+  fundingInfoUnavailableNote,
+} from '@/lib/fundingInfo.ts';
 import type { PersonnelRecord } from '@/queries/personnel.ts';
 import { DataTable } from '@/shared/DataTable.tsx';
 import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
@@ -278,20 +281,10 @@ function EarnCodeLabel({ record }: { record: PersonnelRecord }) {
           {record.earnCode}
         </span>
       )}
-      {record.earnCodeStatus === 'Unsplit' && (
-        <TooltipLabel
-          asChild
-          label={
-            <span
-              className="badge badge-soft badge-warning badge-sm mr-2"
-              tabIndex={0}
-            >
-              Unsplit
-            </span>
-          }
-          placement="bottom"
-          tooltip={tooltipDefinitions.unsplitEarnCodes}
-        />
+      {isSalaryUnknown(record) && (
+        <span className="mr-2 text-base-content/70">
+          {FUNDING_INFO_UNAVAILABLE}
+        </span>
       )}
     </>
   );
@@ -619,7 +612,7 @@ export function PersonnelTable({ data }: PersonnelTableProps) {
       />
       {salaryUnknownPeople > 0 && (
         <p className="mt-2 text-sm text-warning">
-          {unsplitExclusionNote('Totals', salaryUnknownPeople)}
+          {fundingInfoUnavailableNote('Totals', salaryUnknownPeople)}
         </p>
       )}
     </div>

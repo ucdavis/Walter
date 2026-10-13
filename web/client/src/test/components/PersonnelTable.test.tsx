@@ -304,7 +304,7 @@ describe('PersonnelTable', () => {
     expect(screen.queryByText('$9,000.00')).not.toBeInTheDocument();
     expect(
       screen.getByText(
-        /Totals exclude 1 person whose pay can't be split by earn code/
+        'Totals exclude 1 person whose funding entry info is not available.'
       )
     ).toBeInTheDocument();
   });
@@ -404,7 +404,7 @@ describe('PersonnelTable', () => {
     expect(screen.getByText('—')).toBeInTheDocument();
   });
 
-  it('labels earn codes and marks unsplit lines', async () => {
+  it('labels earn codes and says when funding entry info is not available', async () => {
     const user = userEvent.setup();
     const records = [
       createRecord({
@@ -430,10 +430,13 @@ describe('PersonnelTable', () => {
 
     expect(screen.getByText('NNC')).toBeInTheDocument();
     expect(screen.getByText('REG')).toBeInTheDocument();
-    expect(screen.getByText('Unsplit')).toBeInTheDocument();
+    expect(
+      screen.getByText('Funding entry info not available')
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Unsplit')).not.toBeInTheDocument();
   });
 
-  it('explains on the Unsplit badge that no salary is shown', async () => {
+  it('never shows the internal Unsplit status', async () => {
     const user = userEvent.setup();
     render(
       <PersonnelTable
@@ -446,10 +449,10 @@ describe('PersonnelTable', () => {
       screen.getByRole('cell', { name: 'Smith, John (1001) - PROF-FY' })
     );
 
-    await user.hover(screen.getByText('Unsplit'));
-    const tooltip = await screen.findByRole('tooltip');
-    expect(tooltip).toHaveTextContent(/no salary is shown/i);
-    expect(tooltip).not.toHaveTextContent(/whole salary is shown/i);
+    expect(document.body).not.toHaveTextContent(/unsplit/i);
+    expect(
+      screen.getByText('Funding entry info not available')
+    ).toBeInTheDocument();
   });
 
   it('shows no earn code label when the source has none', async () => {

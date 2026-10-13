@@ -34,7 +34,7 @@ import {
   type ProjectionHistoryMonths,
   projectProjectionQueryOptions,
 } from '@/queries/projectProjection.ts';
-import { unsplitExclusionNote } from '@/lib/unsplit.ts';
+import { fundingInfoUnavailableNote } from '@/lib/fundingInfo.ts';
 import { tooltipDefinitions } from '@/shared/tooltips.ts';
 
 const GRID_COLOR = 'var(--color-main-border)';
@@ -760,7 +760,7 @@ export function ProjectBurndownSection({
           </p>
           {unsplitPeople > 0 && (
             <p className="mt-2 text-sm text-warning">
-              {unsplitExclusionNote('Projected salaries', unsplitPeople)}
+              {fundingInfoUnavailableNote('Projected salaries', unsplitPeople)}
             </p>
           )}
         </div>
