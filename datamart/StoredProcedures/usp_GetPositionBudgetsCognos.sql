@@ -108,7 +108,9 @@ BEGIN
         FROM dbo.PositionBudgetsCognos pb
         JOIN @ValidatedProjects vp ON pb.ProjectId = vp.ProjectId
         LEFT JOIN dbo.Projects p ON pb.ProjectId = p.Code
-        LEFT JOIN dbo.CompositeBenefitRates cbr ON pb.JobCode = cbr.JobCode
+        -- Rate set is the row's business unit; NULL (loaded before the column was mapped) is campus.
+        LEFT JOIN dbo.CompositeBenefitRates cbr
+            ON cbr.RateSet = COALESCE(pb.BusinessUnit, 'DVCMP') AND cbr.JobCode = pb.JobCode
         -- ProjectType is a project-level attribute; collapse the per-task/fund portfolio rows
         -- to one row per project so the join cannot multiply funding distributions.
         LEFT JOIN (

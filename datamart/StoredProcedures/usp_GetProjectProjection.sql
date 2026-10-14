@@ -149,16 +149,20 @@ BEGIN
         INTO #pers
         FROM #periods p
         JOIN (
-            SELECT ProjectId, MonthlyRate, Fte, DistributionPercent, JobCode
+            -- RateSet picks the dbo.CompositeBenefitRates set: the row's business unit for
+            -- Cognos (NULL = campus); campus for dbo.PositionBudgets until it carries one (#442).
+            SELECT ProjectId, MonthlyRate, Fte, DistributionPercent, JobCode,
+                   'DVCMP' AS RateSet
             FROM dbo.PositionBudgets
             WHERE ISNULL(@PersonnelSource, N'') <> N'Cognos'
             UNION ALL
-            SELECT ProjectId, MonthlyRate * EarnCodeShare AS MonthlyRate, Fte, DistributionPercent, JobCode
+            SELECT ProjectId, MonthlyRate * EarnCodeShare AS MonthlyRate, Fte, DistributionPercent, JobCode,
+                   COALESCE(BusinessUnit, 'DVCMP') AS RateSet
             FROM dbo.PositionBudgetsCognos
             WHERE @PersonnelSource = N'Cognos' AND IsFuture = 0
               AND EarnCodeStatus <> N'Unsplit'
         ) pb ON pb.ProjectId = @ProjectId
-        LEFT JOIN dbo.CompositeBenefitRates cbr ON cbr.JobCode = pb.JobCode
+        LEFT JOIN dbo.CompositeBenefitRates cbr ON cbr.RateSet = pb.RateSet AND cbr.JobCode = pb.JobCode
         WHERE p.Kind IN ('blended','projected')
         GROUP BY p.MonthStart;
 
