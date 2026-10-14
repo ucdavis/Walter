@@ -35,13 +35,17 @@ function safeText(value: string | null | undefined): string {
   return value ?? '';
 }
 
+/** One funding entry: a person's earn code lines on it, summed. */
 export interface AggregatedDistribution {
+  /** Share of the job charged here: sum of earn code share x distribution %. */
+  distributionPercent: number;
   fundingEndingSoon: boolean;
   monthlyFringe: number;
   monthlyRate: number;
   monthlyTotal: number;
+  /** First line of the entry; carries the project, task, and dates. */
   record: PersonnelRecord;
-  /** Unsplit line: amounts are 0 and must not be shown. */
+  /** Unsplit entry: amounts are 0 and must not be shown. */
   salaryUnknown: boolean;
 }
 
@@ -74,19 +78,26 @@ function isSalaryUnknown(record: PersonnelRecord): boolean {
   return record.earnCodeStatus === 'Unsplit';
 }
 
+function sum<T>(items: T[], pick: (item: T) => number): number {
+  return items.reduce((total, item) => total + pick(item), 0);
+}
+
 function aggregateDistribution(
-  record: PersonnelRecord
+  lines: PersonnelRecord[]
 ): AggregatedDistribution {
-  const salaryUnknown = isSalaryUnknown(record);
+  const [record] = lines;
+  const salaryUnknown = lines.some(isSalaryUnknown);
   // Cognos lines carry their earn code's share of pay; other sources have none.
-  const monthlyRate = salaryUnknown
+  const share = (line: PersonnelRecord) =>
+    (line.earnCodeShare ?? 1) * (line.distributionPercent / 100);
+  const salary = (line: PersonnelRecord) =>
+    line.monthlyRate * line.fte * share(line);
+  const monthlyRate = salaryUnknown ? 0 : sum(lines, salary);
+  const monthlyFringe = salaryUnknown
     ? 0
-    : record.monthlyRate *
-      (record.earnCodeShare ?? 1) *
-      record.fte *
-      (record.distributionPercent / 100);
-  const monthlyFringe = monthlyRate * record.compositeBenefitRate;
+    : sum(lines, (line) => salary(line) * line.compositeBenefitRate);
   return {
+    distributionPercent: salaryUnknown ? 0 : sum(lines, share) * 100,
     fundingEndingSoon: isEndingSoon(record.fundingEndDate),
     monthlyFringe,
     monthlyRate,
@@ -96,10 +107,34 @@ function aggregateDistribution(
   };
 }
 
+/** Groups a position's lines by funding entry, so earn codes show as one total. */
+function aggregateDistributions(
+  records: PersonnelRecord[]
+): AggregatedDistribution[] {
+  const entries = new Map<string, PersonnelRecord[]>();
+  for (const record of records) {
+    const key = [
+      record.projectId,
+      record.task ?? '',
+      record.fundingEffectiveDate ?? '',
+      record.fundingEndDate ?? '',
+      record.isFuture,
+    ].join('|');
+    const lines = entries.get(key);
+    if (lines) {
+      lines.push(record);
+    } else {
+      entries.set(key, [record]);
+    }
+  }
+  return Array.from(entries.values(), aggregateDistribution);
+}
+
 export function aggregateByPosition(
   data: PersonnelRecord[]
 ): AggregatedPosition[] {
   const positionMap = new Map<string, AggregatedPosition>();
+  const positionLines = new Map<string, PersonnelRecord[]>();
   // Current entries first so position-level figures come from the entry in effect.
   const ordered = [
     ...data.filter((r) => !r.isFuture),
@@ -108,16 +143,17 @@ export function aggregateByPosition(
 
   for (const record of ordered) {
     const key = `${record.employeeId}-${record.positionNumber}`;
-    const existing = positionMap.get(key);
+    const lines = positionLines.get(key);
 
-    if (existing) {
-      existing.distributions.push(aggregateDistribution(record));
+    if (lines) {
+      lines.push(record);
     } else {
+      positionLines.set(key, [record]);
       const salaryUnknown = isSalaryUnknown(record);
       const monthlyRate = salaryUnknown ? 0 : record.monthlyRate * record.fte;
       const monthlyFringe = monthlyRate * record.compositeBenefitRate;
       positionMap.set(key, {
-        distributions: [aggregateDistribution(record)],
+        distributions: [],
         employeeId: record.employeeId,
         fte: record.fte,
         isFutureOnly: record.isFuture,
@@ -135,6 +171,12 @@ export function aggregateByPosition(
         salaryUnknown,
       });
     }
+  }
+
+  for (const [key, position] of positionMap) {
+    position.distributions = aggregateDistributions(
+      positionLines.get(key) ?? []
+    );
   }
 
   return Array.from(positionMap.values());
@@ -229,8 +271,13 @@ function DistributionSubtable({
                   : '—'}
               </td>
               <td className="text-right text-sm">
-                <EarnCodeLabel record={dist.record} />
-                {dist.record.distributionPercent}%
+                {dist.salaryUnknown ? (
+                  <span className="text-base-content/70">
+                    {FUNDING_INFO_UNAVAILABLE}
+                  </span>
+                ) : (
+                  `${formatPercent(dist.distributionPercent)}%`
+                )}
               </td>
               <td className="text-right text-sm">
                 {dist.record.isFuture && <FutureBadge />}
@@ -273,21 +320,8 @@ function DistributionSubtable({
   );
 }
 
-function EarnCodeLabel({ record }: { record: PersonnelRecord }) {
-  return (
-    <>
-      {record.earnCode && (
-        <span className="badge badge-ghost badge-sm mr-2">
-          {record.earnCode}
-        </span>
-      )}
-      {isSalaryUnknown(record) && (
-        <span className="mr-2 text-base-content/70">
-          {FUNDING_INFO_UNAVAILABLE}
-        </span>
-      )}
-    </>
-  );
+function formatPercent(value: number): number {
+  return Math.round(value * 100) / 100;
 }
 
 /** Unsplit amounts are unknown, not zero: show a dash. */
@@ -304,8 +338,9 @@ function FutureBadge() {
 function getExportData(positions: AggregatedPosition[]) {
   return positions.flatMap((pos) =>
     pos.distributions.map((dist) => ({
-      distributionPercent: dist.record.distributionPercent,
-      earnCode: dist.record.earnCode ?? '',
+      distributionPercent: dist.salaryUnknown
+        ? null
+        : formatPercent(dist.distributionPercent),
       fte: pos.fte,
       fundingEffectiveDate: dist.record.fundingEffectiveDate ?? '',
       fundingEndDate: dist.record.fundingEndDate ?? '',
@@ -335,7 +370,6 @@ const personnelCsvColumns = [
   { header: 'Project', key: 'projectDescription' as const },
   { header: 'Task', key: 'task' as const },
   { header: 'Dist %', key: 'distributionPercent' as const },
-  { header: 'Earn Code', key: 'earnCode' as const },
   {
     format: 'date' as const,
     header: 'Eff. Date',

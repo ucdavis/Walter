@@ -178,6 +178,57 @@ describe('aggregateByPosition', () => {
     expect(position.distributions[0].monthlyRate).toBe(2000);
   });
 
+  it('merges earn code lines on the same funding entry into one total', () => {
+    const records = [
+      createRecord({
+        compositeBenefitRate: 0.4,
+        distributionPercent: 100,
+        earnCode: 'REG',
+        earnCodeShare: 0.8,
+        earnCodeStatus: 'Split',
+        fte: 0.5,
+        monthlyRate: 10_000,
+      }),
+      createRecord({
+        compositeBenefitRate: 0.4,
+        distributionPercent: 50,
+        earnCode: 'NNC',
+        earnCodeShare: 0.2,
+        earnCodeStatus: 'Split',
+        fte: 0.5,
+        monthlyRate: 10_000,
+      }),
+    ];
+
+    const [position] = aggregateByPosition(records);
+
+    expect(position.distributions).toHaveLength(1);
+    const [dist] = position.distributions;
+    // 0.8 * 100% + 0.2 * 50%
+    expect(dist.distributionPercent).toBeCloseTo(90);
+    // REG 4000 + NNC 500
+    expect(dist.monthlyRate).toBeCloseTo(4500);
+    expect(dist.monthlyFringe).toBeCloseTo(1800);
+    expect(dist.monthlyTotal).toBeCloseTo(6300);
+  });
+
+  it('keeps funding entries with different dates or tasks as separate rows', () => {
+    const records = [
+      createRecord({ earnCode: 'REG', task: 'T1' }),
+      createRecord({ earnCode: 'NNC', task: 'T2' }),
+      createRecord({
+        earnCode: 'REG',
+        fundingEffectiveDate: '2026-01-01T00:00:00.000Z',
+        task: 'T1',
+      }),
+      createRecord({ earnCode: 'NNC', isFuture: true, task: 'T1' }),
+    ];
+
+    const [position] = aggregateByPosition(records);
+
+    expect(position.distributions).toHaveLength(4);
+  });
+
   it('marks unsplit positions and their lines as salary unknown', () => {
     const [position] = aggregateByPosition([
       createRecord({ earnCodeShare: null, earnCodeStatus: 'Unsplit' }),
@@ -404,22 +455,20 @@ describe('PersonnelTable', () => {
     expect(screen.getByText('—')).toBeInTheDocument();
   });
 
-  it('labels earn codes and says when funding entry info is not available', async () => {
+  it('shows one total row per funding entry with no earn codes', async () => {
     const user = userEvent.setup();
     const records = [
       createRecord({
-        earnCode: 'NNC',
-        earnCodeShare: 0.2,
+        earnCode: 'REG',
+        earnCodeShare: 0.75,
         earnCodeStatus: 'Split',
         projectDescription: 'Grant A',
-        projectId: 'PROJ1',
       }),
       createRecord({
-        earnCode: 'REG',
-        earnCodeShare: null,
-        earnCodeStatus: 'Unsplit',
-        projectDescription: 'Dept Funds',
-        projectId: 'PROJ2',
+        earnCode: 'NNC',
+        earnCodeShare: 0.25,
+        earnCodeStatus: 'Split',
+        projectDescription: 'Grant A',
       }),
     ];
 
@@ -428,12 +477,36 @@ describe('PersonnelTable', () => {
       screen.getByRole('cell', { name: 'Smith, John (1001) - PROF-FY' })
     );
 
-    expect(screen.getByText('NNC')).toBeInTheDocument();
-    expect(screen.getByText('REG')).toBeInTheDocument();
-    expect(
-      screen.getByText('Funding entry info not available')
-    ).toBeInTheDocument();
-    expect(screen.queryByText('Unsplit')).not.toBeInTheDocument();
+    expect(screen.getAllByText('Grant A')).toHaveLength(1);
+    expect(screen.getByText('100%')).toBeInTheDocument();
+    expect(screen.queryByText('REG')).not.toBeInTheDocument();
+    expect(screen.queryByText('NNC')).not.toBeInTheDocument();
+  });
+
+  it('exports one row per funding entry with no earn code column', () => {
+    render(
+      <PersonnelTable
+        data={[
+          createRecord({
+            earnCode: 'REG',
+            earnCodeShare: 0.75,
+            earnCodeStatus: 'Split',
+          }),
+          createRecord({
+            earnCode: 'NNC',
+            earnCodeShare: 0.25,
+            earnCodeStatus: 'Split',
+          }),
+        ]}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Export' }));
+
+    const csv = vi.mocked(downloadExcelCsv).mock.calls[0]?.[0] ?? '';
+    expect(csv).not.toContain('Earn Code');
+    expect(csv).not.toContain('NNC');
+    expect(csv.match(/Smith, John/g)).toHaveLength(1);
   });
 
   it('never shows the internal Unsplit status', async () => {
@@ -453,17 +526,6 @@ describe('PersonnelTable', () => {
     expect(
       screen.getByText('Funding entry info not available')
     ).toBeInTheDocument();
-  });
-
-  it('shows no earn code label when the source has none', async () => {
-    const user = userEvent.setup();
-    render(<PersonnelTable data={[createRecord()]} />);
-    await user.click(
-      screen.getByRole('cell', { name: 'Smith, John (1001) - PROF-FY' })
-    );
-
-    expect(screen.queryByText('Unsplit')).not.toBeInTheDocument();
-    expect(screen.queryByText('REG')).not.toBeInTheDocument();
   });
 
   it('shows a tooltip on the Mo. CBR header', async () => {
