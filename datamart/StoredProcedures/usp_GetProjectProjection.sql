@@ -149,8 +149,8 @@ BEGIN
         INTO #pers
         FROM #periods p
         JOIN (
-            -- RateSet picks the dbo.CompositeBenefitRates set: campus for dbo.PositionBudgets
-            -- (no business unit), the row's business unit for Cognos (NULL = campus).
+            -- RateSet picks the dbo.CompositeBenefitRates set: the row's business unit for
+            -- Cognos (NULL = campus); campus for dbo.PositionBudgets until it carries one (#442).
             SELECT ProjectId, MonthlyRate, Fte, DistributionPercent, JobCode,
                    'DVCMP' AS RateSet
             FROM dbo.PositionBudgets

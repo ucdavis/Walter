@@ -106,7 +106,7 @@ BEGIN
         FROM dbo.PositionBudgets pb
         JOIN @ValidatedProjects vp ON pb.ProjectId = vp.ProjectId
         LEFT JOIN dbo.Projects p ON pb.ProjectId = p.Code
-        -- dbo.PositionBudgets has no business unit, so it always uses the campus rate set.
+        -- Campus rate set until dbo.PositionBudgets carries BusinessUnit (#442).
         LEFT JOIN dbo.CompositeBenefitRates cbr ON cbr.RateSet = 'DVCMP' AND pb.JobCode = cbr.JobCode
         -- ProjectType is a project-level attribute; collapse the per-task/fund portfolio rows
         -- to one row per project so the join cannot multiply funding distributions.
