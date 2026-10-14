@@ -40,6 +40,7 @@ create table dbo.PositionBudgetsCognos_Staging
     EarnCodeShare        decimal(9, 8) null,
     EarnCodeStatus       nvarchar(10)  not null
         constraint DF_PositionBudgetsCognos_Staging_EarnCodeStatus default ('BaseOnly'),
-    LoadedAt             datetime2(3)  not null
+    LoadedAt             datetime2(3)  not null,
+    BusinessUnit         nvarchar(5)   null
 )
 go

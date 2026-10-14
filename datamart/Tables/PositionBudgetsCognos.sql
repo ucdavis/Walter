@@ -57,6 +57,10 @@ create table dbo.PositionBudgetsCognos
     EarnCodeStatus       nvarchar(10)  not null
         constraint DF_PositionBudgetsCognos_EarnCodeStatus default ('BaseOnly'),
     LoadedAt             datetime2(3)  not null,
+    -- The 391's Business Unit Code (DVCMP, DVMED, UCANR); picks the
+    -- dbo.CompositeBenefitRates rate set. Last so adding it needs no rebuild;
+    -- NULL until the loader maps it, and the procs treat NULL as DVCMP.
+    BusinessUnit         nvarchar(5)   null,
     constraint PK_PositionBudgetsCognos
         primary key (PositionNumber, ComboCode, EmployeeId, FundingEffectiveDate, EarnCode)
 )

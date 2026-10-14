@@ -308,7 +308,8 @@ BEGIN
             cbr.CBR AS COMPOSITE_BENEFIT_RATE
         FROM #PositionBudgets pb
         LEFT JOIN #ProjectNames pn ON pb.PROJECT_ID = pn.CODE
-        LEFT JOIN dbo.CompositeBenefitRates cbr ON pb.JOBCODE = cbr.JobCode
+        -- The UCPath source has no business unit here, so it always uses the campus rate set.
+        LEFT JOIN dbo.CompositeBenefitRates cbr ON cbr.RateSet = 'DVCMP' AND pb.JOBCODE = cbr.JobCode
         -- ProjectType is a project-level attribute; collapse the per-task/fund portfolio rows
         -- to one row per project so the join cannot multiply funding distributions.
         LEFT JOIN (
