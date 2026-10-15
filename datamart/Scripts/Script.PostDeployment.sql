@@ -59,7 +59,10 @@ GRANT SELECT ON [dbo].[ChartStringSegment] TO [WalterAppRole];
 
 -- Grant pipeline role permissions
 GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[FacultyDeptPortfolio] TO [WalterPipelineRole];
-GRANT INSERT, SELECT, UPDATE ON [dbo].[EmployeeAccrualBalances] TO [WalterPipelineRole];
+-- Accrual snapshots use pre-copy DELETE + INSERT on staging, then usp_SwapStagingTable.
+-- The swap's dynamic SQL requires DELETE on the destination to replace its rows.
+GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[EmployeeAccrualBalances] TO [WalterPipelineRole];
+GRANT INSERT, SELECT, DELETE ON [dbo].[EmployeeAccrualBalances_Staging] TO [WalterPipelineRole];
 GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[PositionBudgets] TO [WalterPipelineRole];
 GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[PositionBudgets_Staging] TO [WalterPipelineRole];
 GRANT EXECUTE ON [dbo].[usp_SwapPositionBudgets] TO [WalterPipelineRole];
