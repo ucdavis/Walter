@@ -208,7 +208,7 @@ public static class AccrualOverviewCalculator
             GetFiscalYearMonthCount(latestMonth.AsOfDate));
     }
 
-    // Creates one employee snapshot per month using that employee's latest row within the month.
+    // Uses each month's latest rows for balances and history through that date for usage.
     private static Dictionary<int, MonthlySnapshot> BuildMonthlySnapshots(
         IReadOnlyList<EmployeeAccrualBalanceRecord> records)
     {
