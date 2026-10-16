@@ -949,6 +949,39 @@ public sealed class AccrualOverviewCalculatorTests
     }
 
     [Fact]
+    public void Usage_history_preserves_negative_corrections_with_null_duplicate_positions()
+    {
+        var records = new[]
+        {
+            CreateUsageRecord(new DateTime(2026, 9, 12), hoursTaken: 8m),
+            CreateUsageRecord(new DateTime(2026, 9, 26), hoursTaken: -8m),
+            CreateUsageRecord(new DateTime(2026, 9, 26), hoursTaken: null, position: "P002"),
+        };
+
+        var employee = AccrualOverviewCalculator.BuildDepartmentDetail(records, "TEST")!.Employees.Single();
+        employee.LastVacationDate.Should().Be(new DateTime(2026, 9, 12));
+        employee.MonthsToCap.Should().Be(3);
+
+        var candidate = AccrualOverviewCalculator.BuildNotificationCandidates(records).Single();
+        candidate.MonthsToCap.Should().Be(employee.MonthsToCap);
+        candidate.LastVacationDate.Should().Be(employee.LastVacationDate);
+    }
+
+    [Fact]
+    public void Usage_history_treats_all_null_position_usage_as_zero()
+    {
+        var records = new[]
+        {
+            CreateUsageRecord(new DateTime(2026, 9, 26), hoursTaken: null),
+            CreateUsageRecord(new DateTime(2026, 9, 26), hoursTaken: null, position: "P002"),
+        };
+
+        var employee = AccrualOverviewCalculator.BuildDepartmentDetail(records, "TEST")!.Employees.Single();
+        employee.LastVacationDate.Should().BeNull();
+        employee.MonthsToCap.Should().Be(3);
+    }
+
+    [Fact]
     public void Usage_history_with_no_usage_or_positive_accrual_uses_cap_fallback()
     {
         var records = new[]

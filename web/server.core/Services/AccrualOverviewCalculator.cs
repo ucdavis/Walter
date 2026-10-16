@@ -290,12 +290,13 @@ public static class AccrualOverviewCalculator
         // The source repeats employee-level period totals for each position. Keep each
         // reporting date once; later balance snapshots must not hide earlier usage.
         // Retain the existing per-date maximum when duplicated position rows disagree.
+        // Ignore null positions so they cannot replace a negative correction with zero.
         var periodHistory = historyRows
             .GroupBy(row => row.AsOfDate)
             .OrderBy(group => group.Key)
             .Select(group => new EmployeePeriodUsagePoint(
                 group.Key,
-                group.Max(row => row.HoursTaken ?? 0m)))
+                group.Max(row => row.HoursTaken) ?? 0m))
             .ToList();
 
         // Preserve the report's latest positive award estimate, including when accrual
