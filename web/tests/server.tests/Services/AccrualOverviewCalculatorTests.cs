@@ -836,6 +836,179 @@ public sealed class AccrualOverviewCalculatorTests
         result.AtCapCount.Should().Be(2);
     }
 
+    [Fact]
+    public void Usage_history_keeps_positive_period_before_later_zero_usage_and_duplicate_positions()
+    {
+        var records = new[]
+        {
+            CreateUsageRecord(new DateTime(2026, 8, 31), hoursTaken: 4m, accrualHours: 12m),
+            CreateUsageRecord(new DateTime(2026, 9, 12), hoursTaken: 8m, accrualHours: 12m),
+            CreateUsageRecord(new DateTime(2026, 9, 12), hoursTaken: 8m, accrualHours: 12m, position: "P002"),
+            CreateUsageRecord(new DateTime(2026, 9, 26), hoursTaken: 0m, accrualHours: 0m),
+            CreateUsageRecord(new DateTime(2026, 9, 26), hoursTaken: 0m, accrualHours: 0m, position: "P002"),
+        };
+
+        var detail = AccrualOverviewCalculator.BuildDepartmentDetail(records, "TEST")!;
+        var employee = detail.Employees.Should().ContainSingle().Subject;
+        employee.LastVacationDate.Should().Be(new DateTime(2026, 9, 12));
+        // Two observed months average six hours of usage. (240 - 200) / (12 - 6) rounds to seven.
+        employee.MonthsToCap.Should().Be(7);
+        employee.AccrualHoursPerMonth.Should().Be(12m);
+        employee.BalanceHours.Should().Be(200m);
+        employee.CapHours.Should().Be(240m);
+        detail.ApproachingCapCount.Should().Be(1);
+        detail.LostCostMonth.Should().Be(0m);
+
+        var candidate = AccrualOverviewCalculator.BuildNotificationCandidates(records).Should().ContainSingle().Subject;
+        candidate.LastVacationDate.Should().Be(employee.LastVacationDate);
+        candidate.MonthsToCap.Should().Be(employee.MonthsToCap);
+    }
+
+    [Fact]
+    public void Usage_history_sums_distinct_periods_once_without_summing_accrual_awards()
+    {
+        var records = new[]
+        {
+            CreateUsageRecord(new DateTime(2026, 9, 5), hoursTaken: 4m, accrualHours: 10m),
+            CreateUsageRecord(new DateTime(2026, 9, 5), hoursTaken: 4m, accrualHours: 10m, position: "P002"),
+            CreateUsageRecord(new DateTime(2026, 9, 19), hoursTaken: 8m, accrualHours: 16m),
+            CreateUsageRecord(new DateTime(2026, 9, 19), hoursTaken: 8m, accrualHours: 16m, position: "P002"),
+            CreateUsageRecord(new DateTime(2026, 9, 30), hoursTaken: 0m, accrualHours: 0m),
+        };
+
+        var employee = AccrualOverviewCalculator.BuildDepartmentDetail(records, "TEST")!.Employees.Single();
+        employee.LastVacationDate.Should().Be(new DateTime(2026, 9, 19));
+        employee.AccrualHoursPerMonth.Should().Be(16m);
+        // The source's latest positive award remains the accrual estimate; monthly usage is 4 + 8.
+        employee.MonthsToCap.Should().Be(10);
+        var reordered = AccrualOverviewCalculator.BuildDepartmentDetail(records.Reverse().ToArray(), "TEST")!;
+        reordered.Employees.Single().Should().BeEquivalentTo(employee);
+    }
+
+    [Fact]
+    public void Usage_history_averages_six_monthly_totals_rather_than_six_periods()
+    {
+        var records = new List<EmployeeAccrualBalanceRecord>
+        {
+            CreateUsageRecord(new DateTime(2026, 3, 31), hoursTaken: 120m),
+        };
+        for (var month = 4; month <= 9; month++)
+        {
+            records.Add(CreateUsageRecord(new DateTime(2026, month, 12), hoursTaken: 2m));
+            records.Add(CreateUsageRecord(new DateTime(2026, month, 26), hoursTaken: 4m));
+        }
+
+        var employee = AccrualOverviewCalculator.BuildDepartmentDetail(records, "TEST")!.Employees.Single();
+        // March is outside the last six recorded months. Each remaining month has six usage hours.
+        employee.MonthsToCap.Should().Be(4);
+        employee.LastVacationDate.Should().Be(new DateTime(2026, 9, 26));
+    }
+
+    [Fact]
+    public void Usage_history_averages_only_available_months_without_inventing_zero_usage()
+    {
+        var records = new[]
+        {
+            CreateUsageRecord(new DateTime(2026, 1, 31), hoursTaken: 20m),
+            CreateUsageRecord(new DateTime(2026, 7, 31), hoursTaken: 4m),
+            CreateUsageRecord(new DateTime(2026, 9, 12), hoursTaken: 0m),
+        };
+
+        var employee = AccrualOverviewCalculator.BuildDepartmentDetail(records, "TEST")!.Employees.Single();
+        // Preserve the existing observed-month contract, including the partial current month.
+        employee.MonthsToCap.Should().Be(5);
+        employee.LastVacationDate.Should().Be(new DateTime(2026, 7, 31));
+    }
+
+    [Fact]
+    public void Usage_history_finds_last_vacation_before_the_projection_averaging_window()
+    {
+        var records = Enumerable.Range(3, 7)
+            .Select(month => CreateUsageRecord(
+                new DateTime(2026, month, DateTime.DaysInMonth(2026, month)),
+                hoursTaken: month == 3 ? 8m : 0m))
+            .ToArray();
+
+        var employee = AccrualOverviewCalculator.BuildDepartmentDetail(records, "TEST")!.Employees.Single();
+        employee.LastVacationDate.Should().Be(new DateTime(2026, 3, 31));
+        employee.MonthsToCap.Should().Be(3);
+    }
+
+    [Fact]
+    public void Usage_history_preserves_signed_usage_corrections_and_positive_reporting_date()
+    {
+        var records = new[]
+        {
+            CreateUsageRecord(new DateTime(2026, 9, 12), hoursTaken: 8m),
+            CreateUsageRecord(new DateTime(2026, 9, 26), hoursTaken: -8m),
+        };
+
+        var employee = AccrualOverviewCalculator.BuildDepartmentDetail(records, "TEST")!.Employees.Single();
+        employee.LastVacationDate.Should().Be(new DateTime(2026, 9, 12));
+        employee.MonthsToCap.Should().Be(3);
+    }
+
+    [Fact]
+    public void Usage_history_with_no_usage_or_positive_accrual_uses_cap_fallback()
+    {
+        var records = new[]
+        {
+            CreateUsageRecord(new DateTime(2026, 9, 12), hoursTaken: null, accrualHours: null),
+            CreateUsageRecord(new DateTime(2026, 9, 26), hoursTaken: 0m, accrualHours: 0m),
+        };
+
+        var employee = AccrualOverviewCalculator.BuildDepartmentDetail(records, "TEST")!.Employees.Single();
+        employee.LastVacationDate.Should().BeNull();
+        employee.AccrualHoursPerMonth.Should().Be(10m);
+        employee.MonthsToCap.Should().Be(4);
+    }
+
+    [Theory]
+    [InlineData(200, 0, 0, null)]
+    [InlineData(240, 240, 20, 0)]
+    [InlineData(250, 240, 20, 0)]
+    [InlineData(200, 240, 16, null)]
+    [InlineData(200, 240, 20, null)]
+    [InlineData(232, 240, 0, 1)]
+    public void Usage_history_preserves_cap_and_nonpositive_net_accrual_rules(
+        int balance, int cap, int usage, int? expectedMonths)
+    {
+        var records = new[]
+        {
+            CreateUsageRecord(new DateTime(2026, 9, 12), hoursTaken: usage, balance: balance, cap: cap),
+            CreateUsageRecord(new DateTime(2026, 9, 26), hoursTaken: 0m, accrualHours: 0m, balance: balance, cap: cap),
+        };
+
+        var employee = AccrualOverviewCalculator.BuildDepartmentDetail(records, "TEST")!.Employees.Single();
+        employee.MonthsToCap.Should().Be(expectedMonths);
+    }
+
+    private static EmployeeAccrualBalanceRecord CreateUsageRecord(
+        DateTime date,
+        decimal? hoursTaken,
+        decimal? accrualHours = 16m,
+        string position = "P001",
+        decimal balance = 200m,
+        decimal cap = 240m)
+    {
+        return new EmployeeAccrualBalanceRecord
+        {
+            EmployeeId = "SYNTHETIC-001",
+            EmployeeName = "Example Employee",
+            EmployeeEmail = "example@example.invalid",
+            EmployeeClassDescription = "Staff: Career",
+            PositionNumber = position,
+            AsOfDate = date,
+            HoursTaken = hoursTaken,
+            AccrualHours = accrualHours,
+            CalculatedBal = balance,
+            AccrualLimit = cap,
+            Level5Dept = "TEST",
+            Level5DeptDesc = "Example Department",
+            TypeLabel = "Vacation",
+        };
+    }
+
     private static EmployeeAccrualBalanceRecord CreateRecord(
         string employeeId,
         string departmentCode,

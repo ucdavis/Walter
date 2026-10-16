@@ -287,23 +287,19 @@ public static class AccrualOverviewCalculator
 
         percentage = DecimalRound(percentage, 1);
 
-        var monthlyHistory = historyRows
-            .GroupBy(row => GetMonthKey(row.AsOfDate))
+        // The source repeats employee-level period totals for each position. Keep each
+        // reporting date once; later balance snapshots must not hide earlier usage.
+        // Retain the existing per-date maximum when duplicated position rows disagree.
+        var periodHistory = historyRows
+            .GroupBy(row => row.AsOfDate)
             .OrderBy(group => group.Key)
-            .Select(group =>
-            {
-                var latestDateInMonth = group.Max(row => row.AsOfDate);
-                var latestRows = group
-                    .Where(row => row.AsOfDate == latestDateInMonth)
-                    .ToList();
-
-                return new EmployeeMonthlyHistoryPoint(
-                    latestDateInMonth,
-                    latestRows.Max(row => row.AccrualHours ?? 0m),
-                    latestRows.Max(row => row.HoursTaken ?? 0m));
-            })
+            .Select(group => new EmployeePeriodUsagePoint(
+                group.Key,
+                group.Max(row => row.HoursTaken ?? 0m)))
             .ToList();
 
+        // Preserve the report's latest positive award estimate, including when accrual
+        // stops at cap. Summing awards would change the existing financial cost model.
         var normalMonthlyAccrual = historyRows
             .Where(row => (row.AccrualHours ?? 0m) > 0m)
             .OrderBy(row => row.AsOfDate)
@@ -315,14 +311,21 @@ public static class AccrualOverviewCalculator
             normalMonthlyAccrual = GetNormalMonthlyAccrual(accrualLimit);
         }
 
-        var recentHistory = monthlyHistory.TakeLast(6).ToList();
-        var avgMonthlyUsage = recentHistory.Count > 0
-            ? DecimalRound(recentHistory.Average(point => point.HoursTaken))
+        // Average the last six observed months, including the current reporting month.
+        // Missing months are unknown, not zero usage; signed period corrections are retained.
+        var recentMonthlyUsage = periodHistory
+            .GroupBy(point => GetMonthKey(point.AsOfDate))
+            .OrderBy(group => group.Key)
+            .Select(group => group.Sum(point => point.HoursTaken))
+            .TakeLast(6)
+            .ToList();
+        var avgMonthlyUsage = recentMonthlyUsage.Count > 0
+            ? DecimalRound(recentMonthlyUsage.Average())
             : 0m;
         var hourlyRate = GetHourlyRate(classification, currentRows);
         var status = GetStatus(percentage);
         var monthsToCap = GetMonthsToCap(balance, accrualLimit, normalMonthlyAccrual, avgMonthlyUsage);
-        var lastVacationDate = monthlyHistory
+        var lastVacationDate = periodHistory
             .LastOrDefault(point => point.HoursTaken > 0m)
             ?.AsOfDate;
 
@@ -703,9 +706,8 @@ public static class AccrualOverviewCalculator
         decimal CapHours,
         AccrualStatus Status);
 
-    private sealed record EmployeeMonthlyHistoryPoint(
+    private sealed record EmployeePeriodUsagePoint(
         DateTime AsOfDate,
-        decimal AccrualHours,
         decimal HoursTaken);
 
     private sealed class MonthlySnapshot
