@@ -9,6 +9,7 @@ import { getErrorPresentation } from '@/lib/errorPresentation.ts';
 import { summarizeProjectByNumber } from '@/lib/projectSummary.ts';
 import { featureFlagsQueryOptions } from '@/queries/featureFlags.ts';
 import { projectsDetailQueryOptions } from '@/queries/project.ts';
+import { projectCostsQueryOptions } from '@/queries/projectCosts.ts';
 import { useUser } from '@/shared/auth/UserContext.tsx';
 import {
   ClipboardDocumentListIcon,
@@ -40,11 +41,20 @@ export const Route = createFileRoute(
     category: parseCategory(search.category),
   }),
   // Keep validation ahead of the loader so TanStack Router infers the search type.
-  loader: async ({ context: { queryClient }, params: { iamId } }) => {
-    await Promise.all([
+  loader: async ({
+    context: { queryClient },
+    params: { iamId, projectNumber },
+  }) => {
+    const [, featureFlags] = await Promise.all([
       queryClient.ensureQueryData(projectsDetailQueryOptions(iamId)),
       queryClient.ensureQueryData(featureFlagsQueryOptions()),
     ]);
+
+    if (featureFlags.projectCostsEnabled) {
+      await queryClient.ensureQueryData(
+        projectCostsQueryOptions(projectNumber)
+      );
+    }
   },
   pendingComponent: () => <PageLoading message="Fetching project costs..." />,
 });
@@ -115,7 +125,11 @@ function RouteComponent() {
 
         {featureFlags.projectCostsEnabled ? (
           <section className="section-margin">
-            <ProjectCostsTable category={category} key={category ?? 'all'} />
+            <ProjectCostsTable
+              category={category}
+              key={category ?? 'all'}
+              projectNumber={projectNumber}
+            />
           </section>
         ) : (
           <PageEmpty message="Project costs are not available in this environment." />

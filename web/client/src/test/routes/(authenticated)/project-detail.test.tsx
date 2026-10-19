@@ -581,6 +581,9 @@ describe('project detail page', () => {
       createProject({ expenditureCategoryName: '07 - Travel' }),
     ];
     setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);
+    server.use(
+      http.get('/api/project/costs/:projectNumber', () => HttpResponse.json([]))
+    );
 
     const { cleanup } = renderRoute({
       initialPath: '/projects/1000/P1',
@@ -598,11 +601,16 @@ describe('project detail page', () => {
         'href',
         '/projectcosts/1000/P1?category=07+-+Travel'
       );
-      expect(totalExpensesLink).toHaveAttribute('href', '/projectcosts/1000/P1');
+      expect(totalExpensesLink).toHaveAttribute(
+        'href',
+        '/projectcosts/1000/P1'
+      );
 
       await user.click(categoryExpenseLink);
 
-      const projectCostsTable = await screen.findByTestId('project-costs-table');
+      const projectCostsTable = await screen.findByTestId(
+        'project-costs-table'
+      );
       expect(
         within(projectCostsTable).getByRole('button', {
           name: '07 - Travel',

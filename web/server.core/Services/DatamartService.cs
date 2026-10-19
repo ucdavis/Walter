@@ -106,6 +106,10 @@ public interface IDatamartService
     Task<ProjectProjectionResult> GetProjectProjectionAsync(
         string projectNumber, int historyMonths, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default);
 
+    /// <summary>PPM expenditure-item detail for a single project, from the local PPMProjectCosts table.</summary>
+    Task<IReadOnlyList<ProjectCostRecord>> GetProjectCostsAsync(
+        string projectNumber, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default);
+
     /// <summary>Current-period balance measures grouped by the caller-selected chart-string segments.</summary>
     Task<IReadOnlyList<DepartmentBalanceRow>> GetGlBalanceSummaryAsync(
         DepartmentBalancesQuery query, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default);
@@ -446,6 +450,15 @@ public sealed class DatamartService : IDatamartService, IPpmPortfolioReader, IAc
                 Periods = periods,
             };
         }, ct);
+    }
+
+    public async Task<IReadOnlyList<ProjectCostRecord>> GetProjectCostsAsync(
+        string projectNumber, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default)
+    {
+        return await ExecuteSprocAsync<ProjectCostRecord>(
+            "dbo.usp_GetProjectCosts",
+            new { ProjectId = projectNumber, ApplicationName = _appName, ApplicationUser = applicationUser, EmulatingUser = emulatingUser },
+            ct: ct);
     }
 
     private static string? ToCsvParam(string[]? values)

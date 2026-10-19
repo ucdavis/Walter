@@ -1,163 +1,15 @@
 import { useMemo, useState } from 'react';
+import { useSuspenseQuery } from '@tanstack/react-query';
 import { createColumnHelper } from '@tanstack/react-table';
 import { TableExportActions } from '@/components/TableExportActions.tsx';
-import { projectCostCategories } from '@/components/project/projectCostCategories.ts';
 import { projectExpenditureCategoryColor } from '@/components/project/projectChartColors.ts';
 import { formatCurrency } from '@/lib/currency.ts';
 import type { CsvColumn } from '@/lib/csv.ts';
+import {
+  type ProjectCostRecord,
+  projectCostsQueryOptions,
+} from '@/queries/projectCosts.ts';
 import { DataTable } from '@/shared/DataTable.tsx';
-
-interface ProjectCostRecord {
-  accountingPeriod: string;
-  burdenedCost: number;
-  documentEntry: string;
-  expenditureCategory: string;
-  expenditureType: string;
-}
-
-// Temporary sample data keeps the preview useful until project-cost transactions are available.
-const projectCostRecords: ProjectCostRecord[] = [
-  {
-    accountingPeriod: 'Oct-25',
-    burdenedCost: 1125.8,
-    documentEntry: 'Prior Period Allocation',
-    expenditureCategory: '09 - Indirect Costs',
-    expenditureType: '538100 - Sponsored Program Indirect Costs',
-  },
-  {
-    accountingPeriod: 'Nov-25',
-    burdenedCost: 2340.2,
-    documentEntry: 'Service Invoice',
-    expenditureCategory: '03 - Supplies / Services / Other Expenses',
-    expenditureType: '522860 - Technical Services',
-  },
-  {
-    accountingPeriod: 'Dec-25',
-    burdenedCost: 975.45,
-    documentEntry: 'Equipment Rental',
-    expenditureCategory: '03 - Supplies / Services / Other Expenses',
-    expenditureType: '522840 - Equipment Rental',
-  },
-  {
-    accountingPeriod: 'Jan-26',
-    burdenedCost: 1740.26,
-    documentEntry: 'Benefits Allocation',
-    expenditureCategory: '02 - Fringe Benefits',
-    expenditureType: '508110 - Employee Benefits Pool',
-  },
-  {
-    accountingPeriod: 'Feb-26',
-    burdenedCost: 725.1,
-    documentEntry: 'Travel Reimbursement',
-    expenditureCategory: '07 - Travel',
-    expenditureType: '523220 - Field Research Travel',
-  },
-  {
-    accountingPeriod: 'Mar-26',
-    burdenedCost: 1280.4,
-    documentEntry: 'Purchase Order Invoice',
-    expenditureCategory: '03 - Supplies / Services / Other Expenses',
-    expenditureType: '522810 - Research Materials',
-  },
-  {
-    accountingPeriod: 'Apr-26',
-    burdenedCost: 12_785.42,
-    documentEntry: 'Payroll Distribution',
-    expenditureCategory: '01 - Salaries and Wages',
-    expenditureType: '501010 - Research Personnel Salary',
-  },
-  {
-    accountingPeriod: 'Apr-26',
-    burdenedCost: 4116.25,
-    documentEntry: 'Benefits Allocation',
-    expenditureCategory: '02 - Fringe Benefits',
-    expenditureType: '508110 - Employee Benefits Pool',
-  },
-  {
-    accountingPeriod: 'Apr-26',
-    burdenedCost: 986.7,
-    documentEntry: 'Supplier Invoice',
-    expenditureCategory: '03 - Supplies / Services / Other Expenses',
-    expenditureType: '522810 - Research Materials',
-  },
-  {
-    accountingPeriod: 'Apr-26',
-    burdenedCost: 2975.34,
-    documentEntry: 'Indirect Cost Allocation',
-    expenditureCategory: '09 - Indirect Costs',
-    expenditureType: '538100 - Sponsored Program Indirect Costs',
-  },
-  {
-    accountingPeriod: 'May-26',
-    burdenedCost: 13_124.18,
-    documentEntry: 'Payroll Distribution',
-    expenditureCategory: '01 - Salaries and Wages',
-    expenditureType: '501010 - Research Personnel Salary',
-  },
-  {
-    accountingPeriod: 'May-26',
-    burdenedCost: 4235.71,
-    documentEntry: 'Benefits Allocation',
-    expenditureCategory: '02 - Fringe Benefits',
-    expenditureType: '508110 - Employee Benefits Pool',
-  },
-  {
-    accountingPeriod: 'May-26',
-    burdenedCost: 684.9,
-    documentEntry: 'Travel Reimbursement',
-    expenditureCategory: '07 - Travel',
-    expenditureType: '523210 - Domestic Conference Travel',
-  },
-  {
-    accountingPeriod: 'May-26',
-    burdenedCost: 1148.32,
-    documentEntry: 'Purchase Order Invoice',
-    expenditureCategory: '03 - Supplies / Services / Other Expenses',
-    expenditureType: '522830 - Specialized Equipment',
-  },
-  {
-    accountingPeriod: 'May-26',
-    burdenedCost: 3144.76,
-    documentEntry: 'Indirect Cost Allocation',
-    expenditureCategory: '09 - Indirect Costs',
-    expenditureType: '538100 - Sponsored Program Indirect Costs',
-  },
-  {
-    accountingPeriod: 'Jun-26',
-    burdenedCost: 12_934.66,
-    documentEntry: 'Payroll Distribution',
-    expenditureCategory: '01 - Salaries and Wages',
-    expenditureType: '501010 - Research Personnel Salary',
-  },
-  {
-    accountingPeriod: 'Jun-26',
-    burdenedCost: 4188.09,
-    documentEntry: 'Benefits Allocation',
-    expenditureCategory: '02 - Fringe Benefits',
-    expenditureType: '508110 - Employee Benefits Pool',
-  },
-  {
-    accountingPeriod: 'Jun-26',
-    burdenedCost: -320,
-    documentEntry: 'Cost Transfer',
-    expenditureCategory: '03 - Supplies / Services / Other Expenses',
-    expenditureType: '522810 - Research Materials',
-  },
-  {
-    accountingPeriod: 'Jun-26',
-    burdenedCost: 1567.44,
-    documentEntry: 'Supplier Invoice',
-    expenditureCategory: '03 - Supplies / Services / Other Expenses',
-    expenditureType: '522850 - Laboratory Support Services',
-  },
-  {
-    accountingPeriod: 'Jun-26',
-    burdenedCost: 3108.52,
-    documentEntry: 'Indirect Cost Allocation',
-    expenditureCategory: '09 - Indirect Costs',
-    expenditureType: '538100 - Sponsored Program Indirect Costs',
-  },
-];
 
 const columnHelper = createColumnHelper<ProjectCostRecord>();
 const accountingPeriodMonthIndexes: Record<string, number> = {
@@ -197,12 +49,6 @@ function getAccountingPeriodMonthIndex(accountingPeriod: string) {
   return (2000 + Number(shortYear)) * 12 + monthIndex;
 }
 
-const latestAccountingPeriodMonthIndex = Math.max(
-  ...projectCostRecords.map((record) =>
-    getAccountingPeriodMonthIndex(record.accountingPeriod)
-  )
-);
-
 function getTimelineMonthCount(timeline: ProjectCostTimeline) {
   switch (timeline) {
     case '3-months':
@@ -220,7 +66,16 @@ function sumBurdenedCost(rows: { original: ProjectCostRecord }[]) {
   return rows.reduce((total, row) => total + row.original.burdenedCost, 0);
 }
 
-export function ProjectCostsTable({ category }: { category?: string }) {
+export function ProjectCostsTable({
+  category,
+  projectNumber,
+}: {
+  category?: string;
+  projectNumber: string;
+}) {
+  const { data: projectCostRecords } = useSuspenseQuery(
+    projectCostsQueryOptions(projectNumber)
+  );
   const [selectedCategories, setSelectedCategories] = useState<string[]>(() =>
     category ? [category] : []
   );
@@ -278,6 +133,29 @@ export function ProjectCostsTable({ category }: { category?: string }) {
     ],
     []
   );
+  const latestAccountingPeriodMonthIndex = useMemo(
+    () =>
+      projectCostRecords.reduce(
+        (latest, record) =>
+          Math.max(
+            latest,
+            getAccountingPeriodMonthIndex(record.accountingPeriod)
+          ),
+        Number.NEGATIVE_INFINITY
+      ),
+    [projectCostRecords]
+  );
+  // Keep a URL-selected category visible even when the project has no costs in it.
+  const projectCostCategories = useMemo(
+    () =>
+      [
+        ...new Set([
+          ...projectCostRecords.map((record) => record.expenditureCategory),
+          ...(category ? [category] : []),
+        ]),
+      ].sort(),
+    [category, projectCostRecords]
+  );
   const filteredRecords = useMemo(() => {
     const timelineMonthCount = getTimelineMonthCount(selectedTimeline);
     const earliestTimelineMonthIndex =
@@ -296,7 +174,12 @@ export function ProjectCostsTable({ category }: { category?: string }) {
 
       return isWithinTimeline && matchesCategory;
     });
-  }, [selectedCategories, selectedTimeline]);
+  }, [
+    latestAccountingPeriodMonthIndex,
+    projectCostRecords,
+    selectedCategories,
+    selectedTimeline,
+  ]);
   const toggleCategory = (category: string) => {
     setSelectedCategories((current) =>
       current.includes(category)
@@ -385,7 +268,7 @@ export function ProjectCostsTable({ category }: { category?: string }) {
           },
         })}
         globalFilter="left"
-        pagination="off"
+        initialState={{ pagination: { pageSize: 100 } }}
         tableActions={(table) => (
           <TableExportActions
             baseFilename="project-costs"
