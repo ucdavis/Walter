@@ -3,6 +3,7 @@ import { screen, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import type { ProjectRecord } from '@/queries/project.ts';
+import type { ProjectCostRecord } from '@/queries/projectCosts.ts';
 import { server } from '@/test/mswUtils.ts';
 import { renderRoute } from '@/test/routerUtils.tsx';
 
@@ -69,7 +70,173 @@ const createProject = (
   ...overrides,
 });
 
-function setupHandlers(projects: ProjectRecord[]) {
+const projectCostRecords: ProjectCostRecord[] = [
+  {
+    accountingPeriod: 'Oct-25',
+    burdenedCost: 1125.8,
+    documentEntry: 'Prior Period Allocation',
+    expenditureCategory: '09 - Indirect Costs',
+    expenditureType: '538100 - Sponsored Program Indirect Costs',
+    transactionNumber: 1001,
+  },
+  {
+    accountingPeriod: 'Nov-25',
+    burdenedCost: 2340.2,
+    documentEntry: 'Service Invoice',
+    expenditureCategory: '03 - Supplies / Services / Other Expenses',
+    expenditureType: '522860 - Technical Services',
+    transactionNumber: 1002,
+  },
+  {
+    accountingPeriod: 'Dec-25',
+    burdenedCost: 975.45,
+    documentEntry: 'Equipment Rental',
+    expenditureCategory: '03 - Supplies / Services / Other Expenses',
+    expenditureType: '522840 - Equipment Rental',
+    transactionNumber: 1003,
+  },
+  {
+    accountingPeriod: 'Jan-26',
+    burdenedCost: 1740.26,
+    documentEntry: 'Benefits Allocation',
+    expenditureCategory: '02 - Fringe Benefits',
+    expenditureType: '508110 - Employee Benefits Pool',
+    transactionNumber: 1004,
+  },
+  {
+    accountingPeriod: 'Feb-26',
+    burdenedCost: 725.1,
+    documentEntry: 'Travel Reimbursement',
+    expenditureCategory: '07 - Travel',
+    expenditureType: '523220 - Field Research Travel',
+    transactionNumber: 1005,
+  },
+  {
+    accountingPeriod: 'Mar-26',
+    burdenedCost: 1280.4,
+    documentEntry: 'Purchase Order Invoice',
+    expenditureCategory: '03 - Supplies / Services / Other Expenses',
+    expenditureType: '522810 - Research Materials',
+    transactionNumber: 1006,
+  },
+  {
+    accountingPeriod: 'Apr-26',
+    burdenedCost: 12_785.42,
+    documentEntry: 'Payroll Distribution',
+    expenditureCategory: '01 - Salaries and Wages',
+    expenditureType: '501010 - Research Personnel Salary',
+    transactionNumber: 1007,
+  },
+  {
+    accountingPeriod: 'Apr-26',
+    burdenedCost: 4116.25,
+    documentEntry: 'Benefits Allocation',
+    expenditureCategory: '02 - Fringe Benefits',
+    expenditureType: '508110 - Employee Benefits Pool',
+    transactionNumber: 1008,
+  },
+  {
+    accountingPeriod: 'Apr-26',
+    burdenedCost: 986.7,
+    documentEntry: 'Supplier Invoice',
+    expenditureCategory: '03 - Supplies / Services / Other Expenses',
+    expenditureType: '522810 - Research Materials',
+    transactionNumber: 1009,
+  },
+  {
+    accountingPeriod: 'Apr-26',
+    burdenedCost: 2975.34,
+    documentEntry: 'Indirect Cost Allocation',
+    expenditureCategory: '09 - Indirect Costs',
+    expenditureType: '538100 - Sponsored Program Indirect Costs',
+    transactionNumber: 1010,
+  },
+  {
+    accountingPeriod: 'May-26',
+    burdenedCost: 13_124.18,
+    documentEntry: 'Payroll Distribution',
+    expenditureCategory: '01 - Salaries and Wages',
+    expenditureType: '501010 - Research Personnel Salary',
+    transactionNumber: 1011,
+  },
+  {
+    accountingPeriod: 'May-26',
+    burdenedCost: 4235.71,
+    documentEntry: 'Benefits Allocation',
+    expenditureCategory: '02 - Fringe Benefits',
+    expenditureType: '508110 - Employee Benefits Pool',
+    transactionNumber: 1012,
+  },
+  {
+    accountingPeriod: 'May-26',
+    burdenedCost: 684.9,
+    documentEntry: 'Travel Reimbursement',
+    expenditureCategory: '07 - Travel',
+    expenditureType: '523210 - Domestic Conference Travel',
+    transactionNumber: 1013,
+  },
+  {
+    accountingPeriod: 'May-26',
+    burdenedCost: 1148.32,
+    documentEntry: 'Purchase Order Invoice',
+    expenditureCategory: '03 - Supplies / Services / Other Expenses',
+    expenditureType: '522830 - Specialized Equipment',
+    transactionNumber: 1014,
+  },
+  {
+    accountingPeriod: 'May-26',
+    burdenedCost: 3144.76,
+    documentEntry: 'Indirect Cost Allocation',
+    expenditureCategory: '09 - Indirect Costs',
+    expenditureType: '538100 - Sponsored Program Indirect Costs',
+    transactionNumber: 1015,
+  },
+  {
+    accountingPeriod: 'Jun-26',
+    burdenedCost: 12_934.66,
+    documentEntry: 'Payroll Distribution',
+    expenditureCategory: '01 - Salaries and Wages',
+    expenditureType: '501010 - Research Personnel Salary',
+    transactionNumber: 1016,
+  },
+  {
+    accountingPeriod: 'Jun-26',
+    burdenedCost: 4188.09,
+    documentEntry: 'Benefits Allocation',
+    expenditureCategory: '02 - Fringe Benefits',
+    expenditureType: '508110 - Employee Benefits Pool',
+    transactionNumber: 1017,
+  },
+  {
+    accountingPeriod: 'Jun-26',
+    burdenedCost: -320,
+    documentEntry: 'Cost Transfer',
+    expenditureCategory: '03 - Supplies / Services / Other Expenses',
+    expenditureType: '522810 - Research Materials',
+    transactionNumber: 1018,
+  },
+  {
+    accountingPeriod: 'Jun-26',
+    burdenedCost: 1567.44,
+    documentEntry: 'Supplier Invoice',
+    expenditureCategory: '03 - Supplies / Services / Other Expenses',
+    expenditureType: '522850 - Laboratory Support Services',
+    transactionNumber: 1019,
+  },
+  {
+    accountingPeriod: 'Jun-26',
+    burdenedCost: 3108.52,
+    documentEntry: 'Indirect Cost Allocation',
+    expenditureCategory: '09 - Indirect Costs',
+    expenditureType: '538100 - Sponsored Program Indirect Costs',
+    transactionNumber: 1020,
+  },
+];
+
+function setupHandlers(
+  projects: ProjectRecord[],
+  costs: ProjectCostRecord[] = projectCostRecords
+) {
   server.use(
     http.get('/api/user/me', () =>
       HttpResponse.json({
@@ -84,12 +251,15 @@ function setupHandlers(projects: ProjectRecord[]) {
     http.get('/api/project/managed/by-iam/:iamId', () =>
       HttpResponse.json({ pis: [], projectManager: null })
     ),
-    http.get('/api/project/by-iam/:iamId', () => HttpResponse.json(projects))
+    http.get('/api/project/by-iam/:iamId', () => HttpResponse.json(projects)),
+    http.get('/api/project/costs/:projectNumber', () =>
+      HttpResponse.json(costs)
+    )
   );
 }
 
 describe('project costs page', () => {
-  it('shows a sample project-costs table for a project', async () => {
+  it('shows the project-costs table for a project', async () => {
     setupHandlers([createProject()]);
 
     const { cleanup } = renderRoute({
@@ -140,7 +310,7 @@ describe('project costs page', () => {
     }
   });
 
-  it('does not show sample costs when the feature is disabled', async () => {
+  it('does not show costs when the feature is disabled', async () => {
     setupHandlers([createProject()]);
     server.use(
       http.get('/api/system/features', () =>
@@ -230,7 +400,9 @@ describe('project costs page', () => {
 
       expect(travelFilter).toHaveAttribute('aria-pressed', 'true');
       expect(screen.getAllByText('Travel Reimbursement')).toHaveLength(2);
-      expect(screen.queryByText('Payroll Distribution')).not.toBeInTheDocument();
+      expect(
+        screen.queryByText('Payroll Distribution')
+      ).not.toBeInTheDocument();
     } finally {
       cleanup();
     }
@@ -286,6 +458,69 @@ describe('project costs page', () => {
       await user.click(nineMonths);
       expect(nineMonths).toHaveAttribute('aria-pressed', 'true');
       expect(screen.getByText('Prior Period Allocation')).toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('builds category filters from the categories in the costs', async () => {
+    setupHandlers(
+      [createProject()],
+      [
+        {
+          accountingPeriod: 'Sep-26',
+          burdenedCost: 5000,
+          documentEntry: 'Supplier Invoice',
+          expenditureCategory: '04 - Equipment and Facilities',
+          expenditureType: '540000 - Equipment',
+          transactionNumber: 1,
+        },
+      ]
+    );
+
+    const { cleanup } = renderRoute({
+      initialPath: '/projectcosts/1000/P1',
+    });
+
+    try {
+      const table = await screen.findByTestId('project-costs-table');
+
+      expect(
+        within(table).getByRole('button', {
+          name: '04 - Equipment and Facilities',
+        })
+      ).toBeInTheDocument();
+      expect(
+        within(table).queryByRole('button', { name: '07 - Travel' })
+      ).not.toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('pages costs 100 rows at a time and totals every filtered row', async () => {
+    setupHandlers(
+      [createProject()],
+      Array.from({ length: 150 }, (_, index) => ({
+        accountingPeriod: 'Sep-26',
+        burdenedCost: 10,
+        documentEntry: `Entry ${index + 1}`,
+        expenditureCategory: '03 - Supplies / Services / Other Expenses',
+        expenditureType: '522810 - Research Materials',
+        transactionNumber: index + 1,
+      }))
+    );
+
+    const { cleanup } = renderRoute({
+      initialPath: '/projectcosts/1000/P1',
+    });
+
+    try {
+      await screen.findByTestId('project-costs-table');
+
+      expect(screen.getByText('Entry 100')).toBeInTheDocument();
+      expect(screen.queryByText('Entry 101')).not.toBeInTheDocument();
+      expect(screen.getByText('$1,500.00')).toBeInTheDocument();
     } finally {
       cleanup();
     }
