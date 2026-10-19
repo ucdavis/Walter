@@ -18,6 +18,7 @@ GRANT EXECUTE ON [dbo].[usp_GetFacultyDeptPortfolio] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_GetProjectSummary] TO [WalterAppRole];
 
 GRANT EXECUTE ON [dbo].[usp_GetProjectProjection] TO [WalterAppRole];
+GRANT EXECUTE ON [dbo].[usp_GetProjectCosts] TO [WalterAppRole];
 
 GRANT EXECUTE ON [dbo].[usp_GetGLPPMReconciliation] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_GetGLTransactionListings] TO [WalterAppRole];
