@@ -261,36 +261,58 @@ describe('aggregateByPosition', () => {
 });
 
 describe('PersonnelTable', () => {
-  it('displays name and position in combined format', () => {
+  it('displays the employee name in the primary column', () => {
     const records = [
       createRecord({ name: 'Smith, John', positionDescription: 'PROF-FY' }),
     ];
 
     render(<PersonnelTable data={records} />);
 
-    expect(
-      screen.getByText('Smith, John (1001) - PROF-FY')
-    ).toBeInTheDocument();
+    expect(screen.getByText('Smith, John')).toBeInTheDocument();
+    expect(screen.queryByText('Smith, John (1001) - PROF-FY')).toBeNull();
   });
 
-  it('displays FTE column', () => {
+  it('displays job, project, and monthly summaries in the accordion header', () => {
     const records = [createRecord({ fte: 0.75 })];
 
     render(<PersonnelTable data={records} />);
 
+    expect(screen.getByText(/PROF-FY/)).toBeInTheDocument();
     expect(screen.getByText('0.75')).toBeInTheDocument();
+    expect(screen.getByLabelText('1 project')).toBeInTheDocument();
+    expect(screen.getByText('Mo. Salary')).toBeInTheDocument();
+    expect(screen.getByText('Mo. CBR')).toBeInTheDocument();
+    expect(screen.getByText('Mo. Total')).toBeInTheDocument();
+    expect(screen.getByText('Monthly Salary')).toBeInTheDocument();
+    expect(screen.getByText('Monthly CBR')).toBeInTheDocument();
+    expect(screen.getByText('Monthly Total')).toBeInTheDocument();
   });
 
-  it('shows a tooltip on the FTE header', async () => {
+  it('shows the number of distinct projects in the accordion header', () => {
+    render(
+      <PersonnelTable
+        data={[
+          createRecord({ projectId: 'PROJ1' }),
+          createRecord({ projectId: 'PROJ2' }),
+        ]}
+      />
+    );
+
+    expect(screen.getByLabelText('2 projects')).toBeInTheDocument();
+  });
+
+  it('shows a tooltip for the FTE summary', async () => {
     const user = userEvent.setup();
     render(<PersonnelTable data={[createRecord()]} />);
 
     const fteHeader = screen.getByText('FTE');
-    const fteTrigger = fteHeader.parentElement as HTMLElement;
+    const fteTrigger = fteHeader.closest('.tooltip-trigger') as HTMLElement;
 
     expect(fteTrigger).toHaveAttribute('data-tooltip-placement', 'bottom');
-    expect(fteTrigger).toHaveAttribute('tabIndex', '0');
-    expect(fteHeader).toHaveClass('tooltip-label');
+    // The summary is part of the accordion button, so it must not add a
+    // second keyboard stop inside that control.
+    expect(fteTrigger).not.toHaveAttribute('tabIndex');
+    expect(fteHeader.closest('.tooltip-label')).toBeInTheDocument();
 
     await user.hover(fteTrigger);
 
@@ -299,7 +321,7 @@ describe('PersonnelTable', () => {
     );
   });
 
-  it('displays totals in footer', () => {
+  it('displays totals above the personnel rows', () => {
     const records = [
       createRecord({
         compositeBenefitRate: 0.4,
@@ -349,7 +371,8 @@ describe('PersonnelTable', () => {
 
     render(<PersonnelTable data={records} />);
 
-    // 5000 shows on Smith's row and in the footer; Doe's 4000 shows nowhere.
+    // Smith's amount appears in the summary and totals; Doe's unknown salary
+    // never appears.
     expect(screen.getAllByText('$5,000.00')).toHaveLength(2);
     expect(screen.queryByText('$4,000.00')).not.toBeInTheDocument();
     expect(screen.queryByText('$9,000.00')).not.toBeInTheDocument();
@@ -398,9 +421,12 @@ describe('PersonnelTable', () => {
 
     render(<PersonnelTable data={records} />);
 
-    const trigger = screen.getByText(
-      formatDate(twoMonthsFromNow.toISOString(), '')
+    await userEvent.setup().click(
+      screen.getByRole('button', { name: 'Smith, John (1001) - PROF-FY' })
     );
+    const trigger = screen
+      .getAllByText(formatDate(twoMonthsFromNow.toISOString(), ''))
+      .at(-1) as HTMLElement;
     fireEvent.focus(trigger);
 
     expect(await screen.findByRole('tooltip')).toHaveTextContent(
@@ -408,20 +434,26 @@ describe('PersonnelTable', () => {
     );
   });
 
-  it('renders an expanded distributions subtable with headers', async () => {
+  it('shows funding and job details when an employee accordion is expanded', async () => {
     const user = userEvent.setup();
     const records = [createRecord({ projectDescription: 'Test Project' })];
 
     render(<PersonnelTable data={records} />);
 
     expect(screen.queryByText('Project')).not.toBeInTheDocument();
+    expect(screen.queryByText('Job Details')).not.toBeInTheDocument();
 
-    await user.click(
-      screen.getByRole('cell', { name: 'Smith, John (1001) - PROF-FY' })
-    );
+    const accordion = screen.getByRole('button', {
+      name: 'Smith, John (1001) - PROF-FY',
+    });
+    expect(accordion).toHaveAttribute('aria-expanded', 'false');
 
+    await user.click(accordion);
+
+    expect(screen.getByText('Job Details')).toBeInTheDocument();
     expect(screen.getByText('Project')).toBeInTheDocument();
     expect(screen.getByText('Test Project')).toBeInTheDocument();
+    expect(accordion).toHaveAttribute('aria-expanded', 'true');
   });
 
   it('shows the Task on internal-project funding entries and a dash otherwise', async () => {
@@ -446,7 +478,7 @@ describe('PersonnelTable', () => {
     render(<PersonnelTable data={records} />);
 
     await user.click(
-      screen.getByRole('cell', { name: 'Smith, John (1001) - PROF-FY' })
+      screen.getByRole('button', { name: 'Smith, John (1001) - PROF-FY' })
     );
 
     // Internal project surfaces its task; sponsored project hides it behind a dash.
@@ -474,7 +506,7 @@ describe('PersonnelTable', () => {
 
     render(<PersonnelTable data={records} />);
     await user.click(
-      screen.getByRole('cell', { name: 'Smith, John (1001) - PROF-FY' })
+      screen.getByRole('button', { name: 'Smith, John (1001) - PROF-FY' })
     );
 
     expect(screen.getAllByText('Grant A')).toHaveLength(1);
@@ -519,7 +551,7 @@ describe('PersonnelTable', () => {
       />
     );
     await user.click(
-      screen.getByRole('cell', { name: 'Smith, John (1001) - PROF-FY' })
+      screen.getByRole('button', { name: 'Smith, John (1001) - PROF-FY' })
     );
 
     expect(document.body).not.toHaveTextContent(/unsplit/i);
@@ -532,7 +564,13 @@ describe('PersonnelTable', () => {
     const user = userEvent.setup();
     render(<PersonnelTable data={[createRecord()]} />);
 
-    const label = screen.getByText('Mo. CBR');
+    await user.click(
+      screen.getByRole('button', { name: 'Smith, John (1001) - PROF-FY' })
+    );
+
+    const label = screen
+      .getAllByText('Mo. CBR')
+      .find((element) => element.closest('.tooltip-label')) as HTMLElement;
     await user.hover(label.parentElement as HTMLElement);
 
     expect(await screen.findByRole('tooltip')).toHaveTextContent(
@@ -549,7 +587,7 @@ describe('PersonnelTable', () => {
     );
 
     await user.click(
-      screen.getByRole('cell', { name: 'Smith, John (1001) - PROF-FY' })
+      screen.getByRole('button', { name: 'Smith, John (1001) - PROF-FY' })
     );
 
     const distLabel = screen.getByText('Dist %');
@@ -560,12 +598,10 @@ describe('PersonnelTable', () => {
 
     await user.unhover(distLabel.parentElement as HTMLElement);
 
-    // Two occurrences after expand: outer header and subtable header. Hover
-    // the subtable's (last) one.
-    const cbrLabels = screen.getAllByText('Mo. CBR');
-    await user.hover(
-      cbrLabels[cbrLabels.length - 1].parentElement as HTMLElement
-    );
+    const cbrLabel = screen
+      .getAllByText('Mo. CBR')
+      .find((element) => element.closest('.tooltip-label')) as HTMLElement;
+    await user.hover(cbrLabel.parentElement as HTMLElement);
     expect(await screen.findByRole('tooltip')).toHaveTextContent(
       tooltipDefinitions.monthlyCbr
     );
@@ -584,9 +620,7 @@ describe('PersonnelTable', () => {
 
     render(<PersonnelTable data={records} />);
 
-    expect(
-      screen.getByText('Smith, John (1001) - PROF-FY')
-    ).toBeInTheDocument();
+    expect(screen.getByText('Smith, John')).toBeInTheDocument();
     expect(screen.queryByText(/STDT 3/)).not.toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: /unfilled/i })
@@ -619,7 +653,7 @@ describe('PersonnelTable', () => {
     expect(toggle).toHaveTextContent('Show future entries (1)');
 
     await user.click(
-      screen.getByRole('cell', { name: 'Smith, John (1001) - PROF-FY' })
+      screen.getByRole('button', { name: 'Smith, John (1001) - PROF-FY' })
     );
     expect(screen.getByText('Current Project')).toBeInTheDocument();
     expect(screen.queryByText('Future Project')).not.toBeInTheDocument();
@@ -656,12 +690,15 @@ describe('PersonnelTable', () => {
       screen.getByRole('button', { name: /show future entries/i })
     );
 
-    expect(screen.getByText(/New, Hire \(1003\)/)).toBeInTheDocument();
-    // Footer: only the current 5000 salary and 2000 CBR count.
-    const footer = screen.getByText('Totals').closest('tr') as HTMLElement;
-    expect(footer).toHaveTextContent('$5,000.00');
-    expect(footer).toHaveTextContent('$2,000.00');
-    expect(footer).toHaveTextContent('$7,000.00');
+    expect(screen.getByText('New, Hire')).toBeInTheDocument();
+    // Summary: only the current 5000 salary and 2000 CBR count.
+    const totals = screen.getByRole('heading', {
+      level: 3,
+      name: 'Funding Distribution Totals',
+    }).parentElement as HTMLElement;
+    expect(totals).toHaveTextContent('$5,000.00');
+    expect(totals).toHaveTextContent('$2,000.00');
+    expect(totals).toHaveTextContent('$7,000.00');
   });
 
   it('renders only filtered data when passed filtered records', () => {
@@ -685,12 +722,8 @@ describe('PersonnelTable', () => {
 
     render(<PersonnelTable data={filtered} />);
 
-    expect(
-      screen.getByText('Adams, Alice (1001) - PROF-FY')
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByText('Baker, Bob (1002) - PROF-FY')
-    ).not.toBeInTheDocument();
+    expect(screen.getByText('Adams, Alice')).toBeInTheDocument();
+    expect(screen.queryByText('Baker, Bob')).not.toBeInTheDocument();
   });
 
   it('shows the filtered export action only when a search filter is active', () => {
