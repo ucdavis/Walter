@@ -538,6 +538,13 @@ public class SystemControllerTests
             CancellationToken ct = default)
             => throw new NotImplementedException();
 
+        public Task<IReadOnlyList<ProjectCostRecord>> GetProjectCostsAsync(
+            string projectNumber,
+            string? applicationUser = null,
+            string? emulatingUser = null,
+            CancellationToken ct = default)
+            => throw new NotImplementedException();
+
         public Task<IReadOnlyList<DepartmentBalanceRow>> GetGlBalanceSummaryAsync(
             DepartmentBalancesQuery query,
             string? applicationUser = null,

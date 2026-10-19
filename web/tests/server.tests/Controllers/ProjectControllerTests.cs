@@ -389,7 +389,7 @@ public sealed class ProjectControllerTests
     public static IEnumerable<object[]> ProjectAccessCases()
     {
         foreach (var legacy in new[] { true, false })
-            foreach (var endpoint in new[] { "byNumber", "personnel", "transactions", "reconciliation", "projection" })
+            foreach (var endpoint in new[] { "byNumber", "personnel", "transactions", "reconciliation", "projection", "costs" })
                 foreach (var membership in new[] { "team-pi", "team-pm", "award-pi", "award-pm", "administrator", "none" })
                     foreach (var forbidden in new[] { false, true })
                         yield return [legacy, endpoint, membership, forbidden];
@@ -433,6 +433,7 @@ public sealed class ProjectControllerTests
     [InlineData("transactions")]
     [InlineData("reconciliation")]
     [InlineData("projection")]
+    [InlineData("costs")]
     [InlineData("portfolio")]
     public async Task Imported_authorization_propagates_failure_and_cancellation_without_reading_reports(string endpoint)
     {
@@ -470,9 +471,9 @@ public sealed class ProjectControllerTests
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = CreateUser([role]) } }
         };
-        foreach (var endpoint in new[] { "byNumber", "personnel", "transactions", "reconciliation", "projection" })
+        foreach (var endpoint in new[] { "byNumber", "personnel", "transactions", "reconciliation", "projection", "costs" })
             (await InvokeProjectEndpoint(controller, endpoint, "UNRELATED", null)).Should().BeOfType<OkObjectResult>();
-        dm.ReportCalls.Should().Be(5);
+        dm.ReportCalls.Should().Be(6);
     }
 
     private static Task<IActionResult> InvokeProjectEndpoint(ProjectController controller, string endpoint, string codes, string? iamId)
@@ -483,6 +484,7 @@ public sealed class ProjectControllerTests
             "transactions" => controller.GetTransactionsForProjectsAsync(default, codes),
             "reconciliation" => controller.GetGLPPMReconciliationAsync(default, codes),
             "projection" => controller.GetProjectionAsync(codes.Contains(',') ? "FORBIDDEN" : codes, default),
+            "costs" => controller.GetProjectCostsAsync(codes.Contains(',') ? "FORBIDDEN" : codes, default),
             "portfolio" => controller.GetByIamIdAsync(iamId!, default),
             _ => throw new ArgumentOutOfRangeException(nameof(endpoint))
         };
@@ -737,6 +739,17 @@ public sealed class ProjectControllerTests
             return _projection is not null
                 ? Task.FromResult(_projection)
                 : throw new InvalidOperationException("Datamart should not be called for unauthorized users.");
+        }
+
+        public Task<IReadOnlyList<ProjectCostRecord>> GetProjectCostsAsync(
+            string projectNumber,
+            string? applicationUser = null,
+            string? emulatingUser = null,
+            CancellationToken ct = default)
+        {
+            ReportCalls++;
+            if (_allowReports) return Task.FromResult<IReadOnlyList<ProjectCostRecord>>([]);
+            throw new InvalidOperationException("Datamart should not be called for unauthorized users.");
         }
 
         public Task<IReadOnlyList<DepartmentBalanceRow>> GetGlBalanceSummaryAsync(
