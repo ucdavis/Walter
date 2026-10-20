@@ -408,8 +408,21 @@ describe('project costs page', () => {
     }
   });
 
-  it('ignores unsupported expenditure categories in the URL', async () => {
-    setupHandlers([createProject()]);
+  it('filters by any expenditure category in the URL, not just the original five', async () => {
+    setupHandlers(
+      [createProject()],
+      [
+        ...projectCostRecords,
+        {
+          accountingPeriod: 'Sep-26',
+          burdenedCost: 5000,
+          documentEntry: 'Supplier Invoice',
+          expenditureCategory: '04 - Equipment and Facilities',
+          expenditureType: '540000 - Equipment',
+          transactionNumber: 999,
+        },
+      ]
+    );
 
     const { cleanup } = renderRoute({
       initialPath:
@@ -420,9 +433,16 @@ describe('project costs page', () => {
       const table = await screen.findByTestId('project-costs-table');
 
       expect(
-        within(table).getByRole('button', { name: 'All Categories' })
+        within(table).getByRole('button', {
+          name: '04 - Equipment and Facilities',
+        })
       ).toHaveAttribute('aria-pressed', 'true');
-      expect(screen.getAllByText('Payroll Distribution')).toHaveLength(3);
+      expect(
+        within(table).getByRole('button', { name: 'All Categories' })
+      ).toHaveAttribute('aria-pressed', 'false');
+      expect(
+        screen.queryByText('Payroll Distribution')
+      ).not.toBeInTheDocument();
     } finally {
       cleanup();
     }

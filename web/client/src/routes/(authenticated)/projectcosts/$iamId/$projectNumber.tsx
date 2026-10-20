@@ -1,5 +1,4 @@
 import { ProjectCostsTable } from '@/components/project/ProjectCostsTable.tsx';
-import { hasProjectCostCategory } from '@/components/project/projectCostCategories.ts';
 import { ProjectPortfolioLayout } from '@/components/project/ProjectPortfolioLayout.tsx';
 import { PageEmpty } from '@/components/states/PageEmpty.tsx';
 import { PageError } from '@/components/states/PageError.tsx';
@@ -29,7 +28,7 @@ interface ProjectCostsSearch {
 function parseCategory(value: unknown) {
   const category = typeof value === 'string' ? value.trim() : '';
 
-  return category && hasProjectCostCategory(category) ? category : undefined;
+  return category || undefined;
 }
 
 export const Route = createFileRoute(
