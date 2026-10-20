@@ -29,12 +29,49 @@ BEGIN
 
         EXEC dbo.usp_ValidateAggieEnterpriseProject @ProjectId;
 
+        -- Every report column except load bookkeeping (SourcePartition, LoadedAt); the page
+        -- shows a few and the CSV export carries the rest.
         SELECT
             c.TransactionNumber,
-            c.AccountingPeriod,
+            c.AwardNumber,
+            c.AwardName,
+            c.AwardType,
+            c.AwardStatus,
+            c.AwardStartDate,
+            c.AwardEndDate,
+            c.ProjectNumber,
+            c.ProjectName,
+            c.ProjectBusinessUnit,
+            c.ProjectOwningOrgCode + ' - ' + c.ProjectOwningOrgName AS ProjectOwningOrg,
+            c.ProjectType,
+            c.ProjectStatus,
+            c.ProjectStartDate,
+            c.ProjectEndDate,
+            c.TaskNumber,
+            c.TaskName,
+            c.TaskStatus,
+            c.TaskFundCode + ' - ' + c.TaskFundName AS TaskFund,
+            c.TaskPurposeCode + ' - ' + c.TaskPurposeName AS TaskPurpose,
+            c.TaskProgramCode + ' - ' + c.TaskProgramName AS TaskProgram,
+            c.TaskActivityCode + ' - ' + c.TaskActivityName AS TaskActivity,
+            c.ExpenditureBusinessUnit,
+            c.ExpenditureOrgCode + ' - ' + c.ExpenditureOrgName AS ExpenditureOrg,
             c.ExpenditureCategoryCode + ' - ' + c.ExpenditureCategoryName AS ExpenditureCategory,
             c.ExpenditureTypeCode + ' - ' + c.ExpenditureTypeName AS ExpenditureType,
+            c.ExpenditureBatch,
+            c.ExpenditureItemDate,
+            c.AccountingPeriod,
+            c.AccountingDate,
+            c.Document,
             c.DocumentEntry,
+            c.SourceTransactionNumber,
+            c.TransferredFromTransactionNumber,
+            c.AdjustingItem,
+            c.Comment,
+            c.Billable,
+            c.InvoicedStatus,
+            c.RevenueStatus,
+            c.RawCost,
             c.BurdenedCost
         FROM dbo.PPMProjectCosts c
         WHERE c.ProjectNumber = @ProjectId
