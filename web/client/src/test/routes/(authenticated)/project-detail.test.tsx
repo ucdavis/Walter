@@ -621,29 +621,53 @@ describe('project detail page', () => {
     }
   });
 
-  it('does not link categories that the project-cost preview cannot display', async () => {
+  it('links every expenditure category, not just the original five', async () => {
+    const user = userEvent.setup();
     const projects = [
       createProject({
         expenditureCategoryName: '04 - Equipment and Facilities',
       }),
     ];
     setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);
+    server.use(
+      http.get('/api/project/costs/:projectNumber', () =>
+        HttpResponse.json([
+          {
+            accountingPeriod: 'Sep-26',
+            burdenedCost: 5000,
+            documentEntry: 'Supplier Invoice',
+            expenditureCategory: '04 - Equipment and Facilities',
+            expenditureType: '540000 - Equipment',
+            transactionNumber: 1,
+          },
+        ])
+      )
+    );
 
     const { cleanup } = renderRoute({
       initialPath: '/projects/1000/P1',
     });
 
     try {
-      await screen.findByRole('heading', { level: 1, name: 'Test Project' });
+      const categoryExpenseLink = await screen.findByRole('link', {
+        name: 'View project costs for 04 - Equipment and Facilities',
+      });
 
+      expect(categoryExpenseLink).toHaveAttribute(
+        'href',
+        '/projectcosts/1000/P1?category=04+-+Equipment+and+Facilities'
+      );
+
+      await user.click(categoryExpenseLink);
+
+      const projectCostsTable = await screen.findByTestId(
+        'project-costs-table'
+      );
       expect(
-        screen.queryByRole('link', {
-          name: 'View project costs for 04 - Equipment and Facilities',
+        within(projectCostsTable).getByRole('button', {
+          name: '04 - Equipment and Facilities',
         })
-      ).not.toBeInTheDocument();
-      expect(
-        screen.getByRole('link', { name: 'View all project costs' })
-      ).toHaveAttribute('href', '/projectcosts/1000/P1');
+      ).toHaveAttribute('aria-pressed', 'true');
     } finally {
       cleanup();
     }
