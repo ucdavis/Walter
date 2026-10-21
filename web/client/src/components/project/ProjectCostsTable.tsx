@@ -5,6 +5,7 @@ import { TableExportActions } from '@/components/TableExportActions.tsx';
 import { projectExpenditureCategoryColor } from '@/components/project/projectChartColors.ts';
 import { formatCurrency } from '@/lib/currency.ts';
 import type { CsvColumn } from '@/lib/csv.ts';
+import { formatDate } from '@/lib/date.ts';
 import {
   type ProjectCostRecord,
   projectCostsQueryOptions,
@@ -148,6 +149,17 @@ export function ProjectCostsTable({
         header: 'Accounting Period',
         minSize: 130,
         size: 140,
+      }),
+      columnHelper.accessor('expenditureItemDate', {
+        cell: (info) => (
+          <span className="text-sm whitespace-nowrap">
+            {formatDate(info.getValue())}
+          </span>
+        ),
+        footer: () => null,
+        header: 'Expenditure Item Date',
+        minSize: 150,
+        size: 160,
       }),
       columnHelper.accessor('documentEntry', {
         cell: (info) => <span className="text-sm">{info.getValue()}</span>,

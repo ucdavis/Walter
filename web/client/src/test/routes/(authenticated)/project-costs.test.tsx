@@ -348,10 +348,12 @@ describe('project costs page', () => {
       ).toEqual([
         'Expenditure Category',
         'Accounting Period',
+        'Expenditure Item Date',
         'Document Entry',
         'Expenditure Type',
         'Burdened Cost',
       ]);
+      expect(screen.getAllByText('09.15.2026')[0]).toBeInTheDocument();
       const payrollEntries = screen.getAllByText('Payroll Distribution');
       expect(payrollEntries).toHaveLength(3);
       expect(payrollEntries[0].closest('tr')).toHaveAttribute(
