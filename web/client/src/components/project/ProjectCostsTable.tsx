@@ -5,6 +5,7 @@ import { TableExportActions } from '@/components/TableExportActions.tsx';
 import { projectExpenditureCategoryColor } from '@/components/project/projectChartColors.ts';
 import { formatCurrency } from '@/lib/currency.ts';
 import type { CsvColumn } from '@/lib/csv.ts';
+import { formatDate } from '@/lib/date.ts';
 import {
   type ProjectCostRecord,
   projectCostsQueryOptions,
@@ -32,11 +33,61 @@ const projectCostTimelineOptions = [
   { label: '6mo', value: '6-months' },
   { label: '9mo', value: '9-months' },
 ] as const;
+// Export carries every report column, not just the ones shown on the page.
 const projectCostCsvColumns: CsvColumn<ProjectCostRecord>[] = [
+  { header: 'Transaction Number', key: 'transactionNumber' },
+  { header: 'Award Number', key: 'awardNumber' },
+  { header: 'Award Name', key: 'awardName' },
+  { header: 'Award Type', key: 'awardType' },
+  { header: 'Award Status', key: 'awardStatus' },
+  { format: 'date', header: 'Award Start Date', key: 'awardStartDate' },
+  { format: 'date', header: 'Award End Date', key: 'awardEndDate' },
+  { header: 'Project Number', key: 'projectNumber' },
+  { header: 'Project Name', key: 'projectName' },
+  { header: 'Project Business Unit', key: 'projectBusinessUnit' },
+  { header: 'Project Owning Organization Code', key: 'projectOwningOrgCode' },
+  { header: 'Project Owning Organization Name', key: 'projectOwningOrgName' },
+  { header: 'Project Type', key: 'projectType' },
+  { header: 'Project Status', key: 'projectStatus' },
+  { format: 'date', header: 'Project Start Date', key: 'projectStartDate' },
+  { format: 'date', header: 'Project End Date', key: 'projectEndDate' },
+  { header: 'Task Number', key: 'taskNumber' },
+  { header: 'Task Name', key: 'taskName' },
+  { header: 'Task Status', key: 'taskStatus' },
+  { header: 'Task Fund Code', key: 'taskFundCode' },
+  { header: 'Task Fund Name', key: 'taskFundName' },
+  { header: 'Task Purpose Code', key: 'taskPurposeCode' },
+  { header: 'Task Purpose Name', key: 'taskPurposeName' },
+  { header: 'Task Program Code', key: 'taskProgramCode' },
+  { header: 'Task Program Name', key: 'taskProgramName' },
+  { header: 'Task Activity Code', key: 'taskActivityCode' },
+  { header: 'Task Activity Name', key: 'taskActivityName' },
+  { header: 'Expenditure Business Unit', key: 'expenditureBusinessUnit' },
+  { header: 'Expenditure Organization Code', key: 'expenditureOrgCode' },
+  { header: 'Expenditure Organization Name', key: 'expenditureOrgName' },
   { header: 'Expenditure Category', key: 'expenditureCategory' },
-  { header: 'Accounting Period', key: 'accountingPeriod' },
-  { header: 'Document Entry', key: 'documentEntry' },
   { header: 'Expenditure Type', key: 'expenditureType' },
+  { header: 'Expenditure Batch', key: 'expenditureBatch' },
+  {
+    format: 'date',
+    header: 'Expenditure Item Date',
+    key: 'expenditureItemDate',
+  },
+  { header: 'Accounting Period', key: 'accountingPeriod' },
+  { format: 'date', header: 'Accounting Date', key: 'accountingDate' },
+  { header: 'Document', key: 'document' },
+  { header: 'Document Entry', key: 'documentEntry' },
+  { header: 'Source Transaction Number', key: 'sourceTransactionNumber' },
+  {
+    header: 'Transferred From Transaction Number',
+    key: 'transferredFromTransactionNumber',
+  },
+  { header: 'Adjusting Item', key: 'adjustingItem' },
+  { header: 'Comment', key: 'comment' },
+  { header: 'Billable', key: 'billable' },
+  { header: 'Invoiced Status', key: 'invoicedStatus' },
+  { header: 'Revenue Status', key: 'revenueStatus' },
+  { format: 'currency', header: 'Raw Cost', key: 'rawCost' },
   { format: 'currency', header: 'Burdened Cost', key: 'burdenedCost' },
 ];
 
@@ -98,6 +149,17 @@ export function ProjectCostsTable({
         header: 'Accounting Period',
         minSize: 130,
         size: 140,
+      }),
+      columnHelper.accessor('expenditureItemDate', {
+        cell: (info) => (
+          <span className="text-sm whitespace-nowrap">
+            {formatDate(info.getValue())}
+          </span>
+        ),
+        footer: () => null,
+        header: 'Expenditure Item Date',
+        minSize: 150,
+        size: 160,
       }),
       columnHelper.accessor('documentEntry', {
         cell: (info) => <span className="text-sm">{info.getValue()}</span>,
