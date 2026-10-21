@@ -1,6 +1,6 @@
 import { fetchJson } from '@/lib/api.ts';
 
-/** One PPM expenditure item; coded fields are 'CODE - Name'. */
+/** One PPM expenditure item; expenditure category and type are 'CODE - Name'. */
 export interface ProjectCostRecord {
   accountingDate: string;
   /** 'Mon-YY', e.g. 'Sep-26'. */
@@ -22,14 +22,16 @@ export interface ProjectCostRecord {
   expenditureBusinessUnit: string;
   expenditureCategory: string;
   expenditureItemDate: string;
-  expenditureOrg: string;
+  expenditureOrgCode: string;
+  expenditureOrgName: string;
   expenditureType: string;
   invoicedStatus: string;
   projectBusinessUnit: string;
   projectEndDate: string | null;
   projectName: string;
   projectNumber: string;
-  projectOwningOrg: string;
+  projectOwningOrgCode: string;
+  projectOwningOrgName: string;
   projectStartDate: string;
   projectStatus: string;
   projectType: string;
@@ -37,12 +39,16 @@ export interface ProjectCostRecord {
   revenueStatus: string;
   sourceTransactionNumber: number | null;
   /** Null on sponsored rows, as are the other task chart fields. */
-  taskActivity: string | null;
-  taskFund: string | null;
+  taskActivityCode: string | null;
+  taskActivityName: string | null;
+  taskFundCode: string | null;
+  taskFundName: string | null;
   taskName: string;
   taskNumber: string;
-  taskProgram: string | null;
-  taskPurpose: string | null;
+  taskProgramCode: string | null;
+  taskProgramName: string | null;
+  taskPurposeCode: string | null;
+  taskPurposeName: string | null;
   taskStatus: string;
   transactionNumber: number;
   transferredFromTransactionNumber: number | null;

@@ -104,26 +104,32 @@ const createProjectCost = (
   expenditureBusinessUnit: 'UCD Business Unit',
   expenditureCategory: '03 - Supplies / Services / Other Expenses',
   expenditureItemDate: '2026-09-15T00:00:00',
-  expenditureOrg: 'ADNO001 - Test Department',
+  expenditureOrgCode: 'ADNO001',
+  expenditureOrgName: 'Test Department',
   expenditureType: '522860 - Technical Services',
   invoicedStatus: 'Not Invoiced',
   projectBusinessUnit: 'UCD Business Unit',
   projectEndDate: '2027-06-30T00:00:00',
   projectName: 'Test Project',
   projectNumber: 'P1',
-  projectOwningOrg: 'ADNO001 - Test Department',
+  projectOwningOrgCode: 'ADNO001',
+  projectOwningOrgName: 'Test Department',
   projectStartDate: '2024-07-01T00:00:00',
   projectStatus: 'Active',
   projectType: 'Sponsored',
   rawCost: 0,
   revenueStatus: 'Not Recognized',
   sourceTransactionNumber: null,
-  taskActivity: null,
-  taskFund: null,
+  taskActivityCode: null,
+  taskActivityName: null,
+  taskFundCode: null,
+  taskFundName: null,
   taskName: 'Test Task',
   taskNumber: 'TASK01',
-  taskProgram: null,
-  taskPurpose: null,
+  taskProgramCode: null,
+  taskProgramName: null,
+  taskPurposeCode: null,
+  taskPurposeName: null,
   taskStatus: 'Active',
   transactionNumber: 1,
   transferredFromTransactionNumber: null,
@@ -641,7 +647,7 @@ describe('project costs page', () => {
         .split('\r\n');
 
       expect(filename).toBe('project-costs.csv');
-      expect(headerLine.split(',')).toHaveLength(41);
+      expect(headerLine.split(',')).toHaveLength(47);
       expect(headerLine).toContain('Expenditure Item Date');
       expect(headerLine).toContain('Accounting Date');
       expect(headerLine).toContain('Raw Cost');

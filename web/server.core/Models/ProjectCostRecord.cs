@@ -4,7 +4,7 @@ namespace server.core.Models;
 
 /// <summary>
 /// Maps output from usp_GetProjectCosts: one PPM expenditure item with every
-/// "PPM Project Expenses" report column. Coded fields are 'CODE - Name'.
+/// "PPM Project Expenses" report column. Expenditure category and type are 'CODE - Name'.
 /// </summary>
 public sealed class ProjectCostRecord
 {
@@ -39,8 +39,11 @@ public sealed class ProjectCostRecord
     [JsonPropertyName("projectBusinessUnit")]
     public string ProjectBusinessUnit { get; set; } = "";
 
-    [JsonPropertyName("projectOwningOrg")]
-    public string ProjectOwningOrg { get; set; } = "";
+    [JsonPropertyName("projectOwningOrgCode")]
+    public string ProjectOwningOrgCode { get; set; } = "";
+
+    [JsonPropertyName("projectOwningOrgName")]
+    public string ProjectOwningOrgName { get; set; } = "";
 
     [JsonPropertyName("projectType")]
     public string ProjectType { get; set; } = "";
@@ -64,23 +67,38 @@ public sealed class ProjectCostRecord
     public string TaskStatus { get; set; } = "";
 
     /// <summary>Null on sponsored rows, as are the other Task chart fields.</summary>
-    [JsonPropertyName("taskFund")]
-    public string? TaskFund { get; set; }
+    [JsonPropertyName("taskFundCode")]
+    public string? TaskFundCode { get; set; }
 
-    [JsonPropertyName("taskPurpose")]
-    public string? TaskPurpose { get; set; }
+    [JsonPropertyName("taskFundName")]
+    public string? TaskFundName { get; set; }
 
-    [JsonPropertyName("taskProgram")]
-    public string? TaskProgram { get; set; }
+    [JsonPropertyName("taskPurposeCode")]
+    public string? TaskPurposeCode { get; set; }
 
-    [JsonPropertyName("taskActivity")]
-    public string? TaskActivity { get; set; }
+    [JsonPropertyName("taskPurposeName")]
+    public string? TaskPurposeName { get; set; }
+
+    [JsonPropertyName("taskProgramCode")]
+    public string? TaskProgramCode { get; set; }
+
+    [JsonPropertyName("taskProgramName")]
+    public string? TaskProgramName { get; set; }
+
+    [JsonPropertyName("taskActivityCode")]
+    public string? TaskActivityCode { get; set; }
+
+    [JsonPropertyName("taskActivityName")]
+    public string? TaskActivityName { get; set; }
 
     [JsonPropertyName("expenditureBusinessUnit")]
     public string ExpenditureBusinessUnit { get; set; } = "";
 
-    [JsonPropertyName("expenditureOrg")]
-    public string ExpenditureOrg { get; set; } = "";
+    [JsonPropertyName("expenditureOrgCode")]
+    public string ExpenditureOrgCode { get; set; } = "";
+
+    [JsonPropertyName("expenditureOrgName")]
+    public string ExpenditureOrgName { get; set; } = "";
 
     [JsonPropertyName("expenditureCategory")]
     public string ExpenditureCategory { get; set; } = "";
