@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import {
   aggregateByPosition,
@@ -261,126 +267,307 @@ describe('aggregateByPosition', () => {
 });
 
 describe('PersonnelTable', () => {
-  it('displays the employee name in the primary column', () => {
-    const records = [
-      createRecord({ name: 'Smith, John', positionDescription: 'PROF-FY' }),
-    ];
+  it('shows only PI-distributed amounts in the summary and expanded details', async () => {
+    const user = userEvent.setup();
+    render(
+      <PersonnelTable data={[createRecord({ distributionPercent: 60 })]} />
+    );
+    const card = screen.getByRole('article', { name: 'Smith, John' });
+    expect(within(card).getByText('$3,000.00')).toBeInTheDocument();
+    expect(within(card).getByText('$1,200.00')).toBeInTheDocument();
+    expect(within(card).getByText('$4,200.00')).toBeInTheDocument();
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
 
-    render(<PersonnelTable data={records} />);
-
-    expect(screen.getByText('Smith, John')).toBeInTheDocument();
-    expect(screen.queryByText('Smith, John (1001) - PROF-FY')).toBeNull();
+    const trigger = within(card).getByRole('button');
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    trigger.focus();
+    await user.keyboard('{Enter}');
+    expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    expect(within(card).getByRole('table')).toBeInTheDocument();
+    expect(within(card).getByText('Test Project')).toBeInTheDocument();
+    for (const fullJobAmount of ['$5,000.00', '$2,000.00', '$7,000.00']) {
+      expect(screen.queryByText(fullJobAmount)).not.toBeInTheDocument();
+    }
+    await user.click(trigger);
+    expect(within(card).queryByRole('table')).not.toBeInTheDocument();
   });
 
-  it('displays job, project, and monthly summaries in the accordion header', () => {
-    const records = [createRecord({ fte: 0.75 })];
-
-    render(<PersonnelTable data={records} />);
-
-    expect(screen.getByText(/PROF-FY/)).toBeInTheDocument();
-    expect(screen.getByText('0.75')).toBeInTheDocument();
-    expect(screen.getByLabelText('1 project')).toBeInTheDocument();
-    expect(screen.getByText('Mo. Salary')).toBeInTheDocument();
-    expect(screen.getByText('Mo. CBR')).toBeInTheDocument();
-    expect(screen.getByText('Mo. Total')).toBeInTheDocument();
-    expect(screen.getByText('Monthly Salary')).toBeInTheDocument();
-    expect(screen.getByText('Monthly CBR')).toBeInTheDocument();
-    expect(screen.getByText('Monthly Total')).toBeInTheDocument();
-  });
-
-  it('shows the number of distinct projects in the accordion header', () => {
+  it('groups multiple positions under one employee and sums their PI funding', async () => {
+    const user = userEvent.setup();
     render(
       <PersonnelTable
         data={[
-          createRecord({ projectId: 'PROJ1' }),
-          createRecord({ projectId: 'PROJ2' }),
+          createRecord({ distributionPercent: 40 }),
+          createRecord({
+            distributionPercent: 50,
+            fte: 0.5,
+            monthlyRate: 4000,
+            positionDescription: 'ASSOC PROF-FY',
+            positionNumber: '40005678',
+            projectId: 'PROJ2',
+          }),
         ]}
       />
     );
-
-    expect(screen.getByLabelText('2 projects')).toBeInTheDocument();
+    expect(screen.getAllByRole('article')).toHaveLength(1);
+    const card = screen.getByRole('article', { name: 'Smith, John' });
+    expect(within(card).getByText('2 projects')).toBeInTheDocument();
+    expect(within(card).getByText('$3,000.00')).toBeInTheDocument();
+    expect(within(card).getByText('$1,200.00')).toBeInTheDocument();
+    expect(within(card).getByText('$4,200.00')).toBeInTheDocument();
+    await user.click(within(card).getByRole('button'));
+    expect(within(card).getByText('PROF-FY · 001234')).toBeInTheDocument();
+    expect(
+      within(card).getByText('ASSOC PROF-FY · 001234')
+    ).toBeInTheDocument();
   });
 
-  it('shows a tooltip for the FTE summary', async () => {
+  it('counts distinct projects rather than funding entries', () => {
+    render(
+      <PersonnelTable
+        data={[
+          createRecord(),
+          createRecord({ fundingEffectiveDate: '2026-01-01' }),
+        ]}
+      />
+    );
+    const card = screen.getByRole('article', { name: 'Smith, John' });
+    expect(within(card).getByText('1 project')).toBeInTheDocument();
+  });
+
+  it('totals only the current PI distributions across employees', () => {
+    render(
+      <PersonnelTable
+        data={[
+          createRecord({ distributionPercent: 60 }),
+          createRecord({
+            distributionPercent: 50,
+            employeeId: '1002',
+            monthlyRate: 4000,
+            name: 'Doe, Jane',
+          }),
+        ]}
+      />
+    );
+    const totals = screen.getByRole('region', { name: 'PI funding totals' });
+    expect(within(totals).getByText('$5,000.00')).toBeInTheDocument();
+    expect(within(totals).getByText('$2,000.00')).toBeInTheDocument();
+    expect(within(totals).getByText('$7,000.00')).toBeInTheDocument();
+    expect(screen.queryByText('$9,000.00')).not.toBeInTheDocument();
+  });
+
+  it('shows unavailable funding as dashes rather than full job salary or zero', async () => {
+    const user = userEvent.setup();
+    render(
+      <PersonnelTable
+        data={[createRecord({ earnCodeStatus: 'Unsplit', monthlyRate: 4321 })]}
+      />
+    );
+    const card = screen.getByRole('article', { name: 'Smith, John' });
+    expect(within(card).getAllByText('—')).toHaveLength(3);
+    expect(within(card).getByText('Funding unavailable')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Totals include known current funding only.'
+    );
+    await user.click(within(card).getByRole('button'));
+    expect(
+      within(card).getByText('Funding entry info not available')
+    ).toBeInTheDocument();
+    expect(screen.queryByText('$4,321.00')).not.toBeInTheDocument();
+    expect(document.body).not.toHaveTextContent(/unsplit/i);
+  });
+
+  it('keeps known funding in partial employee totals and identifies missing amounts', () => {
+    render(
+      <PersonnelTable
+        data={[
+          createRecord({ distributionPercent: 60 }),
+          createRecord({
+            earnCodeStatus: 'Unsplit',
+            monthlyRate: 4321,
+            projectId: 'PROJ2',
+          }),
+        ]}
+      />
+    );
+    const card = screen.getByRole('article', { name: 'Smith, John' });
+    expect(within(card).getByText('Partial funding')).toBeInTheDocument();
+    expect(within(card).getByText('$3,000.00')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'not available for 1 entry'
+    );
+    expect(screen.queryByText('$4,321.00')).not.toBeInTheDocument();
+  });
+
+  it('keeps current totals unchanged when future funding is shown', async () => {
+    const user = userEvent.setup();
+    render(
+      <PersonnelTable
+        data={[
+          createRecord(),
+          createRecord({
+            isFuture: true,
+            monthlyRate: 9000,
+            projectDescription: 'Future Project',
+          }),
+          createRecord({
+            employeeId: '1003',
+            isFuture: true,
+            monthlyRate: 8000,
+            name: 'New, Hire',
+          }),
+        ]}
+      />
+    );
+    expect(
+      screen.queryByRole('article', { name: 'New, Hire' })
+    ).not.toBeInTheDocument();
+    await user.click(
+      screen.getByRole('button', { name: /show future entries/i })
+    );
+    const totals = screen.getByRole('region', { name: 'PI funding totals' });
+    expect(within(totals).getByText('$5,000.00')).toBeInTheDocument();
+    expect(within(totals).getByText('$2,000.00')).toBeInTheDocument();
+    expect(within(totals).getByText('$7,000.00')).toBeInTheDocument();
+    const futureCard = screen.getByRole('article', { name: 'New, Hire' });
+    expect(within(futureCard).getAllByText('—')).toHaveLength(3);
+    expect(within(futureCard).getByText('Future only')).toBeInTheDocument();
+    const card = screen.getByRole('article', { name: 'Smith, John' });
+    expect(within(card).queryByText('$9,000.00')).not.toBeInTheDocument();
+    await user.click(within(card).getByRole('button'));
+    expect(within(card).getByText('Future Project')).toBeInTheDocument();
+    expect(within(card).getByText('$9,000.00')).toBeInTheDocument();
+  });
+
+  it('allows future funding to be viewed when there are no current employees', async () => {
+    const user = userEvent.setup();
+    render(<PersonnelTable data={[createRecord({ isFuture: true })]} />);
+    expect(screen.queryByRole('article')).not.toBeInTheDocument();
+    await user.click(
+      screen.getByRole('button', { name: /show future entries/i })
+    );
+    expect(
+      screen.getByRole('article', { name: 'Smith, John' })
+    ).toBeInTheDocument();
+  });
+
+  it('filters employee cards and PI totals by project search', () => {
+    render(
+      <PersonnelTable
+        data={[
+          createRecord({
+            distributionPercent: 60,
+            name: 'Adams, Alice',
+            projectDescription: 'Sunny Project',
+          }),
+          createRecord({
+            employeeId: '1002',
+            name: 'Baker, Bob',
+            projectDescription: 'Rainy Project',
+          }),
+        ]}
+      />
+    );
+    fireEvent.input(
+      screen.getByRole('searchbox', { name: 'Search personnel' }),
+      { target: { value: 'Sunny' } }
+    );
+    expect(
+      screen.getByRole('article', { name: 'Adams, Alice' })
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('article', { name: 'Baker, Bob' })
+    ).not.toBeInTheDocument();
+    const totals = screen.getByRole('region', { name: 'PI funding totals' });
+    expect(within(totals).getByText('$3,000.00')).toBeInTheDocument();
+    expect(within(totals).getByText('$1,200.00')).toBeInTheDocument();
+    expect(within(totals).getByText('$4,200.00')).toBeInTheDocument();
+  });
+
+  it('shows an empty search state and hides unfilled positions', () => {
+    render(
+      <PersonnelTable
+        data={[
+          createRecord(),
+          createRecord({
+            employeeId: '',
+            name: '',
+            positionDescription: 'STDT 3',
+          }),
+        ]}
+      />
+    );
+    expect(screen.getAllByRole('article')).toHaveLength(1);
+    expect(screen.queryByText('STDT 3')).not.toBeInTheDocument();
+    fireEvent.input(screen.getByRole('searchbox'), {
+      target: { value: 'no match' },
+    });
+    expect(
+      screen.getByText('No matching personnel found.')
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('article')).not.toBeInTheDocument();
+  });
+
+  it('retains FE date and CBR tooltips in the funding breakdown', async () => {
     const user = userEvent.setup();
     render(<PersonnelTable data={[createRecord()]} />);
+    const card = screen.getByRole('article', { name: 'Smith, John' });
+    await user.click(within(card).getByRole('button'));
+    const table = within(card).getByRole('table');
+    for (const [label, tooltip] of [
+      ['FE Start', tooltipDefinitions.fundingEntryStart],
+      ['FE End', tooltipDefinitions.fundingEntryEnd],
+      ['Dist %', tooltipDefinitions.distributionPercent],
+      ['Mo. CBR', tooltipDefinitions.monthlyCbr],
+    ]) {
+      const trigger = within(table).getByText(label)
+        .parentElement as HTMLElement;
+      await user.hover(trigger);
+      expect(await screen.findByRole('tooltip')).toHaveTextContent(tooltip);
+      await user.unhover(trigger);
+    }
+  });
 
-    const fteHeader = screen.getByText('FTE');
-    const fteTrigger = fteHeader.closest('.tooltip-trigger') as HTMLElement;
-
-    expect(fteTrigger).toHaveAttribute('data-tooltip-placement', 'bottom');
-    // The summary is part of the accordion button, so it must not add a
-    // second keyboard stop inside that control.
-    expect(fteTrigger).not.toHaveAttribute('tabIndex');
-    expect(fteHeader.closest('.tooltip-label')).toBeInTheDocument();
-
-    await user.hover(fteTrigger);
-
-    expect(await screen.findByRole('tooltip')).toHaveTextContent(
-      tooltipDefinitions.fte
+  it('shows only internal tasks in the project breakdown', async () => {
+    const user = userEvent.setup();
+    render(
+      <PersonnelTable
+        data={[
+          createRecord({ projectType: 'Internal', task: '441000' }),
+          createRecord({
+            projectId: 'PROJ2',
+            projectType: 'Sponsored',
+            task: '778100',
+          }),
+        ]}
+      />
     );
+    const card = screen.getByRole('article', { name: 'Smith, John' });
+    await user.click(within(card).getByRole('button'));
+    expect(within(card).getByText('441000')).toBeInTheDocument();
+    expect(within(card).queryByText('778100')).not.toBeInTheDocument();
   });
 
-  it('displays totals above the personnel rows', () => {
-    const records = [
-      createRecord({
-        compositeBenefitRate: 0.4,
-        employeeId: '1001',
-        monthlyRate: 5000,
-        positionNumber: '40001234',
-      }), // monthly: 5000, fringe: 2000
-      createRecord({
-        compositeBenefitRate: 0.4,
-        employeeId: '1002',
-        monthlyRate: 4000,
-        name: 'Doe, Jane',
-        positionNumber: '40005678',
-      }), // monthly: 4000, fringe: 1600
-    ];
-
-    render(<PersonnelTable data={records} />);
-
-    // Total monthly rate: 5000 + 4000 = 9000
-    expect(screen.getByText('$9,000.00')).toBeInTheDocument();
-    // Total monthly fringe: 2000 + 1600 = 3600
-    expect(screen.getByText('$3,600.00')).toBeInTheDocument();
-    // Monthly total: 9000 + 3600 = 12600
-    expect(screen.getByText('$12,600.00')).toBeInTheDocument();
-  });
-
-  it('hides salary for unsplit people and leaves them out of totals with a warning', () => {
-    const records = [
-      createRecord({
-        compositeBenefitRate: 0.4,
-        earnCodeShare: 1,
-        earnCodeStatus: 'BaseOnly',
-        employeeId: '1001',
-        monthlyRate: 5000,
-        positionNumber: '40001234',
-      }),
-      createRecord({
-        compositeBenefitRate: 0.4,
-        earnCodeShare: null,
-        earnCodeStatus: 'Unsplit',
-        employeeId: '1002',
-        monthlyRate: 4000,
-        name: 'Doe, Jane',
-        positionNumber: '40005678',
-      }),
-    ];
-
-    render(<PersonnelTable data={records} />);
-
-    // Smith's amount appears in the summary and totals; Doe's unknown salary
-    // never appears.
-    expect(screen.getAllByText('$5,000.00')).toHaveLength(2);
-    expect(screen.queryByText('$4,000.00')).not.toBeInTheDocument();
-    expect(screen.queryByText('$9,000.00')).not.toBeInTheDocument();
+  it('shows a warning for current funding ending within three months', async () => {
+    const date = new Date();
+    date.setMonth(date.getMonth() + 2);
+    const user = userEvent.setup();
+    render(
+      <PersonnelTable
+        data={[createRecord({ fundingEndDate: date.toISOString() })]}
+      />
+    );
+    const card = screen.getByRole('article', { name: 'Smith, John' });
+    expect(within(card).getByText('Funding ends soon')).toBeInTheDocument();
+    await user.click(within(card).getByRole('button'));
     expect(
-      screen.getByText(
-        'Totals exclude 1 person whose funding entry info is not available.'
-      )
+      within(card).getByText(formatDate(date.toISOString(), ''))
     ).toBeInTheDocument();
+  });
+
+  it('shows an empty state when no personnel exist', () => {
+    render(<PersonnelTable data={[]} />);
+    expect(screen.getByText('No personnel found.')).toBeInTheDocument();
   });
 
   it('exports no amounts for unsplit people', () => {
@@ -402,117 +589,6 @@ describe('PersonnelTable', () => {
     expect(csv).toContain('Smith, John');
     expect(csv).not.toContain('4,321');
     expect(csv).not.toContain('4321');
-  });
-
-  it('shows empty state when no data', () => {
-    render(<PersonnelTable data={[]} />);
-    expect(screen.getByText('No personnel found.')).toBeInTheDocument();
-  });
-
-  it('shows ending soon indicator for dates within 3 months', async () => {
-    const twoMonthsFromNow = new Date();
-    twoMonthsFromNow.setMonth(twoMonthsFromNow.getMonth() + 2);
-
-    const records = [
-      createRecord({
-        jobEndDate: twoMonthsFromNow.toISOString(),
-      }),
-    ];
-
-    render(<PersonnelTable data={records} />);
-
-    await userEvent.setup().click(
-      screen.getByRole('button', { name: 'Smith, John (1001) - PROF-FY' })
-    );
-    const trigger = screen
-      .getAllByText(formatDate(twoMonthsFromNow.toISOString(), ''))
-      .at(-1) as HTMLElement;
-    fireEvent.focus(trigger);
-
-    expect(await screen.findByRole('tooltip')).toHaveTextContent(
-      tooltipDefinitions.endingWithinThreeMonths
-    );
-  });
-
-  it('shows funding and job details when an employee accordion is expanded', async () => {
-    const user = userEvent.setup();
-    const records = [createRecord({ projectDescription: 'Test Project' })];
-
-    render(<PersonnelTable data={records} />);
-
-    expect(screen.queryByText('Project')).not.toBeInTheDocument();
-    expect(screen.queryByText('Job Details')).not.toBeInTheDocument();
-
-    const accordion = screen.getByRole('button', {
-      name: 'Smith, John (1001) - PROF-FY',
-    });
-    expect(accordion).toHaveAttribute('aria-expanded', 'false');
-
-    await user.click(accordion);
-
-    expect(screen.getByText('Job Details')).toBeInTheDocument();
-    expect(screen.getByText('Project')).toBeInTheDocument();
-    expect(screen.getByText('Test Project')).toBeInTheDocument();
-    expect(accordion).toHaveAttribute('aria-expanded', 'true');
-  });
-
-  it('shows the Task on internal-project funding entries and a dash otherwise', async () => {
-    const user = userEvent.setup();
-    const records = [
-      createRecord({
-        positionNumber: '40001234',
-        projectDescription: 'Internal Ops',
-        projectId: 'PROJ1',
-        projectType: 'Internal',
-        task: '441000',
-      }),
-      createRecord({
-        positionNumber: '40001234',
-        projectDescription: 'NSF Grant',
-        projectId: 'PROJ2',
-        projectType: 'Sponsored',
-        task: '778100',
-      }),
-    ];
-
-    render(<PersonnelTable data={records} />);
-
-    await user.click(
-      screen.getByRole('button', { name: 'Smith, John (1001) - PROF-FY' })
-    );
-
-    // Internal project surfaces its task; sponsored project hides it behind a dash.
-    expect(screen.getByText('441000')).toBeInTheDocument();
-    expect(screen.queryByText('778100')).not.toBeInTheDocument();
-    expect(screen.getByText('—')).toBeInTheDocument();
-  });
-
-  it('shows one total row per funding entry with no earn codes', async () => {
-    const user = userEvent.setup();
-    const records = [
-      createRecord({
-        earnCode: 'REG',
-        earnCodeShare: 0.75,
-        earnCodeStatus: 'Split',
-        projectDescription: 'Grant A',
-      }),
-      createRecord({
-        earnCode: 'NNC',
-        earnCodeShare: 0.25,
-        earnCodeStatus: 'Split',
-        projectDescription: 'Grant A',
-      }),
-    ];
-
-    render(<PersonnelTable data={records} />);
-    await user.click(
-      screen.getByRole('button', { name: 'Smith, John (1001) - PROF-FY' })
-    );
-
-    expect(screen.getAllByText('Grant A')).toHaveLength(1);
-    expect(screen.getByText('100%')).toBeInTheDocument();
-    expect(screen.queryByText('REG')).not.toBeInTheDocument();
-    expect(screen.queryByText('NNC')).not.toBeInTheDocument();
   });
 
   it('exports one row per funding entry with no earn code column', () => {
@@ -539,191 +615,6 @@ describe('PersonnelTable', () => {
     expect(csv).not.toContain('Earn Code');
     expect(csv).not.toContain('NNC');
     expect(csv.match(/Smith, John/g)).toHaveLength(1);
-  });
-
-  it('never shows the internal Unsplit status', async () => {
-    const user = userEvent.setup();
-    render(
-      <PersonnelTable
-        data={[
-          createRecord({ earnCodeShare: null, earnCodeStatus: 'Unsplit' }),
-        ]}
-      />
-    );
-    await user.click(
-      screen.getByRole('button', { name: 'Smith, John (1001) - PROF-FY' })
-    );
-
-    expect(document.body).not.toHaveTextContent(/unsplit/i);
-    expect(
-      screen.getByText('Funding entry info not available')
-    ).toBeInTheDocument();
-  });
-
-  it('shows a tooltip on the Mo. CBR header', async () => {
-    const user = userEvent.setup();
-    render(<PersonnelTable data={[createRecord()]} />);
-
-    await user.click(
-      screen.getByRole('button', { name: 'Smith, John (1001) - PROF-FY' })
-    );
-
-    const label = screen
-      .getAllByText('Mo. CBR')
-      .find((element) => element.closest('.tooltip-label')) as HTMLElement;
-    await user.hover(label.parentElement as HTMLElement);
-
-    expect(await screen.findByRole('tooltip')).toHaveTextContent(
-      tooltipDefinitions.monthlyCbr
-    );
-  });
-
-  it('shows tooltips in the funding distribution subtable', async () => {
-    const user = userEvent.setup();
-    render(
-      <PersonnelTable
-        data={[createRecord({ projectDescription: 'Test Project' })]}
-      />
-    );
-
-    await user.click(
-      screen.getByRole('button', { name: 'Smith, John (1001) - PROF-FY' })
-    );
-
-    const distLabel = screen.getByText('Dist %');
-    await user.hover(distLabel.parentElement as HTMLElement);
-    expect(await screen.findByRole('tooltip')).toHaveTextContent(
-      tooltipDefinitions.distributionPercent
-    );
-
-    await user.unhover(distLabel.parentElement as HTMLElement);
-
-    const cbrLabel = screen
-      .getAllByText('Mo. CBR')
-      .find((element) => element.closest('.tooltip-label')) as HTMLElement;
-    await user.hover(cbrLabel.parentElement as HTMLElement);
-    expect(await screen.findByRole('tooltip')).toHaveTextContent(
-      tooltipDefinitions.monthlyCbr
-    );
-  });
-
-  it('hides unfilled positions without offering a toggle', () => {
-    const records = [
-      createRecord({ name: 'Smith, John', positionNumber: '40001234' }),
-      createRecord({
-        employeeId: '',
-        name: '',
-        positionDescription: 'STDT 3',
-        positionNumber: '40005678',
-      }),
-    ];
-
-    render(<PersonnelTable data={records} />);
-
-    expect(screen.getByText('Smith, John')).toBeInTheDocument();
-    expect(screen.queryByText(/STDT 3/)).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole('button', { name: /unfilled/i })
-    ).not.toBeInTheDocument();
-  });
-
-  it('does not show the future toggle when no future entries exist', () => {
-    render(<PersonnelTable data={[createRecord()]} />);
-
-    expect(
-      screen.queryByRole('button', { name: /future entries/i })
-    ).not.toBeInTheDocument();
-  });
-
-  it('hides future entries by default and shows them when toggled', async () => {
-    const user = userEvent.setup();
-    const records = [
-      createRecord({ projectDescription: 'Current Project' }),
-      createRecord({
-        fundingEffectiveDate: '2099-01-01T00:00:00.000Z',
-        isFuture: true,
-        monthlyRate: 9000,
-        projectDescription: 'Future Project',
-      }),
-    ];
-
-    render(<PersonnelTable data={records} />);
-
-    const toggle = screen.getByRole('button', { name: /show future entries/i });
-    expect(toggle).toHaveTextContent('Show future entries (1)');
-
-    await user.click(
-      screen.getByRole('button', { name: 'Smith, John (1001) - PROF-FY' })
-    );
-    expect(screen.getByText('Current Project')).toBeInTheDocument();
-    expect(screen.queryByText('Future Project')).not.toBeInTheDocument();
-
-    await user.click(toggle);
-
-    expect(screen.getByText('Future Project')).toBeInTheDocument();
-    expect(screen.getByText('Future')).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: /hide future entries/i })
-    ).toBeInTheDocument();
-  });
-
-  it('keeps totals on current entries when future entries are shown', async () => {
-    const user = userEvent.setup();
-    const records = [
-      createRecord({ monthlyRate: 5000 }),
-      createRecord({
-        fundingEffectiveDate: '2099-01-01T00:00:00.000Z',
-        isFuture: true,
-        monthlyRate: 9000,
-      }),
-      createRecord({
-        employeeId: '1003',
-        isFuture: true,
-        monthlyRate: 7000,
-        name: 'New, Hire',
-        positionNumber: '40009999',
-      }),
-    ];
-
-    render(<PersonnelTable data={records} />);
-    await user.click(
-      screen.getByRole('button', { name: /show future entries/i })
-    );
-
-    expect(screen.getByText('New, Hire')).toBeInTheDocument();
-    // Summary: only the current 5000 salary and 2000 CBR count.
-    const totals = screen.getByRole('heading', {
-      level: 3,
-      name: 'Funding Distribution Totals',
-    }).parentElement as HTMLElement;
-    expect(totals).toHaveTextContent('$5,000.00');
-    expect(totals).toHaveTextContent('$2,000.00');
-    expect(totals).toHaveTextContent('$7,000.00');
-  });
-
-  it('renders only filtered data when passed filtered records', () => {
-    const allPersonnel = [
-      createRecord({
-        employeeId: '1001',
-        name: 'Adams, Alice',
-        positionNumber: '40001111',
-        projectId: 'PROJ1',
-      }),
-      createRecord({
-        employeeId: '1002',
-        name: 'Baker, Bob',
-        positionNumber: '40002222',
-        projectId: 'PROJ2',
-      }),
-    ];
-
-    // Filter to only PROJ1
-    const filtered = allPersonnel.filter((p) => p.projectId === 'PROJ1');
-
-    render(<PersonnelTable data={filtered} />);
-
-    expect(screen.getByText('Adams, Alice')).toBeInTheDocument();
-    expect(screen.queryByText('Baker, Bob')).not.toBeInTheDocument();
   });
 
   it('shows the filtered export action only when a search filter is active', () => {

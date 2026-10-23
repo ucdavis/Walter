@@ -1,0 +1,469 @@
+# Personnel example #2: Parenthesis, completed 2026-10-22.
+# Base: main at 6cf26319ab2f8b89706677ccfacd83fddb2de46b.
+# Original table layout: position details first, funding distribution on expand.
+# FE Start / FE End retain the shared UC Path tooltip labels.
+# Differences show current funding totals above full job amounts.
+# Funding amounts use base-content; full job amounts use base-content/80 in ( ).
+# Discrepancy amounts have no tooltip or special font weight.
+# Footer always shows funding totals above full job totals in parentheses,
+# with identical font size and weight and only the text color differing.
+# Future and unavailable funding amounts are excluded from funding totals.
+# Expanded funding columns share the parent table's column widths.
+# Funding title and first column align with the employee name via pl-8.
+# Personnel descriptions explain that parentheses include non-PI funding.
+# Restore selectively against subsequent edits rather than blindly applying.
+
+diff --git a/web/client/src/components/project/PersonnelSection.tsx b/web/client/src/components/project/PersonnelSection.tsx
+index 7790b7e..1fec73b 100644
+--- a/web/client/src/components/project/PersonnelSection.tsx
++++ b/web/client/src/components/project/PersonnelSection.tsx
+@@ -92,6 +92,10 @@ export function PersonnelSection({
+         accessed by WALTER. Additional information will be displayed once
+         available.
+       </p>
++      <p className="max-w-3xl mb-4">
++        Amounts in parentheses reflect full job amounts, including funding not
++        associated with this PI.
++      </p>
+       {personnelQuery.isPending && <PersonnelTableSkeleton />}
+       {personnelQuery.isError && (
+         <p className="text-error mt-4">Error loading personnel.</p>
+diff --git a/web/client/src/components/project/PersonnelTable.tsx b/web/client/src/components/project/PersonnelTable.tsx
+index 37ae991..c88bde0 100644
+--- a/web/client/src/components/project/PersonnelTable.tsx
++++ b/web/client/src/components/project/PersonnelTable.tsx
+@@ -198,28 +198,25 @@ function getPositionSearchText(position: AggregatedPosition): string {
+ }
+ 
+ function DistributionSubtable({
++  columnWidths,
+   distributions,
+ }: {
++  columnWidths: number[];
+   distributions: AggregatedDistribution[];
+ }) {
+   return (
+-    <div className="pr-4">
+-      <h4 className="font-semibold text-sm mb-2">Funding Distribution</h4>
+-      <table className="table walter-table walter-subtable">
++    <div>
++      <h4 className="font-semibold text-sm mb-2 px-8">Funding Distribution</h4>
++      <table className="table walter-table walter-subtable [&_th]:!px-2 [&_td]:!px-2 [&_tr>:first-child]:!pl-8">
+         <colgroup>
+-          <col className="walter-subtable-col-primary" />
+-          <col className="walter-subtable-col-secondary" />
+-          <col className="walter-subtable-col-secondary" />
+-          <col className="walter-subtable-col-equal" />
+-          <col className="walter-subtable-col-equal" />
+-          <col className="walter-subtable-col-equal" />
+-          <col className="walter-subtable-col-equal" />
+-          <col className="walter-subtable-col-equal" />
++          {columnWidths.map((width, index) => (
++            <col key={index} style={{ width }} />
++          ))}
+         </colgroup>
+         <thead>
+           <tr>
+             <th>Project</th>
+-            <th className="text-right">Task</th>
++            <th>Task</th>
+             <th>
+               <span className="flex justify-end w-full">
+                 <TooltipLabel
+@@ -230,10 +227,22 @@ function DistributionSubtable({
+               </span>
+             </th>
+             <th>
+-              <span className="flex justify-end w-full">Funding Eff. Date</span>
++              <span className="flex justify-end w-full">
++                <TooltipLabel
++                  label="FE Start"
++                  placement="bottom"
++                  tooltip={tooltipDefinitions.fundingEntryStart}
++                />
++              </span>
+             </th>
+             <th>
+-              <span className="flex justify-end w-full">Funding End Date</span>
++              <span className="flex justify-end w-full">
++                <TooltipLabel
++                  label="FE End"
++                  placement="bottom"
++                  tooltip={tooltipDefinitions.fundingEntryEnd}
++                />
++              </span>
+             </th>
+             <th>
+               <span className="flex justify-end w-full">Mo. Salary</span>
+@@ -265,7 +274,7 @@ function DistributionSubtable({
+                   tooltip={dist.record.projectDescription}
+                 />
+               </td>
+-              <td className="text-right text-sm">
++              <td className="text-sm">
+                 {dist.record.projectType === 'Internal'
+                   ? safeText(dist.record.task)
+                   : '—'}
+@@ -329,6 +338,60 @@ function formatAmount(value: number, salaryUnknown: boolean): string {
+   return salaryUnknown ? '—' : formatCurrency(value);
+ }
+ 
++type MonthlyAmount = 'monthlyFringe' | 'monthlyRate' | 'monthlyTotal';
++
++function MonthlyAmountCell({
++  amount,
++  position,
++}: {
++  amount: MonthlyAmount;
++  position: AggregatedPosition;
++}) {
++  const currentDistributions = position.distributions.filter(
++    (distribution) => !distribution.record.isFuture
++  );
++  const canCompare =
++    !position.salaryUnknown &&
++    currentDistributions.length > 0 &&
++    currentDistributions.every((distribution) => !distribution.salaryUnknown);
++  const fundingAmounts = {
++    monthlyFringe: sum(currentDistributions, (d) => d.monthlyFringe),
++    monthlyRate: sum(currentDistributions, (d) => d.monthlyRate),
++    monthlyTotal: sum(currentDistributions, (d) => d.monthlyTotal),
++  };
++  const differs = (key: MonthlyAmount) =>
++    canCompare &&
++    formatCurrency(fundingAmounts[key]) !== formatCurrency(position[key]);
++  const hasDiscrepancy =
++    differs('monthlyRate') ||
++    differs('monthlyFringe') ||
++    differs('monthlyTotal');
++
++  return (
++    <div className="flex w-full flex-col items-end gap-1 text-right">
++      {hasDiscrepancy && (
++        <span className="min-h-5">
++          {differs(amount) && (
++            <span className="text-base-content">
++              <span className="sr-only">Funding distribution total</span>
++              {formatCurrency(fundingAmounts[amount])}
++            </span>
++          )}
++        </span>
++      )}
++      <span
++        className={
++          differs(amount) ? 'text-base-content/80' : 'text-base-content'
++        }
++      >
++        {differs(amount)
++          ? `(${formatAmount(position[amount], position.salaryUnknown)})`
++          : formatAmount(position[amount], position.salaryUnknown)}
++      </span>
++    </div>
++  );
++}
++
+ function FutureBadge() {
+   return (
+     <span className="badge badge-soft badge-info badge-sm mr-2">Future</span>
+@@ -415,6 +478,35 @@ function sumCurrent(
+   );
+ }
+ 
++function MonthlyAmountTotals({
++  amount,
++  rows,
++}: {
++  amount: MonthlyAmount;
++  rows: { original: AggregatedPosition }[];
++}) {
++  const distributions = rows.flatMap((row) =>
++    row.original.distributions.filter(
++      (distribution) =>
++        !distribution.record.isFuture && !distribution.salaryUnknown
++    )
++  );
++
++  return (
++    <div className="flex w-full flex-col items-end gap-1 text-right">
++      <span className="text-base-content">
++        <span className="sr-only">Funding total</span>
++        {formatCurrency(
++          sum(distributions, (distribution) => distribution[amount])
++        )}
++      </span>
++      <span className="text-base-content/80">
++        ({formatCurrency(sumCurrent(rows, (position) => position[amount]))})
++      </span>
++    </div>
++  );
++}
++
+ /** Distinct people whose current salary can't be attributed (Unsplit). */
+ function countSalaryUnknownPeople(positions: AggregatedPosition[]): number {
+   return new Set(
+@@ -527,16 +619,16 @@ export function PersonnelTable({ data }: PersonnelTableProps) {
+       }),
+       columnHelper.accessor('monthlyRate', {
+         cell: (info) => (
+-          <span className="flex justify-end w-full">
+-            {formatAmount(info.getValue(), info.row.original.salaryUnknown)}
+-          </span>
++          <MonthlyAmountCell
++            amount="monthlyRate"
++            position={info.row.original}
++          />
+         ),
+         footer: ({ table }) => (
+-          <span className="flex justify-end w-full">
+-            {formatCurrency(
+-              sumCurrent(table.getFilteredRowModel().rows, (p) => p.monthlyRate)
+-            )}
+-          </span>
++          <MonthlyAmountTotals
++            amount="monthlyRate"
++            rows={table.getFilteredRowModel().rows}
++          />
+         ),
+         header: () => (
+           <span className="flex justify-end w-full">Mo. Salary</span>
+@@ -544,19 +636,16 @@ export function PersonnelTable({ data }: PersonnelTableProps) {
+       }),
+       columnHelper.accessor('monthlyFringe', {
+         cell: (info) => (
+-          <span className="flex justify-end w-full">
+-            {formatAmount(info.getValue(), info.row.original.salaryUnknown)}
+-          </span>
++          <MonthlyAmountCell
++            amount="monthlyFringe"
++            position={info.row.original}
++          />
+         ),
+         footer: ({ table }) => (
+-          <span className="flex justify-end w-full">
+-            {formatCurrency(
+-              sumCurrent(
+-                table.getFilteredRowModel().rows,
+-                (p) => p.monthlyFringe
+-              )
+-            )}
+-          </span>
++          <MonthlyAmountTotals
++            amount="monthlyFringe"
++            rows={table.getFilteredRowModel().rows}
++          />
+         ),
+         header: () => (
+           <span className="flex justify-end w-full">
+@@ -570,19 +659,16 @@ export function PersonnelTable({ data }: PersonnelTableProps) {
+       }),
+       columnHelper.accessor('monthlyTotal', {
+         cell: (info) => (
+-          <span className="flex justify-end w-full">
+-            {formatAmount(info.getValue(), info.row.original.salaryUnknown)}
+-          </span>
++          <MonthlyAmountCell
++            amount="monthlyTotal"
++            position={info.row.original}
++          />
+         ),
+         footer: ({ table }) => (
+-          <span className="flex justify-end w-full">
+-            {formatCurrency(
+-              sumCurrent(
+-                table.getFilteredRowModel().rows,
+-                (p) => p.monthlyTotal
+-              )
+-            )}
+-          </span>
++          <MonthlyAmountTotals
++            amount="monthlyTotal"
++            rows={table.getFilteredRowModel().rows}
++          />
+         ),
+         header: () => (
+           <span className="flex justify-end w-full">Mo. Total</span>
+@@ -620,9 +706,14 @@ export function PersonnelTable({ data }: PersonnelTableProps) {
+         initialState={{ sorting: [{ desc: false, id: 'positionProject' }] }}
+         pagination="off"
+         renderSubComponent={({ row }) => (
+-          <DistributionSubtable distributions={row.original.distributions} />
++          <DistributionSubtable
++            columnWidths={row
++              .getVisibleCells()
++              .map((cell) => cell.column.getSize())}
++            distributions={row.original.distributions}
++          />
+         )}
+-        subComponentRowClassName="pivot-row"
++        subComponentRowClassName="pivot-row [&>td]:!px-0"
+         tableActions={(table) => (
+           <div className="flex flex-wrap items-center gap-2">
+             {futureCount > 0 && (
+diff --git a/web/client/src/routes/(authenticated)/personnel.tsx b/web/client/src/routes/(authenticated)/personnel.tsx
+index 61a3839..1377111 100644
+--- a/web/client/src/routes/(authenticated)/personnel.tsx
++++ b/web/client/src/routes/(authenticated)/personnel.tsx
+@@ -79,6 +79,10 @@ function RouteComponent() {
+         accessed by WALTER. Additional information will be displayed once
+         available.
+       </p>
++      <p className="max-w-3xl mb-4">
++        Amounts in parentheses reflect full job amounts, including funding not
++        associated with this PI.
++      </p>
+       {/* Personnel Table */}
+       <PersonnelTable data={data} />
+     </div>
+diff --git a/web/client/src/shared/tooltips.ts b/web/client/src/shared/tooltips.ts
+index 34d4df5..326c2ea 100644
+--- a/web/client/src/shared/tooltips.ts
++++ b/web/client/src/shared/tooltips.ts
+@@ -25,6 +25,8 @@ export const tooltipDefinitions = {
+     'High-level grouping of costs, such as labor, travel, or supplier costs.',
+   failedToSaveLabel: 'Failed to save label',
+   fte: 'Full-Time Equivalent (FTE) equals one employee working 100% time.',
++  fundingEntryEnd: 'Funding Entry From UC Path End',
++  fundingEntryStart: 'Funding Entry From UC Path Start',
+   grantAdministrator:
+     'Research admin contact for award setup and ongoing award administration.',
+   monthlyCbr:
+diff --git a/web/client/src/test/components/PersonnelTable.test.tsx b/web/client/src/test/components/PersonnelTable.test.tsx
+index ec2fb5e..f8c0d20 100644
+--- a/web/client/src/test/components/PersonnelTable.test.tsx
++++ b/web/client/src/test/components/PersonnelTable.test.tsx
+@@ -1,5 +1,11 @@
+ import { afterEach, describe, expect, it, vi } from 'vitest';
+-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
++import {
++  cleanup,
++  fireEvent,
++  render,
++  screen,
++  within,
++} from '@testing-library/react';
+ import { userEvent } from '@testing-library/user-event';
+ import {
+   aggregateByPosition,
+@@ -326,6 +332,91 @@ describe('PersonnelTable', () => {
+     expect(screen.getByText('$12,600.00')).toBeInTheDocument();
+   });
+ 
++  it('shows differing funding totals above the position amounts while collapsed', async () => {
++    const user = userEvent.setup();
++    render(
++      <PersonnelTable
++        data={[
++          createRecord({ distributionPercent: 40, projectId: 'PROJ1' }),
++          createRecord({ distributionPercent: 20, projectId: 'PROJ2' }),
++        ]}
++      />
++    );
++
++    const row = screen
++      .getByRole('cell', { name: 'Smith, John (1001) - PROF-FY' })
++      .closest('tr') as HTMLElement;
++    const cells = within(row).getAllByRole('cell');
++    expect(cells[5]).toHaveTextContent(/\$3,000\.00.*\(\$5,000\.00\)/);
++    expect(cells[6]).toHaveTextContent(/\$1,200\.00.*\(\$2,000\.00\)/);
++    expect(cells[7]).toHaveTextContent(/\$4,200\.00.*\(\$7,000\.00\)/);
++    expect(within(row).getAllByText('Funding distribution total')).toHaveLength(
++      3
++    );
++    expect(screen.queryByText('Project')).not.toBeInTheDocument();
++
++    const fundingAmount = within(row).getByText('$3,000.00');
++    expect(fundingAmount).toHaveClass('text-base-content');
++    expect(within(row).getByText('($5,000.00)')).toHaveClass(
++      'text-base-content/80'
++    );
++    await user.hover(fundingAmount);
++    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
++
++    const footer = screen.getByText('Totals').closest('tr') as HTMLElement;
++    const totals = within(footer).getAllByRole('cell');
++    expect(totals[5]).toHaveTextContent(/\$3,000\.00.*\(\$5,000\.00\)/);
++    expect(totals[6]).toHaveTextContent(/\$1,200\.00.*\(\$2,000\.00\)/);
++    expect(totals[7]).toHaveTextContent(/\$4,200\.00.*\(\$7,000\.00\)/);
++    expect(within(footer).getByText('$3,000.00')).toHaveClass(
++      'text-base-content'
++    );
++    expect(within(footer).getByText('($5,000.00)')).toHaveClass(
++      'text-base-content/80'
++    );
++  });
++
++  it('only adds funding amounts to the monthly columns that differ', () => {
++    render(
++      <PersonnelTable
++        data={[
++          createRecord({ distributionPercent: 50, projectId: 'PROJ1' }),
++          createRecord({
++            compositeBenefitRate: 0.2,
++            distributionPercent: 50,
++            projectId: 'PROJ2',
++          }),
++        ]}
++      />
++    );
++
++    const row = screen
++      .getByRole('cell', { name: 'Smith, John (1001) - PROF-FY' })
++      .closest('tr') as HTMLElement;
++    const cells = within(row).getAllByRole('cell');
++    expect(cells[5]).toHaveTextContent(/^\$5,000\.00$/);
++    expect(cells[6]).toHaveTextContent(/\$1,500\.00.*\(\$2,000\.00\)/);
++    expect(cells[7]).toHaveTextContent(/\$6,500\.00.*\(\$7,000\.00\)/);
++    expect(within(row).getAllByText('Funding distribution total')).toHaveLength(
++      2
++    );
++  });
++
++  it('does not flag differences below the displayed currency precision', () => {
++    render(
++      <PersonnelTable
++        data={[
++          createRecord({ distributionPercent: 33.3333, projectId: 'PROJ1' }),
++          createRecord({ distributionPercent: 66.6667, projectId: 'PROJ2' }),
++        ]}
++      />
++    );
++
++    expect(
++      screen.queryByText('Funding distribution total')
++    ).not.toBeInTheDocument();
++  });
++
+   it('hides salary for unsplit people and leaves them out of totals with a warning', () => {
+     const records = [
+       createRecord({
+@@ -353,6 +444,9 @@ describe('PersonnelTable', () => {
+     expect(screen.getAllByText('$5,000.00')).toHaveLength(2);
+     expect(screen.queryByText('$4,000.00')).not.toBeInTheDocument();
+     expect(screen.queryByText('$9,000.00')).not.toBeInTheDocument();
++    expect(
++      screen.queryByText('Funding distribution total')
++    ).not.toBeInTheDocument();
+     expect(
+       screen.getByText(
+         'Totals exclude 1 person whose funding entry info is not available.'
+@@ -563,9 +657,7 @@ describe('PersonnelTable', () => {
+     // Two occurrences after expand: outer header and subtable header. Hover
+     // the subtable's (last) one.
+     const cbrLabels = screen.getAllByText('Mo. CBR');
+-    await user.hover(
+-      cbrLabels[cbrLabels.length - 1].parentElement as HTMLElement
+-    );
++    await user.hover(cbrLabels.at(-1)?.parentElement as HTMLElement);
+     expect(await screen.findByRole('tooltip')).toHaveTextContent(
+       tooltipDefinitions.monthlyCbr
+     );
+@@ -662,6 +754,9 @@ describe('PersonnelTable', () => {
+     expect(footer).toHaveTextContent('$5,000.00');
+     expect(footer).toHaveTextContent('$2,000.00');
+     expect(footer).toHaveTextContent('$7,000.00');
++    expect(
++      screen.queryByText('Funding distribution total')
++    ).not.toBeInTheDocument();
+   });
+ 
+   it('renders only filtered data when passed filtered records', () => {

@@ -1,0 +1,1095 @@
+# Personnel reverse accordion example, completed 2026-10-22.
+# Base: main at 6cf26319ab2f8b89706677ccfacd83fddb2de46b.
+# This patch preserves the finished component, styles, tooltip copy, and tests.
+# Funding entries are visible by default under a single shared header row.
+# Job Details expands below each employee on bg-base-200 without header borders.
+# Job description, FTE, dates, and monetary columns align with funding columns.
+# Job Details and its first column use pl-8 to align with the employee name.
+# FE Start / FE End use the shared Funding Entry From UC Path tooltips.
+# The footer sums current, known funding distributions for filtered employees.
+# Restore selectively against later work; the active original table already
+# retains the FE header labels and tooltips, so do not blindly apply over edits.
+
+diff --git a/web/client/src/components/project/PersonnelTable.tsx b/web/client/src/components/project/PersonnelTable.tsx
+index 37ae991..c4fc733 100644
+--- a/web/client/src/components/project/PersonnelTable.tsx
++++ b/web/client/src/components/project/PersonnelTable.tsx
+@@ -1,11 +1,10 @@
+-import { useMemo, useState } from 'react';
+-import { createColumnHelper } from '@tanstack/react-table';
++import { Fragment, useMemo, useState } from 'react';
+ import {
+   ChevronDownIcon,
+   ChevronUpIcon,
+   ClockIcon,
+ } from '@heroicons/react/24/outline';
+-import { TableExportActions } from '@/components/TableExportActions.tsx';
++import { ExportDataButton } from '@/components/ExportDataButton.tsx';
+ import { formatCurrency } from '@/lib/currency.ts';
+ import { formatDate } from '@/lib/date.ts';
+ import {
+@@ -13,7 +12,6 @@ import {
+   fundingInfoUnavailableNote,
+ } from '@/lib/fundingInfo.ts';
+ import type { PersonnelRecord } from '@/queries/personnel.ts';
+-import { DataTable } from '@/shared/DataTable.tsx';
+ import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
+ import { tooltipDefinitions } from '@/shared/tooltips.ts';
+ 
+@@ -182,8 +180,6 @@ export function aggregateByPosition(
+   return Array.from(positionMap.values());
+ }
+ 
+-const columnHelper = createColumnHelper<AggregatedPosition>();
+-
+ function getPositionSearchText(position: AggregatedPosition): string {
+   const projectDescriptions = position.distributions
+     .map((dist) => dist.record.projectDescription)
+@@ -197,126 +193,137 @@ function getPositionSearchText(position: AggregatedPosition): string {
+   ].join(' ');
+ }
+ 
+-function DistributionSubtable({
+-  distributions,
++function FundingColumnGroup() {
++  return (
++    <>
++      <col className="personnel-reverse-col-project" />
++      <col className="personnel-reverse-col-task" />
++      <col className="personnel-reverse-col-task" />
++      <col className="personnel-reverse-col-value" />
++      <col className="personnel-reverse-col-value" />
++      <col className="personnel-reverse-col-value" />
++      <col className="personnel-reverse-col-value" />
++      <col className="personnel-reverse-col-value" />
++    </>
++  );
++}
++
++function FundingColumnHeaders() {
++  return (
++    <>
++      <th>Project</th>
++      <th className="text-right">Task</th>
++      <th>
++        <span className="flex justify-end w-full">
++          <TooltipLabel
++            label="Dist %"
++            placement="bottom"
++            tooltip={tooltipDefinitions.distributionPercent}
++          />
++        </span>
++      </th>
++      <th>
++        <span className="flex justify-end w-full">
++          <TooltipLabel
++            label="FE Start"
++            placement="bottom"
++            tooltip={tooltipDefinitions.fundingEntryStart}
++          />
++        </span>
++      </th>
++      <th>
++        <span className="flex justify-end w-full">
++          <TooltipLabel
++            label="FE End"
++            placement="bottom"
++            tooltip={tooltipDefinitions.fundingEntryEnd}
++          />
++        </span>
++      </th>
++      <th>
++        <span className="flex justify-end w-full">Mo. Salary</span>
++      </th>
++      <th>
++        <span className="flex justify-end w-full">
++          <TooltipLabel
++            label="Mo. CBR"
++            placement="bottom"
++            tooltip={tooltipDefinitions.monthlyCbr}
++          />
++        </span>
++      </th>
++      <th>
++        <span className="flex justify-end w-full">Mo. Total</span>
++      </th>
++    </>
++  );
++}
++
++function FundingDistributionCells({
++  distribution,
+ }: {
+-  distributions: AggregatedDistribution[];
++  distribution: AggregatedDistribution;
+ }) {
+   return (
+-    <div className="pr-4">
+-      <h4 className="font-semibold text-sm mb-2">Funding Distribution</h4>
+-      <table className="table walter-table walter-subtable">
+-        <colgroup>
+-          <col className="walter-subtable-col-primary" />
+-          <col className="walter-subtable-col-secondary" />
+-          <col className="walter-subtable-col-secondary" />
+-          <col className="walter-subtable-col-equal" />
+-          <col className="walter-subtable-col-equal" />
+-          <col className="walter-subtable-col-equal" />
+-          <col className="walter-subtable-col-equal" />
+-          <col className="walter-subtable-col-equal" />
+-        </colgroup>
+-        <thead>
+-          <tr>
+-            <th>Project</th>
+-            <th className="text-right">Task</th>
+-            <th>
+-              <span className="flex justify-end w-full">
+-                <TooltipLabel
+-                  label="Dist %"
+-                  placement="bottom"
+-                  tooltip={tooltipDefinitions.distributionPercent}
+-                />
+-              </span>
+-            </th>
+-            <th>
+-              <span className="flex justify-end w-full">Funding Eff. Date</span>
+-            </th>
+-            <th>
+-              <span className="flex justify-end w-full">Funding End Date</span>
+-            </th>
+-            <th>
+-              <span className="flex justify-end w-full">Mo. Salary</span>
+-            </th>
+-            <th>
+-              <span className="flex justify-end w-full">
+-                <TooltipLabel
+-                  label="Mo. CBR"
+-                  placement="bottom"
+-                  tooltip={tooltipDefinitions.monthlyCbr}
+-                />
++    <>
++      <td className="text-sm">
++        <TooltipLabel
++          className="block min-w-0"
++          focusable={false}
++          label={distribution.record.projectDescription}
++          labelClassName="block truncate"
++          placement="bottom"
++          tooltip={distribution.record.projectDescription}
++        />
++      </td>
++      <td className="text-right text-sm">
++        {distribution.record.projectType === 'Internal'
++          ? safeText(distribution.record.task)
++          : '—'}
++      </td>
++      <td className="text-right text-sm">
++        {distribution.salaryUnknown ? (
++          <span className="text-base-content/70">
++            {FUNDING_INFO_UNAVAILABLE}
++          </span>
++        ) : (
++          `${formatPercent(distribution.distributionPercent)}%`
++        )}
++      </td>
++      <td className="text-right text-sm">
++        {distribution.record.isFuture && <FutureBadge />}
++        {formatDate(distribution.record.fundingEffectiveDate, '')}
++      </td>
++      <td className="text-right text-sm">
++        {distribution.fundingEndingSoon ? (
++          <TooltipLabel
++            asChild
++            label={
++              <span
++                className="text-error inline-flex items-center gap-1"
++                tabIndex={0}
++              >
++                <ClockIcon aria-hidden="true" className="w-3 h-3" />
++                {formatDate(distribution.record.fundingEndDate, '')}
+               </span>
+-            </th>
+-            <th>
+-              <span className="flex justify-end w-full">Mo. Total</span>
+-            </th>
+-          </tr>
+-        </thead>
+-        <tbody>
+-          {distributions.map((dist, idx) => (
+-            <tr key={idx}>
+-              <td className="text-sm">
+-                <TooltipLabel
+-                  className="block min-w-0"
+-                  focusable={false}
+-                  label={dist.record.projectDescription}
+-                  labelClassName="block truncate"
+-                  placement="bottom"
+-                  tooltip={dist.record.projectDescription}
+-                />
+-              </td>
+-              <td className="text-right text-sm">
+-                {dist.record.projectType === 'Internal'
+-                  ? safeText(dist.record.task)
+-                  : '—'}
+-              </td>
+-              <td className="text-right text-sm">
+-                {dist.salaryUnknown ? (
+-                  <span className="text-base-content/70">
+-                    {FUNDING_INFO_UNAVAILABLE}
+-                  </span>
+-                ) : (
+-                  `${formatPercent(dist.distributionPercent)}%`
+-                )}
+-              </td>
+-              <td className="text-right text-sm">
+-                {dist.record.isFuture && <FutureBadge />}
+-                {formatDate(dist.record.fundingEffectiveDate, '')}
+-              </td>
+-              <td className="text-right text-sm">
+-                {dist.fundingEndingSoon ? (
+-                  <TooltipLabel
+-                    asChild
+-                    label={
+-                      <span
+-                        className="text-error inline-flex items-center gap-1"
+-                        tabIndex={0}
+-                      >
+-                        <ClockIcon aria-hidden="true" className="w-3 h-3" />
+-                        {formatDate(dist.record.fundingEndDate, '')}
+-                      </span>
+-                    }
+-                    placement="bottom"
+-                    tooltip={tooltipDefinitions.endingWithinThreeMonths}
+-                  />
+-                ) : (
+-                  formatDate(dist.record.fundingEndDate, '')
+-                )}
+-              </td>
+-              <td className="text-right text-sm">
+-                {formatAmount(dist.monthlyRate, dist.salaryUnknown)}
+-              </td>
+-              <td className="text-right text-sm">
+-                {formatAmount(dist.monthlyFringe, dist.salaryUnknown)}
+-              </td>
+-              <td className="text-right text-sm">
+-                {formatAmount(dist.monthlyTotal, dist.salaryUnknown)}
+-              </td>
+-            </tr>
+-          ))}
+-        </tbody>
+-      </table>
+-    </div>
++            }
++            placement="bottom"
++            tooltip={tooltipDefinitions.endingWithinThreeMonths}
++          />
++        ) : (
++          formatDate(distribution.record.fundingEndDate, '')
++        )}
++      </td>
++      <td className="text-right text-sm">
++        {formatAmount(distribution.monthlyRate, distribution.salaryUnknown)}
++      </td>
++      <td className="text-right text-sm">
++        {formatAmount(distribution.monthlyFringe, distribution.salaryUnknown)}
++      </td>
++      <td className="text-right text-sm">
++        {formatAmount(distribution.monthlyTotal, distribution.salaryUnknown)}
++      </td>
++    </>
+   );
+ }
+ 
+@@ -335,6 +342,92 @@ function FutureBadge() {
+   );
+ }
+ 
++function JobDetails({ position }: { position: AggregatedPosition }) {
++  return (
++    <div className="border-base-300 py-3">
++      <h4 className="mb-2 px-8 font-semibold text-sm">Job Details</h4>
++      <table className="w-full table-fixed text-sm [&_th]:!border-y-0 [&_tr>:first-child]:!pl-8">
++        <colgroup>
++          <col className="personnel-job-details-col-id" />
++          <col className="personnel-job-details-col-code" />
++          <col className="personnel-job-details-col-description" />
++          <col className="personnel-reverse-col-task" />
++          <col className="personnel-reverse-col-value" />
++          <col className="personnel-reverse-col-value" />
++          <col className="personnel-reverse-col-value" />
++          <col className="personnel-reverse-col-value" />
++          <col className="personnel-reverse-col-value" />
++        </colgroup>
++        <thead>
++          <tr>
++            <th>Empl ID</th>
++            <th>Job Code</th>
++            <th>Job Code Description</th>
++            <th className="text-right">
++              <TooltipLabel
++                label="FTE"
++                placement="bottom"
++                tooltip={tooltipDefinitions.fte}
++              />
++            </th>
++            <th className="text-right">Eff. Date</th>
++            <th className="text-right">End Date</th>
++            <th className="text-right">Mo. Salary</th>
++            <th className="text-right">
++              <TooltipLabel
++                label="Mo. CBR"
++                placement="bottom"
++                tooltip={tooltipDefinitions.monthlyCbr}
++              />
++            </th>
++            <th className="text-right">Mo. Total</th>
++          </tr>
++        </thead>
++        <tbody>
++          <tr>
++            <td>{position.employeeId}</td>
++            <td>{position.jobCode}</td>
++            <td>{position.positionDescription}</td>
++            <td className="text-right">{position.fte}</td>
++            <td className="text-right">
++              {formatDate(position.jobEffectiveDate, '')}
++            </td>
++            <td className="text-right">
++              {position.jobEndingSoon ? (
++                <TooltipLabel
++                  asChild
++                  label={
++                    <span
++                      className="text-error inline-flex items-center gap-1"
++                      tabIndex={0}
++                    >
++                      <ClockIcon aria-hidden="true" className="w-4 h-4" />
++                      {formatDate(position.jobEndDate, '')}
++                    </span>
++                  }
++                  placement="bottom"
++                  tooltip={tooltipDefinitions.endingWithinThreeMonths}
++                />
++              ) : (
++                formatDate(position.jobEndDate, '')
++              )}
++            </td>
++            <td className="text-right">
++              {formatAmount(position.monthlyRate, position.salaryUnknown)}
++            </td>
++            <td className="text-right">
++              {formatAmount(position.monthlyFringe, position.salaryUnknown)}
++            </td>
++            <td className="text-right">
++              {formatAmount(position.monthlyTotal, position.salaryUnknown)}
++            </td>
++          </tr>
++        </tbody>
++      </table>
++    </div>
++  );
++}
++
+ function getExportData(positions: AggregatedPosition[]) {
+   return positions.flatMap((pos) =>
+     pos.distributions.map((dist) => ({
+@@ -402,16 +495,18 @@ interface PersonnelTableProps {
+   data: PersonnelRecord[];
+ }
+ 
+-function sumCurrent(
+-  rows: { original: AggregatedPosition }[],
+-  pick: (position: AggregatedPosition) => number
++function sumCurrentDistributions(
++  positions: AggregatedPosition[],
++  pick: (distribution: AggregatedDistribution) => number
+ ): number {
+-  return rows.reduce(
+-    (sum, row) =>
+-      row.original.isFutureOnly || row.original.salaryUnknown
+-        ? sum
+-        : sum + pick(row.original),
+-    0
++  return sum(positions, (position) =>
++    sum(
++      position.distributions.filter(
++        (distribution) =>
++          !distribution.record.isFuture && !distribution.salaryUnknown
++      ),
++      pick
++    )
+   );
+ }
+ 
+@@ -419,12 +514,21 @@ function sumCurrent(
+ function countSalaryUnknownPeople(positions: AggregatedPosition[]): number {
+   return new Set(
+     positions
+-      .filter((p) => p.salaryUnknown && !p.isFutureOnly)
++      .filter((position) =>
++        position.distributions.some(
++          (distribution) =>
++            distribution.salaryUnknown && !distribution.record.isFuture
++        )
++      )
+       .map((p) => p.employeeId)
+   ).size;
+ }
+ 
+ export function PersonnelTable({ data }: PersonnelTableProps) {
++  const [expandedPositionKeys, setExpandedPositionKeys] = useState<Set<string>>(
++    () => new Set()
++  );
++  const [search, setSearch] = useState('');
+   const [showFuture, setShowFuture] = useState(false);
+   // Unfilled positions (legacy sources only) stay hidden.
+   const filledData = useMemo(() => data.filter((r) => r.name), [data]);
+@@ -440,161 +544,58 @@ export function PersonnelTable({ data }: PersonnelTableProps) {
+     [filledData, showFuture]
+   );
+ 
+-  const columns = useMemo(
+-    () => [
+-      columnHelper.accessor(getPositionSearchText, {
+-        cell: ({ row }) => (
+-          <div className="flex items-center gap-2">
+-            {row.getCanExpand() ? (
+-              row.getIsExpanded() ? (
+-                <ChevronUpIcon className="w-4 h-4" />
+-              ) : (
+-                <ChevronDownIcon className="w-4 h-4" />
+-              )
+-            ) : null}
+-            {row.original.isFutureOnly && <FutureBadge />}
+-            {row.original.name
+-              ? `${row.original.name} (${row.original.employeeId}) - `
+-              : ''}
+-            {safeText(row.original.positionDescription)}
+-          </div>
+-        ),
+-        footer: () => 'Totals',
+-        header: 'Position',
+-        id: 'positionProject',
+-        minSize: 400,
+-        size: 400,
+-        sortingFn: (a, b) =>
+-          safeText(a.original.name).localeCompare(safeText(b.original.name)),
+-      }),
+-      columnHelper.accessor('jobCode', {
+-        cell: (info) => info.getValue(),
+-        header: 'Job Code',
+-      }),
+-      columnHelper.accessor('fte', {
+-        cell: (info) => (
+-          <span className="flex justify-end">{info.getValue()}</span>
+-        ),
+-        header: () => (
+-          <span className="flex justify-end w-full">
+-            <TooltipLabel
+-              label="FTE"
+-              placement="bottom"
+-              tooltip={tooltipDefinitions.fte}
+-            />
+-          </span>
+-        ),
+-      }),
+-      columnHelper.accessor('jobEffectiveDate', {
+-        cell: (info) => (
+-          <span className="flex justify-end">
+-            {formatDate(info.getValue() as string | null, '')}
+-          </span>
+-        ),
+-        header: () => (
+-          <span className="flex justify-end w-full">Eff. Date</span>
+-        ),
+-      }),
+-      columnHelper.accessor('jobEndDate', {
+-        cell: ({ row }) => {
+-          const { jobEndDate, jobEndingSoon } = row.original;
+-          return (
+-            <span className="flex justify-end">
+-              {jobEndingSoon ? (
+-                <TooltipLabel
+-                  asChild
+-                  label={
+-                    <span
+-                      className="text-error inline-flex items-center gap-1"
+-                      tabIndex={0}
+-                    >
+-                      <ClockIcon aria-hidden="true" className="w-4 h-4" />
+-                      {formatDate(jobEndDate, '')}
+-                    </span>
+-                  }
+-                  placement="bottom"
+-                  tooltip={tooltipDefinitions.endingWithinThreeMonths}
+-                />
+-              ) : (
+-                formatDate(jobEndDate, '')
+-              )}
+-            </span>
+-          );
+-        },
+-        header: () => <span className="flex justify-end w-full">End Date</span>,
+-        minSize: 130,
+-        size: 130,
+-      }),
+-      columnHelper.accessor('monthlyRate', {
+-        cell: (info) => (
+-          <span className="flex justify-end w-full">
+-            {formatAmount(info.getValue(), info.row.original.salaryUnknown)}
+-          </span>
+-        ),
+-        footer: ({ table }) => (
+-          <span className="flex justify-end w-full">
+-            {formatCurrency(
+-              sumCurrent(table.getFilteredRowModel().rows, (p) => p.monthlyRate)
+-            )}
+-          </span>
+-        ),
+-        header: () => (
+-          <span className="flex justify-end w-full">Mo. Salary</span>
+-        ),
+-      }),
+-      columnHelper.accessor('monthlyFringe', {
+-        cell: (info) => (
+-          <span className="flex justify-end w-full">
+-            {formatAmount(info.getValue(), info.row.original.salaryUnknown)}
+-          </span>
+-        ),
+-        footer: ({ table }) => (
+-          <span className="flex justify-end w-full">
+-            {formatCurrency(
+-              sumCurrent(
+-                table.getFilteredRowModel().rows,
+-                (p) => p.monthlyFringe
+-              )
+-            )}
+-          </span>
+-        ),
+-        header: () => (
+-          <span className="flex justify-end w-full">
+-            <TooltipLabel
+-              label="Mo. CBR"
+-              placement="bottom"
+-              tooltip={tooltipDefinitions.monthlyCbr}
+-            />
+-          </span>
+-        ),
+-      }),
+-      columnHelper.accessor('monthlyTotal', {
+-        cell: (info) => (
+-          <span className="flex justify-end w-full">
+-            {formatAmount(info.getValue(), info.row.original.salaryUnknown)}
+-          </span>
+-        ),
+-        footer: ({ table }) => (
+-          <span className="flex justify-end w-full">
+-            {formatCurrency(
+-              sumCurrent(
+-                table.getFilteredRowModel().rows,
+-                (p) => p.monthlyTotal
+-              )
+-            )}
+-          </span>
+-        ),
+-        header: () => (
+-          <span className="flex justify-end w-full">Mo. Total</span>
+-        ),
+-      }),
+-    ],
+-    []
+-  );
++  const filteredPositions = useMemo(() => {
++    const normalizedSearch = search.trim().toLocaleLowerCase();
++    const matchingPositions = normalizedSearch
++      ? positions.filter((position) =>
++          getPositionSearchText(position)
++            .toLocaleLowerCase()
++            .includes(normalizedSearch)
++        )
++      : positions;
++
++    return [...matchingPositions].sort((a, b) =>
++      safeText(a.name).localeCompare(safeText(b.name))
++    );
++  }, [positions, search]);
++
++  const allExpanded =
++    filteredPositions.length > 0 &&
++    filteredPositions.every((position) =>
++      expandedPositionKeys.has(position.key)
++    );
++
++  const togglePosition = (key: string) => {
++    setExpandedPositionKeys((current) => {
++      const next = new Set(current);
++      if (next.has(key)) {
++        next.delete(key);
++      } else {
++        next.add(key);
++      }
++      return next;
++    });
++  };
++
++  const toggleAllPositions = () => {
++    setExpandedPositionKeys((current) => {
++      if (allExpanded) {
++        return new Set(
++          [...current].filter(
++            (key) => !filteredPositions.some((position) => position.key === key)
++          )
++        );
++      }
++      return new Set([
++        ...current,
++        ...filteredPositions.map((position) => position.key),
++      ]);
++    });
++  };
+ 
+   const salaryUnknownPeople = useMemo(
+-    () => countSalaryUnknownPeople(positions),
+-    [positions]
++    () => countSalaryUnknownPeople(filteredPositions),
++    [filteredPositions]
+   );
+ 
+   if (positions.length === 0) {
+@@ -603,47 +604,162 @@ export function PersonnelTable({ data }: PersonnelTableProps) {
+ 
+   return (
+     <div>
+-      <DataTable
+-        columns={columns}
+-        data={positions}
+-        footerRowClassName="totaltr"
+-        getRowCanExpand={(row) => row.original.distributions.length > 0}
+-        getRowProps={(row) =>
+-          row.getCanExpand()
+-            ? {
+-                className: 'cursor-pointer hover:bg-base-200',
+-                onClick: () => row.toggleExpanded(),
+-              }
+-            : { className: 'hover:bg-base-200' }
+-        }
+-        globalFilter="left"
+-        initialState={{ sorting: [{ desc: false, id: 'positionProject' }] }}
+-        pagination="off"
+-        renderSubComponent={({ row }) => (
+-          <DistributionSubtable distributions={row.original.distributions} />
+-        )}
+-        subComponentRowClassName="pivot-row"
+-        tableActions={(table) => (
+-          <div className="flex flex-wrap items-center gap-2">
+-            {futureCount > 0 && (
+-              <button
+-                className={`btn btn-sm${showFuture ? ' btn-active' : ''}`}
+-                onClick={() => setShowFuture((current) => !current)}
+-                type="button"
+-              >
+-                {showFuture ? 'Hide' : 'Show'} future entries ({futureCount})
+-              </button>
+-            )}
+-            <TableExportActions
+-              baseFilename="personnel"
++      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
++        <label className="input input-bordered flex max-w-sm flex-1 items-center gap-2">
++          <svg
++            aria-hidden="true"
++            className="h-[1em] opacity-50"
++            viewBox="0 0 24 24"
++            xmlns="http://www.w3.org/2000/svg"
++          >
++            <g
++              fill="none"
++              stroke="currentColor"
++              strokeLinecap="round"
++              strokeLinejoin="round"
++              strokeWidth="2.5"
++            >
++              <circle cx="11" cy="11" r="8" />
++              <path d="m21 21-4.3-4.3" />
++            </g>
++          </svg>
++          <input
++            className="grow"
++            onChange={(event) => setSearch(event.target.value)}
++            placeholder="Search all columns..."
++            type="text"
++            value={search}
++          />
++        </label>
++        <div className="flex flex-wrap items-center gap-2">
++          <button
++            className="btn btn-sm"
++            onClick={toggleAllPositions}
++            type="button"
++          >
++            {allExpanded ? 'Collapse all' : 'Expand all'}
++          </button>
++          {futureCount > 0 && (
++            <button
++              className={`btn btn-sm${showFuture ? ' btn-active' : ''}`}
++              onClick={() => setShowFuture((current) => !current)}
++              type="button"
++            >
++              {showFuture ? 'Hide' : 'Show'} future entries ({futureCount})
++            </button>
++          )}
++          <ExportDataButton
++            columns={personnelCsvColumns}
++            data={getExportData(positions)}
++            filename="personnel.csv"
++          />
++          {search.trim() && (
++            <ExportDataButton
+               columns={personnelCsvColumns}
+-              data={positions}
+-              table={table}
+-              toRows={getExportData}
++              data={getExportData(filteredPositions)}
++              filename="personnel-filtered.csv"
++              label="Export filtered"
+             />
+-          </div>
+-        )}
+-      />
++          )}
++        </div>
++      </div>
++      <div className="overflow-x-auto">
++        <table className="table walter-table personnel-reverse-table">
++          <colgroup>
++            <col className="personnel-reverse-col-employee" />
++            <FundingColumnGroup />
++          </colgroup>
++          <thead>
++            <tr>
++              <th scope="col">Employee</th>
++              <FundingColumnHeaders />
++            </tr>
++          </thead>
++          <tbody>
++            {filteredPositions.map((position) => {
++              const isExpanded = expandedPositionKeys.has(position.key);
++
++              return (
++                <Fragment key={position.key}>
++                  {position.distributions.map((distribution, index) => (
++                    <tr key={`${position.key}-${index}`}>
++                      {index === 0 && (
++                        <td
++                          className="align-top"
++                          rowSpan={position.distributions.length}
++                        >
++                          <button
++                            aria-expanded={isExpanded}
++                            className="flex w-full items-center gap-2 text-left"
++                            onClick={() => togglePosition(position.key)}
++                            type="button"
++                          >
++                            {isExpanded ? (
++                              <ChevronUpIcon
++                                aria-hidden="true"
++                                className="h-4 w-4 shrink-0"
++                              />
++                            ) : (
++                              <ChevronDownIcon
++                                aria-hidden="true"
++                                className="h-4 w-4 shrink-0"
++                              />
++                            )}
++                            <span>
++                              {position.isFutureOnly && <FutureBadge />}
++                              {position.name
++                                ? `${position.name} (${position.employeeId}) - `
++                                : ''}
++                              {position.positionDescription}
++                            </span>
++                          </button>
++                        </td>
++                      )}
++                      <FundingDistributionCells distribution={distribution} />
++                    </tr>
++                  ))}
++                  {isExpanded && (
++                    <tr className="bg-base-200">
++                      <td className="!p-0" colSpan={9}>
++                        <JobDetails position={position} />
++                      </td>
++                    </tr>
++                  )}
++                </Fragment>
++              );
++            })}
++          </tbody>
++          <tfoot>
++            <tr className="totaltr">
++              <th colSpan={6}>Funding Distribution Totals</th>
++              <th className="text-right">
++                {formatCurrency(
++                  sumCurrentDistributions(
++                    filteredPositions,
++                    (d) => d.monthlyRate
++                  )
++                )}
++              </th>
++              <th className="text-right">
++                {formatCurrency(
++                  sumCurrentDistributions(
++                    filteredPositions,
++                    (d) => d.monthlyFringe
++                  )
++                )}
++              </th>
++              <th className="text-right">
++                {formatCurrency(
++                  sumCurrentDistributions(
++                    filteredPositions,
++                    (d) => d.monthlyTotal
++                  )
++                )}
++              </th>
++            </tr>
++          </tfoot>
++        </table>
++      </div>
+       {salaryUnknownPeople > 0 && (
+         <p className="mt-2 text-sm text-warning">
+           {fundingInfoUnavailableNote('Totals', salaryUnknownPeople)}
+diff --git a/web/client/src/main.css b/web/client/src/main.css
+index 5172773..c89c657 100644
+--- a/web/client/src/main.css
++++ b/web/client/src/main.css
+@@ -269,6 +269,35 @@
+   padding-left: 24px;
+ }
+ 
++.walter-table.personnel-reverse-table {
++  min-width: 1100px;
++}
++
++.personnel-reverse-col-employee {
++  width: 20%;
++}
++
++.personnel-reverse-col-project {
++  width: 19.2%;
++}
++
++.personnel-reverse-col-task {
++  width: 6.4%;
++}
++
++.personnel-reverse-col-value {
++  width: 9.6%;
++}
++
++.personnel-job-details-col-id,
++.personnel-job-details-col-code {
++  width: 10%;
++}
++
++.personnel-job-details-col-description {
++  width: 25.6%;
++}
++
+ .select,
+ .input,
+ .textarea {
+diff --git a/web/client/src/shared/tooltips.ts b/web/client/src/shared/tooltips.ts
+index 34d4df5..326c2ea 100644
+--- a/web/client/src/shared/tooltips.ts
++++ b/web/client/src/shared/tooltips.ts
+@@ -25,6 +25,8 @@ export const tooltipDefinitions = {
+     'High-level grouping of costs, such as labor, travel, or supplier costs.',
+   failedToSaveLabel: 'Failed to save label',
+   fte: 'Full-Time Equivalent (FTE) equals one employee working 100% time.',
++  fundingEntryEnd: 'Funding Entry From UC Path End',
++  fundingEntryStart: 'Funding Entry From UC Path Start',
+   grantAdministrator:
+     'Research admin contact for award setup and ongoing award administration.',
+   monthlyCbr:
+diff --git a/web/client/src/test/components/PersonnelTable.test.tsx b/web/client/src/test/components/PersonnelTable.test.tsx
+index ec2fb5e..8cb41fe 100644
+--- a/web/client/src/test/components/PersonnelTable.test.tsx
++++ b/web/client/src/test/components/PersonnelTable.test.tsx
+@@ -273,18 +273,26 @@ describe('PersonnelTable', () => {
+     ).toBeInTheDocument();
+   });
+ 
+-  it('displays FTE column', () => {
++  it('displays FTE in expanded job details', async () => {
++    const user = userEvent.setup();
+     const records = [createRecord({ fte: 0.75 })];
+ 
+     render(<PersonnelTable data={records} />);
++    await user.click(
++      screen.getByRole('button', { name: 'Smith, John (1001) - PROF-FY' })
++    );
+ 
+     expect(screen.getByText('0.75')).toBeInTheDocument();
+   });
+ 
+-  it('shows a tooltip on the FTE header', async () => {
++  it('shows a tooltip on the FTE header in expanded job details', async () => {
+     const user = userEvent.setup();
+     render(<PersonnelTable data={[createRecord()]} />);
+ 
++    await user.click(
++      screen.getByRole('button', { name: 'Smith, John (1001) - PROF-FY' })
++    );
++
+     const fteHeader = screen.getByText('FTE');
+     const fteTrigger = fteHeader.parentElement as HTMLElement;
+ 
+@@ -326,6 +334,38 @@ describe('PersonnelTable', () => {
+     expect(screen.getByText('$12,600.00')).toBeInTheDocument();
+   });
+ 
++  it('totals distributed amounts rather than the full position amounts', async () => {
++    const user = userEvent.setup();
++    render(
++      <PersonnelTable
++        data={[
++          createRecord({ distributionPercent: 40, projectId: 'PROJ1' }),
++          createRecord({
++            compositeBenefitRate: 0.2,
++            distributionPercent: 20,
++            projectId: 'PROJ2',
++          }),
++        ]}
++      />
++    );
++
++    const footer = screen
++      .getByText('Funding Distribution Totals')
++      .closest('tr') as HTMLElement;
++    expect(footer).toHaveTextContent('$3,000.00');
++    expect(footer).toHaveTextContent('$1,000.00');
++    expect(footer).toHaveTextContent('$4,000.00');
++
++    await user.click(
++      screen.getByRole('button', { name: 'Smith, John (1001) - PROF-FY' })
++    );
++
++    expect(screen.getByText('$5,000.00')).toBeInTheDocument();
++    expect(footer).toHaveTextContent('$3,000.00');
++    expect(footer).toHaveTextContent('$1,000.00');
++    expect(footer).toHaveTextContent('$4,000.00');
++  });
++
+   it('hides salary for unsplit people and leaves them out of totals with a warning', () => {
+     const records = [
+       createRecord({
+@@ -398,6 +438,10 @@ describe('PersonnelTable', () => {
+ 
+     render(<PersonnelTable data={records} />);
+ 
++    fireEvent.click(
++      screen.getByRole('button', { name: 'Smith, John (1001) - PROF-FY' })
++    );
++
+     const trigger = screen.getByText(
+       formatDate(twoMonthsFromNow.toISOString(), '')
+     );
+@@ -408,20 +452,23 @@ describe('PersonnelTable', () => {
+     );
+   });
+ 
+-  it('renders an expanded distributions subtable with headers', async () => {
++  it('shows funding distribution by default and job details when expanded', async () => {
+     const user = userEvent.setup();
+     const records = [createRecord({ projectDescription: 'Test Project' })];
+ 
+     render(<PersonnelTable data={records} />);
+ 
+-    expect(screen.queryByText('Project')).not.toBeInTheDocument();
++    expect(screen.getByText('Project')).toBeInTheDocument();
++    expect(screen.getByText('Test Project')).toBeInTheDocument();
++    expect(screen.queryByText('Job Details')).not.toBeInTheDocument();
+ 
+     await user.click(
+-      screen.getByRole('cell', { name: 'Smith, John (1001) - PROF-FY' })
++      screen.getByRole('button', { name: 'Smith, John (1001) - PROF-FY' })
+     );
+ 
+-    expect(screen.getByText('Project')).toBeInTheDocument();
+-    expect(screen.getByText('Test Project')).toBeInTheDocument();
++    expect(screen.getByText('Job Details')).toBeInTheDocument();
++    expect(screen.getByText('001234')).toBeInTheDocument();
++    expect(screen.getAllByText('$5,000.00')).toHaveLength(3);
+   });
+ 
+   it('shows the Task on internal-project funding entries and a dash otherwise', async () => {
+@@ -446,7 +493,7 @@ describe('PersonnelTable', () => {
+     render(<PersonnelTable data={records} />);
+ 
+     await user.click(
+-      screen.getByRole('cell', { name: 'Smith, John (1001) - PROF-FY' })
++      screen.getByRole('button', { name: 'Smith, John (1001) - PROF-FY' })
+     );
+ 
+     // Internal project surfaces its task; sponsored project hides it behind a dash.
+@@ -474,7 +521,7 @@ describe('PersonnelTable', () => {
+ 
+     render(<PersonnelTable data={records} />);
+     await user.click(
+-      screen.getByRole('cell', { name: 'Smith, John (1001) - PROF-FY' })
++      screen.getByRole('button', { name: 'Smith, John (1001) - PROF-FY' })
+     );
+ 
+     expect(screen.getAllByText('Grant A')).toHaveLength(1);
+@@ -519,7 +566,7 @@ describe('PersonnelTable', () => {
+       />
+     );
+     await user.click(
+-      screen.getByRole('cell', { name: 'Smith, John (1001) - PROF-FY' })
++      screen.getByRole('button', { name: 'Smith, John (1001) - PROF-FY' })
+     );
+ 
+     expect(document.body).not.toHaveTextContent(/unsplit/i);
+@@ -549,7 +596,7 @@ describe('PersonnelTable', () => {
+     );
+ 
+     await user.click(
+-      screen.getByRole('cell', { name: 'Smith, John (1001) - PROF-FY' })
++      screen.getByRole('button', { name: 'Smith, John (1001) - PROF-FY' })
+     );
+ 
+     const distLabel = screen.getByText('Dist %');
+@@ -560,12 +607,9 @@ describe('PersonnelTable', () => {
+ 
+     await user.unhover(distLabel.parentElement as HTMLElement);
+ 
+-    // Two occurrences after expand: outer header and subtable header. Hover
+-    // the subtable's (last) one.
++    // The expanded job-details header is the last Mo. CBR label.
+     const cbrLabels = screen.getAllByText('Mo. CBR');
+-    await user.hover(
+-      cbrLabels[cbrLabels.length - 1].parentElement as HTMLElement
+-    );
++    await user.hover(cbrLabels.at(-1)?.parentElement as HTMLElement);
+     expect(await screen.findByRole('tooltip')).toHaveTextContent(
+       tooltipDefinitions.monthlyCbr
+     );
+@@ -619,7 +663,7 @@ describe('PersonnelTable', () => {
+     expect(toggle).toHaveTextContent('Show future entries (1)');
+ 
+     await user.click(
+-      screen.getByRole('cell', { name: 'Smith, John (1001) - PROF-FY' })
++      screen.getByRole('button', { name: 'Smith, John (1001) - PROF-FY' })
+     );
+     expect(screen.getByText('Current Project')).toBeInTheDocument();
+     expect(screen.queryByText('Future Project')).not.toBeInTheDocument();
+@@ -658,7 +702,9 @@ describe('PersonnelTable', () => {
+ 
+     expect(screen.getByText(/New, Hire \(1003\)/)).toBeInTheDocument();
+     // Footer: only the current 5000 salary and 2000 CBR count.
+-    const footer = screen.getByText('Totals').closest('tr') as HTMLElement;
++    const footer = screen
++      .getByText('Funding Distribution Totals')
++      .closest('tr') as HTMLElement;
+     expect(footer).toHaveTextContent('$5,000.00');
+     expect(footer).toHaveTextContent('$2,000.00');
+     expect(footer).toHaveTextContent('$7,000.00');

@@ -1,0 +1,1654 @@
+# Personnel example #4: PI Funding Cards, completed 2026-10-22.
+# Base: main at 6cf26319ab2f8b89706677ccfacd83fddb2de46b.
+# Compact, full-width cards group all positions under one employee.
+# The collapsed summary always shows current PI-distributed salary, CBR,
+# and total, plus role descriptions, employee ID, and a distinct project count.
+# Expand a card to see its project funding table with FE Start / FE End tooltips.
+# Multiple positions are identified within the project rows.
+# Full job/other-PI salary, CBR, and total are never rendered in this option.
+# Page totals sum the same current, known funding entries as the employee cards.
+# Future entries are opt-in and never increase current summary/page amounts.
+# Future-only and unknown amounts show dashes; partial amounts are identified.
+# Employee/project search updates the cards, page totals, and filtered export.
+# All other examples remain archived separately.
+# Restore selectively against subsequent edits rather than blindly applying.
+
+diff --git a/web/client/src/components/project/PersonnelSection.tsx b/web/client/src/components/project/PersonnelSection.tsx
+index 7790b7e..7bf37bf 100644
+--- a/web/client/src/components/project/PersonnelSection.tsx
++++ b/web/client/src/components/project/PersonnelSection.tsx
+@@ -92,6 +92,10 @@ export function PersonnelSection({
+         accessed by WALTER. Additional information will be displayed once
+         available.
+       </p>
++      <p className="max-w-3xl mb-4">
++        Monthly amounts show current funding for this PI only. Expand an
++        employee to see their project funding details.
++      </p>
+       {personnelQuery.isPending && <PersonnelTableSkeleton />}
+       {personnelQuery.isError && (
+         <p className="text-error mt-4">Error loading personnel.</p>
+diff --git a/web/client/src/components/project/PersonnelTable.tsx b/web/client/src/components/project/PersonnelTable.tsx
+index 37ae991..fb433af 100644
+--- a/web/client/src/components/project/PersonnelTable.tsx
++++ b/web/client/src/components/project/PersonnelTable.tsx
+@@ -1,19 +1,15 @@
+-import { useMemo, useState } from 'react';
+-import { createColumnHelper } from '@tanstack/react-table';
++import { useId, useMemo, useState } from 'react';
+ import {
+   ChevronDownIcon,
+-  ChevronUpIcon,
++  ClipboardDocumentListIcon,
+   ClockIcon,
++  MagnifyingGlassIcon,
+ } from '@heroicons/react/24/outline';
+-import { TableExportActions } from '@/components/TableExportActions.tsx';
++import { ExportDataButton } from '@/components/ExportDataButton.tsx';
+ import { formatCurrency } from '@/lib/currency.ts';
+ import { formatDate } from '@/lib/date.ts';
+-import {
+-  FUNDING_INFO_UNAVAILABLE,
+-  fundingInfoUnavailableNote,
+-} from '@/lib/fundingInfo.ts';
++import { FUNDING_INFO_UNAVAILABLE } from '@/lib/fundingInfo.ts';
+ import type { PersonnelRecord } from '@/queries/personnel.ts';
+-import { DataTable } from '@/shared/DataTable.tsx';
+ import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
+ import { tooltipDefinitions } from '@/shared/tooltips.ts';
+ 
+@@ -182,8 +178,6 @@ export function aggregateByPosition(
+   return Array.from(positionMap.values());
+ }
+ 
+-const columnHelper = createColumnHelper<AggregatedPosition>();
+-
+ function getPositionSearchText(position: AggregatedPosition): string {
+   const projectDescriptions = position.distributions
+     .map((dist) => dist.record.projectDescription)
+@@ -197,126 +191,144 @@ function getPositionSearchText(position: AggregatedPosition): string {
+   ].join(' ');
+ }
+ 
+-function DistributionSubtable({
+-  distributions,
++function FundingColumnGroup() {
++  return (
++    <>
++      <col className="walter-subtable-col-primary" />
++      <col className="walter-subtable-col-secondary" />
++      <col className="walter-subtable-col-secondary" />
++      <col className="walter-subtable-col-equal" />
++      <col className="walter-subtable-col-equal" />
++      <col className="walter-subtable-col-equal" />
++      <col className="walter-subtable-col-equal" />
++      <col className="walter-subtable-col-equal" />
++    </>
++  );
++}
++
++function FundingColumnHeaders() {
++  return (
++    <>
++      <th>Project</th>
++      <th className="text-right">Task</th>
++      <th>
++        <span className="flex justify-end w-full">
++          <TooltipLabel
++            label="Dist %"
++            placement="bottom"
++            tooltip={tooltipDefinitions.distributionPercent}
++          />
++        </span>
++      </th>
++      <th>
++        <span className="flex justify-end w-full">
++          <TooltipLabel
++            label="FE Start"
++            placement="bottom"
++            tooltip={tooltipDefinitions.fundingEntryStart}
++          />
++        </span>
++      </th>
++      <th>
++        <span className="flex justify-end w-full">
++          <TooltipLabel
++            label="FE End"
++            placement="bottom"
++            tooltip={tooltipDefinitions.fundingEntryEnd}
++          />
++        </span>
++      </th>
++      <th>
++        <span className="flex justify-end w-full">Mo. Salary</span>
++      </th>
++      <th>
++        <span className="flex justify-end w-full">
++          <TooltipLabel
++            label="Mo. CBR"
++            placement="bottom"
++            tooltip={tooltipDefinitions.monthlyCbr}
++          />
++        </span>
++      </th>
++      <th>
++        <span className="flex justify-end w-full">Mo. Total</span>
++      </th>
++    </>
++  );
++}
++
++function FundingDistributionCells({
++  distribution,
++  positionLabel,
+ }: {
+-  distributions: AggregatedDistribution[];
++  distribution: AggregatedDistribution;
++  positionLabel?: string;
+ }) {
+   return (
+-    <div className="pr-4">
+-      <h4 className="font-semibold text-sm mb-2">Funding Distribution</h4>
+-      <table className="table walter-table walter-subtable">
+-        <colgroup>
+-          <col className="walter-subtable-col-primary" />
+-          <col className="walter-subtable-col-secondary" />
+-          <col className="walter-subtable-col-secondary" />
+-          <col className="walter-subtable-col-equal" />
+-          <col className="walter-subtable-col-equal" />
+-          <col className="walter-subtable-col-equal" />
+-          <col className="walter-subtable-col-equal" />
+-          <col className="walter-subtable-col-equal" />
+-        </colgroup>
+-        <thead>
+-          <tr>
+-            <th>Project</th>
+-            <th className="text-right">Task</th>
+-            <th>
+-              <span className="flex justify-end w-full">
+-                <TooltipLabel
+-                  label="Dist %"
+-                  placement="bottom"
+-                  tooltip={tooltipDefinitions.distributionPercent}
+-                />
+-              </span>
+-            </th>
+-            <th>
+-              <span className="flex justify-end w-full">Funding Eff. Date</span>
+-            </th>
+-            <th>
+-              <span className="flex justify-end w-full">Funding End Date</span>
+-            </th>
+-            <th>
+-              <span className="flex justify-end w-full">Mo. Salary</span>
+-            </th>
+-            <th>
+-              <span className="flex justify-end w-full">
+-                <TooltipLabel
+-                  label="Mo. CBR"
+-                  placement="bottom"
+-                  tooltip={tooltipDefinitions.monthlyCbr}
+-                />
++    <>
++      <td className="text-sm">
++        <TooltipLabel
++          className="block min-w-0"
++          focusable={false}
++          label={distribution.record.projectDescription}
++          labelClassName="block truncate"
++          placement="bottom"
++          tooltip={distribution.record.projectDescription}
++        />
++        {positionLabel && (
++          <span className="mt-1 block text-xs text-base-content/70">
++            {positionLabel}
++          </span>
++        )}
++      </td>
++      <td className="text-right text-sm">
++        {distribution.record.projectType === 'Internal'
++          ? safeText(distribution.record.task)
++          : '—'}
++      </td>
++      <td className="text-right text-sm">
++        {distribution.salaryUnknown ? (
++          <span className="text-base-content/70">
++            {FUNDING_INFO_UNAVAILABLE}
++          </span>
++        ) : (
++          `${formatPercent(distribution.distributionPercent)}%`
++        )}
++      </td>
++      <td className="text-right text-sm">
++        {distribution.record.isFuture && <FutureBadge />}
++        {formatDate(distribution.record.fundingEffectiveDate, '')}
++      </td>
++      <td className="text-right text-sm">
++        {distribution.fundingEndingSoon ? (
++          <TooltipLabel
++            asChild
++            label={
++              <span
++                className="text-error inline-flex items-center gap-1"
++                tabIndex={0}
++              >
++                <ClockIcon aria-hidden="true" className="w-3 h-3" />
++                {formatDate(distribution.record.fundingEndDate, '')}
+               </span>
+-            </th>
+-            <th>
+-              <span className="flex justify-end w-full">Mo. Total</span>
+-            </th>
+-          </tr>
+-        </thead>
+-        <tbody>
+-          {distributions.map((dist, idx) => (
+-            <tr key={idx}>
+-              <td className="text-sm">
+-                <TooltipLabel
+-                  className="block min-w-0"
+-                  focusable={false}
+-                  label={dist.record.projectDescription}
+-                  labelClassName="block truncate"
+-                  placement="bottom"
+-                  tooltip={dist.record.projectDescription}
+-                />
+-              </td>
+-              <td className="text-right text-sm">
+-                {dist.record.projectType === 'Internal'
+-                  ? safeText(dist.record.task)
+-                  : '—'}
+-              </td>
+-              <td className="text-right text-sm">
+-                {dist.salaryUnknown ? (
+-                  <span className="text-base-content/70">
+-                    {FUNDING_INFO_UNAVAILABLE}
+-                  </span>
+-                ) : (
+-                  `${formatPercent(dist.distributionPercent)}%`
+-                )}
+-              </td>
+-              <td className="text-right text-sm">
+-                {dist.record.isFuture && <FutureBadge />}
+-                {formatDate(dist.record.fundingEffectiveDate, '')}
+-              </td>
+-              <td className="text-right text-sm">
+-                {dist.fundingEndingSoon ? (
+-                  <TooltipLabel
+-                    asChild
+-                    label={
+-                      <span
+-                        className="text-error inline-flex items-center gap-1"
+-                        tabIndex={0}
+-                      >
+-                        <ClockIcon aria-hidden="true" className="w-3 h-3" />
+-                        {formatDate(dist.record.fundingEndDate, '')}
+-                      </span>
+-                    }
+-                    placement="bottom"
+-                    tooltip={tooltipDefinitions.endingWithinThreeMonths}
+-                  />
+-                ) : (
+-                  formatDate(dist.record.fundingEndDate, '')
+-                )}
+-              </td>
+-              <td className="text-right text-sm">
+-                {formatAmount(dist.monthlyRate, dist.salaryUnknown)}
+-              </td>
+-              <td className="text-right text-sm">
+-                {formatAmount(dist.monthlyFringe, dist.salaryUnknown)}
+-              </td>
+-              <td className="text-right text-sm">
+-                {formatAmount(dist.monthlyTotal, dist.salaryUnknown)}
+-              </td>
+-            </tr>
+-          ))}
+-        </tbody>
+-      </table>
+-    </div>
++            }
++            placement="bottom"
++            tooltip={tooltipDefinitions.endingWithinThreeMonths}
++          />
++        ) : (
++          formatDate(distribution.record.fundingEndDate, '')
++        )}
++      </td>
++      <td className="text-right text-sm">
++        {formatAmount(distribution.monthlyRate, distribution.salaryUnknown)}
++      </td>
++      <td className="text-right text-sm">
++        {formatAmount(distribution.monthlyFringe, distribution.salaryUnknown)}
++      </td>
++      <td className="text-right text-sm">
++        {formatAmount(distribution.monthlyTotal, distribution.salaryUnknown)}
++      </td>
++    </>
+   );
+ }
+ 
+@@ -398,255 +410,354 @@ const personnelCsvColumns = [
+   },
+ ];
+ 
+-interface PersonnelTableProps {
+-  data: PersonnelRecord[];
++interface EmployeeFunding {
++  distributions: AggregatedDistribution[];
++  employeeId: string;
++  name: string;
++  positions: AggregatedPosition[];
++}
++
++function groupByEmployee(positions: AggregatedPosition[]): EmployeeFunding[] {
++  const employees = new Map<string, EmployeeFunding>();
++  for (const position of positions) {
++    const employee = employees.get(position.employeeId);
++    if (employee) {
++      employee.positions.push(position);
++      employee.distributions.push(...position.distributions);
++    } else {
++      employees.set(position.employeeId, {
++        distributions: [...position.distributions],
++        employeeId: position.employeeId,
++        name: position.name,
++        positions: [position],
++      });
++    }
++  }
++  return [...employees.values()].sort((a, b) => a.name.localeCompare(b.name));
++}
++
++function summarizeFunding(distributions: AggregatedDistribution[]) {
++  const current = distributions.filter(
++    (distribution) => !distribution.record.isFuture
++  );
++  const known = current.filter((distribution) => !distribution.salaryUnknown);
++  return {
++    monthlyFringe: known.length ? sum(known, (d) => d.monthlyFringe) : null,
++    monthlyRate: known.length ? sum(known, (d) => d.monthlyRate) : null,
++    monthlyTotal: known.length ? sum(known, (d) => d.monthlyTotal) : null,
++    unknownCount: current.length - known.length,
++  };
++}
++
++function formatFundingAmount(value: number | null): string {
++  return value === null ? '—' : formatCurrency(value);
+ }
+ 
+-function sumCurrent(
+-  rows: { original: AggregatedPosition }[],
+-  pick: (position: AggregatedPosition) => number
+-): number {
+-  return rows.reduce(
+-    (sum, row) =>
+-      row.original.isFutureOnly || row.original.salaryUnknown
+-        ? sum
+-        : sum + pick(row.original),
+-    0
++function FundingMetric({
++  emphasis = false,
++  label,
++  value,
++}: {
++  emphasis?: boolean;
++  label: string;
++  value: number | null;
++}) {
++  return (
++    <span className="min-w-0 sm:min-w-24">
++      <span className="block text-xs text-base-content/70">{label}</span>
++      <span
++        className={`mt-1 block tabular-nums ${emphasis ? 'font-semibold' : 'font-medium'}`}
++      >
++        {formatFundingAmount(value)}
++      </span>
++    </span>
+   );
+ }
+ 
+-/** Distinct people whose current salary can't be attributed (Unsplit). */
+-function countSalaryUnknownPeople(positions: AggregatedPosition[]): number {
+-  return new Set(
+-    positions
+-      .filter((p) => p.salaryUnknown && !p.isFutureOnly)
+-      .map((p) => p.employeeId)
++function EmployeeFundingCard({ employee }: { employee: EmployeeFunding }) {
++  const [expanded, setExpanded] = useState(false);
++  const detailsId = useId();
++  const funding = summarizeFunding(employee.distributions);
++  const projectCount = new Set(
++    employee.distributions.map((d) => d.record.projectId)
+   ).size;
++  const roles = [
++    ...new Set(
++      employee.positions.map((position) => position.positionDescription)
++    ),
++  ]
++    .filter(Boolean)
++    .join(' · ');
++  const futureOnly = employee.distributions.every(
++    (distribution) => distribution.record.isFuture
++  );
++  const fundingEndingSoon = employee.distributions.some(
++    (d) => !d.record.isFuture && d.fundingEndingSoon
++  );
++
++  return (
++    <article
++      aria-label={employee.name}
++      className="overflow-hidden rounded-box border border-base-300 bg-base-100"
++    >
++      <button
++        aria-controls={detailsId}
++        aria-expanded={expanded}
++        className="flex w-full flex-wrap items-center gap-4 p-4 text-left transition-colors hover:bg-base-200/50 focus-visible:outline-2 focus-visible:outline-primary"
++        onClick={() => setExpanded((current) => !current)}
++        type="button"
++      >
++        <span className="flex min-w-0 flex-1 items-center gap-3">
++          <ChevronDownIcon
++            aria-hidden="true"
++            className={`h-4 w-4 shrink-0 transition-transform ${expanded ? 'rotate-180' : ''}`}
++          />
++          <span className="min-w-0">
++            <span className="block font-semibold">{employee.name}</span>
++            {roles && (
++              <span className="mt-1 block text-sm text-base-content/70">
++                {roles}
++              </span>
++            )}
++            <span className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-base-content/70">
++              <span className="inline-flex items-center gap-1">
++                <ClipboardDocumentListIcon
++                  aria-hidden="true"
++                  className="h-4 w-4"
++                />
++                <span>
++                  {projectCount} {projectCount === 1 ? 'project' : 'projects'}
++                </span>
++              </span>
++              <span>Empl ID {employee.employeeId}</span>
++              {futureOnly && (
++                <span className="badge badge-soft badge-info badge-sm">
++                  Future only
++                </span>
++              )}
++              {funding.unknownCount > 0 && (
++                <span className="badge badge-soft badge-warning badge-sm">
++                  {funding.monthlyRate === null
++                    ? 'Funding unavailable'
++                    : 'Partial funding'}
++                </span>
++              )}
++              {fundingEndingSoon && (
++                <span className="inline-flex items-center gap-1 text-error">
++                  <ClockIcon aria-hidden="true" className="h-3 w-3" />
++                  Funding ends soon
++                </span>
++              )}
++            </span>
++          </span>
++        </span>
++        <span className="grid w-full grid-cols-3 gap-3 text-right text-sm sm:w-auto sm:gap-6 sm:text-base">
++          <FundingMetric label="Mo. Salary" value={funding.monthlyRate} />
++          <FundingMetric label="Mo. CBR" value={funding.monthlyFringe} />
++          <FundingMetric
++            emphasis
++            label="Mo. Total"
++            value={funding.monthlyTotal}
++          />
++        </span>
++      </button>
++      {expanded && (
++        <div
++          aria-label={`${employee.name} funding distribution`}
++          className="border-t border-base-300 px-4 py-3"
++          id={detailsId}
++          role="region"
++        >
++          <h4 className="mb-2 text-sm font-semibold">Funding Distribution</h4>
++          <div className="overflow-x-auto">
++            <table className="table walter-table !min-w-4xl [&_th]:!border-t-0">
++              <colgroup>
++                <FundingColumnGroup />
++              </colgroup>
++              <thead>
++                <tr>
++                  <FundingColumnHeaders />
++                </tr>
++              </thead>
++              <tbody>
++                {employee.positions.flatMap((position) =>
++                  position.distributions.map((distribution, index) => (
++                    <tr key={`${position.key}-${index}`}>
++                      <FundingDistributionCells
++                        distribution={distribution}
++                        positionLabel={
++                          employee.positions.length > 1
++                            ? `${position.positionDescription} · ${position.jobCode}`
++                            : undefined
++                        }
++                      />
++                    </tr>
++                  ))
++                )}
++              </tbody>
++            </table>
++          </div>
++        </div>
++      )}
++    </article>
++  );
++}
++
++interface PersonnelTableProps {
++  data: PersonnelRecord[];
+ }
+ 
+ export function PersonnelTable({ data }: PersonnelTableProps) {
++  const [search, setSearch] = useState('');
+   const [showFuture, setShowFuture] = useState(false);
+-  // Unfilled positions (legacy sources only) stay hidden.
+-  const filledData = useMemo(() => data.filter((r) => r.name), [data]);
++  const filledData = useMemo(
++    () => data.filter((record) => record.name),
++    [data]
++  );
+   const futureCount = useMemo(
+-    () => filledData.filter((r) => r.isFuture).length,
++    () => filledData.filter((record) => record.isFuture).length,
+     [filledData]
+   );
+   const positions = useMemo(
+     () =>
+       aggregateByPosition(
+-        showFuture ? filledData : filledData.filter((r) => !r.isFuture)
++        showFuture
++          ? filledData
++          : filledData.filter((record) => !record.isFuture)
+       ),
+     [filledData, showFuture]
+   );
+-
+-  const columns = useMemo(
+-    () => [
+-      columnHelper.accessor(getPositionSearchText, {
+-        cell: ({ row }) => (
+-          <div className="flex items-center gap-2">
+-            {row.getCanExpand() ? (
+-              row.getIsExpanded() ? (
+-                <ChevronUpIcon className="w-4 h-4" />
+-              ) : (
+-                <ChevronDownIcon className="w-4 h-4" />
+-              )
+-            ) : null}
+-            {row.original.isFutureOnly && <FutureBadge />}
+-            {row.original.name
+-              ? `${row.original.name} (${row.original.employeeId}) - `
+-              : ''}
+-            {safeText(row.original.positionDescription)}
+-          </div>
+-        ),
+-        footer: () => 'Totals',
+-        header: 'Position',
+-        id: 'positionProject',
+-        minSize: 400,
+-        size: 400,
+-        sortingFn: (a, b) =>
+-          safeText(a.original.name).localeCompare(safeText(b.original.name)),
+-      }),
+-      columnHelper.accessor('jobCode', {
+-        cell: (info) => info.getValue(),
+-        header: 'Job Code',
+-      }),
+-      columnHelper.accessor('fte', {
+-        cell: (info) => (
+-          <span className="flex justify-end">{info.getValue()}</span>
+-        ),
+-        header: () => (
+-          <span className="flex justify-end w-full">
+-            <TooltipLabel
+-              label="FTE"
+-              placement="bottom"
+-              tooltip={tooltipDefinitions.fte}
+-            />
+-          </span>
+-        ),
+-      }),
+-      columnHelper.accessor('jobEffectiveDate', {
+-        cell: (info) => (
+-          <span className="flex justify-end">
+-            {formatDate(info.getValue() as string | null, '')}
+-          </span>
+-        ),
+-        header: () => (
+-          <span className="flex justify-end w-full">Eff. Date</span>
+-        ),
+-      }),
+-      columnHelper.accessor('jobEndDate', {
+-        cell: ({ row }) => {
+-          const { jobEndDate, jobEndingSoon } = row.original;
+-          return (
+-            <span className="flex justify-end">
+-              {jobEndingSoon ? (
+-                <TooltipLabel
+-                  asChild
+-                  label={
+-                    <span
+-                      className="text-error inline-flex items-center gap-1"
+-                      tabIndex={0}
+-                    >
+-                      <ClockIcon aria-hidden="true" className="w-4 h-4" />
+-                      {formatDate(jobEndDate, '')}
+-                    </span>
+-                  }
+-                  placement="bottom"
+-                  tooltip={tooltipDefinitions.endingWithinThreeMonths}
+-                />
+-              ) : (
+-                formatDate(jobEndDate, '')
+-              )}
+-            </span>
+-          );
+-        },
+-        header: () => <span className="flex justify-end w-full">End Date</span>,
+-        minSize: 130,
+-        size: 130,
+-      }),
+-      columnHelper.accessor('monthlyRate', {
+-        cell: (info) => (
+-          <span className="flex justify-end w-full">
+-            {formatAmount(info.getValue(), info.row.original.salaryUnknown)}
+-          </span>
+-        ),
+-        footer: ({ table }) => (
+-          <span className="flex justify-end w-full">
+-            {formatCurrency(
+-              sumCurrent(table.getFilteredRowModel().rows, (p) => p.monthlyRate)
+-            )}
+-          </span>
+-        ),
+-        header: () => (
+-          <span className="flex justify-end w-full">Mo. Salary</span>
+-        ),
+-      }),
+-      columnHelper.accessor('monthlyFringe', {
+-        cell: (info) => (
+-          <span className="flex justify-end w-full">
+-            {formatAmount(info.getValue(), info.row.original.salaryUnknown)}
+-          </span>
+-        ),
+-        footer: ({ table }) => (
+-          <span className="flex justify-end w-full">
+-            {formatCurrency(
+-              sumCurrent(
+-                table.getFilteredRowModel().rows,
+-                (p) => p.monthlyFringe
+-              )
+-            )}
+-          </span>
+-        ),
+-        header: () => (
+-          <span className="flex justify-end w-full">
+-            <TooltipLabel
+-              label="Mo. CBR"
+-              placement="bottom"
+-              tooltip={tooltipDefinitions.monthlyCbr}
+-            />
+-          </span>
+-        ),
+-      }),
+-      columnHelper.accessor('monthlyTotal', {
+-        cell: (info) => (
+-          <span className="flex justify-end w-full">
+-            {formatAmount(info.getValue(), info.row.original.salaryUnknown)}
+-          </span>
+-        ),
+-        footer: ({ table }) => (
+-          <span className="flex justify-end w-full">
+-            {formatCurrency(
+-              sumCurrent(
+-                table.getFilteredRowModel().rows,
+-                (p) => p.monthlyTotal
+-              )
+-            )}
+-          </span>
+-        ),
+-        header: () => (
+-          <span className="flex justify-end w-full">Mo. Total</span>
+-        ),
+-      }),
+-    ],
+-    []
++  const employees = useMemo(() => groupByEmployee(positions), [positions]);
++  const filteredEmployees = useMemo(() => {
++    const query = search.trim().toLocaleLowerCase();
++    return query
++      ? employees.filter((employee) =>
++          employee.positions.some((position) =>
++            getPositionSearchText(position).toLocaleLowerCase().includes(query)
++          )
++        )
++      : employees;
++  }, [employees, search]);
++  const filteredPositions = useMemo(
++    () => filteredEmployees.flatMap((employee) => employee.positions),
++    [filteredEmployees]
+   );
+-
+-  const salaryUnknownPeople = useMemo(
+-    () => countSalaryUnknownPeople(positions),
+-    [positions]
++  const totals = useMemo(
++    () =>
++      summarizeFunding(
++        filteredEmployees.flatMap((employee) => employee.distributions)
++      ),
++    [filteredEmployees]
+   );
++  const hasSearch = search.trim().length > 0;
+ 
+-  if (positions.length === 0) {
+-    return <p className="text-base-content/70 mt-4">No personnel found.</p>;
++  if (filledData.length === 0) {
++    return <p className="mt-4 text-base-content/70">No personnel found.</p>;
+   }
+ 
+   return (
+-    <div>
+-      <DataTable
+-        columns={columns}
+-        data={positions}
+-        footerRowClassName="totaltr"
+-        getRowCanExpand={(row) => row.original.distributions.length > 0}
+-        getRowProps={(row) =>
+-          row.getCanExpand()
+-            ? {
+-                className: 'cursor-pointer hover:bg-base-200',
+-                onClick: () => row.toggleExpanded(),
+-              }
+-            : { className: 'hover:bg-base-200' }
+-        }
+-        globalFilter="left"
+-        initialState={{ sorting: [{ desc: false, id: 'positionProject' }] }}
+-        pagination="off"
+-        renderSubComponent={({ row }) => (
+-          <DistributionSubtable distributions={row.original.distributions} />
+-        )}
+-        subComponentRowClassName="pivot-row"
+-        tableActions={(table) => (
+-          <div className="flex flex-wrap items-center gap-2">
+-            {futureCount > 0 && (
+-              <button
+-                className={`btn btn-sm${showFuture ? ' btn-active' : ''}`}
+-                onClick={() => setShowFuture((current) => !current)}
+-                type="button"
+-              >
+-                {showFuture ? 'Hide' : 'Show'} future entries ({futureCount})
+-              </button>
+-            )}
+-            <TableExportActions
+-              baseFilename="personnel"
++    <div className="space-y-4">
++      <div className="flex flex-wrap items-center justify-between gap-3">
++        <label className="input input-bordered flex w-full max-w-sm items-center gap-2">
++          <MagnifyingGlassIcon
++            aria-hidden="true"
++            className="h-4 w-4 opacity-50"
++          />
++          <input
++            aria-label="Search personnel"
++            className="min-w-0 grow"
++            onChange={(event) => setSearch(event.target.value)}
++            placeholder="Search all columns..."
++            type="search"
++            value={search}
++          />
++        </label>
++        <div className="flex flex-wrap items-center gap-2">
++          {futureCount > 0 && (
++            <button
++              className={`btn btn-sm${showFuture ? ' btn-active' : ''}`}
++              onClick={() => setShowFuture((current) => !current)}
++              type="button"
++            >
++              {showFuture ? 'Hide' : 'Show'} future entries ({futureCount})
++            </button>
++          )}
++          <ExportDataButton
++            columns={personnelCsvColumns}
++            data={getExportData(positions)}
++            filename="personnel.csv"
++          />
++          {hasSearch && (
++            <ExportDataButton
+               columns={personnelCsvColumns}
+-              data={positions}
+-              table={table}
+-              toRows={getExportData}
++              data={getExportData(filteredPositions)}
++              filename="personnel-filtered.csv"
++              label="Export filtered"
+             />
++          )}
++        </div>
++      </div>
++
++      <section
++        aria-label="PI funding totals"
++        className="border-b border-base-300 pb-4"
++      >
++        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
++          <h3 className="text-sm font-semibold">
++            {hasSearch
++              ? 'Filtered monthly funding for this PI'
++              : 'Monthly funding for this PI'}
++          </h3>
++          <span className="text-xs text-base-content/70">
++            {filteredEmployees.length}{' '}
++            {filteredEmployees.length === 1 ? 'employee' : 'employees'} ·
++            Current funding only
++          </span>
++        </div>
++        <dl className="flex flex-wrap gap-x-12 gap-y-3">
++          <div>
++            <dt className="stat-label">Mo. Salary</dt>
++            <dd className="stat-value font-sans">
++              {formatFundingAmount(totals.monthlyRate)}
++            </dd>
+           </div>
+-        )}
+-      />
+-      {salaryUnknownPeople > 0 && (
+-        <p className="mt-2 text-sm text-warning">
+-          {fundingInfoUnavailableNote('Totals', salaryUnknownPeople)}
++          <div>
++            <dt className="stat-label">Mo. CBR</dt>
++            <dd className="stat-value font-sans">
++              {formatFundingAmount(totals.monthlyFringe)}
++            </dd>
++          </div>
++          <div>
++            <dt className="stat-label">Mo. Total</dt>
++            <dd className="stat-value font-sans">
++              {formatFundingAmount(totals.monthlyTotal)}
++            </dd>
++          </div>
++        </dl>
++      </section>
++
++      {totals.unknownCount > 0 && (
++        <p className="text-sm text-warning" role="status">
++          Funding entry info is not available for {totals.unknownCount}{' '}
++          {totals.unknownCount === 1 ? 'entry' : 'entries'}. Totals include
++          known current funding only.
++        </p>
++      )}
++
++      {filteredEmployees.length ? (
++        <div className="space-y-3">
++          {filteredEmployees.map((employee) => (
++            <EmployeeFundingCard
++              employee={employee}
++              key={employee.employeeId}
++            />
++          ))}
++        </div>
++      ) : (
++        <p className="py-4 text-base-content/70">
++          {hasSearch
++            ? 'No matching personnel found.'
++            : 'No current personnel found. Show future entries to view upcoming funding.'}
+         </p>
+       )}
+     </div>
+diff --git a/web/client/src/routes/(authenticated)/personnel.tsx b/web/client/src/routes/(authenticated)/personnel.tsx
+index 61a3839..8d2dd39 100644
+--- a/web/client/src/routes/(authenticated)/personnel.tsx
++++ b/web/client/src/routes/(authenticated)/personnel.tsx
+@@ -79,6 +79,10 @@ function RouteComponent() {
+         accessed by WALTER. Additional information will be displayed once
+         available.
+       </p>
++      <p className="max-w-3xl mb-4">
++        Monthly amounts show current funding for this PI only. Expand an
++        employee to see their project funding details.
++      </p>
+       {/* Personnel Table */}
+       <PersonnelTable data={data} />
+     </div>
+diff --git a/web/client/src/shared/tooltips.ts b/web/client/src/shared/tooltips.ts
+index 34d4df5..326c2ea 100644
+--- a/web/client/src/shared/tooltips.ts
++++ b/web/client/src/shared/tooltips.ts
+@@ -25,6 +25,8 @@ export const tooltipDefinitions = {
+     'High-level grouping of costs, such as labor, travel, or supplier costs.',
+   failedToSaveLabel: 'Failed to save label',
+   fte: 'Full-Time Equivalent (FTE) equals one employee working 100% time.',
++  fundingEntryEnd: 'Funding Entry From UC Path End',
++  fundingEntryStart: 'Funding Entry From UC Path Start',
+   grantAdministrator:
+     'Research admin contact for award setup and ongoing award administration.',
+   monthlyCbr:
+diff --git a/web/client/src/test/components/PersonnelTable.test.tsx b/web/client/src/test/components/PersonnelTable.test.tsx
+index ec2fb5e..990ac80 100644
+--- a/web/client/src/test/components/PersonnelTable.test.tsx
++++ b/web/client/src/test/components/PersonnelTable.test.tsx
+@@ -1,5 +1,11 @@
+ import { afterEach, describe, expect, it, vi } from 'vitest';
+-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
++import {
++  cleanup,
++  fireEvent,
++  render,
++  screen,
++  within,
++} from '@testing-library/react';
+ import { userEvent } from '@testing-library/user-event';
+ import {
+   aggregateByPosition,
+@@ -261,436 +267,354 @@ describe('aggregateByPosition', () => {
+ });
+ 
+ describe('PersonnelTable', () => {
+-  it('displays name and position in combined format', () => {
+-    const records = [
+-      createRecord({ name: 'Smith, John', positionDescription: 'PROF-FY' }),
+-    ];
+-
+-    render(<PersonnelTable data={records} />);
+-
++  it('shows only PI-distributed amounts in the summary and expanded details', async () => {
++    const user = userEvent.setup();
++    render(
++      <PersonnelTable data={[createRecord({ distributionPercent: 60 })]} />
++    );
++    const card = screen.getByRole('article', { name: 'Smith, John' });
++    expect(within(card).getByText('$3,000.00')).toBeInTheDocument();
++    expect(within(card).getByText('$1,200.00')).toBeInTheDocument();
++    expect(within(card).getByText('$4,200.00')).toBeInTheDocument();
++    expect(screen.queryByRole('table')).not.toBeInTheDocument();
++
++    const trigger = within(card).getByRole('button');
++    expect(trigger).toHaveAttribute('aria-expanded', 'false');
++    trigger.focus();
++    await user.keyboard('{Enter}');
++    expect(trigger).toHaveAttribute('aria-expanded', 'true');
++    expect(within(card).getByRole('table')).toBeInTheDocument();
++    expect(within(card).getByText('Test Project')).toBeInTheDocument();
++    for (const fullJobAmount of ['$5,000.00', '$2,000.00', '$7,000.00']) {
++      expect(screen.queryByText(fullJobAmount)).not.toBeInTheDocument();
++    }
++    await user.click(trigger);
++    expect(within(card).queryByRole('table')).not.toBeInTheDocument();
++  });
++
++  it('groups multiple positions under one employee and sums their PI funding', async () => {
++    const user = userEvent.setup();
++    render(
++      <PersonnelTable
++        data={[
++          createRecord({ distributionPercent: 40 }),
++          createRecord({
++            distributionPercent: 50,
++            fte: 0.5,
++            monthlyRate: 4000,
++            positionDescription: 'ASSOC PROF-FY',
++            positionNumber: '40005678',
++            projectId: 'PROJ2',
++          }),
++        ]}
++      />
++    );
++    expect(screen.getAllByRole('article')).toHaveLength(1);
++    const card = screen.getByRole('article', { name: 'Smith, John' });
++    expect(within(card).getByText('2 projects')).toBeInTheDocument();
++    expect(within(card).getByText('$3,000.00')).toBeInTheDocument();
++    expect(within(card).getByText('$1,200.00')).toBeInTheDocument();
++    expect(within(card).getByText('$4,200.00')).toBeInTheDocument();
++    await user.click(within(card).getByRole('button'));
++    expect(within(card).getByText('PROF-FY · 001234')).toBeInTheDocument();
+     expect(
+-      screen.getByText('Smith, John (1001) - PROF-FY')
++      within(card).getByText('ASSOC PROF-FY · 001234')
+     ).toBeInTheDocument();
+   });
+ 
+-  it('displays FTE column', () => {
+-    const records = [createRecord({ fte: 0.75 })];
+-
+-    render(<PersonnelTable data={records} />);
+-
+-    expect(screen.getByText('0.75')).toBeInTheDocument();
+-  });
+-
+-  it('shows a tooltip on the FTE header', async () => {
+-    const user = userEvent.setup();
+-    render(<PersonnelTable data={[createRecord()]} />);
+-
+-    const fteHeader = screen.getByText('FTE');
+-    const fteTrigger = fteHeader.parentElement as HTMLElement;
+-
+-    expect(fteTrigger).toHaveAttribute('data-tooltip-placement', 'bottom');
+-    expect(fteTrigger).toHaveAttribute('tabIndex', '0');
+-    expect(fteHeader).toHaveClass('tooltip-label');
+-
+-    await user.hover(fteTrigger);
+-
+-    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+-      tooltipDefinitions.fte
++  it('counts distinct projects rather than funding entries', () => {
++    render(
++      <PersonnelTable
++        data={[
++          createRecord(),
++          createRecord({ fundingEffectiveDate: '2026-01-01' }),
++        ]}
++      />
+     );
++    const card = screen.getByRole('article', { name: 'Smith, John' });
++    expect(within(card).getByText('1 project')).toBeInTheDocument();
+   });
+ 
+-  it('displays totals in footer', () => {
+-    const records = [
+-      createRecord({
+-        compositeBenefitRate: 0.4,
+-        employeeId: '1001',
+-        monthlyRate: 5000,
+-        positionNumber: '40001234',
+-      }), // monthly: 5000, fringe: 2000
+-      createRecord({
+-        compositeBenefitRate: 0.4,
+-        employeeId: '1002',
+-        monthlyRate: 4000,
+-        name: 'Doe, Jane',
+-        positionNumber: '40005678',
+-      }), // monthly: 4000, fringe: 1600
+-    ];
+-
+-    render(<PersonnelTable data={records} />);
+-
+-    // Total monthly rate: 5000 + 4000 = 9000
+-    expect(screen.getByText('$9,000.00')).toBeInTheDocument();
+-    // Total monthly fringe: 2000 + 1600 = 3600
+-    expect(screen.getByText('$3,600.00')).toBeInTheDocument();
+-    // Monthly total: 9000 + 3600 = 12600
+-    expect(screen.getByText('$12,600.00')).toBeInTheDocument();
++  it('totals only the current PI distributions across employees', () => {
++    render(
++      <PersonnelTable
++        data={[
++          createRecord({ distributionPercent: 60 }),
++          createRecord({
++            distributionPercent: 50,
++            employeeId: '1002',
++            monthlyRate: 4000,
++            name: 'Doe, Jane',
++          }),
++        ]}
++      />
++    );
++    const totals = screen.getByRole('region', { name: 'PI funding totals' });
++    expect(within(totals).getByText('$5,000.00')).toBeInTheDocument();
++    expect(within(totals).getByText('$2,000.00')).toBeInTheDocument();
++    expect(within(totals).getByText('$7,000.00')).toBeInTheDocument();
++    expect(screen.queryByText('$9,000.00')).not.toBeInTheDocument();
+   });
+ 
+-  it('hides salary for unsplit people and leaves them out of totals with a warning', () => {
+-    const records = [
+-      createRecord({
+-        compositeBenefitRate: 0.4,
+-        earnCodeShare: 1,
+-        earnCodeStatus: 'BaseOnly',
+-        employeeId: '1001',
+-        monthlyRate: 5000,
+-        positionNumber: '40001234',
+-      }),
+-      createRecord({
+-        compositeBenefitRate: 0.4,
+-        earnCodeShare: null,
+-        earnCodeStatus: 'Unsplit',
+-        employeeId: '1002',
+-        monthlyRate: 4000,
+-        name: 'Doe, Jane',
+-        positionNumber: '40005678',
+-      }),
+-    ];
+-
+-    render(<PersonnelTable data={records} />);
+-
+-    // 5000 shows on Smith's row and in the footer; Doe's 4000 shows nowhere.
+-    expect(screen.getAllByText('$5,000.00')).toHaveLength(2);
+-    expect(screen.queryByText('$4,000.00')).not.toBeInTheDocument();
+-    expect(screen.queryByText('$9,000.00')).not.toBeInTheDocument();
++  it('shows unavailable funding as dashes rather than full job salary or zero', async () => {
++    const user = userEvent.setup();
++    render(
++      <PersonnelTable
++        data={[createRecord({ earnCodeStatus: 'Unsplit', monthlyRate: 4321 })]}
++      />
++    );
++    const card = screen.getByRole('article', { name: 'Smith, John' });
++    expect(within(card).getAllByText('—')).toHaveLength(3);
++    expect(within(card).getByText('Funding unavailable')).toBeInTheDocument();
++    expect(screen.getByRole('status')).toHaveTextContent(
++      'Totals include known current funding only.'
++    );
++    await user.click(within(card).getByRole('button'));
+     expect(
+-      screen.getByText(
+-        'Totals exclude 1 person whose funding entry info is not available.'
+-      )
++      within(card).getByText('Funding entry info not available')
+     ).toBeInTheDocument();
++    expect(screen.queryByText('$4,321.00')).not.toBeInTheDocument();
++    expect(document.body).not.toHaveTextContent(/unsplit/i);
+   });
+ 
+-  it('exports no amounts for unsplit people', () => {
++  it('keeps known funding in partial employee totals and identifies missing amounts', () => {
+     render(
+       <PersonnelTable
+         data={[
++          createRecord({ distributionPercent: 60 }),
+           createRecord({
+-            earnCodeShare: null,
+             earnCodeStatus: 'Unsplit',
+             monthlyRate: 4321,
++            projectId: 'PROJ2',
+           }),
+         ]}
+       />
+     );
+-
+-    fireEvent.click(screen.getByRole('button', { name: 'Export' }));
+-
+-    const csv = vi.mocked(downloadExcelCsv).mock.calls[0]?.[0];
+-    expect(csv).toContain('Smith, John');
+-    expect(csv).not.toContain('4,321');
+-    expect(csv).not.toContain('4321');
+-  });
+-
+-  it('shows empty state when no data', () => {
+-    render(<PersonnelTable data={[]} />);
+-    expect(screen.getByText('No personnel found.')).toBeInTheDocument();
+-  });
+-
+-  it('shows ending soon indicator for dates within 3 months', async () => {
+-    const twoMonthsFromNow = new Date();
+-    twoMonthsFromNow.setMonth(twoMonthsFromNow.getMonth() + 2);
+-
+-    const records = [
+-      createRecord({
+-        jobEndDate: twoMonthsFromNow.toISOString(),
+-      }),
+-    ];
+-
+-    render(<PersonnelTable data={records} />);
+-
+-    const trigger = screen.getByText(
+-      formatDate(twoMonthsFromNow.toISOString(), '')
+-    );
+-    fireEvent.focus(trigger);
+-
+-    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+-      tooltipDefinitions.endingWithinThreeMonths
++    const card = screen.getByRole('article', { name: 'Smith, John' });
++    expect(within(card).getByText('Partial funding')).toBeInTheDocument();
++    expect(within(card).getByText('$3,000.00')).toBeInTheDocument();
++    expect(screen.getByRole('status')).toHaveTextContent(
++      'not available for 1 entry'
+     );
++    expect(screen.queryByText('$4,321.00')).not.toBeInTheDocument();
+   });
+ 
+-  it('renders an expanded distributions subtable with headers', async () => {
++  it('keeps current totals unchanged when future funding is shown', async () => {
+     const user = userEvent.setup();
+-    const records = [createRecord({ projectDescription: 'Test Project' })];
+-
+-    render(<PersonnelTable data={records} />);
+-
+-    expect(screen.queryByText('Project')).not.toBeInTheDocument();
+-
+-    await user.click(
+-      screen.getByRole('cell', { name: 'Smith, John (1001) - PROF-FY' })
++    render(
++      <PersonnelTable
++        data={[
++          createRecord(),
++          createRecord({
++            isFuture: true,
++            monthlyRate: 9000,
++            projectDescription: 'Future Project',
++          }),
++          createRecord({
++            employeeId: '1003',
++            isFuture: true,
++            monthlyRate: 8000,
++            name: 'New, Hire',
++          }),
++        ]}
++      />
+     );
+-
+-    expect(screen.getByText('Project')).toBeInTheDocument();
+-    expect(screen.getByText('Test Project')).toBeInTheDocument();
+-  });
+-
+-  it('shows the Task on internal-project funding entries and a dash otherwise', async () => {
+-    const user = userEvent.setup();
+-    const records = [
+-      createRecord({
+-        positionNumber: '40001234',
+-        projectDescription: 'Internal Ops',
+-        projectId: 'PROJ1',
+-        projectType: 'Internal',
+-        task: '441000',
+-      }),
+-      createRecord({
+-        positionNumber: '40001234',
+-        projectDescription: 'NSF Grant',
+-        projectId: 'PROJ2',
+-        projectType: 'Sponsored',
+-        task: '778100',
+-      }),
+-    ];
+-
+-    render(<PersonnelTable data={records} />);
+-
++    expect(
++      screen.queryByRole('article', { name: 'New, Hire' })
++    ).not.toBeInTheDocument();
+     await user.click(
+-      screen.getByRole('cell', { name: 'Smith, John (1001) - PROF-FY' })
++      screen.getByRole('button', { name: /show future entries/i })
+     );
+-
+-    // Internal project surfaces its task; sponsored project hides it behind a dash.
+-    expect(screen.getByText('441000')).toBeInTheDocument();
+-    expect(screen.queryByText('778100')).not.toBeInTheDocument();
+-    expect(screen.getByText('—')).toBeInTheDocument();
+-  });
+-
+-  it('shows one total row per funding entry with no earn codes', async () => {
++    const totals = screen.getByRole('region', { name: 'PI funding totals' });
++    expect(within(totals).getByText('$5,000.00')).toBeInTheDocument();
++    expect(within(totals).getByText('$2,000.00')).toBeInTheDocument();
++    expect(within(totals).getByText('$7,000.00')).toBeInTheDocument();
++    const futureCard = screen.getByRole('article', { name: 'New, Hire' });
++    expect(within(futureCard).getAllByText('—')).toHaveLength(3);
++    expect(within(futureCard).getByText('Future only')).toBeInTheDocument();
++    const card = screen.getByRole('article', { name: 'Smith, John' });
++    expect(within(card).queryByText('$9,000.00')).not.toBeInTheDocument();
++    await user.click(within(card).getByRole('button'));
++    expect(within(card).getByText('Future Project')).toBeInTheDocument();
++    expect(within(card).getByText('$9,000.00')).toBeInTheDocument();
++  });
++
++  it('allows future funding to be viewed when there are no current employees', async () => {
+     const user = userEvent.setup();
+-    const records = [
+-      createRecord({
+-        earnCode: 'REG',
+-        earnCodeShare: 0.75,
+-        earnCodeStatus: 'Split',
+-        projectDescription: 'Grant A',
+-      }),
+-      createRecord({
+-        earnCode: 'NNC',
+-        earnCodeShare: 0.25,
+-        earnCodeStatus: 'Split',
+-        projectDescription: 'Grant A',
+-      }),
+-    ];
+-
+-    render(<PersonnelTable data={records} />);
++    render(<PersonnelTable data={[createRecord({ isFuture: true })]} />);
++    expect(screen.queryByRole('article')).not.toBeInTheDocument();
+     await user.click(
+-      screen.getByRole('cell', { name: 'Smith, John (1001) - PROF-FY' })
++      screen.getByRole('button', { name: /show future entries/i })
+     );
+-
+-    expect(screen.getAllByText('Grant A')).toHaveLength(1);
+-    expect(screen.getByText('100%')).toBeInTheDocument();
+-    expect(screen.queryByText('REG')).not.toBeInTheDocument();
+-    expect(screen.queryByText('NNC')).not.toBeInTheDocument();
++    expect(
++      screen.getByRole('article', { name: 'Smith, John' })
++    ).toBeInTheDocument();
+   });
+ 
+-  it('exports one row per funding entry with no earn code column', () => {
++  it('filters employee cards and PI totals by project search', () => {
+     render(
+       <PersonnelTable
+         data={[
+           createRecord({
+-            earnCode: 'REG',
+-            earnCodeShare: 0.75,
+-            earnCodeStatus: 'Split',
++            distributionPercent: 60,
++            name: 'Adams, Alice',
++            projectDescription: 'Sunny Project',
+           }),
+           createRecord({
+-            earnCode: 'NNC',
+-            earnCodeShare: 0.25,
+-            earnCodeStatus: 'Split',
++            employeeId: '1002',
++            name: 'Baker, Bob',
++            projectDescription: 'Rainy Project',
+           }),
+         ]}
+       />
+     );
+-
+-    fireEvent.click(screen.getByRole('button', { name: 'Export' }));
+-
+-    const csv = vi.mocked(downloadExcelCsv).mock.calls[0]?.[0] ?? '';
+-    expect(csv).not.toContain('Earn Code');
+-    expect(csv).not.toContain('NNC');
+-    expect(csv.match(/Smith, John/g)).toHaveLength(1);
++    fireEvent.input(
++      screen.getByRole('searchbox', { name: 'Search personnel' }),
++      { target: { value: 'Sunny' } }
++    );
++    expect(
++      screen.getByRole('article', { name: 'Adams, Alice' })
++    ).toBeInTheDocument();
++    expect(
++      screen.queryByRole('article', { name: 'Baker, Bob' })
++    ).not.toBeInTheDocument();
++    const totals = screen.getByRole('region', { name: 'PI funding totals' });
++    expect(within(totals).getByText('$3,000.00')).toBeInTheDocument();
++    expect(within(totals).getByText('$1,200.00')).toBeInTheDocument();
++    expect(within(totals).getByText('$4,200.00')).toBeInTheDocument();
+   });
+ 
+-  it('never shows the internal Unsplit status', async () => {
+-    const user = userEvent.setup();
++  it('shows an empty search state and hides unfilled positions', () => {
+     render(
+       <PersonnelTable
+         data={[
+-          createRecord({ earnCodeShare: null, earnCodeStatus: 'Unsplit' }),
++          createRecord(),
++          createRecord({
++            employeeId: '',
++            name: '',
++            positionDescription: 'STDT 3',
++          }),
+         ]}
+       />
+     );
+-    await user.click(
+-      screen.getByRole('cell', { name: 'Smith, John (1001) - PROF-FY' })
+-    );
+-
+-    expect(document.body).not.toHaveTextContent(/unsplit/i);
++    expect(screen.getAllByRole('article')).toHaveLength(1);
++    expect(screen.queryByText('STDT 3')).not.toBeInTheDocument();
++    fireEvent.input(screen.getByRole('searchbox'), {
++      target: { value: 'no match' },
++    });
+     expect(
+-      screen.getByText('Funding entry info not available')
++      screen.getByText('No matching personnel found.')
+     ).toBeInTheDocument();
++    expect(screen.queryByRole('article')).not.toBeInTheDocument();
+   });
+ 
+-  it('shows a tooltip on the Mo. CBR header', async () => {
++  it('retains FE date and CBR tooltips in the funding breakdown', async () => {
+     const user = userEvent.setup();
+     render(<PersonnelTable data={[createRecord()]} />);
+-
+-    const label = screen.getByText('Mo. CBR');
+-    await user.hover(label.parentElement as HTMLElement);
+-
+-    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+-      tooltipDefinitions.monthlyCbr
++    const card = screen.getByRole('article', { name: 'Smith, John' });
++    await user.click(within(card).getByRole('button'));
++    const table = within(card).getByRole('table');
++    for (const [label, tooltip] of [
++      ['FE Start', tooltipDefinitions.fundingEntryStart],
++      ['FE End', tooltipDefinitions.fundingEntryEnd],
++      ['Dist %', tooltipDefinitions.distributionPercent],
++      ['Mo. CBR', tooltipDefinitions.monthlyCbr],
++    ]) {
++      const trigger = within(table).getByText(label)
++        .parentElement as HTMLElement;
++      await user.hover(trigger);
++      expect(await screen.findByRole('tooltip')).toHaveTextContent(tooltip);
++      await user.unhover(trigger);
++    }
++  });
++
++  it('shows only internal tasks in the project breakdown', async () => {
++    const user = userEvent.setup();
++    render(
++      <PersonnelTable
++        data={[
++          createRecord({ projectType: 'Internal', task: '441000' }),
++          createRecord({
++            projectId: 'PROJ2',
++            projectType: 'Sponsored',
++            task: '778100',
++          }),
++        ]}
++      />
+     );
++    const card = screen.getByRole('article', { name: 'Smith, John' });
++    await user.click(within(card).getByRole('button'));
++    expect(within(card).getByText('441000')).toBeInTheDocument();
++    expect(within(card).queryByText('778100')).not.toBeInTheDocument();
+   });
+ 
+-  it('shows tooltips in the funding distribution subtable', async () => {
++  it('shows a warning for current funding ending within three months', async () => {
++    const date = new Date();
++    date.setMonth(date.getMonth() + 2);
+     const user = userEvent.setup();
+     render(
+       <PersonnelTable
+-        data={[createRecord({ projectDescription: 'Test Project' })]}
++        data={[createRecord({ fundingEndDate: date.toISOString() })]}
+       />
+     );
+-
+-    await user.click(
+-      screen.getByRole('cell', { name: 'Smith, John (1001) - PROF-FY' })
+-    );
+-
+-    const distLabel = screen.getByText('Dist %');
+-    await user.hover(distLabel.parentElement as HTMLElement);
+-    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+-      tooltipDefinitions.distributionPercent
+-    );
+-
+-    await user.unhover(distLabel.parentElement as HTMLElement);
+-
+-    // Two occurrences after expand: outer header and subtable header. Hover
+-    // the subtable's (last) one.
+-    const cbrLabels = screen.getAllByText('Mo. CBR');
+-    await user.hover(
+-      cbrLabels[cbrLabels.length - 1].parentElement as HTMLElement
+-    );
+-    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+-      tooltipDefinitions.monthlyCbr
+-    );
+-  });
+-
+-  it('hides unfilled positions without offering a toggle', () => {
+-    const records = [
+-      createRecord({ name: 'Smith, John', positionNumber: '40001234' }),
+-      createRecord({
+-        employeeId: '',
+-        name: '',
+-        positionDescription: 'STDT 3',
+-        positionNumber: '40005678',
+-      }),
+-    ];
+-
+-    render(<PersonnelTable data={records} />);
+-
++    const card = screen.getByRole('article', { name: 'Smith, John' });
++    expect(within(card).getByText('Funding ends soon')).toBeInTheDocument();
++    await user.click(within(card).getByRole('button'));
+     expect(
+-      screen.getByText('Smith, John (1001) - PROF-FY')
++      within(card).getByText(formatDate(date.toISOString(), ''))
+     ).toBeInTheDocument();
+-    expect(screen.queryByText(/STDT 3/)).not.toBeInTheDocument();
+-    expect(
+-      screen.queryByRole('button', { name: /unfilled/i })
+-    ).not.toBeInTheDocument();
+   });
+ 
+-  it('does not show the future toggle when no future entries exist', () => {
+-    render(<PersonnelTable data={[createRecord()]} />);
+-
+-    expect(
+-      screen.queryByRole('button', { name: /future entries/i })
+-    ).not.toBeInTheDocument();
++  it('shows an empty state when no personnel exist', () => {
++    render(<PersonnelTable data={[]} />);
++    expect(screen.getByText('No personnel found.')).toBeInTheDocument();
+   });
+ 
+-  it('hides future entries by default and shows them when toggled', async () => {
+-    const user = userEvent.setup();
+-    const records = [
+-      createRecord({ projectDescription: 'Current Project' }),
+-      createRecord({
+-        fundingEffectiveDate: '2099-01-01T00:00:00.000Z',
+-        isFuture: true,
+-        monthlyRate: 9000,
+-        projectDescription: 'Future Project',
+-      }),
+-    ];
+-
+-    render(<PersonnelTable data={records} />);
+-
+-    const toggle = screen.getByRole('button', { name: /show future entries/i });
+-    expect(toggle).toHaveTextContent('Show future entries (1)');
+-
+-    await user.click(
+-      screen.getByRole('cell', { name: 'Smith, John (1001) - PROF-FY' })
++  it('exports no amounts for unsplit people', () => {
++    render(
++      <PersonnelTable
++        data={[
++          createRecord({
++            earnCodeShare: null,
++            earnCodeStatus: 'Unsplit',
++            monthlyRate: 4321,
++          }),
++        ]}
++      />
+     );
+-    expect(screen.getByText('Current Project')).toBeInTheDocument();
+-    expect(screen.queryByText('Future Project')).not.toBeInTheDocument();
+ 
+-    await user.click(toggle);
++    fireEvent.click(screen.getByRole('button', { name: 'Export' }));
+ 
+-    expect(screen.getByText('Future Project')).toBeInTheDocument();
+-    expect(screen.getByText('Future')).toBeInTheDocument();
+-    expect(
+-      screen.getByRole('button', { name: /hide future entries/i })
+-    ).toBeInTheDocument();
++    const csv = vi.mocked(downloadExcelCsv).mock.calls[0]?.[0];
++    expect(csv).toContain('Smith, John');
++    expect(csv).not.toContain('4,321');
++    expect(csv).not.toContain('4321');
+   });
+ 
+-  it('keeps totals on current entries when future entries are shown', async () => {
+-    const user = userEvent.setup();
+-    const records = [
+-      createRecord({ monthlyRate: 5000 }),
+-      createRecord({
+-        fundingEffectiveDate: '2099-01-01T00:00:00.000Z',
+-        isFuture: true,
+-        monthlyRate: 9000,
+-      }),
+-      createRecord({
+-        employeeId: '1003',
+-        isFuture: true,
+-        monthlyRate: 7000,
+-        name: 'New, Hire',
+-        positionNumber: '40009999',
+-      }),
+-    ];
+-
+-    render(<PersonnelTable data={records} />);
+-    await user.click(
+-      screen.getByRole('button', { name: /show future entries/i })
++  it('exports one row per funding entry with no earn code column', () => {
++    render(
++      <PersonnelTable
++        data={[
++          createRecord({
++            earnCode: 'REG',
++            earnCodeShare: 0.75,
++            earnCodeStatus: 'Split',
++          }),
++          createRecord({
++            earnCode: 'NNC',
++            earnCodeShare: 0.25,
++            earnCodeStatus: 'Split',
++          }),
++        ]}
++      />
+     );
+ 
+-    expect(screen.getByText(/New, Hire \(1003\)/)).toBeInTheDocument();
+-    // Footer: only the current 5000 salary and 2000 CBR count.
+-    const footer = screen.getByText('Totals').closest('tr') as HTMLElement;
+-    expect(footer).toHaveTextContent('$5,000.00');
+-    expect(footer).toHaveTextContent('$2,000.00');
+-    expect(footer).toHaveTextContent('$7,000.00');
+-  });
+-
+-  it('renders only filtered data when passed filtered records', () => {
+-    const allPersonnel = [
+-      createRecord({
+-        employeeId: '1001',
+-        name: 'Adams, Alice',
+-        positionNumber: '40001111',
+-        projectId: 'PROJ1',
+-      }),
+-      createRecord({
+-        employeeId: '1002',
+-        name: 'Baker, Bob',
+-        positionNumber: '40002222',
+-        projectId: 'PROJ2',
+-      }),
+-    ];
+-
+-    // Filter to only PROJ1
+-    const filtered = allPersonnel.filter((p) => p.projectId === 'PROJ1');
+-
+-    render(<PersonnelTable data={filtered} />);
++    fireEvent.click(screen.getByRole('button', { name: 'Export' }));
+ 
+-    expect(
+-      screen.getByText('Adams, Alice (1001) - PROF-FY')
+-    ).toBeInTheDocument();
+-    expect(
+-      screen.queryByText('Baker, Bob (1002) - PROF-FY')
+-    ).not.toBeInTheDocument();
++    const csv = vi.mocked(downloadExcelCsv).mock.calls[0]?.[0] ?? '';
++    expect(csv).not.toContain('Earn Code');
++    expect(csv).not.toContain('NNC');
++    expect(csv.match(/Smith, John/g)).toHaveLength(1);
+   });
+ 
+   it('shows the filtered export action only when a search filter is active', () => {

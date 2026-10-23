@@ -92,6 +92,10 @@ export function PersonnelSection({
         accessed by WALTER. Additional information will be displayed once
         available.
       </p>
+      <p className="max-w-3xl mb-4">
+        Monthly amounts show current funding for this PI only. Expand an
+        employee to see their project funding details.
+      </p>
       {personnelQuery.isPending && <PersonnelTableSkeleton />}
       {personnelQuery.isError && (
         <p className="text-error mt-4">Error loading personnel.</p>

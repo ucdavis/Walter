@@ -25,6 +25,8 @@ export const tooltipDefinitions = {
     'High-level grouping of costs, such as labor, travel, or supplier costs.',
   failedToSaveLabel: 'Failed to save label',
   fte: 'Full-Time Equivalent (FTE) equals one employee working 100% time.',
+  fundingEntryEnd: 'Funding Entry From UC Path End',
+  fundingEntryStart: 'Funding Entry From UC Path Start',
   grantAdministrator:
     'Research admin contact for award setup and ongoing award administration.',
   monthlyCbr:

@@ -79,6 +79,10 @@ function RouteComponent() {
         accessed by WALTER. Additional information will be displayed once
         available.
       </p>
+      <p className="max-w-3xl mb-4">
+        Monthly amounts show current funding for this PI only. Expand an
+        employee to see their project funding details.
+      </p>
       {/* Personnel Table */}
       <PersonnelTable data={data} />
     </div>
