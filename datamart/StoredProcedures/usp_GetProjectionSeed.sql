@@ -1,6 +1,5 @@
--- Seed data for a PI projection, at project/task x expenditure category grain, for the PI's active
--- portfolio: projects where they are PI (project or award scope) plus PI-less projects they manage.
--- Portfolio rule mirrors ProjectController by-iam; keep in sync.
+-- Seed data for a PI projection, at project/task x expenditure category grain, for active projects
+-- where the employee is the project-level PI.
 -- Returns four result sets:
 --   1. Projects: names, award, and dates (project dates from dbo.PpmProjects, else award dates).
 --   2. Budgets: budget, spent, committed from dbo.FacultyDeptPortfolio.
@@ -38,13 +37,8 @@ BEGIN
         FROM dbo.PpmPersonRoles r
         JOIN dbo.PpmProjects p ON p.ProjectNumber = r.ProjectNumber
         WHERE r.EmployeeId = @PiEmployeeId
-          AND r.ScopeType IN ('PROJECT', 'AWARD')
-          AND (r.RoleName = 'Principal Investigator'
-               OR (r.RoleName = 'Project Manager'
-                   AND NOT EXISTS (SELECT 1 FROM dbo.PpmPersonRoles pi
-                                   WHERE pi.ProjectNumber = r.ProjectNumber
-                                     AND pi.ScopeType = 'PROJECT'
-                                     AND pi.RoleName = 'Principal Investigator')))
+          AND r.ScopeType = 'PROJECT'
+          AND r.RoleName = 'Principal Investigator'
           AND EXISTS (SELECT 1 FROM dbo.FacultyDeptPortfolio f
                       WHERE f.ProjectNumber = r.ProjectNumber AND f.ProjectStatus = 'ACTIVE');
 
