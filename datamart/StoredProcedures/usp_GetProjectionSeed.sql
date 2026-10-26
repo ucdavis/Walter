@@ -1,0 +1,160 @@
+-- Seed data for a PI projection, at project/task x expenditure category grain, for active projects.
+-- Task is NULL for projects whose only task is TASK01 (sponsored), so they are one row per project.
+-- Returns four result sets:
+--   1. Projects: names, award, and dates (project dates from dbo.PpmProjects, else award dates).
+--   2. Budgets: budget, spent, committed from dbo.FacultyDeptPortfolio.
+--   3. Actuals: monthly burdened cost from dbo.PPMProjectCosts, 12 full months plus the current month.
+--   4. RunRates: trailing non-personnel monthly averages for 3, 6, and 12 month windows.
+CREATE PROCEDURE dbo.usp_GetProjectionSeed
+    @ProjectIds      NVARCHAR(MAX),
+    @ApplicationName NVARCHAR(128) = NULL,
+    @ApplicationUser NVARCHAR(256) = NULL,
+    @EmulatingUser   NVARCHAR(256) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @StartTime      DATETIME2 = SYSDATETIME();
+    DECLARE @RowCount       INT;
+    DECLARE @Duration_MS    INT;
+    DECLARE @ErrorMsg       NVARCHAR(MAX);
+    DECLARE @ParametersJSON NVARCHAR(MAX);
+    DECLARE @CurrMonthStart DATE = DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1);
+
+    EXEC dbo.usp_SanitizeInputString @ApplicationName OUTPUT;
+    EXEC dbo.usp_SanitizeInputString @ApplicationUser OUTPUT;
+
+    BEGIN TRY
+        SET @ParametersJSON = (
+            SELECT @ProjectIds AS ProjectIds,
+                   COALESCE(@ApplicationName, APP_NAME()) AS ApplicationName
+            FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
+        );
+
+        DROP TABLE IF EXISTS #ids;
+        SELECT DISTINCT LTRIM(RTRIM(value)) AS ProjectNumber
+        INTO #ids
+        FROM STRING_SPLIT(@ProjectIds, ',')
+        WHERE LTRIM(RTRIM(value)) <> '';
+
+        -- UseTask = 0 when every task is TASK01, so sponsored projects collapse to one row.
+        DROP TABLE IF EXISTS #mode;
+        SELECT f.ProjectNumber,
+               MAX(CASE WHEN f.TaskNum NOT IN ('TASK01', '') THEN 1 ELSE 0 END) AS UseTask
+        INTO #mode
+        FROM dbo.FacultyDeptPortfolio f
+        JOIN #ids i ON i.ProjectNumber = f.ProjectNumber
+        WHERE f.ProjectStatus = 'ACTIVE'
+        GROUP BY f.ProjectNumber;
+
+        -- Month dimension: n = -12..-1 full months, 0 = current month.
+        DROP TABLE IF EXISTS #months;
+        ;WITH n AS (
+            SELECT TOP (13) ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) - 13 AS n
+            FROM sys.all_objects
+        )
+        SELECT n.n,
+               DATEADD(MONTH, n.n, @CurrMonthStart) AS MonthStart,
+               FORMAT(DATEADD(MONTH, n.n, @CurrMonthStart), 'MMM-yy') AS DisplayPeriod
+        INTO #months
+        FROM n;
+
+        /* 1. Projects */
+        SELECT f.ProjectNumber,
+               CASE WHEN m.UseTask = 1 THEN f.TaskNum END AS TaskNumber,
+               CASE WHEN m.UseTask = 1 THEN MAX(f.TaskName) END AS TaskName,
+               MAX(f.ProjectName) AS ProjectName,
+               MAX(f.ProjectType) AS ProjectType,
+               MAX(f.AwardNumber) AS AwardNumber,
+               MAX(f.AwardName) AS AwardName,
+               COALESCE(MAX(pp.ProjectStartDate), MAX(f.AwardStartDate)) AS StartDate,
+               COALESCE(MAX(pp.ProjectEndDate), MAX(f.AwardEndDate)) AS EndDate
+        FROM dbo.FacultyDeptPortfolio f
+        JOIN #mode m ON m.ProjectNumber = f.ProjectNumber
+        LEFT JOIN dbo.PpmProjects pp ON pp.ProjectNumber = CAST(f.ProjectNumber AS VARCHAR(15))
+        WHERE f.ProjectStatus = 'ACTIVE'
+        GROUP BY f.ProjectNumber, m.UseTask, CASE WHEN m.UseTask = 1 THEN f.TaskNum END;
+
+        /* 2. Budgets */
+        SELECT f.ProjectNumber,
+               CASE WHEN m.UseTask = 1 THEN f.TaskNum END AS TaskNumber,
+               f.ExpenditureCategoryName AS ExpenditureCategory,
+               SUM(f.PpmBudget) AS Budget,
+               SUM(f.PpmExpenses) AS SpentToDate,
+               SUM(f.PpmCommitments) AS Committed
+        FROM dbo.FacultyDeptPortfolio f
+        JOIN #mode m ON m.ProjectNumber = f.ProjectNumber
+        WHERE f.ProjectStatus = 'ACTIVE'
+        GROUP BY f.ProjectNumber, CASE WHEN m.UseTask = 1 THEN f.TaskNum END, f.ExpenditureCategoryName;
+
+        DROP TABLE IF EXISTS #actuals;
+        SELECT c.ProjectNumber,
+               CASE WHEN m.UseTask = 1 THEN c.TaskNumber END AS TaskNumber,
+               c.ExpenditureCategoryCode + ' - ' + c.ExpenditureCategoryName AS ExpenditureCategory,
+               mo.n,
+               mo.MonthStart,
+               SUM(c.BurdenedCost) AS Amount
+        INTO #actuals
+        FROM dbo.PPMProjectCosts c
+        JOIN #mode m ON m.ProjectNumber = c.ProjectNumber
+        JOIN #months mo ON mo.DisplayPeriod = c.AccountingPeriod
+        GROUP BY c.ProjectNumber, CASE WHEN m.UseTask = 1 THEN c.TaskNumber END,
+                 c.ExpenditureCategoryCode + ' - ' + c.ExpenditureCategoryName, mo.n, mo.MonthStart;
+
+        /* 3. Actuals */
+        SELECT ProjectNumber, TaskNumber, ExpenditureCategory, MonthStart AS [Month], Amount
+        FROM #actuals;
+
+        /* 4. RunRates. Run-rate rule duplicated from dbo.usp_GetProjectProjection; keep in sync.
+           Per window, average over the full months from the first month with any cost through
+           last month; equipment is excluded as lumpy. */
+        ;WITH w AS (
+            SELECT v.W FROM (VALUES (3), (6), (12)) v(W)
+        ),
+        span AS (
+            SELECT a.ProjectNumber, a.TaskNumber, w.W, -MIN(a.n) AS Months
+            FROM #actuals a
+            JOIN w ON a.n BETWEEN -w.W AND -1
+            GROUP BY a.ProjectNumber, a.TaskNumber, w.W
+        )
+        SELECT a.ProjectNumber, a.TaskNumber, a.ExpenditureCategory, s.W AS HistoryMonths,
+               CAST(SUM(a.Amount) / s.Months AS DECIMAL(18, 2)) AS MonthlyAmount
+        FROM #actuals a
+        JOIN span s ON s.ProjectNumber = a.ProjectNumber
+                   AND ISNULL(s.TaskNumber, '') = ISNULL(a.TaskNumber, '')
+                   AND a.n BETWEEN -s.W AND -1
+        WHERE a.ExpenditureCategory NOT IN ('01 - Salaries and Wages', '02 - Fringe Benefits',
+                                            '04 - Equipment and Facilities')
+        GROUP BY a.ProjectNumber, a.TaskNumber, a.ExpenditureCategory, s.W, s.Months;
+
+        SET @RowCount = @@ROWCOUNT;
+        SET @Duration_MS = DATEDIFF(MILLISECOND, @StartTime, SYSDATETIME());
+
+        EXEC [dbo].[usp_LogProcedureExecution]
+            @ProcedureName = 'dbo.usp_GetProjectionSeed',
+            @Duration_MS = @Duration_MS,
+            @RowCount = @RowCount,
+            @Parameters = @ParametersJSON,
+            @ApplicationName = @ApplicationName,
+            @ApplicationUser = @ApplicationUser,
+            @EmulatingUser = @EmulatingUser,
+            @Success = 1;
+    END TRY
+    BEGIN CATCH
+        SET @Duration_MS = DATEDIFF(MILLISECOND, @StartTime, SYSDATETIME());
+        SET @ErrorMsg = ERROR_MESSAGE();
+
+        EXEC [dbo].[usp_LogProcedureExecution]
+            @ProcedureName = 'dbo.usp_GetProjectionSeed',
+            @Duration_MS = @Duration_MS,
+            @Parameters = @ParametersJSON,
+            @ApplicationName = @ApplicationName,
+            @ApplicationUser = @ApplicationUser,
+            @EmulatingUser = @EmulatingUser,
+            @Success = 0,
+            @ErrorMessage = @ErrorMsg;
+
+        THROW;
+    END CATCH
+END;
+GO

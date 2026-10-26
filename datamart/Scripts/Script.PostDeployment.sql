@@ -19,6 +19,7 @@ GRANT EXECUTE ON [dbo].[usp_GetProjectSummary] TO [WalterAppRole];
 
 GRANT EXECUTE ON [dbo].[usp_GetProjectProjection] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_GetProjectCosts] TO [WalterAppRole];
+GRANT EXECUTE ON [dbo].[usp_GetProjectionSeed] TO [WalterAppRole];
 
 GRANT EXECUTE ON [dbo].[usp_GetGLPPMReconciliation] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_GetGLTransactionListings] TO [WalterAppRole];
@@ -38,6 +39,7 @@ GRANT EXECUTE ON [dbo].[usp_ValidateFinancialDept] TO [WalterAppRole];
 
 -- Grant application role permissions to tables
 GRANT SELECT ON [dbo].[FacultyDeptPortfolio] TO [WalterAppRole];
+GRANT SELECT ON [dbo].[CompositeBenefitRates] TO [WalterAppRole];
 GRANT SELECT ON [dbo].[EmployeeAccrualBalances] TO [WalterAppRole];
 GRANT SELECT ON [dbo].[PositionBudgets] TO [WalterAppRole];
 GRANT SELECT ON [dbo].[PositionBudgetsCognos] TO [WalterAppRole];
