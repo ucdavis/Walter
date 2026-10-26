@@ -1,7 +1,6 @@
 -- Seed data for a PI projection, at project/task x expenditure category grain, for the PI's active
 -- portfolio: projects where they are PI (project or award scope) plus PI-less projects they manage.
 -- Portfolio rule mirrors ProjectController by-iam; keep in sync.
--- Task is NULL for projects whose only task is TASK01 (sponsored), so they are one row per project.
 -- Returns four result sets:
 --   1. Projects: names, award, and dates (project dates from dbo.PpmProjects, else award dates).
 --   2. Budgets: budget, spent, committed from dbo.FacultyDeptPortfolio.
@@ -45,17 +44,9 @@ BEGIN
                    AND NOT EXISTS (SELECT 1 FROM dbo.PpmPersonRoles pi
                                    WHERE pi.ProjectNumber = r.ProjectNumber
                                      AND pi.ScopeType = 'PROJECT'
-                                     AND pi.RoleName = 'Principal Investigator')));
-
-        -- UseTask = 0 when every task is TASK01, so sponsored projects collapse to one row.
-        DROP TABLE IF EXISTS #mode;
-        SELECT f.ProjectNumber,
-               MAX(CASE WHEN f.TaskNum NOT IN ('TASK01', '') THEN 1 ELSE 0 END) AS UseTask
-        INTO #mode
-        FROM dbo.FacultyDeptPortfolio f
-        JOIN #ids i ON i.ProjectNumber = f.ProjectNumber
-        WHERE f.ProjectStatus = 'ACTIVE'
-        GROUP BY f.ProjectNumber;
+                                     AND pi.RoleName = 'Principal Investigator')))
+          AND EXISTS (SELECT 1 FROM dbo.FacultyDeptPortfolio f
+                      WHERE f.ProjectNumber = r.ProjectNumber AND f.ProjectStatus = 'ACTIVE');
 
         -- Month dimension: n = -12..-1 full months, 0 = current month.
         DROP TABLE IF EXISTS #months;
@@ -71,8 +62,8 @@ BEGIN
 
         /* 1. Projects */
         SELECT f.ProjectNumber,
-               CASE WHEN m.UseTask = 1 THEN f.TaskNum END AS TaskNumber,
-               CASE WHEN m.UseTask = 1 THEN MAX(f.TaskName) END AS TaskName,
+               f.TaskNum AS TaskNumber,
+               MAX(f.TaskName) AS TaskName,
                MAX(f.ProjectName) AS ProjectName,
                MAX(f.ProjectType) AS ProjectType,
                MAX(f.AwardNumber) AS AwardNumber,
@@ -80,35 +71,33 @@ BEGIN
                COALESCE(MAX(pp.ProjectStartDate), MAX(f.AwardStartDate)) AS StartDate,
                COALESCE(MAX(pp.ProjectEndDate), MAX(f.AwardEndDate)) AS EndDate
         FROM dbo.FacultyDeptPortfolio f
-        JOIN #mode m ON m.ProjectNumber = f.ProjectNumber
+        JOIN #ids i ON i.ProjectNumber = f.ProjectNumber
         LEFT JOIN dbo.PpmProjects pp ON pp.ProjectNumber = CAST(f.ProjectNumber AS VARCHAR(15))
-        WHERE f.ProjectStatus = 'ACTIVE'
-        GROUP BY f.ProjectNumber, m.UseTask, CASE WHEN m.UseTask = 1 THEN f.TaskNum END;
+        GROUP BY f.ProjectNumber, f.TaskNum;
 
         /* 2. Budgets */
         SELECT f.ProjectNumber,
-               CASE WHEN m.UseTask = 1 THEN f.TaskNum END AS TaskNumber,
+               f.TaskNum AS TaskNumber,
                f.ExpenditureCategoryName AS ExpenditureCategory,
                SUM(f.PpmBudget) AS Budget,
                SUM(f.PpmExpenses) AS SpentToDate,
                SUM(f.PpmCommitments) AS Committed
         FROM dbo.FacultyDeptPortfolio f
-        JOIN #mode m ON m.ProjectNumber = f.ProjectNumber
-        WHERE f.ProjectStatus = 'ACTIVE'
-        GROUP BY f.ProjectNumber, CASE WHEN m.UseTask = 1 THEN f.TaskNum END, f.ExpenditureCategoryName;
+        JOIN #ids i ON i.ProjectNumber = f.ProjectNumber
+        GROUP BY f.ProjectNumber, f.TaskNum, f.ExpenditureCategoryName;
 
         DROP TABLE IF EXISTS #actuals;
         SELECT c.ProjectNumber,
-               CASE WHEN m.UseTask = 1 THEN c.TaskNumber END AS TaskNumber,
+               c.TaskNumber,
                c.ExpenditureCategoryCode + ' - ' + c.ExpenditureCategoryName AS ExpenditureCategory,
                mo.n,
                mo.MonthStart,
                SUM(c.BurdenedCost) AS Amount
         INTO #actuals
         FROM dbo.PPMProjectCosts c
-        JOIN #mode m ON m.ProjectNumber = c.ProjectNumber
+        JOIN #ids i ON i.ProjectNumber = c.ProjectNumber
         JOIN #months mo ON mo.DisplayPeriod = c.AccountingPeriod
-        GROUP BY c.ProjectNumber, CASE WHEN m.UseTask = 1 THEN c.TaskNumber END,
+        GROUP BY c.ProjectNumber, c.TaskNumber,
                  c.ExpenditureCategoryCode + ' - ' + c.ExpenditureCategoryName, mo.n, mo.MonthStart;
 
         /* 3. Actuals */
@@ -131,7 +120,7 @@ BEGIN
                CAST(SUM(a.Amount) / s.Months AS DECIMAL(18, 2)) AS MonthlyAmount
         FROM #actuals a
         JOIN span s ON s.ProjectNumber = a.ProjectNumber
-                   AND ISNULL(s.TaskNumber, '') = ISNULL(a.TaskNumber, '')
+                   AND s.TaskNumber = a.TaskNumber
                    AND a.n BETWEEN -s.W AND -1
         WHERE a.ExpenditureCategory NOT IN ('01 - Salaries and Wages', '02 - Fringe Benefits',
                                             '04 - Equipment and Facilities')
