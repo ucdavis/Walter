@@ -1,4 +1,6 @@
--- Seed data for a PI projection, at project/task x expenditure category grain, for active projects.
+-- Seed data for a PI projection, at project/task x expenditure category grain, for the PI's active
+-- portfolio: projects where they are PI (project or award scope) plus PI-less projects they manage.
+-- Portfolio rule mirrors ProjectController by-iam; keep in sync.
 -- Task is NULL for projects whose only task is TASK01 (sponsored), so they are one row per project.
 -- Returns four result sets:
 --   1. Projects: names, award, and dates (project dates from dbo.PpmProjects, else award dates).
@@ -6,7 +8,7 @@
 --   3. Actuals: monthly burdened cost from dbo.PPMProjectCosts, 12 full months plus the current month.
 --   4. RunRates: trailing non-personnel monthly averages for 3, 6, and 12 month windows.
 CREATE PROCEDURE dbo.usp_GetProjectionSeed
-    @ProjectIds      NVARCHAR(MAX),
+    @PiEmployeeId    VARCHAR(16),
     @ApplicationName NVARCHAR(128) = NULL,
     @ApplicationUser NVARCHAR(256) = NULL,
     @EmulatingUser   NVARCHAR(256) = NULL
@@ -26,16 +28,24 @@ BEGIN
 
     BEGIN TRY
         SET @ParametersJSON = (
-            SELECT @ProjectIds AS ProjectIds,
+            SELECT @PiEmployeeId AS PiEmployeeId,
                    COALESCE(@ApplicationName, APP_NAME()) AS ApplicationName
             FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
         );
 
         DROP TABLE IF EXISTS #ids;
-        SELECT DISTINCT LTRIM(RTRIM(value)) AS ProjectNumber
+        SELECT DISTINCT r.ProjectNumber
         INTO #ids
-        FROM STRING_SPLIT(@ProjectIds, ',')
-        WHERE LTRIM(RTRIM(value)) <> '';
+        FROM dbo.PpmPersonRoles r
+        JOIN dbo.PpmProjects p ON p.ProjectNumber = r.ProjectNumber
+        WHERE r.EmployeeId = @PiEmployeeId
+          AND r.ScopeType IN ('PROJECT', 'AWARD')
+          AND (r.RoleName = 'Principal Investigator'
+               OR (r.RoleName = 'Project Manager'
+                   AND NOT EXISTS (SELECT 1 FROM dbo.PpmPersonRoles pi
+                                   WHERE pi.ProjectNumber = r.ProjectNumber
+                                     AND pi.ScopeType = 'PROJECT'
+                                     AND pi.RoleName = 'Principal Investigator')));
 
         -- UseTask = 0 when every task is TASK01, so sponsored projects collapse to one row.
         DROP TABLE IF EXISTS #mode;

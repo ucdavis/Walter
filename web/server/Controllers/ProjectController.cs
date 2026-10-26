@@ -81,6 +81,7 @@ public sealed class ProjectController : ApiControllerBase
         var managedProjects = await pmTask;
 
         // PM projects without a project PI belong in the PM's own portfolio.
+        // dbo.usp_GetProjectionSeed mirrors this portfolio rule; keep in sync.
         var orphanedProjects = managedProjects
             .Where(p => !p.TeamMembers.Any(m => m.RoleName == PpmRole.PrincipalInvestigator))
             .ToList();
