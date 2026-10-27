@@ -1,7 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
-import { http, HttpResponse } from 'msw';
+import { screen, waitFor, within } from '@testing-library/react';
+import { userEvent } from '@testing-library/user-event';
+import { delay, http, HttpResponse } from 'msw';
+import type {
+  GLPPMReconciliationRecord,
+  ManagedPisEnvelope,
+  ProjectRecord,
+} from '@/queries/project.ts';
 import { server } from '@/test/mswUtils.ts';
+import {
+  createProjectRecord,
+  createReconciliationRecord,
+} from '@/test/projectFixtures.ts';
 import { renderRoute } from '@/test/routerUtils.tsx';
 
 const createUser = (roles: string[]) => ({
@@ -19,7 +29,9 @@ const emptyManagedResponse = {
   projectManager: null,
 };
 
-const managedResponse = (name: string | null = 'Test User') => ({
+const managedResponse = (
+  name: string | null = 'Test User'
+): ManagedPisEnvelope => ({
   pis: [
     { employeeId: '2001', iamId: 'IAM-2001', name: 'PI One', projectCount: 2 },
     { employeeId: '2002', iamId: 'IAM-2002', name: 'PI Two', projectCount: 1 },
@@ -27,16 +39,85 @@ const managedResponse = (name: string | null = 'Test User') => ({
   projectManager: { employeeId: '1000', iamId: 'IAM-1000', name },
 });
 
+const outOfBalance = (project: string) =>
+  createReconciliationRecord({ glActualAmount: -100, ppmBudBal: 0, project });
+
+const internalProject = (
+  projectNumber: string,
+  overrides: Partial<ProjectRecord> = {}
+) =>
+  createProjectRecord({
+    projectName: `Project ${projectNumber}`,
+    projectNumber,
+    ...overrides,
+  });
+
+const setupHandlers = ({
+  managed = managedResponse(),
+  portfolios = {},
+  reconciliation = [],
+  user = createUser(['ProjectManager']),
+}: {
+  managed?: ManagedPisEnvelope | typeof emptyManagedResponse;
+  portfolios?: Record<string, ProjectRecord[] | 'error'>;
+  reconciliation?: GLPPMReconciliationRecord[] | 'error' | 'pending';
+  user?: ReturnType<typeof createUser>;
+} = {}) => {
+  const reconciliationRequests: string[][] = [];
+
+  server.use(
+    http.get('/api/user/me', () => HttpResponse.json(user)),
+    http.get('/api/project/managed/by-iam/:iamId', () =>
+      HttpResponse.json(managed)
+    ),
+    http.get('/api/project/by-iam/:iamId', ({ params }) => {
+      const portfolio = portfolios[params.iamId as string];
+      if (portfolio === 'error') {
+        return new HttpResponse(null, { status: 500 });
+      }
+      return HttpResponse.json(portfolio ?? []);
+    }),
+    http.get('/api/project/personnel', () => HttpResponse.json([])),
+    http.get('/api/project/gl-ppm-reconciliation', async ({ request }) => {
+      const codes =
+        new URL(request.url).searchParams.get('projectCodes')?.split(',') ?? [];
+      reconciliationRequests.push(codes);
+      if (reconciliation === 'pending') {
+        await delay('infinite');
+      }
+      if (reconciliation === 'error') {
+        return new HttpResponse(null, { status: 500 });
+      }
+      return HttpResponse.json(
+        (reconciliation === 'pending' ? [] : reconciliation).filter((r) =>
+          codes.includes(r.project)
+        )
+      );
+    })
+  );
+
+  return { reconciliationRequests };
+};
+
+const piRow = (name: string) => {
+  const row = screen.getByRole('link', { name }).closest('tr');
+  if (!row) {
+    throw new Error(`No row for ${name}`);
+  }
+  return row;
+};
+
+const issuesTile = () => {
+  const tile = screen.getByText('Reconciliation issues').closest('div');
+  if (!tile) {
+    throw new Error('No reconciliation issues tile');
+  }
+  return tile;
+};
+
 describe('principal investigators route', () => {
   it('renders the principal investigators table for authorized users', async () => {
-    server.use(
-      http.get('/api/user/me', () =>
-        HttpResponse.json(createUser(['FinancialViewer']))
-      ),
-      http.get('/api/project/managed/by-iam/:iamId', () =>
-        HttpResponse.json(managedResponse())
-      )
-    );
+    setupHandlers({ user: createUser(['FinancialViewer']) });
 
     const { cleanup } = renderRoute({
       initialPath: '/principalInvestigators',
@@ -57,14 +138,10 @@ describe('principal investigators route', () => {
   });
 
   it('falls back to the generic heading when project manager name is missing', async () => {
-    server.use(
-      http.get('/api/user/me', () =>
-        HttpResponse.json(createUser(['FinancialViewer']))
-      ),
-      http.get('/api/project/managed/by-iam/:iamId', () =>
-        HttpResponse.json(managedResponse(null))
-      )
-    );
+    setupHandlers({
+      managed: managedResponse(null),
+      user: createUser(['FinancialViewer']),
+    });
 
     const { cleanup } = renderRoute({
       initialPath: '/principalInvestigators',
@@ -80,14 +157,7 @@ describe('principal investigators route', () => {
   });
 
   it('shows the empty state when no managed investigators are returned', async () => {
-    server.use(
-      http.get('/api/user/me', () =>
-        HttpResponse.json(createUser(['ProjectManager']))
-      ),
-      http.get('/api/project/managed/by-iam/:iamId', () =>
-        HttpResponse.json(emptyManagedResponse)
-      )
-    );
+    setupHandlers({ managed: emptyManagedResponse });
 
     const { cleanup } = renderRoute({
       initialPath: '/principalInvestigators',
@@ -102,31 +172,26 @@ describe('principal investigators route', () => {
     }
   });
 
-  it('links managed investigators only when an IAM ID is present', async () => {
-    server.use(
-      http.get('/api/user/me', () =>
-        HttpResponse.json(createUser(['FinancialViewer']))
-      ),
-      http.get('/api/project/managed/by-iam/:iamId', () =>
-        HttpResponse.json({
-          pis: [
-            {
-              employeeId: '2001',
-              iamId: 'IAM-PI-ONE',
-              name: 'PI One',
-              projectCount: 2,
-            },
-            {
-              employeeId: '2002',
-              iamId: null,
-              name: 'PI Two',
-              projectCount: 1,
-            },
-          ],
-          projectManager: { employeeId: '1000', iamId: 'IAM-1000', name: 'Test User' },
-        })
-      )
-    );
+  it('hides PIs without an IAM ID', async () => {
+    setupHandlers({
+      managed: {
+        pis: [
+          {
+            employeeId: '2001',
+            iamId: 'IAM-PI-ONE',
+            name: 'PI One',
+            projectCount: 2,
+          },
+          { employeeId: '2002', iamId: null, name: 'PI Two', projectCount: 1 },
+        ],
+        projectManager: {
+          employeeId: '1000',
+          iamId: 'IAM-1000',
+          name: 'Test User',
+        },
+      },
+      user: createUser(['FinancialViewer']),
+    });
 
     const { cleanup } = renderRoute({
       initialPath: '/principalInvestigators',
@@ -135,21 +200,378 @@ describe('principal investigators route', () => {
     try {
       const linkedPi = await screen.findByRole('link', { name: 'PI One' });
       expect(linkedPi).toHaveAttribute('href', '/projects/IAM-PI-ONE');
-      expect(screen.getByText('PI Two').closest('a')).toBeNull();
+      expect(screen.queryByText('PI Two')).toBeNull();
+      expect(
+        screen.getByText('1 investigators across 2 projects')
+      ).toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('shows reconciliation issue counts per PI', async () => {
+    setupHandlers({
+      managed: {
+        pis: [
+          {
+            employeeId: '2001',
+            iamId: 'IAM-2001',
+            name: 'PI One',
+            projectCount: 2,
+          },
+          {
+            employeeId: '2002',
+            iamId: 'IAM-2002',
+            name: 'PI Two',
+            projectCount: 1,
+          },
+          {
+            employeeId: '2003',
+            iamId: 'IAM-2003',
+            name: 'PI Three',
+            projectCount: 1,
+          },
+        ],
+        projectManager: {
+          employeeId: '1000',
+          iamId: 'IAM-1000',
+          name: 'Test User',
+        },
+      },
+      portfolios: {
+        'IAM-2001': [internalProject('P1'), internalProject('P2')],
+        'IAM-2002': [internalProject('P3')],
+        'IAM-2003': [internalProject('P4')],
+      },
+      reconciliation: [
+        outOfBalance('P1'),
+        outOfBalance('P2'),
+        outOfBalance('P3'),
+        createReconciliationRecord({ project: 'P4' }),
+      ],
+    });
+
+    const { cleanup } = renderRoute({
+      initialPath: '/principalInvestigators',
+    });
+
+    try {
+      await screen.findByRole('link', { name: 'PI One' });
+      expect(
+        await within(piRow('PI One')).findByText('2 reconciliation issues')
+      ).toBeInTheDocument();
+      expect(
+        within(piRow('PI Two')).getByText('1 reconciliation issue')
+      ).toBeInTheDocument();
+      await waitFor(() => {
+        expect(within(issuesTile()).getByText('3')).toBeInTheDocument();
+      });
+      expect(
+        within(piRow('PI Three')).queryByText(/reconciliation issue/)
+      ).toBeNull();
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('lists PIs alphabetically', async () => {
+    setupHandlers({
+      managed: {
+        pis: [
+          {
+            employeeId: '2001',
+            iamId: 'IAM-2001',
+            name: 'Zed',
+            projectCount: 1,
+          },
+          {
+            employeeId: '2002',
+            iamId: 'IAM-2002',
+            name: 'Amy',
+            projectCount: 1,
+          },
+          {
+            employeeId: '2003',
+            iamId: 'IAM-2003',
+            name: 'Mia',
+            projectCount: 1,
+          },
+        ],
+        projectManager: {
+          employeeId: '1000',
+          iamId: 'IAM-1000',
+          name: 'Test User',
+        },
+      },
+    });
+
+    const { cleanup } = renderRoute({
+      initialPath: '/principalInvestigators',
+    });
+
+    try {
+      await screen.findByRole('link', { name: 'Zed' });
+      const names = screen
+        .getAllByRole('link')
+        .map((link) => link.textContent)
+        .filter((name) => ['Amy', 'Mia', 'Zed'].includes(name ?? ''));
+      expect(names).toEqual(['Amy', 'Mia', 'Zed']);
+    } finally {
+      cleanup();
+    }
+  });
+
+  it("only requests reconciliation for this PM's internal projects", async () => {
+    const { reconciliationRequests } = setupHandlers({
+      portfolios: {
+        'IAM-2001': [
+          internalProject('P1'),
+          internalProject('P2', { pmEmployeeId: '9999' }),
+          internalProject('S1', { projectType: 'Sponsored' }),
+        ],
+      },
+      reconciliation: [outOfBalance('P1')],
+    });
+
+    const { cleanup } = renderRoute({
+      initialPath: '/principalInvestigators',
+    });
+
+    try {
+      await screen.findByText('1 reconciliation issue');
+      expect(reconciliationRequests).toEqual([['P1']]);
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('filters by the viewed PM for financial viewers', async () => {
+    const { reconciliationRequests } = setupHandlers({
+      managed: {
+        pis: [
+          {
+            employeeId: '2001',
+            iamId: 'IAM-2001',
+            name: 'PI One',
+            projectCount: 2,
+          },
+        ],
+        projectManager: {
+          employeeId: '9999',
+          iamId: 'IAM-9999',
+          name: 'Other PM',
+        },
+      },
+      portfolios: {
+        'IAM-2001': [
+          internalProject('P1'),
+          internalProject('P2', { pmEmployeeId: '9999' }),
+        ],
+      },
+      reconciliation: [outOfBalance('P1'), outOfBalance('P2')],
+      user: createUser(['FinancialViewer']),
+    });
+
+    const { cleanup } = renderRoute({
+      initialPath: '/principalInvestigators/IAM-9999',
+    });
+
+    try {
+      await screen.findByText('1 reconciliation issue');
+      expect(reconciliationRequests).toEqual([['P2']]);
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('batches reconciliation requests by 100 projects', async () => {
+    const projects = Array.from({ length: 150 }, (_, i) =>
+      internalProject(`P${String(i).padStart(3, '0')}`)
+    );
+    const { reconciliationRequests } = setupHandlers({
+      portfolios: { 'IAM-2001': projects },
+    });
+
+    const { cleanup } = renderRoute({
+      initialPath: '/principalInvestigators',
+    });
+
+    try {
+      await screen.findByRole('link', { name: 'PI One' });
+      await waitFor(() => {
+        expect(reconciliationRequests.map((r) => r.length).sort()).toEqual([
+          100, 50,
+        ]);
+      });
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('renders the PI list before reconciliation resolves', async () => {
+    setupHandlers({
+      portfolios: { 'IAM-2001': [internalProject('P1')] },
+      reconciliation: 'pending',
+    });
+
+    const { cleanup } = renderRoute({
+      initialPath: '/principalInvestigators',
+    });
+
+    try {
+      await screen.findByRole('link', { name: 'PI One' });
+      expect(
+        within(piRow('PI One')).getByLabelText('Loading reconciliation')
+      ).toBeInTheDocument();
+      expect(within(issuesTile()).getByText('-')).toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('isolates a failed PI portfolio', async () => {
+    setupHandlers({
+      portfolios: {
+        'IAM-2001': 'error',
+        'IAM-2002': [internalProject('P3')],
+      },
+      reconciliation: [outOfBalance('P3')],
+    });
+
+    const { cleanup } = renderRoute({
+      initialPath: '/principalInvestigators',
+    });
+
+    try {
+      await screen.findByRole('link', { name: 'PI One' });
+      expect(
+        await within(piRow('PI Two')).findByText('1 reconciliation issue')
+      ).toBeInTheDocument();
+      expect(
+        within(piRow('PI One')).getByLabelText("Couldn't load reconciliation")
+      ).toBeInTheDocument();
+      expect(within(issuesTile()).getByText('-')).toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('counts a co-PI project once in the stat tile', async () => {
+    const { reconciliationRequests } = setupHandlers({
+      portfolios: {
+        'IAM-2001': [internalProject('P1')],
+        'IAM-2002': [internalProject('P1')],
+      },
+      reconciliation: [outOfBalance('P1')],
+    });
+
+    const { cleanup } = renderRoute({
+      initialPath: '/principalInvestigators',
+    });
+
+    try {
+      await screen.findByRole('link', { name: 'PI One' });
+      expect(
+        await within(piRow('PI One')).findByText('1 reconciliation issue')
+      ).toBeInTheDocument();
+      expect(
+        within(piRow('PI Two')).getByText('1 reconciliation issue')
+      ).toBeInTheDocument();
+      expect(within(issuesTile()).getByText('1')).toBeInTheDocument();
+      expect(reconciliationRequests).toEqual([['P1']]);
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('expands a PI to projects and a project to chart strings', async () => {
+    const user = userEvent.setup();
+    setupHandlers({
+      portfolios: { 'IAM-2001': [internalProject('P1')] },
+      reconciliation: [outOfBalance('P1')],
+    });
+
+    const { cleanup } = renderRoute({
+      initialPath: '/principalInvestigators',
+    });
+
+    try {
+      await screen.findByRole('link', { name: 'PI One' });
+      await within(piRow('PI One')).findByText('1 reconciliation issue');
+
+      await user.click(piRow('PI One'));
+      const projectLink = await screen.findByRole('link', { name: 'P1' });
+      expect(projectLink).toHaveAttribute('href', '/reports/reconciliation/P1');
+      expect(screen.getByText('Project P1')).toBeInTheDocument();
+      expect(screen.getByText('Out of balance')).toBeInTheDocument();
+
+      const projectRow = projectLink.closest('tr');
+      if (!projectRow) {
+        throw new Error('No project row');
+      }
+      await user.click(projectRow);
+      expect(
+        await screen.findByRole('link', { name: 'Details' })
+      ).toBeInTheDocument();
+      const reconciliationTable = screen
+        .getByRole('columnheader', { name: 'GL Balance' })
+        .closest('table');
+      if (!reconciliationTable) {
+        throw new Error('No reconciliation table');
+      }
+      expect(
+        within(reconciliationTable).queryByRole('columnheader', {
+          name: 'Project',
+        })
+      ).toBeNull();
+
+      await user.click(piRow('PI Two'));
+      expect(
+        await screen.findByText('No internal projects.')
+      ).toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('PI name link navigates instead of expanding', async () => {
+    const user = userEvent.setup();
+    setupHandlers({ portfolios: { 'IAM-2001': [internalProject('P1')] } });
+
+    const { cleanup, router } = renderRoute({
+      initialPath: '/principalInvestigators',
+    });
+
+    try {
+      await user.click(await screen.findByRole('link', { name: 'PI One' }));
+      await waitFor(() => {
+        expect(router.state.location.pathname).toBe('/projects/IAM-2001');
+      });
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('shows the known-issue note', async () => {
+    setupHandlers();
+
+    const { cleanup } = renderRoute({
+      initialPath: '/principalInvestigators',
+    });
+
+    try {
+      expect(
+        await screen.findByText(
+          "GL and PPM balances can differ from the UCD PPM to GL Non-Sponsored Projects Reconciliation Report; see any project's reconciliation page for details."
+        )
+      ).toBeInTheDocument();
     } finally {
       cleanup();
     }
   });
 
   it('redirects unauthorized users back to home', async () => {
-    server.use(
-      http.get('/api/user/me', () => HttpResponse.json(createUser([]))),
-      http.get('/api/project/managed/by-iam/:iamId', () =>
-        HttpResponse.json(emptyManagedResponse)
-      ),
-      http.get('/api/project/by-iam/:iamId', () => HttpResponse.json([])),
-      http.get('/api/project/personnel', () => HttpResponse.json([]))
-    );
+    setupHandlers({ managed: emptyManagedResponse, user: createUser([]) });
 
     const { cleanup } = renderRoute({
       initialPath: '/principalInvestigators',
@@ -169,17 +591,24 @@ describe('principal investigators route', () => {
 
 describe('principal investigators $iamId route', () => {
   it('allows a FinancialViewer to view another PM', async () => {
-    server.use(
-      http.get('/api/user/me', () =>
-        HttpResponse.json(createUser(['FinancialViewer']))
-      ),
-      http.get('/api/project/managed/by-iam/:iamId', () =>
-        HttpResponse.json({
-          pis: [{ employeeId: '2001', iamId: 'IAM-2001', name: 'PI One', projectCount: 2 }],
-          projectManager: { employeeId: '9999', iamId: 'IAM-9999', name: 'Other PM' },
-        })
-      )
-    );
+    setupHandlers({
+      managed: {
+        pis: [
+          {
+            employeeId: '2001',
+            iamId: 'IAM-2001',
+            name: 'PI One',
+            projectCount: 2,
+          },
+        ],
+        projectManager: {
+          employeeId: '9999',
+          iamId: 'IAM-9999',
+          name: 'Other PM',
+        },
+      },
+      user: createUser(['FinancialViewer']),
+    });
 
     const { cleanup } = renderRoute({
       initialPath: '/principalInvestigators/IAM-9999',
@@ -196,14 +625,7 @@ describe('principal investigators $iamId route', () => {
   });
 
   it('allows a user to view their own managed PIs via $iamId', async () => {
-    server.use(
-      http.get('/api/user/me', () =>
-        HttpResponse.json(createUser(['ProjectManager']))
-      ),
-      http.get('/api/project/managed/by-iam/:iamId', () =>
-        HttpResponse.json(managedResponse())
-      )
-    );
+    setupHandlers();
 
     const { cleanup } = renderRoute({
       initialPath: '/principalInvestigators/IAM-1000',
@@ -219,16 +641,7 @@ describe('principal investigators $iamId route', () => {
   });
 
   it('redirects a non-FinancialViewer viewing another PM back to home', async () => {
-    server.use(
-      http.get('/api/user/me', () =>
-        HttpResponse.json(createUser(['ProjectManager']))
-      ),
-      http.get('/api/project/managed/by-iam/:iamId', () =>
-        HttpResponse.json(emptyManagedResponse)
-      ),
-      http.get('/api/project/by-iam/:iamId', () => HttpResponse.json([])),
-      http.get('/api/project/personnel', () => HttpResponse.json([]))
-    );
+    setupHandlers({ managed: emptyManagedResponse });
 
     const { cleanup } = renderRoute({
       initialPath: '/principalInvestigators/IAM-9999',
