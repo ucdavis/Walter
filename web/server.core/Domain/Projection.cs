@@ -52,7 +52,7 @@ public class Projection
 
         // SQL Server rejects SET NULL here (second cascade path from Projection), so EF nulls tracked rows instead.
         modelBuilder.Entity<ProjectionFundingEntry>()
-            .HasOne<ProjectionProject>()
+            .HasOne(f => f.Project)
             .WithMany()
             .HasForeignKey(f => f.ProjectionProjectId)
             .OnDelete(DeleteBehavior.ClientSetNull);
@@ -220,6 +220,10 @@ public class ProjectionFundingEntry
     public int ProjectionJobId { get; set; }
 
     public int? ProjectionProjectId { get; set; }
+
+    /// <summary>Lets an unsaved graph link funding to a project; not serialized.</summary>
+    [JsonIgnore]
+    public ProjectionProject? Project { get; set; }
 
     [Precision(9, 6)]
     public decimal Percent { get; set; }

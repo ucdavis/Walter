@@ -12,7 +12,7 @@ using server.core.Data;
 namespace server.core.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20261027130321_AddProjections")]
+    [Migration("20261027130939_AddProjections")]
     partial class AddProjections
     {
         /// <inheritdoc />
@@ -754,9 +754,11 @@ namespace server.core.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("server.core.Domain.ProjectionProject", null)
+                    b.HasOne("server.core.Domain.ProjectionProject", "Project")
                         .WithMany()
                         .HasForeignKey("ProjectionProjectId");
+
+                    b.Navigation("Project");
                 });
 
             modelBuilder.Entity("server.core.Domain.ProjectionJob", b =>

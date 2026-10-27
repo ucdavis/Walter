@@ -751,9 +751,11 @@ namespace server.core.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("server.core.Domain.ProjectionProject", null)
+                    b.HasOne("server.core.Domain.ProjectionProject", "Project")
                         .WithMany()
                         .HasForeignKey("ProjectionProjectId");
+
+                    b.Navigation("Project");
                 });
 
             modelBuilder.Entity("server.core.Domain.ProjectionJob", b =>
