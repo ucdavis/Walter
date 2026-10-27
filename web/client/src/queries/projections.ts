@@ -9,26 +9,20 @@ export interface ProjectionBudget {
   budget: number;
   committed: number;
   expenditureCategory: string;
-  id: number;
   isSeeded: boolean;
-  projectionProjectId: number;
   spentToDate: number;
 }
 
 export interface ProjectionActual {
   amount: number;
   expenditureCategory: string;
-  id: number;
   month: string;
-  projectionProjectId: number;
 }
 
 export interface ProjectionRunRate {
   expenditureCategory: string;
   historyMonths: number;
-  id: number;
   monthlyAmount: number;
-  projectionProjectId: number;
 }
 
 export interface ProjectionExpense {
@@ -37,9 +31,7 @@ export interface ProjectionExpense {
   description: string | null;
   endMonth: string | null;
   expenditureCategory: string;
-  id: number;
   kind: ProjectionExpenseKind;
-  projectionProjectId: number;
   startMonth: string | null;
 }
 
@@ -52,7 +44,6 @@ export interface ProjectionProject {
   expenses: ProjectionExpense[];
   id: number;
   isSeeded: boolean;
-  projectionId: number;
   projectName: string;
   projectNumber: string | null;
   projectType: string | null;
@@ -64,12 +55,10 @@ export interface ProjectionProject {
 
 export interface ProjectionFundingEntry {
   endDate: string | null;
-  id: number;
   isSeeded: boolean;
   percent: number;
-  projectionJobId: number;
   /** Null means funded outside this PI's projects: counted as funded, not charged. */
-  projectionProjectId: number | null;
+  projectId: number | null;
   startDate: string | null;
 }
 
@@ -89,7 +78,6 @@ export interface ProjectionJob {
   monthlySalary: number | null;
   name: string;
   positionNumber: string | null;
-  projectionId: number;
   rateSet: string;
   startDate: string | null;
   title: string | null;
@@ -160,23 +148,20 @@ export const createProjection = (
     body
   );
 
-export interface ProjectionChange {
-  body?: unknown;
-  method: 'POST' | 'PUT' | 'PATCH' | 'DELETE';
-  /** Relative to /api/projections/{id}, e.g. 'jobs/12' or '' for the projection itself. */
-  path: string;
-}
+export type ProjectionDraft = Pick<
+  Projection,
+  'historyMonths' | 'jobs' | 'name' | 'projects'
+>;
 
-/** One mutation for every projection edit; refetches the projection afterwards. */
-export const useProjectionMutation = (id: number) => {
+/** Saves the whole projection; the response carries regenerated Projected expenses after a window change. */
+export const useSaveProjection = (id: number) => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ body, method, path }: ProjectionChange) =>
-      fetchJson<unknown>(`/api/projections/${id}${path ? `/${path}` : ''}`, {
-        body: body === undefined ? undefined : JSON.stringify(body),
-        method,
+    mutationFn: ({ historyMonths, jobs, name, projects }: ProjectionDraft) =>
+      fetchJson<Projection>(`/api/projections/${id}`, {
+        body: JSON.stringify({ historyMonths, jobs, name, projects }),
+        method: 'PUT',
       }),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ['projections', id] }),
+    onSuccess: (saved) => queryClient.setQueryData(['projections', id], saved),
   });
 };

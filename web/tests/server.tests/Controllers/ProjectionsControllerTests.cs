@@ -113,128 +113,89 @@ public sealed class ProjectionsControllerTests
         (await controller.ListByIam(PiIam, default)).Should().BeOfType<ForbidResult>();
     }
 
+    private static ProjectionsController.SaveProjectionRequest Draft(Projection p, int? historyMonths = null) =>
+        new(p.Name, historyMonths ?? p.HistoryMonths, p.Projects, p.Jobs);
+
     [Fact]
     public async Task Reset_keeps_id_name_and_creator_and_drops_edits()
     {
         using var ctx = TestDbContextFactory.CreateInMemory();
         var created = await CreateProjectionAsync(ctx);
-        ctx.ProjectionProjects.Add(new ProjectionProject { ProjectionId = created.Id, ProjectName = "Hypothetical" });
-        ctx.SaveChanges();
+        var controller = CreateController(ctx, financialViewer: true);
+        created.Projects.Add(new ProjectionProject { Id = 2, ProjectName = "Hypothetical" });
+        await controller.Save(created.Id, Draft(created), default);
 
-        var result = await CreateController(ctx, financialViewer: true)
-            .Reset(created.Id, new ProjectionsController.HistoryMonthsRequest(3), default);
+        var result = await controller.Reset(created.Id, new ProjectionsController.HistoryMonthsRequest(3), default);
 
         var reset = result.Should().BeOfType<OkObjectResult>().Which.Value.Should().BeOfType<Projection>().Subject;
         reset.Should().BeEquivalentTo(new { created.Id, Name = "Plan A", CreatedBy = "tester" });
         reset.Projects.Should().ContainSingle().Which.ProjectNumber.Should().Be("P1");
-        ctx.ProjectionProjects.Count().Should().Be(1);
     }
 
     [Fact]
-    public async Task HistoryMonths_rejects_invalid_window()
+    public async Task Save_rejects_invalid_window()
     {
         using var ctx = TestDbContextFactory.CreateInMemory();
         var created = await CreateProjectionAsync(ctx);
 
-        var result = await CreateController(ctx, financialViewer: true)
-            .HistoryMonths(created.Id, new ProjectionsController.HistoryMonthsRequest(4), default);
+        var result = await CreateController(ctx, financialViewer: true).Save(created.Id, Draft(created, 4), default);
 
         result.Should().BeOfType<BadRequestObjectResult>();
     }
 
     [Fact]
-    public async Task Child_from_another_projection_is_not_found()
+    public async Task Unrelated_user_cannot_save()
     {
         using var ctx = TestDbContextFactory.CreateInMemory();
-        var a = await CreateProjectionAsync(ctx);
-        var b = await CreateProjectionAsync(ctx);
-        var controller = CreateController(ctx, financialViewer: true);
-        var jobB = (ProjectionJob)((OkObjectResult)await controller.CreateJob(b.Id, new ProjectionJob { Name = "B job" }, default)).Value!;
+        var created = await CreateProjectionAsync(ctx);
 
-        (await controller.UpdateJob(a.Id, jobB.Id, new ProjectionJob { Name = "Hijack" }, default)).Should().BeOfType<NotFoundResult>();
-        jobB.Name.Should().Be("B job");
+        var result = await CreateController(ctx, employeeId: "999").Save(created.Id, Draft(created) with { Name = "Hijack" }, default);
+
+        result.Should().BeOfType<ForbidResult>();
     }
 
     [Fact]
-    public async Task Funding_pointing_at_another_projections_project_is_not_found()
+    public async Task Save_persists_the_whole_document()
     {
         using var ctx = TestDbContextFactory.CreateInMemory();
-        var a = await CreateProjectionAsync(ctx);
-        var b = await CreateProjectionAsync(ctx);
+        var created = await CreateProjectionAsync(ctx);
         var controller = CreateController(ctx, financialViewer: true);
-        var jobA = (ProjectionJob)((OkObjectResult)await controller.CreateJob(a.Id, new ProjectionJob { Name = "A job" }, default)).Value!;
-
-        var result = await controller.CreateFunding(a.Id, jobA.Id,
-            new ProjectionFundingEntry { ProjectionProjectId = b.Projects.Single().Id, Percent = 1 }, default);
-
-        result.Should().BeOfType<NotFoundResult>();
-    }
-
-    [Fact]
-    public async Task Creating_projected_expense_is_rejected()
-    {
-        using var ctx = TestDbContextFactory.CreateInMemory();
-        var a = await CreateProjectionAsync(ctx);
-
-        var result = await CreateController(ctx, financialViewer: true).CreateExpense(a.Id, new ProjectionExpense
+        created.Jobs.Add(new ProjectionJob
         {
-            ProjectionProjectId = a.Projects.Single().Id, Kind = ProjectionExpenseKind.Projected, ExpenditureCategory = Supplies, Amount = 1,
-        }, default);
+            Id = 1, Name = "GSR #2", MonthlySalary = 4000, Fte = 0.5m,
+            FundingEntries = [new() { ProjectId = created.Projects.Single().Id, Percent = 1 }],
+        });
 
-        result.Should().BeOfType<BadRequestObjectResult>();
+        (await controller.Save(created.Id, Draft(created) with { Name = "Plan B" }, default)).Should().BeOfType<OkObjectResult>();
+        ctx.ChangeTracker.Clear();
+
+        var loaded = (Projection)((OkObjectResult)await controller.Get(created.Id, default)).Value!;
+        loaded.Name.Should().Be("Plan B");
+        loaded.Jobs.Should().ContainSingle().Which.FundingEntries.Should().ContainSingle()
+            .Which.Should().BeEquivalentTo(new { ProjectId = created.Projects.Single().Id, Percent = 1m });
     }
 
     [Fact]
-    public async Task Edited_projected_expense_stays_projected_and_window_change_replaces_it()
+    public async Task Edited_projected_expense_survives_save_and_window_change_replaces_it()
     {
         using var ctx = TestDbContextFactory.CreateInMemory();
-        var a = await CreateProjectionAsync(ctx);
-        var project = a.Projects.Single();
-        var projected = project.Expenses.Single();
+        var created = await CreateProjectionAsync(ctx);
         var controller = CreateController(ctx, financialViewer: true);
+        var expenses = created.Projects.Single().Expenses;
+        expenses.Single().Amount = 75;
+        expenses.Add(new ProjectionExpense { Kind = ProjectionExpenseKind.Monthly, ExpenditureCategory = Supplies, Amount = 10 });
 
-        var result = await controller.UpdateExpense(a.Id, projected.Id, new ProjectionExpense
-        {
-            ProjectionProjectId = project.Id, Kind = ProjectionExpenseKind.Projected, ExpenditureCategory = Supplies, Amount = 75,
-        }, default);
-        result.Should().BeOfType<OkObjectResult>().Which.Value.Should().BeEquivalentTo(new { Kind = ProjectionExpenseKind.Projected, Amount = 75m });
+        await controller.Save(created.Id, Draft(created), default);
+        ctx.ChangeTracker.Clear();
+        var saved = (Projection)((OkObjectResult)await controller.Get(created.Id, default)).Value!;
+        saved.Projects.Single().Expenses.Select(e => (e.Kind, e.Amount)).Should().BeEquivalentTo(
+            [(ProjectionExpenseKind.Projected, 75m), (ProjectionExpenseKind.Monthly, 10m)]);
 
-        await controller.HistoryMonths(a.Id, new ProjectionsController.HistoryMonthsRequest(12), default);
-        ctx.ProjectionExpenses.Select(e => new { e.Kind, e.Amount }).Should().BeEquivalentTo(
-            [new { Kind = ProjectionExpenseKind.Projected, Amount = 20m }]);
-    }
-
-    [Fact]
-    public async Task Crud_round_trip_for_job_and_funding()
-    {
-        using var ctx = TestDbContextFactory.CreateInMemory();
-        var a = await CreateProjectionAsync(ctx);
-        var controller = CreateController(ctx, financialViewer: true);
-
-        var job = (ProjectionJob)((OkObjectResult)await controller.CreateJob(a.Id,
-            new ProjectionJob { Name = "GSR #2", MonthlySalary = 4000, Fte = 0.5m }, default)).Value!;
-        (await controller.CreateFunding(a.Id, job.Id,
-            new ProjectionFundingEntry { ProjectionProjectId = a.Projects.Single().Id, Percent = 1 }, default)).Should().BeOfType<OkObjectResult>();
-
-        var loaded = (Projection)((OkObjectResult)await controller.Get(a.Id, default)).Value!;
-        loaded.Jobs.Should().ContainSingle().Which.FundingEntries.Should().ContainSingle().Which.Percent.Should().Be(1m);
-
-        (await controller.DeleteJob(a.Id, job.Id, default)).Should().BeOfType<NoContentResult>();
-        ctx.ProjectionJobs.Should().BeEmpty();
-        ctx.ProjectionFundingEntries.Should().BeEmpty();
-    }
-
-    [Fact]
-    public async Task Deleting_a_project_detaches_its_funding()
-    {
-        using var ctx = TestDbContextFactory.CreateInMemory();
-        var a = await CreateProjectionAsync(ctx);
-        var controller = CreateController(ctx, financialViewer: true);
-        var job = (ProjectionJob)((OkObjectResult)await controller.CreateJob(a.Id, new ProjectionJob { Name = "Job" }, default)).Value!;
-        await controller.CreateFunding(a.Id, job.Id, new ProjectionFundingEntry { ProjectionProjectId = a.Projects.Single().Id, Percent = 1 }, default);
-
-        (await controller.DeleteProject(a.Id, a.Projects.Single().Id, default)).Should().BeOfType<NoContentResult>();
-
-        ctx.ProjectionFundingEntries.Should().ContainSingle().Which.ProjectionProjectId.Should().BeNull();
+        await controller.Save(created.Id, Draft(saved, 12), default);
+        ctx.ChangeTracker.Clear();
+        var rewindowed = (Projection)((OkObjectResult)await controller.Get(created.Id, default)).Value!;
+        rewindowed.HistoryMonths.Should().Be(12);
+        rewindowed.Projects.Single().Expenses.Select(e => (e.Kind, e.Amount)).Should().BeEquivalentTo(
+            [(ProjectionExpenseKind.Monthly, 10m), (ProjectionExpenseKind.Projected, 20m)]);
     }
 }

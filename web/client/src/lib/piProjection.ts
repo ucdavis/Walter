@@ -142,9 +142,7 @@ export function computePiProjection(projection: Projection): {
         }
         fundedPercent += f.percent;
         const project =
-          f.projectionProjectId === null
-            ? undefined
-            : projectsById.get(f.projectionProjectId);
+          f.projectId === null ? undefined : projectsById.get(f.projectId);
         if (!project) {
           continue;
         }

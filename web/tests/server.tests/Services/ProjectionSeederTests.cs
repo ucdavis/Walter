@@ -46,6 +46,7 @@ public sealed class ProjectionSeederTests
 
         projection.HistoryMonths.Should().Be(6);
         var project = projection.Projects.Should().ContainSingle().Subject;
+        project.Id.Should().Be(1);
         project.ProjectNumber.Should().Be("P1");
         project.TaskNumber.Should().Be("TASK01");
         project.IsSeeded.Should().BeTrue();
@@ -62,8 +63,9 @@ public sealed class ProjectionSeederTests
 
         var job = projection.Jobs.Should().ContainSingle().Subject;
         job.Should().BeEquivalentTo(new { MonthlySalary = 5000m, CbrRate = 0.3m, VacationAccrualRate = 0.083m, RateSet = "UCANR" });
-        job.FundingEntries.Select(f => (f.Project, f.Percent)).Should().BeEquivalentTo(
-            [(projection.Projects.Single(), 0.6m), ((ProjectionProject?)null, 0.4m)]);
+        job.Id.Should().Be(1);
+        job.FundingEntries.Select(f => (f.ProjectId, f.Percent)).Should().BeEquivalentTo(
+            [((int?)projection.Projects.Single().Id, 0.6m), ((int?)null, 0.4m)]);
     }
 
     [Fact]
@@ -72,7 +74,7 @@ public sealed class ProjectionSeederTests
         var projection = await SeedAsync(Data(Line(100, task: "")));
 
         projection.Jobs.Single().FundingEntries.Should().ContainSingle()
-            .Which.Should().BeEquivalentTo(new { Project = projection.Projects.Single(), Percent = 1m });
+            .Which.Should().BeEquivalentTo(new { ProjectId = projection.Projects.Single().Id, Percent = 1m });
     }
 
     [Fact]
@@ -80,7 +82,7 @@ public sealed class ProjectionSeederTests
     {
         var projection = await SeedAsync(Data(Line(40, isFuture: true), Line(60)));
 
-        projection.Jobs.Single().FundingEntries.Where(f => f.Project != null).Sum(f => f.Percent).Should().Be(0.6m);
+        projection.Jobs.Single().FundingEntries.Where(f => f.ProjectId != null).Sum(f => f.Percent).Should().Be(0.6m);
     }
 
     [Fact]

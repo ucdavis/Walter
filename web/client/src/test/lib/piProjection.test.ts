@@ -14,15 +14,13 @@ import type {
 const SUPPLIES = '05 - Supplies';
 
 const funding = (
-  projectionProjectId: number | null,
+  projectId: number | null,
   percent: number
 ): ProjectionFundingEntry => ({
   endDate: null,
-  id: 1,
   isSeeded: true,
   percent,
-  projectionJobId: 1,
-  projectionProjectId,
+  projectId,
   startDate: null,
 });
 
@@ -41,7 +39,6 @@ const job = (overrides: Partial<ProjectionJob>): ProjectionJob => ({
   monthlySalary: 1000,
   name: 'Person',
   positionNumber: 'X1',
-  projectionId: 1,
   rateSet: 'DVCMP',
   startDate: null,
   title: null,
@@ -54,9 +51,7 @@ const expense = (overrides: Partial<ProjectionExpense>): ProjectionExpense => ({
   description: null,
   endMonth: null,
   expenditureCategory: SUPPLIES,
-  id: 1,
   kind: 'Monthly',
-  projectionProjectId: 1,
   startMonth: null,
   ...overrides,
 });
@@ -81,11 +76,9 @@ const projection = ({
   piEmployeeId: 'PI',
   projects: [
     {
-      actuals: actuals.map((a, i) => ({
+      actuals: actuals.map((a) => ({
         ...a,
         expenditureCategory: SUPPLIES,
-        id: i,
-        projectionProjectId: 1,
       })),
       awardName: null,
       awardNumber: null,
@@ -94,9 +87,7 @@ const projection = ({
           budget: 1000,
           committed: 0,
           expenditureCategory: SUPPLIES,
-          id: 1,
           isSeeded: true,
-          projectionProjectId: 1,
           spentToDate: 0,
         },
       ],
@@ -104,7 +95,6 @@ const projection = ({
       expenses,
       id: 1,
       isSeeded: true,
-      projectionId: 1,
       projectName: 'Project 1',
       projectNumber: 'P1',
       projectType: null,
@@ -168,7 +158,7 @@ describe('computePiProjection', () => {
     const p = projection({
       expenses: [
         expense({ amount: 310, kind: 'Monthly' }),
-        expense({ amount: 62, id: 2, kind: 'Projected' }),
+        expense({ amount: 62, kind: 'Projected' }),
       ],
     });
 
@@ -186,7 +176,6 @@ describe('computePiProjection', () => {
         }),
         expense({
           amount: 500,
-          id: 2,
           kind: 'OneTime',
           startMonth: '2027-02-01',
         }),

@@ -13,8 +13,10 @@ public sealed class ProjectionSeeder(IProjectionDataSource data)
     {
         var seed = await data.GetProjectionSeedAsync(projection.PiEmployeeId, applicationUser, emulatingUser, ct);
 
+        var nextId = 1;
         var projects = seed.Projects.ToDictionary(p => (p.ProjectNumber, p.TaskNumber), p => new ProjectionProject
         {
+            Id = nextId++,
             ProjectNumber = p.ProjectNumber,
             TaskNumber = p.TaskNumber,
             TaskName = p.TaskName,
@@ -66,7 +68,7 @@ public sealed class ProjectionSeeder(IProjectionDataSource data)
         projection.Jobs = personnel
             .Where(r => !r.IsFuture)
             .GroupBy(r => (r.EmployeeId, r.PositionNumber))
-            .Select(g => ToJob(g.ToList(), Match))
+            .Select((g, i) => ToJob(i + 1, g.ToList(), Match))
             .ToList();
     }
 
@@ -88,12 +90,13 @@ public sealed class ProjectionSeeder(IProjectionDataSource data)
         }
     }
 
-    private static ProjectionJob ToJob(List<PositionBudgetRecord> rows, Func<PositionBudgetRecord, ProjectionProject?> match)
+    private static ProjectionJob ToJob(int id, List<PositionBudgetRecord> rows, Func<PositionBudgetRecord, ProjectionProject?> match)
     {
         var first = rows[0];
         var unsplit = rows.Any(r => r.EarnCodeStatus == "Unsplit");
         var job = new ProjectionJob
         {
+            Id = id,
             EmployeeId = first.EmployeeId,
             PositionNumber = first.PositionNumber,
             Name = first.Name ?? first.EmployeeId ?? "",
@@ -116,7 +119,7 @@ public sealed class ProjectionSeeder(IProjectionDataSource data)
             if (project is null) continue;
             job.FundingEntries.Add(new ProjectionFundingEntry
             {
-                Project = project,
+                ProjectId = project.Id,
                 Percent = (r.DistributionPercent ?? 0) / 100 * (r.EarnCodeShare ?? 1),
                 StartDate = ToDate(r.FundingEffectiveDate),
                 EndDate = ToDate(r.FundingEndDate),

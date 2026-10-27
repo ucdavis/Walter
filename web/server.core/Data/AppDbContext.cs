@@ -12,13 +12,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<OutboundMessage> OutboundMessages => Set<OutboundMessage>();
     public DbSet<ChartStringLabel> ChartStringLabels => Set<ChartStringLabel>();
     public DbSet<Projection> Projections => Set<Projection>();
-    public DbSet<ProjectionProject> ProjectionProjects => Set<ProjectionProject>();
-    public DbSet<ProjectionBudget> ProjectionBudgets => Set<ProjectionBudget>();
-    public DbSet<ProjectionActual> ProjectionActuals => Set<ProjectionActual>();
-    public DbSet<ProjectionRunRate> ProjectionRunRates => Set<ProjectionRunRate>();
-    public DbSet<ProjectionJob> ProjectionJobs => Set<ProjectionJob>();
-    public DbSet<ProjectionFundingEntry> ProjectionFundingEntries => Set<ProjectionFundingEntry>();
-    public DbSet<ProjectionExpense> ProjectionExpenses => Set<ProjectionExpense>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
