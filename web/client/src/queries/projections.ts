@@ -1,3 +1,6 @@
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { fetchJson, postJson } from '@/lib/api.ts';
+
 // Server JSON for /api/projections. DateOnly fields arrive as 'YYYY-MM-DD', DateTime as full ISO strings.
 
 export type ProjectionExpenseKind = 'OneTime' | 'Monthly' | 'Projected';
@@ -129,3 +132,52 @@ export interface ProjectionLookups {
   expenditureCategories: string[];
   jobCodes: JobCode[];
 }
+
+export const projectionListQueryOptions = (iamId: string) => ({
+  queryFn: () =>
+    fetchJson<ProjectionSummary[]>(
+      `/api/projections/by-iam/${encodeURIComponent(iamId)}`
+    ),
+  queryKey: ['projections', 'by-iam', iamId] as const,
+});
+
+export const projectionQueryOptions = (id: number) => ({
+  queryFn: () => fetchJson<Projection>(`/api/projections/${id}`),
+  queryKey: ['projections', id] as const,
+});
+
+export const projectionLookupsQueryOptions = () => ({
+  queryFn: () => fetchJson<ProjectionLookups>('/api/projections/lookups'),
+  queryKey: ['projections', 'lookups'] as const,
+  staleTime: 60 * 60 * 1000, // 1 hour; reference data
+});
+
+export const createProjection = (
+  iamId: string,
+  body: { historyMonths: number; name: string }
+) =>
+  postJson<Projection>(
+    `/api/projections/by-iam/${encodeURIComponent(iamId)}`,
+    body
+  );
+
+export interface ProjectionChange {
+  body?: unknown;
+  method: 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+  /** Relative to /api/projections/{id}, e.g. 'jobs/12' or '' for the projection itself. */
+  path: string;
+}
+
+/** One mutation for every projection edit; refetches the projection afterwards. */
+export const useProjectionMutation = (id: number) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ body, method, path }: ProjectionChange) =>
+      fetchJson<unknown>(`/api/projections/${id}${path ? `/${path}` : ''}`, {
+        body: body === undefined ? undefined : JSON.stringify(body),
+        method,
+      }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ['projections', id] }),
+  });
+};

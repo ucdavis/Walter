@@ -24,4 +24,7 @@ public sealed class FeatureFlagOptions
 
     /// <summary>Whether the project costs preview is exposed in the UI.</summary>
     public bool ProjectCostsEnabled { get; set; }
+
+    /// <summary>Whether the PI projections pages are exposed in the UI. The API is not gated.</summary>
+    public bool ProjectionsEnabled { get; set; }
 }
