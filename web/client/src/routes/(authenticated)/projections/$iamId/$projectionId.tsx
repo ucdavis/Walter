@@ -21,6 +21,9 @@ function RouteComponent() {
   return (
     <main className="container">
       <h1 className="h1 mt-8">{projection.name}</h1>
+      <pre className="text-xs whitespace-pre-wrap">
+        {JSON.stringify(projection, null, 2)}
+      </pre>
     </main>
   );
 }
