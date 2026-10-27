@@ -35,7 +35,6 @@ BEGIN
         SELECT DISTINCT r.ProjectNumber
         INTO #ids
         FROM dbo.PpmPersonRoles r
-        JOIN dbo.PpmProjects p ON p.ProjectNumber = r.ProjectNumber
         WHERE r.EmployeeId = @PiEmployeeId
           AND r.ScopeType = 'PROJECT'
           AND r.RoleName = 'Principal Investigator'
