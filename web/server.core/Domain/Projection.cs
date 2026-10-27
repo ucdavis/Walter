@@ -238,7 +238,7 @@ public enum ProjectionExpenseKind
 {
     OneTime,
     Monthly,
-    /// <summary>Generated from run-rates; editing converts it to Monthly so window changes keep the edit.</summary>
+    /// <summary>Generated from run-rates; a window change or reset replaces these, including edited ones.</summary>
     Projected,
 }
 

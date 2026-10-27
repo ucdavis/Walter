@@ -185,7 +185,7 @@ public sealed class ProjectionsControllerTests
     }
 
     [Fact]
-    public async Task Editing_projected_expense_converts_to_monthly_and_survives_window_change()
+    public async Task Edited_projected_expense_stays_projected_and_window_change_replaces_it()
     {
         using var ctx = TestDbContextFactory.CreateInMemory();
         var a = await CreateProjectionAsync(ctx);
@@ -197,11 +197,11 @@ public sealed class ProjectionsControllerTests
         {
             ProjectionProjectId = project.Id, Kind = ProjectionExpenseKind.Projected, ExpenditureCategory = Supplies, Amount = 75,
         }, default);
-        result.Should().BeOfType<OkObjectResult>().Which.Value.Should().BeEquivalentTo(new { Kind = ProjectionExpenseKind.Monthly, Amount = 75m });
+        result.Should().BeOfType<OkObjectResult>().Which.Value.Should().BeEquivalentTo(new { Kind = ProjectionExpenseKind.Projected, Amount = 75m });
 
         await controller.HistoryMonths(a.Id, new ProjectionsController.HistoryMonthsRequest(12), default);
         ctx.ProjectionExpenses.Select(e => new { e.Kind, e.Amount }).Should().BeEquivalentTo(
-            [new { Kind = ProjectionExpenseKind.Monthly, Amount = 75m }, new { Kind = ProjectionExpenseKind.Projected, Amount = 20m }]);
+            [new { Kind = ProjectionExpenseKind.Projected, Amount = 20m }]);
     }
 
     [Fact]

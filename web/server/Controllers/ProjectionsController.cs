@@ -255,14 +255,15 @@ public sealed class ProjectionsController(
         return Ok(body);
     });
 
-    /// <summary>Editing a Projected expense makes it Monthly so a later window change keeps the edit.</summary>
+    /// <summary>Edits to a Projected expense stay Projected, so a window change or reset replaces them.</summary>
     [HttpPut("{id:int}/expenses/{expenseId:int}")]
     public Task<IActionResult> UpdateExpense(int id, int expenseId, ProjectionExpense body, CancellationToken ct) => MutateAsync(id, ct, p =>
     {
         if (body.Kind == ProjectionExpenseKind.OneTime && body.StartMonth is null) return BadRequest("One-time expenses need a month.");
         var expense = p.Projects.SelectMany(x => x.Expenses).SingleOrDefault(x => x.Id == expenseId);
         if (expense is null || p.Projects.All(x => x.Id != body.ProjectionProjectId)) return NotFound();
-        if (body.Kind == ProjectionExpenseKind.Projected) body.Kind = ProjectionExpenseKind.Monthly;
+        if (body.Kind == ProjectionExpenseKind.Projected && expense.Kind != ProjectionExpenseKind.Projected)
+            return BadRequest("Projected expenses are generated from run-rates.");
         body.Id = expense.Id;
         db.Entry(expense).CurrentValues.SetValues(body);
         return Ok(expense);
