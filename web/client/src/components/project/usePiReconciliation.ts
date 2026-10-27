@@ -49,7 +49,9 @@ export function usePiReconciliation(
   const pmProjects = portfolioQueries.map((q) =>
     q.data && pmEmployeeId ? getPmInternalProjects(q.data, pmEmployeeId) : []
   );
-  const portfoliosSettled = portfolioQueries.every((q) => !q.isPending);
+  // isFetched stays true while an errored portfolio refetches, so one failing
+  // PI doesn't put every other PI back into loading.
+  const portfoliosSettled = portfolioQueries.every((q) => q.isFetched);
 
   const projectNumbers = portfoliosSettled
     ? [...new Set(pmProjects.flat().map((p) => p.projectNumber))].sort()
@@ -86,9 +88,11 @@ export function usePiReconciliation(
     const portfolio = portfolioQueries[index];
     const projects = pmProjects[index] ?? [];
     let status: PiReconciliationStatus;
+    // A failed background refetch keeps its last good data, so only treat
+    // errors with no data as failures.
     if (!portfolio || portfolio.isPending) {
       status = 'loading';
-    } else if (portfolio.isError) {
+    } else if (portfolio.isError && !portfolio.data) {
       status = 'error';
     } else if (projects.length === 0) {
       status = 'success';
@@ -100,7 +104,7 @@ export function usePiReconciliation(
       );
       if (batchQueries.some((q) => !q || q.isPending)) {
         status = 'loading';
-      } else if (batchQueries.some((q) => q.isError)) {
+      } else if (batchQueries.some((q) => q.isError && !q.data)) {
         status = 'error';
       } else {
         status = 'success';

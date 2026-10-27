@@ -50,6 +50,24 @@ describe('getPmInternalProjects', () => {
     expect(result.map((p) => p.projectNumber)).toEqual(['P1']);
   });
 
+  it('tolerates a project with no name', () => {
+    const result = getPmInternalProjects(
+      [
+        createProjectRecord({ projectName: 'Beta', projectNumber: 'P2' }),
+        createProjectRecord({
+          projectName: null as unknown as string,
+          projectNumber: 'P1',
+        }),
+      ],
+      '1000'
+    );
+
+    expect(result).toEqual([
+      { projectName: '', projectNumber: 'P1' },
+      { projectName: 'Beta', projectNumber: 'P2' },
+    ]);
+  });
+
   it('sorts projects by name then number', () => {
     const result = getPmInternalProjects(
       [

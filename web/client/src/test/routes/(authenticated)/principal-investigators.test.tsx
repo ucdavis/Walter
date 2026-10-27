@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { screen, waitFor, within } from '@testing-library/react';
+import { focusManager } from '@tanstack/react-query';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
 import type {
@@ -106,6 +107,10 @@ const piRow = (name: string) => {
   }
   return row;
 };
+
+// Lets React Query's batched notifications reach the DOM.
+const flushRender = () =>
+  act(() => new Promise((resolve) => setTimeout(resolve, 50)));
 
 const issuesTile = () => {
   const tile = screen.getByText('Reconciliation issues').closest('div');
@@ -451,6 +456,113 @@ describe('principal investigators route', () => {
         within(piRow('PI One')).getByLabelText("Couldn't load reconciliation")
       ).toBeInTheDocument();
       expect(within(issuesTile()).getByText('-')).toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('keeps other PIs loaded while a failed portfolio refetches on focus', async () => {
+    setupHandlers({
+      portfolios: {
+        'IAM-2001': 'error',
+        'IAM-2002': [internalProject('P3')],
+      },
+      reconciliation: [outOfBalance('P3')],
+    });
+
+    const { cleanup } = renderRoute({
+      initialPath: '/principalInvestigators',
+    });
+
+    try {
+      await screen.findByRole('link', { name: 'PI One' });
+      await within(piRow('PI Two')).findByText('1 reconciliation issue');
+
+      server.use(
+        http.get('/api/project/by-iam/IAM-2001', async () => {
+          await delay('infinite');
+        })
+      );
+      focusManager.setFocused(false);
+      focusManager.setFocused(true);
+
+      expect(
+        await within(piRow('PI One')).findByLabelText('Loading reconciliation')
+      ).toBeInTheDocument();
+      expect(
+        within(piRow('PI Two')).getByText('1 reconciliation issue')
+      ).toBeInTheDocument();
+    } finally {
+      focusManager.setFocused(undefined);
+      cleanup();
+    }
+  });
+
+  it('keeps reconciliation counts when a background refetch fails', async () => {
+    setupHandlers({
+      portfolios: { 'IAM-2002': [internalProject('P3')] },
+      reconciliation: [outOfBalance('P3')],
+    });
+
+    const { cleanup, queryClient } = renderRoute({
+      initialPath: '/principalInvestigators',
+    });
+
+    try {
+      await screen.findByRole('link', { name: 'PI Two' });
+      await within(piRow('PI Two')).findByText('1 reconciliation issue');
+
+      server.use(
+        http.get(
+          '/api/project/gl-ppm-reconciliation',
+          () => new HttpResponse(null, { status: 500 })
+        )
+      );
+      await queryClient.refetchQueries({ queryKey: ['gl-ppm-reconciliation'] });
+      await flushRender();
+
+      expect(
+        queryClient.getQueryState(['gl-ppm-reconciliation', 'P3'])?.status
+      ).toBe('error');
+      expect(
+        within(piRow('PI Two')).getByText('1 reconciliation issue')
+      ).toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('keeps reconciliation counts when a portfolio refetch fails', async () => {
+    setupHandlers({
+      portfolios: { 'IAM-2002': [internalProject('P3')] },
+      reconciliation: [outOfBalance('P3')],
+    });
+
+    const { cleanup, queryClient } = renderRoute({
+      initialPath: '/principalInvestigators',
+    });
+
+    try {
+      await screen.findByRole('link', { name: 'PI Two' });
+      await within(piRow('PI Two')).findByText('1 reconciliation issue');
+
+      server.use(
+        http.get(
+          '/api/project/by-iam/IAM-2002',
+          () => new HttpResponse(null, { status: 500 })
+        )
+      );
+      await queryClient.refetchQueries({
+        queryKey: ['projects', 'by-iam', 'IAM-2002'],
+      });
+      await flushRender();
+
+      expect(
+        queryClient.getQueryState(['projects', 'by-iam', 'IAM-2002'])?.status
+      ).toBe('error');
+      expect(
+        within(piRow('PI Two')).getByText('1 reconciliation issue')
+      ).toBeInTheDocument();
     } finally {
       cleanup();
     }

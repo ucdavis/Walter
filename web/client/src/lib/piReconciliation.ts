@@ -33,7 +33,7 @@ export function getPmInternalProjects(
       !byNumber.has(r.projectNumber)
     ) {
       byNumber.set(r.projectNumber, {
-        projectName: r.projectName,
+        projectName: r.projectName ?? '',
         projectNumber: r.projectNumber,
       });
     }
