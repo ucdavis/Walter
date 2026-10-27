@@ -7,7 +7,6 @@ import {
   ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline';
 import { ReconciliationTable } from '@/components/reconciliation/ReconciliationTable.tsx';
-import type { PiReconciliationProject } from '@/lib/piReconciliation.ts';
 import type { ManagedPiRecord } from '@/queries/project.ts';
 import { DataTable } from '@/shared/DataTable.tsx';
 import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
@@ -67,37 +66,6 @@ function ReconciliationBadge({
   );
 }
 
-const projectColumnHelper = createColumnHelper<PiReconciliationProject>();
-
-const projectColumns = [
-  projectColumnHelper.accessor('projectNumber', {
-    cell: (info) => (
-      <div className="flex items-center gap-2">
-        <ExpandIcon isExpanded={info.row.getIsExpanded()} />
-        <Link
-          className="link"
-          onClick={stopRowToggle}
-          params={{ projectNumber: info.getValue() }}
-          to="/reports/reconciliation/$projectNumber/"
-        >
-          {info.getValue()}
-        </Link>
-        <span>{info.row.original.projectName}</span>
-      </div>
-    ),
-    header: 'Project',
-    size: 400,
-  }),
-  projectColumnHelper.display({
-    cell: (info) =>
-      info.row.original.isOutOfBalance ? (
-        <span className="badge badge-sm badge-warning">Out of balance</span>
-      ) : null,
-    header: '',
-    id: 'status',
-  }),
-];
-
 function PiProjectsPanel({
   summary,
 }: {
@@ -123,32 +91,14 @@ function PiProjectsPanel({
     );
   }
 
-  return (
-    <DataTable
-      columns={projectColumns}
-      data={summary.projects}
-      expandable={false}
-      getRowProps={(row) => ({
-        className: 'cursor-pointer hover:bg-base-200',
-        onClick: () => row.toggleExpanded(),
-      })}
-      globalFilter="none"
-      pagination="off"
-      renderSubComponent={({ row }) =>
-        row.original.records.length === 0 ? (
-          <p className="text-sm text-base-content/70">
-            No reconciliation data.
-          </p>
-        ) : (
-          <ReconciliationTable
-            records={row.original.records}
-            showProject={false}
-          />
-        )
-      }
-      subComponentRowClassName="pivot-row"
-    />
-  );
+  const records = summary.projects.flatMap((p) => p.records);
+  if (records.length === 0) {
+    return (
+      <p className="text-sm text-base-content/70">No reconciliation data.</p>
+    );
+  }
+
+  return <ReconciliationTable projectFirst records={records} />;
 }
 
 const piColumnHelper = createColumnHelper<PiRow>();

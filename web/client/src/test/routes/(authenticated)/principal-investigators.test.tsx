@@ -596,11 +596,16 @@ describe('principal investigators route', () => {
     }
   });
 
-  it('expands a PI to projects and a project to chart strings', async () => {
+  it('expands a PI to one reconciliation table across its projects', async () => {
     const user = userEvent.setup();
     setupHandlers({
-      portfolios: { 'IAM-2001': [internalProject('P1')] },
-      reconciliation: [outOfBalance('P1')],
+      portfolios: {
+        'IAM-2001': [internalProject('P2'), internalProject('P1')],
+      },
+      reconciliation: [
+        createReconciliationRecord({ fundCode: 'F0', project: 'P2' }),
+        outOfBalance('P1'),
+      ],
     });
 
     const { cleanup } = renderRoute({
@@ -612,30 +617,27 @@ describe('principal investigators route', () => {
       await within(piRow('PI One')).findByText('1 reconciliation issue');
 
       await user.click(piRow('PI One'));
-      const projectLink = await screen.findByRole('link', { name: 'P1' });
-      expect(projectLink).toHaveAttribute('href', '/reports/reconciliation/P1');
-      expect(screen.getByText('Project P1')).toBeInTheDocument();
-      expect(screen.getByText('Out of balance')).toBeInTheDocument();
-
-      const projectRow = projectLink.closest('tr');
-      if (!projectRow) {
-        throw new Error('No project row');
-      }
-      await user.click(projectRow);
-      expect(
-        await screen.findByRole('link', { name: 'Details' })
-      ).toBeInTheDocument();
-      const reconciliationTable = screen
-        .getByRole('columnheader', { name: 'GL Balance' })
-        .closest('table');
+      const reconciliationTable = (
+        await screen.findByRole('columnheader', { name: 'GL Balance' })
+      ).closest('table');
       if (!reconciliationTable) {
         throw new Error('No reconciliation table');
       }
+
+      const headers = within(reconciliationTable)
+        .getAllByRole('columnheader')
+        .map((header) => header.textContent);
+      expect(headers.slice(0, 3)).toEqual(['Project', 'Dept', 'GL Fund']);
+
+      const rows = within(reconciliationTable).getAllByRole('row').slice(1);
+      expect(rows.map((row) => row.querySelector('td')?.textContent)).toEqual([
+        'P1',
+        'P2',
+      ]);
+      expect(rows[0]).toHaveClass('bg-info/10');
       expect(
-        within(reconciliationTable).queryByRole('columnheader', {
-          name: 'Project',
-        })
-      ).toBeNull();
+        within(reconciliationTable).getAllByRole('link', { name: 'Details' })
+      ).toHaveLength(2);
 
       await user.click(piRow('PI Two'));
       expect(

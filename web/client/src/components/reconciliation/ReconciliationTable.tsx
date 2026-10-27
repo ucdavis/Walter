@@ -12,43 +12,42 @@ import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
 
 const columnHelper = createColumnHelper<GLPPMReconciliationRecord>();
 
+const departmentColumn = columnHelper.accessor('financialDepartment', {
+  cell: (info) => <span>{info.getValue() ?? '-'}</span>,
+  header: 'Dept',
+});
+
+const projectColumn = columnHelper.accessor('project', {
+  cell: (info) => (
+    <TooltipLabel
+      focusable={false}
+      label={info.getValue()}
+      placement="bottom"
+      screenReaderLabel={info.row.original.projectDescription ?? undefined}
+      tooltip={info.row.original.projectDescription ?? undefined}
+    />
+  ),
+  header: 'Project',
+});
+
 interface ReconciliationTableProps {
+  projectFirst?: boolean;
   records: GLPPMReconciliationRecord[];
-  showProject?: boolean;
   tableActions?: ReactNode;
 }
 
 export function ReconciliationTable({
+  projectFirst = false,
   records,
-  showProject = true,
   tableActions,
 }: ReconciliationTableProps) {
   const sorted = useMemo(() => sortReconciliationRecords(records), [records]);
 
   const columns = useMemo(
     () => [
-      columnHelper.accessor('financialDepartment', {
-        cell: (info) => <span>{info.getValue() ?? '-'}</span>,
-        header: 'Dept',
-      }),
-      ...(showProject
-        ? [
-            columnHelper.accessor('project', {
-              cell: (info) => (
-                <TooltipLabel
-                  focusable={false}
-                  label={info.getValue()}
-                  placement="bottom"
-                  screenReaderLabel={
-                    info.row.original.projectDescription ?? undefined
-                  }
-                  tooltip={info.row.original.projectDescription ?? undefined}
-                />
-              ),
-              header: 'Project',
-            }),
-          ]
-        : []),
+      ...(projectFirst
+        ? [projectColumn, departmentColumn]
+        : [departmentColumn, projectColumn]),
       columnHelper.accessor('fundCode', {
         cell: (info) => (
           <TooltipLabel
@@ -162,7 +161,7 @@ export function ReconciliationTable({
         size: 60,
       }),
     ],
-    [showProject]
+    [projectFirst]
   );
 
   return (
