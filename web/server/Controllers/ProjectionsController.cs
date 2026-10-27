@@ -124,6 +124,159 @@ public sealed class ProjectionsController(
         return Ok(projection);
     }
 
+    // Child CRUD. Bodies are the entities; ids, parent ids, and IsSeeded come from the route or the existing row,
+    // and every lookup stays inside the loaded projection so ids from another projection 404.
+
+    [HttpPost("{id:int}/projects")]
+    public Task<IActionResult> CreateProject(int id, ProjectionProject body, CancellationToken ct) => MutateAsync(id, ct, p =>
+    {
+        body.Id = 0;
+        body.IsSeeded = false;
+        body.Budgets = []; body.Actuals = []; body.RunRates = []; body.Expenses = [];
+        p.Projects.Add(body);
+        return Ok(body);
+    });
+
+    [HttpPut("{id:int}/projects/{projectId:int}")]
+    public Task<IActionResult> UpdateProject(int id, int projectId, ProjectionProject body, CancellationToken ct) => MutateAsync(id, ct, p =>
+    {
+        var project = p.Projects.SingleOrDefault(x => x.Id == projectId);
+        if (project is null) return NotFound();
+        (body.Id, body.ProjectionId, body.IsSeeded) = (project.Id, project.ProjectionId, project.IsSeeded);
+        db.Entry(project).CurrentValues.SetValues(body);
+        return Ok(project);
+    });
+
+    /// <summary>Funding entries on the project are detached (EF nulls their tracked FK), not deleted.</summary>
+    [HttpDelete("{id:int}/projects/{projectId:int}")]
+    public Task<IActionResult> DeleteProject(int id, int projectId, CancellationToken ct) => MutateAsync(id, ct, p =>
+    {
+        var project = p.Projects.SingleOrDefault(x => x.Id == projectId);
+        if (project is null) return NotFound();
+        db.Remove(project);
+        return NoContent();
+    });
+
+    [HttpPost("{id:int}/projects/{projectId:int}/budgets")]
+    public Task<IActionResult> CreateBudget(int id, int projectId, ProjectionBudget body, CancellationToken ct) => MutateAsync(id, ct, p =>
+    {
+        var project = p.Projects.SingleOrDefault(x => x.Id == projectId);
+        if (project is null) return NotFound();
+        (body.Id, body.IsSeeded, body.SpentToDate, body.Committed) = (0, false, 0, 0);
+        project.Budgets.Add(body);
+        return Ok(body);
+    });
+
+    [HttpPut("{id:int}/projects/{projectId:int}/budgets/{budgetId:int}")]
+    public Task<IActionResult> UpdateBudget(int id, int projectId, int budgetId, ProjectionBudget body, CancellationToken ct) => MutateAsync(id, ct, p =>
+    {
+        var budget = p.Projects.SingleOrDefault(x => x.Id == projectId)?.Budgets.SingleOrDefault(x => x.Id == budgetId);
+        if (budget is null) return NotFound();
+        (body.Id, body.ProjectionProjectId, body.IsSeeded, body.SpentToDate, body.Committed) =
+            (budget.Id, budget.ProjectionProjectId, budget.IsSeeded, budget.SpentToDate, budget.Committed);
+        db.Entry(budget).CurrentValues.SetValues(body);
+        return Ok(budget);
+    });
+
+    [HttpDelete("{id:int}/projects/{projectId:int}/budgets/{budgetId:int}")]
+    public Task<IActionResult> DeleteBudget(int id, int projectId, int budgetId, CancellationToken ct) => MutateAsync(id, ct, p =>
+    {
+        var budget = p.Projects.SingleOrDefault(x => x.Id == projectId)?.Budgets.SingleOrDefault(x => x.Id == budgetId);
+        if (budget is null) return NotFound();
+        db.Remove(budget);
+        return NoContent();
+    });
+
+    [HttpPost("{id:int}/jobs")]
+    public Task<IActionResult> CreateJob(int id, ProjectionJob body, CancellationToken ct) => MutateAsync(id, ct, p =>
+    {
+        (body.Id, body.IsSeeded, body.FundingEntries) = (0, false, []);
+        p.Jobs.Add(body);
+        return Ok(body);
+    });
+
+    [HttpPut("{id:int}/jobs/{jobId:int}")]
+    public Task<IActionResult> UpdateJob(int id, int jobId, ProjectionJob body, CancellationToken ct) => MutateAsync(id, ct, p =>
+    {
+        var job = p.Jobs.SingleOrDefault(x => x.Id == jobId);
+        if (job is null) return NotFound();
+        (body.Id, body.ProjectionId, body.IsSeeded) = (job.Id, job.ProjectionId, job.IsSeeded);
+        db.Entry(job).CurrentValues.SetValues(body);
+        return Ok(job);
+    });
+
+    [HttpDelete("{id:int}/jobs/{jobId:int}")]
+    public Task<IActionResult> DeleteJob(int id, int jobId, CancellationToken ct) => MutateAsync(id, ct, p =>
+    {
+        var job = p.Jobs.SingleOrDefault(x => x.Id == jobId);
+        if (job is null) return NotFound();
+        db.Remove(job);
+        return NoContent();
+    });
+
+    [HttpPost("{id:int}/jobs/{jobId:int}/funding")]
+    public Task<IActionResult> CreateFunding(int id, int jobId, ProjectionFundingEntry body, CancellationToken ct) => MutateAsync(id, ct, p =>
+    {
+        var job = p.Jobs.SingleOrDefault(x => x.Id == jobId);
+        if (job is null || !InProjection(p, body.ProjectionProjectId)) return NotFound();
+        (body.Id, body.IsSeeded) = (0, false);
+        job.FundingEntries.Add(body);
+        return Ok(body);
+    });
+
+    [HttpPut("{id:int}/jobs/{jobId:int}/funding/{fundingId:int}")]
+    public Task<IActionResult> UpdateFunding(int id, int jobId, int fundingId, ProjectionFundingEntry body, CancellationToken ct) => MutateAsync(id, ct, p =>
+    {
+        var entry = p.Jobs.SingleOrDefault(x => x.Id == jobId)?.FundingEntries.SingleOrDefault(x => x.Id == fundingId);
+        if (entry is null || !InProjection(p, body.ProjectionProjectId)) return NotFound();
+        (body.Id, body.ProjectionJobId, body.IsSeeded) = (entry.Id, entry.ProjectionJobId, entry.IsSeeded);
+        db.Entry(entry).CurrentValues.SetValues(body);
+        return Ok(entry);
+    });
+
+    [HttpDelete("{id:int}/jobs/{jobId:int}/funding/{fundingId:int}")]
+    public Task<IActionResult> DeleteFunding(int id, int jobId, int fundingId, CancellationToken ct) => MutateAsync(id, ct, p =>
+    {
+        var entry = p.Jobs.SingleOrDefault(x => x.Id == jobId)?.FundingEntries.SingleOrDefault(x => x.Id == fundingId);
+        if (entry is null) return NotFound();
+        db.Remove(entry);
+        return NoContent();
+    });
+
+    [HttpPost("{id:int}/expenses")]
+    public Task<IActionResult> CreateExpense(int id, ProjectionExpense body, CancellationToken ct) => MutateAsync(id, ct, p =>
+    {
+        if (body.Kind == ProjectionExpenseKind.Projected) return BadRequest("Projected expenses are generated from run-rates.");
+        if (body.Kind == ProjectionExpenseKind.OneTime && body.StartMonth is null) return BadRequest("One-time expenses need a month.");
+        var project = p.Projects.SingleOrDefault(x => x.Id == body.ProjectionProjectId);
+        if (project is null) return NotFound();
+        body.Id = 0;
+        project.Expenses.Add(body);
+        return Ok(body);
+    });
+
+    /// <summary>Editing a Projected expense makes it Monthly so a later window change keeps the edit.</summary>
+    [HttpPut("{id:int}/expenses/{expenseId:int}")]
+    public Task<IActionResult> UpdateExpense(int id, int expenseId, ProjectionExpense body, CancellationToken ct) => MutateAsync(id, ct, p =>
+    {
+        if (body.Kind == ProjectionExpenseKind.OneTime && body.StartMonth is null) return BadRequest("One-time expenses need a month.");
+        var expense = p.Projects.SelectMany(x => x.Expenses).SingleOrDefault(x => x.Id == expenseId);
+        if (expense is null || p.Projects.All(x => x.Id != body.ProjectionProjectId)) return NotFound();
+        if (body.Kind == ProjectionExpenseKind.Projected) body.Kind = ProjectionExpenseKind.Monthly;
+        body.Id = expense.Id;
+        db.Entry(expense).CurrentValues.SetValues(body);
+        return Ok(expense);
+    });
+
+    [HttpDelete("{id:int}/expenses/{expenseId:int}")]
+    public Task<IActionResult> DeleteExpense(int id, int expenseId, CancellationToken ct) => MutateAsync(id, ct, p =>
+    {
+        var expense = p.Projects.SelectMany(x => x.Expenses).SingleOrDefault(x => x.Id == expenseId);
+        if (expense is null) return NotFound();
+        db.Remove(expense);
+        return NoContent();
+    });
+
     [HttpGet("lookups")]
     public async Task<IActionResult> Lookups(CancellationToken ct) =>
         Ok(new ProjectionLookups(await data.GetJobCodesAsync(ct), await data.GetExpenditureCategoriesAsync(ct)));
@@ -142,6 +295,23 @@ public sealed class ProjectionsController(
         if (projection is null) return (null, NotFound());
         return await CanAccessPiAsync(projection.PiEmployeeId, ct) ? (projection, null) : (null, Forbid());
     }
+
+    /// <summary>Loads with access checks, applies a change, and saves once only when the change succeeded.</summary>
+    private async Task<IActionResult> MutateAsync(int id, CancellationToken ct, Func<Projection, IActionResult> change)
+    {
+        var (projection, error) = await LoadAsync(id, ct);
+        if (error is not null) return error;
+
+        var result = change(projection!);
+        if (result is not (OkObjectResult or NoContentResult)) return result;
+        Touch(projection!);
+        await db.SaveChangesAsync(ct);
+        return result;
+    }
+
+    /// <summary>Null means outside the portfolio; otherwise the project must belong to this projection.</summary>
+    private static bool InProjection(Projection projection, int? projectId) =>
+        projectId is null || projection.Projects.Any(x => x.Id == projectId);
 
     /// <summary>Any child change bumps the projection's audit fields.</summary>
     internal void Touch(Projection projection)
