@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchJson } from '../lib/api.ts';
+import { hasDiscrepancy } from '../lib/reconciliation.ts';
 
 export interface ProjectRecord {
   activityCode: string | null;
@@ -239,7 +240,7 @@ export function useProjectDiscrepancyState(projectCodes: string[]) {
     // matching the per-row formula on the reconciliation page.
     const result = new Set<string>();
     for (const r of data) {
-      if (Math.abs(r.glActualAmount + r.ppmBudBal) > 0.005) {
+      if (hasDiscrepancy(r)) {
         result.add(r.project);
       }
     }
