@@ -281,13 +281,13 @@ namespace server.core.Migrations
 
                     b.Property<string>("PiEmployeeId")
                         .IsRequired()
-                        .HasMaxLength(16)
-                        .HasColumnType("nvarchar(16)");
+                        .HasMaxLength(8)
+                        .HasColumnType("nvarchar(8)");
 
                     b.Property<string>("PiIamId")
                         .IsRequired()
-                        .HasMaxLength(16)
-                        .HasColumnType("nvarchar(16)");
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
 
                     b.Property<DateTime>("SeededAt")
                         .HasColumnType("datetime2");
@@ -473,8 +473,8 @@ namespace server.core.Migrations
                         .HasColumnType("decimal(9,6)");
 
                     b.Property<string>("EmployeeId")
-                        .HasMaxLength(16)
-                        .HasColumnType("nvarchar(16)");
+                        .HasMaxLength(8)
+                        .HasColumnType("nvarchar(8)");
 
                     b.Property<DateOnly?>("EndDate")
                         .HasColumnType("date");
@@ -491,8 +491,8 @@ namespace server.core.Migrations
                         .HasColumnType("bit");
 
                     b.Property<string>("JobCode")
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
+                        .HasMaxLength(6)
+                        .HasColumnType("nvarchar(6)");
 
                     b.Property<decimal?>("MonthlySalary")
                         .HasPrecision(18, 2)
@@ -504,16 +504,16 @@ namespace server.core.Migrations
                         .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("PositionNumber")
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                        .HasMaxLength(8)
+                        .HasColumnType("nvarchar(8)");
 
                     b.Property<int>("ProjectionId")
                         .HasColumnType("int");
 
                     b.Property<string>("RateSet")
                         .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
+                        .HasMaxLength(5)
+                        .HasColumnType("nvarchar(5)");
 
                     b.Property<DateOnly?>("StartDate")
                         .HasColumnType("date");
@@ -561,8 +561,8 @@ namespace server.core.Migrations
                         .HasColumnType("nvarchar(300)");
 
                     b.Property<string>("ProjectNumber")
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
 
                     b.Property<string>("ProjectType")
                         .HasMaxLength(100)

@@ -14,10 +14,10 @@ public class Projection
     public int Id { get; set; }
 
     /// <summary>Owner PI; the target of the portfolio access check.</summary>
-    [Required, MaxLength(16)]
+    [Required, MaxLength(8)]
     public string PiEmployeeId { get; set; } = "";
 
-    [Required, MaxLength(16)]
+    [Required, MaxLength(10)]
     public string PiIamId { get; set; } = "";
 
     [Required, MaxLength(200)]
@@ -67,7 +67,7 @@ public class ProjectionProject
 
     public int ProjectionId { get; set; }
 
-    [MaxLength(20)]
+    [MaxLength(10)]
     public string? ProjectNumber { get; set; }
 
     [MaxLength(20)]
@@ -163,23 +163,23 @@ public class ProjectionJob
 
     public int ProjectionId { get; set; }
 
-    [MaxLength(16)]
+    [MaxLength(8)]
     public string? EmployeeId { get; set; }
 
-    [MaxLength(20)]
+    [MaxLength(8)]
     public string? PositionNumber { get; set; }
 
     [Required, MaxLength(200)]
     public string Name { get; set; } = "";
 
-    [MaxLength(10)]
+    [MaxLength(6)]
     public string? JobCode { get; set; }
 
     [MaxLength(200)]
     public string? Title { get; set; }
 
     /// <summary>CBR rate set (UCPath business unit): DVCMP, DVMED, or UCANR.</summary>
-    [Required, MaxLength(10)]
+    [Required, MaxLength(5)]
     public string RateSet { get; set; } = "DVCMP";
 
     /// <summary>1.0-FTE monthly rate as of SeededAt; null means the job needs input.</summary>

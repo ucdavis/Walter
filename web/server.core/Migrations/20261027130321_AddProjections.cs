@@ -17,8 +17,8 @@ namespace server.core.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    PiEmployeeId = table.Column<string>(type: "nvarchar(16)", maxLength: 16, nullable: false),
-                    PiIamId = table.Column<string>(type: "nvarchar(16)", maxLength: 16, nullable: false),
+                    PiEmployeeId = table.Column<string>(type: "nvarchar(8)", maxLength: 8, nullable: false),
+                    PiIamId = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: false),
                     Name = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
                     HistoryMonths = table.Column<int>(type: "int", nullable: false),
                     SeededAt = table.Column<DateTime>(type: "datetime2", nullable: false),
@@ -39,12 +39,12 @@ namespace server.core.Migrations
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     ProjectionId = table.Column<int>(type: "int", nullable: false),
-                    EmployeeId = table.Column<string>(type: "nvarchar(16)", maxLength: 16, nullable: true),
-                    PositionNumber = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
+                    EmployeeId = table.Column<string>(type: "nvarchar(8)", maxLength: 8, nullable: true),
+                    PositionNumber = table.Column<string>(type: "nvarchar(8)", maxLength: 8, nullable: true),
                     Name = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    JobCode = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: true),
+                    JobCode = table.Column<string>(type: "nvarchar(6)", maxLength: 6, nullable: true),
                     Title = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
-                    RateSet = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: false),
+                    RateSet = table.Column<string>(type: "nvarchar(5)", maxLength: 5, nullable: false),
                     MonthlySalary = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: true),
                     Fte = table.Column<decimal>(type: "decimal(9,6)", precision: 9, scale: 6, nullable: false),
                     CbrRate = table.Column<decimal>(type: "decimal(9,6)", precision: 9, scale: 6, nullable: true),
@@ -74,7 +74,7 @@ namespace server.core.Migrations
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     ProjectionId = table.Column<int>(type: "int", nullable: false),
-                    ProjectNumber = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
+                    ProjectNumber = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: true),
                     TaskNumber = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
                     TaskName = table.Column<string>(type: "nvarchar(300)", maxLength: 300, nullable: true),
                     ProjectName = table.Column<string>(type: "nvarchar(300)", maxLength: 300, nullable: false),
