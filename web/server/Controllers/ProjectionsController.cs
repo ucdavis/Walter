@@ -52,7 +52,6 @@ public sealed class ProjectionsController(
         var projection = new Projection
         {
             PiEmployeeId = piEmployeeId!,
-            PiIamId = iamId,
             Name = request.Name,
             CreatedBy = User.GetUserIdentifier(),
             CreatedAt = DateTime.UtcNow,

@@ -104,7 +104,6 @@ export interface Projection {
   jobs: ProjectionJob[];
   name: string;
   piEmployeeId: string;
-  piIamId: string;
   projects: ProjectionProject[];
   /** The projection's "now": all calculation is relative to this snapshot. */
   seededAt: string;

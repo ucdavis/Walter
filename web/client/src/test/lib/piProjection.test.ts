@@ -79,7 +79,6 @@ const projection = ({
   jobs,
   name: 'Plan',
   piEmployeeId: 'PI',
-  piIamId: 'IAM',
   projects: [
     {
       actuals: actuals.map((a, i) => ({

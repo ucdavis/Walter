@@ -284,11 +284,6 @@ namespace server.core.Migrations
                         .HasMaxLength(8)
                         .HasColumnType("nvarchar(8)");
 
-                    b.Property<string>("PiIamId")
-                        .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
-
                     b.Property<DateTime>("SeededAt")
                         .HasColumnType("datetime2");
 

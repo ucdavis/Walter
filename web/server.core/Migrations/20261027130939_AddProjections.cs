@@ -18,7 +18,6 @@ namespace server.core.Migrations
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     PiEmployeeId = table.Column<string>(type: "nvarchar(8)", maxLength: 8, nullable: false),
-                    PiIamId = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: false),
                     Name = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
                     HistoryMonths = table.Column<int>(type: "int", nullable: false),
                     SeededAt = table.Column<DateTime>(type: "datetime2", nullable: false),

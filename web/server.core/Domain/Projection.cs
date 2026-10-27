@@ -17,9 +17,6 @@ public class Projection
     [Required, MaxLength(8)]
     public string PiEmployeeId { get; set; } = "";
 
-    [Required, MaxLength(10)]
-    public string PiIamId { get; set; } = "";
-
     [Required, MaxLength(200)]
     public string Name { get; set; } = "";
 
