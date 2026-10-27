@@ -149,22 +149,31 @@ describe('synthetic portfolio accounting', () => {
 });
 
 describe('demo API and real screens', () => {
-  it('does not expose ProjectionLab outside demo mode', async () => {
+  it.each([
+    ['projections', 'ProjectionLab is available in the local demo portfolio.'],
+    [
+      'guided-projections',
+      'Guided projections are available in the local demo portfolio.',
+    ],
+    [
+      'projection-designs',
+      'Guided projections are available in the local demo portfolio.',
+    ],
+  ])('does not expose %s outside demo mode', async (path, message) => {
     server.use(...createDemoHandlers(data));
     const { cleanup } = renderRoute({
-      initialPath: `/projections/${DEMO_IAM_ID}`,
+      initialPath: `/${path}/${DEMO_IAM_ID}`,
     });
     try {
-      expect(
-        await screen.findByText(
-          'ProjectionLab is available in the local demo portfolio.'
-        )
-      ).toBeInTheDocument();
+      expect(await screen.findByText(message)).toBeInTheDocument();
       expect(
         screen.queryByRole('heading', { name: 'ProjectionLab' })
       ).not.toBeInTheDocument();
       expect(
         screen.queryByRole('link', { name: 'Projections' })
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('link', { name: 'Guided projections' })
       ).not.toBeInTheDocument();
     } finally {
       cleanup();

@@ -25,7 +25,9 @@ import { Route as authenticatedPrincipalInvestigatorsIndexRouteImport } from './
 import { Route as authenticatedAdminIndexRouteImport } from './routes/(authenticated)/admin/index'
 import { Route as authenticatedAccrualsIndexRouteImport } from './routes/(authenticated)/accruals/index'
 import { Route as authenticatedProjectionsIamIdRouteImport } from './routes/(authenticated)/projections/$iamId'
+import { Route as authenticatedProjectionDesignsIamIdRouteImport } from './routes/(authenticated)/projection-designs/$iamId'
 import { Route as authenticatedPrincipalInvestigatorsIamIdRouteImport } from './routes/(authenticated)/principalInvestigators/$iamId'
+import { Route as authenticatedGuidedProjectionsIamIdRouteImport } from './routes/(authenticated)/guided-projections/$iamId'
 import { Route as authenticatedAdminUsersRouteImport } from './routes/(authenticated)/admin/users'
 import { Route as authenticatedAdminNotificationRouteImport } from './routes/(authenticated)/admin/notification'
 import { Route as authenticatedAdminEmailPreviewRouteImport } from './routes/(authenticated)/admin/email-preview'
@@ -125,10 +127,22 @@ const authenticatedProjectionsIamIdRoute =
     path: '/projections/$iamId',
     getParentRoute: () => authenticatedRouteRoute,
   } as any)
+const authenticatedProjectionDesignsIamIdRoute =
+  authenticatedProjectionDesignsIamIdRouteImport.update({
+    id: '/projection-designs/$iamId',
+    path: '/projection-designs/$iamId',
+    getParentRoute: () => authenticatedRouteRoute,
+  } as any)
 const authenticatedPrincipalInvestigatorsIamIdRoute =
   authenticatedPrincipalInvestigatorsIamIdRouteImport.update({
     id: '/principalInvestigators/$iamId',
     path: '/principalInvestigators/$iamId',
+    getParentRoute: () => authenticatedRouteRoute,
+  } as any)
+const authenticatedGuidedProjectionsIamIdRoute =
+  authenticatedGuidedProjectionsIamIdRouteImport.update({
+    id: '/guided-projections/$iamId',
+    path: '/guided-projections/$iamId',
     getParentRoute: () => authenticatedRouteRoute,
   } as any)
 const authenticatedAdminUsersRoute = authenticatedAdminUsersRouteImport.update({
@@ -232,7 +246,9 @@ export interface FileRoutesByFullPath {
   '/admin/email-preview': typeof authenticatedAdminEmailPreviewRoute
   '/admin/notification': typeof authenticatedAdminNotificationRoute
   '/admin/users': typeof authenticatedAdminUsersRoute
+  '/guided-projections/$iamId': typeof authenticatedGuidedProjectionsIamIdRoute
   '/principalInvestigators/$iamId': typeof authenticatedPrincipalInvestigatorsIamIdRoute
+  '/projection-designs/$iamId': typeof authenticatedProjectionDesignsIamIdRoute
   '/projections/$iamId': typeof authenticatedProjectionsIamIdRoute
   '/accruals': typeof authenticatedAccrualsIndexRoute
   '/admin/': typeof authenticatedAdminIndexRoute
@@ -261,7 +277,9 @@ export interface FileRoutesByTo {
   '/admin/email-preview': typeof authenticatedAdminEmailPreviewRoute
   '/admin/notification': typeof authenticatedAdminNotificationRoute
   '/admin/users': typeof authenticatedAdminUsersRoute
+  '/guided-projections/$iamId': typeof authenticatedGuidedProjectionsIamIdRoute
   '/principalInvestigators/$iamId': typeof authenticatedPrincipalInvestigatorsIamIdRoute
+  '/projection-designs/$iamId': typeof authenticatedProjectionDesignsIamIdRoute
   '/projections/$iamId': typeof authenticatedProjectionsIamIdRoute
   '/accruals': typeof authenticatedAccrualsIndexRoute
   '/admin': typeof authenticatedAdminIndexRoute
@@ -295,7 +313,9 @@ export interface FileRoutesById {
   '/(authenticated)/admin/email-preview': typeof authenticatedAdminEmailPreviewRoute
   '/(authenticated)/admin/notification': typeof authenticatedAdminNotificationRoute
   '/(authenticated)/admin/users': typeof authenticatedAdminUsersRoute
+  '/(authenticated)/guided-projections/$iamId': typeof authenticatedGuidedProjectionsIamIdRoute
   '/(authenticated)/principalInvestigators/$iamId': typeof authenticatedPrincipalInvestigatorsIamIdRoute
+  '/(authenticated)/projection-designs/$iamId': typeof authenticatedProjectionDesignsIamIdRoute
   '/(authenticated)/projections/$iamId': typeof authenticatedProjectionsIamIdRoute
   '/(authenticated)/accruals/': typeof authenticatedAccrualsIndexRoute
   '/(authenticated)/admin/': typeof authenticatedAdminIndexRoute
@@ -329,7 +349,9 @@ export interface FileRouteTypes {
     | '/admin/email-preview'
     | '/admin/notification'
     | '/admin/users'
+    | '/guided-projections/$iamId'
     | '/principalInvestigators/$iamId'
+    | '/projection-designs/$iamId'
     | '/projections/$iamId'
     | '/accruals'
     | '/admin/'
@@ -358,7 +380,9 @@ export interface FileRouteTypes {
     | '/admin/email-preview'
     | '/admin/notification'
     | '/admin/users'
+    | '/guided-projections/$iamId'
     | '/principalInvestigators/$iamId'
+    | '/projection-designs/$iamId'
     | '/projections/$iamId'
     | '/accruals'
     | '/admin'
@@ -391,7 +415,9 @@ export interface FileRouteTypes {
     | '/(authenticated)/admin/email-preview'
     | '/(authenticated)/admin/notification'
     | '/(authenticated)/admin/users'
+    | '/(authenticated)/guided-projections/$iamId'
     | '/(authenticated)/principalInvestigators/$iamId'
+    | '/(authenticated)/projection-designs/$iamId'
     | '/(authenticated)/projections/$iamId'
     | '/(authenticated)/accruals/'
     | '/(authenticated)/admin/'
@@ -526,11 +552,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authenticatedProjectionsIamIdRouteImport
       parentRoute: typeof authenticatedRouteRoute
     }
+    '/(authenticated)/projection-designs/$iamId': {
+      id: '/(authenticated)/projection-designs/$iamId'
+      path: '/projection-designs/$iamId'
+      fullPath: '/projection-designs/$iamId'
+      preLoaderRoute: typeof authenticatedProjectionDesignsIamIdRouteImport
+      parentRoute: typeof authenticatedRouteRoute
+    }
     '/(authenticated)/principalInvestigators/$iamId': {
       id: '/(authenticated)/principalInvestigators/$iamId'
       path: '/principalInvestigators/$iamId'
       fullPath: '/principalInvestigators/$iamId'
       preLoaderRoute: typeof authenticatedPrincipalInvestigatorsIamIdRouteImport
+      parentRoute: typeof authenticatedRouteRoute
+    }
+    '/(authenticated)/guided-projections/$iamId': {
+      id: '/(authenticated)/guided-projections/$iamId'
+      path: '/guided-projections/$iamId'
+      fullPath: '/guided-projections/$iamId'
+      preLoaderRoute: typeof authenticatedGuidedProjectionsIamIdRouteImport
       parentRoute: typeof authenticatedRouteRoute
     }
     '/(authenticated)/admin/users': {
@@ -721,7 +761,9 @@ interface authenticatedRouteRouteChildren {
   authenticatedIndexRoute: typeof authenticatedIndexRoute
   authenticatedAccrualsAboutRoute: typeof authenticatedAccrualsAboutRoute
   authenticatedAccrualsOverviewRoute: typeof authenticatedAccrualsOverviewRoute
+  authenticatedGuidedProjectionsIamIdRoute: typeof authenticatedGuidedProjectionsIamIdRoute
   authenticatedPrincipalInvestigatorsIamIdRoute: typeof authenticatedPrincipalInvestigatorsIamIdRoute
+  authenticatedProjectionDesignsIamIdRoute: typeof authenticatedProjectionDesignsIamIdRoute
   authenticatedProjectionsIamIdRoute: typeof authenticatedProjectionsIamIdRoute
   authenticatedAccrualsIndexRoute: typeof authenticatedAccrualsIndexRoute
   authenticatedPrincipalInvestigatorsIndexRoute: typeof authenticatedPrincipalInvestigatorsIndexRoute
@@ -741,8 +783,12 @@ const authenticatedRouteRouteChildren: authenticatedRouteRouteChildren = {
   authenticatedIndexRoute: authenticatedIndexRoute,
   authenticatedAccrualsAboutRoute: authenticatedAccrualsAboutRoute,
   authenticatedAccrualsOverviewRoute: authenticatedAccrualsOverviewRoute,
+  authenticatedGuidedProjectionsIamIdRoute:
+    authenticatedGuidedProjectionsIamIdRoute,
   authenticatedPrincipalInvestigatorsIamIdRoute:
     authenticatedPrincipalInvestigatorsIamIdRoute,
+  authenticatedProjectionDesignsIamIdRoute:
+    authenticatedProjectionDesignsIamIdRoute,
   authenticatedProjectionsIamIdRoute: authenticatedProjectionsIamIdRoute,
   authenticatedAccrualsIndexRoute: authenticatedAccrualsIndexRoute,
   authenticatedPrincipalInvestigatorsIndexRoute:
