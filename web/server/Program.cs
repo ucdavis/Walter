@@ -85,6 +85,7 @@ builder.Services.AddSingleton<IFinancialApiService, FinancialApiService>();
 builder.Services.AddSingleton<DatamartService>();
 builder.Services.AddSingleton<IDatamartService>(sp => sp.GetRequiredService<DatamartService>());
 builder.Services.AddSingleton<IPpmPortfolioReader>(sp => sp.GetRequiredService<DatamartService>());
+builder.Services.AddSingleton<IProjectionDataSource>(sp => sp.GetRequiredService<DatamartService>());
 builder.Services.AddScoped<PpmPortfolioService>();
 
 // add scoped services here
