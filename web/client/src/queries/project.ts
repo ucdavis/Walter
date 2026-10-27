@@ -183,6 +183,8 @@ export const useManagedPisQuery = (iamId: string) => {
     isError: managedPisResult.isError,
     isPending: managedPisResult.isPending,
     managedPis: managedPisResult.data?.pis ?? [],
+    projectManagerEmployeeId:
+      managedPisResult.data?.projectManager?.employeeId ?? null,
     projectManagerName: managedPisResult.data?.projectManager?.name ?? null,
   };
 };
