@@ -1,5 +1,9 @@
 import { useId } from 'react';
-import { ArrowLeftIcon, ArrowRightIcon } from '@heroicons/react/24/outline';
+import {
+  ArrowRightIcon,
+  CheckCircleIcon,
+  ExclamationTriangleIcon,
+} from '@heroicons/react/24/outline';
 import {
   Area,
   CartesianGrid,
@@ -38,16 +42,26 @@ export function LiveResults({
   const gaps = result.funds.filter((fund) => fund.firstDeficit);
   const endingMonth = result.chart.at(-1)?.month;
   return (
-    <section aria-label="Live project outlook" className="hp-live-panel">
-      <div className="hp-live-heading">
-        <h2>Project outlooks</h2>
-        <span>
-          <i /> Live
-        </span>
+    <section
+      aria-label="Live project outlook"
+      className="card hp-live-panel text-base"
+    >
+      <div>
+        <h2 className="text-2xl font-semibold">
+          {gaps.length
+            ? `${gaps.length} of ${result.funds.length} projects ${gaps.length === 1 ? 'runs' : 'run'} short`
+            : result.funds.length
+              ? 'Each project stays within funding'
+              : 'Select a project to see its outlook'}
+        </h2>
+        <p className="mt-2 text-sm leading-relaxed text-base-content/70">
+          Balances stay separate. Select a line or a project below to explore.
+        </p>
       </div>
-      <label className="hp-chart-select">
+      <label className="hp-chart-select text-sm">
         Explore a project
         <select
+          className="select w-full text-base"
           onChange={(event) => onProject(event.target.value || null)}
           value={selected?.id ?? ''}
         >
@@ -59,36 +73,27 @@ export function LiveResults({
           ))}
         </select>
       </label>
-      {selected ? (
+      {selected && (
         <>
-          <h3 className="hp-chart-project-name">{selected.name}</h3>
-          <span className="hp-balance-label">
+          <h3 className="hp-chart-project-name text-lg font-semibold leading-snug">
+            {selected.name}
+          </h3>
+          <span className="hp-balance-label text-sm text-base-content/70">
             Ending balance · {endingMonth && monthLabel(endingMonth)}
           </span>
           <strong
-            className={`hp-live-balance ${selected.ending < 0 ? 'hp-negative' : ''}`}
+            className={`hp-live-balance text-4xl font-bold ${selected.ending < 0 ? 'text-error' : ''}`}
           >
             {money(selected.ending)}
           </strong>
-          <p className={selected.firstDeficit ? 'hp-negative' : ''}>
+          <p
+            className={`text-sm leading-relaxed ${selected.firstDeficit ? 'text-error' : 'text-base-content/70'}`}
+          >
             {selected.firstDeficit
               ? `First below zero in ${monthLabel(selected.firstDeficit)}`
               : 'Stays within funding throughout this plan'}
           </p>
         </>
-      ) : (
-        <div className="hp-project-status">
-          <strong>
-            {gaps.length
-              ? `${gaps.length} of ${result.funds.length} projects ${gaps.length === 1 ? 'runs' : 'run'} short`
-              : result.funds.length
-                ? 'Each project stays within funding'
-                : 'Select a project to see its outlook'}
-          </strong>
-          <p>
-            Balances stay separate. Select a line or a project below to explore.
-          </p>
-        </div>
       )}
       <div
         aria-label={
@@ -108,63 +113,61 @@ export function LiveResults({
               <linearGradient id={gradient} x1="0" x2="0" y1="0" y2="1">
                 <stop
                   offset="0%"
-                  stopColor={selected?.color ?? '#257f73'}
+                  stopColor={selected?.color ?? 'var(--color-primary)'}
                   stopOpacity={0.18}
                 />
                 <stop
                   offset="100%"
-                  stopColor={selected?.color ?? '#257f73'}
+                  stopColor={selected?.color ?? 'var(--color-primary)'}
                   stopOpacity={0.01}
                 />
               </linearGradient>
             </defs>
-            <CartesianGrid stroke="#e9eeed" vertical={false} />
+            <CartesianGrid stroke="var(--color-main-border)" vertical={false} />
             <XAxis
               axisLine={false}
               dataKey="month"
               minTickGap={24}
-              tick={{ fill: '#7a898b', fontSize: 11 }}
+              tick={{ className: 'text-sm fill-base-content/70' }}
               tickFormatter={(month: string) => monthLabel(month).split(' ')[0]}
               tickLine={false}
             />
             <YAxis
               axisLine={false}
-              tick={{ fill: '#7a898b', fontSize: 11 }}
+              tick={{ className: 'text-sm fill-base-content/70' }}
               tickFormatter={shortMoney}
               tickLine={false}
-              width={57}
+              width={70}
             />
             <Tooltip
               contentStyle={{
-                border: '1px solid #dce6e4',
+                border: '1px solid var(--color-main-border)',
                 borderRadius: 8,
-                fontSize: 12,
                 maxWidth: 300,
                 whiteSpace: 'normal',
               }}
               formatter={(value) => money(Number(value))}
               labelFormatter={(month) => monthLabel(String(month))}
+              wrapperClassName="text-sm"
             />
             <ReferenceLine
               label={{
-                fill: '#a45548',
-                fontSize: 10,
+                className: 'text-xs fill-error',
                 position: 'insideTopRight',
                 value: 'Zero balance',
               }}
-              stroke="#c47a6b"
+              stroke="var(--color-error)"
               strokeDasharray="4 4"
               y={0}
             />
             {selected?.firstDeficit && (
               <ReferenceLine
                 label={{
-                  fill: '#a45548',
-                  fontSize: 10,
+                  className: 'text-xs fill-error',
                   position: 'top',
                   value: `Shortfall · ${monthLabel(selected.firstDeficit)}`,
                 }}
-                stroke="#b86455"
+                stroke="var(--color-error)"
                 strokeDasharray="3 4"
                 x={selected.firstDeficit}
               />
@@ -199,40 +202,42 @@ export function LiveResults({
           </ComposedChart>
         </ResponsiveContainer>
       </div>
-      <p className="hp-chart-period">
+      <p className="hp-chart-period text-sm text-base-content/70">
         Month-end balances ·{' '}
         {result.chart[0] && monthLabel(result.chart[0].month)} to{' '}
         {endingMonth && monthLabel(endingMonth)}
       </p>
       {selected ? (
-        <div className="hp-costs">
+        <div className="hp-costs text-sm">
           <div>
-            <span>Starting balance</span>
+            <span className="text-base-content/70">Starting balance</span>
             <strong>{money(selected.startingBalance)}</strong>
           </div>
           <div>
-            <span>Salary</span>
+            <span className="text-base-content/70">Salary</span>
             <strong>{money(selected.salary)}</strong>
           </div>
           <div>
-            <span>Fringe</span>
+            <span className="text-base-content/70">Fringe</span>
             <strong>{money(selected.fringe)}</strong>
           </div>
           <div>
-            <span>Indirect costs · {selected.indirectRate}%</span>
+            <span className="text-base-content/70">
+              Indirect costs · {selected.indirectRate}%
+            </span>
             <strong>{money(selected.indirect)}</strong>
           </div>
           <div>
-            <span>Other expenses</span>
+            <span className="text-base-content/70">Other expenses</span>
             <strong>{money(selected.other)}</strong>
           </div>
           <div>
-            <span>Total planned spending</span>
+            <span className="text-base-content/70">Total planned spending</span>
             <strong>{money(selected.spending)}</strong>
           </div>
         </div>
       ) : (
-        <div className="hp-chart-legend">
+        <div className="hp-chart-legend text-sm">
           {result.funds.map((fund) => (
             <button
               key={fund.id}
@@ -241,14 +246,16 @@ export function LiveResults({
             >
               <i style={{ background: fund.color }} />
               <span>
-                <strong>{fund.name}</strong>
-                <small>
+                <strong className="text-sm font-semibold leading-normal">
+                  {fund.name}
+                </strong>
+                <small className="text-sm text-base-content/70">
                   {fund.firstDeficit
                     ? `Shortfall starts ${monthLabel(fund.firstDeficit)}`
                     : 'Within funding'}
                 </small>
               </span>
-              <b className={fund.ending < 0 ? 'hp-negative' : ''}>
+              <b className={fund.ending < 0 ? 'text-error' : ''}>
                 {shortMoney(fund.ending)}
               </b>
               <ArrowRightIcon />
@@ -256,9 +263,11 @@ export function LiveResults({
           ))}
         </div>
       )}
-      <div className="hp-portfolio-total">
+      <div className="hp-portfolio-total text-sm text-base-content/70">
         <span>All projects combined · ending</span>
-        <strong className={result.ending < 0 ? 'hp-negative' : ''}>
+        <strong
+          className={`text-base font-semibold ${result.ending < 0 ? 'text-error' : ''}`}
+        >
           {money(result.ending)}
         </strong>
       </div>
@@ -268,68 +277,72 @@ export function LiveResults({
 
 export function ProjectDetail({
   fund,
-  onBack,
   onStaffing,
 }: {
   fund: ProjectResult;
-  onBack: () => void;
   onStaffing: () => void;
 }) {
   const lastMonth = fund.chart.at(-1)!.month;
   return (
     <div className="hp-project-detail">
-      <button className="gp-back" onClick={onBack} type="button">
-        <ArrowLeftIcon /> All project balances
-      </button>
-      <span className="gp-eyebrow">PROJECT DETAIL · {fund.id}</span>
-      <h2>
+      <h2 className="text-2xl font-semibold">
         <i style={{ background: fund.color }} />
         {fund.name}
       </h2>
-      <p>
+      <p className="text-sm leading-relaxed text-base-content/70">
         Project dates: {monthLabel(fund.startDate.slice(0, 7))} to{' '}
         {monthLabel(fund.endDate.slice(0, 7))}
       </p>
       <div
-        className={`hp-project-insight ${fund.firstDeficit ? 'hp-project-insight-gap' : ''}`}
+        className={`alert alert-soft flex items-start gap-3 rounded-lg p-5 text-left shadow-none ${fund.firstDeficit ? 'alert-warning' : 'alert-success'}`}
+        role="status"
       >
-        <strong>
-          {fund.firstDeficit
-            ? `Runs short in ${monthLabel(fund.firstDeficit)}`
-            : 'Within funding for this plan'}
-        </strong>
-        <p>
-          {fund.firstDeficit
-            ? `The balance first drops below zero in ${monthLabel(fund.firstDeficit)} and reaches ${money(fund.ending)} by ${monthLabel(lastMonth)}.`
-            : `${money(fund.ending)} remains at the end of ${monthLabel(lastMonth)}.`}
-        </p>
+        {fund.firstDeficit ? (
+          <ExclamationTriangleIcon
+            aria-hidden="true"
+            className="mt-0.5 shrink-0"
+          />
+        ) : (
+          <CheckCircleIcon aria-hidden="true" className="mt-0.5 shrink-0" />
+        )}
+        <div className="min-w-0">
+          <strong className="block text-base font-semibold text-base-content">
+            {fund.firstDeficit
+              ? `Runs short in ${monthLabel(fund.firstDeficit)}`
+              : 'Within funding for this plan'}
+          </strong>
+          <span className="mt-1 block text-sm font-normal leading-relaxed text-base-content/70">
+            Projected ending balance: {money(fund.ending)} in{' '}
+            {monthLabel(lastMonth)}.
+          </span>
+        </div>
       </div>
       <div className="hp-project-metrics">
         <div>
-          <span>Starting balance</span>
-          <strong>{money(fund.startingBalance)}</strong>
+          <span className="text-sm">Starting balance</span>
+          <strong className="text-3xl">{money(fund.startingBalance)}</strong>
         </div>
         <div>
-          <span>Planned spending</span>
-          <strong>{money(fund.spending)}</strong>
+          <span className="text-sm">Planned spending</span>
+          <strong className="text-3xl">{money(fund.spending)}</strong>
         </div>
       </div>
       <div className="hp-detail-heading">
-        <h3>People funded here</h3>
-        <button onClick={onStaffing} type="button">
+        <h3 className="text-lg font-semibold">People funded here</h3>
+        <button className="text-sm" onClick={onStaffing} type="button">
           Edit funding shares <ArrowRightIcon />
         </button>
       </div>
-      <p className="hp-detail-caption">
+      <p className="hp-detail-caption text-sm">
         Project costs include salary, fringe, and indirect costs.
       </p>
       {fund.staff.length ? (
         fund.staff.map((person) => (
-          <div className="hp-funded-person" key={person.id}>
+          <div className="hp-funded-person text-sm" key={person.id}>
             <div>
               <strong>{person.name}</strong>
               {person.splits.map((split) => (
-                <small key={split.id}>
+                <small className="text-sm" key={split.id}>
                   {split.percent}% · {monthLabel(split.startMonth)} to{' '}
                   {monthLabel(split.endMonth)}
                 </small>
@@ -339,17 +352,18 @@ export function ProjectDetail({
           </div>
         ))
       ) : (
-        <p className="hp-detail-caption">
+        <p className="hp-detail-caption text-sm">
           No staffing costs in this planning period.
         </p>
       )}
-      <details className="hp-monthly-detail">
-        <summary>
-          Month-by-month balances <span>{fund.chart.length} months</span>
+      <details className="hp-monthly-detail text-sm">
+        <summary className="text-base">
+          Month-by-month balances{' '}
+          <span className="text-sm">{fund.chart.length} months</span>
         </summary>
-        <div className="hp-monthly-scroll">
-          <table>
-            <caption>
+        <div className="hp-monthly-scroll text-sm">
+          <table className="table walter-table walter-subtable">
+            <caption className="text-sm">
               Monthly spending and ending balance for {fund.name}
             </caption>
             <thead>
@@ -369,7 +383,7 @@ export function ProjectDetail({
                   <th scope="row">
                     {monthLabel(point.month)}
                     {point.month === fund.firstDeficit && (
-                      <small>First shortfall</small>
+                      <small className="text-sm">First shortfall</small>
                     )}
                   </th>
                   <td>{money(point.personnel)}</td>

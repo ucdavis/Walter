@@ -20,10 +20,21 @@ Create a plan, review the prefilled funding and people, add recurring or one-tim
 expenses, then open the workspace. Changes to saved plans update the results
 and save automatically in this browser.
 
+The homepage and plan workspaces share a collapsible plan list, styled like the project list.
+It links to the projections homepage, the default plan, and all saved plans.
+The default plan starts from the current snapshot and saves edits like other
+plans; duplicating it creates a separate saved plan. On mobile, expand the plan
+list to switch plans.
+
 Staffing supports multiple project shares per person, each with its own
 percentage and dates. Percentages refer to full-time salary, so a 50% appointment
 can be split into two 25% shares. Overlapping shares above 100% show a validation
 message and block setup completion. Older saved plans migrate to this model.
+
+Funding supports adding planned sources in setup and in the workspace. New
+sources are included immediately and open for editing their name, description,
+balance, indirect rate, and funding dates. They are available for staffing shares
+and expenses, and save with the plan in this browser.
 
 The live chart shows a separate balance for every project. Select a project
 balance, chart line, or the shortfall summary to explore its first shortfall

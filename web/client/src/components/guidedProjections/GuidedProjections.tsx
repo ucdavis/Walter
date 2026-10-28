@@ -5,11 +5,11 @@ import {
   BanknotesIcon,
   ChartBarIcon,
   CheckIcon,
+  Cog6ToothIcon,
   DocumentDuplicateIcon,
   ExclamationTriangleIcon,
-  FolderIcon,
+  ListBulletIcon,
   PlusIcon,
-  Squares2X2Icon,
   UserGroupIcon,
 } from '@heroicons/react/24/outline';
 import type { ProjectionDemoPlan } from '@/demo/projectionPlan.ts';
@@ -30,6 +30,7 @@ import {
   projectGuidedPlan,
   type ProjectionPlan,
 } from '@/components/guidedProjections/planModel.ts';
+import PlansSidebar from '@/components/guidedProjections/PlansSidebar.tsx';
 import SplitStaffEditor from '@/components/guidedProjections/SplitStaffEditor.tsx';
 import {
   LiveResults,
@@ -47,11 +48,12 @@ type Section =
 type Result = ReturnType<typeof projectGuidedPlan>;
 const sections: { icon: typeof ChartBarIcon; name: Section }[] = [
   { icon: ChartBarIcon, name: 'Overview' },
-  { icon: FolderIcon, name: 'Plan details' },
+  { icon: Cog6ToothIcon, name: 'Plan details' },
   { icon: BanknotesIcon, name: 'Funding' },
   { icon: UserGroupIcon, name: 'Staffing' },
-  { icon: Squares2X2Icon, name: 'Expenses' },
+  { icon: ListBulletIcon, name: 'Expenses' },
 ];
+const defaultPlanId = 'walter-default-plan';
 const steps = ['Plan & funding', 'Staffing', 'Other expenses', 'Review'];
 
 export default function GuidedProjections({
@@ -61,9 +63,19 @@ export default function GuidedProjections({
 }) {
   // Keep the prototype key so existing saved plans remain available.
   const storageKey = `walter-hybrid-v1-${initialPlan.asOf}-${initialPlan.fundingSources.map((fund) => fund.startingBalance).join('-')}`;
-  const [plans, setPlans] = useState(() =>
-    readSavedPlans(initialPlan, storageKey)
-  );
+  const [plans, setPlans] = useState(() => {
+    const saved = readSavedPlans(initialPlan, storageKey);
+    if (saved.some((plan) => plan.id === defaultPlanId)) {
+      return saved;
+    }
+    return [
+      {
+        ...createProjectionPlan(initialPlan, 'Default plan'),
+        id: defaultPlanId,
+      },
+      ...saved,
+    ];
+  });
   const [draft, setDraft] = useState(() => createProjectionPlan(initialPlan));
   const [screen, setScreen] = useState<'home' | 'setup' | 'workspace'>('home');
   const [section, setSection] = useState<Section>('Overview');
@@ -72,6 +84,7 @@ export default function GuidedProjections({
   const [visited, setVisited] = useState(0);
   const [storageAvailable, setStorageAvailable] = useState(true);
   const heading = useRef<HTMLHeadingElement>(null);
+  const layout = useRef<HTMLDivElement>(null);
   const result = projectGuidedPlan(draft);
   const error = planValidation(draft);
   const selectedProject = result.funds.find((fund) => fund.id === projectId);
@@ -95,7 +108,7 @@ export default function GuidedProjections({
 
   function scrollToHeading() {
     requestAnimationFrame(() => {
-      heading.current?.scrollIntoView({ block: 'start' });
+      layout.current?.scrollIntoView({ block: 'start' });
       heading.current?.focus({ preventScroll: true });
     });
   }
@@ -157,9 +170,12 @@ export default function GuidedProjections({
 
   if (screen === 'setup') {
     return (
-      <div className="gp-root hp-root hp-setup">
+      <div
+        className="container gp-root hp-root hp-setup scroll-mt-24"
+        ref={layout}
+      >
         <div className="hp-setup-top">
-          <Brand />
+          <h2 className="h3">Guided projections</h2>
           <span>New plan · {monthLabel(initialPlan.asOf)} snapshot</span>
         </div>
         <div className="hp-setup-content">
@@ -171,7 +187,6 @@ export default function GuidedProjections({
             <ArrowLeftIcon /> All plans
           </button>
           <header className="hp-setup-heading">
-            <span className="gp-eyebrow">NEW PLAN · STEP {step + 1} OF 4</span>
             <h1 ref={heading} tabIndex={-1}>
               {
                 [
@@ -222,7 +237,7 @@ export default function GuidedProjections({
           </ol>
           <section
             aria-label={steps[step]}
-            className="gp-wizard-card hp-setup-card"
+            className="card gp-wizard-card hp-setup-card"
           >
             {step === 0 && (
               <>
@@ -290,7 +305,7 @@ export default function GuidedProjections({
           </section>
           <footer className="gp-wizard-footer hp-setup-footer">
             <button
-              className="gp-secondary"
+              className="btn btn-outline gp-secondary"
               onClick={() => {
                 if (step === 0) {
                   setScreen('home');
@@ -307,7 +322,7 @@ export default function GuidedProjections({
               {error || 'You can revisit every assumption in your workspace.'}
             </span>
             <button
-              className="gp-primary"
+              className="btn btn-primary gp-primary"
               disabled={Boolean(error)}
               onClick={nextStep}
               type="button"
@@ -322,312 +337,272 @@ export default function GuidedProjections({
   }
 
   return (
-    <div className="gp-root hp-root hp-layout">
-      <aside className="hp-rail">
-        <Brand />
-        <div className="hp-owner">
-          <span>
-            {initialPlan.ownerName
-              .split(' ')
-              .map((part) => part[0])
-              .join('')}
-          </span>
-          <div>
-            {initialPlan.ownerName}
-            <small>Research portfolio</small>
-          </div>
-        </div>
-        <button
-          className={
-            screen === 'home' ? 'hp-rail-link hp-selected' : 'hp-rail-link'
-          }
-          onClick={() => setScreen('home')}
-          type="button"
-        >
-          <Squares2X2Icon /> All plans
-        </button>
-        {screen === 'workspace' && (
-          <nav aria-label="Plan workspace sections">
-            <p className="hp-rail-label">IN THIS PLAN</p>
-            {sections.map(({ icon: Icon, name }) => (
-              <button
-                aria-current={section === name ? 'page' : undefined}
-                className={
-                  section === name ? 'hp-rail-link hp-selected' : 'hp-rail-link'
-                }
-                key={name}
-                onClick={() => goToSection(name)}
-                type="button"
-              >
-                <Icon />
-                {name}
-              </button>
-            ))}
-          </nav>
-        )}
-        <p className="hp-rail-foot">
-          Demo portfolio
-          <small>
-            {monthLabel(initialPlan.asOf)} snapshot
-            <br />
-            Plans stay separate from Walter records.
-          </small>
-        </p>
-      </aside>
-      <div className="hp-main">
-        <div className="hp-topbar">
-          <span>
-            <button
-              aria-label="Back to all plans"
-              onClick={() => setScreen('home')}
-              type="button"
-            >
-              Plans
-            </button>{' '}
-            <span>/</span> {screen === 'home' ? 'Your plans' : draft.name}
-          </span>
-          <span className="hp-version-label">Guided projections</span>
-        </div>
-        <div className="hp-content">
-          {screen === 'home' ? (
-            <>
-              <header className="hp-page-heading">
-                <div>
-                  <span className="gp-eyebrow">YOUR RESEARCH PLANS</span>
-                  <h1 ref={heading} tabIndex={-1}>
-                    Plan what comes next.
-                  </h1>
-                  <p>
-                    Start with your current projects. Explore a different
-                    staffing or spending plan.
-                  </p>
-                </div>
-                <button className="gp-primary" onClick={start} type="button">
-                  <PlusIcon /> New plan
-                </button>
-              </header>
-              <div className="hp-portfolio">
-                <div>
-                  <span>Available across active projects</span>
-                  <strong>
-                    {money(
-                      initialPlan.fundingSources.reduce(
-                        (total, fund) => total + fund.startingBalance,
-                        0
-                      )
-                    )}
-                  </strong>
-                  <small>From your Walter snapshot</small>
-                </div>
-                <div className="hp-portfolio-funds">
-                  {initialPlan.fundingSources.map((fund) => (
-                    <div key={fund.id}>
-                      <span>
-                        <i style={{ background: fund.color }} />
-                        {fund.name}
-                      </span>
-                      <strong>{shortMoney(fund.startingBalance)}</strong>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="hp-library-title">
-                <h2>
-                  Your plans <span>{plans.length}</span>
-                </h2>
-                <span>Separate assumptions for each plan</span>
-              </div>
-              <div className="hp-plan-grid">
-                {plans.map((plan) => {
-                  const projection = projectGuidedPlan(plan);
-                  return (
-                    <button
-                      className="hp-plan-card"
-                      key={plan.id}
-                      onClick={() => open(plan)}
-                      type="button"
-                    >
-                      <span className="hp-plan-icon">
-                        <FolderIcon />
-                      </span>
-                      <h3>{plan.name}</h3>
-                      <p>
-                        {plan.note ||
-                          'A plan based on your current Walter snapshot.'}
-                      </p>
-                      <MiniChart
-                        values={projection.chart.map((point) => point.balance)}
-                      />
-                      <div className="hp-card-total">
-                        <span>Ending balance</span>
-                        <strong
-                          className={projection.ending < 0 ? 'hp-negative' : ''}
-                        >
-                          {money(projection.ending)}
-                        </strong>
-                      </div>
-                      <div className="hp-card-footer">
-                        <span>
-                          {plan.months} months ·{' '}
-                          {
-                            plan.staff.filter((person) => person.included)
-                              .length
-                          }{' '}
-                          people
-                        </span>
-                        <span>
-                          Open plan <ArrowRightIcon />
-                        </span>
-                      </div>
-                    </button>
-                  );
-                })}
-                <button
-                  className="hp-plan-card hp-new-plan"
-                  onClick={start}
-                  type="button"
-                >
-                  <PlusIcon />
-                  <h3>Explore another possibility</h3>
-                  <p>
-                    Four short steps, with your funding and staffing already
-                    filled in.
-                  </p>
-                  <span>
-                    Create a plan <ArrowRightIcon />
-                  </span>
-                </button>
-              </div>
-            </>
-          ) : (
-            <>
-              <header className="hp-page-heading hp-workspace-heading">
-                <div>
-                  <span className="gp-eyebrow">PLAN WORKSPACE</span>
-                  <h1 ref={heading} tabIndex={-1}>
-                    {draft.name || 'Untitled plan'}
-                  </h1>
-                  <p>
-                    {monthLabel(draft.startMonth)} onward · {draft.months}{' '}
-                    months <span className="hp-save-status">{storageText}</span>
-                  </p>
-                </div>
-                <button
-                  className="gp-secondary"
-                  onClick={duplicate}
-                  type="button"
-                >
-                  <DocumentDuplicateIcon /> Duplicate plan
-                </button>
-              </header>
-              <nav aria-label="Plan sections" className="hp-mobile-sections">
-                {sections.map(({ name }) => (
+    <div
+      className={`container gp-root hp-root hp-layout scroll-mt-24 ${screen === 'home' ? 'hp-home text-base' : ''}`}
+      ref={layout}
+    >
+      <div className="flex flex-col gap-6 md:flex-row md:gap-8">
+        <PlansSidebar
+          currentPlanId={screen === 'workspace' ? draft.id : null}
+          defaultPlan={plans.find((plan) => plan.id === defaultPlanId)!}
+          onCreate={start}
+          onHome={() => {
+            setScreen('home');
+            scrollToHeading();
+          }}
+          onOpen={open}
+          plans={plans.filter((plan) => plan.id !== defaultPlanId)}
+        />
+        <div className="hp-main flex-1">
+          <div className="hp-content">
+            {screen === 'home' ? (
+              <>
+                <header className="hp-page-heading">
+                  <div>
+                    <h1 className="h1" ref={heading} tabIndex={-1}>
+                      {initialPlan.ownerName}&apos;s Projections
+                    </h1>
+                  </div>
                   <button
-                    aria-current={section === name ? 'page' : undefined}
-                    key={name}
-                    onClick={() => goToSection(name)}
+                    className="btn btn-primary gp-primary"
+                    onClick={start}
                     type="button"
                   >
-                    {name}
+                    <PlusIcon /> New plan
                   </button>
-                ))}
-              </nav>
-              <ShortfallSummary
-                onProject={viewProject}
-                onReview={() => goToSection('Staffing')}
-                result={result}
-              />
-              <div className="hp-workspace-grid">
-                <section
-                  aria-label={`${section} editor`}
-                  className="hp-editor-panel"
-                >
-                  {section === 'Overview' &&
-                    (selectedProject ? (
-                      <ProjectDetail
-                        fund={selectedProject}
-                        onBack={() => setProjectId(null)}
-                        onStaffing={() => goToSection('Staffing')}
-                      />
-                    ) : (
-                      <Overview
-                        onProject={viewProject}
-                        onSection={goToSection}
-                        plan={draft}
-                        result={result}
-                      />
-                    ))}
-                  {section === 'Plan details' && (
-                    <>
-                      <div className="gp-editor-heading">
-                        <div>
-                          <h2>Plan details</h2>
-                          <p>
-                            Change the name, horizon, or purpose of this plan.
-                          </p>
-                        </div>
+                </header>
+                <div className="card hp-portfolio">
+                  <div>
+                    <span className="stat-label text-base">
+                      Available across active projects
+                    </span>
+                    <strong className="text-3xl font-bold">
+                      {money(
+                        initialPlan.fundingSources.reduce(
+                          (total, fund) => total + fund.startingBalance,
+                          0
+                        )
+                      )}
+                    </strong>
+                    <small className="text-sm">From your Walter snapshot</small>
+                  </div>
+                  <div className="hp-portfolio-funds text-base">
+                    {initialPlan.fundingSources.map((fund) => (
+                      <div key={fund.id}>
+                        <span>
+                          <i style={{ background: fund.color }} />
+                          {fund.name}
+                        </span>
+                        <strong>{shortMoney(fund.startingBalance)}</strong>
                       </div>
-                      <PlanDetails plan={draft} update={update} />
-                    </>
-                  )}
-                  {section === 'Funding' && (
-                    <FundingEditor
-                      plan={draft}
-                      update={(next) =>
-                        update({
-                          ...draft,
-                          funding: next.funding,
-                          selectedFunding: next.selectedFunding,
-                        })
-                      }
-                    />
-                  )}
-                  {section === 'Staffing' && (
-                    <SplitStaffEditor plan={draft} update={update} />
-                  )}
-                  {section === 'Expenses' && (
-                    <ExpenseEditor
-                      plan={draft}
-                      update={(next) =>
-                        update({ ...draft, expenses: next.expenses })
-                      }
-                    />
-                  )}
-                  {error && (
-                    <p className="hp-validation" role="status">
-                      {error}
+                    ))}
+                  </div>
+                </div>
+                <div className="hp-library-title">
+                  <h2 className="h2">
+                    Your plans{' '}
+                    <span className="text-sm font-medium">{plans.length}</span>
+                  </h2>
+                  <span className="text-sm">
+                    Separate assumptions for each plan
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 gap-5 @xl:grid-cols-2 @4xl:grid-cols-3">
+                  {plans.map((plan) => {
+                    const projection = projectGuidedPlan(plan);
+                    return (
+                      <button
+                        className="hp-plan-card"
+                        key={plan.id}
+                        onClick={() => open(plan)}
+                        type="button"
+                      >
+                        <h3 className="text-xl font-semibold">{plan.name}</h3>
+                        <p className="text-base">
+                          {plan.note ||
+                            'A plan based on your current Walter snapshot.'}
+                        </p>
+                        <MiniChart
+                          values={projection.chart.map(
+                            (point) => point.balance
+                          )}
+                        />
+                        <div className="hp-card-total">
+                          <span className="text-sm">Ending balance</span>
+                          <strong
+                            className={`text-xl font-medium ${projection.ending < 0 ? 'hp-negative' : ''}`}
+                          >
+                            {money(projection.ending)}
+                          </strong>
+                        </div>
+                        <div className="hp-card-footer text-sm">
+                          <span>
+                            {plan.months} months ·{' '}
+                            {
+                              plan.staff.filter((person) => person.included)
+                                .length
+                            }{' '}
+                            people
+                          </span>
+                          <span>
+                            Open plan <ArrowRightIcon />
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                  <button
+                    className="hp-plan-card hp-new-plan"
+                    onClick={start}
+                    type="button"
+                  >
+                    <PlusIcon />
+                    <h3 className="text-xl font-semibold">
+                      Explore another possibility
+                    </h3>
+                    <p className="text-base">
+                      Four short steps, with your funding and staffing already
+                      filled in.
                     </p>
-                  )}
-                </section>
-                <LiveResults
-                  onProject={setProjectId}
-                  projectId={projectId}
+                    <span className="text-sm">
+                      Create a plan <ArrowRightIcon />
+                    </span>
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <ShortfallSummary
+                  onProject={viewProject}
+                  onReview={() => goToSection('Staffing')}
                   result={result}
                 />
-              </div>
-              <p className="hp-model-note">
-                Salary, fringe, and indirect costs are included. Other expenses
-                use direct costs only in this demo.
+                <header className="hp-page-heading hp-workspace-heading">
+                  <div>
+                    <h1 ref={heading} tabIndex={-1}>
+                      {draft.name || 'Untitled plan'}
+                    </h1>
+                    <p className="subtitle">
+                      {monthLabel(draft.startMonth)} onward · {draft.months}{' '}
+                      months{' '}
+                      <span className="hp-save-status">{storageText}</span>
+                    </p>
+                  </div>
+                  <button
+                    className="btn btn-outline gp-secondary"
+                    onClick={duplicate}
+                    type="button"
+                  >
+                    <DocumentDuplicateIcon /> Duplicate plan
+                  </button>
+                </header>
+                <nav
+                  aria-label="Plan sections"
+                  className="tabs tabs-border hp-sections"
+                >
+                  {sections.map(({ icon: Icon, name }) => (
+                    <button
+                      aria-current={section === name ? 'page' : undefined}
+                      className={`tab gap-2 text-base ${section === name ? 'tab-active text-primary' : ''}`}
+                      key={name}
+                      onClick={() => goToSection(name)}
+                      type="button"
+                    >
+                      <Icon aria-hidden="true" />
+                      {name}
+                    </button>
+                  ))}
+                </nav>
+                <div className="hp-workspace-grid">
+                  <section
+                    aria-label={`${section} editor`}
+                    className="hp-editor-panel text-base"
+                  >
+                    {section === 'Overview' &&
+                      (selectedProject ? (
+                        <ProjectDetail
+                          fund={selectedProject}
+                          onStaffing={() => goToSection('Staffing')}
+                        />
+                      ) : (
+                        <Overview
+                          onProject={viewProject}
+                          onSection={goToSection}
+                          plan={draft}
+                          result={result}
+                        />
+                      ))}
+                    {section === 'Plan details' && (
+                      <>
+                        <div className="gp-editor-heading">
+                          <div>
+                            <h2 className="text-xl font-semibold">
+                              Plan details
+                            </h2>
+                            <p className="text-sm leading-relaxed text-base-content/70">
+                              Change the name, horizon, or purpose of this plan.
+                            </p>
+                          </div>
+                        </div>
+                        <PlanDetails plan={draft} update={update} />
+                      </>
+                    )}
+                    {section === 'Funding' && (
+                      <FundingEditor
+                        plan={draft}
+                        update={(next) =>
+                          update({
+                            ...draft,
+                            funding: next.funding,
+                            selectedFunding: next.selectedFunding,
+                          })
+                        }
+                      />
+                    )}
+                    {section === 'Staffing' && (
+                      <SplitStaffEditor plan={draft} update={update} />
+                    )}
+                    {section === 'Expenses' && (
+                      <ExpenseEditor
+                        plan={draft}
+                        update={(next) =>
+                          update({ ...draft, expenses: next.expenses })
+                        }
+                      />
+                    )}
+                    {error && (
+                      <p className="hp-validation text-sm" role="status">
+                        {error}
+                      </p>
+                    )}
+                  </section>
+                  <div className="hp-outlook-column min-w-0">
+                    <LiveResults
+                      onProject={setProjectId}
+                      projectId={projectId}
+                      result={result}
+                    />
+                    <p className="hp-model-note">
+                      Salary, fringe, and indirect costs are included. Other
+                      expenses use direct costs only in this demo.
+                    </p>
+                    <p className="hp-model-note">
+                      Demo plans are saved in this browser and do not update
+                      Walter project records.
+                    </p>
+                  </div>
+                </div>
+              </>
+            )}
+            {screen === 'home' && (
+              <p className="hp-model-note text-sm">
+                Demo plans are saved in this browser and do not update Walter
+                project records.
               </p>
-            </>
-          )}
+            )}
+          </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-function Brand() {
-  return (
-    <div className="hp-brand">
-      <span className="hp-brand-mark">
-        <i />
-        <i />
-        <i />
-      </span>
-      <span>
-        Spend Lab<small>GUIDED PROJECTIONS</small>
-      </span>
     </div>
   );
 }
@@ -642,17 +617,19 @@ function PlanDetails({
   return (
     <div className="hp-plan-details">
       <div className="gp-basics">
-        <label>
+        <label className="text-sm">
           Plan name
           <input
+            className="input w-full text-base"
             maxLength={80}
             onChange={(event) => update({ ...plan, name: event.target.value })}
             value={plan.name}
           />
         </label>
-        <label>
+        <label className="text-sm">
           Planning period
           <select
+            className="select w-full text-base"
             onChange={(event) =>
               update({ ...plan, months: Number(event.target.value) })
             }
@@ -664,9 +641,15 @@ function PlanDetails({
           </select>
         </label>
       </div>
-      <label className="gp-note-field">
-        What are you exploring? <span>Optional</span>
+      <label className="gp-note-field text-sm">
+        <span className="flex flex-wrap items-baseline gap-2">
+          What are you exploring?{' '}
+          <span className="text-sm font-normal text-base-content/70">
+            Optional
+          </span>
+        </span>
         <input
+          className="input w-full text-base"
           onChange={(event) => update({ ...plan, note: event.target.value })}
           placeholder="For example, supplies for next field season"
           value={plan.note}
@@ -690,20 +673,23 @@ function ShortfallSummary({
     .sort((a, b) => a.firstDeficit!.localeCompare(b.firstDeficit!));
   const first = gaps[0];
   return (
-    <aside
+    <div
       aria-label="Funding summary"
-      className={`hp-shortfall ${first ? '' : 'hp-shortfall-clear'}`}
+      className={`alert alert-soft mb-6 ${first ? 'alert-error' : 'alert-success'}`}
+      role="status"
     >
-      <span className="hp-shortfall-icon">
-        {first ? <ExclamationTriangleIcon /> : <CheckIcon />}
-      </span>
-      <div>
-        <h2>
+      {first ? (
+        <ExclamationTriangleIcon aria-hidden="true" />
+      ) : (
+        <CheckIcon aria-hidden="true" />
+      )}
+      <div className="min-w-0">
+        <span className="block font-semibold">
           {first
             ? `First project shortfall: ${monthLabel(first.firstDeficit!)}`
             : 'Your plan stays within the selected funding.'}
-        </h2>
-        <p>
+        </span>
+        <span className="block text-sm">
           {first ? (
             <>
               <strong>{first.name}</strong> ends {money(Math.abs(first.ending))}{' '}
@@ -715,17 +701,18 @@ function ShortfallSummary({
           ) : (
             'Each included project covers its planned costs over this horizon.'
           )}
-        </p>
+        </span>
       </div>
       {first && (
         <button
+          className="btn btn-outline btn-sm"
           onClick={() => (onProject ? onProject(first.id) : onReview())}
           type="button"
         >
           {onProject ? 'Explore project' : 'Review staffing'} <ArrowRightIcon />
         </button>
       )}
-    </aside>
+    </div>
   );
 }
 
@@ -742,55 +729,63 @@ function Overview({
 }) {
   return (
     <>
-      <div className="gp-editor-heading">
+      <div className="gp-editor-heading text-base">
         <div>
-          <h2>Your plan at a glance</h2>
-          <p>Review the assumptions behind this outlook.</p>
+          <h2 className="text-xl font-semibold">Your plan at a glance</h2>
+          <p className="text-sm leading-relaxed text-base-content/70">
+            Review the assumptions behind this outlook.
+          </p>
         </div>
       </div>
-      <div className="hp-overview-counts">
-        <div>
-          <span>People included</span>
-          <strong>
-            {plan.staff.filter((person) => person.included).length}
-          </strong>
-        </div>
-        <div>
-          <span>Funding sources</span>
-          <strong>{plan.selectedFunding.length}</strong>
-        </div>
-        <div>
-          <span>Other expenses</span>
-          <strong>{plan.expenses.length}</strong>
-        </div>
+      <div className="fancy-data">
+        <dl className="grid grid-cols-3 gap-4">
+          <div className="flex min-w-0 flex-col gap-1">
+            <dt className="stat-label text-sm">People included</dt>
+            <dd className="stat-value">
+              {plan.staff.filter((person) => person.included).length}
+            </dd>
+          </div>
+          <div className="flex min-w-0 flex-col gap-1">
+            <dt className="stat-label text-sm">Funding sources</dt>
+            <dd className="stat-value">{plan.selectedFunding.length}</dd>
+          </div>
+          <div className="flex min-w-0 flex-col gap-1">
+            <dt className="stat-label text-sm">Other expenses</dt>
+            <dd className="stat-value">{plan.expenses.length}</dd>
+          </div>
+        </dl>
       </div>
-      <h3 className="hp-fund-heading">Project balances</h3>
+      <h3 className="hp-fund-heading text-base">Project balances</h3>
       {result.funds.map((fund) => (
         <button
-          className="hp-fund-result hp-fund-link"
+          className="my-3 flex w-full items-center justify-between gap-4 rounded-e border-s-4 px-4 py-3 text-left text-base hover:bg-base-200"
           key={fund.id}
           onClick={() => onProject(fund.id)}
+          style={{ borderInlineStartColor: fund.color }}
           type="button"
         >
           <div>
-            <strong>
-              <i style={{ background: fund.color }} />
-              {fund.name}
-            </strong>
-            <span>
+            <strong className="font-semibold">{fund.name}</strong>
+            <span className="mt-1 block text-sm text-base-content/70">
               {fund.firstDeficit
                 ? `Runs short in ${monthLabel(fund.firstDeficit)}`
                 : 'Within available funding'}
             </span>
           </div>
-          <strong className={fund.ending < 0 ? 'hp-negative' : ''}>
-            {shortMoney(fund.ending)} <ArrowRightIcon />
+          <strong
+            className={`flex items-center gap-2 whitespace-nowrap font-semibold ${fund.ending < 0 ? 'text-error' : ''}`}
+          >
+            {shortMoney(fund.ending)}{' '}
+            <ArrowRightIcon className="size-4 shrink-0" />
           </strong>
         </button>
       ))}
-      <div className="hp-overview-actions">
+      <div className="hp-overview-actions text-sm">
         <button onClick={() => onSection('Staffing')} type="button">
           Adjust staffing <ArrowRightIcon />
+        </button>
+        <button onClick={() => onSection('Funding')} type="button">
+          Adjust funding <ArrowRightIcon />
         </button>
         <button onClick={() => onSection('Expenses')} type="button">
           Review expenses <ArrowRightIcon />

@@ -76,19 +76,23 @@ export default function SplitStaffEditor({
   }
   return (
     <>
-      <div className="gp-editor-heading">
+      <div className="gp-editor-heading text-base">
         <div>
-          <h2>People & project funding</h2>
-          <p>
+          <h2 className="text-xl font-semibold">People & project funding</h2>
+          <p className="text-sm leading-relaxed text-base-content/70">
             Split a person&apos;s time across projects, or change funding over
             time.
           </p>
         </div>
-        <button className="gp-secondary" onClick={addPerson} type="button">
+        <button
+          className="btn btn-outline gp-secondary"
+          onClick={addPerson}
+          type="button"
+        >
           <PlusIcon /> Add person
         </button>
       </div>
-      <p className="hp-split-explainer">
+      <p className="hp-split-explainer text-sm">
         Each share is a percentage of full-time salary. For a 50% appointment,
         shares should add up to 50%.
       </p>
@@ -119,6 +123,7 @@ export default function SplitStaffEditor({
                 <input
                   aria-label={`Include ${person.name}`}
                   checked={person.included}
+                  className="checkbox checkbox-primary checkbox-sm"
                   onChange={(event) =>
                     updatePerson({ ...person, included: event.target.checked })
                   }
@@ -127,15 +132,15 @@ export default function SplitStaffEditor({
                 <button
                   aria-controls={`funding-${person.id}`}
                   aria-expanded={expanded === person.id}
-                  className="hp-person-toggle"
+                  className="hp-person-toggle text-base"
                   onClick={() =>
                     setExpanded(expanded === person.id ? null : person.id)
                   }
                   type="button"
                 >
                   <span>
-                    <strong>{person.name}</strong>
-                    <small>
+                    <strong className="text-base">{person.name}</strong>
+                    <small className="text-sm">
                       {money(person.annualSalary)} annual salary ·{' '}
                       {person.fringeRate}% fringe
                     </small>
@@ -143,7 +148,7 @@ export default function SplitStaffEditor({
                   <ChevronDownIcon />
                 </button>
               </div>
-              <div className="hp-split-chips">
+              <div className="hp-split-chips text-sm">
                 {person.splits.map((split) => {
                   const fund = plan.funding.find(
                     (row) => row.id === split.fundingId
@@ -162,12 +167,13 @@ export default function SplitStaffEditor({
               </div>
               {expanded === person.id && (
                 <div className="hp-person-funding" id={`funding-${person.id}`}>
-                  <details className="hp-person-assumptions">
+                  <details className="hp-person-assumptions text-sm">
                     <summary>Salary & person details</summary>
                     <div className="hp-split-fields">
-                      <label>
+                      <label className="text-sm">
                         Name
                         <input
+                          className="input w-full text-base"
                           onChange={(event) =>
                             updatePerson({
                               ...person,
@@ -177,9 +183,10 @@ export default function SplitStaffEditor({
                           value={person.name}
                         />
                       </label>
-                      <label>
+                      <label className="text-sm">
                         Annual full-time salary
                         <input
+                          className="input w-full text-base"
                           min={0}
                           onChange={(event) =>
                             updatePerson({
@@ -193,9 +200,10 @@ export default function SplitStaffEditor({
                           value={person.annualSalary}
                         />
                       </label>
-                      <label>
+                      <label className="text-sm">
                         Fringe %
                         <input
+                          className="input w-full text-base"
                           min={0}
                           onChange={(event) =>
                             updatePerson({
@@ -222,12 +230,15 @@ export default function SplitStaffEditor({
                       );
                     return (
                       <fieldset className="hp-split-row" key={split.id}>
-                        <legend>Funding share {index + 1}</legend>
+                        <legend className="text-sm">
+                          Funding share {index + 1}
+                        </legend>
                         <div className="hp-split-project">
-                          <label>
+                          <label className="text-sm">
                             Project
                             <select
                               aria-label={`${person.name} project ${index + 1}`}
+                              className="select w-full text-base"
                               onChange={(event) =>
                                 updateSplit(person, {
                                   ...split,
@@ -248,10 +259,11 @@ export default function SplitStaffEditor({
                               ))}
                             </select>
                           </label>
-                          <label>
+                          <label className="text-sm">
                             Share %
                             <input
                               aria-label={`${person.name} share ${index + 1}`}
+                              className="input w-full text-base"
                               max={100}
                               min={0}
                               onChange={(event) =>
@@ -284,10 +296,11 @@ export default function SplitStaffEditor({
                           </button>
                         </div>
                         <div className="hp-split-dates">
-                          <label>
+                          <label className="text-sm">
                             From
                             <input
                               aria-label={`${person.name} share ${index + 1} from`}
+                              className="input w-full text-base"
                               onChange={(event) =>
                                 updateSplit(person, {
                                   ...split,
@@ -298,10 +311,11 @@ export default function SplitStaffEditor({
                               value={split.startMonth}
                             />
                           </label>
-                          <label>
+                          <label className="text-sm">
                             Through
                             <input
                               aria-label={`${person.name} share ${index + 1} through`}
+                              className="input w-full text-base"
                               onChange={(event) =>
                                 updateSplit(person, {
                                   ...split,
@@ -314,13 +328,13 @@ export default function SplitStaffEditor({
                           </label>
                         </div>
                         {!source && (
-                          <p className="hp-validation">
+                          <p className="hp-validation text-sm">
                             This project is excluded from the plan. This share
                             isn&apos;t charged.
                           </p>
                         )}
                         {outsideDates && (
-                          <p className="hp-validation">
+                          <p className="hp-validation text-sm">
                             Only months within this project&apos;s{' '}
                             {monthLabel(source.startDate.slice(0, 7))} to{' '}
                             {monthLabel(source.endDate.slice(0, 7))} dates are
@@ -330,9 +344,9 @@ export default function SplitStaffEditor({
                       </fieldset>
                     );
                   })}
-                  <div className="hp-split-footer">
+                  <div className="hp-split-footer text-sm">
                     <button
-                      className="hp-add-split"
+                      className="hp-add-split text-sm"
                       disabled={!funds.length}
                       onClick={() =>
                         updatePerson({
@@ -368,14 +382,17 @@ export default function SplitStaffEditor({
                       assigned
                     </span>
                   </div>
-                  <p className="hp-split-hint">
+                  <p className="hp-split-hint text-sm">
                     To split 100% between two projects, try 60% on one and 40%
                     on the other. Each share can have its own dates.
                   </p>
                 </div>
               )}
               {error && (
-                <p className="hp-validation hp-split-error" role="status">
+                <p
+                  className="hp-validation hp-split-error text-sm"
+                  role="status"
+                >
                   {error}
                 </p>
               )}
