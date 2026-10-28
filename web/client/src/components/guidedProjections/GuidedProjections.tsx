@@ -36,8 +36,6 @@ import {
   LiveResults,
   ProjectDetail,
 } from '@/components/guidedProjections/ProjectOutlook.tsx';
-import '@/components/guidedProjections/planEditors.css';
-import '@/components/guidedProjections/guidedProjections.css';
 
 type Section =
   | 'Overview'
@@ -170,167 +168,178 @@ export default function GuidedProjections({
 
   if (screen === 'setup') {
     return (
-      <div
-        className="container gp-root hp-root hp-setup scroll-mt-24"
-        ref={layout}
-      >
-        <div className="hp-setup-top">
-          <h2 className="h3">Guided projections</h2>
-          <span>New plan · {monthLabel(initialPlan.asOf)} snapshot</span>
-        </div>
-        <div className="hp-setup-content">
-          <button
-            className="gp-back"
-            onClick={() => setScreen('home')}
-            type="button"
-          >
-            <ArrowLeftIcon /> All plans
-          </button>
-          <header className="hp-setup-heading">
-            <h1 ref={heading} tabIndex={-1}>
-              {
-                [
-                  'Choose your starting point.',
-                  'Review your team.',
-                  'Plan for everything else.',
-                  'Ready to explore your plan.',
-                ][step]
-              }
-            </h1>
-            <p>
-              {
-                [
-                  'Your current funding and people are already filled in.',
-                  'Keep current appointments or adjust them for this plan.',
-                  'Add supplies, travel, or a one-time purchase. You can also skip this step.',
-                  'Check your assumptions, then open a workspace where results update as you edit.',
-                ][step]
-              }
-            </p>
-          </header>
-          <ol aria-label="Plan setup progress" className="gp-steps hp-steps">
-            {steps.map((label, index) => (
-              <li
-                className={
-                  index === step
-                    ? 'gp-step-active'
-                    : index < step
-                      ? 'gp-step-done'
-                      : ''
+      <div className="container scroll-mt-24" ref={layout}>
+        <div className="bg-base-100 pt-6 pb-12 text-base leading-normal text-base-content">
+          <div className="mx-auto max-w-4xl">
+            <button
+              className="inline-flex items-center gap-2 py-2 text-sm text-base-content/70 transition-colors hover:text-primary"
+              onClick={() => setScreen('home')}
+              type="button"
+            >
+              <ArrowLeftIcon className="size-5 shrink-0" /> All plans
+            </button>
+            <header className="mt-6 mb-8">
+              <h1 className="h1 outline-none" ref={heading} tabIndex={-1}>
+                {
+                  [
+                    'Choose your starting point.',
+                    'Review your team.',
+                    'Plan for everything else.',
+                    'Ready to explore your plan.',
+                  ][step]
                 }
-                key={label}
-              >
-                <button
-                  aria-current={index === step ? 'step' : undefined}
-                  disabled={index > visited}
-                  onClick={() => {
-                    setStep(index);
-                    scrollToHeading();
-                  }}
-                  type="button"
+              </h1>
+              <p className="mt-3 max-w-2xl text-base leading-relaxed text-base-content/70">
+                {
+                  [
+                    'Your current funding and people are already filled in.',
+                    'Keep current appointments or adjust them for this plan.',
+                    'Add supplies, travel, or a one-time purchase. You can also skip this step.',
+                    'Check your assumptions, then open a workspace where results update as you edit.',
+                  ][step]
+                }
+              </p>
+            </header>
+            <ol
+              aria-label="Plan setup progress"
+              className="mb-10 flex w-full list-none p-0"
+            >
+              {steps.map((label, index) => (
+                <li
+                  className="relative flex-1 not-last:after:absolute not-last:after:top-4 not-last:after:right-[calc(-50%+1.75rem)] not-last:after:left-[calc(50%+1.75rem)] not-last:after:h-px not-last:after:bg-main-border"
+                  key={label}
                 >
-                  <span>{index < step ? <CheckIcon /> : index + 1}</span>
-                  {label}
-                </button>
-              </li>
-            ))}
-          </ol>
-          <section
-            aria-label={steps[step]}
-            className="card gp-wizard-card hp-setup-card"
-          >
-            {step === 0 && (
-              <>
-                <PlanDetails plan={draft} update={update} />
-                <FundingEditor
+                  <button
+                    aria-current={index === step ? 'step' : undefined}
+                    className={`relative z-10 mx-auto flex cursor-pointer flex-col items-center gap-3 px-1 text-xs text-balance disabled:cursor-not-allowed sm:text-sm ${index <= step ? 'font-medium text-primary' : 'text-base-content/60'}`}
+                    disabled={index > visited}
+                    onClick={() => {
+                      setStep(index);
+                      scrollToHeading();
+                    }}
+                    type="button"
+                  >
+                    <span
+                      className={`grid size-8 place-items-center rounded-full border text-sm font-semibold ${index === step ? 'border-primary bg-primary text-primary-content ring-4 ring-base-200' : index < step ? 'border-base-200 bg-base-200 text-primary' : 'border-main-border bg-base-200'}`}
+                    >
+                      {index < step ? (
+                        <CheckIcon className="size-4 shrink-0" />
+                      ) : (
+                        index + 1
+                      )}
+                    </span>
+                    {label}
+                  </button>
+                </li>
+              ))}
+            </ol>
+            <section aria-label={steps[step]}>
+              {step === 0 && (
+                <>
+                  <h2 className="mb-5 text-xl font-semibold">Plan details</h2>
+                  <PlanDetails plan={draft} update={update} />
+                  <FundingEditor
+                    plan={draft}
+                    update={(next) =>
+                      update({
+                        ...draft,
+                        funding: next.funding,
+                        selectedFunding: next.selectedFunding,
+                      })
+                    }
+                  />
+                </>
+              )}
+              {step === 1 && <SplitStaffEditor plan={draft} update={update} />}
+              {step === 2 && (
+                <ExpenseEditor
                   plan={draft}
                   update={(next) =>
-                    update({
-                      ...draft,
-                      funding: next.funding,
-                      selectedFunding: next.selectedFunding,
-                    })
+                    update({ ...draft, expenses: next.expenses })
                   }
                 />
-              </>
-            )}
-            {step === 1 && <SplitStaffEditor plan={draft} update={update} />}
-            {step === 2 && (
-              <ExpenseEditor
-                plan={draft}
-                update={(next) => update({ ...draft, expenses: next.expenses })}
-              />
-            )}
-            {step === 3 && (
-              <>
-                <div className="hp-review-heading">
-                  <span className="gp-tag gp-tag-blue">
-                    {draft.months}-month plan
-                  </span>
-                  <h2>{draft.name}</h2>
-                  <p>
-                    {draft.note ||
-                      `Starting from the ${monthLabel(draft.startMonth)} Walter snapshot.`}
-                  </p>
-                </div>
-                <div className="gp-review-grid">
-                  <ReviewItem
-                    detail={`${money(result.starting)} available`}
-                    edit={() => setStep(0)}
-                    label="Funding"
-                    value={`${draft.selectedFunding.length} projects`}
-                  />
-                  <ReviewItem
-                    detail={`${money(result.personnel)} projected cost`}
-                    edit={() => setStep(1)}
-                    label="Staffing"
-                    value={`${draft.staff.filter((person) => person.included).length} people`}
-                  />
-                  <ReviewItem
-                    detail={`${money(result.other)} direct costs`}
-                    edit={() => setStep(2)}
-                    label="Other expenses"
-                    value={`${draft.expenses.length} ${draft.expenses.length === 1 ? 'expense' : 'expenses'}`}
-                  />
-                </div>
-                <ShortfallSummary onReview={() => setStep(1)} result={result} />
-                <div className="hp-review-ending">
-                  <span>Combined ending balance</span>
-                  <strong className={result.ending < 0 ? 'hp-negative' : ''}>
-                    {money(result.ending)}
-                  </strong>
-                </div>
-              </>
-            )}
-          </section>
-          <footer className="gp-wizard-footer hp-setup-footer">
-            <button
-              className="btn btn-outline gp-secondary"
-              onClick={() => {
-                if (step === 0) {
-                  setScreen('home');
-                } else {
-                  setStep(step - 1);
-                  scrollToHeading();
-                }
-              }}
-              type="button"
-            >
-              {step === 0 ? 'Cancel setup' : 'Back'}
-            </button>
-            <span>
-              {error || 'You can revisit every assumption in your workspace.'}
-            </span>
-            <button
-              className="btn btn-primary gp-primary"
-              disabled={Boolean(error)}
-              onClick={nextStep}
-              type="button"
-            >
-              {step === 3 ? 'Create plan & open workspace' : 'Continue'}
-              <ArrowRightIcon />
-            </button>
-          </footer>
+              )}
+              {step === 3 && (
+                <>
+                  <div className="mb-6 text-center [&>h2]:my-2 [&>h2]:text-2xl [&>h2]:font-bold [&>p]:text-sm [&>p]:text-base-content/70">
+                    <span className="inline-flex items-center rounded px-2 py-1 text-sm font-semibold bg-base-200 text-primary">
+                      {draft.months}-month plan
+                    </span>
+                    <h2>{draft.name}</h2>
+                    <p>
+                      {draft.note ||
+                        `Starting from the ${monthLabel(draft.startMonth)} Walter snapshot.`}
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                    <ReviewItem
+                      detail={`${money(result.starting)} available`}
+                      edit={() => setStep(0)}
+                      icon={BanknotesIcon}
+                      label="Funding"
+                      value={`${draft.selectedFunding.length} projects`}
+                    />
+                    <ReviewItem
+                      detail={`${money(result.personnel)} projected cost`}
+                      edit={() => setStep(1)}
+                      icon={UserGroupIcon}
+                      label="Staffing"
+                      value={`${draft.staff.filter((person) => person.included).length} people`}
+                    />
+                    <ReviewItem
+                      detail={`${money(result.other)} direct costs`}
+                      edit={() => setStep(2)}
+                      icon={ListBulletIcon}
+                      label="Other expenses"
+                      value={`${draft.expenses.length} ${draft.expenses.length === 1 ? 'expense' : 'expenses'}`}
+                    />
+                  </div>
+                  <div className="pt-6">
+                    <ShortfallSummary
+                      onReview={() => setStep(1)}
+                      result={result}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between gap-4 border-t border-main-border pt-5 [&>span]:text-sm [&>span]:text-base-content/70 [&>strong]:text-3xl">
+                    <span>Combined ending balance</span>
+                    <strong className={result.ending < 0 ? 'text-error' : ''}>
+                      {money(result.ending)}
+                    </strong>
+                  </div>
+                </>
+              )}
+            </section>
+            <footer className="mt-8 grid grid-cols-2 items-center gap-4 border-t border-main-border pt-6 sm:grid-cols-[auto_minmax(0,1fr)_auto]">
+              <button
+                className="btn btn-ghost justify-self-start text-base-content/70"
+                onClick={() => {
+                  if (step === 0) {
+                    setScreen('home');
+                  } else {
+                    setStep(step - 1);
+                    scrollToHeading();
+                  }
+                }}
+                type="button"
+              >
+                {step === 0 ? 'Cancel setup' : 'Back'}
+              </button>
+              <span
+                className={`order-3 col-span-2 text-center text-sm leading-relaxed sm:order-none sm:col-span-1 ${error ? 'text-error' : 'text-base-content/60'}`}
+              >
+                {error || 'You can revisit every assumption in your workspace.'}
+              </span>
+              <button
+                className="btn btn-primary h-auto min-h-12 justify-self-end py-3 text-center whitespace-normal"
+                disabled={Boolean(error)}
+                onClick={nextStep}
+                type="button"
+              >
+                {step === 3 ? 'Create plan & open workspace' : 'Continue'}
+                <ArrowRightIcon className="size-5 shrink-0" />
+              </button>
+            </footer>
+          </div>
         </div>
       </div>
     );
@@ -338,10 +347,10 @@ export default function GuidedProjections({
 
   return (
     <div
-      className={`container gp-root hp-root hp-layout scroll-mt-24 ${screen === 'home' ? 'hp-home text-base' : ''}`}
+      className="container scroll-mt-24 bg-base-100 text-base leading-normal text-base-content"
       ref={layout}
     >
-      <div className="flex flex-col gap-6 md:flex-row md:gap-8">
+      <div className="flex flex-col gap-6 pt-6 pb-12 md:flex-row md:gap-8">
         <PlansSidebar
           currentPlanId={screen === 'workspace' ? draft.id : null}
           defaultPlan={plans.find((plan) => plan.id === defaultPlanId)!}
@@ -353,26 +362,26 @@ export default function GuidedProjections({
           onOpen={open}
           plans={plans.filter((plan) => plan.id !== defaultPlanId)}
         />
-        <div className="hp-main flex-1">
-          <div className="hp-content">
+        <div className="@container min-w-0 flex-1">
+          <div className="py-6">
             {screen === 'home' ? (
               <>
-                <header className="hp-page-heading">
+                <header className="mb-6 flex flex-wrap items-start justify-between gap-4 md:items-center">
                   <div>
-                    <h1 className="h1" ref={heading} tabIndex={-1}>
+                    <h1 className="h1 outline-none" ref={heading} tabIndex={-1}>
                       {initialPlan.ownerName}&apos;s Projections
                     </h1>
                   </div>
                   <button
-                    className="btn btn-primary gp-primary"
+                    className="btn btn-primary"
                     onClick={start}
                     type="button"
                   >
-                    <PlusIcon /> New plan
+                    <PlusIcon className="size-5 shrink-0" /> New plan
                   </button>
                 </header>
-                <div className="card hp-portfolio">
-                  <div>
+                <div className="card mb-8 grid grid-cols-1 gap-6 border border-main-border bg-base-200 p-6 @3xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+                  <div className="flex flex-col gap-1 border-b border-main-border pb-4 @3xl:border-e @3xl:border-b-0 @3xl:pb-0">
                     <span className="stat-label text-base">
                       Available across active projects
                     </span>
@@ -384,13 +393,21 @@ export default function GuidedProjections({
                         )
                       )}
                     </strong>
-                    <small className="text-sm">From your Walter snapshot</small>
+                    <small className="text-sm text-base-content/70">
+                      From your Walter snapshot
+                    </small>
                   </div>
-                  <div className="hp-portfolio-funds text-base">
+                  <div className="flex flex-col justify-center gap-5 text-base">
                     {initialPlan.fundingSources.map((fund) => (
-                      <div key={fund.id}>
-                        <span>
-                          <i style={{ background: fund.color }} />
+                      <div
+                        className="flex items-center justify-between gap-4"
+                        key={fund.id}
+                      >
+                        <span className="flex items-center gap-2">
+                          <i
+                            className="block size-1.5 shrink-0 rounded-full"
+                            style={{ background: fund.color }}
+                          />
                           {fund.name}
                         </span>
                         <strong>{shortMoney(fund.startingBalance)}</strong>
@@ -398,12 +415,14 @@ export default function GuidedProjections({
                     ))}
                   </div>
                 </div>
-                <div className="hp-library-title">
+                <div className="mb-4 flex items-center justify-between gap-3">
                   <h2 className="h2">
                     Your plans{' '}
-                    <span className="text-sm font-medium">{plans.length}</span>
+                    <span className="ms-2 rounded bg-base-200 px-2 py-0.5 text-sm font-medium">
+                      {plans.length}
+                    </span>
                   </h2>
-                  <span className="text-sm">
+                  <span className="hidden text-sm text-base-content/70 sm:block">
                     Separate assumptions for each plan
                   </span>
                 </div>
@@ -412,7 +431,7 @@ export default function GuidedProjections({
                     const projection = projectGuidedPlan(plan);
                     return (
                       <button
-                        className="hp-plan-card"
+                        className="min-w-0 rounded-box border border-main-border p-6 text-left transition-[border-color,box-shadow] hover:border-base-content/70 hover:shadow-sm motion-reduce:transition-none [&>p]:mt-2 [&>p]:min-h-10"
                         key={plan.id}
                         onClick={() => open(plan)}
                         type="button"
@@ -427,15 +446,15 @@ export default function GuidedProjections({
                             (point) => point.balance
                           )}
                         />
-                        <div className="hp-card-total">
+                        <div className="flex items-baseline justify-between gap-3 [&>span]:text-base-content/70">
                           <span className="text-sm">Ending balance</span>
                           <strong
-                            className={`text-xl font-medium ${projection.ending < 0 ? 'hp-negative' : ''}`}
+                            className={`text-xl font-medium ${projection.ending < 0 ? 'text-error' : ''}`}
                           >
                             {money(projection.ending)}
                           </strong>
                         </div>
-                        <div className="hp-card-footer text-sm">
+                        <div className="mt-4 flex items-center justify-between gap-3 border-t border-main-border pt-3.5 text-base-content/70 [&>span:last-child]:flex [&>span:last-child]:items-center [&>span:last-child]:gap-1.5 [&>span:last-child]:text-primary text-sm">
                           <span>
                             {plan.months} months ·{' '}
                             {
@@ -445,18 +464,19 @@ export default function GuidedProjections({
                             people
                           </span>
                           <span>
-                            Open plan <ArrowRightIcon />
+                            Open plan{' '}
+                            <ArrowRightIcon className="size-5 shrink-0" />
                           </span>
                         </div>
                       </button>
                     );
                   })}
                   <button
-                    className="hp-plan-card hp-new-plan"
+                    className="min-w-0 rounded-box border border-main-border p-6 text-left transition-[border-color,box-shadow] hover:border-base-content/70 hover:shadow-sm motion-reduce:transition-none [&>p]:mt-2 [&>p]:min-h-10 flex min-h-60 flex-col items-start justify-center border-dashed [&>svg]:mb-4 [&>svg]:size-6 [&>svg]:text-primary [&>span]:mt-4 [&>span]:flex [&>span]:items-center [&>span]:gap-2 [&>span]:text-primary"
                     onClick={start}
                     type="button"
                   >
-                    <PlusIcon />
+                    <PlusIcon className="size-5 shrink-0" />
                     <h3 className="text-xl font-semibold">
                       Explore another possibility
                     </h3>
@@ -465,7 +485,8 @@ export default function GuidedProjections({
                       filled in.
                     </p>
                     <span className="text-sm">
-                      Create a plan <ArrowRightIcon />
+                      Create a plan{' '}
+                      <ArrowRightIcon className="size-5 shrink-0" />
                     </span>
                   </button>
                 </div>
@@ -477,46 +498,51 @@ export default function GuidedProjections({
                   onReview={() => goToSection('Staffing')}
                   result={result}
                 />
-                <header className="hp-page-heading hp-workspace-heading">
+                <header className="mb-6 flex flex-wrap items-start justify-between gap-4 md:items-center">
                   <div>
-                    <h1 ref={heading} tabIndex={-1}>
+                    <h1 className="h1 outline-none" ref={heading} tabIndex={-1}>
                       {draft.name || 'Untitled plan'}
                     </h1>
                     <p className="subtitle">
                       {monthLabel(draft.startMonth)} onward · {draft.months}{' '}
                       months{' '}
-                      <span className="hp-save-status">{storageText}</span>
+                      <span className="mt-1 block text-base-content/70 xl:ms-4 xl:mt-0 xl:inline">
+                        {storageText}
+                      </span>
                     </p>
                   </div>
                   <button
-                    className="btn btn-outline gp-secondary"
+                    className="btn btn-outline"
                     onClick={duplicate}
                     type="button"
                   >
-                    <DocumentDuplicateIcon /> Duplicate plan
+                    <DocumentDuplicateIcon className="size-5 shrink-0" />{' '}
+                    Duplicate plan
                   </button>
                 </header>
                 <nav
                   aria-label="Plan sections"
-                  className="tabs tabs-border hp-sections"
+                  className="mb-6 overflow-x-auto"
                 >
-                  {sections.map(({ icon: Icon, name }) => (
-                    <button
-                      aria-current={section === name ? 'page' : undefined}
-                      className={`tab gap-2 text-base ${section === name ? 'tab-active text-primary' : ''}`}
-                      key={name}
-                      onClick={() => goToSection(name)}
-                      type="button"
-                    >
-                      <Icon aria-hidden="true" />
-                      {name}
-                    </button>
-                  ))}
+                  <div className="join flex w-full">
+                    {sections.map(({ icon: Icon, name }) => (
+                      <button
+                        aria-current={section === name ? 'page' : undefined}
+                        className={`btn join-item flex-1 gap-2 px-3 text-base whitespace-nowrap ${section === name ? 'btn-primary' : 'btn-outline border-main-border'}`}
+                        key={name}
+                        onClick={() => goToSection(name)}
+                        type="button"
+                      >
+                        <Icon aria-hidden="true" className="size-5 shrink-0" />
+                        {name}
+                      </button>
+                    ))}
+                  </div>
                 </nav>
-                <div className="hp-workspace-grid">
+                <div className="grid grid-cols-1 items-start gap-5 @4xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
                   <section
                     aria-label={`${section} editor`}
-                    className="hp-editor-panel text-base"
+                    className="min-w-0 text-base"
                   >
                     {section === 'Overview' &&
                       (selectedProject ? (
@@ -534,7 +560,7 @@ export default function GuidedProjections({
                       ))}
                     {section === 'Plan details' && (
                       <>
-                        <div className="gp-editor-heading">
+                        <div className="mb-5 flex flex-wrap items-start justify-between gap-4 [&_p]:mt-1">
                           <div>
                             <h2 className="text-xl font-semibold">
                               Plan details
@@ -571,22 +597,25 @@ export default function GuidedProjections({
                       />
                     )}
                     {error && (
-                      <p className="hp-validation text-sm" role="status">
+                      <p
+                        className="mt-4 rounded-md bg-error/10 p-3 text-error text-sm"
+                        role="status"
+                      >
                         {error}
                       </p>
                     )}
                   </section>
-                  <div className="hp-outlook-column min-w-0">
+                  <div className="@4xl:sticky @4xl:top-24 min-w-0">
                     <LiveResults
                       onProject={setProjectId}
                       projectId={projectId}
                       result={result}
                     />
-                    <p className="hp-model-note">
+                    <p className="mt-4 text-sm leading-relaxed text-base-content/70">
                       Salary, fringe, and indirect costs are included. Other
                       expenses use direct costs only in this demo.
                     </p>
-                    <p className="hp-model-note">
+                    <p className="mt-4 text-sm leading-relaxed text-base-content/70">
                       Demo plans are saved in this browser and do not update
                       Walter project records.
                     </p>
@@ -595,7 +624,7 @@ export default function GuidedProjections({
               </>
             )}
             {screen === 'home' && (
-              <p className="hp-model-note text-sm">
+              <p className="mt-4 text-sm leading-relaxed text-base-content/70 text-sm">
                 Demo plans are saved in this browser and do not update Walter
                 project records.
               </p>
@@ -615,9 +644,9 @@ function PlanDetails({
   update: (plan: ProjectionPlan) => void;
 }) {
   return (
-    <div className="hp-plan-details">
-      <div className="gp-basics">
-        <label className="text-sm">
+    <div className="@container mb-8">
+      <div className="mb-5 grid grid-cols-1 gap-5 @xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <label className="flex min-w-0 flex-col gap-2 font-medium text-sm">
           Plan name
           <input
             className="input w-full text-base"
@@ -626,7 +655,7 @@ function PlanDetails({
             value={plan.name}
           />
         </label>
-        <label className="text-sm">
+        <label className="flex min-w-0 flex-col gap-2 font-medium text-sm">
           Planning period
           <select
             className="select w-full text-base"
@@ -641,7 +670,7 @@ function PlanDetails({
           </select>
         </label>
       </div>
-      <label className="gp-note-field text-sm">
+      <label className="flex min-w-0 flex-col gap-2 text-sm font-medium">
         <span className="flex flex-wrap items-baseline gap-2">
           What are you exploring?{' '}
           <span className="text-sm font-normal text-base-content/70">
@@ -679,9 +708,12 @@ function ShortfallSummary({
       role="status"
     >
       {first ? (
-        <ExclamationTriangleIcon aria-hidden="true" />
+        <ExclamationTriangleIcon
+          aria-hidden="true"
+          className="size-5 shrink-0"
+        />
       ) : (
-        <CheckIcon aria-hidden="true" />
+        <CheckIcon aria-hidden="true" className="size-5 shrink-0" />
       )}
       <div className="min-w-0">
         <span className="block font-semibold">
@@ -709,7 +741,8 @@ function ShortfallSummary({
           onClick={() => (onProject ? onProject(first.id) : onReview())}
           type="button"
         >
-          {onProject ? 'Explore project' : 'Review staffing'} <ArrowRightIcon />
+          {onProject ? 'Explore project' : 'Review staffing'}{' '}
+          <ArrowRightIcon className="size-5 shrink-0" />
         </button>
       )}
     </div>
@@ -729,7 +762,7 @@ function Overview({
 }) {
   return (
     <>
-      <div className="gp-editor-heading text-base">
+      <div className="mb-5 flex flex-wrap items-start justify-between gap-4 [&_p]:mt-1 text-base">
         <div>
           <h2 className="text-xl font-semibold">Your plan at a glance</h2>
           <p className="text-sm leading-relaxed text-base-content/70">
@@ -755,7 +788,7 @@ function Overview({
           </div>
         </dl>
       </div>
-      <h3 className="hp-fund-heading text-base">Project balances</h3>
+      <h3 className="mt-7 font-semibold text-base">Project balances</h3>
       {result.funds.map((fund) => (
         <button
           className="my-3 flex w-full items-center justify-between gap-4 rounded-e border-s-4 px-4 py-3 text-left text-base hover:bg-base-200"
@@ -780,15 +813,15 @@ function Overview({
           </strong>
         </button>
       ))}
-      <div className="hp-overview-actions text-sm">
+      <div className="mt-6 flex flex-wrap gap-3 [&>button]:flex [&>button]:items-center [&>button]:gap-1.5 [&>button]:text-primary text-sm">
         <button onClick={() => onSection('Staffing')} type="button">
-          Adjust staffing <ArrowRightIcon />
+          Adjust staffing <ArrowRightIcon className="size-5 shrink-0" />
         </button>
         <button onClick={() => onSection('Funding')} type="button">
-          Adjust funding <ArrowRightIcon />
+          Adjust funding <ArrowRightIcon className="size-5 shrink-0" />
         </button>
         <button onClick={() => onSection('Expenses')} type="button">
-          Review expenses <ArrowRightIcon />
+          Review expenses <ArrowRightIcon className="size-5 shrink-0" />
         </button>
       </div>
     </>

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import {
   BanknotesIcon,
   ChevronDownIcon,
+  ListBulletIcon,
   PlusIcon,
   TrashIcon,
 } from '@heroicons/react/24/outline';
@@ -18,24 +19,33 @@ import {
 export function ReviewItem({
   detail,
   edit,
+  icon: Icon,
   label,
   value,
 }: {
   detail: string;
   edit: () => void;
+  icon: typeof BanknotesIcon;
   label: string;
   value: string;
 }) {
   return (
-    <div className="gp-review-item">
-      <div>
-        <span>{label}</span>
-        <button className="gp-text-button" onClick={edit} type="button">
+    <div className="rounded-lg border border-main-border p-4">
+      <div className="flex items-center justify-between text-sm text-base-content/70">
+        <span className="flex items-center gap-2">
+          <Icon aria-hidden="true" className="size-5 shrink-0" />
+          {label}
+        </span>
+        <button
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-primary"
+          onClick={edit}
+          type="button"
+        >
           Edit
         </button>
       </div>
-      <strong>{value}</strong>
-      <p>{detail}</p>
+      <strong className="mt-4 mb-1 block text-xl">{value}</strong>
+      <p className="text-sm text-base-content/70">{detail}</p>
     </div>
   );
 }
@@ -50,10 +60,16 @@ export function MiniChart({ values }: { values: number[] }) {
     )
     .join(' ');
   return (
-    <svg aria-hidden="true" className="gp-mini-chart" viewBox="0 0 290 80">
+    <svg
+      aria-hidden="true"
+      className="my-3 block h-14 w-full"
+      preserveAspectRatio="none"
+      viewBox="0 0 290 80"
+    >
       <line
-        stroke="var(--color-main-border)"
-        strokeDasharray="3 4"
+        stroke="color-mix(in oklab, var(--color-base-content) 45%, transparent)"
+        strokeDasharray="5 3"
+        strokeWidth="1.5"
         x1="0"
         x2="290"
         y1={70 - ((0 - low) / (high - low)) * 62}
@@ -111,20 +127,23 @@ export function FundingEditor({
   }
   return (
     <div>
-      <div className="gp-editor-heading text-base">
+      <div className="mb-5 flex flex-wrap items-start justify-between gap-4 [&_p]:mt-1 text-base">
         <div>
-          <h2 className="text-xl font-semibold">Your funding sources</h2>
+          <h2 className="flex items-center gap-2 text-xl font-semibold">
+            <BanknotesIcon aria-hidden="true" className="size-5 shrink-0" />
+            Your funding sources
+          </h2>
           <p className="text-sm leading-relaxed text-base-content/70">
             Choose the projects this plan should include, or add planned
             funding.
           </p>
         </div>
         <button
-          className="btn btn-outline gp-secondary"
+          className="btn btn-outline"
           onClick={addFundingSource}
           type="button"
         >
-          <PlusIcon /> Add funding source
+          <PlusIcon className="size-5 shrink-0" /> Add funding source
         </button>
       </div>
       <div className="grid gap-5">
@@ -147,7 +166,7 @@ export function FundingEditor({
                     </p>
                   )}
                 </div>
-                <label className="shrink-0 text-xs text-base-content/70">
+                <label className="flex min-w-0 flex-col gap-2 font-medium shrink-0 text-xs text-base-content/70">
                   <input
                     aria-label={`Include ${fund.name}`}
                     checked={plan.selectedFunding.includes(fund.id)}
@@ -172,7 +191,7 @@ export function FundingEditor({
                 <span>Ends {monthLabel(fund.endDate.slice(0, 7))}</span>
               </div>
               <div className="mt-5 flex flex-wrap items-end justify-between gap-4 border-t border-main-border pt-5">
-                <label className="min-w-0 flex-1 text-sm">
+                <label className="flex min-w-0 flex-col gap-2 font-medium min-w-0 flex-1 text-sm">
                   Available balance
                   <span className="relative block max-w-52">
                     <span
@@ -221,7 +240,7 @@ export function FundingEditor({
                 className="grid grid-cols-1 gap-5 border-t border-main-border bg-base-200 p-5 sm:grid-cols-2 sm:p-6"
                 id={`source-details-${fund.id}`}
               >
-                <label className="min-w-0 text-sm sm:col-span-2">
+                <label className="flex min-w-0 flex-col gap-2 font-medium min-w-0 text-sm sm:col-span-2">
                   Funding source name
                   <input
                     autoFocus
@@ -232,7 +251,7 @@ export function FundingEditor({
                     value={fund.name}
                   />
                 </label>
-                <label className="min-w-0 text-sm sm:col-span-2">
+                <label className="flex min-w-0 flex-col gap-2 font-medium min-w-0 text-sm sm:col-span-2">
                   Description
                   <input
                     className="input w-full text-base"
@@ -242,7 +261,7 @@ export function FundingEditor({
                     value={fund.description ?? ''}
                   />
                 </label>
-                <label className="text-sm">
+                <label className="flex min-w-0 flex-col gap-2 font-medium text-sm">
                   Indirect rate %
                   <input
                     className="input w-full text-base"
@@ -260,7 +279,7 @@ export function FundingEditor({
                     value={fund.indirectRate}
                   />
                 </label>
-                <label className="text-sm">
+                <label className="flex min-w-0 flex-col gap-2 font-medium text-sm">
                   Start date
                   <input
                     className="input w-full text-base"
@@ -277,7 +296,7 @@ export function FundingEditor({
                     value={fund.startDate}
                   />
                 </label>
-                <label className="text-sm">
+                <label className="flex min-w-0 flex-col gap-2 font-medium text-sm">
                   End date
                   <input
                     className="input w-full text-base"
@@ -300,11 +319,11 @@ export function FundingEditor({
         ))}
       </div>
       {plan.selectedFunding.length === 0 && (
-        <p className="gp-validation text-sm">
+        <p className="mt-3 text-error text-sm">
           Choose at least one funding source to continue.
         </p>
       )}
-      <p className="gp-model-note text-sm">
+      <p className="mt-5 leading-relaxed text-base-content/70 text-sm">
         Balances already account for recorded expenses and commitments. Your
         changes apply to this plan only.
       </p>
@@ -348,25 +367,24 @@ export function ExpenseEditor({
   }
   return (
     <>
-      <div className="gp-editor-heading text-base">
+      <div className="mb-5 flex flex-wrap items-start justify-between gap-4 [&_p]:mt-1 text-base">
         <div>
-          <h2 className="text-xl font-semibold">Beyond staffing</h2>
+          <h2 className="flex items-center gap-2 text-xl font-semibold">
+            <ListBulletIcon aria-hidden="true" className="size-5 shrink-0" />
+            Beyond staffing
+          </h2>
           <p className="text-sm leading-relaxed text-base-content/70">
             Plan for regular costs and one-time purchases.
           </p>
         </div>
-        <button
-          className="btn btn-outline gp-secondary"
-          onClick={() => add()}
-          type="button"
-        >
-          <PlusIcon /> Add expense
+        <button className="btn btn-outline" onClick={() => add()} type="button">
+          <PlusIcon className="size-5 shrink-0" /> Add expense
         </button>
       </div>
       {plan.expenses.length === 0 ? (
-        <div className="gp-expense-empty text-sm">
-          <span className="gp-empty-icon">
-            <BanknotesIcon />
+        <div className="rounded-lg border border-dashed border-main-border bg-base-200 px-5 py-9 text-center [&>h3]:mb-2 text-sm">
+          <span className="mx-auto mb-4 grid size-12 place-items-center rounded-full bg-base-200 text-base-content/70">
+            <BanknotesIcon className="size-5 shrink-0" />
           </span>
           <h3 className="text-xl font-semibold">
             What else does your research need?
@@ -374,21 +392,21 @@ export function ExpenseEditor({
           <p className="text-sm leading-relaxed text-base-content/70">
             Start with a common expense, or continue with staffing only.
           </p>
-          <div className="gp-expense-presets text-sm">
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-2.5 [&>button]:flex [&>button]:items-center [&>button]:gap-1.5 [&>button]:rounded-md [&>button]:border [&>button]:border-main-border [&>button]:bg-base-200 [&>button]:px-3 [&>button]:py-2 [&>button]:text-base-content/70 text-sm">
             <button onClick={() => add('Lab supplies', 500)} type="button">
-              <PlusIcon /> Lab supplies
+              <PlusIcon className="size-5 shrink-0" /> Lab supplies
             </button>
             <button
               onClick={() => add('Conference travel', 2500, 'once')}
               type="button"
             >
-              <PlusIcon /> Travel
+              <PlusIcon className="size-5 shrink-0" /> Travel
             </button>
             <button
               onClick={() => add('Equipment', 5000, 'once')}
               type="button"
             >
-              <PlusIcon /> Equipment
+              <PlusIcon className="size-5 shrink-0" /> Equipment
             </button>
           </div>
         </div>
@@ -400,7 +418,7 @@ export function ExpenseEditor({
               key={expense.id}
             >
               <div className="mb-5 flex items-end gap-4">
-                <label className="min-w-0 flex-1 text-sm">
+                <label className="flex min-w-0 flex-col gap-2 font-medium min-w-0 flex-1 text-sm">
                   Expense name
                   <input
                     className="input w-full text-base"
@@ -423,11 +441,11 @@ export function ExpenseEditor({
                   }
                   type="button"
                 >
-                  <TrashIcon />
+                  <TrashIcon className="size-5 shrink-0" />
                 </button>
               </div>
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                <label className="text-sm">
+                <label className="flex min-w-0 flex-col gap-2 font-medium text-sm">
                   Amount
                   <input
                     className="input w-full text-base"
@@ -442,7 +460,7 @@ export function ExpenseEditor({
                     value={expense.amount}
                   />
                 </label>
-                <label className="text-sm">
+                <label className="flex min-w-0 flex-col gap-2 font-medium text-sm">
                   Frequency
                   <select
                     className="select w-full text-base"
@@ -457,7 +475,7 @@ export function ExpenseEditor({
                     <option value="once">One time</option>
                   </select>
                 </label>
-                <label className="text-sm">
+                <label className="flex min-w-0 flex-col gap-2 font-medium text-sm">
                   {expense.frequency === 'monthly' ? 'Starting month' : 'Month'}
                   <input
                     className="input w-full text-base"
@@ -470,7 +488,7 @@ export function ExpenseEditor({
                     value={expense.month}
                   />
                 </label>
-                <label className="text-sm">
+                <label className="flex min-w-0 flex-col gap-2 font-medium text-sm">
                   Funding project
                   <select
                     className="select w-full text-base"
@@ -493,7 +511,7 @@ export function ExpenseEditor({
           ))}
         </div>
       )}
-      <p className="gp-model-note text-sm">
+      <p className="mt-5 leading-relaxed text-base-content/70 text-sm">
         In this demo, other expenses are direct costs only. Monthly costs repeat
         from the selected month until the plan or funding source ends.
       </p>

@@ -3,6 +3,7 @@ import {
   ChevronDownIcon,
   PlusIcon,
   TrashIcon,
+  UserGroupIcon,
 } from '@heroicons/react/24/outline';
 import { money } from '@/components/guidedProjections/defaults.ts';
 import {
@@ -76,27 +77,26 @@ export default function SplitStaffEditor({
   }
   return (
     <>
-      <div className="gp-editor-heading text-base">
+      <div className="mb-5 flex flex-wrap items-start justify-between gap-4 [&_p]:mt-1 text-base">
         <div>
-          <h2 className="text-xl font-semibold">People & project funding</h2>
+          <h2 className="flex items-center gap-2 text-xl font-semibold">
+            <UserGroupIcon aria-hidden="true" className="size-5 shrink-0" />
+            People & project funding
+          </h2>
           <p className="text-sm leading-relaxed text-base-content/70">
             Split a person&apos;s time across projects, or change funding over
             time.
           </p>
         </div>
-        <button
-          className="btn btn-outline gp-secondary"
-          onClick={addPerson}
-          type="button"
-        >
-          <PlusIcon /> Add person
+        <button className="btn btn-outline" onClick={addPerson} type="button">
+          <PlusIcon className="size-5 shrink-0" /> Add person
         </button>
       </div>
-      <p className="hp-split-explainer text-sm">
+      <p className="mb-5 rounded-md bg-base-200 px-4 py-3 leading-relaxed text-base-content/70 text-sm">
         Each share is a percentage of full-time salary. For a 50% appointment,
         shares should add up to 50%.
       </p>
-      <div className="hp-staff-list">
+      <div className="grid gap-4">
         {plan.staff.map((person) => {
           const error = person.included ? staffValidation(person, plan) : null;
           const totals = months
@@ -116,10 +116,11 @@ export default function SplitStaffEditor({
           const max = totals.length ? Math.max(...totals) : 0;
           return (
             <article
-              className={`hp-split-person ${person.included ? '' : 'hp-person-excluded'}`}
+              className="group overflow-hidden rounded-lg border border-main-border"
+              data-excluded={!person.included}
               key={person.id}
             >
-              <div className="hp-person-header">
+              <div className="flex items-center gap-2.5 p-3.5">
                 <input
                   aria-label={`Include ${person.name}`}
                   checked={person.included}
@@ -132,7 +133,7 @@ export default function SplitStaffEditor({
                 <button
                   aria-controls={`funding-${person.id}`}
                   aria-expanded={expanded === person.id}
-                  className="hp-person-toggle text-base"
+                  className="flex flex-1 items-center justify-between gap-3 text-left group-data-[excluded=true]:opacity-50 [&_small]:mt-1 [&_small]:block [&_small]:text-base-content/70 [&>svg]:size-4 [&>svg]:transition-transform aria-expanded:[&>svg]:rotate-180 text-base"
                   onClick={() =>
                     setExpanded(expanded === person.id ? null : person.id)
                   }
@@ -145,10 +146,10 @@ export default function SplitStaffEditor({
                       {person.fringeRate}% fringe
                     </small>
                   </span>
-                  <ChevronDownIcon />
+                  <ChevronDownIcon className="size-5 shrink-0" />
                 </button>
               </div>
-              <div className="hp-split-chips text-sm">
+              <div className="grid gap-1.5 px-3.5 pb-3.5 sm:ps-9 group-data-[excluded=true]:opacity-50 [&>button]:text-left [&>button]:leading-normal [&>button]:text-base-content/70 [&_b]:me-1 [&_i]:me-1.5 [&_i]:inline-block [&_i]:size-2 [&_i]:shrink-0 [&_i]:rounded-full text-sm">
                 {person.splits.map((split) => {
                   const fund = plan.funding.find(
                     (row) => row.id === split.fundingId
@@ -166,11 +167,14 @@ export default function SplitStaffEditor({
                 })}
               </div>
               {expanded === person.id && (
-                <div className="hp-person-funding" id={`funding-${person.id}`}>
-                  <details className="hp-person-assumptions text-sm">
+                <div
+                  className="border-t border-main-border bg-base-200 p-3 sm:p-3.5"
+                  id={`funding-${person.id}`}
+                >
+                  <details className="mb-4 [&>summary]:cursor-pointer [&>summary]:text-base-content/70 text-sm">
                     <summary>Salary & person details</summary>
-                    <div className="hp-split-fields">
-                      <label className="text-sm">
+                    <div className="mt-3 grid grid-cols-2 gap-2.5 [&>label:first-child]:col-span-full">
+                      <label className="grid min-w-0 gap-1 text-sm font-medium text-base-content/70">
                         Name
                         <input
                           className="input w-full text-base"
@@ -183,7 +187,7 @@ export default function SplitStaffEditor({
                           value={person.name}
                         />
                       </label>
-                      <label className="text-sm">
+                      <label className="grid min-w-0 gap-1 text-sm font-medium text-base-content/70">
                         Annual full-time salary
                         <input
                           className="input w-full text-base"
@@ -200,7 +204,7 @@ export default function SplitStaffEditor({
                           value={person.annualSalary}
                         />
                       </label>
-                      <label className="text-sm">
+                      <label className="grid min-w-0 gap-1 text-sm font-medium text-base-content/70">
                         Fringe %
                         <input
                           className="input w-full text-base"
@@ -229,12 +233,15 @@ export default function SplitStaffEditor({
                           !isFundingSourceActiveInMonth(source, month)
                       );
                     return (
-                      <fieldset className="hp-split-row" key={split.id}>
+                      <fieldset
+                        className="mb-3 min-w-0 rounded-md border border-main-border bg-base-200 p-2 sm:p-3 [&>legend]:px-1 [&>legend]:text-base-content/70"
+                        key={split.id}
+                      >
                         <legend className="text-sm">
                           Funding share {index + 1}
                         </legend>
-                        <div className="hp-split-project">
-                          <label className="text-sm">
+                        <div className="grid grid-cols-[minmax(0,1fr)_4rem_1.25rem] items-end gap-1.5 sm:grid-cols-[minmax(0,1fr)_4.5rem_1.5rem] sm:gap-2">
+                          <label className="grid min-w-0 gap-1 text-sm font-medium text-base-content/70">
                             Project
                             <select
                               aria-label={`${person.name} project ${index + 1}`}
@@ -259,7 +266,7 @@ export default function SplitStaffEditor({
                               ))}
                             </select>
                           </label>
-                          <label className="text-sm">
+                          <label className="grid min-w-0 gap-1 text-sm font-medium text-base-content/70">
                             Share %
                             <input
                               aria-label={`${person.name} share ${index + 1}`}
@@ -281,7 +288,7 @@ export default function SplitStaffEditor({
                           </label>
                           <button
                             aria-label={`Remove ${person.name} funding share ${index + 1}`}
-                            className="hp-remove-split"
+                            className="py-2 text-error [&>svg]:size-4"
                             onClick={() =>
                               updatePerson({
                                 ...person,
@@ -292,11 +299,11 @@ export default function SplitStaffEditor({
                             }
                             type="button"
                           >
-                            <TrashIcon />
+                            <TrashIcon className="size-5 shrink-0" />
                           </button>
                         </div>
-                        <div className="hp-split-dates">
-                          <label className="text-sm">
+                        <div className="mt-2.5 grid grid-cols-2 gap-2.5">
+                          <label className="grid min-w-0 gap-1 text-sm font-medium text-base-content/70">
                             From
                             <input
                               aria-label={`${person.name} share ${index + 1} from`}
@@ -311,7 +318,7 @@ export default function SplitStaffEditor({
                               value={split.startMonth}
                             />
                           </label>
-                          <label className="text-sm">
+                          <label className="grid min-w-0 gap-1 text-sm font-medium text-base-content/70">
                             Through
                             <input
                               aria-label={`${person.name} share ${index + 1} through`}
@@ -328,13 +335,13 @@ export default function SplitStaffEditor({
                           </label>
                         </div>
                         {!source && (
-                          <p className="hp-validation text-sm">
+                          <p className="mt-4 rounded-md bg-error/10 p-3 text-error text-sm">
                             This project is excluded from the plan. This share
                             isn&apos;t charged.
                           </p>
                         )}
                         {outsideDates && (
-                          <p className="hp-validation text-sm">
+                          <p className="mt-4 rounded-md bg-error/10 p-3 text-error text-sm">
                             Only months within this project&apos;s{' '}
                             {monthLabel(source.startDate.slice(0, 7))} to{' '}
                             {monthLabel(source.endDate.slice(0, 7))} dates are
@@ -344,9 +351,9 @@ export default function SplitStaffEditor({
                       </fieldset>
                     );
                   })}
-                  <div className="hp-split-footer text-sm">
+                  <div className="flex items-center justify-between gap-3 text-sm">
                     <button
-                      className="hp-add-split text-sm"
+                      className="flex items-center gap-1.5 font-semibold text-primary [&>svg]:size-4 text-sm"
                       disabled={!funds.length}
                       onClick={() =>
                         updatePerson({
@@ -373,16 +380,16 @@ export default function SplitStaffEditor({
                       }
                       type="button"
                     >
-                      <PlusIcon /> Add project share
+                      <PlusIcon className="size-5 shrink-0" /> Add project share
                     </button>
-                    <span className={error ? 'hp-negative' : ''}>
+                    <span className={error ? 'text-error' : ''}>
                       {min === max
                         ? `${Number(max.toFixed(1))}%`
                         : `${Number(min.toFixed(1))}% to ${Number(max.toFixed(1))}%`}{' '}
                       assigned
                     </span>
                   </div>
-                  <p className="hp-split-hint text-sm">
+                  <p className="mt-3 leading-relaxed text-base-content/70 text-sm">
                     To split 100% between two projects, try 60% on one and 40%
                     on the other. Each share can have its own dates.
                   </p>
@@ -390,7 +397,7 @@ export default function SplitStaffEditor({
               )}
               {error && (
                 <p
-                  className="hp-validation hp-split-error text-sm"
+                  className="mt-4 rounded-md bg-error/10 p-3 text-error m-0 rounded-none px-3.5 py-2.5 text-sm"
                   role="status"
                 >
                   {error}

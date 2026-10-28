@@ -118,7 +118,7 @@ describe('Guided projection plan navigation', () => {
     expect(
       within(
         screen.getByRole('navigation', { name: 'Plan navigation' })
-      ).getByRole('button', { name: 'Overview' })
+      ).getByRole('button', { name: 'Dashboard' })
     ).toHaveAttribute('aria-current', 'page');
     openDefault();
     const navigation = within(
@@ -136,7 +136,7 @@ describe('Guided projection plan navigation', () => {
     expect(
       navigation.getByRole('button', { name: /Next field season/ })
     ).toHaveAttribute('aria-current', 'page');
-    fireEvent.click(navigation.getByRole('button', { name: 'Overview' }));
+    fireEvent.click(navigation.getByRole('button', { name: 'Dashboard' }));
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
       "Morgan Reed's Projections"
     );
@@ -146,7 +146,7 @@ describe('Guided projection plan navigation', () => {
     expect(
       within(
         screen.getByRole('navigation', { name: 'Plan navigation' })
-      ).getByRole('button', { name: 'Overview' })
+      ).getByRole('button', { name: 'Dashboard' })
     ).toHaveAttribute('aria-current', 'page');
   });
 

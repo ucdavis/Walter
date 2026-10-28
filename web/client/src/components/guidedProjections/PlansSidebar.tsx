@@ -74,7 +74,7 @@ export default function PlansSidebar({
             onClick={() => setMobileOpen(!mobileOpen)}
             type="button"
           >
-            <ChevronDownIcon aria-hidden="true" />
+            <ChevronDownIcon aria-hidden="true" className="size-5 shrink-0" />
             <span className="sr-only">
               {mobileOpen ? 'Hide plans' : 'Show plans'}
             </span>
@@ -85,7 +85,11 @@ export default function PlansSidebar({
             onClick={() => setCollapsed(!collapsed)}
             type="button"
           >
-            {collapsed ? <ChevronDoubleRightIcon /> : <ChevronDoubleLeftIcon />}
+            {collapsed ? (
+              <ChevronDoubleRightIcon className="size-5 shrink-0" />
+            ) : (
+              <ChevronDoubleLeftIcon className="size-5 shrink-0" />
+            )}
           </button>
         </div>
         <nav
@@ -100,11 +104,14 @@ export default function PlansSidebar({
               onHome();
               setMobileOpen(false);
             }}
-            title={collapsed ? 'Overview' : undefined}
+            title={collapsed ? 'Dashboard' : undefined}
             type="button"
           >
-            <PresentationChartLineIcon aria-hidden="true" />
-            <span className={collapsed ? 'md:sr-only' : ''}>Overview</span>
+            <PresentationChartLineIcon
+              aria-hidden="true"
+              className="size-5 shrink-0"
+            />
+            <span className={collapsed ? 'md:sr-only' : ''}>Dashboard</span>
           </button>
           {planButton(defaultPlan, true)}
           <div
@@ -127,7 +134,7 @@ export default function PlansSidebar({
         title={collapsed ? 'Create New Plan' : undefined}
         type="button"
       >
-        <PlusIcon aria-hidden="true" />
+        <PlusIcon aria-hidden="true" className="size-5 shrink-0" />
         <span className={collapsed ? 'md:sr-only' : ''}>Create New Plan</span>
       </button>
     </aside>

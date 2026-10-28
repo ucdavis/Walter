@@ -44,7 +44,7 @@ export function LiveResults({
   return (
     <section
       aria-label="Live project outlook"
-      className="card hp-live-panel text-base"
+      className="card min-w-0 border border-main-border bg-base-200 p-5 xl:p-6 text-base"
     >
       <div>
         <h2 className="text-2xl font-semibold">
@@ -58,7 +58,7 @@ export function LiveResults({
           Balances stay separate. Select a line or a project below to explore.
         </p>
       </div>
-      <label className="hp-chart-select text-sm">
+      <label className="flex min-w-0 flex-col gap-2 font-medium my-5 grid gap-1.5 text-sm">
         Explore a project
         <select
           className="select w-full text-base"
@@ -75,14 +75,14 @@ export function LiveResults({
       </label>
       {selected && (
         <>
-          <h3 className="hp-chart-project-name text-lg font-semibold leading-snug">
+          <h3 className="mb-3.5 text-lg font-semibold leading-snug">
             {selected.name}
           </h3>
-          <span className="hp-balance-label text-sm text-base-content/70">
+          <span className="block text-sm text-base-content/70">
             Ending balance · {endingMonth && monthLabel(endingMonth)}
           </span>
           <strong
-            className={`hp-live-balance text-4xl font-bold ${selected.ending < 0 ? 'text-error' : ''}`}
+            className={`my-1 block text-4xl font-bold ${selected.ending < 0 ? 'text-error' : ''}`}
           >
             {money(selected.ending)}
           </strong>
@@ -101,7 +101,7 @@ export function LiveResults({
             ? `Monthly remaining balance for ${selected.name}`
             : 'Monthly remaining balances by project'
         }
-        className="hp-chart"
+        className="mt-4 mb-1 h-60 w-full"
       >
         <ResponsiveContainer height="100%" width="100%">
           <ComposedChart
@@ -202,13 +202,13 @@ export function LiveResults({
           </ComposedChart>
         </ResponsiveContainer>
       </div>
-      <p className="hp-chart-period text-sm text-base-content/70">
+      <p className="mt-1.5 mb-3.5 text-center text-sm text-base-content/70">
         Month-end balances ·{' '}
         {result.chart[0] && monthLabel(result.chart[0].month)} to{' '}
         {endingMonth && monthLabel(endingMonth)}
       </p>
       {selected ? (
-        <div className="hp-costs text-sm">
+        <div className="grid gap-3 border-t border-main-border pt-3.5 [&>div]:flex [&>div]:items-center [&>div]:justify-between [&>div]:gap-3 [&>div:last-child]:border-t [&>div:last-child]:border-main-border [&>div:last-child]:pt-3 text-sm">
           <div>
             <span className="text-base-content/70">Starting balance</span>
             <strong>{money(selected.startingBalance)}</strong>
@@ -237,7 +237,7 @@ export function LiveResults({
           </div>
         </div>
       ) : (
-        <div className="hp-chart-legend text-sm">
+        <div className="[&>button]:flex [&>button]:w-full [&>button]:items-center [&>button]:gap-1.5 [&>button]:border-t [&>button]:border-main-border [&>button]:py-3 [&>button]:text-left [&>button:hover]:bg-base-200 [&_i]:me-1.5 [&_i]:inline-block [&_i]:size-2 [&_i]:shrink-0 [&_i]:rounded-full [&_span]:min-w-0 [&_span]:flex-1 [&_strong]:block [&_small]:mt-1 [&_small]:block [&_b]:whitespace-nowrap [&_svg]:size-4 text-sm">
           {result.funds.map((fund) => (
             <button
               key={fund.id}
@@ -258,12 +258,12 @@ export function LiveResults({
               <b className={fund.ending < 0 ? 'text-error' : ''}>
                 {shortMoney(fund.ending)}
               </b>
-              <ArrowRightIcon />
+              <ArrowRightIcon className="size-5 shrink-0" />
             </button>
           ))}
         </div>
       )}
-      <div className="hp-portfolio-total text-sm text-base-content/70">
+      <div className="mt-3 flex items-center justify-between gap-2 border-t border-main-border pt-4 text-sm text-base-content/70">
         <span>All projects combined · ending</span>
         <strong
           className={`text-base font-semibold ${result.ending < 0 ? 'text-error' : ''}`}
@@ -284,7 +284,7 @@ export function ProjectDetail({
 }) {
   const lastMonth = fund.chart.at(-1)!.month;
   return (
-    <div className="hp-project-detail">
+    <div className="[&>h2]:leading-snug [&>h2]:tracking-normal [&>h2_i]:me-1.5 [&>h2_i]:inline-block [&>h2_i]:size-2 [&>h2_i]:rounded-full">
       <h2 className="text-2xl font-semibold">
         <i style={{ background: fund.color }} />
         {fund.name}
@@ -317,7 +317,7 @@ export function ProjectDetail({
           </span>
         </div>
       </div>
-      <div className="hp-project-metrics">
+      <div className="mt-5 mb-7 grid grid-cols-2 gap-3 [&_span]:block [&_span]:text-base-content/70 [&_strong]:mt-1 [&_strong]:block [&_strong]:font-semibold [&_strong]:tracking-normal">
         <div>
           <span className="text-sm">Starting balance</span>
           <strong className="text-3xl">{money(fund.startingBalance)}</strong>
@@ -327,18 +327,21 @@ export function ProjectDetail({
           <strong className="text-3xl">{money(fund.spending)}</strong>
         </div>
       </div>
-      <div className="hp-detail-heading">
+      <div className="flex items-center justify-between gap-2.5 [&>button]:flex [&>button]:items-center [&>button]:gap-1 [&>button]:text-right [&>button]:text-primary [&_svg]:size-4">
         <h3 className="text-lg font-semibold">People funded here</h3>
         <button className="text-sm" onClick={onStaffing} type="button">
-          Edit funding shares <ArrowRightIcon />
+          Edit funding shares <ArrowRightIcon className="size-5 shrink-0" />
         </button>
       </div>
-      <p className="hp-detail-caption text-sm">
+      <p className="mt-1.5 mb-3.5 text-base-content/70 text-sm">
         Project costs include salary, fringe, and indirect costs.
       </p>
       {fund.staff.length ? (
         fund.staff.map((person) => (
-          <div className="hp-funded-person text-sm" key={person.id}>
+          <div
+            className="flex items-center justify-between gap-3.5 border-t border-main-border py-3 [&_small]:mt-1 [&_small]:block [&_small]:text-base-content/70 text-sm"
+            key={person.id}
+          >
             <div>
               <strong>{person.name}</strong>
               {person.splits.map((split) => (
@@ -352,16 +355,16 @@ export function ProjectDetail({
           </div>
         ))
       ) : (
-        <p className="hp-detail-caption text-sm">
+        <p className="mt-1.5 mb-3.5 text-base-content/70 text-sm">
           No staffing costs in this planning period.
         </p>
       )}
-      <details className="hp-monthly-detail text-sm">
+      <details className="mt-6 border-t border-main-border pt-4 [&>summary]:cursor-pointer [&>summary]:font-semibold [&>summary>span]:float-right [&>summary>span]:font-normal [&>summary>span]:text-base-content/70 text-sm">
         <summary className="text-base">
           Month-by-month balances{' '}
           <span className="text-sm">{fund.chart.length} months</span>
         </summary>
-        <div className="hp-monthly-scroll text-sm">
+        <div className="mt-3.5 overflow-x-auto [&_table]:w-full [&_table]:border-collapse [&_caption]:mb-2 [&_caption]:text-left [&_caption]:text-base-content/70 [&_th]:border-b [&_th]:border-main-border [&_th]:px-1.5 [&_th]:py-2.5 [&_th]:text-right [&_th]:font-medium [&_th]:whitespace-nowrap [&_th:first-child]:text-left [&_td]:border-b [&_td]:border-main-border [&_td]:px-1.5 [&_td]:py-2.5 [&_td]:text-right [&_td]:whitespace-nowrap [&_thead]:text-base-content/70 [&_small]:block text-sm">
           <table className="table walter-table walter-subtable">
             <caption className="text-sm">
               Monthly spending and ending balance for {fund.name}
@@ -377,7 +380,11 @@ export function ProjectDetail({
             <tbody>
               {fund.chart.map((point) => (
                 <tr
-                  className={point.balance < 0 ? 'hp-deficit-row' : ''}
+                  className={
+                    point.balance < 0
+                      ? 'bg-error/10 [&>td:last-child]:font-semibold [&>td:last-child]:text-error'
+                      : ''
+                  }
                   key={point.month}
                 >
                   <th scope="row">
