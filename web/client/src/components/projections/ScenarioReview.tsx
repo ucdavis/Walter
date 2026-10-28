@@ -51,45 +51,50 @@ export function ScenarioPreview({
     [plan, scenario, asOf]
   );
   return (
-    <section aria-label="Proposed scenario" className="projection-proposal">
+    <section
+      aria-label="Proposed scenario"
+      className="mt-4 rounded-box border border-primary/20 bg-primary/5 p-4"
+    >
       <div className="flex items-start justify-between gap-2">
         <div>
-          <p className="projection-eyebrow">Proposed change</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-base-content/70">
+            Proposed change
+          </p>
           <h3 className="mt-1 font-semibold">{scenario.title}</h3>
         </div>
         <button
           aria-label="Dismiss proposal"
-          className="projection-icon-button"
+          className="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary btn btn-ghost btn-sm btn-square text-base-content/70"
           onClick={onDismiss}
           type="button"
         >
           <XMarkIcon className="size-4" />
         </button>
       </div>
-      <p className="mt-2 text-xs text-[#667277]">
+      <p className="mt-2 text-xs text-base-content/70">
         Preview only. Your working plan has not changed.
       </p>
       {result.comparison && (
         <div aria-live="polite" className="my-3 space-y-3">
           {result.comparison.sources.map((source) => (
-            <div className="border-t border-[#d8e3de] pt-2" key={source.id}>
-              <p className="text-xs text-[#586861]">{source.name}</p>
+            <div className="border-t border-main-border pt-2" key={source.id}>
+              <p className="text-xs text-base-content/70">{source.name}</p>
               <p className="mt-1 flex flex-wrap items-baseline gap-2 tabular-nums">
-                <span className="text-sm text-[#667277]">
+                <span className="text-sm text-base-content/70">
                   {projectionMoney(source.original.remainingBalance)}
                 </span>
                 <span aria-label="becomes">→</span>
                 <strong
                   className={
                     source.proposed.remainingBalance < 0
-                      ? 'text-[#ac3e36]'
-                      : 'text-[#215d57]'
+                      ? 'text-error'
+                      : 'text-primary'
                   }
                 >
                   {projectionMoney(source.proposed.remainingBalance)}
                 </strong>
               </p>
-              <p className="mt-1 text-xs text-[#667277]">
+              <p className="mt-1 text-xs text-base-content/70">
                 {Math.abs(source.costChange) < 0.01
                   ? 'Personnel costs unchanged'
                   : `${projectionMoney(Math.abs(source.costChange))} ${source.costChange > 0 ? 'more' : 'less'} in personnel costs`}
@@ -99,7 +104,7 @@ export function ScenarioPreview({
         </div>
       )}
       <details className="my-3">
-        <summary className="cursor-pointer text-sm font-medium text-[#215d57]">
+        <summary className="cursor-pointer text-sm font-medium text-primary">
           Adjust assumptions
         </summary>
         <div className="mt-3">
@@ -109,7 +114,7 @@ export function ScenarioPreview({
       <ReviewError error={result.error} stale={stale} />
       <div className="grid gap-2">
         <button
-          className="projection-secondary-button"
+          className="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary btn btn-outline"
           disabled={stale}
           onClick={onExpand}
           type="button"
@@ -118,7 +123,7 @@ export function ScenarioPreview({
           Explore scenario
         </button>
         <button
-          className="projection-primary-button"
+          className="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary btn btn-primary"
           disabled={!result.draft || stale}
           onClick={() => result.draft && onApply(result.draft)}
           type="button"
@@ -147,27 +152,29 @@ export function ScenarioComparison({
   return (
     <dialog
       aria-labelledby="projection-comparison-title"
-      className="projection-comparison-dialog"
+      className="text-base-content backdrop:bg-base-content/30 m-auto max-h-[calc(100dvh-2.5rem)] w-[min(75rem,calc(100vw-2rem))] max-w-none overflow-auto rounded-box border border-main-border bg-base-100 p-0 text-base-content backdrop:bg-base-content/30"
       onCancel={onClose}
       ref={ref}
     >
-      <div className="border-b border-[#d8ddd6] p-5 sm:p-6">
+      <div className="border-b border-main-border p-5 sm:p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="projection-eyebrow">Explore scenario</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-base-content/70">
+              Explore scenario
+            </p>
             <h2
               className="mt-1 text-2xl font-semibold"
               id="projection-comparison-title"
             >
               {scenario.title}
             </h2>
-            <p className="mt-2 text-sm text-[#667277]">
+            <p className="mt-2 text-sm text-base-content/70">
               Adjust the proposal and compare it with your current plan.
             </p>
           </div>
           <button
             aria-label="Close comparison"
-            className="projection-icon-button"
+            className="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary btn btn-ghost btn-sm btn-square text-base-content/70"
             onClick={onClose}
             type="button"
           >
@@ -187,13 +194,13 @@ export function ScenarioComparison({
           <div aria-live="polite" className="mt-6 grid gap-5 md:grid-cols-2">
             {(['original', 'proposed'] as const).map((side) => (
               <section
-                className={`rounded-lg border p-4 ${side === 'proposed' ? 'border-[#8eb8af] bg-[#f3f9f6]' : 'border-[#d8ddd6] bg-white'}`}
+                className={`rounded-lg border p-4 ${side === 'proposed' ? 'border-primary/40 bg-primary/5' : 'border-main-border bg-base-100'}`}
                 key={side}
               >
                 <h3 className="text-lg font-semibold">
                   {side === 'original' ? 'Current plan' : 'Proposed plan'}
                 </h3>
-                <p className="mb-5 mt-1 text-xs text-[#667277]">
+                <p className="mb-5 mt-1 text-xs text-base-content/70">
                   {side === 'original'
                     ? 'Kept as it is until you apply'
                     : 'Calculated with the assumptions above'}
@@ -211,21 +218,21 @@ export function ScenarioComparison({
           </div>
         )}
       </div>
-      <footer className="flex flex-wrap items-center justify-between gap-4 border-t border-[#d8ddd6] bg-[#f8faf7] p-5 sm:p-6">
-        <p className="max-w-xl text-xs text-[#667277]">
+      <footer className="flex flex-wrap items-center justify-between gap-4 border-t border-main-border bg-base-200 p-5 sm:p-6">
+        <p className="max-w-xl text-xs text-base-content/70">
           Salary, fringe, and indirect costs are included. Funding availability
           alone does not establish eligibility. Changes stay in this demo.
         </p>
         <div className="flex gap-2">
           <button
-            className="projection-secondary-button"
+            className="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary btn btn-outline"
             onClick={onClose}
             type="button"
           >
             Back to copilot
           </button>
           <button
-            className="projection-primary-button"
+            className="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary btn btn-primary"
             disabled={!result.draft || stale}
             onClick={() => result.draft && onApply(result.draft)}
             type="button"
@@ -266,16 +273,16 @@ function ComparisonFund({
   }));
   const summary = source[side];
   return (
-    <div className="mt-4 border-t border-[#d8ddd6] pt-4">
-      <p className="text-xs text-[#667277]">{source.id}</p>
+    <div className="mt-4 border-t border-main-border pt-4">
+      <p className="text-xs text-base-content/70">{source.id}</p>
       <h4 className="mt-1 text-sm font-medium">{source.name}</h4>
-      <p className="mt-3 text-xs text-[#667277]">Ending balance</p>
+      <p className="mt-3 text-xs text-base-content/70">Ending balance</p>
       <p
-        className={`mt-2 text-2xl font-semibold tabular-nums ${summary.remainingBalance < 0 ? 'text-[#ac3e36]' : 'text-[#215d57]'}`}
+        className={`mt-2 text-2xl font-semibold tabular-nums ${summary.remainingBalance < 0 ? 'text-error' : 'text-primary'}`}
       >
         {projectionExactMoney(summary.remainingBalance)}
       </p>
-      <p className="mt-1 text-xs text-[#667277]">
+      <p className="mt-1 text-xs text-base-content/70">
         {summary.deficitMonths.length
           ? `First deficit: ${monthLabel(summary.deficitMonths[0])}`
           : 'No projected deficit'}
@@ -290,18 +297,31 @@ function ComparisonFund({
             data={rows}
             margin={{ bottom: 4, left: 0, right: 10, top: 8 }}
           >
-            <CartesianGrid stroke="#dfe5df" vertical={false} />
-            <XAxis dataKey="month" minTickGap={35} tick={{ fontSize: 11 }} />
+            <CartesianGrid stroke="var(--color-main-border)" vertical={false} />
+            <XAxis
+              dataKey="month"
+              minTickGap={35}
+              tick={{ className: 'text-xs fill-base-content/70' }}
+            />
             <YAxis
               domain={[low - padding, high + padding]}
-              tick={{ fontSize: 11 }}
+              tick={{ className: 'text-xs fill-base-content/70' }}
               tickFormatter={(value: number) =>
                 `${value < 0 ? '−' : ''}$${Math.abs(value / 1000).toFixed(0)}k`
               }
               width={68}
             />
-            <ReferenceLine stroke="#a45750" strokeDasharray="4 3" y={0} />
+            <ReferenceLine
+              stroke="var(--color-error)"
+              strokeDasharray="4 3"
+              y={0}
+            />
             <Tooltip
+              contentStyle={{
+                background: 'var(--color-base-100)',
+                borderColor: 'var(--color-main-border)',
+                color: 'var(--color-base-content)',
+              }}
               formatter={(value) =>
                 typeof value === 'number' ? projectionExactMoney(value) : '—'
               }
@@ -311,13 +331,17 @@ function ComparisonFund({
               dot={false}
               isAnimationActive={false}
               name="Remaining"
-              stroke={side === 'original' ? '#788b83' : '#2f7f79'}
+              stroke={
+                side === 'original'
+                  ? 'color-mix(in oklab, var(--color-base-content) 50%, transparent)'
+                  : 'var(--color-primary)'
+              }
               strokeWidth={2}
             />
           </LineChart>
         </ResponsiveContainer>
       </div>
-      <p className="text-xs text-[#667277]">
+      <p className="text-xs text-base-content/70">
         Personnel drawdown: {projectionExactMoney(summary.totalDrawdown)}
       </p>
     </div>
@@ -333,7 +357,7 @@ function ReviewError({
 }) {
   return error || stale ? (
     <p
-      className="my-3 rounded-md border border-[#e5b7ac] bg-[#fff1ec] p-3 text-sm text-[#9a392a]"
+      className="my-3 rounded-md border border-error/30 bg-error/10 p-3 text-sm text-error"
       role="alert"
     >
       {stale
@@ -384,7 +408,7 @@ function ScenarioEditor({
         />
       ))}
       {scenario.assumptions.length > 0 && (
-        <div className="text-xs text-[#667277]">
+        <div className="text-xs text-base-content/70">
           <p className="mb-1 font-medium">Assumptions</p>
           <ul className="list-disc space-y-1 pl-4">
             {scenario.assumptions.map((text, index) => (
@@ -428,9 +452,10 @@ function OperationEditor({
       </legend>
       <div className={fields}>
         {operation.type === 'hire' && (
-          <label className="projection-field col-span-2">
+          <label className="grid min-w-0 gap-2 text-sm font-medium text-base-content/70 col-span-2">
             Name
             <input
+              className="input input-sm min-w-0 w-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               onChange={(e) => onChange({ ...operation, name: e.target.value })}
               value={operation.name}
             />
@@ -461,9 +486,10 @@ function OperationEditor({
               onChange={(percent) => onChange({ ...operation, percent })}
               value={operation.percent}
             />
-            <label className="projection-field">
+            <label className="grid min-w-0 gap-2 text-sm font-medium text-base-content/70">
               Funding project
               <select
+                className="select select-sm min-w-0 w-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                 onChange={(e) =>
                   onChange({ ...operation, fundingSourceId: e.target.value })
                 }
@@ -480,9 +506,10 @@ function OperationEditor({
         )}
         {(operation.type === 'hire' || operation.type === 'allocate') && (
           <>
-            <label className="projection-field">
+            <label className="grid min-w-0 gap-2 text-sm font-medium text-base-content/70">
               Start month
               <input
+                className="input input-sm min-w-0 w-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                 onChange={(e) =>
                   onChange({ ...operation, startMonth: e.target.value })
                 }
@@ -490,9 +517,10 @@ function OperationEditor({
                 value={operation.startMonth}
               />
             </label>
-            <label className="projection-field">
+            <label className="grid min-w-0 gap-2 text-sm font-medium text-base-content/70">
               End month
               <input
+                className="input input-sm min-w-0 w-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                 onChange={(e) =>
                   onChange({ ...operation, endMonth: e.target.value })
                 }
@@ -509,9 +537,10 @@ function OperationEditor({
                 className="grid grid-cols-[minmax(0,1fr)_75px_auto] items-end gap-2"
                 key={index}
               >
-                <label className="projection-field">
+                <label className="grid min-w-0 gap-2 text-sm font-medium text-base-content/70">
                   Funding project
                   <select
+                    className="select select-sm min-w-0 w-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                     onChange={(e) =>
                       onChange({
                         ...operation,
@@ -546,7 +575,7 @@ function OperationEditor({
                 />
                 <button
                   aria-label={`Remove split ${index + 1}`}
-                  className="projection-icon-button"
+                  className="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary btn btn-ghost btn-sm btn-square text-base-content/70"
                   onClick={() =>
                     onChange({
                       ...operation,
@@ -560,7 +589,7 @@ function OperationEditor({
               </div>
             ))}
             <button
-              className="projection-text-button"
+              className="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary text-left text-sm font-medium text-primary hover:underline"
               disabled={operation.splits.length >= plan.fundingSources.length}
               onClick={() => {
                 const fund = plan.fundingSources.find(
@@ -584,14 +613,14 @@ function OperationEditor({
               Add funding split
             </button>
             {!operation.splits.length && (
-              <p className="text-xs text-[#667277]">
+              <p className="text-xs text-base-content/70">
                 Clears funding allocations for these months.
               </p>
             )}
           </div>
         )}
         {operation.type === 'person' && (
-          <p className="col-span-2 text-xs text-[#667277]">
+          <p className="col-span-2 text-xs text-base-content/70">
             Applies to this person&apos;s entire modeled appointment.
           </p>
         )}
@@ -613,9 +642,10 @@ function OperationEditor({
               }
               value={operation.indirectRate}
             />
-            <label className="projection-field">
+            <label className="grid min-w-0 gap-2 text-sm font-medium text-base-content/70">
               Funding start
               <input
+                className="input input-sm min-w-0 w-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                 onChange={(e) =>
                   onChange({ ...operation, startDate: e.target.value })
                 }
@@ -623,9 +653,10 @@ function OperationEditor({
                 value={operation.startDate}
               />
             </label>
-            <label className="projection-field">
+            <label className="grid min-w-0 gap-2 text-sm font-medium text-base-content/70">
               Funding end
               <input
+                className="input input-sm min-w-0 w-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                 onChange={(e) =>
                   onChange({ ...operation, endDate: e.target.value })
                 }
@@ -633,7 +664,7 @@ function OperationEditor({
                 value={operation.endDate}
               />
             </label>
-            <p className="col-span-2 text-xs text-[#667277]">
+            <p className="col-span-2 text-xs text-base-content/70">
               Balance changes take effect at the start of the fund.
             </p>
           </>
@@ -657,9 +688,10 @@ function NumberField({
   value: number;
 }) {
   return (
-    <label className="projection-field">
+    <label className="grid min-w-0 gap-2 text-sm font-medium text-base-content/70">
       {label}
       <input
+        className="input input-sm min-w-0 w-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         max={max}
         min={min}
         onChange={(e) =>

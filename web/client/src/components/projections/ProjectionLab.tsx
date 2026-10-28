@@ -1,4 +1,3 @@
-import '@/components/projections/projectionLab.css';
 import { useProjectionDialog } from '@/components/projections/useProjectionDialog.ts';
 import ProjectionCopilot from '@/components/projections/ProjectionCopilot.tsx';
 import {
@@ -55,7 +54,13 @@ import {
   type FundingChartPoint,
 } from '@/components/projections/fundingChart.ts';
 
-const sourceColors = ['#2f7f79', '#5f7fd3', '#cc7a28', '#7a5bc7', '#7aa846'];
+const sourceColors = [
+  'var(--color-primary)',
+  '#5f7fd3',
+  '#cc7a28',
+  '#7a5bc7',
+  '#7aa846',
+];
 
 const compactCurrencyFormatter = new Intl.NumberFormat('en-US', {
   currency: 'USD',
@@ -394,16 +399,16 @@ export default function ProjectionLab({
   }
 
   return (
-    <main className="projection-lab min-h-screen bg-[#f5f6f2] text-[#1f2a2e]">
-      <header className="border-b border-[#d8ddd6] bg-white">
-        <div className="mx-auto flex max-w-[1600px] flex-col gap-4 px-5 py-4 lg:flex-row lg:items-center lg:justify-between lg:px-8">
+    <main className="container bg-base-100 font-sans text-base text-base-content">
+      <header className="pt-8 pb-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex size-11 items-center justify-center rounded-lg bg-[#2f7f79] text-white">
+            <div className="flex size-11 items-center justify-center text-primary">
               <ChartBarIcon aria-hidden="true" className="size-6" />
             </div>
             <div>
-              <h1 className="text-2xl font-semibold">ProjectionLab</h1>
-              <p className="text-sm text-[#667277]">
+              <h1 className="h1">ProjectionLab</h1>
+              <p className="text-sm text-base-content/70">
                 {initialPlan.ownerName} · Monthly funding drawdown from people
                 allocations
               </p>
@@ -411,7 +416,7 @@ export default function ProjectionLab({
           </div>
           <div className="flex flex-wrap items-center gap-2 text-sm">
             <Link
-              className="rounded-full border border-[#cbd5d1] px-3 py-1.5 text-[#39464b]"
+              className="btn btn-ghost btn-sm"
               params={{ iamId }}
               to="/projects/$iamId"
             >
@@ -424,7 +429,7 @@ export default function ProjectionLab({
               {people.length} people
             </Badge>
             <button
-              className="inline-flex items-center gap-2 rounded-full border border-[#cbd5d1] bg-white px-3 py-1.5 font-medium text-[#39464b] hover:border-[#8ca6a0]"
+              className="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary btn btn-outline btn-sm"
               onClick={resetPlan}
               type="button"
             >
@@ -435,8 +440,8 @@ export default function ProjectionLab({
         </div>
       </header>
 
-      <div className="mx-auto max-w-[1960px] space-y-5 px-5 py-5 lg:px-8">
-        <p className="text-sm text-[#667277]">
+      <div className="space-y-6 pb-12">
+        <p className="text-sm text-base-content/70">
           Demo plan from {initialPlan.asOf}. Starting balances are after
           expenses and commitments. Only future salary, fringe, and indirect
           costs are projected. Changes last until you leave or reload this page.
@@ -448,7 +453,7 @@ export default function ProjectionLab({
           totalDrawdown={totalDrawdown}
         />
 
-        <div className="projection-workspace">
+        <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_23rem]">
           <section className="min-w-0 space-y-5">
             {(projection.invalidAllocations.length > 0 ||
               projection.allocationValidations.some(
@@ -536,15 +541,10 @@ function Badge({
   icon: React.ReactNode;
   tone: 'green' | 'blue';
 }) {
-  const classes =
-    tone === 'green'
-      ? 'bg-[#e7f3f1] text-[#2f7f79]'
-      : 'bg-[#eef2ff] text-[#526fbf]';
+  const classes = tone === 'green' ? 'badge-primary' : 'badge-info';
 
   return (
-    <span
-      className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 font-medium ${classes}`}
-    >
+    <span className={`badge badge-soft gap-2 py-3 text-sm ${classes}`}>
       {icon}
       {children}
     </span>
@@ -563,8 +563,8 @@ function SummaryCard({
   totalDrawdown: number;
 }) {
   return (
-    <section className="rounded-lg border border-[#d8ddd6] bg-white p-4 shadow-sm">
-      <h2 className="mb-3 text-2xl font-semibold">Plan health</h2>
+    <section className="card p-5 sm:p-6">
+      <h2 className="mb-4 text-xl font-semibold">Plan health</h2>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Metric label="Remaining" value={formatCompactCurrency(totalBalance)} />
         <Metric label="Drawdown" value={formatCompactCurrency(totalDrawdown)} />
@@ -596,17 +596,17 @@ function Metric({
   warning?: boolean;
 }) {
   const valueClass = warning
-    ? 'text-[#b42318]'
+    ? 'text-error'
     : positive
-      ? 'text-[#0f766e]'
-      : 'text-[#1f2a2e]';
+      ? 'text-success'
+      : 'text-base-content';
 
   return (
     <div
-      className={`rounded-md border p-3 ${warning ? 'border-[#d4574f] bg-[#fff1ef]' : 'border-[#e2e6df] bg-[#f8faf7]'}`}
+      className={`rounded-md border p-3 ${warning ? 'border-error bg-error/10' : 'border-main-border bg-base-200'}`}
     >
-      <p className="text-xs font-semibold uppercase text-[#667277]">{label}</p>
-      <p className={`mt-1 text-xl font-semibold ${valueClass}`}>{value}</p>
+      <p className="stat-label text-sm text-base-content/70">{label}</p>
+      <p className={`stat-value-lg mt-1 ${valueClass}`}>{value}</p>
     </div>
   );
 }
@@ -627,10 +627,10 @@ function LabeledNumber({
   value: number;
 }) {
   return (
-    <label className="grid gap-1 text-xs font-semibold text-[#667277]">
+    <label className="grid gap-1 text-xs font-semibold text-base-content/70">
       {label}
       <input
-        className="rounded-md border border-[#cdd5d1] px-3 py-2 text-sm font-normal text-[#1f2a2e]"
+        className="input input-sm min-w-0 w-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary rounded-md border border-main-border px-3 py-2 text-sm font-normal text-base-content"
         data-testid={testId}
         inputMode="decimal"
         max={max}
@@ -655,10 +655,10 @@ function LabeledDate({
   value: string;
 }) {
   return (
-    <label className="grid gap-1 text-xs font-semibold text-[#667277]">
+    <label className="grid gap-1 text-xs font-semibold text-base-content/70">
       {label}
       <input
-        className="rounded-md border border-[#cdd5d1] px-3 py-2 text-sm font-normal text-[#1f2a2e]"
+        className="input input-sm min-w-0 w-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary rounded-md border border-main-border px-3 py-2 text-sm font-normal text-base-content"
         data-testid={testId}
         onChange={(event) => {
           if (event.target.value) {
@@ -727,16 +727,16 @@ function AddRowModal({
       <dialog
         aria-label={isSource ? 'Add funding source' : 'Add person'}
         aria-modal="true"
-        className="m-auto w-full max-w-2xl rounded-lg bg-white shadow-2xl"
+        className="text-base-content backdrop:bg-base-content/30 m-auto w-full max-w-2xl rounded-lg bg-base-100 shadow-2xl"
         data-testid="add-row-modal"
         onCancel={onCancel}
         ref={dialogRef}
       >
-        <div className="border-b border-[#d8ddd6] p-5">
+        <div className="border-b border-main-border p-5">
           <h2 className="text-xl font-semibold">
             Add {isSource ? 'funding source' : 'person'}
           </h2>
-          <p className="text-sm text-[#667277]">
+          <p className="text-sm text-base-content/70">
             This creates a new timeline row. You can continue editing it inline
             after it is added.
           </p>
@@ -747,7 +747,7 @@ function AddRowModal({
             <>
               <input
                 aria-label="Funding source name"
-                className="rounded-md border border-[#cdd5d1] px-3 py-2"
+                className="input input-sm min-w-0 w-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary rounded-md border border-main-border px-3 py-2"
                 data-testid="new-source-name"
                 onChange={(event) =>
                   onSourceDraftChange((current) => ({
@@ -810,7 +810,7 @@ function AddRowModal({
             <>
               <input
                 aria-label="Person name"
-                className="rounded-md border border-[#cdd5d1] px-3 py-2"
+                className="input input-sm min-w-0 w-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary rounded-md border border-main-border px-3 py-2"
                 data-testid="new-person-name"
                 onChange={(event) =>
                   onPersonDraftChange((current) => ({
@@ -850,16 +850,16 @@ function AddRowModal({
           )}
         </div>
 
-        <div className="flex justify-end gap-2 border-t border-[#d8ddd6] p-5">
+        <div className="flex justify-end gap-2 border-t border-main-border p-5">
           <button
-            className="rounded-md border border-[#cbd5d1] px-4 py-2 font-semibold text-[#39464b] hover:border-[#8ca6a0]"
+            className="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary btn btn-outline"
             onClick={onCancel}
             type="button"
           >
             Cancel
           </button>
           <button
-            className="inline-flex items-center gap-2 rounded-md bg-[#2f7f79] px-4 py-2 font-semibold text-white hover:bg-[#286d68]"
+            className="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary btn btn-primary"
             data-testid={isSource ? 'add-funding-source' : 'add-person'}
             onClick={isSource ? onAddFundingSource : onAddPerson}
             type="button"
@@ -1017,7 +1017,7 @@ function AllocationModal({
     <div className="fixed inset-0 z-[100]" role="presentation">
       <div
         aria-hidden="true"
-        className="pointer-events-none fixed rounded-md ring-4 ring-[#0f766e] ring-offset-2 ring-offset-white"
+        className="pointer-events-none fixed rounded-md ring-4 ring-primary ring-offset-2 ring-offset-base-100"
         style={{
           height: editor.anchorRect.height,
           left: editor.anchorRect.left,
@@ -1028,19 +1028,19 @@ function AllocationModal({
       <dialog
         aria-label={`${person?.name ?? 'Person'} allocation`}
         aria-modal="true"
-        className="fixed m-0 overflow-y-auto rounded-lg border-4 border-[#0f766e] bg-white shadow-2xl"
+        className="text-base-content backdrop:bg-base-content/30 fixed m-0 overflow-y-auto rounded-lg border-4 border-primary bg-base-100 shadow-2xl"
         data-testid="allocation-modal"
         onCancel={onCancel}
         ref={dialogRef}
         style={popoverStyle}
       >
-        <div className="border-b border-[#d8ddd6] bg-[#edf7f5] p-5">
+        <div className="border-b border-main-border bg-primary/5 p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h2 className="text-xl font-semibold">
                 {person?.name ?? 'Person'} allocation
               </h2>
-              <p className="text-sm text-[#667277]">
+              <p className="text-sm text-base-content/70">
                 Editing {monthLabel(editor.anchorMonth)}. Expand the range to
                 replace nearby months with this same setup.
               </p>
@@ -1057,14 +1057,14 @@ function AllocationModal({
         <div className="space-y-5 p-5">
           <div>
             <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
-              <h3 className="text-sm font-semibold uppercase text-[#667277]">
+              <h3 className="text-sm font-semibold uppercase text-base-content/70">
                 Apply range
               </h3>
               <div className="grid grid-cols-2 gap-2">
-                <label className="grid gap-1 text-xs font-semibold text-[#667277]">
+                <label className="grid gap-1 text-xs font-semibold text-base-content/70">
                   Start
                   <input
-                    className="rounded-md border border-[#cdd5d1] px-3 py-2 text-sm font-normal text-[#1f2a2e]"
+                    className="input input-sm min-w-0 w-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary rounded-md border border-main-border px-3 py-2 text-sm font-normal text-base-content"
                     data-testid="allocation-start-month"
                     onChange={(event) =>
                       event.target.value &&
@@ -1074,10 +1074,10 @@ function AllocationModal({
                     value={editor.startMonth}
                   />
                 </label>
-                <label className="grid gap-1 text-xs font-semibold text-[#667277]">
+                <label className="grid gap-1 text-xs font-semibold text-base-content/70">
                   End
                   <input
-                    className="rounded-md border border-[#cdd5d1] px-3 py-2 text-sm font-normal text-[#1f2a2e]"
+                    className="input input-sm min-w-0 w-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary rounded-md border border-main-border px-3 py-2 text-sm font-normal text-base-content"
                     data-testid="allocation-end-month"
                     onChange={(event) =>
                       event.target.value &&
@@ -1091,7 +1091,7 @@ function AllocationModal({
             </div>
 
             <div
-              className="flex gap-2 overflow-x-auto scroll-smooth rounded-md border border-[#d8ddd6] bg-[#f8faf7] p-2"
+              className="flex gap-2 overflow-x-auto scroll-smooth rounded-md border border-main-border bg-base-200 p-2"
               ref={rangeStripRef}
             >
               {months.map((month) => {
@@ -1123,14 +1123,14 @@ function AllocationModal({
                   <button
                     className={`min-w-[112px] rounded-md border px-3 py-2 text-left text-xs transition ${
                       invalid
-                        ? 'border-[#d4574f] bg-[#fff1ef] text-[#9f271e]'
+                        ? 'border-error bg-error/10 text-error'
                         : willReplace
-                          ? 'border-[#d89035] bg-[#fff7e8] text-[#8a4f00]'
+                          ? 'border-warning bg-warning/10 text-warning'
                           : selected
-                            ? 'border-2 border-[#0f766e] bg-[#dff3ef] text-[#0f5f59] shadow-[0_0_0_2px_rgba(15,118,110,0.16)]'
+                            ? 'border-2 border-primary bg-primary/10 text-primary ring-2 ring-primary/20'
                             : monthAllocations.length > 0
-                              ? 'border-[#c7d3ce] bg-[#f1f3ef] text-[#39464b]'
-                              : 'border-[#e2e6df] bg-white text-[#667277]'
+                              ? 'border-main-border bg-base-200 text-base-content'
+                              : 'border-main-border bg-base-100 text-base-content/70'
                     }`}
                     data-range-month={month}
                     data-testid={`range-month-${month}`}
@@ -1160,11 +1160,11 @@ function AllocationModal({
 
           <div>
             <div className="mb-2 flex items-center justify-between gap-3">
-              <h3 className="text-sm font-semibold uppercase text-[#667277]">
+              <h3 className="text-sm font-semibold uppercase text-base-content/70">
                 Funding split
               </h3>
               <button
-                className="inline-flex items-center gap-2 rounded-md border border-[#cbd5d1] px-3 py-2 text-sm font-semibold text-[#39464b] hover:border-[#8ca6a0]"
+                className="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary inline-flex items-center gap-2 rounded-md border border-main-border px-3 py-2 text-sm font-semibold text-base-content hover:border-primary/50"
                 data-testid="modal-add-split"
                 disabled={editor.splits.length >= fundingSources.length}
                 onClick={onAddSplit}
@@ -1176,7 +1176,7 @@ function AllocationModal({
             </div>
 
             {editor.splits.length === 0 ? (
-              <div className="rounded-md border border-dashed border-[#cbd5d1] p-4 text-sm text-[#667277]">
+              <div className="rounded-md border border-dashed border-main-border p-4 text-sm text-base-content/70">
                 No funding source assigned for this month. Add one to default to
                 100%.
               </div>
@@ -1189,7 +1189,7 @@ function AllocationModal({
                   >
                     <select
                       aria-label={`Funding source ${index + 1}`}
-                      className="rounded-md border border-[#cdd5d1] px-3 py-2"
+                      className="select select-sm min-w-0 w-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary rounded-md border border-main-border px-3 py-2"
                       data-testid={`modal-source-${index}`}
                       onChange={(event) =>
                         onUpdateSplit(index, {
@@ -1214,7 +1214,7 @@ function AllocationModal({
                     </select>
                     <input
                       aria-label={`Percent ${index + 1}`}
-                      className="rounded-md border border-[#cdd5d1] px-3 py-2"
+                      className="input input-sm min-w-0 w-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary rounded-md border border-main-border px-3 py-2"
                       data-testid={`modal-percent-${index}`}
                       inputMode="decimal"
                       onChange={(event) =>
@@ -1229,7 +1229,7 @@ function AllocationModal({
                     />
                     <button
                       aria-label={`Remove funding source ${index + 1}`}
-                      className="rounded-md border border-[#cdd5d1] p-2 text-[#8a3a33] hover:bg-[#fff1ef]"
+                      className="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary rounded-md border border-main-border p-2 text-error hover:bg-error/10"
                       onClick={() => onRemoveSplit(index)}
                       type="button"
                     >
@@ -1242,7 +1242,7 @@ function AllocationModal({
           </div>
 
           {(runTotal > 100 || hasInactiveSource) && (
-            <div className="rounded-md bg-[#fff1ef] px-3 py-2 text-sm font-semibold text-[#b42318]">
+            <div className="rounded-md bg-error/10 px-3 py-2 text-sm font-semibold text-error">
               {runTotal > 100 && <p>Allocation total cannot exceed 100%.</p>}
               {hasInactiveSource && (
                 <p>
@@ -1254,16 +1254,16 @@ function AllocationModal({
           )}
         </div>
 
-        <div className="flex flex-wrap justify-end gap-2 border-t border-[#d8ddd6] p-5">
+        <div className="flex flex-wrap justify-end gap-2 border-t border-main-border p-5">
           <button
-            className="rounded-md border border-[#cbd5d1] px-4 py-2 font-semibold text-[#39464b] hover:border-[#8ca6a0]"
+            className="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary btn btn-outline"
             onClick={onCancel}
             type="button"
           >
             Cancel
           </button>
           <button
-            className="inline-flex items-center gap-2 rounded-md bg-[#2f7f79] px-4 py-2 font-semibold text-white hover:bg-[#286d68] disabled:cursor-not-allowed disabled:bg-[#a8b7b3]"
+            className="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary btn btn-primary"
             data-testid="modal-save-allocation"
             disabled={!canSave}
             onClick={onSave}
@@ -1293,8 +1293,8 @@ function ValidationPanel({
   );
 
   return (
-    <section className="rounded-lg border border-[#f0b0a8] bg-[#fff8f6] p-4 shadow-sm">
-      <h2 className="flex items-center gap-2 text-lg font-semibold text-[#9f271e]">
+    <section className="alert alert-error alert-soft block p-4 font-normal">
+      <h2 className="flex items-center gap-2 text-lg font-semibold text-error">
         <ExclamationTriangleIcon aria-hidden="true" className="size-5" />
         Validation warnings
       </h2>
@@ -1337,10 +1337,10 @@ function InlineNumber({
   value: number;
 }) {
   return (
-    <label className="grid gap-1 text-[11px] font-semibold uppercase text-[#667277]">
+    <label className="grid gap-1 text-xs font-semibold uppercase text-base-content/70">
       {label}
       <input
-        className="rounded-md border border-[#cdd5d1] bg-white px-2 py-1 text-sm font-normal normal-case text-[#1f2a2e]"
+        className="input input-sm min-w-0 w-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary rounded-md border border-main-border bg-base-100 px-2 py-1 text-sm font-normal normal-case text-base-content"
         data-testid={testId}
         inputMode="decimal"
         onChange={(event) => {
@@ -1366,10 +1366,10 @@ function InlineText({
   value: string;
 }) {
   return (
-    <label className="grid gap-1 text-[11px] font-semibold uppercase text-[#667277]">
+    <label className="grid gap-1 text-xs font-semibold uppercase text-base-content/70">
       {label}
       <input
-        className="rounded-md border border-[#cdd5d1] bg-white px-2 py-1 text-sm font-normal normal-case text-[#1f2a2e]"
+        className="input input-sm min-w-0 w-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary rounded-md border border-main-border bg-base-100 px-2 py-1 text-sm font-normal normal-case text-base-content"
         data-testid={testId}
         onChange={(event) => {
           if (event.target.value) {
@@ -1551,26 +1551,26 @@ function FundingChartTooltip({
   }
 
   return (
-    <div className="rounded-md border border-[#cbd5d1] bg-white px-3 py-2 text-xs shadow-lg">
-      <p className="mb-1 font-semibold text-[#1f2a2e]">{label}</p>
+    <div className="rounded-md border border-main-border bg-base-100 px-3 py-2 text-xs shadow-lg">
+      <p className="mb-1 font-semibold text-base-content">{label}</p>
       {point.active ? (
         <div className="space-y-1">
           <p
             className={
-              point.deficit ? 'font-semibold text-[#b42318]' : 'text-[#39464b]'
+              point.deficit ? 'font-semibold text-error' : 'text-base-content'
             }
           >
             Remaining: {formatCompactCurrency(point.remainingBalance ?? 0)}
           </p>
-          <p className="text-[#667277]">
+          <p className="text-base-content/70">
             Drawdown: {formatCompactCurrency(point.drawdown)}
           </p>
           {point.deficit && (
-            <p className="font-semibold text-[#b42318]">Below $0</p>
+            <p className="font-semibold text-error">Below $0</p>
           )}
         </div>
       ) : (
-        <p className="text-[#8a9692]">Inactive</p>
+        <p className="text-base-content/50">Inactive</p>
       )}
     </div>
   );
@@ -1601,30 +1601,30 @@ function FundingSourceChart({
           data={chartData}
           margin={{ bottom: 6, left: 0, right: 18, top: 12 }}
         >
-          <CartesianGrid stroke="#edf0ec" vertical={false} />
+          <CartesianGrid stroke="var(--color-main-border)" vertical={false} />
           <XAxis
-            axisLine={{ stroke: '#d8ddd6' }}
+            axisLine={{ stroke: 'var(--color-main-border)' }}
             dataKey="monthLabel"
             interval={tickInterval}
-            tick={{ fill: '#667277', fontSize: 11 }}
+            tick={{ className: 'text-xs fill-base-content/70' }}
             tickFormatter={compactChartMonthLabel}
             tickLine={false}
           />
           <YAxis
             axisLine={false}
             domain={[domainMin, domainMax]}
-            tick={{ fill: '#667277', fontSize: 11 }}
+            tick={{ className: 'text-xs fill-base-content/70' }}
             tickFormatter={(value) => formatCompactCurrency(Number(value))}
             tickLine={false}
             width={56}
           />
           <Tooltip
             content={<FundingChartTooltip />}
-            cursor={{ fill: '#f2f4f0' }}
+            cursor={{ fill: 'var(--color-base-200)' }}
           />
           {hasVisibleDeficit && (
             <ReferenceArea
-              fill="#d4574f"
+              fill="var(--color-error)"
               fillOpacity={0.08}
               ifOverflow="extendDomain"
               y1={domainMin}
@@ -1633,7 +1633,11 @@ function FundingSourceChart({
           )}
           <ReferenceLine
             ifOverflow="extendDomain"
-            stroke={hasVisibleDeficit ? '#b42318' : '#39464b'}
+            stroke={
+              hasVisibleDeficit
+                ? 'var(--color-error)'
+                : 'var(--color-base-content)'
+            }
             strokeDasharray="4 4"
             strokeWidth={hasVisibleDeficit ? 2 : 1}
             y={0}
@@ -1641,13 +1645,17 @@ function FundingSourceChart({
           <Bar
             barSize={14}
             dataKey="drawdownExpense"
-            fill="#9aa8a4"
+            fill="var(--color-base-content)"
             isAnimationActive={false}
             name="Drawdown"
             opacity={0.62}
           />
           <Line
-            activeDot={{ r: 4, stroke: '#ffffff', strokeWidth: 2 }}
+            activeDot={{
+              r: 4,
+              stroke: 'var(--color-base-100)',
+              strokeWidth: 2,
+            }}
             connectNulls={false}
             dataKey="remainingBalance"
             dot={false}
@@ -1660,17 +1668,22 @@ function FundingSourceChart({
           {hasVisibleDeficit && (
             <Line
               activeDot={{
-                fill: '#b42318',
+                fill: 'var(--color-error)',
                 r: 5,
-                stroke: '#ffffff',
+                stroke: 'var(--color-base-100)',
                 strokeWidth: 2,
               }}
               connectNulls={false}
               dataKey="deficitBalance"
-              dot={{ fill: '#d4574f', r: 4, stroke: '#ffffff', strokeWidth: 2 }}
+              dot={{
+                fill: 'var(--color-error)',
+                r: 4,
+                stroke: 'var(--color-base-100)',
+                strokeWidth: 2,
+              }}
               isAnimationActive={false}
               name="Deficit"
-              stroke="#d4574f"
+              stroke="var(--color-error)"
               strokeWidth={2.8}
               type="monotone"
             />
@@ -1779,27 +1792,27 @@ function Timeline({
   }
 
   return (
-    <section className="rounded-lg border border-[#d8ddd6] bg-white shadow-sm">
-      <div className="space-y-4 border-b border-[#d8ddd6] p-4">
+    <section className="rounded-lg border border-main-border bg-base-100 shadow-sm">
+      <div className="space-y-4 border-b border-main-border p-4">
         <div>
           <h2 className="text-lg font-semibold">Timeline</h2>
-          <p className="text-sm text-[#667277]">
+          <p className="text-sm text-base-content/70">
             Funding rows show remaining balances. Click a person’s month to edit
             or extend their allocations.
           </p>
         </div>
 
-        <div className="grid gap-3 rounded-lg border border-[#d8ddd6] bg-[#f8faf7] p-3 lg:grid-cols-[auto_1fr_auto] lg:items-center">
+        <div className="grid gap-3 rounded-lg border border-main-border bg-base-200 p-3 lg:grid-cols-[auto_1fr_auto] lg:items-center">
           <div
-            className="inline-grid grid-cols-4 rounded-md border border-[#cbd5d1] bg-white p-1 text-sm font-semibold"
+            className="inline-grid grid-cols-4 rounded-md border border-main-border bg-base-100 p-1 text-sm font-semibold"
             data-testid="timeline-window-control"
           >
             {timelineWindowModes.map((mode) => (
               <button
                 className={`rounded px-3 py-1.5 transition ${
                   windowMode === mode.id
-                    ? 'bg-[#2f7f79] text-white shadow-sm'
-                    : 'text-[#39464b] hover:bg-[#edf5f3]'
+                    ? 'bg-primary text-primary-content shadow-sm'
+                    : 'text-base-content hover:bg-primary/5'
                 }`}
                 data-testid={`timeline-mode-${mode.id}`}
                 key={mode.id}
@@ -1814,19 +1827,19 @@ function Timeline({
           <div className="min-w-0">
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
               <p
-                className="text-sm font-semibold text-[#39464b]"
+                className="text-sm font-semibold text-base-content"
                 data-testid="timeline-range-label"
               >
                 {timelineRangeLabel(windowMode, visibleMonths)}
               </p>
-              <p className="text-xs text-[#667277]">
+              <p className="text-xs text-base-content/70">
                 {windowMode === 'all'
                   ? 'Full frame'
                   : 'Click the strip to jump the window'}
               </p>
             </div>
             <div
-              className="grid h-7 overflow-hidden rounded-md border border-[#cbd5d1] bg-white"
+              className="grid h-7 overflow-hidden rounded-md border border-main-border bg-base-100"
               data-testid="timeline-mini-strip"
               style={miniStripStyle}
             >
@@ -1837,12 +1850,12 @@ function Timeline({
                 return (
                   <button
                     aria-label={`Jump to ${monthLabel(month)}`}
-                    className={`border-r border-[#edf0ec] transition last:border-r-0 ${
+                    className={`border-r border-main-border transition last:border-r-0 ${
                       selected
                         ? edge
-                          ? 'bg-[#2f7f79]'
-                          : 'bg-[#75aaa3]'
-                        : 'bg-[#eef1ed] hover:bg-[#dfe8e5]'
+                          ? 'bg-primary'
+                          : 'bg-primary/60'
+                        : 'bg-base-200 hover:bg-base-300'
                     }`}
                     key={month}
                     onClick={() => jumpToMiniStripMonth(index)}
@@ -1857,7 +1870,7 @@ function Timeline({
           <div className="flex items-center gap-2">
             <button
               aria-label="Previous month window"
-              className="inline-flex size-9 items-center justify-center rounded-md border border-[#cbd5d1] bg-white text-[#39464b] hover:border-[#8ca6a0] disabled:cursor-not-allowed disabled:opacity-40"
+              className="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary btn btn-outline btn-sm btn-square"
               data-testid="timeline-window-prev"
               disabled={!canShiftBackward}
               onClick={() =>
@@ -1871,7 +1884,7 @@ function Timeline({
             </button>
             <button
               aria-label="Next month window"
-              className="inline-flex size-9 items-center justify-center rounded-md border border-[#cbd5d1] bg-white text-[#39464b] hover:border-[#8ca6a0] disabled:cursor-not-allowed disabled:opacity-40"
+              className="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary btn btn-outline btn-sm btn-square"
               data-testid="timeline-window-next"
               disabled={!canShiftForward}
               onClick={() =>
@@ -1890,16 +1903,16 @@ function Timeline({
       <div className="overflow-x-auto">
         <div className="min-w-[1000px]">
           <div
-            className="grid border-b border-[#d8ddd6] bg-[#f2f4f0]"
+            className="grid border-b border-main-border bg-base-200"
             style={rowGridStyle}
           >
-            <div className="px-4 py-3 text-xs font-semibold uppercase text-[#667277]">
+            <div className="px-4 py-3 text-xs font-semibold uppercase text-base-content/70">
               Row
             </div>
             <div className="grid" style={monthGridStyle}>
               {visibleMonths.map((month) => (
                 <div
-                  className="min-w-0 border-l border-[#d8ddd6] px-1 py-3 text-center text-xs font-semibold text-[#667277]"
+                  className="min-w-0 border-l border-main-border px-1 py-3 text-center text-xs font-semibold text-base-content/70"
                   key={month}
                 >
                   <span className={isAllMode ? 'block truncate' : ''}>
@@ -1911,14 +1924,14 @@ function Timeline({
           </div>
 
           <div
-            className="grid bg-[#f8faf7] text-sm font-semibold text-[#39464b]"
+            className="grid bg-base-200 text-sm font-semibold text-base-content"
             style={rowGridStyle}
           >
-            <div className="flex items-center justify-between border-r border-[#d8ddd6] px-4 py-2">
+            <div className="flex items-center justify-between border-r border-main-border px-4 py-2">
               <span>Funding sources</span>
               <button
                 aria-label="Add funding source"
-                className="inline-flex items-center gap-1 rounded-md border border-[#cbd5d1] bg-white px-2 py-1 text-xs font-semibold text-[#2f7f79] hover:border-[#8ca6a0]"
+                className="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary inline-flex items-center gap-1 rounded-md border border-main-border bg-base-100 px-2 py-1 text-xs font-semibold text-primary hover:border-primary/50"
                 data-testid="open-add-funding-source"
                 onClick={onAddFundingSource}
                 type="button"
@@ -1931,12 +1944,12 @@ function Timeline({
           </div>
           {fundingSources.map((source) => (
             <div
-              className="grid border-t border-[#e2e6df]"
+              className="grid border-t border-main-border"
               data-testid={`timeline-source-${source.id}`}
               key={source.id}
               style={rowGridStyle}
             >
-              <div className="border-r border-[#d8ddd6] px-4 py-3">
+              <div className="border-r border-main-border px-4 py-3">
                 <div className="mb-2 flex items-center gap-2">
                   <span
                     className="size-3 rounded-full"
@@ -1944,7 +1957,7 @@ function Timeline({
                   />
                   <input
                     aria-label={`${source.name} name`}
-                    className="min-w-0 flex-1 rounded-md border border-[#cdd5d1] px-2 py-1 font-semibold"
+                    className="input input-sm min-w-0 w-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary min-w-0 flex-1 rounded-md border border-main-border px-2 py-1 font-semibold"
                     data-testid={`source-name-${source.id}`}
                     onChange={(event) =>
                       onSourceChange(source.id, { name: event.target.value })
@@ -1953,7 +1966,7 @@ function Timeline({
                   />
                   <button
                     aria-label={`Delete ${source.name}`}
-                    className="rounded-md p-1 text-[#8a3a33] hover:bg-[#fff1ef]"
+                    className="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary rounded-md p-1 text-error hover:bg-error/10"
                     onClick={() => onSourceDelete(source.id)}
                     type="button"
                   >
@@ -1961,7 +1974,7 @@ function Timeline({
                   </button>
                 </div>
                 {source.description && (
-                  <p className="mb-2 text-xs text-[#667277]">
+                  <p className="mb-2 text-xs text-base-content/70">
                     {source.description}
                   </p>
                 )}
@@ -2003,7 +2016,7 @@ function Timeline({
                   />
                 </div>
               </div>
-              <div className="min-w-0 border-l border-[#e2e6df] bg-white p-3">
+              <div className="min-w-0 border-l border-main-border bg-base-100 p-3">
                 <FundingSourceChart
                   fundingMonths={projection.fundingMonths}
                   source={source}
@@ -2014,14 +2027,14 @@ function Timeline({
           ))}
 
           <div
-            className="grid bg-[#f8faf7] text-sm font-semibold text-[#39464b]"
+            className="grid bg-base-200 text-sm font-semibold text-base-content"
             style={rowGridStyle}
           >
-            <div className="flex items-center justify-between border-r border-[#d8ddd6] px-4 py-2">
+            <div className="flex items-center justify-between border-r border-main-border px-4 py-2">
               <span>People</span>
               <button
                 aria-label="Add person"
-                className="inline-flex items-center gap-1 rounded-md border border-[#cbd5d1] bg-white px-2 py-1 text-xs font-semibold text-[#526fbf] hover:border-[#8ca6a0]"
+                className="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary inline-flex items-center gap-1 rounded-md border border-main-border bg-base-100 px-2 py-1 text-xs font-semibold text-info hover:border-primary/50"
                 data-testid="open-add-person"
                 onClick={onAddPerson}
                 type="button"
@@ -2034,16 +2047,16 @@ function Timeline({
           </div>
           {people.map((person) => (
             <div
-              className="grid border-t border-[#e2e6df]"
+              className="grid border-t border-main-border"
               data-testid={`timeline-person-${person.id}`}
               key={person.id}
               style={rowGridStyle}
             >
-              <div className="border-r border-[#d8ddd6] px-4 py-3">
+              <div className="border-r border-main-border px-4 py-3">
                 <div className="mb-2 flex items-center gap-2">
                   <input
                     aria-label={`${person.name} name`}
-                    className="min-w-0 flex-1 rounded-md border border-[#cdd5d1] px-2 py-1 font-semibold"
+                    className="input input-sm min-w-0 w-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary min-w-0 flex-1 rounded-md border border-main-border px-2 py-1 font-semibold"
                     data-testid={`person-name-${person.id}`}
                     onChange={(event) =>
                       onPersonChange(person.id, { name: event.target.value })
@@ -2052,7 +2065,7 @@ function Timeline({
                   />
                   <button
                     aria-label={`Delete ${person.name}`}
-                    className="rounded-md p-1 text-[#8a3a33] hover:bg-[#fff1ef]"
+                    className="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary rounded-md p-1 text-error hover:bg-error/10"
                     onClick={() => onPersonDelete(person.id)}
                     type="button"
                   >
@@ -2103,10 +2116,10 @@ function Timeline({
 
                   return (
                     <button
-                      className={`min-w-0 border-l border-[#e2e6df] p-1 text-left transition hover:bg-[#edf5f3] ${
+                      className={`min-w-0 border-l border-main-border p-1 text-left transition hover:bg-primary/5 ${
                         validation?.overAllocated || invalidInMonth
-                          ? 'bg-[#fff1ef]'
-                          : 'bg-white'
+                          ? 'bg-error/10'
+                          : 'bg-base-100'
                       }`}
                       data-testid={`person-cell-${person.id}-${month}`}
                       key={month}
@@ -2135,7 +2148,7 @@ function Timeline({
                       type="button"
                     >
                       <div
-                        className={`flex flex-col overflow-hidden rounded-md border border-[#d8ddd6] bg-[#f8faf7] ${
+                        className={`flex flex-col overflow-hidden rounded-md border border-main-border bg-base-200 ${
                           isAllMode ? 'h-14' : 'h-20'
                         }`}
                       >
@@ -2161,12 +2174,13 @@ function Timeline({
 
                           return (
                             <div
-                              className={`flex-none truncate px-1 text-[11px] font-semibold leading-5 text-white ${
+                              className={`flex-none truncate px-1 text-xs font-semibold leading-5 text-white ${
                                 active ? '' : 'line-through opacity-70'
                               }`}
                               key={`${allocation.fundingSourceId}-${allocation.month}`}
                               style={{
-                                backgroundColor: source?.color ?? '#a5ada9',
+                                backgroundColor:
+                                  source?.color ?? 'var(--color-base-300)',
                                 flexBasis: `${allocation.percent}%`,
                               }}
                               title={`${source?.name ?? 'Unknown'} ${allocation.percent}%`}
@@ -2177,7 +2191,7 @@ function Timeline({
                         })}
                         {unassignedPercent > 0 && (
                           <div
-                            className="flex-none truncate px-1 text-[11px] leading-5 text-[#8a9692]"
+                            className="flex-none truncate px-1 text-xs leading-5 text-base-content/50"
                             style={{ flexBasis: `${unassignedPercent}%` }}
                           >
                             {isAllMode ? '' : `${unassignedPercent}% open`}
@@ -2185,7 +2199,7 @@ function Timeline({
                         )}
                       </div>
                       {(validation?.overAllocated || invalidInMonth) && (
-                        <p className="mt-1 text-[11px] font-semibold text-[#b42318]">
+                        <p className="mt-1 text-xs font-semibold text-error">
                           {validation?.overAllocated
                             ? `${validation.totalPercent}%`
                             : 'Invalid'}

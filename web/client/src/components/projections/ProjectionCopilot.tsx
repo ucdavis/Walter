@@ -155,36 +155,42 @@ export default function ProjectionCopilot({
   const unavailable = status.isPending || !status.data?.configured;
   const stale = proposal !== null && proposal.basedOn !== currentKey;
   return (
-    <aside aria-label="Projection copilot" className="projection-copilot">
-      <div className="projection-copilot-heading">
-        <SparklesIcon aria-hidden="true" className="size-5 text-[#2f7f79]" />
+    <aside
+      aria-label="Projection copilot"
+      className="row-start-1 min-w-0 rounded-box border border-main-border bg-base-200 xl:row-auto"
+    >
+      <div className="flex items-center gap-2 border-b border-main-border px-5 py-4">
+        <SparklesIcon aria-hidden="true" className="size-5 text-primary" />
         <h2 className="font-semibold">Projection copilot</h2>
-        <span className="ml-auto text-xs text-[#667277]">Demo</span>
+        <span className="ml-auto text-xs text-base-content/70">Demo</span>
       </div>
       <section
         aria-labelledby="projection-insights-title"
-        className="border-b border-[#dce4de] p-4"
+        className="border-b border-main-border p-4"
       >
-        <h3 className="projection-eyebrow" id="projection-insights-title">
+        <h3
+          className="text-xs font-semibold uppercase tracking-wide text-base-content/70"
+          id="projection-insights-title"
+        >
           What stands out
         </h3>
         {shortfall && (
-          <div className="projection-insight mt-3 border-l-[#bd655a]">
+          <div className="border-s-4 ps-3 mt-3 border-s-error">
             <h4 className="text-sm font-semibold">
               {shortfall.name} runs short
             </h4>
-            <p className="mt-2 text-sm text-[#586861]">
+            <p className="mt-2 text-sm text-base-content/70">
               {shortfall.firstDeficitMonth &&
                 `First deficit in ${monthLabel(shortfall.firstDeficitMonth)}. `}
               The plan ends {projectionMoney(-shortfall.remainingBalance)} below
               zero.
             </p>
-            <p className="mt-2 text-xs text-[#667277]">
+            <p className="mt-2 text-xs text-base-content/70">
               Personnel averages {projectionMoney(shortfall.averageMonthlyCost)}
               /month across {shortfall.spendingMonthCount} funded months.
             </p>
             <button
-              className="projection-text-button mt-2"
+              className="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary text-left text-sm font-medium text-primary hover:underline mt-2"
               disabled={request.isPending || unavailable}
               onClick={() =>
                 ask(
@@ -198,14 +204,14 @@ export default function ProjectionCopilot({
           </div>
         )}
         {headroom && (
-          <div className="projection-insight mt-4 border-l-[#73a58c]">
+          <div className="border-s-4 ps-3 mt-4 border-s-success">
             <h4 className="text-sm font-semibold">{headroom.name} has room</h4>
-            <p className="mt-2 text-sm text-[#586861]">
+            <p className="mt-2 text-sm text-base-content/70">
               {projectionMoney(headroom.remainingBalance)} remains after the
               planned assignments.
             </p>
             <button
-              className="projection-text-button mt-2"
+              className="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary text-left text-sm font-medium text-primary hover:underline mt-2"
               disabled={request.isPending || unavailable}
               onClick={() =>
                 ask(
@@ -219,7 +225,7 @@ export default function ProjectionCopilot({
           </div>
         )}
         {!shortfall && !headroom && (
-          <p className="mt-3 text-sm text-[#667277]">
+          <p className="mt-3 text-sm text-base-content/70">
             Add funding and people to explore your projection.
           </p>
         )}
@@ -227,23 +233,23 @@ export default function ProjectionCopilot({
       <section aria-label="Ask the copilot" className="p-4">
         <h3 className="text-sm font-semibold">Ask or try a change</h3>
         {!messages.length && (
-          <p className="mt-2 text-sm text-[#667277]">
+          <p className="mt-2 text-sm text-base-content/70">
             Ask what is driving a balance, or try a different staffing plan.
           </p>
         )}
         <div
           aria-label="Copilot conversation"
           aria-live="polite"
-          className="projection-conversation"
+          className="max-h-90 overflow-y-auto wrap-anywhere xl:max-h-120"
           ref={conversation}
           role="log"
         >
           {messages.map((message, index) => (
             <div
-              className={`projection-message ${message.role === 'user' ? 'projection-user-message' : ''}`}
+              className={`mt-4 py-3 ${message.role === 'user' ? 'rounded-box bg-base-100 px-3' : ''}`}
               key={index}
             >
-              <p className="mb-1 text-xs font-semibold text-[#667277]">
+              <p className="mb-1 text-xs font-semibold text-base-content/70">
                 {message.role === 'user' ? 'You' : 'Copilot'}
               </p>
               <div className="whitespace-pre-wrap break-words text-sm leading-relaxed">
@@ -252,19 +258,19 @@ export default function ProjectionCopilot({
             </div>
           ))}
           {request.isPending && (
-            <p className="py-3 text-sm text-[#667277]" role="status">
+            <p className="py-3 text-sm text-base-content/70" role="status">
               Checking the projection…
             </p>
           )}
         </div>
         {request.error && (
           <div
-            className="my-3 rounded-md bg-[#fff1ec] p-3 text-sm text-[#9a392a]"
+            className="my-3 rounded-md bg-error/10 p-3 text-sm text-error"
             role="alert"
           >
             {request.error.message}
             <button
-              className="projection-text-button mt-2 block"
+              className="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary text-left text-sm font-medium text-primary hover:underline mt-2 block"
               onClick={() => {
                 const last = [...messages]
                   .reverse()
@@ -292,11 +298,11 @@ export default function ProjectionCopilot({
           />
         )}
         {undo && (
-          <div className="my-3 rounded-md border border-[#cbded4] bg-[#eff7f2] p-3 text-sm">
+          <div className="my-3 rounded-md border border-main-border bg-success/10 p-3 text-sm">
             <p className="font-medium">Applied: {undo.title}</p>
             {undo.available ? (
               <button
-                className="projection-text-button mt-2 inline-flex items-center gap-1"
+                className="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary text-left text-sm font-medium text-primary hover:underline mt-2 inline-flex items-center gap-1"
                 onClick={() => {
                   onUndo();
                   setProposal(null);
@@ -315,14 +321,14 @@ export default function ProjectionCopilot({
                 Undo change
               </button>
             ) : (
-              <p className="mt-1 text-xs text-[#667277]">
+              <p className="mt-1 text-xs text-base-content/70">
                 The plan was edited afterward, so Undo is no longer available.
               </p>
             )}
           </div>
         )}
         <form
-          className="projection-compose mt-4"
+          className="rounded-box border border-main-border bg-base-100 p-3 mt-4"
           onSubmit={(event) => {
             event.preventDefault();
             ask(question);
@@ -332,6 +338,7 @@ export default function ProjectionCopilot({
             Question about the projection
           </label>
           <textarea
+            className="textarea textarea-ghost mb-2 min-h-20 w-full resize-y text-base focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             disabled={unavailable}
             id="projection-question"
             maxLength={4000}
@@ -341,12 +348,12 @@ export default function ProjectionCopilot({
             value={question}
           />
           <div className="flex items-center justify-between gap-2">
-            <span className="text-xs text-[#667277]">
+            <span className="text-xs text-base-content/70">
               {plan.fundingSources.length} projects · {plan.people.length}{' '}
               people
             </span>
             <button
-              className="projection-primary-button"
+              className="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary btn btn-primary"
               disabled={!question.trim() || request.isPending || unavailable}
               type="submit"
             >
@@ -356,17 +363,17 @@ export default function ProjectionCopilot({
           </div>
         </form>
         {status.data && !status.data.configured && (
-          <p className="mt-3 text-xs text-[#9a392a]" role="status">
+          <p className="mt-3 text-xs text-error" role="status">
             OpenAI is not configured. Add OPENAI_API_KEY to
             web/client/.env.demo.local and restart the demo.
           </p>
         )}
         {status.error && (
-          <p className="mt-3 text-xs text-[#9a392a]" role="alert">
+          <p className="mt-3 text-xs text-error" role="alert">
             {status.error.message}
           </p>
         )}
-        <p className="mt-3 text-xs text-[#667277]">
+        <p className="mt-3 text-xs text-base-content/70">
           Proposals are temporary. Review the assumptions before applying.
         </p>
       </section>
