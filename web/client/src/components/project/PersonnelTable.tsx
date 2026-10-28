@@ -8,6 +8,10 @@ import {
 import { TableExportActions } from '@/components/TableExportActions.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import { formatDate } from '@/lib/date.ts';
+import {
+  FUNDING_INFO_UNAVAILABLE,
+  fundingInfoUnavailableNote,
+} from '@/lib/fundingInfo.ts';
 import type { PersonnelRecord } from '@/queries/personnel.ts';
 import { DataTable } from '@/shared/DataTable.tsx';
 import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
@@ -31,18 +35,26 @@ function safeText(value: string | null | undefined): string {
   return value ?? '';
 }
 
+/** One funding entry: a person's earn code lines on it, summed. */
 export interface AggregatedDistribution {
+  /** Share of the job charged here: sum of earn code share x distribution %. */
+  distributionPercent: number;
   fundingEndingSoon: boolean;
   monthlyFringe: number;
   monthlyRate: number;
   monthlyTotal: number;
+  /** First line of the entry; carries the project, task, and dates. */
   record: PersonnelRecord;
+  /** Unsplit entry: amounts are 0 and must not be shown. */
+  salaryUnknown: boolean;
 }
 
 export interface AggregatedPosition {
   distributions: AggregatedDistribution[];
   employeeId: string;
   fte: number;
+  /** No current entry; shown only with future entries and excluded from totals. */
+  isFutureOnly: boolean;
   jobCode: string;
   jobEffectiveDate: string | null;
   jobEndDate: string | null;
@@ -54,41 +66,97 @@ export interface AggregatedPosition {
   name: string;
   positionDescription: string;
   positionNumber: string;
+  /**
+   * Pay is split across earn codes but there is no UCP-310 data to split it,
+   * so no salary can be attributed to the project: amounts are 0, hidden, and
+   * left out of totals.
+   */
+  salaryUnknown: boolean;
+}
+
+function isSalaryUnknown(record: PersonnelRecord): boolean {
+  return record.earnCodeStatus === 'Unsplit';
+}
+
+function sum<T>(items: T[], pick: (item: T) => number): number {
+  return items.reduce((total, item) => total + pick(item), 0);
 }
 
 function aggregateDistribution(
-  record: PersonnelRecord
+  lines: PersonnelRecord[]
 ): AggregatedDistribution {
-  const monthlyRate =
-    record.monthlyRate * record.fte * (record.distributionPercent / 100);
-  const monthlyFringe = monthlyRate * record.compositeBenefitRate;
+  const [record] = lines;
+  const salaryUnknown = lines.some(isSalaryUnknown);
+  // Cognos lines carry their earn code's share of pay; other sources have none.
+  const share = (line: PersonnelRecord) =>
+    (line.earnCodeShare ?? 1) * (line.distributionPercent / 100);
+  const salary = (line: PersonnelRecord) =>
+    line.monthlyRate * line.fte * share(line);
+  const monthlyRate = salaryUnknown ? 0 : sum(lines, salary);
+  const monthlyFringe = salaryUnknown
+    ? 0
+    : sum(lines, (line) => salary(line) * line.compositeBenefitRate);
   return {
+    distributionPercent: salaryUnknown ? 0 : sum(lines, share) * 100,
     fundingEndingSoon: isEndingSoon(record.fundingEndDate),
     monthlyFringe,
     monthlyRate,
     monthlyTotal: monthlyRate + monthlyFringe,
     record,
+    salaryUnknown,
   };
+}
+
+/** Groups a position's lines by funding entry, so earn codes show as one total. */
+function aggregateDistributions(
+  records: PersonnelRecord[]
+): AggregatedDistribution[] {
+  const entries = new Map<string, PersonnelRecord[]>();
+  for (const record of records) {
+    const key = [
+      record.projectId,
+      record.task ?? '',
+      record.fundingEffectiveDate ?? '',
+      record.fundingEndDate ?? '',
+      record.isFuture,
+    ].join('|');
+    const lines = entries.get(key);
+    if (lines) {
+      lines.push(record);
+    } else {
+      entries.set(key, [record]);
+    }
+  }
+  return Array.from(entries.values(), aggregateDistribution);
 }
 
 export function aggregateByPosition(
   data: PersonnelRecord[]
 ): AggregatedPosition[] {
   const positionMap = new Map<string, AggregatedPosition>();
+  const positionLines = new Map<string, PersonnelRecord[]>();
+  // Current entries first so position-level figures come from the entry in effect.
+  const ordered = [
+    ...data.filter((r) => !r.isFuture),
+    ...data.filter((r) => r.isFuture),
+  ];
 
-  for (const record of data) {
+  for (const record of ordered) {
     const key = `${record.employeeId}-${record.positionNumber}`;
-    const existing = positionMap.get(key);
+    const lines = positionLines.get(key);
 
-    if (existing) {
-      existing.distributions.push(aggregateDistribution(record));
+    if (lines) {
+      lines.push(record);
     } else {
-      const monthlyRate = record.monthlyRate * record.fte;
+      positionLines.set(key, [record]);
+      const salaryUnknown = isSalaryUnknown(record);
+      const monthlyRate = salaryUnknown ? 0 : record.monthlyRate * record.fte;
       const monthlyFringe = monthlyRate * record.compositeBenefitRate;
       positionMap.set(key, {
-        distributions: [aggregateDistribution(record)],
+        distributions: [],
         employeeId: record.employeeId,
         fte: record.fte,
+        isFutureOnly: record.isFuture,
         jobCode: safeText(record.jobCode),
         jobEffectiveDate: record.jobEffectiveDate,
         jobEndDate: record.jobEndDate,
@@ -100,8 +168,15 @@ export function aggregateByPosition(
         name: safeText(record.name),
         positionDescription: safeText(record.positionDescription),
         positionNumber: safeText(record.positionNumber),
+        salaryUnknown,
       });
     }
+  }
+
+  for (const [key, position] of positionMap) {
+    position.distributions = aggregateDistributions(
+      positionLines.get(key) ?? []
+    );
   }
 
   return Array.from(positionMap.values());
@@ -196,9 +271,16 @@ function DistributionSubtable({
                   : '—'}
               </td>
               <td className="text-right text-sm">
-                {dist.record.distributionPercent}%
+                {dist.salaryUnknown ? (
+                  <span className="text-base-content/70">
+                    {FUNDING_INFO_UNAVAILABLE}
+                  </span>
+                ) : (
+                  `${formatPercent(dist.distributionPercent)}%`
+                )}
               </td>
               <td className="text-right text-sm">
+                {dist.record.isFuture && <FutureBadge />}
                 {formatDate(dist.record.fundingEffectiveDate, '')}
               </td>
               <td className="text-right text-sm">
@@ -222,13 +304,13 @@ function DistributionSubtable({
                 )}
               </td>
               <td className="text-right text-sm">
-                {formatCurrency(dist.monthlyRate)}
+                {formatAmount(dist.monthlyRate, dist.salaryUnknown)}
               </td>
               <td className="text-right text-sm">
-                {formatCurrency(dist.monthlyFringe)}
+                {formatAmount(dist.monthlyFringe, dist.salaryUnknown)}
               </td>
               <td className="text-right text-sm">
-                {formatCurrency(dist.monthlyTotal)}
+                {formatAmount(dist.monthlyTotal, dist.salaryUnknown)}
               </td>
             </tr>
           ))}
@@ -238,17 +320,35 @@ function DistributionSubtable({
   );
 }
 
+function formatPercent(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+/** Unsplit amounts are unknown, not zero: show a dash. */
+function formatAmount(value: number, salaryUnknown: boolean): string {
+  return salaryUnknown ? '—' : formatCurrency(value);
+}
+
+function FutureBadge() {
+  return (
+    <span className="badge badge-soft badge-info badge-sm mr-2">Future</span>
+  );
+}
+
 function getExportData(positions: AggregatedPosition[]) {
   return positions.flatMap((pos) =>
     pos.distributions.map((dist) => ({
-      distributionPercent: dist.record.distributionPercent,
+      distributionPercent: dist.salaryUnknown
+        ? null
+        : formatPercent(dist.distributionPercent),
       fte: pos.fte,
       fundingEffectiveDate: dist.record.fundingEffectiveDate ?? '',
       fundingEndDate: dist.record.fundingEndDate ?? '',
+      future: dist.record.isFuture ? 'Yes' : '',
       jobCode: pos.jobCode,
-      monthlyFringe: dist.monthlyFringe,
-      monthlyRate: dist.monthlyRate,
-      monthlyTotal: dist.monthlyTotal,
+      monthlyFringe: dist.salaryUnknown ? null : dist.monthlyFringe,
+      monthlyRate: dist.salaryUnknown ? null : dist.monthlyRate,
+      monthlyTotal: dist.salaryUnknown ? null : dist.monthlyTotal,
       name: pos.name,
       positionDescription: pos.positionDescription,
       positionNumber: pos.positionNumber,
@@ -280,6 +380,7 @@ const personnelCsvColumns = [
     header: 'End Date',
     key: 'fundingEndDate' as const,
   },
+  { header: 'Future', key: 'future' as const },
   {
     format: 'currency' as const,
     header: 'Monthly Salary (Distributed)',
@@ -301,21 +402,42 @@ interface PersonnelTableProps {
   data: PersonnelRecord[];
 }
 
-function isUnfilled(position: AggregatedPosition): boolean {
-  return !position.name;
+function sumCurrent(
+  rows: { original: AggregatedPosition }[],
+  pick: (position: AggregatedPosition) => number
+): number {
+  return rows.reduce(
+    (sum, row) =>
+      row.original.isFutureOnly || row.original.salaryUnknown
+        ? sum
+        : sum + pick(row.original),
+    0
+  );
+}
+
+/** Distinct people whose current salary can't be attributed (Unsplit). */
+function countSalaryUnknownPeople(positions: AggregatedPosition[]): number {
+  return new Set(
+    positions
+      .filter((p) => p.salaryUnknown && !p.isFutureOnly)
+      .map((p) => p.employeeId)
+  ).size;
 }
 
 export function PersonnelTable({ data }: PersonnelTableProps) {
-  const [showUnfilled, setShowUnfilled] = useState(false);
-  const allPositions = useMemo(() => aggregateByPosition(data), [data]);
-  const unfilledCount = useMemo(
-    () => allPositions.filter(isUnfilled).length,
-    [allPositions]
+  const [showFuture, setShowFuture] = useState(false);
+  // Unfilled positions (legacy sources only) stay hidden.
+  const filledData = useMemo(() => data.filter((r) => r.name), [data]);
+  const futureCount = useMemo(
+    () => filledData.filter((r) => r.isFuture).length,
+    [filledData]
   );
   const positions = useMemo(
     () =>
-      showUnfilled ? allPositions : allPositions.filter((p) => !isUnfilled(p)),
-    [allPositions, showUnfilled]
+      aggregateByPosition(
+        showFuture ? filledData : filledData.filter((r) => !r.isFuture)
+      ),
+    [filledData, showFuture]
   );
 
   const columns = useMemo(
@@ -330,6 +452,7 @@ export function PersonnelTable({ data }: PersonnelTableProps) {
                 <ChevronDownIcon className="w-4 h-4" />
               )
             ) : null}
+            {row.original.isFutureOnly && <FutureBadge />}
             {row.original.name
               ? `${row.original.name} (${row.original.employeeId}) - `
               : ''}
@@ -405,18 +528,13 @@ export function PersonnelTable({ data }: PersonnelTableProps) {
       columnHelper.accessor('monthlyRate', {
         cell: (info) => (
           <span className="flex justify-end w-full">
-            {formatCurrency(info.getValue())}
+            {formatAmount(info.getValue(), info.row.original.salaryUnknown)}
           </span>
         ),
         footer: ({ table }) => (
           <span className="flex justify-end w-full">
             {formatCurrency(
-              table
-                .getFilteredRowModel()
-                .rows.reduce(
-                  (sum, row) => sum + row.original.monthlyRate,
-                  0
-                )
+              sumCurrent(table.getFilteredRowModel().rows, (p) => p.monthlyRate)
             )}
           </span>
         ),
@@ -427,18 +545,16 @@ export function PersonnelTable({ data }: PersonnelTableProps) {
       columnHelper.accessor('monthlyFringe', {
         cell: (info) => (
           <span className="flex justify-end w-full">
-            {formatCurrency(info.getValue())}
+            {formatAmount(info.getValue(), info.row.original.salaryUnknown)}
           </span>
         ),
         footer: ({ table }) => (
           <span className="flex justify-end w-full">
             {formatCurrency(
-              table
-                .getFilteredRowModel()
-                .rows.reduce(
-                  (sum, row) => sum + row.original.monthlyFringe,
-                  0
-                )
+              sumCurrent(
+                table.getFilteredRowModel().rows,
+                (p) => p.monthlyFringe
+              )
             )}
           </span>
         ),
@@ -455,18 +571,16 @@ export function PersonnelTable({ data }: PersonnelTableProps) {
       columnHelper.accessor('monthlyTotal', {
         cell: (info) => (
           <span className="flex justify-end w-full">
-            {formatCurrency(info.getValue())}
+            {formatAmount(info.getValue(), info.row.original.salaryUnknown)}
           </span>
         ),
         footer: ({ table }) => (
           <span className="flex justify-end w-full">
             {formatCurrency(
-              table
-                .getFilteredRowModel()
-                .rows.reduce(
-                  (sum, row) => sum + row.original.monthlyTotal,
-                  0
-                )
+              sumCurrent(
+                table.getFilteredRowModel().rows,
+                (p) => p.monthlyTotal
+              )
             )}
           </span>
         ),
@@ -476,6 +590,11 @@ export function PersonnelTable({ data }: PersonnelTableProps) {
       }),
     ],
     []
+  );
+
+  const salaryUnknownPeople = useMemo(
+    () => countSalaryUnknownPeople(positions),
+    [positions]
   );
 
   if (positions.length === 0) {
@@ -506,13 +625,13 @@ export function PersonnelTable({ data }: PersonnelTableProps) {
         subComponentRowClassName="pivot-row"
         tableActions={(table) => (
           <div className="flex flex-wrap items-center gap-2">
-            {unfilledCount > 0 && (
+            {futureCount > 0 && (
               <button
-                className={`btn btn-sm${showUnfilled ? ' btn-active' : ''}`}
-                onClick={() => setShowUnfilled((current) => !current)}
+                className={`btn btn-sm${showFuture ? ' btn-active' : ''}`}
+                onClick={() => setShowFuture((current) => !current)}
                 type="button"
               >
-                {showUnfilled ? 'Hide' : 'Show'} unfilled ({unfilledCount})
+                {showFuture ? 'Hide' : 'Show'} future entries ({futureCount})
               </button>
             )}
             <TableExportActions
@@ -525,6 +644,11 @@ export function PersonnelTable({ data }: PersonnelTableProps) {
           </div>
         )}
       />
+      {salaryUnknownPeople > 0 && (
+        <p className="mt-2 text-sm text-warning">
+          {fundingInfoUnavailableNote('Totals', salaryUnknownPeople)}
+        </p>
+      )}
     </div>
   );
 }

@@ -27,7 +27,10 @@ import { isAwardExpired } from '@/lib/date.ts';
 import { buildFinjectorUrl } from '@/lib/finjector.ts';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { PresentationChartLineIcon } from '@heroicons/react/24/outline';
+import {
+  PresentationChartLineIcon,
+  TableCellsIcon,
+} from '@heroicons/react/24/outline';
 import ProjectAdditionalInfo from '@/components/project/ProjectAdditionalInfo.tsx';
 
 export const Route = createFileRoute(
@@ -101,13 +104,19 @@ function ProjectContent({
     summary.taskNum,
     summary.projectOwningOrgCode
   );
+  const showProjectBurndown =
+    !summary.isInternal &&
+    featureFlags?.burndownEnabled &&
+    !isAwardExpired(summary.awardEndDate);
+  const showProjectCosts = featureFlags?.projectCostsEnabled;
+  const showDemoProjections = import.meta.env.MODE === 'demo';
 
   return (
     <main className="flex-1 min-w-0">
       <section className="mt-8 mb-2">
         <h1 className="h1 max-w-4xl">{summary.displayName}</h1>
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-base text-base-content/80">
-          <span className="font-proxima-bold text-base-content">
+          <span className="font-sans font-bold text-base-content">
             {summary.projectNumber}
           </span>
           {!summary.isInternal && finjectorUrl && (
@@ -139,7 +148,7 @@ function ProjectContent({
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1">
           <span
-            className={`badge font-proxima-bold badge-sm ${summary.isInternal ? 'badge-accent' : 'badge-info'}`}
+            className={`badge font-sans font-bold badge-sm ${summary.isInternal ? 'badge-accent' : 'badge-info'}`}
           >
             {summary.isInternal ? 'Internal Project' : 'Sponsored Project'}
           </span>
@@ -168,21 +177,19 @@ function ProjectContent({
 
       <ProjectDetails
         actions={
-          <>
-            {import.meta.env.MODE === 'demo' && (
-              <Link
-                className="btn btn-lg"
-                params={{ iamId }}
-                to="/projections/$iamId"
-              >
-                <PresentationChartLineIcon className="h-4 w-4" />
-                Projections
-              </Link>
-            )}
-            {!summary.isInternal &&
-            featureFlags?.burndownEnabled &&
-            !isAwardExpired(summary.awardEndDate) ? (
-              <>
+          showDemoProjections || showProjectBurndown || showProjectCosts ? (
+            <>
+              {showDemoProjections && (
+                <Link
+                  className="btn btn-lg"
+                  params={{ iamId }}
+                  to="/projections/$iamId"
+                >
+                  <PresentationChartLineIcon className="h-4 w-4" />
+                  Projections
+                </Link>
+              )}
+              {showProjectBurndown ? (
                 <Link
                   className="btn btn-lg"
                   params={{ iamId, projectNumber: summary.projectNumber }}
@@ -191,9 +198,19 @@ function ProjectContent({
                   <PresentationChartLineIcon className="h-4 w-4" />
                   Project Burndown
                 </Link>
-              </>
-            ) : null}
-          </>
+              ) : null}
+              {showProjectCosts ? (
+                <Link
+                  className="btn btn-lg"
+                  params={{ iamId, projectNumber: summary.projectNumber }}
+                  to="/projectcosts/$iamId/$projectNumber"
+                >
+                  <TableCellsIcon className="h-4 w-4" />
+                  Project Costs
+                </Link>
+              ) : null}
+            </>
+          ) : null
         }
         summary={summary}
       />
@@ -226,7 +243,9 @@ function ProjectContent({
               <ExpenditureCategoryBreakdown
                 awardEndDate={summary.awardEndDate}
                 awardStartDate={summary.awardStartDate}
+                iamId={iamId}
                 progressEnabled={featureFlags?.expenditureProgressEnabled}
+                projectCostsEnabled={showProjectCosts}
                 projectNumber={summary.projectNumber}
                 records={projectRecords}
               />

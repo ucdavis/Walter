@@ -30,10 +30,12 @@ BEGIN
 
     INSERT INTO @AllowedTables ([TableName])
     VALUES
+        (N'EmployeeAccrualBalances'),
         (N'GlProjectMonthlyActuals'),
         (N'GlSummaryBalances'),
         (N'People'),
         (N'PositionBudgets'),
+        (N'PositionBudgetsCognos'),
         (N'PpmAwards'),
         (N'PpmPeople'),
         (N'PpmPersonRoles'),

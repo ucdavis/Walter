@@ -25,6 +25,10 @@ public sealed class ProjectProjectionCategory
 
     [JsonPropertyName("remainingNow")]
     public decimal RemainingNow { get; set; }
+
+    /// <summary>People left out of projected salaries because their pay is split across earn codes with no UCP-310 data (Unsplit). Project-level: the same on every row.</summary>
+    [JsonPropertyName("unsplitPeople")]
+    public int UnsplitPeople { get; set; }
 }
 
 /// <summary>

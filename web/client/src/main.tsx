@@ -42,9 +42,8 @@ async function renderApp() {
     const rootElement = document.getElementById('root')!;
     if (!rootElement.innerHTML) {
       if (!DemoControls) {
-        void bootstrapRum().catch((error: unknown) => {
-          // eslint-disable-next-line no-console -- Keep telemetry startup failures diagnosable.
-          console.error('Failed to bootstrap RUM', error);
+        void bootstrapRum({
+          routeTemplates: router.flatRoutes.map((route) => route.fullPath),
         });
       }
 

@@ -124,6 +124,10 @@ public sealed class DepartmentBalancesControllerTests
             CancellationToken ct = default)
             => Task.FromResult(_options);
 
+        public Task<IReadOnlyList<ProjectSearchRecord>> SearchProjectsAsync(
+            string fuzzyQuery, string exactProjectNumber, CancellationToken ct = default)
+            => throw new NotImplementedException();
+
         public Task<IReadOnlyList<SearchablePersonRecord>> SearchPeopleAsync(string query, int limit, CancellationToken ct = default)
             => Task.FromResult<IReadOnlyList<SearchablePersonRecord>>(Array.Empty<SearchablePersonRecord>());
 
@@ -154,7 +158,10 @@ public sealed class DepartmentBalancesControllerTests
         public Task<IReadOnlyList<GLTransactionRecord>> GetGLTransactionListingsAsync(IEnumerable<string> projectNumbers, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default)
             => throw new InvalidOperationException("Not needed for DepartmentBalancesController tests.");
 
-        public Task<ProjectProjectionResult> GetProjectProjectionAsync(string projectNumber, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default)
+        public Task<ProjectProjectionResult> GetProjectProjectionAsync(string projectNumber, int historyMonths, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default)
+            => throw new InvalidOperationException("Not needed for DepartmentBalancesController tests.");
+
+        public Task<IReadOnlyList<ProjectCostRecord>> GetProjectCostsAsync(string projectNumber, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default)
             => throw new InvalidOperationException("Not needed for DepartmentBalancesController tests.");
     }
 }

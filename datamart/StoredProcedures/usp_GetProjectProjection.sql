@@ -1,15 +1,18 @@
 -- Monthly per-expenditure-category budget burndown for a single project.
 -- Returns two result sets:
 --   1. Per-category budget header (budget, spent-to-date, committed, current remaining, award end date).
---   2. Period x category grid: 3 trailing actual months, the current (blended) month, and
---      projected months through the award end date (12 when the award end date is unknown),
---      each with actual spend, projected spend, and the running budget
+--   2. Period x category grid: @HistoryMonths (3, 6, or 12) trailing actual months, the current
+--      (blended) month, and projected months through the award end date (12 when the award
+--      end date is unknown), each with actual spend, projected spend, and the running budget
 --      remaining (burndown).
 -- All inputs are local: GL actuals from dbo.GlProjectMonthlyActuals, the natural-account ->
--- category crosswalk from dbo.ExpenditureTypeByAccount, personnel from dbo.PositionBudgets +
+-- category crosswalk from dbo.ExpenditureTypeByAccount, personnel from dbo.PositionBudgets
+-- (or dbo.PositionBudgetsCognos current entries when @PersonnelSource = 'Cognos') +
 -- dbo.CompositeBenefitRates, and the budget baseline from dbo.FacultyDeptPortfolio.
 CREATE PROCEDURE dbo.usp_GetProjectProjection
     @ProjectId       NVARCHAR(15),
+    @PersonnelSource NVARCHAR(20)  = NULL,
+    @HistoryMonths   INT           = 3,
     @ApplicationName NVARCHAR(128) = NULL,
     @ApplicationUser NVARCHAR(256) = NULL,
     @EmulatingUser   NVARCHAR(256) = NULL
@@ -23,9 +26,9 @@ BEGIN
     DECLARE @ErrorMsg       NVARCHAR(MAX);
     DECLARE @ParametersJSON NVARCHAR(MAX);
 
-    -- "Now" anchors the whole window: 3 trailing actual months, the current (blended) month,
-    -- and projected months through the award end date. Current-month non-personnel projection
-    -- is prorated by the days remaining in the month.
+    -- "Now" anchors the whole window: @HistoryMonths trailing actual months, the current
+    -- (blended) month, and projected months through the award end date. Current-month
+    -- non-personnel projection is prorated by the days remaining in the month.
     DECLARE @Today          DATE = CAST(GETDATE() AS DATE);
     DECLARE @CurrMonthStart DATE = DATEFROMPARTS(YEAR(@Today), MONTH(@Today), 1);
     DECLARE @DaysInMonth    INT  = DAY(EOMONTH(@Today));
@@ -38,11 +41,16 @@ BEGIN
         -- Build parameters JSON before validation so a bad project id is still logged by the CATCH.
         SET @ParametersJSON = (
             SELECT @ProjectId AS ProjectId,
+                   @PersonnelSource AS PersonnelSource,
+                   @HistoryMonths AS HistoryMonths,
                    COALESCE(@ApplicationName, APP_NAME()) AS ApplicationName
             FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
         );
 
         EXEC dbo.usp_ValidateAggieEnterpriseProject @ProjectId;
+
+        IF @HistoryMonths IS NULL OR @HistoryMonths NOT IN (3, 6, 12)
+            THROW 50000, 'HistoryMonths must be 3, 6, or 12.', 1;
 
         /* Horizon end: project through the award end date's month; when the award end date
            is unknown, fall back to 12 projected months. A past/current end date yields no
@@ -59,13 +67,14 @@ BEGIN
             END;
         IF @ProjMonths < 0 SET @ProjMonths = 0;
 
-        /* Period dimension: 3 trailing actual months (n = -3..-1), the blended current month
-           (n = 0), and projected months (n = 1..@ProjMonths). The tally reads from
-           sys.all_objects, which bounds even a corrupt far-future end date to a finite window. */
+        /* Period dimension: @HistoryMonths trailing actual months (n = -@HistoryMonths..-1), the
+           blended current month (n = 0), and projected months (n = 1..@ProjMonths). The tally
+           reads from sys.all_objects, which bounds even a corrupt far-future end date to a finite
+           window. */
         DROP TABLE IF EXISTS #periods;
         ;WITH n AS (
-            SELECT TOP (@ProjMonths + 4)
-                   ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) - 4 AS n
+            SELECT TOP (@ProjMonths + @HistoryMonths + 1)
+                   ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) - (@HistoryMonths + 1) AS n
             FROM sys.all_objects
         )
         SELECT
@@ -116,11 +125,22 @@ BEGIN
               UNION SELECT '02 - Fringe Benefits') c;
 
         /* Personnel projection for the current + future months. Mirrors the personnel table on
-           the page (usp_GetPositionBudgetsLocal): every funding line for the project, with no
+           the page (usp_GetPositionBudgetsLocal, or usp_GetPositionBudgetsCognos with future
+           entries hidden when @PersonnelSource = 'Cognos'): every funding line for the project, with no
            funding- or job-end-date gating, projected flat across the whole horizon (the award
            end date is returned separately for the chart to mark). Salary is this project's share:
            MonthlyRate (1.0-FTE rate) * Fte * DistributionPercent. Fringe loads CBR only (the CBR
-           is stored as a fraction); vacation accrual is excluded for now, matching the page. */
+           is stored as a fraction); vacation accrual is excluded for now, matching the page. Cognos lines carry
+           EarnCodeShare (share of pay for the line's earn code), applied here. Unsplit lines
+           (pay split across earn codes is unknown) are left out by status and counted in
+           @UnsplitPeople so the page can say the projection excludes them. */
+        DECLARE @UnsplitPeople INT = (
+            SELECT COUNT(DISTINCT EmployeeId)
+            FROM dbo.PositionBudgetsCognos
+            WHERE @PersonnelSource = N'Cognos' AND IsFuture = 0
+              AND ProjectId = @ProjectId AND EarnCodeStatus = N'Unsplit'
+        );
+
         DROP TABLE IF EXISTS #pers;
         SELECT p.MonthStart,
                SUM(pb.MonthlyRate * pb.Fte * pb.DistributionPercent / 100.0) AS Salary,
@@ -128,15 +148,29 @@ BEGIN
                    * COALESCE(cbr.CBR, 0)) AS Fringe
         INTO #pers
         FROM #periods p
-        JOIN dbo.PositionBudgets pb ON pb.ProjectId = @ProjectId
-        LEFT JOIN dbo.CompositeBenefitRates cbr ON cbr.JobCode = pb.JobCode
+        JOIN (
+            -- RateSet picks the dbo.CompositeBenefitRates set: the row's business unit for
+            -- Cognos (NULL = campus); campus for dbo.PositionBudgets until it carries one (#442).
+            SELECT ProjectId, MonthlyRate, Fte, DistributionPercent, JobCode,
+                   'DVCMP' AS RateSet
+            FROM dbo.PositionBudgets
+            WHERE ISNULL(@PersonnelSource, N'') <> N'Cognos'
+            UNION ALL
+            SELECT ProjectId, MonthlyRate * EarnCodeShare AS MonthlyRate, Fte, DistributionPercent, JobCode,
+                   COALESCE(BusinessUnit, 'DVCMP') AS RateSet
+            FROM dbo.PositionBudgetsCognos
+            WHERE @PersonnelSource = N'Cognos' AND IsFuture = 0
+              AND EarnCodeStatus <> N'Unsplit'
+        ) pb ON pb.ProjectId = @ProjectId
+        LEFT JOIN dbo.CompositeBenefitRates cbr ON cbr.RateSet = pb.RateSet AND cbr.JobCode = pb.JobCode
         WHERE p.Kind IN ('blended','projected')
         GROUP BY p.MonthStart;
 
         /* Trailing actual months to average over: from the first month with GL data through the
-           most recent actual month (0-3). A zero-spend month after activity has begun counts as a
-           real zero; months before the project started posting do not dilute the run-rate (e.g.
-           data two months ago and nothing last month still averages over 2 months). */
+           most recent actual month (0-@HistoryMonths). A zero-spend month after activity has
+           begun counts as a real zero; months before the project started posting do not dilute
+           the run-rate (e.g. data two months ago and nothing last month still averages over
+           2 months). */
         DECLARE @FirstActualMonth DATE = (
             SELECT MIN(p.MonthStart)
             FROM #gl g
@@ -184,13 +218,15 @@ BEGIN
         LEFT JOIN #pers pr ON pr.MonthStart = p.MonthStart
         LEFT JOIN #navg na ON na.ExpenditureCategory = c.ExpenditureCategory;
 
-        /* Result 1: per-category budget header. AwardEndDate is project-level (same on each row)
-           so the chart can draw the award-end reference line. */
+        /* Result 1: per-category budget header. AwardEndDate and UnsplitPeople are project-level
+           (same on each row): the chart draws the award-end reference line and notes how many
+           people the personnel projection leaves out. */
         SELECT b.ExpenditureCategory,
                CASE WHEN b.ExpenditureCategory IN ('01 - Salaries and Wages','02 - Fringe Benefits')
                     THEN 1 ELSE 0 END AS IsPersonnel,
                b.Budget, b.SpentToDate, b.Committed, b.RemainingNow,
-               b.AwardEndDate
+               b.AwardEndDate,
+               @UnsplitPeople AS UnsplitPeople
         FROM #budget b
         ORDER BY b.ExpenditureCategory;
 

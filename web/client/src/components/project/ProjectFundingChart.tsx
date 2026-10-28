@@ -177,13 +177,13 @@ export function ProjectFundingChart({ projects }: ProjectFundingChartProps) {
             {negativeEntries.map(([key, value], index) => (
               <p key={key}>
                 <span
-                  className="font-proxima-bold"
+                  className="font-sans font-bold"
                   style={{ color: getFundingColor(key, index) }}
                 >
                   {key}
                 </span>
                 :{' '}
-                <span className="font-proxima-bold text-error">
+                <span className="font-sans font-bold text-error">
                   {formatCurrency(value)}
                 </span>
               </p>

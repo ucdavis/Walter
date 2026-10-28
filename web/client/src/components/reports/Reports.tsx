@@ -77,7 +77,7 @@ export function Reports() {
                   <ArrowRightIcon className="mt-1 h-5 w-5 shrink-0 text-base-content/40 transition group-hover:translate-x-1 group-hover:text-primary" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-proxima-bold">{report.title}</h2>
+                  <h2 className="text-xl font-sans font-bold">{report.title}</h2>
                   <p className="mt-2 text-sm leading-6 text-base-content/70">
                     {report.description}
                   </p>

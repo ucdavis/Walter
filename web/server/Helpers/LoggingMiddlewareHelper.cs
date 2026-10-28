@@ -1,4 +1,3 @@
-using System;
 using System.Diagnostics;
 
 namespace server.Helpers;
@@ -6,7 +5,8 @@ namespace server.Helpers;
 public static class LoggingMiddlewareHelper
 {
     /// <summary>
-    /// Adds request context enrichment middleware that includes trace info, user info, and client details in log scope
+    /// Adds IAM IDs to request traces and includes request, user, and client details in log scopes.
+    /// Register after authentication and before authorization to include denied requests.
     /// </summary>
     public static void UseRequestContextLogging(this WebApplication app)
     {
@@ -21,21 +21,21 @@ public static class LoggingMiddlewareHelper
             // user info (stable identifiers when authenticated)
             var isAuthenticated = ctx.User.Identity?.IsAuthenticated == true;
 
-            Guid? userId = null;
+            string? iamId = null;
             string? userIdentifier = null;
 
             if (isAuthenticated)
             {
-                try
-                {
-                    userId = ctx.User.GetUserId();
-                }
-                catch
-                {
-                }
-
                 userIdentifier = ctx.User.GetUserIdentifier();
+                iamId = ctx.User.GetIamId();
+                if (string.IsNullOrWhiteSpace(iamId))
+                {
+                    iamId = null;
+                }
             }
+
+            // Read only authenticated claims; telemetry must not trigger identity lookups.
+            activity?.SetTag("user.id", iamId);
 
             // Track actual user when emulating
             var emulatingUser = ctx.User.FindFirst("emulating_user")?.Value;
@@ -49,7 +49,7 @@ public static class LoggingMiddlewareHelper
             // Make these available to all logs in this request
             using (app.Logger.BeginScope(new Dictionary<string, object?>
             {
-                ["user.id"] = userId,
+                ["user.id"] = iamId,
                 ["user.identifier"] = userIdentifier,
                 ["user.emulating"] = emulatingUser,
                 ["request.id"] = requestId,

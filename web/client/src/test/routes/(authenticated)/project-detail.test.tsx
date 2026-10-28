@@ -54,11 +54,13 @@ const createProject = (
   programDesc: 'Program',
   projectBurdenCostRate: null,
   projectBurdenScheduleBase: null,
+  projectEndDate: '2099-12-31',
   projectFund: null,
   projectName: 'Test Project',
   projectNumber: 'P1',
   projectOwningOrg: 'ORG001',
   projectOwningOrgCode: 'ORG001',
+  projectStartDate: '2024-01-01',
   projectStatusCode: 'ACTIVE',
   projectType: 'Sponsored',
   purposeDesc: 'Research',
@@ -304,7 +306,7 @@ describe('project detail page', () => {
     }
   });
 
-  it('hides Award Information and date fields for internal projects', async () => {
+  it('hides Award Information but shows project dates for internal projects', async () => {
     const projects = [
       createProject({
         awardEndDate: null,
@@ -322,8 +324,8 @@ describe('project detail page', () => {
     try {
       await screen.findByText('Project Manager');
       expect(screen.queryByText('Award Information')).not.toBeInTheDocument();
-      expect(screen.queryByText('Project Start')).not.toBeInTheDocument();
-      expect(screen.queryByText('Project End')).not.toBeInTheDocument();
+      expect(screen.getByText('Project Start')).toBeInTheDocument();
+      expect(screen.getByText('Project End')).toBeInTheDocument();
     } finally {
       cleanup();
     }
@@ -513,7 +515,7 @@ describe('project detail page', () => {
     ],
   };
 
-  it('shows the merged expenditure progress and burndown link when projections are enabled', async () => {
+  it('shows project action links when their features are enabled', async () => {
     const projects = [createProject({ pmEmployeeId: '2000' })];
     setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);
 
@@ -525,6 +527,9 @@ describe('project detail page', () => {
       const burndownLink = await screen.findByRole('link', {
         name: 'Project Burndown',
       });
+      const projectCostsLink = screen.getByRole('link', {
+        name: 'Project Costs',
+      });
       const detailsSection = screen
         .getByText('Project Start')
         .closest('section') as HTMLElement;
@@ -534,6 +539,11 @@ describe('project detail page', () => {
           name: 'Project Burndown',
         })
       ).toBe(burndownLink);
+      expect(
+        within(detailsSection).getByRole('link', {
+          name: 'Project Costs',
+        })
+      ).toBe(projectCostsLink);
       expect(
         screen.queryByRole('link', { name: 'Expenditure Progress' })
       ).not.toBeInTheDocument();
@@ -558,10 +568,106 @@ describe('project detail page', () => {
       expect(
         screen.queryByTestId('project-burndown-chart')
       ).not.toBeInTheDocument();
-      expect(burndownLink).toHaveAttribute(
+      expect(burndownLink).toHaveAttribute('href', '/projectburndown/1000/P1');
+      expect(projectCostsLink).toHaveAttribute('href', '/projectcosts/1000/P1');
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('links expense values to their project-cost category filter', async () => {
+    const user = userEvent.setup();
+    const projects = [
+      createProject({ expenditureCategoryName: '07 - Travel' }),
+    ];
+    setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);
+    server.use(
+      http.get('/api/project/costs/:projectNumber', () => HttpResponse.json([]))
+    );
+
+    const { cleanup } = renderRoute({
+      initialPath: '/projects/1000/P1',
+    });
+
+    try {
+      const categoryExpenseLink = await screen.findByRole('link', {
+        name: 'View project costs for 07 - Travel',
+      });
+      const totalExpensesLink = screen.getByRole('link', {
+        name: 'View all project costs',
+      });
+
+      expect(categoryExpenseLink).toHaveAttribute(
         'href',
-        '/projectburndown/1000/P1'
+        '/projectcosts/1000/P1?category=07+-+Travel'
       );
+      expect(totalExpensesLink).toHaveAttribute(
+        'href',
+        '/projectcosts/1000/P1'
+      );
+
+      await user.click(categoryExpenseLink);
+
+      const projectCostsTable = await screen.findByTestId(
+        'project-costs-table'
+      );
+      expect(
+        within(projectCostsTable).getByRole('button', {
+          name: '07 - Travel',
+        })
+      ).toHaveAttribute('aria-pressed', 'true');
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('links every expenditure category, not just the original five', async () => {
+    const user = userEvent.setup();
+    const projects = [
+      createProject({
+        expenditureCategoryName: '04 - Equipment and Facilities',
+      }),
+    ];
+    setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);
+    server.use(
+      http.get('/api/project/costs/:projectNumber', () =>
+        HttpResponse.json([
+          {
+            accountingPeriod: 'Sep-26',
+            burdenedCost: 5000,
+            documentEntry: 'Supplier Invoice',
+            expenditureCategory: '04 - Equipment and Facilities',
+            expenditureType: '540000 - Equipment',
+            transactionNumber: 1,
+          },
+        ])
+      )
+    );
+
+    const { cleanup } = renderRoute({
+      initialPath: '/projects/1000/P1',
+    });
+
+    try {
+      const categoryExpenseLink = await screen.findByRole('link', {
+        name: 'View project costs for 04 - Equipment and Facilities',
+      });
+
+      expect(categoryExpenseLink).toHaveAttribute(
+        'href',
+        '/projectcosts/1000/P1?category=04+-+Equipment+and+Facilities'
+      );
+
+      await user.click(categoryExpenseLink);
+
+      const projectCostsTable = await screen.findByTestId(
+        'project-costs-table'
+      );
+      expect(
+        within(projectCostsTable).getByRole('button', {
+          name: '04 - Equipment and Facilities',
+        })
+      ).toHaveAttribute('aria-pressed', 'true');
     } finally {
       cleanup();
     }
@@ -578,6 +684,9 @@ describe('project detail page', () => {
       expect(
         screen.queryByRole('link', { name: /Project Burndown/ })
       ).not.toBeInTheDocument();
+      expect(
+        screen.getByRole('link', { name: 'Project Costs' })
+      ).toHaveAttribute('href', '/projectcosts/1000/P1');
     } finally {
       cleanup();
     }
@@ -706,12 +815,18 @@ describe('project detail page', () => {
       expect(
         screen.getByRole('heading', { name: 'Non-Personnel: Supplies' })
       ).toBeInTheDocument();
+
+      await user.click(nonPersonnelTab);
+      expect(suppliesTab).toHaveAttribute('aria-selected', 'false');
+      expect(
+        screen.getByRole('heading', { name: 'Non-Personnel' })
+      ).toBeInTheDocument();
     } finally {
       cleanup();
     }
   });
 
-  it('hides visualization actions for internal projects', async () => {
+  it('shows project costs but hides burndown for internal projects', async () => {
     const projects = [
       createProject({
         awardEndDate: null,
@@ -742,6 +857,9 @@ describe('project detail page', () => {
         })
       ).not.toBeInTheDocument();
       expect(
+        screen.getByRole('link', { name: 'Project Costs' })
+      ).toHaveAttribute('href', '/projectcosts/1000/P1');
+      expect(
         screen.queryByRole('link', { name: 'Details' })
       ).not.toBeInTheDocument();
       expect(screen.queryByText('Project Burndown')).not.toBeInTheDocument();
@@ -751,7 +869,12 @@ describe('project detail page', () => {
   });
 
   it('hides visualization actions when the feature flags are off', async () => {
-    const projects = [createProject({ pmEmployeeId: '2000' })];
+    const projects = [
+      createProject({
+        expenditureCategoryName: '07 - Travel',
+        pmEmployeeId: '2000',
+      }),
+    ];
     setupHandlers(
       { employeeId: '1000', name: 'PI User' },
       projects,
@@ -762,6 +885,7 @@ describe('project detail page', () => {
         HttpResponse.json({
           burndownEnabled: false,
           expenditureProgressEnabled: false,
+          projectCostsEnabled: false,
         })
       )
     );
@@ -779,6 +903,17 @@ describe('project detail page', () => {
         screen.queryByRole('link', {
           name: 'Project Burndown',
         })
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('link', { name: 'Project Costs' })
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('link', {
+          name: 'View project costs for 07 - Travel',
+        })
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('link', { name: 'View all project costs' })
       ).not.toBeInTheDocument();
       expect(screen.queryByText('Project Burndown')).not.toBeInTheDocument();
     } finally {

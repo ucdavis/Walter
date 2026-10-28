@@ -42,9 +42,11 @@ const createSummary = (
   primarySponsorName: 'National Science Foundation',
   projectBurdenCostRate: '0.265',
   projectBurdenScheduleBase: 'MTDC-Rev 001',
+  projectEndDate: '2027-06-30',
   projectFund: null,
   projectNumber: 'K30ABC123',
   projectOwningOrgCode: null,
+  projectStartDate: '2023-07-01',
   projectStatusCode: 'ACTIVE',
   sponsorAwardNumber: 'NSF-2024-001',
   taskNum: null,
@@ -112,8 +114,10 @@ describe('ProjectDetails', () => {
     expect(screen.queryByText('All Expenses')).not.toBeInTheDocument();
     expect(screen.getByText('Project Start')).toBeInTheDocument();
     expect(screen.getByText('Project End')).toBeInTheDocument();
-    expect(screen.getByText('01.01.2024')).toBeInTheDocument();
-    expect(screen.getByText('12.31.2026')).toBeInTheDocument();
+    expect(screen.getByText('07.01.2023')).toBeInTheDocument();
+    expect(screen.getByText('06.30.2027')).toBeInTheDocument();
+    expect(screen.queryByText('01.01.2024')).not.toBeInTheDocument();
+    expect(screen.queryByText('12.31.2026')).not.toBeInTheDocument();
     expect(
       screen
         .getByText('Project Start')

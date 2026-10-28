@@ -9,7 +9,10 @@ import { summarizeProjectByNumber } from '@/lib/projectSummary.ts';
 import { featureFlagsQueryOptions } from '@/queries/featureFlags.ts';
 import { projectsDetailQueryOptions } from '@/queries/project.ts';
 import { useUser } from '@/shared/auth/UserContext.tsx';
-import { ClipboardDocumentListIcon } from '@heroicons/react/24/outline';
+import {
+  ClipboardDocumentListIcon,
+  TableCellsIcon,
+} from '@heroicons/react/24/outline';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import {
   createFileRoute,
@@ -79,6 +82,16 @@ function RouteComponent() {
               <ClipboardDocumentListIcon className="h-4 w-4" />
               Project Details
             </Link>
+            {featureFlags.projectCostsEnabled ? (
+              <Link
+                className="btn btn-sm"
+                params={{ iamId, projectNumber: summary.projectNumber }}
+                to="/projectcosts/$iamId/$projectNumber"
+              >
+                <TableCellsIcon className="h-4 w-4" />
+                Project Costs
+              </Link>
+            ) : null}
           </div>
 
           <h1 className="h1">Project Burndown</h1>

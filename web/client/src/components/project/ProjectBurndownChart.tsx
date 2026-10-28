@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import {
   CartesianGrid,
   Line,
@@ -29,7 +30,11 @@ import {
   type ProjectionSeries,
 } from '@/lib/projectProjection.ts';
 import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
-import { useProjectProjectionQuery } from '@/queries/projectProjection.ts';
+import {
+  type ProjectionHistoryMonths,
+  projectProjectionQueryOptions,
+} from '@/queries/projectProjection.ts';
+import { fundingInfoUnavailableNote } from '@/lib/fundingInfo.ts';
 import { tooltipDefinitions } from '@/shared/tooltips.ts';
 
 const GRID_COLOR = 'var(--color-main-border)';
@@ -63,6 +68,14 @@ const TIMELINE_OPTIONS = [
   { label: '18 months', value: '18-months' },
   { label: '24 months', value: '24-months' },
 ] as const;
+const HISTORY_OPTIONS: readonly {
+  label: string;
+  value: ProjectionHistoryMonths;
+}[] = [
+  { label: '3 months', value: 3 },
+  { label: '6 months', value: 6 },
+  { label: '12 months', value: 12 },
+];
 
 type ChartRow = { label: string; month: string } & Record<
   string,
@@ -109,9 +122,9 @@ function formatMonthLabel(index: number) {
   return `${MONTH_LABELS[month]}-${String(year).slice(-2)}`;
 }
 
-export function getAwardEndMonthIndex(awardEndDate: string | null) {
-  const awardEndMonth = getProjectMonth(awardEndDate);
-  return awardEndMonth ? getMonthIndex(awardEndMonth) : null;
+export function getDateMonthIndex(date: string | null) {
+  const month = getProjectMonth(date);
+  return month ? getMonthIndex(month) : null;
 }
 
 // Each series renders as two lines sharing a color: a solid one over the
@@ -172,12 +185,26 @@ export function buildChartRows(
   });
 }
 
-export function getRollingStartMonthIndex(referenceMonthIndex: number | null) {
+// History never reaches back before the award start month.
+export function getRollingStartMonthIndex(
+  referenceMonthIndex: number | null,
+  historyMonths: ProjectionHistoryMonths = 3,
+  awardStartMonthIndex: number | null = null
+) {
   if (referenceMonthIndex === null) {
     return null;
   }
 
-  return referenceMonthIndex - 3;
+  const historyStartMonthIndex = referenceMonthIndex - historyMonths;
+
+  if (
+    awardStartMonthIndex === null ||
+    awardStartMonthIndex > referenceMonthIndex
+  ) {
+    return historyStartMonthIndex;
+  }
+
+  return Math.max(historyStartMonthIndex, awardStartMonthIndex);
 }
 
 function getTimelineMonthCount(timeline: TimelineOption) {
@@ -391,7 +418,7 @@ function BurndownTooltip({
 
   return (
     <div className="rounded-md border border-main-border bg-base-100 p-4 text-sm shadow-lg">
-      <p className="font-proxima-bold text-base mb-2">{row.label}</p>
+      <p className="font-sans font-bold text-base mb-2">{row.label}</p>
       <dl className="space-y-2">
         {visibleSeries.map(({ color, key }) => {
           const remaining = (row[`${key}::dashed`] ?? row[`${key}::solid`]) as
@@ -406,7 +433,7 @@ function BurndownTooltip({
 
           return (
             <div key={key}>
-              <dt className="font-proxima-bold flex items-center gap-2">
+              <dt className="font-sans font-bold flex items-center gap-2">
                 <span
                   className="inline-block h-3 w-3 rounded-sm"
                   style={{ backgroundColor: color }}
@@ -429,7 +456,7 @@ function BurndownTooltip({
 
       {categorySpend.length > 0 && (
         <div className="mt-3 border-t border-main-border pt-3">
-          <p className="font-proxima-bold mb-2">Expenses by Category</p>
+          <p className="font-sans font-bold mb-2">Expenses by Category</p>
           <div className="space-y-1">
             {categorySpend.map(({ expenditureCategory, spend }) => (
               <div
@@ -465,6 +492,86 @@ function BurndownTooltip({
   );
 }
 
+interface BurndownSelectProps<T extends number | string> {
+  id: string;
+  label: string;
+  onChange: (value: T) => void;
+  options: readonly { label: string; value: T }[];
+  value: T;
+}
+
+function BurndownSelect<T extends number | string>({
+  id,
+  label,
+  onChange,
+  options,
+  value,
+}: BurndownSelectProps<T>) {
+  const [isOpen, setIsOpen] = useState(false);
+  const selectedLabel =
+    options.find((option) => option.value === value)?.label ??
+    options[0]?.label;
+
+  return (
+    <div
+      className="relative"
+      onBlur={(event) => {
+        const nextFocus = event.relatedTarget as Node | null;
+        if (!event.currentTarget.contains(nextFocus)) {
+          setIsOpen(false);
+        }
+      }}
+    >
+      <span className="stat-label block" id={`${id}-label`}>
+        {label}
+      </span>
+      <button
+        aria-controls={`${id}-menu`}
+        aria-expanded={isOpen}
+        aria-haspopup="listbox"
+        aria-labelledby={`${id}-label ${id}-trigger`}
+        className="inline-flex items-center gap-1 text-base font-normal"
+        id={`${id}-trigger`}
+        onClick={() => setIsOpen((current) => !current)}
+        role="combobox"
+        type="button"
+      >
+        {selectedLabel}
+        <ChevronDownIcon className="h-4 w-4" />
+      </button>
+      {isOpen ? (
+        <div
+          aria-labelledby={`${id}-label`}
+          className="absolute left-0 top-full z-100 mt-1 min-w-36 rounded-md border border-main-border bg-base-100 p-1 shadow-lg"
+          id={`${id}-menu`}
+          role="listbox"
+        >
+          {options.map((option) => (
+            <button
+              aria-selected={option.value === value}
+              className={`block w-full rounded px-3 py-2 text-left text-sm ${
+                option.value === value
+                  ? 'bg-base-200 font-semibold'
+                  : 'hover:bg-base-200'
+              }`}
+              key={option.value}
+              onClick={() => {
+                onChange(option.value);
+                setIsOpen(false);
+              }}
+              onMouseDown={(event) => event.preventDefault()}
+              role="option"
+              type="button"
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 interface ProjectBurndownSectionProps {
   awardEndDate: string | null;
   awardStartDate: string | null;
@@ -473,9 +580,20 @@ interface ProjectBurndownSectionProps {
 
 export function ProjectBurndownSection({
   awardEndDate,
+  awardStartDate,
   projectNumber,
 }: ProjectBurndownSectionProps) {
-  const projectionQuery = useProjectProjectionQuery(projectNumber);
+  const [selectedHistoryMonths, setSelectedHistoryMonths] =
+    useState<ProjectionHistoryMonths>(3);
+  // Keep the current chart on screen while a different history window loads.
+  const projectionQuery = useQuery({
+    ...projectProjectionQueryOptions(
+      projectNumber,
+      true,
+      selectedHistoryMonths
+    ),
+    placeholderData: keepPreviousData,
+  });
   const result = projectionQuery.data;
   const series = useMemo(
     () => (result ? buildProjectionSeries(result) : []),
@@ -491,9 +609,8 @@ export function ProjectBurndownSection({
   );
   const [selectedTimeline, setSelectedTimeline] =
     useState<TimelineOption>('project-end');
-  const [isTimelineMenuOpen, setIsTimelineMenuOpen] = useState(false);
   const awardEndMonthIndex = useMemo(
-    () => getAwardEndMonthIndex(awardEndDate),
+    () => getDateMonthIndex(awardEndDate),
     [awardEndDate]
   );
   const awardEndMonth = useMemo(
@@ -512,9 +629,22 @@ export function ProjectBurndownSection({
         : null,
     [projectionTransitionMonth]
   );
+  const awardStartMonthIndex = useMemo(
+    () => getDateMonthIndex(awardStartDate),
+    [awardStartDate]
+  );
   const rollingStartMonthIndex = useMemo(
-    () => getRollingStartMonthIndex(projectionTransitionMonthIndex),
-    [projectionTransitionMonthIndex]
+    () =>
+      getRollingStartMonthIndex(
+        projectionTransitionMonthIndex,
+        selectedHistoryMonths,
+        awardStartMonthIndex
+      ),
+    [
+      awardStartMonthIndex,
+      projectionTransitionMonthIndex,
+      selectedHistoryMonths,
+    ]
   );
   const timelineEndMonthIndex = useMemo(
     () =>
@@ -615,10 +745,8 @@ export function ProjectBurndownSection({
   const projectEndForMarker = result
     ? getProjectionStats(result, awardEndDate).projectedEnd
     : 0;
-  const selectedTimelineLabel =
-    TIMELINE_OPTIONS.find((option) => option.value === selectedTimeline)
-      ?.label ?? TIMELINE_OPTIONS[0].label;
   const useDenseXAxisTicks = selectedTimeline === '24-months';
+  const unsplitPeople = result?.categories[0]?.unsplitPeople ?? 0;
 
   return (
     <>
@@ -626,10 +754,15 @@ export function ProjectBurndownSection({
         <div className="mb-6 max-w-3xl">
           <p>{tooltipDefinitions.projectBurndown}</p>
           <p className="mt-2 text-sm text-muted">
-            Indirect Costs (F&amp;A) are assessed based on the approved award. If
-            spending varies from approved award, ICR may be affected, please
+            Indirect Costs (F&amp;A) are assessed based on the approved award.
+            If spending varies from approved award, ICR may be affected, please
             see your fiscal officer for specifics.
           </p>
+          {unsplitPeople > 0 && (
+            <p className="mt-2 text-sm text-warning">
+              {fundingInfoUnavailableNote('Projected salaries', unsplitPeople)}
+            </p>
+          )}
         </div>
 
         {projectionQuery.isPending && (
@@ -646,64 +779,21 @@ export function ProjectBurndownSection({
           <div>
             {stats && (
               <div className="relative z-50 mb-6 text-sm">
-                <div
-                  className="relative z-[100] mb-4"
-                  onBlur={(event) => {
-                    const nextFocus = event.relatedTarget as Node | null;
-                    if (!event.currentTarget.contains(nextFocus)) {
-                      setIsTimelineMenuOpen(false);
-                    }
-                  }}
-                >
-                  <span
-                    className="stat-label block"
-                    id="burndown-timeline-label"
-                  >
-                    Timeline
-                  </span>
-                  <button
-                    aria-controls="burndown-timeline-menu"
-                    aria-expanded={isTimelineMenuOpen}
-                    aria-haspopup="listbox"
-                    aria-labelledby="burndown-timeline-label burndown-timeline-trigger"
-                    className="inline-flex items-center gap-1 text-base font-normal"
-                    id="burndown-timeline-trigger"
-                    onClick={() => setIsTimelineMenuOpen((current) => !current)}
-                    role="combobox"
-                    type="button"
-                  >
-                    {selectedTimelineLabel}
-                    <ChevronDownIcon className="h-4 w-4" />
-                  </button>
-                  {isTimelineMenuOpen ? (
-                    <div
-                      aria-labelledby="burndown-timeline-label"
-                      className="absolute left-0 top-full z-100 mt-1 min-w-36 rounded-md border border-main-border bg-base-100 p-1 shadow-lg"
-                      id="burndown-timeline-menu"
-                      role="listbox"
-                    >
-                      {TIMELINE_OPTIONS.map((option) => (
-                        <button
-                          aria-selected={option.value === selectedTimeline}
-                          className={`block w-full rounded px-3 py-2 text-left text-sm ${
-                            option.value === selectedTimeline
-                              ? 'bg-base-200 font-semibold'
-                              : 'hover:bg-base-200'
-                          }`}
-                          key={option.value}
-                          onClick={() => {
-                            setSelectedTimeline(option.value);
-                            setIsTimelineMenuOpen(false);
-                          }}
-                          onMouseDown={(event) => event.preventDefault()}
-                          role="option"
-                          type="button"
-                        >
-                          {option.label}
-                        </button>
-                      ))}
-                    </div>
-                  ) : null}
+                <div className="relative z-[100] mb-4 flex flex-wrap gap-10">
+                  <BurndownSelect
+                    id="burndown-timeline"
+                    label="Timeline"
+                    onChange={setSelectedTimeline}
+                    options={TIMELINE_OPTIONS}
+                    value={selectedTimeline}
+                  />
+                  <BurndownSelect
+                    id="burndown-history"
+                    label="History"
+                    onChange={setSelectedHistoryMonths}
+                    options={HISTORY_OPTIONS}
+                    value={selectedHistoryMonths}
+                  />
                 </div>
                 <div className="flex flex-wrap gap-10">
                   <div className="relative z-50">
@@ -736,7 +826,7 @@ export function ProjectBurndownSection({
               </div>
             )}
 
-            <h3 className="font-proxima-bold mb-2 text-base">{chartTitle}</h3>
+            <h3 className="font-sans font-bold mb-2 text-base">{chartTitle}</h3>
 
             <div className="h-80" data-testid="project-burndown-chart">
               <ResponsiveContainer height="100%" width="100%">
@@ -875,9 +965,7 @@ export function ProjectBurndownSection({
                     key={entry.key}
                     onClick={() => {
                       setSelectedKey(entry.key);
-                      if (entry.key !== NON_PERSONNEL_SERIES) {
-                        setSelectedNonPersonnelCategory(null);
-                      }
+                      setSelectedNonPersonnelCategory(null);
                     }}
                     role="tab"
                     type="button"

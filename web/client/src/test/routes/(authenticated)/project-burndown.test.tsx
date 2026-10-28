@@ -52,11 +52,13 @@ const createProject = (
   programDesc: 'Program',
   projectBurdenCostRate: null,
   projectBurdenScheduleBase: null,
+  projectEndDate: null,
   projectFund: null,
   projectName: 'Test Project',
   projectNumber: 'P1',
   projectOwningOrg: 'ORG001',
   projectOwningOrgCode: 'ORG001',
+  projectStartDate: null,
   projectStatusCode: 'ACTIVE',
   projectType: 'Sponsored',
   purposeDesc: 'Research',
@@ -96,13 +98,12 @@ const setupHandlers = (
     http.get('/api/project/projection/:projectNumber', () =>
       HttpResponse.json(projection)
     ),
-    http.get('/api/project/gl-ppm-reconciliation', () =>
-      HttpResponse.json([])
-    ),
+    http.get('/api/project/gl-ppm-reconciliation', () => HttpResponse.json([])),
     http.get('/api/system/features', () =>
       HttpResponse.json({
         burndownEnabled: true,
         expenditureProgressEnabled: true,
+        projectCostsEnabled: true,
       })
     )
   );
@@ -126,6 +127,9 @@ describe('project burndown page', () => {
       expect(
         screen.getByRole('link', { name: /Project Details/ })
       ).toBeInTheDocument();
+      expect(
+        screen.getByRole('link', { name: 'Project Costs' })
+      ).toHaveAttribute('href', '/projectcosts/1000/P1');
     } finally {
       cleanup();
     }
@@ -148,6 +152,9 @@ describe('project burndown page', () => {
           'Project burndown is not available for expired projects.'
         )
       ).not.toBeInTheDocument();
+      expect(
+        screen.getByRole('link', { name: 'Project Costs' })
+      ).toHaveAttribute('href', '/projectcosts/1000/P1');
     } finally {
       cleanup();
     }

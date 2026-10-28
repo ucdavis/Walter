@@ -215,11 +215,13 @@ export function createDemoData(
           projectBurdenScheduleBase: internal
             ? null
             : 'Modified total direct costs',
+          projectEndDate: `${monthAt(asOf, endOffset)}-28`,
           projectFund: internal ? null : 'D5000',
           projectName: name,
           projectNumber,
           projectOwningOrg: 'Ecology and Environmental Science',
           projectOwningOrgCode: 'DEMO001',
+          projectStartDate: `${monthAt(asOf, startOffset)}-01`,
           projectStatusCode: closed ? 'CLOSED' : 'ACTIVE',
           projectType: internal ? 'Internal' : 'Sponsored',
           purposeDesc: 'Research',
@@ -425,6 +427,7 @@ export function createDemoData(
       fte,
       fundingEffectiveDate: `${monthAt(asOf, -2)}-01`,
       fundingEndDate: `${monthAt(asOf, 10)}-28`,
+      isFuture: false,
       jobCode: `D${String(i + 1).padStart(5, '0')}`,
       jobEffectiveDate: `${monthAt(asOf, -6)}-01`,
       jobEndDate: `${monthAt(asOf, 10)}-28`,

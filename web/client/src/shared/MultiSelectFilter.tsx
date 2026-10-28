@@ -129,7 +129,7 @@ export function MultiSelectFilter({
     <>
       <div
         aria-disabled={disabled}
-        className={`flex min-h-10 w-full flex-wrap items-center gap-1 rounded-lg border border-base-300 bg-base-100 px-2 py-1.5 text-sm ${
+        className={`flex min-h-10 w-full min-w-0 max-w-full flex-wrap items-center gap-1 overflow-x-hidden rounded-lg border border-base-300 bg-base-100 px-2 py-1.5 text-sm ${
           disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
         } ${open ? 'ring-2 ring-primary' : ''}`}
         ref={setReference}
@@ -140,27 +140,36 @@ export function MultiSelectFilter({
             {loading ? 'Loading…' : placeholder}
           </span>
         ) : (
-          selected.map((v) => (
-            <span
-              className="badge badge-primary badge-soft max-w-full gap-1"
-              key={v}
-            >
-              <span className="truncate">{labelFor(v)}</span>
-              {!disabled ? (
-                <button
-                  aria-label={`Remove ${labelFor(v)}`}
-                  className="hover:text-primary-content/70"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    remove(v);
-                  }}
-                  type="button"
+          <div className="grid min-w-0 flex-1 gap-1">
+            {selected.map((v) => {
+              const label = labelFor(v);
+              return (
+                <div
+                  className="flex min-w-0 max-w-full items-center gap-1"
+                  key={v}
                 >
-                  <XMarkIcon className="h-3 w-3" />
-                </button>
-              ) : null}
-            </span>
-          ))
+                  <span className="badge badge-primary badge-soft min-w-0 flex-1 justify-start">
+                    <span className="truncate" title={label}>
+                      {label}
+                    </span>
+                  </span>
+                  {!disabled ? (
+                    <button
+                      aria-label={`Remove ${label}`}
+                      className="flex size-7 shrink-0 items-center justify-center rounded-full text-primary hover:bg-primary/10 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        remove(v);
+                      }}
+                      type="button"
+                    >
+                      <XMarkIcon className="h-3 w-3" />
+                    </button>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
         )}
         <ChevronUpDownIcon className="ml-auto h-4 w-4 shrink-0 text-base-content/50" />
       </div>

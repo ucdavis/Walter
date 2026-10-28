@@ -18,6 +18,7 @@ GRANT EXECUTE ON [dbo].[usp_GetFacultyDeptPortfolio] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_GetProjectSummary] TO [WalterAppRole];
 
 GRANT EXECUTE ON [dbo].[usp_GetProjectProjection] TO [WalterAppRole];
+GRANT EXECUTE ON [dbo].[usp_GetProjectCosts] TO [WalterAppRole];
 
 GRANT EXECUTE ON [dbo].[usp_GetGLPPMReconciliation] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_GetGLTransactionListings] TO [WalterAppRole];
@@ -25,6 +26,7 @@ GRANT EXECUTE ON [dbo].[usp_GetGlBalanceSummary] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_GetGlBalanceSummaryFilterOptions] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_GetPositionBudgets] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_GetPositionBudgetsLocal] TO [WalterAppRole];
+GRANT EXECUTE ON [dbo].[usp_GetPositionBudgetsCognos] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_GetSearchablePeople] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_HealthCheck_Connectivity] TO [WalterAppRole];
 GRANT EXECUTE ON [dbo].[usp_LogProcedureExecution] TO [WalterAppRole];
@@ -38,6 +40,8 @@ GRANT EXECUTE ON [dbo].[usp_ValidateFinancialDept] TO [WalterAppRole];
 GRANT SELECT ON [dbo].[FacultyDeptPortfolio] TO [WalterAppRole];
 GRANT SELECT ON [dbo].[EmployeeAccrualBalances] TO [WalterAppRole];
 GRANT SELECT ON [dbo].[PositionBudgets] TO [WalterAppRole];
+GRANT SELECT ON [dbo].[PositionBudgetsCognos] TO [WalterAppRole];
+GRANT SELECT ON [dbo].[PPMProjectCosts] TO [WalterAppRole];
 GRANT SELECT ON [dbo].[Projects] TO [WalterAppRole];
 GRANT SELECT ON [dbo].[People] TO [WalterAppRole];
 GRANT SELECT ON [dbo].[PpmAwards] TO [WalterAppRole];
@@ -56,11 +60,24 @@ GRANT SELECT ON [dbo].[ChartStringSegment] TO [WalterAppRole];
 
 -- Grant pipeline role permissions
 GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[FacultyDeptPortfolio] TO [WalterPipelineRole];
-GRANT INSERT, SELECT, UPDATE ON [dbo].[EmployeeAccrualBalances] TO [WalterPipelineRole];
+-- Accrual snapshots use pre-copy DELETE + INSERT on staging, then usp_SwapStagingTable.
+-- The swap's dynamic SQL requires DELETE on the destination to replace its rows.
+GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[EmployeeAccrualBalances] TO [WalterPipelineRole];
+GRANT INSERT, SELECT, DELETE ON [dbo].[EmployeeAccrualBalances_Staging] TO [WalterPipelineRole];
 GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[PositionBudgets] TO [WalterPipelineRole];
 GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[PositionBudgets_Staging] TO [WalterPipelineRole];
 GRANT EXECUTE ON [dbo].[usp_SwapPositionBudgets] TO [WalterPipelineRole];
+-- pl_ucp_funding_entry_loader loads PositionBudgetsCognos_Staging (pre-copy DELETE + bulk insert),
+-- then usp_SwapStagingTable snapshot-swaps it into PositionBudgetsCognos.
+GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[PositionBudgetsCognos] TO [WalterPipelineRole];
+GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[PositionBudgetsCognos_Staging] TO [WalterPipelineRole];
 GRANT EXECUTE ON [dbo].[usp_SwapStagingTable] TO [WalterPipelineRole];
+-- pl_ppm_project_costs_loader loads PPMProjectCosts_Staging (pre-copy DELETE + bulk insert of
+-- that night's rows only), then usp_MergeStagingByScope replaces those (SourcePartition,
+-- AccountingPeriod) scopes in PPMProjectCosts. Never swapped; accumulates history.
+GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[PPMProjectCosts] TO [WalterPipelineRole];
+GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[PPMProjectCosts_Staging] TO [WalterPipelineRole];
+GRANT EXECUTE ON [dbo].[usp_MergeStagingByScope] TO [WalterPipelineRole];
 GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[Projects] TO [WalterPipelineRole];
 GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[People] TO [WalterPipelineRole];
 GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[People_Staging] TO [WalterPipelineRole];

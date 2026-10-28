@@ -67,7 +67,7 @@ describe('ProjectExpenditureProgressCategories', () => {
     );
 
     for (const overage of screen.getAllByText('$250.00 over')) {
-      expect(overage).toHaveClass('font-proxima-bold');
+      expect(overage).toHaveClass('font-sans', 'font-bold');
     }
     expect(screen.queryByText('$250.00 (100%) over')).not.toBeInTheDocument();
     expect(

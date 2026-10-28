@@ -18,22 +18,40 @@ public sealed class DatamartOptions
     /// <summary>Local ETL-populated dbo.PositionBudgets table (dbo.usp_GetPositionBudgetsLocal).</summary>
     public const string LocalSource = "Local";
 
+    /// <summary>Campus-wide dbo.PositionBudgetsCognos table from the UCP-391 Funding Entry report (dbo.usp_GetPositionBudgetsCognos).</summary>
+    public const string CognosSource = "Cognos";
+
     public string ConnectionString { get; set; } = string.Empty;
     public string ApplicationName { get; set; } = "Walter";
 
     /// <summary>
-    /// Which backing source position budgets are read from. Defaults to the live UCPath
-    /// data warehouse; set Datamart:PositionBudgetsSource=Local (env Datamart__PositionBudgetsSource)
-    /// to cut an environment over to the local table.
+    /// Which backing source position budgets are read from, for both the personnel section and
+    /// burndown projections (which read local PositionBudgets unless Cognos). Defaults to the live UCPath
+    /// data warehouse; set Datamart:PositionBudgetsSource=Local or Cognos (env
+    /// Datamart__PositionBudgetsSource) to cut an environment over. Unrecognized values fall
+    /// back to the default.
     /// </summary>
     public string PositionBudgetsSource { get; set; } = UCPathDWHSource;
 
-    public bool UsePositionBudgetsLocalTable =>
-        string.Equals(PositionBudgetsSource?.Trim(), LocalSource, StringComparison.OrdinalIgnoreCase);
+    /// <summary>Stored procedure the personnel section reads, per <see cref="PositionBudgetsSource"/>.</summary>
+    public string PositionBudgetsSproc => PositionBudgetsSource?.Trim().ToLowerInvariant() switch
+    {
+        "local" => "dbo.usp_GetPositionBudgetsLocal",
+        "cognos" => "dbo.usp_GetPositionBudgetsCognos",
+        _ => "dbo.usp_GetPositionBudgets",
+    };
+
+    /// <summary>Whether burndown projections read personnel from PositionBudgetsCognos instead of PositionBudgets.</summary>
+    public bool UseCognosPositionBudgets =>
+        string.Equals(PositionBudgetsSource?.Trim(), CognosSource, StringComparison.OrdinalIgnoreCase);
 }
 
 public interface IDatamartService
 {
+    /// <summary>Returns up to 20 imported project-search candidates, without status or date filters. The caller owns final ordering and the display limit.</summary>
+    Task<IReadOnlyList<ProjectSearchRecord>> SearchProjectsAsync(
+        string fuzzyQuery, string exactProjectNumber, CancellationToken ct = default);
+
     /// <summary>
     /// Searches People records that have both an IAM ID for navigation and an Employee ID for downstream project data.
     /// </summary>
@@ -82,8 +100,14 @@ public interface IDatamartService
     /// <summary>
     /// Per-expenditure-category budget burndown for a single project: the budget header
     /// plus a period x category grid of actuals, projections, and running remaining.
+    /// <paramref name="historyMonths"/> (3, 6, or 12) sets both the trailing actual months returned
+    /// and the window the non-personnel run-rate averages over.
     /// </summary>
     Task<ProjectProjectionResult> GetProjectProjectionAsync(
+        string projectNumber, int historyMonths, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default);
+
+    /// <summary>PPM expenditure-item detail for a single project, from the local PPMProjectCosts table.</summary>
+    Task<IReadOnlyList<ProjectCostRecord>> GetProjectCostsAsync(
         string projectNumber, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default);
 
     /// <summary>Current-period balance measures grouped by the caller-selected chart-string segments.</summary>
@@ -95,13 +119,14 @@ public interface IDatamartService
         DepartmentBalancesOptionsQuery query, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default);
 }
 
-public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
+public sealed class DatamartService : IDatamartService, IPpmPortfolioReader, IAccrualReportDataSource
 {
     private const string GetSearchablePeopleSproc = "dbo.usp_GetSearchablePeople";
 
     private readonly string _connectionString;
     private readonly string _appName;
     private readonly string _positionBudgetsSproc;
+    private readonly bool _useCognosPositionBudgets;
     private readonly AsyncRetryPolicy _retry;
 
     static DatamartService()
@@ -122,10 +147,9 @@ public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
             ? "Walter"
             : value.ApplicationName.Trim();
 
-        // Feature flag: read position budgets from the local ETL table or the live UCPath DWH.
-        _positionBudgetsSproc = value.UsePositionBudgetsLocalTable
-            ? "dbo.usp_GetPositionBudgetsLocal"
-            : "dbo.usp_GetPositionBudgets";
+        // Feature flag: which source the personnel section reads position budgets from.
+        _positionBudgetsSproc = value.PositionBudgetsSproc;
+        _useCognosPositionBudgets = value.UseCognosPositionBudgets;
 
         _retry = Policy
             .Handle<SqlException>()
@@ -135,6 +159,89 @@ public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
                 sleepDurationProvider: attempt =>
                     TimeSpan.FromMilliseconds(200 * Math.Pow(2, attempt))
             );
+    }
+
+    /// <summary>Searches the imported PPM snapshot with the existing AE percent/underscore wildcard semantics.</summary>
+    public Task<IReadOnlyList<ProjectSearchRecord>> SearchProjectsAsync(
+        string fuzzyQuery, string exactProjectNumber, CancellationToken ct = default)
+    {
+        // SQL Server adds bracket patterns to LIKE; AE treats brackets literally.
+        var pattern = "%" + fuzzyQuery.Replace("[", "[[]", StringComparison.Ordinal) + "%";
+        // Bound wildcard searches before transfer; retain an exact match before filling the candidate pool.
+        return ExecuteQueryAsync<ProjectSearchRecord>("""
+            SELECT TOP (20) ProjectNumber, Name AS ProjectName
+            FROM dbo.PpmProjects
+            WHERE Name COLLATE Latin1_General_100_CI_AS LIKE @Pattern
+               OR ProjectNumber COLLATE Latin1_General_100_CI_AS LIKE @Pattern
+               OR ProjectNumber COLLATE Latin1_General_100_CI_AS = @ExactProjectNumber
+            ORDER BY CASE WHEN ProjectNumber COLLATE Latin1_General_100_CI_AS = @ExactProjectNumber THEN 0 ELSE 1 END,
+                     Name COLLATE Latin1_General_100_CI_AS, ProjectNumber
+            """, new { Pattern = pattern, ExactProjectNumber = exactProjectNumber }, ct: ct);
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<PpmProjectMembership>> GetEmployeeProjectsAsync(
+        string employeeId, string roleName, CancellationToken ct = default)
+    {
+        // Award roles select projects, but only project roles populate the returned team.
+        var rows = await ExecuteQueryAsync<ProjectMembershipRow>("""
+            SELECT DISTINCT p.ProjectNumber, p.Name AS ProjectName,
+                   t.EmployeeId, t.Name AS MemberName, t.RoleName
+            FROM dbo.PpmProjects p
+            LEFT JOIN dbo.PpmPersonRoles t ON t.ProjectNumber = p.ProjectNumber AND t.ScopeType = 'PROJECT'
+            WHERE EXISTS (
+                SELECT 1 FROM dbo.PpmPersonRoles r
+                WHERE r.ProjectNumber = p.ProjectNumber AND r.EmployeeId = @EmployeeId
+                  AND r.RoleName = @RoleName AND r.ScopeType IN ('PROJECT', 'AWARD'))
+            ORDER BY p.ProjectNumber, t.Name, t.EmployeeId, t.RoleName
+            """, new { EmployeeId = employeeId, RoleName = roleName }, ct: ct);
+        return rows.GroupBy(r => r.ProjectNumber)
+            .Select(g => new PpmProjectMembership(g.Key, g.First().ProjectName,
+                g.Where(r => r.RoleName is not null)
+                    .Select(r => new PpmTeamMember(r.EmployeeId ?? string.Empty, r.MemberName ?? string.Empty, r.RoleName!))
+                    .ToArray()))
+            .ToArray();
+    }
+
+    /// <inheritdoc />
+    public Task<IReadOnlyList<PpmTeamMember>> GetProjectTeamAsync(
+        string projectNumber, string roleName, CancellationToken ct = default) =>
+        ExecuteQueryAsync<PpmTeamMember>("""
+            SELECT DISTINCT r.EmployeeId, r.Name, r.RoleName
+            FROM dbo.PpmPersonRoles r
+            INNER JOIN dbo.PpmProjects p ON p.ProjectNumber = r.ProjectNumber
+            WHERE r.ProjectNumber = @ProjectNumber AND r.ScopeType = 'PROJECT' AND r.RoleName = @RoleName
+            ORDER BY r.Name, r.EmployeeId
+            """, new { ProjectNumber = projectNumber, RoleName = roleName }, ct: ct);
+
+    /// <inheritdoc />
+    public async Task<IReadOnlySet<string>> GetProjectManagerEmployeeIdsAsync(
+        IEnumerable<string> employeeIds, CancellationToken ct = default)
+    {
+        ct.ThrowIfCancellationRequested();
+        var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        // Chunk parameter lists below SQL Server's parameter limit, even outside the five-person search UI.
+        foreach (var batch in employeeIds.Where(id => !string.IsNullOrWhiteSpace(id)).Distinct(StringComparer.OrdinalIgnoreCase).Chunk(500))
+        {
+            var ids = await ExecuteQueryAsync<string>("""
+                SELECT DISTINCT r.EmployeeId
+                FROM dbo.PpmPersonRoles r
+                INNER JOIN dbo.PpmProjects p ON p.ProjectNumber = r.ProjectNumber
+                WHERE r.EmployeeId IN @EmployeeIds AND r.RoleName = 'Project Manager'
+                  AND r.ScopeType IN ('PROJECT', 'AWARD')
+                """, new { EmployeeIds = batch }, ct: ct);
+            result.UnionWith(ids);
+        }
+        return result;
+    }
+
+    private sealed class ProjectMembershipRow
+    {
+        public string ProjectNumber { get; set; } = string.Empty;
+        public string ProjectName { get; set; } = string.Empty;
+        public string? EmployeeId { get; set; }
+        public string? MemberName { get; set; }
+        public string? RoleName { get; set; }
     }
 
     public async Task<IReadOnlyList<FacultyPortfolioRecord>> GetFacultyPortfolioAsync(
@@ -305,7 +412,7 @@ public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
     }
 
     public async Task<ProjectProjectionResult> GetProjectProjectionAsync(
-        string projectNumber, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default)
+        string projectNumber, int historyMonths, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default)
     {
         // The sproc returns two result sets, which ExecuteSprocAsync cannot consume.
         return await _retry.ExecuteAsync(async ct2 =>
@@ -313,9 +420,22 @@ public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
             await using var conn = new SqlConnection(_connectionString);
             await conn.OpenAsync(ct2);
 
+            var parameters = new DynamicParameters(
+                new { ProjectId = projectNumber, ApplicationName = _appName, ApplicationUser = applicationUser, EmulatingUser = emulatingUser });
+            // Sent only when on, so the call works against the sproc before @PersonnelSource deploys.
+            if (_useCognosPositionBudgets)
+            {
+                parameters.Add("PersonnelSource", DatamartOptions.CognosSource);
+            }
+            // Sent only when non-default, so the call works against the sproc before @HistoryMonths deploys.
+            if (historyMonths != 3)
+            {
+                parameters.Add("HistoryMonths", historyMonths);
+            }
+
             var cmd = new CommandDefinition(
                 commandText: "dbo.usp_GetProjectProjection",
-                parameters: new { ProjectId = projectNumber, ApplicationName = _appName, ApplicationUser = applicationUser, EmulatingUser = emulatingUser },
+                parameters: parameters,
                 commandType: CommandType.StoredProcedure,
                 commandTimeout: 60,
                 cancellationToken: ct2);
@@ -330,6 +450,15 @@ public sealed class DatamartService : IDatamartService, IAccrualReportDataSource
                 Periods = periods,
             };
         }, ct);
+    }
+
+    public async Task<IReadOnlyList<ProjectCostRecord>> GetProjectCostsAsync(
+        string projectNumber, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default)
+    {
+        return await ExecuteSprocAsync<ProjectCostRecord>(
+            "dbo.usp_GetProjectCosts",
+            new { ProjectId = projectNumber, ApplicationName = _appName, ApplicationUser = applicationUser, EmulatingUser = emulatingUser },
+            ct: ct);
     }
 
     private static string? ToCsvParam(string[]? values)

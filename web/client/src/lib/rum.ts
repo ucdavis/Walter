@@ -1,4 +1,5 @@
 import { init as initApm } from '@elastic/apm-rum';
+import { createRumPrivacyFilter } from '@/lib/rumPrivacy.ts';
 
 type RumInitConfig = Parameters<typeof initApm>[0];
 
@@ -9,10 +10,12 @@ interface RumTransaction {
 }
 
 interface RumAgent {
+  addFilter: (filter: ReturnType<typeof createRumPrivacyFilter>) => void;
   addLabels?: (labels: Record<string, string>) => void;
   getCurrentTransaction?: () => RumTransaction | undefined;
   setCustomContext?: (context: Record<string, unknown>) => void;
   setInitialPageLoadName?: (name: string) => void;
+  setUserContext: (context: { id: string }) => void;
 }
 
 export interface RumPublicConfig {
@@ -39,10 +42,13 @@ interface BootstrapRumDependencies {
   fetchConfig?: () => Promise<RumPublicConfig | null>;
   getOrigin?: () => string;
   init?: (config: RumInitConfig) => RumAgent;
+  routeTemplates?: string[];
 }
 
 let bootstrapPromise: Promise<RumAgent | null> | null = null;
 let rumAgent: RumAgent | null = null;
+let latestRouteMetadata: RumRouteMetadata | null = null;
+let latestIamId = '';
 
 export async function bootstrapRum(
   dependencies: BootstrapRumDependencies = {}
@@ -55,6 +61,7 @@ export async function bootstrapRum(
     fetchConfig = loadRumConfig,
     getOrigin = () => window.location.origin,
     init = initApm,
+    routeTemplates = [],
   } = dependencies;
 
   bootstrapPromise = (async () => {
@@ -64,16 +71,26 @@ export async function bootstrapRum(
         return null;
       }
 
+      const origin = getOrigin();
       rumAgent = init({
         breakdownMetrics: true,
         centralConfig: false,
-        distributedTracingOrigins: [getOrigin()],
+        distributedTracingOrigins: [origin],
         environment: config.environment,
         serverUrl: config.serverUrl,
         serviceName: config.serviceName,
         serviceVersion: config.serviceVersion,
         transactionSampleRate: config.transactionSampleRate,
+        ...(latestRouteMetadata && {
+          pageLoadTransactionName: latestRouteMetadata.routeTemplate,
+        }),
       }) as RumAgent;
+
+      rumAgent.addFilter(createRumPrivacyFilter(origin, routeTemplates));
+      applyRumUserIdentity(latestIamId);
+      if (latestRouteMetadata) {
+        applyRumRouteMetadata(latestRouteMetadata);
+      }
 
       return rumAgent;
     } catch {
@@ -85,7 +102,17 @@ export async function bootstrapRum(
   return bootstrapPromise;
 }
 
+export function applyRumUserIdentity(iamId?: string | null): void {
+  // Keep the latest identity while runtime configuration is still loading.
+  latestIamId = iamId?.trim() ?? '';
+  // Elastic shallow-merges context and ignores null/undefined IDs. An empty
+  // string overwrites the previous ID when the user is no longer available.
+  rumAgent?.setUserContext({ id: latestIamId });
+}
+
 export function applyRumRouteMetadata(metadata: RumRouteMetadata): void {
+  // The router can resolve while the runtime config request is still in flight.
+  latestRouteMetadata = metadata;
   if (!rumAgent) {
     return;
   }
@@ -136,6 +163,8 @@ export function resolveRumRouteMetadata(
 export function resetRumForTests(): void {
   bootstrapPromise = null;
   rumAgent = null;
+  latestRouteMetadata = null;
+  latestIamId = '';
 }
 
 async function loadRumConfig(): Promise<RumPublicConfig | null> {

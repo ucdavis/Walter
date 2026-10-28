@@ -56,6 +56,12 @@ builder.Services.Configure<IamSettings>(builder.Configuration.GetSection("Iam"))
 builder.Services.Configure<FinancialSettings>(builder.Configuration.GetSection("Financial"));
 builder.Services.Configure<RumOptions>(builder.Configuration.GetSection("Rum"));
 builder.Services.Configure<FeatureFlagOptions>(builder.Configuration.GetSection(FeatureFlagOptions.SectionName));
+builder.Services.PostConfigure<FeatureFlagOptions>(options =>
+{
+    // Preserve the single-underscore environment key used for the GraphQL rollout switch.
+    options.UseGraphQLAPI = builder.Configuration.GetValue<bool?>("FeatureFlags_UseGraphQLAPI")
+        ?? options.UseGraphQLAPI;
+});
 builder.Services.Configure<AppOptions>(builder.Configuration.GetSection(AppOptions.SectionName));
 builder.Services.Configure<DatamartOptions>(options =>
 {
@@ -76,7 +82,10 @@ builder.Services.AddResponseCaching();
 
 // add singleton services here
 builder.Services.AddSingleton<IFinancialApiService, FinancialApiService>();
-builder.Services.AddSingleton<IDatamartService, DatamartService>();
+builder.Services.AddSingleton<DatamartService>();
+builder.Services.AddSingleton<IDatamartService>(sp => sp.GetRequiredService<DatamartService>());
+builder.Services.AddSingleton<IPpmPortfolioReader>(sp => sp.GetRequiredService<DatamartService>());
+builder.Services.AddScoped<PpmPortfolioService>();
 
 // add scoped services here
 builder.Services.AddScoped<IDbInitializer, DbInitializer>();
@@ -173,10 +182,10 @@ else
 
 
 app.UseAuthentication();
-app.UseAuthorization();
 
-// enrich every log with request context
+// Enrich authorization failures as well as controller logs after authentication.
 app.UseRequestContextLogging();
+app.UseAuthorization();
 
 // app.UseHttpLogging(); // if you want extra logging. It's a little overkill though with the current logging setup
 

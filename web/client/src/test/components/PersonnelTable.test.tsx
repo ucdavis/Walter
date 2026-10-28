@@ -31,10 +31,14 @@ const createRecord = (
 ): PersonnelRecord => ({
   compositeBenefitRate: 0.4,
   distributionPercent: 100,
+  earnCode: null,
+  earnCodeShare: null,
+  earnCodeStatus: null,
   employeeId: '1001',
   fte: 1.0,
   fundingEffectiveDate: '2025-07-01T00:00:00.000Z',
   fundingEndDate: '2026-12-31T00:00:00.000Z',
+  isFuture: false,
   jobCode: '001234',
   jobEffectiveDate: '2020-01-01T00:00:00.000Z',
   jobEndDate: null,
@@ -118,6 +122,128 @@ describe('aggregateByPosition', () => {
     expect(dist2.monthlyTotal).toBeCloseTo(1120);
   });
 
+  it('takes position figures from the current entry when a future entry comes first', () => {
+    const records = [
+      createRecord({ fte: 1, isFuture: true, monthlyRate: 9000 }),
+      createRecord({ fte: 0.5, monthlyRate: 4000 }),
+    ];
+
+    const [position] = aggregateByPosition(records);
+
+    expect(position.monthlyRate).toBe(2000);
+    expect(position.isFutureOnly).toBe(false);
+    expect(position.distributions.map((d) => d.record.isFuture)).toEqual([
+      false,
+      true,
+    ]);
+  });
+
+  it('applies the earn code share to line salary but not position salary', () => {
+    const records = [
+      createRecord({
+        distributionPercent: 100,
+        earnCode: 'REG',
+        earnCodeShare: 0.8,
+        earnCodeStatus: 'Split',
+        fte: 0.5,
+        monthlyRate: 10_000,
+        projectId: 'PROJ1',
+      }),
+      createRecord({
+        distributionPercent: 50,
+        earnCode: 'NNC',
+        earnCodeShare: 0.2,
+        earnCodeStatus: 'Split',
+        fte: 0.5,
+        monthlyRate: 10_000,
+        projectId: 'PROJ2',
+      }),
+    ];
+
+    const [position] = aggregateByPosition(records);
+
+    // Position salary is the whole job: 10_000 * 0.5
+    expect(position.monthlyRate).toBe(5000);
+    // REG line: 10000 * 0.8 * 0.5 * 100%
+    expect(position.distributions[0].monthlyRate).toBeCloseTo(4000);
+    // NNC line: 10000 * 0.2 * 0.5 * 50%
+    expect(position.distributions[1].monthlyRate).toBeCloseTo(500);
+  });
+
+  it('treats a missing earn code share as 1', () => {
+    const [position] = aggregateByPosition([
+      createRecord({ distributionPercent: 50, fte: 1, monthlyRate: 4000 }),
+    ]);
+
+    expect(position.distributions[0].monthlyRate).toBe(2000);
+  });
+
+  it('merges earn code lines on the same funding entry into one total', () => {
+    const records = [
+      createRecord({
+        compositeBenefitRate: 0.4,
+        distributionPercent: 100,
+        earnCode: 'REG',
+        earnCodeShare: 0.8,
+        earnCodeStatus: 'Split',
+        fte: 0.5,
+        monthlyRate: 10_000,
+      }),
+      createRecord({
+        compositeBenefitRate: 0.4,
+        distributionPercent: 50,
+        earnCode: 'NNC',
+        earnCodeShare: 0.2,
+        earnCodeStatus: 'Split',
+        fte: 0.5,
+        monthlyRate: 10_000,
+      }),
+    ];
+
+    const [position] = aggregateByPosition(records);
+
+    expect(position.distributions).toHaveLength(1);
+    const [dist] = position.distributions;
+    // 0.8 * 100% + 0.2 * 50%
+    expect(dist.distributionPercent).toBeCloseTo(90);
+    // REG 4000 + NNC 500
+    expect(dist.monthlyRate).toBeCloseTo(4500);
+    expect(dist.monthlyFringe).toBeCloseTo(1800);
+    expect(dist.monthlyTotal).toBeCloseTo(6300);
+  });
+
+  it('keeps funding entries with different dates or tasks as separate rows', () => {
+    const records = [
+      createRecord({ earnCode: 'REG', task: 'T1' }),
+      createRecord({ earnCode: 'NNC', task: 'T2' }),
+      createRecord({
+        earnCode: 'REG',
+        fundingEffectiveDate: '2026-01-01T00:00:00.000Z',
+        task: 'T1',
+      }),
+      createRecord({ earnCode: 'NNC', isFuture: true, task: 'T1' }),
+    ];
+
+    const [position] = aggregateByPosition(records);
+
+    expect(position.distributions).toHaveLength(4);
+  });
+
+  it('marks unsplit positions and their lines as salary unknown', () => {
+    const [position] = aggregateByPosition([
+      createRecord({ earnCodeShare: null, earnCodeStatus: 'Unsplit' }),
+    ]);
+
+    expect(position.salaryUnknown).toBe(true);
+    expect(position.distributions[0].salaryUnknown).toBe(true);
+  });
+
+  it('marks positions with only future entries', () => {
+    const [position] = aggregateByPosition([createRecord({ isFuture: true })]);
+
+    expect(position.isFutureOnly).toBe(true);
+  });
+
   it('separates same position number for different employees', () => {
     const records = [
       createRecord({ employeeId: '1001', positionNumber: '40001234' }),
@@ -142,7 +268,9 @@ describe('PersonnelTable', () => {
 
     render(<PersonnelTable data={records} />);
 
-    expect(screen.getByText('Smith, John (1001) - PROF-FY')).toBeInTheDocument();
+    expect(
+      screen.getByText('Smith, John (1001) - PROF-FY')
+    ).toBeInTheDocument();
   });
 
   it('displays FTE column', () => {
@@ -196,6 +324,61 @@ describe('PersonnelTable', () => {
     expect(screen.getByText('$3,600.00')).toBeInTheDocument();
     // Monthly total: 9000 + 3600 = 12600
     expect(screen.getByText('$12,600.00')).toBeInTheDocument();
+  });
+
+  it('hides salary for unsplit people and leaves them out of totals with a warning', () => {
+    const records = [
+      createRecord({
+        compositeBenefitRate: 0.4,
+        earnCodeShare: 1,
+        earnCodeStatus: 'BaseOnly',
+        employeeId: '1001',
+        monthlyRate: 5000,
+        positionNumber: '40001234',
+      }),
+      createRecord({
+        compositeBenefitRate: 0.4,
+        earnCodeShare: null,
+        earnCodeStatus: 'Unsplit',
+        employeeId: '1002',
+        monthlyRate: 4000,
+        name: 'Doe, Jane',
+        positionNumber: '40005678',
+      }),
+    ];
+
+    render(<PersonnelTable data={records} />);
+
+    // 5000 shows on Smith's row and in the footer; Doe's 4000 shows nowhere.
+    expect(screen.getAllByText('$5,000.00')).toHaveLength(2);
+    expect(screen.queryByText('$4,000.00')).not.toBeInTheDocument();
+    expect(screen.queryByText('$9,000.00')).not.toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Totals exclude 1 person whose funding entry info is not available.'
+      )
+    ).toBeInTheDocument();
+  });
+
+  it('exports no amounts for unsplit people', () => {
+    render(
+      <PersonnelTable
+        data={[
+          createRecord({
+            earnCodeShare: null,
+            earnCodeStatus: 'Unsplit',
+            monthlyRate: 4321,
+          }),
+        ]}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Export' }));
+
+    const csv = vi.mocked(downloadExcelCsv).mock.calls[0]?.[0];
+    expect(csv).toContain('Smith, John');
+    expect(csv).not.toContain('4,321');
+    expect(csv).not.toContain('4321');
   });
 
   it('shows empty state when no data', () => {
@@ -272,6 +455,79 @@ describe('PersonnelTable', () => {
     expect(screen.getByText('—')).toBeInTheDocument();
   });
 
+  it('shows one total row per funding entry with no earn codes', async () => {
+    const user = userEvent.setup();
+    const records = [
+      createRecord({
+        earnCode: 'REG',
+        earnCodeShare: 0.75,
+        earnCodeStatus: 'Split',
+        projectDescription: 'Grant A',
+      }),
+      createRecord({
+        earnCode: 'NNC',
+        earnCodeShare: 0.25,
+        earnCodeStatus: 'Split',
+        projectDescription: 'Grant A',
+      }),
+    ];
+
+    render(<PersonnelTable data={records} />);
+    await user.click(
+      screen.getByRole('cell', { name: 'Smith, John (1001) - PROF-FY' })
+    );
+
+    expect(screen.getAllByText('Grant A')).toHaveLength(1);
+    expect(screen.getByText('100%')).toBeInTheDocument();
+    expect(screen.queryByText('REG')).not.toBeInTheDocument();
+    expect(screen.queryByText('NNC')).not.toBeInTheDocument();
+  });
+
+  it('exports one row per funding entry with no earn code column', () => {
+    render(
+      <PersonnelTable
+        data={[
+          createRecord({
+            earnCode: 'REG',
+            earnCodeShare: 0.75,
+            earnCodeStatus: 'Split',
+          }),
+          createRecord({
+            earnCode: 'NNC',
+            earnCodeShare: 0.25,
+            earnCodeStatus: 'Split',
+          }),
+        ]}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Export' }));
+
+    const csv = vi.mocked(downloadExcelCsv).mock.calls[0]?.[0] ?? '';
+    expect(csv).not.toContain('Earn Code');
+    expect(csv).not.toContain('NNC');
+    expect(csv.match(/Smith, John/g)).toHaveLength(1);
+  });
+
+  it('never shows the internal Unsplit status', async () => {
+    const user = userEvent.setup();
+    render(
+      <PersonnelTable
+        data={[
+          createRecord({ earnCodeShare: null, earnCodeStatus: 'Unsplit' }),
+        ]}
+      />
+    );
+    await user.click(
+      screen.getByRole('cell', { name: 'Smith, John (1001) - PROF-FY' })
+    );
+
+    expect(document.body).not.toHaveTextContent(/unsplit/i);
+    expect(
+      screen.getByText('Funding entry info not available')
+    ).toBeInTheDocument();
+  });
+
   it('shows a tooltip on the Mo. CBR header', async () => {
     const user = userEvent.setup();
     render(<PersonnelTable data={[createRecord()]} />);
@@ -286,7 +542,11 @@ describe('PersonnelTable', () => {
 
   it('shows tooltips in the funding distribution subtable', async () => {
     const user = userEvent.setup();
-    render(<PersonnelTable data={[createRecord({ projectDescription: 'Test Project' })]} />);
+    render(
+      <PersonnelTable
+        data={[createRecord({ projectDescription: 'Test Project' })]}
+      />
+    );
 
     await user.click(
       screen.getByRole('cell', { name: 'Smith, John (1001) - PROF-FY' })
@@ -303,13 +563,15 @@ describe('PersonnelTable', () => {
     // Two occurrences after expand: outer header and subtable header. Hover
     // the subtable's (last) one.
     const cbrLabels = screen.getAllByText('Mo. CBR');
-    await user.hover(cbrLabels[cbrLabels.length - 1].parentElement as HTMLElement);
+    await user.hover(
+      cbrLabels[cbrLabels.length - 1].parentElement as HTMLElement
+    );
     expect(await screen.findByRole('tooltip')).toHaveTextContent(
       tooltipDefinitions.monthlyCbr
     );
   });
 
-  it('hides unfilled positions by default', () => {
+  it('hides unfilled positions without offering a toggle', () => {
     const records = [
       createRecord({ name: 'Smith, John', positionNumber: '40001234' }),
       createRecord({
@@ -322,43 +584,84 @@ describe('PersonnelTable', () => {
 
     render(<PersonnelTable data={records} />);
 
-    expect(screen.getByText('Smith, John (1001) - PROF-FY')).toBeInTheDocument();
-    expect(screen.queryByText(/STDT 3/)).not.toBeInTheDocument();
-  });
-
-  it('shows unfilled positions when toggle is clicked', async () => {
-    const user = userEvent.setup();
-    const records = [
-      createRecord({ name: 'Smith, John', positionNumber: '40001234' }),
-      createRecord({
-        employeeId: '',
-        name: '',
-        positionDescription: 'STDT 3',
-        positionNumber: '40005678',
-      }),
-    ];
-
-    render(<PersonnelTable data={records} />);
-
-    const toggle = screen.getByRole('button', { name: /show unfilled/i });
-    expect(toggle).toHaveTextContent('Show unfilled (1)');
-
-    await user.click(toggle);
-
-    expect(screen.getByText(/STDT 3/)).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: /hide unfilled/i })
+      screen.getByText('Smith, John (1001) - PROF-FY')
     ).toBeInTheDocument();
-  });
-
-  it('does not show unfilled toggle when no unfilled positions exist', () => {
-    const records = [createRecord({ name: 'Smith, John' })];
-
-    render(<PersonnelTable data={records} />);
-
+    expect(screen.queryByText(/STDT 3/)).not.toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: /unfilled/i })
     ).not.toBeInTheDocument();
+  });
+
+  it('does not show the future toggle when no future entries exist', () => {
+    render(<PersonnelTable data={[createRecord()]} />);
+
+    expect(
+      screen.queryByRole('button', { name: /future entries/i })
+    ).not.toBeInTheDocument();
+  });
+
+  it('hides future entries by default and shows them when toggled', async () => {
+    const user = userEvent.setup();
+    const records = [
+      createRecord({ projectDescription: 'Current Project' }),
+      createRecord({
+        fundingEffectiveDate: '2099-01-01T00:00:00.000Z',
+        isFuture: true,
+        monthlyRate: 9000,
+        projectDescription: 'Future Project',
+      }),
+    ];
+
+    render(<PersonnelTable data={records} />);
+
+    const toggle = screen.getByRole('button', { name: /show future entries/i });
+    expect(toggle).toHaveTextContent('Show future entries (1)');
+
+    await user.click(
+      screen.getByRole('cell', { name: 'Smith, John (1001) - PROF-FY' })
+    );
+    expect(screen.getByText('Current Project')).toBeInTheDocument();
+    expect(screen.queryByText('Future Project')).not.toBeInTheDocument();
+
+    await user.click(toggle);
+
+    expect(screen.getByText('Future Project')).toBeInTheDocument();
+    expect(screen.getByText('Future')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /hide future entries/i })
+    ).toBeInTheDocument();
+  });
+
+  it('keeps totals on current entries when future entries are shown', async () => {
+    const user = userEvent.setup();
+    const records = [
+      createRecord({ monthlyRate: 5000 }),
+      createRecord({
+        fundingEffectiveDate: '2099-01-01T00:00:00.000Z',
+        isFuture: true,
+        monthlyRate: 9000,
+      }),
+      createRecord({
+        employeeId: '1003',
+        isFuture: true,
+        monthlyRate: 7000,
+        name: 'New, Hire',
+        positionNumber: '40009999',
+      }),
+    ];
+
+    render(<PersonnelTable data={records} />);
+    await user.click(
+      screen.getByRole('button', { name: /show future entries/i })
+    );
+
+    expect(screen.getByText(/New, Hire \(1003\)/)).toBeInTheDocument();
+    // Footer: only the current 5000 salary and 2000 CBR count.
+    const footer = screen.getByText('Totals').closest('tr') as HTMLElement;
+    expect(footer).toHaveTextContent('$5,000.00');
+    expect(footer).toHaveTextContent('$2,000.00');
+    expect(footer).toHaveTextContent('$7,000.00');
   });
 
   it('renders only filtered data when passed filtered records', () => {
@@ -382,8 +685,12 @@ describe('PersonnelTable', () => {
 
     render(<PersonnelTable data={filtered} />);
 
-    expect(screen.getByText('Adams, Alice (1001) - PROF-FY')).toBeInTheDocument();
-    expect(screen.queryByText('Baker, Bob (1002) - PROF-FY')).not.toBeInTheDocument();
+    expect(
+      screen.getByText('Adams, Alice (1001) - PROF-FY')
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText('Baker, Bob (1002) - PROF-FY')
+    ).not.toBeInTheDocument();
   });
 
   it('shows the filtered export action only when a search filter is active', () => {

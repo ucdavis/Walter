@@ -60,11 +60,13 @@ const createProject = (
   programDesc: 'Program',
   projectBurdenCostRate: null,
   projectBurdenScheduleBase: null,
+  projectEndDate: null,
   projectFund: null,
   projectName: 'Test Project',
   projectNumber: 'P1',
   projectOwningOrg: 'ORG001',
   projectOwningOrgCode: 'ORG001',
+  projectStartDate: null,
   projectStatusCode: 'ACTIVE',
   projectType: 'Sponsored',
   purposeDesc: 'Research',
@@ -108,9 +110,9 @@ describe('ProjectFundingChart', () => {
     expect(screen.getByText('Negative balances:')).toBeInTheDocument();
     const internalLabel = screen.getByText('Internal');
     const internalBalance = screen.getByText(/-\$3,000/);
-    expect(internalLabel).toHaveClass('font-proxima-bold');
+    expect(internalLabel).toHaveClass('font-sans', 'font-bold');
     expect(internalLabel).toHaveStyle({ color: 'var(--color-accent)' });
-    expect(internalBalance).toHaveClass('font-proxima-bold', 'text-error');
+    expect(internalBalance).toHaveClass('font-sans', 'font-bold', 'text-error');
   });
 
   it('clamps per-type, not per-project', () => {
@@ -152,10 +154,10 @@ describe('ProjectFundingChart', () => {
     const internalBalance = screen.getByText(/-\$1,000/);
     const sponsoredBalance = screen.getByText(/-\$2,000/);
     expect(internalLabel).toHaveStyle({ color: 'var(--color-accent)' });
-    expect(sponsoredLabel).toHaveClass('font-proxima-bold');
+    expect(sponsoredLabel).toHaveClass('font-sans', 'font-bold');
     expect(sponsoredLabel).toHaveStyle({ color: 'var(--color-info)' });
-    expect(internalBalance).toHaveClass('font-proxima-bold', 'text-error');
-    expect(sponsoredBalance).toHaveClass('font-proxima-bold', 'text-error');
+    expect(internalBalance).toHaveClass('font-sans', 'font-bold', 'text-error');
+    expect(sponsoredBalance).toHaveClass('font-sans', 'font-bold', 'text-error');
   });
 
   it('does not show the negative section when all types are positive', () => {
