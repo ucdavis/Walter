@@ -13,26 +13,6 @@ import {
 import { DataTable } from '@/shared/DataTable.tsx';
 
 const columnHelper = createColumnHelper<ProjectCostRecord>();
-const accountingPeriodMonthIndexes: Record<string, number> = {
-  Apr: 3,
-  Aug: 7,
-  Dec: 11,
-  Feb: 1,
-  Jan: 0,
-  Jul: 6,
-  Jun: 5,
-  Mar: 2,
-  May: 4,
-  Nov: 10,
-  Oct: 9,
-  Sep: 8,
-};
-const projectCostTimelineOptions = [
-  { label: 'Entire project', value: 'entire-project' },
-  { label: '3mo', value: '3-months' },
-  { label: '6mo', value: '6-months' },
-  { label: '9mo', value: '9-months' },
-] as const;
 // Export carries every report column, not just the ones shown on the page.
 const projectCostCsvColumns: CsvColumn<ProjectCostRecord>[] = [
   { header: 'Transaction Number', key: 'transactionNumber' },
@@ -91,28 +71,6 @@ const projectCostCsvColumns: CsvColumn<ProjectCostRecord>[] = [
   { format: 'currency', header: 'Burdened Cost', key: 'burdenedCost' },
 ];
 
-type ProjectCostTimeline = (typeof projectCostTimelineOptions)[number]['value'];
-
-function getAccountingPeriodMonthIndex(accountingPeriod: string) {
-  const [monthName, shortYear] = accountingPeriod.split('-');
-  const monthIndex = accountingPeriodMonthIndexes[monthName] ?? 0;
-
-  return (2000 + Number(shortYear)) * 12 + monthIndex;
-}
-
-function getTimelineMonthCount(timeline: ProjectCostTimeline) {
-  switch (timeline) {
-    case '3-months':
-      return 3;
-    case '6-months':
-      return 6;
-    case '9-months':
-      return 9;
-    default:
-      return null;
-  }
-}
-
 function sumBurdenedCost(rows: { original: ProjectCostRecord }[]) {
   return rows.reduce((total, row) => total + row.original.burdenedCost, 0);
 }
@@ -133,8 +91,8 @@ export function ProjectCostsTable({
   const [selectedCategories, setSelectedCategories] = useState<string[]>(() =>
     category ? [category] : []
   );
-  const [selectedTimeline, setSelectedTimeline] =
-    useState<ProjectCostTimeline>('entire-project');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
   const [selectedTask, setSelectedTask] = useState('');
   const columns = useMemo(
     () => [
@@ -225,18 +183,6 @@ export function ProjectCostsTable({
     ],
     [isInternal]
   );
-  const latestAccountingPeriodMonthIndex = useMemo(
-    () =>
-      projectCostRecords.reduce(
-        (latest, record) =>
-          Math.max(
-            latest,
-            getAccountingPeriodMonthIndex(record.accountingPeriod)
-          ),
-        Number.NEGATIVE_INFINITY
-      ),
-    [projectCostRecords]
-  );
   // Keep a URL-selected category visible even when the project has no costs in it.
   const projectCostCategories = useMemo(
     () =>
@@ -263,31 +209,19 @@ export function ProjectCostsTable({
     [projectCostRecords]
   );
   const filteredRecords = useMemo(() => {
-    const timelineMonthCount = getTimelineMonthCount(selectedTimeline);
-    const earliestTimelineMonthIndex =
-      timelineMonthCount === null
-        ? null
-        : latestAccountingPeriodMonthIndex - timelineMonthCount + 1;
-
     return projectCostRecords.filter((record) => {
-      const isWithinTimeline =
-        earliestTimelineMonthIndex === null ||
-        getAccountingPeriodMonthIndex(record.accountingPeriod) >=
-          earliestTimelineMonthIndex;
+      // Dates are 'YYYY-MM-DD' strings, so string comparison orders them.
+      const itemDate = record.expenditureItemDate.slice(0, 10);
+      const isWithinDates =
+        (!fromDate || itemDate >= fromDate) && (!toDate || itemDate <= toDate);
       const matchesCategory =
         selectedCategories.length === 0 ||
         selectedCategories.includes(record.expenditureCategory);
       const matchesTask = !selectedTask || record.taskNumber === selectedTask;
 
-      return isWithinTimeline && matchesCategory && matchesTask;
+      return isWithinDates && matchesCategory && matchesTask;
     });
-  }, [
-    latestAccountingPeriodMonthIndex,
-    projectCostRecords,
-    selectedCategories,
-    selectedTask,
-    selectedTimeline,
-  ]);
+  }, [fromDate, projectCostRecords, selectedCategories, selectedTask, toDate]);
   const toggleCategory = (category: string) => {
     setSelectedCategories((current) =>
       current.includes(category)
@@ -301,27 +235,49 @@ export function ProjectCostsTable({
       <div className="mb-4">
         <div className="mb-4 flex flex-wrap items-end gap-4">
           <div>
-            <span className="stat-label mb-1 block">Timeline</span>
-            <div aria-label="Timeline" className="join" role="group">
-              {projectCostTimelineOptions.map((option) => {
-                const isSelected = selectedTimeline === option.value;
-
-                return (
-                  <button
-                    aria-pressed={isSelected}
-                    className={`btn btn-sm join-item ${
-                      isSelected ? 'btn-active' : ''
-                    }`}
-                    key={option.value}
-                    onClick={() => setSelectedTimeline(option.value)}
-                    type="button"
-                  >
-                    {option.label}
-                  </button>
-                );
-              })}
-            </div>
+            <label
+              className="stat-label mb-1 block"
+              htmlFor="project-costs-from-date"
+            >
+              From
+            </label>
+            <input
+              className="input input-sm"
+              id="project-costs-from-date"
+              max={toDate || undefined}
+              onChange={(event) => setFromDate(event.target.value)}
+              type="date"
+              value={fromDate}
+            />
           </div>
+          <div>
+            <label
+              className="stat-label mb-1 block"
+              htmlFor="project-costs-to-date"
+            >
+              To
+            </label>
+            <input
+              className="input input-sm"
+              id="project-costs-to-date"
+              min={fromDate || undefined}
+              onChange={(event) => setToDate(event.target.value)}
+              type="date"
+              value={toDate}
+            />
+          </div>
+          {fromDate || toDate ? (
+            <button
+              className="btn btn-sm btn-ghost"
+              onClick={() => {
+                setFromDate('');
+                setToDate('');
+              }}
+              type="button"
+            >
+              Clear dates
+            </button>
+          ) : null}
 
           {isInternal ? (
             <div>
