@@ -513,7 +513,12 @@ function EmployeeFundingCard({ employee }: { employee: EmployeeFunding }) {
             className={`h-4 w-4 shrink-0 transition-transform ${expanded ? 'rotate-180' : ''}`}
           />
           <span className="min-w-0">
-            <span className="block font-semibold">{employee.name}</span>
+            <span className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <span className="font-semibold">{employee.name}</span>
+              <span className="text-xs text-base-content/70">
+                Empl ID {employee.employeeId}
+              </span>
+            </span>
             {roles && (
               <span className="mt-1 block text-sm text-base-content/70">
                 {roles}
@@ -529,7 +534,6 @@ function EmployeeFundingCard({ employee }: { employee: EmployeeFunding }) {
                   {projectCount} {projectCount === 1 ? 'project' : 'projects'}
                 </span>
               </span>
-              <span>Empl ID {employee.employeeId}</span>
               {futureOnly && (
                 <span className="badge badge-soft badge-info badge-sm">
                   Future only
@@ -698,12 +702,9 @@ export function PersonnelTable({ data }: PersonnelTableProps) {
         </div>
       </div>
 
-      <section
-        aria-label="PI funding totals"
-        className="border-b border-base-300 pb-4"
-      >
+      <section aria-label="PI funding totals" className="pb-4">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h3 className="text-sm font-semibold">
+          <h3 className="text-lg font-bold">
             {hasSearch
               ? 'Filtered monthly funding for this PI'
               : 'Monthly funding for this PI'}
@@ -716,19 +717,19 @@ export function PersonnelTable({ data }: PersonnelTableProps) {
         </div>
         <dl className="flex flex-wrap gap-x-12 gap-y-3">
           <div>
-            <dt className="stat-label">Mo. Salary</dt>
+            <dt className="stat-label">Monthly Salary</dt>
             <dd className="stat-value font-sans">
               {formatFundingAmount(totals.monthlyRate)}
             </dd>
           </div>
           <div>
-            <dt className="stat-label">Mo. CBR</dt>
+            <dt className="stat-label">Monthly CBR</dt>
             <dd className="stat-value font-sans">
               {formatFundingAmount(totals.monthlyFringe)}
             </dd>
           </div>
           <div>
-            <dt className="stat-label">Mo. Total</dt>
+            <dt className="stat-label">Monthly Total</dt>
             <dd className="stat-value font-sans">
               {formatFundingAmount(totals.monthlyTotal)}
             </dd>
