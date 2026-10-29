@@ -23,8 +23,12 @@ const RootLayout = () => (
       </div>
 
       <Footer />
-      <ReactQueryDevtools buttonPosition="bottom-right" />
-      <TanStackRouterDevtools position="bottom-left" />
+      {import.meta.env.MODE !== 'demo' && (
+        <>
+          <ReactQueryDevtools buttonPosition="bottom-right" />
+          <TanStackRouterDevtools position="bottom-left" />
+        </>
+      )}
     </div>
   </>
 );

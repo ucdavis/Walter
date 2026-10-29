@@ -39,9 +39,9 @@ _Using the DevContainer is optional, but it will get you the right version of do
    npm start
    ```
 
-   This command automatically installs dependencies (if needed) and starts both the .NET backend and Vite frontend with hot reload enabled.
+   This command starts the .NET backend and Vite frontend together with hot reload enabled. Run `npm install` in `web` and `npm --prefix client ci` first if dependencies are not installed.
 
-   _Optional: If dependencies change, you can manually reinstall with `npm install && cd client && npm install && cd ..` but you shouldn't have to, the `npm start` should handle it._
+   If dependencies change, rerun `npm install` and `npm --prefix client ci` from `web`.
 
 4. **Access the application**
 
@@ -53,6 +53,47 @@ If you want to access endpoints individually, you can do so at the following URL
 - Backend API: http://localhost:5166 (nothing to see, but /api/\* has the direct API endpoints)
 - API Documentation (Swagger): http://localhost:5166/swagger/index.html
 - Health check: http://localhost:5166/health
+
+### Local demos with fictional data
+
+From `web`, run `npm run demo`. This starts only the frontend at
+`http://127.0.0.1:5175` and opens the sponsored project. It does not need SQL
+Server, Entra sign-in, the .NET server, or financial API credentials. On a fresh
+checkout, run `npm --prefix client ci` first.
+
+The demo signs in as fictional investigator Morgan Reed and includes:
+
+- `DEMOSPN001`: an active sponsored project with a roughly $540,000 budget,
+  spending across eight categories, subrecipient commitments, and personnel.
+- `DEMOINT001`: internal research support with eight tasks and roughly $87,000
+  remaining in the default dataset.
+- `DEMOCLO001` and `DEMOCLO002`: closed projects with positive and negative
+  remaining balances. Use **Show expired (2)** to include them in the sponsored projects table.
+
+Use **All projects** in the demo bar to open the portfolio dashboard. The home
+page, project search, project details, personnel, category table/graph toggles,
+expanded tables/graphs, CSV exports, and sponsored project burndown work with
+the synthetic data. Administrative reports and external tools such as Finjector
+are not simulated.
+
+**New dataset** changes the amounts while retaining the project scenarios and
+fictional identities. **Reset demo** restores seed 42. The seed and snapshot
+month are saved in browser local storage, so refreshes and navigation preserve
+the data. Resetting or regenerating also updates the snapshot month, keeping
+the active award dates suitable for a new recording.
+
+The generator uses integer cents. Monthly transactions sum to category and
+task expenses; balances equal budget minus expenses and commitments. The
+portfolio and graphs derive from those same rows. Forecast personnel costs
+use the appointments displayed in the personnel table. Other future costs use
+the last six months of synthetic spending, with commitments reserved once.
+
+Demo mode uses browser MSW handlers and a separate local port with no backend
+proxy. Unimplemented API requests and writes return errors instead of reaching
+a real service. Analytics and developer panels are disabled in demo mode. The
+worker is served from the installed MSW package only during demo development;
+the regular production build excludes the demo module and worker. Building in
+`demo` mode is deliberately unsupported.
 
 ### Database configuration
 

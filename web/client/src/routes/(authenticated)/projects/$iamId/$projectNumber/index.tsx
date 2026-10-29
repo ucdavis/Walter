@@ -109,6 +109,7 @@ function ProjectContent({
     featureFlags?.burndownEnabled &&
     !isAwardExpired(summary.awardEndDate);
   const showProjectCosts = featureFlags?.projectCostsEnabled;
+  const showDemoProjections = import.meta.env.MODE === 'demo';
 
   return (
     <main className="flex-1 min-w-0">
@@ -176,8 +177,18 @@ function ProjectContent({
 
       <ProjectDetails
         actions={
-          showProjectBurndown || showProjectCosts ? (
+          showDemoProjections || showProjectBurndown || showProjectCosts ? (
             <>
+              {showDemoProjections && (
+                <Link
+                  className="btn btn-lg"
+                  params={{ iamId }}
+                  to="/projections/$iamId"
+                >
+                  <PresentationChartLineIcon className="h-4 w-4" />
+                  Projections
+                </Link>
+              )}
               {showProjectBurndown ? (
                 <Link
                   className="btn btn-lg"

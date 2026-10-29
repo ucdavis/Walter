@@ -42,6 +42,8 @@ export interface ProjectionProject {
   budgets: ProjectionBudget[];
   endDate: string | null;
   expenses: ProjectionExpense[];
+  /** Optional workspace metadata in the existing Projects JSON column. */
+  guidedSettings?: ProjectionSettings;
   id: number;
   isSeeded: boolean;
   projectName: string;
@@ -95,8 +97,18 @@ export interface Projection {
   projects: ProjectionProject[];
   /** The projection's "now": all calculation is relative to this snapshot. */
   seededAt: string;
+  /** API view of workspace metadata in Projects JSON; not a separate database column. */
+  settings?: ProjectionSettings;
   updatedAt: string;
   updatedBy: string | null;
+}
+
+export interface ProjectionSettings {
+  excludedJobIds: number[];
+  months: number;
+  note: string;
+  selectedProjectIds: number[] | null;
+  startMonth: string | null;
 }
 
 export interface ProjectionSummary {
@@ -141,7 +153,11 @@ export const projectionLookupsQueryOptions = () => ({
 
 export const createProjection = (
   iamId: string,
-  body: { historyMonths: number; name: string }
+  body: {
+    draft?: Pick<Projection, 'seededAt' | 'projects' | 'jobs' | 'settings'>;
+    historyMonths: number;
+    name: string;
+  }
 ) =>
   postJson<Projection>(
     `/api/projections/by-iam/${encodeURIComponent(iamId)}`,
@@ -150,18 +166,29 @@ export const createProjection = (
 
 export type ProjectionDraft = Pick<
   Projection,
-  'historyMonths' | 'jobs' | 'name' | 'projects'
->;
+  'historyMonths' | 'jobs' | 'name' | 'projects' | 'settings'
+> & { preserveProjectedExpenses?: boolean };
+
+export const projectionSeedQueryOptions = (iamId: string) => ({
+  queryFn: () =>
+    fetchJson<Projection>(
+      `/api/projections/by-iam/${encodeURIComponent(iamId)}/seed?historyMonths=3`
+    ),
+  queryKey: ['projections', 'seed', iamId] as const,
+  staleTime: 5 * 60 * 1000,
+});
+
+export const saveProjection = (id: number, draft: ProjectionDraft) =>
+  fetchJson<Projection>(`/api/projections/${id}`, {
+    body: JSON.stringify(draft),
+    method: 'PUT',
+  });
 
 /** Saves the whole projection; the response carries regenerated Projected expenses after a window change. */
 export const useSaveProjection = (id: number) => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ historyMonths, jobs, name, projects }: ProjectionDraft) =>
-      fetchJson<Projection>(`/api/projections/${id}`, {
-        body: JSON.stringify({ historyMonths, jobs, name, projects }),
-        method: 'PUT',
-      }),
+    mutationFn: (draft: ProjectionDraft) => saveProjection(id, draft),
     onSuccess: (saved) => queryClient.setQueryData(['projections', id], saved),
   });
 };

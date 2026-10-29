@@ -5,6 +5,7 @@
 project.lock.json
 .DS_Store
 *.pyc
+node_modules/
 
 # User-specific files
 *.suo

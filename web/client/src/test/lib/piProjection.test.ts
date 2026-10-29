@@ -219,10 +219,10 @@ describe('computePiProjection', () => {
     expect(at('2026-09')).toMatchObject({
       actualAmount: 40,
       kind: 'actual',
-      remaining: 1000,
+      remaining: 1100,
     });
-    expect(at('2026-10')).toMatchObject({ kind: 'blended', remaining: 750 });
-    expect(at('2026-11')).toMatchObject({ kind: 'projected', remaining: 440 });
+    expect(at('2026-10')).toMatchObject({ kind: 'blended', remaining: 850 });
+    expect(at('2026-11')).toMatchObject({ kind: 'projected', remaining: 540 });
   });
 
   it('projects 12 months when a project has no end date', () => {

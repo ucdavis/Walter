@@ -35,7 +35,7 @@ function NavLinks({
       {links.map((link) => (
         <Link
           activeOptions={{ exact: false }}
-          className={linkClassName}
+          className={`${linkClassName} whitespace-nowrap`}
           key={link.label}
           onClick={onNavigate}
           params={link.params}
@@ -70,6 +70,20 @@ const Header: React.FC = () => {
               label: 'Projects',
               params: { iamId: user.iamId },
               to: '/projects/$iamId',
+            } satisfies NavLinkItem,
+          ]
+        : []),
+      ...(import.meta.env.MODE === 'demo'
+        ? [
+            {
+              label: 'Projections',
+              params: { iamId: user.iamId },
+              to: '/projections/$iamId',
+            } satisfies NavLinkItem,
+            {
+              label: 'Guided projections',
+              params: { iamId: user.iamId },
+              to: '/guided-projections/$iamId',
             } satisfies NavLinkItem,
           ]
         : []),
@@ -123,19 +137,25 @@ const Header: React.FC = () => {
             to="/"
           >
             <WalterLogo className="w-8 h-8" />
-            <h1 className="text-xl hidden md:block">Walter</h1>
+            <h1 className="text-xl hidden lg:block">Walter</h1>
           </Link>
 
           {/* Desktop search */}
           <div className="hidden md:block">
-            <SearchButton className="w-52 md:w-64" placeholder="Search…" />
+            <SearchButton
+              className="w-36 lg:w-44 xl:w-64"
+              placeholder="Search…"
+            />
           </div>
         </div>
 
         <div className="flex items-center gap-4">
           {/* Desktop nav */}
-          <nav className="hidden md:flex items-center gap-6">
-            <NavLinks className="flex items-center gap-6" links={navLinks} />
+          <nav className="hidden md:flex items-center">
+            <NavLinks
+              className="flex items-center gap-3 xl:gap-6"
+              links={navLinks}
+            />
           </nav>
 
           <button
