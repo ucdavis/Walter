@@ -69,7 +69,7 @@
   @apply font-sans font-bold text-lg;
 }
 .subtitle {
-  @apply text-lg font-sans font-bold uppercase text-base-content/70;
+  @apply text-lg font-sans font-medium normal-case text-base-content/70;
 }
 .text-muted {
   @apply text-base-content/70;
