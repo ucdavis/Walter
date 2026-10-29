@@ -54,4 +54,33 @@ public sealed class PpmPortfolioService(
         }
         return result;
     }
+
+    /// <summary>
+    /// Checks whether the current user is a PI or PM on any project where the
+    /// specified employee is a Principal Investigator.
+    /// </summary>
+    public async Task<bool> IsOnAnyProjectForPiAsync(
+        string? requesterEmployeeId,
+        string piEmployeeId,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(requesterEmployeeId))
+            return false;
+
+        // Self-lookup is always allowed
+        if (string.Equals(requesterEmployeeId, piEmployeeId, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        var projects = await GetEmployeeProjectsAsync(
+            piEmployeeId, PpmRole.PrincipalInvestigator, cancellationToken);
+
+        // The requester must be a project team member (PI or PM) on at least one of the
+        // target's projects. Being award PI on a covering award is intentionally not
+        // sufficient: it must not grant access to the target PI's portfolio (issue #335).
+        return projects
+            .Any(project =>
+                project.TeamMembers.Any(m =>
+                    (m.RoleName == PpmRole.PrincipalInvestigator || m.RoleName == PpmRole.ProjectManager) &&
+                    string.Equals(m.EmployeeId, requesterEmployeeId, StringComparison.OrdinalIgnoreCase)));
+    }
 }
