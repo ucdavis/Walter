@@ -7,7 +7,8 @@ Run `npm run demo` from `web/client`. The navigation contains two projection tab
 - **Projections** at `/projections/9000000001`: the original timeline and copilot,
   retained for comparison.
 
-Both routes are available only in local demo mode. The earlier
+Both demo planners are available only in local demo mode. In normal app mode,
+`/projections/$iamId` opens the saved-projections list from the server. The earlier
 `/projection-designs/9000000001` links redirect to guided projections. The three
 unused concepts and design gallery have been removed.
 

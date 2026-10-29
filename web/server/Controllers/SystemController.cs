@@ -59,7 +59,8 @@ public class SystemController : ApiControllerBase
         return Ok(new ClientFeatures(
             _featureFlags.BurndownEnabled,
             _featureFlags.ExpenditureProgressEnabled,
-            _featureFlags.ProjectCostsEnabled));
+            _featureFlags.ProjectCostsEnabled,
+            _featureFlags.ProjectionsEnabled));
     }
 
     [HttpGet("emulate/{identifier}")]
@@ -233,4 +234,5 @@ public class SystemController : ApiControllerBase
 public sealed record ClientFeatures(
     bool BurndownEnabled,
     bool ExpenditureProgressEnabled,
-    bool ProjectCostsEnabled);
+    bool ProjectCostsEnabled,
+    bool ProjectionsEnabled);

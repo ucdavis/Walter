@@ -150,7 +150,6 @@ describe('synthetic portfolio accounting', () => {
 
 describe('demo API and real screens', () => {
   it.each([
-    ['projections', 'ProjectionLab is available in the local demo portfolio.'],
     [
       'guided-projections',
       'Guided projections are available in the local demo portfolio.',

@@ -11,8 +11,9 @@ import { summarizeAllProjects } from '@/lib/projectSummary.ts';
 import { canViewProjectDiscrepancy } from '@/shared/auth/roleAccess.ts';
 import { useUser } from '@/shared/auth/UserContext.tsx';
 import { Currency } from '@/shared/Currency.tsx';
-import { useSuspenseQuery } from '@tanstack/react-query';
-import { createFileRoute } from '@tanstack/react-router';
+import { useQuery, useSuspenseQuery } from '@tanstack/react-query';
+import { createFileRoute, Link } from '@tanstack/react-router';
+import { featureFlagsQueryOptions } from '@/queries/featureFlags.ts';
 import { PageEmpty } from '@/components/states/PageEmpty.tsx';
 import {
   BanknotesIcon,
@@ -50,6 +51,7 @@ function RouteComponent() {
   );
 
   const user = useUser();
+  const { data: featureFlags } = useQuery(featureFlagsQueryOptions());
   const authorizedDiscrepancyProjectNumbers = useMemo(
     () => [
       ...new Set(
@@ -109,6 +111,15 @@ function RouteComponent() {
         <h1 className="h1">
           {ownerDisplayName ? `${ownerDisplayName}'s Dashboard` : 'Dashboard'}
         </h1>
+        {featureFlags?.projectionsEnabled && (
+          <Link
+            className="btn btn-outline btn-sm"
+            params={{ iamId }}
+            to="/projections/$iamId"
+          >
+            Projections
+          </Link>
+        )}
       </section>
       <section className="section-margin">
         <div className="fancy-data">

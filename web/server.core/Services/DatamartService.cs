@@ -119,7 +119,7 @@ public interface IDatamartService
         DepartmentBalancesOptionsQuery query, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default);
 }
 
-public sealed class DatamartService : IDatamartService, IPpmPortfolioReader, IAccrualReportDataSource
+public sealed class DatamartService : IDatamartService, IPpmPortfolioReader, IAccrualReportDataSource, IProjectionDataSource
 {
     private const string GetSearchablePeopleSproc = "dbo.usp_GetSearchablePeople";
 
@@ -451,6 +451,49 @@ public sealed class DatamartService : IDatamartService, IPpmPortfolioReader, IAc
             };
         }, ct);
     }
+
+    public async Task<ProjectionSeedData> GetProjectionSeedAsync(
+        string piEmployeeId, string? applicationUser, string? emulatingUser, CancellationToken ct)
+    {
+        return await _retry.ExecuteAsync(async ct2 =>
+        {
+            await using var conn = new SqlConnection(_connectionString);
+            await conn.OpenAsync(ct2);
+
+            var cmd = new CommandDefinition(
+                commandText: "dbo.usp_GetProjectionSeed",
+                parameters: new { PiEmployeeId = piEmployeeId, ApplicationName = _appName, ApplicationUser = applicationUser, EmulatingUser = emulatingUser },
+                commandType: CommandType.StoredProcedure,
+                commandTimeout: 60,
+                cancellationToken: ct2);
+
+            await using var grid = await conn.QueryMultipleAsync(cmd);
+            return new ProjectionSeedData
+            {
+                Projects = (await grid.ReadAsync<ProjectionSeedProject>()).AsList(),
+                Budgets = (await grid.ReadAsync<ProjectionSeedBudget>()).AsList(),
+                Actuals = (await grid.ReadAsync<ProjectionSeedActual>()).AsList(),
+                RunRates = (await grid.ReadAsync<ProjectionSeedRunRate>()).AsList(),
+            };
+        }, ct);
+    }
+
+    public Task<IReadOnlyList<PositionBudgetRecord>> GetCognosPositionBudgetsAsync(
+        IReadOnlyList<string> projectNumbers, string? applicationUser, string? emulatingUser, CancellationToken ct) =>
+        ExecuteSprocAsync<PositionBudgetRecord>(
+            "dbo.usp_GetPositionBudgetsCognos",
+            new { ProjectIds = string.Join(",", projectNumbers), ApplicationName = _appName, ApplicationUser = applicationUser, EmulatingUser = emulatingUser },
+            ct: ct);
+
+    public Task<IReadOnlyList<JobCodeRecord>> GetJobCodesAsync(CancellationToken ct) =>
+        ExecuteQueryAsync<JobCodeRecord>(
+            "SELECT RateSet, JobCode, Title, CBR AS Cbr, VacationAccrual FROM dbo.CompositeBenefitRates ORDER BY JobCode, RateSet",
+            ct: ct);
+
+    public Task<IReadOnlyList<string>> GetExpenditureCategoriesAsync(CancellationToken ct) =>
+        ExecuteQueryAsync<string>(
+            "SELECT DISTINCT ExpenditureCategory FROM dbo.ExpenditureTypeByAccount ORDER BY ExpenditureCategory",
+            ct: ct);
 
     public async Task<IReadOnlyList<ProjectCostRecord>> GetProjectCostsAsync(
         string projectNumber, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default)

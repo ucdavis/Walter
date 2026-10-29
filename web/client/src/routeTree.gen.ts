@@ -24,7 +24,6 @@ import { Route as authenticatedReportsIndexRouteImport } from './routes/(authent
 import { Route as authenticatedPrincipalInvestigatorsIndexRouteImport } from './routes/(authenticated)/principalInvestigators/index'
 import { Route as authenticatedAdminIndexRouteImport } from './routes/(authenticated)/admin/index'
 import { Route as authenticatedAccrualsIndexRouteImport } from './routes/(authenticated)/accruals/index'
-import { Route as authenticatedProjectionsIamIdRouteImport } from './routes/(authenticated)/projections/$iamId'
 import { Route as authenticatedProjectionDesignsIamIdRouteImport } from './routes/(authenticated)/projection-designs/$iamId'
 import { Route as authenticatedPrincipalInvestigatorsIamIdRouteImport } from './routes/(authenticated)/principalInvestigators/$iamId'
 import { Route as authenticatedGuidedProjectionsIamIdRouteImport } from './routes/(authenticated)/guided-projections/$iamId'
@@ -36,7 +35,9 @@ import { Route as authenticatedAccrualsAboutRouteImport } from './routes/(authen
 import { Route as authenticatedProjectsIamIdRouteRouteImport } from './routes/(authenticated)/projects/$iamId/route'
 import { Route as authenticatedReportsDepartmentBalancesIndexRouteImport } from './routes/(authenticated)/reports/department-balances/index'
 import { Route as authenticatedProjectsIamIdIndexRouteImport } from './routes/(authenticated)/projects/$iamId/index'
+import { Route as authenticatedProjectionsIamIdIndexRouteImport } from './routes/(authenticated)/projections/$iamId/index'
 import { Route as authenticatedProjectsByNumberProjectNumberRouteImport } from './routes/(authenticated)/projects/by-number/$projectNumber'
+import { Route as authenticatedProjectionsIamIdProjectionIdRouteImport } from './routes/(authenticated)/projections/$iamId/$projectionId'
 import { Route as authenticatedProjectcostsIamIdProjectNumberRouteImport } from './routes/(authenticated)/projectcosts/$iamId/$projectNumber'
 import { Route as authenticatedProjectburndownIamIdProjectNumberRouteImport } from './routes/(authenticated)/projectburndown/$iamId/$projectNumber'
 import { Route as authenticatedAccrualsDepartmentDepartmentCodeRouteImport } from './routes/(authenticated)/accruals/department/$departmentCode'
@@ -122,12 +123,6 @@ const authenticatedAccrualsIndexRoute =
     path: '/accruals/',
     getParentRoute: () => authenticatedRouteRoute,
   } as any)
-const authenticatedProjectionsIamIdRoute =
-  authenticatedProjectionsIamIdRouteImport.update({
-    id: '/projections/$iamId',
-    path: '/projections/$iamId',
-    getParentRoute: () => authenticatedRouteRoute,
-  } as any)
 const authenticatedProjectionDesignsIamIdRoute =
   authenticatedProjectionDesignsIamIdRouteImport.update({
     id: '/projection-designs/$iamId',
@@ -193,11 +188,23 @@ const authenticatedProjectsIamIdIndexRoute =
     path: '/',
     getParentRoute: () => authenticatedProjectsIamIdRouteRoute,
   } as any)
+const authenticatedProjectionsIamIdIndexRoute =
+  authenticatedProjectionsIamIdIndexRouteImport.update({
+    id: '/projections/$iamId/',
+    path: '/projections/$iamId/',
+    getParentRoute: () => authenticatedRouteRoute,
+  } as any)
 const authenticatedProjectsByNumberProjectNumberRoute =
   authenticatedProjectsByNumberProjectNumberRouteImport.update({
     id: '/by-number/$projectNumber',
     path: '/by-number/$projectNumber',
     getParentRoute: () => authenticatedProjectsRouteRoute,
+  } as any)
+const authenticatedProjectionsIamIdProjectionIdRoute =
+  authenticatedProjectionsIamIdProjectionIdRouteImport.update({
+    id: '/projections/$iamId/$projectionId',
+    path: '/projections/$iamId/$projectionId',
+    getParentRoute: () => authenticatedRouteRoute,
   } as any)
 const authenticatedProjectcostsIamIdProjectNumberRoute =
   authenticatedProjectcostsIamIdProjectNumberRouteImport.update({
@@ -256,7 +263,6 @@ export interface FileRoutesByFullPath {
   '/guided-projections/$iamId': typeof authenticatedGuidedProjectionsIamIdRoute
   '/principalInvestigators/$iamId': typeof authenticatedPrincipalInvestigatorsIamIdRoute
   '/projection-designs/$iamId': typeof authenticatedProjectionDesignsIamIdRoute
-  '/projections/$iamId': typeof authenticatedProjectionsIamIdRoute
   '/accruals': typeof authenticatedAccrualsIndexRoute
   '/admin/': typeof authenticatedAdminIndexRoute
   '/principalInvestigators': typeof authenticatedPrincipalInvestigatorsIndexRoute
@@ -264,7 +270,9 @@ export interface FileRoutesByFullPath {
   '/accruals/department/$departmentCode': typeof authenticatedAccrualsDepartmentDepartmentCodeRoute
   '/projectburndown/$iamId/$projectNumber': typeof authenticatedProjectburndownIamIdProjectNumberRoute
   '/projectcosts/$iamId/$projectNumber': typeof authenticatedProjectcostsIamIdProjectNumberRoute
+  '/projections/$iamId/$projectionId': typeof authenticatedProjectionsIamIdProjectionIdRoute
   '/projects/by-number/$projectNumber': typeof authenticatedProjectsByNumberProjectNumberRoute
+  '/projections/$iamId': typeof authenticatedProjectionsIamIdIndexRoute
   '/projects/$iamId/': typeof authenticatedProjectsIamIdIndexRoute
   '/reports/department-balances': typeof authenticatedReportsDepartmentBalancesIndexRoute
   '/reports/reconciliation/$projectNumber/detail': typeof authenticatedReportsReconciliationProjectNumberDetailRoute
@@ -288,7 +296,6 @@ export interface FileRoutesByTo {
   '/guided-projections/$iamId': typeof authenticatedGuidedProjectionsIamIdRoute
   '/principalInvestigators/$iamId': typeof authenticatedPrincipalInvestigatorsIamIdRoute
   '/projection-designs/$iamId': typeof authenticatedProjectionDesignsIamIdRoute
-  '/projections/$iamId': typeof authenticatedProjectionsIamIdRoute
   '/accruals': typeof authenticatedAccrualsIndexRoute
   '/admin': typeof authenticatedAdminIndexRoute
   '/principalInvestigators': typeof authenticatedPrincipalInvestigatorsIndexRoute
@@ -296,7 +303,9 @@ export interface FileRoutesByTo {
   '/accruals/department/$departmentCode': typeof authenticatedAccrualsDepartmentDepartmentCodeRoute
   '/projectburndown/$iamId/$projectNumber': typeof authenticatedProjectburndownIamIdProjectNumberRoute
   '/projectcosts/$iamId/$projectNumber': typeof authenticatedProjectcostsIamIdProjectNumberRoute
+  '/projections/$iamId/$projectionId': typeof authenticatedProjectionsIamIdProjectionIdRoute
   '/projects/by-number/$projectNumber': typeof authenticatedProjectsByNumberProjectNumberRoute
+  '/projections/$iamId': typeof authenticatedProjectionsIamIdIndexRoute
   '/projects/$iamId': typeof authenticatedProjectsIamIdIndexRoute
   '/reports/department-balances': typeof authenticatedReportsDepartmentBalancesIndexRoute
   '/reports/reconciliation/$projectNumber/detail': typeof authenticatedReportsReconciliationProjectNumberDetailRoute
@@ -325,7 +334,6 @@ export interface FileRoutesById {
   '/(authenticated)/guided-projections/$iamId': typeof authenticatedGuidedProjectionsIamIdRoute
   '/(authenticated)/principalInvestigators/$iamId': typeof authenticatedPrincipalInvestigatorsIamIdRoute
   '/(authenticated)/projection-designs/$iamId': typeof authenticatedProjectionDesignsIamIdRoute
-  '/(authenticated)/projections/$iamId': typeof authenticatedProjectionsIamIdRoute
   '/(authenticated)/accruals/': typeof authenticatedAccrualsIndexRoute
   '/(authenticated)/admin/': typeof authenticatedAdminIndexRoute
   '/(authenticated)/principalInvestigators/': typeof authenticatedPrincipalInvestigatorsIndexRoute
@@ -333,7 +341,9 @@ export interface FileRoutesById {
   '/(authenticated)/accruals/department/$departmentCode': typeof authenticatedAccrualsDepartmentDepartmentCodeRoute
   '/(authenticated)/projectburndown/$iamId/$projectNumber': typeof authenticatedProjectburndownIamIdProjectNumberRoute
   '/(authenticated)/projectcosts/$iamId/$projectNumber': typeof authenticatedProjectcostsIamIdProjectNumberRoute
+  '/(authenticated)/projections/$iamId/$projectionId': typeof authenticatedProjectionsIamIdProjectionIdRoute
   '/(authenticated)/projects/by-number/$projectNumber': typeof authenticatedProjectsByNumberProjectNumberRoute
+  '/(authenticated)/projections/$iamId/': typeof authenticatedProjectionsIamIdIndexRoute
   '/(authenticated)/projects/$iamId/': typeof authenticatedProjectsIamIdIndexRoute
   '/(authenticated)/reports/department-balances/': typeof authenticatedReportsDepartmentBalancesIndexRoute
   '/(authenticated)/reports/reconciliation/$projectNumber/detail': typeof authenticatedReportsReconciliationProjectNumberDetailRoute
@@ -362,7 +372,6 @@ export interface FileRouteTypes {
     | '/guided-projections/$iamId'
     | '/principalInvestigators/$iamId'
     | '/projection-designs/$iamId'
-    | '/projections/$iamId'
     | '/accruals'
     | '/admin/'
     | '/principalInvestigators'
@@ -370,7 +379,9 @@ export interface FileRouteTypes {
     | '/accruals/department/$departmentCode'
     | '/projectburndown/$iamId/$projectNumber'
     | '/projectcosts/$iamId/$projectNumber'
+    | '/projections/$iamId/$projectionId'
     | '/projects/by-number/$projectNumber'
+    | '/projections/$iamId'
     | '/projects/$iamId/'
     | '/reports/department-balances'
     | '/reports/reconciliation/$projectNumber/detail'
@@ -394,7 +405,6 @@ export interface FileRouteTypes {
     | '/guided-projections/$iamId'
     | '/principalInvestigators/$iamId'
     | '/projection-designs/$iamId'
-    | '/projections/$iamId'
     | '/accruals'
     | '/admin'
     | '/principalInvestigators'
@@ -402,7 +412,9 @@ export interface FileRouteTypes {
     | '/accruals/department/$departmentCode'
     | '/projectburndown/$iamId/$projectNumber'
     | '/projectcosts/$iamId/$projectNumber'
+    | '/projections/$iamId/$projectionId'
     | '/projects/by-number/$projectNumber'
+    | '/projections/$iamId'
     | '/projects/$iamId'
     | '/reports/department-balances'
     | '/reports/reconciliation/$projectNumber/detail'
@@ -430,7 +442,6 @@ export interface FileRouteTypes {
     | '/(authenticated)/guided-projections/$iamId'
     | '/(authenticated)/principalInvestigators/$iamId'
     | '/(authenticated)/projection-designs/$iamId'
-    | '/(authenticated)/projections/$iamId'
     | '/(authenticated)/accruals/'
     | '/(authenticated)/admin/'
     | '/(authenticated)/principalInvestigators/'
@@ -438,7 +449,9 @@ export interface FileRouteTypes {
     | '/(authenticated)/accruals/department/$departmentCode'
     | '/(authenticated)/projectburndown/$iamId/$projectNumber'
     | '/(authenticated)/projectcosts/$iamId/$projectNumber'
+    | '/(authenticated)/projections/$iamId/$projectionId'
     | '/(authenticated)/projects/by-number/$projectNumber'
+    | '/(authenticated)/projections/$iamId/'
     | '/(authenticated)/projects/$iamId/'
     | '/(authenticated)/reports/department-balances/'
     | '/(authenticated)/reports/reconciliation/$projectNumber/detail'
@@ -558,13 +571,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authenticatedAccrualsIndexRouteImport
       parentRoute: typeof authenticatedRouteRoute
     }
-    '/(authenticated)/projections/$iamId': {
-      id: '/(authenticated)/projections/$iamId'
-      path: '/projections/$iamId'
-      fullPath: '/projections/$iamId'
-      preLoaderRoute: typeof authenticatedProjectionsIamIdRouteImport
-      parentRoute: typeof authenticatedRouteRoute
-    }
     '/(authenticated)/projection-designs/$iamId': {
       id: '/(authenticated)/projection-designs/$iamId'
       path: '/projection-designs/$iamId'
@@ -642,12 +648,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authenticatedProjectsIamIdIndexRouteImport
       parentRoute: typeof authenticatedProjectsIamIdRouteRoute
     }
+    '/(authenticated)/projections/$iamId/': {
+      id: '/(authenticated)/projections/$iamId/'
+      path: '/projections/$iamId'
+      fullPath: '/projections/$iamId'
+      preLoaderRoute: typeof authenticatedProjectionsIamIdIndexRouteImport
+      parentRoute: typeof authenticatedRouteRoute
+    }
     '/(authenticated)/projects/by-number/$projectNumber': {
       id: '/(authenticated)/projects/by-number/$projectNumber'
       path: '/by-number/$projectNumber'
       fullPath: '/projects/by-number/$projectNumber'
       preLoaderRoute: typeof authenticatedProjectsByNumberProjectNumberRouteImport
       parentRoute: typeof authenticatedProjectsRouteRoute
+    }
+    '/(authenticated)/projections/$iamId/$projectionId': {
+      id: '/(authenticated)/projections/$iamId/$projectionId'
+      path: '/projections/$iamId/$projectionId'
+      fullPath: '/projections/$iamId/$projectionId'
+      preLoaderRoute: typeof authenticatedProjectionsIamIdProjectionIdRouteImport
+      parentRoute: typeof authenticatedRouteRoute
     }
     '/(authenticated)/projectcosts/$iamId/$projectNumber': {
       id: '/(authenticated)/projectcosts/$iamId/$projectNumber'
@@ -784,12 +804,13 @@ interface authenticatedRouteRouteChildren {
   authenticatedGuidedProjectionsIamIdRoute: typeof authenticatedGuidedProjectionsIamIdRoute
   authenticatedPrincipalInvestigatorsIamIdRoute: typeof authenticatedPrincipalInvestigatorsIamIdRoute
   authenticatedProjectionDesignsIamIdRoute: typeof authenticatedProjectionDesignsIamIdRoute
-  authenticatedProjectionsIamIdRoute: typeof authenticatedProjectionsIamIdRoute
   authenticatedAccrualsIndexRoute: typeof authenticatedAccrualsIndexRoute
   authenticatedPrincipalInvestigatorsIndexRoute: typeof authenticatedPrincipalInvestigatorsIndexRoute
   authenticatedAccrualsDepartmentDepartmentCodeRoute: typeof authenticatedAccrualsDepartmentDepartmentCodeRoute
   authenticatedProjectburndownIamIdProjectNumberRoute: typeof authenticatedProjectburndownIamIdProjectNumberRoute
   authenticatedProjectcostsIamIdProjectNumberRoute: typeof authenticatedProjectcostsIamIdProjectNumberRoute
+  authenticatedProjectionsIamIdProjectionIdRoute: typeof authenticatedProjectionsIamIdProjectionIdRoute
+  authenticatedProjectionsIamIdIndexRoute: typeof authenticatedProjectionsIamIdIndexRoute
 }
 
 const authenticatedRouteRouteChildren: authenticatedRouteRouteChildren = {
@@ -810,7 +831,6 @@ const authenticatedRouteRouteChildren: authenticatedRouteRouteChildren = {
     authenticatedPrincipalInvestigatorsIamIdRoute,
   authenticatedProjectionDesignsIamIdRoute:
     authenticatedProjectionDesignsIamIdRoute,
-  authenticatedProjectionsIamIdRoute: authenticatedProjectionsIamIdRoute,
   authenticatedAccrualsIndexRoute: authenticatedAccrualsIndexRoute,
   authenticatedPrincipalInvestigatorsIndexRoute:
     authenticatedPrincipalInvestigatorsIndexRoute,
@@ -820,6 +840,10 @@ const authenticatedRouteRouteChildren: authenticatedRouteRouteChildren = {
     authenticatedProjectburndownIamIdProjectNumberRoute,
   authenticatedProjectcostsIamIdProjectNumberRoute:
     authenticatedProjectcostsIamIdProjectNumberRoute,
+  authenticatedProjectionsIamIdProjectionIdRoute:
+    authenticatedProjectionsIamIdProjectionIdRoute,
+  authenticatedProjectionsIamIdIndexRoute:
+    authenticatedProjectionsIamIdIndexRoute,
 }
 
 const authenticatedRouteRouteWithChildren =

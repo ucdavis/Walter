@@ -184,7 +184,8 @@ BEGIN
 
         /* Non-personnel projection = average spend per trailing actual month that has data.
            Equipment ('04 - Equipment and Facilities') is excluded: it is lumpy/one-time and a
-           run-rate would over-project it. It still shows its actuals and stays in the burndown. */
+           run-rate would over-project it. It still shows its actuals and stays in the burndown.
+           Run-rate rule duplicated in dbo.usp_GetProjectionSeed; keep in sync. */
         DROP TABLE IF EXISTS #navg;
         SELECT g.ExpenditureCategory, SUM(g.ActualAmount) / NULLIF(@ActualMonths, 0) AS AvgAmount
         INTO #navg

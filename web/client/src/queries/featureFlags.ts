@@ -5,6 +5,7 @@ export type FeatureFlags = {
   burndownEnabled: boolean;
   expenditureProgressEnabled: boolean;
   projectCostsEnabled: boolean;
+  projectionsEnabled: boolean;
 };
 
 export const featureFlagsQueryOptions = () => ({

@@ -67,6 +67,19 @@ public sealed class PpmPortfolioServiceTests
         await action.Should().ThrowAsync<OperationCanceledException>();
     }
 
+    [Theory]
+    [InlineData("200", true)]
+    [InlineData("100", true)]
+    [InlineData("999", false)]
+    [InlineData(null, false)]
+    public async Task IsOnAnyProjectForPiAsync_true_for_pm_on_one_of_the_pis_projects(string? requester, bool expected)
+    {
+        var reader = new FakePpmPortfolioReader(
+            [new("P1", [new(PpmRole.PrincipalInvestigator, "PI", "100", null), new(PpmRole.ProjectManager, "PM", "200", null)], [])]);
+        var result = await Create(false, reader).IsOnAnyProjectForPiAsync(requester, "100", default);
+        result.Should().Be(expected);
+    }
+
     private static PpmPortfolioService Create(bool legacy, FakePpmPortfolioReader reader) =>
         new(new FakeFinancialApiService([], new Dictionary<string, IReadOnlyList<FakeFinancialProjectTeamMember>>
         {

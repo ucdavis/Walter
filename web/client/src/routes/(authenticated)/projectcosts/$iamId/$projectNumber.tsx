@@ -23,12 +23,13 @@ import {
 
 interface ProjectCostsSearch {
   category?: string;
+  task?: string;
 }
 
-function parseCategory(value: unknown) {
-  const category = typeof value === 'string' ? value.trim() : '';
+function parseSearchValue(value: unknown) {
+  const text = typeof value === 'string' ? value.trim() : '';
 
-  return category || undefined;
+  return text || undefined;
 }
 
 export const Route = createFileRoute(
@@ -37,7 +38,8 @@ export const Route = createFileRoute(
   component: RouteComponent,
   errorComponent: ProjectCostsErrorBoundary,
   validateSearch: (search: Record<string, unknown>): ProjectCostsSearch => ({
-    category: parseCategory(search.category),
+    category: parseSearchValue(search.category),
+    task: parseSearchValue(search.task),
   }),
   // Keep validation ahead of the loader so TanStack Router infers the search type.
   loader: async ({
@@ -73,7 +75,7 @@ const ProjectNotFound = ({ projectNumber }: { projectNumber: string }) => (
 
 function RouteComponent() {
   const { iamId, projectNumber } = Route.useParams();
-  const { category } = Route.useSearch();
+  const { category, task } = Route.useSearch();
   const { data: projects } = useSuspenseQuery(
     projectsDetailQueryOptions(iamId)
   );
@@ -126,8 +128,10 @@ function RouteComponent() {
           <section className="section-margin">
             <ProjectCostsTable
               category={category}
-              key={category ?? 'all'}
+              isInternal={summary.isInternal}
+              key={`${category ?? 'all'}|${task ?? 'all'}`}
               projectNumber={projectNumber}
+              task={task}
             />
           </section>
         ) : (
