@@ -801,12 +801,11 @@ describe('project detail page', () => {
       const timelineSelect = screen.getByRole('combobox', {
         name: 'Timeline',
       });
-      expect(timelineSelect).toHaveTextContent('Project End');
+      expect(timelineSelect).toHaveValue('project-end');
       expect(screen.queryByText('Projection')).not.toBeInTheDocument();
 
-      await user.click(timelineSelect);
-      await user.click(screen.getByRole('option', { name: '12 months' }));
-      expect(timelineSelect).toHaveTextContent('12 months');
+      await user.selectOptions(timelineSelect, '12-months');
+      expect(timelineSelect).toHaveValue('12-months');
       expect(await screen.findByText('-$315.00')).toBeInTheDocument();
       expect(
         screen.queryByTestId('project-expenditure-progress')

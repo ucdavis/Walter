@@ -683,12 +683,38 @@ describe('project costs page', () => {
       await screen.findByTestId('project-costs-table');
       expect(screen.getByText('March Entry')).toBeInTheDocument();
 
-      await user.type(screen.getByLabelText('From'), '2026-06-15');
+      await user.click(screen.getByLabelText('From'));
+      const fromCalendar = screen.getByRole('dialog', {
+        name: 'Choose from date',
+      });
+      const today = new Date();
+      const monthsToJune =
+        (2026 - today.getFullYear()) * 12 + 5 - today.getMonth();
+      for (let month = 0; month < Math.abs(monthsToJune); month++) {
+        await user.click(
+          within(fromCalendar).getByRole('button', {
+            name:
+              monthsToJune < 0
+                ? 'Go to the Previous Month'
+                : 'Go to the Next Month',
+          })
+        );
+      }
+      await user.click(
+        within(fromCalendar).getByRole('button', { name: /June 15th, 2026/ })
+      );
       expect(screen.queryByText('March Entry')).not.toBeInTheDocument();
       expect(screen.getByText('June Entry')).toBeInTheDocument();
       expect(screen.getByText('September Entry')).toBeInTheDocument();
 
-      await user.type(screen.getByLabelText('To'), '2026-06-15');
+      await user.click(screen.getByLabelText('To'));
+      const toCalendar = screen.getByRole('dialog', { name: 'Choose to date' });
+      expect(
+        within(toCalendar).getByRole('button', { name: /June 14th, 2026/ })
+      ).toBeDisabled();
+      await user.click(
+        within(toCalendar).getByRole('button', { name: /June 15th, 2026/ })
+      );
       expect(screen.getByText('June Entry')).toBeInTheDocument();
       expect(screen.queryByText('September Entry')).not.toBeInTheDocument();
 
