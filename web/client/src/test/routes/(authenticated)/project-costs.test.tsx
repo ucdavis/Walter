@@ -378,6 +378,79 @@ describe('project costs page', () => {
     }
   });
 
+  it('does not show the task column or task filter for sponsored projects', async () => {
+    setupHandlers([createProject()]);
+
+    const { cleanup } = renderRoute({
+      initialPath: '/projectcosts/1000/P1',
+    });
+
+    try {
+      const table = await screen.findByTestId('project-costs-table');
+
+      expect(
+        within(table).queryByRole('columnheader', { name: 'Task' })
+      ).not.toBeInTheDocument();
+      expect(
+        within(table).queryByRole('combobox', { name: 'Task' })
+      ).not.toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('shows the task column and filters by task for internal projects', async () => {
+    const user = userEvent.setup();
+    setupHandlers(
+      [createProject({ awardNumber: null, projectType: 'Internal' })],
+      [
+        createProjectCost({
+          documentEntry: 'Field Entry',
+          taskName: 'Field Work',
+          taskNumber: 'TASK02',
+          transactionNumber: 1,
+        }),
+        createProjectCost({
+          documentEntry: 'Lab Entry',
+          taskName: 'Lab Work',
+          taskNumber: 'TASK01',
+          transactionNumber: 2,
+        }),
+      ]
+    );
+
+    const { cleanup } = renderRoute({
+      initialPath: '/projectcosts/1000/P1',
+    });
+
+    try {
+      const table = await screen.findByTestId('project-costs-table');
+
+      expect(
+        within(table).getByRole('columnheader', { name: 'Task' })
+      ).toBeInTheDocument();
+      const taskFilter = within(table).getByRole('combobox', {
+        name: 'Task',
+      });
+      expect(
+        within(taskFilter)
+          .getAllByRole('option')
+          .map((option) => option.textContent)
+      ).toEqual(['All Tasks', 'TASK01 - Lab Work', 'TASK02 - Field Work']);
+      expect(taskFilter).toHaveValue('');
+
+      await user.selectOptions(taskFilter, 'TASK02');
+      expect(screen.getByText('Field Entry')).toBeInTheDocument();
+      expect(screen.queryByText('Lab Entry')).not.toBeInTheDocument();
+
+      await user.selectOptions(taskFilter, '');
+      expect(screen.getByText('Field Entry')).toBeInTheDocument();
+      expect(screen.getByText('Lab Entry')).toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+
   it('does not show costs when the feature is disabled', async () => {
     setupHandlers([createProject()]);
     server.use(

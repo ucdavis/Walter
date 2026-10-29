@@ -119,9 +119,12 @@ function sumBurdenedCost(rows: { original: ProjectCostRecord }[]) {
 
 export function ProjectCostsTable({
   category,
+  isInternal = false,
   projectNumber,
 }: {
   category?: string;
+  /** Internal projects show a task column and task filter; sponsored projects have a single task. */
+  isInternal?: boolean;
   projectNumber: string;
 }) {
   const { data: projectCostRecords } = useSuspenseQuery(
@@ -132,6 +135,7 @@ export function ProjectCostsTable({
   );
   const [selectedTimeline, setSelectedTimeline] =
     useState<ProjectCostTimeline>('entire-project');
+  const [selectedTask, setSelectedTask] = useState('');
   const columns = useMemo(
     () => [
       columnHelper.accessor('expenditureCategory', {
@@ -141,6 +145,32 @@ export function ProjectCostsTable({
         minSize: 220,
         size: 260,
       }),
+      ...(isInternal
+        ? [
+            columnHelper.accessor(
+              (row) => [row.taskNumber, row.taskName].join(' '),
+              {
+                cell: (info) => (
+                  <div className="text-sm">
+                    <div className="whitespace-nowrap">
+                      {info.row.original.taskNumber}
+                    </div>
+                    {info.row.original.taskName && (
+                      <div className="text-xs text-base-content/80">
+                        {info.row.original.taskName}
+                      </div>
+                    )}
+                  </div>
+                ),
+                footer: () => null,
+                header: 'Task',
+                id: 'task',
+                minSize: 180,
+                size: 220,
+              }
+            ),
+          ]
+        : []),
       columnHelper.accessor('accountingPeriod', {
         cell: (info) => (
           <span className="text-sm whitespace-nowrap">{info.getValue()}</span>
@@ -193,7 +223,7 @@ export function ProjectCostsTable({
         size: 160,
       }),
     ],
-    []
+    [isInternal]
   );
   const latestAccountingPeriodMonthIndex = useMemo(
     () =>
@@ -218,6 +248,20 @@ export function ProjectCostsTable({
       ].sort(),
     [category, projectCostRecords]
   );
+  const projectCostTasks = useMemo(
+    () =>
+      [
+        ...new Map(
+          projectCostRecords.map((record) => [
+            record.taskNumber,
+            record.taskName,
+          ])
+        ),
+      ]
+        .map(([taskNumber, taskName]) => ({ taskName, taskNumber }))
+        .sort((a, b) => a.taskNumber.localeCompare(b.taskNumber)),
+    [projectCostRecords]
+  );
   const filteredRecords = useMemo(() => {
     const timelineMonthCount = getTimelineMonthCount(selectedTimeline);
     const earliestTimelineMonthIndex =
@@ -233,13 +277,15 @@ export function ProjectCostsTable({
       const matchesCategory =
         selectedCategories.length === 0 ||
         selectedCategories.includes(record.expenditureCategory);
+      const matchesTask = !selectedTask || record.taskNumber === selectedTask;
 
-      return isWithinTimeline && matchesCategory;
+      return isWithinTimeline && matchesCategory && matchesTask;
     });
   }, [
     latestAccountingPeriodMonthIndex,
     projectCostRecords,
     selectedCategories,
+    selectedTask,
     selectedTimeline,
   ]);
   const toggleCategory = (category: string) => {
@@ -253,27 +299,55 @@ export function ProjectCostsTable({
   return (
     <div data-testid="project-costs-table">
       <div className="mb-4">
-        <div className="mb-4">
-          <span className="stat-label mb-1 block">Timeline</span>
-          <div aria-label="Timeline" className="join" role="group">
-            {projectCostTimelineOptions.map((option) => {
-              const isSelected = selectedTimeline === option.value;
+        <div className="mb-4 flex flex-wrap items-end gap-4">
+          <div>
+            <span className="stat-label mb-1 block">Timeline</span>
+            <div aria-label="Timeline" className="join" role="group">
+              {projectCostTimelineOptions.map((option) => {
+                const isSelected = selectedTimeline === option.value;
 
-              return (
-                <button
-                  aria-pressed={isSelected}
-                  className={`btn btn-sm join-item ${
-                    isSelected ? 'btn-active' : ''
-                  }`}
-                  key={option.value}
-                  onClick={() => setSelectedTimeline(option.value)}
-                  type="button"
-                >
-                  {option.label}
-                </button>
-              );
-            })}
+                return (
+                  <button
+                    aria-pressed={isSelected}
+                    className={`btn btn-sm join-item ${
+                      isSelected ? 'btn-active' : ''
+                    }`}
+                    key={option.value}
+                    onClick={() => setSelectedTimeline(option.value)}
+                    type="button"
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
+
+          {isInternal ? (
+            <div>
+              <label
+                className="stat-label mb-1 block"
+                htmlFor="project-costs-task"
+              >
+                Task
+              </label>
+              <select
+                className="select select-bordered select-sm w-full sm:w-72"
+                id="project-costs-task"
+                onChange={(event) => setSelectedTask(event.target.value)}
+                value={selectedTask}
+              >
+                <option value="">All Tasks</option>
+                {projectCostTasks.map((task) => (
+                  <option key={task.taskNumber} value={task.taskNumber}>
+                    {task.taskName
+                      ? `${task.taskNumber} - ${task.taskName}`
+                      : task.taskNumber}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
         </div>
 
         <div className="flex flex-wrap items-center gap-2">

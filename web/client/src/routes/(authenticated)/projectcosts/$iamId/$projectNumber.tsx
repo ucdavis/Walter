@@ -126,6 +126,7 @@ function RouteComponent() {
           <section className="section-margin">
             <ProjectCostsTable
               category={category}
+              isInternal={summary.isInternal}
               key={category ?? 'all'}
               projectNumber={projectNumber}
             />
