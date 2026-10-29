@@ -1,7 +1,6 @@
 import { useId, useMemo, useState } from 'react';
 import {
   ChevronDownIcon,
-  ClipboardDocumentListIcon,
   ClockIcon,
   MagnifyingGlassIcon,
 } from '@heroicons/react/24/outline';
@@ -524,38 +523,37 @@ function EmployeeFundingCard({ employee }: { employee: EmployeeFunding }) {
                 {roles}
               </span>
             )}
-            <span className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-base-content/70">
-              <span className="inline-flex items-center gap-1">
-                <ClipboardDocumentListIcon
-                  aria-hidden="true"
-                  className="h-4 w-4"
-                />
-                <span>
-                  {projectCount} {projectCount === 1 ? 'project' : 'projects'}
-                </span>
+            {(futureOnly || funding.unknownCount > 0 || fundingEndingSoon) && (
+              <span className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-base-content/70">
+                {futureOnly && (
+                  <span className="badge badge-soft badge-info badge-sm">
+                    Future only
+                  </span>
+                )}
+                {funding.unknownCount > 0 && (
+                  <span className="badge badge-soft badge-warning badge-sm">
+                    {funding.monthlyRate === null
+                      ? 'Funding unavailable'
+                      : 'Partial funding'}
+                  </span>
+                )}
+                {fundingEndingSoon && (
+                  <span className="inline-flex items-center gap-1 text-error">
+                    <ClockIcon aria-hidden="true" className="h-3 w-3" />
+                    Funding ends soon
+                  </span>
+                )}
               </span>
-              {futureOnly && (
-                <span className="badge badge-soft badge-info badge-sm">
-                  Future only
-                </span>
-              )}
-              {funding.unknownCount > 0 && (
-                <span className="badge badge-soft badge-warning badge-sm">
-                  {funding.monthlyRate === null
-                    ? 'Funding unavailable'
-                    : 'Partial funding'}
-                </span>
-              )}
-              {fundingEndingSoon && (
-                <span className="inline-flex items-center gap-1 text-error">
-                  <ClockIcon aria-hidden="true" className="h-3 w-3" />
-                  Funding ends soon
-                </span>
-              )}
-            </span>
+            )}
           </span>
         </span>
-        <span className="grid w-full grid-cols-3 gap-3 text-right text-sm sm:w-auto sm:gap-6 sm:text-base">
+        <span className="grid w-full grid-cols-4 gap-3 text-right text-sm sm:w-auto sm:gap-6 sm:text-base">
+          <span className="min-w-0 sm:min-w-24">
+            <span className="block text-xs text-base-content/70">Projects</span>
+            <span className="mt-1 block font-medium tabular-nums">
+              {projectCount}
+            </span>
+          </span>
           <FundingMetric label="Mo. Salary" value={funding.monthlyRate} />
           <FundingMetric label="Mo. CBR" value={funding.monthlyFringe} />
           <FundingMetric
