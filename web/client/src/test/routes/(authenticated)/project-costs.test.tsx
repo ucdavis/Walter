@@ -370,9 +370,145 @@ describe('project costs page', () => {
       expect(
         screen.getByRole('button', { name: 'Export' })
       ).toBeInTheDocument();
+      expect(screen.getByLabelText('From')).toHaveValue('');
+      expect(screen.getByLabelText('To')).toHaveValue('');
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('does not show the task column or task filter for sponsored projects', async () => {
+    setupHandlers([createProject()]);
+
+    const { cleanup } = renderRoute({
+      initialPath: '/projectcosts/1000/P1',
+    });
+
+    try {
+      const table = await screen.findByTestId('project-costs-table');
+
       expect(
-        screen.getByRole('button', { name: 'Entire project' })
-      ).toHaveAttribute('aria-pressed', 'true');
+        within(table).queryByRole('columnheader', { name: 'Task' })
+      ).not.toBeInTheDocument();
+      expect(
+        within(table).queryByRole('combobox', { name: 'Task' })
+      ).not.toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('shows the task column and filters by task for internal projects', async () => {
+    const user = userEvent.setup();
+    setupHandlers(
+      [createProject({ awardNumber: null, projectType: 'Internal' })],
+      [
+        createProjectCost({
+          documentEntry: 'Field Entry',
+          taskName: 'Field Work',
+          taskNumber: 'TASK02',
+          transactionNumber: 1,
+        }),
+        createProjectCost({
+          documentEntry: 'Lab Entry',
+          taskName: 'Lab Work',
+          taskNumber: 'TASK01',
+          transactionNumber: 2,
+        }),
+      ]
+    );
+
+    const { cleanup } = renderRoute({
+      initialPath: '/projectcosts/1000/P1',
+    });
+
+    try {
+      const table = await screen.findByTestId('project-costs-table');
+
+      expect(
+        within(table).getByRole('columnheader', { name: 'Task' })
+      ).toBeInTheDocument();
+      await user.hover(within(table).getByText('TASK02'));
+      expect(await screen.findByRole('tooltip')).toHaveTextContent(
+        'Field Work'
+      );
+      await user.unhover(within(table).getByText('TASK02'));
+      const taskFilter = within(table).getByRole('combobox', {
+        name: 'Task',
+      });
+      expect(
+        within(taskFilter)
+          .getAllByRole('option')
+          .map((option) => option.textContent)
+      ).toEqual(['All Tasks', 'TASK01 - Lab Work', 'TASK02 - Field Work']);
+      expect(taskFilter).toHaveValue('');
+
+      await user.selectOptions(taskFilter, 'TASK02');
+      expect(screen.getByText('Field Entry')).toBeInTheDocument();
+      expect(screen.queryByText('Lab Entry')).not.toBeInTheDocument();
+
+      await user.selectOptions(taskFilter, '');
+      expect(screen.getByText('Field Entry')).toBeInTheDocument();
+      expect(screen.getByText('Lab Entry')).toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('filters by the task in the URL', async () => {
+    setupHandlers(
+      [createProject({ awardNumber: null, projectType: 'Internal' })],
+      [
+        createProjectCost({
+          documentEntry: 'Field Entry',
+          taskName: 'Field Work',
+          taskNumber: 'TASK02',
+          transactionNumber: 1,
+        }),
+        createProjectCost({
+          documentEntry: 'Lab Entry',
+          taskName: 'Lab Work',
+          taskNumber: 'TASK01',
+          transactionNumber: 2,
+        }),
+      ]
+    );
+
+    const { cleanup } = renderRoute({
+      initialPath: '/projectcosts/1000/P1?task=TASK02',
+    });
+
+    try {
+      const table = await screen.findByTestId('project-costs-table');
+
+      expect(within(table).getByRole('combobox', { name: 'Task' })).toHaveValue(
+        'TASK02'
+      );
+      expect(screen.getByText('Field Entry')).toBeInTheDocument();
+      expect(screen.queryByText('Lab Entry')).not.toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('keeps a URL task with no costs selectable', async () => {
+    setupHandlers([
+      createProject({ awardNumber: null, projectType: 'Internal' }),
+    ]);
+
+    const { cleanup } = renderRoute({
+      initialPath: '/projectcosts/1000/P1?task=TASK99',
+    });
+
+    try {
+      const table = await screen.findByTestId('project-costs-table');
+
+      expect(within(table).getByRole('combobox', { name: 'Task' })).toHaveValue(
+        'TASK99'
+      );
+      expect(
+        screen.queryByText('Payroll Distribution')
+      ).not.toBeInTheDocument();
     } finally {
       cleanup();
     }
@@ -516,9 +652,28 @@ describe('project costs page', () => {
     }
   });
 
-  it('filters to the selected trailing timeline', async () => {
+  it('filters by expenditure item date range and clears it', async () => {
     const user = userEvent.setup();
-    setupHandlers([createProject()]);
+    setupHandlers(
+      [createProject()],
+      [
+        createProjectCost({
+          documentEntry: 'March Entry',
+          expenditureItemDate: '2026-03-10T00:00:00',
+          transactionNumber: 1,
+        }),
+        createProjectCost({
+          documentEntry: 'June Entry',
+          expenditureItemDate: '2026-06-15T00:00:00',
+          transactionNumber: 2,
+        }),
+        createProjectCost({
+          documentEntry: 'September Entry',
+          expenditureItemDate: '2026-09-20T00:00:00',
+          transactionNumber: 3,
+        }),
+      ]
+    );
 
     const { cleanup } = renderRoute({
       initialPath: '/projectcosts/1000/P1',
@@ -526,26 +681,20 @@ describe('project costs page', () => {
 
     try {
       await screen.findByTestId('project-costs-table');
-      expect(screen.getByText('Prior Period Allocation')).toBeInTheDocument();
+      expect(screen.getByText('March Entry')).toBeInTheDocument();
 
-      const threeMonths = screen.getByRole('button', { name: '3mo' });
-      await user.click(threeMonths);
-      expect(threeMonths).toHaveAttribute('aria-pressed', 'true');
-      expect(
-        screen.queryByText('Prior Period Allocation')
-      ).not.toBeInTheDocument();
-      expect(screen.getAllByText('Payroll Distribution')).toHaveLength(3);
-      expect(screen.getAllByText('Benefits Allocation')).toHaveLength(3);
+      await user.type(screen.getByLabelText('From'), '2026-06-15');
+      expect(screen.queryByText('March Entry')).not.toBeInTheDocument();
+      expect(screen.getByText('June Entry')).toBeInTheDocument();
+      expect(screen.getByText('September Entry')).toBeInTheDocument();
 
-      const sixMonths = screen.getByRole('button', { name: '6mo' });
-      await user.click(sixMonths);
-      expect(sixMonths).toHaveAttribute('aria-pressed', 'true');
-      expect(screen.getAllByText('Benefits Allocation')).toHaveLength(4);
+      await user.type(screen.getByLabelText('To'), '2026-06-15');
+      expect(screen.getByText('June Entry')).toBeInTheDocument();
+      expect(screen.queryByText('September Entry')).not.toBeInTheDocument();
 
-      const nineMonths = screen.getByRole('button', { name: '9mo' });
-      await user.click(nineMonths);
-      expect(nineMonths).toHaveAttribute('aria-pressed', 'true');
-      expect(screen.getByText('Prior Period Allocation')).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: 'Clear dates' }));
+      expect(screen.getByText('March Entry')).toBeInTheDocument();
+      expect(screen.getByText('September Entry')).toBeInTheDocument();
     } finally {
       cleanup();
     }

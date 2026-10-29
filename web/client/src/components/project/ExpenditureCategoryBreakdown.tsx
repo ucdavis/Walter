@@ -129,17 +129,19 @@ function buildProgressCategories(
   }));
 }
 
-function ExpensesValue({
+export function ExpensesValue({
   category,
   iamId,
   projectCostsEnabled,
   projectNumber,
+  task,
   value,
 }: {
   category?: string;
   iamId?: string;
   projectCostsEnabled: boolean;
   projectNumber: string;
+  task?: string;
   value: number;
 }) {
   const formattedValue = formatCurrency(value);
@@ -148,18 +150,21 @@ function ExpensesValue({
     return <span>{formattedValue}</span>;
   }
 
-  const hasCategory = Boolean(category);
-
   return (
     <Link
       aria-label={
-        hasCategory
+        category
           ? `View project costs for ${category}`
-          : 'View all project costs'
+          : task
+            ? `View project costs for task ${task}`
+            : 'View all project costs'
       }
       className="link underline underline-offset-2"
       params={{ iamId, projectNumber }}
-      search={hasCategory ? { category } : {}}
+      search={{
+        ...(category ? { category } : {}),
+        ...(task ? { task } : {}),
+      }}
       to="/projectcosts/$iamId/$projectNumber"
     >
       {formattedValue}

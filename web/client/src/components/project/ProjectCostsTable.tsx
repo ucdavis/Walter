@@ -11,28 +11,9 @@ import {
   projectCostsQueryOptions,
 } from '@/queries/projectCosts.ts';
 import { DataTable } from '@/shared/DataTable.tsx';
+import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
 
 const columnHelper = createColumnHelper<ProjectCostRecord>();
-const accountingPeriodMonthIndexes: Record<string, number> = {
-  Apr: 3,
-  Aug: 7,
-  Dec: 11,
-  Feb: 1,
-  Jan: 0,
-  Jul: 6,
-  Jun: 5,
-  Mar: 2,
-  May: 4,
-  Nov: 10,
-  Oct: 9,
-  Sep: 8,
-};
-const projectCostTimelineOptions = [
-  { label: 'Entire project', value: 'entire-project' },
-  { label: '3mo', value: '3-months' },
-  { label: '6mo', value: '6-months' },
-  { label: '9mo', value: '9-months' },
-] as const;
 // Export carries every report column, not just the ones shown on the page.
 const projectCostCsvColumns: CsvColumn<ProjectCostRecord>[] = [
   { header: 'Transaction Number', key: 'transactionNumber' },
@@ -91,26 +72,24 @@ const projectCostCsvColumns: CsvColumn<ProjectCostRecord>[] = [
   { format: 'currency', header: 'Burdened Cost', key: 'burdenedCost' },
 ];
 
-type ProjectCostTimeline = (typeof projectCostTimelineOptions)[number]['value'];
-
-function getAccountingPeriodMonthIndex(accountingPeriod: string) {
-  const [monthName, shortYear] = accountingPeriod.split('-');
-  const monthIndex = accountingPeriodMonthIndexes[monthName] ?? 0;
-
-  return (2000 + Number(shortYear)) * 12 + monthIndex;
-}
-
-function getTimelineMonthCount(timeline: ProjectCostTimeline) {
-  switch (timeline) {
-    case '3-months':
-      return 3;
-    case '6-months':
-      return 6;
-    case '9-months':
-      return 9;
-    default:
-      return null;
-  }
+function TruncatedText({
+  maxWidthClassName,
+  value,
+}: {
+  maxWidthClassName: string;
+  value: string;
+}) {
+  return (
+    <span className="text-sm">
+      <TooltipLabel
+        className={`block min-w-0 ${maxWidthClassName}`}
+        focusable={false}
+        label={value}
+        labelClassName="block truncate"
+        tooltip={value}
+      />
+    </span>
+  );
 }
 
 function sumBurdenedCost(rows: { original: ProjectCostRecord }[]) {
@@ -119,10 +98,15 @@ function sumBurdenedCost(rows: { original: ProjectCostRecord }[]) {
 
 export function ProjectCostsTable({
   category,
+  isInternal = false,
   projectNumber,
+  task,
 }: {
   category?: string;
+  /** Internal projects show a task column and task filter; sponsored projects have a single task. */
+  isInternal?: boolean;
   projectNumber: string;
+  task?: string;
 }) {
   const { data: projectCostRecords } = useSuspenseQuery(
     projectCostsQueryOptions(projectNumber)
@@ -130,17 +114,43 @@ export function ProjectCostsTable({
   const [selectedCategories, setSelectedCategories] = useState<string[]>(() =>
     category ? [category] : []
   );
-  const [selectedTimeline, setSelectedTimeline] =
-    useState<ProjectCostTimeline>('entire-project');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  const [selectedTask, setSelectedTask] = useState(task ?? '');
   const columns = useMemo(
     () => [
       columnHelper.accessor('expenditureCategory', {
-        cell: (info) => <span className="text-sm">{info.getValue()}</span>,
+        cell: (info) => (
+          <TruncatedText maxWidthClassName="max-w-40" value={info.getValue()} />
+        ),
         footer: () => <span className="font-proxima-bold">Total costs</span>,
         header: 'Expenditure Category',
-        minSize: 220,
-        size: 260,
+        minSize: 160,
+        size: 180,
       }),
+      ...(isInternal
+        ? [
+            columnHelper.accessor(
+              (row) => [row.taskNumber, row.taskName].join(' '),
+              {
+                cell: (info) => (
+                  <span className="text-sm whitespace-nowrap">
+                    <TooltipLabel
+                      focusable={false}
+                      label={info.row.original.taskNumber}
+                      tooltip={info.row.original.taskName}
+                    />
+                  </span>
+                ),
+                footer: () => null,
+                header: 'Task',
+                id: 'task',
+                minSize: 90,
+                size: 100,
+              }
+            ),
+          ]
+        : []),
       columnHelper.accessor('accountingPeriod', {
         cell: (info) => (
           <span className="text-sm whitespace-nowrap">{info.getValue()}</span>
@@ -162,18 +172,22 @@ export function ProjectCostsTable({
         size: 160,
       }),
       columnHelper.accessor('documentEntry', {
-        cell: (info) => <span className="text-sm">{info.getValue()}</span>,
+        cell: (info) => (
+          <TruncatedText maxWidthClassName="max-w-32" value={info.getValue()} />
+        ),
         footer: () => null,
         header: 'Document Entry',
-        minSize: 180,
-        size: 190,
+        minSize: 130,
+        size: 150,
       }),
       columnHelper.accessor('expenditureType', {
-        cell: (info) => <span className="text-sm">{info.getValue()}</span>,
+        cell: (info) => (
+          <TruncatedText maxWidthClassName="max-w-48" value={info.getValue()} />
+        ),
         footer: () => null,
         header: 'Expenditure Type',
-        minSize: 260,
-        size: 300,
+        minSize: 180,
+        size: 220,
       }),
       columnHelper.accessor('burdenedCost', {
         cell: (info) => (
@@ -193,19 +207,7 @@ export function ProjectCostsTable({
         size: 160,
       }),
     ],
-    []
-  );
-  const latestAccountingPeriodMonthIndex = useMemo(
-    () =>
-      projectCostRecords.reduce(
-        (latest, record) =>
-          Math.max(
-            latest,
-            getAccountingPeriodMonthIndex(record.accountingPeriod)
-          ),
-        Number.NEGATIVE_INFINITY
-      ),
-    [projectCostRecords]
+    [isInternal]
   );
   // Keep a URL-selected category visible even when the project has no costs in it.
   const projectCostCategories = useMemo(
@@ -218,30 +220,32 @@ export function ProjectCostsTable({
       ].sort(),
     [category, projectCostRecords]
   );
-  const filteredRecords = useMemo(() => {
-    const timelineMonthCount = getTimelineMonthCount(selectedTimeline);
-    const earliestTimelineMonthIndex =
-      timelineMonthCount === null
-        ? null
-        : latestAccountingPeriodMonthIndex - timelineMonthCount + 1;
+  // Keep a URL-selected task visible even when the project has no costs on it.
+  const projectCostTasks = useMemo(() => {
+    const taskNames = new Map<string, string>(task ? [[task, '']] : []);
 
+    for (const record of projectCostRecords) {
+      taskNames.set(record.taskNumber, record.taskName);
+    }
+
+    return [...taskNames]
+      .map(([taskNumber, taskName]) => ({ taskName, taskNumber }))
+      .sort((a, b) => a.taskNumber.localeCompare(b.taskNumber));
+  }, [projectCostRecords, task]);
+  const filteredRecords = useMemo(() => {
     return projectCostRecords.filter((record) => {
-      const isWithinTimeline =
-        earliestTimelineMonthIndex === null ||
-        getAccountingPeriodMonthIndex(record.accountingPeriod) >=
-          earliestTimelineMonthIndex;
+      // Dates are 'YYYY-MM-DD' strings, so string comparison orders them.
+      const itemDate = record.expenditureItemDate.slice(0, 10);
+      const isWithinDates =
+        (!fromDate || itemDate >= fromDate) && (!toDate || itemDate <= toDate);
       const matchesCategory =
         selectedCategories.length === 0 ||
         selectedCategories.includes(record.expenditureCategory);
+      const matchesTask = !selectedTask || record.taskNumber === selectedTask;
 
-      return isWithinTimeline && matchesCategory;
+      return isWithinDates && matchesCategory && matchesTask;
     });
-  }, [
-    latestAccountingPeriodMonthIndex,
-    projectCostRecords,
-    selectedCategories,
-    selectedTimeline,
-  ]);
+  }, [fromDate, projectCostRecords, selectedCategories, selectedTask, toDate]);
   const toggleCategory = (category: string) => {
     setSelectedCategories((current) =>
       current.includes(category)
@@ -253,27 +257,77 @@ export function ProjectCostsTable({
   return (
     <div data-testid="project-costs-table">
       <div className="mb-4">
-        <div className="mb-4">
-          <span className="stat-label mb-1 block">Timeline</span>
-          <div aria-label="Timeline" className="join" role="group">
-            {projectCostTimelineOptions.map((option) => {
-              const isSelected = selectedTimeline === option.value;
-
-              return (
-                <button
-                  aria-pressed={isSelected}
-                  className={`btn btn-sm join-item ${
-                    isSelected ? 'btn-active' : ''
-                  }`}
-                  key={option.value}
-                  onClick={() => setSelectedTimeline(option.value)}
-                  type="button"
-                >
-                  {option.label}
-                </button>
-              );
-            })}
+        <div className="mb-4 flex flex-wrap items-end gap-4">
+          <div>
+            <label
+              className="stat-label mb-1 block"
+              htmlFor="project-costs-from-date"
+            >
+              From
+            </label>
+            <input
+              className="input input-sm"
+              id="project-costs-from-date"
+              max={toDate || undefined}
+              onChange={(event) => setFromDate(event.target.value)}
+              type="date"
+              value={fromDate}
+            />
           </div>
+          <div>
+            <label
+              className="stat-label mb-1 block"
+              htmlFor="project-costs-to-date"
+            >
+              To
+            </label>
+            <input
+              className="input input-sm"
+              id="project-costs-to-date"
+              min={fromDate || undefined}
+              onChange={(event) => setToDate(event.target.value)}
+              type="date"
+              value={toDate}
+            />
+          </div>
+          {fromDate || toDate ? (
+            <button
+              className="btn btn-sm btn-ghost"
+              onClick={() => {
+                setFromDate('');
+                setToDate('');
+              }}
+              type="button"
+            >
+              Clear dates
+            </button>
+          ) : null}
+
+          {isInternal ? (
+            <div>
+              <label
+                className="stat-label mb-1 block"
+                htmlFor="project-costs-task"
+              >
+                Task
+              </label>
+              <select
+                className="select select-sm w-full max-w-full sm:w-auto"
+                id="project-costs-task"
+                onChange={(event) => setSelectedTask(event.target.value)}
+                value={selectedTask}
+              >
+                <option value="">All Tasks</option>
+                {projectCostTasks.map((task) => (
+                  <option key={task.taskNumber} value={task.taskNumber}>
+                    {task.taskName
+                      ? `${task.taskNumber} - ${task.taskName}`
+                      : task.taskNumber}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
         </div>
 
         <div className="flex flex-wrap items-center gap-2">

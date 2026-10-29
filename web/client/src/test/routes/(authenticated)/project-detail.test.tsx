@@ -637,6 +637,7 @@ describe('project detail page', () => {
             burdenedCost: 5000,
             documentEntry: 'Supplier Invoice',
             expenditureCategory: '04 - Equipment and Facilities',
+            expenditureItemDate: '2026-09-15T00:00:00',
             expenditureType: '540000 - Equipment',
             transactionNumber: 1,
           },
@@ -668,6 +669,51 @@ describe('project detail page', () => {
           name: '04 - Equipment and Facilities',
         })
       ).toHaveAttribute('aria-pressed', 'true');
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('links task expense values to their project-cost task filter', async () => {
+    const user = userEvent.setup();
+    const projects = [
+      createProject({
+        awardEndDate: null,
+        awardNumber: null,
+        awardStartDate: null,
+        projectType: 'Internal',
+      }),
+    ];
+    setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);
+    server.use(
+      http.get('/api/project/costs/:projectNumber', () => HttpResponse.json([]))
+    );
+
+    const { cleanup } = renderRoute({
+      initialPath: '/projects/1000/P1',
+    });
+
+    try {
+      const taskExpenseLink = await screen.findByRole('link', {
+        name: 'View project costs for task T001',
+      });
+
+      expect(taskExpenseLink).toHaveAttribute(
+        'href',
+        '/projectcosts/1000/P1?task=T001'
+      );
+      expect(
+        screen.getByRole('link', { name: 'View all project costs' })
+      ).toHaveAttribute('href', '/projectcosts/1000/P1');
+
+      await user.click(taskExpenseLink);
+
+      const projectCostsTable = await screen.findByTestId(
+        'project-costs-table'
+      );
+      expect(
+        within(projectCostsTable).getByRole('combobox', { name: 'Task' })
+      ).toHaveValue('T001');
     } finally {
       cleanup();
     }

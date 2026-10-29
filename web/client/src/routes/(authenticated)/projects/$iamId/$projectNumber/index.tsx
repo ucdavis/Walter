@@ -215,7 +215,9 @@ function ProjectContent({
             </h2>
             <div className="mt-4">
               <TaskBreakdown
+                iamId={iamId}
                 isInternal={summary.isInternal}
+                projectCostsEnabled={showProjectCosts}
                 projectNumber={summary.projectNumber}
                 records={projectRecords}
               />
