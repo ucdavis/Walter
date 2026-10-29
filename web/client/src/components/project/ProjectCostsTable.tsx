@@ -11,6 +11,7 @@ import {
   projectCostsQueryOptions,
 } from '@/queries/projectCosts.ts';
 import { DataTable } from '@/shared/DataTable.tsx';
+import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
 
 const columnHelper = createColumnHelper<ProjectCostRecord>();
 // Export carries every report column, not just the ones shown on the page.
@@ -111,22 +112,19 @@ export function ProjectCostsTable({
               (row) => [row.taskNumber, row.taskName].join(' '),
               {
                 cell: (info) => (
-                  <div className="text-sm">
-                    <div className="whitespace-nowrap">
-                      {info.row.original.taskNumber}
-                    </div>
-                    {info.row.original.taskName && (
-                      <div className="text-xs text-base-content/80">
-                        {info.row.original.taskName}
-                      </div>
-                    )}
-                  </div>
+                  <span className="text-sm whitespace-nowrap">
+                    <TooltipLabel
+                      focusable={false}
+                      label={info.row.original.taskNumber}
+                      tooltip={info.row.original.taskName}
+                    />
+                  </span>
                 ),
                 footer: () => null,
                 header: 'Task',
                 id: 'task',
-                minSize: 180,
-                size: 220,
+                minSize: 90,
+                size: 100,
               }
             ),
           ]
@@ -159,11 +157,21 @@ export function ProjectCostsTable({
         size: 190,
       }),
       columnHelper.accessor('expenditureType', {
-        cell: (info) => <span className="text-sm">{info.getValue()}</span>,
+        cell: (info) => (
+          <span className="text-sm">
+            <TooltipLabel
+              className="block min-w-0 max-w-48"
+              focusable={false}
+              label={info.getValue()}
+              labelClassName="block truncate"
+              tooltip={info.getValue()}
+            />
+          </span>
+        ),
         footer: () => null,
         header: 'Expenditure Type',
-        minSize: 260,
-        size: 300,
+        minSize: 180,
+        size: 220,
       }),
       columnHelper.accessor('burdenedCost', {
         cell: (info) => (

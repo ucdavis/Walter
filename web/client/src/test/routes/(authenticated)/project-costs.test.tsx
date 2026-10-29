@@ -428,6 +428,11 @@ describe('project costs page', () => {
       expect(
         within(table).getByRole('columnheader', { name: 'Task' })
       ).toBeInTheDocument();
+      await user.hover(within(table).getByText('TASK02'));
+      expect(await screen.findByRole('tooltip')).toHaveTextContent(
+        'Field Work'
+      );
+      await user.unhover(within(table).getByText('TASK02'));
       const taskFilter = within(table).getByRole('combobox', {
         name: 'Task',
       });
