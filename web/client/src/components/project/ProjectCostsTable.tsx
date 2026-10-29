@@ -72,6 +72,26 @@ const projectCostCsvColumns: CsvColumn<ProjectCostRecord>[] = [
   { format: 'currency', header: 'Burdened Cost', key: 'burdenedCost' },
 ];
 
+function TruncatedText({
+  maxWidthClassName,
+  value,
+}: {
+  maxWidthClassName: string;
+  value: string;
+}) {
+  return (
+    <span className="text-sm">
+      <TooltipLabel
+        className={`block min-w-0 ${maxWidthClassName}`}
+        focusable={false}
+        label={value}
+        labelClassName="block truncate"
+        tooltip={value}
+      />
+    </span>
+  );
+}
+
 function sumBurdenedCost(rows: { original: ProjectCostRecord }[]) {
   return rows.reduce((total, row) => total + row.original.burdenedCost, 0);
 }
@@ -100,11 +120,13 @@ export function ProjectCostsTable({
   const columns = useMemo(
     () => [
       columnHelper.accessor('expenditureCategory', {
-        cell: (info) => <span className="text-sm">{info.getValue()}</span>,
+        cell: (info) => (
+          <TruncatedText maxWidthClassName="max-w-40" value={info.getValue()} />
+        ),
         footer: () => <span className="font-proxima-bold">Total costs</span>,
         header: 'Expenditure Category',
-        minSize: 220,
-        size: 260,
+        minSize: 160,
+        size: 180,
       }),
       ...(isInternal
         ? [
@@ -150,23 +172,17 @@ export function ProjectCostsTable({
         size: 160,
       }),
       columnHelper.accessor('documentEntry', {
-        cell: (info) => <span className="text-sm">{info.getValue()}</span>,
+        cell: (info) => (
+          <TruncatedText maxWidthClassName="max-w-32" value={info.getValue()} />
+        ),
         footer: () => null,
         header: 'Document Entry',
-        minSize: 180,
-        size: 190,
+        minSize: 130,
+        size: 150,
       }),
       columnHelper.accessor('expenditureType', {
         cell: (info) => (
-          <span className="text-sm">
-            <TooltipLabel
-              className="block min-w-0 max-w-48"
-              focusable={false}
-              label={info.getValue()}
-              labelClassName="block truncate"
-              tooltip={info.getValue()}
-            />
-          </span>
+          <TruncatedText maxWidthClassName="max-w-48" value={info.getValue()} />
         ),
         footer: () => null,
         header: 'Expenditure Type',
