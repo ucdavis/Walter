@@ -267,6 +267,50 @@ describe('aggregateByPosition', () => {
 });
 
 describe('PersonnelTable', () => {
+  it('expands and closes all visible cards and tracks individual toggles', async () => {
+    const user = userEvent.setup();
+    render(
+      <PersonnelTable
+        data={[
+          createRecord(),
+          createRecord({ employeeId: '1002', name: 'Jones, Jane' }),
+        ]}
+      />
+    );
+    await user.click(screen.getByRole('button', { name: 'Expand all' }));
+    expect(
+      screen.getAllByRole('region', { name: /funding distribution/ })
+    ).toHaveLength(2);
+    await user.click(
+      within(screen.getByRole('article', { name: 'Jones, Jane' })).getByRole(
+        'button'
+      )
+    );
+    expect(
+      screen.getByRole('button', { name: 'Expand all' })
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Expand all' }));
+    await user.type(
+      screen.getByRole('searchbox', { name: 'Search personnel' }),
+      'Smith'
+    );
+    await user.click(screen.getByRole('button', { name: 'Close all' }));
+    expect(
+      screen.queryByRole('region', { name: /funding distribution/ })
+    ).not.toBeInTheDocument();
+    await user.clear(
+      screen.getByRole('searchbox', { name: 'Search personnel' })
+    );
+    expect(
+      screen.getAllByRole('region', { name: /funding distribution/ })
+    ).toHaveLength(1);
+    await user.click(screen.getByRole('button', { name: 'Expand all' }));
+    await user.click(screen.getByRole('button', { name: 'Close all' }));
+    expect(
+      screen.queryByRole('region', { name: /funding distribution/ })
+    ).not.toBeInTheDocument();
+  });
+
   it('shows only PI-distributed amounts in the summary and expanded details', async () => {
     const user = userEvent.setup();
     render(
@@ -311,7 +355,9 @@ describe('PersonnelTable', () => {
     );
     expect(screen.getAllByRole('article')).toHaveLength(1);
     const card = screen.getByRole('article', { name: 'Smith, John' });
-    expect(within(card).getByText('2 projects')).toBeInTheDocument();
+    expect(within(card).getByText('Projects').parentElement).toHaveTextContent(
+      /^Projects2$/
+    );
     expect(within(card).getByText('$3,000.00')).toBeInTheDocument();
     expect(within(card).getByText('$1,200.00')).toBeInTheDocument();
     expect(within(card).getByText('$4,200.00')).toBeInTheDocument();
@@ -332,7 +378,9 @@ describe('PersonnelTable', () => {
       />
     );
     const card = screen.getByRole('article', { name: 'Smith, John' });
-    expect(within(card).getByText('1 project')).toBeInTheDocument();
+    expect(within(card).getByText('Projects').parentElement).toHaveTextContent(
+      /^Projects1$/
+    );
   });
 
   it('totals only the current PI distributions across employees', () => {

@@ -1,4 +1,4 @@
-# Personnel example #4: PI Funding Cards, completed 2026-10-22.
+# Personnel example #4: PI Funding Cards, updated 2026-10-29.
 # Base: main at 6cf26319ab2f8b89706677ccfacd83fddb2de46b.
 # Compact, full-width cards group all positions under one employee.
 # The collapsed summary always shows current PI-distributed salary, CBR,
@@ -12,6 +12,9 @@
 # Employee/project search updates the cards, page totals, and filtered export.
 # All other examples remain archived separately.
 # Restore selectively against subsequent edits rather than blindly applying.
+
+# Employee ID sits beside the name with its small, muted styling.
+# Projects appears above its count beside the monthly figures.
 
 diff --git a/web/client/src/components/project/PersonnelSection.tsx b/web/client/src/components/project/PersonnelSection.tsx
 index 7790b7e..7bf37bf 100644
@@ -29,17 +32,16 @@ index 7790b7e..7bf37bf 100644
        {personnelQuery.isError && (
          <p className="text-error mt-4">Error loading personnel.</p>
 diff --git a/web/client/src/components/project/PersonnelTable.tsx b/web/client/src/components/project/PersonnelTable.tsx
-index 37ae991..fb433af 100644
+index 37ae991..633cc0c 100644
 --- a/web/client/src/components/project/PersonnelTable.tsx
 +++ b/web/client/src/components/project/PersonnelTable.tsx
-@@ -1,19 +1,15 @@
+@@ -1,19 +1,14 @@
 -import { useMemo, useState } from 'react';
 -import { createColumnHelper } from '@tanstack/react-table';
 +import { useId, useMemo, useState } from 'react';
  import {
    ChevronDownIcon,
 -  ChevronUpIcon,
-+  ClipboardDocumentListIcon,
    ClockIcon,
 +  MagnifyingGlassIcon,
  } from '@heroicons/react/24/outline';
@@ -56,20 +58,20 @@ index 37ae991..fb433af 100644
 -import { DataTable } from '@/shared/DataTable.tsx';
  import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
  import { tooltipDefinitions } from '@/shared/tooltips.ts';
- 
-@@ -182,8 +178,6 @@ export function aggregateByPosition(
+
+@@ -182,8 +177,6 @@ export function aggregateByPosition(
    return Array.from(positionMap.values());
  }
- 
+
 -const columnHelper = createColumnHelper<AggregatedPosition>();
 -
  function getPositionSearchText(position: AggregatedPosition): string {
    const projectDescriptions = position.distributions
      .map((dist) => dist.record.projectDescription)
-@@ -197,126 +191,144 @@ function getPositionSearchText(position: AggregatedPosition): string {
+@@ -197,126 +190,144 @@ function getPositionSearchText(position: AggregatedPosition): string {
    ].join(' ');
  }
- 
+
 -function DistributionSubtable({
 -  distributions,
 +function FundingColumnGroup() {
@@ -326,11 +328,11 @@ index 37ae991..fb433af 100644
 +    </>
    );
  }
- 
-@@ -398,255 +410,354 @@ const personnelCsvColumns = [
+
+@@ -398,255 +409,401 @@ const personnelCsvColumns = [
    },
  ];
- 
+
 -interface PersonnelTableProps {
 -  data: PersonnelRecord[];
 +interface EmployeeFunding {
@@ -357,8 +359,18 @@ index 37ae991..fb433af 100644
 +    }
 +  }
 +  return [...employees.values()].sort((a, b) => a.name.localeCompare(b.name));
-+}
-+
+ }
+
+-function sumCurrent(
+-  rows: { original: AggregatedPosition }[],
+-  pick: (position: AggregatedPosition) => number
+-): number {
+-  return rows.reduce(
+-    (sum, row) =>
+-      row.original.isFutureOnly || row.original.salaryUnknown
+-        ? sum
+-        : sum + pick(row.original),
+-    0
 +function summarizeFunding(distributions: AggregatedDistribution[]) {
 +  const current = distributions.filter(
 +    (distribution) => !distribution.record.isFuture
@@ -374,18 +386,8 @@ index 37ae991..fb433af 100644
 +
 +function formatFundingAmount(value: number | null): string {
 +  return value === null ? '—' : formatCurrency(value);
- }
- 
--function sumCurrent(
--  rows: { original: AggregatedPosition }[],
--  pick: (position: AggregatedPosition) => number
--): number {
--  return rows.reduce(
--    (sum, row) =>
--      row.original.isFutureOnly || row.original.salaryUnknown
--        ? sum
--        : sum + pick(row.original),
--    0
++}
++
 +function FundingMetric({
 +  emphasis = false,
 +  label,
@@ -406,15 +408,22 @@ index 37ae991..fb433af 100644
 +    </span>
    );
  }
- 
+
 -/** Distinct people whose current salary can't be attributed (Unsplit). */
 -function countSalaryUnknownPeople(positions: AggregatedPosition[]): number {
 -  return new Set(
 -    positions
 -      .filter((p) => p.salaryUnknown && !p.isFutureOnly)
 -      .map((p) => p.employeeId)
-+function EmployeeFundingCard({ employee }: { employee: EmployeeFunding }) {
-+  const [expanded, setExpanded] = useState(false);
++function EmployeeFundingCard({
++  employee,
++  expanded,
++  onToggle,
++}: {
++  employee: EmployeeFunding;
++  expanded: boolean;
++  onToggle: () => void;
++}) {
 +  const detailsId = useId();
 +  const funding = summarizeFunding(employee.distributions);
 +  const projectCount = new Set(
@@ -443,7 +452,7 @@ index 37ae991..fb433af 100644
 +        aria-controls={detailsId}
 +        aria-expanded={expanded}
 +        className="flex w-full flex-wrap items-center gap-4 p-4 text-left transition-colors hover:bg-base-200/50 focus-visible:outline-2 focus-visible:outline-primary"
-+        onClick={() => setExpanded((current) => !current)}
++        onClick={onToggle}
 +        type="button"
 +      >
 +        <span className="flex min-w-0 flex-1 items-center gap-3">
@@ -452,45 +461,48 @@ index 37ae991..fb433af 100644
 +            className={`h-4 w-4 shrink-0 transition-transform ${expanded ? 'rotate-180' : ''}`}
 +          />
 +          <span className="min-w-0">
-+            <span className="block font-semibold">{employee.name}</span>
++            <span className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
++              <span className="font-semibold">{employee.name}</span>
++              <span className="text-xs text-base-content/70">
++                Empl ID {employee.employeeId}
++              </span>
++            </span>
 +            {roles && (
 +              <span className="mt-1 block text-sm text-base-content/70">
 +                {roles}
 +              </span>
 +            )}
-+            <span className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-base-content/70">
-+              <span className="inline-flex items-center gap-1">
-+                <ClipboardDocumentListIcon
-+                  aria-hidden="true"
-+                  className="h-4 w-4"
-+                />
-+                <span>
-+                  {projectCount} {projectCount === 1 ? 'project' : 'projects'}
-+                </span>
++            {(futureOnly || funding.unknownCount > 0 || fundingEndingSoon) && (
++              <span className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-base-content/70">
++                {futureOnly && (
++                  <span className="badge badge-soft badge-info badge-sm">
++                    Future only
++                  </span>
++                )}
++                {funding.unknownCount > 0 && (
++                  <span className="badge badge-soft badge-warning badge-sm">
++                    {funding.monthlyRate === null
++                      ? 'Funding unavailable'
++                      : 'Partial funding'}
++                  </span>
++                )}
++                {fundingEndingSoon && (
++                  <span className="inline-flex items-center gap-1 text-error">
++                    <ClockIcon aria-hidden="true" className="h-3 w-3" />
++                    Funding ends soon
++                  </span>
++                )}
 +              </span>
-+              <span>Empl ID {employee.employeeId}</span>
-+              {futureOnly && (
-+                <span className="badge badge-soft badge-info badge-sm">
-+                  Future only
-+                </span>
-+              )}
-+              {funding.unknownCount > 0 && (
-+                <span className="badge badge-soft badge-warning badge-sm">
-+                  {funding.monthlyRate === null
-+                    ? 'Funding unavailable'
-+                    : 'Partial funding'}
-+                </span>
-+              )}
-+              {fundingEndingSoon && (
-+                <span className="inline-flex items-center gap-1 text-error">
-+                  <ClockIcon aria-hidden="true" className="h-3 w-3" />
-+                  Funding ends soon
-+                </span>
-+              )}
-+            </span>
++            )}
 +          </span>
 +        </span>
-+        <span className="grid w-full grid-cols-3 gap-3 text-right text-sm sm:w-auto sm:gap-6 sm:text-base">
++        <span className="grid w-full grid-cols-4 gap-3 text-right text-sm sm:w-auto sm:gap-6 sm:text-base">
++          <span className="min-w-0 sm:min-w-24">
++            <span className="block text-xs text-base-content/70">Projects</span>
++            <span className="mt-1 block font-medium tabular-nums">
++              {projectCount}
++            </span>
++          </span>
 +          <FundingMetric label="Mo. Salary" value={funding.monthlyRate} />
 +          <FundingMetric label="Mo. CBR" value={funding.monthlyFringe} />
 +          <FundingMetric
@@ -503,7 +515,7 @@ index 37ae991..fb433af 100644
 +      {expanded && (
 +        <div
 +          aria-label={`${employee.name} funding distribution`}
-+          className="border-t border-base-300 px-4 py-3"
++          className="border-t border-base-300 bg-base-200 px-4 py-3"
 +          id={detailsId}
 +          role="region"
 +        >
@@ -545,8 +557,11 @@ index 37ae991..fb433af 100644
 +interface PersonnelTableProps {
 +  data: PersonnelRecord[];
  }
- 
+
  export function PersonnelTable({ data }: PersonnelTableProps) {
++  const [expandedEmployeeIds, setExpandedEmployeeIds] = useState<Set<string>>(
++    () => new Set()
++  );
 +  const [search, setSearch] = useState('');
    const [showFuture, setShowFuture] = useState(false);
 -  // Unfilled positions (legacy sources only) stay hidden.
@@ -748,13 +763,18 @@ index 37ae991..fb433af 100644
 +    [filteredEmployees]
    );
 +  const hasSearch = search.trim().length > 0;
- 
++  const allExpanded =
++    filteredEmployees.length > 0 &&
++    filteredEmployees.every((employee) =>
++      expandedEmployeeIds.has(employee.employeeId)
++    );
+
 -  if (positions.length === 0) {
 -    return <p className="text-base-content/70 mt-4">No personnel found.</p>;
 +  if (filledData.length === 0) {
 +    return <p className="mt-4 text-base-content/70">No personnel found.</p>;
    }
- 
+
    return (
 -    <div>
 -      <DataTable
@@ -816,6 +836,26 @@ index 37ae991..fb433af 100644
 +              {showFuture ? 'Hide' : 'Show'} future entries ({futureCount})
 +            </button>
 +          )}
++          <button
++            className="btn btn-sm"
++            disabled={filteredEmployees.length === 0}
++            onClick={() =>
++              setExpandedEmployeeIds((current) => {
++                const next = new Set(current);
++                for (const employee of filteredEmployees) {
++                  if (allExpanded) {
++                    next.delete(employee.employeeId);
++                  } else {
++                    next.add(employee.employeeId);
++                  }
++                }
++                return next;
++              })
++            }
++            type="button"
++          >
++            {allExpanded ? 'Close all' : 'Expand all'}
++          </button>
 +          <ExportDataButton
 +            columns={personnelCsvColumns}
 +            data={getExportData(positions)}
@@ -835,12 +875,9 @@ index 37ae991..fb433af 100644
 +        </div>
 +      </div>
 +
-+      <section
-+        aria-label="PI funding totals"
-+        className="border-b border-base-300 pb-4"
-+      >
++      <section aria-label="PI funding totals" className="pb-4">
 +        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-+          <h3 className="text-sm font-semibold">
++          <h3 className="text-lg font-bold">
 +            {hasSearch
 +              ? 'Filtered monthly funding for this PI'
 +              : 'Monthly funding for this PI'}
@@ -853,7 +890,7 @@ index 37ae991..fb433af 100644
 +        </div>
 +        <dl className="flex flex-wrap gap-x-12 gap-y-3">
 +          <div>
-+            <dt className="stat-label">Mo. Salary</dt>
++            <dt className="stat-label">Monthly Salary</dt>
 +            <dd className="stat-value font-sans">
 +              {formatFundingAmount(totals.monthlyRate)}
 +            </dd>
@@ -864,13 +901,13 @@ index 37ae991..fb433af 100644
 -        <p className="mt-2 text-sm text-warning">
 -          {fundingInfoUnavailableNote('Totals', salaryUnknownPeople)}
 +          <div>
-+            <dt className="stat-label">Mo. CBR</dt>
++            <dt className="stat-label">Monthly CBR</dt>
 +            <dd className="stat-value font-sans">
 +              {formatFundingAmount(totals.monthlyFringe)}
 +            </dd>
 +          </div>
 +          <div>
-+            <dt className="stat-label">Mo. Total</dt>
++            <dt className="stat-label">Monthly Total</dt>
 +            <dd className="stat-value font-sans">
 +              {formatFundingAmount(totals.monthlyTotal)}
 +            </dd>
@@ -891,7 +928,19 @@ index 37ae991..fb433af 100644
 +          {filteredEmployees.map((employee) => (
 +            <EmployeeFundingCard
 +              employee={employee}
++              expanded={expandedEmployeeIds.has(employee.employeeId)}
 +              key={employee.employeeId}
++              onToggle={() =>
++                setExpandedEmployeeIds((current) => {
++                  const next = new Set(current);
++                  if (next.has(employee.employeeId)) {
++                    next.delete(employee.employeeId);
++                  } else {
++                    next.add(employee.employeeId);
++                  }
++                  return next;
++                })
++              }
 +            />
 +          ))}
 +        </div>
@@ -932,7 +981,7 @@ index 34d4df5..326c2ea 100644
      'Research admin contact for award setup and ongoing award administration.',
    monthlyCbr:
 diff --git a/web/client/src/test/components/PersonnelTable.test.tsx b/web/client/src/test/components/PersonnelTable.test.tsx
-index ec2fb5e..990ac80 100644
+index ec2fb5e..f25ae93 100644
 --- a/web/client/src/test/components/PersonnelTable.test.tsx
 +++ b/web/client/src/test/components/PersonnelTable.test.tsx
 @@ -1,5 +1,11 @@
@@ -948,9 +997,9 @@ index ec2fb5e..990ac80 100644
  import { userEvent } from '@testing-library/user-event';
  import {
    aggregateByPosition,
-@@ -261,436 +267,354 @@ describe('aggregateByPosition', () => {
+@@ -261,436 +267,402 @@ describe('aggregateByPosition', () => {
  });
- 
+
  describe('PersonnelTable', () => {
 -  it('displays name and position in combined format', () => {
 -    const records = [
@@ -959,8 +1008,75 @@ index ec2fb5e..990ac80 100644
 -
 -    render(<PersonnelTable data={records} />);
 -
-+  it('shows only PI-distributed amounts in the summary and expanded details', async () => {
++  it('expands and closes all visible cards and tracks individual toggles', async () => {
 +    const user = userEvent.setup();
++    render(
++      <PersonnelTable
++        data={[
++          createRecord(),
++          createRecord({ employeeId: '1002', name: 'Jones, Jane' }),
++        ]}
++      />
++    );
++    await user.click(screen.getByRole('button', { name: 'Expand all' }));
++    expect(
++      screen.getAllByRole('region', { name: /funding distribution/ })
++    ).toHaveLength(2);
++    await user.click(
++      within(screen.getByRole('article', { name: 'Jones, Jane' })).getByRole(
++        'button'
++      )
++    );
+     expect(
+-      screen.getByText('Smith, John (1001) - PROF-FY')
++      screen.getByRole('button', { name: 'Expand all' })
+     ).toBeInTheDocument();
++    await user.click(screen.getByRole('button', { name: 'Expand all' }));
++    await user.type(
++      screen.getByRole('searchbox', { name: 'Search personnel' }),
++      'Smith'
++    );
++    await user.click(screen.getByRole('button', { name: 'Close all' }));
++    expect(
++      screen.queryByRole('region', { name: /funding distribution/ })
++    ).not.toBeInTheDocument();
++    await user.clear(
++      screen.getByRole('searchbox', { name: 'Search personnel' })
++    );
++    expect(
++      screen.getAllByRole('region', { name: /funding distribution/ })
++    ).toHaveLength(1);
++    await user.click(screen.getByRole('button', { name: 'Expand all' }));
++    await user.click(screen.getByRole('button', { name: 'Close all' }));
++    expect(
++      screen.queryByRole('region', { name: /funding distribution/ })
++    ).not.toBeInTheDocument();
+   });
+
+-  it('displays FTE column', () => {
+-    const records = [createRecord({ fte: 0.75 })];
+-
+-    render(<PersonnelTable data={records} />);
+-
+-    expect(screen.getByText('0.75')).toBeInTheDocument();
+-  });
+-
+-  it('shows a tooltip on the FTE header', async () => {
++  it('shows only PI-distributed amounts in the summary and expanded details', async () => {
+     const user = userEvent.setup();
+-    render(<PersonnelTable data={[createRecord()]} />);
+-
+-    const fteHeader = screen.getByText('FTE');
+-    const fteTrigger = fteHeader.parentElement as HTMLElement;
+-
+-    expect(fteTrigger).toHaveAttribute('data-tooltip-placement', 'bottom');
+-    expect(fteTrigger).toHaveAttribute('tabIndex', '0');
+-    expect(fteHeader).toHaveClass('tooltip-label');
+-
+-    await user.hover(fteTrigger);
+-
+-    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+-      tooltipDefinitions.fte
 +    render(
 +      <PersonnelTable data={[createRecord({ distributionPercent: 60 })]} />
 +    );
@@ -1000,57 +1116,22 @@ index ec2fb5e..990ac80 100644
 +          }),
 +        ]}
 +      />
-+    );
+     );
 +    expect(screen.getAllByRole('article')).toHaveLength(1);
 +    const card = screen.getByRole('article', { name: 'Smith, John' });
-+    expect(within(card).getByText('2 projects')).toBeInTheDocument();
++    expect(within(card).getByText('Projects').parentElement).toHaveTextContent(
++      /^Projects2$/
++    );
 +    expect(within(card).getByText('$3,000.00')).toBeInTheDocument();
 +    expect(within(card).getByText('$1,200.00')).toBeInTheDocument();
 +    expect(within(card).getByText('$4,200.00')).toBeInTheDocument();
 +    await user.click(within(card).getByRole('button'));
 +    expect(within(card).getByText('PROF-FY · 001234')).toBeInTheDocument();
-     expect(
--      screen.getByText('Smith, John (1001) - PROF-FY')
++    expect(
 +      within(card).getByText('ASSOC PROF-FY · 001234')
-     ).toBeInTheDocument();
++    ).toBeInTheDocument();
    });
- 
--  it('displays FTE column', () => {
--    const records = [createRecord({ fte: 0.75 })];
--
--    render(<PersonnelTable data={records} />);
--
--    expect(screen.getByText('0.75')).toBeInTheDocument();
--  });
--
--  it('shows a tooltip on the FTE header', async () => {
--    const user = userEvent.setup();
--    render(<PersonnelTable data={[createRecord()]} />);
--
--    const fteHeader = screen.getByText('FTE');
--    const fteTrigger = fteHeader.parentElement as HTMLElement;
--
--    expect(fteTrigger).toHaveAttribute('data-tooltip-placement', 'bottom');
--    expect(fteTrigger).toHaveAttribute('tabIndex', '0');
--    expect(fteHeader).toHaveClass('tooltip-label');
--
--    await user.hover(fteTrigger);
--
--    expect(await screen.findByRole('tooltip')).toHaveTextContent(
--      tooltipDefinitions.fte
-+  it('counts distinct projects rather than funding entries', () => {
-+    render(
-+      <PersonnelTable
-+        data={[
-+          createRecord(),
-+          createRecord({ fundingEffectiveDate: '2026-01-01' }),
-+        ]}
-+      />
-     );
-+    const card = screen.getByRole('article', { name: 'Smith, John' });
-+    expect(within(card).getByText('1 project')).toBeInTheDocument();
-   });
- 
+
 -  it('displays totals in footer', () => {
 -    const records = [
 -      createRecord({
@@ -1076,27 +1157,21 @@ index ec2fb5e..990ac80 100644
 -    expect(screen.getByText('$3,600.00')).toBeInTheDocument();
 -    // Monthly total: 9000 + 3600 = 12600
 -    expect(screen.getByText('$12,600.00')).toBeInTheDocument();
-+  it('totals only the current PI distributions across employees', () => {
++  it('counts distinct projects rather than funding entries', () => {
 +    render(
 +      <PersonnelTable
 +        data={[
-+          createRecord({ distributionPercent: 60 }),
-+          createRecord({
-+            distributionPercent: 50,
-+            employeeId: '1002',
-+            monthlyRate: 4000,
-+            name: 'Doe, Jane',
-+          }),
++          createRecord(),
++          createRecord({ fundingEffectiveDate: '2026-01-01' }),
 +        ]}
 +      />
 +    );
-+    const totals = screen.getByRole('region', { name: 'PI funding totals' });
-+    expect(within(totals).getByText('$5,000.00')).toBeInTheDocument();
-+    expect(within(totals).getByText('$2,000.00')).toBeInTheDocument();
-+    expect(within(totals).getByText('$7,000.00')).toBeInTheDocument();
-+    expect(screen.queryByText('$9,000.00')).not.toBeInTheDocument();
++    const card = screen.getByRole('article', { name: 'Smith, John' });
++    expect(within(card).getByText('Projects').parentElement).toHaveTextContent(
++      /^Projects1$/
++    );
    });
- 
+
 -  it('hides salary for unsplit people and leaves them out of totals with a warning', () => {
 -    const records = [
 -      createRecord({
@@ -1123,7 +1198,27 @@ index ec2fb5e..990ac80 100644
 -    // 5000 shows on Smith's row and in the footer; Doe's 4000 shows nowhere.
 -    expect(screen.getAllByText('$5,000.00')).toHaveLength(2);
 -    expect(screen.queryByText('$4,000.00')).not.toBeInTheDocument();
--    expect(screen.queryByText('$9,000.00')).not.toBeInTheDocument();
++  it('totals only the current PI distributions across employees', () => {
++    render(
++      <PersonnelTable
++        data={[
++          createRecord({ distributionPercent: 60 }),
++          createRecord({
++            distributionPercent: 50,
++            employeeId: '1002',
++            monthlyRate: 4000,
++            name: 'Doe, Jane',
++          }),
++        ]}
++      />
++    );
++    const totals = screen.getByRole('region', { name: 'PI funding totals' });
++    expect(within(totals).getByText('$5,000.00')).toBeInTheDocument();
++    expect(within(totals).getByText('$2,000.00')).toBeInTheDocument();
++    expect(within(totals).getByText('$7,000.00')).toBeInTheDocument();
+     expect(screen.queryByText('$9,000.00')).not.toBeInTheDocument();
++  });
++
 +  it('shows unavailable funding as dashes rather than full job salary or zero', async () => {
 +    const user = userEvent.setup();
 +    render(
@@ -1147,7 +1242,7 @@ index ec2fb5e..990ac80 100644
 +    expect(screen.queryByText('$4,321.00')).not.toBeInTheDocument();
 +    expect(document.body).not.toHaveTextContent(/unsplit/i);
    });
- 
+
 -  it('exports no amounts for unsplit people', () => {
 +  it('keeps known funding in partial employee totals and identifies missing amounts', () => {
      render(
@@ -1204,7 +1299,7 @@ index ec2fb5e..990ac80 100644
      );
 +    expect(screen.queryByText('$4,321.00')).not.toBeInTheDocument();
    });
- 
+
 -  it('renders an expanded distributions subtable with headers', async () => {
 +  it('keeps current totals unchanged when future funding is shown', async () => {
      const user = userEvent.setup();
@@ -1322,7 +1417,7 @@ index ec2fb5e..990ac80 100644
 +      screen.getByRole('article', { name: 'Smith, John' })
 +    ).toBeInTheDocument();
    });
- 
+
 -  it('exports one row per funding entry with no earn code column', () => {
 +  it('filters employee cards and PI totals by project search', () => {
      render(
@@ -1369,7 +1464,7 @@ index ec2fb5e..990ac80 100644
 +    expect(within(totals).getByText('$1,200.00')).toBeInTheDocument();
 +    expect(within(totals).getByText('$4,200.00')).toBeInTheDocument();
    });
- 
+
 -  it('never shows the internal Unsplit status', async () => {
 -    const user = userEvent.setup();
 +  it('shows an empty search state and hides unfilled positions', () => {
@@ -1402,7 +1497,7 @@ index ec2fb5e..990ac80 100644
      ).toBeInTheDocument();
 +    expect(screen.queryByRole('article')).not.toBeInTheDocument();
    });
- 
+
 -  it('shows a tooltip on the Mo. CBR header', async () => {
 +  it('retains FE date and CBR tooltips in the funding breakdown', async () => {
      const user = userEvent.setup();
@@ -1449,7 +1544,7 @@ index ec2fb5e..990ac80 100644
 +    expect(within(card).getByText('441000')).toBeInTheDocument();
 +    expect(within(card).queryByText('778100')).not.toBeInTheDocument();
    });
- 
+
 -  it('shows tooltips in the funding distribution subtable', async () => {
 +  it('shows a warning for current funding ending within three months', async () => {
 +    const date = new Date();
@@ -1510,7 +1605,7 @@ index ec2fb5e..990ac80 100644
 -      screen.queryByRole('button', { name: /unfilled/i })
 -    ).not.toBeInTheDocument();
    });
- 
+
 -  it('does not show the future toggle when no future entries exist', () => {
 -    render(<PersonnelTable data={[createRecord()]} />);
 -
@@ -1521,7 +1616,7 @@ index ec2fb5e..990ac80 100644
 +    render(<PersonnelTable data={[]} />);
 +    expect(screen.getByText('No personnel found.')).toBeInTheDocument();
    });
- 
+
 -  it('hides future entries by default and shows them when toggled', async () => {
 -    const user = userEvent.setup();
 -    const records = [
@@ -1555,10 +1650,10 @@ index ec2fb5e..990ac80 100644
      );
 -    expect(screen.getByText('Current Project')).toBeInTheDocument();
 -    expect(screen.queryByText('Future Project')).not.toBeInTheDocument();
- 
+
 -    await user.click(toggle);
 +    fireEvent.click(screen.getByRole('button', { name: 'Export' }));
- 
+
 -    expect(screen.getByText('Future Project')).toBeInTheDocument();
 -    expect(screen.getByText('Future')).toBeInTheDocument();
 -    expect(
@@ -1569,7 +1664,7 @@ index ec2fb5e..990ac80 100644
 +    expect(csv).not.toContain('4,321');
 +    expect(csv).not.toContain('4321');
    });
- 
+
 -  it('keeps totals on current entries when future entries are shown', async () => {
 -    const user = userEvent.setup();
 -    const records = [
@@ -1608,7 +1703,7 @@ index ec2fb5e..990ac80 100644
 +        ]}
 +      />
      );
- 
+
 -    expect(screen.getByText(/New, Hire \(1003\)/)).toBeInTheDocument();
 -    // Footer: only the current 5000 salary and 2000 CBR count.
 -    const footer = screen.getByText('Totals').closest('tr') as HTMLElement;
@@ -1638,7 +1733,7 @@ index ec2fb5e..990ac80 100644
 -
 -    render(<PersonnelTable data={filtered} />);
 +    fireEvent.click(screen.getByRole('button', { name: 'Export' }));
- 
+
 -    expect(
 -      screen.getByText('Adams, Alice (1001) - PROF-FY')
 -    ).toBeInTheDocument();
@@ -1650,5 +1745,5 @@ index ec2fb5e..990ac80 100644
 +    expect(csv).not.toContain('NNC');
 +    expect(csv.match(/Smith, John/g)).toHaveLength(1);
    });
- 
+
    it('shows the filtered export action only when a search filter is active', () => {

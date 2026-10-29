@@ -473,8 +473,15 @@ function FundingMetric({
   );
 }
 
-function EmployeeFundingCard({ employee }: { employee: EmployeeFunding }) {
-  const [expanded, setExpanded] = useState(false);
+function EmployeeFundingCard({
+  employee,
+  expanded,
+  onToggle,
+}: {
+  employee: EmployeeFunding;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
   const detailsId = useId();
   const funding = summarizeFunding(employee.distributions);
   const projectCount = new Set(
@@ -503,7 +510,7 @@ function EmployeeFundingCard({ employee }: { employee: EmployeeFunding }) {
         aria-controls={detailsId}
         aria-expanded={expanded}
         className="flex w-full flex-wrap items-center gap-4 p-4 text-left transition-colors hover:bg-base-200/50 focus-visible:outline-2 focus-visible:outline-primary"
-        onClick={() => setExpanded((current) => !current)}
+        onClick={onToggle}
         type="button"
       >
         <span className="flex min-w-0 flex-1 items-center gap-3">
@@ -566,7 +573,7 @@ function EmployeeFundingCard({ employee }: { employee: EmployeeFunding }) {
       {expanded && (
         <div
           aria-label={`${employee.name} funding distribution`}
-          className="border-t border-base-300 px-4 py-3"
+          className="border-t border-base-300 bg-base-200 px-4 py-3"
           id={detailsId}
           role="region"
         >
@@ -610,6 +617,9 @@ interface PersonnelTableProps {
 }
 
 export function PersonnelTable({ data }: PersonnelTableProps) {
+  const [expandedEmployeeIds, setExpandedEmployeeIds] = useState<Set<string>>(
+    () => new Set()
+  );
   const [search, setSearch] = useState('');
   const [showFuture, setShowFuture] = useState(false);
   const filledData = useMemo(
@@ -652,6 +662,11 @@ export function PersonnelTable({ data }: PersonnelTableProps) {
     [filteredEmployees]
   );
   const hasSearch = search.trim().length > 0;
+  const allExpanded =
+    filteredEmployees.length > 0 &&
+    filteredEmployees.every((employee) =>
+      expandedEmployeeIds.has(employee.employeeId)
+    );
 
   if (filledData.length === 0) {
     return <p className="mt-4 text-base-content/70">No personnel found.</p>;
@@ -684,6 +699,26 @@ export function PersonnelTable({ data }: PersonnelTableProps) {
               {showFuture ? 'Hide' : 'Show'} future entries ({futureCount})
             </button>
           )}
+          <button
+            className="btn btn-sm"
+            disabled={filteredEmployees.length === 0}
+            onClick={() =>
+              setExpandedEmployeeIds((current) => {
+                const next = new Set(current);
+                for (const employee of filteredEmployees) {
+                  if (allExpanded) {
+                    next.delete(employee.employeeId);
+                  } else {
+                    next.add(employee.employeeId);
+                  }
+                }
+                return next;
+              })
+            }
+            type="button"
+          >
+            {allExpanded ? 'Close all' : 'Expand all'}
+          </button>
           <ExportDataButton
             columns={personnelCsvColumns}
             data={getExportData(positions)}
@@ -748,7 +783,19 @@ export function PersonnelTable({ data }: PersonnelTableProps) {
           {filteredEmployees.map((employee) => (
             <EmployeeFundingCard
               employee={employee}
+              expanded={expandedEmployeeIds.has(employee.employeeId)}
               key={employee.employeeId}
+              onToggle={() =>
+                setExpandedEmployeeIds((current) => {
+                  const next = new Set(current);
+                  if (next.has(employee.employeeId)) {
+                    next.delete(employee.employeeId);
+                  } else {
+                    next.add(employee.employeeId);
+                  }
+                  return next;
+                })
+              }
             />
           ))}
         </div>
