@@ -83,6 +83,17 @@ beforeEach(() => {
 
 function mockSavedProjections() {
   server.use(
+    http.get(`/api/project/by-iam/${DEMO_IAM_ID}`, () =>
+      HttpResponse.json([
+        {
+          awardEndDate: null,
+          projectNumber: 'PPM123',
+          projectType: 'Sponsored',
+          taskNum: '1',
+          taskStatus: 'Active',
+        },
+      ])
+    ),
     http.get(`/api/projections/by-iam/${DEMO_IAM_ID}/seed`, () =>
       HttpResponse.json({ ...projection, id: 0, name: 'Default plan' })
     ),
@@ -145,6 +156,86 @@ function openSaved() {
 }
 
 describe('guided projections with server persistence', () => {
+  it('saves only eligible projects, combining their tasks into one snapshot row', async () => {
+    mockSavedProjections();
+    saved = [];
+    const tasks = [7, 8, 9, 10].map((id) => ({
+      ...structuredClone(projection.projects[0]),
+      id,
+      projectNumber: id === 10 ? 'EXPIRED' : 'PPM123',
+      projectType: id === 10 ? 'Sponsored' : 'Internal',
+      taskNumber: String(id),
+    }));
+    server.use(
+      http.get(`/api/projections/by-iam/${DEMO_IAM_ID}/seed`, () =>
+        HttpResponse.json({
+          ...projection,
+          id: 0,
+          name: 'Default plan',
+          projects: tasks,
+        })
+      ),
+      http.get(`/api/project/by-iam/${DEMO_IAM_ID}`, () =>
+        HttpResponse.json(
+          tasks.map((task) => ({
+            awardEndDate: task.id === 10 ? '2000-01-01' : null,
+            projectNumber: task.projectNumber,
+            projectType: task.projectType,
+            taskNum: task.taskNumber,
+            taskStatus: task.id === 9 ? 'Inactive' : 'Active',
+          }))
+        )
+      )
+    );
+    const view = renderRoute({
+      initialPath: `/projections/${DEMO_IAM_ID}?plan=default`,
+    });
+    try {
+      await screen.findByRole('heading', { name: 'Your plan at a glance' });
+      expect(
+        within(screen.getByLabelText('Explore a project')).getAllByRole(
+          'option'
+        )
+      ).toHaveLength(2);
+      fireEvent.click(screen.getByRole('button', { name: 'Save plan' }));
+      await screen.findByText('Saved in Walter');
+      expect(saved[0].projects).toHaveLength(1);
+      expect(saved[0].projects[0]).toMatchObject({
+        projectNumber: 'PPM123',
+        taskNumber: null,
+      });
+      expect(saved[0].projects[0].budgets[0].budget).toBe(300_000);
+      expect(saved[0].projects[0].expenses[0].amount).toBe(200);
+      expect(saved[0].settings?.selectedProjectIds).toEqual([7]);
+      expect(writes).toHaveLength(1);
+    } finally {
+      view.cleanup();
+    }
+  });
+
+  it('keeps saved plans but disables fresh plans when dashboard filters cannot be loaded', async () => {
+    mockSavedProjections();
+    server.use(
+      http.get(
+        `/api/project/by-iam/${DEMO_IAM_ID}`,
+        () => new HttpResponse(null, { status: 503 })
+      )
+    );
+    const view = renderRoute({ initialPath: `/projections/${DEMO_IAM_ID}/12` });
+    try {
+      await screen.findByRole('heading', { name: projection.name });
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        'Current portfolio data could not be loaded'
+      );
+      expect(
+        screen.getByRole('button', { name: 'Create New Plan' })
+      ).toBeDisabled();
+      expect(writes).toEqual([]);
+    } finally {
+      view.cleanup();
+    }
+  });
+
   it.each(['?plan=default', '/12'])(
     'restores projects and sections with Back and Forward at %s',
     async (suffix) => {
@@ -165,7 +256,7 @@ describe('guided projections with server persistence', () => {
         await act(async () => view.router.history.back());
         await screen.findByRole('heading', {
           level: 2,
-          name: 'Real seed project · Task 1',
+          name: /Real seed project/,
         });
         await act(async () => view.router.history.back());
         await screen.findByRole('heading', { name: 'Your plan at a glance' });
@@ -173,7 +264,7 @@ describe('guided projections with server persistence', () => {
         await act(async () => view.router.history.forward());
         await screen.findByRole('heading', {
           level: 2,
-          name: 'Real seed project · Task 1',
+          name: /Real seed project/,
         });
         fireEvent.click(
           screen.getByRole('button', { name: 'Back to all projects' })
@@ -185,14 +276,14 @@ describe('guided projections with server persistence', () => {
         });
         await screen.findByRole('heading', {
           level: 2,
-          name: 'Real seed project · Task 1',
+          name: /Real seed project/,
         });
         fireEvent.click(screen.getByRole('button', { name: 'All plans' }));
         await screen.findByRole('heading', { name: 'Portfolio projections' });
         await act(async () => view.router.history.back());
         await screen.findByRole('heading', {
           level: 2,
-          name: 'Real seed project · Task 1',
+          name: /Real seed project/,
         });
         expect(writes).toEqual([]);
       } finally {
@@ -210,7 +301,7 @@ describe('guided projections with server persistence', () => {
     try {
       await screen.findByRole('heading', {
         level: 2,
-        name: 'Real seed project · Task 1',
+        name: /Real seed project/,
       });
       await section('Plan details');
       fireEvent.change(screen.getByLabelText('Plan name'), {
@@ -225,7 +316,7 @@ describe('guided projections with server persistence', () => {
       await act(async () => view.router.history.back());
       await screen.findByRole('heading', {
         level: 2,
-        name: 'Real seed project · Task 1',
+        name: /Real seed project/,
       });
       expect(confirm).not.toHaveBeenCalled();
       fireEvent.click(

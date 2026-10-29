@@ -12,6 +12,19 @@ use **Save plan** to store the scenario in Walter's `Projections` table. Creatin
 a plan through setup also saves it. Real portfolio data is never saved to browser
 storage. Failed saves keep the draft open for another attempt.
 
+Fresh/default plans apply the dashboard's visibility rules before calculating:
+inactive internal tasks are excluded, and sponsored projects are excluded when
+their latest award end date is before today. Missing award dates and awards ending
+today remain eligible. Eligibility comes from the same portfolio endpoint as the
+dashboard; if that request fails, no unfiltered default plan is offered.
+
+Eligible tasks are combined into one row per project. Budgets, monthly actuals,
+run-rates, and expenses are summed without including excluded tasks. Staffing
+allocations are combined only when their funding dates match. Allocations to
+excluded tasks/projects become outside funding, and people funded solely by
+excluded items are removed. Saved plans retain the resulting project-level
+snapshot when reopened; current dashboard filters do not rewrite that snapshot.
+
 Saved plans open at `/projections/$iamId/$projectionId`. They retain their original
 snapshot date, budgets, actuals, and assumptions when reopened. Duplicating a plan
 copies that snapshot and its edits into a separate row. It does not reseed from
@@ -43,7 +56,7 @@ APIs, and keeps the snapshot date fixed while editing.
 
 Supported assumptions include:
 
-- Project/task inclusion, planned funding, available balances, and project dates.
+- Project inclusion, planned funding, available balances, and project dates.
   Balance edits preserve the original category budgets through an adjustment row.
 - Staffing inclusion, full-time salary, appointment FTE, CBR, vacation accrual,
   annual COLA, fee remission, and appointment dates. Job-code lookups can fill
@@ -57,7 +70,7 @@ Supported assumptions include:
   generated estimate's dates or frequency converts it to a planned expense.
 - Plan name, notes, and planning horizon. The saved snapshot fixes the starting month.
 
-Charts show each project/task's balance, shortfalls, and monthly costs. The live
+Charts show each project's balance, shortfalls, and monthly costs. The live
 planner does not recompute indirect costs from a project burden rate. Indirect
 cost estimates remain part of the source category spending averages.
 

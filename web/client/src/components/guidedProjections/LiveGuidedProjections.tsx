@@ -11,6 +11,8 @@ import {
 } from '@tanstack/react-router';
 import GuidedProjections from '@/components/guidedProjections/GuidedProjections.tsx';
 import type { PlanView } from '@/components/guidedProjections/navigation.ts';
+import { prepareDefaultProjection } from '@/components/guidedProjections/defaultSnapshot.ts';
+import { projectsDetailQueryOptions } from '@/queries/project.ts';
 import {
   fromServerProjection,
   toServerProjection,
@@ -33,11 +35,15 @@ export const guidedWorkspaceQueryOptions = (
   queryClient: QueryClient
 ) => ({
   queryFn: async () => {
-    const [seedResult, summariesResult, lookupResult] =
+    const [seedResult, summariesResult, lookupResult, portfolioResult] =
       await Promise.allSettled([
         queryClient.fetchQuery(projectionSeedQueryOptions(iamId)),
         queryClient.fetchQuery(projectionListQueryOptions(iamId)),
         queryClient.ensureQueryData(projectionLookupsQueryOptions()),
+        queryClient.fetchQuery({
+          ...projectsDetailQueryOptions(iamId),
+          staleTime: 0,
+        }),
       ]);
     // The saved portfolio remains usable during a datamart outage. Access failures
     // still fail the route through the independently authorized saved-list request.
@@ -52,11 +58,19 @@ export const guidedWorkspaceQueryOptions = (
     if (!plans.length && seedResult.status === 'rejected') {
       throw seedResult.reason;
     }
+    // Never offer an unfiltered default when the dashboard's eligibility data is unavailable.
+    if (!plans.length && portfolioResult.status === 'rejected') {
+      throw portfolioResult.reason;
+    }
     return {
       lookups:
         lookupResult.status === 'fulfilled' ? lookupResult.value : undefined,
       plans,
-      seed: seedResult.status === 'fulfilled' ? seedResult.value : null,
+      seed:
+        seedResult.status === 'fulfilled' &&
+        portfolioResult.status === 'fulfilled'
+          ? prepareDefaultProjection(seedResult.value, portfolioResult.value)
+          : null,
     };
   },
   queryKey: ['projections', 'workspace', iamId] as const,

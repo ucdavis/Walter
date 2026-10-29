@@ -554,6 +554,12 @@ export default function GuidedProjections({
                         ? `${initialPlan.ownerName}'s Projections`
                         : 'Portfolio projections'}
                     </h1>
+                    {remote && (
+                      <p className="mt-2 max-w-2xl text-sm text-base-content/70">
+                        New plans exclude inactive internal tasks and expired
+                        awards. Each project combines its eligible tasks.
+                      </p>
+                    )}
                   </div>
                   <button
                     className="btn btn-primary"
@@ -850,7 +856,7 @@ export default function GuidedProjections({
                     />
                     <p className="mt-4 text-sm leading-relaxed text-base-content/70">
                       {remote
-                        ? 'Uses PPM project/task budgets and costs, UCPath staffing, and historical spending averages. Salary, benefits, vacation accrual, COLA, and fee remission follow each job’s assumptions.'
+                        ? 'Projects combine eligible tasks from the snapshot; inactive internal tasks and expired awards are excluded. Uses PPM budgets and costs, UCPath staffing, and historical spending averages. Salary, benefits, vacation accrual, COLA, and fee remission follow each job’s assumptions.'
                         : 'Salary, fringe, and indirect costs are included. Other expenses use direct costs only in this demo.'}
                     </p>
                     <p className="mt-4 text-sm leading-relaxed text-base-content/70">
