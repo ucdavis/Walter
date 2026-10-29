@@ -1,6 +1,10 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
-import { DayPicker } from '@daypicker/react';
+import {
+  DayPicker,
+  type MonthCaptionProps,
+  useDayPicker,
+} from '@daypicker/react';
 import {
   autoUpdate,
   flip,
@@ -17,6 +21,66 @@ import {
 import { CalendarDaysIcon } from '@heroicons/react/24/outline';
 import { parseProjectDate } from '@/lib/date.ts';
 import '@daypicker/react/style.css';
+
+function DatePickerCaption({
+  calendarMonth,
+  displayIndex: _displayIndex,
+  ...props
+}: MonthCaptionProps) {
+  const { goToMonth } = useDayPicker();
+  const month = calendarMonth.date;
+
+  return (
+    <div {...props}>
+      <div className="flex items-center gap-2">
+        <select
+          aria-label="Calendar month"
+          className="select select-sm w-28 border-main-border bg-base-100"
+          onChange={(event) => {
+            const nextMonth = new Date(month);
+            nextMonth.setMonth(Number(event.target.value));
+            goToMonth(nextMonth);
+          }}
+          value={month.getMonth()}
+        >
+          {Array.from({ length: 12 }, (_, index) => (
+            <option key={index} value={index}>
+              {format(new Date(2000, index, 1), 'MMMM')}
+            </option>
+          ))}
+        </select>
+        <input
+          aria-label="Calendar year"
+          className="input input-sm w-20 border-main-border bg-base-100"
+          defaultValue={month.getFullYear()}
+          key={month.getFullYear()}
+          min={1}
+          onBlur={(event) => {
+            const year = Number(event.target.value);
+            const nextMonth = new Date(month);
+            nextMonth.setFullYear(year);
+            // Year navigation has no product cutoff; reject invalid calendar values.
+            if (
+              Number.isInteger(year) &&
+              year > 0 &&
+              !Number.isNaN(nextMonth.getTime())
+            ) {
+              goToMonth(nextMonth);
+            } else {
+              event.target.value = String(month.getFullYear());
+            }
+          }}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              event.currentTarget.blur();
+            }
+          }}
+          type="number"
+        />
+      </div>
+    </div>
+  );
+}
 
 interface DatePickerProps {
   id: string;
@@ -106,12 +170,14 @@ export function DatePicker({
                     'rounded-field bg-primary text-primary-content font-semibold',
                   today: 'font-semibold',
                 }}
+                components={{ MonthCaption: DatePickerCaption }}
                 defaultMonth={selected ?? maxDate ?? minDate ?? undefined}
                 disabled={[
                   ...(minDate ? [{ before: minDate }] : []),
                   ...(maxDate ? [{ after: maxDate }] : []),
                 ]}
                 mode="single"
+                navLayout="after"
                 onSelect={(date: Date | undefined) => {
                   // Filter dates stay local date-only strings, without a UTC conversion.
                   onChange(date ? format(date, 'yyyy-MM-dd') : '');
