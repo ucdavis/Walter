@@ -10,7 +10,6 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { ChevronDownIcon } from '@heroicons/react/24/outline';
 import { formatCurrency } from '@/lib/currency.ts';
 import { getProjectMonth } from '@/lib/date.ts';
 import {
@@ -507,67 +506,33 @@ function BurndownSelect<T extends number | string>({
   options,
   value,
 }: BurndownSelectProps<T>) {
-  const [isOpen, setIsOpen] = useState(false);
-  const selectedLabel =
-    options.find((option) => option.value === value)?.label ??
-    options[0]?.label;
-
   return (
-    <div
-      className="relative"
-      onBlur={(event) => {
-        const nextFocus = event.relatedTarget as Node | null;
-        if (!event.currentTarget.contains(nextFocus)) {
-          setIsOpen(false);
-        }
-      }}
-    >
-      <span className="stat-label block" id={`${id}-label`}>
-        {label}
-      </span>
-      <button
-        aria-controls={`${id}-menu`}
-        aria-expanded={isOpen}
-        aria-haspopup="listbox"
-        aria-labelledby={`${id}-label ${id}-trigger`}
-        className="inline-flex items-center gap-1 text-base font-normal"
-        id={`${id}-trigger`}
-        onClick={() => setIsOpen((current) => !current)}
-        role="combobox"
-        type="button"
+    <div className="w-full min-w-0 sm:w-48">
+      <label
+        className="mb-2 block text-sm font-medium text-base-content"
+        htmlFor={id}
       >
-        {selectedLabel}
-        <ChevronDownIcon className="h-4 w-4" />
-      </button>
-      {isOpen ? (
-        <div
-          aria-labelledby={`${id}-label`}
-          className="absolute left-0 top-full z-100 mt-1 min-w-36 rounded-md border border-main-border bg-base-100 p-1 shadow-lg"
-          id={`${id}-menu`}
-          role="listbox"
-        >
-          {options.map((option) => (
-            <button
-              aria-selected={option.value === value}
-              className={`block w-full rounded px-3 py-2 text-left text-sm ${
-                option.value === value
-                  ? 'bg-base-200 font-semibold'
-                  : 'hover:bg-base-200'
-              }`}
-              key={option.value}
-              onClick={() => {
-                onChange(option.value);
-                setIsOpen(false);
-              }}
-              onMouseDown={(event) => event.preventDefault()}
-              role="option"
-              type="button"
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-      ) : null}
+        {label}
+      </label>
+      <select
+        className="select min-h-11 w-full max-w-full border-main-border bg-base-100 text-base focus:border-primary focus:outline-primary"
+        id={id}
+        onChange={(event) => {
+          const selectedOption = options.find(
+            (option) => String(option.value) === event.target.value
+          );
+          if (selectedOption) {
+            onChange(selectedOption.value);
+          }
+        }}
+        value={value}
+      >
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }
@@ -779,7 +744,7 @@ export function ProjectBurndownSection({
           <div>
             {stats && (
               <div className="relative z-50 mb-6 text-sm">
-                <div className="relative z-[100] mb-4 flex flex-wrap gap-10">
+                <div className="relative z-[100] mb-4 flex flex-wrap gap-4">
                   <BurndownSelect
                     id="burndown-timeline"
                     label="Timeline"

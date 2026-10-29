@@ -11,6 +11,7 @@ import {
   projectCostsQueryOptions,
 } from '@/queries/projectCosts.ts';
 import { DataTable } from '@/shared/DataTable.tsx';
+import { DatePicker } from '@/shared/DatePicker.tsx';
 import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
 
 const columnHelper = createColumnHelper<ProjectCostRecord>();
@@ -257,42 +258,26 @@ export function ProjectCostsTable({
   return (
     <div data-testid="project-costs-table">
       <div className="mb-4">
-        <div className="mb-4 flex flex-wrap items-end gap-4">
-          <div>
-            <label
-              className="stat-label mb-1 block"
-              htmlFor="project-costs-from-date"
-            >
-              From
-            </label>
-            <input
-              className="input input-sm"
-              id="project-costs-from-date"
-              max={toDate || undefined}
-              onChange={(event) => setFromDate(event.target.value)}
-              type="date"
-              value={fromDate}
-            />
-          </div>
-          <div>
-            <label
-              className="stat-label mb-1 block"
-              htmlFor="project-costs-to-date"
-            >
-              To
-            </label>
-            <input
-              className="input input-sm"
-              id="project-costs-to-date"
-              min={fromDate || undefined}
-              onChange={(event) => setToDate(event.target.value)}
-              type="date"
-              value={toDate}
-            />
-          </div>
+        <div className="mb-5 flex flex-wrap items-end gap-4">
+          <DatePicker
+            id="project-costs-from-date"
+            label="From"
+            max={toDate || undefined}
+            onChange={setFromDate}
+            placeholder="Any start date"
+            value={fromDate}
+          />
+          <DatePicker
+            id="project-costs-to-date"
+            label="To"
+            min={fromDate || undefined}
+            onChange={setToDate}
+            placeholder="Any end date"
+            value={toDate}
+          />
           {fromDate || toDate ? (
             <button
-              className="btn btn-sm btn-ghost"
+              className="btn btn-ghost min-h-11 text-base"
               onClick={() => {
                 setFromDate('');
                 setToDate('');
@@ -304,15 +289,15 @@ export function ProjectCostsTable({
           ) : null}
 
           {isInternal ? (
-            <div>
+            <div className="w-full min-w-0 sm:w-auto sm:min-w-56 sm:max-w-full">
               <label
-                className="stat-label mb-1 block"
+                className="mb-2 block text-sm font-medium text-base-content"
                 htmlFor="project-costs-task"
               >
                 Task
               </label>
               <select
-                className="select select-sm w-full max-w-full sm:w-auto"
+                className="select min-h-11 w-full max-w-full border-main-border bg-base-100 text-base focus:border-primary focus:outline-primary"
                 id="project-costs-task"
                 onChange={(event) => setSelectedTask(event.target.value)}
                 value={selectedTask}
@@ -333,12 +318,12 @@ export function ProjectCostsTable({
         <div className="flex flex-wrap items-center gap-2">
           <div
             aria-label="Filter by expenditure category"
-            className="tabs tabs-box flex w-fit flex-wrap"
+            className="tabs tabs-box flex w-fit max-w-full flex-wrap gap-1"
             role="group"
           >
             <button
               aria-pressed={selectedCategories.length === 0}
-              className={`tab ${
+              className={`tab h-auto min-h-11 px-4 py-2 text-base font-medium ${
                 selectedCategories.length === 0 ? 'tab-active' : ''
               }`}
               onClick={() => setSelectedCategories([])}
@@ -352,7 +337,7 @@ export function ProjectCostsTable({
               return (
                 <button
                   aria-pressed={isSelected}
-                  className={`tab ${isSelected ? 'tab-active' : ''}`}
+                  className={`tab h-auto min-h-11 px-4 py-2 text-base font-medium ${isSelected ? 'tab-active' : ''}`}
                   key={category}
                   onClick={() => toggleCategory(category)}
                   type="button"
@@ -374,6 +359,40 @@ export function ProjectCostsTable({
       <DataTable
         columns={columns}
         data={filteredRecords}
+        emptyState={(table) => (
+          <div
+            className="flex flex-col items-center gap-3 px-4 py-12 text-center"
+            role="status"
+          >
+            <div>
+              <h3 className="text-lg font-semibold">
+                {projectCostRecords.length === 0
+                  ? 'No project costs available'
+                  : 'No matching project costs'}
+              </h3>
+              <p className="mt-1 text-base text-base-content/70">
+                {projectCostRecords.length === 0
+                  ? 'There are no cost records available for this project.'
+                  : 'Try adjusting your dates, categories, or search to see more costs.'}
+              </p>
+            </div>
+            {projectCostRecords.length > 0 ? (
+              <button
+                className="btn btn-sm btn-outline"
+                onClick={() => {
+                  setFromDate('');
+                  setToDate('');
+                  setSelectedCategories([]);
+                  setSelectedTask('');
+                  table.setGlobalFilter('');
+                }}
+                type="button"
+              >
+                Clear filters
+              </button>
+            ) : null}
+          </div>
+        )}
         footerRowClassName="totaltr"
         getRowProps={(row) => ({
           className: 'hover:bg-base-200/50',

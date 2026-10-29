@@ -325,11 +325,10 @@ describe('ProjectBurndownSection history', () => {
     const historySelect = await screen.findByRole('combobox', {
       name: /History/,
     });
-    fireEvent.click(historySelect);
-    fireEvent.click(screen.getByRole('option', { name: '6 months' }));
+    fireEvent.change(historySelect, { target: { value: '6' } });
 
     await expect.poll(() => requestedHistoryMonths).toEqual(['3', '6']);
-    expect(historySelect).toHaveTextContent('6 months');
+    expect(historySelect).toHaveValue('6');
   });
 
   const renderSection = (result: ProjectProjectionResult) => {
@@ -372,6 +371,8 @@ describe('ProjectBurndownSection history', () => {
     renderSection(projection);
 
     await screen.findByRole('combobox', { name: /History/ });
-    expect(screen.queryByText(/Projected salaries exclude/)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/Projected salaries exclude/)
+    ).not.toBeInTheDocument();
   });
 });
