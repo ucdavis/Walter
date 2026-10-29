@@ -680,6 +680,8 @@ describe('project costs page', () => {
     });
 
     try {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date(2026, 4, 1));
       await screen.findByTestId('project-costs-table');
       expect(screen.getByText('March Entry')).toBeInTheDocument();
 
@@ -722,6 +724,7 @@ describe('project costs page', () => {
       expect(screen.getByText('March Entry')).toBeInTheDocument();
       expect(screen.getByText('September Entry')).toBeInTheDocument();
     } finally {
+      vi.useRealTimers();
       cleanup();
     }
   });
