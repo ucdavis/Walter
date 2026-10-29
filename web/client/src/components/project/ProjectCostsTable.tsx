@@ -11,6 +11,7 @@ import {
   projectCostsQueryOptions,
 } from '@/queries/projectCosts.ts';
 import { DataTable } from '@/shared/DataTable.tsx';
+import { DatePicker } from '@/shared/DatePicker.tsx';
 import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
 
 const columnHelper = createColumnHelper<ProjectCostRecord>();
@@ -258,38 +259,22 @@ export function ProjectCostsTable({
     <div data-testid="project-costs-table">
       <div className="mb-4">
         <div className="mb-5 flex flex-wrap items-end gap-4">
-          <div className="w-full sm:w-48">
-            <label
-              className="mb-2 block text-sm font-medium text-base-content/70"
-              htmlFor="project-costs-from-date"
-            >
-              From
-            </label>
-            <input
-              className="input min-h-11 w-full border-main-border bg-base-100 text-base focus:border-primary focus:outline-primary"
-              id="project-costs-from-date"
-              max={toDate || undefined}
-              onChange={(event) => setFromDate(event.target.value)}
-              type="date"
-              value={fromDate}
-            />
-          </div>
-          <div className="w-full sm:w-48">
-            <label
-              className="mb-2 block text-sm font-medium text-base-content/70"
-              htmlFor="project-costs-to-date"
-            >
-              To
-            </label>
-            <input
-              className="input min-h-11 w-full border-main-border bg-base-100 text-base focus:border-primary focus:outline-primary"
-              id="project-costs-to-date"
-              min={fromDate || undefined}
-              onChange={(event) => setToDate(event.target.value)}
-              type="date"
-              value={toDate}
-            />
-          </div>
+          <DatePicker
+            id="project-costs-from-date"
+            label="From"
+            max={toDate || undefined}
+            onChange={setFromDate}
+            placeholder="Any start date"
+            value={fromDate}
+          />
+          <DatePicker
+            id="project-costs-to-date"
+            label="To"
+            min={fromDate || undefined}
+            onChange={setToDate}
+            placeholder="Any end date"
+            value={toDate}
+          />
           {fromDate || toDate ? (
             <button
               className="btn btn-ghost min-h-11 text-base"
@@ -306,7 +291,7 @@ export function ProjectCostsTable({
           {isInternal ? (
             <div className="w-full min-w-0 sm:w-auto sm:min-w-56 sm:max-w-full">
               <label
-                className="mb-2 block text-sm font-medium text-base-content/70"
+                className="mb-2 block text-sm font-medium text-base-content"
                 htmlFor="project-costs-task"
               >
                 Task

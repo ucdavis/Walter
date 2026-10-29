@@ -509,7 +509,7 @@ function BurndownSelect<T extends number | string>({
   return (
     <div className="w-full min-w-0 sm:w-48">
       <label
-        className="mb-2 block text-sm font-medium text-base-content/70"
+        className="mb-2 block text-sm font-medium text-base-content"
         htmlFor={id}
       >
         {label}
