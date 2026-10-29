@@ -5,12 +5,17 @@ import {
   TrashIcon,
   UserGroupIcon,
 } from '@heroicons/react/24/outline';
+import type {
+  ProjectionJob,
+  ProjectionLookups,
+} from '@/queries/projections.ts';
 import { money } from '@/components/guidedProjections/defaults.ts';
 import {
   monthLabel,
   isFundingSourceActiveInMonth,
 } from '@/components/projections/projection.ts';
 import {
+  OUTSIDE_FUNDING_ID,
   planMonths,
   splitActive,
   staffValidation,
@@ -20,9 +25,11 @@ import {
 } from '@/components/guidedProjections/planModel.ts';
 
 export default function SplitStaffEditor({
+  lookups,
   plan,
   update,
 }: {
+  lookups?: ProjectionLookups;
   plan: ProjectionPlan;
   update: (plan: ProjectionPlan) => void;
 }) {
@@ -70,6 +77,28 @@ export default function SplitStaffEditor({
             },
           ],
           startMonth: plan.startMonth,
+          ...(plan.serverProjection && {
+            serverJob: {
+              cbrRate: 0.25,
+              colaMonth: 7,
+              colaRate: 0,
+              employeeId: null,
+              endDate: null,
+              feeRemissionMonthly: null,
+              fte: 1,
+              fundingEntries: [],
+              id: 0,
+              isSeeded: false,
+              jobCode: null,
+              monthlySalary: 5000,
+              name: 'Planned hire',
+              positionNumber: null,
+              rateSet: 'DVCMP',
+              startDate: null,
+              title: null,
+              vacationAccrualRate: 0,
+            },
+          }),
         },
       ],
     });
@@ -95,6 +124,8 @@ export default function SplitStaffEditor({
       <p className="mb-5 rounded-md bg-base-200 px-4 py-3 leading-relaxed text-base-content/70 text-sm">
         Each share is a percentage of full-time salary. For a 50% appointment,
         shares should add up to 50%.
+        {plan.serverProjection &&
+          ' Outside portfolio shares count toward the appointment but do not charge these projects.'}
       </p>
       <div className="grid gap-4">
         {plan.staff.map((person) => {
@@ -108,7 +139,8 @@ export default function SplitStaffEditor({
                 .filter(
                   (split) =>
                     splitActive(split, month) &&
-                    plan.selectedFunding.includes(split.fundingId)
+                    (plan.selectedFunding.includes(split.fundingId) ||
+                      split.fundingId === OUTSIDE_FUNDING_ID)
                 )
                 .reduce((total, split) => total + split.percent, 0)
             );
@@ -142,8 +174,14 @@ export default function SplitStaffEditor({
                   <span>
                     <strong className="text-base">{person.name}</strong>
                     <small className="text-sm">
-                      {money(person.annualSalary)} annual salary ·{' '}
-                      {person.fringeRate}% fringe
+                      {person.salaryMissing
+                        ? 'Salary needed'
+                        : `${money(person.annualSalary)} annual salary`}{' '}
+                      ·{' '}
+                      {person.serverJob?.cbrRate === null
+                        ? 'CBR needed'
+                        : `${person.fringeRate}% ${plan.serverProjection ? 'CBR' : 'fringe'}`}
+                      {person.serverJob && ` · ${person.serverJob.fte} FTE`}
                     </small>
                   </span>
                   <ChevronDownIcon className="size-5 shrink-0" />
@@ -161,7 +199,12 @@ export default function SplitStaffEditor({
                       type="button"
                     >
                       <i style={{ background: fund?.color }} />
-                      <b>{split.percent}%</b> {fund?.name ?? 'Choose project'}
+                      <b>{Number(split.percent.toFixed(2))}%</b>{' '}
+                      {split.fundingId === OUTSIDE_FUNDING_ID
+                        ? 'Outside portfolio'
+                        : fund
+                          ? fundingLabel(fund)
+                          : 'Choose project'}
                     </button>
                   );
                 })}
@@ -198,14 +241,19 @@ export default function SplitStaffEditor({
                               annualSalary: nonNegativeNumber(
                                 event.target.value
                               ),
+                              salaryMissing: plan.serverProjection
+                                ? event.target.value === ''
+                                : undefined,
                             })
                           }
                           type="number"
-                          value={person.annualSalary}
+                          value={
+                            person.salaryMissing ? '' : person.annualSalary
+                          }
                         />
                       </label>
                       <label className="grid min-w-0 gap-1 text-sm font-medium text-base-content/70">
-                        Fringe %
+                        {plan.serverProjection ? 'CBR %' : 'Fringe %'}
                         <input
                           className="input w-full text-base"
                           min={0}
@@ -213,12 +261,33 @@ export default function SplitStaffEditor({
                             updatePerson({
                               ...person,
                               fringeRate: nonNegativeNumber(event.target.value),
+                              ...(person.serverJob && {
+                                serverJob: {
+                                  ...person.serverJob,
+                                  cbrRate:
+                                    event.target.value === ''
+                                      ? null
+                                      : nonNegativeNumber(event.target.value) /
+                                        100,
+                                },
+                              }),
                             })
                           }
                           type="number"
-                          value={person.fringeRate}
+                          value={
+                            person.serverJob?.cbrRate === null
+                              ? ''
+                              : person.fringeRate
+                          }
                         />
                       </label>
+                      {person.serverJob && (
+                        <JobDetails
+                          lookups={lookups}
+                          person={person}
+                          update={updatePerson}
+                        />
+                      )}
                     </div>
                   </details>
                   {person.splits.map((split, index) => {
@@ -254,14 +323,20 @@ export default function SplitStaffEditor({
                               }
                               value={split.fundingId}
                             >
-                              {!source && (
-                                <option value={split.fundingId}>
-                                  Project not included
+                              {plan.serverProjection && (
+                                <option value={OUTSIDE_FUNDING_ID}>
+                                  Outside portfolio
                                 </option>
                               )}
+                              {!source &&
+                                split.fundingId !== OUTSIDE_FUNDING_ID && (
+                                  <option value={split.fundingId}>
+                                    Project not included
+                                  </option>
+                                )}
                               {funds.map((fund) => (
                                 <option key={fund.id} value={fund.id}>
-                                  {fund.name}
+                                  {fundingLabel(fund)}
                                 </option>
                               ))}
                             </select>
@@ -334,7 +409,7 @@ export default function SplitStaffEditor({
                             />
                           </label>
                         </div>
-                        {!source && (
+                        {!source && split.fundingId !== OUTSIDE_FUNDING_ID && (
                           <p className="mt-4 rounded-md bg-error/10 p-3 text-error text-sm">
                             This project is excluded from the plan. This share
                             isn&apos;t charged.
@@ -354,7 +429,7 @@ export default function SplitStaffEditor({
                   <div className="flex items-center justify-between gap-3 text-sm">
                     <button
                       className="flex items-center gap-1.5 font-semibold text-primary [&>svg]:size-4 text-sm"
-                      disabled={!funds.length}
+                      disabled={!funds.length && !plan.serverProjection}
                       onClick={() =>
                         updatePerson({
                           ...person,
@@ -369,9 +444,14 @@ export default function SplitStaffEditor({
                                     !person.splits.some(
                                       (split) => split.fundingId === fund.id
                                     )
-                                )?.id ?? funds[0].id,
+                                )?.id ??
+                                funds[0]?.id ??
+                                OUTSIDE_FUNDING_ID,
                               id: crypto.randomUUID(),
-                              percent: Math.max(0, 100 - max),
+                              percent: Math.max(
+                                0,
+                                (person.serverJob?.fte ?? 1) * 100 - max
+                              ),
                               startMonth:
                                 person.splits[0]?.startMonth ?? plan.startMonth,
                             },
@@ -414,4 +494,208 @@ export default function SplitStaffEditor({
 function nonNegativeNumber(value: string) {
   const amount = Number(value);
   return Number.isFinite(amount) ? Math.max(0, amount) : 0;
+}
+
+function JobDetails({
+  lookups,
+  person,
+  update,
+}: {
+  lookups?: ProjectionLookups;
+  person: PlanStaff;
+  update: (person: PlanStaff) => void;
+}) {
+  const job = person.serverJob!;
+  const patch = (changes: Partial<ProjectionJob>) =>
+    update({ ...person, serverJob: { ...job, ...changes } });
+  const jobCodeValue = `${job.rateSet}|${job.jobCode ?? ''}`;
+  const hasJobCode = lookups?.jobCodes.some(
+    (code) => `${code.rateSet}|${code.jobCode}` === jobCodeValue
+  );
+
+  return (
+    <>
+      <label className="col-span-full grid min-w-0 gap-1 text-sm font-medium text-base-content/70">
+        Job code and rate set
+        <select
+          className="select w-full text-base"
+          onChange={(event) => {
+            const code = lookups?.jobCodes.find(
+              (entry) =>
+                `${entry.rateSet}|${entry.jobCode}` === event.target.value
+            );
+            if (code) {
+              update({
+                ...person,
+                fringeRate: (code.cbr ?? 0) * 100,
+                serverJob: {
+                  ...job,
+                  cbrRate: code.cbr,
+                  jobCode: code.jobCode,
+                  rateSet: code.rateSet,
+                  title: code.title,
+                  vacationAccrualRate: code.vacationAccrual ?? 0,
+                },
+              });
+            }
+          }}
+          value={jobCodeValue}
+        >
+          {!hasJobCode && (
+            <option value={jobCodeValue}>
+              {job.jobCode
+                ? `${job.jobCode} · ${job.rateSet}`
+                : 'Choose job code'}
+            </option>
+          )}
+          {lookups?.jobCodes.map((code) => (
+            <option
+              key={`${code.rateSet}|${code.jobCode}`}
+              value={`${code.rateSet}|${code.jobCode}`}
+            >
+              {code.jobCode} · {code.title ?? 'Untitled job'} · {code.rateSet}
+            </option>
+          ))}
+        </select>
+      </label>
+      <JobNumber
+        label="Appointment FTE"
+        max={1}
+        onChange={(value) => {
+          const fte = value ?? 0;
+          update({
+            ...person,
+            serverJob: { ...job, fte },
+            // Keep the funding distribution unchanged when appointment effort changes.
+            splits: person.splits.map((split) => ({
+              ...split,
+              percent:
+                job.fte > 0
+                  ? (split.percent * fte) / job.fte
+                  : (split.serverEntry?.percent ?? 0) * fte * 100,
+            })),
+          });
+        }}
+        step={0.01}
+        value={job.fte}
+      />
+      <JobNumber
+        label="Vacation accrual %"
+        onChange={(value) => patch({ vacationAccrualRate: (value ?? 0) / 100 })}
+        value={job.vacationAccrualRate * 100}
+      />
+      <JobNumber
+        label="Annual COLA %"
+        onChange={(value) => patch({ colaRate: (value ?? 0) / 100 })}
+        value={job.colaRate * 100}
+      />
+      <label className="grid min-w-0 gap-1 text-sm font-medium text-base-content/70">
+        COLA month
+        <select
+          className="select w-full text-base"
+          onChange={(event) => patch({ colaMonth: Number(event.target.value) })}
+          value={job.colaMonth}
+        >
+          {[
+            'January',
+            'February',
+            'March',
+            'April',
+            'May',
+            'June',
+            'July',
+            'August',
+            'September',
+            'October',
+            'November',
+            'December',
+          ].map((month, index) => (
+            <option key={month} value={index + 1}>
+              {month}
+            </option>
+          ))}
+        </select>
+      </label>
+      <JobNumber
+        label="Monthly fee remission"
+        onChange={(value) => patch({ feeRemissionMonthly: value })}
+        value={job.feeRemissionMonthly}
+      />
+      <div className="col-span-full grid grid-cols-2 gap-2.5">
+        <label className="grid min-w-0 gap-1 text-sm font-medium text-base-content/70">
+          Appointment starts
+          <input
+            className="input w-full text-base"
+            max={job.endDate ?? undefined}
+            onChange={(event) =>
+              patch({ startDate: event.target.value || null })
+            }
+            type="date"
+            value={job.startDate ?? ''}
+          />
+        </label>
+        <label className="grid min-w-0 gap-1 text-sm font-medium text-base-content/70">
+          Appointment ends
+          <input
+            className="input w-full text-base"
+            min={job.startDate ?? undefined}
+            onChange={(event) => patch({ endDate: event.target.value || null })}
+            type="date"
+            value={job.endDate ?? ''}
+          />
+        </label>
+      </div>
+      <p className="col-span-full text-sm font-normal text-base-content/70">
+        Blank appointment dates leave the job open for the planning period. Fee
+        remission is the monthly total for the appointment.
+      </p>
+      {(person.salaryMissing || job.cbrRate === null) && (
+        <p className="col-span-full text-sm font-normal text-warning">
+          Enter the missing salary or CBR before relying on this projection.
+          Missing values currently contribute zero cost.
+        </p>
+      )}
+    </>
+  );
+}
+
+function JobNumber({
+  label,
+  max,
+  onChange,
+  step = 'any',
+  value,
+}: {
+  label: string;
+  max?: number;
+  onChange: (value: number | null) => void;
+  step?: number | 'any';
+  value: number | null;
+}) {
+  return (
+    <label className="grid min-w-0 gap-1 text-sm font-medium text-base-content/70">
+      {label}
+      <input
+        className="input w-full text-base"
+        max={max}
+        min={0}
+        onChange={(event) =>
+          onChange(
+            event.target.value === ''
+              ? null
+              : nonNegativeNumber(event.target.value)
+          )
+        }
+        step={step}
+        type="number"
+        value={value === null ? '' : Number(value.toFixed(6))}
+      />
+    </label>
+  );
+}
+
+function fundingLabel(fund: ProjectionPlan['funding'][number]) {
+  return fund.serverProject?.taskNumber
+    ? `${fund.name} · Task ${fund.serverProject.taskNumber}`
+    : fund.name;
 }

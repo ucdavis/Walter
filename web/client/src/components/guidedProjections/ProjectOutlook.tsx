@@ -23,10 +23,12 @@ import type {
 } from '@/components/guidedProjections/planModel.ts';
 
 export function LiveResults({
+  incomplete = false,
   onProject,
   projectId,
   result,
 }: {
+  incomplete?: boolean;
   onProject: (id: string | null) => void;
   projectId: string | null;
   result: PlanResult;
@@ -50,9 +52,11 @@ export function LiveResults({
         <h2 className="text-2xl font-semibold">
           {gaps.length
             ? `${gaps.length} of ${result.funds.length} projects ${gaps.length === 1 ? 'runs' : 'run'} short`
-            : result.funds.length
-              ? 'Each project stays within funding'
-              : 'Select a project to see its outlook'}
+            : incomplete
+              ? 'Staffing costs need review'
+              : result.funds.length
+                ? 'Each project stays within funding'
+                : 'Select a project to see its outlook'}
         </h2>
         <p className="mt-2 text-sm leading-relaxed text-base-content/70">
           Balances stay separate. Select a line or a project below to explore.
@@ -91,7 +95,9 @@ export function LiveResults({
           >
             {selected.firstDeficit
               ? `First below zero in ${monthLabel(selected.firstDeficit)}`
-              : 'Stays within funding throughout this plan'}
+              : incomplete
+                ? 'Balance excludes missing staffing costs'
+                : 'Stays within funding throughout this plan'}
           </p>
         </>
       )}
@@ -210,7 +216,11 @@ export function LiveResults({
       {selected ? (
         <div className="grid gap-3 border-t border-main-border pt-3.5 [&>div]:flex [&>div]:items-center [&>div]:justify-between [&>div]:gap-3 [&>div:last-child]:border-t [&>div:last-child]:border-main-border [&>div:last-child]:pt-3 text-sm">
           <div>
-            <span className="text-base-content/70">Starting balance</span>
+            <span className="text-base-content/70">
+              {selected.serverProject
+                ? 'Opening planning balance'
+                : 'Starting balance'}
+            </span>
             <strong>{money(selected.startingBalance)}</strong>
           </div>
           <div>
@@ -221,12 +231,20 @@ export function LiveResults({
             <span className="text-base-content/70">Fringe</span>
             <strong>{money(selected.fringe)}</strong>
           </div>
-          <div>
-            <span className="text-base-content/70">
-              Indirect costs · {selected.indirectRate}%
-            </span>
-            <strong>{money(selected.indirect)}</strong>
-          </div>
+          {selected.fees !== 0 && (
+            <div>
+              <span className="text-base-content/70">Fee remission</span>
+              <strong>{money(selected.fees)}</strong>
+            </div>
+          )}
+          {!selected.serverProject && (
+            <div>
+              <span className="text-base-content/70">
+                Indirect costs · {selected.indirectRate}%
+              </span>
+              <strong>{money(selected.indirect)}</strong>
+            </div>
+          )}
           <div>
             <span className="text-base-content/70">Other expenses</span>
             <strong>{money(selected.other)}</strong>
@@ -300,10 +318,10 @@ export function ProjectDetail({
         {fund.firstDeficit ? (
           <ExclamationTriangleIcon
             aria-hidden="true"
-            className="mt-0.5 shrink-0"
+            className="mt-0.5 size-6 shrink-0"
           />
         ) : (
-          <CheckCircleIcon aria-hidden="true" className="mt-0.5 shrink-0" />
+          <CheckCircleIcon aria-hidden="true" className="mt-0.5 size-6 shrink-0" />
         )}
         <div className="min-w-0">
           <strong className="block text-base font-semibold text-base-content">
@@ -319,7 +337,11 @@ export function ProjectDetail({
       </div>
       <div className="mt-5 mb-7 grid grid-cols-2 gap-3 [&_span]:block [&_span]:text-base-content/70 [&_strong]:mt-1 [&_strong]:block [&_strong]:font-semibold [&_strong]:tracking-normal">
         <div>
-          <span className="text-sm">Starting balance</span>
+          <span className="text-sm">
+            {fund.serverProject
+              ? 'Opening planning balance'
+              : 'Starting balance'}
+          </span>
           <strong className="text-3xl">{money(fund.startingBalance)}</strong>
         </div>
         <div>
@@ -327,6 +349,12 @@ export function ProjectDetail({
           <strong className="text-3xl">{money(fund.spending)}</strong>
         </div>
       </div>
+      {fund.serverProject && (
+        <p className="mb-5 text-sm text-base-content/70">
+          The opening balance restores costs already posted in the snapshot
+          month before calculating that full month.
+        </p>
+      )}
       <div className="flex items-center justify-between gap-2.5 [&>button]:flex [&>button]:items-center [&>button]:gap-1 [&>button]:text-right [&>button]:text-primary [&_svg]:size-4">
         <h3 className="text-lg font-semibold">People funded here</h3>
         <button className="text-sm" onClick={onStaffing} type="button">
@@ -334,7 +362,9 @@ export function ProjectDetail({
         </button>
       </div>
       <p className="mt-1.5 mb-3.5 text-base-content/70 text-sm">
-        Project costs include salary, fringe, and indirect costs.
+        {fund.serverProject
+          ? 'Staffing costs include salary, benefits, vacation accrual, and fee remission.'
+          : 'Project costs include salary, fringe, and indirect costs.'}
       </p>
       {fund.staff.length ? (
         fund.staff.map((person) => (

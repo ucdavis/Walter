@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
@@ -12,6 +12,13 @@ import {
   PlusIcon,
   UserGroupIcon,
 } from '@heroicons/react/24/outline';
+import type { ProjectionLookups } from '@/queries/projections.ts';
+import {
+  planSections,
+  type PlanSection,
+  type PlanView,
+} from '@/components/guidedProjections/navigation.ts';
+import { withHistoryMonths } from '@/components/guidedProjections/serverPlan.ts';
 import type { ProjectionDemoPlan } from '@/demo/projectionPlan.ts';
 import { monthLabel } from '@/components/projections/projection.ts';
 import {
@@ -54,30 +61,64 @@ const sections: { icon: typeof ChartBarIcon; name: Section }[] = [
 const defaultPlanId = 'walter-default-plan';
 const steps = ['Plan & funding', 'Staffing', 'Other expenses', 'Review'];
 
+export type RemotePlans = {
+  baseline?: ProjectionPlan;
+  initialPlanId?: string;
+  lookups?: ProjectionLookups;
+  onDirtyChange: (dirty: boolean, inWorkspace: boolean) => void;
+  onNavigate: (planId?: string) => void;
+  onViewChange?: (view: PlanView) => void;
+  plans: ProjectionPlan[];
+  save: (plan: ProjectionPlan, isNew: boolean) => Promise<ProjectionPlan>;
+  view?: PlanView;
+};
+
 export default function GuidedProjections({
   initialPlan,
+  remote,
 }: {
-  initialPlan: ProjectionDemoPlan;
+  initialPlan?: ProjectionDemoPlan;
+  remote?: RemotePlans;
 }) {
-  // Keep the prototype key so existing saved plans remain available.
-  const storageKey = `walter-hybrid-v1-${initialPlan.asOf}-${initialPlan.fundingSources.map((fund) => fund.startingBalance).join('-')}`;
+  // Browser storage is exclusively for the synthetic demo, never real personnel data.
+  const storageKey = initialPlan
+    ? `walter-hybrid-v1-${initialPlan.asOf}-${initialPlan.fundingSources.map((fund) => fund.startingBalance).join('-')}`
+    : '';
+  const baseline = remote
+    ? (remote.baseline ?? remote.plans[0])
+    : createProjectionPlan(initialPlan!, 'Default plan');
   const [plans, setPlans] = useState(() => {
-    const saved = readSavedPlans(initialPlan, storageKey);
-    if (saved.some((plan) => plan.id === defaultPlanId)) {
-      return saved;
+    if (remote) {
+      return [
+        ...(remote.baseline ? [{ ...remote.baseline, id: defaultPlanId }] : []),
+        ...remote.plans,
+      ];
     }
-    return [
-      {
-        ...createProjectionPlan(initialPlan, 'Default plan'),
-        id: defaultPlanId,
-      },
-      ...saved,
-    ];
+    const saved = readSavedPlans(initialPlan!, storageKey);
+    return saved.some((plan) => plan.id === defaultPlanId)
+      ? saved
+      : [{ ...baseline, id: defaultPlanId }, ...saved];
   });
-  const [draft, setDraft] = useState(() => createProjectionPlan(initialPlan));
-  const [screen, setScreen] = useState<'home' | 'setup' | 'workspace'>('home');
-  const [section, setSection] = useState<Section>('Overview');
-  const [projectId, setProjectId] = useState<string | null>(null);
+  const initialSavedPlan = plans.find(
+    (plan) => plan.id === remote?.initialPlanId
+  );
+  const [draft, setDraft] = useState(() =>
+    structuredClone(initialSavedPlan ?? baseline)
+  );
+  const [screen, setScreen] = useState<'home' | 'setup' | 'workspace'>(
+    initialSavedPlan ? 'workspace' : 'home'
+  );
+  const [dirty, setDirty] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const onDirtyChange = remote?.onDirtyChange;
+  useEffect(() => {
+    onDirtyChange?.(dirty || saving, screen === 'workspace');
+  }, [dirty, saving, onDirtyChange, screen]);
+  const [localView, setLocalView] = useState<PlanView>({});
+  const view = remote?.view ?? localView;
+  const section: Section = planSections[view.section ?? 'overview'];
+  const projectId = view.project ?? null;
   const [step, setStep] = useState(0);
   const [visited, setVisited] = useState(0);
   const [storageAvailable, setStorageAvailable] = useState(true);
@@ -89,6 +130,9 @@ export default function GuidedProjections({
 
   function persist(next: ProjectionPlan[]) {
     setPlans(next);
+    if (remote) {
+      return;
+    }
     try {
       localStorage.setItem(storageKey, JSON.stringify(next));
       setStorageAvailable(true);
@@ -99,7 +143,10 @@ export default function GuidedProjections({
 
   function update(next: ProjectionPlan) {
     setDraft(next);
-    if (screen === 'workspace') {
+    if (remote) {
+      setDirty(true);
+      setSaveError(null);
+    } else if (screen === 'workspace') {
       persist(plans.map((plan) => (plan.id === next.id ? next : plan)));
     }
   }
@@ -111,16 +158,62 @@ export default function GuidedProjections({
     });
   }
 
+  function canLeave() {
+    return (
+      !saving &&
+      (!remote ||
+        !dirty ||
+        window.confirm('Discard your unsaved plan changes?'))
+    );
+  }
+
+  function home() {
+    if (!canLeave()) {
+      return;
+    }
+    setDirty(false);
+    setSaveError(null);
+    setScreen('home');
+    remote?.onNavigate();
+    scrollToHeading();
+  }
+
   function open(plan: ProjectionPlan) {
+    if (screen === 'workspace' && draft.id === plan.id) {
+      goToSection('Overview');
+      return;
+    }
+    if (!canLeave()) {
+      return;
+    }
+    showPlan(plan);
+  }
+
+  function showPlan(plan: ProjectionPlan) {
+    setDirty(false);
+    setSaveError(null);
     setDraft(structuredClone(plan));
-    setSection('Overview');
-    setProjectId(null);
+    setLocalView({});
     setScreen('workspace');
+    remote?.onNavigate(plan.id);
     scrollToHeading();
   }
 
   function start() {
-    setDraft(createProjectionPlan(initialPlan, 'My next plan'));
+    if (!canLeave() || (remote && !remote.baseline)) {
+      return;
+    }
+    setDirty(false);
+    setSaveError(null);
+    setDraft(
+      remote
+        ? {
+            ...structuredClone(remote.baseline!),
+            id: crypto.randomUUID(),
+            name: 'My next plan',
+          }
+        : createProjectionPlan(initialPlan!, 'My next plan')
+    );
     setStep(0);
     setVisited(0);
     setScreen('setup');
@@ -128,17 +221,59 @@ export default function GuidedProjections({
   }
 
   function goToSection(next: Section) {
-    setSection(next);
-    if (next === 'Overview') {
-      setProjectId(null);
-    }
+    changeView({
+      project: next === 'Overview' ? undefined : view.project,
+      section:
+        next === 'Overview'
+          ? undefined
+          : (Object.keys(planSections) as PlanSection[]).find(
+              (key) => planSections[key] === next
+            ),
+    });
     scrollToHeading();
   }
 
-  function viewProject(id: string) {
-    setProjectId(id);
-    setSection('Overview');
+  function changeView(next: PlanView) {
+    setLocalView(next);
+    remote?.onViewChange?.(next);
+  }
+
+  function viewProject(id: string | null) {
+    changeView({ project: id ?? undefined });
     scrollToHeading();
+  }
+
+  async function save(plan = draft, isNew = false) {
+    if (!remote || saving) {
+      return;
+    }
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const saved = await remote.save(
+        plan,
+        isNew ||
+          !plans.some((row) => row.id === plan.id) ||
+          plan.id === defaultPlanId
+      );
+      setPlans((current) =>
+        current.some((row) => row.id === saved.id)
+          ? current.map((row) => (row.id === saved.id ? saved : row))
+          : [...current, saved]
+      );
+      if (saved.id === draft.id && screen === 'workspace') {
+        setDraft(structuredClone(saved));
+        setDirty(false);
+      } else {
+        showPlan(saved);
+      }
+    } catch {
+      setSaveError(
+        'Could not save this plan. Your changes are still here. Try saving again.'
+      );
+    } finally {
+      setSaving(false);
+    }
   }
 
   function duplicate() {
@@ -147,14 +282,22 @@ export default function GuidedProjections({
       id: crypto.randomUUID(),
       name: `${draft.name} copy`,
     };
-    persist([...plans, copy]);
-    open(copy);
+    if (remote) {
+      void save(copy, true);
+    } else {
+      persist([...plans, copy]);
+      open(copy);
+    }
   }
 
   function nextStep() {
     if (step === 3) {
-      persist([...plans, draft]);
-      open(draft);
+      if (remote) {
+        void save(draft, true);
+      } else {
+        persist([...plans, draft]);
+        open(draft);
+      }
     } else {
       setStep(step + 1);
       setVisited(Math.max(visited, step + 1));
@@ -162,18 +305,29 @@ export default function GuidedProjections({
     }
   }
 
-  const storageText = storageAvailable
-    ? 'Saved in this browser'
-    : 'Browser storage unavailable. Changes last for this session.';
+  const storageText = remote
+    ? saving
+      ? 'Saving...'
+      : dirty
+        ? 'Unsaved changes'
+        : draft.id === defaultPlanId
+          ? 'Current snapshot. Save to keep this plan.'
+          : 'Saved in Walter'
+    : storageAvailable
+      ? 'Saved in this browser'
+      : 'Browser storage unavailable. Changes last for this session.';
 
   if (screen === 'setup') {
     return (
-      <div className="container scroll-mt-24" ref={layout}>
+      <div
+        className="container scroll-mt-24 [&_button:enabled]:cursor-pointer"
+        ref={layout}
+      >
         <div className="bg-base-100 pt-6 pb-12 text-base leading-normal text-base-content">
           <div className="mx-auto max-w-4xl">
             <button
               className="inline-flex items-center gap-2 py-2 text-sm text-base-content/70 transition-colors hover:text-primary"
-              onClick={() => setScreen('home')}
+              onClick={home}
               type="button"
             >
               <ArrowLeftIcon className="size-5 shrink-0" /> All plans
@@ -233,7 +387,7 @@ export default function GuidedProjections({
                 </li>
               ))}
             </ol>
-            <section aria-label={steps[step]}>
+            <section aria-label={steps[step]} inert={saving}>
               {step === 0 && (
                 <>
                   <h2 className="mb-5 text-xl font-semibold">Plan details</h2>
@@ -250,9 +404,16 @@ export default function GuidedProjections({
                   />
                 </>
               )}
-              {step === 1 && <SplitStaffEditor plan={draft} update={update} />}
+              {step === 1 && (
+                <SplitStaffEditor
+                  lookups={remote?.lookups}
+                  plan={draft}
+                  update={update}
+                />
+              )}
               {step === 2 && (
                 <ExpenseEditor
+                  lookups={remote?.lookups}
                   plan={draft}
                   update={(next) =>
                     update({ ...draft, expenses: next.expenses })
@@ -296,6 +457,7 @@ export default function GuidedProjections({
                   </div>
                   <div className="pt-6">
                     <ShortfallSummary
+                      incomplete={hasMissingInputs(draft)}
                       onReview={() => setStep(1)}
                       result={result}
                     />
@@ -309,12 +471,17 @@ export default function GuidedProjections({
                 </>
               )}
             </section>
+            {saveError && (
+              <p className="mt-4 text-error" role="alert">
+                {saveError}
+              </p>
+            )}
             <footer className="mt-8 grid grid-cols-2 items-center gap-4 border-t border-main-border pt-6 sm:grid-cols-[auto_minmax(0,1fr)_auto]">
               <button
                 className="btn btn-ghost justify-self-start text-base-content/70"
                 onClick={() => {
                   if (step === 0) {
-                    setScreen('home');
+                    home();
                   } else {
                     setStep(step - 1);
                     scrollToHeading();
@@ -331,11 +498,15 @@ export default function GuidedProjections({
               </span>
               <button
                 className="btn btn-primary h-auto min-h-12 justify-self-end py-3 text-center whitespace-normal"
-                disabled={Boolean(error)}
+                disabled={Boolean(error) || saving}
                 onClick={nextStep}
                 type="button"
               >
-                {step === 3 ? 'Create plan & open workspace' : 'Continue'}
+                {saving
+                  ? 'Saving...'
+                  : step === 3
+                    ? 'Create plan & open workspace'
+                    : 'Continue'}
                 <ArrowRightIcon className="size-5 shrink-0" />
               </button>
             </footer>
@@ -347,74 +518,89 @@ export default function GuidedProjections({
 
   return (
     <div
-      className="container scroll-mt-24 bg-base-100 text-base leading-normal text-base-content"
+      className="container scroll-mt-24 bg-base-100 text-base leading-normal text-base-content [&_button:enabled]:cursor-pointer"
       ref={layout}
     >
       <div className="flex flex-col gap-6 pt-6 pb-12 md:flex-row md:gap-8">
         <PlansSidebar
+          canCreate={!remote || Boolean(remote.baseline)}
           currentPlanId={screen === 'workspace' ? draft.id : null}
-          defaultPlan={plans.find((plan) => plan.id === defaultPlanId)!}
+          defaultPlan={plans.find((plan) => plan.id === defaultPlanId)}
           onCreate={start}
-          onHome={() => {
-            setScreen('home');
-            scrollToHeading();
-          }}
+          onHome={home}
           onOpen={open}
           plans={plans.filter((plan) => plan.id !== defaultPlanId)}
         />
         <div className="@container min-w-0 flex-1">
           <div className="py-6">
+            {remote && !remote.baseline && (
+              <p className="alert mb-4" role="alert">
+                Current portfolio data could not be loaded. You can edit saved
+                plans. Reload the page to try creating a plan from current data.
+              </p>
+            )}
+            {remote && !remote.lookups && (
+              <p className="alert mb-4" role="status">
+                Job-code and expense-category lookups are unavailable. You can
+                still edit the values in this plan.
+              </p>
+            )}
             {screen === 'home' ? (
               <>
                 <header className="mb-6 flex flex-wrap items-start justify-between gap-4 md:items-center">
                   <div>
                     <h1 className="h1 outline-none" ref={heading} tabIndex={-1}>
-                      {initialPlan.ownerName}&apos;s Projections
+                      {initialPlan
+                        ? `${initialPlan.ownerName}'s Projections`
+                        : 'Portfolio projections'}
                     </h1>
                   </div>
                   <button
                     className="btn btn-primary"
+                    disabled={Boolean(remote && !remote.baseline)}
                     onClick={start}
                     type="button"
                   >
                     <PlusIcon className="size-5 shrink-0" /> New plan
                   </button>
                 </header>
-                <div className="card mb-8 grid grid-cols-1 gap-6 border border-main-border bg-base-200 p-6 @3xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
-                  <div className="flex flex-col gap-1 border-b border-main-border pb-4 @3xl:border-e @3xl:border-b-0 @3xl:pb-0">
-                    <span className="stat-label text-base">
-                      Available across active projects
-                    </span>
-                    <strong className="text-3xl font-bold">
-                      {money(
-                        initialPlan.fundingSources.reduce(
-                          (total, fund) => total + fund.startingBalance,
-                          0
-                        )
-                      )}
-                    </strong>
-                    <small className="text-sm text-base-content/70">
-                      From your Walter snapshot
-                    </small>
+                {(!remote || remote.baseline) && (
+                  <div className="card mb-8 grid grid-cols-1 gap-6 border border-main-border bg-base-200 p-6 @3xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+                    <div className="flex flex-col gap-1 border-b border-main-border pb-4 @3xl:border-e @3xl:border-b-0 @3xl:pb-0">
+                      <span className="stat-label text-base">
+                        Available across active projects
+                      </span>
+                      <strong className="text-3xl font-bold">
+                        {money(
+                          baseline.funding.reduce(
+                            (total, fund) => total + fund.startingBalance,
+                            0
+                          )
+                        )}
+                      </strong>
+                      <small className="text-sm text-base-content/70">
+                        From your Walter snapshot
+                      </small>
+                    </div>
+                    <div className="flex flex-col justify-center gap-5 text-base">
+                      {baseline.funding.map((fund) => (
+                        <div
+                          className="flex items-center justify-between gap-4"
+                          key={fund.id}
+                        >
+                          <span className="flex items-center gap-2">
+                            <i
+                              className="block size-1.5 shrink-0 rounded-full"
+                              style={{ background: fund.color }}
+                            />
+                            {fund.name}
+                          </span>
+                          <strong>{shortMoney(fund.startingBalance)}</strong>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div className="flex flex-col justify-center gap-5 text-base">
-                    {initialPlan.fundingSources.map((fund) => (
-                      <div
-                        className="flex items-center justify-between gap-4"
-                        key={fund.id}
-                      >
-                        <span className="flex items-center gap-2">
-                          <i
-                            className="block size-1.5 shrink-0 rounded-full"
-                            style={{ background: fund.color }}
-                          />
-                          {fund.name}
-                        </span>
-                        <strong>{shortMoney(fund.startingBalance)}</strong>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                )}
                 <div className="mb-4 flex items-center justify-between gap-3">
                   <h2 className="h2">
                     Your plans{' '}
@@ -473,6 +659,7 @@ export default function GuidedProjections({
                   })}
                   <button
                     className="min-w-0 rounded-box border border-main-border p-6 text-left transition-[border-color,box-shadow] hover:border-base-content/70 hover:shadow-sm motion-reduce:transition-none [&>p]:mt-2 [&>p]:min-h-10 flex min-h-60 flex-col items-start justify-center border-dashed [&>svg]:mb-4 [&>svg]:size-6 [&>svg]:text-primary [&>span]:mt-4 [&>span]:flex [&>span]:items-center [&>span]:gap-2 [&>span]:text-primary"
+                    disabled={Boolean(remote && !remote.baseline)}
                     onClick={start}
                     type="button"
                   >
@@ -493,7 +680,19 @@ export default function GuidedProjections({
               </>
             ) : (
               <>
+                <button
+                  className="mb-4 inline-flex items-center gap-2 text-sm text-primary"
+                  onClick={home}
+                  type="button"
+                >
+                  <ArrowLeftIcon
+                    aria-hidden="true"
+                    className="size-4 shrink-0"
+                  />
+                  All plans
+                </button>
                 <ShortfallSummary
+                  incomplete={hasMissingInputs(draft)}
                   onProject={viewProject}
                   onReview={() => goToSection('Staffing')}
                   result={result}
@@ -511,15 +710,33 @@ export default function GuidedProjections({
                       </span>
                     </p>
                   </div>
-                  <button
-                    className="btn btn-outline"
-                    onClick={duplicate}
-                    type="button"
-                  >
-                    <DocumentDuplicateIcon className="size-5 shrink-0" />{' '}
-                    Duplicate plan
-                  </button>
+                  <div className="flex flex-wrap gap-2">
+                    {remote && (
+                      <button
+                        className="btn btn-primary"
+                        disabled={Boolean(error) || saving}
+                        onClick={() => void save()}
+                        type="button"
+                      >
+                        {saving ? 'Saving...' : 'Save plan'}
+                      </button>
+                    )}
+                    <button
+                      className="btn btn-outline"
+                      disabled={saving || (Boolean(remote) && Boolean(error))}
+                      onClick={duplicate}
+                      type="button"
+                    >
+                      <DocumentDuplicateIcon className="size-5 shrink-0" />{' '}
+                      Duplicate plan
+                    </button>
+                  </div>
                 </header>
+                {saveError && (
+                  <p className="mb-4 text-error" role="alert">
+                    {saveError}
+                  </p>
+                )}
                 <nav
                   aria-label="Plan sections"
                   className="mb-6 overflow-x-auto"
@@ -543,7 +760,21 @@ export default function GuidedProjections({
                   <section
                     aria-label={`${section} editor`}
                     className="min-w-0 text-base"
+                    inert={saving}
                   >
+                    {(selectedProject || section !== 'Overview') && (
+                      <button
+                        className="mb-4 inline-flex items-center gap-2 text-sm text-primary"
+                        onClick={() => goToSection('Overview')}
+                        type="button"
+                      >
+                        <ArrowLeftIcon
+                          aria-hidden="true"
+                          className="size-4 shrink-0"
+                        />
+                        Back to all projects
+                      </button>
+                    )}
                     {section === 'Overview' &&
                       (selectedProject ? (
                         <ProjectDetail
@@ -586,10 +817,15 @@ export default function GuidedProjections({
                       />
                     )}
                     {section === 'Staffing' && (
-                      <SplitStaffEditor plan={draft} update={update} />
+                      <SplitStaffEditor
+                        lookups={remote?.lookups}
+                        plan={draft}
+                        update={update}
+                      />
                     )}
                     {section === 'Expenses' && (
                       <ExpenseEditor
+                        lookups={remote?.lookups}
                         plan={draft}
                         update={(next) =>
                           update({ ...draft, expenses: next.expenses })
@@ -607,17 +843,20 @@ export default function GuidedProjections({
                   </section>
                   <div className="@4xl:sticky @4xl:top-24 min-w-0">
                     <LiveResults
-                      onProject={setProjectId}
+                      incomplete={hasMissingInputs(draft)}
+                      onProject={viewProject}
                       projectId={projectId}
                       result={result}
                     />
                     <p className="mt-4 text-sm leading-relaxed text-base-content/70">
-                      Salary, fringe, and indirect costs are included. Other
-                      expenses use direct costs only in this demo.
+                      {remote
+                        ? 'Uses PPM project/task budgets and costs, UCPath staffing, and historical spending averages. Salary, benefits, vacation accrual, COLA, and fee remission follow each job’s assumptions.'
+                        : 'Salary, fringe, and indirect costs are included. Other expenses use direct costs only in this demo.'}
                     </p>
                     <p className="mt-4 text-sm leading-relaxed text-base-content/70">
-                      Demo plans are saved in this browser and do not update
-                      Walter project records.
+                      {remote
+                        ? 'Save plan stores this scenario in Walter. Project accounting records are unchanged.'
+                        : 'Demo plans are saved in this browser and do not update Walter project records.'}
                     </p>
                   </div>
                 </div>
@@ -625,8 +864,9 @@ export default function GuidedProjections({
             )}
             {screen === 'home' && (
               <p className="mt-4 text-sm leading-relaxed text-base-content/70 text-sm">
-                Demo plans are saved in this browser and do not update Walter
-                project records.
+                {remote
+                  ? 'Plans are shared with people who can access this PI’s portfolio. Use Save plan to keep your changes.'
+                  : 'Demo plans are saved in this browser and do not update Walter project records.'}
               </p>
             )}
           </div>
@@ -645,12 +885,32 @@ function PlanDetails({
 }) {
   return (
     <div className="@container mb-8">
+      {plan.serverProjection && (
+        <label className="mb-5 flex flex-col gap-2 text-sm font-medium">
+          Spending average
+          <select
+            className="select w-full"
+            onChange={(event) =>
+              update(withHistoryMonths(plan, Number(event.target.value)))
+            }
+            value={plan.historyMonths}
+          >
+            <option value={3}>Previous 3 months</option>
+            <option value={6}>Previous 6 months</option>
+            <option value={12}>Previous 12 months</option>
+          </select>
+          <span className="font-normal text-base-content/70">
+            Changing the window replaces expenses based on historical spending.
+            Monthly and one-time expenses stay as entered.
+          </span>
+        </label>
+      )}
       <div className="mb-5 grid grid-cols-1 gap-5 @xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <label className="flex min-w-0 flex-col gap-2 font-medium text-sm">
           Plan name
           <input
             className="input w-full text-base"
-            maxLength={80}
+            maxLength={200}
             onChange={(event) => update({ ...plan, name: event.target.value })}
             value={plan.name}
           />
@@ -679,6 +939,7 @@ function PlanDetails({
         </span>
         <input
           className="input w-full text-base"
+          maxLength={2000}
           onChange={(event) => update({ ...plan, note: event.target.value })}
           placeholder="For example, supplies for next field season"
           value={plan.note}
@@ -688,11 +949,22 @@ function PlanDetails({
   );
 }
 
+function hasMissingInputs(plan: ProjectionPlan) {
+  return plan.staff.some(
+    (person) =>
+      person.included &&
+      person.serverJob &&
+      (person.salaryMissing || person.serverJob.cbrRate === null)
+  );
+}
+
 function ShortfallSummary({
+  incomplete = false,
   onProject,
   onReview,
   result,
 }: {
+  incomplete?: boolean;
   onProject?: (id: string) => void;
   onReview: () => void;
   result: Result;
@@ -704,7 +976,7 @@ function ShortfallSummary({
   return (
     <div
       aria-label="Funding summary"
-      className={`alert alert-soft mb-6 ${first ? 'alert-error' : 'alert-success'}`}
+      className={`alert alert-soft mb-6 ${first ? 'alert-error' : incomplete ? 'alert-warning' : 'alert-success'}`}
       role="status"
     >
       {first ? (
@@ -719,7 +991,9 @@ function ShortfallSummary({
         <span className="block font-semibold">
           {first
             ? `First project shortfall: ${monthLabel(first.firstDeficit!)}`
-            : 'Your plan stays within the selected funding.'}
+            : incomplete
+              ? 'Staffing costs are incomplete.'
+              : 'Your plan stays within the selected funding.'}
         </span>
         <span className="block text-sm">
           {first ? (
@@ -730,6 +1004,8 @@ function ShortfallSummary({
                 ? `${gaps.length} projects need attention.`
                 : 'Other project balances do not automatically cover this gap.'}
             </>
+          ) : incomplete ? (
+            'Review missing salary and benefit rates before relying on these balances.'
           ) : (
             'Each included project covers its planned costs over this horizon.'
           )}

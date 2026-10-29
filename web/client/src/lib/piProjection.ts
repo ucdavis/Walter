@@ -20,6 +20,14 @@ export interface JobFundingMonth {
   month: string;
 }
 
+export interface JobCostRow {
+  amount: number;
+  expenditureCategory: string;
+  jobId: number;
+  month: string;
+  projectId: number;
+}
+
 export const SALARY_CATEGORY = '01 - Salaries and Wages';
 export const FRINGE_CATEGORY = '02 - Fringe Benefits';
 export const FEE_REMISSION_CATEGORY = '08 - Fellowship & Scholarships';
@@ -43,19 +51,33 @@ const within = (m: number, start: string | null, end: string | null) =>
  * Projects a PI's portfolio month by month. "Now" is always the projection's seededAt,
  * because budgets and actuals are a snapshot from that moment.
  */
-export function computePiProjection(projection: Projection): {
+export function computePiProjection(
+  projection: Projection,
+  options?: { endMonth: string }
+): {
+  jobCosts: JobCostRow[];
   jobFunding: JobFundingMonth[];
   rows: PiProjectionRow[];
 } {
-  const seed = new Date(projection.seededAt);
+  // SQL datetime2 loses DateTime.Kind. Those stored snapshot times are UTC,
+  // including when the serializer returns them without a timezone suffix.
+  const seed = new Date(
+    /(?:z|[+-]\d{2}:?\d{2})$/i.test(projection.seededAt)
+      ? projection.seededAt
+      : `${projection.seededAt}Z`
+  );
   const seedIndex = seed.getUTCFullYear() * 12 + seed.getUTCMonth();
   const daysInMonth = new Date(
     Date.UTC(seed.getUTCFullYear(), seed.getUTCMonth() + 1, 0)
   ).getUTCDate();
   const proration = (daysInMonth - seed.getUTCDate()) / daysInMonth;
 
+  const horizonLimit = options ? toIndex(options.endMonth) : Infinity;
   const projectEnd = (p: ProjectionProject) =>
-    p.endDate ? toIndex(p.endDate) : seedIndex + 12;
+    Math.min(
+      horizonLimit,
+      p.endDate ? toIndex(p.endDate) : options ? horizonLimit : seedIndex + 12
+    );
   const horizonEnd = Math.max(
     seedIndex,
     ...projection.projects.map(projectEnd)
@@ -75,8 +97,12 @@ export function computePiProjection(projection: Projection): {
     m: number,
     amount: number
   ) => {
-    if (m < seedIndex || m > projectEnd(project)) {
-      return;
+    if (
+      m < seedIndex ||
+      m > projectEnd(project) ||
+      (project.startDate !== null && m < toIndex(project.startDate))
+    ) {
+      return false;
     }
     const byCategory =
       charges.get(project.id) ?? new Map<string, Map<number, number>>();
@@ -84,6 +110,7 @@ export function computePiProjection(projection: Projection): {
     byMonth.set(m, (byMonth.get(m) ?? 0) + amount);
     byCategory.set(category, byMonth);
     charges.set(project.id, byCategory);
+    return true;
   };
 
   for (const project of projection.projects) {
@@ -103,10 +130,12 @@ export function computePiProjection(projection: Projection): {
         e.kind === 'Monthly' && e.startMonth
           ? toIndex(e.startMonth)
           : seedIndex;
-      const end =
+      const end = Math.min(
+        projectEnd(project),
         e.kind === 'Monthly' && e.endMonth
           ? toIndex(e.endMonth)
-          : projectEnd(project);
+          : projectEnd(project)
+      );
       for (let m = Math.max(start, seedIndex); m <= end; m++) {
         charge(
           project,
@@ -120,6 +149,7 @@ export function computePiProjection(projection: Projection): {
 
   const projectsById = new Map(projection.projects.map((p) => [p.id, p]));
   const jobFunding: JobFundingMonth[] = [];
+  const jobCosts: JobCostRow[] = [];
   for (const job of projection.jobs) {
     for (let m = seedIndex; m <= horizonEnd; m++) {
       if (!within(m, job.startDate, job.endDate)) {
@@ -148,7 +178,16 @@ export function computePiProjection(projection: Projection): {
         }
         for (const [category, cost] of costs) {
           if (cost) {
-            charge(project, category, m, cost * f.percent);
+            const amount = cost * f.percent;
+            if (charge(project, category, m, amount)) {
+              jobCosts.push({
+                amount,
+                expenditureCategory: category,
+                jobId: job.id,
+                month: toMonth(m),
+                projectId: project.id,
+              });
+            }
           }
         }
       }
@@ -183,8 +222,16 @@ export function computePiProjection(projection: Projection): {
       const budget = project.budgets.find(
         (b) => b.expenditureCategory === category
       );
+      // SpentToDate already includes this month's actuals. Restore that month
+      // before replacing personnel and blending actual/projected other costs.
+      const currentActual = project.actuals
+        .filter(
+          (a) =>
+            a.expenditureCategory === category && toIndex(a.month) === seedIndex
+        )
+        .reduce((total, a) => total + a.amount, 0);
       const startRemaining = budget
-        ? budget.budget - budget.spentToDate - budget.committed
+        ? budget.budget - budget.spentToDate - budget.committed + currentActual
         : 0;
       const actual = (m: number) => actuals.get(category)?.get(m) ?? 0;
       const planned = (m: number) => projectCharges.get(category)?.get(m) ?? 0;
@@ -219,7 +266,7 @@ export function computePiProjection(projection: Projection): {
     }
   }
 
-  return { jobFunding, rows };
+  return { jobCosts, jobFunding, rows };
 }
 
 /** Compounds the COLA once for each COLA month after the seed month, through month m. */

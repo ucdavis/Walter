@@ -1,5 +1,13 @@
 import type { ProjectionDemoPlan } from '@/demo/projectionPlan.ts';
 import type { FundingSource } from '@/components/projections/projection.ts';
+import type {
+  ProjectionExpense,
+  ProjectionProject,
+} from '@/queries/projections.ts';
+
+export type PlanFunding = FundingSource & {
+  serverProject?: ProjectionProject;
+};
 
 export type LegacyStaff = {
   annualSalary: number;
@@ -20,11 +28,12 @@ export type PlanExpense = {
   id: string;
   month: string;
   name: string;
+  serverExpense?: ProjectionExpense;
 };
 
 export type LegacyPlan = {
   expenses: PlanExpense[];
-  funding: FundingSource[];
+  funding: PlanFunding[];
   id: string;
   months: number;
   name: string;

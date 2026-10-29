@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import {
   BanknotesIcon,
   ChevronDownIcon,
@@ -10,6 +10,7 @@ import {
   monthLabel,
   type FundingSource,
 } from '@/components/projections/projection.ts';
+import type { ProjectionLookups } from '@/queries/projections.ts';
 import type { PlanExpense } from '@/components/guidedProjections/defaults.ts';
 import {
   planMonths,
@@ -187,7 +188,9 @@ export function FundingEditor({
                 </label>
               </div>
               <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-sm text-base-content/70">
-                <span>{fund.indirectRate}% indirect</span>
+                {!plan.serverProjection && (
+                  <span>{fund.indirectRate}% indirect</span>
+                )}
                 <span>Ends {monthLabel(fund.endDate.slice(0, 7))}</span>
               </div>
               <div className="mt-5 flex flex-wrap items-end justify-between gap-4 border-t border-main-border pt-5">
@@ -203,13 +206,9 @@ export function FundingEditor({
                     <input
                       aria-label={`${fund.name} starting balance`}
                       className="input w-full ps-7 text-base font-medium tabular-nums"
-                      min={0}
                       onChange={(event) =>
                         patch(fund.id, {
-                          startingBalance: Math.max(
-                            0,
-                            readNumber(event.target.value)
-                          ),
+                          startingBalance: readNumber(event.target.value),
                         })
                       }
                       step={100}
@@ -251,34 +250,38 @@ export function FundingEditor({
                     value={fund.name}
                   />
                 </label>
-                <label className="flex min-w-0 flex-col gap-2 font-medium min-w-0 text-sm sm:col-span-2">
-                  Description
-                  <input
-                    className="input w-full text-base"
-                    onChange={(event) =>
-                      patch(fund.id, { description: event.target.value })
-                    }
-                    value={fund.description ?? ''}
-                  />
-                </label>
-                <label className="flex min-w-0 flex-col gap-2 font-medium text-sm">
-                  Indirect rate %
-                  <input
-                    className="input w-full text-base"
-                    min={0}
-                    onChange={(event) =>
-                      patch(fund.id, {
-                        indirectRate: Math.max(
-                          0,
-                          readNumber(event.target.value)
-                        ),
-                      })
-                    }
-                    step="any"
-                    type="number"
-                    value={fund.indirectRate}
-                  />
-                </label>
+                {!plan.serverProjection && (
+                  <label className="flex min-w-0 flex-col gap-2 font-medium min-w-0 text-sm sm:col-span-2">
+                    Description
+                    <input
+                      className="input w-full text-base"
+                      onChange={(event) =>
+                        patch(fund.id, { description: event.target.value })
+                      }
+                      value={fund.description ?? ''}
+                    />
+                  </label>
+                )}
+                {!plan.serverProjection && (
+                  <label className="flex min-w-0 flex-col gap-2 font-medium text-sm">
+                    Indirect rate %
+                    <input
+                      className="input w-full text-base"
+                      min={0}
+                      onChange={(event) =>
+                        patch(fund.id, {
+                          indirectRate: Math.max(
+                            0,
+                            readNumber(event.target.value)
+                          ),
+                        })
+                      }
+                      step="any"
+                      type="number"
+                      value={fund.indirectRate}
+                    />
+                  </label>
+                )}
                 <label className="flex min-w-0 flex-col gap-2 font-medium text-sm">
                   Start date
                   <input
@@ -332,12 +335,15 @@ export function FundingEditor({
 }
 
 export function ExpenseEditor({
+  lookups,
   plan,
   update,
 }: {
+  lookups?: ProjectionLookups;
   plan: ProjectionPlan;
   update: (plan: ProjectionPlan) => void;
 }) {
+  const categoryListId = useId();
   const patch = (id: string, changes: Partial<PlanExpense>) =>
     update({
       ...plan,
@@ -361,6 +367,19 @@ export function ExpenseEditor({
           id: crypto.randomUUID(),
           month: plan.startMonth,
           name,
+          ...(plan.serverProjection && {
+            serverExpense: {
+              amount,
+              description: name,
+              endMonth: null,
+              expenditureCategory: 'Other expenses',
+              kind:
+                frequency === 'once'
+                  ? ('OneTime' as const)
+                  : ('Monthly' as const),
+              startMonth: `${plan.startMonth}-01`,
+            },
+          }),
         },
       ],
     });
@@ -381,6 +400,21 @@ export function ExpenseEditor({
           <PlusIcon className="size-5 shrink-0" /> Add expense
         </button>
       </div>
+      {plan.serverProjection && (
+        <datalist id={categoryListId}>
+          {[
+            ...new Set([
+              ...(lookups?.expenditureCategories ?? []),
+              ...plan.expenses.map(
+                (expense) =>
+                  expense.serverExpense?.expenditureCategory ?? 'Other expenses'
+              ),
+            ]),
+          ].map((category) => (
+            <option key={category} value={category} />
+          ))}
+        </datalist>
+      )}
       {plan.expenses.length === 0 ? (
         <div className="rounded-lg border border-dashed border-main-border bg-base-200 px-5 py-9 text-center [&>h3]:mb-2 text-sm">
           <span className="mx-auto mb-4 grid size-12 place-items-center rounded-full bg-base-200 text-base-content/70">
@@ -417,6 +451,13 @@ export function ExpenseEditor({
               className="rounded-lg border border-main-border bg-base-200 p-5 sm:p-6"
               key={expense.id}
             >
+              {expense.serverExpense?.kind === 'Projected' && (
+                <p className="mb-4 text-sm text-base-content/70">
+                  Based on the {plan.historyMonths}-month spending average.
+                  Changing the history window replaces this estimate. Editing
+                  its dates or frequency makes it a planned expense.
+                </p>
+              )}
               <div className="mb-5 flex items-end gap-4">
                 <label className="flex min-w-0 flex-col gap-2 font-medium min-w-0 flex-1 text-sm">
                   Expense name
@@ -467,6 +508,15 @@ export function ExpenseEditor({
                     onChange={(event) =>
                       patch(expense.id, {
                         frequency: event.target.value as 'monthly' | 'once',
+                        ...(expense.serverExpense && {
+                          serverExpense: {
+                            ...expense.serverExpense,
+                            kind:
+                              event.target.value === 'once'
+                                ? 'OneTime'
+                                : 'Monthly',
+                          },
+                        }),
                       })
                     }
                     value={expense.frequency}
@@ -482,12 +532,65 @@ export function ExpenseEditor({
                     onChange={(event) =>
                       patch(expense.id, {
                         month: event.target.value || plan.startMonth,
+                        ...(expense.serverExpense && {
+                          serverExpense: {
+                            ...expense.serverExpense,
+                            kind:
+                              expense.frequency === 'once'
+                                ? 'OneTime'
+                                : 'Monthly',
+                          },
+                        }),
                       })
                     }
                     type="month"
                     value={expense.month}
                   />
                 </label>
+                {expense.serverExpense && (
+                  <label className="flex min-w-0 flex-col gap-2 font-medium text-sm">
+                    Expenditure category
+                    <input
+                      className="input w-full text-base"
+                      list={categoryListId}
+                      onChange={(event) =>
+                        patch(expense.id, {
+                          serverExpense: {
+                            ...expense.serverExpense!,
+                            expenditureCategory: event.target.value,
+                          },
+                        })
+                      }
+                      value={expense.serverExpense.expenditureCategory}
+                    />
+                  </label>
+                )}
+                {expense.serverExpense && expense.frequency === 'monthly' && (
+                  <label className="flex min-w-0 flex-col gap-2 font-medium text-sm">
+                    Ending month
+                    <input
+                      aria-label="Ending month"
+                      className="input w-full text-base"
+                      min={expense.month}
+                      onChange={(event) =>
+                        patch(expense.id, {
+                          serverExpense: {
+                            ...expense.serverExpense!,
+                            endMonth: event.target.value
+                              ? `${event.target.value}-01`
+                              : null,
+                            kind: 'Monthly',
+                          },
+                        })
+                      }
+                      type="month"
+                      value={expense.serverExpense.endMonth?.slice(0, 7) ?? ''}
+                    />
+                    <span className="font-normal text-base-content/70">
+                      Leave blank to continue through the project end.
+                    </span>
+                  </label>
+                )}
                 <label className="flex min-w-0 flex-col gap-2 font-medium text-sm">
                   Funding project
                   <select
@@ -497,11 +600,21 @@ export function ExpenseEditor({
                     }
                     value={expense.fundingId}
                   >
+                    {!plan.selectedFunding.includes(expense.fundingId) && (
+                      <option value={expense.fundingId}>
+                        {plan.funding.find(
+                          (fund) => fund.id === expense.fundingId
+                        )?.name ?? 'Project not included'}{' '}
+                        · excluded
+                      </option>
+                    )}
                     {plan.funding
                       .filter((fund) => plan.selectedFunding.includes(fund.id))
                       .map((fund) => (
                         <option key={fund.id} value={fund.id}>
                           {fund.name}
+                          {fund.serverProject?.taskNumber &&
+                            ` · Task ${fund.serverProject.taskNumber}`}
                         </option>
                       ))}
                   </select>
@@ -512,8 +625,9 @@ export function ExpenseEditor({
         </div>
       )}
       <p className="mt-5 leading-relaxed text-base-content/70 text-sm">
-        In this demo, other expenses are direct costs only. Monthly costs repeat
-        from the selected month until the plan or funding source ends.
+        {plan.serverProjection
+          ? 'Monthly costs repeat through the selected ending month or project end. Spending estimates use the saved snapshot and selected history window.'
+          : 'In this demo, other expenses are direct costs only. Monthly costs repeat from the selected month until the plan or funding source ends.'}
       </p>
     </>
   );

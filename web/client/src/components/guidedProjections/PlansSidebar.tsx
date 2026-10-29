@@ -9,6 +9,7 @@ import {
 import type { ProjectionPlan } from '@/components/guidedProjections/planModel.ts';
 
 export default function PlansSidebar({
+  canCreate = true,
   currentPlanId,
   defaultPlan,
   onCreate,
@@ -16,8 +17,9 @@ export default function PlansSidebar({
   onOpen,
   plans,
 }: {
+  canCreate?: boolean;
   currentPlanId: string | null;
-  defaultPlan: ProjectionPlan;
+  defaultPlan?: ProjectionPlan;
   onCreate: () => void;
   onHome: () => void;
   onOpen: (plan: ProjectionPlan) => void;
@@ -113,7 +115,7 @@ export default function PlansSidebar({
             />
             <span className={collapsed ? 'md:sr-only' : ''}>Dashboard</span>
           </button>
-          {planButton(defaultPlan, true)}
+          {defaultPlan && planButton(defaultPlan, true)}
           <div
             className={`border-b border-main-border bg-base-200 px-3 py-2 text-xs uppercase text-base-content/70 ${collapsed ? 'md:sr-only' : ''}`}
           >
@@ -127,6 +129,7 @@ export default function PlansSidebar({
       </div>
       <button
         className="btn btn-link text-base-content/70"
+        disabled={!canCreate}
         onClick={() => {
           onCreate();
           setMobileOpen(false);

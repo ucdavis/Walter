@@ -3,8 +3,11 @@
 Run `npm run demo` in `web/client`, then choose **Projections** in the menu or
 project details. The planner opens at
 `http://127.0.0.1:5175/projections/9000000001`. It is available only in Vite's
-demo mode. In normal app mode, the same route opens the server-backed
-saved-projections list instead. Guided projections remains a separate demo.
+demo mode. In normal app mode, the same route opens the guided planner with
+real portfolio data and saved projections. See
+[guided-projections.md](guided-projections.md) for its APIs, saving behavior, and
+schema requirement. The guided demo remains available separately at
+`/guided-projections/9000000001` and saves synthetic plans in browser storage.
 
 The timeline, allocation editor, charts, and calculations were ported from the
 local ProjectionLab prototype. Click a person's month to change funding splits

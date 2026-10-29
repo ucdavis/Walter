@@ -1,29 +1,32 @@
-import { useSuspenseQuery } from '@tanstack/react-query';
+import { validatePlanSearch } from '@/components/guidedProjections/navigation.ts';
 import { createFileRoute } from '@tanstack/react-router';
 import { PageLoading } from '@/components/states/PageLoading.tsx';
-import { projectionQueryOptions } from '@/queries/projections.ts';
+import LiveGuidedProjections, {
+  loadGuidedWorkspace,
+  GuidedProjectionsError,
+} from '@/components/guidedProjections/LiveGuidedProjections.tsx';
 
 export const Route = createFileRoute(
   '/(authenticated)/projections/$iamId/$projectionId'
 )({
+  validateSearch: validatePlanSearch,
+  // eslint-disable-next-line perfectionist/sort-objects -- Search validation precedes dependent route options.
   component: RouteComponent,
-  loader: ({ context: { queryClient }, params: { projectionId } }) =>
-    queryClient.ensureQueryData(projectionQueryOptions(Number(projectionId))),
+  errorComponent: GuidedProjectionsError,
+  loader: ({ context: { queryClient }, params: { iamId, projectionId } }) =>
+    loadGuidedWorkspace(queryClient, iamId, projectionId),
   pendingComponent: () => <PageLoading message="Fetching projection..." />,
 });
 
 function RouteComponent() {
-  const { projectionId } = Route.useParams();
-  const { data: projection } = useSuspenseQuery(
-    projectionQueryOptions(Number(projectionId))
-  );
-
+  const { iamId, projectionId } = Route.useParams();
+  const view = Route.useSearch();
   return (
-    <main className="container">
-      <h1 className="h1 mt-8">{projection.name}</h1>
-      <pre className="text-xs whitespace-pre-wrap">
-        {JSON.stringify(projection, null, 2)}
-      </pre>
-    </main>
+    <LiveGuidedProjections
+      iamId={iamId}
+      key={`${iamId}-${projectionId}`}
+      projectionId={projectionId}
+      view={view}
+    />
   );
 }

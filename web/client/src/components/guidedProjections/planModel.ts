@@ -1,4 +1,10 @@
 import type { ProjectionDemoPlan } from '@/demo/projectionPlan.ts';
+import type {
+  Projection,
+  ProjectionFundingEntry,
+  ProjectionJob,
+} from '@/queries/projections.ts';
+import { computeServerGuidedPlan } from '@/components/guidedProjections/serverPlan.ts';
 import {
   createPlanDefaults,
   type LegacyPlan,
@@ -17,10 +23,22 @@ export type FundingSplit = {
   fundingId: string;
   id: string;
   percent: number;
+  serverEndMonth?: string;
+  serverEntry?: ProjectionFundingEntry;
+  serverStartMonth?: string;
   startMonth: string;
 };
-export type PlanStaff = LegacyStaff & { splits: FundingSplit[] };
-export type ProjectionPlan = Omit<LegacyPlan, 'staff'> & { staff: PlanStaff[] };
+export const OUTSIDE_FUNDING_ID = '__outside__';
+export type PlanStaff = LegacyStaff & {
+  salaryMissing?: boolean;
+  serverJob?: ProjectionJob;
+  splits: FundingSplit[];
+};
+export type ProjectionPlan = Omit<LegacyPlan, 'staff'> & {
+  historyMonths?: number;
+  serverProjection?: Projection;
+  staff: PlanStaff[];
+};
 
 export function migrateSavedPlan(
   plan: LegacyPlan | ProjectionPlan
@@ -89,7 +107,16 @@ export function planMonths(plan: ProjectionPlan) {
 }
 
 export function splitActive(split: FundingSplit, month: string) {
-  return month >= split.startMonth && month <= split.endMonth;
+  const unboundedStart =
+    split.serverEntry?.startDate === null &&
+    split.startMonth === split.serverStartMonth;
+  const unboundedEnd =
+    split.serverEntry?.endDate === null &&
+    split.endMonth === split.serverEndMonth;
+  return (
+    (unboundedStart || month >= split.startMonth) &&
+    (unboundedEnd || month <= split.endMonth)
+  );
 }
 
 export function staffValidation(person: PlanStaff, plan: ProjectionPlan) {
@@ -116,18 +143,23 @@ export function staffValidation(person: PlanStaff, plan: ProjectionPlan) {
     const total = person.splits
       .filter(
         (split) =>
-          plan.selectedFunding.includes(split.fundingId) &&
+          (plan.selectedFunding.includes(split.fundingId) ||
+            split.fundingId === OUTSIDE_FUNDING_ID) &&
           splitActive(split, month)
       )
       .reduce((sum, split) => sum + split.percent, 0);
-    if (total > 100.000_01) {
-      return `${person.name} totals ${Number(total.toFixed(1))}% in ${monthLabel(month)}. Reduce the shares to 100% or less.`;
+    const maximum = person.serverJob ? person.serverJob.fte * 100 : 100;
+    if (total > maximum + 0.000_01) {
+      return `${person.name} totals ${Number(total.toFixed(1))}% in ${monthLabel(month)}. Reduce the shares to ${Number(maximum.toFixed(1))}% or less.`;
     }
   }
   return null;
 }
 
 export function projectGuidedPlan(plan: ProjectionPlan) {
+  if (plan.serverProjection) {
+    return computeServerGuidedPlan(plan);
+  }
   const months = planMonths(plan);
   const sources = plan.funding.filter((fund) =>
     plan.selectedFunding.includes(fund.id)
@@ -183,6 +215,7 @@ export function projectGuidedPlan(plan: ProjectionPlan) {
       balance -= personnel + other;
       return {
         balance,
+        fees: 0,
         fringe,
         indirect,
         month,
@@ -199,6 +232,7 @@ export function projectGuidedPlan(plan: ProjectionPlan) {
       ...source,
       chart,
       ending: balance,
+      fees: 0,
       firstDeficit: chart.find((row) => row.balance < 0)?.month,
       fringe: sum('fringe'),
       indirect: sum('indirect'),

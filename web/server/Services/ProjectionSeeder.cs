@@ -55,6 +55,7 @@ public sealed class ProjectionSeeder(IProjectionDataSource data)
 
         projection.Projects = [.. projects.Values];
         projection.SeededAt = DateTime.UtcNow;
+        projection.Settings = new ProjectionSettings();
         ApplyRunRates(projection, historyMonths);
 
         var projectNumbers = projects.Keys.Select(k => k.ProjectNumber).Distinct().ToList();

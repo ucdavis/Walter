@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
@@ -42,6 +43,22 @@ public class Projection
     public List<ProjectionProject> Projects { get; set; } = [];
     public List<ProjectionJob> Jobs { get; set; } = [];
 
+    /// <summary>
+    /// Guided workspace choices stored in the existing Projects JSON column.
+    /// This API convenience property is not a database column; one project carries the metadata.
+    /// </summary>
+    [NotMapped]
+    public ProjectionSettings Settings
+    {
+        get => Projects.Select(p => p.GuidedSettings).FirstOrDefault(s => s is not null) ?? new();
+        set
+        {
+            // Keep one copy so project reordering cannot resurrect stale workspace choices.
+            foreach (var project in Projects) project.GuidedSettings = null;
+            if (Projects.Count > 0) Projects[0].GuidedSettings = value;
+        }
+    }
+
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     internal static void OnModelCreating(ModelBuilder modelBuilder)
@@ -63,6 +80,24 @@ public class Projection
                 v => JsonSerializer.Deserialize<List<T>>(JsonSerializer.Serialize(v, JsonOptions), JsonOptions)!));
 }
 
+/// <summary>Display and inclusion choices for the guided workspace; excluded rows remain in the saved snapshot.</summary>
+public class ProjectionSettings
+{
+    /// <summary>First displayed month, YYYY-MM; null starts at the snapshot month.</summary>
+    public string? StartMonth { get; set; }
+
+    /// <summary>Number of months displayed from StartMonth.</summary>
+    public int Months { get; set; } = 12;
+
+    public string Note { get; set; } = "";
+
+    /// <summary>Included project/task ids; null includes every project.</summary>
+    public List<int>? SelectedProjectIds { get; set; }
+
+    /// <summary>Jobs retained for editing but omitted from projected costs.</summary>
+    public List<int> ExcludedJobIds { get; set; } = [];
+}
+
 /// <summary>A project/task in the projection; ProjectNumber is null for a hypothetical project.</summary>
 public class ProjectionProject
 {
@@ -77,6 +112,10 @@ public class ProjectionProject
     public DateOnly? StartDate { get; set; }
     public DateOnly? EndDate { get; set; }
     public bool IsSeeded { get; set; }
+
+    /// <summary>Optional guided workspace metadata; persisted inside Projects JSON without changing the table schema.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public ProjectionSettings? GuidedSettings { get; set; }
 
     public List<ProjectionBudget> Budgets { get; set; } = [];
     public List<ProjectionActual> Actuals { get; set; } = [];
