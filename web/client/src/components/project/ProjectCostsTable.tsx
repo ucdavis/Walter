@@ -79,11 +79,13 @@ export function ProjectCostsTable({
   category,
   isInternal = false,
   projectNumber,
+  task,
 }: {
   category?: string;
   /** Internal projects show a task column and task filter; sponsored projects have a single task. */
   isInternal?: boolean;
   projectNumber: string;
+  task?: string;
 }) {
   const { data: projectCostRecords } = useSuspenseQuery(
     projectCostsQueryOptions(projectNumber)
@@ -93,7 +95,7 @@ export function ProjectCostsTable({
   );
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
-  const [selectedTask, setSelectedTask] = useState('');
+  const [selectedTask, setSelectedTask] = useState(task ?? '');
   const columns = useMemo(
     () => [
       columnHelper.accessor('expenditureCategory', {
@@ -194,20 +196,18 @@ export function ProjectCostsTable({
       ].sort(),
     [category, projectCostRecords]
   );
-  const projectCostTasks = useMemo(
-    () =>
-      [
-        ...new Map(
-          projectCostRecords.map((record) => [
-            record.taskNumber,
-            record.taskName,
-          ])
-        ),
-      ]
-        .map(([taskNumber, taskName]) => ({ taskName, taskNumber }))
-        .sort((a, b) => a.taskNumber.localeCompare(b.taskNumber)),
-    [projectCostRecords]
-  );
+  // Keep a URL-selected task visible even when the project has no costs on it.
+  const projectCostTasks = useMemo(() => {
+    const taskNames = new Map<string, string>(task ? [[task, '']] : []);
+
+    for (const record of projectCostRecords) {
+      taskNames.set(record.taskNumber, record.taskName);
+    }
+
+    return [...taskNames]
+      .map(([taskNumber, taskName]) => ({ taskName, taskNumber }))
+      .sort((a, b) => a.taskNumber.localeCompare(b.taskNumber));
+  }, [projectCostRecords, task]);
   const filteredRecords = useMemo(() => {
     return projectCostRecords.filter((record) => {
       // Dates are 'YYYY-MM-DD' strings, so string comparison orders them.
@@ -288,7 +288,7 @@ export function ProjectCostsTable({
                 Task
               </label>
               <select
-                className="select select-bordered select-sm w-full sm:w-72"
+                className="select select-sm w-full max-w-full sm:w-auto"
                 id="project-costs-task"
                 onChange={(event) => setSelectedTask(event.target.value)}
                 value={selectedTask}

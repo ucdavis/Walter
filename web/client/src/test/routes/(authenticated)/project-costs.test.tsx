@@ -450,6 +450,65 @@ describe('project costs page', () => {
     }
   });
 
+  it('filters by the task in the URL', async () => {
+    setupHandlers(
+      [createProject({ awardNumber: null, projectType: 'Internal' })],
+      [
+        createProjectCost({
+          documentEntry: 'Field Entry',
+          taskName: 'Field Work',
+          taskNumber: 'TASK02',
+          transactionNumber: 1,
+        }),
+        createProjectCost({
+          documentEntry: 'Lab Entry',
+          taskName: 'Lab Work',
+          taskNumber: 'TASK01',
+          transactionNumber: 2,
+        }),
+      ]
+    );
+
+    const { cleanup } = renderRoute({
+      initialPath: '/projectcosts/1000/P1?task=TASK02',
+    });
+
+    try {
+      const table = await screen.findByTestId('project-costs-table');
+
+      expect(within(table).getByRole('combobox', { name: 'Task' })).toHaveValue(
+        'TASK02'
+      );
+      expect(screen.getByText('Field Entry')).toBeInTheDocument();
+      expect(screen.queryByText('Lab Entry')).not.toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('keeps a URL task with no costs selectable', async () => {
+    setupHandlers([
+      createProject({ awardNumber: null, projectType: 'Internal' }),
+    ]);
+
+    const { cleanup } = renderRoute({
+      initialPath: '/projectcosts/1000/P1?task=TASK99',
+    });
+
+    try {
+      const table = await screen.findByTestId('project-costs-table');
+
+      expect(within(table).getByRole('combobox', { name: 'Task' })).toHaveValue(
+        'TASK99'
+      );
+      expect(
+        screen.queryByText('Payroll Distribution')
+      ).not.toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+
   it('does not show costs when the feature is disabled', async () => {
     setupHandlers([createProject()]);
     server.use(
