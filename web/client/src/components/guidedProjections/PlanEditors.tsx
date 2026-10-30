@@ -1,7 +1,6 @@
-import { useId, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import {
   BanknotesIcon,
-  ChevronDownIcon,
   ListBulletIcon,
   PlusIcon,
   TrashIcon,
@@ -11,7 +10,12 @@ import {
   type FundingSource,
 } from '@/components/projections/projection.ts';
 import type { ProjectionLookups } from '@/queries/projections.ts';
-import type { PlanExpense } from '@/components/guidedProjections/defaults.ts';
+import { useRevealItem } from '@/shared/hooks/useRevealItem.ts';
+import FundingSourceDetailsModal from '@/components/guidedProjections/FundingSourceDetailsModal.tsx';
+import {
+  money,
+  type PlanExpense,
+} from '@/components/guidedProjections/defaults.ts';
 import {
   planMonths,
   type ProjectionPlan,
@@ -93,7 +97,10 @@ export function FundingEditor({
   plan: ProjectionPlan;
   update: (plan: ProjectionPlan) => void;
 }) {
-  const [expanded, setExpanded] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const addedItemId = useRef<string | null>(null);
+  const { registerItem, revealItem } = useRevealItem();
+  const editingFund = plan.funding.find((fund) => fund.id === editingId);
   function patch(id: string, changes: Partial<FundingSource>) {
     update({
       ...plan,
@@ -102,8 +109,23 @@ export function FundingEditor({
       ),
     });
   }
+  function removeFundingSource(id: string) {
+    update({
+      ...plan,
+      expenses: plan.expenses.filter((expense) => expense.fundingId !== id),
+      funding: plan.funding.filter((fund) => fund.id !== id),
+      selectedFunding: plan.selectedFunding.filter((fundId) => fundId !== id),
+      staff: plan.staff.map((person) => ({
+        ...person,
+        fundingId: person.fundingId === id ? '' : person.fundingId,
+        splits: person.splits.filter((split) => split.fundingId !== id),
+      })),
+    });
+    setEditingId(null);
+  }
   function addFundingSource() {
     const id = crypto.randomUUID();
+    addedItemId.current = id;
     const [year, month] = planMonths(plan).at(-1)!.split('-').map(Number);
     update({
       ...plan,
@@ -124,7 +146,8 @@ export function FundingEditor({
       ],
       selectedFunding: [...plan.selectedFunding, id],
     });
-    setExpanded(id);
+    setEditingId(id);
+    revealItem(id, { focus: false });
   }
   return (
     <div>
@@ -135,8 +158,7 @@ export function FundingEditor({
             Your funding sources
           </h2>
           <p className="text-sm leading-relaxed text-base-content/70">
-            Choose the projects this plan should include, or add planned
-            funding.
+            Review your projects and add planned funding.
           </p>
         </div>
         <button
@@ -147,15 +169,16 @@ export function FundingEditor({
           <PlusIcon className="size-5 shrink-0" /> Add funding source
         </button>
       </div>
-      <div className="grid gap-5">
+      <div className="grid gap-3">
         {plan.funding.map((fund) => (
           <article
             aria-label={fund.name || 'Untitled funding source'}
-            className="overflow-hidden border-s-4 bg-base-100"
+            className="scroll-mt-24 overflow-hidden border-s-4 bg-base-100"
             key={fund.id}
+            ref={(element) => registerItem(fund.id, element)}
             style={{ borderInlineStartColor: fund.color }}
           >
-            <div className="p-5 sm:p-6">
+            <div className="px-4 py-3 sm:px-5">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
                   <h3 className="text-lg font-semibold leading-snug break-words">
@@ -167,163 +190,57 @@ export function FundingEditor({
                     </p>
                   )}
                 </div>
-                <label className="flex min-w-0 flex-col gap-2 font-medium shrink-0 text-xs text-base-content/70">
-                  <input
-                    aria-label={`Include ${fund.name}`}
-                    checked={plan.selectedFunding.includes(fund.id)}
-                    className="checkbox checkbox-primary checkbox-sm self-center"
-                    onChange={(event) =>
-                      update({
-                        ...plan,
-                        selectedFunding: event.target.checked
-                          ? [...plan.selectedFunding, fund.id]
-                          : plan.selectedFunding.filter((id) => id !== fund.id),
-                      })
-                    }
-                    type="checkbox"
-                  />
-                  {plan.selectedFunding.includes(fund.id)
-                    ? 'Included'
-                    : 'Excluded'}
-                </label>
               </div>
-              <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-sm text-base-content/70">
+              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-base-content/70">
                 {!plan.serverProjection && (
                   <span>{fund.indirectRate}% indirect</span>
                 )}
                 <span>Ends {monthLabel(fund.endDate.slice(0, 7))}</span>
               </div>
-              <div className="mt-5 flex flex-wrap items-end justify-between gap-4 border-t border-main-border pt-5">
-                <label className="flex min-w-0 flex-col gap-2 font-medium min-w-0 flex-1 text-sm">
-                  Available balance
-                  <span className="relative block max-w-52">
-                    <span
-                      aria-hidden="true"
-                      className="pointer-events-none absolute inset-y-0 start-3 z-10 flex items-center text-base text-base-content/60"
-                    >
-                      $
-                    </span>
-                    <input
-                      aria-label={`${fund.name} starting balance`}
-                      className="input w-full ps-7 text-base font-medium tabular-nums"
-                      onChange={(event) =>
-                        patch(fund.id, {
-                          startingBalance: readNumber(event.target.value),
-                        })
-                      }
-                      step={100}
-                      type="number"
-                      value={fund.startingBalance}
-                    />
-                  </span>
-                </label>
+              <div className="mt-3 flex flex-wrap items-end justify-between gap-3 border-t border-main-border pt-3">
+                <dl className="min-w-0">
+                  <dt className="text-sm text-base-content/70">
+                    Available balance
+                  </dt>
+                  <dd
+                    aria-label={`${fund.name} available balance`}
+                    className={`mt-0.5 text-xl font-semibold tabular-nums ${fund.startingBalance < 0 ? 'text-error' : ''}`}
+                  >
+                    {money(fund.startingBalance)}
+                  </dd>
+                </dl>
                 <button
-                  aria-controls={`source-details-${fund.id}`}
-                  aria-expanded={expanded === fund.id}
+                  aria-haspopup="dialog"
                   className="btn btn-ghost btn-sm gap-2 text-primary"
-                  onClick={() =>
-                    setExpanded(expanded === fund.id ? null : fund.id)
-                  }
+                  onClick={() => setEditingId(fund.id)}
                   type="button"
                 >
-                  {expanded === fund.id ? 'Close details' : 'Edit details'}
-                  <ChevronDownIcon
-                    aria-hidden="true"
-                    className={`transition-transform ${expanded === fund.id ? 'rotate-180' : ''}`}
-                  />
+                  Edit details
                 </button>
               </div>
             </div>
-            {expanded === fund.id && (
-              <div
-                className="grid grid-cols-1 gap-5 border-t border-main-border bg-base-200 p-5 sm:grid-cols-2 sm:p-6"
-                id={`source-details-${fund.id}`}
-              >
-                <label className="flex min-w-0 flex-col gap-2 font-medium min-w-0 text-sm sm:col-span-2">
-                  Funding source name
-                  <input
-                    autoFocus
-                    className="input w-full text-base"
-                    onChange={(event) =>
-                      patch(fund.id, { name: event.target.value })
-                    }
-                    value={fund.name}
-                  />
-                </label>
-                {!plan.serverProjection && (
-                  <label className="flex min-w-0 flex-col gap-2 font-medium min-w-0 text-sm sm:col-span-2">
-                    Description
-                    <input
-                      className="input w-full text-base"
-                      onChange={(event) =>
-                        patch(fund.id, { description: event.target.value })
-                      }
-                      value={fund.description ?? ''}
-                    />
-                  </label>
-                )}
-                {!plan.serverProjection && (
-                  <label className="flex min-w-0 flex-col gap-2 font-medium text-sm">
-                    Indirect rate %
-                    <input
-                      className="input w-full text-base"
-                      min={0}
-                      onChange={(event) =>
-                        patch(fund.id, {
-                          indirectRate: Math.max(
-                            0,
-                            readNumber(event.target.value)
-                          ),
-                        })
-                      }
-                      step="any"
-                      type="number"
-                      value={fund.indirectRate}
-                    />
-                  </label>
-                )}
-                <label className="flex min-w-0 flex-col gap-2 font-medium text-sm">
-                  Start date
-                  <input
-                    className="input w-full text-base"
-                    max={fund.endDate}
-                    onChange={(event) => {
-                      if (
-                        event.target.value &&
-                        event.target.value <= fund.endDate
-                      ) {
-                        patch(fund.id, { startDate: event.target.value });
-                      }
-                    }}
-                    type="date"
-                    value={fund.startDate}
-                  />
-                </label>
-                <label className="flex min-w-0 flex-col gap-2 font-medium text-sm">
-                  End date
-                  <input
-                    className="input w-full text-base"
-                    min={fund.startDate}
-                    onChange={(event) => {
-                      if (
-                        event.target.value &&
-                        event.target.value >= fund.startDate
-                      ) {
-                        patch(fund.id, { endDate: event.target.value });
-                      }
-                    }}
-                    type="date"
-                    value={fund.endDate}
-                  />
-                </label>
-              </div>
-            )}
           </article>
         ))}
       </div>
+      {editingFund && (
+        <FundingSourceDetailsModal
+          fund={editingFund}
+          isServerPlan={Boolean(plan.serverProjection)}
+          key={editingFund.id}
+          onApply={(fund) => patch(fund.id, fund)}
+          onClose={() => {
+            setEditingId(null);
+            if (addedItemId.current === editingFund.id) {
+              addedItemId.current = null;
+              revealItem(editingFund.id);
+            }
+          }}
+          onRemove={() => removeFundingSource(editingFund.id)}
+        />
+      )}
       {plan.selectedFunding.length === 0 && (
         <p className="mt-3 text-error text-sm">
-          Choose at least one funding source to continue.
+          Add a funding source to continue.
         </p>
       )}
       <p className="mt-5 leading-relaxed text-base-content/70 text-sm">
@@ -344,6 +261,7 @@ export function ExpenseEditor({
   update: (plan: ProjectionPlan) => void;
 }) {
   const categoryListId = useId();
+  const { registerItem, revealItem } = useRevealItem();
   const patch = (id: string, changes: Partial<PlanExpense>) =>
     update({
       ...plan,
@@ -356,6 +274,7 @@ export function ExpenseEditor({
     amount = 500,
     frequency: 'monthly' | 'once' = 'monthly'
   ) {
+    const id = crypto.randomUUID();
     update({
       ...plan,
       expenses: [
@@ -364,7 +283,7 @@ export function ExpenseEditor({
           amount,
           frequency,
           fundingId: plan.selectedFunding[0] ?? '',
-          id: crypto.randomUUID(),
+          id,
           month: plan.startMonth,
           name,
           ...(plan.serverProjection && {
@@ -383,6 +302,7 @@ export function ExpenseEditor({
         },
       ],
     });
+    revealItem(id);
   }
   return (
     <>
@@ -448,8 +368,9 @@ export function ExpenseEditor({
         <div className="grid gap-5">
           {plan.expenses.map((expense) => (
             <div
-              className="rounded-lg border border-main-border bg-base-200 p-5 sm:p-6"
+              className="scroll-mt-24 rounded-lg border border-main-border bg-base-200 p-5 sm:p-6"
               key={expense.id}
+              ref={(element) => registerItem(expense.id, element)}
             >
               {expense.serverExpense?.kind === 'Projected' && (
                 <p className="mb-4 text-sm text-base-content/70">

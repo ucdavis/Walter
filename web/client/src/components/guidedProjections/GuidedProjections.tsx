@@ -18,7 +18,10 @@ import {
   type PlanSection,
   type PlanView,
 } from '@/components/guidedProjections/navigation.ts';
-import { withHistoryMonths } from '@/components/guidedProjections/serverPlan.ts';
+import {
+  PlanDetails,
+  PlanDetailsModal,
+} from '@/components/guidedProjections/PlanDetails.tsx';
 import type { ProjectionDemoPlan } from '@/demo/projectionPlan.ts';
 import { monthLabel } from '@/components/projections/projection.ts';
 import {
@@ -53,7 +56,6 @@ type Section =
 type Result = ReturnType<typeof projectGuidedPlan>;
 const sections: { icon: typeof ChartBarIcon; name: Section }[] = [
   { icon: ChartBarIcon, name: 'Overview' },
-  { icon: Cog6ToothIcon, name: 'Plan details' },
   { icon: BanknotesIcon, name: 'Funding' },
   { icon: UserGroupIcon, name: 'Staffing' },
   { icon: ListBulletIcon, name: 'Expenses' },
@@ -117,8 +119,13 @@ export default function GuidedProjections({
   }, [dirty, saving, onDirtyChange, screen]);
   const [localView, setLocalView] = useState<PlanView>({});
   const view = remote?.view ?? localView;
-  const section: Section = planSections[view.section ?? 'overview'];
-  const projectId = view.project ?? null;
+  const [detailsReturnView, setDetailsReturnView] = useState<PlanView>(() => ({
+    ...view,
+    section: undefined,
+  }));
+  const editorView = view.section === 'plan-details' ? detailsReturnView : view;
+  const section: Section = planSections[editorView.section ?? 'overview'];
+  const projectId = editorView.project ?? null;
   const [step, setStep] = useState(0);
   const [visited, setVisited] = useState(0);
   const [storageAvailable, setStorageAvailable] = useState(true);
@@ -392,16 +399,7 @@ export default function GuidedProjections({
                 <>
                   <h2 className="mb-5 text-xl font-semibold">Plan details</h2>
                   <PlanDetails plan={draft} update={update} />
-                  <FundingEditor
-                    plan={draft}
-                    update={(next) =>
-                      update({
-                        ...draft,
-                        funding: next.funding,
-                        selectedFunding: next.selectedFunding,
-                      })
-                    }
-                  />
+                  <FundingEditor plan={draft} update={update} />
                 </>
               )}
               {step === 1 && (
@@ -522,15 +520,17 @@ export default function GuidedProjections({
       ref={layout}
     >
       <div className="flex flex-col gap-6 pt-6 pb-12 md:flex-row md:gap-8">
-        <PlansSidebar
-          canCreate={!remote || Boolean(remote.baseline)}
-          currentPlanId={screen === 'workspace' ? draft.id : null}
-          defaultPlan={plans.find((plan) => plan.id === defaultPlanId)}
-          onCreate={start}
-          onHome={home}
-          onOpen={open}
-          plans={plans.filter((plan) => plan.id !== defaultPlanId)}
-        />
+        {screen === 'home' && (
+          <PlansSidebar
+            canCreate={!remote || Boolean(remote.baseline)}
+            currentPlanId={null}
+            defaultPlan={plans.find((plan) => plan.id === defaultPlanId)}
+            onCreate={start}
+            onHome={home}
+            onOpen={open}
+            plans={plans.filter((plan) => plan.id !== defaultPlanId)}
+          />
+        )}
         <div className="@container min-w-0 flex-1">
           <div className="py-6">
             {remote && !remote.baseline && (
@@ -717,6 +717,22 @@ export default function GuidedProjections({
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2">
+                    <button
+                      aria-haspopup="dialog"
+                      className="btn btn-outline"
+                      disabled={saving}
+                      onClick={() => {
+                        setDetailsReturnView(view);
+                        changeView({ ...view, section: 'plan-details' });
+                      }}
+                      type="button"
+                    >
+                      <Cog6ToothIcon
+                        aria-hidden="true"
+                        className="size-5 shrink-0"
+                      />{' '}
+                      Plan details
+                    </button>
                     {remote && (
                       <button
                         className="btn btn-primary"
@@ -762,7 +778,9 @@ export default function GuidedProjections({
                     ))}
                   </div>
                 </nav>
-                <div className="grid grid-cols-1 items-start gap-5 @4xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+                <div
+                  className={`grid grid-cols-1 items-start gap-5 ${section === 'Staffing' ? '' : '@4xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]'}`}
+                >
                   <section
                     aria-label={`${section} editor`}
                     className="min-w-0 text-base"
@@ -795,32 +813,8 @@ export default function GuidedProjections({
                           result={result}
                         />
                       ))}
-                    {section === 'Plan details' && (
-                      <>
-                        <div className="mb-5 flex flex-wrap items-start justify-between gap-4 [&_p]:mt-1">
-                          <div>
-                            <h2 className="text-xl font-semibold">
-                              Plan details
-                            </h2>
-                            <p className="text-sm leading-relaxed text-base-content/70">
-                              Change the name, horizon, or purpose of this plan.
-                            </p>
-                          </div>
-                        </div>
-                        <PlanDetails plan={draft} update={update} />
-                      </>
-                    )}
                     {section === 'Funding' && (
-                      <FundingEditor
-                        plan={draft}
-                        update={(next) =>
-                          update({
-                            ...draft,
-                            funding: next.funding,
-                            selectedFunding: next.selectedFunding,
-                          })
-                        }
-                      />
+                      <FundingEditor plan={draft} update={update} />
                     )}
                     {section === 'Staffing' && (
                       <SplitStaffEditor
@@ -847,24 +841,26 @@ export default function GuidedProjections({
                       </p>
                     )}
                   </section>
-                  <div className="@4xl:sticky @4xl:top-24 min-w-0">
-                    <LiveResults
-                      incomplete={hasMissingInputs(draft)}
-                      onProject={viewProject}
-                      projectId={projectId}
-                      result={result}
-                    />
-                    <p className="mt-4 text-sm leading-relaxed text-base-content/70">
-                      {remote
-                        ? 'Projects combine eligible tasks from the snapshot; inactive internal tasks and expired awards are excluded. Uses PPM budgets and costs, UCPath staffing, and historical spending averages. Salary, benefits, vacation accrual, COLA, and fee remission follow each job’s assumptions.'
-                        : 'Salary, fringe, and indirect costs are included. Other expenses use direct costs only in this demo.'}
-                    </p>
-                    <p className="mt-4 text-sm leading-relaxed text-base-content/70">
-                      {remote
-                        ? 'Save plan stores this scenario in Walter. Project accounting records are unchanged.'
-                        : 'Demo plans are saved in this browser and do not update Walter project records.'}
-                    </p>
-                  </div>
+                  {section !== 'Staffing' && (
+                    <div className="@4xl:sticky @4xl:top-24 min-w-0">
+                      <LiveResults
+                        incomplete={hasMissingInputs(draft)}
+                        onProject={viewProject}
+                        projectId={projectId}
+                        result={result}
+                      />
+                      <p className="mt-4 text-sm leading-relaxed text-base-content/70">
+                        {remote
+                          ? 'Projects combine eligible tasks from the snapshot; inactive internal tasks and expired awards are excluded. Uses PPM budgets and costs, UCPath staffing, and historical spending averages. Salary, benefits, vacation accrual, COLA, and fee remission follow each job’s assumptions.'
+                          : 'Salary, fringe, and indirect costs are included. Other expenses use direct costs only in this demo.'}
+                      </p>
+                      <p className="mt-4 text-sm leading-relaxed text-base-content/70">
+                        {remote
+                          ? 'Save plan stores this scenario in Walter. Project accounting records are unchanged.'
+                          : 'Demo plans are saved in this browser and do not update Walter project records.'}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </>
             )}
@@ -878,79 +874,14 @@ export default function GuidedProjections({
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-function PlanDetails({
-  plan,
-  update,
-}: {
-  plan: ProjectionPlan;
-  update: (plan: ProjectionPlan) => void;
-}) {
-  return (
-    <div className="@container mb-8">
-      {plan.serverProjection && (
-        <label className="mb-5 flex flex-col gap-2 text-sm font-medium">
-          Spending average
-          <select
-            className="select w-full"
-            onChange={(event) =>
-              update(withHistoryMonths(plan, Number(event.target.value)))
-            }
-            value={plan.historyMonths}
-          >
-            <option value={3}>Previous 3 months</option>
-            <option value={6}>Previous 6 months</option>
-            <option value={12}>Previous 12 months</option>
-          </select>
-          <span className="font-normal text-base-content/70">
-            Changing the window replaces expenses based on historical spending.
-            Monthly and one-time expenses stay as entered.
-          </span>
-        </label>
-      )}
-      <div className="mb-5 grid grid-cols-1 gap-5 @xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-        <label className="flex min-w-0 flex-col gap-2 font-medium text-sm">
-          Plan name
-          <input
-            className="input w-full text-base"
-            maxLength={200}
-            onChange={(event) => update({ ...plan, name: event.target.value })}
-            value={plan.name}
-          />
-        </label>
-        <label className="flex min-w-0 flex-col gap-2 font-medium text-sm">
-          Planning period
-          <select
-            className="select w-full text-base"
-            onChange={(event) =>
-              update({ ...plan, months: Number(event.target.value) })
-            }
-            value={plan.months}
-          >
-            <option value={6}>Next 6 months</option>
-            <option value={12}>Next 12 months</option>
-            <option value={18}>Next 18 months</option>
-          </select>
-        </label>
-      </div>
-      <label className="flex min-w-0 flex-col gap-2 text-sm font-medium">
-        <span className="flex flex-wrap items-baseline gap-2">
-          What are you exploring?{' '}
-          <span className="text-sm font-normal text-base-content/70">
-            Optional
-          </span>
-        </span>
-        <input
-          className="input w-full text-base"
-          maxLength={2000}
-          onChange={(event) => update({ ...plan, note: event.target.value })}
-          placeholder="For example, supplies for next field season"
-          value={plan.note}
+      {screen === 'workspace' && view.section === 'plan-details' && (
+        <PlanDetailsModal
+          key={draft.id}
+          onApply={update}
+          onClose={() => changeView(detailsReturnView)}
+          plan={draft}
         />
-      </label>
+      )}
     </div>
   );
 }

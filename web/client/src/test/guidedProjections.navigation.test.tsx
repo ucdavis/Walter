@@ -6,6 +6,7 @@ import {
   within,
 } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { ProjectionPlan } from '@/components/guidedProjections/planModel.ts';
 import GuidedProjections from '@/components/guidedProjections/GuidedProjections.tsx';
 import { createDemoData } from '@/demo/data.ts';
 import { createProjectionDemoPlan } from '@/demo/projectionPlan.ts';
@@ -52,18 +53,16 @@ describe('Guided projection plan navigation', () => {
     fireEvent.change(screen.getByLabelText('Funding source name'), {
       target: { value: 'Future grant' },
     });
-    fireEvent.change(screen.getByLabelText('Future grant starting balance'), {
-      target: { value: '125000' },
-    });
     fireEvent.change(screen.getByLabelText('Indirect rate %'), {
       target: { value: '35' },
     });
     fireEvent.change(screen.getByLabelText('End date'), {
       target: { value: '2027-06-30' },
     });
-    expect(
-      screen.getByRole('checkbox', { name: /Future grant/ })
-    ).toBeChecked();
+    fireEvent.change(screen.getByLabelText('Available balance'), {
+      target: { value: '125000' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
     section('Expenses');
     fireEvent.click(screen.getByRole('button', { name: 'Add expense' }));
     fireEvent.change(screen.getByLabelText('Funding project'), {
@@ -81,18 +80,61 @@ describe('Guided projection plan navigation', () => {
     openDefault();
     section('Funding');
     expect(
-      screen.getByRole('checkbox', { name: /Include Future grant/ })
-    ).toBeChecked();
-    expect(screen.getByLabelText('Future grant starting balance')).toHaveValue(
-      125_000
-    );
+      screen.getByLabelText('Future grant available balance')
+    ).toHaveTextContent('$125,000');
     section('Expenses');
     expect(screen.getByLabelText('Funding project')).toHaveDisplayValue(
       'Future grant'
     );
   });
 
-  it('starts plan setup from the sidebar on the homepage and in a plan', () => {
+  it('removes source allocations from the workspace and keeps them removed after reloading', () => {
+    const source = createProjectionDemoPlan(createDemoData(17, '2026-01'))
+      .fundingSources[0];
+    const view = renderPlans();
+    openDefault();
+    fireEvent.click(
+      within(
+        screen.getByRole('navigation', { name: 'Plan sections' })
+      ).getByRole('button', { name: 'Funding' })
+    );
+    fireEvent.click(
+      within(screen.getByRole('article', { name: source.name })).getByRole(
+        'button',
+        { name: 'Edit details' }
+      )
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Remove funding source' })
+    );
+    const stored = JSON.parse(
+      localStorage.getItem(localStorage.key(0)!)!
+    ) as ProjectionPlan[];
+    const plan = stored.find((row) => row.id === 'walter-default-plan')!;
+    expect(plan.funding.some((fund) => fund.id === source.id)).toBe(false);
+    expect(plan.selectedFunding).not.toContain(source.id);
+    expect(
+      plan.staff.some((person) =>
+        person.splits.some((split) => split.fundingId === source.id)
+      )
+    ).toBe(false);
+    expect(
+      plan.expenses.some((expense) => expense.fundingId === source.id)
+    ).toBe(false);
+    view.unmount();
+    renderPlans();
+    openDefault();
+    fireEvent.click(
+      within(
+        screen.getByRole('navigation', { name: 'Plan sections' })
+      ).getByRole('button', { name: 'Funding' })
+    );
+    expect(
+      screen.queryByRole('article', { name: source.name })
+    ).not.toBeInTheDocument();
+  });
+
+  it('shows the sidebar on the dashboard and hides it during setup', () => {
     renderPlans();
     function createFromSidebar() {
       fireEvent.click(
@@ -103,10 +145,12 @@ describe('Guided projection plan navigation', () => {
       expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
         'Choose your starting point.'
       );
+      expect(
+        screen.queryByRole('complementary', { name: 'Projection plans' })
+      ).not.toBeInTheDocument();
     }
     createFromSidebar();
     fireEvent.click(screen.getByRole('button', { name: 'Cancel setup' }));
-    openDefault();
     createFromSidebar();
   });
 
@@ -121,22 +165,22 @@ describe('Guided projection plan navigation', () => {
       ).getByRole('button', { name: 'Dashboard' })
     ).toHaveAttribute('aria-current', 'page');
     openDefault();
-    const navigation = within(
-      screen.getByRole('navigation', { name: 'Plan navigation' })
-    );
     expect(
-      navigation.getByRole('button', { name: /Default plan/ })
-    ).toHaveAttribute('aria-current', 'page');
+      screen.queryByRole('complementary', { name: 'Projection plans' })
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'All plans' }));
     fireEvent.click(
-      navigation.getByRole('button', { name: /Next field season/ })
+      within(
+        screen.getByRole('navigation', { name: 'Plan navigation' })
+      ).getByRole('button', { name: /Next field season/ })
     );
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
       'Next field season'
     );
     expect(
-      navigation.getByRole('button', { name: /Next field season/ })
-    ).toHaveAttribute('aria-current', 'page');
-    fireEvent.click(navigation.getByRole('button', { name: 'Dashboard' }));
+      screen.queryByRole('complementary', { name: 'Projection plans' })
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'All plans' }));
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
       "Morgan Reed's Projections"
     );
@@ -153,33 +197,44 @@ describe('Guided projection plan navigation', () => {
   it('keeps default-plan edits and duplicates available after reloading', () => {
     const view = renderPlans();
     openDefault();
-    fireEvent.click(
+    expect(
       within(
         screen.getByRole('navigation', { name: 'Plan sections' })
-      ).getByRole('button', { name: 'Plan details' })
+      ).queryByRole('button', { name: 'Plan details' })
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Plan details' }));
+    expect(
+      screen.getByRole('dialog', { name: 'Plan details' })
+    ).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Plan name'), {
+      target: { value: 'Canceled plan name' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
+      'Default plan'
     );
+    fireEvent.click(screen.getByRole('button', { name: 'Plan details' }));
     fireEvent.change(screen.getByLabelText('Plan name'), {
       target: { value: 'My baseline' },
     });
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
     fireEvent.click(screen.getByRole('button', { name: 'Duplicate plan' }));
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
       'My baseline copy'
     );
     view.unmount();
     renderPlans();
-    fireEvent.click(
-      within(
-        screen.getByRole('navigation', { name: 'Plan navigation' })
-      ).getByRole('button', { name: /My baseline copy/ })
-    );
     const navigation = within(
       screen.getByRole('navigation', { name: 'Plan navigation' })
     );
     expect(
       navigation.getByRole('button', { name: /My baseline\s*Default plan/ })
     ).toBeInTheDocument();
-    expect(
+    fireEvent.click(
       navigation.getByRole('button', { name: /My baseline copy/ })
-    ).toHaveAttribute('aria-current', 'page');
+    );
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
+      'My baseline copy'
+    );
   });
 });

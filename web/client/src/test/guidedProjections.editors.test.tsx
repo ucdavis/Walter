@@ -1,6 +1,13 @@
 import { useState } from 'react';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   ExpenseEditor,
   FundingEditor,
@@ -10,6 +17,7 @@ import {
   fromServerProjection,
   toServerProjection,
 } from '@/components/guidedProjections/serverPlan.ts';
+import { allocationInMonth } from '@/components/guidedProjections/staffAllocation.ts';
 import type { ProjectionPlan } from '@/components/guidedProjections/planModel.ts';
 import type { Projection } from '@/queries/projections.ts';
 
@@ -102,8 +110,11 @@ function fixture(): Projection {
   };
 }
 
-function renderEditor(editor: 'staff' | 'expenses' | 'funding') {
-  let latest: ProjectionPlan = fromServerProjection(fixture());
+function renderEditor(
+  editor: 'staff' | 'expenses' | 'funding',
+  initial = fixture()
+) {
+  let latest: ProjectionPlan = fromServerProjection(initial);
   function Editor() {
     const [plan, setPlan] = useState(latest);
     const update = (next: ProjectionPlan) => {
@@ -134,20 +145,218 @@ function renderEditor(editor: 'staff' | 'expenses' | 'funding') {
     );
   }
   render(<Editor />);
-  return () => toServerProjection(latest);
+  return Object.assign(() => toServerProjection(latest), {
+    plan: () => latest,
+  });
 }
 
 describe('Live guided projection editors', () => {
+  it('reveals a newly added expense and focuses its name', async () => {
+    const scroll = vi.spyOn(Element.prototype, 'scrollIntoView');
+    try {
+      renderEditor('expenses');
+      fireEvent.click(screen.getByRole('button', { name: 'Add expense' }));
+      const input = screen.getAllByLabelText('Expense name').at(-1)!;
+      await waitFor(() => expect(input).toHaveFocus());
+      expect(
+        scroll.mock.contexts.some((element) =>
+          (element as Element).contains(input)
+        )
+      ).toBe(true);
+    } finally {
+      scroll.mockRestore();
+    }
+  });
+
+  it.each([
+    {
+      add: 'Add funding source',
+      button: 'Edit details',
+      editor: 'funding' as const,
+      name: 'Planned funding source',
+    },
+    {
+      add: 'Add person',
+      button: 'Salary & person details',
+      editor: 'staff' as const,
+      name: 'Planned hire',
+    },
+  ])(
+    'reveals the new $name after closing its modal',
+    async ({ add, button, editor, name }) => {
+      const scroll = vi.spyOn(Element.prototype, 'scrollIntoView');
+      try {
+        renderEditor(editor);
+        fireEvent.click(screen.getByRole('button', { name: add }));
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+        const card = screen.getByText(name).closest('article')!;
+        await waitFor(() =>
+          expect(
+            within(card).getByRole('button', { name: button })
+          ).toHaveFocus()
+        );
+        expect(scroll.mock.contexts).toContain(card);
+      } finally {
+        scroll.mockRestore();
+      }
+    }
+  );
+
+  it('edits one month in a modal without changing adjacent months', () => {
+    renderEditor('staff');
+    const timeline = screen.getByRole('region', {
+      name: 'Alex Researcher monthly funding',
+    });
+    expect(within(timeline).getAllByRole('button')).toHaveLength(12);
+    fireEvent.change(screen.getByLabelText('Planning period'), {
+      target: { value: '6' },
+    });
+    expect(within(timeline).getAllByRole('button')).toHaveLength(6);
+    fireEvent.change(screen.getByLabelText('Planning period'), {
+      target: { value: '18' },
+    });
+    expect(within(timeline).getAllByRole('button')).toHaveLength(18);
+    expect(
+      screen.getByRole('button', {
+        name: /Alex Researcher, Oct 2026: 30% Lab project, 20% Outside portfolio/,
+      })
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByLabelText('Alex Researcher share 1')
+    ).not.toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: /Alex Researcher, Oct 2026: 30% Lab project/,
+      })
+    );
+    expect(
+      screen.getByRole('dialog', { name: 'Alex Researcher allocation' })
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText('Start month')).toHaveValue('2026-10');
+    expect(screen.getByLabelText('End month')).toHaveValue('2026-10');
+    fireEvent.change(screen.getByLabelText('Alex Researcher share 1'), {
+      target: { value: '10' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Replace 1 month' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('button', {
+        name: /Alex Researcher, Oct 2026: 10% Lab project, 20% Outside portfolio, 20% open/,
+      })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', {
+        name: /Alex Researcher, Nov 2026: 30% Lab project, 20% Outside portfolio/,
+      })
+    ).toBeInTheDocument();
+  });
+
+  it('cancels allocation drafts and replaces only the selected range after saving', () => {
+    const saved = renderEditor('staff');
+    const original = saved();
+    const open = () =>
+      fireEvent.click(
+        screen.getByRole('button', {
+          name: /Alex Researcher, Dec 2026: 30% Lab project/,
+        })
+      );
+    open();
+    fireEvent.change(screen.getByLabelText('Alex Researcher share 1'), {
+      target: { value: '10' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(saved()).toEqual(original);
+    open();
+    fireEvent.change(screen.getByLabelText('Start month'), {
+      target: { value: '2026-11' },
+    });
+    fireEvent.change(screen.getByLabelText('End month'), {
+      target: { value: '2027-01' },
+    });
+    fireEvent.change(screen.getByLabelText('Alex Researcher share 1'), {
+      target: { value: '10' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Replace 3 months' }));
+    const reloaded = fromServerProjection(saved());
+    for (const month of ['2026-11', '2026-12', '2027-01']) {
+      expect(
+        allocationInMonth(reloaded.staff[0], month).map(
+          (share) => share.percent
+        )
+      ).toEqual([10, 20]);
+    }
+    for (const month of ['2026-10', '2027-02', '2029-01']) {
+      expect(
+        allocationInMonth(reloaded.staff[0], month).map(
+          (share) => share.percent
+        )
+      ).toEqual([30, 20]);
+    }
+  });
+
+  it('adds and removes sources, blocks over-allocation, and allows clearing a month', () => {
+    renderEditor('staff');
+    fireEvent.click(
+      screen.getByRole('button', { name: /Alex Researcher, Dec 2026:/ })
+    );
+    fireEvent.change(screen.getByLabelText('Alex Researcher share 1'), {
+      target: { value: '40' },
+    });
+    expect(
+      screen.getByRole('button', { name: 'Replace 1 month' })
+    ).toBeDisabled();
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Reduce them to 50% or less'
+    );
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Remove Alex Researcher funding share 2',
+      })
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Add funding source' }));
+    expect(
+      screen.getByLabelText('Alex Researcher project 2')
+    ).toHaveDisplayValue('Outside portfolio');
+    expect(screen.getByLabelText('Alex Researcher share 2')).toHaveValue(10);
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Remove Alex Researcher funding share 2',
+      })
+    );
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Remove Alex Researcher funding share 1',
+      })
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Replace 1 month' }));
+    expect(
+      screen.getByRole('button', {
+        name: /Alex Researcher, Dec 2026: 50% open/,
+      })
+    ).toBeInTheDocument();
+  });
+
   it('keeps outside funding and appointment funding proportions when FTE changes', () => {
     const saved = renderEditor('staff');
+    fireEvent.click(
+      screen.getByRole('button', { name: /Alex Researcher, Oct 2026:/ })
+    );
     expect(screen.getByLabelText('Alex Researcher share 1')).toHaveValue(30);
     expect(
       screen.getByLabelText('Alex Researcher project 2')
     ).toHaveDisplayValue('Outside portfolio');
-    fireEvent.click(screen.getByText('Salary & person details'));
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Salary & person details' })
+    );
     fireEvent.change(screen.getByLabelText('Appointment FTE'), {
       target: { value: '0.75' },
     });
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: /Alex Researcher, Oct 2026:/ })
+    );
     expect(screen.getByLabelText('Alex Researcher share 1')).toHaveValue(45);
     expect(screen.getByLabelText('Alex Researcher share 2')).toHaveValue(30);
     expect(
@@ -156,9 +365,43 @@ describe('Live guided projection editors', () => {
     expect(saved().jobs[0].fundingEntries[1].projectId).toBeNull();
   });
 
+  it('keeps person details in a modal and discards canceled changes', () => {
+    const saved = renderEditor('staff');
+    const original = saved();
+    expect(screen.queryByLabelText('Name')).not.toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Salary & person details' })
+    );
+    expect(
+      screen.getByRole('dialog', { name: 'Salary & person details' })
+    ).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Name'), {
+      target: { value: 'Changed name' },
+    });
+    fireEvent.change(screen.getByLabelText('Appointment FTE'), {
+      target: { value: '0.75' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(saved()).toEqual(original);
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Salary & person details' })
+    );
+    expect(screen.getByLabelText('Name')).toHaveValue('Alex Researcher');
+    expect(screen.getByLabelText('Appointment FTE')).toHaveValue(0.5);
+    fireEvent(
+      screen.getByRole('dialog'),
+      new Event('cancel', { bubbles: true })
+    );
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(saved()).toEqual(original);
+  });
+
   it('keeps missing pay inputs blank and applies the selected job-code rates', () => {
     const saved = renderEditor('staff');
-    fireEvent.click(screen.getByText('Salary & person details'));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Salary & person details' })
+    );
     expect(screen.getByLabelText('Annual full-time salary')).toHaveValue(null);
     expect(screen.getByLabelText('CBR %')).toHaveValue(null);
     fireEvent.change(screen.getByLabelText('Annual full-time salary'), {
@@ -170,6 +413,7 @@ describe('Live guided projection editors', () => {
     fireEvent.change(screen.getByLabelText('Appointment ends'), {
       target: { value: '2027-05-15' },
     });
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
     expect(saved().jobs[0]).toMatchObject({
       cbrRate: 0.3,
       endDate: '2027-05-15',
@@ -177,7 +421,11 @@ describe('Live guided projection editors', () => {
       monthlySalary: 6000,
       vacationAccrualRate: 0.09,
     });
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Salary & person details' })
+    );
     fireEvent.change(screen.getByLabelText('CBR %'), { target: { value: '' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
     expect(saved().jobs[0].cbrRate).toBeNull();
   });
 
@@ -203,11 +451,73 @@ describe('Live guided projection editors', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('removes a funding source and its references while preserving other funding', () => {
+    const initial = fixture();
+    initial.projects.push({
+      ...structuredClone(initial.projects[0]),
+      id: 2,
+      projectName: 'Other project',
+      projectNumber: 'B456',
+    });
+    initial.jobs[0].fundingEntries[0].percent = 0.4;
+    initial.jobs[0].fundingEntries.push({
+      endDate: null,
+      isSeeded: true,
+      percent: 0.2,
+      projectId: 2,
+      startDate: null,
+    });
+    const saved = renderEditor('funding', initial);
+    fireEvent.click(
+      within(screen.getByRole('article', { name: 'Lab project' })).getByRole(
+        'button',
+        { name: 'Edit details' }
+      )
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Remove funding source' })
+    );
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('article', { name: 'Lab project' })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('article', { name: 'Other project' })
+    ).toBeInTheDocument();
+    expect(saved().projects.map((project) => project.id)).toEqual([2]);
+    expect(
+      saved().jobs[0].fundingEntries.map(({ percent, projectId }) => ({
+        percent,
+        projectId,
+      }))
+    ).toEqual([
+      { percent: 0.4, projectId: null },
+      { percent: 0.2, projectId: 2 },
+    ]);
+    expect(saved().settings?.selectedProjectIds).toEqual([2]);
+    expect(saved.plan().expenses.map((expense) => expense.fundingId)).toEqual([
+      'project-2',
+    ]);
+    expect(saved.plan().staff[0].fundingId).toBe('');
+    expect(
+      saved
+        .plan()
+        .staff[0].splits.some((split) => split.fundingId === 'project-1')
+    ).toBe(false);
+    expect(initial.projects).toHaveLength(2);
+  });
+
   it('retains a negative available balance without changing the seeded budget rows', () => {
     const saved = renderEditor('funding');
-    fireEvent.change(screen.getByLabelText('Lab project starting balance'), {
+    expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Edit details' }));
+    fireEvent.change(screen.getByLabelText('Available balance'), {
       target: { value: '-2500' },
     });
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+    expect(
+      screen.getByLabelText('Lab project available balance')
+    ).toHaveTextContent('-$2,500');
     expect(saved().projects[0].budgets[0]).toEqual(
       fixture().projects[0].budgets[0]
     );
@@ -220,5 +530,36 @@ describe('Live guided projection editors', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Edit details' }));
     expect(screen.queryByLabelText('Indirect rate %')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Description')).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('dialog', { name: 'Funding source details' })
+    ).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Funding source name'), {
+      target: { value: 'Canceled name' },
+    });
+    fireEvent.change(screen.getByLabelText('Available balance'), {
+      target: { value: '99999' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(saved().projects[0].projectName).toBe('Lab project');
+    expect(
+      screen.getByLabelText('Lab project available balance')
+    ).toHaveTextContent('-$2,500');
+    fireEvent.click(screen.getByRole('button', { name: 'Edit details' }));
+    fireEvent.change(screen.getByLabelText('Funding source name'), {
+      target: { value: 'Revised source' },
+    });
+    fireEvent.change(screen.getByLabelText('End date'), {
+      target: { value: '2028-06-30' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(saved().projects[0]).toMatchObject({
+      endDate: '2028-06-30',
+      projectName: 'Revised source',
+    });
+    expect(saved().projects[0].budgets[0]).toEqual(
+      fixture().projects[0].budgets[0]
+    );
   });
 });

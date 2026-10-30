@@ -133,6 +133,11 @@ function mockSavedProjections() {
   );
 }
 async function section(name: string) {
+  if (name === 'Plan details') {
+    fireEvent.click(screen.getByRole('button', { name }));
+    await screen.findByRole('dialog', { name: 'Plan details' });
+    return;
+  }
   fireEvent.click(
     within(screen.getByRole('navigation', { name: 'Plan sections' })).getByRole(
       'button',
@@ -227,6 +232,8 @@ describe('guided projections with server persistence', () => {
       expect(screen.getByRole('alert')).toHaveTextContent(
         'Current portfolio data could not be loaded'
       );
+      fireEvent.click(screen.getByRole('button', { name: 'All plans' }));
+      await screen.findByRole('heading', { name: 'Portfolio projections' });
       expect(
         screen.getByRole('button', { name: 'Create New Plan' })
       ).toBeDisabled();
@@ -307,8 +314,14 @@ describe('guided projections with server persistence', () => {
       fireEvent.change(screen.getByLabelText('Plan name'), {
         target: { value: 'Keep these edits' },
       });
+      fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
       await screen.findByText('Unsaved changes');
       await section('Funding');
+      await act(async () => view.router.history.back());
+      await screen.findByRole('heading', {
+        level: 2,
+        name: /Real seed project/,
+      });
       await act(async () => view.router.history.back());
       expect(await screen.findByLabelText('Plan name')).toHaveValue(
         'Keep these edits'
@@ -319,22 +332,19 @@ describe('guided projections with server persistence', () => {
         name: /Real seed project/,
       });
       expect(confirm).not.toHaveBeenCalled();
-      fireEvent.click(
-        within(
-          screen.getByRole('navigation', { name: 'Plan navigation' })
-        ).getByRole('button', { name: /Default plan/ })
-      );
+      await section('Overview');
       await screen.findByRole('heading', { name: 'Your plan at a glance' });
       expect(confirm).not.toHaveBeenCalled();
       await section('Plan details');
       expect(screen.getByLabelText('Plan name')).toHaveValue(
         'Keep these edits'
       );
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
       fireEvent.click(screen.getByRole('button', { name: 'All plans' }));
       expect(confirm).toHaveBeenCalledOnce();
-      expect(screen.getByLabelText('Plan name')).toHaveValue(
-        'Keep these edits'
-      );
+      expect(
+        screen.getByRole('heading', { level: 1, name: 'Keep these edits' })
+      ).toBeInTheDocument();
       expect(writes).toEqual([]);
     } finally {
       view.cleanup();
@@ -388,6 +398,7 @@ describe('guided projections with server persistence', () => {
         ),
         { target: { value: 'Fieldwork budget' } }
       );
+      fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
       expect(screen.getByText('Unsaved changes')).toBeInTheDocument();
       fireEvent.click(screen.getByRole('button', { name: 'Save plan' }));
       await screen.findByText('Saved in Walter');
@@ -425,11 +436,14 @@ describe('guided projections with server persistence', () => {
       fireEvent.change(screen.getByLabelText('Plan name'), {
         target: { value: 'Retry this plan' },
       });
+      fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
       fireEvent.click(screen.getByRole('button', { name: 'Save plan' }));
       expect(await screen.findByRole('alert')).toHaveTextContent(
         'Could not save this plan'
       );
-      expect(screen.getByLabelText('Plan name')).toHaveValue('Retry this plan');
+      expect(
+        screen.getByRole('heading', { level: 1, name: 'Retry this plan' })
+      ).toBeInTheDocument();
       expect(saved[0].name).toBe(projection.name);
       failSave = false;
       fireEvent.click(screen.getByRole('button', { name: 'Save plan' }));
@@ -496,11 +510,14 @@ describe('guided projections with server persistence', () => {
       fireEvent.change(screen.getByLabelText('Plan name'), {
         target: { value: 'Keep editing' },
       });
-      fireEvent.click(screen.getByRole('button', { name: 'Dashboard' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+      fireEvent.click(screen.getByRole('button', { name: 'All plans' }));
       expect(confirm).toHaveBeenCalled();
-      expect(screen.getByLabelText('Plan name')).toHaveValue('Keep editing');
+      expect(
+        screen.getByRole('heading', { level: 1, name: 'Keep editing' })
+      ).toBeInTheDocument();
       confirm.mockReturnValue(true);
-      fireEvent.click(screen.getByRole('button', { name: 'Dashboard' }));
+      fireEvent.click(screen.getByRole('button', { name: 'All plans' }));
       expect(
         screen.getByRole('heading', { name: 'Portfolio projections' })
       ).toBeInTheDocument();
@@ -528,10 +545,12 @@ describe('guided projections with server persistence', () => {
       expect(screen.getByRole('alert')).toHaveTextContent(
         'Current portfolio data could not be loaded'
       );
+      expect(screen.getByRole('button', { name: 'Save plan' })).toBeEnabled();
+      fireEvent.click(screen.getByRole('button', { name: 'All plans' }));
+      await screen.findByRole('heading', { name: 'Portfolio projections' });
       expect(
         screen.getByRole('button', { name: 'Create New Plan' })
       ).toBeDisabled();
-      expect(screen.getByRole('button', { name: 'Save plan' })).toBeEnabled();
     } finally {
       view.cleanup();
     }
