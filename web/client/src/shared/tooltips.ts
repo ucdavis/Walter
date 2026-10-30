@@ -30,6 +30,8 @@ export const tooltipDefinitions = {
   monthlyCbr:
     'Monthly composite benefit rate cost, including fringe/benefit burden.',
   openDepartmentDetails: 'Open department details',
+  outsidePortfolioFunding:
+    'This share is funded outside this portfolio and does not charge the projects in this plan.',
   postReportingPeriod:
     'Number of days after the award end date allowed for reporting and closeout activity.',
   projectBurndown:
@@ -38,6 +40,7 @@ export const tooltipDefinitions = {
   selectFinancialDepartmentFirst: 'Select a financial department first',
   selectSingleDepartmentToLabel:
     'Display Financial Department or select a single financial department to add labels',
+  staffingFundingExhausted: 'Funding exhausted',
   taskBreakdown:
     'Summary of how project costs are organized by financial coding segments.',
   totalBalance:
@@ -48,3 +51,42 @@ export const tooltipDefinitions = {
 } as const;
 
 export type TooltipDefinitionKey = keyof typeof tooltipDefinitions;
+
+export const staffingProjectTooltipLabels = {
+  availableBalance: 'Available balance',
+  award: 'Award',
+  description: 'Description',
+  fundingDates: 'Plan funding dates',
+  indirectRate: 'Indirect rate',
+  percent: 'Funding share',
+  projectNumber: 'Project number',
+  projectType: 'Project type',
+  remainingBalance: 'Projected month-end balance',
+  task: 'Task',
+} as const;
+
+const percent = (value: number) => `${Number(value.toFixed(1))}%`;
+
+export function staffingFundingTooltip({
+  open,
+  over,
+  shares,
+  status,
+}: {
+  open: number;
+  over: number;
+  shares: readonly { exhausted?: boolean; name: string; percent: number }[];
+  status: string;
+}) {
+  return (
+    status ||
+    [
+      ...shares.map(
+        (share) =>
+          `${percent(share.percent)} ${share.name}${share.exhausted ? ` (${tooltipDefinitions.staffingFundingExhausted.toLowerCase()})` : ''}`
+      ),
+      ...(open > 0.000_01 ? [`${percent(open)} open`] : []),
+      ...(over > 0.000_01 ? [`${percent(over)} over appointment`] : []),
+    ].join(', ')
+  );
+}

@@ -107,11 +107,12 @@ export default function StaffAllocationModal({
     <dialog
       aria-describedby={descriptionId}
       aria-labelledby={titleId}
-      className="m-auto max-h-[calc(100dvh-2rem)] w-[min(64rem,calc(100vw-2rem))] max-w-none overflow-auto rounded-lg border border-main-border bg-base-100 p-0 text-base text-base-content shadow-xl backdrop:bg-base-content/30"
+      className="m-auto max-h-[calc(100dvh-2rem)] w-[min(64rem,calc(100vw-2rem))] max-w-none overflow-x-hidden overflow-y-auto rounded-lg border border-main-border bg-base-100 p-0 text-base text-base-content shadow-xl backdrop:bg-base-content/30"
       onCancel={onClose}
       ref={ref}
     >
       <form
+        className="min-w-0 max-w-full"
         onSubmit={(event) => {
           event.preventDefault();
           if (!error) {
@@ -122,7 +123,10 @@ export default function StaffAllocationModal({
       >
         <header className="border-b border-main-border bg-base-200 px-5 py-5 sm:px-6">
           <div className="flex flex-wrap items-start justify-between gap-3">
-            <h2 className="text-2xl font-semibold" id={titleId}>
+            <h2
+              className="min-w-0 text-2xl font-semibold break-words"
+              id={titleId}
+            >
               {person.name} allocation
             </h2>
             <div className="flex items-center gap-3">
@@ -151,15 +155,15 @@ export default function StaffAllocationModal({
             months with this same setup.
           </p>
         </header>
-        <div className="grid gap-6 p-5 sm:p-6">
-          <section aria-label="Apply range">
+        <div className="grid min-w-0 grid-cols-1 gap-6 p-5 sm:p-6">
+          <section aria-label="Apply range" className="min-w-0">
             <div className="mb-4 flex flex-wrap items-end justify-between gap-4">
               <h3 className="text-base font-semibold">Apply range</h3>
-              <div className="grid w-full gap-3 sm:w-auto sm:grid-cols-2">
-                <label className="grid gap-1.5 text-sm font-medium">
+              <div className="grid min-w-0 w-full gap-3 sm:w-auto sm:grid-cols-2">
+                <label className="grid min-w-0 gap-1.5 text-sm font-medium">
                   Start month
                   <input
-                    className="input w-full"
+                    className="input min-w-0 w-full"
                     max={month}
                     min={months[0]}
                     onChange={(event) => setStart(event.target.value)}
@@ -168,10 +172,10 @@ export default function StaffAllocationModal({
                     value={start}
                   />
                 </label>
-                <label className="grid gap-1.5 text-sm font-medium">
+                <label className="grid min-w-0 gap-1.5 text-sm font-medium">
                   End month
                   <input
-                    className="input w-full"
+                    className="input min-w-0 w-full"
                     max={months.at(-1)}
                     min={month}
                     onChange={(event) => setEnd(event.target.value)}
@@ -184,7 +188,7 @@ export default function StaffAllocationModal({
             </div>
             <div
               aria-label="Months to replace"
-              className="flex gap-2 overflow-x-auto rounded-md border border-main-border bg-base-200 p-3"
+              className="flex min-w-0 w-full max-w-full gap-2 overflow-x-auto overscroll-x-contain rounded-md border border-main-border bg-base-200 p-3"
             >
               {months.map((value) => (
                 <button
@@ -213,7 +217,7 @@ export default function StaffAllocationModal({
               ))}
             </div>
           </section>
-          <section aria-label="Funding split">
+          <section aria-label="Funding split" className="min-w-0">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h3 className="text-base font-semibold">Funding split</h3>
@@ -254,7 +258,7 @@ export default function StaffAllocationModal({
                     Project
                     <select
                       aria-label={`${person.name} project ${index + 1}`}
-                      className="select w-full"
+                      className="select min-w-0 w-full"
                       onChange={(event) =>
                         updateShare(share.id, { fundingId: event.target.value })
                       }
@@ -281,11 +285,11 @@ export default function StaffAllocationModal({
                       ))}
                     </select>
                   </label>
-                  <label className="grid gap-1.5 text-sm font-medium">
+                  <label className="grid min-w-0 gap-1.5 text-sm font-medium">
                     Share %
                     <input
                       aria-label={`${person.name} share ${index + 1}`}
-                      className="input w-full"
+                      className="input min-w-0 w-full"
                       max={100}
                       min={0}
                       onChange={(event) =>

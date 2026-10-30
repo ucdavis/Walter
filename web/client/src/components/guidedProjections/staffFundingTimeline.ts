@@ -1,6 +1,7 @@
 import {
   OUTSIDE_FUNDING_ID,
   planMonths,
+  projectGuidedPlan,
   splitActive,
   type PlanStaff,
   type ProjectionPlan,
@@ -9,13 +10,20 @@ import { isFundingSourceActiveInMonth } from '@/components/projections/projectio
 
 type MonthlyShare = {
   color: string;
+  exhausted: boolean;
   id: string;
   label: string;
   name: string;
   percent: number;
+  remainingBalance?: number;
 };
 
-export function staffFundingMonths(person: PlanStaff, plan: ProjectionPlan) {
+export function staffFundingMonths(
+  person: PlanStaff,
+  plan: ProjectionPlan,
+  result = projectGuidedPlan(plan)
+) {
+  const projectedFunds = new Map(result.funds.map((fund) => [fund.id, fund]));
   const funds = new Map(
     plan.funding
       .filter((fund) => plan.selectedFunding.includes(fund.id))
@@ -43,14 +51,19 @@ export function staffFundingMonths(person: PlanStaff, plan: ProjectionPlan) {
           continue;
         }
         const existing = shares.get(split.fundingId);
+        const remainingBalance = projectedFunds
+          .get(split.fundingId)
+          ?.chart.find((point) => point.month === month)?.balance;
         shares.set(split.fundingId, {
           color: fund?.color ?? '#64748b',
+          exhausted: remainingBalance !== undefined && remainingBalance <= 0,
           id: split.fundingId,
           label: outside
             ? 'Outside'
             : (fund!.serverProject?.projectNumber ?? fund!.name),
           name: outside ? 'Outside portfolio' : fund!.name,
           percent: (existing?.percent ?? 0) + split.percent,
+          remainingBalance,
         });
       }
     }

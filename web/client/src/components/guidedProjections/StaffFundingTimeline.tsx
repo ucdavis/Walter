@@ -1,8 +1,13 @@
 import type {
+  PlanResult,
   PlanStaff,
   ProjectionPlan,
 } from '@/components/guidedProjections/planModel.ts';
+import { ExclamationTriangleIcon } from '@heroicons/react/24/solid';
 import { staffFundingMonths } from '@/components/guidedProjections/staffFundingTimeline.ts';
+import StaffFundingTooltip from '@/components/guidedProjections/StaffFundingTooltip.tsx';
+import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
+import { staffingFundingTooltip } from '@/shared/tooltips.ts';
 import { monthLabel } from '@/components/projections/projection.ts';
 
 const percent = (value: number) => `${Number(value.toFixed(1))}%`;
@@ -11,12 +16,14 @@ export default function StaffFundingTimeline({
   onEdit,
   person,
   plan,
+  result,
 }: {
   onEdit: (month: string) => void;
   person: PlanStaff;
   plan: ProjectionPlan;
+  result: PlanResult;
 }) {
-  const months = staffFundingMonths(person, plan);
+  const months = staffFundingMonths(person, plan, result);
   return (
     <div className="min-w-0 border-t border-main-border p-3.5">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs text-base-content/60">
@@ -45,17 +52,12 @@ export default function StaffFundingTimeline({
                 : !active
                   ? 'Not active'
                   : '';
-              const summary =
-                status ||
-                [
-                  ...shares.map(
-                    (share) => `${percent(share.percent)} ${share.name}`
-                  ),
-                  ...(open > 0.000_01 ? [`${percent(open)} open`] : []),
-                  ...(over > 0.000_01
-                    ? [`${percent(over)} over appointment`]
-                    : []),
-                ].join(', ');
+              const summary = staffingFundingTooltip({
+                open,
+                over,
+                shares,
+                status,
+              });
               const scale = Math.max(appointment, total, 1);
               return (
                 <button
@@ -79,22 +81,48 @@ export default function StaffFundingTimeline({
                     ) : (
                       <>
                         {shares.map((share) => (
-                          <span
-                            className="block shrink-0 overflow-hidden px-1.5 text-[11px] leading-tight font-medium"
+                          <TooltipLabel
+                            asChild
+                            focusable={false}
                             key={share.id}
-                            style={{
-                              backgroundColor: share.color,
-                              color: fundingTextColor(share.color),
-                              height: `${(share.percent / scale) * 100}%`,
-                            }}
-                          >
-                            <span className="block">
-                              {percent(share.percent)}
-                            </span>
-                            <span className="block truncate">
-                              {share.label}
-                            </span>
-                          </span>
+                            label={
+                              <span
+                                className="block shrink-0 overflow-hidden px-1.5 text-[11px] leading-tight font-medium"
+                                style={{
+                                  backgroundColor: share.exhausted
+                                    ? 'var(--color-error)'
+                                    : share.color,
+                                  color: share.exhausted
+                                    ? 'var(--color-error-content)'
+                                    : fundingTextColor(share.color),
+                                  height: `${(share.percent / scale) * 100}%`,
+                                }}
+                              >
+                                <span className="flex items-center justify-between gap-0.5">
+                                  <span>{percent(share.percent)}</span>
+                                  {share.exhausted && (
+                                    <ExclamationTriangleIcon
+                                      aria-hidden="true"
+                                      className="size-3 shrink-0"
+                                    />
+                                  )}
+                                </span>
+                                <span className="block truncate">
+                                  {share.label}
+                                </span>
+                              </span>
+                            }
+                            tooltip={
+                              <StaffFundingTooltip
+                                fund={plan.funding.find(
+                                  (fund) => fund.id === share.id
+                                )}
+                                month={month}
+                                share={share}
+                              />
+                            }
+                            variant="card"
+                          />
                         ))}
                         {open > 0.000_01 && (
                           <span className="min-h-0 flex-1 overflow-hidden px-1.5 py-1 text-[11px] leading-tight text-base-content/60">

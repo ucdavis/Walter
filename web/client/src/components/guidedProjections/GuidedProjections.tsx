@@ -42,10 +42,7 @@ import {
 } from '@/components/guidedProjections/planModel.ts';
 import PlansSidebar from '@/components/guidedProjections/PlansSidebar.tsx';
 import SplitStaffEditor from '@/components/guidedProjections/SplitStaffEditor.tsx';
-import {
-  LiveResults,
-  ProjectDetail,
-} from '@/components/guidedProjections/ProjectOutlook.tsx';
+import { LiveResults } from '@/components/guidedProjections/ProjectOutlook.tsx';
 
 type Section =
   | 'Overview'
@@ -250,6 +247,10 @@ export default function GuidedProjections({
     scrollToHeading();
   }
 
+  function focusProject(id: string | null) {
+    changeView({ ...view, project: id ?? undefined });
+  }
+
   async function save(plan = draft, isNew = false) {
     if (!remote || saving) {
       return;
@@ -406,6 +407,7 @@ export default function GuidedProjections({
                 <SplitStaffEditor
                   lookups={remote?.lookups}
                   plan={draft}
+                  result={result}
                   update={update}
                 />
               )}
@@ -779,14 +781,14 @@ export default function GuidedProjections({
                   </div>
                 </nav>
                 <div
-                  className={`grid grid-cols-1 items-start gap-5 ${section === 'Staffing' ? '' : '@4xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]'}`}
+                  className={`grid grid-cols-1 items-start gap-5 ${section === 'Funding' || section === 'Expenses' ? '@4xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]' : ''}`}
                 >
-                  <section
-                    aria-label={`${section} editor`}
-                    className="min-w-0 text-base"
-                    inert={saving}
-                  >
-                    {(selectedProject || section !== 'Overview') && (
+                  {section !== 'Overview' && (
+                    <section
+                      aria-label={`${section} editor`}
+                      className="min-w-0 text-base"
+                      inert={saving}
+                    >
                       <button
                         className="mb-4 inline-flex items-center gap-2 text-sm text-primary"
                         onClick={() => goToSection('Overview')}
@@ -798,54 +800,64 @@ export default function GuidedProjections({
                         />
                         Back to all projects
                       </button>
-                    )}
-                    {section === 'Overview' &&
-                      (selectedProject ? (
-                        <ProjectDetail
-                          fund={selectedProject}
-                          onStaffing={() => goToSection('Staffing')}
-                        />
-                      ) : (
-                        <Overview
-                          onProject={viewProject}
-                          onSection={goToSection}
+                      {section === 'Funding' && (
+                        <FundingEditor plan={draft} update={update} />
+                      )}
+                      {section === 'Staffing' && (
+                        <SplitStaffEditor
+                          lookups={remote?.lookups}
                           plan={draft}
                           result={result}
+                          update={update}
                         />
-                      ))}
-                    {section === 'Funding' && (
-                      <FundingEditor plan={draft} update={update} />
-                    )}
-                    {section === 'Staffing' && (
-                      <SplitStaffEditor
-                        lookups={remote?.lookups}
-                        plan={draft}
-                        update={update}
-                      />
-                    )}
-                    {section === 'Expenses' && (
-                      <ExpenseEditor
-                        lookups={remote?.lookups}
-                        plan={draft}
-                        update={(next) =>
-                          update({ ...draft, expenses: next.expenses })
-                        }
-                      />
-                    )}
-                    {error && (
-                      <p
-                        className="mt-4 rounded-md bg-error/10 p-3 text-error text-sm"
-                        role="status"
-                      >
-                        {error}
-                      </p>
-                    )}
-                  </section>
+                      )}
+                      {section === 'Expenses' && (
+                        <ExpenseEditor
+                          lookups={remote?.lookups}
+                          plan={draft}
+                          update={(next) =>
+                            update({ ...draft, expenses: next.expenses })
+                          }
+                        />
+                      )}
+                      {error && (
+                        <p
+                          className="mt-4 rounded-md bg-error/10 p-3 text-error text-sm"
+                          role="status"
+                        >
+                          {error}
+                        </p>
+                      )}
+                    </section>
+                  )}
                   {section !== 'Staffing' && (
-                    <div className="@4xl:sticky @4xl:top-24 min-w-0">
+                    <div
+                      className={`min-w-0 ${section === 'Overview' ? '' : '@4xl:sticky @4xl:top-24'}`}
+                    >
+                      {section === 'Overview' && selectedProject && (
+                        <button
+                          className="mb-4 inline-flex items-center gap-2 text-sm text-primary"
+                          onClick={() => viewProject(null)}
+                          type="button"
+                        >
+                          <ArrowLeftIcon
+                            aria-hidden="true"
+                            className="size-4 shrink-0"
+                          />{' '}
+                          Back to all projects
+                        </button>
+                      )}
+                      {section === 'Overview' && error && (
+                        <p
+                          className="mb-4 rounded-md bg-error/10 p-3 text-sm text-error"
+                          role="status"
+                        >
+                          {error}
+                        </p>
+                      )}
                       <LiveResults
                         incomplete={hasMissingInputs(draft)}
-                        onProject={viewProject}
+                        onProject={focusProject}
                         projectId={projectId}
                         result={result}
                       />
@@ -959,84 +971,5 @@ function ShortfallSummary({
         </button>
       )}
     </div>
-  );
-}
-
-function Overview({
-  onProject,
-  onSection,
-  plan,
-  result,
-}: {
-  onProject: (id: string) => void;
-  onSection: (section: Section) => void;
-  plan: ProjectionPlan;
-  result: Result;
-}) {
-  return (
-    <>
-      <div className="mb-5 flex flex-wrap items-start justify-between gap-4 [&_p]:mt-1 text-base">
-        <div>
-          <h2 className="text-xl font-semibold">Your plan at a glance</h2>
-          <p className="text-sm leading-relaxed text-base-content/70">
-            Review the assumptions behind this outlook.
-          </p>
-        </div>
-      </div>
-      <div className="fancy-data">
-        <dl className="grid grid-cols-3 gap-4">
-          <div className="flex min-w-0 flex-col gap-1">
-            <dt className="stat-label text-sm">People included</dt>
-            <dd className="stat-value">
-              {plan.staff.filter((person) => person.included).length}
-            </dd>
-          </div>
-          <div className="flex min-w-0 flex-col gap-1">
-            <dt className="stat-label text-sm">Funding sources</dt>
-            <dd className="stat-value">{plan.selectedFunding.length}</dd>
-          </div>
-          <div className="flex min-w-0 flex-col gap-1">
-            <dt className="stat-label text-sm">Other expenses</dt>
-            <dd className="stat-value">{plan.expenses.length}</dd>
-          </div>
-        </dl>
-      </div>
-      <h3 className="mt-7 font-semibold text-base">Project balances</h3>
-      {result.funds.map((fund) => (
-        <button
-          className="my-3 flex w-full items-center justify-between gap-4 rounded-e border-s-4 px-4 py-3 text-left text-base hover:bg-base-200"
-          key={fund.id}
-          onClick={() => onProject(fund.id)}
-          style={{ borderInlineStartColor: fund.color }}
-          type="button"
-        >
-          <div>
-            <strong className="font-semibold">{fund.name}</strong>
-            <span className="mt-1 block text-sm text-base-content/70">
-              {fund.firstDeficit
-                ? `Runs short in ${monthLabel(fund.firstDeficit)}`
-                : 'Within available funding'}
-            </span>
-          </div>
-          <strong
-            className={`flex items-center gap-2 whitespace-nowrap font-semibold ${fund.ending < 0 ? 'text-error' : ''}`}
-          >
-            {shortMoney(fund.ending)}{' '}
-            <ArrowRightIcon className="size-4 shrink-0" />
-          </strong>
-        </button>
-      ))}
-      <div className="mt-6 flex flex-wrap gap-3 [&>button]:flex [&>button]:items-center [&>button]:gap-1.5 [&>button]:text-primary text-sm">
-        <button onClick={() => onSection('Staffing')} type="button">
-          Adjust staffing <ArrowRightIcon className="size-5 shrink-0" />
-        </button>
-        <button onClick={() => onSection('Funding')} type="button">
-          Adjust funding <ArrowRightIcon className="size-5 shrink-0" />
-        </button>
-        <button onClick={() => onSection('Expenses')} type="button">
-          Review expenses <ArrowRightIcon className="size-5 shrink-0" />
-        </button>
-      </div>
-    </>
   );
 }

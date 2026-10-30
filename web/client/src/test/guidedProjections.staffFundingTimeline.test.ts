@@ -46,6 +46,79 @@ function fixture(): ProjectionPlan {
 }
 
 describe('Staff monthly funding timeline', () => {
+  it('flags a filled share at zero balance and ignores months after the project ends', () => {
+    const plan = fixture();
+    plan.expenses = [];
+    plan.funding = plan.funding.map((fund, index) => ({
+      ...fund,
+      indirectRate: 0,
+      startingBalance: index === 0 ? 50 : 1000,
+    }));
+    const person = plan.staff[0];
+    person.annualSalary = 1200;
+    person.fringeRate = 0;
+    person.splits = person.splits.map((split) => ({
+      ...split,
+      percent: 50,
+      startMonth: '2026-01',
+    }));
+    const [first, second, ended] = staffFundingMonths(person, plan);
+    expect(
+      first.shares.find((share) => share.id === plan.funding[0].id)
+    ).toMatchObject({
+      exhausted: true,
+      remainingBalance: 0,
+    });
+    expect(
+      second.shares.find((share) => share.id === plan.funding[0].id)
+    ).toMatchObject({
+      exhausted: true,
+      remainingBalance: -50,
+    });
+    expect(
+      first.shares.find((share) => share.id === plan.funding[1].id)
+    ).toMatchObject({
+      exhausted: false,
+      remainingBalance: 950,
+    });
+    expect(ended.shares.some((share) => share.id === plan.funding[0].id)).toBe(
+      false
+    );
+  });
+
+  it('includes other people and expenses in the funding warning and clears it when funds increase', () => {
+    const plan = fixture();
+    plan.funding = plan.funding.map((fund) => ({
+      ...fund,
+      indirectRate: 0,
+      startingBalance: 100,
+    }));
+    const person = plan.staff[0];
+    person.annualSalary = 1200;
+    person.fringeRate = 0;
+    person.splits = [{ ...person.splits[0], percent: 50 }];
+    plan.staff.push({ ...person, id: 'other-person', name: 'Other person' });
+    plan.expenses = [
+      {
+        amount: 50,
+        frequency: 'once',
+        fundingId: plan.funding[0].id,
+        id: 'expense',
+        month: '2026-01',
+        name: 'Supplies',
+      },
+    ];
+    expect(staffFundingMonths(person, plan)[0].shares[0]).toMatchObject({
+      exhausted: true,
+      remainingBalance: -50,
+    });
+    plan.funding[0].startingBalance = 300;
+    expect(staffFundingMonths(person, plan)[0].shares[0]).toMatchObject({
+      exhausted: false,
+      remainingBalance: 150,
+    });
+  });
+
   it('shows funding changes and opens a gap when a project ends', () => {
     const plan = fixture();
     expect(
@@ -100,7 +173,12 @@ describe('Staff monthly funding timeline', () => {
       appointment: 50,
       open: 30,
       shares: [
-        { id: OUTSIDE_FUNDING_ID, name: 'Outside portfolio', percent: 20 },
+        {
+          exhausted: false,
+          id: OUTSIDE_FUNDING_ID,
+          name: 'Outside portfolio',
+          percent: 20,
+        },
       ],
     });
     expect(months[2]).toMatchObject({ active: false, open: 0, shares: [] });

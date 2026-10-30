@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { PlusIcon, UserGroupIcon } from '@heroicons/react/24/outline';
 import type { ProjectionLookups } from '@/queries/projections.ts';
 import StaffPersonDetailsModal from '@/components/guidedProjections/StaffPersonDetailsModal.tsx';
@@ -9,7 +9,9 @@ import { money } from '@/components/guidedProjections/defaults.ts';
 import { useRevealItem } from '@/shared/hooks/useRevealItem.ts';
 import {
   planMonths,
+  projectGuidedPlan,
   staffValidation,
+  type PlanResult,
   type ProjectionPlan,
   type PlanStaff,
 } from '@/components/guidedProjections/planModel.ts';
@@ -17,12 +19,18 @@ import {
 export default function SplitStaffEditor({
   lookups,
   plan,
+  result,
   update,
 }: {
   lookups?: ProjectionLookups;
   plan: ProjectionPlan;
+  result?: PlanResult;
   update: (plan: ProjectionPlan) => void;
 }) {
+  const projection = useMemo(
+    () => result ?? projectGuidedPlan(plan),
+    [plan, result]
+  );
   const [detailsPersonId, setDetailsPersonId] = useState<string | null>(null);
   const addedItemId = useRef<string | null>(null);
   const { registerItem, revealItem } = useRevealItem();
@@ -170,6 +178,7 @@ export default function SplitStaffEditor({
                 }
                 person={person}
                 plan={plan}
+                result={projection}
               />
               {error && (
                 <p

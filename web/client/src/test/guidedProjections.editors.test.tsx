@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { userEvent } from '@testing-library/user-event';
 import {
   cleanup,
   fireEvent,
@@ -202,6 +203,72 @@ describe('Live guided projection editors', () => {
       }
     }
   );
+
+  it('warns on a filled block when funds run out, without warning for ended projects or outside funding', async () => {
+    const user = userEvent.setup();
+    const initial = fixture();
+    initial.projects[0].budgets[0].budget = 4200;
+    initial.projects[0].expenses[0].amount = 1200;
+    initial.projects[0].expenses[0].kind = 'OneTime';
+    initial.projects[0].expenses[0].startMonth = '2026-11-01';
+    initial.projects[0].endDate = '2026-11-30';
+    initial.jobs[0].monthlySalary = 0;
+    initial.jobs[0].cbrRate = 0;
+    initial.jobs[0].feeRemissionMonthly = 0;
+    renderEditor('staff', initial);
+    expect(
+      screen.getByRole('button', { name: /Alex Researcher, Oct 2026:/ })
+    ).not.toHaveAccessibleName(/funding exhausted/);
+    const exhausted = screen.getByRole('button', {
+      name: /Alex Researcher, Nov 2026: 30% Lab project \(funding exhausted\), 20% Outside portfolio/,
+    });
+    await user.hover(within(exhausted).getByText('30%').parentElement!);
+    const tooltip = await screen.findByRole('tooltip');
+    expect(tooltip).toHaveTextContent('Funding exhausted');
+    expect(tooltip).toHaveTextContent('Projected month-end balance$0');
+    const ended = screen.getByRole('button', {
+      name: /Alex Researcher, Dec 2026:/,
+    });
+    expect(ended).not.toHaveAccessibleName(/funding exhausted/);
+    expect(within(ended).queryByText('30%')).not.toBeInTheDocument();
+  });
+
+  it('shows project details in a card tooltip when hovering a staffing month', async () => {
+    const user = userEvent.setup();
+    const initial = fixture();
+    initial.projects[0].awardNumber = 'AWD123';
+    initial.projects[0].awardName = 'Research award';
+    renderEditor('staff', initial);
+    const month = screen.getByRole('button', {
+      name: /Alex Researcher, Oct 2026:/,
+    });
+    const project = within(month).getByText('30%').parentElement!;
+    await user.hover(project);
+    const tooltip = await screen.findByRole('tooltip');
+    expect(tooltip).toHaveTextContent('Lab project');
+    expect(tooltip).toHaveTextContent('Oct 2026');
+    expect(tooltip).toHaveTextContent('Funding share30%');
+    expect(tooltip).toHaveTextContent('Project numberA123');
+    expect(tooltip).toHaveTextContent('Project typeSponsored');
+    expect(tooltip).toHaveTextContent('AwardAWD123 · Research award');
+    expect(tooltip).toHaveTextContent('Task01 · Lab');
+    expect(tooltip).toHaveTextContent('01.01.2025 – 12.31.2027');
+    expect(tooltip).toHaveTextContent('Available balance$7,000');
+    await user.unhover(project);
+    await waitFor(() =>
+      expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
+    );
+    await user.hover(within(month).getByText('20%').parentElement!);
+    const outside = await screen.findByRole('tooltip');
+    expect(outside).toHaveTextContent('Outside portfolio');
+    expect(outside).toHaveTextContent('Funding share20%');
+    expect(outside).toHaveTextContent(
+      'does not charge the projects in this plan'
+    );
+    expect(
+      within(outside).queryByText('Available balance')
+    ).not.toBeInTheDocument();
+  });
 
   it('edits one month in a modal without changing adjacent months', () => {
     renderEditor('staff');

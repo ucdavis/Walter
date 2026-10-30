@@ -196,7 +196,7 @@ describe('guided projections with server persistence', () => {
       initialPath: `/projections/${DEMO_IAM_ID}?plan=default`,
     });
     try {
-      await screen.findByRole('heading', { name: 'Your plan at a glance' });
+      await screen.findByRole('region', { name: 'Live project outlook' });
       expect(
         within(screen.getByLabelText('Explore a project')).getAllByRole(
           'option'
@@ -251,47 +251,80 @@ describe('guided projections with server persistence', () => {
         initialPath: `/projections/${DEMO_IAM_ID}${suffix}`,
       });
       try {
-        await screen.findByRole('heading', { name: 'Your plan at a glance' });
-        fireEvent.click(
-          within(
-            screen.getByRole('region', { name: 'Overview editor' })
-          ).getByRole('button', { name: /Real seed project/ })
-        );
+        await screen.findByRole('region', { name: 'Live project outlook' });
+        fireEvent.change(screen.getByLabelText('Explore a project'), {
+          target: { value: 'project-7' },
+        });
         await screen.findByRole('button', { name: 'Back to all projects' });
         expect(view.router.state.location.search.project).toBe('project-7');
         await section('Staffing');
         await act(async () => view.router.history.back());
         await screen.findByRole('heading', {
-          level: 2,
+          level: 3,
           name: /Real seed project/,
         });
         await act(async () => view.router.history.back());
-        await screen.findByRole('heading', { name: 'Your plan at a glance' });
+        await screen.findByRole('region', { name: 'Live project outlook' });
         expect(screen.getByLabelText('Explore a project')).toHaveValue('');
         await act(async () => view.router.history.forward());
         await screen.findByRole('heading', {
-          level: 2,
+          level: 3,
           name: /Real seed project/,
         });
         fireEvent.click(
           screen.getByRole('button', { name: 'Back to all projects' })
         );
-        await screen.findByRole('heading', { name: 'Your plan at a glance' });
+        await screen.findByRole('region', { name: 'Live project outlook' });
         expect(screen.getByLabelText('Explore a project')).toHaveValue('');
         fireEvent.change(screen.getByLabelText('Explore a project'), {
           target: { value: 'project-7' },
         });
         await screen.findByRole('heading', {
-          level: 2,
+          level: 3,
           name: /Real seed project/,
         });
         fireEvent.click(screen.getByRole('button', { name: 'All plans' }));
         await screen.findByRole('heading', { name: 'Portfolio projections' });
         await act(async () => view.router.history.back());
         await screen.findByRole('heading', {
-          level: 2,
+          level: 3,
           name: /Real seed project/,
         });
+        expect(writes).toEqual([]);
+      } finally {
+        view.cleanup();
+      }
+    }
+  );
+
+  it.each(['Funding', 'Expenses'])(
+    'keeps the %s tab active when changing project focus',
+    async (name) => {
+      mockSavedProjections();
+      const view = renderRoute({
+        initialPath: `/projections/${DEMO_IAM_ID}/12`,
+      });
+      try {
+        await screen.findByRole('region', { name: 'Live project outlook' });
+        await section(name);
+        for (const project of ['project-7', '']) {
+          fireEvent.change(screen.getByLabelText('Explore a project'), {
+            target: { value: project },
+          });
+          await waitFor(() =>
+            expect(screen.getByLabelText('Explore a project')).toHaveValue(
+              project
+            )
+          );
+          expect(
+            within(
+              screen.getByRole('navigation', { name: 'Plan sections' })
+            ).getByRole('button', { name })
+          ).toHaveAttribute('aria-current', 'page');
+          expect(
+            screen.getByRole('region', { name: `${name} editor` })
+          ).toBeInTheDocument();
+        }
         expect(writes).toEqual([]);
       } finally {
         view.cleanup();
@@ -307,7 +340,7 @@ describe('guided projections with server persistence', () => {
     });
     try {
       await screen.findByRole('heading', {
-        level: 2,
+        level: 3,
         name: /Real seed project/,
       });
       await section('Plan details');
@@ -319,7 +352,7 @@ describe('guided projections with server persistence', () => {
       await section('Funding');
       await act(async () => view.router.history.back());
       await screen.findByRole('heading', {
-        level: 2,
+        level: 3,
         name: /Real seed project/,
       });
       await act(async () => view.router.history.back());
@@ -328,12 +361,12 @@ describe('guided projections with server persistence', () => {
       );
       await act(async () => view.router.history.back());
       await screen.findByRole('heading', {
-        level: 2,
+        level: 3,
         name: /Real seed project/,
       });
       expect(confirm).not.toHaveBeenCalled();
       await section('Overview');
-      await screen.findByRole('heading', { name: 'Your plan at a glance' });
+      await screen.findByRole('region', { name: 'Live project outlook' });
       expect(confirm).not.toHaveBeenCalled();
       await section('Plan details');
       expect(screen.getByLabelText('Plan name')).toHaveValue(

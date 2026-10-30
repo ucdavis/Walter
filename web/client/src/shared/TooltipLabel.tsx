@@ -34,7 +34,8 @@ interface TooltipLabelProps {
   labelClassName?: string;
   placement?: 'bottom' | 'left' | 'right' | 'top';
   screenReaderLabel?: string;
-  tooltip?: string;
+  tooltip?: ReactNode;
+  variant?: 'card' | 'default';
 }
 
 export function TooltipLabel({
@@ -46,6 +47,7 @@ export function TooltipLabel({
   placement = 'top',
   screenReaderLabel,
   tooltip,
+  variant = 'default',
 }: TooltipLabelProps) {
   const [open, setOpen] = useState(false);
   const [arrowElement, setArrowElement] = useState<HTMLDivElement | null>(null);
@@ -154,17 +156,22 @@ export function TooltipLabel({
         <FloatingPortal>
           <div
             {...getFloatingProps({
-              className: 'floating-tooltip',
+              className:
+                variant === 'card'
+                  ? 'z-[200] max-w-[min(24rem,calc(100vw-2rem))] rounded-md border border-main-border bg-base-100 p-4 text-sm leading-normal text-base-content shadow-lg'
+                  : 'floating-tooltip',
               style: floatingStyles,
             })}
             ref={setFloating}
           >
-            <div
-              aria-hidden="true"
-              className="floating-tooltip-arrow"
-              ref={setArrowElement}
-              style={arrowStyle}
-            />
+            {variant !== 'card' && (
+              <div
+                aria-hidden="true"
+                className="floating-tooltip-arrow"
+                ref={setArrowElement}
+                style={arrowStyle}
+              />
+            )}
             {tooltip}
           </div>
         </FloatingPortal>
