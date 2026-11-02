@@ -73,7 +73,7 @@ describe('Guided projection plan navigation', () => {
         },
       });
     pickFutureGrant();
-    fireEvent.click(screen.getByRole('button', { name: 'Add monthly' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add new expense' }));
     expect(screen.getByLabelText('Expense name')).toHaveValue(
       'Monthly expense'
     );

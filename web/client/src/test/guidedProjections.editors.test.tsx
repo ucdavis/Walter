@@ -156,7 +156,7 @@ describe('Live guided projection editors', () => {
     const scroll = vi.spyOn(Element.prototype, 'scrollIntoView');
     try {
       renderEditor('expenses');
-      fireEvent.click(screen.getByRole('button', { name: 'Add monthly' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Add new expense' }));
       const input = screen.getAllByLabelText('Expense name').at(-1)!;
       await waitFor(() => expect(input).toHaveFocus());
       expect(

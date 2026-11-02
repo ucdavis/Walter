@@ -384,23 +384,10 @@ export function ExpenseEditor({
   const ghostInput = 'input input-ghost input-sm w-full px-1';
   const sumPlanTotals = (expenses: PlanExpense[]) =>
     expenses.reduce((sum, expense) => sum + planTotal(expense, months), 0);
-  const sectionHeader = (
-    title: string,
-    frequency: 'monthly' | 'once',
-    label: string
-  ) => (
+  const sectionHeader = (title: string) => (
     <tr className="bg-base-200/60">
-      <th className="text-xs font-semibold uppercase" colSpan={6}>
+      <th className="text-sm font-semibold" colSpan={8}>
         {title}
-      </th>
-      <th className="text-right" colSpan={2}>
-        <button
-          className="btn btn-ghost btn-xs"
-          onClick={() => add(frequency)}
-          type="button"
-        >
-          <PlusIcon className="size-4 shrink-0" /> {label}
-        </button>
       </th>
     </tr>
   );
@@ -556,22 +543,33 @@ export function ExpenseEditor({
             Projected spending by category, plus any costs you plan to add.
           </p>
         </div>
-        <div className="flex min-w-0 flex-col gap-1 text-sm font-medium">
-          <label htmlFor={projectSelectId}>Project</label>
-          <select
-            className="select select-sm w-80 max-w-full"
-            id={projectSelectId}
-            onChange={(event) => setSelectedId(event.target.value)}
-            value={fundingId}
+        <div className="flex min-w-0 flex-wrap items-end gap-3">
+          <div className="flex min-w-0 flex-col gap-1 text-sm font-medium">
+            <label htmlFor={projectSelectId}>Project</label>
+            <select
+              className="select select-sm w-80 max-w-full"
+              id={projectSelectId}
+              onChange={(event) => setSelectedId(event.target.value)}
+              value={fundingId}
+            >
+              {projects.map((fund) => (
+                <option key={fund.id} value={fund.id}>
+                  {fund.name}
+                  {fund.serverProject?.taskNumber &&
+                    ` · Task ${fund.serverProject.taskNumber}`}
+                </option>
+              ))}
+            </select>
+          </div>
+          <button
+            className="btn btn-outline"
+            disabled={!fundingId}
+            onClick={() => add('monthly')}
+            type="button"
           >
-            {projects.map((fund) => (
-              <option key={fund.id} value={fund.id}>
-                {fund.name}
-                {fund.serverProject?.taskNumber &&
-                  ` · Task ${fund.serverProject.taskNumber}`}
-              </option>
-            ))}
-          </select>
+            <PlusIcon aria-hidden="true" className="size-5 shrink-0" /> Add new
+            expense
+          </button>
         </div>
       </div>
       <div className="overflow-x-auto">
@@ -601,7 +599,7 @@ export function ExpenseEditor({
             </tr>
           </thead>
           <tbody>
-            {sectionHeader('Monthly expenses', 'monthly', 'Add monthly')}
+            {sectionHeader('Monthly expenses')}
             {monthlyRows.length === 0 && emptyRow('No monthly expenses.')}
             {monthlyRows.map((expense) =>
               isProjected(expense) ? (
@@ -629,7 +627,7 @@ export function ExpenseEditor({
               )
             )}
             {subtotalRow('Monthly total', monthlyRows, true)}
-            {sectionHeader('One-time expenses', 'once', 'Add one-time')}
+            {sectionHeader('One-time expenses')}
             {oneTimeRows.length === 0 && emptyRow('No one-time expenses.')}
             {oneTimeRows.map(plannedRow)}
             {subtotalRow('One-time total', oneTimeRows, false)}
