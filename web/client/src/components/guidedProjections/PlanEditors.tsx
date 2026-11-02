@@ -498,7 +498,7 @@ export function ExpenseEditor({
                 <td>
                   <select
                     aria-label="Expenditure category"
-                    className="select select-ghost select-sm w-full px-1"
+                    className="select select-ghost select-sm w-full px-1 [&::picker(select)]:bg-base-100"
                     onChange={(event) =>
                       patchServer(expense, {
                         expenditureCategory: event.target.value,
@@ -534,7 +534,7 @@ export function ExpenseEditor({
                 <td>
                   <select
                     aria-label="Frequency"
-                    className="select select-ghost select-sm w-full px-1"
+                    className="select select-ghost select-sm w-full px-1 [&::picker(select)]:bg-base-100"
                     onChange={(event) => {
                       const frequency =
                         event.target.value === 'once' ? 'once' : 'monthly';
