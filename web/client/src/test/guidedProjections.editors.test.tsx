@@ -509,6 +509,18 @@ describe('Live guided projection editors', () => {
     });
   });
 
+  it('totals expenses only through the project end date', () => {
+    const initial = fixture();
+    initial.projects[0].endDate = '2026-11-30';
+    renderEditor('expenses', initial);
+    expect(screen.getByRole('note')).toHaveTextContent(
+      'This project ends in Nov 2026.'
+    );
+    expect(screen.getAllByText('Project end · Nov 2026')).not.toHaveLength(0);
+    const totals = screen.getByText('Monthly total').closest('tr')!;
+    expect(totals).toHaveTextContent('$1,000');
+  });
+
   it('removes a funding source and its references while preserving other funding', () => {
     const initial = fixture();
     initial.projects.push({

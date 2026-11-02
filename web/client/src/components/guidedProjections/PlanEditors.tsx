@@ -6,6 +6,7 @@ import {
   TrashIcon,
 } from '@heroicons/react/24/outline';
 import {
+  isFundingSourceActiveInMonth,
   monthLabel,
   type FundingSource,
 } from '@/components/projections/projection.ts';
@@ -277,7 +278,17 @@ export function ExpenseEditor({
   const fundingId = projects.some((fund) => fund.id === selectedId)
     ? selectedId
     : (projects[0]?.id ?? '');
-  const months = planMonths(plan);
+  const project = projects.find((fund) => fund.id === fundingId);
+  // Balances only charge expenses while the project is active.
+  const months = planMonths(plan).filter(
+    (month) => !project || isFundingSourceActiveInMonth(project, month)
+  );
+  const projectEnd = project?.endDate.slice(0, 7);
+  const endsBeforePlan =
+    projectEnd !== undefined && projectEnd < planMonths(plan).at(-1)!;
+  const endLabel = endsBeforePlan
+    ? `Project end · ${monthLabel(projectEnd)}`
+    : 'Plan end';
   const rows = plan.expenses.filter(
     (expense) => expense.fundingId === fundingId
   );
@@ -531,12 +542,12 @@ export function ExpenseEditor({
             />
           ) : (
             <button
-              aria-label="Ending month: Plan end"
+              aria-label={`Ending month: ${endLabel}`}
               className="btn btn-ghost btn-sm w-full justify-start px-1 font-normal"
               onClick={() => setEditingEndId(expense.id)}
               type="button"
             >
-              Plan end
+              {endLabel}
             </button>
           ))}
       </td>
@@ -574,6 +585,12 @@ export function ExpenseEditor({
           </select>
         </div>
       </div>
+      {endsBeforePlan && (
+        <p className="mb-3 text-sm text-base-content/70" role="note">
+          This project ends in {monthLabel(projectEnd)}. Expenses after that
+          month are not counted.
+        </p>
+      )}
       <div className="overflow-x-auto">
         <table className="table walter-table table-sm">
           <colgroup>
@@ -620,7 +637,7 @@ export function ExpenseEditor({
                     </span>
                   </td>
                   <td>{monthLabel(expense.month)}</td>
-                  <td className="text-base-content/70">Plan end</td>
+                  <td className="text-base-content/70">{endLabel}</td>
                   {amountCell(expense)}
                   {totalAndRemove(expense)}
                 </tr>
