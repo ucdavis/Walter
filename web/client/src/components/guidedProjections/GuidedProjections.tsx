@@ -781,7 +781,7 @@ export default function GuidedProjections({
                   </div>
                 </nav>
                 <div
-                  className={`grid grid-cols-1 items-start gap-5 ${section === 'Funding' || section === 'Expenses' ? '@4xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]' : ''}`}
+                  className={`grid grid-cols-1 items-start gap-5 ${section === 'Funding' ? '@4xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]' : ''}`}
                 >
                   {section !== 'Overview' && (
                     <section

@@ -9,6 +9,7 @@ import {
   monthLabel,
   type FundingSource,
 } from '@/components/projections/projection.ts';
+import { projectExpenditureCategoryColor } from '@/components/project/projectChartColors.ts';
 import type { ProjectionLookups } from '@/queries/projections.ts';
 import { useRevealItem } from '@/shared/hooks/useRevealItem.ts';
 import FundingSourceDetailsModal from '@/components/guidedProjections/FundingSourceDetailsModal.tsx';
@@ -262,6 +263,19 @@ export function ExpenseEditor({
 }) {
   const categoryListId = useId();
   const { registerItem, revealItem } = useRevealItem();
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const showCategories = Boolean(plan.serverProjection);
+  const months = planMonths(plan);
+  const categories = [...new Set(plan.expenses.map(expenseCategory))].sort();
+  const activeCategories = selectedCategories.filter((category) =>
+    categories.includes(category)
+  );
+  const visibleExpenses =
+    activeCategories.length === 0
+      ? plan.expenses
+      : plan.expenses.filter((expense) =>
+          activeCategories.includes(expenseCategory(expense))
+        );
   const patch = (id: string, changes: Partial<PlanExpense>) =>
     update({
       ...plan,
@@ -269,11 +283,7 @@ export function ExpenseEditor({
         expense.id === id ? { ...expense, ...changes } : expense
       ),
     });
-  function add(
-    name = 'Other expense',
-    amount = 500,
-    frequency: 'monthly' | 'once' = 'monthly'
-  ) {
+  function add(name: string, amount: number, frequency: 'monthly' | 'once') {
     const id = crypto.randomUUID();
     update({
       ...plan,
@@ -302,8 +312,15 @@ export function ExpenseEditor({
         },
       ],
     });
+    setSelectedCategories([]);
     revealItem(id);
   }
+  const toggleCategory = (category: string) =>
+    setSelectedCategories(
+      activeCategories.includes(category)
+        ? activeCategories.filter((selected) => selected !== category)
+        : [...activeCategories, category]
+    );
   return (
     <>
       <div className="mb-5 flex flex-wrap items-start justify-between gap-4 [&_p]:mt-1 text-base">
@@ -316,19 +333,29 @@ export function ExpenseEditor({
             Plan for regular costs and one-time purchases.
           </p>
         </div>
-        <button className="btn btn-outline" onClick={() => add()} type="button">
-          <PlusIcon className="size-5 shrink-0" /> Add expense
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            className="btn btn-outline btn-sm"
+            onClick={() => add('Monthly expense', 500, 'monthly')}
+            type="button"
+          >
+            <PlusIcon className="size-4 shrink-0" /> Add monthly
+          </button>
+          <button
+            className="btn btn-outline btn-sm"
+            onClick={() => add('One-time expense', 2500, 'once')}
+            type="button"
+          >
+            <PlusIcon className="size-4 shrink-0" /> Add one-time
+          </button>
+        </div>
       </div>
       {plan.serverProjection && (
         <datalist id={categoryListId}>
           {[
             ...new Set([
               ...(lookups?.expenditureCategories ?? []),
-              ...plan.expenses.map(
-                (expense) =>
-                  expense.serverExpense?.expenditureCategory ?? 'Other expenses'
-              ),
+              ...categories,
             ]),
           ].map((category) => (
             <option key={category} value={category} />
@@ -347,7 +374,10 @@ export function ExpenseEditor({
             Start with a common expense, or continue with staffing only.
           </p>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-2.5 [&>button]:flex [&>button]:items-center [&>button]:gap-1.5 [&>button]:rounded-md [&>button]:border [&>button]:border-main-border [&>button]:bg-base-200 [&>button]:px-3 [&>button]:py-2 [&>button]:text-base-content/70 text-sm">
-            <button onClick={() => add('Lab supplies', 500)} type="button">
+            <button
+              onClick={() => add('Lab supplies', 500, 'monthly')}
+              type="button"
+            >
               <PlusIcon className="size-5 shrink-0" /> Lab supplies
             </button>
             <button
@@ -365,193 +395,329 @@ export function ExpenseEditor({
           </div>
         </div>
       ) : (
-        <div className="grid gap-5">
-          {plan.expenses.map((expense) => (
+        <>
+          {showCategories && (
             <div
-              className="scroll-mt-24 rounded-lg border border-main-border bg-base-200 p-5 sm:p-6"
-              key={expense.id}
-              ref={(element) => registerItem(expense.id, element)}
+              aria-label="Filter by expenditure category"
+              className="tabs tabs-box tabs-sm mb-4 flex w-fit flex-wrap"
+              role="group"
             >
-              {expense.serverExpense?.kind === 'Projected' && (
-                <p className="mb-4 text-sm text-base-content/70">
-                  Based on the {plan.historyMonths}-month spending average.
-                  Changing the history window replaces this estimate. Editing
-                  its dates or frequency makes it a planned expense.
-                </p>
-              )}
-              <div className="mb-5 flex items-end gap-4">
-                <label className="flex min-w-0 flex-col gap-2 font-medium min-w-0 flex-1 text-sm">
-                  Expense name
-                  <input
-                    className="input w-full text-base"
-                    onChange={(event) =>
-                      patch(expense.id, { name: event.target.value })
-                    }
-                    value={expense.name}
-                  />
-                </label>
-                <button
-                  aria-label={`Remove ${expense.name}`}
-                  className="btn btn-ghost btn-square shrink-0 text-base-content/70 hover:bg-error/10 hover:text-error"
-                  onClick={() =>
-                    update({
-                      ...plan,
-                      expenses: plan.expenses.filter(
-                        (item) => item.id !== expense.id
-                      ),
-                    })
-                  }
-                  type="button"
-                >
-                  <TrashIcon className="size-5 shrink-0" />
-                </button>
-              </div>
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                <label className="flex min-w-0 flex-col gap-2 font-medium text-sm">
-                  Amount
-                  <input
-                    className="input w-full text-base"
-                    min={0}
-                    onChange={(event) =>
-                      patch(expense.id, {
-                        amount: Math.max(0, readNumber(event.target.value)),
-                      })
-                    }
-                    step={100}
-                    type="number"
-                    value={expense.amount}
-                  />
-                </label>
-                <label className="flex min-w-0 flex-col gap-2 font-medium text-sm">
-                  Frequency
-                  <select
-                    className="select w-full text-base"
-                    onChange={(event) =>
-                      patch(expense.id, {
-                        frequency: event.target.value as 'monthly' | 'once',
-                        ...(expense.serverExpense && {
-                          serverExpense: {
-                            ...expense.serverExpense,
-                            kind:
-                              event.target.value === 'once'
-                                ? 'OneTime'
-                                : 'Monthly',
-                          },
-                        }),
-                      })
-                    }
-                    value={expense.frequency}
+              <button
+                aria-pressed={activeCategories.length === 0}
+                className={`tab ${activeCategories.length === 0 ? 'tab-active' : ''}`}
+                onClick={() => setSelectedCategories([])}
+                type="button"
+              >
+                All Categories
+              </button>
+              {categories.map((category) => {
+                const isSelected = activeCategories.includes(category);
+                return (
+                  <button
+                    aria-pressed={isSelected}
+                    className={`tab ${isSelected ? 'tab-active' : ''}`}
+                    key={category}
+                    onClick={() => toggleCategory(category)}
+                    type="button"
                   >
-                    <option value="monthly">Every month</option>
-                    <option value="once">One time</option>
-                  </select>
-                </label>
-                <label className="flex min-w-0 flex-col gap-2 font-medium text-sm">
-                  {expense.frequency === 'monthly' ? 'Starting month' : 'Month'}
-                  <input
-                    className="input w-full text-base"
-                    onChange={(event) =>
-                      patch(expense.id, {
-                        month: event.target.value || plan.startMonth,
-                        ...(expense.serverExpense && {
-                          serverExpense: {
-                            ...expense.serverExpense,
-                            kind:
-                              expense.frequency === 'once'
-                                ? 'OneTime'
-                                : 'Monthly',
-                          },
-                        }),
-                      })
-                    }
-                    type="month"
-                    value={expense.month}
-                  />
-                </label>
-                {expense.serverExpense && (
-                  <label className="flex min-w-0 flex-col gap-2 font-medium text-sm">
-                    Expenditure category
-                    <input
-                      className="input w-full text-base"
-                      list={categoryListId}
-                      onChange={(event) =>
-                        patch(expense.id, {
-                          serverExpense: {
-                            ...expense.serverExpense!,
-                            expenditureCategory: event.target.value,
-                          },
-                        })
-                      }
-                      value={expense.serverExpense.expenditureCategory}
+                    <span
+                      className="mr-2 inline-block size-3 rounded-sm"
+                      style={{
+                        backgroundColor:
+                          projectExpenditureCategoryColor(category),
+                      }}
                     />
-                  </label>
-                )}
-                {expense.serverExpense && expense.frequency === 'monthly' && (
-                  <label className="flex min-w-0 flex-col gap-2 font-medium text-sm">
-                    Ending month
-                    <input
-                      aria-label="Ending month"
-                      className="input w-full text-base"
-                      min={expense.month}
-                      onChange={(event) =>
-                        patch(expense.id, {
-                          serverExpense: {
-                            ...expense.serverExpense!,
-                            endMonth: event.target.value
-                              ? `${event.target.value}-01`
-                              : null,
-                            kind: 'Monthly',
-                          },
-                        })
-                      }
-                      type="month"
-                      value={expense.serverExpense.endMonth?.slice(0, 7) ?? ''}
-                    />
-                    <span className="font-normal text-base-content/70">
-                      Leave blank to continue through the project end.
-                    </span>
-                  </label>
-                )}
-                <label className="flex min-w-0 flex-col gap-2 font-medium text-sm">
-                  Funding project
-                  <select
-                    className="select w-full text-base"
-                    onChange={(event) =>
-                      patch(expense.id, { fundingId: event.target.value })
-                    }
-                    value={expense.fundingId}
-                  >
-                    {!plan.selectedFunding.includes(expense.fundingId) && (
-                      <option value={expense.fundingId}>
-                        {plan.funding.find(
-                          (fund) => fund.id === expense.fundingId
-                        )?.name ?? 'Project not included'}{' '}
-                        · excluded
-                      </option>
-                    )}
-                    {plan.funding
-                      .filter((fund) => plan.selectedFunding.includes(fund.id))
-                      .map((fund) => (
-                        <option key={fund.id} value={fund.id}>
-                          {fund.name}
-                          {fund.serverProject?.taskNumber &&
-                            ` · Task ${fund.serverProject.taskNumber}`}
-                        </option>
-                      ))}
-                  </select>
-                </label>
-              </div>
+                    {category}
+                  </button>
+                );
+              })}
             </div>
-          ))}
-        </div>
+          )}
+          <div className="overflow-x-auto">
+            <table className="table walter-table table-sm">
+              <colgroup>
+                {showCategories && <col className="w-44" />}
+                <col className="w-48" />
+                <col className="w-32" />
+                <col className="w-36" />
+                <col className="w-36" />
+                <col className="w-44" />
+                <col className="w-32" />
+                <col className="w-28" />
+                <col className="w-12" />
+              </colgroup>
+              <thead>
+                <tr>
+                  {showCategories && <th>Expenditure Category</th>}
+                  <th>Description</th>
+                  <th>Type</th>
+                  <th>Start</th>
+                  <th>End</th>
+                  <th>Funding Project</th>
+                  <th className="text-right">Amount</th>
+                  <th className="text-right">Plan Total</th>
+                  <th>
+                    <span className="sr-only">Remove</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {visibleExpenses.map((expense) => {
+                  const projected = expense.serverExpense?.kind === 'Projected';
+                  return (
+                    <tr
+                      className="hover:bg-base-200/50"
+                      key={expense.id}
+                      style={{
+                        borderLeft: `3px solid ${projectExpenditureCategoryColor(
+                          expenseCategory(expense)
+                        )}`,
+                      }}
+                    >
+                      {showCategories && (
+                        <td>
+                          <input
+                            aria-label="Expenditure category"
+                            className="input input-sm w-full"
+                            list={categoryListId}
+                            onChange={(event) =>
+                              patch(expense.id, {
+                                serverExpense: {
+                                  ...expense.serverExpense!,
+                                  expenditureCategory: event.target.value,
+                                },
+                              })
+                            }
+                            value={expense.serverExpense?.expenditureCategory}
+                          />
+                        </td>
+                      )}
+                      <td
+                        className="scroll-mt-24"
+                        ref={(element) => registerItem(expense.id, element)}
+                      >
+                        <input
+                          aria-label="Expense name"
+                          className="input input-sm w-full"
+                          onChange={(event) =>
+                            patch(expense.id, { name: event.target.value })
+                          }
+                          value={expense.name}
+                        />
+                        {projected && (
+                          <p className="mt-1 text-xs text-base-content/70">
+                            Based on the {plan.historyMonths}-month spending
+                            average
+                          </p>
+                        )}
+                      </td>
+                      <td>
+                        <select
+                          aria-label="Frequency"
+                          className="select select-sm w-full"
+                          onChange={(event) => {
+                            const frequency = event.target.value;
+                            if (
+                              frequency !== 'monthly' &&
+                              frequency !== 'once'
+                            ) {
+                              return;
+                            }
+                            patch(expense.id, {
+                              frequency,
+                              ...(expense.serverExpense && {
+                                serverExpense: {
+                                  ...expense.serverExpense,
+                                  kind:
+                                    frequency === 'once'
+                                      ? 'OneTime'
+                                      : 'Monthly',
+                                },
+                              }),
+                            });
+                          }}
+                          value={projected ? 'projected' : expense.frequency}
+                        >
+                          {projected && (
+                            <option value="projected">Projected</option>
+                          )}
+                          <option value="monthly">Monthly</option>
+                          <option value="once">One time</option>
+                        </select>
+                      </td>
+                      <td>
+                        <input
+                          aria-label={
+                            expense.frequency === 'monthly'
+                              ? 'Starting month'
+                              : 'Month'
+                          }
+                          className="input input-sm w-full"
+                          onChange={(event) =>
+                            patch(expense.id, {
+                              month: event.target.value || plan.startMonth,
+                              ...(expense.serverExpense && {
+                                serverExpense: {
+                                  ...expense.serverExpense,
+                                  kind:
+                                    expense.frequency === 'once'
+                                      ? 'OneTime'
+                                      : 'Monthly',
+                                },
+                              }),
+                            })
+                          }
+                          type="month"
+                          value={expense.month}
+                        />
+                      </td>
+                      <td>
+                        {expense.serverExpense &&
+                        expense.frequency === 'monthly' ? (
+                          <input
+                            aria-label="Ending month"
+                            className="input input-sm w-full"
+                            min={expense.month}
+                            onChange={(event) =>
+                              patch(expense.id, {
+                                serverExpense: {
+                                  ...expense.serverExpense!,
+                                  endMonth: event.target.value
+                                    ? `${event.target.value}-01`
+                                    : null,
+                                  kind: 'Monthly',
+                                },
+                              })
+                            }
+                            title="Leave blank to continue through the project end."
+                            type="month"
+                            value={
+                              expense.serverExpense.endMonth?.slice(0, 7) ?? ''
+                            }
+                          />
+                        ) : null}
+                      </td>
+                      <td>
+                        <select
+                          aria-label="Funding project"
+                          className="select select-sm w-full"
+                          onChange={(event) =>
+                            patch(expense.id, { fundingId: event.target.value })
+                          }
+                          value={expense.fundingId}
+                        >
+                          {!plan.selectedFunding.includes(
+                            expense.fundingId
+                          ) && (
+                            <option value={expense.fundingId}>
+                              {plan.funding.find(
+                                (fund) => fund.id === expense.fundingId
+                              )?.name ?? 'Project not included'}{' '}
+                              · excluded
+                            </option>
+                          )}
+                          {plan.funding
+                            .filter((fund) =>
+                              plan.selectedFunding.includes(fund.id)
+                            )
+                            .map((fund) => (
+                              <option key={fund.id} value={fund.id}>
+                                {fund.name}
+                                {fund.serverProject?.taskNumber &&
+                                  ` · Task ${fund.serverProject.taskNumber}`}
+                              </option>
+                            ))}
+                        </select>
+                      </td>
+                      <td>
+                        <label className="input input-sm w-full">
+                          <span className="text-base-content/50">$</span>
+                          <input
+                            aria-label="Amount"
+                            className="text-right"
+                            min={0}
+                            onChange={(event) =>
+                              patch(expense.id, {
+                                amount: Math.max(
+                                  0,
+                                  readNumber(event.target.value)
+                                ),
+                              })
+                            }
+                            step={100}
+                            type="number"
+                            value={expense.amount}
+                          />
+                          {expense.frequency === 'monthly' && (
+                            <span className="text-xs text-base-content/50">
+                              /mo
+                            </span>
+                          )}
+                        </label>
+                      </td>
+                      <td className="text-right whitespace-nowrap">
+                        {money(planTotal(expense, months))}
+                      </td>
+                      <td>
+                        <button
+                          aria-label={`Remove ${expense.name}`}
+                          className="btn btn-ghost btn-square btn-sm text-base-content/70 hover:bg-error/10 hover:text-error"
+                          onClick={() =>
+                            update({
+                              ...plan,
+                              expenses: plan.expenses.filter(
+                                (item) => item.id !== expense.id
+                              ),
+                            })
+                          }
+                          type="button"
+                        >
+                          <TrashIcon className="size-4 shrink-0" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              <tfoot>
+                <tr className="totaltr">
+                  <td colSpan={showCategories ? 7 : 6}>Total over plan</td>
+                  <td className="text-right whitespace-nowrap">
+                    {money(
+                      visibleExpenses.reduce(
+                        (sum, expense) => sum + planTotal(expense, months),
+                        0
+                      )
+                    )}
+                  </td>
+                  <td />
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </>
       )}
       <p className="mt-5 leading-relaxed text-base-content/70 text-sm">
         {plan.serverProjection
-          ? 'Monthly costs repeat through the selected ending month or project end. Spending estimates use the saved snapshot and selected history window.'
+          ? 'Monthly costs repeat through the selected ending month or project end. Spending estimates use the saved snapshot and selected history window. Editing a projected estimate’s dates or type makes it a planned expense.'
           : 'In this demo, other expenses are direct costs only. Monthly costs repeat from the selected month until the plan or funding source ends.'}
       </p>
     </>
   );
+}
+
+function expenseCategory(expense: PlanExpense) {
+  return expense.serverExpense?.expenditureCategory ?? 'Other expenses';
+}
+
+function planTotal(expense: PlanExpense, months: string[]) {
+  const endMonth = expense.serverExpense?.endMonth?.slice(0, 7);
+  const activeMonths = months.filter((month) =>
+    expense.frequency === 'once'
+      ? month === expense.month
+      : month >= expense.month && (!endMonth || month <= endMonth)
+  ).length;
+  return activeMonths * expense.amount;
 }
 
 function readNumber(value: string) {

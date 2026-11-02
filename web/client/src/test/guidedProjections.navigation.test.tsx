@@ -64,7 +64,7 @@ describe('Guided projection plan navigation', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
     section('Expenses');
-    fireEvent.click(screen.getByRole('button', { name: 'Add expense' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add monthly' }));
     fireEvent.change(screen.getByLabelText('Funding project'), {
       target: {
         value: screen
