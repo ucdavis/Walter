@@ -297,7 +297,7 @@ describe('guided projections with server persistence', () => {
     }
   );
 
-  it.each(['Funding', 'Expenses'])(
+  it.each(['Funding'])(
     'keeps the %s tab active when changing project focus',
     async (name) => {
       mockSavedProjections();

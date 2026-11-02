@@ -829,7 +829,7 @@ export default function GuidedProjections({
                       )}
                     </section>
                   )}
-                  {section !== 'Staffing' && (
+                  {section !== 'Staffing' && section !== 'Expenses' && (
                     <div
                       className={`min-w-0 ${section === 'Overview' ? '' : '@4xl:sticky @4xl:top-24'}`}
                     >
