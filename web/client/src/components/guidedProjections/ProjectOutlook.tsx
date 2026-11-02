@@ -1,8 +1,20 @@
+import { useId } from 'react';
 import {
   ArrowRightIcon,
   CheckCircleIcon,
   ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline';
+import {
+  Area,
+  CartesianGrid,
+  ComposedChart,
+  Line,
+  ReferenceLine,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
 import { money, shortMoney } from '@/components/guidedProjections/defaults.ts';
 import { monthLabel } from '@/components/projections/projection.ts';
 import type {
@@ -21,7 +33,14 @@ export function LiveResults({
   projectId: string | null;
   result: PlanResult;
 }) {
+  const gradient = useId();
   const selected = result.funds.find((fund) => fund.id === projectId);
+  const points = result.chart.map((point, index) => ({
+    month: point.month,
+    ...Object.fromEntries(
+      result.funds.map((fund) => [fund.id, fund.chart[index].balance])
+    ),
+  }));
   const gaps = result.funds.filter((fund) => fund.firstDeficit);
   const endingMonth = result.chart.at(-1)?.month;
   return (
@@ -40,7 +59,7 @@ export function LiveResults({
                 : 'Select a project to see its outlook'}
         </h2>
         <p className="mt-2 text-sm leading-relaxed text-base-content/70">
-          Balances stay separate. Select a project below to explore.
+          Balances stay separate. Select a line or a project below to explore.
         </p>
       </div>
       <label className="flex min-w-0 flex-col gap-2 font-medium my-5 grid gap-1.5 text-sm">
@@ -82,6 +101,118 @@ export function LiveResults({
           </p>
         </>
       )}
+      <div
+        aria-label={
+          selected
+            ? `Monthly remaining balance for ${selected.name}`
+            : 'Monthly remaining balances by project'
+        }
+        className="mt-4 mb-1 h-60 w-full"
+      >
+        <ResponsiveContainer height="100%" width="100%">
+          <ComposedChart
+            accessibilityLayer
+            data={points}
+            margin={{ bottom: 0, left: 0, right: 12, top: 28 }}
+          >
+            <defs>
+              <linearGradient id={gradient} x1="0" x2="0" y1="0" y2="1">
+                <stop
+                  offset="0%"
+                  stopColor={selected?.color ?? 'var(--color-primary)'}
+                  stopOpacity={0.18}
+                />
+                <stop
+                  offset="100%"
+                  stopColor={selected?.color ?? 'var(--color-primary)'}
+                  stopOpacity={0.01}
+                />
+              </linearGradient>
+            </defs>
+            <CartesianGrid stroke="var(--color-main-border)" vertical={false} />
+            <XAxis
+              axisLine={false}
+              dataKey="month"
+              minTickGap={24}
+              tick={{ className: 'text-sm fill-base-content/70' }}
+              tickFormatter={(month: string) => monthLabel(month).split(' ')[0]}
+              tickLine={false}
+            />
+            <YAxis
+              axisLine={false}
+              tick={{ className: 'text-sm fill-base-content/70' }}
+              tickFormatter={shortMoney}
+              tickLine={false}
+              width={70}
+            />
+            <Tooltip
+              contentStyle={{
+                border: '1px solid var(--color-main-border)',
+                borderRadius: 8,
+                maxWidth: 300,
+                whiteSpace: 'normal',
+              }}
+              formatter={(value) => money(Number(value))}
+              labelFormatter={(month) => monthLabel(String(month))}
+              wrapperClassName="text-sm"
+            />
+            <ReferenceLine
+              label={{
+                className: 'text-xs fill-error',
+                position: 'insideTopRight',
+                value: 'Zero balance',
+              }}
+              stroke="var(--color-error)"
+              strokeDasharray="4 4"
+              y={0}
+            />
+            {selected?.firstDeficit && (
+              <ReferenceLine
+                label={{
+                  className: 'text-xs fill-error',
+                  position: 'top',
+                  value: `Shortfall · ${monthLabel(selected.firstDeficit)}`,
+                }}
+                stroke="var(--color-error)"
+                strokeDasharray="3 4"
+                x={selected.firstDeficit}
+              />
+            )}
+            {selected ? (
+              <Area
+                dataKey={selected.id}
+                fill={`url(#${gradient})`}
+                isAnimationActive={false}
+                name={selected.name}
+                stroke={selected.color}
+                strokeWidth={2.5}
+                type="linear"
+              />
+            ) : (
+              result.funds.map((fund) => (
+                <Line
+                  activeDot={{ onClick: () => onProject(fund.id), r: 6 }}
+                  dataKey={fund.id}
+                  dot={false}
+                  isAnimationActive={false}
+                  key={fund.id}
+                  name={fund.name}
+                  onClick={() => onProject(fund.id)}
+                  stroke={fund.color}
+                  strokeWidth={3}
+                  style={{ cursor: 'pointer' }}
+                  type="linear"
+                />
+              ))
+            )}
+          </ComposedChart>
+        </ResponsiveContainer>
+      </div>
+      <p className="mt-1.5 mb-3.5 text-center text-sm text-base-content/70">
+        Month-end balances ·{' '}
+        {result.chart[0] && monthLabel(result.chart[0].month)} to{' '}
+        {endingMonth && monthLabel(endingMonth)}
+      </p>
       {selected ? (
         <div className="grid gap-3 border-t border-main-border pt-3.5 [&>div]:flex [&>div]:items-center [&>div]:justify-between [&>div]:gap-3 [&>div:last-child]:border-t [&>div:last-child]:border-main-border [&>div:last-child]:pt-3 text-sm">
           <div>
@@ -190,10 +321,7 @@ export function ProjectDetail({
             className="mt-0.5 size-6 shrink-0"
           />
         ) : (
-          <CheckCircleIcon
-            aria-hidden="true"
-            className="mt-0.5 size-6 shrink-0"
-          />
+          <CheckCircleIcon aria-hidden="true" className="mt-0.5 size-6 shrink-0" />
         )}
         <div className="min-w-0">
           <strong className="block text-base font-semibold text-base-content">
