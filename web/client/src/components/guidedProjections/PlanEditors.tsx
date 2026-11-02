@@ -9,11 +9,11 @@ import {
   monthLabel,
   type FundingSource,
 } from '@/components/projections/projection.ts';
-import { projectExpenditureCategoryColor } from '@/components/project/projectChartColors.ts';
-import type {
-  ProjectionExpense,
-  ProjectionLookups,
-} from '@/queries/projections.ts';
+import {
+  EXPENDITURE_CATEGORIES,
+  projectExpenditureCategoryColor,
+} from '@/components/project/projectChartColors.ts';
+import type { ProjectionExpense } from '@/queries/projections.ts';
 import { useRevealItem } from '@/shared/hooks/useRevealItem.ts';
 import FundingSourceDetailsModal from '@/components/guidedProjections/FundingSourceDetailsModal.tsx';
 import {
@@ -256,18 +256,15 @@ export function FundingEditor({
 }
 
 export function ExpenseEditor({
-  lookups,
   plan,
   projectId,
   update,
 }: {
-  lookups?: ProjectionLookups;
   plan: ProjectionPlan;
   /** Project to show first, such as the one being viewed in the workspace. */
   projectId?: string | null;
   update: (plan: ProjectionPlan) => void;
 }) {
-  const categoryListId = useId();
   const projectSelectId = useId();
   const [editingEndId, setEditingEndId] = useState<string | null>(null);
   const { registerItem, revealItem } = useRevealItem();
@@ -288,15 +285,7 @@ export function ExpenseEditor({
     .filter(isProjected)
     .sort((a, b) => expenseCategory(a).localeCompare(expenseCategory(b)));
   const plannedRows = rows.filter((expense) => !isProjected(expense));
-  const categoryOptions = [
-    ...new Set([
-      ...(lookups?.expenditureCategories ?? []),
-      ...plan.expenses.map(expenseCategory),
-    ]),
-  ].sort();
-  const defaultCategory =
-    categoryOptions.find((category) => category.startsWith('03 ')) ??
-    'Other expenses';
+  const defaultCategory = EXPENSE_CATEGORIES[0];
   const patch = (id: string, changes: Partial<PlanExpense>) =>
     update({
       ...plan,
@@ -385,11 +374,6 @@ export function ExpenseEditor({
       </td>
     </>
   );
-  const rowStyle = (expense: PlanExpense) => ({
-    borderLeft: `3px solid ${projectExpenditureCategoryColor(
-      expenseCategory(expense)
-    )}`,
-  });
   const ghostInput = 'input input-ghost input-sm w-full px-1';
   return (
     <>
@@ -421,15 +405,10 @@ export function ExpenseEditor({
           </select>
         </div>
       </div>
-      <datalist id={categoryListId}>
-        {categoryOptions.map((category) => (
-          <option key={category} value={category} />
-        ))}
-      </datalist>
       <div className="overflow-x-auto">
         <table className="table walter-table table-sm">
           <colgroup>
-            <col className="w-60" />
+            <col className="w-80" />
             <col />
             <col className="w-28" />
             <col className="w-36" />
@@ -517,17 +496,27 @@ export function ExpenseEditor({
                 style={rowStyle(expense)}
               >
                 <td>
-                  <input
+                  <select
                     aria-label="Expenditure category"
-                    className={ghostInput}
-                    list={categoryListId}
+                    className="select select-ghost select-sm w-full px-1"
                     onChange={(event) =>
                       patchServer(expense, {
                         expenditureCategory: event.target.value,
                       })
                     }
                     value={expenseCategory(expense)}
-                  />
+                  >
+                    {[
+                      ...EXPENSE_CATEGORIES,
+                      ...(isStandardCategory(expenseCategory(expense))
+                        ? []
+                        : [expenseCategory(expense)]),
+                    ].map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                    ))}
+                  </select>
                 </td>
                 <td
                   className="scroll-mt-24"
@@ -642,6 +631,23 @@ export function ExpenseEditor({
       </p>
     </>
   );
+}
+
+// Salary and fringe come from staffing, so expenses use the remaining categories.
+const EXPENSE_CATEGORIES: string[] = EXPENDITURE_CATEGORIES.filter(
+  (category) => !category.startsWith('01 ') && !category.startsWith('02 ')
+);
+
+function isStandardCategory(category: string) {
+  return EXPENSE_CATEGORIES.includes(category);
+}
+
+function rowStyle(expense: PlanExpense) {
+  return {
+    borderLeft: `3px solid ${projectExpenditureCategoryColor(
+      expenseCategory(expense)
+    )}`,
+  };
 }
 
 function isProjected(expense: PlanExpense) {

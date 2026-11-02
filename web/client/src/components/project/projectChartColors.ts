@@ -25,6 +25,20 @@ export const PROJECT_EXPENDITURE_CATEGORY_COLORS = {
   '07 - Fellowships': 'var(--color-ucd-putahcreek)',
 } as const;
 
+/** The standard expenditure categories, in ledger order. */
+export const EXPENDITURE_CATEGORIES = [
+  '01 - Salaries and Wages',
+  '02 - Fringe Benefits',
+  '03 - Supplies / Services / Other Expenses',
+  '04 - Equipment and Facilities',
+  '05 - Contracts (Subrecipients)',
+  '06 - UC Multi-Campus',
+  '07 - Travel',
+  '08 - Fellowship & Scholarships',
+  '09 - Indirect Costs',
+  '99 - Uncategorized',
+] as const;
+
 export const PROJECT_PERSONNEL_COLOR = PROJECT_SERIES_COLORS.Personnel;
 const PROJECT_UNKNOWN_CATEGORY_COLOR = 'var(--color-ucd-rose)';
 

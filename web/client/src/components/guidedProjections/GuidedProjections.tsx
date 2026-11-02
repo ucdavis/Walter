@@ -413,7 +413,6 @@ export default function GuidedProjections({
               )}
               {step === 2 && (
                 <ExpenseEditor
-                  lookups={remote?.lookups}
                   plan={draft}
                   update={(next) =>
                     update({ ...draft, expenses: next.expenses })
@@ -813,7 +812,6 @@ export default function GuidedProjections({
                       )}
                       {section === 'Expenses' && (
                         <ExpenseEditor
-                          lookups={remote?.lookups}
                           plan={draft}
                           projectId={projectId}
                           update={(next) =>
