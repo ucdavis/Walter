@@ -269,6 +269,7 @@ export function ExpenseEditor({
 }) {
   const categoryListId = useId();
   const projectSelectId = useId();
+  const [editingEndId, setEditingEndId] = useState<string | null>(null);
   const { registerItem, revealItem } = useRevealItem();
   const projects = plan.funding.filter((fund) =>
     plan.selectedFunding.includes(fund.id)
@@ -350,14 +351,15 @@ export function ExpenseEditor({
         <input
           aria-label="Amount"
           className="w-16 text-right"
-          min={0}
+          inputMode="numeric"
           onChange={(event) =>
             patch(expense.id, {
-              amount: Math.max(0, readNumber(event.target.value)),
+              amount: Math.max(
+                0,
+                readNumber(event.target.value.replaceAll(/[$,]/g, ''))
+              ),
             })
           }
-          step={100}
-          type="number"
           value={expense.amount}
         />
         {expense.frequency === 'monthly' && (
@@ -579,23 +581,38 @@ export function ExpenseEditor({
                   />
                 </td>
                 <td>
-                  {expense.frequency === 'monthly' && (
-                    <input
-                      aria-label="Ending month"
-                      className={`${ghostInput} ${expense.serverExpense?.endMonth ? '' : 'text-base-content/30'}`}
-                      min={expense.month}
-                      onChange={(event) =>
-                        patchServer(expense, {
-                          endMonth: event.target.value
-                            ? `${event.target.value}-01`
-                            : null,
-                        })
-                      }
-                      title="Leave blank to continue through the project end."
-                      type="month"
-                      value={expense.serverExpense?.endMonth?.slice(0, 7) ?? ''}
-                    />
-                  )}
+                  {expense.frequency === 'monthly' &&
+                    (expense.serverExpense?.endMonth ||
+                    editingEndId === expense.id ? (
+                      <input
+                        aria-label="Ending month"
+                        autoFocus={!expense.serverExpense?.endMonth}
+                        className={ghostInput}
+                        min={expense.month}
+                        onBlur={() => setEditingEndId(null)}
+                        onChange={(event) =>
+                          patchServer(expense, {
+                            endMonth: event.target.value
+                              ? `${event.target.value}-01`
+                              : null,
+                          })
+                        }
+                        title="Clear to run through the plan end."
+                        type="month"
+                        value={
+                          expense.serverExpense?.endMonth?.slice(0, 7) ?? ''
+                        }
+                      />
+                    ) : (
+                      <button
+                        aria-label="Ending month: Plan end"
+                        className="btn btn-ghost btn-sm w-full justify-start px-1 font-normal"
+                        onClick={() => setEditingEndId(expense.id)}
+                        type="button"
+                      >
+                        Plan end
+                      </button>
+                    ))}
                 </td>
                 {amountCell(expense)}
                 {totalAndRemove(expense)}
