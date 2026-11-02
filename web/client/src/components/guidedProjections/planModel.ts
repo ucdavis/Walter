@@ -207,7 +207,9 @@ export function projectGuidedPlan(plan: ProjectionPlan) {
             expense.fundingId === source.id &&
             isFundingSourceActiveInMonth(source, month) &&
             (expense.frequency === 'monthly'
-              ? month >= expense.month
+              ? month >= expense.month &&
+                (!expense.serverExpense?.endMonth ||
+                  month <= expense.serverExpense.endMonth.slice(0, 7))
               : month === expense.month)
         )
         .reduce((sum, expense) => sum + expense.amount, 0);

@@ -64,16 +64,18 @@ describe('Guided projection plan navigation', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
     section('Expenses');
+    const pickFutureGrant = () =>
+      fireEvent.change(screen.getByLabelText('Project'), {
+        target: {
+          value: screen
+            .getByRole('option', { name: 'Future grant' })
+            .getAttribute('value'),
+        },
+      });
+    pickFutureGrant();
     fireEvent.click(screen.getByRole('button', { name: 'Add monthly' }));
-    fireEvent.change(screen.getByLabelText('Funding project'), {
-      target: {
-        value: screen
-          .getByRole('option', { name: 'Future grant' })
-          .getAttribute('value'),
-      },
-    });
-    expect(screen.getByLabelText('Funding project')).toHaveDisplayValue(
-      'Future grant'
+    expect(screen.getByLabelText('Expense name')).toHaveValue(
+      'Monthly expense'
     );
     view.unmount();
     renderPlans();
@@ -83,8 +85,9 @@ describe('Guided projection plan navigation', () => {
       screen.getByLabelText('Future grant available balance')
     ).toHaveTextContent('$125,000');
     section('Expenses');
-    expect(screen.getByLabelText('Funding project')).toHaveDisplayValue(
-      'Future grant'
+    pickFutureGrant();
+    expect(screen.getByLabelText('Expense name')).toHaveValue(
+      'Monthly expense'
     );
   });
 

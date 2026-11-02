@@ -81,7 +81,7 @@ export default function GuidedProjections({
 }) {
   // Browser storage is exclusively for the synthetic demo, never real personnel data.
   const storageKey = initialPlan
-    ? `walter-hybrid-v1-${initialPlan.asOf}-${initialPlan.fundingSources.map((fund) => fund.startingBalance).join('-')}`
+    ? `walter-hybrid-v2-${initialPlan.asOf}-${initialPlan.fundingSources.map((fund) => fund.startingBalance).join('-')}`
     : '';
   const baseline = remote
     ? (remote.baseline ?? remote.plans[0])
@@ -815,6 +815,7 @@ export default function GuidedProjections({
                         <ExpenseEditor
                           lookups={remote?.lookups}
                           plan={draft}
+                          projectId={projectId}
                           update={(next) =>
                             update({ ...draft, expenses: next.expenses })
                           }

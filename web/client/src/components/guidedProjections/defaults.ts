@@ -63,7 +63,22 @@ export function createPlanDefaults(
   name = 'Untitled plan'
 ): LegacyPlan {
   return {
-    expenses: [],
+    expenses: (data.runRates ?? []).map((rate) => ({
+      amount: rate.monthlyAmount,
+      frequency: 'monthly',
+      fundingId: rate.fundingSourceId,
+      id: crypto.randomUUID(),
+      month: data.asOf,
+      name: rate.expenditureCategory,
+      serverExpense: {
+        amount: rate.monthlyAmount,
+        description: null,
+        endMonth: null,
+        expenditureCategory: rate.expenditureCategory,
+        kind: 'Projected',
+        startMonth: null,
+      },
+    })),
     funding: structuredClone(data.fundingSources),
     id: crypto.randomUUID(),
     months: 12,

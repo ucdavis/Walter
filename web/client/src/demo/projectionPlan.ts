@@ -13,7 +13,20 @@ export type ProjectionDemoPlan = {
   ownerName: string;
   people: Person[];
   planningEndDate: string;
+  /** Average monthly non-personnel spending per project and category. */
+  runRates?: DemoRunRate[];
 };
+
+export type DemoRunRate = {
+  expenditureCategory: string;
+  fundingSourceId: string;
+  monthlyAmount: number;
+};
+
+export const DEMO_HISTORY_MONTHS = 6;
+
+// Staffing covers salary, fringe, and indirect costs, so these are not run rates.
+const staffingCategories = ['01 ', '02 ', '09 '];
 
 const colors = [
   '#2f7f79',
@@ -111,6 +124,36 @@ export function createProjectionDemoPlan(data: DemoData): ProjectionDemoPlan {
     }
   }
 
+  const historyStart = monthAt(data.asOf, -DEMO_HISTORY_MONTHS);
+  const totals = new Map<string, DemoRunRate>();
+  for (const row of data.transactions) {
+    if (
+      !sources.has(row.projectNumber) ||
+      row.accountingPeriod < historyStart ||
+      row.accountingPeriod >= data.asOf ||
+      staffingCategories.some((code) =>
+        row.expenditureCategory.startsWith(code)
+      )
+    ) {
+      continue;
+    }
+    const key = `${row.projectNumber}|${row.expenditureCategory}`;
+    const rate = totals.get(key) ?? {
+      expenditureCategory: row.expenditureCategory,
+      fundingSourceId: row.projectNumber,
+      monthlyAmount: 0,
+    };
+    rate.monthlyAmount += row.burdenedCostInReceiverLedgerCurrency;
+    totals.set(key, rate);
+  }
+  const runRates = [...totals.values()]
+    .map((rate) => ({
+      ...rate,
+      monthlyAmount: Math.round(rate.monthlyAmount / DEMO_HISTORY_MONTHS),
+    }))
+    .filter((rate) => rate.monthlyAmount > 0)
+    .sort((a, b) => a.expenditureCategory.localeCompare(b.expenditureCategory));
+
   return {
     allocations,
     asOf: data.asOf,
@@ -118,5 +161,6 @@ export function createProjectionDemoPlan(data: DemoData): ProjectionDemoPlan {
     ownerName: data.user.name,
     people: [...people.values()],
     planningEndDate,
+    runRates,
   };
 }

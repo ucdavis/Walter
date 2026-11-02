@@ -35,6 +35,7 @@ export function readSavedPlans(
   fieldwork.note = 'Current staffing plus monthly lab supplies.';
   if (fieldwork.selectedFunding[0]) {
     fieldwork.expenses = [
+      ...fieldwork.expenses,
       {
         amount: 500,
         frequency: 'monthly',
@@ -42,6 +43,14 @@ export function readSavedPlans(
         id: crypto.randomUUID(),
         month: initial.asOf,
         name: 'Lab supplies',
+        serverExpense: {
+          amount: 500,
+          description: 'Lab supplies',
+          endMonth: null,
+          expenditureCategory: '03 - Supplies / Services / Other Expenses',
+          kind: 'Monthly',
+          startMonth: `${initial.asOf}-01`,
+        },
       },
     ];
   }

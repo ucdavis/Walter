@@ -496,26 +496,17 @@ describe('Live guided projection editors', () => {
     expect(saved().jobs[0].cbrRate).toBeNull();
   });
 
-  it('turns a run-rate estimate into a bounded planned expense without losing its category', () => {
+  it('keeps an edited run-rate estimate projected', () => {
     const saved = renderEditor('expenses');
-    expect(
-      screen.getByText(/Based on the 6-month spending average/)
-    ).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('Ending month'), {
-      target: { value: '2027-03' },
-    });
-    fireEvent.change(screen.getByLabelText('Expenditure category'), {
-      target: { value: 'Travel' },
+    expect(screen.getByText('6-month average')).toBeInTheDocument();
+    expect(screen.getByText('Projected')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Amount'), {
+      target: { value: '750' },
     });
     expect(saved().projects[0].expenses[0]).toMatchObject({
-      amount: 500,
-      endMonth: '2027-03-01',
-      expenditureCategory: 'Travel',
-      kind: 'Monthly',
+      amount: 750,
+      kind: 'Projected',
     });
-    expect(
-      screen.queryByText(/Based on the 6-month spending average/)
-    ).not.toBeInTheDocument();
   });
 
   it('removes a funding source and its references while preserving other funding', () => {
