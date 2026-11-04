@@ -572,12 +572,21 @@ export default function GuidedProjections({
                   </button>
                 </header>
                 {(!remote || remote.baseline) && (
-                  <div className="card mb-8 grid grid-cols-1 gap-6 border border-main-border bg-base-200 p-6 @3xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
-                    <div className="flex flex-col gap-1 border-b border-main-border pb-4 @3xl:border-e @3xl:border-b-0 @3xl:pb-0">
-                      <span className="stat-label text-base">
-                        Available across active projects
-                      </span>
-                      <strong className="text-3xl font-bold">
+                  <section
+                    aria-label="Available project balances"
+                    className="mb-6 rounded-box border border-main-border bg-base-200"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 px-5 py-4">
+                      <div>
+                        <span className="text-base font-semibold">
+                          Available across active projects
+                        </span>
+                        <p className="mt-0.5 text-sm text-base-content/70">
+                          {baseline.funding.length} projects · From your Walter
+                          snapshot
+                        </p>
+                      </div>
+                      <strong className="text-2xl font-semibold tabular-nums">
                         {money(
                           baseline.funding.reduce(
                             (total, fund) => total + fund.startingBalance,
@@ -585,28 +594,37 @@ export default function GuidedProjections({
                           )
                         )}
                       </strong>
-                      <small className="text-sm text-base-content/70">
-                        From your Walter snapshot
-                      </small>
                     </div>
-                    <div className="flex flex-col justify-center gap-5 text-base">
-                      {baseline.funding.map((fund) => (
-                        <div
-                          className="flex items-center justify-between gap-4"
-                          key={fund.id}
-                        >
-                          <span className="flex items-center gap-2">
-                            <i
-                              className="block size-1.5 shrink-0 rounded-full"
-                              style={{ background: fund.color }}
-                            />
-                            {fund.name}
-                          </span>
-                          <strong>{shortMoney(fund.startingBalance)}</strong>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                    <details className="border-t border-main-border">
+                      <summary className="cursor-pointer px-5 py-2.5 text-sm font-semibold text-primary focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2">
+                        Project balances ({baseline.funding.length})
+                      </summary>
+                      <ul
+                        aria-label="Project balances"
+                        className="grid max-h-60 grid-cols-1 gap-x-6 overflow-y-auto overscroll-contain px-5 pb-3 @2xl:grid-cols-2"
+                        tabIndex={0}
+                      >
+                        {baseline.funding.map((fund) => (
+                          <li
+                            className="flex min-w-0 items-start justify-between gap-3 border-t border-main-border py-2 text-sm"
+                            key={fund.id}
+                          >
+                            <span className="flex min-w-0 items-start gap-2">
+                              <i
+                                aria-hidden="true"
+                                className="mt-1.5 block size-1.5 shrink-0 rounded-full"
+                                style={{ background: fund.color }}
+                              />
+                              <span className="break-words">{fund.name}</span>
+                            </span>
+                            <strong className="shrink-0 font-semibold tabular-nums">
+                              {shortMoney(fund.startingBalance)}
+                            </strong>
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
+                  </section>
                 )}
                 <div className="mb-4 flex items-center justify-between gap-3">
                   <h2 className="h2">
@@ -619,18 +637,18 @@ export default function GuidedProjections({
                     Separate assumptions for each plan
                   </span>
                 </div>
-                <div className="grid grid-cols-1 gap-5 @xl:grid-cols-2 @4xl:grid-cols-3">
+                <div className="grid grid-cols-1 gap-4 @xl:grid-cols-2 @4xl:grid-cols-3">
                   {plans.map((plan) => {
                     const projection = projectGuidedPlan(plan);
                     return (
                       <button
-                        className="min-w-0 rounded-box border border-main-border p-6 text-left transition-[border-color,box-shadow] hover:border-base-content/70 hover:shadow-sm motion-reduce:transition-none [&>p]:mt-2 [&>p]:min-h-10"
+                        className="min-w-0 rounded-box border border-main-border p-4 text-left transition-[border-color,box-shadow] hover:border-base-content/70 hover:shadow-sm motion-reduce:transition-none [&>p]:mt-1"
                         key={plan.id}
                         onClick={() => open(plan)}
                         type="button"
                       >
                         <h3 className="text-xl font-semibold">{plan.name}</h3>
-                        <p className="text-base">
+                        <p className="line-clamp-2 text-sm text-base-content/70">
                           {plan.note ||
                             'A plan based on your current Walter snapshot.'}
                         </p>
@@ -647,7 +665,7 @@ export default function GuidedProjections({
                             {money(projection.ending)}
                           </strong>
                         </div>
-                        <div className="mt-4 flex items-center justify-between gap-3 border-t border-main-border pt-3.5 text-base-content/70 [&>span:last-child]:flex [&>span:last-child]:items-center [&>span:last-child]:gap-1.5 [&>span:last-child]:text-primary text-sm">
+                        <div className="mt-3 flex items-center justify-between gap-3 border-t border-main-border pt-3 text-base-content/70 [&>span:last-child]:flex [&>span:last-child]:items-center [&>span:last-child]:gap-1.5 [&>span:last-child]:text-primary text-sm">
                           <span>
                             {plan.months} months ·{' '}
                             {
@@ -664,25 +682,6 @@ export default function GuidedProjections({
                       </button>
                     );
                   })}
-                  <button
-                    className="min-w-0 rounded-box border border-main-border p-6 text-left transition-[border-color,box-shadow] hover:border-base-content/70 hover:shadow-sm motion-reduce:transition-none [&>p]:mt-2 [&>p]:min-h-10 flex min-h-60 flex-col items-start justify-center border-dashed [&>svg]:mb-4 [&>svg]:size-6 [&>svg]:text-primary [&>span]:mt-4 [&>span]:flex [&>span]:items-center [&>span]:gap-2 [&>span]:text-primary"
-                    disabled={Boolean(remote && !remote.baseline)}
-                    onClick={start}
-                    type="button"
-                  >
-                    <PlusIcon className="size-5 shrink-0" />
-                    <h3 className="text-xl font-semibold">
-                      Explore another possibility
-                    </h3>
-                    <p className="text-base">
-                      Four short steps, with your funding and staffing already
-                      filled in.
-                    </p>
-                    <span className="text-sm">
-                      Create a plan{' '}
-                      <ArrowRightIcon className="size-5 shrink-0" />
-                    </span>
-                  </button>
                 </div>
               </>
             ) : (

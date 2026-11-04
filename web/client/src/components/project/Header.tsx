@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { SearchButton } from '@/components/search/SearchButton.tsx';
 import { UserAvatar } from '@/components/project/UserAvatar.tsx';
+import { useFeatureFlagsQuery } from '@/queries/featureFlags.ts';
 import WalterLogo from '@/shared/WalterLogo.tsx';
 import { useUser } from '@/shared/auth/UserContext.tsx';
 import {
@@ -50,6 +51,10 @@ function NavLinks({
 
 const Header: React.FC = () => {
   const user = useUser();
+  const { data: featureFlags } = useFeatureFlagsQuery();
+  const projectionsEnabled =
+    import.meta.env.MODE === 'demo' ||
+    Boolean(featureFlags?.projectionsEnabled);
   const canViewProjects = canAccessProjectsNav(user.roles);
   const canViewPersonnel = canAccessPersonnelNav(user.roles);
   const canViewPrincipalInvestigators = canAccessPrincipalInvestigatorsNav(
@@ -73,13 +78,11 @@ const Header: React.FC = () => {
             } satisfies NavLinkItem,
           ]
         : []),
+      ...(projectionsEnabled
+        ? [{ label: 'Projections', to: '/projections' } satisfies NavLinkItem]
+        : []),
       ...(import.meta.env.MODE === 'demo'
         ? [
-            {
-              label: 'Projections',
-              params: { iamId: user.iamId },
-              to: '/projections/$iamId',
-            } satisfies NavLinkItem,
             {
               label: 'Guided projections',
               params: { iamId: user.iamId },
@@ -106,6 +109,7 @@ const Header: React.FC = () => {
     ],
     [
       user.iamId,
+      projectionsEnabled,
       canViewProjects,
       canViewPersonnel,
       canViewPrincipalInvestigators,
@@ -120,6 +124,7 @@ const Header: React.FC = () => {
     }
   }, [
     mobileOpen,
+    projectionsEnabled,
     canViewProjects,
     canViewPersonnel,
     canViewPrincipalInvestigators,

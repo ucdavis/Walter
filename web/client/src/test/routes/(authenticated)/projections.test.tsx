@@ -621,3 +621,77 @@ describe('guided projections with server persistence', () => {
     }
   });
 });
+
+describe('Projections navigation entry', () => {
+  it('opens a PI portfolio from the main navigation', async () => {
+    mockSavedProjections();
+    server.use(
+      http.get('/api/system/features', () =>
+        HttpResponse.json({ projectionsEnabled: true })
+      )
+    );
+    const view = renderRoute({ initialPath: '/help' });
+    try {
+      const link = await screen.findByRole('link', { name: 'Projections' });
+      expect(link).toHaveAttribute('href', '/projections');
+      fireEvent.click(link);
+      await screen.findByRole('heading', { name: 'Portfolio projections' });
+      expect(view.router.state.location.pathname).toBe(
+        `/projections/${DEMO_IAM_ID}`
+      );
+    } finally {
+      view.cleanup();
+    }
+  });
+
+  it.each(['ProjectManager', 'FinancialViewer'])(
+    'requires a %s to choose a managed PI before opening projections',
+    async (role) => {
+      mockSavedProjections();
+      server.use(
+        http.get('/api/user/me', () =>
+          HttpResponse.json({
+            ...createDemoData(42, '2026-10').user,
+            iamId: 'pm-1',
+            roles: [role],
+          })
+        ),
+        http.get('/api/project/managed/by-iam/pm-1', () =>
+          HttpResponse.json({
+            pis: [
+              {
+                employeeId: 'pi-1',
+                iamId: DEMO_IAM_ID,
+                name: 'Test PI',
+                projectCount: 2,
+              },
+              {
+                employeeId: 'pi-2',
+                iamId: null,
+                name: 'PI without IAM ID',
+                projectCount: 1,
+              },
+            ],
+            projectManager: null,
+          })
+        )
+      );
+      const view = renderRoute({ initialPath: '/projections' });
+      try {
+        const link = await screen.findByRole('link', { name: 'Test PI' });
+        expect(view.router.state.location.pathname).toBe('/projections');
+        expect(link).toHaveAttribute('href', `/projections/${DEMO_IAM_ID}`);
+        expect(
+          screen.queryByRole('link', { name: 'PI without IAM ID' })
+        ).not.toBeInTheDocument();
+        fireEvent.click(link);
+        await screen.findByRole('heading', { name: 'Portfolio projections' });
+        expect(view.router.state.location.pathname).toBe(
+          `/projections/${DEMO_IAM_ID}`
+        );
+      } finally {
+        view.cleanup();
+      }
+    }
+  );
+});

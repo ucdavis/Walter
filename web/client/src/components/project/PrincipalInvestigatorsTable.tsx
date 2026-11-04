@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import type { ManagedPiRecord } from '@/queries/project.ts';
 import { DataTable } from '@/shared/DataTable.tsx';
 import { Link } from '@tanstack/react-router';
@@ -5,7 +6,9 @@ import { createColumnHelper } from '@tanstack/react-table';
 
 const columnHelper = createColumnHelper<ManagedPiRecord>();
 
-const columns = [
+type PortfolioDestination = '/projects/$iamId/' | '/projections/$iamId';
+
+const createColumns = (to: PortfolioDestination) => [
   columnHelper.accessor('name', {
     cell: (info) => {
       const iamId = info.row.original.iamId;
@@ -14,11 +17,7 @@ const columns = [
       }
 
       return (
-        <Link
-          className="link"
-          params={{ iamId }}
-          to="/projects/$iamId/"
-        >
+        <Link className="link" params={{ iamId }} to={to}>
           {info.getValue()}
         </Link>
       );
@@ -29,11 +28,14 @@ const columns = [
 
 interface PrincipalInvestigatorsTableProps {
   pis: ManagedPiRecord[];
+  to?: PortfolioDestination;
 }
 
 export function PrincipalInvestigatorsTable({
   pis,
+  to = '/projects/$iamId/',
 }: PrincipalInvestigatorsTableProps) {
+  const columns = useMemo(() => createColumns(to), [to]);
   if (pis.length === 0) {
     return (
       <p className="text-base-content/70 mt-8">
