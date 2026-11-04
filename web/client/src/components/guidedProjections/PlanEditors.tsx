@@ -1,6 +1,7 @@
 import { useId, useRef, useState } from 'react';
 import {
   BanknotesIcon,
+  CheckCircleIcon,
   ListBulletIcon,
   PlusIcon,
   TrashIcon,
@@ -96,9 +97,11 @@ export function MiniChart({ values }: { values: number[] }) {
 
 export function FundingEditor({
   plan,
+  selectable = false,
   update,
 }: {
   plan: ProjectionPlan;
+  selectable?: boolean;
   update: (plan: ProjectionPlan) => void;
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -162,7 +165,9 @@ export function FundingEditor({
             Your funding sources
           </h2>
           <p className="text-sm leading-relaxed text-base-content/70">
-            Review your projects and add planned funding.
+            {selectable
+              ? 'Select the funding sources to include in your plan. Highlighted cards are included.'
+              : 'Review your projects and add planned funding.'}
           </p>
         </div>
         <button
@@ -173,35 +178,63 @@ export function FundingEditor({
           <PlusIcon className="size-5 shrink-0" /> Add funding source
         </button>
       </div>
-      <div className="grid gap-3">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {plan.funding.map((fund) => (
           <article
             aria-label={fund.name || 'Untitled funding source'}
-            className="scroll-mt-24 overflow-hidden border-s-4 bg-base-100"
+            className={`relative min-w-0 scroll-mt-24 overflow-hidden rounded-lg border ${selectable ? `transition-colors ${plan.selectedFunding.includes(fund.id) ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-main-border bg-base-100'}` : 'border-main-border bg-base-100'}`}
             key={fund.id}
             ref={(element) => registerItem(fund.id, element)}
-            style={{ borderInlineStartColor: fund.color }}
           >
-            <div className="px-4 py-3 sm:px-5">
+            {selectable && (
+              <button
+                aria-label={`Include ${fund.name || 'Untitled funding source'} in plan`}
+                aria-pressed={plan.selectedFunding.includes(fund.id)}
+                className="absolute inset-0 rounded-lg focus-visible:outline-2 focus-visible:-outline-offset-4 focus-visible:outline-primary"
+                onClick={() =>
+                  update({
+                    ...plan,
+                    selectedFunding: plan.selectedFunding.includes(fund.id)
+                      ? plan.selectedFunding.filter((id) => id !== fund.id)
+                      : [...plan.selectedFunding, fund.id],
+                  })
+                }
+                type="button"
+              />
+            )}
+            <div
+              className={`flex h-full flex-col px-4 py-3 sm:px-5 ${selectable ? 'pointer-events-none relative' : ''}`}
+            >
               <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <h3 className="text-lg font-semibold leading-snug break-words">
-                    {fund.name || 'Untitled funding source'}
-                  </h3>
-                  {fund.description && (
-                    <p className="mt-1 text-sm text-base-content/70">
-                      {fund.description}
-                    </p>
+                <h3 className="line-clamp-2 h-[2lh] min-w-0 flex-1 text-lg font-semibold leading-snug break-words">
+                  {fund.name || 'Untitled funding source'}
+                </h3>
+                <div className="flex shrink-0 items-start gap-2">
+                  <span
+                    aria-hidden="true"
+                    className="mt-2 size-2 shrink-0 rounded-full"
+                    style={{ backgroundColor: fund.color }}
+                  />
+                  {selectable && (
+                    <CheckCircleIcon
+                      aria-hidden="true"
+                      className={`size-6 shrink-0 ${plan.selectedFunding.includes(fund.id) ? 'text-primary' : 'text-base-content/20'}`}
+                    />
                   )}
                 </div>
               </div>
-              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-base-content/70">
+              <div className="mt-auto mb-3 flex min-h-5 items-center justify-between gap-x-4 pt-2 text-sm text-base-content/70">
+                {fund.description && (
+                  <span className="min-w-0 truncate">{fund.description}</span>
+                )}
                 {!plan.serverProjection && (
                   <span>{fund.indirectRate}% indirect</span>
                 )}
-                <span>Ends {monthLabel(fund.endDate.slice(0, 7))}</span>
+                <span className="ms-auto shrink-0">
+                  Ends {monthLabel(fund.endDate.slice(0, 7))}
+                </span>
               </div>
-              <div className="mt-3 flex flex-wrap items-end justify-between gap-3 border-t border-main-border pt-3">
+              <div className="flex flex-wrap items-end justify-between gap-3 border-t border-main-border pt-3">
                 <dl className="min-w-0">
                   <dt className="text-sm text-base-content/70">
                     Available balance
@@ -215,7 +248,7 @@ export function FundingEditor({
                 </dl>
                 <button
                   aria-haspopup="dialog"
-                  className="btn btn-ghost btn-sm gap-2 text-primary"
+                  className="btn btn-ghost btn-sm gap-2 text-primary pointer-events-auto relative"
                   onClick={() => setEditingId(fund.id)}
                   type="button"
                 >
@@ -244,7 +277,9 @@ export function FundingEditor({
       )}
       {plan.selectedFunding.length === 0 && (
         <p className="mt-3 text-error text-sm">
-          Add a funding source to continue.
+          {selectable
+            ? 'Select at least one funding source to continue.'
+            : 'Add a funding source to continue.'}
         </p>
       )}
       <p className="mt-5 leading-relaxed text-base-content/70 text-sm">

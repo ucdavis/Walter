@@ -11,6 +11,7 @@ import {
   canAccessProjectsNav,
   canAccessAdminDashboard,
   canAccessReportsNav,
+  ROLE_NAMES,
 } from '@/shared/auth/roleAccess.ts';
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
 
@@ -53,8 +54,9 @@ const Header: React.FC = () => {
   const user = useUser();
   const { data: featureFlags } = useFeatureFlagsQuery();
   const projectionsEnabled =
-    import.meta.env.MODE === 'demo' ||
-    Boolean(featureFlags?.projectionsEnabled);
+    !user.roles.includes(ROLE_NAMES.projectManager) &&
+    (import.meta.env.MODE === 'demo' ||
+      Boolean(featureFlags?.projectionsEnabled));
   const canViewProjects = canAccessProjectsNav(user.roles);
   const canViewPersonnel = canAccessPersonnelNav(user.roles);
   const canViewPrincipalInvestigators = canAccessPrincipalInvestigatorsNav(

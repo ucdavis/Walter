@@ -67,6 +67,7 @@ export type RemotePlans = {
   onDirtyChange: (dirty: boolean, inWorkspace: boolean) => void;
   onNavigate: (planId?: string) => void;
   onViewChange?: (view: PlanView) => void;
+  ownerName?: string;
   plans: ProjectionPlan[];
   save: (plan: ProjectionPlan, isNew: boolean) => Promise<ProjectionPlan>;
   view?: PlanView;
@@ -86,6 +87,10 @@ export default function GuidedProjections({
   const baseline = remote
     ? (remote.baseline ?? remote.plans[0])
     : createProjectionPlan(initialPlan!, 'Default plan');
+  const ownerName = initialPlan?.ownerName ?? remote?.ownerName;
+  const ownerDisplayName = ownerName?.includes(',')
+    ? `${ownerName.slice(ownerName.indexOf(',') + 1).trim()} ${ownerName.slice(0, ownerName.indexOf(',')).trim()}`
+    : ownerName;
   const [plans, setPlans] = useState(() => {
     if (remote) {
       return [
@@ -130,7 +135,6 @@ export default function GuidedProjections({
   const layout = useRef<HTMLDivElement>(null);
   const result = projectGuidedPlan(draft);
   const error = planValidation(draft);
-  const selectedProject = result.funds.find((fund) => fund.id === projectId);
 
   function persist(next: ProjectionPlan[]) {
     setPlans(next);
@@ -400,7 +404,7 @@ export default function GuidedProjections({
                 <>
                   <h2 className="mb-5 text-xl font-semibold">Plan details</h2>
                   <PlanDetails plan={draft} update={update} />
-                  <FundingEditor plan={draft} update={update} />
+                  <FundingEditor plan={draft} selectable update={update} />
                 </>
               )}
               {step === 1 && (
@@ -523,10 +527,8 @@ export default function GuidedProjections({
       <div className="flex flex-col gap-6 pt-6 pb-12 md:flex-row md:gap-8">
         {screen === 'home' && (
           <PlansSidebar
-            canCreate={!remote || Boolean(remote.baseline)}
             currentPlanId={null}
             defaultPlan={plans.find((plan) => plan.id === defaultPlanId)}
-            onCreate={start}
             onHome={home}
             onOpen={open}
             plans={plans.filter((plan) => plan.id !== defaultPlanId)}
@@ -551,8 +553,8 @@ export default function GuidedProjections({
                 <header className="mb-6 flex flex-wrap items-start justify-between gap-4 md:items-center">
                   <div>
                     <h1 className="h1 outline-none" ref={heading} tabIndex={-1}>
-                      {initialPlan
-                        ? `${initialPlan.ownerName}'s Projections`
+                      {ownerDisplayName
+                        ? `${ownerDisplayName}’s portfolio projections`
                         : 'Portfolio projections'}
                     </h1>
                     {remote && (
@@ -576,24 +578,24 @@ export default function GuidedProjections({
                     aria-label="Available project balances"
                     className="mb-6 rounded-box border border-main-border bg-base-200"
                   >
-                    <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 px-5 py-4">
+                    <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2 px-5 py-4">
                       <div>
-                        <span className="text-base font-semibold">
+                        <strong className="block text-2xl font-semibold tabular-nums">
+                          {money(
+                            baseline.funding.reduce(
+                              (total, fund) => total + fund.startingBalance,
+                              0
+                            )
+                          )}
+                        </strong>
+                        <span className="mt-0.5 block text-base font-semibold">
                           Available across active projects
                         </span>
-                        <p className="mt-0.5 text-sm text-base-content/70">
-                          {baseline.funding.length} projects · From your Walter
-                          snapshot
-                        </p>
                       </div>
-                      <strong className="text-2xl font-semibold tabular-nums">
-                        {money(
-                          baseline.funding.reduce(
-                            (total, fund) => total + fund.startingBalance,
-                            0
-                          )
-                        )}
-                      </strong>
+                      <p className="ms-auto text-right text-sm text-base-content/70">
+                        {baseline.funding.length} projects · From your Walter
+                        snapshot
+                      </p>
                     </div>
                     <details className="border-t border-main-border">
                       <summary className="cursor-pointer px-5 py-2.5 text-sm font-semibold text-primary focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2">
@@ -615,7 +617,9 @@ export default function GuidedProjections({
                                 className="mt-1.5 block size-1.5 shrink-0 rounded-full"
                                 style={{ background: fund.color }}
                               />
-                              <span className="break-words">{fund.name}</span>
+                              <span className="min-w-0 truncate">
+                                {fund.name}
+                              </span>
                             </span>
                             <strong className="shrink-0 font-semibold tabular-nums">
                               {shortMoney(fund.startingBalance)}
@@ -778,26 +782,13 @@ export default function GuidedProjections({
                     ))}
                   </div>
                 </nav>
-                <div
-                  className={`grid grid-cols-1 items-start gap-5 ${section === 'Funding' ? '@4xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]' : ''}`}
-                >
+                <div className="grid grid-cols-1 items-start gap-5">
                   {section !== 'Overview' && (
                     <section
                       aria-label={`${section} editor`}
                       className="min-w-0 text-base"
                       inert={saving}
                     >
-                      <button
-                        className="mb-4 inline-flex items-center gap-2 text-sm text-primary"
-                        onClick={() => goToSection('Overview')}
-                        type="button"
-                      >
-                        <ArrowLeftIcon
-                          aria-hidden="true"
-                          className="size-4 shrink-0"
-                        />
-                        Back to all projects
-                      </button>
                       {section === 'Funding' && (
                         <FundingEditor plan={draft} update={update} />
                       )}
@@ -828,23 +819,8 @@ export default function GuidedProjections({
                       )}
                     </section>
                   )}
-                  {section !== 'Staffing' && section !== 'Expenses' && (
-                    <div
-                      className={`min-w-0 ${section === 'Overview' ? '' : '@4xl:sticky @4xl:top-24'}`}
-                    >
-                      {section === 'Overview' && selectedProject && (
-                        <button
-                          className="mb-4 inline-flex items-center gap-2 text-sm text-primary"
-                          onClick={() => viewProject(null)}
-                          type="button"
-                        >
-                          <ArrowLeftIcon
-                            aria-hidden="true"
-                            className="size-4 shrink-0"
-                          />{' '}
-                          Back to all projects
-                        </button>
-                      )}
+                  {section === 'Overview' && (
+                    <div className="min-w-0">
                       {section === 'Overview' && error && (
                         <p
                           className="mb-4 rounded-md bg-error/10 p-3 text-sm text-error"
@@ -920,10 +896,13 @@ function ShortfallSummary({
     .filter((fund) => fund.firstDeficit)
     .sort((a, b) => a.firstDeficit!.localeCompare(b.firstDeficit!));
   const first = gaps[0];
+  if (!first && !incomplete) {
+    return null;
+  }
   return (
     <div
       aria-label="Funding summary"
-      className={`alert alert-soft mb-6 ${first ? 'alert-error' : incomplete ? 'alert-warning' : 'alert-success'}`}
+      className={`alert alert-soft mb-6 ${first ? 'alert-error' : 'alert-warning'}`}
       role="status"
     >
       {first ? (
@@ -938,9 +917,7 @@ function ShortfallSummary({
         <span className="block font-semibold">
           {first
             ? `First project shortfall: ${monthLabel(first.firstDeficit!)}`
-            : incomplete
-              ? 'Staffing costs are incomplete.'
-              : 'Your plan stays within the selected funding.'}
+            : 'Staffing costs are incomplete.'}
         </span>
         <span className="block text-sm">
           {first ? (
@@ -951,10 +928,8 @@ function ShortfallSummary({
                 ? `${gaps.length} projects need attention.`
                 : 'Other project balances do not automatically cover this gap.'}
             </>
-          ) : incomplete ? (
-            'Review missing salary and benefit rates before relying on these balances.'
           ) : (
-            'Each included project covers its planned costs over this horizon.'
+            'Review missing salary and benefit rates before relying on these balances.'
           )}
         </span>
       </div>

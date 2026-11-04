@@ -21,6 +21,7 @@ import type { ProjectionPlan } from '@/components/guidedProjections/planModel.ts
 import { PageError } from '@/components/states/PageError.tsx';
 import { HttpError } from '@/lib/api.ts';
 import { getErrorPresentation } from '@/lib/errorPresentation.ts';
+import { useUser } from '@/shared/auth/UserContext.tsx';
 import {
   createProjection,
   projectionListQueryOptions,
@@ -65,6 +66,11 @@ export const guidedWorkspaceQueryOptions = (
     return {
       lookups:
         lookupResult.status === 'fulfilled' ? lookupResult.value : undefined,
+      ownerName:
+        portfolioResult.status === 'fulfilled'
+          ? portfolioResult.value.find((project) => project.ownerName?.trim())
+              ?.ownerName
+          : undefined,
       plans,
       seed:
         seedResult.status === 'fulfilled' &&
@@ -107,6 +113,7 @@ export default function LiveGuidedProjections({
   view: PlanView;
 }) {
   const queryClient = useQueryClient();
+  const user = useUser();
   const navigate = useNavigate();
   const { data } = useSuspenseQuery(
     guidedWorkspaceQueryOptions(iamId, queryClient)
@@ -219,6 +226,8 @@ export default function LiveGuidedProjections({
             to: '.',
           });
         },
+        ownerName:
+          data.ownerName ?? (user.iamId === iamId ? user.name : undefined),
         plans: data.plans.map(fromServerProjection),
         save,
         view,

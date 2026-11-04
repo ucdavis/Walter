@@ -113,7 +113,8 @@ function fixture(): Projection {
 
 function renderEditor(
   editor: 'staff' | 'expenses' | 'funding',
-  initial = fixture()
+  initial = fixture(),
+  selectable = false
 ) {
   let latest: ProjectionPlan = fromServerProjection(initial);
   function Editor() {
@@ -142,7 +143,7 @@ function renderEditor(
     ) : editor === 'expenses' ? (
       <ExpenseEditor plan={plan} update={update} />
     ) : (
-      <FundingEditor plan={plan} update={update} />
+      <FundingEditor plan={plan} selectable={selectable} update={update} />
     );
   }
   render(<Editor />);
@@ -152,6 +153,52 @@ function renderEditor(
 }
 
 describe('Live guided projection editors', () => {
+  it('removes a person and their allocations from the saved plan through person details', () => {
+    const initial = fixture();
+    initial.jobs.push({
+      ...structuredClone(initial.jobs[0]),
+      id: 2,
+      name: 'Other person',
+    });
+    const saved = renderEditor('staff', initial);
+    const removed = saved.plan().staff[0];
+    fireEvent.click(
+      screen.getAllByRole('button', { name: 'Salary & person details' })[0]
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Remove person' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(saved.plan().staff.some((person) => person.id === removed.id)).toBe(
+      false
+    );
+    expect(saved().jobs.map((job) => job.name)).toEqual(['Other person']);
+    expect(screen.getByText('Other person')).toBeInTheDocument();
+  });
+
+  it('toggles funding card inclusion and saves the selected projects without deleting source data', async () => {
+    const user = userEvent.setup();
+    const saved = renderEditor('funding', fixture(), true);
+    const fund = saved.plan().funding[0];
+    const card = screen.getByRole('button', {
+      name: `Include ${fund.name} in plan`,
+    });
+    expect(card).toHaveAttribute('aria-pressed', 'true');
+    await user.click(card);
+    expect(card).toHaveAttribute('aria-pressed', 'false');
+    expect(saved().settings?.selectedProjectIds).toEqual([]);
+    expect(saved.plan().funding).toContainEqual(fund);
+    expect(
+      screen.getByText('Select at least one funding source to continue.')
+    ).toBeInTheDocument();
+    await user.tab();
+    await user.tab({ shift: true });
+    await user.keyboard(' ');
+    expect(card).toHaveAttribute('aria-pressed', 'true');
+    expect(saved().settings?.selectedProjectIds).toEqual([1]);
+    await user.click(screen.getByRole('button', { name: 'Edit details' }));
+    expect(card).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+
   it('reveals a newly added expense and focuses its name', async () => {
     const scroll = vi.spyOn(Element.prototype, 'scrollIntoView');
     try {

@@ -1,5 +1,5 @@
 import { useId, useState } from 'react';
-import { XMarkIcon } from '@heroicons/react/24/outline';
+import { TrashIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import type {
   ProjectionJob,
   ProjectionLookups,
@@ -12,12 +12,14 @@ export default function StaffPersonDetailsModal({
   lookups,
   onApply,
   onClose,
+  onRemove,
   person,
 }: {
   isServerPlan: boolean;
   lookups?: ProjectionLookups;
   onApply: (person: PlanStaff) => void;
   onClose: () => void;
+  onRemove: () => void;
   person: PlanStaff;
 }) {
   const ref = useProjectionDialog();
@@ -133,8 +135,19 @@ export default function StaffPersonDetailsModal({
               {error}
             </p>
           )}
+          <p className="mt-5 text-sm text-base-content/60">
+            Removing this person also removes their funding allocations from
+            this plan.
+          </p>
         </div>
         <footer className="flex flex-wrap justify-end gap-3 border-t border-main-border px-5 py-4 sm:px-6">
+          <button
+            className="btn btn-ghost me-auto text-error"
+            onClick={onRemove}
+            type="button"
+          >
+            <TrashIcon aria-hidden="true" className="size-5" /> Remove person
+          </button>
           <button className="btn btn-outline" onClick={onClose} type="button">
             Cancel
           </button>

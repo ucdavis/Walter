@@ -224,7 +224,7 @@
 .walter-table.table-cardgrid td {
   padding: 0;
 }
-.walter-table.table-cardgrid td a {
+.walter-table.table-cardgrid td > a {
   text-decoration: none;
   font-size: 1rem;
   display: block;
@@ -232,7 +232,7 @@
   border-radius: 4px;
   padding: 12px;
 }
-.walter-table.table-cardgrid td a:hover {
+.walter-table.table-cardgrid td > a:hover {
   background-color: var(--color-base-200);
   font-size: 1rem;
 }

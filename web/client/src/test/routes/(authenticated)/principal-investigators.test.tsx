@@ -28,6 +28,64 @@ const managedResponse = (name: string | null = 'Test User') => ({
 });
 
 describe('principal investigators route', () => {
+  it.each(['/', '/principalInvestigators'])(
+    'provides PI project and projection shortcuts on %s without PM projections navigation',
+    async (initialPath) => {
+      server.use(
+        http.get('/api/user/me', () =>
+          HttpResponse.json(createUser(['ProjectManager']))
+        ),
+        http.get('/api/system/features', () =>
+          HttpResponse.json({ projectionsEnabled: true })
+        ),
+        http.get('/api/project/managed/by-iam/:iamId', () =>
+          HttpResponse.json(managedResponse())
+        ),
+        http.get('/api/project/by-iam/:iamId', () => HttpResponse.json([]))
+      );
+
+      const { cleanup } = renderRoute({ initialPath });
+      try {
+        expect(
+          await screen.findByRole('link', {
+            name: 'View projections for PI One',
+          })
+        ).toHaveAttribute('href', '/projections/IAM-2001');
+        expect(
+          screen.getByRole('link', { name: 'View projects for PI One' })
+        ).toHaveAttribute('href', '/projects/IAM-2001');
+        expect(
+          screen.queryByRole('link', { name: 'Projections' })
+        ).not.toBeInTheDocument();
+      } finally {
+        cleanup();
+      }
+    }
+  );
+
+  it('hides PI projections shortcuts when projections are disabled', async () => {
+    server.use(
+      http.get('/api/user/me', () =>
+        HttpResponse.json(createUser(['ProjectManager']))
+      ),
+      http.get('/api/system/features', () =>
+        HttpResponse.json({ projectionsEnabled: false })
+      ),
+      http.get('/api/project/managed/by-iam/:iamId', () =>
+        HttpResponse.json(managedResponse())
+      )
+    );
+    const { cleanup } = renderRoute({ initialPath: '/principalInvestigators' });
+    try {
+      await screen.findByRole('link', { name: 'View projects for PI One' });
+      expect(
+        screen.queryByRole('link', { name: 'View projections for PI One' })
+      ).not.toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+
   it('renders the principal investigators table for authorized users', async () => {
     server.use(
       http.get('/api/user/me', () =>
@@ -123,7 +181,11 @@ describe('principal investigators route', () => {
               projectCount: 1,
             },
           ],
-          projectManager: { employeeId: '1000', iamId: 'IAM-1000', name: 'Test User' },
+          projectManager: {
+            employeeId: '1000',
+            iamId: 'IAM-1000',
+            name: 'Test User',
+          },
         })
       )
     );
@@ -175,8 +237,19 @@ describe('principal investigators $iamId route', () => {
       ),
       http.get('/api/project/managed/by-iam/:iamId', () =>
         HttpResponse.json({
-          pis: [{ employeeId: '2001', iamId: 'IAM-2001', name: 'PI One', projectCount: 2 }],
-          projectManager: { employeeId: '9999', iamId: 'IAM-9999', name: 'Other PM' },
+          pis: [
+            {
+              employeeId: '2001',
+              iamId: 'IAM-2001',
+              name: 'PI One',
+              projectCount: 2,
+            },
+          ],
+          projectManager: {
+            employeeId: '9999',
+            iamId: 'IAM-9999',
+            name: 'Other PM',
+          },
         })
       )
     );

@@ -233,10 +233,8 @@ describe('guided projections with server persistence', () => {
         'Current portfolio data could not be loaded'
       );
       fireEvent.click(screen.getByRole('button', { name: 'All plans' }));
-      await screen.findByRole('heading', { name: 'Portfolio projections' });
-      expect(
-        screen.getByRole('button', { name: 'Create New Plan' })
-      ).toBeDisabled();
+      await screen.findByRole('heading', { name: /portfolio projections/i });
+      expect(screen.getByRole('button', { name: 'New plan' })).toBeDisabled();
       expect(writes).toEqual([]);
     } finally {
       view.cleanup();
@@ -255,7 +253,13 @@ describe('guided projections with server persistence', () => {
         fireEvent.change(screen.getByLabelText('Explore a project'), {
           target: { value: 'project-7' },
         });
-        await screen.findByRole('button', { name: 'Back to all projects' });
+        await screen.findByRole('heading', {
+          level: 3,
+          name: /Real seed project/,
+        });
+        expect(
+          screen.queryByRole('button', { name: 'Back to all projects' })
+        ).not.toBeInTheDocument();
         expect(view.router.state.location.search.project).toBe('project-7');
         await section('Staffing');
         await act(async () => view.router.history.back());
@@ -271,9 +275,9 @@ describe('guided projections with server persistence', () => {
           level: 3,
           name: /Real seed project/,
         });
-        fireEvent.click(
-          screen.getByRole('button', { name: 'Back to all projects' })
-        );
+        fireEvent.change(screen.getByLabelText('Explore a project'), {
+          target: { value: '' },
+        });
         await screen.findByRole('region', { name: 'Live project outlook' });
         expect(screen.getByLabelText('Explore a project')).toHaveValue('');
         fireEvent.change(screen.getByLabelText('Explore a project'), {
@@ -284,7 +288,7 @@ describe('guided projections with server persistence', () => {
           name: /Real seed project/,
         });
         fireEvent.click(screen.getByRole('button', { name: 'All plans' }));
-        await screen.findByRole('heading', { name: 'Portfolio projections' });
+        await screen.findByRole('heading', { name: /portfolio projections/i });
         await act(async () => view.router.history.back());
         await screen.findByRole('heading', {
           level: 3,
@@ -297,40 +301,26 @@ describe('guided projections with server persistence', () => {
     }
   );
 
-  it.each(['Funding'])(
-    'keeps the %s tab active when changing project focus',
-    async (name) => {
-      mockSavedProjections();
-      const view = renderRoute({
-        initialPath: `/projections/${DEMO_IAM_ID}/12`,
-      });
-      try {
-        await screen.findByRole('region', { name: 'Live project outlook' });
-        await section(name);
-        for (const project of ['project-7', '']) {
-          fireEvent.change(screen.getByLabelText('Explore a project'), {
-            target: { value: project },
-          });
-          await waitFor(() =>
-            expect(screen.getByLabelText('Explore a project')).toHaveValue(
-              project
-            )
-          );
-          expect(
-            within(
-              screen.getByRole('navigation', { name: 'Plan sections' })
-            ).getByRole('button', { name })
-          ).toHaveAttribute('aria-current', 'page');
-          expect(
-            screen.getByRole('region', { name: `${name} editor` })
-          ).toBeInTheDocument();
-        }
-        expect(writes).toEqual([]);
-      } finally {
-        view.cleanup();
-      }
+  it('shows the Funding editor without the outlook graph', async () => {
+    mockSavedProjections();
+    const view = renderRoute({ initialPath: `/projections/${DEMO_IAM_ID}/12` });
+    try {
+      await screen.findByRole('region', { name: 'Live project outlook' });
+      await section('Funding');
+      expect(
+        screen.getByRole('region', { name: 'Funding editor' })
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('region', { name: 'Live project outlook' })
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByLabelText('Explore a project')
+      ).not.toBeInTheDocument();
+      expect(writes).toEqual([]);
+    } finally {
+      view.cleanup();
     }
-  );
+  });
 
   it('opens a project deep link and keeps edits during view history navigation', async () => {
     mockSavedProjections();
@@ -392,7 +382,7 @@ describe('guided projections with server persistence', () => {
       const storage = vi.spyOn(Storage.prototype, 'setItem');
       const view = renderRoute({ initialPath: `/${path}/${DEMO_IAM_ID}` });
       try {
-        await screen.findByRole('heading', { name: 'Portfolio projections' });
+        await screen.findByRole('heading', { name: /portfolio projections/i });
         expect(screen.getAllByText('Real seed project').length).toBeGreaterThan(
           0
         );
@@ -516,7 +506,7 @@ describe('guided projections with server persistence', () => {
     mockSavedProjections();
     const view = renderRoute({ initialPath: `/projections/${DEMO_IAM_ID}` });
     try {
-      await screen.findByRole('heading', { name: 'Portfolio projections' });
+      await screen.findByRole('heading', { name: /portfolio projections/i });
       fireEvent.click(screen.getByRole('button', { name: 'New plan' }));
       for (let step = 0; step < 3; step++) {
         fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
@@ -552,7 +542,7 @@ describe('guided projections with server persistence', () => {
       confirm.mockReturnValue(true);
       fireEvent.click(screen.getByRole('button', { name: 'All plans' }));
       expect(
-        screen.getByRole('heading', { name: 'Portfolio projections' })
+        screen.getByRole('heading', { name: /portfolio projections/i })
       ).toBeInTheDocument();
     } finally {
       view.cleanup();
@@ -580,10 +570,8 @@ describe('guided projections with server persistence', () => {
       );
       expect(screen.getByRole('button', { name: 'Save plan' })).toBeEnabled();
       fireEvent.click(screen.getByRole('button', { name: 'All plans' }));
-      await screen.findByRole('heading', { name: 'Portfolio projections' });
-      expect(
-        screen.getByRole('button', { name: 'Create New Plan' })
-      ).toBeDisabled();
+      await screen.findByRole('heading', { name: /portfolio projections/i });
+      expect(screen.getByRole('button', { name: 'New plan' })).toBeDisabled();
     } finally {
       view.cleanup();
     }
@@ -635,7 +623,9 @@ describe('Projections navigation entry', () => {
       const link = await screen.findByRole('link', { name: 'Projections' });
       expect(link).toHaveAttribute('href', '/projections');
       fireEvent.click(link);
-      await screen.findByRole('heading', { name: 'Portfolio projections' });
+      await screen.findByRole('heading', {
+        name: 'Morgan Reed’s portfolio projections',
+      });
       expect(view.router.state.location.pathname).toBe(
         `/projections/${DEMO_IAM_ID}`
       );
@@ -685,7 +675,7 @@ describe('Projections navigation entry', () => {
           screen.queryByRole('link', { name: 'PI without IAM ID' })
         ).not.toBeInTheDocument();
         fireEvent.click(link);
-        await screen.findByRole('heading', { name: 'Portfolio projections' });
+        await screen.findByRole('heading', { name: /portfolio projections/i });
         expect(view.router.state.location.pathname).toBe(
           `/projections/${DEMO_IAM_ID}`
         );

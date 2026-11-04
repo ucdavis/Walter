@@ -1,7 +1,6 @@
 import { useId } from 'react';
 import {
   ArrowRightIcon,
-  CheckCircleIcon,
   ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline';
 import {
@@ -311,30 +310,26 @@ export function ProjectDetail({
         Project dates: {monthLabel(fund.startDate.slice(0, 7))} to{' '}
         {monthLabel(fund.endDate.slice(0, 7))}
       </p>
-      <div
-        className={`alert alert-soft flex items-start gap-3 rounded-lg p-5 text-left shadow-none ${fund.firstDeficit ? 'alert-warning' : 'alert-success'}`}
-        role="status"
-      >
-        {fund.firstDeficit ? (
+      {fund.firstDeficit && (
+        <div
+          className="alert alert-soft alert-warning flex items-start gap-3 rounded-lg p-5 text-left shadow-none"
+          role="status"
+        >
           <ExclamationTriangleIcon
             aria-hidden="true"
             className="mt-0.5 size-6 shrink-0"
           />
-        ) : (
-          <CheckCircleIcon aria-hidden="true" className="mt-0.5 size-6 shrink-0" />
-        )}
-        <div className="min-w-0">
-          <strong className="block text-base font-semibold text-base-content">
-            {fund.firstDeficit
-              ? `Runs short in ${monthLabel(fund.firstDeficit)}`
-              : 'Within funding for this plan'}
-          </strong>
-          <span className="mt-1 block text-sm font-normal leading-relaxed text-base-content/70">
-            Projected ending balance: {money(fund.ending)} in{' '}
-            {monthLabel(lastMonth)}.
-          </span>
+          <div className="min-w-0">
+            <strong className="block text-base font-semibold text-base-content">
+              {`Runs short in ${monthLabel(fund.firstDeficit)}`}
+            </strong>
+            <span className="mt-1 block text-sm font-normal leading-relaxed text-base-content/70">
+              Projected ending balance: {money(fund.ending)} in{' '}
+              {monthLabel(lastMonth)}.
+            </span>
+          </div>
         </div>
-      </div>
+      )}
       <div className="mt-5 mb-7 grid grid-cols-2 gap-3 [&_span]:block [&_span]:text-base-content/70 [&_strong]:mt-1 [&_strong]:block [&_strong]:font-semibold [&_strong]:tracking-normal">
         <div>
           <span className="text-sm">

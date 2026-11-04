@@ -4,23 +4,18 @@ import {
   ChevronDoubleRightIcon,
   ChevronDownIcon,
   PresentationChartLineIcon,
-  PlusIcon,
 } from '@heroicons/react/24/outline';
 import type { ProjectionPlan } from '@/components/guidedProjections/planModel.ts';
 
 export default function PlansSidebar({
-  canCreate = true,
   currentPlanId,
   defaultPlan,
-  onCreate,
   onHome,
   onOpen,
   plans,
 }: {
-  canCreate?: boolean;
   currentPlanId: string | null;
   defaultPlan?: ProjectionPlan;
-  onCreate: () => void;
   onHome: () => void;
   onOpen: (plan: ProjectionPlan) => void;
   plans: ProjectionPlan[];
@@ -127,19 +122,6 @@ export default function PlansSidebar({
           )}
         </nav>
       </div>
-      <button
-        className="btn btn-link text-base-content/70"
-        disabled={!canCreate}
-        onClick={() => {
-          onCreate();
-          setMobileOpen(false);
-        }}
-        title={collapsed ? 'Create New Plan' : undefined}
-        type="button"
-      >
-        <PlusIcon aria-hidden="true" className="size-5 shrink-0" />
-        <span className={collapsed ? 'md:sr-only' : ''}>Create New Plan</span>
-      </button>
     </aside>
   );
 }

@@ -139,12 +139,13 @@ describe('Guided projection plan navigation', () => {
 
   it('shows the sidebar on the dashboard and hides it during setup', () => {
     renderPlans();
-    function createFromSidebar() {
-      fireEvent.click(
+    function createFromDashboard() {
+      expect(
         within(
           screen.getByRole('complementary', { name: 'Projection plans' })
-        ).getByRole('button', { name: 'Create New Plan' })
-      );
+        ).queryByRole('button', { name: 'Create New Plan' })
+      ).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'New plan' }));
       expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
         'Choose your starting point.'
       );
@@ -152,9 +153,9 @@ describe('Guided projection plan navigation', () => {
         screen.queryByRole('complementary', { name: 'Projection plans' })
       ).not.toBeInTheDocument();
     }
-    createFromSidebar();
+    createFromDashboard();
     fireEvent.click(screen.getByRole('button', { name: 'Cancel setup' }));
-    createFromSidebar();
+    createFromDashboard();
   });
 
   it('switches between the default and saved plans and returns home', () => {
@@ -185,7 +186,7 @@ describe('Guided projection plan navigation', () => {
     ).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'All plans' }));
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
-      "Morgan Reed's Projections"
+      'Morgan Reed’s portfolio projections'
     );
     expect(
       screen.getByRole('complementary', { name: 'Projection plans' })

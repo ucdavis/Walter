@@ -205,6 +205,18 @@ export default function SplitStaffEditor({
               revealItem(detailsPerson.id);
             }
           }}
+          onRemove={() => {
+            update({
+              ...plan,
+              staff: plan.staff.filter(
+                (person) => person.id !== detailsPerson.id
+              ),
+            });
+            setDetailsPersonId(null);
+            if (addedItemId.current === detailsPerson.id) {
+              addedItemId.current = null;
+            }
+          }}
           person={detailsPerson}
         />
       )}
