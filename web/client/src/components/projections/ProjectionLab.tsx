@@ -408,7 +408,7 @@ export default function ProjectionLab({
             </div>
             <div>
               <h1 className="h1">ProjectionLab</h1>
-              <p className="text-sm text-base-content/70">
+              <p className="text-sm text-base-content/80">
                 {initialPlan.ownerName} · Monthly funding drawdown from people
                 allocations
               </p>
@@ -441,7 +441,7 @@ export default function ProjectionLab({
       </header>
 
       <div className="space-y-6 pb-12">
-        <p className="text-sm text-base-content/70">
+        <p className="text-sm text-base-content/80">
           Demo plan from {initialPlan.asOf}. Starting balances are after
           expenses and commitments. Only future salary, fringe, and indirect
           costs are projected. Changes last until you leave or reload this page.
@@ -605,7 +605,7 @@ function Metric({
     <div
       className={`rounded-md border p-3 ${warning ? 'border-error bg-error/10' : 'border-main-border bg-base-200'}`}
     >
-      <p className="stat-label text-sm text-base-content/70">{label}</p>
+      <p className="stat-label text-sm text-base-content/80">{label}</p>
       <p className={`stat-value-lg mt-1 ${valueClass}`}>{value}</p>
     </div>
   );
@@ -627,7 +627,7 @@ function LabeledNumber({
   value: number;
 }) {
   return (
-    <label className="grid gap-1 text-xs font-semibold text-base-content/70">
+    <label className="grid gap-1 text-xs font-semibold text-base-content/80">
       {label}
       <input
         className="input input-sm min-w-0 w-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary rounded-md border border-main-border px-3 py-2 text-sm font-normal text-base-content"
@@ -655,7 +655,7 @@ function LabeledDate({
   value: string;
 }) {
   return (
-    <label className="grid gap-1 text-xs font-semibold text-base-content/70">
+    <label className="grid gap-1 text-xs font-semibold text-base-content/80">
       {label}
       <input
         className="input input-sm min-w-0 w-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary rounded-md border border-main-border px-3 py-2 text-sm font-normal text-base-content"
@@ -736,7 +736,7 @@ function AddRowModal({
           <h2 className="text-xl font-semibold">
             Add {isSource ? 'funding source' : 'person'}
           </h2>
-          <p className="text-sm text-base-content/70">
+          <p className="text-sm text-base-content/80">
             This creates a new timeline row. You can continue editing it inline
             after it is added.
           </p>
@@ -1040,7 +1040,7 @@ function AllocationModal({
               <h2 className="text-xl font-semibold">
                 {person?.name ?? 'Person'} allocation
               </h2>
-              <p className="text-sm text-base-content/70">
+              <p className="text-sm text-base-content/80">
                 Editing {monthLabel(editor.anchorMonth)}. Expand the range to
                 replace nearby months with this same setup.
               </p>
@@ -1057,11 +1057,11 @@ function AllocationModal({
         <div className="space-y-5 p-5">
           <div>
             <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
-              <h3 className="text-sm font-semibold uppercase text-base-content/70">
+              <h3 className="text-sm font-semibold uppercase text-base-content/80">
                 Apply range
               </h3>
               <div className="grid grid-cols-2 gap-2">
-                <label className="grid gap-1 text-xs font-semibold text-base-content/70">
+                <label className="grid gap-1 text-xs font-semibold text-base-content/80">
                   Start
                   <input
                     className="input input-sm min-w-0 w-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary rounded-md border border-main-border px-3 py-2 text-sm font-normal text-base-content"
@@ -1074,7 +1074,7 @@ function AllocationModal({
                     value={editor.startMonth}
                   />
                 </label>
-                <label className="grid gap-1 text-xs font-semibold text-base-content/70">
+                <label className="grid gap-1 text-xs font-semibold text-base-content/80">
                   End
                   <input
                     className="input input-sm min-w-0 w-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary rounded-md border border-main-border px-3 py-2 text-sm font-normal text-base-content"
@@ -1130,7 +1130,7 @@ function AllocationModal({
                             ? 'border-2 border-primary bg-primary/10 text-primary ring-2 ring-primary/20'
                             : monthAllocations.length > 0
                               ? 'border-main-border bg-base-200 text-base-content'
-                              : 'border-main-border bg-base-100 text-base-content/70'
+                              : 'border-main-border bg-base-100 text-base-content/80'
                     }`}
                     data-range-month={month}
                     data-testid={`range-month-${month}`}
@@ -1160,7 +1160,7 @@ function AllocationModal({
 
           <div>
             <div className="mb-2 flex items-center justify-between gap-3">
-              <h3 className="text-sm font-semibold uppercase text-base-content/70">
+              <h3 className="text-sm font-semibold uppercase text-base-content/80">
                 Funding split
               </h3>
               <button
@@ -1176,7 +1176,7 @@ function AllocationModal({
             </div>
 
             {editor.splits.length === 0 ? (
-              <div className="rounded-md border border-dashed border-main-border p-4 text-sm text-base-content/70">
+              <div className="rounded-md border border-dashed border-main-border p-4 text-sm text-base-content/80">
                 No funding source assigned for this month. Add one to default to
                 100%.
               </div>
@@ -1337,7 +1337,7 @@ function InlineNumber({
   value: number;
 }) {
   return (
-    <label className="grid gap-1 text-xs font-semibold uppercase text-base-content/70">
+    <label className="grid gap-1 text-xs font-semibold uppercase text-base-content/80">
       {label}
       <input
         className="input input-sm min-w-0 w-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary rounded-md border border-main-border bg-base-100 px-2 py-1 text-sm font-normal normal-case text-base-content"
@@ -1366,7 +1366,7 @@ function InlineText({
   value: string;
 }) {
   return (
-    <label className="grid gap-1 text-xs font-semibold uppercase text-base-content/70">
+    <label className="grid gap-1 text-xs font-semibold uppercase text-base-content/80">
       {label}
       <input
         className="input input-sm min-w-0 w-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary rounded-md border border-main-border bg-base-100 px-2 py-1 text-sm font-normal normal-case text-base-content"
@@ -1562,7 +1562,7 @@ function FundingChartTooltip({
           >
             Remaining: {formatCompactCurrency(point.remainingBalance ?? 0)}
           </p>
-          <p className="text-base-content/70">
+          <p className="text-base-content/80">
             Drawdown: {formatCompactCurrency(point.drawdown)}
           </p>
           {point.deficit && (
@@ -1606,14 +1606,14 @@ function FundingSourceChart({
             axisLine={{ stroke: 'var(--color-main-border)' }}
             dataKey="monthLabel"
             interval={tickInterval}
-            tick={{ className: 'text-xs fill-base-content/70' }}
+            tick={{ className: 'text-xs fill-base-content/80' }}
             tickFormatter={compactChartMonthLabel}
             tickLine={false}
           />
           <YAxis
             axisLine={false}
             domain={[domainMin, domainMax]}
-            tick={{ className: 'text-xs fill-base-content/70' }}
+            tick={{ className: 'text-xs fill-base-content/80' }}
             tickFormatter={(value) => formatCompactCurrency(Number(value))}
             tickLine={false}
             width={56}
@@ -1796,7 +1796,7 @@ function Timeline({
       <div className="space-y-4 border-b border-main-border p-4">
         <div>
           <h2 className="text-lg font-semibold">Timeline</h2>
-          <p className="text-sm text-base-content/70">
+          <p className="text-sm text-base-content/80">
             Funding rows show remaining balances. Click a person’s month to edit
             or extend their allocations.
           </p>
@@ -1832,7 +1832,7 @@ function Timeline({
               >
                 {timelineRangeLabel(windowMode, visibleMonths)}
               </p>
-              <p className="text-xs text-base-content/70">
+              <p className="text-xs text-base-content/80">
                 {windowMode === 'all'
                   ? 'Full frame'
                   : 'Click the strip to jump the window'}
@@ -1906,13 +1906,13 @@ function Timeline({
             className="grid border-b border-main-border bg-base-200"
             style={rowGridStyle}
           >
-            <div className="px-4 py-3 text-xs font-semibold uppercase text-base-content/70">
+            <div className="px-4 py-3 text-xs font-semibold uppercase text-base-content/80">
               Row
             </div>
             <div className="grid" style={monthGridStyle}>
               {visibleMonths.map((month) => (
                 <div
-                  className="min-w-0 border-l border-main-border px-1 py-3 text-center text-xs font-semibold text-base-content/70"
+                  className="min-w-0 border-l border-main-border px-1 py-3 text-center text-xs font-semibold text-base-content/80"
                   key={month}
                 >
                   <span className={isAllMode ? 'block truncate' : ''}>
@@ -1974,7 +1974,7 @@ function Timeline({
                   </button>
                 </div>
                 {source.description && (
-                  <p className="mb-2 text-xs text-base-content/70">
+                  <p className="mb-2 text-xs text-base-content/80">
                     {source.description}
                   </p>
                 )}

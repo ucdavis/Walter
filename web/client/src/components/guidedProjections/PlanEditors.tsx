@@ -41,7 +41,7 @@ export function ReviewItem({
 }) {
   return (
     <div className="rounded-lg border border-main-border p-4">
-      <div className="flex items-center justify-between text-sm text-base-content/70">
+      <div className="flex items-center justify-between text-sm text-base-content/80">
         <span className="flex items-center gap-2">
           <Icon aria-hidden="true" className="size-5 shrink-0" />
           {label}
@@ -55,7 +55,7 @@ export function ReviewItem({
         </button>
       </div>
       <strong className="mt-4 mb-1 block text-xl">{value}</strong>
-      <p className="text-sm text-base-content/70">{detail}</p>
+      <p className="text-sm text-base-content/80">{detail}</p>
     </div>
   );
 }
@@ -164,7 +164,7 @@ export function FundingEditor({
             <BanknotesIcon aria-hidden="true" className="size-5 shrink-0" />
             Your funding sources
           </h2>
-          <p className="text-sm leading-relaxed text-base-content/70">
+          <p className="text-sm leading-relaxed text-base-content/80">
             {selectable
               ? 'Select the funding sources to include in your plan. Highlighted cards are included.'
               : 'Review your projects and add planned funding.'}
@@ -223,7 +223,7 @@ export function FundingEditor({
                   )}
                 </div>
               </div>
-              <div className="mt-auto mb-3 flex min-h-5 items-center justify-between gap-x-4 pt-2 text-sm text-base-content/70">
+              <div className="mt-auto mb-3 flex min-h-5 items-center justify-between gap-x-4 pt-2 text-sm text-base-content/80">
                 {fund.description && (
                   <span className="min-w-0 truncate">{fund.description}</span>
                 )}
@@ -236,7 +236,7 @@ export function FundingEditor({
               </div>
               <div className="flex flex-wrap items-end justify-between gap-3 border-t border-main-border pt-3">
                 <dl className="min-w-0">
-                  <dt className="text-sm text-base-content/70">
+                  <dt className="text-sm text-base-content/80">
                     Available balance
                   </dt>
                   <dd
@@ -282,7 +282,7 @@ export function FundingEditor({
             : 'Add a funding source to continue.'}
         </p>
       )}
-      <p className="mt-5 leading-relaxed text-base-content/70 text-sm">
+      <p className="mt-5 leading-relaxed text-base-content/80 text-sm">
         Balances already account for recorded expenses and commitments. Your
         changes apply to this plan only.
       </p>
@@ -428,7 +428,7 @@ export function ExpenseEditor({
   );
   const emptyRow = (message: string) => (
     <tr>
-      <td className="text-base-content/70" colSpan={8}>
+      <td className="text-base-content/80" colSpan={8}>
         {message}
       </td>
     </tr>
@@ -574,7 +574,7 @@ export function ExpenseEditor({
             <ListBulletIcon aria-hidden="true" className="size-5 shrink-0" />
             Beyond staffing
           </h2>
-          <p className="text-sm leading-relaxed text-base-content/70">
+          <p className="text-sm leading-relaxed text-base-content/80">
             Projected spending by category, plus any costs you plan to add.
           </p>
         </div>
@@ -644,7 +644,7 @@ export function ExpenseEditor({
                   style={rowStyle(expense)}
                 >
                   <td>{expenseCategory(expense)}</td>
-                  <td className="text-base-content/70">
+                  <td className="text-base-content/80">
                     {plan.historyMonths ?? 6}-month average
                   </td>
                   <td>
@@ -653,7 +653,7 @@ export function ExpenseEditor({
                     </span>
                   </td>
                   <td>{monthLabel(expense.month)}</td>
-                  <td className="text-base-content/70">Plan end</td>
+                  <td className="text-base-content/80">Plan end</td>
                   {amountCell(expense)}
                   {totalAndRemove(expense)}
                 </tr>
@@ -678,7 +678,7 @@ export function ExpenseEditor({
           </tfoot>
         </table>
       </div>
-      <p className="mt-5 leading-relaxed text-base-content/70 text-sm">
+      <p className="mt-5 leading-relaxed text-base-content/80 text-sm">
         {plan.serverProjection
           ? 'Projected amounts use the saved snapshot and selected history window. Monthly costs repeat through the ending month or project end.'
           : 'In this demo, other expenses are direct costs only. Monthly costs repeat from the start month until the ending month, plan end, or funding end.'}

@@ -119,17 +119,33 @@ export function splitActive(split: FundingSplit, month: string) {
   );
 }
 
+export function hasIncorrectFundingDates(split: FundingSplit) {
+  return (
+    !split.startMonth || !split.endMonth || split.startMonth > split.endMonth
+  );
+}
+
 export function staffValidation(person: PlanStaff, plan: ProjectionPlan) {
   if (!person.name.trim()) {
     return 'Give each planned person a name.';
   }
   for (const split of person.splits) {
-    if (
-      !split.startMonth ||
-      !split.endMonth ||
-      split.startMonth > split.endMonth
-    ) {
-      return `Check the funding dates for ${person.name}.`;
+    if (hasIncorrectFundingDates(split)) {
+      const source =
+        split.fundingId === OUTSIDE_FUNDING_ID
+          ? 'Outside portfolio'
+          : (plan.funding.find((fund) => fund.id === split.fundingId)?.name ??
+            'Unknown funding source');
+      const allocation = `${person.name} — ${source}`;
+      if (!split.startMonth || !split.endMonth) {
+        const missing = !split.startMonth
+          ? !split.endMonth
+            ? 'start and end months'
+            : 'start month'
+          : 'end month';
+        return `${allocation}: funding ${missing} missing. Set the missing dates in the allocation editor.`;
+      }
+      return `${allocation}: funding starts in ${monthLabel(split.startMonth)}, after it ends in ${monthLabel(split.endMonth)}. Set the start month on or before the end month in the allocation editor.`;
     }
     if (
       !Number.isFinite(split.percent) ||

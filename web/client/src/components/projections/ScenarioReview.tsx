@@ -57,30 +57,30 @@ export function ScenarioPreview({
     >
       <div className="flex items-start justify-between gap-2">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-base-content/70">
+          <p className="text-xs font-semibold uppercase tracking-wide text-base-content/80">
             Proposed change
           </p>
           <h3 className="mt-1 font-semibold">{scenario.title}</h3>
         </div>
         <button
           aria-label="Dismiss proposal"
-          className="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary btn btn-ghost btn-sm btn-square text-base-content/70"
+          className="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary btn btn-ghost btn-sm btn-square text-base-content/80"
           onClick={onDismiss}
           type="button"
         >
           <XMarkIcon className="size-4" />
         </button>
       </div>
-      <p className="mt-2 text-xs text-base-content/70">
+      <p className="mt-2 text-xs text-base-content/80">
         Preview only. Your working plan has not changed.
       </p>
       {result.comparison && (
         <div aria-live="polite" className="my-3 space-y-3">
           {result.comparison.sources.map((source) => (
             <div className="border-t border-main-border pt-2" key={source.id}>
-              <p className="text-xs text-base-content/70">{source.name}</p>
+              <p className="text-xs text-base-content/80">{source.name}</p>
               <p className="mt-1 flex flex-wrap items-baseline gap-2 tabular-nums">
-                <span className="text-sm text-base-content/70">
+                <span className="text-sm text-base-content/80">
                   {projectionMoney(source.original.remainingBalance)}
                 </span>
                 <span aria-label="becomes">→</span>
@@ -94,7 +94,7 @@ export function ScenarioPreview({
                   {projectionMoney(source.proposed.remainingBalance)}
                 </strong>
               </p>
-              <p className="mt-1 text-xs text-base-content/70">
+              <p className="mt-1 text-xs text-base-content/80">
                 {Math.abs(source.costChange) < 0.01
                   ? 'Personnel costs unchanged'
                   : `${projectionMoney(Math.abs(source.costChange))} ${source.costChange > 0 ? 'more' : 'less'} in personnel costs`}
@@ -159,7 +159,7 @@ export function ScenarioComparison({
       <div className="border-b border-main-border p-5 sm:p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-base-content/70">
+            <p className="text-xs font-semibold uppercase tracking-wide text-base-content/80">
               Explore scenario
             </p>
             <h2
@@ -168,13 +168,13 @@ export function ScenarioComparison({
             >
               {scenario.title}
             </h2>
-            <p className="mt-2 text-sm text-base-content/70">
+            <p className="mt-2 text-sm text-base-content/80">
               Adjust the proposal and compare it with your current plan.
             </p>
           </div>
           <button
             aria-label="Close comparison"
-            className="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary btn btn-ghost btn-sm btn-square text-base-content/70"
+            className="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary btn btn-ghost btn-sm btn-square text-base-content/80"
             onClick={onClose}
             type="button"
           >
@@ -200,7 +200,7 @@ export function ScenarioComparison({
                 <h3 className="text-lg font-semibold">
                   {side === 'original' ? 'Current plan' : 'Proposed plan'}
                 </h3>
-                <p className="mb-5 mt-1 text-xs text-base-content/70">
+                <p className="mb-5 mt-1 text-xs text-base-content/80">
                   {side === 'original'
                     ? 'Kept as it is until you apply'
                     : 'Calculated with the assumptions above'}
@@ -219,7 +219,7 @@ export function ScenarioComparison({
         )}
       </div>
       <footer className="flex flex-wrap items-center justify-between gap-4 border-t border-main-border bg-base-200 p-5 sm:p-6">
-        <p className="max-w-xl text-xs text-base-content/70">
+        <p className="max-w-xl text-xs text-base-content/80">
           Salary, fringe, and indirect costs are included. Funding availability
           alone does not establish eligibility. Changes stay in this demo.
         </p>
@@ -274,15 +274,15 @@ function ComparisonFund({
   const summary = source[side];
   return (
     <div className="mt-4 border-t border-main-border pt-4">
-      <p className="text-xs text-base-content/70">{source.id}</p>
+      <p className="text-xs text-base-content/80">{source.id}</p>
       <h4 className="mt-1 text-sm font-medium">{source.name}</h4>
-      <p className="mt-3 text-xs text-base-content/70">Ending balance</p>
+      <p className="mt-3 text-xs text-base-content/80">Ending balance</p>
       <p
         className={`mt-2 text-2xl font-semibold tabular-nums ${summary.remainingBalance < 0 ? 'text-error' : 'text-primary'}`}
       >
         {projectionExactMoney(summary.remainingBalance)}
       </p>
-      <p className="mt-1 text-xs text-base-content/70">
+      <p className="mt-1 text-xs text-base-content/80">
         {summary.deficitMonths.length
           ? `First deficit: ${monthLabel(summary.deficitMonths[0])}`
           : 'No projected deficit'}
@@ -301,11 +301,11 @@ function ComparisonFund({
             <XAxis
               dataKey="month"
               minTickGap={35}
-              tick={{ className: 'text-xs fill-base-content/70' }}
+              tick={{ className: 'text-xs fill-base-content/80' }}
             />
             <YAxis
               domain={[low - padding, high + padding]}
-              tick={{ className: 'text-xs fill-base-content/70' }}
+              tick={{ className: 'text-xs fill-base-content/80' }}
               tickFormatter={(value: number) =>
                 `${value < 0 ? '−' : ''}$${Math.abs(value / 1000).toFixed(0)}k`
               }
@@ -341,7 +341,7 @@ function ComparisonFund({
           </LineChart>
         </ResponsiveContainer>
       </div>
-      <p className="text-xs text-base-content/70">
+      <p className="text-xs text-base-content/80">
         Personnel drawdown: {projectionExactMoney(summary.totalDrawdown)}
       </p>
     </div>
@@ -408,7 +408,7 @@ function ScenarioEditor({
         />
       ))}
       {scenario.assumptions.length > 0 && (
-        <div className="text-xs text-base-content/70">
+        <div className="text-xs text-base-content/80">
           <p className="mb-1 font-medium">Assumptions</p>
           <ul className="list-disc space-y-1 pl-4">
             {scenario.assumptions.map((text, index) => (
@@ -452,7 +452,7 @@ function OperationEditor({
       </legend>
       <div className={fields}>
         {operation.type === 'hire' && (
-          <label className="grid min-w-0 gap-2 text-sm font-medium text-base-content/70 col-span-2">
+          <label className="grid min-w-0 gap-2 text-sm font-medium text-base-content/80 col-span-2">
             Name
             <input
               className="input input-sm min-w-0 w-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
@@ -486,7 +486,7 @@ function OperationEditor({
               onChange={(percent) => onChange({ ...operation, percent })}
               value={operation.percent}
             />
-            <label className="grid min-w-0 gap-2 text-sm font-medium text-base-content/70">
+            <label className="grid min-w-0 gap-2 text-sm font-medium text-base-content/80">
               Funding project
               <select
                 className="select select-sm min-w-0 w-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
@@ -506,7 +506,7 @@ function OperationEditor({
         )}
         {(operation.type === 'hire' || operation.type === 'allocate') && (
           <>
-            <label className="grid min-w-0 gap-2 text-sm font-medium text-base-content/70">
+            <label className="grid min-w-0 gap-2 text-sm font-medium text-base-content/80">
               Start month
               <input
                 className="input input-sm min-w-0 w-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
@@ -517,7 +517,7 @@ function OperationEditor({
                 value={operation.startMonth}
               />
             </label>
-            <label className="grid min-w-0 gap-2 text-sm font-medium text-base-content/70">
+            <label className="grid min-w-0 gap-2 text-sm font-medium text-base-content/80">
               End month
               <input
                 className="input input-sm min-w-0 w-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
@@ -537,7 +537,7 @@ function OperationEditor({
                 className="grid grid-cols-[minmax(0,1fr)_75px_auto] items-end gap-2"
                 key={index}
               >
-                <label className="grid min-w-0 gap-2 text-sm font-medium text-base-content/70">
+                <label className="grid min-w-0 gap-2 text-sm font-medium text-base-content/80">
                   Funding project
                   <select
                     className="select select-sm min-w-0 w-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
@@ -575,7 +575,7 @@ function OperationEditor({
                 />
                 <button
                   aria-label={`Remove split ${index + 1}`}
-                  className="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary btn btn-ghost btn-sm btn-square text-base-content/70"
+                  className="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary btn btn-ghost btn-sm btn-square text-base-content/80"
                   onClick={() =>
                     onChange({
                       ...operation,
@@ -613,14 +613,14 @@ function OperationEditor({
               Add funding split
             </button>
             {!operation.splits.length && (
-              <p className="text-xs text-base-content/70">
+              <p className="text-xs text-base-content/80">
                 Clears funding allocations for these months.
               </p>
             )}
           </div>
         )}
         {operation.type === 'person' && (
-          <p className="col-span-2 text-xs text-base-content/70">
+          <p className="col-span-2 text-xs text-base-content/80">
             Applies to this person&apos;s entire modeled appointment.
           </p>
         )}
@@ -642,7 +642,7 @@ function OperationEditor({
               }
               value={operation.indirectRate}
             />
-            <label className="grid min-w-0 gap-2 text-sm font-medium text-base-content/70">
+            <label className="grid min-w-0 gap-2 text-sm font-medium text-base-content/80">
               Funding start
               <input
                 className="input input-sm min-w-0 w-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
@@ -653,7 +653,7 @@ function OperationEditor({
                 value={operation.startDate}
               />
             </label>
-            <label className="grid min-w-0 gap-2 text-sm font-medium text-base-content/70">
+            <label className="grid min-w-0 gap-2 text-sm font-medium text-base-content/80">
               Funding end
               <input
                 className="input input-sm min-w-0 w-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
@@ -664,7 +664,7 @@ function OperationEditor({
                 value={operation.endDate}
               />
             </label>
-            <p className="col-span-2 text-xs text-base-content/70">
+            <p className="col-span-2 text-xs text-base-content/80">
               Balance changes take effect at the start of the fund.
             </p>
           </>
@@ -688,7 +688,7 @@ function NumberField({
   value: number;
 }) {
   return (
-    <label className="grid min-w-0 gap-2 text-sm font-medium text-base-content/70">
+    <label className="grid min-w-0 gap-2 text-sm font-medium text-base-content/80">
       {label}
       <input
         className="input input-sm min-w-0 w-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"

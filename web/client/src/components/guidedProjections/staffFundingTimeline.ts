@@ -38,7 +38,6 @@ export function staffFundingMonths(
       (!job?.startDate || month >= job.startDate.slice(0, 7)) &&
       (!job?.endDate || month <= job.endDate.slice(0, 7));
     const shares = new Map<string, MonthlyShare>();
-
     if (person.included && active) {
       for (const split of person.splits) {
         if (!splitActive(split, month) || !(split.percent > 0)) {

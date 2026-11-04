@@ -172,7 +172,9 @@ describe('Guided projection plan navigation', () => {
     expect(
       screen.queryByRole('complementary', { name: 'Projection plans' })
     ).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'All plans' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Projections Dashboard' })
+    );
     fireEvent.click(
       within(
         screen.getByRole('navigation', { name: 'Plan navigation' })
@@ -184,7 +186,9 @@ describe('Guided projection plan navigation', () => {
     expect(
       screen.queryByRole('complementary', { name: 'Projection plans' })
     ).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'All plans' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Projections Dashboard' })
+    );
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
       'Morgan Reed’s portfolio projections'
     );

@@ -45,7 +45,7 @@ export default function FundingSourceDetailsModal({
             <h2 className="text-2xl font-semibold" id={titleId}>
               Funding source details
             </h2>
-            <p className="mt-1 text-sm text-base-content/70">{fund.name}</p>
+            <p className="mt-1 text-sm text-base-content/80">{fund.name}</p>
           </div>
           <button
             aria-label="Close funding source details"

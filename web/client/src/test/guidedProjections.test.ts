@@ -49,6 +49,23 @@ function fixture(): ProjectionDemoPlan {
 }
 
 describe('Guided workspace funding splits', () => {
+  it.each([
+    ['', '2026-03', 'funding start month missing'],
+    ['2026-01', '', 'funding end month missing'],
+    ['', '', 'funding start and end months missing'],
+    [
+      '2026-03',
+      '2026-01',
+      'funding starts in Mar 2026, after it ends in Jan 2026',
+    ],
+  ])('explains invalid funding dates %s–%s', (startMonth, endMonth, issue) => {
+    const plan = createProjectionPlan(fixture());
+    Object.assign(plan.staff[0].splits[0], { endMonth, startMonth });
+    const error = staffValidation(plan.staff[0], plan);
+    expect(error).toContain(`Person — Project A: ${issue}`);
+    expect(error).toContain('allocation editor');
+  });
+
   it('preserves concurrent project assignments and each project indirect rate', () => {
     const plan = createProjectionPlan(fixture());
     expect(plan.staff[0].splits).toHaveLength(2);

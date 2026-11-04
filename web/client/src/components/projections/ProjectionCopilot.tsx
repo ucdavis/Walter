@@ -162,14 +162,14 @@ export default function ProjectionCopilot({
       <div className="flex items-center gap-2 border-b border-main-border px-5 py-4">
         <SparklesIcon aria-hidden="true" className="size-5 text-primary" />
         <h2 className="font-semibold">Projection copilot</h2>
-        <span className="ml-auto text-xs text-base-content/70">Demo</span>
+        <span className="ml-auto text-xs text-base-content/80">Demo</span>
       </div>
       <section
         aria-labelledby="projection-insights-title"
         className="border-b border-main-border p-4"
       >
         <h3
-          className="text-xs font-semibold uppercase tracking-wide text-base-content/70"
+          className="text-xs font-semibold uppercase tracking-wide text-base-content/80"
           id="projection-insights-title"
         >
           What stands out
@@ -179,13 +179,13 @@ export default function ProjectionCopilot({
             <h4 className="text-sm font-semibold">
               {shortfall.name} runs short
             </h4>
-            <p className="mt-2 text-sm text-base-content/70">
+            <p className="mt-2 text-sm text-base-content/80">
               {shortfall.firstDeficitMonth &&
                 `First deficit in ${monthLabel(shortfall.firstDeficitMonth)}. `}
               The plan ends {projectionMoney(-shortfall.remainingBalance)} below
               zero.
             </p>
-            <p className="mt-2 text-xs text-base-content/70">
+            <p className="mt-2 text-xs text-base-content/80">
               Personnel averages {projectionMoney(shortfall.averageMonthlyCost)}
               /month across {shortfall.spendingMonthCount} funded months.
             </p>
@@ -206,7 +206,7 @@ export default function ProjectionCopilot({
         {headroom && (
           <div className="border-s-4 ps-3 mt-4 border-s-success">
             <h4 className="text-sm font-semibold">{headroom.name} has room</h4>
-            <p className="mt-2 text-sm text-base-content/70">
+            <p className="mt-2 text-sm text-base-content/80">
               {projectionMoney(headroom.remainingBalance)} remains after the
               planned assignments.
             </p>
@@ -225,7 +225,7 @@ export default function ProjectionCopilot({
           </div>
         )}
         {!shortfall && !headroom && (
-          <p className="mt-3 text-sm text-base-content/70">
+          <p className="mt-3 text-sm text-base-content/80">
             Add funding and people to explore your projection.
           </p>
         )}
@@ -233,7 +233,7 @@ export default function ProjectionCopilot({
       <section aria-label="Ask the copilot" className="p-4">
         <h3 className="text-sm font-semibold">Ask or try a change</h3>
         {!messages.length && (
-          <p className="mt-2 text-sm text-base-content/70">
+          <p className="mt-2 text-sm text-base-content/80">
             Ask what is driving a balance, or try a different staffing plan.
           </p>
         )}
@@ -249,7 +249,7 @@ export default function ProjectionCopilot({
               className={`mt-4 py-3 ${message.role === 'user' ? 'rounded-box bg-base-100 px-3' : ''}`}
               key={index}
             >
-              <p className="mb-1 text-xs font-semibold text-base-content/70">
+              <p className="mb-1 text-xs font-semibold text-base-content/80">
                 {message.role === 'user' ? 'You' : 'Copilot'}
               </p>
               <div className="whitespace-pre-wrap break-words text-sm leading-relaxed">
@@ -258,7 +258,7 @@ export default function ProjectionCopilot({
             </div>
           ))}
           {request.isPending && (
-            <p className="py-3 text-sm text-base-content/70" role="status">
+            <p className="py-3 text-sm text-base-content/80" role="status">
               Checking the projection…
             </p>
           )}
@@ -321,7 +321,7 @@ export default function ProjectionCopilot({
                 Undo change
               </button>
             ) : (
-              <p className="mt-1 text-xs text-base-content/70">
+              <p className="mt-1 text-xs text-base-content/80">
                 The plan was edited afterward, so Undo is no longer available.
               </p>
             )}
@@ -348,7 +348,7 @@ export default function ProjectionCopilot({
             value={question}
           />
           <div className="flex items-center justify-between gap-2">
-            <span className="text-xs text-base-content/70">
+            <span className="text-xs text-base-content/80">
               {plan.fundingSources.length} projects · {plan.people.length}{' '}
               people
             </span>
@@ -373,7 +373,7 @@ export default function ProjectionCopilot({
             {status.error.message}
           </p>
         )}
-        <p className="mt-3 text-xs text-base-content/70">
+        <p className="mt-3 text-xs text-base-content/80">
           Proposals are temporary. Review the assumptions before applying.
         </p>
       </section>

@@ -232,7 +232,9 @@ describe('guided projections with server persistence', () => {
       expect(screen.getByRole('alert')).toHaveTextContent(
         'Current portfolio data could not be loaded'
       );
-      fireEvent.click(screen.getByRole('button', { name: 'All plans' }));
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Projections Dashboard' })
+      );
       await screen.findByRole('heading', { name: /portfolio projections/i });
       expect(screen.getByRole('button', { name: 'New plan' })).toBeDisabled();
       expect(writes).toEqual([]);
@@ -287,7 +289,9 @@ describe('guided projections with server persistence', () => {
           level: 3,
           name: /Real seed project/,
         });
-        fireEvent.click(screen.getByRole('button', { name: 'All plans' }));
+        fireEvent.click(
+          screen.getByRole('button', { name: 'Projections Dashboard' })
+        );
         await screen.findByRole('heading', { name: /portfolio projections/i });
         await act(async () => view.router.history.back());
         await screen.findByRole('heading', {
@@ -363,7 +367,9 @@ describe('guided projections with server persistence', () => {
         'Keep these edits'
       );
       fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
-      fireEvent.click(screen.getByRole('button', { name: 'All plans' }));
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Projections Dashboard' })
+      );
       expect(confirm).toHaveBeenCalledOnce();
       expect(
         screen.getByRole('heading', { level: 1, name: 'Keep these edits' })
@@ -534,13 +540,17 @@ describe('guided projections with server persistence', () => {
         target: { value: 'Keep editing' },
       });
       fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
-      fireEvent.click(screen.getByRole('button', { name: 'All plans' }));
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Projections Dashboard' })
+      );
       expect(confirm).toHaveBeenCalled();
       expect(
         screen.getByRole('heading', { level: 1, name: 'Keep editing' })
       ).toBeInTheDocument();
       confirm.mockReturnValue(true);
-      fireEvent.click(screen.getByRole('button', { name: 'All plans' }));
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Projections Dashboard' })
+      );
       expect(
         screen.getByRole('heading', { name: /portfolio projections/i })
       ).toBeInTheDocument();
@@ -569,7 +579,9 @@ describe('guided projections with server persistence', () => {
         'Current portfolio data could not be loaded'
       );
       expect(screen.getByRole('button', { name: 'Save plan' })).toBeEnabled();
-      fireEvent.click(screen.getByRole('button', { name: 'All plans' }));
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Projections Dashboard' })
+      );
       await screen.findByRole('heading', { name: /portfolio projections/i });
       expect(screen.getByRole('button', { name: 'New plan' })).toBeDisabled();
     } finally {

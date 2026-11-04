@@ -40,6 +40,7 @@ export default function StaffAllocationModal({
   const { registerItem, revealItem } = useRevealItem();
   const titleId = useId();
   const descriptionId = useId();
+  const errorId = useId();
   const selectedMonthRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     selectedMonthRef.current?.scrollIntoView({
@@ -57,43 +58,89 @@ export default function StaffAllocationModal({
   const selected = months.filter((value) => value >= start && value <= end);
   const appointment = (person.serverJob?.fte ?? 1) * 100;
   const total = shares.reduce((sum, share) => sum + share.percent, 0);
+  const unavailableFunds = funds.filter(
+    (fund) =>
+      shares.some(
+        (share) => share.fundingId === fund.id && share.percent > 0
+      ) && selected.some((value) => !isFundingSourceActiveInMonth(fund, value))
+  );
+  const inactiveMonths = selected.filter(
+    (value) =>
+      appointment <= 0 ||
+      (person.serverJob?.startDate &&
+        value < person.serverJob.startDate.slice(0, 7)) ||
+      (person.serverJob?.endDate &&
+        value > person.serverJob.endDate.slice(0, 7))
+  );
   const nextFundingId =
-    funds.find((fund) => !shares.some((share) => share.fundingId === fund.id))
-      ?.id ??
+    funds.find(
+      (fund) =>
+        !shares.some((share) => share.fundingId === fund.id) &&
+        selected.every((value) => isFundingSourceActiveInMonth(fund, value))
+    )?.id ??
     (plan.serverProjection &&
     !shares.some((share) => share.fundingId === OUTSIDE_FUNDING_ID)
       ? OUTSIDE_FUNDING_ID
       : undefined);
-  const error =
-    !start ||
-    !end ||
-    start > month ||
-    end < month ||
-    start < months[0] ||
-    end > months.at(-1)!
-      ? 'Choose a range within the planning period that includes the selected month.'
-      : shares.some(
-            (share) =>
-              !Number.isFinite(share.percent) ||
-              share.percent < 0 ||
-              share.percent > 100
-          )
-        ? 'Each share must be between 0% and 100%.'
-        : shares.some(
-              (share) =>
-                !funds.some((fund) => fund.id === share.fundingId) &&
-                !(
-                  plan.serverProjection &&
-                  share.fundingId === OUTSIDE_FUNDING_ID
-                )
-            )
-          ? 'Choose an included funding source for each share.'
-          : new Set(shares.map((share) => share.fundingId)).size !==
-              shares.length
-            ? 'Use each funding source once.'
-            : total > appointment + 0.000_01
-              ? `Shares total ${formatPercent(total)}. Reduce them to ${formatPercent(appointment)} or less.`
-              : null;
+  const error = validateAllocation();
+
+  function validateAllocation(): string | null {
+    if (
+      !start ||
+      !end ||
+      start > month ||
+      end < month ||
+      start < months[0] ||
+      end > months.at(-1)!
+    ) {
+      return 'Choose a range within the planning period that includes the selected month.';
+    }
+    if (shares.length && !person.included) {
+      return 'This person is excluded from the plan. Include them before assigning funding.';
+    }
+    if (shares.length && appointment <= 0) {
+      return 'This appointment has 0% FTE. Set a positive appointment FTE in Salary & person details before assigning funding.';
+    }
+    if (shares.length && inactiveMonths.length) {
+      return `This appointment is inactive in ${inactiveMonths.map(monthLabel).join(', ')}. Adjust the apply range or appointment dates in Salary & person details.`;
+    }
+    if (
+      shares.some(
+        (share) =>
+          !Number.isFinite(share.percent) ||
+          share.percent <= 0 ||
+          share.percent > 100
+      )
+    ) {
+      return 'Each share must be greater than 0% and no more than 100%. Remove a share to leave that time open.';
+    }
+    if (
+      shares.some(
+        (share) =>
+          !funds.some((fund) => fund.id === share.fundingId) &&
+          !(plan.serverProjection && share.fundingId === OUTSIDE_FUNDING_ID)
+      )
+    ) {
+      return 'Choose an included funding source for each share.';
+    }
+    if (
+      new Set(shares.map((share) => share.fundingId)).size !== shares.length
+    ) {
+      return 'Use each funding source once.';
+    }
+    if (total > appointment + 0.000_01) {
+      return `Shares total ${formatPercent(total)}. Reduce them to ${formatPercent(appointment)} or less.`;
+    }
+    if (unavailableFunds.length) {
+      return unavailableFunds
+        .map(
+          (fund) =>
+            `${fund.name} is available ${monthLabel(fund.startDate.slice(0, 7))} through ${monthLabel(fund.endDate.slice(0, 7))}. Choose another source or limit the apply range to those dates.`
+        )
+        .join(' ');
+    }
+    return null;
+  }
 
   function updateShare(id: string, changes: Partial<StaffAllocation>) {
     setShares((current) =>
@@ -113,6 +160,7 @@ export default function StaffAllocationModal({
     >
       <form
         className="min-w-0 max-w-full"
+        noValidate
         onSubmit={(event) => {
           event.preventDefault();
           if (!error) {
@@ -148,7 +196,7 @@ export default function StaffAllocationModal({
             </div>
           </div>
           <p
-            className="mt-2 text-sm leading-relaxed text-base-content/70"
+            className="mt-2 text-sm leading-relaxed text-base-content/80"
             id={descriptionId}
           >
             Editing {monthLabel(month)}. Expand the range to replace nearby
@@ -193,7 +241,7 @@ export default function StaffAllocationModal({
               {months.map((value) => (
                 <button
                   aria-pressed={value >= start && value <= end}
-                  className={`min-w-28 shrink-0 rounded-sm border px-3 py-2 text-left text-sm ${value >= start && value <= end ? 'border-primary bg-primary/10 text-primary' : 'border-main-border bg-base-100 text-base-content/70'}`}
+                  className={`min-w-28 shrink-0 rounded-sm border px-3 py-2 text-left text-sm ${value >= start && value <= end ? 'border-primary bg-primary/10 text-primary' : 'border-main-border bg-base-100 text-base-content/80'}`}
                   key={value}
                   onClick={() => {
                     setStart(value < month ? value : month);
@@ -221,14 +269,14 @@ export default function StaffAllocationModal({
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h3 className="text-base font-semibold">Funding split</h3>
-                <p className="mt-1 text-sm text-base-content/70">
+                <p className="mt-1 text-sm text-base-content/80">
                   Shares are percentages of full-time salary. This appointment
                   is {formatPercent(appointment)}.
                 </p>
               </div>
               <button
                 className="btn btn-outline btn-sm"
-                disabled={!nextFundingId}
+                disabled={!nextFundingId || total >= appointment}
                 onClick={() => {
                   const id = crypto.randomUUID();
                   setShares((current) => [
@@ -276,10 +324,32 @@ export default function StaffAllocationModal({
                         </option>
                       )}
                       {funds.map((fund) => (
-                        <option key={fund.id} value={fund.id}>
-                          {fund.name}
+                        <option
+                          disabled={
+                            selected.some(
+                              (value) =>
+                                !isFundingSourceActiveInMonth(fund, value)
+                            ) ||
+                            shares.some(
+                              (other) =>
+                                other.id !== share.id &&
+                                other.fundingId === fund.id
+                            )
+                          }
+                          key={fund.id}
+                          value={fund.id}
+                        >
+                          {fund.name.length > 90
+                            ? `${fund.name.slice(0, 89).trimEnd()}…`
+                            : fund.name}
                           {fund.serverProject?.taskNumber
                             ? ` · Task ${fund.serverProject.taskNumber}`
+                            : ''}
+                          {selected.some(
+                            (value) =>
+                              !isFundingSourceActiveInMonth(fund, value)
+                          )
+                            ? ' · Unavailable for this range'
                             : ''}
                         </option>
                       ))}
@@ -290,7 +360,7 @@ export default function StaffAllocationModal({
                     <input
                       aria-label={`${person.name} share ${index + 1}`}
                       className="input min-w-0 w-full"
-                      max={100}
+                      max={appointment}
                       min={0}
                       onChange={(event) =>
                         updateShare(share.id, {
@@ -318,42 +388,42 @@ export default function StaffAllocationModal({
                 </div>
               ))}
               {!shares.length && (
-                <p className="rounded-md bg-base-200 p-4 text-sm text-base-content/70">
+                <p className="rounded-md bg-base-200 p-4 text-sm text-base-content/80">
                   No funding assigned. Add a source, or apply to leave these
                   months open.
                 </p>
               )}
             </div>
-            {funds
-              .filter(
-                (fund) =>
-                  shares.some(
-                    (share) => share.fundingId === fund.id && share.percent > 0
-                  ) &&
-                  selected.some(
-                    (value) => !isFundingSourceActiveInMonth(fund, value)
-                  )
-              )
-              .map((fund) => (
-                <p className="mt-3 text-sm text-warning" key={fund.id}>
-                  {fund.name} only charges from{' '}
-                  {monthLabel(fund.startDate.slice(0, 7))} through{' '}
-                  {monthLabel(fund.endDate.slice(0, 7))}. Months outside those
-                  dates stay open.
-                </p>
-              ))}
-            {error && (
-              <p className="mt-4 text-sm text-error" role="alert">
-                {error}
+            {total >= appointment && (
+              <p className="mt-3 text-sm text-base-content/80">
+                This appointment is fully allocated. Reduce or remove an
+                existing share before adding another source.
+              </p>
+            )}
+            {total < appointment && !nextFundingId && (
+              <p className="mt-3 text-sm text-base-content/80">
+                No additional funding sources are available for this range.
+                Adjust an existing share, change the apply range, or add a
+                source on the Funding tab.
               </p>
             )}
           </section>
         </div>
         <footer className="flex flex-wrap justify-end gap-3 border-t border-main-border px-5 py-4 sm:px-6">
+          {error && (
+            <p
+              className="alert alert-error alert-soft w-full text-sm"
+              id={errorId}
+              role="alert"
+            >
+              {error}
+            </p>
+          )}
           <button className="btn btn-outline" onClick={onClose} type="button">
             Cancel
           </button>
           <button
+            aria-describedby={error ? errorId : undefined}
             className="btn btn-primary"
             disabled={Boolean(error)}
             type="submit"

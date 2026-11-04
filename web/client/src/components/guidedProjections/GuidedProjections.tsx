@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  ArrowLeftIcon,
   ArrowRightIcon,
   BanknotesIcon,
   ChartBarIcon,
@@ -10,6 +9,7 @@ import {
   ExclamationTriangleIcon,
   ListBulletIcon,
   PlusIcon,
+  PresentationChartLineIcon,
   UserGroupIcon,
 } from '@heroicons/react/24/outline';
 import type { ProjectionLookups } from '@/queries/projections.ts';
@@ -337,12 +337,12 @@ export default function GuidedProjections({
       >
         <div className="bg-base-100 pt-6 pb-12 text-base leading-normal text-base-content">
           <div className="mx-auto max-w-4xl">
-            <button
-              className="inline-flex items-center gap-2 py-2 text-sm text-base-content/70 transition-colors hover:text-primary"
-              onClick={home}
-              type="button"
-            >
-              <ArrowLeftIcon className="size-5 shrink-0" /> All plans
+            <button className="btn gap-2" onClick={home} type="button">
+              <PresentationChartLineIcon
+                aria-hidden="true"
+                className="size-5 shrink-0"
+              />{' '}
+              Projections Dashboard
             </button>
             <header className="mt-6 mb-8">
               <h1 className="h1 outline-none" ref={heading} tabIndex={-1}>
@@ -355,7 +355,7 @@ export default function GuidedProjections({
                   ][step]
                 }
               </h1>
-              <p className="mt-3 max-w-2xl text-base leading-relaxed text-base-content/70">
+              <p className="mt-3 max-w-2xl text-base leading-relaxed text-base-content/80">
                 {
                   [
                     'Your current funding and people are already filled in.',
@@ -425,7 +425,7 @@ export default function GuidedProjections({
               )}
               {step === 3 && (
                 <>
-                  <div className="mb-6 text-center [&>h2]:my-2 [&>h2]:text-2xl [&>h2]:font-bold [&>p]:text-sm [&>p]:text-base-content/70">
+                  <div className="mb-6 text-center [&>h2]:my-2 [&>h2]:text-2xl [&>h2]:font-bold [&>p]:text-sm [&>p]:text-base-content/80">
                     <span className="inline-flex items-center rounded px-2 py-1 text-sm font-semibold bg-base-200 text-primary">
                       {draft.months}-month plan
                     </span>
@@ -465,7 +465,7 @@ export default function GuidedProjections({
                       result={result}
                     />
                   </div>
-                  <div className="flex items-center justify-between gap-4 border-t border-main-border pt-5 [&>span]:text-sm [&>span]:text-base-content/70 [&>strong]:text-3xl">
+                  <div className="flex items-center justify-between gap-4 border-t border-main-border pt-5 [&>span]:text-sm [&>span]:text-base-content/80 [&>strong]:text-3xl">
                     <span>Combined ending balance</span>
                     <strong className={result.ending < 0 ? 'text-error' : ''}>
                       {money(result.ending)}
@@ -481,7 +481,7 @@ export default function GuidedProjections({
             )}
             <footer className="mt-8 grid grid-cols-2 items-center gap-4 border-t border-main-border pt-6 sm:grid-cols-[auto_minmax(0,1fr)_auto]">
               <button
-                className="btn btn-ghost justify-self-start text-base-content/70"
+                className="btn btn-ghost justify-self-start text-base-content/80"
                 onClick={() => {
                   if (step === 0) {
                     home();
@@ -558,7 +558,7 @@ export default function GuidedProjections({
                         : 'Portfolio projections'}
                     </h1>
                     {remote && (
-                      <p className="mt-2 max-w-2xl text-sm text-base-content/70">
+                      <p className="mt-2 max-w-2xl text-sm text-base-content/80">
                         New plans exclude inactive internal tasks and expired
                         awards. Each project combines its eligible tasks.
                       </p>
@@ -592,7 +592,7 @@ export default function GuidedProjections({
                           Available across active projects
                         </span>
                       </div>
-                      <p className="ms-auto text-right text-sm text-base-content/70">
+                      <p className="ms-auto text-right text-sm text-base-content/80">
                         {baseline.funding.length} projects · From your Walter
                         snapshot
                       </p>
@@ -637,7 +637,7 @@ export default function GuidedProjections({
                       {plans.length}
                     </span>
                   </h2>
-                  <span className="hidden text-sm text-base-content/70 sm:block">
+                  <span className="hidden text-sm text-base-content/80 sm:block">
                     Separate assumptions for each plan
                   </span>
                 </div>
@@ -646,13 +646,13 @@ export default function GuidedProjections({
                     const projection = projectGuidedPlan(plan);
                     return (
                       <button
-                        className="min-w-0 rounded-box border border-main-border p-4 text-left transition-[border-color,box-shadow] hover:border-base-content/70 hover:shadow-sm motion-reduce:transition-none [&>p]:mt-1"
+                        className="min-w-0 rounded-box border border-main-border p-4 text-left transition-[border-color,box-shadow] hover:border-base-content/80 hover:shadow-sm motion-reduce:transition-none [&>p]:mt-1"
                         key={plan.id}
                         onClick={() => open(plan)}
                         type="button"
                       >
                         <h3 className="text-xl font-semibold">{plan.name}</h3>
-                        <p className="line-clamp-2 text-sm text-base-content/70">
+                        <p className="line-clamp-2 text-sm text-base-content/80">
                           {plan.note ||
                             'A plan based on your current Walter snapshot.'}
                         </p>
@@ -661,7 +661,7 @@ export default function GuidedProjections({
                             (point) => point.balance
                           )}
                         />
-                        <div className="flex items-baseline justify-between gap-3 [&>span]:text-base-content/70">
+                        <div className="flex items-baseline justify-between gap-3 [&>span]:text-base-content/80">
                           <span className="text-sm">Ending balance</span>
                           <strong
                             className={`text-xl font-medium ${projection.ending < 0 ? 'text-error' : ''}`}
@@ -669,7 +669,7 @@ export default function GuidedProjections({
                             {money(projection.ending)}
                           </strong>
                         </div>
-                        <div className="mt-3 flex items-center justify-between gap-3 border-t border-main-border pt-3 text-base-content/70 [&>span:last-child]:flex [&>span:last-child]:items-center [&>span:last-child]:gap-1.5 [&>span:last-child]:text-primary text-sm">
+                        <div className="mt-3 flex items-center justify-between gap-3 border-t border-main-border pt-3 text-base-content/80 [&>span:last-child]:flex [&>span:last-child]:items-center [&>span:last-child]:gap-1.5 [&>span:last-child]:text-primary text-sm">
                           <span>
                             {plan.months} months ·{' '}
                             {
@@ -690,16 +690,12 @@ export default function GuidedProjections({
               </>
             ) : (
               <>
-                <button
-                  className="mb-4 inline-flex items-center gap-2 text-sm text-primary"
-                  onClick={home}
-                  type="button"
-                >
-                  <ArrowLeftIcon
+                <button className="btn mb-4 gap-2" onClick={home} type="button">
+                  <PresentationChartLineIcon
                     aria-hidden="true"
-                    className="size-4 shrink-0"
+                    className="size-5 shrink-0"
                   />
-                  All plans
+                  Projections Dashboard
                 </button>
                 <ShortfallSummary
                   incomplete={hasMissingInputs(draft)}
@@ -715,7 +711,7 @@ export default function GuidedProjections({
                     <p className="subtitle">
                       {monthLabel(draft.startMonth)} onward · {draft.months}{' '}
                       months{' '}
-                      <span className="mt-1 block text-base-content/70 xl:ms-4 xl:mt-0 xl:inline">
+                      <span className="mt-1 block text-base-content/80 xl:ms-4 xl:mt-0 xl:inline">
                         {storageText}
                       </span>
                     </p>
@@ -835,12 +831,12 @@ export default function GuidedProjections({
                         projectId={projectId}
                         result={result}
                       />
-                      <p className="mt-4 text-sm leading-relaxed text-base-content/70">
+                      <p className="mt-4 text-sm leading-relaxed text-base-content/80">
                         {remote
                           ? 'Projects combine eligible tasks from the snapshot; inactive internal tasks and expired awards are excluded. Uses PPM budgets and costs, UCPath staffing, and historical spending averages. Salary, benefits, vacation accrual, COLA, and fee remission follow each job’s assumptions.'
                           : 'Salary, fringe, and indirect costs are included. Other expenses use direct costs only in this demo.'}
                       </p>
-                      <p className="mt-4 text-sm leading-relaxed text-base-content/70">
+                      <p className="mt-4 text-sm leading-relaxed text-base-content/80">
                         {remote
                           ? 'Save plan stores this scenario in Walter. Project accounting records are unchanged.'
                           : 'Demo plans are saved in this browser and do not update Walter project records.'}
@@ -851,7 +847,7 @@ export default function GuidedProjections({
               </>
             )}
             {screen === 'home' && (
-              <p className="mt-4 text-sm leading-relaxed text-base-content/70 text-sm">
+              <p className="mt-4 text-sm leading-relaxed text-base-content/80 text-sm">
                 {remote
                   ? 'Plans are shared with people who can access this PI’s portfolio. Use Save plan to keep your changes.'
                   : 'Demo plans are saved in this browser and do not update Walter project records.'}

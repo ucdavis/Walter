@@ -1,14 +1,22 @@
 import { useMemo, useRef, useState } from 'react';
-import { PlusIcon, UserGroupIcon } from '@heroicons/react/24/outline';
+import {
+  ExclamationTriangleIcon,
+  PlusIcon,
+  UserGroupIcon,
+} from '@heroicons/react/24/outline';
 import type { ProjectionLookups } from '@/queries/projections.ts';
 import StaffPersonDetailsModal from '@/components/guidedProjections/StaffPersonDetailsModal.tsx';
 import StaffAllocationModal from '@/components/guidedProjections/StaffAllocationModal.tsx';
 import StaffFundingTimeline from '@/components/guidedProjections/StaffFundingTimeline.tsx';
-import PlanningPeriodSelect from '@/components/guidedProjections/PlanningPeriodSelect.tsx';
+import { staffFundingMonths } from '@/components/guidedProjections/staffFundingTimeline.ts';
 import { money } from '@/components/guidedProjections/defaults.ts';
+import { formatDate } from '@/lib/date.ts';
+import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
+import { tooltipDefinitions } from '@/shared/tooltips.ts';
 import { useRevealItem } from '@/shared/hooks/useRevealItem.ts';
 import {
   planMonths,
+  hasIncorrectFundingDates,
   projectGuidedPlan,
   staffValidation,
   type PlanResult,
@@ -116,24 +124,16 @@ export default function SplitStaffEditor({
             <UserGroupIcon aria-hidden="true" className="size-5 shrink-0" />
             People & project funding
           </h2>
-          <p className="text-sm leading-relaxed text-base-content/70">
+          <p className="text-sm leading-relaxed text-base-content/80">
             Split a person&apos;s time across projects, or change funding over
             time.
           </p>
         </div>
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="w-44">
-            <PlanningPeriodSelect
-              months={plan.months}
-              onChange={(months) => update({ ...plan, months })}
-            />
-          </div>
-          <button className="btn btn-outline" onClick={addPerson} type="button">
-            <PlusIcon className="size-5 shrink-0" /> Add person
-          </button>
-        </div>
+        <button className="btn btn-outline" onClick={addPerson} type="button">
+          <PlusIcon className="size-5 shrink-0" /> Add person
+        </button>
       </div>
-      <p className="mb-5 rounded-md bg-base-200 px-4 py-3 leading-relaxed text-base-content/70 text-sm">
+      <p className="mb-5 rounded-md bg-base-200 px-4 py-3 leading-relaxed text-base-content/80 text-sm">
         Each share is a percentage of full-time salary. For a 50% appointment,
         shares should add up to 50%.
         {plan.serverProjection &&
@@ -142,6 +142,11 @@ export default function SplitStaffEditor({
       <div className="grid gap-4">
         {plan.staff.map((person) => {
           const error = person.included ? staffValidation(person, plan) : null;
+          const hasExhaustedFunding = staffFundingMonths(
+            person,
+            plan,
+            projection
+          ).some((month) => month.shares.some((share) => share.exhausted));
           return (
             <article
               className="group scroll-mt-24 overflow-hidden rounded-lg border border-main-border"
@@ -151,16 +156,68 @@ export default function SplitStaffEditor({
             >
               <div className="flex flex-wrap items-start justify-between gap-3 p-3.5">
                 <div className="min-w-0 group-data-[excluded=true]:opacity-50">
-                  <strong className="text-base">{person.name}</strong>
-                  <p className="mt-1 text-sm text-base-content/70">
-                    {person.salaryMissing
-                      ? 'Salary needed'
-                      : `${money(person.annualSalary)} annual salary`}
-                    {' · '}
-                    {person.serverJob?.cbrRate === null
-                      ? 'CBR needed'
-                      : `${person.fringeRate}% ${plan.serverProjection ? 'CBR' : 'fringe'}`}
-                    {person.serverJob && ` · ${person.serverJob.fte} FTE`}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <strong className="text-base">{person.name}</strong>
+                    {hasExhaustedFunding && (
+                      <TooltipLabel
+                        asChild
+                        label={
+                          <span className="badge badge-soft badge-error gap-1.5">
+                            <ExclamationTriangleIcon
+                              aria-hidden="true"
+                              className="size-4 shrink-0"
+                            />
+                            Funding exhausted
+                          </span>
+                        }
+                        tooltip={
+                          tooltipDefinitions.staffingFundingExhaustedExplanation
+                        }
+                      />
+                    )}
+                    {error && (
+                      <TooltipLabel
+                        asChild
+                        label={
+                          <span
+                            className="badge badge-soft badge-error gap-1.5"
+                            role="status"
+                          >
+                            <ExclamationTriangleIcon
+                              aria-hidden="true"
+                              className="size-4 shrink-0"
+                            />
+                            {person.splits.some(hasIncorrectFundingDates)
+                              ? 'Incorrect funding dates'
+                              : error}
+                          </span>
+                        }
+                        tooltip={error}
+                      />
+                    )}
+                  </div>
+                  <p className="mt-1 text-sm text-base-content/80">
+                    <span className="mr-6 inline-block">
+                      {person.salaryMissing
+                        ? 'Salary needed'
+                        : `${money(person.annualSalary)} annual salary`}
+                    </span>
+                    <span className="mr-6 inline-block">
+                      {person.serverJob?.cbrRate === null
+                        ? 'CBR needed'
+                        : `${person.fringeRate}% ${plan.serverProjection ? 'CBR' : 'fringe'}`}
+                    </span>
+                    {person.serverJob && (
+                      <>
+                        <span className="mr-6 inline-block">
+                          {person.serverJob.fte} FTE
+                        </span>
+                        <span className="inline-block">
+                          Appointment end:{' '}
+                          {formatDate(person.serverJob.endDate, 'Not set')}
+                        </span>
+                      </>
+                    )}
                   </p>
                 </div>
                 <button
@@ -180,14 +237,6 @@ export default function SplitStaffEditor({
                 plan={plan}
                 result={projection}
               />
-              {error && (
-                <p
-                  className="mt-4 rounded-md bg-error/10 p-3 text-error m-0 rounded-none px-3.5 py-2.5 text-sm"
-                  role="status"
-                >
-                  {error}
-                </p>
-              )}
             </article>
           );
         })}

@@ -57,7 +57,7 @@ export function LiveResults({
                 ? 'Each project stays within funding'
                 : 'Select a project to see its outlook'}
         </h2>
-        <p className="mt-2 text-sm leading-relaxed text-base-content/70">
+        <p className="mt-2 text-sm leading-relaxed text-base-content/80">
           Balances stay separate. Select a line or a project below to explore.
         </p>
       </div>
@@ -81,7 +81,7 @@ export function LiveResults({
           <h3 className="mb-3.5 text-lg font-semibold leading-snug">
             {selected.name}
           </h3>
-          <span className="block text-sm text-base-content/70">
+          <span className="block text-sm text-base-content/80">
             Ending balance · {endingMonth && monthLabel(endingMonth)}
           </span>
           <strong
@@ -90,7 +90,7 @@ export function LiveResults({
             {money(selected.ending)}
           </strong>
           <p
-            className={`text-sm leading-relaxed ${selected.firstDeficit ? 'text-error' : 'text-base-content/70'}`}
+            className={`text-sm leading-relaxed ${selected.firstDeficit ? 'text-error' : 'text-base-content/80'}`}
           >
             {selected.firstDeficit
               ? `First below zero in ${monthLabel(selected.firstDeficit)}`
@@ -133,13 +133,13 @@ export function LiveResults({
               axisLine={false}
               dataKey="month"
               minTickGap={24}
-              tick={{ className: 'text-sm fill-base-content/70' }}
+              tick={{ className: 'text-sm fill-base-content/80' }}
               tickFormatter={(month: string) => monthLabel(month).split(' ')[0]}
               tickLine={false}
             />
             <YAxis
               axisLine={false}
-              tick={{ className: 'text-sm fill-base-content/70' }}
+              tick={{ className: 'text-sm fill-base-content/80' }}
               tickFormatter={shortMoney}
               tickLine={false}
               width={70}
@@ -149,9 +149,15 @@ export function LiveResults({
                 border: '1px solid var(--color-main-border)',
                 borderRadius: 8,
                 maxWidth: 300,
-                whiteSpace: 'normal',
+                whiteSpace: 'nowrap',
               }}
-              formatter={(value) => money(Number(value))}
+              formatter={(value, name) => {
+                const title = String(name ?? '');
+                return [
+                  money(Number(value)),
+                  title.length > 24 ? `${title.slice(0, 23).trimEnd()}…` : title,
+                ];
+              }}
               labelFormatter={(month) => monthLabel(String(month))}
               wrapperClassName="text-sm"
             />
@@ -207,7 +213,7 @@ export function LiveResults({
           </ComposedChart>
         </ResponsiveContainer>
       </div>
-      <p className="mt-1.5 mb-3.5 text-center text-sm text-base-content/70">
+      <p className="mt-1.5 mb-3.5 text-center text-sm text-base-content/80">
         Month-end balances ·{' '}
         {result.chart[0] && monthLabel(result.chart[0].month)} to{' '}
         {endingMonth && monthLabel(endingMonth)}
@@ -215,7 +221,7 @@ export function LiveResults({
       {selected ? (
         <div className="grid gap-3 border-t border-main-border pt-3.5 [&>div]:flex [&>div]:items-center [&>div]:justify-between [&>div]:gap-3 [&>div:last-child]:border-t [&>div:last-child]:border-main-border [&>div:last-child]:pt-3 text-sm">
           <div>
-            <span className="text-base-content/70">
+            <span className="text-base-content/80">
               {selected.serverProject
                 ? 'Opening planning balance'
                 : 'Starting balance'}
@@ -223,33 +229,33 @@ export function LiveResults({
             <strong>{money(selected.startingBalance)}</strong>
           </div>
           <div>
-            <span className="text-base-content/70">Salary</span>
+            <span className="text-base-content/80">Salary</span>
             <strong>{money(selected.salary)}</strong>
           </div>
           <div>
-            <span className="text-base-content/70">Fringe</span>
+            <span className="text-base-content/80">Fringe</span>
             <strong>{money(selected.fringe)}</strong>
           </div>
           {selected.fees !== 0 && (
             <div>
-              <span className="text-base-content/70">Fee remission</span>
+              <span className="text-base-content/80">Fee remission</span>
               <strong>{money(selected.fees)}</strong>
             </div>
           )}
           {!selected.serverProject && (
             <div>
-              <span className="text-base-content/70">
+              <span className="text-base-content/80">
                 Indirect costs · {selected.indirectRate}%
               </span>
               <strong>{money(selected.indirect)}</strong>
             </div>
           )}
           <div>
-            <span className="text-base-content/70">Other expenses</span>
+            <span className="text-base-content/80">Other expenses</span>
             <strong>{money(selected.other)}</strong>
           </div>
           <div>
-            <span className="text-base-content/70">Total planned spending</span>
+            <span className="text-base-content/80">Total planned spending</span>
             <strong>{money(selected.spending)}</strong>
           </div>
         </div>
@@ -266,7 +272,7 @@ export function LiveResults({
                 <strong className="text-sm font-semibold leading-normal">
                   {fund.name}
                 </strong>
-                <small className="text-sm text-base-content/70">
+                <small className="text-sm text-base-content/80">
                   {fund.firstDeficit
                     ? `Shortfall starts ${monthLabel(fund.firstDeficit)}`
                     : 'Within funding'}
@@ -280,7 +286,7 @@ export function LiveResults({
           ))}
         </div>
       )}
-      <div className="mt-3 flex items-center justify-between gap-2 border-t border-main-border pt-4 text-sm text-base-content/70">
+      <div className="mt-3 flex items-center justify-between gap-2 border-t border-main-border pt-4 text-sm text-base-content/80">
         <span>All projects combined · ending</span>
         <strong
           className={`text-base font-semibold ${result.ending < 0 ? 'text-error' : ''}`}
@@ -306,7 +312,7 @@ export function ProjectDetail({
         <i style={{ background: fund.color }} />
         {fund.name}
       </h2>
-      <p className="text-sm leading-relaxed text-base-content/70">
+      <p className="text-sm leading-relaxed text-base-content/80">
         Project dates: {monthLabel(fund.startDate.slice(0, 7))} to{' '}
         {monthLabel(fund.endDate.slice(0, 7))}
       </p>
@@ -323,14 +329,14 @@ export function ProjectDetail({
             <strong className="block text-base font-semibold text-base-content">
               {`Runs short in ${monthLabel(fund.firstDeficit)}`}
             </strong>
-            <span className="mt-1 block text-sm font-normal leading-relaxed text-base-content/70">
+            <span className="mt-1 block text-sm font-normal leading-relaxed text-base-content/80">
               Projected ending balance: {money(fund.ending)} in{' '}
               {monthLabel(lastMonth)}.
             </span>
           </div>
         </div>
       )}
-      <div className="mt-5 mb-7 grid grid-cols-2 gap-3 [&_span]:block [&_span]:text-base-content/70 [&_strong]:mt-1 [&_strong]:block [&_strong]:font-semibold [&_strong]:tracking-normal">
+      <div className="mt-5 mb-7 grid grid-cols-2 gap-3 [&_span]:block [&_span]:text-base-content/80 [&_strong]:mt-1 [&_strong]:block [&_strong]:font-semibold [&_strong]:tracking-normal">
         <div>
           <span className="text-sm">
             {fund.serverProject
@@ -345,7 +351,7 @@ export function ProjectDetail({
         </div>
       </div>
       {fund.serverProject && (
-        <p className="mb-5 text-sm text-base-content/70">
+        <p className="mb-5 text-sm text-base-content/80">
           The opening balance restores costs already posted in the snapshot
           month before calculating that full month.
         </p>
@@ -356,7 +362,7 @@ export function ProjectDetail({
           Edit funding shares <ArrowRightIcon className="size-5 shrink-0" />
         </button>
       </div>
-      <p className="mt-1.5 mb-3.5 text-base-content/70 text-sm">
+      <p className="mt-1.5 mb-3.5 text-base-content/80 text-sm">
         {fund.serverProject
           ? 'Staffing costs include salary, benefits, vacation accrual, and fee remission.'
           : 'Project costs include salary, fringe, and indirect costs.'}
@@ -364,7 +370,7 @@ export function ProjectDetail({
       {fund.staff.length ? (
         fund.staff.map((person) => (
           <div
-            className="flex items-center justify-between gap-3.5 border-t border-main-border py-3 [&_small]:mt-1 [&_small]:block [&_small]:text-base-content/70 text-sm"
+            className="flex items-center justify-between gap-3.5 border-t border-main-border py-3 [&_small]:mt-1 [&_small]:block [&_small]:text-base-content/80 text-sm"
             key={person.id}
           >
             <div>
@@ -380,16 +386,16 @@ export function ProjectDetail({
           </div>
         ))
       ) : (
-        <p className="mt-1.5 mb-3.5 text-base-content/70 text-sm">
+        <p className="mt-1.5 mb-3.5 text-base-content/80 text-sm">
           No staffing costs in this planning period.
         </p>
       )}
-      <details className="mt-6 border-t border-main-border pt-4 [&>summary]:cursor-pointer [&>summary]:font-semibold [&>summary>span]:float-right [&>summary>span]:font-normal [&>summary>span]:text-base-content/70 text-sm">
+      <details className="mt-6 border-t border-main-border pt-4 [&>summary]:cursor-pointer [&>summary]:font-semibold [&>summary>span]:float-right [&>summary>span]:font-normal [&>summary>span]:text-base-content/80 text-sm">
         <summary className="text-base">
           Month-by-month balances{' '}
           <span className="text-sm">{fund.chart.length} months</span>
         </summary>
-        <div className="mt-3.5 overflow-x-auto [&_table]:w-full [&_table]:border-collapse [&_caption]:mb-2 [&_caption]:text-left [&_caption]:text-base-content/70 [&_th]:border-b [&_th]:border-main-border [&_th]:px-1.5 [&_th]:py-2.5 [&_th]:text-right [&_th]:font-medium [&_th]:whitespace-nowrap [&_th:first-child]:text-left [&_td]:border-b [&_td]:border-main-border [&_td]:px-1.5 [&_td]:py-2.5 [&_td]:text-right [&_td]:whitespace-nowrap [&_thead]:text-base-content/70 [&_small]:block text-sm">
+        <div className="mt-3.5 overflow-x-auto [&_table]:w-full [&_table]:border-collapse [&_caption]:mb-2 [&_caption]:text-left [&_caption]:text-base-content/80 [&_th]:border-b [&_th]:border-main-border [&_th]:px-1.5 [&_th]:py-2.5 [&_th]:text-right [&_th]:font-medium [&_th]:whitespace-nowrap [&_th:first-child]:text-left [&_td]:border-b [&_td]:border-main-border [&_td]:px-1.5 [&_td]:py-2.5 [&_td]:text-right [&_td]:whitespace-nowrap [&_thead]:text-base-content/80 [&_small]:block text-sm">
           <table className="table walter-table walter-subtable">
             <caption className="text-sm">
               Monthly spending and ending balance for {fund.name}

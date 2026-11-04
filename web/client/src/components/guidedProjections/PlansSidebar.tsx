@@ -112,7 +112,7 @@ export default function PlansSidebar({
           </button>
           {defaultPlan && planButton(defaultPlan, true)}
           <div
-            className={`border-b border-main-border bg-base-200 px-3 py-2 text-xs uppercase text-base-content/70 ${collapsed ? 'md:sr-only' : ''}`}
+            className={`border-b border-main-border bg-base-200 px-3 py-2 text-xs uppercase text-base-content/80 ${collapsed ? 'md:sr-only' : ''}`}
           >
             Your plans
           </div>

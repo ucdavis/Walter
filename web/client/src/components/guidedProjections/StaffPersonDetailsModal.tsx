@@ -53,7 +53,7 @@ export default function StaffPersonDetailsModal({
             <h2 className="text-2xl font-semibold" id={titleId}>
               Salary & person details
             </h2>
-            <p className="mt-1 text-sm text-base-content/70">{person.name}</p>
+            <p className="mt-1 text-sm text-base-content/80">{person.name}</p>
           </div>
           <button
             aria-label="Close person details"
@@ -66,7 +66,7 @@ export default function StaffPersonDetailsModal({
         </header>
         <div className="p-5 sm:p-6">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 [&>label:first-child]:col-span-full">
-            <label className="grid min-w-0 gap-1 text-sm font-medium text-base-content/70">
+            <label className="grid min-w-0 gap-1 text-sm font-medium text-base-content/80">
               Name
               <input
                 autoFocus
@@ -80,7 +80,7 @@ export default function StaffPersonDetailsModal({
                 value={draft.name}
               />
             </label>
-            <label className="grid min-w-0 gap-1 text-sm font-medium text-base-content/70">
+            <label className="grid min-w-0 gap-1 text-sm font-medium text-base-content/80">
               Annual full-time salary
               <input
                 className="input w-full text-base"
@@ -99,7 +99,7 @@ export default function StaffPersonDetailsModal({
                 value={draft.salaryMissing ? '' : draft.annualSalary}
               />
             </label>
-            <label className="grid min-w-0 gap-1 text-sm font-medium text-base-content/70">
+            <label className="grid min-w-0 gap-1 text-sm font-medium text-base-content/80">
               {isServerPlan ? 'CBR %' : 'Fringe %'}
               <input
                 className="input w-full text-base"
@@ -188,7 +188,7 @@ function JobDetails({
 
   return (
     <>
-      <label className="col-span-full grid min-w-0 gap-1 text-sm font-medium text-base-content/70">
+      <label className="col-span-full grid min-w-0 gap-1 text-sm font-medium text-base-content/80">
         Job code and rate set
         <select
           className="select w-full text-base"
@@ -262,7 +262,7 @@ function JobDetails({
         onChange={(value) => patch({ colaRate: (value ?? 0) / 100 })}
         value={job.colaRate * 100}
       />
-      <label className="grid min-w-0 gap-1 text-sm font-medium text-base-content/70">
+      <label className="grid min-w-0 gap-1 text-sm font-medium text-base-content/80">
         COLA month
         <select
           className="select w-full text-base"
@@ -295,7 +295,7 @@ function JobDetails({
         value={job.feeRemissionMonthly}
       />
       <div className="col-span-full grid grid-cols-2 gap-2.5">
-        <label className="grid min-w-0 gap-1 text-sm font-medium text-base-content/70">
+        <label className="grid min-w-0 gap-1 text-sm font-medium text-base-content/80">
           Appointment starts
           <input
             className="input w-full text-base"
@@ -307,7 +307,7 @@ function JobDetails({
             value={job.startDate ?? ''}
           />
         </label>
-        <label className="grid min-w-0 gap-1 text-sm font-medium text-base-content/70">
+        <label className="grid min-w-0 gap-1 text-sm font-medium text-base-content/80">
           Appointment ends
           <input
             className="input w-full text-base"
@@ -318,7 +318,7 @@ function JobDetails({
           />
         </label>
       </div>
-      <p className="col-span-full text-sm font-normal text-base-content/70">
+      <p className="col-span-full text-sm font-normal text-base-content/80">
         Blank appointment dates leave the job open for the planning period. Fee
         remission is the monthly total for the appointment.
       </p>
@@ -346,7 +346,7 @@ function JobNumber({
   value: number | null;
 }) {
   return (
-    <label className="grid min-w-0 gap-1 text-sm font-medium text-base-content/70">
+    <label className="grid min-w-0 gap-1 text-sm font-medium text-base-content/80">
       {label}
       <input
         className="input w-full text-base"

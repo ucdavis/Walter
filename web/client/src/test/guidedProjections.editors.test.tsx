@@ -153,6 +153,23 @@ function renderEditor(
 }
 
 describe('Live guided projection editors', () => {
+  it('explains incorrect funding dates on badge hover without flagging monthly cards', async () => {
+    const user = userEvent.setup();
+    const initial = fixture();
+    initial.jobs[0].fundingEntries[0].startDate = '2026-12-01';
+    initial.jobs[0].fundingEntries[0].endDate = '2026-10-31';
+    renderEditor('staff', initial);
+    const badge = screen.getByText('Incorrect funding dates');
+    expect(screen.queryByText('Incorrect dates')).not.toBeInTheDocument();
+    await user.hover(badge);
+    const tooltip = await screen.findByRole('tooltip');
+    expect(tooltip).toHaveTextContent('Lab project');
+    expect(tooltip).toHaveTextContent(
+      'starts in Dec 2026, after it ends in Oct 2026'
+    );
+    expect(tooltip).toHaveTextContent('allocation editor');
+  });
+
   it('removes a person and their allocations from the saved plan through person details', () => {
     const initial = fixture();
     initial.jobs.push({
@@ -263,6 +280,7 @@ describe('Live guided projection editors', () => {
     initial.jobs[0].cbrRate = 0;
     initial.jobs[0].feeRemissionMonthly = 0;
     renderEditor('staff', initial);
+    expect(screen.getByText('Funding exhausted')).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: /Alex Researcher, Oct 2026:/ })
     ).not.toHaveAccessibleName(/funding exhausted/);
@@ -323,14 +341,7 @@ describe('Live guided projection editors', () => {
       name: 'Alex Researcher monthly funding',
     });
     expect(within(timeline).getAllByRole('button')).toHaveLength(12);
-    fireEvent.change(screen.getByLabelText('Planning period'), {
-      target: { value: '6' },
-    });
-    expect(within(timeline).getAllByRole('button')).toHaveLength(6);
-    fireEvent.change(screen.getByLabelText('Planning period'), {
-      target: { value: '18' },
-    });
-    expect(within(timeline).getAllByRole('button')).toHaveLength(18);
+    expect(screen.queryByLabelText('Planning period')).not.toBeInTheDocument();
     expect(
       screen.getByRole('button', {
         name: /Alex Researcher, Oct 2026: 30% Lab project, 20% Outside portfolio/,
@@ -364,6 +375,108 @@ describe('Live guided projection editors', () => {
         name: /Alex Researcher, Nov 2026: 30% Lab project, 20% Outside portfolio/,
       })
     ).toBeInTheDocument();
+  });
+
+  it('blocks allocations outside project dates and saves after the range is corrected', () => {
+    const initial = fixture();
+    initial.projects[0].endDate = '2026-10-31';
+    initial.projects.push({
+      ...structuredClone(initial.projects[0]),
+      endDate: '2027-12-31',
+      id: 2,
+      projectName: 'Future project',
+      projectNumber: 'FUTURE',
+      startDate: '2027-01-01',
+    });
+    const saved = renderEditor('staff', initial);
+    const original = saved();
+    fireEvent.click(
+      screen.getByRole('button', { name: /Alex Researcher, Oct 2026:/ })
+    );
+    expect(
+      within(screen.getByLabelText('Alex Researcher project 1')).getByRole(
+        'option',
+        { name: /Future project.*Unavailable for this range/ }
+      )
+    ).toBeDisabled();
+    fireEvent.change(screen.getByLabelText('End month'), {
+      target: { value: '2026-11' },
+    });
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Lab project is available Jan 2025 through Oct 2026'
+    );
+    expect(
+      screen.getByRole('button', { name: 'Replace 2 months' })
+    ).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Replace 2 months' }));
+    expect(saved()).toEqual(original);
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('End month'), {
+      target: { value: '2026-10' },
+    });
+    fireEvent.change(screen.getByLabelText('Alex Researcher share 1'), {
+      target: { value: '10' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Replace 1 month' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(
+      allocationInMonth(fromServerProjection(saved()).staff[0], '2026-10').map(
+        (share) => share.percent
+      )
+    ).toEqual([10, 20]);
+  });
+
+  it.each(['not started', 'ended', 'zero FTE'])(
+    'explains why a %s appointment cannot be allocated',
+    (reason) => {
+      const initial = fixture();
+      if (reason === 'not started') {
+        initial.jobs[0].startDate = '2026-11-01';
+      }
+      if (reason === 'ended') {
+        initial.jobs[0].endDate = '2026-09-30';
+      }
+      if (reason === 'zero FTE') {
+        initial.jobs[0].fte = 0;
+      }
+      const saved = renderEditor('staff', initial);
+      const original = saved();
+      fireEvent.click(
+        screen.getByRole('button', { name: /Alex Researcher, Oct 2026:/ })
+      );
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        reason === 'zero FTE'
+          ? 'This appointment has 0% FTE'
+          : 'appointment is inactive in Oct 2026'
+      );
+      expect(
+        screen.getByRole('button', { name: 'Replace 1 month' })
+      ).toBeDisabled();
+      expect(saved()).toEqual(original);
+    }
+  );
+
+  it('prevents adding a zero share to a full appointment and explains zero-percent shares', () => {
+    renderEditor('staff');
+    fireEvent.click(
+      screen.getByRole('button', { name: /Alex Researcher, Oct 2026:/ })
+    );
+    const dialog = screen.getByRole('dialog');
+    expect(
+      within(dialog).getByRole('button', { name: 'Add funding source' })
+    ).toBeDisabled();
+    expect(
+      within(dialog).getByText(/Reduce or remove an existing share/)
+    ).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Alex Researcher share 1'), {
+      target: { value: '0' },
+    });
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Each share must be greater than 0%'
+    );
+    expect(
+      screen.getByRole('button', { name: 'Replace 1 month' })
+    ).toBeDisabled();
   });
 
   it('cancels allocation drafts and replaces only the selected range after saving', () => {

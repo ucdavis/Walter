@@ -26,13 +26,6 @@ export default function StaffFundingTimeline({
   const months = staffFundingMonths(person, plan, result);
   return (
     <div className="min-w-0 border-t border-main-border p-3.5">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs text-base-content/60">
-        <span className="font-medium">Monthly project funding</span>
-        <span>
-          {percent((person.serverJob?.fte ?? 1) * 100)} appointment · Select a
-          month to edit shares
-        </span>
-      </div>
       <div
         aria-label={`${person.name} monthly funding`}
         className="overflow-x-auto pb-1 focus-visible:outline-2 focus-visible:outline-primary"
@@ -68,11 +61,16 @@ export default function StaffFundingTimeline({
                   onClick={() => onEdit(month)}
                   type="button"
                 >
-                  <span className="mb-2 block text-center text-xs font-medium text-base-content/70">
+                  <span className="mb-2 block text-center text-xs font-medium text-base-content/80">
                     {monthLabel(month)}
                   </span>
                   <span
-                    className={`flex h-28 flex-col overflow-hidden rounded-sm border bg-base-200 transition-colors group-hover/month:border-primary ${over > 0.000_01 ? 'border-error' : 'border-main-border'}`}
+                    className={`flex h-28 flex-col overflow-hidden rounded-sm border transition-colors group-hover/month:border-primary ${status ? 'bg-base-300/40' : 'bg-base-200'} ${over > 0.000_01 ? 'border-error' : 'border-main-border'}`}
+                    style={{
+                      backgroundImage: status
+                        ? 'repeating-linear-gradient(135deg, transparent 0 6px, color-mix(in oklab, var(--color-base-content) 5%, transparent) 6px 8px)'
+                        : undefined,
+                    }}
                   >
                     {status ? (
                       <span className="m-auto px-1 text-center text-xs text-base-content/50">
@@ -87,11 +85,14 @@ export default function StaffFundingTimeline({
                             key={share.id}
                             label={
                               <span
-                                className="block shrink-0 overflow-hidden px-1.5 text-[11px] leading-tight font-medium"
+                                className="block shrink-0 overflow-hidden px-1.5 pt-1 text-[11px] leading-tight font-medium"
                                 style={{
                                   backgroundColor: share.exhausted
                                     ? 'var(--color-error)'
                                     : share.color,
+                                  backgroundImage: share.exhausted
+                                    ? 'repeating-linear-gradient(135deg, transparent 0 6px, rgb(0 0 0 / 0.18) 6px 12px)'
+                                    : undefined,
                                   color: share.exhausted
                                     ? 'var(--color-error-content)'
                                     : fundingTextColor(share.color),

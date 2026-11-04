@@ -39,7 +39,7 @@ export function PlanDetailsModal({
             <h2 className="text-2xl font-semibold" id={titleId}>
               Plan details
             </h2>
-            <p className="mt-1 text-sm text-base-content/70">
+            <p className="mt-1 text-sm text-base-content/80">
               Change the name, planning period, or purpose of this plan.
             </p>
           </div>
@@ -100,7 +100,7 @@ export function PlanDetails({
             <option value={6}>Previous 6 months</option>
             <option value={12}>Previous 12 months</option>
           </select>
-          <span className="font-normal text-base-content/70">
+          <span className="font-normal text-base-content/80">
             Changing the window replaces expenses based on historical spending.
             Monthly and one-time expenses stay as entered.
           </span>
@@ -124,7 +124,7 @@ export function PlanDetails({
       <label className="flex min-w-0 flex-col gap-2 text-sm font-medium">
         <span className="flex flex-wrap items-baseline gap-2">
           What are you exploring?{' '}
-          <span className="text-sm font-normal text-base-content/70">
+          <span className="text-sm font-normal text-base-content/80">
             Optional
           </span>
         </span>

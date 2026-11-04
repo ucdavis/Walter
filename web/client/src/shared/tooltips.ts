@@ -41,6 +41,8 @@ export const tooltipDefinitions = {
   selectSingleDepartmentToLabel:
     'Display Financial Department or select a single financial department to add labels',
   staffingFundingExhausted: 'Funding exhausted',
+  staffingFundingExhaustedExplanation:
+    'At least one allocated project has a projected balance of zero or less during an active funding month. Review the red patterned funding shares and adjust funding or staffing.',
   taskBreakdown:
     'Summary of how project costs are organized by financial coding segments.',
   totalBalance:
