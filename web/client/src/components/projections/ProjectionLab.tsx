@@ -12,7 +12,7 @@ import {
   ArrowPathIcon,
   BanknotesIcon,
   CalendarDaysIcon,
-  ChartBarIcon,
+  ArrowTrendingUpIcon,
   CheckCircleIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -404,7 +404,7 @@ export default function ProjectionLab({
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-3">
             <div className="flex size-11 items-center justify-center text-primary">
-              <ChartBarIcon aria-hidden="true" className="size-6" />
+              <ArrowTrendingUpIcon aria-hidden="true" className="size-6" />
             </div>
             <div>
               <h1 className="h1">ProjectionLab</h1>

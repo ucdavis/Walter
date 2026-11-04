@@ -9,7 +9,7 @@ import {
   ExclamationTriangleIcon,
   ListBulletIcon,
   PlusIcon,
-  PresentationChartLineIcon,
+  ArrowTrendingUpIcon,
   UserGroupIcon,
 } from '@heroicons/react/24/outline';
 import type { ProjectionLookups } from '@/queries/projections.ts';
@@ -338,7 +338,7 @@ export default function GuidedProjections({
         <div className="bg-base-100 pt-6 pb-12 text-base leading-normal text-base-content">
           <div className="mx-auto max-w-4xl">
             <button className="btn gap-2" onClick={home} type="button">
-              <PresentationChartLineIcon
+              <ArrowTrendingUpIcon
                 aria-hidden="true"
                 className="size-5 shrink-0"
               />{' '}
@@ -691,7 +691,7 @@ export default function GuidedProjections({
             ) : (
               <>
                 <button className="btn mb-4 gap-2" onClick={home} type="button">
-                  <PresentationChartLineIcon
+                  <ArrowTrendingUpIcon
                     aria-hidden="true"
                     className="size-5 shrink-0"
                   />
@@ -817,7 +817,7 @@ export default function GuidedProjections({
                   )}
                   {section === 'Overview' && (
                     <div className="min-w-0">
-                      {section === 'Overview' && error && (
+                      {error && (
                         <p
                           className="mb-4 rounded-md bg-error/10 p-3 text-sm text-error"
                           role="status"
@@ -831,16 +831,23 @@ export default function GuidedProjections({
                         projectId={projectId}
                         result={result}
                       />
-                      <p className="mt-4 text-sm leading-relaxed text-base-content/80">
-                        {remote
-                          ? 'Projects combine eligible tasks from the snapshot; inactive internal tasks and expired awards are excluded. Uses PPM budgets and costs, UCPath staffing, and historical spending averages. Salary, benefits, vacation accrual, COLA, and fee remission follow each job’s assumptions.'
-                          : 'Salary, fringe, and indirect costs are included. Other expenses use direct costs only in this demo.'}
-                      </p>
-                      <p className="mt-4 text-sm leading-relaxed text-base-content/80">
-                        {remote
-                          ? 'Save plan stores this scenario in Walter. Project accounting records are unchanged.'
-                          : 'Demo plans are saved in this browser and do not update Walter project records.'}
-                      </p>
+                      <details className="mt-4 text-sm text-base-content/80">
+                        <summary className="cursor-pointer font-medium">
+                          About this forecast
+                        </summary>
+                        <div className="mt-3 max-w-4xl space-y-2 leading-relaxed">
+                          <p>
+                            {remote
+                              ? 'Projects combine eligible tasks from the snapshot; inactive internal tasks and expired awards are excluded. Uses PPM budgets and costs, UCPath staffing, and historical spending averages. Salary, benefits, vacation accrual, COLA, and fee remission follow each job’s assumptions.'
+                              : 'Salary, fringe, and indirect costs are included. Other expenses use direct costs only in this demo.'}
+                          </p>
+                          <p>
+                            {remote
+                              ? 'Save plan stores this scenario in Walter. Project accounting records are unchanged.'
+                              : 'Demo plans are saved in this browser and do not update Walter project records.'}
+                          </p>
+                        </div>
+                      </details>
                     </div>
                   )}
                 </div>

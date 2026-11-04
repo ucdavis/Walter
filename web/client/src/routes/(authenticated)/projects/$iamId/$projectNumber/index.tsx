@@ -28,6 +28,7 @@ import { buildFinjectorUrl } from '@/lib/finjector.ts';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, Link } from '@tanstack/react-router';
 import {
+  ArrowTrendingUpIcon,
   PresentationChartLineIcon,
   TableCellsIcon,
 } from '@heroicons/react/24/outline';
@@ -185,7 +186,7 @@ function ProjectContent({
                   params={{ iamId }}
                   to="/projections/$iamId"
                 >
-                  <PresentationChartLineIcon className="h-4 w-4" />
+                  <ArrowTrendingUpIcon className="h-4 w-4" />
                   Projections
                 </Link>
               )}

@@ -14,7 +14,12 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { money, shortMoney } from '@/components/guidedProjections/defaults.ts';
+import { money } from '@/components/guidedProjections/defaults.ts';
+import {
+  BalanceYAxisTick,
+  buildBalanceAxisTicks,
+  VerticalMarkerLabel,
+} from '@/components/project/ProjectBurndownChart.tsx';
 import { monthLabel } from '@/components/projections/projection.ts';
 import type {
   PlanResult,
@@ -42,258 +47,339 @@ export function LiveResults({
   }));
   const gaps = result.funds.filter((fund) => fund.firstDeficit);
   const endingMonth = result.chart.at(-1)?.month;
+  const scope = selected ? [selected] : result.funds;
+  const ending = selected?.ending ?? result.ending;
+  const visibleBalances = scope.flatMap((fund) =>
+    fund.chart.map((point) => point.balance)
+  );
+  const minBalance = Math.min(0, ...visibleBalances);
+  const maxBalance = Math.max(0, ...visibleBalances);
+  const padding = Math.max((maxBalance - minBalance) * 0.1, 1000);
+  const yDomainMin = minBalance < 0 ? minBalance - padding : 0;
+  const yDomainMax = maxBalance > 0 ? maxBalance + padding : 0;
+  const yAxisTicks = buildBalanceAxisTicks(yDomainMin, yDomainMax);
+  const useDenseXAxisTicks = points.length >= 24;
   return (
     <section
       aria-label="Live project outlook"
-      className="card min-w-0 border border-main-border bg-base-200 p-5 xl:p-6 text-base"
+      className="min-w-0 overflow-hidden rounded-lg border border-main-border bg-base-100 text-base"
     >
-      <div>
-        <h2 className="text-2xl font-semibold">
-          {gaps.length
-            ? `${gaps.length} of ${result.funds.length} projects ${gaps.length === 1 ? 'runs' : 'run'} short`
-            : incomplete
-              ? 'Staffing costs need review'
-              : result.funds.length
-                ? 'Each project stays within funding'
-                : 'Select a project to see its outlook'}
-        </h2>
-        <p className="mt-2 text-sm leading-relaxed text-base-content/80">
-          Balances stay separate. Select a line or a project below to explore.
-        </p>
-      </div>
-      <label className="flex min-w-0 flex-col gap-2 font-medium my-5 grid gap-1.5 text-sm">
-        Explore a project
-        <select
-          className="select w-full text-base"
-          onChange={(event) => onProject(event.target.value || null)}
-          value={selected?.id ?? ''}
-        >
-          <option value="">All projects · separate balances</option>
-          {result.funds.map((fund) => (
-            <option key={fund.id} value={fund.id}>
-              {fund.name}
-            </option>
-          ))}
-        </select>
-      </label>
-      {selected && (
-        <>
-          <h3 className="mb-3.5 text-lg font-semibold leading-snug">
-            {selected.name}
-          </h3>
-          <span className="block text-sm text-base-content/80">
-            Ending balance · {endingMonth && monthLabel(endingMonth)}
-          </span>
-          <strong
-            className={`my-1 block text-4xl font-bold ${selected.ending < 0 ? 'text-error' : ''}`}
-          >
-            {money(selected.ending)}
-          </strong>
+      <div className="flex flex-wrap items-start justify-between gap-5 p-5 xl:p-6">
+        <div className="min-w-0 flex-1">
+          <h2 className="text-xl font-semibold">Project outlook</h2>
           <p
-            className={`text-sm leading-relaxed ${selected.firstDeficit ? 'text-error' : 'text-base-content/80'}`}
+            className={`mt-1 text-sm ${gaps.length ? 'text-error' : 'text-base-content/80'}`}
           >
-            {selected.firstDeficit
-              ? `First below zero in ${monthLabel(selected.firstDeficit)}`
+            {gaps.length
+              ? `${gaps.length} of ${result.funds.length} projects ${gaps.length === 1 ? 'runs' : 'run'} short`
               : incomplete
-                ? 'Balance excludes missing staffing costs'
-                : 'Stays within funding throughout this plan'}
+                ? 'Staffing costs need review'
+                : result.funds.length
+                  ? 'Each project stays within funding'
+                  : 'Select a project to see its outlook'}
           </p>
-        </>
-      )}
-      <div
-        aria-label={
-          selected
-            ? `Monthly remaining balance for ${selected.name}`
-            : 'Monthly remaining balances by project'
-        }
-        className="mt-4 mb-1 h-60 w-full"
-      >
-        <ResponsiveContainer height="100%" width="100%">
-          <ComposedChart
-            accessibilityLayer
-            data={points}
-            margin={{ bottom: 0, left: 0, right: 12, top: 28 }}
+          <p className="mt-1 text-sm text-base-content/80">
+            Balances stay separate. Select a project to explore its forecast.
+          </p>
+        </div>
+        <label className="grid w-full min-w-0 gap-1.5 text-sm font-medium sm:w-80 lg:w-96">
+          Explore a project
+          <select
+            className="select w-full min-w-0"
+            onChange={(event) => onProject(event.target.value || null)}
+            value={selected?.id ?? ''}
           >
-            <defs>
-              <linearGradient id={gradient} x1="0" x2="0" y1="0" y2="1">
-                <stop
-                  offset="0%"
-                  stopColor={selected?.color ?? 'var(--color-primary)'}
-                  stopOpacity={0.18}
-                />
-                <stop
-                  offset="100%"
-                  stopColor={selected?.color ?? 'var(--color-primary)'}
-                  stopOpacity={0.01}
-                />
-              </linearGradient>
-            </defs>
-            <CartesianGrid stroke="var(--color-main-border)" vertical={false} />
-            <XAxis
-              axisLine={false}
-              dataKey="month"
-              minTickGap={24}
-              tick={{ className: 'text-sm fill-base-content/80' }}
-              tickFormatter={(month: string) => monthLabel(month).split(' ')[0]}
-              tickLine={false}
-            />
-            <YAxis
-              axisLine={false}
-              tick={{ className: 'text-sm fill-base-content/80' }}
-              tickFormatter={shortMoney}
-              tickLine={false}
-              width={70}
-            />
-            <Tooltip
-              contentStyle={{
-                border: '1px solid var(--color-main-border)',
-                borderRadius: 8,
-                maxWidth: 300,
-                whiteSpace: 'nowrap',
-              }}
-              formatter={(value, name) => {
-                const title = String(name ?? '');
-                return [
-                  money(Number(value)),
-                  title.length > 24 ? `${title.slice(0, 23).trimEnd()}…` : title,
-                ];
-              }}
-              labelFormatter={(month) => monthLabel(String(month))}
-              wrapperClassName="text-sm"
-            />
-            <ReferenceLine
-              label={{
-                className: 'text-xs fill-error',
-                position: 'insideTopRight',
-                value: 'Zero balance',
-              }}
-              stroke="var(--color-error)"
-              strokeDasharray="4 4"
-              y={0}
-            />
-            {selected?.firstDeficit && (
-              <ReferenceLine
-                label={{
-                  className: 'text-xs fill-error',
-                  position: 'top',
-                  value: `Shortfall · ${monthLabel(selected.firstDeficit)}`,
+            <option value="">All projects · separate balances</option>
+            {result.funds.map((fund) => (
+              <option key={fund.id} value={fund.id}>
+                {fund.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <dl className="grid gap-4 border-y border-main-border bg-base-200 px-5 py-4 sm:grid-cols-3 sm:gap-6 xl:px-6">
+        <div>
+          <dt className="text-sm text-base-content/80">
+            Opening planning balance
+          </dt>
+          <dd className="mt-1 text-2xl font-semibold tabular-nums">
+            {money(scope.reduce((sum, fund) => sum + fund.startingBalance, 0))}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-sm text-base-content/80">Planned spending</dt>
+          <dd className="mt-1 text-2xl font-semibold tabular-nums">
+            {money(scope.reduce((sum, fund) => sum + fund.spending, 0))}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-sm text-base-content/80">
+            {selected ? 'Ending balance' : 'Combined ending balance'}
+            {endingMonth && ` · ${monthLabel(endingMonth)}`}
+          </dt>
+          <dd
+            className={`mt-1 text-2xl font-semibold tabular-nums ${ending < 0 ? 'text-error' : ''}`}
+          >
+            {money(ending)}
+          </dd>
+        </div>
+      </dl>
+      <div className="p-5 xl:p-6">
+        {selected && (
+          <div className="mb-4 min-w-0">
+            <h3 className="text-lg font-semibold break-words">
+              {selected.name}
+            </h3>
+            <p
+              className={`mt-1 text-sm ${selected.firstDeficit ? 'text-error' : 'text-base-content/80'}`}
+            >
+              {selected.firstDeficit
+                ? `First below zero in ${monthLabel(selected.firstDeficit)}`
+                : incomplete
+                  ? 'Balance excludes missing staffing costs'
+                  : 'Stays within funding throughout this plan'}
+            </p>
+          </div>
+        )}
+        <div
+          aria-label={
+            selected
+              ? `Monthly remaining balance for ${selected.name}`
+              : 'Monthly remaining balances by project'
+          }
+          className="h-72 w-full sm:h-80"
+        >
+          <ResponsiveContainer height="100%" width="100%">
+            <ComposedChart
+              accessibilityLayer
+              data={points}
+              margin={{ bottom: 8, left: 8, right: 24, top: 16 }}
+            >
+              <defs>
+                <linearGradient id={gradient} x1="0" x2="0" y1="0" y2="1">
+                  <stop
+                    offset="0%"
+                    stopColor={selected?.color ?? 'var(--color-primary)'}
+                    stopOpacity={0.18}
+                  />
+                  <stop
+                    offset="100%"
+                    stopColor={selected?.color ?? 'var(--color-primary)'}
+                    stopOpacity={0.01}
+                  />
+                </linearGradient>
+              </defs>
+              <CartesianGrid
+                stroke="var(--color-main-border)"
+                strokeDasharray="3 3"
+              />
+              <XAxis
+                angle={useDenseXAxisTicks ? -35 : 0}
+                dataKey="month"
+                height={useDenseXAxisTicks ? 56 : undefined}
+                interval={useDenseXAxisTicks ? 0 : 'preserveStartEnd'}
+                minTickGap={useDenseXAxisTicks ? 0 : undefined}
+                tick={{
+                  fill: 'currentColor',
+                  fontSize: useDenseXAxisTicks ? 10 : 12,
+                  textAnchor: useDenseXAxisTicks ? 'end' : 'middle',
                 }}
+                tickFormatter={(month: string) => {
+                  const [name, year] = monthLabel(month).split(' ');
+                  return `${name}-${year.slice(-2)}`;
+                }}
+                tickMargin={useDenseXAxisTicks ? 10 : undefined}
+              />
+              <YAxis
+                domain={[
+                  yAxisTicks[0] ?? yDomainMin,
+                  yAxisTicks.at(-1) ?? yDomainMax,
+                ]}
+                tick={<BalanceYAxisTick />}
+                ticks={yAxisTicks}
+              />
+              <Tooltip
+                contentStyle={{
+                  border: '1px solid var(--color-main-border)',
+                  borderRadius: 8,
+                  maxWidth: 300,
+                  whiteSpace: 'nowrap',
+                }}
+                formatter={(value, name) => {
+                  const title = String(name ?? '');
+                  return [
+                    money(Number(value)),
+                    title.length > 24
+                      ? `${title.slice(0, 23).trimEnd()}…`
+                      : title,
+                  ];
+                }}
+                labelFormatter={(month) => monthLabel(String(month))}
+                wrapperClassName="text-sm"
+              />
+              <ReferenceLine
+                ifOverflow="extendDomain"
                 stroke="var(--color-error)"
-                strokeDasharray="3 4"
-                x={selected.firstDeficit}
+                strokeDasharray="5 5"
+                y={0}
               />
-            )}
-            {selected ? (
-              <Area
-                dataKey={selected.id}
-                fill={`url(#${gradient})`}
-                isAnimationActive={false}
-                name={selected.name}
-                stroke={selected.color}
-                strokeWidth={2.5}
-                type="linear"
-              />
-            ) : (
-              result.funds.map((fund) => (
-                <Line
-                  activeDot={{ onClick: () => onProject(fund.id), r: 6 }}
-                  dataKey={fund.id}
-                  dot={false}
+              {selected?.firstDeficit && (
+                <ReferenceLine
+                  label={
+                    <VerticalMarkerLabel
+                      align="end"
+                      labelText={`Shortfall · ${monthLabel(selected.firstDeficit)}`}
+                    />
+                  }
+                  stroke="var(--color-error)"
+                  strokeDasharray="3 5"
+                  strokeOpacity={0.7}
+                  strokeWidth={1.5}
+                  x={selected.firstDeficit}
+                />
+              )}
+              {selected ? (
+                <Area
+                  dataKey={selected.id}
+                  fill={`url(#${gradient})`}
                   isAnimationActive={false}
-                  key={fund.id}
-                  name={fund.name}
-                  onClick={() => onProject(fund.id)}
-                  stroke={fund.color}
-                  strokeWidth={3}
-                  style={{ cursor: 'pointer' }}
+                  name={selected.name}
+                  stroke={selected.color}
+                  strokeWidth={2.5}
                   type="linear"
                 />
-              ))
-            )}
-          </ComposedChart>
-        </ResponsiveContainer>
-      </div>
-      <p className="mt-1.5 mb-3.5 text-center text-sm text-base-content/80">
-        Month-end balances ·{' '}
-        {result.chart[0] && monthLabel(result.chart[0].month)} to{' '}
-        {endingMonth && monthLabel(endingMonth)}
-      </p>
-      {selected ? (
-        <div className="grid gap-3 border-t border-main-border pt-3.5 [&>div]:flex [&>div]:items-center [&>div]:justify-between [&>div]:gap-3 [&>div:last-child]:border-t [&>div:last-child]:border-main-border [&>div:last-child]:pt-3 text-sm">
-          <div>
-            <span className="text-base-content/80">
-              {selected.serverProject
-                ? 'Opening planning balance'
-                : 'Starting balance'}
-            </span>
-            <strong>{money(selected.startingBalance)}</strong>
-          </div>
-          <div>
-            <span className="text-base-content/80">Salary</span>
-            <strong>{money(selected.salary)}</strong>
-          </div>
-          <div>
-            <span className="text-base-content/80">Fringe</span>
-            <strong>{money(selected.fringe)}</strong>
-          </div>
-          {selected.fees !== 0 && (
-            <div>
-              <span className="text-base-content/80">Fee remission</span>
-              <strong>{money(selected.fees)}</strong>
-            </div>
-          )}
-          {!selected.serverProject && (
-            <div>
-              <span className="text-base-content/80">
-                Indirect costs · {selected.indirectRate}%
-              </span>
-              <strong>{money(selected.indirect)}</strong>
-            </div>
-          )}
-          <div>
-            <span className="text-base-content/80">Other expenses</span>
-            <strong>{money(selected.other)}</strong>
-          </div>
-          <div>
-            <span className="text-base-content/80">Total planned spending</span>
-            <strong>{money(selected.spending)}</strong>
-          </div>
+              ) : (
+                result.funds.map((fund) => (
+                  <Line
+                    activeDot={{ onClick: () => onProject(fund.id), r: 6 }}
+                    dataKey={fund.id}
+                    dot={false}
+                    isAnimationActive={false}
+                    key={fund.id}
+                    name={fund.name}
+                    onClick={() => onProject(fund.id)}
+                    stroke={fund.color}
+                    strokeWidth={3}
+                    style={{ cursor: 'pointer' }}
+                    type="linear"
+                  />
+                ))
+              )}
+            </ComposedChart>
+          </ResponsiveContainer>
         </div>
-      ) : (
-        <div className="[&>button]:flex [&>button]:w-full [&>button]:items-center [&>button]:gap-1.5 [&>button]:border-t [&>button]:border-main-border [&>button]:py-3 [&>button]:text-left [&>button:hover]:bg-base-200 [&_i]:me-1.5 [&_i]:inline-block [&_i]:size-2 [&_i]:shrink-0 [&_i]:rounded-full [&_span]:min-w-0 [&_span]:flex-1 [&_strong]:block [&_small]:mt-1 [&_small]:block [&_b]:whitespace-nowrap [&_svg]:size-4 text-sm">
-          {result.funds.map((fund) => (
-            <button
-              key={fund.id}
-              onClick={() => onProject(fund.id)}
-              type="button"
-            >
-              <i style={{ background: fund.color }} />
-              <span>
-                <strong className="text-sm font-semibold leading-normal">
-                  {fund.name}
-                </strong>
-                <small className="text-sm text-base-content/80">
-                  {fund.firstDeficit
-                    ? `Shortfall starts ${monthLabel(fund.firstDeficit)}`
-                    : 'Within funding'}
-                </small>
-              </span>
-              <b className={fund.ending < 0 ? 'text-error' : ''}>
-                {shortMoney(fund.ending)}
-              </b>
-              <ArrowRightIcon className="size-5 shrink-0" />
-            </button>
-          ))}
+        <p className="mt-1.5 mb-3.5 text-center text-sm text-base-content/80">
+          Month-end balances ·{' '}
+          {result.chart[0] && monthLabel(result.chart[0].month)} to{' '}
+          {endingMonth && monthLabel(endingMonth)}
+        </p>
+        {selected ? (
+          <div className="grid grid-cols-2 gap-x-6 gap-y-4 border-t border-main-border pt-5 sm:grid-cols-3 lg:grid-cols-5 [&_span]:block [&_strong]:mt-1 [&_strong]:block [&_strong]:font-semibold [&_strong]:tabular-nums text-sm">
+            <div>
+              <span className="text-base-content/80">Salary</span>
+              <strong>{money(selected.salary)}</strong>
+            </div>
+            <div>
+              <span className="text-base-content/80">Fringe</span>
+              <strong>{money(selected.fringe)}</strong>
+            </div>
+            {selected.fees !== 0 && (
+              <div>
+                <span className="text-base-content/80">Fee remission</span>
+                <strong>{money(selected.fees)}</strong>
+              </div>
+            )}
+            {!selected.serverProject && (
+              <div>
+                <span className="text-base-content/80">
+                  Indirect costs · {selected.indirectRate}%
+                </span>
+                <strong>{money(selected.indirect)}</strong>
+              </div>
+            )}
+            <div>
+              <span className="text-base-content/80">Other expenses</span>
+              <strong>{money(selected.other)}</strong>
+            </div>
+          </div>
+        ) : null}
+      </div>
+      {!selected && result.funds.length > 0 && (
+        <div className="overflow-x-auto border-t border-main-border">
+          <table className="table w-full text-sm">
+            <caption className="px-5 pt-5 pb-3 text-left text-lg font-semibold text-base-content xl:px-6">
+              Projects
+            </caption>
+            <thead className="text-base-content/80">
+              <tr>
+                <th className="pl-5 xl:pl-6" scope="col">
+                  Project
+                </th>
+                <th scope="col">Funding outlook</th>
+                <th className="text-right" scope="col">
+                  Planned spending
+                </th>
+                <th className="pr-5 text-right xl:pr-6" scope="col">
+                  Ending balance
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {result.funds.map((fund) => (
+                <tr className="hover:bg-base-200/50" key={fund.id}>
+                  <td className="max-w-72 pl-5 xl:pl-6">
+                    <button
+                      className="flex w-full min-w-0 items-center gap-2 text-left text-base-content hover:underline"
+                      onClick={() => onProject(fund.id)}
+                      type="button"
+                    >
+                      <span
+                        aria-hidden="true"
+                        className="size-2 shrink-0 rounded-full"
+                        style={{ backgroundColor: fund.color }}
+                      />
+                      <span
+                        className="truncate font-semibold"
+                        title={fund.name}
+                      >
+                        {fund.name}
+                      </span>
+                      <ArrowRightIcon
+                        aria-hidden="true"
+                        className="size-4 shrink-0"
+                      />
+                    </button>
+                  </td>
+                  <td className="whitespace-nowrap">
+                    {fund.firstDeficit ? (
+                      <span className="inline-flex items-center gap-1.5 text-error">
+                        <ExclamationTriangleIcon
+                          aria-hidden="true"
+                          className="size-4 shrink-0"
+                        />
+                        Shortfall · {monthLabel(fund.firstDeficit)}
+                      </span>
+                    ) : (
+                      <span className="text-base-content/80">
+                        Within funding
+                      </span>
+                    )}
+                  </td>
+                  <td className="text-right tabular-nums">
+                    {money(fund.spending)}
+                  </td>
+                  <td
+                    className={`pr-5 text-right font-semibold tabular-nums xl:pr-6 ${fund.ending < 0 ? 'text-error' : ''}`}
+                  >
+                    {money(fund.ending)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
-      <div className="mt-3 flex items-center justify-between gap-2 border-t border-main-border pt-4 text-sm text-base-content/80">
-        <span>All projects combined · ending</span>
-        <strong
-          className={`text-base font-semibold ${result.ending < 0 ? 'text-error' : ''}`}
-        >
-          {money(result.ending)}
-        </strong>
-      </div>
     </section>
   );
 }

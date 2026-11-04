@@ -5,7 +5,7 @@ import { Link } from '@tanstack/react-router';
 import { createColumnHelper } from '@tanstack/react-table';
 import {
   ClipboardDocumentListIcon,
-  PresentationChartLineIcon,
+  ArrowTrendingUpIcon,
 } from '@heroicons/react/24/outline';
 import { useFeatureFlagsQuery } from '@/queries/featureFlags.ts';
 import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
@@ -71,7 +71,7 @@ const createColumns = (
                     params={{ iamId }}
                     to="/projections/$iamId"
                   >
-                    <PresentationChartLineIcon
+                    <ArrowTrendingUpIcon
                       aria-hidden="true"
                       className="size-5"
                     />

@@ -3,7 +3,7 @@ import {
   ChevronDoubleLeftIcon,
   ChevronDoubleRightIcon,
   ChevronDownIcon,
-  PresentationChartLineIcon,
+  ArrowTrendingUpIcon,
 } from '@heroicons/react/24/outline';
 import type { ProjectionPlan } from '@/components/guidedProjections/planModel.ts';
 
@@ -104,7 +104,7 @@ export default function PlansSidebar({
             title={collapsed ? 'Dashboard' : undefined}
             type="button"
           >
-            <PresentationChartLineIcon
+            <ArrowTrendingUpIcon
               aria-hidden="true"
               className="size-5 shrink-0"
             />
