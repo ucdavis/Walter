@@ -216,21 +216,113 @@ describe('Live guided projection editors', () => {
     expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 
-  it('reveals a newly added expense and focuses its name', async () => {
+  it('creates expenses in a modal and reveals the saved row', async () => {
+    const user = userEvent.setup();
     const scroll = vi.spyOn(Element.prototype, 'scrollIntoView');
     try {
-      renderEditor('expenses');
-      fireEvent.click(screen.getByRole('button', { name: 'Add new expense' }));
-      const input = screen.getAllByLabelText('Expense name').at(-1)!;
-      await waitFor(() => expect(input).toHaveFocus());
-      expect(
-        scroll.mock.contexts.some((element) =>
-          (element as Element).contains(input)
-        )
-      ).toBe(true);
+      const saved = renderEditor('expenses');
+      const originalCount = saved.plan().expenses.length;
+      await user.click(screen.getByRole('button', { name: 'Add new expense' }));
+      expect(screen.getByLabelText('Expense name')).toHaveFocus();
+      expect(saved.plan().expenses).toHaveLength(originalCount);
+      fireEvent.change(screen.getByLabelText('Expense name'), {
+        target: { value: 'Conference travel' },
+      });
+      fireEvent.change(screen.getByLabelText('Frequency'), {
+        target: { value: 'once' },
+      });
+      fireEvent.change(
+        within(screen.getByRole('dialog')).getByLabelText('Amount'),
+        { target: { value: '1200' } }
+      );
+      fireEvent.change(screen.getByLabelText('Month'), {
+        target: { value: '2026-11' },
+      });
+      await user.click(
+        screen.getByRole('button', { name: 'Add expense' })
+      );
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(saved().projects[0].expenses).toContainEqual(
+        expect.objectContaining({
+          amount: 1200,
+          description: 'Conference travel',
+          endMonth: null,
+          kind: 'OneTime',
+          startMonth: '2026-11-01',
+        })
+      );
+      const row = screen.getByText('Conference travel').closest('tr')!;
+      expect(within(row).getByText('Nov 2026')).toBeInTheDocument();
+      await waitFor(() => expect(scroll.mock.contexts).toContain(row));
+      expect(screen.getAllByRole('columnheader')).toHaveLength(5);
     } finally {
       scroll.mockRestore();
     }
+  });
+
+  it('discards canceled expenses and keeps empty groups hidden', async () => {
+    const user = userEvent.setup();
+    const saved = renderEditor('expenses');
+    const original = structuredClone(saved.plan().expenses);
+    expect(
+      screen.queryByRole('rowheader', { name: 'One-time expenses' })
+    ).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Add new expense' }));
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(saved.plan().expenses).toEqual(original);
+    expect(screen.queryByText('Monthly expense')).not.toBeInTheDocument();
+  });
+
+  it('edits a planned expense with date validation, discards edits, and removes from the modal', async () => {
+    const user = userEvent.setup();
+    const initial = fixture();
+    initial.projects[0].expenses.push({
+      amount: 200,
+      description: 'Lab supplies',
+      endMonth: null,
+      expenditureCategory: 'Supplies',
+      kind: 'Monthly',
+      startMonth: '2026-10-01',
+    });
+    const saved = renderEditor('expenses', initial);
+    await user.click(screen.getByRole('button', { name: 'Edit Lab supplies' }));
+    fireEvent.change(screen.getByLabelText('Starting month'), {
+      target: { value: '2026-12' },
+    });
+    fireEvent.change(screen.getByLabelText('Ending month'), {
+      target: { value: '2026-11' },
+    });
+    expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled();
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'ending month on or after'
+    );
+    fireEvent.change(screen.getByLabelText('Starting month'), {
+      target: { value: '2026-10' },
+    });
+    fireEvent.change(screen.getByLabelText('Monthly amount'), {
+      target: { value: '300' },
+    });
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+    expect(saved().projects[0].expenses).toContainEqual(
+      expect.objectContaining({
+        amount: 300,
+        description: 'Lab supplies',
+        endMonth: '2026-11-01',
+      })
+    );
+    const row = screen.getByText('Lab supplies').closest('tr')!;
+    expect(within(row).getByText('$600')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Edit Lab supplies' }));
+    fireEvent.change(screen.getByLabelText('Expense name'), {
+      target: { value: 'Discarded name' },
+    });
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.getByText('Lab supplies')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Edit Lab supplies' }));
+    await user.click(screen.getByRole('button', { name: 'Remove expense' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.queryByText('Lab supplies')).not.toBeInTheDocument();
+    expect(saved().projects[0].expenses).toHaveLength(1);
   });
 
   it.each([

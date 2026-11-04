@@ -77,6 +77,9 @@ describe('Guided projection plan navigation', () => {
     expect(screen.getByLabelText('Expense name')).toHaveValue(
       'Monthly expense'
     );
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Add expense' })
+    );
     view.unmount();
     renderPlans();
     openDefault();
@@ -86,9 +89,7 @@ describe('Guided projection plan navigation', () => {
     ).toHaveTextContent('$125,000');
     section('Expenses');
     pickFutureGrant();
-    expect(screen.getByLabelText('Expense name')).toHaveValue(
-      'Monthly expense'
-    );
+    expect(screen.getByText('Monthly expense')).toBeInTheDocument();
   });
 
   it('removes source allocations from the workspace and keeps them removed after reloading', () => {
