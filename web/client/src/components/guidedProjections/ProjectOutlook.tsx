@@ -309,12 +309,12 @@ export function LiveResults({
         <div className="overflow-x-auto border-t border-main-border">
           <table className="table w-full text-sm">
             <caption className="px-5 pt-5 pb-3 text-left text-lg font-semibold text-base-content xl:px-6">
-              Projects
+              Funding Sources
             </caption>
             <thead className="text-base-content/80">
               <tr>
                 <th className="pl-5 xl:pl-6" scope="col">
-                  Project
+                  Project/Task
                 </th>
                 <th scope="col">Funding outlook</th>
                 <th className="text-right" scope="col">

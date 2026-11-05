@@ -167,7 +167,7 @@ export function FundingEditor({
           <p className="text-sm leading-relaxed text-base-content/80">
             {selectable
               ? 'Select the funding sources to include in your plan. Highlighted cards are included.'
-              : 'Review your projects and add planned funding.'}
+              : 'Review your funding sources and add planned funding.'}
           </p>
         </div>
         <button

@@ -336,7 +336,7 @@ export default function GuidedProjections({
         ref={layout}
       >
         <div className="bg-base-100 pt-6 pb-12 text-base leading-normal text-base-content">
-          <div className="mx-auto max-w-4xl">
+          <div className="w-full">
             <button className="btn gap-2" onClick={home} type="button">
               <ArrowTrendingUpIcon
                 aria-hidden="true"
