@@ -71,19 +71,28 @@ function buildRows(
   filters: ExpenditureCategoryFilters = {}
 ): ExpenditureCategoryRow[] {
   const filtered = records.filter((r) => {
-    if (filters.task && (r.taskNum ?? '') !== filters.task) {
+    if (filters.task !== undefined && (r.taskNum ?? '') !== filters.task) {
       return false;
     }
-    if (filters.fund && (r.fundCode ?? '') !== filters.fund) {
+    if (filters.fund !== undefined && (r.fundCode ?? '') !== filters.fund) {
       return false;
     }
-    if (filters.program && (r.programCode ?? '') !== filters.program) {
+    if (
+      filters.program !== undefined &&
+      (r.programCode ?? '') !== filters.program
+    ) {
       return false;
     }
-    if (filters.activity && (r.activityCode ?? '') !== filters.activity) {
+    if (
+      filters.activity !== undefined &&
+      (r.activityCode ?? '') !== filters.activity
+    ) {
       return false;
     }
-    if (filters.dept && (r.projectOwningOrgCode ?? '') !== filters.dept) {
+    if (
+      filters.dept !== undefined &&
+      (r.projectOwningOrgCode ?? '') !== filters.dept
+    ) {
       return false;
     }
     return true;
@@ -351,6 +360,7 @@ export function ExpenditureCategoryBreakdown({
               iamId={iamId}
               projectCostsEnabled={projectCostsEnabled}
               projectNumber={projectNumber}
+              task={filters?.task}
               value={info.getValue()}
             />
           </span>
@@ -361,6 +371,7 @@ export function ExpenditureCategoryBreakdown({
               iamId={iamId}
               projectCostsEnabled={projectCostsEnabled}
               projectNumber={projectNumber}
+              task={filters?.task}
               value={totals.expenses}
             />
           </span>
@@ -418,6 +429,7 @@ export function ExpenditureCategoryBreakdown({
       }),
     ],
     [
+      filters?.task,
       iamId,
       projectCostsEnabled,
       projectNumber,

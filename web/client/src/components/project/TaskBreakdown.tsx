@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { Link } from '@tanstack/react-router';
 import { createColumnHelper } from '@tanstack/react-table';
 import { ExpensesValue } from '@/components/project/ExpenditureCategoryBreakdown.tsx';
 import {
@@ -331,6 +332,38 @@ export function TaskBreakdown({
           </span>
         ),
       }),
+      ...(iamId
+        ? [
+            columnHelper.display({
+              cell: (info) => {
+                const row = info.row.original;
+                return (
+                  <div className="flex justify-end w-full">
+                    <Link
+                      aria-label={`View expenditure categories for task ${row.taskNum}`}
+                      className="link font-semibold text-sm whitespace-nowrap"
+                      params={{ iamId, projectNumber }}
+                      search={{
+                        activity: row.activityCode,
+                        dept: row.financialDepartmentCode,
+                        fund: row.fundCode,
+                        program: row.programCode,
+                        task: row.taskNum,
+                      }}
+                      to="/projects/$iamId/$projectNumber/expenditure-categories"
+                    >
+                      Details
+                    </Link>
+                  </div>
+                );
+              },
+              header: () => (
+                <span className="flex justify-end w-full">More</span>
+              ),
+              id: 'detailsLink',
+            }),
+          ]
+        : []),
     ],
     [
       iamId,
