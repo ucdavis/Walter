@@ -38,3 +38,6 @@ msbuild.wrn
 
 # Claude Code
 .claude/
+
+# Node dependencies
+node_modules/

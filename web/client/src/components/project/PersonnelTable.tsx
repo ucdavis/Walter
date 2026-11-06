@@ -1,8 +1,9 @@
-import { useId, useMemo, useState } from 'react';
+import { useId, useMemo, useRef, useState } from 'react';
 import {
   ChevronDownIcon,
   ClockIcon,
   MagnifyingGlassIcon,
+  XMarkIcon,
 } from '@heroicons/react/24/outline';
 import { ExportDataButton } from '@/components/ExportDataButton.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
@@ -483,6 +484,9 @@ function EmployeeFundingCard({
   onToggle: () => void;
 }) {
   const detailsId = useId();
+  const jobDetailsTitleId = useId();
+  const jobDetailsRef = useRef<HTMLDialogElement>(null);
+  const [jobDetailsOpen, setJobDetailsOpen] = useState(false);
   const funding = summarizeFunding(employee.distributions);
   const projectCount = new Set(
     employee.distributions.map((d) => d.record.projectId)
@@ -501,59 +505,147 @@ function EmployeeFundingCard({
     (d) => !d.record.isFuture && d.fundingEndingSoon
   );
 
+  const jobDetails = (
+    <div className="mt-8 divide-y divide-base-300">
+      {employee.positions.map((position) => (
+        <dl
+          className="grid grid-cols-1 gap-x-8 gap-y-8 py-4 first:pt-0 sm:grid-cols-3"
+          key={position.key}
+        >
+          {[
+            ['Empl ID', employee.employeeId],
+            ['Job Code', position.jobCode || '—'],
+            ['Job Code Description', position.positionDescription || '—'],
+            ['FTE', String(position.fte)],
+            ['Eff. Date', formatDate(position.jobEffectiveDate)],
+            ['End Date', formatDate(position.jobEndDate)],
+          ].map(([label, value]) => (
+            <div key={label}>
+              <dt className="text-sm text-base-content/70">{label}</dt>
+              <dd className="mt-2 break-words">{value}</dd>
+            </div>
+          ))}
+          <div className="col-span-full grid grid-cols-1 gap-4 rounded-box bg-base-200 p-4 sm:grid-cols-3">
+            {(
+              [
+                ['Mo. Salary', position.monthlyRate],
+                ['Mo. CBR', position.monthlyFringe],
+                ['Mo. Total', position.monthlyTotal],
+              ] as const
+            ).map(([label, value]) => (
+              <div key={label}>
+                <dt className="text-sm text-base-content/70">{label}</dt>
+                <dd className="mt-1 font-semibold tabular-nums">
+                  {formatAmount(value, position.salaryUnknown)}
+                </dd>
+              </div>
+            ))}
+          </div>
+        </dl>
+      ))}
+    </div>
+  );
+  const fundingDetails = (
+    <>
+      <h4 className="mb-2 text-sm font-semibold">Funding Distribution</h4>
+      <div className="overflow-x-auto">
+        <table className="table walter-table !min-w-4xl [&_th]:!border-t-0">
+          <colgroup>
+            <FundingColumnGroup />
+          </colgroup>
+          <thead>
+            <tr>
+              <FundingColumnHeaders />
+            </tr>
+          </thead>
+          <tbody>
+            {employee.positions.flatMap((position) =>
+              position.distributions.map((distribution, index) => (
+                <tr key={`${position.key}-${index}`}>
+                  <FundingDistributionCells
+                    distribution={distribution}
+                    positionLabel={
+                      employee.positions.length > 1
+                        ? `${position.positionDescription} · ${position.jobCode}`
+                        : undefined
+                    }
+                  />
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+
   return (
     <article
       aria-label={employee.name}
       className="overflow-hidden rounded-box border border-base-300 bg-base-100"
     >
-      <button
-        aria-controls={detailsId}
-        aria-expanded={expanded}
-        className="flex w-full flex-wrap items-center gap-4 p-4 text-left transition-colors hover:bg-base-200/50 focus-visible:outline-2 focus-visible:outline-primary"
-        onClick={onToggle}
-        type="button"
-      >
-        <span className="flex min-w-0 flex-1 items-center gap-3">
-          <ChevronDownIcon
-            aria-hidden="true"
-            className={`h-4 w-4 shrink-0 transition-transform ${expanded ? 'rotate-180' : ''}`}
-          />
-          <span className="min-w-0">
-            <span className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-              <span className="font-semibold">{employee.name}</span>
-              <span className="text-xs text-base-content/70">
-                Empl ID {employee.employeeId}
+      <div className="flex flex-wrap items-center gap-4 p-4">
+        <button
+          aria-controls={detailsId}
+          aria-expanded={expanded}
+          className="min-w-0 flex-1 rounded-sm text-left transition-colors hover:bg-base-200/50 focus-visible:outline-2 focus-visible:outline-primary"
+          onClick={onToggle}
+          type="button"
+        >
+          <span className="flex min-w-0 flex-1 items-center gap-3">
+            <ChevronDownIcon
+              aria-hidden="true"
+              className={`h-4 w-4 shrink-0 transition-transform ${expanded ? 'rotate-180' : ''}`}
+            />
+            <span className="min-w-0">
+              <span className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                <span className="font-semibold">{employee.name}</span>
+                <span className="text-xs text-base-content/70">
+                  Empl ID {employee.employeeId}
+                </span>
               </span>
+              {roles && (
+                <span className="mt-1 block text-sm text-base-content/70">
+                  {roles}
+                </span>
+              )}
+              {(futureOnly ||
+                funding.unknownCount > 0 ||
+                fundingEndingSoon) && (
+                <span className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-base-content/70">
+                  {futureOnly && (
+                    <span className="badge badge-soft badge-info badge-sm">
+                      Future only
+                    </span>
+                  )}
+                  {funding.unknownCount > 0 && (
+                    <span className="badge badge-soft badge-warning badge-sm">
+                      {funding.monthlyRate === null
+                        ? 'Funding unavailable'
+                        : 'Partial funding'}
+                    </span>
+                  )}
+                  {fundingEndingSoon && (
+                    <span className="inline-flex items-center gap-1 text-error">
+                      <ClockIcon aria-hidden="true" className="h-3 w-3" />
+                      Funding ends soon
+                    </span>
+                  )}
+                </span>
+              )}
             </span>
-            {roles && (
-              <span className="mt-1 block text-sm text-base-content/70">
-                {roles}
-              </span>
-            )}
-            {(futureOnly || funding.unknownCount > 0 || fundingEndingSoon) && (
-              <span className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-base-content/70">
-                {futureOnly && (
-                  <span className="badge badge-soft badge-info badge-sm">
-                    Future only
-                  </span>
-                )}
-                {funding.unknownCount > 0 && (
-                  <span className="badge badge-soft badge-warning badge-sm">
-                    {funding.monthlyRate === null
-                      ? 'Funding unavailable'
-                      : 'Partial funding'}
-                  </span>
-                )}
-                {fundingEndingSoon && (
-                  <span className="inline-flex items-center gap-1 text-error">
-                    <ClockIcon aria-hidden="true" className="h-3 w-3" />
-                    Funding ends soon
-                  </span>
-                )}
-              </span>
-            )}
           </span>
-        </span>
+        </button>
+        <button
+          className="btn btn-sm"
+          onClick={() => {
+            setJobDetailsOpen(true);
+            jobDetailsRef.current?.showModal();
+          }}
+          type="button"
+        >
+          Job details
+        </button>
         <span className="grid w-full grid-cols-4 gap-3 text-right text-sm sm:w-auto sm:gap-6 sm:text-base">
           <span className="min-w-0 sm:min-w-24">
             <span className="block text-xs text-base-content/70">Projects</span>
@@ -569,7 +661,48 @@ function EmployeeFundingCard({
             value={funding.monthlyTotal}
           />
         </span>
-      </button>
+      </div>
+      <dialog
+        aria-labelledby={jobDetailsTitleId}
+        className="modal"
+        onClose={() => setJobDetailsOpen(false)}
+        ref={jobDetailsRef}
+      >
+        {jobDetailsOpen && (
+          <>
+            <div className="modal-box w-11/12 max-w-5xl">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h3 className="text-xl font-semibold" id={jobDetailsTitleId}>
+                    Job Details
+                  </h3>
+                  <p className="mt-2 text-base-content/70">{employee.name}</p>
+                </div>
+                <form method="dialog">
+                  <button
+                    aria-label="Close job details"
+                    className="btn btn-sm btn-ghost btn-square"
+                    onClick={() => jobDetailsRef.current?.close()}
+                    type="button"
+                  >
+                    <XMarkIcon aria-hidden="true" className="size-5" />
+                  </button>
+                </form>
+              </div>
+              {jobDetails}
+            </div>
+            <form className="modal-backdrop" method="dialog">
+              <button
+                aria-label="Dismiss job details"
+                onClick={() => jobDetailsRef.current?.close()}
+                type="button"
+              >
+                Close
+              </button>
+            </form>
+          </>
+        )}
+      </dialog>
       {expanded && (
         <div
           aria-label={`${employee.name} funding distribution`}
@@ -577,35 +710,7 @@ function EmployeeFundingCard({
           id={detailsId}
           role="region"
         >
-          <h4 className="mb-2 text-sm font-semibold">Funding Distribution</h4>
-          <div className="overflow-x-auto">
-            <table className="table walter-table !min-w-4xl [&_th]:!border-t-0">
-              <colgroup>
-                <FundingColumnGroup />
-              </colgroup>
-              <thead>
-                <tr>
-                  <FundingColumnHeaders />
-                </tr>
-              </thead>
-              <tbody>
-                {employee.positions.flatMap((position) =>
-                  position.distributions.map((distribution, index) => (
-                    <tr key={`${position.key}-${index}`}>
-                      <FundingDistributionCells
-                        distribution={distribution}
-                        positionLabel={
-                          employee.positions.length > 1
-                            ? `${position.positionDescription} · ${position.jobCode}`
-                            : undefined
-                        }
-                      />
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+          {fundingDetails}
         </div>
       )}
     </article>

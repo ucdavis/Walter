@@ -267,6 +267,54 @@ describe('aggregateByPosition', () => {
 });
 
 describe('PersonnelTable', () => {
+  it('opens job details for all positions without expanding funding and can close and reopen', async () => {
+    const user = userEvent.setup();
+    render(
+      <PersonnelTable
+        data={[
+          createRecord({
+            distributionPercent: 60,
+            fte: 0.5,
+            jobEndDate: '2027-06-30',
+          }),
+          createRecord({
+            jobCode: '005678',
+            positionDescription: 'SECOND JOB',
+            positionNumber: '40005678',
+          }),
+        ]}
+      />
+    );
+    const card = screen.getByRole('article', { name: 'Smith, John' });
+    const trigger = within(card).getByRole('button', { name: 'Job details' });
+    await user.click(trigger);
+    const dialog = screen.getByRole('dialog', { name: 'Job Details' });
+    expect(within(dialog).getByText('Smith, John')).toBeInTheDocument();
+    expect(within(dialog).getByText('001234')).toBeInTheDocument();
+    expect(within(dialog).getByText('005678')).toBeInTheDocument();
+    expect(within(dialog).getByText('SECOND JOB')).toBeInTheDocument();
+    expect(within(dialog).getByText('0.5')).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(formatDate('2027-06-30'))
+    ).toBeInTheDocument();
+    for (const amount of ['$2,500.00', '$1,000.00', '$3,500.00']) {
+      expect(within(dialog).getByText(amount)).toBeInTheDocument();
+    }
+    expect(within(dialog).getByText('—')).toBeInTheDocument();
+    expect(
+      within(card).getByRole('button', { expanded: false })
+    ).toBeInTheDocument();
+    expect(within(card).queryByRole('region')).not.toBeInTheDocument();
+    await user.click(
+      within(dialog).getByRole('button', { name: 'Close job details' })
+    );
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    await user.click(trigger);
+    expect(
+      screen.getByRole('dialog', { name: 'Job Details' })
+    ).toBeInTheDocument();
+  });
+
   it('expands and closes all visible cards and tracks individual toggles', async () => {
     const user = userEvent.setup();
     render(
@@ -283,7 +331,8 @@ describe('PersonnelTable', () => {
     ).toHaveLength(2);
     await user.click(
       within(screen.getByRole('article', { name: 'Jones, Jane' })).getByRole(
-        'button'
+        'button',
+        { expanded: true }
       )
     );
     expect(
@@ -322,7 +371,7 @@ describe('PersonnelTable', () => {
     expect(within(card).getByText('$4,200.00')).toBeInTheDocument();
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
 
-    const trigger = within(card).getByRole('button');
+    const trigger = within(card).getByRole('button', { expanded: false });
     expect(trigger).toHaveAttribute('aria-expanded', 'false');
     trigger.focus();
     await user.keyboard('{Enter}');
@@ -361,7 +410,7 @@ describe('PersonnelTable', () => {
     expect(within(card).getByText('$3,000.00')).toBeInTheDocument();
     expect(within(card).getByText('$1,200.00')).toBeInTheDocument();
     expect(within(card).getByText('$4,200.00')).toBeInTheDocument();
-    await user.click(within(card).getByRole('button'));
+    await user.click(within(card).getByRole('button', { expanded: false }));
     expect(within(card).getByText('PROF-FY · 001234')).toBeInTheDocument();
     expect(
       within(card).getByText('ASSOC PROF-FY · 001234')
@@ -417,7 +466,7 @@ describe('PersonnelTable', () => {
     expect(screen.getByRole('status')).toHaveTextContent(
       'Totals include known current funding only.'
     );
-    await user.click(within(card).getByRole('button'));
+    await user.click(within(card).getByRole('button', { expanded: false }));
     expect(
       within(card).getByText('Funding entry info not available')
     ).toBeInTheDocument();
@@ -482,7 +531,7 @@ describe('PersonnelTable', () => {
     expect(within(futureCard).getByText('Future only')).toBeInTheDocument();
     const card = screen.getByRole('article', { name: 'Smith, John' });
     expect(within(card).queryByText('$9,000.00')).not.toBeInTheDocument();
-    await user.click(within(card).getByRole('button'));
+    await user.click(within(card).getByRole('button', { expanded: false }));
     expect(within(card).getByText('Future Project')).toBeInTheDocument();
     expect(within(card).getByText('$9,000.00')).toBeInTheDocument();
   });
@@ -560,7 +609,7 @@ describe('PersonnelTable', () => {
     const user = userEvent.setup();
     render(<PersonnelTable data={[createRecord()]} />);
     const card = screen.getByRole('article', { name: 'Smith, John' });
-    await user.click(within(card).getByRole('button'));
+    await user.click(within(card).getByRole('button', { expanded: false }));
     const table = within(card).getByRole('table');
     for (const [label, tooltip] of [
       ['FE Start', tooltipDefinitions.fundingEntryStart],
@@ -591,7 +640,7 @@ describe('PersonnelTable', () => {
       />
     );
     const card = screen.getByRole('article', { name: 'Smith, John' });
-    await user.click(within(card).getByRole('button'));
+    await user.click(within(card).getByRole('button', { expanded: false }));
     expect(within(card).getByText('441000')).toBeInTheDocument();
     expect(within(card).queryByText('778100')).not.toBeInTheDocument();
   });
@@ -607,7 +656,7 @@ describe('PersonnelTable', () => {
     );
     const card = screen.getByRole('article', { name: 'Smith, John' });
     expect(within(card).getByText('Funding ends soon')).toBeInTheDocument();
-    await user.click(within(card).getByRole('button'));
+    await user.click(within(card).getByRole('button', { expanded: false }));
     expect(
       within(card).getByText(formatDate(date.toISOString(), ''))
     ).toBeInTheDocument();
