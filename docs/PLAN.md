@@ -30,16 +30,16 @@ as each decision is settled and each stage is reviewed.
 
 For a full forecast month, before benefits, COLA, or other costs:
 
-| Assumption or result | Original | After salary edit |
-| --- | ---: | ---: |
-| Full-time annual salary | $120,000 | $132,000 |
-| Full-time monthly salary | $10,000 | $11,000 |
-| Appointment FTE | 50% | 50% |
-| Project A share of full-time salary | 25% | 25% |
-| Project B share of full-time salary | 25% | 25% |
-| Monthly charge to Project A | $2,500 | $2,750 |
-| Monthly charge to Project B | $2,500 | $2,750 |
-| Total monthly salary cost | $5,000 | $5,500 |
+| Assumption or result                | Original | After salary edit |
+| ----------------------------------- | -------: | ----------------: |
+| Full-time annual salary             | $120,000 |          $132,000 |
+| Full-time monthly salary            |  $10,000 |           $11,000 |
+| Appointment FTE                     |      50% |               50% |
+| Project A share of full-time salary |      25% |               25% |
+| Project B share of full-time salary |      25% |               25% |
+| Monthly charge to Project A         |   $2,500 |            $2,750 |
+| Monthly charge to Project B         |   $2,500 |            $2,750 |
+| Total monthly salary cost           |   $5,000 |            $5,500 |
 
 The two shares fill the 50% appointment. Each is half of the appointment, even
 though the UI expresses each as 25% of full-time salary. Changing the salary
@@ -51,13 +51,13 @@ Use one editable plan document and named operations that own its business rules.
 Keep interactive forecast calculation independent of React. Components render
 the document and invoke operations; future integrations use the same operations.
 
-| Information | Owner | Required behavior |
-| --- | --- | --- |
-| Saved plan and reference data | TanStack Query | A background refresh cannot overwrite an active draft. |
-| Editable assumptions | One editor session per open plan | Changing section or project preserves the session. |
-| Selected section, project, job, or month | TanStack Router | Links and Back/Forward restore the location. |
-| Partially typed input | Its field or dialog | Incomplete text is not silently converted into a domain value. |
-| Forecasts, totals, and warnings | Pure calculations and selectors | All views use the same results. |
+| Information                              | Owner                            | Required behavior                                              |
+| ---------------------------------------- | -------------------------------- | -------------------------------------------------------------- |
+| Saved plan and reference data            | TanStack Query                   | A background refresh cannot overwrite an active draft.         |
+| Editable assumptions                     | One editor session per open plan | Changing section or project preserves the session.             |
+| Selected section, project, job, or month | TanStack Router                  | Links and Back/Forward restore the location.                   |
+| Partially typed input                    | Its field or dialog              | Incomplete text is not silently converted into a domain value. |
+| Forecasts, totals, and warnings          | Pure calculations and selectors  | All views use the same results.                                |
 
 Start with route-scoped React reducer/context and the existing Query, Router,
 and form tools. Measure a representative large portfolio in Stage 1a. Introduce
@@ -150,15 +150,15 @@ an already saved snapshot. Decide the owning boundary in Stage 2.
 
 ## Stages and review stops
 
-| Stage | Deliverable | Review focus |
-| --- | --- | --- |
-| 0. Behavior agreement | Agreed salary calculation, edit timing, draft behavior, and navigation expectations for a small synthetic portfolio | Product decisions confirmed. Keep later questions assigned to their owning stages. |
-| 1a. One local salary edit | Open a representative plan; link to a job; edit and cancel salary; recalculate a useful project outlook; navigate without losing edits; invoke the same operation without the UI | State ownership, calculation clarity, component boundaries, keyboard behavior, and responsiveness. |
-| 1b. Save that edit | Real saved-plan loading, conditional save, reload, failure recovery, and unsaved-change handling | Failed and conflicting saves preserve work; an in-flight response does not erase subsequent edits. |
-| 2. Plan lifecycle | Fresh unsaved seed, save-as-new, duplicate, plan selection, and dashboard eligibility | Reopened and duplicated plans retain captured inputs; saved plans remain usable when fresh data is unavailable. |
-| 3. Funding and staffing | Project balances/dates, remaining job assumptions, hypothetical hires, and funding schedules | Review project editing, job editing, and allocation editing separately. Check FTE, date ranges, outside funding, and funding proportions. |
-| 4. Expenses and details | Monthly/one-time expenses, generated estimates, history windows, notes, and horizon | Explicit expenses survive regeneration; save/reload preserves the preview. |
-| 5. Complete guided experience | Setup composed from existing editors, full project drilldowns, explanations, and controlled rollout | Verify the complete workflow and genuine reuse. |
+| Stage                         | Deliverable                                                                                                                                                                      | Review focus                                                                                                                              |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| 0. Behavior agreement         | Agreed salary calculation, edit timing, draft behavior, and navigation expectations for a small synthetic portfolio                                                              | Product decisions confirmed. Keep later questions assigned to their owning stages.                                                        |
+| 1a. One local salary edit     | Open a representative plan; link to a job; edit and cancel salary; recalculate a useful project outlook; navigate without losing edits; invoke the same operation without the UI | State ownership, calculation clarity, component boundaries, keyboard behavior, and responsiveness.                                        |
+| 1b. Save that edit            | Real saved-plan loading, conditional save, reload, failure recovery, and unsaved-change handling                                                                                 | Failed and conflicting saves preserve work; an in-flight response does not erase subsequent edits.                                        |
+| 2. Plan lifecycle             | Fresh unsaved seed, save-as-new, duplicate, plan selection, and dashboard eligibility                                                                                            | Reopened and duplicated plans retain captured inputs; saved plans remain usable when fresh data is unavailable.                           |
+| 3. Funding and staffing       | Project balances/dates, remaining job assumptions, hypothetical hires, and funding schedules                                                                                     | Review project editing, job editing, and allocation editing separately. Check FTE, date ranges, outside funding, and funding proportions. |
+| 4. Expenses and details       | Monthly/one-time expenses, generated estimates, history windows, notes, and horizon                                                                                              | Explicit expenses survive regeneration; save/reload preserves the preview.                                                                |
+| 5. Complete guided experience | Setup composed from existing editors, full project drilldowns, explanations, and controlled rollout                                                                              | Verify the complete workflow and genuine reuse.                                                                                           |
 
 Every increment includes appropriate automated checks, a usable preview,
 independent code review, and a review with the user before moving on. Split a stage
@@ -174,11 +174,11 @@ schedules is a confirmed Stage 0 decision.
 
 The salary arithmetic and these product choices were confirmed on November 6, 2026:
 
-| Decision | Agreed behavior | Consequence |
-| --- | --- | --- |
-| When a salary edit applies | Change the job's assumed full-time rate throughout its remaining applicable forecast period, leaving historical actuals unchanged | Scheduling a raise for a future month is deferred. Existing COLA assumptions still need their own fixture. |
-| When an editor changes the plan | Apply changes the in-memory draft and forecast; Cancel leaves them unchanged | Partial typing stays inside the editor. This retains a clear cancellation boundary. |
-| When a plan is persisted | Explicit Save plan | Navigation within a plan preserves the draft; leaving or reloading warns about unsaved work. Reload uses saved inputs. |
+| Decision                        | Agreed behavior                                                                                                                   | Consequence                                                                                                            |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| When a salary edit applies      | Change the job's assumed full-time rate throughout its remaining applicable forecast period, leaving historical actuals unchanged | Scheduling a raise for a future month is deferred. Existing COLA assumptions still need their own fixture.             |
+| When an editor changes the plan | Apply changes the in-memory draft and forecast; Cancel leaves them unchanged                                                      | Partial typing stays inside the editor. This retains a clear cancellation boundary.                                    |
+| When a plan is persisted        | Explicit Save plan                                                                                                                | Navigation within a plan preserves the draft; leaving or reloading warns about unsaved work. Reload uses saved inputs. |
 
 The remaining forecast period is relative to the plan's fixed snapshot, not
 today's date. Reopening an older plan does not move the salary edit's start month.
@@ -211,8 +211,8 @@ The fixed example captures December 2025 salary actuals and forecasts January
 through June 2026. Project A starts with $20,000 available and Project B with
 $16,000. Try the following:
 
-1. Enter $132,000 and Cancel. The annual salary remains $120,000.
-2. Enter $132,000 and Apply. Each project now pays $2,750 monthly. Project A ends
+1. Enter `132000` and Cancel. The annual salary remains $120,000.
+2. Enter `132000` and Apply. Each project now pays $2,750 monthly. Project A ends
    at $3,500 and Project B at -$500, with its shortfall shown separately.
 3. Open Project B's monthly detail, switch sections, and use Back/Forward.
    The applied salary remains in the draft; December actuals remain $2,500.
@@ -242,15 +242,15 @@ is included in this implementation.
 
 ## Questions to resolve in their owning stages
 
-| Before | Question or example |
-| --- | --- |
-| Stage 1b | Which atomic server version check will protect shared plans? How does conflict recovery retain the draft? |
-| Stage 1b | Verify benefit/vacation rates, fee remission, COLA, project date bounds, and current-month actuals against agreed examples. Do not infer correctness from the synthetic demo's totals. |
-| Stage 2 | Where will plan settings live? Verify duplicate semantics, seed eligibility, task grouping, and saved-snapshot independence. |
-| Stage 3 | How do funding schedules behave at appointment/project boundaries, at zero FTE, and when FTE changes? Verify outside funding and distinguish incomplete assumptions from invalid edits. |
-| Stage 4 | Which generated estimates are replaced when the history window changes? When does editing an estimate turn it into an explicit planned expense? |
-| Stage 5 | Verify per-project shortfalls remain visible despite surpluses elsewhere, and decide feature-flag rollout criteria. |
-| Later integration | Define proposal batches, stale-preview handling, bounded undo, authentication, and interactions with pending form edits. |
+| Before            | Question or example                                                                                                                                                                     |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Stage 1b          | Which atomic server version check will protect shared plans? How does conflict recovery retain the draft?                                                                               |
+| Stage 1b          | Verify benefit/vacation rates, fee remission, COLA, project date bounds, and current-month actuals against agreed examples. Do not infer correctness from the synthetic demo's totals.  |
+| Stage 2           | Where will plan settings live? Verify duplicate semantics, seed eligibility, task grouping, and saved-snapshot independence.                                                            |
+| Stage 3           | How do funding schedules behave at appointment/project boundaries, at zero FTE, and when FTE changes? Verify outside funding and distinguish incomplete assumptions from invalid edits. |
+| Stage 4           | Which generated estimates are replaced when the history window changes? When does editing an estimate turn it into an explicit planned expense?                                         |
+| Stage 5           | Verify per-project shortfalls remain visible despite surpluses elsewhere, and decide feature-flag rollout criteria.                                                                     |
+| Later integration | Define proposal batches, stale-preview handling, bounded undo, authentication, and interactions with pending form edits.                                                                |
 
 ## Reference evidence
 
