@@ -185,14 +185,14 @@ export type ProjectionWorkspaceSnapshot = ReturnType<
   typeof readProjectionWorkspace
 >;
 
-/** Adds existing calculator rows for display; no forecast rules live in the view. */
+/** Shows the snapshot month onward; prior-month costs remain in the saved plan and calculator. */
 export function getProjectOutlook(rows: PiProjectionRow[], projectId: number) {
   const months = new Map<
     string,
     { actual: number; forecast: number; month: string; remaining: number }
   >();
   for (const row of rows) {
-    if (row.projectId !== projectId) {
+    if (row.projectId !== projectId || row.kind === 'actual') {
       continue;
     }
     const month = months.get(row.month) ?? {

@@ -78,15 +78,25 @@ funding gaps or overlaps.
 snapshot balance = budget - spent to date - commitments
 ```
 
+Budget, spent to date, and commitments are totals captured at the snapshot date.
+Monthly actuals are the booked cost totals for each category and month. They
+describe spending during that month, rather than the money remaining at its end.
+
 Spent to date includes costs already booked in the snapshot month. Those costs
 remain visible as actuals and are not deducted from the snapshot balance again.
 Only additional forecast spending reduces that balance. This calculation assumes
 the booked actuals are included in the captured balance.
 
 Each project keeps its own balance. A surplus on one project does not cover a
-shortfall on another. Historical balances shown in the forecast are reconstructed
-from the snapshot's budget and commitments, not observed historical month-end
-balances.
+shortfall on another. The project outlook and its monthly detail begin in the
+saved snapshot month and continue through the forecast horizon. The snapshot
+month shows booked actuals and additional forecast spending. Earlier months
+are not shown as historical month-end balances.
+
+Historical monthly spending remains in the saved plan. Its averages supply
+generated recurring expense estimates for the selected history window.
+Snapshot-month spending also remains available for the personnel calculation
+below. Reopening a plan preserves these captured costs and its snapshot date.
 
 ## Snapshot-month personnel costs
 

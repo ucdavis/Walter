@@ -4,6 +4,8 @@ Status: Stage 1a, Stage 1b saving, and the snapshot-month and date-boundary
 corrections accepted. Stage 1b remains open for the remaining calculation
 decisions. Saving remains available with funding gaps/overlaps.
 The CBR default and legacy-plan compatibility increment is accepted.
+The project outlook starts at the snapshot month; historical spending remains
+available for expense estimates and snapshot-month calculations.
 Updated November 6, 2026.
 
 Build a guided planning workspace where users can adjust a dated portfolio
@@ -49,6 +51,9 @@ as each decision is settled and each stage is reviewed.
   Do not add a missing-CBR state or incomplete-benefit warning for this default.
 - Keep the vacation cost field's existing default of 0 and preserve supplied
   values. Add no new vacation-cost UI until the lookup's meaning is confirmed.
+- Show the project outlook from the snapshot month forward. Retain captured
+  monthly spending and its use in expense estimates and snapshot-month netting.
+  Do not show reconstructed balances for earlier months or add warning UI.
 
 ### Agreed salary example
 
@@ -483,10 +488,9 @@ per-project salary target below booked salary. January's forecast becomes zero,
 its actuals stay $1,400, and its end balance stays at the captured $26,600.
 February still forecasts the full $900 salary plus $360 benefits.
 
-The date rules below are implemented and accepted. Historical balance
-presentation, consistent source reporting months, missing benefit inputs, fee
-remission, and remaining COLA assumptions are still open. This increment does
-not close Stage 1b or begin Stage 2.
+The date rules below are implemented and accepted. Consistent source reporting
+months, vacation lookup mapping, fee remission, and remaining COLA assumptions
+are still open. These increments do not close Stage 1b or begin Stage 2.
 
 #### Agreed personnel date rules
 
@@ -633,6 +637,32 @@ The user reviewed and accepted this increment. Publication and deployment remain
 outside this step. It does not close Stage 1b or select a different CBR default,
 official vacation assessment mapping, or fee-remission policy.
 
+#### Agreed project outlook period
+
+The project outlook starts at the saved snapshot month and continues through
+the forecast horizon. It shows that month's booked costs and additional forecast
+spending, then later forecast months. Earlier months are excluded from the
+displayed outlook and monthly detail. No new warning UI is needed.
+
+Current category balances and monthly spending serve different purposes. The
+snapshot's budget, spent-to-date, and commitment totals establish the available
+balance. Captured monthly cost totals describe spending in each category and
+month. Their historical averages supply generated recurring expense estimates;
+snapshot-month totals support the existing booked-cost subtraction.
+
+The calculator can reconstruct earlier remaining balances from the snapshot's
+captured balance and past spending, but these are not observed historical month-end
+balances. The outlook filters out those earlier rows. This presentation change
+retains the saved history, generated estimates, and calculator results, including
+snapshot-month actuals and personnel netting. Stage 1b remains open for the
+other calculation decisions below.
+
+Verification passed: 500 client tests, TypeScript, the production build,
+changed-file ESLint, formatting, and independent review. The browser preview
+starts at January 2026 for the saved January snapshot and retains the expected
+forecast and ending balances. React Doctor scored 97/100 with the existing
+component-size warning; existing client build warnings remain.
+
 #### Findings to resolve
 
 The November 6 source review and executable examples identified the following
@@ -643,9 +673,6 @@ work. These findings do not authorize implementing later stages together.
   snapshot month, but other categories did not reconcile. The SQL seed uses
   server-local `GETDATE()` while the application uses UTC. Establish a consistent
   reporting month and decide how to handle mismatched source cutoffs.
-- **Historical balances:** the calculator reconstructs history using current
-  budgets and commitments. Decide how to present historical actuals without
-  implying that these are observed month-end balances.
 - **Vacation lookup mapping:** the numeric CBR default and legacy compatibility
   are accepted. Keep the vacation field's existing default of 0 and preserve
   supplied values. The earlier `WalterDev` inspection

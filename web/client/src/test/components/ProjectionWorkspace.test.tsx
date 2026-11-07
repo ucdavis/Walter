@@ -41,6 +41,33 @@ const editButton = () =>
   screen.getByRole('button', { name: 'Edit salary for Alex Example' });
 
 describe('projection salary workspace', () => {
+  it('starts the outlook at the saved snapshot month while retaining prior spending', async () => {
+    const plan = createSalaryExample();
+    openPreview('?section=overview&project=1', plan);
+    await screen.findByRole('heading', { name: 'Project A by month' });
+    const table = screen.getByRole('table');
+    expect(
+      within(table)
+        .getAllByRole('rowheader')
+        .map((cell) => cell.textContent)
+    ).toEqual([
+      '2026-01',
+      '2026-02',
+      '2026-03',
+      '2026-04',
+      '2026-05',
+      '2026-06',
+    ]);
+    expect(read().draft.projects[0].actuals).toEqual(plan.projects[0].actuals);
+    expect(read().results.rows).toContainEqual(
+      expect.objectContaining({
+        actualAmount: 2500,
+        month: '2025-12',
+        projectId: 1,
+      })
+    );
+  });
+
   it('keeps booked costs visible while salary edits change only the remaining snapshot forecast', async () => {
     const history = createMemoryHistory({
       initialEntries: [
