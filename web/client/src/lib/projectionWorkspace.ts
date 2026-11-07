@@ -20,6 +20,28 @@ export function createProjectionSession(plan: Projection): ProjectionSession {
   return { baseline: plan, draft: plan, revision: 0 };
 }
 
+/** Acknowledges exactly the submitted revision while retaining edits applied during its request. */
+export function acknowledgeProjectionSave(
+  current: ProjectionSession,
+  submitted: ProjectionSession,
+  saved: Projection
+): ProjectionSession {
+  return {
+    ...current,
+    baseline: saved,
+    draft:
+      current.revision === submitted.revision
+        ? saved
+        : {
+            ...saved,
+            historyMonths: current.draft.historyMonths,
+            jobs: current.draft.jobs,
+            name: current.draft.name,
+            projects: current.draft.projects,
+          },
+  };
+}
+
 /** Changes the assumed rate from the fixed snapshot onward; captured actuals are untouched. */
 export function setJobMonthlySalary(
   session: ProjectionSession,
@@ -121,6 +143,15 @@ export interface PendingSalaryEditor {
   validationMessage: string | null;
 }
 
+export interface ProjectionPersistenceStatus {
+  conflict: 'conflict' | 'snapshotChanged' | 'deleted' | null;
+  conflictOpen: boolean;
+  error: string | null;
+  reloading: boolean;
+  saveStatus: 'idle' | 'saving' | 'saved';
+  saving: boolean;
+}
+
 /** Salary is the only editable assumption in this stage. Restoring it clears dirty status. */
 export function isProjectionDirty(session: ProjectionSession): boolean {
   const original = new Map(
@@ -136,13 +167,15 @@ export function readProjectionWorkspace(
   session: ProjectionSession,
   location: ProjectionLocation,
   results: ProjectionResults,
-  pendingEditor: PendingSalaryEditor | null
+  pendingEditor: PendingSalaryEditor | null,
+  persistence: ProjectionPersistenceStatus | null = null
 ) {
   return structuredClone({
     dirty: isProjectionDirty(session),
     draft: session.draft,
     location,
     pendingEditor,
+    persistence,
     results,
     revision: session.revision,
   });

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   createRootRoute,
   createRoute,
@@ -12,11 +12,20 @@ import {
   type ProjectionWorkspaceHandle,
 } from '@/components/projections/ProjectionWorkspace.tsx';
 import { createSalaryExample } from '@/dev/projections/fixture.ts';
+import { PreviewControls } from '@/dev/projections/PreviewControls.tsx';
+import {
+  createProjectionPreviewServer,
+  type ProjectionPreviewServer,
+} from '@/dev/projections/server.ts';
 import type { Projection } from '@/queries/projections.ts';
+
+interface ProjectionPreviewHandle extends ProjectionWorkspaceHandle {
+  server: ProjectionPreviewServer;
+}
 
 declare global {
   interface Window {
-    walterProjectionPreview?: ProjectionWorkspaceHandle;
+    walterProjectionPreview?: ProjectionPreviewHandle;
   }
 }
 
@@ -24,18 +33,27 @@ declare global {
 export function createProjectionPreviewRouter({
   history,
   plan = createSalaryExample(),
-}: { history?: RouterHistory; plan?: Projection } = {}) {
+  server = createProjectionPreviewServer(plan),
+}: {
+  history?: RouterHistory;
+  plan?: Projection;
+  server?: ProjectionPreviewServer;
+} = {}) {
   const rootRoute = createRootRoute({
     component: () => (
-      <ProjectionSessionProvider initialPlan={plan}>
-        <main>
-          <div className="bg-warning/15 px-4 py-3 text-center text-sm">
-            Synthetic local preview. No real people or projects. Changes stay in
-            this tab and are lost on reload. Saving comes in a later stage.
-          </div>
-          <Outlet />
-        </main>
-      </ProjectionSessionProvider>
+      <main>
+        <div className="bg-warning/15 px-4 py-3 text-center text-sm">
+          Synthetic local preview. No real people or projects. The saved copy
+          lives in this tab; a full page reload resets everything.
+        </div>
+        <PreviewControls
+          onLeave={() => {
+            void router.navigate({ to: '/projections-preview-away.html' });
+          }}
+          server={server}
+        />
+        <Outlet />
+      </main>
     ),
   });
   const previewRoute = createRoute({
@@ -46,15 +64,56 @@ export function createProjectionPreviewRouter({
   });
   const router = createRouter({
     history,
-    routeTree: rootRoute.addChildren([previewRoute]),
+    routeTree: rootRoute.addChildren([
+      previewRoute,
+      createRoute({
+        component: () => (
+          <section className="mx-auto max-w-6xl p-8">
+            <h1 className="text-2xl font-bold">Outside the plan</h1>
+            <button
+              className="btn btn-primary mt-4"
+              onClick={() => {
+                void router.navigate({
+                  search: () => ({ section: 'staffing' }),
+                  to: '/projections-preview.html',
+                });
+              }}
+              type="button"
+            >
+              Return to saved plan
+            </button>
+          </section>
+        ),
+        getParentRoute: () => rootRoute,
+        path: '/projections-preview-away.html',
+      }),
+    ]),
   });
 
   function Preview() {
+    const [initialPlan] = useState(() => server.read().stored);
+    if (!initialPlan) {
+      return (
+        <p className="p-8" role="alert">
+          The saved preview plan was deleted. Reload the page to start a fresh
+          example.
+        </p>
+      );
+    }
+    return (
+      <ProjectionSessionProvider initialPlan={initialPlan} persistence={server}>
+        <Workspace />
+      </ProjectionSessionProvider>
+    );
+  }
+
+  function Workspace() {
     const search = previewRoute.useSearch();
     const workspaceRef = useRef<ProjectionWorkspaceHandle>(null);
     useEffect(() => {
-      const handle: ProjectionWorkspaceHandle = {
+      const handle: ProjectionPreviewHandle = {
         read: () => workspaceRef.current!.read(),
+        server,
       };
       window.walterProjectionPreview = handle;
       return () => {
@@ -72,6 +131,7 @@ export function createProjectionPreviewRouter({
             to: '/projections-preview.html',
           });
         }}
+        planPath="/projections-preview.html"
         ref={workspaceRef}
         search={search}
       />

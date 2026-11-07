@@ -1,6 +1,6 @@
 # Projections implementation plan
 
-Status: Stage 1a accepted. Stage 1b server save contract implemented; user review pending.
+Status: Stage 1a and Stage 1b server save contract accepted. Frontend saving under review.
 Updated November 6, 2026.
 
 Build a guided planning workspace where users can adjust a dated portfolio
@@ -200,17 +200,17 @@ evidence requires a deliberate change.
 
 ## Stage 1a review
 
-The reusable workspace owns one plan session, uses the existing
+The Stage 1a workspace owns one plan session, uses the existing
 `computePiProjection` calculation, and changes salary through
 `setJobMonthlySalary`. The separate Vite preview entry provides synthetic inputs
 without requiring authentication or a backend. Existing application routes and
-production persistence are unchanged.
+production persistence were unchanged by that increment.
 
 From `web/client`, run `npm run dev -- --host 127.0.0.1 --strictPort` and open
 [the salary editor](http://127.0.0.1:5174/projections-preview.html?section=staffing&job=101).
 The normal production build includes only `index.html`; it excludes this preview
 entry and its fixture. Preview changes are in memory and reload restores the
-fixture. Save and unsaved-navigation warnings remain Stage 1b work.
+fixture. Stage 1b adds synthetic saving controls and departure warnings below.
 
 The fixed example captures December 2025 salary actuals and forecasts January
 through June 2026. Project A starts with $20,000 available and Project B with
@@ -243,7 +243,7 @@ input-to-two-animation-frames measurements were 9.7-12.4 ms for typing and
 measurements, not production performance guarantees.
 
 The user reviewed the code and preview and accepted Stage 1a. The synthetic
-preview remains available while the server save contract is built separately.
+preview remains available for subsequent increments.
 
 ## Stage 1b confirmed decisions
 
@@ -252,10 +252,13 @@ These decisions were confirmed after reviewing the saving and conflict cases:
 - **Normal Save** captures the whole applied draft and the exact `UpdatedAt`
   originally loaded. The database checks that timestamp as part of the write.
 - **Conflict** offers Overwrite or Discard. There is no field comparison,
-  selective reapplication, or automatic merge in v1.
+  selective reapplication, or automatic merge in v1. Closing the dialog keeps
+  the local draft. The next Save offers the same choice again.
 - **Overwrite** captures the current applied draft when clicked. It replaces
   the saved editable document, including other users' ordinary edits that arrive
   after the warning. The user does not need to confirm the same overwrite again.
+  If it fails, an explicit manual retry retains that overwrite intention until
+  success or Discard. It never retries automatically.
 - **Snapshot replacement or deletion** blocks overwrite. `SeededAt` identifies
   the original snapshot; a draft cannot restore a deleted plan or replace a
   freshly reset snapshot. The browser retains the draft for reference.
@@ -269,10 +272,22 @@ These decisions were confirmed after reviewing the saving and conflict cases:
   conflict submits the current $140,000 draft.
 - **Leaving with pending changes** offers Stay or Discard. Same-plan navigation
   preserves applied edits. Reload and close use the browser's standard warning.
-  Save never silently applies unfinished text in an editor.
-- **Failed saves** retain local work. A lost response is an unconfirmed outcome;
-  check saved state before retrying. An expired login must not redirect away
-  from the draft without recovery.
+  A changed, unapplied salary buffer also counts as pending work. Back within
+  the same plan can still close the salary editor and discard its buffer, as
+  accepted in Stage 1a. Save never silently applies unfinished text.
+- **Leaving during a save** offers Stay or Leave anyway and explains that the
+  submitted save may still complete. Leaving cannot cancel an accepted write.
+- **Save feedback** uses Saving followed by a checkmark in the Save button after
+  confirmed success. Edits made after submission still appear unsaved.
+- **Failed saves** retain the draft, show simple failure feedback, log the error,
+  and allow manual retry. A lost response may mean the write completed, but the
+  client does not show success without confirmation. Automatic readback,
+  reconciliation, and retries are deferred.
+- **Expired login** follows Walter's existing login behavior. The user accepts
+  that this can interrupt the session and lose an in-memory draft. Do not add a
+  separate session-expired workflow, another-tab login, or a sign-in check.
+- **Browser draft recovery** is deferred. Do not store portfolio drafts in
+  localStorage as part of Stage 1b.
 
 Reset versus refresh needs its own product discussion before either action is
 exposed in the new workspace. Stage 1b protects against the existing reset
@@ -280,15 +295,18 @@ endpoint without adding a reset/refresh UI.
 
 ### Stage 1b implementation stops
 
-1. **Server save contract, current increment.** Use the existing timestamps for
+1. **Server save contract, accepted.** Use the existing timestamps for
    atomic checks, whole-document save and overwrite, and guarded reset/delete.
    Review the code and test against SQL Server before proceeding.
-2. **Normal saving in the workspace.** Load a saved plan, save the applied draft,
+2. **Saving, conflicts, and departure, current increment.** Load a saved plan,
    acknowledge the submitted version, preserve later edits, and handle failures.
-3. **Conflict and departure behavior.** Add Overwrite/Discard, snapshot/deletion
-   recovery, and Stay/Discard navigation handling. Exercise two browser tabs.
+   Add Overwrite/Discard, snapshot/deletion handling, and departure warnings.
+   Review the code and exercise these flows together before proceeding.
+3. **Calculation review.** Verify real-plan costs and date boundaries against
+   explicit examples before closing Stage 1b. Saving tests alone do not establish
+   that the existing calculator is ready for real editing.
 
-The current increment changes no frontend behavior. Its server contract requires
+The accepted server contract requires
 `expectedUpdatedAt` and `expectedSeededAt` on Save, with `overwrite` defaulting to
 false. Reset and Delete require `expectedUpdatedAt`. Missing tokens cannot fall
 back to an unconditional write. Conflicts distinguish an ordinary changed plan
@@ -351,9 +369,61 @@ tests are skipped or not discovered. Existing NuGet audit warnings for
 `System.Security.Cryptography.Pkcs` and `System.Security.Cryptography.Xml` remain
 outside this increment.
 
-The saved-plan client mutation still needs the new request fields in the next
-increment. No save UI is connected yet. Review this server increment before
-starting frontend saving or conflict handling.
+The user accepted this server increment. The current frontend increment connects
+its request fields and save UI, then pauses for review before calculation work.
+
+### Frontend saving review
+
+The saved-plan route now opens the reusable workspace. It verifies the plan is
+in the requested PI's saved-plan list and loads a fresh copy on entry. The editor
+session survives section changes and query refreshes. Each plan has its own
+save mutation, so a response finishing after departure cannot update another
+plan's cache or draft.
+
+Save acknowledges the submitted document, preserves later edits, and shows a
+checkmark only after confirmation. Ordinary conflicts offer Overwrite/Discard;
+reset and deletion block overwrite. Failures keep the draft and allow manual
+retry. Discard reloads saved inputs and clears an open salary buffer. A late
+Discard response cannot navigate back to a plan the user has left.
+
+The workspace read operation now includes serializable saving, conflict, error,
+and reload status alongside the draft and location. No second synchronized
+document or browser storage is introduced.
+
+Try the [local saving preview](http://127.0.0.1:5174/projections-preview.html?section=staffing).
+Its synthetic server copy lives in this tab's memory. Full browser reload resets
+the example; Leave preview and Return to saved plan exercise reopening that copy.
+The scenario controls allow the following checks:
+
+1. Apply a salary change and Save. Confirm the checkmark and the server copy.
+2. Enable Hold save requests, Save, apply another salary, then Finish pending
+   save. The earlier salary is saved and the later salary stays unsaved.
+3. Apply a salary change, select Another user saves, and Save. Close the warning
+   to continue editing, then Save again and choose Overwrite or Discard.
+4. Select Fail before saving or Save, then lose response. The draft remains
+   available for manual retry; no automatic readback occurs.
+5. Reset or delete the synthetic saved plan before saving. Overwrite is blocked.
+6. Use Leave preview with pending changes or a held save. Confirm Stay/Discard
+   or Stay/Leave anyway. Reload with an edited salary buffer uses the browser's
+   standard warning.
+
+Browser checks against the real authenticated route with synthetic HTTP responses
+covered delayed saves, two-tab conflicts, overwrite of the current draft,
+discard, failure/retry, reset protection, reload warnings for unapplied input,
+and leaving during a save followed by reopening. Desktop/mobile layouts were
+also checked. Automated
+tests also cover exact timestamp tokens, query refresh, reopening, and late
+responses after switching plans. The accepted server tests separately establish
+the SQL persistence and concurrency contract.
+
+The full client suite passed, along with TypeScript, the production build,
+changed-file ESLint, and independent review. React Doctor scored the changed
+files 100/100. The production build contains only the normal application entry;
+the synthetic preview and controls are excluded.
+
+Calculation review remains the next stop. Benefits/vacation, fee remission, COLA,
+date boundaries, and current-month balances still need explicit acceptance
+examples before Stage 1b is closed.
 
 ## Questions to resolve in their owning stages
 

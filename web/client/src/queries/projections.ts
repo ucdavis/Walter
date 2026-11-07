@@ -129,7 +129,8 @@ export const projectionListQueryOptions = (iamId: string) => ({
 });
 
 export const projectionQueryOptions = (id: number) => ({
-  queryFn: () => fetchJson<Projection>(`/api/projections/${id}`),
+  queryFn: ({ signal }: { signal: AbortSignal }) =>
+    fetchJson<Projection>(`/api/projections/${id}`, {}, signal),
   queryKey: ['projections', id] as const,
 });
 
@@ -153,15 +154,46 @@ export type ProjectionDraft = Pick<
   'historyMonths' | 'jobs' | 'name' | 'projects'
 >;
 
-/** Unused until Stage 1b request wiring; see docs/PLAN.md for the server save contract. */
+export type SaveProjectionRequest = ProjectionDraft & {
+  /** Opaque server strings. Parsing through Date would lose datetime2 precision. */
+  expectedSeededAt: string;
+  expectedUpdatedAt: string;
+  overwrite?: boolean;
+};
+
+/** Compare UTC tokens only for cache ordering; transmit the original strings unchanged. */
+function orderedTimestamp(timestamp: string) {
+  return timestamp.replace(
+    /(?:\.(\d{1,7}))?Z$/,
+    (_match, fraction = '') => `.${String(fraction).padEnd(7, '0')}Z`
+  );
+}
+
 export const useSaveProjection = (id: number) => {
   const queryClient = useQueryClient();
+  const queryKey = projectionQueryOptions(id).queryKey;
   return useMutation({
-    mutationFn: ({ historyMonths, jobs, name, projects }: ProjectionDraft) =>
+    mutationFn: (request: SaveProjectionRequest) =>
       fetchJson<Projection>(`/api/projections/${id}`, {
-        body: JSON.stringify({ historyMonths, jobs, name, projects }),
+        body: JSON.stringify(request),
         method: 'PUT',
       }),
-    onSuccess: (saved) => queryClient.setQueryData(['projections', id], saved),
+    mutationKey: ['projections', id, 'save'],
+    onMutate: () => queryClient.cancelQueries({ exact: true, queryKey }),
+    onSuccess: async (saved) => {
+      await queryClient.cancelQueries({ exact: true, queryKey });
+      // A response from a plan left open earlier must not replace a newer cached acknowledgement.
+      queryClient.setQueryData<Projection>(queryKey, (current) =>
+        current &&
+        orderedTimestamp(current.updatedAt) > orderedTimestamp(saved.updatedAt)
+          ? current
+          : saved
+      );
+      await queryClient.invalidateQueries({
+        queryKey: ['projections', 'by-iam'],
+        refetchType: 'none',
+      });
+    },
+    retry: false,
   });
 };

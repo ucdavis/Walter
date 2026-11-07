@@ -2,13 +2,17 @@ import { useEffect, useImperativeHandle, useRef, type Ref } from 'react';
 import { formatCurrency } from '@/lib/currency.ts';
 import {
   getProjectOutlook,
-  isProjectionDirty,
   readProjectionLocation,
   readProjectionWorkspace,
   type ProjectionNavigation,
   type ProjectionWorkspaceSnapshot,
 } from '@/lib/projectionWorkspace.ts';
 import { useProjectionSession } from '@/components/projections/ProjectionSession.tsx';
+import { ProjectionNavigationGuard } from '@/components/projections/ProjectionNavigationGuard.tsx';
+import {
+  ProjectionSaveControls,
+  ProjectionSaveFeedback,
+} from '@/components/projections/ProjectionSaveControls.tsx';
 import {
   SalaryEditor,
   type SalaryEditorHandle,
@@ -20,14 +24,17 @@ export interface ProjectionWorkspaceHandle {
 
 export function ProjectionWorkspace({
   onNavigate,
+  planPath,
   ref,
   search,
 }: {
   onNavigate: (location: ProjectionNavigation, replace?: boolean) => void;
+  planPath?: string;
   ref?: Ref<ProjectionWorkspaceHandle>;
   search: Record<string, unknown>;
 }) {
-  const { applySalary, results, session } = useProjectionSession();
+  const { applySalary, persistenceStatus, reloadVersion, results, session } =
+    useProjectionSession();
   const { draft } = session;
   const location = readProjectionLocation(search, draft);
   const editorRef = useRef<SalaryEditorHandle>(null);
@@ -48,7 +55,8 @@ export function ProjectionWorkspace({
         session,
         location,
         results,
-        editorRef.current?.read() ?? null
+        editorRef.current?.read() ?? null,
+        persistenceStatus
       ),
   }));
 
@@ -69,10 +77,10 @@ export function ProjectionWorkspace({
             apply from this snapshot.
           </p>
         </div>
-        <p className="badge badge-outline p-3" role="status">
-          {isProjectionDirty(session) ? 'Unsaved changes' : 'No changes'}
-        </p>
+        <ProjectionSaveControls />
       </header>
+
+      <ProjectionSaveFeedback onNavigate={onNavigate} search={search} />
 
       <nav
         aria-label="Plan sections"
@@ -295,13 +303,19 @@ export function ProjectionWorkspace({
       {selectedJob && (
         <SalaryEditor
           job={selectedJob}
-          key={selectedJob.id}
+          key={`${selectedJob.id}:${reloadVersion}`}
           onApply={applySalary}
           onClose={() =>
             onNavigate({ ...projectSearch, section: 'staffing' }, true)
           }
           ref={editorRef}
           snapshotMonth={draft.seededAt.slice(0, 7)}
+        />
+      )}
+      {planPath && (
+        <ProjectionNavigationGuard
+          pendingEditor={() => editorRef.current?.read() ?? null}
+          planPath={planPath}
         />
       )}
     </div>

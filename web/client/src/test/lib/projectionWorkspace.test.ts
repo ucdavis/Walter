@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { computePiProjection, SALARY_CATEGORY } from '@/lib/piProjection.ts';
 import {
+  acknowledgeProjectionSave,
   createProjectionSession,
   isProjectionDirty,
   readProjectionLocation,
@@ -10,6 +11,66 @@ import {
 import { createSalaryExample } from '@/dev/projections/fixture.ts';
 
 describe('salary workspace operations without React', () => {
+  it('acknowledges a submitted draft with exact authoritative tokens', () => {
+    const initial = createProjectionSession(createSalaryExample());
+    const change = setJobMonthlySalary(initial, {
+      jobId: 101,
+      monthlySalary: 11_000,
+    });
+    if (!change.ok) {
+      throw new Error(change.error);
+    }
+    const submitted = change.session;
+    const saved = {
+      ...submitted.draft,
+      updatedAt: '2026-11-06T19:00:00.1234567Z',
+      updatedBy: 'Editor',
+    };
+    const acknowledged = acknowledgeProjectionSave(submitted, submitted, saved);
+    expect(acknowledged.baseline).toBe(saved);
+    expect(acknowledged.draft).toBe(saved);
+    expect(acknowledged.revision).toBe(submitted.revision);
+    expect(isProjectionDirty(acknowledged)).toBe(false);
+  });
+
+  it('retains newer applied edits while acknowledging only the submitted version', () => {
+    const initial = createProjectionSession(createSalaryExample());
+    const change = setJobMonthlySalary(initial, {
+      jobId: 101,
+      monthlySalary: 11_000,
+    });
+    if (!change.ok) {
+      throw new Error(change.error);
+    }
+    const submitted = change.session;
+    const newer = setJobMonthlySalary(submitted, {
+      jobId: 101,
+      monthlySalary: 12_000,
+    });
+    if (!newer.ok) {
+      throw new Error(newer.error);
+    }
+    const saved = {
+      ...submitted.draft,
+      updatedAt: '2026-11-06T19:00:00.1234567Z',
+      updatedBy: 'Editor',
+    };
+    const acknowledged = acknowledgeProjectionSave(
+      newer.session,
+      submitted,
+      saved
+    );
+    expect(acknowledged.baseline).toBe(saved);
+    expect(acknowledged.draft.jobs).toBe(newer.session.draft.jobs);
+    expect(acknowledged.draft.jobs[0].monthlySalary).toBe(12_000);
+    expect(acknowledged.baseline.jobs[0].monthlySalary).toBe(11_000);
+    expect(acknowledged.draft.updatedAt).toBe('2026-11-06T19:00:00.1234567Z');
+    expect(acknowledged.draft.updatedBy).toBe('Editor');
+    expect(acknowledged.draft.seededAt).toBe(initial.draft.seededAt);
+    expect(acknowledged.revision).toBe(newer.session.revision);
+    expect(isProjectionDirty(acknowledged)).toBe(true);
+  });
+
   it('charges each project 2500 then 2750 for every fixed forecast month and preserves history and funding', () => {
     const initial = createProjectionSession(createSalaryExample());
     const before = computePiProjection(initial.draft);
