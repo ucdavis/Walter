@@ -262,8 +262,14 @@ public sealed class ProjectionSqlServerTests(ProjectionSqlServerFixture sql) : I
     {
         var plan = new Projection
         {
-            Name = "Original", PiEmployeeId = "100", HistoryMonths = 3,
-            CreatedAt = Snapshot, SeededAt = Snapshot, UpdatedAt = Version, CreatedBy = "owner", UpdatedBy = "owner",
+            Name = "Original",
+            PiEmployeeId = "100",
+            HistoryMonths = 3,
+            CreatedAt = Snapshot,
+            SeededAt = Snapshot,
+            UpdatedAt = Version,
+            CreatedBy = "owner",
+            UpdatedBy = "owner",
             Projects = [new() { Id = 1, ProjectName = "Project", Actuals = [new() { Month = new(2029, 12, 1), Amount = 2500, ExpenditureCategory = "Salary" }] }],
             Jobs = [new() { Id = 1, Name = "Example", MonthlySalary = 10000, Fte = 0.5m }],
         };

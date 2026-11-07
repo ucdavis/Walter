@@ -168,7 +168,10 @@ public sealed class ProjectionsControllerTests
         var controller = CreateController(ctx, financialViewer: true);
         created.Jobs.Add(new ProjectionJob
         {
-            Id = 1, Name = "GSR #2", MonthlySalary = 4000, Fte = 0.5m,
+            Id = 1,
+            Name = "GSR #2",
+            MonthlySalary = 4000,
+            Fte = 0.5m,
             FundingEntries = [new() { ProjectId = created.Projects.Single().Id, Percent = 1 }],
         });
 
@@ -349,18 +352,29 @@ public sealed class ProjectionsControllerTests
         var draft = Draft(created) with { Name = "Reviewed scenario" };
         draft.Projects.Single().Budgets.Add(new ProjectionBudget
         {
-            ExpenditureCategory = Supplies, Budget = 20000, SpentToDate = 3000, Committed = 1000,
+            ExpenditureCategory = Supplies,
+            Budget = 20000,
+            SpentToDate = 3000,
+            Committed = 1000,
         });
         draft.Projects.Single().Expenses.Single().Amount = 75;
         draft.Projects.Single().Expenses.Add(new ProjectionExpense
         {
-            Kind = ProjectionExpenseKind.Monthly, ExpenditureCategory = Supplies, Amount = 100,
-            StartMonth = new DateOnly(2026, 12, 1), EndMonth = new DateOnly(2027, 6, 1),
+            Kind = ProjectionExpenseKind.Monthly,
+            ExpenditureCategory = Supplies,
+            Amount = 100,
+            StartMonth = new DateOnly(2026, 12, 1),
+            EndMonth = new DateOnly(2027, 6, 1),
         });
         draft.Jobs.Add(new ProjectionJob
         {
-            Id = 7, Name = "Proposed hire", MonthlySalary = 6500, Fte = 1, CbrRate = 0.3m,
-            StartDate = new DateOnly(2026, 12, 1), EndDate = new DateOnly(2027, 6, 30),
+            Id = 7,
+            Name = "Proposed hire",
+            MonthlySalary = 6500,
+            Fte = 1,
+            CbrRate = 0.3m,
+            StartDate = new DateOnly(2026, 12, 1),
+            EndDate = new DateOnly(2027, 6, 30),
             FundingEntries = [new() { ProjectId = created.Projects.Single().Id, Percent = 1 }],
         });
 
