@@ -1,0 +1,261 @@
+import assert from 'node:assert/strict';
+import {
+  computePiProjection,
+  FEE_REMISSION_CATEGORY,
+  FRINGE_CATEGORY,
+  SALARY_CATEGORY,
+} from '@/lib/piProjection.ts';
+import {
+  createProjectionSession,
+  setJobMonthlySalary,
+} from '@/lib/projectionWorkspace.ts';
+import { createSalaryExample } from '@/dev/projections/fixture.ts';
+import type { Projection } from '@/queries/projections.ts';
+
+const SUPPLIES = '05 - Supplies';
+
+/** Synthetic dollars and illustrative rates; these are not UC Davis rate tables. */
+function example() {
+  const plan = createSalaryExample();
+  plan.jobs[0].cbrRate = 0.3;
+  plan.jobs[0].vacationAccrualRate = 0.1;
+  for (const project of plan.projects) {
+    project.actuals = [];
+    project.budgets = [
+      [SALARY_CATEGORY, 100_000],
+      [FRINGE_CATEGORY, 40_000],
+      [FEE_REMISSION_CATEGORY, 10_000],
+      [SUPPLIES, 10_000],
+    ].map(([expenditureCategory, budget]) => ({
+      budget: Number(budget),
+      committed: 0,
+      expenditureCategory: String(expenditureCategory),
+      isSeeded: true,
+      spentToDate: 0,
+    }));
+  }
+  return plan;
+}
+
+function edited(plan: Projection) {
+  const result = setJobMonthlySalary(createProjectionSession(plan), {
+    jobId: 101,
+    monthlySalary: 11_000,
+  });
+  assert.equal(result.ok, true);
+  return result.session.draft;
+}
+
+function costs(plan: Projection, month: string, projectId = 1) {
+  const rows = computePiProjection(plan).rows;
+  const amount = (category: string) =>
+    rows.find(
+      (row) =>
+        row.projectId === projectId &&
+        row.month === month &&
+        row.expenditureCategory === category
+    )?.projectedAmount ?? 0;
+  return {
+    fees: amount(FEE_REMISSION_CATEGORY),
+    fringe: amount(FRINGE_CATEGORY),
+    salary: amount(SALARY_CATEGORY),
+    supplies: amount(SUPPLIES),
+  };
+}
+
+function extendThrough(plan: Projection, end: string) {
+  plan.projects.forEach((project) => (project.endDate = end));
+  plan.jobs[0].endDate = end;
+  plan.jobs[0].fundingEntries.forEach((funding) => (funding.endDate = end));
+}
+
+/**
+ * Run with `node scripts/review-projection-calculations.ts` from web/client.
+ * Check agreed salary scaling and existing additive-rate arithmetic. Review examples
+ * report current results beside alternatives without treating them as accepted rules.
+ */
+export function reviewProjectionCalculations() {
+  const salary = example();
+  const salaryAfter = edited(salary);
+  const salaryBeforeCosts = costs(salary, '2026-01');
+  const salaryAfterCosts = costs(salaryAfter, '2026-01');
+  assert.deepEqual(salaryBeforeCosts, {
+    fees: 0,
+    fringe: 1000,
+    salary: 2500,
+    supplies: 0,
+  });
+  assert.deepEqual(salaryAfterCosts, {
+    fees: 0,
+    fringe: 1100,
+    salary: 2750,
+    supplies: 0,
+  });
+  assert.deepEqual(costs(salaryAfter, '2026-01', 2), salaryAfterCosts);
+  assert.equal(salary.jobs[0].monthlySalary, 10_000);
+
+  const cola = example();
+  extendThrough(cola, '2028-08-31');
+  cola.jobs[0].colaRate = 0.03;
+  const julySnapshot = structuredClone(cola);
+  julySnapshot.seededAt = '2026-07-15T00:00:00Z';
+  const futureJob = structuredClone(cola);
+  futureJob.jobs[0].startDate = '2026-08-01';
+
+  const fees = structuredClone(cola);
+  fees.jobs[0].feeRemissionMonthly = 1500;
+
+  const boundaries = example();
+  boundaries.seededAt = '2026-01-15T00:00:00Z';
+  boundaries.jobs[0].startDate = '2026-02-15';
+  boundaries.jobs[0].endDate = '2026-03-10';
+  boundaries.jobs[0].fundingEntries[0].startDate = '2026-02-20';
+  boundaries.jobs[0].fundingEntries[0].endDate = '2026-03-05';
+  boundaries.jobs[0].fundingEntries[1].startDate = '2026-03-31';
+  boundaries.jobs[0].fundingEntries[1].endDate = '2026-04-01';
+
+  const futureProject = example();
+  futureProject.projects[0].startDate = '2026-04-01';
+  futureProject.projects[0].expenses = [
+    {
+      amount: 310,
+      description: 'Synthetic monthly supplies',
+      endMonth: null,
+      expenditureCategory: SUPPLIES,
+      kind: 'Monthly',
+      startMonth: null,
+    },
+    {
+      amount: 200,
+      description: 'Synthetic February purchase',
+      endMonth: null,
+      expenditureCategory: SUPPLIES,
+      kind: 'OneTime',
+      startMonth: '2026-02-01',
+    },
+  ];
+
+  const currentActuals = example();
+  currentActuals.seededAt = '2026-10-16T00:00:00Z';
+  extendThrough(currentActuals, '2026-11-30');
+  currentActuals.projects = [currentActuals.projects[0]];
+  currentActuals.jobs[0].fundingEntries = [
+    { ...currentActuals.jobs[0].fundingEntries[0], percent: 1 },
+  ];
+  currentActuals.jobs[0].feeRemissionMonthly = 1500;
+  const currentProject = currentActuals.projects[0];
+  // These current totals explicitly include each October actual below.
+  const currentTotals = [20_000, 8000, 2000, 2000];
+  const octoberActuals = [2500, 1000, 750, 100];
+  currentProject.budgets.forEach((budget, index) => {
+    budget.spentToDate = currentTotals[index];
+    currentProject.actuals.push({
+      amount: octoberActuals[index],
+      expenditureCategory: budget.expenditureCategory,
+      month: '2026-10-01',
+    });
+  });
+  currentProject.expenses = [{ ...futureProject.projects[0].expenses[0] }];
+
+  return {
+    establishedSalaryExample: {
+      afterPerProject: salaryAfterCosts,
+      assumptions:
+        'Snapshot 2026-01-01. Full-time annual salary 120000 to 132000. FTE 0.5, each project share 0.5, illustrative CBR 0.30 plus vacation 0.10. No COLA or fees.',
+      beforePerProject: salaryBeforeCosts,
+      independentlyWorked:
+        'Each project: salary 2500 to 2750; fringe 1000 to 1100; total 3500 to 3850, a 350 increase. Both projects together: 7000 to 7700. Agreed scaling assertions passed.',
+    },
+    reviewExamples: [
+      {
+        assumptions:
+          'Same base salary/FTE/shares/rates. Snapshot 2026-01-01, July COLA 3%, project and job through 2028-08-31. Values are for Project A; Project B is identical.',
+        current: ['2026-06', '2026-07', '2027-07', '2028-07'].map((month) => ({
+          afterSalaryEdit: costs(edited(cola), month),
+          beforeSalaryEdit: costs(cola, month),
+          month,
+        })),
+        independentlyWorked:
+          'Before edit salary/fringe: June 2026 = 2500/1000; July 2026 = 2575/1030; July 2027 = 2652.25/1060.90; July 2028 = 2731.8175/1092.727. After edit: 2750/1100; 2832.50/1133; 2917.475/1166.99; 3004.99925/1201.9997. Assumes annual compounding with no intermediate rounding.',
+        question:
+          'Confirm annual compounding and where dollar rounding belongs.',
+        topic: 'Multi-year COLA',
+      },
+      {
+        assumptions:
+          'Same 120000 annual salary and July 3% COLA, but snapshot is July 15, 2026.',
+        current: ['2026-07', '2027-07', '2028-07'].map((month) => ({
+          ...costs(julySnapshot, month),
+          month,
+        })),
+        independentlyWorked:
+          'If 120000 already includes the July 2026 increase: per-project salaries 2500, 2575, 2652.25. If 120000 is the pre-July rate: 2575, 2652.25, 2731.8175. The rate effective date decides which is correct.',
+        question:
+          'Does a seeded salary already include an increase in its snapshot month?',
+        topic: 'Snapshot during COLA month',
+      },
+      {
+        assumptions:
+          'Snapshot Jan 1, 2026. New job starts Aug 1 with full-time annual salary 120000 and July COLA 3%.',
+        current: costs(futureJob, '2026-08'),
+        independentlyWorked:
+          'If 120000 is a January base rate, August per-project salary is 2575 after July COLA. If 120000 is the agreed August starting rate, it is 2500 until the next July. Current calculation does not distinguish these rate effective dates.',
+        question:
+          'Is a future appointment salary a snapshot-date rate or its starting rate?',
+        topic: 'COLA before a future job starts',
+      },
+      {
+        assumptions:
+          'Fixed fee remission input 1500/month, FTE 0.5, each project share 0.5. July COLA 3%.',
+        current: ['2026-01', '2026-07', '2027-07'].map((month) => ({
+          afterSalaryEdit: costs(edited(fees), month).fees,
+          beforeSalaryEdit: costs(fees, month).fees,
+          month,
+        })),
+        independentlyWorked:
+          'If 1500 is an appointment-level monthly fee: each project owes 750 regardless of salary/FTE/COLA. If it is a full-time fee subject to FTE: each project owes 375. Salary edits alone do not distinguish these interpretations.',
+        question:
+          'Confirm fee amount meaning, eligible months, and whether it is independent of FTE and COLA.',
+        topic: 'Fee remission allocation',
+      },
+      {
+        assumptions:
+          'Snapshot 2026-01-15. Job Feb 15 to Mar 10. Project A funding Feb 20 to Mar 5; Project B funding Mar 31 to Apr 1. Each share remains 0.5.',
+        current: ['2026-01', '2026-02', '2026-03', '2026-04'].map((month) => ({
+          month,
+          projectA: costs(boundaries, month, 1),
+          projectB: costs(boundaries, month, 2),
+        })),
+        independentlyWorked:
+          'Current month-only checks charge Project A salary/fringe 2500/1000 in Feb and Mar; Project B 2500/1000 in Mar. Actual job/funding date intersection gives Project B zero because the windows never overlap. If valid partial months use inclusive daily proration, Project A salary is 803.5714285714 in Feb (9/28 days) and 403.2258064516 in Mar (5/31 days).',
+        question:
+          'After enforcing actual date overlap, should valid partial months receive whole-month costs or daily proration?',
+        topic: 'Job and funding date boundaries',
+      },
+      {
+        assumptions:
+          'Snapshot Jan 1, 2026. Project A starts Apr 1 and ends Jun 30. Job/funding already active Jan 1. Monthly supplies 310 plus one-time February supplies 200.',
+        current: ['2026-01', '2026-02', '2026-03', '2026-04', '2026-06'].map(
+          (month) => ({ ...costs(futureProject, month), month })
+        ),
+        independentlyWorked:
+          'If project start bounds all charges, Jan through Mar salary/fringe/supplies are zero; April salary/fringe/supplies are 2500/1000/310. Current seed-month supplies use 30/31 of 310 = 300, excluding Jan 1.',
+        question:
+          'Project start is currently ignored. After enforcing project bounds, is excluding the snapshot day from recurring expense proration intentional?',
+        topic: 'Future project start',
+      },
+      {
+        assumptions:
+          'Snapshot Oct 16, 2026. One project receives all 0.5-FTE salary. Budgets salary/fringe/fee/supplies = 100000/40000/10000/10000. spentToDate current totals = 20000/8000/2000/2000, already including October actuals 2500/1000/750/100. Monthly supplies 310; 15 remaining days yield 150.',
+        current: computePiProjection(currentActuals).rows.filter(
+          (row) => row.month === '2026-10'
+        ),
+        independentlyWorked:
+          'Keeping booked costs and forecasting only the salary/fringe remainder: salary remaining 77500 = 100000-20000-max(5000-2500,0); fringe 31000 = 40000-8000-max(2000-1000,0). Supplies remaining 7850 = 10000-2000-150 because its actual 100 is already spent. If fee 1500 is also a full-month target, fee remaining 7250 = 10000-2000-max(1500-750,0). Fee handling is unresolved.',
+        question:
+          'Booked salary/fringe now stay fixed with only a nonnegative remainder forecast. Fee handling and presentation of mismatched source cutoffs still need their own rules.',
+        topic: 'Current-month actuals and current-total balances',
+      },
+    ],
+  };
+}

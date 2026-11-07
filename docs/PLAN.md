@@ -1,6 +1,6 @@
 # Projections implementation plan
 
-Status: Stage 1a and Stage 1b server save contract accepted. Frontend saving under review.
+Status: Stage 1a and Stage 1b saving accepted. Snapshot-month correction under review.
 Updated November 6, 2026.
 
 Build a guided planning workspace where users can adjust a dated portfolio
@@ -29,6 +29,10 @@ as each decision is settled and each stage is reviewed.
 - Stage 1b uses the existing `UpdatedAt` timestamp for concurrency and saves the
   whole applied draft. A conflict offers Overwrite or Discard. The confirmed
   behavior and implementation stops are recorded below.
+- Booked snapshot-month salary and benefits stay fixed. For each project and
+  category, sum the full-month personnel estimate and forecast only
+  `max(estimate - booked actual, 0)`. Later full months keep the agreed salary
+  calculation. An edit below booked costs does not refund those costs.
 
 ### Agreed salary example
 
@@ -299,13 +303,13 @@ endpoint without adding a reset/refresh UI.
 1. **Server save contract, accepted.** Use the existing timestamps for
    atomic checks, whole-document save and overwrite, and guarded reset/delete.
    Review the code and test against SQL Server before proceeding.
-2. **Saving, conflicts, and departure, current increment.** Load a saved plan,
+2. **Saving, conflicts, and departure, accepted.** Load a saved plan,
    acknowledge the submitted version, preserve later edits, and handle failures.
    Add Overwrite/Discard, snapshot/deletion handling, and departure warnings.
    Review the code and exercise these flows together before proceeding.
-3. **Calculation review.** Verify real-plan costs and date boundaries against
-   explicit examples before closing Stage 1b. Saving tests alone do not establish
-   that the existing calculator is ready for real editing.
+3. **Calculation review, current increment.** Verify real-plan costs and date
+   boundaries against explicit examples before closing Stage 1b. Saving tests
+   alone do not establish that the existing calculator is ready for real editing.
 
 The accepted server contract requires
 `expectedUpdatedAt` and `expectedSeededAt` on Save, with `overwrite` defaulting to
@@ -370,8 +374,8 @@ tests are skipped or not discovered. Existing NuGet audit warnings for
 `System.Security.Cryptography.Pkcs` and `System.Security.Cryptography.Xml` remain
 outside this increment.
 
-The user accepted this server increment. The current frontend increment connects
-its request fields and save UI, then pauses for review before calculation work.
+The user accepted the server contract and the frontend saving increment. The
+next review covers calculation behavior.
 
 ### Frontend saving review
 
@@ -422,9 +426,27 @@ changed-file ESLint, and independent review. React Doctor scored the changed
 files 100/100. The production build contains only the normal application entry;
 the synthetic preview and controls are excluded.
 
-Calculation review remains the next stop. Benefits/vacation, fee remission, COLA,
-date boundaries, and current-month balances still need explicit acceptance
-examples before Stage 1b is closed.
+The user exercised the preview and accepted the saving behavior. The
+[calculation review](projections-calculation-review.md) records executable fixed
+examples, read-only source reconciliation, and proposed corrections. It confirms
+a current-month balance issue and date-boundary defects. The user accepted
+keeping booked salary and benefits fixed and forecasting only their remainder.
+The current increment implements that rule and stops deducting snapshot actuals
+again from captured balances. Explicit expenses remain additional forecasts;
+fee remission is not treated as a full-month target in this increment.
+
+The [booked salary preview](http://127.0.0.1:5174/projections-preview.html?example=booked&section=overview&project=1)
+uses the same workspace with illustrative benefit rates. Each project has
+$1,000 booked salary and $400 booked benefits, included in its $26,600 snapshot
+balance. January shows $1,400 actuals, $2,100 additional forecast, and a $24,500
+end balance. Change the annual salary from $120,000 to $43,200 to bring the
+per-project salary target below booked salary. January's forecast becomes zero,
+its actuals stay $1,400, and its end balance stays at the captured $26,600.
+February still forecasts the full $900 salary plus $360 benefits.
+
+Date bounds, historical balance presentation, consistent source reporting months,
+missing benefit inputs, fee remission, and remaining COLA assumptions are still
+open. This correction does not close Stage 1b or begin Stage 2.
 
 ## Questions to resolve in their owning stages
 

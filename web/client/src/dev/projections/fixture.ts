@@ -1,4 +1,4 @@
-import { SALARY_CATEGORY } from '@/lib/piProjection.ts';
+import { FRINGE_CATEGORY, SALARY_CATEGORY } from '@/lib/piProjection.ts';
 import type { Projection, ProjectionProject } from '@/queries/projections.ts';
 
 const project = (
@@ -78,4 +78,37 @@ export function createSalaryExample(): Projection {
     updatedAt: '2026-01-01T00:00:00Z',
     updatedBy: null,
   };
+}
+
+/** Booked costs are included in spentToDate. Benefit rates are illustrative only. */
+export function createBookedSalaryExample(): Projection {
+  const plan = createSalaryExample();
+  plan.name = 'Booked salary example';
+  plan.createdAt = plan.seededAt = plan.updatedAt = '2026-01-16T00:00:00Z';
+  plan.jobs[0].cbrRate = 0.3;
+  plan.jobs[0].vacationAccrualRate = 0.1;
+  for (const project of plan.projects) {
+    project.budgets = [
+      {
+        budget: 20_000,
+        committed: 0,
+        expenditureCategory: SALARY_CATEGORY,
+        isSeeded: true,
+        spentToDate: 1000,
+      },
+      {
+        budget: 8000,
+        committed: 0,
+        expenditureCategory: FRINGE_CATEGORY,
+        isSeeded: true,
+        spentToDate: 400,
+      },
+    ];
+    project.actuals = project.budgets.map((budget) => ({
+      amount: budget.spentToDate,
+      expenditureCategory: budget.expenditureCategory,
+      month: '2026-01-01',
+    }));
+  }
+  return plan;
 }

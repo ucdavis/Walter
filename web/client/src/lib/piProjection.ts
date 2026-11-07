@@ -86,38 +86,6 @@ export function computePiProjection(projection: Projection): {
     charges.set(project.id, byCategory);
   };
 
-  for (const project of projection.projects) {
-    for (const e of project.expenses) {
-      if (e.kind === 'OneTime') {
-        if (e.startMonth) {
-          charge(
-            project,
-            e.expenditureCategory,
-            toIndex(e.startMonth),
-            e.amount
-          );
-        }
-        continue;
-      }
-      const start =
-        e.kind === 'Monthly' && e.startMonth
-          ? toIndex(e.startMonth)
-          : seedIndex;
-      const end =
-        e.kind === 'Monthly' && e.endMonth
-          ? toIndex(e.endMonth)
-          : projectEnd(project);
-      for (let m = Math.max(start, seedIndex); m <= end; m++) {
-        charge(
-          project,
-          e.expenditureCategory,
-          m,
-          m === seedIndex ? e.amount * proration : e.amount
-        );
-      }
-    }
-  }
-
   const projectsById = new Map(projection.projects.map((p) => [p.id, p]));
   const jobFunding: JobFundingMonth[] = [];
   for (const job of projection.jobs) {
@@ -156,6 +124,58 @@ export function computePiProjection(projection: Projection): {
     }
   }
 
+  // Net the aggregated job targets once, before adding explicit expenses.
+  // Booked salary and fringe stay fixed even when the new estimate is lower.
+  for (const project of projection.projects) {
+    for (const category of PERSONNEL) {
+      const target =
+        charges.get(project.id)?.get(category)?.get(seedIndex) ?? 0;
+      const booked = project.actuals
+        .filter(
+          (actual) =>
+            actual.expenditureCategory === category &&
+            toIndex(actual.month) === seedIndex
+        )
+        .reduce((total, actual) => total + actual.amount, 0);
+      const remaining = Math.max(target - booked, 0);
+      if (remaining !== target) {
+        charge(project, category, seedIndex, remaining - target);
+      }
+    }
+  }
+
+  for (const project of projection.projects) {
+    for (const e of project.expenses) {
+      if (e.kind === 'OneTime') {
+        if (e.startMonth) {
+          charge(
+            project,
+            e.expenditureCategory,
+            toIndex(e.startMonth),
+            e.amount
+          );
+        }
+        continue;
+      }
+      const start =
+        e.kind === 'Monthly' && e.startMonth
+          ? toIndex(e.startMonth)
+          : seedIndex;
+      const end =
+        e.kind === 'Monthly' && e.endMonth
+          ? toIndex(e.endMonth)
+          : projectEnd(project);
+      for (let m = Math.max(start, seedIndex); m <= end; m++) {
+        charge(
+          project,
+          e.expenditureCategory,
+          m,
+          m === seedIndex ? e.amount * proration : e.amount
+        );
+      }
+    }
+  }
+
   const rows: PiProjectionRow[] = [];
   for (const project of projection.projects) {
     const projectCharges =
@@ -163,10 +183,6 @@ export function computePiProjection(projection: Projection): {
     const actuals = new Map<string, Map<number, number>>();
     for (const a of project.actuals) {
       const m = toIndex(a.month);
-      // Mid-month personnel actuals are replaced by a whole projected month.
-      if (m === seedIndex && PERSONNEL.has(a.expenditureCategory)) {
-        continue;
-      }
       const byMonth =
         actuals.get(a.expenditureCategory) ?? new Map<number, number>();
       byMonth.set(m, (byMonth.get(m) ?? 0) + a.amount);
@@ -197,7 +213,9 @@ export function computePiProjection(projection: Projection): {
         remaining.set(m - 1, remaining.get(m)! + actual(m));
       }
       for (let m = seedIndex; m <= last; m++) {
-        remaining.set(m, remaining.get(m - 1)! - actual(m) - planned(m));
+        // The snapshot balance already includes its booked actuals.
+        const additionalActual = m === seedIndex ? 0 : actual(m);
+        remaining.set(m, remaining.get(m - 1)! - additionalActual - planned(m));
       }
 
       for (let m = firstIndex; m <= last; m++) {

@@ -11,7 +11,10 @@ import {
   ProjectionWorkspace,
   type ProjectionWorkspaceHandle,
 } from '@/components/projections/ProjectionWorkspace.tsx';
-import { createSalaryExample } from '@/dev/projections/fixture.ts';
+import {
+  createBookedSalaryExample,
+  createSalaryExample,
+} from '@/dev/projections/fixture.ts';
 import { PreviewControls } from '@/dev/projections/PreviewControls.tsx';
 import {
   createProjectionPreviewServer,
@@ -31,14 +34,19 @@ declare global {
 
 /** Separate entry tree keeps synthetic data and unauthenticated preview out of the app. */
 export function createProjectionPreviewRouter({
+  example,
   history,
-  plan = createSalaryExample(),
+  plan = example === 'booked'
+    ? createBookedSalaryExample()
+    : createSalaryExample(),
   server = createProjectionPreviewServer(plan),
 }: {
+  example?: 'booked';
   history?: RouterHistory;
   plan?: Projection;
   server?: ProjectionPreviewServer;
 } = {}) {
+  const exampleSearch = example ? { example } : {};
   const rootRoute = createRootRoute({
     component: () => (
       <main>
@@ -74,7 +82,7 @@ export function createProjectionPreviewRouter({
               className="btn btn-primary mt-4"
               onClick={() => {
                 void router.navigate({
-                  search: () => ({ section: 'staffing' }),
+                  search: () => ({ ...exampleSearch, section: 'staffing' }),
                   to: '/projections-preview.html',
                 });
               }}
@@ -127,7 +135,7 @@ export function createProjectionPreviewRouter({
         onNavigate={(location, replace = false) => {
           void router.navigate({
             replace,
-            search: () => location,
+            search: () => ({ ...exampleSearch, ...location }),
             to: '/projections-preview.html',
           });
         }}

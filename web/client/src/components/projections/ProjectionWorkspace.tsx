@@ -203,6 +203,10 @@ export function ProjectionWorkspace({
               >
                 {selectedProject.projectName} by month
               </h2>
+              <p className="mt-2 text-sm">
+                Snapshot-month actuals are already included in the snapshot
+                balance. Forecast shows additional expected spending.
+              </p>
               <div className="mt-4 overflow-x-auto">
                 <table className="table w-full whitespace-nowrap">
                   <caption className="sr-only">

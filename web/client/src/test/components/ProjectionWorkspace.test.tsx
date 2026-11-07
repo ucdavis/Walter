@@ -6,12 +6,14 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createProjectionPreviewRouter } from '@/dev/projections/router.tsx';
 import { createSalaryExample } from '@/dev/projections/fixture.ts';
+import { SALARY_CATEGORY } from '@/lib/piProjection.ts';
 import { ProjectionSessionProvider } from '@/components/projections/ProjectionSession.tsx';
 import {
   ProjectionWorkspace,
@@ -39,6 +41,79 @@ const editButton = () =>
   screen.getByRole('button', { name: 'Edit salary for Alex Example' });
 
 describe('projection salary workspace', () => {
+  it('keeps booked costs visible while salary edits change only the remaining snapshot forecast', async () => {
+    const history = createMemoryHistory({
+      initialEntries: [
+        '/projections-preview.html?example=booked&section=overview&project=1',
+      ],
+    });
+    const router = createProjectionPreviewRouter({
+      example: 'booked',
+      history,
+    });
+    render(<RouterProvider router={router} />);
+    const user = userEvent.setup();
+    await screen.findByRole('heading', { name: 'Project A by month' });
+    const january = () => screen.getByRole('row', { name: /^2026-01 / });
+    expect(
+      within(january())
+        .getAllByRole('cell')
+        .map((cell) => cell.textContent)
+    ).toEqual(['$1,400.00', '$2,100.00', '$24,500.00']);
+
+    await user.click(screen.getByRole('button', { name: 'Staffing' }));
+    await user.click(editButton());
+    await user.clear(salaryInput());
+    await user.type(salaryInput(), '43200');
+    await user.click(screen.getByRole('button', { name: 'Apply' }));
+    await waitFor(() => expect(read().revision).toBe(1));
+    expect(
+      read().results.rows.find(
+        (row) =>
+          row.projectId === 1 &&
+          row.month === '2026-01' &&
+          row.expenditureCategory === SALARY_CATEGORY
+      )
+    ).toMatchObject({
+      actualAmount: 1000,
+      projectedAmount: 0,
+      remaining: 19_000,
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Project outlook' }));
+    await screen.findByRole('heading', { name: 'Project A by month' });
+    expect(
+      within(january())
+        .getAllByRole('cell')
+        .map((cell) => cell.textContent)
+    ).toEqual(['$1,400.00', '$0.00', '$26,600.00']);
+    const february = screen.getByRole('row', { name: /^2026-02 / });
+    expect(
+      within(february)
+        .getAllByRole('cell')
+        .map((cell) => cell.textContent)
+    ).toEqual(['$0.00', '$1,260.00', '$25,340.00']);
+    expect(router.state.location.search).toMatchObject({
+      example: 'booked',
+      project: 1,
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Save plan' }));
+    await waitFor(() => expect(read().dirty).toBe(false));
+    expect(read().draft.projects[0].actuals).toEqual([
+      {
+        amount: 1000,
+        expenditureCategory: SALARY_CATEGORY,
+        month: '2026-01-01',
+      },
+      {
+        amount: 400,
+        expenditureCategory: '02 - Fringe Benefits',
+        month: '2026-01-01',
+      },
+    ]);
+  });
+
   it('opens and focuses a direct job link; Cancel discards typing and Apply commits the same operation', async () => {
     const { user } = openPreview();
     await screen.findByRole('dialog');
