@@ -76,7 +76,7 @@ public sealed class ProjectionsController(
     }
 
     /// <summary>
-    /// Replaces the whole scenario document and preserves server-owned snapshot, identity and audit metadata.
+    /// Replaces the whole scenario document, preserves snapshot, identity and creator metadata, and updates audit fields.
     /// Saves keep submitted estimates; regeneration is an explicit draft operation.
     /// Confirmed overwrite retries ordinary edits, but never crosses a reset or recreates a deleted plan.
     /// </summary>

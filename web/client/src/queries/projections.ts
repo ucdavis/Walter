@@ -153,7 +153,7 @@ export type ProjectionDraft = Pick<
   'historyMonths' | 'jobs' | 'name' | 'projects'
 >;
 
-/** Saves the whole projection; the response carries regenerated Projected expenses after a window change. */
+/** Unused until Stage 1b request wiring; see docs/PLAN.md for the server save contract. */
 export const useSaveProjection = (id: number) => {
   const queryClient = useQueryClient();
   return useMutation({
