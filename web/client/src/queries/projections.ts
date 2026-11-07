@@ -69,6 +69,7 @@ export interface ProjectionJob {
   colaRate: number;
   employeeId: string | null;
   endDate: string | null;
+  /** Appointment's monthly cost, split by funding share without FTE or COLA scaling. */
   feeRemissionMonthly: number | null;
   fte: number;
   fundingEntries: ProjectionFundingEntry[];

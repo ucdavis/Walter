@@ -146,6 +146,7 @@ public class ProjectionJob
     /// <summary>Month of year (1 to 12) the COLA applies.</summary>
     public int ColaMonth { get; set; } = 7;
 
+    /// <summary>Appointment's monthly fee cost, allocated by funding share without FTE or COLA scaling; null contributes zero.</summary>
     public decimal? FeeRemissionMonthly { get; set; }
     public DateOnly? StartDate { get; set; }
     public DateOnly? EndDate { get; set; }

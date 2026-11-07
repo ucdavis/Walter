@@ -445,6 +445,25 @@ describe('computePiProjection', () => {
     });
   });
 
+  it('splits appointment fee costs by funding share without FTE or COLA scaling', () => {
+    const p = projection({
+      jobs: [
+        job({
+          colaMonth: 11,
+          colaRate: 0.03,
+          feeRemissionMonthly: 1500,
+          fte: 0.5,
+          fundingEntries: [funding(1, 0.5), funding(null, 0.5)],
+        }),
+      ],
+    });
+    expect(projected(p, FEE_REMISSION_CATEGORY, '2026-10')).toBe(750);
+    expect(projected(p, FEE_REMISSION_CATEGORY, '2026-11')).toBe(750);
+    p.jobs[0].fte = 0.8;
+    p.jobs[0].monthlySalary = 2000;
+    expect(projected(p, FEE_REMISSION_CATEGORY, '2026-11')).toBe(750);
+  });
+
   it('retains actual-only categories without deducting their booked snapshot costs again', () => {
     const p = projection({
       actuals: [

@@ -130,9 +130,14 @@ continues to limit job and expense forecasts.
 
 ## Additional expenses and fee remission
 
-Explicit expenses are additional planned costs, including expenses assigned to
-salary or benefits categories. They are added after the personnel calculation
-and are not reduced by booked personnel costs.
+The source history averages used for recurring estimates exclude categories
+01 Salaries and Wages, 02 Fringe Benefits, and 04 Equipment. Category 08 Fellowship
+& Scholarships remains included. Booked actuals remain available for balances
+and snapshot-month personnel netting.
+
+Explicit monthly and one-time expenses are additional planned costs, including
+expenses assigned to salary, benefits, or fee categories. They are added after
+the personnel calculation and are not reduced by booked personnel costs.
 
 Recurring expenses, including generated estimates, are prorated for project-active
 days within their applicable months. Project start and end dates are inclusive.
@@ -157,10 +162,11 @@ project ended October 10. The expense specifies a month, not a posting date.
 Entries outside the eligible months stay in the saved plan but do not contribute
 to the forecast; changing the dates can make them applicable again.
 
-A job's monthly fee-remission amount is allocated by its funding shares, without
-FTE, COLA, or daily proration. It remains an additional forecast cost; the personnel
-remainder formula does not apply to it. Including the same fees in a recurring
-expense estimate and a job's fee-remission amount would count them twice.
+A job's fee-remission amount is the appointment's total monthly cost. It is split
+across funding shares without FTE or COLA scaling. The current calculation does
+not prorate it by day and treats it as an additional forecast cost; the personnel
+remainder formula does not apply to it. Entering the same fees as both an explicit
+expense and a job's fee-remission amount would count them twice.
 
 Fee remission uses month-based job and funding windows and the project's end
 month. Its current calculation does not enforce the project's start date or
@@ -169,6 +175,15 @@ require exact day overlap within a month.
 The forecast does not determine fee-remission eligibility or look up tuition
 and fees. See [Graduate Studies' tuition and fee remission guidance](https://grad.ucdavis.edu/tuition-and-fee-remission)
 for those rules.
+
+### Open fee-remission question
+
+Category 08 Fellowship & Scholarships includes costs beyond employee fee
+remission. Its historical recurring estimate and entered employee fee amounts
+currently both contribute to the forecast. How should the forecast distinguish
+other category 08 costs from fee remission and avoid counting the same fees
+twice? This remains unresolved; category 08 continues to use its historical
+estimate alongside any employee fee amounts.
 
 ## Cost-of-living adjustments
 

@@ -54,6 +54,12 @@ as each decision is settled and each stage is reviewed.
 - Show the project outlook from the snapshot month forward. Retain captured
   monthly spending and its use in expense estimates and snapshot-month netting.
   Do not show reconstructed balances for earlier months or add warning UI.
+- Keep personnel settings with the employee. Stage 3 includes a per-employee
+  fee editor.
+- Fee remission is the appointment's total monthly cost, split across funding
+  shares without FTE or COLA scaling. Do not guess a fee default. Date eligibility
+  and snapshot-month fee treatment still need agreement, as does its overlap
+  with historical category 08 estimates.
 
 ### Agreed salary example
 
@@ -187,7 +193,7 @@ an already saved snapshot. Decide the owning boundary in Stage 2.
 | 1a. One local salary edit     | Open a representative plan; link to a job; edit and cancel salary; recalculate a useful project outlook; navigate without losing edits; invoke the same operation without the UI | State ownership, calculation clarity, component boundaries, keyboard behavior, and responsiveness.                                        |
 | 1b. Save that edit            | Real saved-plan loading, conditional save, reload, failure recovery, and unsaved-change handling                                                                                 | Failed and conflicting saves preserve work; an in-flight response does not erase subsequent edits.                                        |
 | 2. Plan lifecycle             | Fresh unsaved seed, save-as-new, duplicate, plan selection, and dashboard eligibility                                                                                            | Reopened and duplicated plans retain captured inputs; saved plans remain usable when fresh data is unavailable.                           |
-| 3. Funding and staffing       | Project balances/dates, remaining job assumptions, hypothetical hires, and funding schedules                                                                                     | Review project editing, job editing, and allocation editing separately. Check FTE, date ranges, outside funding, and funding proportions. |
+| 3. Funding and staffing       | Project balances/dates, employee/job assumptions including fee remission, hypothetical hires, and funding schedules                                                             | Review project editing, job editing, and allocation editing separately. Check FTE, date ranges, outside funding, and funding proportions. |
 | 4. Expenses and details       | Monthly/one-time expenses, generated estimates, history windows, notes, and horizon                                                                                              | Explicit expenses survive regeneration; save/reload preserves the preview.                                                                |
 | 5. Complete guided experience | Setup composed from existing editors, full project drilldowns, explanations, and controlled rollout                                                                              | Verify the complete workflow and genuine reuse.                                                                                           |
 
@@ -663,6 +669,24 @@ starts at January 2026 for the saved January snapshot and retains the expected
 forecast and ending balances. React Doctor scored 97/100 with the existing
 component-size warning; existing client build warnings remain.
 
+#### Fee remission and category 08 estimates
+
+The fee amount is the appointment's total monthly cost, split across its funding
+shares without FTE or COLA scaling. No default amount is selected. Keep the
+fee-remission editor with each employee's job settings in Stage 3.
+
+Keep the existing historical estimate policy for now. The source query excludes
+categories 01 salary, 02 fringe benefits, and 04 equipment; category 08 Fellowship
+& Scholarships remains included. That category covers costs beyond employee fee
+remission. Its historical estimate and entered employee fee amounts currently
+both contribute to the forecast.
+
+How to distinguish other category 08 costs and avoid counting fee remission
+twice remains an open calculation question. Fee date eligibility and
+snapshot-month treatment also remain unresolved. Booked actuals, salary/fringe
+netting, and explicit monthly/one-time expenses retain their existing treatment.
+Stage 1b remains open.
+
 #### Findings to resolve
 
 The November 6 source review and executable examples identified the following
@@ -683,11 +707,13 @@ work. These findings do not authorize implementing later stages together.
   cost. The out-of-band lookup import does not yet establish that this field
   maps to the official Vacation Leave Assessment. Confirm that mapping before
   adding new rate defaults or vacation-cost UI.
-- **Fees:** category 08 contributes to generated expense estimates and can
-  overlap job-level fee remission. Decide the amount's unit, eligible months,
-  and which estimate owns the cost before adding its editor. Its existing
-  monthly eligibility does not follow the new personnel date bounds. Do not
-  activate the unused $1,500 placeholder as a default.
+- **Fees:** category 08 Fellowship & Scholarships remains in historical
+  estimates and covers more than employee fee remission. Decide how to retain
+  other category 08 costs without counting fees twice alongside employee inputs.
+  The employee fee amount is the appointment's total monthly cost, unaffected
+  by FTE or COLA. Eligible dates and snapshot-month treatment also need agreement
+  before adding the per-employee editor in Stage 3. Existing monthly eligibility
+  does not follow the new personnel date bounds. No automatic fee default is selected.
 - **Future hires:** decide whether an entered salary is a snapshot-date rate
   or the agreed starting rate. The existing COLA calculation can apply an
   increase before the job starts.

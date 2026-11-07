@@ -255,9 +255,9 @@ export function reviewProjectionCalculations() {
           month,
         })),
         independentlyWorked:
-          'If 1500 is an appointment-level monthly fee: each project owes 750 regardless of salary/FTE/COLA. If it is a full-time fee subject to FTE: each project owes 375. Salary edits alone do not distinguish these interpretations.',
+          'The appointment-level monthly fee is 1500. Each project owes 750 at its 0.5 funding share, regardless of salary, FTE, or COLA.',
         question:
-          'Confirm fee amount meaning, eligible months, and whether it is independent of FTE and COLA.',
+          'Fee dates, snapshot-month booked-cost treatment, and overlap with category 08 historical estimates remain to be settled.',
         topic: 'Fee remission allocation',
       },
       {
