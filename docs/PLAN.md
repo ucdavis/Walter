@@ -29,10 +29,8 @@ as each decision is settled and each stage is reviewed.
 - Stage 1b uses the existing `UpdatedAt` timestamp for concurrency and saves the
   whole applied draft. A conflict offers Overwrite or Discard. The confirmed
   behavior and implementation stops are recorded below.
-- Booked snapshot-month salary and benefits stay fixed. For each project and
-  category, sum the full-month personnel estimate and forecast only
-  `max(estimate - booked actual, 0)`. Later full months keep the agreed salary
-  calculation. An edit below booked costs does not refund those costs.
+- The [accepted snapshot-month rule](projections-calculation-review.md#accepted-snapshot-month-rule)
+  owns personnel netting, signed-credit handling, and additive expense treatment.
 
 ### Agreed salary example
 

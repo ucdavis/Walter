@@ -139,6 +139,7 @@ export function computePiProjection(projection: Projection): {
         .reduce((total, actual) => total + actual.amount, 0);
       const remaining = Math.max(target - booked, 0);
       if (remaining !== target) {
+        // Net booked credits even after project end; charge's date guard only bounds forecasts.
         const byCategory =
           charges.get(project.id) ?? new Map<string, Map<number, number>>();
         const byMonth = byCategory.get(category) ?? new Map<number, number>();

@@ -86,6 +86,14 @@ balance. Handling mismatched source cutoffs remains unresolved.
 | Edited planned month $900      |            $1,000 |                  $0 |
 
 This avoids treating a lower salary assumption as a refund of booked costs.
+Signed credits follow the same rule, including when the job target is zero:
+a zero target with -$100 booked salary or fringe produces $100 of additional
+forecast.
+This snapshot adjustment also applies after a project's end month; that date
+still bounds job targets and explicit expense forecasts. The regression cases
+in [the calculator tests](../web/client/src/test/lib/piProjection.test.ts)
+cover zero targets and ended projects.
+
 Salary and fringe need separate comparisons because payroll and benefit
 postings can arrive at different times. Future full months retain the agreed
 salary formula. This rule is an estimate of costs still to be booked, not a
@@ -122,7 +130,8 @@ reconstruct historical financial positions.
 Two examples reveal bounds problems independently of the partial-month policy:
 
 - An April 1 project receives January through March salary, fringe, and expenses.
-  The calculator checks project end dates but ignores project start dates.
+  Job and expense forecasts check project end dates but ignore project start
+  dates. Snapshot personnel netting follows the accepted rule above.
 - A job ending March 10 and funding starting March 31 produce a full March
   charge despite having no overlapping dates. Job and funding windows are each
   reduced to months before being combined.
@@ -199,11 +208,11 @@ authoritative zero is inappropriate.
 
 1. Review the implemented snapshot-month rule, corrected balance consumption,
    and display of booked actuals. Cover downward salary edits as well as increases.
-2. Review the date examples and enforce valid bounds. Settle partial-month
-   treatment before adding funding-schedule editing.
-3. Add clear treatment of missing cost assumptions. Keep fee eligibility,
-   hypothetical-hire rate dates, and more detailed expense/commitment ownership
-   with their relevant later editors.
+2. In a separately accepted increment, review the date examples and decide valid
+   bounds and partial-month treatment before adding funding-schedule editing.
+3. In a separately accepted increment, decide how to show missing cost assumptions.
+   Keep fee eligibility, hypothetical-hire rate dates, and more detailed
+   expense/commitment ownership with their relevant later editors.
 
 Review each correction before moving to Stage 2. This increment changes only
 snapshot-month calculation and its explanation, examples, and tests. Save
