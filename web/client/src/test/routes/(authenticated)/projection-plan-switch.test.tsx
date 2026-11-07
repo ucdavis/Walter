@@ -267,9 +267,10 @@ describe('switching saved projection plans', () => {
       expect(
         screen.getByRole('heading', { name: 'Second plan' })
       ).toBeInTheDocument();
-      expect(
-        screen.getByRole('button', { name: 'Staffing' })
-      ).toHaveAttribute('aria-current', 'page');
+      expect(screen.getByRole('button', { name: 'Staffing' })).toHaveAttribute(
+        'aria-current',
+        'page'
+      );
     } finally {
       finishReload();
       route.cleanup();
