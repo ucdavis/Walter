@@ -23,10 +23,10 @@ public class Projection
     [Required, MaxLength(200)]
     public string Name { get; set; } = "";
 
-    /// <summary>3, 6, or 12; the averaging window of the current Projected expenses.</summary>
+    /// <summary>3, 6, or 12; selected averaging window for explicit estimate regeneration.</summary>
     public int HistoryMonths { get; set; }
 
-    /// <summary>When the snapshot was taken (create or last reset); the projection's "now".</summary>
+    /// <summary>Fixed snapshot identity and forecast anchor; advances only on create or reset.</summary>
     public DateTime SeededAt { get; set; }
 
     [MaxLength(200)]
@@ -37,6 +37,7 @@ public class Projection
     [MaxLength(200)]
     public string? UpdatedBy { get; set; }
 
+    /// <summary>UTC audit time and exact client concurrency token; advances on every write.</summary>
     public DateTime UpdatedAt { get; set; }
 
     public List<ProjectionProject> Projects { get; set; } = [];
@@ -48,6 +49,12 @@ public class Projection
     {
         var entity = modelBuilder.Entity<Projection>();
         entity.HasIndex(p => p.PiEmployeeId);
+        // SQL datetime2 preserves ticks but drops Kind. Restore UTC without shifting the saved token.
+        foreach (var property in new[] { nameof(CreatedAt), nameof(SeededAt), nameof(UpdatedAt) })
+            entity.Property<DateTime>(property).HasConversion(
+                value => value,
+                value => DateTime.SpecifyKind(value, DateTimeKind.Utc));
+        entity.Property(p => p.UpdatedAt).IsConcurrencyToken();
         AsJson(entity.Property(p => p.Projects));
         AsJson(entity.Property(p => p.Jobs));
     }
@@ -157,7 +164,7 @@ public enum ProjectionExpenseKind
 {
     OneTime,
     Monthly,
-    /// <summary>Generated from run-rates; a window change or reset replaces these, including edited ones.</summary>
+    /// <summary>Generated from run-rates; explicit regeneration or reset replaces these, including edited ones.</summary>
     Projected,
 }
 

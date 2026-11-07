@@ -5,7 +5,7 @@ using server.core.Services;
 namespace server.Services;
 
 /// <summary>Builds a projection's projects and jobs from a fresh datamart snapshot.</summary>
-public sealed class ProjectionSeeder(IProjectionDataSource data)
+public sealed class ProjectionSeeder(IProjectionDataSource data, TimeProvider? timeProvider = null)
 {
     /// <summary>Replaces projection.Projects and projection.Jobs; sets SeededAt and HistoryMonths.</summary>
     public async Task SeedAsync(Projection projection, int historyMonths,
@@ -54,7 +54,8 @@ public sealed class ProjectionSeeder(IProjectionDataSource data)
             });
 
         projection.Projects = [.. projects.Values];
-        projection.SeededAt = DateTime.UtcNow;
+        projection.SeededAt = ProjectionTimestamps.Advance(projection.SeededAt,
+            (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime);
         ApplyRunRates(projection, historyMonths);
 
         var projectNumbers = projects.Keys.Select(k => k.ProjectNumber).Distinct().ToList();

@@ -1,6 +1,7 @@
 # Projections implementation plan
 
-Status: Stage 1a implemented; user review pending. Updated November 6, 2026.
+Status: Stage 1a accepted. Stage 1b server save contract implemented; user review pending.
+Updated November 6, 2026.
 
 Build a guided planning workspace where users can adjust a dated portfolio
 snapshot, inspect each project's outlook, and save alternative plans. Keep the
@@ -25,6 +26,9 @@ as each decision is settled and each stage is reviewed.
 - The salary calculation below and the three [Stage 0 workflow decisions](#stage-0-confirmed-decisions)
   are agreed: salary changes apply throughout the remaining applicable forecast
   period, editors use Apply/Cancel, and plans use explicit Save plan.
+- Stage 1b uses the existing `UpdatedAt` timestamp for concurrency and saves the
+  whole applied draft. A conflict offers Overwrite or Discard. The confirmed
+  behavior and implementation stops are recorded below.
 
 ### Agreed salary example
 
@@ -112,9 +116,10 @@ location; it does not transfer another browser's unsaved state.
 
 The confirmed persistence behavior is explicit Save plan. Failed saves retain
 the draft. A response acknowledges the version submitted and must not replace
-edits made while the save was in flight. Reject stale server versions atomically
-and retain local work for recovery. Background refresh is not permission to
-replace the editor's document.
+edits made while the save was in flight. Normal saves reject stale timestamps
+atomically and retain local work. A confirmed overwrite replaces the saved
+editable document, including intervening ordinary edits, within the same
+snapshot. Background refresh cannot replace the editor's document.
 
 Reuse business rules from the first editor onward. Share presentation components
 where actual reuse supports it. The guided setup should compose the established
@@ -132,16 +137,16 @@ already runs in TypeScript. Retain those foundations and make focused changes:
 - Persist plan settings and stable nested IDs cleanly as their features arrive.
 - Validate structure, references, dates, and numeric values while allowing
   supported incomplete assumptions such as a missing salary.
-- Preserve captured source facts through the write contract. Editing a scenario
-  must not modify accounting or personnel source records.
+- Keep captured source facts unchanged by scenario editors. Editing a scenario
+  must not modify upstream accounting or personnel source records.
 - Make history-window changes explicit in the draft. Saving should preserve the
   reviewed estimates instead of unexpectedly regenerating them.
 
 Retain document storage rather than introducing a relational planning subsystem.
 The demo stores plan settings inside a project record; the rebuild needs an
-explicit plan-level metadata decision. A small settings/concurrency schema change
-may be cleaner, but no schema change is decided here. Settle concurrency before
-Stage 1b and settings before the lifecycle or details features that require them.
+explicit plan-level metadata decision. Stage 1b reuses `UpdatedAt` and `SeededAt`
+without adding a database column. Settle settings before the lifecycle or details
+features that require them.
 
 Fresh seed eligibility should have one named, tested owner. Apply dashboard rules,
 group eligible tasks by project, and preserve excluded allocations as outside
@@ -237,20 +242,130 @@ input-to-two-animation-frames measurements were 9.7-12.4 ms for typing and
 18.2-62.3 ms for Apply, including recalculation. These are local synthetic
 measurements, not production performance guarantees.
 
-Review the code and try this increment before starting Stage 1b. No later stage
-is included in this implementation.
+The user reviewed the code and preview and accepted Stage 1a. The synthetic
+preview remains available while the server save contract is built separately.
+
+## Stage 1b confirmed decisions
+
+These decisions were confirmed after reviewing the saving and conflict cases:
+
+- **Normal Save** captures the whole applied draft and the exact `UpdatedAt`
+  originally loaded. The database checks that timestamp as part of the write.
+- **Conflict** offers Overwrite or Discard. There is no field comparison,
+  selective reapplication, or automatic merge in v1.
+- **Overwrite** captures the current applied draft when clicked. It replaces
+  the saved editable document, including other users' ordinary edits that arrive
+  after the warning. The user does not need to confirm the same overwrite again.
+- **Snapshot replacement or deletion** blocks overwrite. `SeededAt` identifies
+  the original snapshot; a draft cannot restore a deleted plan or replace a
+  freshly reset snapshot. The browser retains the draft for reference.
+- **Discard after a conflict** loads the latest saved plan in the current
+  workspace, preserving the selected location when it still exists. It does not
+  fetch a fresh source snapshot.
+- **Editing during a save** remains available. Only another Save is disabled.
+  A response acknowledges the submitted draft; later edits remain unsaved.
+  For example, saving $132,000 and then editing to $140,000 leaves $132,000 saved
+  and $140,000 visible with unsaved changes. An overwrite clicked after that
+  conflict submits the current $140,000 draft.
+- **Leaving with pending changes** offers Stay or Discard. Same-plan navigation
+  preserves applied edits. Reload and close use the browser's standard warning.
+  Save never silently applies unfinished text in an editor.
+- **Failed saves** retain local work. A lost response is an unconfirmed outcome;
+  check saved state before retrying. An expired login must not redirect away
+  from the draft without recovery.
+
+Reset versus refresh needs its own product discussion before either action is
+exposed in the new workspace. Stage 1b protects against the existing reset
+endpoint without adding a reset/refresh UI.
+
+### Stage 1b implementation stops
+
+1. **Server save contract, current increment.** Use the existing timestamps for
+   atomic checks, whole-document save and overwrite, and guarded reset/delete.
+   Review the code and test against SQL Server before proceeding.
+2. **Normal saving in the workspace.** Load a saved plan, save the applied draft,
+   acknowledge the submitted version, preserve later edits, and handle failures.
+3. **Conflict and departure behavior.** Add Overwrite/Discard, snapshot/deletion
+   recovery, and Stay/Discard navigation handling. Exercise two browser tabs.
+
+The current increment changes no frontend behavior. Its server contract requires
+`expectedUpdatedAt` and `expectedSeededAt` on Save, with `overwrite` defaulting to
+false. Reset and Delete require `expectedUpdatedAt`. Missing tokens cannot fall
+back to an unconditional write. Conflicts distinguish an ordinary changed plan
+from a replaced snapshot; missing plans and access failures remain separate.
+
+Treat timestamps as exact opaque strings in the client; parsing them into a
+JavaScript `Date` for a save token would lose fractional precision. The server
+returns UTC timestamps, strictly advances `UpdatedAt` on writes and `SeededAt` on
+reset, and uses the expected timestamp in the atomic database predicate. Confirmed
+overwrites may retry ordinary races internally, checking snapshot identity and
+access each time. Retry exhaustion is a transient save failure, not another
+ordinary-conflict prompt.
+
+Save retains the existing whole `Projects`/`Jobs` payload contract, including its
+captured history arrays, while preserving server-owned identity, snapshot, and
+audit metadata. It does not merge or clear fields from the submitted document.
+This also lets overwrite restore a project removed by an ordinary edit within
+the same snapshot. The workspace keeps history read-only; broader server
+validation of captured facts needs a separate decision as the editors expand.
+Save stores the submitted expenses and history window without regenerating
+estimates. Upstream accounting and personnel source records are unchanged.
+
+Acceptance evidence must include exact timestamp round trips, two writers using
+the same original timestamp, stale and missing tokens, overwrite races, reset and
+delete races, authorization, strictly advancing timestamps with a frozen or
+backward clock, and preservation of the submitted estimates. In-memory tests
+alone do not establish the SQL Server concurrency guarantee.
+
+### Server contract review
+
+The first Stage 1b increment implements these endpoints without adding database
+columns or a migration:
+
+| Endpoint                           | Required preconditions                       | Behavior                                                                                                                                            |
+| ---------------------------------- | -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PUT /api/projections/{id}`        | Body `expectedUpdatedAt`, `expectedSeededAt` | Stores the whole submitted name, history window, projects, and jobs. `overwrite: true` accepts intervening ordinary edits within the same snapshot. |
+| `POST /api/projections/{id}/reset` | Body `expectedUpdatedAt`                     | Resets only the loaded version and advances both timestamps.                                                                                        |
+| `DELETE /api/projections/{id}`     | Query `expectedUpdatedAt`                    | Deletes only the loaded version.                                                                                                                    |
+
+Ordinary conflicts return `409` with code `conflict`; a replaced snapshot returns
+`409` with code `snapshotChanged`. Three lost overwrite attempts return `503`
+with code `busy`, unless the final check finds reset, deletion, or lost access.
+Invalid/missing tokens return `400`; missing plans and access failures retain
+their existing `404`/`403` behavior.
+
+Independent review found no remaining code issues. It identified a test gap for
+overwrite retry exhaustion and a final-attempt reset/deletion; those cases were
+added and passed. `dotnet test web/app.sln --no-restore --verbosity minimal`
+passed 433 standard tests. SQL integration tests opt out of that default run.
+The isolated SQL Server 2022 runner passed all 12 integration cases with no skips:
+
+```sh
+web/tests/server.tests/run-projection-sql-tests.sh --no-restore --verbosity minimal
+```
+
+This runner starts its own loopback-only Docker container, applies the existing
+migrations to a uniquely named database, exercises real HTTP binding and SQL
+write races, and removes its database/container afterward. It fails if selected
+tests are skipped or not discovered. Existing NuGet audit warnings for
+`System.Security.Cryptography.Pkcs` and `System.Security.Cryptography.Xml` remain
+outside this increment.
+
+The saved-plan client mutation still needs the new request fields in the next
+increment. No save UI is connected yet. Review this server increment before
+starting frontend saving or conflict handling.
 
 ## Questions to resolve in their owning stages
 
-| Before            | Question or example                                                                                                                                                                     |
-| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Stage 1b          | Which atomic server version check will protect shared plans? How does conflict recovery retain the draft?                                                                               |
-| Stage 1b          | Verify benefit/vacation rates, fee remission, COLA, project date bounds, and current-month actuals against agreed examples. Do not infer correctness from the synthetic demo's totals.  |
-| Stage 2           | Where will plan settings live? Verify duplicate semantics, seed eligibility, task grouping, and saved-snapshot independence.                                                            |
-| Stage 3           | How do funding schedules behave at appointment/project boundaries, at zero FTE, and when FTE changes? Verify outside funding and distinguish incomplete assumptions from invalid edits. |
-| Stage 4           | Which generated estimates are replaced when the history window changes? When does editing an estimate turn it into an explicit planned expense?                                         |
-| Stage 5           | Verify per-project shortfalls remain visible despite surpluses elsewhere, and decide feature-flag rollout criteria.                                                                     |
-| Later integration | Define proposal batches, stale-preview handling, bounded undo, authentication, and interactions with pending form edits.                                                                |
+| Before                        | Question or example                                                                                                                                                                     |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Stage 1b                      | Verify benefit/vacation rates, fee remission, COLA, project date bounds, and current-month actuals against agreed examples. Do not infer correctness from the synthetic demo's totals.  |
+| Stage 2                       | Where will plan settings live? Verify duplicate semantics, seed eligibility, task grouping, and saved-snapshot independence.                                                            |
+| Before exposing reset/refresh | Define their separate meanings, treatment of local edits, and snapshot replacement behavior.                                                                                            |
+| Stage 3                       | How do funding schedules behave at appointment/project boundaries, at zero FTE, and when FTE changes? Verify outside funding and distinguish incomplete assumptions from invalid edits. |
+| Stage 4                       | Which generated estimates are replaced when the history window changes? When does editing an estimate turn it into an explicit planned expense?                                         |
+| Stage 5                       | Verify per-project shortfalls remain visible despite surpluses elsewhere, and decide feature-flag rollout criteria.                                                                     |
+| Later integration             | Define proposal batches, stale-preview handling, bounded undo, authentication, and interactions with pending form edits.                                                                |
 
 ## Reference evidence
 
