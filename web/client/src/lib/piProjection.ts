@@ -124,10 +124,7 @@ export function computePiProjection(projection: Projection): {
         (job.monthlySalary ?? 0) * job.fte * colaFactor(job, seedIndex, m);
       const costs: [string, number][] = [
         [SALARY_CATEGORY, salary],
-        [
-          FRINGE_CATEGORY,
-          salary * ((job.cbrRate ?? 0) + job.vacationAccrualRate),
-        ],
+        [FRINGE_CATEGORY, salary * (job.cbrRate + job.vacationAccrualRate)],
       ];
       let fundedPercent = 0;
       for (const f of job.fundingEntries) {

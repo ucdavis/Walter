@@ -68,6 +68,41 @@ public sealed class ProjectionSeederTests
             [((int?)projection.Projects.Single().Id, 0.6m), ((int?)null, 0.4m)]);
     }
 
+    public static TheoryData<decimal?, decimal> CbrRates => new()
+    {
+        { null, 0m },
+        { 0m, 0m },
+        { 0.3m, 0.3m },
+    };
+
+    [Theory]
+    [MemberData(nameof(CbrRates))]
+    public async Task Defaults_missing_cbr_to_zero_and_preserves_supplied_benefit_rates(decimal? sourceCbr, decimal expectedCbr)
+    {
+        var line = Line(100);
+        line.CompositeBenefitRate = sourceCbr;
+
+        var projection = await SeedAsync(Data(line));
+
+        var job = projection.Jobs.Should().ContainSingle().Subject;
+        job.CbrRate.Should().Be(expectedCbr);
+        job.VacationAccrualRate.Should().Be(0.083m);
+    }
+
+    [Fact]
+    public async Task Defaults_both_missing_benefit_rates_to_zero()
+    {
+        var line = Line(100);
+        line.CompositeBenefitRate = null;
+        line.VacationAccrual = null;
+
+        var projection = await SeedAsync(Data(line));
+
+        var job = projection.Jobs.Should().ContainSingle().Subject;
+        job.CbrRate.Should().Be(0m);
+        job.VacationAccrualRate.Should().Be(0m);
+    }
+
     [Fact]
     public async Task Falls_back_to_the_projects_first_task_when_the_line_task_does_not_match()
     {

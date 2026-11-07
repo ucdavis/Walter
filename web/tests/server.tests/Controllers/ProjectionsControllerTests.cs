@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using FluentAssertions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -182,6 +183,31 @@ public sealed class ProjectionsControllerTests
         loaded.Name.Should().Be("Plan B");
         loaded.Jobs.Should().ContainSingle().Which.FundingEntries.Should().ContainSingle()
             .Which.Should().BeEquivalentTo(new { ProjectId = created.Projects.Single().Id, Percent = 1m });
+    }
+
+    [Fact]
+    public async Task Save_accepts_a_legacy_null_cbr_as_zero_and_preserves_the_supplied_vacation_rate()
+    {
+        using var ctx = TestDbContextFactory.CreateInMemory();
+        var created = await CreateProjectionAsync(ctx);
+        var controller = CreateController(ctx, financialViewer: true);
+        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+        var json = JsonSerializer.SerializeToNode(Draft(created), options)!;
+        json["jobs"] = JsonNode.Parse("""
+            [{"id":1,"name":"Legacy client job","cbrRate":null,"vacationAccrualRate":0.083}]
+            """);
+        var request = json.Deserialize<ProjectionsController.SaveProjectionRequest>(options)!;
+
+        (await controller.Save(created.Id, request, default)).Should().BeOfType<OkObjectResult>();
+        ctx.ChangeTracker.Clear();
+
+        var saved = (Projection)((OkObjectResult)await controller.Get(created.Id, default)).Value!;
+        var job = saved.Jobs.Should().ContainSingle().Subject;
+        job.CbrRate.Should().Be(0m);
+        job.VacationAccrualRate.Should().Be(0.083m);
+        using var response = JsonDocument.Parse(JsonSerializer.Serialize(saved, options));
+        response.RootElement.GetProperty("jobs")[0].GetProperty("cbrRate").ValueKind
+            .Should().Be(JsonValueKind.Number);
     }
 
     [Fact]

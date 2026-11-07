@@ -21,7 +21,7 @@ full-time salary.
 Benefits are calculated from each project's salary cost:
 
 ```text
-benefits = salary cost × (composite benefit rate + vacation assessment rate)
+benefits = salary cost × (composite benefit rate + vacation cost rate)
 ```
 
 The example below uses illustrative rates of 30% for composite benefits and 10%
@@ -33,10 +33,12 @@ for vacation. These are not current UC Davis rates.
 | Benefits plus vacation           |                 $1,000 |                 $1,100 |
 | Total                            |                 $3,500 |                 $3,850 |
 
-Changing salary preserves FTE, funding shares, and booked actuals. Benefit
-estimates depend on the rates supplied to the plan; a missing rate can produce
-a zero estimate. UC Davis's title-code CBR mapping is a planning estimate rather
-than confirmation of an individual employee's rate. See the
+Changing salary preserves FTE, funding shares, and booked actuals. CBR defaults
+to 0 when no rate is supplied. The vacation cost rate also defaults to 0, and
+supplied values are preserved. The vacation field represents an additional
+salary-based cost in this calculator; it does not track an employee's vacation
+hours. UC Davis's title-code CBR mapping is a planning estimate rather than
+confirmation of an individual employee's rate. See the
 [CBR and vacation assessment guidance](https://financeandbusiness.ucdavis.edu/finance/costing-policy-analysis/cbr)
 and [CBR lookup guidance](https://financeandbusiness.ucdavis.edu/finance/costing-policy-analysis/cbr/cbr-lookup).
 

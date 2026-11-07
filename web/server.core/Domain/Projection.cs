@@ -134,7 +134,12 @@ public class ProjectionJob
     public decimal? MonthlySalary { get; set; }
 
     public decimal Fte { get; set; }
-    public decimal? CbrRate { get; set; }
+
+    /// <summary>Composite benefit cost as a fraction of salary; defaults to zero when no rate was supplied.</summary>
+    [JsonConverter(typeof(ProjectionCbrRateJsonConverter))]
+    public decimal CbrRate { get; set; }
+
+    /// <summary>Additional salary-based vacation cost rate; defaults to zero and does not represent leave hours.</summary>
     public decimal VacationAccrualRate { get; set; }
     public decimal ColaRate { get; set; }
 
@@ -147,6 +152,21 @@ public class ProjectionJob
     public bool IsSeeded { get; set; }
 
     public List<ProjectionFundingEntry> FundingEntries { get; set; } = [];
+}
+
+/// <summary>Reads legacy null CBR values as the zero default without changing supplied rates.</summary>
+public sealed class ProjectionCbrRateJsonConverter : JsonConverter<decimal>
+{
+    public override bool HandleNull => true;
+
+    /// <summary>Accepts older saved nulls and retains the caller's existing numeric-reading rules.</summary>
+    public override decimal Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
+        reader.TokenType == JsonTokenType.Null
+            ? 0m
+            : JsonSerializer.Deserialize<decimal>(ref reader, options);
+
+    public override void Write(Utf8JsonWriter writer, decimal value, JsonSerializerOptions options) =>
+        writer.WriteNumberValue(value);
 }
 
 /// <summary>Share of a job's cost; a null ProjectId means funded outside this PI's projects.</summary>

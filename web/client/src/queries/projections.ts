@@ -63,7 +63,8 @@ export interface ProjectionFundingEntry {
 }
 
 export interface ProjectionJob {
-  cbrRate: number | null;
+  /** Fraction of salary; defaults to zero when no source rate was supplied. */
+  cbrRate: number;
   colaMonth: number;
   colaRate: number;
   employeeId: string | null;

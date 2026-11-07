@@ -106,7 +106,7 @@ public sealed class ProjectionSeeder(IProjectionDataSource data, TimeProvider? t
             RateSet = first.BusinessUnit ?? "DVCMP",
             MonthlySalary = unsplit ? null : first.MonthlyRate,
             Fte = first.Fte ?? 0,
-            CbrRate = first.CompositeBenefitRate,
+            CbrRate = first.CompositeBenefitRate ?? 0,
             VacationAccrualRate = first.VacationAccrual ?? 0,
             StartDate = ToDate(first.JobEffectiveDate),
             EndDate = ToDate(first.JobEndDate),

@@ -530,10 +530,10 @@ describe('computePiProjection', () => {
     ).toEqual([0, 100, 100, 500, 0]);
   });
 
-  it('treats null salary and null cbr as zero', () => {
+  it('treats null salary as zero and preserves the supplied vacation rate when CBR is zero', () => {
     const noSalary = projection({ jobs: [job({ monthlySalary: null })] });
     const noCbr = projection({
-      jobs: [job({ cbrRate: null, vacationAccrualRate: 0.1 })],
+      jobs: [job({ cbrRate: 0, vacationAccrualRate: 0.1 })],
     });
 
     expect(

@@ -3,6 +3,7 @@
 Status: Stage 1a, Stage 1b saving, and the snapshot-month and date-boundary
 corrections accepted. Stage 1b remains open for the remaining calculation
 decisions. Saving remains available with funding gaps/overlaps.
+The CBR default and legacy-plan compatibility increment is accepted.
 Updated November 6, 2026.
 
 Build a guided planning workspace where users can adjust a dated portfolio
@@ -43,6 +44,11 @@ as each decision is settled and each stage is reviewed.
   project-active days, restricted to days after the snapshot date in its month.
 - [One-time expenses](#agreed-one-time-expense-month-eligibility) retain their
   full amount in an eligible month. Out-of-range entries remain saved.
+- CBR is a numeric planning input. When no source rate is available, default
+  it to 0 for now. A different default may be chosen later; none is selected.
+  Do not add a missing-CBR state or incomplete-benefit warning for this default.
+- Keep the vacation cost field's existing default of 0 and preserve supplied
+  values. Add no new vacation-cost UI until the lookup's meaning is confirmed.
 
 ### Agreed salary example
 
@@ -600,6 +606,33 @@ The user reviewed and accepted this correction. Publication and deployment
 remain outside this increment; no new no-mistakes pipeline or CI run was
 started. Stage 1b remains open for its other calculation decisions.
 
+#### Benefit-default implementation review
+
+CBR is now numeric in the plan model and client contract. Seeding defaults an
+absent source CBR to 0. A converter on the plan's CBR property reads legacy JSON
+nulls as 0 and preserves supplied rates, including numeric strings accepted by
+the existing Web serializer. Malformed values remain invalid. Missing properties
+use the same zero default, and API/saved output contains a numeric rate.
+
+The converter also applies to EF's existing Jobs JSON conversion and the Save
+controller's document copy. It does not rewrite stored plans on read, change
+snapshot dates, or require a migration. An unchanged legacy JSON column can
+retain a physical null until a later write; its loaded plan value is 0.
+Source lookup fields remain nullable. Vacation defaults and supplied values
+are unchanged, and this increment adds no UI or warnings.
+
+Thirteen new server cases cover seeding, the configured EF converter, legacy
+request save/get behavior, supplied values, and malformed input. Five cases
+failed before the fix. All 446 standard server tests and 499 client tests passed.
+The eight opt-in SQL Server integration cases were not run; this increment does
+not alter the SQL schema or concurrency contract. TypeScript, changed-file
+ESLint, and the production build passed. Independent review found no defects.
+Existing NuGet dependency-audit and client build warnings remain.
+
+The user reviewed and accepted this increment. Publication and deployment remain
+outside this step. It does not close Stage 1b or select a different CBR default,
+official vacation assessment mapping, or fee-remission policy.
+
 #### Findings to resolve
 
 The November 6 source review and executable examples identified the following
@@ -613,12 +646,16 @@ work. These findings do not authorize implementing later stages together.
 - **Historical balances:** the calculator reconstructs history using current
   budgets and commitments. Decide how to present historical actuals without
   implying that these are observed month-end balances.
-- **Missing benefit inputs:** the inspected `WalterDev` lookup had DVCMP and
-  UCANR sets but no DVMED set; some rows in the other sets also lacked matches.
-  Vacation assessment values were all null. Seeding converts missing vacation
-  to zero, so existing saved plans cannot distinguish missing data from genuine
-  zero. Preserve that distinction before adding reliable incomplete-assumption
-  feedback. Keep incomplete plans saveable and do not invent missing rates.
+- **Vacation lookup mapping:** the numeric CBR default and legacy compatibility
+  are accepted. Keep the vacation field's existing default of 0 and preserve
+  supplied values. The earlier `WalterDev` inspection
+  found no DVMED lookup set, some unmatched rows in the other sets, and null
+  vacation rates. Seeding currently converts missing vacation to zero; existing
+  saved zeros cannot reliably be classified as missing data or genuine zero.
+  The calculator treats `VacationAccrualRate` as an additional salary-based
+  cost. The out-of-band lookup import does not yet establish that this field
+  maps to the official Vacation Leave Assessment. Confirm that mapping before
+  adding new rate defaults or vacation-cost UI.
 - **Fees:** category 08 contributes to generated expense estimates and can
   overlap job-level fee remission. Decide the amount's unit, eligible months,
   and which estimate owns the cost before adding its editor. Its existing
