@@ -139,7 +139,12 @@ export function computePiProjection(projection: Projection): {
         .reduce((total, actual) => total + actual.amount, 0);
       const remaining = Math.max(target - booked, 0);
       if (remaining !== target) {
-        charge(project, category, seedIndex, remaining - target);
+        const byCategory =
+          charges.get(project.id) ?? new Map<string, Map<number, number>>();
+        const byMonth = byCategory.get(category) ?? new Map<number, number>();
+        byMonth.set(seedIndex, remaining);
+        byCategory.set(category, byMonth);
+        charges.set(project.id, byCategory);
       }
     }
   }

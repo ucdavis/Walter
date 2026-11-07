@@ -267,6 +267,44 @@ describe('computePiProjection', () => {
     }
   );
 
+  it('nets snapshot salary and fringe credits after the project has ended', () => {
+    const p = projection({
+      actuals: [
+        octoberActual(SALARY_CATEGORY, -100),
+        octoberActual(FRINGE_CATEGORY, -40),
+      ],
+      endDate: '2026-09-30',
+      jobs: [job({ cbrRate: 0.4, monthlySalary: 1000 })],
+    });
+    p.projects[0].budgets = [
+      budget(SALARY_CATEGORY, 10_000, 2900, 1000),
+      budget(FRINGE_CATEGORY, 4000, 960, 400),
+    ];
+    const captured = structuredClone(p);
+
+    expect(computePiProjection(p).rows).toEqual([
+      {
+        actualAmount: -100,
+        expenditureCategory: SALARY_CATEGORY,
+        kind: 'blended',
+        month: '2026-10',
+        projectedAmount: 100,
+        projectId: 1,
+        remaining: 6000,
+      },
+      {
+        actualAmount: -40,
+        expenditureCategory: FRINGE_CATEGORY,
+        kind: 'blended',
+        month: '2026-10',
+        projectedAmount: 40,
+        projectId: 1,
+        remaining: 2600,
+      },
+    ]);
+    expect(p).toEqual(captured);
+  });
+
   it('nets aggregated job targets once per project and category', () => {
     const p = projection({
       actuals: [
