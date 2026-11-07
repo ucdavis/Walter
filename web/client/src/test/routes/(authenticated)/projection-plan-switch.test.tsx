@@ -268,7 +268,7 @@ describe('switching saved projection plans', () => {
         screen.getByRole('heading', { name: 'Second plan' })
       ).toBeInTheDocument();
       expect(
-        screen.getByRole('button', { exact: true, name: 'Staffing' })
+        screen.getByRole('button', { name: 'Staffing' })
       ).toHaveAttribute('aria-current', 'page');
     } finally {
       finishReload();

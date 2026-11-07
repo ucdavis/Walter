@@ -104,9 +104,10 @@ later work. Stage 1a only proves that the salary operation works outside the UI.
 
 ### Navigation and saving
 
-A proposed saved-plan address is
-`/projections/{iamId}/{planId}?section=staffing&job={jobId}`. Add project, allocation,
-expense, and month targets as their editors arrive. Validate targets, reveal and
+The saved-plan address is
+`/projections/{iamId}/{planId}?section=staffing&job={jobId}`. Project outlook links
+use `?section=overview&project={projectId}`. Add allocation, expense, and month
+targets as their editors arrive. Validate targets, reveal and
 focus valid targets, and handle missing ones without crashing or selecting an
 unrelated record.
 
@@ -343,7 +344,7 @@ columns or a migration:
 | Endpoint                           | Required preconditions                       | Behavior                                                                                                                                            |
 | ---------------------------------- | -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `PUT /api/projections/{id}`        | Body `expectedUpdatedAt`, `expectedSeededAt` | Stores the whole submitted name, history window, projects, and jobs. `overwrite: true` accepts intervening ordinary edits within the same snapshot. |
-| `POST /api/projections/{id}/reset` | Body `expectedUpdatedAt`                     | Resets only the loaded version and advances both timestamps.                                                                                        |
+| `POST /api/projections/{id}/reset` | Body `historyMonths`, `expectedUpdatedAt`    | Resets only the loaded version and advances both timestamps.                                                                                        |
 | `DELETE /api/projections/{id}`     | Query `expectedUpdatedAt`                    | Deletes only the loaded version.                                                                                                                    |
 
 Ordinary conflicts return `409` with code `conflict`; a replaced snapshot returns
