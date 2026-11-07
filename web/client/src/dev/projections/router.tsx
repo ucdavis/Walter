@@ -13,6 +13,7 @@ import {
 } from '@/components/projections/ProjectionWorkspace.tsx';
 import {
   createBookedSalaryExample,
+  createDateBoundaryExample,
   createSalaryExample,
 } from '@/dev/projections/fixture.ts';
 import { PreviewControls } from '@/dev/projections/PreviewControls.tsx';
@@ -38,10 +39,12 @@ export function createProjectionPreviewRouter({
   history,
   plan = example === 'booked'
     ? createBookedSalaryExample()
-    : createSalaryExample(),
+    : example === 'dates'
+      ? createDateBoundaryExample()
+      : createSalaryExample(),
   server = createProjectionPreviewServer(plan),
 }: {
-  example?: 'booked';
+  example?: 'booked' | 'dates';
   history?: RouterHistory;
   plan?: Projection;
   server?: ProjectionPreviewServer;

@@ -1,237 +1,171 @@
-# Projections calculation review
+# Projection calculations
 
-Source review completed November 6, 2026, against `b508164b`. Saving is accepted.
-The user accepted the snapshot-month rule below. Its correction is now implemented
-for review; the other findings remain open.
+A projection combines a saved financial snapshot with assumptions about future
+costs. Editing an assumption changes the forecast while preserving booked
+spending. Reopening a saved plan does not advance its snapshot date.
 
-## What the examples establish
+## Salary and benefits
 
-Run from `web/client`:
-
-```sh
-node scripts/review-projection-calculations.ts
-```
-
-The [review examples](../web/client/src/test/lib/piProjection.review.ts) invoke
-the existing calculator and salary operation. They check the agreed salary
-scaling and existing additive-rate arithmetic, then print seven review
-examples alongside independently worked alternatives. Those alternatives are
-not regression assertions or accepted business rules.
-
-The fixed salary example uses a $120,000 full-time annual rate, a 50%
-appointment, and two projects each covering half the appointment. For this
-arithmetic example only, use 30% CBR and 10% vacation assessment. These are
-illustrative inputs, not current UC Davis rates.
-
-| Per project, full forecast month | Before edit | After edit to $132,000 |
-| -------------------------------- | ----------: | ---------------------: |
-| Salary                           |      $2,500 |                 $2,750 |
-| Benefits plus vacation           |      $1,000 |                 $1,100 |
-| Total                            |      $3,500 |                 $3,850 |
-
-The salary operation preserves FTE, funding shares, and captured actuals.
-This is a full forecast month. It does not settle how a partly booked snapshot
-month should work.
-
-## Starting balance and the snapshot month
-
-`SpentToDate` is an inception-to-date expense total, not spending through the
-previous month. The portfolio import maps source `cat_itd_exp` into
-`PpmExpenses`; the projection seed copies that value into `SpentToDate`.
-Before this correction, the calculator started with
-`budget - spentToDate - committed`, but treated that current balance as the
-previous month's closing balance.
-
-Consequences:
-
-- Nonpersonnel current-month actuals were subtracted again.
-- Salary and fringe current-month actuals were hidden in the calculated rows,
-  while a whole forecast month was subtracted from a balance that already
-  includes those booked costs.
-- Historical end balances are reconstructed backward using current budgets and
-  commitments. They are not observed historical balances.
-
-Read-only SELECT checks against `WalterDev` confirmed exact reconciliation for
-both an internal example and a sponsored task/category example: source ITD
-expenses equaled prior-period detail plus current-month detail. In those cases,
-the extra current-month deduction is demonstrably duplicate spending. Some
-other categories did not reconcile. This verifies the defect, but does not
-establish universal equality or a common cutoff across the two feeds.
-
-Source paths:
-
-- [Portfolio import](../pipelines/pipeline/RefreshFacultyDeptPortfolio.json)
-- [Seed budgets and actuals](../datamart/StoredProcedures/usp_GetProjectionSeed.sql)
-- [Current balance calculation](../web/client/src/lib/piProjection.ts)
-
-### Accepted snapshot-month rule
-
-Keep booked costs visible and unchanged. Start with the captured current
-balance and deduct only additional forecast spending. For salary and fringe,
-compute the remaining current-month estimate separately per project/category,
-after summing all relevant jobs:
+Salary is entered as a full-time rate. Before cost-of-living adjustments, each
+project's salary cost for a full month is:
 
 ```text
-remaining month forecast = max(full month estimate - booked month actual, 0)
-month end balance = captured current balance - remaining month forecast
+full-time monthly salary × appointment FTE × project share of the appointment
 ```
 
-This calculation assumes the booked detail is already included in the captured
-balance. Handling mismatched source cutoffs remains unresolved.
+For example, a $120,000 full-time annual salary is $10,000 per month. At 50% FTE,
+the appointment costs $5,000 per month. If two projects each fund half the
+appointment, each pays $2,500. The UI expresses each project's share as 25% of
+full-time salary.
 
-| Salary example for one project | Booked this month | Additional forecast |
-| ------------------------------ | ----------------: | ------------------: |
-| Planned month $2,500           |            $1,000 |              $1,500 |
-| Edited planned month $2,750    |            $1,000 |              $1,750 |
-| Edited planned month $900      |            $1,000 |                  $0 |
+Benefits are calculated from each project's salary cost:
 
-This avoids treating a lower salary assumption as a refund of booked costs.
-Signed credits follow the same rule, including when the job target is zero:
-a zero target with -$100 booked salary or fringe produces $100 of additional
-forecast.
-This snapshot adjustment also applies after a project's end month; that date
-still bounds job targets and explicit expense forecasts. The regression cases
-in [the calculator tests](../web/client/src/test/lib/piProjection.test.ts)
-cover zero targets and ended projects.
+```text
+benefits = salary cost × (composite benefit rate + vacation assessment rate)
+```
 
-Salary and fringe need separate comparisons because payroll and benefit
-postings can arrive at different times. Future full months retain the agreed
-salary formula. This rule is an estimate of costs still to be booked, not a
-calendar-day payroll proration or a reconstruction of individual payroll runs.
+The example below uses illustrative rates of 30% for composite benefits and 10%
+for vacation. These are not current UC Davis rates.
 
-For recurring nonpersonnel spending, the existing partial-month estimate can
-remain an additional cost, without subtracting booked actuals again. Explicit
-expenses remain additive even when assigned to a personnel category; the
-booked-cost subtraction applies to the aggregate job estimate. The current
-day convention excludes the snapshot day: October 16 leaves 15 of 31 days.
-One-time expenses remain explicit additional planned charges. Fee-remission
-handling needs its own decision because it can also be included in run rates.
+| Per project, full forecast month | Annual salary $120,000 | Annual salary $132,000 |
+| -------------------------------- | ---------------------: | ---------------------: |
+| Salary                           |                 $2,500 |                 $2,750 |
+| Benefits plus vacation           |                 $1,000 |                 $1,100 |
+| Total                            |                 $3,500 |                 $3,850 |
 
-The executable October example has current totals that explicitly include its
-current-month actuals:
+Changing salary preserves FTE, funding shares, and booked actuals. Benefit
+estimates depend on the rates supplied to the plan; a missing rate can produce
+a zero estimate. UC Davis's title-code CBR mapping is a planning estimate rather
+than confirmation of an individual employee's rate. See the
+[CBR and vacation assessment guidance](https://financeandbusiness.ucdavis.edu/finance/costing-policy-analysis/cbr)
+and [CBR lookup guidance](https://financeandbusiness.ucdavis.edu/finance/costing-policy-analysis/cbr/cbr-lookup).
 
-| Category      | Before correction | After correction |
-| ------------- | ----------------: | ---------------: |
-| Salary        |           $75,000 |          $77,500 |
-| Fringe        |           $30,000 |          $31,000 |
-| Supplies      |            $7,750 |           $7,850 |
-| Fee remission |            $5,750 |           $6,500 |
+## Personnel dates and partial months
 
-The fee result stops deducting its booked $750 again, but retains the existing
-$1,500 additional forecast. Treating that input as a full-month target would
-instead give $7,250. That fee policy remains undecided.
+Salary and benefits apply only on dates when the project, job, and funding entry
+are all active. Start and end dates are inclusive. The calculator counts calendar
+days, including weekends, within each month:
 
-Recommend showing historical actuals without claiming historical end balances.
-Current budgets, commitments, and a limited expense history are insufficient to
-reconstruct historical financial positions.
+```text
+monthly personnel estimate = full-month cost at the funding share
+                             × eligible days / calendar days in the month
+```
 
-## Date boundaries
+For a full-month project share of $2,500 salary and $1,000 benefits:
 
-Two examples reveal bounds problems independently of the partial-month policy:
+| Eligible dates               |  Salary | Benefits |
+| ---------------------------- | ------: | -------: |
+| February 20 through 28, 2026 | $803.57 |  $321.43 |
+| March 1 through 5, 2026      | $403.23 |  $161.29 |
 
-- An April 1 project receives January through March salary, fringe, and expenses.
-  Job and expense forecasts check project end dates but ignore project start
-  dates. Snapshot personnel netting follows the accepted rule above.
-- A job ending March 10 and funding starting March 31 produce a full March
-  charge despite having no overlapping dates. Job and funding windows are each
-  reduced to months before being combined.
+A job ending March 10 has no eligible days with funding starting March 31.
+A project starting April 1 has no salary or benefits forecast before April.
 
-Recommend enforcing project start/end bounds and actual overlap among the job,
-funding, and project windows. Whether a valid partial month should receive a
-whole-month cost or daily proration remains a separate decision. Sequential
-funding schedules within one month also need an explicit example before funding
-editing is added.
+For a $5,000 monthly appointment funded entirely by Project A through March 15
+and Project B starting March 16, the salary allocations are $2,419.35 to A and
+$2,580.65 to B. Calculations retain precision until amounts are displayed.
 
-## Benefits, COLA, and fee remission
+Funding percentages are used as entered. Missing funding is not redistributed,
+and overlapping allocations are not scaled down. An allocation ending March 15
+and another starting March 15 both include that day. Plans can be saved with
+funding gaps or overlaps.
 
-| Area             | Existing behavior                                                                 | Review direction                                                                                                            |
-| ---------------- | --------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| CBR and vacation | Salary multiplied by the sum of two rates                                         | Arithmetic is consistent when both inputs are known; missing inputs must be distinguished from genuine zero.                |
-| COLA             | Compounds annually after the snapshot month                                       | Consistent with a base salary expressed as of the snapshot. Keep this interpretation explicit.                              |
-| Snapshot in July | July COLA is not applied again that year                                          | Appropriate if the captured salary is already the snapshot's rate; source freshness remains relevant.                       |
-| Future hire      | An August hire can receive a July increase before starting                        | Decide whether a new hire's entered salary is a snapshot-date rate or the agreed starting salary when that editor is added. |
-| Fee remission    | Fixed monthly job amount multiplied by funding share, without FTE or COLA scaling | Confirm the unit and eligible months before adding the editor; do not activate the unused $1,500 placeholder as a default.  |
-| Fee run rates    | Category 08 contributes to generated nonpersonnel expenses                        | Adding a job-level fee can overlap those estimates; choose a single owner for that cost before enabling it.                 |
+## Snapshot balance
 
-With a 3% July COLA, the example's per-project salary is $2,500 before the first
-increase, then $2,575, $2,652.25, and $2,731.8175 in successive Julys. The
-calculator retains precision and the UI formats dollars for display. Reopening
-a saved plan does not advance its snapshot or apply new increases automatically.
+```text
+snapshot balance = budget - spent to date - commitments
+```
 
-UC Davis documents CBR and vacation leave assessments separately. Its title-code
-CBR mapping is a planning estimate, not confirmation of an individual employee's
-rate. Those sources support keeping the captured inputs explicit rather than
-presenting this forecast as payroll-exact. [CBR and VLA](https://financeandbusiness.ucdavis.edu/finance/costing-policy-analysis/cbr),
-[CBR lookup guidance](https://financeandbusiness.ucdavis.edu/finance/costing-policy-analysis/cbr/cbr-lookup).
+Spent to date includes costs already booked in the snapshot month. Those costs
+remain visible as actuals and are not deducted from the snapshot balance again.
+Only additional forecast spending reduces that balance. This calculation assumes
+the booked actuals are included in the captured balance.
 
-Fee remission depends on eligibility, tuition/fees, and appointment timing; it
-is not a universal salary percentage. A user-entered monthly planning amount can
-be useful, but it should not imply automatic policy eligibility or fee lookup.
-[Graduate Studies guidance](https://grad.ucdavis.edu/tuition-and-fee-remission).
+Each project keeps its own balance. A surplus on one project does not cover a
+shortfall on another. Historical balances shown in the forecast are reconstructed
+from the snapshot's budget and commitments, not observed historical month-end
+balances.
 
-## Source completeness and limits
+## Snapshot-month personnel costs
 
-The read-only `WalterDev` checks also found:
+For each project, salary and benefits are calculated separately. The calculator
+first sums the eligible-day estimates for all relevant jobs across the entire
+snapshot month, then subtracts the amount already booked in that category:
 
-- Portfolio rows satisfy `budget - spent - committed = reported balance` within
-  two cents in the inspected dataset. The seed stores those inputs unchanged.
-- Portfolio, monthly costs, and personnel refresh separately; portfolio load
-  dates also vary across rows. Seeding does not establish a shared source cutoff.
-- The SQL seed selects its reporting month using server-local `GETDATE()`, while
-  the application timestamps the snapshot in UTC and the calculator uses UTC.
-  Those month anchors can disagree around month-end. Use a consistent reporting
-  month when correcting the snapshot boundary.
-- Salary/FTE/funding inputs use the agreed full-time-rate units. Cognos earn-code
-  shares are multiplied into the distribution share by the seeder.
-- The inspected benefits lookup contains DVCMP and UCANR sets, but no DVMED set.
-  Some current funding rows in the other sets also lack a matching lookup.
-  This is source-table evidence, not a count of affected seedable portfolios.
-- All vacation assessment values in the inspected lookup are null. The seeder
-  converts missing vacation to zero; missing CBR also becomes zero in calculation.
-  A zero-cost forecast therefore does not establish that an assessment is zero.
-- The existing single-project projection intentionally excludes vacation, while
-  the PI calculator adds it when supplied. Agreement with that older page is
-  not by itself an acceptance test for this feature.
-- Committed amounts are already reserved in the starting balance. Source data
-  does not identify which forecast expenses satisfy each commitment, so this
-  review does not establish that every commitment and forecast are disjoint.
+```text
+additional personnel forecast = max(month's personnel estimate - booked actual, 0)
+month-end balance = snapshot balance - total additional forecast spending
+```
 
-Recommend visible incomplete-assumption feedback when source rates are missing,
-while retaining the agreed ability to save incomplete plans. Existing saved
-vacation values cannot distinguish a missing lookup from genuine zero because
-seeding already discarded that distinction. Reliable feedback requires preserving
-it. Supplying missing rate data and handling commitment overlap need explicit
-scope; silently inventing rates or treating every missing value as an
-authoritative zero is inappropriate.
+| Salary estimate for one project | Booked this month | Additional forecast |
+| ------------------------------- | ----------------: | ------------------: |
+| $2,500                          |            $1,000 |              $1,500 |
+| $2,750                          |            $1,000 |              $1,750 |
+| $900                            |            $1,000 |                  $0 |
 
-## Next implementation boundary
+Reducing an estimate below the booked amount does not refund booked costs.
+Salary and benefits use separate comparisons because their postings can arrive
+at different times. Eligible days before the snapshot date still contribute to
+the estimate because their costs may not yet be booked. For a March 20 snapshot,
+a job active March 1 through 10 with a $1,000 estimate and $800 booked costs
+still forecasts $200. The calculator does not also prorate personnel to days
+after the snapshot. Later months use their eligible-day estimates.
 
-1. Review the implemented snapshot-month rule, corrected balance consumption,
-   and display of booked actuals. Cover downward salary edits as well as increases.
-2. In a separately accepted increment, review the date examples and decide valid
-   bounds and partial-month treatment before adding funding-schedule editing.
-3. In a separately accepted increment, decide how to show missing cost assumptions.
-   Keep fee eligibility, hypothetical-hire rate dates, and more detailed
-   expense/commitment ownership with their relevant later editors.
+Credits are negative actuals and follow the same formula. A zero estimate with
+a $100 booked credit produces $100 of additional forecast. This adjustment
+also applies to credits booked after a project's end month, while that end date
+continues to limit job and expense forecasts.
 
-Review each correction before moving to Stage 2. This increment changes only
-snapshot-month calculation and its explanation, examples, and tests. Save
-contracts, authentication, schemas, source data, and future-month formulas are
-unchanged. Source cutoff alignment and historical balance presentation remain
-open alongside the other calculation findings.
+## Additional expenses and fee remission
 
-## Verification
+Explicit expenses are additional planned costs, including expenses assigned to
+salary or benefits categories. They are added after the personnel calculation
+and are not reduced by booked personnel costs.
 
-The initial source review passed its executable examples, 18 calculator and
-workspace tests, TypeScript checking, and ESLint. Independent reviewers checked
-the arithmetic and distinction between demonstrated defects and proposed rules.
-The current correction adds regression coverage for the accepted rule and a
-booked-cost preview for exercising it through the salary editor.
+Recurring expenses, including generated estimates, are prorated for project-active
+days within their applicable months. Project start and end dates are inclusive.
+In the snapshot month, only days after the snapshot date count. The snapshot day
+itself is excluded.
 
-The 38 focused calculator, workspace, and UI tests passed. The new UI regression
-failed before the correction, showing hidden actuals and an excessive forecast.
-TypeScript, changed-file ESLint, the executable review, and the production build
-passed. Independent code review found no blocking defects. React Doctor scored
-97/100 with a component-size warning on the existing workspace component; this
-increment adds only its short explanation. The build retains its existing CSS,
-module-directive, and bundle-size warnings.
+For a $310 monthly expense and an October 16 snapshot:
+
+| Project dates                      | Eligible days         | Additional forecast |
+| ---------------------------------- | --------------------- | ------------------: |
+| Active throughout October          | October 17 through 31 |                $150 |
+| Ends October 20                    | October 17 through 20 |                 $40 |
+| Starts October 20, ends October 31 | October 20 through 31 |                $120 |
+
+Later months use all applicable project-active days. A fully active month uses
+the full monthly amount; a month with no eligible days has no recurring forecast.
+
+One-time expenses use their full amount when the specified month overlaps the
+project's dates and is the snapshot month or later. They are not prorated by day.
+For an October 16 snapshot, a $1,000 October expense still adds $1,000 if the
+project ended October 10. The expense specifies a month, not a posting date.
+Entries outside the eligible months stay in the saved plan but do not contribute
+to the forecast; changing the dates can make them applicable again.
+
+A job's monthly fee-remission amount is allocated by its funding shares, without
+FTE, COLA, or daily proration. It remains an additional forecast cost; the personnel
+remainder formula does not apply to it. Including the same fees in a recurring
+expense estimate and a job's fee-remission amount would count them twice.
+
+Fee remission uses month-based job and funding windows and the project's end
+month. Its current calculation does not enforce the project's start date or
+require exact day overlap within a month.
+
+The forecast does not determine fee-remission eligibility or look up tuition
+and fees. See [Graduate Studies' tuition and fee remission guidance](https://grad.ucdavis.edu/tuition-and-fee-remission)
+for those rules.
+
+## Cost-of-living adjustments
+
+COLA compounds annually in the configured month after the snapshot month.
+For a $2,500 monthly project salary and a 3% July COLA, the cost becomes $2,575
+in the first July, $2,652.25 in the second, and $2,731.8175 in the third.
+Calculations retain precision; the UI formats amounts as currency.
+
+The salary input is treated as the rate at the snapshot date. If the snapshot
+is in July, a July increase is not applied again that year. The following July
+receives the next increase. These assumptions stay tied to the saved snapshot
+when the plan is reopened.

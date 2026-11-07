@@ -112,3 +112,26 @@ export function createBookedSalaryExample(): Projection {
   }
   return plan;
 }
+
+/** Partial funding dates isolate proration and a funding entry that never overlaps its job. */
+export function createDateBoundaryExample(): Projection {
+  const plan = createBookedSalaryExample();
+  plan.name = 'Date boundary example';
+  plan.createdAt = plan.seededAt = plan.updatedAt = '2026-01-15T00:00:00Z';
+  const job = plan.jobs[0];
+  job.startDate = '2026-02-15';
+  job.endDate = '2026-03-10';
+  job.fundingEntries[0].startDate = '2026-02-20';
+  job.fundingEntries[0].endDate = '2026-03-05';
+  job.fundingEntries[1].startDate = '2026-03-31';
+  job.fundingEntries[1].endDate = '2026-04-01';
+  for (const project of plan.projects) {
+    project.startDate = '2026-01-01';
+    project.endDate = '2026-04-30';
+    project.actuals = [];
+    for (const budget of project.budgets) {
+      budget.spentToDate = 0;
+    }
+  }
+  return plan;
+}

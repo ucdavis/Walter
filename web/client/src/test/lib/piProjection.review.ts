@@ -71,8 +71,8 @@ function extendThrough(plan: Projection, end: string) {
 
 /**
  * Run with `node scripts/review-projection-calculations.ts` from web/client.
- * Check agreed salary scaling and existing additive-rate arithmetic. Review examples
- * report current results beside alternatives without treating them as accepted rules.
+ * Check agreed salary scaling and print the date calculations. Other examples
+ * distinguish unresolved alternatives from the rules already chosen.
  */
 export function reviewProjectionCalculations() {
   const salary = example();
@@ -157,6 +157,48 @@ export function reviewProjectionCalculations() {
   });
   currentProject.expenses = [{ ...futureProject.projects[0].expenses[0] }];
 
+  const fundingSwitch = example();
+  fundingSwitch.jobs[0].fundingEntries = [
+    {
+      ...fundingSwitch.jobs[0].fundingEntries[0],
+      endDate: '2026-03-15',
+      percent: 1,
+      startDate: '2026-03-01',
+    },
+    {
+      ...fundingSwitch.jobs[0].fundingEntries[1],
+      endDate: '2026-03-31',
+      percent: 1,
+      startDate: '2026-03-16',
+    },
+  ];
+
+  const recurringDates = [
+    { end: '2026-10-31', start: null },
+    { end: '2026-10-20', start: null },
+    { end: '2026-10-31', start: '2026-10-20' },
+  ].map(({ end, start }) => {
+    const plan = structuredClone(currentActuals);
+    plan.jobs = [];
+    plan.projects[0].startDate = start;
+    plan.projects[0].endDate = end;
+    return { end, start, supplies: costs(plan, '2026-10').supplies };
+  });
+
+  const oneTime = structuredClone(currentActuals);
+  oneTime.jobs = [];
+  oneTime.projects[0].endDate = '2026-10-10';
+  oneTime.projects[0].expenses = ['2026-09', '2026-10', '2026-11'].map(
+    (month) => ({
+      amount: 1000,
+      description: `Synthetic ${month} purchase`,
+      endMonth: null,
+      expenditureCategory: SUPPLIES,
+      kind: 'OneTime',
+      startMonth: `${month}-01`,
+    })
+  );
+
   return {
     establishedSalaryExample: {
       afterPerProject: salaryAfterCosts,
@@ -227,9 +269,8 @@ export function reviewProjectionCalculations() {
           projectB: costs(boundaries, month, 2),
         })),
         independentlyWorked:
-          'Current month-only checks charge Project A salary/fringe 2500/1000 in Feb and Mar; Project B 2500/1000 in Mar. Actual job/funding date intersection gives Project B zero because the windows never overlap. If valid partial months use inclusive daily proration, Project A salary is 803.5714285714 in Feb (9/28 days) and 403.2258064516 in Mar (5/31 days).',
-        question:
-          'After enforcing actual date overlap, should valid partial months receive whole-month costs or daily proration?',
+          'Project A salary/fringe is 803.5714285714/321.4285714286 in February (9/28 days), then 403.2258064516/161.2903225806 in March (5/31 days). Project B is zero because its funding dates never overlap the job.',
+        rule: 'Use the inclusive intersection of project, job, and funding dates; prorate salary and fringe by eligible calendar days.',
         topic: 'Job and funding date boundaries',
       },
       {
@@ -239,10 +280,42 @@ export function reviewProjectionCalculations() {
           (month) => ({ ...costs(futureProject, month), month })
         ),
         independentlyWorked:
-          'If project start bounds all charges, Jan through Mar salary/fringe/supplies are zero; April salary/fringe/supplies are 2500/1000/310. Current seed-month supplies use 30/31 of 310 = 300, excluding Jan 1.',
-        question:
-          'Project start is currently ignored. After enforcing project bounds, is excluding the snapshot day from recurring expense proration intentional?',
+          'January through March salary/fringe/supplies are zero; April salary/fringe/supplies are 2500/1000/310. The February one-time purchase stays in the plan but contributes no forecast before the project starts.',
+        rule: 'Project dates bound personnel and recurring expense estimates. A one-time expense requires its month to overlap the project dates.',
         topic: 'Future project start',
+      },
+      {
+        assumptions:
+          'A 0.5-FTE appointment at 10000 monthly full-time salary. Project A funds 100% of the appointment March 1 through 15; Project B funds 100% March 16 through 31. Illustrative benefits remain 40%.',
+        current: {
+          projectA: costs(fundingSwitch, '2026-03', 1),
+          projectB: costs(fundingSwitch, '2026-03', 2),
+        },
+        independentlyWorked:
+          'Salary is 5000 × 15/31 = 2419.3548387097 for A and 5000 × 16/31 = 2580.6451612903 for B, totaling 5000. Benefits total 2000, split by the same fractions.',
+        rule: 'Each entry uses its own eligible days and entered share. Sequential full allocations do not each charge a whole month.',
+        topic: 'Funding switch within a month',
+      },
+      {
+        assumptions:
+          'Snapshot October 16, 2026. A 310 monthly supplies estimate with three different project date ranges.',
+        current: recurringDates,
+        independentlyWorked:
+          'A project active all October adds 150 for October 17 through 31. Ending October 20 adds 40 for October 17 through 20. Starting October 20 adds 120 for October 20 through 31.',
+        rule: 'Recurring estimates use project-active days and exclude the snapshot day and earlier days in the snapshot month.',
+        topic: 'Recurring expense dates',
+      },
+      {
+        assumptions:
+          'Snapshot October 16, 2026. Project ends October 10. Three explicit 1000 one-time expenses specify September, October, and November.',
+        current: ['2026-09', '2026-10', '2026-11'].map((month) => ({
+          month,
+          supplies: costs(oneTime, month).supplies,
+        })),
+        independentlyWorked:
+          'September and November add zero. October adds the full 1000 even though the project ended before the snapshot date. All three expense entries stay in the plan.',
+        rule: 'One-time expenses specify a month, not a posting day. Charge the full amount in an eligible month; retain out-of-range entries without forecasting them.',
+        topic: 'One-time expense month eligibility',
       },
       {
         assumptions:

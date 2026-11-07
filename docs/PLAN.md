@@ -1,6 +1,8 @@
 # Projections implementation plan
 
-Status: Stage 1a and Stage 1b saving accepted. Snapshot-month correction under review.
+Status: Stage 1a, Stage 1b saving, and the snapshot-month and date-boundary
+corrections accepted. Stage 1b remains open for the remaining calculation
+decisions. Saving remains available with funding gaps/overlaps.
 Updated November 6, 2026.
 
 Build a guided planning workspace where users can adjust a dated portfolio
@@ -21,6 +23,8 @@ as each decision is settled and each stage is reviewed.
   are outside the initial feature; prepare for AI editing later.
 - Work in stages. Exercise the result and review its code before moving to the
   next stage. Prefer small, understandable changes and shared rules.
+- The deliverable is production code. Temporary previews and review scripts
+  must be removed before the feature is considered complete.
 - Make the workspace inspectable in memory and support direct navigation to
   meaningful sections and editing targets.
 - The salary calculation below and the three [Stage 0 workflow decisions](#stage-0-confirmed-decisions)
@@ -29,8 +33,16 @@ as each decision is settled and each stage is reviewed.
 - Stage 1b uses the existing `UpdatedAt` timestamp for concurrency and saves the
   whole applied draft. A conflict offers Overwrite or Discard. The confirmed
   behavior and implementation stops are recorded below.
-- The [accepted snapshot-month rule](projections-calculation-review.md#accepted-snapshot-month-rule)
-  owns personnel netting, signed-credit handling, and additive expense treatment.
+- The [snapshot-month calculation](projections-calculation-review.md#snapshot-month-personnel-costs)
+  defines personnel netting and signed-credit handling. Explicit expenses remain
+  additional forecast costs.
+- The [personnel date rules](#agreed-personnel-date-rules) use inclusive overlap
+  among project, job, and funding dates, with calendar-day proration of salary
+  and benefits.
+- [Recurring expense estimates](#agreed-recurring-expense-date-rules) use
+  project-active days, restricted to days after the snapshot date in its month.
+- [One-time expenses](#agreed-one-time-expense-month-eligibility) retain their
+  full amount in an eligible month. Out-of-range entries remain saved.
 
 ### Agreed salary example
 
@@ -168,7 +180,7 @@ an already saved snapshot. Decide the owning boundary in Stage 2.
 | 4. Expenses and details       | Monthly/one-time expenses, generated estimates, history windows, notes, and horizon                                                                                              | Explicit expenses survive regeneration; save/reload preserves the preview.                                                                |
 | 5. Complete guided experience | Setup composed from existing editors, full project drilldowns, explanations, and controlled rollout                                                                              | Verify the complete workflow and genuine reuse.                                                                                           |
 
-Every increment includes appropriate automated checks, a usable preview,
+Every increment includes appropriate automated checks, a way to try the result,
 independent code review, and a review with the user before moving on. Split a stage
 into smaller changes when it contains separate behaviors. Accessibility, access
 handling, error states, and responsiveness are acceptance criteria throughout.
@@ -177,6 +189,25 @@ AI service integration, effective-dated salary schedules, real-time collaboratio
 automatic merging, event sourcing, and browser persistence of real portfolio data
 are outside the proposed initial implementation. Deferring effective-dated salary
 schedules is a confirmed Stage 0 decision.
+
+### Production cleanup before completion
+
+Remove temporary development aids as the production workflow replaces them.
+The final feature review must confirm this cleanup is complete, including:
+
+- Remove `web/client/src/dev/projections/`, `web/client/projections-preview.html`, the
+  synthetic scenario controls and server, and `window.walterProjectionPreview`.
+- Remove `web/client/scripts/review-projection-calculations.ts` and
+  `web/client/src/test/lib/piProjection.review.ts` after useful agreed examples
+  are covered by automated regression tests.
+- Replace tests that depend on the preview router or controls with tests of
+  production routes and components. Keep only the small fixtures and test doubles
+  those tests need under `src/test/`.
+- Remove obsolete preview instructions, links, imports, and configuration. Verify
+  the production workflow, regression tests, and build after removal.
+
+Keeping these files out of the production bundle is temporary protection;
+completion requires removing them from the repository.
 
 ## Stage 0 confirmed decisions
 
@@ -424,14 +455,18 @@ changed-file ESLint, and independent review. React Doctor scored the changed
 files 100/100. The production build contains only the normal application entry;
 the synthetic preview and controls are excluded.
 
-The user exercised the preview and accepted the saving behavior. The
-[calculation review](projections-calculation-review.md) records executable fixed
-examples, read-only source reconciliation, and proposed corrections. It confirms
-a current-month balance issue and date-boundary defects. The user accepted
-keeping booked salary and benefits fixed and forecasting only their remainder.
-The current increment implements that rule and stops deducting snapshot actuals
-again from captured balances. Explicit expenses remain additional forecasts;
-fee remission is not treated as a full-month target in this increment.
+The user exercised the preview and accepted the saving behavior.
+
+### Calculation review
+
+The [calculation reference](projections-calculation-review.md) explains the
+formulas and how to interpret their results. The source review found a
+current-month balance issue and date-boundary defects. The user accepted the
+implemented snapshot-month correction. It keeps booked salary and benefits
+fixed and visible, forecasts only their remainder, and stops deducting snapshot
+actuals again from captured balances.
+Explicit expenses remain additional forecasts; fee remission is not treated as
+a full-month target by this correction.
 
 The [booked salary preview](http://127.0.0.1:5174/projections-preview.html?example=booked&section=overview&project=1)
 uses the same workspace with illustrative benefit rates. Each project has
@@ -442,9 +477,194 @@ per-project salary target below booked salary. January's forecast becomes zero,
 its actuals stay $1,400, and its end balance stays at the captured $26,600.
 February still forecasts the full $900 salary plus $360 benefits.
 
-Date bounds, historical balance presentation, consistent source reporting months,
-missing benefit inputs, fee remission, and remaining COLA assumptions are still
-open. This correction does not close Stage 1b or begin Stage 2.
+The date rules below are implemented and accepted. Historical balance
+presentation, consistent source reporting months, missing benefit inputs, fee
+remission, and remaining COLA assumptions are still open. This increment does
+not close Stage 1b or begin Stage 2.
+
+#### Agreed personnel date rules
+
+For each month's salary and benefits, use the dates when the project, job, and
+funding entry all overlap that month. Start and end dates are inclusive. Count
+all calendar days, including weekends:
+
+```text
+personnel target = full-month cost at the funding share
+                   × eligible days / calendar days in the month
+```
+
+An empty intersection produces no job target. A project starting April 1 has no
+salary or benefit target in January through March. A job ending March 10 cannot
+use funding starting March 31.
+
+For a full-month project share of $2,500 salary and $1,000 benefits:
+
+| Eligible dates               |  Salary | Benefits |
+| ---------------------------- | ------: | -------: |
+| February 20 through 28, 2026 | $803.57 |  $321.43 |
+| March 1 through 5, 2026      | $403.23 |  $161.29 |
+
+A $5,000 monthly appointment funded entirely by Project A through March 15 and
+Project B starting March 16 allocates $2,419.35 to A and $2,580.65 to B. These
+are displayed dollar amounts; retain calculation precision until presentation.
+An entry ending March 15 and another starting March 15 overlap for one day.
+
+Funding gaps and overlaps must not prevent saving. The user expects funding
+sources to operate by month in practice and prioritizes simple calculations and
+an uncluttered workspace. Preserve the agreed date calculations and supplied
+shares. This increment does not require new funding-warning UI or a model of
+warning date ranges. Revisit concise feedback with the funding editor in Stage 3.
+Monthly source alignment is an expectation, not an established data guarantee.
+
+For the snapshot month, calculate the target over all eligible days in that
+month, including days before the snapshot date. Aggregate targets per
+project/category, then apply the accepted booked-cost subtraction once. Do not
+also prorate personnel to days after the snapshot date. Preserve booked actuals
+and the accepted signed-credit adjustment, including credits after project end.
+
+This agreement covers salary and benefits. Expense rules follow below; fee
+remission remains a separate decision. The implementation was reviewed and
+accepted; Stage 1b remains open.
+
+#### Agreed recurring expense date rules
+
+Monthly and generated recurring expense estimates count only project-active days
+within the expense's applicable months. Project start and end dates are inclusive.
+In the snapshot month, also restrict the estimate to days after the snapshot
+date, excluding the snapshot day itself:
+
+```text
+additional recurring forecast = monthly amount
+                                × eligible days / calendar days in the month
+```
+
+For a $310 monthly expense and an October 16 snapshot:
+
+| Project dates                      | Eligible days         | Additional forecast |
+| ---------------------------------- | --------------------- | ------------------: |
+| Active throughout October          | October 17 through 31 |                $150 |
+| Ends October 20                    | October 17 through 20 |                 $40 |
+| Starts October 20, ends October 31 | October 20 through 31 |                $120 |
+
+Later months use all applicable project-active days in the month. No eligible
+days means no recurring forecast. These estimates remain additional costs;
+booked actuals are already included in the snapshot balance and are not
+subtracted from the expense estimate.
+
+#### Agreed one-time expense month eligibility
+
+For now, a one-time expense contributes its full amount when its selected month
+overlaps the project's dates and is the snapshot month or later. It is not
+prorated by days or netted against booked actuals. An expense outside those
+months remains in the saved plan but contributes nothing to the forecast.
+
+An October 16 snapshot, a project ending October 10, and a $1,000 October
+one-time expense still produce $1,000 of additional forecast. The expense
+specifies only October, not an exact posting day. This rule preserves that
+explicit expected charge without introducing a day-level expense field.
+
+Fee-remission amount and eligibility rules are not selected by these date
+agreements. Preserve their existing monthly behavior in this increment. This
+does not establish that fee forecasts already follow the new personnel bounds.
+
+#### Date-boundary implementation review
+
+The calculator now uses inclusive UTC calendar-day overlap for salary and
+benefits, project-active days for recurring estimates, and month eligibility for
+one-time expenses. Snapshot personnel netting still follows aggregation over
+the entire eligible month. Saved assumptions and out-of-range expense entries
+remain intact. The inspectable monthly funding share is an average over active
+job days, including explicit outside funding; it does not prove that every day
+is fully covered. Saving and warning UI are unchanged.
+
+Try the [date-boundary preview](http://127.0.0.1:5174/projections-preview.html?example=dates&section=overview&project=1).
+It uses the agreed February/March job and funding dates with illustrative benefit
+rates. Project A forecasts $1,125 in February and $564.52 in March. Project B
+forecasts zero because its funding never overlaps the job. Changing annual
+salary from $120,000 to $132,000 changes A's forecasts to $1,237.50 and $620.97;
+B stays at zero. The existing Apply/Cancel and synthetic saving flow remain
+available. This adds only an example to the temporary preview covered by the
+production cleanup checklist.
+
+All 499 client tests passed, including 23 new date regressions. The first new
+regression reproduced a $2,500 February salary charge where the accepted
+intersection requires $803.57. TypeScript, changed-file ESLint, the executable
+calculation examples, and the production build passed. Browser checks verified
+the baseline, salary edit, navigation, and successful synthetic save. Independent
+code review found no actionable defects.
+
+React Doctor scored 97/100 with the existing workspace component-size warning.
+Existing CSS, module-directive, and bundle-size build warnings remain. Checks
+used local synthetic data and did not revalidate deployed API/database behavior.
+The user reviewed and accepted this correction. Publication and deployment
+remain outside this increment; no new no-mistakes pipeline or CI run was
+started. Stage 1b remains open for its other calculation decisions.
+
+#### Findings to resolve
+
+The November 6 source review and executable examples identified the following
+work. These findings do not authorize implementing later stages together.
+
+- **Reporting cutoff:** portfolio totals, monthly costs, and personnel refresh
+  separately. Matching source records confirmed that ITD spending includes the
+  snapshot month, but other categories did not reconcile. The SQL seed uses
+  server-local `GETDATE()` while the application uses UTC. Establish a consistent
+  reporting month and decide how to handle mismatched source cutoffs.
+- **Historical balances:** the calculator reconstructs history using current
+  budgets and commitments. Decide how to present historical actuals without
+  implying that these are observed month-end balances.
+- **Missing benefit inputs:** the inspected `WalterDev` lookup had DVCMP and
+  UCANR sets but no DVMED set; some rows in the other sets also lacked matches.
+  Vacation assessment values were all null. Seeding converts missing vacation
+  to zero, so existing saved plans cannot distinguish missing data from genuine
+  zero. Preserve that distinction before adding reliable incomplete-assumption
+  feedback. Keep incomplete plans saveable and do not invent missing rates.
+- **Fees:** category 08 contributes to generated expense estimates and can
+  overlap job-level fee remission. Decide the amount's unit, eligible months,
+  and which estimate owns the cost before adding its editor. Its existing
+  monthly eligibility does not follow the new personnel date bounds. Do not
+  activate the unused $1,500 placeholder as a default.
+- **Future hires:** decide whether an entered salary is a snapshot-date rate
+  or the agreed starting rate. The existing COLA calculation can apply an
+  increase before the job starts.
+- **Commitments:** the starting balance already reserves commitments, but the
+  source aggregates do not identify which future expenses fulfill them. Decide
+  how to avoid overlapping commitments and forecast expenses.
+
+Source references are the [portfolio import](../pipelines/pipeline/RefreshFacultyDeptPortfolio.json),
+[seed query](../datamart/StoredProcedures/usp_GetProjectionSeed.sql), and
+[calculator](../web/client/src/lib/piProjection.ts). Salary/FTE/funding units
+matched the full-time-rate interpretation; the seeder includes Cognos earn-code
+shares in the funding fraction. The older single-project calculator excludes
+vacation, so matching that page alone is insufficient validation.
+
+#### Review examples and verification
+
+Run the [executable calculation examples](../web/client/src/test/lib/piProjection.review.ts)
+from `web/client`:
+
+```sh
+node scripts/review-projection-calculations.ts
+```
+
+They exercise the calculator and salary operation, check salary scaling, and
+print examples for the remaining policy decisions. Conditional alternatives
+are not regression assertions.
+
+The snapshot correction passed 56 focused client tests, seven local browser
+scenarios, TypeScript, changed-file ESLint, and the production build. Regression
+tests reproduced hidden actuals and excessive forecast spending before the fix.
+Review also caught a credit after project end that the date guard suppressed;
+that case is fixed and tested for salary and benefits. Browser checks covered
+salary edits, save conflicts, pending saves, and production preview exclusion.
+Validation used synthetic data; it did not revalidate deployed API or database
+concurrency. The local no-mistakes run passed without publication or CI.
+
+React Doctor reported 97/100 with a component-size warning on the workspace.
+Existing CSS, module-directive, and bundle-size build warnings remain. The user
+accepted this correction and the date rules above. Funding gaps/overlaps remain
+saveable, with no new warning UI required by this increment.
+Stage 1b stays open until its remaining decisions and examples are resolved.
 
 ## Questions to resolve in their owning stages
 

@@ -15,6 +15,7 @@ export interface PiProjectionRow {
 }
 
 export interface JobFundingMonth {
+  /** Average funding share over active job days; gaps and overlaps can offset. */
   fundedPercent: number;
   jobId: number;
   month: string;
@@ -39,6 +40,33 @@ const within = (m: number, start: string | null, end: string | null) =>
   (start === null || toIndex(start) <= m) &&
   (end === null || toIndex(end) >= m);
 
+const DAY_MS = 86_400_000;
+type DayRange = { end: number; start: number };
+type DateBounds = { endDate: string | null; startDate: string | null };
+
+// Date-only planning windows use UTC days so daylight saving cannot change their length.
+const toDay = (value: string) =>
+  Date.parse(`${value.slice(0, 10)}T00:00:00Z`) / DAY_MS;
+
+const monthDays = (m: number): DayRange => ({
+  end: Date.UTC(Math.floor(m / 12), (m % 12) + 1, 0) / DAY_MS,
+  start: Date.UTC(Math.floor(m / 12), m % 12, 1) / DAY_MS,
+});
+
+/** Counts the inclusive intersection; a missing endpoint imposes no bound. */
+function overlapDays(range: DayRange, ...bounds: DateBounds[]) {
+  let { end, start } = range;
+  for (const bound of bounds) {
+    if (bound.startDate !== null) {
+      start = Math.max(start, toDay(bound.startDate));
+    }
+    if (bound.endDate !== null) {
+      end = Math.min(end, toDay(bound.endDate));
+    }
+  }
+  return Math.max(0, end - start + 1);
+}
+
 /**
  * Projects a PI's portfolio month by month. "Now" is always the projection's seededAt,
  * because budgets and actuals are a snapshot from that moment.
@@ -49,10 +77,7 @@ export function computePiProjection(projection: Projection): {
 } {
   const seed = new Date(projection.seededAt);
   const seedIndex = seed.getUTCFullYear() * 12 + seed.getUTCMonth();
-  const daysInMonth = new Date(
-    Date.UTC(seed.getUTCFullYear(), seed.getUTCMonth() + 1, 0)
-  ).getUTCDate();
-  const proration = (daysInMonth - seed.getUTCDate()) / daysInMonth;
+  const seedDay = toDay(seed.toISOString());
 
   const projectEnd = (p: ProjectionProject) =>
     p.endDate ? toIndex(p.endDate) : seedIndex + 12;
@@ -93,6 +118,8 @@ export function computePiProjection(projection: Projection): {
       if (!within(m, job.startDate, job.endDate)) {
         continue;
       }
+      const days = monthDays(m);
+      const activeJobDays = overlapDays(days, job);
       const salary =
         (job.monthlySalary ?? 0) * job.fte * colaFactor(job, seedIndex, m);
       const costs: [string, number][] = [
@@ -101,26 +128,51 @@ export function computePiProjection(projection: Projection): {
           FRINGE_CATEGORY,
           salary * ((job.cbrRate ?? 0) + job.vacationAccrualRate),
         ],
-        [FEE_REMISSION_CATEGORY, job.feeRemissionMonthly ?? 0],
       ];
       let fundedPercent = 0;
       for (const f of job.fundingEntries) {
         if (!within(m, f.startDate, f.endDate)) {
           continue;
         }
-        fundedPercent += f.percent;
         const project =
           f.projectId === null ? undefined : projectsById.get(f.projectId);
-        if (!project) {
+
+        // Fee remission keeps its existing monthly eligibility and amount pending its own review.
+        if (project && job.feeRemissionMonthly) {
+          charge(
+            project,
+            FEE_REMISSION_CATEGORY,
+            m,
+            job.feeRemissionMonthly * f.percent
+          );
+        }
+
+        if (
+          activeJobDays === 0 ||
+          (f.projectId !== null && !project) ||
+          (project && m > projectEnd(project))
+        ) {
           continue;
         }
+        const eligibleDays = project
+          ? overlapDays(days, job, f, project)
+          : overlapDays(days, job, f);
+        fundedPercent += f.percent * (eligibleDays / activeJobDays);
+        if (!project || eligibleDays === 0) {
+          continue;
+        }
+
+        // Use the whole month's eligible days here; booked snapshot costs are netted below.
+        const fraction = eligibleDays / overlapDays(days);
         for (const [category, cost] of costs) {
           if (cost) {
-            charge(project, category, m, cost * f.percent);
+            charge(project, category, m, cost * f.percent * fraction);
           }
         }
       }
-      jobFunding.push({ fundedPercent, jobId: job.id, month: toMonth(m) });
+      if (activeJobDays > 0) {
+        jobFunding.push({ fundedPercent, jobId: job.id, month: toMonth(m) });
+      }
     }
   }
 
@@ -154,29 +206,33 @@ export function computePiProjection(projection: Projection): {
     for (const e of project.expenses) {
       if (e.kind === 'OneTime') {
         if (e.startMonth) {
-          charge(
-            project,
-            e.expenditureCategory,
-            toIndex(e.startMonth),
-            e.amount
-          );
+          const m = toIndex(e.startMonth);
+          // A one-time expense specifies a month, so an eligible month keeps its full amount.
+          if (overlapDays(monthDays(m), project) > 0) {
+            charge(project, e.expenditureCategory, m, e.amount);
+          }
         }
         continue;
       }
-      const start =
-        e.kind === 'Monthly' && e.startMonth
-          ? toIndex(e.startMonth)
-          : seedIndex;
-      const end =
-        e.kind === 'Monthly' && e.endMonth
-          ? toIndex(e.endMonth)
-          : projectEnd(project);
+      const start = e.startMonth ? toIndex(e.startMonth) : seedIndex;
+      const end = Math.min(
+        e.endMonth ? toIndex(e.endMonth) : projectEnd(project),
+        projectEnd(project)
+      );
       for (let m = Math.max(start, seedIndex); m <= end; m++) {
+        const days = monthDays(m);
+        const eligibleDays = overlapDays(
+          { ...days, start: m === seedIndex ? seedDay + 1 : days.start },
+          project
+        );
+        if (eligibleDays === 0) {
+          continue;
+        }
         charge(
           project,
           e.expenditureCategory,
           m,
-          m === seedIndex ? e.amount * proration : e.amount
+          e.amount * (eligibleDays / overlapDays(days))
         );
       }
     }
