@@ -7,11 +7,15 @@ namespace server.Services;
 /// <summary>Builds a projection's projects and jobs from a fresh datamart snapshot.</summary>
 public sealed class ProjectionSeeder(IProjectionDataSource data, TimeProvider? timeProvider = null)
 {
-    /// <summary>Replaces projection.Projects and projection.Jobs; sets SeededAt and HistoryMonths.</summary>
+    /// <summary>Captures the latest imported inputs using one UTC snapshot anchor; replaces projects, jobs, SeededAt, and HistoryMonths.</summary>
     public async Task SeedAsync(Projection projection, int historyMonths,
         string? applicationUser, string? emulatingUser, CancellationToken ct)
     {
-        var seed = await data.GetProjectionSeedAsync(projection.PiEmployeeId, applicationUser, emulatingUser, ct);
+        // Keep the query's month and saved snapshot identical across retries or a month boundary.
+        var snapshotAtUtc = ProjectionTimestamps.Advance(projection.SeededAt,
+            (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime);
+        var seed = await data.GetProjectionSeedAsync(projection.PiEmployeeId, snapshotAtUtc,
+            applicationUser, emulatingUser, ct);
 
         var nextId = 1;
         var projects = seed.Projects.ToDictionary(p => (p.ProjectNumber, p.TaskNumber), p => new ProjectionProject
@@ -54,8 +58,7 @@ public sealed class ProjectionSeeder(IProjectionDataSource data, TimeProvider? t
             });
 
         projection.Projects = [.. projects.Values];
-        projection.SeededAt = ProjectionTimestamps.Advance(projection.SeededAt,
-            (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime);
+        projection.SeededAt = snapshotAtUtc;
         ApplyRunRates(projection, historyMonths);
 
         var projectNumbers = projects.Keys.Select(k => k.ProjectNumber).Distinct().ToList();

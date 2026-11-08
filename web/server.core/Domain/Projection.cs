@@ -26,7 +26,7 @@ public class Projection
     /// <summary>3, 6, or 12; selected averaging window for explicit estimate regeneration.</summary>
     public int HistoryMonths { get; set; }
 
-    /// <summary>Fixed snapshot identity and forecast anchor; advances only on create or reset.</summary>
+    /// <summary>Fixed UTC capture time, snapshot identity, and query/forecast anchor; advances only on create or reset, not a synchronized source cutoff.</summary>
     public DateTime SeededAt { get; set; }
 
     [MaxLength(200)]

@@ -107,6 +107,22 @@ export function reviewProjectionCalculations() {
 
   const fees = structuredClone(cola);
   fees.jobs[0].feeRemissionMonthly = 1500;
+  assert.equal(costs(fees, '2026-07').fees, 750);
+  assert.equal(costs(edited(fees), '2026-07').fees, 750);
+
+  const datedFees = structuredClone(fees);
+  datedFees.jobs[0].startDate = '2026-04-10';
+  datedFees.jobs[0].endDate = '2026-04-30';
+  datedFees.jobs[0].fundingEntries = [
+    {
+      ...datedFees.jobs[0].fundingEntries[0],
+      endDate: '2026-04-24',
+      startDate: '2026-04-01',
+    },
+  ];
+  datedFees.projects[0].startDate = '2026-04-01';
+  datedFees.projects[0].endDate = '2026-04-30';
+  assert.equal(costs(datedFees, '2026-04').fees, 375);
 
   const boundaries = example();
   boundaries.seededAt = '2026-01-15T00:00:00Z';
@@ -159,6 +175,14 @@ export function reviewProjectionCalculations() {
     });
   });
   currentProject.expenses = [{ ...futureProject.projects[0].expenses[0] }];
+  const snapshotFee = computePiProjection(currentActuals).rows.find(
+    (row) =>
+      row.month === '2026-10' &&
+      row.expenditureCategory === FEE_REMISSION_CATEGORY
+  );
+  assert.equal(snapshotFee?.actualAmount, 750);
+  assert.equal(snapshotFee?.projectedAmount, 1500);
+  assert.equal(snapshotFee?.remaining, 6500);
 
   const fundingSwitch = example();
   fundingSwitch.jobs[0].fundingEntries = [
@@ -222,8 +246,7 @@ export function reviewProjectionCalculations() {
         })),
         independentlyWorked:
           'Before edit salary/fringe: June 2026 = 2500/1000; July 2026 = 2575/1030; July 2027 = 2652.25/1060.90; July 2028 = 2731.8175/1092.727. After edit: 2750/1100; 2832.50/1133; 2917.475/1166.99; 3004.99925/1201.9997. Assumes annual compounding with no intermediate rounding.',
-        question:
-          'Confirm annual compounding and where dollar rounding belongs.',
+        rule: 'COLA compounds once each configured annual month strictly after the salary base month.',
         topic: 'Multi-year COLA',
       },
       {
@@ -234,9 +257,8 @@ export function reviewProjectionCalculations() {
           month,
         })),
         independentlyWorked:
-          'If 120000 already includes the July 2026 increase: per-project salaries 2500, 2575, 2652.25. If 120000 is the pre-July rate: 2575, 2652.25, 2731.8175. The rate effective date decides which is correct.',
-        question:
-          'Does a seeded salary already include an increase in its snapshot month?',
+          'The entered 120000 is the snapshot rate. Per-project salaries are 2500 in July 2026, then 2575 and 2652.25 in the next two Julys.',
+        rule: 'Imported salaries use the snapshot month as their base; do not apply another increase within that month.',
         topic: 'Snapshot during COLA month',
       },
       {
@@ -262,8 +284,18 @@ export function reviewProjectionCalculations() {
         independentlyWorked:
           'The appointment-level monthly fee is 1500. Each project owes 750 at its 0.5 funding share, regardless of salary, FTE, or COLA.',
         question:
-          'Fee dates, snapshot-month booked-cost treatment, and overlap with category 08 historical estimates remain to be settled.',
+          'Should category 08 historical estimates continue alongside employee fees? They remain additive until that separate decision.',
+        rule: 'Prorate employee fees by inclusive project, job, and funding days. Include the entire eligible snapshot month without subtracting booked category 08 costs.',
         topic: 'Fee remission allocation',
+      },
+      {
+        assumptions:
+          'Appointment fee 1500/month, job April 10 through 30, project April 1 through 30, and 0.5 funding share April 1 through 24.',
+        current: costs(datedFees, '2026-04'),
+        independentlyWorked:
+          'April 10 through 24 gives 15 eligible days: 1500 × 0.5 × 15/30 = 375. FTE, salary, and COLA do not change the fee amount.',
+        rule: 'Use the inclusive intersection of all three date ranges and divide by the calendar days in the month.',
+        topic: 'Fee remission date boundaries',
       },
       {
         assumptions:
@@ -329,9 +361,8 @@ export function reviewProjectionCalculations() {
           (row) => row.month === '2026-10'
         ),
         independentlyWorked:
-          'Keeping booked costs and forecasting only the salary/fringe remainder: salary remaining 77500 = 100000-20000-max(5000-2500,0); fringe 31000 = 40000-8000-max(2000-1000,0). Supplies remaining 7850 = 10000-2000-150 because its actual 100 is already spent. If fee 1500 is also a full-month target, fee remaining 7250 = 10000-2000-max(1500-750,0). Fee handling is unresolved.',
-        question:
-          'Booked salary/fringe now stay fixed with only a nonnegative remainder forecast. Fee handling and presentation of mismatched source cutoffs still need their own rules.',
+          'Keeping booked costs and forecasting only the salary/fringe remainder: salary remaining 77500 = 100000-20000-max(5000-2500,0); fringe 31000 = 40000-8000-max(2000-1000,0). Supplies remaining 7850 = 10000-2000-150 because its actual 100 is already spent. Fee remaining is 6500 = 10000-2000-1500: the full eligible employee fee stays additive, and the booked 750 is already included in spentToDate.',
+        rule: 'Use the latest imported inputs anchored to the saved UTC snapshot. Salary/fringe keep their nonnegative remainder forecast; employee fees remain additive because category 08 can contain other costs. Snapshot actuals are not deducted from current balances a second time.',
         topic: 'Current-month actuals and current-total balances',
       },
     ],

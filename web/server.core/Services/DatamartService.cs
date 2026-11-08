@@ -452,17 +452,25 @@ public sealed class DatamartService : IDatamartService, IPpmPortfolioReader, IAc
         }, ct);
     }
 
+    /// <inheritdoc />
     public async Task<ProjectionSeedData> GetProjectionSeedAsync(
-        string piEmployeeId, string? applicationUser, string? emulatingUser, CancellationToken ct)
+        string piEmployeeId, DateTime snapshotAtUtc, string? applicationUser, string? emulatingUser, CancellationToken ct)
     {
         return await _retry.ExecuteAsync(async ct2 =>
         {
             await using var conn = new SqlConnection(_connectionString);
             await conn.OpenAsync(ct2);
 
+            var parameters = new DynamicParameters(new
+            {
+                PiEmployeeId = piEmployeeId, ApplicationName = _appName,
+                ApplicationUser = applicationUser, EmulatingUser = emulatingUser,
+            });
+            // Preserve ticks so a final instant of the month cannot round into the next month.
+            parameters.Add("SnapshotAt", snapshotAtUtc, DbType.DateTime2);
             var cmd = new CommandDefinition(
                 commandText: "dbo.usp_GetProjectionSeed",
-                parameters: new { PiEmployeeId = piEmployeeId, ApplicationName = _appName, ApplicationUser = applicationUser, EmulatingUser = emulatingUser },
+                parameters: parameters,
                 commandType: CommandType.StoredProcedure,
                 commandTimeout: 60,
                 cancellationToken: ct2);

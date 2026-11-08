@@ -136,6 +136,8 @@ export function computePiProjection(projection: Projection): {
       const costs: [string, number][] = [
         [SALARY_CATEGORY, salary],
         [FRINGE_CATEGORY, salary * (job.cbrRate + job.vacationAccrualRate)],
+        // Fees are an appointment total, independent of salary, FTE, and COLA.
+        [FEE_REMISSION_CATEGORY, job.feeRemissionMonthly ?? 0],
       ];
       let fundedPercent = 0;
       for (const f of job.fundingEntries) {
@@ -144,16 +146,6 @@ export function computePiProjection(projection: Projection): {
         }
         const project =
           f.projectId === null ? undefined : projectsById.get(f.projectId);
-
-        // Fee remission keeps its existing monthly eligibility and amount pending its own review.
-        if (project && job.feeRemissionMonthly) {
-          charge(
-            project,
-            FEE_REMISSION_CATEGORY,
-            m,
-            job.feeRemissionMonthly * f.percent
-          );
-        }
 
         if (
           activeJobDays === 0 ||
@@ -170,7 +162,7 @@ export function computePiProjection(projection: Projection): {
           continue;
         }
 
-        // Use the whole month's eligible days here; booked snapshot costs are netted below.
+        // Use the whole month's eligible days, including days before the snapshot.
         const fraction = eligibleDays / overlapDays(days);
         for (const [category, cost] of costs) {
           if (cost) {
@@ -184,7 +176,7 @@ export function computePiProjection(projection: Projection): {
     }
   }
 
-  // Net the aggregated job targets once, before adding explicit expenses.
+  // Net salary and fringe targets only; category 08 actuals cannot identify employee fees.
   // Booked salary and fringe stay fixed even when the new estimate is lower.
   for (const project of projection.projects) {
     for (const category of PERSONNEL) {

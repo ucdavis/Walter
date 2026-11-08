@@ -1,8 +1,8 @@
 # Projections implementation plan
 
-Status: Stage 1a, Stage 1b saving, and the snapshot-month and date-boundary
-corrections accepted. Stage 1b remains open for the remaining calculation
-decisions. Saving remains available with funding gaps/overlaps.
+Status: Stage 1a and Stage 1b are accepted, including the calculation corrections,
+shared snapshot timestamp, and fee rules. Stage 2 is authorized and beginning.
+Saving remains available with funding gaps/overlaps.
 The CBR default and legacy-plan compatibility increment is accepted.
 The project outlook starts at the snapshot month; historical spending remains
 available for expense estimates and snapshot-month calculations.
@@ -58,12 +58,20 @@ as each decision is settled and each stage is reviewed.
 - Show the project outlook from the snapshot month forward. Retain captured
   monthly spending and its use in expense estimates and snapshot-month netting.
   Do not show reconstructed balances for earlier months or add warning UI.
+- Use one fixed UTC snapshot timestamp for the seed query and saved plan.
+  Capture the latest available imported inputs; their refresh times need not
+  match. Document that this is not a synchronized financial cutoff, without
+  adding warnings or blocking use of the plan.
+- Keep commitments reserved in the starting balance and deduct forecast costs
+  separately. Document the possible overlap in the calculation reference;
+  defer automatic reconciliation without adding controls or warnings.
 - Keep personnel settings with the employee. Stage 3 includes a per-employee
   fee editor.
 - Fee remission is the appointment's total monthly cost, split across funding
-  shares without FTE or COLA scaling. Do not guess a fee default. Date eligibility
-  and snapshot-month fee treatment still need agreement, as does its overlap
-  with historical category 08 estimates.
+  shares without FTE or COLA scaling. Prorate by inclusive project/job/funding
+  overlap days. Use the entire eligible snapshot month and add the result without
+  subtracting category 08 actuals. Do not guess a fee default. Reconciliation
+  with historical category 08 estimates remains deliberately deferred.
 
 ### Agreed salary example
 
@@ -486,8 +494,8 @@ current-month balance issue and date-boundary defects. The user accepted the
 implemented snapshot-month correction. It keeps booked salary and benefits
 fixed and visible, forecasts only their remainder, and stops deducting snapshot
 actuals again from captured balances.
-Explicit expenses remain additional forecasts; fee remission is not treated as
-a full-month target by this correction.
+Explicit expenses remain additional forecasts. Fee remission also remains
+additional and does not use salary/fringe booked-cost subtraction.
 
 The [booked salary preview](http://127.0.0.1:5174/projections-preview.html?example=booked&section=overview&project=1)
 uses the same workspace with illustrative benefit rates. Each project has
@@ -498,9 +506,11 @@ per-project salary target below booked salary. January's forecast becomes zero,
 its actuals stay $1,400, and its end balance stays at the captured $26,600.
 February still forecasts the full $900 salary plus $360 benefits.
 
-The date rules below are implemented and accepted. Consistent source reporting
-months, vacation lookup mapping, fee remission, and remaining COLA assumptions
-are still open. These increments do not close Stage 1b or begin Stage 2.
+The date and COLA rules below are implemented and accepted. Fee date allocation
+and snapshot-month treatment are agreed, implemented, and validated. Stage 1b
+is ready for final review. Category 08 reconciliation
+and vacation lookup mapping are deferred future questions, not blockers for
+that review. Stage 2 still requires a separate decision to proceed.
 
 #### Agreed personnel date rules
 
@@ -542,9 +552,9 @@ project/category, then apply the accepted booked-cost subtraction once. Do not
 also prorate personnel to days after the snapshot date. Preserve booked actuals
 and the accepted signed-credit adjustment, including credits after project end.
 
-This agreement covers salary and benefits. Expense rules follow below; fee
-remission remains a separate decision. The implementation was reviewed and
-accepted; Stage 1b remains open.
+This agreement covers salary and benefits. Expense rules follow below; the
+fee-remission section specifies the same date overlap with different
+snapshot-month treatment. Stage 1b remains open pending final review.
 
 #### Agreed recurring expense date rules
 
@@ -583,9 +593,9 @@ one-time expense still produce $1,000 of additional forecast. The expense
 specifies only October, not an exact posting day. This rule preserves that
 explicit expected charge without introducing a day-level expense field.
 
-Fee-remission amount and eligibility rules are not selected by these date
-agreements. Preserve their existing monthly behavior in this increment. This
-does not establish that fee forecasts already follow the new personnel bounds.
+Job-level fee remission follows its own rule below. These recurring and
+one-time expense rules continue to apply to explicit expenses and generated
+category 08 estimates.
 
 #### Date-boundary implementation review
 
@@ -618,7 +628,7 @@ Existing CSS, module-directive, and bundle-size build warnings remain. Checks
 used local synthetic data and did not revalidate deployed API/database behavior.
 The user reviewed and accepted this correction. Publication and deployment
 remain outside this increment; no new no-mistakes pipeline or CI run was
-started. Stage 1b remains open for its other calculation decisions.
+started. Stage 1b remains open for final review.
 
 #### Benefit-default implementation review
 
@@ -664,8 +674,8 @@ The calculator can reconstruct earlier remaining balances from the snapshot's
 captured balance and past spending, but these are not observed historical month-end
 balances. The outlook filters out those earlier rows. This presentation change
 retains the saved history, generated estimates, and calculator results, including
-snapshot-month actuals and personnel netting. Stage 1b remains open for the
-other calculation decisions below.
+snapshot-month actuals and personnel netting. Stage 1b remains open for final
+validation and review.
 
 Verification passed: 500 client tests, TypeScript, the production build,
 changed-file ESLint, formatting, and independent review. The browser preview
@@ -673,23 +683,57 @@ starts at January 2026 for the saved January snapshot and retains the expected
 forecast and ending balances. React Doctor scored 97/100 with the existing
 component-size warning; existing client build warnings remain.
 
-#### Fee remission and category 08 estimates
+#### Agreed fee remission and category 08 estimates
 
 The fee amount is the appointment's total monthly cost, split across its funding
 shares without FTE or COLA scaling. No default amount is selected. Keep the
 fee-remission editor with each employee's job settings in Stage 3.
 
+Prorate the fee using calendar days when the project, job, and funding entry
+all overlap the month. Start and end dates are inclusive; no overlap produces
+no fee forecast:
+
+```text
+monthly fee forecast = appointment's monthly fee × funding share
+                       × eligible days / calendar days in the month
+```
+
+For a $1,500 monthly appointment fee and a 50% funding share, a full eligible
+month contributes $750. June 1 through 15 contributes $375 because 15 of June's
+30 days are eligible.
+
+In the snapshot month, count all eligible days, including days before the
+snapshot date. The result is additional forecast spending. Do not subtract
+category 08 actuals, which mix fees with other fellowship and scholarship costs.
+A $750 full-month fee forecast therefore remains $750 with $400 already booked
+in category 08. Those booked costs remain visible and included in the snapshot
+balance under the existing inclusion assumption. Salary/fringe netting is unchanged.
+
+The [fee preview](http://127.0.0.1:5174/projections-preview.html?example=fees&section=overview&project=1)
+shows each project's April actuals of $400 alongside a $375 fee forecast,
+leaving $9,225. May shows no actuals and a $750 fee forecast, leaving $8,475.
+These months illustrate partial-month proration and the separate treatment of
+booked category 08 costs.
+
 Keep the existing historical estimate policy for now. The source query excludes
 categories 01 salary, 02 fringe benefits, and 04 equipment; category 08 Fellowship
 & Scholarships remains included. That category covers costs beyond employee fee
 remission. Its historical estimate and entered employee fee amounts currently
-both contribute to the forecast.
+both contribute to the forecast. Explicit monthly/one-time expenses also retain
+their existing additive treatment.
 
 How to distinguish other category 08 costs and avoid counting fee remission
-twice remains an open calculation question. Fee date eligibility and
-snapshot-month treatment also remain unresolved. Booked actuals, salary/fringe
-netting, and explicit monthly/one-time expenses retain their existing treatment.
-Stage 1b remains open.
+twice remains deliberately deferred. The agreed fee amount, date allocation,
+and snapshot-month behavior complete the policy choices needed for the current
+Stage 1b implementation. Final review remains before closing it.
+
+Verification passed: 525 client tests, TypeScript, the production build,
+changed-file lint and formatting, executable examples, and independent review.
+Browser checks matched the April and May preview amounts above with no console
+errors. The date tests cover exact overlap, project bounds, leap day, funding
+gaps/overlaps, FTE/COLA independence, and additive booked costs and credits.
+React Doctor scored 97/100 with the existing component-size warning; existing
+client build warnings remain.
 
 #### Agreed future-hire salary timing
 
@@ -714,8 +758,7 @@ before the snapshot month, also uses the snapshot base. Moving a hypothetical
 job's start date moves its salary base according to the same rule.
 
 Use the existing job source flag and start date; no schema change is needed.
-This settles future-hire COLA timing. Stage 1b remains open for the other
-calculation questions below.
+This settles future-hire COLA timing. Stage 1b remains open for final review.
 
 The [future-hire preview](http://127.0.0.1:5174/projections-preview.html?example=future-hire&section=overview&project=1)
 uses a 50% appointment split equally between two projects. Each project starts
@@ -732,16 +775,56 @@ benefits, later funding/project starts, moved hire dates, and imported jobs.
 React Doctor scored 97/100 with the existing component-size warning; existing
 client build warnings remain. No server behavior or persistence schema changed.
 
-#### Findings to resolve
+#### Agreed commitment treatment
 
-The November 6 source review and executable examples identified the following
-work. These findings do not authorize implementing later stages together.
+Keep the existing treatment for now: commitments reduce the starting balance,
+and forecast costs reduce it separately. The category totals do not identify
+which forecast expenses fulfill commitments, so automatic offsets could hide
+unrelated costs. Matching commitments to forecast expenses is deferred.
 
-- **Reporting cutoff:** portfolio totals, monthly costs, and personnel refresh
-  separately. Matching source records confirmed that ITD spending includes the
-  snapshot month, but other categories did not reconcile. The SQL seed uses
-  server-local `GETDATE()` while the application uses UTC. Establish a consistent
-  reporting month and decide how to handle mismatched source cutoffs.
+For a $100,000 budget, $40,000 spent, and $10,000 committed, the starting balance
+is $50,000. Forecasting the same $10,000 purchase reduces it to $40,000 and counts
+the obligation twice. The calculation reference documents this possible overlap
+and resulting understatement of available funds, including overlap with
+generated recurring estimates. No calculation, control, or warning changes are
+needed. This settles the current commitment policy; Stage 1b remains open for
+final review.
+
+#### Agreed snapshot time and source freshness
+
+The snapshot timestamp records when Walter begins capturing a plan's inputs.
+Use the latest available portfolio, monthly-cost, and personnel data, accepting
+that these sources refresh independently. The timestamp does not promise that
+every source is complete through the same financial cutoff. Document that
+source lag can break the assumption that captured monthly actuals are already
+included in portfolio spending totals. Add no warnings or blocking checks.
+
+Compute the final, monotonically advanced `SeededAt` once before the seed query.
+Pass that UTC `DateTime` as `snapshotAtUtc` through the data source to the query's
+optional `@SnapshotAt DATETIME2` parameter, and save the exact same timestamp.
+The query derives its reporting month from that value. Older callers that omit
+the parameter use `SYSUTCDATETIME()` as the fallback. This keeps the history
+window and forecast in the same month even when a request crosses midnight or
+the database and application use different local time zones.
+
+Deploy the updated SQL procedure before the application that supplies the new
+parameter. Existing saved plans keep their captured timestamps and inputs.
+This change aligns period selection without synchronizing source imports;
+Stage 1b remains open for final review.
+
+Verification passed: 450 server tests, with 8 optional SQL persistence tests
+skipped, and the datamart project build. Four new cases cover a query crossing
+a month boundary, equal or backward clocks advancing the snapshot into a new
+month, and a failed query preserving the prior snapshot. Independent review
+found no issues. The updated seed procedure was not executed against a live
+database or deployed.
+
+#### Deferred calculation questions
+
+These questions remain documented for future work. Their current behavior is
+accepted for Stage 1b, so they do not block its final implementation review or
+authorize expanding this increment into later stages.
+
 - **Vacation lookup mapping:** the numeric CBR default and legacy compatibility
   are accepted. Keep the vacation field's existing default of 0 and preserve
   supplied values. The earlier `WalterDev` inspection
@@ -752,16 +835,12 @@ work. These findings do not authorize implementing later stages together.
   cost. The out-of-band lookup import does not yet establish that this field
   maps to the official Vacation Leave Assessment. Confirm that mapping before
   adding new rate defaults or vacation-cost UI.
-- **Fees:** category 08 Fellowship & Scholarships remains in historical
-  estimates and covers more than employee fee remission. Decide how to retain
-  other category 08 costs without counting fees twice alongside employee inputs.
-  The employee fee amount is the appointment's total monthly cost, unaffected
-  by FTE or COLA. Eligible dates and snapshot-month treatment also need agreement
-  before adding the per-employee editor in Stage 3. Existing monthly eligibility
-  does not follow the new personnel date bounds. No automatic fee default is selected.
-- **Commitments:** the starting balance already reserves commitments, but the
-  source aggregates do not identify which future expenses fulfill them. Decide
-  how to avoid overlapping commitments and forecast expenses.
+- **Category 08 reconciliation:** category 08 Fellowship & Scholarships remains
+  in historical estimates and covers more than employee fee remission. Decide
+  how to retain other category 08 costs without counting fees twice alongside
+  employee inputs.
+  Keep the agreed employee fee calculation and additive historical estimates
+  until that future decision. No automatic fee default is selected.
 
 Source references are the [portfolio import](../pipelines/pipeline/RefreshFacultyDeptPortfolio.json),
 [seed query](../datamart/StoredProcedures/usp_GetProjectionSeed.sql), and
@@ -780,7 +859,7 @@ node scripts/review-projection-calculations.ts
 ```
 
 They exercise the calculator and salary operation, check salary scaling, and
-print examples for the remaining policy decisions. Conditional alternatives
+print examples for the deferred calculation questions. Conditional alternatives
 are not regression assertions.
 
 The snapshot correction passed 56 focused client tests, seven local browser
@@ -796,13 +875,14 @@ React Doctor reported 97/100 with a component-size warning on the workspace.
 Existing CSS, module-directive, and bundle-size build warnings remain. The user
 accepted this correction and the date rules above. Funding gaps/overlaps remain
 saveable, with no new warning UI required by this increment.
-Stage 1b stays open until its remaining decisions and examples are resolved.
+The user accepted the validated calculation behavior and authorized Stage 2.
+Stage 1b is complete. The deliberately deferred questions above remain recorded
+for future work and do not block the plan lifecycle stage.
 
 ## Questions to resolve in their owning stages
 
 | Before                        | Question or example                                                                                                                                                                     |
 | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Stage 1b                      | Verify benefit/vacation rates, fee remission, COLA, project date bounds, and current-month actuals against agreed examples. Do not infer correctness from the synthetic demo's totals.  |
 | Stage 2                       | Where will plan settings live? Verify duplicate semantics, seed eligibility, task grouping, and saved-snapshot independence.                                                            |
 | Before exposing reset/refresh | Define their separate meanings, treatment of local edits, and snapshot replacement behavior.                                                                                            |
 | Stage 3                       | How do funding schedules behave at appointment/project boundaries, at zero FTE, and when FTE changes? Verify outside funding and distinguish incomplete assumptions from invalid edits. |

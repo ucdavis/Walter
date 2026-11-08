@@ -56,15 +56,18 @@ const project = (
   actuals: [],
   awardName: null,
   awardNumber: null,
-  budgets: [SALARY_CATEGORY, FRINGE_CATEGORY, SUPPLIES].map(
-    (expenditureCategory) => ({
-      budget: 10_000,
-      committed: 0,
-      expenditureCategory,
-      isSeeded: true,
-      spentToDate: 0,
-    })
-  ),
+  budgets: [
+    SALARY_CATEGORY,
+    FRINGE_CATEGORY,
+    SUPPLIES,
+    FEE_REMISSION_CATEGORY,
+  ].map((expenditureCategory) => ({
+    budget: 10_000,
+    committed: 0,
+    expenditureCategory,
+    isSeeded: true,
+    spentToDate: 0,
+  })),
   endDate: '2026-12-31',
   expenses: [],
   id: 1,
@@ -568,30 +571,271 @@ describe('projection date rules', () => {
     expect(draft).toEqual(captured);
   });
 
-  it('leaves monthly fee remission unchanged when personnel is prorated', () => {
+  it('allocates monthly fees over the inclusive job, funding, and project intersection', () => {
+    const result = computePiProjection(
+      plan({
+        jobs: [
+          job({
+            endDate: '2026-04-30',
+            feeRemissionMonthly: 1500,
+            fundingEntries: [
+              funding(1, 0.5, {
+                endDate: '2026-04-24',
+                startDate: '2026-04-01',
+              }),
+            ],
+            startDate: '2026-04-10',
+          }),
+        ],
+        projects: [project({ endDate: '2026-04-30', startDate: '2026-04-01' })],
+      })
+    );
+
+    expect(
+      row(result, '2026-04', FEE_REMISSION_CATEGORY)?.projectedAmount
+    ).toBe(375);
+  });
+
+  it.each([
+    { endDate: '2026-04-30', startDate: '2026-04-16' },
+    { endDate: '2026-04-15', startDate: '2026-04-01' },
+  ])('bounds fees by project dates $startDate through $endDate', (dates) => {
+    const result = computePiProjection(
+      plan({
+        jobs: [job({ feeRemissionMonthly: 1500 })],
+        projects: [project(dates)],
+      })
+    );
+
+    expect(
+      row(result, '2026-04', FEE_REMISSION_CATEGORY)?.projectedAmount
+    ).toBe(750);
+  });
+
+  it('does not charge fees when funding and job dates never meet within the month', () => {
     const result = computePiProjection(
       plan({
         jobs: [
           job({
             endDate: '2026-03-10',
             feeRemissionMonthly: 1500,
-            fundingEntries: [
-              funding(1, 0.5, {
-                endDate: '2026-03-05',
-                startDate: '2026-02-20',
-              }),
-            ],
-            startDate: '2026-02-15',
+            fundingEntries: [funding(1, 1, { startDate: '2026-03-11' })],
           }),
         ],
       })
     );
 
     expect(
-      row(result, '2026-02', FEE_REMISSION_CATEGORY)?.projectedAmount
-    ).toBe(750);
-    expect(
       row(result, '2026-03', FEE_REMISSION_CATEGORY)?.projectedAmount
-    ).toBe(750);
+    ).toBe(0);
+  });
+
+  it('charges one inclusive fee day when all endpoints meet on leap day', () => {
+    const result = computePiProjection(
+      plan({
+        jobs: [
+          job({
+            endDate: '2028-02-29',
+            feeRemissionMonthly: 2900,
+            fundingEntries: [funding(1, 1, { startDate: '2028-02-29' })],
+          }),
+        ],
+        projects: [project({ endDate: '2028-02-29', startDate: '2028-02-29' })],
+        seededAt: '2028-01-16T00:00:00Z',
+      })
+    );
+
+    expect(
+      row(result, '2028-02', FEE_REMISSION_CATEGORY)?.projectedAmount
+    ).toBe(100);
+  });
+
+  it.each([
+    { expectedSalary: 0, fte: 1, monthlySalary: null },
+    { expectedSalary: 0, fte: 0, monthlySalary: 10_000 },
+    { expectedSalary: 5500, fte: 0.5, monthlySalary: 10_000 },
+  ])(
+    'keeps appointment fees independent of salary $monthlySalary, FTE $fte, and COLA',
+    ({ expectedSalary, fte, monthlySalary }) => {
+      const result = computePiProjection(
+        plan({
+          jobs: [
+            job({
+              colaRate: 0.1,
+              feeRemissionMonthly: 1500,
+              fte,
+              monthlySalary,
+            }),
+          ],
+        })
+      );
+
+      expect(
+        row(result, '2026-07', FEE_REMISSION_CATEGORY)?.projectedAmount
+      ).toBe(1500);
+      expect(row(result, '2026-07')?.projectedAmount).toBeCloseTo(
+        expectedSalary
+      );
+    }
+  );
+
+  it.each([
+    {
+      description: 'a continuous switch',
+      secondFee: 750,
+      secondStart: '2026-04-16',
+    },
+    { description: 'a one-day gap', secondFee: 700, secondStart: '2026-04-17' },
+    {
+      description: 'a one-day overlap',
+      secondFee: 800,
+      secondStart: '2026-04-15',
+    },
+  ])(
+    'charges each fee allocation as entered with $description',
+    ({ secondFee, secondStart }) => {
+      const draft = plan({
+        jobs: [
+          job({
+            feeRemissionMonthly: 1500,
+            fundingEntries: [
+              funding(1, 1, { endDate: '2026-04-15', startDate: '2026-04-01' }),
+              funding(2, 1, { endDate: '2026-04-30', startDate: secondStart }),
+            ],
+          }),
+        ],
+        projects: [project(), project({ id: 2 })],
+      });
+      const captured = structuredClone(draft);
+      const result = computePiProjection(draft);
+
+      expect(
+        row(result, '2026-04', FEE_REMISSION_CATEGORY)?.projectedAmount
+      ).toBe(750);
+      expect(
+        row(result, '2026-04', FEE_REMISSION_CATEGORY, 2)?.projectedAmount
+      ).toBe(secondFee);
+      expect(draft).toEqual(captured);
+    }
+  );
+
+  it.each([
+    {
+      actual: 800,
+      endDate: '2026-04-30',
+      fee: 1500,
+      remaining: 6400,
+      spentToDate: 2000,
+    },
+    {
+      actual: 800,
+      endDate: '2026-04-10',
+      fee: 500,
+      remaining: 7400,
+      spentToDate: 2000,
+    },
+    {
+      actual: -100,
+      endDate: '2026-04-10',
+      fee: 500,
+      remaining: 8300,
+      spentToDate: 1100,
+    },
+  ])(
+    'adds all eligible April fees through $endDate without netting booked category08 amount $actual',
+    ({ actual, endDate, fee, remaining, spentToDate }) => {
+      const result = computePiProjection(
+        plan({
+          jobs: [job({ feeRemissionMonthly: 1500 })],
+          projects: [
+            project({
+              actuals: [
+                {
+                  amount: actual,
+                  expenditureCategory: FEE_REMISSION_CATEGORY,
+                  month: '2026-04-01',
+                },
+              ],
+              budgets: [
+                {
+                  budget: 10_000,
+                  committed: 100,
+                  expenditureCategory: FEE_REMISSION_CATEGORY,
+                  isSeeded: true,
+                  spentToDate,
+                },
+              ],
+              endDate,
+            }),
+          ],
+          seededAt: '2026-04-20T00:00:00Z',
+        })
+      );
+
+      expect(row(result, '2026-04', FEE_REMISSION_CATEGORY)).toMatchObject({
+        actualAmount: actual,
+        projectedAmount: fee,
+        remaining,
+      });
+    }
+  );
+
+  it('adds employee fees alongside historical category08 estimates and explicit expenses', () => {
+    const draft = plan({
+      jobs: [job({ feeRemissionMonthly: 1500 })],
+      projects: [
+        project({
+          actuals: [
+            {
+              amount: 750,
+              expenditureCategory: FEE_REMISSION_CATEGORY,
+              month: '2026-10-01',
+            },
+          ],
+          budgets: [
+            {
+              budget: 10_000,
+              committed: 0,
+              expenditureCategory: FEE_REMISSION_CATEGORY,
+              isSeeded: true,
+              spentToDate: 2000,
+            },
+          ],
+          endDate: '2026-11-30',
+          expenses: [
+            expense({
+              amount: 310,
+              expenditureCategory: FEE_REMISSION_CATEGORY,
+              kind: 'Projected',
+            }),
+            expense({
+              amount: 62,
+              expenditureCategory: FEE_REMISSION_CATEGORY,
+              kind: 'Monthly',
+            }),
+            expense({
+              amount: 200,
+              expenditureCategory: FEE_REMISSION_CATEGORY,
+              kind: 'OneTime',
+              startMonth: '2026-10-01',
+            }),
+          ],
+        }),
+      ],
+      seededAt: '2026-10-16T00:00:00Z',
+    });
+    const captured = structuredClone(draft);
+    const result = computePiProjection(draft);
+
+    expect(row(result, '2026-10', FEE_REMISSION_CATEGORY)).toMatchObject({
+      actualAmount: 750,
+      projectedAmount: 1880,
+      remaining: 6120,
+    });
+    expect(row(result, '2026-11', FEE_REMISSION_CATEGORY)).toMatchObject({
+      projectedAmount: 1872,
+      remaining: 4248,
+    });
+    expect(draft).toEqual(captured);
   });
 });

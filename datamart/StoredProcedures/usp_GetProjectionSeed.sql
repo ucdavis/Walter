@@ -3,13 +3,14 @@
 -- Returns four result sets:
 --   1. Projects: names, award, and dates (project dates from dbo.PpmProjects, else award dates).
 --   2. Budgets: budget, spent, committed from dbo.FacultyDeptPortfolio.
---   3. Actuals: monthly burdened cost from dbo.PPMProjectCosts, 12 full months plus the current month.
+--   3. Actuals: monthly burdened cost from dbo.PPMProjectCosts, 12 full months plus the snapshot month.
 --   4. RunRates: trailing non-personnel monthly averages for 3, 6, and 12 month windows.
 CREATE PROCEDURE dbo.usp_GetProjectionSeed
     @PiEmployeeId    VARCHAR(16),
     @ApplicationName NVARCHAR(128) = NULL,
     @ApplicationUser NVARCHAR(256) = NULL,
-    @EmulatingUser   NVARCHAR(256) = NULL
+    @EmulatingUser   NVARCHAR(256) = NULL,
+    @SnapshotAt      DATETIME2(7) = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -19,7 +20,9 @@ BEGIN
     DECLARE @Duration_MS    INT;
     DECLARE @ErrorMsg       NVARCHAR(MAX);
     DECLARE @ParametersJSON NVARCHAR(MAX);
-    DECLARE @CurrMonthStart DATE = DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1);
+    -- Older callers can omit the anchor; the planner supplies its exact saved UTC timestamp.
+    SET @SnapshotAt = COALESCE(@SnapshotAt, SYSUTCDATETIME());
+    DECLARE @SnapshotMonthStart DATE = DATEFROMPARTS(YEAR(@SnapshotAt), MONTH(@SnapshotAt), 1);
 
     EXEC dbo.usp_SanitizeInputString @ApplicationName OUTPUT;
     EXEC dbo.usp_SanitizeInputString @ApplicationUser OUTPUT;
@@ -27,6 +30,7 @@ BEGIN
     BEGIN TRY
         SET @ParametersJSON = (
             SELECT @PiEmployeeId AS PiEmployeeId,
+                   @SnapshotAt AS SnapshotAt,
                    COALESCE(@ApplicationName, APP_NAME()) AS ApplicationName
             FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
         );
@@ -41,15 +45,15 @@ BEGIN
           AND EXISTS (SELECT 1 FROM dbo.FacultyDeptPortfolio f
                       WHERE f.ProjectNumber = r.ProjectNumber AND f.ProjectStatus = 'ACTIVE');
 
-        -- Month dimension: n = -12..-1 full months, 0 = current month.
+        -- Month dimension: n = -12..-1 full months, 0 = snapshot month.
         DROP TABLE IF EXISTS #months;
         ;WITH n AS (
             SELECT TOP (13) ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) - 13 AS n
             FROM sys.all_objects
         )
         SELECT n.n,
-               DATEADD(MONTH, n.n, @CurrMonthStart) AS MonthStart,
-               FORMAT(DATEADD(MONTH, n.n, @CurrMonthStart), 'MMM-yy') AS DisplayPeriod
+               DATEADD(MONTH, n.n, @SnapshotMonthStart) AS MonthStart,
+               FORMAT(DATEADD(MONTH, n.n, @SnapshotMonthStart), 'MMM-yy') AS DisplayPeriod
         INTO #months
         FROM n;
 

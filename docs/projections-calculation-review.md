@@ -74,6 +74,15 @@ funding gaps or overlaps.
 
 ## Snapshot balance
 
+The snapshot time records when Walter begins capturing the plan's inputs. One
+UTC snapshot date anchors the history window, forecast months, and partial-month
+calculations. Reopening a plan preserves that date.
+
+Portfolio totals, monthly costs, and personnel data arrive through separate
+imports. The plan uses the latest available inputs from each source. Their
+refresh times can differ, so the snapshot does not guarantee that all inputs
+are complete through one financial cutoff.
+
 ```text
 snapshot balance = budget - spent to date - commitments
 ```
@@ -82,10 +91,22 @@ Budget, spent to date, and commitments are totals captured at the snapshot date.
 Monthly actuals are the booked cost totals for each category and month. They
 describe spending during that month, rather than the money remaining at its end.
 
-Spent to date includes costs already booked in the snapshot month. Those costs
-remain visible as actuals and are not deducted from the snapshot balance again.
-Only additional forecast spending reduces that balance. This calculation assumes
-the booked actuals are included in the captured balance.
+The calculation treats booked snapshot-month costs as already included in spent
+to date. Those costs remain visible as actuals and are not deducted from the
+snapshot balance again. Only additional forecast spending reduces that balance.
+This assumes the captured monthly actuals and portfolio totals align. Different
+import timings can break that assumption and affect the resulting forecast.
+
+Commitments remain reserved throughout the forecast. Planned costs, including
+generated recurring estimates, reduce the balance without being offset against
+those commitments. The captured commitment totals are grouped by category and
+do not identify which forecast expenses fulfill them, so the same obligation
+can be counted twice.
+
+For example, a $100,000 budget with $40,000 spent and $10,000 committed starts
+at $50,000. If the forecast also includes the same $10,000 purchase, it shows
+$40,000 remaining. This overlap can understate the available balance. The
+calculator does not automatically reconcile commitments with forecast costs.
 
 Each project keeps its own balance. A surplus on one project does not cover a
 shortfall on another. The project outlook and its monthly detail begin in the
@@ -163,17 +184,37 @@ Entries outside the eligible months stay in the saved plan but do not contribute
 to the forecast; changing the dates can make them applicable again.
 
 A job's fee-remission amount is the appointment's total monthly cost. It is split
-across funding shares without FTE or COLA scaling. The current calculation does
-not prorate it by day and treats it as an additional forecast cost; the personnel
-remainder formula does not apply to it. Entering the same fees as both an explicit
-expense and a job's fee-remission amount would count them twice.
+across funding shares without FTE or COLA scaling, then prorated by calendar days
+when the project, job, and funding entry are all active. Start and end dates are
+inclusive. No overlap means no fee forecast.
 
-Fee remission uses month-based job and funding windows and the project's end
-month. Its current calculation does not enforce the project's start date or
-require exact day overlap within a month.
+```text
+monthly fee forecast = appointment's monthly fee × funding share
+                       × eligible days / calendar days in the month
+```
 
-The forecast does not determine fee-remission eligibility or look up tuition
-and fees. See [Graduate Studies' tuition and fee remission guidance](https://grad.ucdavis.edu/tuition-and-fee-remission)
+For a $1,500 monthly appointment fee and a 50% funding share:
+
+| Eligible dates    | Eligible days | Fee forecast |
+| ----------------- | ------------: | -----------: |
+| June 1 through 15 |      15 of 30 |         $375 |
+| June 1 through 30 |      30 of 30 |         $750 |
+
+The snapshot month uses all eligible days, including those before the snapshot
+date. For a June 20 snapshot, the June 1 through 15 example still adds $375.
+The fee forecast is additional spending and is not reduced by booked
+category 08 costs, because that category also contains other fellowship and
+scholarship costs. A $750 full-month fee forecast remains $750 even with $400
+already booked in category 08. The $400 remains visible as actuals and is already
+included in the snapshot balance under the inclusion assumption described above.
+
+Generated category 08 estimates and explicit monthly/one-time expenses remain
+additional costs. Entering the same fees as both an explicit expense and a job's
+fee-remission amount would count them twice. No standard fee amount is supplied
+automatically.
+
+The forecast does not determine whether an employee qualifies for fee remission
+or look up tuition and fees. See [Graduate Studies' tuition and fee remission guidance](https://grad.ucdavis.edu/tuition-and-fee-remission)
 for those rules.
 
 ### Open fee-remission question

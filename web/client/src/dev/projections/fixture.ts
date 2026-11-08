@@ -1,4 +1,8 @@
-import { FRINGE_CATEGORY, SALARY_CATEGORY } from '@/lib/piProjection.ts';
+import {
+  FEE_REMISSION_CATEGORY,
+  FRINGE_CATEGORY,
+  SALARY_CATEGORY,
+} from '@/lib/piProjection.ts';
 import type { Projection, ProjectionProject } from '@/queries/projections.ts';
 
 const project = (
@@ -160,6 +164,43 @@ export function createFutureHireExample(): Projection {
       budget.budget = 60_000;
       budget.spentToDate = 0;
     }
+  }
+  return plan;
+}
+
+/** Booked category 08 costs stay fixed while the entered fee follows its eligible dates. */
+export function createFeeExample(): Projection {
+  const plan = createSalaryExample();
+  plan.name = 'Fee remission example';
+  plan.createdAt = plan.seededAt = plan.updatedAt = '2026-04-16T00:00:00Z';
+  const job = plan.jobs[0];
+  job.monthlySalary = 0;
+  job.feeRemissionMonthly = 1500;
+  job.startDate = '2026-04-16';
+  job.endDate = '2026-05-31';
+  for (const funding of job.fundingEntries) {
+    funding.startDate = job.startDate;
+    funding.endDate = job.endDate;
+  }
+  for (const project of plan.projects) {
+    project.startDate = '2026-04-01';
+    project.endDate = '2026-05-31';
+    project.budgets = [
+      {
+        budget: 10_000,
+        committed: 0,
+        expenditureCategory: FEE_REMISSION_CATEGORY,
+        isSeeded: true,
+        spentToDate: 400,
+      },
+    ];
+    project.actuals = [
+      {
+        amount: 400,
+        expenditureCategory: FEE_REMISSION_CATEGORY,
+        month: '2026-04-01',
+      },
+    ];
   }
   return plan;
 }

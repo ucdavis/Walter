@@ -40,6 +40,66 @@ public sealed class ProjectionSeederTests
     }
 
     [Fact]
+    public async Task Keeps_the_query_snapshot_when_the_clock_crosses_a_month_while_awaiting_data()
+    {
+        var beforeMidnight = new DateTime(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc).AddTicks(-1);
+        var clock = new MutableTimeProvider(beforeMidnight);
+        var response = new TaskCompletionSource<ProjectionSeedData>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var data = Data();
+        data.SeedResponse = response.Task;
+        var projection = new Projection { PiEmployeeId = "PI" };
+
+        var seeding = new ProjectionSeeder(data, clock).SeedAsync(projection, 6, null, null, default);
+
+        seeding.IsCompleted.Should().BeFalse();
+        data.SnapshotAtUtc.Should().Be(beforeMidnight);
+        clock.UtcNow = new DateTime(2026, 11, 1, 0, 0, 1, DateTimeKind.Utc);
+        response.SetResult(data.Seed);
+        await seeding;
+
+        projection.SeededAt.Should().Be(beforeMidnight);
+        projection.SeededAt.Should().Be(data.SnapshotAtUtc!.Value);
+        projection.SeededAt.Kind.Should().Be(DateTimeKind.Utc);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public async Task Queries_with_the_monotonic_snapshot_when_advancing_a_saved_token_crosses_a_month(int clockOffsetDays)
+    {
+        var nextMonth = new DateTime(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc);
+        var previousSnapshot = nextMonth.AddTicks(-1);
+        var clock = new MutableTimeProvider(previousSnapshot.AddDays(clockOffsetDays));
+        var data = Data();
+        var projection = new Projection { PiEmployeeId = "PI", SeededAt = previousSnapshot };
+
+        await new ProjectionSeeder(data, clock).SeedAsync(projection, 6, null, null, default);
+
+        data.SnapshotAtUtc.Should().Be(nextMonth);
+        projection.SeededAt.Should().Be(nextMonth);
+        projection.SeededAt.Should().Be(data.SnapshotAtUtc!.Value);
+        projection.SeededAt.Kind.Should().Be(DateTimeKind.Utc);
+    }
+
+    [Fact]
+    public async Task Keeps_the_previous_snapshot_when_the_seed_query_fails()
+    {
+        var previousSnapshot = new DateTime(2026, 10, 16, 0, 0, 0, DateTimeKind.Utc);
+        var querySnapshot = new DateTime(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc);
+        var data = Data();
+        data.SeedResponse = Task.FromException<ProjectionSeedData>(new InvalidOperationException("Seed unavailable"));
+        var projection = new Projection { PiEmployeeId = "PI", SeededAt = previousSnapshot };
+
+        var seeding = () => new ProjectionSeeder(data, new MutableTimeProvider(querySnapshot))
+            .SeedAsync(projection, 6, null, null, default);
+
+        await seeding.Should().ThrowAsync<InvalidOperationException>();
+
+        data.SnapshotAtUtc.Should().Be(querySnapshot);
+        projection.SeededAt.Should().Be(previousSnapshot);
+    }
+
+    [Fact]
     public async Task Seeds_projects_budgets_actuals_runrates_and_projected_expenses()
     {
         var projection = await SeedAsync(Data());
@@ -153,5 +213,11 @@ public sealed class ProjectionSeederTests
         projection.HistoryMonths.Should().Be(12);
         project.Expenses.Select(e => (e.Kind, e.Amount)).Should().BeEquivalentTo(
             [(ProjectionExpenseKind.Monthly, 999m), (ProjectionExpenseKind.Projected, 20m)]);
+    }
+
+    private sealed class MutableTimeProvider(DateTime utcNow) : TimeProvider
+    {
+        public DateTime UtcNow { get; set; } = utcNow;
+        public override DateTimeOffset GetUtcNow() => new(UtcNow);
     }
 }

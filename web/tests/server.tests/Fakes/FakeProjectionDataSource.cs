@@ -6,13 +6,18 @@ namespace server.tests.Fakes;
 public sealed class FakeProjectionDataSource : IProjectionDataSource
 {
     public ProjectionSeedData Seed { get; set; } = new();
+    public Task<ProjectionSeedData>? SeedResponse { get; set; }
+    public DateTime? SnapshotAtUtc { get; private set; }
     public List<PositionBudgetRecord> Personnel { get; set; } = [];
     public List<JobCodeRecord> JobCodes { get; set; } = [];
     public List<string> Categories { get; set; } = [];
 
     public Task<ProjectionSeedData> GetProjectionSeedAsync(
-        string piEmployeeId, string? applicationUser, string? emulatingUser, CancellationToken ct) =>
-        Task.FromResult(Seed);
+        string piEmployeeId, DateTime snapshotAtUtc, string? applicationUser, string? emulatingUser, CancellationToken ct)
+    {
+        SnapshotAtUtc = snapshotAtUtc;
+        return SeedResponse ?? Task.FromResult(Seed);
+    }
 
     public Task<IReadOnlyList<PositionBudgetRecord>> GetCognosPositionBudgetsAsync(
         IReadOnlyList<string> projectNumbers, string? applicationUser, string? emulatingUser, CancellationToken ct) =>
