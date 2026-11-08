@@ -47,6 +47,20 @@ public sealed class ProjectionsController(
             .ToListAsync(ct));
     }
 
+    /// <summary>Captures a fresh authorized draft without creating a saved plan or changing existing plans.</summary>
+    [HttpGet("by-iam/{iamId}/seed")]
+    [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+    public async Task<IActionResult> Seed(string iamId, [FromQuery] int historyMonths = 3, CancellationToken ct = default)
+    {
+        if (!Windows.Contains(historyMonths)) return BadRequest("HistoryMonths must be 3, 6, or 12.");
+        var (piEmployeeId, error) = await ResolvePiAsync(iamId, ct);
+        if (error is not null) return error;
+
+        var draft = new Projection { PiEmployeeId = piEmployeeId!, Name = "New projection" };
+        await seeder.SeedAsync(draft, historyMonths, User.GetUserIdentifier(), User.GetEmulatingUser(), ct);
+        return Ok(draft);
+    }
+
     [HttpPost("by-iam/{iamId}")]
     public async Task<IActionResult> Create(string iamId, CreateProjectionRequest request, CancellationToken ct)
     {

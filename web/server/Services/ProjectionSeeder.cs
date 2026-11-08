@@ -17,57 +17,19 @@ public sealed class ProjectionSeeder(IProjectionDataSource data, TimeProvider? t
         var seed = await data.GetProjectionSeedAsync(projection.PiEmployeeId, snapshotAtUtc,
             applicationUser, emulatingUser, ct);
 
-        var nextId = 1;
-        var projects = seed.Projects.ToDictionary(p => (p.ProjectNumber, p.TaskNumber), p => new ProjectionProject
-        {
-            Id = nextId++,
-            ProjectNumber = p.ProjectNumber,
-            TaskNumber = p.TaskNumber,
-            TaskName = p.TaskName,
-            ProjectName = p.ProjectName ?? p.ProjectNumber,
-            ProjectType = p.ProjectType,
-            AwardNumber = p.AwardNumber,
-            AwardName = p.AwardName,
-            StartDate = ToDate(p.StartDate),
-            EndDate = ToDate(p.EndDate),
-            IsSeeded = true,
-        });
+        var prepared = ProjectionSeedPolicy.Prepare(seed, snapshotAtUtc);
+        // Include excluded source projects so their dated funding remains outside the prepared plan.
+        var projectNumbers = seed.Projects.Select(p => p.ProjectNumber).Distinct().ToList();
+        var personnel = projectNumbers.Count == 0
+            ? Array.Empty<PositionBudgetRecord>()
+            : await data.GetCognosPositionBudgetsAsync(projectNumbers, applicationUser, emulatingUser, ct);
 
-        foreach (var b in seed.Budgets)
-            projects.GetValueOrDefault((b.ProjectNumber, b.TaskNumber))?.Budgets.Add(new ProjectionBudget
-            {
-                ExpenditureCategory = b.ExpenditureCategory,
-                Budget = b.Budget,
-                SpentToDate = b.SpentToDate,
-                Committed = b.Committed,
-                IsSeeded = true,
-            });
-        foreach (var a in seed.Actuals)
-            projects.GetValueOrDefault((a.ProjectNumber, a.TaskNumber))?.Actuals.Add(new ProjectionActual
-            {
-                Month = DateOnly.FromDateTime(a.Month),
-                ExpenditureCategory = a.ExpenditureCategory,
-                Amount = a.Amount,
-            });
-        foreach (var r in seed.RunRates)
-            projects.GetValueOrDefault((r.ProjectNumber, r.TaskNumber))?.RunRates.Add(new ProjectionRunRate
-            {
-                ExpenditureCategory = r.ExpenditureCategory,
-                HistoryMonths = r.HistoryMonths,
-                MonthlyAmount = r.MonthlyAmount,
-            });
-
-        projection.Projects = [.. projects.Values];
+        projection.Projects = prepared.Projects;
         projection.SeededAt = snapshotAtUtc;
         ApplyRunRates(projection, historyMonths);
 
-        var projectNumbers = projects.Keys.Select(k => k.ProjectNumber).Distinct().ToList();
-        var personnel = await data.GetCognosPositionBudgetsAsync(projectNumbers, applicationUser, emulatingUser, ct);
-
-        // Sponsored lines may carry a task that matches no portfolio row; charge the project's first task.
         ProjectionProject? Match(PositionBudgetRecord r) =>
-            projects.GetValueOrDefault((r.ProjectId ?? "", r.Task))
-            ?? projection.Projects.FirstOrDefault(p => p.ProjectNumber == r.ProjectId);
+            prepared.MatchFunding(r.ProjectId, r.Task);
 
         projection.Jobs = personnel
             .Where(r => !r.IsFuture)
@@ -120,10 +82,9 @@ public sealed class ProjectionSeeder(IProjectionDataSource data, TimeProvider? t
         foreach (var r in rows)
         {
             var project = match(r);
-            if (project is null) continue;
             job.FundingEntries.Add(new ProjectionFundingEntry
             {
-                ProjectId = project.Id,
+                ProjectId = project?.Id,
                 Percent = (r.DistributionPercent ?? 0) / 100 * (r.EarnCodeShare ?? 1),
                 StartDate = ToDate(r.FundingEffectiveDate),
                 EndDate = ToDate(r.FundingEndDate),

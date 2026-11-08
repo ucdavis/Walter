@@ -108,7 +108,8 @@ public sealed class ProjectionSeederTests
         var project = projection.Projects.Should().ContainSingle().Subject;
         project.Id.Should().Be(1);
         project.ProjectNumber.Should().Be("P1");
-        project.TaskNumber.Should().Be("TASK01");
+        project.TaskNumber.Should().BeNull();
+        project.TaskName.Should().BeNull();
         project.IsSeeded.Should().BeTrue();
         project.Budgets.Should().ContainSingle().Which.Should().BeEquivalentTo(new { Budget = 1000m, SpentToDate = 200m, Committed = 100m });
         project.RunRates.Should().HaveCount(2);
@@ -164,7 +165,7 @@ public sealed class ProjectionSeederTests
     }
 
     [Fact]
-    public async Task Falls_back_to_the_projects_first_task_when_the_line_task_does_not_match()
+    public async Task Maps_an_unknown_task_to_the_retained_project_group()
     {
         var projection = await SeedAsync(Data(Line(100, task: "")));
 

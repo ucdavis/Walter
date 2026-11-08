@@ -1,7 +1,10 @@
 # Projections implementation plan
 
 Status: Stage 1a and Stage 1b are accepted, including the calculation corrections,
-shared snapshot timestamp, and fee rules. Stage 2 is authorized and beginning.
+shared snapshot timestamp, and fee rules. Stage 2a's fresh-snapshot read and
+eligibility policy are accepted. Wizard completion and duplication are authorized
+in Stage 2b; New plan saves before opening
+the view/edit workspace.
 Saving remains available with funding gaps/overlaps.
 The CBR default and legacy-plan compatibility increment is accepted.
 The project outlook starts at the snapshot month; historical spending remains
@@ -24,6 +27,10 @@ as each decision is settled and each stage is reviewed.
   implementation as the foundation.
 - The guided planner defines the intended UI. The earlier timeline and copilot
   are outside the initial feature; prepare for AI editing later.
+- New plan opens the setup wizard. Its final Create plan action saves the
+  reviewed inputs, then opens the saved plan's workspace. Canceling setup creates
+  no saved plan; a failed create keeps the wizard inputs available for retry.
+  Subsequent workspace edits use explicit Save plan.
 - Work in stages. Exercise the result and review its code before moving to the
   next stage. Prefer small, understandable changes and shared rules.
 - The deliverable is production code. Temporary previews and review scripts
@@ -175,8 +182,9 @@ The reviewed main branch already has per-PI document storage, snapshot inputs,
 lookups, CRUD/reset endpoints, and portfolio-based access. Interactive calculation
 already runs in TypeScript. Retain those foundations and make focused changes:
 
-- Add a seed-only read so opening a fresh draft does not create a saved row.
-- Support saving an edited new draft and duplicating a snapshot without reseeding.
+- Use the seed-only read to prefill the wizard without creating a saved row.
+- Create the saved plan from the wizard's reviewed inputs, or a copied snapshot,
+  without reseeding at the save boundary.
 - Check a server concurrency token on mutations that can discard another edit.
 - Persist plan settings and stable nested IDs cleanly as their features arrive.
 - Validate structure, references, dates, and numeric values while allowing
@@ -187,15 +195,17 @@ already runs in TypeScript. Retain those foundations and make focused changes:
   reviewed estimates instead of unexpectedly regenerating them.
 
 Retain document storage rather than introducing a relational planning subsystem.
-The demo stores plan settings inside a project record; the rebuild needs an
-explicit plan-level metadata decision. Stage 1b reuses `UpdatedAt` and `SeededAt`
-without adding a database column. Settle settings before the lifecycle or details
-features that require them.
+The demo stores plan settings inside a project record; do not carry that pattern
+forward. Name and history window already have plan-level fields, which are
+sufficient for the current lifecycle work. Retain the three-month default and
+date-driven forecast horizon. Add proper plan-level storage when notes, custom
+horizon, or inclusion settings arrive in their owning stage.
 
 Fresh seed eligibility should have one named, tested owner. Apply dashboard rules,
 group eligible tasks by project, and preserve excluded allocations as outside
 funding rather than silently redistributing them. Current filters must not rewrite
-an already saved snapshot. Decide the owning boundary in Stage 2.
+an already saved snapshot. Stage 2a assigns this boundary to the server's fresh
+seed policy.
 
 ## Stages and review stops
 
@@ -204,7 +214,7 @@ an already saved snapshot. Decide the owning boundary in Stage 2.
 | 0. Behavior agreement         | Agreed salary calculation, edit timing, draft behavior, and navigation expectations for a small synthetic portfolio                                                              | Product decisions confirmed. Keep later questions assigned to their owning stages.                                                        |
 | 1a. One local salary edit     | Open a representative plan; link to a job; edit and cancel salary; recalculate a useful project outlook; navigate without losing edits; invoke the same operation without the UI | State ownership, calculation clarity, component boundaries, keyboard behavior, and responsiveness.                                        |
 | 1b. Save that edit            | Real saved-plan loading, conditional save, reload, failure recovery, and unsaved-change handling                                                                                 | Failed and conflicting saves preserve work; an in-flight response does not erase subsequent edits.                                        |
-| 2. Plan lifecycle             | Fresh unsaved seed, save-as-new, duplicate, plan selection, and dashboard eligibility                                                                                            | Reopened and duplicated plans retain captured inputs; saved plans remain usable when fresh data is unavailable.                           |
+| 2. Plan lifecycle             | Wizard snapshot loading, creation on completion, duplicate, plan selection, and dashboard eligibility                                                                           | Wizard completion saves before opening the workspace; reopened and duplicated plans retain captured inputs even when fresh data is unavailable. |
 | 3. Funding and staffing       | Project balances/dates, employee/job assumptions including fee remission, hypothetical hires, and funding schedules                                                             | Review project editing, job editing, and allocation editing separately. Check FTE, date ranges, outside funding, and funding proportions. |
 | 4. Expenses and details       | Monthly/one-time expenses, generated estimates, history windows, notes, and horizon                                                                                              | Explicit expenses survive regeneration; save/reload preserves the preview.                                                                |
 | 5. Complete guided experience | Setup composed from existing editors, full project drilldowns, explanations, and controlled rollout                                                                              | Verify the complete workflow and genuine reuse.                                                                                           |
@@ -246,7 +256,7 @@ The salary arithmetic and these product choices were confirmed on November 6, 20
 | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | When a salary edit applies      | Change the job's assumed full-time rate throughout its remaining applicable forecast period, leaving historical actuals unchanged | Scheduling a raise for a future month is deferred. Existing COLA assumptions still need their own fixture.             |
 | When an editor changes the plan | Apply changes the in-memory draft and forecast; Cancel leaves them unchanged                                                      | Partial typing stays inside the editor. This retains a clear cancellation boundary.                                    |
-| When a plan is persisted        | Explicit Save plan                                                                                                                | Navigation within a plan preserves the draft; leaving or reloading warns about unsaved work. Reload uses saved inputs. |
+| When workspace edits are persisted | Explicit Save plan                                                                                                             | Navigation within a plan preserves the draft; leaving or reloading warns about unsaved work. Reload uses saved inputs. |
 
 The remaining forecast period is relative to the plan's fixed snapshot, not
 today's date. Reopening an older plan does not move the salary edit's start month.
@@ -879,11 +889,84 @@ The user accepted the validated calculation behavior and authorized Stage 2.
 Stage 1b is complete. The deliberately deferred questions above remain recorded
 for future work and do not block the plan lifecycle stage.
 
+## Stage 2: plan lifecycle
+
+### Stage 2a: fresh snapshot and eligibility
+
+`GET /api/projections/by-iam/{iamId}/seed?historyMonths=3` returns fresh,
+authorized inputs for the wizard without creating a saved plan. The history window supports
+3, 6, or 12 months and defaults to 3. The response has ID 0 and no saved-plan
+audit metadata; it retains the captured UTC snapshot timestamp. The response
+is not cached. Opening existing plans remains independent of fresh seed data.
+
+The server's `ProjectionSeedPolicy` owns fresh selection and grouping, including
+the existing Create and explicit Reset paths that call the same seeder:
+
+- Keep the seed query's project-level PI membership and ACTIVE project scope.
+  Dashboard display rules do not broaden portfolio membership.
+- Exclude internal tasks with status `Inactive`. For other project types, use
+  the latest award end date across the project's tasks; exclude the project
+  only when that date is before the saved UTC capture date. Keep missing dates
+  and awards ending on the capture date. Award dates select projects; project
+  dates continue to bound their forecasts.
+- Group eligible tasks into one projection project. Sum category budgets,
+  monthly actuals, and history-window estimates from retained tasks only.
+  Preserve the earliest start and latest end among retained project dates.
+- Keep excluded funding lines as outside funding, including their supplied
+  shares and dates. Do not redistribute them to retained projects. A known
+  excluded task cannot use the legacy fallback for an unmatched task.
+
+Personnel is requested for the original seed project set so excluded allocations
+remain available for that mapping. An empty seed skips the personnel query.
+Fresh policy does not run when opening or saving an existing plan. Legacy
+task-grained snapshots remain usable without being regrouped.
+
+This increment changes the server boundary. The existing UI still uses its
+current create flow; wizard completion and creation from reviewed inputs follow next.
+No new settings column or persistence schema is needed for this increment.
+Deploy the updated seed procedure before this application version so the source
+provides `TaskStatus` and `AwardEndDate`. Older result sets omit those fields;
+they cannot support the agreed exclusions.
+
+Verification passed: 475 server tests, with 8 optional SQL persistence tests
+skipped, the datamart project build, and independent code review. The targeted
+60-test run includes an ASP.NET TestServer request proving the seed route uses
+the default history window, preserves its UTC timestamp, sends `no-store`, and
+creates no saved row. Regression cases cover expiry-day boundaries, task
+grouping, excluded funding, empty inputs, access checks, and saved plans that
+remain usable when fresh seed data fails. The SQL procedure was compiled but
+not executed against a live database; no deployment occurred.
+
+### Stage 2b: wizard completion and copies
+
+New plan opens the setup wizard, prefilled from the seed-only read. Keep its
+working inputs in memory while the user reviews funding, staffing, and expenses.
+The final Create plan action saves those reviewed inputs and opens the existing
+saved-plan workspace only after success. The workspace's Save plan action then
+updates that saved plan. Do not add a separate unsaved workspace route or require
+another Save after finishing the wizard.
+
+Extend the existing Create endpoint to accept the reviewed snapshot, salary
+edits, and expense estimates without reseeding. Canceling setup leaves no saved
+row. Keep the wizard's inputs on creation failure, pause setup edits during the
+final save, and allow retry without duplicate rows after a lost response. A late
+completion after departure must not navigate the user back.
+
+Copying creates a separate saved plan with the source snapshot, assumptions,
+and projection-local IDs. Reopening and copying must work from captured inputs
+even when current source data is unavailable. The full wizard composes the
+staffing and expense editors as their owning stages deliver them; Stage 2 fixes
+the creation boundary rather than introducing a different interim lifecycle.
+
+Stage 2a is accepted and this increment is authorized. Existing plan settings
+are sufficient; later metadata editors should not store settings inside an
+arbitrary project record.
+
 ## Questions to resolve in their owning stages
 
 | Before                        | Question or example                                                                                                                                                                     |
 | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Stage 2                       | Where will plan settings live? Verify duplicate semantics, seed eligibility, task grouping, and saved-snapshot independence.                                                            |
+| Stage 2                       | Review fresh-seed eligibility and grouping, then implement wizard completion, creation retry recovery, duplication, selection, and saved-snapshot independence. |
 | Before exposing reset/refresh | Define their separate meanings, treatment of local edits, and snapshot replacement behavior.                                                                                            |
 | Stage 3                       | How do funding schedules behave at appointment/project boundaries, at zero FTE, and when FTE changes? Verify outside funding and distinguish incomplete assumptions from invalid edits. |
 | Stage 4                       | Which generated estimates are replaced when the history window changes? When does editing an estimate turn it into an explicit planned expense?                                         |

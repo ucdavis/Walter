@@ -4,6 +4,21 @@ A projection combines a saved financial snapshot with assumptions about future
 costs. Editing an assumption changes the forecast while preserving booked
 spending. Reopening a saved plan does not advance its snapshot date.
 
+## Fresh snapshot selection
+
+Fresh snapshots begin with active projects where the person is the project-level
+PI. Internal tasks marked `Inactive` are excluded. Other project types are
+excluded when their latest award end date is before the UTC capture date.
+Missing award end dates and awards ending on the capture date remain eligible.
+Award expiry determines inclusion; project dates determine forecast eligibility.
+
+Eligible tasks are combined into one projection project. Category balances,
+monthly costs, and captured expense averages are summed across retained tasks.
+Funding assigned to excluded tasks or projects remains outside the plan, with
+its original share and dates; it is not redistributed to retained projects.
+Opening or saving an existing plan preserves its captured inputs, including
+older plans that still have separate task records.
+
 ## Salary and benefits
 
 Salary is entered as a full-time rate. Before cost-of-living adjustments, each

@@ -9,6 +9,7 @@ public sealed class FakeProjectionDataSource : IProjectionDataSource
     public Task<ProjectionSeedData>? SeedResponse { get; set; }
     public DateTime? SnapshotAtUtc { get; private set; }
     public List<PositionBudgetRecord> Personnel { get; set; } = [];
+    public IReadOnlyList<string>? PersonnelProjectNumbers { get; private set; }
     public List<JobCodeRecord> JobCodes { get; set; } = [];
     public List<string> Categories { get; set; } = [];
 
@@ -20,8 +21,11 @@ public sealed class FakeProjectionDataSource : IProjectionDataSource
     }
 
     public Task<IReadOnlyList<PositionBudgetRecord>> GetCognosPositionBudgetsAsync(
-        IReadOnlyList<string> projectNumbers, string? applicationUser, string? emulatingUser, CancellationToken ct) =>
-        Task.FromResult<IReadOnlyList<PositionBudgetRecord>>(Personnel.Where(p => projectNumbers.Contains(p.ProjectId)).ToList());
+        IReadOnlyList<string> projectNumbers, string? applicationUser, string? emulatingUser, CancellationToken ct)
+    {
+        PersonnelProjectNumbers = [.. projectNumbers];
+        return Task.FromResult<IReadOnlyList<PositionBudgetRecord>>(Personnel.Where(p => projectNumbers.Contains(p.ProjectId)).ToList());
+    }
 
     public Task<IReadOnlyList<JobCodeRecord>> GetJobCodesAsync(CancellationToken ct) =>
         Task.FromResult<IReadOnlyList<JobCodeRecord>>(JobCodes);

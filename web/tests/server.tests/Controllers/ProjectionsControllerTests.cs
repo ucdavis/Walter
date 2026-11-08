@@ -1,13 +1,20 @@
 using System.Security.Claims;
+using System.Net;
+using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using FluentAssertions;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Hosting;
 using Server.Controllers;
 using Server.Services;
 using Server.Tests;
@@ -31,7 +38,7 @@ public sealed class ProjectionsControllerTests
     ];
 
     private static ProjectionsController CreateController(AppDbContext ctx, string? employeeId = null,
-        bool financialViewer = false, TimeProvider? timeProvider = null)
+        bool financialViewer = false, TimeProvider? timeProvider = null, FakeProjectionDataSource? dataSource = null)
     {
         var claims = new List<Claim> { new("kerberos", "tester") };
         if (financialViewer) claims.Add(new Claim(ClaimTypes.Role, Role.Names.FinancialViewer));
@@ -43,7 +50,7 @@ public sealed class ProjectionsControllerTests
             claims.Add(new Claim(Microsoft.Identity.Web.ClaimConstants.ObjectId, user.Id.ToString()));
         }
 
-        var data = new FakeProjectionDataSource
+        var data = dataSource ?? new FakeProjectionDataSource
         {
             Seed = new ProjectionSeedData
             {
@@ -94,6 +101,195 @@ public sealed class ProjectionsControllerTests
         created.Projects.Should().ContainSingle().Which.ProjectNumber.Should().Be("P1");
         var result = await CreateController(ctx, financialViewer: true).Get(created.Id, default);
         result.Should().BeOfType<OkObjectResult>().Which.Value.Should().BeOfType<Projection>().Which.Name.Should().Be("Plan A");
+    }
+
+    [Fact]
+    public async Task Seed_returns_a_fresh_draft_without_creating_a_plan_or_saving_pending_changes()
+    {
+        using var ctx = TestDbContextFactory.CreateInMemory();
+        var pending = new Projection { Name = "Pending unrelated write", PiEmployeeId = "100" };
+        ctx.Projections.Add(pending);
+        var snapshot = new DateTime(2026, 11, 7, 23, 59, 59, DateTimeKind.Utc).AddTicks(1234567);
+        var data = new FakeProjectionDataSource
+        {
+            Seed = new ProjectionSeedData
+            {
+                Projects = [new() { ProjectNumber = "P1", TaskNumber = "TASK01", ProjectName = "Source project" }],
+                Budgets = [new() { ProjectNumber = "P1", TaskNumber = "TASK01", ExpenditureCategory = Supplies, Budget = 1000, SpentToDate = 200, Committed = 100 }],
+                Actuals = [new() { ProjectNumber = "P1", TaskNumber = "TASK01", ExpenditureCategory = Supplies, Month = new DateTime(2026, 10, 1), Amount = 200 }],
+                RunRates = [new() { ProjectNumber = "P1", TaskNumber = "TASK01", ExpenditureCategory = Supplies, HistoryMonths = 12, MonthlyAmount = 25 }],
+            },
+            Personnel = [new() { EmployeeId = "E1", PositionNumber = "X1", ProjectId = "P1", Task = "TASK01", MonthlyRate = 5000, Fte = 1, DistributionPercent = 100 }],
+        };
+        var controller = CreateController(ctx, financialViewer: true, timeProvider: new MutableTimeProvider(snapshot), dataSource: data);
+
+        var draft = Document(await controller.Seed(PiIam, 12, default));
+
+        draft.Should().BeEquivalentTo(new
+        {
+            Id = 0, Name = "New projection", PiEmployeeId = "100", HistoryMonths = 12,
+            SeededAt = snapshot, CreatedAt = default(DateTime), UpdatedAt = default(DateTime),
+        });
+        draft.CreatedBy.Should().BeNull();
+        draft.UpdatedBy.Should().BeNull();
+        draft.Projects.Should().ContainSingle().Which.Budgets.Should().ContainSingle().Which.Budget.Should().Be(1000);
+        draft.Projects.Single().Actuals.Should().ContainSingle().Which.Amount.Should().Be(200);
+        draft.Projects.Single().Expenses.Should().ContainSingle().Which.Amount.Should().Be(25);
+        draft.Jobs.Should().ContainSingle().Which.MonthlySalary.Should().Be(5000);
+        data.SnapshotAtUtc.Should().Be(snapshot);
+        (await ctx.Projections.CountAsync()).Should().Be(0);
+        ctx.Entry(pending).State.Should().Be(EntityState.Added);
+        ctx.ChangeTracker.Entries<Projection>().Should().ContainSingle().Which.Entity.Should().BeSameAs(pending);
+    }
+
+    [Fact]
+    public async Task Seed_returns_an_empty_draft_without_querying_personnel_when_no_source_projects_exist()
+    {
+        using var ctx = TestDbContextFactory.CreateInMemory();
+        var data = new FakeProjectionDataSource();
+
+        var draft = Document(await CreateController(ctx, financialViewer: true, dataSource: data).Seed(PiIam, 3, default));
+
+        draft.Id.Should().Be(0);
+        draft.Projects.Should().BeEmpty();
+        draft.Jobs.Should().BeEmpty();
+        data.PersonnelProjectNumbers.Should().BeNull();
+        ctx.Projections.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Http_seed_defaults_to_three_months_and_is_not_cacheable_or_persisted()
+    {
+        using var ctx = TestDbContextFactory.CreateInMemory();
+        var snapshot = new DateTime(2026, 11, 7, 23, 59, 59, DateTimeKind.Utc).AddTicks(1234567);
+        var clock = new MutableTimeProvider(snapshot);
+        using var host = new HostBuilder().ConfigureWebHost(builder => builder.UseTestServer()
+            .ConfigureServices(services =>
+            {
+                services.AddLogging();
+                services.AddAuthorizationPolicies();
+                services.AddControllers().AddApplicationPart(typeof(ProjectionsController).Assembly).AddControllersAsServices();
+                services.AddScoped(_ => CreateController(ctx, financialViewer: true, timeProvider: clock));
+            })
+            .Configure(app =>
+            {
+                app.UseRouting();
+                app.Use((context, next) =>
+                {
+                    context.User = new ClaimsPrincipal(new ClaimsIdentity(
+                        [new Claim("kerberos", "tester"), new Claim(ClaimTypes.Role, Role.Names.FinancialViewer)], "Test"));
+                    return next(context);
+                });
+                app.UseAuthorization();
+                app.UseEndpoints(endpoints => endpoints.MapControllers());
+            })).Start();
+        using var client = host.GetTestClient();
+
+        using var response = await client.GetAsync($"/api/projections/by-iam/{PiIam}/seed");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.Headers.CacheControl!.NoStore.Should().BeTrue();
+        var draft = (await response.Content.ReadFromJsonAsync<Projection>())!;
+        draft.Should().BeEquivalentTo(new { Id = 0, Name = "New projection", HistoryMonths = 3, SeededAt = snapshot });
+        draft.SeededAt.Kind.Should().Be(DateTimeKind.Utc);
+        using var invalid = await client.GetAsync($"/api/projections/by-iam/{PiIam}/seed?historyMonths=4");
+        invalid.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        ctx.Projections.Should().BeEmpty();
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(4)]
+    public async Task Seed_rejects_an_invalid_history_window_before_querying_source_data(int historyMonths)
+    {
+        using var ctx = TestDbContextFactory.CreateInMemory();
+        var data = new FakeProjectionDataSource();
+
+        (await CreateController(ctx, financialViewer: true, dataSource: data).Seed(PiIam, historyMonths, default))
+            .Should().BeOfType<BadRequestObjectResult>();
+
+        data.SnapshotAtUtc.Should().BeNull();
+        ctx.Projections.Should().BeEmpty();
+    }
+
+    [Theory]
+    [InlineData("100")]
+    [InlineData("200")]
+    public async Task Seed_allows_the_pi_or_a_project_manager(string employeeId)
+    {
+        using var ctx = TestDbContextFactory.CreateInMemory();
+
+        var draft = Document(await CreateController(ctx, employeeId: employeeId).Seed(PiIam, 6, default));
+
+        draft.PiEmployeeId.Should().Be("100");
+        draft.HistoryMonths.Should().Be(6);
+        draft.Projects.Should().ContainSingle();
+        ctx.Projections.Should().BeEmpty();
+    }
+
+    [Theory]
+    [InlineData(PiIam)]
+    [InlineData("UNKNOWN")]
+    public async Task Seed_does_not_distinguish_an_inaccessible_pi_from_an_unknown_iam(string iamId)
+    {
+        using var ctx = TestDbContextFactory.CreateInMemory();
+        var data = new FakeProjectionDataSource();
+
+        (await CreateController(ctx, employeeId: "999", dataSource: data).Seed(iamId, 3, default))
+            .Should().BeOfType<ForbidResult>();
+
+        data.SnapshotAtUtc.Should().BeNull();
+        ctx.Projections.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Seed_returns_not_found_for_an_unknown_iam_to_a_financial_viewer()
+    {
+        using var ctx = TestDbContextFactory.CreateInMemory();
+        var data = new FakeProjectionDataSource();
+
+        (await CreateController(ctx, financialViewer: true, dataSource: data).Seed("UNKNOWN", 3, default))
+            .Should().BeOfType<NotFoundResult>();
+
+        data.SnapshotAtUtc.Should().BeNull();
+        ctx.Projections.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Reopening_and_saving_preserve_expired_task_level_snapshot_inputs_without_reseeding()
+    {
+        using var ctx = TestDbContextFactory.CreateInMemory();
+        var snapshot = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        var saved = new Projection
+        {
+            PiEmployeeId = "100", Name = "Captured tasks", HistoryMonths = 3,
+            CreatedAt = snapshot, SeededAt = snapshot, UpdatedAt = snapshot,
+            Projects = [
+                new() { Id = 1, ProjectNumber = "P1", TaskNumber = "TASK01", ProjectName = "First captured task", EndDate = new DateOnly(2025, 3, 31) },
+                new() { Id = 2, ProjectNumber = "P1", TaskNumber = "TASK02", ProjectName = "Second captured task", EndDate = new DateOnly(2025, 3, 31) },
+            ],
+            Jobs = [new() { Id = 1, MonthlySalary = null, FundingEntries = [new() { ProjectId = 2, Percent = 0.6m }] }],
+        };
+        ctx.Projections.Add(saved);
+        await ctx.SaveChangesAsync();
+        var originalProjects = JsonSerializer.Serialize(saved.Projects);
+        var originalJobs = JsonSerializer.Serialize(saved.Jobs);
+        var data = new FakeProjectionDataSource { SeedResponse = Task.FromException<ProjectionSeedData>(new InvalidOperationException("Fresh data unavailable")) };
+        var controller = CreateController(ctx, financialViewer: true, dataSource: data);
+        ctx.ChangeTracker.Clear();
+
+        var loaded = Document(await controller.Get(saved.Id, default));
+        var updated = Document(await controller.Save(saved.Id, Draft(loaded) with { Name = "Reviewed saved snapshot" }, default));
+        ctx.ChangeTracker.Clear();
+        var reopened = Document(await controller.Get(saved.Id, default));
+
+        reopened.Name.Should().Be("Reviewed saved snapshot");
+        reopened.SeededAt.Should().Be(snapshot);
+        JsonSerializer.Serialize(reopened.Projects).Should().Be(originalProjects);
+        JsonSerializer.Serialize(reopened.Jobs).Should().Be(originalJobs);
+        updated.Id.Should().Be(saved.Id);
+        data.SnapshotAtUtc.Should().BeNull();
+        data.PersonnelProjectNumbers.Should().BeNull();
     }
 
     [Fact]

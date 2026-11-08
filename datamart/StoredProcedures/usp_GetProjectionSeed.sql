@@ -61,10 +61,12 @@ BEGIN
         SELECT f.ProjectNumber,
                f.TaskNum AS TaskNumber,
                MAX(f.TaskName) AS TaskName,
+               MAX(f.TaskStatus) AS TaskStatus,
                MAX(f.ProjectName) AS ProjectName,
                MAX(f.ProjectType) AS ProjectType,
                MAX(f.AwardNumber) AS AwardNumber,
                MAX(f.AwardName) AS AwardName,
+               MAX(f.AwardEndDate) AS AwardEndDate,
                COALESCE(MAX(pp.ProjectStartDate), MAX(f.AwardStartDate)) AS StartDate,
                COALESCE(MAX(pp.ProjectEndDate), MAX(f.AwardEndDate)) AS EndDate
         FROM dbo.FacultyDeptPortfolio f
