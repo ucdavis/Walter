@@ -6,7 +6,7 @@ decisions. Saving remains available with funding gaps/overlaps.
 The CBR default and legacy-plan compatibility increment is accepted.
 The project outlook starts at the snapshot month; historical spending remains
 available for expense estimates and snapshot-month calculations.
-Updated November 6, 2026.
+Updated November 7, 2026.
 
 Build a guided planning workspace where users can adjust a dated portfolio
 snapshot, inspect each project's outlook, and save alternative plans. Keep the
@@ -33,6 +33,10 @@ as each decision is settled and each stage is reviewed.
 - The salary calculation below and the three [Stage 0 workflow decisions](#stage-0-confirmed-decisions)
   are agreed: salary changes apply throughout the remaining applicable forecast
   period, editors use Apply/Cancel, and plans use explicit Save plan.
+- A hypothetical hire starting after the snapshot month uses its entered
+  full-time salary as the starting rate. COLA first applies in the configured
+  month strictly after the start month. Jobs captured in the snapshot keep
+  the snapshot date as their salary base.
 - Stage 1b uses the existing `UpdatedAt` timestamp for concurrency and saves the
   whole applied draft. A conflict offers Overwrite or Discard. The confirmed
   behavior and implementation stops are recorded below.
@@ -687,6 +691,47 @@ snapshot-month treatment also remain unresolved. Booked actuals, salary/fringe
 netting, and explicit monthly/one-time expenses retain their existing treatment.
 Stage 1b remains open.
 
+#### Agreed future-hire salary timing
+
+For a hypothetical job that was not captured in the source snapshot and starts
+after the snapshot month, the entered salary is the full-time rate at the job's
+start. The first COLA is in the configured month strictly after the start month;
+there is no increase in the start month itself. Later increases compound annually.
+
+With a January 2026 snapshot, an August 2026 hire at $120,000 annually and a 3%
+July COLA has these full-time monthly salary rates:
+
+| Month       | Monthly salary |
+| ----------- | -------------: |
+| August 2026 |        $10,000 |
+| July 2027   |        $10,300 |
+| July 2028   |        $10,609 |
+
+A July 2026 hire also receives its first increase in July 2027. Jobs captured in
+the source snapshot continue to use a snapshot-date salary base, even if their
+start date is later. A hypothetical job with no start date, or a start in or
+before the snapshot month, also uses the snapshot base. Moving a hypothetical
+job's start date moves its salary base according to the same rule.
+
+Use the existing job source flag and start date; no schema change is needed.
+This settles future-hire COLA timing. Stage 1b remains open for the other
+calculation questions below.
+
+The [future-hire preview](http://127.0.0.1:5174/projections-preview.html?example=future-hire&section=overview&project=1)
+uses a 50% appointment split equally between two projects. Each project starts
+at $60,000 and forecasts $2,500 monthly from August 2026 through June 2027, then
+$2,575 in July and August 2027, ending at $27,350. Editing the annual salary to
+$132,000 gives $2,750 and $2,832.50 respectively, ending at $24,085. The salary
+editor displays August 2026 as the rate's base month.
+
+Verification passed: 511 client tests, TypeScript, production build, changed-file
+lint and formatting, executable examples, and independent review. Browser checks
+covered the initial forecast, salary editing, and synthetic saving with the hire
+date preserved. Ten calculation cases cover start-month boundaries, compounding,
+benefits, later funding/project starts, moved hire dates, and imported jobs.
+React Doctor scored 97/100 with the existing component-size warning; existing
+client build warnings remain. No server behavior or persistence schema changed.
+
 #### Findings to resolve
 
 The November 6 source review and executable examples identified the following
@@ -714,9 +759,6 @@ work. These findings do not authorize implementing later stages together.
   by FTE or COLA. Eligible dates and snapshot-month treatment also need agreement
   before adding the per-employee editor in Stage 3. Existing monthly eligibility
   does not follow the new personnel date bounds. No automatic fee default is selected.
-- **Future hires:** decide whether an entered salary is a snapshot-date rate
-  or the agreed starting rate. The existing COLA calculation can apply an
-  increase before the job starts.
 - **Commitments:** the starting balance already reserves commitments, but the
   source aggregates do not identify which future expenses fulfill them. Decide
   how to avoid overlapping commitments and forecast expenses.

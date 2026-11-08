@@ -130,7 +130,7 @@ public class ProjectionJob
     /// <summary>CBR rate set (UCPath business unit): DVCMP, DVMED, or UCANR.</summary>
     public string RateSet { get; set; } = "DVCMP";
 
-    /// <summary>1.0-FTE monthly rate as of SeededAt; null means the job needs input.</summary>
+    /// <summary>1.0-FTE monthly rate at the snapshot, or at the start of an unseeded future hire; null means the job needs input.</summary>
     public decimal? MonthlySalary { get; set; }
 
     public decimal Fte { get; set; }
@@ -150,6 +150,7 @@ public class ProjectionJob
     public decimal? FeeRemissionMonthly { get; set; }
     public DateOnly? StartDate { get; set; }
     public DateOnly? EndDate { get; set; }
+    /// <summary>True for a job imported from personnel data, whose salary remains based at the snapshot month.</summary>
     public bool IsSeeded { get; set; }
 
     public List<ProjectionFundingEntry> FundingEntries { get; set; } = [];

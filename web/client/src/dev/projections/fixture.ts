@@ -135,3 +135,31 @@ export function createDateBoundaryExample(): Projection {
   }
   return plan;
 }
+
+/** A hypothetical hire starts at the entered salary, with its first COLA the following July. */
+export function createFutureHireExample(): Projection {
+  const plan = createSalaryExample();
+  plan.name = 'Future hire example';
+  const job = plan.jobs[0];
+  job.isSeeded = false;
+  job.employeeId = null;
+  job.positionNumber = null;
+  job.startDate = '2026-08-01';
+  job.endDate = '2027-08-31';
+  job.colaRate = 0.03;
+  for (const funding of job.fundingEntries) {
+    funding.isSeeded = false;
+    funding.startDate = job.startDate;
+    funding.endDate = job.endDate;
+  }
+  for (const project of plan.projects) {
+    project.startDate = '2026-01-01';
+    project.endDate = '2027-08-31';
+    project.actuals = [];
+    for (const budget of project.budgets) {
+      budget.budget = 60_000;
+      budget.spentToDate = 0;
+    }
+  }
+  return plan;
+}

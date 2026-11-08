@@ -8,7 +8,10 @@ import '@/main.css';
 if (import.meta.env.DEV) {
   const example = new URLSearchParams(window.location.search).get('example');
   const router = createProjectionPreviewRouter({
-    example: example === 'booked' || example === 'dates' ? example : undefined,
+    example:
+      example === 'booked' || example === 'dates' || example === 'future-hire'
+        ? example
+        : undefined,
   });
   createRoot(document.getElementById('root')!).render(
     <StrictMode>

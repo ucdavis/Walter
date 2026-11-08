@@ -36,6 +36,17 @@ const toIndex = (value: string) =>
 const toMonth = (index: number) =>
   `${Math.floor(index / 12)}-${String((index % 12) + 1).padStart(2, '0')}`;
 
+/** Imported pay is snapshot-dated; a planned future hire's input is its starting rate. */
+export function getJobSalaryBaseMonth(
+  job: ProjectionJob,
+  snapshotMonth: string
+) {
+  const startMonth = job.startDate?.slice(0, 7);
+  return !job.isSeeded && startMonth && startMonth > snapshotMonth
+    ? startMonth
+    : snapshotMonth;
+}
+
 const within = (m: number, start: string | null, end: string | null) =>
   (start === null || toIndex(start) <= m) &&
   (end === null || toIndex(end) >= m);
@@ -299,10 +310,11 @@ export function computePiProjection(projection: Projection): {
   return { jobFunding, rows };
 }
 
-/** Compounds the COLA once for each COLA month after the seed month, through month m. */
+/** Compounds COLA after the salary's base month, never within that month. */
 function colaFactor(job: ProjectionJob, seedIndex: number, m: number) {
+  const salaryMonth = toIndex(getJobSalaryBaseMonth(job, toMonth(seedIndex)));
   let n = 0;
-  for (let k = seedIndex + 1; k <= m; k++) {
+  for (let k = salaryMonth + 1; k <= m; k++) {
     if ((k % 12) + 1 === job.colaMonth) {
       n++;
     }

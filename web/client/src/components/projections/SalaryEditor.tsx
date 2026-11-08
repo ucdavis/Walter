@@ -10,6 +10,7 @@ import type {
   SalaryChange,
 } from '@/lib/projectionWorkspace.ts';
 import type { ProjectionJob } from '@/queries/projections.ts';
+import { getJobSalaryBaseMonth } from '@/lib/piProjection.ts';
 import { formatCurrency } from '@/lib/currency.ts';
 
 export interface SalaryEditorHandle {
@@ -93,9 +94,9 @@ export function SalaryEditor({
           Edit salary for {job.name}
         </h2>
         <p className="mt-2 text-sm" id="salary-description">
-          The full-time rate applies from {snapshotMonth} through this
-          job&apos;s forecast period. Appointment FTE, funding shares, and
-          historical actuals stay the same.
+          This is the full-time rate at{' '}
+          {getJobSalaryBaseMonth(job, snapshotMonth)}. Appointment FTE, funding
+          shares, and annual increases determine the forecast.
         </p>
         <label className="label mt-6" htmlFor="annual-salary">
           Full-time annual salary

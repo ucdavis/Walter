@@ -73,8 +73,7 @@ export function ProjectionWorkspace({
           <p className="text-sm text-base-content/70">Projection plan</p>
           <h1 className="text-3xl font-bold">{draft.name}</h1>
           <p className="mt-2 text-sm">
-            Fixed snapshot {draft.seededAt.slice(0, 10)}. Salary assumptions
-            apply from this snapshot.
+            Fixed snapshot {draft.seededAt.slice(0, 10)}.
           </p>
         </div>
         <ProjectionSaveControls />

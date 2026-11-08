@@ -100,7 +100,10 @@ export function reviewProjectionCalculations() {
   const julySnapshot = structuredClone(cola);
   julySnapshot.seededAt = '2026-07-15T00:00:00Z';
   const futureJob = structuredClone(cola);
+  futureJob.jobs[0].isSeeded = false;
   futureJob.jobs[0].startDate = '2026-08-01';
+  assert.equal(costs(futureJob, '2026-08').salary, 2500);
+  assert.equal(costs(futureJob, '2027-07').salary, 2575);
 
   const fees = structuredClone(cola);
   fees.jobs[0].feeRemissionMonthly = 1500;
@@ -239,12 +242,14 @@ export function reviewProjectionCalculations() {
       {
         assumptions:
           'Snapshot Jan 1, 2026. New job starts Aug 1 with full-time annual salary 120000 and July COLA 3%.',
-        current: costs(futureJob, '2026-08'),
+        current: ['2026-08', '2027-07', '2028-07'].map((month) => ({
+          ...costs(futureJob, month),
+          month,
+        })),
         independentlyWorked:
-          'If 120000 is a January base rate, August per-project salary is 2575 after July COLA. If 120000 is the agreed August starting rate, it is 2500 until the next July. Current calculation does not distinguish these rate effective dates.',
-        question:
-          'Is a future appointment salary a snapshot-date rate or its starting rate?',
-        topic: 'COLA before a future job starts',
+          '120000 is the August starting rate. At 0.5 FTE and a 0.5 project share, salary is 2500 per project until July 2027, then 2575 and 2652.25 in the next two Julys. Benefits follow the same salary increases.',
+        rule: 'A planned future hire receives its first COLA in the configured month strictly after its start month. Imported jobs retain the snapshot-based rule.',
+        topic: 'Future hire starting rate',
       },
       {
         assumptions:

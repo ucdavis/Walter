@@ -502,6 +502,153 @@ describe('computePiProjection', () => {
     expect(projected(p, SALARY_CATEGORY, '2027-07')).toBeCloseTo(1030);
   });
 
+  it('uses a future hypothetical hire starting rate before compounding later annual COLAs', () => {
+    const p = projection({
+      endDate: '2028-08-31',
+      jobs: [
+        job({
+          cbrRate: 0.3,
+          colaRate: 0.03,
+          employeeId: null,
+          isSeeded: false,
+          monthlySalary: 10_000,
+          startDate: '2026-08-01',
+          vacationAccrualRate: 0.083,
+        }),
+      ],
+    });
+    p.seededAt = '2026-01-16T00:00:00Z';
+
+    expect(projected(p, SALARY_CATEGORY, '2026-08')).toBe(10_000);
+    expect(projected(p, SALARY_CATEGORY, '2027-06')).toBe(10_000);
+    expect(projected(p, SALARY_CATEGORY, '2027-07')).toBeCloseTo(10_300);
+    expect(projected(p, SALARY_CATEGORY, '2028-07')).toBeCloseTo(10_609);
+    expect(projected(p, FRINGE_CATEGORY, '2026-08')).toBeCloseTo(3830);
+    expect(projected(p, FRINGE_CATEGORY, '2027-07')).toBeCloseTo(3944.9);
+  });
+
+  it.each([
+    { firstMonthSalary: 10_000, startDate: '2026-07-01' },
+    { firstMonthSalary: (10_000 * 16) / 31, startDate: '2026-07-16' },
+  ])(
+    'prorates a $startDate hire at its starting rate and waits until next year for July COLA',
+    ({ firstMonthSalary, startDate }) => {
+      const p = projection({
+        endDate: '2027-08-31',
+        jobs: [
+          job({
+            cbrRate: 0.3,
+            colaRate: 0.03,
+            employeeId: null,
+            isSeeded: false,
+            monthlySalary: 10_000,
+            startDate,
+          }),
+        ],
+      });
+      p.seededAt = '2026-01-16T00:00:00Z';
+
+      expect(projected(p, SALARY_CATEGORY, '2026-07')).toBeCloseTo(
+        firstMonthSalary
+      );
+      expect(projected(p, FRINGE_CATEGORY, '2026-07')).toBeCloseTo(
+        firstMonthSalary * 0.3
+      );
+      expect(projected(p, SALARY_CATEGORY, '2026-08')).toBe(10_000);
+      expect(projected(p, SALARY_CATEGORY, '2027-07')).toBeCloseTo(10_300);
+    }
+  );
+
+  it('keeps a seeded salary based on the snapshot when its job start is moved into the future', () => {
+    const p = projection({
+      endDate: '2027-08-31',
+      jobs: [
+        job({
+          colaRate: 0.03,
+          monthlySalary: 10_000,
+          startDate: '2026-08-01',
+        }),
+      ],
+    });
+    p.seededAt = '2026-01-16T00:00:00Z';
+
+    expect(projected(p, SALARY_CATEGORY, '2026-08')).toBeCloseTo(10_300);
+    expect(projected(p, SALARY_CATEGORY, '2027-07')).toBeCloseTo(10_609);
+  });
+
+  it.each(['project', 'funding'])(
+    'keeps COLA tied to the hire when the %s starts later',
+    (laterStart) => {
+      const p = projection({
+        endDate: '2028-08-31',
+        jobs: [
+          job({
+            colaRate: 0.03,
+            employeeId: null,
+            isSeeded: false,
+            monthlySalary: 10_000,
+            startDate: '2026-08-01',
+          }),
+        ],
+      });
+      p.seededAt = '2026-01-16T00:00:00Z';
+      if (laterStart === 'project') {
+        p.projects[0].startDate = '2027-08-01';
+      } else {
+        p.jobs[0].fundingEntries[0].startDate = '2027-08-01';
+      }
+
+      expect(projected(p, SALARY_CATEGORY, '2027-07')).toBe(0);
+      expect(projected(p, SALARY_CATEGORY, '2027-08')).toBeCloseTo(10_300);
+      expect(projected(p, SALARY_CATEGORY, '2028-07')).toBeCloseTo(10_609);
+    }
+  );
+
+  it('moves the starting-rate baseline when a hypothetical hire moves past a COLA month', () => {
+    const p = projection({
+      endDate: '2027-08-31',
+      jobs: [
+        job({
+          colaRate: 0.03,
+          employeeId: null,
+          isSeeded: false,
+          monthlySalary: 10_000,
+          startDate: '2026-06-01',
+        }),
+      ],
+    });
+    p.seededAt = '2026-01-16T00:00:00Z';
+
+    expect(projected(p, SALARY_CATEGORY, '2026-08')).toBeCloseTo(10_300);
+
+    p.jobs[0].startDate = '2026-08-01';
+
+    expect(projected(p, SALARY_CATEGORY, '2026-08')).toBe(10_000);
+    expect(projected(p, SALARY_CATEGORY, '2027-07')).toBeCloseTo(10_300);
+  });
+
+  it.each([null, '2025-06-01', '2026-01-01'])(
+    'uses the snapshot salary for a manual job starting %s',
+    (startDate) => {
+      const p = projection({
+        endDate: '2026-08-31',
+        jobs: [
+          job({
+            colaRate: 0.03,
+            employeeId: null,
+            isSeeded: false,
+            monthlySalary: 10_000,
+            startDate,
+          }),
+        ],
+      });
+      p.seededAt = '2026-01-16T00:00:00Z';
+
+      expect(projected(p, SALARY_CATEGORY, '2026-01')).toBe(10_000);
+      expect(projected(p, SALARY_CATEGORY, '2026-07')).toBeCloseTo(10_300);
+    }
+  );
+
   it('does not charge outside-portfolio funding but counts it as funded', () => {
     const p = projection({
       jobs: [job({ fundingEntries: [funding(null, 0.4), funding(1, 0.6)] })],

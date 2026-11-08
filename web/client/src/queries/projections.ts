@@ -74,9 +74,10 @@ export interface ProjectionJob {
   fte: number;
   fundingEntries: ProjectionFundingEntry[];
   id: number;
+  /** Imported jobs use snapshot-based pay; planned future hires use their entered starting rate. */
   isSeeded: boolean;
   jobCode: string | null;
-  /** 1.0-FTE monthly rate; null means the job needs input. */
+  /** 1.0-FTE monthly rate at the snapshot, or at a planned future hire's start; null needs input. */
   monthlySalary: number | null;
   name: string;
   positionNumber: string | null;

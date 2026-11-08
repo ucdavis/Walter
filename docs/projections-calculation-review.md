@@ -187,12 +187,26 @@ estimate alongside any employee fee amounts.
 
 ## Cost-of-living adjustments
 
-COLA compounds annually in the configured month after the snapshot month.
+COLA compounds annually in the configured month. For jobs captured in the
+snapshot, the entered salary is the full-time rate at the snapshot date. The
+first increase is in a configured COLA month strictly after the snapshot month,
+even if the job starts later. If the snapshot is in July, a July increase is not
+applied again that year; the following July receives the next increase.
+
 For a $2,500 monthly project salary and a 3% July COLA, the cost becomes $2,575
-in the first July, $2,652.25 in the second, and $2,731.8175 in the third.
+in the first applicable July, $2,652.25 in the second, and $2,731.8175 in the third.
 Calculations retain precision; the UI formats amounts as currency.
 
-The salary input is treated as the rate at the snapshot date. If the snapshot
-is in July, a July increase is not applied again that year. The following July
-receives the next increase. These assumptions stay tied to the saved snapshot
-when the plan is reopened.
+For a hypothetical hire starting after the snapshot month, the entered salary
+is the full-time rate at the job's start. Its first COLA occurs in the configured
+month strictly after the start month. No increase applies in the start month.
+
+With a January 2026 snapshot, an August 2026 hire at $120,000 annually and a 3%
+July COLA has a full-time monthly rate of $10,000 in August 2026, $10,300 in
+July 2027, and $10,609 in July 2028. A July 2026 hire also receives its first
+increase in July 2027.
+
+A hypothetical hire with no start date, or a start in or before the snapshot
+month, uses the snapshot date as its salary base. Moving its start date changes
+that base according to the same rule. Reopening the plan preserves the saved
+snapshot and job dates.
