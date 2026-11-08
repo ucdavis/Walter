@@ -33,6 +33,60 @@ public sealed class ProjectionSqlServerTests(ProjectionSqlServerFixture sql) : I
     private static readonly DateTime Snapshot = new(2030, 1, 1, 0, 0, 0, DateTimeKind.Utc);
     private static readonly DateTime Version = Snapshot.AddMonths(1).AddTicks(1234567);
 
+    [ProjectionSqlServerTheory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Concurrent_creation_retries_return_one_saved_plan(bool duplicate)
+    {
+        var source = await SeedAsync();
+        var key = Guid.NewGuid();
+        var bothReady = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var arrivals = 0;
+        var barrier = new BeforeWrite(async () =>
+        {
+            if (Interlocked.Increment(ref arrivals) == 2) bothReady.TrySetResult();
+            await bothReady.Task.WaitAsync(TimeSpan.FromSeconds(15));
+        }, once: false);
+        await using var first = sql.CreateContext(barrier);
+        await using var second = sql.CreateContext(barrier);
+        var snapshot = new ProjectionsController.ProjectionSnapshotDraft(source.SeededAt, source.Projects, source.Jobs);
+
+        var results = await Task.WhenAll(
+            duplicate
+                ? Controller(first).Duplicate(source.Id, new("First copy", key), default)
+                : Controller(first).Create("IAM-100", new("First copy", 3, snapshot, key), default),
+            duplicate
+                ? Controller(second).Duplicate(source.Id, new("Second copy", key), default)
+                : Controller(second).Create("IAM-100", new("Second copy", 3, snapshot, key), default));
+
+        var saved = results.Select(result => result.Should().BeOfType<OkObjectResult>().Which.Value.Should().BeOfType<Projection>().Subject).ToArray();
+        saved[0].Id.Should().Be(saved[1].Id).And.NotBe(source.Id);
+        saved[0].Name.Should().Be(saved[1].Name).And.BeOneOf("First copy", "Second copy");
+        await using var check = sql.CreateContext();
+        var created = await check.Projections.SingleAsync(p => p.PiEmployeeId == "100" && p.CreationKey == key);
+        created.Id.Should().Be(saved[0].Id);
+        created.SeededAt.Should().Be(source.SeededAt);
+        created.Projects.Should().BeEquivalentTo(source.Projects);
+        created.Jobs.Should().BeEquivalentTo(source.Jobs);
+        (await check.Projections.SingleAsync(p => p.Id == source.Id)).Name.Should().Be("Original");
+    }
+
+    [ProjectionSqlServerFact]
+    public async Task Creation_key_index_allows_other_pis_and_multiple_legacy_null_keys()
+    {
+        var key = Guid.NewGuid();
+        await using var db = sql.CreateContext();
+        db.Projections.AddRange(
+            new Projection { Name = "PI one", PiEmployeeId = "100", CreationKey = key },
+            new Projection { Name = "PI two", PiEmployeeId = "200", CreationKey = key },
+            new Projection { Name = "Legacy one", PiEmployeeId = "100" },
+            new Projection { Name = "Legacy two", PiEmployeeId = "100" });
+
+        await db.SaveChangesAsync();
+
+        (await db.Projections.CountAsync(p => p.CreationKey == key)).Should().Be(2);
+    }
+
     [ProjectionSqlServerFact]
     public async Task Http_save_round_trips_exact_tokens_and_preserves_the_captured_snapshot()
     {
@@ -292,7 +346,7 @@ public sealed class ProjectionSqlServerTests(ProjectionSqlServerFixture sql) : I
     {
         var data = new FakeProjectionDataSource();
         var services = new ServiceCollection().AddLogging().AddAuthorizationPolicies().BuildServiceProvider();
-        return new ProjectionsController(db, new FakeDatamartService(), services.GetRequiredService<IAuthorizationService>(),
+        return new ProjectionsController(db, new FakeDatamartService(new SearchablePersonRecord { IamId = "IAM-100", EmployeeId = "100", Name = "PI" }), services.GetRequiredService<IAuthorizationService>(),
             new UserService(NullLogger<UserService>.Instance, db),
             new PpmPortfolioService(new FakeFinancialApiService([], null, []), new FakePpmPortfolioReader([]),
                 Options.Create(new FeatureFlagOptions { UseGraphQLAPI = false })),

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using server.core.Data;
 using server.core.Domain;
@@ -27,7 +28,9 @@ public sealed class ProjectionsController(
     private const int OverwriteAttempts = 3;
 
     public sealed record ProjectionSummary(int Id, string Name, DateTime SeededAt, string? UpdatedBy, DateTime UpdatedAt);
-    public sealed record CreateProjectionRequest(string Name, int HistoryMonths);
+    public sealed record ProjectionSnapshotDraft(DateTime? SeededAt, List<ProjectionProject>? Projects, List<ProjectionJob>? Jobs);
+    public sealed record CreateProjectionRequest(string Name, int HistoryMonths, ProjectionSnapshotDraft? Draft = null, Guid? CreationKey = null);
+    public sealed record DuplicateProjectionRequest(string Name, Guid CreationKey);
     public sealed record SaveProjectionRequest(string Name, int HistoryMonths, List<ProjectionProject> Projects,
         List<ProjectionJob> Jobs, DateTime? ExpectedUpdatedAt = null, DateTime? ExpectedSeededAt = null, bool Overwrite = false);
     public sealed record HistoryMonthsRequest(int HistoryMonths, DateTime? ExpectedUpdatedAt = null);
@@ -61,25 +64,56 @@ public sealed class ProjectionsController(
         return Ok(draft);
     }
 
+    /// <summary>Creates a reviewed snapshot without reseeding, or captures fresh inputs for older name/history-only callers.</summary>
     [HttpPost("by-iam/{iamId}")]
     public async Task<IActionResult> Create(string iamId, CreateProjectionRequest request, CancellationToken ct)
     {
+        if (!ValidName(request.Name)) return BadRequest("Name must contain 1 to 200 characters and cannot be blank.");
         if (!Windows.Contains(request.HistoryMonths)) return BadRequest("HistoryMonths must be 3, 6, or 12.");
+        if (request.CreationKey == Guid.Empty || (request.Draft is not null && request.CreationKey is null))
+            return BadRequest("A nonempty CreationKey is required when creating a reviewed draft.");
+        if (request.Draft is not null && !ValidDraft(request.Draft))
+            return BadRequest("Draft requires an exact UTC SeededAt, nonnull collections, unique positive project/job IDs, and valid funding references.");
         var (piEmployeeId, error) = await ResolvePiAsync(iamId, ct);
         if (error is not null) return error;
 
+        var existing = await FindCreationAsync(piEmployeeId!, request.CreationKey, ct);
+        if (existing is not null) return Ok(existing);
         var projection = new Projection
         {
             PiEmployeeId = piEmployeeId!,
             Name = request.Name,
-            CreatedBy = User.GetUserIdentifier(),
-            CreatedAt = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime,
+            HistoryMonths = request.HistoryMonths,
+            CreationKey = request.CreationKey,
         };
-        await seeder.SeedAsync(projection, request.HistoryMonths, User.GetUserIdentifier(), User.GetEmulatingUser(), ct);
-        Touch(projection);
-        db.Projections.Add(projection);
-        await db.SaveChangesAsync(ct);
-        return Ok(projection);
+        if (request.Draft is null)
+            await seeder.SeedAsync(projection, request.HistoryMonths, User.GetUserIdentifier(), User.GetEmulatingUser(), ct);
+        else
+            CopySnapshot(projection, request.Draft);
+        return await InsertAsync(projection, ct);
+    }
+
+    /// <summary>Copies the authorized stored snapshot, retaining nested IDs and assumptions without fetching fresh inputs.</summary>
+    [HttpPost("{id:int}/duplicate")]
+    public async Task<IActionResult> Duplicate(int id, DuplicateProjectionRequest request, CancellationToken ct)
+    {
+        if (!ValidName(request.Name)) return BadRequest("Name must contain 1 to 200 characters and cannot be blank.");
+        if (request.CreationKey == Guid.Empty) return BadRequest("A nonempty CreationKey is required.");
+        // Authorize the source on every attempt, including a replay of an already-created copy.
+        var (source, error) = await LoadAsync(id, ct);
+        if (error is not null) return error;
+        var existing = await FindCreationAsync(source!.PiEmployeeId, request.CreationKey, ct);
+        if (existing is not null) return Ok(existing);
+
+        var projection = new Projection
+        {
+            PiEmployeeId = source.PiEmployeeId,
+            Name = request.Name,
+            HistoryMonths = source.HistoryMonths,
+            CreationKey = request.CreationKey,
+        };
+        CopySnapshot(projection, new(source.SeededAt, source.Projects, source.Jobs));
+        return await InsertAsync(projection, ct);
     }
 
     [HttpGet("{id:int}")]
@@ -207,6 +241,60 @@ public sealed class ProjectionsController(
         projection.UpdatedAt = ProjectionTimestamps.Advance(projection.UpdatedAt,
             (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime);
     }
+
+    private static bool ValidName(string? name) => !string.IsNullOrWhiteSpace(name) && name.Length <= 200;
+
+    private static bool ValidDraft(ProjectionSnapshotDraft draft)
+    {
+        if (!ValidToken(draft.SeededAt) || draft.Projects is null || draft.Jobs is null) return false;
+        if (draft.Projects.Any(p => p is null || p.Id <= 0 || p.Budgets is null || p.Actuals is null || p.RunRates is null || p.Expenses is null
+                || p.Budgets.Any(b => b is null) || p.Actuals.Any(a => a is null) || p.RunRates.Any(r => r is null) || p.Expenses.Any(e => e is null))
+            || draft.Jobs.Any(j => j is null || j.Id <= 0 || j.FundingEntries is null || j.FundingEntries.Any(f => f is null))) return false;
+        var projectIds = draft.Projects.Select(p => p.Id).ToHashSet();
+        return projectIds.Count == draft.Projects.Count
+            && draft.Jobs.Select(j => j.Id).Distinct().Count() == draft.Jobs.Count
+            && draft.Jobs.SelectMany(j => j.FundingEntries).All(f => f.ProjectId is null || projectIds.Contains(f.ProjectId.Value));
+    }
+
+    private static void CopySnapshot(Projection projection, ProjectionSnapshotDraft snapshot)
+    {
+        var copy = JsonSerializer.Deserialize<ProjectionSnapshotDraft>(JsonSerializer.Serialize(snapshot))!;
+        projection.SeededAt = copy.SeededAt!.Value;
+        projection.Projects = copy.Projects!;
+        projection.Jobs = copy.Jobs!;
+    }
+
+    private Task<Projection?> FindCreationAsync(string piEmployeeId, Guid? creationKey, CancellationToken ct) =>
+        creationKey is null ? Task.FromResult<Projection?>(null) : db.Projections.AsNoTracking()
+            .SingleOrDefaultAsync(p => p.PiEmployeeId == piEmployeeId && p.CreationKey == creationKey, ct);
+
+    /// <summary>The database unique key chooses one creation winner; retries return that row without replacing subsequent edits.</summary>
+    private async Task<IActionResult> InsertAsync(Projection projection, CancellationToken ct)
+    {
+        projection.CreatedBy = User.GetUserIdentifier();
+        projection.CreatedAt = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
+        Touch(projection);
+        db.Projections.Add(projection);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+            return Ok(projection);
+        }
+        catch (DbUpdateException exception) when (projection.CreationKey is not null && IsCreationKeyConflict(exception))
+        {
+            db.Entry(projection).State = EntityState.Detached;
+            // A winning insert may have raced with an access change; never return it without rechecking.
+            if (!await CanAccessPiAsync(projection.PiEmployeeId, ct)) return Forbid();
+            var existing = await FindCreationAsync(projection.PiEmployeeId, projection.CreationKey, ct);
+            if (existing is null) throw;
+            return Ok(existing);
+        }
+    }
+
+    /// <summary>Only the creation-key unique index represents a safely replayable insert race.</summary>
+    private static bool IsCreationKeyConflict(DbUpdateException exception) =>
+        exception.InnerException is SqlException sqlException && sqlException.Errors.Cast<SqlError>().Any(error =>
+            error.Number is 2601 or 2627 && error.Message.Contains("IX_Projections_PiEmployeeId_CreationKey", StringComparison.OrdinalIgnoreCase));
 
     /// <summary>Missing or ambiguous timestamps must never disable an atomic version check.</summary>
     private static bool ValidToken(DateTime? timestamp) =>

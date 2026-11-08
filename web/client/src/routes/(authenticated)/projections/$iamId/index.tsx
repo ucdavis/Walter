@@ -8,10 +8,12 @@ import {
 } from '@tanstack/react-router';
 import { PageError } from '@/components/states/PageError.tsx';
 import { PageLoading } from '@/components/states/PageLoading.tsx';
+import { DuplicateProjectionButton } from '@/components/projections/DuplicateProjectionButton.tsx';
+import { NewProjectionWizard } from '@/components/projections/NewProjectionWizard.tsx';
 import { getErrorPresentation } from '@/lib/errorPresentation.ts';
 import {
-  createProjection,
   projectionListQueryOptions,
+  type Projection,
 } from '@/queries/projections.ts';
 
 export const Route = createFileRoute('/(authenticated)/projections/$iamId/')({
@@ -24,30 +26,48 @@ export const Route = createFileRoute('/(authenticated)/projections/$iamId/')({
 
 function RouteComponent() {
   const { iamId } = Route.useParams();
+  return <ProjectionList iamId={iamId} key={iamId} />;
+}
+
+function ProjectionList({ iamId }: { iamId: string }) {
   const { data: projections } = useSuspenseQuery(
     projectionListQueryOptions(iamId)
   );
   const navigate = useNavigate();
-  const [name, setName] = useState('');
-  const [historyMonths, setHistoryMonths] = useState(3);
   const [creating, setCreating] = useState(false);
 
-  const create = async () => {
-    setCreating(true);
-    try {
-      const created = await createProjection(iamId, { historyMonths, name });
-      await navigate({
-        params: { iamId, projectionId: String(created.id) },
-        to: '/projections/$iamId/$projectionId',
-      });
-    } finally {
-      setCreating(false);
-    }
+  const openCreated = async (saved: Projection) => {
+    await navigate({
+      ignoreBlocker: true,
+      params: { iamId, projectionId: String(saved.id) },
+      to: '/projections/$iamId/$projectionId',
+    });
   };
+
+  if (creating) {
+    return (
+      <main className="container">
+        <NewProjectionWizard
+          iamId={iamId}
+          onCancel={() => setCreating(false)}
+          onCreated={openCreated}
+        />
+      </main>
+    );
+  }
 
   return (
     <main className="container">
-      <h1 className="h1 mt-8">Projections</h1>
+      <header className="mt-8 flex flex-wrap items-center justify-between gap-4">
+        <h1 className="h1">Projections</h1>
+        <button
+          className="btn btn-primary"
+          onClick={() => setCreating(true)}
+          type="button"
+        >
+          New plan
+        </button>
+      </header>
 
       <section className="section-margin">
         {projections.length ? (
@@ -57,6 +77,9 @@ function RouteComponent() {
                 <th>Name</th>
                 <th>Data as of</th>
                 <th>Last updated</th>
+                <th>
+                  <span className="sr-only">Actions</span>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -76,6 +99,13 @@ function RouteComponent() {
                     {new Date(p.updatedAt).toLocaleString()}
                     {p.updatedBy ? ` by ${p.updatedBy}` : ''}
                   </td>
+                  <td>
+                    <DuplicateProjectionButton
+                      iamId={iamId}
+                      onCreated={openCreated}
+                      projection={p}
+                    />
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -83,42 +113,6 @@ function RouteComponent() {
         ) : (
           <p>No projections yet.</p>
         )}
-      </section>
-
-      <section className="section-margin">
-        <h2 className="h2">New projection</h2>
-        <form
-          className="flex flex-wrap items-end gap-4"
-          onSubmit={(e) => {
-            e.preventDefault();
-            void create();
-          }}
-        >
-          <label className="flex flex-col gap-1">
-            Name
-            <input
-              className="input input-bordered"
-              onChange={(e) => setName(e.target.value)}
-              required
-              value={name}
-            />
-          </label>
-          <label className="flex flex-col gap-1">
-            Averaging window
-            <select
-              className="select select-bordered"
-              onChange={(e) => setHistoryMonths(Number(e.target.value))}
-              value={historyMonths}
-            >
-              <option value={3}>3 months</option>
-              <option value={6}>6 months</option>
-              <option value={12}>12 months</option>
-            </select>
-          </label>
-          <button className="btn btn-primary" disabled={creating} type="submit">
-            {creating ? 'Creating...' : 'Create'}
-          </button>
-        </form>
       </section>
     </main>
   );

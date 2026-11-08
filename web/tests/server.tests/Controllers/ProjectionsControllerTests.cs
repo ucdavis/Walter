@@ -38,7 +38,8 @@ public sealed class ProjectionsControllerTests
     ];
 
     private static ProjectionsController CreateController(AppDbContext ctx, string? employeeId = null,
-        bool financialViewer = false, TimeProvider? timeProvider = null, FakeProjectionDataSource? dataSource = null)
+        bool financialViewer = false, TimeProvider? timeProvider = null, FakeProjectionDataSource? dataSource = null,
+        string piEmployeeId = "100", bool piIdentityAvailable = true)
     {
         var claims = new List<Claim> { new("kerberos", "tester") };
         if (financialViewer) claims.Add(new Claim(ClaimTypes.Role, Role.Names.FinancialViewer));
@@ -69,7 +70,9 @@ public sealed class ProjectionsControllerTests
 
         return new ProjectionsController(
             ctx,
-            new FakeDatamartService(new SearchablePersonRecord { IamId = PiIam, EmployeeId = "100", Name = "PI" }),
+            new FakeDatamartService(piIdentityAvailable
+                ? new SearchablePersonRecord { IamId = $"IAM-{piEmployeeId}", EmployeeId = piEmployeeId, Name = "PI" }
+                : null),
             services.BuildServiceProvider().GetRequiredService<IAuthorizationService>(),
             new UserService(NullLogger<UserService>.Instance, ctx),
             new PpmPortfolioService(new FakeFinancialApiService([], null, []), new FakePpmPortfolioReader(Portfolio),
@@ -101,6 +104,309 @@ public sealed class ProjectionsControllerTests
         created.Projects.Should().ContainSingle().Which.ProjectNumber.Should().Be("P1");
         var result = await CreateController(ctx, financialViewer: true).Get(created.Id, default);
         result.Should().BeOfType<OkObjectResult>().Which.Value.Should().BeOfType<Projection>().Which.Name.Should().Be("Plan A");
+    }
+
+    [Fact]
+    public async Task Create_from_draft_preserves_reviewed_snapshot_inputs_without_reseeding_or_sharing_request_objects()
+    {
+        using var ctx = TestDbContextFactory.CreateInMemory();
+        var request = NewPlanRequest();
+        var expected = JsonSerializer.Deserialize<ProjectionsController.ProjectionSnapshotDraft>(JsonSerializer.Serialize(request.Draft))!;
+        var now = new DateTime(2026, 11, 8, 12, 0, 0, DateTimeKind.Utc);
+        var data = UnavailableProjectionData();
+        var controller = CreateController(ctx, financialViewer: true, timeProvider: new MutableTimeProvider(now), dataSource: data);
+
+        var created = Document(await controller.Create(PiIam, request, default));
+
+        created.Id.Should().BePositive();
+        created.Should().BeEquivalentTo(new
+        {
+            Name = request.Name, HistoryMonths = 12, PiEmployeeId = "100",
+            SeededAt = expected.SeededAt!.Value, CreatedAt = now, UpdatedAt = now,
+            CreatedBy = "tester", UpdatedBy = "tester",
+        });
+        created.Projects.Should().BeEquivalentTo(expected.Projects);
+        created.Jobs.Should().BeEquivalentTo(expected.Jobs);
+        created.Projects.Should().NotBeSameAs(request.Draft!.Projects);
+        created.Jobs.Single().FundingEntries.Should().NotBeSameAs(request.Draft.Jobs!.Single().FundingEntries);
+        created.CreationKey.Should().Be(request.CreationKey);
+        data.SnapshotAtUtc.Should().BeNull();
+        data.PersonnelProjectNumbers.Should().BeNull();
+        using var response = JsonDocument.Parse(JsonSerializer.Serialize(created, new JsonSerializerOptions(JsonSerializerDefaults.Web)));
+        response.RootElement.TryGetProperty("creationKey", out _).Should().BeFalse();
+
+        request.Draft.Projects!.Single().Expenses.Single(e => e.Kind == ProjectionExpenseKind.Projected).Amount = 999;
+        request.Draft.Jobs!.Single().FundingEntries.Clear();
+        await ctx.SaveChangesAsync();
+        ctx.ChangeTracker.Clear();
+        var reopened = Document(await controller.Get(created.Id, default));
+        reopened.Projects.Should().BeEquivalentTo(expected.Projects);
+        reopened.Jobs.Should().BeEquivalentTo(expected.Jobs);
+        reopened.SeededAt.Should().Be(expected.SeededAt!.Value);
+        reopened.SeededAt.Kind.Should().Be(DateTimeKind.Utc);
+    }
+
+    [Fact]
+    public async Task Retrying_a_draft_creation_returns_the_same_plan_without_overwriting_later_edits()
+    {
+        using var ctx = TestDbContextFactory.CreateInMemory();
+        var data = UnavailableProjectionData();
+        var controller = CreateController(ctx, financialViewer: true, dataSource: data);
+        var request = NewPlanRequest();
+        var created = Document(await controller.Create(PiIam, request, default));
+        var edit = Draft(created) with { Name = "Edited after creation" };
+        edit.Jobs.Single().MonthlySalary = 8123;
+        var edited = Document(await controller.Save(created.Id, edit, default));
+        var updatedAt = edited.UpdatedAt;
+        ctx.ChangeTracker.Clear();
+
+        var replay = Document(await controller.Create(PiIam, request with { Name = "Late retry", HistoryMonths = 3 }, default));
+
+        replay.Id.Should().Be(created.Id);
+        replay.Name.Should().Be("Edited after creation");
+        replay.HistoryMonths.Should().Be(12);
+        replay.Jobs.Single().MonthlySalary.Should().Be(8123);
+        replay.UpdatedAt.Should().Be(updatedAt);
+        (await ctx.Projections.CountAsync()).Should().Be(1);
+        data.SnapshotAtUtc.Should().BeNull();
+        data.PersonnelProjectNumbers.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Retrying_a_keyed_legacy_create_does_not_reseed()
+    {
+        using var ctx = TestDbContextFactory.CreateInMemory();
+        var request = new ProjectionsController.CreateProjectionRequest("Original seeded plan", 3, CreationKey: Guid.NewGuid());
+        var created = Document(await CreateController(ctx, financialViewer: true).Create(PiIam, request, default));
+        ctx.ChangeTracker.Clear();
+        var data = UnavailableProjectionData();
+
+        var replay = Document(await CreateController(ctx, financialViewer: true, dataSource: data).Create(PiIam, request, default));
+
+        replay.Id.Should().Be(created.Id);
+        replay.SeededAt.Should().Be(created.SeededAt);
+        replay.Projects.Should().BeEquivalentTo(created.Projects);
+        (await ctx.Projections.CountAsync()).Should().Be(1);
+        data.SnapshotAtUtc.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Creation_keys_are_scoped_to_the_authorized_pi()
+    {
+        using var ctx = TestDbContextFactory.CreateInMemory();
+        var request = NewPlanRequest();
+
+        var first = Document(await CreateController(ctx, financialViewer: true)
+            .Create(PiIam, request, default));
+        var second = Document(await CreateController(ctx, financialViewer: true, piEmployeeId: "300")
+            .Create("IAM-300", request, default));
+
+        first.Id.Should().NotBe(second.Id);
+        first.PiEmployeeId.Should().Be("100");
+        second.PiEmployeeId.Should().Be("300");
+        first.CreationKey.Should().Be(second.CreationKey);
+        (await ctx.Projections.CountAsync()).Should().Be(2);
+    }
+
+    [Fact]
+    public async Task An_unrelated_user_cannot_replay_creation_or_duplicate_a_plan()
+    {
+        using var ctx = TestDbContextFactory.CreateInMemory();
+        var request = NewPlanRequest();
+        var created = Document(await CreateController(ctx, financialViewer: true).Create(PiIam, request, default));
+        var data = UnavailableProjectionData();
+        var controller = CreateController(ctx, employeeId: "999", dataSource: data);
+
+        (await controller.Create(PiIam, request, default)).Should().BeOfType<ForbidResult>();
+        (await controller.Duplicate(created.Id, new("Unauthorized copy", Guid.NewGuid()), default)).Should().BeOfType<ForbidResult>();
+
+        (await ctx.Projections.CountAsync()).Should().Be(1);
+        data.SnapshotAtUtc.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Duplicate_copies_the_stored_snapshot_and_nested_ids_without_resolving_identity_or_fetching_fresh_data()
+    {
+        using var ctx = TestDbContextFactory.CreateInMemory();
+        var source = await StoreCapturedPlanAsync(ctx);
+        var original = JsonSerializer.Serialize(source);
+        var now = new DateTime(2026, 11, 8, 12, 0, 0, DateTimeKind.Utc);
+        var data = UnavailableProjectionData();
+        var controller = CreateController(ctx, financialViewer: true, timeProvider: new MutableTimeProvider(now),
+            dataSource: data, piIdentityAvailable: false);
+
+        var duplicate = Document(await controller.Duplicate(source.Id, new("Alternative plan", Guid.NewGuid()), default));
+
+        duplicate.Id.Should().NotBe(source.Id);
+        duplicate.Should().BeEquivalentTo(new
+        {
+            Name = "Alternative plan", source.PiEmployeeId, source.SeededAt, source.HistoryMonths,
+            CreatedAt = now, UpdatedAt = now, CreatedBy = "tester", UpdatedBy = "tester",
+        });
+        duplicate.Projects.Should().BeEquivalentTo(source.Projects);
+        duplicate.Jobs.Should().BeEquivalentTo(source.Jobs);
+        duplicate.Projects.Single().Should().NotBeSameAs(source.Projects.Single());
+        duplicate.Jobs.Single().FundingEntries.Should().NotBeSameAs(source.Jobs.Single().FundingEntries);
+        data.SnapshotAtUtc.Should().BeNull();
+        data.PersonnelProjectNumbers.Should().BeNull();
+
+        var edit = Draft(duplicate) with { Name = "Edited alternative" };
+        edit.Projects.Single().Expenses.Single(e => e.Kind == ProjectionExpenseKind.Projected).Amount = 876;
+        await controller.Save(duplicate.Id, edit, default);
+        ctx.ChangeTracker.Clear();
+        JsonSerializer.Serialize(Document(await controller.Get(source.Id, default))).Should().Be(original);
+        (await ctx.Projections.CountAsync()).Should().Be(2);
+    }
+
+    [Fact]
+    public async Task Retrying_duplicate_returns_the_existing_copy_with_its_later_edits()
+    {
+        using var ctx = TestDbContextFactory.CreateInMemory();
+        var source = await StoreCapturedPlanAsync(ctx);
+        var controller = CreateController(ctx, financialViewer: true, dataSource: UnavailableProjectionData());
+        var request = new ProjectionsController.DuplicateProjectionRequest("First copy", Guid.NewGuid());
+        var duplicate = Document(await controller.Duplicate(source.Id, request, default));
+        var edit = Draft(duplicate) with { Name = "Renamed copy" };
+        edit.Jobs.Single().MonthlySalary = 9999;
+        var edited = Document(await controller.Save(duplicate.Id, edit, default));
+        var updatedAt = edited.UpdatedAt;
+        ctx.ChangeTracker.Clear();
+
+        var replay = Document(await controller.Duplicate(source.Id, request with { Name = "Late retry name" }, default));
+
+        replay.Id.Should().Be(duplicate.Id);
+        replay.Name.Should().Be("Renamed copy");
+        replay.Jobs.Single().MonthlySalary.Should().Be(9999);
+        replay.UpdatedAt.Should().Be(updatedAt);
+        (await ctx.Projections.CountAsync()).Should().Be(2);
+    }
+
+    [Fact]
+    public async Task Duplicate_requires_the_source_to_still_exist_even_when_replaying_a_successful_request()
+    {
+        using var ctx = TestDbContextFactory.CreateInMemory();
+        var source = await StoreCapturedPlanAsync(ctx);
+        var controller = CreateController(ctx, financialViewer: true, dataSource: UnavailableProjectionData());
+        var request = new ProjectionsController.DuplicateProjectionRequest("Copy", Guid.NewGuid());
+        var duplicate = Document(await controller.Duplicate(source.Id, request, default));
+        await controller.Delete(source.Id, source.UpdatedAt, default);
+
+        (await controller.Duplicate(source.Id, request, default)).Should().BeOfType<NotFoundResult>();
+
+        (await ctx.Projections.ToListAsync()).Should().ContainSingle().Which.Id.Should().Be(duplicate.Id);
+    }
+
+    [Fact]
+    public async Task A_creation_key_can_create_again_after_its_created_plan_is_deleted()
+    {
+        using var ctx = TestDbContextFactory.CreateInMemory();
+        var controller = CreateController(ctx, financialViewer: true, dataSource: UnavailableProjectionData());
+        var request = NewPlanRequest();
+        var first = Document(await controller.Create(PiIam, request, default));
+        await controller.Delete(first.Id, first.UpdatedAt, default);
+
+        var recreated = Document(await controller.Create(PiIam, request, default));
+
+        recreated.Id.Should().NotBe(first.Id);
+        recreated.SeededAt.Should().Be(request.Draft!.SeededAt!.Value);
+        (await ctx.Projections.CountAsync()).Should().Be(1);
+    }
+
+    [Theory]
+    [InlineData("missing-key")]
+    [InlineData("empty-key")]
+    [InlineData("empty-name")]
+    [InlineData("blank-name")]
+    [InlineData("long-name")]
+    [InlineData("window")]
+    [InlineData("missing-snapshot")]
+    [InlineData("default-snapshot")]
+    [InlineData("non-utc-snapshot")]
+    [InlineData("projects-null")]
+    [InlineData("jobs-null")]
+    [InlineData("budgets-null")]
+    [InlineData("actuals-null")]
+    [InlineData("run-rates-null")]
+    [InlineData("expenses-null")]
+    [InlineData("funding-null")]
+    [InlineData("project-id-zero")]
+    [InlineData("project-id-duplicate")]
+    [InlineData("job-id-negative")]
+    [InlineData("job-id-duplicate")]
+    [InlineData("unknown-funding-project")]
+    public async Task Create_from_draft_rejects_invalid_structure_without_querying_or_persisting(string invalid)
+    {
+        using var ctx = TestDbContextFactory.CreateInMemory();
+        var request = NewPlanRequest();
+        var draft = request.Draft!;
+        switch (invalid)
+        {
+            case "missing-key": request = request with { CreationKey = null }; break;
+            case "empty-key": request = request with { CreationKey = Guid.Empty }; break;
+            case "empty-name": request = request with { Name = "" }; break;
+            case "blank-name": request = request with { Name = "  " }; break;
+            case "long-name": request = request with { Name = new string('x', 201) }; break;
+            case "window": request = request with { HistoryMonths = 4 }; break;
+            case "missing-snapshot": request = request with { Draft = draft with { SeededAt = null } }; break;
+            case "default-snapshot": request = request with { Draft = draft with { SeededAt = DateTime.MinValue } }; break;
+            case "non-utc-snapshot": request = request with { Draft = draft with { SeededAt = DateTime.SpecifyKind(draft.SeededAt!.Value, DateTimeKind.Unspecified) } }; break;
+            case "projects-null": request = request with { Draft = draft with { Projects = null } }; break;
+            case "jobs-null": request = request with { Draft = draft with { Jobs = null } }; break;
+            case "budgets-null": draft.Projects!.Single().Budgets = null!; break;
+            case "actuals-null": draft.Projects!.Single().Actuals = null!; break;
+            case "run-rates-null": draft.Projects!.Single().RunRates = null!; break;
+            case "expenses-null": draft.Projects!.Single().Expenses = null!; break;
+            case "funding-null": draft.Jobs!.Single().FundingEntries = null!; break;
+            case "project-id-zero": draft.Projects!.Single().Id = 0; break;
+            case "project-id-duplicate": draft.Projects!.Add(new() { Id = draft.Projects.Single().Id }); break;
+            case "job-id-negative": draft.Jobs!.Single().Id = -1; break;
+            case "job-id-duplicate": draft.Jobs!.Add(new() { Id = draft.Jobs.Single().Id }); break;
+            case "unknown-funding-project": draft.Jobs!.Single().FundingEntries[0].ProjectId = 999; break;
+        }
+        var data = UnavailableProjectionData();
+
+        (await CreateController(ctx, financialViewer: true, dataSource: data).Create(PiIam, request, default))
+            .Should().BeOfType<BadRequestObjectResult>();
+
+        ctx.Projections.Should().BeEmpty();
+        data.SnapshotAtUtc.Should().BeNull();
+        data.PersonnelProjectNumbers.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Create_from_draft_accepts_incomplete_and_out_of_range_planning_assumptions()
+    {
+        using var ctx = TestDbContextFactory.CreateInMemory();
+        var request = NewPlanRequest();
+        var job = request.Draft!.Jobs!.Single();
+        job.MonthlySalary = null;
+        job.FundingEntries[0].StartDate = new DateOnly(2027, 1, 1);
+        job.FundingEntries[0].EndDate = new DateOnly(2027, 2, 1);
+        job.FundingEntries[0].Percent = 0.75m;
+
+        var created = Document(await CreateController(ctx, financialViewer: true, dataSource: UnavailableProjectionData())
+            .Create(PiIam, request, default));
+
+        created.Jobs.Should().BeEquivalentTo(request.Draft.Jobs);
+        created.Projects.Should().BeEquivalentTo(request.Draft.Projects);
+    }
+
+    [Theory]
+    [InlineData("name")]
+    [InlineData("long-name")]
+    [InlineData("key")]
+    public async Task Duplicate_rejects_an_invalid_name_or_creation_key(string invalid)
+    {
+        using var ctx = TestDbContextFactory.CreateInMemory();
+        var source = await StoreCapturedPlanAsync(ctx);
+        var request = new ProjectionsController.DuplicateProjectionRequest(
+            invalid == "name" ? " " : invalid == "long-name" ? new string('x', 201) : "Copy",
+            invalid == "key" ? Guid.Empty : Guid.NewGuid());
+
+        (await CreateController(ctx, financialViewer: true).Duplicate(source.Id, request, default))
+            .Should().BeOfType<BadRequestObjectResult>();
+
+        (await ctx.Projections.CountAsync()).Should().Be(1);
     }
 
     [Fact]
@@ -644,6 +950,59 @@ public sealed class ProjectionsControllerTests
         reloaded.SeededAt.Kind.Should().Be(DateTimeKind.Utc);
         reloaded.CreatedAt.Kind.Should().Be(DateTimeKind.Utc);
     }
+
+    private static ProjectionsController.CreateProjectionRequest NewPlanRequest() =>
+        new("Reviewed new plan", 12, CapturedSnapshot(), Guid.NewGuid());
+
+    private static ProjectionsController.ProjectionSnapshotDraft CapturedSnapshot() => new(
+        new DateTime(2025, 11, 5, 8, 30, 0, DateTimeKind.Utc).AddTicks(1234567),
+        [
+            new ProjectionProject
+            {
+                Id = 41, ProjectNumber = "P1", TaskNumber = "CAPTURED-TASK", TaskName = "Original task",
+                ProjectName = "Expired captured project", ProjectType = "Sponsored", AwardNumber = "A1", AwardName = "Original award",
+                IsSeeded = true, StartDate = new DateOnly(2025, 1, 1), EndDate = new DateOnly(2025, 12, 31),
+                Budgets = [new() { ExpenditureCategory = Supplies, Budget = 15000, SpentToDate = 2000, Committed = 1000, IsSeeded = true }],
+                Actuals = [new() { ExpenditureCategory = Supplies, Month = new DateOnly(2025, 10, 1), Amount = 250 }],
+                RunRates = [new() { ExpenditureCategory = Supplies, HistoryMonths = 12, MonthlyAmount = 20 }],
+                Expenses = [
+                    new() { Kind = ProjectionExpenseKind.Projected, ExpenditureCategory = Supplies, Amount = 75, Description = "Reviewed estimate" },
+                    new() { Kind = ProjectionExpenseKind.OneTime, ExpenditureCategory = Supplies, Amount = 300, StartMonth = new DateOnly(2026, 6, 1), Description = "Retained out-of-range expense" },
+                ],
+            },
+        ],
+        [
+            new ProjectionJob
+            {
+                Id = 73, Name = "Planned hire", MonthlySalary = 6500, Fte = 0.5m,
+                CbrRate = 0.25m, VacationAccrualRate = 0.083m, ColaMonth = 7, ColaRate = 0.03m,
+                FeeRemissionMonthly = 1500, StartDate = new DateOnly(2025, 11, 1), EndDate = new DateOnly(2025, 12, 31),
+                FundingEntries = [
+                    new() { ProjectId = 41, Percent = 0.4m, StartDate = new DateOnly(2025, 11, 1), EndDate = new DateOnly(2025, 11, 15) },
+                    new() { ProjectId = null, Percent = 0.6m, StartDate = new DateOnly(2025, 11, 1), EndDate = new DateOnly(2025, 11, 30) },
+                ],
+            },
+        ]);
+
+    private static async Task<Projection> StoreCapturedPlanAsync(AppDbContext ctx)
+    {
+        var snapshot = CapturedSnapshot();
+        var source = new Projection
+        {
+            PiEmployeeId = "100", Name = "Stored source", HistoryMonths = 12,
+            SeededAt = snapshot.SeededAt!.Value, CreatedAt = snapshot.SeededAt.Value,
+            UpdatedAt = snapshot.SeededAt.Value.AddDays(1), CreatedBy = "original-owner", UpdatedBy = "previous-editor",
+            Projects = snapshot.Projects!, Jobs = snapshot.Jobs!,
+        };
+        ctx.Projections.Add(source);
+        await ctx.SaveChangesAsync();
+        return source;
+    }
+
+    private static FakeProjectionDataSource UnavailableProjectionData() => new()
+    {
+        SeedResponse = Task.FromException<ProjectionSeedData>(new InvalidOperationException("Fresh data is unavailable")),
+    };
 
     private static Projection Document(IActionResult result) =>
         result.Should().BeOfType<OkObjectResult>().Which.Value.Should().BeOfType<Projection>().Subject;

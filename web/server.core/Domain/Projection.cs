@@ -16,6 +16,10 @@ public class Projection
     [Key]
     public int Id { get; set; }
 
+    /// <summary>Deduplicates retried creation within a PI's plans while this row exists; never changes on later saves.</summary>
+    [JsonIgnore]
+    public Guid? CreationKey { get; set; }
+
     /// <summary>Owner PI; the target of the portfolio access check.</summary>
     [Required, MaxLength(8)]
     public string PiEmployeeId { get; set; } = "";
@@ -49,6 +53,8 @@ public class Projection
     {
         var entity = modelBuilder.Entity<Projection>();
         entity.HasIndex(p => p.PiEmployeeId);
+        entity.HasIndex(p => new { p.PiEmployeeId, p.CreationKey }).IsUnique()
+            .HasFilter("[CreationKey] IS NOT NULL");
         // SQL datetime2 preserves ticks but drops Kind. Restore UTC without shifting the saved token.
         foreach (var property in new[] { nameof(CreatedAt), nameof(SeededAt), nameof(UpdatedAt) })
             entity.Property<DateTime>(property).HasConversion(

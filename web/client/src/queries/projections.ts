@@ -1,4 +1,8 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  useMutation,
+  useQueryClient,
+  type QueryClient,
+} from '@tanstack/react-query';
 import { fetchJson, postJson } from '@/lib/api.ts';
 
 // Server JSON for /api/projections. DateOnly fields arrive as 'YYYY-MM-DD', DateTime as full ISO strings.
@@ -151,6 +155,86 @@ export const createProjection = (
     `/api/projections/by-iam/${encodeURIComponent(iamId)}`,
     body
   );
+
+export type CreateProjectionDraftRequest = {
+  creationKey: string;
+  draft: Pick<Projection, 'seededAt' | 'projects' | 'jobs'>;
+  historyMonths: number;
+  name: string;
+};
+
+export type DuplicateProjectionRequest = {
+  creationKey: string;
+  name: string;
+};
+
+/** A wizard owns this one capture; query refreshes must not replace its draft. */
+export const fetchProjectionSeed = (iamId: string, historyMonths: number) =>
+  fetchJson<Projection>(
+    `/api/projections/by-iam/${encodeURIComponent(iamId)}/seed?historyMonths=${historyMonths}`
+  );
+
+async function cacheCreatedProjection(
+  queryClient: QueryClient,
+  iamId: string,
+  saved: Projection
+) {
+  const detailKey = projectionQueryOptions(saved.id).queryKey;
+  const listKey = projectionListQueryOptions(iamId).queryKey;
+  await Promise.all([
+    queryClient.cancelQueries({ exact: true, queryKey: detailKey }),
+    queryClient.cancelQueries({ exact: true, queryKey: listKey }),
+  ]);
+  // Retrying a lost create response can return a plan already edited elsewhere.
+  queryClient.setQueryData<Projection>(detailKey, (current) =>
+    current &&
+    orderedTimestamp(current.updatedAt) > orderedTimestamp(saved.updatedAt)
+      ? current
+      : saved
+  );
+  queryClient.setQueryData<ProjectionSummary[]>(listKey, (current) => {
+    const existing = current?.find(({ id }) => id === saved.id);
+    const summary =
+      existing &&
+      orderedTimestamp(existing.updatedAt) > orderedTimestamp(saved.updatedAt)
+        ? existing
+        : {
+            id: saved.id,
+            name: saved.name,
+            seededAt: saved.seededAt,
+            updatedAt: saved.updatedAt,
+            updatedBy: saved.updatedBy,
+          };
+    return [summary, ...(current ?? []).filter(({ id }) => id !== saved.id)];
+  });
+  await queryClient.invalidateQueries({
+    queryKey: listKey,
+    refetchType: 'none',
+  });
+}
+
+export const useCreateProjectionDraft = (iamId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (request: CreateProjectionDraftRequest) =>
+      postJson<Projection>(
+        `/api/projections/by-iam/${encodeURIComponent(iamId)}`,
+        request
+      ),
+    onSuccess: (saved) => cacheCreatedProjection(queryClient, iamId, saved),
+    retry: false,
+  });
+};
+
+export const useDuplicateProjection = (iamId: string, id: number) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (request: DuplicateProjectionRequest) =>
+      postJson<Projection>(`/api/projections/${id}/duplicate`, request),
+    onSuccess: (saved) => cacheCreatedProjection(queryClient, iamId, saved),
+    retry: false,
+  });
+};
 
 export type ProjectionDraft = Pick<
   Projection,

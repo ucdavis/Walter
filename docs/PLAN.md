@@ -2,9 +2,9 @@
 
 Status: Stage 1a and Stage 1b are accepted, including the calculation corrections,
 shared snapshot timestamp, and fee rules. Stage 2a's fresh-snapshot read and
-eligibility policy are accepted. Wizard completion and duplication are authorized
-in Stage 2b; New plan saves before opening
-the view/edit workspace.
+eligibility policy are accepted and committed as `5b5a7af3`. Stage 2b's wizard
+completion and duplication are accepted; New plan saves before opening the
+view/edit workspace.
 Saving remains available with funding gaps/overlaps.
 The CBR default and legacy-plan compatibility increment is accepted.
 The project outlook starts at the snapshot month; historical spending remains
@@ -27,9 +27,14 @@ as each decision is settled and each stage is reviewed.
   implementation as the foundation.
 - The guided planner defines the intended UI. The earlier timeline and copilot
   are outside the initial feature; prepare for AI editing later.
+- The final wizard order is Funding sources → Staffing → Expenses → Review.
+  The third step may be labeled Other expenses. Build these steps incrementally;
+  the current Plan step is interim setup, not an additional final wizard step.
 - New plan opens the setup wizard. Its final Create plan action saves the
-  reviewed inputs, then opens the saved plan's workspace. Canceling setup creates
-  no saved plan; a failed create keeps the wizard inputs available for retry.
+  reviewed inputs, then opens the saved plan's workspace. Canceling before the
+  final Create action creates no saved plan; a failed create keeps the wizard
+  inputs available for retry. Leaving after submission may still leave a saved
+  plan if the server completed the request.
   Subsequent workspace edits use explicit Save plan.
 - Work in stages. Exercise the result and review its code before moving to the
   next stage. Prefer small, understandable changes and shared rules.
@@ -921,9 +926,9 @@ remain available for that mapping. An empty seed skips the personnel query.
 Fresh policy does not run when opening or saving an existing plan. Legacy
 task-grained snapshots remain usable without being regrouped.
 
-This increment changes the server boundary. The existing UI still uses its
-current create flow; wizard completion and creation from reviewed inputs follow next.
-No new settings column or persistence schema is needed for this increment.
+This increment changes the server boundary. Stage 2b adds the wizard and creates
+plans from its reviewed inputs. No new settings column or persistence schema is
+needed for Stage 2a.
 Deploy the updated seed procedure before this application version so the source
 provides `TaskStatus` and `AwardEndDate`. Older result sets omit those fields;
 they cannot support the agreed exclusions.
@@ -947,8 +952,8 @@ updates that saved plan. Do not add a separate unsaved workspace route or requir
 another Save after finishing the wizard.
 
 Extend the existing Create endpoint to accept the reviewed snapshot, salary
-edits, and expense estimates without reseeding. Canceling setup leaves no saved
-row. Keep the wizard's inputs on creation failure, pause setup edits during the
+edits, and expense estimates without reseeding. Canceling before creation leaves
+no saved row. Keep the wizard's inputs on creation failure, pause setup edits during the
 final save, and allow retry without duplicate rows after a lost response. A late
 completion after departure must not navigate the user back.
 
@@ -958,15 +963,68 @@ even when current source data is unavailable. The full wizard composes the
 staffing and expense editors as their owning stages deliver them; Stage 2 fixes
 the creation boundary rather than introducing a different interim lifecycle.
 
-Stage 2a is accepted and this increment is authorized. Existing plan settings
-are sufficient; later metadata editors should not store settings inside an
-arbitrary project record.
+Stage 2a and this increment are accepted. The interim
+wizard currently has Plan, Staffing, and Review steps. The final sequence is
+Funding sources, Staffing, Expenses, and Review; Other expenses remains an
+option for the third step's label. Plan selects a name and a 3-, 6-,
+or 12-month averaging window. Continue captures the portfolio once; later edits
+and query refreshes do not recapture it. Staffing reuses the salary editor, and
+Review shows the snapshot date and each project's balance and remaining forecast.
+The averaging window is fixed after capture; canceling setup allows a different
+window. Funding, employee settings, and expense editors follow in their owning
+stages. Existing plan settings are sufficient; later metadata editors should
+not store settings inside an arbitrary project record.
+
+Clean up `NewProjectionWizard.tsx` as the remaining steps are added, including
+using TanStack Form for input state and validation. This is a follow-up to the
+accepted flow, not a prerequisite for this increment. Preserve the tested
+creation retry and navigation behavior during that refactor.
+
+The existing Create endpoint accepts the captured UTC timestamp, projects, jobs,
+name, and history window. It validates the document structure and project
+references, then assigns the saved identity and audit metadata without another
+seed read. Older name/history-only requests retain their existing fresh-seed
+behavior. Duplicate authorizes the source and copies its stored inputs without
+consulting current financial or personnel sources. Normal Save retains its
+existing concurrency checks.
+
+Create and Duplicate use a client-generated creation key. A nullable key column
+and filtered unique index per PI let concurrent requests return one saved row.
+Replays return the current saved plan, preserving edits made since creation.
+An uncertain response freezes the submitted wizard inputs and key until retry
+confirms the result; a definite validation rejection permits further edits.
+Departure during an unresolved request warns that creation may have succeeded,
+and late responses update caches without reopening the workspace.
+
+Creation-key recovery lasts while the resulting row exists. Deleting that row
+removes its recovery key. Duplicate also requires the source to remain available
+and authorized on every retry. Durable recovery after deletion is outside this
+increment. Apply the application database migration before serving these new
+creation requests; it leaves older plans with a null key.
+
+Verification passed: 531 client tests, 509 standard server tests, all 15 isolated
+SQL Server tests, production client build, TypeScript, changed-file lint and
+formatting, and independent code review. The standard server run skips optional
+SQL tests; the isolated run applied the migration and exercised concurrent
+creation and duplication, PI-scoped keys, legacy null keys, and existing save
+concurrency. Six client lifecycle cases cover reviewed-input creation, normal
+subsequent saves, canceled setup, failed seed reads, lost-response recovery,
+copying without fresh sources, and late completion during departure. Review
+found and fixed a duplicate response overriding navigation while the chosen
+plan's loader was still pending; its regression now passes.
+
+A browser walkthrough of the production routes with synthetic API responses
+confirmed Plan → Staffing → Review → saved workspace, preserved the entered
+$132,000 salary and exact snapshot timestamp, and opened a separate saved copy
+with the same inputs. No browser console errors remained in that walkthrough.
+React Doctor found no errors; two wizard control-flow warnings were reviewed.
+Existing CSS optimization, module-directive, and bundle-size warnings remain.
+No live source read, deployment, or publication was performed for this increment.
 
 ## Questions to resolve in their owning stages
 
 | Before                        | Question or example                                                                                                                                                                     |
 | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Stage 2                       | Review fresh-seed eligibility and grouping, then implement wizard completion, creation retry recovery, duplication, selection, and saved-snapshot independence. |
 | Before exposing reset/refresh | Define their separate meanings, treatment of local edits, and snapshot replacement behavior.                                                                                            |
 | Stage 3                       | How do funding schedules behave at appointment/project boundaries, at zero FTE, and when FTE changes? Verify outside funding and distinguish incomplete assumptions from invalid edits. |
 | Stage 4                       | Which generated estimates are replaced when the history window changes? When does editing an estimate turn it into an explicit planned expense?                                         |
