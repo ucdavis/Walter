@@ -6,7 +6,6 @@ import {
   FundingSourcesEditor,
   type FundingSourcesEditorHandle,
 } from '@/components/projections/FundingSourcesEditor.tsx';
-import { AppointmentFundingStatus } from '@/components/projections/AppointmentFundingStatus.tsx';
 import {
   selectInitialSources,
   sourceLabel,
@@ -14,15 +13,22 @@ import {
   type SourceOperation,
 } from '@/lib/projectionSources.ts';
 import { ProjectionDialog } from '@/components/projections/ProjectionDialog.tsx';
-import { SalaryEditor } from '@/components/projections/SalaryEditor.tsx';
+import {
+  StaffingEditor,
+  type StaffingEditorHandle,
+} from '@/components/projections/StaffingEditor.tsx';
+import {
+  validateProjectionAppointments,
+  type AppointmentOperation,
+} from '@/lib/projectionAppointments.ts';
 import { HttpError } from '@/lib/api.ts';
 import { formatCurrency } from '@/lib/currency.ts';
 import { computePiProjection } from '@/lib/piProjection.ts';
 import {
   createProjectionSession,
   getFundingSourceOutlook,
-  setAppointmentMonthlySalary,
   type ProjectionSession,
+  type ProjectionResults,
 } from '@/lib/projectionWorkspace.ts';
 import {
   fetchProjectionSeed,
@@ -58,10 +64,10 @@ export function NewProjectionWizard({
     null
   );
   const sourceEditorRef = useRef<FundingSourcesEditorHandle>(null);
+  const staffingEditorRef = useRef<StaffingEditorHandle>(null);
   const [step, setStep] = useState(0);
   const [session, setSession] =
     useState<ProjectionSession<ProjectionDraft> | null>(null);
-  const [appointmentId, setAppointmentId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] =
@@ -72,9 +78,13 @@ export function NewProjectionWizard({
   const heading = useRef<HTMLHeadingElement>(null);
   const create = useCreateProjectionDraft(iamId);
   const draft = session?.draft;
-  const selectedAppointment = draft?.appointments.find(
-    (appointment) => appointment.id === appointmentId
+  const results = useMemo(
+    () => (draft ? computePiProjection(draft) : null),
+    [draft]
   );
+  const appointmentValidationMessage = draft
+    ? validateProjectionAppointments(draft)
+    : null;
   const hasWork = () =>
     Boolean(
       name ||
@@ -82,7 +92,8 @@ export function NewProjectionWizard({
         session ||
         loading ||
         submitted ||
-        sourceEditorRef.current?.read()?.hasChanges
+        sourceEditorRef.current?.read()?.hasChanges ||
+        staffingEditorRef.current?.read()?.hasChanges
     );
   const blocker = useBlocker({
     enableBeforeUnload: hasWork,
@@ -127,6 +138,14 @@ export function NewProjectionWizard({
             .map(({ id }) => id),
         ]);
       }
+    }
+    return result;
+  }
+
+  function applyAppointmentOperation(operation: AppointmentOperation) {
+    const result = operation(currentSession.current!);
+    if (result.ok) {
+      updateSession(result.session);
     }
     return result;
   }
@@ -181,7 +200,11 @@ export function NewProjectionWizard({
   }
 
   async function finish() {
-    if (!draft || requestPending.current) {
+    if (
+      !draft ||
+      requestPending.current ||
+      validateProjectionAppointments(draft)
+    ) {
       return;
     }
     // An uncertain response locks this payload and key until the same creation is acknowledged.
@@ -283,14 +306,29 @@ export function NewProjectionWizard({
             session={session}
           />
         )}
-        {step === 1 && draft && (
-          <StaffingStep draft={draft} onEdit={setAppointmentId} />
+        {step === 1 && session && results && (
+          <StaffingEditor
+            appointmentFunding={results.appointmentFunding}
+            onOperation={applyAppointmentOperation}
+            ref={staffingEditorRef}
+            session={session}
+          />
         )}
-        {step === 2 && draft && (
-          <ReviewStep draft={draft} historyMonths={historyMonths} name={name} />
+        {step === 2 && draft && results && (
+          <ReviewStep
+            draft={draft}
+            historyMonths={historyMonths}
+            name={name}
+            results={results}
+          />
         )}
       </div>
 
+      {step > 0 && appointmentValidationMessage && (
+        <p className="mt-5 text-error" role="alert">
+          {appointmentValidationMessage}
+        </p>
+      )}
       {error && (
         <p className="mt-5 text-error" role="alert">
           {error}
@@ -342,7 +380,9 @@ export function NewProjectionWizard({
           ) : (
             <button
               className="btn btn-primary"
-              disabled={create.isPending}
+              disabled={
+                create.isPending || Boolean(appointmentValidationMessage)
+              }
               onClick={() => void finish()}
               type="button"
             >
@@ -356,22 +396,6 @@ export function NewProjectionWizard({
         </div>
       </div>
 
-      {selectedAppointment && session && (
-        <SalaryEditor
-          appointment={selectedAppointment}
-          key={selectedAppointment.id}
-          onApply={(change) => {
-            const updated = setAppointmentMonthlySalary(session, change);
-            if (updated.ok) {
-              updateSession(updated.session);
-            } else {
-              setError(updated.error);
-            }
-          }}
-          onClose={() => setAppointmentId(null)}
-          snapshotMonth={session.draft.seededAt.slice(0, 7)}
-        />
-      )}
       {(cancelRequested || blocker.status === 'blocked') && (
         <ProjectionDialog
           onClose={stay}
@@ -380,7 +404,7 @@ export function NewProjectionWizard({
           <p className="mt-4">
             {submitted
               ? 'Creation may still finish or may already have succeeded. Leaving discards this setup.'
-              : 'Your setup choices and salary edits will be discarded.'}
+              : 'Your setup choices and appointment edits will be discarded.'}
           </p>
           <div className="modal-action">
             <button className="btn btn-ghost" onClick={stay} type="button">
@@ -454,70 +478,17 @@ function PlanStep({
   );
 }
 
-function StaffingStep({
-  draft,
-  onEdit,
-}: {
-  draft: ProjectionDraft;
-  onEdit: (appointmentId: number) => void;
-}) {
-  const funding = useMemo(
-    () => computePiProjection(draft).appointmentFunding,
-    [draft]
-  );
-  return (
-    <div className="mt-5 space-y-4">
-      <p>Review full-time salary rates before creating the plan.</p>
-      {draft.appointments.length === 0 && (
-        <p>No appointments in this snapshot.</p>
-      )}
-      {draft.appointments.map((appointment) => (
-        <article
-          className="rounded-box border border-base-300 p-5"
-          key={appointment.id}
-        >
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <h3 className="text-lg font-bold">{appointment.name}</h3>
-              <p className="text-sm">
-                {appointment.title} · {appointment.fte * 100}% appointment FTE
-              </p>
-              <p className="mt-3">
-                {appointment.monthlySalary === null
-                  ? 'Salary needs input'
-                  : `${formatCurrency(appointment.monthlySalary * 12)} per year at full time`}
-              </p>
-              <AppointmentFundingStatus
-                appointment={appointment}
-                months={funding}
-                snapshotMonth={draft.seededAt.slice(0, 7)}
-              />
-            </div>
-            <button
-              className="btn btn-outline"
-              id={`salary-appointment-${appointment.id}`}
-              onClick={() => onEdit(appointment.id)}
-              type="button"
-            >
-              Edit salary for {appointment.name}
-            </button>
-          </div>
-        </article>
-      ))}
-    </div>
-  );
-}
-
 function ReviewStep({
   draft,
   historyMonths,
   name,
+  results,
 }: {
   draft: ProjectionDraft;
   historyMonths: number;
   name: string;
+  results: ProjectionResults;
 }) {
-  const results = useMemo(() => computePiProjection(draft), [draft]);
   return (
     <div className="mt-5">
       <h3 className="text-xl font-bold">{name.trim()}</h3>

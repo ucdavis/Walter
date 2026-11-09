@@ -10,7 +10,6 @@ public sealed class ProjectionBenefitSerializationTests
 {
     public static TheoryData<string, decimal> StoredAppointments => new()
     {
-        { """[{"id":1,"vacationAccrualRate":0.083}]""", 0m },
         { """[{"id":1,"cbrRate":0,"vacationAccrualRate":0.083}]""", 0m },
         { """[{"id":1,"cbrRate":0.32175,"vacationAccrualRate":0.083}]""", 0.32175m },
         { """[{"id":1,"cbrRate":"0.32175","vacationAccrualRate":0.083}]""", 0.32175m },
@@ -53,6 +52,15 @@ public sealed class ProjectionBenefitSerializationTests
         var json = $$"""{"cbrRate":{{cbrJson}}}""";
 
         var deserialize = () => JsonSerializer.Deserialize<ProjectionAppointment>(json,
+            new JsonSerializerOptions(JsonSerializerDefaults.Web));
+
+        deserialize.Should().Throw<JsonException>();
+    }
+
+    [Fact]
+    public void Missing_cbr_is_rejected_instead_of_silently_becoming_an_explicit_zero()
+    {
+        var deserialize = () => JsonSerializer.Deserialize<ProjectionAppointment>("""{"id":1}""",
             new JsonSerializerOptions(JsonSerializerDefaults.Web));
 
         deserialize.Should().Throw<JsonException>();

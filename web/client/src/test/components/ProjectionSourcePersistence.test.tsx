@@ -6,6 +6,7 @@ import {
   useProjectionSession,
 } from '@/components/projections/ProjectionSession.tsx';
 import { createSalaryExample } from '@/dev/projections/fixture.ts';
+import { editProjectionAppointment } from '@/lib/projectionAppointments.ts';
 import { addImportedSources } from '@/lib/projectionSources.ts';
 import { isProjectionDirty } from '@/lib/projectionWorkspace.ts';
 import type {
@@ -51,10 +52,12 @@ describe('source changes during persistence', () => {
       </ProjectionSessionProvider>
     );
     await act(async () =>
-      controls.current!.applySalary({
-        appointmentId: 101,
-        monthlySalary: 11_000,
-      })
+      controls.current!.applyAppointmentOperation((current) =>
+        editProjectionAppointment(current, 101, {
+          ...current.draft.appointments[0],
+          monthlySalary: 11_000,
+        })
+      )
     );
     const actions = controls.current!;
     await act(async () => {

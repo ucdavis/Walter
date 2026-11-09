@@ -10,12 +10,6 @@ export interface ProjectionSession<T extends ProjectionDraft = Projection> {
   revision: number;
 }
 
-export interface AppointmentSalaryChange {
-  appointmentId: number;
-  /** Full-time monthly dollars, before FTE and appointment funding shares. */
-  monthlySalary: number;
-}
-
 export function createProjectionSession<T extends ProjectionDraft>(
   plan: T
 ): ProjectionSession<T> {
@@ -41,44 +35,6 @@ export function acknowledgeProjectionSave(
             historyMonths: current.draft.historyMonths,
             name: current.draft.name,
           },
-  };
-}
-
-/** Changes the assumed rate from the fixed snapshot onward; captured actuals are untouched. */
-export function setAppointmentMonthlySalary<T extends ProjectionDraft>(
-  session: ProjectionSession<T>,
-  change: AppointmentSalaryChange
-): { error: string; ok: false } | { ok: true; session: ProjectionSession<T> } {
-  if (
-    !Number.isFinite(change.monthlySalary) ||
-    change.monthlySalary < 0 ||
-    change.monthlySalary > Number.MAX_SAFE_INTEGER / 12
-  ) {
-    return { error: 'Enter a valid salary of zero or more.', ok: false };
-  }
-  const appointment = session.draft.appointments.find(
-    ({ id }) => id === change.appointmentId
-  );
-  if (!appointment) {
-    return { error: 'This appointment is no longer in the plan.', ok: false };
-  }
-  if (appointment.monthlySalary === change.monthlySalary) {
-    return { ok: true, session };
-  }
-  return {
-    ok: true,
-    session: {
-      ...session,
-      draft: {
-        ...session.draft,
-        appointments: session.draft.appointments.map((candidate) =>
-          candidate.id === change.appointmentId
-            ? { ...candidate, monthlySalary: change.monthlySalary }
-            : candidate
-        ),
-      },
-      revision: session.revision + 1,
-    },
   };
 }
 
@@ -140,7 +96,7 @@ export function readProjectionLocation(
     issues.push(`Funding source ${fundingSourceId} is not in this plan.`);
   }
   if (appointmentId !== null && section !== 'staffing') {
-    issues.push('A salary editor must be opened in Staffing.');
+    issues.push('An appointment editor must be opened in Staffing.');
   }
   return {
     appointmentId,
@@ -155,10 +111,10 @@ export function readProjectionLocation(
 
 export type ProjectionResults = ReturnType<typeof computePiProjection>;
 
-export interface PendingSalaryEditor {
-  appointmentId: number;
+export interface PendingAppointmentEditor {
+  appointmentId: number | null;
   hasChanges: boolean;
-  kind?: 'salary';
+  kind: 'appointment';
   validationMessage: string | null;
 }
 
@@ -169,7 +125,9 @@ export interface PendingSourceEditor {
   validationMessage: string | null;
 }
 
-export type PendingProjectionEditor = PendingSalaryEditor | PendingSourceEditor;
+export type PendingProjectionEditor =
+  | PendingAppointmentEditor
+  | PendingSourceEditor;
 
 export interface ProjectionPersistenceStatus {
   conflict: 'conflict' | 'snapshotChanged' | 'deleted' | null;

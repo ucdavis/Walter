@@ -355,12 +355,12 @@ public sealed partial class ProjectionsControllerTests
     }
 
     [Fact]
-    public async Task Create_from_draft_accepts_incomplete_and_out_of_range_planning_assumptions()
+    public async Task Create_from_draft_accepts_zero_salary_and_out_of_range_allocation_assumptions()
     {
         using var ctx = TestDbContextFactory.CreateInMemory();
         var request = NewPlanRequest();
         var job = request.Draft!.Appointments!.Single();
-        job.MonthlySalary = null;
+        job.MonthlySalary = 0;
         job.Allocations[0].StartDate = new DateOnly(2027, 1, 1);
         job.Allocations[0].EndDate = new DateOnly(2027, 2, 1);
         job.Allocations[0].Percent = 0.75m;
@@ -485,6 +485,9 @@ public sealed partial class ProjectionsControllerTests
             })).Start();
         using var client = host.GetTestClient();
 
+        var lookups = await client.GetFromJsonAsync<ProjectionsController.ProjectionLookups>("/api/projections/lookups");
+        lookups!.AppointmentDefaults.Should().BeEquivalentTo(new { Fte = 1m, CbrRate = 0.2m, ColaRate = 0.03m, ColaMonth = 7 });
+
         using var response = await client.GetAsync($"/api/projections/by-iam/{PiIam}/seed");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -518,6 +521,9 @@ public sealed partial class ProjectionsControllerTests
         invalidCbr["draft"]!["appointments"]![0]!["cbrRate"] = null;
         using var rejectedCbr = await client.PostAsJsonAsync($"/api/projections/by-iam/{PiIam}", invalidCbr);
         rejectedCbr.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        invalidCbr["draft"]!["appointments"]![0]!.AsObject().Remove("cbrRate");
+        using var omittedCbr = await client.PostAsJsonAsync($"/api/projections/by-iam/{PiIam}", invalidCbr);
+        omittedCbr.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         using var missingDraft = await client.PostAsJsonAsync($"/api/projections/by-iam/{PiIam}", new { Name = "Unreviewed", HistoryMonths = 3 });
         missingDraft.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         ctx.Projections.Should().BeEmpty();
@@ -593,7 +599,7 @@ public sealed partial class ProjectionsControllerTests
                 new() { Id = 1, SourceKind = ProjectionSourceKind.Task, CapturedAt = snapshot, ProjectNumber = "P1", TaskNumber = "TASK01", Name = "First task", ProjectName = "First captured task", EndDate = new DateOnly(2025, 3, 31) },
                 new() { Id = 2, SourceKind = ProjectionSourceKind.Task, CapturedAt = snapshot, ProjectNumber = "P1", TaskNumber = "TASK02", Name = "Second task", ProjectName = "Second captured task", EndDate = new DateOnly(2025, 3, 31) },
             ],
-            Appointments = [new() { Id = 1, MonthlySalary = null, Allocations = [new() { FundingSourceId = 2, Percent = 0.6m }] }],
+            Appointments = [new() { Id = 1, IsSeeded = true, MonthlySalary = 5000, Allocations = [new() { FundingSourceId = 2, Percent = 0.6m }] }],
         };
         ctx.Projections.Add(saved);
         await ctx.SaveChangesAsync();
@@ -710,6 +716,7 @@ public sealed partial class ProjectionsControllerTests
             Id = 1,
             Name = "GSR #2",
             MonthlySalary = 4000,
+            StartDate = new DateOnly(2026, 12, 1),
             Fte = 0.5m,
             Allocations = [new() { FundingSourceId = created.FundingSources.Single().Id, Percent = 1 }],
         });
@@ -794,7 +801,7 @@ public sealed partial class ProjectionsControllerTests
         var controller = CreateController(ctx, financialViewer: true);
         var draft = Draft(created) with { Name = "My plan" };
         draft.FundingSources.Single().Expenses.Single().Amount = 123;
-        draft.Appointments.Add(new ProjectionAppointment { Id = 7, Name = "My new hire", MonthlySalary = 8000 });
+        draft.Appointments.Add(new ProjectionAppointment { Id = 7, Name = "My new hire", MonthlySalary = 8000, StartDate = new DateOnly(2026, 12, 1) });
         await controller.Save(created.Id, Draft(created) with { Name = "First competing edit" }, default);
         ConflictCode(await controller.Save(created.Id, draft, default)).Should().Be("conflict");
 

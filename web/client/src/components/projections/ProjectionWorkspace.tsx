@@ -3,7 +3,6 @@ import {
   FundingSourcesEditor,
   type FundingSourcesEditorHandle,
 } from '@/components/projections/FundingSourcesEditor.tsx';
-import { AppointmentFundingStatus } from '@/components/projections/AppointmentFundingStatus.tsx';
 import {
   sourceCapturedBalance,
   sourceLabel,
@@ -25,9 +24,9 @@ import {
   ProjectionSaveFeedback,
 } from '@/components/projections/ProjectionSaveControls.tsx';
 import {
-  SalaryEditor,
-  type SalaryEditorHandle,
-} from '@/components/projections/SalaryEditor.tsx';
+  StaffingEditor,
+  type StaffingEditorHandle,
+} from '@/components/projections/StaffingEditor.tsx';
 
 export interface ProjectionWorkspaceHandle {
   read: () => ProjectionWorkspaceSnapshot;
@@ -47,7 +46,7 @@ export function ProjectionWorkspace({
   search: Record<string, unknown>;
 }) {
   const {
-    applySalary,
+    applyAppointmentOperation,
     applySourceOperation,
     persistenceStatus,
     reloadVersion,
@@ -56,18 +55,12 @@ export function ProjectionWorkspace({
   } = useProjectionSession();
   const { draft } = session;
   const location = readProjectionLocation(search, draft);
-  const editorRef = useRef<SalaryEditorHandle>(null);
+  const editorRef = useRef<StaffingEditorHandle>(null);
   const sourceEditorRef = useRef<FundingSourcesEditorHandle>(null);
   const sourceHeadingRef = useRef<HTMLHeadingElement>(null);
   const selectedSource = draft.fundingSources.find(
     (source) => source.id === location.fundingSourceId
   );
-  const selectedAppointment =
-    location.issues.length === 0 && location.section === 'staffing'
-      ? draft.appointments.find(
-          (appointment) => appointment.id === location.appointmentId
-        )
-      : undefined;
   const sourceSearch =
     location.fundingSourceId === null
       ? {}
@@ -319,88 +312,24 @@ export function ProjectionWorkspace({
       ) : (
         <section className="mt-6">
           <h2 className="text-xl font-bold">Staffing</h2>
-          <p className="mt-2 text-sm">
-            Salary is the full-time rate. Allocation shares below are
-            percentages of full-time salary.
-          </p>
-          <div className="mt-4 space-y-4">
-            {draft.appointments.map((appointment) => (
-              <article
-                className="rounded-box border border-base-300 p-5"
-                key={appointment.id}
-              >
-                <div className="flex flex-wrap justify-between gap-4">
-                  <div>
-                    <h3 className="text-lg font-bold">{appointment.name}</h3>
-                    <p className="text-sm">
-                      {appointment.title} · {appointment.fte * 100}% appointment
-                      FTE
-                    </p>
-                  </div>
-                  <button
-                    className="btn btn-outline"
-                    id={`salary-appointment-${appointment.id}`}
-                    onClick={() =>
-                      onNavigate({
-                        ...sourceSearch,
-                        appointment: appointment.id,
-                        section: 'staffing',
-                      })
-                    }
-                    type="button"
-                  >
-                    Edit salary for {appointment.name}
-                  </button>
-                </div>
-                <p className="mt-4">
-                  {appointment.monthlySalary === null
-                    ? 'Salary needs input'
-                    : `${formatCurrency(appointment.monthlySalary * 12)} per year at full time`}
-                </p>
-                <p className="mt-1 text-sm">
-                  {formatCurrency(appointment.monthlySalary)} per month at full
-                  time
-                </p>
-                <AppointmentFundingStatus
-                  appointment={appointment}
-                  months={results.appointmentFunding}
-                  snapshotMonth={draft.seededAt.slice(0, 7)}
-                />
-                <ul className="mt-4 space-y-1 text-sm">
-                  {appointment.allocations.map((allocation, index) => (
-                    <li key={index}>
-                      {allocation.fundingSourceId === null
-                        ? 'Outside this portfolio'
-                        : (() => {
-                            const source = draft.fundingSources.find(
-                              (source) =>
-                                source.id === allocation.fundingSourceId
-                            );
-                            return source
-                              ? sourceLabel(source)
-                              : 'Unallocated funding';
-                          })()}
-                      : {allocation.percent * appointment.fte * 100}% of
-                      full-time salary
-                    </li>
-                  ))}
-                </ul>
-              </article>
-            ))}
-          </div>
+          <StaffingEditor
+            appointmentFunding={results.appointmentFunding}
+            key={`${reloadVersion}:${location.appointmentId ?? 'list'}`}
+            onOperation={applyAppointmentOperation}
+            ref={editorRef}
+            session={session}
+            target={{
+              id: location.appointmentId,
+              onChange: (id) =>
+                onNavigate(
+                  id === null
+                    ? { ...sourceSearch, section: 'staffing' }
+                    : { ...sourceSearch, appointment: id, section: 'staffing' },
+                  id === null
+                ),
+            }}
+          />
         </section>
-      )}
-      {selectedAppointment && (
-        <SalaryEditor
-          appointment={selectedAppointment}
-          key={`${selectedAppointment.id}:${reloadVersion}`}
-          onApply={applySalary}
-          onClose={() =>
-            onNavigate({ ...sourceSearch, section: 'staffing' }, true)
-          }
-          ref={editorRef}
-          snapshotMonth={draft.seededAt.slice(0, 7)}
-        />
       )}
       {planPath && (
         <ProjectionNavigationGuard

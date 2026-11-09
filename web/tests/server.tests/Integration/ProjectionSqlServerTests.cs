@@ -391,7 +391,7 @@ public sealed class ProjectionSqlServerTests(ProjectionSqlServerFixture sql) : I
             CreatedBy = "owner",
             UpdatedBy = "owner",
             FundingSources = [new() { Id = 1, Name = "Source", SourceKind = ProjectionSourceKind.Task, CapturedAt = Snapshot, ProjectNumber = "P1", TaskNumber = "T1", ProjectName = "Project", Actuals = [new() { Month = new(2029, 12, 1), Amount = 2500, ExpenditureCategory = "Salary" }] }],
-            Appointments = [new() { Id = 1, Name = "Example", MonthlySalary = 10000, Fte = 0.5m }],
+            Appointments = [new() { Id = 1, Name = "Example", IsSeeded = true, MonthlySalary = 10000, Fte = 0.5m }],
         };
         await using var db = sql.CreateContext();
         db.Projections.Add(plan);

@@ -8,6 +8,7 @@ import {
 
 export function ProjectionSaveControls() {
   const {
+    appointmentValidationMessage,
     canSave,
     conflict,
     error,
@@ -26,7 +27,12 @@ export function ProjectionSaveControls() {
       {canSave && (
         <button
           className="btn btn-primary"
-          disabled={saving || reloading || (!dirty && !conflict && !error)}
+          disabled={
+            saving ||
+            reloading ||
+            Boolean(appointmentValidationMessage) ||
+            (!dirty && !conflict && !error)
+          }
           onClick={() => void save()}
           type="button"
         >
@@ -49,6 +55,7 @@ export function ProjectionSaveFeedback({
   search: Record<string, unknown>;
 }) {
   const {
+    appointmentValidationMessage,
     conflict,
     conflictOpen,
     discardSaved,
@@ -61,6 +68,11 @@ export function ProjectionSaveFeedback({
   } = useProjectionSession();
   return (
     <>
+      {appointmentValidationMessage && (
+        <p className="mt-3 text-error" role="alert">
+          {appointmentValidationMessage}
+        </p>
+      )}
       {saveStatus === 'saved' && isProjectionDirty(session) && (
         <p className="mt-3 text-sm" role="status">
           Submitted changes were saved. Newer edits are still unsaved.

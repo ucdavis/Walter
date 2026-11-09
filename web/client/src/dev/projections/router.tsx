@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   createRootRoute,
   createRoute,
@@ -13,6 +14,7 @@ import {
 } from '@/components/projections/ProjectionWorkspace.tsx';
 import {
   createBookedSalaryExample,
+  createAppointmentLookupsExample,
   createDateBoundaryExample,
   createFeeExample,
   createFutureHireExample,
@@ -23,7 +25,10 @@ import {
   createProjectionPreviewServer,
   type ProjectionPreviewServer,
 } from '@/dev/projections/server.ts';
-import type { Projection } from '@/queries/projections.ts';
+import {
+  projectionLookupsQueryOptions,
+  type Projection,
+} from '@/queries/projections.ts';
 
 interface ProjectionPreviewHandle extends ProjectionWorkspaceHandle {
   server: ProjectionPreviewServer;
@@ -56,21 +61,28 @@ export function createProjectionPreviewRouter({
   server?: ProjectionPreviewServer;
 } = {}) {
   const exampleSearch = example ? { example } : {};
+  const queryClient = new QueryClient();
+  queryClient.setQueryData(
+    projectionLookupsQueryOptions().queryKey,
+    createAppointmentLookupsExample()
+  );
   const rootRoute = createRootRoute({
     component: () => (
-      <main>
-        <div className="bg-warning/15 px-4 py-3 text-center text-sm">
-          Synthetic local preview. No real people or projects. The saved copy
-          lives in this tab; a full page reload resets everything.
-        </div>
-        <PreviewControls
-          onLeave={() => {
-            void router.navigate({ to: '/projections-preview-away.html' });
-          }}
-          server={server}
-        />
-        <Outlet />
-      </main>
+      <QueryClientProvider client={queryClient}>
+        <main>
+          <div className="bg-warning/15 px-4 py-3 text-center text-sm">
+            Synthetic local preview. No real people or projects. The saved copy
+            lives in this tab; a full page reload resets everything.
+          </div>
+          <PreviewControls
+            onLeave={() => {
+              void router.navigate({ to: '/projections-preview-away.html' });
+            }}
+            server={server}
+          />
+          <Outlet />
+        </main>
+      </QueryClientProvider>
     ),
   });
   const previewRoute = createRoute({

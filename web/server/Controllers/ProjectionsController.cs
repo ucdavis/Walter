@@ -34,7 +34,8 @@ public sealed class ProjectionsController(
         List<ProjectionAppointment> Appointments, DateTime? ExpectedUpdatedAt = null, DateTime? ExpectedSeededAt = null, bool Overwrite = false);
     public sealed record HistoryMonthsRequest(int HistoryMonths, DateTime? ExpectedUpdatedAt = null);
     public sealed record ProjectionConflict(string Code, string Message);
-    public sealed record ProjectionLookups(IReadOnlyList<JobCodeRecord> JobCodes, IReadOnlyList<string> ExpenditureCategories);
+    public sealed record ProjectionLookups(IReadOnlyList<JobCodeRecord> JobCodes, IReadOnlyList<string> ExpenditureCategories,
+        ProjectionAppointmentDefaults AppointmentDefaults);
     public sealed record ProjectionSourceKey(string ProjectNumber, string? TaskNumber);
     public sealed record ProjectionSourceSummary(string ProjectNumber, string? ProjectName, string? TaskNumber, string? TaskName);
     public sealed record ImportProjectionSourcesRequest(int HistoryMonths, List<ProjectionSourceKey>? Sources);
@@ -104,7 +105,7 @@ public sealed class ProjectionsController(
         if (request.CreationKey == Guid.Empty)
             return BadRequest("A nonempty CreationKey is required when creating a reviewed draft.");
         if (request.Draft is null || !ValidDraft(request.Draft))
-            return BadRequest("Draft requires an exact UTC SeededAt, nonnull collections, unique positive funding source/appointment IDs, and valid allocation references.");
+            return BadRequest("Draft requires valid sources and appointments, including a nonnegative salary for every appointment, exact UTC SeededAt, unique positive IDs, and valid allocation references.");
         var (piEmployeeId, error) = await ResolvePiAsync(iamId, ct);
         if (error is not null) return error;
 
@@ -133,6 +134,9 @@ public sealed class ProjectionsController(
         var existing = await FindCreationAsync(source!.PiEmployeeId, request.CreationKey, ct);
         if (existing is not null) return Ok(existing);
 
+        var snapshot = new ProjectionDraft(request.Name, source.HistoryMonths, source.SeededAt, source.FundingSources, source.Appointments);
+        if (!ValidDraft(snapshot)) return BadRequest("The stored plan has incomplete or invalid inputs and cannot be duplicated.");
+
         var projection = new Projection
         {
             PiEmployeeId = source.PiEmployeeId,
@@ -140,7 +144,7 @@ public sealed class ProjectionsController(
             HistoryMonths = source.HistoryMonths,
             CreationKey = request.CreationKey,
         };
-        CopySnapshot(projection, new(source.Name, source.HistoryMonths, source.SeededAt, source.FundingSources, source.Appointments));
+        CopySnapshot(projection, snapshot);
         return await InsertAsync(projection, ct);
     }
 
@@ -163,7 +167,7 @@ public sealed class ProjectionsController(
         if (!ValidToken(request.ExpectedUpdatedAt) || !ValidToken(request.ExpectedSeededAt))
             return BadRequest("ExpectedUpdatedAt and ExpectedSeededAt must be exact UTC timestamps from the loaded plan.");
         if (!ValidName(request.Name) || !ValidDraft(new(request.Name, request.HistoryMonths, request.ExpectedSeededAt!.Value, request.FundingSources, request.Appointments)))
-            return BadRequest("The plan requires valid sources, unique positive funding source/appointment IDs, and valid allocation references.");
+            return BadRequest("The plan requires valid sources and appointments, including a nonnegative salary for every appointment, unique positive IDs, and valid allocation references.");
 
         // Detach the submitted lists from tracked entities and reuse this frozen draft on every retry.
         var draft = JsonSerializer.Deserialize<SaveProjectionRequest>(JsonSerializer.Serialize(request))!;
@@ -239,7 +243,9 @@ public sealed class ProjectionsController(
 
         var capture = await seeder.CaptureDraftAsync(projection.PiEmployeeId, request.HistoryMonths,
             User.GetUserIdentifier(), User.GetEmulatingUser(), ct, projection.SeededAt);
-        // A reset replaces captured inputs only after the complete read succeeds; identity and name remain saved-plan metadata.
+        // Reject incomplete fresh inputs before replacing any saved fields or advancing the version.
+        if (!ValidDraft(capture.Draft)) return BadRequest("Fresh data has incomplete or invalid inputs. The saved plan was not reset.");
+        // Identity and name remain saved-plan metadata.
         projection.HistoryMonths = capture.Draft.HistoryMonths;
         projection.SeededAt = capture.Draft.SeededAt;
         projection.FundingSources = capture.Draft.FundingSources;
@@ -259,7 +265,7 @@ public sealed class ProjectionsController(
 
     [HttpGet("lookups")]
     public async Task<IActionResult> Lookups(CancellationToken ct) =>
-        Ok(new ProjectionLookups(await data.GetJobCodesAsync(ct), await data.GetExpenditureCategoriesAsync(ct)));
+        Ok(new ProjectionLookups(await data.GetJobCodesAsync(ct), await data.GetExpenditureCategoriesAsync(ct), ProjectionAppointmentDefaults.Default));
 
     /// <summary>Loads the projection and applies the PI portfolio access rule.</summary>
     internal async Task<(Projection? projection, IActionResult? error)> LoadAsync(int id, CancellationToken ct)
@@ -285,12 +291,23 @@ public sealed class ProjectionsController(
         if (draft.FundingSources.Any(p => p is null || p.Id <= 0 || p.Budgets is null || p.Actuals is null || p.RunRates is null || p.Expenses is null
                 || p.Budgets.Any(b => b is null) || p.Actuals.Any(a => a is null) || p.RunRates.Any(r => r is null) || p.Expenses.Any(e => e is null))
             || draft.Appointments.Any(j => j is null || j.Id <= 0 || j.Allocations is null || j.Allocations.Any(f => f is null))) return false;
-        if (!ValidSources(draft.FundingSources)) return false;
+        if (!ValidSources(draft.FundingSources) || !ValidAppointments(draft.Appointments)) return false;
         var sourceIds = draft.FundingSources.Select(p => p.Id).ToHashSet();
         return sourceIds.Count == draft.FundingSources.Count
             && draft.Appointments.Select(j => j.Id).Distinct().Count() == draft.Appointments.Count
             && draft.Appointments.SelectMany(j => j.Allocations).All(f => f.FundingSourceId is null || sourceIds.Contains(f.FundingSourceId.Value));
     }
+
+    /// <summary>Missing imported salary may be reviewed in a draft, but every retained appointment must be complete before persistence.</summary>
+    private static bool ValidAppointments(List<ProjectionAppointment> appointments) => appointments.All(appointment =>
+        appointment.MonthlySalary is >= 0
+        && appointment.Fte is >= 0 and <= 1
+        && appointment.CbrRate >= 0
+        && appointment.ColaRate > -1
+        && appointment.ColaMonth is >= 1 and <= 12
+        && (appointment.FeeRemissionMonthly is null or >= 0)
+        && !(appointment.StartDate > appointment.EndDate)
+        && (appointment.IsSeeded || (appointment.StartDate is not null && !string.IsNullOrWhiteSpace(appointment.Name))));
 
     /// <summary>Each source has an explicit capture and kind; a captured task may appear only once in a plan.</summary>
     private static bool ValidSources(List<ProjectionFundingSource> sources)

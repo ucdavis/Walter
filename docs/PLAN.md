@@ -6,14 +6,17 @@ eligibility policy are accepted and committed as `5b5a7af3`. Stage 2b's wizard
 completion and duplication are accepted and committed as `d524af0c`; New plan
 saves before opening the view/edit workspace. Stage 3a's funding sources and
 greenfield model cleanup are accepted and committed as `4bb4f673`. The follow-up
-audit's seven cleanup recommendations are accepted and verified locally.
-Staffing editors are the next increment.
+audit's seven cleanup recommendations are accepted and committed as `727cf3aa`.
+Stage 3b's appointment editor and hypothetical hires are implemented, verified,
+and accepted. Funding-schedule editing is the next review increment.
 Saving remains available with funding gaps/overlaps.
-CBR defaults to zero when no rate is available from the personnel source.
+CBR defaults to 20% when no rate is supplied. Fresh appointments default to a
+3% annual salary adjustment in July. Every retained appointment needs a salary
+before the plan can be saved; explicit zero is allowed.
 The projection model is greenfield and uses one current document format.
 The project outlook starts at the snapshot month; historical spending remains
 available for expense estimates and snapshot-month calculations.
-Updated November 8, 2026.
+Updated November 9, 2026.
 
 Build a guided planning workspace where users can adjust a dated portfolio
 snapshot, inspect each project's outlook, and save alternative plans. Keep the
@@ -66,9 +69,11 @@ as each decision is settled and each stage is reviewed.
   project-active days, restricted to days after the snapshot date in its month.
 - [One-time expenses](#agreed-one-time-expense-month-eligibility) retain their
   full amount in an eligible month. Out-of-range entries remain saved.
-- CBR is a numeric planning input. When no source rate is available, default
-  it to 0 for now. A different default may be chosen later; none is selected.
-  Do not add a missing-CBR state or incomplete-benefit warning for this default.
+- CBR is a numeric planning input. Use a 20% fallback for hypothetical hires
+  and freshly imported missing rates, chosen for the expected postdoc-heavy
+  roster. Preserve supplied rates, including explicit zero. Keep the default
+  centrally defined and never update existing plans when it changes. The
+  explicit Use lookup rate action and manual editing can replace an assumption.
 - Keep the vacation cost field's existing default of 0 and preserve supplied
   values. Add no new vacation-cost UI until the lookup's meaning is confirmed.
 - Show the project outlook from the snapshot month forward. Retain captured
@@ -141,10 +146,11 @@ Compose a serializable workspace snapshot on demand from the plan, location,
 calculated results, validation issues, draft revision, unsaved status, and pending
 editor. Do not maintain a second synchronized copy of the whole workspace.
 
-Begin with a read operation, navigation, and one typed salary operation. For
-example, `setAppointmentMonthlySalary` identifies an appointment and an explicit full-time monthly
-amount. Later operations can change FTE, replace a funding schedule, or regenerate
-spending estimates. Avoid arbitrary field paths as the public editing contract.
+Use typed operations alongside workspace reads and navigation.
+`editProjectionAppointment` identifies an appointment and applies validated
+salary, FTE, date, and benefit inputs together. Separate operations add and
+remove appointments. Later operations can replace a funding schedule or
+regenerate spending estimates. Avoid arbitrary field paths as the public editing contract.
 
 Salary edits target a stable appointment ID. A Person's name does not
 identify a particular appointment. Keep the distinctions between Person, IAM ID,
@@ -200,8 +206,9 @@ already runs in TypeScript. Retain those foundations and make focused changes:
   without reseeding at the save boundary.
 - Check a server concurrency token on mutations that can discard another edit.
 - Persist plan settings and stable nested IDs cleanly as their features arrive.
-- Validate structure, references, dates, and numeric values while allowing
-  supported incomplete assumptions such as a missing salary.
+- Validate structure, references, dates, and numeric values. Fresh seed drafts
+  may contain missing salaries, but every retained appointment requires an
+  explicit nonnegative salary before creation or saving.
 - Keep captured source facts unchanged by scenario editors. Editing a scenario
   must not modify upstream accounting or personnel source records.
 - Make history-window changes explicit in the draft. Saving should preserve the
@@ -222,15 +229,15 @@ source omission from existing outside funding, as specified below.
 
 ## Stages and review stops
 
-| Stage                         | Deliverable                                                                                                                                                                      | Review focus                                                                                                                              |
-| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| 0. Behavior agreement         | Agreed salary calculation, edit timing, draft behavior, and navigation expectations for a small synthetic portfolio                                                              | Product decisions confirmed. Keep later questions assigned to their owning stages.                                                        |
-| 1a. One local salary edit     | Open a representative plan; link to a job; edit and cancel salary; recalculate a useful project outlook; navigate without losing edits; invoke the same operation without the UI | State ownership, calculation clarity, component boundaries, keyboard behavior, and responsiveness.                                        |
-| 1b. Save that edit            | Real saved-plan loading, conditional save, reload, failure recovery, and unsaved-change handling                                                                                 | Failed and conflicting saves preserve work; an in-flight response does not erase subsequent edits.                                        |
-| 2. Plan lifecycle             | Wizard snapshot loading, creation on completion, duplicate, plan selection, and dashboard eligibility                                                                           | Wizard completion saves before opening the workspace; reopened and duplicated plans retain captured inputs even when fresh data is unavailable. |
-| 3. Funding and staffing       | Project balances/dates, employee/job assumptions including fee remission, hypothetical hires, and funding schedules                                                             | Review project editing, job editing, and allocation editing separately. Check FTE, date ranges, outside funding, and funding proportions. |
-| 4. Expenses and details       | Monthly/one-time expenses, generated estimates, history windows, notes, and horizon                                                                                              | Explicit expenses survive regeneration; save/reload preserves the preview.                                                                |
-| 5. Complete guided experience | Setup composed from existing editors, full project drilldowns, explanations, and controlled rollout                                                                              | Verify the complete workflow and genuine reuse.                                                                                           |
+| Stage                         | Deliverable                                                                                                                                                                      | Review focus                                                                                                                                    |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0. Behavior agreement         | Agreed salary calculation, edit timing, draft behavior, and navigation expectations for a small synthetic portfolio                                                              | Product decisions confirmed. Keep later questions assigned to their owning stages.                                                              |
+| 1a. One local salary edit     | Open a representative plan; link to a job; edit and cancel salary; recalculate a useful project outlook; navigate without losing edits; invoke the same operation without the UI | State ownership, calculation clarity, component boundaries, keyboard behavior, and responsiveness.                                              |
+| 1b. Save that edit            | Real saved-plan loading, conditional save, reload, failure recovery, and unsaved-change handling                                                                                 | Failed and conflicting saves preserve work; an in-flight response does not erase subsequent edits.                                              |
+| 2. Plan lifecycle             | Wizard snapshot loading, creation on completion, duplicate, plan selection, and dashboard eligibility                                                                            | Wizard completion saves before opening the workspace; reopened and duplicated plans retain captured inputs even when fresh data is unavailable. |
+| 3. Funding and staffing       | Project balances/dates, employee/job assumptions including fee remission, hypothetical hires, and funding schedules                                                              | Review project editing, job editing, and allocation editing separately. Check FTE, date ranges, outside funding, and funding proportions.       |
+| 4. Expenses and details       | Monthly/one-time expenses, generated estimates, history windows, notes, and horizon                                                                                              | Explicit expenses survive regeneration; save/reload preserves the preview.                                                                      |
+| 5. Complete guided experience | Setup composed from existing editors, full project drilldowns, explanations, and controlled rollout                                                                              | Verify the complete workflow and genuine reuse.                                                                                                 |
 
 Every increment includes appropriate automated checks, a way to try the result,
 independent code review, and a review with the user before moving on. Split a stage
@@ -265,11 +272,11 @@ completion requires removing them from the repository.
 
 The salary arithmetic and these product choices were confirmed on November 6, 2026:
 
-| Decision                        | Agreed behavior                                                                                                                   | Consequence                                                                                                            |
-| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| When a salary edit applies      | Change the job's assumed full-time rate throughout its remaining applicable forecast period, leaving historical actuals unchanged | Scheduling a raise for a future month is deferred. Existing COLA assumptions still need their own fixture.             |
-| When an editor changes the plan | Apply changes the in-memory draft and forecast; Cancel leaves them unchanged                                                      | Partial typing stays inside the editor. This retains a clear cancellation boundary.                                    |
-| When workspace edits are persisted | Explicit Save plan                                                                                                             | Navigation within a plan preserves the draft; leaving or reloading warns about unsaved work. Reload uses saved inputs. |
+| Decision                           | Agreed behavior                                                                                                                   | Consequence                                                                                                            |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| When a salary edit applies         | Change the job's assumed full-time rate throughout its remaining applicable forecast period, leaving historical actuals unchanged | Scheduling a raise for a future month is deferred. Existing COLA assumptions still need their own fixture.             |
+| When an editor changes the plan    | Apply changes the in-memory draft and forecast; Cancel leaves them unchanged                                                      | Partial typing stays inside the editor. This retains a clear cancellation boundary.                                    |
+| When workspace edits are persisted | Explicit Save plan                                                                                                                | Navigation within a plan preserves the draft; leaving or reloading warns about unsaved work. Reload uses saved inputs. |
 
 The remaining forecast period is relative to the plan's fixed snapshot, not
 today's date. Reopening an older plan does not move the salary edit's start month.
@@ -655,11 +662,11 @@ started. Stage 1b remains open for final review.
 
 #### Benefit defaults
 
-CBR is numeric in the plan model and client contract. Seeding defaults an absent
-source rate to 0. The saved model uses a plain decimal property; it does not
-convert old JSON nulls. Vacation defaults and supplied values remain unchanged.
-No default rate, official vacation assessment mapping, or fee-remission policy
-beyond the agreed rules is implied by this cleanup.
+CBR is numeric in the plan model and client contract. Stage 3b replaces the
+initial zero fallback with an agreed 20% assumption while preserving supplied
+rates, including zero. The saved model does not convert old JSON nulls.
+Vacation defaults and supplied values remain unchanged; its official
+assessment mapping remains deferred.
 
 #### Agreed project outlook period
 
@@ -755,8 +762,8 @@ July COLA has these full-time monthly salary rates:
 
 A July 2026 hire also receives its first increase in July 2027. Jobs captured in
 the source snapshot continue to use a snapshot-date salary base, even if their
-start date is later. A hypothetical job with no start date, or a start in or
-before the snapshot month, also uses the snapshot base. Moving a hypothetical
+start date is later. A hypothetical job starting in or before the snapshot month also uses the
+snapshot base. Stage 3b requires a start date when adding a hypothetical hire. Moving a hypothetical
 job's start date moves its salary base according to the same rule.
 
 Use the existing job source flag and start date; no schema change is needed.
@@ -1213,17 +1220,97 @@ skips. All 17 isolated SQL tests executed and passed. They applied the required
 creation-key migration, rejected null/default keys, exercised the actual seed
 procedure's omitted/null timestamp rejection, and retained creation retries and
 save/reset concurrency. The isolated container was removed afterward. This
-increment is accepted for commit; no deployment or live source read occurred.
+increment is committed as `727cf3aa`; no deployment or live source read occurred.
+
+## Stage 3b: appointments and hypothetical hires
+
+Status: implemented, verified, and accepted. Funding-schedule editing
+remains a separate review increment.
+
+Use one appointment editor in the wizard and saved workspace. Salary, FTE,
+appointment dates, CBR, annual salary adjustment rate/month, and monthly fee
+remission share one Apply/Cancel action. Keep imported employee/position identity
+and descriptive source metadata fixed. A hypothetical hire has an editable
+label and optional job code/title. Vacation cost editing remains deferred.
+
+One FTE value applies throughout the appointment's eligible forecast. Allow
+0–100% per appointment; appointments remain independent. FTE edits preserve
+allocation shares relative to the appointment. Raising a 50% appointment to
+75% with two equal allocations changes each displayed full-time share from
+25% to 37.5%. Explicit allocation dates remain unchanged when appointment dates
+change; date intersections determine costs and can expose unfunded periods.
+At zero FTE, retain and display the relative shares. Entered fees retain their
+agreed independence from FTE.
+
+A new hypothetical hire begins at 100% FTE, with no assigned funding and no
+employee or position ID. Require a descriptive name, an explicit start date,
+and a full-time salary; the end date and job code are optional. A seed draft
+may contain an imported appointment whose salary needs input, but Apply,
+Create, and Save require an explicit nonnegative salary. Zero is valid; blank
+is not. The user supplies a salary or removes the appointment before saving.
+Other persistence paths must uphold the same invariant. In particular, a reset
+with incomplete fresh inputs leaves the prior saved plan untouched.
+
+Use one server-owned set of defaults, exposed through the lookups response:
+20% CBR and a 3% annual salary adjustment in July. Supplied CBR values,
+including zero, take precedence during capture. The CBR fallback is a planning
+assumption chosen for the expected postdoc-heavy roster, not an average of
+job-code rows. Default changes affect new inputs only. No personnel estimate
+comes from historical spending or salary movements.
+
+CBR remains editable. Use lookup rate explicitly applies a supplied value for
+the selected job code and rate set; selection changes alone do not replace a
+manual rate. Missing lookup values do not overwrite the current assumption.
+The lookup does not change vacation costs. Annual salary adjustments may be
+negative but must be above -100%; retain the agreed salary-base and compounding
+timing. Fees remain optional and have no guessed default.
+
+Confirm removal of an appointment and its allocations. Removing it discards
+its forecast costs while preserving captured booked costs and all source
+inputs. An end-date edit models departure during the forecast. New hires with
+no allocations show a simple No funding assigned indication, including when
+their start is beyond the available source horizon. Funding gaps remain saveable.
+
+The wizard and workspace use TanStack Form and shared pure appointment
+operations. Explicit Save, navigation/departure guards, pending edits, concurrent
+save acknowledgements, and exact snapshot/version tokens remain intact.
+Existing appointments can be edited from stored inputs if lookups are unavailable.
+Failed background lookup requests preserve typing; new hires wait for the
+server defaults before opening their form. Source and allocation calculation
+rules remain unchanged.
+
+Verification: all 596 client tests passed across 66 files. TypeScript, the client
+production build, changed-file ESLint, Prettier, and calculation examples passed.
+React Doctor reported no errors and the same four existing warnings, with a
+score of 89. The warnings concern wizard/workspace size, wizard complexity,
+and the loading flag that is already reset inside `finally`.
+
+The standard server suite passed 549 tests with 12 optional SQL skips. All 17
+isolated SQL tests then executed and passed. No migration was added. Tests cover
+fallback versus supplied rates, required and zero salaries, negative annual
+adjustments, reset preserving the saved plan on incomplete capture, and duplicate
+retry behavior.
+
+Browser checks used synthetic API responses through the production wizard and
+saved-plan routes. They verified create/open, explicit lookup application,
+unchanged allocation shares after FTE edits, future unallocated hires, Apply/Cancel
+and Back/Forward behavior, Save, and removal preserving captured actuals. The
+appointment form was usable at 390px width without horizontal overflow.
+Independent review found and closed two lookup availability issues; focused
+tests preserve typing and keep existing appointment edits available during a
+lookup outage. No live personnel read or deployment occurred.
+
+Next: review funding-schedule editing decisions before implementation.
 
 ## Questions to resolve in their owning stages
 
-| Before                        | Question or example                                                                                                                                                                     |
-| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Before exposing reset/refresh | Define their separate meanings, treatment of local edits, and snapshot replacement behavior.                                                                                            |
-| Stage 3                       | How do funding schedules behave at appointment/project boundaries, at zero FTE, and when FTE changes? Verify outside funding and distinguish incomplete assumptions from invalid edits. |
-| Stage 4                       | Which generated estimates are replaced when the history window changes? When does editing an estimate turn it into an explicit planned expense?                                         |
-| Stage 5                       | Verify per-project shortfalls remain visible despite surpluses elsewhere, and decide feature-flag rollout criteria.                                                                     |
-| Later integration             | Define proposal batches, stale-preview handling, bounded undo, authentication, and interactions with pending form edits.                                                                |
+| Before                        | Question or example                                                                                                                                                  |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Before exposing reset/refresh | Define their separate meanings, treatment of local edits, and snapshot replacement behavior.                                                                         |
+| Funding-schedule editing      | Choose allocation-entry defaults, percentage limits, outside-funding controls, and concise gap/overlap feedback. Preserve the agreed appointment FTE and date rules. |
+| Stage 4                       | Which generated estimates are replaced when the history window changes? When does editing an estimate turn it into an explicit planned expense?                      |
+| Stage 5                       | Verify per-project shortfalls remain visible despite surpluses elsewhere, and decide feature-flag rollout criteria.                                                  |
+| Later integration             | Define proposal batches, stale-preview handling, bounded undo, authentication, and interactions with pending form edits.                                             |
 
 ## Reference evidence
 

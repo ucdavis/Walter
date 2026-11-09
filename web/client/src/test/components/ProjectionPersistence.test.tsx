@@ -25,10 +25,16 @@ import {
   ProjectionWorkspace,
   type ProjectionWorkspaceHandle,
 } from '@/components/projections/ProjectionWorkspace.tsx';
-import { createSalaryExample } from '@/dev/projections/fixture.ts';
+import {
+  createSalaryExample,
+  createAppointmentLookupsExample,
+} from '@/dev/projections/fixture.ts';
 import { createProjectionPreviewRouter } from '@/dev/projections/router.tsx';
 import { createProjectionPreviewServer } from '@/dev/projections/server.ts';
-import type { Projection } from '@/queries/projections.ts';
+import {
+  projectionLookupsQueryOptions,
+  type Projection,
+} from '@/queries/projections.ts';
 
 const histories: RouterHistory[] = [];
 
@@ -75,7 +81,9 @@ async function applySalary(
   annual: string
 ) {
   await user.click(
-    await screen.findByRole('button', { name: 'Edit salary for Alex Example' })
+    await screen.findByRole('button', {
+      name: 'Edit appointment for Alex Example',
+    })
   );
   const input = screen.getByRole('textbox', {
     name: 'Full-time annual salary',
@@ -85,7 +93,9 @@ async function applySalary(
   await user.click(screen.getByRole('button', { name: 'Apply' }));
   await waitFor(() =>
     expect(
-      screen.queryByRole('dialog', { name: 'Edit salary for Alex Example' })
+      screen.queryByRole('dialog', {
+        name: 'Edit appointment for Alex Example',
+      })
     ).not.toBeInTheDocument()
   );
 }
@@ -143,7 +153,9 @@ describe('projection saving through the workspace', () => {
     await user.click(
       screen.getByRole('button', { name: 'Return to saved plan' })
     );
-    await screen.findByRole('button', { name: 'Edit salary for Alex Example' });
+    await screen.findByRole('button', {
+      name: 'Edit appointment for Alex Example',
+    });
     expect(read().draft.appointments[0].monthlySalary).toBe(140_000 / 12);
     expect(read().dirty).toBe(false);
   });
@@ -323,14 +335,16 @@ describe('projection saving through the workspace', () => {
 
   it('allows same-plan navigation and protects departure from unapplied input with Stay and Discard', async () => {
     const { router, user } = openPreview({ browserHistory: true });
-    await screen.findByRole('button', { name: 'Edit salary for Alex Example' });
+    await screen.findByRole('button', {
+      name: 'Edit appointment for Alex Example',
+    });
     await user.click(screen.getByRole('button', { name: 'Funding outlook' }));
     expect(
       await screen.findByRole('heading', { name: 'Project B by month' })
     ).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Staffing' }));
     await user.click(
-      screen.getByRole('button', { name: 'Edit salary for Alex Example' })
+      screen.getByRole('button', { name: 'Edit appointment for Alex Example' })
     );
     const input = screen.getByRole('textbox', {
       name: 'Full-time annual salary',
@@ -380,7 +394,9 @@ describe('projection saving through the workspace', () => {
     await user.click(
       screen.getByRole('button', { name: 'Return to saved plan' })
     );
-    await screen.findByRole('button', { name: 'Edit salary for Alex Example' });
+    await screen.findByRole('button', {
+      name: 'Edit appointment for Alex Example',
+    });
     expect(read().dirty).toBe(false);
     expect(read().draft.appointments[0].monthlySalary).toBe(11_000);
   });
@@ -391,6 +407,10 @@ describe('projection saving through the workspace', () => {
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
+    client.setQueryData(
+      projectionLookupsQueryOptions().queryKey,
+      createAppointmentLookupsExample()
+    );
     const ref = createRef<ProjectionWorkspaceHandle>();
     const user = userEvent.setup();
     const onNavigate = vi.fn();

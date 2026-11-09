@@ -36,7 +36,9 @@ saving an existing plan preserves its captured inputs without refreshing them.
 
 ## Salary and benefits
 
-Salary is entered as a full-time rate. Before cost-of-living adjustments, each
+Salary is required as an explicit full-time rate before saving; zero is valid.
+Fresh imported drafts can contain missing salaries until reviewed. Before annual
+salary adjustments, each
 funding source's salary cost for a full month is:
 
 ```text
@@ -45,8 +47,8 @@ full-time monthly salary × appointment FTE × source share of the appointment
 
 For example, a $120,000 full-time annual salary is $10,000 per month. At 50% FTE,
 the appointment costs $5,000 per month. If two projects each fund half the
-appointment, each pays $2,500. The UI expresses each project's share as 25% of
-full-time salary.
+appointment, each pays $2,500. Funding rows show both the 50% appointment share
+and its equivalent of 25% full-time FTE.
 
 Benefits are calculated from each funding source's salary cost:
 
@@ -63,9 +65,19 @@ for vacation. These are not current UC Davis rates.
 | Benefits plus vacation           |                 $1,000 |                 $1,100 |
 | Total                            |                 $3,500 |                 $3,850 |
 
-Changing salary preserves FTE, funding shares, and booked actuals. CBR defaults
-to 0 when no rate is supplied. The vacation cost rate also defaults to 0, and
-supplied values are preserved. The vacation field represents an additional
+Changing salary preserves FTE, funding shares, and booked actuals. Changing FTE
+preserves each allocation's share of the appointment. For example, increasing
+an equally split 50% appointment to 75% increases each source's full-time share
+from 25% to 37.5%. FTE may be zero through 100%; one value applies throughout
+the appointment's eligible forecast.
+
+CBR defaults to 20% for hypothetical hires and missing imported rates. This is
+an editable planning assumption for the expected postdoc-heavy roster. Supplied
+rates, including zero, are preserved. Use lookup rate explicitly applies a
+job-code/rate-set estimate; changing a selection alone does not replace an
+entered rate. Existing saved plans retain their assumptions when defaults or
+lookup values change. The vacation cost rate defaults to 0, and supplied
+vacation values are preserved. The vacation field represents an additional
 salary-based cost in this calculator; it does not track an employee's vacation
 hours. UC Davis's title-code CBR mapping is a planning estimate rather than
 confirmation of an individual employee's rate. See the
@@ -96,6 +108,10 @@ A source starting April 1 has no salary or benefits forecast before April.
 For a $5,000 monthly appointment funded entirely by Project A through March 15
 and Project B starting March 16, the salary allocations are $2,419.35 to A and
 $2,580.65 to B. Calculations retain precision until amounts are displayed.
+
+Changing appointment dates preserves explicit funding dates. Removing an
+appointment removes its allocations and forecast costs; captured booked costs
+remain. A hypothetical hire requires a start date and may have an open end.
 
 Funding percentages are used as entered. Missing funding is not redistributed,
 and overlapping allocations are not scaled down. An allocation ending March 15
@@ -186,11 +202,11 @@ additional personnel forecast = max(month's personnel estimate - booked actual, 
 month-end balance = planning balance - total additional forecast spending
 ```
 
-| Salary estimate for one source  | Booked this month | Additional forecast |
-| ------------------------------- | ----------------: | ------------------: |
-| $2,500                          |            $1,000 |              $1,500 |
-| $2,750                          |            $1,000 |              $1,750 |
-| $900                            |            $1,000 |                  $0 |
+| Salary estimate for one source | Booked this month | Additional forecast |
+| ------------------------------ | ----------------: | ------------------: |
+| $2,500                         |            $1,000 |              $1,500 |
+| $2,750                         |            $1,000 |              $1,750 |
+| $900                           |            $1,000 |                  $0 |
 
 Reducing an estimate below the booked amount does not refund booked costs.
 Salary and benefits use separate comparisons because their postings can arrive
@@ -283,14 +299,19 @@ other category 08 costs from fee remission and avoid counting the same fees
 twice? This remains unresolved; category 08 continues to use its historical
 estimate alongside any employee fee amounts.
 
-## Cost-of-living adjustments
+## Annual salary adjustments
 
-COLA compounds annually in the configured month. For appointments captured in the
-original plan snapshot, the entered salary is the full-time rate at that date.
-The first increase is in a configured COLA month strictly after the original
-plan snapshot month, even if the appointment starts later. If that snapshot is in July,
-a July increase is not applied again that year; the following July receives
-the next increase.
+Fresh appointments default to a 3% annual adjustment in July. The rate and month
+are editable per appointment. Negative adjustments above -100% model recurring
+salary reductions; zero leaves salary unchanged. Saved plans retain their rate
+and month when defaults change.
+
+The adjustment, also called COLA, compounds annually in the configured month.
+For appointments captured in the original plan snapshot, the entered salary is
+the full-time rate at that date. The first adjustment occurs in the configured
+month strictly after the original plan snapshot month, even if the appointment
+starts later. If that snapshot is in July, a July adjustment is not applied
+again that year; the following July receives the next adjustment.
 
 For a $2,500 monthly project salary and a 3% July COLA, the cost becomes $2,575
 in the first applicable July, $2,652.25 in the second, and $2,731.8175 in the third.
@@ -306,8 +327,8 @@ July COLA has a full-time monthly rate of $10,000 in August 2026, $10,300 in
 July 2027, and $10,609 in July 2028. A July 2026 hire also receives its first
 increase in July 2027.
 
-A hypothetical hire with no start date, or a start in or before the original plan
-snapshot month, uses that snapshot date as its salary base. Moving its start
+A hypothetical hire starting in or before the original plan snapshot month
+uses that snapshot date as its salary base. Moving its start
 date changes that base according to the same rule. Reopening the plan preserves
 the saved snapshot and appointment dates. Adding a funding source with a later capture date does
 not change salary bases.

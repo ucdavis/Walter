@@ -12,14 +12,16 @@ import { computePiProjection } from '@/lib/piProjection.ts';
 import {
   acknowledgeProjectionSave,
   createProjectionSession,
-  setAppointmentMonthlySalary,
   type ProjectionSession,
-  type AppointmentSalaryChange,
 } from '@/lib/projectionWorkspace.ts';
 import type {
   Projection,
   SaveProjectionRequest,
 } from '@/queries/projections.ts';
+import {
+  validateProjectionAppointments,
+  type AppointmentOperation,
+} from '@/lib/projectionAppointments.ts';
 import type { SourceOperation } from '@/lib/projectionSources.ts';
 
 export interface ProjectionPersistence {
@@ -91,12 +93,13 @@ function useSession(
     () => computePiProjection(session.draft),
     [session.draft]
   );
-  const applySalary = (change: AppointmentSalaryChange) => {
-    const result = setAppointmentMonthlySalary(currentSession.current, change);
+  const applyAppointmentOperation = (operation: AppointmentOperation) => {
+    const result = operation(currentSession.current);
     if (result.ok) {
       updateSession(result.session);
     }
     setSaveStatus((status) => (status === 'saving' ? status : 'idle'));
+    return result;
   };
 
   const applySourceOperation = (operation: SourceOperation) => {
@@ -121,6 +124,9 @@ function useSession(
       return;
     }
     const submitted = currentSession.current;
+    if (validateProjectionAppointments(submitted.draft)) {
+      return;
+    }
     const { appointments, fundingSources, historyMonths, name } =
       submitted.draft;
     // Capture the current applied draft on this click, independently of any open field buffer.
@@ -204,8 +210,9 @@ function useSession(
   };
 
   return {
-    applySalary,
+    applyAppointmentOperation,
     applySourceOperation,
+    appointmentValidationMessage: validateProjectionAppointments(session.draft),
     canSave: Boolean(persistence),
     conflict,
     conflictOpen,

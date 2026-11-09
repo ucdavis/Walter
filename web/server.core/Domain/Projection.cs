@@ -152,12 +152,13 @@ public class ProjectionAppointment
     /// <summary>CBR rate set (UCPath business unit): DVCMP, DVMED, or UCANR.</summary>
     public string RateSet { get; set; } = "DVCMP";
 
-    /// <summary>1.0-FTE monthly rate at the snapshot, or at the start of an unseeded future hire; null means the appointment needs input.</summary>
+    /// <summary>1.0-FTE monthly rate at the snapshot, or at the start of an unseeded future hire; null is allowed only in an unsaved seed draft.</summary>
     public decimal? MonthlySalary { get; set; }
 
     public decimal Fte { get; set; }
 
-    /// <summary>Composite benefit cost as a fraction of salary; defaults to zero when no rate was supplied.</summary>
+    /// <summary>Composite benefit cost as a fraction of salary, captured or explicitly chosen for this plan.</summary>
+    [JsonRequired]
     public decimal CbrRate { get; set; }
 
     /// <summary>Additional salary-based vacation cost rate; defaults to zero and does not represent leave hours.</summary>

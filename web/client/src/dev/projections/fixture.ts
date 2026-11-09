@@ -6,7 +6,35 @@ import {
 import type {
   Projection,
   ProjectionFundingSource,
+  ProjectionLookups,
 } from '@/queries/projections.ts';
+
+export function createAppointmentLookupsExample(): ProjectionLookups {
+  return {
+    appointmentDefaults: { cbrRate: 0.2, colaMonth: 7, colaRate: 0.03, fte: 1 },
+    expenditureCategories: [
+      SALARY_CATEGORY,
+      FRINGE_CATEGORY,
+      FEE_REMISSION_CATEGORY,
+    ],
+    jobCodes: [
+      {
+        cbr: 0.3,
+        jobCode: 'EXAMPLE',
+        rateSet: 'DVCMP',
+        title: 'Research specialist',
+        vacationAccrual: 0.05,
+      },
+      {
+        cbr: 0.4,
+        jobCode: 'EXAMPLE',
+        rateSet: 'UCANR',
+        title: 'Research specialist',
+        vacationAccrual: 0.06,
+      },
+    ],
+  };
+}
 
 const source = (
   id: number,

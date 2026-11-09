@@ -18,10 +18,14 @@ export function AppointmentFundingStatus({
   );
   return (
     <>
-      {unallocated && (
-        <p className="mt-2 text-sm">
-          Unallocated funding in one or more forecast months.
-        </p>
+      {appointment.allocations.length === 0 ? (
+        <p className="mt-2 text-sm">No funding assigned.</p>
+      ) : (
+        unallocated && (
+          <p className="mt-2 text-sm">
+            Unallocated funding in one or more forecast months.
+          </p>
+        )
       )}
       {appointment.hasUnmatchedFunding && (
         <p className="mt-2 text-sm">

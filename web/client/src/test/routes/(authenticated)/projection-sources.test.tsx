@@ -8,7 +8,10 @@ import {
 } from '@tanstack/react-router';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
-import { createSalaryExample } from '@/dev/projections/fixture.ts';
+import {
+  createSalaryExample,
+  createAppointmentLookupsExample,
+} from '@/dev/projections/fixture.ts';
 import type {
   CreateProjectionDraftRequest,
   Projection,
@@ -97,6 +100,9 @@ function setup(plan = taskFixture()) {
   // The importer owns no plan-local identity; the client must allocate a new one.
   fresh.id = 1;
   server.use(
+    http.get('/api/projections/lookups', () =>
+      HttpResponse.json(createAppointmentLookupsExample())
+    ),
     http.get('/api/user/me', () =>
       HttpResponse.json({
         email: 'preview@example.com',
@@ -246,13 +252,17 @@ describe('funding source lifecycle', () => {
       );
       await user.click(screen.getByRole('button', { name: 'Continue' }));
       await screen.findByRole('button', {
-        name: 'Edit salary for Alex Example',
+        name: 'Edit appointment for Alex Example',
       });
       expect(
-        screen.getByRole('button', { name: 'Edit salary for Blair Example' })
+        screen.getByRole('button', {
+          name: 'Edit appointment for Blair Example',
+        })
       ).toBeInTheDocument();
       expect(
-        screen.queryByRole('button', { name: 'Edit salary for Casey Example' })
+        screen.queryByRole('button', {
+          name: 'Edit appointment for Casey Example',
+        })
       ).not.toBeInTheDocument();
       await user.click(screen.getByRole('button', { name: 'Continue' }));
       await user.click(

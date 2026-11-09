@@ -119,7 +119,7 @@ public sealed class ProjectionSeederTests
         var projection = await SeedAsync(Data(Line(60)));
 
         var job = projection.Appointments.Should().ContainSingle().Subject;
-        job.Should().BeEquivalentTo(new { MonthlySalary = 5000m, CbrRate = 0.3m, VacationAccrualRate = 0.083m, RateSet = "UCANR" });
+        job.Should().BeEquivalentTo(new { MonthlySalary = 5000m, CbrRate = 0.3m, VacationAccrualRate = 0.083m, RateSet = "UCANR", ColaRate = 0.03m, ColaMonth = 7 });
         job.Id.Should().Be(1);
         job.Allocations.Select(f => (f.FundingSourceId, f.Percent)).Should().BeEquivalentTo(
             [((int?)projection.FundingSources.Single().Id, 0.6m), ((int?)null, 0.4m)]);
@@ -127,14 +127,14 @@ public sealed class ProjectionSeederTests
 
     public static TheoryData<decimal?, decimal> CbrRates => new()
     {
-        { null, 0m },
+        { null, 0.2m },
         { 0m, 0m },
         { 0.3m, 0.3m },
     };
 
     [Theory]
     [MemberData(nameof(CbrRates))]
-    public async Task Defaults_missing_cbr_to_zero_and_preserves_supplied_benefit_rates(decimal? sourceCbr, decimal expectedCbr)
+    public async Task Defaults_only_missing_cbr_and_preserves_supplied_benefit_rates(decimal? sourceCbr, decimal expectedCbr)
     {
         var line = Line(100);
         line.CompositeBenefitRate = sourceCbr;
@@ -147,17 +147,23 @@ public sealed class ProjectionSeederTests
     }
 
     [Fact]
-    public async Task Defaults_both_missing_benefit_rates_to_zero()
+    public async Task Uses_planning_cbr_without_filling_missing_fte_salary_or_vacation()
     {
         var line = Line(100);
         line.CompositeBenefitRate = null;
         line.VacationAccrual = null;
+        line.Fte = null;
+        line.MonthlyRate = null;
 
         var projection = await SeedAsync(Data(line));
 
         var job = projection.Appointments.Should().ContainSingle().Subject;
-        job.CbrRate.Should().Be(0m);
+        job.CbrRate.Should().Be(0.2m);
         job.VacationAccrualRate.Should().Be(0m);
+        job.Fte.Should().Be(0m);
+        job.MonthlySalary.Should().BeNull();
+        job.ColaRate.Should().Be(0.03m);
+        job.ColaMonth.Should().Be(7);
     }
 
     [Fact]

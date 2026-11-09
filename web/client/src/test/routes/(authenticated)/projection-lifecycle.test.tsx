@@ -8,7 +8,10 @@ import {
 } from '@tanstack/react-router';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
-import { createSalaryExample } from '@/dev/projections/fixture.ts';
+import {
+  createSalaryExample,
+  createAppointmentLookupsExample,
+} from '@/dev/projections/fixture.ts';
 import type {
   CreateProjectionDraftRequest,
   DuplicateProjectionRequest,
@@ -109,6 +112,9 @@ function handleLifecycle(plans: Projection[] = []) {
     });
   };
   server.use(
+    http.get('/api/projections/lookups', () =>
+      HttpResponse.json(createAppointmentLookupsExample())
+    ),
     http.get('/api/user/me', () =>
       HttpResponse.json({
         email: 'preview@example.com',
@@ -194,12 +200,48 @@ async function reviewWizard(user: ReturnType<typeof userEvent.setup>) {
   );
   await screen.findByRole('button', { name: 'Continue' });
   await user.click(screen.getByRole('button', { name: 'Continue' }));
-  await screen.findByRole('button', { name: 'Edit salary for Alex Example' });
+  await screen.findByRole('button', {
+    name: 'Edit appointment for Alex Example',
+  });
   await user.click(screen.getByRole('button', { name: 'Continue' }));
   await screen.findByRole('button', { name: 'Create plan & open workspace' });
 }
 
 describe('projection creation and copies', () => {
+  it('requires a retained imported salary before creating and accepts an entered zero', async () => {
+    const api = handleLifecycle();
+    api.seed.appointments[0].monthlySalary = null;
+    const route = renderPlans();
+    const user = userEvent.setup();
+    try {
+      await startWizard(user, 'Incomplete salary plan');
+      await reviewWizard(user);
+      expect(
+        screen.getByRole('button', { name: 'Create plan & open workspace' })
+      ).toBeDisabled();
+      expect(api.creates).toHaveLength(0);
+      await user.click(screen.getByRole('button', { name: 'Back' }));
+      await user.click(
+        screen.getByRole('button', {
+          name: 'Edit appointment for Alex Example',
+        })
+      );
+      await user.type(
+        await screen.findByLabelText('Full-time annual salary'),
+        '0'
+      );
+      await user.click(screen.getByRole('button', { name: 'Apply' }));
+      await user.click(screen.getByRole('button', { name: 'Continue' }));
+      await user.click(
+        screen.getByRole('button', { name: 'Create plan & open workspace' })
+      );
+      await waitFor(() => expect(api.creates).toHaveLength(1));
+      expect(api.creates[0].draft.appointments[0].monthlySalary).toBe(0);
+    } finally {
+      route.cleanup();
+    }
+  });
+
   it('saves the reviewed wizard snapshot before opening its saved workspace and then uses normal saves', async () => {
     const api = handleLifecycle();
     const route = renderPlans();
@@ -218,7 +260,7 @@ describe('projection creation and copies', () => {
       await user.click(screen.getByRole('button', { name: 'Continue' }));
       await user.click(
         await screen.findByRole('button', {
-          name: 'Edit salary for Alex Example',
+          name: 'Edit appointment for Alex Example',
         })
       );
       const salary = screen.getByRole('textbox', {
@@ -252,7 +294,9 @@ describe('projection creation and copies', () => {
       expect(api.seedReads()).toBe(1);
       await user.click(await screen.findByRole('button', { name: 'Staffing' }));
       await user.click(
-        screen.getByRole('button', { name: 'Edit salary for Alex Example' })
+        screen.getByRole('button', {
+          name: 'Edit appointment for Alex Example',
+        })
       );
       expect(
         screen.getByRole('textbox', { name: 'Full-time annual salary' })
@@ -316,7 +360,7 @@ describe('projection creation and copies', () => {
       );
       await user.click(await screen.findByRole('button', { name: 'Continue' }));
       await screen.findByRole('button', {
-        name: 'Edit salary for Alex Example',
+        name: 'Edit appointment for Alex Example',
       });
       await user.click(screen.getByRole('button', { name: 'Cancel setup' }));
       await screen.findByRole('dialog', { name: 'Leave setup?' });

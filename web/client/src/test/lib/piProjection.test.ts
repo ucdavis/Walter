@@ -517,6 +517,25 @@ describe('computePiProjection', () => {
     expect(projected(p, SALARY_CATEGORY, '2027-07')).toBeCloseTo(1030);
   });
 
+  it('compounds a negative annual adjustment without reducing the appointment fee', () => {
+    const p = projection({
+      appointments: [
+        appointment({
+          cbrRate: 0.2,
+          colaMonth: 7,
+          colaRate: -0.03,
+          feeRemissionMonthly: 1500,
+        }),
+      ],
+      endDate: '2028-08-31',
+    });
+    expect(projected(p, SALARY_CATEGORY, '2027-06')).toBe(1000);
+    expect(projected(p, SALARY_CATEGORY, '2027-07')).toBeCloseTo(970);
+    expect(projected(p, SALARY_CATEGORY, '2028-07')).toBeCloseTo(940.9);
+    expect(projected(p, FRINGE_CATEGORY, '2028-07')).toBeCloseTo(188.18);
+    expect(projected(p, FEE_REMISSION_CATEGORY, '2028-07')).toBe(1500);
+  });
+
   it('uses a future hypothetical hire starting rate before compounding later annual COLAs', () => {
     const p = projection({
       appointments: [

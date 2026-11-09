@@ -195,7 +195,7 @@ public sealed partial class ProjectionsControllerTests
         };
         var jobs = new List<ProjectionAppointment>
         {
-            new() { Id = 1, Name = "Existing person", HasUnmatchedFunding = true,
+            new() { Id = 1, Name = "Existing person", IsSeeded = true, MonthlySalary = 5000, HasUnmatchedFunding = true,
                 Allocations = [new() { FundingSourceId = 1, Percent = 0.3m }] },
         };
         (await controller.Save(saved.Id, Draft(saved) with { FundingSources = sources, Appointments = jobs }, default)).Should().BeOfType<OkObjectResult>();

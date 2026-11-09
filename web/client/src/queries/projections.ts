@@ -74,7 +74,7 @@ export interface ProjectionFundingAllocation {
 
 export interface ProjectionAppointment {
   allocations: ProjectionFundingAllocation[];
-  /** Fraction of salary; defaults to zero when no source rate was supplied. */
+  /** Fraction of salary; a supplied zero remains an explicit rate. */
   cbrRate: number;
   colaMonth: number;
   colaRate: number;
@@ -143,8 +143,17 @@ export interface JobCode {
 }
 
 export interface ProjectionLookups {
+  appointmentDefaults: ProjectionAppointmentDefaults;
   expenditureCategories: string[];
   jobCodes: JobCode[];
+}
+
+/** Server-owned planning assumptions for a new hypothetical appointment. */
+export interface ProjectionAppointmentDefaults {
+  cbrRate: number;
+  colaMonth: number;
+  colaRate: number;
+  fte: number;
 }
 
 export const projectionListQueryOptions = (iamId: string) => ({

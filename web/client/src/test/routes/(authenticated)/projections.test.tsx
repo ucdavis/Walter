@@ -2,13 +2,19 @@ import { act, screen, waitFor } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
-import { createSalaryExample } from '@/dev/projections/fixture.ts';
+import {
+  createSalaryExample,
+  createAppointmentLookupsExample,
+} from '@/dev/projections/fixture.ts';
 import type { Projection } from '@/queries/projections.ts';
 import { server } from '@/test/mswUtils.ts';
 import { renderRoute } from '@/test/routerUtils.tsx';
 
 function handlePlan(plan: Projection, listed = true) {
   server.use(
+    http.get('/api/projections/lookups', () =>
+      HttpResponse.json(createAppointmentLookupsExample())
+    ),
     http.get('/api/user/me', () =>
       HttpResponse.json({
         email: 'preview@example.com',
@@ -63,6 +69,7 @@ describe('saved projection route', () => {
     });
     try {
       await screen.findByRole('dialog');
+      await screen.findByRole('textbox', { name: 'Full-time annual salary' });
       await user.clear(salaryInput());
       await user.type(salaryInput(), '132000');
       await user.click(screen.getByRole('button', { name: 'Apply' }));
@@ -89,7 +96,9 @@ describe('saved projection route', () => {
       await user.click(screen.getByRole('button', { name: 'Staffing' }));
       expect(membershipReads).toBe(0);
       await user.click(
-        screen.getByRole('button', { name: 'Edit salary for Alex Example' })
+        screen.getByRole('button', {
+          name: 'Edit appointment for Alex Example',
+        })
       );
       expect(salaryInput()).toHaveValue('132000.00');
       await user.click(screen.getByRole('button', { name: 'Cancel' }));
@@ -112,7 +121,9 @@ describe('saved projection route', () => {
       );
 
       await user.click(
-        screen.getByRole('button', { name: 'Edit salary for Alex Example' })
+        screen.getByRole('button', {
+          name: 'Edit appointment for Alex Example',
+        })
       );
       await user.clear(salaryInput());
       await user.type(salaryInput(), '156000');
@@ -155,7 +166,9 @@ describe('saved projection route', () => {
     try {
       await screen.findByRole('alert');
       expect(
-        screen.queryByRole('button', { name: 'Edit salary for Alex Example' })
+        screen.queryByRole('button', {
+          name: 'Edit appointment for Alex Example',
+        })
       ).not.toBeInTheDocument();
       expect(
         screen.queryByRole('button', { name: /^Save plan/ })

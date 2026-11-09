@@ -5,10 +5,8 @@ import {
   FRINGE_CATEGORY,
   SALARY_CATEGORY,
 } from '@/lib/piProjection.ts';
-import {
-  createProjectionSession,
-  setAppointmentMonthlySalary,
-} from '@/lib/projectionWorkspace.ts';
+import { createProjectionSession } from '@/lib/projectionWorkspace.ts';
+import { editProjectionAppointment } from '@/lib/projectionAppointments.ts';
 import { createSalaryExample } from '@/dev/projections/fixture.ts';
 import type { Projection } from '@/queries/projections.ts';
 
@@ -37,8 +35,8 @@ function example() {
 }
 
 function edited(plan: Projection) {
-  const result = setAppointmentMonthlySalary(createProjectionSession(plan), {
-    appointmentId: 101,
+  const result = editProjectionAppointment(createProjectionSession(plan), 101, {
+    ...plan.appointments[0],
     monthlySalary: 11_000,
   });
   assert.equal(result.ok, true);

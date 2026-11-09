@@ -6,8 +6,8 @@ import {
   isProjectionDirty,
   readProjectionLocation,
   readProjectionWorkspace,
-  setAppointmentMonthlySalary,
 } from '@/lib/projectionWorkspace.ts';
+import { editProjectionAppointment } from '@/lib/projectionAppointments.ts';
 import { createSalaryExample } from '@/dev/projections/fixture.ts';
 
 describe('salary workspace operations without React', () => {
@@ -33,8 +33,8 @@ describe('salary workspace operations without React', () => {
 
   it('acknowledges a submitted draft with exact authoritative tokens', () => {
     const initial = createProjectionSession(createSalaryExample());
-    const change = setAppointmentMonthlySalary(initial, {
-      appointmentId: 101,
+    const change = editProjectionAppointment(initial, 101, {
+      ...initial.draft.appointments[0],
       monthlySalary: 11_000,
     });
     if (!change.ok) {
@@ -55,16 +55,16 @@ describe('salary workspace operations without React', () => {
 
   it('retains newer applied edits while acknowledging only the submitted version', () => {
     const initial = createProjectionSession(createSalaryExample());
-    const change = setAppointmentMonthlySalary(initial, {
-      appointmentId: 101,
+    const change = editProjectionAppointment(initial, 101, {
+      ...initial.draft.appointments[0],
       monthlySalary: 11_000,
     });
     if (!change.ok) {
       throw new Error(change.error);
     }
     const submitted = change.session;
-    const newer = setAppointmentMonthlySalary(submitted, {
-      appointmentId: 101,
+    const newer = editProjectionAppointment(submitted, 101, {
+      ...submitted.draft.appointments[0],
       monthlySalary: 12_000,
     });
     if (!newer.ok) {
@@ -96,8 +96,8 @@ describe('salary workspace operations without React', () => {
   it('charges each source 2500 then 2750 for every fixed forecast month and preserves history and funding', () => {
     const initial = createProjectionSession(createSalaryExample());
     const before = computePiProjection(initial.draft);
-    const result = setAppointmentMonthlySalary(initial, {
-      appointmentId: 101,
+    const result = editProjectionAppointment(initial, 101, {
+      ...initial.draft.appointments[0],
       monthlySalary: 132_000 / 12,
     });
     expect(result.ok).toBe(true);
@@ -146,23 +146,23 @@ describe('salary workspace operations without React', () => {
 
   it('keeps no-op identity and clears dirty status when the original salary is restored', () => {
     const initial = createProjectionSession(createSalaryExample());
-    const unchanged = setAppointmentMonthlySalary(initial, {
-      appointmentId: 101,
+    const unchanged = editProjectionAppointment(initial, 101, {
+      ...initial.draft.appointments[0],
       monthlySalary: 10_000,
     });
     if (!unchanged.ok) {
       throw new Error(unchanged.error);
     }
     expect(unchanged.session).toBe(initial);
-    const changed = setAppointmentMonthlySalary(initial, {
-      appointmentId: 101,
+    const changed = editProjectionAppointment(initial, 101, {
+      ...initial.draft.appointments[0],
       monthlySalary: 11_000,
     });
     if (!changed.ok) {
       throw new Error(changed.error);
     }
-    const restored = setAppointmentMonthlySalary(changed.session, {
-      appointmentId: 101,
+    const restored = editProjectionAppointment(changed.session, 101, {
+      ...changed.session.draft.appointments[0],
       monthlySalary: 10_000,
     });
     if (!restored.ok) {
@@ -177,8 +177,8 @@ describe('salary workspace operations without React', () => {
     (monthlySalary) => {
       const session = createProjectionSession(createSalaryExample());
       expect(
-        setAppointmentMonthlySalary(session, {
-          appointmentId: 101,
+        editProjectionAppointment(session, 101, {
+          ...session.draft.appointments[0],
           monthlySalary,
         }).ok
       ).toBe(false);
@@ -189,13 +189,13 @@ describe('salary workspace operations without React', () => {
   it('accepts zero and rejects a missing stable appointment target', () => {
     const session = createProjectionSession(createSalaryExample());
     expect(
-      setAppointmentMonthlySalary(session, {
-        appointmentId: 999,
+      editProjectionAppointment(session, 999, {
+        ...session.draft.appointments[0],
         monthlySalary: 11_000,
       })
     ).toMatchObject({ ok: false });
-    const zero = setAppointmentMonthlySalary(session, {
-      appointmentId: 101,
+    const zero = editProjectionAppointment(session, 101, {
+      ...session.draft.appointments[0],
       monthlySalary: 0,
     });
     if (!zero.ok) {
@@ -218,6 +218,7 @@ describe('salary workspace operations without React', () => {
     const snapshot = readProjectionWorkspace(session, location, results, {
       appointmentId: 101,
       hasChanges: true,
+      kind: 'appointment',
       validationMessage: null,
     });
     expect(snapshot).toMatchObject({

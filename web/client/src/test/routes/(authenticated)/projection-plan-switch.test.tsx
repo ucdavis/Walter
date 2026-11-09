@@ -8,7 +8,10 @@ import {
 } from '@tanstack/react-router';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
-import { createSalaryExample } from '@/dev/projections/fixture.ts';
+import {
+  createSalaryExample,
+  createAppointmentLookupsExample,
+} from '@/dev/projections/fixture.ts';
 import type {
   Projection,
   SaveProjectionRequest,
@@ -53,6 +56,9 @@ function renderPlan(initialPath: string) {
 
 function handlePlans(stored: Map<number, Projection>) {
   server.use(
+    http.get('/api/projections/lookups', () =>
+      HttpResponse.json(createAppointmentLookupsExample())
+    ),
     http.get('/api/user/me', () =>
       HttpResponse.json({
         email: 'preview@example.com',
@@ -120,6 +126,7 @@ describe('switching saved projection plans', () => {
     );
     try {
       await screen.findByRole('dialog');
+      await screen.findByRole('textbox', { name: 'Full-time annual salary' });
       await user.clear(salaryInput());
       await user.type(salaryInput(), '132000');
       await user.click(screen.getByRole('button', { name: 'Apply' }));
@@ -163,7 +170,9 @@ describe('switching saved projection plans', () => {
       ).not.toBeInTheDocument();
 
       await user.click(
-        screen.getByRole('button', { name: 'Edit salary for Blair Example' })
+        screen.getByRole('button', {
+          name: 'Edit appointment for Blair Example',
+        })
       );
       await user.clear(salaryInput());
       await user.type(salaryInput(), '192000');
@@ -215,6 +224,7 @@ describe('switching saved projection plans', () => {
     });
     try {
       await screen.findByRole('dialog');
+      await screen.findByRole('textbox', { name: 'Full-time annual salary' });
       await user.clear(salaryInput());
       await user.type(salaryInput(), '132000');
       await user.click(screen.getByRole('button', { name: 'Apply' }));

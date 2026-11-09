@@ -1,4 +1,6 @@
 import { createRef } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { projectionLookupsQueryOptions } from '@/queries/projections.ts';
 import {
   act,
   cleanup,
@@ -12,7 +14,10 @@ import { userEvent } from '@testing-library/user-event';
 import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createProjectionPreviewRouter } from '@/dev/projections/router.tsx';
-import { createSalaryExample } from '@/dev/projections/fixture.ts';
+import {
+  createSalaryExample,
+  createAppointmentLookupsExample,
+} from '@/dev/projections/fixture.ts';
 import { SALARY_CATEGORY } from '@/lib/piProjection.ts';
 import { ProjectionSessionProvider } from '@/components/projections/ProjectionSession.tsx';
 import {
@@ -38,7 +43,7 @@ const read = () => window.walterProjectionPreview!.read();
 const salaryInput = () =>
   screen.getByRole('textbox', { name: 'Full-time annual salary' });
 const editButton = () =>
-  screen.getByRole('button', { name: 'Edit salary for Alex Example' });
+  screen.getByRole('button', { name: 'Edit appointment for Alex Example' });
 
 describe('projection salary workspace', () => {
   it('starts the outlook at the saved snapshot month while retaining prior spending', async () => {
@@ -146,6 +151,7 @@ describe('projection salary workspace', () => {
     expect(read().pendingEditor).toEqual({
       appointmentId: 101,
       hasChanges: false,
+      kind: 'appointment',
       validationMessage: null,
     });
     await user.clear(salaryInput());
@@ -263,15 +269,22 @@ describe('projection salary workspace', () => {
     const plan = createSalaryExample();
     const ref = createRef<ProjectionWorkspaceHandle>();
     const onNavigate = vi.fn();
+    const queryClient = new QueryClient();
+    queryClient.setQueryData(
+      projectionLookupsQueryOptions().queryKey,
+      createAppointmentLookupsExample()
+    );
     const view = (key: string, search: Record<string, unknown>) => (
-      <ProjectionSessionProvider initialPlan={plan}>
-        <ProjectionWorkspace
-          key={key}
-          onNavigate={onNavigate}
-          ref={ref}
-          search={search}
-        />
-      </ProjectionSessionProvider>
+      <QueryClientProvider client={queryClient}>
+        <ProjectionSessionProvider initialPlan={plan}>
+          <ProjectionWorkspace
+            key={key}
+            onNavigate={onNavigate}
+            ref={ref}
+            search={search}
+          />
+        </ProjectionSessionProvider>
+      </QueryClientProvider>
     );
     const rendered = render(
       view('first', { appointment: 101, section: 'staffing' })
@@ -314,7 +327,7 @@ describe('projection salary workspace', () => {
     ['?section=overview&source=-2', 'The source target is malformed.'],
     [
       '?section=overview&appointment=101',
-      'A salary editor must be opened in Staffing.',
+      'An appointment editor must be opened in Staffing.',
     ],
   ])(
     'handles an invalid direct location %s explicitly',
