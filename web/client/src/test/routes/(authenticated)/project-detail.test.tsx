@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import type { ProjectRecord } from '@/queries/project.ts';
@@ -141,6 +141,9 @@ describe('project detail page', () => {
       expect(
         within(topSection).getByText('Sponsored Project')
       ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('link', { name: 'Task Details' })
+      ).not.toBeInTheDocument();
       expect(
         within(topSection).getByText(
           'Source: Faculty & Department Portfolio Report (PPM)'
@@ -719,6 +722,227 @@ describe('project detail page', () => {
     }
   });
 
+  it('opens task details from the project and switches tasks without retaining the previous chart string', async () => {
+    const user = userEvent.setup();
+    const internal = {
+      awardEndDate: null,
+      awardNumber: null,
+      awardStartDate: null,
+      projectType: 'Internal',
+    };
+    setupHandlers({ employeeId: '1000', name: 'PI User' }, [
+      createProject({
+        ...internal,
+        expenditureCategoryName: '03 - Supplies',
+        taskNum: 'T001',
+      }),
+      createProject({
+        ...internal,
+        activityCode: 'A2',
+        expenditureCategoryName: '07 - Travel',
+        fundCode: 'F2',
+        programCode: 'P2',
+        projectOwningOrgCode: 'ORG2',
+        taskName: 'Task 2',
+        taskNum: 'T002',
+      }),
+    ]);
+
+    const { cleanup, router } = renderRoute({
+      initialPath: '/projects/1000/P1',
+    });
+
+    try {
+      await user.click(
+        await screen.findByRole('link', { name: 'Task Details' })
+      );
+
+      expect(await screen.findByText('03 - Supplies')).toBeInTheDocument();
+      expect(screen.queryByText('07 - Travel')).not.toBeInTheDocument();
+      const taskSelector = screen.getByRole('combobox', { name: /^Task:/ });
+      await user.click(taskSelector);
+      expect(screen.getByRole('listbox', { name: 'Task' })).toBeInTheDocument();
+      await user.keyboard('{Escape}');
+      expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+      expect(taskSelector).toHaveFocus();
+
+      await user.click(taskSelector);
+      await user.click(screen.getByRole('option', { name: /T002/ }));
+      expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+
+      expect(await screen.findByText('07 - Travel')).toBeInTheDocument();
+      expect(screen.queryByText('03 - Supplies')).not.toBeInTheDocument();
+      expect(router.state.location.search).toMatchObject({
+        activity: 'A2',
+        dept: 'ORG2',
+        fund: 'F2',
+        program: 'P2',
+        task: 'T002',
+      });
+      expect(
+        screen.getByRole('link', { name: 'View project costs for task T002' })
+      ).toHaveAttribute('href', '/projectcosts/1000/P1?task=T002');
+
+      await user.click(screen.getByRole('link', { name: 'Project Details' }));
+      expect(
+        await screen.findByRole('link', {
+          name: 'View expenditure categories for task T001',
+        })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('link', {
+          name: 'View expenditure categories for task T002',
+        })
+      ).toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('drills from a task into its expenditure categories and costs', async () => {
+    const user = userEvent.setup();
+    const internal = {
+      awardEndDate: null,
+      awardNumber: null,
+      awardStartDate: null,
+      projectType: 'Internal',
+    };
+    const projects = [
+      createProject({
+        ...internal,
+        activityCode: 'A1',
+        balance: 25,
+        budget: 100,
+        commitments: 0,
+        expenditureCategoryName: '07 - Travel',
+        expenses: 75,
+        fundCode: 'F1',
+        programCode: 'P01',
+        projectOwningOrgCode: 'ORG1',
+        taskNum: 'T001',
+      }),
+      createProject({
+        ...internal,
+        activityCode: 'A1',
+        balance: 0,
+        budget: 200,
+        commitments: 0,
+        expenditureCategoryName: '03 - Supplies',
+        expenses: 200,
+        fundCode: 'F1',
+        programCode: 'P01',
+        projectOwningOrgCode: 'ORG1',
+        taskNum: 'T001',
+      }),
+      createProject({
+        ...internal,
+        activityCode: 'A1',
+        expenditureCategoryName: '01 - Salaries',
+        fundCode: 'F1',
+        programCode: 'P01',
+        projectOwningOrgCode: 'ORG1',
+        taskNum: 'T002',
+      }),
+    ];
+    setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);
+    server.use(
+      http.get('/api/project/costs/:projectNumber', () => HttpResponse.json([]))
+    );
+
+    const { cleanup } = renderRoute({ initialPath: '/projects/1000/P1' });
+
+    try {
+      await user.click(
+        await screen.findByRole('link', {
+          name: 'View expenditure categories for task T001',
+        })
+      );
+
+      await screen.findByRole('heading', {
+        name: 'Expenditure Category Breakdown',
+      });
+      expect(
+        screen.getByRole('combobox', {
+          name: 'Task: T001 – Task 1 / ORG1 / F1 / P01 / A1',
+        })
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByText('T001 / ORG1 / F1 / P01 / A1')
+      ).not.toBeInTheDocument();
+      expect(screen.queryByText('01 - Salaries')).not.toBeInTheDocument();
+      expect(
+        await screen.findByRole('link', {
+          name: 'View project costs for task T001',
+        })
+      ).toHaveAttribute('href', '/projectcosts/1000/P1?task=T001');
+
+      await user.click(
+        screen.getByRole('link', { name: 'View project costs for 07 - Travel' })
+      );
+
+      const projectCostsTable = await screen.findByTestId(
+        'project-costs-table'
+      );
+      expect(
+        within(projectCostsTable).getByRole('combobox', { name: 'Task' })
+      ).toHaveValue('T001');
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('keeps a task with a blank activity separate from the same task with one', async () => {
+    const user = userEvent.setup();
+    const internal = {
+      awardEndDate: null,
+      awardNumber: null,
+      awardStartDate: null,
+      fundCode: 'F1',
+      programCode: 'P01',
+      projectType: 'Internal',
+      taskNum: 'T001',
+    };
+    setupHandlers({ employeeId: '1000', name: 'PI User' }, [
+      createProject({
+        ...internal,
+        activityCode: null,
+        expenditureCategoryName: '03 - Supplies',
+      }),
+      createProject({
+        ...internal,
+        activityCode: 'A1',
+        expenditureCategoryName: '07 - Travel',
+      }),
+    ]);
+
+    const { cleanup } = renderRoute({ initialPath: '/projects/1000/P1' });
+
+    try {
+      const [blankActivityLink] = await screen.findAllByRole('link', {
+        name: 'View expenditure categories for task T001',
+      });
+      await user.click(blankActivityLink);
+
+      expect(await screen.findByText('03 - Supplies')).toBeInTheDocument();
+      expect(screen.queryByText('07 - Travel')).not.toBeInTheDocument();
+
+      await user.click(screen.getByRole('combobox', { name: /^Task:/ }));
+      await user.click(screen.getByRole('option', { name: /A1/ }));
+      expect(await screen.findByText('07 - Travel')).toBeInTheDocument();
+      expect(screen.queryByText('03 - Supplies')).not.toBeInTheDocument();
+
+      await user.click(screen.getByRole('combobox', { name: /^Task:/ }));
+      await waitFor(() =>
+        expect(screen.getByRole('option', { name: /A1/ })).toHaveFocus()
+      );
+      await user.keyboard('{Home}{Enter}');
+      expect(await screen.findByText('03 - Supplies')).toBeInTheDocument();
+      expect(screen.queryByText('07 - Travel')).not.toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+
   it('hides the burndown link for expired projects', async () => {
     const projects = [createProject({ awardEndDate: '2000-01-01' })];
     setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);
@@ -904,9 +1128,6 @@ describe('project detail page', () => {
       expect(
         screen.getByRole('link', { name: 'Project Costs' })
       ).toHaveAttribute('href', '/projectcosts/1000/P1');
-      expect(
-        screen.queryByRole('link', { name: 'Details' })
-      ).not.toBeInTheDocument();
       expect(screen.queryByText('Project Burndown')).not.toBeInTheDocument();
     } finally {
       cleanup();
