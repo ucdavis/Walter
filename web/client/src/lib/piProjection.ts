@@ -1,33 +1,34 @@
 import type {
   Projection,
-  ProjectionJob,
-  ProjectionProject,
+  ProjectionAppointment,
+  ProjectionFundingSource,
 } from '@/queries/projections.ts';
 
 export interface PiProjectionRow {
   actualAmount: number;
   expenditureCategory: string;
+  fundingSourceId: number;
   kind: 'actual' | 'blended' | 'projected';
   month: string; // 'YYYY-MM'
   projectedAmount: number;
-  projectId: number;
   remaining: number;
 }
 
-export interface JobFundingMonth {
-  /** Average funding share over active job days; gaps and overlaps can offset. */
+export interface AppointmentFundingMonth {
+  appointmentId: number;
+  /** Average funding share over active appointment days; gaps and overlaps can offset. */
   fundedPercent: number;
-  jobId: number;
   month: string;
 }
 
 export const SALARY_CATEGORY = '01 - Salaries and Wages';
 export const FRINGE_CATEGORY = '02 - Fringe Benefits';
 export const FEE_REMISSION_CATEGORY = '08 - Fellowship & Scholarships';
-/** Placeholder monthly GSR fee remission the job modal pre-fills; confirm before relying on it. */
+/** Placeholder monthly GSR fee remission the appointment modal pre-fills; confirm before relying on it. */
 export const GSR_FEE_REMISSION_DEFAULT = 1500;
 
 const PERSONNEL = new Set([SALARY_CATEGORY, FRINGE_CATEGORY]);
+export const BALANCE_ADJUSTMENT_CATEGORY = 'Planning balance adjustment';
 
 /** Months since year 0, so month arithmetic is integer math. Accepts 'YYYY-MM' or longer ISO strings. */
 const toIndex = (value: string) =>
@@ -37,12 +38,12 @@ const toMonth = (index: number) =>
   `${Math.floor(index / 12)}-${String((index % 12) + 1).padStart(2, '0')}`;
 
 /** Imported pay is snapshot-dated; a planned future hire's input is its starting rate. */
-export function getJobSalaryBaseMonth(
-  job: ProjectionJob,
+export function getAppointmentSalaryBaseMonth(
+  appointment: ProjectionAppointment,
   snapshotMonth: string
 ) {
-  const startMonth = job.startDate?.slice(0, 7);
-  return !job.isSeeded && startMonth && startMonth > snapshotMonth
+  const startMonth = appointment.startDate?.slice(0, 7);
+  return !appointment.isSeeded && startMonth && startMonth > snapshotMonth
     ? startMonth
     : snapshotMonth;
 }
@@ -79,86 +80,114 @@ function overlapDays(range: DayRange, ...bounds: DateBounds[]) {
 }
 
 /**
- * Projects a PI's portfolio month by month. "Now" is always the projection's seededAt,
- * because budgets and actuals are a snapshot from that moment.
+ * Each funding source forecasts from its captured inputs. Employee salary bases
+ * remain tied to the original plan snapshot, including when later sources are added.
  */
 export function computePiProjection(projection: Projection): {
-  jobFunding: JobFundingMonth[];
+  appointmentFunding: AppointmentFundingMonth[];
   rows: PiProjectionRow[];
 } {
   const seed = new Date(projection.seededAt);
   const seedIndex = seed.getUTCFullYear() * 12 + seed.getUTCMonth();
-  const seedDay = toDay(seed.toISOString());
+  const captures = new Map(
+    projection.fundingSources.map((source) => {
+      const capturedAt = source.capturedAt;
+      const index = toIndex(capturedAt);
+      return [
+        source.id,
+        {
+          day: toDay(capturedAt),
+          firstForecast:
+            source.sourceKind === 'Planned' && source.startDate
+              ? Math.max(index, toIndex(source.startDate))
+              : index,
+          index,
+        },
+      ];
+    })
+  );
+  const capture = (source: ProjectionFundingSource) => captures.get(source.id)!;
 
-  const projectEnd = (p: ProjectionProject) =>
-    p.endDate ? toIndex(p.endDate) : seedIndex + 12;
+  const sourceEnd = (p: ProjectionFundingSource) =>
+    p.endDate ? toIndex(p.endDate) : capture(p).firstForecast + 12;
   const horizonEnd = Math.max(
     seedIndex,
-    ...projection.projects.map(projectEnd)
+    ...projection.fundingSources.map((source) => capture(source).firstForecast),
+    ...projection.fundingSources.map(sourceEnd)
   );
   const firstIndex = Math.min(
     seedIndex,
-    ...projection.projects.flatMap((p) =>
+    ...projection.fundingSources.map((source) => capture(source).index),
+    ...projection.fundingSources.flatMap((p) =>
       p.actuals.map((a) => toIndex(a.month))
     )
   );
 
-  // projectId -> category -> month index -> amount
+  // fundingSourceId -> category -> month index -> amount
   const charges = new Map<number, Map<string, Map<number, number>>>();
   const charge = (
-    project: ProjectionProject,
+    source: ProjectionFundingSource,
     category: string,
     m: number,
     amount: number
   ) => {
-    if (m < seedIndex || m > projectEnd(project)) {
+    if (m < capture(source).firstForecast || m > sourceEnd(source)) {
       return;
     }
     const byCategory =
-      charges.get(project.id) ?? new Map<string, Map<number, number>>();
+      charges.get(source.id) ?? new Map<string, Map<number, number>>();
     const byMonth = byCategory.get(category) ?? new Map<number, number>();
     byMonth.set(m, (byMonth.get(m) ?? 0) + amount);
     byCategory.set(category, byMonth);
-    charges.set(project.id, byCategory);
+    charges.set(source.id, byCategory);
   };
 
-  const projectsById = new Map(projection.projects.map((p) => [p.id, p]));
-  const jobFunding: JobFundingMonth[] = [];
-  for (const job of projection.jobs) {
+  const fundingSourcesById = new Map(
+    projection.fundingSources.map((p) => [p.id, p])
+  );
+  const appointmentFunding: AppointmentFundingMonth[] = [];
+  for (const appointment of projection.appointments) {
     for (let m = seedIndex; m <= horizonEnd; m++) {
-      if (!within(m, job.startDate, job.endDate)) {
+      if (!within(m, appointment.startDate, appointment.endDate)) {
         continue;
       }
       const days = monthDays(m);
-      const activeJobDays = overlapDays(days, job);
+      const activeAppointmentDays = overlapDays(days, appointment);
       const salary =
-        (job.monthlySalary ?? 0) * job.fte * colaFactor(job, seedIndex, m);
+        (appointment.monthlySalary ?? 0) *
+        appointment.fte *
+        colaFactor(appointment, seedIndex, m);
       const costs: [string, number][] = [
         [SALARY_CATEGORY, salary],
-        [FRINGE_CATEGORY, salary * (job.cbrRate + job.vacationAccrualRate)],
+        [
+          FRINGE_CATEGORY,
+          salary * (appointment.cbrRate + appointment.vacationAccrualRate),
+        ],
         // Fees are an appointment total, independent of salary, FTE, and COLA.
-        [FEE_REMISSION_CATEGORY, job.feeRemissionMonthly ?? 0],
+        [FEE_REMISSION_CATEGORY, appointment.feeRemissionMonthly ?? 0],
       ];
       let fundedPercent = 0;
-      for (const f of job.fundingEntries) {
+      for (const f of appointment.allocations) {
         if (!within(m, f.startDate, f.endDate)) {
           continue;
         }
-        const project =
-          f.projectId === null ? undefined : projectsById.get(f.projectId);
+        const source =
+          f.fundingSourceId === null
+            ? undefined
+            : fundingSourcesById.get(f.fundingSourceId);
 
         if (
-          activeJobDays === 0 ||
-          (f.projectId !== null && !project) ||
-          (project && m > projectEnd(project))
+          activeAppointmentDays === 0 ||
+          (f.fundingSourceId !== null && !source) ||
+          (source && m > sourceEnd(source))
         ) {
           continue;
         }
-        const eligibleDays = project
-          ? overlapDays(days, job, f, project)
-          : overlapDays(days, job, f);
-        fundedPercent += f.percent * (eligibleDays / activeJobDays);
-        if (!project || eligibleDays === 0) {
+        const eligibleDays = source
+          ? overlapDays(days, appointment, f, source)
+          : overlapDays(days, appointment, f);
+        fundedPercent += f.percent * (eligibleDays / activeAppointmentDays);
+        if (!source || eligibleDays === 0) {
           continue;
         }
 
@@ -166,70 +195,80 @@ export function computePiProjection(projection: Projection): {
         const fraction = eligibleDays / overlapDays(days);
         for (const [category, cost] of costs) {
           if (cost) {
-            charge(project, category, m, cost * f.percent * fraction);
+            charge(source, category, m, cost * f.percent * fraction);
           }
         }
       }
-      if (activeJobDays > 0) {
-        jobFunding.push({ fundedPercent, jobId: job.id, month: toMonth(m) });
+      if (activeAppointmentDays > 0) {
+        appointmentFunding.push({
+          appointmentId: appointment.id,
+          fundedPercent,
+          month: toMonth(m),
+        });
       }
     }
   }
 
   // Net salary and fringe targets only; category 08 actuals cannot identify employee fees.
   // Booked salary and fringe stay fixed even when the new estimate is lower.
-  for (const project of projection.projects) {
+  for (const source of projection.fundingSources) {
+    const sourceIndex = capture(source).index;
     for (const category of PERSONNEL) {
       const target =
-        charges.get(project.id)?.get(category)?.get(seedIndex) ?? 0;
-      const booked = project.actuals
+        charges.get(source.id)?.get(category)?.get(sourceIndex) ?? 0;
+      const booked = source.actuals
         .filter(
           (actual) =>
             actual.expenditureCategory === category &&
-            toIndex(actual.month) === seedIndex
+            toIndex(actual.month) === sourceIndex
         )
         .reduce((total, actual) => total + actual.amount, 0);
       const remaining = Math.max(target - booked, 0);
       if (remaining !== target) {
-        // Net booked credits even after project end; charge's date guard only bounds forecasts.
+        // Net booked credits even after source end; charge's date guard only bounds forecasts.
         const byCategory =
-          charges.get(project.id) ?? new Map<string, Map<number, number>>();
+          charges.get(source.id) ?? new Map<string, Map<number, number>>();
         const byMonth = byCategory.get(category) ?? new Map<number, number>();
-        byMonth.set(seedIndex, remaining);
+        byMonth.set(sourceIndex, remaining);
         byCategory.set(category, byMonth);
-        charges.set(project.id, byCategory);
+        charges.set(source.id, byCategory);
       }
     }
   }
 
-  for (const project of projection.projects) {
-    for (const e of project.expenses) {
+  for (const source of projection.fundingSources) {
+    const {
+      day: sourceDay,
+      firstForecast,
+      index: sourceIndex,
+    } = capture(source);
+    for (const e of source.expenses) {
       if (e.kind === 'OneTime') {
         if (e.startMonth) {
           const m = toIndex(e.startMonth);
           // A one-time expense specifies a month, so an eligible month keeps its full amount.
-          if (overlapDays(monthDays(m), project) > 0) {
-            charge(project, e.expenditureCategory, m, e.amount);
+          if (overlapDays(monthDays(m), source) > 0) {
+            charge(source, e.expenditureCategory, m, e.amount);
           }
         }
         continue;
       }
-      const start = e.startMonth ? toIndex(e.startMonth) : seedIndex;
+      const start = e.startMonth ? toIndex(e.startMonth) : firstForecast;
       const end = Math.min(
-        e.endMonth ? toIndex(e.endMonth) : projectEnd(project),
-        projectEnd(project)
+        e.endMonth ? toIndex(e.endMonth) : sourceEnd(source),
+        sourceEnd(source)
       );
-      for (let m = Math.max(start, seedIndex); m <= end; m++) {
+      for (let m = Math.max(start, firstForecast); m <= end; m++) {
         const days = monthDays(m);
         const eligibleDays = overlapDays(
-          { ...days, start: m === seedIndex ? seedDay + 1 : days.start },
-          project
+          { ...days, start: m === sourceIndex ? sourceDay + 1 : days.start },
+          source
         );
         if (eligibleDays === 0) {
           continue;
         }
         charge(
-          project,
+          source,
           e.expenditureCategory,
           m,
           e.amount * (eligibleDays / overlapDays(days))
@@ -239,11 +278,12 @@ export function computePiProjection(projection: Projection): {
   }
 
   const rows: PiProjectionRow[] = [];
-  for (const project of projection.projects) {
-    const projectCharges =
-      charges.get(project.id) ?? new Map<string, Map<number, number>>();
+  for (const source of projection.fundingSources) {
+    const { firstForecast, index: sourceIndex } = capture(source);
+    const sourceCharges =
+      charges.get(source.id) ?? new Map<string, Map<number, number>>();
     const actuals = new Map<string, Map<number, number>>();
-    for (const a of project.actuals) {
+    for (const a of source.actuals) {
       const m = toIndex(a.month);
       const byMonth =
         actuals.get(a.expenditureCategory) ?? new Map<number, number>();
@@ -251,32 +291,40 @@ export function computePiProjection(projection: Projection): {
       actuals.set(a.expenditureCategory, byMonth);
     }
     const categories = new Set([
-      ...project.budgets.map((b) => b.expenditureCategory),
+      ...source.budgets.map((b) => b.expenditureCategory),
       ...actuals.keys(),
-      ...projectCharges.keys(),
+      ...sourceCharges.keys(),
+      ...(source.sourceKind === 'Planned' || source.balanceAdjustment
+        ? [BALANCE_ADJUSTMENT_CATEGORY]
+        : []),
     ]);
-    const last = Math.max(projectEnd(project), seedIndex);
+    const last = Math.max(sourceEnd(source), firstForecast);
 
     for (const category of [...categories].sort()) {
-      const budget = project.budgets.find(
+      const budget = source.budgets.find(
         (b) => b.expenditureCategory === category
       );
-      const startRemaining = budget
+      const capturedRemaining = budget
         ? budget.budget - budget.spentToDate - budget.committed
         : 0;
+      const startRemaining =
+        capturedRemaining +
+        (category === BALANCE_ADJUSTMENT_CATEGORY
+          ? source.balanceAdjustment
+          : 0);
       const actual = (m: number) => actuals.get(category)?.get(m) ?? 0;
-      const planned = (m: number) => projectCharges.get(category)?.get(m) ?? 0;
+      const planned = (m: number) => sourceCharges.get(category)?.get(m) ?? 0;
 
       // Remaining at the end of each month: history integrates backward from the seed boundary.
       const remaining = new Map<number, number>([
-        [seedIndex - 1, startRemaining],
+        [firstForecast - 1, startRemaining],
       ]);
-      for (let m = seedIndex - 1; m > firstIndex; m--) {
+      for (let m = firstForecast - 1; m > firstIndex; m--) {
         remaining.set(m - 1, remaining.get(m)! + actual(m));
       }
-      for (let m = seedIndex; m <= last; m++) {
+      for (let m = firstForecast; m <= last; m++) {
         // The snapshot balance already includes its booked actuals.
-        const additionalActual = m === seedIndex ? 0 : actual(m);
+        const additionalActual = m === sourceIndex ? 0 : actual(m);
         remaining.set(m, remaining.get(m - 1)! - additionalActual - planned(m));
       }
 
@@ -284,32 +332,41 @@ export function computePiProjection(projection: Projection): {
         rows.push({
           actualAmount: actual(m),
           expenditureCategory: category,
+          fundingSourceId: source.id,
           kind:
-            m < seedIndex
+            m < firstForecast
               ? 'actual'
-              : m === seedIndex
+              : m === sourceIndex
                 ? 'blended'
                 : 'projected',
           month: toMonth(m),
           projectedAmount: planned(m),
-          projectId: project.id,
-          remaining: remaining.get(m)!,
+          remaining:
+            source.sourceKind === 'Planned' && m < firstForecast
+              ? 0
+              : remaining.get(m)!,
         });
       }
     }
   }
 
-  return { jobFunding, rows };
+  return { appointmentFunding, rows };
 }
 
 /** Compounds COLA after the salary's base month, never within that month. */
-function colaFactor(job: ProjectionJob, seedIndex: number, m: number) {
-  const salaryMonth = toIndex(getJobSalaryBaseMonth(job, toMonth(seedIndex)));
+function colaFactor(
+  appointment: ProjectionAppointment,
+  seedIndex: number,
+  m: number
+) {
+  const salaryMonth = toIndex(
+    getAppointmentSalaryBaseMonth(appointment, toMonth(seedIndex))
+  );
   let n = 0;
   for (let k = salaryMonth + 1; k <= m; k++) {
-    if ((k % 12) + 1 === job.colaMonth) {
+    if ((k % 12) + 1 === appointment.colaMonth) {
       n++;
     }
   }
-  return (1 + job.colaRate) ** n;
+  return (1 + appointment.colaRate) ** n;
 }

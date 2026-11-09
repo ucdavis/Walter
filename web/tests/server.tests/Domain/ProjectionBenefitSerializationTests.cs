@@ -8,9 +8,8 @@ namespace server.tests.Domain;
 
 public sealed class ProjectionBenefitSerializationTests
 {
-    public static TheoryData<string, decimal> StoredJobs => new()
+    public static TheoryData<string, decimal> StoredAppointments => new()
     {
-        { """[{"id":1,"cbrRate":null,"vacationAccrualRate":0.083}]""", 0m },
         { """[{"id":1,"vacationAccrualRate":0.083}]""", 0m },
         { """[{"id":1,"cbrRate":0,"vacationAccrualRate":0.083}]""", 0m },
         { """[{"id":1,"cbrRate":0.32175,"vacationAccrualRate":0.083}]""", 0.32175m },
@@ -18,14 +17,14 @@ public sealed class ProjectionBenefitSerializationTests
     };
 
     [Theory]
-    [MemberData(nameof(StoredJobs))]
-    public void Stored_jobs_load_with_numeric_cbr_and_round_trip_without_changing_supplied_rates(string storedJson, decimal expectedCbr)
+    [MemberData(nameof(StoredAppointments))]
+    public void Stored_appointments_load_with_numeric_cbr_and_round_trip_without_changing_supplied_rates(string storedJson, decimal expectedCbr)
     {
         using var ctx = TestDbContextFactory.CreateInMemory();
         var converter = ctx.Model.FindEntityType(typeof(Projection))!
-            .FindProperty(nameof(Projection.Jobs))!.GetValueConverter()!;
+            .FindProperty(nameof(Projection.Appointments))!.GetValueConverter()!;
 
-        var jobs = (List<ProjectionJob>)converter.ConvertFromProvider(storedJson)!;
+        var jobs = (List<ProjectionAppointment>)converter.ConvertFromProvider(storedJson)!;
 
         var job = jobs.Should().ContainSingle().Subject;
         job.CbrRate.Should().Be(expectedCbr);
@@ -39,20 +38,21 @@ public sealed class ProjectionBenefitSerializationTests
         savedJob.GetProperty("cbrRate").GetDecimal().Should().Be(expectedCbr);
         savedJob.GetProperty("vacationAccrualRate").GetDecimal().Should().Be(0.083m);
 
-        var reloaded = (List<ProjectionJob>)converter.ConvertFromProvider(savedJson)!;
+        var reloaded = (List<ProjectionAppointment>)converter.ConvertFromProvider(savedJson)!;
         reloaded.Single().CbrRate.Should().Be(expectedCbr);
         reloaded.Single().VacationAccrualRate.Should().Be(0.083m);
     }
 
     [Theory]
     [InlineData("\"not a rate\"")]
+    [InlineData("null")]
     [InlineData("true")]
     [InlineData("{}")]
     public void Malformed_cbr_values_are_rejected_instead_of_defaulted(string cbrJson)
     {
         var json = $$"""{"cbrRate":{{cbrJson}}}""";
 
-        var deserialize = () => JsonSerializer.Deserialize<ProjectionJob>(json,
+        var deserialize = () => JsonSerializer.Deserialize<ProjectionAppointment>(json,
             new JsonSerializerOptions(JsonSerializerDefaults.Web));
 
         deserialize.Should().Throw<JsonException>();

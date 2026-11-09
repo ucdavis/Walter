@@ -9,24 +9,27 @@ import type {
   Projection,
   ProjectionBudget,
   ProjectionExpense,
-  ProjectionFundingEntry,
-  ProjectionJob,
+  ProjectionFundingAllocation,
+  ProjectionAppointment,
 } from '@/queries/projections.ts';
 
 const SUPPLIES = '05 - Supplies';
 
 const funding = (
-  projectId: number | null,
+  fundingSourceId: number | null,
   percent: number
-): ProjectionFundingEntry => ({
+): ProjectionFundingAllocation => ({
   endDate: null,
+  fundingSourceId,
   isSeeded: true,
   percent,
-  projectId,
   startDate: null,
 });
 
-const job = (overrides: Partial<ProjectionJob>): ProjectionJob => ({
+const appointment = (
+  overrides: Partial<ProjectionAppointment>
+): ProjectionAppointment => ({
+  allocations: [funding(1, 1)],
   cbrRate: 0,
   colaMonth: 7,
   colaRate: 0,
@@ -34,7 +37,7 @@ const job = (overrides: Partial<ProjectionJob>): ProjectionJob => ({
   endDate: null,
   feeRemissionMonthly: null,
   fte: 1,
-  fundingEntries: [funding(1, 1)],
+  hasUnmatchedFunding: false,
   id: 1,
   isSeeded: true,
   jobCode: null,
@@ -42,6 +45,7 @@ const job = (overrides: Partial<ProjectionJob>): ProjectionJob => ({
   name: 'Person',
   positionNumber: 'X1',
   rateSet: 'DVCMP',
+  sourceProjectNumbers: ['P1'],
   startDate: null,
   title: null,
   vacationAccrualRate: 0,
@@ -60,27 +64,23 @@ const expense = (overrides: Partial<ProjectionExpense>): ProjectionExpense => ({
 
 const projection = ({
   actuals = [],
+  appointments = [],
   endDate = '2027-03-31',
   expenses = [],
-  jobs = [],
 }: {
   actuals?: {
     amount: number;
     expenditureCategory?: string;
     month: string;
   }[];
+  appointments?: ProjectionAppointment[];
   endDate?: string | null;
   expenses?: ProjectionExpense[];
-  jobs?: ProjectionJob[];
 } = {}): Projection => ({
+  appointments,
   createdAt: '2026-10-16T00:00:00Z',
   createdBy: null,
-  historyMonths: 3,
-  id: 1,
-  jobs,
-  name: 'Plan',
-  piEmployeeId: 'PI',
-  projects: [
+  fundingSources: [
     {
       actuals: actuals.map((a) => ({
         ...a,
@@ -88,6 +88,7 @@ const projection = ({
       })),
       awardName: null,
       awardNumber: null,
+      balanceAdjustment: 0,
       budgets: [
         {
           budget: 1000,
@@ -97,6 +98,9 @@ const projection = ({
           spentToDate: 0,
         },
       ],
+      capturedAt: '2026-10-16T00:00:00Z',
+      capturedEndDate: endDate,
+      capturedStartDate: null,
       endDate,
       expenses,
       id: 1,
@@ -105,11 +109,16 @@ const projection = ({
       projectNumber: 'P1',
       projectType: null,
       runRates: [],
+      sourceKind: 'Task',
       startDate: null,
       taskName: null,
       taskNumber: 'TASK01',
     },
   ],
+  historyMonths: 3,
+  id: 1,
+  name: 'Plan',
+  piEmployeeId: 'PI',
   seededAt: '2026-10-16T00:00:00Z',
   updatedAt: '2026-10-16T00:00:00Z',
   updatedBy: null,
@@ -170,9 +179,15 @@ describe('computePiProjection', () => {
           octoberActual(SALARY_CATEGORY, 1000),
           octoberActual(FRINGE_CATEGORY, 300),
         ],
-        jobs: [job({ cbrRate: 0.3, monthlySalary, vacationAccrualRate: 0.1 })],
+        appointments: [
+          appointment({
+            cbrRate: 0.3,
+            monthlySalary,
+            vacationAccrualRate: 0.1,
+          }),
+        ],
       });
-      p.projects[0].budgets = [
+      p.fundingSources[0].budgets = [
         budget(SALARY_CATEGORY, 10_000, 3000, 1000),
         budget(FRINGE_CATEGORY, 4000, 1000, 400),
       ];
@@ -203,11 +218,11 @@ describe('computePiProjection', () => {
 
   it('uses the full personnel target when the snapshot month has no booked costs', () => {
     const p = projection({
-      jobs: [
-        job({
+      appointments: [
+        appointment({
+          allocations: [funding(1, 0.5)],
           cbrRate: 0.3,
           fte: 0.5,
-          fundingEntries: [funding(1, 0.5)],
           monthlySalary: 6000,
           vacationAccrualRate: 0.1,
         }),
@@ -241,9 +256,9 @@ describe('computePiProjection', () => {
           octoberActual(SALARY_CATEGORY, -100),
           octoberActual(FRINGE_CATEGORY, -40),
         ],
-        jobs: [job({ cbrRate: 0.4, monthlySalary })],
+        appointments: [appointment({ cbrRate: 0.4, monthlySalary })],
       });
-      p.projects[0].budgets = [
+      p.fundingSources[0].budgets = [
         budget(SALARY_CATEGORY, 10_000, 2900, 1000),
         budget(FRINGE_CATEGORY, 4000, 960, 400),
       ];
@@ -267,16 +282,16 @@ describe('computePiProjection', () => {
     }
   );
 
-  it('nets snapshot salary and fringe credits after the project has ended', () => {
+  it('nets snapshot salary and fringe credits after the source has ended', () => {
     const p = projection({
       actuals: [
         octoberActual(SALARY_CATEGORY, -100),
         octoberActual(FRINGE_CATEGORY, -40),
       ],
+      appointments: [appointment({ cbrRate: 0.4, monthlySalary: 1000 })],
       endDate: '2026-09-30',
-      jobs: [job({ cbrRate: 0.4, monthlySalary: 1000 })],
     });
-    p.projects[0].budgets = [
+    p.fundingSources[0].budgets = [
       budget(SALARY_CATEGORY, 10_000, 2900, 1000),
       budget(FRINGE_CATEGORY, 4000, 960, 400),
     ];
@@ -286,52 +301,52 @@ describe('computePiProjection', () => {
       {
         actualAmount: -100,
         expenditureCategory: SALARY_CATEGORY,
+        fundingSourceId: 1,
         kind: 'blended',
         month: '2026-10',
         projectedAmount: 100,
-        projectId: 1,
         remaining: 6000,
       },
       {
         actualAmount: -40,
         expenditureCategory: FRINGE_CATEGORY,
+        fundingSourceId: 1,
         kind: 'blended',
         month: '2026-10',
         projectedAmount: 40,
-        projectId: 1,
         remaining: 2600,
       },
     ]);
     expect(p).toEqual(captured);
   });
 
-  it('nets aggregated job targets once per project and category', () => {
+  it('nets aggregated appointment targets once per source and category', () => {
     const p = projection({
       actuals: [
         octoberActual(SALARY_CATEGORY, 600),
         octoberActual(SALARY_CATEGORY, 400),
         octoberActual(FRINGE_CATEGORY, 700),
       ],
-      jobs: [
-        job({
+      appointments: [
+        appointment({
+          allocations: [funding(1, 0.5), funding(2, 0.5)],
           cbrRate: 0.2,
-          fundingEntries: [funding(1, 0.5), funding(2, 0.5)],
           monthlySalary: 1500,
         }),
-        job({
+        appointment({
+          allocations: [funding(1, 0.5), funding(2, 0.5)],
           cbrRate: 0.4,
-          fundingEntries: [funding(1, 0.5), funding(2, 0.5)],
           id: 2,
           monthlySalary: 2500,
         }),
       ],
     });
-    p.projects[0].budgets = [
+    p.fundingSources[0].budgets = [
       budget(SALARY_CATEGORY, 10_000, 3000),
       budget(FRINGE_CATEGORY, 4000, 1000),
     ];
-    p.projects.push({
-      ...p.projects[0],
+    p.fundingSources.push({
+      ...p.fundingSources[0],
       actuals: [
         octoberActual(SALARY_CATEGORY, 2500),
         octoberActual(FRINGE_CATEGORY, 100),
@@ -346,29 +361,29 @@ describe('computePiProjection', () => {
       expect.objectContaining({
         actualAmount: 1000,
         expenditureCategory: SALARY_CATEGORY,
+        fundingSourceId: 1,
         projectedAmount: 1000,
-        projectId: 1,
         remaining: 6000,
       }),
       expect.objectContaining({
         actualAmount: 700,
         expenditureCategory: FRINGE_CATEGORY,
+        fundingSourceId: 1,
         projectedAmount: 0,
-        projectId: 1,
         remaining: 3000,
       }),
       expect.objectContaining({
         actualAmount: 2500,
         expenditureCategory: SALARY_CATEGORY,
+        fundingSourceId: 2,
         projectedAmount: 0,
-        projectId: 2,
         remaining: 7000,
       }),
       expect.objectContaining({
         actualAmount: 100,
         expenditureCategory: FRINGE_CATEGORY,
+        fundingSourceId: 2,
         projectedAmount: 550,
-        projectId: 2,
         remaining: 2450,
       }),
     ]);
@@ -381,6 +396,13 @@ describe('computePiProjection', () => {
         octoberActual(FRINGE_CATEGORY, 400),
         octoberActual(FEE_REMISSION_CATEGORY, 750),
         { amount: 100, month: '2026-10-01' },
+      ],
+      appointments: [
+        appointment({
+          cbrRate: 0.4,
+          feeRemissionMonthly: 1500,
+          monthlySalary: 900,
+        }),
       ],
       expenses: [
         expense({
@@ -398,11 +420,8 @@ describe('computePiProjection', () => {
           kind: 'Projected',
         }),
       ],
-      jobs: [
-        job({ cbrRate: 0.4, feeRemissionMonthly: 1500, monthlySalary: 900 }),
-      ],
     });
-    p.projects[0].budgets = [
+    p.fundingSources[0].budgets = [
       budget(SALARY_CATEGORY, 10_000, 3000),
       budget(FRINGE_CATEGORY, 4000, 1000),
       budget(FEE_REMISSION_CATEGORY, 10_000, 2000),
@@ -447,20 +466,20 @@ describe('computePiProjection', () => {
 
   it('splits appointment fee costs by funding share without FTE or COLA scaling', () => {
     const p = projection({
-      jobs: [
-        job({
+      appointments: [
+        appointment({
+          allocations: [funding(1, 0.5), funding(null, 0.5)],
           colaMonth: 11,
           colaRate: 0.03,
           feeRemissionMonthly: 1500,
           fte: 0.5,
-          fundingEntries: [funding(1, 0.5), funding(null, 0.5)],
         }),
       ],
     });
     expect(projected(p, FEE_REMISSION_CATEGORY, '2026-10')).toBe(750);
     expect(projected(p, FEE_REMISSION_CATEGORY, '2026-11')).toBe(750);
-    p.jobs[0].fte = 0.8;
-    p.jobs[0].monthlySalary = 2000;
+    p.appointments[0].fte = 0.8;
+    p.appointments[0].monthlySalary = 2000;
     expect(projected(p, FEE_REMISSION_CATEGORY, '2026-11')).toBe(750);
   });
 
@@ -471,7 +490,7 @@ describe('computePiProjection', () => {
         { amount: 300, month: '2026-10-01' },
       ],
     });
-    p.projects[0].budgets = [
+    p.fundingSources[0].budgets = [
       budget(SALARY_CATEGORY, 10_000, 2000),
       budget(SUPPLIES, 1000, 400),
     ];
@@ -494,8 +513,8 @@ describe('computePiProjection', () => {
 
   it('applies COLA in and after the COLA month', () => {
     const p = projection({
+      appointments: [appointment({ colaMonth: 7, colaRate: 0.03 })],
       endDate: '2027-12-31',
-      jobs: [job({ colaMonth: 7, colaRate: 0.03 })],
     });
 
     expect(projected(p, SALARY_CATEGORY, '2027-06')).toBe(1000);
@@ -504,9 +523,8 @@ describe('computePiProjection', () => {
 
   it('uses a future hypothetical hire starting rate before compounding later annual COLAs', () => {
     const p = projection({
-      endDate: '2028-08-31',
-      jobs: [
-        job({
+      appointments: [
+        appointment({
           cbrRate: 0.3,
           colaRate: 0.03,
           employeeId: null,
@@ -516,8 +534,10 @@ describe('computePiProjection', () => {
           vacationAccrualRate: 0.083,
         }),
       ],
+      endDate: '2028-08-31',
     });
     p.seededAt = '2026-01-16T00:00:00Z';
+    p.fundingSources.forEach((source) => (source.capturedAt = p.seededAt));
 
     expect(projected(p, SALARY_CATEGORY, '2026-08')).toBe(10_000);
     expect(projected(p, SALARY_CATEGORY, '2027-06')).toBe(10_000);
@@ -534,9 +554,8 @@ describe('computePiProjection', () => {
     'prorates a $startDate hire at its starting rate and waits until next year for July COLA',
     ({ firstMonthSalary, startDate }) => {
       const p = projection({
-        endDate: '2027-08-31',
-        jobs: [
-          job({
+        appointments: [
+          appointment({
             cbrRate: 0.3,
             colaRate: 0.03,
             employeeId: null,
@@ -545,8 +564,10 @@ describe('computePiProjection', () => {
             startDate,
           }),
         ],
+        endDate: '2027-08-31',
       });
       p.seededAt = '2026-01-16T00:00:00Z';
+      p.fundingSources.forEach((source) => (source.capturedAt = p.seededAt));
 
       expect(projected(p, SALARY_CATEGORY, '2026-07')).toBeCloseTo(
         firstMonthSalary
@@ -559,30 +580,30 @@ describe('computePiProjection', () => {
     }
   );
 
-  it('keeps a seeded salary based on the snapshot when its job start is moved into the future', () => {
+  it('keeps a seeded salary based on the snapshot when its appointment start is moved into the future', () => {
     const p = projection({
-      endDate: '2027-08-31',
-      jobs: [
-        job({
+      appointments: [
+        appointment({
           colaRate: 0.03,
           monthlySalary: 10_000,
           startDate: '2026-08-01',
         }),
       ],
+      endDate: '2027-08-31',
     });
     p.seededAt = '2026-01-16T00:00:00Z';
+    p.fundingSources.forEach((source) => (source.capturedAt = p.seededAt));
 
     expect(projected(p, SALARY_CATEGORY, '2026-08')).toBeCloseTo(10_300);
     expect(projected(p, SALARY_CATEGORY, '2027-07')).toBeCloseTo(10_609);
   });
 
-  it.each(['project', 'funding'])(
+  it.each(['source', 'funding'])(
     'keeps COLA tied to the hire when the %s starts later',
     (laterStart) => {
       const p = projection({
-        endDate: '2028-08-31',
-        jobs: [
-          job({
+        appointments: [
+          appointment({
             colaRate: 0.03,
             employeeId: null,
             isSeeded: false,
@@ -590,12 +611,14 @@ describe('computePiProjection', () => {
             startDate: '2026-08-01',
           }),
         ],
+        endDate: '2028-08-31',
       });
       p.seededAt = '2026-01-16T00:00:00Z';
-      if (laterStart === 'project') {
-        p.projects[0].startDate = '2027-08-01';
+      p.fundingSources.forEach((source) => (source.capturedAt = p.seededAt));
+      if (laterStart === 'source') {
+        p.fundingSources[0].startDate = '2027-08-01';
       } else {
-        p.jobs[0].fundingEntries[0].startDate = '2027-08-01';
+        p.appointments[0].allocations[0].startDate = '2027-08-01';
       }
 
       expect(projected(p, SALARY_CATEGORY, '2027-07')).toBe(0);
@@ -606,9 +629,8 @@ describe('computePiProjection', () => {
 
   it('moves the starting-rate baseline when a hypothetical hire moves past a COLA month', () => {
     const p = projection({
-      endDate: '2027-08-31',
-      jobs: [
-        job({
+      appointments: [
+        appointment({
           colaRate: 0.03,
           employeeId: null,
           isSeeded: false,
@@ -616,24 +638,25 @@ describe('computePiProjection', () => {
           startDate: '2026-06-01',
         }),
       ],
+      endDate: '2027-08-31',
     });
     p.seededAt = '2026-01-16T00:00:00Z';
+    p.fundingSources.forEach((source) => (source.capturedAt = p.seededAt));
 
     expect(projected(p, SALARY_CATEGORY, '2026-08')).toBeCloseTo(10_300);
 
-    p.jobs[0].startDate = '2026-08-01';
+    p.appointments[0].startDate = '2026-08-01';
 
     expect(projected(p, SALARY_CATEGORY, '2026-08')).toBe(10_000);
     expect(projected(p, SALARY_CATEGORY, '2027-07')).toBeCloseTo(10_300);
   });
 
   it.each([null, '2025-06-01', '2026-01-01'])(
-    'uses the snapshot salary for a manual job starting %s',
+    'uses the snapshot salary for a manual appointment starting %s',
     (startDate) => {
       const p = projection({
-        endDate: '2026-08-31',
-        jobs: [
-          job({
+        appointments: [
+          appointment({
             colaRate: 0.03,
             employeeId: null,
             isSeeded: false,
@@ -641,8 +664,10 @@ describe('computePiProjection', () => {
             startDate,
           }),
         ],
+        endDate: '2026-08-31',
       });
       p.seededAt = '2026-01-16T00:00:00Z';
+      p.fundingSources.forEach((source) => (source.capturedAt = p.seededAt));
 
       expect(projected(p, SALARY_CATEGORY, '2026-01')).toBe(10_000);
       expect(projected(p, SALARY_CATEGORY, '2026-07')).toBeCloseTo(10_300);
@@ -651,13 +676,16 @@ describe('computePiProjection', () => {
 
   it('does not charge outside-portfolio funding but counts it as funded', () => {
     const p = projection({
-      jobs: [job({ fundingEntries: [funding(null, 0.4), funding(1, 0.6)] })],
+      appointments: [
+        appointment({ allocations: [funding(null, 0.4), funding(1, 0.6)] }),
+      ],
     });
     const result = computePiProjection(p);
 
     expect(projected(p, SALARY_CATEGORY, '2026-11')).toBe(600);
     expect(
-      result.jobFunding.find((f) => f.month === '2026-11')?.fundedPercent
+      result.appointmentFunding.find((f) => f.month === '2026-11')
+        ?.fundedPercent
     ).toBe(1);
   });
 
@@ -697,9 +725,11 @@ describe('computePiProjection', () => {
   });
 
   it('treats null salary as zero and preserves the supplied vacation rate when CBR is zero', () => {
-    const noSalary = projection({ jobs: [job({ monthlySalary: null })] });
+    const noSalary = projection({
+      appointments: [appointment({ monthlySalary: null })],
+    });
     const noCbr = projection({
-      jobs: [job({ cbrRate: 0, vacationAccrualRate: 0.1 })],
+      appointments: [appointment({ cbrRate: 0, vacationAccrualRate: 0.1 })],
     });
 
     expect(
@@ -718,7 +748,7 @@ describe('computePiProjection', () => {
       ],
       expenses: [expense({ amount: 310 })],
     });
-    p.projects[0].budgets = [budget(SUPPLIES, 1000, 140)];
+    p.fundingSources[0].budgets = [budget(SUPPLIES, 1000, 140)];
     const rows = computePiProjection(p).rows.filter(
       (r) => r.expenditureCategory === SUPPLIES
     );
@@ -737,7 +767,7 @@ describe('computePiProjection', () => {
     expect(at('2026-11')).toMatchObject({ kind: 'projected', remaining: 400 });
   });
 
-  it('projects 12 months when a project has no end date', () => {
+  it('fundingSources 12 months when a source has no end date', () => {
     const rows = computePiProjection(
       projection({ endDate: null, expenses: [expense({ amount: 1 })] })
     ).rows;

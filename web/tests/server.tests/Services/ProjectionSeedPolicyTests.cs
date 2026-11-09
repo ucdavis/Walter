@@ -50,7 +50,7 @@ public sealed class ProjectionSeedPolicyTests
 
         var projection = await SeedAsync(data);
 
-        projection.Projects.Should().HaveCount(included ? 1 : 0);
+        projection.FundingSources.Should().HaveCount(included ? 1 : 0);
     }
 
     public static TheoryData<DateTime?, DateTime?, bool> SponsoredEndDates => new()
@@ -83,13 +83,13 @@ public sealed class ProjectionSeedPolicyTests
 
         var projection = await SeedAsync(data);
 
-        projection.Projects.Should().HaveCount(included ? 1 : 0);
+        projection.FundingSources.Should().HaveCount(included ? 2 : 0);
         if (included)
-            projection.Projects.Single().Budgets.Should().ContainSingle().Which.Budget.Should().Be(300);
+            projection.FundingSources.Select(p => p.Budgets.Single().Budget).Should().Equal(100m, 200m);
     }
 
     [Fact]
-    public async Task Groups_only_retained_tasks_and_sums_each_category_month_and_history_window_without_mutating_source()
+    public async Task Keeps_retained_task_financials_and_captured_dates_independent_without_mutating_source()
     {
         var first = TaskRow("P1", "T1");
         first.ProjectName = "First task metadata";
@@ -129,24 +129,35 @@ public sealed class ProjectionSeedPolicyTests
                 ],
             },
         };
+        data.Personnel = [FundingLine("P1", "T1", 40, 4), FundingLine("P1", "T3", 60, 4)];
         var captured = JsonSerializer.Serialize(data.Seed);
 
         var projection = await SeedAsync(data);
 
-        var project = projection.Projects.Should().ContainSingle().Subject;
+        projection.FundingSources.Should().HaveCount(2);
+        var project = projection.FundingSources.Single(p => p.TaskNumber == "T1");
         project.Should().BeEquivalentTo(new
         {
-            ProjectNumber = "P1", ProjectName = "First task metadata", IsSeeded = true,
+            ProjectNumber = "P1", TaskNumber = "T1", TaskName = "T1", ProjectName = "First task metadata", IsSeeded = true,
+            SourceKind = ProjectionSourceKind.Task, CapturedAt = (DateTime?)Snapshot,
             StartDate = new DateOnly(2026, 1, 1), EndDate = new DateOnly(2026, 12, 31),
+            CapturedStartDate = new DateOnly(2026, 1, 1), CapturedEndDate = new DateOnly(2026, 12, 31),
         });
-        project.TaskNumber.Should().BeNull();
-        project.TaskName.Should().BeNull();
         project.Budgets.Select(b => (b.ExpenditureCategory, b.Budget, b.SpentToDate, b.Committed)).Should().BeEquivalentTo(
-            [(Supplies, 3000m, 300m, 30m), (Salary, 11000m, 0m, 0m)]);
+            [(Supplies, 1000m, 100m, 10m), (Salary, 5000m, 0m, 0m)]);
         project.Actuals.Select(a => (a.ExpenditureCategory, a.Month, a.Amount)).Should().BeEquivalentTo(
-            [(Supplies, new DateOnly(2026, 10, 1), 300m), (Supplies, new DateOnly(2026, 9, 1), 50m), (Salary, new DateOnly(2026, 10, 1), 400m)]);
-        project.RunRates.Select(r => (r.HistoryMonths, r.MonthlyAmount)).Should().BeEquivalentTo([(3, 120m), (6, 100m)]);
-        project.Expenses.Should().ContainSingle().Which.Should().BeEquivalentTo(new { Kind = ProjectionExpenseKind.Projected, ExpenditureCategory = Supplies, Amount = 100m });
+            [(Supplies, new DateOnly(2026, 10, 1), 100m), (Salary, new DateOnly(2026, 10, 1), 400m)]);
+        project.RunRates.Select(r => (r.HistoryMonths, r.MonthlyAmount)).Should().BeEquivalentTo([(3, 50m), (6, 40m)]);
+        project.Expenses.Should().ContainSingle().Which.Amount.Should().Be(40m);
+        var other = projection.FundingSources.Single(p => p.TaskNumber == "T3");
+        other.Budgets.Select(b => b.Budget).Should().BeEquivalentTo([2000m, 6000m]);
+        other.Actuals.Select(a => a.Amount).Should().BeEquivalentTo([50m, 200m]);
+        other.Expenses.Should().ContainSingle().Which.Amount.Should().Be(60m);
+        other.CapturedStartDate.Should().Be(new DateOnly(2026, 3, 1));
+        other.CapturedEndDate.Should().Be(new DateOnly(2026, 10, 31));
+        projection.Appointments.Single().Allocations.Select(f => (f.FundingSourceId, f.Percent)).Should().BeEquivalentTo(
+            [((int?)project.Id, 0.4m), ((int?)other.Id, 0.6m)]);
+        projection.Appointments.Single().HasUnmatchedFunding.Should().BeFalse();
         JsonSerializer.Serialize(data.Seed).Should().Be(captured);
     }
 
@@ -163,15 +174,16 @@ public sealed class ProjectionSeedPolicyTests
 
         var projection = await SeedAsync(data);
 
-        var project = projection.Projects.Should().ContainSingle().Subject;
+        var project = projection.FundingSources.Should().ContainSingle().Subject;
         data.PersonnelProjectNumbers.Should().BeEquivalentTo(["P1", "P2"]);
-        var job = projection.Jobs.Should().ContainSingle().Subject;
-        job.FundingEntries.Select(f => (f.ProjectId, f.Percent, f.StartDate, f.EndDate)).Should().BeEquivalentTo(new[]
+        var job = projection.Appointments.Should().ContainSingle().Subject;
+        job.SourceProjectNumbers.Should().Equal("P1", "P2");
+        job.HasUnmatchedFunding.Should().BeTrue();
+        job.Allocations.Select(f => (f.FundingSourceId, f.Percent, f.StartDate, f.EndDate)).Should().BeEquivalentTo(new[]
         {
             ((int?)project.Id, 0.4m, (DateOnly?)new DateOnly(2026, 4, 1), (DateOnly?)new DateOnly(2026, 4, 30)),
             (null, 0.2m, new DateOnly(2026, 5, 1), new DateOnly(2026, 5, 31)),
             (null, 0.1m, new DateOnly(2026, 6, 1), new DateOnly(2026, 6, 30)),
-            ((int?)project.Id, 0.1m, new DateOnly(2026, 7, 1), new DateOnly(2026, 7, 31)),
             (null, 0.2m, null, null),
         });
     }
@@ -190,17 +202,17 @@ public sealed class ProjectionSeedPolicyTests
 
         var projection = await SeedAsync(data);
 
-        projection.Projects.Should().BeEmpty();
+        projection.FundingSources.Should().BeEmpty();
         data.PersonnelProjectNumbers.Should().BeEquivalentTo(["P1"]);
-        projection.Jobs.Should().HaveCount(2);
-        var funded = projection.Jobs.Single(j => j.EmployeeId == "E1");
-        funded.FundingEntries.Should().HaveCount(2).And.OnlyContain(f => f.ProjectId == null);
-        funded.FundingEntries.Should().ContainSingle(f => f.StartDate == new DateOnly(2026, 4, 1))
+        projection.Appointments.Should().HaveCount(2);
+        var funded = projection.Appointments.Single(j => j.EmployeeId == "E1");
+        funded.Allocations.Should().HaveCount(2).And.OnlyContain(f => f.FundingSourceId == null);
+        funded.Allocations.Should().ContainSingle(f => f.StartDate == new DateOnly(2026, 4, 1))
             .Which.Should().BeEquivalentTo(new { Percent = 0.6m, EndDate = new DateOnly(2026, 4, 30) });
-        funded.FundingEntries.Should().ContainSingle(f => f.StartDate == null).Which.Percent.Should().Be(0.4m);
-        var missing = projection.Jobs.Single(j => j.EmployeeId == "E2");
+        funded.Allocations.Should().ContainSingle(f => f.StartDate == null).Which.Percent.Should().Be(0.4m);
+        var missing = projection.Appointments.Single(j => j.EmployeeId == "E2");
         missing.MonthlySalary.Should().BeNull();
-        missing.FundingEntries.Should().BeEmpty();
+        missing.Allocations.Should().BeEmpty();
     }
 
     private sealed class FixedClock : TimeProvider

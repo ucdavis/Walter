@@ -39,17 +39,21 @@ afterEach(() => {
 });
 
 function example() {
-  return {
+  const plan = {
     ...createSalaryExample(),
     seededAt: '2026-01-01T00:00:00.7654321Z',
     updatedAt: '2026-02-01T00:00:00.1234567Z',
   };
+  for (const source of plan.fundingSources) {
+    source.capturedAt = plan.seededAt;
+  }
+  return plan;
 }
 
 function openPreview({ browserHistory = false } = {}) {
   const plan = example();
   const server = createProjectionPreviewServer(plan);
-  const path = '/projections-preview.html?section=staffing&project=2';
+  const path = '/projections-preview.html?section=staffing&source=2';
   if (browserHistory) {
     window.history.replaceState(null, '', path);
   }
@@ -105,15 +109,15 @@ describe('projection saving through the workspace', () => {
       expectedSeededAt: plan.seededAt,
       expectedUpdatedAt: plan.updatedAt,
     });
-    expect(server.read().stored!.jobs[0].monthlySalary).toBe(10_000);
+    expect(server.read().stored!.appointments[0].monthlySalary).toBe(10_000);
 
     await applySalary(user, '140000');
     await user.click(
       screen.getByRole('button', { name: 'Finish pending save' })
     );
     await waitFor(() => expect(saveButton()).toBeEnabled());
-    expect(server.read().stored!.jobs[0].monthlySalary).toBe(11_000);
-    expect(read().draft.jobs[0].monthlySalary).toBe(140_000 / 12);
+    expect(server.read().stored!.appointments[0].monthlySalary).toBe(11_000);
+    expect(read().draft.appointments[0].monthlySalary).toBe(140_000 / 12);
     expect(read().dirty).toBe(true);
     expect(
       screen.getByText(
@@ -140,7 +144,7 @@ describe('projection saving through the workspace', () => {
       screen.getByRole('button', { name: 'Return to saved plan' })
     );
     await screen.findByRole('button', { name: 'Edit salary for Alex Example' });
-    expect(read().draft.jobs[0].monthlySalary).toBe(140_000 / 12);
+    expect(read().draft.appointments[0].monthlySalary).toBe(140_000 / 12);
     expect(read().dirty).toBe(false);
   });
 
@@ -155,14 +159,14 @@ describe('projection saving through the workspace', () => {
       expect(await screen.findByRole('alert')).toHaveTextContent(
         'Save was not confirmed'
       );
-      expect(read().draft.jobs[0].monthlySalary).toBe(11_000);
+      expect(read().draft.appointments[0].monthlySalary).toBe(11_000);
       expect(read().dirty).toBe(true);
       expect(
         screen.queryByRole('button', { name: '✓ Saved' })
       ).not.toBeInTheDocument();
       expect(server.read().requests).toHaveLength(1);
       expect(server.read().reloads).toBe(0);
-      expect(server.read().stored!.jobs[0].monthlySalary).toBe(
+      expect(server.read().stored!.appointments[0].monthlySalary).toBe(
         outcome === 'failure' ? 10_000 : 11_000
       );
       expect(logger).toHaveBeenCalledWith('Projection request failed', {
@@ -195,7 +199,7 @@ describe('projection saving through the workspace', () => {
       saving: false,
     });
     await user.click(screen.getByRole('button', { name: 'Close' }));
-    expect(read().draft.jobs[0].monthlySalary).toBe(11_000);
+    expect(read().draft.appointments[0].monthlySalary).toBe(11_000);
     await applySalary(user, '144000');
     await user.click(saveButton());
     await screen.findByRole('dialog', { name: 'This plan has changed' });
@@ -209,7 +213,7 @@ describe('projection saving through the workspace', () => {
       overwrite: true,
     });
     expect(server.read().stored!.name).toBe(plan.name);
-    expect(server.read().stored!.jobs[0].monthlySalary).toBe(12_000);
+    expect(server.read().stored!.appointments[0].monthlySalary).toBe(12_000);
     expect(server.read().reloads).toBe(0);
   });
 
@@ -248,9 +252,11 @@ describe('projection saving through the workspace', () => {
         await user.click(screen.getByRole('button', { name: 'Overwrite' }));
       }
       await screen.findByRole('button', { name: '✓ Saved' });
-      expect(read().draft.jobs[0].monthlySalary).toBe(10_000);
-      expect(server.read().stored!.jobs[0].monthlySalary).toBe(10_000);
-      expect(server.read().requests[1].jobs[0].monthlySalary).toBe(10_000);
+      expect(read().draft.appointments[0].monthlySalary).toBe(10_000);
+      expect(server.read().stored!.appointments[0].monthlySalary).toBe(10_000);
+      expect(server.read().requests[1].appointments[0].monthlySalary).toBe(
+        10_000
+      );
       expect(server.read().reloads).toBe(0);
     }
   );
@@ -273,11 +279,11 @@ describe('projection saving through the workspace', () => {
       true,
       true,
     ]);
-    expect(server.read().stored!.jobs[0].monthlySalary).toBe(12_000);
+    expect(server.read().stored!.appointments[0].monthlySalary).toBe(12_000);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  it('discards by fetching the latest document and retaining a valid section and project', async () => {
+  it('discards by fetching the latest document and retaining a valid section and source', async () => {
     const { server, user } = openPreview();
     await applySalary(user, '132000');
     act(() => server.editRemotely());
@@ -288,7 +294,7 @@ describe('projection saving through the workspace', () => {
     expect(server.read().reloads).toBe(1);
     expect(read().draft).toEqual(server.read().stored);
     expect(read().location).toMatchObject({
-      projectId: 2,
+      fundingSourceId: 2,
       section: 'staffing',
     });
   });
@@ -309,7 +315,7 @@ describe('projection saving through the workspace', () => {
       expect(
         screen.queryByRole('button', { name: 'Overwrite' })
       ).not.toBeInTheDocument();
-      expect(read().draft.jobs[0].monthlySalary).toBe(11_000);
+      expect(read().draft.appointments[0].monthlySalary).toBe(11_000);
       expect(read().dirty).toBe(true);
       expect(server.read().requests).toHaveLength(1);
     }
@@ -318,7 +324,7 @@ describe('projection saving through the workspace', () => {
   it('allows same-plan navigation and protects departure from unapplied input with Stay and Discard', async () => {
     const { router, user } = openPreview({ browserHistory: true });
     await screen.findByRole('button', { name: 'Edit salary for Alex Example' });
-    await user.click(screen.getByRole('button', { name: 'Project outlook' }));
+    await user.click(screen.getByRole('button', { name: 'Funding outlook' }));
     expect(
       await screen.findByRole('heading', { name: 'Project B by month' })
     ).toBeInTheDocument();
@@ -363,20 +369,20 @@ describe('projection saving through the workspace', () => {
       await screen.findByRole('dialog', { name: 'Leave while saving?' })
     ).toHaveTextContent(/may still complete/i);
     await user.click(screen.getByRole('button', { name: 'Stay' }));
-    expect(read().draft.jobs[0].monthlySalary).toBe(11_000);
+    expect(read().draft.appointments[0].monthlySalary).toBe(11_000);
     await user.click(screen.getByRole('button', { name: 'Leave preview' }));
     await user.click(
       await screen.findByRole('button', { name: 'Leave anyway' })
     );
     await screen.findByRole('heading', { name: 'Outside the plan' });
     await act(async () => server.finishNextSave());
-    expect(server.read().stored!.jobs[0].monthlySalary).toBe(11_000);
+    expect(server.read().stored!.appointments[0].monthlySalary).toBe(11_000);
     await user.click(
       screen.getByRole('button', { name: 'Return to saved plan' })
     );
     await screen.findByRole('button', { name: 'Edit salary for Alex Example' });
     expect(read().dirty).toBe(false);
-    expect(read().draft.jobs[0].monthlySalary).toBe(11_000);
+    expect(read().draft.appointments[0].monthlySalary).toBe(11_000);
   });
 
   it('does not replace an active draft or its save token when Query cache refreshes', async () => {
@@ -400,7 +406,10 @@ describe('projection saving through the workspace', () => {
           <ProjectionWorkspace
             onNavigate={onNavigate}
             ref={ref}
-            search={{ ...(editing ? { job: 101 } : {}), section: 'staffing' }}
+            search={{
+              ...(editing ? { appointment: 101 } : {}),
+              section: 'staffing',
+            }}
           />
         </ProjectionSessionProvider>
       );
@@ -430,7 +439,9 @@ describe('projection saving through the workspace', () => {
         screen.getByRole('heading', { name: plan.name })
       ).toBeInTheDocument()
     );
-    expect(ref.current!.read().draft.jobs[0].monthlySalary).toBe(11_000);
+    expect(ref.current!.read().draft.appointments[0].monthlySalary).toBe(
+      11_000
+    );
     expect(ref.current!.read().dirty).toBe(true);
     await user.click(saveButton());
     await screen.findByRole('dialog', { name: 'This plan has changed' });

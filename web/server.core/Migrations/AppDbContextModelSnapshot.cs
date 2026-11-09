@@ -264,6 +264,10 @@ namespace server.core.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("Appointments")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -274,12 +278,12 @@ namespace server.core.Migrations
                     b.Property<Guid?>("CreationKey")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<int>("HistoryMonths")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Jobs")
+                    b.Property<string>("FundingSources")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("HistoryMonths")
+                        .HasColumnType("int");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -290,10 +294,6 @@ namespace server.core.Migrations
                         .IsRequired()
                         .HasMaxLength(8)
                         .HasColumnType("nvarchar(8)");
-
-                    b.Property<string>("Projects")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("SeededAt")
                         .HasColumnType("datetime2");

@@ -1,5 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useBlocker } from '@tanstack/react-router';
+import { useStore } from '@tanstack/react-form';
+import { useAppForm } from '@/shared/forms/formContext.tsx';
+import {
+  FundingSourcesEditor,
+  type FundingSourcesEditorHandle,
+} from '@/components/projections/FundingSourcesEditor.tsx';
+import { AppointmentFundingStatus } from '@/components/projections/AppointmentFundingStatus.tsx';
+import {
+  selectInitialSources,
+  sourceLabel,
+  sourcePlanningBalance,
+  type SourceOperation,
+} from '@/lib/projectionSources.ts';
 import { ProjectionDialog } from '@/components/projections/ProjectionDialog.tsx';
 import { SalaryEditor } from '@/components/projections/SalaryEditor.tsx';
 import { HttpError } from '@/lib/api.ts';
@@ -7,8 +20,8 @@ import { formatCurrency } from '@/lib/currency.ts';
 import { computePiProjection } from '@/lib/piProjection.ts';
 import {
   createProjectionSession,
-  getProjectOutlook,
-  setJobMonthlySalary,
+  getFundingSourceOutlook,
+  setAppointmentMonthlySalary,
   type ProjectionSession,
 } from '@/lib/projectionWorkspace.ts';
 import {
@@ -18,7 +31,7 @@ import {
   type Projection,
 } from '@/queries/projections.ts';
 
-const steps = ['Plan', 'Staffing', 'Review'];
+const steps = ['Funding sources', 'Staffing', 'Review'];
 
 export function NewProjectionWizard({
   iamId,
@@ -29,11 +42,20 @@ export function NewProjectionWizard({
   onCancel: () => void;
   onCreated: (saved: Projection) => Promise<void>;
 }) {
-  const [name, setName] = useState('');
-  const [historyMonths, setHistoryMonths] = useState(3);
+  const form = useAppForm({
+    defaultValues: { historyMonths: 3, name: '' },
+    onSubmit: async () => {
+      await continueSetup();
+    },
+  });
+  const { historyMonths, name } = useStore(form.store, (state) => state.values);
+  const [selectedSourceIds, setSelectedSourceIds] = useState<number[]>([]);
+  const [rosterSelected, setRosterSelected] = useState(false);
+  const currentSession = useRef<ProjectionSession | null>(null);
+  const sourceEditorRef = useRef<FundingSourcesEditorHandle>(null);
   const [step, setStep] = useState(0);
   const [session, setSession] = useState<ProjectionSession | null>(null);
-  const [jobId, setJobId] = useState<number | null>(null);
+  const [appointmentId, setAppointmentId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] =
@@ -44,9 +66,18 @@ export function NewProjectionWizard({
   const heading = useRef<HTMLHeadingElement>(null);
   const create = useCreateProjectionDraft(iamId);
   const draft = session?.draft;
-  const selectedJob = draft?.jobs.find((job) => job.id === jobId);
+  const selectedAppointment = draft?.appointments.find(
+    (appointment) => appointment.id === appointmentId
+  );
   const hasWork = () =>
-    Boolean(name || historyMonths !== 3 || session || loading || submitted);
+    Boolean(
+      name ||
+        historyMonths !== 3 ||
+        session ||
+        loading ||
+        submitted ||
+        sourceEditorRef.current?.read()?.hasChanges
+    );
   const blocker = useBlocker({
     enableBeforeUnload: hasWork,
     shouldBlockFn: ({ current, next }) =>
@@ -64,12 +95,51 @@ export function NewProjectionWizard({
     heading.current?.focus();
   }, [step]);
 
+  function updateSession(next: ProjectionSession) {
+    currentSession.current = next;
+    setSession(next);
+  }
+
+  function applySourceOperation(operation: SourceOperation) {
+    const previous = currentSession.current!;
+    const result = operation(previous);
+    if (result.ok) {
+      updateSession(result.session);
+      if (!rosterSelected) {
+        const fundingSources = result.session.draft.fundingSources;
+        setSelectedSourceIds((ids) => [
+          ...ids.filter((id) =>
+            fundingSources.some((source) => source.id === id)
+          ),
+          ...fundingSources
+            .filter(
+              (source) =>
+                !previous.draft.fundingSources.some(
+                  ({ id }) => id === source.id
+                )
+            )
+            .map(({ id }) => id),
+        ]);
+      }
+    }
+    return result;
+  }
+
   async function continueSetup() {
     if (requestPending.current || !name.trim()) {
       return;
     }
     setError(null);
     if (session) {
+      if (!rosterSelected) {
+        const selected = selectInitialSources(session, selectedSourceIds);
+        if (!selected.ok) {
+          setError(selected.error);
+          return;
+        }
+        updateSession(selected.session);
+        setRosterSelected(true);
+      }
       setStep(1);
       return;
     }
@@ -80,8 +150,8 @@ export function NewProjectionWizard({
       if (!mounted.current) {
         return;
       }
-      setSession(createProjectionSession({ ...seed, name: name.trim() }));
-      setStep(1);
+      updateSession(createProjectionSession({ ...seed, name: name.trim() }));
+      setSelectedSourceIds(seed.fundingSources.map(({ id }) => id));
     } catch {
       if (mounted.current) {
         setError(
@@ -106,8 +176,8 @@ export function NewProjectionWizard({
       structuredClone({
         creationKey: crypto.randomUUID(),
         draft: {
-          jobs: draft.jobs,
-          projects: draft.projects,
+          appointments: draft.appointments,
+          fundingSources: draft.fundingSources,
           seededAt: draft.seededAt,
         },
         historyMonths,
@@ -178,14 +248,29 @@ export function NewProjectionWizard({
           <PlanStep
             historyMonths={historyMonths}
             name={name}
-            onContinue={continueSetup}
-            onHistoryMonthsChange={setHistoryMonths}
-            onNameChange={setName}
+            onContinue={() => form.handleSubmit()}
+            onHistoryMonthsChange={(value) =>
+              form.setFieldValue('historyMonths', value)
+            }
+            onNameChange={(value) => form.setFieldValue('name', value)}
             seeded={Boolean(session)}
           />
         )}
+        {step === 0 && session && (
+          <FundingSourcesEditor
+            iamId={iamId}
+            initialSelection={
+              rosterSelected
+                ? undefined
+                : { ids: selectedSourceIds, onChange: setSelectedSourceIds }
+            }
+            onOperation={applySourceOperation}
+            ref={sourceEditorRef}
+            session={session}
+          />
+        )}
         {step === 1 && draft && (
-          <StaffingStep draft={draft} onEdit={setJobId} />
+          <StaffingStep draft={draft} onEdit={setAppointmentId} />
         )}
         {step === 2 && draft && (
           <ReviewStep draft={draft} historyMonths={historyMonths} name={name} />
@@ -226,7 +311,11 @@ export function NewProjectionWizard({
               form="projection-setup-plan"
               type="submit"
             >
-              {loading ? 'Loading snapshot...' : 'Continue'}
+              {loading
+                ? 'Loading snapshot...'
+                : session
+                  ? 'Continue'
+                  : 'Load funding sources'}
             </button>
           ) : step === 1 ? (
             <button
@@ -253,19 +342,19 @@ export function NewProjectionWizard({
         </div>
       </div>
 
-      {selectedJob && session && (
+      {selectedAppointment && session && (
         <SalaryEditor
-          job={selectedJob}
-          key={selectedJob.id}
+          appointment={selectedAppointment}
+          key={selectedAppointment.id}
           onApply={(change) => {
-            const updated = setJobMonthlySalary(session, change);
+            const updated = setAppointmentMonthlySalary(session, change);
             if (updated.ok) {
-              setSession(updated.session);
+              updateSession(updated.session);
             } else {
               setError(updated.error);
             }
           }}
-          onClose={() => setJobId(null)}
+          onClose={() => setAppointmentId(null)}
           snapshotMonth={session.draft.seededAt.slice(0, 7)}
         />
       )}
@@ -356,36 +445,47 @@ function StaffingStep({
   onEdit,
 }: {
   draft: Projection;
-  onEdit: (jobId: number) => void;
+  onEdit: (appointmentId: number) => void;
 }) {
+  const funding = useMemo(
+    () => computePiProjection(draft).appointmentFunding,
+    [draft]
+  );
   return (
     <div className="mt-5 space-y-4">
       <p>Review full-time salary rates before creating the plan.</p>
-      {draft.jobs.length === 0 && <p>No appointments in this snapshot.</p>}
-      {draft.jobs.map((job) => (
+      {draft.appointments.length === 0 && (
+        <p>No appointments in this snapshot.</p>
+      )}
+      {draft.appointments.map((appointment) => (
         <article
           className="rounded-box border border-base-300 p-5"
-          key={job.id}
+          key={appointment.id}
         >
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <h3 className="text-lg font-bold">{job.name}</h3>
+              <h3 className="text-lg font-bold">{appointment.name}</h3>
               <p className="text-sm">
-                {job.title} · {job.fte * 100}% appointment FTE
+                {appointment.title} · {appointment.fte * 100}% appointment FTE
               </p>
               <p className="mt-3">
-                {job.monthlySalary === null
+                {appointment.monthlySalary === null
                   ? 'Salary needs input'
-                  : `${formatCurrency(job.monthlySalary * 12)} per year at full time`}
+                  : `${formatCurrency(appointment.monthlySalary * 12)} per year at full time`}
               </p>
+              <AppointmentFundingStatus
+                appointment={appointment}
+                months={funding}
+                snapshotMonth={draft.seededAt.slice(0, 7)}
+              />
             </div>
             <button
               className="btn btn-outline"
-              id={`salary-job-${job.id}`}
-              onClick={() => onEdit(job.id)}
+              id={`salary-appointment-${appointment.id}`}
+              onClick={() => onEdit(appointment.id)}
               type="button"
             >
-              Edit salary for {job.name}
+              Edit salary for {appointment.name}
             </button>
           </div>
         </article>
@@ -407,33 +507,37 @@ function ReviewStep({
   return (
     <div className="mt-5">
       <h3 className="text-xl font-bold">{name.trim()}</h3>
-      <p className="mt-2">Fixed snapshot {draft.seededAt.slice(0, 10)}.</p>
+      <p className="mt-2">
+        Plan started {draft.seededAt.slice(0, 10)}. Source capture dates are
+        shown below.
+      </p>
       <p className="mt-1 text-sm">{historyMonths}-month spending history.</p>
-      <h3 className="mt-6 text-xl font-bold">Project outlook</h3>
-      {draft.projects.length === 0 && (
-        <p className="mt-3">No eligible projects in this snapshot.</p>
+      <h3 className="mt-6 text-xl font-bold">Funding outlook</h3>
+      {draft.fundingSources.length === 0 && (
+        <p className="mt-3">No eligible funding sources in this snapshot.</p>
       )}
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
-        {draft.projects.map((project) => {
-          const months = getProjectOutlook(results.rows, project.id);
-          const snapshotBalance = project.budgets.reduce(
-            (sum, budget) =>
-              sum + budget.budget - budget.spentToDate - budget.committed,
-            0
-          );
+        {draft.fundingSources.map((source) => {
+          const months = getFundingSourceOutlook(results.rows, source.id);
+          const snapshotBalance = sourcePlanningBalance(source);
           const endBalance = months.at(-1)?.remaining ?? snapshotBalance;
           return (
             <article
               className="rounded-box border border-base-300 p-5"
-              key={project.id}
+              key={source.id}
             >
-              <h4 className="text-lg font-bold">{project.projectName}</h4>
+              <h4 className="text-lg font-bold">{sourceLabel(source)}</h4>
               <p className="mt-1 text-sm">
-                Through {project.endDate ?? 'the forecast horizon'}
+                {source.sourceKind === 'Planned'
+                  ? 'Planned funding'
+                  : `Captured ${source.capturedAt.slice(0, 10)}`}
+              </p>
+              <p className="mt-1 text-sm">
+                Through {source.endDate ?? 'the forecast horizon'}
               </p>
               <dl className="mt-4 space-y-2 text-sm">
                 <div className="flex justify-between gap-3">
-                  <dt>Snapshot balance</dt>
+                  <dt>Planning balance</dt>
                   <dd>{formatCurrency(snapshotBalance)}</dd>
                 </div>
                 <div className="flex justify-between gap-3">

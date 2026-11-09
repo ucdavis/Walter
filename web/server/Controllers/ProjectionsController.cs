@@ -28,14 +28,17 @@ public sealed class ProjectionsController(
     private const int OverwriteAttempts = 3;
 
     public sealed record ProjectionSummary(int Id, string Name, DateTime SeededAt, string? UpdatedBy, DateTime UpdatedAt);
-    public sealed record ProjectionSnapshotDraft(DateTime? SeededAt, List<ProjectionProject>? Projects, List<ProjectionJob>? Jobs);
-    public sealed record CreateProjectionRequest(string Name, int HistoryMonths, ProjectionSnapshotDraft? Draft = null, Guid? CreationKey = null);
+    public sealed record ProjectionSnapshotDraft(DateTime? SeededAt, List<ProjectionFundingSource>? FundingSources, List<ProjectionAppointment>? Appointments);
+    public sealed record CreateProjectionRequest(string Name, int HistoryMonths, ProjectionSnapshotDraft? Draft, Guid? CreationKey);
     public sealed record DuplicateProjectionRequest(string Name, Guid CreationKey);
-    public sealed record SaveProjectionRequest(string Name, int HistoryMonths, List<ProjectionProject> Projects,
-        List<ProjectionJob> Jobs, DateTime? ExpectedUpdatedAt = null, DateTime? ExpectedSeededAt = null, bool Overwrite = false);
+    public sealed record SaveProjectionRequest(string Name, int HistoryMonths, List<ProjectionFundingSource> FundingSources,
+        List<ProjectionAppointment> Appointments, DateTime? ExpectedUpdatedAt = null, DateTime? ExpectedSeededAt = null, bool Overwrite = false);
     public sealed record HistoryMonthsRequest(int HistoryMonths, DateTime? ExpectedUpdatedAt = null);
     public sealed record ProjectionConflict(string Code, string Message);
     public sealed record ProjectionLookups(IReadOnlyList<JobCodeRecord> JobCodes, IReadOnlyList<string> ExpenditureCategories);
+    public sealed record ProjectionSourceKey(string ProjectNumber, string? TaskNumber);
+    public sealed record ProjectionSourceSummary(string ProjectNumber, string ProjectName, string? TaskNumber, string? TaskName);
+    public sealed record ImportProjectionSourcesRequest(int HistoryMonths, List<ProjectionSourceKey>? Sources);
 
     [HttpGet("by-iam/{iamId}")]
     public async Task<IActionResult> ListByIam(string iamId, CancellationToken ct)
@@ -64,16 +67,48 @@ public sealed class ProjectionsController(
         return Ok(draft);
     }
 
-    /// <summary>Creates a reviewed snapshot without reseeding, or captures fresh inputs for older name/history-only callers.</summary>
+    /// <summary>Lists currently eligible tasks within the authorized PI portfolio for fresh source selection.</summary>
+    [HttpGet("by-iam/{iamId}/sources")]
+    [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+    public async Task<IActionResult> Sources(string iamId, CancellationToken ct)
+    {
+        var (piEmployeeId, error) = await ResolvePiAsync(iamId, ct);
+        if (error is not null) return error;
+        var sources = await seeder.CaptureSourcesAsync(piEmployeeId!, 3, User.GetUserIdentifier(), User.GetEmulatingUser(), ct);
+        return Ok(sources.Select(p => new ProjectionSourceSummary(p.ProjectNumber!, p.ProjectName, p.TaskNumber, p.TaskName)).ToList());
+    }
+
+    /// <summary>Imports selected current task financials only; client assignment of local IDs cannot refresh staffing or persist a plan.</summary>
+    [HttpPost("by-iam/{iamId}/sources/import")]
+    [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+    public async Task<IActionResult> ImportSources(string iamId, ImportProjectionSourcesRequest request, CancellationToken ct)
+    {
+        if (!Windows.Contains(request.HistoryMonths)) return BadRequest("HistoryMonths must be 3, 6, or 12.");
+        if (request.Sources is null || request.Sources.Count == 0
+            || request.Sources.Any(s => s is null || string.IsNullOrWhiteSpace(s.ProjectNumber)))
+            return BadRequest("Select at least one project/task source.");
+        var selectedKeys = request.Sources.Select(s => ProjectionSeedPolicy.TaskKey(s.ProjectNumber, s.TaskNumber)).ToList();
+        if (selectedKeys.Distinct().Count() != selectedKeys.Count) return BadRequest("Each task may be selected only once.");
+        var (piEmployeeId, error) = await ResolvePiAsync(iamId, ct);
+        if (error is not null) return error;
+        var sources = await seeder.CaptureSourcesAsync(piEmployeeId!, request.HistoryMonths,
+            User.GetUserIdentifier(), User.GetEmulatingUser(), ct);
+        var available = sources.ToDictionary(p => ProjectionSeedPolicy.TaskKey(p.ProjectNumber, p.TaskNumber));
+        // Validate the complete selection against this fresh authorized read; never return a partial import.
+        if (selectedKeys.Any(k => !available.ContainsKey(k))) return BadRequest("A selected source is no longer available in this PI's portfolio.");
+        return Ok(selectedKeys.Select(k => available[k]).ToList());
+    }
+
+    /// <summary>Creates the reviewed snapshot without fetching new source or personnel data.</summary>
     [HttpPost("by-iam/{iamId}")]
     public async Task<IActionResult> Create(string iamId, CreateProjectionRequest request, CancellationToken ct)
     {
         if (!ValidName(request.Name)) return BadRequest("Name must contain 1 to 200 characters and cannot be blank.");
         if (!Windows.Contains(request.HistoryMonths)) return BadRequest("HistoryMonths must be 3, 6, or 12.");
-        if (request.CreationKey == Guid.Empty || (request.Draft is not null && request.CreationKey is null))
+        if (request.CreationKey is null || request.CreationKey == Guid.Empty)
             return BadRequest("A nonempty CreationKey is required when creating a reviewed draft.");
-        if (request.Draft is not null && !ValidDraft(request.Draft))
-            return BadRequest("Draft requires an exact UTC SeededAt, nonnull collections, unique positive project/job IDs, and valid funding references.");
+        if (request.Draft is null || !ValidDraft(request.Draft))
+            return BadRequest("Draft requires an exact UTC SeededAt, nonnull collections, unique positive funding source/appointment IDs, and valid allocation references.");
         var (piEmployeeId, error) = await ResolvePiAsync(iamId, ct);
         if (error is not null) return error;
 
@@ -86,10 +121,7 @@ public sealed class ProjectionsController(
             HistoryMonths = request.HistoryMonths,
             CreationKey = request.CreationKey,
         };
-        if (request.Draft is null)
-            await seeder.SeedAsync(projection, request.HistoryMonths, User.GetUserIdentifier(), User.GetEmulatingUser(), ct);
-        else
-            CopySnapshot(projection, request.Draft);
+        CopySnapshot(projection, request.Draft);
         return await InsertAsync(projection, ct);
     }
 
@@ -112,7 +144,7 @@ public sealed class ProjectionsController(
             HistoryMonths = source.HistoryMonths,
             CreationKey = request.CreationKey,
         };
-        CopySnapshot(projection, new(source.SeededAt, source.Projects, source.Jobs));
+        CopySnapshot(projection, new(source.SeededAt, source.FundingSources, source.Appointments));
         return await InsertAsync(projection, ct);
     }
 
@@ -134,7 +166,8 @@ public sealed class ProjectionsController(
         if (!Windows.Contains(request.HistoryMonths)) return BadRequest("HistoryMonths must be 3, 6, or 12.");
         if (!ValidToken(request.ExpectedUpdatedAt) || !ValidToken(request.ExpectedSeededAt))
             return BadRequest("ExpectedUpdatedAt and ExpectedSeededAt must be exact UTC timestamps from the loaded plan.");
-        if (request.Projects is null || request.Jobs is null) return BadRequest("Projects and Jobs are required.");
+        if (!ValidName(request.Name) || !ValidDraft(new(request.ExpectedSeededAt, request.FundingSources, request.Appointments)))
+            return BadRequest("The plan requires valid sources, unique positive funding source/appointment IDs, and valid allocation references.");
 
         // Detach the submitted lists from tracked entities and reuse this frozen draft on every retry.
         var draft = JsonSerializer.Deserialize<SaveProjectionRequest>(JsonSerializer.Serialize(request))!;
@@ -151,8 +184,8 @@ public sealed class ProjectionsController(
                 draft.Overwrite ? projection.UpdatedAt : draft.ExpectedUpdatedAt!.Value;
             projection.Name = draft.Name;
             projection.HistoryMonths = draft.HistoryMonths;
-            projection.Projects = draft.Projects;
-            projection.Jobs = draft.Jobs;
+            projection.FundingSources = draft.FundingSources;
+            projection.Appointments = draft.Appointments;
             Touch(projection);
             try
             {
@@ -246,22 +279,39 @@ public sealed class ProjectionsController(
 
     private static bool ValidDraft(ProjectionSnapshotDraft draft)
     {
-        if (!ValidToken(draft.SeededAt) || draft.Projects is null || draft.Jobs is null) return false;
-        if (draft.Projects.Any(p => p is null || p.Id <= 0 || p.Budgets is null || p.Actuals is null || p.RunRates is null || p.Expenses is null
+        if (!ValidToken(draft.SeededAt) || draft.FundingSources is null || draft.Appointments is null) return false;
+        if (draft.FundingSources.Any(p => p is null || p.Id <= 0 || p.Budgets is null || p.Actuals is null || p.RunRates is null || p.Expenses is null
                 || p.Budgets.Any(b => b is null) || p.Actuals.Any(a => a is null) || p.RunRates.Any(r => r is null) || p.Expenses.Any(e => e is null))
-            || draft.Jobs.Any(j => j is null || j.Id <= 0 || j.FundingEntries is null || j.FundingEntries.Any(f => f is null))) return false;
-        var projectIds = draft.Projects.Select(p => p.Id).ToHashSet();
-        return projectIds.Count == draft.Projects.Count
-            && draft.Jobs.Select(j => j.Id).Distinct().Count() == draft.Jobs.Count
-            && draft.Jobs.SelectMany(j => j.FundingEntries).All(f => f.ProjectId is null || projectIds.Contains(f.ProjectId.Value));
+            || draft.Appointments.Any(j => j is null || j.Id <= 0 || j.Allocations is null || j.Allocations.Any(f => f is null)
+                || j.SourceProjectNumbers is null || j.SourceProjectNumbers.Any(p => p is null))) return false;
+        if (!ValidSources(draft.FundingSources)) return false;
+        var sourceIds = draft.FundingSources.Select(p => p.Id).ToHashSet();
+        return sourceIds.Count == draft.FundingSources.Count
+            && draft.Appointments.Select(j => j.Id).Distinct().Count() == draft.Appointments.Count
+            && draft.Appointments.SelectMany(j => j.Allocations).All(f => f.FundingSourceId is null || sourceIds.Contains(f.FundingSourceId.Value));
+    }
+
+    /// <summary>Each source has an explicit capture and kind; a captured task may appear only once in a plan.</summary>
+    private static bool ValidSources(List<ProjectionFundingSource> sources)
+    {
+        foreach (var source in sources)
+        {
+            if (!ValidToken(source.CapturedAt) || !Enum.IsDefined(source.SourceKind)
+                || string.IsNullOrWhiteSpace(source.ProjectName) || source.StartDate > source.EndDate) return false;
+            if (source.SourceKind == ProjectionSourceKind.Task && string.IsNullOrWhiteSpace(source.ProjectNumber)) return false;
+            if (source.SourceKind == ProjectionSourceKind.Planned
+                && (source.ProjectNumber is not null || source.TaskNumber is not null || source.StartDate is null)) return false;
+        }
+        var tasks = sources.Where(s => s.SourceKind == ProjectionSourceKind.Task).ToList();
+        return tasks.Select(s => ProjectionSeedPolicy.TaskKey(s.ProjectNumber, s.TaskNumber)).Distinct().Count() == tasks.Count;
     }
 
     private static void CopySnapshot(Projection projection, ProjectionSnapshotDraft snapshot)
     {
         var copy = JsonSerializer.Deserialize<ProjectionSnapshotDraft>(JsonSerializer.Serialize(snapshot))!;
         projection.SeededAt = copy.SeededAt!.Value;
-        projection.Projects = copy.Projects!;
-        projection.Jobs = copy.Jobs!;
+        projection.FundingSources = copy.FundingSources!;
+        projection.Appointments = copy.Appointments!;
     }
 
     private Task<Projection?> FindCreationAsync(string piEmployeeId, Guid? creationKey, CancellationToken ct) =>

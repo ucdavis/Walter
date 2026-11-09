@@ -10,8 +10,8 @@ export interface ProjectionSession {
   revision: number;
 }
 
-export interface SalaryChange {
-  jobId: number;
+export interface AppointmentSalaryChange {
+  appointmentId: number;
   /** Full-time monthly dollars, before FTE and appointment funding shares. */
   monthlySalary: number;
 }
@@ -34,18 +34,18 @@ export function acknowledgeProjectionSave(
         ? saved
         : {
             ...saved,
+            appointments: current.draft.appointments,
+            fundingSources: current.draft.fundingSources,
             historyMonths: current.draft.historyMonths,
-            jobs: current.draft.jobs,
             name: current.draft.name,
-            projects: current.draft.projects,
           },
   };
 }
 
 /** Changes the assumed rate from the fixed snapshot onward; captured actuals are untouched. */
-export function setJobMonthlySalary(
+export function setAppointmentMonthlySalary(
   session: ProjectionSession,
-  change: SalaryChange
+  change: AppointmentSalaryChange
 ): { error: string; ok: false } | { ok: true; session: ProjectionSession } {
   if (
     !Number.isFinite(change.monthlySalary) ||
@@ -54,11 +54,13 @@ export function setJobMonthlySalary(
   ) {
     return { error: 'Enter a valid salary of zero or more.', ok: false };
   }
-  const job = session.draft.jobs.find(({ id }) => id === change.jobId);
-  if (!job) {
-    return { error: 'This job is no longer in the plan.', ok: false };
+  const appointment = session.draft.appointments.find(
+    ({ id }) => id === change.appointmentId
+  );
+  if (!appointment) {
+    return { error: 'This appointment is no longer in the plan.', ok: false };
   }
-  if (job.monthlySalary === change.monthlySalary) {
+  if (appointment.monthlySalary === change.monthlySalary) {
     return { ok: true, session };
   }
   return {
@@ -67,8 +69,8 @@ export function setJobMonthlySalary(
       ...session,
       draft: {
         ...session.draft,
-        jobs: session.draft.jobs.map((candidate) =>
-          candidate.id === change.jobId
+        appointments: session.draft.appointments.map((candidate) =>
+          candidate.id === change.appointmentId
             ? { ...candidate, monthlySalary: change.monthlySalary }
             : candidate
         ),
@@ -79,16 +81,16 @@ export function setJobMonthlySalary(
 }
 
 export interface ProjectionLocation {
+  appointmentId: number | null;
+  fundingSourceId: number | null;
   issues: string[];
-  jobId: number | null;
-  projectId: number | null;
-  section: 'overview' | 'staffing' | null;
+  section: 'overview' | 'funding' | 'staffing' | null;
 }
 
 export interface ProjectionNavigation {
-  job?: number;
-  project?: number;
-  section: 'overview' | 'staffing';
+  appointment?: number;
+  section: 'overview' | 'funding' | 'staffing';
+  source?: number;
 }
 
 export function readProjectionLocation(
@@ -96,7 +98,7 @@ export function readProjectionLocation(
   plan: Projection
 ): ProjectionLocation {
   const issues: string[] = [];
-  const targetId = (key: 'job' | 'project') => {
+  const parseTarget = (key: 'appointment' | 'source') => {
     if (search[key] === undefined) {
       return null;
     }
@@ -111,37 +113,61 @@ export function readProjectionLocation(
     }
     return Number(value);
   };
-  const jobId = targetId('job');
-  const projectId = targetId('project');
+  const appointmentId = parseTarget('appointment');
+  const fundingSourceId = parseTarget('source');
   const section =
-    search.section ?? (search.job === undefined ? 'overview' : 'staffing');
-  if (section !== 'overview' && section !== 'staffing') {
+    search.section ??
+    (search.appointment === undefined ? 'overview' : 'staffing');
+  if (
+    section !== 'overview' &&
+    section !== 'funding' &&
+    section !== 'staffing'
+  ) {
     issues.push('This plan section does not exist.');
   }
-  if (jobId !== null && !plan.jobs.some(({ id }) => id === jobId)) {
-    issues.push(`Job ${jobId} is not in this plan.`);
+  if (
+    appointmentId !== null &&
+    !plan.appointments.some(({ id }) => id === appointmentId)
+  ) {
+    issues.push(`Appointment ${appointmentId} is not in this plan.`);
   }
-  if (projectId !== null && !plan.projects.some(({ id }) => id === projectId)) {
-    issues.push(`Project ${projectId} is not in this plan.`);
+  if (
+    fundingSourceId !== null &&
+    !plan.fundingSources.some(({ id }) => id === fundingSourceId)
+  ) {
+    issues.push(`Funding source ${fundingSourceId} is not in this plan.`);
   }
-  if (jobId !== null && section !== 'staffing') {
+  if (appointmentId !== null && section !== 'staffing') {
     issues.push('A salary editor must be opened in Staffing.');
   }
   return {
+    appointmentId,
+    fundingSourceId,
     issues,
-    jobId,
-    projectId,
-    section: section === 'overview' || section === 'staffing' ? section : null,
+    section:
+      section === 'overview' || section === 'funding' || section === 'staffing'
+        ? section
+        : null,
   };
 }
 
 export type ProjectionResults = ReturnType<typeof computePiProjection>;
 
 export interface PendingSalaryEditor {
+  appointmentId: number;
   hasChanges: boolean;
-  jobId: number;
+  kind?: 'salary';
   validationMessage: string | null;
 }
+
+export interface PendingSourceEditor {
+  fundingSourceId: number | null;
+  hasChanges: boolean;
+  kind: 'source';
+  validationMessage: string | null;
+}
+
+export type PendingProjectionEditor = PendingSalaryEditor | PendingSourceEditor;
 
 export interface ProjectionPersistenceStatus {
   conflict: 'conflict' | 'snapshotChanged' | 'deleted' | null;
@@ -152,13 +178,28 @@ export interface ProjectionPersistenceStatus {
   saving: boolean;
 }
 
-/** Salary is the only editable assumption in this stage. Restoring it clears dirty status. */
-export function isProjectionDirty(session: ProjectionSession): boolean {
-  const original = new Map(
-    session.baseline.jobs.map((job) => [job.id, job.monthlySalary])
+function serializeEditableProjection(plan: Projection) {
+  const document = {
+    appointments: plan.appointments,
+    fundingSources: plan.fundingSources,
+    historyMonths: plan.historyMonths,
+    name: plan.name,
+  };
+  return JSON.stringify(document, (_key, value) =>
+    value && typeof value === 'object' && !Array.isArray(value)
+      ? Object.fromEntries(
+          Object.entries(value).sort(([a], [b]) => a.localeCompare(b))
+        )
+      : value
   );
-  return session.draft.jobs.some(
-    (job) => job.monthlySalary !== original.get(job.id)
+}
+
+/** Compare editable content, excluding server audit tokens and local revision bookkeeping. */
+export function isProjectionDirty(session: ProjectionSession): boolean {
+  return (
+    session.draft !== session.baseline &&
+    serializeEditableProjection(session.draft) !==
+      serializeEditableProjection(session.baseline)
   );
 }
 
@@ -167,7 +208,7 @@ export function readProjectionWorkspace(
   session: ProjectionSession,
   location: ProjectionLocation,
   results: ProjectionResults,
-  pendingEditor: PendingSalaryEditor | null,
+  pendingEditor: PendingProjectionEditor | null,
   persistence: ProjectionPersistenceStatus | null = null
 ) {
   return structuredClone({
@@ -186,13 +227,16 @@ export type ProjectionWorkspaceSnapshot = ReturnType<
 >;
 
 /** Shows the snapshot month onward; prior-month costs remain in the saved plan and calculator. */
-export function getProjectOutlook(rows: PiProjectionRow[], projectId: number) {
+export function getFundingSourceOutlook(
+  rows: PiProjectionRow[],
+  fundingSourceId: number
+) {
   const months = new Map<
     string,
     { actual: number; forecast: number; month: string; remaining: number }
   >();
   for (const row of rows) {
-    if (row.projectId !== projectId || row.kind === 'actual') {
+    if (row.fundingSourceId !== fundingSourceId || row.kind === 'actual') {
       continue;
     }
     const month = months.get(row.month) ?? {

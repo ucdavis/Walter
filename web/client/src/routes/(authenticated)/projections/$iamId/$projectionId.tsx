@@ -22,7 +22,7 @@ export const Route = createFileRoute(
 )({
   component: RouteComponent,
   errorComponent: ProjectionErrorBoundary,
-  // Section and stable project/job targets belong to the URL, not the loader identity.
+  // Section and stable source/appointment targets belong to the URL, not the loader identity.
   validateSearch: (search: Record<string, unknown>) => search,
   // Validate and load on entry, without letting background route errors unmount an active draft.
   gcTime: 0,
@@ -87,6 +87,7 @@ function RouteComponent() {
           </Link>
         </div>
         <ProjectionWorkspace
+          iamId={iamId}
           onNavigate={(location, replace = false) => {
             void navigate({ replace, search: () => location });
           }}

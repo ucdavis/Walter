@@ -39,11 +39,17 @@ export interface ProjectionExpense {
   startMonth: string | null;
 }
 
-export interface ProjectionProject {
+export interface ProjectionFundingSource {
   actuals: ProjectionActual[];
   awardName: string | null;
   awardNumber: string | null;
+  /** Plan-only adjustment; captured budget, spending, and commitments stay intact. */
+  balanceAdjustment: number;
   budgets: ProjectionBudget[];
+  /** Exact UTC capture time of this source's financial inputs. */
+  capturedAt: string;
+  capturedEndDate: string | null;
+  capturedStartDate: string | null;
   endDate: string | null;
   expenses: ProjectionExpense[];
   id: number;
@@ -52,21 +58,23 @@ export interface ProjectionProject {
   projectNumber: string | null;
   projectType: string | null;
   runRates: ProjectionRunRate[];
+  sourceKind: 'Task' | 'Planned';
   startDate: string | null;
   taskName: string | null;
   taskNumber: string | null;
 }
 
-export interface ProjectionFundingEntry {
+export interface ProjectionFundingAllocation {
   endDate: string | null;
+  /** Null means funded outside this plan's sources: counted as funded, not charged. */
+  fundingSourceId: number | null;
   isSeeded: boolean;
   percent: number;
-  /** Null means funded outside this PI's projects: counted as funded, not charged. */
-  projectId: number | null;
   startDate: string | null;
 }
 
-export interface ProjectionJob {
+export interface ProjectionAppointment {
+  allocations: ProjectionFundingAllocation[];
   /** Fraction of salary; defaults to zero when no source rate was supplied. */
   cbrRate: number;
   colaMonth: number;
@@ -76,9 +84,9 @@ export interface ProjectionJob {
   /** Appointment's monthly cost, split by funding share without FTE or COLA scaling. */
   feeRemissionMonthly: number | null;
   fte: number;
-  fundingEntries: ProjectionFundingEntry[];
+  hasUnmatchedFunding: boolean;
   id: number;
-  /** Imported jobs use snapshot-based pay; planned future hires use their entered starting rate. */
+  /** Imported appointments use snapshot-based pay; planned future hires use their entered starting rate. */
   isSeeded: boolean;
   jobCode: string | null;
   /** 1.0-FTE monthly rate at the snapshot, or at a planned future hire's start; null needs input. */
@@ -86,21 +94,23 @@ export interface ProjectionJob {
   name: string;
   positionNumber: string | null;
   rateSet: string;
+  /** Upstream projects paying this appointment, before the wizard selects tasks. */
+  sourceProjectNumbers: string[];
   startDate: string | null;
   title: string | null;
   vacationAccrualRate: number;
 }
 
 export interface Projection {
+  appointments: ProjectionAppointment[];
   createdAt: string;
   createdBy: string | null;
+  fundingSources: ProjectionFundingSource[];
   historyMonths: number;
   id: number;
-  jobs: ProjectionJob[];
   name: string;
   piEmployeeId: string;
-  projects: ProjectionProject[];
-  /** The projection's "now": all calculation is relative to this snapshot. */
+  /** Original plan capture and salary base. */
   seededAt: string;
   updatedAt: string;
   updatedBy: string | null;
@@ -147,18 +157,9 @@ export const projectionLookupsQueryOptions = () => ({
   staleTime: 60 * 60 * 1000, // 1 hour; reference data
 });
 
-export const createProjection = (
-  iamId: string,
-  body: { historyMonths: number; name: string }
-) =>
-  postJson<Projection>(
-    `/api/projections/by-iam/${encodeURIComponent(iamId)}`,
-    body
-  );
-
 export type CreateProjectionDraftRequest = {
   creationKey: string;
-  draft: Pick<Projection, 'seededAt' | 'projects' | 'jobs'>;
+  draft: Pick<Projection, 'seededAt' | 'fundingSources' | 'appointments'>;
   historyMonths: number;
   name: string;
 };
@@ -172,6 +173,34 @@ export type DuplicateProjectionRequest = {
 export const fetchProjectionSeed = (iamId: string, historyMonths: number) =>
   fetchJson<Projection>(
     `/api/projections/by-iam/${encodeURIComponent(iamId)}/seed?historyMonths=${historyMonths}`
+  );
+
+export interface ProjectionSourceSummary {
+  projectName: string;
+  projectNumber: string;
+  taskName: string | null;
+  taskNumber: string | null;
+}
+
+export const projectionSourceCatalogQueryOptions = (iamId: string) => ({
+  queryFn: ({ signal }: { signal: AbortSignal }) =>
+    fetchJson<ProjectionSourceSummary[]>(
+      `/api/projections/by-iam/${encodeURIComponent(iamId)}/sources`,
+      {},
+      signal
+    ),
+  queryKey: ['projections', 'sources', iamId] as const,
+});
+
+/** Imports only selected financial inputs; existing employee assumptions stay in the draft. */
+export const importProjectionSources = (
+  iamId: string,
+  historyMonths: number,
+  sources: Pick<ProjectionSourceSummary, 'projectNumber' | 'taskNumber'>[]
+) =>
+  postJson<ProjectionFundingSource[]>(
+    `/api/projections/by-iam/${encodeURIComponent(iamId)}/sources/import`,
+    { historyMonths, sources }
   );
 
 async function cacheCreatedProjection(
@@ -238,7 +267,7 @@ export const useDuplicateProjection = (iamId: string, id: number) => {
 
 export type ProjectionDraft = Pick<
   Projection,
-  'historyMonths' | 'jobs' | 'name' | 'projects'
+  'historyMonths' | 'appointments' | 'name' | 'fundingSources'
 >;
 
 export type SaveProjectionRequest = ProjectionDraft & {

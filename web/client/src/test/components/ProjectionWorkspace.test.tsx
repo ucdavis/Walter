@@ -23,7 +23,7 @@ import {
 afterEach(cleanup);
 
 function openPreview(
-  search = '?section=staffing&job=101',
+  search = '?section=staffing&appointment=101',
   plan = createSalaryExample()
 ) {
   const history = createMemoryHistory({
@@ -43,7 +43,7 @@ const editButton = () =>
 describe('projection salary workspace', () => {
   it('starts the outlook at the saved snapshot month while retaining prior spending', async () => {
     const plan = createSalaryExample();
-    openPreview('?section=overview&project=1', plan);
+    openPreview('?section=overview&source=1', plan);
     await screen.findByRole('heading', { name: 'Project A by month' });
     const table = screen.getByRole('table');
     expect(
@@ -58,12 +58,14 @@ describe('projection salary workspace', () => {
       '2026-05',
       '2026-06',
     ]);
-    expect(read().draft.projects[0].actuals).toEqual(plan.projects[0].actuals);
+    expect(read().draft.fundingSources[0].actuals).toEqual(
+      plan.fundingSources[0].actuals
+    );
     expect(read().results.rows).toContainEqual(
       expect.objectContaining({
         actualAmount: 2500,
+        fundingSourceId: 1,
         month: '2025-12',
-        projectId: 1,
       })
     );
   });
@@ -71,7 +73,7 @@ describe('projection salary workspace', () => {
   it('keeps booked costs visible while salary edits change only the remaining snapshot forecast', async () => {
     const history = createMemoryHistory({
       initialEntries: [
-        '/projections-preview.html?example=booked&section=overview&project=1',
+        '/projections-preview.html?example=booked&section=overview&source=1',
       ],
     });
     const router = createProjectionPreviewRouter({
@@ -97,7 +99,7 @@ describe('projection salary workspace', () => {
     expect(
       read().results.rows.find(
         (row) =>
-          row.projectId === 1 &&
+          row.fundingSourceId === 1 &&
           row.month === '2026-01' &&
           row.expenditureCategory === SALARY_CATEGORY
       )
@@ -107,7 +109,7 @@ describe('projection salary workspace', () => {
       remaining: 19_000,
     });
 
-    await user.click(screen.getByRole('button', { name: 'Project outlook' }));
+    await user.click(screen.getByRole('button', { name: 'Funding outlook' }));
     await screen.findByRole('heading', { name: 'Project A by month' });
     expect(
       within(january())
@@ -122,12 +124,12 @@ describe('projection salary workspace', () => {
     ).toEqual(['$0.00', '$1,260.00', '$25,340.00']);
     expect(router.state.location.search).toMatchObject({
       example: 'booked',
-      project: 1,
+      source: 1,
     });
 
     await user.click(screen.getByRole('button', { name: 'Save plan' }));
     await waitFor(() => expect(read().dirty).toBe(false));
-    expect(read().draft.projects[0].actuals).toEqual([
+    expect(read().draft.fundingSources[0].actuals).toEqual([
       {
         amount: 1000,
         expenditureCategory: SALARY_CATEGORY,
@@ -141,18 +143,18 @@ describe('projection salary workspace', () => {
     ]);
   });
 
-  it('opens and focuses a direct job link; Cancel discards typing and Apply commits the same operation', async () => {
+  it('opens and focuses a direct appointment link; Cancel discards typing and Apply commits the same operation', async () => {
     const { user } = openPreview();
     await screen.findByRole('dialog');
     expect(salaryInput()).toHaveFocus();
     expect(read().pendingEditor).toEqual({
+      appointmentId: 101,
       hasChanges: false,
-      jobId: 101,
       validationMessage: null,
     });
     await user.clear(salaryInput());
     await user.type(salaryInput(), '132000');
-    expect(read().draft.jobs[0].monthlySalary).toBe(10_000);
+    expect(read().draft.appointments[0].monthlySalary).toBe(10_000);
     expect(read().pendingEditor?.hasChanges).toBe(true);
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
     await waitFor(() =>
@@ -171,7 +173,7 @@ describe('projection salary workspace', () => {
     await user.type(salaryInput(), '132000');
     await user.keyboard('{Enter}');
     await waitFor(() => expect(read().revision).toBe(1));
-    expect(read().draft.jobs[0].monthlySalary).toBe(11_000);
+    expect(read().draft.appointments[0].monthlySalary).toBe(11_000);
     expect(
       read()
         .results.rows.filter((row) => row.kind !== 'actual')
@@ -179,21 +181,21 @@ describe('projection salary workspace', () => {
     ).toBe(true);
     expect(screen.getByRole('status')).toHaveTextContent('Unsaved changes');
     expect(editButton()).toHaveFocus();
-    await user.click(screen.getByRole('button', { name: 'Project outlook' }));
+    await user.click(screen.getByRole('button', { name: 'Funding outlook' }));
     expect(await screen.findByText('Projected shortfall')).toBeInTheDocument();
     expect(screen.getByText('-$500.00')).toBeInTheDocument();
   });
 
   it('rejects blank and invalid annual input, accepts zero, and keeps no-op precision', async () => {
     const plan = createSalaryExample();
-    plan.jobs[0].monthlySalary = 10_000.123_45;
+    plan.appointments[0].monthlySalary = 10_000.123_45;
     const { user } = openPreview(undefined, plan);
     await screen.findByRole('dialog');
     await user.click(screen.getByRole('button', { name: 'Apply' }));
     await waitFor(() =>
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     );
-    expect(read().draft.jobs[0].monthlySalary).toBe(10_000.123_45);
+    expect(read().draft.appointments[0].monthlySalary).toBe(10_000.123_45);
     expect(read().revision).toBe(0);
 
     await user.click(editButton());
@@ -203,7 +205,7 @@ describe('projection salary workspace', () => {
     await waitFor(() =>
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     );
-    expect(read().draft.jobs[0].monthlySalary).toBe(10_000.123_45);
+    expect(read().draft.appointments[0].monthlySalary).toBe(10_000.123_45);
     expect(read().revision).toBe(0);
 
     await user.click(editButton());
@@ -222,11 +224,11 @@ describe('projection salary workspace', () => {
     await user.type(salaryInput(), '0');
     await user.click(screen.getByRole('button', { name: 'Apply' }));
     await waitFor(() => expect(read().revision).toBe(1));
-    expect(read().draft.jobs[0].monthlySalary).toBe(0);
+    expect(read().draft.appointments[0].monthlySalary).toBe(0);
   });
 
-  it('preserves committed salary and project location through Back/Forward and discards a closed editor buffer', async () => {
-    const { history, user } = openPreview('?section=overview&project=2');
+  it('preserves committed salary and source location through Back/Forward and discards a closed editor buffer', async () => {
+    const { history, user } = openPreview('?section=overview&source=2');
     await screen.findByRole('heading', { name: 'Project B by month' });
     await user.click(screen.getByRole('button', { name: 'Staffing' }));
     await user.click(editButton());
@@ -242,7 +244,7 @@ describe('projection salary workspace', () => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     );
     expect(read()).toMatchObject({
-      location: { projectId: 2, section: 'staffing' },
+      location: { fundingSourceId: 2, section: 'staffing' },
       revision: 1,
     });
     await act(async () => history.forward());
@@ -250,11 +252,11 @@ describe('projection salary workspace', () => {
     expect(salaryInput()).toHaveValue('132000.00');
     expect(read().pendingEditor?.hasChanges).toBe(false);
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
-    await user.click(screen.getByRole('button', { name: 'Project outlook' }));
+    await user.click(screen.getByRole('button', { name: 'Funding outlook' }));
     expect(
       await screen.findByRole('heading', { name: 'Project B by month' })
     ).toHaveFocus();
-    expect(read().draft.jobs[0].monthlySalary).toBe(11_000);
+    expect(read().draft.appointments[0].monthlySalary).toBe(11_000);
     await act(async () => history.back());
     await waitFor(() => expect(read().location.section).toBe('staffing'));
     await act(async () => history.forward());
@@ -277,19 +279,23 @@ describe('projection salary workspace', () => {
         />
       </ProjectionSessionProvider>
     );
-    const rendered = render(view('first', { job: 101, section: 'staffing' }));
+    const rendered = render(
+      view('first', { appointment: 101, section: 'staffing' })
+    );
     await user.clear(salaryInput());
     await user.type(salaryInput(), '132000');
     await user.click(screen.getByRole('button', { name: 'Apply' }));
-    rendered.rerender(view('second', { project: 1, section: 'overview' }));
+    rendered.rerender(view('second', { section: 'overview', source: 1 }));
     expect(ref.current!.read()).toMatchObject({ dirty: true, revision: 1 });
-    expect(ref.current!.read().draft.jobs[0].monthlySalary).toBe(11_000);
+    expect(ref.current!.read().draft.appointments[0].monthlySalary).toBe(
+      11_000
+    );
     expect(
       screen.getByRole('heading', { name: 'Project A by month' })
     ).toBeInTheDocument();
   });
 
-  it('treats Escape cancellation like Cancel and restores the job control focus', async () => {
+  it('treats Escape cancellation like Cancel and restores the appointment control focus', async () => {
     openPreview();
     const dialog = await screen.findByRole('dialog');
     fireEvent(dialog, new Event('cancel', { cancelable: true }));
@@ -302,12 +308,18 @@ describe('projection salary workspace', () => {
 
   it.each([
     ['?section=unknown', 'This plan section does not exist.'],
-    ['?section=staffing&job=999', 'Job 999 is not in this plan.'],
-    ['?section=staffing&job=abc', 'The job target is malformed.'],
-    ['?section=overview&project=999', 'Project 999 is not in this plan.'],
-    ['?section=overview&project=-2', 'The project target is malformed.'],
     [
-      '?section=overview&job=101',
+      '?section=staffing&appointment=999',
+      'Appointment 999 is not in this plan.',
+    ],
+    [
+      '?section=staffing&appointment=abc',
+      'The appointment target is malformed.',
+    ],
+    ['?section=overview&source=999', 'Funding source 999 is not in this plan.'],
+    ['?section=overview&source=-2', 'The source target is malformed.'],
+    [
+      '?section=overview&appointment=101',
       'A salary editor must be opened in Staffing.',
     ],
   ])(
@@ -324,9 +336,9 @@ describe('projection salary workspace', () => {
         expect(screen.queryByRole('alert')).not.toBeInTheDocument()
       );
       expect(read().location).toEqual({
+        appointmentId: null,
+        fundingSourceId: null,
         issues: [],
-        jobId: null,
-        projectId: null,
         section: 'overview',
       });
     }

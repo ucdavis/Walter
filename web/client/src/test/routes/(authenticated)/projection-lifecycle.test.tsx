@@ -58,6 +58,9 @@ function handleLifecycle(plans: Projection[] = []) {
     id: 0,
     seededAt: '2026-01-01T00:00:00.1234567Z',
   };
+  for (const source of seed.fundingSources) {
+    source.capturedAt = seed.seededAt;
+  }
   const stored = new Map(plans.map((plan) => [plan.id, structuredClone(plan)]));
   const keys = new Map<string, number>();
   const creates: CreateProjectionDraftRequest[] = [];
@@ -91,8 +94,8 @@ function handleLifecycle(plans: Projection[] = []) {
     return create({
       creationKey: body.creationKey,
       draft: {
-        jobs: stored.get(id)!.jobs,
-        projects: stored.get(id)!.projects,
+        appointments: stored.get(id)!.appointments,
+        fundingSources: stored.get(id)!.fundingSources,
         seededAt: stored.get(id)!.seededAt,
       },
       historyMonths: stored.get(id)!.historyMonths,
@@ -144,10 +147,10 @@ function handleLifecycle(plans: Projection[] = []) {
       const current = stored.get(Number(params.id))!;
       const saved = {
         ...current,
+        appointments: body.appointments,
+        fundingSources: body.fundingSources,
         historyMonths: body.historyMonths,
-        jobs: body.jobs,
         name: body.name,
-        projects: body.projects,
         updatedAt: '2026-02-02T00:00:00.0000002Z',
       };
       stored.set(saved.id, saved);
@@ -176,6 +179,10 @@ async function startWizard(
 }
 
 async function reviewWizard(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(
+    screen.getByRole('button', { name: 'Load funding sources' })
+  );
+  await screen.findByRole('button', { name: 'Continue' });
   await user.click(screen.getByRole('button', { name: 'Continue' }));
   await screen.findByRole('button', { name: 'Edit salary for Alex Example' });
   await user.click(screen.getByRole('button', { name: 'Continue' }));
@@ -194,6 +201,10 @@ describe('projection creation and copies', () => {
         '6'
       );
       expect(api.creates).toHaveLength(0);
+      await user.click(
+        screen.getByRole('button', { name: 'Load funding sources' })
+      );
+      await screen.findByRole('button', { name: 'Continue' });
       await user.click(screen.getByRole('button', { name: 'Continue' }));
       await user.click(
         await screen.findByRole('button', {
@@ -221,8 +232,8 @@ describe('projection creation and copies', () => {
       expect(api.creates[0]).toMatchObject({
         creationKey: expect.any(String),
         draft: {
-          jobs: [{ monthlySalary: 11_000 }],
-          projects: api.seed.projects,
+          appointments: [{ monthlySalary: 11_000 }],
+          fundingSources: api.seed.fundingSources,
           seededAt: api.seed.seededAt,
         },
         historyMonths: 6,
@@ -248,9 +259,9 @@ describe('projection creation and copies', () => {
       await screen.findByRole('button', { name: '✓ Saved' });
       expect(api.updates).toHaveLength(1);
       expect(api.updates[0]).toMatchObject({
+        appointments: [{ monthlySalary: 12_000 }],
         expectedSeededAt: api.seed.seededAt,
         expectedUpdatedAt: '2026-02-01T00:00:00.0000001Z',
-        jobs: [{ monthlySalary: 12_000 }],
       });
       expect(api.creates).toHaveLength(1);
     } finally {
@@ -277,7 +288,9 @@ describe('projection creation and copies', () => {
         screen.getByRole('combobox', { name: 'Averaging window' }),
         '12'
       );
-      await user.click(screen.getByRole('button', { name: 'Continue' }));
+      await user.click(
+        screen.getByRole('button', { name: 'Load funding sources' })
+      );
       await screen.findByRole('alert');
       expect(screen.getByRole('textbox', { name: 'Plan name' })).toHaveValue(
         'Keep my choices'
@@ -285,7 +298,10 @@ describe('projection creation and copies', () => {
       expect(
         screen.getByRole('combobox', { name: 'Averaging window' })
       ).toHaveValue('12');
-      await user.click(screen.getByRole('button', { name: 'Continue' }));
+      await user.click(
+        screen.getByRole('button', { name: 'Load funding sources' })
+      );
+      await user.click(await screen.findByRole('button', { name: 'Continue' }));
       await screen.findByRole('button', {
         name: 'Edit salary for Alex Example',
       });
@@ -378,8 +394,8 @@ describe('projection creation and copies', () => {
       expect(api.stored.size).toBe(2);
       expect(api.stored.get(original.id)).toEqual(original);
       expect(api.stored.get(71)).toMatchObject({
-        jobs: original.jobs,
-        projects: original.projects,
+        appointments: original.appointments,
+        fundingSources: original.fundingSources,
         seededAt: original.seededAt,
       });
     } finally {

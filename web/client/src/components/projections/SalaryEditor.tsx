@@ -7,10 +7,10 @@ import {
 } from 'react';
 import type {
   PendingSalaryEditor,
-  SalaryChange,
+  AppointmentSalaryChange,
 } from '@/lib/projectionWorkspace.ts';
-import type { ProjectionJob } from '@/queries/projections.ts';
-import { getJobSalaryBaseMonth } from '@/lib/piProjection.ts';
+import type { ProjectionAppointment } from '@/queries/projections.ts';
+import { getAppointmentSalaryBaseMonth } from '@/lib/piProjection.ts';
 import { formatCurrency } from '@/lib/currency.ts';
 
 export interface SalaryEditorHandle {
@@ -18,20 +18,22 @@ export interface SalaryEditorHandle {
 }
 
 export function SalaryEditor({
-  job,
+  appointment,
   onApply,
   onClose,
   ref,
   snapshotMonth,
 }: {
-  job: ProjectionJob;
-  onApply: (change: SalaryChange) => void;
+  appointment: ProjectionAppointment;
+  onApply: (change: AppointmentSalaryChange) => void;
   onClose: () => void;
   ref?: Ref<SalaryEditorHandle>;
   snapshotMonth: string;
 }) {
   const initialAnnual =
-    job.monthlySalary === null ? '' : (job.monthlySalary * 12).toFixed(2);
+    appointment.monthlySalary === null
+      ? ''
+      : (appointment.monthlySalary * 12).toFixed(2);
   const [annual, setAnnual] = useState(initialAnnual);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -46,17 +48,23 @@ export function SalaryEditor({
   const hasChanges = annual !== initialAnnual;
   // An unchanged annual display must not round a captured monthly rate on Apply.
   const monthlySalary =
-    amount === Number(initialAnnual) && job.monthlySalary !== null
-      ? job.monthlySalary
+    amount === Number(initialAnnual) && appointment.monthlySalary !== null
+      ? appointment.monthlySalary
       : amount / 12;
 
   useImperativeHandle(ref, () => ({
-    read: () => ({ hasChanges, jobId: job.id, validationMessage }),
+    read: () => ({
+      appointmentId: appointment.id,
+      hasChanges,
+      validationMessage,
+    }),
   }));
 
   useEffect(() => {
     const dialog = dialogRef.current!;
-    const opener = document.getElementById(`salary-job-${job.id}`);
+    const opener = document.getElementById(
+      `salary-appointment-${appointment.id}`
+    );
     dialog.showModal();
     inputRef.current?.focus();
     inputRef.current?.select();
@@ -64,7 +72,7 @@ export function SalaryEditor({
       dialog.close();
       opener?.focus();
     };
-  }, [job.id]);
+  }, [appointment.id]);
 
   return (
     <dialog
@@ -86,17 +94,18 @@ export function SalaryEditor({
             inputRef.current?.focus();
             return;
           }
-          onApply({ jobId: job.id, monthlySalary });
+          onApply({ appointmentId: appointment.id, monthlySalary });
           onClose();
         }}
       >
         <h2 className="text-xl font-bold" id="salary-title">
-          Edit salary for {job.name}
+          Edit salary for {appointment.name}
         </h2>
         <p className="mt-2 text-sm" id="salary-description">
           This is the full-time rate at{' '}
-          {getJobSalaryBaseMonth(job, snapshotMonth)}. Appointment FTE, funding
-          shares, and annual increases determine the forecast.
+          {getAppointmentSalaryBaseMonth(appointment, snapshotMonth)}.
+          Appointment FTE, funding shares, and annual increases determine the
+          forecast.
         </p>
         <label className="label mt-6" htmlFor="annual-salary">
           Full-time annual salary

@@ -49,7 +49,7 @@ public sealed class ProjectionSqlServerTests(ProjectionSqlServerFixture sql) : I
         }, once: false);
         await using var first = sql.CreateContext(barrier);
         await using var second = sql.CreateContext(barrier);
-        var snapshot = new ProjectionsController.ProjectionSnapshotDraft(source.SeededAt, source.Projects, source.Jobs);
+        var snapshot = new ProjectionsController.ProjectionSnapshotDraft(source.SeededAt, source.FundingSources, source.Appointments);
 
         var results = await Task.WhenAll(
             duplicate
@@ -66,21 +66,19 @@ public sealed class ProjectionSqlServerTests(ProjectionSqlServerFixture sql) : I
         var created = await check.Projections.SingleAsync(p => p.PiEmployeeId == "100" && p.CreationKey == key);
         created.Id.Should().Be(saved[0].Id);
         created.SeededAt.Should().Be(source.SeededAt);
-        created.Projects.Should().BeEquivalentTo(source.Projects);
-        created.Jobs.Should().BeEquivalentTo(source.Jobs);
+        created.FundingSources.Should().BeEquivalentTo(source.FundingSources);
+        created.Appointments.Should().BeEquivalentTo(source.Appointments);
         (await check.Projections.SingleAsync(p => p.Id == source.Id)).Name.Should().Be("Original");
     }
 
     [ProjectionSqlServerFact]
-    public async Task Creation_key_index_allows_other_pis_and_multiple_legacy_null_keys()
+    public async Task Creation_key_index_scopes_retries_to_the_pi()
     {
         var key = Guid.NewGuid();
         await using var db = sql.CreateContext();
         db.Projections.AddRange(
             new Projection { Name = "PI one", PiEmployeeId = "100", CreationKey = key },
-            new Projection { Name = "PI two", PiEmployeeId = "200", CreationKey = key },
-            new Projection { Name = "Legacy one", PiEmployeeId = "100" },
-            new Projection { Name = "Legacy two", PiEmployeeId = "100" });
+            new Projection { Name = "PI two", PiEmployeeId = "200", CreationKey = key });
 
         await db.SaveChangesAsync();
 
@@ -101,6 +99,22 @@ public sealed class ProjectionSqlServerTests(ProjectionSqlServerFixture sql) : I
         var body = JsonSerializer.SerializeToNode(Draft(original, "Saved through HTTP"), new JsonSerializerOptions(JsonSerializerDefaults.Web))!.AsObject();
         body["expectedUpdatedAt"] = updatedAt;
         body["expectedSeededAt"] = seededAt;
+        var capturedAt = Snapshot.AddMonths(1).AddTicks(-1);
+        var source = body["fundingSources"]![0]!;
+        source["sourceKind"] = "Task";
+        source["projectNumber"] = "P1";
+        source["taskNumber"] = "T1";
+        source["capturedAt"] = capturedAt;
+        source["balanceAdjustment"] = -125.50m;
+        source["capturedStartDate"] = "2029-01-01";
+        source["startDate"] = "2029-03-01";
+        body["appointments"]![0]!["sourceProjectNumbers"] = new JsonArray("P1");
+        body["appointments"]![0]!["hasUnmatchedFunding"] = true;
+        body["appointments"]![0]!["allocations"] = JsonSerializer.SerializeToNode(new List<ProjectionFundingAllocation>
+        {
+            new() { FundingSourceId = 1, Percent = 0.4m, StartDate = new(2030, 2, 1), EndDate = new(2030, 2, 15) },
+            new() { FundingSourceId = null, Percent = 0.3m },
+        }, new JsonSerializerOptions(JsonSerializerDefaults.Web));
 
         using var response = await client.PutAsJsonAsync($"/api/projections/{original.Id}", body);
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -108,7 +122,7 @@ public sealed class ProjectionSqlServerTests(ProjectionSqlServerFixture sql) : I
         saved.UpdatedAt.Kind.Should().Be(DateTimeKind.Utc);
         saved.UpdatedAt.Should().BeAfter(original.UpdatedAt);
         saved.SeededAt.Should().Be(original.SeededAt);
-        saved.Projects[0].Actuals.Should().BeEquivalentTo(original.Projects[0].Actuals);
+        saved.FundingSources[0].Actuals.Should().BeEquivalentTo(original.FundingSources[0].Actuals);
 
         using var stale = await client.PutAsJsonAsync($"/api/projections/{original.Id}", body);
         stale.StatusCode.Should().Be(HttpStatusCode.Conflict);
@@ -117,6 +131,19 @@ public sealed class ProjectionSqlServerTests(ProjectionSqlServerFixture sql) : I
         var stored = await check.Projections.SingleAsync(p => p.Id == original.Id);
         stored.UpdatedAt.Ticks.Should().Be(saved.UpdatedAt.Ticks);
         stored.Name.Should().Be("Saved through HTTP");
+        stored.FundingSources[0].SourceKind.Should().Be(ProjectionSourceKind.Task);
+        stored.FundingSources[0].CapturedAt.Should().Be(capturedAt);
+        stored.FundingSources[0].CapturedAt.Kind.Should().Be(DateTimeKind.Utc);
+        stored.FundingSources[0].BalanceAdjustment.Should().Be(-125.50m);
+        stored.FundingSources[0].CapturedStartDate.Should().Be(new DateOnly(2029, 1, 1));
+        stored.FundingSources[0].StartDate.Should().Be(new DateOnly(2029, 3, 1));
+        stored.Appointments[0].SourceProjectNumbers.Should().Equal("P1");
+        stored.Appointments[0].HasUnmatchedFunding.Should().BeTrue();
+        stored.Appointments[0].Allocations.Should().BeEquivalentTo(new List<ProjectionFundingAllocation>
+        {
+            new() { FundingSourceId = 1, Percent = 0.4m, StartDate = new(2030, 2, 1), EndDate = new(2030, 2, 15) },
+            new() { FundingSourceId = null, Percent = 0.3m },
+        });
     }
 
     [ProjectionSqlServerFact]
@@ -324,8 +351,8 @@ public sealed class ProjectionSqlServerTests(ProjectionSqlServerFixture sql) : I
             UpdatedAt = Version,
             CreatedBy = "owner",
             UpdatedBy = "owner",
-            Projects = [new() { Id = 1, ProjectName = "Project", Actuals = [new() { Month = new(2029, 12, 1), Amount = 2500, ExpenditureCategory = "Salary" }] }],
-            Jobs = [new() { Id = 1, Name = "Example", MonthlySalary = 10000, Fte = 0.5m }],
+            FundingSources = [new() { Id = 1, SourceKind = ProjectionSourceKind.Task, CapturedAt = Snapshot, ProjectNumber = "P1", TaskNumber = "T1", ProjectName = "Project", Actuals = [new() { Month = new(2029, 12, 1), Amount = 2500, ExpenditureCategory = "Salary" }] }],
+            Appointments = [new() { Id = 1, Name = "Example", MonthlySalary = 10000, Fte = 0.5m }],
         };
         await using var db = sql.CreateContext();
         db.Projections.Add(plan);
@@ -336,7 +363,7 @@ public sealed class ProjectionSqlServerTests(ProjectionSqlServerFixture sql) : I
     private static ProjectionsController.SaveProjectionRequest Draft(Projection plan, string name, bool overwrite = false)
     {
         var copy = JsonSerializer.Deserialize<Projection>(JsonSerializer.Serialize(plan))!;
-        return new(name, copy.HistoryMonths, copy.Projects, copy.Jobs, copy.UpdatedAt, copy.SeededAt, overwrite);
+        return new(name, copy.HistoryMonths, copy.FundingSources, copy.Appointments, copy.UpdatedAt, copy.SeededAt, overwrite);
     }
 
     private static ClaimsPrincipal Viewer() => new(new ClaimsIdentity(

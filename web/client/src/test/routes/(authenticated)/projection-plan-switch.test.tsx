@@ -78,8 +78,8 @@ describe('switching saved projection plans', () => {
   it('keeps a late save for the previous plan out of the new plan and its next save', async () => {
     const first = { ...createSalaryExample(), name: 'First plan' };
     const second = { ...createSalaryExample(), id: 2, name: 'Second plan' };
-    second.jobs[0].name = 'Blair Example';
-    second.jobs[0].monthlySalary = 15_000;
+    second.appointments[0].name = 'Blair Example';
+    second.appointments[0].monthlySalary = 15_000;
     second.updatedAt = '2026-01-01T00:00:00.0000002Z';
     const stored = new Map([
       [first.id, first],
@@ -102,10 +102,10 @@ describe('switching saved projection plans', () => {
         }
         const saved: Projection = {
           ...stored.get(id)!,
+          appointments: body.appointments,
+          fundingSources: body.fundingSources,
           historyMonths: body.historyMonths,
-          jobs: body.jobs,
           name: body.name,
-          projects: body.projects,
           updatedAt:
             id === first.id ? firstSavedAt : '2026-01-03T00:00:00.7654321Z',
           updatedBy: 'preview-user',
@@ -116,7 +116,7 @@ describe('switching saved projection plans', () => {
     );
     const user = userEvent.setup();
     const route = renderPlan(
-      `/projections/IAM-PREVIEW/${first.id}?section=staffing&job=101`
+      `/projections/IAM-PREVIEW/${first.id}?section=staffing&appointment=101`
     );
     try {
       await screen.findByRole('dialog');
@@ -150,8 +150,8 @@ describe('switching saved projection plans', () => {
       expect(
         route.queryClient.getQueryData<Projection>(['projections', second.id])
       ).toMatchObject({
+        appointments: [{ monthlySalary: 15_000, name: 'Blair Example' }],
         id: second.id,
-        jobs: [{ monthlySalary: 15_000, name: 'Blair Example' }],
         name: 'Second plan',
         updatedAt: second.updatedAt,
       });
@@ -172,9 +172,9 @@ describe('switching saved projection plans', () => {
       await waitFor(() => expect(requests).toHaveLength(2));
       expect(requests[1]).toMatchObject({
         body: {
+          appointments: [{ monthlySalary: 16_000, name: 'Blair Example' }],
           expectedSeededAt: second.seededAt,
           expectedUpdatedAt: second.updatedAt,
-          jobs: [{ monthlySalary: 16_000, name: 'Blair Example' }],
           name: 'Second plan',
           overwrite: false,
         },
@@ -202,7 +202,7 @@ describe('switching saved projection plans', () => {
     );
     const user = userEvent.setup();
     const route = renderPlan(
-      `/projections/IAM-PREVIEW/${first.id}?section=staffing&project=2&job=101`
+      `/projections/IAM-PREVIEW/${first.id}?section=staffing&source=2&appointment=101`
     );
     let finishReload!: () => void;
     const delayedReload = new Promise<void>((resolve) => {
@@ -223,7 +223,9 @@ describe('switching saved projection plans', () => {
         name: 'This plan has changed',
       });
       const latest = structuredClone(first);
-      latest.projects = latest.projects.filter(({ id }) => id !== 2);
+      latest.fundingSources = latest.fundingSources.filter(
+        ({ id }) => id !== 2
+      );
       latest.updatedAt = '2026-01-02T00:00:00.1234567Z';
       server.use(
         http.get(`/api/projections/${first.id}`, async () => {
@@ -241,7 +243,7 @@ describe('switching saved projection plans', () => {
       await act(async () => {
         void route.router.navigate({
           params: { iamId: 'IAM-PREVIEW', projectionId: String(second.id) },
-          search: { project: 2, section: 'staffing' },
+          search: { section: 'staffing', source: 2 },
           to: '/projections/$iamId/$projectionId',
         });
       });
@@ -261,8 +263,8 @@ describe('switching saved projection plans', () => {
         `/projections/IAM-PREVIEW/${second.id}`
       );
       expect(route.router.state.location.search).toMatchObject({
-        project: 2,
         section: 'staffing',
+        source: 2,
       });
       expect(
         screen.getByRole('heading', { name: 'Second plan' })

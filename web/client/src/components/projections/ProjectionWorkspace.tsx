@@ -1,7 +1,18 @@
 import { useEffect, useImperativeHandle, useRef, type Ref } from 'react';
+import {
+  FundingSourcesEditor,
+  type FundingSourcesEditorHandle,
+} from '@/components/projections/FundingSourcesEditor.tsx';
+import { AppointmentFundingStatus } from '@/components/projections/AppointmentFundingStatus.tsx';
+import {
+  sourceCapturedBalance,
+  sourceLabel,
+  sourcePlanningBalance,
+  type SourceOperation,
+} from '@/lib/projectionSources.ts';
 import { formatCurrency } from '@/lib/currency.ts';
 import {
-  getProjectOutlook,
+  getFundingSourceOutlook,
   readProjectionLocation,
   readProjectionWorkspace,
   type ProjectionNavigation,
@@ -23,31 +34,58 @@ export interface ProjectionWorkspaceHandle {
 }
 
 export function ProjectionWorkspace({
+  iamId,
   onNavigate,
   planPath,
   ref,
   search,
 }: {
+  iamId?: string;
   onNavigate: (location: ProjectionNavigation, replace?: boolean) => void;
   planPath?: string;
   ref?: Ref<ProjectionWorkspaceHandle>;
   search: Record<string, unknown>;
 }) {
-  const { applySalary, persistenceStatus, reloadVersion, results, session } =
-    useProjectionSession();
+  const {
+    applySalary,
+    applySourceOperation,
+    persistenceStatus,
+    reloadVersion,
+    results,
+    session,
+  } = useProjectionSession();
   const { draft } = session;
   const location = readProjectionLocation(search, draft);
   const editorRef = useRef<SalaryEditorHandle>(null);
-  const projectHeadingRef = useRef<HTMLHeadingElement>(null);
-  const selectedProject = draft.projects.find(
-    (project) => project.id === location.projectId
+  const sourceEditorRef = useRef<FundingSourcesEditorHandle>(null);
+  const sourceHeadingRef = useRef<HTMLHeadingElement>(null);
+  const selectedSource = draft.fundingSources.find(
+    (source) => source.id === location.fundingSourceId
   );
-  const selectedJob =
+  const selectedAppointment =
     location.issues.length === 0 && location.section === 'staffing'
-      ? draft.jobs.find((job) => job.id === location.jobId)
+      ? draft.appointments.find(
+          (appointment) => appointment.id === location.appointmentId
+        )
       : undefined;
-  const projectSearch =
-    location.projectId === null ? {} : { project: location.projectId };
+  const sourceSearch =
+    location.fundingSourceId === null
+      ? {}
+      : { source: location.fundingSourceId };
+
+  function applySources(operation: SourceOperation) {
+    const result = applySourceOperation(operation);
+    if (
+      result.ok &&
+      location.fundingSourceId !== null &&
+      !result.session.draft.fundingSources.some(
+        ({ id }) => id === location.fundingSourceId
+      )
+    ) {
+      onNavigate({ section: 'funding' }, true);
+    }
+    return result;
+  }
 
   useImperativeHandle(ref, () => ({
     read: () =>
@@ -55,16 +93,16 @@ export function ProjectionWorkspace({
         session,
         location,
         results,
-        editorRef.current?.read() ?? null,
+        editorRef.current?.read() ?? sourceEditorRef.current?.read() ?? null,
         persistenceStatus
       ),
   }));
 
   useEffect(() => {
-    if (location.section === 'overview' && location.projectId !== null) {
-      projectHeadingRef.current?.focus();
+    if (location.section === 'overview' && location.fundingSourceId !== null) {
+      sourceHeadingRef.current?.focus();
     }
-  }, [location.projectId, location.section]);
+  }, [location.fundingSourceId, location.section]);
 
   return (
     <div className="mx-auto max-w-6xl p-4 sm:p-8">
@@ -73,7 +111,8 @@ export function ProjectionWorkspace({
           <p className="text-sm text-base-content/70">Projection plan</p>
           <h1 className="text-3xl font-bold">{draft.name}</h1>
           <p className="mt-2 text-sm">
-            Fixed snapshot {draft.seededAt.slice(0, 10)}.
+            Plan started {draft.seededAt.slice(0, 10)}. Each source keeps its
+            own capture date.
           </p>
         </div>
         <ProjectionSaveControls />
@@ -85,15 +124,19 @@ export function ProjectionWorkspace({
         aria-label="Plan sections"
         className="mt-6 flex gap-2 border-b border-base-300 pb-3"
       >
-        {(['overview', 'staffing'] as const).map((section) => (
+        {(['overview', 'funding', 'staffing'] as const).map((section) => (
           <button
             aria-current={location.section === section ? 'page' : undefined}
             className={`btn ${location.section === section ? 'btn-primary' : 'btn-ghost'}`}
             key={section}
-            onClick={() => onNavigate({ ...projectSearch, section })}
+            onClick={() => onNavigate({ ...sourceSearch, section })}
             type="button"
           >
-            {section === 'overview' ? 'Project outlook' : 'Staffing'}
+            {section === 'overview'
+              ? 'Funding outlook'
+              : section === 'funding'
+                ? 'Funding sources'
+                : 'Staffing'}
           </button>
         ))}
       </nav>
@@ -121,46 +164,52 @@ export function ProjectionWorkspace({
         </section>
       ) : location.section === 'overview' ? (
         <section className="mt-6">
-          <h2 className="text-xl font-bold">Project outlook</h2>
+          <h2 className="text-xl font-bold">Funding outlook</h2>
           <p className="mt-2 text-sm">
-            Each project keeps its own balance. A surplus on one project does
-            not cover another project&apos;s shortfall.
+            Each funding source keeps its own balance. A surplus on one task
+            does not cover another task&apos;s shortfall.
           </p>
-          {selectedProject && (
+          {selectedSource && (
             <button
               className="btn btn-ghost btn-sm mt-3"
               onClick={() => onNavigate({ section: 'overview' })}
               type="button"
             >
-              Clear project selection
+              Clear source selection
             </button>
           )}
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            {draft.projects.map((project) => {
-              const months = getProjectOutlook(results.rows, project.id);
-              const endBalance = months.at(-1)?.remaining ?? 0;
+            {draft.fundingSources.map((source) => {
+              const months = getFundingSourceOutlook(results.rows, source.id);
+              const endBalance =
+                months.at(-1)?.remaining ?? sourcePlanningBalance(source);
               const forecast = months.reduce(
                 (sum, month) => sum + month.forecast,
                 0
               );
-              const snapshotBalance = project.budgets.reduce(
-                (sum, budget) =>
-                  sum + budget.budget - budget.spentToDate - budget.committed,
-                0
-              );
+              const snapshotBalance = sourceCapturedBalance(source);
               return (
                 <article
-                  className={`rounded-box border p-5 ${location.projectId === project.id ? 'border-primary' : 'border-base-300'}`}
-                  key={project.id}
+                  className={`rounded-box border p-5 ${location.fundingSourceId === source.id ? 'border-primary' : 'border-base-300'}`}
+                  key={source.id}
                 >
-                  <h3 className="text-lg font-bold">{project.projectName}</h3>
+                  <h3 className="text-lg font-bold">{sourceLabel(source)}</h3>
                   <p className="mt-1 text-sm">
-                    Through {project.endDate ?? 'the forecast horizon'}
+                    {source.sourceKind === 'Planned'
+                      ? 'Planned funding'
+                      : `Captured ${source.capturedAt.slice(0, 10)}`}
+                  </p>
+                  <p className="mt-1 text-sm">
+                    Through {source.endDate ?? 'the forecast horizon'}
                   </p>
                   <dl className="mt-4 space-y-2 text-sm">
                     <div className="flex justify-between gap-3">
-                      <dt>Snapshot balance</dt>
+                      <dt>Captured balance</dt>
                       <dd>{formatCurrency(snapshotBalance)}</dd>
+                    </div>
+                    <div className="flex justify-between gap-3">
+                      <dt>Planning balance</dt>
+                      <dd>{formatCurrency(sourcePlanningBalance(source))}</dd>
                     </div>
                     <div className="flex justify-between gap-3">
                       <dt>Remaining forecast</dt>
@@ -179,28 +228,28 @@ export function ProjectionWorkspace({
                     </p>
                   )}
                   <button
-                    aria-pressed={location.projectId === project.id}
+                    aria-pressed={location.fundingSourceId === source.id}
                     className="btn btn-outline btn-sm mt-4"
                     onClick={() =>
-                      onNavigate({ project: project.id, section: 'overview' })
+                      onNavigate({ section: 'overview', source: source.id })
                     }
                     type="button"
                   >
-                    View {project.projectName}
+                    View {sourceLabel(source)}
                   </button>
                 </article>
               );
             })}
           </div>
-          {selectedProject && (
-            <section aria-labelledby="project-months-title" className="mt-8">
+          {selectedSource && (
+            <section aria-labelledby="source-months-title" className="mt-8">
               <h2
                 className="text-xl font-bold"
-                id="project-months-title"
-                ref={projectHeadingRef}
+                id="source-months-title"
+                ref={sourceHeadingRef}
                 tabIndex={-1}
               >
-                {selectedProject.projectName} by month
+                {sourceLabel(selectedSource)} by month
               </h2>
               <p className="mt-2 text-sm">
                 Snapshot-month actuals are already included in the snapshot
@@ -210,7 +259,7 @@ export function ProjectionWorkspace({
                 <table className="table w-full whitespace-nowrap">
                   <caption className="sr-only">
                     Monthly actuals, forecast, and remaining balance for{' '}
-                    {selectedProject.projectName}
+                    {sourceLabel(selectedSource)}
                   </caption>
                   <thead>
                     <tr>
@@ -221,80 +270,118 @@ export function ProjectionWorkspace({
                     </tr>
                   </thead>
                   <tbody>
-                    {getProjectOutlook(results.rows, selectedProject.id).map(
-                      (month) => (
-                        <tr key={month.month}>
-                          <th scope="row">{month.month}</th>
-                          <td>{formatCurrency(month.actual)}</td>
-                          <td>{formatCurrency(month.forecast)}</td>
-                          <td
-                            className={
-                              month.remaining < 0
-                                ? 'text-error font-semibold'
-                                : ''
-                            }
-                          >
-                            {formatCurrency(month.remaining)}
-                          </td>
-                        </tr>
-                      )
-                    )}
+                    {getFundingSourceOutlook(
+                      results.rows,
+                      selectedSource.id
+                    ).map((month) => (
+                      <tr key={month.month}>
+                        <th scope="row">{month.month}</th>
+                        <td>{formatCurrency(month.actual)}</td>
+                        <td>{formatCurrency(month.forecast)}</td>
+                        <td
+                          className={
+                            month.remaining < 0
+                              ? 'text-error font-semibold'
+                              : ''
+                          }
+                        >
+                          {formatCurrency(month.remaining)}
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
             </section>
           )}
         </section>
+      ) : location.section === 'funding' ? (
+        <section className="mt-6">
+          <h2 className="text-xl font-bold">Funding sources</h2>
+          <FundingSourcesEditor
+            iamId={iamId}
+            key={`${reloadVersion}:${location.fundingSourceId ?? 'list'}`}
+            onOperation={applySources}
+            ref={sourceEditorRef}
+            session={session}
+            sourceTarget={{
+              id: location.fundingSourceId,
+              onChange: (id) =>
+                onNavigate(
+                  id === null
+                    ? { section: 'funding' }
+                    : { section: 'funding', source: id },
+                  id === null
+                ),
+            }}
+          />
+        </section>
       ) : (
         <section className="mt-6">
           <h2 className="text-xl font-bold">Staffing</h2>
           <p className="mt-2 text-sm">
-            Salary is the full-time rate. Project shares below are percentages
-            of full-time salary.
+            Salary is the full-time rate. Allocation shares below are
+            percentages of full-time salary.
           </p>
           <div className="mt-4 space-y-4">
-            {draft.jobs.map((job) => (
+            {draft.appointments.map((appointment) => (
               <article
                 className="rounded-box border border-base-300 p-5"
-                key={job.id}
+                key={appointment.id}
               >
                 <div className="flex flex-wrap justify-between gap-4">
                   <div>
-                    <h3 className="text-lg font-bold">{job.name}</h3>
+                    <h3 className="text-lg font-bold">{appointment.name}</h3>
                     <p className="text-sm">
-                      {job.title} · {job.fte * 100}% appointment FTE
+                      {appointment.title} · {appointment.fte * 100}% appointment
+                      FTE
                     </p>
                   </div>
                   <button
                     className="btn btn-outline"
-                    id={`salary-job-${job.id}`}
+                    id={`salary-appointment-${appointment.id}`}
                     onClick={() =>
                       onNavigate({
-                        ...projectSearch,
-                        job: job.id,
+                        ...sourceSearch,
+                        appointment: appointment.id,
                         section: 'staffing',
                       })
                     }
                     type="button"
                   >
-                    Edit salary for {job.name}
+                    Edit salary for {appointment.name}
                   </button>
                 </div>
                 <p className="mt-4">
-                  {job.monthlySalary === null
+                  {appointment.monthlySalary === null
                     ? 'Salary needs input'
-                    : `${formatCurrency(job.monthlySalary * 12)} per year at full time`}
+                    : `${formatCurrency(appointment.monthlySalary * 12)} per year at full time`}
                 </p>
                 <p className="mt-1 text-sm">
-                  {formatCurrency(job.monthlySalary)} per month at full time
+                  {formatCurrency(appointment.monthlySalary)} per month at full
+                  time
                 </p>
+                <AppointmentFundingStatus
+                  appointment={appointment}
+                  months={results.appointmentFunding}
+                  snapshotMonth={draft.seededAt.slice(0, 7)}
+                />
                 <ul className="mt-4 space-y-1 text-sm">
-                  {job.fundingEntries.map((funding, index) => (
+                  {appointment.allocations.map((allocation, index) => (
                     <li key={index}>
-                      {draft.projects.find(
-                        (project) => project.id === funding.projectId
-                      )?.projectName ?? 'Outside this portfolio'}
-                      : {funding.percent * job.fte * 100}% of full-time salary
+                      {allocation.fundingSourceId === null
+                        ? 'Outside this portfolio'
+                        : (() => {
+                            const source = draft.fundingSources.find(
+                              (source) =>
+                                source.id === allocation.fundingSourceId
+                            );
+                            return source
+                              ? sourceLabel(source)
+                              : 'Unallocated funding';
+                          })()}
+                      : {allocation.percent * appointment.fte * 100}% of
+                      full-time salary
                     </li>
                   ))}
                 </ul>
@@ -303,13 +390,13 @@ export function ProjectionWorkspace({
           </div>
         </section>
       )}
-      {selectedJob && (
+      {selectedAppointment && (
         <SalaryEditor
-          job={selectedJob}
-          key={`${selectedJob.id}:${reloadVersion}`}
+          appointment={selectedAppointment}
+          key={`${selectedAppointment.id}:${reloadVersion}`}
           onApply={applySalary}
           onClose={() =>
-            onNavigate({ ...projectSearch, section: 'staffing' }, true)
+            onNavigate({ ...sourceSearch, section: 'staffing' }, true)
           }
           ref={editorRef}
           snapshotMonth={draft.seededAt.slice(0, 7)}
@@ -317,7 +404,9 @@ export function ProjectionWorkspace({
       )}
       {planPath && (
         <ProjectionNavigationGuard
-          pendingEditor={() => editorRef.current?.read() ?? null}
+          pendingEditor={() =>
+            editorRef.current?.read() ?? sourceEditorRef.current?.read() ?? null
+          }
           planPath={planPath}
         />
       )}

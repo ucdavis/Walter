@@ -12,13 +12,15 @@ import { computePiProjection } from '@/lib/piProjection.ts';
 import {
   acknowledgeProjectionSave,
   createProjectionSession,
-  setJobMonthlySalary,
-  type SalaryChange,
+  setAppointmentMonthlySalary,
+  type ProjectionSession,
+  type AppointmentSalaryChange,
 } from '@/lib/projectionWorkspace.ts';
 import type {
   Projection,
   SaveProjectionRequest,
 } from '@/queries/projections.ts';
+import type { SourceOperation } from '@/lib/projectionSources.ts';
 
 export interface ProjectionPersistence {
   reload: () => Promise<Projection>;
@@ -79,19 +81,31 @@ function useSession(
     };
   }, []);
   const currentSession = useRef(session);
-  useLayoutEffect(() => {
-    currentSession.current = session;
-  }, [session]);
+  // A save and a financial import can resolve in the same React batch. Every transition
+  // advances this reference immediately so the next operation sees its acknowledgement.
+  const updateSession = (next: ProjectionSession) => {
+    currentSession.current = next;
+    setSession(next);
+  };
   const results = useMemo(
     () => computePiProjection(session.draft),
     [session.draft]
   );
-  const applySalary = (change: SalaryChange) => {
-    setSession((current) => {
-      const result = setJobMonthlySalary(current, change);
-      return result.ok ? result.session : current;
-    });
+  const applySalary = (change: AppointmentSalaryChange) => {
+    const result = setAppointmentMonthlySalary(currentSession.current, change);
+    if (result.ok) {
+      updateSession(result.session);
+    }
     setSaveStatus((status) => (status === 'saving' ? status : 'idle'));
+  };
+
+  const applySourceOperation = (operation: SourceOperation) => {
+    const result = operation(currentSession.current);
+    if (result.ok) {
+      updateSession(result.session);
+      setSaveStatus((status) => (status === 'saving' ? status : 'idle'));
+    }
+    return result;
   };
 
   const save = async (overwrite = false) => {
@@ -107,16 +121,17 @@ function useSession(
       return;
     }
     const submitted = currentSession.current;
-    const { historyMonths, jobs, name, projects } = submitted.draft;
+    const { appointments, fundingSources, historyMonths, name } =
+      submitted.draft;
     // Capture the current applied draft on this click, independently of any open field buffer.
     const request = structuredClone({
+      appointments,
       expectedSeededAt: submitted.baseline.seededAt,
       expectedUpdatedAt: submitted.baseline.updatedAt,
+      fundingSources,
       historyMonths,
-      jobs,
       name,
       overwrite: useOverwrite,
-      projects,
     });
     requestPending.current = true;
     if (useOverwrite) {
@@ -127,8 +142,8 @@ function useSession(
     setSaveStatus('saving');
     try {
       const saved = await persistence.save(request);
-      setSession((current) =>
-        acknowledgeProjectionSave(current, submitted, saved)
+      updateSession(
+        acknowledgeProjectionSave(currentSession.current, submitted, saved)
       );
       setConflict(null);
       setOverwriteConfirmed(false);
@@ -163,10 +178,10 @@ function useSession(
       if (!mounted.current) {
         return null;
       }
-      setSession((current) => ({
+      updateSession({
         ...createProjectionSession(saved),
-        revision: current.revision + 1,
-      }));
+        revision: currentSession.current.revision + 1,
+      });
       setReloadVersion((version) => version + 1);
       setConflict(null);
       setOverwriteConfirmed(false);
@@ -190,6 +205,7 @@ function useSession(
 
   return {
     applySalary,
+    applySourceOperation,
     canSave: Boolean(persistence),
     conflict,
     conflictOpen,

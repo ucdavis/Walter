@@ -1,8 +1,14 @@
 # Projection calculations
 
-A projection combines a saved financial snapshot with assumptions about future
-costs. Editing an assumption changes the forecast while preserving booked
-spending. Reopening a saved plan does not advance its snapshot date.
+A projection combines captured financial inputs with assumptions about future
+costs. Each imported funding source has its own capture date. Editing an
+assumption changes the forecast while preserving booked spending. Reopening a
+saved plan does not advance its capture dates.
+
+A funding source is one project/task pair or an entered planned source. Tasks
+keep separate balances and allocations even when every task of a project is
+selected. A project rollup does not allow one task's surplus to cover another
+task's shortfall.
 
 ## Fresh snapshot selection
 
@@ -10,22 +16,30 @@ Fresh snapshots begin with active projects where the person is the project-level
 PI. Internal tasks marked `Inactive` are excluded. Other project types are
 excluded when their latest award end date is before the UTC capture date.
 Missing award end dates and awards ending on the capture date remain eligible.
-Award expiry determines inclusion; project dates determine forecast eligibility.
+Award expiry determines inclusion. Source dates determine forecast eligibility;
+imported tasks initially inherit their project's dates, which the plan can edit.
 
-Eligible tasks are combined into one projection project. Category balances,
-monthly costs, and captured expense averages are summed across retained tasks.
-Funding assigned to excluded tasks or projects remains outside the plan, with
-its original share and dates; it is not redistributed to retained projects.
-Opening or saving an existing plan preserves its captured inputs, including
-older plans that still have separate task records.
+Eligible tasks remain independent sources, with their own category balances,
+monthly costs, and captured expense averages. Initial staffing includes people
+paid on the selected projects, including people paid only on an unchecked task
+of one of those projects. Deliberately unchecked tasks leave their shares
+unallocated. Blank or unmatched personnel task identifiers also leave funding
+unallocated rather than assigning it to another task. Existing outside funding,
+including funding excluded by source eligibility, remains separate.
+
+Removing a source removes its expenses and allocations while retaining employee
+assumptions. It does not redistribute those allocations or fill the gap with
+outside funding. Adding the source again captures fresh financial inputs and
+expense estimates without restoring old edits or importing staffing. Opening or
+saving an existing plan preserves its captured inputs without refreshing them.
 
 ## Salary and benefits
 
 Salary is entered as a full-time rate. Before cost-of-living adjustments, each
-project's salary cost for a full month is:
+funding source's salary cost for a full month is:
 
 ```text
-full-time monthly salary × appointment FTE × project share of the appointment
+full-time monthly salary × appointment FTE × source share of the appointment
 ```
 
 For example, a $120,000 full-time annual salary is $10,000 per month. At 50% FTE,
@@ -33,7 +47,7 @@ the appointment costs $5,000 per month. If two projects each fund half the
 appointment, each pays $2,500. The UI expresses each project's share as 25% of
 full-time salary.
 
-Benefits are calculated from each project's salary cost:
+Benefits are calculated from each funding source's salary cost:
 
 ```text
 benefits = salary cost × (composite benefit rate + vacation cost rate)
@@ -59,8 +73,8 @@ and [CBR lookup guidance](https://financeandbusiness.ucdavis.edu/finance/costing
 
 ## Personnel dates and partial months
 
-Salary and benefits apply only on dates when the project, job, and funding entry
-are all active. Start and end dates are inclusive. The calculator counts calendar
+Salary and benefits apply only on dates when the funding source, appointment, and
+funding entry are all active. Start and end dates are inclusive. The calculator counts calendar
 days, including weekends, within each month:
 
 ```text
@@ -68,15 +82,15 @@ monthly personnel estimate = full-month cost at the funding share
                              × eligible days / calendar days in the month
 ```
 
-For a full-month project share of $2,500 salary and $1,000 benefits:
+For a full-month funding share of $2,500 salary and $1,000 benefits:
 
 | Eligible dates               |  Salary | Benefits |
 | ---------------------------- | ------: | -------: |
 | February 20 through 28, 2026 | $803.57 |  $321.43 |
 | March 1 through 5, 2026      | $403.23 |  $161.29 |
 
-A job ending March 10 has no eligible days with funding starting March 31.
-A project starting April 1 has no salary or benefits forecast before April.
+A appointment ending March 10 has no eligible days with funding starting March 31.
+A source starting April 1 has no salary or benefits forecast before April.
 
 For a $5,000 monthly appointment funded entirely by Project A through March 15
 and Project B starting March 16, the salary allocations are $2,419.35 to A and
@@ -89,9 +103,15 @@ funding gaps or overlaps.
 
 ## Snapshot balance
 
-The snapshot time records when Walter begins capturing the plan's inputs. One
-UTC snapshot date anchors the history window, forecast months, and partial-month
-calculations. Reopening a plan preserves that date.
+An imported source's snapshot time records when Walter begins capturing its
+inputs. Its UTC date anchors its history window, forecast months, and
+partial-month calculations. Sources captured together share that timestamp;
+adding a source later does not change existing sources' timestamps. Every
+source records its own timestamp explicitly.
+
+In the financial rules below, snapshot month means the individual source's
+capture month. Employee salary and COLA bases remain tied to the original plan
+snapshot or the planned hire's starting rate, as described below.
 
 Portfolio totals, monthly costs, and personnel data arrive through separate
 imports. The plan uses the latest available inputs from each source. Their
@@ -100,9 +120,20 @@ are complete through one financial cutoff.
 
 ```text
 snapshot balance = budget - spent to date - commitments
+planning balance = snapshot balance + scenario adjustment
 ```
 
 Budget, spent to date, and commitments are totals captured at the snapshot date.
+Changing a planning balance preserves these captured figures and records the
+difference separately. The adjustment changes the starting balance once; it is
+not an expense or recurring income.
+
+An entered planned source has no captured spending. Its full entered amount
+becomes available on its start date, with no earlier available balance or
+forecast spending. The amount is not reduced by a probability of receiving it.
+It retains the original plan's time anchor, even if entered later. Its forecast
+begins in the later of the original plan snapshot month or its start month.
+
 Monthly actuals are the booked cost totals for each category and month. They
 describe spending during that month, rather than the money remaining at its end.
 
@@ -123,29 +154,38 @@ at $50,000. If the forecast also includes the same $10,000 purchase, it shows
 $40,000 remaining. This overlap can understate the available balance. The
 calculator does not automatically reconcile commitments with forecast costs.
 
-Each project keeps its own balance. A surplus on one project does not cover a
-shortfall on another. The project outlook and its monthly detail begin in the
-saved snapshot month and continue through the forecast horizon. The snapshot
+Each source keeps its own balance. A surplus on one task does not cover a
+shortfall on another. Its outlook and monthly detail begin in its capture month,
+or the availability month for later planned funding, and continue through its
+forecast horizon. The snapshot
 month shows booked actuals and additional forecast spending. Earlier months
 are not shown as historical month-end balances.
 
 Historical monthly spending remains in the saved plan. Its averages supply
 generated recurring expense estimates for the selected history window.
 Snapshot-month spending also remains available for the personnel calculation
-below. Reopening a plan preserves these captured costs and its snapshot date.
+below. Reopening a plan preserves these captured costs and dates.
+
+For example, an October plan can add a task in November with $50,000 available,
+including $2,000 of booked November salary. If November's salary estimate is
+$5,000, the added source forecasts the $3,000 unbooked remainder and ends at
+$47,000. It does not apply November's balance back in October or deduct the
+booked $2,000 again. Existing October sources and employee salary assumptions
+remain unchanged.
 
 ## Snapshot-month personnel costs
 
-For each project, salary and benefits are calculated separately. The calculator
-first sums the eligible-day estimates for all relevant jobs across the entire
-snapshot month, then subtracts the amount already booked in that category:
+For each funding source, salary and benefits are calculated separately. The
+calculator first sums the eligible-day estimates for all relevant appointments across the entire
+source snapshot month, then subtracts the amount already booked for that source
+and category. Costs booked to one task do not offset another task's estimate:
 
 ```text
 additional personnel forecast = max(month's personnel estimate - booked actual, 0)
-month-end balance = snapshot balance - total additional forecast spending
+month-end balance = planning balance - total additional forecast spending
 ```
 
-| Salary estimate for one project | Booked this month | Additional forecast |
+| Salary estimate for one source  | Booked this month | Additional forecast |
 | ------------------------------- | ----------------: | ------------------: |
 | $2,500                          |            $1,000 |              $1,500 |
 | $2,750                          |            $1,000 |              $1,750 |
@@ -155,14 +195,14 @@ Reducing an estimate below the booked amount does not refund booked costs.
 Salary and benefits use separate comparisons because their postings can arrive
 at different times. Eligible days before the snapshot date still contribute to
 the estimate because their costs may not yet be booked. For a March 20 snapshot,
-a job active March 1 through 10 with a $1,000 estimate and $800 booked costs
+a appointment active March 1 through 10 with a $1,000 estimate and $800 booked costs
 still forecasts $200. The calculator does not also prorate personnel to days
 after the snapshot. Later months use their eligible-day estimates.
 
 Credits are negative actuals and follow the same formula. A zero estimate with
 a $100 booked credit produces $100 of additional forecast. This adjustment
-also applies to credits booked after a project's end month, while that end date
-continues to limit job and expense forecasts.
+also applies to credits booked after a source's end month, while that end date
+continues to limit appointment and expense forecasts.
 
 ## Additional expenses and fee remission
 
@@ -175,33 +215,34 @@ Explicit monthly and one-time expenses are additional planned costs, including
 expenses assigned to salary, benefits, or fee categories. They are added after
 the personnel calculation and are not reduced by booked personnel costs.
 
-Recurring expenses, including generated estimates, are prorated for project-active
-days within their applicable months. Project start and end dates are inclusive.
+Recurring expenses, including generated estimates, are prorated for days when
+the funding source is active within their applicable months. Source start and
+end dates are inclusive.
 In the snapshot month, only days after the snapshot date count. The snapshot day
 itself is excluded.
 
 For a $310 monthly expense and an October 16 snapshot:
 
-| Project dates                      | Eligible days         | Additional forecast |
+| Source dates                       | Eligible days         | Additional forecast |
 | ---------------------------------- | --------------------- | ------------------: |
 | Active throughout October          | October 17 through 31 |                $150 |
 | Ends October 20                    | October 17 through 20 |                 $40 |
 | Starts October 20, ends October 31 | October 20 through 31 |                $120 |
 
-Later months use all applicable project-active days. A fully active month uses
+Later months use all days when the source is active. A fully active month uses
 the full monthly amount; a month with no eligible days has no recurring forecast.
 
 One-time expenses use their full amount when the specified month overlaps the
-project's dates and is the snapshot month or later. They are not prorated by day.
+source's dates and is the snapshot month or later. They are not prorated by day.
 For an October 16 snapshot, a $1,000 October expense still adds $1,000 if the
-project ended October 10. The expense specifies a month, not a posting date.
+source ended October 10. The expense specifies a month, not a posting date.
 Entries outside the eligible months stay in the saved plan but do not contribute
 to the forecast; changing the dates can make them applicable again.
 
-A job's fee-remission amount is the appointment's total monthly cost. It is split
+A appointment's fee-remission amount is the appointment's total monthly cost. It is split
 across funding shares without FTE or COLA scaling, then prorated by calendar days
-when the project, job, and funding entry are all active. Start and end dates are
-inclusive. No overlap means no fee forecast.
+when the funding source, appointment, and funding entry are all active. Start and end
+dates are inclusive. No overlap means no fee forecast.
 
 ```text
 monthly fee forecast = appointment's monthly fee × funding share
@@ -224,7 +265,7 @@ already booked in category 08. The $400 remains visible as actuals and is alread
 included in the snapshot balance under the inclusion assumption described above.
 
 Generated category 08 estimates and explicit monthly/one-time expenses remain
-additional costs. Entering the same fees as both an explicit expense and a job's
+additional costs. Entering the same fees as both an explicit expense and a appointment's
 fee-remission amount would count them twice. No standard fee amount is supplied
 automatically.
 
@@ -243,26 +284,29 @@ estimate alongside any employee fee amounts.
 
 ## Cost-of-living adjustments
 
-COLA compounds annually in the configured month. For jobs captured in the
-snapshot, the entered salary is the full-time rate at the snapshot date. The
-first increase is in a configured COLA month strictly after the snapshot month,
-even if the job starts later. If the snapshot is in July, a July increase is not
-applied again that year; the following July receives the next increase.
+COLA compounds annually in the configured month. For appointments captured in the
+original plan snapshot, the entered salary is the full-time rate at that date.
+The first increase is in a configured COLA month strictly after the original
+plan snapshot month, even if the appointment starts later. If that snapshot is in July,
+a July increase is not applied again that year; the following July receives
+the next increase.
 
 For a $2,500 monthly project salary and a 3% July COLA, the cost becomes $2,575
 in the first applicable July, $2,652.25 in the second, and $2,731.8175 in the third.
 Calculations retain precision; the UI formats amounts as currency.
 
-For a hypothetical hire starting after the snapshot month, the entered salary
-is the full-time rate at the job's start. Its first COLA occurs in the configured
-month strictly after the start month. No increase applies in the start month.
+For a hypothetical hire starting after the original plan snapshot month, the
+entered salary is the full-time rate at the appointment's start. Its first COLA occurs
+in the configured month strictly after the start month. No increase applies in
+the start month.
 
-With a January 2026 snapshot, an August 2026 hire at $120,000 annually and a 3%
+With a January 2026 plan snapshot, an August 2026 hire at $120,000 annually and a 3%
 July COLA has a full-time monthly rate of $10,000 in August 2026, $10,300 in
 July 2027, and $10,609 in July 2028. A July 2026 hire also receives its first
 increase in July 2027.
 
-A hypothetical hire with no start date, or a start in or before the snapshot
-month, uses the snapshot date as its salary base. Moving its start date changes
-that base according to the same rule. Reopening the plan preserves the saved
-snapshot and job dates.
+A hypothetical hire with no start date, or a start in or before the original plan
+snapshot month, uses that snapshot date as its salary base. Moving its start
+date changes that base according to the same rule. Reopening the plan preserves
+the saved snapshot and appointment dates. Adding a funding source with a later capture date does
+not change salary bases.

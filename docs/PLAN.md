@@ -3,13 +3,16 @@
 Status: Stage 1a and Stage 1b are accepted, including the calculation corrections,
 shared snapshot timestamp, and fee rules. Stage 2a's fresh-snapshot read and
 eligibility policy are accepted and committed as `5b5a7af3`. Stage 2b's wizard
-completion and duplication are accepted; New plan saves before opening the
-view/edit workspace.
+completion and duplication are accepted and committed as `d524af0c`; New plan
+saves before opening the view/edit workspace. Stage 3a's funding sources and
+greenfield model cleanup are accepted and verified locally. Review the rebuild
+for remaining legacy assumptions before proceeding to the staffing editors.
 Saving remains available with funding gaps/overlaps.
-The CBR default and legacy-plan compatibility increment is accepted.
+CBR defaults to zero when no rate is available from the personnel source.
+The projection model is greenfield and uses one current document format.
 The project outlook starts at the snapshot month; historical spending remains
 available for expense estimates and snapshot-month calculations.
-Updated November 7, 2026.
+Updated November 8, 2026.
 
 Build a guided planning workspace where users can adjust a dated portfolio
 snapshot, inspect each project's outlook, and save alternative plans. Keep the
@@ -29,7 +32,7 @@ as each decision is settled and each stage is reviewed.
   are outside the initial feature; prepare for AI editing later.
 - The final wizard order is Funding sources → Staffing → Expenses → Review.
   The third step may be labeled Other expenses. Build these steps incrementally;
-  the current Plan step is interim setup, not an additional final wizard step.
+  plan name and averaging-window setup belong within Funding sources.
 - New plan opens the setup wizard. Its final Create plan action saves the
   reviewed inputs, then opens the saved plan's workspace. Canceling before the
   final Create action creates no saved plan; a failed create keeps the wizard
@@ -73,7 +76,10 @@ as each decision is settled and each stage is reviewed.
 - Use one fixed UTC snapshot timestamp for the seed query and saved plan.
   Capture the latest available imported inputs; their refresh times need not
   match. Document that this is not a synchronized financial cutoff, without
-  adding warnings or blocking use of the plan.
+  adding warnings or blocking use of the plan. This describes the implemented
+  initial-capture behavior. Stage 3a extends it with source-specific capture
+  dates when funding is added later, while preserving existing snapshots and
+  employee salary bases.
 - Keep commitments reserved in the starting balance and deduct forecast costs
   separately. Document the possible overlap in the calculation reference;
   defer automatic reconciliation without adding controls or warnings.
@@ -135,16 +141,16 @@ calculated results, validation issues, draft revision, unsaved status, and pendi
 editor. Do not maintain a second synchronized copy of the whole workspace.
 
 Begin with a read operation, navigation, and one typed salary operation. For
-example, `setJobMonthlySalary` identifies a job and an explicit full-time monthly
+example, `setAppointmentMonthlySalary` identifies an appointment and an explicit full-time monthly
 amount. Later operations can change FTE, replace a funding schedule, or regenerate
 spending estimates. Avoid arbitrary field paths as the public editing contract.
 
-Salary edits target a stable job or appointment ID. A Person's name does not
+Salary edits target a stable appointment ID. A Person's name does not
 identify a particular appointment. Keep the distinctions between Person, IAM ID,
 and Employee ID in [CONTEXT.md](../CONTEXT.md).
 
-Projects and jobs already have projection-local IDs. Persist stable expense and
-funding-entry IDs when those editors are added. Do not use names or array positions
+Funding sources and appointments have projection-local IDs. Persist stable expense
+and allocation IDs when those editors are added. Do not use names or array positions
 as durable edit targets. Keep monetary units, allocation units, date-only strings,
 and planning months explicit at conversion boundaries.
 
@@ -160,8 +166,9 @@ later work. Stage 1a only proves that the salary operation works outside the UI.
 ### Navigation and saving
 
 The saved-plan address is
-`/projections/{iamId}/{planId}?section=staffing&job={jobId}`. Project outlook links
-use `?section=overview&project={projectId}`. Add allocation, expense, and month
+`/projections/{iamId}/{planId}?section=staffing&appointment={appointmentId}`.
+Funding outlook links use `?section=overview&source={fundingSourceId}`. Funding
+source editors use `?section=funding&source={fundingSourceId}`. Add allocation, expense, and month
 targets as their editors arrive. Validate targets, reveal and
 focus valid targets, and handle missing ones without crashing or selecting an
 unrelated record.
@@ -207,10 +214,10 @@ date-driven forecast horizon. Add proper plan-level storage when notes, custom
 horizon, or inclusion settings arrive in their owning stage.
 
 Fresh seed eligibility should have one named, tested owner. Apply dashboard rules,
-group eligible tasks by project, and preserve excluded allocations as outside
-funding rather than silently redistributing them. Current filters must not rewrite
-an already saved snapshot. Stage 2a assigns this boundary to the server's fresh
-seed policy.
+and keep current filters from rewriting an already saved snapshot. Stage 2a
+assigns this boundary to the server's fresh seed policy. Stage 3a replaces its
+project aggregation with independent task sources and distinguishes deliberate
+source omission from existing outside funding, as specified below.
 
 ## Stages and review stops
 
@@ -398,10 +405,10 @@ overwrites may retry ordinary races internally, checking snapshot identity and
 access each time. Retry exhaustion is a transient save failure, not another
 ordinary-conflict prompt.
 
-Save retains the existing whole `Projects`/`Jobs` payload contract, including its
+Save retains the whole `FundingSources`/`Appointments` document, including its
 captured history arrays, while preserving server-owned identity, snapshot, and
 audit metadata. It does not merge or clear fields from the submitted document.
-This also lets overwrite restore a project removed by an ordinary edit within
+This also lets overwrite restore a source removed by an ordinary edit within
 the same snapshot. The workspace keeps history read-only; broader server
 validation of captured facts needs a separate decision as the editors expand.
 Save stores the submitted expenses and history window without regenerating
@@ -645,32 +652,13 @@ The user reviewed and accepted this correction. Publication and deployment
 remain outside this increment; no new no-mistakes pipeline or CI run was
 started. Stage 1b remains open for final review.
 
-#### Benefit-default implementation review
+#### Benefit defaults
 
-CBR is now numeric in the plan model and client contract. Seeding defaults an
-absent source CBR to 0. A converter on the plan's CBR property reads legacy JSON
-nulls as 0 and preserves supplied rates, including numeric strings accepted by
-the existing Web serializer. Malformed values remain invalid. Missing properties
-use the same zero default, and API/saved output contains a numeric rate.
-
-The converter also applies to EF's existing Jobs JSON conversion and the Save
-controller's document copy. It does not rewrite stored plans on read, change
-snapshot dates, or require a migration. An unchanged legacy JSON column can
-retain a physical null until a later write; its loaded plan value is 0.
-Source lookup fields remain nullable. Vacation defaults and supplied values
-are unchanged, and this increment adds no UI or warnings.
-
-Thirteen new server cases cover seeding, the configured EF converter, legacy
-request save/get behavior, supplied values, and malformed input. Five cases
-failed before the fix. All 446 standard server tests and 499 client tests passed.
-The eight opt-in SQL Server integration cases were not run; this increment does
-not alter the SQL schema or concurrency contract. TypeScript, changed-file
-ESLint, and the production build passed. Independent review found no defects.
-Existing NuGet dependency-audit and client build warnings remain.
-
-The user reviewed and accepted this increment. Publication and deployment remain
-outside this step. It does not close Stage 1b or select a different CBR default,
-official vacation assessment mapping, or fee-remission policy.
+CBR is numeric in the plan model and client contract. Seeding defaults an absent
+source rate to 0. The saved model uses a plain decimal property; it does not
+convert old JSON nulls. Vacation defaults and supplied values remain unchanged.
+No default rate, official vacation assessment mapping, or fee-remission policy
+beyond the agreed rules is implied by this cleanup.
 
 #### Agreed project outlook period
 
@@ -817,8 +805,8 @@ included in portfolio spending totals. Add no warnings or blocking checks.
 Compute the final, monotonically advanced `SeededAt` once before the seed query.
 Pass that UTC `DateTime` as `snapshotAtUtc` through the data source to the query's
 optional `@SnapshotAt DATETIME2` parameter, and save the exact same timestamp.
-The query derives its reporting month from that value. Older callers that omit
-the parameter use `SYSUTCDATETIME()` as the fallback. This keeps the history
+The query derives its reporting month from that value. Omitting the optional
+parameter uses `SYSUTCDATETIME()`. This keeps the history
 window and forecast in the same month even when a request crosses midnight or
 the database and application use different local time zones.
 
@@ -840,8 +828,7 @@ These questions remain documented for future work. Their current behavior is
 accepted for Stage 1b, so they do not block its final implementation review or
 authorize expanding this increment into later stages.
 
-- **Vacation lookup mapping:** the numeric CBR default and legacy compatibility
-  are accepted. Keep the vacation field's existing default of 0 and preserve
+- **Vacation lookup mapping:** the numeric CBR default is accepted. Keep the vacation field's existing default of 0 and preserve
   supplied values. The earlier `WalterDev` inspection
   found no DVMED lookup set, some unmatched rows in the other sets, and null
   vacation rates. Seeding currently converts missing vacation to zero; existing
@@ -898,6 +885,9 @@ for future work and do not block the plan lifecycle stage.
 
 ### Stage 2a: fresh snapshot and eligibility
 
+The behavior below records the implemented Stage 2a increment. Stage 3a revises
+project grouping and deliberately omitted funding shares; its design is below.
+
 `GET /api/projections/by-iam/{iamId}/seed?historyMonths=3` returns fresh,
 authorized inputs for the wizard without creating a saved plan. The history window supports
 3, 6, or 12 months and defaults to 3. The response has ID 0 and no saved-plan
@@ -919,12 +909,11 @@ the existing Create and explicit Reset paths that call the same seeder:
   Preserve the earliest start and latest end among retained project dates.
 - Keep excluded funding lines as outside funding, including their supplied
   shares and dates. Do not redistribute them to retained projects. A known
-  excluded task cannot use the legacy fallback for an unmatched task.
+  excluded task is kept separate from an unmatched task.
 
 Personnel is requested for the original seed project set so excluded allocations
 remain available for that mapping. An empty seed skips the personnel query.
-Fresh policy does not run when opening or saving an existing plan. Legacy
-task-grained snapshots remain usable without being regrouped.
+Fresh policy does not run when opening or saving a plan.
 
 This increment changes the server boundary. Stage 2b adds the wizard and creates
 plans from its reviewed inputs. No new settings column or persistence schema is
@@ -963,8 +952,9 @@ even when current source data is unavailable. The full wizard composes the
 staffing and expense editors as their owning stages deliver them; Stage 2 fixes
 the creation boundary rather than introducing a different interim lifecycle.
 
-Stage 2a and this increment are accepted. The interim
-wizard currently has Plan, Staffing, and Review steps. The final sequence is
+Stage 2a and this increment are accepted. This increment introduced an interim
+wizard with Plan, Staffing, and Review steps. Stage 3a replaces Plan with Funding
+sources. The final sequence is
 Funding sources, Staffing, Expenses, and Review; Other expenses remains an
 option for the third step's label. Plan selects a name and a 3-, 6-,
 or 12-month averaging window. Continue captures the portfolio once; later edits
@@ -980,11 +970,11 @@ using TanStack Form for input state and validation. This is a follow-up to the
 accepted flow, not a prerequisite for this increment. Preserve the tested
 creation retry and navigation behavior during that refactor.
 
-The existing Create endpoint accepts the captured UTC timestamp, projects, jobs,
-name, and history window. It validates the document structure and project
-references, then assigns the saved identity and audit metadata without another
-seed read. Older name/history-only requests retain their existing fresh-seed
-behavior. Duplicate authorizes the source and copies its stored inputs without
+The Create endpoint requires a reviewed draft containing the captured UTC
+timestamp, funding sources, and appointments, plus the name, history window,
+and creation key. It validates the document structure and source references,
+then assigns the saved identity and audit metadata without another seed read.
+Duplicate authorizes the source and copies its stored inputs without
 consulting current financial or personnel sources. Normal Save retains its
 existing concurrency checks.
 
@@ -1000,13 +990,13 @@ Creation-key recovery lasts while the resulting row exists. Deleting that row
 removes its recovery key. Duplicate also requires the source to remain available
 and authorized on every retry. Durable recovery after deletion is outside this
 increment. Apply the application database migration before serving these new
-creation requests; it leaves older plans with a null key.
+creation requests.
 
 Verification passed: 531 client tests, 509 standard server tests, all 15 isolated
 SQL Server tests, production client build, TypeScript, changed-file lint and
 formatting, and independent code review. The standard server run skips optional
 SQL tests; the isolated run applied the migration and exercised concurrent
-creation and duplication, PI-scoped keys, legacy null keys, and existing save
+creation and duplication, PI-scoped keys, and existing save
 concurrency. Six client lifecycle cases cover reviewed-input creation, normal
 subsequent saves, canceled setup, failed seed reads, lost-response recovery,
 copying without fresh sources, and late completion during departure. Review
@@ -1020,6 +1010,163 @@ with the same inputs. No browser console errors remained in that walkthrough.
 React Doctor found no errors; two wizard control-flow warnings were reviewed.
 Existing CSS optimization, module-directive, and bundle-size warnings remain.
 No live source read, deployment, or publication was performed for this increment.
+
+## Stage 3a: funding sources
+
+Status: accepted and verified locally. A review for remaining legacy assumptions
+precedes the staffing editors. Publication and deployment have not been performed.
+
+### Agreed document names and ownership
+
+The plan contains `FundingSources` and `Appointments`. Each appointment has
+`Allocations` referencing a `FundingSourceId`. Use `ProjectionFundingSource`,
+`ProjectionAppointment`, and `ProjectionFundingAllocation` for their model types.
+Keep actual project/task identifiers distinct from the plan-local source ID.
+
+Appointments remain separate because one appointment can draw from several
+sources and survives source removal. Expenses remain under their source for
+the current rules. The future Expenses step can present those expenses together
+without adding a third top-level collection. Reconsider expense ownership if
+unallocated or split expenses become a requirement.
+
+Use `FundingSources` and `Appointments` for the database column names as well
+as the domain and API names. This is a greenfield system. Keep one current
+document format without aliases for prototype fields, old request shapes,
+or old navigation keys. Sources record their kind and capture timestamp explicitly.
+
+Source IDs need only be unique among the plan's current sources. Removed IDs
+may be reused by later additions. Plan and section bookmarks are supported;
+durable bookmarks to a particular funding source after removal are outside the
+current scope. Do not add a persisted source ID counter for that guarantee.
+
+### Source selection and identity
+
+Each imported project/task pair is an independent funding source, even when all
+tasks of a project are selected. Keep its balances, costs, and allocations
+separate. A project rollup summarizes its tasks without letting a task surplus
+hide another task's shortfall. Rollup and graph toggles can follow later.
+
+List projects with expandable tasks. Select all eligible tasks by default;
+users can omit a whole project or individual tasks. Simplify the presentation
+for a single-task project. Existing authorization and eligibility rules still
+apply. Prevent the same task from contributing its finances twice.
+
+### Scenario balances, dates, and planned funding
+
+Allow changes to a source's planning balance through a separate scenario
+adjustment. Preserve captured budget, spent-to-date, and commitments and keep
+the captured balance visible. Allow source start/end date assumptions, keeping
+captured dates available for comparison and reset. Imported task dates initially
+inherit the project's supplied date bounds because the source does not provide
+separate task dates. These edits affect only the plan.
+
+Allow planned funding without an existing Walter project/task. Its full entered
+amount becomes available on its start date. Label it as planned; do not apply
+probability weighting. Users can compare plans with and without that funding.
+
+### Fresh additions and capture dates
+
+Add searches available authorized sources and captures current data for the
+selected tasks. Adding a previously removed task is a fresh import, not a
+restoration of its old inputs or edits.
+
+Each source keeps its own exact UTC capture timestamp. A later addition starts
+its outlook in its own capture month and does not change existing sources,
+employee settings, or their salary bases. Show source capture dates clearly.
+Use each source's date for its captured history window, snapshot-month personnel
+netting, recurring-expense proration, and forecast boundary. Preserve the agreed
+fee and one-time expense rules at that boundary. Do not apply a fresh balance
+to an older month or deduct spending already included in that balance again.
+
+Adding a source after plan creation imports its financial inputs and captured
+expense estimates only. It does not import or update employees or allocations.
+The user assigns that funding in Staffing. Initial wizard setup still prefills
+staffing under the roster rule below.
+
+### Initial roster and removal
+
+For now, the initial roster includes only people paid on the selected projects.
+This is deliberately project-level: someone paid only on an unchecked task of
+a selected project still appears, with that task's share unallocated. Narrowing
+the roster to selected tasks is a possible later refinement. Searching for other
+people the PI pays on outside projects is also deferred.
+
+Removing a source discards its captured inputs, source-specific expenses, and
+planning adjustments. Confirm destructive removal. Delete allocations to that
+source, leaving those shares unallocated; do not create replacement outside
+funding or redistribute the shares. Keep employees and their other assumptions.
+Apply the same allocation rule when tasks are deliberately unchecked during
+setup. Preserve existing outside funding separately.
+
+If imported employee funding has a blank or unmatched task, leave that portion
+unallocated and show a brief indication that its task could not be matched.
+Do not guess a selected task or use the old project-level fallback. Saving with
+funding gaps or overlaps remains allowed.
+
+### Implementation scope
+
+Keep saved inputs fixed when reopening a plan. Every source uses its explicit
+kind and capture timestamp; combined-project prototype documents are outside
+the current contract.
+
+Build shared source operations and editors for setup and the saved workspace.
+Use TanStack Form while cleaning up the wizard's input handling. Preserve the
+accepted Apply/Cancel, explicit Save, creation retry, and navigation behavior.
+The calculation reference describes task independence, source-specific capture
+dates, planning balances, and planned funding availability.
+
+Verify task independence, selected-project roster filtering, omitted and
+unmatched allocations, fresh additions to older snapshots, future availability
+of planned funds, financial-only additions, removal/re-addition, and preservation
+of existing employee assumptions and older plans. Review this increment before
+proceeding to the remaining staffing and allocation editors.
+
+### Implementation and verification
+
+The wizard now uses Funding sources → Staffing → Review. Funding sources includes
+the plan name, averaging window, task selection, and shared source editors. The
+initial Continue filters staffing to selected parent projects once. Subsequent
+source changes preserve the roster. Expenses will join the wizard when its
+editor is implemented in Stage 4.
+
+The saved workspace has a Funding sources section with Apply/Cancel dialogs,
+fresh authorized imports, planned funding, and confirmed removal. Source editor
+URLs support direct navigation and Back/Forward. Pending typing participates in
+the existing departure guard. The wizard and source forms use TanStack Form.
+
+The new source catalog and import endpoints use the existing task-grained seed
+query and authorization rules. Import returns captured finances and expense
+estimates without reading personnel or saving a plan. No additional datamart
+procedure change is needed for Stage 3a; the Stage 2a deployment prerequisite
+still applies.
+
+Migration `20261109065142_RenameProjectionSourcesAndAppointments` renames the
+JSON columns to `FundingSources` and `Appointments`. The model uses those names
+directly. Save/import responses
+update the current editor session synchronously so an import completing alongside
+a save cannot restore an obsolete saved baseline.
+
+Verification passed: 559 client tests, 528 standard server tests, all 15 isolated
+SQL Server tests, TypeScript, the production client build, changed-file ESLint
+and formatting, and independent code review. The standard server run skipped
+10 optional SQL cases; the isolated run exercised the renamed columns,
+current allocation JSON, creation, duplication, and save concurrency.
+Client regressions cover task selection and the parent-project roster, source
+Apply/Cancel and save, fresh re-addition without staffing restoration, pending
+typing on departure, direct links and Back/Forward, and concurrent save/import
+completion. Calculation tests cover independent tasks, later source captures,
+planned availability, and explicit source metadata. SQL validation covers the
+column migration and persistence of the current document shape.
+
+A browser walkthrough of the production routes with synthetic API responses
+confirmed task selection, creation, fresh financial imports, planned funding,
+and saving. A July planned source first appears in July with its full amount;
+an imported March source retains its March capture. The source dialog fits a
+390-pixel viewport, and the saved source list has no horizontal overflow.
+React Doctor found no errors;
+the remaining warnings concern component size and form control flow. Existing
+CSS optimization, module-directive, bundle-size, and dependency-audit warnings
+remain. No live source read or deployed behavior was verified.
 
 ## Questions to resolve in their owning stages
 

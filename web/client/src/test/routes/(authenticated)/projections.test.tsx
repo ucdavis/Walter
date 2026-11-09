@@ -36,6 +36,9 @@ describe('saved projection route', () => {
     const plan = createSalaryExample();
     plan.updatedAt = '2026-01-02T12:34:56.1234567Z';
     plan.seededAt = '2026-01-01T00:00:00.1234567Z';
+    for (const source of plan.fundingSources) {
+      source.capturedAt = plan.seededAt;
+    }
     handlePlan(plan);
     const requests: Record<string, unknown>[] = [];
     const savedVersion = '2026-01-03T12:34:56.7654321Z';
@@ -45,10 +48,10 @@ describe('saved projection route', () => {
         requests.push(body);
         return HttpResponse.json({
           ...plan,
+          appointments: body.appointments,
+          fundingSources: body.fundingSources,
           historyMonths: body.historyMonths,
-          jobs: body.jobs,
           name: body.name,
-          projects: body.projects,
           updatedAt: savedVersion,
           updatedBy: 'preview-user',
         });
@@ -56,7 +59,7 @@ describe('saved projection route', () => {
     );
     const user = userEvent.setup();
     const route = renderRoute({
-      initialPath: `/projections/IAM-PREVIEW/${plan.id}?section=staffing&job=101`,
+      initialPath: `/projections/IAM-PREVIEW/${plan.id}?section=staffing&appointment=101`,
     });
     try {
       await screen.findByRole('dialog');
@@ -77,12 +80,12 @@ describe('saved projection route', () => {
       });
 
       const refreshed = structuredClone(plan);
-      refreshed.jobs[0].monthlySalary = 12_000;
+      refreshed.appointments[0].monthlySalary = 12_000;
       refreshed.updatedAt = '2026-01-02T18:00:00.0000001Z';
       await act(async () => {
         route.queryClient.setQueryData(['projections', plan.id], refreshed);
       });
-      await user.click(screen.getByRole('button', { name: 'Project outlook' }));
+      await user.click(screen.getByRole('button', { name: 'Funding outlook' }));
       await user.click(screen.getByRole('button', { name: 'Staffing' }));
       expect(membershipReads).toBe(0);
       await user.click(
@@ -93,13 +96,13 @@ describe('saved projection route', () => {
       await user.click(screen.getByRole('button', { name: /^Save plan/ }));
       await waitFor(() => expect(requests).toHaveLength(1));
       expect(requests[0]).toEqual({
+        appointments: [{ ...plan.appointments[0], monthlySalary: 11_000 }],
         expectedSeededAt: plan.seededAt,
         expectedUpdatedAt: plan.updatedAt,
+        fundingSources: plan.fundingSources,
         historyMonths: plan.historyMonths,
-        jobs: [{ ...plan.jobs[0], monthlySalary: 11_000 }],
         name: plan.name,
         overwrite: false,
-        projects: plan.projects,
       });
       await waitFor(() =>
         expect(
@@ -117,15 +120,15 @@ describe('saved projection route', () => {
       await user.click(screen.getByRole('button', { name: /^Save plan/ }));
       await waitFor(() => expect(requests).toHaveLength(2));
       expect(requests[1]).toMatchObject({
+        appointments: [{ monthlySalary: 13_000 }],
         expectedSeededAt: plan.seededAt,
         expectedUpdatedAt: savedVersion,
-        jobs: [{ monthlySalary: 13_000 }],
         overwrite: false,
       });
       await screen.findByRole('button', { name: '✓ Saved' });
       await user.click(screen.getByRole('link', { name: 'Help' }));
       const latest = structuredClone(plan);
-      latest.jobs[0].monthlySalary = 15_000;
+      latest.appointments[0].monthlySalary = 15_000;
       latest.updatedAt = '2026-01-04T12:34:56.7654321Z';
       handlePlan(latest);
       await act(async () => {

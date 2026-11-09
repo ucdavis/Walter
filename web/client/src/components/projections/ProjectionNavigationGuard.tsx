@@ -3,14 +3,14 @@ import { useProjectionSession } from '@/components/projections/ProjectionSession
 import { ProjectionDialog } from '@/components/projections/ProjectionDialog.tsx';
 import {
   isProjectionDirty,
-  type PendingSalaryEditor,
+  type PendingProjectionEditor,
 } from '@/lib/projectionWorkspace.ts';
 
 export function ProjectionNavigationGuard({
   pendingEditor,
   planPath,
 }: {
-  pendingEditor: () => PendingSalaryEditor | null;
+  pendingEditor: () => PendingProjectionEditor | null;
   planPath: string;
 }) {
   const { conflict, error, reloading, saving, session } =

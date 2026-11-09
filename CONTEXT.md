@@ -60,6 +60,22 @@ _Avoid_: IAM ID, public person identifier
 A **Person** Walter can include in people search because they have both an **IAM ID** and an **Employee ID**.
 _Avoid_: Directory user, employee-only result
 
+**Projection Plan**:
+A saved scenario for one PI that contains captured funding inputs and editable cost assumptions. The plan is saved and copied as a whole.
+_Avoid_: Project, live financial report
+
+**Funding Source**:
+An independently tracked pool of funding within a **Projection Plan**. It can represent an imported project/task pair or hypothetical funding. Project and task numbers identify its origin; its plan-local ID identifies it inside the scenario.
+_Avoid_: Project when referring to every kind of source
+
+**Appointment**:
+A position or hypothetical hire within a **Projection Plan**, with salary, FTE, benefit, fee, and date assumptions. One person can have several appointments, and an appointment can receive funding from several sources.
+_Avoid_: Person or employee when referring to a particular appointment
+
+**Allocation**:
+A dated share of an **Appointment** paid by a **Funding Source** or explicitly funded outside the plan. The appointment's collection is named `Allocations`; each in-plan allocation references `FundingSourceId`.
+_Avoid_: Funding source when referring to a share assigned to an appointment
+
 ## Relationships
 
 - Walter refers to a **Person** by **IAM ID** in navigation and client-facing person lookups
@@ -76,6 +92,10 @@ _Avoid_: Directory user, employee-only result
 - An active **Accrual Viewer** receives the monthly **Accrual Viewer Report**
 - A scheduled notification run does not create new **Accrual Notifications** when the latest **Accrual Snapshot** has already been notified
 - Employees with unmapped classifications receive the **Generic** employee-group variant
+- A **Projection Plan** keeps **Funding Sources** and **Appointments** as separate collections
+- An **Appointment** owns its **Allocations**, which can refer to several **Funding Sources**
+- A **Funding Source** owns its non-personnel expense estimates and explicit expenses
+- Removing a **Funding Source** removes its expenses and allocations but retains the appointments and leaves those shares unallocated
 
 ## Example dialogue
 
