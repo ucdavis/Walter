@@ -1,4 +1,4 @@
--- Project summary combining local FacultyDeptPortfolio table with award metadata from AE DWH
+-- Project summary combining local FacultyDeptPortfolio with award metadata from PgmMasterData
 -- and project dates from PpmProjects.
 -- Returns task-level data with expenditure category breakdown.
 CREATE PROCEDURE dbo.usp_GetProjectSummary
@@ -26,7 +26,6 @@ BEGIN
         RETURN;
     END;
 
-    DECLARE @RedshiftQuery NVARCHAR(MAX);
     DECLARE @TSQLCommand NVARCHAR(MAX);
     DECLARE @FilterClause NVARCHAR(MAX) = '';
     DECLARE @StartTime DATETIME2 = SYSDATETIME();
@@ -55,51 +54,6 @@ BEGIN
     IF @EndDate IS NOT NULL
         SET @FilterClause = @FilterClause + ' AND f.AwardStartDate <= ''' + CONVERT(VARCHAR(10), @EndDate, 120) + '''';
 
-    -- Build Redshift query for award metadata (pgm_master_data is still remote)
-    SET @RedshiftQuery = '
-        WITH ranked AS (
-            SELECT *,
-                ROW_NUMBER() OVER (
-                    PARTITION BY project_number, award_number
-                    ORDER BY project_burden_cost_rate DESC NULLS LAST, contract_line_number ASC NULLS LAST
-                ) AS rn
-            FROM ae_dwh.pgm_master_data
-            WHERE project_number IN (' + @ProjectIdFilter + ')
-        ),
-        best AS (
-            SELECT * FROM ranked WHERE rn = 1
-        )
-        SELECT
-            b.project_number, b.award_number,
-            b.close_date AS award_close_date,
-            CAST(LISTAGG(DISTINCT a.principal_investigator_person_name, ''; '') WITHIN GROUP (ORDER BY 1) AS VARCHAR(4000)) AS award_pi,
-            b.billing_cycle,
-            b.project_burden_schedule_base,
-            b.project_burden_cost_rate,
-            b.cost_share_required_by_sponsor,
-            CAST(LISTAGG(DISTINCT a.grant_administrator, ''; '') WITHIN GROUP (ORDER BY 1) AS VARCHAR(4000)) AS grant_administrator,
-            b.postrepperiod AS post_reporting_period,
-            b.primary_sponsor_name,
-            CAST('''' AS VARCHAR(10)) AS project_fund,
-            CAST(LISTAGG(DISTINCT a.contractadmin, ''; '') WITHIN GROUP (ORDER BY 1) AS VARCHAR(4000)) AS contract_administrator,
-            b.sponsor_award_number,
-            b.flow_through_funds_primary_sponsor,
-            b.flow_through_funds_reference_award_name,
-            b.flow_through_funds_start_date,
-            b.flow_through_funds_end_date,
-            b.flow_through_funds_amount
-        FROM best b
-        JOIN ae_dwh.pgm_master_data a
-            ON a.project_number = b.project_number AND a.award_number = b.award_number
-        GROUP BY
-            b.project_number, b.award_number, b.close_date, b.billing_cycle,
-            b.project_burden_schedule_base, b.project_burden_cost_rate,
-            b.cost_share_required_by_sponsor, b.postrepperiod, b.primary_sponsor_name,
-            b.sponsor_award_number,
-            b.flow_through_funds_primary_sponsor, b.flow_through_funds_reference_award_name,
-            b.flow_through_funds_start_date, b.flow_through_funds_end_date,
-            b.flow_through_funds_amount';
-
     -- Build parameters JSON for logging
     SET @ParametersJSON = (
         SELECT
@@ -111,37 +65,55 @@ BEGIN
     );
 
     BEGIN TRY
-        -- Fetch award metadata from Redshift into a temp table, then join with local FacultyDeptPortfolio.
-        -- #pgm is pre-created with an explicit column list because INSERT ... EXEC cannot use SELECT INTO.
-        -- The Redshift query is sent via EXEC ... AT (RPC), whose query text has no 8000-character limit.
-        -- [AE_Redshift_PROD] must have rpc out = true and remote proc transaction promotion = false.
-        CREATE TABLE #pgm (
-            project_number                          NVARCHAR(50),
-            award_number                            NVARCHAR(240),
-            award_close_date                        DATE,
-            award_pi                                NVARCHAR(4000),
-            billing_cycle                           NVARCHAR(100),
-            project_burden_schedule_base            NVARCHAR(60),
-            project_burden_cost_rate                NUMERIC(22, 5),
-            cost_share_required_by_sponsor          NVARCHAR(4),
-            grant_administrator                     NVARCHAR(4000),
-            post_reporting_period                   NVARCHAR(160),
-            primary_sponsor_name                    NVARCHAR(720),
-            project_fund                            NVARCHAR(10),
-            contract_administrator                  NVARCHAR(4000),
-            sponsor_award_number                    NVARCHAR(60),
-            flow_through_funds_primary_sponsor      NVARCHAR(720),
-            flow_through_funds_reference_award_name NVARCHAR(200),
-            flow_through_funds_start_date           DATE,
-            flow_through_funds_end_date             DATE,
-            flow_through_funds_amount               NUMERIC(38, 2)
-        );
-
-        INSERT INTO #pgm
-        EXEC (@RedshiftQuery) AT [AE_Redshift_PROD];
-
-        -- Join the Redshift award metadata with the local FacultyDeptPortfolio.
+        -- PgmMasterData fans out per project+award; pick one representative row (highest burden
+        -- rate, then lowest contract line) and aggregate the distinct people names across all rows.
         SET @TSQLCommand = '
+            WITH ranked AS (
+                SELECT ProjectNumber, AwardNumber, CloseDate, BillingCycle,
+                    ProjectBurdenScheduleBase, ProjectBurdenCostRate, CostShareRequiredBySponsor,
+                    PostRepPeriod, PrimarySponsorName, SponsorAwardNumber,
+                    FlowThroughFundsPrimarySponsor, FlowThroughFundsReferenceAwardName,
+                    FlowThroughFundsStartDate, FlowThroughFundsEndDate, FlowThroughFundsAmount,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY ProjectNumber, AwardNumber
+                        ORDER BY ProjectBurdenCostRate DESC,
+                            CASE WHEN ContractLineNumber IS NULL THEN 1 ELSE 0 END, ContractLineNumber
+                    ) AS rn
+                FROM dbo.PgmMasterData
+                WHERE ProjectNumber IN (' + @ProjectIdFilter + ')
+            ),
+            p AS (
+                SELECT
+                    b.ProjectNumber AS project_number, b.AwardNumber AS award_number,
+                    b.CloseDate AS award_close_date,
+                    (SELECT STRING_AGG(v, ''; '') WITHIN GROUP (ORDER BY v)
+                     FROM (SELECT DISTINCT CAST(a.PrincipalInvestigatorPersonName AS NVARCHAR(MAX)) AS v
+                           FROM dbo.PgmMasterData a
+                           WHERE a.ProjectNumber = b.ProjectNumber AND a.AwardNumber = b.AwardNumber) d) AS award_pi,
+                    b.BillingCycle AS billing_cycle,
+                    b.ProjectBurdenScheduleBase AS project_burden_schedule_base,
+                    b.ProjectBurdenCostRate AS project_burden_cost_rate,
+                    b.CostShareRequiredBySponsor AS cost_share_required_by_sponsor,
+                    (SELECT STRING_AGG(v, ''; '') WITHIN GROUP (ORDER BY v)
+                     FROM (SELECT DISTINCT CAST(a.GrantAdministrator AS NVARCHAR(MAX)) AS v
+                           FROM dbo.PgmMasterData a
+                           WHERE a.ProjectNumber = b.ProjectNumber AND a.AwardNumber = b.AwardNumber) d) AS grant_administrator,
+                    b.PostRepPeriod AS post_reporting_period,
+                    b.PrimarySponsorName AS primary_sponsor_name,
+                    CAST('''' AS NVARCHAR(10)) AS project_fund,
+                    (SELECT STRING_AGG(v, ''; '') WITHIN GROUP (ORDER BY v)
+                     FROM (SELECT DISTINCT CAST(a.ContractAdmin AS NVARCHAR(MAX)) AS v
+                           FROM dbo.PgmMasterData a
+                           WHERE a.ProjectNumber = b.ProjectNumber AND a.AwardNumber = b.AwardNumber) d) AS contract_administrator,
+                    b.SponsorAwardNumber AS sponsor_award_number,
+                    b.FlowThroughFundsPrimarySponsor AS flow_through_funds_primary_sponsor,
+                    b.FlowThroughFundsReferenceAwardName AS flow_through_funds_reference_award_name,
+                    b.FlowThroughFundsStartDate AS flow_through_funds_start_date,
+                    b.FlowThroughFundsEndDate AS flow_through_funds_end_date,
+                    b.FlowThroughFundsAmount AS flow_through_funds_amount
+                FROM ranked b
+                WHERE b.rn = 1
+            )
             SELECT f.AwardNumber AS AWARD_NUMBER, f.AwardName AS AWARD_NAME, f.AwardType AS AWARD_TYPE,
                 f.AwardStartDate AS AWARD_START_DATE, f.AwardEndDate AS AWARD_END_DATE, f.AwardStatus AS AWARD_STATUS,
                 f.ProjectNumber AS PROJECT_NUMBER, f.ProjectName AS PROJECT_NAME,
@@ -175,7 +147,7 @@ BEGIN
                 p.flow_through_funds_end_date            AS FLOW_THROUGH_FUNDS_END_DATE,
                 p.flow_through_funds_amount              AS FLOW_THROUGH_FUNDS_AMOUNT
             FROM dbo.FacultyDeptPortfolio f
-            LEFT JOIN #pgm p ON f.ProjectNumber = p.project_number AND f.AwardNumber = p.award_number
+            LEFT JOIN p ON f.ProjectNumber = p.project_number AND f.AwardNumber = p.award_number
             LEFT JOIN dbo.PpmProjects pp ON pp.ProjectNumber = CAST(f.ProjectNumber AS VARCHAR(15))
             ' + @FilterClause;
 
