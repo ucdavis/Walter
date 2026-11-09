@@ -142,6 +142,9 @@ describe('project detail page', () => {
         within(topSection).getByText('Sponsored Project')
       ).toBeInTheDocument();
       expect(
+        screen.queryByRole('link', { name: 'Task Details' })
+      ).not.toBeInTheDocument();
+      expect(
         within(topSection).getByText(
           'Source: Faculty & Department Portfolio Report (PPM)'
         )
@@ -719,6 +722,78 @@ describe('project detail page', () => {
     }
   });
 
+  it('opens task details from the project and switches tasks without retaining the previous chart string', async () => {
+    const user = userEvent.setup();
+    const internal = {
+      awardEndDate: null,
+      awardNumber: null,
+      awardStartDate: null,
+      projectType: 'Internal',
+    };
+    setupHandlers({ employeeId: '1000', name: 'PI User' }, [
+      createProject({
+        ...internal,
+        expenditureCategoryName: '03 - Supplies',
+        taskNum: 'T001',
+      }),
+      createProject({
+        ...internal,
+        activityCode: 'A2',
+        expenditureCategoryName: '07 - Travel',
+        fundCode: 'F2',
+        programCode: 'P2',
+        projectOwningOrgCode: 'ORG2',
+        taskName: 'Task 2',
+        taskNum: 'T002',
+      }),
+    ]);
+
+    const { cleanup, router } = renderRoute({
+      initialPath: '/projects/1000/P1',
+    });
+
+    try {
+      await user.click(
+        await screen.findByRole('link', { name: 'Task Details' })
+      );
+
+      expect(await screen.findByText('03 - Supplies')).toBeInTheDocument();
+      expect(screen.queryByText('07 - Travel')).not.toBeInTheDocument();
+      const taskSelector = screen.getByRole('combobox', { name: 'Task' });
+      await user.selectOptions(
+        taskSelector,
+        within(taskSelector).getByRole('option', { name: /T002/ })
+      );
+
+      expect(await screen.findByText('07 - Travel')).toBeInTheDocument();
+      expect(screen.queryByText('03 - Supplies')).not.toBeInTheDocument();
+      expect(router.state.location.search).toMatchObject({
+        activity: 'A2',
+        dept: 'ORG2',
+        fund: 'F2',
+        program: 'P2',
+        task: 'T002',
+      });
+      expect(
+        screen.getByRole('link', { name: 'View project costs for task T002' })
+      ).toHaveAttribute('href', '/projectcosts/1000/P1?task=T002');
+
+      await user.click(screen.getByRole('link', { name: 'Project Details' }));
+      expect(
+        await screen.findByRole('link', {
+          name: 'View expenditure categories for task T001',
+        })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('link', {
+          name: 'View expenditure categories for task T002',
+        })
+      ).toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+
   it('drills from a task into its expenditure categories and costs', async () => {
     const user = userEvent.setup();
     const internal = {
@@ -838,6 +913,21 @@ describe('project detail page', () => {
       });
       await user.click(blankActivityLink);
 
+      expect(await screen.findByText('03 - Supplies')).toBeInTheDocument();
+      expect(screen.queryByText('07 - Travel')).not.toBeInTheDocument();
+
+      const taskSelector = screen.getByRole('combobox', { name: 'Task' });
+      await user.selectOptions(
+        taskSelector,
+        within(taskSelector).getByRole('option', { name: /A1/ })
+      );
+      expect(await screen.findByText('07 - Travel')).toBeInTheDocument();
+      expect(screen.queryByText('03 - Supplies')).not.toBeInTheDocument();
+
+      await user.selectOptions(
+        taskSelector,
+        within(taskSelector).getByRole('option', { name: /—$/ })
+      );
       expect(await screen.findByText('03 - Supplies')).toBeInTheDocument();
       expect(screen.queryByText('07 - Travel')).not.toBeInTheDocument();
     } finally {

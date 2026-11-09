@@ -28,6 +28,7 @@ import { buildFinjectorUrl } from '@/lib/finjector.ts';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, Link } from '@tanstack/react-router';
 import {
+  ClipboardDocumentListIcon,
   PresentationChartLineIcon,
   TableCellsIcon,
 } from '@heroicons/react/24/outline';
@@ -176,8 +177,19 @@ function ProjectContent({
 
       <ProjectDetails
         actions={
-          showProjectBurndown || showProjectCosts ? (
+          summary.isInternal || showProjectBurndown || showProjectCosts ? (
             <>
+              {summary.isInternal ? (
+                <Link
+                  className="btn btn-lg"
+                  params={{ iamId, projectNumber: summary.projectNumber }}
+                  search={{}}
+                  to="/projects/$iamId/$projectNumber/expenditure-categories"
+                >
+                  <ClipboardDocumentListIcon className="h-4 w-4" />
+                  Task Details
+                </Link>
+              ) : null}
               {showProjectBurndown ? (
                 <Link
                   className="btn btn-lg"
