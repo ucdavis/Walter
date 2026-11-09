@@ -149,11 +149,7 @@ function ProjectContent({
           <span
             className={`badge font-sans font-bold badge-sm ${summary.isInternal ? 'badge-accent' : 'badge-info'}`}
           >
-            {projectRecords[0]?.projectType
-              ? `${projectRecords[0].projectType} Project`
-              : summary.isInternal
-                ? 'Internal Project'
-                : 'Sponsored Project'}
+            {`${projectRecords[0].projectType} Project`}
           </span>
           <span className="text-sm text-base-content/70">
             Source: Faculty & Department Portfolio Report (PPM)
