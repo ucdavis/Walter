@@ -14,7 +14,7 @@ import {
 import type { ProjectionFundingSource } from '@/queries/projections.ts';
 
 function capturedTask(id: number, capturedAt: string): ProjectionFundingSource {
-  const source = createSalaryExample().fundingSources[0];
+  const source = createSalaryExample().content.fundingSources[0];
   return {
     ...source,
     actuals: [
@@ -49,8 +49,8 @@ describe('independent funding source captures', () => {
     const plan = createSalaryExample();
     plan.seededAt = '2026-10-16T00:00:00Z';
     const old = capturedTask(1, plan.seededAt);
-    plan.fundingSources = [old];
-    Object.assign(plan.appointments[0], {
+    plan.content.fundingSources = [old];
+    Object.assign(plan.content.appointments[0], {
       allocations: [1, 2].map((fundingSourceId) => ({
         endDate: null,
         fundingSourceId,
@@ -63,7 +63,7 @@ describe('independent funding source captures', () => {
       startDate: '2026-11-01',
     });
     const before = getFundingSourceOutlook(computePiProjection(plan).rows, 1);
-    plan.fundingSources.push(capturedTask(2, '2026-11-16T00:00:00Z'));
+    plan.content.fundingSources.push(capturedTask(2, '2026-11-16T00:00:00Z'));
     const results = computePiProjection(plan);
     expect(getFundingSourceOutlook(results.rows, 1)).toEqual(before);
     expect(getFundingSourceOutlook(results.rows, 2)[0]).toEqual({
@@ -77,18 +77,18 @@ describe('independent funding source captures', () => {
         ({ month }) => month === '2026-11'
       )
     ).toMatchObject({ forecast: 5000, remaining: 45_000 });
-    expect(plan.fundingSources[1].actuals[0].amount).toBe(2000);
+    expect(plan.content.fundingSources[1].actuals[0].amount).toBe(2000);
   });
 
   it('prorates recurring costs after each source capture day and preserves whole one-time costs', () => {
     const plan = createSalaryExample();
     plan.seededAt = '2026-10-16T00:00:00Z';
-    plan.appointments = [];
-    plan.fundingSources = [
+    plan.content.appointments = [];
+    plan.content.fundingSources = [
       capturedTask(1, plan.seededAt),
       capturedTask(2, '2026-11-16T00:00:00Z'),
     ];
-    for (const source of plan.fundingSources) {
+    for (const source of plan.content.fundingSources) {
       source.runRates = [
         {
           expenditureCategory: SUPPLIES_CATEGORY,
@@ -97,7 +97,7 @@ describe('independent funding source captures', () => {
         },
       ];
     }
-    plan.fundingSources[1].expenses.push({
+    plan.content.fundingSources[1].expenses.push({
       amount: 1000,
       description: 'Example expense',
       endMonth: null,
@@ -124,8 +124,8 @@ describe('independent funding source captures', () => {
     plan.seededAt = '2026-06-16T00:00:00Z';
     const source = capturedTask(1, '2026-08-16T00:00:00Z');
     source.actuals = [];
-    plan.fundingSources = [source];
-    Object.assign(plan.appointments[0], {
+    plan.content.fundingSources = [source];
+    Object.assign(plan.content.appointments[0], {
       allocations: [
         {
           endDate: null,
@@ -147,8 +147,8 @@ describe('independent funding source captures', () => {
   it('makes the entire planned amount available at its start, with no earlier balance or costs', () => {
     const plan = createSalaryExample();
     plan.seededAt = '2026-01-16T00:00:00Z';
-    plan.appointments = [];
-    plan.fundingSources = [];
+    plan.content.appointments = [];
+    plan.content.fundingSources = [];
     const added = addPlannedSource(createProjectionSession(plan), {
       balance: 100_000,
       endDate: '2026-12-31',
@@ -158,7 +158,7 @@ describe('independent funding source captures', () => {
     if (!added.ok) {
       throw new Error(added.error);
     }
-    const source = added.session.draft.fundingSources[0];
+    const source = added.session.draft.content.fundingSources[0];
     source.expenses = [
       {
         amount: 310,
@@ -183,8 +183,8 @@ describe('independent funding source captures', () => {
   it('adds the planning adjustment once without changing category budgets or other source forecasts', () => {
     const plan = createSalaryExample();
     const before = computePiProjection(plan);
-    const captured = structuredClone(plan.fundingSources[0].budgets);
-    plan.fundingSources[0].balanceAdjustment = -5000;
+    const captured = structuredClone(plan.content.fundingSources[0].budgets);
+    plan.content.fundingSources[0].balanceAdjustment = -5000;
     const after = computePiProjection(plan);
     expect(
       getFundingSourceOutlook(after.rows, 1).map(({ remaining }) => remaining)
@@ -193,11 +193,11 @@ describe('independent funding source captures', () => {
         ({ remaining }) => remaining - 5000
       )
     );
-    expect(plan.fundingSources[0].budgets).toEqual(captured);
+    expect(plan.content.fundingSources[0].budgets).toEqual(captured);
     expect(getFundingSourceOutlook(after.rows, 2)).toEqual(
       getFundingSourceOutlook(before.rows, 2)
     );
-    plan.fundingSources[0].balanceAdjustment = 0;
+    plan.content.fundingSources[0].balanceAdjustment = 0;
     expect(computePiProjection(plan)).toEqual(before);
   });
 });

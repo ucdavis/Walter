@@ -107,10 +107,18 @@ export interface ProjectionAppointment {
   vacationAccrualRate: number;
 }
 
-export interface ProjectionDraft {
+export interface ProjectionContent {
   appointments: ProjectionAppointment[];
+  /** Inclusive plan duration anchored to the original snapshot month. */
+  forecastMonths: number;
   fundingSources: ProjectionFundingSource[];
   historyMonths: number;
+  /** Optional plain-text context for this scenario. */
+  notes: string | null;
+}
+
+export interface ProjectionDraft {
+  content: ProjectionContent;
   name: string;
   /** Original plan capture and salary base. */
   seededAt: string;

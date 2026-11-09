@@ -5,7 +5,6 @@ import type {
 } from '@/queries/projections.ts';
 import type { AppointmentOperationResult } from '@/lib/projectionAppointments.ts';
 import type { ProjectionSession } from '@/lib/projectionWorkspace.ts';
-
 export interface AllocationRange {
   endDate: string | null;
   startDate: string | null;
@@ -47,7 +46,7 @@ function validRange(range: AllocationRange) {
 }
 
 function validateShares(plan: ProjectionDraft, shares: AllocationShare[]) {
-  const sourceIds = new Set(plan.fundingSources.map(({ id }) => id));
+  const sourceIds = new Set(plan.content.fundingSources.map(({ id }) => id));
   for (const share of shares) {
     if (
       share.fundingSourceId !== null &&
@@ -70,7 +69,7 @@ function validateShares(plan: ProjectionDraft, shares: AllocationShare[]) {
 export function validateProjectionAllocations(
   plan: ProjectionDraft
 ): string | null {
-  for (const appointment of plan.appointments) {
+  for (const appointment of plan.content.appointments) {
     const error =
       validateShares(plan, appointment.allocations) ??
       (appointment.allocations.some((allocation) => !validRange(allocation))
@@ -89,7 +88,7 @@ export function validateFundingReplacement(
   range: AllocationRange,
   shares: AllocationShare[]
 ): string | null {
-  if (!plan.appointments.some(({ id }) => id === appointmentId)) {
+  if (!plan.content.appointments.some(({ id }) => id === appointmentId)) {
     return 'This appointment is no longer in the plan.';
   }
   if (!validRange(range)) {
@@ -227,7 +226,7 @@ export function replaceAppointmentFunding<T extends ProjectionDraft>(
   if (error) {
     return { error, ok: false };
   }
-  const appointment = session.draft.appointments.find(
+  const appointment = session.draft.content.appointments.find(
     ({ id }) => id === appointmentId
   )!;
   const unchanged = allocationRangeMatches(appointment, range, shares);
@@ -264,11 +263,14 @@ export function replaceAppointmentFunding<T extends ProjectionDraft>(
       ...session,
       draft: {
         ...session.draft,
-        appointments: session.draft.appointments.map((candidate) =>
-          candidate.id === appointmentId
-            ? { ...candidate, allocations, hasUnmatchedFunding: false }
-            : candidate
-        ),
+        content: {
+          ...session.draft.content,
+          appointments: session.draft.content.appointments.map((candidate) =>
+            candidate.id === appointmentId
+              ? { ...candidate, allocations, hasUnmatchedFunding: false }
+              : candidate
+          ),
+        },
       },
       revision: session.revision + 1,
     },

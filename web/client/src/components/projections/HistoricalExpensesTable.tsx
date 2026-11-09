@@ -1,14 +1,17 @@
+import type { ProjectionForecastWindow } from '@/lib/piProjection.ts';
 import { formatCurrency } from '@/lib/currency.ts';
 import { computeExpenseForecast } from '@/lib/piProjection.ts';
 import { getHistoricalExpenseRows } from '@/lib/projectionExpenses.ts';
 import type { ProjectionFundingSource } from '@/queries/projections.ts';
 
 export function HistoricalExpensesTable({
+  forecastWindow,
   historyMonths,
   onEdit,
   onRestore,
   source,
 }: {
+  forecastWindow: ProjectionForecastWindow;
   historyMonths: number;
   onEdit: (category: string) => void;
   onRestore: (category: string) => void;
@@ -37,12 +40,16 @@ export function HistoricalExpensesTable({
             </thead>
             <tbody>
               {historical.map((row) => {
-                const forecast = computeExpenseForecast(source, {
-                  amount: row.effectiveAmount,
-                  endMonth: null,
-                  kind: 'Monthly',
-                  startMonth: null,
-                });
+                const forecast = computeExpenseForecast(
+                  source,
+                  {
+                    amount: row.effectiveAmount,
+                    endMonth: null,
+                    kind: 'Monthly',
+                    startMonth: null,
+                  },
+                  forecastWindow
+                );
                 const captured = source.runRates.some(
                   (rate) =>
                     rate.expenditureCategory === row.expenditureCategory &&

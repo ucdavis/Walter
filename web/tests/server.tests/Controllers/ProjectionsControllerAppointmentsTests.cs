@@ -31,7 +31,7 @@ public sealed partial class ProjectionsControllerTests
         var saved = await StoreCapturedPlanAsync(ctx);
         var before = JsonSerializer.Serialize(saved);
         var draft = Draft(saved);
-        var appointment = draft.Appointments.Single();
+        var appointment = draft.Content.Appointments.Single();
         switch (invalid)
         {
             case "missing-salary": appointment.MonthlySalary = null; break;
@@ -50,7 +50,7 @@ public sealed partial class ProjectionsControllerTests
         }
         var controller = CreateController(ctx, financialViewer: true, dataSource: UnavailableProjectionData());
 
-        var snapshot = new ProjectionDraft(draft.Name, draft.HistoryMonths, saved.SeededAt, draft.FundingSources, draft.Appointments);
+        var snapshot = new ProjectionDraft(draft.Name, saved.SeededAt, draft.Content);
         (await controller.Create(PiIam, new(snapshot, Guid.NewGuid()), default)).Should().BeOfType<BadRequestObjectResult>();
         (await controller.Save(saved.Id, draft, default)).Should().BeOfType<BadRequestObjectResult>();
 
@@ -65,7 +65,7 @@ public sealed partial class ProjectionsControllerTests
     {
         using var ctx = TestDbContextFactory.CreateInMemory();
         var request = NewPlanRequest();
-        var appointment = request.Draft!.Appointments.Single();
+        var appointment = request.Draft!.Content.Appointments.Single();
         appointment.MonthlySalary = 0;
         appointment.Fte = 0;
         appointment.CbrRate = 0;
@@ -76,9 +76,9 @@ public sealed partial class ProjectionsControllerTests
         var controller = CreateController(ctx, financialViewer: true, dataSource: UnavailableProjectionData());
 
         var created = Document(await controller.Create(PiIam, request, default));
-        created.Appointments.Should().BeEquivalentTo(request.Draft.Appointments);
+        created.Content.Appointments.Should().BeEquivalentTo(request.Draft.Content.Appointments);
         var update = Draft(created);
-        var edited = update.Appointments.Single();
+        var edited = update.Content.Appointments.Single();
         edited.Fte = 1;
         edited.ColaMonth = 12;
         edited.ColaRate = 1.5m;
@@ -87,7 +87,7 @@ public sealed partial class ProjectionsControllerTests
         var saved = Document(await controller.Save(created.Id, update, default));
         ctx.ChangeTracker.Clear();
 
-        Document(await controller.Get(saved.Id, default)).Appointments.Should().BeEquivalentTo(update.Appointments);
+        Document(await controller.Get(saved.Id, default)).Content.Appointments.Should().BeEquivalentTo(update.Content.Appointments);
     }
 
     [Fact]
@@ -98,7 +98,7 @@ public sealed partial class ProjectionsControllerTests
         var controller = CreateController(ctx, financialViewer: true, dataSource: data);
 
         var draft = SeedResponse(await controller.Seed(PiIam, 3, default)).Draft;
-        var appointment = draft.Appointments.Should().ContainSingle().Subject;
+        var appointment = draft.Content.Appointments.Should().ContainSingle().Subject;
         appointment.MonthlySalary.Should().BeNull();
         appointment.StartDate.Should().BeNull();
         appointment.EndDate.Should().BeNull();
@@ -107,10 +107,10 @@ public sealed partial class ProjectionsControllerTests
 
         appointment.MonthlySalary = 0;
         var created = Document(await controller.Create(PiIam, new(draft, Guid.NewGuid()), default));
-        created.Appointments.Single().MonthlySalary.Should().Be(0);
-        created.Appointments.Single().StartDate.Should().BeNull();
-        var emptyRoster = draft with { Appointments = [] };
-        Document(await controller.Create(PiIam, new(emptyRoster, Guid.NewGuid()), default)).Appointments.Should().BeEmpty();
+        created.Content.Appointments.Single().MonthlySalary.Should().Be(0);
+        created.Content.Appointments.Single().StartDate.Should().BeNull();
+        var emptyRoster = draft with { Content = draft.Content with { Appointments = [] } };
+        Document(await controller.Create(PiIam, new(emptyRoster, Guid.NewGuid()), default)).Content.Appointments.Should().BeEmpty();
     }
 
     [Fact]
@@ -121,14 +121,14 @@ public sealed partial class ProjectionsControllerTests
         var controller = CreateController(ctx, financialViewer: true, dataSource: UnavailableProjectionData());
         var request = new ProjectionsController.DuplicateProjectionRequest("Copy", Guid.NewGuid());
         var copy = Document(await controller.Duplicate(source.Id, request, default));
-        source.Appointments.Single().MonthlySalary = null;
+        source.Content.Appointments.Single().MonthlySalary = null;
         await ctx.SaveChangesAsync();
 
         (await controller.Duplicate(source.Id, request with { CreationKey = Guid.NewGuid() }, default)).Should().BeOfType<BadRequestObjectResult>();
         var retry = Document(await controller.Duplicate(source.Id, request, default));
 
         retry.Id.Should().Be(copy.Id);
-        retry.Appointments.Single().MonthlySalary.Should().Be(6500);
+        retry.Content.Appointments.Single().MonthlySalary.Should().Be(6500);
         ctx.Projections.Should().HaveCount(2);
     }
 

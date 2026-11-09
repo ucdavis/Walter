@@ -38,7 +38,12 @@ public sealed class ProjectionSeeder(IProjectionDataSource data, TimeProvider? t
             roster.Add(new(appointment.Id, rows.Select(r => r.ProjectId).Where(p => !string.IsNullOrWhiteSpace(p))
                 .Select(p => p!).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToList()));
         }
-        return new(new("New projection", historyMonths, snapshotAtUtc, prepared.FundingSources, appointments), roster);
+        return new(new("New projection", snapshotAtUtc, new ProjectionContent
+        {
+            HistoryMonths = historyMonths,
+            FundingSources = prepared.FundingSources,
+            Appointments = appointments,
+        }), roster);
     }
 
     /// <summary>Captures eligible task financials for Add without querying personnel or changing any saved plan.</summary>

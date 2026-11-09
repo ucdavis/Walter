@@ -20,7 +20,7 @@ public sealed partial class ProjectionsControllerTests
         var stored = await StoreCapturedPlanAsync(ctx);
         var before = JsonSerializer.Serialize(stored);
         var draft = Draft(stored);
-        var allocation = draft.Appointments.Single().Allocations[0];
+        var allocation = draft.Content.Appointments.Single().Allocations[0];
         switch (invalid)
         {
             case "negative-share": allocation.Percent = -0.01m; break;
@@ -28,14 +28,14 @@ public sealed partial class ProjectionsControllerTests
             case "reversed-dates": allocation.EndDate = allocation.StartDate!.Value.AddDays(-1); break;
         }
         var controller = CreateController(ctx, financialViewer: true, dataSource: UnavailableProjectionData());
-        var snapshot = new ProjectionDraft(draft.Name, draft.HistoryMonths, stored.SeededAt, draft.FundingSources, draft.Appointments);
+        var snapshot = new ProjectionDraft(draft.Name, stored.SeededAt, draft.Content);
 
         (await controller.Create(PiIam, new(snapshot, Guid.NewGuid()), default)).Should().BeOfType<BadRequestObjectResult>();
         (await controller.Save(stored.Id, draft, default)).Should().BeOfType<BadRequestObjectResult>();
         JsonSerializer.Serialize(stored).Should().Be(before);
         ctx.ChangeTracker.HasChanges().Should().BeFalse();
 
-        stored.Appointments = draft.Appointments;
+        stored.Content.Appointments = draft.Content.Appointments;
         await ctx.SaveChangesAsync();
         (await controller.Duplicate(stored.Id, new("Invalid copy", Guid.NewGuid()), default)).Should().BeOfType<BadRequestObjectResult>();
         ctx.Projections.Should().ContainSingle();
@@ -46,7 +46,7 @@ public sealed partial class ProjectionsControllerTests
     {
         using var ctx = TestDbContextFactory.CreateInMemory();
         var request = NewPlanRequest();
-        var appointment = request.Draft!.Appointments.Single();
+        var appointment = request.Draft!.Content.Appointments.Single();
         appointment.Fte = 0;
         appointment.FeeRemissionMonthly = 500;
         appointment.HasUnmatchedFunding = true;
@@ -59,29 +59,29 @@ public sealed partial class ProjectionsControllerTests
             new() { FundingSourceId = 41, Percent = 1, StartDate = new DateOnly(2026, 1, 1) },
         ];
         var expected = JsonSerializer.Serialize(appointment.Allocations);
-        var capturedSources = JsonSerializer.Serialize(request.Draft.FundingSources);
+        var capturedSources = JsonSerializer.Serialize(request.Draft.Content.FundingSources);
         var controller = CreateController(ctx, financialViewer: true, dataSource: UnavailableProjectionData());
 
         var created = Document(await controller.Create(PiIam, request, default));
         var update = Draft(created);
-        update.Appointments.Single().MonthlySalary = 7000;
+        update.Content.Appointments.Single().MonthlySalary = 7000;
         var saved = Document(await controller.Save(created.Id, update, default));
         ctx.ChangeTracker.Clear();
         var reopened = Document(await controller.Get(saved.Id, default));
 
-        JsonSerializer.Serialize(reopened.Appointments.Single().Allocations).Should().Be(expected);
-        JsonSerializer.Serialize(reopened.FundingSources).Should().Be(capturedSources);
-        reopened.Appointments.Single().HasUnmatchedFunding.Should().BeTrue();
-        reopened.Appointments.Single().Fte.Should().Be(0);
-        reopened.Appointments.Single().FeeRemissionMonthly.Should().Be(500);
+        JsonSerializer.Serialize(reopened.Content.Appointments.Single().Allocations).Should().Be(expected);
+        JsonSerializer.Serialize(reopened.Content.FundingSources).Should().Be(capturedSources);
+        reopened.Content.Appointments.Single().HasUnmatchedFunding.Should().BeTrue();
+        reopened.Content.Appointments.Single().Fte.Should().Be(0);
+        reopened.Content.Appointments.Single().FeeRemissionMonthly.Should().Be(500);
         var copy = Document(await controller.Duplicate(reopened.Id, new("Same funding", Guid.NewGuid()), default));
-        JsonSerializer.Serialize(copy.Appointments.Single().Allocations).Should().Be(expected);
+        JsonSerializer.Serialize(copy.Content.Appointments.Single().Allocations).Should().Be(expected);
 
         var reviewed = Draft(reopened);
-        reviewed.Appointments.Single().HasUnmatchedFunding = false;
+        reviewed.Content.Appointments.Single().HasUnmatchedFunding = false;
         var acknowledged = Document(await controller.Save(reopened.Id, reviewed, default));
-        acknowledged.Appointments.Single().HasUnmatchedFunding.Should().BeFalse();
-        JsonSerializer.Serialize(acknowledged.Appointments.Single().Allocations).Should().Be(expected);
+        acknowledged.Content.Appointments.Single().HasUnmatchedFunding.Should().BeFalse();
+        JsonSerializer.Serialize(acknowledged.Content.Appointments.Single().Allocations).Should().Be(expected);
     }
 
     [Theory]

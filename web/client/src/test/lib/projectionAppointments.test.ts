@@ -47,7 +47,7 @@ const newHire: AppointmentInputs = {
 describe('appointment operations', () => {
   it('changes FTE and dates without rewriting allocation shares, funding dates, or captured identity', () => {
     const initial = createProjectionSession(createSalaryExample());
-    const original = initial.draft.appointments[0];
+    const original = initial.draft.content.appointments[0];
     original.vacationAccrualRate = 0.07;
     const updated = applied(
       editProjectionAppointment(initial, original.id, {
@@ -60,7 +60,7 @@ describe('appointment operations', () => {
         title: 'Changed title',
       })
     );
-    const appointment = updated.draft.appointments[0];
+    const appointment = updated.draft.content.appointments[0];
     expect(appointment).toMatchObject({
       employeeId: original.employeeId,
       endDate: '2026-03-31',
@@ -78,7 +78,9 @@ describe('appointment operations', () => {
       0.5, 0.5,
     ]);
     expect(appointment.allocations[0].endDate).toBe('2026-06-30');
-    expect(updated.draft.fundingSources).toBe(initial.draft.fundingSources);
+    expect(updated.draft.content.fundingSources).toBe(
+      initial.draft.content.fundingSources
+    );
     expect(
       computePiProjection(updated.draft).rows.find(
         (row) =>
@@ -92,7 +94,7 @@ describe('appointment operations', () => {
 
   it('keeps allocations and the entered fee at zero FTE', () => {
     const initial = createProjectionSession(createSalaryExample());
-    const original = initial.draft.appointments[0];
+    const original = initial.draft.content.appointments[0];
     const updated = applied(
       editProjectionAppointment(initial, original.id, {
         ...original,
@@ -101,7 +103,7 @@ describe('appointment operations', () => {
       })
     );
     const rows = computePiProjection(updated.draft).rows;
-    expect(updated.draft.appointments[0].allocations).toBe(
+    expect(updated.draft.content.appointments[0].allocations).toBe(
       original.allocations
     );
     expect(
@@ -124,7 +126,7 @@ describe('appointment operations', () => {
 
   it('keeps no-op identity and precision, and restoring assumptions clears dirty status', () => {
     const initial = createProjectionSession(createSalaryExample());
-    const original = initial.draft.appointments[0];
+    const original = initial.draft.content.appointments[0];
     original.monthlySalary = 10_000.123_456;
     expect(
       applied(editProjectionAppointment(initial, original.id, original))
@@ -136,7 +138,7 @@ describe('appointment operations', () => {
         fte: 0.75,
       })
     );
-    expect(changed.draft.appointments[0].monthlySalary).toBe(
+    expect(changed.draft.content.appointments[0].monthlySalary).toBe(
       original.monthlySalary
     );
     const restored = applied(
@@ -148,16 +150,20 @@ describe('appointment operations', () => {
 
   it('adds an unallocated hypothetical hire to an unsaved draft without importing identity or financials', () => {
     const draft: ProjectionDraft = {
-      appointments: [],
-      fundingSources: [],
-      historyMonths: 3,
+      content: {
+        appointments: [],
+        forecastMonths: 12,
+        fundingSources: [],
+        historyMonths: 3,
+        notes: null,
+      },
       name: 'Draft',
       seededAt: '2026-01-01T00:00:00Z',
     };
     const added = applied(
       addProjectionAppointment(createProjectionSession(draft), newHire)
     );
-    expect(added.draft.appointments[0]).toEqual({
+    expect(added.draft.content.appointments[0]).toEqual({
       ...newHire,
       allocations: [],
       employeeId: null,
@@ -167,19 +173,28 @@ describe('appointment operations', () => {
       positionNumber: null,
       vacationAccrualRate: 0,
     });
-    expect(draft.appointments).toEqual([]);
-    expect(added.draft.fundingSources).toBe(draft.fundingSources);
+    expect(draft.content.appointments).toEqual([]);
+    expect(added.draft.content.fundingSources).toBe(
+      draft.content.fundingSources
+    );
     expect(Object.keys(added.draft).sort()).toEqual([
-      'appointments',
-      'fundingSources',
-      'historyMonths',
+      'content',
       'name',
       'seededAt',
+    ]);
+    expect(Object.keys(added.draft.content).sort()).toEqual([
+      'appointments',
+      'forecastMonths',
+      'fundingSources',
+      'historyMonths',
+      'notes',
     ]);
     const second = applied(
       addProjectionAppointment(added, { ...newHire, name: 'Another hire' })
     );
-    expect(second.draft.appointments.map(({ id }) => id)).toEqual([1, 2]);
+    expect(second.draft.content.appointments.map(({ id }) => id)).toEqual([
+      1, 2,
+    ]);
   });
 
   it('edits planned identity without changing an explicitly entered CBR', () => {
@@ -189,7 +204,7 @@ describe('appointment operations', () => {
         newHire
       )
     );
-    const hire = added.draft.appointments.at(-1)!;
+    const hire = added.draft.content.appointments.at(-1)!;
     const edited = applied(
       editProjectionAppointment(added, hire.id, {
         ...hire,
@@ -199,7 +214,7 @@ describe('appointment operations', () => {
         title: ' New title ',
       })
     );
-    expect(edited.draft.appointments.at(-1)).toMatchObject({
+    expect(edited.draft.content.appointments.at(-1)).toMatchObject({
       cbrRate: 0.2,
       jobCode: '123456',
       name: 'Named hire',
@@ -212,12 +227,19 @@ describe('appointment operations', () => {
     const initial = createProjectionSession(createSalaryExample());
     const added = applied(addProjectionAppointment(initial, newHire));
     const removed = applied(
-      removeProjectionAppointment(added, initial.draft.appointments[0].id)
+      removeProjectionAppointment(
+        added,
+        initial.draft.content.appointments[0].id
+      )
     );
-    expect(removed.draft.appointments).toHaveLength(1);
-    expect(removed.draft.appointments[0].name).toBe(newHire.name);
-    expect(removed.draft.fundingSources).toBe(initial.draft.fundingSources);
-    expect(removed.draft.fundingSources[0].actuals[0].amount).toBe(2500);
+    expect(removed.draft.content.appointments).toHaveLength(1);
+    expect(removed.draft.content.appointments[0].name).toBe(newHire.name);
+    expect(removed.draft.content.fundingSources).toBe(
+      initial.draft.content.fundingSources
+    );
+    expect(removed.draft.content.fundingSources[0].actuals[0].amount).toBe(
+      2500
+    );
     expect(removeProjectionAppointment(removed, 999)).toMatchObject({
       ok: false,
     });
@@ -225,15 +247,15 @@ describe('appointment operations', () => {
 
   it('blocks Create and Save for missing salary, while allowing zero salary, optional fees and unallocated appointments', () => {
     const draft = createSalaryExample();
-    draft.appointments[0].monthlySalary = null;
+    draft.content.appointments[0].monthlySalary = null;
     expect(validateProjectionAppointments(draft)).toContain(
       'Alex Example: Enter a full-time annual salary'
     );
-    draft.appointments[0].monthlySalary = 0;
-    draft.appointments[0].allocations = [];
-    draft.appointments[0].feeRemissionMonthly = null;
+    draft.content.appointments[0].monthlySalary = 0;
+    draft.content.appointments[0].allocations = [];
+    draft.content.appointments[0].feeRemissionMonthly = null;
     expect(validateProjectionAppointments(draft)).toBeNull();
-    draft.appointments[0].feeRemissionMonthly = 0;
+    draft.content.appointments[0].feeRemissionMonthly = 0;
     expect(validateProjectionAppointments(draft)).toBeNull();
     expect(
       validateAppointmentInputs({ ...newHire, startDate: null }, true)
@@ -271,13 +293,13 @@ describe('appointment operations', () => {
         addProjectionAppointment(session, { ...newHire, ...changes })
       ).toMatchObject({ ok: false });
       expect(session.revision).toBe(0);
-      expect(session.draft.appointments).toHaveLength(1);
+      expect(session.draft.content.appointments).toHaveLength(1);
     }
   );
 
   it('keeps valid out-of-range dates and accepts boundary percentages without normalizing funding', () => {
     const initial = createProjectionSession(createSalaryExample());
-    const appointment = initial.draft.appointments[0];
+    const appointment = initial.draft.content.appointments[0];
     const updated = applied(
       editProjectionAppointment(initial, appointment.id, {
         ...appointment,
@@ -288,8 +310,8 @@ describe('appointment operations', () => {
         startDate: '2028-02-29',
       })
     );
-    expect(updated.draft.appointments[0].startDate).toBe('2028-02-29');
-    expect(updated.draft.appointments[0].allocations).toBe(
+    expect(updated.draft.content.appointments[0].startDate).toBe('2028-02-29');
+    expect(updated.draft.content.appointments[0].allocations).toBe(
       appointment.allocations
     );
     expect(validateProjectionAppointments(updated.draft)).toBeNull();

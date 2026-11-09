@@ -62,7 +62,16 @@ _Avoid_: Directory user, employee-only result
 
 **Projection Plan**:
 A saved scenario for one PI that contains captured funding inputs and editable cost assumptions. The plan is saved and copied as a whole.
+Its typed `Content` contains funding sources, appointments, the history window,
+forecast duration, and notes. Identity, ownership, name, snapshot timestamp, and
+audit fields sit outside that content.
 _Avoid_: Project, live financial report
+
+**Forecast Period**:
+The 12- or 18-month window selected for a **Projection Plan**, counting its original
+snapshot month as the first month. All sources use the same end month. Changing
+the period preserves entered source, appointment, allocation, and expense dates.
+_Avoid_: History window, source lifetime
 
 **Funding Source**:
 An independently tracked pool of funding within a **Projection Plan**. It can represent an imported project/task pair or hypothetical funding. Project and task numbers identify its origin; its plan-local ID identifies it inside the scenario. Its editable name is separate from the captured project name used for grouping.

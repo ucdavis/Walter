@@ -36,9 +36,9 @@ function allocation(
 
 function initial(allocations = [allocation(1, 1, '2026-01-01', '2026-12-31')]) {
   const plan = createSalaryExample();
-  plan.appointments[0].allocations = allocations;
-  plan.appointments[0].endDate = '2026-12-31';
-  for (const source of plan.fundingSources) {
+  plan.content.appointments[0].allocations = allocations;
+  plan.content.appointments[0].endDate = '2026-12-31';
+  for (const source of plan.content.fundingSources) {
     source.endDate = '2026-12-31';
   }
   return createProjectionSession(plan);
@@ -63,11 +63,11 @@ const shareB: AllocationShare[] = [{ fundingSourceId: 2, percent: 1 }];
 describe('replacing an appointment funding period', () => {
   it('switches a middle period while preserving both sides and every other plan input', () => {
     const session = initial();
-    const appointment = session.draft.appointments[0];
+    const appointment = session.draft.content.appointments[0];
     const updated = applied(
       replaceAppointmentFunding(session, 101, summer, shareB)
     );
-    expect(updated.draft.appointments[0]).toEqual({
+    expect(updated.draft.content.appointments[0]).toEqual({
       ...appointment,
       allocations: [
         allocation(1, 1, '2026-01-01', '2026-06-30'),
@@ -75,7 +75,9 @@ describe('replacing an appointment funding period', () => {
         allocation(2, 1, '2026-07-01', '2026-09-30'),
       ],
     });
-    expect(updated.draft.fundingSources).toBe(session.draft.fundingSources);
+    expect(updated.draft.content.fundingSources).toBe(
+      session.draft.content.fundingSources
+    );
     expect(updated.draft.seededAt).toBe(session.draft.seededAt);
     expect(updated.baseline).toBe(session.baseline);
     expect(updated.revision).toBe(1);
@@ -98,13 +100,15 @@ describe('replacing an appointment funding period', () => {
         shareB
       )
     );
-    expect(updated.draft.appointments[0].allocations).toEqual([
+    expect(updated.draft.content.appointments[0].allocations).toEqual([
       allocation(1, 1, null, '2026-03-14'),
       allocation(1, 1, '2026-03-17', null),
       unrelated,
       allocation(2, 1, '2026-03-15', '2026-03-16'),
     ]);
-    expect(updated.draft.appointments[0].allocations[2]).toBe(unrelated);
+    expect(updated.draft.content.appointments[0].allocations[2]).toBe(
+      unrelated
+    );
     expect(
       computePiProjection(updated.draft).rows.find(
         (row) =>
@@ -129,7 +133,7 @@ describe('replacing an appointment funding period', () => {
           []
         )
       );
-      expect(updated.draft.appointments[0].allocations).toEqual([
+      expect(updated.draft.content.appointments[0].allocations).toEqual([
         allocation(null, 1, null, previous),
         allocation(null, 1, next, null),
       ]);
@@ -146,7 +150,7 @@ describe('replacing an appointment funding period', () => {
         shareB
       )
     );
-    expect(throughEnd.draft.appointments[0].allocations).toEqual([
+    expect(throughEnd.draft.content.appointments[0].allocations).toEqual([
       allocation(1, 1, null, '2026-06-30'),
       allocation(2, 1, '2026-07-01', null),
     ]);
@@ -155,7 +159,7 @@ describe('replacing an appointment funding period', () => {
         { fundingSourceId: null, percent: 0.5 },
       ])
     );
-    expect(entire.draft.appointments[0].allocations).toEqual([
+    expect(entire.draft.content.appointments[0].allocations).toEqual([
       allocation(null, 0.5),
     ]);
   });
@@ -171,7 +175,7 @@ describe('replacing an appointment funding period', () => {
           []
         )
       );
-      expect(updated.draft.appointments[0].allocations).toHaveLength(1);
+      expect(updated.draft.content.appointments[0].allocations).toHaveLength(1);
       expect(validateProjectionAllocations(updated.draft)).toBeNull();
     }
   );
@@ -191,7 +195,7 @@ describe('replacing an appointment funding period', () => {
     );
     expect(unchanged).toBe(session);
     expect(
-      allocationRangeMatches(session.draft.appointments[0], whole, [
+      allocationRangeMatches(session.draft.content.appointments[0], whole, [
         { fundingSourceId: 1, percent: 0.666_666_666 },
         { fundingSourceId: null, percent: 0.2 },
       ])
@@ -200,15 +204,17 @@ describe('replacing an appointment funding period', () => {
 
   it('acknowledges unmatched imported funding without fragmenting an unchanged schedule', () => {
     const session = initial();
-    session.draft.appointments[0].hasUnmatchedFunding = true;
+    session.draft.content.appointments[0].hasUnmatchedFunding = true;
     const updated = applied(
       replaceAppointmentFunding(session, 101, summer, [
         { fundingSourceId: 1, percent: 1 },
       ])
     );
-    expect(updated.draft.appointments[0].hasUnmatchedFunding).toBe(false);
-    expect(updated.draft.appointments[0].allocations).toBe(
-      session.draft.appointments[0].allocations
+    expect(updated.draft.content.appointments[0].hasUnmatchedFunding).toBe(
+      false
+    );
+    expect(updated.draft.content.appointments[0].allocations).toBe(
+      session.draft.content.appointments[0].allocations
     );
     expect(updated.revision).toBe(1);
   });
@@ -223,7 +229,7 @@ describe('replacing an appointment funding period', () => {
       ])
     );
     expect(
-      updated.draft.appointments[0].allocations
+      updated.draft.content.appointments[0].allocations
         .slice(-4)
         .map(({ percent }) => percent)
     ).toEqual([1, 1, 0, 0.5]);
@@ -291,7 +297,7 @@ describe('replacing an appointment funding period', () => {
 describe('allocation editor seed', () => {
   it('loads a homogeneous month as exact dates without combining duplicate sources', () => {
     const appointment = initial([allocation(1, 0.5), allocation(1, 0.5)]).draft
-      .appointments[0];
+      .content.appointments[0];
     expect(getAllocationEditorSeed(appointment, '2026-02')).toEqual({
       mixed: false,
       range: { endDate: '2026-02-28', startDate: '2026-02-01' },
@@ -306,7 +312,7 @@ describe('allocation editor seed', () => {
     const appointment = initial([
       allocation(1, 1, '2026-03-10', '2026-03-15'),
       allocation(2, 1, '2026-03-16', null),
-    ]).draft.appointments[0];
+    ]).draft.content.appointments[0];
     expect(getAllocationEditorSeed(appointment, '2026-03')).toEqual({
       mixed: true,
       range: { endDate: '2026-03-09', startDate: '2026-03-01' },
@@ -321,7 +327,8 @@ describe('allocation editor seed', () => {
   });
 
   it('clips the seed to appointment dates and handles leap months and the DateOnly upper bound', () => {
-    const appointment = initial([allocation(1, 1)]).draft.appointments[0];
+    const appointment = initial([allocation(1, 1)]).draft.content
+      .appointments[0];
     appointment.startDate = '2028-02-10';
     appointment.endDate = null;
     expect(getAllocationEditorSeed(appointment, '2028-02').range).toEqual({
@@ -338,9 +345,9 @@ describe('dated allocation coverage', () => {
   it('retains four-digit years and correct month lengths at the DateOnly lower bound', () => {
     const plan = initial([allocation(1, 1)]).draft;
     plan.seededAt = '0001-01-01T00:00:00Z';
-    plan.appointments[0].startDate = '0001-01-01';
-    plan.appointments[0].endDate = '0001-02-28';
-    for (const source of plan.fundingSources) {
+    plan.content.appointments[0].startDate = '0001-01-01';
+    plan.content.appointments[0].endDate = '0001-02-28';
+    for (const source of plan.content.fundingSources) {
       source.capturedAt = plan.seededAt;
       source.startDate = '0001-01-01';
       source.endDate = '0001-02-28';
@@ -348,7 +355,7 @@ describe('dated allocation coverage', () => {
     }
     const result = computePiProjection(plan);
     expect(result.forecastWindow).toEqual({
-      endMonth: '0001-02',
+      endMonth: '0001-12',
       startMonth: '0001-01',
     });
     expect(result.appointmentFunding).toHaveLength(2);
@@ -389,9 +396,9 @@ describe('dated allocation coverage', () => {
 
   it('uses source and appointment bounds and counts outside funding without charging a plan source', () => {
     const plan = initial([allocation(1, 0.5), allocation(null, 0.5)]).draft;
-    plan.appointments[0].startDate = '2026-04-10';
-    plan.appointments[0].endDate = '2026-04-20';
-    plan.fundingSources[0].endDate = '2026-04-15';
+    plan.content.appointments[0].startDate = '2026-04-10';
+    plan.content.appointments[0].endDate = '2026-04-20';
+    plan.content.fundingSources[0].endDate = '2026-04-15';
     const result = computePiProjection(plan);
     expect(result.appointmentFunding).toHaveLength(1);
     expect(result.appointmentFunding[0]).toMatchObject({
@@ -411,8 +418,8 @@ describe('dated allocation coverage', () => {
 
   it('keeps zero-FTE fees and coverage while retaining captured actuals', () => {
     const session = initial();
-    session.draft.appointments[0].fte = 0;
-    session.draft.appointments[0].feeRemissionMonthly = 1500;
+    session.draft.content.appointments[0].fte = 0;
+    session.draft.content.appointments[0].feeRemissionMonthly = 1500;
     const updated = applied(
       replaceAppointmentFunding(session, 101, whole, [
         { fundingSourceId: 1, percent: 0.5 },
@@ -433,13 +440,17 @@ describe('dated allocation coverage', () => {
           row.expenditureCategory === FEE_REMISSION_CATEGORY
       )?.projectedAmount
     ).toBe(750);
-    expect(updated.draft.fundingSources).toBe(session.draft.fundingSources);
-    expect(updated.draft.fundingSources[0].actuals[0].amount).toBe(2500);
+    expect(updated.draft.content.fundingSources).toBe(
+      session.draft.content.fundingSources
+    );
+    expect(updated.draft.content.fundingSources[0].actuals[0].amount).toBe(
+      2500
+    );
   });
 
   it('keeps capture as a balance date rather than a new start boundary for coverage', () => {
     const plan = initial([allocation(1, 1)]).draft;
-    plan.fundingSources[0].capturedAt = '2026-05-15T00:00:00Z';
+    plan.content.fundingSources[0].capturedAt = '2026-05-15T00:00:00Z';
     const result = computePiProjection(plan);
     expect(
       result.appointmentFunding.find(({ month }) => month === '2026-01')
@@ -452,19 +463,19 @@ describe('dated allocation coverage', () => {
     ).toBe(false);
   });
 
-  it('exposes the existing forecast horizon without pretending to check a later appointment', () => {
+  it('exposes the fixed plan horizon without pretending to check a later appointment', () => {
     const plan = initial().draft;
-    plan.fundingSources[0].endDate = null;
-    plan.appointments[0].startDate = '2028-01-01';
-    plan.appointments[0].endDate = null;
+    plan.content.fundingSources[0].endDate = null;
+    plan.content.appointments[0].startDate = '2028-01-01';
+    plan.content.appointments[0].endDate = null;
     expect(getProjectionForecastWindow(plan)).toEqual({
-      endMonth: '2027-01',
+      endMonth: '2026-12',
       startMonth: '2026-01',
     });
     expect(computePiProjection(plan).appointmentFunding).toEqual([]);
-    plan.fundingSources = [];
+    plan.content.fundingSources = [];
     expect(getProjectionForecastWindow(plan)).toEqual({
-      endMonth: '2026-01',
+      endMonth: '2026-12',
       startMonth: '2026-01',
     });
   });

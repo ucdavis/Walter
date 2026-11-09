@@ -1,4 +1,8 @@
 import {
+  validatePlanDetails,
+  type PlanDetailsOperation,
+} from '@/lib/projectionDetails.ts';
+import {
   createContext,
   useContext,
   useLayoutEffect,
@@ -106,6 +110,15 @@ function useSession(
     return result;
   };
 
+  const applyDetailsOperation = (operation: PlanDetailsOperation) => {
+    const result = operation(currentSession.current);
+    if (result.ok) {
+      updateSession(result.session);
+    }
+    setSaveStatus((status) => (status === 'saving' ? status : 'idle'));
+    return result;
+  };
+
   const applyExpenseOperation = (operation: ExpenseOperation) => {
     const result = operation(currentSession.current);
     if (result.ok) {
@@ -138,20 +151,25 @@ function useSession(
     }
     const submitted = currentSession.current;
     if (
+      validatePlanDetails(
+        {
+          forecastMonths: submitted.draft.content.forecastMonths,
+          name: submitted.draft.name,
+          notes: submitted.draft.content.notes,
+        },
+        submitted.draft.seededAt
+      ) ||
       validateProjectionAppointments(submitted.draft) ||
       validateProjectionExpenses(submitted.draft)
     ) {
       return;
     }
-    const { appointments, fundingSources, historyMonths, name } =
-      submitted.draft;
+    const { content, name } = submitted.draft;
     // Capture the current applied draft on this click, independently of any open field buffer.
     const request = structuredClone({
-      appointments,
+      content,
       expectedSeededAt: submitted.baseline.seededAt,
       expectedUpdatedAt: submitted.baseline.updatedAt,
-      fundingSources,
-      historyMonths,
       name,
       overwrite: useOverwrite,
     });
@@ -227,6 +245,7 @@ function useSession(
 
   return {
     applyAppointmentOperation,
+    applyDetailsOperation,
     applyExpenseOperation,
     applySourceOperation,
     canSave: Boolean(persistence),
@@ -254,6 +273,14 @@ function useSession(
     saving: saveStatus === 'saving',
     session,
     validationMessage:
+      validatePlanDetails(
+        {
+          forecastMonths: session.draft.content.forecastMonths,
+          name: session.draft.name,
+          notes: session.draft.content.notes,
+        },
+        session.draft.seededAt
+      ) ??
       validateProjectionAppointments(session.draft) ??
       validateProjectionExpenses(session.draft),
   };

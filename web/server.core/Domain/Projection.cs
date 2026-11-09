@@ -4,12 +4,13 @@ using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using server.core.Models;
 
 namespace server.core.Domain;
 
 /// <summary>
 /// An editable budget scenario for one PI, seeded from a snapshot of their portfolio.
-/// Funding sources and appointments are JSON columns, saved whole; their IDs are unique per plan.
+/// Scenario content is one typed JSON document; identity, access, and concurrency metadata stay in columns.
 /// </summary>
 public class Projection
 {
@@ -24,11 +25,8 @@ public class Projection
     [Required, MaxLength(8)]
     public string PiEmployeeId { get; set; } = "";
 
-    [Required, MaxLength(200)]
+    [Required, MaxLength(ProjectionPlanDefaults.MaximumNameLength)]
     public string Name { get; set; } = "";
-
-    /// <summary>3, 6, or 12; selects captured historical averages without changing custom expense amounts.</summary>
-    public int HistoryMonths { get; set; }
 
     /// <summary>Original UTC capture, snapshot identity, and salary base. Advances only on create or reset; each funding source has its own financial capture.</summary>
     public DateTime SeededAt { get; set; }
@@ -44,8 +42,9 @@ public class Projection
     /// <summary>UTC audit time and exact client concurrency token; advances on every write.</summary>
     public DateTime UpdatedAt { get; set; }
 
-    public List<ProjectionFundingSource> FundingSources { get; set; } = [];
-    public List<ProjectionAppointment> Appointments { get; set; } = [];
+    /// <summary>Complete scenario inputs, saved atomically under the plan's concurrency token.</summary>
+    [Required, JsonRequired]
+    public ProjectionContent Content { get; set; } = new();
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
@@ -60,19 +59,18 @@ public class Projection
                 value => value,
                 value => DateTime.SpecifyKind(value, DateTimeKind.Utc));
         entity.Property(p => p.UpdatedAt).IsConcurrencyToken();
-        AsJson(entity.Property(p => p.FundingSources));
-        AsJson(entity.Property(p => p.Appointments));
+        AsJson(entity.Property(p => p.Content));
     }
 
-    /// <summary>Compares by serialized value so in-place edits to the lists are saved.</summary>
-    private static void AsJson<T>(PropertyBuilder<List<T>> property) =>
+    /// <summary>Compares and snapshots the complete document so in-place nested edits are tracked and saved.</summary>
+    private static void AsJson(PropertyBuilder<ProjectionContent> property) =>
         property.HasConversion(
             v => JsonSerializer.Serialize(v, JsonOptions),
-            v => JsonSerializer.Deserialize<List<T>>(v, JsonOptions)!,
-            new ValueComparer<List<T>>(
+            v => JsonSerializer.Deserialize<ProjectionContent>(v, JsonOptions)!,
+            new ValueComparer<ProjectionContent>(
                 (a, b) => JsonSerializer.Serialize(a, JsonOptions) == JsonSerializer.Serialize(b, JsonOptions),
                 v => JsonSerializer.Serialize(v, JsonOptions).GetHashCode(),
-                v => JsonSerializer.Deserialize<List<T>>(JsonSerializer.Serialize(v, JsonOptions), JsonOptions)!));
+                v => JsonSerializer.Deserialize<ProjectionContent>(JsonSerializer.Serialize(v, JsonOptions), JsonOptions)!));
 }
 
 /// <summary>An independent task or planned funding source.</summary>

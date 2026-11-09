@@ -1,3 +1,11 @@
+import { PlanDurationField } from '@/components/projections/PlanDetailsFields.tsx';
+import { ProjectionReviewStep } from '@/components/projections/ProjectionReviewStep.tsx';
+import {
+  DEFAULT_FORECAST_MONTHS,
+  MAX_PLAN_NAME_LENGTH,
+  editPlanDetails,
+  validatePlanDetails,
+} from '@/lib/projectionDetails.ts';
 import {
   ExpensesEditor,
   type ExpensesEditorHandle,
@@ -16,8 +24,6 @@ import {
 } from '@/components/projections/FundingSourcesEditor.tsx';
 import {
   selectInitialSources,
-  sourceLabel,
-  sourcePlanningBalance,
   type SourceOperation,
 } from '@/lib/projectionSources.ts';
 import { ProjectionDialog } from '@/components/projections/ProjectionDialog.tsx';
@@ -30,13 +36,10 @@ import {
   type AppointmentOperation,
 } from '@/lib/projectionAppointments.ts';
 import { HttpError } from '@/lib/api.ts';
-import { formatCurrency } from '@/lib/currency.ts';
 import { computePiProjection } from '@/lib/piProjection.ts';
 import {
   createProjectionSession,
-  getFundingSourceOutlook,
   type ProjectionSession,
-  type ProjectionResults,
 } from '@/lib/projectionWorkspace.ts';
 import {
   fetchProjectionSeed,
@@ -59,12 +62,19 @@ export function NewProjectionWizard({
   onCreated: (saved: Projection) => Promise<void>;
 }) {
   const form = useAppForm({
-    defaultValues: { name: '' },
+    defaultValues: {
+      forecastMonths: DEFAULT_FORECAST_MONTHS,
+      name: '',
+      notes: '',
+    },
     onSubmit: async () => {
       await continueSetup();
     },
   });
-  const { name } = useStore(form.store, (state) => state.values);
+  const { forecastMonths, name, notes } = useStore(
+    form.store,
+    (state) => state.values
+  );
   const [selectedSourceIds, setSelectedSourceIds] = useState<number[]>([]);
   const [rosterSelected, setRosterSelected] = useState(false);
   const [roster, setRoster] = useState<ProjectionRosterEntry[]>([]);
@@ -91,13 +101,22 @@ export function NewProjectionWizard({
     () => (draft ? computePiProjection(draft) : null),
     [draft]
   );
-  const validationMessage = draft
-    ? (validateProjectionAppointments(draft) ??
-      validateProjectionExpenses(draft))
-    : null;
+  const details = { forecastMonths, name, notes: notes || null };
+  const detailsValidationMessage = validatePlanDetails(
+    details,
+    draft?.seededAt
+  );
+  const validationMessage =
+    detailsValidationMessage ??
+    (draft
+      ? (validateProjectionAppointments(draft) ??
+        validateProjectionExpenses(draft))
+      : null);
   const hasWork = () =>
     Boolean(
       name ||
+        notes ||
+        forecastMonths !== DEFAULT_FORECAST_MONTHS ||
         session ||
         loading ||
         submitted ||
@@ -133,7 +152,7 @@ export function NewProjectionWizard({
     if (result.ok) {
       updateSession(result.session);
       if (!rosterSelected) {
-        const fundingSources = result.session.draft.fundingSources;
+        const fundingSources = result.session.draft.content.fundingSources;
         setSelectedSourceIds((ids) => [
           ...ids.filter((id) =>
             fundingSources.some((source) => source.id === id)
@@ -141,7 +160,7 @@ export function NewProjectionWizard({
           ...fundingSources
             .filter(
               (source) =>
-                !previous.draft.fundingSources.some(
+                !previous.draft.content.fundingSources.some(
                   ({ id }) => id === source.id
                 )
             )
@@ -169,14 +188,20 @@ export function NewProjectionWizard({
   }
 
   async function continueSetup() {
-    if (requestPending.current || !name.trim()) {
+    if (requestPending.current || detailsValidationMessage) {
       return;
     }
     setError(null);
     if (session) {
+      const updated = editPlanDetails(session, details);
+      if (!updated.ok) {
+        setError(updated.error);
+        return;
+      }
+      updateSession(updated.session);
       if (!rosterSelected) {
         const selected = selectInitialSources(
-          session,
+          updated.session,
           selectedSourceIds,
           roster
         );
@@ -199,10 +224,20 @@ export function NewProjectionWizard({
         return;
       }
       updateSession(
-        createProjectionSession({ ...seed.draft, name: name.trim() })
+        createProjectionSession({
+          ...seed.draft,
+          content: {
+            ...seed.draft.content,
+            forecastMonths,
+            notes: notes.trim() ? notes : null,
+          },
+          name: name.trim(),
+        })
       );
       setRoster(seed.roster);
-      setSelectedSourceIds(seed.draft.fundingSources.map(({ id }) => id));
+      setSelectedSourceIds(
+        seed.draft.content.fundingSources.map(({ id }) => id)
+      );
     } catch {
       if (mounted.current) {
         setError(
@@ -221,6 +256,7 @@ export function NewProjectionWizard({
     if (
       !draft ||
       requestPending.current ||
+      detailsValidationMessage ||
       validateProjectionAppointments(draft) ||
       validateProjectionExpenses(draft)
     ) {
@@ -232,9 +268,11 @@ export function NewProjectionWizard({
       structuredClone({
         creationKey: crypto.randomUUID(),
         draft: {
-          appointments: draft.appointments,
-          fundingSources: draft.fundingSources,
-          historyMonths: draft.historyMonths,
+          content: {
+            ...draft.content,
+            forecastMonths,
+            notes: notes.trim() ? notes : null,
+          },
           name: name.trim(),
           seededAt: draft.seededAt,
         },
@@ -305,8 +343,12 @@ export function NewProjectionWizard({
       <div inert={loading || create.isPending}>
         {step === 0 && (
           <PlanStep
+            forecastMonths={forecastMonths}
             name={name}
             onContinue={() => form.handleSubmit()}
+            onForecastMonthsChange={(value) =>
+              form.setFieldValue('forecastMonths', value)
+            }
             onNameChange={(value) => form.setFieldValue('name', value)}
           />
         )}
@@ -340,7 +382,14 @@ export function NewProjectionWizard({
           />
         )}
         {step === 3 && draft && results && (
-          <ReviewStep draft={draft} name={name} results={results} />
+          <ProjectionReviewStep
+            draft={draft}
+            name={name}
+            notes={notes}
+            notesDisabled={Boolean(submitted)}
+            onNotesChange={(value) => form.setFieldValue('notes', value)}
+            results={results}
+          />
         )}
       </div>
 
@@ -379,7 +428,7 @@ export function NewProjectionWizard({
           {step === 0 ? (
             <button
               className="btn btn-primary"
-              disabled={loading || !name.trim()}
+              disabled={loading || Boolean(detailsValidationMessage)}
               form="projection-setup-plan"
               type="submit"
             >
@@ -439,12 +488,16 @@ export function NewProjectionWizard({
 }
 
 function PlanStep({
+  forecastMonths,
   name,
   onContinue,
+  onForecastMonthsChange,
   onNameChange,
 }: {
+  forecastMonths: number;
   name: string;
   onContinue: () => Promise<void>;
+  onForecastMonthsChange: (months: number) => void;
   onNameChange: (value: string) => void;
 }) {
   return (
@@ -460,82 +513,16 @@ function PlanStep({
         Plan name
         <input
           className="input input-bordered w-full"
-          maxLength={200}
+          maxLength={MAX_PLAN_NAME_LENGTH}
           onChange={(event) => onNameChange(event.target.value)}
           required
           value={name}
         />
       </label>
+      <PlanDurationField
+        onChange={onForecastMonthsChange}
+        value={forecastMonths}
+      />
     </form>
-  );
-}
-
-function ReviewStep({
-  draft,
-  name,
-  results,
-}: {
-  draft: ProjectionDraft;
-  name: string;
-  results: ProjectionResults;
-}) {
-  return (
-    <div className="mt-5">
-      <h3 className="text-xl font-bold">{name.trim()}</h3>
-      <p className="mt-2">
-        Plan started {draft.seededAt.slice(0, 10)}. Source capture dates are
-        shown below.
-      </p>
-      <p className="mt-1 text-sm">
-        {draft.historyMonths}-month spending history.
-      </p>
-      <h3 className="mt-6 text-xl font-bold">Funding outlook</h3>
-      {draft.fundingSources.length === 0 && (
-        <p className="mt-3">No eligible funding sources in this snapshot.</p>
-      )}
-      <div className="mt-4 grid gap-4 sm:grid-cols-2">
-        {draft.fundingSources.map((source) => {
-          const months = getFundingSourceOutlook(results.rows, source.id);
-          const snapshotBalance = sourcePlanningBalance(source);
-          const endBalance = months.at(-1)?.remaining ?? snapshotBalance;
-          return (
-            <article
-              className="rounded-box border border-base-300 p-5"
-              key={source.id}
-            >
-              <h4 className="text-lg font-bold">{sourceLabel(source)}</h4>
-              <p className="mt-1 text-sm">
-                {source.sourceKind === 'Planned'
-                  ? 'Planned funding'
-                  : `Captured ${source.capturedAt.slice(0, 10)}`}
-              </p>
-              <p className="mt-1 text-sm">
-                Through {source.endDate ?? 'the forecast horizon'}
-              </p>
-              <dl className="mt-4 space-y-2 text-sm">
-                <div className="flex justify-between gap-3">
-                  <dt>Planning balance</dt>
-                  <dd>{formatCurrency(snapshotBalance)}</dd>
-                </div>
-                <div className="flex justify-between gap-3">
-                  <dt>Remaining forecast</dt>
-                  <dd>
-                    {formatCurrency(
-                      months.reduce((sum, month) => sum + month.forecast, 0)
-                    )}
-                  </dd>
-                </div>
-                <div className="flex justify-between gap-3 font-bold">
-                  <dt>Projected end balance</dt>
-                  <dd className={endBalance < 0 ? 'text-error' : ''}>
-                    {formatCurrency(endBalance)}
-                  </dd>
-                </div>
-              </dl>
-            </article>
-          );
-        })}
-      </div>
-    </div>
   );
 }

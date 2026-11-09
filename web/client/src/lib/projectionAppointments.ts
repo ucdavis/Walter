@@ -4,7 +4,6 @@ import type {
 } from '@/queries/projections.ts';
 import type { ProjectionSession } from '@/lib/projectionWorkspace.ts';
 import { validateProjectionAllocations } from '@/lib/projectionAllocations.ts';
-
 const EDITABLE_FIELDS = [
   'name',
   'jobCode',
@@ -106,7 +105,7 @@ export function validateAppointmentInputs(
 export function validateProjectionAppointments(
   plan: ProjectionDraft
 ): string | null {
-  for (const appointment of plan.appointments) {
+  for (const appointment of plan.content.appointments) {
     const error = validateAppointmentInputs(appointment, !appointment.isSeeded);
     if (error) {
       return `${appointment.name || 'Appointment'}: ${error}`;
@@ -129,7 +128,7 @@ export function editProjectionAppointment<T extends ProjectionDraft>(
   appointmentId: number,
   inputs: AppointmentInputs
 ): AppointmentOperationResult<T> {
-  const appointment = session.draft.appointments.find(
+  const appointment = session.draft.content.appointments.find(
     ({ id }) => id === appointmentId
   );
   if (!appointment) {
@@ -164,9 +163,12 @@ export function editProjectionAppointment<T extends ProjectionDraft>(
       ...session,
       draft: {
         ...session.draft,
-        appointments: session.draft.appointments.map((candidate) =>
-          candidate.id === appointmentId ? edited : candidate
-        ),
+        content: {
+          ...session.draft.content,
+          appointments: session.draft.content.appointments.map((candidate) =>
+            candidate.id === appointmentId ? edited : candidate
+          ),
+        },
       },
       revision: session.revision + 1,
     },
@@ -181,7 +183,8 @@ export function addProjectionAppointment<T extends ProjectionDraft>(
   if (error) {
     return { error, ok: false };
   }
-  const id = Math.max(0, ...session.draft.appointments.map(({ id }) => id)) + 1;
+  const id =
+    Math.max(0, ...session.draft.content.appointments.map(({ id }) => id)) + 1;
   const appointment: ProjectionAppointment = {
     ...inputs,
     ...normalizedIdentity(inputs),
@@ -200,7 +203,10 @@ export function addProjectionAppointment<T extends ProjectionDraft>(
       ...session,
       draft: {
         ...session.draft,
-        appointments: [...session.draft.appointments, appointment],
+        content: {
+          ...session.draft.content,
+          appointments: [...session.draft.content.appointments, appointment],
+        },
       },
       revision: session.revision + 1,
     },
@@ -212,7 +218,9 @@ export function removeProjectionAppointment<T extends ProjectionDraft>(
   session: ProjectionSession<T>,
   appointmentId: number
 ): AppointmentOperationResult<T> {
-  if (!session.draft.appointments.some(({ id }) => id === appointmentId)) {
+  if (
+    !session.draft.content.appointments.some(({ id }) => id === appointmentId)
+  ) {
     return { error: 'This appointment is no longer in the plan.', ok: false };
   }
   return {
@@ -221,9 +229,12 @@ export function removeProjectionAppointment<T extends ProjectionDraft>(
       ...session,
       draft: {
         ...session.draft,
-        appointments: session.draft.appointments.filter(
-          ({ id }) => id !== appointmentId
-        ),
+        content: {
+          ...session.draft.content,
+          appointments: session.draft.content.appointments.filter(
+            ({ id }) => id !== appointmentId
+          ),
+        },
       },
       revision: session.revision + 1,
     },

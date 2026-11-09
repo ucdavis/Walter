@@ -1,8 +1,21 @@
 import {
+  PlanDetailsEditor,
+  type PlanDetailsEditorHandle,
+} from '@/components/projections/PlanDetailsEditor.tsx';
+import { fundingMonthLabel } from '@/components/projections/fundingTimelineDates.ts';
+import { getSourceForecastWindow } from '@/lib/piProjection.ts';
+import { editPlanDetails } from '@/lib/projectionDetails.ts';
+import {
   ExpensesEditor,
   type ExpensesEditorHandle,
 } from '@/components/projections/ExpensesEditor.tsx';
-import { useEffect, useImperativeHandle, useRef, type Ref } from 'react';
+import {
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+  type Ref,
+} from 'react';
 import {
   FundingSourcesEditor,
   type FundingSourcesEditorHandle,
@@ -51,6 +64,7 @@ export function ProjectionWorkspace({
 }) {
   const {
     applyAppointmentOperation,
+    applyDetailsOperation,
     applyExpenseOperation,
     applySourceOperation,
     persistenceStatus,
@@ -60,11 +74,13 @@ export function ProjectionWorkspace({
   } = useProjectionSession();
   const { draft } = session;
   const location = readProjectionLocation(search, draft);
+  const [editingDetails, setEditingDetails] = useState(false);
+  const detailsEditorRef = useRef<PlanDetailsEditorHandle>(null);
   const editorRef = useRef<StaffingEditorHandle>(null);
   const expenseEditorRef = useRef<ExpensesEditorHandle>(null);
   const sourceEditorRef = useRef<FundingSourcesEditorHandle>(null);
   const sourceHeadingRef = useRef<HTMLHeadingElement>(null);
-  const selectedSource = draft.fundingSources.find(
+  const selectedSource = draft.content.fundingSources.find(
     (source) => source.id === location.fundingSourceId
   );
   const sourceSearch =
@@ -77,7 +93,7 @@ export function ProjectionWorkspace({
     if (
       result.ok &&
       location.fundingSourceId !== null &&
-      !result.session.draft.fundingSources.some(
+      !result.session.draft.content.fundingSources.some(
         ({ id }) => id === location.fundingSourceId
       )
     ) {
@@ -92,7 +108,8 @@ export function ProjectionWorkspace({
         session,
         location,
         results,
-        editorRef.current?.read() ??
+        detailsEditorRef.current?.read() ??
+          editorRef.current?.read() ??
           sourceEditorRef.current?.read() ??
           expenseEditorRef.current?.read() ??
           null,
@@ -117,8 +134,44 @@ export function ProjectionWorkspace({
             own capture date.
           </p>
         </div>
-        <ProjectionSaveControls />
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            className="btn btn-outline"
+            onClick={() => setEditingDetails(true)}
+            type="button"
+          >
+            Edit plan details
+          </button>
+          <ProjectionSaveControls />
+        </div>
       </header>
+      <p className="mt-3 text-sm">
+        {draft.content.forecastMonths}-month forecast,{' '}
+        {fundingMonthLabel(results.forecastWindow.startMonth)} through{' '}
+        {fundingMonthLabel(results.forecastWindow.endMonth)}.
+      </p>
+      {draft.content.notes && (
+        <section
+          aria-label="Plan notes"
+          className="mt-4 rounded-box bg-base-200 p-4"
+        >
+          <h2 className="font-semibold">Plan notes</h2>
+          <p className="mt-2 whitespace-pre-wrap break-words">
+            {draft.content.notes}
+          </p>
+        </section>
+      )}
+      {editingDetails && (
+        <PlanDetailsEditor
+          key={reloadVersion}
+          onApply={(inputs) =>
+            applyDetailsOperation((current) => editPlanDetails(current, inputs))
+          }
+          onClose={() => setEditingDetails(false)}
+          plan={draft}
+          ref={detailsEditorRef}
+        />
+      )}
 
       <ProjectionSaveFeedback onNavigate={onNavigate} search={search} />
 
@@ -185,15 +238,18 @@ export function ProjectionWorkspace({
             </button>
           )}
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            {draft.fundingSources.map((source) => {
+            {draft.content.fundingSources.map((source) => {
               const months = getFundingSourceOutlook(results.rows, source.id);
-              const endBalance =
-                months.at(-1)?.remaining ?? sourcePlanningBalance(source);
+              const endBalance = months.at(-1)?.remaining ?? 0;
               const forecast = months.reduce(
                 (sum, month) => sum + month.forecast,
                 0
               );
               const snapshotBalance = sourceCapturedBalance(source);
+              const outside = getSourceForecastWindow(
+                source,
+                results.forecastWindow
+              ).isBeyondForecast;
               return (
                 <article
                   className={`rounded-box border p-5 ${location.fundingSourceId === source.id ? 'border-primary' : 'border-base-300'}`}
@@ -208,6 +264,12 @@ export function ProjectionWorkspace({
                   <p className="mt-1 text-sm">
                     Through {source.endDate ?? 'the forecast horizon'}
                   </p>
+                  {outside && (
+                    <p className="mt-2 text-sm">
+                      This source starts after the forecast period and
+                      contributes no forecast costs or balance in this period.
+                    </p>
+                  )}
                   <dl className="mt-4 space-y-2 text-sm">
                     <div className="flex justify-between gap-3">
                       <dt>Captured balance</dt>
@@ -222,7 +284,10 @@ export function ProjectionWorkspace({
                       <dd>{formatCurrency(forecast)}</dd>
                     </div>
                     <div className="flex justify-between gap-3 font-bold">
-                      <dt>Projected end balance</dt>
+                      <dt>
+                        Projected balance at{' '}
+                        {fundingMonthLabel(results.forecastWindow.endMonth)}
+                      </dt>
                       <dd className={endBalance < 0 ? 'text-error' : ''}>
                         {formatCurrency(endBalance)}
                       </dd>
@@ -368,6 +433,7 @@ export function ProjectionWorkspace({
       {planPath && (
         <ProjectionNavigationGuard
           pendingEditor={() =>
+            detailsEditorRef.current?.read() ??
             editorRef.current?.read() ??
             sourceEditorRef.current?.read() ??
             expenseEditorRef.current?.read() ??

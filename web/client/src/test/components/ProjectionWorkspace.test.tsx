@@ -62,9 +62,15 @@ describe('projection salary workspace', () => {
       '2026-04',
       '2026-05',
       '2026-06',
+      '2026-07',
+      '2026-08',
+      '2026-09',
+      '2026-10',
+      '2026-11',
+      '2026-12',
     ]);
-    expect(read().draft.fundingSources[0].actuals).toEqual(
-      plan.fundingSources[0].actuals
+    expect(read().draft.content.fundingSources[0].actuals).toEqual(
+      plan.content.fundingSources[0].actuals
     );
     expect(read().results.rows.every(({ month }) => month >= '2026-01')).toBe(
       true
@@ -130,7 +136,7 @@ describe('projection salary workspace', () => {
 
     await user.click(screen.getByRole('button', { name: 'Save plan' }));
     await waitFor(() => expect(read().dirty).toBe(false));
-    expect(read().draft.fundingSources[0].actuals).toEqual([
+    expect(read().draft.content.fundingSources[0].actuals).toEqual([
       {
         amount: 1000,
         expenditureCategory: SALARY_CATEGORY,
@@ -156,7 +162,7 @@ describe('projection salary workspace', () => {
     });
     await user.clear(salaryInput());
     await user.type(salaryInput(), '132000');
-    expect(read().draft.appointments[0].monthlySalary).toBe(10_000);
+    expect(read().draft.content.appointments[0].monthlySalary).toBe(10_000);
     expect(read().pendingEditor?.hasChanges).toBe(true);
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
     await waitFor(() =>
@@ -175,9 +181,11 @@ describe('projection salary workspace', () => {
     await user.type(salaryInput(), '132000');
     await user.keyboard('{Enter}');
     await waitFor(() => expect(read().revision).toBe(1));
-    expect(read().draft.appointments[0].monthlySalary).toBe(11_000);
+    expect(read().draft.content.appointments[0].monthlySalary).toBe(11_000);
     expect(
-      read().results.rows.every((row) => row.projectedAmount === 2750)
+      read().results.rows.every(
+        (row) => row.projectedAmount === (row.month <= '2026-06' ? 2750 : 0)
+      )
     ).toBe(true);
     expect(screen.getByRole('status')).toHaveTextContent('Unsaved changes');
     expect(editButton()).toHaveFocus();
@@ -188,14 +196,16 @@ describe('projection salary workspace', () => {
 
   it('rejects blank and invalid annual input, accepts zero, and keeps no-op precision', async () => {
     const plan = createSalaryExample();
-    plan.appointments[0].monthlySalary = 10_000.123_45;
+    plan.content.appointments[0].monthlySalary = 10_000.123_45;
     const { user } = openPreview(undefined, plan);
     await screen.findByRole('dialog');
     await user.click(screen.getByRole('button', { name: 'Apply' }));
     await waitFor(() =>
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     );
-    expect(read().draft.appointments[0].monthlySalary).toBe(10_000.123_45);
+    expect(read().draft.content.appointments[0].monthlySalary).toBe(
+      10_000.123_45
+    );
     expect(read().revision).toBe(0);
 
     await user.click(editButton());
@@ -205,7 +215,9 @@ describe('projection salary workspace', () => {
     await waitFor(() =>
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     );
-    expect(read().draft.appointments[0].monthlySalary).toBe(10_000.123_45);
+    expect(read().draft.content.appointments[0].monthlySalary).toBe(
+      10_000.123_45
+    );
     expect(read().revision).toBe(0);
 
     await user.click(editButton());
@@ -224,7 +236,7 @@ describe('projection salary workspace', () => {
     await user.type(salaryInput(), '0');
     await user.click(screen.getByRole('button', { name: 'Apply' }));
     await waitFor(() => expect(read().revision).toBe(1));
-    expect(read().draft.appointments[0].monthlySalary).toBe(0);
+    expect(read().draft.content.appointments[0].monthlySalary).toBe(0);
   });
 
   it('preserves committed salary and source location through Back/Forward and discards a closed editor buffer', async () => {
@@ -256,7 +268,7 @@ describe('projection salary workspace', () => {
     expect(
       await screen.findByRole('heading', { name: 'Project B by month' })
     ).toHaveFocus();
-    expect(read().draft.appointments[0].monthlySalary).toBe(11_000);
+    expect(read().draft.content.appointments[0].monthlySalary).toBe(11_000);
     await act(async () => history.back());
     await waitFor(() => expect(read().location.section).toBe('staffing'));
     await act(async () => history.forward());
@@ -294,9 +306,9 @@ describe('projection salary workspace', () => {
     await user.click(screen.getByRole('button', { name: 'Apply' }));
     rendered.rerender(view('second', { section: 'overview', source: 1 }));
     expect(ref.current!.read()).toMatchObject({ dirty: true, revision: 1 });
-    expect(ref.current!.read().draft.appointments[0].monthlySalary).toBe(
-      11_000
-    );
+    expect(
+      ref.current!.read().draft.content.appointments[0].monthlySalary
+    ).toBe(11_000);
     expect(
       screen.getByRole('heading', { name: 'Project A by month' })
     ).toBeInTheDocument();

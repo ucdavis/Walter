@@ -14,9 +14,9 @@ import type { Projection } from '@/queries/projections.ts';
 /** Synthetic dollars and illustrative rates; these are not UC Davis rate tables. */
 function example() {
   const plan = createSalaryExample();
-  plan.appointments[0].cbrRate = 0.3;
-  plan.appointments[0].vacationAccrualRate = 0.1;
-  for (const source of plan.fundingSources) {
+  plan.content.appointments[0].cbrRate = 0.3;
+  plan.content.appointments[0].vacationAccrualRate = 0.1;
+  for (const source of plan.content.fundingSources) {
     source.actuals = [];
     source.budgets = [
       [SALARY_CATEGORY, 100_000],
@@ -35,7 +35,7 @@ function example() {
 
 function edited(plan: Projection) {
   const result = editProjectionAppointment(createProjectionSession(plan), 101, {
-    ...plan.appointments[0],
+    ...plan.content.appointments[0],
     monthlySalary: 11_000,
   });
   assert.equal(result.ok, true);
@@ -60,9 +60,9 @@ function costs(plan: Projection, month: string, fundingSourceId = 1) {
 }
 
 function extendThrough(plan: Projection, end: string) {
-  plan.fundingSources.forEach((source) => (source.endDate = end));
-  plan.appointments[0].endDate = end;
-  plan.appointments[0].allocations.forEach(
+  plan.content.fundingSources.forEach((source) => (source.endDate = end));
+  plan.content.appointments[0].endDate = end;
+  plan.content.appointments[0].allocations.forEach(
     (funding) => (funding.endDate = end)
   );
 }
@@ -90,56 +90,61 @@ export function reviewProjectionCalculations() {
     supplies: 0,
   });
   assert.deepEqual(costs(salaryAfter, '2026-01', 2), salaryAfterCosts);
-  assert.equal(salary.appointments[0].monthlySalary, 10_000);
+  assert.equal(salary.content.appointments[0].monthlySalary, 10_000);
 
   const cola = example();
+  cola.content.forecastMonths = 18;
+  cola.seededAt = '2026-03-16T00:00:00Z';
+  cola.content.fundingSources.forEach(
+    (source) => (source.capturedAt = cola.seededAt)
+  );
   extendThrough(cola, '2028-08-31');
-  cola.appointments[0].colaRate = 0.03;
+  cola.content.appointments[0].colaRate = 0.03;
   const julySnapshot = structuredClone(cola);
   julySnapshot.seededAt = '2026-07-15T00:00:00Z';
-  julySnapshot.fundingSources.forEach(
+  julySnapshot.content.fundingSources.forEach(
     (source) => (source.capturedAt = julySnapshot.seededAt)
   );
   const futureAppointment = structuredClone(cola);
-  futureAppointment.appointments[0].isSeeded = false;
-  futureAppointment.appointments[0].startDate = '2026-08-01';
+  futureAppointment.content.appointments[0].isSeeded = false;
+  futureAppointment.content.appointments[0].startDate = '2026-08-01';
   assert.equal(costs(futureAppointment, '2026-08').salary, 2500);
   assert.equal(costs(futureAppointment, '2027-07').salary, 2575);
 
   const fees = structuredClone(cola);
-  fees.appointments[0].feeRemissionMonthly = 1500;
+  fees.content.appointments[0].feeRemissionMonthly = 1500;
   assert.equal(costs(fees, '2026-07').fees, 750);
   assert.equal(costs(edited(fees), '2026-07').fees, 750);
 
   const datedFees = structuredClone(fees);
-  datedFees.appointments[0].startDate = '2026-04-10';
-  datedFees.appointments[0].endDate = '2026-04-30';
-  datedFees.appointments[0].allocations = [
+  datedFees.content.appointments[0].startDate = '2026-04-10';
+  datedFees.content.appointments[0].endDate = '2026-04-30';
+  datedFees.content.appointments[0].allocations = [
     {
-      ...datedFees.appointments[0].allocations[0],
+      ...datedFees.content.appointments[0].allocations[0],
       endDate: '2026-04-24',
       startDate: '2026-04-01',
     },
   ];
-  datedFees.fundingSources[0].startDate = '2026-04-01';
-  datedFees.fundingSources[0].endDate = '2026-04-30';
+  datedFees.content.fundingSources[0].startDate = '2026-04-01';
+  datedFees.content.fundingSources[0].endDate = '2026-04-30';
   assert.equal(costs(datedFees, '2026-04').fees, 375);
 
   const boundaries = example();
   boundaries.seededAt = '2026-01-15T00:00:00Z';
-  boundaries.fundingSources.forEach(
+  boundaries.content.fundingSources.forEach(
     (source) => (source.capturedAt = boundaries.seededAt)
   );
-  boundaries.appointments[0].startDate = '2026-02-15';
-  boundaries.appointments[0].endDate = '2026-03-10';
-  boundaries.appointments[0].allocations[0].startDate = '2026-02-20';
-  boundaries.appointments[0].allocations[0].endDate = '2026-03-05';
-  boundaries.appointments[0].allocations[1].startDate = '2026-03-31';
-  boundaries.appointments[0].allocations[1].endDate = '2026-04-01';
+  boundaries.content.appointments[0].startDate = '2026-02-15';
+  boundaries.content.appointments[0].endDate = '2026-03-10';
+  boundaries.content.appointments[0].allocations[0].startDate = '2026-02-20';
+  boundaries.content.appointments[0].allocations[0].endDate = '2026-03-05';
+  boundaries.content.appointments[0].allocations[1].startDate = '2026-03-31';
+  boundaries.content.appointments[0].allocations[1].endDate = '2026-04-01';
 
   const futureSource = example();
-  futureSource.fundingSources[0].startDate = '2026-04-01';
-  futureSource.fundingSources[0].expenses = [
+  futureSource.content.fundingSources[0].startDate = '2026-04-01';
+  futureSource.content.fundingSources[0].expenses = [
     {
       amount: 310,
       description: 'Synthetic monthly supplies',
@@ -162,16 +167,18 @@ export function reviewProjectionCalculations() {
 
   const currentActuals = example();
   currentActuals.seededAt = '2026-10-16T00:00:00Z';
-  currentActuals.fundingSources.forEach(
+  currentActuals.content.fundingSources.forEach(
     (source) => (source.capturedAt = currentActuals.seededAt)
   );
   extendThrough(currentActuals, '2026-11-30');
-  currentActuals.fundingSources = [currentActuals.fundingSources[0]];
-  currentActuals.appointments[0].allocations = [
-    { ...currentActuals.appointments[0].allocations[0], percent: 1 },
+  currentActuals.content.fundingSources = [
+    currentActuals.content.fundingSources[0],
   ];
-  currentActuals.appointments[0].feeRemissionMonthly = 1500;
-  const currentSource = currentActuals.fundingSources[0];
+  currentActuals.content.appointments[0].allocations = [
+    { ...currentActuals.content.appointments[0].allocations[0], percent: 1 },
+  ];
+  currentActuals.content.appointments[0].feeRemissionMonthly = 1500;
+  const currentSource = currentActuals.content.fundingSources[0];
   // These current totals explicitly include each October actual below.
   const currentTotals = [20_000, 8000, 2000, 2000];
   const octoberActuals = [2500, 1000, 750, 100];
@@ -183,7 +190,9 @@ export function reviewProjectionCalculations() {
       month: '2026-10-01',
     });
   });
-  currentSource.expenses = [{ ...futureSource.fundingSources[0].expenses[0] }];
+  currentSource.expenses = [
+    { ...futureSource.content.fundingSources[0].expenses[0] },
+  ];
   const snapshotFee = computePiProjection(currentActuals).rows.find(
     (row) =>
       row.month === '2026-10' &&
@@ -194,15 +203,15 @@ export function reviewProjectionCalculations() {
   assert.equal(snapshotFee?.remaining, 6500);
 
   const fundingSwitch = example();
-  fundingSwitch.appointments[0].allocations = [
+  fundingSwitch.content.appointments[0].allocations = [
     {
-      ...fundingSwitch.appointments[0].allocations[0],
+      ...fundingSwitch.content.appointments[0].allocations[0],
       endDate: '2026-03-15',
       percent: 1,
       startDate: '2026-03-01',
     },
     {
-      ...fundingSwitch.appointments[0].allocations[1],
+      ...fundingSwitch.content.appointments[0].allocations[1],
       endDate: '2026-03-31',
       percent: 1,
       startDate: '2026-03-16',
@@ -215,27 +224,28 @@ export function reviewProjectionCalculations() {
     { end: '2026-10-31', start: '2026-10-20' },
   ].map(({ end, start }) => {
     const plan = structuredClone(currentActuals);
-    plan.appointments = [];
-    plan.fundingSources[0].startDate = start;
-    plan.fundingSources[0].endDate = end;
+    plan.content.appointments = [];
+    plan.content.fundingSources[0].startDate = start;
+    plan.content.fundingSources[0].endDate = end;
     return { end, start, supplies: costs(plan, '2026-10').supplies };
   });
 
   const oneTime = structuredClone(currentActuals);
-  oneTime.appointments = [];
-  oneTime.fundingSources[0].endDate = '2026-10-10';
-  oneTime.fundingSources[0].expenses = ['2026-09', '2026-10', '2026-11'].map(
-    (month) => ({
-      amount: 1000,
-      description: `Synthetic ${month} purchase`,
-      endMonth: null,
-      expenditureCategory: SUPPLIES,
-      id: 2,
-      kind: 'OneTime',
-      startMonth: `${month}-01`,
-    })
-  );
-
+  oneTime.content.appointments = [];
+  oneTime.content.fundingSources[0].endDate = '2026-10-10';
+  oneTime.content.fundingSources[0].expenses = [
+    '2026-09',
+    '2026-10',
+    '2026-11',
+  ].map((month) => ({
+    amount: 1000,
+    description: `Synthetic ${month} purchase`,
+    endMonth: null,
+    expenditureCategory: SUPPLIES,
+    id: 2,
+    kind: 'OneTime',
+    startMonth: `${month}-01`,
+  }));
   return {
     establishedSalaryExample: {
       afterPerSource: salaryAfterCosts,
@@ -248,45 +258,45 @@ export function reviewProjectionCalculations() {
     reviewExamples: [
       {
         assumptions:
-          'Same base salary/FTE/shares/rates. Snapshot 2026-01-01, July COLA 3%, source and appointment through 2028-08-31. Values are for Project A; Project B is identical.',
-        current: ['2026-06', '2026-07', '2027-07', '2028-07'].map((month) => ({
+          'Same base salary/FTE/shares/rates. Snapshot 2026-03-16, 18-month forecast, July COLA 3%, source and appointment through 2028-08-31. Values are for Project A; Project B is identical.',
+        current: ['2026-06', '2026-07', '2027-07'].map((month) => ({
           afterSalaryEdit: costs(edited(cola), month),
           beforeSalaryEdit: costs(cola, month),
           month,
         })),
         independentlyWorked:
-          'Before edit salary/fringe: June 2026 = 2500/1000; July 2026 = 2575/1030; July 2027 = 2652.25/1060.90; July 2028 = 2731.8175/1092.727. After edit: 2750/1100; 2832.50/1133; 2917.475/1166.99; 3004.99925/1201.9997. Assumes annual compounding with no intermediate rounding.',
+          'Before edit salary/fringe: June 2026 = 2500/1000; July 2026 = 2575/1030; July 2027 = 2652.25/1060.90. After edit: 2750/1100; 2832.50/1133; 2917.475/1166.99. Assumes annual compounding with no intermediate rounding.',
         rule: 'COLA compounds once each configured annual month strictly after the salary base month.',
         topic: 'Multi-year COLA',
       },
       {
         assumptions:
           'Same 120000 annual salary and July 3% COLA, but snapshot is July 15, 2026.',
-        current: ['2026-07', '2027-07', '2028-07'].map((month) => ({
+        current: ['2026-07', '2027-07'].map((month) => ({
           ...costs(julySnapshot, month),
           month,
         })),
         independentlyWorked:
-          'The entered 120000 is the snapshot rate. Per-source salaries are 2500 in July 2026, then 2575 and 2652.25 in the next two Julys.',
+          'The entered 120000 is the snapshot rate. Per-source salaries are 2500 in July 2026, then 2575 the following July within this plan period.',
         rule: 'Imported salaries use the snapshot month as their base; do not apply another increase within that month.',
         topic: 'Snapshot during COLA month',
       },
       {
         assumptions:
-          'Snapshot Jan 1, 2026. New appointment starts Aug 1 with full-time annual salary 120000 and July COLA 3%.',
-        current: ['2026-08', '2027-07', '2028-07'].map((month) => ({
+          'Snapshot Mar 16, 2026, with an 18-month forecast. New appointment starts Aug 1 with full-time annual salary 120000 and July COLA 3%.',
+        current: ['2026-08', '2027-07'].map((month) => ({
           ...costs(futureAppointment, month),
           month,
         })),
         independentlyWorked:
-          '120000 is the August starting rate. At 0.5 FTE and a 0.5 source share, salary is 2500 per source until July 2027, then 2575 and 2652.25 in the next two Julys. Benefits follow the same salary increases.',
+          '120000 is the August starting rate. At 0.5 FTE and a 0.5 source share, salary is 2500 per source until July 2027, then 2575 the following July within this plan period. Benefits follow the same salary increases.',
         rule: 'A planned future hire receives its first COLA in the configured month strictly after its start month. Imported appointments retain the snapshot-based rule.',
         topic: 'Future hire starting rate',
       },
       {
         assumptions:
           'Fixed fee remission input 1500/month, FTE 0.5, each source share 0.5. July COLA 3%.',
-        current: ['2026-01', '2026-07', '2027-07'].map((month) => ({
+        current: ['2026-03', '2026-07', '2027-07'].map((month) => ({
           afterSalaryEdit: costs(edited(fees), month).fees,
           beforeSalaryEdit: costs(fees, month).fees,
           month,

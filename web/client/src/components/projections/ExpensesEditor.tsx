@@ -15,7 +15,10 @@ import {
   type HistoryWindowEditorHandle,
 } from '@/components/projections/HistoryWindowEditor.tsx';
 import { fundingMonthLabel } from '@/components/projections/fundingTimelineDates.ts';
-import { getSourceForecastWindow } from '@/lib/piProjection.ts';
+import {
+  getProjectionForecastWindow,
+  getSourceForecastWindow,
+} from '@/lib/piProjection.ts';
 import {
   addProjectionExpense,
   changeProjectionHistoryMonths,
@@ -59,8 +62,9 @@ export function ExpensesEditor<T extends ProjectionDraft>({
   sourceTarget?: { id: number | null; onChange: (id: number) => void };
 }) {
   const { draft } = session;
+  const forecastWindow = getProjectionForecastWindow(draft);
   const [selectedId, setSelectedId] = useState<number | null>(
-    draft.fundingSources[0]?.id ?? null
+    draft.content.fundingSources[0]?.id ?? null
   );
   const [editing, setEditing] = useState<EditorTarget | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -69,12 +73,12 @@ export function ExpensesEditor<T extends ProjectionDraft>({
   const historyRef = useRef<HistoryWindowEditorHandle>(null);
   const lookup = useQuery(projectionLookupsQueryOptions());
   const selectedSource =
-    draft.fundingSources.find(
+    draft.content.fundingSources.find(
       ({ id }) => id === (sourceTarget ? sourceTarget.id : selectedId)
-    ) ?? draft.fundingSources[0];
+    ) ?? draft.content.fundingSources[0];
   const editingSource =
     editing && editing.kind !== 'history'
-      ? draft.fundingSources.find(({ id }) => id === editing.sourceId)
+      ? draft.content.fundingSources.find(({ id }) => id === editing.sourceId)
       : undefined;
   const expense =
     editing?.kind === 'expense' && editing.id !== 'new'
@@ -82,14 +86,17 @@ export function ExpensesEditor<T extends ProjectionDraft>({
       : undefined;
   const editingHistorical =
     editing?.kind === 'historical' && editingSource
-      ? getHistoricalExpenseRows(editingSource, draft.historyMonths).find(
+      ? getHistoricalExpenseRows(
+          editingSource,
+          draft.content.historyMonths
+        ).find(
           ({ expenditureCategory }) => expenditureCategory === editing.category
         )
       : undefined;
   const categories = [
     ...new Set([
       ...(lookup.data?.expenditureCategories ?? []),
-      ...draft.fundingSources.flatMap((source) =>
+      ...draft.content.fundingSources.flatMap((source) =>
         [
           ...source.budgets,
           ...source.actuals,
@@ -115,14 +122,14 @@ export function ExpensesEditor<T extends ProjectionDraft>({
     return result;
   }
   const window = selectedSource
-    ? getSourceForecastWindow(selectedSource)
+    ? getSourceForecastWindow(selectedSource, forecastWindow)
     : null;
   return (
     <div className="mt-5 space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-box bg-base-200 p-4">
         <div>
           <p className="font-medium">
-            Spending history: {draft.historyMonths} months
+            Spending history: {draft.content.historyMonths} months
           </p>
           <p className="mt-1 text-sm">
             Captured history supplies the monthly estimates for every source.
@@ -152,7 +159,7 @@ export function ExpensesEditor<T extends ProjectionDraft>({
               }}
               value={selectedSource.id}
             >
-              {draft.fundingSources.map((source) => (
+              {draft.content.fundingSources.map((source) => (
                 <option key={source.id} value={source.id}>
                   {sourceLabel(source)}
                 </option>
@@ -163,8 +170,15 @@ export function ExpensesEditor<T extends ProjectionDraft>({
             Captured {selectedSource.capturedAt.slice(0, 10)}. Forecast through{' '}
             {fundingMonthLabel(window!.endMonth)}.
           </p>
+          {window!.isBeyondForecast && (
+            <p className="text-sm">
+              This source starts after the forecast period. Its expenses add no
+              costs within this plan period.
+            </p>
+          )}
           <HistoricalExpensesTable
-            historyMonths={draft.historyMonths}
+            forecastWindow={forecastWindow}
+            historyMonths={draft.content.historyMonths}
             onEdit={(category) =>
               setEditing({
                 category,
@@ -180,6 +194,7 @@ export function ExpensesEditor<T extends ProjectionDraft>({
             source={selectedSource}
           />
           <AddedExpensesTable
+            forecastWindow={forecastWindow}
             onAdd={() =>
               setEditing({
                 id: 'new',
@@ -211,7 +226,7 @@ export function ExpensesEditor<T extends ProjectionDraft>({
       )}
       {editing?.kind === 'history' && (
         <HistoryWindowEditor
-          historyMonths={draft.historyMonths}
+          historyMonths={draft.content.historyMonths}
           onApply={(months) =>
             apply((current) => changeProjectionHistoryMonths(current, months))
           }
@@ -226,9 +241,9 @@ export function ExpensesEditor<T extends ProjectionDraft>({
           hasCapturedAmount={editingSource.runRates.some(
             (rate) =>
               rate.expenditureCategory === editing.category &&
-              rate.historyMonths === draft.historyMonths
+              rate.historyMonths === draft.content.historyMonths
           )}
-          historyMonths={draft.historyMonths}
+          historyMonths={draft.content.historyMonths}
           key={`${editingSource.id}:${editing.category}`}
           monthlyAmount={editingHistorical.effectiveAmount}
           onApply={(amount, forceZero) =>
@@ -253,6 +268,7 @@ export function ExpensesEditor<T extends ProjectionDraft>({
           <ExpenseEditor
             categories={categories}
             expense={expense}
+            forecastWindow={forecastWindow}
             key={`${editingSource.id}:${editing.id}`}
             lookupFailed={lookup.isError}
             onApply={(inputs) =>

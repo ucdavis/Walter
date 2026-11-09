@@ -20,7 +20,7 @@ describe('source changes during persistence', () => {
     const version = '2026-04-01T12:00:00.1234567Z';
     const requests: SaveProjectionRequest[] = [];
     const fresh: ProjectionFundingSource = {
-      ...structuredClone(plan.fundingSources[0]),
+      ...structuredClone(plan.content.fundingSources[0]),
       capturedAt: version,
       projectNumber: 'NEW',
       sourceKind: 'Task',
@@ -30,7 +30,7 @@ describe('source changes during persistence', () => {
     function Probe() {
       const value = useProjectionSession();
       useImperativeHandle(controls, () => value);
-      return <p>{value.session.draft.fundingSources.length} sources</p>;
+      return <p>{value.session.draft.content.fundingSources.length} sources</p>;
     }
     render(
       <ProjectionSessionProvider
@@ -41,8 +41,8 @@ describe('source changes during persistence', () => {
             requests.push(request);
             return {
               ...plan,
-              appointments: request.appointments,
-              fundingSources: request.fundingSources,
+              content: request.content,
+              name: request.name,
               updatedAt: version,
             };
           },
@@ -54,7 +54,7 @@ describe('source changes during persistence', () => {
     await act(async () =>
       controls.current!.applyAppointmentOperation((current) =>
         editProjectionAppointment(current, 101, {
-          ...current.draft.appointments[0],
+          ...current.draft.content.appointments[0],
           monthlySalary: 11_000,
         })
       )
@@ -68,14 +68,14 @@ describe('source changes during persistence', () => {
     });
     expect(screen.getByText('3 sources')).toBeInTheDocument();
     expect(controls.current!.session.baseline.updatedAt).toBe(version);
-    expect(controls.current!.session.draft.appointments[0].monthlySalary).toBe(
-      11_000
-    );
+    expect(
+      controls.current!.session.draft.content.appointments[0].monthlySalary
+    ).toBe(11_000);
     expect(isProjectionDirty(controls.current!.session)).toBe(true);
     await act(async () => controls.current!.save());
     expect(requests).toHaveLength(2);
     expect(requests[1].expectedUpdatedAt).toBe(version);
-    expect(requests[1].fundingSources).toHaveLength(3);
+    expect(requests[1].content.fundingSources).toHaveLength(3);
     expect(isProjectionDirty(controls.current!.session)).toBe(false);
   });
 });

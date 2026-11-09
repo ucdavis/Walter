@@ -10,7 +10,7 @@ import type {
   ProjectionFundingSource,
   ProjectionLookups,
 } from '@/queries/projections.ts';
-
+import { DEFAULT_FORECAST_MONTHS } from '@/lib/projectionDetails.ts';
 export function createAppointmentLookupsExample(): ProjectionLookups {
   return {
     appointmentDefaults: { cbrRate: 0.2, colaMonth: 7, colaRate: 0.03, fte: 1 },
@@ -80,41 +80,45 @@ const source = (
 /** Deliberately excludes benefits, COLA, and other costs to isolate the salary rule. */
 export function createSalaryExample(): Projection {
   return {
-    appointments: [
-      {
-        allocations: [1, 2].map((fundingSourceId) => ({
+    content: {
+      appointments: [
+        {
+          allocations: [1, 2].map((fundingSourceId) => ({
+            endDate: '2026-06-30',
+            fundingSourceId,
+            percent: 0.5,
+            startDate: '2026-01-01',
+          })),
+          cbrRate: 0,
+          colaMonth: 7,
+          colaRate: 0,
+          employeeId: null,
           endDate: '2026-06-30',
-          fundingSourceId,
-          percent: 0.5,
+          feeRemissionMonthly: 0,
+          fte: 0.5,
+          hasUnmatchedFunding: false,
+          id: 101,
+          isSeeded: true,
+          jobCode: null,
+          monthlySalary: 10_000,
+          name: 'Alex Example',
+          positionNumber: 'EXAMPLE-101',
+          rateSet: 'DVCMP',
           startDate: '2026-01-01',
-        })),
-        cbrRate: 0,
-        colaMonth: 7,
-        colaRate: 0,
-        employeeId: null,
-        endDate: '2026-06-30',
-        feeRemissionMonthly: 0,
-        fte: 0.5,
-        hasUnmatchedFunding: false,
-        id: 101,
-        isSeeded: true,
-        jobCode: null,
-        monthlySalary: 10_000,
-        name: 'Alex Example',
-        positionNumber: 'EXAMPLE-101',
-        rateSet: 'DVCMP',
-        startDate: '2026-01-01',
-        title: 'Research specialist',
-        vacationAccrualRate: 0,
-      },
-    ],
+          title: 'Research specialist',
+          vacationAccrualRate: 0,
+        },
+      ],
+      forecastMonths: DEFAULT_FORECAST_MONTHS,
+      fundingSources: [
+        source(1, 'Project A', 20_000),
+        source(2, 'Project B', 16_000),
+      ],
+      historyMonths: 3,
+      notes: null,
+    },
     createdAt: '2026-01-01T00:00:00Z',
     createdBy: null,
-    fundingSources: [
-      source(1, 'Project A', 20_000),
-      source(2, 'Project B', 16_000),
-    ],
-    historyMonths: 3,
     id: 1,
     name: 'Salary planning example',
     piEmployeeId: 'SYNTHETIC',
@@ -129,9 +133,9 @@ export function createBookedSalaryExample(): Projection {
   const plan = createSalaryExample();
   plan.name = 'Booked salary example';
   plan.createdAt = plan.seededAt = plan.updatedAt = '2026-01-16T00:00:00Z';
-  plan.appointments[0].cbrRate = 0.3;
-  plan.appointments[0].vacationAccrualRate = 0.1;
-  for (const source of plan.fundingSources) {
+  plan.content.appointments[0].cbrRate = 0.3;
+  plan.content.appointments[0].vacationAccrualRate = 0.1;
+  for (const source of plan.content.fundingSources) {
     source.capturedAt = plan.seededAt;
     source.budgets = [
       {
@@ -161,14 +165,14 @@ export function createDateBoundaryExample(): Projection {
   const plan = createBookedSalaryExample();
   plan.name = 'Date boundary example';
   plan.createdAt = plan.seededAt = plan.updatedAt = '2026-01-15T00:00:00Z';
-  const appointment = plan.appointments[0];
+  const appointment = plan.content.appointments[0];
   appointment.startDate = '2026-02-15';
   appointment.endDate = '2026-03-10';
   appointment.allocations[0].startDate = '2026-02-20';
   appointment.allocations[0].endDate = '2026-03-05';
   appointment.allocations[1].startDate = '2026-03-31';
   appointment.allocations[1].endDate = '2026-04-01';
-  for (const source of plan.fundingSources) {
+  for (const source of plan.content.fundingSources) {
     source.capturedAt = plan.seededAt;
     source.capturedStartDate = '2026-01-01';
     source.capturedEndDate = '2026-04-30';
@@ -186,7 +190,7 @@ export function createDateBoundaryExample(): Projection {
 export function createFutureHireExample(): Projection {
   const plan = createSalaryExample();
   plan.name = 'Future hire example';
-  const appointment = plan.appointments[0];
+  const appointment = plan.content.appointments[0];
   appointment.isSeeded = false;
   appointment.employeeId = null;
   appointment.positionNumber = null;
@@ -197,7 +201,7 @@ export function createFutureHireExample(): Projection {
     allocation.startDate = appointment.startDate;
     allocation.endDate = appointment.endDate;
   }
-  for (const source of plan.fundingSources) {
+  for (const source of plan.content.fundingSources) {
     source.capturedStartDate = '2026-01-01';
     source.capturedEndDate = '2027-08-31';
     source.startDate = '2026-01-01';
@@ -216,7 +220,7 @@ export function createFeeExample(): Projection {
   const plan = createSalaryExample();
   plan.name = 'Fee remission example';
   plan.createdAt = plan.seededAt = plan.updatedAt = '2026-04-16T00:00:00Z';
-  const appointment = plan.appointments[0];
+  const appointment = plan.content.appointments[0];
   appointment.monthlySalary = 0;
   appointment.feeRemissionMonthly = 1500;
   appointment.startDate = '2026-04-16';
@@ -225,7 +229,7 @@ export function createFeeExample(): Projection {
     allocation.startDate = appointment.startDate;
     allocation.endDate = appointment.endDate;
   }
-  for (const source of plan.fundingSources) {
+  for (const source of plan.content.fundingSources) {
     source.capturedAt = plan.seededAt;
     source.capturedStartDate = '2026-04-01';
     source.capturedEndDate = '2026-05-31';

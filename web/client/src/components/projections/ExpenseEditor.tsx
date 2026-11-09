@@ -1,3 +1,4 @@
+import type { ProjectionForecastWindow } from '@/lib/piProjection.ts';
 import { useImperativeHandle, useState, type Ref } from 'react';
 import { useStore } from '@tanstack/react-form';
 import { useAppForm } from '@/shared/forms/formContext.tsx';
@@ -26,6 +27,7 @@ export interface ExpenseEditorHandle {
 export function ExpenseEditor({
   categories,
   expense,
+  forecastWindow,
   lookupFailed,
   onApply,
   onClose,
@@ -35,6 +37,7 @@ export function ExpenseEditor({
 }: {
   categories: string[];
   expense?: ProjectionExpense;
+  forecastWindow: ProjectionForecastWindow;
   lookupFailed: boolean;
   onApply: (
     inputs: ExpenseInputs
@@ -44,7 +47,7 @@ export function ExpenseEditor({
   ref?: Ref<ExpenseEditorHandle>;
   source: ProjectionFundingSource;
 }) {
-  const window = getSourceForecastWindow(source);
+  const window = getSourceForecastWindow(source, forecastWindow);
   const [initial] = useState(() => ({
     amount: expense?.amount.toFixed(2) ?? '',
     category: expense?.expenditureCategory ?? '',
@@ -106,7 +109,7 @@ export function ExpenseEditor({
   const validationMessage = amountError ?? validateExpenseInputs(inputs);
   const forecast = validationMessage
     ? null
-    : computeExpenseForecast(source, inputs);
+    : computeExpenseForecast(source, inputs, forecastWindow);
   useImperativeHandle(ref, () => ({
     read: () => ({
       expenditureCategory: null,

@@ -138,7 +138,7 @@ export function AllocationEditor({
   const effectiveStart = range.startDate ?? appointment.startDate;
   const effectiveEnd = range.endDate ?? appointment.endDate;
   const unavailable = values.shares.flatMap((share) => {
-    const source = plan.fundingSources.find(
+    const source = plan.content.fundingSources.find(
       ({ id }) => String(id) === share.source
     );
     if (!source) {
@@ -398,7 +398,7 @@ export function AllocationEditor({
                             >
                               <option value="">Choose a source</option>
                               <option value="outside">Outside this plan</option>
-                              {plan.fundingSources.map((item) => (
+                              {plan.content.fundingSources.map((item) => (
                                 <option key={item.id} value={item.id}>
                                   {sourceLabel(item)}
                                 </option>
@@ -410,9 +410,10 @@ export function AllocationEditor({
                               </span>
                             ) : (
                               (() => {
-                                const selectedSource = plan.fundingSources.find(
-                                  ({ id }) => String(id) === share.source
-                                );
+                                const selectedSource =
+                                  plan.content.fundingSources.find(
+                                    ({ id }) => String(id) === share.source
+                                  );
                                 return selectedSource ? (
                                   <span className="text-xs">
                                     {selectedSource.startDate ??

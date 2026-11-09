@@ -11,6 +11,28 @@ selected. A project rollup does not allow one task's surplus to cover another
 task's shortfall. A source's editable name does not change its captured
 project or task identity.
 
+## Plan period and notes
+
+The plan forecasts 12 or 18 months, with 12 as the default. Its original snapshot
+month is the first month. A January 2026 snapshot therefore forecasts January
+through December 2026 at 12 months, or through June 2027 at 18 months. Reopening
+the plan does not move that period to today's date.
+
+All funding sources share this period. Adding a source does not extend it.
+Changing duration preserves source, appointment, allocation, and expense dates;
+only costs eligible within the selected period contribute. Open-ended sources
+run through the plan's end month. Sources captured or first available after that
+month remain in the plan but contribute no balance or forecast costs within the
+period. Their dates can become eligible if the user extends the duration.
+
+Every displayed projected balance refers to the common plan-end month. A source
+ending earlier carries its final balance forward without new charges, subject
+to the snapshot-month personnel credit rule below. A balance at the selected end
+month does not describe costs or funding adequacy beyond that period.
+
+Optional plan notes describe assumptions or purpose and have no calculation
+effect. Saving and duplicating a plan preserve its notes and selected duration.
+
 ## Fresh snapshot selection
 
 Fresh snapshots begin with active projects where the person is the project-level
@@ -160,7 +182,8 @@ An imported source's snapshot time records when Walter begins capturing its
 inputs. Its UTC date anchors its history window, forecast months, and
 partial-month calculations. Sources captured together share that timestamp;
 adding a source later does not change existing sources' timestamps. Every
-source records its own timestamp explicitly.
+source records its own timestamp explicitly. The selected plan period remains
+anchored to the original plan snapshot.
 
 In the financial rules below, snapshot month means the individual source's
 capture month. Employee salary and COLA bases remain tied to the original plan
@@ -209,8 +232,9 @@ calculator does not automatically reconcile commitments with forecast costs.
 
 Each source keeps its own balance. A surplus on one task does not cover a
 shortfall on another. Its outlook and monthly detail begin in its capture month,
-or the availability month for later planned funding, and continue through its
-forecast horizon. The snapshot month shows booked actuals and additional
+or the availability month for later planned funding, and continue through the
+common plan-end month. A source first available or captured after that period
+has no financial rows within it. The snapshot month shows booked actuals and additional
 forecast spending. The calculator does not reconstruct balances for earlier
 months from the captured balance and past spending.
 
@@ -305,8 +329,9 @@ Added expenses require a starting month. Its default is the later of the source'
 capture month and availability month. Monthly expenses can use an explicit ending
 month or follow the source's end. Following the source also follows later edits
 to its end date; an explicit expense ending month stays fixed. If the source has
-no end date, the current source forecast horizon limits the calculation. The
-editor displays that end month.
+no end date, the selected plan period limits the calculation. The editor displays
+that end month. Changing the duration changes that limit without rewriting an
+explicit expense ending month.
 
 Recurring expenses, including generated estimates, are prorated for days when
 the funding source is active within their applicable months. Source start and

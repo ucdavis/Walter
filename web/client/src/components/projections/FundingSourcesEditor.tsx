@@ -51,8 +51,12 @@ export function FundingSourcesEditor<T extends ProjectionDraft>({
   const { draft } = session;
   const selectedIds = new Set(initialSelection?.ids ?? []);
   const editingSourceId = sourceTarget ? sourceTarget.id : editing;
-  const source = draft.fundingSources.find(({ id }) => id === editingSourceId);
-  const removed = draft.fundingSources.find(({ id }) => id === removing);
+  const source = draft.content.fundingSources.find(
+    ({ id }) => id === editingSourceId
+  );
+  const removed = draft.content.fundingSources.find(
+    ({ id }) => id === removing
+  );
   useImperativeHandle(ref, () => ({
     read: () => editorRef.current?.read() ?? null,
   }));
@@ -67,7 +71,7 @@ export function FundingSourcesEditor<T extends ProjectionDraft>({
       {initialSelection && (
         <div className="mt-4">
           <SourceChecklist
-            choices={draft.fundingSources.map((source) => ({
+            choices={draft.content.fundingSources.map((source) => ({
               key: String(source.id),
               label: sourceLabel(source),
               projectName: source.projectName,
@@ -79,7 +83,7 @@ export function FundingSourcesEditor<T extends ProjectionDraft>({
         </div>
       )}
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
-        {draft.fundingSources
+        {draft.content.fundingSources
           .filter((source) => !initialSelection || selectedIds.has(source.id))
           .map((source) => (
             <article
@@ -133,7 +137,7 @@ export function FundingSourcesEditor<T extends ProjectionDraft>({
             </article>
           ))}
       </div>
-      {draft.fundingSources.length === 0 && (
+      {draft.content.fundingSources.length === 0 && (
         <p className="mt-4">No funding sources in this plan.</p>
       )}
       <div className="mt-5 flex flex-wrap gap-3">

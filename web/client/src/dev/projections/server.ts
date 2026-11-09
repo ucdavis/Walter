@@ -37,7 +37,7 @@ export function createProjectionPreviewServer(initialPlan: Projection) {
     pending: 0,
     reloads,
     requests: 0,
-    storedSalary: stored.appointments[0]?.monthlySalary ?? null,
+    storedSalary: stored.content.appointments[0]?.monthlySalary ?? null,
     updatedAt: stored.updatedAt,
   };
 
@@ -48,7 +48,7 @@ export function createProjectionPreviewServer(initialPlan: Projection) {
       pending: pending.length,
       reloads,
       requests: requests.length,
-      storedSalary: stored?.appointments[0]?.monthlySalary ?? null,
+      storedSalary: stored?.content.appointments[0]?.monthlySalary ?? null,
       updatedAt: stored?.updatedAt ?? 'Deleted',
     };
     for (const listener of listeners) {
@@ -68,8 +68,8 @@ export function createProjectionPreviewServer(initialPlan: Projection) {
         return;
       }
       stored.name = 'Plan edited by another user';
-      if (stored.appointments[0]) {
-        stored.appointments[0].monthlySalary = 128_000 / 12;
+      if (stored.content.appointments[0]) {
+        stored.content.appointments[0].monthlySalary = 128_000 / 12;
       }
       stored.updatedAt = nextTimestamp(stored.updatedAt);
       stored.updatedBy = 'Another user';
@@ -96,8 +96,19 @@ export function createProjectionPreviewServer(initialPlan: Projection) {
       }
       const updatedAt = nextTimestamp(stored.updatedAt);
       const seededAt = nextTimestamp(stored.seededAt);
-      stored = { ...structuredClone(initialPlan), seededAt, updatedAt };
-      for (const source of stored.fundingSources) {
+      const fresh = structuredClone(initialPlan);
+      stored = {
+        ...fresh,
+        content: {
+          ...fresh.content,
+          forecastMonths: stored.content.forecastMonths,
+          notes: stored.content.notes,
+        },
+        name: stored.name,
+        seededAt,
+        updatedAt,
+      };
+      for (const source of stored.content.fundingSources) {
         source.capturedAt = seededAt;
       }
       publish();
@@ -138,9 +149,7 @@ export function createProjectionPreviewServer(initialPlan: Projection) {
       }
       stored = {
         ...stored,
-        appointments: submitted.appointments,
-        fundingSources: submitted.fundingSources,
-        historyMonths: submitted.historyMonths,
+        content: submitted.content,
         name: submitted.name,
         updatedAt: nextTimestamp(stored.updatedAt),
         updatedBy: 'Preview user',

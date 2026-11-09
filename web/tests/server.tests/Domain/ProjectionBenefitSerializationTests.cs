@@ -21,25 +21,26 @@ public sealed class ProjectionBenefitSerializationTests
     {
         using var ctx = TestDbContextFactory.CreateInMemory();
         var converter = ctx.Model.FindEntityType(typeof(Projection))!
-            .FindProperty(nameof(Projection.Appointments))!.GetValueConverter()!;
+            .FindProperty(nameof(Projection.Content))!.GetValueConverter()!;
 
-        var jobs = (List<ProjectionAppointment>)converter.ConvertFromProvider(storedJson)!;
+        var contentJson = $$"""{"historyMonths":3,"forecastMonths":12,"fundingSources":[],"appointments":{{storedJson}}}""";
+        var content = (ProjectionContent)converter.ConvertFromProvider(contentJson)!;
 
-        var job = jobs.Should().ContainSingle().Subject;
+        var job = content.Appointments.Should().ContainSingle().Subject;
         job.CbrRate.Should().Be(expectedCbr);
         job.VacationAccrualRate.Should().Be(0.083m);
         job.MonthlySalary.Should().BeNull();
 
-        var savedJson = (string)converter.ConvertToProvider(jobs)!;
+        var savedJson = (string)converter.ConvertToProvider(content)!;
         using var document = JsonDocument.Parse(savedJson);
-        var savedJob = document.RootElement[0];
+        var savedJob = document.RootElement.GetProperty("appointments")[0];
         savedJob.GetProperty("cbrRate").ValueKind.Should().Be(JsonValueKind.Number);
         savedJob.GetProperty("cbrRate").GetDecimal().Should().Be(expectedCbr);
         savedJob.GetProperty("vacationAccrualRate").GetDecimal().Should().Be(0.083m);
 
-        var reloaded = (List<ProjectionAppointment>)converter.ConvertFromProvider(savedJson)!;
-        reloaded.Single().CbrRate.Should().Be(expectedCbr);
-        reloaded.Single().VacationAccrualRate.Should().Be(0.083m);
+        var reloaded = (ProjectionContent)converter.ConvertFromProvider(savedJson)!;
+        reloaded.Appointments.Single().CbrRate.Should().Be(expectedCbr);
+        reloaded.Appointments.Single().VacationAccrualRate.Should().Be(0.083m);
     }
 
     [Theory]

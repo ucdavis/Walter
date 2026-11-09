@@ -64,7 +64,7 @@ describe('salary workspace operations without React', () => {
   it('acknowledges a submitted draft with exact authoritative tokens', () => {
     const initial = createProjectionSession(createSalaryExample());
     const change = editProjectionAppointment(initial, 101, {
-      ...initial.draft.appointments[0],
+      ...initial.draft.content.appointments[0],
       monthlySalary: 11_000,
     });
     if (!change.ok) {
@@ -86,7 +86,7 @@ describe('salary workspace operations without React', () => {
   it('retains newer applied edits while acknowledging only the submitted version', () => {
     const initial = createProjectionSession(createSalaryExample());
     const change = editProjectionAppointment(initial, 101, {
-      ...initial.draft.appointments[0],
+      ...initial.draft.content.appointments[0],
       monthlySalary: 11_000,
     });
     if (!change.ok) {
@@ -94,7 +94,7 @@ describe('salary workspace operations without React', () => {
     }
     const submitted = change.session;
     const newer = editProjectionAppointment(submitted, 101, {
-      ...submitted.draft.appointments[0],
+      ...submitted.draft.content.appointments[0],
       monthlySalary: 12_000,
     });
     if (!newer.ok) {
@@ -111,11 +111,15 @@ describe('salary workspace operations without React', () => {
       saved
     );
     expect(acknowledged.baseline).toBe(saved);
-    expect(acknowledged.draft.appointments).toBe(
-      newer.session.draft.appointments
+    expect(acknowledged.draft.content.appointments).toBe(
+      newer.session.draft.content.appointments
     );
-    expect(acknowledged.draft.appointments[0].monthlySalary).toBe(12_000);
-    expect(acknowledged.baseline.appointments[0].monthlySalary).toBe(11_000);
+    expect(acknowledged.draft.content.appointments[0].monthlySalary).toBe(
+      12_000
+    );
+    expect(acknowledged.baseline.content.appointments[0].monthlySalary).toBe(
+      11_000
+    );
     expect(acknowledged.draft.updatedAt).toBe('2026-11-06T19:00:00.1234567Z');
     expect(acknowledged.draft.updatedBy).toBe('Editor');
     expect(acknowledged.draft.seededAt).toBe(initial.draft.seededAt);
@@ -127,7 +131,7 @@ describe('salary workspace operations without React', () => {
     const initial = createProjectionSession(createSalaryExample());
     const before = computePiProjection(initial.draft);
     const result = editProjectionAppointment(initial, 101, {
-      ...initial.draft.appointments[0],
+      ...initial.draft.content.appointments[0],
       monthlySalary: 132_000 / 12,
     });
     expect(result.ok).toBe(true);
@@ -152,24 +156,29 @@ describe('salary workspace operations without React', () => {
         ['2026-04', 2500],
         ['2026-05', 2500],
         ['2026-06', 2500],
+        ...['07', '08', '09', '10', '11', '12'].map((month) => [
+          `2026-${month}`,
+          0,
+        ]),
       ]);
-      expect(salaryRows(after.rows).map((row) => row.projectedAmount)).toEqual(
-        Array(6).fill(2750)
-      );
+      expect(salaryRows(after.rows).map((row) => row.projectedAmount)).toEqual([
+        ...Array(6).fill(2750),
+        ...Array(6).fill(0),
+      ]);
     }
     expect(after.rows.every((row) => row.month >= '2026-01')).toBe(true);
-    expect(result.session.draft.fundingSources[0].actuals).toEqual(
-      initial.draft.fundingSources[0].actuals
+    expect(result.session.draft.content.fundingSources[0].actuals).toEqual(
+      initial.draft.content.fundingSources[0].actuals
     );
-    expect(result.session.draft.appointments[0].fte).toBe(0.5);
-    expect(result.session.draft.appointments[0].allocations).toBe(
-      initial.draft.appointments[0].allocations
+    expect(result.session.draft.content.appointments[0].fte).toBe(0.5);
+    expect(result.session.draft.content.appointments[0].allocations).toBe(
+      initial.draft.content.appointments[0].allocations
     );
-    expect(result.session.draft.fundingSources).toBe(
-      initial.draft.fundingSources
+    expect(result.session.draft.content.fundingSources).toBe(
+      initial.draft.content.fundingSources
     );
     expect(result.session.draft.seededAt).toBe(initial.draft.seededAt);
-    expect(initial.draft.appointments[0].monthlySalary).toBe(10_000);
+    expect(initial.draft.content.appointments[0].monthlySalary).toBe(10_000);
     expect(result.session.revision).toBe(1);
     expect(isProjectionDirty(result.session)).toBe(true);
   });
@@ -177,7 +186,7 @@ describe('salary workspace operations without React', () => {
   it('keeps no-op identity and clears dirty status when the original salary is restored', () => {
     const initial = createProjectionSession(createSalaryExample());
     const unchanged = editProjectionAppointment(initial, 101, {
-      ...initial.draft.appointments[0],
+      ...initial.draft.content.appointments[0],
       monthlySalary: 10_000,
     });
     if (!unchanged.ok) {
@@ -185,14 +194,14 @@ describe('salary workspace operations without React', () => {
     }
     expect(unchanged.session).toBe(initial);
     const changed = editProjectionAppointment(initial, 101, {
-      ...initial.draft.appointments[0],
+      ...initial.draft.content.appointments[0],
       monthlySalary: 11_000,
     });
     if (!changed.ok) {
       throw new Error(changed.error);
     }
     const restored = editProjectionAppointment(changed.session, 101, {
-      ...changed.session.draft.appointments[0],
+      ...changed.session.draft.content.appointments[0],
       monthlySalary: 10_000,
     });
     if (!restored.ok) {
@@ -208,7 +217,7 @@ describe('salary workspace operations without React', () => {
       const session = createProjectionSession(createSalaryExample());
       expect(
         editProjectionAppointment(session, 101, {
-          ...session.draft.appointments[0],
+          ...session.draft.content.appointments[0],
           monthlySalary,
         }).ok
       ).toBe(false);
@@ -220,12 +229,12 @@ describe('salary workspace operations without React', () => {
     const session = createProjectionSession(createSalaryExample());
     expect(
       editProjectionAppointment(session, 999, {
-        ...session.draft.appointments[0],
+        ...session.draft.content.appointments[0],
         monthlySalary: 11_000,
       })
     ).toMatchObject({ ok: false });
     const zero = editProjectionAppointment(session, 101, {
-      ...session.draft.appointments[0],
+      ...session.draft.content.appointments[0],
       monthlySalary: 0,
     });
     if (!zero.ok) {
@@ -257,10 +266,10 @@ describe('salary workspace operations without React', () => {
       pendingEditor: { hasChanges: true },
       revision: 0,
     });
-    snapshot.draft.appointments[0].monthlySalary = 1;
+    snapshot.draft.content.appointments[0].monthlySalary = 1;
     snapshot.results.rows[0].actualAmount = 1;
     snapshot.location.issues.push('Changed externally');
-    expect(session.draft.appointments[0].monthlySalary).toBe(10_000);
+    expect(session.draft.content.appointments[0].monthlySalary).toBe(10_000);
     expect(results.rows[0].actualAmount).toBe(0);
     expect(location.issues).toEqual([]);
   });

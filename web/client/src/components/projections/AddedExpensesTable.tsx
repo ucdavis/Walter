@@ -1,3 +1,4 @@
+import type { ProjectionForecastWindow } from '@/lib/piProjection.ts';
 import { fundingMonthLabel } from '@/components/projections/fundingTimelineDates.ts';
 import { formatCurrency } from '@/lib/currency.ts';
 import {
@@ -7,17 +8,19 @@ import {
 import type { ProjectionFundingSource } from '@/queries/projections.ts';
 
 export function AddedExpensesTable({
+  forecastWindow,
   onAdd,
   onEdit,
   onRemove,
   source,
 }: {
+  forecastWindow: ProjectionForecastWindow;
   onAdd: () => void;
   onEdit: (id: number) => void;
   onRemove: (id: number) => void;
   source: ProjectionFundingSource;
 }) {
-  const window = getSourceForecastWindow(source);
+  const window = getSourceForecastWindow(source, forecastWindow);
   return (
     <section aria-label="Added expenses">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -46,7 +49,11 @@ export function AddedExpensesTable({
             </thead>
             <tbody>
               {source.expenses.map((item) => {
-                const forecast = computeExpenseForecast(source, item);
+                const forecast = computeExpenseForecast(
+                  source,
+                  item,
+                  forecastWindow
+                );
                 const end =
                   item.endMonth?.slice(0, 7) ??
                   source.endDate?.slice(0, 7) ??

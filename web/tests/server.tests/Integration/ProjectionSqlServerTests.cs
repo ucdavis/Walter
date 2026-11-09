@@ -29,7 +29,7 @@ using server.tests.Fakes;
 namespace server.tests.Integration;
 
 [Trait("Category", "SqlServer")]
-public sealed class ProjectionSqlServerTests(ProjectionSqlServerFixture sql) : IClassFixture<ProjectionSqlServerFixture>
+public sealed partial class ProjectionSqlServerTests(ProjectionSqlServerFixture sql) : IClassFixture<ProjectionSqlServerFixture>
 {
     private static readonly DateTime Snapshot = new(2030, 1, 1, 0, 0, 0, DateTimeKind.Utc);
     private static readonly DateTime Version = Snapshot.AddMonths(1).AddTicks(1234567);
@@ -39,7 +39,7 @@ public sealed class ProjectionSqlServerTests(ProjectionSqlServerFixture sql) : I
     [InlineData(true)]
     public async Task Concurrent_creation_retries_return_one_saved_plan(bool duplicate)
     {
-        var source = await SeedAsync();
+        var source = await SeedAsync(18, "Saved source notes");
         var key = Guid.NewGuid();
         var bothReady = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var arrivals = 0;
@@ -50,7 +50,7 @@ public sealed class ProjectionSqlServerTests(ProjectionSqlServerFixture sql) : I
         }, once: false);
         await using var first = sql.CreateContext(barrier);
         await using var second = sql.CreateContext(barrier);
-        var snapshot = new ProjectionDraft(source.Name, source.HistoryMonths, source.SeededAt, source.FundingSources, source.Appointments);
+        var snapshot = new ProjectionDraft(source.Name, source.SeededAt, source.Content);
 
         var results = await Task.WhenAll(
             duplicate
@@ -67,8 +67,10 @@ public sealed class ProjectionSqlServerTests(ProjectionSqlServerFixture sql) : I
         var created = await check.Projections.SingleAsync(p => p.PiEmployeeId == "100" && p.CreationKey == key);
         created.Id.Should().Be(saved[0].Id);
         created.SeededAt.Should().Be(source.SeededAt);
-        created.FundingSources.Should().BeEquivalentTo(source.FundingSources);
-        created.Appointments.Should().BeEquivalentTo(source.Appointments);
+        created.Content.ForecastMonths.Should().Be(18);
+        created.Content.Notes.Should().Be("Saved source notes");
+        created.Content.FundingSources.Should().BeEquivalentTo(source.Content.FundingSources);
+        created.Content.Appointments.Should().BeEquivalentTo(source.Content.Appointments);
         (await check.Projections.SingleAsync(p => p.Id == source.Id)).Name.Should().Be("Original");
     }
 
@@ -136,8 +138,10 @@ public sealed class ProjectionSqlServerTests(ProjectionSqlServerFixture sql) : I
         var body = JsonSerializer.SerializeToNode(Draft(original, "Saved through HTTP"), new JsonSerializerOptions(JsonSerializerDefaults.Web))!.AsObject();
         body["expectedUpdatedAt"] = updatedAt;
         body["expectedSeededAt"] = seededAt;
+        body["content"]!["forecastMonths"] = 18;
+        body["content"]!["notes"] = "Planning assumptions\n<plain text>";
         var capturedAt = Snapshot.AddMonths(1).AddTicks(-1);
-        var source = body["fundingSources"]![0]!;
+        var source = body["content"]!["fundingSources"]![0]!;
         source["name"] = "Edited source label";
         source["sourceKind"] = "Task";
         source["projectNumber"] = "P1";
@@ -148,12 +152,26 @@ public sealed class ProjectionSqlServerTests(ProjectionSqlServerFixture sql) : I
         source["startDate"] = "2029-03-01";
         source["historicalExpenseOverrides"] = JsonNode.Parse("""[{"expenditureCategory":"05 - Supplies","amount":0},{"expenditureCategory":"06 - Travel","amount":-25.50}]""");
         source["expenses"] = JsonNode.Parse("""[{"id":1,"kind":"Monthly","description":"Planned supplies","expenditureCategory":"05 - Supplies","amount":-10.25,"startMonth":"2030-02-01","endMonth":null}]""");
-        body["appointments"]![0]!["hasUnmatchedFunding"] = true;
-        body["appointments"]![0]!["allocations"] = JsonSerializer.SerializeToNode(new List<ProjectionFundingAllocation>
+        body["content"]!["appointments"]![0]!["hasUnmatchedFunding"] = true;
+        body["content"]!["appointments"]![0]!["allocations"] = JsonSerializer.SerializeToNode(new List<ProjectionFundingAllocation>
         {
             new() { FundingSourceId = 1, Percent = 0.4m, StartDate = new(2030, 2, 1), EndDate = new(2030, 2, 15) },
             new() { FundingSourceId = null, Percent = 0.3m },
         }, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+
+        foreach (var invalidContent in new[] { "missing", "null" })
+        {
+            var invalid = body.DeepClone().AsObject();
+            if (invalidContent == "missing") invalid.Remove("content");
+            else invalid["content"] = null;
+            using var rejected = await client.PutAsJsonAsync($"/api/projections/{original.Id}", invalid);
+            rejected.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        }
+
+        var missingForecast = body.DeepClone().AsObject();
+        missingForecast["content"]!.AsObject().Remove("forecastMonths");
+        using var missing = await client.PutAsJsonAsync($"/api/projections/{original.Id}", missingForecast);
+        missing.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
         using var response = await client.PutAsJsonAsync($"/api/projections/{original.Id}", body);
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -161,7 +179,7 @@ public sealed class ProjectionSqlServerTests(ProjectionSqlServerFixture sql) : I
         saved.UpdatedAt.Kind.Should().Be(DateTimeKind.Utc);
         saved.UpdatedAt.Should().BeAfter(original.UpdatedAt);
         saved.SeededAt.Should().Be(original.SeededAt);
-        saved.FundingSources[0].Actuals.Should().BeEquivalentTo(original.FundingSources[0].Actuals);
+        saved.Content.FundingSources[0].Actuals.Should().BeEquivalentTo(original.Content.FundingSources[0].Actuals);
 
         using var stale = await client.PutAsJsonAsync($"/api/projections/{original.Id}", body);
         stale.StatusCode.Should().Be(HttpStatusCode.Conflict);
@@ -170,22 +188,24 @@ public sealed class ProjectionSqlServerTests(ProjectionSqlServerFixture sql) : I
         var stored = await check.Projections.SingleAsync(p => p.Id == original.Id);
         stored.UpdatedAt.Ticks.Should().Be(saved.UpdatedAt.Ticks);
         stored.Name.Should().Be("Saved through HTTP");
-        stored.FundingSources[0].Name.Should().Be("Edited source label");
-        stored.FundingSources[0].ProjectName.Should().Be("Project");
-        stored.FundingSources[0].SourceKind.Should().Be(ProjectionSourceKind.Task);
-        stored.FundingSources[0].CapturedAt.Should().Be(capturedAt);
-        stored.FundingSources[0].CapturedAt.Kind.Should().Be(DateTimeKind.Utc);
-        stored.FundingSources[0].BalanceAdjustment.Should().Be(-125.50m);
-        stored.FundingSources[0].CapturedStartDate.Should().Be(new DateOnly(2029, 1, 1));
-        stored.FundingSources[0].StartDate.Should().Be(new DateOnly(2029, 3, 1));
-        stored.FundingSources[0].HistoricalExpenseOverrides.Select(expense => expense.Amount).Should().Equal(0m, -25.50m);
-        stored.FundingSources[0].Expenses.Should().ContainSingle().Which.Should().BeEquivalentTo(new
+        stored.Content.ForecastMonths.Should().Be(18);
+        stored.Content.Notes.Should().Be("Planning assumptions\n<plain text>");
+        stored.Content.FundingSources[0].Name.Should().Be("Edited source label");
+        stored.Content.FundingSources[0].ProjectName.Should().Be("Project");
+        stored.Content.FundingSources[0].SourceKind.Should().Be(ProjectionSourceKind.Task);
+        stored.Content.FundingSources[0].CapturedAt.Should().Be(capturedAt);
+        stored.Content.FundingSources[0].CapturedAt.Kind.Should().Be(DateTimeKind.Utc);
+        stored.Content.FundingSources[0].BalanceAdjustment.Should().Be(-125.50m);
+        stored.Content.FundingSources[0].CapturedStartDate.Should().Be(new DateOnly(2029, 1, 1));
+        stored.Content.FundingSources[0].StartDate.Should().Be(new DateOnly(2029, 3, 1));
+        stored.Content.FundingSources[0].HistoricalExpenseOverrides.Select(expense => expense.Amount).Should().Equal(0m, -25.50m);
+        stored.Content.FundingSources[0].Expenses.Should().ContainSingle().Which.Should().BeEquivalentTo(new
         {
             Id = 1, Kind = ProjectionExpenseKind.Monthly, Description = "Planned supplies",
             ExpenditureCategory = "05 - Supplies", Amount = -10.25m, StartMonth = new DateOnly(2030, 2, 1), EndMonth = (DateOnly?)null,
         });
-        stored.Appointments[0].HasUnmatchedFunding.Should().BeTrue();
-        stored.Appointments[0].Allocations.Should().BeEquivalentTo(new List<ProjectionFundingAllocation>
+        stored.Content.Appointments[0].HasUnmatchedFunding.Should().BeTrue();
+        stored.Content.Appointments[0].Allocations.Should().BeEquivalentTo(new List<ProjectionFundingAllocation>
         {
             new() { FundingSourceId = 1, Percent = 0.4m, StartDate = new(2030, 2, 1), EndDate = new(2030, 2, 15) },
             new() { FundingSourceId = null, Percent = 0.3m },
@@ -207,14 +227,16 @@ public sealed class ProjectionSqlServerTests(ProjectionSqlServerFixture sql) : I
         await using var second = sql.CreateContext(barrier);
 
         var results = await Task.WhenAll(
-            Controller(first).Save(original.Id, Draft(original, "First writer"), default),
-            Controller(second).Save(original.Id, Draft(original, "Second writer"), default));
+            Controller(first).Save(original.Id, Draft(original, "First writer") with { Content = original.Content with { ForecastMonths = 18, Notes = "First writer notes" } }, default),
+            Controller(second).Save(original.Id, Draft(original, "Second writer") with { Content = original.Content with { ForecastMonths = 12, Notes = "Second writer notes" } }, default));
 
         results.Should().ContainSingle(result => result is OkObjectResult);
         results.Should().ContainSingle(result => result is ConflictObjectResult);
         await using var check = sql.CreateContext();
         var winner = await check.Projections.SingleAsync(p => p.Id == original.Id);
         winner.Name.Should().BeOneOf("First writer", "Second writer");
+        winner.Content.ForecastMonths.Should().Be(winner.Name == "First writer" ? 18 : 12);
+        winner.Content.Notes.Should().Be($"{winner.Name} notes");
         winner.UpdatedAt.Should().BeAfter(original.UpdatedAt);
     }
 
@@ -385,21 +407,24 @@ public sealed class ProjectionSqlServerTests(ProjectionSqlServerFixture sql) : I
         delete.StatusCode.Should().Be(HttpStatusCode.NoContent);
     }
 
-    private async Task<Projection> SeedAsync()
+    private async Task<Projection> SeedAsync(int forecastMonths = 12, string? notes = null)
     {
         var plan = new Projection
         {
             CreationKey = Guid.NewGuid(),
             Name = "Original",
             PiEmployeeId = "100",
-            HistoryMonths = 3,
             CreatedAt = Snapshot,
             SeededAt = Snapshot,
             UpdatedAt = Version,
             CreatedBy = "owner",
             UpdatedBy = "owner",
-            FundingSources = [new() { Id = 1, Name = "Source", SourceKind = ProjectionSourceKind.Task, CapturedAt = Snapshot, ProjectNumber = "P1", TaskNumber = "T1", ProjectName = "Project", Actuals = [new() { Month = new(2029, 12, 1), Amount = 2500, ExpenditureCategory = "Salary" }] }],
-            Appointments = [new() { Id = 1, Name = "Example", IsSeeded = true, MonthlySalary = 10000, Fte = 0.5m }],
+            Content = new()
+            {
+                ForecastMonths = forecastMonths, Notes = notes,
+                FundingSources = [new() { Id = 1, Name = "Source", SourceKind = ProjectionSourceKind.Task, CapturedAt = Snapshot, ProjectNumber = "P1", TaskNumber = "T1", ProjectName = "Project", Actuals = [new() { Month = new(2029, 12, 1), Amount = 2500, ExpenditureCategory = "Salary" }] }],
+                Appointments = [new() { Id = 1, Name = "Example", IsSeeded = true, MonthlySalary = 10000, Fte = 0.5m }],
+            },
         };
         await using var db = sql.CreateContext();
         db.Projections.Add(plan);
@@ -410,7 +435,7 @@ public sealed class ProjectionSqlServerTests(ProjectionSqlServerFixture sql) : I
     private static ProjectionsController.SaveProjectionRequest Draft(Projection plan, string name, bool overwrite = false)
     {
         var copy = JsonSerializer.Deserialize<Projection>(JsonSerializer.Serialize(plan))!;
-        return new(name, copy.HistoryMonths, copy.FundingSources, copy.Appointments, copy.UpdatedAt, copy.SeededAt, overwrite);
+        return new(name, copy.Content, copy.UpdatedAt, copy.SeededAt, overwrite);
     }
 
     private static ClaimsPrincipal Viewer() => new(new ClaimsIdentity(

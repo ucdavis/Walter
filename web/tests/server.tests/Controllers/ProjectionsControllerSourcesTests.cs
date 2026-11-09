@@ -170,9 +170,9 @@ public sealed partial class ProjectionsControllerTests
             case "duplicate": var duplicate = NewTaskSource(); duplicate.Id = 2; sources.Add(duplicate); break;
             case "planned-capture": task.SourceKind = ProjectionSourceKind.Planned; task.ProjectNumber = null; task.TaskNumber = null; task.CapturedAt = default; break;
         }
-        var snapshot = new ProjectionDraft("Invalid", 3, saved.SeededAt, sources, []);
+        var snapshot = new ProjectionDraft("Invalid", saved.SeededAt, new() { FundingSources = sources });
         (await controller.Create(PiIam, new(snapshot, Guid.NewGuid()), default)).Should().BeOfType<BadRequestObjectResult>();
-        (await controller.Save(saved.Id, Draft(saved) with { FundingSources = sources }, default)).Should().BeOfType<BadRequestObjectResult>();
+        (await controller.Save(saved.Id, Draft(saved) with { Content = saved.Content with { FundingSources = sources } }, default)).Should().BeOfType<BadRequestObjectResult>();
         ctx.Projections.Should().ContainSingle();
         JsonSerializer.Serialize(saved).Should().Be(before);
     }
@@ -198,14 +198,14 @@ public sealed partial class ProjectionsControllerTests
             new() { Id = 1, Name = "Existing person", IsSeeded = true, MonthlySalary = 5000, HasUnmatchedFunding = true,
                 Allocations = [new() { FundingSourceId = 1, Percent = 0.3m }] },
         };
-        (await controller.Save(saved.Id, Draft(saved) with { FundingSources = sources, Appointments = jobs }, default)).Should().BeOfType<OkObjectResult>();
+        (await controller.Save(saved.Id, Draft(saved) with { Content = saved.Content with { FundingSources = sources, Appointments = jobs } }, default)).Should().BeOfType<OkObjectResult>();
         ctx.ChangeTracker.Clear();
         var loaded = (Projection)((OkObjectResult)await controller.Get(saved.Id, default)).Value!;
-        loaded.FundingSources.Should().BeEquivalentTo(sources);
-        loaded.Appointments.Should().BeEquivalentTo(jobs);
-        loaded.FundingSources[0].Name.Should().Be("Edited source label");
-        loaded.FundingSources[0].ProjectName.Should().Be("Captured project");
-        loaded.FundingSources[1].ProjectName.Should().BeNull();
+        loaded.Content.FundingSources.Should().BeEquivalentTo(sources);
+        loaded.Content.Appointments.Should().BeEquivalentTo(jobs);
+        loaded.Content.FundingSources[0].Name.Should().Be("Edited source label");
+        loaded.Content.FundingSources[0].ProjectName.Should().Be("Captured project");
+        loaded.Content.FundingSources[1].ProjectName.Should().BeNull();
         loaded.SeededAt.Should().Be(saved.SeededAt);
     }
 

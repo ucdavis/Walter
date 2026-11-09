@@ -84,8 +84,8 @@ describe('switching saved projection plans', () => {
   it('keeps a late save for the previous plan out of the new plan and its next save', async () => {
     const first = { ...createSalaryExample(), name: 'First plan' };
     const second = { ...createSalaryExample(), id: 2, name: 'Second plan' };
-    second.appointments[0].name = 'Blair Example';
-    second.appointments[0].monthlySalary = 15_000;
+    second.content.appointments[0].name = 'Blair Example';
+    second.content.appointments[0].monthlySalary = 15_000;
     second.updatedAt = '2026-01-01T00:00:00.0000002Z';
     const stored = new Map([
       [first.id, first],
@@ -108,9 +108,7 @@ describe('switching saved projection plans', () => {
         }
         const saved: Projection = {
           ...stored.get(id)!,
-          appointments: body.appointments,
-          fundingSources: body.fundingSources,
-          historyMonths: body.historyMonths,
+          content: body.content,
           name: body.name,
           updatedAt:
             id === first.id ? firstSavedAt : '2026-01-03T00:00:00.7654321Z',
@@ -157,7 +155,9 @@ describe('switching saved projection plans', () => {
       expect(
         route.queryClient.getQueryData<Projection>(['projections', second.id])
       ).toMatchObject({
-        appointments: [{ monthlySalary: 15_000, name: 'Blair Example' }],
+        content: {
+          appointments: [{ monthlySalary: 15_000, name: 'Blair Example' }],
+        },
         id: second.id,
         name: 'Second plan',
         updatedAt: second.updatedAt,
@@ -181,7 +181,9 @@ describe('switching saved projection plans', () => {
       await waitFor(() => expect(requests).toHaveLength(2));
       expect(requests[1]).toMatchObject({
         body: {
-          appointments: [{ monthlySalary: 16_000, name: 'Blair Example' }],
+          content: {
+            appointments: [{ monthlySalary: 16_000, name: 'Blair Example' }],
+          },
           expectedSeededAt: second.seededAt,
           expectedUpdatedAt: second.updatedAt,
           name: 'Second plan',
@@ -233,7 +235,7 @@ describe('switching saved projection plans', () => {
         name: 'This plan has changed',
       });
       const latest = structuredClone(first);
-      latest.fundingSources = latest.fundingSources.filter(
+      latest.content.fundingSources = latest.content.fundingSources.filter(
         ({ id }) => id !== 2
       );
       latest.updatedAt = '2026-01-02T00:00:00.1234567Z';

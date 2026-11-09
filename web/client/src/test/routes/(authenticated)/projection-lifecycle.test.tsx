@@ -60,16 +60,14 @@ function renderPlans() {
 function handleLifecycle(plans: Projection[] = []) {
   const example = createSalaryExample();
   const seed: ProjectionDraft = {
-    appointments: example.appointments,
-    fundingSources: example.fundingSources,
-    historyMonths: example.historyMonths,
+    content: example.content,
     name: example.name,
     seededAt: '2026-01-01T00:00:00.1234567Z',
   };
   const roster = [
     { appointmentId: 101, projectNumbers: ['SYNTHETIC-1', 'SYNTHETIC-2'] },
   ];
-  for (const source of seed.fundingSources) {
+  for (const source of seed.content.fundingSources) {
     source.capturedAt = seed.seededAt;
   }
   const stored = new Map(plans.map((plan) => [plan.id, structuredClone(plan)]));
@@ -105,9 +103,7 @@ function handleLifecycle(plans: Projection[] = []) {
     return create({
       creationKey: body.creationKey,
       draft: {
-        appointments: stored.get(id)!.appointments,
-        fundingSources: stored.get(id)!.fundingSources,
-        historyMonths: stored.get(id)!.historyMonths,
+        content: stored.get(id)!.content,
         name: body.name,
         seededAt: stored.get(id)!.seededAt,
       },
@@ -139,7 +135,7 @@ function handleLifecycle(plans: Projection[] = []) {
       return HttpResponse.json({
         draft: {
           ...seed,
-          historyMonths,
+          content: { ...seed.content, historyMonths },
         },
         roster,
       });
@@ -166,9 +162,7 @@ function handleLifecycle(plans: Projection[] = []) {
       const current = stored.get(Number(params.id))!;
       const saved = {
         ...current,
-        appointments: body.appointments,
-        fundingSources: body.fundingSources,
-        historyMonths: body.historyMonths,
+        content: body.content,
         name: body.name,
         updatedAt: '2026-02-02T00:00:00.0000002Z',
       };
@@ -232,9 +226,57 @@ async function changeHistoryWindow(
 }
 
 describe('projection creation and copies', () => {
+  it('retains wizard duration and notes when revisiting setup and creates them with the original snapshot', async () => {
+    const api = handleLifecycle();
+    const route = renderPlans();
+    const user = userEvent.setup();
+    try {
+      await startWizard(user, 'Detailed plan');
+      expect(screen.getByLabelText('Forecast duration')).toHaveValue('12');
+      await user.selectOptions(
+        screen.getByLabelText('Forecast duration'),
+        '18'
+      );
+      await reviewWizard(user);
+      expect(
+        screen.getByText('18-month forecast, Jan 2026 through Jun 2027.')
+      ).toBeInTheDocument();
+      const notes = 'Assume renewal in June.\n  Keep this indentation.';
+      await user.type(screen.getByLabelText('Plan notes (optional)'), notes);
+      await user.click(screen.getByRole('button', { name: 'Back' }));
+      await user.click(screen.getByRole('button', { name: 'Back' }));
+      await user.click(screen.getByRole('button', { name: 'Back' }));
+      expect(screen.getByLabelText('Forecast duration')).toHaveValue('18');
+      await user.selectOptions(
+        screen.getByLabelText('Forecast duration'),
+        '12'
+      );
+      await user.click(screen.getByRole('button', { name: 'Continue' }));
+      await user.click(screen.getByRole('button', { name: 'Continue' }));
+      await user.click(screen.getByRole('button', { name: 'Continue' }));
+      expect(screen.getByLabelText('Plan notes (optional)')).toHaveValue(notes);
+      expect(
+        screen.getByText('12-month forecast, Jan 2026 through Dec 2026.')
+      ).toBeInTheDocument();
+      await user.click(
+        screen.getByRole('button', { name: 'Create plan & open workspace' })
+      );
+      await waitFor(() => expect(api.creates).toHaveLength(1));
+      expect(api.creates[0].draft).toMatchObject({
+        content: { forecastMonths: 12, notes },
+        name: 'Detailed plan',
+        seededAt: api.seed.seededAt,
+      });
+      expect(api.seedReads()).toBe(1);
+      await screen.findByRole('region', { name: 'Plan notes' });
+    } finally {
+      route.cleanup();
+    }
+  });
+
   it('reviews allocations during wizard staffing and saves the acknowledged import notice', async () => {
     const api = handleLifecycle();
-    api.seed.appointments[0].hasUnmatchedFunding = true;
+    api.seed.content.appointments[0].hasUnmatchedFunding = true;
     const route = renderPlans();
     const user = userEvent.setup();
     try {
@@ -261,11 +303,11 @@ describe('projection creation and copies', () => {
         screen.getByRole('button', { name: 'Create plan & open workspace' })
       );
       await waitFor(() => expect(api.creates).toHaveLength(1));
-      expect(api.creates[0].draft.appointments[0].hasUnmatchedFunding).toBe(
-        false
-      );
-      expect(api.creates[0].draft.appointments[0].allocations).toEqual(
-        api.seed.appointments[0].allocations
+      expect(
+        api.creates[0].draft.content.appointments[0].hasUnmatchedFunding
+      ).toBe(false);
+      expect(api.creates[0].draft.content.appointments[0].allocations).toEqual(
+        api.seed.content.appointments[0].allocations
       );
     } finally {
       route.cleanup();
@@ -274,7 +316,7 @@ describe('projection creation and copies', () => {
 
   it('requires a retained imported salary before creating and accepts an entered zero', async () => {
     const api = handleLifecycle();
-    api.seed.appointments[0].monthlySalary = null;
+    api.seed.content.appointments[0].monthlySalary = null;
     const route = renderPlans();
     const user = userEvent.setup();
     try {
@@ -302,7 +344,9 @@ describe('projection creation and copies', () => {
         screen.getByRole('button', { name: 'Create plan & open workspace' })
       );
       await waitFor(() => expect(api.creates).toHaveLength(1));
-      expect(api.creates[0].draft.appointments[0].monthlySalary).toBe(0);
+      expect(api.creates[0].draft.content.appointments[0].monthlySalary).toBe(
+        0
+      );
     } finally {
       route.cleanup();
     }
@@ -351,9 +395,11 @@ describe('projection creation and copies', () => {
       expect(api.creates[0]).toMatchObject({
         creationKey: expect.any(String),
         draft: {
-          appointments: [{ monthlySalary: 11_000 }],
-          fundingSources: api.seed.fundingSources,
-          historyMonths: 6,
+          content: {
+            appointments: [{ monthlySalary: 11_000 }],
+            fundingSources: api.seed.content.fundingSources,
+            historyMonths: 6,
+          },
           name: 'Reviewed plan',
           seededAt: api.seed.seededAt,
         },
@@ -381,7 +427,7 @@ describe('projection creation and copies', () => {
       await screen.findByRole('button', { name: '✓ Saved' });
       expect(api.updates).toHaveLength(1);
       expect(api.updates[0]).toMatchObject({
-        appointments: [{ monthlySalary: 12_000 }],
+        content: { appointments: [{ monthlySalary: 12_000 }] },
         expectedSeededAt: api.seed.seededAt,
         expectedUpdatedAt: '2026-02-01T00:00:00.0000001Z',
       });
@@ -400,7 +446,10 @@ describe('projection creation and copies', () => {
         return attempts === 1
           ? new HttpResponse(null, { status: 503 })
           : HttpResponse.json({
-              draft: { ...api.seed, historyMonths: 3 },
+              draft: {
+                ...api.seed,
+                content: { ...api.seed.content, historyMonths: 3 },
+              },
               roster: api.roster,
             });
       })
@@ -440,7 +489,7 @@ describe('projection creation and copies', () => {
   it('creates the reviewed expense assumptions and history window without replacing captured inputs', async () => {
     const api = handleLifecycle();
     const category = SUPPLIES_CATEGORY;
-    api.seed.fundingSources[0].runRates = [
+    api.seed.content.fundingSources[0].runRates = [
       { expenditureCategory: category, historyMonths: 3, monthlyAmount: 500 },
       { expenditureCategory: category, historyMonths: 6, monthlyAmount: 600 },
     ];
@@ -486,27 +535,30 @@ describe('projection creation and copies', () => {
       expect(api.creates).toHaveLength(1);
       expect(api.creates[0].draft).toEqual({
         ...captured,
-        fundingSources: [
-          {
-            ...captured.fundingSources[0],
-            expenses: [
-              {
-                amount: -125.5,
-                description: 'Planned supply credit',
-                endMonth: null,
-                expenditureCategory: category,
-                id: 1,
-                kind: 'Monthly',
-                startMonth: '2026-01-01',
-              },
-            ],
-            historicalExpenseOverrides: [
-              { amount: 300, expenditureCategory: category },
-            ],
-          },
-          captured.fundingSources[1],
-        ],
-        historyMonths: 6,
+        content: {
+          ...captured.content,
+          fundingSources: [
+            {
+              ...captured.content.fundingSources[0],
+              expenses: [
+                {
+                  amount: -125.5,
+                  description: 'Planned supply credit',
+                  endMonth: null,
+                  expenditureCategory: category,
+                  id: 1,
+                  kind: 'Monthly',
+                  startMonth: '2026-01-01',
+                },
+              ],
+              historicalExpenseOverrides: [
+                { amount: 300, expenditureCategory: category },
+              ],
+            },
+            captured.content.fundingSources[1],
+          ],
+          historyMonths: 6,
+        },
         name: 'Reviewed expense plan',
       });
       expect(api.seedReads()).toBe(1);
@@ -554,7 +606,10 @@ describe('projection creation and copies', () => {
   });
 
   it('duplicates captured inputs while fresh seed data is unavailable and recovers a lost copy response', async () => {
-    const original = { ...createSalaryExample(), name: 'Saved original' };
+    const original = createSalaryExample();
+    original.name = 'Saved original';
+    original.content.forecastMonths = 18;
+    original.content.notes = 'Keep this assumption\n  in the copy';
     const api = handleLifecycle([original]);
     let seedReads = 0;
     server.use(
@@ -595,8 +650,12 @@ describe('projection creation and copies', () => {
       expect(api.stored.size).toBe(2);
       expect(api.stored.get(original.id)).toEqual(original);
       expect(api.stored.get(71)).toMatchObject({
-        appointments: original.appointments,
-        fundingSources: original.fundingSources,
+        content: {
+          appointments: original.content.appointments,
+          forecastMonths: original.content.forecastMonths,
+          fundingSources: original.content.fundingSources,
+          notes: original.content.notes,
+        },
         seededAt: original.seededAt,
       });
     } finally {
@@ -650,7 +709,10 @@ describe('projection creation and copies', () => {
   });
 
   it('does not let a late duplicate replace a chosen plan while its loader is pending', async () => {
-    const original = { ...createSalaryExample(), name: 'Saved original' };
+    const original = createSalaryExample();
+    original.name = 'Saved original';
+    original.content.forecastMonths = 18;
+    original.content.notes = 'Keep this assumption\n  in the copy';
     const destination = {
       ...createSalaryExample(),
       id: 2,

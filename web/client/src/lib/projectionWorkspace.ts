@@ -30,9 +30,7 @@ export function acknowledgeProjectionSave(
         ? saved
         : {
             ...saved,
-            appointments: current.draft.appointments,
-            fundingSources: current.draft.fundingSources,
-            historyMonths: current.draft.historyMonths,
+            content: current.draft.content,
             name: current.draft.name,
           },
   };
@@ -99,13 +97,13 @@ export function readProjectionLocation(
   }
   if (
     appointmentId !== null &&
-    !plan.appointments.some(({ id }) => id === appointmentId)
+    !plan.content.appointments.some(({ id }) => id === appointmentId)
   ) {
     issues.push(`Appointment ${appointmentId} is not in this plan.`);
   }
   if (
     fundingSourceId !== null &&
-    !plan.fundingSources.some(({ id }) => id === fundingSourceId)
+    !plan.content.fundingSources.some(({ id }) => id === fundingSourceId)
   ) {
     issues.push(`Funding source ${fundingSourceId} is not in this plan.`);
   }
@@ -165,11 +163,18 @@ export interface PendingHistoryEditor {
   validationMessage: string | null;
 }
 
+export interface PendingPlanDetailsEditor {
+  hasChanges: boolean;
+  kind: 'details';
+  validationMessage: string | null;
+}
+
 export type PendingProjectionEditor =
   | PendingAllocationEditor
   | PendingAppointmentEditor
   | PendingExpenseEditor
   | PendingHistoryEditor
+  | PendingPlanDetailsEditor
   | PendingSourceEditor;
 
 export interface ProjectionPersistenceStatus {
@@ -183,9 +188,7 @@ export interface ProjectionPersistenceStatus {
 
 function serializeEditableProjection(plan: ProjectionDraft) {
   const document = {
-    appointments: plan.appointments,
-    fundingSources: plan.fundingSources,
-    historyMonths: plan.historyMonths,
+    content: plan.content,
     name: plan.name,
   };
   return JSON.stringify(document, (_key, value) =>

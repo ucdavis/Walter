@@ -4,7 +4,6 @@ import type {
   ProjectionFundingSource,
 } from '@/queries/projections.ts';
 import type { ProjectionSession } from '@/lib/projectionWorkspace.ts';
-
 export type ExpenseInputs = Omit<ProjectionExpense, 'id'>;
 
 export type ExpenseOperationResult<
@@ -104,10 +103,10 @@ export function validateExpenseInputs(inputs: ExpenseInputs): string | null {
 export function validateProjectionExpenses(
   plan: ProjectionDraft
 ): string | null {
-  if (![3, 6, 12].includes(plan.historyMonths)) {
+  if (![3, 6, 12].includes(plan.content.historyMonths)) {
     return 'Choose a history window of 3, 6, or 12 months.';
   }
-  for (const source of plan.fundingSources) {
+  for (const source of plan.content.fundingSources) {
     const ids = new Set<number>();
     for (const expense of source.expenses) {
       if (
@@ -155,9 +154,12 @@ function updateSource<T extends ProjectionDraft>(
       ...session,
       draft: {
         ...session.draft,
-        fundingSources: session.draft.fundingSources.map((candidate) =>
-          candidate.id === source.id ? updated : candidate
-        ),
+        content: {
+          ...session.draft.content,
+          fundingSources: session.draft.content.fundingSources.map(
+            (candidate) => (candidate.id === source.id ? updated : candidate)
+          ),
+        },
       },
       revision: session.revision + 1,
     },
@@ -184,7 +186,9 @@ export function addProjectionExpense<T extends ProjectionDraft>(
   sourceId: number,
   inputs: ExpenseInputs
 ): ExpenseOperationResult<T> {
-  const source = session.draft.fundingSources.find(({ id }) => id === sourceId);
+  const source = session.draft.content.fundingSources.find(
+    ({ id }) => id === sourceId
+  );
   if (!source) {
     return missingSource;
   }
@@ -209,7 +213,9 @@ export function editProjectionExpense<T extends ProjectionDraft>(
   expenseId: number,
   inputs: ExpenseInputs
 ): ExpenseOperationResult<T> {
-  const source = session.draft.fundingSources.find(({ id }) => id === sourceId);
+  const source = session.draft.content.fundingSources.find(
+    ({ id }) => id === sourceId
+  );
   if (!source) {
     return missingSource;
   }
@@ -242,7 +248,9 @@ export function removeProjectionExpense<T extends ProjectionDraft>(
   sourceId: number,
   expenseId: number
 ): ExpenseOperationResult<T> {
-  const source = session.draft.fundingSources.find(({ id }) => id === sourceId);
+  const source = session.draft.content.fundingSources.find(
+    ({ id }) => id === sourceId
+  );
   if (!source) {
     return missingSource;
   }
@@ -262,7 +270,9 @@ export function setHistoricalExpenseOverride<T extends ProjectionDraft>(
   amount: number,
   options: { force?: boolean } = {}
 ): ExpenseOperationResult<T> {
-  const source = session.draft.fundingSources.find(({ id }) => id === sourceId);
+  const source = session.draft.content.fundingSources.find(
+    ({ id }) => id === sourceId
+  );
   if (!source) {
     return missingSource;
   }
@@ -275,7 +285,7 @@ export function setHistoricalExpenseOverride<T extends ProjectionDraft>(
   }
   const row = getHistoricalExpenseRows(
     source,
-    session.draft.historyMonths
+    session.draft.content.historyMonths
   ).find((row) => row.expenditureCategory === category);
   if (!row) {
     return {
@@ -306,7 +316,9 @@ export function restoreHistoricalExpense<T extends ProjectionDraft>(
   sourceId: number,
   expenditureCategory: string
 ): ExpenseOperationResult<T> {
-  const source = session.draft.fundingSources.find(({ id }) => id === sourceId);
+  const source = session.draft.content.fundingSources.find(
+    ({ id }) => id === sourceId
+  );
   if (!source) {
     return missingSource;
   }
@@ -332,14 +344,20 @@ export function changeProjectionHistoryMonths<T extends ProjectionDraft>(
       ok: false,
     };
   }
-  if (session.draft.historyMonths === historyMonths) {
+  if (session.draft.content.historyMonths === historyMonths) {
     return { ok: true, session };
   }
   return {
     ok: true,
     session: {
       ...session,
-      draft: { ...session.draft, historyMonths },
+      draft: {
+        ...session.draft,
+        content: {
+          ...session.draft.content,
+          historyMonths,
+        },
+      },
       revision: session.revision + 1,
     },
   };

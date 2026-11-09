@@ -6,7 +6,6 @@ import type {
 } from '@/queries/projections.ts';
 import type { AllocationShare } from '@/lib/projectionAllocations.ts';
 import { getHistoricalExpenseRows } from '@/lib/projectionExpenses.ts';
-
 export interface PiProjectionRow {
   actualAmount: number;
   expenditureCategory: string;
@@ -35,6 +34,11 @@ export interface ProjectionForecastWindow {
   startMonth: string;
 }
 
+export interface SourceForecastWindow extends ProjectionForecastWindow {
+  /** Future capture or availability contributes no balance or costs inside this plan period. */
+  isBeyondForecast: boolean;
+}
+
 export const SALARY_CATEGORY = '01 - Salaries and Wages';
 export const FRINGE_CATEGORY = '02 - Fringe Benefits';
 export const SUPPLIES_CATEGORY = '03 - Supplies / Services / Other Expenses';
@@ -55,29 +59,33 @@ const firstSourceForecast = (source: ProjectionFundingSource) =>
     ? Math.max(toIndex(source.capturedAt), toIndex(source.startDate))
     : toIndex(source.capturedAt);
 
-/** A source without an end keeps the existing bounded horizon, including its capture month. */
+/** Source eligibility is bounded by the common plan period without changing stored source dates. */
 export function getSourceForecastWindow(
-  source: ProjectionFundingSource
-): ProjectionForecastWindow {
-  const first = firstSourceForecast(source);
+  source: ProjectionFundingSource,
+  planWindow: ProjectionForecastWindow
+): SourceForecastWindow {
+  const first = Math.max(
+    firstSourceForecast(source),
+    toIndex(planWindow.startMonth)
+  );
+  const last = toIndex(planWindow.endMonth);
   return {
-    endMonth: toMonth(source.endDate ? toIndex(source.endDate) : first + 12),
+    endMonth: toMonth(
+      source.endDate ? Math.min(toIndex(source.endDate), last) : last
+    ),
+    isBeyondForecast:
+      first > last ||
+      Boolean(source.startDate && toIndex(source.startDate) > last),
     startMonth: toMonth(first),
   };
 }
 
-/** Funding checks use the same bounded forecast period shown by the plan. */
+/** The saved duration includes the original snapshot month; adding a source never shifts this period. */
 export function getProjectionForecastWindow(
   projection: ProjectionDraft
 ): ProjectionForecastWindow {
   const start = toIndex(projection.seededAt);
-  const end = Math.max(
-    start,
-    ...projection.fundingSources.flatMap((source) => {
-      const window = getSourceForecastWindow(source);
-      return [toIndex(window.startMonth), toIndex(window.endMonth)];
-    })
-  );
+  const end = start + projection.content.forecastMonths - 1;
   return { endMonth: toMonth(end), startMonth: toMonth(start) };
 }
 
@@ -150,9 +158,10 @@ export interface ExpenseForecast {
 /** Editor impact totals and the plan forecast share the same one-time and recurring date rules. */
 export function computeExpenseForecast(
   source: ProjectionFundingSource,
-  expense: ExpenseForecastInputs
+  expense: ExpenseForecastInputs,
+  planWindow: ProjectionForecastWindow
 ): ExpenseForecast {
-  const window = getSourceForecastWindow(source);
+  const window = getSourceForecastWindow(source, planWindow);
   const first = toIndex(window.startMonth);
   const last = toIndex(window.endMonth);
   const months: ExpenseForecast['months'] = [];
@@ -226,15 +235,19 @@ export function computePiProjection(projection: ProjectionDraft): {
 } {
   const seed = new Date(projection.seededAt);
   const seedIndex = seed.getUTCFullYear() * 12 + seed.getUTCMonth();
+  const forecastWindow = getProjectionForecastWindow(projection);
+  const horizonEnd = toIndex(forecastWindow.endMonth);
   const captures = new Map(
-    projection.fundingSources.map((source) => {
+    projection.content.fundingSources.map((source) => {
       const capturedAt = source.capturedAt;
       const index = toIndex(capturedAt);
       return [
         source.id,
         {
           day: toDay(capturedAt),
-          firstForecast: firstSourceForecast(source),
+          firstForecast: toIndex(
+            getSourceForecastWindow(source, forecastWindow).startMonth
+          ),
           index,
         },
       ];
@@ -243,9 +256,7 @@ export function computePiProjection(projection: ProjectionDraft): {
   const capture = (source: ProjectionFundingSource) => captures.get(source.id)!;
 
   const sourceEnd = (p: ProjectionFundingSource) =>
-    toIndex(getSourceForecastWindow(p).endMonth);
-  const forecastWindow = getProjectionForecastWindow(projection);
-  const horizonEnd = toIndex(forecastWindow.endMonth);
+    toIndex(getSourceForecastWindow(p, forecastWindow).endMonth);
   // fundingSourceId -> category -> month index -> amount
   const charges = new Map<number, Map<string, Map<number, number>>>();
   const charge = (
@@ -266,10 +277,10 @@ export function computePiProjection(projection: ProjectionDraft): {
   };
 
   const fundingSourcesById = new Map(
-    projection.fundingSources.map((p) => [p.id, p])
+    projection.content.fundingSources.map((p) => [p.id, p])
   );
   const appointmentFunding: AppointmentFundingMonth[] = [];
-  for (const appointment of projection.appointments) {
+  for (const appointment of projection.content.appointments) {
     for (let m = seedIndex; m <= horizonEnd; m++) {
       if (!within(m, appointment.startDate, appointment.endDate)) {
         continue;
@@ -357,8 +368,15 @@ export function computePiProjection(projection: ProjectionDraft): {
 
   // Net salary and fringe targets only; category 08 actuals cannot identify employee fees.
   // Booked salary and fringe stay fixed even when the new estimate is lower.
-  for (const source of projection.fundingSources) {
+  for (const source of projection.content.fundingSources) {
     const sourceIndex = capture(source).index;
+    if (
+      getSourceForecastWindow(source, forecastWindow).isBeyondForecast ||
+      sourceIndex < seedIndex ||
+      sourceIndex > horizonEnd
+    ) {
+      continue;
+    }
     for (const category of PERSONNEL) {
       const target =
         charges.get(source.id)?.get(category)?.get(sourceIndex) ?? 0;
@@ -382,10 +400,10 @@ export function computePiProjection(projection: ProjectionDraft): {
     }
   }
 
-  for (const source of projection.fundingSources) {
+  for (const source of projection.content.fundingSources) {
     const historical = getHistoricalExpenseRows(
       source,
-      projection.historyMonths
+      projection.content.historyMonths
     )
       .filter(({ effectiveAmount }) => effectiveAmount !== 0)
       .map(({ effectiveAmount, expenditureCategory }) => ({
@@ -396,7 +414,11 @@ export function computePiProjection(projection: ProjectionDraft): {
         startMonth: null,
       }));
     for (const expense of [...source.expenses, ...historical]) {
-      for (const month of computeExpenseForecast(source, expense).months) {
+      for (const month of computeExpenseForecast(
+        source,
+        expense,
+        forecastWindow
+      ).months) {
         charge(
           source,
           expense.expenditureCategory,
@@ -408,8 +430,11 @@ export function computePiProjection(projection: ProjectionDraft): {
   }
 
   const rows: PiProjectionRow[] = [];
-  for (const source of projection.fundingSources) {
+  for (const source of projection.content.fundingSources) {
     const { firstForecast, index: sourceIndex } = capture(source);
+    if (getSourceForecastWindow(source, forecastWindow).isBeyondForecast) {
+      continue;
+    }
     const sourceCharges =
       charges.get(source.id) ?? new Map<string, Map<number, number>>();
     const actuals = new Map<string, Map<number, number>>();
@@ -428,7 +453,7 @@ export function computePiProjection(projection: ProjectionDraft): {
         ? [BALANCE_ADJUSTMENT_CATEGORY]
         : []),
     ]);
-    const last = Math.max(sourceEnd(source), firstForecast);
+    const lastEligibleMonth = Math.max(sourceEnd(source), firstForecast);
 
     for (const category of [...categories].sort()) {
       const budget = source.budgets.find(
@@ -442,12 +467,14 @@ export function computePiProjection(projection: ProjectionDraft): {
         (category === BALANCE_ADJUSTMENT_CATEGORY
           ? source.balanceAdjustment
           : 0);
-      const actual = (m: number) => actuals.get(category)?.get(m) ?? 0;
+      const actual = (m: number) =>
+        m <= lastEligibleMonth ? (actuals.get(category)?.get(m) ?? 0) : 0;
       const planned = (m: number) => sourceCharges.get(category)?.get(m) ?? 0;
 
       let remaining = startRemaining;
-      for (let m = firstForecast; m <= last; m++) {
+      for (let m = firstForecast; m <= horizonEnd; m++) {
         // The snapshot balance already includes its booked actuals.
+        // After source end, carry its final balance to the common comparison month without new costs.
         const additionalActual = m === sourceIndex ? 0 : actual(m);
         remaining -= additionalActual + planned(m);
         rows.push({

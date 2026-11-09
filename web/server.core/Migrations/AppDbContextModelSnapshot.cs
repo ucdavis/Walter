@@ -264,7 +264,7 @@ namespace server.core.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("Appointments")
+                    b.Property<string>("Content")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
@@ -277,13 +277,6 @@ namespace server.core.Migrations
 
                     b.Property<Guid>("CreationKey")
                         .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("FundingSources")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("HistoryMonths")
-                        .HasColumnType("int");
 
                     b.Property<string>("Name")
                         .IsRequired()

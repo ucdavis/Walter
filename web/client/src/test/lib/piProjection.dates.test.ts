@@ -8,6 +8,7 @@ import {
 } from '@/lib/piProjection.ts';
 import type {
   Projection,
+  ProjectionContent,
   ProjectionExpense,
   ProjectionFundingAllocation,
   ProjectionAppointment,
@@ -102,18 +103,14 @@ const expense = (
 });
 
 const plan = ({
-  fundingSources = [source()],
+  content = {},
   seededAt = '2026-01-16T00:00:00Z',
   ...overrides
-}: Partial<Projection> = {}): Projection => ({
-  appointments: [appointment()],
+}: Partial<Omit<Projection, 'content'>> & {
+  content?: Partial<ProjectionContent>;
+} = {}): Projection => ({
   createdAt: '2026-01-16T00:00:00Z',
   createdBy: null,
-  fundingSources: fundingSources.map((source) => ({
-    ...source,
-    capturedAt: seededAt,
-  })),
-  historyMonths: 3,
   id: 1,
   name: 'Date examples',
   piEmployeeId: 'PI',
@@ -121,6 +118,17 @@ const plan = ({
   updatedAt: '2026-01-16T00:00:00Z',
   updatedBy: null,
   ...overrides,
+  content: {
+    appointments: [appointment()],
+    forecastMonths: 12,
+    historyMonths: 3,
+    notes: null,
+    ...content,
+    fundingSources: (content.fundingSources ?? [source()]).map((source) => ({
+      ...source,
+      capturedAt: seededAt,
+    })),
+  },
 });
 
 const row = (
@@ -140,21 +148,23 @@ describe('projection date rules', () => {
   it('charges salary and benefits only for the inclusive intersection of appointment, funding, and source dates', () => {
     const result = computePiProjection(
       plan({
-        appointments: [
-          appointment({
-            allocations: [
-              funding(1, 0.5, {
-                endDate: '2026-03-05',
-                startDate: '2026-02-20',
-              }),
-            ],
-            endDate: '2026-03-10',
-            startDate: '2026-02-15',
-          }),
-        ],
-        fundingSources: [
-          source({ endDate: '2026-03-06', startDate: '2026-02-18' }),
-        ],
+        content: {
+          appointments: [
+            appointment({
+              allocations: [
+                funding(1, 0.5, {
+                  endDate: '2026-03-05',
+                  startDate: '2026-02-20',
+                }),
+              ],
+              endDate: '2026-03-10',
+              startDate: '2026-02-15',
+            }),
+          ],
+          fundingSources: [
+            source({ endDate: '2026-03-06', startDate: '2026-02-18' }),
+          ],
+        },
       })
     );
 
@@ -177,12 +187,14 @@ describe('projection date rules', () => {
   it('does not charge funding that starts after the appointment ends in the same month', () => {
     const result = computePiProjection(
       plan({
-        appointments: [
-          appointment({
-            allocations: [funding(1, 1, { startDate: '2026-03-31' })],
-            endDate: '2026-03-10',
-          }),
-        ],
+        content: {
+          appointments: [
+            appointment({
+              allocations: [funding(1, 1, { startDate: '2026-03-31' })],
+              endDate: '2026-03-10',
+            }),
+          ],
+        },
       })
     );
 
@@ -203,10 +215,12 @@ describe('projection date rules', () => {
   it('bounds an otherwise open appointment and funding entry by the source dates', () => {
     const result = computePiProjection(
       plan({
-        appointments: [appointment({ monthlySalary: 3100 })],
-        fundingSources: [
-          source({ endDate: '2026-03-25', startDate: '2026-03-20' }),
-        ],
+        content: {
+          appointments: [appointment({ monthlySalary: 3100 })],
+          fundingSources: [
+            source({ endDate: '2026-03-25', startDate: '2026-03-20' }),
+          ],
+        },
       })
     );
 
@@ -218,16 +232,18 @@ describe('projection date rules', () => {
   it('includes the single day on which appointment, funding, and source endpoints meet', () => {
     const result = computePiProjection(
       plan({
-        appointments: [
-          appointment({
-            allocations: [funding(1, 1, { startDate: '2026-03-20' })],
-            endDate: '2026-03-20',
-            monthlySalary: 3100,
-          }),
-        ],
-        fundingSources: [
-          source({ endDate: '2026-03-20', startDate: '2026-03-20' }),
-        ],
+        content: {
+          appointments: [
+            appointment({
+              allocations: [funding(1, 1, { startDate: '2026-03-20' })],
+              endDate: '2026-03-20',
+              monthlySalary: 3100,
+            }),
+          ],
+          fundingSources: [
+            source({ endDate: '2026-03-20', startDate: '2026-03-20' }),
+          ],
+        },
       })
     );
 
@@ -270,10 +286,12 @@ describe('projection date rules', () => {
     }) => {
       const result = computePiProjection(
         plan({
-          appointments: [
-            appointment({ endDate: end, monthlySalary, startDate: start }),
-          ],
-          fundingSources: [source({ endDate: end })],
+          content: {
+            appointments: [
+              appointment({ endDate: end, monthlySalary, startDate: start }),
+            ],
+            fundingSources: [source({ endDate: end })],
+          },
           seededAt: seed,
         })
       );
@@ -312,23 +330,25 @@ describe('projection date rules', () => {
     'preserves allocation shares and costs for $description',
     ({ coverage, secondStart, secondTarget }) => {
       const draft = plan({
-        appointments: [
-          appointment({
-            allocations: [
-              funding(1, 1, {
-                endDate: '2026-03-15',
-                startDate: '2026-03-01',
-              }),
-              funding(2, 1, {
-                endDate: '2026-03-31',
-                startDate: secondStart,
-              }),
-            ],
-            fte: 0.5,
-            monthlySalary: 10_000,
-          }),
-        ],
-        fundingSources: [source(), source({ id: 2 })],
+        content: {
+          appointments: [
+            appointment({
+              allocations: [
+                funding(1, 1, {
+                  endDate: '2026-03-15',
+                  startDate: '2026-03-01',
+                }),
+                funding(2, 1, {
+                  endDate: '2026-03-31',
+                  startDate: secondStart,
+                }),
+              ],
+              fte: 0.5,
+              monthlySalary: 10_000,
+            }),
+          ],
+          fundingSources: [source(), source({ id: 2 })],
+        },
       });
       const captured = structuredClone(draft);
       const result = computePiProjection(draft);
@@ -351,13 +371,15 @@ describe('projection date rules', () => {
   it('counts a fully funded partial-month appointment as fully covered over its active days', () => {
     const result = computePiProjection(
       plan({
-        appointments: [
-          appointment({
-            endDate: '2026-03-20',
-            monthlySalary: 3100,
-            startDate: '2026-03-10',
-          }),
-        ],
+        content: {
+          appointments: [
+            appointment({
+              endDate: '2026-03-20',
+              monthlySalary: 3100,
+              startDate: '2026-03-10',
+            }),
+          ],
+        },
       })
     );
 
@@ -377,15 +399,17 @@ describe('projection date rules', () => {
   it('counts explicit outside funding while source coverage stops at source end', () => {
     const result = computePiProjection(
       plan({
-        appointments: [
-          appointment({
-            allocations: [funding(1, 0.6), funding(null, 0.4)],
-            endDate: '2026-03-20',
-            monthlySalary: 3100,
-            startDate: '2026-03-10',
-          }),
-        ],
-        fundingSources: [source({ endDate: '2026-03-15' })],
+        content: {
+          appointments: [
+            appointment({
+              allocations: [funding(1, 0.6), funding(null, 0.4)],
+              endDate: '2026-03-20',
+              monthlySalary: 3100,
+              startDate: '2026-03-10',
+            }),
+          ],
+          fundingSources: [source({ endDate: '2026-03-15' })],
+        },
       })
     );
 
@@ -401,12 +425,16 @@ describe('projection date rules', () => {
 
   it('keeps open source, appointment, and funding bounds active through the forecast horizon', () => {
     const result = computePiProjection(
-      plan({ fundingSources: [source({ endDate: null })] })
+      plan({
+        content: {
+          fundingSources: [source({ endDate: null })],
+        },
+      })
     );
 
     expect(row(result, '2026-02')?.projectedAmount).toBe(5000);
-    expect(row(result, '2027-01')?.projectedAmount).toBe(5000);
-    expect(result.rows.at(-1)?.month).toBe('2027-01');
+    expect(row(result, '2026-12')?.projectedAmount).toBe(5000);
+    expect(result.rows.at(-1)?.month).toBe('2026-12');
   });
 
   it('nets booked costs against the whole eligible snapshot-month target even after the source has ended', () => {
@@ -428,8 +456,10 @@ describe('projection date rules', () => {
     snapshotProject.budgets[0].spentToDate = 800;
     snapshotProject.budgets[1].spentToDate = 320;
     const draft = plan({
-      appointments: [appointment({ monthlySalary: 3100 })],
-      fundingSources: [snapshotProject],
+      content: {
+        appointments: [appointment({ monthlySalary: 3100 })],
+        fundingSources: [snapshotProject],
+      },
       seededAt: '2026-03-20T00:00:00Z',
     });
     const captured = structuredClone(draft);
@@ -451,23 +481,25 @@ describe('projection date rules', () => {
   it('retains the accepted snapshot credit adjustment when dates produce no personnel target', () => {
     const result = computePiProjection(
       plan({
-        fundingSources: [
-          source({
-            actuals: [
-              {
-                amount: -100,
-                expenditureCategory: SALARY_CATEGORY,
-                month: '2026-03-01',
-              },
-              {
-                amount: -40,
-                expenditureCategory: FRINGE_CATEGORY,
-                month: '2026-03-01',
-              },
-            ],
-            endDate: '2026-02-28',
-          }),
-        ],
+        content: {
+          fundingSources: [
+            source({
+              actuals: [
+                {
+                  amount: -100,
+                  expenditureCategory: SALARY_CATEGORY,
+                  month: '2026-03-01',
+                },
+                {
+                  amount: -40,
+                  expenditureCategory: FRINGE_CATEGORY,
+                  month: '2026-03-01',
+                },
+              ],
+              endDate: '2026-02-28',
+            }),
+          ],
+        },
         seededAt: '2026-03-20T00:00:00Z',
       })
     );
@@ -493,18 +525,20 @@ describe('projection date rules', () => {
       for (const kind of ['Monthly', 'Historical'] as const) {
         const result = computePiProjection(
           plan({
-            appointments: [],
-            fundingSources: [
-              source({
-                endDate: end,
-                expenses: kind === 'Monthly' ? [expense({ kind })] : [],
-                historicalExpenseOverrides:
-                  kind === 'Historical'
-                    ? [{ amount: 310, expenditureCategory: SUPPLIES }]
-                    : [],
-                startDate: start,
-              }),
-            ],
+            content: {
+              appointments: [],
+              fundingSources: [
+                source({
+                  endDate: end,
+                  expenses: kind === 'Monthly' ? [expense({ kind })] : [],
+                  historicalExpenseOverrides:
+                    kind === 'Historical'
+                      ? [{ amount: 310, expenditureCategory: SUPPLIES }]
+                      : [],
+                  startDate: start,
+                }),
+              ],
+            },
             seededAt: '2026-10-16T00:00:00Z',
           })
         );
@@ -521,28 +555,30 @@ describe('projection date rules', () => {
     (kind) => {
       const result = computePiProjection(
         plan({
-          appointments: [],
-          fundingSources: [
-            source({
-              endDate: '2028-03-10',
-              expenses:
-                kind === 'Monthly'
-                  ? [
-                      expense({
-                        amount: 290,
-                        endMonth: '2028-02-01',
-                        kind,
-                        startMonth: '2028-02-01',
-                      }),
-                    ]
-                  : [],
-              historicalExpenseOverrides:
-                kind === 'Historical'
-                  ? [{ amount: 290, expenditureCategory: SUPPLIES }]
-                  : [],
-              startDate: '2028-02-20',
-            }),
-          ],
+          content: {
+            appointments: [],
+            fundingSources: [
+              source({
+                endDate: '2028-03-10',
+                expenses:
+                  kind === 'Monthly'
+                    ? [
+                        expense({
+                          amount: 290,
+                          endMonth: '2028-02-01',
+                          kind,
+                          startMonth: '2028-02-01',
+                        }),
+                      ]
+                    : [],
+                historicalExpenseOverrides:
+                  kind === 'Historical'
+                    ? [{ amount: 290, expenditureCategory: SUPPLIES }]
+                    : [],
+                startDate: '2028-02-20',
+              }),
+            ],
+          },
           seededAt: '2028-01-16T00:00:00Z',
         })
       );
@@ -558,26 +594,28 @@ describe('projection date rules', () => {
   it('keeps a full one-time expense in an eligible snapshot month even when the source already ended', () => {
     const result = computePiProjection(
       plan({
-        appointments: [],
-        fundingSources: [
-          source({
-            actuals: [
-              {
-                amount: 250,
-                expenditureCategory: SUPPLIES,
-                month: '2026-10-01',
-              },
-            ],
-            endDate: '2026-10-10',
-            expenses: [
-              expense({
-                amount: 1000,
-                kind: 'OneTime',
-                startMonth: '2026-10-01',
-              }),
-            ],
-          }),
-        ],
+        content: {
+          appointments: [],
+          fundingSources: [
+            source({
+              actuals: [
+                {
+                  amount: 250,
+                  expenditureCategory: SUPPLIES,
+                  month: '2026-10-01',
+                },
+              ],
+              endDate: '2026-10-10',
+              expenses: [
+                expense({
+                  amount: 1000,
+                  kind: 'OneTime',
+                  startMonth: '2026-10-01',
+                }),
+              ],
+            }),
+          ],
+        },
         seededAt: '2026-10-16T00:00:00Z',
       })
     );
@@ -590,21 +628,23 @@ describe('projection date rules', () => {
 
   it('retains one-time entries outside the eligible source months without forecasting their amounts', () => {
     const draft = plan({
-      appointments: [],
-      fundingSources: [
-        source({
-          endDate: '2026-04-10',
-          expenses: [
-            '2025-12-01',
-            '2026-02-01',
-            '2026-04-01',
-            '2026-05-01',
-          ].map((startMonth) =>
-            expense({ amount: 1000, kind: 'OneTime', startMonth })
-          ),
-          startDate: '2026-04-05',
-        }),
-      ],
+      content: {
+        appointments: [],
+        fundingSources: [
+          source({
+            endDate: '2026-04-10',
+            expenses: [
+              '2025-12-01',
+              '2026-02-01',
+              '2026-04-01',
+              '2026-05-01',
+            ].map((startMonth) =>
+              expense({ amount: 1000, kind: 'OneTime', startMonth })
+            ),
+            startDate: '2026-04-05',
+          }),
+        ],
+      },
     });
     const captured = structuredClone(draft);
     const result = computePiProjection(draft);
@@ -622,22 +662,24 @@ describe('projection date rules', () => {
   it('allocates monthly fees over the inclusive appointment, funding, and source intersection', () => {
     const result = computePiProjection(
       plan({
-        appointments: [
-          appointment({
-            allocations: [
-              funding(1, 0.5, {
-                endDate: '2026-04-24',
-                startDate: '2026-04-01',
-              }),
-            ],
-            endDate: '2026-04-30',
-            feeRemissionMonthly: 1500,
-            startDate: '2026-04-10',
-          }),
-        ],
-        fundingSources: [
-          source({ endDate: '2026-04-30', startDate: '2026-04-01' }),
-        ],
+        content: {
+          appointments: [
+            appointment({
+              allocations: [
+                funding(1, 0.5, {
+                  endDate: '2026-04-24',
+                  startDate: '2026-04-01',
+                }),
+              ],
+              endDate: '2026-04-30',
+              feeRemissionMonthly: 1500,
+              startDate: '2026-04-10',
+            }),
+          ],
+          fundingSources: [
+            source({ endDate: '2026-04-30', startDate: '2026-04-01' }),
+          ],
+        },
       })
     );
 
@@ -652,8 +694,10 @@ describe('projection date rules', () => {
   ])('bounds fees by source dates $startDate through $endDate', (dates) => {
     const result = computePiProjection(
       plan({
-        appointments: [appointment({ feeRemissionMonthly: 1500 })],
-        fundingSources: [source(dates)],
+        content: {
+          appointments: [appointment({ feeRemissionMonthly: 1500 })],
+          fundingSources: [source(dates)],
+        },
       })
     );
 
@@ -665,13 +709,15 @@ describe('projection date rules', () => {
   it('does not charge fees when funding and appointment dates never meet within the month', () => {
     const result = computePiProjection(
       plan({
-        appointments: [
-          appointment({
-            allocations: [funding(1, 1, { startDate: '2026-03-11' })],
-            endDate: '2026-03-10',
-            feeRemissionMonthly: 1500,
-          }),
-        ],
+        content: {
+          appointments: [
+            appointment({
+              allocations: [funding(1, 1, { startDate: '2026-03-11' })],
+              endDate: '2026-03-10',
+              feeRemissionMonthly: 1500,
+            }),
+          ],
+        },
       })
     );
 
@@ -683,16 +729,18 @@ describe('projection date rules', () => {
   it('charges one inclusive fee day when all endpoints meet on leap day', () => {
     const result = computePiProjection(
       plan({
-        appointments: [
-          appointment({
-            allocations: [funding(1, 1, { startDate: '2028-02-29' })],
-            endDate: '2028-02-29',
-            feeRemissionMonthly: 2900,
-          }),
-        ],
-        fundingSources: [
-          source({ endDate: '2028-02-29', startDate: '2028-02-29' }),
-        ],
+        content: {
+          appointments: [
+            appointment({
+              allocations: [funding(1, 1, { startDate: '2028-02-29' })],
+              endDate: '2028-02-29',
+              feeRemissionMonthly: 2900,
+            }),
+          ],
+          fundingSources: [
+            source({ endDate: '2028-02-29', startDate: '2028-02-29' }),
+          ],
+        },
         seededAt: '2028-01-16T00:00:00Z',
       })
     );
@@ -711,14 +759,16 @@ describe('projection date rules', () => {
     ({ expectedSalary, fte, monthlySalary }) => {
       const result = computePiProjection(
         plan({
-          appointments: [
-            appointment({
-              colaRate: 0.1,
-              feeRemissionMonthly: 1500,
-              fte,
-              monthlySalary,
-            }),
-          ],
+          content: {
+            appointments: [
+              appointment({
+                colaRate: 0.1,
+                feeRemissionMonthly: 1500,
+                fte,
+                monthlySalary,
+              }),
+            ],
+          },
         })
       );
 
@@ -747,16 +797,24 @@ describe('projection date rules', () => {
     'charges each fee allocation as entered with $description',
     ({ secondFee, secondStart }) => {
       const draft = plan({
-        appointments: [
-          appointment({
-            allocations: [
-              funding(1, 1, { endDate: '2026-04-15', startDate: '2026-04-01' }),
-              funding(2, 1, { endDate: '2026-04-30', startDate: secondStart }),
-            ],
-            feeRemissionMonthly: 1500,
-          }),
-        ],
-        fundingSources: [source(), source({ id: 2 })],
+        content: {
+          appointments: [
+            appointment({
+              allocations: [
+                funding(1, 1, {
+                  endDate: '2026-04-15',
+                  startDate: '2026-04-01',
+                }),
+                funding(2, 1, {
+                  endDate: '2026-04-30',
+                  startDate: secondStart,
+                }),
+              ],
+              feeRemissionMonthly: 1500,
+            }),
+          ],
+          fundingSources: [source(), source({ id: 2 })],
+        },
       });
       const captured = structuredClone(draft);
       const result = computePiProjection(draft);
@@ -798,27 +856,29 @@ describe('projection date rules', () => {
     ({ actual, endDate, fee, remaining, spentToDate }) => {
       const result = computePiProjection(
         plan({
-          appointments: [appointment({ feeRemissionMonthly: 1500 })],
-          fundingSources: [
-            source({
-              actuals: [
-                {
-                  amount: actual,
-                  expenditureCategory: FEE_REMISSION_CATEGORY,
-                  month: '2026-04-01',
-                },
-              ],
-              budgets: [
-                {
-                  budget: 10_000,
-                  committed: 100,
-                  expenditureCategory: FEE_REMISSION_CATEGORY,
-                  spentToDate,
-                },
-              ],
-              endDate,
-            }),
-          ],
+          content: {
+            appointments: [appointment({ feeRemissionMonthly: 1500 })],
+            fundingSources: [
+              source({
+                actuals: [
+                  {
+                    amount: actual,
+                    expenditureCategory: FEE_REMISSION_CATEGORY,
+                    month: '2026-04-01',
+                  },
+                ],
+                budgets: [
+                  {
+                    budget: 10_000,
+                    committed: 100,
+                    expenditureCategory: FEE_REMISSION_CATEGORY,
+                    spentToDate,
+                  },
+                ],
+                endDate,
+              }),
+            ],
+          },
           seededAt: '2026-04-20T00:00:00Z',
         })
       );
@@ -833,43 +893,45 @@ describe('projection date rules', () => {
 
   it('adds employee fees alongside historical category08 estimates and explicit expenses', () => {
     const draft = plan({
-      appointments: [appointment({ feeRemissionMonthly: 1500 })],
-      fundingSources: [
-        source({
-          actuals: [
-            {
-              amount: 750,
-              expenditureCategory: FEE_REMISSION_CATEGORY,
-              month: '2026-10-01',
-            },
-          ],
-          budgets: [
-            {
-              budget: 10_000,
-              committed: 0,
-              expenditureCategory: FEE_REMISSION_CATEGORY,
-              spentToDate: 2000,
-            },
-          ],
-          endDate: '2026-11-30',
-          expenses: [
-            expense({
-              amount: 62,
-              expenditureCategory: FEE_REMISSION_CATEGORY,
-              kind: 'Monthly',
-            }),
-            expense({
-              amount: 200,
-              expenditureCategory: FEE_REMISSION_CATEGORY,
-              kind: 'OneTime',
-              startMonth: '2026-10-01',
-            }),
-          ],
-          historicalExpenseOverrides: [
-            { amount: 310, expenditureCategory: FEE_REMISSION_CATEGORY },
-          ],
-        }),
-      ],
+      content: {
+        appointments: [appointment({ feeRemissionMonthly: 1500 })],
+        fundingSources: [
+          source({
+            actuals: [
+              {
+                amount: 750,
+                expenditureCategory: FEE_REMISSION_CATEGORY,
+                month: '2026-10-01',
+              },
+            ],
+            budgets: [
+              {
+                budget: 10_000,
+                committed: 0,
+                expenditureCategory: FEE_REMISSION_CATEGORY,
+                spentToDate: 2000,
+              },
+            ],
+            endDate: '2026-11-30',
+            expenses: [
+              expense({
+                amount: 62,
+                expenditureCategory: FEE_REMISSION_CATEGORY,
+                kind: 'Monthly',
+              }),
+              expense({
+                amount: 200,
+                expenditureCategory: FEE_REMISSION_CATEGORY,
+                kind: 'OneTime',
+                startMonth: '2026-10-01',
+              }),
+            ],
+            historicalExpenseOverrides: [
+              { amount: 310, expenditureCategory: FEE_REMISSION_CATEGORY },
+            ],
+          }),
+        ],
+      },
       seededAt: '2026-10-16T00:00:00Z',
     });
     const captured = structuredClone(draft);

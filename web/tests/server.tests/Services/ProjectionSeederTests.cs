@@ -54,7 +54,7 @@ public sealed class ProjectionSeederTests
         projection.SeededAt.Should().Be(beforeMidnight);
         projection.SeededAt.Should().Be(data.SnapshotAtUtc!.Value);
         projection.SeededAt.Kind.Should().Be(DateTimeKind.Utc);
-        projection.FundingSources.Single().CapturedAt.Should().Be(projection.SeededAt);
+        projection.Content.FundingSources.Single().CapturedAt.Should().Be(projection.SeededAt);
     }
 
     [Theory]
@@ -73,7 +73,7 @@ public sealed class ProjectionSeederTests
         projection.SeededAt.Should().Be(nextMonth);
         projection.SeededAt.Should().Be(data.SnapshotAtUtc!.Value);
         projection.SeededAt.Kind.Should().Be(DateTimeKind.Utc);
-        projection.FundingSources.Single().CapturedAt.Should().Be(projection.SeededAt);
+        projection.Content.FundingSources.Single().CapturedAt.Should().Be(projection.SeededAt);
     }
 
     [Fact]
@@ -97,8 +97,10 @@ public sealed class ProjectionSeederTests
     {
         var projection = await SeedAsync(Data());
 
-        projection.HistoryMonths.Should().Be(6);
-        var project = projection.FundingSources.Should().ContainSingle().Subject;
+        projection.Content.HistoryMonths.Should().Be(6);
+        projection.Content.ForecastMonths.Should().Be(12);
+        projection.Content.Notes.Should().BeNull();
+        var project = projection.Content.FundingSources.Should().ContainSingle().Subject;
         project.Id.Should().Be(1);
         project.ProjectNumber.Should().Be("P1");
         project.TaskNumber.Should().Be("TASK01");
@@ -118,11 +120,11 @@ public sealed class ProjectionSeederTests
     {
         var projection = await SeedAsync(Data(Line(60)));
 
-        var job = projection.Appointments.Should().ContainSingle().Subject;
+        var job = projection.Content.Appointments.Should().ContainSingle().Subject;
         job.Should().BeEquivalentTo(new { MonthlySalary = 5000m, CbrRate = 0.3m, VacationAccrualRate = 0.083m, RateSet = "UCANR", ColaRate = 0.03m, ColaMonth = 7 });
         job.Id.Should().Be(1);
         job.Allocations.Select(f => (f.FundingSourceId, f.Percent)).Should().BeEquivalentTo(
-            [((int?)projection.FundingSources.Single().Id, 0.6m), ((int?)null, 0.4m)]);
+            [((int?)projection.Content.FundingSources.Single().Id, 0.6m), ((int?)null, 0.4m)]);
     }
 
     public static TheoryData<decimal?, decimal> CbrRates => new()
@@ -141,7 +143,7 @@ public sealed class ProjectionSeederTests
 
         var projection = await SeedAsync(Data(line));
 
-        var job = projection.Appointments.Should().ContainSingle().Subject;
+        var job = projection.Content.Appointments.Should().ContainSingle().Subject;
         job.CbrRate.Should().Be(expectedCbr);
         job.VacationAccrualRate.Should().Be(0.083m);
     }
@@ -157,7 +159,7 @@ public sealed class ProjectionSeederTests
 
         var projection = await SeedAsync(Data(line));
 
-        var job = projection.Appointments.Should().ContainSingle().Subject;
+        var job = projection.Content.Appointments.Should().ContainSingle().Subject;
         job.CbrRate.Should().Be(0.2m);
         job.VacationAccrualRate.Should().Be(0m);
         job.Fte.Should().Be(0m);
@@ -171,8 +173,8 @@ public sealed class ProjectionSeederTests
     {
         var projection = await SeedAsync(Data(Line(100, task: "")));
 
-        projection.Appointments.Single().Allocations.Should().BeEmpty();
-        projection.Appointments.Single().HasUnmatchedFunding.Should().BeTrue();
+        projection.Content.Appointments.Single().Allocations.Should().BeEmpty();
+        projection.Content.Appointments.Single().HasUnmatchedFunding.Should().BeTrue();
     }
 
     [Fact]
@@ -180,7 +182,7 @@ public sealed class ProjectionSeederTests
     {
         var projection = await SeedAsync(Data(Line(40, isFuture: true), Line(60)));
 
-        projection.Appointments.Single().Allocations.Where(f => f.FundingSourceId != null).Sum(f => f.Percent).Should().Be(0.6m);
+        projection.Content.Appointments.Single().Allocations.Where(f => f.FundingSourceId != null).Sum(f => f.Percent).Should().Be(0.6m);
     }
 
     [Fact]
@@ -188,7 +190,7 @@ public sealed class ProjectionSeederTests
     {
         var projection = await SeedAsync(Data(Line(60, status: "Unsplit")));
 
-        var job = projection.Appointments.Should().ContainSingle().Subject;
+        var job = projection.Content.Appointments.Should().ContainSingle().Subject;
         job.MonthlySalary.Should().BeNull();
         job.Allocations.Should().BeEmpty();
     }
@@ -200,7 +202,7 @@ public sealed class ProjectionSeederTests
         data.Seed.RunRates[0].MonthlyAmount = 0;
         data.Seed.RunRates[1].MonthlyAmount = -20;
 
-        var source = (await SeedAsync(data, 12)).FundingSources.Single();
+        var source = (await SeedAsync(data, 12)).Content.FundingSources.Single();
 
         source.RunRates.Select(r => (r.HistoryMonths, r.MonthlyAmount)).Should().BeEquivalentTo([(3, 0m), (6, -20m)]);
         source.Expenses.Should().BeEmpty();

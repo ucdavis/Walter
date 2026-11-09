@@ -36,35 +36,33 @@ const planned = {
 
 describe('funding source operations', () => {
   it('edits an unsaved draft without saved identity or audit fields', () => {
-    const { appointments, fundingSources, historyMonths, name, seededAt } =
-      createSalaryExample();
-    const draft: ProjectionDraft = {
-      appointments,
-      fundingSources,
-      historyMonths,
-      name,
-      seededAt,
-    };
+    const { content, name, seededAt } = createSalaryExample();
+    const draft: ProjectionDraft = { content, name, seededAt };
     const added = applied(
       addPlannedSource(createProjectionSession(draft), planned)
     );
-    expect(added.draft.fundingSources.at(-1)).toMatchObject({
+    expect(added.draft.content.fundingSources.at(-1)).toMatchObject({
       name: planned.name,
       projectName: null,
     });
     expect(Object.keys(added.draft).sort()).toEqual([
-      'appointments',
-      'fundingSources',
-      'historyMonths',
+      'content',
       'name',
       'seededAt',
     ]);
-    expect(draft.fundingSources).toHaveLength(2);
+    expect(Object.keys(added.draft.content).sort()).toEqual([
+      'appointments',
+      'forecastMonths',
+      'fundingSources',
+      'historyMonths',
+      'notes',
+    ]);
+    expect(draft.content.fundingSources).toHaveLength(2);
   });
 
   it('edits scenario balance and dates without replacing captured financials, then restores clean state', () => {
     const original = session();
-    const source = original.draft.fundingSources[0];
+    const source = original.draft.content.fundingSources[0];
     const changed = applied(
       editProjectionSource(original, source.id, {
         balance: -2500,
@@ -73,7 +71,7 @@ describe('funding source operations', () => {
         startDate: source.startDate,
       })
     );
-    const edited = changed.draft.fundingSources[0];
+    const edited = changed.draft.content.fundingSources[0];
     expect(sourceCapturedBalance(edited)).toBe(20_000);
     expect(sourcePlanningBalance(edited)).toBe(-2500);
     expect(edited.budgets).toBe(source.budgets);
@@ -92,12 +90,12 @@ describe('funding source operations', () => {
     );
     expect(restored.revision).toBe(2);
     expect(isProjectionDirty(restored)).toBe(false);
-    expect(original.draft.fundingSources[0]).toBe(source);
+    expect(original.draft.content.fundingSources[0]).toBe(source);
   });
 
   it('retains intentionally missing captured dates across edits', () => {
     const original = session();
-    Object.assign(original.draft.fundingSources[0], {
+    Object.assign(original.draft.content.fundingSources[0], {
       capturedAt: original.draft.seededAt,
       capturedEndDate: null,
       capturedStartDate: null,
@@ -105,15 +103,15 @@ describe('funding source operations', () => {
     const edited = applied(
       editProjectionSource(original, 1, { ...planned, balance: 20_000 })
     );
-    expect(edited.draft.fundingSources[0].capturedStartDate).toBeNull();
-    expect(edited.draft.fundingSources[0].capturedEndDate).toBeNull();
+    expect(edited.draft.content.fundingSources[0].capturedStartDate).toBeNull();
+    expect(edited.draft.content.fundingSources[0].capturedEndDate).toBeNull();
   });
 
   it('creates planned sources only when applied and gives current sources unique IDs', () => {
     const original = session();
     const added = applied(addPlannedSource(original, planned));
-    const first = added.draft.fundingSources.at(-1)!;
-    expect(original.draft.fundingSources).toHaveLength(2);
+    const first = added.draft.content.fundingSources.at(-1)!;
+    expect(original.draft.content.fundingSources).toHaveLength(2);
     expect(first).toMatchObject({
       balanceAdjustment: 100_000,
       budgets: [],
@@ -123,12 +121,14 @@ describe('funding source operations', () => {
     const removed = applied(removeProjectionSource(added, first.id));
     expect(isProjectionDirty(removed)).toBe(false);
     const next = applied(addPlannedSource(added, planned));
-    expect(next.draft.fundingSources.map(({ id }) => id)).toEqual([1, 2, 3, 4]);
+    expect(next.draft.content.fundingSources.map(({ id }) => id)).toEqual([
+      1, 2, 3, 4,
+    ]);
   });
 
   it('re-adds fresh source inputs without restoring removed allocations or adjustments', () => {
     const original = session();
-    const source = original.draft.fundingSources[1];
+    const source = original.draft.content.fundingSources[1];
     source.projectNumber = 'P1';
     source.taskNumber = 'T1';
     source.sourceKind = 'Task';
@@ -143,10 +143,12 @@ describe('funding source operations', () => {
     };
     fresh.budgets[0].budget = 50_000;
     const readded = applied(addImportedSources(removed, [fresh]));
-    expect(readded.draft.fundingSources.map(({ id }) => id)).toEqual([1, 2]);
-    expect(readded.draft.fundingSources[1]).toEqual(fresh);
-    expect(readded.draft.appointments[0].allocations).toEqual(
-      original.draft.appointments[0].allocations.filter(
+    expect(readded.draft.content.fundingSources.map(({ id }) => id)).toEqual([
+      1, 2,
+    ]);
+    expect(readded.draft.content.fundingSources[1]).toEqual(fresh);
+    expect(readded.draft.content.appointments[0].allocations).toEqual(
+      original.draft.content.appointments[0].allocations.filter(
         ({ fundingSourceId }) => fundingSourceId !== source.id
       )
     );
@@ -155,23 +157,25 @@ describe('funding source operations', () => {
   it('adds fresh financial sources without adding employees or funding and rejects overlapping tasks atomically', () => {
     const original = session();
     const source = {
-      ...structuredClone(original.draft.fundingSources[0]),
+      ...structuredClone(original.draft.content.fundingSources[0]),
       capturedAt: '2026-03-16T00:00:00Z',
       projectNumber: 'NEW',
       sourceKind: 'Task' as const,
       taskNumber: 'T1',
     };
     const added = applied(addImportedSources(original, [source]));
-    expect(added.draft.appointments).toBe(original.draft.appointments);
-    expect(added.draft.fundingSources.at(-1)!.id).toBe(3);
-    expect(added.draft.fundingSources.at(-1)).not.toBe(source);
-    expect(added.draft.fundingSources.at(-1)!.capturedAt).toBe(
+    expect(added.draft.content.appointments).toBe(
+      original.draft.content.appointments
+    );
+    expect(added.draft.content.fundingSources.at(-1)!.id).toBe(3);
+    expect(added.draft.content.fundingSources.at(-1)).not.toBe(source);
+    expect(added.draft.content.fundingSources.at(-1)!.capturedAt).toBe(
       source.capturedAt
     );
     expect(
       addImportedSources(added, [{ ...source, taskNumber: 'T2' }, source]).ok
     ).toBe(false);
-    expect(added.draft.fundingSources).toHaveLength(3);
+    expect(added.draft.content.fundingSources).toHaveLength(3);
     expect(sourcesOverlap(source, { ...source, taskNumber: 'T2' })).toBe(false);
     expect(sourcesOverlap(source, { ...source, taskNumber: null })).toBe(false);
     expect(
@@ -184,17 +188,19 @@ describe('funding source operations', () => {
 
   it('removes a source and its allocation shares without discarding people or filling the gap', () => {
     const original = session();
-    original.draft.appointments[0].allocations.push({
+    original.draft.content.appointments[0].allocations.push({
       endDate: null,
       fundingSourceId: null,
       percent: 0.1,
       startDate: null,
     });
     const removed = applied(removeProjectionSource(original, 1));
-    expect(removed.draft.fundingSources.map(({ id }) => id)).toEqual([2]);
-    expect(removed.draft.appointments).toHaveLength(1);
+    expect(removed.draft.content.fundingSources.map(({ id }) => id)).toEqual([
+      2,
+    ]);
+    expect(removed.draft.content.appointments).toHaveLength(1);
     expect(
-      removed.draft.appointments[0].allocations.map(
+      removed.draft.content.appointments[0].allocations.map(
         ({ fundingSourceId, percent }) => [fundingSourceId, percent]
       )
     ).toEqual([
@@ -204,21 +210,21 @@ describe('funding source operations', () => {
     expect(
       computePiProjection(removed.draft).appointmentFunding[0].fundedPercent
     ).toBeCloseTo(0.6);
-    expect(original.draft.appointments[0].allocations).toHaveLength(3);
+    expect(original.draft.content.appointments[0].allocations).toHaveLength(3);
   });
 
   it('initially selects people by parent source even when their only task is unselected', () => {
     const original = session();
-    original.draft.fundingSources.forEach((source, index) => {
+    original.draft.content.fundingSources.forEach((source, index) => {
       source.projectNumber = 'P1';
       source.taskNumber = `T${index + 1}`;
       source.sourceKind = 'Task';
     });
-    original.draft.appointments[0].allocations = [
-      original.draft.appointments[0].allocations[1],
+    original.draft.content.appointments[0].allocations = [
+      original.draft.content.appointments[0].allocations[1],
     ];
-    original.draft.appointments.push({
-      ...structuredClone(original.draft.appointments[0]),
+    original.draft.content.appointments.push({
+      ...structuredClone(original.draft.content.appointments[0]),
       allocations: [],
       id: 102,
     });
@@ -232,9 +238,13 @@ describe('funding source operations', () => {
         ]
       )
     );
-    expect(selected.draft.appointments.map(({ id }) => id)).toEqual([101]);
-    expect(selected.draft.appointments[0].allocations).toEqual([]);
-    expect(selected.draft.fundingSources.map(({ id }) => id)).toEqual([1]);
+    expect(selected.draft.content.appointments.map(({ id }) => id)).toEqual([
+      101,
+    ]);
+    expect(selected.draft.content.appointments[0].allocations).toEqual([]);
+    expect(selected.draft.content.fundingSources.map(({ id }) => id)).toEqual([
+      1,
+    ]);
   });
 
   it('retains source edits applied during a save and compares structural content regardless of property order', () => {
@@ -246,21 +256,24 @@ describe('funding source operations', () => {
       updatedAt: '2026-01-02T00:00:00.1234567Z',
     };
     const acknowledged = acknowledgeProjectionSave(newer, submitted, saved);
-    expect(acknowledged.draft.fundingSources.map(({ id }) => id)).toEqual([
-      2, 3,
-    ]);
+    expect(
+      acknowledged.draft.content.fundingSources.map(({ id }) => id)
+    ).toEqual([2, 3]);
     expect(acknowledged.draft.updatedAt).toBe(saved.updatedAt);
     expect(isProjectionDirty(acknowledged)).toBe(true);
     const reordered = {
       ...original,
       draft: {
         ...original.draft,
-        fundingSources: original.draft.fundingSources.map(
-          (source) =>
-            Object.fromEntries(
-              Object.entries(source).reverse()
-            ) as typeof source
-        ),
+        content: {
+          ...original.draft.content,
+          fundingSources: original.draft.content.fundingSources.map(
+            (source) =>
+              Object.fromEntries(
+                Object.entries(source).reverse()
+              ) as typeof source
+          ),
+        },
       },
     };
     expect(isProjectionDirty(reordered)).toBe(false);

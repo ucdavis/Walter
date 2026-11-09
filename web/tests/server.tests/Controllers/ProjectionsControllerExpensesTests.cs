@@ -34,7 +34,7 @@ public sealed partial class ProjectionsControllerTests
         var stored = await StoreCapturedPlanAsync(ctx);
         var before = JsonSerializer.Serialize(stored);
         var draft = Draft(stored);
-        var source = draft.FundingSources.Single();
+        var source = draft.Content.FundingSources.Single();
         var expense = source.Expenses.Single();
         expense.Kind = ProjectionExpenseKind.Monthly;
         switch (invalid)
@@ -59,14 +59,14 @@ public sealed partial class ProjectionsControllerTests
             case "duplicate-override": source.HistoricalExpenseOverrides.Add(new() { ExpenditureCategory = $" {Supplies} ", Amount = 0 }); break;
         }
         var controller = CreateController(ctx, financialViewer: true, dataSource: UnavailableProjectionData());
-        var snapshot = new ProjectionDraft(draft.Name, draft.HistoryMonths, stored.SeededAt, draft.FundingSources, draft.Appointments);
+        var snapshot = new ProjectionDraft(draft.Name, stored.SeededAt, draft.Content);
 
         (await controller.Create(PiIam, new(snapshot, Guid.NewGuid()), default)).Should().BeOfType<BadRequestObjectResult>();
         (await controller.Save(stored.Id, draft, default)).Should().BeOfType<BadRequestObjectResult>();
         JsonSerializer.Serialize(stored).Should().Be(before);
         ctx.ChangeTracker.HasChanges().Should().BeFalse();
 
-        stored.FundingSources = draft.FundingSources;
+        stored.Content.FundingSources = draft.Content.FundingSources;
         await ctx.SaveChangesAsync();
         (await controller.Duplicate(stored.Id, new("Invalid copy", Guid.NewGuid()), default)).Should().BeOfType<BadRequestObjectResult>();
         ctx.Projections.Should().ContainSingle();
@@ -77,7 +77,7 @@ public sealed partial class ProjectionsControllerTests
     {
         using var ctx = TestDbContextFactory.CreateInMemory();
         var request = NewPlanRequest();
-        var source = request.Draft!.FundingSources.Single();
+        var source = request.Draft!.Content.FundingSources.Single();
         source.HistoricalExpenseOverrides =
         [
             new() { ExpenditureCategory = Supplies, Amount = 20 },
@@ -92,22 +92,22 @@ public sealed partial class ProjectionsControllerTests
         ];
         var other = NewTaskSource();
         other.Expenses.Add(new() { Id = 1, Kind = ProjectionExpenseKind.OneTime, Description = "Travel credit", ExpenditureCategory = "06 - Travel", Amount = -50, StartMonth = new(2027, 2, 1) });
-        request.Draft.FundingSources.Add(other);
-        var expected = JsonSerializer.Serialize(request.Draft.FundingSources);
+        request.Draft.Content.FundingSources.Add(other);
+        var expected = JsonSerializer.Serialize(request.Draft.Content.FundingSources);
         var controller = CreateController(ctx, financialViewer: true, dataSource: UnavailableProjectionData());
 
         var created = Document(await controller.Create(PiIam, request, default));
         var saved = Document(await controller.Save(created.Id, Draft(created, 3), default));
         ctx.ChangeTracker.Clear();
         var reopened = Document(await controller.Get(saved.Id, default));
-        JsonSerializer.Serialize(reopened.FundingSources).Should().Be(expected);
+        JsonSerializer.Serialize(reopened.Content.FundingSources).Should().Be(expected);
         var duplicate = Document(await controller.Duplicate(reopened.Id, new("Expense alternative", Guid.NewGuid()), default));
-        JsonSerializer.Serialize(duplicate.FundingSources).Should().Be(expected);
+        JsonSerializer.Serialize(duplicate.Content.FundingSources).Should().Be(expected);
 
         var restored = Draft(reopened);
-        restored.FundingSources.Single(s => s.Id == source.Id).HistoricalExpenseOverrides.RemoveAt(0);
+        restored.Content.FundingSources.Single(s => s.Id == source.Id).HistoricalExpenseOverrides.RemoveAt(0);
         var restoredPlan = Document(await controller.Save(reopened.Id, restored, default));
-        restoredPlan.FundingSources.Single(s => s.Id == source.Id).Expenses.Should().BeEquivalentTo(source.Expenses);
-        duplicate.FundingSources.Single(s => s.Id == source.Id).HistoricalExpenseOverrides.Should().HaveCount(3);
+        restoredPlan.Content.FundingSources.Single(s => s.Id == source.Id).Expenses.Should().BeEquivalentTo(source.Expenses);
+        duplicate.Content.FundingSources.Single(s => s.Id == source.Id).HistoricalExpenseOverrides.Should().HaveCount(3);
     }
 }

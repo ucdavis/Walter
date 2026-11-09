@@ -9,7 +9,9 @@ greenfield model cleanup are accepted and committed as `4bb4f673`. The follow-up
 audit's seven cleanup recommendations are accepted and committed as `727cf3aa`.
 Stage 3b's appointment editor and hypothetical hires are accepted and committed
 as `1381103c`. Stage 3c's allocation picker is accepted and committed as `48f06e64`.
-Stage 4a's Other expenses editor is implemented, verified, and accepted.
+Stage 4a's Other expenses editor is accepted and committed as `ea854416`.
+Stage 4b's plan details, fixed forecast duration, and typed `Content` document are
+implemented, verified, and accepted.
 Saving remains available with funding gaps/overlaps.
 CBR defaults to 20% when no rate is supplied. Fresh appointments default to a
 3% annual salary adjustment in July. Every retained appointment needs a salary
@@ -36,7 +38,8 @@ as each decision is settled and each stage is reviewed.
 - The guided planner defines the intended UI. The earlier timeline and copilot
   are outside the initial feature; prepare for AI editing later.
 - The final wizard order is Funding sources → Staffing → Other expenses → Review.
-  Plan name belongs within Funding sources. The plan-wide spending-history
+  Plan name and forecast duration belong within Funding sources. Optional plan
+  notes belong on Review. The plan-wide spending-history
   selector belongs within Other expenses, with a three-month default.
 - New plan opens the setup wizard. Its final Create plan action saves the
   reviewed inputs, then opens the saved plan's workspace. Canceling before the
@@ -220,10 +223,19 @@ already runs in TypeScript. Retain those foundations and make focused changes:
 
 Retain document storage rather than introducing a relational planning subsystem.
 The demo stores plan settings inside a project record; do not carry that pattern
-forward. Name and history window already have plan-level fields, which are
-sufficient for the current lifecycle work. Retain the three-month default and
-date-driven forecast horizon. Add proper plan-level storage when notes, custom
-horizon, or inclusion settings arrive in their owning stage.
+forward. Keep identity, owner PI, name, creation key, snapshot timestamp, and audit
+fields as columns. Store `HistoryMonths`, `ForecastMonths`, `Notes`,
+`FundingSources`, and `Appointments` in one strongly typed `Content` JSON column.
+Name and snapshot timestamp have one authoritative value outside `Content`.
+Use the same boundary in domain objects, API requests and responses, and client
+drafts. Retain the three-month history default. The forecast duration defaults to
+12 months and can be changed to 18, anchored to the original snapshot month.
+
+The content is saved and copied as a whole. Every scenario edit can rewrite that
+JSON column, including a notes-only change; explicit whole-plan saving makes this
+an acceptable tradeoff. New required properties and renamed properties still
+need deliberate stored-document migrations. Keep validation in typed models and
+shared operations, with no untyped settings bag or parallel legacy format.
 
 Fresh seed eligibility should have one named, tested owner. Apply dashboard rules,
 and keep current filters from rewriting an already saved snapshot. Stage 2a
@@ -1044,10 +1056,11 @@ the current rules. The future Expenses step can present those expenses together
 without adding a third top-level collection. Reconsider expense ownership if
 unallocated or split expenses become a requirement.
 
-Use `FundingSources` and `Appointments` for the database column names as well
-as the domain and API names. This is a greenfield system. Keep one current
-document format without aliases for prototype fields, old request shapes,
-or old navigation keys. Sources record their kind and capture timestamp explicitly.
+Use `FundingSources` and `Appointments` as the collection names inside the plan's
+typed `Content` in the database, domain, and API. This is a greenfield system.
+Keep one current document format without aliases for prototype fields, old
+request shapes, or old navigation keys. Sources record their kind and capture
+timestamp explicitly.
 
 Source IDs need only be unique among the plan's current sources. Removed IDs
 may be reused by later additions. Plan and section bookmarks are supported;
@@ -1392,7 +1405,7 @@ read or deployment occurred.
 ## Stage 4a: Other expenses
 
 The user confirmed the expense decisions and authorized implementation on
-November 9, 2026. Notes and a custom forecast horizon remain a later increment.
+November 9, 2026. Plan notes and duration are covered by Stage 4b below.
 
 Use one shared Other expenses editor in the wizard and saved workspace. A funding
 source selector scopes the historical estimates and added expenses. Every expense
@@ -1486,16 +1499,101 @@ remaining warnings include similar table markup and an existing loading-flag
 false positive inside a finally block; no warnings were suppressed.
 
 The shared-category cleanup also passed 113 relevant client tests, TypeScript,
-lint, and formatting. This increment is accepted. No live personnel read,
-database deployment, push, or merge occurred. Next: review plan notes and the
-forecast horizon.
+lint, and formatting. This increment is accepted and committed as `ea854416`.
+No live personnel read, database deployment, push, or merge occurred.
+
+## Stage 4b: Plan details and forecast duration
+
+The user confirmed these decisions and authorized implementation on November 9,
+2026. The forecast period belongs to the whole plan. Offer 12 and 18 months,
+defaulting to 12. Count the original snapshot month as the first month, so a
+12-month January snapshot ends in December. Opening or editing a saved plan does
+not move its time anchor.
+
+Funding sources without an end date run through the selected plan period.
+Source, appointment, allocation, and expense dates retain their eligibility and
+proration rules. Changing duration preserves those dates. Adding a source never
+extends the period automatically. Sources whose availability or capture begins
+after the period remain visible and saved, with an outside-period explanation,
+but contribute no balance or costs within the selected period. Funding coverage
+continues to follow source availability rather than capture dates.
+
+Show every source's projected balance at the same plan-end month. A source that
+ends earlier carries its final balance forward without new charges. Preserve
+capture-month booked facts and the existing salary/fringe credit treatment.
+Label the result "Projected balance at [month]" so it does not imply a lifetime
+outcome. Expense totals and funding checks use the same selected period.
+
+Offer optional multiline plain-text notes for the plan's purpose and assumptions.
+Everyone with plan access can read them, and duplication carries them with the
+saved name and duration. Notes have no calculation effect. Limit notes to 2,000
+characters and retain the existing 200-character name limit. Do not add notes
+per source or appointment, or discussion threads.
+
+The four-step wizard keeps name and duration on Funding sources and notes on
+Review. The saved workspace provides Edit plan details for name, duration, and
+notes. Apply changes the local draft, Cancel leaves it unchanged, and Save plan
+persists the result. Preserve pending-input guards, conflict handling, and newer
+local edits when a save response arrives. The existing reset endpoint preserves
+name, notes, and duration while replacing captured inputs; exposing reset remains
+a separate decision.
+
+Persist duration and notes in `Content` alongside history window, funding sources,
+and appointments. Validate the same rules for creation and saving, and copy the
+saved values on duplication. The user approved this storage boundary after
+reviewing the initial Stage 4b implementation. Replace the undeployed two-column
+migration with a schema-only consolidation migration that adds `Content` and
+removes the replaced columns. This is a greenfield feature: do not convert,
+backfill, or restore documents from the previous format in either migration
+direction. Keep previously committed schema migrations and one current runtime
+document format.
+
+Final verification passed 692 client tests across 72 files, 609 standard server
+tests, and all 18 isolated SQL checks. The standard run skipped 13 optional SQL
+checks, which ran in the isolated suite. The SQL suite applied
+`20261109204549_ConsolidateProjectionContent` on an empty database. Current-schema
+tests verified a complete typed content roundtrip, schema columns, in-place
+nested edits, and unchanged operational metadata.
+Production build, TypeScript, changed-file ESLint, formatting, and diff checks
+passed.
+
+An independent 500-scenario comparison preserved financial amounts in months
+shared by the previous and selected periods. Regression tests cover the exact
+12/18-month boundary, extended open-source expenses, ended-source balance carry,
+future sources and expenses becoming eligible, availability-based funding checks,
+and snapshot-month credits. Tests also cover duplicate settings, late save
+acknowledgements, and unapplied plan-detail input. Independent calculation and
+server reviews found no remaining correctness defects.
+
+A second 500-scenario comparison checked the content consolidation against the
+pre-refactor implementation. Every financial row, appointment funding result,
+and forecast window was identical. Creation and save requests require nested
+`content`, with no flat aliases. Save acknowledgement preserves newer local
+content as a whole. Independent review of persistence found no actionable issues.
+The old-format conversion SQL and its preservation-only test setup were removed;
+an audit found no other projection payload converters or runtime compatibility
+readers.
+
+Browser checks with synthetic API responses verified the four-step wizard,
+reviewed metadata creation, saved-plan Apply and Save/reload, a future source
+entering the longer period, and unchanged entered dates. The details dialog fits
+at 390px without horizontal overflow. After consolidation, browser checks repeated
+wizard creation and Save/reload with nested API responses. Changing duration,
+notes, and history preserved the other content fields and original snapshot.
+The final browser console had no errors or warnings. React Doctor reported no
+errors and 11 warnings. Its wider scan now includes existing allocation-editor
+complexity and size warnings and a staffing-list index key. The other warnings
+remain component complexity/size, similar table markup, and the loading-flag
+false positive. No warnings were suppressed.
+
+This increment is accepted.
+No live financial or personnel read, database deployment, push, or merge occurred.
 
 ## Questions to resolve in their owning stages
 
 | Before                        | Question or example                                                                                                      |
 | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | Before exposing reset/refresh | Define their separate meanings, treatment of local edits, and snapshot replacement behavior.                             |
-| Stage 4b                      | Define plan notes and whether users need an explicit forecast horizon beyond the current source-date-driven window.      |
 | Stage 5                       | Verify per-project shortfalls remain visible despite surpluses elsewhere, and decide feature-flag rollout criteria.      |
 | Later integration             | Define proposal batches, stale-preview handling, bounded undo, authentication, and interactions with pending form edits. |
 

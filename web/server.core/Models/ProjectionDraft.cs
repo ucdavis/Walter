@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using server.core.Domain;
 
 namespace server.core.Models;
@@ -5,10 +6,8 @@ namespace server.core.Models;
 /// <summary>Editable scenario inputs before persistence; excludes saved identity, audit, ownership, and retry metadata.</summary>
 public sealed record ProjectionDraft(
     string Name,
-    int HistoryMonths,
     DateTime SeededAt,
-    List<ProjectionFundingSource> FundingSources,
-    List<ProjectionAppointment> Appointments);
+    [property: JsonRequired] ProjectionContent Content);
 
 /// <summary>Initial roster provenance used only while selecting a new plan's funding sources.</summary>
 public sealed record ProjectionRosterEntry(int AppointmentId, List<string> ProjectNumbers);

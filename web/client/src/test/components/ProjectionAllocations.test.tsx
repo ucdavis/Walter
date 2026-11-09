@@ -29,8 +29,8 @@ afterEach(() => {
 });
 function fullYearPlan() {
   const plan = createSalaryExample();
-  plan.appointments[0].endDate = '2026-12-31';
-  plan.appointments[0].allocations = [
+  plan.content.appointments[0].endDate = '2026-12-31';
+  plan.content.appointments[0].allocations = [
     {
       endDate: '2026-12-31',
       fundingSourceId: 1,
@@ -38,7 +38,7 @@ function fullYearPlan() {
       startDate: '2026-01-01',
     },
   ];
-  for (const source of plan.fundingSources) {
+  for (const source of plan.content.fundingSources) {
     source.endDate = '2026-12-31';
   }
   return plan;
@@ -91,7 +91,7 @@ describe('appointment allocation period editor', () => {
     await waitFor(() =>
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     );
-    expect(read().draft.appointments[0].allocations).toEqual(
+    expect(read().draft.content.appointments[0].allocations).toEqual(
       expect.arrayContaining([
         {
           endDate: '2026-06-30',
@@ -113,18 +113,20 @@ describe('appointment allocation period editor', () => {
         },
       ])
     );
-    expect(read().draft.fundingSources).toEqual(plan.fundingSources);
+    expect(read().draft.content.fundingSources).toEqual(
+      plan.content.fundingSources
+    );
     await user.click(screen.getByRole('button', { name: 'Save plan' }));
     await screen.findByRole('button', { name: '✓ Saved' });
     expect(
-      window.walterProjectionPreview!.server.read().stored!.appointments
-    ).toEqual(read().draft.appointments);
+      window.walterProjectionPreview!.server.read().stored!.content.appointments
+    ).toEqual(read().draft.content.appointments);
   });
 
   it('starts added allocations blank, allows outside funding and totals above 100% at zero FTE, and cancels without changing the plan', async () => {
     const plan = fullYearPlan();
-    plan.appointments[0].fte = 0;
-    plan.appointments[0].feeRemissionMonthly = 1500;
+    plan.content.appointments[0].fte = 0;
+    plan.content.appointments[0].feeRemissionMonthly = 1500;
     const { user } = preview(plan);
     await openJuly(user);
     await user.click(screen.getByRole('button', { name: 'Add allocation' }));
@@ -148,7 +150,7 @@ describe('appointment allocation period editor', () => {
       'outside'
     );
     await user.click(screen.getByRole('button', { name: 'Apply funding' }));
-    expect(read().draft.appointments[0].allocations).toContainEqual({
+    expect(read().draft.content.appointments[0].allocations).toContainEqual({
       endDate: '2026-07-31',
       fundingSourceId: null,
       percent: 1,
@@ -166,7 +168,7 @@ describe('appointment allocation period editor', () => {
     expect(screen.getByText('Uses appointment end')).toBeInTheDocument();
     await user.selectOptions(screen.getByLabelText('Funding source 1'), '2');
     await user.click(screen.getByRole('button', { name: 'Apply funding' }));
-    expect(read().draft.appointments[0].allocations).toContainEqual({
+    expect(read().draft.content.appointments[0].allocations).toContainEqual({
       endDate: null,
       fundingSourceId: 2,
       percent: 1,
@@ -185,7 +187,7 @@ describe('appointment allocation period editor', () => {
       screen.getByText(/Applying will leave the selected period unallocated/)
     ).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Apply funding' }));
-    expect(read().draft.appointments[0].allocations).toEqual([]);
+    expect(read().draft.content.appointments[0].allocations).toEqual([]);
     expect(screen.getByText('No funding assigned.')).toBeInTheDocument();
   });
 
@@ -205,8 +207,8 @@ describe('appointment allocation period editor', () => {
         startDate: '2026-07-15',
       },
     ];
-    plan.appointments[0].allocations = allocations;
-    plan.appointments[0].hasUnmatchedFunding = true;
+    plan.content.appointments[0].allocations = allocations;
+    plan.content.appointments[0].hasUnmatchedFunding = true;
     const { user } = preview(plan);
     await openJuly(user);
     expect(screen.getByLabelText('Start date')).toHaveValue('2026-07-01');
@@ -215,8 +217,12 @@ describe('appointment allocation period editor', () => {
       screen.getByText(/Funding changes within Jul 2026/)
     ).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Apply funding' }));
-    expect(read().draft.appointments[0].allocations).toEqual(allocations);
-    expect(read().draft.appointments[0].hasUnmatchedFunding).toBe(false);
+    expect(read().draft.content.appointments[0].allocations).toEqual(
+      allocations
+    );
+    expect(read().draft.content.appointments[0].hasUnmatchedFunding).toBe(
+      false
+    );
   });
 
   it('preserves pending edits when departure is cancelled and restores saved values with Back and Forward', async () => {
@@ -256,7 +262,7 @@ describe('appointment allocation period editor', () => {
 
   it('shows separate daily gap and overlap warnings even when the monthly average is 100%', async () => {
     const plan = fullYearPlan();
-    plan.appointments[0].allocations = [
+    plan.content.appointments[0].allocations = [
       {
         endDate: '2026-04-30',
         fundingSourceId: 1,

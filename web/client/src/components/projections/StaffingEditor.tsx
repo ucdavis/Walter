@@ -67,7 +67,7 @@ export function StaffingEditor<T extends ProjectionDraft>({
   const editorRef = useRef<AppointmentEditorHandle>(null);
   const allocationRef = useRef<AllocationEditorHandle>(null);
   const { draft } = session;
-  const appointment = draft.appointments.find(
+  const appointment = draft.content.appointments.find(
     ({ id }) =>
       id === (target ? (target.fundingMonth ? null : target.id) : editing)
   );
@@ -76,12 +76,12 @@ export function StaffingEditor<T extends ProjectionDraft>({
       ? { id: target.id, month: target.fundingMonth }
       : null
     : funding;
-  const fundingAppointment = draft.appointments.find(
+  const fundingAppointment = draft.content.appointments.find(
     ({ id }) => id === fundingTarget?.id
   );
   const editFunding = (id: number, month: string) =>
     target ? target.onChange(id, month) : setFunding({ id, month });
-  const removed = draft.appointments.find(({ id }) => id === removing);
+  const removed = draft.content.appointments.find(({ id }) => id === removing);
   useImperativeHandle(ref, () => ({
     read: () =>
       allocationRef.current?.read() ?? editorRef.current?.read() ?? null,
@@ -105,11 +105,11 @@ export function StaffingEditor<T extends ProjectionDraft>({
       >
         Add hypothetical hire
       </button>
-      {draft.appointments.length === 0 && (
+      {draft.content.appointments.length === 0 && (
         <p className="mt-4">No appointments in this plan.</p>
       )}
       <div className="mt-4 space-y-4">
-        {draft.appointments.map((item) => (
+        {draft.content.appointments.map((item) => (
           <article
             className="rounded-box border border-base-300 p-5"
             key={item.id}
@@ -177,7 +177,7 @@ export function StaffingEditor<T extends ProjectionDraft>({
               forecastWindow={forecastWindow}
               months={appointmentFunding}
               onEdit={(month) => editFunding(item.id, month)}
-              sources={draft.fundingSources}
+              sources={draft.content.fundingSources}
             />
             <details className="mt-3 text-sm">
               <summary className="cursor-pointer">
@@ -185,7 +185,7 @@ export function StaffingEditor<T extends ProjectionDraft>({
               </summary>
               <ul className="mt-2 space-y-1 text-sm">
                 {item.allocations.map((allocation, index) => {
-                  const source = draft.fundingSources.find(
+                  const source = draft.content.fundingSources.find(
                     ({ id }) => id === allocation.fundingSourceId
                   );
                   return (

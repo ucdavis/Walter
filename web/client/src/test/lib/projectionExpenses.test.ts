@@ -6,6 +6,7 @@ import {
   FEE_REMISSION_CATEGORY as FEES,
   SUPPLIES_CATEGORY as SUPPLIES,
   getSourceForecastWindow,
+  getProjectionForecastWindow,
 } from '@/lib/piProjection.ts';
 import {
   addProjectionExpense,
@@ -45,9 +46,9 @@ function applied<T extends ProjectionDraft>(result: ExpenseOperationResult<T>) {
 
 function session() {
   const plan = createSalaryExample();
-  plan.appointments = [];
-  plan.fundingSources[0].capturedAt = '2026-01-16T00:00:00Z';
-  plan.fundingSources[0].runRates = [
+  plan.content.appointments = [];
+  plan.content.fundingSources[0].capturedAt = '2026-01-16T00:00:00Z';
+  plan.content.fundingSources[0].runRates = [
     {
       expenditureCategory: SUPPLIES,
       historyMonths: 3,
@@ -63,7 +64,7 @@ function session() {
 describe('historical expense assumptions', () => {
   it('never generates personnel or equipment estimates from captured history', () => {
     const current = session();
-    const source = current.draft.fundingSources[0];
+    const source = current.draft.content.fundingSources[0];
     source.runRates = ['01 - Salaries', '02 - Fringe', '04 - Equipment'].map(
       (expenditureCategory) => ({
         expenditureCategory,
@@ -81,11 +82,11 @@ describe('historical expense assumptions', () => {
 
   it('uses a stable union of captured categories and overrides with exact precision and missing-window zero', () => {
     const current = session();
-    current.draft.fundingSources[0].historicalExpenseOverrides = [
+    current.draft.content.fundingSources[0].historicalExpenseOverrides = [
       { amount: -45.123_456, expenditureCategory: '07 - Services' },
     ];
     expect(
-      getHistoricalExpenseRows(current.draft.fundingSources[0], 3)
+      getHistoricalExpenseRows(current.draft.content.fundingSources[0], 3)
     ).toEqual([
       {
         baselineAmount: 310.123_456,
@@ -122,12 +123,14 @@ describe('historical expense assumptions', () => {
     expect(applied(changeProjectionHistoryMonths(original, 3))).toBe(original);
     const changed = applied(changeProjectionHistoryMonths(original, 6));
     expect(changed.revision).toBe(1);
-    expect(changed.draft.fundingSources).toBe(original.draft.fundingSources);
+    expect(changed.draft.content.fundingSources).toBe(
+      original.draft.content.fundingSources
+    );
     expect(
-      getHistoricalExpenseRows(changed.draft.fundingSources[0], 6)[0]
+      getHistoricalExpenseRows(changed.draft.content.fundingSources[0], 6)[0]
         .effectiveAmount
     ).toBe(620);
-    expect(original.draft.historyMonths).toBe(3);
+    expect(original.draft.content.historyMonths).toBe(3);
     expect(
       isProjectionDirty(applied(changeProjectionHistoryMonths(changed, 3)))
     ).toBe(false);
@@ -140,20 +143,22 @@ describe('historical expense assumptions', () => {
     );
     changed = applied(changeProjectionHistoryMonths(changed, 6));
     expect(
-      getHistoricalExpenseRows(changed.draft.fundingSources[0], 6)[0]
+      getHistoricalExpenseRows(changed.draft.content.fundingSources[0], 6)[0]
     ).toMatchObject({ baselineAmount: 620, overrideAmount: 620 });
     changed = applied(setHistoricalExpenseOverride(changed, 1, SUPPLIES, 0));
     changed = applied(setHistoricalExpenseOverride(changed, 1, TRAVEL, -55));
     changed = applied(changeProjectionHistoryMonths(changed, 12));
-    expect(changed.draft.fundingSources[0].historicalExpenseOverrides).toEqual([
+    expect(
+      changed.draft.content.fundingSources[0].historicalExpenseOverrides
+    ).toEqual([
       { amount: 0, expenditureCategory: SUPPLIES },
       { amount: -55, expenditureCategory: TRAVEL },
     ]);
-    expect(original.draft.fundingSources[0].historicalExpenseOverrides).toEqual(
-      []
-    );
-    expect(changed.draft.fundingSources[0].runRates).toBe(
-      original.draft.fundingSources[0].runRates
+    expect(
+      original.draft.content.fundingSources[0].historicalExpenseOverrides
+    ).toEqual([]);
+    expect(changed.draft.content.fundingSources[0].runRates).toBe(
+      original.draft.content.fundingSources[0].runRates
     );
   });
 
@@ -170,9 +175,10 @@ describe('historical expense assumptions', () => {
     ).toBe(off);
     const changed = applied(changeProjectionHistoryMonths(off, 12));
     expect(
-      getHistoricalExpenseRows(changed.draft.fundingSources[0], 12).find(
-        (row) => row.expenditureCategory === TRAVEL
-      )
+      getHistoricalExpenseRows(
+        changed.draft.content.fundingSources[0],
+        12
+      ).find((row) => row.expenditureCategory === TRAVEL)
     ).toMatchObject({
       baselineAmount: -120,
       effectiveAmount: 0,
@@ -180,9 +186,10 @@ describe('historical expense assumptions', () => {
     });
     const restored = applied(restoreHistoricalExpense(changed, 1, TRAVEL));
     expect(
-      getHistoricalExpenseRows(restored.draft.fundingSources[0], 12).find(
-        (row) => row.expenditureCategory === TRAVEL
-      )?.effectiveAmount
+      getHistoricalExpenseRows(
+        restored.draft.content.fundingSources[0],
+        12
+      ).find((row) => row.expenditureCategory === TRAVEL)?.effectiveAmount
     ).toBe(-120);
     expect(applied(restoreHistoricalExpense(restored, 1, TRAVEL))).toBe(
       restored
@@ -199,22 +206,24 @@ describe('explicit expense operations', () => {
         description: '  Research supplies  ',
       })
     );
-    expect(added.draft.fundingSources[0].expenses).toEqual([
+    expect(added.draft.content.fundingSources[0].expenses).toEqual([
       { ...inputs, id: 1 },
     ]);
-    expect(original.draft.fundingSources[0].expenses).toEqual([]);
-    expect(added.draft.fundingSources[1]).toBe(
-      original.draft.fundingSources[1]
+    expect(original.draft.content.fundingSources[0].expenses).toEqual([]);
+    expect(added.draft.content.fundingSources[1]).toBe(
+      original.draft.content.fundingSources[1]
     );
-    expect(added.draft.appointments).toBe(original.draft.appointments);
+    expect(added.draft.content.appointments).toBe(
+      original.draft.content.appointments
+    );
     for (const key of [
       'actuals',
       'budgets',
       'runRates',
       'historicalExpenseOverrides',
     ] as const) {
-      expect(added.draft.fundingSources[0][key]).toBe(
-        original.draft.fundingSources[0][key]
+      expect(added.draft.content.fundingSources[0][key]).toBe(
+        original.draft.content.fundingSources[0][key]
       );
     }
     expect(applied(editProjectionExpense(added, 1, 1, inputs))).toBe(added);
@@ -225,7 +234,7 @@ describe('explicit expense operations', () => {
         kind: 'OneTime',
       })
     );
-    expect(edited.draft.fundingSources[0].expenses[0]).toMatchObject({
+    expect(edited.draft.content.fundingSources[0].expenses[0]).toMatchObject({
       amount: -50,
       id: 1,
       kind: 'OneTime',
@@ -234,14 +243,14 @@ describe('explicit expense operations', () => {
     expect(isProjectionDirty(removed)).toBe(false);
     expect(removed.revision).toBe(3);
     expect(
-      applied(addProjectionExpense(removed, 1, inputs)).draft.fundingSources[0]
-        .expenses[0].id
+      applied(addProjectionExpense(removed, 1, inputs)).draft.content
+        .fundingSources[0].expenses[0].id
     ).toBe(1);
   });
 
   it('allocates IDs from only the current source and permits zero and out-of-forecast dates', () => {
     const original = session();
-    original.draft.fundingSources[0].expenses = [{ ...inputs, id: 8 }];
+    original.draft.content.fundingSources[0].expenses = [{ ...inputs, id: 8 }];
     const changed = applied(
       addProjectionExpense(original, 2, {
         ...inputs,
@@ -249,12 +258,13 @@ describe('explicit expense operations', () => {
         startMonth: '2050-01-01',
       })
     );
-    expect(changed.draft.fundingSources[1].expenses[0].id).toBe(1);
+    expect(changed.draft.content.fundingSources[1].expenses[0].id).toBe(1);
     expect(validateProjectionExpenses(changed.draft)).toBeNull();
     expect(
       computeExpenseForecast(
-        changed.draft.fundingSources[1],
-        changed.draft.fundingSources[1].expenses[0]
+        changed.draft.content.fundingSources[1],
+        changed.draft.content.fundingSources[1].expenses[0],
+        getProjectionForecastWindow(changed.draft)
       ).hasEligibleDates
     ).toBe(false);
   });
@@ -291,29 +301,29 @@ describe('explicit expense operations', () => {
 
   it('validates each source identity and override category independently', () => {
     const original = session();
-    original.draft.fundingSources[0].expenses = [
+    original.draft.content.fundingSources[0].expenses = [
       { ...inputs, id: 1 },
       { ...inputs, id: 1 },
     ];
     expect(validateProjectionExpenses(original.draft)).toContain(
       'unique positive ID'
     );
-    original.draft.fundingSources[0].expenses = [
+    original.draft.content.fundingSources[0].expenses = [
       { ...inputs, id: 2_147_483_647 },
     ];
     expect(addProjectionExpense(original, 1, inputs).ok).toBe(false);
-    original.draft.fundingSources[0].expenses = [];
+    original.draft.content.fundingSources[0].expenses = [];
     for (const expenditureCategory of [
       '01 - Salaries',
       '02 - Fringe',
       '04 - Equipment',
     ]) {
-      original.draft.fundingSources[0].historicalExpenseOverrides = [
+      original.draft.content.fundingSources[0].historicalExpenseOverrides = [
         { amount: 0, expenditureCategory },
       ];
       expect(validateProjectionExpenses(original.draft)).not.toBeNull();
     }
-    original.draft.fundingSources[0].historicalExpenseOverrides = [
+    original.draft.content.fundingSources[0].historicalExpenseOverrides = [
       { amount: 0, expenditureCategory: SUPPLIES },
       { amount: 10, expenditureCategory: ` ${SUPPLIES} ` },
     ];
@@ -332,10 +342,16 @@ describe('explicit expense operations', () => {
 });
 
 describe('shared expense impact calculations', () => {
-  it('uses each source capture, planned start, and the existing inclusive open-end horizon', () => {
-    const source = session().draft.fundingSources[0];
-    expect(getSourceForecastWindow(source)).toEqual({
+  it('uses each source capture and planned start within the fixed plan horizon', () => {
+    const source = session().draft.content.fundingSources[0];
+    expect(
+      getSourceForecastWindow(
+        source,
+        getProjectionForecastWindow(session().draft)
+      )
+    ).toEqual({
       endMonth: '2026-06',
+      isBeyondForecast: false,
       startMonth: '2026-01',
     });
     const planned = {
@@ -344,35 +360,59 @@ describe('shared expense impact calculations', () => {
       sourceKind: 'Planned' as const,
       startDate: '2026-07-15',
     };
-    expect(getSourceForecastWindow(planned)).toEqual({
-      endMonth: '2027-07',
+    expect(
+      getSourceForecastWindow(
+        planned,
+        getProjectionForecastWindow(session().draft)
+      )
+    ).toEqual({
+      endMonth: '2026-12',
+      isBeyondForecast: false,
       startMonth: '2026-07',
     });
-    const forecast = computeExpenseForecast(planned, {
-      ...inputs,
-      amount: 310,
-    });
-    expect(forecast.months).toHaveLength(13);
+    const forecast = computeExpenseForecast(
+      planned,
+      {
+        ...inputs,
+        amount: 310,
+      },
+      getProjectionForecastWindow(session().draft)
+    );
+    expect(forecast.months).toHaveLength(6);
     expect(forecast.months[0]).toEqual({ amount: 170, month: '2026-07' });
   });
 
   it('reports eligible dates at zero, preserves one-time capture-month behavior, and distinguishes no dates', () => {
-    const source = session().draft.fundingSources[0];
+    const source = session().draft.content.fundingSources[0];
     expect(
-      computeExpenseForecast(source, { ...inputs, amount: 0 })
+      computeExpenseForecast(
+        source,
+        { ...inputs, amount: 0 },
+        getProjectionForecastWindow(session().draft)
+      )
     ).toMatchObject({ hasEligibleDates: true, total: 0 });
     const ended = { ...source, endDate: '2026-01-10' };
-    expect(computeExpenseForecast(ended, { ...inputs, amount: 310 })).toEqual({
+    expect(
+      computeExpenseForecast(
+        ended,
+        { ...inputs, amount: 310 },
+        getProjectionForecastWindow(session().draft)
+      )
+    ).toEqual({
       hasEligibleDates: false,
       months: [],
       total: 0,
     });
     expect(
-      computeExpenseForecast(ended, {
-        ...inputs,
-        amount: -310,
-        kind: 'OneTime',
-      })
+      computeExpenseForecast(
+        ended,
+        {
+          ...inputs,
+          amount: -310,
+          kind: 'OneTime',
+        },
+        getProjectionForecastWindow(session().draft)
+      )
     ).toEqual({
       hasEligibleDates: true,
       months: [{ amount: -310, month: '2026-01' }],
@@ -394,18 +434,25 @@ describe('shared expense impact calculations', () => {
         startMonth: '2026-03-01',
       })
     );
-    const source = current.draft.fundingSources[0];
+    const source = current.draft.content.fundingSources[0];
     const entries = [
       ...source.expenses,
-      ...getHistoricalExpenseRows(source, current.draft.historyMonths).map(
-        (row) => ({
-          amount: row.effectiveAmount,
-          endMonth: null,
-          kind: 'Monthly' as const,
-          startMonth: null,
-        })
-      ),
-    ].map((entry) => computeExpenseForecast(source, entry));
+      ...getHistoricalExpenseRows(
+        source,
+        current.draft.content.historyMonths
+      ).map((row) => ({
+        amount: row.effectiveAmount,
+        endMonth: null,
+        kind: 'Monthly' as const,
+        startMonth: null,
+      })),
+    ].map((entry) =>
+      computeExpenseForecast(
+        source,
+        entry,
+        getProjectionForecastWindow(current.draft)
+      )
+    );
     const rows = computePiProjection(current.draft).rows.filter(
       (row) => row.fundingSourceId === 1
     );
@@ -417,6 +464,8 @@ describe('shared expense impact calculations', () => {
         (row) => row.expenditureCategory === SUPPLIES && row.month === '2026-01'
       )?.projectedAmount
     ).toBe(-120);
-    expect(source.actuals).toEqual(session().draft.fundingSources[0].actuals);
+    expect(source.actuals).toEqual(
+      session().draft.content.fundingSources[0].actuals
+    );
   });
 });

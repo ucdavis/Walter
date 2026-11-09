@@ -34,7 +34,7 @@ function taskFixture(): Projection {
     taskNumber: string,
     name: string
   ): ProjectionFundingSource => ({
-    ...structuredClone(plan.fundingSources[0]),
+    ...structuredClone(plan.content.fundingSources[0]),
     capturedAt: plan.seededAt,
     capturedEndDate: '2026-06-30',
     capturedStartDate: '2026-01-01',
@@ -46,12 +46,12 @@ function taskFixture(): Projection {
     taskName: name,
     taskNumber,
   });
-  plan.fundingSources = [
+  plan.content.fundingSources = [
     task(1, 'PA', 'T1', 'Task One'),
     task(2, 'PA', 'T2', 'Task Two'),
     task(3, 'PB', 'T1', 'Other Project Task'),
   ];
-  plan.fundingSources[1].expenses = [
+  plan.content.fundingSources[1].expenses = [
     {
       amount: 5000,
       description: 'Planned travel',
@@ -62,8 +62,8 @@ function taskFixture(): Projection {
       startMonth: '2026-05-01',
     },
   ];
-  const alex = plan.appointments[0];
-  plan.appointments = [
+  const alex = plan.content.appointments[0];
+  plan.content.appointments = [
     alex,
     {
       ...structuredClone(alex),
@@ -93,7 +93,7 @@ function setup(plan = taskFixture()) {
   const imports: {
     sources: { projectNumber: string; taskNumber: string | null }[];
   }[] = [];
-  const fresh = structuredClone(plan.fundingSources[1]);
+  const fresh = structuredClone(plan.content.fundingSources[1]);
   fresh.capturedAt = '2026-03-15T12:00:00.7654321Z';
   fresh.budgets[0].budget = 50_000;
   fresh.expenses = [];
@@ -119,9 +119,7 @@ function setup(plan = taskFixture()) {
     http.get(portfolioApi + '/seed', () =>
       HttpResponse.json({
         draft: {
-          appointments: plan.appointments,
-          fundingSources: plan.fundingSources,
-          historyMonths: plan.historyMonths,
+          content: plan.content,
           name: plan.name,
           seededAt: plan.seededAt,
         },
@@ -144,9 +142,7 @@ function setup(plan = taskFixture()) {
       saves.push(body);
       saved = {
         ...saved,
-        appointments: body.appointments,
-        fundingSources: body.fundingSources,
-        historyMonths: body.historyMonths,
+        content: body.content,
         name: body.name,
         updatedAt: '2026-04-01T12:00:00.0000001Z',
       };
@@ -154,7 +150,7 @@ function setup(plan = taskFixture()) {
     }),
     http.get(portfolioApi + '/sources', () =>
       HttpResponse.json(
-        plan.fundingSources.map(
+        plan.content.fundingSources.map(
           ({ projectName, projectNumber, taskName, taskNumber }) => ({
             projectName,
             projectNumber,
@@ -270,28 +266,35 @@ describe('funding source lifecycle', () => {
         screen.getByRole('button', { name: 'Create plan & open workspace' })
       );
       await waitFor(() => expect(api.creates).toHaveLength(1));
-      expect(api.creates[0].draft.fundingSources).toEqual([
-        api.plan.fundingSources[0],
+      expect(api.creates[0].draft.content.fundingSources).toEqual([
+        api.plan.content.fundingSources[0],
       ]);
-      expect(api.creates[0].draft.appointments.map(({ name }) => name)).toEqual(
-        ['Alex Example', 'Blair Example']
+      expect(
+        api.creates[0].draft.content.appointments.map(({ name }) => name)
+      ).toEqual(['Alex Example', 'Blair Example']);
+      expect(api.creates[0].draft.content.appointments[0].allocations).toEqual([
+        api.plan.content.appointments[0].allocations[0],
+      ]);
+      expect(api.creates[0].draft.content.appointments[1].allocations).toEqual(
+        []
       );
-      expect(api.creates[0].draft.appointments[0].allocations).toEqual([
-        api.plan.appointments[0].allocations[0],
-      ]);
-      expect(api.creates[0].draft.appointments[1].allocations).toEqual([]);
       expect(Object.keys(api.creates[0]).sort()).toEqual([
         'creationKey',
         'draft',
       ]);
       expect(Object.keys(api.creates[0].draft).sort()).toEqual([
-        'appointments',
-        'fundingSources',
-        'historyMonths',
+        'content',
         'name',
         'seededAt',
       ]);
-      for (const appointment of api.creates[0].draft.appointments) {
+      expect(Object.keys(api.creates[0].draft.content).sort()).toEqual([
+        'appointments',
+        'forecastMonths',
+        'fundingSources',
+        'historyMonths',
+        'notes',
+      ]);
+      for (const appointment of api.creates[0].draft.content.appointments) {
         expect(appointment).not.toHaveProperty('sourceProjectNumbers');
         expect(appointment).not.toHaveProperty('projectNumbers');
       }
@@ -339,7 +342,7 @@ describe('funding source lifecycle', () => {
         screen.getByRole('button', { name: 'Create plan & open workspace' })
       );
       await waitFor(() => expect(api.creates).toHaveLength(1));
-      expect(api.creates[0].draft.fundingSources[0]).toMatchObject({
+      expect(api.creates[0].draft.content.fundingSources[0]).toMatchObject({
         name: 'Field research',
         projectName: 'Project A',
         projectNumber: 'PA',
@@ -375,10 +378,12 @@ describe('funding source lifecycle', () => {
       await waitFor(() => expect(api.saves).toHaveLength(1));
       expect(api.saves[0].expectedSeededAt).toBe(api.plan.seededAt);
       expect(api.saves[0].expectedUpdatedAt).toBe(api.plan.updatedAt);
-      expect(api.saves[0].appointments).toEqual(api.plan.appointments);
-      expect(api.saves[0].fundingSources[0]).toMatchObject({
+      expect(api.saves[0].content.appointments).toEqual(
+        api.plan.content.appointments
+      );
+      expect(api.saves[0].content.fundingSources[0]).toMatchObject({
         balanceAdjustment: 30_000,
-        budgets: api.plan.fundingSources[0].budgets,
+        budgets: api.plan.content.fundingSources[0].budgets,
         capturedAt: api.plan.seededAt,
         capturedEndDate: '2026-06-30',
         endDate: '2026-09-30',
@@ -403,12 +408,14 @@ describe('funding source lifecycle', () => {
       );
       await user.click(screen.getByRole('button', { name: 'Save plan' }));
       await waitFor(() => expect(api.saves).toHaveLength(1));
-      expect(api.saves[0].fundingSources.map(({ id }) => id)).toEqual([1, 3]);
-      expect(api.saves[0].appointments).toHaveLength(3);
-      expect(api.saves[0].appointments[0].allocations).toEqual([
-        api.plan.appointments[0].allocations[0],
+      expect(api.saves[0].content.fundingSources.map(({ id }) => id)).toEqual([
+        1, 3,
       ]);
-      expect(api.saves[0].appointments[1].allocations).toEqual([]);
+      expect(api.saves[0].content.appointments).toHaveLength(3);
+      expect(api.saves[0].content.appointments[0].allocations).toEqual([
+        api.plan.content.appointments[0].allocations[0],
+      ]);
+      expect(api.saves[0].content.appointments[1].allocations).toEqual([]);
 
       await user.click(
         screen.getByRole('button', { name: 'Add funding source' })
@@ -429,20 +436,22 @@ describe('funding source lifecycle', () => {
           sources: [{ projectNumber: 'PA', taskNumber: 'T2' }],
         },
       ]);
-      expect(api.saves[1].appointments).toEqual(api.saves[0].appointments);
-      const readded = api.saves[1].fundingSources.find(
+      expect(api.saves[1].content.appointments).toEqual(
+        api.saves[0].content.appointments
+      );
+      const readded = api.saves[1].content.fundingSources.find(
         ({ taskNumber }) => taskNumber === 'T2'
       )!;
-      expect(api.saves[0].fundingSources.map(({ id }) => id)).not.toContain(
-        readded.id
-      );
+      expect(
+        api.saves[0].content.fundingSources.map(({ id }) => id)
+      ).not.toContain(readded.id);
       expect(readded).toMatchObject({
         budgets: api.fresh.budgets,
         capturedAt: api.fresh.capturedAt,
         expenses: [],
       });
-      expect(api.saves[1].fundingSources[0]).toEqual(
-        api.plan.fundingSources[0]
+      expect(api.saves[1].content.fundingSources[0]).toEqual(
+        api.plan.content.fundingSources[0]
       );
     } finally {
       route.cleanup();

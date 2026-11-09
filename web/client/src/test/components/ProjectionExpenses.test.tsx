@@ -37,7 +37,7 @@ afterEach(() => {
 });
 function expensePlan() {
   const plan = createSalaryExample();
-  plan.fundingSources[0].runRates = [
+  plan.content.fundingSources[0].runRates = [
     {
       expenditureCategory: supplies,
       historyMonths: 3,
@@ -115,9 +115,9 @@ describe('other expenses planning controls', () => {
     expect(screen.getByLabelText('Monthly amount')).toHaveValue('310.12');
     await user.click(screen.getByRole('button', { name: 'Apply amount' }));
     expect(read().revision).toBe(0);
-    expect(read().draft.fundingSources[0].historicalExpenseOverrides).toEqual(
-      []
-    );
+    expect(
+      read().draft.content.fundingSources[0].historicalExpenseOverrides
+    ).toEqual([]);
     await user.click(
       screen.getByRole('button', { name: 'Change history window' })
     );
@@ -126,15 +126,19 @@ describe('other expenses planning controls', () => {
       hasChanges: true,
       kind: 'history',
     });
-    expect(read().draft.historyMonths).toBe(3);
+    expect(read().draft.content.historyMonths).toBe(3);
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
-    expect(read().draft.historyMonths).toBe(3);
+    expect(read().draft.content.historyMonths).toBe(3);
     await changeWindow(user, '6');
-    expect(read().draft.historyMonths).toBe(6);
+    expect(read().draft.content.historyMonths).toBe(6);
     expect(screen.getByText('6-month average: $600.00')).toBeInTheDocument();
     expect(screen.getByText('6-month average: $200.00')).toBeInTheDocument();
-    expect(read().draft.fundingSources).toEqual(plan.fundingSources);
-    expect(read().draft.appointments).toEqual(plan.appointments);
+    expect(read().draft.content.fundingSources).toEqual(
+      plan.content.fundingSources
+    );
+    expect(read().draft.content.appointments).toEqual(
+      plan.content.appointments
+    );
   });
 
   it('retains signed custom amounts through history changes and restores the selected window amount', async () => {
@@ -153,17 +157,17 @@ describe('other expenses planning controls', () => {
     });
     await user.click(screen.getByRole('button', { name: 'Apply amount' }));
     await changeWindow(user, '6');
-    expect(read().draft.fundingSources[0].historicalExpenseOverrides).toEqual([
-      { amount: -20, expenditureCategory: supplies },
-    ]);
+    expect(
+      read().draft.content.fundingSources[0].historicalExpenseOverrides
+    ).toEqual([{ amount: -20, expenditureCategory: supplies }]);
     await user.click(
       screen.getByRole('button', {
         name: `Use historical amount for ${supplies}`,
       })
     );
-    expect(read().draft.fundingSources[0].historicalExpenseOverrides).toEqual(
-      []
-    );
+    expect(
+      read().draft.content.fundingSources[0].historicalExpenseOverrides
+    ).toEqual([]);
     const row = screen.getByText('6-month average: $600.00').closest('tr')!;
     expect(within(row).getByText('$600.00')).toBeInTheDocument();
     expect(
@@ -185,9 +189,9 @@ describe('other expenses planning controls', () => {
     ).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Turn off estimate' }));
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
-    expect(read().draft.fundingSources[0].historicalExpenseOverrides).toEqual(
-      []
-    );
+    expect(
+      read().draft.content.fundingSources[0].historicalExpenseOverrides
+    ).toEqual([]);
     await user.click(
       screen.getByRole('button', {
         name: `Edit historical amount for ${travel}`,
@@ -196,23 +200,23 @@ describe('other expenses planning controls', () => {
     await user.click(screen.getByRole('button', { name: 'Turn off estimate' }));
     await user.click(screen.getByRole('button', { name: 'Apply amount' }));
     await changeWindow(user, '6');
-    expect(read().draft.fundingSources[0].historicalExpenseOverrides).toEqual([
-      { amount: 0, expenditureCategory: travel },
-    ]);
+    expect(
+      read().draft.content.fundingSources[0].historicalExpenseOverrides
+    ).toEqual([{ amount: 0, expenditureCategory: travel }]);
     expect(screen.getByText('Custom · Off')).toBeInTheDocument();
     await user.click(
       screen.getByRole('button', {
         name: `Use historical amount for ${travel}`,
       })
     );
-    expect(read().draft.fundingSources[0].historicalExpenseOverrides).toEqual(
-      []
-    );
+    expect(
+      read().draft.content.fundingSources[0].historicalExpenseOverrides
+    ).toEqual([]);
   });
 
   it('turns a sub-cent custom amount off even when its rounded input already says zero', async () => {
     const plan = expensePlan();
-    plan.fundingSources[0].historicalExpenseOverrides = [
+    plan.content.fundingSources[0].historicalExpenseOverrides = [
       { amount: 0.004, expenditureCategory: supplies },
     ];
     const { user } = preview(plan);
@@ -224,7 +228,8 @@ describe('other expenses planning controls', () => {
     expect(screen.getByLabelText('Monthly amount')).toHaveValue('0.00');
     await user.click(screen.getByRole('button', { name: 'Apply amount' }));
     expect(
-      read().draft.fundingSources[0].historicalExpenseOverrides[0].amount
+      read().draft.content.fundingSources[0].historicalExpenseOverrides[0]
+        .amount
     ).toBe(0.004);
     await user.click(
       screen.getByRole('button', {
@@ -234,14 +239,15 @@ describe('other expenses planning controls', () => {
     await user.click(screen.getByRole('button', { name: 'Turn off estimate' }));
     await user.click(screen.getByRole('button', { name: 'Apply amount' }));
     expect(
-      read().draft.fundingSources[0].historicalExpenseOverrides[0].amount
+      read().draft.content.fundingSources[0].historicalExpenseOverrides[0]
+        .amount
     ).toBe(0);
   });
 
   it('requires blank name/category/amount, defaults dates, shows prorated forecast total, and saves manual expenses separately from captured costs', async () => {
     const plan = expensePlan();
-    plan.fundingSources[0].capturedAt = '2026-01-16T00:00:00Z';
-    plan.fundingSources[0].endDate = '2026-01-31';
+    plan.content.fundingSources[0].capturedAt = '2026-01-16T00:00:00Z';
+    plan.content.fundingSources[0].endDate = '2026-01-31';
     const { user } = preview(plan);
     await user.click(
       await screen.findByRole('button', { name: 'Add expense' })
@@ -273,7 +279,7 @@ describe('other expenses planning controls', () => {
       kind: 'expense',
     });
     await user.click(screen.getByRole('button', { name: 'Apply expense' }));
-    expect(read().draft.fundingSources[0].expenses).toEqual([
+    expect(read().draft.content.fundingSources[0].expenses).toEqual([
       {
         amount: 310,
         description: 'Supplies order',
@@ -284,24 +290,24 @@ describe('other expenses planning controls', () => {
         startMonth: '2026-01-01',
       },
     ]);
-    expect(read().draft.fundingSources[0].actuals).toEqual(
-      plan.fundingSources[0].actuals
+    expect(read().draft.content.fundingSources[0].actuals).toEqual(
+      plan.content.fundingSources[0].actuals
     );
-    expect(read().draft.fundingSources[0].runRates).toEqual(
-      plan.fundingSources[0].runRates
+    expect(read().draft.content.fundingSources[0].runRates).toEqual(
+      plan.content.fundingSources[0].runRates
     );
     const added = screen.getByRole('region', { name: 'Added expenses' });
     expect(within(added).getByText('$150.00')).toBeInTheDocument();
     expect(
-      window.walterProjectionPreview!.server.read().stored!.fundingSources[0]
-        .expenses
+      window.walterProjectionPreview!.server.read().stored!.content
+        .fundingSources[0].expenses
     ).toEqual([]);
     await user.click(screen.getByRole('button', { name: 'Save plan' }));
     await screen.findByRole('button', { name: '✓ Saved' });
     expect(
-      window.walterProjectionPreview!.server.read().stored!.fundingSources[0]
-        .expenses
-    ).toEqual(read().draft.fundingSources[0].expenses);
+      window.walterProjectionPreview!.server.read().stored!.content
+        .fundingSources[0].expenses
+    ).toEqual(read().draft.content.fundingSources[0].expenses);
   });
 
   it('allows a signed one-time credit without end fields and removes it without a second confirmation', async () => {
@@ -313,7 +319,7 @@ describe('other expenses planning controls', () => {
     expect(screen.getByLabelText('Expense month')).toHaveValue('2026-01');
     expect(screen.getByText('Forecast total: -$500.00')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Apply expense' }));
-    expect(read().draft.fundingSources[0].expenses[0]).toMatchObject({
+    expect(read().draft.content.fundingSources[0].expenses[0]).toMatchObject({
       amount: -500,
       endMonth: null,
       kind: 'OneTime',
@@ -322,7 +328,7 @@ describe('other expenses planning controls', () => {
       screen.getByRole('button', { name: 'Remove expense Refund' })
     );
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(read().draft.fundingSources[0].expenses).toEqual([]);
+    expect(read().draft.content.fundingSources[0].expenses).toEqual([]);
   });
 
   it('allows dates outside the forecast with an explanation and never calls a zero amount a date problem', async () => {
@@ -353,8 +359,8 @@ describe('other expenses planning controls', () => {
 
   it('shows a resolved open forecast end and preserves explicit end dates and precise amounts on unchanged edits', async () => {
     const plan = expensePlan();
-    plan.fundingSources[0].endDate = null;
-    plan.fundingSources[0].expenses = [
+    plan.content.fundingSources[0].endDate = null;
+    plan.content.fundingSources[0].expenses = [
       {
         amount: 123.456_789,
         description: 'Fixed estimate',
@@ -373,13 +379,13 @@ describe('other expenses planning controls', () => {
     expect(screen.getByLabelText('End condition')).toHaveValue('fixed');
     expect(screen.getByLabelText('End month')).toHaveValue('2026-05');
     await user.click(screen.getByRole('button', { name: 'Apply expense' }));
-    expect(read().draft.fundingSources[0].expenses).toEqual(
-      plan.fundingSources[0].expenses
+    expect(read().draft.content.fundingSources[0].expenses).toEqual(
+      plan.content.fundingSources[0].expenses
     );
     expect(read().revision).toBe(0);
     await user.click(screen.getByRole('button', { name: 'Add expense' }));
     expect(
-      screen.getByText(/Through forecast end: Jan 2027/)
+      screen.getByText(/Through forecast end: Dec 2026/)
     ).toBeInTheDocument();
     expect(screen.getByLabelText('End condition')).toHaveValue('source');
   });
@@ -409,7 +415,7 @@ describe('other expenses planning controls', () => {
     );
     expect(screen.getByLabelText('Funding source')).toHaveValue('1');
     expect(
-      read().draft.fundingSources.every(
+      read().draft.content.fundingSources.every(
         (source) => source.expenses.length === 0
       )
     ).toBe(true);

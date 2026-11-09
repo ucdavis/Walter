@@ -54,7 +54,7 @@ async function enter(
 describe('appointment planning controls', () => {
   it('keeps captured precision on unchanged Apply and preserves allocations and actuals while editing FTE, rates, fees, and dates', async () => {
     const plan = createSalaryExample();
-    Object.assign(plan.appointments[0], {
+    Object.assign(plan.content.appointments[0], {
       cbrRate: 0.123_456_789,
       colaRate: 0.031_234_567,
       feeRemissionMonthly: 123.456_789,
@@ -68,7 +68,9 @@ describe('appointment planning controls', () => {
     await waitFor(() =>
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     );
-    expect(read().draft.appointments).toEqual(plan.appointments);
+    expect(read().draft.content.appointments).toEqual(
+      plan.content.appointments
+    );
     expect(read().revision).toBe(0);
     await user.click(
       screen.getByRole('button', { name: 'Edit appointment for Alex Example' })
@@ -86,7 +88,9 @@ describe('appointment planning controls', () => {
     });
     expect(read().pendingEditor?.hasChanges).toBe(true);
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
-    expect(read().draft.appointments).toEqual(plan.appointments);
+    expect(read().draft.content.appointments).toEqual(
+      plan.content.appointments
+    );
     await user.click(
       screen.getByRole('button', { name: 'Edit appointment for Alex Example' })
     );
@@ -105,7 +109,7 @@ describe('appointment planning controls', () => {
     await waitFor(() =>
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     );
-    expect(read().draft.appointments[0]).toMatchObject({
+    expect(read().draft.content.appointments[0]).toMatchObject({
       cbrRate: 0.25,
       colaMonth: 10,
       colaRate: -0.03,
@@ -116,10 +120,12 @@ describe('appointment planning controls', () => {
       startDate: '2026-02-15',
       vacationAccrualRate: 0.041_234_5,
     });
-    expect(read().draft.appointments[0].allocations).toEqual(
-      plan.appointments[0].allocations
+    expect(read().draft.content.appointments[0].allocations).toEqual(
+      plan.content.appointments[0].allocations
     );
-    expect(read().draft.fundingSources).toEqual(plan.fundingSources);
+    expect(read().draft.content.fundingSources).toEqual(
+      plan.content.fundingSources
+    );
     expect(
       screen.getAllByText(/50% of appointment · 0% full-time FTE/)
     ).toHaveLength(2);
@@ -127,7 +133,7 @@ describe('appointment planning controls', () => {
 
   it('keeps an imported zero CBR until an explicit lookup or manual change and never changes vacation accrual', async () => {
     const plan = createSalaryExample();
-    Object.assign(plan.appointments[0], {
+    Object.assign(plan.content.appointments[0], {
       cbrRate: 0,
       jobCode: 'EXAMPLE',
       vacationAccrualRate: 0.0123,
@@ -139,16 +145,20 @@ describe('appointment planning controls', () => {
     expect(screen.getByLabelText('CBR (%)')).toHaveValue('30');
     await enter(user, 'CBR (%)', '17.5');
     await user.click(screen.getByRole('button', { name: 'Apply' }));
-    expect(read().draft.appointments[0].cbrRate).toBe(0.175);
-    expect(read().draft.appointments[0].vacationAccrualRate).toBe(0.0123);
+    expect(read().draft.content.appointments[0].cbrRate).toBe(0.175);
+    expect(read().draft.content.appointments[0].vacationAccrualRate).toBe(
+      0.0123
+    );
     await user.click(
       screen.getByRole('button', { name: 'Edit appointment for Alex Example' })
     );
     expect(screen.getByLabelText('CBR (%)')).toHaveValue('17.5');
     await user.click(screen.getByRole('button', { name: 'Use lookup rate' }));
     await user.click(screen.getByRole('button', { name: 'Apply' }));
-    expect(read().draft.appointments[0].cbrRate).toBe(0.3);
-    expect(read().draft.appointments[0].vacationAccrualRate).toBe(0.0123);
+    expect(read().draft.content.appointments[0].cbrRate).toBe(0.3);
+    expect(read().draft.content.appointments[0].vacationAccrualRate).toBe(
+      0.0123
+    );
   });
 
   it('adds a future unallocated hire from server defaults and confirms removal without changing recorded finances', async () => {
@@ -174,7 +184,7 @@ describe('appointment planning controls', () => {
     expect(screen.getByLabelText('CBR (%)')).toHaveValue('20');
     await user.click(screen.getByRole('button', { name: 'Apply' }));
     await screen.findByText('No funding assigned.');
-    expect(read().draft.appointments[1]).toMatchObject({
+    expect(read().draft.content.appointments[1]).toMatchObject({
       allocations: [],
       cbrRate: 0.2,
       colaMonth: 7,
@@ -197,20 +207,24 @@ describe('appointment planning controls', () => {
     await user.click(
       within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancel' })
     );
-    expect(read().draft.appointments).toHaveLength(2);
+    expect(read().draft.content.appointments).toHaveLength(2);
     await user.click(
       screen.getByRole('button', { name: 'Remove appointment for Future hire' })
     );
     await user.click(
       within(screen.getByRole('dialog')).getByRole('button', { name: 'Remove' })
     );
-    expect(read().draft.appointments).toEqual(plan.appointments);
-    expect(read().draft.fundingSources).toEqual(plan.fundingSources);
+    expect(read().draft.content.appointments).toEqual(
+      plan.content.appointments
+    );
+    expect(read().draft.content.fundingSources).toEqual(
+      plan.content.fundingSources
+    );
   });
 
   it('blocks saving an incomplete retained salary until it is supplied or the appointment is removed', async () => {
     const plan = createSalaryExample();
-    plan.appointments[0].monthlySalary = null;
+    plan.content.appointments[0].monthlySalary = null;
     const user = preview(plan, false);
     await screen.findByText('Salary needs input');
     expect(screen.getByRole('button', { name: 'Save plan' })).toBeDisabled();
@@ -231,9 +245,11 @@ describe('appointment planning controls', () => {
     await user.click(screen.getByRole('button', { name: 'Save plan' }));
     await screen.findByRole('button', { name: '✓ Saved' });
     expect(
-      window.walterProjectionPreview!.server.read().stored!.appointments
+      window.walterProjectionPreview!.server.read().stored!.content.appointments
     ).toEqual([]);
-    expect(read().draft.fundingSources).toEqual(plan.fundingSources);
+    expect(read().draft.content.fundingSources).toEqual(
+      plan.content.fundingSources
+    );
   });
 
   it('waits for new-hire defaults, exposes failure, and uses the returned values after retry', async () => {
@@ -286,7 +302,7 @@ describe('appointment planning controls', () => {
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
-    const appointment = createSalaryExample().appointments[0];
+    const appointment = createSalaryExample().content.appointments[0];
     const ref = createRef<AppointmentEditorHandle>();
     const apply = vi.fn(() => ({ ok: true as const }));
     const user = userEvent.setup();

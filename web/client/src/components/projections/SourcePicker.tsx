@@ -58,7 +58,7 @@ export function SourcePicker<T extends ProjectionDraft>({
     }),
   }));
   const choices = (catalog.data ?? []).map((source) => ({
-    disabled: session.draft.fundingSources.some((existing) =>
+    disabled: session.draft.content.fundingSources.some((existing) =>
       sourcesOverlap(existing, source)
     ),
     key: JSON.stringify([source.projectNumber, source.taskNumber]),

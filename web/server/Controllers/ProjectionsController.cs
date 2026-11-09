@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -31,8 +32,8 @@ public sealed class ProjectionsController(
     public sealed record ProjectionSummary(int Id, string Name, DateTime SeededAt, string? UpdatedBy, DateTime UpdatedAt);
     public sealed record CreateProjectionRequest(ProjectionDraft? Draft, Guid CreationKey);
     public sealed record DuplicateProjectionRequest(string Name, Guid CreationKey);
-    public sealed record SaveProjectionRequest(string Name, int HistoryMonths, List<ProjectionFundingSource> FundingSources,
-        List<ProjectionAppointment> Appointments, DateTime? ExpectedUpdatedAt = null, DateTime? ExpectedSeededAt = null, bool Overwrite = false);
+    public sealed record SaveProjectionRequest(string Name, [property: JsonRequired] ProjectionContent Content,
+        DateTime? ExpectedUpdatedAt = null, DateTime? ExpectedSeededAt = null, bool Overwrite = false);
     public sealed record HistoryMonthsRequest(int HistoryMonths, DateTime? ExpectedUpdatedAt = null);
     public sealed record ProjectionConflict(string Code, string Message);
     public sealed record ProjectionLookups(IReadOnlyList<JobCodeRecord> JobCodes, IReadOnlyList<string> ExpenditureCategories,
@@ -115,7 +116,6 @@ public sealed class ProjectionsController(
         {
             PiEmployeeId = piEmployeeId!,
             Name = request.Draft.Name,
-            HistoryMonths = request.Draft.HistoryMonths,
             CreationKey = request.CreationKey,
         };
         CopySnapshot(projection, request.Draft);
@@ -134,14 +134,13 @@ public sealed class ProjectionsController(
         var existing = await FindCreationAsync(source!.PiEmployeeId, request.CreationKey, ct);
         if (existing is not null) return Ok(existing);
 
-        var snapshot = new ProjectionDraft(request.Name, source.HistoryMonths, source.SeededAt, source.FundingSources, source.Appointments);
+        var snapshot = new ProjectionDraft(request.Name, source.SeededAt, source.Content);
         if (!ValidDraft(snapshot)) return BadRequest("The stored plan has incomplete or invalid inputs and cannot be duplicated.");
 
         var projection = new Projection
         {
             PiEmployeeId = source.PiEmployeeId,
             Name = request.Name,
-            HistoryMonths = source.HistoryMonths,
             CreationKey = request.CreationKey,
         };
         CopySnapshot(projection, snapshot);
@@ -163,13 +162,12 @@ public sealed class ProjectionsController(
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Save(int id, SaveProjectionRequest request, CancellationToken ct)
     {
-        if (!Windows.Contains(request.HistoryMonths)) return BadRequest("HistoryMonths must be 3, 6, or 12.");
         if (!ValidToken(request.ExpectedUpdatedAt) || !ValidToken(request.ExpectedSeededAt))
             return BadRequest("ExpectedUpdatedAt and ExpectedSeededAt must be exact UTC timestamps from the loaded plan.");
-        if (!ValidName(request.Name) || !ValidDraft(new(request.Name, request.HistoryMonths, request.ExpectedSeededAt!.Value, request.FundingSources, request.Appointments)))
+        if (!ValidDraft(new(request.Name, request.ExpectedSeededAt!.Value, request.Content)))
             return BadRequest("The plan requires valid sources, appointments, and expenses, including a nonnegative salary for every appointment, unique positive IDs, and valid allocation references.");
 
-        // Detach the submitted lists from tracked entities and reuse this frozen draft on every retry.
+        // Detach the submitted content from tracked entities and reuse this frozen draft on every retry.
         var draft = JsonSerializer.Deserialize<SaveProjectionRequest>(JsonSerializer.Serialize(request))!;
         for (var attempt = 0; attempt < OverwriteAttempts; attempt++)
         {
@@ -183,9 +181,7 @@ public sealed class ProjectionsController(
             db.Entry(projection).Property(p => p.UpdatedAt).OriginalValue =
                 draft.Overwrite ? projection.UpdatedAt : draft.ExpectedUpdatedAt!.Value;
             projection.Name = draft.Name;
-            projection.HistoryMonths = draft.HistoryMonths;
-            projection.FundingSources = draft.FundingSources;
-            projection.Appointments = draft.Appointments;
+            projection.Content = draft.Content;
             Touch(projection);
             try
             {
@@ -230,7 +226,7 @@ public sealed class ProjectionsController(
         }
     }
 
-    /// <summary>Reseeds only the loaded version from current data; id, name, and creator are kept.</summary>
+    /// <summary>Reseeds only the loaded version from current data; identity, name, notes, forecast duration, and creator are kept.</summary>
     [HttpPost("{id:int}/reset")]
     public async Task<IActionResult> Reset(int id, HistoryMonthsRequest request, CancellationToken ct)
     {
@@ -244,12 +240,12 @@ public sealed class ProjectionsController(
         var capture = await seeder.CaptureDraftAsync(projection.PiEmployeeId, request.HistoryMonths,
             User.GetUserIdentifier(), User.GetEmulatingUser(), ct, projection.SeededAt);
         // Reject incomplete fresh inputs before replacing any saved fields or advancing the version.
-        if (!ValidDraft(capture.Draft)) return BadRequest("Fresh data has incomplete or invalid inputs. The saved plan was not reset.");
-        // Identity and name remain saved-plan metadata.
-        projection.HistoryMonths = capture.Draft.HistoryMonths;
+        var content = capture.Draft.Content with { Notes = projection.Content.Notes, ForecastMonths = projection.Content.ForecastMonths };
+        if (!ValidDraft(capture.Draft with { Name = projection.Name, Content = content }))
+            return BadRequest("Fresh data has incomplete or invalid inputs. The saved plan was not reset.");
+        // Replace captured inputs while retaining the user's name, notes, and forecast duration.
         projection.SeededAt = capture.Draft.SeededAt;
-        projection.FundingSources = capture.Draft.FundingSources;
-        projection.Appointments = capture.Draft.Appointments;
+        projection.Content = content;
         Touch(projection);
         try
         {
@@ -283,20 +279,30 @@ public sealed class ProjectionsController(
             (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime);
     }
 
-    private static bool ValidName(string? name) => !string.IsNullOrWhiteSpace(name) && name.Length <= 200;
+    private static bool ValidName(string? name) => !string.IsNullOrWhiteSpace(name) && name.Length <= ProjectionPlanDefaults.MaximumNameLength;
+
+    /// <summary>Keep the exact selected duration within the date range supported by the saved plan and calculator.</summary>
+    private static bool ValidForecastWindow(DateTime seededAt, int forecastMonths) =>
+        ProjectionPlanDefaults.ForecastMonthOptions.Contains(forecastMonths)
+        && seededAt.Year * 12 + seededAt.Month + forecastMonths - 1 <= 9999 * 12 + 12;
 
     private static bool ValidDraft(ProjectionDraft draft)
     {
-        if (!ValidName(draft.Name) || !Windows.Contains(draft.HistoryMonths) || !ValidToken(draft.SeededAt) || draft.FundingSources is null || draft.Appointments is null) return false;
-        if (draft.FundingSources.Any(p => p is null || p.Id <= 0 || p.Budgets is null || p.Actuals is null || p.RunRates is null || p.HistoricalExpenseOverrides is null || p.Expenses is null
+        var content = draft.Content;
+        if (!ValidName(draft.Name) || !ValidToken(draft.SeededAt) || content is null
+            || !Windows.Contains(content.HistoryMonths)
+            || !ValidForecastWindow(draft.SeededAt, content.ForecastMonths)
+            || content.Notes?.Length > ProjectionPlanDefaults.MaximumNotesLength
+            || content.FundingSources is null || content.Appointments is null) return false;
+        if (content.FundingSources.Any(p => p is null || p.Id <= 0 || p.Budgets is null || p.Actuals is null || p.RunRates is null || p.HistoricalExpenseOverrides is null || p.Expenses is null
                 || p.Budgets.Any(b => b is null) || p.Actuals.Any(a => a is null) || p.RunRates.Any(r => r is null)
                 || p.HistoricalExpenseOverrides.Any(e => e is null) || p.Expenses.Any(e => e is null))
-            || draft.Appointments.Any(j => j is null || j.Id <= 0 || j.Allocations is null || j.Allocations.Any(f => f is null))) return false;
-        if (!ValidSources(draft.FundingSources) || !ValidAppointments(draft.Appointments)) return false;
-        var sourceIds = draft.FundingSources.Select(p => p.Id).ToHashSet();
-        return sourceIds.Count == draft.FundingSources.Count
-            && draft.Appointments.Select(j => j.Id).Distinct().Count() == draft.Appointments.Count
-            && draft.Appointments.SelectMany(j => j.Allocations).All(f => f.FundingSourceId is null || sourceIds.Contains(f.FundingSourceId.Value));
+            || content.Appointments.Any(j => j is null || j.Id <= 0 || j.Allocations is null || j.Allocations.Any(f => f is null))) return false;
+        if (!ValidSources(content.FundingSources) || !ValidAppointments(content.Appointments)) return false;
+        var sourceIds = content.FundingSources.Select(p => p.Id).ToHashSet();
+        return sourceIds.Count == content.FundingSources.Count
+            && content.Appointments.Select(j => j.Id).Distinct().Count() == content.Appointments.Count
+            && content.Appointments.SelectMany(j => j.Allocations).All(f => f.FundingSourceId is null || sourceIds.Contains(f.FundingSourceId.Value));
     }
 
     /// <summary>Missing imported salary may be reviewed in a draft, but every retained appointment must be complete before persistence.</summary>
@@ -355,8 +361,7 @@ public sealed class ProjectionsController(
     {
         var copy = JsonSerializer.Deserialize<ProjectionDraft>(JsonSerializer.Serialize(snapshot))!;
         projection.SeededAt = copy.SeededAt;
-        projection.FundingSources = copy.FundingSources!;
-        projection.Appointments = copy.Appointments!;
+        projection.Content = copy.Content;
     }
 
     private Task<Projection?> FindCreationAsync(string piEmployeeId, Guid creationKey, CancellationToken ct) =>
