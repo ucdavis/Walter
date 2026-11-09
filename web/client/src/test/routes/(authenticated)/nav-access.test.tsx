@@ -16,14 +16,18 @@ const createUser = (roles: string[]) => ({
 
 const registerHomeApis = () => {
   server.use(
-    http.get('/api/project/managed/by-iam/:iamId', () => HttpResponse.json({ pis: [], projectManager: null })),
+    http.get('/api/project/managed/by-iam/:iamId', () =>
+      HttpResponse.json({ pis: [], projectManager: null })
+    ),
     http.get('/api/project/by-iam/:iamId', () => HttpResponse.json([])),
     http.get('/api/project/personnel', () => HttpResponse.json([]))
   );
 };
 
 async function renderHomeForRoles(roles: string[]) {
-  server.use(http.get('/api/user/me', () => HttpResponse.json(createUser(roles))));
+  server.use(
+    http.get('/api/user/me', () => HttpResponse.json(createUser(roles)))
+  );
   registerHomeApis();
 
   const rendered = renderRoute({ initialPath: '/' });
@@ -32,18 +36,73 @@ async function renderHomeForRoles(roles: string[]) {
 }
 
 describe('header navigation access control', () => {
+  it.each([
+    '/admin',
+    '/accruals',
+    '/reports/department-balances',
+    '/projections/DEMO000001',
+  ])(
+    'redirects the unsupported presentation route %s before loading its data',
+    async (initialPath) => {
+      let unsupportedRequests = 0;
+      server.use(
+        http.get('/api/user/me', () =>
+          HttpResponse.json({
+            ...createUser(['ProjectManager']),
+            canPresent: true,
+            isPresentation: true,
+            presentationProfile: 'pm',
+          })
+        ),
+        http.get(
+          /\/api\/(accruals|department-balances|projections|admin)(\/|$)/,
+          () => {
+            unsupportedRequests++;
+            return HttpResponse.json({});
+          }
+        )
+      );
+      registerHomeApis();
+      const { cleanup, router } = renderRoute({ initialPath });
+      try {
+        await screen.findByRole('heading', { name: 'W.A.L.T.E.R.' });
+        expect(router.state.location.pathname).toBe('/');
+        expect(unsupportedRequests).toBe(0);
+        expect(screen.getByRole('status')).toHaveTextContent(
+          'Presentation — fictional data'
+        );
+        expect(
+          screen.queryByRole('link', { name: 'Reports' })
+        ).not.toBeInTheDocument();
+        expect(
+          screen.queryByRole('link', { name: 'Admin' })
+        ).not.toBeInTheDocument();
+      } finally {
+        cleanup();
+      }
+    }
+  );
+
   it('shows Projects and Personnel for default users', async () => {
     const { cleanup } = await renderHomeForRoles([]);
 
     try {
-      expect(screen.getByRole('link', { name: 'Projects' })).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: 'Personnel' })).toBeInTheDocument();
+      expect(
+        screen.getByRole('link', { name: 'Projects' })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('link', { name: 'Personnel' })
+      ).toBeInTheDocument();
       expect(screen.getByRole('link', { name: 'Help' })).toBeInTheDocument();
-      expect(screen.queryByRole('link', { name: 'Reports' })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('link', { name: 'Reports' })
+      ).not.toBeInTheDocument();
       expect(
         screen.queryByRole('link', { name: 'Principal Investigators' })
       ).not.toBeInTheDocument();
-      expect(screen.queryByRole('link', { name: 'Admin' })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('link', { name: 'Admin' })
+      ).not.toBeInTheDocument();
     } finally {
       cleanup();
     }
@@ -56,8 +115,12 @@ describe('header navigation access control', () => {
       expect(screen.getByRole('link', { name: 'Admin' })).toBeInTheDocument();
       expect(screen.getByRole('link', { name: 'Reports' })).toBeInTheDocument();
       expect(screen.getByRole('link', { name: 'Help' })).toBeInTheDocument();
-      expect(screen.queryByRole('link', { name: 'Projects' })).not.toBeInTheDocument();
-      expect(screen.queryByRole('link', { name: 'Personnel' })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('link', { name: 'Projects' })
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('link', { name: 'Personnel' })
+      ).not.toBeInTheDocument();
       expect(
         screen.queryByRole('link', { name: 'Principal Investigators' })
       ).not.toBeInTheDocument();
@@ -73,8 +136,12 @@ describe('header navigation access control', () => {
       expect(screen.getByRole('link', { name: 'Admin' })).toBeInTheDocument();
       expect(screen.getByRole('link', { name: 'Reports' })).toBeInTheDocument();
       expect(screen.getByRole('link', { name: 'Help' })).toBeInTheDocument();
-      expect(screen.queryByRole('link', { name: 'Projects' })).not.toBeInTheDocument();
-      expect(screen.queryByRole('link', { name: 'Personnel' })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('link', { name: 'Projects' })
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('link', { name: 'Personnel' })
+      ).not.toBeInTheDocument();
       expect(
         screen.queryByRole('link', { name: 'Principal Investigators' })
       ).not.toBeInTheDocument();
@@ -89,12 +156,18 @@ describe('header navigation access control', () => {
     try {
       expect(screen.getByRole('link', { name: 'Reports' })).toBeInTheDocument();
       expect(screen.getByRole('link', { name: 'Help' })).toBeInTheDocument();
-      expect(screen.queryByRole('link', { name: 'Projects' })).not.toBeInTheDocument();
-      expect(screen.queryByRole('link', { name: 'Personnel' })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('link', { name: 'Projects' })
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('link', { name: 'Personnel' })
+      ).not.toBeInTheDocument();
       expect(
         screen.queryByRole('link', { name: 'Principal Investigators' })
       ).not.toBeInTheDocument();
-      expect(screen.queryByRole('link', { name: 'Admin' })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('link', { name: 'Admin' })
+      ).not.toBeInTheDocument();
     } finally {
       cleanup();
     }
@@ -108,10 +181,18 @@ describe('header navigation access control', () => {
         screen.getByRole('link', { name: 'Principal Investigators' })
       ).toBeInTheDocument();
       expect(screen.getByRole('link', { name: 'Help' })).toBeInTheDocument();
-      expect(screen.queryByRole('link', { name: 'Reports' })).not.toBeInTheDocument();
-      expect(screen.queryByRole('link', { name: 'Projects' })).not.toBeInTheDocument();
-      expect(screen.queryByRole('link', { name: 'Personnel' })).not.toBeInTheDocument();
-      expect(screen.queryByRole('link', { name: 'Admin' })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('link', { name: 'Reports' })
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('link', { name: 'Projects' })
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('link', { name: 'Personnel' })
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('link', { name: 'Admin' })
+      ).not.toBeInTheDocument();
     } finally {
       cleanup();
     }
@@ -125,10 +206,18 @@ describe('header navigation access control', () => {
         screen.getByRole('link', { name: 'Principal Investigators' })
       ).toBeInTheDocument();
       expect(screen.getByRole('link', { name: 'Help' })).toBeInTheDocument();
-      expect(screen.queryByRole('link', { name: 'Reports' })).not.toBeInTheDocument();
-      expect(screen.queryByRole('link', { name: 'Projects' })).not.toBeInTheDocument();
-      expect(screen.queryByRole('link', { name: 'Personnel' })).not.toBeInTheDocument();
-      expect(screen.queryByRole('link', { name: 'Admin' })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('link', { name: 'Reports' })
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('link', { name: 'Projects' })
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('link', { name: 'Personnel' })
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('link', { name: 'Admin' })
+      ).not.toBeInTheDocument();
     } finally {
       cleanup();
     }
@@ -138,14 +227,22 @@ describe('header navigation access control', () => {
     const { cleanup } = await renderHomeForRoles(['System']);
 
     try {
-      expect(screen.getByRole('link', { name: 'Projects' })).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: 'Personnel' })).toBeInTheDocument();
+      expect(
+        screen.getByRole('link', { name: 'Projects' })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('link', { name: 'Personnel' })
+      ).toBeInTheDocument();
       expect(screen.getByRole('link', { name: 'Help' })).toBeInTheDocument();
-      expect(screen.queryByRole('link', { name: 'Reports' })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('link', { name: 'Reports' })
+      ).not.toBeInTheDocument();
       expect(
         screen.queryByRole('link', { name: 'Principal Investigators' })
       ).not.toBeInTheDocument();
-      expect(screen.queryByRole('link', { name: 'Admin' })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('link', { name: 'Admin' })
+      ).not.toBeInTheDocument();
     } finally {
       cleanup();
     }
@@ -158,8 +255,12 @@ describe('header navigation access control', () => {
       expect(screen.getByRole('link', { name: 'Admin' })).toBeInTheDocument();
       expect(screen.getByRole('link', { name: 'Reports' })).toBeInTheDocument();
       expect(screen.getByRole('link', { name: 'Help' })).toBeInTheDocument();
-      expect(screen.queryByRole('link', { name: 'Projects' })).not.toBeInTheDocument();
-      expect(screen.queryByRole('link', { name: 'Personnel' })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('link', { name: 'Projects' })
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('link', { name: 'Personnel' })
+      ).not.toBeInTheDocument();
       expect(
         screen.queryByRole('link', { name: 'Principal Investigators' })
       ).not.toBeInTheDocument();

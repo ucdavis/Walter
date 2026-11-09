@@ -3,8 +3,8 @@ import {
   type ErrorComponentProps,
   Link,
   Outlet,
+  redirect,
 } from '@tanstack/react-router';
-import { RouterContext } from '../../main.tsx';
 import { meQueryOptions } from '../../queries/user.ts';
 import { UserProvider, useUser } from '@/shared/auth/UserContext.tsx';
 import Header from '@/components/project/Header.tsx';
@@ -12,11 +12,13 @@ import { CommandPaletteProvider } from '@/components/search/CommandPaletteProvid
 import { PageError } from '@/components/states/PageError.tsx';
 import { getErrorPresentation } from '@/lib/errorPresentation.ts';
 import { ErrorPageActions } from '@/components/states/ErrorPageActions.tsx';
-import { HttpError } from '@/lib/api.ts';
+import { checkPresentationContext, HttpError } from '@/lib/api.ts';
+import { PresentationControls } from '@/components/demo/PresentationControls.tsx';
 
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   return (
     <UserProvider>
+      <PresentationControls />
       <CommandPaletteProvider>
         <Header />
         {children}
@@ -90,8 +92,24 @@ function AuthenticatedErrorContent({
 }
 
 export const Route = createFileRoute('/(authenticated)')({
-  beforeLoad: async ({ context }: { context: RouterContext }) => {
-    await context.queryClient.ensureQueryData(meQueryOptions());
+  beforeLoad: async ({ context, location }) => {
+    if (checkPresentationContext()) {
+      throw new HttpError(409, '/api/user/me', {
+        code: 'presentation_context_changed',
+      });
+    }
+    const user = await context.queryClient.ensureQueryData(meQueryOptions());
+    if (checkPresentationContext()) {
+      throw new HttpError(409, '/api/user/me', {
+        code: 'presentation_context_changed',
+      });
+    }
+    if (
+      user.isPresentation &&
+      /^\/(admin|accruals|reports|projections)(\/|$)/.test(location.pathname)
+    ) {
+      throw redirect({ to: '/' });
+    }
   },
   component: () => (
     <AuthenticatedLayout>

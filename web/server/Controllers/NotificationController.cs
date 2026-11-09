@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using server.core.Data;
 using server.core.Domain;
+using Server.Demo;
 
 namespace Server.Controllers;
 
@@ -13,10 +14,12 @@ public sealed class NotificationController : ControllerBase
     private const int MessageMaxLength = 2000;
 
     private readonly AppDbContext _ctx;
+    private readonly DemoRequestContext? _demo;
 
-    public NotificationController(AppDbContext ctx)
+    public NotificationController(AppDbContext ctx, DemoRequestContext? demo = null)
     {
         _ctx = ctx;
+        _demo = demo;
     }
 
     public sealed record NotificationResponse(bool Enabled, string Message, DateTime? UpdatedOn);
@@ -26,6 +29,8 @@ public sealed class NotificationController : ControllerBase
     [AllowAnonymous]
     public async Task<ActionResult<NotificationResponse>> Get(CancellationToken ct)
     {
+        if (_demo?.IsActive == true) return Ok(new NotificationResponse(false, "", null));
+
         var n = await _ctx.Notifications
             .AsNoTracking()
             .FirstOrDefaultAsync(x => x.Id == Notification.SingletonId, ct);

@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using server.core.Data;
 using server.Helpers;
 using Server.Services;
+using Server.Demo;
 
 namespace Server.Controllers;
 
@@ -10,16 +11,37 @@ public class UserController : ApiControllerBase
 {
     private readonly AppDbContext _dbContext;
     private readonly IGraphService _graphService;
+    private readonly DemoRequestContext? _demo;
 
-    public UserController(AppDbContext dbContext, IGraphService graphService)
+    public UserController(AppDbContext dbContext, IGraphService graphService, DemoRequestContext? demo = null)
     {
         _dbContext = dbContext;
         _graphService = graphService;
+        _demo = demo;
     }
 
     [HttpGet("me")]
     public async Task<IActionResult> Me(CancellationToken cancellationToken)
     {
+        // The presentation persona exists only in memory; never provision it through IAM or the user table.
+        if (_demo?.PresentationUser is { } presentationUser)
+        {
+            return Ok(new
+            {
+                presentationUser.Id,
+                Name = presentationUser.DisplayName,
+                presentationUser.Email,
+                presentationUser.IamId,
+                presentationUser.EmployeeId,
+                presentationUser.Kerberos,
+                Roles = DemoDataSet.GetRoles(_demo.Profile!),
+                IsEmulating = false,
+                IsPresentation = true,
+                PresentationProfile = _demo.Profile,
+                CanPresent = true,
+            });
+        }
+
         Guid userId;
         try
         {
@@ -57,6 +79,9 @@ public class UserController : ApiControllerBase
             Kerberos = user.Kerberos,
             Roles = roles,
             IsEmulating = User.GetEmulatingUser() is not null,
+            IsPresentation = false,
+            PresentationProfile = (string?)null,
+            CanPresent = _demo?.CanStart ?? false,
         };
 
         return Ok(userInfo);
@@ -65,6 +90,8 @@ public class UserController : ApiControllerBase
     [HttpGet("me/photo")]
     public async Task<IActionResult> MePhoto(CancellationToken cancellationToken)
     {
+        if (_demo?.HasSession == true) return NotFound();
+
         try
         {
             var photo = await _graphService.GetMePhotoAsync(User, cancellationToken);

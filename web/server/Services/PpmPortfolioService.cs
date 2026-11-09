@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 using server.core.Models;
 using server.core.Services;
 using server.Helpers;
+using Server.Demo;
 
 namespace server.Services;
 
@@ -10,13 +11,14 @@ namespace server.Services;
 public sealed class PpmPortfolioService(
     IFinancialApiService financialApi,
     IPpmPortfolioReader reader,
-    IOptions<FeatureFlagOptions> flags)
+    IOptions<FeatureFlagOptions> flags,
+    DemoRequestContext? demo = null)
 {
     /// <summary>Returns project-or-award membership with project-team-only members.</summary>
     public async Task<IReadOnlyList<PpmProjectMembership>> GetEmployeeProjectsAsync(
         string employeeId, string roleName, CancellationToken ct)
     {
-        if (!flags.Value.UseGraphQLAPI)
+        if (demo?.IsActive == true || !flags.Value.UseGraphQLAPI)
             return await reader.GetEmployeeProjectsAsync(employeeId, roleName, ct);
 
         var result = await financialApi.GetClient().PpmProjectByProjectTeamMemberEmployeeId.ExecuteAsync(employeeId, roleName, ct);
@@ -29,7 +31,7 @@ public sealed class PpmPortfolioService(
     /// <inheritdoc cref="IPpmPortfolioReader.GetProjectTeamAsync" />
     public async Task<IReadOnlyList<PpmTeamMember>> GetProjectTeamAsync(string projectNumber, string roleName, CancellationToken ct)
     {
-        if (!flags.Value.UseGraphQLAPI)
+        if (demo?.IsActive == true || !flags.Value.UseGraphQLAPI)
             return await reader.GetProjectTeamAsync(projectNumber, roleName, ct);
 
         var result = await financialApi.GetClient().PpmProjectTeamMembers.ExecuteAsync(projectNumber, roleName, ct);
@@ -42,7 +44,7 @@ public sealed class PpmPortfolioService(
     /// <summary>Returns PM membership for badges and role synchronization; imported mode queries the requested employees in batches.</summary>
     public async Task<IReadOnlySet<string>> GetProjectManagerEmployeeIdsAsync(IEnumerable<string> employeeIds, CancellationToken ct)
     {
-        if (!flags.Value.UseGraphQLAPI)
+        if (demo?.IsActive == true || !flags.Value.UseGraphQLAPI)
             return await reader.GetProjectManagerEmployeeIdsAsync(employeeIds, ct);
 
         var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

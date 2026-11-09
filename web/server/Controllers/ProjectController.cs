@@ -6,6 +6,7 @@ using server.core.Services;
 using server.Helpers;
 using server.Services;
 using Server.Services;
+using Server.Demo;
 
 namespace Server.Controllers;
 
@@ -15,6 +16,7 @@ public sealed class ProjectController : ApiControllerBase
     private readonly IAuthorizationService _authorizationService;
     private readonly IUserService _userService;
     private readonly PpmPortfolioService _portfolioService;
+    private readonly DemoRequestContext? _demo;
 
     public sealed record ManagedPiRecord(
         [property: JsonPropertyName("employeeId")] string EmployeeId,
@@ -35,12 +37,14 @@ public sealed class ProjectController : ApiControllerBase
         IDatamartService datamartService,
         IAuthorizationService authorizationService,
         IUserService userService,
-        PpmPortfolioService portfolioService)
+        PpmPortfolioService portfolioService,
+        DemoRequestContext? demo = null)
     {
         _datamartService = datamartService;
         _authorizationService = authorizationService;
         _userService = userService;
         _portfolioService = portfolioService;
+        _demo = demo;
     }
 
     [HttpGet("by-iam/{iamId}")]
@@ -422,6 +426,8 @@ public sealed class ProjectController : ApiControllerBase
 
     private async Task<string?> GetCurrentEmployeeIdAsync(CancellationToken cancellationToken)
     {
+        if (_demo?.PresentationUser is { } presentationUser) return presentationUser.EmployeeId;
+
         Guid userId;
         try
         {

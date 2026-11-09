@@ -9,6 +9,7 @@ using server.core.Domain;
 using server.core.Services;
 using server.Helpers;
 using Server.Services;
+using Server.Demo;
 
 namespace Server.Controllers;
 
@@ -22,6 +23,7 @@ public class SystemController : ApiControllerBase
     private readonly RumOptions _rumOptions;
     private readonly FeatureFlagOptions _featureFlags;
     private readonly IHostEnvironment _hostEnvironment;
+    private readonly DemoRequestContext? _demo;
 
     public SystemController(
         IUserService userService,
@@ -30,7 +32,8 @@ public class SystemController : ApiControllerBase
         IUserProfileOrchestrator profileOrchestrator,
         IOptions<RumOptions> rumOptions,
         IOptions<FeatureFlagOptions> featureFlags,
-        IHostEnvironment hostEnvironment)
+        IHostEnvironment hostEnvironment,
+        DemoRequestContext? demo = null)
     {
         _userService = userService;
         _graphService = graphService;
@@ -39,12 +42,15 @@ public class SystemController : ApiControllerBase
         _rumOptions = rumOptions.Value;
         _featureFlags = featureFlags.Value;
         _hostEnvironment = hostEnvironment;
+        _demo = demo;
     }
 
     [AllowAnonymous]
     [HttpGet("rum-config")]
     public ActionResult<RumPublicConfig> GetRumConfig()
     {
+        if (_demo?.HasSession == true) return Ok(new RumPublicConfig { Enabled = false });
+
         return Ok(_rumOptions.ToPublicConfig(_hostEnvironment));
     }
 
@@ -56,6 +62,8 @@ public class SystemController : ApiControllerBase
     [HttpGet("features")]
     public ActionResult<ClientFeatures> GetFeatures()
     {
+        if (_demo?.IsActive == true) return Ok(new ClientFeatures(true, true, true, false));
+
         return Ok(new ClientFeatures(
             _featureFlags.BurndownEnabled,
             _featureFlags.ExpenditureProgressEnabled,

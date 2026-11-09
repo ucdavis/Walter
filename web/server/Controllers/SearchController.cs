@@ -10,6 +10,7 @@ using server.core.Models;
 using server.core.Services;
 using server.Helpers;
 using server.Services;
+using Server.Demo;
 
 namespace Server.Controllers;
 
@@ -23,6 +24,7 @@ public sealed class SearchController : ApiControllerBase
     private readonly IDatamartService _datamartService;
     private readonly bool _useGraphQLAPI;
     private readonly PpmPortfolioService _portfolioService;
+    private readonly DemoRequestContext? _demo;
 
     public SearchController(
         AppDbContext dbContext,
@@ -30,14 +32,16 @@ public sealed class SearchController : ApiControllerBase
         IAuthorizationService authorizationService,
         IDatamartService datamartService,
         IOptions<FeatureFlagOptions> featureFlags,
-        PpmPortfolioService portfolioService)
+        PpmPortfolioService portfolioService,
+        DemoRequestContext? demo = null)
     {
         _dbContext = dbContext;
         _financialApiService = financialApiService;
         _authorizationService = authorizationService;
         _datamartService = datamartService;
-        _useGraphQLAPI = featureFlags.Value.UseGraphQLAPI;
+        _useGraphQLAPI = demo?.IsActive != true && featureFlags.Value.UseGraphQLAPI;
         _portfolioService = portfolioService;
+        _demo = demo;
     }
 
     public sealed record SearchProject(
@@ -86,6 +90,9 @@ public sealed class SearchController : ApiControllerBase
         cancellationToken.ThrowIfCancellationRequested();
 
         var reports = new List<SearchReport>();
+
+        if (_demo?.IsActive == true)
+            return Ok(new SearchCatalog(Array.Empty<SearchProject>(), reports));
 
         var canViewAccruals = await _authorizationService.AuthorizeAsync(
             User,
@@ -315,7 +322,7 @@ public sealed class SearchController : ApiControllerBase
             return Unauthorized();
         }
 
-        var employeeId = await _dbContext.Users
+        var employeeId = _demo?.PresentationUser?.EmployeeId ?? await _dbContext.Users
             .AsNoTracking()
             .Where(u => u.Id == userId)
             .Select(u => u.EmployeeId)
@@ -484,6 +491,8 @@ public sealed class SearchController : ApiControllerBase
     /// </summary>
     private async Task<string?> GetCurrentEmployeeIdAsync(CancellationToken cancellationToken)
     {
+        if (_demo?.PresentationUser is { } presentationUser) return presentationUser.EmployeeId;
+
         Guid userId;
         try
         {

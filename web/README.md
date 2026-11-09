@@ -171,6 +171,21 @@ Outside of local dev, `/login` behaves like the normal auth entrypoint (OIDC cha
 
 ## Testing
 
+### Synthetic presentations
+
+Presentation mode uses fictional PI/Project Manager profiles and reporting data generated in memory. It does not add users, permissions, or reporting rows to either database. Normal sign-in and the application's existing startup behavior still apply.
+
+To test locally, set `Demo__Enabled=true` in the backend's launch environment, restart the backend, and sign in normally. The presentation controls appear above the navigation. Choose **Principal Investigator** or **Project Manager**, then **Start presentation**. The persistent **Presentation — fictional data** banner identifies the active profile. **End presentation** returns to the normal session.
+
+For a deployed test instance:
+
+- The ASP.NET Core environment must be `Test` or `Staging`; `Production` rejects presentation activation even if enabled.
+- Set `Demo__Enabled=true` and configure `Demo__AllowedPresenterIds__0`, `Demo__AllowedPresenterIds__1`, etc. with each approved presenter's Entra object ID. Development permits any signed-in user when enabled. User emulation must be ended before starting a presentation.
+
+The initial scope covers portfolios, PI/PM navigation, personnel, search, transaction exports, project costs, reconciliation, and read-only project charts. Editable projections, accruals, department balances, administration, profile photos, and external financial-system links are unavailable during presentations. Only the separate presentation cookie changes; the authentication cookie and actual audit identity are preserved.
+
+Presentation sessions expire after eight hours and then hide data until explicitly ended. Switching modes also hides data in other open tabs; those tabs require an explicit restart or exit. This prevents cached ordinary test data from appearing during a presentation. The sample dates follow the current UTC month, and fictional amounts and relationships are consistent across reports.
+
 ### Client tests
 
 - Run `cd client && npm test` to execute the Vitest suite once.

@@ -7,6 +7,7 @@ import {
   buildFinjectorUrl,
 } from '@/lib/finjector.ts';
 import { useEffect, useRef, useState } from 'react';
+import { useIsPresentation } from '@/shared/auth/UserContext.tsx';
 
 interface FinjectorLinkProps {
   /** Optional text shown as the link label (e.g. the project number or task code). */
@@ -27,9 +28,10 @@ export function FinjectorLink({
   project,
   task,
 }: FinjectorLinkProps) {
+  const isPresentation = useIsPresentation();
   const url = buildFinjectorUrl(project, task, org);
 
-  if (!url) {
+  if (!url || isPresentation) {
     return <>{children}</>;
   }
 
@@ -57,6 +59,7 @@ export function ChartStringCopyButton({
   project,
   task,
 }: Omit<FinjectorLinkProps, 'children'>) {
+  const isPresentation = useIsPresentation();
   const [copied, setCopied] = useState(false);
   const resetFeedbackTimeout = useRef<number | undefined>(undefined);
   const chartString = buildFinjectorChartString(project, task, org);
@@ -68,7 +71,7 @@ export function ChartStringCopyButton({
     []
   );
 
-  if (!chartString) {
+  if (!chartString || isPresentation) {
     return null;
   }
 

@@ -70,38 +70,40 @@ export const UserAvatar: React.FC = () => {
   const hoverName = user.isEmulating ? `Emulating ${userName}` : userName;
   const shouldLinkToLogin =
     !user.isEmulating &&
+    !user.isPresentation &&
     typeof window !== 'undefined' &&
     isLocalLoopbackHost(window.location.hostname);
 
-  const avatar = user.isEmulating ? (
-    <div className="avatar avatar-placeholder">
-      <div
-        aria-label={hoverName}
-        className="bg-warning text-warning-content flex w-10 items-center justify-center rounded-full"
-        role="img"
-      >
-        <IdentificationIcon aria-hidden="true" className="h-6 w-6" />
+  const avatar =
+    user.isEmulating || user.isPresentation ? (
+      <div className="avatar avatar-placeholder">
+        <div
+          aria-label={hoverName}
+          className="bg-warning text-warning-content flex w-10 items-center justify-center rounded-full"
+          role="img"
+        >
+          <IdentificationIcon aria-hidden="true" className="h-6 w-6" />
+        </div>
       </div>
-    </div>
-  ) : !showPhoto ? (
-    <div className="avatar avatar-placeholder">
-      <div className="bg-neutral text-neutral-content w-10 rounded-full">
-        <span>{initials}</span>
+    ) : !showPhoto ? (
+      <div className="avatar avatar-placeholder">
+        <div className="bg-neutral text-neutral-content w-10 rounded-full">
+          <span>{initials}</span>
+        </div>
       </div>
-    </div>
-  ) : (
-    <div className="avatar">
-      <div className="w-10 rounded-full">
-        <img
-          alt="User avatar"
-          decoding="async"
-          loading="lazy"
-          onError={() => setShowPhoto(false)}
-          src="/api/user/me/photo"
-        />
+    ) : (
+      <div className="avatar">
+        <div className="w-10 rounded-full">
+          <img
+            alt="User avatar"
+            decoding="async"
+            loading="lazy"
+            onError={() => setShowPhoto(false)}
+            src="/api/user/me/photo"
+          />
+        </div>
       </div>
-    </div>
-  );
+    );
 
   const avatarContent = shouldLinkToLogin ? (
     <a aria-label="Open local login chooser" href="/login">

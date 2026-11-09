@@ -11,6 +11,7 @@ using server.Helpers;
 using Server.Services;
 using server.core.Services;
 using server.Services;
+using Server.Demo;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -63,6 +64,12 @@ builder.Services.PostConfigure<FeatureFlagOptions>(options =>
         ?? options.UseGraphQLAPI;
 });
 builder.Services.Configure<AppOptions>(builder.Configuration.GetSection(AppOptions.SectionName));
+builder.Services.Configure<DemoOptions>(builder.Configuration.GetSection(DemoOptions.SectionName));
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddScoped<DemoRequestContext>();
+builder.Services.AddScoped<DemoDataSource>();
+builder.Services.AddAntiforgery(options => options.HeaderName = "X-CSRF-TOKEN");
 builder.Services.Configure<DatamartOptions>(options =>
 {
     options.ConnectionString = builder.Configuration["DM_CONNECTION"]
@@ -83,8 +90,11 @@ builder.Services.AddResponseCaching();
 // add singleton services here
 builder.Services.AddSingleton<IFinancialApiService, FinancialApiService>();
 builder.Services.AddSingleton<DatamartService>();
-builder.Services.AddSingleton<IDatamartService>(sp => sp.GetRequiredService<DatamartService>());
-builder.Services.AddSingleton<IPpmPortfolioReader>(sp => sp.GetRequiredService<DatamartService>());
+// Select per request: a presentation must never alter another user's reporting source.
+builder.Services.AddScoped<IDatamartService>(sp => sp.GetRequiredService<DemoRequestContext>().IsActive
+    ? sp.GetRequiredService<DemoDataSource>() : sp.GetRequiredService<DatamartService>());
+builder.Services.AddScoped<IPpmPortfolioReader>(sp => sp.GetRequiredService<DemoRequestContext>().IsActive
+    ? sp.GetRequiredService<DemoDataSource>() : sp.GetRequiredService<DatamartService>());
 builder.Services.AddSingleton<IProjectionDataSource>(sp => sp.GetRequiredService<DatamartService>());
 builder.Services.AddScoped<PpmPortfolioService>();
 builder.Services.AddScoped<ProjectionSeeder>();
@@ -183,7 +193,9 @@ else
 }
 
 
+app.UseRouting();
 app.UseAuthentication();
+app.UseMiddleware<DemoMiddleware>();
 
 // Enrich authorization failures as well as controller logs after authentication.
 app.UseRequestContextLogging();

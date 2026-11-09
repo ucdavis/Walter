@@ -2,13 +2,16 @@ import { fetchJson } from '../lib/api.ts';
 import { useQuery } from '@tanstack/react-query';
 
 export type User = {
+  canPresent?: boolean;
   email: string;
   employeeId: string;
   iamId: string;
   id: string;
   isEmulating: boolean;
+  isPresentation?: boolean;
   kerberos: string;
   name: string;
+  presentationProfile?: 'pi' | 'pm' | null;
   roles: string[];
 };
 
