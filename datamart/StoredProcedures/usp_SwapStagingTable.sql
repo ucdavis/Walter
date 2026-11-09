@@ -33,6 +33,7 @@ BEGIN
         (N'EmployeeAccrualBalances'),
         (N'GlProjectMonthlyActuals'),
         (N'GlSummaryBalances'),
+        (N'PgmMasterData'),
         (N'People'),
         (N'PositionBudgets'),
         (N'PositionBudgetsCognos'),
