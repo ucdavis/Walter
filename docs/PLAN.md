@@ -7,8 +7,9 @@ completion and duplication are accepted and committed as `d524af0c`; New plan
 saves before opening the view/edit workspace. Stage 3a's funding sources and
 greenfield model cleanup are accepted and committed as `4bb4f673`. The follow-up
 audit's seven cleanup recommendations are accepted and committed as `727cf3aa`.
-Stage 3b's appointment editor and hypothetical hires are implemented, verified,
-and accepted. Funding-schedule editing is the next review increment.
+Stage 3b's appointment editor and hypothetical hires are accepted and committed
+as `1381103c`. Stage 3c's allocation picker is implemented, verified, and accepted.
+Expenses is the next review increment.
 Saving remains available with funding gaps/overlaps.
 CBR defaults to 20% when no rate is supplied. Fresh appointments default to a
 3% annual salary adjustment in July. Every retained appointment needs a salary
@@ -156,10 +157,12 @@ Salary edits target a stable appointment ID. A Person's name does not
 identify a particular appointment. Keep the distinctions between Person, IAM ID,
 and Employee ID in [CONTEXT.md](../CONTEXT.md).
 
-Funding sources and appointments have projection-local IDs. Persist stable expense
-and allocation IDs when those editors are added. Do not use names or array positions
-as durable edit targets. Keep monetary units, allocation units, date-only strings,
-and planning months explicit at conversion boundaries.
+Funding sources and appointments have projection-local IDs. Allocation changes
+target an appointment and a date range, replacing the complete split for that
+period. Editor rows need only local keys; no persisted allocation IDs or counters
+are required. Revisit expense identity with its editor. Do not use names or array
+positions as durable edit targets. Keep monetary units, allocation units,
+date-only strings, and planning months explicit at conversion boundaries.
 
 Later, add proposal preview and apply around these operations. A preview records
 the local draft revision it inspected. Reject a stale proposal or one conflicting
@@ -175,8 +178,9 @@ later work. Stage 1a only proves that the salary operation works outside the UI.
 The saved-plan address is
 `/projections/{iamId}/{planId}?section=staffing&appointment={appointmentId}`.
 Funding outlook links use `?section=overview&source={fundingSourceId}`. Funding
-source editors use `?section=funding&source={fundingSourceId}`. Add allocation, expense, and month
-targets as their editors arrive. Validate targets, reveal and
+source editors use `?section=funding&source={fundingSourceId}`. An allocation picker
+adds `fundingMonth=YYYY-MM` to the Staffing appointment address. Add expense
+targets with its editor. Validate targets, reveal and
 focus valid targets, and handle missing ones without crashing or selecting an
 unrelated record.
 
@@ -1224,8 +1228,7 @@ increment is committed as `727cf3aa`; no deployment or live source read occurred
 
 ## Stage 3b: appointments and hypothetical hires
 
-Status: implemented, verified, and accepted. Funding-schedule editing
-remains a separate review increment.
+Status: implemented, verified, accepted, and committed as `1381103c`.
 
 Use one appointment editor in the wizard and saved workspace. Salary, FTE,
 appointment dates, CBR, annual salary adjustment rate/month, and monthly fee
@@ -1300,17 +1303,102 @@ Independent review found and closed two lookup availability issues; focused
 tests preserve typing and keep existing appointment edits available during a
 lookup outage. No live personnel read or deployment occurred.
 
-Next: review funding-schedule editing decisions before implementation.
+## Stage 3c: allocation periods
+
+Status: implemented, verified, and accepted.
+
+Use the demo's appointment funding timeline and period picker in both the wizard
+and saved workspace. Clicking a month opens a funding split for a selected
+period. Applying replaces all allocations within that period, preserving and
+splitting allocations before and after it at exact inclusive date boundaries.
+For example, replacing July through September with B in an appointment funded
+by A all year leaves A in January–June and October–December. Cancel discards
+typing; Apply changes the plan draft, and Save remains explicit.
+
+Retain exact start/end date controls for partial months. Entire appointment and
+Through appointment end are explicit shortcuts, with appointment bounds or an
+open end shown clearly. Blank dates must not have unexplained behavior. A month
+containing more than one dated split must reveal those differences rather than
+silently average them into a replacement. Applying unchanged shares should keep
+the original schedule intact.
+
+Enter percentages of the appointment, showing their full-time FTE equivalent.
+Allow 0–100% per entry, including zero-FTE appointments. Multiple entries for the
+same source and totals above 100% remain allowed; do not merge, rescale, or
+redistribute them automatically. New entries begin with no selected source and
+a blank percentage. Both require explicit input before Apply. Removing an entry
+within the editor needs no extra confirmation. Applying an empty split clears
+funding only within the selected period.
+
+The destination picker contains existing plan sources and Outside this plan.
+Outside allocations count as funded but charge no source in the plan. Missing
+funding remains unallocated; it is never filled with outside funding automatically.
+Adding sources stays in Funding sources. Changing an allocation's destination
+preserves its percentage and entered dates; source and appointment bounds still
+limit its effective dates. An allocation with no eligible overlap remains
+saveable with feedback.
+
+Check funding coverage at actual date boundaries, so a gap and overlap in one
+month cannot cancel into a misleading 100% average. Show concise gap/overallocation
+feedback and expandable affected months, stating the checked forecast horizon.
+Keep No funding assigned visible for appointments without allocations and
+identify appointments starting beyond that horizon. Do not claim indefinite
+coverage for an open-ended appointment. Feedback never blocks saving.
+
+Applying a reviewed allocation period clears the appointment's unmatched-import
+notice, including an unchanged Apply. The wizard's Staffing step supports this
+review. Salary edits, source additions, and Cancel do not clear the notice.
+Ordinary gap/overlap feedback remains independent.
+
+Reuse the demo's interaction, retaining the production calculation rules. Do not
+copy its full-time percentage entry, guessed remaining shares, zero-FTE block,
+overallocation block, duplicate-source restriction, or month-only replacement
+arithmetic. Captured financial inputs, source capture dates, employee assumptions,
+and salary/fee calculations remain unchanged. No migration or legacy document
+adapter is needed.
+
+Verification: all 633 client tests passed across 68 files. TypeScript, the client
+production build, changed-file ESLint, and Prettier passed. Focused tests cover
+exact period replacement, open boundaries, leap days, unchanged Apply, duplicate
+shares, zero-FTE fees, mixed months, navigation, pending typing, and wizard review
+before Create. A final extraction of shared date helpers passed the six allocation
+component tests and TypeScript again.
+
+React Doctor scanned the changed files, including new untracked components,
+with no errors and a score of 86. Seven warnings remain: picker/wizard complexity,
+picker/wizard/workspace size, a stateless allocation-summary list keyed by index,
+and a loading reset that is already inside `finally`. Shared date helpers were
+separated from components to retain normal development hot reload.
+
+The standard server suite passed 560 tests with 12 optional SQL skips. All 17
+isolated SQL tests then executed and passed. Explicit source/share JSON inputs
+are required; zero and Outside this plan remain valid. No migration was added.
+
+Independent review found and corrected a calendar-format edge for valid early
+years. Financial comparisons against the prior commit preserved every financial
+row and prior average-coverage value across 205 fixture variants and another
+400 generated scenarios. Six hundred daily replacement checks verified outside
+period preservation, including open bounds and duplicate shares. No remaining
+correctness findings were reported.
+
+Browser checks used synthetic API responses through the saved workspace. They
+verified the A-to-B July–September example and Save round trip, midmonth outside
+funding, exact mixed-month reopening, unchanged Apply, explicit date shortcuts,
+and a saveable month containing both a gap and overallocation. Snapshot tokens
+and captured spending remained intact. Mobile verification at 390px led to a
+full-width source selector above percentage/removal controls. No live personnel
+read or deployment occurred.
+
+Next: review Expenses decisions before implementation.
 
 ## Questions to resolve in their owning stages
 
-| Before                        | Question or example                                                                                                                                                  |
-| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Before exposing reset/refresh | Define their separate meanings, treatment of local edits, and snapshot replacement behavior.                                                                         |
-| Funding-schedule editing      | Choose allocation-entry defaults, percentage limits, outside-funding controls, and concise gap/overlap feedback. Preserve the agreed appointment FTE and date rules. |
-| Stage 4                       | Which generated estimates are replaced when the history window changes? When does editing an estimate turn it into an explicit planned expense?                      |
-| Stage 5                       | Verify per-project shortfalls remain visible despite surpluses elsewhere, and decide feature-flag rollout criteria.                                                  |
-| Later integration             | Define proposal batches, stale-preview handling, bounded undo, authentication, and interactions with pending form edits.                                             |
+| Before                        | Question or example                                                                                                                             |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| Before exposing reset/refresh | Define their separate meanings, treatment of local edits, and snapshot replacement behavior.                                                    |
+| Stage 4                       | Which generated estimates are replaced when the history window changes? When does editing an estimate turn it into an explicit planned expense? |
+| Stage 5                       | Verify per-project shortfalls remain visible despite surpluses elsewhere, and decide feature-flag rollout criteria.                             |
+| Later integration             | Define proposal batches, stale-preview handling, bounded undo, authentication, and interactions with pending form edits.                        |
 
 ## Reference evidence
 

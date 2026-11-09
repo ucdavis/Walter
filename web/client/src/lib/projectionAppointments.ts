@@ -3,6 +3,7 @@ import type {
   ProjectionDraft,
 } from '@/queries/projections.ts';
 import type { ProjectionSession } from '@/lib/projectionWorkspace.ts';
+import { validateProjectionAllocations } from '@/lib/projectionAllocations.ts';
 
 const EDITABLE_FIELDS = [
   'name',
@@ -111,7 +112,7 @@ export function validateProjectionAppointments(
       return `${appointment.name || 'Appointment'}: ${error}`;
     }
   }
-  return null;
+  return validateProjectionAllocations(plan);
 }
 
 function normalizedIdentity(inputs: AppointmentInputs) {

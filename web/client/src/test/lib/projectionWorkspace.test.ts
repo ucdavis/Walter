@@ -17,6 +17,7 @@ describe('salary workspace operations without React', () => {
       readProjectionLocation({ appointment: '101', source: '2' }, plan)
     ).toEqual({
       appointmentId: 101,
+      fundingMonth: null,
       fundingSourceId: 2,
       issues: [],
       section: 'staffing',
@@ -25,10 +26,39 @@ describe('salary workspace operations without React', () => {
       readProjectionLocation({ section: 'funding', source: 1 }, plan)
     ).toEqual({
       appointmentId: null,
+      fundingMonth: null,
       fundingSourceId: 1,
       issues: [],
       section: 'funding',
     });
+  });
+
+  it('opens allocation months only for a valid appointment target', () => {
+    const plan = createSalaryExample();
+    expect(
+      readProjectionLocation(
+        { appointment: 101, fundingMonth: '2026-07', section: 'staffing' },
+        plan
+      )
+    ).toMatchObject({
+      appointmentId: 101,
+      fundingMonth: '2026-07',
+      issues: [],
+    });
+    for (const fundingMonth of ['2026-99', '0000-01', '2026-1', 202_607]) {
+      expect(
+        readProjectionLocation(
+          { appointment: 101, fundingMonth, section: 'staffing' },
+          plan
+        ).issues
+      ).toContain('The funding month target is malformed.');
+    }
+    expect(
+      readProjectionLocation(
+        { fundingMonth: '2026-07', section: 'staffing' },
+        plan
+      ).issues
+    ).toContain('A funding month requires an appointment.');
   });
 
   it('acknowledges a submitted draft with exact authoritative tokens', () => {

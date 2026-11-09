@@ -174,7 +174,7 @@ public class ProjectionAppointment
     public DateOnly? EndDate { get; set; }
     /// <summary>True for an appointment imported from personnel data, whose salary remains based at the snapshot month.</summary>
     public bool IsSeeded { get; set; }
-    /// <summary>Some imported funding had no exact task match and was left unallocated.</summary>
+    /// <summary>Imported funding had no exact task match and needs review; cleared when the user applies a reviewed allocation schedule.</summary>
     public bool HasUnmatchedFunding { get; set; }
 
     public List<ProjectionFundingAllocation> Allocations { get; set; } = [];
@@ -183,9 +183,14 @@ public class ProjectionAppointment
 /// <summary>Share of an appointment's cost; a null FundingSourceId means funded outside this plan.</summary>
 public class ProjectionFundingAllocation
 {
+    [JsonRequired]
     public int? FundingSourceId { get; set; }
+    /// <summary>Fraction of the appointment, not full-time FTE; each share is 0 to 1, but combined shares need not total 1.</summary>
+    [JsonRequired]
     public decimal Percent { get; set; }
+    /// <summary>Inclusive first day; null adds no start restriction beyond the appointment and source dates.</summary>
     public DateOnly? StartDate { get; set; }
+    /// <summary>Inclusive last day; null adds no end restriction beyond the appointment and source dates.</summary>
     public DateOnly? EndDate { get; set; }
 }
 

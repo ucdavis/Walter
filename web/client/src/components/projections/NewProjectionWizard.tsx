@@ -309,6 +309,7 @@ export function NewProjectionWizard({
         {step === 1 && session && results && (
           <StaffingEditor
             appointmentFunding={results.appointmentFunding}
+            forecastWindow={results.forecastWindow}
             onOperation={applyAppointmentOperation}
             ref={staffingEditorRef}
             session={session}

@@ -113,10 +113,46 @@ Changing appointment dates preserves explicit funding dates. Removing an
 appointment removes its allocations and forecast costs; captured booked costs
 remain. A hypothetical hire requires a start date and may have an open end.
 
-Funding percentages are used as entered. Missing funding is not redistributed,
-and overlapping allocations are not scaled down. An allocation ending March 15
-and another starting March 15 both include that day. Plans can be saved with
-funding gaps or overlaps.
+Each allocation is between 0% and 100% of the appointment. Funding percentages
+are used as entered. Missing funding is not redistributed, and overlapping
+allocations are not scaled down even when their total exceeds 100%. An allocation
+ending March 15 and another starting March 15 both include that day. Plans can
+be saved with funding gaps or overlaps.
+
+## Editing allocation periods
+
+The appointment timeline opens a funding split for a selected period. Apply
+replaces all allocations inside that period and preserves funding on either
+side. Dates are inclusive. If A funds January 1 through December 31 and the
+user replaces July 1 through September 30 with B, A remains through June 30
+and resumes October 1. A partial-month replacement follows the same daily rule.
+An empty split leaves the selected period unallocated.
+
+Entire appointment and Through appointment end are explicit choices for dates
+without an additional allocation boundary. The appointment and source still
+limit eligible costs. Changing a destination preserves the entered percentage
+and dates. Source availability can leave part or all of the period unfunded;
+the editor does not silently move or shorten it. Captured balances and booked
+spending remain unchanged.
+
+Outside this plan is a valid allocation destination. It counts toward funding
+coverage and creates no charge against a source in this plan. Unallocated
+funding has no allocation and is not automatically assigned outside. New entries
+require an explicit source and percentage. Multiple entries for one source are
+allowed, including repeated periods.
+
+Coverage feedback checks dated boundaries within the forecast period. A month
+with no funding for half its active days and 200% for the other half has both a
+gap and overallocation, despite its average being 100%. Affected months and the
+checked-through date appear in the details. The check does not establish funding
+beyond that horizon. Coverage follows source availability dates; a later capture
+timestamp changes the source's financial forecast boundary, not when the source
+existed.
+
+Applying reviewed allocations clears an unmatched-import notice, including
+when the reviewed split is unchanged. Gap and overlap feedback still reflects
+the resulting schedule. Cancel, salary edits, and source additions do not clear
+that notice.
 
 ## Snapshot balance
 

@@ -524,6 +524,13 @@ public sealed partial class ProjectionsControllerTests
         invalidCbr["draft"]!["appointments"]![0]!.AsObject().Remove("cbrRate");
         using var omittedCbr = await client.PostAsJsonAsync($"/api/projections/by-iam/{PiIam}", invalidCbr);
         omittedCbr.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        foreach (var missing in new[] { "fundingSourceId", "percent" })
+        {
+            var request = JsonSerializer.SerializeToNode(NewPlanRequest(), new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
+            request["draft"]!["appointments"]![0]!["allocations"]![0]!.AsObject().Remove(missing);
+            using var rejected = await client.PostAsJsonAsync($"/api/projections/by-iam/{PiIam}", request);
+            rejected.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        }
         using var missingDraft = await client.PostAsJsonAsync($"/api/projections/by-iam/{PiIam}", new { Name = "Unreviewed", HistoryMonths = 3 });
         missingDraft.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         ctx.Projections.Should().BeEmpty();

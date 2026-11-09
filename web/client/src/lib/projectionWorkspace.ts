@@ -40,6 +40,7 @@ export function acknowledgeProjectionSave(
 
 export interface ProjectionLocation {
   appointmentId: number | null;
+  fundingMonth: string | null;
   fundingSourceId: number | null;
   issues: string[];
   section: 'overview' | 'funding' | 'staffing' | null;
@@ -47,6 +48,7 @@ export interface ProjectionLocation {
 
 export interface ProjectionNavigation {
   appointment?: number;
+  fundingMonth?: string;
   section: 'overview' | 'funding' | 'staffing';
   source?: number;
 }
@@ -73,6 +75,17 @@ export function readProjectionLocation(
   };
   const appointmentId = parseTarget('appointment');
   const fundingSourceId = parseTarget('source');
+  const fundingMonth =
+    typeof search.fundingMonth === 'string' &&
+    /^(?!0{4})\d{4}-(0[1-9]|1[0-2])$/.test(search.fundingMonth)
+      ? search.fundingMonth
+      : null;
+  if (search.fundingMonth !== undefined && fundingMonth === null) {
+    issues.push('The funding month target is malformed.');
+  }
+  if (search.fundingMonth !== undefined && appointmentId === null) {
+    issues.push('A funding month requires an appointment.');
+  }
   const section =
     search.section ??
     (search.appointment === undefined ? 'overview' : 'staffing');
@@ -100,6 +113,7 @@ export function readProjectionLocation(
   }
   return {
     appointmentId,
+    fundingMonth,
     fundingSourceId,
     issues,
     section:
@@ -118,6 +132,13 @@ export interface PendingAppointmentEditor {
   validationMessage: string | null;
 }
 
+export interface PendingAllocationEditor {
+  appointmentId: number;
+  hasChanges: boolean;
+  kind: 'allocation';
+  validationMessage: string | null;
+}
+
 export interface PendingSourceEditor {
   fundingSourceId: number | null;
   hasChanges: boolean;
@@ -126,6 +147,7 @@ export interface PendingSourceEditor {
 }
 
 export type PendingProjectionEditor =
+  | PendingAllocationEditor
   | PendingAppointmentEditor
   | PendingSourceEditor;
 

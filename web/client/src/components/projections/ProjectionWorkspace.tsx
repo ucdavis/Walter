@@ -314,17 +314,24 @@ export function ProjectionWorkspace({
           <h2 className="text-xl font-bold">Staffing</h2>
           <StaffingEditor
             appointmentFunding={results.appointmentFunding}
-            key={`${reloadVersion}:${location.appointmentId ?? 'list'}`}
+            forecastWindow={results.forecastWindow}
+            key={`${reloadVersion}:${location.appointmentId ?? 'list'}:${location.fundingMonth ?? 'details'}`}
             onOperation={applyAppointmentOperation}
             ref={editorRef}
             session={session}
             target={{
+              fundingMonth: location.fundingMonth,
               id: location.appointmentId,
-              onChange: (id) =>
+              onChange: (id, month) =>
                 onNavigate(
                   id === null
                     ? { ...sourceSearch, section: 'staffing' }
-                    : { ...sourceSearch, appointment: id, section: 'staffing' },
+                    : {
+                        ...sourceSearch,
+                        appointment: id,
+                        ...(month ? { fundingMonth: month } : {}),
+                        section: 'staffing',
+                      },
                   id === null
                 ),
             }}

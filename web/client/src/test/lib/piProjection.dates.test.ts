@@ -192,7 +192,10 @@ describe('projection date rules', () => {
     ).toEqual({
       appointmentId: 1,
       fundedPercent: 0,
+      hasGap: true,
+      hasOverlap: false,
       month: '2026-03',
+      shares: [],
     });
   });
 
@@ -363,7 +366,10 @@ describe('projection date rules', () => {
     ).toEqual({
       appointmentId: 1,
       fundedPercent: 1,
+      hasGap: false,
+      hasOverlap: false,
       month: '2026-03',
+      shares: [{ fundingSourceId: 1, percent: 1 }],
     });
   });
 

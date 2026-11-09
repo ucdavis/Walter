@@ -3,6 +3,12 @@ import {
   AppointmentEditor,
   type AppointmentEditorHandle,
 } from '@/components/projections/AppointmentEditor.tsx';
+import {
+  AllocationEditor,
+  type AllocationEditorHandle,
+} from '@/components/projections/AllocationEditor.tsx';
+import { FundingTimeline } from '@/components/projections/FundingTimeline.tsx';
+import { replaceAppointmentFunding } from '@/lib/projectionAllocations.ts';
 import { AppointmentFundingStatus } from '@/components/projections/AppointmentFundingStatus.tsx';
 import { ProjectionDialog } from '@/components/projections/ProjectionDialog.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
@@ -16,6 +22,7 @@ import {
 } from '@/lib/projectionAppointments.ts';
 import { sourceLabel } from '@/lib/projectionSources.ts';
 import type {
+  PendingAllocationEditor,
   PendingAppointmentEditor,
   ProjectionSession,
 } from '@/lib/projectionWorkspace.ts';
@@ -27,35 +34,57 @@ const shareFormat = new Intl.NumberFormat('en-US', {
 });
 
 export interface StaffingEditorHandle {
-  read: () => PendingAppointmentEditor | null;
+  read: () => PendingAppointmentEditor | PendingAllocationEditor | null;
 }
 
 export function StaffingEditor<T extends ProjectionDraft>({
   appointmentFunding,
+  forecastWindow,
   onOperation,
   ref,
   session,
   target,
 }: {
   appointmentFunding: AppointmentFundingMonth[];
+  forecastWindow: { endMonth: string; startMonth: string };
   onOperation: (
     operation: AppointmentOperation
   ) => AppointmentOperationResult<T>;
   ref?: Ref<StaffingEditorHandle>;
   session: ProjectionSession<T>;
-  target?: { id: number | null; onChange: (id: number | null) => void };
+  target?: {
+    fundingMonth: string | null;
+    id: number | null;
+    onChange: (id: number | null, month?: string) => void;
+  };
 }) {
   const [editing, setEditing] = useState<number | 'new' | null>(null);
+  const [funding, setFunding] = useState<{ id: number; month: string } | null>(
+    null
+  );
   const [removing, setRemoving] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const editorRef = useRef<AppointmentEditorHandle>(null);
+  const allocationRef = useRef<AllocationEditorHandle>(null);
   const { draft } = session;
   const appointment = draft.appointments.find(
-    ({ id }) => id === (target ? target.id : editing)
+    ({ id }) =>
+      id === (target ? (target.fundingMonth ? null : target.id) : editing)
   );
+  const fundingTarget = target
+    ? target.id !== null && target.fundingMonth
+      ? { id: target.id, month: target.fundingMonth }
+      : null
+    : funding;
+  const fundingAppointment = draft.appointments.find(
+    ({ id }) => id === fundingTarget?.id
+  );
+  const editFunding = (id: number, month: string) =>
+    target ? target.onChange(id, month) : setFunding({ id, month });
   const removed = draft.appointments.find(({ id }) => id === removing);
   useImperativeHandle(ref, () => ({
-    read: () => editorRef.current?.read() ?? null,
+    read: () =>
+      allocationRef.current?.read() ?? editorRef.current?.read() ?? null,
   }));
   function apply(operation: AppointmentOperation) {
     const result = onOperation(operation);
@@ -106,6 +135,22 @@ export function StaffingEditor<T extends ProjectionDraft>({
                   Edit appointment for {item.name}
                 </button>
                 <button
+                  className="btn btn-outline"
+                  id={`edit-funding-${item.id}`}
+                  onClick={() =>
+                    editFunding(
+                      item.id,
+                      item.startDate &&
+                        item.startDate.slice(0, 7) > forecastWindow.startMonth
+                        ? item.startDate.slice(0, 7)
+                        : forecastWindow.startMonth
+                    )
+                  }
+                  type="button"
+                >
+                  Edit funding for {item.name}
+                </button>
+                <button
                   className="btn btn-ghost"
                   onClick={() => setRemoving(item.id)}
                   type="button"
@@ -124,29 +169,45 @@ export function StaffingEditor<T extends ProjectionDraft>({
             </p>
             <AppointmentFundingStatus
               appointment={item}
+              forecastWindow={forecastWindow}
               months={appointmentFunding}
-              snapshotMonth={draft.seededAt.slice(0, 7)}
             />
-            <ul className="mt-4 space-y-1 text-sm">
-              {item.allocations.map((allocation, index) => {
-                const source = draft.fundingSources.find(
-                  ({ id }) => id === allocation.fundingSourceId
-                );
-                return (
-                  <li key={index}>
-                    {allocation.fundingSourceId === null
-                      ? 'Outside this portfolio'
-                      : source
-                        ? sourceLabel(source)
-                        : 'Unallocated funding'}
-                    : {shareFormat.format(allocation.percent)} of appointment
-                    {' · '}
-                    {shareFormat.format(allocation.percent * item.fte)}{' '}
-                    full-time FTE
-                  </li>
-                );
-              })}
-            </ul>
+            <FundingTimeline
+              appointment={item}
+              forecastWindow={forecastWindow}
+              months={appointmentFunding}
+              onEdit={(month) => editFunding(item.id, month)}
+              sources={draft.fundingSources}
+            />
+            <details className="mt-3 text-sm">
+              <summary className="cursor-pointer">
+                Allocation dates and shares
+              </summary>
+              <ul className="mt-2 space-y-1 text-sm">
+                {item.allocations.map((allocation, index) => {
+                  const source = draft.fundingSources.find(
+                    ({ id }) => id === allocation.fundingSourceId
+                  );
+                  return (
+                    <li key={index}>
+                      {allocation.fundingSourceId === null
+                        ? 'Outside this plan'
+                        : source
+                          ? sourceLabel(source)
+                          : 'Unallocated funding'}
+                      : {shareFormat.format(allocation.percent)} of appointment
+                      {' · '}
+                      {shareFormat.format(allocation.percent * item.fte)}{' '}
+                      full-time FTE
+                      <span className="block text-xs">
+                        {allocation.startDate ?? 'Appointment start'} to{' '}
+                        {allocation.endDate ?? 'appointment end'}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </details>
           </article>
         ))}
       </div>
@@ -171,6 +232,27 @@ export function StaffingEditor<T extends ProjectionDraft>({
           }
           ref={editorRef}
           snapshotMonth={draft.seededAt.slice(0, 7)}
+        />
+      )}
+      {fundingAppointment && fundingTarget && (
+        <AllocationEditor
+          appointment={fundingAppointment}
+          forecastWindow={forecastWindow}
+          key={`${fundingAppointment.id}:${fundingTarget.month}`}
+          month={fundingTarget.month}
+          onApply={(range, shares) =>
+            apply((current) =>
+              replaceAppointmentFunding(
+                current,
+                fundingAppointment.id,
+                range,
+                shares
+              )
+            )
+          }
+          onClose={() => (target ? target.onChange(null) : setFunding(null))}
+          plan={draft}
+          ref={allocationRef}
         />
       )}
       {removed && (

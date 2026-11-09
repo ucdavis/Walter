@@ -208,6 +208,45 @@ async function reviewWizard(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe('projection creation and copies', () => {
+  it('reviews allocations during wizard staffing and saves the acknowledged import notice', async () => {
+    const api = handleLifecycle();
+    api.seed.appointments[0].hasUnmatchedFunding = true;
+    const route = renderPlans();
+    const user = userEvent.setup();
+    try {
+      await startWizard(user);
+      await user.click(
+        screen.getByRole('button', { name: 'Load funding sources' })
+      );
+      await user.click(await screen.findByRole('button', { name: 'Continue' }));
+      await screen.findByText(/An imported funding task could not be matched/);
+      await user.click(
+        screen.getByRole('button', { name: 'Edit funding for Alex Example' })
+      );
+      await screen.findByRole('dialog', {
+        name: 'Edit funding for Alex Example',
+      });
+      await user.click(screen.getByRole('button', { name: 'Apply funding' }));
+      expect(
+        screen.queryByText(/An imported funding task could not be matched/)
+      ).not.toBeInTheDocument();
+      expect(api.creates).toHaveLength(0);
+      await user.click(screen.getByRole('button', { name: 'Continue' }));
+      await user.click(
+        screen.getByRole('button', { name: 'Create plan & open workspace' })
+      );
+      await waitFor(() => expect(api.creates).toHaveLength(1));
+      expect(api.creates[0].draft.appointments[0].hasUnmatchedFunding).toBe(
+        false
+      );
+      expect(api.creates[0].draft.appointments[0].allocations).toEqual(
+        api.seed.appointments[0].allocations
+      );
+    } finally {
+      route.cleanup();
+    }
+  });
+
   it('requires a retained imported salary before creating and accepts an entered zero', async () => {
     const api = handleLifecycle();
     api.seed.appointments[0].monthlySalary = null;

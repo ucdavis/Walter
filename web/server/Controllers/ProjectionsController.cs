@@ -307,7 +307,13 @@ public sealed class ProjectionsController(
         && appointment.ColaMonth is >= 1 and <= 12
         && (appointment.FeeRemissionMonthly is null or >= 0)
         && !(appointment.StartDate > appointment.EndDate)
+        && ValidAllocations(appointment.Allocations)
         && (appointment.IsSeeded || (appointment.StartDate is not null && !string.IsNullOrWhiteSpace(appointment.Name))));
+
+    /// <summary>Each allocation must be valid on its own; funding gaps, overlaps, and dates outside source availability remain saveable.</summary>
+    private static bool ValidAllocations(List<ProjectionFundingAllocation> allocations) => allocations.All(allocation =>
+        allocation.Percent is >= 0 and <= 1
+        && !(allocation.StartDate > allocation.EndDate));
 
     /// <summary>Each source has an explicit capture and kind; a captured task may appear only once in a plan.</summary>
     private static bool ValidSources(List<ProjectionFundingSource> sources)

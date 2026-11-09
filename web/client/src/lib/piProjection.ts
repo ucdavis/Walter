@@ -3,6 +3,7 @@ import type {
   ProjectionAppointment,
   ProjectionFundingSource,
 } from '@/queries/projections.ts';
+import type { AllocationShare } from '@/lib/projectionAllocations.ts';
 
 export interface PiProjectionRow {
   actualAmount: number;
@@ -18,7 +19,18 @@ export interface AppointmentFundingMonth {
   appointmentId: number;
   /** Average funding share over active appointment days; gaps and overlaps can offset. */
   fundedPercent: number;
+  /** At least one active day is below 100%, independent of the monthly average. */
+  hasGap: boolean;
+  /** At least one active day exceeds 100%, independent of the monthly average. */
+  hasOverlap: boolean;
   month: string;
+  /** Average appointment share by source, including explicit outside funding. */
+  shares: AllocationShare[];
+}
+
+export interface ProjectionForecastWindow {
+  endMonth: string;
+  startMonth: string;
 }
 
 export const SALARY_CATEGORY = '01 - Salaries and Wages';
@@ -32,7 +44,27 @@ const toIndex = (value: string) =>
   Number(value.slice(0, 4)) * 12 + Number(value.slice(5, 7)) - 1;
 
 const toMonth = (index: number) =>
-  `${Math.floor(index / 12)}-${String((index % 12) + 1).padStart(2, '0')}`;
+  `${String(Math.floor(index / 12)).padStart(4, '0')}-${String((index % 12) + 1).padStart(2, '0')}`;
+
+const firstSourceForecast = (source: ProjectionFundingSource) =>
+  source.sourceKind === 'Planned' && source.startDate
+    ? Math.max(toIndex(source.capturedAt), toIndex(source.startDate))
+    : toIndex(source.capturedAt);
+
+/** Funding checks use the same bounded forecast period shown by the plan. */
+export function getProjectionForecastWindow(
+  projection: ProjectionDraft
+): ProjectionForecastWindow {
+  const start = toIndex(projection.seededAt);
+  const end = Math.max(
+    start,
+    ...projection.fundingSources.flatMap((source) => {
+      const first = firstSourceForecast(source);
+      return [first, source.endDate ? toIndex(source.endDate) : first + 12];
+    })
+  );
+  return { endMonth: toMonth(end), startMonth: toMonth(start) };
+}
 
 /** Imported pay is snapshot-dated; a planned future hire's input is its starting rate. */
 export function getAppointmentSalaryBaseMonth(
@@ -57,13 +89,17 @@ type DateBounds = { endDate: string | null; startDate: string | null };
 const toDay = (value: string) =>
   Date.parse(`${value.slice(0, 10)}T00:00:00Z`) / DAY_MS;
 
-const monthDays = (m: number): DayRange => ({
-  end: Date.UTC(Math.floor(m / 12), (m % 12) + 1, 0) / DAY_MS,
-  start: Date.UTC(Math.floor(m / 12), m % 12, 1) / DAY_MS,
-});
+const monthDays = (m: number): DayRange => {
+  const start = new Date(`${toMonth(m)}-01T00:00:00Z`);
+  const end = new Date(start);
+  // Date.UTC treats years below 100 as 1900–1999; date-only strings retain the supplied year.
+  end.setUTCMonth(end.getUTCMonth() + 1);
+  end.setUTCDate(0);
+  return { end: end.getTime() / DAY_MS, start: start.getTime() / DAY_MS };
+};
 
 /** Counts the inclusive intersection; a missing endpoint imposes no bound. */
-function overlapDays(range: DayRange, ...bounds: DateBounds[]) {
+function overlapRange(range: DayRange, ...bounds: DateBounds[]): DayRange {
   let { end, start } = range;
   for (const bound of bounds) {
     if (bound.startDate !== null) {
@@ -73,7 +109,30 @@ function overlapDays(range: DayRange, ...bounds: DateBounds[]) {
       end = Math.min(end, toDay(bound.endDate));
     }
   }
+  return { end, start };
+}
+
+function overlapDays(range: DayRange, ...bounds: DateBounds[]) {
+  const { end, start } = overlapRange(range, ...bounds);
   return Math.max(0, end - start + 1);
+}
+
+function fundingCoverage(events: Map<number, number>, active: DayRange) {
+  const boundaries = [
+    ...new Set([active.start, active.end + 1, ...events.keys()]),
+  ].sort((a, b) => a - b);
+  let share = 0;
+  let hasGap = false;
+  let hasOverlap = false;
+  // Check constant intervals rather than averaging away a gap and an overlap in the same month.
+  for (const [index, boundary] of boundaries.entries()) {
+    share += events.get(boundary) ?? 0;
+    if (index + 1 < boundaries.length && boundary <= active.end) {
+      hasGap ||= share < 1 - 1e-9;
+      hasOverlap ||= share > 1 + 1e-9;
+    }
+  }
+  return { hasGap, hasOverlap };
 }
 
 /**
@@ -82,6 +141,7 @@ function overlapDays(range: DayRange, ...bounds: DateBounds[]) {
  */
 export function computePiProjection(projection: ProjectionDraft): {
   appointmentFunding: AppointmentFundingMonth[];
+  forecastWindow: ProjectionForecastWindow;
   rows: PiProjectionRow[];
 } {
   const seed = new Date(projection.seededAt);
@@ -94,10 +154,7 @@ export function computePiProjection(projection: ProjectionDraft): {
         source.id,
         {
           day: toDay(capturedAt),
-          firstForecast:
-            source.sourceKind === 'Planned' && source.startDate
-              ? Math.max(index, toIndex(source.startDate))
-              : index,
+          firstForecast: firstSourceForecast(source),
           index,
         },
       ];
@@ -107,11 +164,8 @@ export function computePiProjection(projection: ProjectionDraft): {
 
   const sourceEnd = (p: ProjectionFundingSource) =>
     p.endDate ? toIndex(p.endDate) : capture(p).firstForecast + 12;
-  const horizonEnd = Math.max(
-    seedIndex,
-    ...projection.fundingSources.map((source) => capture(source).firstForecast),
-    ...projection.fundingSources.map(sourceEnd)
-  );
+  const forecastWindow = getProjectionForecastWindow(projection);
+  const horizonEnd = toIndex(forecastWindow.endMonth);
   // fundingSourceId -> category -> month index -> amount
   const charges = new Map<number, Map<string, Map<number, number>>>();
   const charge = (
@@ -156,6 +210,8 @@ export function computePiProjection(projection: ProjectionDraft): {
         [FEE_REMISSION_CATEGORY, appointment.feeRemissionMonthly ?? 0],
       ];
       let fundedPercent = 0;
+      const fundingEvents = new Map<number, number>();
+      const fundingShares = new Map<number | null, number>();
       for (const f of appointment.allocations) {
         if (!within(m, f.startDate, f.endDate)) {
           continue;
@@ -172,10 +228,26 @@ export function computePiProjection(projection: ProjectionDraft): {
         ) {
           continue;
         }
-        const eligibleDays = source
-          ? overlapDays(days, appointment, f, source)
-          : overlapDays(days, appointment, f);
-        fundedPercent += f.percent * (eligibleDays / activeAppointmentDays);
+        const eligible = source
+          ? overlapRange(days, appointment, f, source)
+          : overlapRange(days, appointment, f);
+        const eligibleDays = Math.max(0, eligible.end - eligible.start + 1);
+        const averageShare = f.percent * (eligibleDays / activeAppointmentDays);
+        fundedPercent += averageShare;
+        if (eligibleDays > 0) {
+          fundingShares.set(
+            f.fundingSourceId,
+            (fundingShares.get(f.fundingSourceId) ?? 0) + averageShare
+          );
+          fundingEvents.set(
+            eligible.start,
+            (fundingEvents.get(eligible.start) ?? 0) + f.percent
+          );
+          fundingEvents.set(
+            eligible.end + 1,
+            (fundingEvents.get(eligible.end + 1) ?? 0) - f.percent
+          );
+        }
         if (!source || eligibleDays === 0) {
           continue;
         }
@@ -192,7 +264,12 @@ export function computePiProjection(projection: ProjectionDraft): {
         appointmentFunding.push({
           appointmentId: appointment.id,
           fundedPercent,
+          ...fundingCoverage(fundingEvents, overlapRange(days, appointment)),
           month: toMonth(m),
+          shares: [...fundingShares].map(([fundingSourceId, percent]) => ({
+            fundingSourceId,
+            percent,
+          })),
         });
       }
     }
@@ -322,7 +399,7 @@ export function computePiProjection(projection: ProjectionDraft): {
     }
   }
 
-  return { appointmentFunding, rows };
+  return { appointmentFunding, forecastWindow, rows };
 }
 
 /** Compounds COLA after the salary's base month, never within that month. */
