@@ -52,6 +52,7 @@ GRANT SELECT ON [dbo].[PpmPersonRoles] TO [WalterAppRole];
 GRANT SELECT ON [dbo].[PpmProjects] TO [WalterAppRole];
 GRANT SELECT ON [dbo].[PpmProjectAwards] TO [WalterAppRole];
 GRANT SELECT ON [dbo].[GlProjectMonthlyActuals] TO [WalterAppRole];
+GRANT SELECT ON [dbo].[PgmMasterData] TO [WalterAppRole];
 GRANT SELECT ON [dbo].[GlSummaryBalances] TO [WalterAppRole];
 GRANT SELECT ON [dbo].[ExpenditureTypeByAccount] TO [WalterAppRole];
 -- The financial summary sprocs read these via dynamic SQL, which does not honor ownership chaining.
@@ -98,6 +99,10 @@ GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[PpmProjectAwards_Staging] TO [Wal
 -- which does not honor ownership chaining.
 GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[GlProjectMonthlyActuals] TO [WalterPipelineRole];
 GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[GlProjectMonthlyActuals_Staging] TO [WalterPipelineRole];
+-- pl_aedwh_loader loads PgmMasterData_Staging (pre-copy DELETE + insert from lh_bronze), then
+-- usp_SwapStagingTable snapshot-swaps it into PgmMasterData; same dynamic-SQL caveat as above.
+GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[PgmMasterData] TO [WalterPipelineRole];
+GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[PgmMasterData_Staging] TO [WalterPipelineRole];
 -- pl_gl_balances_loader loads GlSummaryBalances_Staging (pre-copy DELETE + bulk insert), then
 -- usp_SwapStagingTable snapshot-swaps it into GlSummaryBalances — same dynamic-SQL caveat as above.
 GRANT INSERT, SELECT, UPDATE, DELETE ON [dbo].[GlSummaryBalances] TO [WalterPipelineRole];
