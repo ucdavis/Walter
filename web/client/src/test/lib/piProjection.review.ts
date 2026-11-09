@@ -30,7 +30,6 @@ function example() {
       budget: Number(budget),
       committed: 0,
       expenditureCategory: String(expenditureCategory),
-      isSeeded: true,
       spentToDate: 0,
     }));
   }

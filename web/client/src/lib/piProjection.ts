@@ -1,5 +1,5 @@
 import type {
-  Projection,
+  ProjectionDraft,
   ProjectionAppointment,
   ProjectionFundingSource,
 } from '@/queries/projections.ts';
@@ -8,7 +8,7 @@ export interface PiProjectionRow {
   actualAmount: number;
   expenditureCategory: string;
   fundingSourceId: number;
-  kind: 'actual' | 'blended' | 'projected';
+  kind: 'blended' | 'projected';
   month: string; // 'YYYY-MM'
   projectedAmount: number;
   remaining: number;
@@ -24,9 +24,6 @@ export interface AppointmentFundingMonth {
 export const SALARY_CATEGORY = '01 - Salaries and Wages';
 export const FRINGE_CATEGORY = '02 - Fringe Benefits';
 export const FEE_REMISSION_CATEGORY = '08 - Fellowship & Scholarships';
-/** Placeholder monthly GSR fee remission the appointment modal pre-fills; confirm before relying on it. */
-export const GSR_FEE_REMISSION_DEFAULT = 1500;
-
 const PERSONNEL = new Set([SALARY_CATEGORY, FRINGE_CATEGORY]);
 export const BALANCE_ADJUSTMENT_CATEGORY = 'Planning balance adjustment';
 
@@ -83,7 +80,7 @@ function overlapDays(range: DayRange, ...bounds: DateBounds[]) {
  * Each funding source forecasts from its captured inputs. Employee salary bases
  * remain tied to the original plan snapshot, including when later sources are added.
  */
-export function computePiProjection(projection: Projection): {
+export function computePiProjection(projection: ProjectionDraft): {
   appointmentFunding: AppointmentFundingMonth[];
   rows: PiProjectionRow[];
 } {
@@ -115,14 +112,6 @@ export function computePiProjection(projection: Projection): {
     ...projection.fundingSources.map((source) => capture(source).firstForecast),
     ...projection.fundingSources.map(sourceEnd)
   );
-  const firstIndex = Math.min(
-    seedIndex,
-    ...projection.fundingSources.map((source) => capture(source).index),
-    ...projection.fundingSources.flatMap((p) =>
-      p.actuals.map((a) => toIndex(a.month))
-    )
-  );
-
   // fundingSourceId -> category -> month index -> amount
   const charges = new Map<number, Map<string, Map<number, number>>>();
   const charge = (
@@ -315,36 +304,19 @@ export function computePiProjection(projection: Projection): {
       const actual = (m: number) => actuals.get(category)?.get(m) ?? 0;
       const planned = (m: number) => sourceCharges.get(category)?.get(m) ?? 0;
 
-      // Remaining at the end of each month: history integrates backward from the seed boundary.
-      const remaining = new Map<number, number>([
-        [firstForecast - 1, startRemaining],
-      ]);
-      for (let m = firstForecast - 1; m > firstIndex; m--) {
-        remaining.set(m - 1, remaining.get(m)! + actual(m));
-      }
+      let remaining = startRemaining;
       for (let m = firstForecast; m <= last; m++) {
         // The snapshot balance already includes its booked actuals.
         const additionalActual = m === sourceIndex ? 0 : actual(m);
-        remaining.set(m, remaining.get(m - 1)! - additionalActual - planned(m));
-      }
-
-      for (let m = firstIndex; m <= last; m++) {
+        remaining -= additionalActual + planned(m);
         rows.push({
           actualAmount: actual(m),
           expenditureCategory: category,
           fundingSourceId: source.id,
-          kind:
-            m < firstForecast
-              ? 'actual'
-              : m === sourceIndex
-                ? 'blended'
-                : 'projected',
+          kind: m === sourceIndex ? 'blended' : 'projected',
           month: toMonth(m),
           projectedAmount: planned(m),
-          remaining:
-            source.sourceKind === 'Planned' && m < firstForecast
-              ? 0
-              : remaining.get(m)!,
+          remaining,
         });
       }
     }

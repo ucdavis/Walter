@@ -21,7 +21,6 @@ const funding = (
 ): ProjectionFundingAllocation => ({
   endDate: null,
   fundingSourceId,
-  isSeeded: true,
   percent,
   startDate: null,
 });
@@ -45,7 +44,6 @@ const appointment = (
   name: 'Person',
   positionNumber: 'X1',
   rateSet: 'DVCMP',
-  sourceProjectNumbers: ['P1'],
   startDate: null,
   title: null,
   vacationAccrualRate: 0,
@@ -94,7 +92,6 @@ const projection = ({
           budget: 1000,
           committed: 0,
           expenditureCategory: SUPPLIES,
-          isSeeded: true,
           spentToDate: 0,
         },
       ],
@@ -104,7 +101,7 @@ const projection = ({
       endDate,
       expenses,
       id: 1,
-      isSeeded: true,
+      name: 'Project 1',
       projectName: 'Project 1',
       projectNumber: 'P1',
       projectType: null,
@@ -138,7 +135,6 @@ const budget = (
   budget: amount,
   committed,
   expenditureCategory,
-  isSeeded: true,
   spentToDate,
 });
 
@@ -754,10 +750,10 @@ describe('computePiProjection', () => {
     );
     const at = (month: string) => rows.find((r) => r.month === month);
 
-    expect(at('2026-09')).toMatchObject({
-      actualAmount: 40,
-      kind: 'actual',
-      remaining: 860,
+    expect(at('2026-09')).toBeUndefined();
+    expect(p.fundingSources[0].actuals[0]).toMatchObject({
+      amount: 40,
+      month: '2026-09-01',
     });
     expect(at('2026-10')).toMatchObject({
       actualAmount: 100,
@@ -767,7 +763,7 @@ describe('computePiProjection', () => {
     expect(at('2026-11')).toMatchObject({ kind: 'projected', remaining: 400 });
   });
 
-  it('fundingSources 12 months when a source has no end date', () => {
+  it('forecasts 12 months when a source has no end date', () => {
     const rows = computePiProjection(
       projection({ endDate: null, expenses: [expense({ amount: 1 })] })
     ).rows;

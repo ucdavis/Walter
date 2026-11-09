@@ -24,7 +24,6 @@ const source = (
       budget: balance + 2500,
       committed: 0,
       expenditureCategory: SALARY_CATEGORY,
-      isSeeded: true,
       spentToDate: 2500,
     },
   ],
@@ -34,7 +33,7 @@ const source = (
   endDate: '2026-06-30',
   expenses: [],
   id,
-  isSeeded: true,
+  name,
   projectName: name,
   projectNumber: `SYNTHETIC-${id}`,
   projectType: null,
@@ -53,7 +52,6 @@ export function createSalaryExample(): Projection {
         allocations: [1, 2].map((fundingSourceId) => ({
           endDate: '2026-06-30',
           fundingSourceId,
-          isSeeded: true,
           percent: 0.5,
           startDate: '2026-01-01',
         })),
@@ -72,7 +70,6 @@ export function createSalaryExample(): Projection {
         name: 'Alex Example',
         positionNumber: 'EXAMPLE-101',
         rateSet: 'DVCMP',
-        sourceProjectNumbers: ['SYNTHETIC-1', 'SYNTHETIC-2'],
         startDate: '2026-01-01',
         title: 'Research specialist',
         vacationAccrualRate: 0,
@@ -108,14 +105,12 @@ export function createBookedSalaryExample(): Projection {
         budget: 20_000,
         committed: 0,
         expenditureCategory: SALARY_CATEGORY,
-        isSeeded: true,
         spentToDate: 1000,
       },
       {
         budget: 8000,
         committed: 0,
         expenditureCategory: FRINGE_CATEGORY,
-        isSeeded: true,
         spentToDate: 400,
       },
     ];
@@ -162,12 +157,10 @@ export function createFutureHireExample(): Projection {
   appointment.isSeeded = false;
   appointment.employeeId = null;
   appointment.positionNumber = null;
-  appointment.sourceProjectNumbers = [];
   appointment.startDate = '2026-08-01';
   appointment.endDate = '2027-08-31';
   appointment.colaRate = 0.03;
   for (const allocation of appointment.allocations) {
-    allocation.isSeeded = false;
     allocation.startDate = appointment.startDate;
     allocation.endDate = appointment.endDate;
   }
@@ -210,7 +203,6 @@ export function createFeeExample(): Projection {
         budget: 10_000,
         committed: 0,
         expenditureCategory: FEE_REMISSION_CATEGORY,
-        isSeeded: true,
         spentToDate: 400,
       },
     ];

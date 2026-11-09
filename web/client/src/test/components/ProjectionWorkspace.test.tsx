@@ -61,12 +61,8 @@ describe('projection salary workspace', () => {
     expect(read().draft.fundingSources[0].actuals).toEqual(
       plan.fundingSources[0].actuals
     );
-    expect(read().results.rows).toContainEqual(
-      expect.objectContaining({
-        actualAmount: 2500,
-        fundingSourceId: 1,
-        month: '2025-12',
-      })
+    expect(read().results.rows.every(({ month }) => month >= '2026-01')).toBe(
+      true
     );
   });
 
@@ -175,9 +171,7 @@ describe('projection salary workspace', () => {
     await waitFor(() => expect(read().revision).toBe(1));
     expect(read().draft.appointments[0].monthlySalary).toBe(11_000);
     expect(
-      read()
-        .results.rows.filter((row) => row.kind !== 'actual')
-        .every((row) => row.projectedAmount === 2750)
+      read().results.rows.every((row) => row.projectedAmount === 2750)
     ).toBe(true);
     expect(screen.getByRole('status')).toHaveTextContent('Unsaved changes');
     expect(editButton()).toHaveFocus();

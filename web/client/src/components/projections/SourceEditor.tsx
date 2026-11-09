@@ -16,23 +16,26 @@ import type {
   PendingSourceEditor,
   ProjectionSession,
 } from '@/lib/projectionWorkspace.ts';
-import type { ProjectionFundingSource } from '@/queries/projections.ts';
+import type {
+  ProjectionDraft,
+  ProjectionFundingSource,
+} from '@/queries/projections.ts';
 
 export interface SourceEditorHandle {
   read: () => PendingSourceEditor;
 }
 
-export function SourceEditor({
+export function SourceEditor<T extends ProjectionDraft>({
   onApply,
   onClose,
   ref,
   session,
   source,
 }: {
-  onApply: (inputs: SourceInputs) => SourceOperationResult;
+  onApply: (inputs: SourceInputs) => SourceOperationResult<T>;
   onClose: () => void;
   ref?: Ref<SourceEditorHandle>;
-  session: ProjectionSession;
+  session: ProjectionSession<T>;
   source?: ProjectionFundingSource;
 }) {
   const initialBalance = source ? sourcePlanningBalance(source) : null;
@@ -42,7 +45,7 @@ export function SourceEditor({
     defaultValues: {
       balance: initialDisplay,
       endDate: source?.endDate ?? '',
-      name: source?.projectName ?? '',
+      name: source?.name ?? '',
       startDate: source?.startDate ?? '',
     },
     onSubmit: ({ value }) => {

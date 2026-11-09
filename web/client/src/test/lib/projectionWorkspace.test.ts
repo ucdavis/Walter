@@ -111,8 +111,7 @@ describe('salary workspace operations without React', () => {
         rows.filter(
           (row) =>
             row.fundingSourceId === fundingSourceId &&
-            row.expenditureCategory === SALARY_CATEGORY &&
-            row.kind !== 'actual'
+            row.expenditureCategory === SALARY_CATEGORY
         );
       expect(
         salaryRows(before.rows).map((row) => [row.month, row.projectedAmount])
@@ -128,8 +127,9 @@ describe('salary workspace operations without React', () => {
         Array(6).fill(2750)
       );
     }
-    expect(after.rows.filter((row) => row.kind === 'actual')).toEqual(
-      before.rows.filter((row) => row.kind === 'actual')
+    expect(after.rows.every((row) => row.month >= '2026-01')).toBe(true);
+    expect(result.session.draft.fundingSources[0].actuals).toEqual(
+      initial.draft.fundingSources[0].actuals
     );
     expect(result.session.draft.appointments[0].fte).toBe(0.5);
     expect(result.session.draft.appointments[0].allocations).toBe(
@@ -230,7 +230,7 @@ describe('salary workspace operations without React', () => {
     snapshot.results.rows[0].actualAmount = 1;
     snapshot.location.issues.push('Changed externally');
     expect(session.draft.appointments[0].monthlySalary).toBe(10_000);
-    expect(results.rows[0].actualAmount).toBe(2500);
+    expect(results.rows[0].actualAmount).toBe(0);
     expect(location.issues).toEqual([]);
   });
 });

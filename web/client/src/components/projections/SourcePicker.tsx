@@ -19,9 +19,10 @@ import type { ProjectionSession } from '@/lib/projectionWorkspace.ts';
 import {
   importProjectionSources,
   projectionSourceCatalogQueryOptions,
+  type ProjectionDraft,
 } from '@/queries/projections.ts';
 
-export function SourcePicker({
+export function SourcePicker<T extends ProjectionDraft>({
   iamId,
   onApply,
   onClose,
@@ -29,10 +30,10 @@ export function SourcePicker({
   session,
 }: {
   iamId: string;
-  onApply: (operation: SourceOperation) => SourceOperationResult;
+  onApply: (operation: SourceOperation) => SourceOperationResult<T>;
   onClose: () => void;
   ref?: Ref<SourceEditorHandle>;
-  session: ProjectionSession;
+  session: ProjectionSession<T>;
 }) {
   const catalog = useQuery(projectionSourceCatalogQueryOptions(iamId));
   const [search, setSearch] = useState('');

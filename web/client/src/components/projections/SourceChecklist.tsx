@@ -2,7 +2,7 @@ export interface SourceChoice {
   disabled?: boolean;
   key: string;
   label: string;
-  projectName: string;
+  projectName: string | null;
   projectNumber: string | null;
 }
 
@@ -63,6 +63,7 @@ export function SourceChecklist({
             </div>
           );
         }
+        const projectName = group[0].projectName ?? group[0].projectNumber;
         const available = group.filter((choice) => !choice.disabled);
         const checked =
           available.length > 0 &&
@@ -73,7 +74,7 @@ export function SourceChecklist({
           <div className="rounded-box border border-base-300 p-4" key={key}>
             <label className="flex items-center gap-3 font-semibold">
               <input
-                aria-label={`Include project ${group[0].projectName}`}
+                aria-label={`Include project ${projectName}`}
                 checked={checked}
                 className="checkbox checkbox-sm"
                 disabled={available.length === 0}
@@ -90,7 +91,7 @@ export function SourceChecklist({
                 }}
                 type="checkbox"
               />
-              {group[0].projectName}
+              {projectName}
             </label>
             <details className="mt-2" open>
               <summary className="cursor-pointer text-sm">

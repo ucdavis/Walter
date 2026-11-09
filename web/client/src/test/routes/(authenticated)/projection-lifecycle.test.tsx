@@ -13,6 +13,7 @@ import type {
   CreateProjectionDraftRequest,
   DuplicateProjectionRequest,
   Projection,
+  ProjectionDraft,
   SaveProjectionRequest,
 } from '@/queries/projections.ts';
 import { routeTree } from '@/routeTree.gen.ts';
@@ -53,11 +54,17 @@ function renderPlans() {
 }
 
 function handleLifecycle(plans: Projection[] = []) {
-  const seed = {
-    ...createSalaryExample(),
-    id: 0,
+  const example = createSalaryExample();
+  const seed: ProjectionDraft = {
+    appointments: example.appointments,
+    fundingSources: example.fundingSources,
+    historyMonths: example.historyMonths,
+    name: example.name,
     seededAt: '2026-01-01T00:00:00.1234567Z',
   };
+  const roster = [
+    { appointmentId: 101, projectNumbers: ['SYNTHETIC-1', 'SYNTHETIC-2'] },
+  ];
   for (const source of seed.fundingSources) {
     source.capturedAt = seed.seededAt;
   }
@@ -79,9 +86,8 @@ function handleLifecycle(plans: Projection[] = []) {
       ...structuredClone(body.draft),
       createdAt: '2026-02-01T00:00:00.0000001Z',
       createdBy: 'preview',
-      historyMonths: body.historyMonths,
       id: nextId++,
-      name: body.name,
+      piEmployeeId: example.piEmployeeId,
       updatedAt: '2026-02-01T00:00:00.0000001Z',
       updatedBy: 'preview',
     };
@@ -96,17 +102,17 @@ function handleLifecycle(plans: Projection[] = []) {
       draft: {
         appointments: stored.get(id)!.appointments,
         fundingSources: stored.get(id)!.fundingSources,
+        historyMonths: stored.get(id)!.historyMonths,
+        name: body.name,
         seededAt: stored.get(id)!.seededAt,
       },
-      historyMonths: stored.get(id)!.historyMonths,
-      name: body.name,
     });
   };
   server.use(
     http.get('/api/user/me', () =>
       HttpResponse.json({
         email: 'preview@example.com',
-        employeeId: seed.piEmployeeId,
+        employeeId: example.piEmployeeId,
         iamId: 'IAM-PREVIEW',
         id: 'preview-user',
         isEmulating: false,
@@ -119,10 +125,13 @@ function handleLifecycle(plans: Projection[] = []) {
     http.get(createUrl + '/seed', ({ request }) => {
       seedReads++;
       return HttpResponse.json({
-        ...seed,
-        historyMonths: Number(
-          new URL(request.url).searchParams.get('historyMonths') ?? 3
-        ),
+        draft: {
+          ...seed,
+          historyMonths: Number(
+            new URL(request.url).searchParams.get('historyMonths') ?? 3
+          ),
+        },
+        roster,
       });
     }),
     http.post(createUrl, async ({ request }) =>
@@ -162,6 +171,7 @@ function handleLifecycle(plans: Projection[] = []) {
     creates,
     duplicate,
     duplicates,
+    roster,
     seed,
     seedReads: () => seedReads,
     stored,
@@ -234,10 +244,10 @@ describe('projection creation and copies', () => {
         draft: {
           appointments: [{ monthlySalary: 11_000 }],
           fundingSources: api.seed.fundingSources,
+          historyMonths: 6,
+          name: 'Reviewed plan',
           seededAt: api.seed.seededAt,
         },
-        historyMonths: 6,
-        name: 'Reviewed plan',
       });
       expect(api.seedReads()).toBe(1);
       await user.click(await screen.findByRole('button', { name: 'Staffing' }));
@@ -277,7 +287,10 @@ describe('projection creation and copies', () => {
         attempts++;
         return attempts === 1
           ? new HttpResponse(null, { status: 503 })
-          : HttpResponse.json({ ...api.seed, historyMonths: 12 });
+          : HttpResponse.json({
+              draft: { ...api.seed, historyMonths: 12 },
+              roster: api.roster,
+            });
       })
     );
     const route = renderPlans();

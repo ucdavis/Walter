@@ -17,6 +17,7 @@ import {
   type SourceOperation,
   type SourceOperationResult,
 } from '@/lib/projectionSources.ts';
+import type { ProjectionDraft } from '@/queries/projections.ts';
 import type {
   PendingSourceEditor,
   ProjectionSession,
@@ -26,7 +27,7 @@ export interface FundingSourcesEditorHandle {
   read: () => PendingSourceEditor | null;
 }
 
-export function FundingSourcesEditor({
+export function FundingSourcesEditor<T extends ProjectionDraft>({
   iamId,
   initialSelection,
   onOperation,
@@ -36,9 +37,9 @@ export function FundingSourcesEditor({
 }: {
   iamId?: string;
   initialSelection?: { ids: number[]; onChange: (ids: number[]) => void };
-  onOperation: (operation: SourceOperation) => SourceOperationResult;
+  onOperation: (operation: SourceOperation) => SourceOperationResult<T>;
   ref?: Ref<FundingSourcesEditorHandle>;
-  session: ProjectionSession;
+  session: ProjectionSession<T>;
   sourceTarget?: { id: number | null; onChange: (id: number | null) => void };
 }) {
   const [editing, setEditing] = useState<number | 'planned' | 'import' | null>(

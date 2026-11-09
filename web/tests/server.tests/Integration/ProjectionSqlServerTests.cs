@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
@@ -49,15 +50,15 @@ public sealed class ProjectionSqlServerTests(ProjectionSqlServerFixture sql) : I
         }, once: false);
         await using var first = sql.CreateContext(barrier);
         await using var second = sql.CreateContext(barrier);
-        var snapshot = new ProjectionsController.ProjectionSnapshotDraft(source.SeededAt, source.FundingSources, source.Appointments);
+        var snapshot = new ProjectionDraft(source.Name, source.HistoryMonths, source.SeededAt, source.FundingSources, source.Appointments);
 
         var results = await Task.WhenAll(
             duplicate
                 ? Controller(first).Duplicate(source.Id, new("First copy", key), default)
-                : Controller(first).Create("IAM-100", new("First copy", 3, snapshot, key), default),
+                : Controller(first).Create("IAM-100", new(snapshot with { Name = "First copy" }, key), default),
             duplicate
                 ? Controller(second).Duplicate(source.Id, new("Second copy", key), default)
-                : Controller(second).Create("IAM-100", new("Second copy", 3, snapshot, key), default));
+                : Controller(second).Create("IAM-100", new(snapshot with { Name = "Second copy" }, key), default));
 
         var saved = results.Select(result => result.Should().BeOfType<OkObjectResult>().Which.Value.Should().BeOfType<Projection>().Subject).ToArray();
         saved[0].Id.Should().Be(saved[1].Id).And.NotBe(source.Id);
@@ -86,6 +87,42 @@ public sealed class ProjectionSqlServerTests(ProjectionSqlServerFixture sql) : I
     }
 
     [ProjectionSqlServerFact]
+    public async Task Required_creation_keys_cannot_be_cleared_or_defaulted()
+    {
+        var original = await SeedAsync();
+        await using var db = sql.CreateContext();
+        var clear = () => db.Database.ExecuteSqlInterpolatedAsync($"UPDATE [Projections] SET [CreationKey] = NULL WHERE [Id] = {original.Id}");
+        var useDefault = () => db.Database.ExecuteSqlInterpolatedAsync($"UPDATE [Projections] SET [CreationKey] = DEFAULT WHERE [Id] = {original.Id}");
+
+        (await clear.Should().ThrowAsync<SqlException>()).Which.Number.Should().Be(515);
+        (await useDefault.Should().ThrowAsync<SqlException>()).Which.Number.Should().Be(515);
+
+        (await db.Projections.SingleAsync(p => p.Id == original.Id)).CreationKey.Should().Be(original.CreationKey);
+    }
+
+    [ProjectionSqlServerFact]
+    public async Task Seed_procedure_requires_the_callers_snapshot_without_a_database_clock_fallback()
+    {
+        await using var db = sql.CreateContext();
+        // SQL Server defers resolution of the datamart tables; these rejected calls must never reach them.
+        var procedure = string.Join("\n", (await File.ReadAllLinesAsync(Path.Combine(AppContext.BaseDirectory, "Sql", "usp_GetProjectionSeed.sql")))
+            .Where(line => !line.Trim().Equals("GO", StringComparison.OrdinalIgnoreCase)));
+        await db.Database.ExecuteSqlRawAsync(procedure);
+        try
+        {
+            var omitted = () => db.Database.ExecuteSqlRawAsync("EXEC dbo.usp_GetProjectionSeed @PiEmployeeId = 'PI';");
+            var explicitNull = () => db.Database.ExecuteSqlRawAsync("EXEC dbo.usp_GetProjectionSeed @PiEmployeeId = 'PI', @SnapshotAt = NULL;");
+
+            (await omitted.Should().ThrowAsync<SqlException>()).Which.Number.Should().Be(201);
+            (await explicitNull.Should().ThrowAsync<SqlException>()).Which.Number.Should().Be(50001);
+        }
+        finally
+        {
+            await db.Database.ExecuteSqlRawAsync("DROP PROCEDURE dbo.usp_GetProjectionSeed;");
+        }
+    }
+
+    [ProjectionSqlServerFact]
     public async Task Http_save_round_trips_exact_tokens_and_preserves_the_captured_snapshot()
     {
         var original = await SeedAsync();
@@ -101,6 +138,7 @@ public sealed class ProjectionSqlServerTests(ProjectionSqlServerFixture sql) : I
         body["expectedSeededAt"] = seededAt;
         var capturedAt = Snapshot.AddMonths(1).AddTicks(-1);
         var source = body["fundingSources"]![0]!;
+        source["name"] = "Edited source label";
         source["sourceKind"] = "Task";
         source["projectNumber"] = "P1";
         source["taskNumber"] = "T1";
@@ -108,7 +146,6 @@ public sealed class ProjectionSqlServerTests(ProjectionSqlServerFixture sql) : I
         source["balanceAdjustment"] = -125.50m;
         source["capturedStartDate"] = "2029-01-01";
         source["startDate"] = "2029-03-01";
-        body["appointments"]![0]!["sourceProjectNumbers"] = new JsonArray("P1");
         body["appointments"]![0]!["hasUnmatchedFunding"] = true;
         body["appointments"]![0]!["allocations"] = JsonSerializer.SerializeToNode(new List<ProjectionFundingAllocation>
         {
@@ -131,13 +168,14 @@ public sealed class ProjectionSqlServerTests(ProjectionSqlServerFixture sql) : I
         var stored = await check.Projections.SingleAsync(p => p.Id == original.Id);
         stored.UpdatedAt.Ticks.Should().Be(saved.UpdatedAt.Ticks);
         stored.Name.Should().Be("Saved through HTTP");
+        stored.FundingSources[0].Name.Should().Be("Edited source label");
+        stored.FundingSources[0].ProjectName.Should().Be("Project");
         stored.FundingSources[0].SourceKind.Should().Be(ProjectionSourceKind.Task);
         stored.FundingSources[0].CapturedAt.Should().Be(capturedAt);
         stored.FundingSources[0].CapturedAt.Kind.Should().Be(DateTimeKind.Utc);
         stored.FundingSources[0].BalanceAdjustment.Should().Be(-125.50m);
         stored.FundingSources[0].CapturedStartDate.Should().Be(new DateOnly(2029, 1, 1));
         stored.FundingSources[0].StartDate.Should().Be(new DateOnly(2029, 3, 1));
-        stored.Appointments[0].SourceProjectNumbers.Should().Equal("P1");
         stored.Appointments[0].HasUnmatchedFunding.Should().BeTrue();
         stored.Appointments[0].Allocations.Should().BeEquivalentTo(new List<ProjectionFundingAllocation>
         {
@@ -343,6 +381,7 @@ public sealed class ProjectionSqlServerTests(ProjectionSqlServerFixture sql) : I
     {
         var plan = new Projection
         {
+            CreationKey = Guid.NewGuid(),
             Name = "Original",
             PiEmployeeId = "100",
             HistoryMonths = 3,
@@ -351,7 +390,7 @@ public sealed class ProjectionSqlServerTests(ProjectionSqlServerFixture sql) : I
             UpdatedAt = Version,
             CreatedBy = "owner",
             UpdatedBy = "owner",
-            FundingSources = [new() { Id = 1, SourceKind = ProjectionSourceKind.Task, CapturedAt = Snapshot, ProjectNumber = "P1", TaskNumber = "T1", ProjectName = "Project", Actuals = [new() { Month = new(2029, 12, 1), Amount = 2500, ExpenditureCategory = "Salary" }] }],
+            FundingSources = [new() { Id = 1, Name = "Source", SourceKind = ProjectionSourceKind.Task, CapturedAt = Snapshot, ProjectNumber = "P1", TaskNumber = "T1", ProjectName = "Project", Actuals = [new() { Month = new(2029, 12, 1), Amount = 2500, ExpenditureCategory = "Salary" }] }],
             Appointments = [new() { Id = 1, Name = "Example", MonthlySalary = 10000, Fte = 0.5m }],
         };
         await using var db = sql.CreateContext();

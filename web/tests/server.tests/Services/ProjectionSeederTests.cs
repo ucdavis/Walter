@@ -32,12 +32,8 @@ public sealed class ProjectionSeederTests
         VacationAccrual = 0.083m, BusinessUnit = "UCANR", IsFuture = isFuture, EarnCodeStatus = status,
     };
 
-    private static async Task<Projection> SeedAsync(FakeProjectionDataSource data, int historyMonths = 6)
-    {
-        var projection = new Projection { PiEmployeeId = "PI" };
-        await new ProjectionSeeder(data).SeedAsync(projection, historyMonths, null, null, default);
-        return projection;
-    }
+    private static async Task<ProjectionDraft> SeedAsync(FakeProjectionDataSource data, int historyMonths = 6) =>
+        (await new ProjectionSeeder(data).CaptureDraftAsync("PI", historyMonths, null, null, default)).Draft;
 
     [Fact]
     public async Task Keeps_the_query_snapshot_when_the_clock_crosses_a_month_while_awaiting_data()
@@ -47,15 +43,13 @@ public sealed class ProjectionSeederTests
         var response = new TaskCompletionSource<ProjectionSeedData>(TaskCreationOptions.RunContinuationsAsynchronously);
         var data = Data();
         data.SeedResponse = response.Task;
-        var projection = new Projection { PiEmployeeId = "PI" };
-
-        var seeding = new ProjectionSeeder(data, clock).SeedAsync(projection, 6, null, null, default);
+        var seeding = new ProjectionSeeder(data, clock).CaptureDraftAsync("PI", 6, null, null, default);
 
         seeding.IsCompleted.Should().BeFalse();
         data.SnapshotAtUtc.Should().Be(beforeMidnight);
         clock.UtcNow = new DateTime(2026, 11, 1, 0, 0, 1, DateTimeKind.Utc);
         response.SetResult(data.Seed);
-        await seeding;
+        var projection = (await seeding).Draft;
 
         projection.SeededAt.Should().Be(beforeMidnight);
         projection.SeededAt.Should().Be(data.SnapshotAtUtc!.Value);
@@ -72,9 +66,8 @@ public sealed class ProjectionSeederTests
         var previousSnapshot = nextMonth.AddTicks(-1);
         var clock = new MutableTimeProvider(previousSnapshot.AddDays(clockOffsetDays));
         var data = Data();
-        var projection = new Projection { PiEmployeeId = "PI", SeededAt = previousSnapshot };
-
-        await new ProjectionSeeder(data, clock).SeedAsync(projection, 6, null, null, default);
+        var projection = (await new ProjectionSeeder(data, clock)
+            .CaptureDraftAsync("PI", 6, null, null, default, previousSnapshot)).Draft;
 
         data.SnapshotAtUtc.Should().Be(nextMonth);
         projection.SeededAt.Should().Be(nextMonth);
@@ -84,21 +77,19 @@ public sealed class ProjectionSeederTests
     }
 
     [Fact]
-    public async Task Keeps_the_previous_snapshot_when_the_seed_query_fails()
+    public async Task Does_not_return_a_draft_when_the_seed_query_fails()
     {
         var previousSnapshot = new DateTime(2026, 10, 16, 0, 0, 0, DateTimeKind.Utc);
         var querySnapshot = new DateTime(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc);
         var data = Data();
         data.SeedResponse = Task.FromException<ProjectionSeedData>(new InvalidOperationException("Seed unavailable"));
-        var projection = new Projection { PiEmployeeId = "PI", SeededAt = previousSnapshot };
 
         var seeding = () => new ProjectionSeeder(data, new MutableTimeProvider(querySnapshot))
-            .SeedAsync(projection, 6, null, null, default);
+            .CaptureDraftAsync("PI", 6, null, null, default, previousSnapshot);
 
         await seeding.Should().ThrowAsync<InvalidOperationException>();
 
         data.SnapshotAtUtc.Should().Be(querySnapshot);
-        projection.SeededAt.Should().Be(previousSnapshot);
     }
 
     [Fact]
@@ -114,7 +105,8 @@ public sealed class ProjectionSeederTests
         project.SourceKind.Should().Be(ProjectionSourceKind.Task);
         project.CapturedAt.Should().Be(projection.SeededAt);
         project.TaskName.Should().BeNull();
-        project.IsSeeded.Should().BeTrue();
+        project.Name.Should().Be("Project 1");
+        project.ProjectName.Should().Be("Project 1");
         project.Budgets.Should().ContainSingle().Which.Should().BeEquivalentTo(new { Budget = 1000m, SpentToDate = 200m, Committed = 100m });
         project.RunRates.Should().HaveCount(2);
         project.Expenses.Should().ContainSingle().Which.Should().BeEquivalentTo(
@@ -175,7 +167,6 @@ public sealed class ProjectionSeederTests
 
         projection.Appointments.Single().Allocations.Should().BeEmpty();
         projection.Appointments.Single().HasUnmatchedFunding.Should().BeTrue();
-        projection.Appointments.Single().SourceProjectNumbers.Should().Equal("P1");
     }
 
     [Fact]
@@ -212,11 +203,7 @@ public sealed class ProjectionSeederTests
                 new() { Kind = ProjectionExpenseKind.Monthly, ExpenditureCategory = Supplies, Amount = 999 },
             ],
         };
-        var projection = new Projection { HistoryMonths = 3, FundingSources = [project] };
-
-        ProjectionSeeder.ApplyRunRates(projection, 12);
-
-        projection.HistoryMonths.Should().Be(12);
+        ProjectionSeeder.ApplyRunRates([project], 12);
         project.Expenses.Select(e => (e.Kind, e.Amount)).Should().BeEquivalentTo(
             [(ProjectionExpenseKind.Monthly, 999m), (ProjectionExpenseKind.Projected, 20m)]);
     }

@@ -2,11 +2,11 @@ import {
   computePiProjection,
   type PiProjectionRow,
 } from '@/lib/piProjection.ts';
-import type { Projection } from '@/queries/projections.ts';
+import type { Projection, ProjectionDraft } from '@/queries/projections.ts';
 
-export interface ProjectionSession {
-  baseline: Projection;
-  draft: Projection;
+export interface ProjectionSession<T extends ProjectionDraft = Projection> {
+  baseline: T;
+  draft: T;
   revision: number;
 }
 
@@ -16,7 +16,9 @@ export interface AppointmentSalaryChange {
   monthlySalary: number;
 }
 
-export function createProjectionSession(plan: Projection): ProjectionSession {
+export function createProjectionSession<T extends ProjectionDraft>(
+  plan: T
+): ProjectionSession<T> {
   return { baseline: plan, draft: plan, revision: 0 };
 }
 
@@ -43,10 +45,10 @@ export function acknowledgeProjectionSave(
 }
 
 /** Changes the assumed rate from the fixed snapshot onward; captured actuals are untouched. */
-export function setAppointmentMonthlySalary(
-  session: ProjectionSession,
+export function setAppointmentMonthlySalary<T extends ProjectionDraft>(
+  session: ProjectionSession<T>,
   change: AppointmentSalaryChange
-): { error: string; ok: false } | { ok: true; session: ProjectionSession } {
+): { error: string; ok: false } | { ok: true; session: ProjectionSession<T> } {
   if (
     !Number.isFinite(change.monthlySalary) ||
     change.monthlySalary < 0 ||
@@ -95,7 +97,7 @@ export interface ProjectionNavigation {
 
 export function readProjectionLocation(
   search: Record<string, unknown>,
-  plan: Projection
+  plan: ProjectionDraft
 ): ProjectionLocation {
   const issues: string[] = [];
   const parseTarget = (key: 'appointment' | 'source') => {
@@ -178,7 +180,7 @@ export interface ProjectionPersistenceStatus {
   saving: boolean;
 }
 
-function serializeEditableProjection(plan: Projection) {
+function serializeEditableProjection(plan: ProjectionDraft) {
   const document = {
     appointments: plan.appointments,
     fundingSources: plan.fundingSources,
@@ -195,7 +197,9 @@ function serializeEditableProjection(plan: Projection) {
 }
 
 /** Compare editable content, excluding server audit tokens and local revision bookkeeping. */
-export function isProjectionDirty(session: ProjectionSession): boolean {
+export function isProjectionDirty(
+  session: ProjectionSession<ProjectionDraft>
+): boolean {
   return (
     session.draft !== session.baseline &&
     serializeEditableProjection(session.draft) !==
@@ -204,8 +208,8 @@ export function isProjectionDirty(session: ProjectionSession): boolean {
 }
 
 /** Composes the current view on demand without keeping a second workspace document. */
-export function readProjectionWorkspace(
-  session: ProjectionSession,
+export function readProjectionWorkspace<T extends ProjectionDraft>(
+  session: ProjectionSession<T>,
   location: ProjectionLocation,
   results: ProjectionResults,
   pendingEditor: PendingProjectionEditor | null,
@@ -222,11 +226,11 @@ export function readProjectionWorkspace(
   });
 }
 
-export type ProjectionWorkspaceSnapshot = ReturnType<
-  typeof readProjectionWorkspace
->;
+export type ProjectionWorkspaceSnapshot<
+  T extends ProjectionDraft = Projection,
+> = ReturnType<typeof readProjectionWorkspace<T>>;
 
-/** Shows the snapshot month onward; prior-month costs remain in the saved plan and calculator. */
+/** Combines category rows into each funding source's monthly outlook. */
 export function getFundingSourceOutlook(
   rows: PiProjectionRow[],
   fundingSourceId: number
@@ -236,7 +240,7 @@ export function getFundingSourceOutlook(
     { actual: number; forecast: number; month: string; remaining: number }
   >();
   for (const row of rows) {
-    if (row.fundingSourceId !== fundingSourceId || row.kind === 'actual') {
+    if (row.fundingSourceId !== fundingSourceId) {
       continue;
     }
     const month = months.get(row.month) ?? {

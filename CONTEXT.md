@@ -65,7 +65,7 @@ A saved scenario for one PI that contains captured funding inputs and editable c
 _Avoid_: Project, live financial report
 
 **Funding Source**:
-An independently tracked pool of funding within a **Projection Plan**. It can represent an imported project/task pair or hypothetical funding. Project and task numbers identify its origin; its plan-local ID identifies it inside the scenario.
+An independently tracked pool of funding within a **Projection Plan**. It can represent an imported project/task pair or hypothetical funding. Project and task numbers identify its origin; its plan-local ID identifies it inside the scenario. Its editable name is separate from the captured project name used for grouping.
 _Avoid_: Project when referring to every kind of source
 
 **Appointment**:

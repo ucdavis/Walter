@@ -27,12 +27,8 @@ public sealed class ProjectionSeedPolicyTests
         FundingEndDate = new DateTime(2026, month, DateTime.DaysInMonth(2026, month)),
     };
 
-    private static async Task<Projection> SeedAsync(FakeProjectionDataSource data)
-    {
-        var projection = new Projection { PiEmployeeId = "PI" };
-        await new ProjectionSeeder(data, new FixedClock()).SeedAsync(projection, 6, null, null, default);
-        return projection;
-    }
+    private static async Task<ProjectionDraft> SeedAsync(FakeProjectionDataSource data) =>
+        (await new ProjectionSeeder(data, new FixedClock()).CaptureDraftAsync("PI", 6, null, null, default)).Draft;
 
     [Theory]
     [InlineData("Internal", "Active", true)]
@@ -138,7 +134,7 @@ public sealed class ProjectionSeedPolicyTests
         var project = projection.FundingSources.Single(p => p.TaskNumber == "T1");
         project.Should().BeEquivalentTo(new
         {
-            ProjectNumber = "P1", TaskNumber = "T1", TaskName = "T1", ProjectName = "First task metadata", IsSeeded = true,
+            ProjectNumber = "P1", TaskNumber = "T1", TaskName = "T1", Name = "First task metadata", ProjectName = "First task metadata",
             SourceKind = ProjectionSourceKind.Task, CapturedAt = (DateTime?)Snapshot,
             StartDate = new DateOnly(2026, 1, 1), EndDate = new DateOnly(2026, 12, 31),
             CapturedStartDate = new DateOnly(2026, 1, 1), CapturedEndDate = new DateOnly(2026, 12, 31),
@@ -172,12 +168,16 @@ public sealed class ProjectionSeedPolicyTests
             Personnel = [FundingLine("P1", "T1", 40, 4), FundingLine("P1", "T2", 20, 5), FundingLine("P2", "T1", 10, 6), FundingLine("P1", "UNKNOWN", 10, 7)],
         };
 
-        var projection = await SeedAsync(data);
+        var response = await new ProjectionSeeder(data, new FixedClock()).CaptureDraftAsync("PI", 6, null, null, default);
+        var projection = response.Draft;
 
         var project = projection.FundingSources.Should().ContainSingle().Subject;
         data.PersonnelProjectNumbers.Should().BeEquivalentTo(["P1", "P2"]);
+        response.Roster.Should().ContainSingle().Which.Should().BeEquivalentTo(new
+        {
+            AppointmentId = projection.Appointments.Single().Id, ProjectNumbers = new[] { "P1", "P2" },
+        });
         var job = projection.Appointments.Should().ContainSingle().Subject;
-        job.SourceProjectNumbers.Should().Equal("P1", "P2");
         job.HasUnmatchedFunding.Should().BeTrue();
         job.Allocations.Select(f => (f.FundingSourceId, f.Percent, f.StartDate, f.EndDate)).Should().BeEquivalentTo(new[]
         {

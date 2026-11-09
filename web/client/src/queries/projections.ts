@@ -13,7 +13,6 @@ export interface ProjectionBudget {
   budget: number;
   committed: number;
   expenditureCategory: string;
-  isSeeded: boolean;
   spentToDate: number;
 }
 
@@ -53,8 +52,9 @@ export interface ProjectionFundingSource {
   endDate: string | null;
   expenses: ProjectionExpense[];
   id: number;
-  isSeeded: boolean;
-  projectName: string;
+  /** Editable label; captured project and task names remain unchanged. */
+  name: string;
+  projectName: string | null;
   projectNumber: string | null;
   projectType: string | null;
   runRates: ProjectionRunRate[];
@@ -68,7 +68,6 @@ export interface ProjectionFundingAllocation {
   endDate: string | null;
   /** Null means funded outside this plan's sources: counted as funded, not charged. */
   fundingSourceId: number | null;
-  isSeeded: boolean;
   percent: number;
   startDate: string | null;
 }
@@ -94,26 +93,37 @@ export interface ProjectionAppointment {
   name: string;
   positionNumber: string | null;
   rateSet: string;
-  /** Upstream projects paying this appointment, before the wizard selects tasks. */
-  sourceProjectNumbers: string[];
   startDate: string | null;
   title: string | null;
   vacationAccrualRate: number;
 }
 
-export interface Projection {
+export interface ProjectionDraft {
   appointments: ProjectionAppointment[];
-  createdAt: string;
-  createdBy: string | null;
   fundingSources: ProjectionFundingSource[];
   historyMonths: number;
-  id: number;
   name: string;
-  piEmployeeId: string;
   /** Original plan capture and salary base. */
   seededAt: string;
+}
+
+export interface Projection extends ProjectionDraft {
+  createdAt: string;
+  createdBy: string | null;
+  id: number;
+  piEmployeeId: string;
   updatedAt: string;
   updatedBy: string | null;
+}
+
+export interface ProjectionRosterEntry {
+  appointmentId: number;
+  projectNumbers: string[];
+}
+
+export interface ProjectionSeedResponse {
+  draft: ProjectionDraft;
+  roster: ProjectionRosterEntry[];
 }
 
 export interface ProjectionSummary {
@@ -159,9 +169,7 @@ export const projectionLookupsQueryOptions = () => ({
 
 export type CreateProjectionDraftRequest = {
   creationKey: string;
-  draft: Pick<Projection, 'seededAt' | 'fundingSources' | 'appointments'>;
-  historyMonths: number;
-  name: string;
+  draft: ProjectionDraft;
 };
 
 export type DuplicateProjectionRequest = {
@@ -171,12 +179,12 @@ export type DuplicateProjectionRequest = {
 
 /** A wizard owns this one capture; query refreshes must not replace its draft. */
 export const fetchProjectionSeed = (iamId: string, historyMonths: number) =>
-  fetchJson<Projection>(
+  fetchJson<ProjectionSeedResponse>(
     `/api/projections/by-iam/${encodeURIComponent(iamId)}/seed?historyMonths=${historyMonths}`
   );
 
 export interface ProjectionSourceSummary {
-  projectName: string;
+  projectName: string | null;
   projectNumber: string;
   taskName: string | null;
   taskNumber: string | null;
@@ -265,12 +273,7 @@ export const useDuplicateProjection = (iamId: string, id: number) => {
   });
 };
 
-export type ProjectionDraft = Pick<
-  Projection,
-  'historyMonths' | 'appointments' | 'name' | 'fundingSources'
->;
-
-export type SaveProjectionRequest = ProjectionDraft & {
+export type SaveProjectionRequest = Omit<ProjectionDraft, 'seededAt'> & {
   /** Opaque server strings. Parsing through Date would lose datetime2 precision. */
   expectedSeededAt: string;
   expectedUpdatedAt: string;

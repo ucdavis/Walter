@@ -135,7 +135,7 @@ public sealed partial class ProjectionsControllerTests
 
     private static ProjectionFundingSource NewTaskSource() => new()
     {
-        Id = 1, ProjectNumber = "P1", TaskNumber = "T1", ProjectName = "Task source",
+        Id = 1, Name = "Task source", ProjectNumber = "P1", TaskNumber = "T1", ProjectName = "Captured project",
         SourceKind = ProjectionSourceKind.Task, CapturedAt = SourceCapture,
         StartDate = new(2026, 1, 1), EndDate = new(2027, 1, 1),
     };
@@ -170,8 +170,8 @@ public sealed partial class ProjectionsControllerTests
             case "duplicate": var duplicate = NewTaskSource(); duplicate.Id = 2; sources.Add(duplicate); break;
             case "planned-capture": task.SourceKind = ProjectionSourceKind.Planned; task.ProjectNumber = null; task.TaskNumber = null; task.CapturedAt = default; break;
         }
-        var snapshot = new ProjectionsController.ProjectionSnapshotDraft(saved.SeededAt, sources, []);
-        (await controller.Create(PiIam, new("Invalid", 3, snapshot, Guid.NewGuid()), default)).Should().BeOfType<BadRequestObjectResult>();
+        var snapshot = new ProjectionDraft("Invalid", 3, saved.SeededAt, sources, []);
+        (await controller.Create(PiIam, new(snapshot, Guid.NewGuid()), default)).Should().BeOfType<BadRequestObjectResult>();
         (await controller.Save(saved.Id, Draft(saved) with { FundingSources = sources }, default)).Should().BeOfType<BadRequestObjectResult>();
         ctx.Projections.Should().ContainSingle();
         JsonSerializer.Serialize(saved).Should().Be(before);
@@ -184,17 +184,18 @@ public sealed partial class ProjectionsControllerTests
         var saved = await CreateProjectionAsync(ctx);
         var controller = CreateController(ctx, financialViewer: true);
         var task = NewTaskSource();
+        task.Name = "Edited source label";
         task.BalanceAdjustment = -125;
         task.CapturedStartDate = new(2026, 1, 1);
         task.StartDate = new(2026, 3, 1);
         var sources = new List<ProjectionFundingSource>
         {
             task,
-            new() { Id = 2, ProjectName = "Planned", SourceKind = ProjectionSourceKind.Planned, CapturedAt = SourceCapture, StartDate = new(2027, 1, 1), BalanceAdjustment = 10000 },
+            new() { Id = 2, Name = "Planned", SourceKind = ProjectionSourceKind.Planned, CapturedAt = SourceCapture, StartDate = new(2027, 1, 1), BalanceAdjustment = 10000 },
         };
         var jobs = new List<ProjectionAppointment>
         {
-            new() { Id = 1, Name = "Existing person", SourceProjectNumbers = ["P1"], HasUnmatchedFunding = true,
+            new() { Id = 1, Name = "Existing person", HasUnmatchedFunding = true,
                 Allocations = [new() { FundingSourceId = 1, Percent = 0.3m }] },
         };
         (await controller.Save(saved.Id, Draft(saved) with { FundingSources = sources, Appointments = jobs }, default)).Should().BeOfType<OkObjectResult>();
@@ -202,6 +203,9 @@ public sealed partial class ProjectionsControllerTests
         var loaded = (Projection)((OkObjectResult)await controller.Get(saved.Id, default)).Value!;
         loaded.FundingSources.Should().BeEquivalentTo(sources);
         loaded.Appointments.Should().BeEquivalentTo(jobs);
+        loaded.FundingSources[0].Name.Should().Be("Edited source label");
+        loaded.FundingSources[0].ProjectName.Should().Be("Captured project");
+        loaded.FundingSources[1].ProjectName.Should().BeNull();
         loaded.SeededAt.Should().Be(saved.SeededAt);
     }
 

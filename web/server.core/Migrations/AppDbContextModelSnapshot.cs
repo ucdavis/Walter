@@ -275,7 +275,7 @@ namespace server.core.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
-                    b.Property<Guid?>("CreationKey")
+                    b.Property<Guid>("CreationKey")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("FundingSources")
@@ -311,8 +311,7 @@ namespace server.core.Migrations
                     b.HasIndex("PiEmployeeId");
 
                     b.HasIndex("PiEmployeeId", "CreationKey")
-                        .IsUnique()
-                        .HasFilter("[CreationKey] IS NOT NULL");
+                        .IsUnique();
 
                     b.ToTable("Projections");
                 });

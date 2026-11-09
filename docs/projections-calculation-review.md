@@ -8,7 +8,8 @@ saved plan does not advance its capture dates.
 A funding source is one project/task pair or an entered planned source. Tasks
 keep separate balances and allocations even when every task of a project is
 selected. A project rollup does not allow one task's surplus to cover another
-task's shortfall.
+task's shortfall. A source's editable name does not change its captured
+project or task identity.
 
 ## Fresh snapshot selection
 
@@ -89,7 +90,7 @@ For a full-month funding share of $2,500 salary and $1,000 benefits:
 | February 20 through 28, 2026 | $803.57 |  $321.43 |
 | March 1 through 5, 2026      | $403.23 |  $161.29 |
 
-A appointment ending March 10 has no eligible days with funding starting March 31.
+An appointment ending March 10 has no eligible days with funding starting March 31.
 A source starting April 1 has no salary or benefits forecast before April.
 
 For a $5,000 monthly appointment funded entirely by Project A through March 15
@@ -157,9 +158,9 @@ calculator does not automatically reconcile commitments with forecast costs.
 Each source keeps its own balance. A surplus on one task does not cover a
 shortfall on another. Its outlook and monthly detail begin in its capture month,
 or the availability month for later planned funding, and continue through its
-forecast horizon. The snapshot
-month shows booked actuals and additional forecast spending. Earlier months
-are not shown as historical month-end balances.
+forecast horizon. The snapshot month shows booked actuals and additional
+forecast spending. The calculator does not reconstruct balances for earlier
+months from the captured balance and past spending.
 
 Historical monthly spending remains in the saved plan. Its averages supply
 generated recurring expense estimates for the selected history window.

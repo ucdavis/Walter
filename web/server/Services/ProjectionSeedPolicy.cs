@@ -39,7 +39,8 @@ internal static class ProjectionSeedPolicy
                     ProjectNumber = task.ProjectNumber,
                     TaskNumber = string.IsNullOrEmpty(task.TaskNumber) ? null : task.TaskNumber,
                     TaskName = task.TaskName,
-                    ProjectName = task.ProjectName ?? task.ProjectNumber,
+                    Name = task.ProjectName ?? task.ProjectNumber,
+                    ProjectName = task.ProjectName,
                     ProjectType = task.ProjectType,
                     AwardNumber = task.AwardNumber,
                     AwardName = task.AwardName,
@@ -49,7 +50,6 @@ internal static class ProjectionSeedPolicy
                     CapturedEndDate = ToDate(task.EndDate),
                     StartDate = ToDate(task.StartDate),
                     EndDate = ToDate(task.EndDate),
-                    IsSeeded = true,
                     Budgets = budgets[key]
                         .GroupBy(b => b.ExpenditureCategory)
                         .OrderBy(g => g.Key, StringComparer.Ordinal)
@@ -59,7 +59,6 @@ internal static class ProjectionSeedPolicy
                             Budget = g.Sum(b => b.Budget),
                             SpentToDate = g.Sum(b => b.SpentToDate),
                             Committed = g.Sum(b => b.Committed),
-                            IsSeeded = true,
                         }).ToList(),
                     Actuals = actuals[key]
                         .GroupBy(a => (a.ExpenditureCategory, Month: DateOnly.FromDateTime(a.Month)))

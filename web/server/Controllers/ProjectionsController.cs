@@ -28,8 +28,7 @@ public sealed class ProjectionsController(
     private const int OverwriteAttempts = 3;
 
     public sealed record ProjectionSummary(int Id, string Name, DateTime SeededAt, string? UpdatedBy, DateTime UpdatedAt);
-    public sealed record ProjectionSnapshotDraft(DateTime? SeededAt, List<ProjectionFundingSource>? FundingSources, List<ProjectionAppointment>? Appointments);
-    public sealed record CreateProjectionRequest(string Name, int HistoryMonths, ProjectionSnapshotDraft? Draft, Guid? CreationKey);
+    public sealed record CreateProjectionRequest(ProjectionDraft? Draft, Guid CreationKey);
     public sealed record DuplicateProjectionRequest(string Name, Guid CreationKey);
     public sealed record SaveProjectionRequest(string Name, int HistoryMonths, List<ProjectionFundingSource> FundingSources,
         List<ProjectionAppointment> Appointments, DateTime? ExpectedUpdatedAt = null, DateTime? ExpectedSeededAt = null, bool Overwrite = false);
@@ -37,7 +36,7 @@ public sealed class ProjectionsController(
     public sealed record ProjectionConflict(string Code, string Message);
     public sealed record ProjectionLookups(IReadOnlyList<JobCodeRecord> JobCodes, IReadOnlyList<string> ExpenditureCategories);
     public sealed record ProjectionSourceKey(string ProjectNumber, string? TaskNumber);
-    public sealed record ProjectionSourceSummary(string ProjectNumber, string ProjectName, string? TaskNumber, string? TaskName);
+    public sealed record ProjectionSourceSummary(string ProjectNumber, string? ProjectName, string? TaskNumber, string? TaskName);
     public sealed record ImportProjectionSourcesRequest(int HistoryMonths, List<ProjectionSourceKey>? Sources);
 
     [HttpGet("by-iam/{iamId}")]
@@ -62,9 +61,8 @@ public sealed class ProjectionsController(
         var (piEmployeeId, error) = await ResolvePiAsync(iamId, ct);
         if (error is not null) return error;
 
-        var draft = new Projection { PiEmployeeId = piEmployeeId!, Name = "New projection" };
-        await seeder.SeedAsync(draft, historyMonths, User.GetUserIdentifier(), User.GetEmulatingUser(), ct);
-        return Ok(draft);
+        return Ok(await seeder.CaptureDraftAsync(piEmployeeId!, historyMonths,
+            User.GetUserIdentifier(), User.GetEmulatingUser(), ct));
     }
 
     /// <summary>Lists currently eligible tasks within the authorized PI portfolio for fresh source selection.</summary>
@@ -103,9 +101,7 @@ public sealed class ProjectionsController(
     [HttpPost("by-iam/{iamId}")]
     public async Task<IActionResult> Create(string iamId, CreateProjectionRequest request, CancellationToken ct)
     {
-        if (!ValidName(request.Name)) return BadRequest("Name must contain 1 to 200 characters and cannot be blank.");
-        if (!Windows.Contains(request.HistoryMonths)) return BadRequest("HistoryMonths must be 3, 6, or 12.");
-        if (request.CreationKey is null || request.CreationKey == Guid.Empty)
+        if (request.CreationKey == Guid.Empty)
             return BadRequest("A nonempty CreationKey is required when creating a reviewed draft.");
         if (request.Draft is null || !ValidDraft(request.Draft))
             return BadRequest("Draft requires an exact UTC SeededAt, nonnull collections, unique positive funding source/appointment IDs, and valid allocation references.");
@@ -117,8 +113,8 @@ public sealed class ProjectionsController(
         var projection = new Projection
         {
             PiEmployeeId = piEmployeeId!,
-            Name = request.Name,
-            HistoryMonths = request.HistoryMonths,
+            Name = request.Draft.Name,
+            HistoryMonths = request.Draft.HistoryMonths,
             CreationKey = request.CreationKey,
         };
         CopySnapshot(projection, request.Draft);
@@ -144,7 +140,7 @@ public sealed class ProjectionsController(
             HistoryMonths = source.HistoryMonths,
             CreationKey = request.CreationKey,
         };
-        CopySnapshot(projection, new(source.SeededAt, source.FundingSources, source.Appointments));
+        CopySnapshot(projection, new(source.Name, source.HistoryMonths, source.SeededAt, source.FundingSources, source.Appointments));
         return await InsertAsync(projection, ct);
     }
 
@@ -166,7 +162,7 @@ public sealed class ProjectionsController(
         if (!Windows.Contains(request.HistoryMonths)) return BadRequest("HistoryMonths must be 3, 6, or 12.");
         if (!ValidToken(request.ExpectedUpdatedAt) || !ValidToken(request.ExpectedSeededAt))
             return BadRequest("ExpectedUpdatedAt and ExpectedSeededAt must be exact UTC timestamps from the loaded plan.");
-        if (!ValidName(request.Name) || !ValidDraft(new(request.ExpectedSeededAt, request.FundingSources, request.Appointments)))
+        if (!ValidName(request.Name) || !ValidDraft(new(request.Name, request.HistoryMonths, request.ExpectedSeededAt!.Value, request.FundingSources, request.Appointments)))
             return BadRequest("The plan requires valid sources, unique positive funding source/appointment IDs, and valid allocation references.");
 
         // Detach the submitted lists from tracked entities and reuse this frozen draft on every retry.
@@ -241,7 +237,13 @@ public sealed class ProjectionsController(
         if (projection!.UpdatedAt != request.ExpectedUpdatedAt) return Changed();
         db.Entry(projection).Property(p => p.UpdatedAt).OriginalValue = request.ExpectedUpdatedAt!.Value;
 
-        await seeder.SeedAsync(projection, request.HistoryMonths, User.GetUserIdentifier(), User.GetEmulatingUser(), ct);
+        var capture = await seeder.CaptureDraftAsync(projection.PiEmployeeId, request.HistoryMonths,
+            User.GetUserIdentifier(), User.GetEmulatingUser(), ct, projection.SeededAt);
+        // A reset replaces captured inputs only after the complete read succeeds; identity and name remain saved-plan metadata.
+        projection.HistoryMonths = capture.Draft.HistoryMonths;
+        projection.SeededAt = capture.Draft.SeededAt;
+        projection.FundingSources = capture.Draft.FundingSources;
+        projection.Appointments = capture.Draft.Appointments;
         Touch(projection);
         try
         {
@@ -277,13 +279,12 @@ public sealed class ProjectionsController(
 
     private static bool ValidName(string? name) => !string.IsNullOrWhiteSpace(name) && name.Length <= 200;
 
-    private static bool ValidDraft(ProjectionSnapshotDraft draft)
+    private static bool ValidDraft(ProjectionDraft draft)
     {
-        if (!ValidToken(draft.SeededAt) || draft.FundingSources is null || draft.Appointments is null) return false;
+        if (!ValidName(draft.Name) || !Windows.Contains(draft.HistoryMonths) || !ValidToken(draft.SeededAt) || draft.FundingSources is null || draft.Appointments is null) return false;
         if (draft.FundingSources.Any(p => p is null || p.Id <= 0 || p.Budgets is null || p.Actuals is null || p.RunRates is null || p.Expenses is null
                 || p.Budgets.Any(b => b is null) || p.Actuals.Any(a => a is null) || p.RunRates.Any(r => r is null) || p.Expenses.Any(e => e is null))
-            || draft.Appointments.Any(j => j is null || j.Id <= 0 || j.Allocations is null || j.Allocations.Any(f => f is null)
-                || j.SourceProjectNumbers is null || j.SourceProjectNumbers.Any(p => p is null))) return false;
+            || draft.Appointments.Any(j => j is null || j.Id <= 0 || j.Allocations is null || j.Allocations.Any(f => f is null))) return false;
         if (!ValidSources(draft.FundingSources)) return false;
         var sourceIds = draft.FundingSources.Select(p => p.Id).ToHashSet();
         return sourceIds.Count == draft.FundingSources.Count
@@ -297,7 +298,7 @@ public sealed class ProjectionsController(
         foreach (var source in sources)
         {
             if (!ValidToken(source.CapturedAt) || !Enum.IsDefined(source.SourceKind)
-                || string.IsNullOrWhiteSpace(source.ProjectName) || source.StartDate > source.EndDate) return false;
+                || string.IsNullOrWhiteSpace(source.Name) || source.StartDate > source.EndDate) return false;
             if (source.SourceKind == ProjectionSourceKind.Task && string.IsNullOrWhiteSpace(source.ProjectNumber)) return false;
             if (source.SourceKind == ProjectionSourceKind.Planned
                 && (source.ProjectNumber is not null || source.TaskNumber is not null || source.StartDate is null)) return false;
@@ -306,16 +307,16 @@ public sealed class ProjectionsController(
         return tasks.Select(s => ProjectionSeedPolicy.TaskKey(s.ProjectNumber, s.TaskNumber)).Distinct().Count() == tasks.Count;
     }
 
-    private static void CopySnapshot(Projection projection, ProjectionSnapshotDraft snapshot)
+    private static void CopySnapshot(Projection projection, ProjectionDraft snapshot)
     {
-        var copy = JsonSerializer.Deserialize<ProjectionSnapshotDraft>(JsonSerializer.Serialize(snapshot))!;
-        projection.SeededAt = copy.SeededAt!.Value;
+        var copy = JsonSerializer.Deserialize<ProjectionDraft>(JsonSerializer.Serialize(snapshot))!;
+        projection.SeededAt = copy.SeededAt;
         projection.FundingSources = copy.FundingSources!;
         projection.Appointments = copy.Appointments!;
     }
 
-    private Task<Projection?> FindCreationAsync(string piEmployeeId, Guid? creationKey, CancellationToken ct) =>
-        creationKey is null ? Task.FromResult<Projection?>(null) : db.Projections.AsNoTracking()
+    private Task<Projection?> FindCreationAsync(string piEmployeeId, Guid creationKey, CancellationToken ct) =>
+        db.Projections.AsNoTracking()
             .SingleOrDefaultAsync(p => p.PiEmployeeId == piEmployeeId && p.CreationKey == creationKey, ct);
 
     /// <summary>The database unique key chooses one creation winner; retries return that row without replacing subsequent edits.</summary>
@@ -330,7 +331,7 @@ public sealed class ProjectionsController(
             await db.SaveChangesAsync(ct);
             return Ok(projection);
         }
-        catch (DbUpdateException exception) when (projection.CreationKey is not null && IsCreationKeyConflict(exception))
+        catch (DbUpdateException exception) when (IsCreationKeyConflict(exception))
         {
             db.Entry(projection).State = EntityState.Detached;
             // A winning insert may have raced with an access change; never return it without rechecking.

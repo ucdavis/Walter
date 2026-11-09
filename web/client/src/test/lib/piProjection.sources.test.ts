@@ -24,7 +24,6 @@ function capturedTask(id: number, capturedAt: string): ProjectionFundingSource {
         budget: 52_000,
         committed: 0,
         expenditureCategory: SALARY_CATEGORY,
-        isSeeded: true,
         spentToDate: 2000,
       },
     ],
@@ -50,7 +49,6 @@ describe('independent funding source captures', () => {
       allocations: [1, 2].map((fundingSourceId) => ({
         endDate: null,
         fundingSourceId,
-        isSeeded: true,
         percent: 0.5,
         startDate: '2026-11-01',
       })),
@@ -111,16 +109,11 @@ describe('independent funding source captures', () => {
       1000 + (310 * 14) / 30
     );
     expect(
-      results.rows
-        .filter(
-          ({ fundingSourceId, month }) =>
-            fundingSourceId === 2 && month === '2026-10'
-        )
-        .every(
-          ({ kind, projectedAmount }) =>
-            projectedAmount === 0 && kind === 'actual'
-        )
-    ).toBe(true);
+      results.rows.filter(
+        ({ fundingSourceId, month }) =>
+          fundingSourceId === 2 && month === '2026-10'
+      )
+    ).toEqual([]);
   });
 
   it('keeps an existing employee COLA based on the original plan date when a later source is added', () => {
@@ -134,7 +127,6 @@ describe('independent funding source captures', () => {
         {
           endDate: null,
           fundingSourceId: 1,
-          isSeeded: true,
           percent: 1,
           startDate: null,
         },
@@ -175,14 +167,7 @@ describe('independent funding source captures', () => {
       },
     ];
     const result = computePiProjection(added.session.draft);
-    expect(
-      result.rows
-        .filter(({ month }) => month < '2026-07')
-        .every(
-          ({ projectedAmount, remaining }) =>
-            remaining === 0 && projectedAmount === 0
-        )
-    ).toBe(true);
+    expect(result.rows.filter(({ month }) => month < '2026-07')).toEqual([]);
     expect(getFundingSourceOutlook(result.rows, source.id)[0]).toEqual({
       actual: 0,
       forecast: 170,

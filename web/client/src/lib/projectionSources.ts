@@ -1,6 +1,7 @@
 import type {
-  Projection,
+  ProjectionDraft,
   ProjectionFundingSource,
+  ProjectionRosterEntry,
 } from '@/queries/projections.ts';
 import type { ProjectionSession } from '@/lib/projectionWorkspace.ts';
 
@@ -11,13 +12,14 @@ export interface SourceInputs {
   startDate: string | null;
 }
 
-export type SourceOperationResult =
-  | { error: string; ok: false }
-  | { fundingSourceId?: number; ok: true; session: ProjectionSession };
+export type SourceOperationResult<T extends ProjectionDraft = ProjectionDraft> =
 
-export type SourceOperation = (
-  session: ProjectionSession
-) => SourceOperationResult;
+    | { error: string; ok: false }
+    | { fundingSourceId?: number; ok: true; session: ProjectionSession<T> };
+
+export type SourceOperation = <T extends ProjectionDraft>(
+  session: ProjectionSession<T>
+) => SourceOperationResult<T>;
 
 export const sourceCapturedBalance = (source: ProjectionFundingSource) =>
   source.budgets.reduce(
@@ -30,7 +32,7 @@ export const sourcePlanningBalance = (source: ProjectionFundingSource) =>
 
 export const sourceLabel = (source: ProjectionFundingSource) =>
   [
-    source.projectName,
+    source.name,
     source.taskNumber && `Task ${source.taskNumber}`,
     source.taskName,
   ]
@@ -87,25 +89,25 @@ function validation(inputs: SourceInputs, planned: boolean) {
   return null;
 }
 
-function changed(
-  session: ProjectionSession,
-  draft: Projection
-): SourceOperationResult {
+function changed<T extends ProjectionDraft>(
+  session: ProjectionSession<T>,
+  draft: T
+): SourceOperationResult<T> {
   return {
     ok: true,
     session: { ...session, draft, revision: session.revision + 1 },
   };
 }
 
-function nextId(session: ProjectionSession) {
+function nextId(session: ProjectionSession<ProjectionDraft>) {
   return Math.max(0, ...session.draft.fundingSources.map(({ id }) => id)) + 1;
 }
 
-export function editProjectionSource(
-  session: ProjectionSession,
+export function editProjectionSource<T extends ProjectionDraft>(
+  session: ProjectionSession<T>,
   fundingSourceId: number,
   inputs: SourceInputs
-): SourceOperationResult {
+): SourceOperationResult<T> {
   const source = session.draft.fundingSources.find(
     ({ id }) => id === fundingSourceId
   );
@@ -124,7 +126,7 @@ export function editProjectionSource(
     return { error: 'Enter a finite available balance.', ok: false };
   }
   if (
-    inputs.name.trim() === source.projectName &&
+    inputs.name.trim() === source.name &&
     inputs.startDate === source.startDate &&
     inputs.endDate === source.endDate &&
     balanceAdjustment === source.balanceAdjustment
@@ -139,7 +141,7 @@ export function editProjectionSource(
             ...candidate,
             balanceAdjustment,
             endDate: inputs.endDate,
-            projectName: inputs.name.trim(),
+            name: inputs.name.trim(),
             startDate: inputs.startDate,
           }
         : candidate
@@ -147,10 +149,10 @@ export function editProjectionSource(
   });
 }
 
-export function addPlannedSource(
-  session: ProjectionSession,
+export function addPlannedSource<T extends ProjectionDraft>(
+  session: ProjectionSession<T>,
   inputs: SourceInputs
-): SourceOperationResult {
+): SourceOperationResult<T> {
   const error = validation(inputs, true);
   if (error) {
     return { error, ok: false };
@@ -168,8 +170,8 @@ export function addPlannedSource(
     endDate: inputs.endDate,
     expenses: [],
     id,
-    isSeeded: false,
-    projectName: inputs.name.trim(),
+    name: inputs.name.trim(),
+    projectName: null,
     projectNumber: null,
     projectType: null,
     runRates: [],
@@ -193,10 +195,10 @@ export function addPlannedSource(
 }
 
 /** Adds captured financial inputs only; employee assumptions and allocations are unchanged. */
-export function addImportedSources(
-  session: ProjectionSession,
+export function addImportedSources<T extends ProjectionDraft>(
+  session: ProjectionSession<T>,
   sources: ProjectionFundingSource[]
-): SourceOperationResult {
+): SourceOperationResult<T> {
   if (sources.length === 0) {
     return { ok: true, session };
   }
@@ -207,7 +209,7 @@ export function addImportedSources(
       {
         balance: sourcePlanningBalance(source),
         endDate: source.endDate,
-        name: source.projectName,
+        name: source.name,
         startDate: source.startDate,
       },
       false
@@ -245,10 +247,10 @@ export function addImportedSources(
 }
 
 /** Removing a source leaves its former staffing share unallocated; it does not invent outside funding. */
-export function removeProjectionSource(
-  session: ProjectionSession,
+export function removeProjectionSource<T extends ProjectionDraft>(
+  session: ProjectionSession<T>,
   fundingSourceId: number
-): SourceOperationResult {
+): SourceOperationResult<T> {
   if (!session.draft.fundingSources.some(({ id }) => id === fundingSourceId)) {
     return {
       error: 'This funding source is no longer in the plan.',
@@ -270,10 +272,11 @@ export function removeProjectionSource(
 }
 
 /** Called once when initial source selection finishes. Later removals must retain the roster. */
-export function selectInitialSources(
-  session: ProjectionSession,
-  fundingSourceIds: number[]
-): SourceOperationResult {
+export function selectInitialSources<T extends ProjectionDraft>(
+  session: ProjectionSession<T>,
+  fundingSourceIds: number[],
+  roster: ProjectionRosterEntry[]
+): SourceOperationResult<T> {
   const ids = new Set(fundingSourceIds);
   if (
     fundingSourceIds.some(
@@ -291,11 +294,14 @@ export function selectInitialSources(
   const parentProjects = new Set(
     fundingSources.map(({ projectNumber }) => projectNumber).filter(Boolean)
   );
+  const rosterProjects = new Map(
+    roster.map((entry) => [entry.appointmentId, entry.projectNumbers])
+  );
   const appointments = session.draft.appointments
     .filter((appointment) =>
-      appointment.sourceProjectNumbers.some((parent) =>
-        parentProjects.has(parent)
-      )
+      rosterProjects
+        .get(appointment.id)
+        ?.some((parent) => parentProjects.has(parent))
     )
     .map((appointment) => ({
       ...appointment,

@@ -29,6 +29,8 @@ import {
   useCreateProjectionDraft,
   type CreateProjectionDraftRequest,
   type Projection,
+  type ProjectionDraft,
+  type ProjectionRosterEntry,
 } from '@/queries/projections.ts';
 
 const steps = ['Funding sources', 'Staffing', 'Review'];
@@ -51,10 +53,14 @@ export function NewProjectionWizard({
   const { historyMonths, name } = useStore(form.store, (state) => state.values);
   const [selectedSourceIds, setSelectedSourceIds] = useState<number[]>([]);
   const [rosterSelected, setRosterSelected] = useState(false);
-  const currentSession = useRef<ProjectionSession | null>(null);
+  const [roster, setRoster] = useState<ProjectionRosterEntry[]>([]);
+  const currentSession = useRef<ProjectionSession<ProjectionDraft> | null>(
+    null
+  );
   const sourceEditorRef = useRef<FundingSourcesEditorHandle>(null);
   const [step, setStep] = useState(0);
-  const [session, setSession] = useState<ProjectionSession | null>(null);
+  const [session, setSession] =
+    useState<ProjectionSession<ProjectionDraft> | null>(null);
   const [appointmentId, setAppointmentId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -95,7 +101,7 @@ export function NewProjectionWizard({
     heading.current?.focus();
   }, [step]);
 
-  function updateSession(next: ProjectionSession) {
+  function updateSession(next: ProjectionSession<ProjectionDraft>) {
     currentSession.current = next;
     setSession(next);
   }
@@ -132,13 +138,18 @@ export function NewProjectionWizard({
     setError(null);
     if (session) {
       if (!rosterSelected) {
-        const selected = selectInitialSources(session, selectedSourceIds);
+        const selected = selectInitialSources(
+          session,
+          selectedSourceIds,
+          roster
+        );
         if (!selected.ok) {
           setError(selected.error);
           return;
         }
         updateSession(selected.session);
         setRosterSelected(true);
+        setRoster([]);
       }
       setStep(1);
       return;
@@ -150,8 +161,11 @@ export function NewProjectionWizard({
       if (!mounted.current) {
         return;
       }
-      updateSession(createProjectionSession({ ...seed, name: name.trim() }));
-      setSelectedSourceIds(seed.fundingSources.map(({ id }) => id));
+      updateSession(
+        createProjectionSession({ ...seed.draft, name: name.trim() })
+      );
+      setRoster(seed.roster);
+      setSelectedSourceIds(seed.draft.fundingSources.map(({ id }) => id));
     } catch {
       if (mounted.current) {
         setError(
@@ -178,10 +192,10 @@ export function NewProjectionWizard({
         draft: {
           appointments: draft.appointments,
           fundingSources: draft.fundingSources,
+          historyMonths,
+          name: name.trim(),
           seededAt: draft.seededAt,
         },
-        historyMonths,
-        name: name.trim(),
       });
     setSubmitted(request);
     setError(null);
@@ -444,7 +458,7 @@ function StaffingStep({
   draft,
   onEdit,
 }: {
-  draft: Projection;
+  draft: ProjectionDraft;
   onEdit: (appointmentId: number) => void;
 }) {
   const funding = useMemo(
@@ -499,7 +513,7 @@ function ReviewStep({
   historyMonths,
   name,
 }: {
-  draft: Projection;
+  draft: ProjectionDraft;
   historyMonths: number;
   name: string;
 }) {

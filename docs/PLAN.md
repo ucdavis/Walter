@@ -5,8 +5,9 @@ shared snapshot timestamp, and fee rules. Stage 2a's fresh-snapshot read and
 eligibility policy are accepted and committed as `5b5a7af3`. Stage 2b's wizard
 completion and duplication are accepted and committed as `d524af0c`; New plan
 saves before opening the view/edit workspace. Stage 3a's funding sources and
-greenfield model cleanup are accepted and verified locally. Review the rebuild
-for remaining legacy assumptions before proceeding to the staffing editors.
+greenfield model cleanup are accepted and committed as `4bb4f673`. The follow-up
+audit's seven cleanup recommendations are accepted and verified locally.
+Staffing editors are the next increment.
 Saving remains available with funding gaps/overlaps.
 CBR defaults to zero when no rate is available from the personnel source.
 The projection model is greenfield and uses one current document format.
@@ -72,7 +73,7 @@ as each decision is settled and each stage is reviewed.
   values. Add no new vacation-cost UI until the lookup's meaning is confirmed.
 - Show the project outlook from the snapshot month forward. Retain captured
   monthly spending and its use in expense estimates and snapshot-month netting.
-  Do not show reconstructed balances for earlier months or add warning UI.
+  Do not reconstruct balances for earlier months or add warning UI.
 - Use one fixed UTC snapshot timestamp for the seed query and saved plan.
   Capture the latest available imported inputs; their refresh times need not
   match. Document that this is not a synchronized financial cutoff, without
@@ -292,7 +293,7 @@ without requiring authentication or a backend. Existing application routes and
 production persistence were unchanged by that increment.
 
 From `web/client`, run `npm run dev -- --host 127.0.0.1 --strictPort` and open
-[the salary editor](http://127.0.0.1:5174/projections-preview.html?section=staffing&job=101).
+[the salary editor](http://127.0.0.1:5174/projections-preview.html?section=staffing&appointment=101).
 The normal production build includes only `index.html`; it excludes this preview
 entry and its fixture. Preview changes are in memory and reload restores the
 fixture. Stage 1b adds synthetic saving controls and departure warnings below.
@@ -519,7 +520,7 @@ actuals again from captured balances.
 Explicit expenses remain additional forecasts. Fee remission also remains
 additional and does not use salary/fringe booked-cost subtraction.
 
-The [booked salary preview](http://127.0.0.1:5174/projections-preview.html?example=booked&section=overview&project=1)
+The [booked salary preview](http://127.0.0.1:5174/projections-preview.html?example=booked&section=overview&source=1)
 uses the same workspace with illustrative benefit rates. Each project has
 $1,000 booked salary and $400 booked benefits, included in its $26,600 snapshot
 balance. January shows $1,400 actuals, $2,100 additional forecast, and a $24,500
@@ -629,7 +630,7 @@ remain intact. The inspectable monthly funding share is an average over active
 job days, including explicit outside funding; it does not prove that every day
 is fully covered. Saving and warning UI are unchanged.
 
-Try the [date-boundary preview](http://127.0.0.1:5174/projections-preview.html?example=dates&section=overview&project=1).
+Try the [date-boundary preview](http://127.0.0.1:5174/projections-preview.html?example=dates&section=overview&source=1).
 It uses the agreed February/March job and funding dates with illustrative benefit
 rates. Project A forecasts $1,125 in February and $564.52 in March. Project B
 forecasts zero because its funding never overlaps the job. Changing annual
@@ -673,12 +674,10 @@ balance. Captured monthly cost totals describe spending in each category and
 month. Their historical averages supply generated recurring expense estimates;
 snapshot-month totals support the existing booked-cost subtraction.
 
-The calculator can reconstruct earlier remaining balances from the snapshot's
-captured balance and past spending, but these are not observed historical month-end
-balances. The outlook filters out those earlier rows. This presentation change
-retains the saved history, generated estimates, and calculator results, including
-snapshot-month actuals and personnel netting. Stage 1b remains open for final
-validation and review.
+The calculator emits only each source's capture month onward, or its later
+planned availability month. It does not reconstruct earlier balances from
+today's balance and past spending. Saved monthly history still supplies expense
+estimates and snapshot-month personnel netting.
 
 Verification passed: 500 client tests, TypeScript, the production build,
 changed-file ESLint, formatting, and independent review. The browser preview
@@ -712,7 +711,7 @@ A $750 full-month fee forecast therefore remains $750 with $400 already booked
 in category 08. Those booked costs remain visible and included in the snapshot
 balance under the existing inclusion assumption. Salary/fringe netting is unchanged.
 
-The [fee preview](http://127.0.0.1:5174/projections-preview.html?example=fees&section=overview&project=1)
+The [fee preview](http://127.0.0.1:5174/projections-preview.html?example=fees&section=overview&source=1)
 shows each project's April actuals of $400 alongside a $375 fee forecast,
 leaving $9,225. May shows no actuals and a $750 fee forecast, leaving $8,475.
 These months illustrate partial-month proration and the separate treatment of
@@ -763,7 +762,7 @@ job's start date moves its salary base according to the same rule.
 Use the existing job source flag and start date; no schema change is needed.
 This settles future-hire COLA timing. Stage 1b remains open for final review.
 
-The [future-hire preview](http://127.0.0.1:5174/projections-preview.html?example=future-hire&section=overview&project=1)
+The [future-hire preview](http://127.0.0.1:5174/projections-preview.html?example=future-hire&section=overview&source=1)
 uses a 50% appointment split equally between two projects. Each project starts
 at $60,000 and forecasts $2,500 monthly from August 2026 through June 2027, then
 $2,575 in July and August 2027, ending at $27,350. Editing the annual salary to
@@ -804,16 +803,16 @@ included in portfolio spending totals. Add no warnings or blocking checks.
 
 Compute the final, monotonically advanced `SeededAt` once before the seed query.
 Pass that UTC `DateTime` as `snapshotAtUtc` through the data source to the query's
-optional `@SnapshotAt DATETIME2` parameter, and save the exact same timestamp.
-The query derives its reporting month from that value. Omitting the optional
-parameter uses `SYSUTCDATETIME()`. This keeps the history
-window and forecast in the same month even when a request crosses midnight or
-the database and application use different local time zones.
+required `@SnapshotAt DATETIME2(7)` parameter, and save the exact same timestamp.
+The query derives its reporting month from that value and rejects a missing or
+null timestamp. This keeps the history window and forecast in the same month
+even when a request crosses midnight or the database and application use
+different local time zones.
 
-Deploy the updated SQL procedure before the application that supplies the new
-parameter. Existing saved plans keep their captured timestamps and inputs.
-This change aligns period selection without synchronizing source imports;
-Stage 1b remains open for final review.
+Coordinate deployment of the application and seed procedure. The current
+contract requires the caller's timestamp; the previous application did not
+supply one. Existing saved plans keep their captured timestamps and inputs.
+This change aligns period selection without synchronizing source imports.
 
 Verification passed: 450 server tests, with 8 optional SQL persistence tests
 skipped, and the datamart project build. Four new cases cover a query crossing
@@ -890,9 +889,10 @@ project grouping and deliberately omitted funding shares; its design is below.
 
 `GET /api/projections/by-iam/{iamId}/seed?historyMonths=3` returns fresh,
 authorized inputs for the wizard without creating a saved plan. The history window supports
-3, 6, or 12 months and defaults to 3. The response has ID 0 and no saved-plan
-audit metadata; it retains the captured UTC snapshot timestamp. The response
-is not cached. Opening existing plans remains independent of fresh seed data.
+3, 6, or 12 months and defaults to 3. The current response separates an editable
+`draft` from temporary `roster` selection metadata. The draft retains its UTC
+capture timestamp and has no saved-plan ID or audit metadata. The response is
+not cached. Opening existing plans remains independent of fresh seed data.
 
 The server's `ProjectionSeedPolicy` owns fresh selection and grouping, including
 the existing Create and explicit Reset paths that call the same seeder:
@@ -918,9 +918,9 @@ Fresh policy does not run when opening or saving a plan.
 This increment changes the server boundary. Stage 2b adds the wizard and creates
 plans from its reviewed inputs. No new settings column or persistence schema is
 needed for Stage 2a.
-Deploy the updated seed procedure before this application version so the source
-provides `TaskStatus` and `AwardEndDate`. Older result sets omit those fields;
-they cannot support the agreed exclusions.
+Deploy the seed procedure with the application so the source provides
+`TaskStatus` and `AwardEndDate` and accepts the required capture timestamp.
+Older result sets cannot support the agreed exclusions.
 
 Verification passed: 475 server tests, with 8 optional SQL persistence tests
 skipped, the datamart project build, and independent code review. The targeted
@@ -965,21 +965,20 @@ window. Funding, employee settings, and expense editors follow in their owning
 stages. Existing plan settings are sufficient; later metadata editors should
 not store settings inside an arbitrary project record.
 
-Clean up `NewProjectionWizard.tsx` as the remaining steps are added, including
-using TanStack Form for input state and validation. This is a follow-up to the
-accepted flow, not a prerequisite for this increment. Preserve the tested
-creation retry and navigation behavior during that refactor.
+The wizard now uses TanStack Form for input state and validation. Continue
+cleaning up `NewProjectionWizard.tsx` as the remaining steps are added, while
+preserving the tested creation retry and navigation behavior.
 
 The Create endpoint requires a reviewed draft containing the captured UTC
-timestamp, funding sources, and appointments, plus the name, history window,
-and creation key. It validates the document structure and source references,
+timestamp, funding sources, appointments, name, and history window, alongside
+a creation key. It validates the document structure and source references,
 then assigns the saved identity and audit metadata without another seed read.
 Duplicate authorizes the source and copies its stored inputs without
 consulting current financial or personnel sources. Normal Save retains its
 existing concurrency checks.
 
-Create and Duplicate use a client-generated creation key. A nullable key column
-and filtered unique index per PI let concurrent requests return one saved row.
+Create and Duplicate use a required client-generated creation key. A unique
+index per PI lets concurrent requests return one saved row.
 Replays return the current saved plan, preserving edits made since creation.
 An uncertain response freezes the submitted wizard inputs and key until retry
 confirms the result; a definite validation rejection permits further edits.
@@ -1013,8 +1012,9 @@ No live source read, deployment, or publication was performed for this increment
 
 ## Stage 3a: funding sources
 
-Status: accepted and verified locally. A review for remaining legacy assumptions
-precedes the staffing editors. Publication and deployment have not been performed.
+Status: accepted and committed as `4bb4f673`. The approved follow-up audit cleanup
+is accepted and verified locally. Staffing editors are next. Publication and
+deployment have not been performed.
 
 ### Agreed document names and ownership
 
@@ -1022,6 +1022,10 @@ The plan contains `FundingSources` and `Appointments`. Each appointment has
 `Allocations` referencing a `FundingSourceId`. Use `ProjectionFundingSource`,
 `ProjectionAppointment`, and `ProjectionFundingAllocation` for their model types.
 Keep actual project/task identifiers distinct from the plan-local source ID.
+A source's editable `Name` is separate from its captured `ProjectName`; renaming
+a task must not rename its project group. Planned sources have no project origin
+metadata. Only appointments retain `IsSeeded`, because their salary base depends
+on whether they were imported or entered as hypothetical hires.
 
 Appointments remain separate because one appointment can draw from several
 sources and survives source removal. Expenses remain under their source for
@@ -1089,7 +1093,10 @@ For now, the initial roster includes only people paid on the selected projects.
 This is deliberately project-level: someone paid only on an unchecked task of
 a selected project still appears, with that task's share unallocated. Narrowing
 the roster to selected tasks is a possible later refinement. Searching for other
-people the PI pays on outside projects is also deferred.
+people the PI pays on outside projects is also deferred. The seed response keeps
+appointment-to-project membership in temporary roster metadata. The wizard uses
+it once for initial selection; saved appointments, copies, and later saves do
+not retain it.
 
 Removing a source discards its captured inputs, source-specific expenses, and
 planning adjustments. Confirm destructive removal. Delete allocations to that
@@ -1136,9 +1143,9 @@ the existing departure guard. The wizard and source forms use TanStack Form.
 
 The new source catalog and import endpoints use the existing task-grained seed
 query and authorization rules. Import returns captured finances and expense
-estimates without reading personnel or saving a plan. No additional datamart
-procedure change is needed for Stage 3a; the Stage 2a deployment prerequisite
-still applies.
+estimates without reading personnel or saving a plan. The follow-up cleanup
+also requires the seed procedure's exact capture timestamp instead of falling
+back to the database clock. Coordinate its deployment with the application.
 
 Migration `20261109065142_RenameProjectionSourcesAndAppointments` renames the
 JSON columns to `FundingSources` and `Appointments`. The model uses those names
@@ -1167,6 +1174,46 @@ React Doctor found no errors;
 the remaining warnings concern component size and form control flow. Existing
 CSS optimization, module-directive, bundle-size, and dependency-audit warnings
 remain. No live source read or deployed behavior was verified.
+
+### Follow-up greenfield audit cleanup
+
+The approved cleanup separates editable source names from captured project
+names, removes unused source/budget/allocation seed flags and the unused fee
+default, and makes every persisted creation key required. The unique PI/key
+index preserves creation and duplication retries. Migration
+`20261109071624_RequireProjectionCreationKey` makes the column non-nullable and
+removes the filtered index, with no default value or data backfill.
+
+The wizard seed response has one `ProjectionDraft` plus temporary roster
+membership. Create accepts that reviewed draft and a creation key. Drafts contain
+only plan inputs, without fabricated saved IDs or audit timestamps. The
+calculator no longer emits reconstructed historical balances; it retains the
+captured monthly costs used for estimates and snapshot-month netting.
+
+The seed procedure requires a non-null `DATETIME2(7)` capture timestamp. A local
+repository search and GitHub code search across the UC Davis organization found
+Walter's `DatamartService` as its only executable caller. That adapter supplies
+the timestamp explicitly. Live database dependencies and ad hoc callers have
+not been checked; no procedure has been deployed.
+
+Reset and snapshot-change protection remain. Their future user-facing meaning
+still belongs to the reset/refresh decision below.
+
+Client verification passed: 561 tests, TypeScript and the production build,
+changed-file ESLint and formatting, and the executable calculation examples.
+An additional comparison against the preceding commit matched all current and
+future forecast rows and funding coverage across five fixtures and 200 generated
+scenarios. Independent review found no issues. React Doctor reported no errors
+and the existing four component-size and wizard-control-flow warnings.
+
+The datamart build passed using the installed .NET 9 MSBuild. Its existing SQL
+project SDK cannot build under the default .NET 10 SDK because a NuGet targets
+path moved. The standard server suite passed 527 tests with 12 optional SQL
+skips. All 17 isolated SQL tests executed and passed. They applied the required
+creation-key migration, rejected null/default keys, exercised the actual seed
+procedure's omitted/null timestamp rejection, and retained creation retries and
+save/reset concurrency. The isolated container was removed afterward. This
+increment is accepted for commit; no deployment or live source read occurred.
 
 ## Questions to resolve in their owning stages
 

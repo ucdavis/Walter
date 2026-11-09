@@ -18,9 +18,10 @@ import {
   isProjectionDirty,
   readProjectionLocation,
 } from '@/lib/projectionWorkspace.ts';
+import type { ProjectionDraft } from '@/queries/projections.ts';
 
 const session = () => createProjectionSession(createSalaryExample());
-function applied(result: SourceOperationResult) {
+function applied<T extends ProjectionDraft>(result: SourceOperationResult<T>) {
   if (!result.ok) {
     throw new Error(result.error);
   }
@@ -34,6 +35,33 @@ const planned = {
 };
 
 describe('funding source operations', () => {
+  it('edits an unsaved draft without saved identity or audit fields', () => {
+    const { appointments, fundingSources, historyMonths, name, seededAt } =
+      createSalaryExample();
+    const draft: ProjectionDraft = {
+      appointments,
+      fundingSources,
+      historyMonths,
+      name,
+      seededAt,
+    };
+    const added = applied(
+      addPlannedSource(createProjectionSession(draft), planned)
+    );
+    expect(added.draft.fundingSources.at(-1)).toMatchObject({
+      name: planned.name,
+      projectName: null,
+    });
+    expect(Object.keys(added.draft).sort()).toEqual([
+      'appointments',
+      'fundingSources',
+      'historyMonths',
+      'name',
+      'seededAt',
+    ]);
+    expect(draft.fundingSources).toHaveLength(2);
+  });
+
   it('edits scenario balance and dates without replacing captured financials, then restores clean state', () => {
     const original = session();
     const source = original.draft.fundingSources[0];
@@ -50,13 +78,15 @@ describe('funding source operations', () => {
     expect(sourcePlanningBalance(edited)).toBe(-2500);
     expect(edited.budgets).toBe(source.budgets);
     expect(edited.actuals).toBe(source.actuals);
+    expect(edited.name).toBe('Revised source');
+    expect(edited.projectName).toBe(source.projectName);
     expect(edited.capturedEndDate).toBe(source.endDate);
     expect(isProjectionDirty(changed)).toBe(true);
     const restored = applied(
       editProjectionSource(changed, source.id, {
         balance: 20_000,
         endDate: source.endDate,
-        name: source.projectName,
+        name: source.name,
         startDate: source.startDate,
       })
     );
@@ -157,7 +187,6 @@ describe('funding source operations', () => {
     original.draft.appointments[0].allocations.push({
       endDate: null,
       fundingSourceId: null,
-      isSeeded: true,
       percent: 0.1,
       startDate: null,
     });
@@ -185,7 +214,6 @@ describe('funding source operations', () => {
       source.taskNumber = `T${index + 1}`;
       source.sourceKind = 'Task';
     });
-    original.draft.appointments[0].sourceProjectNumbers = ['P1'];
     original.draft.appointments[0].allocations = [
       original.draft.appointments[0].allocations[1],
     ];
@@ -193,9 +221,17 @@ describe('funding source operations', () => {
       ...structuredClone(original.draft.appointments[0]),
       allocations: [],
       id: 102,
-      sourceProjectNumbers: ['OTHER'],
     });
-    const selected = applied(selectInitialSources(original, [1]));
+    const selected = applied(
+      selectInitialSources(
+        original,
+        [1],
+        [
+          { appointmentId: 101, projectNumbers: ['P1'] },
+          { appointmentId: 102, projectNumbers: ['OTHER'] },
+        ]
+      )
+    );
     expect(selected.draft.appointments.map(({ id }) => id)).toEqual([101]);
     expect(selected.draft.appointments[0].allocations).toEqual([]);
     expect(selected.draft.fundingSources.map(({ id }) => id)).toEqual([1]);

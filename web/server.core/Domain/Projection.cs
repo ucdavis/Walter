@@ -18,7 +18,7 @@ public class Projection
 
     /// <summary>Deduplicates retried creation within a PI's plans while this row exists; never changes on later saves.</summary>
     [JsonIgnore]
-    public Guid? CreationKey { get; set; }
+    public Guid CreationKey { get; set; }
 
     /// <summary>Owner PI; the target of the portfolio access check.</summary>
     [Required, MaxLength(8)]
@@ -53,8 +53,7 @@ public class Projection
     {
         var entity = modelBuilder.Entity<Projection>();
         entity.HasIndex(p => p.PiEmployeeId);
-        entity.HasIndex(p => new { p.PiEmployeeId, p.CreationKey }).IsUnique()
-            .HasFilter("[CreationKey] IS NOT NULL");
+        entity.HasIndex(p => new { p.PiEmployeeId, p.CreationKey }).IsUnique();
         // SQL datetime2 preserves ticks but drops Kind. Restore UTC without shifting the saved token.
         foreach (var property in new[] { nameof(CreatedAt), nameof(SeededAt), nameof(UpdatedAt) })
             entity.Property<DateTime>(property).HasConversion(
@@ -83,7 +82,9 @@ public class ProjectionFundingSource
     public string? ProjectNumber { get; set; }
     public string? TaskNumber { get; set; }
     public string? TaskName { get; set; }
-    public string ProjectName { get; set; } = "";
+    /// <summary>Editable label within the scenario; captured project metadata remains unchanged.</summary>
+    public string Name { get; set; } = "";
+    public string? ProjectName { get; set; }
     public string? ProjectType { get; set; }
     public string? AwardNumber { get; set; }
     public string? AwardName { get; set; }
@@ -99,7 +100,6 @@ public class ProjectionFundingSource
     public DateOnly? CapturedEndDate { get; set; }
     public DateOnly? StartDate { get; set; }
     public DateOnly? EndDate { get; set; }
-    public bool IsSeeded { get; set; }
 
     public List<ProjectionBudget> Budgets { get; set; } = [];
     public List<ProjectionActual> Actuals { get; set; } = [];
@@ -121,7 +121,6 @@ public class ProjectionBudget
     public decimal Budget { get; set; }
     public decimal SpentToDate { get; set; }
     public decimal Committed { get; set; }
-    public bool IsSeeded { get; set; }
 }
 
 /// <summary>Read-only monthly cost history captured at seed time.</summary>
@@ -174,9 +173,6 @@ public class ProjectionAppointment
     public DateOnly? EndDate { get; set; }
     /// <summary>True for an appointment imported from personnel data, whose salary remains based at the snapshot month.</summary>
     public bool IsSeeded { get; set; }
-
-    /// <summary>Walter projects paying this appointment at initial capture; allows setup to filter its roster before allocations are removed.</summary>
-    public List<string> SourceProjectNumbers { get; set; } = [];
     /// <summary>Some imported funding had no exact task match and was left unallocated.</summary>
     public bool HasUnmatchedFunding { get; set; }
 
@@ -190,7 +186,6 @@ public class ProjectionFundingAllocation
     public decimal Percent { get; set; }
     public DateOnly? StartDate { get; set; }
     public DateOnly? EndDate { get; set; }
-    public bool IsSeeded { get; set; }
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]

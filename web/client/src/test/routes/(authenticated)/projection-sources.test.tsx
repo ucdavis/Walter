@@ -36,6 +36,7 @@ function taskFixture(): Projection {
     capturedEndDate: '2026-06-30',
     capturedStartDate: '2026-01-01',
     id,
+    name: projectNumber === 'PA' ? 'Project A' : 'Project B',
     projectName: projectNumber === 'PA' ? 'Project A' : 'Project B',
     projectNumber,
     sourceKind: 'Task',
@@ -57,7 +58,7 @@ function taskFixture(): Projection {
       startMonth: '2026-05-01',
     },
   ];
-  const alex = { ...plan.appointments[0], sourceProjectNumbers: ['PA'] };
+  const alex = plan.appointments[0];
   plan.appointments = [
     alex,
     {
@@ -71,7 +72,6 @@ function taskFixture(): Projection {
       allocations: [{ ...alex.allocations[0], fundingSourceId: 3, percent: 1 }],
       id: 103,
       name: 'Casey Example',
-      sourceProjectNumbers: ['PB'],
     },
   ];
   return plan;
@@ -79,6 +79,11 @@ function taskFixture(): Projection {
 
 function setup(plan = taskFixture()) {
   let saved = structuredClone(plan);
+  const roster = [
+    { appointmentId: 101, projectNumbers: ['PA'] },
+    { appointmentId: 102, projectNumbers: ['PA'] },
+    { appointmentId: 103, projectNumbers: ['PB'] },
+  ];
   const creates: CreateProjectionDraftRequest[] = [];
   const saves: SaveProjectionRequest[] = [];
   const imports: {
@@ -106,7 +111,16 @@ function setup(plan = taskFixture()) {
     ),
     http.get(portfolioApi, () => HttpResponse.json([saved])),
     http.get(portfolioApi + '/seed', () =>
-      HttpResponse.json({ ...plan, id: 0 })
+      HttpResponse.json({
+        draft: {
+          appointments: plan.appointments,
+          fundingSources: plan.fundingSources,
+          historyMonths: plan.historyMonths,
+          name: plan.name,
+          seededAt: plan.seededAt,
+        },
+        roster,
+      })
     ),
     http.get('/api/projections/:id', () => HttpResponse.json(saved)),
     http.post(portfolioApi, async ({ request }) => {
@@ -115,9 +129,7 @@ function setup(plan = taskFixture()) {
       saved = {
         ...plan,
         ...body.draft,
-        historyMonths: body.historyMonths,
         id: 71,
-        name: body.name,
       };
       return HttpResponse.json(saved);
     }),
@@ -151,7 +163,7 @@ function setup(plan = taskFixture()) {
       return HttpResponse.json([fresh]);
     })
   );
-  return { creates, fresh, imports, plan, saves };
+  return { creates, fresh, imports, plan, roster, saves };
 }
 
 function renderPlan(path = portfolioPath + '/1?section=funding') {
@@ -257,6 +269,71 @@ describe('funding source lifecycle', () => {
         api.plan.appointments[0].allocations[0],
       ]);
       expect(api.creates[0].draft.appointments[1].allocations).toEqual([]);
+      expect(Object.keys(api.creates[0]).sort()).toEqual([
+        'creationKey',
+        'draft',
+      ]);
+      expect(Object.keys(api.creates[0].draft).sort()).toEqual([
+        'appointments',
+        'fundingSources',
+        'historyMonths',
+        'name',
+        'seededAt',
+      ]);
+      for (const appointment of api.creates[0].draft.appointments) {
+        expect(appointment).not.toHaveProperty('sourceProjectNumbers');
+        expect(appointment).not.toHaveProperty('projectNumbers');
+      }
+    } finally {
+      route.cleanup();
+    }
+  });
+
+  it('renames a task source without changing its captured parent project heading', async () => {
+    const api = setup();
+    const route = renderPlan(portfolioPath);
+    const user = userEvent.setup();
+    try {
+      await user.click(await screen.findByRole('button', { name: 'New plan' }));
+      await user.type(screen.getByLabelText('Plan name'), 'Renamed task plan');
+      await user.click(
+        screen.getByRole('button', { name: 'Load funding sources' })
+      );
+      await screen.findByRole('checkbox', {
+        name: 'Include project Project A',
+      });
+      await user.click(
+        screen.getByRole('button', { name: /Edit .*Task T1.*Task One/ })
+      );
+      await user.clear(screen.getByLabelText('Source name'));
+      await user.type(screen.getByLabelText('Source name'), 'Field research');
+      await user.click(screen.getByRole('button', { name: 'Apply' }));
+      expect(
+        screen.getByRole('checkbox', { name: 'Include project Project A' })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('checkbox', {
+          name: /Include Field research.*Task T1/,
+        })
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('checkbox', {
+          name: 'Include project Field research',
+        })
+      ).not.toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: 'Continue' }));
+      await user.click(screen.getByRole('button', { name: 'Continue' }));
+      await user.click(
+        screen.getByRole('button', { name: 'Create plan & open workspace' })
+      );
+      await waitFor(() => expect(api.creates).toHaveLength(1));
+      expect(api.creates[0].draft.fundingSources[0]).toMatchObject({
+        name: 'Field research',
+        projectName: 'Project A',
+        projectNumber: 'PA',
+        taskName: 'Task One',
+        taskNumber: 'T1',
+      });
     } finally {
       route.cleanup();
     }

@@ -10,7 +10,7 @@ CREATE PROCEDURE dbo.usp_GetProjectionSeed
     @ApplicationName NVARCHAR(128) = NULL,
     @ApplicationUser NVARCHAR(256) = NULL,
     @EmulatingUser   NVARCHAR(256) = NULL,
-    @SnapshotAt      DATETIME2(7) = NULL
+    @SnapshotAt      DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -20,8 +20,9 @@ BEGIN
     DECLARE @Duration_MS    INT;
     DECLARE @ErrorMsg       NVARCHAR(MAX);
     DECLARE @ParametersJSON NVARCHAR(MAX);
-    -- Older callers can omit the anchor; the planner supplies its exact saved UTC timestamp.
-    SET @SnapshotAt = COALESCE(@SnapshotAt, SYSUTCDATETIME());
+    -- The query must use the exact timestamp captured by its caller.
+    IF @SnapshotAt IS NULL
+        THROW 50001, 'SnapshotAt is required.', 1;
     DECLARE @SnapshotMonthStart DATE = DATEFROMPARTS(YEAR(@SnapshotAt), MONTH(@SnapshotAt), 1);
 
     EXEC dbo.usp_SanitizeInputString @ApplicationName OUTPUT;

@@ -91,9 +91,9 @@ public sealed partial class ProjectionsControllerTests
     private static async Task<Projection> CreateProjectionAsync(AppDbContext ctx)
     {
         var controller = CreateController(ctx, financialViewer: true);
-        var draft = Document(await controller.Seed(PiIam, 3, default));
+        var draft = SeedResponse(await controller.Seed(PiIam, 3, default)).Draft;
         return Document(await controller.Create(PiIam,
-            new("Plan A", 3, new(draft.SeededAt, draft.FundingSources, draft.Appointments), Guid.NewGuid()), default));
+            new(draft with { Name = "Plan A" }, Guid.NewGuid()), default));
     }
 
     [Fact]
@@ -112,7 +112,7 @@ public sealed partial class ProjectionsControllerTests
     {
         using var ctx = TestDbContextFactory.CreateInMemory();
         var request = NewPlanRequest();
-        var expected = JsonSerializer.Deserialize<ProjectionsController.ProjectionSnapshotDraft>(JsonSerializer.Serialize(request.Draft))!;
+        var expected = JsonSerializer.Deserialize<ProjectionDraft>(JsonSerializer.Serialize(request.Draft))!;
         var now = new DateTime(2026, 11, 8, 12, 0, 0, DateTimeKind.Utc);
         var data = UnavailableProjectionData();
         var controller = CreateController(ctx, financialViewer: true, timeProvider: new MutableTimeProvider(now), dataSource: data);
@@ -122,8 +122,8 @@ public sealed partial class ProjectionsControllerTests
         created.Id.Should().BePositive();
         created.Should().BeEquivalentTo(new
         {
-            Name = request.Name, HistoryMonths = 12, PiEmployeeId = "100",
-            SeededAt = expected.SeededAt!.Value, CreatedAt = now, UpdatedAt = now,
+            Name = request.Draft!.Name, HistoryMonths = 12, PiEmployeeId = "100",
+            SeededAt = expected.SeededAt, CreatedAt = now, UpdatedAt = now,
             CreatedBy = "tester", UpdatedBy = "tester",
         });
         created.FundingSources.Should().BeEquivalentTo(expected.FundingSources);
@@ -143,7 +143,7 @@ public sealed partial class ProjectionsControllerTests
         var reopened = Document(await controller.Get(created.Id, default));
         reopened.FundingSources.Should().BeEquivalentTo(expected.FundingSources);
         reopened.Appointments.Should().BeEquivalentTo(expected.Appointments);
-        reopened.SeededAt.Should().Be(expected.SeededAt!.Value);
+        reopened.SeededAt.Should().Be(expected.SeededAt);
         reopened.SeededAt.Kind.Should().Be(DateTimeKind.Utc);
     }
 
@@ -161,7 +161,7 @@ public sealed partial class ProjectionsControllerTests
         var updatedAt = edited.UpdatedAt;
         ctx.ChangeTracker.Clear();
 
-        var replay = Document(await controller.Create(PiIam, request with { Name = "Late retry", HistoryMonths = 3 }, default));
+        var replay = Document(await controller.Create(PiIam, request with { Draft = request.Draft! with { Name = "Late retry", HistoryMonths = 3 } }, default));
 
         replay.Id.Should().Be(created.Id);
         replay.Name.Should().Be("Edited after creation");
@@ -291,19 +291,17 @@ public sealed partial class ProjectionsControllerTests
         var recreated = Document(await controller.Create(PiIam, request, default));
 
         recreated.Id.Should().NotBe(first.Id);
-        recreated.SeededAt.Should().Be(request.Draft!.SeededAt!.Value);
+        recreated.SeededAt.Should().Be(request.Draft!.SeededAt);
         (await ctx.Projections.CountAsync()).Should().Be(1);
     }
 
     [Theory]
     [InlineData("missing-draft")]
-    [InlineData("missing-key")]
     [InlineData("empty-key")]
     [InlineData("empty-name")]
     [InlineData("blank-name")]
     [InlineData("long-name")]
     [InlineData("window")]
-    [InlineData("missing-snapshot")]
     [InlineData("default-snapshot")]
     [InlineData("non-utc-snapshot")]
     [InlineData("projects-null")]
@@ -326,17 +324,15 @@ public sealed partial class ProjectionsControllerTests
         switch (invalid)
         {
             case "missing-draft": request = request with { Draft = null }; break;
-            case "missing-key": request = request with { CreationKey = null }; break;
             case "empty-key": request = request with { CreationKey = Guid.Empty }; break;
-            case "empty-name": request = request with { Name = "" }; break;
-            case "blank-name": request = request with { Name = "  " }; break;
-            case "long-name": request = request with { Name = new string('x', 201) }; break;
-            case "window": request = request with { HistoryMonths = 4 }; break;
-            case "missing-snapshot": request = request with { Draft = draft with { SeededAt = null } }; break;
+            case "empty-name": request = request with { Draft = draft with { Name = "" } }; break;
+            case "blank-name": request = request with { Draft = draft with { Name = "  " } }; break;
+            case "long-name": request = request with { Draft = draft with { Name = new string('x', 201) } }; break;
+            case "window": request = request with { Draft = draft with { HistoryMonths = 4 } }; break;
             case "default-snapshot": request = request with { Draft = draft with { SeededAt = DateTime.MinValue } }; break;
-            case "non-utc-snapshot": request = request with { Draft = draft with { SeededAt = DateTime.SpecifyKind(draft.SeededAt!.Value, DateTimeKind.Unspecified) } }; break;
-            case "projects-null": request = request with { Draft = draft with { FundingSources = null } }; break;
-            case "jobs-null": request = request with { Draft = draft with { Appointments = null } }; break;
+            case "non-utc-snapshot": request = request with { Draft = draft with { SeededAt = DateTime.SpecifyKind(draft.SeededAt, DateTimeKind.Unspecified) } }; break;
+            case "projects-null": request = request with { Draft = draft with { FundingSources = null! } }; break;
+            case "jobs-null": request = request with { Draft = draft with { Appointments = null! } }; break;
             case "budgets-null": draft.FundingSources!.Single().Budgets = null!; break;
             case "actuals-null": draft.FundingSources!.Single().Actuals = null!; break;
             case "run-rates-null": draft.FundingSources!.Single().RunRates = null!; break;
@@ -414,15 +410,27 @@ public sealed partial class ProjectionsControllerTests
         };
         var controller = CreateController(ctx, financialViewer: true, timeProvider: new MutableTimeProvider(snapshot), dataSource: data);
 
-        var draft = Document(await controller.Seed(PiIam, 12, default));
+        var response = SeedResponse(await controller.Seed(PiIam, 12, default));
+        var draft = response.Draft;
 
         draft.Should().BeEquivalentTo(new
         {
-            Id = 0, Name = "New projection", PiEmployeeId = "100", HistoryMonths = 12,
-            SeededAt = snapshot, CreatedAt = default(DateTime), UpdatedAt = default(DateTime),
+            Name = "New projection", HistoryMonths = 12, SeededAt = snapshot,
         });
-        draft.CreatedBy.Should().BeNull();
-        draft.UpdatedBy.Should().BeNull();
+        response.Roster.Should().ContainSingle().Which.Should().BeEquivalentTo(new
+        {
+            AppointmentId = draft.Appointments.Single().Id, ProjectNumbers = new[] { "P1" },
+        });
+        using var json = JsonDocument.Parse(JsonSerializer.Serialize(response, new JsonSerializerOptions(JsonSerializerDefaults.Web)));
+        json.RootElement.EnumerateObject().Select(p => p.Name).Should().BeEquivalentTo("draft", "roster");
+        var draftJson = json.RootElement.GetProperty("draft");
+        draftJson.EnumerateObject().Select(p => p.Name).Should().BeEquivalentTo("name", "historyMonths", "seededAt", "fundingSources", "appointments");
+        draftJson.GetProperty("appointments")[0].TryGetProperty("sourceProjectNumbers", out _).Should().BeFalse();
+        draftJson.GetProperty("appointments")[0].GetProperty("isSeeded").GetBoolean().Should().BeTrue();
+        var sourceJson = draftJson.GetProperty("fundingSources")[0];
+        sourceJson.TryGetProperty("isSeeded", out _).Should().BeFalse();
+        sourceJson.GetProperty("budgets")[0].TryGetProperty("isSeeded", out _).Should().BeFalse();
+        draftJson.GetProperty("appointments")[0].GetProperty("allocations")[0].TryGetProperty("isSeeded", out _).Should().BeFalse();
         draft.FundingSources.Should().ContainSingle().Which.Budgets.Should().ContainSingle().Which.Budget.Should().Be(1000);
         draft.FundingSources.Single().Actuals.Should().ContainSingle().Which.Amount.Should().Be(200);
         draft.FundingSources.Single().Expenses.Should().ContainSingle().Which.Amount.Should().Be(25);
@@ -439,9 +447,10 @@ public sealed partial class ProjectionsControllerTests
         using var ctx = TestDbContextFactory.CreateInMemory();
         var data = new FakeProjectionDataSource();
 
-        var draft = Document(await CreateController(ctx, financialViewer: true, dataSource: data).Seed(PiIam, 3, default));
+        var response = SeedResponse(await CreateController(ctx, financialViewer: true, dataSource: data).Seed(PiIam, 3, default));
+        var draft = response.Draft;
 
-        draft.Id.Should().Be(0);
+        response.Roster.Should().BeEmpty();
         draft.FundingSources.Should().BeEmpty();
         draft.Appointments.Should().BeEmpty();
         data.PersonnelProjectNumbers.Should().BeNull();
@@ -480,8 +489,8 @@ public sealed partial class ProjectionsControllerTests
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         response.Headers.CacheControl!.NoStore.Should().BeTrue();
-        var draft = (await response.Content.ReadFromJsonAsync<Projection>())!;
-        draft.Should().BeEquivalentTo(new { Id = 0, Name = "New projection", HistoryMonths = 3, SeededAt = snapshot });
+        var draft = (await response.Content.ReadFromJsonAsync<ProjectionSeedResponse>())!.Draft;
+        draft.Should().BeEquivalentTo(new { Name = "New projection", HistoryMonths = 3, SeededAt = snapshot });
         draft.SeededAt.Kind.Should().Be(DateTimeKind.Utc);
         using var catalog = await client.GetAsync($"/api/projections/by-iam/{PiIam}/sources");
         catalog.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -536,9 +545,8 @@ public sealed partial class ProjectionsControllerTests
     {
         using var ctx = TestDbContextFactory.CreateInMemory();
 
-        var draft = Document(await CreateController(ctx, employeeId: employeeId).Seed(PiIam, 6, default));
+        var draft = SeedResponse(await CreateController(ctx, employeeId: employeeId).Seed(PiIam, 6, default)).Draft;
 
-        draft.PiEmployeeId.Should().Be("100");
         draft.HistoryMonths.Should().Be(6);
         draft.FundingSources.Should().ContainSingle();
         ctx.Projections.Should().BeEmpty();
@@ -582,8 +590,8 @@ public sealed partial class ProjectionsControllerTests
             PiEmployeeId = "100", Name = "Captured tasks", HistoryMonths = 3,
             CreatedAt = snapshot, SeededAt = snapshot, UpdatedAt = snapshot,
             FundingSources = [
-                new() { Id = 1, SourceKind = ProjectionSourceKind.Task, CapturedAt = snapshot, ProjectNumber = "P1", TaskNumber = "TASK01", ProjectName = "First captured task", EndDate = new DateOnly(2025, 3, 31) },
-                new() { Id = 2, SourceKind = ProjectionSourceKind.Task, CapturedAt = snapshot, ProjectNumber = "P1", TaskNumber = "TASK02", ProjectName = "Second captured task", EndDate = new DateOnly(2025, 3, 31) },
+                new() { Id = 1, SourceKind = ProjectionSourceKind.Task, CapturedAt = snapshot, ProjectNumber = "P1", TaskNumber = "TASK01", Name = "First task", ProjectName = "First captured task", EndDate = new DateOnly(2025, 3, 31) },
+                new() { Id = 2, SourceKind = ProjectionSourceKind.Task, CapturedAt = snapshot, ProjectNumber = "P1", TaskNumber = "TASK02", Name = "Second task", ProjectName = "Second captured task", EndDate = new DateOnly(2025, 3, 31) },
             ],
             Appointments = [new() { Id = 1, MonthlySalary = null, Allocations = [new() { FundingSourceId = 2, Percent = 0.6m }] }],
         };
@@ -641,15 +649,32 @@ public sealed partial class ProjectionsControllerTests
     {
         using var ctx = TestDbContextFactory.CreateInMemory();
         var created = await CreateProjectionAsync(ctx);
+        var creationKey = created.CreationKey;
         var controller = CreateController(ctx, financialViewer: true);
-        created.FundingSources.Add(new ProjectionFundingSource { Id = 2, ProjectName = "Hypothetical", SourceKind = ProjectionSourceKind.Planned, CapturedAt = created.SeededAt, StartDate = new(2027, 1, 1) });
+        created.FundingSources.Add(new ProjectionFundingSource { Id = 2, Name = "Hypothetical", SourceKind = ProjectionSourceKind.Planned, CapturedAt = created.SeededAt, StartDate = new(2027, 1, 1) });
         await controller.Save(created.Id, Draft(created), default);
 
         var result = await controller.Reset(created.Id, new ProjectionsController.HistoryMonthsRequest(3, created.UpdatedAt), default);
 
         var reset = result.Should().BeOfType<OkObjectResult>().Which.Value.Should().BeOfType<Projection>().Subject;
-        reset.Should().BeEquivalentTo(new { created.Id, Name = "Plan A", CreatedBy = "tester" });
+        reset.Should().BeEquivalentTo(new { created.Id, CreationKey = creationKey, Name = "Plan A", CreatedBy = "tester" });
         reset.FundingSources.Should().ContainSingle().Which.ProjectNumber.Should().Be("P1");
+    }
+
+    [Fact]
+    public async Task Reset_keeps_the_entire_saved_plan_when_capture_fails()
+    {
+        using var ctx = TestDbContextFactory.CreateInMemory();
+        var saved = await StoreCapturedPlanAsync(ctx);
+        var before = JsonSerializer.Serialize(saved);
+        var controller = CreateController(ctx, financialViewer: true, dataSource: UnavailableProjectionData());
+
+        var reset = () => controller.Reset(saved.Id, new(3, saved.UpdatedAt), default);
+
+        await reset.Should().ThrowAsync<InvalidOperationException>();
+        JsonSerializer.Serialize(saved).Should().Be(before);
+        ctx.ChangeTracker.Clear();
+        JsonSerializer.Serialize(Document(await controller.Get(saved.Id, default))).Should().Be(before);
     }
 
     [Fact]
@@ -775,7 +800,7 @@ public sealed partial class ProjectionsControllerTests
 
         var later = Draft(created) with { Name = "Another edit after conflict" };
         later.FundingSources.Clear();
-        later.FundingSources.Add(new ProjectionFundingSource { Id = 2, ProjectName = "Other editor's source", SourceKind = ProjectionSourceKind.Planned, CapturedAt = later.ExpectedSeededAt!.Value, StartDate = new(2027, 1, 1) });
+        later.FundingSources.Add(new ProjectionFundingSource { Id = 2, Name = "Other editor's source", SourceKind = ProjectionSourceKind.Planned, CapturedAt = later.ExpectedSeededAt!.Value, StartDate = new(2027, 1, 1) });
         await controller.Save(created.Id, later, default);
         var result = await controller.Save(created.Id, draft with { Overwrite = true }, default);
 
@@ -912,7 +937,7 @@ public sealed partial class ProjectionsControllerTests
         var instant = new DateTime(2026, 11, 6, 12, 0, 0, DateTimeKind.Utc).AddTicks(1234567);
         var clock = new MutableTimeProvider(instant);
         var controller = CreateController(ctx, financialViewer: true, timeProvider: clock);
-        var created = Document(await controller.Create(PiIam, new("Frozen clock", 3, new(instant, [], []), Guid.NewGuid()), default));
+        var created = Document(await controller.Create(PiIam, new(new("Frozen clock", 3, instant, [], []), Guid.NewGuid()), default));
         var seededAt = created.SeededAt;
         var initialUpdatedAt = created.UpdatedAt;
         var request = JsonSerializer.Deserialize<ProjectionsController.SaveProjectionRequest>(JsonSerializer.Serialize(Draft(created)))!;
@@ -938,17 +963,18 @@ public sealed partial class ProjectionsControllerTests
     }
 
     private static ProjectionsController.CreateProjectionRequest NewPlanRequest() =>
-        new("Reviewed new plan", 12, CapturedSnapshot(), Guid.NewGuid());
+        new(CapturedSnapshot(), Guid.NewGuid());
 
-    private static ProjectionsController.ProjectionSnapshotDraft CapturedSnapshot() => new(
+    private static ProjectionDraft CapturedSnapshot() => new(
+        "Reviewed new plan", 12,
         new DateTime(2025, 11, 5, 8, 30, 0, DateTimeKind.Utc).AddTicks(1234567),
         [
             new ProjectionFundingSource
             {
                 Id = 41, SourceKind = ProjectionSourceKind.Task, CapturedAt = new DateTime(2025, 11, 5, 8, 30, 0, DateTimeKind.Utc).AddTicks(1234567), ProjectNumber = "P1", TaskNumber = "CAPTURED-TASK", TaskName = "Original task",
-                ProjectName = "Expired captured project", ProjectType = "Sponsored", AwardNumber = "A1", AwardName = "Original award",
-                IsSeeded = true, StartDate = new DateOnly(2025, 1, 1), EndDate = new DateOnly(2025, 12, 31),
-                Budgets = [new() { ExpenditureCategory = Supplies, Budget = 15000, SpentToDate = 2000, Committed = 1000, IsSeeded = true }],
+                Name = "Reviewed task", ProjectName = "Expired captured project", ProjectType = "Sponsored", AwardNumber = "A1", AwardName = "Original award",
+                StartDate = new DateOnly(2025, 1, 1), EndDate = new DateOnly(2025, 12, 31),
+                Budgets = [new() { ExpenditureCategory = Supplies, Budget = 15000, SpentToDate = 2000, Committed = 1000 }],
                 Actuals = [new() { ExpenditureCategory = Supplies, Month = new DateOnly(2025, 10, 1), Amount = 250 }],
                 RunRates = [new() { ExpenditureCategory = Supplies, HistoryMonths = 12, MonthlyAmount = 20 }],
                 Expenses = [
@@ -975,9 +1001,9 @@ public sealed partial class ProjectionsControllerTests
         var snapshot = CapturedSnapshot();
         var source = new Projection
         {
-            PiEmployeeId = "100", Name = "Stored source", HistoryMonths = 12,
-            SeededAt = snapshot.SeededAt!.Value, CreatedAt = snapshot.SeededAt.Value,
-            UpdatedAt = snapshot.SeededAt.Value.AddDays(1), CreatedBy = "original-owner", UpdatedBy = "previous-editor",
+            CreationKey = Guid.NewGuid(), PiEmployeeId = "100", Name = "Stored source", HistoryMonths = 12,
+            SeededAt = snapshot.SeededAt, CreatedAt = snapshot.SeededAt,
+            UpdatedAt = snapshot.SeededAt.AddDays(1), CreatedBy = "original-owner", UpdatedBy = "previous-editor",
             FundingSources = snapshot.FundingSources!, Appointments = snapshot.Appointments!,
         };
         ctx.Projections.Add(source);
@@ -989,6 +1015,9 @@ public sealed partial class ProjectionsControllerTests
     {
         SeedResponse = Task.FromException<ProjectionSeedData>(new InvalidOperationException("Fresh data is unavailable")),
     };
+
+    private static ProjectionSeedResponse SeedResponse(IActionResult result) =>
+        result.Should().BeOfType<OkObjectResult>().Which.Value.Should().BeOfType<ProjectionSeedResponse>().Subject;
 
     private static Projection Document(IActionResult result) =>
         result.Should().BeOfType<OkObjectResult>().Which.Value.Should().BeOfType<Projection>().Subject;
