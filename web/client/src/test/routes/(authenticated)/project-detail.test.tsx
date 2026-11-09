@@ -151,6 +151,33 @@ describe('project detail page', () => {
     }
   });
 
+  it('labels the badge with the PPM project type', async () => {
+    const projects = [
+      createProject({ pmEmployeeId: '2000', projectType: 'Capital' }),
+    ];
+    setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);
+
+    const { cleanup } = renderRoute({
+      initialPath: '/projects/1000/P1',
+    });
+
+    try {
+      const heading = await screen.findByRole('heading', {
+        level: 1,
+        name: 'Test Project',
+      });
+      const topSection = heading.closest('section') as HTMLElement;
+      expect(
+        within(topSection).getByText('Capital Project')
+      ).toBeInTheDocument();
+      expect(
+        within(topSection).queryByText('Sponsored Project')
+      ).not.toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+
   it('uses a neutral status dot for unknown project statuses', async () => {
     const projects = [
       createProject({ pmEmployeeId: '2000', projectStatusCode: 'ON_HOLD' }),
