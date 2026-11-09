@@ -383,10 +383,16 @@ export function NewProjectionWizard({
         )}
         {step === 3 && draft && results && (
           <ProjectionReviewStep
+            disabled={Boolean(submitted)}
             draft={draft}
             name={name}
             notes={notes}
-            notesDisabled={Boolean(submitted)}
+            onEditStep={(target) => {
+              if (!submitted && !requestPending.current) {
+                setError(null);
+                setStep(target);
+              }
+            }}
             onNotesChange={(value) => form.setFieldValue('notes', value)}
             results={results}
           />

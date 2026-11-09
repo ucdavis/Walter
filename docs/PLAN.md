@@ -12,7 +12,9 @@ as `1381103c`. Stage 3c's allocation picker is accepted and committed as `48f06e
 Stage 4a's Other expenses editor is accepted and committed as `ea854416`.
 Stage 4b's plan details, fixed forecast duration, and typed `Content` document are
 accepted and committed as `9a700ef1`. Stage 5a's funding outlook and source
-drilldowns are implemented, verified, and accepted.
+drilldowns are accepted and committed as `4209d76b`. Stage 5b's saved-plan
+dashboard, current balances, and minimal wizard Review are implemented, verified,
+and accepted.
 Sponsored personnel budget availability and category rebudgeting are deferred
 until the end of this plan, potentially after v1. They do not block v1 completion.
 Saving remains available with funding gaps/overlaps.
@@ -1667,6 +1669,66 @@ The generated CSS retains every referenced Gunrock and semantic color token.
 
 This increment is accepted. No server, database, or calculation-engine changes
 were required.
+
+## Stage 5b: saved-plan dashboard and minimal Review
+
+The user approved these decisions on November 9, 2026. Faculty should see enough
+information to make the next decision, with additional detail available on request.
+Keep the guided wizard's final Review short: shared outlook totals, a compact
+summary of source shortfalls and appointment funding gaps or overlaps, and a
+collapsed source balance table. Direct edit links return to Funding sources,
+Staffing, or Other expenses while preserving the draft and notes. Warnings do not
+block creation. The final action still saves before opening the workspace;
+uncertain creation freezes the submitted inputs for an idempotent retry.
+
+Replace the metadata table with saved-plan cards showing the name, optional notes,
+forecast dates, appointment count, projected ending balance, and a small combined
+balance chart. Keep the earliest source shortfall visible even if the plan's
+combined balance remains positive or the shortfall recovers. Empty or outside-period
+forecasts show no forecast data rather than an invented zero. New, Open, Duplicate,
+and the workspace's return link retain their existing behavior. The cards use saved
+inputs and never create a default plan or capture a new plan automatically.
+
+Load each saved document independently after the list appears. A slow or failed
+preview leaves other cards and plan actions usable, with retry available on that
+card. A changed version discovered by the list refreshes the corresponding preview.
+The compact SVG chart uses the shared Walter palette and preserves missing months.
+It does not add another charting dependency or duplicate financial calculations.
+
+Include a separate Current project balances panel with one total and a collapsed
+project/task breakdown. Extend the existing authorized source catalog response with
+each task's budget minus spending minus commitments and its UTC capture time. This
+reuses `CaptureSourcesAsync`, its eligibility policy, and `usp_GetProjectionSeed`;
+it requires no new SPROC, personnel read, database field, or saved-plan mutation.
+The panel loads independently from saved plans and explains the retrieval time in
+its details. Current balances do not replace the captured inputs of saved scenarios.
+
+Verification passed all 718 client tests across 77 files and all 145 projection
+controller tests. Coverage includes independent loading and failure, retries,
+current balances versus saved inputs, task shortfalls hidden by positive project
+totals, recovered forecast shortfalls, empty forecasts, changed saved versions,
+Review navigation retaining notes and the original capture, and frozen inputs after
+uncertain creation. A regression also holds an older preview read while the list
+discovers a newer version, then verifies a fresh read without looping when the
+detail is newer than the list. Version comparison retains exact server ticks.
+Production build, TypeScript, changed-file ESLint, formatting, and diff checks
+passed. Independent review found no remaining correctness issues.
+
+Browser checks used synthetic API responses on the production routes. They
+verified current project/task balances separate from saved forecasts, collapsed
+details, notes surviving a return to Staffing, recovered and outside-period source
+details, and final creation opening the saved workspace with those notes intact.
+Dashboard and Review fit at 390px without page overflow. Final browser checks
+reported no console errors or warnings. React Doctor reported no errors and 12
+existing warnings across the wider branch: editor complexity/size, a staffing-list
+index key, the wizard loading-flag rule, and the static Recharts warning inside the
+deferred chart component. No warnings were suppressed. Existing NuGet audit
+advisories remain outside this increment.
+
+This increment is accepted.
+
+Complete guided-workflow review, temporary preview removal, and rollout criteria
+remain later Stage 5 work. Reset/refresh and category rebudgeting remain deferred.
 
 ## Deferred: sponsored personnel budgets and category rebudgeting
 

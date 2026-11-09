@@ -39,7 +39,9 @@ public sealed class ProjectionsController(
     public sealed record ProjectionLookups(IReadOnlyList<JobCodeRecord> JobCodes, IReadOnlyList<string> ExpenditureCategories,
         ProjectionAppointmentDefaults AppointmentDefaults);
     public sealed record ProjectionSourceKey(string ProjectNumber, string? TaskNumber);
-    public sealed record ProjectionSourceSummary(string ProjectNumber, string? ProjectName, string? TaskNumber, string? TaskName);
+    /// <summary>Fresh task identity and budget remaining after spending and commitments, without forecast assumptions.</summary>
+    public sealed record ProjectionSourceSummary(string ProjectNumber, string? ProjectName, string? TaskNumber, string? TaskName,
+        decimal AvailableBalance, DateTime CapturedAt);
     public sealed record ImportProjectionSourcesRequest(List<ProjectionSourceKey>? Sources);
 
     [HttpGet("by-iam/{iamId}")]
@@ -68,7 +70,7 @@ public sealed class ProjectionsController(
             User.GetUserIdentifier(), User.GetEmulatingUser(), ct));
     }
 
-    /// <summary>Lists currently eligible tasks within the authorized PI portfolio for fresh source selection.</summary>
+    /// <summary>Lists eligible tasks and their current available balances for the authorized PI portfolio without loading personnel.</summary>
     [HttpGet("by-iam/{iamId}/sources")]
     [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
     public async Task<IActionResult> Sources(string iamId, CancellationToken ct)
@@ -76,7 +78,8 @@ public sealed class ProjectionsController(
         var (piEmployeeId, error) = await ResolvePiAsync(iamId, ct);
         if (error is not null) return error;
         var sources = await seeder.CaptureSourcesAsync(piEmployeeId!, User.GetUserIdentifier(), User.GetEmulatingUser(), ct);
-        return Ok(sources.Select(p => new ProjectionSourceSummary(p.ProjectNumber!, p.ProjectName, p.TaskNumber, p.TaskName)).ToList());
+        return Ok(sources.Select(p => new ProjectionSourceSummary(p.ProjectNumber!, p.ProjectName, p.TaskNumber, p.TaskName,
+            p.Budgets.Sum(b => b.Budget - b.SpentToDate - b.Committed), p.CapturedAt)).ToList());
     }
 
     /// <summary>Imports selected current task financials only; client assignment of local IDs cannot refresh staffing or persist a plan.</summary>

@@ -210,6 +210,8 @@ export const fetchProjectionSeed = (iamId: string, historyMonths: number) =>
   );
 
 export interface ProjectionSourceSummary {
+  availableBalance: number;
+  capturedAt: string;
   projectName: string | null;
   projectNumber: string;
   taskName: string | null;
@@ -306,7 +308,7 @@ export type SaveProjectionRequest = Omit<ProjectionDraft, 'seededAt'> & {
 };
 
 /** Compare UTC tokens only for cache ordering; transmit the original strings unchanged. */
-function orderedTimestamp(timestamp: string) {
+export function orderedTimestamp(timestamp: string) {
   return timestamp.replace(
     /(?:\.(\d{1,7}))?Z$/,
     (_match, fraction = '') => `.${String(fraction).padEnd(7, '0')}Z`

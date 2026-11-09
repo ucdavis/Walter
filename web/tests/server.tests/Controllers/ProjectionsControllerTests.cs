@@ -504,6 +504,10 @@ public sealed partial class ProjectionsControllerTests
         using var catalog = await client.GetAsync($"/api/projections/by-iam/{PiIam}/sources");
         catalog.StatusCode.Should().Be(HttpStatusCode.OK);
         catalog.Headers.CacheControl!.NoStore.Should().BeTrue();
+        var catalogSource = (await catalog.Content.ReadFromJsonAsync<List<ProjectionsController.ProjectionSourceSummary>>())!.Single();
+        catalogSource.AvailableBalance.Should().Be(0m);
+        catalogSource.CapturedAt.Should().Be(snapshot);
+        catalogSource.CapturedAt.Kind.Should().Be(DateTimeKind.Utc);
         clock.UtcNow = snapshot.AddMonths(1);
         using var imported = await client.PostAsJsonAsync($"/api/projections/by-iam/{PiIam}/sources/import",
             new ProjectionsController.ImportProjectionSourcesRequest([new("P1", "TASK01")]));

@@ -76,16 +76,23 @@ export function DuplicateProjectionButton({
   return (
     <div>
       <button
+        aria-label={
+          duplicate.isPending
+            ? `Duplicating ${projection.name}...`
+            : failed
+              ? `Retry duplicate ${projection.name}`
+              : `Duplicate ${projection.name}`
+        }
         className="btn btn-outline btn-sm"
         disabled={duplicate.isPending}
         onClick={() => void copy()}
         type="button"
       >
         {duplicate.isPending
-          ? `Duplicating ${projection.name}...`
+          ? 'Duplicating...'
           : failed
-            ? `Retry duplicate ${projection.name}`
-            : `Duplicate ${projection.name}`}
+            ? 'Retry duplicate'
+            : 'Duplicate'}
       </button>
       {failed && (
         <p className="mt-2 text-sm text-error" role="alert">

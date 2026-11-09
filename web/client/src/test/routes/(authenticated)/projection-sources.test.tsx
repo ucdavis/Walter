@@ -19,6 +19,7 @@ import type {
   SaveProjectionRequest,
 } from '@/queries/projections.ts';
 import { routeTree } from '@/routeTree.gen.ts';
+import { sourcePlanningBalance } from '@/lib/projectionSources.ts';
 import { server } from '@/test/mswUtils.ts';
 
 const portfolioPath = '/projections/IAM-PREVIEW';
@@ -150,14 +151,14 @@ function setup(plan = taskFixture()) {
     }),
     http.get(portfolioApi + '/sources', () =>
       HttpResponse.json(
-        plan.content.fundingSources.map(
-          ({ projectName, projectNumber, taskName, taskNumber }) => ({
-            projectName,
-            projectNumber,
-            taskName,
-            taskNumber,
-          })
-        )
+        plan.content.fundingSources.map((source) => ({
+          availableBalance: sourcePlanningBalance(source),
+          capturedAt: source.capturedAt,
+          projectName: source.projectName,
+          projectNumber: source.projectNumber,
+          taskName: source.taskName,
+          taskNumber: source.taskNumber,
+        }))
       )
     ),
     http.post(portfolioApi + '/sources/import', async ({ request }) => {

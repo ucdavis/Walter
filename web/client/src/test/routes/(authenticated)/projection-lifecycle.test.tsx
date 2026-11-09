@@ -126,6 +126,7 @@ function handleLifecycle(plans: Projection[] = []) {
       })
     ),
     http.get(createUrl, () => HttpResponse.json([...stored.values()])),
+    http.get(createUrl + '/sources', () => HttpResponse.json([])),
     http.get(createUrl + '/seed', ({ request }) => {
       seedReads++;
       const historyMonths = Number(
@@ -228,6 +229,7 @@ async function changeHistoryWindow(
 describe('projection creation and copies', () => {
   it('retains wizard duration and notes when revisiting setup and creates them with the original snapshot', async () => {
     const api = handleLifecycle();
+    api.seed.content.appointments[0].allocations[0].percent = 0.25;
     const route = renderPlans();
     const user = userEvent.setup();
     try {
@@ -243,9 +245,25 @@ describe('projection creation and copies', () => {
       ).toBeInTheDocument();
       const notes = 'Assume renewal in June.\n  Keep this indentation.';
       await user.type(screen.getByLabelText('Plan notes (optional)'), notes);
-      await user.click(screen.getByRole('button', { name: 'Back' }));
-      await user.click(screen.getByRole('button', { name: 'Back' }));
-      await user.click(screen.getByRole('button', { name: 'Back' }));
+      expect(
+        screen.getByRole('region', { name: 'Items to review' })
+      ).toHaveTextContent('1 appointment has unallocated time.');
+      await user.click(screen.getByRole('button', { name: 'Edit staffing' }));
+      await screen.findByRole('button', {
+        name: 'Edit appointment for Alex Example',
+      });
+      await user.click(screen.getByRole('button', { name: 'Continue' }));
+      await user.click(screen.getByRole('button', { name: 'Continue' }));
+      expect(screen.getByLabelText('Plan notes (optional)')).toHaveValue(notes);
+      await user.click(
+        screen.getByRole('button', { name: 'Edit other expenses' })
+      );
+      await screen.findByRole('button', { name: 'Change history window' });
+      await user.click(screen.getByRole('button', { name: 'Continue' }));
+      expect(screen.getByLabelText('Plan notes (optional)')).toHaveValue(notes);
+      await user.click(
+        screen.getByRole('button', { name: 'Edit funding sources' })
+      );
       expect(screen.getByLabelText('Forecast duration')).toHaveValue('18');
       await user.selectOptions(
         screen.getByLabelText('Forecast duration'),
@@ -258,6 +276,9 @@ describe('projection creation and copies', () => {
       expect(
         screen.getByText('12-month forecast, Jan 2026 through Dec 2026.')
       ).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: 'Create plan & open workspace' })
+      ).toBeEnabled();
       await user.click(
         screen.getByRole('button', { name: 'Create plan & open workspace' })
       );
@@ -592,6 +613,14 @@ describe('projection creation and copies', () => {
       await screen.findByRole('button', { name: 'Retry creation' });
       expect(route.router.state.location.pathname).toBe(portfolioPath);
       expect(screen.getByRole('button', { name: 'Back' })).toBeDisabled();
+      expect(screen.getByLabelText('Plan notes (optional)')).toBeDisabled();
+      for (const name of [
+        'Edit funding sources',
+        'Edit staffing',
+        'Edit other expenses',
+      ]) {
+        expect(screen.getByRole('button', { name })).toBeDisabled();
+      }
       expect(api.stored.size).toBe(1);
       await user.click(screen.getByRole('button', { name: 'Retry creation' }));
       await waitFor(() =>

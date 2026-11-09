@@ -39,7 +39,7 @@ public sealed partial class ProjectionsControllerTests
     };
 
     [Fact]
-    public async Task Source_catalog_returns_eligible_task_keys_without_personnel_or_saved_rows()
+    public async Task Source_catalog_returns_eligible_task_balances_without_personnel_or_saved_rows()
     {
         using var ctx = TestDbContextFactory.CreateInMemory();
         var data = SourceData();
@@ -50,8 +50,31 @@ public sealed partial class ProjectionsControllerTests
         var sources = (List<ProjectionsController.ProjectionSourceSummary>)result.Value!;
         sources.Select(s => (s.ProjectNumber, s.TaskNumber, s.TaskName)).Should().Equal(
             ("P1", "T1", "First"), ("P1", "T2", "Second"));
+        sources.Select(s => s.AvailableBalance).Should().Equal(600m, 9000m);
+        sources.Should().OnlyContain(s => s.CapturedAt == SourceCapture && s.CapturedAt.Kind == DateTimeKind.Utc);
+        data.SnapshotAtUtc.Should().Be(SourceCapture);
         data.PersonnelProjectNumbers.Should().BeNull();
         ctx.Projections.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Source_catalog_preserves_credits_and_shortfalls_within_each_task()
+    {
+        using var ctx = TestDbContextFactory.CreateInMemory();
+        var data = SourceData();
+        data.Seed.Budgets.AddRange(
+        [
+            new() { ProjectNumber = "P1", TaskNumber = "T1", ExpenditureCategory = Supplies, SpentToDate = -50, Committed = -10 },
+            new() { ProjectNumber = "P1", TaskNumber = "T1", ExpenditureCategory = "06 - Travel", Budget = 100, SpentToDate = 800 },
+            new() { ProjectNumber = "P1", TaskNumber = "T3", ExpenditureCategory = Supplies, Budget = 50000 },
+        ]);
+        var controller = CreateController(ctx, financialViewer: true, dataSource: data);
+
+        var result = (OkObjectResult)await controller.Sources(PiIam, default);
+
+        var sources = (List<ProjectionsController.ProjectionSourceSummary>)result.Value!;
+        sources.Select(s => (s.TaskNumber, s.AvailableBalance)).Should().Equal(("T1", -40m), ("T2", 9000m));
+        data.PersonnelProjectNumbers.Should().BeNull();
     }
 
     [Fact]
