@@ -3,32 +3,19 @@ import {
   type PlanDetailsEditorHandle,
 } from '@/components/projections/PlanDetailsEditor.tsx';
 import { fundingMonthLabel } from '@/components/projections/fundingTimelineDates.ts';
-import { getSourceForecastWindow } from '@/lib/piProjection.ts';
+import { FundingOutlook } from '@/components/projections/FundingOutlook.tsx';
 import { editPlanDetails } from '@/lib/projectionDetails.ts';
 import {
   ExpensesEditor,
   type ExpensesEditorHandle,
 } from '@/components/projections/ExpensesEditor.tsx';
-import {
-  useEffect,
-  useImperativeHandle,
-  useRef,
-  useState,
-  type Ref,
-} from 'react';
+import { useImperativeHandle, useRef, useState, type Ref } from 'react';
 import {
   FundingSourcesEditor,
   type FundingSourcesEditorHandle,
 } from '@/components/projections/FundingSourcesEditor.tsx';
+import type { SourceOperation } from '@/lib/projectionSources.ts';
 import {
-  sourceCapturedBalance,
-  sourceLabel,
-  sourcePlanningBalance,
-  type SourceOperation,
-} from '@/lib/projectionSources.ts';
-import { formatCurrency } from '@/lib/currency.ts';
-import {
-  getFundingSourceOutlook,
   readProjectionLocation,
   readProjectionWorkspace,
   type ProjectionNavigation,
@@ -79,10 +66,6 @@ export function ProjectionWorkspace({
   const editorRef = useRef<StaffingEditorHandle>(null);
   const expenseEditorRef = useRef<ExpensesEditorHandle>(null);
   const sourceEditorRef = useRef<FundingSourcesEditorHandle>(null);
-  const sourceHeadingRef = useRef<HTMLHeadingElement>(null);
-  const selectedSource = draft.content.fundingSources.find(
-    (source) => source.id === location.fundingSourceId
-  );
   const sourceSearch =
     location.fundingSourceId === null
       ? {}
@@ -116,12 +99,6 @@ export function ProjectionWorkspace({
         persistenceStatus
       ),
   }));
-
-  useEffect(() => {
-    if (location.section === 'overview' && location.fundingSourceId !== null) {
-      sourceHeadingRef.current?.focus();
-    }
-  }, [location.fundingSourceId, location.section]);
 
   return (
     <div className="mx-auto max-w-6xl p-4 sm:p-8">
@@ -222,150 +199,12 @@ export function ProjectionWorkspace({
           </button>
         </section>
       ) : location.section === 'overview' ? (
-        <section className="mt-6">
-          <h2 className="text-xl font-bold">Funding outlook</h2>
-          <p className="mt-2 text-sm">
-            Each funding source keeps its own balance. A surplus on one task
-            does not cover another task&apos;s shortfall.
-          </p>
-          {selectedSource && (
-            <button
-              className="btn btn-ghost btn-sm mt-3"
-              onClick={() => onNavigate({ section: 'overview' })}
-              type="button"
-            >
-              Clear source selection
-            </button>
-          )}
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            {draft.content.fundingSources.map((source) => {
-              const months = getFundingSourceOutlook(results.rows, source.id);
-              const endBalance = months.at(-1)?.remaining ?? 0;
-              const forecast = months.reduce(
-                (sum, month) => sum + month.forecast,
-                0
-              );
-              const snapshotBalance = sourceCapturedBalance(source);
-              const outside = getSourceForecastWindow(
-                source,
-                results.forecastWindow
-              ).isBeyondForecast;
-              return (
-                <article
-                  className={`rounded-box border p-5 ${location.fundingSourceId === source.id ? 'border-primary' : 'border-base-300'}`}
-                  key={source.id}
-                >
-                  <h3 className="text-lg font-bold">{sourceLabel(source)}</h3>
-                  <p className="mt-1 text-sm">
-                    {source.sourceKind === 'Planned'
-                      ? 'Planned funding'
-                      : `Captured ${source.capturedAt.slice(0, 10)}`}
-                  </p>
-                  <p className="mt-1 text-sm">
-                    Through {source.endDate ?? 'the forecast horizon'}
-                  </p>
-                  {outside && (
-                    <p className="mt-2 text-sm">
-                      This source starts after the forecast period and
-                      contributes no forecast costs or balance in this period.
-                    </p>
-                  )}
-                  <dl className="mt-4 space-y-2 text-sm">
-                    <div className="flex justify-between gap-3">
-                      <dt>Captured balance</dt>
-                      <dd>{formatCurrency(snapshotBalance)}</dd>
-                    </div>
-                    <div className="flex justify-between gap-3">
-                      <dt>Planning balance</dt>
-                      <dd>{formatCurrency(sourcePlanningBalance(source))}</dd>
-                    </div>
-                    <div className="flex justify-between gap-3">
-                      <dt>Remaining forecast</dt>
-                      <dd>{formatCurrency(forecast)}</dd>
-                    </div>
-                    <div className="flex justify-between gap-3 font-bold">
-                      <dt>
-                        Projected balance at{' '}
-                        {fundingMonthLabel(results.forecastWindow.endMonth)}
-                      </dt>
-                      <dd className={endBalance < 0 ? 'text-error' : ''}>
-                        {formatCurrency(endBalance)}
-                      </dd>
-                    </div>
-                  </dl>
-                  {endBalance < 0 && (
-                    <p className="mt-3 font-semibold text-error">
-                      Projected shortfall
-                    </p>
-                  )}
-                  <button
-                    aria-pressed={location.fundingSourceId === source.id}
-                    className="btn btn-outline btn-sm mt-4"
-                    onClick={() =>
-                      onNavigate({ section: 'overview', source: source.id })
-                    }
-                    type="button"
-                  >
-                    View {sourceLabel(source)}
-                  </button>
-                </article>
-              );
-            })}
-          </div>
-          {selectedSource && (
-            <section aria-labelledby="source-months-title" className="mt-8">
-              <h2
-                className="text-xl font-bold"
-                id="source-months-title"
-                ref={sourceHeadingRef}
-                tabIndex={-1}
-              >
-                {sourceLabel(selectedSource)} by month
-              </h2>
-              <p className="mt-2 text-sm">
-                Snapshot-month actuals are already included in the snapshot
-                balance. Forecast shows additional expected spending.
-              </p>
-              <div className="mt-4 overflow-x-auto">
-                <table className="table w-full whitespace-nowrap">
-                  <caption className="sr-only">
-                    Monthly actuals, forecast, and remaining balance for{' '}
-                    {sourceLabel(selectedSource)}
-                  </caption>
-                  <thead>
-                    <tr>
-                      <th scope="col">Month</th>
-                      <th scope="col">Actuals</th>
-                      <th scope="col">Forecast</th>
-                      <th scope="col">End balance</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {getFundingSourceOutlook(
-                      results.rows,
-                      selectedSource.id
-                    ).map((month) => (
-                      <tr key={month.month}>
-                        <th scope="row">{month.month}</th>
-                        <td>{formatCurrency(month.actual)}</td>
-                        <td>{formatCurrency(month.forecast)}</td>
-                        <td
-                          className={
-                            month.remaining < 0
-                              ? 'text-error font-semibold'
-                              : ''
-                          }
-                        >
-                          {formatCurrency(month.remaining)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          )}
-        </section>
+        <FundingOutlook
+          draft={draft}
+          onNavigate={onNavigate}
+          results={results}
+          selectedSourceId={location.fundingSourceId}
+        />
       ) : location.section === 'funding' ? (
         <section className="mt-6">
           <h2 className="text-xl font-bold">Funding sources</h2>

@@ -49,8 +49,11 @@ describe('projection salary workspace', () => {
   it('starts the outlook at the saved snapshot month while retaining prior spending', async () => {
     const plan = createSalaryExample();
     openPreview('?section=overview&source=1', plan);
-    await screen.findByRole('heading', { name: 'Project A by month' });
-    const table = screen.getByRole('table');
+    await screen.findByRole('heading', { name: 'Project A details' });
+    await userEvent.click(screen.getByText('Monthly balances and costs'));
+    const table = screen.getByRole('table', {
+      name: 'Monthly actuals, forecast, and remaining balance for Project A',
+    });
     expect(
       within(table)
         .getAllByRole('rowheader')
@@ -89,7 +92,8 @@ describe('projection salary workspace', () => {
     });
     render(<RouterProvider router={router} />);
     const user = userEvent.setup();
-    await screen.findByRole('heading', { name: 'Project A by month' });
+    await screen.findByRole('heading', { name: 'Project A details' });
+    await user.click(screen.getByText('Monthly balances and costs'));
     const january = () => screen.getByRole('row', { name: /^2026-01 / });
     expect(
       within(january())
@@ -117,7 +121,8 @@ describe('projection salary workspace', () => {
     });
 
     await user.click(screen.getByRole('button', { name: 'Funding outlook' }));
-    await screen.findByRole('heading', { name: 'Project A by month' });
+    await screen.findByRole('heading', { name: 'Project A details' });
+    await user.click(screen.getByText('Monthly balances and costs'));
     expect(
       within(january())
         .getAllByRole('cell')
@@ -241,7 +246,7 @@ describe('projection salary workspace', () => {
 
   it('preserves committed salary and source location through Back/Forward and discards a closed editor buffer', async () => {
     const { history, user } = openPreview('?section=overview&source=2');
-    await screen.findByRole('heading', { name: 'Project B by month' });
+    await screen.findByRole('heading', { name: 'Project B details' });
     await user.click(screen.getByRole('button', { name: 'Staffing' }));
     await user.click(editButton());
     await user.clear(salaryInput());
@@ -266,13 +271,13 @@ describe('projection salary workspace', () => {
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
     await user.click(screen.getByRole('button', { name: 'Funding outlook' }));
     expect(
-      await screen.findByRole('heading', { name: 'Project B by month' })
+      await screen.findByRole('heading', { name: 'Project B details' })
     ).toHaveFocus();
     expect(read().draft.content.appointments[0].monthlySalary).toBe(11_000);
     await act(async () => history.back());
     await waitFor(() => expect(read().location.section).toBe('staffing'));
     await act(async () => history.forward());
-    await screen.findByRole('heading', { name: 'Project B by month' });
+    await screen.findByRole('heading', { name: 'Project B details' });
     expect(read().revision).toBe(1);
   });
 
@@ -310,7 +315,7 @@ describe('projection salary workspace', () => {
       ref.current!.read().draft.content.appointments[0].monthlySalary
     ).toBe(11_000);
     expect(
-      screen.getByRole('heading', { name: 'Project A by month' })
+      screen.getByRole('heading', { name: 'Project A details' })
     ).toBeInTheDocument();
   });
 

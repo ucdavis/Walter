@@ -259,14 +259,13 @@ describe('projection plan details', () => {
     future.startDate = '2027-03-01';
     future.endDate = null;
     const user = preview(plan);
-    const heading = await screen.findByRole('heading', { name: 'Project B' });
-    const card = heading.closest('article')!;
+    await screen.findByRole('button', { name: 'View Project B' });
+    const row = () =>
+      screen.getByRole('button', { name: 'View Project B' }).closest('tr')!;
     expect(
-      within(card).getByText(/This source starts after the forecast period/)
+      within(row()).getByText('Outside forecast period')
     ).toBeInTheDocument();
-    expect(
-      within(card).getByText('Projected balance at Dec 2026').nextElementSibling
-    ).toHaveTextContent('$0.00');
+    expect(within(row()).getAllByRole('cell').at(-1)).toHaveTextContent('—');
     expect(read().results.rows.some((row) => row.fundingSourceId === 2)).toBe(
       false
     );
@@ -276,7 +275,7 @@ describe('projection plan details', () => {
       screen.getByRole('button', { name: 'Apply plan details' })
     );
     expect(
-      within(card).queryByText(/This source starts after the forecast period/)
+      within(row()).queryByText('Outside forecast period')
     ).not.toBeInTheDocument();
     expect(read().results.rows.some((row) => row.fundingSourceId === 2)).toBe(
       true

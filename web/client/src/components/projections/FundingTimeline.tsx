@@ -4,19 +4,12 @@ import {
 } from '@/components/projections/fundingTimelineDates.ts';
 import type { AppointmentFundingMonth } from '@/lib/piProjection.ts';
 import { sourceLabel } from '@/lib/projectionSources.ts';
+import { chartSeriesColor } from '@/shared/chartColors.ts';
 import type {
   ProjectionAppointment,
   ProjectionFundingSource,
 } from '@/queries/projections.ts';
 
-const colors = [
-  '#2563eb',
-  '#047857',
-  '#7c3aed',
-  '#c2410c',
-  '#0e7490',
-  '#a21caf',
-];
 const percent = new Intl.NumberFormat('en-US', {
   maximumFractionDigits: 1,
   style: 'percent',
@@ -90,15 +83,17 @@ export function FundingTimeline({
                               : 'Unallocated';
                         return (
                           <span
-                            className="block shrink-0 overflow-hidden px-1 py-0.5 text-[11px] leading-tight text-white"
+                            className="block shrink-0 overflow-hidden px-1 py-0.5 text-[11px] leading-tight"
                             key={share.fundingSourceId ?? 'outside'}
                             style={{
                               backgroundColor:
                                 share.fundingSourceId === null
-                                  ? '#475569'
-                                  : colors[
-                                      Math.max(0, sourceIndex) % colors.length
-                                    ],
+                                  ? 'var(--color-neutral)'
+                                  : chartSeriesColor(sourceIndex),
+                              color:
+                                share.fundingSourceId === null
+                                  ? 'var(--color-neutral-content)'
+                                  : 'var(--color-light-font)',
                               height: `${(share.percent / scale) * 100}%`,
                             }}
                             title={`${label}: ${percent.format(share.percent)} average of appointment`}
