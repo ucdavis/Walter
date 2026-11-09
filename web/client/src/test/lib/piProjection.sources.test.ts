@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { createSalaryExample } from '@/dev/projections/fixture.ts';
-import { computePiProjection, SALARY_CATEGORY } from '@/lib/piProjection.ts';
+import {
+  computePiProjection,
+  EQUIPMENT_CATEGORY,
+  SALARY_CATEGORY,
+  SUPPLIES_CATEGORY,
+} from '@/lib/piProjection.ts';
 import { addPlannedSource } from '@/lib/projectionSources.ts';
 import {
   createProjectionSession,
@@ -84,22 +89,20 @@ describe('independent funding source captures', () => {
       capturedTask(2, '2026-11-16T00:00:00Z'),
     ];
     for (const source of plan.fundingSources) {
-      source.expenses = [
+      source.runRates = [
         {
-          amount: 310,
-          description: null,
-          endMonth: null,
-          expenditureCategory: '05 - Supplies',
-          kind: 'Projected',
-          startMonth: null,
+          expenditureCategory: SUPPLIES_CATEGORY,
+          historyMonths: 3,
+          monthlyAmount: 310,
         },
       ];
     }
     plan.fundingSources[1].expenses.push({
       amount: 1000,
-      description: null,
+      description: 'Example expense',
       endMonth: null,
-      expenditureCategory: '04 - Equipment',
+      expenditureCategory: EQUIPMENT_CATEGORY,
+      id: 1,
       kind: 'OneTime',
       startMonth: '2026-11-01',
     });
@@ -159,9 +162,10 @@ describe('independent funding source captures', () => {
     source.expenses = [
       {
         amount: 310,
-        description: null,
+        description: 'Example expense',
         endMonth: null,
-        expenditureCategory: '05 - Supplies',
+        expenditureCategory: SUPPLIES_CATEGORY,
+        id: 1,
         kind: 'Monthly',
         startMonth: '2026-01-01',
       },

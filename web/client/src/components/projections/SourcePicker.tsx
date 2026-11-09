@@ -95,11 +95,7 @@ export function SourcePicker<T extends ProjectionDraft>({
     setPending(true);
     setError(null);
     try {
-      const captured = await importProjectionSources(
-        iamId,
-        session.draft.historyMonths,
-        sources
-      );
+      const captured = await importProjectionSources(iamId, sources);
       if (!mounted.current) {
         return;
       }

@@ -21,7 +21,6 @@ public sealed class ProjectionSeeder(IProjectionDataSource data, TimeProvider? t
         var personnel = projectNumbers.Count == 0
             ? Array.Empty<PositionBudgetRecord>()
             : await data.GetCognosPositionBudgetsAsync(projectNumbers, applicationUser, emulatingUser, ct);
-        ApplyRunRates(prepared.FundingSources, historyMonths);
 
         (bool Known, ProjectionFundingSource? Source) Match(PositionBudgetRecord r)
         {
@@ -43,31 +42,12 @@ public sealed class ProjectionSeeder(IProjectionDataSource data, TimeProvider? t
     }
 
     /// <summary>Captures eligible task financials for Add without querying personnel or changing any saved plan.</summary>
-    public async Task<List<ProjectionFundingSource>> CaptureSourcesAsync(string piEmployeeId, int historyMonths,
+    public async Task<List<ProjectionFundingSource>> CaptureSourcesAsync(string piEmployeeId,
         string? applicationUser, string? emulatingUser, CancellationToken ct)
     {
         var snapshotAtUtc = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
         var seed = await data.GetProjectionSeedAsync(piEmployeeId, snapshotAtUtc, applicationUser, emulatingUser, ct);
-        var sources = ProjectionSeedPolicy.Prepare(seed, snapshotAtUtc).FundingSources;
-        ApplyRunRates(sources, historyMonths);
-        return sources;
-    }
-
-    /// <summary>Removes Projected expenses on every source and recreates them from RunRates for the window.</summary>
-    public static void ApplyRunRates(IReadOnlyList<ProjectionFundingSource> sources, int historyMonths)
-    {
-        foreach (var source in sources)
-        {
-            source.Expenses.RemoveAll(e => e.Kind == ProjectionExpenseKind.Projected);
-            source.Expenses.AddRange(source.RunRates
-                .Where(r => r.HistoryMonths == historyMonths && r.MonthlyAmount != 0)
-                .Select(r => new ProjectionExpense
-                {
-                    Kind = ProjectionExpenseKind.Projected,
-                    ExpenditureCategory = r.ExpenditureCategory,
-                    Amount = r.MonthlyAmount,
-                }));
-        }
+        return ProjectionSeedPolicy.Prepare(seed, snapshotAtUtc).FundingSources;
     }
 
     private static ProjectionAppointment ToAppointment(int id, List<PositionBudgetRecord> rows,

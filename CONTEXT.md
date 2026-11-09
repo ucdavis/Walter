@@ -76,6 +76,14 @@ _Avoid_: Person or employee when referring to a particular appointment
 A dated share of an **Appointment** paid by a **Funding Source** or explicitly funded outside the plan. The appointment's collection is named `Allocations`; each in-plan allocation references `FundingSourceId`.
 _Avoid_: Funding source when referring to a share assigned to an appointment
 
+**Historical Expense Estimate**:
+A monthly cost derived from a **Funding Source**'s captured spending averages for the plan's selected history window. A custom amount replaces that category's average until explicitly restored; zero turns it off.
+_Avoid_: Added expense when referring to an adjusted historical amount
+
+**Added Expense**:
+A monthly or one-time planned cost owned by one **Funding Source**, with an entered description, category, amount, and schedule. It contributes in addition to historical estimates and appointment costs. A negative amount represents a cost credit.
+_Avoid_: Allocation when referring to a scheduled expense
+
 ## Relationships
 
 - Walter refers to a **Person** by **IAM ID** in navigation and client-facing person lookups
@@ -94,7 +102,8 @@ _Avoid_: Funding source when referring to a share assigned to an appointment
 - Employees with unmapped classifications receive the **Generic** employee-group variant
 - A **Projection Plan** keeps **Funding Sources** and **Appointments** as separate collections
 - An **Appointment** owns its **Allocations**, which can refer to several **Funding Sources**
-- A **Funding Source** owns its non-personnel expense estimates and explicit expenses
+- A **Funding Source** owns its **Historical Expense Estimates** and **Added Expenses**
+- Changing the plan's history window preserves custom historical amounts and all **Added Expenses**
 - Removing a **Funding Source** removes its expenses and allocations but retains the appointments and leaves those shares unallocated
 
 ## Example dialogue

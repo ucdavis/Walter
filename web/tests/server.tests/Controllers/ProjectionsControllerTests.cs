@@ -136,7 +136,7 @@ public sealed partial class ProjectionsControllerTests
         using var response = JsonDocument.Parse(JsonSerializer.Serialize(created, new JsonSerializerOptions(JsonSerializerDefaults.Web)));
         response.RootElement.TryGetProperty("creationKey", out _).Should().BeFalse();
 
-        request.Draft.FundingSources!.Single().Expenses.Single(e => e.Kind == ProjectionExpenseKind.Projected).Amount = 999;
+        request.Draft.FundingSources!.Single().HistoricalExpenseOverrides.Single().Amount = 999;
         request.Draft.Appointments!.Single().Allocations.Clear();
         await ctx.SaveChangesAsync();
         ctx.ChangeTracker.Clear();
@@ -234,7 +234,7 @@ public sealed partial class ProjectionsControllerTests
         data.PersonnelProjectNumbers.Should().BeNull();
 
         var edit = Draft(duplicate) with { Name = "Edited alternative" };
-        edit.FundingSources.Single().Expenses.Single(e => e.Kind == ProjectionExpenseKind.Projected).Amount = 876;
+        edit.FundingSources.Single().HistoricalExpenseOverrides.Single().Amount = 876;
         await controller.Save(duplicate.Id, edit, default);
         ctx.ChangeTracker.Clear();
         JsonSerializer.Serialize(Document(await controller.Get(source.Id, default))).Should().Be(original);
@@ -310,6 +310,7 @@ public sealed partial class ProjectionsControllerTests
     [InlineData("actuals-null")]
     [InlineData("run-rates-null")]
     [InlineData("expenses-null")]
+    [InlineData("overrides-null")]
     [InlineData("funding-null")]
     [InlineData("project-id-zero")]
     [InlineData("project-id-duplicate")]
@@ -337,6 +338,7 @@ public sealed partial class ProjectionsControllerTests
             case "actuals-null": draft.FundingSources!.Single().Actuals = null!; break;
             case "run-rates-null": draft.FundingSources!.Single().RunRates = null!; break;
             case "expenses-null": draft.FundingSources!.Single().Expenses = null!; break;
+            case "overrides-null": draft.FundingSources!.Single().HistoricalExpenseOverrides = null!; break;
             case "funding-null": draft.Appointments!.Single().Allocations = null!; break;
             case "project-id-zero": draft.FundingSources!.Single().Id = 0; break;
             case "project-id-duplicate": draft.FundingSources!.Add(new() { Id = draft.FundingSources.Single().Id }); break;
@@ -433,7 +435,9 @@ public sealed partial class ProjectionsControllerTests
         draftJson.GetProperty("appointments")[0].GetProperty("allocations")[0].TryGetProperty("isSeeded", out _).Should().BeFalse();
         draft.FundingSources.Should().ContainSingle().Which.Budgets.Should().ContainSingle().Which.Budget.Should().Be(1000);
         draft.FundingSources.Single().Actuals.Should().ContainSingle().Which.Amount.Should().Be(200);
-        draft.FundingSources.Single().Expenses.Should().ContainSingle().Which.Amount.Should().Be(25);
+        draft.FundingSources.Single().RunRates.Should().ContainSingle().Which.MonthlyAmount.Should().Be(25);
+        draft.FundingSources.Single().Expenses.Should().BeEmpty();
+        draft.FundingSources.Single().HistoricalExpenseOverrides.Should().BeEmpty();
         draft.Appointments.Should().ContainSingle().Which.MonthlySalary.Should().Be(5000);
         data.SnapshotAtUtc.Should().Be(snapshot);
         (await ctx.Projections.CountAsync()).Should().Be(0);
@@ -500,14 +504,16 @@ public sealed partial class ProjectionsControllerTests
         catalog.Headers.CacheControl!.NoStore.Should().BeTrue();
         clock.UtcNow = snapshot.AddMonths(1);
         using var imported = await client.PostAsJsonAsync($"/api/projections/by-iam/{PiIam}/sources/import",
-            new ProjectionsController.ImportProjectionSourcesRequest(12, [new("P1", "TASK01")]));
+            new ProjectionsController.ImportProjectionSourcesRequest([new("P1", "TASK01")]));
         imported.StatusCode.Should().Be(HttpStatusCode.OK);
         imported.Headers.CacheControl!.NoStore.Should().BeTrue();
         var importedSource = (await imported.Content.ReadFromJsonAsync<List<ProjectionFundingSource>>())!.Single();
         importedSource.SourceKind.Should().Be(ProjectionSourceKind.Task);
         importedSource.CapturedAt.Should().Be(clock.UtcNow);
         importedSource.CapturedAt.Kind.Should().Be(DateTimeKind.Utc);
-        importedSource.Expenses.Single().Amount.Should().Be(20);
+        importedSource.RunRates.Single(r => r.HistoryMonths == 12).MonthlyAmount.Should().Be(20);
+        importedSource.Expenses.Should().BeEmpty();
+        importedSource.HistoricalExpenseOverrides.Should().BeEmpty();
         using var invalid = await client.GetAsync($"/api/projections/by-iam/{PiIam}/seed?historyMonths=4");
         invalid.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         foreach (var missing in new[] { "sourceKind", "capturedAt" })
@@ -664,6 +670,12 @@ public sealed partial class ProjectionsControllerTests
         var created = await CreateProjectionAsync(ctx);
         var creationKey = created.CreationKey;
         var controller = CreateController(ctx, financialViewer: true);
+        created.FundingSources.Single().HistoricalExpenseOverrides.Add(new() { ExpenditureCategory = Supplies, Amount = 0 });
+        created.FundingSources.Single().Expenses.Add(new()
+        {
+            Id = 1, Kind = ProjectionExpenseKind.OneTime, Description = "Planned purchase",
+            ExpenditureCategory = Supplies, Amount = 100, StartMonth = new(2027, 1, 1),
+        });
         created.FundingSources.Add(new ProjectionFundingSource { Id = 2, Name = "Hypothetical", SourceKind = ProjectionSourceKind.Planned, CapturedAt = created.SeededAt, StartDate = new(2027, 1, 1) });
         await controller.Save(created.Id, Draft(created), default);
 
@@ -672,6 +684,8 @@ public sealed partial class ProjectionsControllerTests
         var reset = result.Should().BeOfType<OkObjectResult>().Which.Value.Should().BeOfType<Projection>().Subject;
         reset.Should().BeEquivalentTo(new { created.Id, CreationKey = creationKey, Name = "Plan A", CreatedBy = "tester" });
         reset.FundingSources.Should().ContainSingle().Which.ProjectNumber.Should().Be("P1");
+        reset.FundingSources.Single().HistoricalExpenseOverrides.Should().BeEmpty();
+        reset.FundingSources.Single().Expenses.Should().BeEmpty();
     }
 
     [Fact]
@@ -738,27 +752,28 @@ public sealed partial class ProjectionsControllerTests
     }
 
     [Fact]
-    public async Task Save_preserves_reviewed_expenses_even_when_history_window_changes()
+    public async Task Save_preserves_overrides_and_explicit_expenses_when_history_window_changes()
     {
         using var ctx = TestDbContextFactory.CreateInMemory();
         var created = await CreateProjectionAsync(ctx);
-        var controller = CreateController(ctx, financialViewer: true);
-        var expenses = created.FundingSources.Single().Expenses;
-        expenses.Single().Amount = 75;
-        expenses.Add(new ProjectionExpense { Kind = ProjectionExpenseKind.Monthly, ExpenditureCategory = Supplies, Amount = 10 });
+        var controller = CreateController(ctx, financialViewer: true, dataSource: UnavailableProjectionData());
+        var draft = Draft(created);
+        draft.FundingSources.Single().HistoricalExpenseOverrides.Add(new() { ExpenditureCategory = Supplies, Amount = 0 });
+        draft.FundingSources.Single().Expenses.Add(new()
+        {
+            Id = 1, Kind = ProjectionExpenseKind.Monthly, Description = "Planned supplies",
+            ExpenditureCategory = Supplies, Amount = -10, StartMonth = new(2026, 12, 1),
+        });
+        var expected = JsonSerializer.Serialize(draft.FundingSources);
 
-        await controller.Save(created.Id, Draft(created), default);
-        ctx.ChangeTracker.Clear();
-        var saved = (Projection)((OkObjectResult)await controller.Get(created.Id, default)).Value!;
-        saved.FundingSources.Single().Expenses.Select(e => (e.Kind, e.Amount)).Should().BeEquivalentTo(
-            [(ProjectionExpenseKind.Projected, 75m), (ProjectionExpenseKind.Monthly, 10m)]);
-
+        var saved = Document(await controller.Save(created.Id, draft, default));
         await controller.Save(created.Id, Draft(saved, 12), default);
         ctx.ChangeTracker.Clear();
-        var rewindowed = (Projection)((OkObjectResult)await controller.Get(created.Id, default)).Value!;
+        var rewindowed = Document(await controller.Get(created.Id, default));
+
         rewindowed.HistoryMonths.Should().Be(12);
-        rewindowed.FundingSources.Single().Expenses.Select(e => (e.Kind, e.Amount)).Should().BeEquivalentTo(
-            [(ProjectionExpenseKind.Monthly, 10m), (ProjectionExpenseKind.Projected, 75m)]);
+        JsonSerializer.Serialize(rewindowed.FundingSources).Should().Be(expected);
+        rewindowed.FundingSources.Single().HistoricalExpenseOverrides.Single().Amount.Should().Be(0);
     }
 
     [Fact]
@@ -768,18 +783,19 @@ public sealed partial class ProjectionsControllerTests
         var created = await CreateProjectionAsync(ctx);
         var controller = CreateController(ctx, financialViewer: true);
         var stale = Draft(created) with { Name = "My unsaved plan" };
-        stale.FundingSources.Single().Expenses.Single().Amount = 999;
+        stale.FundingSources.Single().HistoricalExpenseOverrides.Add(new() { ExpenditureCategory = Supplies, Amount = 999 });
         await controller.Save(created.Id, Draft(created) with { Name = "Other editor" }, default);
 
         var result = await controller.Save(created.Id, stale, default);
 
         ConflictCode(result).Should().Be("conflict");
         stale.Name.Should().Be("My unsaved plan");
-        stale.FundingSources.Single().Expenses.Single().Amount.Should().Be(999);
+        stale.FundingSources.Single().HistoricalExpenseOverrides.Single().Amount.Should().Be(999);
         ctx.ChangeTracker.Clear();
         var saved = Document(await controller.Get(created.Id, default));
         saved.Name.Should().Be("Other editor");
-        saved.FundingSources.Single().Expenses.Single().Amount.Should().Be(50);
+        saved.FundingSources.Single().HistoricalExpenseOverrides.Should().BeEmpty();
+        saved.FundingSources.Single().RunRates.Single(r => r.HistoryMonths == 3).MonthlyAmount.Should().Be(50);
     }
 
     [Theory]
@@ -807,7 +823,7 @@ public sealed partial class ProjectionsControllerTests
         var created = await CreateProjectionAsync(ctx);
         var controller = CreateController(ctx, financialViewer: true);
         var draft = Draft(created) with { Name = "My plan" };
-        draft.FundingSources.Single().Expenses.Single().Amount = 123;
+        draft.FundingSources.Single().HistoricalExpenseOverrides.Add(new() { ExpenditureCategory = Supplies, Amount = 123 });
         draft.Appointments.Add(new ProjectionAppointment { Id = 7, Name = "My new hire", MonthlySalary = 8000, StartDate = new DateOnly(2026, 12, 1) });
         await controller.Save(created.Id, Draft(created) with { Name = "First competing edit" }, default);
         ConflictCode(await controller.Save(created.Id, draft, default)).Should().Be("conflict");
@@ -820,7 +836,7 @@ public sealed partial class ProjectionsControllerTests
 
         var saved = Document(result);
         saved.Name.Should().Be("My plan");
-        saved.FundingSources.Should().ContainSingle().Which.Expenses.Single().Amount.Should().Be(123);
+        saved.FundingSources.Should().ContainSingle().Which.HistoricalExpenseOverrides.Single().Amount.Should().Be(123);
         saved.FundingSources.Single().Actuals.Single().Amount.Should().Be(250);
         saved.FundingSources.Single().RunRates.Should().HaveCount(2);
         saved.Appointments.Should().ContainSingle().Which.Name.Should().Be("My new hire");
@@ -910,9 +926,10 @@ public sealed partial class ProjectionsControllerTests
             SpentToDate = 3000,
             Committed = 1000,
         });
-        draft.FundingSources.Single().Expenses.Single().Amount = 75;
+        draft.FundingSources.Single().HistoricalExpenseOverrides.Add(new() { ExpenditureCategory = Supplies, Amount = 75 });
         draft.FundingSources.Single().Expenses.Add(new ProjectionExpense
         {
+            Id = 1, Description = "Monthly supplies",
             Kind = ProjectionExpenseKind.Monthly,
             ExpenditureCategory = Supplies,
             Amount = 100,
@@ -991,9 +1008,9 @@ public sealed partial class ProjectionsControllerTests
                 Budgets = [new() { ExpenditureCategory = Supplies, Budget = 15000, SpentToDate = 2000, Committed = 1000 }],
                 Actuals = [new() { ExpenditureCategory = Supplies, Month = new DateOnly(2025, 10, 1), Amount = 250 }],
                 RunRates = [new() { ExpenditureCategory = Supplies, HistoryMonths = 12, MonthlyAmount = 20 }],
+                HistoricalExpenseOverrides = [new() { ExpenditureCategory = Supplies, Amount = 75 }],
                 Expenses = [
-                    new() { Kind = ProjectionExpenseKind.Projected, ExpenditureCategory = Supplies, Amount = 75, Description = "Reviewed estimate" },
-                    new() { Kind = ProjectionExpenseKind.OneTime, ExpenditureCategory = Supplies, Amount = 300, StartMonth = new DateOnly(2026, 6, 1), Description = "Retained out-of-range expense" },
+                    new() { Id = 1, Kind = ProjectionExpenseKind.OneTime, ExpenditureCategory = Supplies, Amount = 300, StartMonth = new DateOnly(2026, 6, 1), Description = "Retained out-of-range expense" },
                 ],
             },
         ],

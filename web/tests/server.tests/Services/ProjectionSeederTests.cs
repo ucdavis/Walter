@@ -93,7 +93,7 @@ public sealed class ProjectionSeederTests
     }
 
     [Fact]
-    public async Task Seeds_projects_budgets_actuals_runrates_and_projected_expenses()
+    public async Task Seeds_projects_budgets_actuals_and_all_runrates_without_materialized_expenses()
     {
         var projection = await SeedAsync(Data());
 
@@ -109,8 +109,8 @@ public sealed class ProjectionSeederTests
         project.ProjectName.Should().Be("Project 1");
         project.Budgets.Should().ContainSingle().Which.Should().BeEquivalentTo(new { Budget = 1000m, SpentToDate = 200m, Committed = 100m });
         project.RunRates.Should().HaveCount(2);
-        project.Expenses.Should().ContainSingle().Which.Should().BeEquivalentTo(
-            new { Kind = ProjectionExpenseKind.Projected, Amount = 40m, ExpenditureCategory = Supplies });
+        project.Expenses.Should().BeEmpty();
+        project.HistoricalExpenseOverrides.Should().BeEmpty();
     }
 
     [Fact]
@@ -194,24 +194,17 @@ public sealed class ProjectionSeederTests
     }
 
     [Fact]
-    public void ApplyRunRates_replaces_projected_and_keeps_monthly()
+    public async Task Seed_preserves_zero_and_negative_captured_averages_for_every_window()
     {
-        var project = new ProjectionFundingSource
-        {
-            RunRates =
-            [
-                new() { ExpenditureCategory = Supplies, HistoryMonths = 3, MonthlyAmount = 50 },
-                new() { ExpenditureCategory = Supplies, HistoryMonths = 12, MonthlyAmount = 20 },
-            ],
-            Expenses =
-            [
-                new() { Kind = ProjectionExpenseKind.Projected, ExpenditureCategory = Supplies, Amount = 50 },
-                new() { Kind = ProjectionExpenseKind.Monthly, ExpenditureCategory = Supplies, Amount = 999 },
-            ],
-        };
-        ProjectionSeeder.ApplyRunRates([project], 12);
-        project.Expenses.Select(e => (e.Kind, e.Amount)).Should().BeEquivalentTo(
-            [(ProjectionExpenseKind.Monthly, 999m), (ProjectionExpenseKind.Projected, 20m)]);
+        var data = Data();
+        data.Seed.RunRates[0].MonthlyAmount = 0;
+        data.Seed.RunRates[1].MonthlyAmount = -20;
+
+        var source = (await SeedAsync(data, 12)).FundingSources.Single();
+
+        source.RunRates.Select(r => (r.HistoryMonths, r.MonthlyAmount)).Should().BeEquivalentTo([(3, 0m), (6, -20m)]);
+        source.Expenses.Should().BeEmpty();
+        source.HistoricalExpenseOverrides.Should().BeEmpty();
     }
 
     private sealed class MutableTimeProvider(DateTime utcNow) : TimeProvider

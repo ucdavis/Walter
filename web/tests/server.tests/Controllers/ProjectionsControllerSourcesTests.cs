@@ -64,7 +64,7 @@ public sealed partial class ProjectionsControllerTests
         var original = JsonSerializer.Serialize(data.Seed);
         var controller = CreateController(ctx, financialViewer: true, dataSource: data, timeProvider: new MutableTimeProvider(SourceCapture));
 
-        var result = (OkObjectResult)await controller.ImportSources(PiIam, new(6, [new("P1", "T1")]), default);
+        var result = (OkObjectResult)await controller.ImportSources(PiIam, new([new("P1", "T1")]), default);
 
         var source = ((List<ProjectionFundingSource>)result.Value!).Should().ContainSingle().Subject;
         source.Should().BeEquivalentTo(new
@@ -75,7 +75,9 @@ public sealed partial class ProjectionsControllerTests
         });
         source.Budgets.Should().ContainSingle().Which.Budget.Should().Be(1000);
         source.Actuals.Should().ContainSingle().Which.Amount.Should().Be(75);
-        source.Expenses.Should().ContainSingle().Which.Amount.Should().Be(40);
+        source.RunRates.Single(r => r.HistoryMonths == 6).MonthlyAmount.Should().Be(40);
+        source.Expenses.Should().BeEmpty();
+        source.HistoricalExpenseOverrides.Should().BeEmpty();
         data.SnapshotAtUtc.Should().Be(SourceCapture);
         data.PersonnelProjectNumbers.Should().BeNull();
         ctx.Projections.Should().ContainSingle();
@@ -92,7 +94,7 @@ public sealed partial class ProjectionsControllerTests
         var data = SourceData();
         var controller = CreateController(ctx, financialViewer: true, dataSource: data);
 
-        (await controller.ImportSources(PiIam, new(3, [new("P1", "T1"), new("P1", unavailableTask)]), default))
+        (await controller.ImportSources(PiIam, new([new("P1", "T1"), new("P1", unavailableTask)]), default))
             .Should().BeOfType<BadRequestObjectResult>();
 
         data.PersonnelProjectNumbers.Should().BeNull();
@@ -100,7 +102,6 @@ public sealed partial class ProjectionsControllerTests
     }
 
     [Theory]
-    [InlineData("history")]
     [InlineData("empty")]
     [InlineData("missing")]
     [InlineData("duplicate")]
@@ -111,11 +112,10 @@ public sealed partial class ProjectionsControllerTests
         var data = SourceData();
         var request = invalid switch
         {
-            "history" => new ProjectionsController.ImportProjectionSourcesRequest(4, [new("P1", "T1")]),
-            "empty" => new(3, []),
-            "missing" => new(3, null),
-            "duplicate" => new(3, [new("P1", null), new("P1", "")]),
-            _ => new(3, [new(" ", "T1")]),
+            "empty" => new ProjectionsController.ImportProjectionSourcesRequest([]),
+            "missing" => new(null),
+            "duplicate" => new([new("P1", null), new("P1", "")]),
+            _ => new([new(" ", "T1")]),
         };
         (await CreateController(ctx, financialViewer: true, dataSource: data).ImportSources(PiIam, request, default))
             .Should().BeOfType<BadRequestObjectResult>();
@@ -129,7 +129,7 @@ public sealed partial class ProjectionsControllerTests
         var data = SourceData();
         var controller = CreateController(ctx, employeeId: "999", dataSource: data);
         (await controller.Sources(PiIam, default)).Should().BeOfType<ForbidResult>();
-        (await controller.ImportSources(PiIam, new(3, [new("P1", "T1")]), default)).Should().BeOfType<ForbidResult>();
+        (await controller.ImportSources(PiIam, new([new("P1", "T1")]), default)).Should().BeOfType<ForbidResult>();
         data.SnapshotAtUtc.Should().BeNull();
     }
 

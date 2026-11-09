@@ -169,6 +169,7 @@ export function addPlannedSource<T extends ProjectionDraft>(
     capturedStartDate: null,
     endDate: inputs.endDate,
     expenses: [],
+    historicalExpenseOverrides: [],
     id,
     name: inputs.name.trim(),
     projectName: null,

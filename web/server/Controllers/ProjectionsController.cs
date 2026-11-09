@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
@@ -38,7 +39,7 @@ public sealed class ProjectionsController(
         ProjectionAppointmentDefaults AppointmentDefaults);
     public sealed record ProjectionSourceKey(string ProjectNumber, string? TaskNumber);
     public sealed record ProjectionSourceSummary(string ProjectNumber, string? ProjectName, string? TaskNumber, string? TaskName);
-    public sealed record ImportProjectionSourcesRequest(int HistoryMonths, List<ProjectionSourceKey>? Sources);
+    public sealed record ImportProjectionSourcesRequest(List<ProjectionSourceKey>? Sources);
 
     [HttpGet("by-iam/{iamId}")]
     public async Task<IActionResult> ListByIam(string iamId, CancellationToken ct)
@@ -73,7 +74,7 @@ public sealed class ProjectionsController(
     {
         var (piEmployeeId, error) = await ResolvePiAsync(iamId, ct);
         if (error is not null) return error;
-        var sources = await seeder.CaptureSourcesAsync(piEmployeeId!, 3, User.GetUserIdentifier(), User.GetEmulatingUser(), ct);
+        var sources = await seeder.CaptureSourcesAsync(piEmployeeId!, User.GetUserIdentifier(), User.GetEmulatingUser(), ct);
         return Ok(sources.Select(p => new ProjectionSourceSummary(p.ProjectNumber!, p.ProjectName, p.TaskNumber, p.TaskName)).ToList());
     }
 
@@ -82,7 +83,6 @@ public sealed class ProjectionsController(
     [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
     public async Task<IActionResult> ImportSources(string iamId, ImportProjectionSourcesRequest request, CancellationToken ct)
     {
-        if (!Windows.Contains(request.HistoryMonths)) return BadRequest("HistoryMonths must be 3, 6, or 12.");
         if (request.Sources is null || request.Sources.Count == 0
             || request.Sources.Any(s => s is null || string.IsNullOrWhiteSpace(s.ProjectNumber)))
             return BadRequest("Select at least one project/task source.");
@@ -90,7 +90,7 @@ public sealed class ProjectionsController(
         if (selectedKeys.Distinct().Count() != selectedKeys.Count) return BadRequest("Each task may be selected only once.");
         var (piEmployeeId, error) = await ResolvePiAsync(iamId, ct);
         if (error is not null) return error;
-        var sources = await seeder.CaptureSourcesAsync(piEmployeeId!, request.HistoryMonths,
+        var sources = await seeder.CaptureSourcesAsync(piEmployeeId!,
             User.GetUserIdentifier(), User.GetEmulatingUser(), ct);
         var available = sources.ToDictionary(p => ProjectionSeedPolicy.TaskKey(p.ProjectNumber, p.TaskNumber));
         // Validate the complete selection against this fresh authorized read; never return a partial import.
@@ -105,7 +105,7 @@ public sealed class ProjectionsController(
         if (request.CreationKey == Guid.Empty)
             return BadRequest("A nonempty CreationKey is required when creating a reviewed draft.");
         if (request.Draft is null || !ValidDraft(request.Draft))
-            return BadRequest("Draft requires valid sources and appointments, including a nonnegative salary for every appointment, exact UTC SeededAt, unique positive IDs, and valid allocation references.");
+            return BadRequest("Draft requires valid sources, appointments, and expenses, including a nonnegative salary for every appointment, exact UTC SeededAt, unique positive IDs, and valid allocation references.");
         var (piEmployeeId, error) = await ResolvePiAsync(iamId, ct);
         if (error is not null) return error;
 
@@ -157,7 +157,7 @@ public sealed class ProjectionsController(
 
     /// <summary>
     /// Replaces the whole scenario document, preserves snapshot, identity and creator metadata, and updates audit fields.
-    /// Saves keep submitted estimates; regeneration is an explicit draft operation.
+    /// Saves keep captured averages, historical overrides, and explicit planned expenses as submitted.
     /// Confirmed overwrite retries ordinary edits, but never crosses a reset or recreates a deleted plan.
     /// </summary>
     [HttpPut("{id:int}")]
@@ -167,7 +167,7 @@ public sealed class ProjectionsController(
         if (!ValidToken(request.ExpectedUpdatedAt) || !ValidToken(request.ExpectedSeededAt))
             return BadRequest("ExpectedUpdatedAt and ExpectedSeededAt must be exact UTC timestamps from the loaded plan.");
         if (!ValidName(request.Name) || !ValidDraft(new(request.Name, request.HistoryMonths, request.ExpectedSeededAt!.Value, request.FundingSources, request.Appointments)))
-            return BadRequest("The plan requires valid sources and appointments, including a nonnegative salary for every appointment, unique positive IDs, and valid allocation references.");
+            return BadRequest("The plan requires valid sources, appointments, and expenses, including a nonnegative salary for every appointment, unique positive IDs, and valid allocation references.");
 
         // Detach the submitted lists from tracked entities and reuse this frozen draft on every retry.
         var draft = JsonSerializer.Deserialize<SaveProjectionRequest>(JsonSerializer.Serialize(request))!;
@@ -288,8 +288,9 @@ public sealed class ProjectionsController(
     private static bool ValidDraft(ProjectionDraft draft)
     {
         if (!ValidName(draft.Name) || !Windows.Contains(draft.HistoryMonths) || !ValidToken(draft.SeededAt) || draft.FundingSources is null || draft.Appointments is null) return false;
-        if (draft.FundingSources.Any(p => p is null || p.Id <= 0 || p.Budgets is null || p.Actuals is null || p.RunRates is null || p.Expenses is null
-                || p.Budgets.Any(b => b is null) || p.Actuals.Any(a => a is null) || p.RunRates.Any(r => r is null) || p.Expenses.Any(e => e is null))
+        if (draft.FundingSources.Any(p => p is null || p.Id <= 0 || p.Budgets is null || p.Actuals is null || p.RunRates is null || p.HistoricalExpenseOverrides is null || p.Expenses is null
+                || p.Budgets.Any(b => b is null) || p.Actuals.Any(a => a is null) || p.RunRates.Any(r => r is null)
+                || p.HistoricalExpenseOverrides.Any(e => e is null) || p.Expenses.Any(e => e is null))
             || draft.Appointments.Any(j => j is null || j.Id <= 0 || j.Allocations is null || j.Allocations.Any(f => f is null))) return false;
         if (!ValidSources(draft.FundingSources) || !ValidAppointments(draft.Appointments)) return false;
         var sourceIds = draft.FundingSources.Select(p => p.Id).ToHashSet();
@@ -315,13 +316,33 @@ public sealed class ProjectionsController(
         allocation.Percent is >= 0 and <= 1
         && !(allocation.StartDate > allocation.EndDate));
 
+    /// <summary>Historical overrides survive window changes; explicit expense dates need not overlap source availability.</summary>
+    private static bool ValidExpenses(ProjectionFundingSource source) =>
+        source.HistoricalExpenseOverrides.All(expense => ValidExpenseCategory(expense.ExpenditureCategory, historical: true))
+        && source.HistoricalExpenseOverrides.Select(expense => expense.ExpenditureCategory.Trim()).Distinct(StringComparer.Ordinal).Count() == source.HistoricalExpenseOverrides.Count
+        && source.Expenses.All(expense => expense.Id > 0
+            && Enum.IsDefined(expense.Kind)
+            && !string.IsNullOrWhiteSpace(expense.Description)
+            && ValidExpenseCategory(expense.ExpenditureCategory, historical: false)
+            && expense.StartMonth.Day == 1
+            && (expense.Kind == ProjectionExpenseKind.OneTime
+                ? expense.EndMonth is null
+                : expense.EndMonth is null || (expense.EndMonth.Value.Day == 1 && expense.StartMonth <= expense.EndMonth.Value)))
+        && source.Expenses.Select(expense => expense.Id).Distinct().Count() == source.Expenses.Count;
+
+    private static bool ValidExpenseCategory(string? category, bool historical)
+    {
+        if (string.IsNullOrWhiteSpace(category)) return false;
+        return !Regex.IsMatch(category.Trim(), historical ? @"^(01|02|04)(?:\s|-|$)" : @"^(01|02)(?:\s|-|$)");
+    }
+
     /// <summary>Each source has an explicit capture and kind; a captured task may appear only once in a plan.</summary>
     private static bool ValidSources(List<ProjectionFundingSource> sources)
     {
         foreach (var source in sources)
         {
             if (!ValidToken(source.CapturedAt) || !Enum.IsDefined(source.SourceKind)
-                || string.IsNullOrWhiteSpace(source.Name) || source.StartDate > source.EndDate) return false;
+                || string.IsNullOrWhiteSpace(source.Name) || source.StartDate > source.EndDate || !ValidExpenses(source)) return false;
             if (source.SourceKind == ProjectionSourceKind.Task && string.IsNullOrWhiteSpace(source.ProjectNumber)) return false;
             if (source.SourceKind == ProjectionSourceKind.Planned
                 && (source.ProjectNumber is not null || source.TaskNumber is not null || source.StartDate is null)) return false;

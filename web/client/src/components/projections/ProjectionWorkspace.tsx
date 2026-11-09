@@ -1,3 +1,7 @@
+import {
+  ExpensesEditor,
+  type ExpensesEditorHandle,
+} from '@/components/projections/ExpensesEditor.tsx';
 import { useEffect, useImperativeHandle, useRef, type Ref } from 'react';
 import {
   FundingSourcesEditor,
@@ -47,6 +51,7 @@ export function ProjectionWorkspace({
 }) {
   const {
     applyAppointmentOperation,
+    applyExpenseOperation,
     applySourceOperation,
     persistenceStatus,
     reloadVersion,
@@ -56,6 +61,7 @@ export function ProjectionWorkspace({
   const { draft } = session;
   const location = readProjectionLocation(search, draft);
   const editorRef = useRef<StaffingEditorHandle>(null);
+  const expenseEditorRef = useRef<ExpensesEditorHandle>(null);
   const sourceEditorRef = useRef<FundingSourcesEditorHandle>(null);
   const sourceHeadingRef = useRef<HTMLHeadingElement>(null);
   const selectedSource = draft.fundingSources.find(
@@ -86,7 +92,10 @@ export function ProjectionWorkspace({
         session,
         location,
         results,
-        editorRef.current?.read() ?? sourceEditorRef.current?.read() ?? null,
+        editorRef.current?.read() ??
+          sourceEditorRef.current?.read() ??
+          expenseEditorRef.current?.read() ??
+          null,
         persistenceStatus
       ),
   }));
@@ -115,23 +124,27 @@ export function ProjectionWorkspace({
 
       <nav
         aria-label="Plan sections"
-        className="mt-6 flex gap-2 border-b border-base-300 pb-3"
+        className="mt-6 flex flex-wrap gap-2 border-b border-base-300 pb-3"
       >
-        {(['overview', 'funding', 'staffing'] as const).map((section) => (
-          <button
-            aria-current={location.section === section ? 'page' : undefined}
-            className={`btn ${location.section === section ? 'btn-primary' : 'btn-ghost'}`}
-            key={section}
-            onClick={() => onNavigate({ ...sourceSearch, section })}
-            type="button"
-          >
-            {section === 'overview'
-              ? 'Funding outlook'
-              : section === 'funding'
-                ? 'Funding sources'
-                : 'Staffing'}
-          </button>
-        ))}
+        {(['overview', 'funding', 'staffing', 'expenses'] as const).map(
+          (section) => (
+            <button
+              aria-current={location.section === section ? 'page' : undefined}
+              className={`btn ${location.section === section ? 'btn-primary' : 'btn-ghost'}`}
+              key={section}
+              onClick={() => onNavigate({ ...sourceSearch, section })}
+              type="button"
+            >
+              {section === 'overview'
+                ? 'Funding outlook'
+                : section === 'funding'
+                  ? 'Funding sources'
+                  : section === 'staffing'
+                    ? 'Staffing'
+                    : 'Other expenses'}
+            </button>
+          )
+        )}
       </nav>
 
       {location.issues.length > 0 ? (
@@ -309,7 +322,7 @@ export function ProjectionWorkspace({
             }}
           />
         </section>
-      ) : (
+      ) : location.section === 'staffing' ? (
         <section className="mt-6">
           <h2 className="text-xl font-bold">Staffing</h2>
           <StaffingEditor
@@ -337,11 +350,28 @@ export function ProjectionWorkspace({
             }}
           />
         </section>
+      ) : (
+        <section className="mt-6">
+          <h2 className="text-xl font-bold">Other expenses</h2>
+          <ExpensesEditor
+            key={`${reloadVersion}:${location.fundingSourceId ?? 'first'}`}
+            onOperation={applyExpenseOperation}
+            ref={expenseEditorRef}
+            session={session}
+            sourceTarget={{
+              id: location.fundingSourceId,
+              onChange: (id) => onNavigate({ section: 'expenses', source: id }),
+            }}
+          />
+        </section>
       )}
       {planPath && (
         <ProjectionNavigationGuard
           pendingEditor={() =>
-            editorRef.current?.read() ?? sourceEditorRef.current?.read() ?? null
+            editorRef.current?.read() ??
+            sourceEditorRef.current?.read() ??
+            expenseEditorRef.current?.read() ??
+            null
           }
           planPath={planPath}
         />

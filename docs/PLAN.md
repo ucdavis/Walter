@@ -8,8 +8,8 @@ saves before opening the view/edit workspace. Stage 3a's funding sources and
 greenfield model cleanup are accepted and committed as `4bb4f673`. The follow-up
 audit's seven cleanup recommendations are accepted and committed as `727cf3aa`.
 Stage 3b's appointment editor and hypothetical hires are accepted and committed
-as `1381103c`. Stage 3c's allocation picker is implemented, verified, and accepted.
-Expenses is the next review increment.
+as `1381103c`. Stage 3c's allocation picker is accepted and committed as `48f06e64`.
+Stage 4a's Other expenses editor is implemented, verified, and accepted.
 Saving remains available with funding gaps/overlaps.
 CBR defaults to 20% when no rate is supplied. Fresh appointments default to a
 3% annual salary adjustment in July. Every retained appointment needs a salary
@@ -35,9 +35,9 @@ as each decision is settled and each stage is reviewed.
   implementation as the foundation.
 - The guided planner defines the intended UI. The earlier timeline and copilot
   are outside the initial feature; prepare for AI editing later.
-- The final wizard order is Funding sources → Staffing → Expenses → Review.
-  The third step may be labeled Other expenses. Build these steps incrementally;
-  plan name and averaging-window setup belong within Funding sources.
+- The final wizard order is Funding sources → Staffing → Other expenses → Review.
+  Plan name belongs within Funding sources. The plan-wide spending-history
+  selector belongs within Other expenses, with a three-month default.
 - New plan opens the setup wizard. Its final Create plan action saves the
   reviewed inputs, then opens the saved plan's workspace. Canceling before the
   final Create action creates no saved plan; a failed create keeps the wizard
@@ -1389,16 +1389,115 @@ and captured spending remained intact. Mobile verification at 390px led to a
 full-width source selector above percentage/removal controls. No live personnel
 read or deployment occurred.
 
-Next: review Expenses decisions before implementation.
+## Stage 4a: Other expenses
+
+The user confirmed the expense decisions and authorized implementation on
+November 9, 2026. Notes and a custom forecast horizon remain a later increment.
+
+Use one shared Other expenses editor in the wizard and saved workspace. A funding
+source selector scopes the historical estimates and added expenses. Every expense
+still belongs to one source; there are no split or unallocated expenses.
+
+### Historical estimates
+
+Captured run rates supply the plan's selected 3-, 6-, or 12-month historical
+amounts. Changing the plan-wide window uses those captured inputs and never
+refreshes source balances, capture dates, or staffing. The selector moves from
+the first wizard step into Other expenses, where its effect can be reviewed.
+
+Historical rows allow amount edits only. A custom amount survives window changes,
+including an explicit zero that turns the estimate off. It remains custom even
+when another window's average equals that amount. Opening and applying an
+unchanged automatic estimate does not create a custom amount. Each adjusted row
+offers Use historical amount for the currently selected window; there is no bulk
+reset or historical-row Delete action.
+An explicit Turn off estimate choice also pins zero when the current historical
+baseline is already zero, without changing the unchanged-Apply rule.
+
+Show categories found in any captured window, plus categories with custom amounts.
+A category with no costs captured in the selected window has a zero historical
+baseline, labeled accordingly. A custom amount remains visible and effective.
+Sources without captured expense history have no historical rows unless a custom
+amount exists. Captured averages can be negative and retain their sign and
+precision.
+
+Persist captured run rates, optional custom amounts by source/category, and added
+expenses. Derive historical estimates from those inputs instead of persisting a
+second editable copy of every generated amount. Remove the unused Projected
+expense kind; this greenfield format needs no legacy adapter or migration bridge.
+
+### Added expenses and dates
+
+Added expenses have a required description, category, amount, and starting month.
+They are Monthly or One time. New entries default to Monthly with empty
+description, category, and amount fields. Salary and fringe categories belong in
+Staffing and are excluded from added expenses. Equipment and category 08 remain
+available; category 08 overlap with appointment fees stays deferred.
+
+Amounts may be positive, zero, or negative. Negative amounts reduce forecast
+spending. Default the starting month to the later of the source's capture month
+and availability month. A monthly expense defaults to Through funding source
+end, following later source-end changes. For an open-ended source, display
+Through forecast end with its current end month. An explicitly entered end month
+stays fixed, must be on or after the start, and remains bounded by source
+eligibility in the calculation. One-time expenses have no end month.
+
+An added expense can be removed without another confirmation; removal changes
+the unsaved draft. Explicit expense IDs are local to their source, with no
+high-water counter or permanent expense bookmark contract. Removing a funding
+source discards its estimates and added expenses under the existing source
+removal rules. Re-adding it captures fresh inputs.
+
+### Forecast display and persistence
+
+Show the entered amount, schedule, and forecast total through the source's
+forecast end. Use the same expense contribution calculation as the plan forecast,
+including partial-month proration. Do not sum unrelated schedules into a single
+monthly-expenses figure. If an expense's dates produce no forecast cost, show one
+short inline explanation and allow saving. An intentional zero is not a date
+warning; partial-month costs need no warning.
+
+Editors and the history selector use Apply/Cancel. Workspace edits require Save
+plan, and wizard completion saves the reviewed draft before opening it. Preserve
+pending-input navigation guards and the existing save/conflict behavior. Month
+fields use canonical first-of-month dates in the document, with validation shared
+across creation and saving.
+
+Verification passed 667 client tests across 70 files, 590 standard server tests,
+and all 17 isolated SQL checks. The standard server run skipped 12 optional SQL
+checks, which ran in the isolated suite. Production build, TypeScript, changed-file
+ESLint, formatting, and diff checks passed. An independent 500-case comparison
+preserved financial amounts and appointment funding across the calculation
+extraction. Independent review found and resolved category fallback and precise
+amount Turn off issues; no actionable findings remain.
+
+Browser checks used synthetic API responses through the production routes. They
+verified unchanged Apply, custom amounts and explicit zero across history changes,
+restoring the current average, signed monthly expenses, exact-date forecast totals,
+Save/reload, and saveable one-time costs outside the forecast horizon. Mobile
+verification at 390px found no page overflow. The four-step wizard saved its
+reviewed history setting before opening the workspace; an automated Create
+regression additionally checked manual expenses, custom historical amounts, and
+unchanged captured inputs. Final browser checks had no console errors or warnings.
+
+React Doctor reported no errors and eight warnings, primarily component complexity
+and size. The new expense tables were extracted into focused components. Reviewed
+remaining warnings include similar table markup and an existing loading-flag
+false positive inside a finally block; no warnings were suppressed.
+
+The shared-category cleanup also passed 113 relevant client tests, TypeScript,
+lint, and formatting. This increment is accepted. No live personnel read,
+database deployment, push, or merge occurred. Next: review plan notes and the
+forecast horizon.
 
 ## Questions to resolve in their owning stages
 
-| Before                        | Question or example                                                                                                                             |
-| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| Before exposing reset/refresh | Define their separate meanings, treatment of local edits, and snapshot replacement behavior.                                                    |
-| Stage 4                       | Which generated estimates are replaced when the history window changes? When does editing an estimate turn it into an explicit planned expense? |
-| Stage 5                       | Verify per-project shortfalls remain visible despite surpluses elsewhere, and decide feature-flag rollout criteria.                             |
-| Later integration             | Define proposal batches, stale-preview handling, bounded undo, authentication, and interactions with pending form edits.                        |
+| Before                        | Question or example                                                                                                      |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Before exposing reset/refresh | Define their separate meanings, treatment of local edits, and snapshot replacement behavior.                             |
+| Stage 4b                      | Define plan notes and whether users need an explicit forecast horizon beyond the current source-date-driven window.      |
+| Stage 5                       | Verify per-project shortfalls remain visible despite surpluses elsewhere, and decide feature-flag rollout criteria.      |
+| Later integration             | Define proposal batches, stale-preview handling, bounded undo, authentication, and interactions with pending form edits. |
 
 ## Reference evidence
 

@@ -1,7 +1,9 @@
 import {
+  EQUIPMENT_CATEGORY,
   FEE_REMISSION_CATEGORY,
   FRINGE_CATEGORY,
   SALARY_CATEGORY,
+  SUPPLIES_CATEGORY,
 } from '@/lib/piProjection.ts';
 import type {
   Projection,
@@ -15,6 +17,8 @@ export function createAppointmentLookupsExample(): ProjectionLookups {
     expenditureCategories: [
       SALARY_CATEGORY,
       FRINGE_CATEGORY,
+      SUPPLIES_CATEGORY,
+      EQUIPMENT_CATEGORY,
       FEE_REMISSION_CATEGORY,
     ],
     jobCodes: [
@@ -60,6 +64,7 @@ const source = (
   capturedStartDate: '2025-12-01',
   endDate: '2026-06-30',
   expenses: [],
+  historicalExpenseOverrides: [],
   id,
   name,
   projectName: name,

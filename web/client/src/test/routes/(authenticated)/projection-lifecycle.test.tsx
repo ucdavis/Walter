@@ -21,6 +21,7 @@ import type {
 } from '@/queries/projections.ts';
 import { routeTree } from '@/routeTree.gen.ts';
 import { server } from '@/test/mswUtils.ts';
+import { SUPPLIES_CATEGORY } from '@/lib/piProjection.ts';
 
 const portfolioPath = '/projections/IAM-PREVIEW';
 const createUrl = '/api/projections/by-iam/IAM-PREVIEW';
@@ -76,6 +77,7 @@ function handleLifecycle(plans: Projection[] = []) {
   const creates: CreateProjectionDraftRequest[] = [];
   const duplicates: DuplicateProjectionRequest[] = [];
   const updates: SaveProjectionRequest[] = [];
+  const seedHistoryWindows: number[] = [];
   let seedReads = 0;
   let nextId = 71;
   const create = (body: CreateProjectionDraftRequest) => {
@@ -130,12 +132,14 @@ function handleLifecycle(plans: Projection[] = []) {
     http.get(createUrl, () => HttpResponse.json([...stored.values()])),
     http.get(createUrl + '/seed', ({ request }) => {
       seedReads++;
+      const historyMonths = Number(
+        new URL(request.url).searchParams.get('historyMonths') ?? 3
+      );
+      seedHistoryWindows.push(historyMonths);
       return HttpResponse.json({
         draft: {
           ...seed,
-          historyMonths: Number(
-            new URL(request.url).searchParams.get('historyMonths') ?? 3
-          ),
+          historyMonths,
         },
         roster,
       });
@@ -179,6 +183,7 @@ function handleLifecycle(plans: Projection[] = []) {
     duplicates,
     roster,
     seed,
+    seedHistoryWindows,
     seedReads: () => seedReads,
     stored,
     updates,
@@ -204,7 +209,26 @@ async function reviewWizard(user: ReturnType<typeof userEvent.setup>) {
     name: 'Edit appointment for Alex Example',
   });
   await user.click(screen.getByRole('button', { name: 'Continue' }));
+  await screen.findByRole('button', { name: 'Change history window' });
+  await user.click(screen.getByRole('button', { name: 'Continue' }));
   await screen.findByRole('button', { name: 'Create plan & open workspace' });
+}
+
+async function changeHistoryWindow(
+  user: ReturnType<typeof userEvent.setup>,
+  historyMonths: string
+) {
+  await user.click(
+    screen.getByRole('button', { name: 'Change history window' })
+  );
+  await screen.findByRole('dialog', { name: 'Change spending history' });
+  await user.selectOptions(
+    screen.getByRole('combobox', { name: 'Averaging window' }),
+    historyMonths
+  );
+  await user.click(
+    screen.getByRole('button', { name: 'Apply history window' })
+  );
 }
 
 describe('projection creation and copies', () => {
@@ -231,6 +255,7 @@ describe('projection creation and copies', () => {
         screen.queryByText(/An imported funding task could not be matched/)
       ).not.toBeInTheDocument();
       expect(api.creates).toHaveLength(0);
+      await user.click(screen.getByRole('button', { name: 'Continue' }));
       await user.click(screen.getByRole('button', { name: 'Continue' }));
       await user.click(
         screen.getByRole('button', { name: 'Create plan & open workspace' })
@@ -260,6 +285,7 @@ describe('projection creation and copies', () => {
       ).toBeDisabled();
       expect(api.creates).toHaveLength(0);
       await user.click(screen.getByRole('button', { name: 'Back' }));
+      await user.click(screen.getByRole('button', { name: 'Back' }));
       await user.click(
         screen.getByRole('button', {
           name: 'Edit appointment for Alex Example',
@@ -270,6 +296,7 @@ describe('projection creation and copies', () => {
         '0'
       );
       await user.click(screen.getByRole('button', { name: 'Apply' }));
+      await user.click(screen.getByRole('button', { name: 'Continue' }));
       await user.click(screen.getByRole('button', { name: 'Continue' }));
       await user.click(
         screen.getByRole('button', { name: 'Create plan & open workspace' })
@@ -287,10 +314,9 @@ describe('projection creation and copies', () => {
     const user = userEvent.setup();
     try {
       await startWizard(user);
-      await user.selectOptions(
-        screen.getByRole('combobox', { name: 'Averaging window' }),
-        '6'
-      );
+      expect(
+        screen.queryByRole('combobox', { name: 'Averaging window' })
+      ).not.toBeInTheDocument();
       expect(api.creates).toHaveLength(0);
       await user.click(
         screen.getByRole('button', { name: 'Load funding sources' })
@@ -308,6 +334,8 @@ describe('projection creation and copies', () => {
       await user.clear(salary);
       await user.type(salary, '132000');
       await user.click(screen.getByRole('button', { name: 'Apply' }));
+      await user.click(screen.getByRole('button', { name: 'Continue' }));
+      await changeHistoryWindow(user, '6');
       await user.click(screen.getByRole('button', { name: 'Continue' }));
       expect(api.creates).toHaveLength(0);
       expect(
@@ -331,6 +359,7 @@ describe('projection creation and copies', () => {
         },
       });
       expect(api.seedReads()).toBe(1);
+      expect(api.seedHistoryWindows).toEqual([3]);
       await user.click(await screen.findByRole('button', { name: 'Staffing' }));
       await user.click(
         screen.getByRole('button', {
@@ -371,7 +400,7 @@ describe('projection creation and copies', () => {
         return attempts === 1
           ? new HttpResponse(null, { status: 503 })
           : HttpResponse.json({
-              draft: { ...api.seed, historyMonths: 12 },
+              draft: { ...api.seed, historyMonths: 3 },
               roster: api.roster,
             });
       })
@@ -380,10 +409,6 @@ describe('projection creation and copies', () => {
     const user = userEvent.setup();
     try {
       await startWizard(user, 'Keep my choices');
-      await user.selectOptions(
-        screen.getByRole('combobox', { name: 'Averaging window' }),
-        '12'
-      );
       await user.click(
         screen.getByRole('button', { name: 'Load funding sources' })
       );
@@ -391,9 +416,6 @@ describe('projection creation and copies', () => {
       expect(screen.getByRole('textbox', { name: 'Plan name' })).toHaveValue(
         'Keep my choices'
       );
-      expect(
-        screen.getByRole('combobox', { name: 'Averaging window' })
-      ).toHaveValue('12');
       await user.click(
         screen.getByRole('button', { name: 'Load funding sources' })
       );
@@ -401,12 +423,95 @@ describe('projection creation and copies', () => {
       await screen.findByRole('button', {
         name: 'Edit appointment for Alex Example',
       });
+      await user.click(screen.getByRole('button', { name: 'Continue' }));
+      await changeHistoryWindow(user, '12');
+      expect(attempts).toBe(2);
       await user.click(screen.getByRole('button', { name: 'Cancel setup' }));
       await screen.findByRole('dialog', { name: 'Leave setup?' });
       await user.click(screen.getByRole('button', { name: 'Discard' }));
       await screen.findByRole('button', { name: 'New plan' });
       expect(api.creates).toHaveLength(0);
       expect(api.stored.size).toBe(0);
+    } finally {
+      route.cleanup();
+    }
+  });
+
+  it('creates the reviewed expense assumptions and history window without replacing captured inputs', async () => {
+    const api = handleLifecycle();
+    const category = SUPPLIES_CATEGORY;
+    api.seed.fundingSources[0].runRates = [
+      { expenditureCategory: category, historyMonths: 3, monthlyAmount: 500 },
+      { expenditureCategory: category, historyMonths: 6, monthlyAmount: 600 },
+    ];
+    const captured = structuredClone(api.seed);
+    const route = renderPlans();
+    const user = userEvent.setup();
+    try {
+      await startWizard(user, 'Reviewed expense plan');
+      await user.click(
+        screen.getByRole('button', { name: 'Load funding sources' })
+      );
+      await user.click(await screen.findByRole('button', { name: 'Continue' }));
+      await screen.findByRole('button', {
+        name: 'Edit appointment for Alex Example',
+      });
+      await user.click(screen.getByRole('button', { name: 'Continue' }));
+      await user.click(
+        screen.getByRole('button', {
+          name: `Edit historical amount for ${category}`,
+        })
+      );
+      await user.clear(screen.getByLabelText('Monthly amount'));
+      await user.type(screen.getByLabelText('Monthly amount'), '300');
+      await user.click(screen.getByRole('button', { name: 'Apply amount' }));
+      await user.click(screen.getByRole('button', { name: 'Add expense' }));
+      await user.type(
+        screen.getByLabelText('Expense name'),
+        'Planned supply credit'
+      );
+      await user.selectOptions(screen.getByLabelText('Category'), category);
+      await user.type(screen.getByLabelText('Monthly amount'), '-125.50');
+      await user.click(screen.getByRole('button', { name: 'Apply expense' }));
+      await changeHistoryWindow(user, '6');
+      expect(api.creates).toHaveLength(0);
+      await user.click(screen.getByRole('button', { name: 'Continue' }));
+      await user.click(
+        screen.getByRole('button', { name: 'Create plan & open workspace' })
+      );
+      await waitFor(() =>
+        expect(route.router.state.location.pathname).toBe(portfolioPath + '/71')
+      );
+
+      expect(api.creates).toHaveLength(1);
+      expect(api.creates[0].draft).toEqual({
+        ...captured,
+        fundingSources: [
+          {
+            ...captured.fundingSources[0],
+            expenses: [
+              {
+                amount: -125.5,
+                description: 'Planned supply credit',
+                endMonth: null,
+                expenditureCategory: category,
+                id: 1,
+                kind: 'Monthly',
+                startMonth: '2026-01-01',
+              },
+            ],
+            historicalExpenseOverrides: [
+              { amount: 300, expenditureCategory: category },
+            ],
+          },
+          captured.fundingSources[1],
+        ],
+        historyMonths: 6,
+        name: 'Reviewed expense plan',
+      });
+      expect(api.seedReads()).toBe(1);
+      expect(api.seedHistoryWindows).toEqual([3]);
+      expect(api.seed).toEqual(captured);
     } finally {
       route.cleanup();
     }

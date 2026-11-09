@@ -146,6 +146,8 @@ public sealed class ProjectionSqlServerTests(ProjectionSqlServerFixture sql) : I
         source["balanceAdjustment"] = -125.50m;
         source["capturedStartDate"] = "2029-01-01";
         source["startDate"] = "2029-03-01";
+        source["historicalExpenseOverrides"] = JsonNode.Parse("""[{"expenditureCategory":"05 - Supplies","amount":0},{"expenditureCategory":"06 - Travel","amount":-25.50}]""");
+        source["expenses"] = JsonNode.Parse("""[{"id":1,"kind":"Monthly","description":"Planned supplies","expenditureCategory":"05 - Supplies","amount":-10.25,"startMonth":"2030-02-01","endMonth":null}]""");
         body["appointments"]![0]!["hasUnmatchedFunding"] = true;
         body["appointments"]![0]!["allocations"] = JsonSerializer.SerializeToNode(new List<ProjectionFundingAllocation>
         {
@@ -176,6 +178,12 @@ public sealed class ProjectionSqlServerTests(ProjectionSqlServerFixture sql) : I
         stored.FundingSources[0].BalanceAdjustment.Should().Be(-125.50m);
         stored.FundingSources[0].CapturedStartDate.Should().Be(new DateOnly(2029, 1, 1));
         stored.FundingSources[0].StartDate.Should().Be(new DateOnly(2029, 3, 1));
+        stored.FundingSources[0].HistoricalExpenseOverrides.Select(expense => expense.Amount).Should().Equal(0m, -25.50m);
+        stored.FundingSources[0].Expenses.Should().ContainSingle().Which.Should().BeEquivalentTo(new
+        {
+            Id = 1, Kind = ProjectionExpenseKind.Monthly, Description = "Planned supplies",
+            ExpenditureCategory = "05 - Supplies", Amount = -10.25m, StartMonth = new DateOnly(2030, 2, 1), EndMonth = (DateOnly?)null,
+        });
         stored.Appointments[0].HasUnmatchedFunding.Should().BeTrue();
         stored.Appointments[0].Allocations.Should().BeEquivalentTo(new List<ProjectionFundingAllocation>
         {

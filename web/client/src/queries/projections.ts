@@ -7,7 +7,7 @@ import { fetchJson, postJson } from '@/lib/api.ts';
 
 // Server JSON for /api/projections. DateOnly fields arrive as 'YYYY-MM-DD', DateTime as full ISO strings.
 
-export type ProjectionExpenseKind = 'OneTime' | 'Monthly' | 'Projected';
+export type ProjectionExpenseKind = 'OneTime' | 'Monthly';
 
 export interface ProjectionBudget {
   budget: number;
@@ -29,13 +29,21 @@ export interface ProjectionRunRate {
 }
 
 export interface ProjectionExpense {
-  /** Per month for Monthly and Projected; total for OneTime. */
+  /** Per month for Monthly; total for OneTime. Signed amounts include planned credits. */
   amount: number;
-  description: string | null;
+  description: string;
   endMonth: string | null;
   expenditureCategory: string;
+  /** Source-local editor identity; removed IDs need not be retained. */
+  id: number;
   kind: ProjectionExpenseKind;
-  startMonth: string | null;
+  startMonth: string;
+}
+
+export interface ProjectionHistoricalExpenseOverride {
+  /** Explicit zero suppresses the captured estimate until restored. */
+  amount: number;
+  expenditureCategory: string;
 }
 
 export interface ProjectionFundingSource {
@@ -51,6 +59,7 @@ export interface ProjectionFundingSource {
   capturedStartDate: string | null;
   endDate: string | null;
   expenses: ProjectionExpense[];
+  historicalExpenseOverrides: ProjectionHistoricalExpenseOverride[];
   id: number;
   /** Editable label; captured project and task names remain unchanged. */
   name: string;
@@ -212,12 +221,11 @@ export const projectionSourceCatalogQueryOptions = (iamId: string) => ({
 /** Imports only selected financial inputs; existing employee assumptions stay in the draft. */
 export const importProjectionSources = (
   iamId: string,
-  historyMonths: number,
   sources: Pick<ProjectionSourceSummary, 'projectNumber' | 'taskNumber'>[]
 ) =>
   postJson<ProjectionFundingSource[]>(
     `/api/projections/by-iam/${encodeURIComponent(iamId)}/sources/import`,
-    { historyMonths, sources }
+    { sources }
   );
 
 async function cacheCreatedProjection(

@@ -4,6 +4,7 @@ import {
   FEE_REMISSION_CATEGORY,
   FRINGE_CATEGORY,
   SALARY_CATEGORY,
+  SUPPLIES_CATEGORY as SUPPLIES,
 } from '@/lib/piProjection.ts';
 import type {
   Projection,
@@ -12,8 +13,6 @@ import type {
   ProjectionAppointment,
   ProjectionFundingSource,
 } from '@/queries/projections.ts';
-
-const SUPPLIES = '05 - Supplies';
 
 const funding = (
   fundingSourceId: number | null = 1,
@@ -75,6 +74,7 @@ const source = (
   capturedStartDate: null,
   endDate: '2026-12-31',
   expenses: [],
+  historicalExpenseOverrides: [],
   id: 1,
   name: 'Example source',
   projectName: 'Example source',
@@ -95,8 +95,9 @@ const expense = (
   description: 'Example expense',
   endMonth: null,
   expenditureCategory: SUPPLIES,
+  id: 1,
   kind: 'Monthly',
-  startMonth: null,
+  startMonth: '2026-01-01',
   ...overrides,
 });
 
@@ -489,14 +490,18 @@ describe('projection date rules', () => {
   ])(
     'restricts snapshot recurring expenses to source days after the snapshot: $start through $end',
     ({ end, expected, start }) => {
-      for (const kind of ['Monthly', 'Projected'] as const) {
+      for (const kind of ['Monthly', 'Historical'] as const) {
         const result = computePiProjection(
           plan({
             appointments: [],
             fundingSources: [
               source({
                 endDate: end,
-                expenses: [expense({ kind })],
+                expenses: kind === 'Monthly' ? [expense({ kind })] : [],
+                historicalExpenseOverrides:
+                  kind === 'Historical'
+                    ? [{ amount: 310, expenditureCategory: SUPPLIES }]
+                    : [],
                 startDate: start,
               }),
             ],
@@ -511,8 +516,8 @@ describe('projection date rules', () => {
     }
   );
 
-  it.each(['Monthly', 'Projected'] as const)(
-    'prorates later %s expenses by source dates while preserving their month limits',
+  it.each(['Monthly', 'Historical'] as const)(
+    'prorates later %s expenses by source dates and applicable month limits',
     (kind) => {
       const result = computePiProjection(
         plan({
@@ -520,14 +525,21 @@ describe('projection date rules', () => {
           fundingSources: [
             source({
               endDate: '2028-03-10',
-              expenses: [
-                expense({
-                  amount: 290,
-                  endMonth: '2028-02-01',
-                  kind,
-                  startMonth: '2028-02-01',
-                }),
-              ],
+              expenses:
+                kind === 'Monthly'
+                  ? [
+                      expense({
+                        amount: 290,
+                        endMonth: '2028-02-01',
+                        kind,
+                        startMonth: '2028-02-01',
+                      }),
+                    ]
+                  : [],
+              historicalExpenseOverrides:
+                kind === 'Historical'
+                  ? [{ amount: 290, expenditureCategory: SUPPLIES }]
+                  : [],
               startDate: '2028-02-20',
             }),
           ],
@@ -537,7 +549,9 @@ describe('projection date rules', () => {
 
       expect(row(result, '2028-01', SUPPLIES)?.projectedAmount).toBe(0);
       expect(row(result, '2028-02', SUPPLIES)?.projectedAmount).toBe(100);
-      expect(row(result, '2028-03', SUPPLIES)?.projectedAmount).toBe(0);
+      expect(row(result, '2028-03', SUPPLIES)?.projectedAmount).toBeCloseTo(
+        kind === 'Monthly' ? 0 : (290 * 10) / 31
+      );
     }
   );
 
@@ -840,11 +854,6 @@ describe('projection date rules', () => {
           endDate: '2026-11-30',
           expenses: [
             expense({
-              amount: 310,
-              expenditureCategory: FEE_REMISSION_CATEGORY,
-              kind: 'Projected',
-            }),
-            expense({
               amount: 62,
               expenditureCategory: FEE_REMISSION_CATEGORY,
               kind: 'Monthly',
@@ -855,6 +864,9 @@ describe('projection date rules', () => {
               kind: 'OneTime',
               startMonth: '2026-10-01',
             }),
+          ],
+          historicalExpenseOverrides: [
+            { amount: 310, expenditureCategory: FEE_REMISSION_CATEGORY },
           ],
         }),
       ],

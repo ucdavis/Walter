@@ -57,6 +57,7 @@ function taskFixture(): Projection {
       description: 'Planned travel',
       endMonth: null,
       expenditureCategory: '05 - Travel',
+      id: 1,
       kind: 'OneTime',
       startMonth: '2026-05-01',
     },
@@ -90,7 +91,6 @@ function setup(plan = taskFixture()) {
   const creates: CreateProjectionDraftRequest[] = [];
   const saves: SaveProjectionRequest[] = [];
   const imports: {
-    historyMonths: number;
     sources: { projectNumber: string; taskNumber: string | null }[];
   }[] = [];
   const fresh = structuredClone(plan.fundingSources[1]);
@@ -265,6 +265,7 @@ describe('funding source lifecycle', () => {
         })
       ).not.toBeInTheDocument();
       await user.click(screen.getByRole('button', { name: 'Continue' }));
+      await user.click(screen.getByRole('button', { name: 'Continue' }));
       await user.click(
         screen.getByRole('button', { name: 'Create plan & open workspace' })
       );
@@ -331,6 +332,7 @@ describe('funding source lifecycle', () => {
           name: 'Include project Field research',
         })
       ).not.toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: 'Continue' }));
       await user.click(screen.getByRole('button', { name: 'Continue' }));
       await user.click(screen.getByRole('button', { name: 'Continue' }));
       await user.click(
@@ -424,7 +426,6 @@ describe('funding source lifecycle', () => {
       await waitFor(() => expect(api.saves).toHaveLength(2));
       expect(api.imports).toEqual([
         {
-          historyMonths: 3,
           sources: [{ projectNumber: 'PA', taskNumber: 'T2' }],
         },
       ]);

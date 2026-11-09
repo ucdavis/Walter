@@ -1,3 +1,11 @@
+import {
+  ExpensesEditor,
+  type ExpensesEditorHandle,
+} from '@/components/projections/ExpensesEditor.tsx';
+import {
+  validateProjectionExpenses,
+  type ExpenseOperation,
+} from '@/lib/projectionExpenses.ts';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useBlocker } from '@tanstack/react-router';
 import { useStore } from '@tanstack/react-form';
@@ -39,7 +47,7 @@ import {
   type ProjectionRosterEntry,
 } from '@/queries/projections.ts';
 
-const steps = ['Funding sources', 'Staffing', 'Review'];
+const steps = ['Funding sources', 'Staffing', 'Other expenses', 'Review'];
 
 export function NewProjectionWizard({
   iamId,
@@ -51,12 +59,12 @@ export function NewProjectionWizard({
   onCreated: (saved: Projection) => Promise<void>;
 }) {
   const form = useAppForm({
-    defaultValues: { historyMonths: 3, name: '' },
+    defaultValues: { name: '' },
     onSubmit: async () => {
       await continueSetup();
     },
   });
-  const { historyMonths, name } = useStore(form.store, (state) => state.values);
+  const { name } = useStore(form.store, (state) => state.values);
   const [selectedSourceIds, setSelectedSourceIds] = useState<number[]>([]);
   const [rosterSelected, setRosterSelected] = useState(false);
   const [roster, setRoster] = useState<ProjectionRosterEntry[]>([]);
@@ -64,6 +72,7 @@ export function NewProjectionWizard({
     null
   );
   const sourceEditorRef = useRef<FundingSourcesEditorHandle>(null);
+  const expenseEditorRef = useRef<ExpensesEditorHandle>(null);
   const staffingEditorRef = useRef<StaffingEditorHandle>(null);
   const [step, setStep] = useState(0);
   const [session, setSession] =
@@ -82,18 +91,19 @@ export function NewProjectionWizard({
     () => (draft ? computePiProjection(draft) : null),
     [draft]
   );
-  const appointmentValidationMessage = draft
-    ? validateProjectionAppointments(draft)
+  const validationMessage = draft
+    ? (validateProjectionAppointments(draft) ??
+      validateProjectionExpenses(draft))
     : null;
   const hasWork = () =>
     Boolean(
       name ||
-        historyMonths !== 3 ||
         session ||
         loading ||
         submitted ||
         sourceEditorRef.current?.read()?.hasChanges ||
-        staffingEditorRef.current?.read()?.hasChanges
+        staffingEditorRef.current?.read()?.hasChanges ||
+        expenseEditorRef.current?.read()?.hasChanges
     );
   const blocker = useBlocker({
     enableBeforeUnload: hasWork,
@@ -150,6 +160,14 @@ export function NewProjectionWizard({
     return result;
   }
 
+  function applyExpenseOperation(operation: ExpenseOperation) {
+    const result = operation(currentSession.current!);
+    if (result.ok) {
+      updateSession(result.session);
+    }
+    return result;
+  }
+
   async function continueSetup() {
     if (requestPending.current || !name.trim()) {
       return;
@@ -176,7 +194,7 @@ export function NewProjectionWizard({
     requestPending.current = true;
     setLoading(true);
     try {
-      const seed = await fetchProjectionSeed(iamId, historyMonths);
+      const seed = await fetchProjectionSeed(iamId, 3);
       if (!mounted.current) {
         return;
       }
@@ -203,7 +221,8 @@ export function NewProjectionWizard({
     if (
       !draft ||
       requestPending.current ||
-      validateProjectionAppointments(draft)
+      validateProjectionAppointments(draft) ||
+      validateProjectionExpenses(draft)
     ) {
       return;
     }
@@ -215,7 +234,7 @@ export function NewProjectionWizard({
         draft: {
           appointments: draft.appointments,
           fundingSources: draft.fundingSources,
-          historyMonths,
+          historyMonths: draft.historyMonths,
           name: name.trim(),
           seededAt: draft.seededAt,
         },
@@ -265,7 +284,10 @@ export function NewProjectionWizard({
   return (
     <section aria-label="New plan setup" className="mx-auto max-w-5xl py-8">
       <h1 className="text-3xl font-bold">New plan</h1>
-      <ol aria-label="Plan setup progress" className="mt-6 flex gap-6">
+      <ol
+        aria-label="Plan setup progress"
+        className="mt-6 flex flex-wrap gap-x-6 gap-y-2"
+      >
         {steps.map((label, index) => (
           <li
             aria-current={index === step ? 'step' : undefined}
@@ -283,14 +305,9 @@ export function NewProjectionWizard({
       <div inert={loading || create.isPending}>
         {step === 0 && (
           <PlanStep
-            historyMonths={historyMonths}
             name={name}
             onContinue={() => form.handleSubmit()}
-            onHistoryMonthsChange={(value) =>
-              form.setFieldValue('historyMonths', value)
-            }
             onNameChange={(value) => form.setFieldValue('name', value)}
-            seeded={Boolean(session)}
           />
         )}
         {step === 0 && session && (
@@ -315,19 +332,21 @@ export function NewProjectionWizard({
             session={session}
           />
         )}
-        {step === 2 && draft && results && (
-          <ReviewStep
-            draft={draft}
-            historyMonths={historyMonths}
-            name={name}
-            results={results}
+        {step === 2 && session && (
+          <ExpensesEditor
+            onOperation={applyExpenseOperation}
+            ref={expenseEditorRef}
+            session={session}
           />
+        )}
+        {step === 3 && draft && results && (
+          <ReviewStep draft={draft} name={name} results={results} />
         )}
       </div>
 
-      {step > 0 && appointmentValidationMessage && (
+      {step > 0 && validationMessage && (
         <p className="mt-5 text-error" role="alert">
-          {appointmentValidationMessage}
+          {validationMessage}
         </p>
       )}
       {error && (
@@ -370,10 +389,10 @@ export function NewProjectionWizard({
                   ? 'Continue'
                   : 'Load funding sources'}
             </button>
-          ) : step === 1 ? (
+          ) : step < 3 ? (
             <button
               className="btn btn-primary"
-              onClick={() => setStep(2)}
+              onClick={() => setStep(step + 1)}
               type="button"
             >
               Continue
@@ -381,9 +400,7 @@ export function NewProjectionWizard({
           ) : (
             <button
               className="btn btn-primary"
-              disabled={
-                create.isPending || Boolean(appointmentValidationMessage)
-              }
+              disabled={create.isPending || Boolean(validationMessage)}
               onClick={() => void finish()}
               type="button"
             >
@@ -405,7 +422,7 @@ export function NewProjectionWizard({
           <p className="mt-4">
             {submitted
               ? 'Creation may still finish or may already have succeeded. Leaving discards this setup.'
-              : 'Your setup choices and appointment edits will be discarded.'}
+              : 'Your setup choices and edits will be discarded.'}
           </p>
           <div className="modal-action">
             <button className="btn btn-ghost" onClick={stay} type="button">
@@ -422,19 +439,13 @@ export function NewProjectionWizard({
 }
 
 function PlanStep({
-  historyMonths,
   name,
   onContinue,
-  onHistoryMonthsChange,
   onNameChange,
-  seeded,
 }: {
-  historyMonths: number;
   name: string;
   onContinue: () => Promise<void>;
-  onHistoryMonthsChange: (value: number) => void;
   onNameChange: (value: string) => void;
-  seeded: boolean;
 }) {
   return (
     <form
@@ -455,38 +466,16 @@ function PlanStep({
           value={name}
         />
       </label>
-      <label className="flex max-w-xs flex-col gap-2">
-        Averaging window
-        <select
-          className="select select-bordered"
-          disabled={seeded}
-          onChange={(event) =>
-            onHistoryMonthsChange(Number(event.target.value))
-          }
-          value={historyMonths}
-        >
-          <option value={3}>3 months</option>
-          <option value={6}>6 months</option>
-          <option value={12}>12 months</option>
-        </select>
-      </label>
-      {seeded && (
-        <p className="text-sm">
-          Cancel setup to choose another averaging window.
-        </p>
-      )}
     </form>
   );
 }
 
 function ReviewStep({
   draft,
-  historyMonths,
   name,
   results,
 }: {
   draft: ProjectionDraft;
-  historyMonths: number;
   name: string;
   results: ProjectionResults;
 }) {
@@ -497,7 +486,9 @@ function ReviewStep({
         Plan started {draft.seededAt.slice(0, 10)}. Source capture dates are
         shown below.
       </p>
-      <p className="mt-1 text-sm">{historyMonths}-month spending history.</p>
+      <p className="mt-1 text-sm">
+        {draft.historyMonths}-month spending history.
+      </p>
       <h3 className="mt-6 text-xl font-bold">Funding outlook</h3>
       {draft.fundingSources.length === 0 && (
         <p className="mt-3">No eligible funding sources in this snapshot.</p>

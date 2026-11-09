@@ -22,6 +22,10 @@ import {
   validateProjectionAppointments,
   type AppointmentOperation,
 } from '@/lib/projectionAppointments.ts';
+import {
+  validateProjectionExpenses,
+  type ExpenseOperation,
+} from '@/lib/projectionExpenses.ts';
 import type { SourceOperation } from '@/lib/projectionSources.ts';
 
 export interface ProjectionPersistence {
@@ -102,6 +106,15 @@ function useSession(
     return result;
   };
 
+  const applyExpenseOperation = (operation: ExpenseOperation) => {
+    const result = operation(currentSession.current);
+    if (result.ok) {
+      updateSession(result.session);
+    }
+    setSaveStatus((status) => (status === 'saving' ? status : 'idle'));
+    return result;
+  };
+
   const applySourceOperation = (operation: SourceOperation) => {
     const result = operation(currentSession.current);
     if (result.ok) {
@@ -124,7 +137,10 @@ function useSession(
       return;
     }
     const submitted = currentSession.current;
-    if (validateProjectionAppointments(submitted.draft)) {
+    if (
+      validateProjectionAppointments(submitted.draft) ||
+      validateProjectionExpenses(submitted.draft)
+    ) {
       return;
     }
     const { appointments, fundingSources, historyMonths, name } =
@@ -211,8 +227,8 @@ function useSession(
 
   return {
     applyAppointmentOperation,
+    applyExpenseOperation,
     applySourceOperation,
-    appointmentValidationMessage: validateProjectionAppointments(session.draft),
     canSave: Boolean(persistence),
     conflict,
     conflictOpen,
@@ -237,6 +253,9 @@ function useSession(
     saveStatus,
     saving: saveStatus === 'saving',
     session,
+    validationMessage:
+      validateProjectionAppointments(session.draft) ??
+      validateProjectionExpenses(session.draft),
   };
 }
 

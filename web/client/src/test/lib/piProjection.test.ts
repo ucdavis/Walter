@@ -4,6 +4,7 @@ import {
   FEE_REMISSION_CATEGORY,
   FRINGE_CATEGORY,
   SALARY_CATEGORY,
+  SUPPLIES_CATEGORY as SUPPLIES,
 } from '@/lib/piProjection.ts';
 import type {
   Projection,
@@ -11,9 +12,8 @@ import type {
   ProjectionExpense,
   ProjectionFundingAllocation,
   ProjectionAppointment,
+  ProjectionHistoricalExpenseOverride,
 } from '@/queries/projections.ts';
-
-const SUPPLIES = '05 - Supplies';
 
 const funding = (
   fundingSourceId: number | null,
@@ -52,11 +52,12 @@ const appointment = (
 
 const expense = (overrides: Partial<ProjectionExpense>): ProjectionExpense => ({
   amount: 0,
-  description: null,
+  description: 'Example expense',
   endMonth: null,
   expenditureCategory: SUPPLIES,
+  id: 1,
   kind: 'Monthly',
-  startMonth: null,
+  startMonth: '2026-10-01',
   ...overrides,
 });
 
@@ -65,6 +66,7 @@ const projection = ({
   appointments = [],
   endDate = '2027-03-31',
   expenses = [],
+  historicalExpenseOverrides = [],
 }: {
   actuals?: {
     amount: number;
@@ -74,6 +76,7 @@ const projection = ({
   appointments?: ProjectionAppointment[];
   endDate?: string | null;
   expenses?: ProjectionExpense[];
+  historicalExpenseOverrides?: ProjectionHistoricalExpenseOverride[];
 } = {}): Projection => ({
   appointments,
   createdAt: '2026-10-16T00:00:00Z',
@@ -100,6 +103,7 @@ const projection = ({
       capturedStartDate: null,
       endDate,
       expenses,
+      historicalExpenseOverrides,
       id: 1,
       name: 'Project 1',
       projectName: 'Project 1',
@@ -410,11 +414,9 @@ describe('computePiProjection', () => {
         expense({ amount: 310, expenditureCategory: SALARY_CATEGORY }),
         expense({ amount: 62, expenditureCategory: FRINGE_CATEGORY }),
         expense({ amount: 310 }),
-        expense({
-          amount: 310,
-          expenditureCategory: FEE_REMISSION_CATEGORY,
-          kind: 'Projected',
-        }),
+      ],
+      historicalExpenseOverrides: [
+        { amount: 310, expenditureCategory: FEE_REMISSION_CATEGORY },
       ],
     });
     p.fundingSources[0].budgets = [
@@ -704,11 +706,11 @@ describe('computePiProjection', () => {
     ).toBe(1);
   });
 
-  it('prorates monthly and projected expenses in the seed month only', () => {
+  it('prorates monthly and historical expenses in the seed month only', () => {
     const p = projection({
-      expenses: [
-        expense({ amount: 310, kind: 'Monthly' }),
-        expense({ amount: 62, kind: 'Projected' }),
+      expenses: [expense({ amount: 310, kind: 'Monthly' })],
+      historicalExpenseOverrides: [
+        { amount: 62, expenditureCategory: SUPPLIES },
       ],
     });
 

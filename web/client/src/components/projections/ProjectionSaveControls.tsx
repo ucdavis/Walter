@@ -8,7 +8,6 @@ import {
 
 export function ProjectionSaveControls() {
   const {
-    appointmentValidationMessage,
     canSave,
     conflict,
     error,
@@ -17,6 +16,7 @@ export function ProjectionSaveControls() {
     saveStatus,
     saving,
     session,
+    validationMessage,
   } = useProjectionSession();
   const dirty = isProjectionDirty(session);
   return (
@@ -30,7 +30,7 @@ export function ProjectionSaveControls() {
           disabled={
             saving ||
             reloading ||
-            Boolean(appointmentValidationMessage) ||
+            Boolean(validationMessage) ||
             (!dirty && !conflict && !error)
           }
           onClick={() => void save()}
@@ -55,7 +55,6 @@ export function ProjectionSaveFeedback({
   search: Record<string, unknown>;
 }) {
   const {
-    appointmentValidationMessage,
     conflict,
     conflictOpen,
     discardSaved,
@@ -65,12 +64,13 @@ export function ProjectionSaveFeedback({
     reloading,
     saveStatus,
     session,
+    validationMessage,
   } = useProjectionSession();
   return (
     <>
-      {appointmentValidationMessage && (
+      {validationMessage && (
         <p className="mt-3 text-error" role="alert">
-          {appointmentValidationMessage}
+          {validationMessage}
         </p>
       )}
       {saveStatus === 'saved' && isProjectionDirty(session) && (

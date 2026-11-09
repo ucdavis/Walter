@@ -4,13 +4,12 @@ import {
   FEE_REMISSION_CATEGORY,
   FRINGE_CATEGORY,
   SALARY_CATEGORY,
+  SUPPLIES_CATEGORY as SUPPLIES,
 } from '@/lib/piProjection.ts';
 import { createProjectionSession } from '@/lib/projectionWorkspace.ts';
 import { editProjectionAppointment } from '@/lib/projectionAppointments.ts';
 import { createSalaryExample } from '@/dev/projections/fixture.ts';
 import type { Projection } from '@/queries/projections.ts';
-
-const SUPPLIES = '05 - Supplies';
 
 /** Synthetic dollars and illustrative rates; these are not UC Davis rate tables. */
 function example() {
@@ -146,14 +145,16 @@ export function reviewProjectionCalculations() {
       description: 'Synthetic monthly supplies',
       endMonth: null,
       expenditureCategory: SUPPLIES,
+      id: 1,
       kind: 'Monthly',
-      startMonth: null,
+      startMonth: '2026-01-01',
     },
     {
       amount: 200,
       description: 'Synthetic February purchase',
       endMonth: null,
       expenditureCategory: SUPPLIES,
+      id: 2,
       kind: 'OneTime',
       startMonth: '2026-02-01',
     },
@@ -229,6 +230,7 @@ export function reviewProjectionCalculations() {
       description: `Synthetic ${month} purchase`,
       endMonth: null,
       expenditureCategory: SUPPLIES,
+      id: 2,
       kind: 'OneTime',
       startMonth: `${month}-01`,
     })

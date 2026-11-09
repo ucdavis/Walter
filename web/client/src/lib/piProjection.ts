@@ -2,8 +2,10 @@ import type {
   ProjectionDraft,
   ProjectionAppointment,
   ProjectionFundingSource,
+  ProjectionExpenseKind,
 } from '@/queries/projections.ts';
 import type { AllocationShare } from '@/lib/projectionAllocations.ts';
+import { getHistoricalExpenseRows } from '@/lib/projectionExpenses.ts';
 
 export interface PiProjectionRow {
   actualAmount: number;
@@ -35,6 +37,8 @@ export interface ProjectionForecastWindow {
 
 export const SALARY_CATEGORY = '01 - Salaries and Wages';
 export const FRINGE_CATEGORY = '02 - Fringe Benefits';
+export const SUPPLIES_CATEGORY = '03 - Supplies / Services / Other Expenses';
+export const EQUIPMENT_CATEGORY = '04 - Equipment and Facilities';
 export const FEE_REMISSION_CATEGORY = '08 - Fellowship & Scholarships';
 const PERSONNEL = new Set([SALARY_CATEGORY, FRINGE_CATEGORY]);
 export const BALANCE_ADJUSTMENT_CATEGORY = 'Planning balance adjustment';
@@ -51,6 +55,17 @@ const firstSourceForecast = (source: ProjectionFundingSource) =>
     ? Math.max(toIndex(source.capturedAt), toIndex(source.startDate))
     : toIndex(source.capturedAt);
 
+/** A source without an end keeps the existing bounded horizon, including its capture month. */
+export function getSourceForecastWindow(
+  source: ProjectionFundingSource
+): ProjectionForecastWindow {
+  const first = firstSourceForecast(source);
+  return {
+    endMonth: toMonth(source.endDate ? toIndex(source.endDate) : first + 12),
+    startMonth: toMonth(first),
+  };
+}
+
 /** Funding checks use the same bounded forecast period shown by the plan. */
 export function getProjectionForecastWindow(
   projection: ProjectionDraft
@@ -59,8 +74,8 @@ export function getProjectionForecastWindow(
   const end = Math.max(
     start,
     ...projection.fundingSources.flatMap((source) => {
-      const first = firstSourceForecast(source);
-      return [first, source.endDate ? toIndex(source.endDate) : first + 12];
+      const window = getSourceForecastWindow(source);
+      return [toIndex(window.startMonth), toIndex(window.endMonth)];
     })
   );
   return { endMonth: toMonth(end), startMonth: toMonth(start) };
@@ -117,6 +132,71 @@ function overlapDays(range: DayRange, ...bounds: DateBounds[]) {
   return Math.max(0, end - start + 1);
 }
 
+export interface ExpenseForecastInputs {
+  amount: number;
+  endMonth: string | null;
+  kind: ProjectionExpenseKind;
+  /** Null is reserved for a historical estimate spanning the source forecast. */
+  startMonth: string | null;
+}
+
+export interface ExpenseForecast {
+  /** Date eligibility is independent of a zero amount or a signed credit. */
+  hasEligibleDates: boolean;
+  months: { amount: number; month: string }[];
+  total: number;
+}
+
+/** Editor impact totals and the plan forecast share the same one-time and recurring date rules. */
+export function computeExpenseForecast(
+  source: ProjectionFundingSource,
+  expense: ExpenseForecastInputs
+): ExpenseForecast {
+  const window = getSourceForecastWindow(source);
+  const first = toIndex(window.startMonth);
+  const last = toIndex(window.endMonth);
+  const months: ExpenseForecast['months'] = [];
+  if (expense.kind === 'OneTime') {
+    if (expense.startMonth) {
+      const month = toIndex(expense.startMonth);
+      // A one-time cost is month-based, including a capture month that has any source overlap.
+      if (
+        month >= first &&
+        month <= last &&
+        overlapDays(monthDays(month), source) > 0
+      ) {
+        months.push({ amount: expense.amount, month: toMonth(month) });
+      }
+    }
+  } else {
+    const start = expense.startMonth ? toIndex(expense.startMonth) : first;
+    const end = Math.min(
+      expense.endMonth ? toIndex(expense.endMonth) : last,
+      last
+    );
+    const sourceIndex = toIndex(source.capturedAt);
+    const sourceDay = toDay(source.capturedAt);
+    for (let month = Math.max(start, first); month <= end; month++) {
+      const days = monthDays(month);
+      const eligibleDays = overlapDays(
+        { ...days, start: month === sourceIndex ? sourceDay + 1 : days.start },
+        source
+      );
+      if (eligibleDays > 0) {
+        months.push({
+          amount: expense.amount * (eligibleDays / overlapDays(days)),
+          month: toMonth(month),
+        });
+      }
+    }
+  }
+  return {
+    hasEligibleDates: months.length > 0,
+    months,
+    total: months.reduce((sum, month) => sum + month.amount, 0),
+  };
+}
+
 function fundingCoverage(events: Map<number, number>, active: DayRange) {
   const boundaries = [
     ...new Set([active.start, active.end + 1, ...events.keys()]),
@@ -163,7 +243,7 @@ export function computePiProjection(projection: ProjectionDraft): {
   const capture = (source: ProjectionFundingSource) => captures.get(source.id)!;
 
   const sourceEnd = (p: ProjectionFundingSource) =>
-    p.endDate ? toIndex(p.endDate) : capture(p).firstForecast + 12;
+    toIndex(getSourceForecastWindow(p).endMonth);
   const forecastWindow = getProjectionForecastWindow(projection);
   const horizonEnd = toIndex(forecastWindow.endMonth);
   // fundingSourceId -> category -> month index -> amount
@@ -303,41 +383,25 @@ export function computePiProjection(projection: ProjectionDraft): {
   }
 
   for (const source of projection.fundingSources) {
-    const {
-      day: sourceDay,
-      firstForecast,
-      index: sourceIndex,
-    } = capture(source);
-    for (const e of source.expenses) {
-      if (e.kind === 'OneTime') {
-        if (e.startMonth) {
-          const m = toIndex(e.startMonth);
-          // A one-time expense specifies a month, so an eligible month keeps its full amount.
-          if (overlapDays(monthDays(m), source) > 0) {
-            charge(source, e.expenditureCategory, m, e.amount);
-          }
-        }
-        continue;
-      }
-      const start = e.startMonth ? toIndex(e.startMonth) : firstForecast;
-      const end = Math.min(
-        e.endMonth ? toIndex(e.endMonth) : sourceEnd(source),
-        sourceEnd(source)
-      );
-      for (let m = Math.max(start, firstForecast); m <= end; m++) {
-        const days = monthDays(m);
-        const eligibleDays = overlapDays(
-          { ...days, start: m === sourceIndex ? sourceDay + 1 : days.start },
-          source
-        );
-        if (eligibleDays === 0) {
-          continue;
-        }
+    const historical = getHistoricalExpenseRows(
+      source,
+      projection.historyMonths
+    )
+      .filter(({ effectiveAmount }) => effectiveAmount !== 0)
+      .map(({ effectiveAmount, expenditureCategory }) => ({
+        amount: effectiveAmount,
+        endMonth: null,
+        expenditureCategory,
+        kind: 'Monthly' as const,
+        startMonth: null,
+      }));
+    for (const expense of [...source.expenses, ...historical]) {
+      for (const month of computeExpenseForecast(source, expense).months) {
         charge(
           source,
-          e.expenditureCategory,
-          m,
-          e.amount * (eligibleDays / overlapDays(days))
+          expense.expenditureCategory,
+          toIndex(month.month),
+          month.amount
         );
       }
     }

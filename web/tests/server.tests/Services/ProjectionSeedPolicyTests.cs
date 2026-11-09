@@ -144,11 +144,12 @@ public sealed class ProjectionSeedPolicyTests
         project.Actuals.Select(a => (a.ExpenditureCategory, a.Month, a.Amount)).Should().BeEquivalentTo(
             [(Supplies, new DateOnly(2026, 10, 1), 100m), (Salary, new DateOnly(2026, 10, 1), 400m)]);
         project.RunRates.Select(r => (r.HistoryMonths, r.MonthlyAmount)).Should().BeEquivalentTo([(3, 50m), (6, 40m)]);
-        project.Expenses.Should().ContainSingle().Which.Amount.Should().Be(40m);
+        project.Expenses.Should().BeEmpty();
         var other = projection.FundingSources.Single(p => p.TaskNumber == "T3");
         other.Budgets.Select(b => b.Budget).Should().BeEquivalentTo([2000m, 6000m]);
         other.Actuals.Select(a => a.Amount).Should().BeEquivalentTo([50m, 200m]);
-        other.Expenses.Should().ContainSingle().Which.Amount.Should().Be(60m);
+        other.RunRates.Single(r => r.HistoryMonths == 6).MonthlyAmount.Should().Be(60m);
+        other.Expenses.Should().BeEmpty();
         other.CapturedStartDate.Should().Be(new DateOnly(2026, 3, 1));
         other.CapturedEndDate.Should().Be(new DateOnly(2026, 10, 31));
         projection.Appointments.Single().Allocations.Select(f => (f.FundingSourceId, f.Percent)).Should().BeEquivalentTo(

@@ -27,7 +27,7 @@ public class Projection
     [Required, MaxLength(200)]
     public string Name { get; set; } = "";
 
-    /// <summary>3, 6, or 12; selected averaging window for explicit estimate regeneration.</summary>
+    /// <summary>3, 6, or 12; selects captured historical averages without changing custom expense amounts.</summary>
     public int HistoryMonths { get; set; }
 
     /// <summary>Original UTC capture, snapshot identity, and salary base. Advances only on create or reset; each funding source has its own financial capture.</summary>
@@ -104,6 +104,9 @@ public class ProjectionFundingSource
     public List<ProjectionBudget> Budgets { get; set; } = [];
     public List<ProjectionActual> Actuals { get; set; } = [];
     public List<ProjectionRunRate> RunRates { get; set; } = [];
+    /// <summary>Custom monthly historical estimates by category; an explicit zero disables that estimate across history windows.</summary>
+    public List<ProjectionHistoricalExpenseOverride> HistoricalExpenseOverrides { get; set; } = [];
+    /// <summary>Explicit planned expenses, separate from estimates derived from captured history.</summary>
     public List<ProjectionExpense> Expenses { get; set; } = [];
 }
 
@@ -199,19 +202,36 @@ public enum ProjectionExpenseKind
 {
     OneTime,
     Monthly,
-    /// <summary>Generated from run-rates; explicit regeneration or reset replaces these, including edited ones.</summary>
-    Projected,
+}
+
+/// <summary>Replaces one category's historical monthly estimate until explicitly removed, even if it equals the selected average.</summary>
+public class ProjectionHistoricalExpenseOverride
+{
+    [JsonRequired]
+    public string ExpenditureCategory { get; set; } = "";
+    [JsonRequired]
+    public decimal Amount { get; set; }
 }
 
 public class ProjectionExpense
 {
+    /// <summary>Positive identity unique within this funding source; retained through expense edits.</summary>
+    [JsonRequired]
+    public int Id { get; set; }
+    [JsonRequired]
     public ProjectionExpenseKind Kind { get; set; }
-    public string? Description { get; set; }
+    [JsonRequired]
+    public string Description { get; set; } = "";
+    [JsonRequired]
     public string ExpenditureCategory { get; set; } = "";
 
-    /// <summary>Per month for Monthly and Projected; total for OneTime.</summary>
+    /// <summary>Signed planned cost, including zero; per month for Monthly and total for OneTime.</summary>
+    [JsonRequired]
     public decimal Amount { get; set; }
 
-    public DateOnly? StartMonth { get; set; }
+    /// <summary>Required planning month, represented by its first calendar day.</summary>
+    [JsonRequired]
+    public DateOnly StartMonth { get; set; }
+    /// <summary>Inclusive final planning month for Monthly; null follows the source end and is required for OneTime.</summary>
     public DateOnly? EndMonth { get; set; }
 }

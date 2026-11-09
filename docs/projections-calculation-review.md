@@ -264,9 +264,49 @@ The source history averages used for recurring estimates exclude categories
 & Scholarships remains included. Booked actuals remain available for balances
 and snapshot-month personnel netting.
 
-Explicit monthly and one-time expenses are additional planned costs, including
-expenses assigned to salary, benefits, or fee categories. They are added after
-the personnel calculation and are not reduced by booked personnel costs.
+Explicit monthly and one-time expenses are additional planned costs. Salary and
+fringe are entered through Staffing; added expenses use the remaining categories,
+including equipment and fellowship/scholarship costs. Added expenses are not
+reduced by booked costs. Amounts may be positive, zero, or negative; negative
+amounts reduce forecast spending.
+
+### Historical estimates and custom amounts
+
+Each source retains its captured 3-, 6-, and 12-month expense averages. The plan's
+history setting selects which captured averages to use. Changing that setting
+does not fetch new data or alter balances, source capture dates, or appointments.
+
+A historical category normally follows the selected average. Editing its amount
+sets a custom monthly amount that survives later history-window changes. Explicit
+zero turns that estimate off. Use historical amount removes the custom amount and
+returns to the currently selected window. A custom amount remains custom even
+when it happens to equal that window's average. Applying an unchanged automatic
+estimate leaves it following history.
+Turn off estimate explicitly fixes the amount at zero, including when the current
+historical average is already zero but another window contains costs.
+
+For example, supplies average $500 per month over three months and $600 over six
+months. If the planner adjusts supplies to $300, changing to six months keeps
+$300. Use historical amount then changes it to $600. A separately added supplies
+expense is additional to either amount and is never replaced by a history change.
+
+The historical category list includes categories present in any captured window
+and categories with custom amounts. If a category has no costs captured in the
+selected window, its historical baseline is zero. This does not establish that
+the underlying financial imports are complete. A custom amount still applies.
+Negative captured averages remain negative.
+
+Historical estimates use the source's eligible forecast period and have no custom
+schedule. For a separately scheduled cost, add a monthly or one-time expense.
+
+### Expense schedules
+
+Added expenses require a starting month. Its default is the later of the source's
+capture month and availability month. Monthly expenses can use an explicit ending
+month or follow the source's end. Following the source also follows later edits
+to its end date; an explicit expense ending month stays fixed. If the source has
+no end date, the current source forecast horizon limits the calculation. The
+editor displays that end month.
 
 Recurring expenses, including generated estimates, are prorated for days when
 the funding source is active within their applicable months. Source start and
@@ -286,7 +326,8 @@ Later months use all days when the source is active. A fully active month uses
 the full monthly amount; a month with no eligible days has no recurring forecast.
 
 One-time expenses use their full amount when the specified month overlaps the
-source's dates and is the snapshot month or later. They are not prorated by day.
+source's dates and falls within its forecast period, starting with the snapshot
+month or later availability month. They are not prorated by day.
 For an October 16 snapshot, a $1,000 October expense still adds $1,000 if the
 source ended October 10. The expense specifies a month, not a posting date.
 Entries outside the eligible months stay in the saved plan but do not contribute

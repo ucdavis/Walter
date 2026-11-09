@@ -43,13 +43,13 @@ export interface ProjectionLocation {
   fundingMonth: string | null;
   fundingSourceId: number | null;
   issues: string[];
-  section: 'overview' | 'funding' | 'staffing' | null;
+  section: 'overview' | 'funding' | 'staffing' | 'expenses' | null;
 }
 
 export interface ProjectionNavigation {
   appointment?: number;
   fundingMonth?: string;
-  section: 'overview' | 'funding' | 'staffing';
+  section: 'overview' | 'funding' | 'staffing' | 'expenses';
   source?: number;
 }
 
@@ -92,7 +92,8 @@ export function readProjectionLocation(
   if (
     section !== 'overview' &&
     section !== 'funding' &&
-    section !== 'staffing'
+    section !== 'staffing' &&
+    section !== 'expenses'
   ) {
     issues.push('This plan section does not exist.');
   }
@@ -117,7 +118,10 @@ export function readProjectionLocation(
     fundingSourceId,
     issues,
     section:
-      section === 'overview' || section === 'funding' || section === 'staffing'
+      section === 'overview' ||
+      section === 'funding' ||
+      section === 'staffing' ||
+      section === 'expenses'
         ? section
         : null,
   };
@@ -146,9 +150,26 @@ export interface PendingSourceEditor {
   validationMessage: string | null;
 }
 
+export interface PendingExpenseEditor {
+  expenditureCategory: string | null;
+  expenseId: number | null;
+  fundingSourceId: number;
+  hasChanges: boolean;
+  kind: 'expense' | 'historicalExpense';
+  validationMessage: string | null;
+}
+
+export interface PendingHistoryEditor {
+  hasChanges: boolean;
+  kind: 'history';
+  validationMessage: string | null;
+}
+
 export type PendingProjectionEditor =
   | PendingAllocationEditor
   | PendingAppointmentEditor
+  | PendingExpenseEditor
+  | PendingHistoryEditor
   | PendingSourceEditor;
 
 export interface ProjectionPersistenceStatus {
