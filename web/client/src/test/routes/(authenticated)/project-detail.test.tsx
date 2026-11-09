@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import type { ProjectRecord } from '@/queries/project.ts';
@@ -759,11 +759,16 @@ describe('project detail page', () => {
 
       expect(await screen.findByText('03 - Supplies')).toBeInTheDocument();
       expect(screen.queryByText('07 - Travel')).not.toBeInTheDocument();
-      const taskSelector = screen.getByRole('combobox', { name: 'Task' });
-      await user.selectOptions(
-        taskSelector,
-        within(taskSelector).getByRole('option', { name: /T002/ })
-      );
+      const taskSelector = screen.getByRole('combobox', { name: /^Task:/ });
+      await user.click(taskSelector);
+      expect(screen.getByRole('listbox', { name: 'Task' })).toBeInTheDocument();
+      await user.keyboard('{Escape}');
+      expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+      expect(taskSelector).toHaveFocus();
+
+      await user.click(taskSelector);
+      await user.click(screen.getByRole('option', { name: /T002/ }));
+      expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
 
       expect(await screen.findByText('07 - Travel')).toBeInTheDocument();
       expect(screen.queryByText('03 - Supplies')).not.toBeInTheDocument();
@@ -857,8 +862,13 @@ describe('project detail page', () => {
         name: 'Expenditure Category Breakdown',
       });
       expect(
-        screen.getByText('T001 / ORG1 / F1 / P01 / A1')
+        screen.getByRole('combobox', {
+          name: 'Task: T001 – Task 1 / ORG1 / F1 / P01 / A1',
+        })
       ).toBeInTheDocument();
+      expect(
+        screen.queryByText('T001 / ORG1 / F1 / P01 / A1')
+      ).not.toBeInTheDocument();
       expect(screen.queryByText('01 - Salaries')).not.toBeInTheDocument();
       expect(
         await screen.findByRole('link', {
@@ -916,18 +926,16 @@ describe('project detail page', () => {
       expect(await screen.findByText('03 - Supplies')).toBeInTheDocument();
       expect(screen.queryByText('07 - Travel')).not.toBeInTheDocument();
 
-      const taskSelector = screen.getByRole('combobox', { name: 'Task' });
-      await user.selectOptions(
-        taskSelector,
-        within(taskSelector).getByRole('option', { name: /A1/ })
-      );
+      await user.click(screen.getByRole('combobox', { name: /^Task:/ }));
+      await user.click(screen.getByRole('option', { name: /A1/ }));
       expect(await screen.findByText('07 - Travel')).toBeInTheDocument();
       expect(screen.queryByText('03 - Supplies')).not.toBeInTheDocument();
 
-      await user.selectOptions(
-        taskSelector,
-        within(taskSelector).getByRole('option', { name: /—$/ })
+      await user.click(screen.getByRole('combobox', { name: /^Task:/ }));
+      await waitFor(() =>
+        expect(screen.getByRole('option', { name: /A1/ })).toHaveFocus()
       );
+      await user.keyboard('{Home}{Enter}');
       expect(await screen.findByText('03 - Supplies')).toBeInTheDocument();
       expect(screen.queryByText('07 - Travel')).not.toBeInTheDocument();
     } finally {

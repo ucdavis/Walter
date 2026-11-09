@@ -48,7 +48,6 @@ interface ExpenditureCategoryBreakdownProps {
   projectCostsEnabled?: boolean;
   projectNumber: string;
   records: ProjectRecord[];
-  tableLeadingActions?: ReactNode;
 }
 
 const columnHelper = createColumnHelper<ExpenditureCategoryRow>();
@@ -292,7 +291,6 @@ export function ExpenditureCategoryBreakdown({
   projectCostsEnabled = false,
   projectNumber,
   records,
-  tableLeadingActions,
 }: ExpenditureCategoryBreakdownProps) {
   const [selectedView, setSelectedView] = useState<'progress' | 'table' | null>(
     null
@@ -513,14 +511,7 @@ export function ExpenditureCategoryBreakdown({
       initiallyExpanded={isExpanded}
       onOverlayActiveChange={setIsExpanded}
       tableActions={exportButton}
-      tableLeadingActions={
-        tableLeadingActions || graphViewButton ? (
-          <>
-            {tableLeadingActions}
-            {graphViewButton}
-          </>
-        ) : null
-      }
+      tableLeadingActions={graphViewButton}
     />
   );
 }
