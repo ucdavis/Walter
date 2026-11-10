@@ -1,9 +1,8 @@
 namespace server.Helpers;
 
 /// <summary>
-/// Environment feature flags, bound from the "FeatureFlags" configuration section. These gate
-/// optional features per environment (set via appsettings or an Azure App Setting, e.g. env
-/// FeatureFlags__BurndownEnabled). UI flags are surfaced to the SPA via GET /api/system/features.
+/// Backend rollout settings and legacy UI defaults bound from "FeatureFlags". The UI values
+/// seed Microsoft Feature Management only when no Azure App Configuration endpoint is configured.
 /// </summary>
 public sealed class FeatureFlagOptions
 {

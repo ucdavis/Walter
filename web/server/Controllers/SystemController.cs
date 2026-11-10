@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using Microsoft.Identity.Web;
+using Microsoft.FeatureManagement;
 using server.core.Domain;
 using server.core.Services;
 using server.Helpers;
@@ -12,7 +13,6 @@ using Server.Services;
 
 namespace Server.Controllers;
 
-[Authorize(Policy = AuthorizationHelper.Policies.IsSystem)]
 public class SystemController : ApiControllerBase
 {
     private readonly IUserService _userService;
@@ -20,7 +20,9 @@ public class SystemController : ApiControllerBase
     private readonly IDatamartService _datamartService;
     private readonly IUserProfileOrchestrator _profileOrchestrator;
     private readonly RumOptions _rumOptions;
-    private readonly FeatureFlagOptions _featureFlags;
+    private readonly IFeatureManager _features;
+    private readonly IFeatureDefinitionProvider _featureDefinitions;
+    private readonly ILogger<SystemController> _logger;
     private readonly IHostEnvironment _hostEnvironment;
 
     public SystemController(
@@ -29,15 +31,19 @@ public class SystemController : ApiControllerBase
         IDatamartService datamartService,
         IUserProfileOrchestrator profileOrchestrator,
         IOptions<RumOptions> rumOptions,
-        IOptions<FeatureFlagOptions> featureFlags,
-        IHostEnvironment hostEnvironment)
+        IFeatureManager features,
+        IFeatureDefinitionProvider featureDefinitions,
+        IHostEnvironment hostEnvironment,
+        ILogger<SystemController> logger)
     {
         _userService = userService;
         _graphService = graphService;
         _datamartService = datamartService;
         _profileOrchestrator = profileOrchestrator;
         _rumOptions = rumOptions.Value;
-        _featureFlags = featureFlags.Value;
+        _features = features;
+        _featureDefinitions = featureDefinitions;
+        _logger = logger;
         _hostEnvironment = hostEnvironment;
     }
 
@@ -49,20 +55,32 @@ public class SystemController : ApiControllerBase
     }
 
     /// <summary>
-    /// Environment feature flags the SPA reads at load to decide which optional features to show.
-    /// Anonymous + non-sensitive, mirroring rum-config.
+    /// Evaluates optional UI features for the authenticated effective user. These flags do not authorize backend APIs.
     /// </summary>
-    [AllowAnonymous]
     [HttpGet("features")]
-    public ActionResult<ClientFeatures> GetFeatures()
+    [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+    public async Task<ActionResult<ClientFeatures>> GetFeatures()
     {
         return Ok(new ClientFeatures(
-            _featureFlags.BurndownEnabled,
-            _featureFlags.ExpenditureProgressEnabled,
-            _featureFlags.ProjectCostsEnabled,
-            _featureFlags.ProjectionsEnabled));
+            await IsFeatureEnabledAsync(UiFeatureNames.Burndown),
+            await IsFeatureEnabledAsync(UiFeatureNames.ExpenditureProgress),
+            await IsFeatureEnabledAsync(UiFeatureNames.ProjectCosts),
+            await IsFeatureEnabledAsync(UiFeatureNames.Projections)));
     }
 
+    /// <summary>Missing definitions are off and visible in operational logs, including after a live deletion.</summary>
+    private async Task<bool> IsFeatureEnabledAsync(string feature)
+    {
+        if (await _featureDefinitions.GetFeatureDefinitionAsync(feature) is null)
+        {
+            _logger.LogWarning("UI feature {Feature} is missing from the selected configuration; returning disabled.", feature);
+            return false;
+        }
+
+        return await _features.IsEnabledAsync(feature);
+    }
+
+    [Authorize(Policy = AuthorizationHelper.Policies.IsSystem)]
     [HttpGet("emulate/{identifier}")]
     public async Task<IActionResult> Emulate(
         string identifier,

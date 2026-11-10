@@ -6,6 +6,7 @@ import { PageLoading } from '@/components/states/PageLoading.tsx';
 import { isAwardExpired } from '@/lib/date.ts';
 import { getErrorPresentation } from '@/lib/errorPresentation.ts';
 import { summarizeProjectByNumber } from '@/lib/projectSummary.ts';
+import { meQueryOptions } from '@/queries/user.ts';
 import { featureFlagsQueryOptions } from '@/queries/featureFlags.ts';
 import { projectsDetailQueryOptions } from '@/queries/project.ts';
 import { projectCostsQueryOptions } from '@/queries/projectCosts.ts';
@@ -46,9 +47,10 @@ export const Route = createFileRoute(
     context: { queryClient },
     params: { iamId, projectNumber },
   }) => {
+    const user = await queryClient.ensureQueryData(meQueryOptions());
     const [, featureFlags] = await Promise.all([
       queryClient.ensureQueryData(projectsDetailQueryOptions(iamId)),
-      queryClient.ensureQueryData(featureFlagsQueryOptions()),
+      queryClient.ensureQueryData(featureFlagsQueryOptions(user.id)),
     ]);
 
     if (featureFlags.projectCostsEnabled) {
@@ -74,12 +76,13 @@ const ProjectNotFound = ({ projectNumber }: { projectNumber: string }) => (
 );
 
 function RouteComponent() {
+  const user = useUser();
   const { iamId, projectNumber } = Route.useParams();
   const { category, task } = Route.useSearch();
   const { data: projects } = useSuspenseQuery(
     projectsDetailQueryOptions(iamId)
   );
-  const { data: featureFlags } = useSuspenseQuery(featureFlagsQueryOptions());
+  const { data: featureFlags } = useSuspenseQuery(featureFlagsQueryOptions(user.id));
   const summary = summarizeProjectByNumber(projects, projectNumber);
 
   if (!summary) {
