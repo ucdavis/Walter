@@ -212,7 +212,7 @@ describe('appointment allocation period editor', () => {
     expect(screen.queryByLabelText('Funding source 1')).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Add allocation' }));
     await user.selectOptions(screen.getByLabelText('Funding source 1'), '2');
-    await user.type(screen.getByLabelText('Appointment share 1 (%)'), '100');
+    expect(screen.getByLabelText('Appointment share 1 (%)')).toHaveValue('100');
     await user.click(screen.getByRole('button', { name: /^Replace / }));
     await waitFor(() =>
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
@@ -268,7 +268,7 @@ describe('appointment allocation period editor', () => {
       screen.getByLabelText('Funding source 1'),
       'outside'
     );
-    await user.type(screen.getByLabelText('Appointment share 1 (%)'), '100');
+    expect(screen.getByLabelText('Appointment share 1 (%)')).toHaveValue('100');
     await user.click(screen.getByRole('button', { name: /^Replace / }));
     await waitFor(() =>
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
@@ -289,6 +289,18 @@ describe('appointment allocation period editor', () => {
         /Choose another funding source or edit its dates in Funding sources/
       )
     ).toBeInTheDocument();
+    expect(
+      within(screen.getByLabelText('Funding source 1')).getByRole('group', {
+        name: 'Outside selected dates',
+      })
+    ).toHaveTextContent('Project A');
+    expect(
+      screen.getByText(
+        /No coverage in the selected period. This share stays unfunded throughout/
+      )
+    ).toBeInTheDocument();
+    expect(screen.getByText('100% assigned')).toHaveClass('badge-warning');
+
     await user.click(
       screen.getByRole('button', { name: 'Entire appointment' })
     );
@@ -323,7 +335,102 @@ describe('appointment allocation period editor', () => {
     ).toBeInTheDocument();
   });
 
-  it('starts added allocations blank, allows outside funding and totals above 100% at zero FTE, and cancels without changing the plan', async () => {
+  it.each([0.25, 0.123_456_789_012_345])(
+    'defaults a new share to the exact remainder of %s, including outside funding',
+    async (percent) => {
+      const plan = fullYearPlan();
+      plan.content.appointments[0].allocations[0].percent = percent;
+      plan.content.appointments[0].allocations[0].fundingSourceId = null;
+      const { user } = openWorkspace(plan);
+      await openJuly(user);
+      await user.click(screen.getByRole('button', { name: 'Add allocation' }));
+      expect(screen.getByLabelText('Funding source 2')).toHaveValue('');
+      expect(screen.getByLabelText('Appointment share 2 (%)')).toHaveValue(
+        String(Number(((1 - percent) * 100).toPrecision(12)))
+      );
+      await user.selectOptions(screen.getByLabelText('Funding source 2'), '2');
+      await user.click(screen.getByRole('button', { name: /^Replace / }));
+      expect(read().draft.content.appointments[0].allocations).toContainEqual({
+        endDate: '2026-07-31',
+        fundingSourceId: 2,
+        percent: 1 - percent,
+        startDate: '2026-07-01',
+      });
+      expect(read().draft.content.appointments[0].allocations).toContainEqual({
+        endDate: '2026-07-31',
+        fundingSourceId: null,
+        percent,
+        startDate: '2026-07-01',
+      });
+    }
+  );
+
+  it('leaves the default blank when an existing percentage is invalid or overallocated', async () => {
+    const { user } = openWorkspace();
+    await openJuly(user);
+    for (const value of ['', 'not a percentage', '-10', '150']) {
+      const input = screen.getByLabelText('Appointment share 1 (%)');
+      await user.clear(input);
+      if (value) {
+        await user.type(input, value);
+      }
+      await user.click(screen.getByRole('button', { name: 'Add allocation' }));
+      expect(screen.getByLabelText('Appointment share 2 (%)')).toHaveValue('');
+      await user.click(
+        screen.getByRole('button', { name: 'Remove allocation 2' })
+      );
+    }
+  });
+
+  it('groups sources by exact active date coverage and updates groups when dates or modes change', async () => {
+    const plan = fullYearPlan();
+    plan.content.appointments[0].endDate = '2026-07-20';
+    plan.content.fundingSources[0].endDate = '2026-07-20';
+    plan.content.fundingSources[1].startDate = '2026-07-15';
+    const { user } = openWorkspace(plan);
+    await openJuly(user);
+    const sourceSelect = screen.getByLabelText('Funding source 1');
+    expect(
+      within(sourceSelect).getByRole('group', { name: 'Covers selected dates' })
+    ).toHaveTextContent('Project A');
+    expect(
+      within(sourceSelect).getByRole('group', {
+        name: 'Partly covers selected dates',
+      })
+    ).toHaveTextContent('Project B');
+    await user.selectOptions(sourceSelect, '2');
+    expect(screen.getByText('100% assigned')).toHaveClass('badge-warning');
+    expect(
+      screen.getByText(/Partial coverage. This share stays unfunded/)
+    ).toBeInTheDocument();
+    date('Start date', '2026-07-15');
+    date('End date', '2026-07-15');
+    expect(
+      within(sourceSelect).getByRole('group', { name: 'Covers selected dates' })
+    ).toHaveTextContent('Project B');
+    expect(screen.getByText('100% allocated')).toBeInTheDocument();
+    date('End date', '2026-07-14');
+    expect(
+      within(sourceSelect).getByRole('group', { name: 'Check selected dates' })
+    ).toHaveTextContent('Project A');
+    await user.click(
+      screen.getByRole('button', { name: 'Through appointment end' })
+    );
+    expect(
+      within(sourceSelect).getByRole('group', { name: 'Covers selected dates' })
+    ).toHaveTextContent('Project B');
+    await user.click(
+      screen.getByRole('button', { name: 'Entire appointment' })
+    );
+    expect(
+      within(sourceSelect).getByRole('group', {
+        name: 'Partly covers selected dates',
+      })
+    ).toHaveTextContent('Project B');
+    expect(sourceSelect).toHaveValue('2');
+  });
+
+  it('leaves added allocations blank at full allocation, allows outside funding and totals above 100% at zero FTE, and cancels without changing the plan', async () => {
     const plan = fullYearPlan();
     plan.content.appointments[0].fte = 0;
     plan.content.appointments[0].feeRemissionMonthly = 1500;

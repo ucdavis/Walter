@@ -2055,7 +2055,28 @@ click-to-edit, and viewport-fitting mobile cards. Shared tooltip regressions
 cover hover/click/focus interaction and replacing cards across months. React
 Doctor reports 88/100 with 16 warnings and no errors.
 
-This visual increment awaits user review.
+The visual increment was approved and committed as `5ef2c492`.
+
+The allocation follow-up groups funding sources by whether they cover all, part,
+or none of the selected active appointment dates. Groups update when dates or
+replacement modes change; invalid dates show a request to check the range. Every
+source remains selectable. Date-limited splits show an amber assigned percentage,
+with distinct explanations for partial coverage and no coverage. Applying still
+records the allocation without extending source dates or changing the calculation.
+
+Add allocation fills the remaining appointment share, so an existing 25% proposes
+75% and an empty split proposes 100%. Outside funding counts toward the total.
+The exact remainder is preserved on Apply. The new source remains unselected;
+full or excessive totals and invalid percentages leave the new share blank.
+
+Verification passed all 768 client tests across 83 files, production build,
+TypeScript, and scoped lint/formatting. Browser checks confirmed coverage groups,
+partial versus absent coverage, the 25% to 75% default, and applying a mixed split
+while preserving the uncovered portion. Mobile layout remains usable. No browser
+test changes were saved. React Doctor reports 88/100, 17 warnings, and no errors;
+the additional warning concerns component complexity.
+
+This follow-up awaits user review.
 
 ## Deferred: sponsored personnel budgets and category rebudgeting
 

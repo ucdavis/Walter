@@ -28,6 +28,7 @@ import type { PendingAllocationEditor } from '@/lib/projectionWorkspace.ts';
 import type {
   ProjectionAppointment,
   ProjectionDraft,
+  ProjectionFundingSource,
 } from '@/queries/projections.ts';
 import {
   fundingMonthLabel,
@@ -130,6 +131,15 @@ export function AllocationEditor({
     ? 'Choose a funding source and enter an appointment percentage for every allocation.'
     : validateFundingReplacement(plan, appointment.id, range, shares);
   const total = shares.reduce((sum, share) => sum + share.percent, 0);
+  const remainingShare = values.shares.every(
+    (share, index) =>
+      share.percent.trim() &&
+      Number.isFinite(shares[index].percent) &&
+      shares[index].percent >= 0 &&
+      shares[index].percent <= 1
+  )
+    ? Math.max(0, 1 - total)
+    : 0;
   const months = fundingMonths(forecastWindow);
   if (!months.includes(month)) {
     months.push(month);
@@ -165,16 +175,57 @@ export function AllocationEditor({
     [effectiveEnd, appointment.endDate]
       .filter((date) => date !== null)
       .sort()[0] ?? null;
-  const limitedSources = plan.content.fundingSources.filter(
-    (source) =>
-      shares.some(
-        (share) => share.fundingSourceId === source.id && share.percent > 0
-      ) &&
-      ((source.startDate !== null &&
+  const validCoverageRange =
+    (range.startDate === null || isPlanningDate(range.startDate)) &&
+    (range.endDate === null || isPlanningDate(range.endDate)) &&
+    !(range.startDate && range.endDate && range.startDate > range.endDate);
+  const sourceCoverage = (source: ProjectionFundingSource) => {
+    if (!validCoverageRange) {
+      return 'Check selected dates';
+    }
+    if (
+      outsideAppointment ||
+      (source.endDate !== null &&
+        coverageStart !== null &&
+        source.endDate < coverageStart) ||
+      (source.startDate !== null &&
+        coverageEnd !== null &&
+        source.startDate > coverageEnd)
+    ) {
+      return 'Outside selected dates';
+    }
+    if (
+      (source.startDate !== null &&
         (coverageStart === null || source.startDate > coverageStart)) ||
-        (source.endDate !== null &&
-          (coverageEnd === null || source.endDate < coverageEnd)))
-  );
+      (source.endDate !== null &&
+        (coverageEnd === null || source.endDate < coverageEnd))
+    ) {
+      return 'Partly covers selected dates';
+    }
+    return 'Covers selected dates';
+  };
+  const coverageGroups = [
+    'Covers selected dates',
+    'Partly covers selected dates',
+    'Outside selected dates',
+    'Check selected dates',
+  ]
+    .map((label) => ({
+      label,
+      sources: plan.content.fundingSources.filter(
+        (source) => sourceCoverage(source) === label
+      ),
+    }))
+    .filter(({ sources }) => sources.length > 0);
+  const limitedSources = validCoverageRange
+    ? plan.content.fundingSources.filter(
+        (source) =>
+          shares.some(
+            (share) => share.fundingSourceId === source.id && share.percent > 0
+          ) && sourceCoverage(source) !== 'Covers selected dates'
+      )
+    : [];
+  const datesLimitFunding = outsideAppointment || limitedSources.length > 0;
   const partlyOutsideAppointment =
     !outsideAppointment &&
     (Boolean(
@@ -227,11 +278,11 @@ export function AllocationEditor({
             <div className="flex items-center gap-3">
               <span
                 aria-live="polite"
-                className={`badge badge-soft gap-2 p-3 ${total > 1 ? 'badge-error' : 'badge-primary'}`}
+                className={`badge badge-soft gap-2 p-3 ${total > 1 ? 'badge-error' : datesLimitFunding ? 'badge-warning' : 'badge-primary'}`}
               >
                 <CalendarDaysIcon aria-hidden="true" className="size-4" />
                 {Number.isFinite(total)
-                  ? `${percentText(total)}% allocated`
+                  ? `${percentText(total)}% ${datesLimitFunding ? 'assigned' : 'allocated'}`
                   : 'Enter shares'}
               </span>
               <button
@@ -468,9 +519,12 @@ export function AllocationEditor({
                 onClick={() =>
                   form.pushFieldValue('shares', {
                     id: crypto.randomUUID(),
-                    originalPercent: null,
-                    originalText: '',
-                    percent: '',
+                    // Retain the exact remainder when its display is left unchanged.
+                    originalPercent: remainingShare > 0 ? remainingShare : null,
+                    originalText:
+                      remainingShare > 0 ? percentText(remainingShare) : '',
+                    percent:
+                      remainingShare > 0 ? percentText(remainingShare) : '',
                     source: '',
                   })
                 }
@@ -503,10 +557,14 @@ export function AllocationEditor({
                             >
                               <option value="">Choose a source</option>
                               <option value="outside">Outside this plan</option>
-                              {plan.content.fundingSources.map((item) => (
-                                <option key={item.id} value={item.id}>
-                                  {sourceLabel(item)}
-                                </option>
+                              {coverageGroups.map(({ label, sources }) => (
+                                <optgroup key={label} label={label}>
+                                  {sources.map((item) => (
+                                    <option key={item.id} value={item.id}>
+                                      {sourceLabel(item)}
+                                    </option>
+                                  ))}
+                                </optgroup>
                               ))}
                             </select>
                           </label>
@@ -586,7 +644,10 @@ export function AllocationEditor({
                     <li key={source.id}>
                       {sourceLabel(source)}:{' '}
                       {source.startDate ?? 'No start limit'} to{' '}
-                      {source.endDate ?? 'no end limit'}.
+                      {source.endDate ?? 'no end limit'}.{' '}
+                      {sourceCoverage(source) === 'Outside selected dates'
+                        ? 'No coverage in the selected period. This share stays unfunded throughout the period.'
+                        : 'Partial coverage. This share stays unfunded before the source starts or after it ends.'}
                     </li>
                   ))}
                 </ul>
