@@ -20,7 +20,8 @@ passes against isolated local app and datamart databases containing copied real
 portfolio records. Shared datamart deployment, broader financial reconciliation,
 and rollout acceptance remain open. A read-only branch review identified bounded
 structural cleanup rather than a broad rewrite. Stage 5e implements that cleanup
-and passes combined verification. The cleanup is accepted.
+and passes combined verification. The cleanup is accepted and committed as
+`2b7a8e2a`. Stage 5f records the additional isolated real-data reconciliation.
 Sponsored personnel budget availability and category rebudgeting are deferred
 until the end of this plan, potentially after v1. They do not block v1 completion.
 Saving remains available with funding gaps/overlaps.
@@ -1866,6 +1867,59 @@ confirmed initial date focus, Escape discarding an unapplied allocation change,
 and focus returning to the original funding cell. No database or financial-policy
 changes are part of this increment. The isolated real-data backend remains
 available for review.
+
+## Stage 5f: additional isolated real-data reconciliation
+
+Three contrasting portfolios were copied from WalterDev using read-only source
+queries. All inserts and procedure audit writes stayed in the existing isolated
+local datamart. The application database and shared databases were unchanged.
+The copy added 244 projects and 152,494 cost rows, plus associated portfolio,
+personnel, and identity records. Existing review data was preserved.
+
+| Portfolio                           | Active project/task pairs | Eligible sources | Retained appointments | Unsplit appointments requiring salary |
+| ----------------------------------- | ------------------------: | ---------------: | --------------------: | ------------------------------------: |
+| Large appointment roster            |                        67 |               41 |                   988 |                                     3 |
+| Multiple tasks and split earn codes |                        82 |               65 |                    66 |                                     1 |
+| Small mixed portfolio               |                         6 |                2 |                     3 |                                     1 |
+
+The 988-appointment portfolio is excluded from representative acceptance and
+performance requirements at the user's direction. It is suspected to be a
+catch-all or anomalous source portfolio; that explanation has not been verified.
+Its completed arithmetic checks remain part of the evidence totals below, but
+no additional investigation or UI scaling work is planned for that outlier.
+
+Independent aggregation of the copied records matched all 354 budget/category
+rows, 551 monthly cost rows, and 178 returned three/six/twelve-month expense
+averages from the branch seed procedure. The check used a fixed November 9, 2026
+snapshot. The production datamart adapter and seeder then captured fresh drafts
+using the current snapshot clock. All 1,061 captured appointments matched their
+source salary/FTE/CBR grouping rules and independently reconstructed allocation
+shares and dates, including excluded-source funding and residual outside funding.
+After initial task selection, 1,057 appointments remained.
+
+A separate daily calculation matched 198 salary/fringe month-category results
+for November, December, and January from the production TypeScript calculator.
+It independently intersected source, appointment, and allocation dates, applied
+salary/FTE/share and benefit rates, and subtracted snapshot-month booked costs.
+No numerical discrepancy was found in these checks.
+
+The records contain 132 split and eight unsplit earn-code rows. Five retained
+appointments correctly have no imported salary or allocations because their pay
+is unsplit; the user must supply assumptions before saving. One retained
+appointment has no matching CBR lookup and correctly receives the agreed 20%
+default. Neither behavior requires a new policy decision.
+
+Limits: this sample contains no raw missing salary/FTE or unmatched task rows,
+so those cases retain automated-test coverage rather than additional real-data
+evidence. The monthly hand checks cover personnel, not a full independent
+reimplementation of every expense and future COLA calculation. This pass did not
+create additional saved plans, repeat browser/access checks for the new identities,
+or measure browser performance for the 988-appointment portfolio. The earlier
+isolated create/save/reopen/access checks still apply. Shared procedure deployment,
+Entra authentication, and controlled rollout remain unverified.
+
+Private row-level evidence and temporary comparison programs remain outside the
+repository in the local review directory. Only aggregate results are recorded here.
 
 ## Deferred: sponsored personnel budgets and category rebudgeting
 
