@@ -50,6 +50,7 @@ export function ProjectionDialog({
       }
       onCancel={(event) => {
         event.preventDefault();
+        event.stopPropagation();
         onClose();
       }}
       ref={ref}

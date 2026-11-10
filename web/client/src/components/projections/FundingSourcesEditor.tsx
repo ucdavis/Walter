@@ -1,11 +1,13 @@
 import { BanknotesIcon, PlusIcon } from '@heroicons/react/24/outline';
 import { useImperativeHandle, useRef, useState, type Ref } from 'react';
 import { ProjectionDialog } from '@/components/projections/ProjectionDialog.tsx';
+import { FundingSourceCard } from '@/components/projections/FundingSourceCard.tsx';
 import { FundingSourceList } from '@/components/projections/FundingSourceList.tsx';
 import {
   SourceEditor,
   type SourceEditorHandle,
 } from '@/components/projections/SourceEditor.tsx';
+import { SourceSelection } from '@/components/projections/SourceSelection.tsx';
 import { SourcePicker } from '@/components/projections/SourcePicker.tsx';
 import {
   addPlannedSource,
@@ -46,6 +48,7 @@ export function FundingSourcesEditor<T extends ProjectionDraft>({
   const [removing, setRemoving] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const editorRef = useRef<SourceEditorHandle>(null);
+  const selectionRef = useRef<SourceEditorHandle>(null);
   const { draft } = session;
   const editingSourceId = sourceTarget ? sourceTarget.id : editing;
   const source = draft.content.fundingSources.find(
@@ -55,7 +58,10 @@ export function FundingSourcesEditor<T extends ProjectionDraft>({
     ({ id }) => id === removing
   );
   useImperativeHandle(ref, () => ({
-    read: () => editorRef.current?.read() ?? null,
+    read: () =>
+      selectionRef.current?.read()?.hasChanges
+        ? selectionRef.current.read()
+        : (editorRef.current?.read() ?? null),
   }));
   function apply(operation: SourceOperation) {
     const result = onOperation(operation);
@@ -72,7 +78,7 @@ export function FundingSourcesEditor<T extends ProjectionDraft>({
           </h2>
           <p className="mt-1 text-sm leading-relaxed text-base-content/80">
             {initialSelection
-              ? 'Select the funding sources to include in your plan. Highlighted cards are included.'
+              ? 'Search and add the funding sources to include in your plan.'
               : 'Review the funding included in your plan.'}{' '}
             Each task keeps its own balance and forecast.
           </p>
@@ -98,14 +104,57 @@ export function FundingSourcesEditor<T extends ProjectionDraft>({
           </button>
         </div>
       </div>
-      <FundingSourceList
-        initialSelection={initialSelection}
-        onEdit={(id) =>
-          sourceTarget ? sourceTarget.onChange(id) : setEditing(id)
-        }
-        onRemove={setRemoving}
-        sources={draft.content.fundingSources}
-      />
+      {initialSelection ? (
+        <SourceSelection
+          choices={draft.content.fundingSources.map((source) => ({
+            key: String(source.id),
+            label: sourceLabel(source),
+            projectName: source.projectName,
+            projectNumber: source.projectNumber,
+            searchText: [
+              source.awardName,
+              source.awardNumber,
+              source.projectType,
+            ]
+              .filter(Boolean)
+              .join(' '),
+            taskName: source.taskName,
+            taskNumber: source.taskNumber,
+          }))}
+          onChange={(keys) => initialSelection.onChange(keys.map(Number))}
+          ref={selectionRef}
+          renderSource={(choice, grouped) => {
+            const source = draft.content.fundingSources.find(
+              ({ id }) => String(id) === choice.key
+            )!;
+            return (
+              <FundingSourceCard
+                colorIndex={draft.content.fundingSources.indexOf(source)}
+                grouped={grouped}
+                key={choice.key}
+                onEdit={(id) =>
+                  sourceTarget ? sourceTarget.onChange(id) : setEditing(id)
+                }
+                onRemove={(id) =>
+                  initialSelection.onChange(
+                    initialSelection.ids.filter((selected) => selected !== id)
+                  )
+                }
+                source={source}
+              />
+            );
+          }}
+          selected={initialSelection.ids.map(String)}
+        />
+      ) : (
+        <FundingSourceList
+          onEdit={(id) =>
+            sourceTarget ? sourceTarget.onChange(id) : setEditing(id)
+          }
+          onRemove={setRemoving}
+          sources={draft.content.fundingSources}
+        />
+      )}
       <p className="mt-5 text-sm text-base-content/60">
         Balances already account for recorded expenses and commitments. Your
         changes apply to this plan only.

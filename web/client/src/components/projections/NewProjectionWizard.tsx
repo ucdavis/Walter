@@ -252,9 +252,7 @@ export function NewProjectionWizard({
       currentSession.current = captured;
       setSession(captured);
       setRoster(seed.roster);
-      setSelectedSourceIds(
-        seed.draft.content.fundingSources.map(({ id }) => id)
-      );
+      setSelectedSourceIds([]);
     } catch {
       if (mounted.current) {
         setError(
@@ -417,7 +415,7 @@ export function NewProjectionWizard({
         <p className="mt-3 max-w-2xl text-base leading-relaxed text-base-content/80">
           {
             [
-              'Your current funding is filled in. Choose the sources to include in your plan.',
+              'Search and add the funding sources to include in your plan.',
               'Keep current appointments or adjust them for this plan.',
               'Plan for supplies, travel, or a one-time purchase. Start with your historical spending estimates.',
               'Check your assumptions, then create a plan you can explore and adjust.',

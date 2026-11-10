@@ -23,6 +23,7 @@ import type {
 import { routeTree } from '@/routeTree.gen.ts';
 import { server } from '@/test/mswUtils.ts';
 import { SUPPLIES_CATEGORY } from '@/lib/piProjection.ts';
+import { chooseInitialProjects } from '@/test/helpers/projectionSourceSelection.ts';
 
 const portfolioPath = '/projections/IAM-PREVIEW';
 const createUrl = '/api/projections/by-iam/IAM-PREVIEW';
@@ -200,6 +201,7 @@ async function startWizard(
 }
 
 async function reviewWizard(user: ReturnType<typeof userEvent.setup>) {
+  await chooseInitialProjects(user, ['Project A', 'Project B']);
   await waitFor(() =>
     expect(screen.getByRole('button', { name: 'Continue' })).toBeEnabled()
   );
@@ -315,9 +317,10 @@ describe('projection creation and copies', () => {
       );
       expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled();
       release();
-      await waitFor(() =>
-        expect(screen.getByRole('button', { name: 'Continue' })).toBeEnabled()
-      );
+      await screen.findByRole('searchbox', { name: 'Search funding sources' });
+      expect(
+        screen.getByText('0 funding sources selected')
+      ).toBeInTheDocument();
       expect(screen.getByLabelText('Plan name')).toHaveValue(
         'Typed while loading'
       );
@@ -415,7 +418,10 @@ describe('projection creation and copies', () => {
     const user = userEvent.setup();
     try {
       await user.click(await screen.findByRole('button', { name: 'New plan' }));
-      await screen.findAllByRole('checkbox', { name: /^Include / });
+      await screen.findByRole('searchbox', { name: 'Search funding sources' });
+      expect(
+        screen.queryByRole('checkbox', { name: /^Include / })
+      ).not.toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled();
       await user.click(screen.getByRole('button', { name: 'Cancel setup' }));
       await screen.findByRole('button', { name: 'New plan' });
@@ -502,6 +508,7 @@ describe('projection creation and copies', () => {
     const user = userEvent.setup();
     try {
       await startWizard(user);
+      await chooseInitialProjects(user, ['Project A', 'Project B']);
       await waitFor(() =>
         expect(screen.getByRole('button', { name: 'Continue' })).toBeEnabled()
       );
@@ -583,6 +590,7 @@ describe('projection creation and copies', () => {
         screen.queryByRole('combobox', { name: 'Averaging window' })
       ).not.toBeInTheDocument();
       expect(api.creates).toHaveLength(0);
+      await chooseInitialProjects(user, ['Project A', 'Project B']);
       await waitFor(() =>
         expect(screen.getByRole('button', { name: 'Continue' })).toBeEnabled()
       );
@@ -684,6 +692,7 @@ describe('projection creation and copies', () => {
         'Keep my choices'
       );
       await user.click(screen.getByRole('button', { name: 'Retry funding' }));
+      await chooseInitialProjects(user, ['Project A', 'Project B']);
       await waitFor(() =>
         expect(screen.getByRole('button', { name: 'Continue' })).toBeEnabled()
       );
@@ -717,6 +726,7 @@ describe('projection creation and copies', () => {
     const user = userEvent.setup();
     try {
       await startWizard(user, 'Reviewed expense plan');
+      await chooseInitialProjects(user, ['Project A', 'Project B']);
       await waitFor(() =>
         expect(screen.getByRole('button', { name: 'Continue' })).toBeEnabled()
       );

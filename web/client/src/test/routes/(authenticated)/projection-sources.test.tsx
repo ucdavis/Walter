@@ -1,4 +1,11 @@
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
@@ -21,6 +28,7 @@ import type {
 import { routeTree } from '@/routeTree.gen.ts';
 import { sourcePlanningBalance } from '@/lib/projectionSources.ts';
 import { server } from '@/test/mswUtils.ts';
+import { chooseInitialProjects } from '@/test/helpers/projectionSourceSelection.ts';
 
 const portfolioPath = '/projections/IAM-PREVIEW';
 const portfolioApi = '/api/projections/by-iam/IAM-PREVIEW';
@@ -193,6 +201,34 @@ function renderPlan(path = portfolioPath + '/1?section=funding') {
 }
 
 describe('funding source lifecycle', () => {
+  it('continues an empty selection without silently including funding or staff', async () => {
+    const api = setup();
+    const route = renderPlan(portfolioPath);
+    const user = userEvent.setup();
+    try {
+      await user.click(await screen.findByRole('button', { name: 'New plan' }));
+      await user.type(
+        screen.getByLabelText('Plan name'),
+        'Empty planning scenario'
+      );
+      await screen.findByText('0 funding sources selected');
+      await user.click(screen.getByRole('button', { name: 'Continue' }));
+      expect(
+        screen.queryByRole('button', { name: /^Edit appointment for / })
+      ).not.toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: 'Continue' }));
+      await user.click(screen.getByRole('button', { name: 'Continue' }));
+      await user.click(
+        screen.getByRole('button', { name: 'Create plan & open workspace' })
+      );
+      await waitFor(() => expect(api.creates).toHaveLength(1));
+      expect(api.creates[0].draft.content.fundingSources).toEqual([]);
+      expect(api.creates[0].draft.content.appointments).toEqual([]);
+    } finally {
+      route.cleanup();
+    }
+  });
+
   it('opens a source editor by URL and restores the addressed source through Back and Forward', async () => {
     setup();
     const route = renderPlan(portfolioPath + '/1?section=funding&source=2');
@@ -238,15 +274,23 @@ describe('funding source lifecycle', () => {
         screen.getByRole('textbox', { name: 'Plan name' }),
         'Selected task plan'
       );
-      await waitFor(() =>
-        expect(screen.getByRole('button', { name: 'Continue' })).toBeEnabled()
-      );
+      const search = await screen.findByRole('searchbox', {
+        name: 'Search funding sources',
+      });
+      expect(
+        screen.getByText('0 funding sources selected')
+      ).toBeInTheDocument();
+      expect(screen.queryByRole('article')).not.toBeInTheDocument();
+      await user.type(search, 'Task One');
+      const results = screen.getByRole('region', {
+        name: 'Project A search results',
+      });
       await user.click(
-        await screen.findByRole('checkbox', { name: /Task T2/ })
+        within(results).getByRole('button', { name: 'Add this task' })
       );
-      await user.click(
-        screen.getByRole('checkbox', { name: /Other Project Task/ })
-      );
+      expect(
+        screen.getByRole('region', { name: 'Project A selected funding' })
+      ).toHaveTextContent('1 of 2 tasks');
       await user.click(screen.getByRole('button', { name: 'Continue' }));
       await screen.findByRole('button', {
         name: 'Edit appointment for Alex Example',
@@ -302,6 +346,117 @@ describe('funding source lifecycle', () => {
     }
   });
 
+  it('keeps chosen funding when returning to setup and does not add staff from later task imports', async () => {
+    const api = setup();
+    const route = renderPlan(portfolioPath);
+    const user = userEvent.setup();
+    try {
+      await user.click(await screen.findByRole('button', { name: 'New plan' }));
+      await user.type(screen.getByLabelText('Plan name'), 'Chosen staff only');
+      await user.type(
+        await screen.findByRole('searchbox', {
+          name: 'Search funding sources',
+        }),
+        'Task One'
+      );
+      await user.click(
+        within(
+          screen.getByRole('region', { name: 'Project A search results' })
+        ).getByRole('button', { name: 'Add this task' })
+      );
+      await user.click(screen.getByRole('button', { name: 'Continue' }));
+      await screen.findByRole('button', {
+        name: 'Edit appointment for Alex Example',
+      });
+      await user.click(screen.getByRole('button', { name: 'Funding sources' }));
+      expect(screen.getAllByRole('article')).toHaveLength(1);
+      expect(
+        screen.queryByRole('region', { name: 'Project B funding sources' })
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /Edit .*Task T1.*Task One/ })
+      ).toBeInTheDocument();
+      await user.click(
+        screen.getByRole('button', { name: 'Add funding source' })
+      );
+      const picker = screen.getByRole('dialog', { name: 'Add funding source' });
+      await user.type(
+        await within(picker).findByRole('searchbox', {
+          name: 'Search funding sources',
+        }),
+        'Task Two'
+      );
+      await user.click(
+        within(picker).getByRole('button', { name: 'Add this task' })
+      );
+      await user.click(
+        within(picker).getByRole('button', { name: 'Change tasks' })
+      );
+      const taskDialog = screen.getByRole('dialog', {
+        name: 'Change tasks for Project A',
+      });
+      await user.click(
+        within(taskDialog).getByRole('button', { name: 'Clear all' })
+      );
+      // jsdom does not perform Escape's native dialog cancellation.
+      fireEvent(
+        taskDialog,
+        new Event('cancel', { bubbles: false, cancelable: true })
+      );
+      expect(
+        screen.queryByRole('dialog', { name: 'Change tasks for Project A' })
+      ).not.toBeInTheDocument();
+      expect(screen.getByRole('dialog', { name: 'Add funding source' })).toBe(
+        picker
+      );
+      expect(
+        within(picker).getByText('1 funding source selected')
+      ).toBeInTheDocument();
+      await user.click(
+        within(picker).getByRole('button', { name: 'Add selected sources' })
+      );
+      await waitFor(() =>
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      );
+      expect(screen.getAllByRole('article')).toHaveLength(2);
+      await user.click(screen.getByRole('button', { name: 'Continue' }));
+      expect(
+        screen.getByRole('button', {
+          name: 'Edit appointment for Alex Example',
+        })
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', {
+          name: 'Edit appointment for Blair Example',
+        })
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', {
+          name: 'Edit appointment for Casey Example',
+        })
+      ).not.toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: 'Continue' }));
+      await user.click(screen.getByRole('button', { name: 'Continue' }));
+      await user.click(
+        screen.getByRole('button', { name: 'Create plan & open workspace' })
+      );
+      await waitFor(() => expect(api.creates).toHaveLength(1));
+      expect(
+        api.creates[0].draft.content.fundingSources.map(
+          ({ taskNumber }) => taskNumber
+        )
+      ).toEqual(['T1', 'T2']);
+      expect(
+        api.creates[0].draft.content.appointments.map(({ name }) => name)
+      ).toEqual(['Alex Example']);
+      expect(api.creates[0].draft.content.appointments[0].allocations).toEqual([
+        api.plan.content.appointments[0].allocations[0],
+      ]);
+    } finally {
+      route.cleanup();
+    }
+  });
+
   it('renames a task source without changing its captured parent project heading', async () => {
     const api = setup();
     const route = renderPlan(portfolioPath);
@@ -309,12 +464,7 @@ describe('funding source lifecycle', () => {
     try {
       await user.click(await screen.findByRole('button', { name: 'New plan' }));
       await user.type(screen.getByLabelText('Plan name'), 'Renamed task plan');
-      await waitFor(() =>
-        expect(screen.getByRole('button', { name: 'Continue' })).toBeEnabled()
-      );
-      await screen.findByRole('checkbox', {
-        name: 'Include project Project A',
-      });
+      await chooseInitialProjects(user, ['Project A']);
       await user.click(
         screen.getByRole('button', { name: /Edit .*Task T1.*Task One/ })
       );
@@ -322,16 +472,16 @@ describe('funding source lifecycle', () => {
       await user.type(screen.getByLabelText('Source name'), 'Field research');
       await user.click(screen.getByRole('button', { name: 'Apply' }));
       expect(
-        screen.getByRole('checkbox', { name: 'Include project Project A' })
+        screen.getByRole('region', { name: 'Project A selected funding' })
       ).toBeInTheDocument();
       expect(
-        screen.getByRole('checkbox', {
-          name: /Include Field research.*Task T1/,
+        screen.getByRole('button', {
+          name: /Edit Field research.*Task T1/,
         })
       ).toBeInTheDocument();
       expect(
-        screen.queryByRole('checkbox', {
-          name: 'Include project Field research',
+        screen.queryByRole('region', {
+          name: 'Field research selected funding',
         })
       ).not.toBeInTheDocument();
       await user.click(screen.getByRole('button', { name: 'Continue' }));
@@ -419,8 +569,18 @@ describe('funding source lifecycle', () => {
       await user.click(
         screen.getByRole('button', { name: 'Add funding source' })
       );
+      await user.type(
+        await within(
+          screen.getByRole('dialog', { name: 'Add funding source' })
+        ).findByRole('searchbox', {
+          name: 'Search funding sources',
+        }),
+        'Task Two'
+      );
       await user.click(
-        await screen.findByRole('checkbox', { name: /Task T2/ })
+        within(
+          screen.getByRole('region', { name: 'Project A search results' })
+        ).getByRole('button', { name: 'Add this task' })
       );
       await user.click(
         screen.getByRole('button', { name: 'Add selected sources' })

@@ -8,7 +8,7 @@ import {
 } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ProjectionDialog } from '@/components/projections/ProjectionDialog.tsx';
-import { SourceChecklist } from '@/components/projections/SourceChecklist.tsx';
+import { SourceSelection } from '@/components/projections/SourceSelection.tsx';
 import type { SourceEditorHandle } from '@/components/projections/SourceEditor.tsx';
 import {
   addImportedSources,
@@ -37,12 +37,12 @@ export function SourcePicker<T extends ProjectionDraft>({
   session: ProjectionSession<T>;
 }) {
   const catalog = useQuery(projectionSourceCatalogQueryOptions(iamId));
-  const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<string[]>([]);
   const [pending, setPending] = useState(false);
   const selectedKeys = new Set(selected);
   const [error, setError] = useState<string | null>(null);
   const mounted = useRef(true);
+  const selectionRef = useRef<SourceEditorHandle>(null);
   const busy = useRef(false);
   useEffect(() => {
     mounted.current = true;
@@ -53,7 +53,10 @@ export function SourcePicker<T extends ProjectionDraft>({
   useImperativeHandle(ref, () => ({
     read: () => ({
       fundingSourceId: null,
-      hasChanges: selected.length > 0 || pending,
+      hasChanges:
+        selected.length > 0 ||
+        pending ||
+        Boolean(selectionRef.current?.read().hasChanges),
       kind: 'source',
       validationMessage: error,
     }),
@@ -72,14 +75,11 @@ export function SourcePicker<T extends ProjectionDraft>({
       .join(' · '),
     projectName: source.projectName,
     projectNumber: source.projectNumber,
+    taskName: source.taskName,
+    taskNumber: source.taskNumber,
   }));
-  const shown = choices.filter((choice) =>
-    `${choice.label} ${choice.projectNumber}`
-      .toLowerCase()
-      .includes(search.toLowerCase())
-  );
   async function add() {
-    if (busy.current) {
+    if (busy.current || selectionRef.current?.read().hasChanges) {
       return;
     }
     const sources = (catalog.data ?? [])
@@ -122,20 +122,12 @@ export function SourcePicker<T extends ProjectionDraft>({
     }
   }
   return (
-    <ProjectionDialog onClose={onClose} title="Add funding source">
+    <ProjectionDialog onClose={onClose} title="Add funding source" wide>
       <p className="mt-3 text-sm text-base-content/70">
         Capture current financial inputs for selected tasks. Employees and their
         allocations stay unchanged.
       </p>
       <div className="mt-4" inert={pending}>
-        <label className="flex flex-col gap-2 text-sm">
-          Search projects
-          <input
-            className="input input-bordered w-full"
-            onChange={(event) => setSearch(event.target.value)}
-            value={search}
-          />
-        </label>
         {catalog.isPending ? (
           <p className="mt-4" role="status">
             Loading available sources...
@@ -152,13 +144,13 @@ export function SourcePicker<T extends ProjectionDraft>({
             </button>
           </div>
         ) : (
-          <div className="mt-4 max-h-80 overflow-y-auto">
-            <SourceChecklist
-              choices={shown}
+          <div className="mt-4">
+            <SourceSelection
+              choices={choices}
               onChange={setSelected}
+              ref={selectionRef}
               selected={selected}
             />
-            {shown.length === 0 && <p>No matching sources.</p>}
           </div>
         )}
       </div>

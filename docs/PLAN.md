@@ -22,8 +22,9 @@ and rollout acceptance remain open. A read-only branch review identified bounded
 structural cleanup rather than a broad rewrite. Stage 5e implements that cleanup
 and passes combined verification. The cleanup is accepted and committed as
 `2b7a8e2a`. Stage 5f records the additional isolated real-data reconciliation.
-Stage 5g aligns the four-step wizard with the demo and awaits visual review; the
-saved-plan dashboard and workspace are the next visual increment.
+Stage 5g's demo alignment and allocation refinements are accepted and committed
+as `5ef2c492` and `895a5917`. Stage 5h replaces the initially selected portfolio
+with search-and-add funding selection, optimized for one project and its tasks.
 Sponsored personnel budget availability and category rebudgeting are deferred
 until the end of this plan, potentially after v1. They do not block v1 completion.
 Saving remains available with funding gaps/overlaps.
@@ -33,7 +34,7 @@ before the plan can be saved; explicit zero is allowed.
 The projection model is greenfield and uses one current document format.
 The project outlook starts at the snapshot month; historical spending remains
 available for expense estimates and snapshot-month calculations.
-Updated November 9, 2026.
+Updated November 10, 2026.
 
 Build a guided planning workspace where users can adjust a dated portfolio
 snapshot, inspect each project's outlook, and save alternative plans. Keep the
@@ -2076,7 +2077,53 @@ while preserving the uncovered portion. Mobile layout remains usable. No browser
 test changes were saved. React Doctor reports 88/100, 17 warnings, and no errors;
 the additional warning concerns component complexity.
 
-This follow-up awaits user review.
+This follow-up was approved and committed as `895a5917`.
+
+## Stage 5h: search-and-add funding selection
+
+The user selected Search and add after comparing three interactive alternatives.
+New plans start with no funding sources selected. The common path is to find one
+project and add all of its tasks. Selecting one task must also be easy, without
+first reviewing or deselecting the rest of the portfolio.
+
+Search matches project names and numbers, task names and numbers, and useful
+captured metadata where available. Project actions include all eligible tasks in
+that project, regardless of which rows match the query. Task-only matches retain
+their parent project identity and can add just that task. A single-task project
+shows one source card with its name, balance, dates, and editing controls. A
+multi-task project shows its name once above a responsive grid of selected task
+cards. Task cards show the task identity without repeating the project name.
+Change tasks opens a dialog with Select all, Clear all, Cancel, and Apply;
+selection changes take effect only on Apply. Each task remains an
+independent funding source with its own balance and forecast; grouping does not
+pool funds. Planned funding and source detail editing remain available.
+
+Initial staffing still comes only from selected task provenance, once when
+leaving the funding step. Returning to that step preserves the plan's current
+sources and appointments. Later imports add financial inputs without importing
+staff. Saved plans retain their sources; the empty default applies only to new
+setup. The same search-and-add control is used when adding sources to a saved
+plan. There is no new requirement to select at least one source.
+
+Accepted November 10. The shared picker keeps the complete project
+group behind filtered results and prevents duplicate additions. Setup and saved
+plans share visible financial cards; planned funding keeps its name and editing
+controls. The task dialog participates in pending-edit navigation guards. Closing
+a nested task dialog leaves the source picker open. The old selection checklist,
+nested card wrappers, and collapsed funding-detail mode have been removed.
+Source cards omit the captured-funding disclosure; captured inputs remain
+available in the source editor and outlook details.
+
+Validation: all 778 client tests passed across 83 files. TypeScript, the production
+build, changed-file ESLint, and formatting checks passed. React Doctor reported no
+errors (88/100; branch-wide warnings remain). Live browser checks against the
+isolated local databases verified empty setup, adding all nine tasks in a real
+project, selecting a single task by code, and preserving that selection on Back.
+Card refinement checks covered a standalone single-task source, a visible grid
+of three selected tasks, staged Apply, Escape rollback, and nested-dialog Escape.
+Only the appointment associated with that task entered initial staffing; importing
+another source afterward left staffing unchanged. No review plan was saved.
+The user accepted this increment, including the simplified source cards.
 
 ## Deferred: sponsored personnel budgets and category rebudgeting
 
