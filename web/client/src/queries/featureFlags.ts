@@ -11,7 +11,9 @@ export type FeatureFlags = {
 
 export const featureFlagsQueryOptions = (userId: string) => ({
   queryFn: async (): Promise<FeatureFlags> => {
-    return await fetchJson<FeatureFlags>('/api/system/features', { cache: 'no-store' });
+    return await fetchJson<FeatureFlags>('/api/system/features', {
+      cache: 'no-store',
+    });
   },
   // Identity separates browser results only; the server uses the authentication cookie.
   queryKey: ['system', 'features', userId] as const,

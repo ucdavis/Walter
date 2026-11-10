@@ -57,7 +57,9 @@ function RouteComponent() {
   const { data: projects } = useSuspenseQuery(
     projectsDetailQueryOptions(iamId)
   );
-  const { data: featureFlags } = useSuspenseQuery(featureFlagsQueryOptions(user.id));
+  const { data: featureFlags } = useSuspenseQuery(
+    featureFlagsQueryOptions(user.id)
+  );
   const summary = summarizeProjectByNumber(projects, projectNumber);
 
   if (!summary) {

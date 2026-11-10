@@ -34,7 +34,8 @@ public static class FeatureManagementHelper
                 .AddAzureAppConfiguration(options =>
                 {
                     options.Connect(new Uri(endpoint!), new DefaultAzureCredential())
-                    // Replace the provider's default all-keys query in this shared store.
+                    // Suppress the default all-keys query. Load flags only through the native selector
+                    // so the provider tracks every loaded flag for deletion during refresh.
                     .Select(".", environmentName)
                     .UseFeatureFlags(flags => flags
                         .Select("walter.*", environmentName)

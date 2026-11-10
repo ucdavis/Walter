@@ -114,7 +114,7 @@ The example IDs are placeholders. Walter resolves the authenticated user's `ucdP
 
 #### Refresh and validation
 
-Requests trigger a refresh check at most once per ten minutes per server process. Flag definitions and audience rules are cached together; user targeting is evaluated locally and does not cause a store call per user. Ten minutes gives about 144 refresh opportunities per continuously active instance per day, not a guaranteed request total. Startup reads, pagination, retries, additional instances, and developer machines add requests to the shared store's quota. An idle instance does not refresh until requests resume.
+The feature-flag refresh interval is ten minutes per server process, and refresh is request-driven. Flag definitions and audience rules are cached together; user targeting is evaluated locally and does not cause a store call per user. Ten minutes gives about 144 refresh opportunities per continuously active instance per day, not a guaranteed request total. Startup reads, pagination, retries, additional instances, and developer machines add requests to the shared store's quota. An idle instance does not refresh until requests resume.
 
 The client treats results as stale after one minute and polls Walter every two minutes while mounted and active. Feature queries are keyed by the authenticated user's ID, and the API and browser fetch both disable HTTP caching. Login and emulation reload the application. Under steady traffic, allow roughly ten minutes plus the next browser poll for changes; idle apps and background tabs can take longer. Refresh runs asynchronously, so the request that starts a refresh may still see the previous values.
 

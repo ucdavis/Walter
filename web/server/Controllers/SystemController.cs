@@ -248,7 +248,7 @@ public class SystemController : ApiControllerBase
     }
 }
 
-/// <summary>Environment feature flags surfaced to the SPA via GET /api/system/features.</summary>
+/// <summary>UI feature decisions for the authenticated effective user, returned by GET /api/system/features.</summary>
 public sealed record ClientFeatures(
     bool BurndownEnabled,
     bool ExpenditureProgressEnabled,

@@ -124,7 +124,9 @@ export function ProjectsSidebar() {
   const { data: projects } = useSuspenseQuery(
     projectsDetailQueryOptions(iamId)
   );
-  const { data: featureFlags } = useSuspenseQuery(featureFlagsQueryOptions(user.id));
+  const { data: featureFlags } = useSuspenseQuery(
+    featureFlagsQueryOptions(user.id)
+  );
   const currentPathname = useRouterState({
     select: (state) => state.location.pathname,
   });
