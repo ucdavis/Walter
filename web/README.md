@@ -72,7 +72,7 @@ You might also want to set the publisher domain to ucdavis.edu and fill in the o
 
 ### UI feature flags
 
-Walter evaluates native Azure App Configuration feature flags with `Microsoft.Azure.AppConfiguration.AspNetCore` 8.6.1, `Microsoft.FeatureManagement` 4.8.0, and `Azure.Identity` 1.21.0. The browser calls the authenticated `/api/system/features` endpoint and receives the existing four boolean properties. These flags control the existing UI gates; they do not authorize access to backend APIs. `UseGraphQLAPI` remains a separate backend setting, including the legacy `FeatureFlags_UseGraphQLAPI` override.
+Walter evaluates native Azure App Configuration feature flags with the `Microsoft.Azure.AppConfiguration.AspNetCore`, `Microsoft.FeatureManagement`, and `Azure.Identity` packages pinned in [server.csproj](server/server.csproj). The browser calls the authenticated `/api/system/features` endpoint and receives the existing four boolean properties. These flags control the existing UI gates; they do not authorize access to backend APIs. `UseGraphQLAPI` remains a separate backend setting, including the legacy `FeatureFlags_UseGraphQLAPI` override.
 
 The shared Free store `appcs-caes-shared-test` in `rg-shared-appconfig-test`, in the TEST subscription, is for Development and Test only. Production must use its own store in its separate subscription. In the Azure Portal, open **Feature manager** and create native feature flags with these exact, case-sensitive IDs and labels:
 
