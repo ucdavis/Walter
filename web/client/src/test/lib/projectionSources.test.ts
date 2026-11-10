@@ -213,35 +213,52 @@ describe('funding source operations', () => {
     expect(original.draft.content.appointments[0].allocations).toHaveLength(3);
   });
 
-  it('initially selects people by parent source even when their only task is unselected', () => {
+  it('selects exact task provenance, retaining Unsplit appointments but excluding unmatched-only people', () => {
     const original = session();
-    original.draft.content.fundingSources.forEach((source, index) => {
-      source.projectNumber = 'P1';
-      source.taskNumber = `T${index + 1}`;
-      source.sourceKind = 'Task';
+    const appointment = original.draft.content.appointments[0];
+    appointment.hasUnmatchedFunding = true;
+    appointment.allocations.push({
+      ...appointment.allocations[0],
+      fundingSourceId: null,
+      percent: 0.1,
     });
-    original.draft.content.appointments[0].allocations = [
-      original.draft.content.appointments[0].allocations[1],
-    ];
-    original.draft.content.appointments.push({
-      ...structuredClone(original.draft.content.appointments[0]),
-      allocations: [],
-      id: 102,
-    });
+    original.draft.content.appointments.push(
+      {
+        ...structuredClone(appointment),
+        allocations: [],
+        id: 102,
+        monthlySalary: null,
+      },
+      { ...structuredClone(appointment), allocations: [], id: 103 },
+      {
+        ...structuredClone(appointment),
+        allocations: [appointment.allocations[1]],
+        id: 104,
+      }
+    );
     const selected = applied(
       selectInitialSources(
         original,
         [1],
         [
-          { appointmentId: 101, projectNumbers: ['P1'] },
-          { appointmentId: 102, projectNumbers: ['OTHER'] },
+          { appointmentId: 101, fundingSourceIds: [1, 2] },
+          { appointmentId: 102, fundingSourceIds: [1] },
+          { appointmentId: 103, fundingSourceIds: [] },
+          { appointmentId: 104, fundingSourceIds: [2] },
         ]
       )
     );
     expect(selected.draft.content.appointments.map(({ id }) => id)).toEqual([
-      101,
+      101, 102,
     ]);
-    expect(selected.draft.content.appointments[0].allocations).toEqual([]);
+    expect(selected.draft.content.appointments[0]).toMatchObject({
+      allocations: [appointment.allocations[0], appointment.allocations[2]],
+      hasUnmatchedFunding: true,
+    });
+    expect(selected.draft.content.appointments[1]).toMatchObject({
+      allocations: [],
+      monthlySalary: null,
+    });
     expect(selected.draft.content.fundingSources.map(({ id }) => id)).toEqual([
       1,
     ]);

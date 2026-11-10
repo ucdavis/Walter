@@ -1,4 +1,7 @@
-import { PlanDurationField } from '@/components/projections/PlanDetailsFields.tsx';
+import {
+  PlanDurationField,
+  PlanNotesField,
+} from '@/components/projections/PlanDetailsFields.tsx';
 import { ProjectionReviewStep } from '@/components/projections/ProjectionReviewStep.tsx';
 import {
   DEFAULT_FORECAST_MONTHS,
@@ -14,7 +17,7 @@ import {
   validateProjectionExpenses,
   type ExpenseOperation,
 } from '@/lib/projectionExpenses.ts';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useBlocker } from '@tanstack/react-router';
 import { useStore } from '@tanstack/react-form';
 import { useAppForm } from '@/shared/forms/formContext.tsx';
@@ -76,6 +79,9 @@ export function NewProjectionWizard({
     (state) => state.values
   );
   const [selectedSourceIds, setSelectedSourceIds] = useState<number[]>([]);
+  const [selectionTouched, setSelectionTouched] = useState(false);
+  const [returningToReview, setReturningToReview] = useState(false);
+  const seedStarted = useRef(false);
   const [rosterSelected, setRosterSelected] = useState(false);
   const [roster, setRoster] = useState<ProjectionRosterEntry[]>([]);
   const currentSession = useRef<ProjectionSession<ProjectionDraft> | null>(
@@ -87,7 +93,7 @@ export function NewProjectionWizard({
   const [step, setStep] = useState(0);
   const [session, setSession] =
     useState<ProjectionSession<ProjectionDraft> | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] =
     useState<CreateProjectionDraftRequest | null>(null);
@@ -117,8 +123,8 @@ export function NewProjectionWizard({
       name ||
         notes ||
         forecastMonths !== DEFAULT_FORECAST_MONTHS ||
-        session ||
-        loading ||
+        selectionTouched ||
+        (session?.revision ?? 0) > 0 ||
         submitted ||
         sourceEditorRef.current?.read()?.hasChanges ||
         staffingEditorRef.current?.read()?.hasChanges ||
@@ -188,7 +194,7 @@ export function NewProjectionWizard({
   }
 
   async function continueSetup() {
-    if (requestPending.current || detailsValidationMessage) {
+    if (requestPending.current || detailsValidationMessage || pendingEdits()) {
       return;
     }
     setError(null);
@@ -216,24 +222,24 @@ export function NewProjectionWizard({
       setStep(1);
       return;
     }
+  }
+
+  const captureFunding = useCallback(async () => {
+    if (requestPending.current || !mounted.current) {
+      return;
+    }
     requestPending.current = true;
     setLoading(true);
+    setError(null);
     try {
       const seed = await fetchProjectionSeed(iamId, 3);
       if (!mounted.current) {
         return;
       }
-      updateSession(
-        createProjectionSession({
-          ...seed.draft,
-          content: {
-            ...seed.draft.content,
-            forecastMonths,
-            notes: notes.trim() ? notes : null,
-          },
-          name: name.trim(),
-        })
-      );
+      // Financial capture must not replace details typed while the request was pending.
+      const captured = createProjectionSession(seed.draft);
+      currentSession.current = captured;
+      setSession(captured);
       setRoster(seed.roster);
       setSelectedSourceIds(
         seed.draft.content.fundingSources.map(({ id }) => id)
@@ -241,7 +247,7 @@ export function NewProjectionWizard({
     } catch {
       if (mounted.current) {
         setError(
-          'Could not load current portfolio data. Your setup choices are still here. Try Continue again.'
+          'Could not load funding sources. Your setup choices are still here. Retry funding to try again.'
         );
       }
     } finally {
@@ -250,6 +256,51 @@ export function NewProjectionWizard({
         setLoading(false);
       }
     }
+  }, [iamId]);
+
+  useEffect(() => {
+    // StrictMode replays effects. Capture once for this setup, then retry only on request.
+    if (!seedStarted.current) {
+      seedStarted.current = true;
+      void captureFunding();
+    }
+  }, [captureFunding]);
+
+  function pendingEdits() {
+    return (
+      sourceEditorRef.current?.read()?.hasChanges ||
+      staffingEditorRef.current?.read()?.hasChanges ||
+      expenseEditorRef.current?.read()?.hasChanges
+    );
+  }
+
+  function navigateStep(target: number) {
+    if (submitted || requestPending.current) {
+      return;
+    }
+    if (pendingEdits()) {
+      setError('Apply or cancel your open editor before changing steps.');
+      return;
+    }
+    setError(null);
+    setStep(target);
+  }
+
+  function returnToReview() {
+    if (detailsValidationMessage || !session || pendingEdits()) {
+      setError(
+        detailsValidationMessage ??
+          'Apply or cancel your open editor before returning to review.'
+      );
+      return;
+    }
+    const updated = editPlanDetails(session, details);
+    if (!updated.ok) {
+      setError(updated.error);
+      return;
+    }
+    updateSession(updated.session);
+    navigateStep(3);
   }
 
   async function finish() {
@@ -340,16 +391,18 @@ export function NewProjectionWizard({
         {steps[step]}
       </h2>
 
-      <div inert={loading || create.isPending}>
+      <div inert={create.isPending}>
         {step === 0 && (
           <PlanStep
             forecastMonths={forecastMonths}
             name={name}
+            notes={notes}
             onContinue={() => form.handleSubmit()}
             onForecastMonthsChange={(value) =>
               form.setFieldValue('forecastMonths', value)
             }
             onNameChange={(value) => form.setFieldValue('name', value)}
+            onNotesChange={(value) => form.setFieldValue('notes', value)}
           />
         )}
         {step === 0 && session && (
@@ -358,7 +411,13 @@ export function NewProjectionWizard({
             initialSelection={
               rosterSelected
                 ? undefined
-                : { ids: selectedSourceIds, onChange: setSelectedSourceIds }
+                : {
+                    ids: selectedSourceIds,
+                    onChange: (ids) => {
+                      setSelectionTouched(true);
+                      setSelectedSourceIds(ids);
+                    },
+                  }
             }
             onOperation={applySourceOperation}
             ref={sourceEditorRef}
@@ -389,8 +448,8 @@ export function NewProjectionWizard({
             notes={notes}
             onEditStep={(target) => {
               if (!submitted && !requestPending.current) {
-                setError(null);
-                setStep(target);
+                setReturningToReview(true);
+                navigateStep(target);
               }
             }}
             onNotesChange={(value) => form.setFieldValue('notes', value)}
@@ -398,6 +457,21 @@ export function NewProjectionWizard({
           />
         )}
       </div>
+
+      {step === 0 && loading && (
+        <p className="mt-5" role="status">
+          Loading funding sources...
+        </p>
+      )}
+      {step === 0 && !loading && !session && (
+        <button
+          className="btn btn-secondary mt-5"
+          onClick={() => void captureFunding()}
+          type="button"
+        >
+          Retry funding
+        </button>
+      )}
 
       {step > 0 && validationMessage && (
         <p className="mt-5 text-error" role="alert">
@@ -423,31 +497,45 @@ export function NewProjectionWizard({
               className="btn btn-ghost"
               disabled={Boolean(submitted)}
               onClick={() => {
-                setError(null);
-                setStep(step - 1);
+                if (step === 3) {
+                  setReturningToReview(true);
+                }
+                navigateStep(step - 1);
               }}
               type="button"
             >
               Back
             </button>
           )}
+          {returningToReview && step < 3 && (
+            <button
+              className="btn btn-secondary"
+              disabled={
+                Boolean(detailsValidationMessage) ||
+                loading ||
+                Boolean(submitted)
+              }
+              onClick={returnToReview}
+              type="button"
+            >
+              Return to review
+            </button>
+          )}
           {step === 0 ? (
             <button
               className="btn btn-primary"
-              disabled={loading || Boolean(detailsValidationMessage)}
+              disabled={
+                loading || !session || Boolean(detailsValidationMessage)
+              }
               form="projection-setup-plan"
               type="submit"
             >
-              {loading
-                ? 'Loading snapshot...'
-                : session
-                  ? 'Continue'
-                  : 'Load funding sources'}
+              Continue
             </button>
           ) : step < 3 ? (
             <button
               className="btn btn-primary"
-              onClick={() => setStep(step + 1)}
+              onClick={() => navigateStep(step + 1)}
               type="button"
             >
               Continue
@@ -496,15 +584,19 @@ export function NewProjectionWizard({
 function PlanStep({
   forecastMonths,
   name,
+  notes,
   onContinue,
   onForecastMonthsChange,
   onNameChange,
+  onNotesChange,
 }: {
   forecastMonths: number;
   name: string;
+  notes: string;
   onContinue: () => Promise<void>;
   onForecastMonthsChange: (months: number) => void;
   onNameChange: (value: string) => void;
+  onNotesChange: (notes: string) => void;
 }) {
   return (
     <form
@@ -525,6 +617,12 @@ function PlanStep({
           value={name}
         />
       </label>
+      <PlanNotesField
+        label="Description (optional)"
+        onChange={onNotesChange}
+        rows={2}
+        value={notes}
+      />
       <PlanDurationField
         onChange={onForecastMonthsChange}
         value={forecastMonths}

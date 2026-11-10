@@ -292,7 +292,7 @@ export function removeProjectionSource<T extends ProjectionDraft>(
   });
 }
 
-/** Called once when initial source selection finishes. Later removals must retain the roster. */
+/** Selects the initial roster by captured task provenance once. Later removals must retain the roster. */
 export function selectInitialSources<T extends ProjectionDraft>(
   session: ProjectionSession<T>,
   fundingSourceIds: number[],
@@ -313,17 +313,12 @@ export function selectInitialSources<T extends ProjectionDraft>(
   const fundingSources = session.draft.content.fundingSources.filter(({ id }) =>
     ids.has(id)
   );
-  const parentProjects = new Set(
-    fundingSources.map(({ projectNumber }) => projectNumber).filter(Boolean)
-  );
-  const rosterProjects = new Map(
-    roster.map((entry) => [entry.appointmentId, entry.projectNumbers])
+  const rosterSources = new Map(
+    roster.map((entry) => [entry.appointmentId, entry.fundingSourceIds])
   );
   const appointments = session.draft.content.appointments
     .filter((appointment) =>
-      rosterProjects
-        .get(appointment.id)
-        ?.some((parent) => parentProjects.has(parent))
+      rosterSources.get(appointment.id)?.some((sourceId) => ids.has(sourceId))
     )
     .map((appointment) => ({
       ...appointment,

@@ -179,6 +179,7 @@ export function ProjectionReviewStep({
       <PlanNotesField
         disabled={disabled}
         onChange={onNotesChange}
+        rows={2}
         value={notes}
       />
     </div>

@@ -1,6 +1,6 @@
 import { HistoricalExpensesTable } from '@/components/projections/HistoricalExpensesTable.tsx';
 import { AddedExpensesTable } from '@/components/projections/AddedExpensesTable.tsx';
-import { useImperativeHandle, useRef, useState, type Ref } from 'react';
+import { useId, useImperativeHandle, useRef, useState, type Ref } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   ExpenseEditor,
@@ -62,6 +62,7 @@ export function ExpensesEditor<T extends ProjectionDraft>({
   sourceTarget?: { id: number | null; onChange: (id: number) => void };
 }) {
   const { draft } = session;
+  const sourceHelpId = useId();
   const forecastWindow = getProjectionForecastWindow(draft);
   const [selectedId, setSelectedId] = useState<number | null>(
     draft.content.fundingSources[0]?.id ?? null
@@ -126,28 +127,23 @@ export function ExpensesEditor<T extends ProjectionDraft>({
     : null;
   return (
     <div className="mt-5 space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-box bg-base-200 p-4">
-        <div>
-          <p className="font-medium">
-            Spending history: {draft.content.historyMonths} months
-          </p>
-          <p className="mt-1 text-sm">
-            Captured history supplies the monthly estimates for every source.
-          </p>
-        </div>
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <p>Spending history: {draft.content.historyMonths} months</p>
         <button
-          className="btn btn-outline"
+          aria-label="Change history window"
+          className="btn btn-ghost btn-sm"
           onClick={() => setEditing({ kind: 'history' })}
           type="button"
         >
-          Change history window
+          Change
         </button>
       </div>
       {selectedSource ? (
         <>
           <label className="flex max-w-xl flex-col gap-2">
-            Funding source
+            View expenses for
             <select
+              aria-describedby={sourceHelpId}
               className="select select-bordered w-full"
               onChange={(event) => {
                 const id = Number(event.target.value);
@@ -166,6 +162,10 @@ export function ExpensesEditor<T extends ProjectionDraft>({
               ))}
             </select>
           </label>
+          <p className="text-sm" id={sourceHelpId}>
+            Historical estimates and added expenses below belong to this source.
+            New expenses are charged here.
+          </p>
           <p className="text-sm">
             Captured {selectedSource.capturedAt.slice(0, 10)}. Forecast through{' '}
             {fundingMonthLabel(window!.endMonth)}.

@@ -33,23 +33,27 @@ export function PlanDurationField({
 
 export function PlanNotesField({
   disabled,
+  label = 'Plan notes (optional)',
   onChange,
+  rows = 4,
   value,
 }: {
   disabled?: boolean;
+  label?: string;
   onChange: (notes: string) => void;
+  rows?: number;
   value: string;
 }) {
   return (
     <div className="space-y-2">
       <label className="flex flex-col gap-2">
-        Plan notes (optional)
+        {label}
         <textarea
           className="textarea textarea-bordered w-full"
           disabled={disabled}
           maxLength={MAX_PLAN_NOTES_LENGTH}
           onChange={(event) => onChange(event.target.value)}
-          rows={4}
+          rows={rows}
           value={value}
         />
       </label>

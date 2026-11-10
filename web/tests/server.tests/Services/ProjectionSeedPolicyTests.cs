@@ -176,7 +176,7 @@ public sealed class ProjectionSeedPolicyTests
         data.PersonnelProjectNumbers.Should().BeEquivalentTo(["P1", "P2"]);
         response.Roster.Should().ContainSingle().Which.Should().BeEquivalentTo(new
         {
-            AppointmentId = projection.Content.Appointments.Single().Id, ProjectNumbers = new[] { "P1", "P2" },
+            AppointmentId = projection.Content.Appointments.Single().Id, FundingSourceIds = new[] { project.Id },
         });
         var job = projection.Content.Appointments.Should().ContainSingle().Subject;
         job.HasUnmatchedFunding.Should().BeTrue();

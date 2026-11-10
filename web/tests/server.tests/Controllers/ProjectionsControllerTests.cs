@@ -421,7 +421,7 @@ public sealed partial class ProjectionsControllerTests
         });
         response.Roster.Should().ContainSingle().Which.Should().BeEquivalentTo(new
         {
-            AppointmentId = draft.Content.Appointments.Single().Id, ProjectNumbers = new[] { "P1" },
+            AppointmentId = draft.Content.Appointments.Single().Id, FundingSourceIds = new[] { 1 },
         });
         using var json = JsonDocument.Parse(JsonSerializer.Serialize(response, new JsonSerializerOptions(JsonSerializerDefaults.Web)));
         json.RootElement.EnumerateObject().Select(p => p.Name).Should().BeEquivalentTo("draft", "roster");
@@ -430,6 +430,7 @@ public sealed partial class ProjectionsControllerTests
         var contentJson = draftJson.GetProperty("content");
         contentJson.EnumerateObject().Select(p => p.Name).Should().BeEquivalentTo("historyMonths", "forecastMonths", "notes", "fundingSources", "appointments");
         contentJson.GetProperty("appointments")[0].TryGetProperty("sourceProjectNumbers", out _).Should().BeFalse();
+        contentJson.GetProperty("appointments")[0].TryGetProperty("fundingSourceIds", out _).Should().BeFalse();
         contentJson.GetProperty("appointments")[0].GetProperty("isSeeded").GetBoolean().Should().BeTrue();
         var sourceJson = contentJson.GetProperty("fundingSources")[0];
         sourceJson.TryGetProperty("isSeeded", out _).Should().BeFalse();

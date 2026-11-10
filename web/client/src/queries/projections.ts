@@ -135,7 +135,7 @@ export interface Projection extends ProjectionDraft {
 
 export interface ProjectionRosterEntry {
   appointmentId: number;
-  projectNumbers: string[];
+  fundingSourceIds: number[];
 }
 
 export interface ProjectionSeedResponse {

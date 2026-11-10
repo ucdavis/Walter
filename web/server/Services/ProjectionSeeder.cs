@@ -33,10 +33,12 @@ public sealed class ProjectionSeeder(IProjectionDataSource data, TimeProvider? t
         foreach (var group in personnel.Where(r => !r.IsFuture).GroupBy(r => (r.EmployeeId, r.PositionNumber)))
         {
             var rows = group.ToList();
+            // Match raw rows even when Unsplit prevents constructing allocations, so task selection cannot hide that appointment.
+            var fundingSourceIds = rows.Select(Match).Where(m => m.Source is not null)
+                .Select(m => m.Source!.Id).Distinct().Order().ToList();
             var appointment = ToAppointment(appointments.Count + 1, rows, Match);
             appointments.Add(appointment);
-            roster.Add(new(appointment.Id, rows.Select(r => r.ProjectId).Where(p => !string.IsNullOrWhiteSpace(p))
-                .Select(p => p!).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToList()));
+            roster.Add(new(appointment.Id, fundingSourceIds));
         }
         return new(new("New projection", snapshotAtUtc, new ProjectionContent
         {

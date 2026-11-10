@@ -13,8 +13,11 @@ Stage 4a's Other expenses editor is accepted and committed as `ea854416`.
 Stage 4b's plan details, fixed forecast duration, and typed `Content` document are
 accepted and committed as `9a700ef1`. Stage 5a's funding outlook and source
 drilldowns are accepted and committed as `4209d76b`. Stage 5b's saved-plan
-dashboard, current balances, and minimal wizard Review are implemented, verified,
-and accepted.
+dashboard, current balances, and minimal wizard Review are accepted and committed
+as `ce6a7c03`. Stage 5c's workflow refinements and selected-task initial staffing
+are implemented, verified, and accepted. Next is real-backend validation using
+real datamart inputs and an isolated local plan database, with a parallel
+read-only review of the branch for structural cleanup.
 Sponsored personnel budget availability and category rebudgeting are deferred
 until the end of this plan, potentially after v1. They do not block v1 completion.
 Saving remains available with funding gaps/overlaps.
@@ -43,9 +46,10 @@ as each decision is settled and each stage is reviewed.
 - The guided planner defines the intended UI. The earlier timeline and copilot
   are outside the initial feature; prepare for AI editing later.
 - The final wizard order is Funding sources → Staffing → Other expenses → Review.
-  Plan name and forecast duration belong within Funding sources. Optional plan
-  notes belong on Review. The plan-wide spending-history
-  selector belongs within Other expenses, with a three-month default.
+  Plan name, optional description, and forecast duration belong within Funding
+  sources. Description uses the existing plan notes value, which remains editable
+  on Review. The compact plan-wide spending-history selector belongs within Other
+  expenses, with a three-month default.
 - New plan opens the setup wizard. Its final Create plan action saves the
   reviewed inputs, then opens the saved plan's workspace. Canceling before the
   final Create action creates no saved plan; a failed create keeps the wizard
@@ -259,7 +263,7 @@ source omission from existing outside funding, as specified below.
 | 3. Funding and staffing       | Project balances/dates, employee/job assumptions including fee remission, hypothetical hires, and funding schedules                                                              | Review project editing, job editing, and allocation editing separately. Check FTE, date ranges, outside funding, and funding proportions.       |
 | 4. Expenses and details       | Monthly/one-time expenses, generated estimates, history windows, notes, and horizon                                                                                              | Explicit expenses survive regeneration; save/reload preserves the preview.                                                                      |
 | 5. Complete guided experience | Setup composed from existing editors, full project drilldowns, explanations, and controlled rollout                                                                              | Verify the complete workflow and genuine reuse.                                                                                                 |
-| Later, possibly after v1      | [Sponsored personnel budgets and category rebudgeting](#deferred-sponsored-personnel-budgets-and-category-rebudgeting)                                                            | Confirm source rules, explain category availability, and retain understandable scenario adjustments. Not a v1 completion requirement.              |
+| Later, possibly after v1      | [Sponsored personnel budgets and category rebudgeting](#deferred-sponsored-personnel-budgets-and-category-rebudgeting)                                                           | Confirm source rules, explain category availability, and retain understandable scenario adjustments. Not a v1 completion requirement.           |
 
 Every increment includes appropriate automated checks, a way to try the result,
 independent code review, and a review with the user before moving on. Split a stage
@@ -1119,14 +1123,20 @@ staffing under the roster rule below.
 
 ### Initial roster and removal
 
-For now, the initial roster includes only people paid on the selected projects.
-This is deliberately project-level: someone paid only on an unchecked task of
-a selected project still appears, with that task's share unallocated. Narrowing
-the roster to selected tasks is a possible later refinement. Searching for other
-people the PI pays on outside projects is also deferred. The seed response keeps
-appointment-to-project membership in temporary roster metadata. The wizard uses
-it once for initial selection; saved appointments, copies, and later saves do
-not retain it.
+The initial roster includes only appointments with a personnel funding record
+matched to a selected task. The user narrowed the earlier project-level rule
+after the workflow review. Selecting task 01 does not bring in someone paid only
+on task 02 of the same project. Temporary roster metadata identifies matching
+funding-source IDs from the original personnel rows, independently of calculated
+allocations. This keeps an appointment with an unsplit salary record when its task
+matches, so its required salary can still be entered during setup.
+
+Blank or unmatched task records alone cannot establish membership in a selected
+task. An appointment with another matched selected-task record remains included,
+with its unmatched-funding indication and unallocated share preserved. Do not guess
+a task from the project number. The wizard uses roster metadata once for initial
+selection; saved appointments, copies, and later saves do not retain it. Searching
+for other people the PI pays on outside projects remains deferred.
 
 Removing a source discards its captured inputs, source-specific expenses, and
 planning adjustments. Confirm destructive removal. Delete allocations to that
@@ -1152,7 +1162,7 @@ accepted Apply/Cancel, explicit Save, creation retry, and navigation behavior.
 The calculation reference describes task independence, source-specific capture
 dates, planning balances, and planned funding availability.
 
-Verify task independence, selected-project roster filtering, omitted and
+Verify task independence, selected-task roster filtering, omitted and
 unmatched allocations, fresh additions to older snapshots, future availability
 of planned funds, financial-only additions, removal/re-addition, and preservation
 of existing employee assumptions and older plans. Review this increment before
@@ -1162,8 +1172,9 @@ proceeding to the remaining staffing and allocation editors.
 
 The wizard now uses Funding sources → Staffing → Review. Funding sources includes
 the plan name, averaging window, task selection, and shared source editors. The
-initial Continue filters staffing to selected parent projects once. Subsequent
-source changes preserve the roster. Expenses will join the wizard when its
+initial Continue filters staffing once. The original project-level rule was
+narrowed to selected tasks during Stage 5c. Subsequent source changes preserve the
+roster. Expenses will join the wizard when its
 editor is implemented in Stage 4.
 
 The saved workspace has a Funding sources section with Apply/Cancel dialogs,
@@ -1414,8 +1425,11 @@ The user confirmed the expense decisions and authorized implementation on
 November 9, 2026. Plan notes and duration are covered by Stage 4b below.
 
 Use one shared Other expenses editor in the wizard and saved workspace. A funding
-source selector scopes the historical estimates and added expenses. Every expense
-still belongs to one source; there are no split or unallocated expenses.
+source selector scopes the historical estimates and added expenses. Label it
+"View expenses for" and explain that new expenses are charged to that source.
+The Add/Edit dialog identifies the charge source and its captured project/task.
+Changing the page selector does not move existing expenses. Every expense still
+belongs to one source; there are no split or unallocated expenses.
 
 ### Historical estimates
 
@@ -1510,8 +1524,7 @@ No live personnel read, database deployment, push, or merge occurred.
 
 ## Stage 4b: Plan details and forecast duration
 
-The user confirmed these decisions and authorized implementation on November 9,
-2026. The forecast period belongs to the whole plan. Offer 12 and 18 months,
+The user confirmed these decisions and authorized implementation on November 9, 2026. The forecast period belongs to the whole plan. Offer 12 and 18 months,
 defaulting to 12. Count the original snapshot month as the first month, so a
 12-month January snapshot ends in December. Opening or editing a saved plan does
 not move its time anchor.
@@ -1536,8 +1549,9 @@ saved name and duration. Notes have no calculation effect. Limit notes to 2,000
 characters and retain the existing 200-character name limit. Do not add notes
 per source or appointment, or discussion threads.
 
-The four-step wizard keeps name and duration on Funding sources and notes on
-Review. The saved workspace provides Edit plan details for name, duration, and
+The four-step wizard keeps name, duration, and an optional description on Funding
+sources; the same notes value remains editable on Review. The saved workspace
+provides Edit plan details for name, duration, and
 notes. Apply changes the local draft, Cancel leaves it unchanged, and Save plan
 persists the result. Preserve pending-input guards, conflict handling, and newer
 local edits when a save response arrives. The existing reset endpoint preserves
@@ -1729,6 +1743,75 @@ This increment is accepted.
 
 Complete guided-workflow review, temporary preview removal, and rollout criteria
 remain later Stage 5 work. Reset/refresh and category rebudgeting remain deferred.
+
+## Stage 5c: guided-workflow review refinements
+
+The user authorized these refinements after trying the complete guided workflow
+on November 9, 2026. Opening New plan captures funding automatically while name,
+optional description, and duration remain editable. Capture does not require a
+name and does not overwrite details entered while loading. Loading failures offer
+Retry funding; Continue requires a valid name and a completed capture. An untouched
+automatic capture alone does not trigger a discard warning or create a saved plan.
+
+Funding sources use one searchable list grouped under captured project names and
+numbers. Each task's checkbox, dates, planning balance, and Edit action appear
+together. Captured project identity remains visible even when a source is renamed.
+Unchecked tasks remain searchable and can be reselected with their edits intact.
+A project checkbox controls all its tasks, including siblings hidden by search.
+Initial selection has no separate Add funding source dialog; Add planned source
+remains available. After initial selection, adding a real source still imports
+fresh data and does not automatically import staff.
+
+Review's edit links and Back offer Return to review from earlier steps without
+recapturing data or repeating roster selection. Open editor changes must be applied
+or canceled before changing steps. The final Create action and its frozen,
+idempotent retry behavior remain unchanged.
+
+Other expenses shows spending history as a compact inline summary and Change
+button. Its existing dialog still requires Apply or Cancel. A new expense form
+does not show validation errors before interaction; invalid amounts still block
+Apply, and zero or negative amounts remain valid.
+
+Follow-up review narrowed initial staffing to selected tasks rather than their
+parent projects. An appointment funded only by an unchecked sibling task is no
+longer included. Membership comes from the personnel rows even when an unsplit
+salary means allocations cannot be constructed yet. Later source additions and
+removals still retain the existing roster.
+
+The user retained the per-source Other expenses layout. Its selector now states
+which source's history and added expenses are displayed and charged. The expense
+dialog identifies the charge source with its captured project identity. Neither
+the user nor browser investigation could reproduce the reported disappearing
+options; a regression verifies source choices survive adding the first expense,
+with distinct history values and expenses kept on their selected source.
+
+All 729 client tests across 78 files and 179 targeted projection controller and
+seeding tests pass, along with the production build, TypeScript, changed-file
+ESLint, formatting, and diff checks. New regressions cover
+single capture under StrictMode, details entered during loading, untouched-capture
+cancellation, Return to review preserving staffing edits, project/task selection
+and search, clickable checkbox labels, expense validation after interaction,
+selected-task roster membership including unsplit rows, and expense source
+selection retaining all choices and correct ownership.
+Independent review found no remaining correctness issues. React Doctor reported
+no errors and 14 warnings across the staged branch, covering component complexity
+and size, the existing staffing index key, and static loading/chart diagnostics.
+The loading reset is guarded inside `finally`; the chart is already deferred.
+No warnings were suppressed.
+
+Browser checks against the synthetic API verified automatic loading, an unchecked
+task remaining searchable and reselectable, project identity, description retention,
+Return to review, history cancellation, quiet initial expense validation, and final
+creation opening the saved workspace. Selecting only Coastal research task 01
+includes Alex while excluding Jordan and Casey, who are funded only on task 02.
+The funding layout fit at 390px without page
+overflow, and the browser reported no console errors or warnings. These checks do
+not establish real backend, authentication, or datamart readiness.
+
+This increment is accepted. Next, validate the real backend and datamart reads
+using an isolated local plan database. Review the branch for structural cleanup
+in parallel before choosing larger refactors. Broader staffing layout cleanup,
+temporary preview removal, and rollout criteria remain later work.
 
 ## Deferred: sponsored personnel budgets and category rebudgeting
 

@@ -77,6 +77,9 @@ export function ExpenseEditor({
       start: initial.start,
     },
     onSubmit: () => {
+      if (validationMessage) {
+        return;
+      }
       const result = onApply(inputs);
       if (result.ok) {
         onClose();
@@ -85,7 +88,8 @@ export function ExpenseEditor({
       }
     },
   });
-  const values = useStore(form.store, (state) => state.values);
+  const formState = useStore(form.store, (state) => state);
+  const values = formState.values;
   const inputs: ExpenseInputs = {
     amount:
       values.amount === initial.amount && initial.preciseAmount !== null
@@ -107,6 +111,13 @@ export function ExpenseEditor({
       ? 'Enter an amount, including zero or a negative amount, with up to two decimal places.'
       : null;
   const validationMessage = amountError ?? validateExpenseInputs(inputs);
+  const amountMeta = formState.fieldMeta.amount;
+  const showValidation =
+    formState.submissionAttempts > 0 ||
+    (amountError
+      ? amountMeta?.isTouched || amountMeta?.isDirty
+      : formState.isTouched || formState.isDirty);
+  const visibleValidationMessage = showValidation ? validationMessage : null;
   const forecast = validationMessage
     ? null
     : computeExpenseForecast(source, inputs, forecastWindow);
@@ -125,15 +136,22 @@ export function ExpenseEditor({
       onClose={onClose}
       title={expense ? `Edit expense: ${expense.description}` : 'Add expense'}
     >
-      <p className="mt-2 text-sm">Funding source: {sourceLabel(source)}</p>
+      <p className="mt-2 text-sm">
+        <span className="font-medium">Charge to:</span> {sourceLabel(source)}
+      </p>
+      {source.projectNumber && (
+        <p className="mt-1 text-sm text-base-content/70">
+          {[source.projectName, `Project ${source.projectNumber}`]
+            .filter(Boolean)
+            .join(' · ')}
+        </p>
+      )}
       <form
         className="mt-4 space-y-4"
         noValidate
         onSubmit={(event) => {
           event.preventDefault();
-          if (!validationMessage) {
-            void form.handleSubmit();
-          }
+          void form.handleSubmit();
         }}
       >
         <form.Field name="description">
@@ -289,9 +307,9 @@ export function ExpenseEditor({
               : ''}
           </p>
         )}
-        {(validationMessage || error) && (
+        {(visibleValidationMessage || error) && (
           <p className="text-error" role="alert">
-            {validationMessage ?? error}
+            {error ?? visibleValidationMessage}
           </p>
         )}
         <div className="modal-action">

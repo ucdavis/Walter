@@ -252,6 +252,7 @@ describe('other expenses planning controls', () => {
     await user.click(
       await screen.findByRole('button', { name: 'Add expense' })
     );
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(screen.getByLabelText('Expense name')).toHaveValue('');
     expect(screen.getByLabelText('Category')).toHaveValue('');
     expect(screen.getByLabelText('Monthly amount')).toHaveValue('');
@@ -308,6 +309,48 @@ describe('other expenses planning controls', () => {
       window.walterProjectionPreview!.server.read().stored!.content
         .fundingSources[0].expenses
     ).toEqual(read().draft.content.fundingSources[0].expenses);
+  });
+
+  it('waits for amount interaction before showing validation and clears it for valid credits and zero', async () => {
+    const { user } = preview();
+    await user.click(
+      await screen.findByRole('button', { name: 'Add expense' })
+    );
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    await user.type(screen.getByLabelText('Expense name'), 'Travel credit');
+    await user.selectOptions(screen.getByLabelText('Category'), supplies);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    await user.click(screen.getByLabelText('Monthly amount'));
+    await user.tab();
+    expect(screen.getByRole('alert')).toHaveTextContent('Enter an amount');
+    await enter(user, 'Monthly amount', '1.234');
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'up to two decimal places'
+    );
+    expect(
+      screen.getByRole('button', { name: 'Apply expense' })
+    ).toBeDisabled();
+    await enter(user, 'Monthly amount', '-12.50');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Apply expense' })).toBeEnabled();
+    await enter(user, 'Monthly amount', '0');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Apply expense' })).toBeEnabled();
+  });
+
+  it('shows validation on an invalid form submission without adding an expense', async () => {
+    const { user } = preview();
+    await user.click(
+      await screen.findByRole('button', { name: 'Add expense' })
+    );
+    fireEvent.submit(screen.getByLabelText('Expense name').closest('form')!);
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Enter an amount'
+    );
+    expect(read().draft.content.fundingSources[0].expenses).toEqual([]);
+    expect(
+      screen.getByRole('button', { name: 'Apply expense' })
+    ).toBeDisabled();
   });
 
   it('allows a signed one-time credit without end fields and removes it without a second confirmation', async () => {
@@ -390,10 +433,71 @@ describe('other expenses planning controls', () => {
     expect(screen.getByLabelText('End condition')).toHaveValue('source');
   });
 
+  it('keeps every source available after the first expense and scopes history and added expenses to the selected source', async () => {
+    const plan = expensePlan();
+    plan.content.fundingSources[1].name = 'Renamed analysis';
+    plan.content.fundingSources[1].projectName = 'Captured coastal project';
+    plan.content.fundingSources[1].projectNumber = 'P-EXPENSES';
+    plan.content.fundingSources[1].taskNumber = '02';
+    plan.content.fundingSources[1].taskName = 'Analysis';
+    plan.content.fundingSources[1].runRates = [
+      { expenditureCategory: supplies, historyMonths: 3, monthlyAmount: 900 },
+    ];
+    const { user } = preview(plan);
+    const selector = await screen.findByLabelText('View expenses for');
+    const sourceOptions = () =>
+      within(screen.getByLabelText('View expenses for'))
+        .getAllByRole('option')
+        .map((option) => ({
+          text: option.textContent,
+          value: option.getAttribute('value'),
+        }));
+    const initialOptions = sourceOptions();
+    expect(screen.getByText('3-month average: $310.12')).toBeInTheDocument();
+    await user.selectOptions(selector, '2');
+    expect(screen.getByLabelText('View expenses for')).toHaveValue('2');
+    expect(screen.getByText('3-month average: $900.00')).toBeInTheDocument();
+    expect(
+      screen.queryByText('3-month average: $310.12')
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /Historical estimates and added expenses below belong to this source/
+      )
+    ).toBeInTheDocument();
+    await addManual(user, 'Second source purchase', '25');
+    const expenseDialog = screen.getByRole('dialog', { name: 'Add expense' });
+    expect(expenseDialog).toHaveTextContent(
+      'Charge to: Renamed analysis · Task 02 · Analysis'
+    );
+    expect(expenseDialog).toHaveTextContent(
+      'Captured coastal project · Project P-EXPENSES'
+    );
+    await user.click(screen.getByRole('button', { name: 'Apply expense' }));
+    expect(sourceOptions()).toEqual(initialOptions);
+    expect(screen.getByLabelText('View expenses for')).toHaveValue('2');
+    expect(read().draft.content.fundingSources[0].expenses).toEqual([]);
+    expect(read().draft.content.fundingSources[1].expenses).toMatchObject([
+      { amount: 25, description: 'Second source purchase' },
+    ]);
+    await user.selectOptions(screen.getByLabelText('View expenses for'), '1');
+    expect(screen.getByText('3-month average: $310.12')).toBeInTheDocument();
+    expect(
+      screen.getByText('No added expenses for this source.')
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText('Second source purchase')
+    ).not.toBeInTheDocument();
+    expect(sourceOptions()).toEqual(initialOptions);
+    await user.selectOptions(screen.getByLabelText('View expenses for'), '2');
+    expect(screen.getByText('Second source purchase')).toBeInTheDocument();
+    expect(screen.getByText('3-month average: $900.00')).toBeInTheDocument();
+  });
+
   it('guards unapplied typing on departure and resets its source target on browser Back', async () => {
     const { history, user } = preview(expensePlan(), true);
-    await screen.findByLabelText('Funding source');
-    await user.selectOptions(screen.getByLabelText('Funding source'), '2');
+    await screen.findByLabelText('View expenses for');
+    await user.selectOptions(screen.getByLabelText('View expenses for'), '2');
     await addManual(user, 'Project B supplies', '20');
     expect(read().pendingEditor).toMatchObject({
       fundingSourceId: 2,
@@ -413,7 +517,7 @@ describe('other expenses planning controls', () => {
     await waitFor(() =>
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     );
-    expect(screen.getByLabelText('Funding source')).toHaveValue('1');
+    expect(screen.getByLabelText('View expenses for')).toHaveValue('1');
     expect(
       read().draft.content.fundingSources.every(
         (source) => source.expenses.length === 0
@@ -423,7 +527,7 @@ describe('other expenses planning controls', () => {
       history.forward();
     });
     await waitFor(() =>
-      expect(screen.getByLabelText('Funding source')).toHaveValue('2')
+      expect(screen.getByLabelText('View expenses for')).toHaveValue('2')
     );
     expect(read().pendingEditor).toBeNull();
   });

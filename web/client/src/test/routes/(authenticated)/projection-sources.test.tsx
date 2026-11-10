@@ -85,9 +85,9 @@ function taskFixture(): Projection {
 function setup(plan = taskFixture()) {
   let saved = structuredClone(plan);
   const roster = [
-    { appointmentId: 101, projectNumbers: ['PA'] },
-    { appointmentId: 102, projectNumbers: ['PA'] },
-    { appointmentId: 103, projectNumbers: ['PB'] },
+    { appointmentId: 101, fundingSourceIds: [1, 2] },
+    { appointmentId: 102, fundingSourceIds: [2] },
+    { appointmentId: 103, fundingSourceIds: [3] },
   ];
   const creates: CreateProjectionDraftRequest[] = [];
   const saves: SaveProjectionRequest[] = [];
@@ -228,7 +228,7 @@ describe('funding source lifecycle', () => {
     }
   });
 
-  it('selects individual tasks but keeps the initial roster at selected project scope', async () => {
+  it('retains only the initial personnel tied to selected tasks', async () => {
     const api = setup();
     const route = renderPlan(portfolioPath);
     const user = userEvent.setup();
@@ -238,8 +238,8 @@ describe('funding source lifecycle', () => {
         screen.getByRole('textbox', { name: 'Plan name' }),
         'Selected task plan'
       );
-      await user.click(
-        screen.getByRole('button', { name: 'Load funding sources' })
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: 'Continue' })).toBeEnabled()
       );
       await user.click(
         await screen.findByRole('checkbox', { name: /Task T2/ })
@@ -252,10 +252,10 @@ describe('funding source lifecycle', () => {
         name: 'Edit appointment for Alex Example',
       });
       expect(
-        screen.getByRole('button', {
+        screen.queryByRole('button', {
           name: 'Edit appointment for Blair Example',
         })
-      ).toBeInTheDocument();
+      ).not.toBeInTheDocument();
       expect(
         screen.queryByRole('button', {
           name: 'Edit appointment for Casey Example',
@@ -272,13 +272,10 @@ describe('funding source lifecycle', () => {
       ]);
       expect(
         api.creates[0].draft.content.appointments.map(({ name }) => name)
-      ).toEqual(['Alex Example', 'Blair Example']);
+      ).toEqual(['Alex Example']);
       expect(api.creates[0].draft.content.appointments[0].allocations).toEqual([
         api.plan.content.appointments[0].allocations[0],
       ]);
-      expect(api.creates[0].draft.content.appointments[1].allocations).toEqual(
-        []
-      );
       expect(Object.keys(api.creates[0]).sort()).toEqual([
         'creationKey',
         'draft',
@@ -298,6 +295,7 @@ describe('funding source lifecycle', () => {
       for (const appointment of api.creates[0].draft.content.appointments) {
         expect(appointment).not.toHaveProperty('sourceProjectNumbers');
         expect(appointment).not.toHaveProperty('projectNumbers');
+        expect(appointment).not.toHaveProperty('fundingSourceIds');
       }
     } finally {
       route.cleanup();
@@ -311,8 +309,8 @@ describe('funding source lifecycle', () => {
     try {
       await user.click(await screen.findByRole('button', { name: 'New plan' }));
       await user.type(screen.getByLabelText('Plan name'), 'Renamed task plan');
-      await user.click(
-        screen.getByRole('button', { name: 'Load funding sources' })
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: 'Continue' })).toBeEnabled()
       );
       await screen.findByRole('checkbox', {
         name: 'Include project Project A',

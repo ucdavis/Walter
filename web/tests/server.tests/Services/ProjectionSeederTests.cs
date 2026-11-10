@@ -195,6 +195,39 @@ public sealed class ProjectionSeederTests
         job.Allocations.Should().BeEmpty();
     }
 
+    [Theory]
+    [InlineData("TASK01", null, true)]
+    [InlineData("TASK01", "Unsplit", true)]
+    [InlineData("", null, false)]
+    [InlineData("UNKNOWN", null, false)]
+    [InlineData("", "Unsplit", false)]
+    public async Task Records_exact_task_provenance_independently_of_constructed_allocations(string task, string? status, bool matched)
+    {
+        var response = await new ProjectionSeeder(Data(Line(100, status: status, task: task)))
+            .CaptureDraftAsync("PI", 3, null, null, default);
+
+        var entry = response.Roster.Should().ContainSingle().Subject;
+        entry.AppointmentId.Should().Be(response.Draft.Content.Appointments.Single().Id);
+        entry.FundingSourceIds.Should().BeEquivalentTo(matched ? new[] { 1 } : Array.Empty<int>());
+        if (status == "Unsplit")
+        {
+            response.Draft.Content.Appointments.Single().MonthlySalary.Should().BeNull();
+            response.Draft.Content.Appointments.Single().Allocations.Should().BeEmpty();
+        }
+    }
+
+    [Fact]
+    public async Task Task_provenance_excludes_future_and_unmatched_rows_but_retains_matches_with_unmatched_warnings()
+    {
+        var data = Data(Line(50), Line(50, task: "UNKNOWN"), Line(100, isFuture: true, task: "TASK02"));
+        data.Seed.Projects.Add(new() { ProjectNumber = "P1", TaskNumber = "TASK02" });
+        var response = await new ProjectionSeeder(data).CaptureDraftAsync("PI", 3, null, null, default);
+
+        response.Roster.Should().ContainSingle().Which.FundingSourceIds.Should().Equal(1);
+        response.Draft.Content.Appointments.Single().HasUnmatchedFunding.Should().BeTrue();
+        response.Draft.Content.Appointments.Single().Allocations.Should().ContainSingle().Which.FundingSourceId.Should().Be(1);
+    }
+
     [Fact]
     public async Task Seed_preserves_zero_and_negative_captured_averages_for_every_window()
     {

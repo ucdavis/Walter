@@ -1,3 +1,4 @@
+import { StrictMode } from 'react';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -26,7 +27,7 @@ import { SUPPLIES_CATEGORY } from '@/lib/piProjection.ts';
 const portfolioPath = '/projections/IAM-PREVIEW';
 const createUrl = '/api/projections/by-iam/IAM-PREVIEW';
 
-function renderPlans() {
+function renderPlans(strict = false) {
   window.history.replaceState(null, '', portfolioPath);
   const history = createBrowserHistory();
   const queryClient = new QueryClient({
@@ -42,7 +43,13 @@ function renderPlans() {
   });
   const { unmount } = render(
     <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
+      {strict ? (
+        <StrictMode>
+          <RouterProvider router={router} />
+        </StrictMode>
+      ) : (
+        <RouterProvider router={router} />
+      )}
     </QueryClientProvider>
   );
   return {
@@ -64,9 +71,7 @@ function handleLifecycle(plans: Projection[] = []) {
     name: example.name,
     seededAt: '2026-01-01T00:00:00.1234567Z',
   };
-  const roster = [
-    { appointmentId: 101, projectNumbers: ['SYNTHETIC-1', 'SYNTHETIC-2'] },
-  ];
+  const roster = [{ appointmentId: 101, fundingSourceIds: [1, 2] }];
   for (const source of seed.content.fundingSources) {
     source.capturedAt = seed.seededAt;
   }
@@ -195,8 +200,8 @@ async function startWizard(
 }
 
 async function reviewWizard(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(
-    screen.getByRole('button', { name: 'Load funding sources' })
+  await waitFor(() =>
+    expect(screen.getByRole('button', { name: 'Continue' })).toBeEnabled()
   );
   await screen.findByRole('button', { name: 'Continue' });
   await user.click(screen.getByRole('button', { name: 'Continue' }));
@@ -227,6 +232,154 @@ async function changeHistoryWindow(
 }
 
 describe('projection creation and copies', () => {
+  it('captures once automatically while keeping details typed during a delayed response', async () => {
+    const api = handleLifecycle();
+    let release!: () => void;
+    const responseReady = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let captures = 0;
+    server.use(
+      http.get(createUrl + '/seed', async () => {
+        captures++;
+        await responseReady;
+        return HttpResponse.json({ draft: api.seed, roster: api.roster });
+      })
+    );
+    const route = renderPlans(true);
+    const user = userEvent.setup();
+    try {
+      await user.click(await screen.findByRole('button', { name: 'New plan' }));
+      await screen.findByText('Loading funding sources...');
+      expect(
+        screen.queryByRole('button', { name: 'Load funding sources' })
+      ).not.toBeInTheDocument();
+      await user.type(
+        screen.getByLabelText('Plan name'),
+        'Typed while loading'
+      );
+      await user.type(
+        screen.getByLabelText('Description (optional)'),
+        'Keep the renewal assumption.'
+      );
+      await user.selectOptions(
+        screen.getByLabelText('Forecast duration'),
+        '18'
+      );
+      expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled();
+      release();
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: 'Continue' })).toBeEnabled()
+      );
+      expect(screen.getByLabelText('Plan name')).toHaveValue(
+        'Typed while loading'
+      );
+      expect(screen.getByLabelText('Description (optional)')).toHaveValue(
+        'Keep the renewal assumption.'
+      );
+      expect(screen.getByLabelText('Forecast duration')).toHaveValue('18');
+      await reviewWizard(user);
+      for (const label of [
+        'Edit staffing',
+        'Edit funding sources',
+        'Edit other expenses',
+      ]) {
+        await user.click(screen.getByRole('button', { name: label }));
+        if (label === 'Edit staffing') {
+          await user.click(
+            screen.getByRole('button', {
+              name: 'Edit appointment for Alex Example',
+            })
+          );
+          await user.clear(screen.getByLabelText('Full-time annual salary'));
+          await user.type(
+            screen.getByLabelText('Full-time annual salary'),
+            '84000'
+          );
+          await user.click(screen.getByRole('button', { name: 'Apply' }));
+        }
+        await user.click(
+          screen.getByRole('button', { name: 'Return to review' })
+        );
+        await screen.findByRole('button', {
+          name: 'Create plan & open workspace',
+        });
+      }
+      expect(screen.getByLabelText('Plan notes (optional)')).toHaveValue(
+        'Keep the renewal assumption.'
+      );
+      await user.click(
+        screen.getByRole('button', { name: 'Create plan & open workspace' })
+      );
+      await waitFor(() => expect(api.creates).toHaveLength(1));
+      expect(api.creates[0].draft).toMatchObject({
+        content: { forecastMonths: 18, notes: 'Keep the renewal assumption.' },
+        name: 'Typed while loading',
+      });
+      expect(api.creates[0].draft.content.appointments[0].monthlySalary).toBe(
+        7000
+      );
+      expect(captures).toBe(1);
+    } finally {
+      release();
+      route.cleanup();
+    }
+  });
+
+  it('cancels untouched automatic capture without a discard prompt and ignores its late response', async () => {
+    const api = handleLifecycle();
+    let release!: () => void;
+    const responseReady = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    server.use(
+      http.get(createUrl + '/seed', async () => {
+        await responseReady;
+        return HttpResponse.json({ draft: api.seed, roster: api.roster });
+      })
+    );
+    const route = renderPlans();
+    const user = userEvent.setup();
+    try {
+      await user.click(await screen.findByRole('button', { name: 'New plan' }));
+      await screen.findByText('Loading funding sources...');
+      await user.click(screen.getByRole('button', { name: 'Cancel setup' }));
+      await screen.findByRole('button', { name: 'New plan' });
+      expect(
+        screen.queryByRole('dialog', { name: 'Leave setup?' })
+      ).not.toBeInTheDocument();
+      await act(async () => {
+        release();
+        await responseReady;
+      });
+      expect(
+        screen.queryByRole('region', { name: 'New plan setup' })
+      ).not.toBeInTheDocument();
+      expect(api.creates).toHaveLength(0);
+    } finally {
+      release();
+      route.cleanup();
+    }
+  });
+
+  it('does not treat a completed automatic capture as user work or allow an unnamed plan to continue', async () => {
+    handleLifecycle();
+    const route = renderPlans();
+    const user = userEvent.setup();
+    try {
+      await user.click(await screen.findByRole('button', { name: 'New plan' }));
+      await screen.findAllByRole('checkbox', { name: /Include project/ });
+      expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled();
+      await user.click(screen.getByRole('button', { name: 'Cancel setup' }));
+      await screen.findByRole('button', { name: 'New plan' });
+      expect(
+        screen.queryByRole('dialog', { name: 'Leave setup?' })
+      ).not.toBeInTheDocument();
+    } finally {
+      route.cleanup();
+    }
+  });
+
   it('retains wizard duration and notes when revisiting setup and creates them with the original snapshot', async () => {
     const api = handleLifecycle();
     api.seed.content.appointments[0].allocations[0].percent = 0.25;
@@ -302,8 +455,8 @@ describe('projection creation and copies', () => {
     const user = userEvent.setup();
     try {
       await startWizard(user);
-      await user.click(
-        screen.getByRole('button', { name: 'Load funding sources' })
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: 'Continue' })).toBeEnabled()
       );
       await user.click(await screen.findByRole('button', { name: 'Continue' }));
       await screen.findByText(/An imported funding task could not be matched/);
@@ -383,8 +536,8 @@ describe('projection creation and copies', () => {
         screen.queryByRole('combobox', { name: 'Averaging window' })
       ).not.toBeInTheDocument();
       expect(api.creates).toHaveLength(0);
-      await user.click(
-        screen.getByRole('button', { name: 'Load funding sources' })
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: 'Continue' })).toBeEnabled()
       );
       await screen.findByRole('button', { name: 'Continue' });
       await user.click(screen.getByRole('button', { name: 'Continue' }));
@@ -479,15 +632,13 @@ describe('projection creation and copies', () => {
     const user = userEvent.setup();
     try {
       await startWizard(user, 'Keep my choices');
-      await user.click(
-        screen.getByRole('button', { name: 'Load funding sources' })
-      );
       await screen.findByRole('alert');
       expect(screen.getByRole('textbox', { name: 'Plan name' })).toHaveValue(
         'Keep my choices'
       );
-      await user.click(
-        screen.getByRole('button', { name: 'Load funding sources' })
+      await user.click(screen.getByRole('button', { name: 'Retry funding' }));
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: 'Continue' })).toBeEnabled()
       );
       await user.click(await screen.findByRole('button', { name: 'Continue' }));
       await screen.findByRole('button', {
@@ -519,8 +670,8 @@ describe('projection creation and copies', () => {
     const user = userEvent.setup();
     try {
       await startWizard(user, 'Reviewed expense plan');
-      await user.click(
-        screen.getByRole('button', { name: 'Load funding sources' })
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: 'Continue' })).toBeEnabled()
       );
       await user.click(await screen.findByRole('button', { name: 'Continue' }));
       await screen.findByRole('button', {

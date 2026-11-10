@@ -1,19 +1,16 @@
 import { useImperativeHandle, useRef, useState, type Ref } from 'react';
 import { ProjectionDialog } from '@/components/projections/ProjectionDialog.tsx';
-import { SourceChecklist } from '@/components/projections/SourceChecklist.tsx';
+import { FundingSourceList } from '@/components/projections/FundingSourceList.tsx';
 import {
   SourceEditor,
   type SourceEditorHandle,
 } from '@/components/projections/SourceEditor.tsx';
 import { SourcePicker } from '@/components/projections/SourcePicker.tsx';
-import { formatCurrency } from '@/lib/currency.ts';
 import {
   addPlannedSource,
   editProjectionSource,
   removeProjectionSource,
-  sourceCapturedBalance,
   sourceLabel,
-  sourcePlanningBalance,
   type SourceOperation,
   type SourceOperationResult,
 } from '@/lib/projectionSources.ts';
@@ -49,7 +46,6 @@ export function FundingSourcesEditor<T extends ProjectionDraft>({
   const [error, setError] = useState<string | null>(null);
   const editorRef = useRef<SourceEditorHandle>(null);
   const { draft } = session;
-  const selectedIds = new Set(initialSelection?.ids ?? []);
   const editingSourceId = sourceTarget ? sourceTarget.id : editing;
   const source = draft.content.fundingSources.find(
     ({ id }) => id === editingSourceId
@@ -68,80 +64,16 @@ export function FundingSourcesEditor<T extends ProjectionDraft>({
   return (
     <div className="mt-5">
       <p className="text-sm">Each task keeps its own balance and forecast.</p>
-      {initialSelection && (
-        <div className="mt-4">
-          <SourceChecklist
-            choices={draft.content.fundingSources.map((source) => ({
-              key: String(source.id),
-              label: sourceLabel(source),
-              projectName: source.projectName,
-              projectNumber: source.projectNumber,
-            }))}
-            onChange={(keys) => initialSelection.onChange(keys.map(Number))}
-            selected={initialSelection.ids.map(String)}
-          />
-        </div>
-      )}
-      <div className="mt-4 grid gap-4 sm:grid-cols-2">
-        {draft.content.fundingSources
-          .filter((source) => !initialSelection || selectedIds.has(source.id))
-          .map((source) => (
-            <article
-              className="rounded-box border border-base-300 p-5"
-              key={source.id}
-            >
-              <h3 className="text-lg font-bold">{sourceLabel(source)}</h3>
-              <p className="mt-1 text-sm">
-                {source.sourceKind === 'Planned'
-                  ? 'Planned funding'
-                  : `Captured ${source.capturedAt.slice(0, 10)}`}
-              </p>
-              <p className="mt-1 text-sm">
-                {source.startDate ?? 'No start date'} to{' '}
-                {source.endDate ?? 'No end date'}
-              </p>
-              <dl className="mt-3 space-y-1 text-sm">
-                {source.sourceKind !== 'Planned' && (
-                  <div className="flex justify-between gap-3">
-                    <dt>Captured balance</dt>
-                    <dd>{formatCurrency(sourceCapturedBalance(source))}</dd>
-                  </div>
-                )}
-                <div className="flex justify-between gap-3 font-semibold">
-                  <dt>Planning balance</dt>
-                  <dd>{formatCurrency(sourcePlanningBalance(source))}</dd>
-                </div>
-              </dl>
-              <div className="mt-4 flex flex-wrap gap-2">
-                <button
-                  className="btn btn-outline btn-sm"
-                  onClick={() =>
-                    sourceTarget
-                      ? sourceTarget.onChange(source.id)
-                      : setEditing(source.id)
-                  }
-                  type="button"
-                >
-                  Edit {sourceLabel(source)}
-                </button>
-                {!initialSelection && (
-                  <button
-                    className="btn btn-ghost btn-sm"
-                    onClick={() => setRemoving(source.id)}
-                    type="button"
-                  >
-                    Remove {sourceLabel(source)}
-                  </button>
-                )}
-              </div>
-            </article>
-          ))}
-      </div>
-      {draft.content.fundingSources.length === 0 && (
-        <p className="mt-4">No funding sources in this plan.</p>
-      )}
+      <FundingSourceList
+        initialSelection={initialSelection}
+        onEdit={(id) =>
+          sourceTarget ? sourceTarget.onChange(id) : setEditing(id)
+        }
+        onRemove={setRemoving}
+        sources={draft.content.fundingSources}
+      />
       <div className="mt-5 flex flex-wrap gap-3">
-        {iamId && (
+        {iamId && !initialSelection && (
           <button
             className="btn btn-outline"
             onClick={() => setEditing('import')}
