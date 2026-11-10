@@ -35,7 +35,7 @@ public static class FeatureManagementHelper
                 {
                     options.Connect(new Uri(endpoint!), new DefaultAzureCredential())
                     // Replace the provider's default all-keys query in this shared store.
-                    .Select(".appconfig.featureflag/walter.*", environmentName)
+                    .Select(".", environmentName)
                     .UseFeatureFlags(flags => flags
                         .Select("walter.*", environmentName)
                         .SetRefreshInterval(TimeSpan.FromMinutes(10)))
@@ -56,8 +56,6 @@ public static class FeatureManagementHelper
                 configuration.GetValue<bool>($"FeatureFlags:{flag.Key}").ToString()));
             featureConfiguration = new ConfigurationBuilder()
                 .AddInMemoryCollection(defaults)
-                // Native local feature definitions may override the legacy startup defaults.
-                .AddConfiguration(configuration)
                 .Build();
         }
 

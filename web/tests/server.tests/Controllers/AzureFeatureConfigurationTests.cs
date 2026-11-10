@@ -1,5 +1,7 @@
+using System.Text.Json;
 using Azure;
 using Azure.Core;
+using Azure.Core.Pipeline;
 using Azure.Data.AppConfiguration;
 using FluentAssertions;
 using Microsoft.Extensions.Azure;
@@ -43,8 +45,10 @@ public class AzureFeatureConfigurationTests
         (await manager.IsEnabledAsync(UiFeatureNames.ProjectCosts)).Should().BeFalse();
         (await manager.IsEnabledAsync(UiFeatureNames.Projections)).Should().BeFalse();
         (await manager.GetFeatureNamesAsync().ToListAsync()).Should().Equal(UiFeatureNames.Burndown);
-        client.Selectors.Should().NotBeEmpty().And.OnlyContain(selector =>
-            selector.KeyFilter == ".appconfig.featureflag/walter.*" && selector.LabelFilter == environment);
+        client.Selectors.Should().HaveCount(2).And.OnlyContain(selector =>
+            (selector.KeyFilter == "." || selector.KeyFilter == ".appconfig.featureflag/walter.*") &&
+            selector.LabelFilter == environment);
+        client.Selectors.Count(selector => selector.KeyFilter == ".appconfig.featureflag/walter.*").Should().Be(1);
 
         // Middleware must find the refresher through the chained configuration root.
         var refresher = provider.GetRequiredService<IConfigurationRefresherProvider>().Refreshers.Single();
@@ -55,6 +59,54 @@ public class AzureFeatureConfigurationTests
             (await manager.IsEnabledAsync(UiFeatureNames.Burndown)).Should().BeTrue();
         }
         client.Selectors.Should().HaveCount(startupRequests, "evaluations and refresh calls inside the interval use the shared cache");
+
+        client.ReplaceSettings([]);
+        await RefreshNow(refresher);
+        client.Selectors.Count.Should().BeGreaterThan(startupRequests);
+        (await manager.IsEnabledAsync(UiFeatureNames.Burndown)).Should().BeFalse();
+        (await manager.GetFeatureNamesAsync().ToListAsync()).Should().BeEmpty();
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("WrongLabel")]
+    public async Task Flags_removed_between_startup_reads_stay_missing_after_due_refresh(string? newLabel)
+    {
+        string[] names = [
+            "walter.BurndownEnabled", "walter.ExpenditureProgressEnabled",
+            "walter.ProjectCostsEnabled", "walter.ProjectionsEnabled",
+        ];
+        var client = new StoreClient(names.Select(name => Flag(name, "Test")).ToArray())
+        {
+            SettingsAfterFirstRead = newLabel is null ? [] : names.Select(name => Flag(name, newLabel)).ToArray(),
+        };
+        var configuration = LocalDefaults();
+        using var configurationLifetime = (IDisposable)configuration;
+        var services = new ServiceCollection();
+        services.AddLogging();
+        using var database = TestDbContextFactory.CreateInMemory();
+        services.AddSingleton(database);
+        services.AddScoped<IUserService, UserService>();
+        services.AddSingleton<IConfiguration>(configuration);
+        services.AddWalterFeatureManagement(configuration, "Test", new ClientFactory(client)).Should().BeTrue();
+        using var provider = services.BuildServiceProvider();
+        using var scope = provider.CreateScope();
+        var manager = scope.ServiceProvider.GetRequiredService<IFeatureManager>();
+        var definitions = scope.ServiceProvider.GetRequiredService<IFeatureDefinitionProvider>();
+        foreach (var name in names)
+        {
+            (await manager.IsEnabledAsync(name)).Should().BeFalse();
+            (await definitions.GetFeatureDefinitionAsync(name)).Should().BeNull();
+        }
+
+        var startupRequests = client.Selectors.Count;
+        await RefreshNow(provider.GetRequiredService<IConfigurationRefresherProvider>().Refreshers.Single());
+        client.Selectors.Count.Should().BeGreaterThan(startupRequests);
+        foreach (var name in names)
+        {
+            (await manager.IsEnabledAsync(name)).Should().BeFalse();
+            (await definitions.GetFeatureDefinitionAsync(name)).Should().BeNull();
+        }
     }
 
     [Fact]
@@ -90,6 +142,17 @@ public class AzureFeatureConfigurationTests
         ContentType = "application/vnd.microsoft.appconfig.ff+json;charset=utf-8",
     };
 
+    private static async Task RefreshNow(IConfigurationRefresher refresher)
+    {
+        refresher.ProcessPushNotification(new PushNotification
+        {
+            ResourceUri = new Uri("https://test.azconfig.io"),
+            EventType = "Microsoft.AppConfiguration.KeyValueDeleted",
+            SyncToken = "offline=dmVyc2lvbg==;sn=1",
+        }, TimeSpan.Zero);
+        await refresher.RefreshAsync();
+    }
+
     private sealed class ClientFactory(ConfigurationClient client) : IAzureClientFactory<ConfigurationClient>
     {
         public ConfigurationClient CreateClient(string name) => client;
@@ -97,8 +160,18 @@ public class AzureFeatureConfigurationTests
 
     private sealed class StoreClient(ConfigurationSetting[] settings) : ConfigurationClient
     {
+        private int _version = 1;
         public List<SettingSelector> Selectors { get; } = [];
         public Exception? Failure { get; init; }
+        public ConfigurationSetting[]? SettingsAfterFirstRead { get; init; }
+
+        public void ReplaceSettings(ConfigurationSetting[] updated)
+        {
+            settings = updated;
+            _version++;
+        }
+
+        public override void UpdateSyncToken(string syncToken) { }
 
         public override AsyncPageable<ConfigurationSetting> GetConfigurationSettingsAsync(
             SettingSelector selector, CancellationToken cancellationToken = default)
@@ -106,13 +179,50 @@ public class AzureFeatureConfigurationTests
             Selectors.Add(selector);
             if (Failure is not null) throw Failure;
             var matching = settings.Where(setting => setting.Label == selector.LabelFilter &&
-                setting.Key.StartsWith(selector.KeyFilter.TrimEnd('*'), StringComparison.Ordinal)).ToArray();
-            return AsyncPageable<ConfigurationSetting>.FromPages([
-                Page<ConfigurationSetting>.FromValues(matching, null, new StoreResponse())]);
+                (selector.KeyFilter.EndsWith('*')
+                    ? setting.Key.StartsWith(selector.KeyFilter[..^1], StringComparison.Ordinal)
+                    : setting.Key == selector.KeyFilter)).ToArray();
+            var response = new StoreResponse($"\"version-{_version}\"")
+            {
+                ContentStream = new MemoryStream(JsonSerializer.SerializeToUtf8Bytes(new
+                {
+                    items = matching.Select(setting => new
+                    {
+                        key = setting.Key,
+                        label = setting.Label,
+                        value = setting.Value,
+                        content_type = setting.ContentType,
+                    }),
+                })),
+            };
+            if (Selectors.Count == 1 && SettingsAfterFirstRead is not null)
+                ReplaceSettings(SettingsAfterFirstRead);
+            var client = new ConfigurationClient(new Uri("https://test.azconfig.io"), new OfflineCredential(),
+                new ConfigurationClientOptions { Transport = new StoreTransport(response) });
+            return client.GetConfigurationSettingsAsync(selector, cancellationToken);
         }
     }
 
-    private sealed class StoreResponse : Response
+    private sealed class OfflineCredential : TokenCredential
+    {
+        public override AccessToken GetToken(TokenRequestContext requestContext, CancellationToken cancellationToken) =>
+            new("offline", DateTimeOffset.MaxValue);
+        public override ValueTask<AccessToken> GetTokenAsync(TokenRequestContext requestContext, CancellationToken cancellationToken) =>
+            ValueTask.FromResult(GetToken(requestContext, cancellationToken));
+    }
+
+    private sealed class StoreTransport(Response response) : HttpPipelineTransport
+    {
+        public override Request CreateRequest() => HttpClientTransport.Shared.CreateRequest();
+        public override void Process(HttpMessage message) => message.Response = response;
+        public override ValueTask ProcessAsync(HttpMessage message)
+        {
+            Process(message);
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    private sealed class StoreResponse(string etag) : Response
     {
         public override int Status => 200;
         public override string ReasonPhrase => "OK";
@@ -120,10 +230,10 @@ public class AzureFeatureConfigurationTests
         public override string ClientRequestId { get; set; } = "offline-test";
         public override void Dispose() { }
         protected override bool ContainsHeader(string name) => name.Equals("ETag", StringComparison.OrdinalIgnoreCase);
-        protected override IEnumerable<HttpHeader> EnumerateHeaders() => [new("ETag", "\"version-1\"")];
+        protected override IEnumerable<HttpHeader> EnumerateHeaders() => [new("ETag", etag)];
         protected override bool TryGetHeader(string name, out string value)
         {
-            value = ContainsHeader(name) ? "\"version-1\"" : "";
+            value = ContainsHeader(name) ? etag : "";
             return ContainsHeader(name);
         }
         protected override bool TryGetHeaderValues(string name, out IEnumerable<string> values)

@@ -177,17 +177,38 @@ public class FeatureManagementTests
         (await host.Flags())["burndownEnabled"].Should().BeFalse();
     }
 
-    [Fact]
-    public async Task No_endpoint_uses_legacy_values_through_the_same_feature_manager()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task No_endpoint_uses_only_legacy_values_even_with_conflicting_native_definitions(bool microsoftSchema)
     {
         var configuration = new ConfigurationManager();
-        configuration.AddInMemoryCollection(new Dictionary<string, string?>
+        var values = new Dictionary<string, string?>
         {
             ["FeatureFlags:BurndownEnabled"] = "true",
             ["FeatureFlags:ExpenditureProgressEnabled"] = "false",
             ["FeatureFlags:ProjectCostsEnabled"] = "false",
             ["FeatureFlags:ProjectionsEnabled"] = "true",
-        });
+        };
+        var nativeOverrides = new Dictionary<string, bool>
+        {
+            ["walter.BurndownEnabled"] = false,
+            ["walter.ExpenditureProgressEnabled"] = true,
+            ["walter.ProjectCostsEnabled"] = true,
+            ["walter.ProjectionsEnabled"] = false,
+        };
+        var index = 0;
+        foreach (var flag in nativeOverrides)
+        {
+            if (microsoftSchema)
+            {
+                values[$"feature_management:feature_flags:{index}:id"] = flag.Key;
+                values[$"feature_management:feature_flags:{index++}:enabled"] = flag.Value.ToString();
+            }
+            else
+                values[$"FeatureManagement:{flag.Key}"] = flag.Value.ToString();
+        }
+        configuration.AddInMemoryCollection(values);
         await using var host = await FeatureHost.Start(configuration, useLegacyFallback: true);
         host.SignIn();
         (await host.Flags()).Should().BeEquivalentTo(new Dictionary<string, bool>
