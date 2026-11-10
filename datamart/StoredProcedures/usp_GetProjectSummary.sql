@@ -67,7 +67,9 @@ BEGIN
     BEGIN TRY
         -- PgmMasterData fans out per project+award; pick one representative row (highest burden
         -- rate, then lowest contract line) and aggregate the distinct people names across all rows.
-        SET @TSQLCommand = '
+        -- Literals need the N prefix: a varchar literal over 4000 chars is cut to 4000 when
+        -- concatenated with NVARCHAR(MAX).
+        SET @TSQLCommand = N'
             WITH ranked AS (
                 SELECT ProjectNumber, AwardNumber, CloseDate, BillingCycle,
                     ProjectBurdenScheduleBase, ProjectBurdenCostRate, CostShareRequiredBySponsor,
@@ -80,7 +82,7 @@ BEGIN
                             CASE WHEN ContractLineNumber IS NULL THEN 1 ELSE 0 END, ContractLineNumber
                     ) AS rn
                 FROM dbo.PgmMasterData
-                WHERE ProjectNumber IN (' + @ProjectIdFilter + ')
+                WHERE ProjectNumber IN (' + @ProjectIdFilter + N')
             ),
             p AS (
                 SELECT
