@@ -1,25 +1,19 @@
 import { useMemo } from 'react';
-import { createFileRoute, Link } from '@tanstack/react-router';
+import { createFileRoute } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
-import { createColumnHelper } from '@tanstack/react-table';
-import {
-  glPpmReconciliationQueryOptions,
-  type GLPPMReconciliationRecord,
-} from '@/queries/project.ts';
+import { glPpmReconciliationQueryOptions } from '@/queries/project.ts';
 import { ExportDataButton } from '@/components/ExportDataButton.tsx';
-import { formatCurrency } from '@/lib/currency.ts';
-import { DataTable } from '@/shared/DataTable.tsx';
-import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
+import { ReconciliationTable } from '@/components/reconciliation/ReconciliationTable.tsx';
+import {
+  hasDiscrepancy,
+  sortReconciliationRecords,
+} from '@/lib/reconciliation.ts';
 
 export const Route = createFileRoute(
   '/(authenticated)/reports/reconciliation/$projectNumber/'
 )({
   component: RouteComponent,
 });
-
-function hasDiscrepancy(r: GLPPMReconciliationRecord): boolean {
-  return Math.abs(r.glActualAmount + r.ppmBudBal) > 0.005;
-}
 
 const csvColumns = [
   { header: 'Dept', key: 'financialDepartment' as const },
@@ -50,8 +44,6 @@ const csvColumns = [
   },
 ];
 
-const columnHelper = createColumnHelper<GLPPMReconciliationRecord>();
-
 function RouteComponent() {
   const { projectNumber } = Route.useParams();
 
@@ -61,164 +53,14 @@ function RouteComponent() {
     isPending: isReconciliationPending,
   } = useQuery(glPpmReconciliationQueryOptions([projectNumber]));
 
-  // Sort by fund, then program, then activity
   const sorted = useMemo(
-    () =>
-      [...(records ?? [])].sort((a, b) => {
-        const fundCmp = (a.fundCode ?? '').localeCompare(b.fundCode ?? '');
-        if (fundCmp !== 0) {
-          return fundCmp;
-        }
-        const progCmp = (a.programCode ?? '').localeCompare(
-          b.programCode ?? ''
-        );
-        if (progCmp !== 0) {
-          return progCmp;
-        }
-        return (a.activityCode ?? '').localeCompare(b.activityCode ?? '');
-      }),
+    () => sortReconciliationRecords(records ?? []),
     [records]
   );
 
   const discrepancyCount = useMemo(
     () => sorted.filter(hasDiscrepancy).length,
     [sorted]
-  );
-
-  const columns = useMemo(
-    () => [
-      columnHelper.accessor('financialDepartment', {
-        cell: (info) => <span>{info.getValue() ?? '-'}</span>,
-        header: 'Dept',
-      }),
-      columnHelper.accessor('project', {
-        cell: (info) => (
-          <TooltipLabel
-            focusable={false}
-            label={info.getValue()}
-            placement="bottom"
-            screenReaderLabel={
-              info.row.original.projectDescription ?? undefined
-            }
-            tooltip={info.row.original.projectDescription ?? undefined}
-          />
-        ),
-        header: 'Project',
-      }),
-      columnHelper.accessor('fundCode', {
-        cell: (info) => (
-          <TooltipLabel
-            focusable={false}
-            label={info.getValue() ?? '-'}
-            placement="bottom"
-            screenReaderLabel={info.row.original.fundDescription ?? undefined}
-            tooltip={info.row.original.fundDescription ?? undefined}
-          />
-        ),
-        header: 'GL Fund',
-      }),
-      columnHelper.accessor('ppmFundCode', {
-        cell: (info) => (
-          <TooltipLabel
-            focusable={false}
-            label={info.getValue()}
-            placement="bottom"
-            screenReaderLabel={
-              info.row.original.ppmFundDescription ?? undefined
-            }
-            tooltip={info.row.original.ppmFundDescription ?? undefined}
-          />
-        ),
-        header: 'PPM Fund',
-      }),
-      columnHelper.accessor('programCode', {
-        cell: (info) => (
-          <TooltipLabel
-            focusable={false}
-            label={info.getValue() ?? '-'}
-            placement="bottom"
-            screenReaderLabel={
-              info.row.original.programDescription ?? undefined
-            }
-            tooltip={info.row.original.programDescription ?? undefined}
-          />
-        ),
-        header: 'Program',
-      }),
-      columnHelper.accessor('activityCode', {
-        cell: (info) => (
-          <TooltipLabel
-            focusable={false}
-            label={info.getValue() ?? '-'}
-            placement="bottom"
-            screenReaderLabel={
-              info.row.original.activityDescription ?? undefined
-            }
-            tooltip={info.row.original.activityDescription ?? undefined}
-          />
-        ),
-        header: 'Activity',
-      }),
-      columnHelper.accessor('glActualAmount', {
-        cell: (info) => (
-          <span className="flex justify-end">
-            {formatCurrency(info.getValue())}
-          </span>
-        ),
-        header: () => <span className="flex justify-end">GL Balance</span>,
-      }),
-      columnHelper.accessor('ppmBudBal', {
-        cell: (info) => (
-          <span className="flex justify-end">
-            {formatCurrency(info.getValue())}
-          </span>
-        ),
-        header: () => <span className="flex justify-end">PPM Balance</span>,
-      }),
-      columnHelper.display({
-        cell: (info) => {
-          const row = info.row.original;
-          const diff = row.glActualAmount + row.ppmBudBal;
-          const isDisc = hasDiscrepancy(row);
-          return (
-            <span
-              className={`flex font-sans font-bold justify-end ${
-                isDisc ? 'text-info' : ''
-              }`}
-            >
-              {formatCurrency(diff)}
-            </span>
-          );
-        },
-        header: () => <span className="flex justify-end">Difference</span>,
-        id: 'difference',
-      }),
-      columnHelper.display({
-        cell: (info) => {
-          const row = info.row.original;
-          return (
-            <Link
-              className="btn btn-xs ms-2 -mt-1"
-              params={{ projectNumber }}
-              search={{
-                activity: row.activityCode ?? '',
-                dept: row.financialDepartment ?? '',
-                fund: row.fundCode ?? '',
-                program: row.programCode ?? '',
-              }}
-              to="/reports/reconciliation/$projectNumber/detail"
-            >
-              Details
-            </Link>
-          );
-        },
-        enableSorting: false,
-        header: '',
-        id: 'actions',
-        size: 60,
-      }),
-    ],
-    [projectNumber]
   );
 
   return (
@@ -262,18 +104,8 @@ function RouteComponent() {
             </section>
           )}
 
-          <DataTable
-            columns={columns}
-            data={sorted}
-            expandable={false}
-            getRowProps={(row) => {
-              if (!hasDiscrepancy(row.original)) {
-                return {};
-              }
-              return { className: 'bg-info/10' };
-            }}
-            globalFilter="none"
-            pagination="off"
+          <ReconciliationTable
+            records={sorted}
             tableActions={
               <ExportDataButton
                 columns={csvColumns}
