@@ -19,7 +19,7 @@ import {
   createBookedSalaryExample,
   createAppointmentLookupsExample,
 } from '@/test/fixtures/projections.ts';
-import { SALARY_CATEGORY } from '@/lib/piProjection.ts';
+import { FRINGE_CATEGORY, SALARY_CATEGORY } from '@/lib/piProjection.ts';
 import { ProjectionSessionProvider } from '@/components/projections/ProjectionSession.tsx';
 import {
   ProjectionWorkspace,
@@ -110,6 +110,44 @@ describe('projection plan header', () => {
 });
 
 describe('projection source focus', () => {
+  it('takes a sponsored staffing warning directly to the visible category table', async () => {
+    const plan = createSalaryExample();
+    plan.content.fundingSources[0].projectType = 'Sponsored';
+    plan.content.fundingSources[0].budgets.push({
+      budget: 0,
+      committed: 0,
+      expenditureCategory: FRINGE_CATEGORY,
+      spentToDate: 100,
+    });
+    const { user } = openWorkspace('?section=staffing', plan);
+    const badge = await screen.findByRole('button', {
+      name: 'Fringe budget shortfall',
+    });
+    badge.focus();
+    await user.keyboard('{Enter}');
+    const dialog = screen.getByRole('dialog', {
+      name: 'Fringe budget shortfall',
+    });
+    const link = within(dialog).getByRole('button', {
+      name: 'View category balances',
+    });
+    link.focus();
+    await user.keyboard('{Enter}');
+    const heading = await screen.findByRole('heading', {
+      name: 'Category budget balances',
+    });
+    await waitFor(() => expect(heading).toHaveFocus());
+    expect(read().location).toMatchObject({
+      fundingSourceId: 1,
+      section: 'overview',
+    });
+    expect(
+      screen.getByRole('table', {
+        name: 'Captured category budgets and remaining balances at plan end',
+      })
+    ).toBeVisible();
+  });
+
   it('focuses explicit source selection but leaves history scroll restoration alone', async () => {
     const scroll = vi.spyOn(Element.prototype, 'scrollIntoView');
     try {

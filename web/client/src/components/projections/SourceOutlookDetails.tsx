@@ -1,3 +1,9 @@
+import type { Ref } from 'react';
+import { SourceCategoryBudgets } from '@/components/projections/SourceCategoryBudgets.tsx';
+import {
+  buildSourceFundingBalance,
+  getSourceFundingBasis,
+} from '@/lib/projectionFundingBalances.ts';
 import { SourceOutlookAppointments } from '@/components/projections/SourceOutlookAppointments.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import { FRINGE_CATEGORY, SALARY_CATEGORY } from '@/lib/piProjection.ts';
@@ -10,11 +16,13 @@ import type {
 import type { ProjectionDraft } from '@/queries/projections.ts';
 
 export function SourceOutlookDetails({
+  categoryHeadingRef,
   draft,
   onNavigate,
   outlook,
   results,
 }: {
+  categoryHeadingRef?: Ref<HTMLHeadingElement>;
   draft: ProjectionDraft;
   onNavigate: (location: ProjectionNavigation) => void;
   outlook: SourceOutlook;
@@ -84,7 +92,17 @@ export function SourceOutlookDetails({
           allocations remain saved.
         </p>
       )}
-      <SourceForecastCosts outlook={outlook} />
+      <SourceCategoryBudgets
+        balance={buildSourceFundingBalance(source, results.rows)}
+        headingRef={categoryHeadingRef}
+        sourceIdentity={[outlook.label, source.projectNumber]
+          .filter(Boolean)
+          .join(' · ')}
+      />
+      <SourceForecastCosts
+        outlook={outlook}
+        showCategories={getSourceFundingBasis(source) !== 'sponsored'}
+      />
       <SourceMonthlyAmounts outlook={outlook} />
       <SourceOutlookAppointments
         appointments={draft.content.appointments}
@@ -96,7 +114,13 @@ export function SourceOutlookDetails({
   );
 }
 
-function SourceForecastCosts({ outlook }: { outlook: SourceOutlook }) {
+function SourceForecastCosts({
+  outlook,
+  showCategories,
+}: {
+  outlook: SourceOutlook;
+  showCategories: boolean;
+}) {
   const salary =
     outlook.categories.find(
       ({ expenditureCategory }) => expenditureCategory === SALARY_CATEGORY
@@ -126,40 +150,44 @@ function SourceForecastCosts({ outlook }: { outlook: SourceOutlook }) {
           </div>
         ))}
       </dl>
-      <details className="mt-4">
-        <summary className="cursor-pointer font-medium">
-          Forecast costs by category
-        </summary>
-        {outlook.categories.length ? (
-          <div className="mt-3 overflow-x-auto">
-            <table className="table w-full">
-              <caption className="sr-only">
-                {outlook.label} forecast costs by category
-              </caption>
-              <thead>
-                <tr>
-                  <th scope="col">Expenditure category</th>
-                  <th className="text-right" scope="col">
-                    Net forecast costs
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {outlook.categories.map(({ expenditureCategory, forecast }) => (
-                  <tr key={expenditureCategory}>
-                    <th scope="row">{expenditureCategory}</th>
-                    <td className="text-right whitespace-nowrap">
-                      {formatCurrency(forecast)}
-                    </td>
+      {showCategories && (
+        <details className="mt-4">
+          <summary className="cursor-pointer font-medium">
+            Forecast costs by category
+          </summary>
+          {outlook.categories.length ? (
+            <div className="mt-3 overflow-x-auto">
+              <table className="table w-full">
+                <caption className="sr-only">
+                  {outlook.label} forecast costs by category
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Expenditure category</th>
+                    <th className="text-right" scope="col">
+                      Net forecast costs
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <p className="mt-3 text-sm">No forecast costs in this period.</p>
-        )}
-      </details>
+                </thead>
+                <tbody>
+                  {outlook.categories.map(
+                    ({ expenditureCategory, forecast }) => (
+                      <tr key={expenditureCategory}>
+                        <th scope="row">{expenditureCategory}</th>
+                        <td className="text-right whitespace-nowrap">
+                          {formatCurrency(forecast)}
+                        </td>
+                      </tr>
+                    )
+                  )}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="mt-3 text-sm">No forecast costs in this period.</p>
+          )}
+        </details>
+      )}
     </section>
   );
 }

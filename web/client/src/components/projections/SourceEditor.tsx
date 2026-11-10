@@ -1,3 +1,4 @@
+import { getSourceFundingBasis } from '@/lib/projectionFundingBalances.ts';
 import { ArrowPathIcon, CheckIcon } from '@heroicons/react/24/outline';
 import { useEffect, useImperativeHandle, useRef, type Ref } from 'react';
 import { useStore } from '@tanstack/react-form';
@@ -118,6 +119,12 @@ export function SourceEditor<T extends ProjectionDraft>({
             </label>
           )}
         </form.Field>
+        {source && getSourceFundingBasis(source) === 'sponsored' && (
+          <p className="text-sm text-base-content/70">
+            Changing the total planning balance does not change salary or fringe
+            category budgets.
+          </p>
+        )}
         <form.Field name="balance">
           {(field) => (
             <label className="flex flex-col gap-2 text-sm">

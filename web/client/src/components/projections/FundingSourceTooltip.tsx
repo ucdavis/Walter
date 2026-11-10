@@ -2,6 +2,12 @@ import { ExclamationTriangleIcon } from '@heroicons/react/24/solid';
 import { fundingMonthLabel } from '@/components/projections/fundingTimelineDates.ts';
 import { formatCurrency } from '@/lib/currency.ts';
 import { formatDate } from '@/lib/date.ts';
+import {
+  getSourceFundingBasis,
+  type SourceFundingMonth,
+} from '@/lib/projectionFundingBalances.ts';
+import { SALARY_CATEGORY, FRINGE_CATEGORY } from '@/lib/piProjection.ts';
+import { budgetShortfallLabel } from '@/components/projections/AppointmentBudgetWarnings.tsx';
 import { sourcePlanningBalance } from '@/lib/projectionSources.ts';
 import type { ProjectionFundingSource } from '@/queries/projections.ts';
 
@@ -11,22 +17,92 @@ const percent = new Intl.NumberFormat('en-US', {
 });
 
 export function FundingSourceTooltip({
+  balance,
   color,
   month,
   outside,
-  remaining,
   share,
   source,
 }: {
+  balance?: SourceFundingMonth;
   color: string;
   month: string;
   outside: boolean;
-  remaining?: number;
   share: number;
   source?: ProjectionFundingSource;
 }) {
+  const basis = source ? getSourceFundingBasis(source) : null;
+  const shortfall =
+    source &&
+    balance &&
+    (basis === 'sponsored'
+      ? balance.personnelDeficits.length > 0
+      : basis === 'general' && balance.remaining < 0);
+  const warningLabel =
+    balance && basis === 'sponsored'
+      ? budgetShortfallLabel([
+          {
+            basis,
+            fundingSourceId: source!.id,
+            month,
+            personnelDeficits: balance.personnelDeficits,
+            remaining: balance.remaining,
+          },
+        ])
+      : 'Projected funding shortfall';
+  const categoryValue = (
+    category: string,
+    key: 'salary' | 'fringe',
+    value: number | undefined
+  ) => {
+    if (!balance) {
+      return 'No forecast for this month';
+    }
+    if (
+      !source?.budgets.some((budget) => budget.expenditureCategory === category)
+    ) {
+      return balance.personnelDeficits.some(
+        (deficit) => deficit.category === key && deficit.missingBudget
+      )
+        ? `${value !== undefined && value < 0 ? `${formatCurrency(value)} · ` : ''}No ${key} budget recorded`
+        : '—';
+    }
+    return formatCurrency(value ?? 0);
+  };
   const fields = [
     { label: 'Average appointment share', value: percent.format(share) },
+    {
+      label: 'Source overall planning balance',
+      value: source ? formatCurrency(sourcePlanningBalance(source)) : null,
+    },
+    {
+      label: 'Source overall month-end balance',
+      value: source
+        ? balance === undefined
+          ? 'No forecast for this month'
+          : formatCurrency(balance.remaining)
+        : null,
+    },
+    ...(basis === 'sponsored'
+      ? [
+          {
+            label: 'Salary month-end balance',
+            value: categoryValue(
+              SALARY_CATEGORY,
+              'salary',
+              balance?.salaryRemaining
+            ),
+          },
+          {
+            label: 'Fringe month-end balance',
+            value: categoryValue(
+              FRINGE_CATEGORY,
+              'fringe',
+              balance?.fringeRemaining
+            ),
+          },
+        ]
+      : []),
     {
       label: 'Project',
       value: source ? source.projectNumber : null,
@@ -60,18 +136,6 @@ export function FundingSourceTooltip({
         ? `${formatDate(source.startDate, 'No start date')} to ${formatDate(source.endDate, 'No end date')}`
         : null,
     },
-    {
-      label: 'Planning balance',
-      value: source ? formatCurrency(sourcePlanningBalance(source)) : null,
-    },
-    {
-      label: 'Projected month-end balance',
-      value: source
-        ? remaining === undefined
-          ? 'No forecast for this month'
-          : formatCurrency(remaining)
-        : null,
-    },
   ].filter(
     ({ value }) => value !== null && value !== undefined && value !== ''
   );
@@ -90,13 +154,13 @@ export function FundingSourceTooltip({
           {outside ? 'Outside this plan' : source ? source.name : 'Unallocated'}
         </span>
       </p>
-      {source && remaining !== undefined && remaining < 0 && (
+      {shortfall && (
         <p className="mb-3 flex items-start gap-2 font-semibold text-error">
           <ExclamationTriangleIcon
             aria-hidden="true"
             className="mt-0.5 size-4 shrink-0"
           />
-          Projected month-end balance is below zero.
+          {warningLabel}
         </p>
       )}
       <dl className="space-y-2 border-t border-main-border pt-3">
@@ -113,7 +177,11 @@ export function FundingSourceTooltip({
       <p className="mt-3 border-t border-main-border pt-3 text-xs text-base-content/70">
         {outside
           ? 'This share is explicitly funded outside this plan. No funding balance is tracked here. '
-          : 'Balances include all expenditure categories for this source.'}
+          : basis === 'sponsored'
+            ? 'Salary and fringe use separate category budgets. Source overall includes all expenditure categories.'
+            : basis === 'general'
+              ? 'Personnel uses this source’s overall available pool.'
+              : 'Funding basis unknown. Salary and fringe budget restrictions cannot be determined.'}
       </p>
     </div>
   );

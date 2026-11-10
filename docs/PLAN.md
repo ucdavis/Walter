@@ -25,10 +25,11 @@ and passes combined verification. The cleanup is accepted and committed as
 Stage 5g's demo alignment and allocation refinements are accepted and committed
 as `5ef2c492` and `895a5917`. Stage 5h's search-and-add funding selection and task
 cards were accepted and committed as `e1033f19`. Stage 5i's saved-plan header,
-long chart labels, and shortfall navigation refinements are accepted.
-Sponsored personnel budget availability and category rebudgeting are deferred
-until the end of this plan, potentially after v1. They do not block v1 completion.
-Saving remains available with funding gaps/overlaps.
+long chart labels, and shortfall navigation refinements are accepted and committed
+as `a58b495d`. Stage 5j implements the agreed personnel category warnings and
+read-only budget balances. Category editing and rebudgeting are a separate
+increment required before shipping; they are no longer optional for v1.
+Saving remains available with funding gaps, overlaps, and budget shortfalls.
 CBR defaults to 20% when no rate is supplied. Fresh appointments default to a
 3% annual salary adjustment in July. Every retained appointment needs a salary
 before the plan can be saved; explicit zero is allowed.
@@ -262,16 +263,17 @@ source omission from existing outside funding, as specified below.
 
 ## Stages and review stops
 
-| Stage                         | Deliverable                                                                                                                                                                      | Review focus                                                                                                                                    |
-| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0. Behavior agreement         | Agreed salary calculation, edit timing, draft behavior, and navigation expectations for a small synthetic portfolio                                                              | Product decisions confirmed. Keep later questions assigned to their owning stages.                                                              |
-| 1a. One local salary edit     | Open a representative plan; link to a job; edit and cancel salary; recalculate a useful project outlook; navigate without losing edits; invoke the same operation without the UI | State ownership, calculation clarity, component boundaries, keyboard behavior, and responsiveness.                                              |
-| 1b. Save that edit            | Real saved-plan loading, conditional save, reload, failure recovery, and unsaved-change handling                                                                                 | Failed and conflicting saves preserve work; an in-flight response does not erase subsequent edits.                                              |
-| 2. Plan lifecycle             | Wizard snapshot loading, creation on completion, duplicate, plan selection, and dashboard eligibility                                                                            | Wizard completion saves before opening the workspace; reopened and duplicated plans retain captured inputs even when fresh data is unavailable. |
-| 3. Funding and staffing       | Project balances/dates, employee/job assumptions including fee remission, hypothetical hires, and funding schedules                                                              | Review project editing, job editing, and allocation editing separately. Check FTE, date ranges, outside funding, and funding proportions.       |
-| 4. Expenses and details       | Monthly/one-time expenses, generated estimates, history windows, notes, and horizon                                                                                              | Explicit expenses survive regeneration; save/reload preserves the preview.                                                                      |
-| 5. Complete guided experience | Setup composed from existing editors, full project drilldowns, explanations, and controlled rollout                                                                              | Verify the complete workflow and genuine reuse.                                                                                                 |
-| Later, possibly after v1      | [Sponsored personnel budgets and category rebudgeting](#deferred-sponsored-personnel-budgets-and-category-rebudgeting)                                                           | Confirm source rules, explain category availability, and retain understandable scenario adjustments. Not a v1 completion requirement.           |
+| Stage                          | Deliverable                                                                                                                                                                      | Review focus                                                                                                                                    |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0. Behavior agreement          | Agreed salary calculation, edit timing, draft behavior, and navigation expectations for a small synthetic portfolio                                                              | Product decisions confirmed. Keep later questions assigned to their owning stages.                                                              |
+| 1a. One local salary edit      | Open a representative plan; link to a job; edit and cancel salary; recalculate a useful project outlook; navigate without losing edits; invoke the same operation without the UI | State ownership, calculation clarity, component boundaries, keyboard behavior, and responsiveness.                                              |
+| 1b. Save that edit             | Real saved-plan loading, conditional save, reload, failure recovery, and unsaved-change handling                                                                                 | Failed and conflicting saves preserve work; an in-flight response does not erase subsequent edits.                                              |
+| 2. Plan lifecycle              | Wizard snapshot loading, creation on completion, duplicate, plan selection, and dashboard eligibility                                                                            | Wizard completion saves before opening the workspace; reopened and duplicated plans retain captured inputs even when fresh data is unavailable. |
+| 3. Funding and staffing        | Project balances/dates, employee/job assumptions including fee remission, hypothetical hires, and funding schedules                                                              | Review project editing, job editing, and allocation editing separately. Check FTE, date ranges, outside funding, and funding proportions.       |
+| 4. Expenses and details        | Monthly/one-time expenses, generated estimates, history windows, notes, and horizon                                                                                              | Explicit expenses survive regeneration; save/reload preserves the preview.                                                                      |
+| 5. Complete guided experience  | Setup composed from existing editors, full project drilldowns, explanations, and controlled rollout                                                                              | Verify the complete workflow and genuine reuse.                                                                                                 |
+| 5j. Category budget visibility | [Personnel warnings and balances](#stage-5j-personnel-category-warnings-and-balances)                                                                                            | Distinguish salary/fringe limits from general-pool funding without changing the calculator.                                                     |
+| Required before shipping       | [Category editing and rebudgeting](#required-before-shipping-category-editing-and-rebudgeting)                                                                                   | Retain captured budgets and explain scenario adjustments. Required for v1 completion.                                                           |
 
 Every increment includes appropriate automated checks, a way to try the result,
 independent code review, and a review with the user before moving on. Split a stage
@@ -1624,7 +1626,8 @@ expandable category and monthly tables. Label the total Net forecast costs so
 signed expense credits remain understandable. Preserve booked costs in the
 monthly detail and explain that capture-month spending is already included in
 the captured balance. Fee remission remains within category 08 in this view;
-category restrictions and rebudgeting belong to the deferred work below.
+category restrictions are added in Stage 5j; category editing is a separate
+pre-ship requirement below.
 
 List appointments allocated to the selected source, their shares and dates, and
 links to the appointment and allocation editors. Link to the source's funding
@@ -2005,8 +2008,8 @@ source's total projected month-end balance is below zero. A card badge identifie
 appointments with such months. This uses the same category-summed source balance
 as the outlook, without pooling other sources or changing allocations or forecast
 costs. Zero does not warn; a recovered month clears its warning. Unallocated and
-inactive periods retain their existing treatment. Restricted sponsored personnel
-budgets remain deferred below.
+inactive periods retain their existing treatment. Stage 5j replaces this total-only
+staffing rule with salary/fringe checks for sponsored sources.
 
 The CBR check found no unit conversion error: the copied lookup supplies 2% for
 the current graduate-student appointments and 20% for the postdoc. Imported rates
@@ -2162,44 +2165,79 @@ narrow-screen browser check remains unverified. No saved plan data was changed.
 The shortfall follow-up passed 42 focused tests, TypeScript, production build,
 lint, and formatting checks. Browser review verified repeated Explore clicks,
 entry from Staffing, and exact scroll restoration when returning from expenses.
-This increment is accepted for commit and push.
+This increment is accepted and committed as `a58b495d`.
 
-## Deferred: sponsored personnel budgets and category rebudgeting
+## Stage 5j: personnel category warnings and balances
 
-Record this direction for the end of the work, potentially after v1. It does not
-change the current calculation or editors, and v1 may be completed without it.
-Review category availability first, then rebudgeting as a separate increment.
+The warning and display rules are agreed. Preserve the calculator's existing
+category balances, snapshot reconciliation, date proration, and forecast costs.
+This increment does not edit category budgets or change allocations automatically.
 
-For sponsored funding, assess salary and fringe affordability against the source's
-`01 - Salaries and Wages` and `02 - Fringe Benefits` budgets. Other categories'
-surpluses should not silently cover a personnel shortfall. Retain the total source
-outlook, but distinguish it from the money available for personnel. For
-non-sponsored funding, the intended behavior is to draw costs from that source's
-general available pool. This does not combine unrelated projects or tasks.
+- `Sponsored` and `Sponsored Capital` sources use salary category 01 and fringe
+  category 02 for staffing shortfall warnings. Neither category can cover the
+  other. Other categories, including fees in 08, do not drive these warnings yet.
+- `Internal` and hypothetical sources use their own general pool. Imported types
+  that are not recognized show an unknown budgeting basis instead of silently
+  assuming unrestricted funding. Classification uses the existing project type;
+  neither category-row presence nor the budgetary-control flag defines this rule.
+- A negative month-end balance marks the affected source segment red for every
+  appointment with a positive eligible allocation to that source in the month.
+  Other segments keep their source colors. Exactly zero is not a shortfall;
+  recovered months clear the warning. Funding gaps remain a separate signal.
+- Badges distinguish salary, fringe, both, and general-pool shortfalls. Their
+  details identify the source, affected category and months, and deficit amounts.
+  Existing and future deficits use the same warning. Source hover details retain
+  clearly labeled total balances alongside sponsored salary/fringe balances.
+- A missing salary/fringe budget row supplies no available funding. When that
+  category is used, explain that no budget was recorded; do not fall back to the
+  total source balance. Positive booked costs count as usage even when
+  snapshot-month netting leaves no additional forecast cost. An unused missing
+  category does not generate a warning.
+- Sponsored source details show a compact category table with available balance
+  at capture, forecast costs, and remaining balance at plan end. Salary and fringe
+  come first. Other categories and the separate overall balance adjustment keep
+  the table reconcilable with the source total. General-pool sources keep their
+  total balance and category spending breakdown without category-deficit colors.
+- Saved-plan staffing warnings focus the source's category table. General-pool
+  warnings open the source outlook. Wizard staffing uses the same warnings and
+  figures without linking to an unavailable saved outlook.
+- Editing an overall planning balance does not change category budgets or clear
+  a personnel category deficit. The sponsored balance editor explains this.
+  Warnings remain informational; saving and editing allocations stay available.
 
-The working assumption is that sponsored projects have one task and can appear
-as a single project funding source, while non-sponsored sources use general
-balances rather than category budgets. Confirm those rules against source data
-before encoding them. Preserve project/task identity even when the UI hides a
-redundant task.
+The isolated copy provides concrete examples for verification. `SP0A252322` is
+sponsored with one task and $156,941.58 available overall, but salary has
+$65,105.00 and fringe is already $9,786.33 below budget. Its budgetary-control flag
+is false. Internal task `FPAFST4784/COFGSS` records salary and fringe spending in
+category rows with zero budgets while its funding sits in category 03; its pool
+still has $12,943.75. Thus category-row presence would incorrectly classify this
+internal source. All sponsored projects in the copied data have one task, but
+that is not a schema guarantee; continue to preserve project/task identity.
 
-The existing data model already provides part of this foundation:
+Implemented and verified, awaiting user review. All 814 client tests pass across
+86 files, including category classification, missing-budget usage, per-month
+warnings, and navigation focus. TypeScript, the production build, changed-file
+lint, formatting, and diff checks pass. React Doctor reports 87/100 with 22
+warnings and no errors; its branch-wide cleanup suggestions remain separate.
 
-- [The seed query](../datamart/StoredProcedures/usp_GetProjectionSeed.sql) captures
-  budget, spending, and commitments by project, task, and expenditure category.
-  [The calculator](../web/client/src/lib/piProjection.ts) starts each category at
-  budget minus spent-to-date minus commitments, then deducts forecast costs.
-  [The source outlook](../web/client/src/lib/projectionWorkspace.ts) sums those
-  category balances, so the current overall result can hide a category shortfall.
-  [The portfolio import](../pipelines/pipeline/RefreshFacultyDeptPortfolio.json)
-  filters out rows with null `cat_budget`; it does not establish where a source
-  without a budget should obtain its general available balance.
-- [Source eligibility](../web/server/Services/ProjectionSeedPolicy.cs) distinguishes
-  `Internal` from other project types and retains each task. It does not establish
-  a one-task guarantee or prove that every non-sponsored source lacks a budget.
-  [PpmProjects](../datamart/Tables/PpmProjects.sql) has `SponsoredProject`,
-  `ProjectBudgeted`, and `HasBudgetaryControl` fields that the plan seed does not
-  currently capture. Check their meaning and completeness before choosing a rule.
+Read-only reconciliation against the isolated local databases confirmed that
+`SP0A252322` ends November with $145,925.36 overall and a fringe deficit of
+$9,930.85. Both allocated appointments warn for fringe in their active months.
+The internal `COFGSS` appointment remains clear while its overall pool is positive.
+Inputs and calculator results are unchanged by the new selectors.
+
+Desktop browser review verified red sponsored allocation segments, salary/fringe
+amounts in month tooltips, keyboard opening and dismissal of warning details,
+direct category-table focus, normal Explore focus at the source heading, the
+general-pool view, and the sponsored balance-editor explanation. The table shows
+source identity at the warning-link destination and highlights negative starting
+and ending category balances. No saved plan or database data was changed.
+
+## Required before shipping: category editing and rebudgeting
+
+Design and review this after Stage 5j. The user has made category editing a
+shipping requirement. It remains separate from the read-only category view and
+staffing warnings so those rules can be reviewed first.
 
 Category rebudgeting should preserve captured budgets, spending, and commitments.
 Record scenario adjustments separately so a saved plan can explain what changed,
@@ -2211,13 +2249,10 @@ or changes submitted to upstream accounting.
 
 Resolve these questions when the work begins:
 
-- Which source fields reliably identify sponsored and category-restricted funds?
-  Verify the single-task assumption, exceptions, and the non-sponsored pool's
-  balance source. Missing category data must not silently mean unrestricted money.
-- Show salary and fringe availability separately, together, or both? Confirm the
-  availability formula and commitment overlap using real examples while preserving
-  snapshot-month netting. Decide how fees, planned sources, and the current
-  uncategorized `BalanceAdjustment` participate.
+- Decide how category edits relate to the existing uncategorized overall balance
+  adjustment, fees, and hypothetical funding. Preserve captured amounts and the
+  existing snapshot-month netting. Commitment overlap remains documented in the
+  calculation review; category editing must not silently change that rule.
 - Must rebudget transfers balance to zero within one source? Distinguish moving
   existing budget from adding or removing overall funding; an expense credit is
   not a budget transfer. Decide whether changes apply to the whole scenario or

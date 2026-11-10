@@ -35,6 +35,7 @@ function toggleSet(current: ReadonlySet<string>, id: string) {
 }
 
 export interface FundingOutlookHandle {
+  focusCategoryBudgets: () => void;
   focusSelectedSource: () => void;
 }
 
@@ -56,6 +57,7 @@ export function FundingOutlook({
   const selected = outlook.sources.find(
     ({ source }) => source.id === selectedSourceId
   );
+  const categoryHeadingRef = useRef<HTMLHeadingElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const focusSelectedSource = useCallback(() => {
     const heading = headingRef.current;
@@ -64,7 +66,18 @@ export function FundingOutlook({
       heading.scrollIntoView({ block: 'start' });
     }
   }, []);
-  useImperativeHandle(ref, () => ({ focusSelectedSource }));
+  useImperativeHandle(ref, () => ({
+    focusCategoryBudgets: () => {
+      const heading = categoryHeadingRef.current;
+      if (heading) {
+        heading.focus({ preventScroll: true });
+        heading.scrollIntoView({ block: 'start' });
+      } else {
+        focusSelectedSource();
+      }
+    },
+    focusSelectedSource,
+  }));
   const [grouped, setGrouped] = useState(false);
   const [hiddenSources, setHiddenSources] = useState<Set<string>>(new Set());
   const [hiddenGroups, setHiddenGroups] = useState<Set<string>>(new Set());
@@ -195,6 +208,7 @@ export function FundingOutlook({
       )}
       {selected && (
         <SourceOutlookDetails
+          categoryHeadingRef={categoryHeadingRef}
           draft={draft}
           key={selected.source.id}
           onNavigate={onNavigate}

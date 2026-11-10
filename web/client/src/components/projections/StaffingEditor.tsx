@@ -1,6 +1,5 @@
 import {
   BanknotesIcon,
-  ExclamationTriangleIcon,
   PencilSquareIcon,
   PlusIcon,
   TrashIcon,
@@ -15,6 +14,7 @@ import {
   AllocationEditor,
   type AllocationEditorHandle,
 } from '@/components/projections/AllocationEditor.tsx';
+import { AppointmentBudgetWarnings } from '@/components/projections/AppointmentBudgetWarnings.tsx';
 import { FundingTimeline } from '@/components/projections/FundingTimeline.tsx';
 import { replaceAppointmentFunding } from '@/lib/projectionAllocations.ts';
 import {
@@ -27,10 +27,7 @@ import type {
   AppointmentFundingMonth,
   PiProjectionRow,
 } from '@/lib/piProjection.ts';
-import {
-  buildSourceFundingBalances,
-  getAppointmentFundingShortfalls,
-} from '@/lib/projectionFundingBalances.ts';
+import { buildSourceFundingBalances } from '@/lib/projectionFundingBalances.ts';
 import {
   addProjectionAppointment,
   editProjectionAppointment,
@@ -58,6 +55,7 @@ export function StaffingEditor<T extends ProjectionDraft>({
   appointmentFunding,
   forecastWindow,
   onOperation,
+  onViewSource,
   ref,
   results,
   session,
@@ -68,6 +66,7 @@ export function StaffingEditor<T extends ProjectionDraft>({
   onOperation: (
     operation: AppointmentOperation
   ) => AppointmentOperationResult<T>;
+  onViewSource?: (id: number) => void;
   ref?: Ref<StaffingEditorHandle>;
   results: { rows: PiProjectionRow[] };
   session: ProjectionSession<T>;
@@ -86,7 +85,10 @@ export function StaffingEditor<T extends ProjectionDraft>({
   const editorRef = useRef<AppointmentEditorHandle>(null);
   const allocationRef = useRef<AllocationEditorHandle>(null);
   const { draft } = session;
-  const sourceBalances = buildSourceFundingBalances(results.rows);
+  const sourceBalances = buildSourceFundingBalances(
+    draft.content.fundingSources,
+    results.rows
+  );
   const appointment = draft.content.appointments.find(
     ({ id }) =>
       id === (target ? (target.fundingMonth ? null : target.id) : editing)
@@ -155,23 +157,14 @@ export function StaffingEditor<T extends ProjectionDraft>({
                     appointmentId={item.id}
                     months={appointmentFunding}
                   />
-                  {getAppointmentFundingShortfalls(
-                    appointmentFunding.filter(
+                  <AppointmentBudgetWarnings
+                    months={appointmentFunding.filter(
                       ({ appointmentId }) => appointmentId === item.id
-                    ),
-                    sourceBalances
-                  ).length > 0 && (
-                    <span
-                      className="badge badge-error badge-soft gap-1"
-                      title="An assigned funding source has a projected balance below zero at month end. Allocations remain unchanged."
-                    >
-                      <ExclamationTriangleIcon
-                        aria-hidden="true"
-                        className="size-3.5"
-                      />
-                      Projected funding shortfall
-                    </span>
-                  )}
+                    )}
+                    onViewSource={onViewSource}
+                    sourceBalances={sourceBalances}
+                    sources={draft.content.fundingSources}
+                  />
                 </div>
                 <p className="mt-1 text-sm text-base-content/80 tabular-nums">
                   <span>

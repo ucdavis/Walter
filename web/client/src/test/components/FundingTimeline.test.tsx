@@ -37,12 +37,49 @@ it('marks only the short source share and month, preserves gap warnings, and edi
         new Map([
           [
             1,
-            new Map([
-              ['2026-02', -100],
-              ['2026-03', 0],
-            ]),
+            {
+              basis: 'general',
+              categories: [],
+              months: new Map([
+                [
+                  '2026-02',
+                  {
+                    fringeRemaining: 0,
+                    personnelDeficits: [],
+                    remaining: -100,
+                    salaryRemaining: 0,
+                  },
+                ],
+                [
+                  '2026-03',
+                  {
+                    fringeRemaining: 0,
+                    personnelDeficits: [],
+                    remaining: 0,
+                    salaryRemaining: 0,
+                  },
+                ],
+              ]),
+            },
           ],
-          [2, new Map([['2026-02', 5000]])],
+          [
+            2,
+            {
+              basis: 'general',
+              categories: [],
+              months: new Map([
+                [
+                  '2026-02',
+                  {
+                    fringeRemaining: 0,
+                    personnelDeficits: [],
+                    remaining: 5000,
+                    salaryRemaining: 0,
+                  },
+                ],
+              ]),
+            },
+          ],
         ])
       }
       sources={plan.content.fundingSources}
@@ -66,7 +103,9 @@ it('marks only the short source share and month, preserves gap warnings, and edi
   const user = userEvent.setup();
   await user.hover(shortShare);
   const card = await screen.findByRole('tooltip');
-  expect(within(card).getByText('Planning balance')).toBeInTheDocument();
+  expect(
+    within(card).getByText('Source overall planning balance')
+  ).toBeInTheDocument();
   expect(within(card).getByText('$20,000.00')).toBeInTheDocument();
   expect(within(card).getByText('-$100.00')).toBeInTheDocument();
   expect(within(card).getByText('SYNTHETIC-1')).toBeInTheDocument();
@@ -107,4 +146,89 @@ it('marks only the short source share and month, preserves gap warnings, and edi
   expect(
     screen.queryByText(/Bars show average appointment shares/)
   ).not.toBeInTheDocument();
+});
+
+it('marks only the sponsored share for a fringe deficit while its overall balance stays positive', async () => {
+  const plan = createSalaryExample();
+  plan.content.fundingSources[0].projectType = 'Sponsored';
+  const appointment = plan.content.appointments[0];
+  render(
+    <FundingTimeline
+      appointment={appointment}
+      forecastWindow={{ endMonth: '2026-02', startMonth: '2026-02' }}
+      months={[
+        {
+          appointmentId: appointment.id,
+          fundedPercent: 1,
+          hasGap: false,
+          hasOverlap: false,
+          month: '2026-02',
+          shares: [
+            { fundingSourceId: 1, percent: 0.5 },
+            { fundingSourceId: 2, percent: 0.5 },
+          ],
+        },
+      ]}
+      onEdit={vi.fn()}
+      sourceBalances={
+        new Map([
+          [
+            1,
+            {
+              basis: 'sponsored',
+              categories: [],
+              months: new Map([
+                [
+                  '2026-02',
+                  {
+                    fringeRemaining: -1200,
+                    personnelDeficits: [
+                      {
+                        category: 'fringe',
+                        expenditureCategory: '02 - Fringe Benefits',
+                        missingBudget: true,
+                        remaining: -1200,
+                      },
+                    ],
+                    remaining: 150_000,
+                    salaryRemaining: 65_000,
+                  },
+                ],
+              ]),
+            },
+          ],
+        ])
+      }
+      sources={plan.content.fundingSources}
+    />
+  );
+  const month = screen.getByRole('button', {
+    name: /Alex Example, Feb 2026:.*Fringe budget shortfall/,
+  });
+  const bad = within(month).getByText('Project A').parentElement!;
+  expect(bad.style.backgroundImage).toContain('repeating-linear-gradient');
+  expect(
+    within(month).getByText('Project B').parentElement!.style.backgroundImage
+  ).toBe('');
+  await userEvent.hover(bad);
+  const tooltip = await screen.findByRole('tooltip');
+  expect(within(tooltip).getByText('$150,000.00')).toBeInTheDocument();
+  expect(
+    within(tooltip)
+      .getAllByRole('term')
+      .slice(0, 5)
+      .map((term) => term.textContent)
+  ).toEqual([
+    'Average appointment share',
+    'Source overall planning balance',
+    'Source overall month-end balance',
+    'Salary month-end balance',
+    'Fringe month-end balance',
+  ]);
+  expect(
+    within(tooltip).getByText('Fringe month-end balance')
+  ).toBeInTheDocument();
+  expect(
+    within(tooltip).getByText('-$1,200.00 · No fringe budget recorded')
+  ).toBeInTheDocument();
 });

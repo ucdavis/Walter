@@ -138,10 +138,13 @@ function open(plan = example()) {
 
 describe('source outlook details', () => {
   it('shows additional costs with fees and signed credits while keeping booked costs separate', async () => {
+    const previouslyFocused = document.activeElement;
     const { user } = open();
     expect(
       screen.getByRole('heading', { name: 'Project A details' })
-    ).toHaveFocus();
+    ).toBeVisible();
+    // Navigation owns focus; rendering details alone must not move it.
+    expect(document.activeElement).toBe(previouslyFocused);
     const breakdown = screen.getByRole('region', {
       name: 'Net forecast cost breakdown',
     });

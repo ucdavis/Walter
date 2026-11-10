@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
 import { FundingSourceTooltip } from '@/components/projections/FundingSourceTooltip.tsx';
 import { ExclamationTriangleIcon } from '@heroicons/react/24/solid';
+import { budgetShortfallLabel } from '@/components/projections/AppointmentBudgetWarnings.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import {
   getAppointmentFundingShortfalls,
@@ -66,9 +67,9 @@ export function FundingTimeline({
             sourceBalances
           );
           const shortfallSummary = shortfalls
-            .map(({ fundingSourceId, remaining }) => {
+            .map(({ basis, fundingSourceId, personnelDeficits, remaining }) => {
               const source = sources.find(({ id }) => id === fundingSourceId);
-              return `${source ? sourceLabel(source) : 'Funding source'}: projected total remaining at the end of ${fundingMonthLabel(month)} is ${formatCurrency(remaining)}. Assigned shares and forecast costs continue`;
+              return `${source ? sourceLabel(source) : 'Funding source'}: ${basis === 'sponsored' ? personnelDeficits.map(({ category, missingBudget, remaining }) => `${category} remaining ${formatCurrency(remaining)}${missingBudget ? `; No ${category} budget recorded` : ''}`).join('; ') : `projected total remaining at the end of ${fundingMonthLabel(month)} is ${formatCurrency(remaining)}`}. Assigned shares and forecast costs continue`;
             })
             .join('. ');
           const shareTooltip = (share: {
@@ -80,6 +81,13 @@ export function FundingTimeline({
             );
             return (
               <FundingSourceTooltip
+                balance={
+                  share.fundingSourceId === null
+                    ? undefined
+                    : sourceBalances
+                        .get(share.fundingSourceId)
+                        ?.months.get(month)
+                }
                 color={
                   share.fundingSourceId === null
                     ? 'var(--color-neutral)'
@@ -87,11 +95,6 @@ export function FundingTimeline({
                 }
                 month={month}
                 outside={share.fundingSourceId === null}
-                remaining={
-                  share.fundingSourceId === null
-                    ? undefined
-                    : sourceBalances.get(share.fundingSourceId)?.get(month)
-                }
                 share={share.percent}
                 source={sources[sourceIndex]}
               />
@@ -114,7 +117,7 @@ export function FundingTimeline({
               label={
                 <button
                   aria-haspopup="dialog"
-                  aria-label={`${appointment.name}, ${fundingMonthLabel(month)}: ${status}${shortfallSummary ? `. Projected funding shortfall. ${shortfallSummary}` : ''}. Edit allocations`}
+                  aria-label={`${appointment.name}, ${fundingMonthLabel(month)}: ${status}${shortfallSummary ? `. ${budgetShortfallLabel(shortfalls)}. ${shortfallSummary}` : ''}. Edit allocations`}
                   className="group/month min-w-0 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                   id={`funding-${appointment.id}-${month}`}
                   onClick={() => onEdit(month)}

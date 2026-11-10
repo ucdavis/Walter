@@ -254,6 +254,35 @@ $47,000. It does not apply November's balance back in October or deduct the
 booked $2,000 again. Existing October sources and employee salary assumptions
 remain unchanged.
 
+### Personnel budget warnings
+
+The calculator retains each expenditure category's balance. Staffing warnings for
+`Sponsored` and `Sponsored Capital` sources examine salary category 01 and fringe
+category 02 separately. A positive overall balance does not cover a deficit in
+either category. Fringe includes the appointment's CBR and vacation accrual costs.
+Fees remain in category 08 and do not drive sponsored personnel category
+warnings yet; they still count against general-pool funding.
+
+`Internal` and hypothetical sources use their general available pool. Internal
+spending can still have expenditure-category rows; those rows do not establish
+separate spending limits. Unrecognized imported project types have an unknown
+budgeting basis rather than being treated as unrestricted.
+
+Shortfalls mean a balance below zero at month end. The affected source segment
+warns for all appointments allocated to it in that month; the warning does not
+attribute the deficit to a particular appointment or infer a daily exhaustion
+date. Exactly zero is not a shortfall. Recovered months clear the warning.
+Existing and forecast deficits use the same presentation. Gaps in allocation
+coverage remain separate from budget shortfalls, and warnings do not block saves.
+
+A missing personnel category budget supplies no available funding. When used,
+the warning explains that no salary or fringe budget was recorded. Usage includes
+positive booked costs even when snapshot-month netting leaves no additional
+forecast cost. A missing, unused category does not warn. An overall
+planning-balance adjustment remains separate from category budgets, so it cannot
+clear a salary or fringe shortfall.
+Category editing is a required, separate increment before shipping.
+
 ## Snapshot-month personnel costs
 
 For each funding source, salary and benefits are calculated separately. The

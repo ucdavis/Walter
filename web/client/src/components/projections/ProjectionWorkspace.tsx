@@ -86,6 +86,7 @@ export function ProjectionWorkspace({
   const expenseEditorRef = useRef<ExpensesEditorHandle>(null);
   const sourceEditorRef = useRef<FundingSourcesEditorHandle>(null);
   const outlookRef = useRef<FundingOutlookHandle>(null);
+  const categoryFocus = useRef(false);
   const pendingSourceFocus = useRef<number | null>(null);
   useEffect(() => {
     // Only an explicit source action moves the view; history restores its own scroll position.
@@ -94,11 +95,20 @@ export function ProjectionWorkspace({
       location.section === 'overview' &&
       location.fundingSourceId === pendingSourceFocus.current
     ) {
-      outlookRef.current?.focusSelectedSource();
+      if (categoryFocus.current) {
+        outlookRef.current?.focusCategoryBudgets();
+      } else {
+        outlookRef.current?.focusSelectedSource();
+      }
     }
     pendingSourceFocus.current = null;
   }, [location.section, location.fundingSourceId, location.issues.length]);
-  function onNavigate(target: ProjectionNavigation, replace = false) {
+  function onNavigate(
+    target: ProjectionNavigation,
+    replace = false,
+    categories = false
+  ) {
+    categoryFocus.current = categories;
     pendingSourceFocus.current = null;
     if (target.section === 'overview' && target.source !== undefined) {
       if (
@@ -106,7 +116,11 @@ export function ProjectionWorkspace({
         target.source === location.fundingSourceId &&
         outlookRef.current
       ) {
-        outlookRef.current?.focusSelectedSource();
+        if (categoryFocus.current) {
+          outlookRef.current?.focusCategoryBudgets();
+        } else {
+          outlookRef.current?.focusSelectedSource();
+        }
       } else {
         pendingSourceFocus.current = target.source;
       }
@@ -298,6 +312,9 @@ export function ProjectionWorkspace({
             forecastWindow={results.forecastWindow}
             key={`${reloadVersion}:${location.appointmentId ?? 'list'}:${location.fundingMonth ?? 'details'}`}
             onOperation={applyAppointmentOperation}
+            onViewSource={(id) =>
+              onNavigate({ section: 'overview', source: id }, false, true)
+            }
             ref={editorRef}
             results={results}
             session={session}
