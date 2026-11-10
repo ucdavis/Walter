@@ -15,6 +15,7 @@ import {
 } from '@/components/projections/fundingTimelineDates.ts';
 import { formatCurrency } from '@/lib/currency.ts';
 import { chartSeriesColor } from '@/shared/chartColors.ts';
+import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
 import type { OutlookMonth } from '@/lib/projectionOutlook.ts';
 
 const compactCurrency = new Intl.NumberFormat('en-US', {
@@ -26,11 +27,89 @@ const compactCurrency = new Intl.NumberFormat('en-US', {
 
 export interface OutlookSeries {
   colorIndex: number;
+  contextLabel?: string;
+  displayLabel?: string;
   emptyReason: string;
   id: string;
+  identityLabel?: string;
   label: string;
   months: OutlookMonth[];
   onSelect: () => void;
+}
+
+export function FundingOutlookTooltip({
+  active,
+  label,
+  payload,
+  series,
+}: {
+  active?: boolean;
+  label?: number | string;
+  payload?: readonly { dataKey?: unknown; value?: unknown }[];
+  series: OutlookSeries[];
+}) {
+  if (!active) {
+    return null;
+  }
+  const rows = (payload ?? []).flatMap(({ dataKey, value }) => {
+    const entry = series.find(({ id }) => id === dataKey);
+    return entry && typeof value === 'number' && Number.isFinite(value)
+      ? [{ entry, value }]
+      : [];
+  });
+  if (rows.length === 0) {
+    return null;
+  }
+  return (
+    <div
+      aria-label={`${fundingMonthLabel(String(label))} remaining balances`}
+      className="w-full overflow-y-auto rounded-lg border border-base-300 bg-base-100 p-3 text-sm text-base-content shadow-lg"
+      onFocus={(event) => event.stopPropagation()}
+      onKeyDown={(event) => event.stopPropagation()}
+      onMouseMove={(event) => event.stopPropagation()}
+      role="region"
+      style={{ maxHeight: 'min(18rem, 60vh)' }}
+      tabIndex={0}
+    >
+      <p className="mb-2 font-semibold">{fundingMonthLabel(String(label))}</p>
+      <dl className="space-y-2">
+        {rows.map(({ entry, value }) => (
+          <div
+            className="grid items-start gap-x-3"
+            key={entry.id}
+            style={{ gridTemplateColumns: 'minmax(0, 1fr) max-content' }}
+          >
+            <dt
+              aria-label={entry.identityLabel ?? entry.label}
+              className="flex min-w-0 items-start gap-2"
+            >
+              <span
+                aria-hidden
+                className="mt-1.5 size-2 shrink-0 rounded-full"
+                style={{ backgroundColor: chartSeriesColor(entry.colorIndex) }}
+              />
+              <span className="min-w-0 whitespace-normal [overflow-wrap:anywhere]">
+                <span
+                  className="line-clamp-2"
+                  title={entry.identityLabel ?? entry.label}
+                >
+                  {entry.displayLabel ?? entry.label}
+                </span>
+                {entry.contextLabel && (
+                  <span className="block text-xs text-base-content/70">
+                    {entry.contextLabel}
+                  </span>
+                )}
+              </span>
+            </dt>
+            <dd className="whitespace-nowrap text-right tabular-nums">
+              {formatCurrency(value)}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
 }
 
 export function FundingOutlookChart({
@@ -93,33 +172,54 @@ export function FundingOutlookChart({
           </div>
           <div className="grid gap-2 sm:grid-cols-2">
             {series.map((entry) => (
-              <label className="flex items-start gap-2 text-sm" key={entry.id}>
-                <input
-                  aria-label={
-                    entry.months.length > 0
-                      ? entry.label
-                      : `${entry.label}: ${entry.emptyReason}`
-                  }
-                  checked={!hidden.has(entry.id) && entry.months.length > 0}
-                  className="checkbox checkbox-sm mt-0.5"
-                  disabled={entry.months.length === 0}
-                  onChange={() => onToggle(entry.id)}
-                  type="checkbox"
-                />
-                <span
-                  aria-hidden
-                  className="mt-2 h-2 w-2 shrink-0 rounded-full"
-                  style={{
-                    backgroundColor: chartSeriesColor(entry.colorIndex),
-                  }}
-                />
-                <span className="min-w-0 break-words">
-                  {entry.label}
-                  {entry.months.length === 0 && (
-                    <span className="block text-xs"> {entry.emptyReason}</span>
-                  )}
-                </span>
-              </label>
+              <TooltipLabel
+                asChild
+                key={entry.id}
+                label={
+                  <label className="flex min-w-0 items-start gap-2 text-sm">
+                    <input
+                      aria-label={
+                        entry.months.length > 0
+                          ? entry.label
+                          : `${entry.label}: ${entry.emptyReason}`
+                      }
+                      checked={!hidden.has(entry.id) && entry.months.length > 0}
+                      className="checkbox checkbox-sm mt-0.5"
+                      disabled={entry.months.length === 0}
+                      onChange={() => onToggle(entry.id)}
+                      type="checkbox"
+                    />
+                    <span
+                      aria-hidden
+                      className="mt-2 h-2 w-2 shrink-0 rounded-full"
+                      style={{
+                        backgroundColor: chartSeriesColor(entry.colorIndex),
+                      }}
+                    />
+                    <span className="min-w-0">
+                      <span className="block truncate">
+                        {entry.displayLabel ?? entry.label}
+                      </span>
+                      {entry.contextLabel && (
+                        <span className="block truncate text-xs text-base-content/70">
+                          {entry.contextLabel}
+                        </span>
+                      )}
+                      {entry.months.length === 0 && (
+                        <span className="block text-xs">
+                          {' '}
+                          {entry.emptyReason}
+                        </span>
+                      )}
+                    </span>
+                  </label>
+                }
+                tooltip={
+                  <span className="block max-w-[calc(100vw-3rem)] whitespace-normal [overflow-wrap:anywhere]">
+                    {entry.identityLabel ?? entry.label}
+                  </span>
+                }
+              />
             ))}
           </div>
         </details>
@@ -162,14 +262,16 @@ export function FundingOutlookChart({
                 width={67}
               />
               <Tooltip
-                contentStyle={{
-                  backgroundColor: 'var(--color-base-100)',
-                  borderColor: 'var(--color-base-300)',
-                  borderRadius: 8,
-                  maxWidth: 320,
+                content={(props) => (
+                  <FundingOutlookTooltip {...props} series={series} />
+                )}
+                wrapperStyle={{
+                  maxWidth: '100%',
+                  pointerEvents: 'auto',
+                  whiteSpace: 'normal',
+                  width: 'min(22rem, calc(100vw - 3rem))',
+                  zIndex: 20,
                 }}
-                formatter={(value) => formatCurrency(Number(value))}
-                labelFormatter={(month) => fundingMonthLabel(String(month))}
               />
               <ReferenceLine
                 ifOverflow="extendDomain"
@@ -238,24 +340,44 @@ export function FundingOutlookChart({
       {!focused && visible.length > 0 && (
         <nav
           aria-label="Chart legend"
-          className="mt-4 flex flex-wrap justify-center gap-x-5 gap-y-2"
+          className="mt-4 grid grid-cols-1 gap-x-5 gap-y-2 sm:grid-cols-2 xl:grid-cols-3"
         >
           {visible.map((entry) => (
-            <button
-              className="flex min-w-0 max-w-full items-center gap-2 text-left text-sm hover:underline"
+            <TooltipLabel
+              asChild
               key={entry.id}
-              onClick={entry.onSelect}
-              type="button"
-            >
-              <span
-                aria-hidden
-                className="h-2 w-2 shrink-0 rounded-full"
-                style={{
-                  backgroundColor: chartSeriesColor(entry.colorIndex),
-                }}
-              />
-              <span className="break-words">{entry.label}</span>
-            </button>
+              label={
+                <button
+                  aria-label={entry.label}
+                  className="flex w-full min-w-0 items-center gap-2 text-left text-sm hover:underline"
+                  onClick={entry.onSelect}
+                  type="button"
+                >
+                  <span
+                    aria-hidden
+                    className="h-2 w-2 shrink-0 rounded-full"
+                    style={{
+                      backgroundColor: chartSeriesColor(entry.colorIndex),
+                    }}
+                  />
+                  <span className="min-w-0">
+                    <span className="block truncate">
+                      {entry.displayLabel ?? entry.label}
+                    </span>
+                    {entry.contextLabel && (
+                      <span className="block truncate text-xs text-base-content/70">
+                        {entry.contextLabel}
+                      </span>
+                    )}
+                  </span>
+                </button>
+              }
+              tooltip={
+                <span className="block max-w-[calc(100vw-3rem)] whitespace-normal [overflow-wrap:anywhere]">
+                  {entry.identityLabel ?? entry.label}
+                </span>
+              }
+            />
           ))}
         </nav>
       )}

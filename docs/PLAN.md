@@ -23,8 +23,9 @@ structural cleanup rather than a broad rewrite. Stage 5e implements that cleanup
 and passes combined verification. The cleanup is accepted and committed as
 `2b7a8e2a`. Stage 5f records the additional isolated real-data reconciliation.
 Stage 5g's demo alignment and allocation refinements are accepted and committed
-as `5ef2c492` and `895a5917`. Stage 5h replaces the initially selected portfolio
-with search-and-add funding selection, optimized for one project and its tasks.
+as `5ef2c492` and `895a5917`. Stage 5h's search-and-add funding selection and task
+cards were accepted and committed as `e1033f19`. Stage 5i's saved-plan header,
+long chart labels, and shortfall navigation refinements are accepted.
 Sponsored personnel budget availability and category rebudgeting are deferred
 until the end of this plan, potentially after v1. They do not block v1 completion.
 Saving remains available with funding gaps/overlaps.
@@ -2124,6 +2125,44 @@ of three selected tasks, staged Apply, Escape rollback, and nested-dialog Escape
 Only the appointment associated with that task entered initial staffing; importing
 another source afterward left staffing unchanged. No review plan was saved.
 The user accepted this increment, including the simplified source cards.
+
+## Stage 5i: saved-plan header and chart labels
+
+Match the demo's compact plan heading, alert placement, icon buttons, and
+full-width segmented navigation. Keep the production terms Funding outlook,
+Funding sources, Staffing, and Other expenses. Manual save, unsaved-change
+status, conflict handling, and navigation guards remain intact. Plan duplication
+remains available from the dashboard.
+
+Chart labels must handle long project and task names without hiding currency
+values or overflowing the chart. Use compact display labels with identifying
+codes, retain full source identities for hover and keyboard focus, and give
+tooltip values their own aligned column. Keep the existing source identities,
+colors, calculations, and chart navigation behavior.
+
+Implemented for review November 10. The workspace builds the outlook once and
+shares it with the header notice and chart section. The balance tooltip limits
+names to two lines, keeps amounts aligned, and supports scrolling without changing
+the selected month. Legend and line-control labels expose full identities on
+hover and keyboard focus. Single-task projects retain their human-readable names.
+
+Follow-up review names the first funding source to fall short in the header
+warning, with its first shortfall month. Explore funding source now lands at the
+source's forecast heading, balances, and chart below the sticky Walter header.
+It no longer focuses the details section below the chart. Only explicit source
+navigation moves focus, so browser Back and Forward retain scroll restoration.
+
+Validation: 786 client tests passed across 85 files; the final tooltip event
+isolation regression, TypeScript, production build, changed-file lint, and
+formatting checks passed. React Doctor reported no errors. Desktop browser review
+compared the live demo header and exercised a saved plan with 19 funding sources,
+including mouse and keyboard tooltip scrolling and full-name keyboard tooltips.
+The browser's viewport override did not change its rendered dimensions, so a
+narrow-screen browser check remains unverified. No saved plan data was changed.
+The shortfall follow-up passed 42 focused tests, TypeScript, production build,
+lint, and formatting checks. Browser review verified repeated Explore clicks,
+entry from Staffing, and exact scroll restoration when returning from expenses.
+This increment is accepted for commit and push.
 
 ## Deferred: sponsored personnel budgets and category rebudgeting
 

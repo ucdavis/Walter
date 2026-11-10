@@ -1,3 +1,7 @@
+import {
+  ArrowRightIcon,
+  ExclamationTriangleIcon,
+} from '@heroicons/react/24/outline';
 import { fundingMonthLabel } from '@/components/projections/fundingTimelineDates.ts';
 import { formatCurrency } from '@/lib/currency.ts';
 import type {
@@ -24,52 +28,73 @@ export function FundingOutlookNotice({
   return (
     <section
       aria-label="Funding summary"
-      className="mt-4 space-y-3 rounded-box border border-warning/50 bg-warning/5 p-4 text-sm"
+      className={`mb-5 flex items-start gap-3 rounded-lg border p-4 text-sm ${first ? 'border-error/30 bg-error/5' : 'border-warning/50 bg-warning/5'}`}
     >
-      {first && (
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="font-semibold text-error">Projected shortfall</p>
-            <p className="mt-1">
-              {outlook.shortfallSources.length}{' '}
-              {outlook.shortfallSources.length === 1
-                ? 'source falls'
-                : 'sources fall'}{' '}
-              below zero. First in{' '}
-              {fundingMonthLabel(first.firstShortfallMonth!)}. Balances remain
-              separate, even when grouped by project.
-            </p>
+      <ExclamationTriangleIcon
+        aria-hidden="true"
+        className={`mt-0.5 size-5 shrink-0 ${first ? 'text-error' : 'text-warning'}`}
+      />
+      <div className="min-w-0 flex-1 space-y-3">
+        {first && (
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold text-error">
+                First funding shortfall:{' '}
+                {fundingMonthLabel(first.firstShortfallMonth!)}
+              </p>
+              <p className="mt-1 font-semibold break-words">
+                {first.source.name}
+                {first.source.taskNumber
+                  ? ` · Task ${first.source.taskNumber}`
+                  : ''}
+                {first.source.taskName &&
+                first.source.taskName !== first.source.taskNumber &&
+                first.source.taskName !== first.source.name
+                  ? ` · ${first.source.taskName}`
+                  : ''}
+              </p>
+              <p className="mt-1 text-base-content/70">
+                {outlook.shortfallSources.length}{' '}
+                {outlook.shortfallSources.length === 1
+                  ? 'source falls'
+                  : 'sources fall'}{' '}
+                below zero. Balances remain separate, even when grouped by
+                project.
+              </p>
+            </div>
+            <button
+              aria-label={`Explore ${first.label}`}
+              className="btn btn-outline btn-error btn-sm"
+              onClick={() =>
+                onNavigate({ section: 'overview', source: first.source.id })
+              }
+              type="button"
+            >
+              Explore funding source
+              <ArrowRightIcon aria-hidden="true" className="size-4" />
+            </button>
           </div>
-          <button
-            className="btn btn-outline btn-sm"
-            onClick={() =>
-              onNavigate({ section: 'overview', source: first.source.id })
-            }
-            type="button"
-          >
-            Explore {first.label}
-          </button>
-        </div>
-      )}
-      {(gaps > 0 || overlaps > 0) && (
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <p>
-            {gaps > 0 &&
-              `${gaps} ${gaps === 1 ? 'appointment has' : 'appointments have'} unallocated time`}
-            {gaps > 0 && overlaps > 0 && '; '}
-            {overlaps > 0 &&
-              `${overlaps} ${overlaps === 1 ? 'appointment has' : 'appointments have'} overlapping allocations`}
-            . Unallocated shares do not charge a funding source.
-          </p>
-          <button
-            className="btn btn-outline btn-sm"
-            onClick={() => onNavigate({ section: 'staffing' })}
-            type="button"
-          >
-            Review staffing
-          </button>
-        </div>
-      )}
+        )}
+        {(gaps > 0 || overlaps > 0) && (
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p>
+              {gaps > 0 &&
+                `${gaps} ${gaps === 1 ? 'appointment has' : 'appointments have'} unallocated time`}
+              {gaps > 0 && overlaps > 0 && '; '}
+              {overlaps > 0 &&
+                `${overlaps} ${overlaps === 1 ? 'appointment has' : 'appointments have'} overlapping allocations`}
+              . Unallocated shares do not charge a funding source.
+            </p>
+            <button
+              className="btn btn-outline btn-sm"
+              onClick={() => onNavigate({ section: 'staffing' })}
+              type="button"
+            >
+              Review staffing
+            </button>
+          </div>
+        )}
+      </div>
     </section>
   );
 }

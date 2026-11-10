@@ -1,3 +1,4 @@
+import { ArrowTrendingUpIcon } from '@heroicons/react/24/outline';
 import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
 import {
   createFileRoute,
@@ -81,15 +82,27 @@ function RouteComponent() {
       }}
     >
       <main>
-        <div className="mx-auto max-w-6xl px-4 pt-4 sm:px-8">
-          <Link className="link" params={{ iamId }} to="/projections/$iamId">
-            Back to projections
+        <div className="mx-auto w-full max-w-[96rem] px-4 pt-4 sm:px-8">
+          <Link
+            className="btn btn-outline btn-sm gap-2 border-base-300 bg-base-100"
+            params={{ iamId }}
+            to="/projections/$iamId"
+          >
+            <ArrowTrendingUpIcon aria-hidden="true" className="size-4" />
+            Projections dashboard
           </Link>
         </div>
         <ProjectionWorkspace
           iamId={iamId}
           onNavigate={(location, replace = false) => {
-            void navigate({ replace, search: () => location });
+            void navigate({
+              replace,
+              // Source selection focuses its forecast card; do not reset that scroll to the page top.
+              resetScroll: !(
+                location.section === 'overview' && location.source !== undefined
+              ),
+              search: () => location,
+            });
           }}
           planPath={`/projections/${encodeURIComponent(iamId)}/${projectionId}`}
           search={search}

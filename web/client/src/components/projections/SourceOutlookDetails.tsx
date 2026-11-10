@@ -1,4 +1,3 @@
-import { useEffect, useRef } from 'react';
 import { SourceOutlookAppointments } from '@/components/projections/SourceOutlookAppointments.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import { FRINGE_CATEGORY, SALARY_CATEGORY } from '@/lib/piProjection.ts';
@@ -21,21 +20,13 @@ export function SourceOutlookDetails({
   outlook: SourceOutlook;
   results: ProjectionResults;
 }) {
-  const headingRef = useRef<HTMLHeadingElement>(null);
   const { source } = outlook;
-  useEffect(() => {
-    headingRef.current?.focus();
-  }, [source.id]);
 
   return (
     <section aria-label={`${outlook.label} details`} className="mt-8 space-y-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <h3
-            className="break-words text-xl font-bold"
-            ref={headingRef}
-            tabIndex={-1}
-          >
+          <h3 className="break-words text-xl font-bold">
             {outlook.label} details
           </h3>
           <p className="mt-2 text-sm">

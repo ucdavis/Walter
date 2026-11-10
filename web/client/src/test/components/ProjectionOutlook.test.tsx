@@ -1,4 +1,6 @@
-import { cloneElement, type ReactElement } from 'react';
+import { FundingOutlookNotice } from '@/components/projections/FundingOutlookSummary.tsx';
+import { buildProjectionOutlook } from '@/lib/projectionOutlook.ts';
+import { cloneElement, type ComponentProps, type ReactElement } from 'react';
 import { cleanup, render, screen, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -130,13 +132,26 @@ function plan(): ProjectionDraft {
   };
 }
 
+function OutlookView(props: ComponentProps<typeof FundingOutlook>) {
+  return (
+    <>
+      <FundingOutlookNotice
+        onNavigate={props.onNavigate}
+        outlook={props.outlook}
+      />
+      <FundingOutlook {...props} />
+    </>
+  );
+}
+
 async function show(draft = plan(), selectedSourceId: number | null = null) {
   const onNavigate = vi.fn();
   const results = computePiProjection(draft);
   const view = render(
-    <FundingOutlook
+    <OutlookView
       draft={draft}
       onNavigate={onNavigate}
+      outlook={buildProjectionOutlook(draft, results)}
       results={results}
       selectedSourceId={selectedSourceId}
     />
@@ -152,7 +167,10 @@ describe('funding outlook', () => {
     const { onNavigate, user } = await show();
     expect(
       screen.getByRole('region', { name: 'Funding summary' })
-    ).toHaveTextContent('1 source falls below zero. First in Jan 2026');
+    ).toHaveTextContent('First funding shortfall: Jan 2026');
+    expect(
+      screen.getByRole('region', { name: 'Funding summary' })
+    ).toHaveTextContent('Source 1 · Task 1');
     const table = screen.getByRole('table', { name: 'Funding sources' });
     expect(within(table).getByText('1 task shortfall')).toBeInTheDocument();
     expect(within(table).getByText('$1,050.00')).toBeInTheDocument();
@@ -282,9 +300,10 @@ describe('funding outlook', () => {
       screen.getByRole('checkbox', { name: 'Source 1 · Task 1' })
     );
     rerender(
-      <FundingOutlook
+      <OutlookView
         draft={draft}
         onNavigate={onNavigate}
+        outlook={buildProjectionOutlook(draft, results)}
         results={results}
         selectedSourceId={1}
       />
@@ -303,9 +322,10 @@ describe('funding outlook', () => {
     );
     expect(onNavigate).toHaveBeenLastCalledWith({ section: 'overview' });
     rerender(
-      <FundingOutlook
+      <OutlookView
         draft={draft}
         onNavigate={onNavigate}
+        outlook={buildProjectionOutlook(draft, results)}
         results={results}
         selectedSourceId={null}
       />

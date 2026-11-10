@@ -1,15 +1,33 @@
+import { FundingOutlookNotice } from '@/components/projections/FundingOutlookSummary.tsx';
+import { buildProjectionOutlook } from '@/lib/projectionOutlook.ts';
+import {
+  BanknotesIcon,
+  ChartBarIcon,
+  Cog6ToothIcon,
+  ListBulletIcon,
+  UsersIcon,
+} from '@heroicons/react/24/outline';
 import {
   PlanDetailsEditor,
   type PlanDetailsEditorHandle,
 } from '@/components/projections/PlanDetailsEditor.tsx';
 import { fundingMonthLabel } from '@/components/projections/fundingTimelineDates.ts';
-import { FundingOutlook } from '@/components/projections/FundingOutlook.tsx';
+import {
+  FundingOutlook,
+  type FundingOutlookHandle,
+} from '@/components/projections/FundingOutlook.tsx';
 import { editPlanDetails } from '@/lib/projectionDetails.ts';
 import {
   ExpensesEditor,
   type ExpensesEditorHandle,
 } from '@/components/projections/ExpensesEditor.tsx';
-import { useImperativeHandle, useRef, useState, type Ref } from 'react';
+import {
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+  type Ref,
+} from 'react';
 import {
   FundingSourcesEditor,
   type FundingSourcesEditorHandle,
@@ -38,7 +56,7 @@ export interface ProjectionWorkspaceHandle {
 
 export function ProjectionWorkspace({
   iamId,
-  onNavigate,
+  onNavigate: navigate,
   planPath,
   ref,
   search,
@@ -60,12 +78,41 @@ export function ProjectionWorkspace({
     session,
   } = useProjectionSession();
   const { draft } = session;
+  const outlook = buildProjectionOutlook(draft, results);
   const location = readProjectionLocation(search, draft);
   const [editingDetails, setEditingDetails] = useState(false);
   const detailsEditorRef = useRef<PlanDetailsEditorHandle>(null);
   const editorRef = useRef<StaffingEditorHandle>(null);
   const expenseEditorRef = useRef<ExpensesEditorHandle>(null);
   const sourceEditorRef = useRef<FundingSourcesEditorHandle>(null);
+  const outlookRef = useRef<FundingOutlookHandle>(null);
+  const pendingSourceFocus = useRef<number | null>(null);
+  useEffect(() => {
+    // Only an explicit source action moves the view; history restores its own scroll position.
+    if (
+      pendingSourceFocus.current !== null &&
+      location.section === 'overview' &&
+      location.fundingSourceId === pendingSourceFocus.current
+    ) {
+      outlookRef.current?.focusSelectedSource();
+    }
+    pendingSourceFocus.current = null;
+  }, [location.section, location.fundingSourceId, location.issues.length]);
+  function onNavigate(target: ProjectionNavigation, replace = false) {
+    pendingSourceFocus.current = null;
+    if (target.section === 'overview' && target.source !== undefined) {
+      if (
+        location.section === 'overview' &&
+        target.source === location.fundingSourceId &&
+        outlookRef.current
+      ) {
+        outlookRef.current?.focusSelectedSource();
+      } else {
+        pendingSourceFocus.current = target.source;
+      }
+    }
+    navigate(target, replace);
+  }
   const sourceSearch =
     location.fundingSourceId === null
       ? {}
@@ -101,32 +148,37 @@ export function ProjectionWorkspace({
   }));
 
   return (
-    <div className="mx-auto max-w-6xl p-4 sm:p-8">
-      <header className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <p className="text-sm text-base-content/70">Projection plan</p>
-          <h1 className="text-3xl font-bold">{draft.name}</h1>
-          <p className="mt-2 text-sm">
-            Plan started {draft.seededAt.slice(0, 10)}. Each source keeps its
-            own capture date.
-          </p>
+    <div className="mx-auto w-full max-w-[96rem] p-4 sm:p-8">
+      <FundingOutlookNotice onNavigate={onNavigate} outlook={outlook} />
+      <header className="flex flex-wrap items-start justify-between gap-x-6 gap-y-4">
+        <div className="min-w-0 flex-1 basis-80">
+          <h1 className="text-2xl font-bold leading-tight break-words sm:text-3xl">
+            {draft.name}
+          </h1>
+          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs font-medium tracking-wide text-base-content/60 uppercase">
+            <p title="Each source keeps its own capture date.">
+              Plan started {draft.seededAt.slice(0, 10)}
+            </p>
+            <p>
+              {draft.content.forecastMonths}-month forecast,{' '}
+              {fundingMonthLabel(results.forecastWindow.startMonth)} through{' '}
+              {fundingMonthLabel(results.forecastWindow.endMonth)}.
+            </p>
+          </div>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           <button
-            className="btn btn-outline"
+            aria-label="Edit plan details"
+            className="btn btn-outline btn-sm"
             onClick={() => setEditingDetails(true)}
             type="button"
           >
-            Edit plan details
+            <Cog6ToothIcon aria-hidden="true" className="size-4" />
+            Plan details
           </button>
           <ProjectionSaveControls />
         </div>
       </header>
-      <p className="mt-3 text-sm">
-        {draft.content.forecastMonths}-month forecast,{' '}
-        {fundingMonthLabel(results.forecastWindow.startMonth)} through{' '}
-        {fundingMonthLabel(results.forecastWindow.endMonth)}.
-      </p>
       {draft.content.notes && (
         <section
           aria-label="Plan notes"
@@ -154,27 +206,39 @@ export function ProjectionWorkspace({
 
       <nav
         aria-label="Plan sections"
-        className="mt-6 flex flex-wrap gap-2 border-b border-base-300 pb-3"
+        className="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-base-300 bg-base-300 sm:grid-cols-4"
       >
-        {(['overview', 'funding', 'staffing', 'expenses'] as const).map(
-          (section) => (
-            <button
-              aria-current={location.section === section ? 'page' : undefined}
-              className={`btn ${location.section === section ? 'btn-primary' : 'btn-ghost'}`}
-              key={section}
-              onClick={() => onNavigate({ ...sourceSearch, section })}
-              type="button"
-            >
-              {section === 'overview'
-                ? 'Funding outlook'
-                : section === 'funding'
-                  ? 'Funding sources'
-                  : section === 'staffing'
-                    ? 'Staffing'
-                    : 'Other expenses'}
-            </button>
-          )
-        )}
+        {(
+          [
+            {
+              Icon: ChartBarIcon,
+              label: 'Funding outlook',
+              section: 'overview',
+            },
+            {
+              Icon: BanknotesIcon,
+              label: 'Funding sources',
+              section: 'funding',
+            },
+            { Icon: UsersIcon, label: 'Staffing', section: 'staffing' },
+            {
+              Icon: ListBulletIcon,
+              label: 'Other expenses',
+              section: 'expenses',
+            },
+          ] as const
+        ).map(({ Icon, label, section }) => (
+          <button
+            aria-current={location.section === section ? 'page' : undefined}
+            className={`btn h-auto min-h-12 w-full rounded-none border-0 px-2 py-3 text-sm shadow-none ${location.section === section ? 'bg-primary text-primary-content hover:bg-primary/90' : 'bg-base-100 text-base-content/70 hover:bg-base-200'}`}
+            key={section}
+            onClick={() => onNavigate({ ...sourceSearch, section })}
+            type="button"
+          >
+            <Icon aria-hidden="true" className="size-4 shrink-0" />
+            {label}
+          </button>
+        ))}
       </nav>
 
       {location.issues.length > 0 ? (
@@ -202,6 +266,8 @@ export function ProjectionWorkspace({
         <FundingOutlook
           draft={draft}
           onNavigate={onNavigate}
+          outlook={outlook}
+          ref={outlookRef}
           results={results}
           selectedSourceId={location.fundingSourceId}
         />

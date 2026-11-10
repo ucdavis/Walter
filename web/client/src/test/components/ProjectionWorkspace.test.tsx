@@ -48,6 +48,96 @@ const salaryInput = () =>
 const editButton = () =>
   screen.getByRole('button', { name: 'Edit appointment for Alex Example' });
 
+describe('projection plan header', () => {
+  it('keeps one actionable funding warning above the title across section navigation', async () => {
+    const plan = createSalaryExample();
+    plan.content.fundingSources[0].balanceAdjustment = -50_000;
+    const { user } = openWorkspace('?section=overview', plan);
+    const title = await screen.findByRole('heading', { name: plan.name });
+    const summary = screen.getByRole('region', { name: 'Funding summary' });
+    expect(summary).toHaveTextContent('First funding shortfall: Jan 2026');
+    expect(summary).toHaveTextContent('Project A');
+    expect(
+      summary.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+    const navigation = screen.getByRole('navigation', {
+      name: 'Plan sections',
+    });
+    expect(within(navigation).getAllByRole('button')).toHaveLength(4);
+    expect(
+      within(navigation).getByRole('button', { name: 'Funding outlook' })
+    ).toHaveAttribute('aria-current', 'page');
+    expect(
+      screen.getByRole('button', { name: 'Edit plan details' })
+    ).toHaveTextContent('Plan details');
+    expect(screen.getByRole('button', { name: 'Save plan' })).toBeDisabled();
+    await user.click(
+      within(navigation).getByRole('button', { name: 'Staffing' })
+    );
+    expect(
+      screen.getAllByRole('region', { name: 'Funding summary' })
+    ).toHaveLength(1);
+    expect(
+      within(navigation).getByRole('button', { name: 'Staffing' })
+    ).toHaveAttribute('aria-current', 'page');
+    await user.click(
+      within(summary).getByRole('button', { name: 'Explore Project A' })
+    );
+    expect(
+      await screen.findByRole('heading', { name: 'Project A details' })
+    ).toBeInTheDocument();
+    expect(
+      within(navigation).getByRole('button', { name: 'Funding outlook' })
+    ).toHaveAttribute('aria-current', 'page');
+    const sourceTitle = screen.getByRole('heading', {
+      name: 'Project A',
+    });
+    await waitFor(() => expect(sourceTitle).toHaveFocus());
+    expect(
+      sourceTitle.compareDocumentPosition(
+        screen.getByLabelText('Outlook totals')
+      ) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+    await user.click(
+      within(summary).getByRole('button', { name: 'Explore Project A' })
+    );
+    expect(sourceTitle).toHaveFocus();
+    expect(read().location).toMatchObject({
+      fundingSourceId: 1,
+      section: 'overview',
+    });
+  });
+});
+
+describe('projection source focus', () => {
+  it('focuses explicit source selection but leaves history scroll restoration alone', async () => {
+    const scroll = vi.spyOn(Element.prototype, 'scrollIntoView');
+    try {
+      const { history, user } = openWorkspace('?section=overview&source=1');
+      await screen.findByRole('heading', { name: 'Project A details' });
+      expect(scroll).not.toHaveBeenCalled();
+      await user.selectOptions(
+        screen.getByRole('combobox', { name: 'Explore a funding source' }),
+        '2'
+      );
+      const sourceTitle = await screen.findByRole('heading', {
+        name: 'Project B',
+      });
+      await waitFor(() => expect(sourceTitle).toHaveFocus());
+      expect(scroll).toHaveBeenCalledWith({ block: 'start' });
+      scroll.mockClear();
+      await act(async () => history.back());
+      await screen.findByRole('heading', { name: 'Project A details' });
+      expect(scroll).not.toHaveBeenCalled();
+      await act(async () => history.forward());
+      await screen.findByRole('heading', { name: 'Project B details' });
+      expect(scroll).not.toHaveBeenCalled();
+    } finally {
+      scroll.mockRestore();
+    }
+  });
+});
+
 describe('projection salary workspace', () => {
   it('starts the outlook at the saved snapshot month while retaining prior spending', async () => {
     const plan = createSalaryExample();
@@ -196,7 +286,9 @@ describe('projection salary workspace', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Unsaved changes');
     expect(editButton()).toHaveFocus();
     await user.click(screen.getByRole('button', { name: 'Funding outlook' }));
-    expect(await screen.findByText('Projected shortfall')).toBeInTheDocument();
+    expect(
+      await screen.findByText(/First funding shortfall:/)
+    ).toBeInTheDocument();
     expect(screen.getByText('-$500.00')).toBeInTheDocument();
   });
 
@@ -272,7 +364,7 @@ describe('projection salary workspace', () => {
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
     await user.click(screen.getByRole('button', { name: 'Funding outlook' }));
     expect(
-      await screen.findByRole('heading', { name: 'Project B details' })
+      await screen.findByRole('heading', { name: 'Project B' })
     ).toHaveFocus();
     expect(read().draft.content.appointments[0].monthlySalary).toBe(11_000);
     await act(async () => history.back());

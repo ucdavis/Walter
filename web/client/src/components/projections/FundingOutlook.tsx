@@ -1,12 +1,17 @@
-import { lazy, Suspense, useState } from 'react';
-import { fundingOutlookSeries } from '@/components/projections/fundingOutlookSeries.ts';
 import {
-  FundingOutlookNotice,
-  FundingOutlookTotals,
-} from '@/components/projections/FundingOutlookSummary.tsx';
+  lazy,
+  Suspense,
+  useCallback,
+  useImperativeHandle,
+  useRef,
+  useState,
+  type Ref,
+} from 'react';
+import { fundingOutlookSeries } from '@/components/projections/fundingOutlookSeries.ts';
+import { FundingOutlookTotals } from '@/components/projections/FundingOutlookSummary.tsx';
 import { FundingOutlookTable } from '@/components/projections/FundingOutlookTable.tsx';
 import { SourceOutlookDetails } from '@/components/projections/SourceOutlookDetails.tsx';
-import { buildProjectionOutlook } from '@/lib/projectionOutlook.ts';
+import type { ProjectionOutlook } from '@/lib/projectionOutlook.ts';
 import type {
   ProjectionNavigation,
   ProjectionResults,
@@ -29,21 +34,37 @@ function toggleSet(current: ReadonlySet<string>, id: string) {
   return next;
 }
 
+export interface FundingOutlookHandle {
+  focusSelectedSource: () => void;
+}
+
 export function FundingOutlook({
   draft,
   onNavigate,
+  outlook,
+  ref,
   results,
   selectedSourceId,
 }: {
   draft: ProjectionDraft;
   onNavigate: (location: ProjectionNavigation) => void;
+  outlook: ProjectionOutlook;
+  ref?: Ref<FundingOutlookHandle>;
   results: ProjectionResults;
   selectedSourceId: number | null;
 }) {
-  const outlook = buildProjectionOutlook(draft, results);
   const selected = outlook.sources.find(
     ({ source }) => source.id === selectedSourceId
   );
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const focusSelectedSource = useCallback(() => {
+    const heading = headingRef.current;
+    if (heading) {
+      heading.focus({ preventScroll: true });
+      heading.scrollIntoView({ block: 'start' });
+    }
+  }, []);
+  useImperativeHandle(ref, () => ({ focusSelectedSource }));
   const [grouped, setGrouped] = useState(false);
   const [hiddenSources, setHiddenSources] = useState<Set<string>>(new Set());
   const [hiddenGroups, setHiddenGroups] = useState<Set<string>>(new Set());
@@ -71,7 +92,6 @@ export function FundingOutlook({
         Each funding source keeps its own balance. A surplus on one task does
         not cover another task&apos;s shortfall.
       </p>
-      <FundingOutlookNotice onNavigate={onNavigate} outlook={outlook} />
       {outlook.sources.length === 0 ? (
         <p className="mt-6">
           No funding sources in this plan. Add funding sources to explore an
@@ -80,10 +100,14 @@ export function FundingOutlook({
       ) : (
         <div className="mt-5 overflow-hidden rounded-box border border-base-300">
           <div className="flex flex-wrap items-end justify-between gap-4 p-4 sm:p-5">
-            <div>
-              <p className="font-semibold">
+            <div className="min-w-0 flex-1">
+              <h3
+                className="scroll-mt-24 text-lg font-semibold break-words"
+                ref={headingRef}
+                tabIndex={-1}
+              >
                 {selected ? selected.label : 'All funding sources'}
-              </p>
+              </h3>
               <p className="mt-1 text-sm text-base-content/70">
                 {selected
                   ? 'Explore the inputs behind this source’s forecast.'
