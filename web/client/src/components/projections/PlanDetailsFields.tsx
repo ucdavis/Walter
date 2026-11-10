@@ -11,11 +11,11 @@ export function PlanDurationField({
   value: number;
 }) {
   return (
-    <div className="max-w-xs space-y-2">
-      <label className="flex flex-col gap-2">
+    <div className="space-y-2">
+      <label className="flex flex-col gap-2 text-sm font-medium">
         Forecast duration
         <select
-          className="select select-bordered w-full"
+          className="select w-full text-base font-normal"
           onChange={(event) => onChange(Number(event.target.value))}
           value={value}
         >
@@ -26,7 +26,9 @@ export function PlanDurationField({
           ))}
         </select>
       </label>
-      <p className="text-sm">Starts in the original snapshot month.</p>
+      <p className="text-xs text-base-content/60">
+        Starts in the original snapshot month.
+      </p>
     </div>
   );
 }
@@ -46,10 +48,10 @@ export function PlanNotesField({
 }) {
   return (
     <div className="space-y-2">
-      <label className="flex flex-col gap-2">
+      <label className="flex flex-col gap-2 text-sm font-medium">
         {label}
         <textarea
-          className="textarea textarea-bordered w-full"
+          className="textarea min-h-10 w-full text-base font-normal"
           disabled={disabled}
           maxLength={MAX_PLAN_NOTES_LENGTH}
           onChange={(event) => onChange(event.target.value)}
@@ -57,7 +59,7 @@ export function PlanNotesField({
           value={value}
         />
       </label>
-      <p className="text-sm">
+      <p className="text-xs text-base-content/60">
         Visible to everyone who can view this plan. Up to{' '}
         {MAX_PLAN_NOTES_LENGTH.toLocaleString()} characters.
       </p>

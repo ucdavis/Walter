@@ -1,3 +1,11 @@
+import {
+  BanknotesIcon,
+  ExclamationTriangleIcon,
+  PencilSquareIcon,
+  PlusIcon,
+  TrashIcon,
+  UserGroupIcon,
+} from '@heroicons/react/24/outline';
 import { useImperativeHandle, useRef, useState, type Ref } from 'react';
 import {
   AppointmentEditor,
@@ -9,10 +17,20 @@ import {
 } from '@/components/projections/AllocationEditor.tsx';
 import { FundingTimeline } from '@/components/projections/FundingTimeline.tsx';
 import { replaceAppointmentFunding } from '@/lib/projectionAllocations.ts';
-import { AppointmentFundingStatus } from '@/components/projections/AppointmentFundingStatus.tsx';
+import {
+  AppointmentFundingBadges,
+  AppointmentFundingStatus,
+} from '@/components/projections/AppointmentFundingStatus.tsx';
 import { ProjectionDialog } from '@/components/projections/ProjectionDialog.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
-import type { AppointmentFundingMonth } from '@/lib/piProjection.ts';
+import type {
+  AppointmentFundingMonth,
+  PiProjectionRow,
+} from '@/lib/piProjection.ts';
+import {
+  buildSourceFundingBalances,
+  getAppointmentFundingShortfalls,
+} from '@/lib/projectionFundingBalances.ts';
 import {
   addProjectionAppointment,
   editProjectionAppointment,
@@ -20,7 +38,6 @@ import {
   type AppointmentOperation,
   type AppointmentOperationResult,
 } from '@/lib/projectionAppointments.ts';
-import { sourceLabel } from '@/lib/projectionSources.ts';
 import type {
   PendingAllocationEditor,
   PendingAppointmentEditor,
@@ -42,6 +59,7 @@ export function StaffingEditor<T extends ProjectionDraft>({
   forecastWindow,
   onOperation,
   ref,
+  results,
   session,
   target,
 }: {
@@ -51,6 +69,7 @@ export function StaffingEditor<T extends ProjectionDraft>({
     operation: AppointmentOperation
   ) => AppointmentOperationResult<T>;
   ref?: Ref<StaffingEditorHandle>;
+  results: { rows: PiProjectionRow[] };
   session: ProjectionSession<T>;
   target?: {
     fundingMonth: string | null;
@@ -67,6 +86,7 @@ export function StaffingEditor<T extends ProjectionDraft>({
   const editorRef = useRef<AppointmentEditorHandle>(null);
   const allocationRef = useRef<AllocationEditorHandle>(null);
   const { draft } = session;
+  const sourceBalances = buildSourceFundingBalances(results.rows);
   const appointment = draft.content.appointments.find(
     ({ id }) =>
       id === (target ? (target.fundingMonth ? null : target.id) : editing)
@@ -93,49 +113,94 @@ export function StaffingEditor<T extends ProjectionDraft>({
   }
   return (
     <div className="mt-5">
-      <p className="text-sm">
-        Salary is the full-time rate. Funding shares are percentages of each
-        appointment.
-      </p>
-      <button
-        className="btn btn-outline mt-4"
-        id="add-hypothetical-hire"
-        onClick={() => setEditing('new')}
-        type="button"
-      >
-        Add hypothetical hire
-      </button>
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h2 className="flex items-center gap-2 text-xl font-semibold">
+            <UserGroupIcon aria-hidden="true" className="size-5 shrink-0" />
+            Staffing
+          </h2>
+          <p className="mt-1 text-sm leading-relaxed text-base-content/80">
+            Review salary and benefits, then choose how each appointment is
+            funded.
+          </p>
+        </div>
+        <button
+          className="btn btn-outline"
+          id="add-hypothetical-hire"
+          onClick={() => setEditing('new')}
+          type="button"
+        >
+          <PlusIcon aria-hidden="true" className="size-5" />
+          Add hypothetical hire
+        </button>
+      </div>
       {draft.content.appointments.length === 0 && (
         <p className="mt-4">No appointments in this plan.</p>
       )}
       <div className="mt-4 space-y-4">
         {draft.content.appointments.map((item) => (
           <article
-            className="rounded-box border border-base-300 p-5"
+            className="overflow-hidden rounded-lg border border-main-border bg-base-100"
             key={item.id}
           >
-            <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="flex flex-wrap items-start justify-between gap-3 px-3.5 pt-3.5 pb-2">
               <div>
-                <h3 className="text-lg font-bold">{item.name}</h3>
-                {!item.isSeeded && <p className="text-sm">Hypothetical hire</p>}
-                <p className="text-sm">
-                  {item.title ? `${item.title} · ` : ''}
-                  {item.fte * 100}% appointment FTE
+                <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                  <h3 className="text-base font-semibold">{item.name}</h3>
+                  <span className="text-sm text-base-content/80">
+                    {item.title ? `${item.title} · ` : ''}
+                    {shareFormat.format(item.fte)} FTE
+                  </span>
+                  <AppointmentFundingBadges
+                    appointmentId={item.id}
+                    months={appointmentFunding}
+                  />
+                  {getAppointmentFundingShortfalls(
+                    appointmentFunding.filter(
+                      ({ appointmentId }) => appointmentId === item.id
+                    ),
+                    sourceBalances
+                  ).length > 0 && (
+                    <span
+                      className="badge badge-error badge-soft gap-1"
+                      title="An assigned funding source has a projected balance below zero at month end. Allocations remain unchanged."
+                    >
+                      <ExclamationTriangleIcon
+                        aria-hidden="true"
+                        className="size-3.5"
+                      />
+                      Projected funding shortfall
+                    </span>
+                  )}
+                </div>
+                <p className="mt-1 text-sm text-base-content/80 tabular-nums">
+                  <span>
+                    {item.monthlySalary === null
+                      ? 'Salary needs input'
+                      : `${formatCurrency(item.monthlySalary * 12)} per year at full time`}
+                  </span>
+                  {' · '}Fringe (CBR) {shareFormat.format(item.cbrRate)}
                 </p>
+                {!item.isSeeded && (
+                  <p className="mt-1 text-sm">Hypothetical hire</p>
+                )}
               </div>
               <div className="flex flex-wrap gap-2">
                 <button
-                  className="btn btn-outline"
+                  aria-label={`Edit appointment for ${item.name}`}
+                  className="btn btn-ghost btn-sm text-primary"
                   id={`edit-appointment-${item.id}`}
                   onClick={() =>
                     target ? target.onChange(item.id) : setEditing(item.id)
                   }
                   type="button"
                 >
-                  Edit appointment for {item.name}
+                  <PencilSquareIcon aria-hidden="true" className="size-4" />
+                  Edit appointment
                 </button>
                 <button
-                  className="btn btn-outline"
+                  aria-label={`Edit funding for ${item.name}`}
+                  className="btn btn-ghost btn-sm text-primary"
                   id={`edit-funding-${item.id}`}
                   onClick={() =>
                     editFunding(
@@ -148,66 +213,36 @@ export function StaffingEditor<T extends ProjectionDraft>({
                   }
                   type="button"
                 >
-                  Edit funding for {item.name}
+                  <BanknotesIcon aria-hidden="true" className="size-4" />
+                  Edit funding
                 </button>
                 <button
-                  className="btn btn-ghost"
+                  aria-label={`Remove appointment for ${item.name}`}
+                  className="btn btn-ghost btn-sm"
                   onClick={() => setRemoving(item.id)}
                   type="button"
                 >
-                  Remove appointment for {item.name}
+                  <TrashIcon aria-hidden="true" className="size-4" />
+                  <span className="sr-only">
+                    Remove appointment for {item.name}
+                  </span>
                 </button>
               </div>
             </div>
-            <p className="mt-4">
-              {item.monthlySalary === null
-                ? 'Salary needs input'
-                : `${formatCurrency(item.monthlySalary * 12)} per year at full time`}
-            </p>
-            <p className="mt-1 text-sm">
-              {formatCurrency(item.monthlySalary)} per month at full time
-            </p>
-            <AppointmentFundingStatus
-              appointment={item}
-              forecastWindow={forecastWindow}
-              months={appointmentFunding}
-            />
+            <div className="px-3.5 pb-3">
+              <AppointmentFundingStatus
+                appointment={item}
+                forecastWindow={forecastWindow}
+              />
+            </div>
             <FundingTimeline
               appointment={item}
               forecastWindow={forecastWindow}
               months={appointmentFunding}
               onEdit={(month) => editFunding(item.id, month)}
+              sourceBalances={sourceBalances}
               sources={draft.content.fundingSources}
             />
-            <details className="mt-3 text-sm">
-              <summary className="cursor-pointer">
-                Allocation dates and shares
-              </summary>
-              <ul className="mt-2 space-y-1 text-sm">
-                {item.allocations.map((allocation, index) => {
-                  const source = draft.content.fundingSources.find(
-                    ({ id }) => id === allocation.fundingSourceId
-                  );
-                  return (
-                    <li key={index}>
-                      {allocation.fundingSourceId === null
-                        ? 'Outside this plan'
-                        : source
-                          ? sourceLabel(source)
-                          : 'Unallocated funding'}
-                      : {shareFormat.format(allocation.percent)} of appointment
-                      {' · '}
-                      {shareFormat.format(allocation.percent * item.fte)}{' '}
-                      full-time FTE
-                      <span className="block text-xs">
-                        {allocation.startDate ?? 'Appointment start'} to{' '}
-                        {allocation.endDate ?? 'appointment end'}
-                      </span>
-                    </li>
-                  );
-                })}
-              </ul>
-            </details>
           </article>
         ))}
       </div>

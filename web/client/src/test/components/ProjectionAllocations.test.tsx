@@ -66,7 +66,7 @@ async function openJuly(user: ReturnType<typeof userEvent.setup>) {
   await user.click(
     await screen.findByRole('button', { name: /Alex Example, Jul 2026:/ })
   );
-  return screen.findByRole('dialog', { name: 'Edit funding for Alex Example' });
+  return screen.findByRole('dialog', { name: 'Alex Example funding' });
 }
 function date(label: string, value: string) {
   fireEvent.change(screen.getByLabelText(label), { target: { value } });
@@ -92,6 +92,46 @@ describe('appointment allocation period editor', () => {
     );
   });
 
+  it('labels partial and open ranges honestly and discards changes with the close button', async () => {
+    const plan = fullYearPlan();
+    const { user } = openWorkspace(plan);
+    await openJuly(user);
+    date('Start date', '10000-07-15');
+    expect(
+      screen.getByRole('button', { name: 'Replace selected dates' })
+    ).toBeDisabled();
+    date('Start date', '2026-07-15');
+    expect(
+      screen.getByRole('button', { name: 'Replace selected dates' })
+    ).toBeEnabled();
+    await user.click(
+      screen.getByRole('button', { name: 'Through appointment end' })
+    );
+    expect(
+      screen.getByRole('button', { name: 'Replace through appointment end' })
+    ).toBeEnabled();
+    await user.click(
+      screen.getByRole('button', { name: 'Entire appointment' })
+    );
+    expect(
+      screen.getByRole('button', { name: 'Replace entire appointment' })
+    ).toBeEnabled();
+    await user.selectOptions(screen.getByLabelText('Funding source 1'), '2');
+    await user.click(
+      screen.getByRole('button', { name: 'Close funding editor' })
+    );
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    );
+    expect(
+      screen.getByRole('button', { name: /Alex Example, Jul 2026:/ })
+    ).toHaveFocus();
+    expect(read().draft.content.appointments[0].allocations).toEqual(
+      plan.content.appointments[0].allocations
+    );
+    expect(read()).toMatchObject({ dirty: false, revision: 0 });
+  });
+
   it('replaces July through September, preserves both sides and actuals, and saves the resulting schedule', async () => {
     const plan = fullYearPlan();
     const { history, user } = openWorkspace(plan);
@@ -99,14 +139,20 @@ describe('appointment allocation period editor', () => {
     expect(history.location.search).toContain('fundingMonth=2026-07');
     expect(screen.getByLabelText('Start date')).toHaveValue('2026-07-01');
     expect(screen.getByLabelText('End date')).toHaveValue('2026-07-31');
+    expect(
+      screen.getByRole('button', { name: 'Replace 1 month' })
+    ).toBeEnabled();
     date('End date', '2026-09-30');
+    expect(
+      screen.getByRole('button', { name: 'Replace 3 months' })
+    ).toBeEnabled();
     await user.selectOptions(screen.getByLabelText('Funding source 1'), '2');
     expect(read().pendingEditor).toMatchObject({
       appointmentId: 101,
       hasChanges: true,
       kind: 'allocation',
     });
-    await user.click(screen.getByRole('button', { name: 'Apply funding' }));
+    await user.click(screen.getByRole('button', { name: /^Replace / }));
     await waitFor(() =>
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     );
@@ -142,6 +188,141 @@ describe('appointment allocation period editor', () => {
     );
   });
 
+  it('funds an active empty month and replaces the entire appointment with that split', async () => {
+    const plan = fullYearPlan();
+    plan.content.appointments[0].allocations = [
+      {
+        endDate: '2026-06-30',
+        fundingSourceId: 1,
+        percent: 1,
+        startDate: null,
+      },
+      {
+        endDate: null,
+        fundingSourceId: 1,
+        percent: 1,
+        startDate: '2026-08-01',
+      },
+    ];
+    const { user } = openWorkspace(plan);
+    expect(
+      await screen.findByRole('button', { name: 'Funding gaps' })
+    ).toBeVisible();
+    await openJuly(user);
+    expect(screen.queryByLabelText('Funding source 1')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Add allocation' }));
+    await user.selectOptions(screen.getByLabelText('Funding source 1'), '2');
+    await user.type(screen.getByLabelText('Appointment share 1 (%)'), '100');
+    await user.click(screen.getByRole('button', { name: /^Replace / }));
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    );
+    expect(
+      screen.queryByRole('button', { name: 'Funding gaps' })
+    ).not.toBeInTheDocument();
+    expect(read().draft.content.appointments[0].allocations).toEqual([
+      ...plan.content.appointments[0].allocations,
+      {
+        endDate: '2026-07-31',
+        fundingSourceId: 2,
+        percent: 1,
+        startDate: '2026-07-01',
+      },
+    ]);
+    await user.click(screen.getByRole('button', { name: 'Save plan' }));
+    await screen.findByRole('button', { name: '✓ Saved' });
+    expect(workspace.server.read().stored!.content.appointments).toEqual(
+      read().draft.content.appointments
+    );
+    await openJuly(user);
+    await user.click(
+      screen.getByRole('button', { name: 'Entire appointment' })
+    );
+    await user.click(screen.getByRole('button', { name: /^Replace / }));
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    );
+    expect(read().draft.content.appointments[0].allocations).toEqual([
+      { endDate: null, fundingSourceId: 2, percent: 1, startDate: null },
+    ]);
+    await user.click(screen.getByRole('button', { name: 'Save plan' }));
+    await screen.findByRole('button', { name: '✓ Saved' });
+    expect(workspace.server.read().stored!.content.appointments).toEqual(
+      read().draft.content.appointments
+    );
+  });
+
+  it('explains why funding an inactive month cannot extend the appointment', async () => {
+    const plan = fullYearPlan();
+    plan.content.appointments[0].endDate = '2026-06-30';
+    const { user } = openWorkspace(plan);
+    await openJuly(user);
+    expect(
+      screen.getByText(/This period has no active appointment dates/)
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /Jul 2026\s*Not active/ })
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Add allocation' }));
+    await user.selectOptions(
+      screen.getByLabelText('Funding source 1'),
+      'outside'
+    );
+    await user.type(screen.getByLabelText('Appointment share 1 (%)'), '100');
+    await user.click(screen.getByRole('button', { name: /^Replace / }));
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    );
+    expect(read().draft.content.appointments[0].endDate).toBe('2026-06-30');
+    expect(
+      screen.getByRole('button', { name: /Alex Example, Jul 2026: Not active/ })
+    ).toBeInTheDocument();
+  });
+
+  it('explains an expired source in an active month and allows replacing it', async () => {
+    const plan = fullYearPlan();
+    plan.content.fundingSources[0].endDate = '2026-06-30';
+    const { user } = openWorkspace(plan);
+    await openJuly(user);
+    expect(
+      screen.getByText(
+        /Choose another funding source or edit its dates in Funding sources/
+      )
+    ).toBeInTheDocument();
+    await user.click(
+      screen.getByRole('button', { name: 'Entire appointment' })
+    );
+    expect(
+      screen.getByText(
+        /Entire appointment does not extend funding source dates/
+      )
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Specific dates' }));
+    await user.click(screen.getByRole('button', { name: /^Replace / }));
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    );
+    expect(read().draft.content.appointments[0].allocations).toEqual(
+      plan.content.appointments[0].allocations
+    );
+    expect(
+      screen.getByRole('button', {
+        name: /Alex Example, Jul 2026: Funding gaps/,
+      })
+    ).toBeInTheDocument();
+    await openJuly(user);
+    await user.selectOptions(screen.getByLabelText('Funding source 1'), '2');
+    await user.click(screen.getByRole('button', { name: /^Replace / }));
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    );
+    expect(
+      screen.getByRole('button', {
+        name: /Alex Example, Jul 2026: 100% funded/,
+      })
+    ).toBeInTheDocument();
+  });
+
   it('starts added allocations blank, allows outside funding and totals above 100% at zero FTE, and cancels without changing the plan', async () => {
     const plan = fullYearPlan();
     plan.content.appointments[0].fte = 0;
@@ -151,15 +332,13 @@ describe('appointment allocation period editor', () => {
     await user.click(screen.getByRole('button', { name: 'Add allocation' }));
     expect(screen.getByLabelText('Funding source 2')).toHaveValue('');
     expect(screen.getByLabelText('Appointment share 2 (%)')).toHaveValue('');
-    expect(
-      screen.getByRole('button', { name: 'Apply funding' })
-    ).toBeDisabled();
+    expect(screen.getByRole('button', { name: /^Replace / })).toBeDisabled();
     await user.selectOptions(
       screen.getByLabelText('Funding source 2'),
       'outside'
     );
     await user.type(screen.getByLabelText('Appointment share 2 (%)'), '50');
-    expect(screen.getByRole('button', { name: 'Apply funding' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /^Replace / })).toBeEnabled();
     expect(screen.getByText(/Total: 150% of appointment/)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(read().draft).toEqual(plan);
@@ -168,7 +347,7 @@ describe('appointment allocation period editor', () => {
       screen.getByLabelText('Funding source 1'),
       'outside'
     );
-    await user.click(screen.getByRole('button', { name: 'Apply funding' }));
+    await user.click(screen.getByRole('button', { name: /^Replace / }));
     expect(read().draft.content.appointments[0].allocations).toContainEqual({
       endDate: '2026-07-31',
       fundingSourceId: null,
@@ -186,7 +365,7 @@ describe('appointment allocation period editor', () => {
     expect(screen.getByLabelText('End date')).toBeDisabled();
     expect(screen.getByText('Uses appointment end')).toBeInTheDocument();
     await user.selectOptions(screen.getByLabelText('Funding source 1'), '2');
-    await user.click(screen.getByRole('button', { name: 'Apply funding' }));
+    await user.click(screen.getByRole('button', { name: /^Replace / }));
     expect(read().draft.content.appointments[0].allocations).toContainEqual({
       endDate: null,
       fundingSourceId: 2,
@@ -205,7 +384,7 @@ describe('appointment allocation period editor', () => {
     expect(
       screen.getByText(/Applying will leave the selected period unallocated/)
     ).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Apply funding' }));
+    await user.click(screen.getByRole('button', { name: /^Replace / }));
     expect(read().draft.content.appointments[0].allocations).toEqual([]);
     expect(screen.getByText('No funding assigned.')).toBeInTheDocument();
   });
@@ -235,7 +414,7 @@ describe('appointment allocation period editor', () => {
     expect(
       screen.getByText(/Funding changes within Jul 2026/)
     ).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Apply funding' }));
+    await user.click(screen.getByRole('button', { name: /^Replace / }));
     expect(read().draft.content.appointments[0].allocations).toEqual(
       allocations
     );
@@ -263,7 +442,7 @@ describe('appointment allocation period editor', () => {
       history.forward();
     });
     await screen.findByRole('dialog', {
-      name: 'Edit funding for Alex Example',
+      name: 'Alex Example funding',
     });
     expect(screen.getByLabelText('Funding source 1')).toHaveValue('1');
     await user.selectOptions(screen.getByLabelText('Funding source 1'), '2');
@@ -301,10 +480,19 @@ describe('appointment allocation period editor', () => {
     await screen.findByRole('button', {
       name: /Alex Example, Apr 2026: Funding gaps and overallocations/,
     });
-    await user.click(
-      screen.getByText('Funding gaps and overallocated funding')
+    await user.click(screen.getByRole('button', { name: 'Funding gaps' }));
+    expect(
+      await screen.findByText('Partially allocated April 2026')
+    ).toBeVisible();
+    expect(screen.getByText('Unallocated January–March 2026')).toBeVisible();
+    expect(screen.getByText('Unallocated May–December 2026')).toBeVisible();
+    await user.keyboard('{Escape}');
+    await waitFor(() =>
+      expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
     );
-    expect(screen.getByText(/Checked through 2026-12-31/)).toBeVisible();
-    expect(screen.getByText(/Overallocated funding: Apr 2026/)).toBeVisible();
+    await user.click(
+      screen.getByRole('button', { name: 'Overallocated funding' })
+    );
+    expect(await screen.findByText('Overallocated April 2026')).toBeVisible();
   });
 });

@@ -100,6 +100,9 @@ async function addManual(
   await user.selectOptions(screen.getByLabelText('Category'), supplies);
   await user.type(screen.getByLabelText('Monthly amount'), amount);
 }
+function expectSummary(label: string, amount: string) {
+  expect(screen.getByText(label).nextElementSibling).toHaveTextContent(amount);
+}
 function month(label: string, value: string) {
   fireEvent.change(screen.getByLabelText(label), { target: { value } });
 }
@@ -151,6 +154,7 @@ describe('other expenses planning controls', () => {
       })
     );
     await enter(user, 'Monthly amount', '-20');
+    expectSummary('Historical forecast', '$1,850.74');
     expect(read().pendingEditor).toMatchObject({
       expenditureCategory: supplies,
       fundingSourceId: 1,
@@ -158,6 +162,8 @@ describe('other expenses planning controls', () => {
       kind: 'historicalExpense',
     });
     await user.click(screen.getByRole('button', { name: 'Apply amount' }));
+    expectSummary('Historical forecast', '-$119.35');
+    expectSummary('Total other expenses', '-$119.35');
     await changeWindow(user, '6');
     expect(
       read().draft.content.fundingSources[0].historicalExpenseOverrides
@@ -367,6 +373,8 @@ describe('other expenses planning controls', () => {
       endMonth: null,
       kind: 'OneTime',
     });
+    expectSummary('Added expense forecast', '-$500.00');
+    expectSummary('Total other expenses', '$1,350.74');
     await user.click(
       screen.getByRole('button', { name: 'Remove expense Refund' })
     );
@@ -453,9 +461,12 @@ describe('other expenses planning controls', () => {
           value: option.getAttribute('value'),
         }));
     const initialOptions = sourceOptions();
+    expectSummary('Historical forecast', '$1,850.74');
+    expectSummary('Added expense forecast', '$0.00');
     expect(screen.getByText('3-month average: $310.12')).toBeInTheDocument();
     await user.selectOptions(selector, '2');
     expect(screen.getByLabelText('View expenses for')).toHaveValue('2');
+    expectSummary('Historical forecast', '$5,370.97');
     expect(screen.getByText('3-month average: $900.00')).toBeInTheDocument();
     expect(
       screen.queryByText('3-month average: $310.12')
@@ -474,6 +485,8 @@ describe('other expenses planning controls', () => {
       'Captured coastal project · Project P-EXPENSES'
     );
     await user.click(screen.getByRole('button', { name: 'Apply expense' }));
+    expectSummary('Added expense forecast', '$149.19');
+    expectSummary('Total other expenses', '$5,520.16');
     expect(sourceOptions()).toEqual(initialOptions);
     expect(screen.getByLabelText('View expenses for')).toHaveValue('2');
     expect(read().draft.content.fundingSources[0].expenses).toEqual([]);
@@ -481,6 +494,8 @@ describe('other expenses planning controls', () => {
       { amount: 25, description: 'Second source purchase' },
     ]);
     await user.selectOptions(screen.getByLabelText('View expenses for'), '1');
+    expectSummary('Added expense forecast', '$0.00');
+    expectSummary('Total other expenses', '$1,850.74');
     expect(screen.getByText('3-month average: $310.12')).toBeInTheDocument();
     expect(
       screen.getByText('No added expenses for this source.')

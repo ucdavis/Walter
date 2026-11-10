@@ -127,8 +127,11 @@ describe('appointment planning controls', () => {
       plan.content.fundingSources
     );
     expect(
-      screen.getAllByText(/50% of appointment · 0% full-time FTE/)
-    ).toHaveLength(2);
+      screen.getByText('Research specialist · 0% FTE')
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText('Allocation dates and shares')
+    ).not.toBeInTheDocument();
   });
 
   it('keeps an imported zero CBR until an explicit lookup or manual change and never changes vacation accrual', async () => {
@@ -141,7 +144,7 @@ describe('appointment planning controls', () => {
     const user = openWorkspace(plan);
     await screen.findByLabelText('CBR (%)');
     expect(screen.getByLabelText('CBR (%)')).toHaveValue('0');
-    await user.click(screen.getByRole('button', { name: 'Use lookup rate' }));
+    await user.click(screen.getByRole('button', { name: 'Use 30% CBR' }));
     expect(screen.getByLabelText('CBR (%)')).toHaveValue('30');
     await enter(user, 'CBR (%)', '17.5');
     await user.click(screen.getByRole('button', { name: 'Apply' }));
@@ -153,7 +156,7 @@ describe('appointment planning controls', () => {
       screen.getByRole('button', { name: 'Edit appointment for Alex Example' })
     );
     expect(screen.getByLabelText('CBR (%)')).toHaveValue('17.5');
-    await user.click(screen.getByRole('button', { name: 'Use lookup rate' }));
+    await user.click(screen.getByRole('button', { name: 'Use 30% CBR' }));
     await user.click(screen.getByRole('button', { name: 'Apply' }));
     expect(read().draft.content.appointments[0].cbrRate).toBe(0.3);
     expect(read().draft.content.appointments[0].vacationAccrualRate).toBe(

@@ -1,3 +1,4 @@
+import { ArrowPathIcon, CheckIcon } from '@heroicons/react/24/outline';
 import { useEffect, useImperativeHandle, useRef, type Ref } from 'react';
 import { useStore } from '@tanstack/react-form';
 import { useAppForm } from '@/shared/forms/formContext.tsx';
@@ -104,7 +105,7 @@ export function SourceEditor<T extends ProjectionDraft>({
       >
         <form.Field name="name">
           {(field) => (
-            <label className="flex flex-col gap-1">
+            <label className="flex flex-col gap-2 text-sm">
               Source name
               <input
                 className="input input-bordered w-full"
@@ -119,7 +120,7 @@ export function SourceEditor<T extends ProjectionDraft>({
         </form.Field>
         <form.Field name="balance">
           {(field) => (
-            <label className="flex flex-col gap-1">
+            <label className="flex flex-col gap-2 text-sm">
               Planning balance
               <input
                 className="input input-bordered w-full"
@@ -134,7 +135,7 @@ export function SourceEditor<T extends ProjectionDraft>({
         <div className="grid gap-4 sm:grid-cols-2">
           <form.Field name="startDate">
             {(field) => (
-              <label className="flex flex-col gap-1">
+              <label className="flex flex-col gap-2 text-sm">
                 Start date
                 <input
                   className="input input-bordered w-full"
@@ -148,7 +149,7 @@ export function SourceEditor<T extends ProjectionDraft>({
           </form.Field>
           <form.Field name="endDate">
             {(field) => (
-              <label className="flex flex-col gap-1">
+              <label className="flex flex-col gap-2 text-sm">
                 End date
                 <input
                   className="input input-bordered w-full"
@@ -167,7 +168,7 @@ export function SourceEditor<T extends ProjectionDraft>({
           </p>
         ) : (
           source && (
-            <div className="rounded-box bg-base-200 p-3 text-sm">
+            <div className="rounded-lg border border-main-border bg-base-200/40 p-4 text-sm text-base-content/80">
               <p>
                 Captured balance:{' '}
                 {formatCurrency(sourceCapturedBalance(source))}
@@ -188,6 +189,7 @@ export function SourceEditor<T extends ProjectionDraft>({
                 }}
                 type="button"
               >
+                <ArrowPathIcon aria-hidden="true" className="size-4" />
                 Reset balance and dates
               </button>
             </div>
@@ -207,6 +209,7 @@ export function SourceEditor<T extends ProjectionDraft>({
             disabled={Boolean(validationMessage)}
             type="submit"
           >
+            <CheckIcon aria-hidden="true" className="size-4" />
             Apply
           </button>
         </div>

@@ -22,6 +22,8 @@ and rollout acceptance remain open. A read-only branch review identified bounded
 structural cleanup rather than a broad rewrite. Stage 5e implements that cleanup
 and passes combined verification. The cleanup is accepted and committed as
 `2b7a8e2a`. Stage 5f records the additional isolated real-data reconciliation.
+Stage 5g aligns the four-step wizard with the demo and awaits visual review; the
+saved-plan dashboard and workspace are the next visual increment.
 Sponsored personnel budget availability and category rebudgeting are deferred
 until the end of this plan, potentially after v1. They do not block v1 completion.
 Saving remains available with funding gaps/overlaps.
@@ -1920,6 +1922,140 @@ Entra authentication, and controlled rollout remain unverified.
 
 Private row-level evidence and temporary comparison programs remain outside the
 repository in the local review directory. Only aggregate results are recorded here.
+
+## Stage 5g: wizard layout alignment with the guided demo
+
+The user selected the guided demo as the visual and interaction target while
+keeping the rebuilt feature's terminology and capabilities. This increment covers
+the complete four-step wizard. The saved-plan dashboard and workspace remain the
+next visual review increment; shared editor styling also improves their dialogs
+and content panels.
+
+The wizard uses the demo's page hierarchy, connected numbered progress indicator,
+compact plan-detail grid, selected funding cards, icon actions, and footer layout.
+Visited steps are navigable through the existing validation and pending-edit
+guards. The dashboard return uses the same discard confirmation as Cancel setup.
+Review summarizes funding sources, appointments, and other expenses in three edit
+cards while retaining outlook totals, warnings, source details, and notes.
+
+Single-task funding sources use one selection control and show project identity
+once. Multiple-task projects keep all/partial project selection and individual
+task controls in bounded keyboard-scrollable lists. Search still selects a whole
+project even when some of its tasks are hidden. Renamed sources keep their names.
+Staffing retains appointment assumptions, hypothetical hires, the monthly funding
+schedule, explicit allocation dates in the funding editor, and outside funding.
+Other expenses remains
+scoped to one funding source, with historical/added/combined forecast summaries
+computed by the existing expense calculator.
+
+No financial policy, persistence contract, schema, or source-data behavior changes.
+The demo's indirect-rate display remains deferred because the current contracts
+do not supply that value. Current terminology remains authoritative: funding
+sources, appointments, allocations, historical estimates, and added expenses.
+
+Desktop and 390px browser checks passed all four steps, source selection,
+source-scoped expenses, visited-step navigation, and guarded cancellation. The
+isolated real backend created and reopened the UI alignment review plan with no
+pending changes. All 751 client tests across 79 files, TypeScript, production
+build, changed-file lint/formatting, and independent code review passed. React
+Doctor remains at 85/100 with 14 warnings and no errors. The only browser console
+error was the expected unavailable profile photo under local development login.
+A follow-up comparison at matching desktop/mobile viewports confirmed the same
+loaded Proxima Nova font and theme tokens as the demo. Presentation now matches
+its text weights, supporting contrast, two-line source titles, compact metadata,
+section icons, and stable source color markers. Repeated task identifiers are
+suppressed while distinct names remain available. Edit appointment and Edit
+funding remain separate actions.
+
+The reported allocation case involved an active appointment whose assigned funding
+source had already ended. The stored 100% allocation therefore provided no eligible
+funding in the selected month; choosing Entire appointment did not extend the
+source's dates. The replacement logic was unchanged. The editor now explains
+appointment bounds, marks inactive months correctly, and prominently shows funding
+source bounds when they cover only part or none of the replacement period. Out-of-
+range allocations remain saveable under the accepted policy. Regression checks
+cover funding an active empty month and saving/reopening, entire-appointment
+replacement, expired-source gaps, and switching to an eligible source.
+
+Follow-up verification passed: all 754 client tests across 79 files, production
+build, TypeScript, changed-file lint/formatting, and independent review. Browser
+checks reproduced the expired-source case and confirmed that changing the selected
+month to valid outside funding updates its coverage. Shared editor headings were
+deduplicated in the saved workspace. React Doctor reports 85/100, 16 warnings,
+and no errors; the additional warnings concern component size/complexity.
+
+The staffing follow-up removes the redundant allocation dates/shares disclosure
+and timeline instruction sentence at the user's request. Cards put name, title,
+and FTE together, with annual full-time salary and fringe (CBR) on one line below.
+Separate Edit appointment and Edit funding actions remain. The funding dialog
+follows the demo's stacked layout: a shaded header with calendar allocation badge
+and close button, Apply range with dates on the right above the month strip,
+then a full-width funding split and separate footer. It uses the demo's width,
+spacing, typography, borders, plus/delete icons, and outline Cancel button.
+The primary action names the replacement range; partial dates and open-ended
+modes have distinct labels. Late-month openings reveal the selected month in the
+strip. Exact dates, all replacement modes, precision, outside funding, and
+date-bound warnings remain available. Warnings appear when relevant rather than
+repeating general date instructions in every dialog.
+
+Assigned timeline segments now show red stripes and a warning icon when that
+source's total projected month-end balance is below zero. A card badge identifies
+appointments with such months. This uses the same category-summed source balance
+as the outlook, without pooling other sources or changing allocations or forecast
+costs. Zero does not warn; a recovered month clears its warning. Unallocated and
+inactive periods retain their existing treatment. Restricted sponsored personnel
+budgets remain deferred below.
+
+The CBR check found no unit conversion error: the copied lookup supplies 2% for
+the current graduate-student appointments and 20% for the postdoc. Imported rates
+remain unchanged; 20% remains a missing-rate default, not a minimum. The editor
+now names the actual rate offered by its lookup action and identifies the job code
+and business unit. The copied table does not establish workbook freshness or an
+individual employee's payroll assessment.
+
+Staffing verification passed all 757 client tests across 81 files, production
+build, TypeScript, and changed-file lint/formatting. The first concurrent run had
+three timing failures; the complete rerun with two workers passed. Desktop and
+390px browser checks confirmed the compact cards, responsive funding dialog,
+live allocated total, explicit CBR action, and a source-specific red shortfall
+segment beside a healthy month. React Doctor reports 88/100 with 15 warnings
+and no errors; removing the disclosure also removed its index-key warning.
+
+The allocation dialog's demo-alignment pass passed all 758 client tests across
+81 files, production build, TypeScript, and scoped lint/formatting. Browser
+comparison at matching desktop viewports confirmed the stacked layout and framed
+header/footer. Desktop and mobile checks covered close-button discard, unchanged
+plan state, and revealing a late selected month. Regression coverage also checks
+exact replacement labels, partial/open ranges, invalid dates, and focus return.
+React Doctor remains at 88/100 with 15 warnings and no errors.
+
+Funding gaps and overallocations now appear as header badges rather than a
+collapsed section. Hover, focus, or click reveals consecutive month ranges,
+separating partially allocated months from fully unallocated months. These labels
+use daily coverage flags, so offsetting gaps and overlaps remain visible even
+when a month's average is 100%. Inactive and healthy months break ranges.
+
+Allocation segments show demo-style detail cards with the source name, project,
+task and award identity, plan dates, planning balance, and projected month-end
+balance. Repeated names are omitted from metadata. Shares are identified as
+averages over active appointment days. Cards use existing source totals across
+categories, preserve zero balances, and explain outside funding without inventing
+a balance. The unavailable indirect-rate field remains omitted. A single monthly
+balance map supplies both cards and shortfall warnings.
+
+Month focus exposes funding details to keyboard users; moving between segments
+and months keeps one timeline card open. Cards remain hoverable and Escape
+dismissible, and clicking a month closes its card before opening the editor.
+
+Verification passed all 764 client tests across 83 files, production build,
+TypeScript, and changed-file lint/formatting. Real-data browser checks confirmed
+the partially allocated June and unallocated July–October ranges, badge hover and
+click, moving onto a source card, keyboard month details, Escape dismissal,
+click-to-edit, and viewport-fitting mobile cards. Shared tooltip regressions
+cover hover/click/focus interaction and replacing cards across months. React
+Doctor reports 88/100 with 16 warnings and no errors.
+
+This visual increment awaits user review.
 
 ## Deferred: sponsored personnel budgets and category rebudgeting
 

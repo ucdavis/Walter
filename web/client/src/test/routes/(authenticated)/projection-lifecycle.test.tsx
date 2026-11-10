@@ -232,6 +232,53 @@ async function changeHistoryWindow(
 }
 
 describe('projection creation and copies', () => {
+  it('revisits completed steps without skipping selection or losing unapplied edits', async () => {
+    const api = handleLifecycle();
+    const route = renderPlans();
+    const user = userEvent.setup();
+    try {
+      await startWizard(user);
+      expect(screen.getByRole('button', { name: 'Staffing' })).toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Review' })).toBeDisabled();
+      await reviewWizard(user);
+      await user.click(screen.getByRole('button', { name: 'Funding sources' }));
+      await user.clear(screen.getByLabelText('Plan name'));
+      await user.click(screen.getByRole('button', { name: 'Review' }));
+      expect(screen.getByLabelText('Plan name')).toBeInTheDocument();
+      await user.type(screen.getByLabelText('Plan name'), 'Revisited plan');
+      await user.selectOptions(
+        screen.getByLabelText('Forecast duration'),
+        '18'
+      );
+      await user.click(screen.getByRole('button', { name: 'Review' }));
+      expect(
+        await screen.findByRole('heading', { name: 'Revisited plan' })
+      ).toBeInTheDocument();
+      expect(screen.getByText(/18-month forecast/)).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: 'Funding sources' }));
+      await user.click(screen.getByRole('button', { name: 'Edit Project A' }));
+      await user.type(screen.getByLabelText('Source name'), ' edited');
+      await user.click(screen.getByRole('button', { name: 'Review' }));
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        'Apply or cancel your open editor'
+      );
+      await user.click(screen.getByRole('button', { name: 'Cancel' }));
+      await user.click(
+        screen.getByRole('button', { name: 'Projections dashboard' })
+      );
+      expect(
+        await screen.findByRole('dialog', { name: 'Leave setup?' })
+      ).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: 'Stay' }));
+      expect(screen.getByLabelText('Plan name')).toHaveValue('Revisited plan');
+      expect(api.creates).toHaveLength(0);
+      expect(api.seedReads()).toBe(1);
+    } finally {
+      route.cleanup();
+    }
+  });
+
   it('captures once automatically while keeping details typed during a delayed response', async () => {
     const api = handleLifecycle();
     let release!: () => void;
@@ -259,7 +306,7 @@ describe('projection creation and copies', () => {
         'Typed while loading'
       );
       await user.type(
-        screen.getByLabelText('Description (optional)'),
+        screen.getByLabelText('What are you exploring? (optional)'),
         'Keep the renewal assumption.'
       );
       await user.selectOptions(
@@ -274,9 +321,9 @@ describe('projection creation and copies', () => {
       expect(screen.getByLabelText('Plan name')).toHaveValue(
         'Typed while loading'
       );
-      expect(screen.getByLabelText('Description (optional)')).toHaveValue(
-        'Keep the renewal assumption.'
-      );
+      expect(
+        screen.getByLabelText('What are you exploring? (optional)')
+      ).toHaveValue('Keep the renewal assumption.');
       expect(screen.getByLabelText('Forecast duration')).toHaveValue('18');
       await reviewWizard(user);
       for (const label of [
@@ -368,7 +415,7 @@ describe('projection creation and copies', () => {
     const user = userEvent.setup();
     try {
       await user.click(await screen.findByRole('button', { name: 'New plan' }));
-      await screen.findAllByRole('checkbox', { name: /Include project/ });
+      await screen.findAllByRole('checkbox', { name: /^Include / });
       expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled();
       await user.click(screen.getByRole('button', { name: 'Cancel setup' }));
       await screen.findByRole('button', { name: 'New plan' });
@@ -464,9 +511,9 @@ describe('projection creation and copies', () => {
         screen.getByRole('button', { name: 'Edit funding for Alex Example' })
       );
       await screen.findByRole('dialog', {
-        name: 'Edit funding for Alex Example',
+        name: 'Alex Example funding',
       });
-      await user.click(screen.getByRole('button', { name: 'Apply funding' }));
+      await user.click(screen.getByRole('button', { name: /^Replace / }));
       expect(
         screen.queryByText(/An imported funding task could not be matched/)
       ).not.toBeInTheDocument();

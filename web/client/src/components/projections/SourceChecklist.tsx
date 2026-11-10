@@ -40,7 +40,7 @@ export function SourceChecklist({
       <input
         aria-label={`Include ${choice.label}`}
         checked={selectedKeys.has(choice.key)}
-        className="checkbox checkbox-sm mt-0.5"
+        className="checkbox checkbox-primary checkbox-sm mt-0.5"
         disabled={choice.disabled}
         onChange={(event) => toggle([choice.key], event.target.checked)}
         type="checkbox"
@@ -58,7 +58,10 @@ export function SourceChecklist({
       {[...groups.entries()].map(([key, group]) => {
         if (group.length === 1) {
           return (
-            <div className="rounded-box border border-base-300 px-4" key={key}>
+            <div
+              className={`rounded-lg border px-4 ${selectedKeys.has(group[0].key) ? 'border-primary bg-primary/5' : 'border-base-300'}`}
+              key={key}
+            >
               {task(group[0])}
             </div>
           );
@@ -71,12 +74,15 @@ export function SourceChecklist({
         const partial =
           !checked && available.some((choice) => selectedKeys.has(choice.key));
         return (
-          <div className="rounded-box border border-base-300 p-4" key={key}>
+          <div
+            className={`rounded-lg border p-4 ${checked || partial ? 'border-primary bg-primary/5' : 'border-base-300'}`}
+            key={key}
+          >
             <label className="flex items-center gap-3 font-semibold">
               <input
                 aria-label={`Include project ${projectName}`}
                 checked={checked}
-                className="checkbox checkbox-sm"
+                className="checkbox checkbox-primary checkbox-sm"
                 disabled={available.length === 0}
                 onChange={(event) =>
                   toggle(

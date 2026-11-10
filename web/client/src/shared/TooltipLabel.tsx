@@ -1,4 +1,10 @@
-import type { CSSProperties, HTMLAttributes, ReactNode, Ref } from 'react';
+import type {
+  CSSProperties,
+  HTMLAttributes,
+  ReactNode,
+  Ref,
+  MouseEvent,
+} from 'react';
 import { cloneElement, isValidElement, useState } from 'react';
 import {
   autoUpdate,
@@ -7,6 +13,9 @@ import {
   FloatingPortal,
   offset,
   shift,
+  safePolygon,
+  size,
+  useClick,
   useDismiss,
   useFloating,
   useFocus,
@@ -24,30 +33,47 @@ type TooltipChildProps = HTMLAttributes<HTMLElement> & {
 interface TooltipLabelProps {
   asChild?: boolean;
   className?: string;
+  clickToOpen?: boolean;
   /**
    * Keeps repeated display values, such as table cells, out of the Tab order
    * while retaining their hover tooltip. Pair with screenReaderLabel when the
    * tooltip adds context that must be available to assistive technology.
    */
   focusable?: boolean;
+  focusEnabled?: boolean;
+  hoverEnabled?: boolean;
   label: ReactNode;
   labelClassName?: string;
+  onOpenChange?: (open: boolean) => void;
+  open?: boolean;
   placement?: 'bottom' | 'left' | 'right' | 'top';
   screenReaderLabel?: string;
-  tooltip?: string;
+  tooltip?: ReactNode;
+  variant?: 'card' | 'default';
 }
 
 export function TooltipLabel({
   asChild = false,
   className,
+  clickToOpen = false,
   focusable = true,
+  focusEnabled = true,
+  hoverEnabled = true,
   label,
   labelClassName,
+  onOpenChange,
+  open: controlledOpen,
   placement = 'top',
   screenReaderLabel,
   tooltip,
+  variant = 'default',
 }: TooltipLabelProps) {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen ?? internalOpen;
+  const setOpen = (next: boolean) => {
+    setInternalOpen(next);
+    onOpenChange?.(next);
+  };
   const [arrowElement, setArrowElement] = useState<HTMLDivElement | null>(null);
   const {
     context,
@@ -61,6 +87,14 @@ export function TooltipLabel({
       flip({ padding: 8 }),
       shift({ padding: 8 }),
       arrow({ element: arrowElement }),
+      size({
+        apply({ availableHeight, elements }) {
+          if (variant === 'card') {
+            elements.floating.style.maxHeight = `${Math.max(80, availableHeight)}px`;
+          }
+        },
+        padding: 8,
+      }),
     ],
     onOpenChange: setOpen,
     open,
@@ -69,16 +103,25 @@ export function TooltipLabel({
   });
   const enabled = Boolean(tooltip);
   const hover = useHover(context, {
-    delay: { close: 0, open: 150 },
-    enabled,
+    delay: { close: variant === 'card' ? 100 : 0, open: 150 },
+    enabled: enabled && hoverEnabled,
+    handleClose:
+      variant === 'card'
+        ? safePolygon({ blockPointerEvents: false })
+        : undefined,
     move: false,
   });
-  const focus = useFocus(context, { enabled });
-  const dismiss = useDismiss(context, { enabled });
+  const focus = useFocus(context, { enabled: enabled && focusEnabled });
+  const click = useClick(context, { enabled: enabled && clickToOpen });
+  const dismiss = useDismiss(context, {
+    enabled,
+    referencePress: !clickToOpen,
+  });
   const role = useRole(context, { enabled, role: 'tooltip' });
   const { getFloatingProps, getReferenceProps } = useInteractions([
     hover,
     focus,
+    click,
     dismiss,
     role,
   ]);
@@ -127,6 +170,12 @@ export function TooltipLabel({
     cloneElement(child, {
       ...getReferenceProps({
         ...child.props,
+        onClick: (event: MouseEvent<HTMLElement>) => {
+          if (!clickToOpen) {
+            setOpen(false);
+          }
+          child.props.onClick?.(event);
+        },
         ref: referenceRef,
       }),
       'data-tooltip-placement': placement,
@@ -154,17 +203,22 @@ export function TooltipLabel({
         <FloatingPortal>
           <div
             {...getFloatingProps({
-              className: 'floating-tooltip',
+              className:
+                variant === 'card'
+                  ? 'z-[200] w-96 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-md border border-main-border bg-base-100 p-4 text-sm leading-normal text-base-content shadow-lg'
+                  : 'floating-tooltip',
               style: floatingStyles,
             })}
             ref={setFloating}
           >
-            <div
-              aria-hidden="true"
-              className="floating-tooltip-arrow"
-              ref={setArrowElement}
-              style={arrowStyle}
-            />
+            {variant !== 'card' && (
+              <div
+                aria-hidden="true"
+                className="floating-tooltip-arrow"
+                ref={setArrowElement}
+                style={arrowStyle}
+              />
+            )}
             {tooltip}
           </div>
         </FloatingPortal>

@@ -1,3 +1,4 @@
+import { PlusIcon } from '@heroicons/react/24/outline';
 import {
   useEffect,
   useImperativeHandle,
@@ -122,12 +123,12 @@ export function SourcePicker<T extends ProjectionDraft>({
   }
   return (
     <ProjectionDialog onClose={onClose} title="Add funding source">
-      <p className="mt-3 text-sm">
+      <p className="mt-3 text-sm text-base-content/70">
         Capture current financial inputs for selected tasks. Employees and their
         allocations stay unchanged.
       </p>
       <div className="mt-4" inert={pending}>
-        <label className="flex flex-col gap-1">
+        <label className="flex flex-col gap-2 text-sm">
           Search projects
           <input
             className="input input-bordered w-full"
@@ -176,6 +177,7 @@ export function SourcePicker<T extends ProjectionDraft>({
           onClick={() => void add()}
           type="button"
         >
+          <PlusIcon aria-hidden="true" className="size-4" />
           {pending ? 'Adding sources...' : 'Add selected sources'}
         </button>
       </div>

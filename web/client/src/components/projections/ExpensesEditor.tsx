@@ -1,3 +1,5 @@
+import { ClockIcon, ListBulletIcon } from '@heroicons/react/24/outline';
+import { formatCurrency } from '@/lib/currency.ts';
 import { HistoricalExpensesTable } from '@/components/projections/HistoricalExpensesTable.tsx';
 import { AddedExpensesTable } from '@/components/projections/AddedExpensesTable.tsx';
 import { useId, useImperativeHandle, useRef, useState, type Ref } from 'react';
@@ -16,6 +18,7 @@ import {
 } from '@/components/projections/HistoryWindowEditor.tsx';
 import { fundingMonthLabel } from '@/components/projections/fundingTimelineDates.ts';
 import {
+  computeExpenseForecast,
   getProjectionForecastWindow,
   getSourceForecastWindow,
 } from '@/lib/piProjection.ts';
@@ -125,13 +128,51 @@ export function ExpensesEditor<T extends ProjectionDraft>({
   const window = selectedSource
     ? getSourceForecastWindow(selectedSource, forecastWindow)
     : null;
+  const historicalTotal = selectedSource
+    ? getHistoricalExpenseRows(
+        selectedSource,
+        draft.content.historyMonths
+      ).reduce(
+        (total, row) =>
+          total +
+          computeExpenseForecast(
+            selectedSource,
+            {
+              amount: row.effectiveAmount,
+              endMonth: null,
+              kind: 'Monthly',
+              startMonth: null,
+            },
+            forecastWindow
+          ).total,
+        0
+      )
+    : 0;
+  const addedTotal =
+    selectedSource?.expenses.reduce(
+      (total, item) =>
+        total +
+        computeExpenseForecast(selectedSource, item, forecastWindow).total,
+      0
+    ) ?? 0;
   return (
-    <div className="mt-5 space-y-6">
-      <div className="flex flex-wrap items-center gap-2 text-sm">
+    <div className="mt-5 space-y-5">
+      <div>
+        <h2 className="flex items-center gap-2 text-xl font-semibold">
+          <ListBulletIcon aria-hidden="true" className="size-5 shrink-0" />
+          Other expenses
+        </h2>
+        <p className="mt-1 text-sm leading-relaxed text-base-content/80">
+          Adjust historical estimates or add costs for one funding source at a
+          time.
+        </p>
+      </div>
+      <div className="flex flex-wrap items-center gap-2 text-sm text-base-content/80">
+        <ClockIcon aria-hidden="true" className="size-4" />
         <p>Spending history: {draft.content.historyMonths} months</p>
         <button
           aria-label="Change history window"
-          className="btn btn-ghost btn-sm"
+          className="btn btn-ghost btn-sm text-primary"
           onClick={() => setEditing({ kind: 'history' })}
           type="button"
         >
@@ -140,7 +181,7 @@ export function ExpensesEditor<T extends ProjectionDraft>({
       </div>
       {selectedSource ? (
         <>
-          <label className="flex max-w-xl flex-col gap-2">
+          <label className="flex max-w-3xl flex-col gap-1.5 text-sm font-medium">
             View expenses for
             <select
               aria-describedby={sourceHelpId}
@@ -162,20 +203,46 @@ export function ExpensesEditor<T extends ProjectionDraft>({
               ))}
             </select>
           </label>
-          <p className="text-sm" id={sourceHelpId}>
+          <p className="text-sm text-base-content/80" id={sourceHelpId}>
             Historical estimates and added expenses below belong to this source.
             New expenses are charged here.
           </p>
-          <p className="text-sm">
+          <p className="text-sm text-base-content/80">
             Captured {selectedSource.capturedAt.slice(0, 10)}. Forecast through{' '}
             {fundingMonthLabel(window!.endMonth)}.
           </p>
           {window!.isBeyondForecast && (
-            <p className="text-sm">
+            <p className="text-sm text-base-content/80">
               This source starts after the forecast period. Its expenses add no
               costs within this plan period.
             </p>
           )}
+          <dl className="grid gap-4 rounded-lg border border-main-border bg-base-200 p-5 sm:grid-cols-3 sm:gap-6">
+            <div>
+              <dt className="text-sm text-base-content/80">
+                Historical forecast
+              </dt>
+              <dd className="mt-1 text-2xl font-semibold tabular-nums">
+                {formatCurrency(historicalTotal)}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-sm text-base-content/80">
+                Added expense forecast
+              </dt>
+              <dd className="mt-1 text-2xl font-semibold tabular-nums">
+                {formatCurrency(addedTotal)}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-sm text-base-content/80">
+                Total other expenses
+              </dt>
+              <dd className="mt-1 text-2xl font-semibold tabular-nums">
+                {formatCurrency(historicalTotal + addedTotal)}
+              </dd>
+            </div>
+          </dl>
           <HistoricalExpensesTable
             forecastWindow={forecastWindow}
             historyMonths={draft.content.historyMonths}

@@ -207,7 +207,6 @@ export function ProjectionWorkspace({
         />
       ) : location.section === 'funding' ? (
         <section className="mt-6">
-          <h2 className="text-xl font-bold">Funding sources</h2>
           <FundingSourcesEditor
             iamId={iamId}
             key={`${reloadVersion}:${location.fundingSourceId ?? 'list'}`}
@@ -228,13 +227,13 @@ export function ProjectionWorkspace({
         </section>
       ) : location.section === 'staffing' ? (
         <section className="mt-6">
-          <h2 className="text-xl font-bold">Staffing</h2>
           <StaffingEditor
             appointmentFunding={results.appointmentFunding}
             forecastWindow={results.forecastWindow}
             key={`${reloadVersion}:${location.appointmentId ?? 'list'}:${location.fundingMonth ?? 'details'}`}
             onOperation={applyAppointmentOperation}
             ref={editorRef}
+            results={results}
             session={session}
             target={{
               fundingMonth: location.fundingMonth,
@@ -256,7 +255,6 @@ export function ProjectionWorkspace({
         </section>
       ) : (
         <section className="mt-6">
-          <h2 className="text-xl font-bold">Other expenses</h2>
           <ExpensesEditor
             key={`${reloadVersion}:${location.fundingSourceId ?? 'first'}`}
             onOperation={applyExpenseOperation}

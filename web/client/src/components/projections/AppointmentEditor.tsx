@@ -90,8 +90,8 @@ export function AppointmentEditor({
       }}
       ref={dialogRef}
     >
-      <div className="modal-box max-w-3xl">
-        <h2 className="text-xl font-bold" id={titleId}>
+      <div className="modal-box max-w-3xl rounded-xl border border-main-border p-6">
+        <h2 className="text-xl font-semibold" id={titleId}>
           {appointment
             ? `Edit appointment for ${appointment.name}`
             : 'Add hypothetical hire'}
@@ -124,7 +124,7 @@ export function AppointmentEditor({
           </div>
         ) : null}
         {!initialDefaults && (
-          <div className="modal-action">
+          <div className="modal-action border-t border-main-border pt-4">
             <button className="btn btn-ghost" onClick={onClose} type="button">
               Cancel
             </button>
@@ -309,7 +309,7 @@ function AppointmentForm({
           {(['name', 'title'] as const).map((name) => (
             <form.Field key={name} name={name}>
               {(field) => (
-                <label className="flex flex-col gap-1">
+                <label className="flex flex-col gap-1.5 text-sm font-medium">
                   {name === 'name' ? 'Appointment name' : 'Title'}
                   <input
                     className="input input-bordered w-full"
@@ -325,7 +325,7 @@ function AppointmentForm({
           {(['jobCode', 'rateSet'] as const).map((name) => (
             <form.Field key={name} name={name}>
               {(field) => (
-                <label className="flex flex-col gap-1">
+                <label className="flex flex-col gap-1.5 text-sm font-medium">
                   {name === 'jobCode' ? 'Job code' : 'Business unit'}
                   <select
                     className="select select-bordered w-full"
@@ -348,7 +348,7 @@ function AppointmentForm({
           ))}
         </div>
       ) : (
-        <div className="rounded-box bg-base-200 p-3 text-sm">
+        <div className="rounded-lg border border-main-border bg-base-200/50 p-4 text-sm">
           <p className="font-semibold">
             {appointment!.name} · {appointment!.title}
           </p>
@@ -366,7 +366,7 @@ function AppointmentForm({
         {fields.map(({ label, name, type }) => (
           <form.Field key={name} name={name}>
             {(field) => (
-              <label className="flex flex-col gap-1">
+              <label className="flex flex-col gap-1.5 text-sm font-medium">
                 {label}
                 <input
                   aria-invalid={
@@ -392,7 +392,7 @@ function AppointmentForm({
         ))}
         <form.Field name="colaMonth">
           {(field) => (
-            <label className="flex flex-col gap-1">
+            <label className="flex flex-col gap-1.5 text-sm font-medium">
               Adjustment month
               <select
                 className="select select-bordered w-full"
@@ -420,15 +420,17 @@ function AppointmentForm({
           }}
           type="button"
         >
-          Use lookup rate
+          {lookupRate != null && Number.isFinite(lookupRate)
+            ? `Use ${percentDisplay(lookupRate)}% CBR`
+            : 'CBR rate unavailable'}
         </button>
         <span>
           {lookupRate == null
-            ? 'No CBR lookup rate for this job code and rate set.'
-            : `Lookup CBR: ${percentDisplay(lookupRate)}%`}
+            ? 'No CBR rate is available for this job code and business unit.'
+            : `CBR for job ${values.jobCode} in ${businessUnits[values.rateSet] ?? values.rateSet}. Apply to save this rate in the plan.`}
         </span>
       </div>
-      <p className="text-sm">
+      <p className="text-sm text-base-content/80">
         {formatCurrency(inputs.monthlySalary)} per month at full time. Salary
         base:{' '}
         {appointment
@@ -439,7 +441,7 @@ function AppointmentForm({
           : (inputs.startDate?.slice(0, 7) ?? 'choose a start date')}
         .
       </p>
-      <p className="text-sm">
+      <p className="text-sm text-base-content/80">
         Apply updates this plan. Cancel or leave this editor to discard
         unapplied changes.
       </p>
@@ -448,7 +450,7 @@ function AppointmentForm({
           {validationMessage ?? applyError}
         </p>
       )}
-      <div className="modal-action">
+      <div className="modal-action border-t border-main-border pt-4">
         <button className="btn btn-ghost" onClick={onClose} type="button">
           Cancel
         </button>

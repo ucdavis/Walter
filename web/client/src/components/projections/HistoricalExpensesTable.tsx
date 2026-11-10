@@ -1,3 +1,7 @@
+import {
+  PencilSquareIcon,
+  ArrowUturnLeftIcon,
+} from '@heroicons/react/24/outline';
 import type { ProjectionForecastWindow } from '@/lib/piProjection.ts';
 import { formatCurrency } from '@/lib/currency.ts';
 import { computeExpenseForecast } from '@/lib/piProjection.ts';
@@ -20,19 +24,19 @@ export function HistoricalExpensesTable({
   const historical = getHistoricalExpenseRows(source, historyMonths);
   return (
     <section aria-label="Historical expense estimates">
-      <h3 className="text-xl font-semibold">Historical estimates</h3>
-      <p className="mt-2 text-sm">
+      <h3 className="text-base font-semibold">Historical estimates</h3>
+      <p className="mt-1 text-sm text-base-content/80">
         Monthly amounts use the selected history window. Custom amounts stay in
         place until you restore the historical amount.
       </p>
       {historical.length ? (
-        <div className="mt-3 overflow-x-auto">
-          <table className="table table-sm min-w-[40rem]">
-            <thead>
+        <div className="mt-3 overflow-x-auto rounded-lg border border-base-300">
+          <table className="table walter-table text-sm min-w-[40rem]">
+            <thead className="bg-base-200/60">
               <tr>
                 <th>Category</th>
-                <th>Monthly amount</th>
-                <th>Forecast total</th>
+                <th className="text-right">Monthly amount</th>
+                <th className="text-right">Forecast total</th>
                 <th>
                   <span className="sr-only">Actions</span>
                 </th>
@@ -56,41 +60,48 @@ export function HistoricalExpensesTable({
                     rate.historyMonths === historyMonths
                 );
                 return (
-                  <tr key={row.expenditureCategory}>
+                  <tr
+                    className="hover:bg-base-200/40"
+                    key={row.expenditureCategory}
+                  >
                     <th className="font-normal" scope="row">
-                      <span className="font-medium">
+                      <span className="font-semibold">
                         {row.expenditureCategory}
                       </span>
-                      <span className="mt-1 block text-xs">
+                      <span className="mt-1 block text-xs text-base-content/70">
                         {captured
                           ? `${historyMonths}-month average: ${formatCurrency(row.baselineAmount)}`
                           : 'No costs captured in this window'}
                       </span>
                     </th>
-                    <td>
+                    <td className="text-right whitespace-nowrap tabular-nums">
                       {formatCurrency(row.effectiveAmount)}
-                      <span className="mt-1 block text-xs">
+                      <span className="mt-1 block text-xs text-base-content/70">
                         {row.overrideAmount === null ? 'Historical' : 'Custom'}
                         {row.effectiveAmount === 0 ? ' · Off' : ''}
                       </span>
                     </td>
-                    <td>
+                    <td className="text-right whitespace-nowrap tabular-nums">
                       {formatCurrency(forecast.total)}
                       {row.effectiveAmount !== 0 &&
                         !forecast.hasEligibleDates && (
-                          <span className="mt-1 block text-xs">
+                          <span className="mt-1 block text-xs text-base-content/70">
                             No eligible dates in the forecast period.
                           </span>
                         )}
                     </td>
                     <td>
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex justify-end gap-1">
                         <button
                           aria-label={`Edit historical amount for ${row.expenditureCategory}`}
-                          className="btn btn-outline btn-sm"
+                          className="btn btn-ghost btn-sm text-primary"
                           onClick={() => onEdit(row.expenditureCategory)}
                           type="button"
                         >
+                          <PencilSquareIcon
+                            aria-hidden="true"
+                            className="size-4"
+                          />
                           Edit amount
                         </button>
                         {row.overrideAmount !== null && (
@@ -100,6 +111,10 @@ export function HistoricalExpensesTable({
                             onClick={() => onRestore(row.expenditureCategory)}
                             type="button"
                           >
+                            <ArrowUturnLeftIcon
+                              aria-hidden="true"
+                              className="size-4"
+                            />
                             Use historical amount
                           </button>
                         )}

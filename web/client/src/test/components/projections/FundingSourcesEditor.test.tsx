@@ -77,7 +77,7 @@ describe('funding source selection and grouping', () => {
     ).toBeInTheDocument();
     expect(
       screen.getByRole('region', { name: 'Equipment grant funding sources' })
-    ).toHaveTextContent('Project P200 · 1 task');
+    ).toHaveTextContent('Project P200 · Task 01');
     expect(
       screen.queryByRole('button', { name: /^Add funding source$/ })
     ).not.toBeInTheDocument();
@@ -207,6 +207,6 @@ describe('funding source selection and grouping', () => {
     expect(screen.getAllByRole('article')).toHaveLength(2);
     expect(
       screen.getByRole('region', { name: 'Coastal research funding sources' })
-    ).toHaveTextContent('Project P100 · 1 task');
+    ).toHaveTextContent('Project P100 · Task 02');
   });
 });

@@ -1,3 +1,4 @@
+import { BanknotesIcon, PlusIcon } from '@heroicons/react/24/outline';
 import { useImperativeHandle, useRef, useState, type Ref } from 'react';
 import { ProjectionDialog } from '@/components/projections/ProjectionDialog.tsx';
 import { FundingSourceList } from '@/components/projections/FundingSourceList.tsx';
@@ -62,8 +63,41 @@ export function FundingSourcesEditor<T extends ProjectionDraft>({
     return result;
   }
   return (
-    <div className="mt-5">
-      <p className="text-sm">Each task keeps its own balance and forecast.</p>
+    <div className="mt-8">
+      <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h2 className="flex items-center gap-2 text-xl font-semibold">
+            <BanknotesIcon aria-hidden="true" className="size-5" />
+            Funding sources
+          </h2>
+          <p className="mt-1 text-sm leading-relaxed text-base-content/80">
+            {initialSelection
+              ? 'Select the funding sources to include in your plan. Highlighted cards are included.'
+              : 'Review the funding included in your plan.'}{' '}
+            Each task keeps its own balance and forecast.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {iamId && !initialSelection && (
+            <button
+              className="btn btn-outline"
+              onClick={() => setEditing('import')}
+              type="button"
+            >
+              <PlusIcon aria-hidden="true" className="size-5" />
+              Add funding source
+            </button>
+          )}
+          <button
+            className="btn btn-outline"
+            onClick={() => setEditing('planned')}
+            type="button"
+          >
+            <PlusIcon aria-hidden="true" className="size-5" />
+            Add planned source
+          </button>
+        </div>
+      </div>
       <FundingSourceList
         initialSelection={initialSelection}
         onEdit={(id) =>
@@ -72,24 +106,10 @@ export function FundingSourcesEditor<T extends ProjectionDraft>({
         onRemove={setRemoving}
         sources={draft.content.fundingSources}
       />
-      <div className="mt-5 flex flex-wrap gap-3">
-        {iamId && !initialSelection && (
-          <button
-            className="btn btn-outline"
-            onClick={() => setEditing('import')}
-            type="button"
-          >
-            Add funding source
-          </button>
-        )}
-        <button
-          className="btn btn-outline"
-          onClick={() => setEditing('planned')}
-          type="button"
-        >
-          Add planned source
-        </button>
-      </div>
+      <p className="mt-5 text-sm text-base-content/60">
+        Balances already account for recorded expenses and commitments. Your
+        changes apply to this plan only.
+      </p>
       {error && (
         <p className="mt-4 text-error" role="alert">
           {error}
@@ -131,7 +151,7 @@ export function FundingSourcesEditor<T extends ProjectionDraft>({
         >
           <p className="mt-4">
             Remove {sourceLabel(removed)} and its expenses and allocations?
-            Employees stay in the plan, and those funding shares become
+            Appointments stay in the plan, and those funding shares become
             unallocated. Adding this source again captures fresh data.
           </p>
           <div className="modal-action">

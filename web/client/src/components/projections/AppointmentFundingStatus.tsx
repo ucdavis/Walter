@@ -1,24 +1,20 @@
+import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
+import {
+  fundingWarningLabel,
+  getAppointmentFundingWarnings,
+} from '@/lib/projectionFundingWarnings.ts';
 import type { AppointmentFundingMonth } from '@/lib/piProjection.ts';
 import type { ProjectionAppointment } from '@/queries/projections.ts';
-import {
-  fundingMonthLabel,
-  fundingMonthRange,
-} from '@/components/projections/fundingTimelineDates.ts';
+import { fundingMonthRange } from '@/components/projections/fundingTimelineDates.ts';
 
 export function AppointmentFundingStatus({
   appointment,
   forecastWindow,
-  months,
 }: {
   appointment: ProjectionAppointment;
   forecastWindow: { endMonth: string; startMonth: string };
-  months: AppointmentFundingMonth[];
 }) {
-  const active = months.filter(
-    (month) => month.appointmentId === appointment.id
-  );
-  const gaps = active.filter(({ hasGap }) => hasGap);
-  const overlaps = active.filter(({ hasOverlap }) => hasOverlap);
   const future = Boolean(
     appointment.startDate &&
       appointment.startDate.slice(0, 7) > forecastWindow.endMonth
@@ -34,40 +30,64 @@ export function AppointmentFundingStatus({
           {fundingMonthRange(forecastWindow.endMonth).endDate}.
         </p>
       )}
-      {(gaps.length > 0 || overlaps.length > 0) && (
-        <details className="mt-2 text-sm">
-          <summary className="cursor-pointer">
-            {gaps.length && overlaps.length
-              ? 'Funding gaps and overallocated funding'
-              : gaps.length
-                ? 'Funding gaps'
-                : 'Overallocated funding'}
-          </summary>
-          <p className="mt-1">
-            Checked through {fundingMonthRange(forecastWindow.endMonth).endDate}
-            . Gaps and overlaps do not prevent saving.
-          </p>
-          {gaps.length > 0 && (
-            <p>
-              Unallocated funding:{' '}
-              {gaps.map(({ month }) => fundingMonthLabel(month)).join(', ')}.
-            </p>
-          )}
-          {overlaps.length > 0 && (
-            <p>
-              Overallocated funding:{' '}
-              {overlaps.map(({ month }) => fundingMonthLabel(month)).join(', ')}
-              .
-            </p>
-          )}
-        </details>
-      )}
       {appointment.hasUnmatchedFunding && (
         <p className="mt-2 text-sm">
           An imported funding task could not be matched; review unallocated
           funding.
         </p>
       )}
+    </>
+  );
+}
+
+export function AppointmentFundingBadges({
+  appointmentId,
+  months,
+}: {
+  appointmentId: number;
+  months: AppointmentFundingMonth[];
+}) {
+  const { gaps, overlaps } = getAppointmentFundingWarnings(
+    months.filter((month) => month.appointmentId === appointmentId)
+  );
+  return (
+    <>
+      {[
+        { label: 'Funding gaps', ranges: gaps, tone: 'badge-warning' },
+        {
+          label: 'Overallocated funding',
+          ranges: overlaps,
+          tone: 'badge-error',
+        },
+      ]
+        .filter(({ ranges }) => ranges.length > 0)
+        .map(({ label, ranges, tone }) => (
+          <TooltipLabel
+            asChild
+            clickToOpen
+            key={label}
+            label={
+              <button
+                className={`badge badge-soft gap-1 ${tone}`}
+                type="button"
+              >
+                <ExclamationTriangleIcon
+                  aria-hidden="true"
+                  className="size-3.5"
+                />
+                {label}
+              </button>
+            }
+            tooltip={
+              <ul className="space-y-1 text-sm">
+                {ranges.map((range) => (
+                  <li key={range.startMonth}>{fundingWarningLabel(range)}</li>
+                ))}
+              </ul>
+            }
+            variant="card"
+          />
+        ))}
     </>
   );
 }

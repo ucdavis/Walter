@@ -136,11 +136,11 @@ export function ExpenseEditor({
       onClose={onClose}
       title={expense ? `Edit expense: ${expense.description}` : 'Add expense'}
     >
-      <p className="mt-2 text-sm">
+      <p className="mt-2 text-sm text-base-content/80">
         <span className="font-medium">Charge to:</span> {sourceLabel(source)}
       </p>
       {source.projectNumber && (
-        <p className="mt-1 text-sm text-base-content/70">
+        <p className="mt-1 text-sm text-base-content/80">
           {[source.projectName, `Project ${source.projectNumber}`]
             .filter(Boolean)
             .join(' · ')}
@@ -156,7 +156,7 @@ export function ExpenseEditor({
       >
         <form.Field name="description">
           {(field) => (
-            <label className="flex flex-col gap-1">
+            <label className="flex flex-col gap-1.5 text-sm font-medium">
               Expense name
               <input
                 className="input input-bordered w-full"
@@ -169,7 +169,7 @@ export function ExpenseEditor({
         </form.Field>
         <form.Field name="category">
           {(field) => (
-            <label className="flex flex-col gap-1">
+            <label className="flex flex-col gap-1.5 text-sm font-medium">
               Category
               <select
                 className="select select-bordered w-full"
@@ -188,7 +188,7 @@ export function ExpenseEditor({
           )}
         </form.Field>
         {lookupFailed && (
-          <p className="text-sm">
+          <p className="text-sm text-base-content/80">
             The category lookup is unavailable; captured categories are still
             listed.{' '}
             <button className="link" onClick={onRetryCategories} type="button">
@@ -199,7 +199,7 @@ export function ExpenseEditor({
         <div className="grid gap-3 sm:grid-cols-2">
           <form.Field name="kind">
             {(field) => (
-              <label className="flex flex-col gap-1">
+              <label className="flex flex-col gap-1.5 text-sm font-medium">
                 Frequency
                 <select
                   className="select select-bordered w-full"
@@ -218,7 +218,7 @@ export function ExpenseEditor({
           </form.Field>
           <form.Field name="amount">
             {(field) => (
-              <label className="flex flex-col gap-1">
+              <label className="flex flex-col gap-1.5 text-sm font-medium">
                 {values.kind === 'Monthly' ? 'Monthly amount' : 'Amount'}
                 <input
                   className="input input-bordered w-full"
@@ -231,12 +231,12 @@ export function ExpenseEditor({
             )}
           </form.Field>
         </div>
-        <p className="text-sm">
+        <p className="text-sm text-base-content/80">
           A negative amount reduces forecast costs. Zero is allowed.
         </p>
         <form.Field name="start">
           {(field) => (
-            <label className="flex flex-col gap-1">
+            <label className="flex flex-col gap-1.5 text-sm font-medium">
               {values.kind === 'Monthly' ? 'Start month' : 'Expense month'}
               <input
                 className="input input-bordered w-full"
@@ -252,7 +252,7 @@ export function ExpenseEditor({
           <>
             <form.Field name="endMode">
               {(field) => (
-                <label className="flex flex-col gap-1">
+                <label className="flex flex-col gap-1.5 text-sm font-medium">
                   End condition
                   <select
                     className="select select-bordered w-full"
@@ -276,7 +276,7 @@ export function ExpenseEditor({
             {values.endMode === 'fixed' ? (
               <form.Field name="end">
                 {(field) => (
-                  <label className="flex flex-col gap-1">
+                  <label className="flex flex-col gap-1.5 text-sm font-medium">
                     End month
                     <input
                       className="input input-bordered w-full"
@@ -291,7 +291,7 @@ export function ExpenseEditor({
                 )}
               </form.Field>
             ) : (
-              <p className="text-sm">
+              <p className="text-sm text-base-content/80">
                 {source.endDate
                   ? `Through source end: ${source.endDate}. This follows changes to the source end date.`
                   : `Through forecast end: ${fundingMonthLabel(window.endMonth)}. This follows the source's forecast period.`}
@@ -300,7 +300,7 @@ export function ExpenseEditor({
           </>
         )}
         {forecast && (
-          <p className="text-sm">
+          <p className="text-sm text-base-content/80">
             Forecast total: {formatCurrency(forecast.total)}
             {inputs.amount !== 0 && !forecast.hasEligibleDates
               ? '. These dates fall outside the source forecast period, so this expense adds no forecast cost.'
@@ -312,7 +312,7 @@ export function ExpenseEditor({
             {error ?? visibleValidationMessage}
           </p>
         )}
-        <div className="modal-action">
+        <div className="modal-action border-t border-main-border pt-4">
           <button className="btn btn-ghost" onClick={onClose} type="button">
             Cancel
           </button>

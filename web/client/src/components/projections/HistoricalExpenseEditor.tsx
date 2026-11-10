@@ -123,11 +123,11 @@ export function HistoricalExpenseEditor({
           Turn off estimate
         </button>
         {forceZero && amount === 0 && (
-          <p className="text-sm">
+          <p className="text-sm text-base-content/80">
             This estimate will stay off when the history window changes.
           </p>
         )}
-        <p className="text-sm">
+        <p className="text-sm text-base-content/80">
           Use Turn off estimate to keep it at zero across history windows. A
           negative amount reduces forecast costs. A custom amount stays in place
           when the history window changes; Use historical amount restores the
@@ -138,7 +138,7 @@ export function HistoricalExpenseEditor({
             {validationMessage ?? error}
           </p>
         )}
-        <div className="modal-action">
+        <div className="modal-action border-t border-base-300 pt-4">
           <button className="btn btn-ghost" onClick={onClose} type="button">
             Cancel
           </button>

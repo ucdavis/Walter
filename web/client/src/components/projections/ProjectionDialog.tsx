@@ -8,6 +8,8 @@ import {
 
 export function ProjectionDialog({
   children,
+  edgeToEdge = false,
+  header,
   initialFocusRef,
   onClose,
   returnFocusTo,
@@ -15,6 +17,8 @@ export function ProjectionDialog({
   wide = false,
 }: {
   children: ReactNode;
+  edgeToEdge?: boolean;
+  header?: (titleId: string) => ReactNode;
   initialFocusRef?: RefObject<HTMLElement | null>;
   onClose: () => void;
   returnFocusTo?: () => HTMLElement | null;
@@ -39,17 +43,31 @@ export function ProjectionDialog({
   return (
     <dialog
       aria-labelledby={titleId}
-      className="modal"
+      className={
+        edgeToEdge
+          ? 'm-auto max-h-[calc(100dvh-2rem)] w-[min(64rem,calc(100vw-2rem))] max-w-none overflow-x-hidden overflow-y-auto rounded-lg border border-main-border bg-base-100 p-0 text-base text-base-content shadow-xl backdrop:bg-base-content/30'
+          : 'modal'
+      }
       onCancel={(event) => {
         event.preventDefault();
         onClose();
       }}
       ref={ref}
     >
-      <div className={`modal-box${wide ? ' max-w-4xl' : ''}`}>
-        <h2 className="text-xl font-bold" id={titleId}>
-          {title}
-        </h2>
+      <div
+        className={
+          edgeToEdge
+            ? 'min-w-0 max-w-full'
+            : `modal-box rounded-xl border border-base-300 p-6${wide ? ' max-w-4xl' : ''}`
+        }
+      >
+        {header ? (
+          header(titleId)
+        ) : (
+          <h2 className="text-xl font-semibold" id={titleId}>
+            {title}
+          </h2>
+        )}
         {children}
       </div>
     </dialog>

@@ -1,3 +1,9 @@
+import {
+  BanknotesIcon,
+  ListBulletIcon,
+  PencilSquareIcon,
+  UserGroupIcon,
+} from '@heroicons/react/24/outline';
 import { useMemo } from 'react';
 import { FundingOutlookTotals } from '@/components/projections/FundingOutlookSummary.tsx';
 import { PlanNotesField } from '@/components/projections/PlanDetailsFields.tsx';
@@ -30,16 +36,71 @@ export function ProjectionReviewStep({
   );
   const gaps = outlook.gapAppointmentIds.length;
   const overlaps = outlook.overlapAppointmentIds.length;
+  const sourceCount = draft.content.fundingSources.length;
+  const appointmentCount = draft.content.appointments.length;
+  const expenseCount = draft.content.fundingSources.reduce(
+    (count, source) => count + source.expenses.length,
+    0
+  );
   return (
-    <div className="mt-5 space-y-5">
-      <div>
-        <h3 className="text-xl font-bold">{name.trim()}</h3>
+    <div className="space-y-6">
+      <div className="text-center">
+        <h3 className="text-2xl font-bold">{name.trim()}</h3>
         <p className="mt-1 text-sm">
           {draft.content.forecastMonths}-month forecast,{' '}
           {fundingMonthLabel(results.forecastWindow.startMonth)} through{' '}
           {fundingMonthLabel(results.forecastWindow.endMonth)}.
         </p>
       </div>
+      <nav aria-label="Edit setup" className="grid gap-4 sm:grid-cols-3">
+        {[
+          {
+            action: 'Edit funding sources',
+            detail: 'Each source keeps its own balance and forecast.',
+            icon: BanknotesIcon,
+            step: 0 as const,
+            title: 'Funding sources',
+            value: `${sourceCount} funding ${sourceCount === 1 ? 'source' : 'sources'}`,
+          },
+          {
+            action: 'Edit staffing',
+            detail: 'Salary, benefits, dates, and funding allocations.',
+            icon: UserGroupIcon,
+            step: 1 as const,
+            title: 'Staffing',
+            value: `${appointmentCount} ${appointmentCount === 1 ? 'appointment' : 'appointments'}`,
+          },
+          {
+            action: 'Edit other expenses',
+            detail: `${draft.content.historyMonths}-month history for expense estimates.`,
+            icon: ListBulletIcon,
+            step: 2 as const,
+            title: 'Other expenses',
+            value: `${expenseCount} added ${expenseCount === 1 ? 'expense' : 'expenses'}`,
+          },
+        ].map(({ action, detail, icon: Icon, step, title, value }) => (
+          <div
+            className="flex flex-col rounded-lg border border-main-border p-4"
+            key={step}
+          >
+            <h3 className="flex items-center gap-2 text-sm font-medium text-base-content/80">
+              <Icon aria-hidden="true" className="size-5" />
+              {title}
+            </h3>
+            <p className="mt-4 text-xl font-semibold">{value}</p>
+            <p className="mt-2 text-sm text-base-content/80">{detail}</p>
+            <button
+              className="btn btn-ghost btn-sm mt-3 self-start px-0 text-primary"
+              disabled={disabled}
+              onClick={() => onEditStep(step)}
+              type="button"
+            >
+              <PencilSquareIcon aria-hidden="true" className="size-4" />
+              {action}
+            </button>
+          </div>
+        ))}
+      </nav>
       <FundingOutlookTotals
         endMonth={results.forecastWindow.endMonth}
         outlook={outlook}
@@ -73,7 +134,7 @@ export function ProjectionReviewStep({
               overlapping allocations.
             </p>
           )}
-          <p className="text-base-content/70">
+          <p className="text-base-content/80">
             You can create this plan and make adjustments later.
           </p>
         </section>
@@ -81,12 +142,12 @@ export function ProjectionReviewStep({
       {outlook.sources.length === 0 ? (
         <p className="text-sm">No funding sources selected.</p>
       ) : (
-        <details className="rounded-box border border-base-300">
+        <details className="rounded-box border border-main-border">
           <summary className="cursor-pointer p-4 text-sm font-medium">
             Funding source details ({outlook.sources.length})
           </summary>
           <div className="px-4 pb-4">
-            <p className="mb-3 text-sm text-base-content/70">
+            <p className="mb-3 text-sm text-base-content/80">
               Plan started {draft.seededAt.slice(0, 10)}.{' '}
               {draft.content.historyMonths}-month spending history.
             </p>
@@ -114,7 +175,7 @@ export function ProjectionReviewStep({
                     <tr key={source.source.id}>
                       <th className="font-normal" scope="row">
                         <span className="font-medium">{source.label}</span>
-                        <span className="mt-1 block text-xs text-base-content/70">
+                        <span className="mt-1 block text-xs text-base-content/80">
                           {source.source.sourceKind === 'Planned'
                             ? 'Planned funding'
                             : `Captured ${source.source.capturedAt.slice(0, 10)}`}
@@ -150,32 +211,6 @@ export function ProjectionReviewStep({
           </div>
         </details>
       )}
-      <nav aria-label="Edit setup" className="flex flex-wrap gap-2">
-        <button
-          className="btn btn-ghost btn-sm"
-          disabled={disabled}
-          onClick={() => onEditStep(0)}
-          type="button"
-        >
-          Edit funding sources
-        </button>
-        <button
-          className="btn btn-ghost btn-sm"
-          disabled={disabled}
-          onClick={() => onEditStep(1)}
-          type="button"
-        >
-          Edit staffing
-        </button>
-        <button
-          className="btn btn-ghost btn-sm"
-          disabled={disabled}
-          onClick={() => onEditStep(2)}
-          type="button"
-        >
-          Edit other expenses
-        </button>
-      </nav>
       <PlanNotesField
         disabled={disabled}
         onChange={onNotesChange}

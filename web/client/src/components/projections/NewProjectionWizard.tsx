@@ -1,4 +1,10 @@
 import {
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  ArrowTrendingUpIcon,
+  CheckIcon,
+} from '@heroicons/react/24/outline';
+import {
   PlanDurationField,
   PlanNotesField,
 } from '@/components/projections/PlanDetailsFields.tsx';
@@ -91,6 +97,7 @@ export function NewProjectionWizard({
   const expenseEditorRef = useRef<ExpensesEditorHandle>(null);
   const staffingEditorRef = useRef<StaffingEditorHandle>(null);
   const [step, setStep] = useState(0);
+  const [visitedStep, setVisitedStep] = useState(0);
   const [session, setSession] =
     useState<ProjectionSession<ProjectionDraft> | null>(null);
   const [loading, setLoading] = useState(true);
@@ -222,6 +229,7 @@ export function NewProjectionWizard({
         setRosterSelected(true);
         setRoster([]);
       }
+      setVisitedStep((visited) => Math.max(visited, 1));
       setStep(1);
       return;
     }
@@ -285,7 +293,16 @@ export function NewProjectionWizard({
       setError('Apply or cancel your open editor before changing steps.');
       return;
     }
+    if (step === 0 && target !== 0 && session) {
+      const updated = editPlanDetails(session, details);
+      if (!updated.ok) {
+        setError(updated.error);
+        return;
+      }
+      updateSession(updated.session);
+    }
     setError(null);
+    setVisitedStep((visited) => Math.max(visited, target));
     setStep(target);
   }
 
@@ -374,26 +391,78 @@ export function NewProjectionWizard({
   }
 
   return (
-    <section aria-label="New plan setup" className="mx-auto max-w-5xl py-8">
-      <h1 className="text-3xl font-bold">New plan</h1>
+    <section
+      aria-label="New plan setup"
+      className="w-full pt-6 pb-12 text-base leading-normal text-base-content"
+    >
+      <button
+        className="btn mb-6"
+        onClick={() => (hasWork() ? setCancelRequested(true) : leave())}
+        type="button"
+      >
+        <ArrowTrendingUpIcon aria-hidden="true" className="size-5" />
+        Projections dashboard
+      </button>
+      <header className="mb-8">
+        <h1 className="h1 outline-none" ref={heading} tabIndex={-1}>
+          {
+            [
+              'Choose your starting point.',
+              'Review your team.',
+              'Plan for everything else.',
+              'Ready to explore your plan.',
+            ][step]
+          }
+        </h1>
+        <p className="mt-3 max-w-2xl text-base leading-relaxed text-base-content/80">
+          {
+            [
+              'Your current funding is filled in. Choose the sources to include in your plan.',
+              'Keep current appointments or adjust them for this plan.',
+              'Plan for supplies, travel, or a one-time purchase. Start with your historical spending estimates.',
+              'Check your assumptions, then create a plan you can explore and adjust.',
+            ][step]
+          }
+        </p>
+      </header>
       <ol
         aria-label="Plan setup progress"
-        className="mt-6 flex flex-wrap gap-x-6 gap-y-2"
+        className="mb-10 flex w-full list-none p-0"
       >
         {steps.map((label, index) => (
           <li
             aria-current={index === step ? 'step' : undefined}
-            className={index === step ? 'font-bold text-primary' : ''}
+            className="relative flex flex-1 flex-col items-center gap-3 px-1 text-center text-xs not-last:after:absolute not-last:after:top-4 not-last:after:right-[calc(-50%+1.75rem)] not-last:after:left-[calc(50%+1.75rem)] not-last:after:h-px not-last:after:bg-base-300 sm:text-sm"
             key={label}
           >
-            {index + 1}. {label}
+            <button
+              aria-current={index === step ? 'step' : undefined}
+              className="relative z-10 flex flex-col items-center gap-3 disabled:cursor-not-allowed"
+              disabled={
+                index > visitedStep || Boolean(submitted) || create.isPending
+              }
+              onClick={() => navigateStep(index)}
+              type="button"
+            >
+              <span
+                aria-hidden="true"
+                className={`relative z-10 grid size-8 place-items-center rounded-full border font-semibold ${index === step ? 'border-primary bg-primary text-primary-content ring-4 ring-base-200' : index < step ? 'border-base-200 bg-base-200 text-primary' : 'border-main-border bg-base-200 text-base-content/60'}`}
+              >
+                {index < step ? <CheckIcon className="size-4" /> : index + 1}
+              </span>
+              <span
+                className={
+                  index <= step
+                    ? 'font-medium text-primary'
+                    : 'text-base-content/60'
+                }
+              >
+                {label}
+              </span>
+            </button>
           </li>
         ))}
       </ol>
-      <h2 className="mt-8 text-2xl font-bold" ref={heading} tabIndex={-1}>
-        {steps[step]}
-      </h2>
-
       <div inert={create.isPending}>
         {step === 0 && (
           <PlanStep
@@ -433,6 +502,7 @@ export function NewProjectionWizard({
             forecastWindow={results.forecastWindow}
             onOperation={applyAppointmentOperation}
             ref={staffingEditorRef}
+            results={results}
             session={session}
           />
         )}
@@ -486,7 +556,7 @@ export function NewProjectionWizard({
           {error}
         </p>
       )}
-      <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-base-300 pt-5">
+      <div className="mt-8 flex flex-wrap items-center justify-between gap-4 border-t border-main-border pt-6">
         <button
           className="btn btn-ghost"
           onClick={() => (hasWork() ? setCancelRequested(true) : leave())}
@@ -494,7 +564,10 @@ export function NewProjectionWizard({
         >
           Cancel setup
         </button>
-        <div className="flex gap-3">
+        <p className="hidden text-sm text-base-content/60 lg:block">
+          You can revisit every assumption in your workspace.
+        </p>
+        <div className="flex flex-wrap gap-3">
           {step > 0 && (
             <button
               className="btn btn-ghost"
@@ -507,12 +580,13 @@ export function NewProjectionWizard({
               }}
               type="button"
             >
+              <ArrowLeftIcon aria-hidden="true" className="size-4" />
               Back
             </button>
           )}
           {returningToReview && step < 3 && (
             <button
-              className="btn btn-secondary"
+              className="btn btn-outline"
               disabled={
                 Boolean(detailsValidationMessage) ||
                 loading ||
@@ -534,6 +608,7 @@ export function NewProjectionWizard({
               type="submit"
             >
               Continue
+              <ArrowRightIcon aria-hidden="true" className="size-4" />
             </button>
           ) : step < 3 ? (
             <button
@@ -542,6 +617,7 @@ export function NewProjectionWizard({
               type="button"
             >
               Continue
+              <ArrowRightIcon aria-hidden="true" className="size-4" />
             </button>
           ) : (
             <button
@@ -603,32 +679,35 @@ function PlanStep({
 }) {
   return (
     <form
-      className="mt-5 space-y-5"
+      className="space-y-5"
       id="projection-setup-plan"
       onSubmit={(event) => {
         event.preventDefault();
         void onContinue();
       }}
     >
-      <label className="flex max-w-xl flex-col gap-2">
-        Plan name
-        <input
-          className="input input-bordered w-full"
-          maxLength={MAX_PLAN_NAME_LENGTH}
-          onChange={(event) => onNameChange(event.target.value)}
-          required
-          value={name}
+      <h2 className="text-xl font-semibold">Plan details</h2>
+      <div className="grid items-start gap-5 md:grid-cols-3">
+        <label className="flex flex-col gap-2 text-sm font-medium md:col-span-2">
+          Plan name
+          <input
+            className="input w-full text-base"
+            maxLength={MAX_PLAN_NAME_LENGTH}
+            onChange={(event) => onNameChange(event.target.value)}
+            required
+            value={name}
+          />
+        </label>
+        <PlanDurationField
+          onChange={onForecastMonthsChange}
+          value={forecastMonths}
         />
-      </label>
+      </div>
       <PlanNotesField
-        label="Description (optional)"
+        label="What are you exploring? (optional)"
         onChange={onNotesChange}
-        rows={2}
+        rows={1}
         value={notes}
-      />
-      <PlanDurationField
-        onChange={onForecastMonthsChange}
-        value={forecastMonths}
       />
     </form>
   );

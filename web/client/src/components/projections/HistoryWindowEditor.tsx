@@ -71,7 +71,7 @@ export function HistoryWindowEditor({
             </label>
           )}
         </form.Field>
-        <p className="text-sm">
+        <p className="text-sm text-base-content/80">
           Uses the spending captured with each funding source. Custom monthly
           amounts and added expenses stay unchanged. This does not refresh
           balances or staffing.
@@ -81,7 +81,7 @@ export function HistoryWindowEditor({
             {validationMessage ?? error}
           </p>
         )}
-        <div className="modal-action">
+        <div className="modal-action border-t border-base-300 pt-4">
           <button className="btn btn-ghost" onClick={onClose} type="button">
             Cancel
           </button>
