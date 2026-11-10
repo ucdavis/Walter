@@ -28,8 +28,8 @@ import { chooseInitialProjects } from '@/test/helpers/projectionSourceSelection.
 const portfolioPath = '/projections/IAM-PREVIEW';
 const createUrl = '/api/projections/by-iam/IAM-PREVIEW';
 
-function renderPlans(strict = false) {
-  window.history.replaceState(null, '', portfolioPath);
+function renderPlans(strict = false, path = portfolioPath) {
+  window.history.replaceState(null, '', path);
   const history = createBrowserHistory();
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -867,7 +867,7 @@ describe('projection creation and copies', () => {
         }
       )
     );
-    const route = renderPlans();
+    const route = renderPlans(false, `${portfolioPath}/${original.id}`);
     const user = userEvent.setup();
     try {
       await user.click(
@@ -983,13 +983,20 @@ describe('projection creation and copies', () => {
         return HttpResponse.json(destination);
       })
     );
-    const route = renderPlans();
+    const route = renderPlans(false, `${portfolioPath}/${original.id}`);
     const user = userEvent.setup();
     try {
       await user.click(
         await screen.findByRole('button', { name: 'Duplicate Saved original' })
       );
       await waitFor(() => expect(api.duplicates).toHaveLength(1));
+      await user.click(
+        screen.getByRole('button', { name: 'Edit plan details' })
+      );
+      expect(
+        screen.getByRole('button', { name: 'Delete plan' })
+      ).toBeDisabled();
+      await user.click(screen.getByRole('button', { name: 'Cancel' }));
       await act(async () => {
         void route.router.navigate({
           params: { iamId: 'IAM-PREVIEW', projectionId: '2' },
@@ -1010,6 +1017,342 @@ describe('projection creation and copies', () => {
     } finally {
       finishDuplicate();
       finishDestination();
+      route.cleanup();
+    }
+  });
+  it('keeps deletion confirmation safe, preserves canceled typing, and removes only the confirmed saved version', async () => {
+    const original = createSalaryExample();
+    original.name = 'Delete candidate';
+    original.updatedAt = '2026-02-01T00:00:00.1234567Z';
+    const api = handleLifecycle([original]);
+    const tokens: string[] = [];
+    server.use(
+      http.delete('/api/projections/:id', ({ params, request }) => {
+        tokens.push(
+          new URL(request.url).searchParams.get('expectedUpdatedAt')!
+        );
+        api.stored.delete(Number(params.id));
+        return new HttpResponse(null, { status: 204 });
+      })
+    );
+    const route = renderPlans(false, `${portfolioPath}/${original.id}`);
+    const user = userEvent.setup();
+    try {
+      await user.click(
+        await screen.findByRole('button', { name: 'Edit plan details' })
+      );
+      await user.clear(screen.getByRole('textbox', { name: 'Plan name' }));
+      await user.type(
+        screen.getByRole('textbox', { name: 'Plan name' }),
+        'Unapplied name'
+      );
+      await user.click(screen.getByRole('button', { name: 'Delete plan' }));
+      expect(screen.getAllByRole('dialog')).toHaveLength(1);
+      expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus();
+      await user.keyboard('{Enter}');
+      expect(tokens).toEqual([]);
+      expect(screen.getByRole('textbox', { name: 'Plan name' })).toHaveValue(
+        'Unapplied name'
+      );
+      await user.click(screen.getByRole('button', { name: 'Delete plan' }));
+      await user.click(
+        screen.getByRole('button', { name: 'Permanently delete plan' })
+      );
+      await waitFor(() =>
+        expect(route.router.state.location.pathname).toBe(portfolioPath)
+      );
+      expect(tokens).toEqual([original.updatedAt]);
+      expect(
+        route.queryClient.getQueryData(['projections', original.id])
+      ).toBeUndefined();
+      expect(
+        screen.queryByRole('dialog', { name: 'Leave this plan?' })
+      ).not.toBeInTheDocument();
+    } finally {
+      route.cleanup();
+    }
+  });
+
+  it('retries deletion against the original timestamp and requires whole-plan reload after a conflict', async () => {
+    const original = createSalaryExample();
+    original.name = 'Versioned plan';
+    const api = handleLifecycle([original]);
+    const tokens: string[] = [];
+    server.use(
+      http.delete('/api/projections/:id', ({ request }) => {
+        tokens.push(
+          new URL(request.url).searchParams.get('expectedUpdatedAt')!
+        );
+        return tokens.length === 1
+          ? HttpResponse.error()
+          : new HttpResponse(null, { status: 409 });
+      })
+    );
+    const route = renderPlans(false, `${portfolioPath}/${original.id}`);
+    const user = userEvent.setup();
+    try {
+      await user.click(
+        await screen.findByRole('button', { name: 'Edit plan details' })
+      );
+      await user.clear(screen.getByRole('textbox', { name: 'Plan name' }));
+      await user.type(
+        screen.getByRole('textbox', { name: 'Plan name' }),
+        'Local typing'
+      );
+      await user.click(screen.getByRole('button', { name: 'Delete plan' }));
+      await user.click(
+        screen.getByRole('button', { name: 'Permanently delete plan' })
+      );
+      await user.click(
+        await screen.findByRole('button', { name: 'Retry delete' })
+      );
+      await screen.findByText(/This plan changed since you opened it/);
+      expect(tokens).toEqual([original.updatedAt, original.updatedAt]);
+      expect(
+        screen.queryByRole('button', { name: 'Retry delete' })
+      ).not.toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: 'Cancel' }));
+      expect(screen.getByRole('textbox', { name: 'Plan name' })).toHaveValue(
+        'Local typing'
+      );
+      const newer = {
+        ...original,
+        name: 'Reviewed newer plan',
+        updatedAt: '2026-04-01T00:00:00.7654321Z',
+      };
+      api.stored.set(original.id, newer);
+      let failReload = true;
+      server.use(
+        http.get('/api/projections/:id', () =>
+          failReload
+            ? new HttpResponse(null, { status: 503 })
+            : HttpResponse.json(newer)
+        )
+      );
+      await user.click(screen.getByRole('button', { name: 'Delete plan' }));
+      await user.click(
+        await screen.findByRole('button', {
+          name: 'Discard edits and reload plan',
+        })
+      );
+      await screen.findAllByText(/The saved plan could not be loaded/);
+      await user.click(screen.getByRole('button', { name: 'Cancel' }));
+      expect(screen.getByRole('textbox', { name: 'Plan name' })).toHaveValue(
+        'Local typing'
+      );
+      failReload = false;
+      await user.click(screen.getByRole('button', { name: 'Delete plan' }));
+      await user.click(
+        screen.getByRole('button', { name: 'Discard edits and reload plan' })
+      );
+      await screen.findByRole('heading', { level: 1, name: newer.name });
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(tokens).toEqual([original.updatedAt, original.updatedAt]);
+      await user.click(
+        screen.getByRole('button', { name: 'Edit plan details' })
+      );
+      await user.click(screen.getByRole('button', { name: 'Delete plan' }));
+      await user.click(
+        screen.getByRole('button', { name: 'Permanently delete plan' })
+      );
+      await waitFor(() => expect(tokens.at(-1)).toBe(newer.updatedAt));
+    } finally {
+      route.cleanup();
+    }
+  });
+
+  it('requires saving applied edits before duplicating the saved plan', async () => {
+    const original = createSalaryExample();
+    original.name = 'Saved version';
+    const api = handleLifecycle([original]);
+    const route = renderPlans(false, `${portfolioPath}/${original.id}`);
+    const user = userEvent.setup();
+    try {
+      const duplicate = await screen.findByRole('button', {
+        name: 'Duplicate Saved version',
+      });
+      expect(duplicate).toBeEnabled();
+      await user.click(
+        screen.getByRole('button', { name: 'Edit plan details' })
+      );
+      await user.clear(screen.getByRole('textbox', { name: 'Plan name' }));
+      await user.type(
+        screen.getByRole('textbox', { name: 'Plan name' }),
+        'Edited version'
+      );
+      await user.click(
+        screen.getByRole('button', { name: 'Apply plan details' })
+      );
+      expect(duplicate).toBeDisabled();
+      expect(duplicate).toHaveAttribute(
+        'title',
+        'Save changes before duplicating'
+      );
+      expect(api.duplicates).toEqual([]);
+    } finally {
+      route.cleanup();
+    }
+  });
+  it('recovers a lost deletion response when retry confirms absence, but preserves work on access failure', async () => {
+    const original = createSalaryExample();
+    const api = handleLifecycle([original]);
+    let attempts = 0;
+    const tokens: string[] = [];
+    server.use(
+      http.delete('/api/projections/:id', ({ request }) => {
+        attempts++;
+        tokens.push(
+          new URL(request.url).searchParams.get('expectedUpdatedAt')!
+        );
+        if (attempts === 1) {
+          return new HttpResponse(null, { status: 403 });
+        }
+        if (attempts === 2) {
+          api.stored.delete(original.id);
+          return HttpResponse.error();
+        }
+        return new HttpResponse(null, { status: 404 });
+      })
+    );
+    const route = renderPlans(false, `${portfolioPath}/${original.id}`);
+    const user = userEvent.setup();
+    try {
+      await user.click(
+        await screen.findByRole('button', { name: 'Edit plan details' })
+      );
+      await user.click(screen.getByRole('button', { name: 'Delete plan' }));
+      await user.click(
+        screen.getByRole('button', { name: 'Permanently delete plan' })
+      );
+      await screen.findByRole('button', { name: 'Retry delete' });
+      expect(route.router.state.location.pathname).toBe(
+        `${portfolioPath}/${original.id}`
+      );
+      expect(api.stored.has(original.id)).toBe(true);
+      await user.click(screen.getByRole('button', { name: 'Retry delete' }));
+      await waitFor(() => expect(attempts).toBe(2));
+      await waitFor(() =>
+        expect(
+          screen.getByRole('button', { name: 'Retry delete' })
+        ).toBeEnabled()
+      );
+      await user.click(screen.getByRole('button', { name: 'Retry delete' }));
+      await waitFor(() =>
+        expect(route.router.state.location.pathname).toBe(portfolioPath)
+      );
+      expect(tokens).toEqual([
+        original.updatedAt,
+        original.updatedAt,
+        original.updatedAt,
+      ]);
+      expect(
+        route.queryClient.getQueryData(['projections', original.id])
+      ).toBeUndefined();
+    } finally {
+      route.cleanup();
+    }
+  });
+  it('does not redirect after leaving an in-flight deletion', async () => {
+    const original = createSalaryExample();
+    const destination = { ...original, id: 2, name: 'Chosen destination' };
+    const api = handleLifecycle([original, destination]);
+    let finish!: () => void;
+    const held = new Promise<void>((resolve) => {
+      finish = resolve;
+    });
+    let requests = 0;
+    server.use(
+      http.delete('/api/projections/:id', async () => {
+        requests++;
+        await held;
+        api.stored.delete(original.id);
+        return new HttpResponse(null, { status: 204 });
+      })
+    );
+    const route = renderPlans(false, `${portfolioPath}/${original.id}`);
+    const user = userEvent.setup();
+    try {
+      await user.click(
+        await screen.findByRole('button', { name: 'Edit plan details' })
+      );
+      await user.click(screen.getByRole('button', { name: 'Delete plan' }));
+      await user.click(
+        screen.getByRole('button', { name: 'Permanently delete plan' })
+      );
+      await waitFor(() => expect(requests).toBe(1));
+      await act(async () => {
+        void route.router.navigate({
+          params: { iamId: 'IAM-PREVIEW', projectionId: '2' },
+          to: '/projections/$iamId/$projectionId',
+        });
+      });
+      await user.click(await screen.findByRole('button', { name: 'Discard' }));
+      await screen.findByRole('heading', { level: 1, name: destination.name });
+      await act(async () => finish());
+      await waitFor(() => expect(api.stored.has(original.id)).toBe(false));
+      expect(route.router.state.location.pathname).toBe(`${portfolioPath}/2`);
+    } finally {
+      finish();
+      route.cleanup();
+    }
+  });
+  it('keeps deletion disabled until duplicate destination loading completes', async () => {
+    const original = createSalaryExample();
+    original.name = 'Copy source';
+    const api = handleLifecycle([original]);
+    let finishCopy!: () => void;
+    let finishLoader!: () => void;
+    const heldCopy = new Promise<void>((resolve) => {
+      finishCopy = resolve;
+    });
+    const heldLoader = new Promise<void>((resolve) => {
+      finishLoader = resolve;
+    });
+    let loaderReads = 0;
+    server.use(
+      http.post(
+        '/api/projections/:id/duplicate',
+        async ({ params, request }) => {
+          const saved = api.duplicate(
+            Number(params.id),
+            (await request.json()) as DuplicateProjectionRequest
+          );
+          await heldCopy;
+          return HttpResponse.json(saved);
+        }
+      ),
+      http.get('/api/projections/71', async () => {
+        loaderReads++;
+        await heldLoader;
+        return HttpResponse.json(api.stored.get(71));
+      })
+    );
+    const route = renderPlans(false, `${portfolioPath}/${original.id}`);
+    const user = userEvent.setup();
+    try {
+      await user.click(
+        await screen.findByRole('button', { name: 'Duplicate Copy source' })
+      );
+      await waitFor(() => expect(api.duplicates).toHaveLength(1));
+      await user.click(
+        screen.getByRole('button', { name: 'Edit plan details' })
+      );
+      expect(
+        screen.getByRole('button', { name: 'Delete plan' })
+      ).toBeDisabled();
+      await act(async () => finishCopy());
+      await waitFor(() => expect(loaderReads).toBe(1));
+      expect(
+        screen.getByRole('button', { name: 'Delete plan' })
+      ).toBeDisabled();
+      await act(async () => finishLoader());
+      await screen.findByRole('heading', {
+        level: 1,
+        name: 'Copy source copy',
+      });
+    } finally {
+      finishCopy();
+      finishLoader();
       route.cleanup();
     }
   });

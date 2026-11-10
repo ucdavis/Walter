@@ -94,6 +94,25 @@ function RouteComponent() {
         </div>
         <ProjectionWorkspace
           iamId={iamId}
+          onDeleted={async () => {
+            await navigate({
+              params: { iamId },
+              search: {},
+              to: '/projections/$iamId',
+            });
+            // Remove only after the detail observer has left, avoiding a deleted-plan refetch.
+            queryClient.removeQueries({
+              exact: true,
+              queryKey: options.queryKey,
+            });
+          }}
+          onDuplicated={async (saved) => {
+            await navigate({
+              params: { iamId, projectionId: String(saved.id) },
+              search: {},
+              to: '/projections/$iamId/$projectionId',
+            });
+          }}
           onNavigate={(location, replace = false) => {
             void navigate({
               replace,

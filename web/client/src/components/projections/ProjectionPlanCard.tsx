@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
-import { DuplicateProjectionButton } from '@/components/projections/DuplicateProjectionButton.tsx';
+import { ArrowRightIcon } from '@heroicons/react/24/outline';
 import { ProjectionBalanceSparkline } from '@/components/projections/ProjectionBalanceSparkline.tsx';
 import { fundingMonthLabel } from '@/components/projections/fundingTimelineDates.ts';
 import { formatCurrency } from '@/lib/currency.ts';
@@ -25,11 +25,9 @@ function savedPreview(plan: Projection) {
 
 export function ProjectionPlanCard({
   iamId,
-  onCreated,
   summary,
 }: {
   iamId: string;
-  onCreated: (saved: Projection) => Promise<void>;
   summary: ProjectionSummary;
 }) {
   const queryClient = useQueryClient();
@@ -56,11 +54,12 @@ export function ProjectionPlanCard({
   return (
     <article
       aria-label={plan.name}
-      className="flex min-w-0 flex-col rounded-box border border-base-300 bg-base-100 p-5"
+      className="relative flex min-w-0 flex-col rounded-box border border-base-300 bg-base-100 p-4 transition-shadow hover:shadow-md"
     >
-      <h3 className="text-xl font-semibold break-words">
+      <h3 className="line-clamp-2 text-lg font-semibold break-words">
         <Link
-          className="link link-hover"
+          aria-label={`Open plan ${plan.name}`}
+          className="after:absolute after:inset-0 after:rounded-box focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-offset-2 focus-visible:after:outline-primary"
           params={{ iamId, projectionId: String(summary.id) }}
           to="/projections/$iamId/$projectionId"
         >
@@ -69,48 +68,35 @@ export function ProjectionPlanCard({
       </h3>
       {data ? (
         <>
-          {data.plan.content.notes && (
-            <p className="mt-2 line-clamp-2 text-sm text-base-content/70 break-words">
-              {data.plan.content.notes}
-            </p>
-          )}
-          <p className="mt-3 text-sm text-base-content/70">
-            {fundingMonthLabel(data.window.startMonth)} through{' '}
-            {fundingMonthLabel(data.window.endMonth)} ·{' '}
-            {data.plan.content.appointments.length}{' '}
-            {data.plan.content.appointments.length === 1
-              ? 'appointment'
-              : 'appointments'}
-          </p>
-          <dl className="mt-4">
-            <dt className="text-sm">Projected ending balance</dt>
+          <div className="mt-1 min-h-10">
+            {data.plan.content.notes && (
+              <p className="line-clamp-2 text-sm text-base-content/65 break-words">
+                {data.plan.content.notes}
+              </p>
+            )}
+          </div>
+          <div className="mt-3">
+            <ProjectionBalanceSparkline
+              months={data.outlook.months}
+              window={data.window}
+            />
+          </div>
+          <dl className="mt-3 mb-4 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+            <dt className="text-xs text-base-content/65">Ending balance</dt>
             <dd
-              className={`mt-1 text-2xl font-semibold ${data.outlook.endBalance !== null && data.outlook.endBalance < 0 ? 'text-error' : ''}`}
+              className={`ml-auto min-w-0 max-w-full text-right text-2xl font-semibold break-words tabular-nums ${data.outlook.endBalance !== null && data.outlook.endBalance < 0 ? 'text-error' : ''}`}
             >
               {data.outlook.endBalance === null
                 ? 'No forecast data'
                 : formatCurrency(data.outlook.endBalance)}
             </dd>
           </dl>
-          <ProjectionBalanceSparkline
-            months={data.outlook.months}
-            window={data.window}
-          />
-          {data.outlook.firstShortfallMonth && (
-            <p className="mt-2 text-sm text-error">
-              {data.outlook.shortfallSources.length === 1
-                ? 'A funding source falls'
-                : `${data.outlook.shortfallSources.length} funding sources fall`}{' '}
-              below zero. First in{' '}
-              {fundingMonthLabel(data.outlook.firstShortfallMonth)}.
-            </p>
-          )}
         </>
       ) : preview.isError ? (
         <div className="my-5 text-sm">
           <p>Preview unavailable.</p>
           <button
-            className="btn btn-ghost btn-sm mt-2"
+            className="btn btn-ghost btn-sm relative z-10 mt-2"
             disabled={preview.isFetching}
             onClick={() => void preview.refetch()}
             type="button"
@@ -123,26 +109,27 @@ export function ProjectionPlanCard({
           Loading preview...
         </p>
       )}
-      <div className="mt-auto pt-5">
-        <p className="mb-3 text-xs text-base-content/70">
-          Saved {new Date(plan.updatedAt).toLocaleString()}
-        </p>
-        <div className="flex flex-wrap items-center gap-2">
-          <Link
-            aria-label={`Open plan ${plan.name}`}
-            className="btn btn-primary btn-sm"
-            params={{ iamId, projectionId: String(summary.id) }}
-            to="/projections/$iamId/$projectionId"
+      <footer className="mt-auto flex flex-wrap items-end justify-between gap-3 border-t border-base-200 pt-3">
+        {data && (
+          <p
+            className="text-xs text-base-content/65"
+            title={`Starts ${fundingMonthLabel(data.window.startMonth)}`}
           >
-            Open plan
-          </Link>
-          <DuplicateProjectionButton
-            iamId={iamId}
-            onCreated={onCreated}
-            projection={plan}
-          />
-        </div>
-      </div>
+            {data.plan.content.forecastMonths} months ·{' '}
+            {data.plan.content.appointments.length}{' '}
+            {data.plan.content.appointments.length === 1
+              ? 'appointment'
+              : 'appointments'}
+          </p>
+        )}
+        <span
+          aria-hidden="true"
+          className="ml-auto inline-flex items-center gap-1.5 text-sm font-semibold text-primary"
+        >
+          Open plan
+          <ArrowRightIcon className="size-4" />
+        </span>
+      </footer>
     </article>
   );
 }

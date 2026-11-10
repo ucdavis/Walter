@@ -1,3 +1,5 @@
+import { DuplicateProjectionButton } from '@/components/projections/DuplicateProjectionButton.tsx';
+import type { Projection } from '@/queries/projections.ts';
 import { FundingOutlookNotice } from '@/components/projections/FundingOutlookSummary.tsx';
 import { buildProjectionOutlook } from '@/lib/projectionOutlook.ts';
 import {
@@ -34,6 +36,7 @@ import {
 } from '@/components/projections/FundingSourcesEditor.tsx';
 import type { SourceOperation } from '@/lib/projectionSources.ts';
 import {
+  isProjectionDirty,
   readProjectionLocation,
   readProjectionWorkspace,
   type ProjectionNavigation,
@@ -56,12 +59,16 @@ export interface ProjectionWorkspaceHandle {
 
 export function ProjectionWorkspace({
   iamId,
+  onDeleted,
+  onDuplicated,
   onNavigate: navigate,
   planPath,
   ref,
   search,
 }: {
   iamId?: string;
+  onDeleted?: () => Promise<void>;
+  onDuplicated?: (saved: Projection) => Promise<void>;
   onNavigate: (location: ProjectionNavigation, replace?: boolean) => void;
   planPath?: string;
   ref?: Ref<ProjectionWorkspaceHandle>;
@@ -72,11 +79,22 @@ export function ProjectionWorkspace({
     applyDetailsOperation,
     applyExpenseOperation,
     applySourceOperation,
+    conflict,
+    error,
     persistenceStatus,
+    reloading,
     reloadVersion,
     results,
+    saving,
     session,
   } = useProjectionSession();
+  const [duplicating, setDuplicating] = useState(false);
+  const deletionConfirmed = useRef(false);
+  const duplicateDisabled =
+    saving ||
+    reloading ||
+    Boolean(error || conflict) ||
+    isProjectionDirty(session);
   const { draft } = session;
   const outlook = buildProjectionOutlook(draft, results);
   const location = readProjectionLocation(search, draft);
@@ -190,6 +208,23 @@ export function ProjectionWorkspace({
             <Cog6ToothIcon aria-hidden="true" className="size-4" />
             Plan details
           </button>
+          {iamId && onDuplicated && (
+            <DuplicateProjectionButton
+              canDuplicate={() =>
+                ![
+                  detailsEditorRef.current?.read(),
+                  editorRef.current?.read(),
+                  sourceEditorRef.current?.read(),
+                  expenseEditorRef.current?.read(),
+                ].some((editor) => editor?.hasChanges)
+              }
+              disabled={duplicateDisabled}
+              iamId={iamId}
+              onBusyChange={setDuplicating}
+              onCreated={onDuplicated}
+              projection={session.baseline}
+            />
+          )}
           <ProjectionSaveControls />
         </div>
       </header>
@@ -206,11 +241,21 @@ export function ProjectionWorkspace({
       )}
       {editingDetails && (
         <PlanDetailsEditor
+          deleteDisabled={saving || reloading || duplicating}
+          iamId={iamId}
           key={reloadVersion}
           onApply={(inputs) =>
             applyDetailsOperation((current) => editPlanDetails(current, inputs))
           }
           onClose={() => setEditingDetails(false)}
+          onDeleted={
+            onDeleted
+              ? async () => {
+                  deletionConfirmed.current = true;
+                  await onDeleted();
+                }
+              : undefined
+          }
           plan={draft}
           ref={detailsEditorRef}
         />
@@ -358,6 +403,7 @@ export function ProjectionWorkspace({
       )}
       {planPath && (
         <ProjectionNavigationGuard
+          allowDeparture={() => deletionConfirmed.current}
           pendingEditor={() =>
             detailsEditorRef.current?.read() ??
             editorRef.current?.read() ??

@@ -28,8 +28,9 @@ cards were accepted and committed as `e1033f19`. Stage 5i's saved-plan header,
 long chart labels, and shortfall navigation refinements are accepted and committed
 as `a58b495d`. Stage 5j's personnel category warnings and read-only budget balances
 are accepted and committed as `c7661e35`. Stage 5k's category editing and
-rebudgeting are implemented, verified, and accepted, including planned funding
-source types and the follow-up navigation and help refinements.
+rebudgeting are accepted and committed as `1433dbb2`, including planned funding
+source types and the follow-up navigation and help refinements. Stage 5l's compact
+dashboard and workspace plan actions are implemented, verified, and accepted.
 Saving remains available with funding gaps, overlaps, and budget shortfalls.
 CBR defaults to 20% when no rate is supplied. Fresh appointments default to a
 3% annual salary adjustment in July. Every retained appointment needs a salary
@@ -275,6 +276,7 @@ source omission from existing outside funding, as specified below.
 | 5. Complete guided experience  | Setup composed from existing editors, full project drilldowns, explanations, and controlled rollout                                                                              | Verify the complete workflow and genuine reuse.                                                                                                 |
 | 5j. Category budget visibility | [Personnel warnings and balances](#stage-5j-personnel-category-warnings-and-balances)                                                                                            | Distinguish salary/fringe limits from general-pool funding without changing the calculator.                                                     |
 | 5k. Category editing, accepted | [Category editing and rebudgeting](#stage-5k-category-editing-and-rebudgeting)                                                                                                   | Preserve original budgets and explain scenario adjustments. Implemented, verified, and accepted.                                                |
+| 5l. Dashboard and plan actions | [Compact dashboard and plan actions](#stage-5l-compact-dashboard-and-plan-actions)                                                                                               | Keep cards easy to scan and open; preserve pending work and version checks when duplicating or deleting.                                        |
 
 Every increment includes appropriate automated checks, a way to try the result,
 independent code review, and a review with the user before moving on. Split a stage
@@ -2315,6 +2317,44 @@ information icon. The shared tooltip stays above native dialogs; Escape dismisse
 the help without closing the editor. Targeted navigation, editor, and tooltip
 tests passed, along with a fresh production build and React Doctor check. This
 follow-up changed no saved plan data.
+
+## Stage 5l: compact dashboard and plan actions
+
+The dashboard uses the guided demo's compact card layout. New plan has a plus
+icon, and Your plans shows the saved-plan count. Each card opens the plan, keeps
+the dashed zero line, and places a prominent ending balance below its graph.
+The footer shows forecast duration and appointment count; appointments are not
+relabeled as distinct people. Long notes remain abbreviated. Per-source shortfall
+warnings stay inside the plan rather than crowding the dashboard. Each preview
+retains independent loading, failure, and retry behavior.
+
+Duplicate moves beside Plan details in the workspace and retains its existing
+saved-plan copy behavior. Pending changes must be saved first; a late duplicate
+response must not silently discard edits or replace a subsequently chosen page.
+
+Delete belongs inside Plan details, separate from its ordinary Apply/Cancel
+actions. A confirmation names the saved plan and explains that deletion is
+permanent. The existing API checks the exact loaded version and portfolio access.
+Cancel and failure retain the draft. A stale version requires reloading before a
+new deletion attempt; retries never silently acquire a newer version token.
+Only confirmed deletion or a response confirming that the plan is already absent
+bypasses the departure warning and returns to the dashboard. A lost response can
+therefore be retried without creating a new deletion intent. Full-plan
+reset/refresh remains deferred.
+
+Implementation, verification, and user review are complete. All 849 client
+tests across 89 files passed, including version-guarded deletion, failed reload,
+lost-response recovery, and delayed copy/delete navigation. TypeScript, the
+production build, changed-file ESLint, formatting, and diff checks passed. React
+Doctor reported 86/100 with 24 warnings and no errors. Independent review found no
+unresolved blockers.
+
+Desktop browser review checked the card layout and full-card hit area, the moved
+Duplicate action, disabled duplication with unsaved changes, named deletion
+confirmation with Cancel focused, and preservation of unapplied details after
+canceling deletion. Temporary edits were discarded. No existing saved plan was
+changed, copied, or deleted during this walkthrough. No backend or database schema
+change was required.
 
 ## Questions to resolve in their owning stages
 

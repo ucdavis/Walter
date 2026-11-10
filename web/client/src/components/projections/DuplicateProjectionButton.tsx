@@ -1,3 +1,4 @@
+import { DocumentDuplicateIcon } from '@heroicons/react/24/outline';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from '@tanstack/react-router';
 import { HttpError } from '@/lib/api.ts';
@@ -9,16 +10,23 @@ import {
 } from '@/queries/projections.ts';
 
 export function DuplicateProjectionButton({
+  canDuplicate,
+  disabled = false,
   iamId,
+  onBusyChange,
   onCreated,
   projection,
 }: {
+  canDuplicate?: () => boolean;
+  disabled?: boolean;
   iamId: string;
+  onBusyChange?: (busy: boolean) => void;
   onCreated: (saved: Projection) => Promise<void>;
   projection: ProjectionSummary;
 }) {
   const router = useRouter();
   const duplicate = useDuplicateProjection(iamId, projection.id);
+  const [created, setCreated] = useState<Projection | null>(null);
   const [failed, setFailed] = useState(false);
   const intent = useRef<DuplicateProjectionRequest | null>(null);
   const mounted = useRef(true);
@@ -26,7 +34,7 @@ export function DuplicateProjectionButton({
   const navigationVersion = useRef(0);
   useEffect(() => {
     mounted.current = true;
-    // Destination loaders can keep this list mounted after the user has chosen another page.
+    // Destination loaders can keep this component mounted after the user has chosen another page.
     const unsubscribe = router.subscribe(
       'onBeforeNavigate',
       ({ hrefChanged }) => {
@@ -42,7 +50,7 @@ export function DuplicateProjectionButton({
   }, [router]);
 
   async function copy() {
-    if (pending.current) {
+    if (pending.current || disabled || canDuplicate?.() === false) {
       return;
     }
     intent.current ??= {
@@ -51,9 +59,13 @@ export function DuplicateProjectionButton({
     };
     const startedAtNavigationVersion = navigationVersion.current;
     pending.current = true;
+    onBusyChange?.(true);
     setFailed(false);
     try {
-      const saved = await duplicate.mutateAsync(intent.current);
+      const saved = created ?? (await duplicate.mutateAsync(intent.current));
+      if (mounted.current) {
+        setCreated(saved);
+      }
       if (
         mounted.current &&
         startedAtNavigationVersion === navigationVersion.current
@@ -70,6 +82,9 @@ export function DuplicateProjectionButton({
       setFailed(true);
     } finally {
       pending.current = false;
+      if (mounted.current) {
+        onBusyChange?.(false);
+      }
     }
   }
 
@@ -79,22 +94,30 @@ export function DuplicateProjectionButton({
         aria-label={
           duplicate.isPending
             ? `Duplicating ${projection.name}...`
-            : failed
-              ? `Retry duplicate ${projection.name}`
-              : `Duplicate ${projection.name}`
+            : created
+              ? `Open copy of ${projection.name}`
+              : failed
+                ? `Retry duplicate ${projection.name}`
+                : `Duplicate ${projection.name}`
         }
         className="btn btn-outline btn-sm"
-        disabled={duplicate.isPending}
+        disabled={disabled || duplicate.isPending}
         onClick={() => void copy()}
+        title={
+          disabled ? 'Save changes before duplicating' : 'Copies the saved plan'
+        }
         type="button"
       >
+        <DocumentDuplicateIcon aria-hidden="true" className="size-4" />
         {duplicate.isPending
           ? 'Duplicating...'
-          : failed
-            ? 'Retry duplicate'
-            : 'Duplicate'}
+          : created
+            ? 'Open copy'
+            : failed
+              ? 'Retry duplicate'
+              : 'Duplicate plan'}
       </button>
-      {failed && (
+      {failed && !created && (
         <p className="mt-2 text-sm text-error" role="alert">
           Duplication was not confirmed. Retry to recover the same copy.
         </p>

@@ -3,7 +3,7 @@ import {
   useQueryClient,
   type QueryClient,
 } from '@tanstack/react-query';
-import { fetchJson, postJson } from '@/lib/api.ts';
+import { fetchJson, HttpError, postJson } from '@/lib/api.ts';
 
 // Server JSON for /api/projections. DateOnly fields arrive as 'YYYY-MM-DD', DateTime as full ISO strings.
 
@@ -347,6 +347,38 @@ export const useSaveProjection = (id: number) => {
       );
       await queryClient.invalidateQueries({
         queryKey: ['projections', 'by-iam'],
+        refetchType: 'none',
+      });
+    },
+    retry: false,
+  });
+};
+
+export const useDeleteProjection = (iamId: string, id: number) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (expectedUpdatedAt: string) => {
+      try {
+        await fetchJson<void>(
+          `/api/projections/${id}?expectedUpdatedAt=${encodeURIComponent(expectedUpdatedAt)}`,
+          { method: 'DELETE' }
+        );
+      } catch (error) {
+        // A lost success response can be retried: 404 confirms absence; 403 does not.
+        if (!(error instanceof HttpError && error.status === 404)) {
+          throw error;
+        }
+      }
+    },
+    onSuccess: async () => {
+      const queryKey = projectionListQueryOptions(iamId).queryKey;
+      await queryClient.cancelQueries({ exact: true, queryKey });
+      queryClient.setQueryData<ProjectionSummary[]>(queryKey, (current) =>
+        current?.filter((plan) => plan.id !== id)
+      );
+      await queryClient.invalidateQueries({
+        exact: true,
+        queryKey,
         refetchType: 'none',
       });
     },

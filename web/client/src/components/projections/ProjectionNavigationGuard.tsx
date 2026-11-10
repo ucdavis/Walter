@@ -7,20 +7,23 @@ import {
 } from '@/lib/projectionWorkspace.ts';
 
 export function ProjectionNavigationGuard({
+  allowDeparture,
   pendingEditor,
   planPath,
 }: {
+  allowDeparture?: () => boolean;
   pendingEditor: () => PendingProjectionEditor | null;
   planPath: string;
 }) {
   const { conflict, error, reloading, saving, session } =
     useProjectionSession();
   const hasWork = () =>
-    saving ||
-    reloading ||
-    Boolean(error || conflict) ||
-    isProjectionDirty(session) ||
-    Boolean(pendingEditor()?.hasChanges);
+    !allowDeparture?.() &&
+    (saving ||
+      reloading ||
+      Boolean(error || conflict) ||
+      isProjectionDirty(session) ||
+      Boolean(pendingEditor()?.hasChanges));
   const blocker = useBlocker({
     enableBeforeUnload: hasWork,
     shouldBlockFn: ({ next }) =>

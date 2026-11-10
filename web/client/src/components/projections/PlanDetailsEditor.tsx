@@ -1,3 +1,4 @@
+import { DeleteProjectionDialog } from '@/components/projections/DeleteProjectionDialog.tsx';
 import { useImperativeHandle, useState, type Ref } from 'react';
 import { useStore } from '@tanstack/react-form';
 import { useAppForm } from '@/shared/forms/formContext.tsx';
@@ -21,18 +22,26 @@ export interface PlanDetailsEditorHandle {
 }
 
 export function PlanDetailsEditor({
+  deleteDisabled = false,
+  iamId,
   onApply,
   onClose,
+  onDeleted,
   plan,
   ref,
 }: {
+  deleteDisabled?: boolean;
+  iamId?: string;
   onApply: (
     inputs: PlanDetailsInputs
   ) => { ok: true } | { error: string; ok: false };
   onClose: () => void;
+  onDeleted?: () => Promise<void>;
   plan: ProjectionDraft;
   ref?: Ref<PlanDetailsEditorHandle>;
 }) {
+  const [deleteConflict, setDeleteConflict] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const form = useAppForm({
     defaultValues: {
@@ -59,11 +68,23 @@ export function PlanDetailsEditor({
       });
   useImperativeHandle(ref, () => ({
     read: () => ({
-      hasChanges: form.state.isDirty,
+      hasChanges: confirmDelete || form.state.isDirty,
       kind: 'details',
       validationMessage,
     }),
   }));
+  if (confirmDelete && iamId && onDeleted) {
+    return (
+      <DeleteProjectionDialog
+        conflict={deleteConflict}
+        iamId={iamId}
+        onClose={() => setConfirmDelete(false)}
+        onConflict={() => setDeleteConflict(true)}
+        onDeleted={onDeleted}
+        onReloaded={onClose}
+      />
+    );
+  }
   return (
     <ProjectionDialog onClose={onClose} title="Edit plan details">
       <form
@@ -130,6 +151,18 @@ export function PlanDetailsEditor({
           </button>
         </div>
       </form>
+      {iamId && onDeleted && (
+        <div className="mt-6 border-t border-base-300 pt-4">
+          <button
+            className="btn btn-outline btn-error btn-sm"
+            disabled={deleteDisabled}
+            onClick={() => setConfirmDelete(true)}
+            type="button"
+          >
+            Delete plan
+          </button>
+        </div>
+      )}
     </ProjectionDialog>
   );
 }

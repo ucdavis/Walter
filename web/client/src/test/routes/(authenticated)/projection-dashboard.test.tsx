@@ -291,7 +291,7 @@ describe('projection dashboard', () => {
     }
   });
 
-  it('shows a recovered source shortfall despite a positive ending total, and never invents a zero forecast', async () => {
+  it('keeps the ending total without card warnings and never invents a zero forecast', async () => {
     const recovered = example(71, 'Recovered shortfall');
     recovered.content.fundingSources[0].expenses = [
       {
@@ -325,16 +325,66 @@ describe('projection dashboard', () => {
       });
       expect(await within(card).findByText('$1,300.00')).toBeInTheDocument();
       expect(
-        within(card).getByText(
-          'A funding source falls below zero. First in Feb 2026.'
-        )
-      ).toBeInTheDocument();
+        within(card).queryByText(/falls below zero/)
+      ).not.toBeInTheDocument();
+      expect(
+        within(card).queryByRole('button', { name: /Duplicate/ })
+      ).not.toBeInTheDocument();
       const absent = screen.getByRole('article', { name: 'Outside period' });
       expect(
         await within(absent).findByText('No forecast data')
       ).toBeInTheDocument();
       expect(within(absent).queryByText('$0.00')).not.toBeInTheDocument();
       expect(within(absent).queryByRole('img')).not.toBeInTheDocument();
+    } finally {
+      route.cleanup();
+    }
+  });
+
+  it('shows a count, real forecast durations and appointments, with one keyboard-operable card link', async () => {
+    const short = example(71, 'Twelve month plan');
+    const long = example(72, 'Eighteen month plan');
+    short.content.forecastMonths = 12;
+    long.content.forecastMonths = 18;
+    long.content.appointments = createSalaryExample().content.appointments;
+    handleDashboard([short, long]);
+    const route = openDashboard();
+    const user = userEvent.setup();
+    try {
+      expect(
+        await screen.findByRole('heading', { name: 'Your plans' })
+      ).toBeInTheDocument();
+      expect(screen.getByLabelText('2 plans')).toHaveTextContent('2');
+      const shortCard = screen.getByRole('article', { name: short.name });
+      const longCard = screen.getByRole('article', { name: long.name });
+      expect(
+        await within(shortCard).findByText('12 months · 0 appointments')
+      ).toBeInTheDocument();
+      expect(
+        await within(longCard).findByText('18 months · 1 appointment')
+      ).toBeInTheDocument();
+      expect(within(shortCard).getAllByRole('link')).toHaveLength(1);
+      const graph = within(shortCard).getByRole('img');
+      const ending = within(shortCard).getByText('Ending balance');
+      expect(
+        graph.compareDocumentPosition(ending) & Node.DOCUMENT_POSITION_FOLLOWING
+      ).toBeTruthy();
+      expect(graph.querySelector('line')).toHaveAttribute(
+        'stroke-dasharray',
+        '4 4'
+      );
+      const link = within(shortCard).getByRole('link', {
+        name: `Open plan ${short.name}`,
+      });
+      expect(link).toHaveAttribute('href', '/projections/IAM-PREVIEW/71');
+      expect(link).toHaveClass('after:inset-0');
+      link.focus();
+      await user.keyboard('{Enter}');
+      await waitFor(() =>
+        expect(route.router.state.location.pathname).toBe(
+          '/projections/IAM-PREVIEW/71'
+        )
+      );
     } finally {
       route.cleanup();
     }
@@ -360,9 +410,11 @@ describe('projection dashboard', () => {
     const route = openDashboard();
     const user = userEvent.setup();
     try {
-      await user.click(
-        await screen.findByRole('button', { name: 'Retry preview' })
-      );
+      const retry = await screen.findByRole('button', {
+        name: 'Retry preview',
+      });
+      expect(retry.closest('a')).toBeNull();
+      await user.click(retry);
       await user.click(
         await screen.findByRole('button', { name: 'Retry balances' })
       );

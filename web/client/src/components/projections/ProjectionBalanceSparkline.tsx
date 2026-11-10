@@ -43,8 +43,9 @@ export function ProjectionBalanceSparkline({
       viewBox="0 0 320 68"
     >
       <line
-        stroke="var(--color-base-300)"
+        stroke="var(--color-base-content)"
         strokeDasharray="4 4"
+        strokeOpacity="0.3"
         x1="4"
         x2="316"
         y1={y(0)}

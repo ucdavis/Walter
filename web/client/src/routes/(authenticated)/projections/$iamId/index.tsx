@@ -1,3 +1,4 @@
+import { PlusIcon } from '@heroicons/react/24/outline';
 import { useState } from 'react';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import {
@@ -65,21 +66,29 @@ function ProjectionList({ iamId }: { iamId: string }) {
           onClick={() => setCreating(true)}
           type="button"
         >
+          <PlusIcon aria-hidden="true" className="size-5" />
           New plan
         </button>
       </header>
 
       <CurrentProjectBalances iamId={iamId} />
 
-      <section aria-label="Saved plans" className="section-margin mt-8">
-        <h2 className="mb-4 text-2xl font-semibold">Saved plans</h2>
+      <section aria-label="Your plans" className="section-margin mt-8">
+        <div className="mb-4 flex items-center gap-2">
+          <h2 className="text-2xl font-semibold">Your plans</h2>
+          <span
+            aria-label={`${projections.length} plans`}
+            className="badge badge-neutral badge-soft"
+          >
+            {projections.length}
+          </span>
+        </div>
         {projections.length ? (
-          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
             {projections.map((projection) => (
               <ProjectionPlanCard
                 iamId={iamId}
                 key={projection.id}
-                onCreated={openCreated}
                 summary={projection}
               />
             ))}
