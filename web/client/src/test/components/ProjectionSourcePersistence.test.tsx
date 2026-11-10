@@ -5,7 +5,7 @@ import {
   ProjectionSessionProvider,
   useProjectionSession,
 } from '@/components/projections/ProjectionSession.tsx';
-import { createSalaryExample } from '@/dev/projections/fixture.ts';
+import { createSalaryExample } from '@/test/fixtures/projections.ts';
 import { editProjectionAppointment } from '@/lib/projectionAppointments.ts';
 import { addImportedSources } from '@/lib/projectionSources.ts';
 import { isProjectionDirty } from '@/lib/projectionWorkspace.ts';

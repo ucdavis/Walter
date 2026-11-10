@@ -14,10 +14,11 @@ import {
   RouterProvider,
 } from '@tanstack/react-router';
 import { afterEach, describe, expect, it } from 'vitest';
-import { createSalaryExample } from '@/dev/projections/fixture.ts';
-import { createProjectionPreviewRouter } from '@/dev/projections/router.tsx';
+import { createSalaryExample } from '@/test/fixtures/projections.ts';
+import { createProjectionWorkspaceHarness } from '@/test/helpers/projectionWorkspace.tsx';
 
-const read = () => window.walterProjectionPreview!.read();
+let workspace: ReturnType<typeof createProjectionWorkspaceHarness>;
+const read = () => workspace.read();
 const histories: ReturnType<typeof createMemoryHistory>[] = [];
 afterEach(() => {
   cleanup();
@@ -43,23 +44,22 @@ function fullYearPlan() {
   }
   return plan;
 }
-function preview(
+function openWorkspace(
   plan = fullYearPlan(),
   search = '?section=staffing',
   browser = false
 ) {
   if (browser) {
-    window.history.replaceState(null, '', `/projections-preview.html${search}`);
+    window.history.replaceState(null, '', `/projections/TEST-PI/1${search}`);
   }
   const history = browser
     ? createBrowserHistory()
     : createMemoryHistory({
-        initialEntries: [`/projections-preview.html${search}`],
+        initialEntries: [`/projections/TEST-PI/1${search}`],
       });
   histories.push(history);
-  render(
-    <RouterProvider router={createProjectionPreviewRouter({ history, plan })} />
-  );
+  workspace = createProjectionWorkspaceHarness({ history, plan });
+  render(<RouterProvider router={workspace.router} />);
   return { history, user: userEvent.setup() };
 }
 async function openJuly(user: ReturnType<typeof userEvent.setup>) {
@@ -73,9 +73,28 @@ function date(label: string, value: string) {
 }
 
 describe('appointment allocation period editor', () => {
+  it('focuses the start date and returns to the funding cell after Escape discards typing', async () => {
+    const plan = fullYearPlan();
+    const { user } = openWorkspace(plan);
+    const dialog = await openJuly(user);
+    expect(screen.getByLabelText('Start date')).toHaveFocus();
+    await user.selectOptions(screen.getByLabelText('Funding source 1'), '2');
+    fireEvent(dialog, new Event('cancel', { cancelable: true }));
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    );
+    expect(
+      screen.getByRole('button', { name: /Alex Example, Jul 2026:/ })
+    ).toHaveFocus();
+    expect(read()).toMatchObject({ dirty: false, revision: 0 });
+    expect(read().draft.content.appointments[0].allocations).toEqual(
+      plan.content.appointments[0].allocations
+    );
+  });
+
   it('replaces July through September, preserves both sides and actuals, and saves the resulting schedule', async () => {
     const plan = fullYearPlan();
-    const { history, user } = preview(plan);
+    const { history, user } = openWorkspace(plan);
     await openJuly(user);
     expect(history.location.search).toContain('fundingMonth=2026-07');
     expect(screen.getByLabelText('Start date')).toHaveValue('2026-07-01');
@@ -118,16 +137,16 @@ describe('appointment allocation period editor', () => {
     );
     await user.click(screen.getByRole('button', { name: 'Save plan' }));
     await screen.findByRole('button', { name: '✓ Saved' });
-    expect(
-      window.walterProjectionPreview!.server.read().stored!.content.appointments
-    ).toEqual(read().draft.content.appointments);
+    expect(workspace.server.read().stored!.content.appointments).toEqual(
+      read().draft.content.appointments
+    );
   });
 
   it('starts added allocations blank, allows outside funding and totals above 100% at zero FTE, and cancels without changing the plan', async () => {
     const plan = fullYearPlan();
     plan.content.appointments[0].fte = 0;
     plan.content.appointments[0].feeRemissionMonthly = 1500;
-    const { user } = preview(plan);
+    const { user } = openWorkspace(plan);
     await openJuly(user);
     await user.click(screen.getByRole('button', { name: 'Add allocation' }));
     expect(screen.getByLabelText('Funding source 2')).toHaveValue('');
@@ -159,7 +178,7 @@ describe('appointment allocation period editor', () => {
   });
 
   it('exposes explicit appointment date shortcuts and clears only the selected period when every share is removed', async () => {
-    const { user } = preview();
+    const { user } = openWorkspace();
     await openJuly(user);
     await user.click(
       screen.getByRole('button', { name: 'Through appointment end' })
@@ -209,7 +228,7 @@ describe('appointment allocation period editor', () => {
     ];
     plan.content.appointments[0].allocations = allocations;
     plan.content.appointments[0].hasUnmatchedFunding = true;
-    const { user } = preview(plan);
+    const { user } = openWorkspace(plan);
     await openJuly(user);
     expect(screen.getByLabelText('Start date')).toHaveValue('2026-07-01');
     expect(screen.getByLabelText('End date')).toHaveValue('2026-07-14');
@@ -226,7 +245,7 @@ describe('appointment allocation period editor', () => {
   });
 
   it('preserves pending edits when departure is cancelled and restores saved values with Back and Forward', async () => {
-    const { history, user } = preview(
+    const { history, user } = openWorkspace(
       fullYearPlan(),
       '?section=staffing',
       true
@@ -252,7 +271,9 @@ describe('appointment allocation period editor', () => {
       hasChanges: true,
       kind: 'allocation',
     });
-    await user.click(screen.getByRole('button', { name: 'Leave preview' }));
+    act(() => {
+      void workspace.router.navigate({ to: '/projections/TEST-PI' });
+    });
     const guard = await screen.findByRole('dialog', {
       name: 'Leave this plan?',
     });
@@ -276,7 +297,7 @@ describe('appointment allocation period editor', () => {
         startDate: '2026-04-16',
       },
     ];
-    const { user } = preview(plan);
+    const { user } = openWorkspace(plan);
     await screen.findByRole('button', {
       name: /Alex Example, Apr 2026: Funding gaps and overallocations/,
     });

@@ -4,6 +4,7 @@ import type {
   ProjectionRosterEntry,
 } from '@/queries/projections.ts';
 import type { ProjectionSession } from '@/lib/projectionWorkspace.ts';
+import { isPlanningDate } from '@/lib/date.ts';
 export interface SourceInputs {
   balance: number;
   endDate: string | null;
@@ -57,19 +58,6 @@ export function sourcesOverlap(a: SourceIdentity, b: SourceIdentity) {
   );
 }
 
-function validDate(value: string | null) {
-  if (value === null) {
-    return true;
-  }
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || value.startsWith('0000')) {
-    return false;
-  }
-  const date = new Date(`${value}T00:00:00Z`);
-  return (
-    Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value
-  );
-}
-
 function validation(inputs: SourceInputs, planned: boolean) {
   if (!inputs.name.trim() || inputs.name.trim().length > 200) {
     return 'Enter a funding source name of 1 to 200 characters.';
@@ -78,8 +66,8 @@ function validation(inputs: SourceInputs, planned: boolean) {
     return 'Enter a finite available balance.';
   }
   if (
-    !validDate(inputs.startDate) ||
-    !validDate(inputs.endDate) ||
+    (inputs.startDate !== null && !isPlanningDate(inputs.startDate)) ||
+    (inputs.endDate !== null && !isPlanningDate(inputs.endDate)) ||
     (inputs.startDate && inputs.endDate && inputs.startDate > inputs.endDate) ||
     (planned && !inputs.startDate)
   ) {

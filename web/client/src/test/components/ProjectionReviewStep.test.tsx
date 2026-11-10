@@ -2,7 +2,7 @@ import { cleanup, render, screen, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ProjectionReviewStep } from '@/components/projections/ProjectionReviewStep.tsx';
-import { createSalaryExample } from '@/dev/projections/fixture.ts';
+import { createSalaryExample } from '@/test/fixtures/projections.ts';
 import { computePiProjection, SUPPLIES_CATEGORY } from '@/lib/piProjection.ts';
 
 afterEach(cleanup);

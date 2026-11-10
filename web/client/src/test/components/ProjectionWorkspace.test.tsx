@@ -13,11 +13,12 @@ import {
 import { userEvent } from '@testing-library/user-event';
 import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createProjectionPreviewRouter } from '@/dev/projections/router.tsx';
+import { createProjectionWorkspaceHarness } from '@/test/helpers/projectionWorkspace.tsx';
 import {
   createSalaryExample,
+  createBookedSalaryExample,
   createAppointmentLookupsExample,
-} from '@/dev/projections/fixture.ts';
+} from '@/test/fixtures/projections.ts';
 import { SALARY_CATEGORY } from '@/lib/piProjection.ts';
 import { ProjectionSessionProvider } from '@/components/projections/ProjectionSession.tsx';
 import {
@@ -27,19 +28,21 @@ import {
 
 afterEach(cleanup);
 
-function openPreview(
+function openWorkspace(
   search = '?section=staffing&appointment=101',
   plan = createSalaryExample()
 ) {
   const history = createMemoryHistory({
-    initialEntries: [`/projections-preview.html${search}`],
+    initialEntries: [`/projections/TEST-PI/1${search}`],
   });
-  const router = createProjectionPreviewRouter({ history, plan });
+  workspace = createProjectionWorkspaceHarness({ history, plan });
+  const { router } = workspace;
   render(<RouterProvider router={router} />);
   return { history, router, user: userEvent.setup() };
 }
 
-const read = () => window.walterProjectionPreview!.read();
+let workspace: ReturnType<typeof createProjectionWorkspaceHarness>;
+const read = () => workspace.read();
 const salaryInput = () =>
   screen.getByRole('textbox', { name: 'Full-time annual salary' });
 const editButton = () =>
@@ -48,7 +51,7 @@ const editButton = () =>
 describe('projection salary workspace', () => {
   it('starts the outlook at the saved snapshot month while retaining prior spending', async () => {
     const plan = createSalaryExample();
-    openPreview('?section=overview&source=1', plan);
+    openWorkspace('?section=overview&source=1', plan);
     await screen.findByRole('heading', { name: 'Project A details' });
     await userEvent.click(screen.getByText('Monthly balances and costs'));
     const table = screen.getByRole('table', {
@@ -82,14 +85,13 @@ describe('projection salary workspace', () => {
 
   it('keeps booked costs visible while salary edits change only the remaining snapshot forecast', async () => {
     const history = createMemoryHistory({
-      initialEntries: [
-        '/projections-preview.html?example=booked&section=overview&source=1',
-      ],
+      initialEntries: ['/projections/TEST-PI/1?section=overview&source=1'],
     });
-    const router = createProjectionPreviewRouter({
-      example: 'booked',
+    workspace = createProjectionWorkspaceHarness({
       history,
+      plan: createBookedSalaryExample(),
     });
+    const { router } = workspace;
     render(<RouterProvider router={router} />);
     const user = userEvent.setup();
     await screen.findByRole('heading', { name: 'Project A details' });
@@ -135,7 +137,6 @@ describe('projection salary workspace', () => {
         .map((cell) => cell.textContent)
     ).toEqual(['$0.00', '$1,260.00', '$25,340.00']);
     expect(router.state.location.search).toMatchObject({
-      example: 'booked',
       source: 1,
     });
 
@@ -156,7 +157,7 @@ describe('projection salary workspace', () => {
   });
 
   it('opens and focuses a direct appointment link; Cancel discards typing and Apply commits the same operation', async () => {
-    const { user } = openPreview();
+    const { user } = openWorkspace();
     await screen.findByRole('dialog');
     expect(salaryInput()).toHaveFocus();
     expect(read().pendingEditor).toEqual({
@@ -202,7 +203,7 @@ describe('projection salary workspace', () => {
   it('rejects blank and invalid annual input, accepts zero, and keeps no-op precision', async () => {
     const plan = createSalaryExample();
     plan.content.appointments[0].monthlySalary = 10_000.123_45;
-    const { user } = openPreview(undefined, plan);
+    const { user } = openWorkspace(undefined, plan);
     await screen.findByRole('dialog');
     await user.click(screen.getByRole('button', { name: 'Apply' }));
     await waitFor(() =>
@@ -245,7 +246,7 @@ describe('projection salary workspace', () => {
   });
 
   it('preserves committed salary and source location through Back/Forward and discards a closed editor buffer', async () => {
-    const { history, user } = openPreview('?section=overview&source=2');
+    const { history, user } = openWorkspace('?section=overview&source=2');
     await screen.findByRole('heading', { name: 'Project B details' });
     await user.click(screen.getByRole('button', { name: 'Staffing' }));
     await user.click(editButton());
@@ -320,7 +321,7 @@ describe('projection salary workspace', () => {
   });
 
   it('treats Escape cancellation like Cancel and restores the appointment control focus', async () => {
-    openPreview();
+    openWorkspace();
     const dialog = await screen.findByRole('dialog');
     fireEvent(dialog, new Event('cancel', { cancelable: true }));
     await waitFor(() =>
@@ -349,7 +350,7 @@ describe('projection salary workspace', () => {
   ])(
     'handles an invalid direct location %s explicitly',
     async (search, message) => {
-      const { user } = openPreview(search);
+      const { user } = openWorkspace(search);
       expect(await screen.findByRole('alert')).toHaveTextContent(message);
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
       expect(read().revision).toBe(0);

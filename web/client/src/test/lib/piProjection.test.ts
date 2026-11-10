@@ -526,6 +526,31 @@ describe('computePiProjection', () => {
     expect(projected(p, SALARY_CATEGORY, '2027-07')).toBeCloseTo(1030);
   });
 
+  it('treats an imported salary captured in its COLA month as the current rate', () => {
+    const p = projection({
+      appointments: [
+        appointment({
+          allocations: [funding(1, 0.5)],
+          cbrRate: 0.3,
+          colaMonth: 7,
+          colaRate: 0.03,
+          fte: 0.5,
+          monthlySalary: 10_000,
+          vacationAccrualRate: 0.1,
+        }),
+      ],
+      endDate: '2027-12-31',
+      forecastMonths: 18,
+    });
+    p.seededAt = p.content.fundingSources[0].capturedAt =
+      '2026-07-15T00:00:00Z';
+
+    expect(projected(p, SALARY_CATEGORY, '2026-07')).toBe(2500);
+    expect(projected(p, FRINGE_CATEGORY, '2026-07')).toBe(1000);
+    expect(projected(p, SALARY_CATEGORY, '2027-07')).toBeCloseTo(2575);
+    expect(projected(p, FRINGE_CATEGORY, '2027-07')).toBeCloseTo(1030);
+  });
+
   it('compounds a negative annual adjustment without reducing the appointment fee', () => {
     const p = projection({
       appointments: [

@@ -14,8 +14,8 @@ import {
   RouterProvider,
 } from '@tanstack/react-router';
 import { afterEach, describe, expect, it } from 'vitest';
-import { createSalaryExample } from '@/dev/projections/fixture.ts';
-import { createProjectionPreviewRouter } from '@/dev/projections/router.tsx';
+import { createSalaryExample } from '@/test/fixtures/projections.ts';
+import { createProjectionWorkspaceHarness } from '@/test/helpers/projectionWorkspace.tsx';
 
 import {
   EQUIPMENT_CATEGORY,
@@ -25,7 +25,8 @@ import {
   SUPPLIES_CATEGORY as supplies,
 } from '@/lib/piProjection.ts';
 const travel = '06 - Travel';
-const read = () => window.walterProjectionPreview!.read();
+let workspace: ReturnType<typeof createProjectionWorkspaceHarness>;
+const read = () => workspace.read();
 const histories: ReturnType<typeof createMemoryHistory>[] = [];
 afterEach(() => {
   cleanup();
@@ -48,21 +49,22 @@ function expensePlan() {
   ];
   return plan;
 }
-function preview(
+function openWorkspace(
   plan = expensePlan(),
   browser = false,
   search = '?section=expenses&source=1'
 ) {
   if (browser) {
-    window.history.replaceState(null, '', `/projections-preview.html${search}`);
+    window.history.replaceState(null, '', `/projections/TEST-PI/1${search}`);
   }
   const history = browser
     ? createBrowserHistory()
     : createMemoryHistory({
-        initialEntries: [`/projections-preview.html${search}`],
+        initialEntries: [`/projections/TEST-PI/1${search}`],
       });
   histories.push(history);
-  const router = createProjectionPreviewRouter({ history, plan });
+  workspace = createProjectionWorkspaceHarness({ history, plan });
+  const { router } = workspace;
   render(<RouterProvider router={router} />);
   return { history, router, user: userEvent.setup() };
 }
@@ -105,7 +107,7 @@ function month(label: string, value: string) {
 describe('other expenses planning controls', () => {
   it('uses captured history with stable categories, preserves an unchanged precise amount, and applies history only on Apply', async () => {
     const plan = expensePlan();
-    const { user } = preview(plan);
+    const { user } = openWorkspace(plan);
     await screen.findByText('No costs captured in this window');
     await user.click(
       screen.getByRole('button', {
@@ -142,7 +144,7 @@ describe('other expenses planning controls', () => {
   });
 
   it('retains signed custom amounts through history changes and restores the selected window amount', async () => {
-    const { user } = preview();
+    const { user } = openWorkspace();
     await user.click(
       await screen.findByRole('button', {
         name: `Edit historical amount for ${supplies}`,
@@ -176,7 +178,7 @@ describe('other expenses planning controls', () => {
   });
 
   it('explicitly turns a missing zero baseline off across history windows and can cancel that intent', async () => {
-    const { user } = preview();
+    const { user } = openWorkspace();
     await user.click(
       await screen.findByRole('button', {
         name: `Edit historical amount for ${travel}`,
@@ -219,7 +221,7 @@ describe('other expenses planning controls', () => {
     plan.content.fundingSources[0].historicalExpenseOverrides = [
       { amount: 0.004, expenditureCategory: supplies },
     ];
-    const { user } = preview(plan);
+    const { user } = openWorkspace(plan);
     await user.click(
       await screen.findByRole('button', {
         name: `Edit historical amount for ${supplies}`,
@@ -248,7 +250,7 @@ describe('other expenses planning controls', () => {
     const plan = expensePlan();
     plan.content.fundingSources[0].capturedAt = '2026-01-16T00:00:00Z';
     plan.content.fundingSources[0].endDate = '2026-01-31';
-    const { user } = preview(plan);
+    const { user } = openWorkspace(plan);
     await user.click(
       await screen.findByRole('button', { name: 'Add expense' })
     );
@@ -300,19 +302,17 @@ describe('other expenses planning controls', () => {
     const added = screen.getByRole('region', { name: 'Added expenses' });
     expect(within(added).getByText('$150.00')).toBeInTheDocument();
     expect(
-      window.walterProjectionPreview!.server.read().stored!.content
-        .fundingSources[0].expenses
+      workspace.server.read().stored!.content.fundingSources[0].expenses
     ).toEqual([]);
     await user.click(screen.getByRole('button', { name: 'Save plan' }));
     await screen.findByRole('button', { name: '✓ Saved' });
     expect(
-      window.walterProjectionPreview!.server.read().stored!.content
-        .fundingSources[0].expenses
+      workspace.server.read().stored!.content.fundingSources[0].expenses
     ).toEqual(read().draft.content.fundingSources[0].expenses);
   });
 
   it('waits for amount interaction before showing validation and clears it for valid credits and zero', async () => {
-    const { user } = preview();
+    const { user } = openWorkspace();
     await user.click(
       await screen.findByRole('button', { name: 'Add expense' })
     );
@@ -339,7 +339,7 @@ describe('other expenses planning controls', () => {
   });
 
   it('shows validation on an invalid form submission without adding an expense', async () => {
-    const { user } = preview();
+    const { user } = openWorkspace();
     await user.click(
       await screen.findByRole('button', { name: 'Add expense' })
     );
@@ -354,7 +354,7 @@ describe('other expenses planning controls', () => {
   });
 
   it('allows a signed one-time credit without end fields and removes it without a second confirmation', async () => {
-    const { user } = preview();
+    const { user } = openWorkspace();
     await addManual(user, 'Refund', '-500');
     await user.selectOptions(screen.getByLabelText('Frequency'), 'OneTime');
     expect(screen.queryByLabelText('End condition')).not.toBeInTheDocument();
@@ -375,7 +375,7 @@ describe('other expenses planning controls', () => {
   });
 
   it('allows dates outside the forecast with an explanation and never calls a zero amount a date problem', async () => {
-    const { user } = preview();
+    const { user } = openWorkspace();
     await addManual(user, 'Later purchase', '25');
     month('Start month', '2028-01');
     expect(screen.getByText(/These dates fall outside/)).toBeInTheDocument();
@@ -414,7 +414,7 @@ describe('other expenses planning controls', () => {
         startMonth: '2026-02-01',
       },
     ];
-    const { user } = preview(plan);
+    const { user } = openWorkspace(plan);
     await user.click(
       await screen.findByRole('button', { name: 'Edit expense Fixed estimate' })
     );
@@ -443,7 +443,7 @@ describe('other expenses planning controls', () => {
     plan.content.fundingSources[1].runRates = [
       { expenditureCategory: supplies, historyMonths: 3, monthlyAmount: 900 },
     ];
-    const { user } = preview(plan);
+    const { user } = openWorkspace(plan);
     const selector = await screen.findByLabelText('View expenses for');
     const sourceOptions = () =>
       within(screen.getByLabelText('View expenses for'))
@@ -495,7 +495,7 @@ describe('other expenses planning controls', () => {
   });
 
   it('guards unapplied typing on departure and resets its source target on browser Back', async () => {
-    const { history, user } = preview(expensePlan(), true);
+    const { history, user } = openWorkspace(expensePlan(), true);
     await screen.findByLabelText('View expenses for');
     await user.selectOptions(screen.getByLabelText('View expenses for'), '2');
     await addManual(user, 'Project B supplies', '20');
@@ -503,7 +503,9 @@ describe('other expenses planning controls', () => {
       fundingSourceId: 2,
       hasChanges: true,
     });
-    await user.click(screen.getByRole('button', { name: 'Leave preview' }));
+    act(() => {
+      void workspace.router.navigate({ to: '/projections/TEST-PI' });
+    });
     const guard = await screen.findByRole('dialog', {
       name: 'Leave this plan?',
     });

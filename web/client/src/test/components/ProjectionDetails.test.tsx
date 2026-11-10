@@ -14,10 +14,11 @@ import {
   RouterProvider,
 } from '@tanstack/react-router';
 import { afterEach, describe, expect, it } from 'vitest';
-import { createSalaryExample } from '@/dev/projections/fixture.ts';
-import { createProjectionPreviewRouter } from '@/dev/projections/router.tsx';
+import { createSalaryExample } from '@/test/fixtures/projections.ts';
+import { createProjectionWorkspaceHarness } from '@/test/helpers/projectionWorkspace.tsx';
 
-const read = () => window.walterProjectionPreview!.read();
+let workspace: ReturnType<typeof createProjectionWorkspaceHarness>;
+const read = () => workspace.read();
 const histories: ReturnType<typeof createMemoryHistory>[] = [];
 afterEach(() => {
   cleanup();
@@ -27,23 +28,22 @@ afterEach(() => {
   histories.length = 0;
   window.history.replaceState(null, '', '/');
 });
-function preview(
+function openWorkspace(
   plan = createSalaryExample(),
   browser = false,
   search = '?section=overview'
 ) {
   if (browser) {
-    window.history.replaceState(null, '', `/projections-preview.html${search}`);
+    window.history.replaceState(null, '', `/projections/TEST-PI/1${search}`);
   }
   const history = browser
     ? createBrowserHistory()
     : createMemoryHistory({
-        initialEntries: [`/projections-preview.html${search}`],
+        initialEntries: [`/projections/TEST-PI/1${search}`],
       });
   histories.push(history);
-  render(
-    <RouterProvider router={createProjectionPreviewRouter({ history, plan })} />
-  );
+  workspace = createProjectionWorkspaceHarness({ history, plan });
+  render(<RouterProvider router={workspace.router} />);
   return userEvent.setup();
 }
 async function openDetails(user: ReturnType<typeof userEvent.setup>) {
@@ -66,13 +66,13 @@ async function enter(
 
 describe('projection plan details', () => {
   it('keeps an open unapplied details buffer when a prior save is acknowledged', async () => {
-    const user = preview();
+    const user = openWorkspace();
     await openDetails(user);
     await user.selectOptions(screen.getByLabelText('Forecast duration'), '18');
     await user.click(
       screen.getByRole('button', { name: 'Apply plan details' })
     );
-    const server = window.walterProjectionPreview!.server;
+    const server = workspace.server;
     act(() => server.setHold(true));
     await user.click(screen.getByRole('button', { name: 'Save plan' }));
     await screen.findByRole('button', { name: 'Saving…' });
@@ -95,7 +95,7 @@ describe('projection plan details', () => {
 
   it('keeps name, duration and plain multiline notes pending until Apply, then saves all metadata explicitly', async () => {
     const plan = createSalaryExample();
-    const user = preview(plan);
+    const user = openWorkspace(plan);
     await openDetails(user);
     expect(screen.getByLabelText('Forecast duration')).toHaveValue('12');
     expect(screen.getByLabelText('Plan notes (optional)')).toHaveAttribute(
@@ -142,13 +142,10 @@ describe('projection plan details', () => {
     expect(read().draft.content.appointments).toEqual(
       plan.content.appointments
     );
-    expect(
-      window.walterProjectionPreview!.server.read().stored!.content
-        .forecastMonths
-    ).toBe(12);
+    expect(workspace.server.read().stored!.content.forecastMonths).toBe(12);
     await user.click(screen.getByRole('button', { name: 'Save plan' }));
     await screen.findByRole('button', { name: '✓ Saved' });
-    expect(window.walterProjectionPreview!.server.read().stored).toMatchObject({
+    expect(workspace.server.read().stored).toMatchObject({
       content: { forecastMonths: 18, notes },
       name: 'Longer plan',
       seededAt: plan.seededAt,
@@ -158,7 +155,7 @@ describe('projection plan details', () => {
   it('requires a plan name, rejects notes over the limit, and clears notes with whitespace-only input', async () => {
     const plan = createSalaryExample();
     plan.content.notes = 'Existing note';
-    const user = preview(plan);
+    const user = openWorkspace(plan);
     await openDetails(user);
     await enter(user, 'Plan name', '   ');
     expect(
@@ -213,7 +210,7 @@ describe('projection plan details', () => {
         startMonth: '2026-01-01',
       },
     ];
-    const user = preview(plan, false, '?section=expenses&source=1');
+    const user = openWorkspace(plan, false, '?section=expenses&source=1');
     await screen.findByRole('heading', { name: 'Other expenses' });
     const row = (name: string) => screen.getByText(name).closest('tr')!;
     expect(
@@ -258,7 +255,7 @@ describe('projection plan details', () => {
     future.sourceKind = 'Planned';
     future.startDate = '2027-03-01';
     future.endDate = null;
-    const user = preview(plan);
+    const user = openWorkspace(plan);
     await screen.findByRole('button', { name: 'View Project B' });
     const row = () =>
       screen.getByRole('button', { name: 'View Project B' }).closest('tr')!;
@@ -284,14 +281,14 @@ describe('projection plan details', () => {
   });
 
   it('retains newer metadata after a delayed save and submits it with the next explicit Save', async () => {
-    const user = preview();
+    const user = openWorkspace();
     await openDetails(user);
     await user.selectOptions(screen.getByLabelText('Forecast duration'), '18');
     await enter(user, 'Plan notes (optional)', 'First submitted note');
     await user.click(
       screen.getByRole('button', { name: 'Apply plan details' })
     );
-    const server = window.walterProjectionPreview!.server;
+    const server = workspace.server;
     act(() => server.setHold(true));
     await user.click(screen.getByRole('button', { name: 'Save plan' }));
     await screen.findByRole('button', { name: 'Saving…' });
@@ -324,10 +321,12 @@ describe('projection plan details', () => {
   });
 
   it('guards unapplied metadata on departure and preserves typing after Stay', async () => {
-    const user = preview(createSalaryExample(), true);
+    const user = openWorkspace(createSalaryExample(), true);
     await openDetails(user);
     await enter(user, 'Plan notes (optional)', 'Still typing');
-    await user.click(screen.getByRole('button', { name: 'Leave preview' }));
+    act(() => {
+      void workspace.router.navigate({ to: '/projections/TEST-PI' });
+    });
     const guard = await screen.findByRole('dialog', {
       name: 'Leave this plan?',
     });
@@ -338,11 +337,11 @@ describe('projection plan details', () => {
     expect(read().draft.content.notes).toBeNull();
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(read().dirty).toBe(false);
-    await user.click(screen.getByRole('button', { name: 'Leave preview' }));
+    act(() => {
+      void workspace.router.navigate({ to: '/projections/TEST-PI' });
+    });
     await waitFor(() =>
-      expect(
-        screen.getByRole('heading', { name: 'Outside the plan' })
-      ).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: 'Plans' })).toBeInTheDocument()
     );
   });
 });

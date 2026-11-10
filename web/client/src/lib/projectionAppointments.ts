@@ -4,6 +4,7 @@ import type {
 } from '@/queries/projections.ts';
 import type { ProjectionSession } from '@/lib/projectionWorkspace.ts';
 import { validateProjectionAllocations } from '@/lib/projectionAllocations.ts';
+import { isPlanningDate } from '@/lib/date.ts';
 const EDITABLE_FIELDS = [
   'name',
   'jobCode',
@@ -33,19 +34,6 @@ export type AppointmentOperationResult<
 export type AppointmentOperation = <T extends ProjectionDraft>(
   session: ProjectionSession<T>
 ) => AppointmentOperationResult<T>;
-
-function validDate(value: string | null) {
-  if (value === null) {
-    return true;
-  }
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || value.startsWith('0000')) {
-    return false;
-  }
-  const date = new Date(`${value}T00:00:00Z`);
-  return (
-    Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value
-  );
-}
 
 /** Incomplete imported inputs may be reviewed, but applied and saved assumptions must be valid. */
 export function validateAppointmentInputs(
@@ -89,8 +77,8 @@ export function validateAppointmentInputs(
     return 'Enter a monthly fee of zero or more, or leave it blank.';
   }
   if (
-    !validDate(inputs.startDate) ||
-    !validDate(inputs.endDate) ||
+    (inputs.startDate !== null && !isPlanningDate(inputs.startDate)) ||
+    (inputs.endDate !== null && !isPlanningDate(inputs.endDate)) ||
     (inputs.startDate && inputs.endDate && inputs.startDate > inputs.endDate) ||
     (requireStartDate && !inputs.startDate)
   ) {

@@ -20,25 +20,25 @@ import {
 import {
   createAppointmentLookupsExample,
   createSalaryExample,
-} from '@/dev/projections/fixture.ts';
-import { createProjectionPreviewRouter } from '@/dev/projections/router.tsx';
+} from '@/test/fixtures/projections.ts';
+import { createProjectionWorkspaceHarness } from '@/test/helpers/projectionWorkspace.tsx';
 import { projectionLookupsQueryOptions } from '@/queries/projections.ts';
 import { server } from '@/test/mswUtils.ts';
 
 afterEach(cleanup);
 
-function preview(plan = createSalaryExample(), editing = true) {
+function openWorkspace(plan = createSalaryExample(), editing = true) {
   const history = createMemoryHistory({
     initialEntries: [
-      `/projections-preview.html?section=staffing${editing ? '&appointment=101' : ''}`,
+      `/projections/TEST-PI/1?section=staffing${editing ? '&appointment=101' : ''}`,
     ],
   });
-  render(
-    <RouterProvider router={createProjectionPreviewRouter({ history, plan })} />
-  );
+  workspace = createProjectionWorkspaceHarness({ history, plan });
+  render(<RouterProvider router={workspace.router} />);
   return userEvent.setup();
 }
-const read = () => window.walterProjectionPreview!.read();
+let workspace: ReturnType<typeof createProjectionWorkspaceHarness>;
+const read = () => workspace.read();
 async function enter(
   user: ReturnType<typeof userEvent.setup>,
   label: string,
@@ -61,7 +61,7 @@ describe('appointment planning controls', () => {
       monthlySalary: 10_000.123_45,
       vacationAccrualRate: 0.041_234_5,
     });
-    const user = preview(plan);
+    const user = openWorkspace(plan);
     await screen.findByLabelText('Full-time annual salary');
     expect(screen.queryByLabelText('Appointment name')).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Apply' }));
@@ -138,7 +138,7 @@ describe('appointment planning controls', () => {
       jobCode: 'EXAMPLE',
       vacationAccrualRate: 0.0123,
     });
-    const user = preview(plan);
+    const user = openWorkspace(plan);
     await screen.findByLabelText('CBR (%)');
     expect(screen.getByLabelText('CBR (%)')).toHaveValue('0');
     await user.click(screen.getByRole('button', { name: 'Use lookup rate' }));
@@ -163,7 +163,7 @@ describe('appointment planning controls', () => {
 
   it('adds a future unallocated hire from server defaults and confirms removal without changing recorded finances', async () => {
     const plan = createSalaryExample();
-    const user = preview(plan, false);
+    const user = openWorkspace(plan, false);
     await user.click(
       await screen.findByRole('button', { name: 'Add hypothetical hire' })
     );
@@ -225,7 +225,7 @@ describe('appointment planning controls', () => {
   it('blocks saving an incomplete retained salary until it is supplied or the appointment is removed', async () => {
     const plan = createSalaryExample();
     plan.content.appointments[0].monthlySalary = null;
-    const user = preview(plan, false);
+    const user = openWorkspace(plan, false);
     await screen.findByText('Salary needs input');
     expect(screen.getByRole('button', { name: 'Save plan' })).toBeDisabled();
     await user.click(
@@ -244,9 +244,7 @@ describe('appointment planning controls', () => {
     );
     await user.click(screen.getByRole('button', { name: 'Save plan' }));
     await screen.findByRole('button', { name: '✓ Saved' });
-    expect(
-      window.walterProjectionPreview!.server.read().stored!.content.appointments
-    ).toEqual([]);
+    expect(workspace.server.read().stored!.content.appointments).toEqual([]);
     expect(read().draft.content.fundingSources).toEqual(
       plan.content.fundingSources
     );

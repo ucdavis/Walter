@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createSalaryExample } from '@/dev/projections/fixture.ts';
+import { createSalaryExample } from '@/test/fixtures/projections.ts';
 import {
   computePiProjection,
   EQUIPMENT_CATEGORY,

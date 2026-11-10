@@ -2,7 +2,7 @@ import { act, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
-import { createSalaryExample } from '@/dev/projections/fixture.ts';
+import { createSalaryExample } from '@/test/fixtures/projections.ts';
 import { SUPPLIES_CATEGORY } from '@/lib/piProjection.ts';
 import type {
   Projection,

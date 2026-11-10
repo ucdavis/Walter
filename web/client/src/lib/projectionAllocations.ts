@@ -5,6 +5,7 @@ import type {
 } from '@/queries/projections.ts';
 import type { AppointmentOperationResult } from '@/lib/projectionAppointments.ts';
 import type { ProjectionSession } from '@/lib/projectionWorkspace.ts';
+import { isPlanningDate } from '@/lib/date.ts';
 export interface AllocationRange {
   endDate: string | null;
   startDate: string | null;
@@ -27,20 +28,10 @@ const bounds = (range: AllocationRange) => ({
   start: range.startDate === null ? MIN_DAY : day(range.startDate),
 });
 
-function validDate(value: string | null) {
-  return (
-    value === null ||
-    (/^\d{4}-\d{2}-\d{2}$/.test(value) &&
-      !value.startsWith('0000') &&
-      Number.isFinite(day(value)) &&
-      date(day(value)) === value)
-  );
-}
-
 function validRange(range: AllocationRange) {
   return (
-    validDate(range.startDate) &&
-    validDate(range.endDate) &&
+    (range.startDate === null || isPlanningDate(range.startDate)) &&
+    (range.endDate === null || isPlanningDate(range.endDate)) &&
     !(range.startDate && range.endDate && range.startDate > range.endDate)
   );
 }
@@ -165,7 +156,7 @@ export function getAllocationEditorSeed(
   shares: AllocationShare[];
 } {
   const start = `${month}-01`;
-  if (!validDate(start)) {
+  if (!isPlanningDate(start)) {
     throw new Error('Choose a valid funding month.');
   }
   const last = new Date(day(start) * DAY_MS);

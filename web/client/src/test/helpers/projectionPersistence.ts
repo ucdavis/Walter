@@ -4,17 +4,7 @@ import type {
   SaveProjectionRequest,
 } from '@/queries/projections.ts';
 
-export type PreviewSaveOutcome = 'success' | 'failure' | 'lost-response';
-
-interface PreviewStatus {
-  hold: boolean;
-  outcome: PreviewSaveOutcome;
-  pending: number;
-  reloads: number;
-  requests: number;
-  storedSalary: number | null;
-  updatedAt: string;
-}
+type SaveOutcome = 'success' | 'failure' | 'lost-response';
 
 function nextTimestamp(timestamp: string) {
   const [seconds, fraction = ''] = timestamp.replace(/Z$/, '').split('.');
@@ -22,69 +12,36 @@ function nextTimestamp(timestamp: string) {
   return `${seconds}.${String(ticks).padStart(7, '0')}Z`;
 }
 
-/** A synthetic saved document for the separate development preview. Nothing leaves this tab. */
-export function createProjectionPreviewServer(initialPlan: Projection) {
+/** Controllable persistence for component tests of delayed and conflicting saves. */
+export function createProjectionPersistenceDouble(initialPlan: Projection) {
   let stored: Projection | null = structuredClone(initialPlan);
   let hold = false;
-  let outcome: PreviewSaveOutcome = 'success';
+  let outcome: SaveOutcome = 'success';
   let reloads = 0;
   const requests: SaveProjectionRequest[] = [];
   const pending: (() => void)[] = [];
-  const listeners = new Set<() => void>();
-  let status: PreviewStatus = {
-    hold,
-    outcome,
-    pending: 0,
-    reloads,
-    requests: 0,
-    storedSalary: stored.content.appointments[0]?.monthlySalary ?? null,
-    updatedAt: stored.updatedAt,
-  };
-
-  const publish = () => {
-    status = {
-      hold,
-      outcome,
-      pending: pending.length,
-      reloads,
-      requests: requests.length,
-      storedSalary: stored?.content.appointments[0]?.monthlySalary ?? null,
-      updatedAt: stored?.updatedAt ?? 'Deleted',
-    };
-    for (const listener of listeners) {
-      listener();
-    }
-  };
   const url = `/api/projections/${initialPlan.id}`;
   const missing = () => new HttpError(404, url, 'This plan was deleted.');
 
   return {
     deleteRemotely: () => {
       stored = null;
-      publish();
     },
     editRemotely: () => {
-      if (!stored) {
-        return;
+      if (stored) {
+        stored.name = 'Plan edited by another user';
+        if (stored.content.appointments[0]) {
+          stored.content.appointments[0].monthlySalary = 128_000 / 12;
+        }
+        stored.updatedAt = nextTimestamp(stored.updatedAt);
+        stored.updatedBy = 'Another user';
       }
-      stored.name = 'Plan edited by another user';
-      if (stored.content.appointments[0]) {
-        stored.content.appointments[0].monthlySalary = 128_000 / 12;
-      }
-      stored.updatedAt = nextTimestamp(stored.updatedAt);
-      stored.updatedBy = 'Another user';
-      publish();
     },
-    finishNextSave: () => {
-      pending.shift()?.();
-      publish();
-    },
-    getStatus: () => status,
+    finishNextSave: () => pending.shift()?.(),
     read: () =>
       structuredClone({ pending: pending.length, reloads, requests, stored }),
     reload: async () => {
       reloads++;
-      publish();
       if (!stored) {
         throw missing();
       }
@@ -111,23 +68,17 @@ export function createProjectionPreviewServer(initialPlan: Projection) {
       for (const source of stored.content.fundingSources) {
         source.capturedAt = seededAt;
       }
-      publish();
     },
     save: async (request: SaveProjectionRequest) => {
       const submitted = structuredClone(request);
       requests.push(submitted);
       const nextOutcome = outcome;
       outcome = 'success';
-      publish();
       if (hold) {
-        await new Promise<void>((resolve) => {
-          pending.push(resolve);
-          publish();
-        });
+        await new Promise<void>((resolve) => pending.push(resolve));
       }
       if (nextOutcome === 'failure') {
-        publish();
-        throw new TypeError('Synthetic save request failed.');
+        throw new TypeError('Save request failed.');
       }
       if (!stored) {
         throw missing();
@@ -152,29 +103,18 @@ export function createProjectionPreviewServer(initialPlan: Projection) {
         content: submitted.content,
         name: submitted.name,
         updatedAt: nextTimestamp(stored.updatedAt),
-        updatedBy: 'Preview user',
+        updatedBy: 'Test user',
       };
-      publish();
       if (nextOutcome === 'lost-response') {
-        throw new TypeError('Synthetic save response was lost.');
+        throw new TypeError('Save response was lost.');
       }
       return structuredClone(stored);
     },
     setHold: (value: boolean) => {
       hold = value;
-      publish();
     },
-    setOutcome: (value: PreviewSaveOutcome) => {
+    setOutcome: (value: SaveOutcome) => {
       outcome = value;
-      publish();
-    },
-    subscribe: (listener: () => void) => {
-      listeners.add(listener);
-      return () => listeners.delete(listener);
     },
   };
 }
-
-export type ProjectionPreviewServer = ReturnType<
-  typeof createProjectionPreviewServer
->;

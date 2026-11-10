@@ -101,41 +101,16 @@ function useSession(
     () => computePiProjection(session.draft),
     [session.draft]
   );
-  const applyAppointmentOperation = (operation: AppointmentOperation) => {
-    const result = operation(currentSession.current);
-    if (result.ok) {
-      updateSession(result.session);
-    }
-    setSaveStatus((status) => (status === 'saving' ? status : 'idle'));
-    return result;
-  };
-
-  const applyDetailsOperation = (operation: PlanDetailsOperation) => {
-    const result = operation(currentSession.current);
-    if (result.ok) {
-      updateSession(result.session);
-    }
-    setSaveStatus((status) => (status === 'saving' ? status : 'idle'));
-    return result;
-  };
-
-  const applyExpenseOperation = (operation: ExpenseOperation) => {
-    const result = operation(currentSession.current);
-    if (result.ok) {
-      updateSession(result.session);
-    }
-    setSaveStatus((status) => (status === 'saving' ? status : 'idle'));
-    return result;
-  };
-
-  const applySourceOperation = (operation: SourceOperation) => {
+  function applyOperation<
+    Result extends { ok: false } | { ok: true; session: ProjectionSession },
+  >(operation: (session: ProjectionSession) => Result): Result {
     const result = operation(currentSession.current);
     if (result.ok) {
       updateSession(result.session);
       setSaveStatus((status) => (status === 'saving' ? status : 'idle'));
     }
     return result;
-  };
+  }
 
   const save = async (overwrite = false) => {
     if (!persistence || requestPending.current) {
@@ -244,10 +219,14 @@ function useSession(
   };
 
   return {
-    applyAppointmentOperation,
-    applyDetailsOperation,
-    applyExpenseOperation,
-    applySourceOperation,
+    applyAppointmentOperation: (operation: AppointmentOperation) =>
+      applyOperation(operation),
+    applyDetailsOperation: (operation: PlanDetailsOperation) =>
+      applyOperation(operation),
+    applyExpenseOperation: (operation: ExpenseOperation) =>
+      applyOperation(operation),
+    applySourceOperation: (operation: SourceOperation) =>
+      applyOperation(operation),
     canSave: Boolean(persistence),
     conflict,
     conflictOpen,

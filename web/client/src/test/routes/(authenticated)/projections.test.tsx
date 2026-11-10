@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import {
   createSalaryExample,
   createAppointmentLookupsExample,
-} from '@/dev/projections/fixture.ts';
+} from '@/test/fixtures/projections.ts';
 import type { Projection } from '@/queries/projections.ts';
 import { server } from '@/test/mswUtils.ts';
 import { renderRoute } from '@/test/routerUtils.tsx';

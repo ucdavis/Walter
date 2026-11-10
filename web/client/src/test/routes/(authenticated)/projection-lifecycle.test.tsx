@@ -12,7 +12,7 @@ import { describe, expect, it } from 'vitest';
 import {
   createSalaryExample,
   createAppointmentLookupsExample,
-} from '@/dev/projections/fixture.ts';
+} from '@/test/fixtures/projections.ts';
 import type {
   CreateProjectionDraftRequest,
   DuplicateProjectionRequest,

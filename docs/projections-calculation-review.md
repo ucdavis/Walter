@@ -43,9 +43,13 @@ Award expiry determines inclusion. Source dates determine forecast eligibility;
 imported tasks initially inherit their project's dates, which the plan can edit.
 
 Eligible tasks remain independent sources, with their own category balances,
-monthly costs, and captured expense averages. Initial staffing includes people
-paid on the selected projects, including people paid only on an unchecked task
-of one of those projects. Deliberately unchecked tasks leave their shares
+monthly costs, and captured expense averages. Initial staffing includes only
+appointments with a personnel funding record matched to a selected task. This
+includes matching unsplit salary records even when their salary needs input and
+allocations cannot yet be constructed. Records with only blank or unmatched task
+identifiers cannot establish membership in a selected task.
+
+For retained appointments, deliberately unchecked tasks leave their shares
 unallocated. Blank or unmatched personnel task identifiers also leave funding
 unallocated rather than assigning it to another task. Existing outside funding,
 including funding excluded by source eligibility, remains separate.

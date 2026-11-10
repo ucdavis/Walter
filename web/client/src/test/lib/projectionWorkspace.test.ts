@@ -8,7 +8,7 @@ import {
   readProjectionWorkspace,
 } from '@/lib/projectionWorkspace.ts';
 import { editProjectionAppointment } from '@/lib/projectionAppointments.ts';
-import { createSalaryExample } from '@/dev/projections/fixture.ts';
+import { createSalaryExample } from '@/test/fixtures/projections.ts';
 
 describe('salary workspace operations without React', () => {
   it('opens canonical source and appointment targets', () => {

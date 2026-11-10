@@ -3,7 +3,7 @@ import { cleanup, render, screen, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 import { FundingSourcesEditor } from '@/components/projections/FundingSourcesEditor.tsx';
-import { createSalaryExample } from '@/dev/projections/fixture.ts';
+import { createSalaryExample } from '@/test/fixtures/projections.ts';
 import { createProjectionSession } from '@/lib/projectionWorkspace.ts';
 
 afterEach(cleanup);

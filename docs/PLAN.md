@@ -15,9 +15,12 @@ accepted and committed as `9a700ef1`. Stage 5a's funding outlook and source
 drilldowns are accepted and committed as `4209d76b`. Stage 5b's saved-plan
 dashboard, current balances, and minimal wizard Review are accepted and committed
 as `ce6a7c03`. Stage 5c's workflow refinements and selected-task initial staffing
-are implemented, verified, and accepted. Next is real-backend validation using
-real datamart inputs and an isolated local plan database, with a parallel
-read-only review of the branch for structural cleanup.
+are implemented, verified, and accepted. An initial real-backend walkthrough now
+passes against isolated local app and datamart databases containing copied real
+portfolio records. Shared datamart deployment, broader financial reconciliation,
+and rollout acceptance remain open. A read-only branch review identified bounded
+structural cleanup rather than a broad rewrite. Stage 5e implements that cleanup
+and passes combined verification. The cleanup is accepted.
 Sponsored personnel budget availability and category rebudgeting are deferred
 until the end of this plan, potentially after v1. They do not block v1 completion.
 Saving remains available with funding gaps/overlaps.
@@ -277,8 +280,8 @@ schedules is a confirmed Stage 0 decision.
 
 ### Production cleanup before completion
 
-Remove temporary development aids as the production workflow replaces them.
-The final feature review must confirm this cleanup is complete, including:
+Stage 5e removes the temporary development aids after preserving regression
+coverage. The completion requirements are:
 
 - Remove `web/client/src/dev/projections/`, `web/client/projections-preview.html`, the
   synthetic scenario controls and server, and `window.walterProjectionPreview`.
@@ -321,15 +324,10 @@ evidence requires a deliberate change.
 
 The Stage 1a workspace owns one plan session, uses the existing
 `computePiProjection` calculation, and changes salary through
-`setJobMonthlySalary`. The separate Vite preview entry provides synthetic inputs
-without requiring authentication or a backend. Existing application routes and
-production persistence were unchanged by that increment.
-
-From `web/client`, run `npm run dev -- --host 127.0.0.1 --strictPort` and open
-[the salary editor](http://127.0.0.1:5174/projections-preview.html?section=staffing&appointment=101).
-The normal production build includes only `index.html`; it excludes this preview
-entry and its fixture. Preview changes are in memory and reload restores the
-fixture. Stage 1b adds synthetic saving controls and departure warnings below.
+`setJobMonthlySalary`. That increment used a separate synthetic Vite entry without authentication
+or a backend. Existing application routes and production persistence were
+unchanged. The temporary entry has since been replaced by production-component
+tests using fixtures under `web/client/src/test/`.
 
 The fixed example captures December 2025 salary actuals and forecasts January
 through June 2026. Project A starts with $20,000 available and Project B with
@@ -342,10 +340,6 @@ $16,000. Try the following:
    The applied salary remains in the draft; December actuals remain $2,500.
 4. Open the salary editor by URL. Blank or invalid text disables Apply; zero is
    a valid salary. Escape cancels and returns focus to the job's edit control.
-
-In the preview console, `window.walterProjectionPreview.read()` returns a
-detached snapshot of the draft, location, results, revision, dirty state, and
-pending editor status. Editing that returned object cannot mutate the live plan.
 
 Local verification includes 19 new behavioral tests and 447 passing client tests,
 TypeScript, changed-file lint, and a successful production build. React Doctor
@@ -362,7 +356,7 @@ input-to-two-animation-frames measurements were 9.7-12.4 ms for typing and
 measurements, not production performance guarantees.
 
 The user reviewed the code and preview and accepted Stage 1a. The synthetic
-preview remains available for subsequent increments.
+preview supported later increments until its retirement in Stage 5e.
 
 ## Stage 1b confirmed decisions
 
@@ -509,22 +503,10 @@ The workspace read operation now includes serializable saving, conflict, error,
 and reload status alongside the draft and location. No second synchronized
 document or browser storage is introduced.
 
-Try the [local saving preview](http://127.0.0.1:5174/projections-preview.html?section=staffing).
-Its synthetic server copy lives in this tab's memory. Full browser reload resets
-the example; Leave preview and Return to saved plan exercise reopening that copy.
-The scenario controls allow the following checks:
-
-1. Apply a salary change and Save. Confirm the checkmark and the server copy.
-2. Enable Hold save requests, Save, apply another salary, then Finish pending
-   save. The earlier salary is saved and the later salary stays unsaved.
-3. Apply a salary change, select Another user saves, and Save. Close the warning
-   to continue editing, then Save again and choose Overwrite or Discard.
-4. Select Fail before saving or Save, then lose response. The draft remains
-   available for manual retry; no automatic readback occurs.
-5. Reset or delete the synthetic saved plan before saving. Overwrite is blocked.
-6. Use Leave preview with pending changes or a held save. Confirm Stay/Discard
-   or Stay/Leave anyway. Reload with an edited salary buffer uses the browser's
-   standard warning.
+The retained persistence regressions cover saving the applied salary, edits made
+while a save is pending, conflict overwrite/discard, failed and lost responses,
+reset/deletion protection, and departure/reload warnings. They operate on the
+production workspace with a test-only persistence double.
 
 Browser checks against the real authenticated route with synthetic HTTP responses
 covered delayed saves, two-tab conflicts, overwrite of the current draft,
@@ -553,8 +535,7 @@ actuals again from captured balances.
 Explicit expenses remain additional forecasts. Fee remission also remains
 additional and does not use salary/fringe booked-cost subtraction.
 
-The [booked salary preview](http://127.0.0.1:5174/projections-preview.html?example=booked&section=overview&source=1)
-uses the same workspace with illustrative benefit rates. Each project has
+The booked salary regression uses illustrative benefit rates. Each project has
 $1,000 booked salary and $400 booked benefits, included in its $26,600 snapshot
 balance. January shows $1,400 actuals, $2,100 additional forecast, and a $24,500
 end balance. Change the annual salary from $120,000 to $43,200 to bring the
@@ -663,14 +644,12 @@ remain intact. The inspectable monthly funding share is an average over active
 job days, including explicit outside funding; it does not prove that every day
 is fully covered. Saving and warning UI are unchanged.
 
-Try the [date-boundary preview](http://127.0.0.1:5174/projections-preview.html?example=dates&section=overview&source=1).
-It uses the agreed February/March job and funding dates with illustrative benefit
-rates. Project A forecasts $1,125 in February and $564.52 in March. Project B
+The date-boundary regressions use the agreed February/March job and funding
+dates with illustrative benefit rates. Project A forecasts $1,125 in February and $564.52 in March. Project B
 forecasts zero because its funding never overlaps the job. Changing annual
 salary from $120,000 to $132,000 changes A's forecasts to $1,237.50 and $620.97;
-B stays at zero. The existing Apply/Cancel and synthetic saving flow remain
-available. This adds only an example to the temporary preview covered by the
-production cleanup checklist.
+B stays at zero. These calculation expectations remain covered after removing
+the temporary preview.
 
 All 499 client tests passed, including 23 new date regressions. The first new
 regression reproduced a $2,500 February salary charge where the accepted
@@ -744,8 +723,7 @@ A $750 full-month fee forecast therefore remains $750 with $400 already booked
 in category 08. Those booked costs remain visible and included in the snapshot
 balance under the existing inclusion assumption. Salary/fringe netting is unchanged.
 
-The [fee preview](http://127.0.0.1:5174/projections-preview.html?example=fees&section=overview&source=1)
-shows each project's April actuals of $400 alongside a $375 fee forecast,
+The fee regression shows each project's April actuals of $400 alongside a $375 fee forecast,
 leaving $9,225. May shows no actuals and a $750 fee forecast, leaving $8,475.
 These months illustrate partial-month proration and the separate treatment of
 booked category 08 costs.
@@ -795,8 +773,7 @@ job's start date moves its salary base according to the same rule.
 Use the existing job source flag and start date; no schema change is needed.
 This settles future-hire COLA timing. Stage 1b remains open for final review.
 
-The [future-hire preview](http://127.0.0.1:5174/projections-preview.html?example=future-hire&section=overview&source=1)
-uses a 50% appointment split equally between two projects. Each project starts
+The future-hire regression uses a 50% appointment split equally between two projects. Each project starts
 at $60,000 and forecasts $2,500 monthly from August 2026 through June 2027, then
 $2,575 in July and August 2027, ending at $27,350. Editing the annual salary to
 $132,000 gives $2,750 and $2,832.50 respectively, ending at $24,085. The salary
@@ -1812,6 +1789,83 @@ This increment is accepted. Next, validate the real backend and datamart reads
 using an isolated local plan database. Review the branch for structural cleanup
 in parallel before choosing larger refactors. Broader staffing layout cleanup,
 temporary preview removal, and rollout criteria remain later work.
+
+## Stage 5d: isolated real-data backend review
+
+The functional workflow is committed as `65fe73a6`. The real .NET backend now runs
+with a separate local SQL Server application database containing all 13 branch
+migrations. The local PI and PM login identities were copied from the configured
+test application database; the review uses the existing development login flow.
+
+The shared WalterDev datamart still has the older projection procedure without
+the required `SnapshotAt` parameter. To keep schema changes isolated, a second
+local database contains the branch's projection tables and six required stored
+procedures, plus copied real records for one representative PI's 16 associated
+projects. The copy includes 3,895 cost rows, five personnel funding rows, project
+and team records, related identities, and the real category and benefit lookups.
+It preserves raw values and identifiers. Source portfolio and personnel loads are
+dated November 9, 2026. No shared database schema or data was changed.
+
+The actual application returns 19 eligible funding sources and five appointments,
+including internal and sponsored projects and a project with multiple tasks.
+All retained appointments have salaries and matching task provenance. Browser
+creation, notes editing, Save, and reload passed. API duplication preserved the
+document and snapshot; retrying the creation key returned the same duplicate.
+A stale save returned 409. Anonymous reads returned 401, unrelated local-user
+reads returned 403, and the PI's reads succeeded. The local procedure audit log
+recorded no failures. The optional profile photo is unavailable under local login.
+
+This establishes a working real-backend path against copied real data. It does
+not establish continuous datamart refresh, shared procedure deployment, Entra SSO,
+or full financial reconciliation. Review additional portfolios and compare their
+captured inputs and forecasts before release. Other Walter pages that depend on
+Redshift are outside this scoped local datamart.
+
+The parallel branch review found no confirmed correctness defect or need for a
+broad architecture rewrite. Recommended cleanup order:
+
+1. Move necessary fixtures under tests, replace temporary preview-router test
+   dependencies with production components/routes, and remove the preview code.
+2. Share the strict client date validator used by sources, appointments, and
+   allocations while keeping each caller's required-date rules explicit.
+3. Reduce repeated operation/session bookkeeping within each existing owner,
+   preserving immediate refs and save/conflict behavior.
+4. Reuse the existing dialog lifecycle for allocation editing with its required
+   width and focus behavior.
+
+The stale project-wide staffing wording in the calculation reference has been
+corrected. Keep the pure financial operations, exact task matching, creation
+idempotency, concurrency checks, and current greenfield document format.
+
+## Stage 5e: production cleanup
+
+The approved cleanup keeps the existing calculation, editing, and persistence
+boundaries. It removes the separate development preview entry, scenario controls,
+synthetic server, browser global, and temporary calculation-review script/module.
+The tests now mount production session/workspace components with test-owned router
+navigation and explicit state handles. Only used fixtures and a reduced persistence
+double remain under `web/client/src/test/`.
+
+The coverage audit retained salary, date, fee, conflict, delayed-save, and
+navigation assertions. It added the missing imported-salary boundary where the
+snapshot falls in the configured COLA month: the captured rate stays unchanged
+that month, and the first annual adjustment occurs the following year.
+
+Appointments, sources, and allocations share one strict date validator; each
+caller retains its own nullable-date and required-start rules. Saved-session and
+wizard operation helpers reduce repeated apply bookkeeping while keeping source
+selection explicit and immediately advancing session refs. Rejected operations
+leave the last saved confirmation intact. The allocation editor uses the shared
+dialog lifecycle with its existing wide layout, initial date focus, Escape
+cancellation, and funding-cell fallback focus.
+
+Verification passed: 750 client tests across 79 files, TypeScript, the production
+build, changed-file ESLint and formatting, and independent read-only review.
+React Doctor remains at 85/100 with 14 warnings and no errors. The real-data UI
+confirmed initial date focus, Escape discarding an unapplied allocation change,
+and focus returning to the original funding cell. No database or financial-policy
+changes are part of this increment. The isolated real-data backend remains
+available for review.
 
 ## Deferred: sponsored personnel budgets and category rebudgeting
 

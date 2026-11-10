@@ -28,9 +28,9 @@ import {
 import {
   createSalaryExample,
   createAppointmentLookupsExample,
-} from '@/dev/projections/fixture.ts';
-import { createProjectionPreviewRouter } from '@/dev/projections/router.tsx';
-import { createProjectionPreviewServer } from '@/dev/projections/server.ts';
+} from '@/test/fixtures/projections.ts';
+import { createProjectionWorkspaceHarness } from '@/test/helpers/projectionWorkspace.tsx';
+import { createProjectionPersistenceDouble } from '@/test/helpers/projectionPersistence.ts';
 import {
   projectionLookupsQueryOptions,
   type Projection,
@@ -56,10 +56,10 @@ function example() {
   return plan;
 }
 
-function openPreview({ browserHistory = false } = {}) {
+function openWorkspace({ browserHistory = false } = {}) {
   const plan = example();
-  const server = createProjectionPreviewServer(plan);
-  const path = '/projections-preview.html?section=staffing&source=2';
+  const server = createProjectionPersistenceDouble(plan);
+  const path = '/projections/TEST-PI/1?section=staffing&source=2';
   if (browserHistory) {
     window.history.replaceState(null, '', path);
   }
@@ -68,12 +68,14 @@ function openPreview({ browserHistory = false } = {}) {
     ? createBrowserHistory({ window })
     : createMemoryHistory({ initialEntries: [path] });
   histories.push(history);
-  const router = createProjectionPreviewRouter({ history, plan, server });
+  workspace = createProjectionWorkspaceHarness({ history, plan, server });
+  const { router } = workspace;
   render(<RouterProvider router={router} />);
   return { history, plan, router, server, user: userEvent.setup() };
 }
 
-const read = () => window.walterProjectionPreview!.read();
+let workspace: ReturnType<typeof createProjectionWorkspaceHarness>;
+const read = () => workspace.read();
 const saveButton = () => screen.getByRole('button', { name: 'Save plan' });
 
 async function applySalary(
@@ -102,11 +104,9 @@ async function applySalary(
 
 describe('projection saving through the workspace', () => {
   it('captures exact tokens once, keeps newer edits during a delayed save, and reopens the saved plan', async () => {
-    const { plan, server, user } = openPreview();
+    const { plan, server, user } = openWorkspace();
     await applySalary(user, '132000');
-    await user.click(
-      screen.getByRole('checkbox', { name: 'Hold save requests' })
-    );
+    act(() => server.setHold(true));
     await user.dblClick(saveButton());
     await waitFor(() => expect(server.read().requests).toHaveLength(1));
     expect(screen.getByRole('button', { name: 'Saving…' })).toBeDisabled();
@@ -124,9 +124,7 @@ describe('projection saving through the workspace', () => {
     );
 
     await applySalary(user, '140000');
-    await user.click(
-      screen.getByRole('button', { name: 'Finish pending save' })
-    );
+    act(() => server.finishNextSave());
     await waitFor(() => expect(saveButton()).toBeEnabled());
     expect(server.read().stored!.content.appointments[0].monthlySalary).toBe(
       11_000
@@ -142,9 +140,7 @@ describe('projection saving through the workspace', () => {
     ).toBeInTheDocument();
     const acknowledgedVersion = server.read().stored!.updatedAt;
 
-    await user.click(
-      screen.getByRole('checkbox', { name: 'Hold save requests' })
-    );
+    act(() => server.setHold(false));
     await user.click(saveButton());
     expect(
       await screen.findByRole('button', { name: '✓ Saved' })
@@ -154,11 +150,16 @@ describe('projection saving through the workspace', () => {
     );
     expect(server.read().requests[1].expectedSeededAt).toBe(plan.seededAt);
     expect(read().dirty).toBe(false);
-    await user.click(screen.getByRole('button', { name: 'Leave preview' }));
-    await screen.findByRole('heading', { name: 'Outside the plan' });
-    await user.click(
-      screen.getByRole('button', { name: 'Return to saved plan' })
-    );
+    act(() => {
+      void workspace.router.navigate({ to: '/projections/TEST-PI' });
+    });
+    await screen.findByRole('heading', { name: 'Plans' });
+    await act(async () => {
+      await workspace.router.navigate({
+        search: { section: 'staffing' },
+        to: '/projections/TEST-PI/1',
+      });
+    });
     await screen.findByRole('button', {
       name: 'Edit appointment for Alex Example',
     });
@@ -172,7 +173,7 @@ describe('projection saving through the workspace', () => {
     'keeps failed %s saves unconfirmed without automatic reads or retries',
     async (outcome) => {
       const logger = vi.spyOn(console, 'error').mockImplementation(() => {});
-      const { server, user } = openPreview();
+      const { server, user } = openWorkspace();
       await applySalary(user, '132000');
       act(() => server.setOutcome(outcome));
       await user.click(saveButton());
@@ -208,7 +209,7 @@ describe('projection saving through the workspace', () => {
   );
 
   it('closes a conflict without losing work and overwrites with the current whole draft', async () => {
-    const { plan, server, user } = openPreview();
+    const { plan, server, user } = openWorkspace();
     await applySalary(user, '132000');
     act(() => server.editRemotely());
     await user.click(saveButton());
@@ -243,7 +244,7 @@ describe('projection saving through the workspace', () => {
     'allows explicit retry after %s when newer edits return to the original baseline',
     async (outcome) => {
       vi.spyOn(console, 'error').mockImplementation(() => {});
-      const { router, server, user } = openPreview({ browserHistory: true });
+      const { router, server, user } = openWorkspace({ browserHistory: true });
       await applySalary(user, '132000');
       act(() => {
         server.setOutcome(outcome);
@@ -262,7 +263,7 @@ describe('projection saving through the workspace', () => {
       fireEvent(window, unload);
       expect(unload.defaultPrevented).toBe(true);
       act(() => {
-        void router.navigate({ to: '/projections-preview-away.html' });
+        void router.navigate({ to: '/projections/TEST-PI' });
       });
       await screen.findByRole('dialog', { name: 'Leave this plan?' });
       await user.click(screen.getByRole('button', { name: 'Stay' }));
@@ -287,7 +288,7 @@ describe('projection saving through the workspace', () => {
 
   it('retains confirmed overwrite intent across an explicit retry after a transient failure', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
-    const { server, user } = openPreview();
+    const { server, user } = openWorkspace();
     await applySalary(user, '132000');
     act(() => server.editRemotely());
     await user.click(saveButton());
@@ -310,7 +311,7 @@ describe('projection saving through the workspace', () => {
   });
 
   it('discards by fetching the latest document and retaining a valid section and source', async () => {
-    const { server, user } = openPreview();
+    const { server, user } = openWorkspace();
     await applySalary(user, '132000');
     act(() => server.editRemotely());
     await user.click(saveButton());
@@ -328,7 +329,7 @@ describe('projection saving through the workspace', () => {
   it.each(['reset', 'delete'] as const)(
     'blocks overwrite after a remote %s and preserves the local draft',
     async (change) => {
-      const { server, user } = openPreview();
+      const { server, user } = openWorkspace();
       await applySalary(user, '132000');
       act(() =>
         change === 'reset' ? server.resetRemotely() : server.deleteRemotely()
@@ -348,7 +349,7 @@ describe('projection saving through the workspace', () => {
   );
 
   it('allows same-plan navigation and protects departure from unapplied input with Stay and Discard', async () => {
-    const { router, user } = openPreview({ browserHistory: true });
+    const { router, user } = openWorkspace({ browserHistory: true });
     await screen.findByRole('button', {
       name: 'Edit appointment for Alex Example',
     });
@@ -370,46 +371,53 @@ describe('projection saving through the workspace', () => {
     expect(unload.defaultPrevented).toBe(true);
 
     act(() => {
-      void router.navigate({ to: '/projections-preview-away.html' });
+      void router.navigate({ to: '/projections/TEST-PI' });
     });
     await screen.findByRole('dialog', { name: 'Leave this plan?' });
     await user.click(screen.getByRole('button', { name: 'Stay' }));
     expect(input).toHaveValue('132000');
     expect(read().dirty).toBe(false);
     act(() => {
-      void router.navigate({ to: '/projections-preview-away.html' });
+      void router.navigate({ to: '/projections/TEST-PI' });
     });
     await screen.findByRole('dialog', { name: 'Leave this plan?' });
     await user.click(screen.getByRole('button', { name: 'Discard' }));
     expect(
-      await screen.findByRole('heading', { name: 'Outside the plan' })
+      await screen.findByRole('heading', { name: 'Plans' })
     ).toBeInTheDocument();
   });
 
   it('warns that a pending save may finish after leaving and permits the confirmed departure', async () => {
-    const { server, user } = openPreview({ browserHistory: true });
+    const { server, user } = openWorkspace({ browserHistory: true });
     await applySalary(user, '132000');
     act(() => server.setHold(true));
     await user.click(saveButton());
     await screen.findByRole('button', { name: 'Saving…' });
-    await user.click(screen.getByRole('button', { name: 'Leave preview' }));
+    act(() => {
+      void workspace.router.navigate({ to: '/projections/TEST-PI' });
+    });
     expect(
       await screen.findByRole('dialog', { name: 'Leave while saving?' })
     ).toHaveTextContent(/may still complete/i);
     await user.click(screen.getByRole('button', { name: 'Stay' }));
     expect(read().draft.content.appointments[0].monthlySalary).toBe(11_000);
-    await user.click(screen.getByRole('button', { name: 'Leave preview' }));
+    act(() => {
+      void workspace.router.navigate({ to: '/projections/TEST-PI' });
+    });
     await user.click(
       await screen.findByRole('button', { name: 'Leave anyway' })
     );
-    await screen.findByRole('heading', { name: 'Outside the plan' });
+    await screen.findByRole('heading', { name: 'Plans' });
     await act(async () => server.finishNextSave());
     expect(server.read().stored!.content.appointments[0].monthlySalary).toBe(
       11_000
     );
-    await user.click(
-      screen.getByRole('button', { name: 'Return to saved plan' })
-    );
+    await act(async () => {
+      await workspace.router.navigate({
+        search: { section: 'staffing' },
+        to: '/projections/TEST-PI/1',
+      });
+    });
     await screen.findByRole('button', {
       name: 'Edit appointment for Alex Example',
     });
@@ -419,7 +427,7 @@ describe('projection saving through the workspace', () => {
 
   it('does not replace an active draft or its save token when Query cache refreshes', async () => {
     const plan = example();
-    const server = createProjectionPreviewServer(plan);
+    const server = createProjectionPersistenceDouble(plan);
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });

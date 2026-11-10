@@ -177,7 +177,13 @@ export function NewProjectionWizard({
     return result;
   }
 
-  function applyAppointmentOperation(operation: AppointmentOperation) {
+  function applyOperation<
+    Result extends
+      | { ok: false }
+      | { ok: true; session: ProjectionSession<ProjectionDraft> },
+  >(
+    operation: (session: ProjectionSession<ProjectionDraft>) => Result
+  ): Result {
     const result = operation(currentSession.current!);
     if (result.ok) {
       updateSession(result.session);
@@ -185,13 +191,10 @@ export function NewProjectionWizard({
     return result;
   }
 
-  function applyExpenseOperation(operation: ExpenseOperation) {
-    const result = operation(currentSession.current!);
-    if (result.ok) {
-      updateSession(result.session);
-    }
-    return result;
-  }
+  const applyAppointmentOperation = (operation: AppointmentOperation) =>
+    applyOperation(operation);
+  const applyExpenseOperation = (operation: ExpenseOperation) =>
+    applyOperation(operation);
 
   async function continueSetup() {
     if (requestPending.current || detailsValidationMessage || pendingEdits()) {
