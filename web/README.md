@@ -70,32 +70,13 @@ When you are ready to get your own, go to [Microsoft Entra ID](https://entra.mic
 
 You might also want to set the publisher domain to ucdavis.edu and fill in the other general branding info.
 
-### UI feature flags
+### Feature flags
 
-Walter evaluates native Azure App Configuration feature flags with the `Microsoft.Azure.AppConfiguration.AspNetCore`, `Microsoft.FeatureManagement`, and `Azure.Identity` packages pinned in [server.csproj](server/server.csproj). The browser calls the authenticated `/api/system/features` endpoint and receives the existing four boolean properties. These flags control the existing UI gates; they do not authorize access to backend APIs. `UseGraphQLAPI` remains a separate backend setting, including the legacy `FeatureFlags_UseGraphQLAPI` override.
+Configure `AppConfiguration__Endpoint` to connect to Azure App Configuration. For local development, authorize Azure CLI with `az login` using an account with access to the store. Leave the endpoint unset to use local feature settings.
 
-The shared Free store `appcs-caes-shared-test` in `rg-shared-appconfig-test`, in the TEST subscription, is for Development and Test only. Production must use its own store in its separate subscription. In the Azure Portal, open **Feature manager** and create native feature flags with these exact, case-sensitive IDs and labels:
+Flags refresh every ten minutes while the app receives requests. Active browser tabs check for updates every two minutes.
 
-| Flag ID | Development | Test |
-| --- | --- | --- |
-| `walter.BurndownEnabled` | On | On |
-| `walter.ExpenditureProgressEnabled` | On | On |
-| `walter.ProjectCostsEnabled` | On | On |
-| `walter.ProjectionsEnabled` | On | Off |
-
-Those eight flags are already provisioned. Do not create `Production` labels in this shared test store. When the production store is ready, create the same IDs with the `Production` label and explicitly choose their initial values before connecting the app.
-
-To connect an environment during a separately scheduled rollout:
-
-1. Enable the App Service's system-assigned managed identity. Grant that identity **App Configuration Data Reader** on the correct store. Allow time for the role assignment to propagate.
-2. Set `ASPNETCORE_ENVIRONMENT=Test` on TEST. The exact runtime environment name selects the label; there is no unlabeled or cross-environment fallback. Local development uses `Development`; production uses `Production`.
-3. Set `AppConfiguration__Endpoint=https://appcs-caes-shared-test.azconfig.io` for Development or Test. Use the separate production store endpoint for production. Restart the app after changing these settings and verify the authenticated features response.
-
-In `Development`, Walter uses `AzureCliCredential` directly so credential discovery cannot delay startup while probing other login methods. Install Azure CLI and sign in with `az login` to an account with Data Reader access to the TEST store, then set the endpoint in `server/.env`. When running Walter in a devcontainer, install and sign in to Azure CLI inside that container. No `AZURE_TOKEN_CREDENTIALS` override, access keys, or connection strings are needed. Other environments retain `DefaultAzureCredential`, which uses the configured App Service identity in Azure.
-
-Leave the endpoint unset to use the existing `FeatureFlags__BurndownEnabled`, `FeatureFlags__ExpenditureProgressEnabled`, `FeatureFlags__ProjectCostsEnabled`, and `FeatureFlags__ProjectionsEnabled` settings through Microsoft's feature manager without Azure authentication. The Development defaults enable all four. This fallback preserves each unconnected environment's settings; changing those environment variables requires a restart.
-
-Once an endpoint is configured, Azure is authoritative. A missing flag or wrong label means off, with a warning when the API evaluates it. An inaccessible store fails cold startup after the provider's bounded startup attempts, configured with a 30-second timeout. If a refresh fails after startup, the process keeps its last successfully loaded definitions. The cache is in memory and does not survive a restart.
+Missing flags are off. Connection failures prevent startup; failures after startup retain cached values.
 
 #### IAM targeting
 
@@ -113,14 +94,6 @@ Use the native `Microsoft.Targeting` filter for an IAM allowlist or exclusions. 
 ```
 
 The example IDs are placeholders. Walter resolves the authenticated user's `ucdPersonIAMID` claim, falling back to that user's stored IAM ID. During emulation it uses the emulated user's stored IAM ID. It never accepts targeting identity from a query parameter or the project page's IAM ID. If IAM cannot be resolved, global flags still work, targeted flags return off even with a default of `100`, and Walter logs a warning. Group membership and percentage rollouts other than the `0`/`100` defaults are outside this workflow.
-
-#### Refresh and validation
-
-The feature-flag refresh interval is ten minutes per server process, and refresh is request-driven. Flag definitions and audience rules are cached together; user targeting is evaluated locally and does not cause a store call per user. Ten minutes gives about 144 refresh opportunities per continuously active instance per day, not a guaranteed request total. Startup reads, pagination, retries, additional instances, and developer machines add requests to the shared store's quota. An idle instance does not refresh until requests resume.
-
-The client treats results as stale after one minute and polls Walter every two minutes while mounted and active. Feature queries are keyed by the authenticated user's ID, and the API and browser fetch both disable HTTP caching. Login and emulation reload the application. Under steady traffic, allow roughly ten minutes plus the next browser poll for changes; idle apps and background tabs can take longer. Refresh runs asynchronously, so the request that starts a refresh may still see the previous values.
-
-The offline .NET tests exercise authentication, the JSON contract, environment selection through the Azure provider, local fallback, native targeting, emulation, missing identity, and configuration reload. Client tests cover polling and cache isolation when the effective user changes. Before enabling Azure in a deployed environment, verify both an included and excluded IAM user, emulation, and a flag change through the running app. This code change does not perform the rollout.
 
 ### Health check
 
