@@ -5,12 +5,14 @@ import type {
   Ref,
   MouseEvent,
 } from 'react';
-import { cloneElement, isValidElement, useState } from 'react';
+import { cloneElement, isValidElement, useLayoutEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   autoUpdate,
   arrow,
   flip,
   FloatingPortal,
+  useFloatingPortalNode,
   offset,
   shift,
   safePolygon,
@@ -101,6 +103,7 @@ export function TooltipLabel({
     placement,
     whileElementsMounted: autoUpdate,
   });
+  const dialog = context.elements.domReference?.closest('dialog') ?? null;
   const enabled = Boolean(tooltip);
   const hover = useHover(context, {
     delay: { close: variant === 'card' ? 100 : 0, open: 150 },
@@ -200,7 +203,7 @@ export function TooltipLabel({
     <>
       {reference}
       {open ? (
-        <FloatingPortal>
+        <TooltipPortal dialog={dialog}>
           <div
             {...getFloatingProps({
               className:
@@ -221,8 +224,48 @@ export function TooltipLabel({
             )}
             {tooltip}
           </div>
-        </FloatingPortal>
+        </TooltipPortal>
       ) : null}
     </>
   );
+}
+
+function TooltipPortal({
+  children,
+  dialog,
+}: {
+  children: ReactNode;
+  dialog: HTMLDialogElement | null;
+}) {
+  return dialog ? (
+    <DialogTooltipPortal dialog={dialog}>{children}</DialogTooltipPortal>
+  ) : (
+    <FloatingPortal>{children}</FloatingPortal>
+  );
+}
+
+function DialogTooltipPortal({
+  children,
+  dialog,
+}: {
+  children: ReactNode;
+  dialog: HTMLDialogElement;
+}) {
+  const portalNode = useFloatingPortalNode({ root: dialog });
+  useLayoutEffect(() => {
+    // Keep help in the native top layer without adding a grid item to the modal.
+    if (portalNode) {
+      portalNode.style.setProperty('display', 'contents');
+    }
+    const preventNativeCancel = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+      }
+    };
+    // Dismissing help must not also trigger the browser's native dialog cancel.
+    dialog.addEventListener('keydown', preventNativeCancel, true);
+    return () =>
+      dialog.removeEventListener('keydown', preventNativeCancel, true);
+  }, [dialog, portalNode]);
+  return portalNode ? createPortal(children, portalNode) : null;
 }

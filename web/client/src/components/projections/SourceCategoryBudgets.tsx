@@ -6,10 +6,14 @@ import type { SourceFundingBalance } from '@/lib/projectionFundingBalances.ts';
 export function SourceCategoryBudgets({
   balance,
   headingRef,
+  initialPlanned = false,
+  onEdit,
   sourceIdentity,
 }: {
   balance: SourceFundingBalance;
   headingRef?: Ref<HTMLHeadingElement>;
+  initialPlanned?: boolean;
+  onEdit?: () => void;
   sourceIdentity?: string;
 }) {
   if (balance.basis === 'unknown') {
@@ -21,43 +25,66 @@ export function SourceCategoryBudgets({
       </p>
     );
   }
-  if (balance.basis !== 'sponsored') {
+  if (balance.basis !== 'categories') {
     return null;
   }
   const total = balance.categories.reduce(
     (sum, row) => ({
+      adjustment: sum.adjustment + row.adjustment,
       captured: sum.captured + row.capturedAvailable,
-      forecast: sum.forecast + row.forecast,
       remaining: sum.remaining + (row.endRemaining ?? 0),
+      revised: sum.revised + row.revisedAvailable,
     }),
-    { captured: 0, forecast: 0, remaining: 0 }
+    { adjustment: 0, captured: 0, remaining: 0, revised: 0 }
   );
   return (
     <section aria-label="Category budget balances">
-      <h4 className="scroll-mt-24 font-semibold" ref={headingRef} tabIndex={-1}>
-        Category budget balances
-      </h4>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h4
+          className="scroll-mt-24 font-semibold"
+          ref={headingRef}
+          tabIndex={-1}
+        >
+          Category budget balances
+        </h4>
+        {onEdit && (
+          <button
+            className="btn btn-outline btn-sm"
+            onClick={onEdit}
+            type="button"
+          >
+            Edit budget
+          </button>
+        )}
+      </div>
       {sourceIdentity && (
         <p className="mt-1 text-sm font-medium break-words">{sourceIdentity}</p>
       )}
       <p className="mt-2 text-sm text-base-content/70">
         Salary and fringe have separate budgets. A positive source overall
-        balance does not cover a shortfall in either category. Planning balance
-        adjustments are shown separately.
+        balance does not cover a shortfall in either category. Net changes apply
+        to this plan only.
       </p>
       <div className="mt-3 overflow-x-auto">
         <table className="table table-sm w-full">
           <caption className="sr-only">
-            Captured category budgets and remaining balances at plan end
+            {initialPlanned
+              ? 'Initial planned category budgets and remaining balances at plan end'
+              : 'Captured category budgets and remaining balances at plan end'}
           </caption>
           <thead>
             <tr>
               <th scope="col">Category</th>
               <th className="text-right" scope="col">
-                Starting available
+                {initialPlanned
+                  ? 'Initial planned funding'
+                  : 'Captured available'}
               </th>
               <th className="text-right" scope="col">
-                Net forecast costs
+                Net change
+              </th>
+              <th className="text-right" scope="col">
+                Revised available
               </th>
               <th className="text-right" scope="col">
                 Remaining at plan end
@@ -72,7 +99,7 @@ export function SourceCategoryBudgets({
                   : row.expenditureCategory === FRINGE_CATEGORY
                     ? 'fringe'
                     : null;
-              const missing = !row.budgetRecorded && !row.isBalanceAdjustment;
+              const missing = !row.hasBudget && !row.isBalanceAdjustment;
               return (
                 <tr key={row.expenditureCategory}>
                   <th scope="row">
@@ -88,10 +115,18 @@ export function SourceCategoryBudgets({
                   <td
                     className={`text-right whitespace-nowrap ${row.capturedAvailable < 0 ? 'font-semibold text-error' : ''}`}
                   >
-                    {missing ? '—' : formatCurrency(row.capturedAvailable)}
+                    {!row.budgetRecorded && !row.isBalanceAdjustment
+                      ? '—'
+                      : formatCurrency(row.capturedAvailable)}
                   </td>
                   <td className="text-right whitespace-nowrap">
-                    {formatCurrency(row.forecast)}
+                    {row.adjustment > 0 ? '+' : ''}
+                    {formatCurrency(row.adjustment)}
+                  </td>
+                  <td
+                    className={`text-right whitespace-nowrap ${row.revisedAvailable < 0 ? 'font-semibold text-error' : ''}`}
+                  >
+                    {formatCurrency(row.revisedAvailable)}
                   </td>
                   <td
                     className={`text-right whitespace-nowrap ${row.endRemaining !== null && row.endRemaining < 0 ? 'font-semibold text-error' : ''}`}
@@ -112,7 +147,10 @@ export function SourceCategoryBudgets({
                 {formatCurrency(total.captured)}
               </td>
               <td className="text-right whitespace-nowrap">
-                {formatCurrency(total.forecast)}
+                {formatCurrency(total.adjustment)}
+              </td>
+              <td className="text-right whitespace-nowrap">
+                {formatCurrency(total.revised)}
               </td>
               <td className="text-right whitespace-nowrap">
                 {balance.months.size ? formatCurrency(total.remaining) : '—'}

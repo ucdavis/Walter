@@ -19,7 +19,11 @@ import {
   createBookedSalaryExample,
   createAppointmentLookupsExample,
 } from '@/test/fixtures/projections.ts';
-import { FRINGE_CATEGORY, SALARY_CATEGORY } from '@/lib/piProjection.ts';
+import {
+  FRINGE_CATEGORY,
+  SALARY_CATEGORY,
+  SUPPLIES_CATEGORY,
+} from '@/lib/piProjection.ts';
 import { ProjectionSessionProvider } from '@/components/projections/ProjectionSession.tsx';
 import {
   ProjectionWorkspace,
@@ -106,6 +110,58 @@ describe('projection plan header', () => {
       fundingSourceId: 1,
       section: 'overview',
     });
+  });
+});
+
+describe('category budget persistence', () => {
+  it('applies a budget move through the source route and preserves it after save and reopen', async () => {
+    const plan = createSalaryExample();
+    plan.content.fundingSources[0].projectType = 'Sponsored';
+    plan.content.fundingSources[0].budgets.push({
+      budget: 5000,
+      committed: 0,
+      expenditureCategory: SUPPLIES_CATEGORY,
+      spentToDate: 0,
+    });
+    const { user } = openWorkspace('?section=overview&source=1', plan);
+    await user.click(
+      await screen.findByRole('button', { name: 'Edit budget' })
+    );
+    await screen.findByRole('dialog', { name: 'Edit Project A' });
+    await user.click(screen.getByRole('button', { name: 'Move budget' }));
+    await user.selectOptions(
+      screen.getByLabelText('From category'),
+      SUPPLIES_CATEGORY
+    );
+    await user.selectOptions(
+      screen.getByLabelText('To category'),
+      SALARY_CATEGORY
+    );
+    await user.type(screen.getByLabelText('Amount'), '3000');
+    expect(read().pendingEditor?.hasChanges).toBe(true);
+    await user.click(screen.getByRole('button', { name: 'Move amount' }));
+    await user.click(screen.getByRole('button', { name: 'Apply' }));
+    expect(read().draft.content.fundingSources[0].categoryAdjustments).toEqual([
+      { amount: 3000, expenditureCategory: SALARY_CATEGORY },
+      { amount: -3000, expenditureCategory: SUPPLIES_CATEGORY },
+    ]);
+    await user.click(screen.getByRole('button', { name: 'Save plan' }));
+    await waitFor(() =>
+      expect(workspace.server.read().requests).toHaveLength(1)
+    );
+    const saved = workspace.server.read().stored!;
+    expect(saved.content.fundingSources[0].budgets).toEqual(
+      plan.content.fundingSources[0].budgets
+    );
+    cleanup();
+    openWorkspace('?section=funding&source=1', saved);
+    await screen.findByRole('dialog', { name: 'Edit Project A' });
+    expect(screen.getByLabelText('Net budget changes')).toHaveTextContent(
+      '$3,000.00'
+    );
+    expect(screen.getByLabelText('Net budget changes')).toHaveTextContent(
+      '-$3,000.00'
+    );
   });
 });
 

@@ -447,9 +447,12 @@ export function computePiProjection(projection: ProjectionDraft): {
     }
     const categories = new Set([
       ...source.budgets.map((b) => b.expenditureCategory),
+      ...source.categoryAdjustments.map((b) => b.expenditureCategory),
       ...actuals.keys(),
       ...sourceCharges.keys(),
-      ...(source.sourceKind === 'Planned' || source.balanceAdjustment
+      ...(source.initialPlannedBalance ||
+      source.balanceAdjustment ||
+      source.plannedBudgetMode === 'GeneralPool'
         ? [BALANCE_ADJUSTMENT_CATEGORY]
         : []),
     ]);
@@ -464,8 +467,11 @@ export function computePiProjection(projection: ProjectionDraft): {
         : 0;
       const startRemaining =
         capturedRemaining +
+        (source.categoryAdjustments.find(
+          (row) => row.expenditureCategory === category
+        )?.amount ?? 0) +
         (category === BALANCE_ADJUSTMENT_CATEGORY
-          ? source.balanceAdjustment
+          ? source.initialPlannedBalance + source.balanceAdjustment
           : 0);
       const actual = (m: number) =>
         m <= lastEligibleMonth ? (actuals.get(category)?.get(m) ?? 0) : 0;

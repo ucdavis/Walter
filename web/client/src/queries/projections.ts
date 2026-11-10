@@ -46,6 +46,11 @@ export interface ProjectionHistoricalExpenseOverride {
   expenditureCategory: string;
 }
 
+export interface CategoryBudgetAdjustment {
+  amount: number;
+  expenditureCategory: string;
+}
+
 export interface ProjectionFundingSource {
   actuals: ProjectionActual[];
   awardName: string | null;
@@ -57,12 +62,17 @@ export interface ProjectionFundingSource {
   capturedAt: string;
   capturedEndDate: string | null;
   capturedStartDate: string | null;
+  /** Net scenario changes; a zero entry explicitly establishes an absent category. */
+  categoryAdjustments: CategoryBudgetAdjustment[];
   endDate: string | null;
   expenses: ProjectionExpense[];
   historicalExpenseOverrides: ProjectionHistoricalExpenseOverride[];
   id: number;
+  /** Fixed initial definition for planned general-pool funding. */
+  initialPlannedBalance: number;
   /** Editable label; captured project and task names remain unchanged. */
   name: string;
+  plannedBudgetMode: 'GeneralPool' | 'Categories' | null;
   projectName: string | null;
   projectNumber: string | null;
   projectType: string | null;

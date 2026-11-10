@@ -26,9 +26,10 @@ Stage 5g's demo alignment and allocation refinements are accepted and committed
 as `5ef2c492` and `895a5917`. Stage 5h's search-and-add funding selection and task
 cards were accepted and committed as `e1033f19`. Stage 5i's saved-plan header,
 long chart labels, and shortfall navigation refinements are accepted and committed
-as `a58b495d`. Stage 5j implements the agreed personnel category warnings and
-read-only budget balances. Category editing and rebudgeting are a separate
-increment required before shipping; they are no longer optional for v1.
+as `a58b495d`. Stage 5j's personnel category warnings and read-only budget balances
+are accepted and committed as `c7661e35`. Stage 5k's category editing and
+rebudgeting are implemented, verified, and accepted, including planned funding
+source types and the follow-up navigation and help refinements.
 Saving remains available with funding gaps, overlaps, and budget shortfalls.
 CBR defaults to 20% when no rate is supplied. Fresh appointments default to a
 3% annual salary adjustment in July. Every retained appointment needs a salary
@@ -273,7 +274,7 @@ source omission from existing outside funding, as specified below.
 | 4. Expenses and details        | Monthly/one-time expenses, generated estimates, history windows, notes, and horizon                                                                                              | Explicit expenses survive regeneration; save/reload preserves the preview.                                                                      |
 | 5. Complete guided experience  | Setup composed from existing editors, full project drilldowns, explanations, and controlled rollout                                                                              | Verify the complete workflow and genuine reuse.                                                                                                 |
 | 5j. Category budget visibility | [Personnel warnings and balances](#stage-5j-personnel-category-warnings-and-balances)                                                                                            | Distinguish salary/fringe limits from general-pool funding without changing the calculator.                                                     |
-| Required before shipping       | [Category editing and rebudgeting](#required-before-shipping-category-editing-and-rebudgeting)                                                                                   | Retain captured budgets and explain scenario adjustments. Required for v1 completion.                                                           |
+| 5k. Category editing, accepted | [Category editing and rebudgeting](#stage-5k-category-editing-and-rebudgeting)                                                                                                   | Preserve original budgets and explain scenario adjustments. Implemented, verified, and accepted.                                                |
 
 Every increment includes appropriate automated checks, a way to try the result,
 independent code review, and a review with the user before moving on. Split a stage
@@ -2214,7 +2215,7 @@ still has $12,943.75. Thus category-row presence would incorrectly classify this
 internal source. All sponsored projects in the copied data have one task, but
 that is not a schema guarantee; continue to preserve project/task identity.
 
-Implemented and verified, awaiting user review. All 814 client tests pass across
+Accepted and committed as `c7661e35`. All 814 client tests pass across
 86 files, including category classification, missing-budget usage, per-month
 warnings, and navigation focus. TypeScript, the production build, changed-file
 lint, formatting, and diff checks pass. React Doctor reports 87/100 with 22
@@ -2233,35 +2234,87 @@ general-pool view, and the sponsored balance-editor explanation. The table shows
 source identity at the warning-link destination and highlights negative starting
 and ending category balances. No saved plan or database data was changed.
 
-## Required before shipping: category editing and rebudgeting
+## Stage 5k: category editing and rebudgeting
 
-Design and review this after Stage 5j. The user has made category editing a
-shipping requirement. It remains separate from the read-only category view and
-staffing warnings so those rules can be reviewed first.
+The twelve design decisions and the implementation are accepted.
+Budget changes are scenario assumptions; they do not alter booked expenses or
+submit changes to upstream accounting.
 
-Category rebudgeting should preserve captured budgets, spending, and commitments.
-Record scenario adjustments separately so a saved plan can explain what changed,
-for example, "Added $5,000 to salary and $1,000 to fringe; subtracted $6,000 from
-supplies." A proposed category view could show captured budget, scenario change,
-revised budget, and projected remaining, with a readable change summary. The UI
-and storage design remain open. These are plan assumptions, not booked expenses
-or changes submitted to upstream accounting.
+- Preserve imported budgets, spending, commitments, and actuals. Store net
+  category adjustments separately. Show captured available, net change, revised
+  available, and forecast remaining. Work with money left after recorded spending
+  and commitments, rather than asking users to reconstruct lifetime award budgets.
+- Keep two distinct actions. Move budget chooses a donor category, recipient
+  category, and positive amount, preserving the source total. Adjust funding adds
+  or removes money in a chosen category, changing the total exactly once.
+- Sponsored and Sponsored Capital totals are calculated from their category
+  amounts. New changes must identify a category. Internal sources keep their
+  general-pool balance editor. Unknown imported project types remain explicit.
+  Automatically spreading a changed overall balance across categories is deferred.
+- Use the existing unfiltered expenditure-category lookup, including 01 salary,
+  02 fringe, and 09 indirect costs. Users can add a budget for a category absent
+  from the capture, but cannot invent or rename finance categories. Explicit zero
+  is distinct from absence. Scenario-funded salary and fringe categories use the
+  normal balance checks while retaining the absence of a captured budget.
+- A transfer may leave the donor below zero. Show before/after amounts and an
+  inline warning; keep saving available. Moving salary budget does not
+  automatically move fringe or indirect budget. Budget edits change available
+  funding only, preserving forecast costs, snapshot-month netting, dates, and
+  signed expense-credit behavior.
+- Budget definitions apply throughout that source's forecast from its capture or
+  planned start. No effective-dated budget movements in this increment. A planned
+  source can model distinct future funding. Each imported project/task remains
+  unique within the plan.
+- Planned sources choose a Source type at creation: Internal uses a shared balance
+  for all spending; Sponsored uses separate category budgets. An information icon
+  explains the choice. That choice stays fixed afterward for v1.
+  Category-based planned sources use the same
+  salary/fringe warnings as sponsored sources; general-pool sources use total
+  funding. Preserve the original entered pool or category amounts as Initial
+  planned funding, separate from subsequent adjustments.
+- Reset budget changes restores the entire source's starting budget definition,
+  including originally absent categories. For planned funding it restores the
+  initial entered amounts, not zero. It leaves dates, appointments, allocations,
+  and expenses alone. Avoid resetting one side of a transfer independently.
+- Retain a readable summary of net changes, not individual editing actions. For
+  example, adding $5,000 to salary then reducing that change by $2,000 shows
+  Salary +$3,000. Duplication preserves the baseline and adjustments. Source
+  removal discards them; re-addition captures fresh data under the existing rules.
+- Use the same budget editing operations in setup and the saved workspace.
+  Apply commits the complete editor buffer; Cancel discards it. Pending input in
+  a transfer or funding-adjustment panel must not disappear during outer Apply or
+  navigation. Category balances link to the source editor.
+- Top-level section navigation opens the chosen view without opening an editor.
+  An outlook source selection does not carry over as a funding-source edit target;
+  explicit Edit funding source and Edit budget actions still open that editor.
 
-Resolve these questions when the work begins:
+Implementation, verification, and user review are complete. The current
+JSON document stores the initial planned funding and net category adjustments.
+No schema migration, legacy-format conversion, or shared database change was
+needed.
 
-- Decide how category edits relate to the existing uncategorized overall balance
-  adjustment, fees, and hypothetical funding. Preserve captured amounts and the
-  existing snapshot-month netting. Commitment overlap remains documented in the
-  calculation review; category editing must not silently change that rule.
-- Must rebudget transfers balance to zero within one source? Distinguish moving
-  existing budget from adding or removing overall funding; an expense credit is
-  not a budget transfer. Decide whether changes apply to the whole scenario or
-  from a chosen date, and what a category deficit should show without blocking saves.
-- Is a summary of net changes enough, or should saved plans retain individual
-  rebudget actions, reasons, and who/when details? Define editing or reversing an
-  action and how duplication, source removal/re-addition, and future refresh/reset
-  preserve or discard the record. Keep a readable record without committing to
-  event sourcing or a separate audit subsystem now.
+Verification passed 837 client tests across 89 files, 634 server tests, and all
+19 isolated SQL integration tests. TypeScript, the production build, changed-file
+ESLint, formatting, and diff checks passed. React Doctor reported 86/100 with
+24 warnings and no errors. The warnings include the larger source editor and
+budget editor, alongside existing branch cleanup items. Independent review found
+no unresolved blockers.
+
+Browser review in the isolated local database verified moving budget, adding
+funding, negative donor warnings, save/reload, planned category creation, fixed
+budget mode, and reset after reload. Budget reset preserved edited source dates
+and restored initial planned amounts. A separate review plan kept the original
+saved plan unchanged. Read-only reconciliation against that original confirmed
+that captured financials, appointments, and forecast costs were unchanged;
+transfers conserved the total, and added funding changed it exactly once.
+
+Follow-up UI review verified that the Funding sources tab opens the list from a
+selected source outlook, while explicit Edit actions still open the source
+editor. Planned funding now presents Internal and Sponsored source types with an
+information icon. The shared tooltip stays above native dialogs; Escape dismisses
+the help without closing the editor. Targeted navigation, editor, and tooltip
+tests passed, along with a fresh production build and React Doctor check. This
+follow-up changed no saved plan data.
 
 ## Questions to resolve in their owning stages
 

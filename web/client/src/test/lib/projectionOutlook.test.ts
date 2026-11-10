@@ -37,11 +37,14 @@ function source(
     capturedAt: snapshot,
     capturedEndDate: null,
     capturedStartDate: null,
+    categoryAdjustments: [],
     endDate: null,
     expenses: [],
     historicalExpenseOverrides: [],
     id,
+    initialPlannedBalance: 0,
     name: 'Field research',
+    plannedBudgetMode: null,
     projectName: 'Field research',
     projectNumber: 'P1',
     projectType: 'Internal',
@@ -158,6 +161,7 @@ describe('funding outlook presentation', () => {
         source(4, {
           balanceAdjustment: 100,
           budgets: [],
+          plannedBudgetMode: 'GeneralPool',
           projectName: null,
           projectNumber: null,
           sourceKind: 'Planned',
@@ -167,6 +171,7 @@ describe('funding outlook presentation', () => {
         source(5, {
           balanceAdjustment: 200,
           budgets: [],
+          plannedBudgetMode: 'GeneralPool',
           projectName: null,
           projectNumber: null,
           sourceKind: 'Planned',
@@ -198,6 +203,7 @@ describe('funding outlook presentation', () => {
         source(2, {
           balanceAdjustment: 500,
           budgets: [],
+          plannedBudgetMode: 'GeneralPool',
           projectNumber: null,
           sourceKind: 'Planned',
           startDate: '2026-07-15',
@@ -207,6 +213,7 @@ describe('funding outlook presentation', () => {
         source(4, {
           balanceAdjustment: 10_000,
           budgets: [],
+          plannedBudgetMode: 'GeneralPool',
           projectNumber: null,
           sourceKind: 'Planned',
           startDate: '2027-01-01',

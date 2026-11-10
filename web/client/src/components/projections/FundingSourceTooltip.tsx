@@ -1,3 +1,4 @@
+import { hasSourceCategoryBudget } from '@/lib/projectionBudgets.ts';
 import { ExclamationTriangleIcon } from '@heroicons/react/24/solid';
 import { fundingMonthLabel } from '@/components/projections/fundingTimelineDates.ts';
 import { formatCurrency } from '@/lib/currency.ts';
@@ -35,11 +36,11 @@ export function FundingSourceTooltip({
   const shortfall =
     source &&
     balance &&
-    (basis === 'sponsored'
+    (basis === 'categories'
       ? balance.personnelDeficits.length > 0
       : basis === 'general' && balance.remaining < 0);
   const warningLabel =
-    balance && basis === 'sponsored'
+    balance && basis === 'categories'
       ? budgetShortfallLabel([
           {
             basis,
@@ -58,9 +59,7 @@ export function FundingSourceTooltip({
     if (!balance) {
       return 'No forecast for this month';
     }
-    if (
-      !source?.budgets.some((budget) => budget.expenditureCategory === category)
-    ) {
+    if (!source || !hasSourceCategoryBudget(source, category)) {
       return balance.personnelDeficits.some(
         (deficit) => deficit.category === key && deficit.missingBudget
       )
@@ -83,7 +82,7 @@ export function FundingSourceTooltip({
           : formatCurrency(balance.remaining)
         : null,
     },
-    ...(basis === 'sponsored'
+    ...(basis === 'categories'
       ? [
           {
             label: 'Salary month-end balance',
@@ -177,7 +176,7 @@ export function FundingSourceTooltip({
       <p className="mt-3 border-t border-main-border pt-3 text-xs text-base-content/70">
         {outside
           ? 'This share is explicitly funded outside this plan. No funding balance is tracked here. '
-          : basis === 'sponsored'
+          : basis === 'categories'
             ? 'Salary and fringe use separate category budgets. Source overall includes all expenditure categories.'
             : basis === 'general'
               ? 'Personnel uses this source’s overall available pool.'

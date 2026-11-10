@@ -1,4 +1,13 @@
 import {
+  getSourceFundingBasis,
+  hasSourceCategoryBudget,
+  type SourceFundingBasis,
+} from '@/lib/projectionBudgets.ts';
+export {
+  getSourceFundingBasis,
+  type SourceFundingBasis,
+} from '@/lib/projectionBudgets.ts';
+import {
   BALANCE_ADJUSTMENT_CATEGORY,
   FRINGE_CATEGORY,
   SALARY_CATEGORY,
@@ -8,17 +17,18 @@ import {
 import { getFundingSourceOutlook } from '@/lib/projectionWorkspace.ts';
 import type { ProjectionFundingSource } from '@/queries/projections.ts';
 
-export type SourceFundingBasis = 'sponsored' | 'general' | 'unknown';
-
 export interface SourceCategoryBalance {
+  adjustment: number;
   budgetRecorded: boolean;
   capturedAvailable: number;
   endRemaining: number | null;
   expenditureCategory: string;
   firstDeficitMonth: string | null;
   forecast: number;
+  hasBudget: boolean;
   hasCharges: boolean;
   isBalanceAdjustment: boolean;
+  revisedAvailable: number;
 }
 
 export interface PersonnelBudgetDeficit {
@@ -45,30 +55,12 @@ export interface SourceFundingBalance {
 export type SourceFundingBalances = ReadonlyMap<number, SourceFundingBalance>;
 
 export interface SourceFundingShortfall {
-  basis: 'sponsored' | 'general';
+  basis: 'categories' | 'general';
   fundingSourceId: number;
   month: string;
   personnelDeficits: PersonnelBudgetDeficit[];
   /** Total source balance remains available for context, even when a category is short. */
   remaining: number;
-}
-
-/** Only known imported project types establish a budgeting basis; planned funding is a general pool. */
-export function getSourceFundingBasis(
-  source: ProjectionFundingSource
-): SourceFundingBasis {
-  if (source.sourceKind === 'Planned') {
-    return 'general';
-  }
-  switch (source.projectType?.trim().toLowerCase()) {
-    case 'sponsored':
-    case 'sponsored capital':
-      return 'sponsored';
-    case 'internal':
-      return 'general';
-    default:
-      return 'unknown';
-  }
 }
 
 const personnelCategories = [
@@ -104,9 +96,14 @@ export function buildSourceFundingBalance(
   }
   const categoryNames = new Set([
     ...source.budgets.map(({ expenditureCategory }) => expenditureCategory),
+    ...source.categoryAdjustments.map(
+      ({ expenditureCategory }) => expenditureCategory
+    ),
     ...rowsByCategory.keys(),
-    ...(basis === 'sponsored' ? [SALARY_CATEGORY, FRINGE_CATEGORY] : []),
-    ...(source.balanceAdjustment !== 0 || source.sourceKind === 'Planned'
+    ...(basis === 'categories' ? [SALARY_CATEGORY, FRINGE_CATEGORY] : []),
+    ...(source.balanceAdjustment !== 0 ||
+    source.initialPlannedBalance !== 0 ||
+    source.plannedBudgetMode === 'GeneralPool'
       ? [BALANCE_ADJUSTMENT_CATEGORY]
       : []),
   ]);
@@ -123,13 +120,22 @@ export function buildSourceFundingBalance(
         expenditureCategory === BALANCE_ADJUSTMENT_CATEGORY;
       const capturedAvailable =
         (budget ? budget.budget - budget.spentToDate - budget.committed : 0) +
-        (isBalanceAdjustment ? source.balanceAdjustment : 0);
+        (isBalanceAdjustment ? source.initialPlannedBalance : 0);
+      const adjustment = isBalanceAdjustment
+        ? source.balanceAdjustment
+        : (source.categoryAdjustments.find(
+            (row) => row.expenditureCategory === expenditureCategory
+          )?.amount ?? 0);
+      const revisedAvailable = capturedAvailable + adjustment;
       return {
-        budgetRecorded: budget !== undefined,
+        adjustment,
+        budgetRecorded:
+          budget !== undefined ||
+          (isBalanceAdjustment && source.plannedBudgetMode === 'GeneralPool'),
         capturedAvailable,
         endRemaining:
           categoryRows.at(-1)?.remaining ??
-          (totals.length > 0 ? capturedAvailable : null),
+          (totals.length > 0 ? revisedAvailable : null),
         expenditureCategory,
         firstDeficitMonth:
           categoryRows.find(({ remaining }) => remaining < 0)?.month ?? null,
@@ -137,18 +143,22 @@ export function buildSourceFundingBalance(
           (sum, row) => sum + row.projectedAmount,
           0
         ),
+        hasBudget:
+          hasSourceCategoryBudget(source, expenditureCategory) ||
+          (isBalanceAdjustment && source.plannedBudgetMode === 'GeneralPool'),
         hasCharges: categoryRows.some(
           ({ actualAmount, projectedAmount }) =>
             actualAmount > 0 || projectedAmount > 0
         ),
         isBalanceAdjustment,
+        revisedAvailable,
       };
     });
   const personnel = personnelCategories.map((category) => ({
     ...category,
-    budgetRecorded: source.budgets.some(
-      ({ expenditureCategory }) =>
-        expenditureCategory === category.expenditureCategory
+    budgetRecorded: hasSourceCategoryBudget(
+      source,
+      category.expenditureCategory
     ),
     months: new Map(
       (rowsByCategory.get(category.expenditureCategory) ?? []).map((row) => [
@@ -229,7 +239,7 @@ export function getAppointmentFundingShortfalls(
         return [];
       }
       if (
-        source.basis === 'sponsored'
+        source.basis === 'categories'
           ? balance.personnelDeficits.length === 0
           : balance.remaining >= 0
       ) {
@@ -241,7 +251,7 @@ export function getAppointmentFundingShortfalls(
           fundingSourceId,
           month,
           personnelDeficits:
-            source.basis === 'sponsored' ? balance.personnelDeficits : [],
+            source.basis === 'categories' ? balance.personnelDeficits : [],
           remaining: balance.remaining,
         },
       ];

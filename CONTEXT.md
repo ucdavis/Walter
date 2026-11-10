@@ -77,6 +77,19 @@ _Avoid_: History window, source lifetime
 An independently tracked pool of funding within a **Projection Plan**. It can represent an imported project/task pair or hypothetical funding. Project and task numbers identify its origin; its plan-local ID identifies it inside the scenario. Its editable name is separate from the captured project name used for grouping.
 _Avoid_: Project when referring to every kind of source
 
+**Budget Adjustment**:
+A net scenario change to a **Funding Source**'s starting available money. Captured
+budgets, spending, and commitments remain intact. Moving money between categories
+preserves the source total; adding or removing funding changes that total. Budget
+adjustments do not change forecast expenses or submit changes to accounting.
+_Avoid_: Expense credit, booked spending, allocation
+
+**Initial Planned Funding**:
+The original pool amount or category budgets entered when a hypothetical
+**Funding Source** is created. It is the baseline for later budget adjustments
+and resets. It is user-entered funding, not a captured financial-system balance.
+_Avoid_: Captured budget when describing hypothetical funding
+
 **Appointment**:
 A position or hypothetical hire within a **Projection Plan**, with salary, FTE, benefit, fee, and date assumptions. One person can have several appointments, and an appointment can receive funding from several sources.
 _Avoid_: Person or employee when referring to a particular appointment
@@ -112,6 +125,8 @@ _Avoid_: Allocation when referring to a scheduled expense
 - A **Projection Plan** keeps **Funding Sources** and **Appointments** as separate collections
 - An **Appointment** owns its **Allocations**, which can refer to several **Funding Sources**
 - A **Funding Source** owns its **Historical Expense Estimates** and **Added Expenses**
+- A **Funding Source** retains its starting budget definition separately from its **Budget Adjustments**
+- Resetting **Budget Adjustments** leaves source dates, appointments, allocations, and expenses unchanged
 - Changing the plan's history window preserves custom historical amounts and all **Added Expenses**
 - Removing a **Funding Source** removes its expenses and allocations but retains the appointments and leaves those shares unallocated
 

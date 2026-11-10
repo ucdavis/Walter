@@ -91,14 +91,21 @@ public class ProjectionFundingSource
     /// <summary>Exact UTC capture of this source's financial inputs, independent of the plan's salary base.</summary>
     [JsonRequired]
     public DateTime CapturedAt { get; set; }
-    /// <summary>Scenario-only change to available balance; captured budget, spending, and commitments remain intact.</summary>
+    /// <summary>Scenario-only change to a general pool; category-based sources use category adjustments instead.</summary>
     public decimal BalanceAdjustment { get; set; }
+    /// <summary>Net scenario changes by financial category; zero explicitly defines an otherwise absent budget.</summary>
+    public List<ProjectionCategoryBudgetAdjustment> CategoryAdjustments { get; set; } = [];
+    /// <summary>Original general-pool amount for planned funding, retained when scenario changes are reset.</summary>
+    public decimal InitialPlannedBalance { get; set; }
+    /// <summary>Budgeting mode chosen when planned funding is created; null for imported tasks.</summary>
+    public ProjectionPlannedBudgetMode? PlannedBudgetMode { get; set; }
     /// <summary>Imported date bounds, retained separately from editable scenario bounds.</summary>
     public DateOnly? CapturedStartDate { get; set; }
     public DateOnly? CapturedEndDate { get; set; }
     public DateOnly? StartDate { get; set; }
     public DateOnly? EndDate { get; set; }
 
+    /// <summary>Captured imported budgets, or the original planned category definition with no booked costs.</summary>
     public List<ProjectionBudget> Budgets { get; set; } = [];
     public List<ProjectionActual> Actuals { get; set; } = [];
     public List<ProjectionRunRate> RunRates { get; set; } = [];
@@ -113,6 +120,20 @@ public enum ProjectionSourceKind
 {
     Task,
     Planned,
+}
+
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum ProjectionPlannedBudgetMode
+{
+    GeneralPool,
+    Categories,
+}
+
+/// <summary>A net scenario budget delta; no action history or effective date is persisted.</summary>
+public sealed class ProjectionCategoryBudgetAdjustment
+{
+    public string ExpenditureCategory { get; set; } = "";
+    public decimal Amount { get; set; }
 }
 
 /// <summary>Budget for a project/task x expenditure category; the projection's starting balance.</summary>

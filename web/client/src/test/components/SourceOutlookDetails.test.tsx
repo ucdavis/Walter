@@ -88,6 +88,7 @@ function example(): ProjectionDraft {
           capturedAt: '2026-01-16T00:00:00Z',
           capturedEndDate: '2026-12-31',
           capturedStartDate: '2026-01-01',
+          categoryAdjustments: [],
           endDate: '2026-12-31',
           expenses: [
             {
@@ -102,7 +103,9 @@ function example(): ProjectionDraft {
           ],
           historicalExpenseOverrides: [],
           id: 1,
+          initialPlannedBalance: 0,
           name: 'Project A',
+          plannedBudgetMode: null,
           projectName: 'Project A',
           projectNumber: 'A',
           projectType: 'Internal',

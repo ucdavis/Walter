@@ -16,7 +16,7 @@ import { createSalaryExample } from '@/test/fixtures/projections.ts';
 afterEach(cleanup);
 const sources = createSalaryExample().content.fundingSources;
 const balance: SourceFundingBalance = {
-  basis: 'sponsored',
+  basis: 'categories',
   categories: [],
   months: new Map([
     [
@@ -145,13 +145,16 @@ it('keeps unknown funding neutral and excludes outside shares', () => {
 
 it('shows captured category inputs, forecast, negative remainder, and adjustment separately; no internal category warning table', () => {
   const row = {
+    adjustment: 0,
     budgetRecorded: true,
     capturedAvailable: 100,
     endRemaining: -20,
     firstDeficitMonth: '2026-02',
     forecast: 120,
+    hasBudget: true,
     hasCharges: true,
     isBalanceAdjustment: false,
+    revisedAvailable: 100,
   };
   const { rerender } = render(
     <SourceCategoryBudgets
@@ -166,6 +169,7 @@ it('shows captured category inputs, forecast, negative remainder, and adjustment
             endRemaining: 0,
             expenditureCategory: FRINGE_CATEGORY,
             forecast: 0,
+            hasBudget: false,
           },
           {
             ...row,
@@ -180,7 +184,7 @@ it('shows captured category inputs, forecast, negative remainder, and adjustment
     />
   );
   expect(
-    screen.getByRole('columnheader', { name: 'Starting available' })
+    screen.getByRole('columnheader', { name: 'Captured available' })
   ).toBeInTheDocument();
   expect(screen.getByText('No fringe budget recorded')).toBeInTheDocument();
   expect(screen.getByText('-$20.00')).toHaveClass('text-error');

@@ -152,7 +152,9 @@ describe('independent funding source captures', () => {
     const added = addPlannedSource(createProjectionSession(plan), {
       balance: 100_000,
       endDate: '2026-12-31',
+      initialCategoryBudgets: [],
       name: 'Future funding',
+      plannedBudgetMode: 'GeneralPool',
       startDate: '2026-07-15',
     });
     if (!added.ok) {

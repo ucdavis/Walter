@@ -175,7 +175,7 @@ it('marks only the sponsored share for a fringe deficit while its overall balanc
           [
             1,
             {
-              basis: 'sponsored',
+              basis: 'categories',
               categories: [],
               months: new Map([
                 [

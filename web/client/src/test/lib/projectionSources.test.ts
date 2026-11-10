@@ -30,7 +30,9 @@ function applied<T extends ProjectionDraft>(result: SourceOperationResult<T>) {
 const planned = {
   balance: 100_000,
   endDate: '2026-12-31',
+  initialCategoryBudgets: [],
   name: 'Planned grant',
+  plannedBudgetMode: 'GeneralPool' as const,
   startDate: '2026-07-01',
 };
 
@@ -113,9 +115,11 @@ describe('funding source operations', () => {
     const first = added.draft.content.fundingSources.at(-1)!;
     expect(original.draft.content.fundingSources).toHaveLength(2);
     expect(first).toMatchObject({
-      balanceAdjustment: 100_000,
+      balanceAdjustment: 0,
       budgets: [],
       capturedAt: original.draft.seededAt,
+      initialPlannedBalance: 100_000,
+      plannedBudgetMode: 'GeneralPool',
       sourceKind: 'Planned',
     });
     const removed = applied(removeProjectionSource(added, first.id));

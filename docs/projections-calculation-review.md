@@ -263,10 +263,13 @@ either category. Fringe includes the appointment's CBR and vacation accrual cost
 Fees remain in category 08 and do not drive sponsored personnel category
 warnings yet; they still count against general-pool funding.
 
-`Internal` and hypothetical sources use their general available pool. Internal
-spending can still have expenditure-category rows; those rows do not establish
-separate spending limits. Unrecognized imported project types have an unknown
-budgeting basis rather than being treated as unrestricted.
+`Internal` sources use their general available pool. Internal spending can still
+have expenditure-category rows; those rows do not establish separate spending
+limits. Planned funding chooses a Source type when created: Internal uses one
+shared balance, and Sponsored uses separate category budgets.
+Category-based planned funding uses the same salary/fringe checks as sponsored
+funding. Unrecognized imported project types have an unknown budgeting basis
+rather than being treated as unrestricted.
 
 Shortfalls mean a balance below zero at month end. The affected source segment
 warns for all appointments allocated to it in that month; the warning does not
@@ -278,10 +281,36 @@ coverage remain separate from budget shortfalls, and warnings do not block saves
 A missing personnel category budget supplies no available funding. When used,
 the warning explains that no salary or fringe budget was recorded. Usage includes
 positive booked costs even when snapshot-month netting leaves no additional
-forecast cost. A missing, unused category does not warn. An overall
-planning-balance adjustment remains separate from category budgets, so it cannot
-clear a salary or fringe shortfall.
-Category editing is a required, separate increment before shipping.
+forecast cost. A missing, unused category does not warn. An overall source
+surplus does not clear a salary or fringe shortfall; availability must be added
+to the affected category.
+
+### Category editing and rebudgeting
+
+Imported category availability begins at captured budget minus spent-to-date and
+commitments. Net category adjustments change that available amount without
+rewriting any captured values. A move between categories subtracts from one and
+adds the same amount to another. An explicit funding adjustment changes the
+selected category and the source total once. Sponsored totals are derived from
+category amounts; their overall balance is not edited independently.
+
+For example, moving $5,000 from supplies to salary raises salary availability by
+$5,000 and lowers supplies by $5,000. Forecast salary, fringe, indirect costs, and
+fees do not change. A negative donor category remains visible and saveable. There
+are no automatic companion fringe or indirect budget movements.
+
+The editor uses the financial-system category lookup, including categories absent
+from the source's capture. A newly funded category uses its scenario budget for
+the personnel checks while preserving the absence of an original captured row.
+An explicitly entered zero is distinct from no budget definition.
+
+Budget definitions apply from the source's capture or planned start throughout
+its forecast; this increment has no effective-dated budget movements. Planned
+funding chooses its budgeting type at creation and retains the initial entered
+amounts separately from subsequent adjustments. Reset budget changes restores
+the original category budgets or general pool, leaving dates, appointments,
+allocations, and expenses alone. Duplicating a plan retains both the starting
+definition and net adjustments. No individual editing history is stored.
 
 ## Snapshot-month personnel costs
 

@@ -33,7 +33,7 @@ const monthIndex = (month: string) =>
 
 function warningRanges(warnings: SourceFundingShortfall[]) {
   const entries = warnings.flatMap((warning) =>
-    warning.basis === 'sponsored'
+    warning.basis === 'categories'
       ? warning.personnelDeficits.map((deficit) => ({
           label: deficit.category === 'salary' ? 'Salary' : 'Fringe',
           missingBudget: deficit.missingBudget,
@@ -151,7 +151,7 @@ export function FundingWarningDetails({
                   onClick={() => onViewSource(id)}
                   type="button"
                 >
-                  {sourceWarnings[0]?.basis === 'sponsored'
+                  {sourceWarnings[0]?.basis === 'categories'
                     ? 'View category balances'
                     : 'View funding outlook'}
                 </button>
@@ -178,7 +178,7 @@ export function AppointmentBudgetWarnings({
   sourceBalances: SourceFundingBalances;
   sources: ProjectionFundingSource[];
 }) {
-  const [openBasis, setOpenBasis] = useState<'sponsored' | 'general' | null>(
+  const [openBasis, setOpenBasis] = useState<'categories' | 'general' | null>(
     null
   );
   const warnings = getAppointmentFundingShortfalls(months, sourceBalances);
@@ -230,7 +230,7 @@ export function AppointmentBudgetWarnings({
           </div>
         </ProjectionDialog>
       )}
-      {(['sponsored', 'general'] as const).map((basis) => {
+      {(['categories', 'general'] as const).map((basis) => {
         const matching = warnings.filter((warning) => warning.basis === basis);
         return (
           matching.length > 0 && (

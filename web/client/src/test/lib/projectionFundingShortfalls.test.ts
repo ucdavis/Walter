@@ -58,9 +58,9 @@ const funding = (
 
 describe('funding budgeting basis', () => {
   it.each([
-    ['Sponsored', 'sponsored'],
-    ['Sponsored Capital', 'sponsored'],
-    [' sponsored capital ', 'sponsored'],
+    ['Sponsored', 'categories'],
+    ['Sponsored Capital', 'categories'],
+    [' sponsored capital ', 'categories'],
     ['Internal', 'general'],
     ['internal', 'general'],
     [null, 'unknown'],
@@ -77,6 +77,7 @@ describe('funding budgeting basis', () => {
     expect(
       getSourceFundingBasis({
         ...source(1, 'Sponsored'),
+        plannedBudgetMode: 'GeneralPool',
         sourceKind: 'Planned',
       })
     ).toBe('general');
@@ -220,7 +221,7 @@ describe('staffing funding warnings', () => {
       )
     ).toEqual([
       {
-        basis: 'sponsored',
+        basis: 'categories',
         fundingSourceId: 1,
         month: '2026-02',
         personnelDeficits: [
@@ -426,14 +427,16 @@ describe('source category balances', () => {
       forecast: 14_000,
     });
     expect(balance.categories.at(-1)).toMatchObject({
-      capturedAvailable: 500,
+      adjustment: 500,
+      capturedAvailable: 0,
       endRemaining: 500,
       forecast: 0,
       isBalanceAdjustment: true,
+      revisedAvailable: 500,
     });
     expect(
       balance.categories.reduce(
-        (sum, category) => sum + category.capturedAvailable,
+        (sum, category) => sum + category.revisedAvailable,
         0
       )
     ).toBe(13_000);

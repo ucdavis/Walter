@@ -1,4 +1,9 @@
+import {
+  getSourceFundingBasis,
+  validateCategoryBudgets,
+} from '@/lib/projectionBudgets.ts';
 import type {
+  CategoryBudgetAdjustment,
   ProjectionDraft,
   ProjectionFundingSource,
   ProjectionRosterEntry,
@@ -7,9 +12,15 @@ import type { ProjectionSession } from '@/lib/projectionWorkspace.ts';
 import { isPlanningDate } from '@/lib/date.ts';
 export interface SourceInputs {
   balance: number;
+  categoryAdjustments?: CategoryBudgetAdjustment[];
   endDate: string | null;
   name: string;
   startDate: string | null;
+}
+
+export interface PlannedSourceInputs extends SourceInputs {
+  initialCategoryBudgets: CategoryBudgetAdjustment[];
+  plannedBudgetMode: 'GeneralPool' | 'Categories';
 }
 
 export type SourceOperationResult<T extends ProjectionDraft = ProjectionDraft> =
@@ -28,7 +39,10 @@ export const sourceCapturedBalance = (source: ProjectionFundingSource) =>
   );
 
 export const sourcePlanningBalance = (source: ProjectionFundingSource) =>
-  sourceCapturedBalance(source) + source.balanceAdjustment;
+  sourceCapturedBalance(source) +
+  source.initialPlannedBalance +
+  source.balanceAdjustment +
+  source.categoryAdjustments.reduce((sum, row) => sum + row.amount, 0);
 
 export const sourceLabel = (source: ProjectionFundingSource) =>
   [
@@ -95,7 +109,8 @@ function nextId(session: ProjectionSession<ProjectionDraft>) {
 export function editProjectionSource<T extends ProjectionDraft>(
   session: ProjectionSession<T>,
   fundingSourceId: number,
-  inputs: SourceInputs
+  inputs: SourceInputs,
+  financialCategories: string[] = []
 ): SourceOperationResult<T> {
   const source = session.draft.content.fundingSources.find(
     ({ id }) => id === fundingSourceId
@@ -110,7 +125,37 @@ export function editProjectionSource<T extends ProjectionDraft>(
   if (error) {
     return { error, ok: false };
   }
-  const balanceAdjustment = inputs.balance - sourceCapturedBalance(source);
+  const categoryAdjustments =
+    inputs.categoryAdjustments ?? source.categoryAdjustments;
+  if (inputs.categoryAdjustments) {
+    const budgetError = validateCategoryBudgets(
+      categoryAdjustments,
+      financialCategories
+    );
+    if (budgetError) {
+      return { error: budgetError, ok: false };
+    }
+  }
+  const categoryBasis = getSourceFundingBasis(source) === 'categories';
+  if (!categoryBasis && categoryAdjustments.length > 0) {
+    return {
+      error: 'Category budget changes require category-based funding.',
+      ok: false,
+    };
+  }
+  const revisedCategoryTotal =
+    sourceCapturedBalance(source) +
+    source.initialPlannedBalance +
+    categoryAdjustments.reduce((sum, row) => sum + row.amount, 0);
+  if (categoryBasis && inputs.balance !== revisedCategoryTotal) {
+    return {
+      error: 'Adjust a financial category to change this source total.',
+      ok: false,
+    };
+  }
+  const balanceAdjustment = categoryBasis
+    ? 0
+    : inputs.balance - revisedCategoryTotal;
   if (!Number.isFinite(balanceAdjustment)) {
     return { error: 'Enter a finite available balance.', ok: false };
   }
@@ -118,7 +163,9 @@ export function editProjectionSource<T extends ProjectionDraft>(
     inputs.name.trim() === source.name &&
     inputs.startDate === source.startDate &&
     inputs.endDate === source.endDate &&
-    balanceAdjustment === source.balanceAdjustment
+    balanceAdjustment === source.balanceAdjustment &&
+    JSON.stringify(categoryAdjustments) ===
+      JSON.stringify(source.categoryAdjustments)
   ) {
     return { ok: true, session };
   }
@@ -131,6 +178,7 @@ export function editProjectionSource<T extends ProjectionDraft>(
           ? {
               ...candidate,
               balanceAdjustment,
+              categoryAdjustments: structuredClone(categoryAdjustments),
               endDate: inputs.endDate,
               name: inputs.name.trim(),
               startDate: inputs.startDate,
@@ -143,27 +191,71 @@ export function editProjectionSource<T extends ProjectionDraft>(
 
 export function addPlannedSource<T extends ProjectionDraft>(
   session: ProjectionSession<T>,
-  inputs: SourceInputs
+  inputs: PlannedSourceInputs,
+  financialCategories: string[] = []
 ): SourceOperationResult<T> {
   const error = validation(inputs, true);
   if (error) {
     return { error, ok: false };
+  }
+  if (!['GeneralPool', 'Categories'].includes(inputs.plannedBudgetMode)) {
+    return { error: 'Choose a planned funding budget mode.', ok: false };
+  }
+  const budgetError = validateCategoryBudgets(
+    inputs.initialCategoryBudgets,
+    financialCategories
+  );
+  if (budgetError) {
+    return { error: budgetError, ok: false };
+  }
+  if (
+    inputs.plannedBudgetMode === 'GeneralPool' &&
+    inputs.initialCategoryBudgets.length > 0
+  ) {
+    return {
+      error: 'General-pool funding cannot have category budgets.',
+      ok: false,
+    };
+  }
+  const initialTotal = inputs.initialCategoryBudgets.reduce(
+    (sum, row) => sum + row.amount,
+    0
+  );
+  if (
+    inputs.plannedBudgetMode === 'Categories' &&
+    inputs.balance !== initialTotal
+  ) {
+    return {
+      error: 'The planned total must equal its category budgets.',
+      ok: false,
+    };
   }
   const id = nextId(session);
   const source: ProjectionFundingSource = {
     actuals: [],
     awardName: null,
     awardNumber: null,
-    balanceAdjustment: inputs.balance,
-    budgets: [],
+    balanceAdjustment: 0,
+    budgets: inputs.initialCategoryBudgets.map(
+      ({ amount, expenditureCategory }) => ({
+        budget: amount,
+        committed: 0,
+        expenditureCategory,
+        spentToDate: 0,
+      })
+    ),
     capturedAt: session.draft.seededAt,
     capturedEndDate: null,
     capturedStartDate: null,
+    categoryAdjustments: [],
     endDate: inputs.endDate,
     expenses: [],
     historicalExpenseOverrides: [],
     id,
+    initialPlannedBalance:
+      inputs.plannedBudgetMode === 'GeneralPool' ? inputs.balance : 0,
     name: inputs.name.trim(),
+    plannedBudgetMode: inputs.plannedBudgetMode,
     projectName: null,
     projectNumber: null,
     projectType: null,

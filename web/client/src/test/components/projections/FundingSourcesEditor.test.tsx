@@ -1,3 +1,5 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { projectionLookupsQueryOptions } from '@/queries/projections.ts';
 import { createRef, useState, type Ref } from 'react';
 import {
   cleanup,
@@ -12,11 +14,25 @@ import {
   FundingSourcesEditor,
   type FundingSourcesEditorHandle,
 } from '@/components/projections/FundingSourcesEditor.tsx';
-import { createSalaryExample } from '@/test/fixtures/projections.ts';
+import {
+  createSalaryExample,
+  createAppointmentLookupsExample,
+} from '@/test/fixtures/projections.ts';
 import { createProjectionSession } from '@/lib/projectionWorkspace.ts';
 import { chooseInitialProjects } from '@/test/helpers/projectionSourceSelection.ts';
 
 afterEach(cleanup);
+
+function createLookupClient() {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  client.setQueryData(
+    projectionLookupsQueryOptions().queryKey,
+    createAppointmentLookupsExample()
+  );
+  return client;
+}
 
 function Harness({
   editorRef,
@@ -59,9 +75,10 @@ function Harness({
     ];
     return createProjectionSession(draft);
   });
+  const [queryClient] = useState(createLookupClient);
   const [ids, setIds] = useState<number[]>([]);
   return (
-    <>
+    <QueryClientProvider client={queryClient}>
       <FundingSourcesEditor
         iamId="IAM-TEST"
         initialSelection={initial ? { ids, onChange: setIds } : undefined}
@@ -85,7 +102,7 @@ function Harness({
         session={session}
       />
       <output data-testid="selected-source-ids">{ids.join(',')}</output>
-    </>
+    </QueryClientProvider>
   );
 }
 

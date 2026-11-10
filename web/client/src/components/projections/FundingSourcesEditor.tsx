@@ -167,11 +167,11 @@ export function FundingSourcesEditor<T extends ProjectionDraft>({
       {(source || editing === 'planned') && (
         <SourceEditor
           key={source?.id ?? 'planned'}
-          onApply={(inputs) =>
+          onApply={(inputs, categories) =>
             apply((current) =>
               source
-                ? editProjectionSource(current, source.id, inputs)
-                : addPlannedSource(current, inputs)
+                ? editProjectionSource(current, source.id, inputs, categories)
+                : addPlannedSource(current, inputs, categories)
             )
           }
           onClose={() =>

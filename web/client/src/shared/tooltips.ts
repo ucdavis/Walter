@@ -30,6 +30,8 @@ export const tooltipDefinitions = {
   monthlyCbr:
     'Monthly composite benefit rate cost, including fringe/benefit burden.',
   openDepartmentDetails: 'Open department details',
+  plannedSourceType:
+    'Internal uses one shared balance for all spending. Sponsored uses separate category budgets, including salary and fringe.',
   postReportingPeriod:
     'Number of days after the award end date allowed for reporting and closeout activity.',
   projectBurndown:

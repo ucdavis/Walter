@@ -229,6 +229,63 @@ describe('funding source lifecycle', () => {
     }
   });
 
+  it('opens the funding list from a selected outlook without treating the source as an edit request', async () => {
+    setup();
+    const route = renderPlan(portfolioPath + '/1?section=overview&source=2');
+    const user = userEvent.setup();
+    try {
+      expect(
+        await screen.findByRole('combobox', {
+          name: 'Explore a funding source',
+        })
+      ).toHaveValue('2');
+      const sectionButton = within(
+        screen.getByRole('navigation', { name: 'Plan sections' })
+      ).getByRole('button', { name: 'Funding sources' });
+      sectionButton.focus();
+      await user.keyboard('{Enter}');
+      await waitFor(() =>
+        expect(route.router.state.location.search).toEqual({
+          section: 'funding',
+        })
+      );
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(
+        await screen.findByRole('button', { name: /Edit .*Task T2/ })
+      ).toBeInTheDocument();
+      await act(async () => route.router.history.back());
+      await waitFor(() =>
+        expect(route.router.state.location.search).toMatchObject({
+          section: 'overview',
+          source: 2,
+        })
+      );
+      expect(
+        await screen.findByRole('combobox', {
+          name: 'Explore a funding source',
+        })
+      ).toHaveValue('2');
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      await act(async () => route.router.history.forward());
+      await waitFor(() =>
+        expect(route.router.state.location.search).toEqual({
+          section: 'funding',
+        })
+      );
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      await user.click(
+        await screen.findByRole('button', { name: /Edit .*Task T2/ })
+      );
+      await screen.findByRole('dialog', { name: /Edit .*Task T2/ });
+      expect(route.router.state.location.search).toMatchObject({
+        section: 'funding',
+        source: 2,
+      });
+    } finally {
+      route.cleanup();
+    }
+  });
+
   it('opens a source editor by URL and restores the addressed source through Back and Forward', async () => {
     setup();
     const route = renderPlan(portfolioPath + '/1?section=funding&source=2');

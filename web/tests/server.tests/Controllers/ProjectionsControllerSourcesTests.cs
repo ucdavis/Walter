@@ -214,7 +214,7 @@ public sealed partial class ProjectionsControllerTests
         var sources = new List<ProjectionFundingSource>
         {
             task,
-            new() { Id = 2, Name = "Planned", SourceKind = ProjectionSourceKind.Planned, CapturedAt = SourceCapture, StartDate = new(2027, 1, 1), BalanceAdjustment = 10000 },
+            new() { Id = 2, Name = "Planned", SourceKind = ProjectionSourceKind.Planned, PlannedBudgetMode = ProjectionPlannedBudgetMode.GeneralPool, CapturedAt = SourceCapture, StartDate = new(2027, 1, 1), InitialPlannedBalance = 10000 },
         };
         var jobs = new List<ProjectionAppointment>
         {

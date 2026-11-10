@@ -69,7 +69,7 @@ export function FundingTimeline({
           const shortfallSummary = shortfalls
             .map(({ basis, fundingSourceId, personnelDeficits, remaining }) => {
               const source = sources.find(({ id }) => id === fundingSourceId);
-              return `${source ? sourceLabel(source) : 'Funding source'}: ${basis === 'sponsored' ? personnelDeficits.map(({ category, missingBudget, remaining }) => `${category} remaining ${formatCurrency(remaining)}${missingBudget ? `; No ${category} budget recorded` : ''}`).join('; ') : `projected total remaining at the end of ${fundingMonthLabel(month)} is ${formatCurrency(remaining)}`}. Assigned shares and forecast costs continue`;
+              return `${source ? sourceLabel(source) : 'Funding source'}: ${basis === 'categories' ? personnelDeficits.map(({ category, missingBudget, remaining }) => `${category} remaining ${formatCurrency(remaining)}${missingBudget ? `; No ${category} budget recorded` : ''}`).join('; ') : `projected total remaining at the end of ${fundingMonthLabel(month)} is ${formatCurrency(remaining)}`}. Assigned shares and forecast costs continue`;
             })
             .join('. ');
           const shareTooltip = (share: {

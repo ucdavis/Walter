@@ -297,8 +297,8 @@ public sealed class ProjectionsController(
             || !ValidForecastWindow(draft.SeededAt, content.ForecastMonths)
             || content.Notes?.Length > ProjectionPlanDefaults.MaximumNotesLength
             || content.FundingSources is null || content.Appointments is null) return false;
-        if (content.FundingSources.Any(p => p is null || p.Id <= 0 || p.Budgets is null || p.Actuals is null || p.RunRates is null || p.HistoricalExpenseOverrides is null || p.Expenses is null
-                || p.Budgets.Any(b => b is null) || p.Actuals.Any(a => a is null) || p.RunRates.Any(r => r is null)
+        if (content.FundingSources.Any(p => p is null || p.Id <= 0 || p.Budgets is null || p.CategoryAdjustments is null || p.Actuals is null || p.RunRates is null || p.HistoricalExpenseOverrides is null || p.Expenses is null
+                || p.CategoryAdjustments.Any(a => a is null) || p.Budgets.Any(b => b is null) || p.Actuals.Any(a => a is null) || p.RunRates.Any(r => r is null)
                 || p.HistoricalExpenseOverrides.Any(e => e is null) || p.Expenses.Any(e => e is null))
             || content.Appointments.Any(j => j is null || j.Id <= 0 || j.Allocations is null || j.Allocations.Any(f => f is null))) return false;
         if (!ValidSources(content.FundingSources) || !ValidAppointments(content.Appointments)) return false;
@@ -351,7 +351,7 @@ public sealed class ProjectionsController(
         foreach (var source in sources)
         {
             if (!ValidToken(source.CapturedAt) || !Enum.IsDefined(source.SourceKind)
-                || string.IsNullOrWhiteSpace(source.Name) || source.StartDate > source.EndDate || !ValidExpenses(source)) return false;
+                || string.IsNullOrWhiteSpace(source.Name) || source.StartDate > source.EndDate || !ValidExpenses(source) || !ValidSourceBudgets(source)) return false;
             if (source.SourceKind == ProjectionSourceKind.Task && string.IsNullOrWhiteSpace(source.ProjectNumber)) return false;
             if (source.SourceKind == ProjectionSourceKind.Planned
                 && (source.ProjectNumber is not null || source.TaskNumber is not null || source.StartDate is null)) return false;
@@ -359,6 +359,31 @@ public sealed class ProjectionsController(
         var tasks = sources.Where(s => s.SourceKind == ProjectionSourceKind.Task).ToList();
         return tasks.Select(s => ProjectionSeedPolicy.TaskKey(s.ProjectNumber, s.TaskNumber)).Distinct().Count() == tasks.Count;
     }
+
+    /// <summary>Validate scenario shape without requiring live datamart access to save a captured plan.</summary>
+    private static bool ValidSourceBudgets(ProjectionFundingSource source)
+    {
+        if (source.CategoryAdjustments.Any(row => !ValidFinancialCategory(row.ExpenditureCategory) || row.Amount != decimal.Round(row.Amount, 2))
+            || source.CategoryAdjustments.Select(row => row.ExpenditureCategory[..2]).Distinct(StringComparer.Ordinal).Count() != source.CategoryAdjustments.Count)
+            return false;
+        var categoryBased = source.SourceKind == ProjectionSourceKind.Planned
+            ? source.PlannedBudgetMode == ProjectionPlannedBudgetMode.Categories
+            : source.ProjectType?.Trim().ToLowerInvariant() is "sponsored" or "sponsored capital";
+        if (categoryBased ? source.BalanceAdjustment != 0 : source.CategoryAdjustments.Count != 0) return false;
+        if (source.SourceKind == ProjectionSourceKind.Task)
+            return source.PlannedBudgetMode is null && source.InitialPlannedBalance == 0;
+        if (source.PlannedBudgetMode is null || !Enum.IsDefined(source.PlannedBudgetMode.Value)
+            || source.Actuals.Count != 0 || source.RunRates.Count != 0
+            || source.CapturedStartDate is not null || source.CapturedEndDate is not null)
+            return false;
+        if (source.PlannedBudgetMode == ProjectionPlannedBudgetMode.GeneralPool) return source.Budgets.Count == 0;
+        return source.InitialPlannedBalance == 0
+            && source.Budgets.All(row => ValidFinancialCategory(row.ExpenditureCategory) && row.Budget == decimal.Round(row.Budget, 2) && row.SpentToDate == 0 && row.Committed == 0)
+            && source.Budgets.Select(row => row.ExpenditureCategory[..2]).Distinct(StringComparer.Ordinal).Count() == source.Budgets.Count;
+    }
+
+    private static bool ValidFinancialCategory(string? category) => category is { Length: <= 200 }
+        && Regex.IsMatch(category, @"^0[1-9] - \S(?:.*\S)?\z");
 
     private static void CopySnapshot(Projection projection, ProjectionDraft snapshot)
     {

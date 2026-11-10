@@ -95,13 +95,15 @@ export function SourceOutlookDetails({
       <SourceCategoryBudgets
         balance={buildSourceFundingBalance(source, results.rows)}
         headingRef={categoryHeadingRef}
+        initialPlanned={source.sourceKind === 'Planned'}
+        onEdit={() => onNavigate({ section: 'funding', source: source.id })}
         sourceIdentity={[outlook.label, source.projectNumber]
           .filter(Boolean)
           .join(' · ')}
       />
       <SourceForecastCosts
         outlook={outlook}
-        showCategories={getSourceFundingBasis(source) !== 'sponsored'}
+        showCategories={getSourceFundingBasis(source) !== 'categories'}
       />
       <SourceMonthlyAmounts outlook={outlook} />
       <SourceOutlookAppointments

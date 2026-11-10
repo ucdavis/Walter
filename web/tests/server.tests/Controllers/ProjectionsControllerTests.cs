@@ -687,7 +687,7 @@ public sealed partial class ProjectionsControllerTests
             Id = 1, Kind = ProjectionExpenseKind.OneTime, Description = "Planned purchase",
             ExpenditureCategory = Supplies, Amount = 100, StartMonth = new(2027, 1, 1),
         });
-        created.Content.FundingSources.Add(new ProjectionFundingSource { Id = 2, Name = "Hypothetical", SourceKind = ProjectionSourceKind.Planned, CapturedAt = created.SeededAt, StartDate = new(2027, 1, 1) });
+        created.Content.FundingSources.Add(new ProjectionFundingSource { Id = 2, Name = "Hypothetical", SourceKind = ProjectionSourceKind.Planned, PlannedBudgetMode = ProjectionPlannedBudgetMode.GeneralPool, CapturedAt = created.SeededAt, StartDate = new(2027, 1, 1) });
         await controller.Save(created.Id, Draft(created), default);
 
         var result = await controller.Reset(created.Id, new ProjectionsController.HistoryMonthsRequest(3, created.UpdatedAt), default);
@@ -845,7 +845,7 @@ public sealed partial class ProjectionsControllerTests
 
         var later = Draft(created) with { Name = "Another edit after conflict" };
         later.Content.FundingSources.Clear();
-        later.Content.FundingSources.Add(new ProjectionFundingSource { Id = 2, Name = "Other editor's source", SourceKind = ProjectionSourceKind.Planned, CapturedAt = later.ExpectedSeededAt!.Value, StartDate = new(2027, 1, 1) });
+        later.Content.FundingSources.Add(new ProjectionFundingSource { Id = 2, Name = "Other editor's source", SourceKind = ProjectionSourceKind.Planned, PlannedBudgetMode = ProjectionPlannedBudgetMode.GeneralPool, CapturedAt = later.ExpectedSeededAt!.Value, StartDate = new(2027, 1, 1) });
         await controller.Save(created.Id, later, default);
         var result = await controller.Save(created.Id, draft with { Overwrite = true }, default);
 

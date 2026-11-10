@@ -246,7 +246,13 @@ export function ProjectionWorkspace({
             aria-current={location.section === section ? 'page' : undefined}
             className={`btn h-auto min-h-12 w-full rounded-none border-0 px-2 py-3 text-sm shadow-none ${location.section === section ? 'bg-primary text-primary-content hover:bg-primary/90' : 'bg-base-100 text-base-content/70 hover:bg-base-200'}`}
             key={section}
-            onClick={() => onNavigate({ ...sourceSearch, section })}
+            onClick={() =>
+              onNavigate(
+                section === 'funding'
+                  ? { section }
+                  : { ...sourceSearch, section }
+              )
+            }
             type="button"
           >
             <Icon aria-hidden="true" className="size-4 shrink-0" />
