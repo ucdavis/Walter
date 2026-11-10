@@ -33,7 +33,11 @@ public static class FeatureManagementHelper
             var azureFlags = new ConfigurationBuilder()
                 .AddAzureAppConfiguration(options =>
                 {
-                    options.Connect(new Uri(endpoint!), new DefaultAzureCredential())
+                    // Development uses az login directly to avoid credential discovery delaying startup.
+                    options.Connect(new Uri(endpoint!),
+                        string.Equals(environmentName, Environments.Development, StringComparison.OrdinalIgnoreCase)
+                            ? new AzureCliCredential()
+                            : new DefaultAzureCredential())
                     // Suppress the default all-keys query. Load flags only through the native selector
                     // so the provider tracks every loaded flag for deletion during refresh.
                     .Select(".", environmentName)
