@@ -92,9 +92,13 @@ public sealed partial class ProjectionsControllerTests
         var source = ((List<ProjectionFundingSource>)result.Value!).Should().ContainSingle().Subject;
         source.Should().BeEquivalentTo(new
         {
-            ProjectNumber = "P1", TaskNumber = "T1", SourceKind = ProjectionSourceKind.Task,
-            CapturedAt = SourceCapture, CapturedStartDate = (DateOnly?)new DateOnly(2026, 1, 2),
-            CapturedEndDate = (DateOnly?)new DateOnly(2027, 6, 30), BalanceAdjustment = 0m,
+            ProjectNumber = "P1",
+            TaskNumber = "T1",
+            SourceKind = ProjectionSourceKind.Task,
+            CapturedAt = SourceCapture,
+            CapturedStartDate = (DateOnly?)new DateOnly(2026, 1, 2),
+            CapturedEndDate = (DateOnly?)new DateOnly(2027, 6, 30),
+            BalanceAdjustment = 0m,
         });
         source.Budgets.Should().ContainSingle().Which.Budget.Should().Be(1000);
         source.Actuals.Should().ContainSingle().Which.Amount.Should().Be(75);
@@ -158,9 +162,15 @@ public sealed partial class ProjectionsControllerTests
 
     private static ProjectionFundingSource NewTaskSource() => new()
     {
-        Id = 1, Name = "Task source", ProjectNumber = "P1", TaskNumber = "T1", ProjectName = "Captured project",
-        SourceKind = ProjectionSourceKind.Task, CapturedAt = SourceCapture,
-        StartDate = new(2026, 1, 1), EndDate = new(2027, 1, 1),
+        Id = 1,
+        Name = "Task source",
+        ProjectNumber = "P1",
+        TaskNumber = "T1",
+        ProjectName = "Captured project",
+        SourceKind = ProjectionSourceKind.Task,
+        CapturedAt = SourceCapture,
+        StartDate = new(2026, 1, 1),
+        EndDate = new(2027, 1, 1),
     };
 
     [Theory]

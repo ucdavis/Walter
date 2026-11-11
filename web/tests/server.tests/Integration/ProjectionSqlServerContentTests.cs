@@ -38,8 +38,15 @@ public sealed partial class ProjectionSqlServerTests
         allocation.Percent.Should().Be(0);
         stored.Should().BeEquivalentTo(new
         {
-            original.Id, original.CreationKey, original.PiEmployeeId, original.Name,
-            original.SeededAt, original.CreatedAt, original.CreatedBy, original.UpdatedAt, original.UpdatedBy,
+            original.Id,
+            original.CreationKey,
+            original.PiEmployeeId,
+            original.Name,
+            original.SeededAt,
+            original.CreatedAt,
+            original.CreatedBy,
+            original.UpdatedAt,
+            original.UpdatedBy,
         });
     }
     [ProjectionSqlServerFact]

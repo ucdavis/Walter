@@ -96,9 +96,16 @@ public sealed partial class ProjectionsControllerTests
         var key = stored.CreationKey;
         var line = new PositionBudgetRecord
         {
-            EmployeeId = "E1", PositionNumber = "POS1", Name = "Imported person", ProjectId = "P1", Task = "T1",
-            MonthlyRate = 5000, Fte = 1, DistributionPercent = 100,
-            FundingEffectiveDate = new DateTime(2026, 1, 1), FundingEndDate = new DateTime(2026, 12, 31),
+            EmployeeId = "E1",
+            PositionNumber = "POS1",
+            Name = "Imported person",
+            ProjectId = "P1",
+            Task = "T1",
+            MonthlyRate = 5000,
+            Fte = 1,
+            DistributionPercent = 100,
+            FundingEffectiveDate = new DateTime(2026, 1, 1),
+            FundingEndDate = new DateTime(2026, 12, 31),
         };
         switch (invalid)
         {

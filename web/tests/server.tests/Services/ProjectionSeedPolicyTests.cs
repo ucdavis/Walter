@@ -15,14 +15,23 @@ public sealed class ProjectionSeedPolicyTests
 
     private static ProjectionSeedProject TaskRow(string project, string task, string? type = "Internal", string? status = "Active") => new()
     {
-        ProjectNumber = project, TaskNumber = task, TaskName = task, ProjectName = project,
-        ProjectType = type, TaskStatus = status,
+        ProjectNumber = project,
+        TaskNumber = task,
+        TaskName = task,
+        ProjectName = project,
+        ProjectType = type,
+        TaskStatus = status,
     };
 
     private static PositionBudgetRecord FundingLine(string project, string task, decimal percent, int month) => new()
     {
-        EmployeeId = "E1", PositionNumber = "X1", ProjectId = project, Task = task,
-        MonthlyRate = 5000, Fte = 1, DistributionPercent = percent,
+        EmployeeId = "E1",
+        PositionNumber = "X1",
+        ProjectId = project,
+        Task = task,
+        MonthlyRate = 5000,
+        Fte = 1,
+        DistributionPercent = percent,
         FundingEffectiveDate = new DateTime(2026, month, 1),
         FundingEndDate = new DateTime(2026, month, DateTime.DaysInMonth(2026, month)),
     };
@@ -134,10 +143,17 @@ public sealed class ProjectionSeedPolicyTests
         var project = projection.Content.FundingSources.Single(p => p.TaskNumber == "T1");
         project.Should().BeEquivalentTo(new
         {
-            ProjectNumber = "P1", TaskNumber = "T1", TaskName = "T1", Name = "First task metadata", ProjectName = "First task metadata",
-            SourceKind = ProjectionSourceKind.Task, CapturedAt = (DateTime?)Snapshot,
-            StartDate = new DateOnly(2026, 1, 1), EndDate = new DateOnly(2026, 12, 31),
-            CapturedStartDate = new DateOnly(2026, 1, 1), CapturedEndDate = new DateOnly(2026, 12, 31),
+            ProjectNumber = "P1",
+            TaskNumber = "T1",
+            TaskName = "T1",
+            Name = "First task metadata",
+            ProjectName = "First task metadata",
+            SourceKind = ProjectionSourceKind.Task,
+            CapturedAt = (DateTime?)Snapshot,
+            StartDate = new DateOnly(2026, 1, 1),
+            EndDate = new DateOnly(2026, 12, 31),
+            CapturedStartDate = new DateOnly(2026, 1, 1),
+            CapturedEndDate = new DateOnly(2026, 12, 31),
         });
         project.Budgets.Select(b => (b.ExpenditureCategory, b.Budget, b.SpentToDate, b.Committed)).Should().BeEquivalentTo(
             [(Supplies, 1000m, 100m, 10m), (Salary, 5000m, 0m, 0m)]);
@@ -176,7 +192,8 @@ public sealed class ProjectionSeedPolicyTests
         data.PersonnelProjectNumbers.Should().BeEquivalentTo(["P1", "P2"]);
         response.Roster.Should().ContainSingle().Which.Should().BeEquivalentTo(new
         {
-            AppointmentId = projection.Content.Appointments.Single().Id, FundingSourceIds = new[] { project.Id },
+            AppointmentId = projection.Content.Appointments.Single().Id,
+            FundingSourceIds = new[] { project.Id },
         });
         var job = projection.Content.Appointments.Should().ContainSingle().Subject;
         job.HasUnmatchedFunding.Should().BeTrue();

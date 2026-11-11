@@ -147,8 +147,14 @@ public sealed partial class ProjectionsControllerTests
         var before = JsonSerializer.Serialize(saved);
         var line = new PositionBudgetRecord
         {
-            EmployeeId = "E1", PositionNumber = "POS1", Name = "Imported person", ProjectId = "P1", Task = "T1",
-            MonthlyRate = 5000, Fte = 1, CompositeBenefitRate = 0.35m,
+            EmployeeId = "E1",
+            PositionNumber = "POS1",
+            Name = "Imported person",
+            ProjectId = "P1",
+            Task = "T1",
+            MonthlyRate = 5000,
+            Fte = 1,
+            CompositeBenefitRate = 0.35m,
         };
         switch (invalid)
         {

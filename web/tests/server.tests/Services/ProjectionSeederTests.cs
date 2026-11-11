@@ -27,9 +27,19 @@ public sealed class ProjectionSeederTests
 
     private static PositionBudgetRecord Line(decimal percent, bool isFuture = false, string? status = null, string? task = "TASK01") => new()
     {
-        EmployeeId = "E1", PositionNumber = "X1", Name = "Person", ProjectId = "P1", Task = task,
-        DistributionPercent = percent, MonthlyRate = 5000, Fte = 1, CompositeBenefitRate = 0.3m,
-        VacationAccrual = 0.083m, BusinessUnit = "UCANR", IsFuture = isFuture, EarnCodeStatus = status,
+        EmployeeId = "E1",
+        PositionNumber = "X1",
+        Name = "Person",
+        ProjectId = "P1",
+        Task = task,
+        DistributionPercent = percent,
+        MonthlyRate = 5000,
+        Fte = 1,
+        CompositeBenefitRate = 0.3m,
+        VacationAccrual = 0.083m,
+        BusinessUnit = "UCANR",
+        IsFuture = isFuture,
+        EarnCodeStatus = status,
     };
 
     private static async Task<ProjectionDraft> SeedAsync(FakeProjectionDataSource data, int historyMonths = 6) =>
