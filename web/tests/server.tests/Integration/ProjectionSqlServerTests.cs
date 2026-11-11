@@ -201,8 +201,13 @@ public sealed partial class ProjectionSqlServerTests(ProjectionSqlServerFixture 
         stored.Content.FundingSources[0].HistoricalExpenseOverrides.Select(expense => expense.Amount).Should().Equal(0m, -25.50m);
         stored.Content.FundingSources[0].Expenses.Should().ContainSingle().Which.Should().BeEquivalentTo(new
         {
-            Id = 1, Kind = ProjectionExpenseKind.Monthly, Description = "Planned supplies",
-            ExpenditureCategory = "05 - Supplies", Amount = -10.25m, StartMonth = new DateOnly(2030, 2, 1), EndMonth = (DateOnly?)null,
+            Id = 1,
+            Kind = ProjectionExpenseKind.Monthly,
+            Description = "Planned supplies",
+            ExpenditureCategory = "05 - Supplies",
+            Amount = -10.25m,
+            StartMonth = new DateOnly(2030, 2, 1),
+            EndMonth = (DateOnly?)null,
         });
         stored.Content.Appointments[0].HasUnmatchedFunding.Should().BeTrue();
         stored.Content.Appointments[0].Allocations.Should().BeEquivalentTo(new List<ProjectionFundingAllocation>
@@ -421,7 +426,8 @@ public sealed partial class ProjectionSqlServerTests(ProjectionSqlServerFixture 
             UpdatedBy = "owner",
             Content = new()
             {
-                ForecastMonths = forecastMonths, Notes = notes,
+                ForecastMonths = forecastMonths,
+                Notes = notes,
                 FundingSources = [new() { Id = 1, Name = "Source", SourceKind = ProjectionSourceKind.Task, CapturedAt = Snapshot, ProjectNumber = "P1", TaskNumber = "T1", ProjectName = "Project", Actuals = [new() { Month = new(2029, 12, 1), Amount = 2500, ExpenditureCategory = "Salary" }] }],
                 Appointments = [new() { Id = 1, Name = "Example", IsSeeded = true, MonthlySalary = 10000, Fte = 0.5m }],
             },

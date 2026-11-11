@@ -122,9 +122,14 @@ public sealed partial class ProjectionsControllerTests
         created.Id.Should().BePositive();
         created.Should().BeEquivalentTo(new
         {
-            Name = request.Draft!.Name, Content = expected.Content, PiEmployeeId = "100",
-            SeededAt = expected.SeededAt, CreatedAt = now, UpdatedAt = now,
-            CreatedBy = "tester", UpdatedBy = "tester",
+            Name = request.Draft!.Name,
+            Content = expected.Content,
+            PiEmployeeId = "100",
+            SeededAt = expected.SeededAt,
+            CreatedAt = now,
+            UpdatedAt = now,
+            CreatedBy = "tester",
+            UpdatedBy = "tester",
         });
         created.Content.FundingSources.Should().BeEquivalentTo(expected.Content.FundingSources);
         created.Content.Appointments.Should().BeEquivalentTo(expected.Content.Appointments);
@@ -223,8 +228,14 @@ public sealed partial class ProjectionsControllerTests
         duplicate.Id.Should().NotBe(source.Id);
         duplicate.Should().BeEquivalentTo(new
         {
-            Name = "Alternative plan", source.PiEmployeeId, source.SeededAt, source.Content,
-            CreatedAt = now, UpdatedAt = now, CreatedBy = "tester", UpdatedBy = "tester",
+            Name = "Alternative plan",
+            source.PiEmployeeId,
+            source.SeededAt,
+            source.Content,
+            CreatedAt = now,
+            UpdatedAt = now,
+            CreatedBy = "tester",
+            UpdatedBy = "tester",
         });
         duplicate.Content.FundingSources.Should().BeEquivalentTo(source.Content.FundingSources);
         duplicate.Content.Appointments.Should().BeEquivalentTo(source.Content.Appointments);
@@ -417,11 +428,14 @@ public sealed partial class ProjectionsControllerTests
 
         draft.Should().BeEquivalentTo(new
         {
-            Name = "New projection", Content = new { HistoryMonths = 12, ForecastMonths = 12, Notes = (string?)null }, SeededAt = snapshot,
+            Name = "New projection",
+            Content = new { HistoryMonths = 12, ForecastMonths = 12, Notes = (string?)null },
+            SeededAt = snapshot,
         });
         response.Roster.Should().ContainSingle().Which.Should().BeEquivalentTo(new
         {
-            AppointmentId = draft.Content.Appointments.Single().Id, FundingSourceIds = new[] { 1 },
+            AppointmentId = draft.Content.Appointments.Single().Id,
+            FundingSourceIds = new[] { 1 },
         });
         using var json = JsonDocument.Parse(JsonSerializer.Serialize(response, new JsonSerializerOptions(JsonSerializerDefaults.Web)));
         json.RootElement.EnumerateObject().Select(p => p.Name).Should().BeEquivalentTo("draft", "roster");
@@ -613,8 +627,11 @@ public sealed partial class ProjectionsControllerTests
         var snapshot = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         var saved = new Projection
         {
-            PiEmployeeId = "100", Name = "Captured tasks",
-            CreatedAt = snapshot, SeededAt = snapshot, UpdatedAt = snapshot,
+            PiEmployeeId = "100",
+            Name = "Captured tasks",
+            CreatedAt = snapshot,
+            SeededAt = snapshot,
+            UpdatedAt = snapshot,
             Content = new()
             {
                 FundingSources = [
@@ -684,8 +701,12 @@ public sealed partial class ProjectionsControllerTests
         created.Content.FundingSources.Single().HistoricalExpenseOverrides.Add(new() { ExpenditureCategory = Supplies, Amount = 0 });
         created.Content.FundingSources.Single().Expenses.Add(new()
         {
-            Id = 1, Kind = ProjectionExpenseKind.OneTime, Description = "Planned purchase",
-            ExpenditureCategory = Supplies, Amount = 100, StartMonth = new(2027, 1, 1),
+            Id = 1,
+            Kind = ProjectionExpenseKind.OneTime,
+            Description = "Planned purchase",
+            ExpenditureCategory = Supplies,
+            Amount = 100,
+            StartMonth = new(2027, 1, 1),
         });
         created.Content.FundingSources.Add(new ProjectionFundingSource { Id = 2, Name = "Hypothetical", SourceKind = ProjectionSourceKind.Planned, PlannedBudgetMode = ProjectionPlannedBudgetMode.GeneralPool, CapturedAt = created.SeededAt, StartDate = new(2027, 1, 1) });
         await controller.Save(created.Id, Draft(created), default);
@@ -695,7 +716,10 @@ public sealed partial class ProjectionsControllerTests
         var reset = result.Should().BeOfType<OkObjectResult>().Which.Value.Should().BeOfType<Projection>().Subject;
         reset.Should().BeEquivalentTo(new
         {
-            created.Id, CreationKey = creationKey, Name = "Plan A", CreatedBy = "tester",
+            created.Id,
+            CreationKey = creationKey,
+            Name = "Plan A",
+            CreatedBy = "tester",
             Content = new { ForecastMonths = 18, Notes = "Keep these planning assumptions." },
         });
         reset.Content.FundingSources.Should().ContainSingle().Which.ProjectNumber.Should().Be("P1");
@@ -776,8 +800,12 @@ public sealed partial class ProjectionsControllerTests
         draft.Content.FundingSources.Single().HistoricalExpenseOverrides.Add(new() { ExpenditureCategory = Supplies, Amount = 0 });
         draft.Content.FundingSources.Single().Expenses.Add(new()
         {
-            Id = 1, Kind = ProjectionExpenseKind.Monthly, Description = "Planned supplies",
-            ExpenditureCategory = Supplies, Amount = -10, StartMonth = new(2026, 12, 1),
+            Id = 1,
+            Kind = ProjectionExpenseKind.Monthly,
+            Description = "Planned supplies",
+            ExpenditureCategory = Supplies,
+            Amount = -10,
+            StartMonth = new(2026, 12, 1),
         });
         var expected = JsonSerializer.Serialize(draft.Content.FundingSources);
 
@@ -944,7 +972,8 @@ public sealed partial class ProjectionsControllerTests
         draft.Content.FundingSources.Single().HistoricalExpenseOverrides.Add(new() { ExpenditureCategory = Supplies, Amount = 75 });
         draft.Content.FundingSources.Single().Expenses.Add(new ProjectionExpense
         {
-            Id = 1, Description = "Monthly supplies",
+            Id = 1,
+            Description = "Monthly supplies",
             Kind = ProjectionExpenseKind.Monthly,
             ExpenditureCategory = Supplies,
             Amount = 100,
@@ -1016,7 +1045,9 @@ public sealed partial class ProjectionsControllerTests
         new DateTime(2025, 11, 5, 8, 30, 0, DateTimeKind.Utc).AddTicks(1234567),
         new ProjectionContent
         {
-            HistoryMonths = 12, ForecastMonths = 18, Notes = "Captured planning notes\nKeep this context.",
+            HistoryMonths = 12,
+            ForecastMonths = 18,
+            Notes = "Captured planning notes\nKeep this context.",
             FundingSources = [
                 new ProjectionFundingSource
                 {
@@ -1051,9 +1082,14 @@ public sealed partial class ProjectionsControllerTests
         var snapshot = CapturedSnapshot();
         var source = new Projection
         {
-            CreationKey = Guid.NewGuid(), PiEmployeeId = "100", Name = "Stored source",
-            SeededAt = snapshot.SeededAt, CreatedAt = snapshot.SeededAt,
-            UpdatedAt = snapshot.SeededAt.AddDays(1), CreatedBy = "original-owner", UpdatedBy = "previous-editor",
+            CreationKey = Guid.NewGuid(),
+            PiEmployeeId = "100",
+            Name = "Stored source",
+            SeededAt = snapshot.SeededAt,
+            CreatedAt = snapshot.SeededAt,
+            UpdatedAt = snapshot.SeededAt.AddDays(1),
+            CreatedBy = "original-owner",
+            UpdatedBy = "previous-editor",
             Content = snapshot.Content,
         };
         ctx.Projections.Add(source);

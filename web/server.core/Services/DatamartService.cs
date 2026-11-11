@@ -463,8 +463,10 @@ public sealed class DatamartService : IDatamartService, IPpmPortfolioReader, IAc
 
             var parameters = new DynamicParameters(new
             {
-                PiEmployeeId = piEmployeeId, ApplicationName = _appName,
-                ApplicationUser = applicationUser, EmulatingUser = emulatingUser,
+                PiEmployeeId = piEmployeeId,
+                ApplicationName = _appName,
+                ApplicationUser = applicationUser,
+                EmulatingUser = emulatingUser,
             });
             // Preserve ticks so a final instant of the month cannot round into the next month.
             parameters.Add("SnapshotAt", snapshotAtUtc, DbType.DateTime2);

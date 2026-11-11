@@ -59,17 +59,13 @@ as each decision is settled and each stage is reviewed.
   implementation as the foundation.
 - The guided planner defines the intended UI. The earlier timeline and copilot
   are outside the initial feature; prepare for AI editing later.
-- The final wizard order is Funding sources → Staffing → Other expenses → Review.
+- The [user workflow](../README.md#projection-plans) defines creation and saving.
   Plan name, optional description, and forecast duration belong within Funding
-  sources. Description uses the existing plan notes value, which remains editable
-  on Review. The compact plan-wide spending-history selector belongs within Other
-  expenses, with a three-month default.
-- New plan opens the setup wizard. Its final Create plan action saves the
-  reviewed inputs, then opens the saved plan's workspace. Canceling before the
-  final Create action creates no saved plan; a failed create keeps the wizard
-  inputs available for retry. Leaving after submission may still leave a saved
-  plan if the server completed the request.
-  Subsequent workspace edits use explicit Save plan.
+  sources. Description uses the plan notes value, also editable on Review. The
+  plan-wide spending-history selector belongs within Other expenses, with a
+  three-month default. A failed create preserves the wizard inputs for retry;
+  leaving after submission may still leave a saved plan if the server completed
+  the request.
 - Work in stages. Exercise the result and review its code before moving to the
   next stage. Prefer small, understandable changes and shared rules.
 - The deliverable is production code. Temporary previews and review scripts
@@ -126,22 +122,9 @@ as each decision is settled and each stage is reviewed.
 
 ### Agreed salary example
 
-For a full forecast month, before benefits, COLA, or other costs:
-
-| Assumption or result                | Original | After salary edit |
-| ----------------------------------- | -------: | ----------------: |
-| Full-time annual salary             | $120,000 |          $132,000 |
-| Full-time monthly salary            |  $10,000 |           $11,000 |
-| Appointment FTE                     |      50% |               50% |
-| Project A share of full-time salary |      25% |               25% |
-| Project B share of full-time salary |      25% |               25% |
-| Monthly charge to Project A         |   $2,500 |            $2,750 |
-| Monthly charge to Project B         |   $2,500 |            $2,750 |
-| Total monthly salary cost           |   $5,000 |            $5,500 |
-
-The two shares fill the 50% appointment. Each is half of the appointment, even
-though the UI expresses each as 25% of full-time salary. Changing the salary
-alone preserves FTE and funding shares.
+See [Salary and benefits](projections-calculation-review.md#salary-and-benefits)
+for the salary formula and example. Allocation inputs are shares of the
+appointment; the equivalent full-time FTE is shown separately.
 
 ## Recommended architecture
 
@@ -316,7 +299,7 @@ The salary arithmetic and these product choices were confirmed on November 6, 20
 
 | Decision                           | Agreed behavior                                                                                                                   | Consequence                                                                                                            |
 | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| When a salary edit applies         | Change the job's assumed full-time rate throughout its remaining applicable forecast period, leaving historical actuals unchanged | Scheduling a raise for a future month is deferred.                                                                      |
+| When a salary edit applies         | Change the job's assumed full-time rate throughout its remaining applicable forecast period, leaving historical actuals unchanged | Scheduling a raise for a future month is deferred.                                                                     |
 | When an editor changes the plan    | Apply changes the in-memory draft and forecast; Cancel leaves them unchanged                                                      | Partial typing stays inside the editor. This retains a clear cancellation boundary.                                    |
 | When workspace edits are persisted | Explicit Save plan                                                                                                                | Navigation within a plan preserves the draft; leaving or reloading warns about unsaved work. Reload uses saved inputs. |
 
@@ -466,11 +449,11 @@ alone do not establish the SQL Server concurrency guarantee.
 The first Stage 1b increment implements these endpoints without adding database
 columns or a migration:
 
-| Endpoint                           | Required preconditions                       | Behavior                                                                                                                                            |
-| ---------------------------------- | -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `PUT /api/projections/{id}`        | Body `expectedUpdatedAt`, `expectedSeededAt` | Stores the whole submitted name, history window, projects, and jobs. `overwrite: true` accepts intervening ordinary edits within the same snapshot. |
-| `POST /api/projections/{id}/reset` | Body `historyMonths`, `expectedUpdatedAt`    | Resets only the loaded version and advances both timestamps.                                                                                        |
-| `DELETE /api/projections/{id}`     | Query `expectedUpdatedAt`                    | Deletes only the loaded version.                                                                                                                    |
+| Endpoint                           | Required preconditions                       | Behavior                                                                                                                               |
+| ---------------------------------- | -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `PUT /api/projections/{id}`        | Body `expectedUpdatedAt`, `expectedSeededAt` | Stores the submitted name and typed `Content` document. `overwrite: true` accepts intervening ordinary edits within the same snapshot. |
+| `POST /api/projections/{id}/reset` | Body `historyMonths`, `expectedUpdatedAt`    | Resets only the loaded version and advances both timestamps.                                                                           |
+| `DELETE /api/projections/{id}`     | Query `expectedUpdatedAt`                    | Deletes only the loaded version.                                                                                                       |
 
 Ordinary conflicts return `409` with code `conflict`; a replaced snapshot returns
 `409` with code `snapshotChanged`. Three lost overwrite attempts return `503`
@@ -912,8 +895,8 @@ authorized inputs for the wizard without creating a saved plan. The history wind
 capture timestamp and has no saved-plan ID or audit metadata. The response is
 not cached. Opening existing plans remains independent of fresh seed data.
 
-The server's `ProjectionSeedPolicy` owns fresh selection and grouping, including
-the existing Create and explicit Reset paths that call the same seeder:
+The server's `ProjectionSeedPolicy` owns fresh selection for seed reads, source
+additions, and explicit Reset. Create saves the reviewed draft without reseeding:
 
 - Keep the seed query's project-level PI membership and ACTIVE project scope.
   Dashboard display rules do not broaden portfolio membership.
@@ -922,9 +905,8 @@ the existing Create and explicit Reset paths that call the same seeder:
   only when that date is before the saved UTC capture date. Keep missing dates
   and awards ending on the capture date. Award dates select projects; project
   dates continue to bound their forecasts.
-- Group eligible tasks into one projection project. Sum category budgets,
-  monthly actuals, and history-window estimates from retained tasks only.
-  Preserve the earliest start and latest end among retained project dates.
+- The original project grouping was superseded by
+  [independent task sources](projections-calculation-review.md#fresh-snapshot-selection).
 - Keep excluded funding lines as outside funding, including their supplied
   shares and dates. Do not redistribute them to retained projects. A known
   excluded task is kept separate from an unmatched task.
@@ -970,22 +952,15 @@ even when current source data is unavailable. The full wizard composes the
 staffing and expense editors as their owning stages deliver them; Stage 2 fixes
 the creation boundary rather than introducing a different interim lifecycle.
 
-Stage 2a and this increment are accepted. This increment introduced an interim
-wizard with Plan, Staffing, and Review steps. Stage 3a replaces Plan with Funding
-sources. The final sequence is
-Funding sources, Staffing, Expenses, and Review; Other expenses remains an
-option for the third step's label. Plan selects a name and a 3-, 6-,
-or 12-month averaging window. Continue captures the portfolio once; later edits
-and query refreshes do not recapture it. Staffing reuses the salary editor, and
-Review shows the snapshot date and each project's balance and remaining forecast.
-The averaging window is fixed after capture; canceling setup allows a different
-window. Funding, employee settings, and expense editors follow in their owning
-stages. Existing plan settings are sufficient; later metadata editors should
-not store settings inside an arbitrary project record.
+Stage 2a and this increment are accepted. The interim wizard was replaced by
+the [current setup workflow](../README.md#projection-plans). See
+[Stage 5h](#stage-5h-search-and-add-funding-selection) for source selection and
+initial staffing, and [Stage 4a](#stage-4a-other-expenses) for the history selector.
 
-The wizard now uses TanStack Form for input state and validation. Continue
-cleaning up `NewProjectionWizard.tsx` as the remaining steps are added, while
-preserving the tested creation retry and navigation behavior.
+The original fixed history window was superseded by
+[historical estimates and custom amounts](projections-calculation-review.md#historical-estimates-and-custom-amounts).
+Plan-wide settings belong to typed `Content`, not an arbitrary funding source.
+The wizard uses TanStack Form for input state and validation.
 
 The Create endpoint requires a reviewed draft containing the captured UTC
 timestamp, funding sources, appointments, name, and history window, alongside
@@ -1047,9 +1022,9 @@ on whether they were imported or entered as hypothetical hires.
 
 Appointments remain separate because one appointment can draw from several
 sources and survives source removal. Expenses remain under their source for
-the current rules. The future Expenses step can present those expenses together
-without adding a third top-level collection. Reconsider expense ownership if
-unallocated or split expenses become a requirement.
+the current rules. [Other expenses](#stage-4a-other-expenses) defines the
+source-scoped editor. Reconsider expense ownership if unallocated or split
+expenses become a requirement.
 
 Use `FundingSources` and `Appointments` as the collection names inside the plan's
 typed `Content` in the database, domain, and API. This is a greenfield system.
@@ -1069,10 +1044,10 @@ tasks of a project are selected. Keep its balances, costs, and allocations
 separate. A project rollup summarizes its tasks without letting a task surplus
 hide another task's shortfall. Rollup and graph toggles can follow later.
 
-List projects with expandable tasks. Select all eligible tasks by default;
-users can omit a whole project or individual tasks. Simplify the presentation
-for a single-task project. Existing authorization and eligibility rules still
-apply. Prevent the same task from contributing its finances twice.
+The original selection checklist was replaced by
+[Stage 5h search-and-add](#stage-5h-search-and-add-funding-selection), which owns
+the current selection workflow. Existing authorization and eligibility rules
+still apply. Prevent the same task from contributing its finances twice.
 
 ### Scenario balances, dates, and planned funding
 
@@ -2431,7 +2406,7 @@ local review setup, not a deployment of the newer main procedure to shared SQL.
 | Before                        | Question or example                                                                                                      |
 | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | Before exposing reset/refresh | Define their separate meanings, treatment of local edits, and snapshot replacement behavior.                             |
-| Before release                | Validate real Entra access and shared datamart deployment; decide feature-flag and pilot rollout criteria.                |
+| Before release                | Validate real Entra access and shared datamart deployment; decide feature-flag and pilot rollout criteria.               |
 | Later integration             | Define proposal batches, stale-preview handling, bounded undo, authentication, and interactions with pending form edits. |
 
 ## Reference evidence
