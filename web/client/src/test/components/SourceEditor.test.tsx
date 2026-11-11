@@ -1,6 +1,14 @@
+import { http, HttpResponse } from 'msw';
+import { server } from '@/test/mswUtils.ts';
 import { createRef } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, expect, it, vi } from 'vitest';
 import {
@@ -17,6 +25,7 @@ import {
   FRINGE_CATEGORY,
   SALARY_CATEGORY,
   SUPPLIES_CATEGORY,
+  FEE_REMISSION_CATEGORY,
 } from '@/lib/piProjection.ts';
 import { projectionLookupsQueryOptions } from '@/queries/projections.ts';
 import {
@@ -267,4 +276,76 @@ it('shows the fixed planned source type without offering to change imported fina
   cleanup();
   open();
   expect(screen.queryByText('Source type')).not.toBeInTheDocument();
+});
+
+it('offers categories saved only in expenses or overrides when the cold lookup fails', async () => {
+  server.use(
+    http.get(
+      '/api/projections/lookups',
+      () => new HttpResponse(null, { status: 500 })
+    )
+  );
+  const plan = createSalaryExample();
+  const source = plan.content.fundingSources[0];
+  source.projectType = 'Sponsored';
+  source.expenses = [
+    {
+      amount: 20,
+      description: 'Saved expense',
+      endMonth: null,
+      expenditureCategory: SUPPLIES_CATEGORY,
+      id: 1,
+      kind: 'Monthly',
+      startMonth: '2026-01-01',
+    },
+  ];
+  source.historicalExpenseOverrides = [
+    { amount: 0, expenditureCategory: FEE_REMISSION_CATEGORY },
+  ];
+  const session = createProjectionSession(plan);
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  const onApply = vi.fn((inputs, categories) =>
+    editProjectionSource(session, source.id, inputs, categories)
+  );
+  render(
+    <QueryClientProvider client={queryClient}>
+      <SourceEditor
+        onApply={onApply}
+        onClose={vi.fn()}
+        session={session}
+        source={source}
+      />
+    </QueryClientProvider>
+  );
+  await waitFor(() =>
+    expect(
+      queryClient.getQueryState(projectionLookupsQueryOptions().queryKey)
+        ?.status
+    ).toBe('error')
+  );
+  const user = userEvent.setup();
+  await user.click(screen.getByRole('button', { name: 'Adjust funding' }));
+  expect(
+    screen.getByRole('option', { name: SUPPLIES_CATEGORY })
+  ).toBeInTheDocument();
+  expect(
+    screen.getByRole('option', { name: FEE_REMISSION_CATEGORY })
+  ).toBeInTheDocument();
+  await user.selectOptions(
+    screen.getByLabelText('Category'),
+    FEE_REMISSION_CATEGORY
+  );
+  await user.type(screen.getByLabelText('Amount'), '100');
+  await user.click(screen.getByRole('button', { name: 'Apply adjustment' }));
+  await user.click(screen.getByRole('button', { name: 'Apply' }));
+  const result = onApply.mock.results[0].value;
+  expect(result.ok).toBe(true);
+  if (result.ok) {
+    expect(
+      result.session.draft.content.fundingSources[0].categoryAdjustments
+    ).toEqual([{ amount: 100, expenditureCategory: FEE_REMISSION_CATEGORY }]);
+  }
+  queryClient.clear();
 });

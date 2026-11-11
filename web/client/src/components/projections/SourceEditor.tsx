@@ -75,6 +75,8 @@ export function SourceEditor<T extends ProjectionDraft>({
             ...source.categoryAdjustments,
             ...source.actuals,
             ...source.runRates,
+            ...source.expenses,
+            ...source.historicalExpenseOverrides,
           ].map((row) => row.expenditureCategory)
         : []),
     ]),

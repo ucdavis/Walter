@@ -17,8 +17,9 @@ dashboard, current balances, and minimal wizard Review are accepted and committe
 as `ce6a7c03`. Stage 5c's workflow refinements and selected-task initial staffing
 are implemented, verified, and accepted. An initial real-backend walkthrough now
 passes against isolated local app and datamart databases containing copied real
-portfolio records. Shared datamart deployment, broader financial reconciliation,
-and rollout acceptance remain open. A read-only branch review identified bounded
+portfolio records. Stage 5f records the bounded financial reconciliation;
+shared datamart deployment, real Entra authentication, and rollout acceptance
+remain open. A read-only branch review identified bounded
 structural cleanup rather than a broad rewrite. Stage 5e implements that cleanup
 and passes combined verification. The cleanup is accepted and committed as
 `2b7a8e2a`. Stage 5f records the additional isolated real-data reconciliation.
@@ -30,7 +31,9 @@ as `a58b495d`. Stage 5j's personnel category warnings and read-only budget balan
 are accepted and committed as `c7661e35`. Stage 5k's category editing and
 rebudgeting are accepted and committed as `1433dbb2`, including planned funding
 source types and the follow-up navigation and help refinements. Stage 5l's compact
-dashboard and workspace plan actions are implemented, verified, and accepted.
+dashboard and workspace plan actions are accepted and committed as `13e6aeb4`.
+Stage 5m's final isolated acceptance pass is complete; its category-picker fixes
+and closeout record await user review. No additional v1 feature work was identified.
 Saving remains available with funding gaps, overlaps, and budget shortfalls.
 CBR defaults to 20% when no rate is supplied. Fresh appointments default to a
 3% annual salary adjustment in July. Every retained appointment needs a salary
@@ -313,7 +316,7 @@ The salary arithmetic and these product choices were confirmed on November 6, 20
 
 | Decision                           | Agreed behavior                                                                                                                   | Consequence                                                                                                            |
 | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| When a salary edit applies         | Change the job's assumed full-time rate throughout its remaining applicable forecast period, leaving historical actuals unchanged | Scheduling a raise for a future month is deferred. Existing COLA assumptions still need their own fixture.             |
+| When a salary edit applies         | Change the job's assumed full-time rate throughout its remaining applicable forecast period, leaving historical actuals unchanged | Scheduling a raise for a future month is deferred.                                                                      |
 | When an editor changes the plan    | Apply changes the in-memory draft and forecast; Cancel leaves them unchanged                                                      | Partial typing stays inside the editor. This retains a clear cancellation boundary.                                    |
 | When workspace edits are persisted | Explicit Save plan                                                                                                                | Navigation within a plan preserves the draft; leaving or reloading warns about unsaved work. Reload uses saved inputs. |
 
@@ -872,16 +875,11 @@ vacation, so matching that page alone is insufficient validation.
 
 #### Review examples and verification
 
-Run the [executable calculation examples](../web/client/src/test/lib/piProjection.review.ts)
-from `web/client`:
-
-```sh
-node scripts/review-projection-calculations.ts
-```
-
-They exercise the calculator and salary operation, check salary scaling, and
-print examples for the deferred calculation questions. Conditional alternatives
-are not regression assertions.
+Stage 5e retired the temporary review script after preserving agreed examples in
+the [calculator tests](../web/client/src/test/lib/piProjection.test.ts) and
+[date-boundary tests](../web/client/src/test/lib/piProjection.dates.test.ts).
+The deferred calculation questions above remain separate from those regression
+assertions.
 
 The snapshot correction passed 56 focused client tests, seven local browser
 scenarios, TypeScript, changed-file ESLint, and the production build. Regression
@@ -1643,9 +1641,10 @@ funding, linked to Staffing. Count appointments once per issue type within the
 forecast period. Keep allocation coverage distinct from a funding source's
 balance shortfall. Both remain saveable under the existing rules.
 
-This increment changes presentation and navigation. Final workflow review,
-temporary preview removal, and rollout criteria remain later Stage 5 work.
-Reset/refresh and category rebudgeting remain deferred.
+This increment changes presentation and navigation. Stage 5e completed temporary
+preview removal, and Stage 5k completed category rebudgeting. Stage 5m records the
+final isolated workflow review. Rollout criteria remain open; reset/refresh remains
+deferred.
 
 Verification passed all 710 client tests across 75 files, the production build,
 TypeScript, changed-file ESLint, formatting, and diff checks. New tests cover
@@ -1729,8 +1728,9 @@ advisories remain outside this increment.
 
 This increment is accepted.
 
-Complete guided-workflow review, temporary preview removal, and rollout criteria
-remain later Stage 5 work. Reset/refresh and category rebudgeting remain deferred.
+Stage 5e completed temporary preview removal, and Stage 5k completed category
+rebudgeting. Stage 5m records the complete isolated guided-workflow review.
+Rollout criteria remain open; reset/refresh remains deferred.
 
 ## Stage 5c: guided-workflow review refinements
 
@@ -1796,10 +1796,10 @@ The funding layout fit at 390px without page
 overflow, and the browser reported no console errors or warnings. These checks do
 not establish real backend, authentication, or datamart readiness.
 
-This increment is accepted. Next, validate the real backend and datamart reads
-using an isolated local plan database. Review the branch for structural cleanup
-in parallel before choosing larger refactors. Broader staffing layout cleanup,
-temporary preview removal, and rollout criteria remain later work.
+This increment is accepted. Stages 5d and 5f record the subsequent isolated
+real-data checks. Stage 5e completed the structural cleanup and temporary preview
+removal, and Stage 5g records the staffing layout refinements. Rollout criteria
+remain open.
 
 ## Stage 5d: isolated real-data backend review
 
@@ -2356,12 +2356,82 @@ canceling deletion. Temporary edits were discarded. No existing saved plan was
 changed, copied, or deleted during this walkthrough. No backend or database schema
 change was required.
 
+## Stage 5m: final isolated acceptance
+
+The final acceptance pass used the running local backend with
+`WalterProjectionReview_20261109` and `WalterProjectionData_20261109` on the
+loopback-only review SQL container. No shared database, deployment, or identity
+configuration changed. Temporary acceptance plans were removed; all nine
+pre-existing plans' complete saved documents were verified unchanged. Datamart
+writes were limited to the copied audit log, with no financial-table writes.
+
+Three parallel reviews covered API lifecycle/access/concurrency, UI and category
+fallbacks, and business-workflow consistency. One bounded defect affected both
+category pickers when the financial category lookup failed with an empty cache:
+Other expenses omitted categories introduced by saved budget adjustments, while
+the funding editor omitted categories present only in saved expenses or history
+overrides. Both now retain every category represented in the saved source rows.
+Personnel categories remain excluded from Other expenses. Two regression tests
+exercise lookup failure and successfully apply the resulting edit.
+
+The real browser walkthrough verified the four-step wizard from empty funding
+selection through saving and reopening an 18-month plan. It covered single-task
+funding, adding all tasks then retaining a subset, task-based staffing, monthly
+and entire-appointment allocation replacement, the remaining-share default,
+source-scoped expenses, category budget transfers, and saved-plan duplication.
+A transfer conserved the source total, cleared the fringe shortfall warning,
+survived save/reload, and was preserved in the duplicate. Actual API reads
+independently confirmed the persisted assumptions and identical duplicate content.
+
+Responsive checks used actual 390px and 768px browser viewports. The wizard,
+workspace, funding editor, category budget editor, and dashboard remained usable;
+wide month strips and budget tables scroll within their own containers. Keyboard
+checks covered Enter, Tab, Escape, initial Cancel focus in deletion confirmation,
+and dismissing source-type help without closing its parent dialog. Browser
+deletion checks stopped at confirmation and Cancel; temporary-plan deletion and
+its concurrency behavior were exercised through the local API. Temporary browser
+viewport overrides were reset.
+
+API checks verified PI/PM access, unauthorized and anonymous rejection, creation
+and duplication retries, exact-version save/delete conflicts, competing writers,
+and invalid budget rejection without changing the saved version. All 851 client
+tests across 90 files, 634 server tests, and 19 isolated SQL integration tests
+passed. The production build, TypeScript, changed-file ESLint, formatting, and
+diff checks passed. React Doctor reported 86/100 with 25 warnings and no errors;
+the loading-flag warning points to code already inside `finally`. Remaining
+warnings concern component size/complexity and existing performance suggestions.
+Existing build-size and NuGet dependency advisories remain outside these fixes.
+
+No unresolved v1 workflow defect was found in this pass. The 988-appointment
+outlier remains excluded as agreed. Real Entra authentication, shared datamart
+procedure deployment, and feature-flag/pilot rollout still require release
+validation. This isolated acceptance does not establish those production results.
+Previously deferred calculation questions and full-plan reset/refresh remain
+deferred rather than being silently reinterpreted for release.
+
+## Isolated dashboard and Projects support
+
+The local review datamart now also supports the normal PI dashboard and Projects
+page. It contains `PgmMasterData` plus the local-metadata version of
+`usp_GetProjectSummary` and its parser from current main, and `PositionBudgets`
+with `usp_GetPositionBudgetsLocal` from this branch. Read-only source queries
+copied 254 award metadata rows and 28 position-budget rows, restricted to project
+numbers already present in the isolated portfolio. All writes went to
+`WalterProjectionData_20261109`; no linked servers or live-source dependencies
+were added. No saved projection documents changed.
+
+Browser verification passed for `/` and `/projects/1000005702`, including project
+balances and the five-person personnel section. Projection list and source APIs
+still return successfully. The Projects overview already exposes a Projections
+link; broader link placement remains a separate UX decision. This extension is a
+local review setup, not a deployment of the newer main procedure to shared SQL.
+
 ## Questions to resolve in their owning stages
 
 | Before                        | Question or example                                                                                                      |
 | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | Before exposing reset/refresh | Define their separate meanings, treatment of local edits, and snapshot replacement behavior.                             |
-| Stage 5                       | Review the complete guided workflow and decide feature-flag rollout criteria.                                            |
+| Before release                | Validate real Entra access and shared datamart deployment; decide feature-flag and pilot rollout criteria.                |
 | Later integration             | Define proposal batches, stale-preview handling, bounded undo, authentication, and interactions with pending form edits. |
 
 ## Reference evidence

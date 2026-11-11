@@ -103,6 +103,7 @@ export function ExpensesEditor<T extends ProjectionDraft>({
       ...draft.content.fundingSources.flatMap((source) =>
         [
           ...source.budgets,
+          ...source.categoryAdjustments,
           ...source.actuals,
           ...source.runRates,
           ...source.expenses,
