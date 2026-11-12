@@ -84,7 +84,7 @@ builder.Services.AddResponseCaching();
 // add singleton services here
 builder.Services.AddSingleton<IFinancialApiService, FinancialApiService>();
 builder.Services.AddSingleton<DatamartService>();
-if (builder.Configuration.GetValue<bool>($"{FeatureFlagOptions.SectionName}:{nameof(FeatureFlagOptions.DemoDataEnabled)}"))
+if (builder.Configuration.GetValue<bool>("FeatureFlags:DemoDataEnabled"))
 {
     builder.Services.AddDemoData();
 }
