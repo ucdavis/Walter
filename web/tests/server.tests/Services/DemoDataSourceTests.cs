@@ -19,12 +19,25 @@ public sealed class DemoDataSourceTests
 
         var projects = await _data.GetEmployeeProjectsAsync(DemoDataSet.PiEmployeeId, PpmRole.PrincipalInvestigator);
         projects.Select(p => p.ProjectNumber).Should().BeEquivalentTo(Projects);
-        (await _data.GetEmployeeProjectsAsync(DemoDataSet.PmEmployeeId, PpmRole.ProjectManager)).Should().HaveCount(3);
+        (await _data.GetEmployeeProjectsAsync(DemoDataSet.PmEmployeeId, PpmRole.ProjectManager)).Should().HaveCount(4);
         foreach (var project in projects)
         {
             var rows = await _data.GetFacultyPortfolioAsync([project.ProjectNumber]);
             rows.Should().NotBeEmpty().And.OnlyContain(r => r.Pi == person.Name);
         }
+    }
+
+    [Fact]
+    public async Task The_second_demo_PI_has_their_own_project_and_staff()
+    {
+        var person = await _data.GetSearchablePersonByIamIdAsync("DEMO000003");
+        var projects = await _data.GetEmployeeProjectsAsync(person!.EmployeeId, PpmRole.PrincipalInvestigator);
+
+        projects.Should().ContainSingle().Which.ProjectNumber.Should().Be("DEMO-1003");
+        (await _data.GetFacultyPortfolioAsync(["DEMO-1003"])).Should().NotBeEmpty().And.OnlyContain(r => r.Pi == person.Name);
+        (await _data.GetPositionBudgetsAsync(["DEMO-1003"])).Should().ContainSingle().Which.Name.Should().Be("Casey Placeholder");
+        (await _data.GetProjectionSeedAsync(person.EmployeeId)).Projects.Should().ContainSingle()
+            .Which.ProjectNumber.Should().Be("DEMO-1003");
     }
 
     [Fact]
@@ -57,6 +70,7 @@ public sealed class DemoDataSourceTests
     [Theory]
     [InlineData("DEMO-1001")]
     [InlineData("DEMO-1002")]
+    [InlineData("DEMO-1003")]
     [InlineData("DEMO-1004")]
     public async Task Costs_personnel_and_burndown_agree_with_the_portfolio(string project)
     {

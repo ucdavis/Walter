@@ -11,6 +11,7 @@ public static class DemoDataSet
     public const string PiEmployeeId = "DEMO0001";
     public const string PmIamId = "DEMO000002";
     public const string PmEmployeeId = "DEMO0002";
+    private const string SecondPiEmployeeId = "DEMO0003";
     internal const string SalaryCategory = "01 - Salaries and Wages";
     internal const string BenefitsCategory = "02 - Fringe Benefits";
     private const string SuppliesCategory = "03 - Supplies / Services / Other Expenses";
@@ -19,7 +20,9 @@ public static class DemoDataSet
     [
         new() { IamId = PiIamId, EmployeeId = PiEmployeeId, Name = "Professor Ada Example", Email = "ada.example@example.invalid" },
         new() { IamId = PmIamId, EmployeeId = PmEmployeeId, Name = "Pat Demo", Email = "pat.demo@example.invalid" },
+        new() { IamId = "DEMO000003", EmployeeId = SecondPiEmployeeId, Name = "Professor Robin Fiction", Email = "robin.fiction@example.invalid" },
         new() { IamId = "DEMO000101", EmployeeId = "DEMO0101", Name = "Taylor Sample", Email = "taylor.sample@example.invalid" },
+        new() { IamId = "DEMO000102", EmployeeId = "DEMO0102", Name = "Casey Placeholder", Email = "casey.placeholder@example.invalid" },
         new() { IamId = "DEMO000103", EmployeeId = "DEMO0103", Name = "Morgan Makebelieve", Email = "morgan.makebelieve@example.invalid" },
     ];
 
@@ -27,6 +30,7 @@ public static class DemoDataSet
     [
         ("DEMO-1001", "Sky Garden Demonstration Research", PiEmployeeId, false, 18, 48m, 2500m, 500m),
         ("DEMO-1002", "Rainbow Soil Demonstration Study", PiEmployeeId, false, 2, 16m, 2500m, 1500m),
+        ("DEMO-1003", "Moon Orchard Demonstration Research", SecondPiEmployeeId, false, 12, 30m, 6000m, 800m),
         ("DEMO-1004", "Imaginary Laboratory Start-up", PiEmployeeId, true, 24, 24m, 2000m, 400m),
     ];
 
@@ -88,9 +92,14 @@ public static class DemoDataSet
         var people = CreatePeople().ToDictionary(p => p.EmployeeId);
         return Projects().Select(project =>
         {
-            var employeeId = project.Number == "DEMO-1004" ? "DEMO0103" : "DEMO0101";
-            var rate = employeeId == "DEMO0103" ? 4000m : 5000m;
-            var fte = employeeId == "DEMO0103" ? 0.5m : 1m;
+            var employeeId = project.Number switch
+            {
+                "DEMO-1003" => "DEMO0102",
+                "DEMO-1004" => "DEMO0103",
+                _ => "DEMO0101",
+            };
+            var rate = employeeId == "DEMO0102" ? 7500m : employeeId == "DEMO0103" ? 4000m : 5000m;
+            var fte = employeeId == "DEMO0102" ? 0.8m : employeeId == "DEMO0103" ? 0.5m : 1m;
             return new PositionBudgetRecord
             {
                 EmployeeId = employeeId, Name = people[employeeId].Name, PositionNumber = $"POS-{employeeId}",

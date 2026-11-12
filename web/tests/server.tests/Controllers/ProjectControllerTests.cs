@@ -457,7 +457,7 @@ public sealed class ProjectControllerTests
     }
 
     [Fact]
-    public async Task Financial_viewer_sees_the_demo_PI_without_calling_AE_or_the_datamart()
+    public async Task Financial_viewer_sees_the_demo_PI_and_PM_without_calling_AE_or_the_datamart()
     {
         using var ctx = TestDbContextFactory.CreateInMemory();
         var dm = new FakeDatamartService();
@@ -477,6 +477,11 @@ public sealed class ProjectControllerTests
             .Which.Select(r => r.ProjectNumber).Distinct().Should().BeEquivalentTo(["DEMO-1001", "DEMO-1002", "DEMO-1004"]);
         foreach (var endpoint in new[] { "byNumber", "personnel", "transactions", "reconciliation", "projection", "costs" })
             (await InvokeProjectEndpoint(controller, endpoint, "DEMO-1001", null)).Should().BeOfType<OkObjectResult>();
+
+        var managed = await controller.GetManagedFaculty(DemoDataSet.PmIamId, default);
+
+        var pis = managed.Should().BeOfType<OkObjectResult>().Which.Value.Should().BeOfType<ProjectController.ManagedPisEnvelope>().Which.Pis;
+        pis.Select(pi => (pi.IamId, pi.ProjectCount)).Should().BeEquivalentTo([(DemoDataSet.PiIamId, 3), ("DEMO000003", 1)]);
         dm.ReportCalls.Should().Be(0);
     }
 
