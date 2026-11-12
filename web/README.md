@@ -169,6 +169,18 @@ When running locally in **Development** on **loopback** (`127.0.0.1` / `::1`), `
 
 Outside of local dev, `/login` behaves like the normal auth entrypoint (OIDC challenge).
 
+### Demo data
+
+Setting `FeatureFlags:DemoDataEnabled` (env `FeatureFlags__DemoDataEnabled=true`) serves a fictional PI and three fictional projects from memory, for demos. It is on in Development and off everywhere else unless set. The setting is read at startup, so changing it needs a restart.
+
+Open the demo PI at `/projects/DEMO000001`; the project, burndown, project costs, and projections pages work from there. The projects are `DEMO-1001`, `DEMO-1002` (runs out of money), and `DEMO-1004`.
+
+- Any id starting with `DEMO` is answered from memory; every other id goes to the datamart as usual.
+- Authorization is unchanged, so the viewer needs Financial Viewer or Admin. The PI and PM dev logins get a 403.
+- Requires `FeatureFlags:UseGraphQLAPI` to be `false` (the Development default), because AE rejects demo ids.
+- The demo PI does not appear in search, and accruals and department balances are not covered.
+- Projections saved for the demo PI are real rows in the app database and are shared by everyone who opens it.
+
 ## Testing
 
 ### Client tests
