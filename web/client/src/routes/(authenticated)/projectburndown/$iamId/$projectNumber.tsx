@@ -11,6 +11,7 @@ import { projectsDetailQueryOptions } from '@/queries/project.ts';
 import { useUser } from '@/shared/auth/UserContext.tsx';
 import {
   ClipboardDocumentListIcon,
+  PresentationChartLineIcon,
   TableCellsIcon,
 } from '@heroicons/react/24/outline';
 import { useSuspenseQuery } from '@tanstack/react-query';
@@ -94,7 +95,11 @@ function RouteComponent() {
             ) : null}
           </div>
 
-          <p className="mb-2 font-semibold uppercase text-base-content/70">
+          <p className="mb-2 flex items-center gap-2 font-semibold uppercase text-base-content/70">
+            <PresentationChartLineIcon
+              aria-hidden="true"
+              className="size-4 shrink-0"
+            />
             Project Burndown
           </p>
           <h1 className="h1 max-w-5xl">{summary.displayName}</h1>

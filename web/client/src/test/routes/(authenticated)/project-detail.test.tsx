@@ -1020,12 +1020,11 @@ describe('project detail page', () => {
     try {
       expect(
         await screen.findByRole('heading', {
-          name: 'Project Burndown',
+          level: 1,
+          name: 'Test Project',
         })
       ).toBeInTheDocument();
-      expect(
-        screen.getByRole('heading', { level: 2, name: 'Test Project' })
-      ).toBeInTheDocument();
+      expect(screen.getByText('Project Burndown')).toBeInTheDocument();
       expect(
         await screen.findByTestId('project-burndown-chart')
       ).toBeInTheDocument();
