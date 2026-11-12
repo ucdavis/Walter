@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Server.Controllers;
+using Server.Demo;
 using Server.Services;
 using server.core.Models;
 using server.core.Services;
@@ -453,6 +454,32 @@ public sealed class ProjectControllerTests
             (await request.Should().ThrowAsync<Exception>()).Which.Should().BeSameAs(error);
             dm.ReportCalls.Should().Be(0);
         }
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Financial_viewer_sees_the_demo_PI_without_calling_AE_or_the_datamart(bool legacy)
+    {
+        using var ctx = TestDbContextFactory.CreateInMemory();
+        var dm = new FakeDatamartService();
+        var router = new DemoDataRouter(dm, new FakePpmPortfolioReader { Error = new Exception("Demo ids must not reach the datamart") },
+            new FakeProjectionDataSource(), new DemoDataSource());
+        var controller = new ProjectController(router, CreateAuthorizationService(),
+            new UserService(NullLogger<UserService>.Instance, ctx),
+            new PpmPortfolioService(new ThrowingFinancialApiService(), router,
+                Microsoft.Extensions.Options.Options.Create(new FeatureFlagOptions { UseGraphQLAPI = legacy })))
+        {
+            ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = CreateUser([Role.Names.FinancialViewer]) } }
+        };
+
+        var portfolio = await controller.GetByIamIdAsync(DemoDataSet.PiIamId, default);
+
+        portfolio.Should().BeOfType<OkObjectResult>().Which.Value.Should().BeAssignableTo<IEnumerable<FacultyPortfolioRecord>>()
+            .Which.Select(r => r.ProjectNumber).Distinct().Should().BeEquivalentTo(["DEMO-1001", "DEMO-1002", "DEMO-1004"]);
+        foreach (var endpoint in new[] { "byNumber", "personnel", "transactions", "reconciliation", "projection", "costs" })
+            (await InvokeProjectEndpoint(controller, endpoint, "DEMO-1001", null)).Should().BeOfType<OkObjectResult>();
+        dm.ReportCalls.Should().Be(0);
     }
 
     [Theory]

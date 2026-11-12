@@ -15,6 +15,36 @@ public sealed class PpmPortfolioServiceTests
         new("P2", [new(PpmRole.ProjectManager, "Project PM", "PM", null)], [])
     ];
 
+    private static readonly FakeFinancialProject[] DemoProjects =
+    [
+        new("DEMO-1", [new(PpmRole.PrincipalInvestigator, "Demo PI", "DEMO0001", null),
+            new(PpmRole.ProjectManager, "Demo PM", "DEMO0002", null)], [])
+    ];
+
+    [Fact]
+    public async Task Demo_ids_use_the_reader_even_in_GraphQL_mode()
+    {
+        var reader = new FakePpmPortfolioReader(DemoProjects);
+        var service = Create(legacy: true, reader);
+
+        (await service.GetEmployeeProjectsAsync("DEMO0001", PpmRole.PrincipalInvestigator, default)).Should().ContainSingle();
+        (await service.GetProjectTeamAsync("DEMO-1", PpmRole.PrincipalInvestigator, default)).Should().ContainSingle();
+        reader.MembershipCalls.Should().Be(1);
+        reader.TeamCalls.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Badges_send_only_demo_ids_to_the_reader_in_GraphQL_mode()
+    {
+        var reader = new FakePpmPortfolioReader(DemoProjects);
+        var service = Create(legacy: true, reader);
+
+        var managers = await service.GetProjectManagerEmployeeIdsAsync(["DEMO0002", "PM", "NOBODY"], default);
+
+        managers.Should().BeEquivalentTo(["DEMO0002", "PM"]);
+        reader.BadgeEmployeeIds.Should().Equal("DEMO0002");
+    }
+
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
