@@ -86,14 +86,7 @@ builder.Services.AddSingleton<IFinancialApiService, FinancialApiService>();
 builder.Services.AddSingleton<DatamartService>();
 if (builder.Configuration.GetValue<bool>($"{FeatureFlagOptions.SectionName}:{nameof(FeatureFlagOptions.DemoDataEnabled)}"))
 {
-    builder.Services.AddSingleton(sp =>
-    {
-        var datamart = sp.GetRequiredService<DatamartService>();
-        return new DemoDataRouter(datamart, datamart, datamart, new DemoDataSource());
-    });
-    builder.Services.AddSingleton<IDatamartService>(sp => sp.GetRequiredService<DemoDataRouter>());
-    builder.Services.AddSingleton<IPpmPortfolioReader>(sp => sp.GetRequiredService<DemoDataRouter>());
-    builder.Services.AddSingleton<IProjectionDataSource>(sp => sp.GetRequiredService<DemoDataRouter>());
+    builder.Services.AddDemoData();
 }
 else
 {

@@ -38,14 +38,6 @@ public sealed class DemoDataSource(DateTime? referenceDate = null)
         Result<IReadOnlyList<PpmTeamMember>>(DemoDataSet.CreateMemberships().Where(p => Equal(p.ProjectNumber, projectNumber))
             .SelectMany(p => p.TeamMembers).Where(m => Equal(m.RoleName, roleName)).ToArray(), ct);
 
-    public Task<IReadOnlySet<string>> GetProjectManagerEmployeeIdsAsync(IEnumerable<string> employeeIds, CancellationToken ct = default)
-    {
-        var ids = Requested(employeeIds);
-        return Result<IReadOnlySet<string>>(DemoDataSet.CreateMemberships().SelectMany(p => p.TeamMembers)
-            .Where(m => m.RoleName == PpmRole.ProjectManager && ids.Contains(m.EmployeeId))
-            .Select(m => m.EmployeeId).ToHashSet(StringComparer.OrdinalIgnoreCase), ct);
-    }
-
     public Task<IReadOnlyList<FacultyPortfolioRecord>> GetFacultyPortfolioAsync(IEnumerable<string> projectNumbers, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default)
     {
         var ids = Requested(projectNumbers);

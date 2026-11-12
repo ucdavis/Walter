@@ -39,8 +39,6 @@ public sealed class DemoDataSourceTests
         (await _data.GetProjectProjectionAsync("REAL-PROJECT", 3)).Categories.Should().BeEmpty();
         (await _data.GetFacultyPortfolioAsync(["REAL-PROJECT", "DEMO-1001"]))
             .Should().OnlyContain(p => p.ProjectNumber == "DEMO-1001");
-        (await _data.GetProjectManagerEmployeeIdsAsync([DemoDataSet.PmEmployeeId, "12345678"]))
-            .Should().BeEquivalentTo([DemoDataSet.PmEmployeeId]);
     }
 
     [Fact]

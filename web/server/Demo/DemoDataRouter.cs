@@ -10,7 +10,7 @@ public sealed class DemoDataRouter(
     IProjectionDataSource projections,
     DemoDataSource demo) : IDatamartService, IPpmPortfolioReader, IProjectionDataSource
 {
-    public static bool IsDemo(string? id) =>
+    private static bool IsDemo(string? id) =>
         id?.TrimStart().StartsWith("DEMO", StringComparison.OrdinalIgnoreCase) == true;
 
     public Task<IReadOnlyList<ProjectSearchRecord>> SearchProjectsAsync(string fuzzyQuery, string exactProjectNumber, CancellationToken ct = default) =>
@@ -84,11 +84,8 @@ public sealed class DemoDataRouter(
             ? demo.GetProjectTeamAsync(projectNumber, roleName, ct)
             : reader.GetProjectTeamAsync(projectNumber, roleName, ct);
 
-    public async Task<IReadOnlySet<string>> GetProjectManagerEmployeeIdsAsync(IEnumerable<string> employeeIds, CancellationToken ct = default) =>
-        (await SplitAsync<string>(employeeIds,
-            async ids => [.. await demo.GetProjectManagerEmployeeIdsAsync(ids, ct)],
-            async ids => [.. await reader.GetProjectManagerEmployeeIdsAsync(ids, ct)]))
-        .ToHashSet(StringComparer.OrdinalIgnoreCase);
+    public Task<IReadOnlySet<string>> GetProjectManagerEmployeeIdsAsync(IEnumerable<string> employeeIds, CancellationToken ct = default) =>
+        reader.GetProjectManagerEmployeeIdsAsync(employeeIds, ct);
 
     public Task<ProjectionSeedData> GetProjectionSeedAsync(string piEmployeeId, string? applicationUser, string? emulatingUser, CancellationToken ct) =>
         IsDemo(piEmployeeId)

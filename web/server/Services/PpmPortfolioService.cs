@@ -3,7 +3,6 @@ using Microsoft.Extensions.Options;
 using server.core.Models;
 using server.core.Services;
 using server.Helpers;
-using Server.Demo;
 
 namespace server.Services;
 
@@ -17,8 +16,7 @@ public sealed class PpmPortfolioService(
     public async Task<IReadOnlyList<PpmProjectMembership>> GetEmployeeProjectsAsync(
         string employeeId, string roleName, CancellationToken ct)
     {
-        // AE rejects demo ids, so they always go to the reader.
-        if (!flags.Value.UseGraphQLAPI || DemoDataRouter.IsDemo(employeeId))
+        if (!flags.Value.UseGraphQLAPI)
             return await reader.GetEmployeeProjectsAsync(employeeId, roleName, ct);
 
         var result = await financialApi.GetClient().PpmProjectByProjectTeamMemberEmployeeId.ExecuteAsync(employeeId, roleName, ct);
@@ -31,7 +29,7 @@ public sealed class PpmPortfolioService(
     /// <inheritdoc cref="IPpmPortfolioReader.GetProjectTeamAsync" />
     public async Task<IReadOnlyList<PpmTeamMember>> GetProjectTeamAsync(string projectNumber, string roleName, CancellationToken ct)
     {
-        if (!flags.Value.UseGraphQLAPI || DemoDataRouter.IsDemo(projectNumber))
+        if (!flags.Value.UseGraphQLAPI)
             return await reader.GetProjectTeamAsync(projectNumber, roleName, ct);
 
         var result = await financialApi.GetClient().PpmProjectTeamMembers.ExecuteAsync(projectNumber, roleName, ct);
@@ -47,12 +45,8 @@ public sealed class PpmPortfolioService(
         if (!flags.Value.UseGraphQLAPI)
             return await reader.GetProjectManagerEmployeeIdsAsync(employeeIds, ct);
 
-        var ids = employeeIds.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-        var demoIds = ids.Where(DemoDataRouter.IsDemo).ToList();
         var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        if (demoIds.Count > 0)
-            result.UnionWith(await reader.GetProjectManagerEmployeeIdsAsync(demoIds, ct));
-        foreach (var employeeId in ids.Except(demoIds))
+        foreach (var employeeId in employeeIds.Distinct(StringComparer.OrdinalIgnoreCase))
         {
             var projects = await financialApi.GetClient().PpmProjectByProjectTeamMemberEmployeeId.ExecuteAsync(employeeId, PpmRole.ProjectManager, ct);
             if (projects.ReadData().PpmProjectByProjectTeamMemberEmployeeId.Any())

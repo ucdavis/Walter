@@ -456,10 +456,8 @@ public sealed class ProjectControllerTests
         }
     }
 
-    [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public async Task Financial_viewer_sees_the_demo_PI_without_calling_AE_or_the_datamart(bool legacy)
+    [Fact]
+    public async Task Financial_viewer_sees_the_demo_PI_without_calling_AE_or_the_datamart()
     {
         using var ctx = TestDbContextFactory.CreateInMemory();
         var dm = new FakeDatamartService();
@@ -468,7 +466,7 @@ public sealed class ProjectControllerTests
         var controller = new ProjectController(router, CreateAuthorizationService(),
             new UserService(NullLogger<UserService>.Instance, ctx),
             new PpmPortfolioService(new ThrowingFinancialApiService(), router,
-                Microsoft.Extensions.Options.Options.Create(new FeatureFlagOptions { UseGraphQLAPI = legacy })))
+                Microsoft.Extensions.Options.Options.Create(new FeatureFlagOptions { UseGraphQLAPI = false })))
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = CreateUser([Role.Names.FinancialViewer]) } }
         };

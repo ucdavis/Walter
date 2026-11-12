@@ -1,6 +1,8 @@
 using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
 using server.core.Domain;
 using server.core.Models;
+using server.core.Services;
 using server.Helpers;
 using server.Services;
 using server.tests.Fakes;
@@ -77,12 +79,29 @@ public sealed class DemoDataRouterTests
     }
 
     [Fact]
-    public async Task Project_manager_badges_merge_demo_and_real_employees()
+    public async Task Registration_serves_all_three_interfaces_from_one_router()
     {
-        var managers = await Router().GetProjectManagerEmployeeIdsAsync([DemoDataSet.PmEmployeeId, "E1", "E2"]);
+        var services = new ServiceCollection();
+        services.Configure<DatamartOptions>(options => options.ConnectionString = "Server=unused");
+        services.AddSingleton<DatamartService>();
+        services.AddDemoData();
+        using var provider = services.BuildServiceProvider(validateScopes: true);
 
-        managers.Should().BeEquivalentTo([DemoDataSet.PmEmployeeId, "E1"]);
-        _reader.BadgeEmployeeIds.Should().BeEquivalentTo(["E1", "E2"]);
+        var datamart = provider.GetRequiredService<IDatamartService>();
+
+        datamart.Should().BeOfType<DemoDataRouter>();
+        provider.GetRequiredService<IPpmPortfolioReader>().Should().BeSameAs(datamart);
+        provider.GetRequiredService<IProjectionDataSource>().Should().BeSameAs(datamart);
+        (await datamart.GetSearchablePersonByIamIdAsync(DemoDataSet.PiIamId)).Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task Project_manager_badges_always_come_from_the_datamart()
+    {
+        var managers = await Router().GetProjectManagerEmployeeIdsAsync([DemoDataSet.PmEmployeeId, "E1"]);
+
+        managers.Should().BeEquivalentTo(["E1"]);
+        _reader.BadgeEmployeeIds.Should().BeEquivalentTo([DemoDataSet.PmEmployeeId, "E1"]);
     }
 
     [Fact]
