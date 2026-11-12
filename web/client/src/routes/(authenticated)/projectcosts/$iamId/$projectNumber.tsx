@@ -98,8 +98,8 @@ function RouteComponent() {
   return (
     <ProjectPortfolioLayout>
       <main className="flex-1 min-w-0">
-        <section className="mt-8 mb-6 sm:mb-8">
-          <div className="mb-4 flex flex-wrap gap-2">
+        <section className="mt-8 mb-2">
+          <div className="mb-12 flex flex-wrap gap-2">
             <Link
               className="btn btn-sm"
               params={{ iamId, projectNumber: summary.projectNumber }}
@@ -120,12 +120,19 @@ function RouteComponent() {
             ) : null}
           </div>
 
-          <h1 className="h1">Project Costs</h1>
-          <h2 className="subtitle max-w-5xl">{summary.displayName}</h2>
+          <p className="mb-2 font-semibold uppercase text-base-content/70">
+            Project Costs
+          </p>
+          <h1 className="h1 max-w-5xl">{summary.displayName}</h1>
         </section>
 
         {featureFlags.projectCostsEnabled ? (
           <section className="section-margin">
+            <p className="max-w-3xl">
+              Project Costs are updated weekly on Mondays from the Cognos
+              Project Expense Report. Costs that have occurred since the latest
+              data refresh are not included.
+            </p>
             <ProjectCostsTable
               category={category}
               isInternal={summary.isInternal}

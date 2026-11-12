@@ -334,11 +334,9 @@ describe('project costs page', () => {
 
     try {
       expect(
-        await screen.findByRole('heading', { name: 'Project Costs' })
+        await screen.findByRole('heading', { level: 1, name: 'Test Project' })
       ).toBeInTheDocument();
-      expect(
-        screen.getByRole('heading', { level: 2, name: 'Test Project' })
-      ).toBeInTheDocument();
+      expect(screen.getByText('Project Costs')).toBeInTheDocument();
       const table = screen.getByTestId('project-costs-table');
       expect(table).toBeInTheDocument();
       expect(

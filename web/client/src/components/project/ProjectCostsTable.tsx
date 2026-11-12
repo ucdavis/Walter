@@ -257,7 +257,7 @@ export function ProjectCostsTable({
 
   return (
     <div data-testid="project-costs-table">
-      <div className="mb-6 sm:mb-8">
+      <div className="mb-6 sm:mb-8 mt-4">
         <div className="mb-6 flex flex-wrap items-end gap-4">
           <fieldset className="min-w-0 w-full sm:w-auto">
             <legend className="mb-2 text-sm font-semibold text-base-content/80">
