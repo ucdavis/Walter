@@ -72,7 +72,7 @@ function RouteComponent() {
   return (
     <ProjectPortfolioLayout>
       <main className="flex-1 min-w-0">
-        <section className="mt-8 mb-2">
+        <section className="mt-8 mb-6 sm:mb-8">
           <div className="mb-4 flex flex-wrap gap-2">
             <Link
               className="btn btn-sm"
