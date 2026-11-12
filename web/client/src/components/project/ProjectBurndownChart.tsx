@@ -715,8 +715,8 @@ export function ProjectBurndownSection({
 
   return (
     <>
-      <section className="mt-2 pb-4">
-        <div className="mb-6 max-w-3xl">
+      <section className="pb-4">
+        <div className="mb-6 max-w-3xl sm:mb-8">
           <p>{tooltipDefinitions.projectBurndown}</p>
           <p className="mt-2 text-sm text-muted">
             Indirect Costs (F&amp;A) are assessed based on the approved award.
@@ -743,8 +743,8 @@ export function ProjectBurndownSection({
         {projectionQuery.isSuccess && series.length > 0 && (
           <div>
             {stats && (
-              <div className="relative z-50 mb-6 text-sm">
-                <div className="relative z-[100] mb-4 flex flex-wrap gap-4">
+              <div className="relative z-50 mb-6 text-sm sm:mb-8">
+                <div className="relative z-[100] mb-6 flex flex-wrap gap-4">
                   <BurndownSelect
                     id="burndown-timeline"
                     label="Timeline"

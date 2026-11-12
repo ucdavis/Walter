@@ -257,36 +257,43 @@ export function ProjectCostsTable({
 
   return (
     <div data-testid="project-costs-table">
-      <div className="mb-4">
-        <div className="mb-5 flex flex-wrap items-end gap-4">
-          <DatePicker
-            id="project-costs-from-date"
-            label="From"
-            max={toDate || undefined}
-            onChange={setFromDate}
-            placeholder="Any start date"
-            value={fromDate}
-          />
-          <DatePicker
-            id="project-costs-to-date"
-            label="To"
-            min={fromDate || undefined}
-            onChange={setToDate}
-            placeholder="Any end date"
-            value={toDate}
-          />
-          {fromDate || toDate ? (
-            <button
-              className="btn btn-ghost min-h-11 text-base"
-              onClick={() => {
-                setFromDate('');
-                setToDate('');
-              }}
-              type="button"
-            >
-              Clear dates
-            </button>
-          ) : null}
+      <div className="mb-6 sm:mb-8 mt-4">
+        <div className="mb-6 flex flex-wrap items-end gap-4">
+          <fieldset className="min-w-0 w-full sm:w-auto">
+            <legend className="mb-2 text-sm font-semibold text-base-content/80">
+              Expenditure item date
+            </legend>
+            <div className="flex flex-wrap items-end gap-4">
+              <DatePicker
+                id="project-costs-from-date"
+                label="From"
+                max={toDate || undefined}
+                onChange={setFromDate}
+                placeholder="Any start date"
+                value={fromDate}
+              />
+              <DatePicker
+                id="project-costs-to-date"
+                label="To"
+                min={fromDate || undefined}
+                onChange={setToDate}
+                placeholder="Any end date"
+                value={toDate}
+              />
+              {fromDate || toDate ? (
+                <button
+                  className="btn btn-ghost min-h-11 text-base"
+                  onClick={() => {
+                    setFromDate('');
+                    setToDate('');
+                  }}
+                  type="button"
+                >
+                  Clear dates
+                </button>
+              ) : null}
+            </div>
+          </fieldset>
 
           {isInternal ? (
             <div className="w-full min-w-0 sm:w-auto sm:min-w-56 sm:max-w-full">

@@ -11,6 +11,7 @@ import { projectsDetailQueryOptions } from '@/queries/project.ts';
 import { useUser } from '@/shared/auth/UserContext.tsx';
 import {
   ClipboardDocumentListIcon,
+  PresentationChartLineIcon,
   TableCellsIcon,
 } from '@heroicons/react/24/outline';
 import { useSuspenseQuery } from '@tanstack/react-query';
@@ -73,7 +74,7 @@ function RouteComponent() {
     <ProjectPortfolioLayout>
       <main className="flex-1 min-w-0">
         <section className="mt-8 mb-2">
-          <div className="mb-4 flex flex-wrap gap-2">
+          <div className="mb-12 flex flex-wrap gap-2">
             <Link
               className="btn btn-sm"
               params={{ iamId, projectNumber: summary.projectNumber }}
@@ -94,8 +95,14 @@ function RouteComponent() {
             ) : null}
           </div>
 
-          <h1 className="h1">Project Burndown</h1>
-          <h2 className="subtitle max-w-5xl">{summary.displayName}</h2>
+          <p className="mb-2 flex items-center gap-2 font-semibold uppercase text-base-content/70">
+            <PresentationChartLineIcon
+              aria-hidden="true"
+              className="size-4 shrink-0"
+            />
+            Project Burndown
+          </p>
+          <h1 className="h1 max-w-5xl">{summary.displayName}</h1>
         </section>
 
         {expired ? (

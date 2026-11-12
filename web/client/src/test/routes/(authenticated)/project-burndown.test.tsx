@@ -145,8 +145,9 @@ describe('project burndown page', () => {
 
     try {
       expect(
-        await screen.findByRole('heading', { name: 'Project Burndown' })
+        await screen.findByRole('heading', { level: 1, name: 'Test Project' })
       ).toBeInTheDocument();
+      expect(screen.getByText('Project Burndown')).toBeInTheDocument();
       expect(
         screen.queryByText(
           'Project burndown is not available for expired projects.'
