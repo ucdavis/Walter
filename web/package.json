@@ -2,10 +2,13 @@
   "name": "web-app-template",
   "private": true,
   "scripts": {
-    "start": "dotnet watch --project server/server.csproj",
-    "kill-ports": "npx kill-port 5166 5174"
+    "start": "npm-run-all --parallel start:server start:client",
+    "kill-ports": "npx kill-port 5166 5174",
+    "start:server": "dotnet watch run --project server/server.csproj --launch-profile http-cli",
+    "start:client": "wait-on --timeout 120000 http-get://localhost:5166/health && npm --prefix client run dev"
   },
   "devDependencies": {
-    "npm-run-all": "^4.1.5"
+    "npm-run-all": "^4.1.5",
+    "wait-on": "^9.0.4"
   }
 }
