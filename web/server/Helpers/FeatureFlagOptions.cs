@@ -1,9 +1,8 @@
 namespace server.Helpers;
 
 /// <summary>
-/// Environment feature flags, bound from the "FeatureFlags" configuration section. These gate
-/// optional features per environment (set via appsettings or an Azure App Setting, e.g. env
-/// FeatureFlags__BurndownEnabled). UI flags are surfaced to the SPA via GET /api/system/features.
+/// Backend rollout settings and legacy UI defaults bound from "FeatureFlags". The UI values
+/// seed Microsoft Feature Management only when no Azure App Configuration endpoint is configured.
 /// </summary>
 public sealed class FeatureFlagOptions
 {
@@ -16,16 +15,12 @@ public sealed class FeatureFlagOptions
     /// </summary>
     public bool UseGraphQLAPI { get; set; } = true;
 
-    /// <summary>Whether the project burndown feature is exposed in the UI.</summary>
     public bool BurndownEnabled { get; set; }
 
-    /// <summary>Whether the expenditure progress feature is exposed in the UI.</summary>
     public bool ExpenditureProgressEnabled { get; set; }
 
-    /// <summary>Whether the project costs preview is exposed in the UI.</summary>
     public bool ProjectCostsEnabled { get; set; }
 
-    /// <summary>Whether the PI projections pages are exposed in the UI. The API is not gated.</summary>
     public bool ProjectionsEnabled { get; set; }
 
     /// <summary>Serves in-memory demo data for ids starting with DEMO. Read once at startup.</summary>

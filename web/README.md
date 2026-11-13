@@ -70,6 +70,31 @@ When you are ready to get your own, go to [Microsoft Entra ID](https://entra.mic
 
 You might also want to set the publisher domain to ucdavis.edu and fill in the other general branding info.
 
+### Feature flags
+
+Configure `AppConfiguration__Endpoint` to connect to Azure App Configuration. For local development, authorize Azure CLI with `az login` using an account with access to the store. Leave the endpoint unset to use local feature settings.
+
+Flags refresh every ten minutes while the app receives requests. Active browser tabs check for updates every two minutes.
+
+Missing flags are off. Connection failures prevent startup; failures after startup retain cached values.
+
+#### IAM targeting
+
+Use the native `Microsoft.Targeting` filter for an IAM allowlist or exclusions. Keep the feature itself enabled. For a preview, set the default rollout to `0` and add IAM IDs under `Audience.Users`. For a feature enabled for everyone except selected users, set the default to `100` and add IAM IDs under `Audience.Exclusion.Users`. Exclusions take precedence over inclusions. Example filter parameters:
+
+```json
+{
+  "Audience": {
+    "Users": ["1234567890"],
+    "Groups": [],
+    "DefaultRolloutPercentage": 0,
+    "Exclusion": { "Users": ["0987654321"], "Groups": [] }
+  }
+}
+```
+
+The example IDs are placeholders. Walter resolves the authenticated user's `ucdPersonIAMID` claim, falling back to that user's stored IAM ID. During emulation it uses the emulated user's stored IAM ID. It never accepts targeting identity from a query parameter or the project page's IAM ID. If IAM cannot be resolved, global flags still work, targeted flags return off even with a default of `100`, and Walter logs a warning. Group membership and percentage rollouts other than the `0`/`100` defaults are outside this workflow.
+
 ### Health check
 
 The health check endpoint (`/health`) is configured to return the status of the application and its dependencies. It includes a database health check to ensure the SQL Server connection is healthy. See [Health Checks](https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/health-checks?view=aspnetcore-10.0#entity-framework-core-dbcontext-probe).

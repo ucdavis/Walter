@@ -51,7 +51,7 @@ function RouteComponent() {
   );
 
   const user = useUser();
-  const { data: featureFlags } = useQuery(featureFlagsQueryOptions());
+  const { data: featureFlags } = useQuery(featureFlagsQueryOptions(user.id));
   const authorizedDiscrepancyProjectNumbers = useMemo(
     () => [
       ...new Set(

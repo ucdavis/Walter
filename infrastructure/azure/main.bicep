@@ -10,6 +10,15 @@ param env string = ''
 @description('Existing App Service Plan resource ID')
 param appServicePlanId string
 
+@description('Existing App Configuration store name. Leave empty to preserve deployments that do not use App Configuration.')
+param appConfigurationStoreName string = ''
+
+@description('Resource group containing the existing App Configuration store.')
+param appConfigurationResourceGroupName string = resourceGroup().name
+
+@description('Subscription containing the existing App Configuration store, in the same Microsoft Entra tenant.')
+param appConfigurationSubscriptionId string = subscription().subscriptionId
+
 @description('SQL admin login name')
 param sqlAdminLogin string = ''
 
@@ -91,10 +100,20 @@ module web './modules/webapp.bicep' = {
     webAppName: webAppName
     appServicePlanId: appServicePlanId
     linuxFxVersion: linuxFxVersion
+    enableSystemAssignedIdentity: !empty(appConfigurationStoreName)
   }
   dependsOn: [
     sql
   ]
+}
+
+module appConfigurationAccess './modules/appconfiguration-access.bicep' = if (!empty(appConfigurationStoreName)) {
+  name: 'app-configuration-${uniqueString(resourceGroup().id, webAppName)}'
+  scope: resourceGroup(appConfigurationSubscriptionId, appConfigurationResourceGroupName)
+  params: {
+    storeName: appConfigurationStoreName
+    principalId: web.outputs.principalId
+  }
 }
 
 module notificationsFunction './modules/functionapp.bicep' = {
@@ -118,6 +137,7 @@ module notificationsFunction './modules/functionapp.bicep' = {
 }
 
 output webAppId string = web.outputs.webAppId
+output appConfigurationEndpoint string = !empty(appConfigurationStoreName) ? appConfigurationAccess!.outputs.endpoint : ''
 output functionAppId string = notificationsFunction.outputs.functionAppId
 output sqlServerFqdn string = sql.outputs.sqlServerFqdn
 output nameToken string = nameToken
