@@ -28,6 +28,8 @@ export interface ProjectSummary {
   flowThroughFundsStartDate: string | null;
   grantAdministrator: string | null;
   internalFundedProject: string | null;
+  /** PPM type Capital or Sponsored Capital: multi-task like internal, category budgets like sponsored. */
+  isCapital: boolean;
   isInternal: boolean;
   pa: string | null;
   pi: string | null;
@@ -131,6 +133,7 @@ export const summarizeAllProjects = (
     flowThroughFundsStartDate: null,
     grantAdministrator: null,
     internalFundedProject: null,
+    isCapital: false,
     isInternal: false,
     pa: null,
     pi: 'Multiple',
@@ -190,6 +193,9 @@ export const summarizeProjectByNumber = (
     internalFundedProject: first.projectType
       ? first.projectType === 'Internal' ? 'Yes' : 'No'
       : null,
+    isCapital:
+      first.projectType === 'Capital' ||
+      first.projectType === 'Sponsored Capital',
     isInternal: first.projectType === 'Internal',
     pa: first.pa,
     pi: first.pi,

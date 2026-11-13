@@ -453,6 +453,27 @@ describe('project costs page', () => {
     }
   });
 
+  it('shows the task column and task filter for Capital projects', async () => {
+    setupHandlers(
+      [createProject({ projectType: 'Capital' })],
+      [createProjectCost({ taskName: 'Field Work', taskNumber: 'TASK02' })]
+    );
+
+    const { cleanup } = renderRoute({ initialPath: '/projectcosts/1000/P1' });
+
+    try {
+      const table = await screen.findByTestId('project-costs-table');
+      expect(
+        within(table).getByRole('columnheader', { name: 'Task' })
+      ).toBeInTheDocument();
+      expect(
+        within(table).getByRole('combobox', { name: 'Task' })
+      ).toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+
   it('filters by the task in the URL', async () => {
     setupHandlers(
       [createProject({ awardNumber: null, projectType: 'Internal' })],

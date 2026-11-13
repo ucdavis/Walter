@@ -1236,6 +1236,99 @@ describe('project detail page', () => {
     }
   });
 
+  it.each(['Capital', 'Sponsored Capital'])(
+    'shows both breakdowns with per-task Finjector links for %s projects',
+    async (projectType) => {
+      const projects = [
+        createProject({
+          expenditureCategoryName: '01 - Salaries and Wages',
+          fundCode: '13U00',
+          pmEmployeeId: '2000',
+          projectType,
+        }),
+        createProject({
+          expenditureCategoryName: '03 - Supplies / Services / Other Expenses',
+          fundCode: '20700',
+          pmEmployeeId: '2000',
+          projectType,
+          taskName: 'Task 2',
+          taskNum: 'T002',
+        }),
+      ];
+      setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);
+
+      const { cleanup } = renderRoute({ initialPath: '/projects/1000/P1' });
+
+      try {
+        const categoryHeading = await screen.findByRole('heading', {
+          level: 2,
+          name: 'Expenditure Category Breakdown',
+        });
+        const taskHeading = screen.getByRole('heading', {
+          level: 2,
+          name: 'Task Breakdown',
+        });
+        // Expenditure categories come first.
+        expect(
+          categoryHeading.compareDocumentPosition(taskHeading) &
+            Node.DOCUMENT_POSITION_FOLLOWING
+        ).toBeTruthy();
+
+        expect(screen.getByText('13U00')).toBeInTheDocument();
+        expect(screen.getByText('20700')).toBeInTheDocument();
+
+        const finjectorLinks = screen.getAllByRole('link', {
+          name: 'Open in Finjector',
+        });
+        expect(finjectorLinks.map((link) => link.getAttribute('href'))).toEqual(
+          [
+            expect.stringContaining('P1-T001-ORG001'),
+            expect.stringContaining('P1-T002-ORG001'),
+          ]
+        );
+
+        const topSection = screen
+          .getByRole('heading', { level: 1, name: 'Test Project' })
+          .closest('section') as HTMLElement;
+        expect(
+          within(topSection).queryByRole('link', { name: /Open in Finjector/ })
+        ).not.toBeInTheDocument();
+        expect(
+          screen.queryByRole('link', { name: 'Task Details' })
+        ).not.toBeInTheDocument();
+      } finally {
+        cleanup();
+      }
+    }
+  );
+
+  it('keeps the sponsored layout for Sponsored Fabrication projects', async () => {
+    const projects = [
+      createProject({
+        pmEmployeeId: '2000',
+        projectType: 'Sponsored Fabrication',
+      }),
+    ];
+    setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);
+
+    const { cleanup } = renderRoute({ initialPath: '/projects/1000/P1' });
+
+    try {
+      const heading = await screen.findByRole('heading', {
+        level: 1,
+        name: 'Test Project',
+      });
+      expect(
+        within(heading.closest('section') as HTMLElement).getByRole('link', {
+          name: /Open in Finjector/,
+        })
+      ).toBeInTheDocument();
+      expect(screen.queryByText('Task Breakdown')).not.toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+
   it('shows expenditure categories instead of task breakdown for sponsored projects', async () => {
     const user = userEvent.setup();
     const projects = [
