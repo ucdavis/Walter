@@ -105,6 +105,38 @@ const setupHandlers = (
 };
 
 describe('project detail page', () => {
+  it.each([true, false])(
+    'gates the PI-wide projections action with flag %s',
+    async (enabled) => {
+      setupHandlers({ employeeId: '1000', name: 'PI User' }, [createProject()]);
+      server.use(
+        http.get('/api/system/features', () =>
+          HttpResponse.json({ projectionsEnabled: enabled })
+        )
+      );
+      const { cleanup } = renderRoute({ initialPath: '/projects/1000/P1' });
+      try {
+        await screen.findByRole('heading', { level: 1, name: 'Test Project' });
+        const main = screen
+          .getByRole('heading', { level: 1, name: 'Test Project' })
+          .closest('main')!;
+        if (enabled) {
+          const link = await within(main).findByRole('link', {
+            name: 'Projections',
+          });
+          expect(link).toHaveAttribute('href', '/projections/1000');
+          expect(link).toHaveClass('btn', 'btn-lg');
+        } else {
+          expect(
+            within(main).queryByRole('link', { name: 'Projections' })
+          ).not.toBeInTheDocument();
+        }
+      } finally {
+        cleanup();
+      }
+    }
+  );
+
   it('shows project identity, Finjector action, status, and source in the top section', async () => {
     const projects = [createProject({ pmEmployeeId: '2000' })];
     setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);

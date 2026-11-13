@@ -47,6 +47,8 @@ export const tooltipDefinitions = {
   totalBudget:
     'Total PPM budget across all active and expired projects. Closed projects are excluded.',
   viewChartStringInFinjector: 'View chart string in Finjector',
+  viewPiProjections: 'View projections',
+  viewPiProjects: 'View projects',
 } as const;
 
 export type TooltipDefinitionKey = keyof typeof tooltipDefinitions;
