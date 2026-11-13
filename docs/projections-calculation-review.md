@@ -269,7 +269,8 @@ limits. Planned funding chooses a Source type when created: Internal uses one
 shared balance, and Sponsored uses separate category budgets.
 Category-based planned funding uses the same salary/fringe checks as sponsored
 funding. Unrecognized imported project types have an unknown budgeting basis
-rather than being treated as unrestricted.
+rather than being treated as unrestricted. Imported source classification uses
+the project type, not the presence of category rows or the budgetary-control flag.
 
 Shortfalls mean a balance below zero at month end. The affected source segment
 warns for all appointments allocated to it in that month; the warning does not

@@ -4,7 +4,10 @@ import { PageEmpty } from '@/components/states/PageEmpty.tsx';
 import { PageError } from '@/components/states/PageError.tsx';
 import { PageLoading } from '@/components/states/PageLoading.tsx';
 import { getErrorPresentation } from '@/lib/errorPresentation.ts';
-import { managedPisQueryOptions, useManagedPisQuery } from '@/queries/project.ts';
+import {
+  managedPisQueryOptions,
+  useManagedPisQuery,
+} from '@/queries/project.ts';
 import { ProjectionUnavailable } from '@/components/projections/ProjectionAvailability.tsx';
 import {
   featureFlagsQueryOptions,
@@ -20,7 +23,9 @@ export const Route = createFileRoute('/(authenticated)/projections/')({
     const flags = await context.queryClient.fetchQuery(
       featureFlagsQueryOptions(user.id)
     );
-    if (!flags.projectionsEnabled) {return;}
+    if (!flags.projectionsEnabled) {
+      return;
+    }
     if (!canAccessPrincipalInvestigatorsNav(user.roles)) {
       const managed = await context.queryClient.ensureQueryData(
         managedPisQueryOptions(user.iamId)

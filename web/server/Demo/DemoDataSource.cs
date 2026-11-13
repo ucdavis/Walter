@@ -59,30 +59,69 @@ public sealed class DemoDataSource(DateTime? referenceDate = null)
         var ids = Requested(projectNumbers);
         var transactions = DemoDataSet.CreateCosts(Month).Where(p => ids.Contains(p.ProjectNumber)).Select(p => new GLTransactionRecord
         {
-            Entity = "DEMO", EntityDescription = "Fictional Demonstration Entity", Project = p.ProjectNumber, ProjectDescription = p.ProjectName,
-            Fund = "DEMO-FUND", FundDescription = "Fictional Research Fund", FinancialDepartment = "DEMO-DEPT",
-            FinancialDepartmentDescription = p.ProjectOwningOrgName, Account = $"DEMO-{p.ExpenditureCategory[..2]}",
-            AccountDescription = p.ExpenditureCategory[5..], Purpose = "DEMO-PURPOSE", PurposeDescription = "Demonstration Research",
-            Program = "DEMO-PROGRAM", ProgramDescription = "Imaginary Research Program", Activity = "DEMO-ACTIVITY",
-            ActivityDescription = "Presentation Examples", DocumentType = "DEMO", AccountingSequenceNumber = p.TransactionNumber.ToString(CultureInfo.InvariantCulture),
-            TrackingNo = p.Document, Reference = p.Document, JournalLineDescription = p.Comment, JournalAcctDate = p.AccountingDate,
-            JournalName = $"DEMO {p.ExpenditureCategory}", JournalReference = p.Document, PeriodName = p.AccountingPeriod,
-            JournalBatchName = p.ExpenditureBatch, JournalSource = "Fictional presentation data", JournalCategory = p.ExpenditureCategory,
-            BatchStatus = "P", ActualFlag = "A", ActualAmount = p.BurdenedCost, NaturalAccountType = "5 - Expense",
+            Entity = "DEMO",
+            EntityDescription = "Fictional Demonstration Entity",
+            Project = p.ProjectNumber,
+            ProjectDescription = p.ProjectName,
+            Fund = "DEMO-FUND",
+            FundDescription = "Fictional Research Fund",
+            FinancialDepartment = "DEMO-DEPT",
+            FinancialDepartmentDescription = p.ProjectOwningOrgName,
+            Account = $"DEMO-{p.ExpenditureCategory[..2]}",
+            AccountDescription = p.ExpenditureCategory[5..],
+            Purpose = "DEMO-PURPOSE",
+            PurposeDescription = "Demonstration Research",
+            Program = "DEMO-PROGRAM",
+            ProgramDescription = "Imaginary Research Program",
+            Activity = "DEMO-ACTIVITY",
+            ActivityDescription = "Presentation Examples",
+            DocumentType = "DEMO",
+            AccountingSequenceNumber = p.TransactionNumber.ToString(CultureInfo.InvariantCulture),
+            TrackingNo = p.Document,
+            Reference = p.Document,
+            JournalLineDescription = p.Comment,
+            JournalAcctDate = p.AccountingDate,
+            JournalName = $"DEMO {p.ExpenditureCategory}",
+            JournalReference = p.Document,
+            PeriodName = p.AccountingPeriod,
+            JournalBatchName = p.ExpenditureBatch,
+            JournalSource = "Fictional presentation data",
+            JournalCategory = p.ExpenditureCategory,
+            BatchStatus = "P",
+            ActualFlag = "A",
+            ActualAmount = p.BurdenedCost,
+            NaturalAccountType = "5 - Expense",
         }).ToList();
         transactions.AddRange(DemoDataSet.CreatePortfolio(Month).Where(p => ids.Contains(p.ProjectNumber))
             .GroupBy(p => p.ProjectNumber).Select(group => new GLTransactionRecord
             {
-                Entity = "DEMO", EntityDescription = "Fictional Demonstration Entity", Project = group.Key,
-                ProjectDescription = group.First().ProjectName, Fund = "DEMO-FUND", FundDescription = "Fictional Research Fund",
-                FinancialDepartment = "DEMO-DEPT", FinancialDepartmentDescription = "Department of Imaginary Research",
-                Account = "DEMO-REVENUE", AccountDescription = "Fictional project funding", Purpose = "DEMO-PURPOSE",
-                PurposeDescription = "Demonstration Research", Program = "DEMO-PROGRAM", ProgramDescription = "Imaginary Research Program",
-                Activity = "DEMO-ACTIVITY", ActivityDescription = "Presentation Examples", DocumentType = "DEMO",
-                Reference = $"DEMO-FUNDING-{group.Key}", JournalLineDescription = "Entirely invented opening project funding",
-                JournalAcctDate = Month.AddMonths(-12), PeriodName = Month.AddMonths(-12).ToString("MMM-yy", CultureInfo.InvariantCulture),
-                JournalName = "DEMO opening funding", JournalSource = "Fictional presentation data", BatchStatus = "P",
-                ActualFlag = "A", ActualAmount = -group.Sum(p => p.PpmBudget), NaturalAccountType = "4 - Revenue",
+                Entity = "DEMO",
+                EntityDescription = "Fictional Demonstration Entity",
+                Project = group.Key,
+                ProjectDescription = group.First().ProjectName,
+                Fund = "DEMO-FUND",
+                FundDescription = "Fictional Research Fund",
+                FinancialDepartment = "DEMO-DEPT",
+                FinancialDepartmentDescription = "Department of Imaginary Research",
+                Account = "DEMO-REVENUE",
+                AccountDescription = "Fictional project funding",
+                Purpose = "DEMO-PURPOSE",
+                PurposeDescription = "Demonstration Research",
+                Program = "DEMO-PROGRAM",
+                ProgramDescription = "Imaginary Research Program",
+                Activity = "DEMO-ACTIVITY",
+                ActivityDescription = "Presentation Examples",
+                DocumentType = "DEMO",
+                Reference = $"DEMO-FUNDING-{group.Key}",
+                JournalLineDescription = "Entirely invented opening project funding",
+                JournalAcctDate = Month.AddMonths(-12),
+                PeriodName = Month.AddMonths(-12).ToString("MMM-yy", CultureInfo.InvariantCulture),
+                JournalName = "DEMO opening funding",
+                JournalSource = "Fictional presentation data",
+                BatchStatus = "P",
+                ActualFlag = "A",
+                ActualAmount = -group.Sum(p => p.PpmBudget),
+                NaturalAccountType = "4 - Revenue",
             }));
         return Result<IReadOnlyList<GLTransactionRecord>>(transactions, ct);
     }
@@ -93,14 +132,24 @@ public sealed class DemoDataSource(DateTime? referenceDate = null)
         return Result<IReadOnlyList<GLPPMReconciliationRecord>>(DemoDataSet.CreatePortfolio(Month).Where(p => ids.Contains(p.ProjectNumber))
             .GroupBy(p => p.ProjectNumber).Select(group => new GLPPMReconciliationRecord
             {
-                Project = group.Key, ProjectDescription = group.First().ProjectName, FinancialDepartment = "DEMO-DEPT",
-                FundCode = "DEMO-FUND", FundDescription = "Fictional Research Fund", PpmFundCode = "DEMO-FUND",
-                PpmFundDescription = "Fictional Research Fund", ProgramCode = "DEMO-PROGRAM", ProgramDescription = "Imaginary Research Program",
-                ActivityCode = "DEMO-ACTIVITY", ActivityDescription = "Presentation Examples",
-                GlActualAmount = group.Sum(p => p.PpmExpenses - p.PpmBudget), PpmBudget = group.Sum(p => p.PpmBudget),
+                Project = group.Key,
+                ProjectDescription = group.First().ProjectName,
+                FinancialDepartment = "DEMO-DEPT",
+                FundCode = "DEMO-FUND",
+                FundDescription = "Fictional Research Fund",
+                PpmFundCode = "DEMO-FUND",
+                PpmFundDescription = "Fictional Research Fund",
+                ProgramCode = "DEMO-PROGRAM",
+                ProgramDescription = "Imaginary Research Program",
+                ActivityCode = "DEMO-ACTIVITY",
+                ActivityDescription = "Presentation Examples",
+                GlActualAmount = group.Sum(p => p.PpmExpenses - p.PpmBudget),
+                PpmBudget = group.Sum(p => p.PpmBudget),
                 // Reconciliation compares actuals only; its PPM balance excludes the portfolio's commitments.
-                PpmItdExp = group.Sum(p => p.PpmExpenses), PpmBudBal = group.Sum(p => p.PpmBudget - p.PpmExpenses),
-                RemainingBalance = 0m, DataSource = "Both",
+                PpmItdExp = group.Sum(p => p.PpmExpenses),
+                PpmBudBal = group.Sum(p => p.PpmBudget - p.PpmExpenses),
+                RemainingBalance = 0m,
+                DataSource = "Both",
             }).ToArray(), ct);
     }
 
@@ -112,8 +161,12 @@ public sealed class DemoDataSource(DateTime? referenceDate = null)
         {
             Categories = rows.Select(p => new ProjectProjectionCategory
             {
-                ExpenditureCategory = p.ExpenditureCategoryName!, IsPersonnel = IsPersonnel(p.ExpenditureCategoryName),
-                Budget = p.PpmBudget, SpentToDate = p.PpmExpenses, Committed = p.PpmCommitments, RemainingNow = p.PpmBudBal,
+                ExpenditureCategory = p.ExpenditureCategoryName!,
+                IsPersonnel = IsPersonnel(p.ExpenditureCategoryName),
+                Budget = p.PpmBudget,
+                SpentToDate = p.PpmExpenses,
+                Committed = p.PpmCommitments,
+                RemainingNow = p.PpmBudBal,
             }).ToArray(),
             Periods = rows.SelectMany(p => Enumerable.Range(-historyMonths, historyMonths + 13).Select(offset =>
             {
@@ -121,9 +174,11 @@ public sealed class DemoDataSource(DateTime? referenceDate = null)
                 var monthly = DemoDataSet.MonthlyAmount(p);
                 return new ProjectProjectionPeriod
                 {
-                    Month = month.ToString("yyyy-MM", CultureInfo.InvariantCulture), DisplayPeriod = month.ToString("MMM-yy", CultureInfo.InvariantCulture),
+                    Month = month.ToString("yyyy-MM", CultureInfo.InvariantCulture),
+                    DisplayPeriod = month.ToString("MMM-yy", CultureInfo.InvariantCulture),
                     Kind = offset < 0 ? "actual" : offset == 0 ? "blended" : "projected",
-                    ExpenditureCategory = p.ExpenditureCategoryName!, IsPersonnel = IsPersonnel(p.ExpenditureCategoryName),
+                    ExpenditureCategory = p.ExpenditureCategoryName!,
+                    IsPersonnel = IsPersonnel(p.ExpenditureCategoryName),
                     ActualAmount = offset < 0 ? monthly : offset == 0 ? monthly / 2m : 0m,
                     ProjectedAmount = offset > 0 ? monthly : offset == 0 ? monthly / 2m : 0m,
                     // Match the report's anchor at the last actual month, then subtract each following month's spend.

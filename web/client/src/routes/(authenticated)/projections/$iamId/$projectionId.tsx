@@ -46,7 +46,9 @@ export const Route = createFileRoute(
     const flags = await queryClient.fetchQuery(
       featureFlagsQueryOptions(user.id)
     );
-    if (!flags.projectionsEnabled) {return { enabled: false };}
+    if (!flags.projectionsEnabled) {
+      return { enabled: false };
+    }
     if (
       !/^[1-9]\d*$/.test(projectionId) ||
       !Number.isSafeInteger(Number(projectionId))
@@ -88,7 +90,9 @@ function ProjectionPlanPage({
   const [admitted] = useState(initiallyEnabled);
   const { iamId } = Route.useParams();
   const { data: flags } = useFeatureFlagsQuery();
-  if (!admitted) {return <ProjectionUnavailable iamId={iamId} />;}
+  if (!admitted) {
+    return <ProjectionUnavailable iamId={iamId} />;
+  }
   return <ProjectionEditor featureEnabled={!!flags?.projectionsEnabled} />;
 }
 

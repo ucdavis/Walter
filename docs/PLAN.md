@@ -1738,24 +1738,18 @@ name and does not overwrite details entered while loading. Loading failures offe
 Retry funding; Continue requires a valid name and a completed capture. An untouched
 automatic capture alone does not trigger a discard warning or create a saved plan.
 
-Funding sources use one searchable list grouped under captured project names and
-numbers. Each task's checkbox, dates, planning balance, and Edit action appear
-together. Captured project identity remains visible even when a source is renamed.
-Unchecked tasks remain searchable and can be reselected with their edits intact.
-A project checkbox controls all its tasks, including siblings hidden by search.
-Initial selection has no separate Add funding source dialog; Add planned source
-remains available. After initial selection, adding a real source still imports
-fresh data and does not automatically import staff.
+The initial funding checklist was replaced by the
+[search-and-add selection workflow](#stage-5h-search-and-add-funding-selection).
 
 Review's edit links and Back offer Return to review from earlier steps without
 recapturing data or repeating roster selection. Open editor changes must be applied
 or canceled before changing steps. The final Create action and its frozen,
 idempotent retry behavior remain unchanged.
 
-Other expenses shows spending history as a compact inline summary and Change
-button. Its existing dialog still requires Apply or Cancel. A new expense form
-does not show validation errors before interaction; invalid amounts still block
-Apply, and zero or negative amounts remain valid.
+The current expense layout and history control are described in
+[Stage 4a](#stage-4a-other-expenses). A new expense form does not show validation
+errors before interaction; invalid amounts still block Apply, and zero or negative
+amounts remain valid.
 
 Follow-up review narrowed initial staffing to selected tasks rather than their
 parent projects. An appointment funded only by an unchecked sibling task is no
@@ -1763,12 +1757,8 @@ longer included. Membership comes from the personnel rows even when an unsplit
 salary means allocations cannot be constructed yet. Later source additions and
 removals still retain the existing roster.
 
-The user retained the per-source Other expenses layout. Its selector now states
-which source's history and added expenses are displayed and charged. The expense
-dialog identifies the charge source with its captured project identity. Neither
-the user nor browser investigation could reproduce the reported disappearing
-options; a regression verifies source choices survive adding the first expense,
-with distinct history values and expenses kept on their selected source.
+The earlier per-source-only expense layout was superseded by the combined view
+in [Stage 4a](#stage-4a-other-expenses).
 
 All 729 client tests across 78 files and 179 targeted projection controller and
 seeding tests pass, along with the production build, TypeScript, changed-file
@@ -2186,13 +2176,9 @@ The warning and display rules are agreed. Preserve the calculator's existing
 category balances, snapshot reconciliation, date proration, and forecast costs.
 This increment does not edit category budgets or change allocations automatically.
 
-- `Sponsored` and `Sponsored Capital` sources use salary category 01 and fringe
-  category 02 for staffing shortfall warnings. Neither category can cover the
-  other. Other categories, including fees in 08, do not drive these warnings yet.
-- `Internal` and hypothetical sources use their own general pool. Imported types
-  that are not recognized show an unknown budgeting basis instead of silently
-  assuming unrestricted funding. Classification uses the existing project type;
-  neither category-row presence nor the budgetary-control flag defines this rule.
+- Source classification and category eligibility follow the
+  [personnel budget rules](projections-calculation-review.md#personnel-budget-warnings),
+  including the source type selected for planned funding.
 - A negative month-end balance marks the affected source segment red for every
   appointment with a positive eligible allocation to that source in the month.
   Other segments keep their source colors. Exactly zero is not a shortfall;
