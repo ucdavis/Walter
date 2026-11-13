@@ -8,6 +8,7 @@ using Razor.Templating.Core;
 using server.core.Data;
 using server.HealthChecks;
 using server.Helpers;
+using Server.Demo;
 using Server.Services;
 using server.core.Services;
 using server.Services;
@@ -83,9 +84,16 @@ builder.Services.AddResponseCaching();
 // add singleton services here
 builder.Services.AddSingleton<IFinancialApiService, FinancialApiService>();
 builder.Services.AddSingleton<DatamartService>();
-builder.Services.AddSingleton<IDatamartService>(sp => sp.GetRequiredService<DatamartService>());
-builder.Services.AddSingleton<IPpmPortfolioReader>(sp => sp.GetRequiredService<DatamartService>());
-builder.Services.AddSingleton<IProjectionDataSource>(sp => sp.GetRequiredService<DatamartService>());
+if (builder.Configuration.GetValue<bool>("FeatureFlags:DemoDataEnabled"))
+{
+    builder.Services.AddDemoData();
+}
+else
+{
+    builder.Services.AddSingleton<IDatamartService>(sp => sp.GetRequiredService<DatamartService>());
+    builder.Services.AddSingleton<IPpmPortfolioReader>(sp => sp.GetRequiredService<DatamartService>());
+    builder.Services.AddSingleton<IProjectionDataSource>(sp => sp.GetRequiredService<DatamartService>());
+}
 builder.Services.AddScoped<PpmPortfolioService>();
 builder.Services.AddScoped<ProjectionSeeder>();
 

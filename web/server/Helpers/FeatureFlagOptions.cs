@@ -27,4 +27,7 @@ public sealed class FeatureFlagOptions
 
     /// <summary>Whether the PI projections pages are exposed in the UI. The API is not gated.</summary>
     public bool ProjectionsEnabled { get; set; }
+
+    /// <summary>Serves in-memory demo data for ids starting with DEMO. Read once at startup.</summary>
+    public bool DemoDataEnabled { get; set; }
 }
