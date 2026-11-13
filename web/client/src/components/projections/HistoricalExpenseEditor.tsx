@@ -2,6 +2,8 @@ import { useImperativeHandle, useState, type Ref } from 'react';
 import { useStore } from '@tanstack/react-form';
 import { useAppForm } from '@/shared/forms/formContext.tsx';
 import { ProjectionDialog } from '@/components/projections/ProjectionDialog.tsx';
+import { sourceLabel } from '@/lib/projectionSources.ts';
+import type { ProjectionFundingSource } from '@/queries/projections.ts';
 import { formatCurrency } from '@/lib/currency.ts';
 import type { PendingExpenseEditor } from '@/lib/projectionWorkspace.ts';
 
@@ -18,7 +20,7 @@ export function HistoricalExpenseEditor({
   onApply,
   onClose,
   ref,
-  sourceId,
+  source,
 }: {
   baselineAmount: number;
   category: string;
@@ -31,7 +33,7 @@ export function HistoricalExpenseEditor({
   ) => { error: string; ok: false } | { ok: true };
   onClose: () => void;
   ref?: Ref<HistoricalExpenseEditorHandle>;
-  sourceId: number;
+  source: ProjectionFundingSource;
 }) {
   const [initial] = useState(() => ({
     amount: monthlyAmount.toFixed(2),
@@ -72,7 +74,7 @@ export function HistoricalExpenseEditor({
     read: () => ({
       expenditureCategory: category,
       expenseId: null,
-      fundingSourceId: sourceId,
+      fundingSourceId: source.id,
       hasChanges: form.state.isDirty,
       kind: 'historicalExpense',
       validationMessage,
@@ -83,6 +85,19 @@ export function HistoricalExpenseEditor({
       onClose={onClose}
       title={`Edit historical amount: ${category}`}
     >
+      <p className="mt-2 text-sm text-base-content/80">
+        <span className="font-medium">Charge to:</span> {sourceLabel(source)}
+      </p>
+      {(source.projectNumber || source.taskNumber) && (
+        <p className="mt-1 text-sm text-base-content/80">
+          {[
+            source.projectNumber && `Project ${source.projectNumber}`,
+            source.taskNumber && `Task ${source.taskNumber}`,
+          ]
+            .filter(Boolean)
+            .join(' · ')}
+        </p>
+      )}
       <p className="mt-3 text-sm">
         {hasCapturedAmount
           ? `Captured ${historyMonths}-month average: ${formatCurrency(baselineAmount)} per month.`

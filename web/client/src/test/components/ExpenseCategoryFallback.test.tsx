@@ -52,7 +52,10 @@ it('uses saved scenario categories when the cold financial lookup fails, while s
     ).toBe('error')
   );
   const user = userEvent.setup();
-  await user.click(screen.getByRole('button', { name: 'Add expense' }));
+  expect(screen.getByLabelText('View expenses for')).toHaveValue('');
+  await user.click(screen.getAllByRole('button', { name: 'Add expense' })[0]);
+  expect(screen.getByLabelText('Charge to')).toHaveValue('');
+  await user.selectOptions(screen.getByLabelText('Charge to'), '1');
   expect(
     screen.getByRole('option', { name: EQUIPMENT_CATEGORY })
   ).toBeInTheDocument();

@@ -1,11 +1,14 @@
 import { DuplicateProjectionButton } from '@/components/projections/DuplicateProjectionButton.tsx';
 import type { Projection } from '@/queries/projections.ts';
 import { FundingOutlookNotice } from '@/components/projections/FundingOutlookSummary.tsx';
+import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
+import { tooltipDefinitions } from '@/shared/tooltips.ts';
 import { buildProjectionOutlook } from '@/lib/projectionOutlook.ts';
 import {
   BanknotesIcon,
   ChartBarIcon,
   Cog6ToothIcon,
+  ExclamationTriangleIcon,
   ListBulletIcon,
   UsersIcon,
 } from '@heroicons/react/24/outline';
@@ -25,6 +28,7 @@ import {
 } from '@/components/projections/ExpensesEditor.tsx';
 import {
   useEffect,
+  useId,
   useImperativeHandle,
   useRef,
   useState,
@@ -89,6 +93,26 @@ export function ProjectionWorkspace({
     session,
   } = useProjectionSession();
   const [duplicating, setDuplicating] = useState(false);
+  const [summaryMinimized, setSummaryMinimized] = useState(false);
+  const summaryId = useId();
+  const minimizeSummaryRef = useRef<HTMLButtonElement>(null);
+  const restoreSummaryRef = useRef<HTMLButtonElement>(null);
+  const toggleSummaryFocus = useRef(false);
+  useEffect(() => {
+    if (!toggleSummaryFocus.current) {
+      return;
+    }
+    // Each toggle removes its opener, so focus the replacement control.
+    (summaryMinimized
+      ? restoreSummaryRef
+      : minimizeSummaryRef
+    ).current?.focus();
+    toggleSummaryFocus.current = false;
+  }, [summaryMinimized]);
+  function toggleSummary() {
+    toggleSummaryFocus.current = true;
+    setSummaryMinimized((minimized) => !minimized);
+  }
   const deletionConfirmed = useRef(false);
   const duplicateDisabled =
     saving ||
@@ -97,6 +121,11 @@ export function ProjectionWorkspace({
     isProjectionDirty(session);
   const { draft } = session;
   const outlook = buildProjectionOutlook(draft, results);
+  const hasShortfall = outlook.shortfallSources.length > 0;
+  const hasFundingWarnings =
+    hasShortfall ||
+    outlook.gapAppointmentIds.length > 0 ||
+    outlook.overlapAppointmentIds.length > 0;
   const location = readProjectionLocation(search, draft);
   const [editingDetails, setEditingDetails] = useState(false);
   const detailsEditorRef = useRef<PlanDetailsEditorHandle>(null);
@@ -181,12 +210,44 @@ export function ProjectionWorkspace({
 
   return (
     <div className="mx-auto w-full max-w-[96rem] p-4 sm:p-8">
-      <FundingOutlookNotice onNavigate={onNavigate} outlook={outlook} />
+      <div hidden={summaryMinimized} id={summaryId}>
+        <FundingOutlookNotice
+          minimizeRef={minimizeSummaryRef}
+          onMinimize={toggleSummary}
+          onNavigate={onNavigate}
+          outlook={outlook}
+          summaryId={summaryId}
+        />
+      </div>
       <header className="flex flex-wrap items-start justify-between gap-x-6 gap-y-4">
         <div className="min-w-0 flex-1 basis-80">
-          <h1 className="text-2xl font-bold leading-tight break-words sm:text-3xl">
-            {draft.name}
-          </h1>
+          <div className="flex items-start gap-2">
+            <h1 className="min-w-0 text-2xl font-bold leading-tight break-words sm:text-3xl">
+              {draft.name}
+            </h1>
+            {summaryMinimized && hasFundingWarnings && (
+              <TooltipLabel
+                asChild
+                label={
+                  <button
+                    aria-controls={summaryId}
+                    aria-expanded="false"
+                    aria-label="Show funding summary"
+                    className={`btn btn-ghost btn-sm btn-square shrink-0 ${hasShortfall ? 'text-error' : 'text-warning'}`}
+                    onClick={toggleSummary}
+                    ref={restoreSummaryRef}
+                    type="button"
+                  >
+                    <ExclamationTriangleIcon
+                      aria-hidden="true"
+                      className="size-5"
+                    />
+                  </button>
+                }
+                tooltip={tooltipDefinitions.showFundingSummary}
+              />
+            )}
+          </div>
           <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs font-medium tracking-wide text-base-content/60 uppercase">
             <p title="Each source keeps its own capture date.">
               Plan started {draft.seededAt.slice(0, 10)}
@@ -228,17 +289,6 @@ export function ProjectionWorkspace({
           <ProjectionSaveControls />
         </div>
       </header>
-      {draft.content.notes && (
-        <section
-          aria-label="Plan notes"
-          className="mt-4 rounded-box bg-base-200 p-4"
-        >
-          <h2 className="font-semibold">Plan notes</h2>
-          <p className="mt-2 whitespace-pre-wrap break-words">
-            {draft.content.notes}
-          </p>
-        </section>
-      )}
       {editingDetails && (
         <PlanDetailsEditor
           deleteDisabled={saving || reloading || duplicating}
@@ -293,7 +343,7 @@ export function ProjectionWorkspace({
             key={section}
             onClick={() =>
               onNavigate(
-                section === 'funding'
+                section === 'funding' || section === 'expenses'
                   ? { section }
                   : { ...sourceSearch, section }
               )
@@ -390,13 +440,18 @@ export function ProjectionWorkspace({
       ) : (
         <section className="mt-6">
           <ExpensesEditor
-            key={`${reloadVersion}:${location.fundingSourceId ?? 'first'}`}
+            key={`${reloadVersion}:${location.fundingSourceId ?? 'all'}`}
             onOperation={applyExpenseOperation}
             ref={expenseEditorRef}
             session={session}
             sourceTarget={{
               id: location.fundingSourceId,
-              onChange: (id) => onNavigate({ section: 'expenses', source: id }),
+              onChange: (id) =>
+                onNavigate(
+                  id === null
+                    ? { section: 'expenses' }
+                    : { section: 'expenses', source: id }
+                ),
             }}
           />
         </section>

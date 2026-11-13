@@ -95,7 +95,13 @@ async function addManual(
   name = 'Supplies order',
   amount = '310'
 ) {
-  await user.click(await screen.findByRole('button', { name: 'Add expense' }));
+  await user.click(
+    (await screen.findAllByRole('button', { name: 'Add expense' }))[0]
+  );
+  const charge = screen.getByLabelText<HTMLSelectElement>('Charge to');
+  expect(
+    charge.value ? screen.getByLabelText('Expense name') : charge
+  ).toHaveFocus();
   await user.type(screen.getByLabelText('Expense name'), name);
   await user.selectOptions(screen.getByLabelText('Category'), supplies);
   await user.type(screen.getByLabelText('Monthly amount'), amount);
@@ -108,6 +114,38 @@ function month(label: string, value: string) {
 }
 
 describe('other expenses planning controls', () => {
+  it('opens history settings from the gear and updates its spending-history tooltip after Apply', async () => {
+    const { user } = openWorkspace();
+    const settings = await screen.findByRole('button', {
+      name: 'Change history window',
+    });
+    expect(screen.getAllByRole('button', { name: 'Add expense' })).toHaveLength(
+      2
+    );
+    await user.hover(settings);
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+      'Spending history: 3 months'
+    );
+    await user.click(settings);
+    await user.selectOptions(screen.getByLabelText('Averaging window'), '6');
+    await user.click(
+      screen.getByRole('button', { name: 'Apply history window' })
+    );
+    await waitFor(() => expect(settings).toHaveFocus());
+    await user.hover(settings);
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+      'Spending history: 6 months'
+    );
+    expect(read().draft.content.historyMonths).toBe(6);
+    await user.unhover(settings);
+    await user.click(screen.getAllByRole('button', { name: 'Add expense' })[1]);
+    expect(screen.getByLabelText('Expense name')).toHaveFocus();
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(
+      screen.getAllByRole('button', { name: 'Add expense' })[1]
+    ).toHaveFocus();
+  });
+
   it('uses captured history with stable categories, preserves an unchanged precise amount, and applies history only on Apply', async () => {
     const plan = expensePlan();
     const { user } = openWorkspace(plan);
@@ -258,7 +296,7 @@ describe('other expenses planning controls', () => {
     plan.content.fundingSources[0].endDate = '2026-01-31';
     const { user } = openWorkspace(plan);
     await user.click(
-      await screen.findByRole('button', { name: 'Add expense' })
+      (await screen.findAllByRole('button', { name: 'Add expense' }))[0]
     );
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(screen.getByLabelText('Expense name')).toHaveValue('');
@@ -320,7 +358,7 @@ describe('other expenses planning controls', () => {
   it('waits for amount interaction before showing validation and clears it for valid credits and zero', async () => {
     const { user } = openWorkspace();
     await user.click(
-      await screen.findByRole('button', { name: 'Add expense' })
+      (await screen.findAllByRole('button', { name: 'Add expense' }))[0]
     );
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     await user.type(screen.getByLabelText('Expense name'), 'Travel credit');
@@ -347,7 +385,7 @@ describe('other expenses planning controls', () => {
   it('shows validation on an invalid form submission without adding an expense', async () => {
     const { user } = openWorkspace();
     await user.click(
-      await screen.findByRole('button', { name: 'Add expense' })
+      (await screen.findAllByRole('button', { name: 'Add expense' }))[0]
     );
     fireEvent.submit(screen.getByLabelText('Expense name').closest('form')!);
     expect(await screen.findByRole('alert')).toHaveTextContent(
@@ -434,7 +472,7 @@ describe('other expenses planning controls', () => {
       plan.content.fundingSources[0].expenses
     );
     expect(read().revision).toBe(0);
-    await user.click(screen.getByRole('button', { name: 'Add expense' }));
+    await user.click(screen.getAllByRole('button', { name: 'Add expense' })[0]);
     expect(
       screen.getByText(/Through forecast end: Dec 2026/)
     ).toBeInTheDocument();
@@ -471,19 +509,15 @@ describe('other expenses planning controls', () => {
     expect(
       screen.queryByText('3-month average: $310.12')
     ).not.toBeInTheDocument();
-    expect(
-      screen.getByText(
-        /Historical estimates and added expenses below belong to this source/
-      )
-    ).toBeInTheDocument();
     await addManual(user, 'Second source purchase', '25');
     const expenseDialog = screen.getByRole('dialog', { name: 'Add expense' });
-    expect(expenseDialog).toHaveTextContent(
-      'Charge to: Renamed analysis · Task 02 · Analysis'
-    );
-    expect(expenseDialog).toHaveTextContent(
-      'Captured coastal project · Project P-EXPENSES'
-    );
+    expect(within(expenseDialog).getByLabelText('Charge to')).toHaveValue('2');
+    expect(
+      within(expenseDialog).getByRole('option', {
+        name: /Renamed analysis.*Task 02.*Analysis/,
+      })
+    ).toBeInTheDocument();
+    expect(expenseDialog).toHaveTextContent('Project P-EXPENSES');
     await user.click(screen.getByRole('button', { name: 'Apply expense' }));
     expectSummary('Added expense forecast', '$149.19');
     expectSummary('Total other expenses', '$5,520.16');
@@ -498,7 +532,7 @@ describe('other expenses planning controls', () => {
     expectSummary('Total other expenses', '$1,850.74');
     expect(screen.getByText('3-month average: $310.12')).toBeInTheDocument();
     expect(
-      screen.getByText('No added expenses for this source.')
+      screen.getByText('No added expenses for the selected funding sources.')
     ).toBeInTheDocument();
     expect(
       screen.queryByText('Second source purchase')
@@ -547,5 +581,234 @@ describe('other expenses planning controls', () => {
       expect(screen.getByLabelText('View expenses for')).toHaveValue('2')
     );
     expect(read().pendingEditor).toBeNull();
+  });
+});
+
+function combinedPlan() {
+  const plan = createSalaryExample();
+  const [first, second] = plan.content.fundingSources;
+  first.capturedAt = '2026-01-16T00:00:00Z';
+  first.endDate = '2026-01-31';
+  second.capturedAt = '2026-02-14T00:00:00Z';
+  second.startDate = '2026-02-01';
+  second.endDate = '2026-02-28';
+  for (const source of [first, second]) {
+    source.runRates = [
+      {
+        expenditureCategory: supplies,
+        historyMonths: 3,
+        monthlyAmount: source.id === 1 ? 310 : 280,
+      },
+    ];
+    source.expenses = [
+      {
+        amount: source.id === 1 ? 62 : 56,
+        description: 'Shared order',
+        endMonth: null,
+        expenditureCategory: supplies,
+        id: 7,
+        kind: 'Monthly',
+        startMonth: '2026-01-01',
+      },
+    ];
+  }
+  return plan;
+}
+
+describe('combined expense tables', () => {
+  it('defaults saved plans to all sources and calculates each source using its own capture and end dates', async () => {
+    const { user } = openWorkspace(combinedPlan(), false, '?section=expenses');
+    expect(await screen.findByLabelText('View expenses for')).toHaveValue('');
+    expectSummary('Historical forecast', '$290.00');
+    expectSummary('Added expense forecast', '$58.00');
+    expectSummary('Total other expenses', '$348.00');
+    const added = screen.getByRole('region', { name: 'Added expenses' });
+    expect(within(added).getAllByText('Shared order')).toHaveLength(2);
+    await user.click(
+      within(added).getByRole('button', { name: 'View expenses for Project B' })
+    );
+    expect(screen.getByLabelText('View expenses for')).toHaveValue('2');
+    expectSummary('Historical forecast', '$140.00');
+    expectSummary('Added expense forecast', '$28.00');
+    expect(read().location.fundingSourceId).toBe(2);
+    await user.selectOptions(screen.getByLabelText('View expenses for'), '');
+    expectSummary('Total other expenses', '$348.00');
+    expect(read().location.fundingSourceId).toBeNull();
+    expect(read().dirty).toBe(false);
+  });
+
+  it('opens all expenses when entering from a focused funding outlook', async () => {
+    const { user } = openWorkspace(
+      combinedPlan(),
+      false,
+      '?section=overview&source=2'
+    );
+    await user.click(
+      await screen.findByRole('button', { name: 'Other expenses' })
+    );
+    expect(await screen.findByLabelText('View expenses for')).toHaveValue('');
+    expectSummary('Total other expenses', '$348.00');
+  });
+
+  it('requires a charge target in All, retains typed details when changing it, and follows untouched source date defaults', async () => {
+    const { user } = openWorkspace(combinedPlan(), false, '?section=expenses');
+    await addManual(user, 'New purchase', '280');
+    expect(screen.getByLabelText('Charge to')).toHaveValue('');
+    expect(
+      screen.getByRole('button', { name: 'Apply expense' })
+    ).toBeDisabled();
+    expect(read().pendingEditor).toMatchObject({
+      fundingSourceId: null,
+      hasChanges: true,
+    });
+    await user.selectOptions(screen.getByLabelText('Charge to'), '1');
+    expect(screen.getByLabelText('Charge to')).toHaveFocus();
+    expect(screen.getByLabelText('Start month')).toHaveValue('2026-01');
+    expect(screen.getByText('Forecast total: $135.48')).toBeInTheDocument();
+    await user.selectOptions(screen.getByLabelText('Charge to'), '2');
+    expect(screen.getByLabelText('Expense name')).toHaveValue('New purchase');
+    expect(screen.getByLabelText('Category')).toHaveValue(supplies);
+    expect(screen.getByLabelText('Monthly amount')).toHaveValue('280');
+    expect(screen.getByLabelText('Start month')).toHaveValue('2026-02');
+    expect(screen.getByText('Forecast total: $140.00')).toBeInTheDocument();
+    month('Start month', '2026-03');
+    await user.selectOptions(screen.getByLabelText('End condition'), 'fixed');
+    month('End month', '2026-04');
+    await user.selectOptions(screen.getByLabelText('Charge to'), '1');
+    expect(screen.getByLabelText('Start month')).toHaveValue('2026-03');
+    expect(screen.getByLabelText('End month')).toHaveValue('2026-04');
+    expect(screen.getByLabelText('End condition')).toHaveValue('fixed');
+    await user.selectOptions(screen.getByLabelText('Charge to'), '2');
+    await user.click(screen.getByRole('button', { name: 'Apply expense' }));
+    expect(read().draft.content.fundingSources[0].expenses).toHaveLength(1);
+    expect(read().draft.content.fundingSources[1].expenses).toHaveLength(2);
+    expect(read().draft.content.fundingSources[1].expenses[1]).toMatchObject({
+      amount: 280,
+      description: 'New purchase',
+      endMonth: '2026-04-01',
+      startMonth: '2026-03-01',
+    });
+    expect(screen.getByLabelText('View expenses for')).toHaveValue('');
+  });
+
+  it('distinguishes tasks on the same long-named project in combined rows', async () => {
+    const plan = combinedPlan();
+    const name =
+      'Food science research and shared laboratory operations for the next field season';
+    for (const source of plan.content.fundingSources) {
+      source.name = source.projectName = name;
+      source.projectNumber = 'FPAFST4784';
+      source.taskNumber = source.id === 1 ? 'COFAES' : 'COFCME';
+    }
+    const { user } = openWorkspace(plan, false, '?section=expenses');
+    const added = await screen.findByRole('region', { name: 'Added expenses' });
+    const task = within(added).getByRole('button', {
+      name: `View expenses for ${name} · Task COFCME`,
+    });
+    expect(task).toHaveTextContent('Project FPAFST4784');
+    expect(task).toHaveTextContent('Task COFCME');
+    expect(
+      within(added).getByRole('button', {
+        name: `View expenses for ${name} · Task COFAES`,
+      })
+    ).toBeInTheDocument();
+    await user.click(task);
+    expect(screen.getByLabelText('View expenses for')).toHaveValue('2');
+    expectSummary('Total other expenses', '$168.00');
+  });
+
+  it('guards typed expenses before any charge source has been chosen', async () => {
+    const { user } = openWorkspace(combinedPlan(), true, '?section=expenses');
+    await addManual(user, 'Unassigned draft', '0');
+    act(() => {
+      void workspace.router.navigate({ to: '/projections/TEST-PI' });
+    });
+    const guard = await screen.findByRole('dialog', {
+      name: 'Leave this plan?',
+    });
+    await user.click(within(guard).getByRole('button', { name: 'Stay' }));
+    expect(screen.getByLabelText('Expense name')).toHaveValue(
+      'Unassigned draft'
+    );
+    expect(screen.getByLabelText('Charge to')).toHaveValue('');
+    expect(read().pendingEditor).toMatchObject({
+      fundingSourceId: null,
+      hasChanges: true,
+    });
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(read().pendingEditor).toBeNull();
+    expect(read().dirty).toBe(false);
+  });
+
+  it('preselects the sole source while keeping the all-source view', async () => {
+    const plan = combinedPlan();
+    plan.content.fundingSources = [plan.content.fundingSources[0]];
+    plan.content.appointments = [];
+    const { user } = openWorkspace(plan, false, '?section=expenses');
+    const addButtons = await screen.findAllByRole('button', {
+      name: 'Add expense',
+    });
+    expect(addButtons).toHaveLength(2);
+    const bottomAdd = addButtons[1];
+    expect(
+      screen
+        .getByRole('region', { name: 'Added expenses' })
+        .compareDocumentPosition(bottomAdd) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+    await user.click(bottomAdd);
+    expect(screen.getByLabelText('Expense name')).toHaveFocus();
+    expect(screen.getByLabelText('Charge to')).toHaveValue('1');
+    expect(screen.getByLabelText('View expenses for')).toHaveValue('');
+  });
+
+  it('edits, removes, overrides, and restores the intended source when both tables contain duplicate identifiers', async () => {
+    const plan = combinedPlan();
+    const originalFirst = structuredClone(plan.content.fundingSources[0]);
+    const { user } = openWorkspace(plan, false, '?section=expenses');
+    await screen.findByLabelText('View expenses for');
+    const sourceRow = (region: string) =>
+      within(screen.getByRole('region', { name: region }))
+        .getByRole('button', { name: 'View expenses for Project B' })
+        .closest('tr')!;
+    await user.click(
+      within(sourceRow('Added expenses')).getByRole('button', {
+        name: 'Edit expense Shared order',
+      })
+    );
+    await enter(user, 'Monthly amount', '84');
+    await user.click(screen.getByRole('button', { name: 'Apply expense' }));
+    expect(read().draft.content.fundingSources[1].expenses[0].amount).toBe(84);
+    expect(read().draft.content.fundingSources[0]).toEqual(originalFirst);
+    await user.click(
+      within(sourceRow('Added expenses')).getByRole('button', {
+        name: 'Remove expense Shared order',
+      })
+    );
+    expect(read().draft.content.fundingSources[1].expenses).toEqual([]);
+    expect(read().draft.content.fundingSources[0]).toEqual(originalFirst);
+    await user.click(
+      within(sourceRow('Historical expense estimates')).getByRole('button', {
+        name: `Edit historical amount for ${supplies}`,
+      })
+    );
+    expect(screen.getByRole('dialog')).toHaveTextContent(
+      'Charge to: Project B'
+    );
+    expect(screen.getByRole('dialog')).toHaveTextContent('Project SYNTHETIC-2');
+    await enter(user, 'Monthly amount', '0');
+    await user.click(screen.getByRole('button', { name: 'Apply amount' }));
+    expect(
+      read().draft.content.fundingSources[1].historicalExpenseOverrides
+    ).toEqual([{ amount: 0, expenditureCategory: supplies }]);
+    expect(read().draft.content.fundingSources[0]).toEqual(originalFirst);
+    await user.click(
+      within(sourceRow('Historical expense estimates')).getByRole('button', {
+        name: `Use historical amount for ${supplies}`,
+      })
+    );
+    expect(
+      read().draft.content.fundingSources[1].historicalExpenseOverrides
+    ).toEqual([]);
+    expect(read().draft.content.fundingSources[0]).toEqual(originalFirst);
   });
 });

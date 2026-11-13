@@ -1,5 +1,5 @@
 import type { ProjectionForecastWindow } from '@/lib/piProjection.ts';
-import { useImperativeHandle, useState, type Ref } from 'react';
+import { useImperativeHandle, useRef, useState, type Ref } from 'react';
 import { useStore } from '@tanstack/react-form';
 import { useAppForm } from '@/shared/forms/formContext.tsx';
 import { ProjectionDialog } from '@/components/projections/ProjectionDialog.tsx';
@@ -24,6 +24,24 @@ export interface ExpenseEditorHandle {
   read: () => PendingExpenseEditor;
 }
 
+function defaultExpenseDates(
+  source: ProjectionFundingSource | undefined,
+  forecastWindow: ProjectionForecastWindow
+) {
+  const window = source
+    ? getSourceForecastWindow(source, forecastWindow)
+    : forecastWindow;
+  return {
+    end: source?.endDate?.slice(0, 7) ?? window.endMonth,
+    start: [
+      window.startMonth,
+      source?.startDate?.slice(0, 7) ?? window.startMonth,
+    ]
+      .sort()
+      .at(-1)!,
+  };
+}
+
 export function ExpenseEditor({
   categories,
   expense,
@@ -33,37 +51,38 @@ export function ExpenseEditor({
   onClose,
   onRetryCategories,
   ref,
-  source,
+  source: initialSource,
+  sources,
 }: {
   categories: string[];
   expense?: ProjectionExpense;
   forecastWindow: ProjectionForecastWindow;
   lookupFailed: boolean;
   onApply: (
-    inputs: ExpenseInputs
+    inputs: ExpenseInputs,
+    sourceId: number
   ) => { error: string; ok: false } | { ok: true };
   onClose: () => void;
   onRetryCategories: () => void;
   ref?: Ref<ExpenseEditorHandle>;
-  source: ProjectionFundingSource;
+  source?: ProjectionFundingSource;
+  sources: ProjectionFundingSource[];
 }) {
-  const window = getSourceForecastWindow(source, forecastWindow);
+  const defaults = defaultExpenseDates(initialSource, forecastWindow);
+  const nameRef = useRef<HTMLInputElement>(null);
+  const chargeRef = useRef<HTMLSelectElement>(null);
+  const explicitStart = useRef(false);
+  const explicitEnd = useRef(false);
   const [initial] = useState(() => ({
     amount: expense?.amount.toFixed(2) ?? '',
     category: expense?.expenditureCategory ?? '',
     description: expense?.description ?? '',
-    end:
-      expense?.endMonth?.slice(0, 7) ??
-      source.endDate?.slice(0, 7) ??
-      window.endMonth,
+    end: expense?.endMonth?.slice(0, 7) ?? defaults.end,
     endMode: expense?.endMonth ? ('fixed' as const) : ('source' as const),
+    focusExpenseName: Boolean(initialSource || expense),
     kind: expense?.kind ?? 'Monthly',
     preciseAmount: expense?.amount ?? null,
-    start:
-      expense?.startMonth?.slice(0, 7) ??
-      [window.startMonth, source.startDate?.slice(0, 7) ?? window.startMonth]
-        .sort()
-        .at(-1)!,
+    start: expense?.startMonth?.slice(0, 7) ?? defaults.start,
   }));
   const [error, setError] = useState<string | null>(null);
   const form = useAppForm({
@@ -74,13 +93,14 @@ export function ExpenseEditor({
       end: initial.end,
       endMode: initial.endMode as 'source' | 'fixed',
       kind: initial.kind,
+      sourceId: initialSource ? String(initialSource.id) : '',
       start: initial.start,
     },
     onSubmit: () => {
-      if (validationMessage) {
+      if (validationMessage || !source) {
         return;
       }
-      const result = onApply(inputs);
+      const result = onApply(inputs, source.id);
       if (result.ok) {
         onClose();
       } else {
@@ -90,6 +110,12 @@ export function ExpenseEditor({
   });
   const formState = useStore(form.store, (state) => state);
   const values = formState.values;
+  const source = expense
+    ? sources.find(({ id }) => id === initialSource?.id)
+    : sources.find(({ id }) => String(id) === values.sourceId);
+  const window = source
+    ? getSourceForecastWindow(source, forecastWindow)
+    : forecastWindow;
   const inputs: ExpenseInputs = {
     amount:
       values.amount === initial.amount && initial.preciseAmount !== null
@@ -110,7 +136,9 @@ export function ExpenseEditor({
     !values.amount.trim() || !/^-?\d+(\.\d{1,2})?$/.test(values.amount.trim())
       ? 'Enter an amount, including zero or a negative amount, with up to two decimal places.'
       : null;
-  const validationMessage = amountError ?? validateExpenseInputs(inputs);
+  const validationMessage = !source
+    ? 'Choose a funding source to charge this expense to.'
+    : (amountError ?? validateExpenseInputs(inputs));
   const amountMeta = formState.fieldMeta.amount;
   const showValidation =
     formState.submissionAttempts > 0 ||
@@ -118,14 +146,15 @@ export function ExpenseEditor({
       ? amountMeta?.isTouched || amountMeta?.isDirty
       : formState.isTouched || formState.isDirty);
   const visibleValidationMessage = showValidation ? validationMessage : null;
-  const forecast = validationMessage
-    ? null
-    : computeExpenseForecast(source, inputs, forecastWindow);
+  const forecast =
+    validationMessage || !source
+      ? null
+      : computeExpenseForecast(source, inputs, forecastWindow);
   useImperativeHandle(ref, () => ({
     read: () => ({
       expenditureCategory: null,
       expenseId: expense?.id ?? null,
-      fundingSourceId: source.id,
+      fundingSourceId: source?.id ?? null,
       hasChanges: form.state.isDirty,
       kind: 'expense',
       validationMessage,
@@ -133,15 +162,21 @@ export function ExpenseEditor({
   }));
   return (
     <ProjectionDialog
+      initialFocusRef={initial.focusExpenseName ? nameRef : chargeRef}
       onClose={onClose}
       title={expense ? `Edit expense: ${expense.description}` : 'Add expense'}
     >
-      <p className="mt-2 text-sm text-base-content/80">
-        <span className="font-medium">Charge to:</span> {sourceLabel(source)}
-      </p>
-      {source.projectNumber && (
+      {expense && source && (
+        <p className="mt-2 text-sm text-base-content/80">
+          <span className="font-medium">Charge to:</span> {sourceLabel(source)}
+        </p>
+      )}
+      {expense && source && (source.projectNumber || source.taskNumber) && (
         <p className="mt-1 text-sm text-base-content/80">
-          {[source.projectName, `Project ${source.projectNumber}`]
+          {[
+            source.projectNumber && `Project ${source.projectNumber}`,
+            source.taskNumber && `Task ${source.taskNumber}`,
+          ]
             .filter(Boolean)
             .join(' · ')}
         </p>
@@ -154,6 +189,59 @@ export function ExpenseEditor({
           void form.handleSubmit();
         }}
       >
+        {!expense && (
+          <form.Field name="sourceId">
+            {(field) => (
+              <div>
+                <label className="flex flex-col gap-1.5 text-sm font-medium">
+                  Charge to
+                  <select
+                    className="select select-bordered w-full"
+                    onBlur={field.handleBlur}
+                    onChange={(event) => {
+                      const nextSource = sources.find(
+                        ({ id }) => String(id) === event.target.value
+                      );
+                      const nextDates = defaultExpenseDates(
+                        nextSource,
+                        forecastWindow
+                      );
+                      field.handleChange(event.target.value);
+                      // Source defaults follow the charge target until the user chooses explicit dates.
+                      if (!explicitStart.current) {
+                        form.setFieldValue('start', nextDates.start);
+                      }
+                      if (!explicitEnd.current) {
+                        form.setFieldValue('end', nextDates.end);
+                      }
+                      setError(null);
+                    }}
+                    ref={chargeRef}
+                    required
+                    value={field.state.value}
+                  >
+                    <option value="">Choose a funding source</option>
+                    {sources.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {sourceLabel(item)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                {source && (source.projectNumber || source.taskNumber) && (
+                  <p className="mt-1 text-sm text-base-content/80">
+                    {[
+                      source.projectNumber && `Project ${source.projectNumber}`,
+                      source.taskNumber && `Task ${source.taskNumber}`,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </p>
+                )}
+              </div>
+            )}
+          </form.Field>
+        )}
         <form.Field name="description">
           {(field) => (
             <label className="flex flex-col gap-1.5 text-sm font-medium">
@@ -162,6 +250,7 @@ export function ExpenseEditor({
                 className="input input-bordered w-full"
                 onBlur={field.handleBlur}
                 onChange={(event) => field.handleChange(event.target.value)}
+                ref={nameRef}
                 value={field.state.value}
               />
             </label>
@@ -241,7 +330,10 @@ export function ExpenseEditor({
               <input
                 className="input input-bordered w-full"
                 onBlur={field.handleBlur}
-                onChange={(event) => field.handleChange(event.target.value)}
+                onChange={(event) => {
+                  explicitStart.current = true;
+                  field.handleChange(event.target.value);
+                }}
                 type="month"
                 value={field.state.value}
               />
@@ -264,7 +356,7 @@ export function ExpenseEditor({
                     value={field.state.value}
                   >
                     <option value="source">
-                      {source.endDate
+                      {source?.endDate
                         ? 'Through source end'
                         : 'Through forecast end'}
                     </option>
@@ -281,9 +373,10 @@ export function ExpenseEditor({
                     <input
                       className="input input-bordered w-full"
                       onBlur={field.handleBlur}
-                      onChange={(event) =>
-                        field.handleChange(event.target.value)
-                      }
+                      onChange={(event) => {
+                        explicitEnd.current = true;
+                        field.handleChange(event.target.value);
+                      }}
                       type="month"
                       value={field.state.value}
                     />
@@ -292,8 +385,8 @@ export function ExpenseEditor({
               </form.Field>
             ) : (
               <p className="text-sm text-base-content/80">
-                {source.endDate
-                  ? `Through source end: ${source.endDate}. This follows changes to the source end date.`
+                {source?.endDate
+                  ? `Through source end: ${source?.endDate}. This follows changes to the source end date.`
                   : `Through forecast end: ${fundingMonthLabel(window.endMonth)}. This follows the source's forecast period.`}
               </p>
             )}

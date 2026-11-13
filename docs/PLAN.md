@@ -1390,12 +1390,27 @@ read or deployment occurred.
 The user confirmed the expense decisions and authorized implementation on
 November 9, 2026. Plan notes and duration are covered by Stage 4b below.
 
-Use one shared Other expenses editor in the wizard and saved workspace. A funding
-source selector scopes the historical estimates and added expenses. Label it
-"View expenses for" and explain that new expenses are charged to that source.
-The Add/Edit dialog identifies the charge source and its captured project/task.
-Changing the page selector does not move existing expenses. Every expense still
-belongs to one source; there are no split or unallocated expenses.
+Use one shared Other expenses editor in the wizard and saved workspace. Following
+the November 13 review, it defaults to All funding sources, with combined
+historical-estimate and added-expense tables and totals. Each row identifies its
+funding source and task; selecting that source narrows both tables. The "View
+expenses for" selector also allows returning to All funding sources. An explicit
+source URL still opens that source, while the Other expenses navigation button
+opens the combined view.
+
+Keep the Other expenses heading and list icon consistent with the other sections,
+followed by a compact expense toolbar. A settings icon opens the history-window
+editor and its tooltip shows the current window. Add expense is available above
+and below the tables.
+
+Add expense requires a Charge to selection. It starts blank in All view when
+multiple sources exist, or uses the selected source or the plan's only source.
+Changing Charge to preserves entered expense details and updates date defaults
+only when those dates have not been explicitly edited. Existing expense edits
+retain their original source. Changing the page selector does not move expenses.
+Every expense still belongs to one source; there are no split or unallocated
+expenses. Combined totals sum each source's forecast using its own eligible dates;
+they do not pool source balances or category budgets.
 
 ### Historical estimates
 
@@ -1517,8 +1532,9 @@ per source or appointment, or discussion threads.
 
 The four-step wizard keeps name, duration, and an optional description on Funding
 sources; the same notes value remains editable on Review. The saved workspace
-provides Edit plan details for name, duration, and
-notes. Apply changes the local draft, Cancel leaves it unchanged, and Save plan
+provides Edit plan details for name, duration, and notes. Notes are read inside
+Plan details rather than repeated above every section. Apply changes the local
+draft, Cancel leaves it unchanged, and Save plan
 persists the result. Preserve pending-input guards, conflict handling, and newer
 local edits when a save response arrives. The existing reset endpoint preserves
 name, notes, and duration while replacing captured inputs; exposing reset remains
@@ -2138,6 +2154,11 @@ warning, with its first shortfall month. Explore funding source now lands at the
 source's forecast heading, balances, and chart below the sticky Walter header.
 It no longer focuses the details section below the chart. Only explicit source
 navigation moves focus, so browser Back and Forward retain scroll restoration.
+
+The November 13 compactness review allows the header warning to be minimized to
+a warning icon beside the plan name. The icon restores the full summary. This
+choice lasts while the workspace remains open, including section navigation;
+reopening the plan shows the summary again. It changes no saved plan data.
 
 Validation: 786 client tests passed across 85 files; the final tooltip event
 isolation regression, TypeScript, production build, changed-file lint, and

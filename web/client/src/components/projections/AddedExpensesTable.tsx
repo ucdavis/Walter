@@ -1,8 +1,4 @@
-import {
-  PencilSquareIcon,
-  PlusIcon,
-  TrashIcon,
-} from '@heroicons/react/24/outline';
+import { PencilSquareIcon, TrashIcon } from '@heroicons/react/24/outline';
 import type { ProjectionForecastWindow } from '@/lib/piProjection.ts';
 import { fundingMonthLabel } from '@/components/projections/fundingTimelineDates.ts';
 import { formatCurrency } from '@/lib/currency.ts';
@@ -10,41 +6,37 @@ import {
   computeExpenseForecast,
   getSourceForecastWindow,
 } from '@/lib/piProjection.ts';
+import { ExpenseSourceLink } from '@/components/projections/ExpenseSourceLink.tsx';
 import type { ProjectionFundingSource } from '@/queries/projections.ts';
 
 export function AddedExpensesTable({
   forecastWindow,
-  onAdd,
   onEdit,
   onRemove,
-  source,
+  onSelectSource,
+  sources,
 }: {
   forecastWindow: ProjectionForecastWindow;
-  onAdd: () => void;
-  onEdit: (id: number) => void;
-  onRemove: (id: number) => void;
-  source: ProjectionFundingSource;
+  onEdit: (sourceId: number, id: number) => void;
+  onRemove: (sourceId: number, id: number) => void;
+  onSelectSource: (id: number) => void;
+  sources: ProjectionFundingSource[];
 }) {
-  const window = getSourceForecastWindow(source, forecastWindow);
+  const expenses = sources.flatMap((source) =>
+    source.expenses.map((item) => ({ item, source }))
+  );
   return (
     <section aria-label="Added expenses">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h3 className="text-base font-semibold">Added expenses</h3>
-        <button
-          className="btn btn-outline"
-          onClick={() => onAdd()}
-          type="button"
-        >
-          <PlusIcon aria-hidden="true" className="size-5" />
-          Add expense
-        </button>
       </div>
-      {source.expenses.length ? (
+      {expenses.length ? (
         <div className="mt-3 overflow-x-auto rounded-lg border border-base-300">
           <table className="table walter-table text-sm min-w-[44rem]">
             <thead className="bg-base-200/60">
               <tr>
                 <th>Expense</th>
+                <th>Funding source</th>
                 <th>Schedule</th>
                 <th className="text-right">Entered amount</th>
                 <th className="text-right">Forecast total</th>
@@ -54,7 +46,8 @@ export function AddedExpensesTable({
               </tr>
             </thead>
             <tbody>
-              {source.expenses.map((item) => {
+              {expenses.map(({ item, source }) => {
+                const window = getSourceForecastWindow(source, forecastWindow);
                 const forecast = computeExpenseForecast(
                   source,
                   item,
@@ -65,13 +58,22 @@ export function AddedExpensesTable({
                   source.endDate?.slice(0, 7) ??
                   window.endMonth;
                 return (
-                  <tr className="hover:bg-base-200/40" key={item.id}>
+                  <tr
+                    className="hover:bg-base-200/40"
+                    key={`${source.id}:${item.id}`}
+                  >
                     <th className="font-normal" scope="row">
                       <span className="font-semibold">{item.description}</span>
                       <span className="mt-1 block text-xs text-base-content/70">
                         {item.expenditureCategory}
                       </span>
                     </th>
+                    <td>
+                      <ExpenseSourceLink
+                        onSelect={onSelectSource}
+                        source={source}
+                      />
+                    </td>
                     <td>
                       {item.kind === 'OneTime' ? (
                         `One time: ${fundingMonthLabel(item.startMonth.slice(0, 7))}`
@@ -106,7 +108,7 @@ export function AddedExpensesTable({
                         <button
                           aria-label={`Edit expense ${item.description}`}
                           className="btn btn-ghost btn-sm text-primary"
-                          onClick={() => onEdit(item.id)}
+                          onClick={() => onEdit(source.id, item.id)}
                           type="button"
                         >
                           <PencilSquareIcon
@@ -118,7 +120,7 @@ export function AddedExpensesTable({
                         <button
                           aria-label={`Remove expense ${item.description}`}
                           className="btn btn-ghost btn-sm"
-                          onClick={() => onRemove(item.id)}
+                          onClick={() => onRemove(source.id, item.id)}
                           type="button"
                         >
                           <TrashIcon aria-hidden="true" className="size-4" />
@@ -133,7 +135,9 @@ export function AddedExpensesTable({
           </table>
         </div>
       ) : (
-        <p className="mt-3 text-sm">No added expenses for this source.</p>
+        <p className="mt-3 text-sm">
+          No added expenses for the selected funding sources.
+        </p>
       )}
     </section>
   );

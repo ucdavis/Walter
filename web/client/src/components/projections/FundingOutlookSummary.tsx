@@ -1,7 +1,11 @@
 import {
   ArrowRightIcon,
   ExclamationTriangleIcon,
+  MinusIcon,
 } from '@heroicons/react/24/outline';
+import type { Ref } from 'react';
+import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
+import { tooltipDefinitions } from '@/shared/tooltips.ts';
 import { fundingMonthLabel } from '@/components/projections/fundingTimelineDates.ts';
 import { formatCurrency } from '@/lib/currency.ts';
 import type {
@@ -11,11 +15,17 @@ import type {
 import type { ProjectionNavigation } from '@/lib/projectionWorkspace.ts';
 
 export function FundingOutlookNotice({
+  minimizeRef,
+  onMinimize,
   onNavigate,
   outlook,
+  summaryId,
 }: {
+  minimizeRef?: Ref<HTMLButtonElement>;
+  onMinimize?: () => void;
   onNavigate: (location: ProjectionNavigation) => void;
   outlook: ProjectionOutlook;
+  summaryId?: string;
 }) {
   const first = outlook.shortfallSources.find(
     (source) => source.firstShortfallMonth === outlook.firstShortfallMonth
@@ -95,6 +105,25 @@ export function FundingOutlookNotice({
           </div>
         )}
       </div>
+      {onMinimize && (
+        <TooltipLabel
+          asChild
+          label={
+            <button
+              aria-controls={summaryId}
+              aria-expanded="true"
+              aria-label="Minimize funding summary"
+              className="btn btn-ghost btn-sm btn-square shrink-0"
+              onClick={onMinimize}
+              ref={minimizeRef}
+              type="button"
+            >
+              <MinusIcon aria-hidden="true" className="size-4" />
+            </button>
+          }
+          tooltip={tooltipDefinitions.minimizeFundingSummary}
+        />
+      )}
     </section>
   );
 }

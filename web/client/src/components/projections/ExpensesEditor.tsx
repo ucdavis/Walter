@@ -1,4 +1,10 @@
-import { ClockIcon, ListBulletIcon } from '@heroicons/react/24/outline';
+import {
+  Cog6ToothIcon,
+  ListBulletIcon,
+  PlusIcon,
+} from '@heroicons/react/24/outline';
+import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
+import { projectionHistoryTooltip } from '@/shared/tooltips.ts';
 import { formatCurrency } from '@/lib/currency.ts';
 import { HistoricalExpensesTable } from '@/components/projections/HistoricalExpensesTable.tsx';
 import { AddedExpensesTable } from '@/components/projections/AddedExpensesTable.tsx';
@@ -50,7 +56,7 @@ export interface ExpensesEditorHandle {
 }
 type EditorTarget =
   | { kind: 'history' }
-  | { id: number | 'new'; kind: 'expense'; sourceId: number }
+  | { id: number | 'new'; kind: 'expense'; sourceId: number | null }
   | { category: string; kind: 'historical'; sourceId: number };
 
 export function ExpensesEditor<T extends ProjectionDraft>({
@@ -62,24 +68,31 @@ export function ExpensesEditor<T extends ProjectionDraft>({
   onOperation: (operation: ExpenseOperation) => ExpenseOperationResult<T>;
   ref?: Ref<ExpensesEditorHandle>;
   session: ProjectionSession<T>;
-  sourceTarget?: { id: number | null; onChange: (id: number) => void };
+  sourceTarget?: { id: number | null; onChange: (id: number | null) => void };
 }) {
   const { draft } = session;
   const sourceHelpId = useId();
   const forecastWindow = getProjectionForecastWindow(draft);
-  const [selectedId, setSelectedId] = useState<number | null>(
-    draft.content.fundingSources[0]?.id ?? null
-  );
+  const [selectedId, setSelectedId] = useState<number | null>(null);
   const [editing, setEditing] = useState<EditorTarget | null>(null);
   const [error, setError] = useState<string | null>(null);
   const manualRef = useRef<ExpenseEditorHandle>(null);
   const historicalRef = useRef<HistoricalExpenseEditorHandle>(null);
   const historyRef = useRef<HistoryWindowEditorHandle>(null);
   const lookup = useQuery(projectionLookupsQueryOptions());
-  const selectedSource =
-    draft.content.fundingSources.find(
-      ({ id }) => id === (sourceTarget ? sourceTarget.id : selectedId)
-    ) ?? draft.content.fundingSources[0];
+  const selectedSource = draft.content.fundingSources.find(
+    ({ id }) => id === (sourceTarget ? sourceTarget.id : selectedId)
+  );
+  const visibleSources = selectedSource
+    ? [selectedSource]
+    : draft.content.fundingSources;
+  const selectSource = (id: number | null) => {
+    if (sourceTarget) {
+      sourceTarget.onChange(id);
+    } else {
+      setSelectedId(id);
+    }
+  };
   const editingSource =
     editing && editing.kind !== 'history'
       ? draft.content.fundingSources.find(({ id }) => id === editing.sourceId)
@@ -126,18 +139,28 @@ export function ExpensesEditor<T extends ProjectionDraft>({
     setError(result.ok ? null : result.error);
     return result;
   }
+  function openNewExpense() {
+    setEditing({
+      id: 'new',
+      kind: 'expense',
+      sourceId:
+        selectedSource?.id ??
+        (draft.content.fundingSources.length === 1
+          ? draft.content.fundingSources[0].id
+          : null),
+    });
+  }
   const window = selectedSource
     ? getSourceForecastWindow(selectedSource, forecastWindow)
     : null;
-  const historicalTotal = selectedSource
-    ? getHistoricalExpenseRows(
-        selectedSource,
-        draft.content.historyMonths
-      ).reduce(
-        (total, row) =>
-          total +
+  const historicalTotal = visibleSources.reduce(
+    (total, source) =>
+      total +
+      getHistoricalExpenseRows(source, draft.content.historyMonths).reduce(
+        (sourceTotal, row) =>
+          sourceTotal +
           computeExpenseForecast(
-            selectedSource,
+            source,
             {
               amount: row.effectiveAmount,
               endMonth: null,
@@ -147,56 +170,41 @@ export function ExpensesEditor<T extends ProjectionDraft>({
             forecastWindow
           ).total,
         0
-      )
-    : 0;
-  const addedTotal =
-    selectedSource?.expenses.reduce(
-      (total, item) =>
-        total +
-        computeExpenseForecast(selectedSource, item, forecastWindow).total,
-      0
-    ) ?? 0;
+      ),
+    0
+  );
+  const addedTotal = visibleSources.reduce(
+    (total, source) =>
+      total +
+      source.expenses.reduce(
+        (sourceTotal, item) =>
+          sourceTotal +
+          computeExpenseForecast(source, item, forecastWindow).total,
+        0
+      ),
+    0
+  );
   return (
     <div className="mt-5 space-y-5">
-      <div>
-        <h2 className="flex items-center gap-2 text-xl font-semibold">
-          <ListBulletIcon aria-hidden="true" className="size-5 shrink-0" />
-          Other expenses
-        </h2>
-        <p className="mt-1 text-sm leading-relaxed text-base-content/80">
-          Adjust historical estimates or add costs for one funding source at a
-          time.
-        </p>
-      </div>
-      <div className="flex flex-wrap items-center gap-2 text-sm text-base-content/80">
-        <ClockIcon aria-hidden="true" className="size-4" />
-        <p>Spending history: {draft.content.historyMonths} months</p>
-        <button
-          aria-label="Change history window"
-          className="btn btn-ghost btn-sm text-primary"
-          onClick={() => setEditing({ kind: 'history' })}
-          type="button"
-        >
-          Change
-        </button>
-      </div>
-      {selectedSource ? (
-        <>
-          <label className="flex max-w-3xl flex-col gap-1.5 text-sm font-medium">
+      <h2 className="flex items-center gap-2 text-xl font-semibold">
+        <ListBulletIcon aria-hidden="true" className="size-5 shrink-0" />
+        Other expenses
+      </h2>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        {draft.content.fundingSources.length > 0 && (
+          <label className="flex min-w-0 flex-1 basis-64 flex-col gap-1.5 text-sm font-medium">
             View expenses for
             <select
               aria-describedby={sourceHelpId}
               className="select select-bordered w-full"
-              onChange={(event) => {
-                const id = Number(event.target.value);
-                if (sourceTarget) {
-                  sourceTarget.onChange(id);
-                } else {
-                  setSelectedId(id);
-                }
-              }}
-              value={selectedSource.id}
+              onChange={(event) =>
+                selectSource(
+                  event.target.value === '' ? null : Number(event.target.value)
+                )
+              }
+              value={selectedSource?.id ?? ''}
             >
+              <option value="">All funding sources</option>
               {draft.content.fundingSources.map((source) => (
                 <option key={source.id} value={source.id}>
                   {sourceLabel(source)}
@@ -204,15 +212,47 @@ export function ExpensesEditor<T extends ProjectionDraft>({
               ))}
             </select>
           </label>
+        )}
+        <div className="ml-auto flex shrink-0 items-center gap-1">
+          <button
+            className="btn btn-primary"
+            disabled={!draft.content.fundingSources.length}
+            onClick={openNewExpense}
+            type="button"
+          >
+            <PlusIcon aria-hidden="true" className="size-5" />
+            Add expense
+          </button>
+          <TooltipLabel
+            asChild
+            label={
+              <button
+                aria-label="Change history window"
+                className="btn btn-ghost btn-square btn-sm text-base-content/70"
+                onClick={() => setEditing({ kind: 'history' })}
+                type="button"
+              >
+                <Cog6ToothIcon aria-hidden="true" className="size-5" />
+              </button>
+            }
+            tooltip={projectionHistoryTooltip(draft.content.historyMonths)}
+          />
+        </div>
+      </div>
+      {draft.content.fundingSources.length ? (
+        <>
           <p className="text-sm text-base-content/80" id={sourceHelpId}>
-            Historical estimates and added expenses below belong to this source.
-            New expenses are charged here.
+            {selectedSource
+              ? 'Showing expenses charged to this funding source.'
+              : 'Showing expenses across all funding sources. Select a source in either table to focus this view.'}
           </p>
-          <p className="text-sm text-base-content/80">
-            Captured {selectedSource.capturedAt.slice(0, 10)}. Forecast through{' '}
-            {fundingMonthLabel(window!.endMonth)}.
-          </p>
-          {window!.isBeyondForecast && (
+          {selectedSource && window && (
+            <p className="text-sm text-base-content/80">
+              Captured {selectedSource.capturedAt.slice(0, 10)}. Forecast
+              through {fundingMonthLabel(window.endMonth)}.
+            </p>
+          )}
+          {window?.isBeyondForecast && (
             <p className="text-sm text-base-content/80">
               This source starts after the forecast period. Its expenses add no
               costs within this plan period.
@@ -247,39 +287,42 @@ export function ExpensesEditor<T extends ProjectionDraft>({
           <HistoricalExpensesTable
             forecastWindow={forecastWindow}
             historyMonths={draft.content.historyMonths}
-            onEdit={(category) =>
+            onEdit={(sourceId, category) =>
               setEditing({
                 category,
                 kind: 'historical',
-                sourceId: selectedSource.id,
+                sourceId,
               })
             }
-            onRestore={(category) =>
+            onRestore={(sourceId, category) =>
               apply((current) =>
-                restoreHistoricalExpense(current, selectedSource.id, category)
+                restoreHistoricalExpense(current, sourceId, category)
               )
             }
-            source={selectedSource}
+            onSelectSource={selectSource}
+            sources={visibleSources}
           />
           <AddedExpensesTable
             forecastWindow={forecastWindow}
-            onAdd={() =>
-              setEditing({
-                id: 'new',
-                kind: 'expense',
-                sourceId: selectedSource.id,
-              })
+            onEdit={(sourceId, id) =>
+              setEditing({ id, kind: 'expense', sourceId })
             }
-            onEdit={(id) =>
-              setEditing({ id, kind: 'expense', sourceId: selectedSource.id })
+            onRemove={(sourceId, id) =>
+              apply((current) => removeProjectionExpense(current, sourceId, id))
             }
-            onRemove={(id) =>
-              apply((current) =>
-                removeProjectionExpense(current, selectedSource.id, id)
-              )
-            }
-            source={selectedSource}
+            onSelectSource={selectSource}
+            sources={visibleSources}
           />
+          <div className="flex justify-end">
+            <button
+              className="btn btn-primary"
+              onClick={openNewExpense}
+              type="button"
+            >
+              <PlusIcon aria-hidden="true" className="size-5" />
+              Add expense
+            </button>
+          </div>
         </>
       ) : (
         <p>
@@ -327,38 +370,32 @@ export function ExpensesEditor<T extends ProjectionDraft>({
           }
           onClose={() => setEditing(null)}
           ref={historicalRef}
-          sourceId={editingSource.id}
+          source={editingSource}
         />
       )}
-      {editing?.kind === 'expense' &&
-        editingSource &&
-        (editing.id === 'new' || expense) && (
-          <ExpenseEditor
-            categories={categories}
-            expense={expense}
-            forecastWindow={forecastWindow}
-            key={`${editingSource.id}:${editing.id}`}
-            lookupFailed={lookup.isError}
-            onApply={(inputs) =>
-              apply((current) =>
-                editing.id === 'new'
-                  ? addProjectionExpense(current, editingSource.id, inputs)
-                  : editProjectionExpense(
-                      current,
-                      editingSource.id,
-                      editing.id,
-                      inputs
-                    )
-              )
-            }
-            onClose={() => setEditing(null)}
-            onRetryCategories={() => {
-              void lookup.refetch();
-            }}
-            ref={manualRef}
-            source={editingSource}
-          />
-        )}
+      {editing?.kind === 'expense' && (editing.id === 'new' || expense) && (
+        <ExpenseEditor
+          categories={categories}
+          expense={expense}
+          forecastWindow={forecastWindow}
+          key={`${editing.sourceId ?? 'all'}:${editing.id}`}
+          lookupFailed={lookup.isError}
+          onApply={(inputs, sourceId) =>
+            apply((current) =>
+              editing.id === 'new'
+                ? addProjectionExpense(current, sourceId, inputs)
+                : editProjectionExpense(current, sourceId, editing.id, inputs)
+            )
+          }
+          onClose={() => setEditing(null)}
+          onRetryCategories={() => {
+            void lookup.refetch();
+          }}
+          ref={manualRef}
+          source={editingSource}
+          sources={draft.content.fundingSources}
+        />
+      )}
     </div>
   );
 }

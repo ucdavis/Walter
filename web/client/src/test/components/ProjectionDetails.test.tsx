@@ -132,10 +132,13 @@ describe('projection plan details', () => {
       content: { forecastMonths: 18, notes },
       name: 'Longer plan',
     });
-    const visibleNotes = screen.getByRole('region', { name: 'Plan notes' });
-    expect(visibleNotes).toHaveTextContent('<b>Planning assumption</b>');
-    expect(visibleNotes.querySelector('b')).toBeNull();
-    expect(visibleNotes.querySelector('p')!.textContent).toBe(notes);
+    expect(
+      screen.queryByRole('region', { name: 'Plan notes' })
+    ).not.toBeInTheDocument();
+    await openDetails(user);
+    expect(screen.getByLabelText('Plan notes (optional)')).toHaveValue(notes);
+    expect(screen.getByRole('dialog').querySelector('b')).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(read().draft.content.fundingSources).toEqual(
       plan.content.fundingSources
     );

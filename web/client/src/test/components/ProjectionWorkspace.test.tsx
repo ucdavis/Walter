@@ -53,6 +53,123 @@ const editButton = () =>
   screen.getByRole('button', { name: 'Edit appointment for Alex Example' });
 
 describe('projection plan header', () => {
+  it('minimizes warnings beside the title across sections and restores them without changing the plan', async () => {
+    const plan = createSalaryExample();
+    plan.content.fundingSources[0].balanceAdjustment = -50_000;
+    plan.content.notes = 'Read this only in Plan details.';
+    const { user } = openWorkspace('?section=overview', plan);
+    const minimize = await screen.findByRole('button', {
+      name: 'Minimize funding summary',
+    });
+    expect(minimize).toHaveAttribute('aria-expanded', 'true');
+    expect(
+      screen.queryByRole('region', { name: 'Plan notes' })
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(plan.content.notes)).not.toBeInTheDocument();
+    await user.click(minimize);
+    const restore = screen.getByRole('button', {
+      name: 'Show funding summary',
+    });
+    expect(restore).toHaveAttribute('aria-expanded', 'false');
+    expect(restore).toHaveClass('text-error');
+    expect(restore).toHaveFocus();
+    expect(
+      screen.getByRole('heading', { name: plan.name }).parentElement
+    ).toContainElement(restore);
+    expect(
+      document.getElementById(restore.getAttribute('aria-controls')!)
+    ).not.toBeVisible();
+    expect(
+      screen.queryByRole('region', { name: 'Funding summary' })
+    ).not.toBeInTheDocument();
+    const navigation = screen.getByRole('navigation', {
+      name: 'Plan sections',
+    });
+    await user.click(
+      within(navigation).getByRole('button', { name: 'Staffing' })
+    );
+    await user.click(
+      within(navigation).getByRole('button', { name: 'Other expenses' })
+    );
+    expect(
+      screen.getByRole('button', { name: 'Show funding summary' })
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('region', { name: 'Funding summary' })
+    ).not.toBeInTheDocument();
+    await user.click(
+      screen.getByRole('button', { name: 'Show funding summary' })
+    );
+    expect(
+      screen.getByRole('region', { name: 'Funding summary' })
+    ).toHaveTextContent('First funding shortfall: Jan 2026');
+    expect(
+      screen.getByRole('button', { name: 'Minimize funding summary' })
+    ).toHaveFocus();
+    expect(
+      screen.queryByRole('button', { name: 'Show funding summary' })
+    ).not.toBeInTheDocument();
+    expect(read()).toMatchObject({ dirty: false, revision: 0 });
+    expect(read().draft).toEqual(plan);
+    expect(screen.getByRole('button', { name: 'Save plan' })).toBeDisabled();
+    await user.click(screen.getByRole('button', { name: 'Edit plan details' }));
+    expect(screen.getByLabelText('Plan notes (optional)')).toHaveValue(
+      plan.content.notes
+    );
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    await user.click(
+      screen.getByRole('button', { name: 'Minimize funding summary' })
+    );
+    cleanup();
+    openWorkspace('?section=overview', plan);
+    expect(
+      await screen.findByRole('region', { name: 'Funding summary' })
+    ).toBeVisible();
+  });
+
+  it.each([0.25, 0.75])(
+    'uses an amber minimized warning for allocation shares of %s without a funding shortfall',
+    async (percent) => {
+      const plan = createSalaryExample();
+      for (const source of plan.content.fundingSources) {
+        source.balanceAdjustment = 100_000;
+      }
+      for (const allocation of plan.content.appointments[0].allocations) {
+        allocation.percent = percent;
+      }
+      const { user } = openWorkspace('?section=overview', plan);
+      await user.click(
+        await screen.findByRole('button', { name: 'Minimize funding summary' })
+      );
+      expect(
+        screen.getByRole('button', { name: 'Show funding summary' })
+      ).toHaveClass('text-warning');
+      await user.click(
+        screen.getByRole('button', { name: 'Show funding summary' })
+      );
+      await user.click(
+        within(
+          screen.getByRole('region', { name: 'Funding summary' })
+        ).getByRole('button', { name: 'Review staffing' })
+      );
+      expect(read().location.section).toBe('staffing');
+    }
+  );
+
+  it('shows no funding toggle when the plan has no warnings', async () => {
+    openWorkspace('?section=overview');
+    await screen.findByRole('heading', { name: 'Salary planning example' });
+    expect(
+      screen.queryByRole('region', { name: 'Funding summary' })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Minimize funding summary' })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Show funding summary' })
+    ).not.toBeInTheDocument();
+  });
+
   it('keeps one actionable funding warning above the title across section navigation', async () => {
     const plan = createSalaryExample();
     plan.content.fundingSources[0].balanceAdjustment = -50_000;

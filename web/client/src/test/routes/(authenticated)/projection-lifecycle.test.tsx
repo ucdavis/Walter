@@ -252,9 +252,7 @@ describe('projection creation and copies', () => {
       });
       await screen.findByText(/Projections have been turned off/);
       await reviewWizard(user);
-      await user.click(
-        screen.getByRole('button', { name: 'Create plan' })
-      );
+      await user.click(screen.getByRole('button', { name: 'Create plan' }));
       await screen.findByText(/was saved\./);
       expect(api.creates).toHaveLength(1);
       expect(
@@ -529,7 +527,14 @@ describe('projection creation and copies', () => {
         seededAt: api.seed.seededAt,
       });
       expect(api.seedReads()).toBe(1);
-      await screen.findByRole('region', { name: 'Plan notes' });
+      await user.click(
+        await screen.findByRole('button', { name: 'Edit plan details' })
+      );
+      expect(screen.getByLabelText('Plan notes (optional)')).toHaveValue(notes);
+      expect(
+        screen.queryByRole('region', { name: 'Plan notes' })
+      ).not.toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: 'Cancel' }));
     } finally {
       route.cleanup();
     }
@@ -769,6 +774,7 @@ describe('projection creation and copies', () => {
         name: 'Edit appointment for Alex Example',
       });
       await user.click(screen.getByRole('button', { name: 'Continue' }));
+      expect(screen.getByLabelText('View expenses for')).toHaveValue('');
       await user.click(
         screen.getByRole('button', {
           name: `Edit historical amount for ${category}`,
@@ -777,13 +783,23 @@ describe('projection creation and copies', () => {
       await user.clear(screen.getByLabelText('Monthly amount'));
       await user.type(screen.getByLabelText('Monthly amount'), '300');
       await user.click(screen.getByRole('button', { name: 'Apply amount' }));
-      await user.click(screen.getByRole('button', { name: 'Add expense' }));
+      await user.click(
+        screen.getAllByRole('button', { name: 'Add expense' })[0]
+      );
+      expect(screen.getByLabelText('Charge to')).toHaveValue('');
       await user.type(
         screen.getByLabelText('Expense name'),
         'Planned supply credit'
       );
       await user.selectOptions(screen.getByLabelText('Category'), category);
       await user.type(screen.getByLabelText('Monthly amount'), '-125.50');
+      expect(
+        screen.getByRole('button', { name: 'Apply expense' })
+      ).toBeDisabled();
+      await user.selectOptions(screen.getByLabelText('Charge to'), '1');
+      expect(
+        screen.getByRole('button', { name: 'Apply expense' })
+      ).toBeEnabled();
       await user.click(screen.getByRole('button', { name: 'Apply expense' }));
       await changeHistoryWindow(user, '6');
       expect(api.creates).toHaveLength(0);

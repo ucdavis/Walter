@@ -151,7 +151,7 @@ export interface PendingSourceEditor {
 export interface PendingExpenseEditor {
   expenditureCategory: string | null;
   expenseId: number | null;
-  fundingSourceId: number;
+  fundingSourceId: number | null;
   hasChanges: boolean;
   kind: 'expense' | 'historicalExpense';
   validationMessage: string | null;

@@ -6,6 +6,7 @@ import type { ProjectionForecastWindow } from '@/lib/piProjection.ts';
 import { formatCurrency } from '@/lib/currency.ts';
 import { computeExpenseForecast } from '@/lib/piProjection.ts';
 import { getHistoricalExpenseRows } from '@/lib/projectionExpenses.ts';
+import { ExpenseSourceLink } from '@/components/projections/ExpenseSourceLink.tsx';
 import type { ProjectionFundingSource } from '@/queries/projections.ts';
 
 export function HistoricalExpensesTable({
@@ -13,15 +14,22 @@ export function HistoricalExpensesTable({
   historyMonths,
   onEdit,
   onRestore,
-  source,
+  onSelectSource,
+  sources,
 }: {
   forecastWindow: ProjectionForecastWindow;
   historyMonths: number;
-  onEdit: (category: string) => void;
-  onRestore: (category: string) => void;
-  source: ProjectionFundingSource;
+  onEdit: (sourceId: number, category: string) => void;
+  onRestore: (sourceId: number, category: string) => void;
+  onSelectSource: (id: number) => void;
+  sources: ProjectionFundingSource[];
 }) {
-  const historical = getHistoricalExpenseRows(source, historyMonths);
+  const historical = sources.flatMap((source) =>
+    getHistoricalExpenseRows(source, historyMonths).map((row) => ({
+      row,
+      source,
+    }))
+  );
   return (
     <section aria-label="Historical expense estimates">
       <h3 className="text-base font-semibold">Historical estimates</h3>
@@ -35,6 +43,7 @@ export function HistoricalExpensesTable({
             <thead className="bg-base-200/60">
               <tr>
                 <th>Category</th>
+                <th>Funding source</th>
                 <th className="text-right">Monthly amount</th>
                 <th className="text-right">Forecast total</th>
                 <th>
@@ -43,7 +52,7 @@ export function HistoricalExpensesTable({
               </tr>
             </thead>
             <tbody>
-              {historical.map((row) => {
+              {historical.map(({ row, source }) => {
                 const forecast = computeExpenseForecast(
                   source,
                   {
@@ -62,7 +71,7 @@ export function HistoricalExpensesTable({
                 return (
                   <tr
                     className="hover:bg-base-200/40"
-                    key={row.expenditureCategory}
+                    key={`${source.id}:${row.expenditureCategory}`}
                   >
                     <th className="font-normal" scope="row">
                       <span className="font-semibold">
@@ -74,6 +83,12 @@ export function HistoricalExpensesTable({
                           : 'No costs captured in this window'}
                       </span>
                     </th>
+                    <td>
+                      <ExpenseSourceLink
+                        onSelect={onSelectSource}
+                        source={source}
+                      />
+                    </td>
                     <td className="text-right whitespace-nowrap tabular-nums">
                       {formatCurrency(row.effectiveAmount)}
                       <span className="mt-1 block text-xs text-base-content/70">
@@ -95,7 +110,9 @@ export function HistoricalExpensesTable({
                         <button
                           aria-label={`Edit historical amount for ${row.expenditureCategory}`}
                           className="btn btn-ghost btn-sm text-primary"
-                          onClick={() => onEdit(row.expenditureCategory)}
+                          onClick={() =>
+                            onEdit(source.id, row.expenditureCategory)
+                          }
                           type="button"
                         >
                           <PencilSquareIcon
@@ -108,7 +125,9 @@ export function HistoricalExpensesTable({
                           <button
                             aria-label={`Use historical amount for ${row.expenditureCategory}`}
                             className="btn btn-ghost btn-sm"
-                            onClick={() => onRestore(row.expenditureCategory)}
+                            onClick={() =>
+                              onRestore(source.id, row.expenditureCategory)
+                            }
                             type="button"
                           >
                             <ArrowUturnLeftIcon
@@ -128,7 +147,8 @@ export function HistoricalExpensesTable({
         </div>
       ) : (
         <p className="mt-3 text-sm">
-          No historical expense categories were captured for this source.
+          No historical expense categories were captured for the selected
+          funding sources.
         </p>
       )}
     </section>
