@@ -52,6 +52,39 @@ async function enter(
 }
 
 describe('appointment planning controls', () => {
+  it.each([
+    ['2026-01-01', '2026-10'],
+    ['2026-10-15', '2026-10'],
+    ['2027-07-01', '2027-07'],
+  ])(
+    'keeps the salary base for a %s start consistent before and after Apply',
+    async (startDate, baseMonth) => {
+      const plan = createSalaryExample();
+      plan.seededAt = '2026-10-01T00:00:00Z';
+      const user = openWorkspace(plan, false);
+      await user.click(
+        await screen.findByRole('button', { name: 'Add hypothetical hire' })
+      );
+      await enter(user, 'Appointment name', 'Planned hire');
+      await enter(user, 'Full-time annual salary', '120000');
+      fireEvent.change(screen.getByLabelText('Start date'), {
+        target: { value: startDate },
+      });
+      expect(
+        screen.getByText(`Salary base: ${baseMonth}.`, { exact: false })
+      ).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: 'Apply' }));
+      await user.click(
+        await screen.findByRole('button', {
+          name: 'Edit appointment for Planned hire',
+        })
+      );
+      expect(
+        screen.getByText(`Salary base: ${baseMonth}.`, { exact: false })
+      ).toBeInTheDocument();
+    }
+  );
+
   it('keeps captured precision on unchanged Apply and preserves allocations and actuals while editing FTE, rates, fees, and dates', async () => {
     const plan = createSalaryExample();
     Object.assign(plan.content.appointments[0], {

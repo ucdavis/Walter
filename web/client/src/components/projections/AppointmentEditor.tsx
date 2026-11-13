@@ -433,12 +433,10 @@ function AppointmentForm({
       <p className="text-sm text-base-content/80">
         {formatCurrency(inputs.monthlySalary)} per month at full time. Salary
         base:{' '}
-        {appointment
-          ? getAppointmentSalaryBaseMonth(
-              { ...appointment, startDate: inputs.startDate },
-              snapshotMonth
-            )
-          : (inputs.startDate?.slice(0, 7) ?? 'choose a start date')}
+        {getAppointmentSalaryBaseMonth(
+          { isSeeded: !planned, startDate: inputs.startDate },
+          snapshotMonth
+        )}
         .
       </p>
       <p className="text-sm text-base-content/80">

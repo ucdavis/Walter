@@ -91,7 +91,7 @@ export function getProjectionForecastWindow(
 
 /** Imported pay is snapshot-dated; a planned future hire's input is its starting rate. */
 export function getAppointmentSalaryBaseMonth(
-  appointment: ProjectionAppointment,
+  appointment: Pick<ProjectionAppointment, 'isSeeded' | 'startDate'>,
   snapshotMonth: string
 ) {
   const startMonth = appointment.startDate?.slice(0, 7);
