@@ -1,0 +1,262 @@
+import {
+  computePiProjection,
+  type PiProjectionRow,
+} from '@/lib/piProjection.ts';
+import type { Projection, ProjectionDraft } from '@/queries/projections.ts';
+
+export interface ProjectionSession<T extends ProjectionDraft = Projection> {
+  baseline: T;
+  draft: T;
+  revision: number;
+}
+
+export function createProjectionSession<T extends ProjectionDraft>(
+  plan: T
+): ProjectionSession<T> {
+  return { baseline: plan, draft: plan, revision: 0 };
+}
+
+/** Acknowledges exactly the submitted revision while retaining edits applied during its request. */
+export function acknowledgeProjectionSave(
+  current: ProjectionSession,
+  submitted: ProjectionSession,
+  saved: Projection
+): ProjectionSession {
+  return {
+    ...current,
+    baseline: saved,
+    draft:
+      current.revision === submitted.revision
+        ? saved
+        : {
+            ...saved,
+            content: current.draft.content,
+            name: current.draft.name,
+          },
+  };
+}
+
+export interface ProjectionLocation {
+  appointmentId: number | null;
+  fundingMonth: string | null;
+  fundingSourceId: number | null;
+  issues: string[];
+  section: 'overview' | 'funding' | 'staffing' | 'expenses' | null;
+}
+
+export interface ProjectionNavigation {
+  appointment?: number;
+  fundingMonth?: string;
+  section: 'overview' | 'funding' | 'staffing' | 'expenses';
+  source?: number;
+}
+
+export function readProjectionLocation(
+  search: Record<string, unknown>,
+  plan: ProjectionDraft
+): ProjectionLocation {
+  const issues: string[] = [];
+  const parseTarget = (key: 'appointment' | 'source') => {
+    if (search[key] === undefined) {
+      return null;
+    }
+    const value = search[key];
+    if (
+      !['string', 'number'].includes(typeof value) ||
+      !/^[1-9]\d*$/.test(String(value)) ||
+      !Number.isSafeInteger(Number(value))
+    ) {
+      issues.push(`The ${key} target is malformed.`);
+      return null;
+    }
+    return Number(value);
+  };
+  const appointmentId = parseTarget('appointment');
+  const fundingSourceId = parseTarget('source');
+  const fundingMonth =
+    typeof search.fundingMonth === 'string' &&
+    /^(?!0{4})\d{4}-(0[1-9]|1[0-2])$/.test(search.fundingMonth)
+      ? search.fundingMonth
+      : null;
+  if (search.fundingMonth !== undefined && fundingMonth === null) {
+    issues.push('The funding month target is malformed.');
+  }
+  if (search.fundingMonth !== undefined && appointmentId === null) {
+    issues.push('A funding month requires an appointment.');
+  }
+  const section =
+    search.section ??
+    (search.appointment === undefined ? 'overview' : 'staffing');
+  if (
+    section !== 'overview' &&
+    section !== 'funding' &&
+    section !== 'staffing' &&
+    section !== 'expenses'
+  ) {
+    issues.push('This plan section does not exist.');
+  }
+  if (
+    appointmentId !== null &&
+    !plan.content.appointments.some(({ id }) => id === appointmentId)
+  ) {
+    issues.push(`Appointment ${appointmentId} is not in this plan.`);
+  }
+  if (
+    fundingSourceId !== null &&
+    !plan.content.fundingSources.some(({ id }) => id === fundingSourceId)
+  ) {
+    issues.push(`Funding source ${fundingSourceId} is not in this plan.`);
+  }
+  if (appointmentId !== null && section !== 'staffing') {
+    issues.push('An appointment editor must be opened in Staffing.');
+  }
+  return {
+    appointmentId,
+    fundingMonth,
+    fundingSourceId,
+    issues,
+    section:
+      section === 'overview' ||
+      section === 'funding' ||
+      section === 'staffing' ||
+      section === 'expenses'
+        ? section
+        : null,
+  };
+}
+
+export type ProjectionResults = ReturnType<typeof computePiProjection>;
+
+export interface PendingAppointmentEditor {
+  appointmentId: number | null;
+  hasChanges: boolean;
+  kind: 'appointment';
+  validationMessage: string | null;
+}
+
+export interface PendingAllocationEditor {
+  appointmentId: number;
+  hasChanges: boolean;
+  kind: 'allocation';
+  validationMessage: string | null;
+}
+
+export interface PendingSourceEditor {
+  fundingSourceId: number | null;
+  hasChanges: boolean;
+  kind: 'source';
+  validationMessage: string | null;
+}
+
+export interface PendingExpenseEditor {
+  expenditureCategory: string | null;
+  expenseId: number | null;
+  fundingSourceId: number | null;
+  hasChanges: boolean;
+  kind: 'expense' | 'historicalExpense';
+  validationMessage: string | null;
+}
+
+export interface PendingHistoryEditor {
+  hasChanges: boolean;
+  kind: 'history';
+  validationMessage: string | null;
+}
+
+export interface PendingPlanDetailsEditor {
+  hasChanges: boolean;
+  kind: 'details';
+  validationMessage: string | null;
+}
+
+export type PendingProjectionEditor =
+  | PendingAllocationEditor
+  | PendingAppointmentEditor
+  | PendingExpenseEditor
+  | PendingHistoryEditor
+  | PendingPlanDetailsEditor
+  | PendingSourceEditor;
+
+export interface ProjectionPersistenceStatus {
+  conflict: 'conflict' | 'snapshotChanged' | 'deleted' | null;
+  conflictOpen: boolean;
+  error: string | null;
+  reloading: boolean;
+  saveStatus: 'idle' | 'saving' | 'saved';
+  saving: boolean;
+}
+
+function serializeEditableProjection(plan: ProjectionDraft) {
+  const document = {
+    content: plan.content,
+    name: plan.name,
+  };
+  return JSON.stringify(document, (_key, value) =>
+    value && typeof value === 'object' && !Array.isArray(value)
+      ? Object.fromEntries(
+          Object.entries(value).sort(([a], [b]) => a.localeCompare(b))
+        )
+      : value
+  );
+}
+
+/** Compare editable content, excluding server audit tokens and local revision bookkeeping. */
+export function isProjectionDirty(
+  session: ProjectionSession<ProjectionDraft>
+): boolean {
+  return (
+    session.draft !== session.baseline &&
+    serializeEditableProjection(session.draft) !==
+      serializeEditableProjection(session.baseline)
+  );
+}
+
+/** Composes the current view on demand without keeping a second workspace document. */
+export function readProjectionWorkspace<T extends ProjectionDraft>(
+  session: ProjectionSession<T>,
+  location: ProjectionLocation,
+  results: ProjectionResults,
+  pendingEditor: PendingProjectionEditor | null,
+  persistence: ProjectionPersistenceStatus | null = null
+) {
+  return structuredClone({
+    dirty: isProjectionDirty(session),
+    draft: session.draft,
+    location,
+    pendingEditor,
+    persistence,
+    results,
+    revision: session.revision,
+  });
+}
+
+export type ProjectionWorkspaceSnapshot<
+  T extends ProjectionDraft = Projection,
+> = ReturnType<typeof readProjectionWorkspace<T>>;
+
+/** Combines category rows into each funding source's monthly outlook. */
+export function getFundingSourceOutlook(
+  rows: PiProjectionRow[],
+  fundingSourceId: number
+) {
+  const months = new Map<
+    string,
+    { actual: number; forecast: number; month: string; remaining: number }
+  >();
+  for (const row of rows) {
+    if (row.fundingSourceId !== fundingSourceId) {
+      continue;
+    }
+    const month = months.get(row.month) ?? {
+      actual: 0,
+      forecast: 0,
+      month: row.month,
+      remaining: 0,
+    };
+    month.actual += row.actualAmount;
+    month.forecast += row.projectedAmount;
+    month.remaining += row.remaining;
+    months.set(row.month, month);
+  }
+  return [...months.values()].sort((a, b) => a.month.localeCompare(b.month));
+}

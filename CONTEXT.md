@@ -60,6 +60,52 @@ _Avoid_: IAM ID, public person identifier
 A **Person** Walter can include in people search because they have both an **IAM ID** and an **Employee ID**.
 _Avoid_: Directory user, employee-only result
 
+**Projection Plan**:
+A saved scenario for one PI that contains captured funding inputs and editable cost assumptions. The plan is saved and copied as a whole.
+Its typed `Content` contains funding sources, appointments, the history window,
+forecast duration, and notes. Identity, ownership, name, snapshot timestamp, and
+audit fields sit outside that content.
+_Avoid_: Project, live financial report
+
+**Forecast Period**:
+The 12- or 18-month window selected for a **Projection Plan**, counting its original
+snapshot month as the first month. All sources use the same end month. Changing
+the period preserves entered source, appointment, allocation, and expense dates.
+_Avoid_: History window, source lifetime
+
+**Funding Source**:
+An independently tracked pool of funding within a **Projection Plan**. It can represent an imported project/task pair or hypothetical funding. Project and task numbers identify its origin; its plan-local ID identifies it inside the scenario. Its editable name is separate from the captured project name used for grouping.
+_Avoid_: Project when referring to every kind of source
+
+**Budget Adjustment**:
+A net scenario change to a **Funding Source**'s starting available money. Captured
+budgets, spending, and commitments remain intact. Moving money between categories
+preserves the source total; adding or removing funding changes that total. Budget
+adjustments do not change forecast expenses or submit changes to accounting.
+_Avoid_: Expense credit, booked spending, allocation
+
+**Initial Planned Funding**:
+The original pool amount or category budgets entered when a hypothetical
+**Funding Source** is created. It is the baseline for later budget adjustments
+and resets. It is user-entered funding, not a captured financial-system balance.
+_Avoid_: Captured budget when describing hypothetical funding
+
+**Appointment**:
+A position or hypothetical hire within a **Projection Plan**, with salary, FTE, benefit, fee, and date assumptions. One person can have several appointments, and an appointment can receive funding from several sources.
+_Avoid_: Person or employee when referring to a particular appointment
+
+**Allocation**:
+A dated share of an **Appointment** paid by a **Funding Source** or explicitly funded outside the plan. The appointment's collection is named `Allocations`; each in-plan allocation references `FundingSourceId`.
+_Avoid_: Funding source when referring to a share assigned to an appointment
+
+**Historical Expense Estimate**:
+A monthly cost derived from a **Funding Source**'s captured spending averages for the plan's selected history window. A custom amount replaces that category's average until explicitly restored; zero turns it off.
+_Avoid_: Added expense when referring to an adjusted historical amount
+
+**Added Expense**:
+A monthly or one-time planned cost owned by one **Funding Source**, with an entered description, category, amount, and schedule. It contributes in addition to historical estimates and appointment costs. A negative amount represents a cost credit.
+_Avoid_: Allocation when referring to a scheduled expense
+
 ## Relationships
 
 - Walter refers to a **Person** by **IAM ID** in navigation and client-facing person lookups
@@ -76,6 +122,13 @@ _Avoid_: Directory user, employee-only result
 - An active **Accrual Viewer** receives the monthly **Accrual Viewer Report**
 - A scheduled notification run does not create new **Accrual Notifications** when the latest **Accrual Snapshot** has already been notified
 - Employees with unmapped classifications receive the **Generic** employee-group variant
+- A **Projection Plan** keeps **Funding Sources** and **Appointments** as separate collections
+- An **Appointment** owns its **Allocations**, which can refer to several **Funding Sources**
+- A **Funding Source** owns its **Historical Expense Estimates** and **Added Expenses**
+- A **Funding Source** retains its starting budget definition separately from its **Budget Adjustments**
+- Resetting **Budget Adjustments** leaves source dates, appointments, allocations, and expenses unchanged
+- Changing the plan's history window preserves custom historical amounts and all **Added Expenses**
+- Removing a **Funding Source** removes its expenses and allocations but retains the appointments and leaves those shares unallocated
 
 ## Example dialogue
 

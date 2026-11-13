@@ -78,6 +78,13 @@ Flags refresh every ten minutes while the app receives requests. Active browser 
 
 Missing flags are off. Connection failures prevent startup; failures after startup retain cached values.
 
+`walter.ProjectionsEnabled` controls the Projections link, dashboard, and saved-plan
+routes. Disabled routes do not fetch plan data. An already-open plan editor or
+setup wizard can finish saving after the flag turns off; a notice explains that
+the plan cannot be reopened until the flag is enabled again. Duplication is hidden
+while disabled. These are UI rollout controls, not API authorization rules, and
+turning the flag off does not delete saved plans.
+
 #### IAM targeting
 
 Use the native `Microsoft.Targeting` filter for an IAM allowlist or exclusions. Keep the feature itself enabled. For a preview, set the default rollout to `0` and add IAM IDs under `Audience.Users`. For a feature enabled for everyone except selected users, set the default to `100` and add IAM IDs under `Audience.Exclusion.Users`. Exclusions take precedence over inclusions. Example filter parameters:

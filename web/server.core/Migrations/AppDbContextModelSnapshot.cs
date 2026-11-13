@@ -264,6 +264,10 @@ namespace server.core.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -271,12 +275,8 @@ namespace server.core.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
-                    b.Property<int>("HistoryMonths")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Jobs")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<Guid>("CreationKey")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -288,14 +288,11 @@ namespace server.core.Migrations
                         .HasMaxLength(8)
                         .HasColumnType("nvarchar(8)");
 
-                    b.Property<string>("Projects")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<DateTime>("SeededAt")
                         .HasColumnType("datetime2");
 
                     b.Property<DateTime>("UpdatedAt")
+                        .IsConcurrencyToken()
                         .HasColumnType("datetime2");
 
                     b.Property<string>("UpdatedBy")
@@ -305,6 +302,9 @@ namespace server.core.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("PiEmployeeId");
+
+                    b.HasIndex("PiEmployeeId", "CreationKey")
+                        .IsUnique();
 
                     b.ToTable("Projections");
                 });

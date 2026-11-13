@@ -4,8 +4,34 @@ import {
   getLocalDateOnly,
   getProjectMonth,
   isAwardExpired,
+  isPlanningDate,
   parseProjectDate,
 } from '@/lib/date.ts';
+
+describe('isPlanningDate', () => {
+  it.each(['0001-01-01', '9999-12-31', '2000-02-29', '2028-02-29'])(
+    'accepts the valid calendar date %s',
+    (value) => expect(isPlanningDate(value)).toBe(true)
+  );
+
+  it.each([
+    '0000-01-01',
+    '10000-01-01',
+    '1900-02-29',
+    '2026-02-29',
+    '2026-04-31',
+    '2026-00-01',
+    '2026-13-01',
+    '2026-01-00',
+    '2026-1-01',
+    '2026-01-1',
+    '2026-01-01T00:00:00Z',
+    ' 2026-01-01',
+    '',
+  ])('rejects %s as a planning date', (value) =>
+    expect(isPlanningDate(value)).toBe(false)
+  );
+});
 
 describe('formatDate', () => {
   it('formats date as MM.DD.YYYY', () => {

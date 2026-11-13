@@ -27,9 +27,13 @@ export const tooltipDefinitions = {
   fte: 'Full-Time Equivalent (FTE) equals one employee working 100% time.',
   grantAdministrator:
     'Research admin contact for award setup and ongoing award administration.',
+  minimizeFundingSummary:
+    'Minimize funding warnings beside the plan name. You can reopen the summary there.',
   monthlyCbr:
     'Monthly composite benefit rate cost, including fringe/benefit burden.',
   openDepartmentDetails: 'Open department details',
+  plannedSourceType:
+    'Internal uses one shared balance for all spending. Sponsored uses separate category budgets, including salary and fringe.',
   postReportingPeriod:
     'Number of days after the award end date allowed for reporting and closeout activity.',
   projectBurndown:
@@ -38,6 +42,8 @@ export const tooltipDefinitions = {
   selectFinancialDepartmentFirst: 'Select a financial department first',
   selectSingleDepartmentToLabel:
     'Display Financial Department or select a single financial department to add labels',
+  showFundingSummary:
+    'Show funding shortfalls, unallocated time, and overlapping allocations.',
   taskBreakdown:
     'Summary of how project costs are organized by financial coding segments.',
   totalBalance:
@@ -45,6 +51,12 @@ export const tooltipDefinitions = {
   totalBudget:
     'Total PPM budget across all active and expired projects. Closed projects are excluded.',
   viewChartStringInFinjector: 'View chart string in Finjector',
+  viewPiProjections: 'View projections',
+  viewPiProjects: 'View projects',
 } as const;
 
 export type TooltipDefinitionKey = keyof typeof tooltipDefinitions;
+
+export function projectionHistoryTooltip(months: number) {
+  return `Spending history: ${months} months`;
+}

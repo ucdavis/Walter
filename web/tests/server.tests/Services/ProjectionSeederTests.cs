@@ -27,33 +27,102 @@ public sealed class ProjectionSeederTests
 
     private static PositionBudgetRecord Line(decimal percent, bool isFuture = false, string? status = null, string? task = "TASK01") => new()
     {
-        EmployeeId = "E1", PositionNumber = "X1", Name = "Person", ProjectId = "P1", Task = task,
-        DistributionPercent = percent, MonthlyRate = 5000, Fte = 1, CompositeBenefitRate = 0.3m,
-        VacationAccrual = 0.083m, BusinessUnit = "UCANR", IsFuture = isFuture, EarnCodeStatus = status,
+        EmployeeId = "E1",
+        PositionNumber = "X1",
+        Name = "Person",
+        ProjectId = "P1",
+        Task = task,
+        DistributionPercent = percent,
+        MonthlyRate = 5000,
+        Fte = 1,
+        CompositeBenefitRate = 0.3m,
+        VacationAccrual = 0.083m,
+        BusinessUnit = "UCANR",
+        IsFuture = isFuture,
+        EarnCodeStatus = status,
     };
 
-    private static async Task<Projection> SeedAsync(FakeProjectionDataSource data, int historyMonths = 6)
+    private static async Task<ProjectionDraft> SeedAsync(FakeProjectionDataSource data, int historyMonths = 6) =>
+        (await new ProjectionSeeder(data).CaptureDraftAsync("PI", historyMonths, null, null, default)).Draft;
+
+    [Fact]
+    public async Task Keeps_the_query_snapshot_when_the_clock_crosses_a_month_while_awaiting_data()
     {
-        var projection = new Projection { PiEmployeeId = "PI" };
-        await new ProjectionSeeder(data).SeedAsync(projection, historyMonths, null, null, default);
-        return projection;
+        var beforeMidnight = new DateTime(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc).AddTicks(-1);
+        var clock = new MutableTimeProvider(beforeMidnight);
+        var response = new TaskCompletionSource<ProjectionSeedData>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var data = Data();
+        data.SeedResponse = response.Task;
+        var seeding = new ProjectionSeeder(data, clock).CaptureDraftAsync("PI", 6, null, null, default);
+
+        seeding.IsCompleted.Should().BeFalse();
+        data.SnapshotAtUtc.Should().Be(beforeMidnight);
+        clock.UtcNow = new DateTime(2026, 11, 1, 0, 0, 1, DateTimeKind.Utc);
+        response.SetResult(data.Seed);
+        var projection = (await seeding).Draft;
+
+        projection.SeededAt.Should().Be(beforeMidnight);
+        projection.SeededAt.Should().Be(data.SnapshotAtUtc!.Value);
+        projection.SeededAt.Kind.Should().Be(DateTimeKind.Utc);
+        projection.Content.FundingSources.Single().CapturedAt.Should().Be(projection.SeededAt);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public async Task Queries_with_the_monotonic_snapshot_when_advancing_a_saved_token_crosses_a_month(int clockOffsetDays)
+    {
+        var nextMonth = new DateTime(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc);
+        var previousSnapshot = nextMonth.AddTicks(-1);
+        var clock = new MutableTimeProvider(previousSnapshot.AddDays(clockOffsetDays));
+        var data = Data();
+        var projection = (await new ProjectionSeeder(data, clock)
+            .CaptureDraftAsync("PI", 6, null, null, default, previousSnapshot)).Draft;
+
+        data.SnapshotAtUtc.Should().Be(nextMonth);
+        projection.SeededAt.Should().Be(nextMonth);
+        projection.SeededAt.Should().Be(data.SnapshotAtUtc!.Value);
+        projection.SeededAt.Kind.Should().Be(DateTimeKind.Utc);
+        projection.Content.FundingSources.Single().CapturedAt.Should().Be(projection.SeededAt);
     }
 
     [Fact]
-    public async Task Seeds_projects_budgets_actuals_runrates_and_projected_expenses()
+    public async Task Does_not_return_a_draft_when_the_seed_query_fails()
+    {
+        var previousSnapshot = new DateTime(2026, 10, 16, 0, 0, 0, DateTimeKind.Utc);
+        var querySnapshot = new DateTime(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc);
+        var data = Data();
+        data.SeedResponse = Task.FromException<ProjectionSeedData>(new InvalidOperationException("Seed unavailable"));
+
+        var seeding = () => new ProjectionSeeder(data, new MutableTimeProvider(querySnapshot))
+            .CaptureDraftAsync("PI", 6, null, null, default, previousSnapshot);
+
+        await seeding.Should().ThrowAsync<InvalidOperationException>();
+
+        data.SnapshotAtUtc.Should().Be(querySnapshot);
+    }
+
+    [Fact]
+    public async Task Seeds_projects_budgets_actuals_and_all_runrates_without_materialized_expenses()
     {
         var projection = await SeedAsync(Data());
 
-        projection.HistoryMonths.Should().Be(6);
-        var project = projection.Projects.Should().ContainSingle().Subject;
+        projection.Content.HistoryMonths.Should().Be(6);
+        projection.Content.ForecastMonths.Should().Be(12);
+        projection.Content.Notes.Should().BeNull();
+        var project = projection.Content.FundingSources.Should().ContainSingle().Subject;
         project.Id.Should().Be(1);
         project.ProjectNumber.Should().Be("P1");
         project.TaskNumber.Should().Be("TASK01");
-        project.IsSeeded.Should().BeTrue();
+        project.SourceKind.Should().Be(ProjectionSourceKind.Task);
+        project.CapturedAt.Should().Be(projection.SeededAt);
+        project.TaskName.Should().BeNull();
+        project.Name.Should().Be("Project 1");
+        project.ProjectName.Should().Be("Project 1");
         project.Budgets.Should().ContainSingle().Which.Should().BeEquivalentTo(new { Budget = 1000m, SpentToDate = 200m, Committed = 100m });
         project.RunRates.Should().HaveCount(2);
-        project.Expenses.Should().ContainSingle().Which.Should().BeEquivalentTo(
-            new { Kind = ProjectionExpenseKind.Projected, Amount = 40m, ExpenditureCategory = Supplies });
+        project.Expenses.Should().BeEmpty();
+        project.HistoricalExpenseOverrides.Should().BeEmpty();
     }
 
     [Fact]
@@ -61,20 +130,61 @@ public sealed class ProjectionSeederTests
     {
         var projection = await SeedAsync(Data(Line(60)));
 
-        var job = projection.Jobs.Should().ContainSingle().Subject;
-        job.Should().BeEquivalentTo(new { MonthlySalary = 5000m, CbrRate = 0.3m, VacationAccrualRate = 0.083m, RateSet = "UCANR" });
+        var job = projection.Content.Appointments.Should().ContainSingle().Subject;
+        job.Should().BeEquivalentTo(new { MonthlySalary = 5000m, CbrRate = 0.3m, VacationAccrualRate = 0.083m, RateSet = "UCANR", ColaRate = 0.03m, ColaMonth = 7 });
         job.Id.Should().Be(1);
-        job.FundingEntries.Select(f => (f.ProjectId, f.Percent)).Should().BeEquivalentTo(
-            [((int?)projection.Projects.Single().Id, 0.6m), ((int?)null, 0.4m)]);
+        job.Allocations.Select(f => (f.FundingSourceId, f.Percent)).Should().BeEquivalentTo(
+            [((int?)projection.Content.FundingSources.Single().Id, 0.6m), ((int?)null, 0.4m)]);
+    }
+
+    public static TheoryData<decimal?, decimal> CbrRates => new()
+    {
+        { null, 0.2m },
+        { 0m, 0m },
+        { 0.3m, 0.3m },
+    };
+
+    [Theory]
+    [MemberData(nameof(CbrRates))]
+    public async Task Defaults_only_missing_cbr_and_preserves_supplied_benefit_rates(decimal? sourceCbr, decimal expectedCbr)
+    {
+        var line = Line(100);
+        line.CompositeBenefitRate = sourceCbr;
+
+        var projection = await SeedAsync(Data(line));
+
+        var job = projection.Content.Appointments.Should().ContainSingle().Subject;
+        job.CbrRate.Should().Be(expectedCbr);
+        job.VacationAccrualRate.Should().Be(0.083m);
     }
 
     [Fact]
-    public async Task Falls_back_to_the_projects_first_task_when_the_line_task_does_not_match()
+    public async Task Uses_planning_cbr_without_filling_missing_fte_salary_or_vacation()
+    {
+        var line = Line(100);
+        line.CompositeBenefitRate = null;
+        line.VacationAccrual = null;
+        line.Fte = null;
+        line.MonthlyRate = null;
+
+        var projection = await SeedAsync(Data(line));
+
+        var job = projection.Content.Appointments.Should().ContainSingle().Subject;
+        job.CbrRate.Should().Be(0.2m);
+        job.VacationAccrualRate.Should().Be(0m);
+        job.Fte.Should().Be(0m);
+        job.MonthlySalary.Should().BeNull();
+        job.ColaRate.Should().Be(0.03m);
+        job.ColaMonth.Should().Be(7);
+    }
+
+    [Fact]
+    public async Task Leaves_an_unknown_task_unallocated_without_replacing_it_with_outside_funding()
     {
         var projection = await SeedAsync(Data(Line(100, task: "")));
 
-        projection.Jobs.Single().FundingEntries.Should().ContainSingle()
-            .Which.Should().BeEquivalentTo(new { ProjectId = projection.Projects.Single().Id, Percent = 1m });
+        projection.Content.Appointments.Single().Allocations.Should().BeEmpty();
+        projection.Content.Appointments.Single().HasUnmatchedFunding.Should().BeTrue();
     }
 
     [Fact]
@@ -82,7 +192,7 @@ public sealed class ProjectionSeederTests
     {
         var projection = await SeedAsync(Data(Line(40, isFuture: true), Line(60)));
 
-        projection.Jobs.Single().FundingEntries.Where(f => f.ProjectId != null).Sum(f => f.Percent).Should().Be(0.6m);
+        projection.Content.Appointments.Single().Allocations.Where(f => f.FundingSourceId != null).Sum(f => f.Percent).Should().Be(0.6m);
     }
 
     [Fact]
@@ -90,33 +200,61 @@ public sealed class ProjectionSeederTests
     {
         var projection = await SeedAsync(Data(Line(60, status: "Unsplit")));
 
-        var job = projection.Jobs.Should().ContainSingle().Subject;
+        var job = projection.Content.Appointments.Should().ContainSingle().Subject;
         job.MonthlySalary.Should().BeNull();
-        job.FundingEntries.Should().BeEmpty();
+        job.Allocations.Should().BeEmpty();
+    }
+
+    [Theory]
+    [InlineData("TASK01", null, true)]
+    [InlineData("TASK01", "Unsplit", true)]
+    [InlineData("", null, false)]
+    [InlineData("UNKNOWN", null, false)]
+    [InlineData("", "Unsplit", false)]
+    public async Task Records_exact_task_provenance_independently_of_constructed_allocations(string task, string? status, bool matched)
+    {
+        var response = await new ProjectionSeeder(Data(Line(100, status: status, task: task)))
+            .CaptureDraftAsync("PI", 3, null, null, default);
+
+        var entry = response.Roster.Should().ContainSingle().Subject;
+        entry.AppointmentId.Should().Be(response.Draft.Content.Appointments.Single().Id);
+        entry.FundingSourceIds.Should().BeEquivalentTo(matched ? new[] { 1 } : Array.Empty<int>());
+        if (status == "Unsplit")
+        {
+            response.Draft.Content.Appointments.Single().MonthlySalary.Should().BeNull();
+            response.Draft.Content.Appointments.Single().Allocations.Should().BeEmpty();
+        }
     }
 
     [Fact]
-    public void ApplyRunRates_replaces_projected_and_keeps_monthly()
+    public async Task Task_provenance_excludes_future_and_unmatched_rows_but_retains_matches_with_unmatched_warnings()
     {
-        var project = new ProjectionProject
-        {
-            RunRates =
-            [
-                new() { ExpenditureCategory = Supplies, HistoryMonths = 3, MonthlyAmount = 50 },
-                new() { ExpenditureCategory = Supplies, HistoryMonths = 12, MonthlyAmount = 20 },
-            ],
-            Expenses =
-            [
-                new() { Kind = ProjectionExpenseKind.Projected, ExpenditureCategory = Supplies, Amount = 50 },
-                new() { Kind = ProjectionExpenseKind.Monthly, ExpenditureCategory = Supplies, Amount = 999 },
-            ],
-        };
-        var projection = new Projection { HistoryMonths = 3, Projects = [project] };
+        var data = Data(Line(50), Line(50, task: "UNKNOWN"), Line(100, isFuture: true, task: "TASK02"));
+        data.Seed.Projects.Add(new() { ProjectNumber = "P1", TaskNumber = "TASK02" });
+        var response = await new ProjectionSeeder(data).CaptureDraftAsync("PI", 3, null, null, default);
 
-        ProjectionSeeder.ApplyRunRates(projection, 12);
+        response.Roster.Should().ContainSingle().Which.FundingSourceIds.Should().Equal(1);
+        response.Draft.Content.Appointments.Single().HasUnmatchedFunding.Should().BeTrue();
+        response.Draft.Content.Appointments.Single().Allocations.Should().ContainSingle().Which.FundingSourceId.Should().Be(1);
+    }
 
-        projection.HistoryMonths.Should().Be(12);
-        project.Expenses.Select(e => (e.Kind, e.Amount)).Should().BeEquivalentTo(
-            [(ProjectionExpenseKind.Monthly, 999m), (ProjectionExpenseKind.Projected, 20m)]);
+    [Fact]
+    public async Task Seed_preserves_zero_and_negative_captured_averages_for_every_window()
+    {
+        var data = Data();
+        data.Seed.RunRates[0].MonthlyAmount = 0;
+        data.Seed.RunRates[1].MonthlyAmount = -20;
+
+        var source = (await SeedAsync(data, 12)).Content.FundingSources.Single();
+
+        source.RunRates.Select(r => (r.HistoryMonths, r.MonthlyAmount)).Should().BeEquivalentTo([(3, 0m), (6, -20m)]);
+        source.Expenses.Should().BeEmpty();
+        source.HistoricalExpenseOverrides.Should().BeEmpty();
+    }
+
+    private sealed class MutableTimeProvider(DateTime utcNow) : TimeProvider
+    {
+        public DateTime UtcNow { get; set; } = utcNow;
+        public override DateTimeOffset GetUtcNow() => new(UtcNow);
     }
 }

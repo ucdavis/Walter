@@ -1,124 +1,147 @@
+import { PlusIcon } from '@heroicons/react/24/outline';
 import { useState } from 'react';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import {
   createFileRoute,
   type ErrorComponentProps,
-  Link,
   useNavigate,
 } from '@tanstack/react-router';
 import { PageError } from '@/components/states/PageError.tsx';
 import { PageLoading } from '@/components/states/PageLoading.tsx';
+import { CurrentProjectBalances } from '@/components/projections/CurrentProjectBalances.tsx';
+import { ProjectionPlanCard } from '@/components/projections/ProjectionPlanCard.tsx';
+import { NewProjectionWizard } from '@/components/projections/NewProjectionWizard.tsx';
+import {
+  ProjectionSessionNotice,
+  ProjectionUnavailable,
+} from '@/components/projections/ProjectionAvailability.tsx';
+import {
+  featureFlagsQueryOptions,
+  useFeatureFlagsQuery,
+} from '@/queries/featureFlags.ts';
+import { meQueryOptions } from '@/queries/user.ts';
+import { useUser } from '@/shared/auth/UserContext.tsx';
 import { getErrorPresentation } from '@/lib/errorPresentation.ts';
 import {
-  createProjection,
   projectionListQueryOptions,
+  type Projection,
 } from '@/queries/projections.ts';
 
 export const Route = createFileRoute('/(authenticated)/projections/$iamId/')({
   component: RouteComponent,
   errorComponent: ProjectionsErrorBoundary,
-  loader: ({ context: { queryClient }, params: { iamId } }) =>
-    queryClient.ensureQueryData(projectionListQueryOptions(iamId)),
+  loader: async ({ context: { queryClient }, params: { iamId } }) => {
+    const user = await queryClient.ensureQueryData(meQueryOptions());
+    const flags = await queryClient.fetchQuery(
+      featureFlagsQueryOptions(user.id)
+    );
+    if (flags.projectionsEnabled) {
+      await queryClient.ensureQueryData(projectionListQueryOptions(iamId));
+    }
+  },
   pendingComponent: () => <PageLoading message="Fetching projections..." />,
 });
 
 function RouteComponent() {
   const { iamId } = Route.useParams();
+  const user = useUser();
+  return <ProjectionDashboard iamId={iamId} key={`${user.id}:${iamId}`} />;
+}
+
+function ProjectionDashboard({ iamId }: { iamId: string }) {
+  const { data: flags } = useFeatureFlagsQuery();
+  const navigate = useNavigate();
+  const [creating, setCreating] = useState(false);
+  const [savedName, setSavedName] = useState<string>();
+
+  const openCreated = async (saved: Projection) => {
+    if (!flags?.projectionsEnabled) {
+      setSavedName(saved.name);
+      setCreating(false);
+      return;
+    }
+    await navigate({
+      ignoreBlocker: true,
+      params: { iamId, projectionId: String(saved.id) },
+      to: '/projections/$iamId/$projectionId',
+    });
+  };
+
+  if (creating) {
+    return (
+      <main className="container">
+        {!flags?.projectionsEnabled && <ProjectionSessionNotice />}
+        <NewProjectionWizard
+          iamId={iamId}
+          onCancel={() => setCreating(false)}
+          onCreated={openCreated}
+          openWorkspaceAfterCreate={!!flags?.projectionsEnabled}
+        />
+      </main>
+    );
+  }
+
+  if (!flags?.projectionsEnabled) {
+    return (
+      <>
+        {savedName && (
+          <p className="alert alert-success" role="status">
+            {savedName} was saved.
+          </p>
+        )}
+        <ProjectionUnavailable iamId={iamId} />
+      </>
+    );
+  }
+
+  return <ProjectionList iamId={iamId} onCreate={() => setCreating(true)} />;
+}
+
+function ProjectionList({
+  iamId,
+  onCreate,
+}: {
+  iamId: string;
+  onCreate: () => void;
+}) {
   const { data: projections } = useSuspenseQuery(
     projectionListQueryOptions(iamId)
   );
-  const navigate = useNavigate();
-  const [name, setName] = useState('');
-  const [historyMonths, setHistoryMonths] = useState(3);
-  const [creating, setCreating] = useState(false);
-
-  const create = async () => {
-    setCreating(true);
-    try {
-      const created = await createProjection(iamId, { historyMonths, name });
-      await navigate({
-        params: { iamId, projectionId: String(created.id) },
-        to: '/projections/$iamId/$projectionId',
-      });
-    } finally {
-      setCreating(false);
-    }
-  };
-
   return (
     <main className="container">
-      <h1 className="h1 mt-8">Projections</h1>
+      <header className="mt-8 flex flex-wrap items-center justify-between gap-4">
+        <h1 className="h1">Projections</h1>
+        <button className="btn btn-primary" onClick={onCreate} type="button">
+          <PlusIcon aria-hidden="true" className="size-5" />
+          New plan
+        </button>
+      </header>
 
-      <section className="section-margin">
+      <CurrentProjectBalances iamId={iamId} />
+
+      <section aria-label="Your plans" className="section-margin mt-8">
+        <div className="mb-4 flex items-center gap-2">
+          <h2 className="text-2xl font-semibold">Your plans</h2>
+          <span
+            aria-label={`${projections.length} plans`}
+            className="badge badge-neutral badge-soft"
+          >
+            {projections.length}
+          </span>
+        </div>
         {projections.length ? (
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Data as of</th>
-                <th>Last updated</th>
-              </tr>
-            </thead>
-            <tbody>
-              {projections.map((p) => (
-                <tr key={p.id}>
-                  <td>
-                    <Link
-                      className="link"
-                      params={{ iamId, projectionId: String(p.id) }}
-                      to="/projections/$iamId/$projectionId"
-                    >
-                      {p.name}
-                    </Link>
-                  </td>
-                  <td>{new Date(p.seededAt).toLocaleDateString()}</td>
-                  <td>
-                    {new Date(p.updatedAt).toLocaleString()}
-                    {p.updatedBy ? ` by ${p.updatedBy}` : ''}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+            {projections.map((projection) => (
+              <ProjectionPlanCard
+                iamId={iamId}
+                key={projection.id}
+                summary={projection}
+              />
+            ))}
+          </div>
         ) : (
-          <p>No projections yet.</p>
+          <p>No saved plans yet. Start with New plan.</p>
         )}
-      </section>
-
-      <section className="section-margin">
-        <h2 className="h2">New projection</h2>
-        <form
-          className="flex flex-wrap items-end gap-4"
-          onSubmit={(e) => {
-            e.preventDefault();
-            void create();
-          }}
-        >
-          <label className="flex flex-col gap-1">
-            Name
-            <input
-              className="input input-bordered"
-              onChange={(e) => setName(e.target.value)}
-              required
-              value={name}
-            />
-          </label>
-          <label className="flex flex-col gap-1">
-            Averaging window
-            <select
-              className="select select-bordered"
-              onChange={(e) => setHistoryMonths(Number(e.target.value))}
-              value={historyMonths}
-            >
-              <option value={3}>3 months</option>
-              <option value={6}>6 months</option>
-              <option value={12}>12 months</option>
-            </select>
-          </label>
-          <button className="btn btn-primary" disabled={creating} type="submit">
-            {creating ? 'Creating...' : 'Create'}
-          </button>
-        </form>
       </section>
     </main>
   );

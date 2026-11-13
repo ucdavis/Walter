@@ -4,97 +4,65 @@ using server.core.Services;
 
 namespace server.Services;
 
-/// <summary>Builds a projection's projects and jobs from a fresh datamart snapshot.</summary>
-public sealed class ProjectionSeeder(IProjectionDataSource data)
+/// <summary>Builds a plan's funding sources and appointments from a fresh datamart snapshot.</summary>
+public sealed class ProjectionSeeder(IProjectionDataSource data, TimeProvider? timeProvider = null)
 {
-    /// <summary>Replaces projection.Projects and projection.Jobs; sets SeededAt and HistoryMonths.</summary>
-    public async Task SeedAsync(Projection projection, int historyMonths,
+    /// <summary>Captures editable inputs and setup-only roster provenance using one UTC anchor, without constructing a saved entity.</summary>
+    public async Task<ProjectionSeedResponse> CaptureDraftAsync(string piEmployeeId, int historyMonths,
+        string? applicationUser, string? emulatingUser, CancellationToken ct, DateTime previousSeededAt = default)
+    {
+        // Resets must advance even with a stalled clock; the query and returned capture always share one anchor.
+        var snapshotAtUtc = ProjectionTimestamps.Advance(previousSeededAt,
+            (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime);
+        var seed = await data.GetProjectionSeedAsync(piEmployeeId, snapshotAtUtc, applicationUser, emulatingUser, ct);
+        var prepared = ProjectionSeedPolicy.Prepare(seed, snapshotAtUtc);
+        // Include excluded source projects so their dated funding remains outside the prepared plan.
+        var projectNumbers = seed.Projects.Select(p => p.ProjectNumber).Distinct().ToList();
+        var personnel = projectNumbers.Count == 0
+            ? Array.Empty<PositionBudgetRecord>()
+            : await data.GetCognosPositionBudgetsAsync(projectNumbers, applicationUser, emulatingUser, ct);
+
+        (bool Known, ProjectionFundingSource? Source) Match(PositionBudgetRecord r)
+        {
+            var known = prepared.TryMatchFunding(r.ProjectId, r.Task, out var source);
+            return (known, source);
+        }
+
+        var appointments = new List<ProjectionAppointment>();
+        var roster = new List<ProjectionRosterEntry>();
+        foreach (var group in personnel.Where(r => !r.IsFuture).GroupBy(r => (r.EmployeeId, r.PositionNumber)))
+        {
+            var rows = group.ToList();
+            // Match raw rows even when Unsplit prevents constructing allocations, so task selection cannot hide that appointment.
+            var fundingSourceIds = rows.Select(Match).Where(m => m.Source is not null)
+                .Select(m => m.Source!.Id).Distinct().Order().ToList();
+            var appointment = ToAppointment(appointments.Count + 1, rows, Match);
+            appointments.Add(appointment);
+            roster.Add(new(appointment.Id, fundingSourceIds));
+        }
+        return new(new("New projection", snapshotAtUtc, new ProjectionContent
+        {
+            HistoryMonths = historyMonths,
+            FundingSources = prepared.FundingSources,
+            Appointments = appointments,
+        }), roster);
+    }
+
+    /// <summary>Captures eligible task financials for Add without querying personnel or changing any saved plan.</summary>
+    public async Task<List<ProjectionFundingSource>> CaptureSourcesAsync(string piEmployeeId,
         string? applicationUser, string? emulatingUser, CancellationToken ct)
     {
-        var seed = await data.GetProjectionSeedAsync(projection.PiEmployeeId, applicationUser, emulatingUser, ct);
-
-        var nextId = 1;
-        var projects = seed.Projects.ToDictionary(p => (p.ProjectNumber, p.TaskNumber), p => new ProjectionProject
-        {
-            Id = nextId++,
-            ProjectNumber = p.ProjectNumber,
-            TaskNumber = p.TaskNumber,
-            TaskName = p.TaskName,
-            ProjectName = p.ProjectName ?? p.ProjectNumber,
-            ProjectType = p.ProjectType,
-            AwardNumber = p.AwardNumber,
-            AwardName = p.AwardName,
-            StartDate = ToDate(p.StartDate),
-            EndDate = ToDate(p.EndDate),
-            IsSeeded = true,
-        });
-
-        foreach (var b in seed.Budgets)
-            projects.GetValueOrDefault((b.ProjectNumber, b.TaskNumber))?.Budgets.Add(new ProjectionBudget
-            {
-                ExpenditureCategory = b.ExpenditureCategory,
-                Budget = b.Budget,
-                SpentToDate = b.SpentToDate,
-                Committed = b.Committed,
-                IsSeeded = true,
-            });
-        foreach (var a in seed.Actuals)
-            projects.GetValueOrDefault((a.ProjectNumber, a.TaskNumber))?.Actuals.Add(new ProjectionActual
-            {
-                Month = DateOnly.FromDateTime(a.Month),
-                ExpenditureCategory = a.ExpenditureCategory,
-                Amount = a.Amount,
-            });
-        foreach (var r in seed.RunRates)
-            projects.GetValueOrDefault((r.ProjectNumber, r.TaskNumber))?.RunRates.Add(new ProjectionRunRate
-            {
-                ExpenditureCategory = r.ExpenditureCategory,
-                HistoryMonths = r.HistoryMonths,
-                MonthlyAmount = r.MonthlyAmount,
-            });
-
-        projection.Projects = [.. projects.Values];
-        projection.SeededAt = DateTime.UtcNow;
-        ApplyRunRates(projection, historyMonths);
-
-        var projectNumbers = projects.Keys.Select(k => k.ProjectNumber).Distinct().ToList();
-        var personnel = await data.GetCognosPositionBudgetsAsync(projectNumbers, applicationUser, emulatingUser, ct);
-
-        // Sponsored lines may carry a task that matches no portfolio row; charge the project's first task.
-        ProjectionProject? Match(PositionBudgetRecord r) =>
-            projects.GetValueOrDefault((r.ProjectId ?? "", r.Task))
-            ?? projection.Projects.FirstOrDefault(p => p.ProjectNumber == r.ProjectId);
-
-        projection.Jobs = personnel
-            .Where(r => !r.IsFuture)
-            .GroupBy(r => (r.EmployeeId, r.PositionNumber))
-            .Select((g, i) => ToJob(i + 1, g.ToList(), Match))
-            .ToList();
+        var snapshotAtUtc = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
+        var seed = await data.GetProjectionSeedAsync(piEmployeeId, snapshotAtUtc, applicationUser, emulatingUser, ct);
+        return ProjectionSeedPolicy.Prepare(seed, snapshotAtUtc).FundingSources;
     }
 
-    /// <summary>Removes Projected expenses on every project and recreates them from RunRates for the window.</summary>
-    public static void ApplyRunRates(Projection projection, int historyMonths)
-    {
-        projection.HistoryMonths = historyMonths;
-        foreach (var project in projection.Projects)
-        {
-            project.Expenses.RemoveAll(e => e.Kind == ProjectionExpenseKind.Projected);
-            project.Expenses.AddRange(project.RunRates
-                .Where(r => r.HistoryMonths == historyMonths && r.MonthlyAmount != 0)
-                .Select(r => new ProjectionExpense
-                {
-                    Kind = ProjectionExpenseKind.Projected,
-                    ExpenditureCategory = r.ExpenditureCategory,
-                    Amount = r.MonthlyAmount,
-                }));
-        }
-    }
-
-    private static ProjectionJob ToJob(int id, List<PositionBudgetRecord> rows, Func<PositionBudgetRecord, ProjectionProject?> match)
+    private static ProjectionAppointment ToAppointment(int id, List<PositionBudgetRecord> rows,
+        Func<PositionBudgetRecord, (bool Known, ProjectionFundingSource? Source)> match)
     {
         var first = rows[0];
         var unsplit = rows.Any(r => r.EarnCodeStatus == "Unsplit");
-        var job = new ProjectionJob
+        var appointment = new ProjectionAppointment
         {
             Id = id,
             EmployeeId = first.EmployeeId,
@@ -105,33 +73,35 @@ public sealed class ProjectionSeeder(IProjectionDataSource data)
             RateSet = first.BusinessUnit ?? "DVCMP",
             MonthlySalary = unsplit ? null : first.MonthlyRate,
             Fte = first.Fte ?? 0,
-            CbrRate = first.CompositeBenefitRate,
+            CbrRate = first.CompositeBenefitRate ?? ProjectionAppointmentDefaults.Default.CbrRate,
             VacationAccrualRate = first.VacationAccrual ?? 0,
+            ColaRate = ProjectionAppointmentDefaults.Default.ColaRate,
+            ColaMonth = ProjectionAppointmentDefaults.Default.ColaMonth,
             StartDate = ToDate(first.JobEffectiveDate),
             EndDate = ToDate(first.JobEndDate),
             IsSeeded = true,
+            HasUnmatchedFunding = rows.Any(r => !match(r).Known),
         };
-        if (unsplit) return job;
+        if (unsplit) return appointment;
 
         foreach (var r in rows)
         {
-            var project = match(r);
-            if (project is null) continue;
-            job.FundingEntries.Add(new ProjectionFundingEntry
+            var matched = match(r);
+            if (!matched.Known) continue;
+            appointment.Allocations.Add(new ProjectionFundingAllocation
             {
-                ProjectId = project.Id,
+                FundingSourceId = matched.Source?.Id,
                 Percent = (r.DistributionPercent ?? 0) / 100 * (r.EarnCodeShare ?? 1),
                 StartDate = ToDate(r.FundingEffectiveDate),
                 EndDate = ToDate(r.FundingEndDate),
-                IsSeeded = true,
             });
         }
 
-        // The rest of the person's pay comes from projects outside this portfolio.
-        var funded = job.FundingEntries.Sum(f => f.Percent);
+        // Count all imported shares before omitting unknown tasks, so their gaps never become outside funding.
+        var funded = rows.Sum(r => (r.DistributionPercent ?? 0) / 100 * (r.EarnCodeShare ?? 1));
         if (funded < 1)
-            job.FundingEntries.Add(new ProjectionFundingEntry { Percent = 1 - funded, IsSeeded = true });
-        return job;
+            appointment.Allocations.Add(new ProjectionFundingAllocation { Percent = 1 - funded });
+        return appointment;
     }
 
     private static DateOnly? ToDate(DateTime? value) => value is null ? null : DateOnly.FromDateTime(value.Value);

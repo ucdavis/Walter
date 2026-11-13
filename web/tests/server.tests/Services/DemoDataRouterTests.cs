@@ -53,7 +53,19 @@ public sealed class DemoDataRouterTests
 
         (await router.GetSearchablePersonByIamIdAsync(RealPerson.IamId))!.Name.Should().Be("Real Person");
         (await router.GetProjectTeamAsync("REAL-1", PpmRole.ProjectManager)).Should().ContainSingle();
-        (await router.GetProjectionSeedAsync("E1", null, null, default)).Should().BeSameAs(_projections.Seed);
+        var snapshot = new DateTime(2027, 1, 31, 23, 59, 59, DateTimeKind.Utc);
+        (await router.GetProjectionSeedAsync("E1", snapshot, null, null, default)).Should().BeSameAs(_projections.Seed);
+        _projections.SnapshotAtUtc.Should().Be(snapshot);
+    }
+
+    [Fact]
+    public async Task Demo_projection_seed_uses_the_requested_snapshot_month()
+    {
+        var snapshot = new DateTime(2030, 6, 30, 23, 59, 59, DateTimeKind.Utc);
+        var seed = await Router().GetProjectionSeedAsync(DemoDataSet.PiEmployeeId, snapshot, null, null, default);
+
+        seed.Actuals.Should().NotBeEmpty();
+        seed.Actuals.Max(row => row.Month).Should().Be(new DateTime(2030, 6, 1));
     }
 
     [Fact]
@@ -115,16 +127,16 @@ public sealed class DemoDataRouterTests
     [Fact]
     public async Task Demo_PI_projections_are_seeded_from_demo_data()
     {
-        var projection = new Projection { PiEmployeeId = DemoDataSet.PiEmployeeId, Name = "Demo" };
+        var response = await new ProjectionSeeder(Router()).CaptureDraftAsync(
+            DemoDataSet.PiEmployeeId, 3, null, null, default);
+        var content = response.Draft.Content;
 
-        await new ProjectionSeeder(Router()).SeedAsync(projection, 3, null, null, default);
-
-        projection.Projects.Select(p => p.ProjectNumber).Should().BeEquivalentTo(["DEMO-1001", "DEMO-1002", "DEMO-1004"]);
-        projection.Projects.Should().OnlyContain(p => p.Budgets.Count == 3 && p.Actuals.Count > 0
-            && p.Expenses.Any(e => e.Kind == ProjectionExpenseKind.Projected));
-        var projectIds = projection.Projects.Select(p => (int?)p.Id).ToList();
-        projection.Jobs.Should().NotBeEmpty();
-        projection.Jobs.Should().OnlyContain(j => j.FundingEntries.Any(f => projectIds.Contains(f.ProjectId)));
+        content.FundingSources.Select(p => p.ProjectNumber).Should().BeEquivalentTo(["DEMO-1001", "DEMO-1002", "DEMO-1004"]);
+        content.FundingSources.Should().OnlyContain(p => p.Budgets.Count == 3 && p.Actuals.Count > 0
+            && p.RunRates.Count > 0);
+        var sourceIds = content.FundingSources.Select(p => (int?)p.Id).ToList();
+        content.Appointments.Should().NotBeEmpty();
+        content.Appointments.Should().OnlyContain(j => j.Allocations.Any(f => sourceIds.Contains(f.FundingSourceId)));
     }
 
     [Fact]

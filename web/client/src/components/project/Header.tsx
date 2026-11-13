@@ -5,12 +5,16 @@ import { UserAvatar } from '@/components/project/UserAvatar.tsx';
 import WalterLogo from '@/shared/WalterLogo.tsx';
 import { useUser } from '@/shared/auth/UserContext.tsx';
 import {
+  ROLE_NAMES,
   canAccessPersonnelNav,
   canAccessPrincipalInvestigatorsNav,
   canAccessProjectsNav,
   canAccessAdminDashboard,
   canAccessReportsNav,
 } from '@/shared/auth/roleAccess.ts';
+import { useFeatureFlagsQuery } from '@/queries/featureFlags.ts';
+import { managedPisQueryOptions } from '@/queries/project.ts';
+import { useQuery } from '@tanstack/react-query';
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
 
 type NavLinkItem = {
@@ -50,6 +54,21 @@ function NavLinks({
 
 const Header: React.FC = () => {
   const user = useUser();
+  const { data: featureFlags } = useFeatureFlagsQuery();
+  const hasProjectManagerRole = user.roles.includes(ROLE_NAMES.projectManager);
+  const managedPis = useQuery({
+    ...managedPisQueryOptions(user.iamId),
+    enabled:
+      Boolean(user.iamId) &&
+      Boolean(featureFlags?.projectionsEnabled) &&
+      !hasProjectManagerRole,
+  });
+  // Project managers can be identified by their portfolio without an app role.
+  const projectionsEnabled =
+    Boolean(featureFlags?.projectionsEnabled) &&
+    !hasProjectManagerRole &&
+    managedPis.isSuccess &&
+    managedPis.data.pis.length === 0;
   const canViewProjects = canAccessProjectsNav(user.roles);
   const canViewPersonnel = canAccessPersonnelNav(user.roles);
   const canViewPrincipalInvestigators = canAccessPrincipalInvestigatorsNav(
@@ -73,6 +92,9 @@ const Header: React.FC = () => {
             } satisfies NavLinkItem,
           ]
         : []),
+      ...(projectionsEnabled
+        ? [{ label: 'Projections', to: '/projections' } satisfies NavLinkItem]
+        : []),
       ...(canViewPersonnel
         ? [{ label: 'Personnel', to: '/personnel' } satisfies NavLinkItem]
         : []),
@@ -92,6 +114,7 @@ const Header: React.FC = () => {
     ],
     [
       user.iamId,
+      projectionsEnabled,
       canViewProjects,
       canViewPersonnel,
       canViewPrincipalInvestigators,
@@ -106,6 +129,7 @@ const Header: React.FC = () => {
     }
   }, [
     mobileOpen,
+    projectionsEnabled,
     canViewProjects,
     canViewPersonnel,
     canViewPrincipalInvestigators,

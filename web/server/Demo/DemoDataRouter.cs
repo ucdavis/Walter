@@ -87,10 +87,10 @@ public sealed class DemoDataRouter(
     public Task<IReadOnlySet<string>> GetProjectManagerEmployeeIdsAsync(IEnumerable<string> employeeIds, CancellationToken ct = default) =>
         reader.GetProjectManagerEmployeeIdsAsync(employeeIds, ct);
 
-    public Task<ProjectionSeedData> GetProjectionSeedAsync(string piEmployeeId, string? applicationUser, string? emulatingUser, CancellationToken ct) =>
+    public Task<ProjectionSeedData> GetProjectionSeedAsync(string piEmployeeId, DateTime snapshotAtUtc, string? applicationUser, string? emulatingUser, CancellationToken ct) =>
         IsDemo(piEmployeeId)
-            ? demo.GetProjectionSeedAsync(piEmployeeId, ct)
-            : projections.GetProjectionSeedAsync(piEmployeeId, applicationUser, emulatingUser, ct);
+            ? demo.GetProjectionSeedAsync(piEmployeeId, ct, snapshotAtUtc)
+            : projections.GetProjectionSeedAsync(piEmployeeId, snapshotAtUtc, applicationUser, emulatingUser, ct);
 
     public Task<IReadOnlyList<PositionBudgetRecord>> GetCognosPositionBudgetsAsync(IReadOnlyList<string> projectNumbers, string? applicationUser, string? emulatingUser, CancellationToken ct) =>
         SplitAsync(projectNumbers,

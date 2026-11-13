@@ -237,6 +237,40 @@
   font-size: 1rem;
 }
 
+/* PI cards contain separate name and action links, not nested link cards. */
+.walter-table.pi-cardgrid {
+  display: block;
+  min-width: 0;
+}
+
+.walter-table.pi-cardgrid thead {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.walter-table.pi-cardgrid tbody {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  gap: 16px;
+}
+
+.walter-table.pi-cardgrid tr,
+.walter-table.pi-cardgrid td {
+  display: block;
+  min-width: 0;
+}
+
+.walter-table.pi-cardgrid td {
+  /* Override DataTable's inline column width so cards fill their grid track. */
+  width: auto !important;
+  padding: 0;
+}
+
 .walter-table.walter-subtable {
   min-width: 0;
   table-layout: fixed;

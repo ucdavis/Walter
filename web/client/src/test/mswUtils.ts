@@ -6,6 +6,9 @@ import { afterAll, afterEach, beforeAll } from 'vitest';
 // otherwise force every test to opt in. Tests that want to assert against
 // these endpoints can still override via `server.use(...)`.
 const defaultHandlers = [
+  http.get('/api/project/managed/by-iam/:iamId', () =>
+    HttpResponse.json({ pis: [], projectManager: null })
+  ),
   http.get('/api/notification', () =>
     HttpResponse.json({ enabled: false, message: '', updatedOn: null })
   ),
@@ -14,6 +17,7 @@ const defaultHandlers = [
       burndownEnabled: true,
       expenditureProgressEnabled: true,
       projectCostsEnabled: true,
+      projectionsEnabled: true,
     })
   ),
 ];
