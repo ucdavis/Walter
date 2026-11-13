@@ -11,6 +11,16 @@ import { PageLoading } from '@/components/states/PageLoading.tsx';
 import { CurrentProjectBalances } from '@/components/projections/CurrentProjectBalances.tsx';
 import { ProjectionPlanCard } from '@/components/projections/ProjectionPlanCard.tsx';
 import { NewProjectionWizard } from '@/components/projections/NewProjectionWizard.tsx';
+import {
+  ProjectionSessionNotice,
+  ProjectionUnavailable,
+} from '@/components/projections/ProjectionAvailability.tsx';
+import {
+  featureFlagsQueryOptions,
+  useFeatureFlagsQuery,
+} from '@/queries/featureFlags.ts';
+import { meQueryOptions } from '@/queries/user.ts';
+import { useUser } from '@/shared/auth/UserContext.tsx';
 import { getErrorPresentation } from '@/lib/errorPresentation.ts';
 import {
   projectionListQueryOptions,
@@ -20,24 +30,36 @@ import {
 export const Route = createFileRoute('/(authenticated)/projections/$iamId/')({
   component: RouteComponent,
   errorComponent: ProjectionsErrorBoundary,
-  loader: ({ context: { queryClient }, params: { iamId } }) =>
-    queryClient.ensureQueryData(projectionListQueryOptions(iamId)),
+  loader: async ({ context: { queryClient }, params: { iamId } }) => {
+    const user = await queryClient.ensureQueryData(meQueryOptions());
+    const flags = await queryClient.fetchQuery(
+      featureFlagsQueryOptions(user.id)
+    );
+    if (flags.projectionsEnabled) {
+      await queryClient.ensureQueryData(projectionListQueryOptions(iamId));
+    }
+  },
   pendingComponent: () => <PageLoading message="Fetching projections..." />,
 });
 
 function RouteComponent() {
   const { iamId } = Route.useParams();
-  return <ProjectionList iamId={iamId} key={iamId} />;
+  const user = useUser();
+  return <ProjectionDashboard iamId={iamId} key={`${user.id}:${iamId}`} />;
 }
 
-function ProjectionList({ iamId }: { iamId: string }) {
-  const { data: projections } = useSuspenseQuery(
-    projectionListQueryOptions(iamId)
-  );
+function ProjectionDashboard({ iamId }: { iamId: string }) {
+  const { data: flags } = useFeatureFlagsQuery();
   const navigate = useNavigate();
   const [creating, setCreating] = useState(false);
+  const [savedName, setSavedName] = useState<string>();
 
   const openCreated = async (saved: Projection) => {
+    if (!flags?.projectionsEnabled) {
+      setSavedName(saved.name);
+      setCreating(false);
+      return;
+    }
     await navigate({
       ignoreBlocker: true,
       params: { iamId, projectionId: String(saved.id) },
@@ -48,24 +70,48 @@ function ProjectionList({ iamId }: { iamId: string }) {
   if (creating) {
     return (
       <main className="container">
+        {!flags?.projectionsEnabled && <ProjectionSessionNotice />}
         <NewProjectionWizard
           iamId={iamId}
           onCancel={() => setCreating(false)}
           onCreated={openCreated}
+          openWorkspaceAfterCreate={!!flags?.projectionsEnabled}
         />
       </main>
     );
   }
 
+  if (!flags?.projectionsEnabled) {
+    return (
+      <>
+        {savedName && (
+          <p className="alert alert-success" role="status">
+            {savedName} was saved.
+          </p>
+        )}
+        <ProjectionUnavailable iamId={iamId} />
+      </>
+    );
+  }
+
+  return <ProjectionList iamId={iamId} onCreate={() => setCreating(true)} />;
+}
+
+function ProjectionList({
+  iamId,
+  onCreate,
+}: {
+  iamId: string;
+  onCreate: () => void;
+}) {
+  const { data: projections } = useSuspenseQuery(
+    projectionListQueryOptions(iamId)
+  );
   return (
     <main className="container">
       <header className="mt-8 flex flex-wrap items-center justify-between gap-4">
         <h1 className="h1">Projections</h1>
-        <button
-          className="btn btn-primary"
-          onClick={() => setCreating(true)}
-          type="button"
-        >
+        <button className="btn btn-primary" onClick={onCreate} type="button">
           <PlusIcon aria-hidden="true" className="size-5" />
           New plan
         </button>

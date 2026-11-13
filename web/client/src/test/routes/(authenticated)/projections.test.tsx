@@ -38,6 +38,107 @@ const salaryInput = () =>
   screen.getByRole('textbox', { name: 'Full-time annual salary' });
 
 describe('saved projection route', () => {
+  it.each(['/projections/IAM-PREVIEW', '/projections/IAM-PREVIEW/1'])(
+    'does not load projection data when disabled at %s',
+    async (initialPath) => {
+      handlePlan(createSalaryExample());
+      let projectionReads = 0;
+      server.use(
+        http.get('/api/system/features', () =>
+          HttpResponse.json({ projectionsEnabled: false })
+        ),
+        http.get('/api/projections/*', () => {
+          projectionReads++;
+          return HttpResponse.json([]);
+        })
+      );
+      const route = renderRoute({ initialPath });
+      try {
+        await screen.findByText('Projections are not available.');
+        expect(
+          screen.getByRole('link', { name: 'Back to projects' })
+        ).toHaveAttribute('href', '/projects/IAM-PREVIEW');
+        expect(
+          screen.queryByRole('button', { name: 'New plan' })
+        ).not.toBeInTheDocument();
+        expect(projectionReads).toBe(0);
+      } finally {
+        route.cleanup();
+      }
+    }
+  );
+
+  it('preserves an unapplied edit after disablement, saves it, and blocks reopening the plan', async () => {
+    const plan = createSalaryExample();
+    handlePlan(plan);
+    const requests: Record<string, unknown>[] = [];
+    server.use(
+      http.put('/api/projections/:id', async ({ request }) => {
+        const body = (await request.json()) as Record<string, unknown>;
+        requests.push(body);
+        return HttpResponse.json({
+          ...plan,
+          ...body,
+          updatedAt: '2026-02-01T00:00:00Z',
+        });
+      })
+    );
+    const user = userEvent.setup();
+    const route = renderRoute({
+      initialPath: `/projections/IAM-PREVIEW/${plan.id}?section=staffing&appointment=101`,
+    });
+    try {
+      await screen.findByRole('textbox', { name: 'Full-time annual salary' });
+      await user.clear(salaryInput());
+      await user.type(salaryInput(), '132000');
+      server.use(
+        http.get('/api/system/features', () =>
+          HttpResponse.json({ projectionsEnabled: false })
+        )
+      );
+      await act(async () => {
+        await route.queryClient.invalidateQueries({
+          queryKey: ['system', 'features'],
+        });
+      });
+      await screen.findByText(/Projections have been turned off/);
+      expect(salaryInput()).toHaveValue('132000');
+      await user.click(screen.getByRole('button', { name: 'Apply' }));
+      await user.click(screen.getByRole('button', { name: 'Funding outlook' }));
+      expect(
+        screen.queryByText('Projections are not available.')
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: 'Duplicate plan' })
+      ).not.toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: /^Save plan/ }));
+      await screen.findByRole('button', { name: '✓ Saved' });
+      expect(requests).toHaveLength(1);
+      expect(requests[0]).toMatchObject({
+        content: { appointments: [{ monthlySalary: 11_000 }] },
+      });
+
+      await user.click(
+        screen.getByRole('link', { name: 'Projections dashboard' })
+      );
+      await screen.findByText('Projections are not available.');
+      await act(async () => {
+        await route.router.navigate({
+          params: { iamId: 'IAM-PREVIEW', projectionId: String(plan.id) },
+          to: '/projections/$iamId/$projectionId',
+        });
+      });
+      expect(
+        screen.getByText('Projections are not available.')
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: /^Save plan/ })
+      ).not.toBeInTheDocument();
+    } finally {
+      route.cleanup();
+    }
+  });
+
   it('preserves edits through query refresh and navigation, then saves exact versions through the real mutation', async () => {
     const plan = createSalaryExample();
     plan.updatedAt = '2026-01-02T12:34:56.1234567Z';

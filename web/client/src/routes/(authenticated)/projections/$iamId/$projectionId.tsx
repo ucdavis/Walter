@@ -1,4 +1,5 @@
 import { ArrowTrendingUpIcon } from '@heroicons/react/24/outline';
+import { useState } from 'react';
 import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
 import {
   createFileRoute,
@@ -7,6 +8,16 @@ import {
 } from '@tanstack/react-router';
 import { ProjectionSessionProvider } from '@/components/projections/ProjectionSession.tsx';
 import { ProjectionWorkspace } from '@/components/projections/ProjectionWorkspace.tsx';
+import {
+  ProjectionSessionNotice,
+  ProjectionUnavailable,
+} from '@/components/projections/ProjectionAvailability.tsx';
+import {
+  featureFlagsQueryOptions,
+  useFeatureFlagsQuery,
+} from '@/queries/featureFlags.ts';
+import { meQueryOptions } from '@/queries/user.ts';
+import { useUser } from '@/shared/auth/UserContext.tsx';
 import { PageError } from '@/components/states/PageError.tsx';
 import { PageLoading } from '@/components/states/PageLoading.tsx';
 import { HttpError } from '@/lib/api.ts';
@@ -31,6 +42,11 @@ export const Route = createFileRoute(
     context: { queryClient },
     params: { iamId, projectionId },
   }) => {
+    const user = await queryClient.ensureQueryData(meQueryOptions());
+    const flags = await queryClient.fetchQuery(
+      featureFlagsQueryOptions(user.id)
+    );
+    if (!flags.projectionsEnabled) {return { enabled: false };}
     if (
       !/^[1-9]\d*$/.test(projectionId) ||
       !Number.isSafeInteger(Number(projectionId))
@@ -45,12 +61,38 @@ export const Route = createFileRoute(
     if (!list.some(({ id }: ProjectionSummary) => id === projection.id)) {
       throw new HttpError(404, '/api/projections');
     }
+    return { enabled: true };
   },
   pendingComponent: () => <PageLoading message="Fetching projection..." />,
   staleTime: Infinity,
 });
 
 function RouteComponent() {
+  const { iamId, projectionId } = Route.useParams();
+  const user = useUser();
+  const { enabled } = Route.useLoaderData();
+  return (
+    <ProjectionPlanPage
+      initiallyEnabled={enabled}
+      key={`${user.id}:${iamId}:${projectionId}`}
+    />
+  );
+}
+
+function ProjectionPlanPage({
+  initiallyEnabled,
+}: {
+  initiallyEnabled: boolean;
+}) {
+  // Admission lasts only for this mounted plan, so flag refreshes cannot discard an editor's work.
+  const [admitted] = useState(initiallyEnabled);
+  const { iamId } = Route.useParams();
+  const { data: flags } = useFeatureFlagsQuery();
+  if (!admitted) {return <ProjectionUnavailable iamId={iamId} />;}
+  return <ProjectionEditor featureEnabled={!!flags?.projectionsEnabled} />;
+}
+
+function ProjectionEditor({ featureEnabled }: { featureEnabled: boolean }) {
   const { iamId, projectionId } = Route.useParams();
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
@@ -83,6 +125,7 @@ function RouteComponent() {
     >
       <main>
         <div className="mx-auto w-full max-w-[96rem] px-4 pt-4 sm:px-8">
+          {!featureEnabled && <ProjectionSessionNotice />}
           <Link
             className="btn btn-outline btn-sm gap-2 border-base-300 bg-base-100"
             params={{ iamId }}
@@ -106,13 +149,17 @@ function RouteComponent() {
               queryKey: options.queryKey,
             });
           }}
-          onDuplicated={async (saved) => {
-            await navigate({
-              params: { iamId, projectionId: String(saved.id) },
-              search: {},
-              to: '/projections/$iamId/$projectionId',
-            });
-          }}
+          onDuplicated={
+            featureEnabled
+              ? async (saved) => {
+                  await navigate({
+                    params: { iamId, projectionId: String(saved.id) },
+                    search: {},
+                    to: '/projections/$iamId/$projectionId',
+                  });
+                }
+              : undefined
+          }
           onNavigate={(location, replace = false) => {
             void navigate({
               replace,

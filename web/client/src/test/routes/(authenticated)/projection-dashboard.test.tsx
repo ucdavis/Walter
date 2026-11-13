@@ -78,6 +78,33 @@ function openDashboard() {
 }
 
 describe('projection dashboard', () => {
+  it('removes plan entry points when the flag turns off while viewing the dashboard', async () => {
+    handleDashboard([example(71, 'Visible plan')]);
+    const route = openDashboard();
+    try {
+      await screen.findByRole('article', { name: 'Visible plan' });
+      server.use(
+        http.get('/api/system/features', () =>
+          HttpResponse.json({ projectionsEnabled: false })
+        )
+      );
+      await act(async () => {
+        await route.queryClient.invalidateQueries({
+          queryKey: ['system', 'features'],
+        });
+      });
+      await screen.findByText('Projections are not available.');
+      expect(
+        screen.queryByRole('button', { name: 'New plan' })
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('article', { name: 'Visible plan' })
+      ).not.toBeInTheDocument();
+    } finally {
+      route.cleanup();
+    }
+  });
+
   it('follows an older in-flight preview with a fresh read when metadata advances, without refetching newer details', async () => {
     const original = example(71, 'Initial plan');
     original.updatedAt = '2026-11-09T22:00:00.12Z';

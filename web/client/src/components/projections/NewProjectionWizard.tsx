@@ -65,10 +65,12 @@ export function NewProjectionWizard({
   iamId,
   onCancel,
   onCreated,
+  openWorkspaceAfterCreate = true,
 }: {
   iamId: string;
   onCancel: () => void;
   onCreated: (saved: Projection) => Promise<void>;
+  openWorkspaceAfterCreate?: boolean;
 }) {
   const form = useAppForm({
     defaultValues: {
@@ -628,7 +630,9 @@ export function NewProjectionWizard({
                 ? 'Creating...'
                 : submitted
                   ? 'Retry creation'
-                  : 'Create plan & open workspace'}
+                  : openWorkspaceAfterCreate
+                    ? 'Create plan & open workspace'
+                    : 'Create plan'}
             </button>
           )}
         </div>

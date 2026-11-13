@@ -213,7 +213,7 @@ async function reviewWizard(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole('button', { name: 'Continue' }));
   await screen.findByRole('button', { name: 'Change history window' });
   await user.click(screen.getByRole('button', { name: 'Continue' }));
-  await screen.findByRole('button', { name: 'Create plan & open workspace' });
+  await screen.findByRole('button', { name: /^Create plan/ });
 }
 
 async function changeHistoryWindow(
@@ -234,6 +234,40 @@ async function changeHistoryWindow(
 }
 
 describe('projection creation and copies', () => {
+  it('lets an open wizard save after the flag turns off without opening a new editing session', async () => {
+    const api = handleLifecycle();
+    const route = renderPlans();
+    const user = userEvent.setup();
+    try {
+      await startWizard(user);
+      server.use(
+        http.get('/api/system/features', () =>
+          HttpResponse.json({ projectionsEnabled: false })
+        )
+      );
+      await act(async () => {
+        await route.queryClient.invalidateQueries({
+          queryKey: ['system', 'features'],
+        });
+      });
+      await screen.findByText(/Projections have been turned off/);
+      await reviewWizard(user);
+      await user.click(
+        screen.getByRole('button', { name: 'Create plan' })
+      );
+      await screen.findByText(/was saved\./);
+      expect(api.creates).toHaveLength(1);
+      expect(
+        screen.getByText('Projections are not available.')
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: 'New plan' })
+      ).not.toBeInTheDocument();
+    } finally {
+      route.cleanup();
+    }
+  });
+
   it('revisits completed steps without skipping selection or losing unapplied edits', async () => {
     const api = handleLifecycle();
     const route = renderPlans();

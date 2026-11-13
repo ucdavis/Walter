@@ -35,6 +35,12 @@ dashboard and workspace plan actions are accepted and committed as `13e6aeb4`.
 Stage 5m's final isolated acceptance pass is complete; its category-picker fixes
 and closeout record await user review. No additional v1 feature work was identified.
 Saving remains available with funding gaps, overlaps, and budget shortfalls.
+The UI rollout uses `walter.ProjectionsEnabled`, shared with Walter's feature-flag
+evaluation and IAM targeting. Disabled entry points show an unavailable message
+without reading projection data. Open saved-plan editors and setup wizards retain
+their work and can save before leaving when a flag refresh disables projections;
+new plan access and duplication are hidden. Saved data and API authorization stay
+unchanged. Pilot audience configuration and deployed acceptance remain release work.
 CBR defaults to 20% when no rate is supplied. Fresh appointments default to a
 3% annual salary adjustment in July. Every retained appointment needs a salary
 before the plan can be saved; explicit zero is allowed.

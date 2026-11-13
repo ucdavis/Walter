@@ -14,6 +14,7 @@ const defaultHandlers = [
       burndownEnabled: true,
       expenditureProgressEnabled: true,
       projectCostsEnabled: true,
+      projectionsEnabled: true,
     })
   ),
 ];
