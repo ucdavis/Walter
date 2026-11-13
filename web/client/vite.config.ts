@@ -29,6 +29,7 @@ export default defineConfig({
     host: true,
     open: true,
     port: 5174,
+    strictPort: true,
     proxy: {
       '/health': {
         secure: false,
