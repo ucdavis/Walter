@@ -62,6 +62,7 @@ describe('projection plan header', () => {
       name: 'Minimize funding summary',
     });
     expect(minimize).toHaveAttribute('aria-expanded', 'true');
+    expect(minimize).toHaveTextContent('Minimize');
     expect(
       screen.queryByRole('region', { name: 'Plan notes' })
     ).not.toBeInTheDocument();

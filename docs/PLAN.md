@@ -2156,9 +2156,17 @@ It no longer focuses the details section below the chart. Only explicit source
 navigation moves focus, so browser Back and Forward retain scroll restoration.
 
 The November 13 compactness review allows the header warning to be minimized to
-a warning icon beside the plan name. The icon restores the full summary. This
-choice lasts while the workspace remains open, including section navigation;
-reopening the plan shows the summary again. It changes no saved plan data.
+a warning badge beside the plan name. A visible Minimize action folds the warning
+surface into that badge; selecting the badge unfolds the full summary. The icon
+stays within the warning surface instead of traveling separately. Reduced-motion
+preferences skip the animation. This choice lasts while the workspace remains
+open, including section navigation; reopening the plan shows the summary again.
+It changes no saved plan data.
+
+The fold follow-up passed 35 focused component tests, TypeScript, production
+build, and scoped lint. Browser checks covered both animation directions, rapid
+reversal, focus retention, reduced motion, resize interruption, and a narrow
+layout with a long source name. The reviewed plan remained unchanged.
 
 Validation: 786 client tests passed across 85 files; the final tooltip event
 isolation regression, TypeScript, production build, changed-file lint, and

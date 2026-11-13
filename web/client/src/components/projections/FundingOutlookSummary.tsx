@@ -1,7 +1,7 @@
 import {
   ArrowRightIcon,
   ExclamationTriangleIcon,
-  MinusIcon,
+  ArrowsPointingInIcon,
 } from '@heroicons/react/24/outline';
 import type { Ref } from 'react';
 import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
@@ -16,15 +16,19 @@ import type { ProjectionNavigation } from '@/lib/projectionWorkspace.ts';
 
 export function FundingOutlookNotice({
   minimizeRef,
+  minimizeTooltipEnabled = true,
   onMinimize,
   onNavigate,
   outlook,
+  ref,
   summaryId,
 }: {
   minimizeRef?: Ref<HTMLButtonElement>;
+  minimizeTooltipEnabled?: boolean;
   onMinimize?: () => void;
   onNavigate: (location: ProjectionNavigation) => void;
   outlook: ProjectionOutlook;
+  ref?: Ref<HTMLElement>;
   summaryId?: string;
 }) {
   const first = outlook.shortfallSources.find(
@@ -38,15 +42,17 @@ export function FundingOutlookNotice({
   return (
     <section
       aria-label="Funding summary"
-      className={`mb-5 flex items-start gap-3 rounded-lg border p-4 text-sm ${first ? 'border-error/30 bg-error/5' : 'border-warning/50 bg-warning/5'}`}
+      className={`mb-5 grid grid-cols-[auto_1fr_auto] items-start gap-3 sm:flex rounded-lg border p-4 text-sm ${first ? 'border-error/30 bg-error/5' : 'border-warning/50 bg-warning/5'}`}
+      ref={ref}
     >
       <ExclamationTriangleIcon
         aria-hidden="true"
         className={`mt-0.5 size-5 shrink-0 ${first ? 'text-error' : 'text-warning'}`}
+        data-funding-summary-icon
       />
-      <div className="min-w-0 flex-1 space-y-3">
+      <div className="col-span-3 row-start-2 min-w-0 flex-1 space-y-3">
         {first && (
-          <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-center">
             <div className="min-w-0 flex-1">
               <p className="font-semibold text-error">
                 First funding shortfall:{' '}
@@ -74,7 +80,7 @@ export function FundingOutlookNotice({
             </div>
             <button
               aria-label={`Explore ${first.label}`}
-              className="btn btn-outline btn-error btn-sm"
+              className="btn btn-outline btn-error btn-sm self-start sm:self-auto"
               onClick={() =>
                 onNavigate({ section: 'overview', source: first.source.id })
               }
@@ -86,7 +92,7 @@ export function FundingOutlookNotice({
           </div>
         )}
         {(gaps > 0 || overlaps > 0) && (
-          <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-center">
             <p>
               {gaps > 0 &&
                 `${gaps} ${gaps === 1 ? 'appointment has' : 'appointments have'} unallocated time`}
@@ -96,7 +102,7 @@ export function FundingOutlookNotice({
               . Unallocated shares do not charge a funding source.
             </p>
             <button
-              className="btn btn-outline btn-sm"
+              className="btn btn-outline btn-sm self-start sm:self-auto"
               onClick={() => onNavigate({ section: 'staffing' })}
               type="button"
             >
@@ -108,19 +114,23 @@ export function FundingOutlookNotice({
       {onMinimize && (
         <TooltipLabel
           asChild
+          focusEnabled={minimizeTooltipEnabled}
+          hoverEnabled={minimizeTooltipEnabled}
           label={
             <button
               aria-controls={summaryId}
               aria-expanded="true"
               aria-label="Minimize funding summary"
-              className="btn btn-ghost btn-sm btn-square shrink-0"
+              className="btn btn-ghost btn-sm col-start-3 row-start-1 shrink-0"
               onClick={onMinimize}
               ref={minimizeRef}
               type="button"
             >
-              <MinusIcon aria-hidden="true" className="size-4" />
+              <ArrowsPointingInIcon aria-hidden="true" className="size-4" />
+              Minimize
             </button>
           }
+          open={minimizeTooltipEnabled ? undefined : false}
           tooltip={tooltipDefinitions.minimizeFundingSummary}
         />
       )}
