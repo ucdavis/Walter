@@ -7,15 +7,22 @@ import { renderRoute } from '@/test/routerUtils.tsx';
 function setup(roles: string[], enabled = true, hasManagedPis = true) {
   const managed = vi.fn(() =>
     HttpResponse.json({
-      pis: hasManagedPis ? [
-        { employeeId: '2', iamId: 'PI-2', name: 'Example PI', projectCount: 1 },
-        {
-          employeeId: '3',
-          iamId: null,
-          name: 'Missing Identity',
-          projectCount: 0,
-        },
-      ] : [],
+      pis: hasManagedPis
+        ? [
+            {
+              employeeId: '2',
+              iamId: 'PI-2',
+              name: 'Example PI',
+              projectCount: 1,
+            },
+            {
+              employeeId: '3',
+              iamId: null,
+              name: 'Missing Identity',
+              projectCount: 0,
+            },
+          ]
+        : [],
       projectManager: null,
     })
   );
@@ -86,8 +93,10 @@ describe('projection navigation', () => {
       expect(route.router.state.location.pathname).toBe('/projections/SELF');
       expect(managed).toHaveBeenCalledOnce();
       expect(projections).toHaveBeenCalledOnce();
-      expect(screen.getByRole('link', { name: 'Projections' }))
-        .toHaveAttribute('href', '/projections');
+      expect(screen.getByRole('link', { name: 'Projections' })).toHaveAttribute(
+        'href',
+        '/projections'
+      );
     } finally {
       route.cleanup();
     }
@@ -97,13 +106,16 @@ describe('projection navigation', () => {
     const { projections } = setup([]);
     const route = renderRoute({ initialPath: '/projections' });
     try {
-      expect(await screen.findByRole('link', { name: 'Example PI' }))
-        .toHaveAttribute('href', '/projections/PI-2');
+      expect(
+        await screen.findByRole('link', { name: 'Example PI' })
+      ).toHaveAttribute('href', '/projections/PI-2');
       expect(route.router.state.location.pathname).toBe('/projections');
-      expect(screen.queryByRole('link', { name: 'Projections' }))
-        .not.toBeInTheDocument();
-      expect(screen.getByRole('link', { name: 'View projections for Example PI' }))
-        .toHaveAttribute('href', '/projections/PI-2');
+      expect(
+        screen.queryByRole('link', { name: 'Projections' })
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByRole('link', { name: 'View projections for Example PI' })
+      ).toHaveAttribute('href', '/projections/PI-2');
       expect(projections).not.toHaveBeenCalled();
     } finally {
       route.cleanup();
@@ -114,9 +126,13 @@ describe('projection navigation', () => {
     setup(['FinancialViewer'], true, false);
     const route = renderRoute({ initialPath: '/projections' });
     try {
-      await screen.findByText("You don't have any managed principal investigators to view yet.");
-      expect(screen.getByRole('link', { name: 'Projections' }))
-        .toHaveAttribute('href', '/projections');
+      await screen.findByText(
+        "You don't have any managed principal investigators to view yet."
+      );
+      expect(screen.getByRole('link', { name: 'Projections' })).toHaveAttribute(
+        'href',
+        '/projections'
+      );
       expect(route.router.state.location.pathname).toBe('/projections');
     } finally {
       route.cleanup();
@@ -183,9 +199,11 @@ describe('projection navigation', () => {
         const shortcut = screen.queryByRole('link', {
           name: 'View projections for Example PI',
         });
-        if (enabled)
-          {expect(shortcut).toHaveAttribute('href', '/projections/PI-2');}
-        else {expect(shortcut).not.toBeInTheDocument();}
+        if (enabled) {
+          expect(shortcut).toHaveAttribute('href', '/projections/PI-2');
+        } else {
+          expect(shortcut).not.toBeInTheDocument();
+        }
       } finally {
         route.cleanup();
       }
