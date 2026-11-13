@@ -39,9 +39,9 @@ _Using the DevContainer is optional, but it will get you the right version of do
    npm start
    ```
 
-   This command automatically installs dependencies (if needed) and starts both the .NET backend and Vite frontend with hot reload enabled.
+   Run `npm install` from `web/` first. `npm start` starts the backend with the `http-cli` profile, waits up to two minutes for `/health`, then starts Vite with hot reload. Health is checked only at startup; existing IDE profiles retain SPA proxy.
 
-   _Optional: If dependencies change, you can manually reinstall with `npm install && cd client && npm install && cd ..` but you shouldn't have to, the `npm start` should handle it._
+   Install client dependencies with `npm --prefix client install` when needed.
 
 4. **Access the application**
 
