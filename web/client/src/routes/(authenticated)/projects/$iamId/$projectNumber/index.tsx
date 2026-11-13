@@ -93,7 +93,9 @@ function ProjectContent({
     user.employeeId
   );
   const reconciliationState = useProjectDiscrepancyState(
-    summary.isInternal && canSeeDiscrepancy ? [summary.projectNumber] : []
+    (summary.isInternal || summary.isCapital) && canSeeDiscrepancy
+      ? [summary.projectNumber]
+      : []
   );
   const reconciliationStatus = reconciliationState.hasData
     ? reconciliationState.discrepancies.has(summary.projectNumber)

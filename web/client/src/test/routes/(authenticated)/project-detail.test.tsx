@@ -1639,6 +1639,91 @@ describe('project detail page', () => {
       }
     });
 
+    it.each(['Capital', 'Sponsored Capital'])(
+      'shows balanced reconciliation alert for authorized project managers on %s project details',
+      async (projectType) => {
+        const projects = [createProject({ pmEmployeeId: '1000', projectType })];
+        setupDetailHandlers({
+          projects,
+          reconciliation: [],
+          user: { employeeId: '1000', name: 'PM User', roles: [] },
+        });
+
+        const { cleanup } = renderRoute({ initialPath: '/projects/1000/P1' });
+
+        try {
+          const message = await screen.findByText(
+            'GL/PPM is Balanced. Click here to view.',
+            {},
+            { timeout: 3000 }
+          );
+          expect(message.closest('[role="alert"]')).toHaveClass(
+            'alert-success'
+          );
+          expect(message.closest('a')).toHaveAttribute(
+            'href',
+            '/reports/reconciliation/P1'
+          );
+        } finally {
+          cleanup();
+        }
+      }
+    );
+
+    it('shows discrepancy reconciliation alert for authorized project managers on capital project details', async () => {
+      const projects = [
+        createProject({ pmEmployeeId: '1000', projectType: 'Capital' }),
+      ];
+      setupDetailHandlers({
+        projects,
+        reconciliation: discrepantReconciliation,
+        user: { employeeId: '1000', name: 'PM User', roles: [] },
+      });
+
+      const { cleanup } = renderRoute({ initialPath: '/projects/1000/P1' });
+
+      try {
+        const message = await screen.findByText(
+          /has a gl\/ppm reconciliation discrepancy/i,
+          {},
+          { timeout: 3000 }
+        );
+        expect(message.closest('a')).toHaveAttribute(
+          'href',
+          '/reports/reconciliation/P1'
+        );
+      } finally {
+        cleanup();
+      }
+    });
+
+    it('hides reconciliation alert for PI viewing own capital project', async () => {
+      const projects = [
+        createProject({ pmEmployeeId: '2000', projectType: 'Capital' }),
+      ];
+      setupDetailHandlers({
+        projects,
+        user: { employeeId: '1000', name: 'PI User', roles: [] },
+      });
+      let reconciliationRequested = false;
+      server.use(
+        http.get('/api/project/gl-ppm-reconciliation', () => {
+          reconciliationRequested = true;
+          return HttpResponse.json(discrepantReconciliation);
+        })
+      );
+
+      const { cleanup } = renderRoute({ initialPath: '/projects/1000/P1' });
+
+      try {
+        await screen.findByText('Task Breakdown');
+        expect(reconciliationRequested).toBe(false);
+        expect(screen.queryByText(/gl\/ppm/i)).not.toBeInTheDocument();
+      } finally {
+        cleanup();
+      }
+    });
+
     it('hides reconciliation alert for PI viewing own internal project', async () => {
       const projects = [
         createProject({ pmEmployeeId: '2000', projectType: 'Internal' }),
