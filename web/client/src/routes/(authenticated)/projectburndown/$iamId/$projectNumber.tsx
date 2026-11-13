@@ -6,11 +6,13 @@ import { PageLoading } from '@/components/states/PageLoading.tsx';
 import { isAwardExpired } from '@/lib/date.ts';
 import { getErrorPresentation } from '@/lib/errorPresentation.ts';
 import { summarizeProjectByNumber } from '@/lib/projectSummary.ts';
+import { meQueryOptions } from '@/queries/user.ts';
 import { featureFlagsQueryOptions } from '@/queries/featureFlags.ts';
 import { projectsDetailQueryOptions } from '@/queries/project.ts';
 import { useUser } from '@/shared/auth/UserContext.tsx';
 import {
   ClipboardDocumentListIcon,
+  PresentationChartLineIcon,
   TableCellsIcon,
 } from '@heroicons/react/24/outline';
 import { useSuspenseQuery } from '@tanstack/react-query';
@@ -26,9 +28,10 @@ export const Route = createFileRoute(
   component: RouteComponent,
   errorComponent: ProjectBurndownErrorBoundary,
   loader: async ({ context: { queryClient }, params: { iamId } }) => {
+    const user = await queryClient.ensureQueryData(meQueryOptions());
     await Promise.all([
       queryClient.ensureQueryData(projectsDetailQueryOptions(iamId)),
-      queryClient.ensureQueryData(featureFlagsQueryOptions()),
+      queryClient.ensureQueryData(featureFlagsQueryOptions(user.id)),
     ]);
   },
   pendingComponent: () => (
@@ -50,11 +53,14 @@ const ProjectNotFound = ({ projectNumber }: { projectNumber: string }) => (
 );
 
 function RouteComponent() {
+  const user = useUser();
   const { iamId, projectNumber } = Route.useParams();
   const { data: projects } = useSuspenseQuery(
     projectsDetailQueryOptions(iamId)
   );
-  const { data: featureFlags } = useSuspenseQuery(featureFlagsQueryOptions());
+  const { data: featureFlags } = useSuspenseQuery(
+    featureFlagsQueryOptions(user.id)
+  );
   const summary = summarizeProjectByNumber(projects, projectNumber);
 
   if (!summary) {
@@ -73,7 +79,7 @@ function RouteComponent() {
     <ProjectPortfolioLayout>
       <main className="flex-1 min-w-0">
         <section className="mt-8 mb-2">
-          <div className="mb-4 flex flex-wrap gap-2">
+          <div className="mb-12 flex flex-wrap gap-2">
             <Link
               className="btn btn-sm"
               params={{ iamId, projectNumber: summary.projectNumber }}
@@ -94,8 +100,14 @@ function RouteComponent() {
             ) : null}
           </div>
 
-          <h1 className="h1">Project Burndown</h1>
-          <h2 className="subtitle max-w-5xl">{summary.displayName}</h2>
+          <p className="mb-2 flex items-center gap-2 font-semibold uppercase text-base-content/70">
+            <PresentationChartLineIcon
+              aria-hidden="true"
+              className="size-4 shrink-0"
+            />
+            Project Burndown
+          </p>
+          <h1 className="h1 max-w-5xl">{summary.displayName}</h1>
         </section>
 
         {expired ? (

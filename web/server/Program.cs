@@ -8,6 +8,7 @@ using Razor.Templating.Core;
 using server.core.Data;
 using server.HealthChecks;
 using server.Helpers;
+using Server.Demo;
 using Server.Services;
 using server.core.Services;
 using server.Services;
@@ -21,6 +22,9 @@ builder.Configuration
     .AddEnvFile(".env", optional: true) // secrets stored here
     .AddEnvFile($".env.{builder.Environment.EnvironmentName}", optional: true) // env-specific secrets
     .AddEnvironmentVariables(); // OS env vars override everything
+
+var useAzureFeatureFlags = builder.Services.AddWalterFeatureManagement(
+    builder.Configuration, builder.Environment.EnvironmentName);
 
 // setup logging and telemetry
 TelemetryHelper.ConfigureLogging(builder.Logging);
@@ -55,13 +59,6 @@ builder.Services.AddAuthorizationPolicies();
 builder.Services.Configure<IamSettings>(builder.Configuration.GetSection("Iam"));
 builder.Services.Configure<FinancialSettings>(builder.Configuration.GetSection("Financial"));
 builder.Services.Configure<RumOptions>(builder.Configuration.GetSection("Rum"));
-builder.Services.Configure<FeatureFlagOptions>(builder.Configuration.GetSection(FeatureFlagOptions.SectionName));
-builder.Services.PostConfigure<FeatureFlagOptions>(options =>
-{
-    // Preserve the single-underscore environment key used for the GraphQL rollout switch.
-    options.UseGraphQLAPI = builder.Configuration.GetValue<bool?>("FeatureFlags_UseGraphQLAPI")
-        ?? options.UseGraphQLAPI;
-});
 builder.Services.Configure<AppOptions>(builder.Configuration.GetSection(AppOptions.SectionName));
 builder.Services.Configure<DatamartOptions>(options =>
 {
@@ -83,9 +80,16 @@ builder.Services.AddResponseCaching();
 // add singleton services here
 builder.Services.AddSingleton<IFinancialApiService, FinancialApiService>();
 builder.Services.AddSingleton<DatamartService>();
-builder.Services.AddSingleton<IDatamartService>(sp => sp.GetRequiredService<DatamartService>());
-builder.Services.AddSingleton<IPpmPortfolioReader>(sp => sp.GetRequiredService<DatamartService>());
-builder.Services.AddSingleton<IProjectionDataSource>(sp => sp.GetRequiredService<DatamartService>());
+if (builder.Configuration.GetValue<bool>("FeatureFlags:DemoDataEnabled"))
+{
+    builder.Services.AddDemoData();
+}
+else
+{
+    builder.Services.AddSingleton<IDatamartService>(sp => sp.GetRequiredService<DatamartService>());
+    builder.Services.AddSingleton<IPpmPortfolioReader>(sp => sp.GetRequiredService<DatamartService>());
+    builder.Services.AddSingleton<IProjectionDataSource>(sp => sp.GetRequiredService<DatamartService>());
+}
 builder.Services.AddScoped<PpmPortfolioService>();
 builder.Services.AddScoped<ProjectionSeeder>();
 
@@ -130,6 +134,11 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.UseForwardedHeaders();
+
+if (useAzureFeatureFlags)
+{
+    app.UseAzureAppConfiguration();
+}
 
 app.Use(async (context, next) =>
 {

@@ -1,4 +1,5 @@
-import { fetchJson } from '../lib/api.ts';
+import { fetchJson } from '@/lib/api.ts';
+import { useUser } from '@/shared/auth/UserContext.tsx';
 import { useQuery } from '@tanstack/react-query';
 
 export type FeatureFlags = {
@@ -8,14 +9,19 @@ export type FeatureFlags = {
   projectionsEnabled: boolean;
 };
 
-export const featureFlagsQueryOptions = () => ({
+export const featureFlagsQueryOptions = (userId: string) => ({
   queryFn: async (): Promise<FeatureFlags> => {
-    return await fetchJson<FeatureFlags>('/api/system/features');
+    return await fetchJson<FeatureFlags>('/api/system/features', {
+      cache: 'no-store',
+    });
   },
-  queryKey: ['system', 'features'] as const,
-  staleTime: 60 * 60 * 1000, // 1 hour; environment flags rarely change
+  // Identity separates browser results only; the server uses the authentication cookie.
+  queryKey: ['system', 'features', userId] as const,
+  refetchInterval: 2 * 60_000,
+  staleTime: 60_000,
 });
 
 export const useFeatureFlagsQuery = () => {
-  return useQuery(featureFlagsQueryOptions());
+  const user = useUser();
+  return useQuery(featureFlagsQueryOptions(user.id));
 };
