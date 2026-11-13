@@ -133,8 +133,11 @@ public sealed class DemoDataSource(DateTime? referenceDate = null)
         }, ct);
     }
 
-    public Task<ProjectionSeedData> GetProjectionSeedAsync(string piEmployeeId, CancellationToken ct = default) =>
-        Result(DemoDataSet.CreateProjectionSeed(piEmployeeId, Month), ct);
+    public Task<ProjectionSeedData> GetProjectionSeedAsync(string piEmployeeId, CancellationToken ct = default, DateTime? snapshotAtUtc = null) =>
+        Result(DemoDataSet.CreateProjectionSeed(piEmployeeId,
+            snapshotAtUtc is { } snapshot
+                ? new DateTime(snapshot.Year, snapshot.Month, 1, 0, 0, 0, DateTimeKind.Utc)
+                : Month), ct);
 
     private static int IsPersonnel(string? category) => category is DemoDataSet.SalaryCategory or DemoDataSet.BenefitsCategory ? 1 : 0;
     private static bool Equal(string? left, string? right) => string.Equals(left, right?.Trim(), StringComparison.OrdinalIgnoreCase);
