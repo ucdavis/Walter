@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import {
   aggregateByPosition,
@@ -293,7 +293,9 @@ describe('PersonnelTable', () => {
       screen.getByRole('button', { name: 'Smith, John (1001) - PROF-FY' })
     );
 
-    const fteHeader = screen.getByText('FTE');
+    const fteHeader = within(
+      screen.getByRole('columnheader', { name: 'FTE' })
+    ).getByText('FTE');
     const fteTrigger = fteHeader.parentElement as HTMLElement;
 
     expect(fteTrigger).toHaveAttribute('data-tooltip-placement', 'bottom');
@@ -807,5 +809,194 @@ describe('PersonnelTable', () => {
     expect(csv).not.toContain('Rainy Project');
     expect(csv).toContain('07/01/2024');
     expect(filename).toBe('personnel-filtered.csv');
+  });
+  it.each([
+    '1001',
+    '001234',
+    'TASK-42',
+    formatDate('2020-01-01T00:00:00.000Z', ''),
+    '5000',
+  ])('searches personnel for %s', async (query) => {
+    const user = userEvent.setup();
+    render(
+      <PersonnelTable
+        data={[
+          createRecord({ projectType: 'Internal', task: 'TASK-42' }),
+          createRecord({
+            employeeId: '1002',
+            jobCode: '009999',
+            jobEffectiveDate: '2022-01-01T00:00:00.000Z',
+            monthlyRate: 9000,
+            name: 'Baker, Bob',
+            positionNumber: '40009999',
+            projectType: 'Internal',
+            task: 'OTHER',
+          }),
+        ]}
+      />
+    );
+    await user.type(
+      screen.getByRole('textbox', { name: 'Search personnel' }),
+      query
+    );
+    expect(
+      screen.getByRole('button', { name: /Smith, John/ })
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /Baker, Bob/ })
+    ).not.toBeInTheDocument();
+  });
+
+  it('expands and collapses only filtered positions and preserves hidden expansions', async () => {
+    const user = userEvent.setup();
+    render(
+      <PersonnelTable
+        data={[
+          createRecord(),
+          createRecord({
+            employeeId: '1002',
+            name: 'Baker, Bob',
+            positionNumber: '40009999',
+          }),
+        ]}
+      />
+    );
+    const search = screen.getByRole('textbox', { name: 'Search personnel' });
+    await user.click(screen.getByRole('button', { name: 'Expand all' }));
+    expect(screen.getByRole('button', { name: /Smith, John/ })).toHaveAttribute(
+      'aria-expanded',
+      'true'
+    );
+    expect(screen.getByRole('button', { name: /Baker, Bob/ })).toHaveAttribute(
+      'aria-expanded',
+      'true'
+    );
+    await user.type(search, 'Smith');
+    await user.click(screen.getByRole('button', { name: 'Collapse all' }));
+    expect(screen.getByRole('button', { name: /Smith, John/ })).toHaveAttribute(
+      'aria-expanded',
+      'false'
+    );
+    await user.clear(search);
+    expect(screen.getByRole('button', { name: /Baker, Bob/ })).toHaveAttribute(
+      'aria-expanded',
+      'true'
+    );
+    await user.click(screen.getByRole('button', { name: /Baker, Bob/ }));
+    await user.type(search, 'Baker');
+    await user.click(screen.getByRole('button', { name: 'Expand all' }));
+    await user.clear(search);
+    expect(screen.getByRole('button', { name: /Smith, John/ })).toHaveAttribute(
+      'aria-expanded',
+      'false'
+    );
+    expect(screen.getByRole('button', { name: /Baker, Bob/ })).toHaveAttribute(
+      'aria-expanded',
+      'true'
+    );
+  });
+
+  it('links each expansion button to its own job details and supports keyboard toggling', async () => {
+    const user = userEvent.setup();
+    render(
+      <PersonnelTable
+        data={[createRecord(), createRecord({ positionNumber: '40009999' })]}
+      />
+    );
+    const buttons = screen.getAllByRole('button', { name: /Smith, John/ });
+    const ids = buttons.map((button) => button.getAttribute('aria-controls'));
+    expect(new Set(ids).size).toBe(2);
+    expect(document.getElementById(ids[0]!)).not.toBeVisible();
+    buttons[0].focus();
+    await user.keyboard('{Enter}');
+    expect(document.getElementById(ids[0]!)).toBeVisible();
+    expect(document.getElementById(ids[1]!)).not.toBeVisible();
+    await user.keyboard(' ');
+    expect(document.getElementById(ids[0]!)).not.toBeVisible();
+  });
+
+  it('sorts by distributed monthly funding numerically and keeps funding rows grouped', async () => {
+    const user = userEvent.setup();
+    render(
+      <PersonnelTable
+        data={[
+          createRecord({
+            distributionPercent: 10,
+            monthlyRate: 10_000,
+            projectDescription: 'Smith funding',
+          }),
+          createRecord({
+            employeeId: '1002',
+            monthlyRate: 2000,
+            name: 'Baker, Bob',
+            positionNumber: '40009999',
+            projectDescription: 'Baker funding',
+          }),
+        ]}
+      />
+    );
+    const names = () =>
+      screen
+        .getAllByRole('button', { name: /\(100[12]\)/ })
+        .map((button) => button.textContent);
+    expect(names()[0]).toContain('Baker');
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'Sort personnel by' }),
+      'monthlyRate'
+    );
+    expect(names()[0]).toContain('Smith');
+    expect(
+      within(
+        screen.getByRole('button', { name: /Smith/ }).closest('tbody')!
+      ).getByText('Smith funding')
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Sort descending' }));
+    expect(names()[0]).toContain('Baker');
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'Sort personnel by' }),
+      'name'
+    );
+    expect(names()[0]).toContain('Smith');
+  });
+
+  it('restores focus and scrolling when the expanded table closes with Escape', async () => {
+    const user = userEvent.setup();
+    render(<PersonnelTable data={[createRecord()]} />);
+    await user.click(screen.getByRole('button', { name: 'Expand table' }));
+    expect(document.body.style.overflow).toBe('hidden');
+    expect(
+      screen.getByRole('button', { name: 'Collapse table' })
+    ).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    expect(screen.getByRole('button', { name: 'Expand table' })).toHaveFocus();
+    expect(document.body.style.overflow).toBe('');
+  });
+
+  it('shows an empty search result without removing the search controls', async () => {
+    const user = userEvent.setup();
+    render(<PersonnelTable data={[createRecord()]} />);
+    await user.type(
+      screen.getByRole('textbox', { name: 'Search personnel' }),
+      'no match'
+    );
+    expect(
+      screen.getByText('No matching personnel found.')
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Expand all' })).toBeDisabled();
+    await user.clear(screen.getByRole('textbox', { name: 'Search personnel' }));
+    expect(screen.getByRole('button', { name: /Smith/ })).toBeInTheDocument();
+  });
+
+  it('allows future-only personnel to be shown when no current entries exist', async () => {
+    const user = userEvent.setup();
+    render(<PersonnelTable data={[createRecord({ isFuture: true })]} />);
+    await user.click(
+      screen.getByRole('button', { name: /Show future entries/ })
+    );
+    expect(screen.getByRole('button', { name: /Smith/ })).toBeInTheDocument();
+    const footer = screen
+      .getByText('Funding Distribution Totals')
+      .closest('tr')!;
+    expect(footer).toHaveTextContent('$0.00');
   });
 });

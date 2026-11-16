@@ -1,4 +1,8 @@
-import { PersonnelTable } from '@/components/project/PersonnelTable.tsx';
+import {
+  FundingColumnGroup,
+  FundingColumnHeaders,
+  PersonnelTable,
+} from '@/components/project/PersonnelTable.tsx';
 import { usePersonnelQuery } from '@/queries/personnel.ts';
 
 interface PersonnelSectionProps {
@@ -9,63 +13,30 @@ interface PersonnelSectionProps {
 function PersonnelTableSkeleton({ rows = 5 }: { rows?: number }) {
   return (
     <div className="overflow-x-auto mt-4">
-      <table className="table walter-table">
+      <table
+        aria-label="Loading personnel"
+        className="table walter-table personnel-reverse-table"
+      >
         <colgroup>
-          <col className="w-1/3" />
-          <col className="w-14" />
-          <col className="w-24" />
-          <col className="w-24" />
-          <col className="w-28" />
-          <col className="w-24" />
-          <col className="w-24" />
+          <col className="personnel-reverse-col-employee" />
+          <FundingColumnGroup />
         </colgroup>
         <thead>
           <tr>
-            <th>Position/Project</th>
-            <th>
-              <span className="flex justify-end w-full">FTE</span>
-            </th>
-            <th>
-              <span className="flex justify-end w-full">Effective Date</span>
-            </th>
-            <th>
-              <span className="flex justify-end w-full">Expected End Date</span>
-            </th>
-            <th>
-              <span className="flex justify-end w-full">Monthly Rate</span>
-            </th>
-            <th>
-              <span className="flex justify-end w-full">Monthly Fringe</span>
-            </th>
-            <th>
-              <span className="flex justify-end w-full">Monthly Total</span>
-            </th>
+            <th scope="col">Employee</th>
+            <FundingColumnHeaders />
           </tr>
         </thead>
         <tbody>
           {Array.from({ length: rows }).map((_, index) => (
             <tr key={index}>
-              <td>
-                <div className="skeleton h-5 w-64" />
-              </td>
-              <td>
-                <div className="skeleton h-5 w-10 ml-auto" />
-              </td>
-              <td>
-                <div className="skeleton h-5 w-20 ml-auto" />
-              </td>
-              <td>
-                <div className="skeleton h-5 w-20 ml-auto" />
-              </td>
-              <td>
-                <div className="skeleton h-5 w-24 ml-auto" />
-              </td>
-              <td>
-                <div className="skeleton h-5 w-24 ml-auto" />
-              </td>
-              <td>
-                <div className="skeleton h-5 w-24 ml-auto" />
-              </td>
+              {Array.from({ length: 9 }).map((_, column) => (
+                <td key={column}>
+                  <div
+                    className={`skeleton h-5 ${column < 2 ? 'w-full' : 'w-16 ml-auto'}`}
+                  />
+                </td>
+              ))}
             </tr>
           ))}
         </tbody>

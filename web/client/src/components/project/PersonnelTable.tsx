@@ -1,5 +1,7 @@
-import { Fragment, useMemo, useState } from 'react';
+import { Fragment, useId, useMemo, useState } from 'react';
 import {
+  ArrowsPointingInIcon,
+  ArrowsPointingOutIcon,
   ChevronDownIcon,
   ChevronUpIcon,
   ClockIcon,
@@ -14,6 +16,7 @@ import {
 import type { PersonnelRecord } from '@/queries/personnel.ts';
 import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
 import { tooltipDefinitions } from '@/shared/tooltips.ts';
+import { useExpandableOverlay } from '@/shared/hooks/useExpandableOverlay.ts';
 
 function isEndingSoon(dateStr: string | null): boolean {
   if (!dateStr) {
@@ -181,19 +184,43 @@ export function aggregateByPosition(
 }
 
 function getPositionSearchText(position: AggregatedPosition): string {
-  const projectDescriptions = position.distributions
-    .map((dist) => dist.record.projectDescription)
-    .join(' ');
-
   return [
-    safeText(position.name),
-    safeText(position.positionDescription),
-    safeText(position.positionNumber),
-    projectDescriptions,
+    position.name,
+    position.employeeId,
+    position.positionDescription,
+    position.positionNumber,
+    position.jobCode,
+    position.fte,
+    formatDate(position.jobEffectiveDate, ''),
+    formatDate(position.jobEndDate, ''),
+    ...(!position.salaryUnknown
+      ? [
+          position.monthlyRate,
+          position.monthlyFringe,
+          position.monthlyTotal,
+        ].flatMap((amount) => [String(amount), formatCurrency(amount)])
+      : []),
+    ...position.distributions.flatMap((distribution) => [
+      distribution.record.projectDescription,
+      distribution.record.projectId,
+      distribution.record.projectType === 'Internal'
+        ? distribution.record.task
+        : '',
+      formatPercent(distribution.distributionPercent),
+      formatDate(distribution.record.fundingEffectiveDate, ''),
+      formatDate(distribution.record.fundingEndDate, ''),
+      ...(!distribution.salaryUnknown
+        ? [
+            distribution.monthlyRate,
+            distribution.monthlyFringe,
+            distribution.monthlyTotal,
+          ].flatMap((amount) => [String(amount), formatCurrency(amount)])
+        : []),
+    ]),
   ].join(' ');
 }
 
-function FundingColumnGroup() {
+export function FundingColumnGroup() {
   return (
     <>
       <col className="personnel-reverse-col-project" />
@@ -208,7 +235,7 @@ function FundingColumnGroup() {
   );
 }
 
-function FundingColumnHeaders() {
+export function FundingColumnHeaders() {
   return (
     <>
       <th>Project</th>
@@ -524,7 +551,49 @@ function countSalaryUnknownPeople(positions: AggregatedPosition[]): number {
   ).size;
 }
 
+const sortOptions = [
+  ['name', 'Employee name'],
+  ['jobCode', 'Job code'],
+  ['fte', 'FTE'],
+  ['jobEffectiveDate', 'Job effective date'],
+  ['jobEndDate', 'Job end date'],
+  ['monthlyRate', 'Monthly funding salary'],
+  ['monthlyFringe', 'Monthly funding CBR'],
+  ['monthlyTotal', 'Monthly funding total'],
+] as const;
+type PersonnelSortKey = (typeof sortOptions)[number][0];
+
+function getSortValue(position: AggregatedPosition, key: PersonnelSortKey) {
+  switch (key) {
+    case 'monthlyRate':
+    case 'monthlyFringe':
+    case 'monthlyTotal':
+      return sumCurrentDistributions(
+        [position],
+        (distribution) => distribution[key]
+      );
+    default:
+      return position[key] ?? '';
+  }
+}
+
 export function PersonnelTable({ data }: PersonnelTableProps) {
+  const detailsPrefix = useId();
+  const [sortKey, setSortKey] = useState<PersonnelSortKey>('name');
+  const [sortDescending, setSortDescending] = useState(false);
+  const {
+    canAnimateRect,
+    closeExpanded,
+    containerRef,
+    expandButtonRef,
+    handleContainerTransitionEnd,
+    isOverlayActive,
+    overlayStyle,
+    placeholderHeight,
+    placeholderRef,
+    prefersReducedMotion,
+    toggleExpanded,
+  } = useExpandableOverlay({ enabled: true });
   const [expandedPositionKeys, setExpandedPositionKeys] = useState<Set<string>>(
     () => new Set()
   );
@@ -554,10 +623,21 @@ export function PersonnelTable({ data }: PersonnelTableProps) {
         )
       : positions;
 
-    return [...matchingPositions].sort((a, b) =>
-      safeText(a.name).localeCompare(safeText(b.name))
-    );
-  }, [positions, search]);
+    return [...matchingPositions].sort((a, b) => {
+      const left = getSortValue(a, sortKey);
+      const right = getSortValue(b, sortKey);
+      const comparison =
+        typeof left === 'number' && typeof right === 'number'
+          ? left - right
+          : String(left).localeCompare(String(right), undefined, {
+              numeric: true,
+            });
+      return (
+        (sortDescending ? -comparison : comparison) ||
+        a.name.localeCompare(b.name)
+      );
+    });
+  }, [positions, search, sortKey, sortDescending]);
 
   const allExpanded =
     filteredPositions.length > 0 &&
@@ -598,193 +678,269 @@ export function PersonnelTable({ data }: PersonnelTableProps) {
     [filteredPositions]
   );
 
-  if (positions.length === 0) {
+  if (filledData.length === 0) {
     return <p className="text-base-content/70 mt-4">No personnel found.</p>;
   }
 
   return (
-    <div>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <label className="input input-bordered flex max-w-sm flex-1 items-center gap-2">
-          <svg
+    <>
+      {isOverlayActive && (
+        <>
+          <div
             aria-hidden="true"
-            className="h-[1em] opacity-50"
-            viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <g
-              fill="none"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2.5"
-            >
-              <circle cx="11" cy="11" r="8" />
-              <path d="m21 21-4.3-4.3" />
-            </g>
-          </svg>
-          <input
-            aria-label="Search personnel"
-            className="grow"
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search all columns..."
-            type="text"
-            value={search}
+            className="fixed inset-0 bg-black/40 z-90"
+            onClick={closeExpanded}
           />
-        </label>
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            className="btn btn-sm"
-            onClick={toggleAllPositions}
-            type="button"
-          >
-            {allExpanded ? 'Collapse all' : 'Expand all'}
-          </button>
-          {futureCount > 0 && (
+          <div
+            aria-hidden="true"
+            ref={placeholderRef}
+            style={{ height: placeholderHeight ?? undefined }}
+          />
+        </>
+      )}
+      <div
+        className={
+          isOverlayActive
+            ? `fixed z-100 flex flex-col min-h-0 bg-base-100 rounded-box shadow-xl p-4 ${prefersReducedMotion || !canAnimateRect ? 'transition-none' : 'transition-[top,left,width,height] duration-300 ease-in-out'}`
+            : ''
+        }
+        onTransitionEnd={handleContainerTransitionEnd}
+        ref={containerRef}
+        style={overlayStyle}
+      >
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <label className="input input-bordered flex max-w-sm flex-1 items-center gap-2">
+            <svg
+              aria-hidden="true"
+              className="h-[1em] opacity-50"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <g
+                fill="none"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2.5"
+              >
+                <circle cx="11" cy="11" r="8" />
+                <path d="m21 21-4.3-4.3" />
+              </g>
+            </svg>
+            <input
+              aria-label="Search personnel"
+              className="grow"
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search all columns..."
+              type="text"
+              value={search}
+            />
+          </label>
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              aria-label="Sort personnel by"
+              className="select select-sm w-auto"
+              onChange={(event) =>
+                setSortKey(event.target.value as PersonnelSortKey)
+              }
+              value={sortKey}
+            >
+              {sortOptions.map(([key, label]) => (
+                <option key={key} value={key}>
+                  {label}
+                </option>
+              ))}
+            </select>
             <button
-              className={`btn btn-sm${showFuture ? ' btn-active' : ''}`}
-              onClick={() => setShowFuture((current) => !current)}
+              aria-label={sortDescending ? 'Sort ascending' : 'Sort descending'}
+              className="btn btn-sm"
+              onClick={() => setSortDescending((current) => !current)}
               type="button"
             >
-              {showFuture ? 'Hide' : 'Show'} future entries ({futureCount})
+              {sortDescending ? 'Descending' : 'Ascending'}
             </button>
-          )}
-          <ExportDataButton
-            columns={personnelCsvColumns}
-            data={getExportData(positions)}
-            filename="personnel.csv"
-          />
-          {search.trim() && (
+            <button
+              className="btn btn-sm"
+              disabled={filteredPositions.length === 0}
+              onClick={toggleAllPositions}
+              type="button"
+            >
+              {allExpanded ? 'Collapse all' : 'Expand all'}
+            </button>
+            {futureCount > 0 && (
+              <button
+                className={`btn btn-sm${showFuture ? ' btn-active' : ''}`}
+                onClick={() => setShowFuture((current) => !current)}
+                type="button"
+              >
+                {showFuture ? 'Hide' : 'Show'} future entries ({futureCount})
+              </button>
+            )}
             <ExportDataButton
               columns={personnelCsvColumns}
-              data={getExportData(filteredPositions)}
-              filename="personnel-filtered.csv"
-              label="Export filtered"
+              data={getExportData(positions)}
+              filename="personnel.csv"
             />
-          )}
+            <button
+              aria-label={isOverlayActive ? 'Collapse table' : 'Expand table'}
+              className="btn btn-sm btn-square"
+              onClick={toggleExpanded}
+              ref={expandButtonRef}
+              type="button"
+            >
+              {isOverlayActive ? (
+                <ArrowsPointingInIcon aria-hidden="true" className="size-5" />
+              ) : (
+                <ArrowsPointingOutIcon aria-hidden="true" className="size-5" />
+              )}
+            </button>
+            {search.trim() && (
+              <ExportDataButton
+                columns={personnelCsvColumns}
+                data={getExportData(filteredPositions)}
+                filename="personnel-filtered.csv"
+                label="Export filtered"
+              />
+            )}
+          </div>
         </div>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="table walter-table personnel-reverse-table">
-          <colgroup>
-            <col className="personnel-reverse-col-employee" />
-            <FundingColumnGroup />
-          </colgroup>
-          <thead>
-            <tr>
-              <th scope="col">Employee</th>
-              <FundingColumnHeaders />
-            </tr>
-          </thead>
-          <tbody aria-hidden="true">
-            <tr>
-              <td className="!h-2 !border-0 !p-0" colSpan={9} />
-            </tr>
-          </tbody>
-          {filteredPositions.map((position) => {
-            const isExpanded = expandedPositionKeys.has(position.key);
+        <div
+          className={
+            isOverlayActive ? 'flex-1 min-h-0 overflow-auto' : 'overflow-x-auto'
+          }
+        >
+          <table className="table walter-table personnel-reverse-table">
+            <colgroup>
+              <col className="personnel-reverse-col-employee" />
+              <FundingColumnGroup />
+            </colgroup>
+            <thead>
+              <tr>
+                <th scope="col">Employee</th>
+                <FundingColumnHeaders />
+              </tr>
+            </thead>
+            <tbody aria-hidden="true">
+              <tr>
+                <td className="!h-2 !border-0 !p-0" colSpan={9} />
+              </tr>
+            </tbody>
+            {filteredPositions.map((position) => {
+              const isExpanded = expandedPositionKeys.has(position.key);
+              const detailsId = `${detailsPrefix}-${encodeURIComponent(position.key)}`;
 
-            return (
-              <Fragment key={position.key}>
-                <tbody
-                  className={`personnel-row-group${isExpanded ? ' personnel-row-expanded' : ''}`}
-                >
-                  {position.distributions.map((distribution, index) => (
-                    <tr
-                      className={
-                        index === position.distributions.length - 1
-                          ? 'personnel-funding-last'
-                          : undefined
-                      }
-                      key={`${position.key}-${index}`}
-                    >
-                      {index === 0 && (
-                        <td
-                          className="personnel-employee-cell align-top"
-                          rowSpan={position.distributions.length}
-                        >
-                          <button
-                            aria-expanded={isExpanded}
-                            className="flex w-full items-start gap-3 rounded-sm text-left leading-relaxed focus-visible:outline-2 focus-visible:outline-primary"
-                            onClick={() => togglePosition(position.key)}
-                            type="button"
+              return (
+                <Fragment key={position.key}>
+                  <tbody
+                    className={`personnel-row-group${isExpanded ? ' personnel-row-expanded' : ''}`}
+                  >
+                    {position.distributions.map((distribution, index) => (
+                      <tr
+                        className={
+                          index === position.distributions.length - 1
+                            ? 'personnel-funding-last'
+                            : undefined
+                        }
+                        key={`${position.key}-${index}`}
+                      >
+                        {index === 0 && (
+                          <td
+                            className="personnel-employee-cell align-top"
+                            rowSpan={position.distributions.length}
                           >
-                            {isExpanded ? (
-                              <ChevronUpIcon
-                                aria-hidden="true"
-                                className="h-4 w-4 shrink-0"
-                              />
-                            ) : (
-                              <ChevronDownIcon
-                                aria-hidden="true"
-                                className="h-4 w-4 shrink-0"
-                              />
-                            )}
-                            <span>
-                              {position.isFutureOnly && <FutureBadge />}
-                              {position.name
-                                ? `${position.name} (${position.employeeId}) - `
-                                : ''}
-                              {position.positionDescription}
-                            </span>
-                          </button>
-                        </td>
-                      )}
-                      <FundingDistributionCells distribution={distribution} />
-                    </tr>
-                  ))}
-                  {isExpanded && (
-                    <tr className="personnel-job-row bg-base-200">
+                            <button
+                              aria-controls={detailsId}
+                              aria-expanded={isExpanded}
+                              className="flex w-full items-start gap-3 rounded-sm text-left leading-relaxed focus-visible:outline-2 focus-visible:outline-primary"
+                              onClick={() => togglePosition(position.key)}
+                              type="button"
+                            >
+                              {isExpanded ? (
+                                <ChevronUpIcon
+                                  aria-hidden="true"
+                                  className="h-4 w-4 shrink-0"
+                                />
+                              ) : (
+                                <ChevronDownIcon
+                                  aria-hidden="true"
+                                  className="h-4 w-4 shrink-0"
+                                />
+                              )}
+                              <span>
+                                {position.isFutureOnly && <FutureBadge />}
+                                {position.name
+                                  ? `${position.name} (${position.employeeId}) - `
+                                  : ''}
+                                {position.positionDescription}
+                              </span>
+                            </button>
+                          </td>
+                        )}
+                        <FundingDistributionCells distribution={distribution} />
+                      </tr>
+                    ))}
+                    <tr
+                      className="personnel-job-row bg-base-200"
+                      hidden={!isExpanded}
+                      id={detailsId}
+                    >
                       <td className="!p-0" colSpan={9}>
-                        <JobDetails position={position} />
+                        {isExpanded && <JobDetails position={position} />}
                       </td>
                     </tr>
+                  </tbody>
+                  <tbody aria-hidden="true">
+                    <tr>
+                      <td className="!h-3 !border-0 !p-0" colSpan={9} />
+                    </tr>
+                  </tbody>
+                </Fragment>
+              );
+            })}
+            {filteredPositions.length === 0 && (
+              <tbody>
+                <tr>
+                  <td colSpan={9}>No matching personnel found.</td>
+                </tr>
+              </tbody>
+            )}
+            <tfoot>
+              <tr className="totaltr">
+                <th colSpan={6}>Funding Distribution Totals</th>
+                <th className="text-right">
+                  {formatCurrency(
+                    sumCurrentDistributions(
+                      filteredPositions,
+                      (d) => d.monthlyRate
+                    )
                   )}
-                </tbody>
-                <tbody aria-hidden="true">
-                  <tr>
-                    <td className="!h-3 !border-0 !p-0" colSpan={9} />
-                  </tr>
-                </tbody>
-              </Fragment>
-            );
-          })}
-          <tfoot>
-            <tr className="totaltr">
-              <th colSpan={6}>Funding Distribution Totals</th>
-              <th className="text-right">
-                {formatCurrency(
-                  sumCurrentDistributions(
-                    filteredPositions,
-                    (d) => d.monthlyRate
-                  )
-                )}
-              </th>
-              <th className="text-right">
-                {formatCurrency(
-                  sumCurrentDistributions(
-                    filteredPositions,
-                    (d) => d.monthlyFringe
-                  )
-                )}
-              </th>
-              <th className="text-right">
-                {formatCurrency(
-                  sumCurrentDistributions(
-                    filteredPositions,
-                    (d) => d.monthlyTotal
-                  )
-                )}
-              </th>
-            </tr>
-          </tfoot>
-        </table>
+                </th>
+                <th className="text-right">
+                  {formatCurrency(
+                    sumCurrentDistributions(
+                      filteredPositions,
+                      (d) => d.monthlyFringe
+                    )
+                  )}
+                </th>
+                <th className="text-right">
+                  {formatCurrency(
+                    sumCurrentDistributions(
+                      filteredPositions,
+                      (d) => d.monthlyTotal
+                    )
+                  )}
+                </th>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        {salaryUnknownPeople > 0 && (
+          <p className="mt-2 text-sm text-warning">
+            {fundingInfoUnavailableNote('Totals', salaryUnknownPeople)}
+          </p>
+        )}
       </div>
-      {salaryUnknownPeople > 0 && (
-        <p className="mt-2 text-sm text-warning">
-          {fundingInfoUnavailableNote('Totals', salaryUnknownPeople)}
-        </p>
-      )}
-    </div>
+    </>
   );
 }
