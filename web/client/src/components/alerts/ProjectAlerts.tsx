@@ -98,7 +98,7 @@ export function ProjectAlerts({
 }: ProjectAlertsProps) {
   const alerts = getAlertsForProject(summary, prefix);
   const awardEndedAlert = getAwardEndedAlert(summary);
-  const showReconciliationStatus = summary.isInternal;
+  const showReconciliationStatus = summary.isInternal || summary.isCapital;
 
   if (awardEndedAlert) {
     alerts.unshift(awardEndedAlert);

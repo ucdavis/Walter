@@ -29,6 +29,7 @@ const createSummary = (
   flowThroughFundsStartDate: null,
   grantAdministrator: null,
   internalFundedProject: null,
+  isCapital: false,
   isInternal: false,
   pa: null,
   pi: null,

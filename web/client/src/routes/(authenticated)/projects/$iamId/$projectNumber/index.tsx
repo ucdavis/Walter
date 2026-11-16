@@ -93,7 +93,9 @@ function ProjectContent({
     user.employeeId
   );
   const reconciliationState = useProjectDiscrepancyState(
-    summary.isInternal && canSeeDiscrepancy ? [summary.projectNumber] : []
+    (summary.isInternal || summary.isCapital) && canSeeDiscrepancy
+      ? [summary.projectNumber]
+      : []
   );
   const reconciliationStatus = reconciliationState.hasData
     ? reconciliationState.discrepancies.has(summary.projectNumber)
@@ -119,7 +121,7 @@ function ProjectContent({
           <span className="font-sans font-bold text-base-content">
             {summary.projectNumber}
           </span>
-          {!summary.isInternal && finjectorUrl && (
+          {!summary.isInternal && !summary.isCapital && finjectorUrl && (
             <span className="inline-flex items-center gap-1">
               <FinjectorLink
                 org={summary.projectOwningOrgCode}
@@ -253,6 +255,25 @@ function ProjectContent({
                 records={projectRecords}
               />
             </div>
+            {summary.isCapital && (
+              <>
+                <h2 className="h2 mt-8">
+                  <TooltipLabel
+                    label="Task Breakdown"
+                    tooltip={tooltipDefinitions.taskBreakdown}
+                  />
+                </h2>
+                <div className="mt-4">
+                  <TaskBreakdown
+                    iamId={iamId}
+                    isInternal
+                    projectCostsEnabled={showProjectCosts}
+                    projectNumber={summary.projectNumber}
+                    records={projectRecords}
+                  />
+                </div>
+              </>
+            )}
           </>
         )}
       </section>

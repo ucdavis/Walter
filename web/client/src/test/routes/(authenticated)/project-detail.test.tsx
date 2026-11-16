@@ -1236,6 +1236,97 @@ describe('project detail page', () => {
     }
   });
 
+  it.each(['Capital', 'Fabrication'])(
+    'shows both breakdowns with per-task Finjector links for %s projects',
+    async (projectType) => {
+      const projects = [
+        createProject({
+          expenditureCategoryName: '01 - Salaries and Wages',
+          fundCode: '13U00',
+          pmEmployeeId: '2000',
+          projectType,
+        }),
+        createProject({
+          expenditureCategoryName: '03 - Supplies / Services / Other Expenses',
+          fundCode: '20700',
+          pmEmployeeId: '2000',
+          projectType,
+          taskName: 'Task 2',
+          taskNum: 'T002',
+        }),
+      ];
+      setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);
+
+      const { cleanup } = renderRoute({ initialPath: '/projects/1000/P1' });
+
+      try {
+        const categoryHeading = await screen.findByRole('heading', {
+          level: 2,
+          name: 'Expenditure Category Breakdown',
+        });
+        const taskHeading = screen.getByRole('heading', {
+          level: 2,
+          name: 'Task Breakdown',
+        });
+        // Expenditure categories come first.
+        expect(
+          categoryHeading.compareDocumentPosition(taskHeading) &
+            Node.DOCUMENT_POSITION_FOLLOWING
+        ).toBeTruthy();
+
+        expect(screen.getByText('13U00')).toBeInTheDocument();
+        expect(screen.getByText('20700')).toBeInTheDocument();
+
+        const finjectorLinks = screen.getAllByRole('link', {
+          name: 'Open in Finjector',
+        });
+        expect(finjectorLinks.map((link) => link.getAttribute('href'))).toEqual(
+          [
+            expect.stringContaining('P1-T001-ORG001'),
+            expect.stringContaining('P1-T002-ORG001'),
+          ]
+        );
+
+        const topSection = screen
+          .getByRole('heading', { level: 1, name: 'Test Project' })
+          .closest('section') as HTMLElement;
+        expect(
+          within(topSection).queryByRole('link', { name: /Open in Finjector/ })
+        ).not.toBeInTheDocument();
+        expect(
+          screen.queryByRole('link', { name: 'Task Details' })
+        ).not.toBeInTheDocument();
+      } finally {
+        cleanup();
+      }
+    }
+  );
+
+  it.each(['Sponsored Capital', 'Sponsored Fabrication'])(
+    'keeps the sponsored layout for %s projects',
+    async (projectType) => {
+      const projects = [createProject({ pmEmployeeId: '2000', projectType })];
+      setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);
+
+      const { cleanup } = renderRoute({ initialPath: '/projects/1000/P1' });
+
+      try {
+        const heading = await screen.findByRole('heading', {
+          level: 1,
+          name: 'Test Project',
+        });
+        expect(
+          within(heading.closest('section') as HTMLElement).getByRole('link', {
+            name: /Open in Finjector/,
+          })
+        ).toBeInTheDocument();
+        expect(screen.queryByText('Task Breakdown')).not.toBeInTheDocument();
+      } finally {
+        cleanup();
+      }
+    }
+  );
+
   it('shows expenditure categories instead of task breakdown for sponsored projects', async () => {
     const user = userEvent.setup();
     const projects = [
@@ -1541,6 +1632,117 @@ describe('project detail page', () => {
         expect(
           screen.queryByText(/has a gl\/ppm reconciliation discrepancy/i)
         ).not.toBeInTheDocument();
+      } finally {
+        cleanup();
+      }
+    });
+
+    it('hides reconciliation alert for project managers on Sponsored Capital project details', async () => {
+      const projects = [
+        createProject({
+          pmEmployeeId: '1000',
+          projectType: 'Sponsored Capital',
+        }),
+      ];
+      setupDetailHandlers({
+        projects,
+        reconciliation: discrepantReconciliation,
+        user: { employeeId: '1000', name: 'PM User', roles: [] },
+      });
+
+      const { cleanup } = renderRoute({ initialPath: '/projects/1000/P1' });
+
+      try {
+        await screen.findByText('Project Manager');
+        // Wait out the fetch so a late alert would be caught.
+        await expect(
+          screen.findByText(/gl\/ppm/i, {}, { timeout: 500 })
+        ).rejects.toThrow();
+      } finally {
+        cleanup();
+      }
+    });
+
+    it.each(['Capital', 'Fabrication'])(
+      'shows balanced reconciliation alert for authorized project managers on %s project details',
+      async (projectType) => {
+        const projects = [createProject({ pmEmployeeId: '1000', projectType })];
+        setupDetailHandlers({
+          projects,
+          reconciliation: [],
+          user: { employeeId: '1000', name: 'PM User', roles: [] },
+        });
+
+        const { cleanup } = renderRoute({ initialPath: '/projects/1000/P1' });
+
+        try {
+          const message = await screen.findByText(
+            'GL/PPM is Balanced. Click here to view.',
+            {},
+            { timeout: 3000 }
+          );
+          expect(message.closest('[role="alert"]')).toHaveClass(
+            'alert-success'
+          );
+          expect(message.closest('a')).toHaveAttribute(
+            'href',
+            '/reports/reconciliation/P1'
+          );
+        } finally {
+          cleanup();
+        }
+      }
+    );
+
+    it('shows discrepancy reconciliation alert for authorized project managers on capital project details', async () => {
+      const projects = [
+        createProject({ pmEmployeeId: '1000', projectType: 'Capital' }),
+      ];
+      setupDetailHandlers({
+        projects,
+        reconciliation: discrepantReconciliation,
+        user: { employeeId: '1000', name: 'PM User', roles: [] },
+      });
+
+      const { cleanup } = renderRoute({ initialPath: '/projects/1000/P1' });
+
+      try {
+        const message = await screen.findByText(
+          /has a gl\/ppm reconciliation discrepancy/i,
+          {},
+          { timeout: 3000 }
+        );
+        expect(message.closest('a')).toHaveAttribute(
+          'href',
+          '/reports/reconciliation/P1'
+        );
+      } finally {
+        cleanup();
+      }
+    });
+
+    it('hides reconciliation alert for PI viewing own capital project', async () => {
+      const projects = [
+        createProject({ pmEmployeeId: '2000', projectType: 'Capital' }),
+      ];
+      setupDetailHandlers({
+        projects,
+        user: { employeeId: '1000', name: 'PI User', roles: [] },
+      });
+      let reconciliationRequested = false;
+      server.use(
+        http.get('/api/project/gl-ppm-reconciliation', () => {
+          reconciliationRequested = true;
+          return HttpResponse.json(discrepantReconciliation);
+        })
+      );
+
+      const { cleanup } = renderRoute({ initialPath: '/projects/1000/P1' });
+
+      try {
+        await screen.findByText('Task Breakdown');
+        expect(reconciliationRequested).toBe(false);
+        expect(screen.queryByText(/gl\/ppm/i)).not.toBeInTheDocument();
       } finally {
         cleanup();
       }

@@ -142,7 +142,7 @@ function RouteComponent() {
             </p>
             <ProjectCostsTable
               category={category}
-              isInternal={summary.isInternal}
+              isInternal={summary.isInternal || summary.isCapital}
               key={`${category ?? 'all'}|${task ?? 'all'}`}
               projectNumber={projectNumber}
               task={task}
