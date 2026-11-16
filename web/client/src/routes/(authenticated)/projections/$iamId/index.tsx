@@ -11,7 +11,6 @@ import { PageError } from '@/components/states/PageError.tsx';
 import { PageLoading } from '@/components/states/PageLoading.tsx';
 import { CurrentProjectBalances } from '@/components/projections/CurrentProjectBalances.tsx';
 import { ProjectionPlanCard } from '@/components/projections/ProjectionPlanCard.tsx';
-import { ProjectionPlansSidebar } from '@/components/projections/ProjectionPlansSidebar.tsx';
 import { NewProjectionWizard } from '@/components/projections/NewProjectionWizard.tsx';
 import {
   ProjectionSessionNotice,
@@ -123,9 +122,8 @@ function ProjectionList({
     : ownerName;
   return (
     <main className="container scroll-mt-24 bg-base-100 text-base leading-normal text-base-content [&_button:enabled]:cursor-pointer">
-      <div className="flex flex-col gap-6 pt-6 pb-12 md:flex-row md:gap-8">
-        <ProjectionPlansSidebar iamId={iamId} plans={projections} />
-        <div className="@container min-w-0 flex-1 py-6">
+      <div className="py-6 pb-12">
+        <div className="@container min-w-0">
           <header className="mb-6 flex flex-wrap items-start justify-between gap-4 md:items-center">
             <div>
               <h1 className="h1">

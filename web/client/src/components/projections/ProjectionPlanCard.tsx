@@ -71,7 +71,7 @@ export function ProjectionPlanCard({
           <div className="mt-1">
             <p className="line-clamp-2 text-sm text-base-content/80 break-words">
               {data.plan.content.notes ||
-                'A plan based on your current Walter snapshot.'}
+                'Based on saved funding and staffing assumptions.'}
             </p>
           </div>
           <div className="my-3">
@@ -110,10 +110,11 @@ export function ProjectionPlanCard({
       )}
       <footer className="mt-auto flex flex-wrap items-end justify-between gap-3 border-t border-main-border pt-3">
         {data && (
-          <p
-            className="text-sm text-base-content/80"
-            title={`Starts ${fundingMonthLabel(data.window.startMonth)}`}
-          >
+          <p className="text-sm text-base-content/80">
+            <span className="block">
+              {fundingMonthLabel(data.window.startMonth)} to{' '}
+              {fundingMonthLabel(data.window.endMonth)}
+            </span>
             {data.plan.content.forecastMonths} months ·{' '}
             {data.plan.content.appointments.length}{' '}
             {data.plan.content.appointments.length === 1

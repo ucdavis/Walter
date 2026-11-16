@@ -78,37 +78,6 @@ function openDashboard() {
 }
 
 describe('projection dashboard', () => {
-  it('navigates saved plans from the collapsible dashboard plan list with the keyboard', async () => {
-    handleDashboard([example(71, 'Field season'), example(72, 'Renewal')]);
-    const route = openDashboard();
-    const user = userEvent.setup();
-    try {
-      const sidebar = await screen.findByRole('complementary', {
-        name: 'Projection plans',
-      });
-      const collapse = within(sidebar).getByRole('button', {
-        name: 'Collapse plan list',
-      });
-      expect(collapse).toHaveAttribute('aria-expanded', 'true');
-      await user.click(collapse);
-      const expand = within(sidebar).getByRole('button', {
-        name: 'Expand plan list',
-      });
-      expect(expand).toHaveAttribute('aria-expanded', 'false');
-      await user.click(expand);
-      const link = within(sidebar).getByRole('link', { name: 'Renewal' });
-      expect(link).toHaveAttribute('href', '/projections/IAM-PREVIEW/72');
-      link.focus();
-      await user.keyboard('{Enter}');
-      await screen.findByRole('heading', { name: 'Renewal' });
-      expect(route.router.state.location.pathname).toBe(
-        '/projections/IAM-PREVIEW/72'
-      );
-    } finally {
-      route.cleanup();
-    }
-  });
-
   it('removes plan entry points when the flag turns off while viewing the dashboard', async () => {
     handleDashboard([example(71, 'Visible plan')]);
     const route = openDashboard();
@@ -403,6 +372,7 @@ describe('projection dashboard', () => {
     const short = example(71, 'Twelve month plan');
     const long = example(72, 'Eighteen month plan');
     short.content.forecastMonths = 12;
+    short.content.notes = '';
     long.content.forecastMonths = 18;
     long.content.appointments = createSalaryExample().content.appointments;
     handleDashboard([short, long]);
@@ -421,6 +391,20 @@ describe('projection dashboard', () => {
       expect(
         await within(longCard).findByText('18 months · 1 appointment')
       ).toBeInTheDocument();
+      expect(
+        within(shortCard).getByText('Jan 2026 to Dec 2026')
+      ).toBeInTheDocument();
+      expect(
+        within(longCard).getByText('Jan 2026 to Jun 2027')
+      ).toBeInTheDocument();
+      expect(
+        within(shortCard).getByText(
+          'Based on saved funding and staffing assumptions.'
+        )
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('navigation', { name: 'Plan navigation' })
+      ).not.toBeInTheDocument();
       expect(within(shortCard).getAllByRole('link')).toHaveLength(1);
       const graph = within(shortCard).getByRole('img');
       const ending = within(shortCard).getByText('Ending balance');
