@@ -3,6 +3,7 @@ import {
   getSourceForecastWindow,
 } from '@/lib/piProjection.ts';
 import { sourceLabel, sourcePlanningBalance } from '@/lib/projectionSources.ts';
+import { buildSourceFundingBalance } from '@/lib/projectionFundingBalances.ts';
 import {
   getFundingSourceOutlook,
   type ProjectionResults,
@@ -21,6 +22,7 @@ export interface OutlookMonth {
 
 export interface SourceOutlook {
   categories: { expenditureCategory: string; forecast: number }[];
+  categoryShortfalls: CategoryBudgetShortfall[];
   endBalance: number | null;
   firstShortfallMonth: string | null;
   forecast: number;
@@ -32,8 +34,16 @@ export interface SourceOutlook {
   source: ProjectionFundingSource;
 }
 
+export interface CategoryBudgetShortfall {
+  expenditureCategory: string;
+  firstMonth: string;
+  missingBudget: boolean;
+}
+
 export interface OutlookGroup {
+  categoryShortfallSources: SourceOutlook[];
   endBalance: number | null;
+  firstCategoryShortfallMonth: string | null;
   firstShortfallMonth: string | null;
   forecast: number;
   id: string;
@@ -46,7 +56,9 @@ export interface OutlookGroup {
 }
 
 export interface ProjectionOutlook {
+  categoryShortfallSources: SourceOutlook[];
   endBalance: number | null;
+  firstCategoryShortfallMonth: string | null;
   firstShortfallMonth: string | null;
   forecast: number;
   gapAppointmentIds: number[];
@@ -81,8 +93,18 @@ function summarizeSources(sources: SourceOutlook[]) {
   const shortfallSources = sources.filter(
     ({ firstShortfallMonth }) => firstShortfallMonth !== null
   );
+  const categoryShortfallSources = sources.filter(
+    ({ categoryShortfalls }) => categoryShortfalls.length > 0
+  );
   return {
+    categoryShortfallSources,
     endBalance: months.at(-1)?.remaining ?? null,
+    firstCategoryShortfallMonth:
+      categoryShortfallSources
+        .flatMap(({ categoryShortfalls }) =>
+          categoryShortfalls.map(({ firstMonth }) => firstMonth)
+        )
+        .sort()[0] ?? null,
     firstShortfallMonth:
       shortfallSources
         .map(({ firstShortfallMonth }) => firstShortfallMonth!)
@@ -112,6 +134,35 @@ export function buildProjectionOutlook(
   const sources = draft.content.fundingSources.map((source): SourceOutlook => {
     const rows = rowsBySource.get(source.id) ?? [];
     const months = getFundingSourceOutlook(rows, source.id);
+    const funding = buildSourceFundingBalance(source, rows);
+    const categoryShortfalls: CategoryBudgetShortfall[] =
+      funding.basis === 'categories'
+        ? funding.categories.flatMap((category) => {
+            if (category.isBalanceAdjustment) {
+              return [];
+            }
+            // Staffing also flags booked salary/fringe without a budget, even if the net forecast is zero.
+            const missingMonth = [...funding.months].find(([, month]) =>
+              month.personnelDeficits.some(
+                (deficit) =>
+                  deficit.expenditureCategory ===
+                    category.expenditureCategory && deficit.missingBudget
+              )
+            )?.[0];
+            const firstMonth = [category.firstDeficitMonth, missingMonth]
+              .filter(Boolean)
+              .sort()[0];
+            return firstMonth
+              ? [
+                  {
+                    expenditureCategory: category.expenditureCategory,
+                    firstMonth,
+                    missingBudget: !category.hasBudget,
+                  },
+                ]
+              : [];
+          })
+        : [];
     const categories = new Map<string, number>();
     for (const row of rows) {
       if (row.expenditureCategory !== BALANCE_ADJUSTMENT_CATEGORY) {
@@ -128,6 +179,7 @@ export function buildProjectionOutlook(
           expenditureCategory,
           forecast,
         })),
+      categoryShortfalls,
       endBalance: months.at(-1)?.remaining ?? null,
       firstShortfallMonth:
         months.find(({ remaining }) => remaining < 0)?.month ?? null,

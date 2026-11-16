@@ -284,6 +284,72 @@ describe('category budget persistence', () => {
 });
 
 describe('projection source focus', () => {
+  it('keeps category-only warnings visible and opens balances from both the alert and source row', async () => {
+    const plan = createSalaryExample();
+    plan.content.fundingSources[0].projectType = 'Sponsored';
+    plan.content.fundingSources[0].budgets[0].budget = 1000;
+    plan.content.fundingSources[0].budgets.push({
+      budget: 50_000,
+      committed: 0,
+      expenditureCategory: SUPPLIES_CATEGORY,
+      spentToDate: 0,
+    });
+    const { user } = openWorkspace('?section=overview', plan);
+    const summary = await screen.findByRole('region', {
+      name: 'Funding summary',
+    });
+    expect(summary).toHaveTextContent(
+      'First category budget shortfall: Jan 2026'
+    );
+    expect(summary).toHaveClass('alert-error');
+    const before = JSON.stringify(read().draft);
+    await user.click(
+      screen.getByRole('button', { name: 'Minimize funding summary' })
+    );
+    const restore = await screen.findByRole('button', {
+      name: 'Show funding summary',
+    });
+    expect(restore).toHaveClass('text-error');
+    await user.click(restore);
+    await user.click(
+      within(summary).getByRole('button', {
+        name: 'View category balances for Project A',
+      })
+    );
+    const heading = await screen.findByRole('heading', {
+      name: 'Category and month worksheet',
+    });
+    await waitFor(() => expect(heading).toHaveFocus());
+    expect(
+      screen.getByRole('table', {
+        name: 'Project A category worksheet: Month-end balances',
+      })
+    ).toBeVisible();
+    await user.click(
+      screen.getByRole('button', { name: 'Back to all funding sources' })
+    );
+    const sources = await screen.findByRole('table', {
+      name: 'Funding sources',
+    });
+    await user.click(
+      within(sources).getByRole('button', {
+        name: 'View category shortfalls for Project A',
+      })
+    );
+    await waitFor(() =>
+      expect(
+        screen.getByRole('heading', { name: 'Category and month worksheet' })
+      ).toHaveFocus()
+    );
+    expect(
+      screen.getByRole('table', {
+        name: 'Project A category worksheet: Month-end balances',
+      })
+    ).toBeVisible();
+    expect(JSON.stringify(read().draft)).toBe(before);
+    expect(screen.getByRole('button', { name: 'Save plan' })).toBeDisabled();
+  });
+
   it('takes a sponsored staffing warning directly to the visible category table', async () => {
     const plan = createSalaryExample();
     plan.content.fundingSources[0].projectType = 'Sponsored';

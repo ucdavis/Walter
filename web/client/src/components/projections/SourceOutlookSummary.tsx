@@ -1,4 +1,5 @@
 import type { Ref } from 'react';
+import { SourceCategoryShortfallWarning } from '@/components/projections/SourceCategoryShortfallWarning.tsx';
 import { fundingMonthLabel } from '@/components/projections/fundingTimelineDates.ts';
 import { formatProjectionCurrency as money } from '@/components/projections/projectionFormatting.ts';
 import { FRINGE_CATEGORY, SALARY_CATEGORY } from '@/lib/piProjection.ts';
@@ -16,11 +17,13 @@ const dateLabel = (date: string) =>
 export function SourceOutlookHeader({
   headingRef,
   onNavigate,
+  onViewCategoryBalances,
   outlook,
   planStartDate,
 }: {
   headingRef?: Ref<HTMLHeadingElement>;
   onNavigate: (location: ProjectionNavigation) => void;
+  onViewCategoryBalances: (id: number) => void;
   outlook: SourceOutlook;
   planStartDate: string;
 }) {
@@ -43,17 +46,24 @@ export function SourceOutlookHeader({
       {dates.length > 0 && (
         <p className="text-sm text-base-content/80">{dates.join(' · ')}</p>
       )}
-      <p
-        className={`text-sm ${outlook.firstShortfallMonth ? 'text-error' : 'text-base-content/80'}`}
-      >
-        {outlook.firstShortfallMonth
-          ? `First below zero in ${fundingMonthLabel(outlook.firstShortfallMonth)}`
-          : outlook.outside
-            ? 'Outside forecast period. Its entered funding and allocations remain saved.'
-            : outlook.endBalance === null
-              ? 'No forecast data in this period'
-              : 'Stays within funding throughout this plan'}
-      </p>
+      {(outlook.firstShortfallMonth ||
+        outlook.categoryShortfalls.length === 0) && (
+        <p
+          className={`text-sm ${outlook.firstShortfallMonth ? 'text-error' : 'text-base-content/80'}`}
+        >
+          {outlook.firstShortfallMonth
+            ? `First below zero in ${fundingMonthLabel(outlook.firstShortfallMonth)}`
+            : outlook.outside
+              ? 'Outside forecast period. Its entered funding and allocations remain saved.'
+              : outlook.endBalance === null
+                ? 'No forecast data in this period'
+                : 'Stays within funding throughout this plan'}
+        </p>
+      )}
+      <SourceCategoryShortfallWarning
+        onView={onViewCategoryBalances}
+        outlook={outlook}
+      />
       <div className="flex flex-wrap gap-2 pt-1">
         <button
           className="btn btn-outline btn-sm"

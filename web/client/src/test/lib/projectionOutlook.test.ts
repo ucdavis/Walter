@@ -119,6 +119,156 @@ function outlook(draft: ProjectionDraft) {
 }
 
 describe('funding outlook presentation', () => {
+  it('reports category deficits despite positive source, project, and plan balances', () => {
+    const draft = plan([
+      source(1, {
+        budgets: [
+          {
+            budget: 1000,
+            committed: 0,
+            expenditureCategory: SALARY_CATEGORY,
+            spentToDate: 0,
+          },
+          {
+            budget: 300,
+            committed: 0,
+            expenditureCategory: FRINGE_CATEGORY,
+            spentToDate: 0,
+          },
+          {
+            budget: 10_000,
+            committed: 0,
+            expenditureCategory: SUPPLIES_CATEGORY,
+            spentToDate: 0,
+          },
+        ],
+        expenses: [
+          {
+            ...expense(1, 1500, '2026-01'),
+            expenditureCategory: SALARY_CATEGORY,
+          },
+          {
+            ...expense(2, 350, '2026-02'),
+            expenditureCategory: FRINGE_CATEGORY,
+          },
+        ],
+        projectType: 'Sponsored',
+      }),
+      source(2),
+    ]);
+    const result = outlook(draft);
+    expect(result.endBalance).toBe(10_450);
+    expect(result.firstShortfallMonth).toBeNull();
+    expect(result.shortfallSources).toEqual([]);
+    expect(result.sources[0].categoryShortfalls).toEqual([
+      {
+        expenditureCategory: SALARY_CATEGORY,
+        firstMonth: '2026-01',
+        missingBudget: false,
+      },
+      {
+        expenditureCategory: FRINGE_CATEGORY,
+        firstMonth: '2026-02',
+        missingBudget: false,
+      },
+    ]);
+    expect(result.firstCategoryShortfallMonth).toBe('2026-01');
+    expect(result.categoryShortfallSources).toHaveLength(1);
+    expect(result.groups[0].categoryShortfallSources).toHaveLength(1);
+    expect(result.groups[0].firstCategoryShortfallMonth).toBe('2026-01');
+  });
+
+  it('keeps a recovered supplies category shortfall visible without changing the overall timeline', () => {
+    const result = outlook(
+      plan([
+        source(1, {
+          expenses: [expense(1, 100, '2026-01'), expense(2, -100, '2026-02')],
+          projectType: 'Sponsored',
+        }),
+      ])
+    );
+    expect(result.sources[0].categoryShortfalls).toEqual([
+      {
+        expenditureCategory: SUPPLIES_CATEGORY,
+        firstMonth: '2026-01',
+        missingBudget: true,
+      },
+    ]);
+    expect(result.endBalance).toBe(1000);
+    expect(result.months.every(({ remaining }) => remaining >= 0)).toBe(true);
+  });
+
+  it('matches staffing warnings for booked salary with no recorded salary budget', () => {
+    const result = outlook(
+      plan([
+        source(1, {
+          actuals: [
+            {
+              amount: 100,
+              expenditureCategory: SALARY_CATEGORY,
+              month: '2026-01-01',
+            },
+          ],
+          budgets: [
+            {
+              budget: 5000,
+              committed: 0,
+              expenditureCategory: SUPPLIES_CATEGORY,
+              spentToDate: 0,
+            },
+          ],
+          projectType: 'Sponsored',
+        }),
+      ])
+    );
+    expect(result.sources[0].categoryShortfalls).toEqual([
+      {
+        expenditureCategory: SALARY_CATEGORY,
+        firstMonth: '2026-01',
+        missingBudget: true,
+      },
+    ]);
+    expect(result.forecast).toBe(0);
+    expect(result.endBalance).toBe(5000);
+  });
+
+  it.each(['Internal', null])(
+    'does not imply category limits for %s funding',
+    (projectType) => {
+      const result = outlook(
+        plan([
+          source(1, {
+            expenses: [expense(1, 100, '2026-01')],
+            projectType,
+          }),
+        ])
+      );
+      expect(result.firstCategoryShortfallMonth).toBeNull();
+      expect(result.categoryShortfallSources).toEqual([]);
+    }
+  );
+
+  it('excludes category deficits beyond the forecast period', () => {
+    const result = outlook(
+      plan([
+        source(1, {
+          budgets: [
+            {
+              budget: 0,
+              committed: 0,
+              expenditureCategory: SALARY_CATEGORY,
+              spentToDate: 1000,
+            },
+          ],
+          capturedAt: '2027-01-01T00:00:00Z',
+          projectType: 'Sponsored',
+        }),
+      ])
+    );
+    expect(result.sources[0].outside).toBe(true);
+    expect(result.categoryShortfallSources).toEqual([]);
+  });
+
   it('keeps a recovered task shortfall visible despite positive project and plan totals', () => {
     const result = outlook(
       plan([
@@ -381,7 +531,9 @@ describe('funding outlook presentation', () => {
 
   it('has no financial timeline or implied funding when the plan has no sources', () => {
     expect(outlook(plan([]))).toEqual({
+      categoryShortfallSources: [],
       endBalance: null,
+      firstCategoryShortfallMonth: null,
       firstShortfallMonth: null,
       forecast: 0,
       gapAppointmentIds: [],

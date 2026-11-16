@@ -72,6 +72,20 @@ function show(draft = example()) {
 }
 
 describe('minimal setup review', () => {
+  it('includes category shortfalls in setup review when the combined balance stays positive', () => {
+    const draft = example();
+    draft.content.appointments = [];
+    draft.content.fundingSources[0].projectType = 'Sponsored';
+    const budget = draft.content.fundingSources[0].budgets[0];
+    budget.budget = budget.spentToDate + 1000;
+    show(draft);
+    expect(screen.getByRole('region', { name: 'Items to review' })).toHaveTextContent(
+      '1 funding source has category budget shortfalls, first in Jan 2026.'
+    );
+    expect(screen.getByLabelText('Outlook totals')).toHaveTextContent('$17,000');
+    expect(screen.queryByText(/funding source falls below zero/)).not.toBeInTheDocument();
+  });
+
   it('keeps recovered task shortfalls and staffing issues visible with source details collapsed', async () => {
     const user = show();
     const totals = screen.getByLabelText('Outlook totals');

@@ -302,6 +302,25 @@ For example, $10,000 in appointment estimates and $3,000 already recorded give a
 and budget calculations are unchanged, and these derived details are not
 persisted.
 
+### Outlook category warnings
+
+The plan summary, source outlook, and funding source list flag any category that
+falls below zero during the forecast for Sponsored sources and planned funding
+with category budgets. These warnings remain visible if the category later
+recovers or the overall source, project, or plan balance is positive. Internal
+and unknown-basis sources do not imply separate category limits. Sources outside
+the forecast period do not contribute warnings.
+
+The summary shows the earliest overall or category shortfall and names the
+affected source. Category warning links open the category worksheet in month-end
+balance mode. Grouped project rows retain the task warnings. Overall balances and
+chart lines still show the actual source totals; warnings do not change costs or
+net balances. The setup review also includes category shortfalls.
+
+Missing, used salary and fringe budgets follow the same rule as Staffing,
+including booked costs with no additional first-month forecast. The overview
+additionally includes other category deficits, such as supplies or fee remission.
+
 ### Personnel budget warnings
 
 The calculator retains each expenditure category's balance. Staffing warnings for

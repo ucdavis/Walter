@@ -47,6 +47,7 @@ export interface FundingOutlookHandle {
 export function FundingOutlook({
   draft,
   onNavigate,
+  onViewCategoryBalances,
   outlook,
   ref,
   results,
@@ -54,6 +55,7 @@ export function FundingOutlook({
 }: {
   draft: ProjectionDraft;
   onNavigate: (location: ProjectionNavigation) => void;
+  onViewCategoryBalances?: (id: number) => void;
   outlook: ProjectionOutlook;
   ref?: Ref<FundingOutlookHandle>;
   results: ProjectionResults;
@@ -116,20 +118,28 @@ export function FundingOutlook({
                 <SourceOutlookHeader
                   headingRef={headingRef}
                   onNavigate={onNavigate}
+                  onViewCategoryBalances={() =>
+                    worksheetRef.current?.focusBalances()
+                  }
                   outlook={selected}
                   planStartDate={draft.seededAt.slice(0, 10)}
                 />
               ) : (
                 <>
                   <h2 className="text-xl font-semibold">Project outlook</h2>
-                  <p className="mt-1 text-sm text-base-content/80">
-                    {outlook.shortfallSources.length
-                      ? `${outlook.shortfallSources.length} of ${outlook.sources.length} funding sources ${outlook.shortfallSources.length === 1 ? 'runs' : 'run'} short`
-                      : 'Each funding source stays within funding'}
+                  <p
+                    className={`mt-1 text-sm ${outlook.categoryShortfallSources.length ? 'text-error' : 'text-base-content/80'}`}
+                  >
+                    {outlook.categoryShortfallSources.length
+                      ? `${outlook.categoryShortfallSources.length} funding ${outlook.categoryShortfallSources.length === 1 ? 'source has' : 'sources have'} category budget shortfalls`
+                      : outlook.shortfallSources.length
+                        ? `${outlook.shortfallSources.length} of ${outlook.sources.length} funding sources ${outlook.shortfallSources.length === 1 ? 'runs' : 'run'} short`
+                        : 'Each funding source stays within funding'}
                   </p>
                   <p className="mt-1 text-sm text-base-content/80">
-                    Balances stay separate. Select a funding source to explore
-                    its forecast.
+                    {outlook.categoryShortfallSources.length
+                      ? 'An overall surplus does not cover a shortfall in a category budget. Select a warning to review category balances.'
+                      : 'Balances stay separate. Select a funding source to explore its forecast.'}
                   </p>
                 </>
               )}
@@ -215,6 +225,7 @@ export function FundingOutlook({
               onToggleGroup={(id) =>
                 setExpandedGroups((current) => toggleSet(current, id))
               }
+              onViewCategoryBalances={onViewCategoryBalances ?? selectSource}
               sources={outlook.sources}
             />
           )}

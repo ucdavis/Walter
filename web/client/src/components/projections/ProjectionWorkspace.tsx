@@ -103,7 +103,9 @@ export function ProjectionWorkspace({
     isProjectionDirty(session);
   const { draft } = session;
   const outlook = buildProjectionOutlook(draft, results);
-  const hasShortfall = outlook.shortfallSources.length > 0;
+  const hasShortfall =
+    outlook.shortfallSources.length > 0 ||
+    outlook.categoryShortfallSources.length > 0;
   const hasFundingWarnings =
     hasShortfall ||
     outlook.gapAppointmentIds.length > 0 ||
@@ -208,6 +210,9 @@ export function ProjectionWorkspace({
           minimizeTooltipEnabled={!summaryMinimized && !summaryAnimating}
           onMinimize={toggleSummary}
           onNavigate={onNavigate}
+          onViewCategoryBalances={(id) =>
+            onNavigate({ section: 'overview', source: id }, false, true)
+          }
           outlook={outlook}
           ref={noticeRef}
           summaryId={summaryId}
@@ -382,6 +387,9 @@ export function ProjectionWorkspace({
           <FundingOutlook
             draft={draft}
             onNavigate={onNavigate}
+            onViewCategoryBalances={(id) =>
+              onNavigate({ section: 'overview', source: id }, false, true)
+            }
             outlook={outlook}
             ref={outlookRef}
             results={results}

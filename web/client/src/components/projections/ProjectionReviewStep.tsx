@@ -104,11 +104,25 @@ export function ProjectionReviewStep({
           </div>
         ))}
       </nav>
-      {(outlook.firstShortfallMonth || gaps > 0 || overlaps > 0) && (
+      {(outlook.firstShortfallMonth ||
+        outlook.firstCategoryShortfallMonth ||
+        gaps > 0 ||
+        overlaps > 0) && (
         <section
           aria-label="Items to review"
           className="space-y-1 rounded-box border border-warning/50 bg-warning/5 p-4 text-sm"
         >
+          {outlook.firstCategoryShortfallMonth && (
+            <p>
+              {outlook.categoryShortfallSources.length}{' '}
+              {outlook.categoryShortfallSources.length === 1
+                ? 'funding source has'
+                : 'funding sources have'}{' '}
+              category budget shortfalls, first in{' '}
+              {fundingMonthLabel(outlook.firstCategoryShortfallMonth)}. An
+              overall surplus does not cover these categories.
+            </p>
+          )}
           {outlook.firstShortfallMonth && (
             <p>
               {outlook.shortfallSources.length}{' '}

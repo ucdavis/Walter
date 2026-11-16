@@ -140,6 +140,7 @@ function OutlookView(props: ComponentProps<typeof FundingOutlook>) {
     <>
       <FundingOutlookNotice
         onNavigate={props.onNavigate}
+        onViewCategoryBalances={props.onViewCategoryBalances}
         outlook={props.outlook}
       />
       <FundingOutlook {...props} />
@@ -149,23 +150,102 @@ function OutlookView(props: ComponentProps<typeof FundingOutlook>) {
 
 async function show(draft = plan(), selectedSourceId: number | null = null) {
   const onNavigate = vi.fn();
+  const onViewCategoryBalances = vi.fn();
   const results = computePiProjection(draft);
   const view = render(
     <OutlookView
       draft={draft}
       onNavigate={onNavigate}
+      onViewCategoryBalances={onViewCategoryBalances}
       outlook={buildProjectionOutlook(draft, results)}
       results={results}
       selectedSourceId={selectedSourceId}
     />
   );
   await screen.findByRole('img', {}, { timeout: 5000 });
-  return { ...view, draft, onNavigate, results, user: userEvent.setup() };
+  return {
+    ...view,
+    draft,
+    onNavigate,
+    onViewCategoryBalances,
+    results,
+    user: userEvent.setup(),
+  };
 }
 
 const chartLines = () => document.querySelectorAll('.recharts-line-curve');
 
 describe('funding outlook', () => {
+  it('keeps an earlier overall shortfall first while also calling out later category shortfalls', async () => {
+    const draft = plan();
+    const second = draft.content.fundingSources[1];
+    second.projectType = 'Sponsored';
+    second.expenses = [{
+      ...structuredClone(draft.content.fundingSources[0].expenses[0]),
+      startMonth: '2026-02-01',
+    }];
+    await show(draft);
+    const summary = screen.getByRole('region', { name: 'Funding summary' });
+    expect(summary).toHaveTextContent('First funding shortfall: Jan 2026');
+    expect(summary).toHaveTextContent('1 source has category budget shortfalls');
+    expect(within(summary).getByRole('button', {name: 'Explore Source 1 · Task 1'})).toBeInTheDocument();
+  });
+
+  it('marks category shortfalls in the alert, project row, and source row despite a positive overall balance', async () => {
+    const draft = plan();
+    draft.content.appointments = [];
+    draft.content.fundingSources = draft.content.fundingSources.slice(0, 2);
+    draft.content.fundingSources[0].projectType = 'Sponsored';
+    draft.content.fundingSources[0].budgets[0].budget = 500;
+    const { onViewCategoryBalances, user } = await show(draft);
+    const summary = screen.getByRole('region', { name: 'Funding summary' });
+    expect(summary).toHaveTextContent(
+      'First category budget shortfall: Jan 2026'
+    );
+    expect(summary).toHaveTextContent(SUPPLIES_CATEGORY);
+    expect(summary).not.toHaveTextContent('source falls below zero');
+    expect(
+      screen.queryByText('Each funding source stays within funding')
+    ).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Outlook totals')).toHaveTextContent('$1,500');
+    await user.click(
+      within(summary).getByRole('button', {
+        name: 'View category balances for Source 1 · Task 1',
+      })
+    );
+    expect(onViewCategoryBalances).toHaveBeenLastCalledWith(1);
+    const table = screen.getByRole('table', { name: 'Funding sources' });
+    expect(table).toHaveTextContent('1 task has category shortfalls');
+    expect(table).not.toHaveTextContent('Within funding');
+    await user.click(
+      within(table).getByRole('button', { name: /Field research/ })
+    );
+    const warning = within(table).getByRole('button', {
+      name: 'View category shortfalls for Source 1 · Task 1',
+    });
+    await user.hover(warning);
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+      SUPPLIES_CATEGORY
+    );
+    await user.click(warning);
+    expect(onViewCategoryBalances).toHaveBeenLastCalledWith(1);
+  });
+
+  it('avoids an all-clear message in a selected source with a category deficit', async () => {
+    const draft = plan();
+    draft.content.fundingSources[0].projectType = 'Sponsored';
+    draft.content.fundingSources[0].budgets[0].budget = 500;
+    await show(draft, 1);
+    expect(
+      screen.queryByText('Stays within funding throughout this plan')
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('button', {
+        name: 'View category shortfalls for Source 1 · Task 1',
+      })
+    ).toBeInTheDocument();
+  });
+
   it('keeps a recovered task shortfall visible under a positive project rollup', async () => {
     const { onNavigate, user } = await show();
     expect(
@@ -324,7 +404,7 @@ describe('funding outlook', () => {
     ).toBeInTheDocument();
     expect(document.querySelector('.recharts-area-curve')).not.toBeNull();
     expect(
-      screen.getByRole('heading', { name: 'Source 1 · Task 1 details' })
+      screen.getByRole('heading', { name: 'Source 1 · Task 1' })
     ).toBeInTheDocument();
     await user.click(
       screen.getByRole('button', { name: 'Back to all funding sources' })

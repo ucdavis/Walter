@@ -19,6 +19,7 @@ export function FundingOutlookNotice({
   minimizeTooltipEnabled = true,
   onMinimize,
   onNavigate,
+  onViewCategoryBalances,
   outlook,
   ref,
   summaryId,
@@ -27,13 +28,28 @@ export function FundingOutlookNotice({
   minimizeTooltipEnabled?: boolean;
   onMinimize?: () => void;
   onNavigate: (location: ProjectionNavigation) => void;
+  onViewCategoryBalances?: (id: number) => void;
   outlook: ProjectionOutlook;
   ref?: Ref<HTMLElement>;
   summaryId?: string;
 }) {
-  const first = outlook.shortfallSources.find(
+  const firstOverall = outlook.shortfallSources.find(
     (source) => source.firstShortfallMonth === outlook.firstShortfallMonth
   );
+  const firstCategory = outlook.categoryShortfallSources.find((source) =>
+    source.categoryShortfalls.some(
+      ({ firstMonth }) => firstMonth === outlook.firstCategoryShortfallMonth
+    )
+  );
+  const categoryFirst = Boolean(
+    firstCategory &&
+      (!outlook.firstShortfallMonth ||
+        outlook.firstCategoryShortfallMonth! <= outlook.firstShortfallMonth)
+  );
+  const first = categoryFirst ? firstCategory : firstOverall;
+  const firstMonth = categoryFirst
+    ? outlook.firstCategoryShortfallMonth
+    : outlook.firstShortfallMonth;
   const gaps = outlook.gapAppointmentIds.length;
   const overlaps = outlook.overlapAppointmentIds.length;
   if (!first && !gaps && !overlaps) {
@@ -55,8 +71,10 @@ export function FundingOutlookNotice({
           <div className="flex flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-center">
             <div className="min-w-0 flex-1">
               <p className="font-semibold text-error">
-                First funding shortfall:{' '}
-                {fundingMonthLabel(first.firstShortfallMonth!)}
+                {categoryFirst
+                  ? 'First category budget shortfall'
+                  : 'First funding shortfall'}
+                : {fundingMonthLabel(firstMonth!)}
               </p>
               <p className="mt-1 font-semibold break-words">
                 {first.source.name}
@@ -69,24 +87,52 @@ export function FundingOutlookNotice({
                   ? ` · ${first.source.taskName}`
                   : ''}
               </p>
-              <p className="mt-1 text-base-content/80">
-                {outlook.shortfallSources.length}{' '}
-                {outlook.shortfallSources.length === 1
-                  ? 'source falls'
-                  : 'sources fall'}{' '}
-                below zero. Balances remain separate, even when grouped by
-                project.
-              </p>
+              {categoryFirst && (
+                <p className="mt-1">
+                  {first.categoryShortfalls
+                    .filter((shortfall) => shortfall.firstMonth === firstMonth)
+                    .map(({ expenditureCategory }) => expenditureCategory)
+                    .join(' · ')}
+                </p>
+              )}
+              {outlook.categoryShortfallSources.length > 0 && (
+                <p className="mt-1 text-base-content/80">
+                  {outlook.categoryShortfallSources.length}{' '}
+                  {outlook.categoryShortfallSources.length === 1
+                    ? 'source has'
+                    : 'sources have'}{' '}
+                  category budget shortfalls. An overall surplus does not cover
+                  these categories.
+                </p>
+              )}
+              {outlook.shortfallSources.length > 0 && (
+                <p className="mt-1 text-base-content/80">
+                  {outlook.shortfallSources.length}{' '}
+                  {outlook.shortfallSources.length === 1
+                    ? 'source falls'
+                    : 'sources fall'}{' '}
+                  below zero. Balances remain separate, even when grouped by
+                  project.
+                </p>
+              )}
             </div>
             <button
-              aria-label={`Explore ${first.label}`}
+              aria-label={
+                categoryFirst
+                  ? `View category balances for ${first.label}`
+                  : `Explore ${first.label}`
+              }
               className="btn btn-outline btn-sm self-start sm:self-auto"
               onClick={() =>
-                onNavigate({ section: 'overview', source: first.source.id })
+                categoryFirst && onViewCategoryBalances
+                  ? onViewCategoryBalances(first.source.id)
+                  : onNavigate({ section: 'overview', source: first.source.id })
               }
               type="button"
             >
-              Explore funding source
+              {categoryFirst
+                ? 'View category balances'
+                : 'Explore funding source'}
               <ArrowRightIcon aria-hidden="true" className="size-4" />
             </button>
           </div>

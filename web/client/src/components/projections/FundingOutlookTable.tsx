@@ -6,6 +6,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { projectionSeriesColor } from '@/components/projections/projectionFormatting.ts';
 import { Fragment } from 'react';
+import { SourceCategoryShortfallWarning } from '@/components/projections/SourceCategoryShortfallWarning.tsx';
 import { fundingMonthLabel } from '@/components/projections/fundingTimelineDates.ts';
 import { formatProjectionCurrency as formatCurrency } from '@/components/projections/projectionFormatting.ts';
 import type { OutlookGroup, SourceOutlook } from '@/lib/projectionOutlook.ts';
@@ -14,11 +15,13 @@ function SourceRow({
   colorIndex,
   nested = false,
   onSelect,
+  onViewCategoryBalances,
   outlook,
 }: {
   colorIndex: number;
   nested?: boolean;
   onSelect: (id: number) => void;
+  onViewCategoryBalances: (id: number) => void;
   outlook: SourceOutlook;
 }) {
   return (
@@ -69,8 +72,16 @@ function SourceRow({
               <span className="block text-xs">Recovers by plan end</span>
             )}
           </span>
-        ) : (
+        ) : outlook.categoryShortfalls.length === 0 ? (
           'Within funding'
+        ) : null}
+        {outlook.categoryShortfalls.length > 0 && (
+          <div className="mt-1">
+            <SourceCategoryShortfallWarning
+              onView={onViewCategoryBalances}
+              outlook={outlook}
+            />
+          </div>
         )}
       </td>
       <td className="text-right tabular-nums">
@@ -90,12 +101,14 @@ export function FundingOutlookTable({
   groups,
   onSelect,
   onToggleGroup,
+  onViewCategoryBalances,
   sources,
 }: {
   expandedGroups: ReadonlySet<string>;
   groups: OutlookGroup[];
   onSelect: (id: number) => void;
   onToggleGroup: (id: string) => void;
+  onViewCategoryBalances: (id: number) => void;
   sources?: SourceOutlook[];
 }) {
   return (
@@ -134,6 +147,7 @@ export function FundingOutlookTable({
                 )}
                 key={group.id}
                 onSelect={onSelect}
+                onViewCategoryBalances={onViewCategoryBalances}
                 outlook={group.sources[0]}
               />
             ) : (
@@ -182,8 +196,29 @@ export function FundingOutlookTable({
                       ) : (
                         'No forecast data in this period'
                       )
-                    ) : (
+                    ) : group.categoryShortfallSources.length === 0 ? (
                       'Within funding'
+                    ) : null}
+                    {group.categoryShortfallSources.length > 0 && (
+                      <span className="mt-1 flex items-start gap-1.5 text-error">
+                        <ExclamationTriangleIcon
+                          aria-hidden="true"
+                          className="mt-0.5 size-4 shrink-0"
+                        />
+                        <span>
+                          {group.categoryShortfallSources.length}{' '}
+                          {group.categoryShortfallSources.length === 1
+                            ? 'task has'
+                            : 'tasks have'}{' '}
+                          category shortfalls
+                          <span className="block text-xs">
+                            First{' '}
+                            {fundingMonthLabel(
+                              group.firstCategoryShortfallMonth!
+                            )}
+                          </span>
+                        </span>
+                      </span>
                     )}
                   </td>
                   <td className="text-right tabular-nums">
@@ -208,6 +243,7 @@ export function FundingOutlookTable({
                       key={source.source.id}
                       nested
                       onSelect={onSelect}
+                      onViewCategoryBalances={onViewCategoryBalances}
                       outlook={source}
                     />
                   ))}
