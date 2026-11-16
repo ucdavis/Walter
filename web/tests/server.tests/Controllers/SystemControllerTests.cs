@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Configuration;
+using Microsoft.FeatureManagement;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -143,14 +145,15 @@ public class SystemControllerTests
     }
 
     [Theory]
-    [InlineData(true, true, true)]
-    [InlineData(true, false, false)]
-    [InlineData(false, true, false)]
-    [InlineData(false, false, true)]
-    public void GetFeatures_reflects_the_configured_flags(
+    [InlineData(true, true, true, false)]
+    [InlineData(true, false, false, true)]
+    [InlineData(false, true, false, false)]
+    [InlineData(false, false, true, true)]
+    public async Task GetFeatures_reflects_the_configured_flags(
         bool burndownEnabled,
         bool expenditureProgressEnabled,
-        bool projectCostsEnabled)
+        bool projectCostsEnabled,
+        bool projectionsEnabled)
     {
         using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
 
@@ -161,15 +164,17 @@ public class SystemControllerTests
                 BurndownEnabled = burndownEnabled,
                 ExpenditureProgressEnabled = expenditureProgressEnabled,
                 ProjectCostsEnabled = projectCostsEnabled,
+                ProjectionsEnabled = projectionsEnabled,
             });
 
-        var result = controller.GetFeatures();
+        var result = await controller.GetFeatures();
 
         result.Result.Should().BeOfType<OkObjectResult>()
             .Which.Value.Should().BeEquivalentTo(new ClientFeatures(
                 burndownEnabled,
                 expenditureProgressEnabled,
-                projectCostsEnabled));
+                projectCostsEnabled,
+                projectionsEnabled));
     }
 
     [Fact]
@@ -383,19 +388,33 @@ public class SystemControllerTests
 
         var services = new ServiceCollection();
         services.AddSingleton<IAuthenticationService>(auth);
+        var configuredFlags = featureFlags ?? new FeatureFlagOptions();
+        var configuration = new ConfigurationManager();
+        configuration.AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["FeatureFlags:BurndownEnabled"] = configuredFlags.BurndownEnabled.ToString(),
+            ["FeatureFlags:ExpenditureProgressEnabled"] = configuredFlags.ExpenditureProgressEnabled.ToString(),
+            ["FeatureFlags:ProjectCostsEnabled"] = configuredFlags.ProjectCostsEnabled.ToString(),
+            ["FeatureFlags:ProjectionsEnabled"] = configuredFlags.ProjectionsEnabled.ToString(),
+        });
+        var userService = new UserService(NullLogger<UserService>.Instance, ctx);
+        services.AddSingleton<IUserService>(userService);
+        services.AddLogging();
+        services.AddWalterFeatureManagement(configuration, environmentName);
         var sp = services.BuildServiceProvider();
 
         var httpContext = new DefaultHttpContext { RequestServices = sp };
 
-        var userService = new UserService(NullLogger<UserService>.Instance, ctx);
         var controller = new SystemController(
             userService,
             graphService ?? new FakeGraphService(),
             datamartService ?? new FakeDatamartService(),
             profileOrchestrator ?? new FakeUserProfileOrchestrator(ctx),
             Options.Create(rumOptions ?? new RumOptions()),
-            Options.Create(featureFlags ?? new FeatureFlagOptions()),
-            new FakeHostEnvironment { EnvironmentName = environmentName })
+            sp.GetRequiredService<IFeatureManager>(),
+            sp.GetRequiredService<IFeatureDefinitionProvider>(),
+            new FakeHostEnvironment { EnvironmentName = environmentName },
+            NullLogger<SystemController>.Instance)
         {
             ControllerContext = new ControllerContext { HttpContext = httpContext },
         };
@@ -533,6 +552,13 @@ public class SystemControllerTests
         public Task<ProjectProjectionResult> GetProjectProjectionAsync(
             string projectNumber,
             int historyMonths,
+            string? applicationUser = null,
+            string? emulatingUser = null,
+            CancellationToken ct = default)
+            => throw new NotImplementedException();
+
+        public Task<IReadOnlyList<ProjectCostRecord>> GetProjectCostsAsync(
+            string projectNumber,
             string? applicationUser = null,
             string? emulatingUser = null,
             CancellationToken ct = default)

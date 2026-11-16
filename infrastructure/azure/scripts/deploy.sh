@@ -7,7 +7,12 @@ TEMPLATE_FILE="${SCRIPT_DIR}/../main.bicep"
 usage() {
   cat <<'EOF'
 Usage:
+  infrastructure/azure/scripts/deploy.sh --config <file.json> [options]
   infrastructure/azure/scripts/deploy.sh --resource-group <name> --app-service-plan-id <id> [options]
+
+Configuration:
+      --config                   JSON deployment defaults; command-line options override them (requires jq)
+      --subscription             Deployment subscription ID (required in config; otherwise defaults to current subscription)
 
 Required:
   -g, --resource-group           Azure resource group name to deploy into
@@ -19,6 +24,13 @@ SQL creation:
 
 App setting seeds:
       --datamart-connection-string  Datamart connection string (required only when seeding a missing DM_CONNECTION, or set env var DM_CONNECTION)
+
+App Configuration (opt-in, existing store only):
+      --app-configuration-store-name       Existing store name
+      --app-configuration-resource-group   Resource group containing the store (required with store name)
+      --app-configuration-subscription-id  Store subscription ID (default: deployment subscription)
+      --runtime-environment                Exact feature flag label: Test or Production (required with store name)
+      --app-configuration-access-only      Provision identity/access without setting endpoint or runtime environment
 
 Naming:
       --app-name                 Application name used for generated names (default: walter)
@@ -56,6 +68,7 @@ RESOURCE_GROUP=""
 LOCATION=""
 ENVIRONMENT=""
 APP_NAME="walter"
+TARGET_SUBSCRIPTION=""
 
 APP_SERVICE_PLAN_ID="${APP_SERVICE_PLAN_ID:-}"
 SQL_ADMIN_LOGIN_VALUE="${SQL_ADMIN_LOGIN:-}"
@@ -68,9 +81,61 @@ ALLOW_AZURE_SERVICES_TO_SQL="false"
 WHAT_IF="false"
 CREATE_SQL_SERVER="true"
 SQL_SERVER_NAME_OVERRIDE=""
+APP_CONFIGURATION_STORE_NAME=""
+APP_CONFIGURATION_RESOURCE_GROUP=""
+APP_CONFIGURATION_SUBSCRIPTION_ID=""
+RUNTIME_ENVIRONMENT=""
+APP_CONFIGURATION_ACCESS_ONLY="false"
+
+# Load data as arguments, never as shell code. Prepend defaults so explicit CLI options win.
+CONFIG_FILE=""
+CLI_ARGS=()
+while [[ $# -gt 0 ]]; do
+  if [[ "$1" == "--config" ]]; then
+    if [[ -n "$CONFIG_FILE" || $# -lt 2 || -z "${2:-}" ]]; then
+      echo "Pass --config once with a JSON file path." >&2
+      exit 2
+    fi
+    CONFIG_FILE="$2"
+    shift 2
+  else
+    CLI_ARGS+=("$1")
+    shift
+  fi
+done
+
+CONFIG_ARGS=()
+if [[ -n "$CONFIG_FILE" ]]; then
+  if ! command -v jq >/dev/null 2>&1; then
+    echo "jq is required to read --config JSON files." >&2
+    exit 1
+  fi
+  CONFIG_ARGUMENTS="$(jq -er '
+    if type == "object"
+      and (keys - ["subscription", "resource-group", "location", "app-name", "env", "app-service-plan-id",
+        "app-configuration-store-name", "app-configuration-resource-group", "app-configuration-subscription-id",
+        "runtime-environment", "linux-fx-version", "function-linux-fx-version"] | length == 0)
+      and all(.[]; type == "string" and length > 0 and (explode | all(. >= 32)))
+      and has("subscription")
+    then to_entries[] | "--" + .key, .value
+    else error("Config must contain a subscription and supported nonempty string options only.")
+    end
+  ' "$CONFIG_FILE")" || exit 2
+  while IFS= read -r argument; do
+    CONFIG_ARGS+=("$argument")
+  done <<< "$CONFIG_ARGUMENTS"
+fi
+# Bash 3 treats empty arrays as unset under nounset.
+set -- ${CONFIG_ARGS[@]+"${CONFIG_ARGS[@]}"} ${CLI_ARGS[@]+"${CLI_ARGS[@]}"}
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --subscription)
+      if [[ -z "${2:-}" || "${2:-}" == --* ]]; then
+        echo "Pass --subscription with a subscription ID or name." >&2
+        exit 2
+      fi
+      TARGET_SUBSCRIPTION="${2:-}"; shift 2 ;;
     -g|--resource-group)
       RESOURCE_GROUP="${2:-}"; shift 2 ;;
     -l|--location)
@@ -87,6 +152,16 @@ while [[ $# -gt 0 ]]; do
       SQL_ADMIN_PASSWORD_VALUE="${2:-}"; shift 2 ;;
     --datamart-connection-string)
       DATAMART_CONNECTION_STRING_VALUE="${2:-}"; shift 2 ;;
+    --app-configuration-store-name)
+      APP_CONFIGURATION_STORE_NAME="${2:-}"; shift 2 ;;
+    --app-configuration-resource-group)
+      APP_CONFIGURATION_RESOURCE_GROUP="${2:-}"; shift 2 ;;
+    --app-configuration-subscription-id)
+      APP_CONFIGURATION_SUBSCRIPTION_ID="${2:-}"; shift 2 ;;
+    --runtime-environment)
+      RUNTIME_ENVIRONMENT="${2:-}"; shift 2 ;;
+    --app-configuration-access-only)
+      APP_CONFIGURATION_ACCESS_ONLY="true"; shift ;;
     --linux-fx-version)
       LINUX_FX_VERSION="${2:-}"; shift 2 ;;
     --function-linux-fx-version)
@@ -116,10 +191,35 @@ if [[ -z "$APP_SERVICE_PLAN_ID" ]]; then
   exit 2
 fi
 
+if [[ -n "$APP_CONFIGURATION_STORE_NAME" ]]; then
+  if [[ -z "$APP_CONFIGURATION_RESOURCE_GROUP" ]]; then
+    echo "Missing required: --app-configuration-resource-group" >&2
+    exit 2
+  fi
+  case "$RUNTIME_ENVIRONMENT" in
+    Test|Production) ;;
+    *)
+      echo "App Configuration requires --runtime-environment Test or Production, matching the store's feature flag label exactly. Development uses Azure CLI credentials and is for local runs." >&2
+      exit 2 ;;
+  esac
+elif [[ -n "$APP_CONFIGURATION_RESOURCE_GROUP" || -n "$APP_CONFIGURATION_SUBSCRIPTION_ID" || -n "$RUNTIME_ENVIRONMENT" || "$APP_CONFIGURATION_ACCESS_ONLY" == "true" ]]; then
+  echo "App Configuration options require --app-configuration-store-name." >&2
+  exit 2
+fi
+
 if ! command -v az >/dev/null 2>&1; then
   echo "Azure CLI not found. Install it first: https://learn.microsoft.com/cli/azure/install-azure-cli" >&2
   exit 1
 fi
+
+if [[ -z "$TARGET_SUBSCRIPTION" ]]; then
+  TARGET_SUBSCRIPTION="$(az account show --query id -o tsv)"
+fi
+
+# Scope every resource operation without changing the user's Azure CLI default subscription.
+az_target() {
+  az "$@" --subscription "$TARGET_SUBSCRIPTION"
+}
 
 normalize_name() {
   printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | sed 's/[ _]/-/g'
@@ -132,13 +232,13 @@ app_setting_exists() {
   local count
 
   if [[ "$app_type" == "webapp" ]]; then
-    count="$(az webapp config appsettings list \
+    count="$(az_target webapp config appsettings list \
       --resource-group "$RESOURCE_GROUP" \
       --name "$app_name" \
       --query "[?name=='${setting_name}'] | length(@)" \
       -o tsv)"
   else
-    count="$(az functionapp config appsettings list \
+    count="$(az_target functionapp config appsettings list \
       --resource-group "$RESOURCE_GROUP" \
       --name "$app_name" \
       --query "[?name=='${setting_name}'] | length(@)" \
@@ -161,13 +261,13 @@ seed_app_setting_if_missing() {
 
   echo "Adding missing app setting '${setting_name}' to '${app_name}'."
   if [[ "$app_type" == "webapp" ]]; then
-    az webapp config appsettings set \
+    az_target webapp config appsettings set \
       --resource-group "$RESOURCE_GROUP" \
       --name "$app_name" \
       --settings "${setting_name}=${setting_value}" \
       >/dev/null
   else
-    az functionapp config appsettings set \
+    az_target functionapp config appsettings set \
       --resource-group "$RESOURCE_GROUP" \
       --name "$app_name" \
       --settings "${setting_name}=${setting_value}" \
@@ -211,13 +311,62 @@ seed_dm_connection_if_missing() {
   seed_app_setting_if_missing "$app_type" "$app_name" "DM_CONNECTION" "$DATAMART_CONNECTION_STRING_VALUE"
 }
 
-if [[ "$(az group exists -n "$RESOURCE_GROUP")" != "true" ]]; then
+configure_app_configuration() {
+  if [[ -z "$APP_CONFIGURATION_STORE_NAME" ]]; then
+    return
+  fi
+  if [[ "$APP_CONFIGURATION_ACCESS_ONLY" == "true" ]]; then
+    echo "App Configuration identity/access prepared. Endpoint and runtime environment were not changed."
+    echo "Allow up to 15 minutes for access to propagate, then rerun without --app-configuration-access-only."
+    return
+  fi
+
+  local endpoint
+  endpoint="$(az_target deployment group show \
+    --name "$DEPLOYMENT_NAME" \
+    --resource-group "$RESOURCE_GROUP" \
+    --query "properties.outputs.appConfigurationEndpoint.value" \
+    -o tsv)"
+  if [[ -z "$endpoint" ]]; then
+    echo "Deployment did not return an App Configuration endpoint; app settings were not changed." >&2
+    exit 1
+  fi
+
+  local matching_settings
+  matching_settings="$(az_target webapp config appsettings list \
+    --resource-group "$RESOURCE_GROUP" \
+    --name "$WEB_APP_NAME" \
+    --query "[?(name=='AppConfiguration__Endpoint' && value=='${endpoint}') || (name=='ASPNETCORE_ENVIRONMENT' && value=='${RUNTIME_ENVIRONMENT}') || (name=='DOTNET_ENVIRONMENT' && value=='${RUNTIME_ENVIRONMENT}')] | length(@)" \
+    -o tsv)"
+  if [[ "$matching_settings" == "3" ]]; then
+    echo "App Configuration endpoint and runtime environment already match on '${WEB_APP_NAME}'."
+    return
+  fi
+
+  # Set the endpoint and both environment keys together. DOTNET_ENVIRONMENT takes precedence
+  # in WebApplication.CreateBuilder; leaving it stale could select another label or credential.
+  echo "Configuring '${WEB_APP_NAME}' to use '${endpoint}' with label '${RUNTIME_ENVIRONMENT}'."
+  az_target webapp config appsettings set \
+    --resource-group "$RESOURCE_GROUP" \
+    --name "$WEB_APP_NAME" \
+    --settings \
+      "AppConfiguration__Endpoint=${endpoint}" \
+      "ASPNETCORE_ENVIRONMENT=${RUNTIME_ENVIRONMENT}" \
+      "DOTNET_ENVIRONMENT=${RUNTIME_ENVIRONMENT}" \
+    >/dev/null
+}
+
+if [[ "$(az_target group exists -n "$RESOURCE_GROUP")" != "true" ]]; then
+  if [[ "$WHAT_IF" == "true" ]]; then
+    echo "Resource group '${RESOURCE_GROUP}' must already exist for --what-if. No changes were made." >&2
+    exit 1
+  fi
   LOCATION="${LOCATION:-westus2}"
   echo "Creating resource group '${RESOURCE_GROUP}' in '${LOCATION}'..."
-  az group create -n "$RESOURCE_GROUP" -l "$LOCATION" >/dev/null
+  az_target group create -n "$RESOURCE_GROUP" -l "$LOCATION" >/dev/null
 else
   if [[ -z "$LOCATION" ]]; then
-    LOCATION="$(az group show -n "$RESOURCE_GROUP" --query location -o tsv)"
+    LOCATION="$(az_target group show -n "$RESOURCE_GROUP" --query location -o tsv)"
   fi
 fi
 
@@ -230,7 +379,7 @@ else
 fi
 
 SQL_SERVER_NAME_PREFIX="sql-${BASE_NAME}-"
-SQL_SERVER_MATCHES="$(az sql server list \
+SQL_SERVER_MATCHES="$(az_target sql server list \
   --resource-group "$RESOURCE_GROUP" \
   --query "[?starts_with(name, '${SQL_SERVER_NAME_PREFIX}')].name" \
   -o tsv)"
@@ -244,7 +393,7 @@ if [[ "$SQL_SERVER_MATCH_COUNT" -gt 1 ]]; then
 elif [[ "$SQL_SERVER_MATCH_COUNT" == "1" ]]; then
   CREATE_SQL_SERVER="false"
   SQL_SERVER_NAME_OVERRIDE="$(printf '%s\n' "$SQL_SERVER_MATCHES" | sed '/^$/d' | head -n 1)"
-  EXISTING_SQL_ADMIN_LOGIN="$(az sql server show \
+  EXISTING_SQL_ADMIN_LOGIN="$(az_target sql server show \
     --resource-group "$RESOURCE_GROUP" \
     --name "$SQL_SERVER_NAME_OVERRIDE" \
     --query administratorLogin \
@@ -302,40 +451,53 @@ if [[ -n "$ENVIRONMENT" ]]; then
   AZ_PARAMS+=("env=${ENVIRONMENT}")
 fi
 
+if [[ -n "$APP_CONFIGURATION_STORE_NAME" ]]; then
+  AZ_PARAMS+=(
+    "appConfigurationStoreName=${APP_CONFIGURATION_STORE_NAME}"
+    "appConfigurationResourceGroupName=${APP_CONFIGURATION_RESOURCE_GROUP}"
+  )
+  if [[ -n "$APP_CONFIGURATION_SUBSCRIPTION_ID" ]]; then
+    AZ_PARAMS+=("appConfigurationSubscriptionId=${APP_CONFIGURATION_SUBSCRIPTION_ID}")
+  fi
+fi
+
 if [[ "$WHAT_IF" == "true" ]]; then
-  az deployment group what-if \
+  az_target deployment group what-if \
     --name "$DEPLOYMENT_NAME" \
     --resource-group "$RESOURCE_GROUP" \
     --template-file "$TEMPLATE_FILE" \
     --parameters "${AZ_PARAMS[@]}"
+  if [[ -n "$APP_CONFIGURATION_STORE_NAME" && "$APP_CONFIGURATION_ACCESS_ONLY" != "true" ]]; then
+    echo "After deployment, the script would update only AppConfiguration__Endpoint, ASPNETCORE_ENVIRONMENT, and DOTNET_ENVIRONMENT on the web app, using this store and '${RUNTIME_ENVIRONMENT}'."
+  fi
 else
-  az deployment group create \
+  az_target deployment group create \
     --name "$DEPLOYMENT_NAME" \
     --resource-group "$RESOURCE_GROUP" \
     --template-file "$TEMPLATE_FILE" \
     --parameters "${AZ_PARAMS[@]}"
 
-  WEB_APP_NAME="$(az deployment group show \
+  WEB_APP_NAME="$(az_target deployment group show \
     --name "$DEPLOYMENT_NAME" \
     --resource-group "$RESOURCE_GROUP" \
     --query "properties.outputs.webAppName.value" \
     -o tsv)"
-  FUNCTION_APP_NAME="$(az deployment group show \
+  FUNCTION_APP_NAME="$(az_target deployment group show \
     --name "$DEPLOYMENT_NAME" \
     --resource-group "$RESOURCE_GROUP" \
     --query "properties.outputs.functionAppName.value" \
     -o tsv)"
-  FUNCTION_STORAGE_ACCOUNT_NAME="$(az deployment group show \
+  FUNCTION_STORAGE_ACCOUNT_NAME="$(az_target deployment group show \
     --name "$DEPLOYMENT_NAME" \
     --resource-group "$RESOURCE_GROUP" \
     --query "properties.outputs.functionStorageAccountName.value" \
     -o tsv)"
-  SQL_SERVER_FQDN="$(az deployment group show \
+  SQL_SERVER_FQDN="$(az_target deployment group show \
     --name "$DEPLOYMENT_NAME" \
     --resource-group "$RESOURCE_GROUP" \
     --query "properties.outputs.sqlServerFqdn.value" \
     -o tsv)"
-  SQL_DB_NAME="$(az deployment group show \
+  SQL_DB_NAME="$(az_target deployment group show \
     --name "$DEPLOYMENT_NAME" \
     --resource-group "$RESOURCE_GROUP" \
     --query "properties.outputs.sqlDbName.value" \
@@ -357,7 +519,7 @@ else
     DB_CONNECTION_VALUE="Server=tcp:${SQL_SERVER_FQDN},1433;Initial Catalog=${SQL_DB_NAME};Persist Security Info=False;User ID=${SQL_ADMIN_LOGIN_VALUE};Password=${SQL_ADMIN_PASSWORD_VALUE};MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
   fi
 
-  FUNCTION_STORAGE_CONNECTION="$(az storage account show-connection-string \
+  FUNCTION_STORAGE_CONNECTION="$(az_target storage account show-connection-string \
     --resource-group "$RESOURCE_GROUP" \
     --name "$FUNCTION_STORAGE_ACCOUNT_NAME" \
     --query connectionString \
@@ -383,4 +545,6 @@ else
   seed_app_setting_if_missing "functionapp" "$FUNCTION_APP_NAME" "NOTIFICATIONS_ACCRUAL_GENERATION_SCHEDULE" "0 0 9 2 * *"
   seed_app_setting_if_missing "functionapp" "$FUNCTION_APP_NAME" "Notifications__SenderEnabled" "false"
   seed_app_setting_if_missing "functionapp" "$FUNCTION_APP_NAME" "Notifications__AccrualGenerationEnabled" "false"
+
+  configure_app_configuration
 fi

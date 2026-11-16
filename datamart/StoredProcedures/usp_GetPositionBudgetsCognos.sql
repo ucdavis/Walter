@@ -97,6 +97,7 @@ BEGIN
             pb.Name AS NAME,
             pb.PositionDescription AS POSITION_DESCRIPTION,
             pb.JobCode AS JOB_CODE,
+            pb.BusinessUnit AS BUSINESS_UNIT,
             cbr.VacationAccrual AS VACATION_ACCRUAL,
             cbr.CBR AS COMPOSITE_BENEFIT_RATE,
             pb.IsFuture AS IS_FUTURE,

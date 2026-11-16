@@ -160,5 +160,8 @@ public sealed class DepartmentBalancesControllerTests
 
         public Task<ProjectProjectionResult> GetProjectProjectionAsync(string projectNumber, int historyMonths, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default)
             => throw new InvalidOperationException("Not needed for DepartmentBalancesController tests.");
+
+        public Task<IReadOnlyList<ProjectCostRecord>> GetProjectCostsAsync(string projectNumber, string? applicationUser = null, string? emulatingUser = null, CancellationToken ct = default)
+            => throw new InvalidOperationException("Not needed for DepartmentBalancesController tests.");
     }
 }

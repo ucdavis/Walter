@@ -5,6 +5,7 @@ import {
   ProjectRecord,
 } from '@/queries/project.ts';
 import { featureFlagsQueryOptions } from '@/queries/featureFlags.ts';
+import { useUser } from '@/shared/auth/UserContext.tsx';
 import { Currency } from '@/shared/Currency.tsx';
 import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
 import { useSuspenseQuery } from '@tanstack/react-query';
@@ -118,11 +119,14 @@ const projectNumberClasses = (isInternal: boolean) =>
   isInternal ? 'text-accent' : 'text-info';
 
 export function ProjectsSidebar() {
+  const user = useUser();
   const { iamId, projectNumber } = useParams({ strict: false });
   const { data: projects } = useSuspenseQuery(
     projectsDetailQueryOptions(iamId)
   );
-  const { data: featureFlags } = useSuspenseQuery(featureFlagsQueryOptions());
+  const { data: featureFlags } = useSuspenseQuery(
+    featureFlagsQueryOptions(user.id)
+  );
   const currentPathname = useRouterState({
     select: (state) => state.location.pathname,
   });

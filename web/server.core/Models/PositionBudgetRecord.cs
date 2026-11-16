@@ -45,6 +45,14 @@ public sealed class PositionBudgetRecord
     [JsonPropertyName("compositeBenefitRate")]
     public decimal? CompositeBenefitRate { get; set; }
 
+    /// <summary>UCPath business unit (CBR rate set). Cognos source only.</summary>
+    [JsonPropertyName("businessUnit")]
+    public string? BusinessUnit { get; set; }
+
+    /// <summary>Vacation accrual rate for the job code. Cognos source only.</summary>
+    [JsonPropertyName("vacationAccrual")]
+    public decimal? VacationAccrual { get; set; }
+
     [JsonPropertyName("fte")]
     public decimal? Fte { get; set; }
 

@@ -28,6 +28,7 @@ import { buildFinjectorUrl } from '@/lib/finjector.ts';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, Link } from '@tanstack/react-router';
 import {
+  ClipboardDocumentListIcon,
   PresentationChartLineIcon,
   TableCellsIcon,
 } from '@heroicons/react/24/outline';
@@ -149,7 +150,7 @@ function ProjectContent({
           <span
             className={`badge font-sans font-bold badge-sm ${summary.isInternal ? 'badge-accent' : 'badge-info'}`}
           >
-            {summary.isInternal ? 'Internal Project' : 'Sponsored Project'}
+            {`${projectRecords[0].projectType} Project`}
           </span>
           <span className="text-sm text-base-content/70">
             Source: Faculty & Department Portfolio Report (PPM)
@@ -176,8 +177,19 @@ function ProjectContent({
 
       <ProjectDetails
         actions={
-          showProjectBurndown || showProjectCosts ? (
+          summary.isInternal || showProjectBurndown || showProjectCosts ? (
             <>
+              {summary.isInternal ? (
+                <Link
+                  className="btn btn-lg"
+                  params={{ iamId, projectNumber: summary.projectNumber }}
+                  search={{}}
+                  to="/projects/$iamId/$projectNumber/expenditure-categories"
+                >
+                  <ClipboardDocumentListIcon className="h-4 w-4" />
+                  Task Details
+                </Link>
+              ) : null}
               {showProjectBurndown ? (
                 <Link
                   className="btn btn-lg"
@@ -215,7 +227,9 @@ function ProjectContent({
             </h2>
             <div className="mt-4">
               <TaskBreakdown
+                iamId={iamId}
                 isInternal={summary.isInternal}
+                projectCostsEnabled={showProjectCosts}
                 projectNumber={summary.projectNumber}
                 records={projectRecords}
               />

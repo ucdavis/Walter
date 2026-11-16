@@ -54,6 +54,7 @@ interface DataTableProps<TData extends object> {
   columns: DataTableColumns<TData>;
   data: TData[];
   defaultColumnSize?: number;
+  emptyState?: TableActionsRenderer<TData>;
   expandable?: boolean;
   filterPlaceholder?: string;
   footerRowClassName?: string;
@@ -76,6 +77,7 @@ export const DataTable = <TData extends object>({
   columns,
   data,
   defaultColumnSize = 100,
+  emptyState,
   expandable = true,
   filterPlaceholder = 'Search all columns...',
   footerRowClassName,
@@ -147,6 +149,10 @@ export const DataTable = <TData extends object>({
   const areAllExpandableRowsExpanded =
     hasExpandableRows && expandableRows.every((row) => row.getIsExpanded());
   const showFooter = hasAnyFooter(columns);
+  const showEmptyState =
+    emptyState !== undefined && table.getFilteredRowModel().rows.length === 0;
+  const resolvedEmptyState =
+    typeof emptyState === 'function' ? emptyState(table) : emptyState;
   const showPaginationControls =
     pagination === 'on' || (pagination === 'auto' && table.getPageCount() > 1);
   const resolvedTableActions =
@@ -416,6 +422,13 @@ export const DataTable = <TData extends object>({
               ))}
             </thead>
             <tbody>
+              {showEmptyState ? (
+                <tr>
+                  <td colSpan={table.getVisibleLeafColumns().length}>
+                    {resolvedEmptyState}
+                  </td>
+                </tr>
+              ) : null}
               {table.getRowModel().rows.map((row) => {
                 const rowProps = getRowProps?.(row);
 
@@ -452,7 +465,7 @@ export const DataTable = <TData extends object>({
                 );
               })}
             </tbody>
-            {showFooter ? (
+            {showFooter && !showEmptyState ? (
               <tfoot>
                 {table.getFooterGroups().map((footerGroup) => (
                   <tr className={footerRowClassName} key={footerGroup.id}>

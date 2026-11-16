@@ -1,0 +1,12 @@
+{
+  "subscription": "003283b1-cc5e-417a-b037-01ff3c05537b",
+  "resource-group": "rg-walter-prod",
+  "location": "westus2",
+  "app-name": "walter",
+  "env": "production",
+  "app-service-plan-id": "/subscriptions/003283b1-cc5e-417a-b037-01ff3c05537b/resourceGroups/Shared/providers/Microsoft.Web/serverfarms/Petunia",
+  "app-configuration-store-name": "appcs-caes-shared-prod",
+  "app-configuration-resource-group": "rg-shared-appconfig",
+  "app-configuration-subscription-id": "003283b1-cc5e-417a-b037-01ff3c05537b",
+  "runtime-environment": "Production"
+}

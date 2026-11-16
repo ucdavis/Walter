@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
+import { Link } from '@tanstack/react-router';
 import { createColumnHelper } from '@tanstack/react-table';
+import { ExpensesValue } from '@/components/project/ExpenditureCategoryBreakdown.tsx';
 import {
   ChartStringCopyButton,
   FinjectorLink,
@@ -94,8 +96,10 @@ const csvColumns = [
 ];
 
 interface TaskBreakdownProps {
+  iamId?: string;
   /** Internal projects link each task to Finjector; sponsored projects link at the project level instead. */
   isInternal: boolean;
+  projectCostsEnabled?: boolean;
   projectNumber: string;
   records: ProjectRecord[];
 }
@@ -123,7 +127,9 @@ function isHiddenByDefault(row: TaskBreakdownRow): boolean {
 }
 
 export function TaskBreakdown({
+  iamId,
   isInternal,
+  projectCostsEnabled = false,
   projectNumber,
   records,
 }: TaskBreakdownProps) {
@@ -256,12 +262,23 @@ export function TaskBreakdown({
       columnHelper.accessor('expenses', {
         cell: (info) => (
           <span className="flex justify-end">
-            {formatCurrency(info.getValue())}
+            <ExpensesValue
+              iamId={iamId}
+              projectCostsEnabled={projectCostsEnabled}
+              projectNumber={projectNumber}
+              task={info.row.original.taskNum}
+              value={info.getValue()}
+            />
           </span>
         ),
         footer: () => (
           <span className="flex justify-end">
-            {formatCurrency(totals.expenses)}
+            <ExpensesValue
+              iamId={iamId}
+              projectCostsEnabled={projectCostsEnabled}
+              projectNumber={projectNumber}
+              value={totals.expenses}
+            />
           </span>
         ),
         header: () => <span className="flex justify-end">Expenses</span>,
@@ -315,9 +332,43 @@ export function TaskBreakdown({
           </span>
         ),
       }),
+      ...(iamId
+        ? [
+            columnHelper.display({
+              cell: (info) => {
+                const row = info.row.original;
+                return (
+                  <div className="flex justify-end w-full">
+                    <Link
+                      aria-label={`View expenditure categories for task ${row.taskNum}`}
+                      className="link font-semibold text-sm whitespace-nowrap"
+                      params={{ iamId, projectNumber }}
+                      search={{
+                        activity: row.activityCode,
+                        dept: row.financialDepartmentCode,
+                        fund: row.fundCode,
+                        program: row.programCode,
+                        task: row.taskNum,
+                      }}
+                      to="/projects/$iamId/$projectNumber/expenditure-categories"
+                    >
+                      Details
+                    </Link>
+                  </div>
+                );
+              },
+              header: () => (
+                <span className="flex justify-end w-full">More</span>
+              ),
+              id: 'detailsLink',
+            }),
+          ]
+        : []),
     ],
     [
+      iamId,
       isInternal,
+      projectCostsEnabled,
       projectNumber,
       totals.balance,
       totals.budget,

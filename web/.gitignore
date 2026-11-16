@@ -14,6 +14,9 @@ project.lock.json
 .env
 local.settings.json
 
+# Node dependencies
+node_modules/
+
 # Build results
 [Dd]ebug/
 [Dd]ebugPublic/

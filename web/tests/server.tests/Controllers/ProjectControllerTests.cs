@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Server.Controllers;
+using Server.Demo;
 using Server.Services;
 using server.core.Models;
 using server.core.Services;
@@ -29,7 +30,7 @@ public sealed class ProjectControllerTests
         var authorizationService = CreateAuthorizationService();
 
         var controller = new ProjectController(
-            new ResolvingDatamartService(
+            new FakeDatamartService(
                 new SearchablePersonRecord
                 {
                     IamId = "IAM-PM",
@@ -64,7 +65,7 @@ public sealed class ProjectControllerTests
         var authorizationService = CreateAuthorizationService();
 
         var controller = new ProjectController(
-            new ResolvingDatamartService(),
+            new FakeDatamartService(),
             authorizationService,
             new UserService(NullLogger<UserService>.Instance, ctx),
             new PpmPortfolioService(new ThrowingFinancialApiService(), new FakePpmPortfolioReader(), Microsoft.Extensions.Options.Options.Create(new FeatureFlagOptions())))
@@ -90,7 +91,7 @@ public sealed class ProjectControllerTests
         var authorizationService = CreateAuthorizationService();
 
         var controller = new ProjectController(
-            new ResolvingDatamartService(),
+            new FakeDatamartService(),
             authorizationService,
             new UserService(NullLogger<UserService>.Instance, ctx),
             new PpmPortfolioService(new ThrowingFinancialApiService(), new FakePpmPortfolioReader(), Microsoft.Extensions.Options.Options.Create(new FeatureFlagOptions())))
@@ -119,7 +120,7 @@ public sealed class ProjectControllerTests
         var authorizationService = CreateAuthorizationService();
 
         var controller = new ProjectController(
-            new ResolvingDatamartService(),
+            new FakeDatamartService(),
             authorizationService,
             new UserService(NullLogger<UserService>.Instance, ctx),
             new PpmPortfolioService(new ThrowingFinancialApiService(), new FakePpmPortfolioReader(), Microsoft.Extensions.Options.Options.Create(new FeatureFlagOptions())))
@@ -148,7 +149,7 @@ public sealed class ProjectControllerTests
         var authorizationService = CreateAuthorizationService();
 
         var controller = new ProjectController(
-            new ResolvingDatamartService(),
+            new FakeDatamartService(),
             authorizationService,
             new UserService(NullLogger<UserService>.Instance, ctx),
             new PpmPortfolioService(new ThrowingFinancialApiService(), new FakePpmPortfolioReader(), Microsoft.Extensions.Options.Options.Create(new FeatureFlagOptions())))
@@ -204,7 +205,7 @@ public sealed class ProjectControllerTests
         };
 
         var controller = new ProjectController(
-            new ResolvingDatamartService(projection: projection),
+            new FakeDatamartService(projection: projection),
             authorizationService,
             new UserService(NullLogger<UserService>.Instance, ctx),
             new PpmPortfolioService(new ThrowingFinancialApiService(), new FakePpmPortfolioReader(), Microsoft.Extensions.Options.Options.Create(new FeatureFlagOptions())))
@@ -233,7 +234,7 @@ public sealed class ProjectControllerTests
     public async Task GetProjection_passes_history_months_to_datamart(int historyMonths)
     {
         using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
-        var datamart = new ResolvingDatamartService(projection: new ProjectProjectionResult());
+        var datamart = new FakeDatamartService(projection: new ProjectProjectionResult());
         var controller = CreateProjectionController(ctx, datamart);
 
         var result = await controller.GetProjectionAsync("PROJ-001", CancellationToken.None, historyMonths);
@@ -249,7 +250,7 @@ public sealed class ProjectControllerTests
     public async Task GetProjection_rejects_unsupported_history_months(int historyMonths)
     {
         using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
-        var datamart = new ResolvingDatamartService(projection: new ProjectProjectionResult());
+        var datamart = new FakeDatamartService(projection: new ProjectProjectionResult());
         var controller = CreateProjectionController(ctx, datamart);
 
         var result = await controller.GetProjectionAsync("PROJ-001", CancellationToken.None, historyMonths);
@@ -258,7 +259,7 @@ public sealed class ProjectControllerTests
         datamart.LastHistoryMonths.Should().BeNull();
     }
 
-    private static ProjectController CreateProjectionController(AppDbContext ctx, ResolvingDatamartService datamart)
+    private static ProjectController CreateProjectionController(AppDbContext ctx, FakeDatamartService datamart)
         => new(
             datamart,
             CreateAuthorizationService(),
@@ -389,7 +390,7 @@ public sealed class ProjectControllerTests
     public static IEnumerable<object[]> ProjectAccessCases()
     {
         foreach (var legacy in new[] { true, false })
-            foreach (var endpoint in new[] { "byNumber", "personnel", "transactions", "reconciliation", "projection" })
+            foreach (var endpoint in new[] { "byNumber", "personnel", "transactions", "reconciliation", "projection", "costs" })
                 foreach (var membership in new[] { "team-pi", "team-pm", "award-pi", "award-pm", "administrator", "none" })
                     foreach (var forbidden in new[] { false, true })
                         yield return [legacy, endpoint, membership, forbidden];
@@ -408,7 +409,7 @@ public sealed class ProjectControllerTests
         FakeFinancialProject project = new("ALLOWED",
             membership.StartsWith("team") || membership == "administrator" ? [member] : [],
             membership.StartsWith("award") ? [member] : []);
-        var dm = new ResolvingDatamartService(
+        var dm = new FakeDatamartService(
             new SearchablePersonRecord { IamId = requester.IamId, EmployeeId = "CALLER", Name = "Caller" },
             projection: new ProjectProjectionResult(), portfolio: [], allowReports: true);
         var controller = new ProjectController(dm, CreateAuthorizationService(),
@@ -433,6 +434,7 @@ public sealed class ProjectControllerTests
     [InlineData("transactions")]
     [InlineData("reconciliation")]
     [InlineData("projection")]
+    [InlineData("costs")]
     [InlineData("portfolio")]
     public async Task Imported_authorization_propagates_failure_and_cancellation_without_reading_reports(string endpoint)
     {
@@ -440,7 +442,7 @@ public sealed class ProjectControllerTests
         var requester = SeedUser(ctx, "CALLER");
         foreach (var error in new Exception[] { new InvalidOperationException("Snapshot unavailable"), new OperationCanceledException() })
         {
-            var dm = new ResolvingDatamartService(new SearchablePersonRecord { IamId = "IAM-PI", EmployeeId = "PI", Name = "PI" });
+            var dm = new FakeDatamartService(new SearchablePersonRecord { IamId = "IAM-PI", EmployeeId = "PI", Name = "PI" });
             var controller = new ProjectController(dm, CreateAuthorizationService(),
                 new UserService(NullLogger<UserService>.Instance, ctx),
                 new PpmPortfolioService(new ThrowingFinancialApiService(), new FakePpmPortfolioReader { Error = error },
@@ -454,6 +456,35 @@ public sealed class ProjectControllerTests
         }
     }
 
+    [Fact]
+    public async Task Financial_viewer_sees_the_demo_PI_and_PM_without_calling_AE_or_the_datamart()
+    {
+        using var ctx = TestDbContextFactory.CreateInMemory();
+        var dm = new FakeDatamartService();
+        var router = new DemoDataRouter(dm, new FakePpmPortfolioReader { Error = new Exception("Demo ids must not reach the datamart") },
+            new FakeProjectionDataSource(), new DemoDataSource());
+        var controller = new ProjectController(router, CreateAuthorizationService(),
+            new UserService(NullLogger<UserService>.Instance, ctx),
+            new PpmPortfolioService(new ThrowingFinancialApiService(), router,
+                Microsoft.Extensions.Options.Options.Create(new FeatureFlagOptions { UseGraphQLAPI = false })))
+        {
+            ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = CreateUser([Role.Names.FinancialViewer]) } }
+        };
+
+        var portfolio = await controller.GetByIamIdAsync(DemoDataSet.PiIamId, default);
+
+        portfolio.Should().BeOfType<OkObjectResult>().Which.Value.Should().BeAssignableTo<IEnumerable<FacultyPortfolioRecord>>()
+            .Which.Select(r => r.ProjectNumber).Distinct().Should().BeEquivalentTo(["DEMO-1001", "DEMO-1002", "DEMO-1004"]);
+        foreach (var endpoint in new[] { "byNumber", "personnel", "transactions", "reconciliation", "projection", "costs" })
+            (await InvokeProjectEndpoint(controller, endpoint, "DEMO-1001", null)).Should().BeOfType<OkObjectResult>();
+
+        var managed = await controller.GetManagedFaculty(DemoDataSet.PmIamId, default);
+
+        var pis = managed.Should().BeOfType<OkObjectResult>().Which.Value.Should().BeOfType<ProjectController.ManagedPisEnvelope>().Which.Pis;
+        pis.Select(pi => (pi.IamId, pi.ProjectCount)).Should().BeEquivalentTo([(DemoDataSet.PiIamId, 3), ("DEMO000003", 1)]);
+        dm.ReportCalls.Should().Be(0);
+    }
+
     [Theory]
     [InlineData(Role.Names.Admin, true)]
     [InlineData(Role.Names.Admin, false)]
@@ -462,7 +493,7 @@ public sealed class ProjectControllerTests
     public async Task Privileged_project_access_bypasses_membership_sources(string role, bool legacy)
     {
         using var ctx = TestDbContextFactory.CreateInMemory();
-        var dm = new ResolvingDatamartService(projection: new ProjectProjectionResult(), portfolio: [], allowReports: true);
+        var dm = new FakeDatamartService(projection: new ProjectProjectionResult(), portfolio: [], allowReports: true);
         var controller = new ProjectController(dm, CreateAuthorizationService(),
             new UserService(NullLogger<UserService>.Instance, ctx),
             new PpmPortfolioService(new ThrowingFinancialApiService(), new FakePpmPortfolioReader { Error = new Exception("Must bypass membership") },
@@ -470,9 +501,9 @@ public sealed class ProjectControllerTests
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = CreateUser([role]) } }
         };
-        foreach (var endpoint in new[] { "byNumber", "personnel", "transactions", "reconciliation", "projection" })
+        foreach (var endpoint in new[] { "byNumber", "personnel", "transactions", "reconciliation", "projection", "costs" })
             (await InvokeProjectEndpoint(controller, endpoint, "UNRELATED", null)).Should().BeOfType<OkObjectResult>();
-        dm.ReportCalls.Should().Be(5);
+        dm.ReportCalls.Should().Be(6);
     }
 
     private static Task<IActionResult> InvokeProjectEndpoint(ProjectController controller, string endpoint, string codes, string? iamId)
@@ -483,6 +514,7 @@ public sealed class ProjectControllerTests
             "transactions" => controller.GetTransactionsForProjectsAsync(default, codes),
             "reconciliation" => controller.GetGLPPMReconciliationAsync(default, codes),
             "projection" => controller.GetProjectionAsync(codes.Contains(',') ? "FORBIDDEN" : codes, default),
+            "costs" => controller.GetProjectCostsAsync(codes.Contains(',') ? "FORBIDDEN" : codes, default),
             "portfolio" => controller.GetByIamIdAsync(iamId!, default),
             _ => throw new ArgumentOutOfRangeException(nameof(endpoint))
         };
@@ -515,7 +547,7 @@ public sealed class ProjectControllerTests
         bool useGraphQLAPI = true)
     {
         return new ProjectController(
-            new ResolvingDatamartService(targetPerson, portfolio: portfolio),
+            new FakeDatamartService(targetPerson, portfolio: portfolio),
             CreateAuthorizationService(),
             new UserService(NullLogger<UserService>.Instance, ctx),
             new PpmPortfolioService(useGraphQLAPI ? new FakeFinancialApiService([], null, projects) : new ThrowingFinancialApiService(), new FakePpmPortfolioReader(projects), Microsoft.Extensions.Options.Options.Create(new FeatureFlagOptions { UseGraphQLAPI = useGraphQLAPI })))
@@ -586,171 +618,5 @@ public sealed class ProjectControllerTests
         {
             throw new InvalidOperationException("Financial API should not be called for unauthorized users.");
         }
-    }
-
-    private sealed class ResolvingDatamartService : IDatamartService
-    {
-        private readonly SearchablePersonRecord? _person;
-        private readonly ProjectProjectionResult? _projection;
-        private readonly IReadOnlyList<FacultyPortfolioRecord>? _portfolio;
-        private readonly IReadOnlyList<DepartmentBalanceRow> _summaryRows;
-        private readonly IReadOnlyList<DepartmentBalanceOption> _options;
-
-        private readonly bool _allowReports;
-        public int ReportCalls { get; private set; }
-
-        public int? LastHistoryMonths { get; private set; }
-
-        public ResolvingDatamartService(
-            SearchablePersonRecord? person = null,
-            ProjectProjectionResult? projection = null,
-            IReadOnlyList<FacultyPortfolioRecord>? portfolio = null,
-            IReadOnlyList<DepartmentBalanceRow>? summaryRows = null,
-            IReadOnlyList<DepartmentBalanceOption>? options = null,
-            bool allowReports = false)
-        {
-            _allowReports = allowReports;
-            _person = person;
-            _projection = projection;
-            _portfolio = portfolio;
-            _summaryRows = summaryRows ?? Array.Empty<DepartmentBalanceRow>();
-            _options = options ?? Array.Empty<DepartmentBalanceOption>();
-        }
-
-        public Task<IReadOnlyList<ProjectSearchRecord>> SearchProjectsAsync(
-            string fuzzyQuery, string exactProjectNumber, CancellationToken ct = default)
-            => throw new NotImplementedException();
-
-        public Task<IReadOnlyList<SearchablePersonRecord>> SearchPeopleAsync(
-            string query,
-            int limit,
-            CancellationToken ct = default)
-        {
-            return Task.FromResult<IReadOnlyList<SearchablePersonRecord>>(Array.Empty<SearchablePersonRecord>());
-        }
-
-        public Task<SearchablePersonRecord?> GetSearchablePersonByIamIdAsync(
-            string iamId,
-            CancellationToken ct = default)
-        {
-            return Task.FromResult(_person is not null &&
-                string.Equals(iamId, _person.IamId, StringComparison.OrdinalIgnoreCase)
-                ? _person
-                : null);
-        }
-
-        public Task<SearchablePersonRecord?> GetSearchablePersonByEmployeeIdAsync(
-            string employeeId,
-            CancellationToken ct = default)
-        {
-            return Task.FromResult(_person is not null &&
-                string.Equals(employeeId, _person.EmployeeId, StringComparison.OrdinalIgnoreCase)
-                ? _person
-                : null);
-        }
-
-        public Task<IReadOnlyList<SearchablePersonRecord>> GetSearchablePeopleByEmployeeIdsAsync(
-            IEnumerable<string> employeeIds,
-            CancellationToken ct = default)
-        {
-            return Task.FromResult<IReadOnlyList<SearchablePersonRecord>>(
-                _person is not null && employeeIds.Contains(_person.EmployeeId, StringComparer.OrdinalIgnoreCase)
-                    ? new[] { _person }
-                    : Array.Empty<SearchablePersonRecord>());
-        }
-
-        public Task<SearchablePersonRecord?> GetSearchablePersonByEmailAsync(
-            string email,
-            CancellationToken ct = default)
-        {
-            return Task.FromResult<SearchablePersonRecord?>(null);
-        }
-
-        public Task<IReadOnlyList<FacultyPortfolioRecord>> GetFacultyPortfolioAsync(
-            IEnumerable<string> projectNumbers,
-            string? applicationUser = null,
-            string? emulatingUser = null,
-            CancellationToken ct = default)
-        {
-            ReportCalls++;
-            if (_portfolio is null)
-            {
-                throw new InvalidOperationException("Datamart should not be called for unauthorized users.");
-            }
-
-            var requested = new HashSet<string>(projectNumbers, StringComparer.OrdinalIgnoreCase);
-            return Task.FromResult<IReadOnlyList<FacultyPortfolioRecord>>(
-                _portfolio.Where(p => requested.Contains(p.ProjectNumber)).ToList());
-        }
-
-        public Task<IReadOnlyList<PositionBudgetRecord>> GetPositionBudgetsAsync(
-            IEnumerable<string> projectNumbers,
-            string? applicationUser = null,
-            string? emulatingUser = null,
-            CancellationToken ct = default)
-        {
-            ReportCalls++;
-            if (_allowReports) return Task.FromResult<IReadOnlyList<PositionBudgetRecord>>([]);
-            throw new InvalidOperationException("Datamart should not be called for unauthorized users.");
-        }
-
-        public Task<IReadOnlyList<EmployeeAccrualBalanceRecord>> GetEmployeeAccrualBalancesAsync(
-            DateTime startDate,
-            string? applicationUser = null,
-            string? emulatingUser = null,
-            CancellationToken ct = default)
-        {
-            throw new InvalidOperationException("Datamart should not be called for unauthorized users.");
-        }
-
-        public Task<IReadOnlyList<GLPPMReconciliationRecord>> GetGLPPMReconciliationAsync(
-            IEnumerable<string> projectNumbers,
-            string? applicationUser = null,
-            string? emulatingUser = null,
-            CancellationToken ct = default)
-        {
-            ReportCalls++;
-            if (_allowReports) return Task.FromResult<IReadOnlyList<GLPPMReconciliationRecord>>([]);
-            throw new InvalidOperationException("Datamart should not be called for unauthorized users.");
-        }
-
-        public Task<IReadOnlyList<GLTransactionRecord>> GetGLTransactionListingsAsync(
-            IEnumerable<string> projectNumbers,
-            string? applicationUser = null,
-            string? emulatingUser = null,
-            CancellationToken ct = default)
-        {
-            ReportCalls++;
-            if (_allowReports) return Task.FromResult<IReadOnlyList<GLTransactionRecord>>([]);
-            throw new InvalidOperationException("Datamart should not be called for unauthorized users.");
-        }
-
-        public Task<ProjectProjectionResult> GetProjectProjectionAsync(
-            string projectNumber,
-            int historyMonths,
-            string? applicationUser = null,
-            string? emulatingUser = null,
-            CancellationToken ct = default)
-        {
-            ReportCalls++;
-            LastHistoryMonths = historyMonths;
-            return _projection is not null
-                ? Task.FromResult(_projection)
-                : throw new InvalidOperationException("Datamart should not be called for unauthorized users.");
-        }
-
-        public Task<IReadOnlyList<DepartmentBalanceRow>> GetGlBalanceSummaryAsync(
-            DepartmentBalancesQuery query,
-            string? applicationUser = null,
-            string? emulatingUser = null,
-            CancellationToken ct = default)
-            => Task.FromResult(_summaryRows);
-
-        public Task<IReadOnlyList<DepartmentBalanceOption>> GetGlBalanceFilterOptionsAsync(
-            DepartmentBalancesOptionsQuery query,
-            string? applicationUser = null,
-            string? emulatingUser = null,
-            CancellationToken ct = default)
-            => Task.FromResult(_options);
     }
 }

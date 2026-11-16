@@ -1,240 +1,157 @@
 import { useMemo, useState } from 'react';
+import { useSuspenseQuery } from '@tanstack/react-query';
 import { createColumnHelper } from '@tanstack/react-table';
 import { TableExportActions } from '@/components/TableExportActions.tsx';
-import { projectCostCategories } from '@/components/project/projectCostCategories.ts';
 import { projectExpenditureCategoryColor } from '@/components/project/projectChartColors.ts';
 import { formatCurrency } from '@/lib/currency.ts';
 import type { CsvColumn } from '@/lib/csv.ts';
+import { formatDate } from '@/lib/date.ts';
+import {
+  type ProjectCostRecord,
+  projectCostsQueryOptions,
+} from '@/queries/projectCosts.ts';
 import { DataTable } from '@/shared/DataTable.tsx';
-
-interface ProjectCostRecord {
-  accountingPeriod: string;
-  burdenedCost: number;
-  documentEntry: string;
-  expenditureCategory: string;
-  expenditureType: string;
-}
-
-// Temporary sample data keeps the preview useful until project-cost transactions are available.
-const projectCostRecords: ProjectCostRecord[] = [
-  {
-    accountingPeriod: 'Oct-25',
-    burdenedCost: 1125.8,
-    documentEntry: 'Prior Period Allocation',
-    expenditureCategory: '09 - Indirect Costs',
-    expenditureType: '538100 - Sponsored Program Indirect Costs',
-  },
-  {
-    accountingPeriod: 'Nov-25',
-    burdenedCost: 2340.2,
-    documentEntry: 'Service Invoice',
-    expenditureCategory: '03 - Supplies / Services / Other Expenses',
-    expenditureType: '522860 - Technical Services',
-  },
-  {
-    accountingPeriod: 'Dec-25',
-    burdenedCost: 975.45,
-    documentEntry: 'Equipment Rental',
-    expenditureCategory: '03 - Supplies / Services / Other Expenses',
-    expenditureType: '522840 - Equipment Rental',
-  },
-  {
-    accountingPeriod: 'Jan-26',
-    burdenedCost: 1740.26,
-    documentEntry: 'Benefits Allocation',
-    expenditureCategory: '02 - Fringe Benefits',
-    expenditureType: '508110 - Employee Benefits Pool',
-  },
-  {
-    accountingPeriod: 'Feb-26',
-    burdenedCost: 725.1,
-    documentEntry: 'Travel Reimbursement',
-    expenditureCategory: '07 - Travel',
-    expenditureType: '523220 - Field Research Travel',
-  },
-  {
-    accountingPeriod: 'Mar-26',
-    burdenedCost: 1280.4,
-    documentEntry: 'Purchase Order Invoice',
-    expenditureCategory: '03 - Supplies / Services / Other Expenses',
-    expenditureType: '522810 - Research Materials',
-  },
-  {
-    accountingPeriod: 'Apr-26',
-    burdenedCost: 12_785.42,
-    documentEntry: 'Payroll Distribution',
-    expenditureCategory: '01 - Salaries and Wages',
-    expenditureType: '501010 - Research Personnel Salary',
-  },
-  {
-    accountingPeriod: 'Apr-26',
-    burdenedCost: 4116.25,
-    documentEntry: 'Benefits Allocation',
-    expenditureCategory: '02 - Fringe Benefits',
-    expenditureType: '508110 - Employee Benefits Pool',
-  },
-  {
-    accountingPeriod: 'Apr-26',
-    burdenedCost: 986.7,
-    documentEntry: 'Supplier Invoice',
-    expenditureCategory: '03 - Supplies / Services / Other Expenses',
-    expenditureType: '522810 - Research Materials',
-  },
-  {
-    accountingPeriod: 'Apr-26',
-    burdenedCost: 2975.34,
-    documentEntry: 'Indirect Cost Allocation',
-    expenditureCategory: '09 - Indirect Costs',
-    expenditureType: '538100 - Sponsored Program Indirect Costs',
-  },
-  {
-    accountingPeriod: 'May-26',
-    burdenedCost: 13_124.18,
-    documentEntry: 'Payroll Distribution',
-    expenditureCategory: '01 - Salaries and Wages',
-    expenditureType: '501010 - Research Personnel Salary',
-  },
-  {
-    accountingPeriod: 'May-26',
-    burdenedCost: 4235.71,
-    documentEntry: 'Benefits Allocation',
-    expenditureCategory: '02 - Fringe Benefits',
-    expenditureType: '508110 - Employee Benefits Pool',
-  },
-  {
-    accountingPeriod: 'May-26',
-    burdenedCost: 684.9,
-    documentEntry: 'Travel Reimbursement',
-    expenditureCategory: '07 - Travel',
-    expenditureType: '523210 - Domestic Conference Travel',
-  },
-  {
-    accountingPeriod: 'May-26',
-    burdenedCost: 1148.32,
-    documentEntry: 'Purchase Order Invoice',
-    expenditureCategory: '03 - Supplies / Services / Other Expenses',
-    expenditureType: '522830 - Specialized Equipment',
-  },
-  {
-    accountingPeriod: 'May-26',
-    burdenedCost: 3144.76,
-    documentEntry: 'Indirect Cost Allocation',
-    expenditureCategory: '09 - Indirect Costs',
-    expenditureType: '538100 - Sponsored Program Indirect Costs',
-  },
-  {
-    accountingPeriod: 'Jun-26',
-    burdenedCost: 12_934.66,
-    documentEntry: 'Payroll Distribution',
-    expenditureCategory: '01 - Salaries and Wages',
-    expenditureType: '501010 - Research Personnel Salary',
-  },
-  {
-    accountingPeriod: 'Jun-26',
-    burdenedCost: 4188.09,
-    documentEntry: 'Benefits Allocation',
-    expenditureCategory: '02 - Fringe Benefits',
-    expenditureType: '508110 - Employee Benefits Pool',
-  },
-  {
-    accountingPeriod: 'Jun-26',
-    burdenedCost: -320,
-    documentEntry: 'Cost Transfer',
-    expenditureCategory: '03 - Supplies / Services / Other Expenses',
-    expenditureType: '522810 - Research Materials',
-  },
-  {
-    accountingPeriod: 'Jun-26',
-    burdenedCost: 1567.44,
-    documentEntry: 'Supplier Invoice',
-    expenditureCategory: '03 - Supplies / Services / Other Expenses',
-    expenditureType: '522850 - Laboratory Support Services',
-  },
-  {
-    accountingPeriod: 'Jun-26',
-    burdenedCost: 3108.52,
-    documentEntry: 'Indirect Cost Allocation',
-    expenditureCategory: '09 - Indirect Costs',
-    expenditureType: '538100 - Sponsored Program Indirect Costs',
-  },
-];
+import { DatePicker } from '@/shared/DatePicker.tsx';
+import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
 
 const columnHelper = createColumnHelper<ProjectCostRecord>();
-const accountingPeriodMonthIndexes: Record<string, number> = {
-  Apr: 3,
-  Aug: 7,
-  Dec: 11,
-  Feb: 1,
-  Jan: 0,
-  Jul: 6,
-  Jun: 5,
-  Mar: 2,
-  May: 4,
-  Nov: 10,
-  Oct: 9,
-  Sep: 8,
-};
-const projectCostTimelineOptions = [
-  { label: 'Entire project', value: 'entire-project' },
-  { label: '3mo', value: '3-months' },
-  { label: '6mo', value: '6-months' },
-  { label: '9mo', value: '9-months' },
-] as const;
+// Export carries every report column, not just the ones shown on the page.
 const projectCostCsvColumns: CsvColumn<ProjectCostRecord>[] = [
+  { header: 'Transaction Number', key: 'transactionNumber' },
+  { header: 'Award Number', key: 'awardNumber' },
+  { header: 'Award Name', key: 'awardName' },
+  { header: 'Award Type', key: 'awardType' },
+  { header: 'Award Status', key: 'awardStatus' },
+  { format: 'date', header: 'Award Start Date', key: 'awardStartDate' },
+  { format: 'date', header: 'Award End Date', key: 'awardEndDate' },
+  { header: 'Project Number', key: 'projectNumber' },
+  { header: 'Project Name', key: 'projectName' },
+  { header: 'Project Business Unit', key: 'projectBusinessUnit' },
+  { header: 'Project Owning Organization Code', key: 'projectOwningOrgCode' },
+  { header: 'Project Owning Organization Name', key: 'projectOwningOrgName' },
+  { header: 'Project Type', key: 'projectType' },
+  { header: 'Project Status', key: 'projectStatus' },
+  { format: 'date', header: 'Project Start Date', key: 'projectStartDate' },
+  { format: 'date', header: 'Project End Date', key: 'projectEndDate' },
+  { header: 'Task Number', key: 'taskNumber' },
+  { header: 'Task Name', key: 'taskName' },
+  { header: 'Task Status', key: 'taskStatus' },
+  { header: 'Task Fund Code', key: 'taskFundCode' },
+  { header: 'Task Fund Name', key: 'taskFundName' },
+  { header: 'Task Purpose Code', key: 'taskPurposeCode' },
+  { header: 'Task Purpose Name', key: 'taskPurposeName' },
+  { header: 'Task Program Code', key: 'taskProgramCode' },
+  { header: 'Task Program Name', key: 'taskProgramName' },
+  { header: 'Task Activity Code', key: 'taskActivityCode' },
+  { header: 'Task Activity Name', key: 'taskActivityName' },
+  { header: 'Expenditure Business Unit', key: 'expenditureBusinessUnit' },
+  { header: 'Expenditure Organization Code', key: 'expenditureOrgCode' },
+  { header: 'Expenditure Organization Name', key: 'expenditureOrgName' },
   { header: 'Expenditure Category', key: 'expenditureCategory' },
-  { header: 'Accounting Period', key: 'accountingPeriod' },
-  { header: 'Document Entry', key: 'documentEntry' },
   { header: 'Expenditure Type', key: 'expenditureType' },
+  { header: 'Expenditure Batch', key: 'expenditureBatch' },
+  {
+    format: 'date',
+    header: 'Expenditure Item Date',
+    key: 'expenditureItemDate',
+  },
+  { header: 'Accounting Period', key: 'accountingPeriod' },
+  { format: 'date', header: 'Accounting Date', key: 'accountingDate' },
+  { header: 'Document', key: 'document' },
+  { header: 'Document Entry', key: 'documentEntry' },
+  { header: 'Source Transaction Number', key: 'sourceTransactionNumber' },
+  {
+    header: 'Transferred From Transaction Number',
+    key: 'transferredFromTransactionNumber',
+  },
+  { header: 'Adjusting Item', key: 'adjustingItem' },
+  { header: 'Comment', key: 'comment' },
+  { header: 'Billable', key: 'billable' },
+  { header: 'Invoiced Status', key: 'invoicedStatus' },
+  { header: 'Revenue Status', key: 'revenueStatus' },
+  { format: 'currency', header: 'Raw Cost', key: 'rawCost' },
   { format: 'currency', header: 'Burdened Cost', key: 'burdenedCost' },
 ];
 
-type ProjectCostTimeline = (typeof projectCostTimelineOptions)[number]['value'];
-
-function getAccountingPeriodMonthIndex(accountingPeriod: string) {
-  const [monthName, shortYear] = accountingPeriod.split('-');
-  const monthIndex = accountingPeriodMonthIndexes[monthName] ?? 0;
-
-  return (2000 + Number(shortYear)) * 12 + monthIndex;
-}
-
-const latestAccountingPeriodMonthIndex = Math.max(
-  ...projectCostRecords.map((record) =>
-    getAccountingPeriodMonthIndex(record.accountingPeriod)
-  )
-);
-
-function getTimelineMonthCount(timeline: ProjectCostTimeline) {
-  switch (timeline) {
-    case '3-months':
-      return 3;
-    case '6-months':
-      return 6;
-    case '9-months':
-      return 9;
-    default:
-      return null;
-  }
+function TruncatedText({
+  maxWidthClassName,
+  value,
+}: {
+  maxWidthClassName: string;
+  value: string;
+}) {
+  return (
+    <span className="text-sm">
+      <TooltipLabel
+        className={`block min-w-0 ${maxWidthClassName}`}
+        focusable={false}
+        label={value}
+        labelClassName="block truncate"
+        tooltip={value}
+      />
+    </span>
+  );
 }
 
 function sumBurdenedCost(rows: { original: ProjectCostRecord }[]) {
   return rows.reduce((total, row) => total + row.original.burdenedCost, 0);
 }
 
-export function ProjectCostsTable({ category }: { category?: string }) {
+export function ProjectCostsTable({
+  category,
+  isInternal = false,
+  projectNumber,
+  task,
+}: {
+  category?: string;
+  /** Internal projects show a task column and task filter; sponsored projects have a single task. */
+  isInternal?: boolean;
+  projectNumber: string;
+  task?: string;
+}) {
+  const { data: projectCostRecords } = useSuspenseQuery(
+    projectCostsQueryOptions(projectNumber)
+  );
   const [selectedCategories, setSelectedCategories] = useState<string[]>(() =>
     category ? [category] : []
   );
-  const [selectedTimeline, setSelectedTimeline] =
-    useState<ProjectCostTimeline>('entire-project');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  const [selectedTask, setSelectedTask] = useState(task ?? '');
   const columns = useMemo(
     () => [
       columnHelper.accessor('expenditureCategory', {
-        cell: (info) => <span className="text-sm">{info.getValue()}</span>,
+        cell: (info) => (
+          <TruncatedText maxWidthClassName="max-w-40" value={info.getValue()} />
+        ),
         footer: () => <span className="font-proxima-bold">Total costs</span>,
         header: 'Expenditure Category',
-        minSize: 220,
-        size: 260,
+        minSize: 160,
+        size: 180,
       }),
+      ...(isInternal
+        ? [
+            columnHelper.accessor(
+              (row) => [row.taskNumber, row.taskName].join(' '),
+              {
+                cell: (info) => (
+                  <span className="text-sm whitespace-nowrap">
+                    <TooltipLabel
+                      focusable={false}
+                      label={info.row.original.taskNumber}
+                      tooltip={info.row.original.taskName}
+                    />
+                  </span>
+                ),
+                footer: () => null,
+                header: 'Task',
+                id: 'task',
+                minSize: 90,
+                size: 100,
+              }
+            ),
+          ]
+        : []),
       columnHelper.accessor('accountingPeriod', {
         cell: (info) => (
           <span className="text-sm whitespace-nowrap">{info.getValue()}</span>
@@ -244,19 +161,34 @@ export function ProjectCostsTable({ category }: { category?: string }) {
         minSize: 130,
         size: 140,
       }),
+      columnHelper.accessor('expenditureItemDate', {
+        cell: (info) => (
+          <span className="text-sm whitespace-nowrap">
+            {formatDate(info.getValue())}
+          </span>
+        ),
+        footer: () => null,
+        header: 'Expenditure Item Date',
+        minSize: 150,
+        size: 160,
+      }),
       columnHelper.accessor('documentEntry', {
-        cell: (info) => <span className="text-sm">{info.getValue()}</span>,
+        cell: (info) => (
+          <TruncatedText maxWidthClassName="max-w-32" value={info.getValue()} />
+        ),
         footer: () => null,
         header: 'Document Entry',
-        minSize: 180,
-        size: 190,
+        minSize: 130,
+        size: 150,
       }),
       columnHelper.accessor('expenditureType', {
-        cell: (info) => <span className="text-sm">{info.getValue()}</span>,
+        cell: (info) => (
+          <TruncatedText maxWidthClassName="max-w-48" value={info.getValue()} />
+        ),
         footer: () => null,
         header: 'Expenditure Type',
-        minSize: 260,
-        size: 300,
+        minSize: 180,
+        size: 220,
       }),
       columnHelper.accessor('burdenedCost', {
         cell: (info) => (
@@ -276,27 +208,45 @@ export function ProjectCostsTable({ category }: { category?: string }) {
         size: 160,
       }),
     ],
-    []
+    [isInternal]
   );
-  const filteredRecords = useMemo(() => {
-    const timelineMonthCount = getTimelineMonthCount(selectedTimeline);
-    const earliestTimelineMonthIndex =
-      timelineMonthCount === null
-        ? null
-        : latestAccountingPeriodMonthIndex - timelineMonthCount + 1;
+  // Keep a URL-selected category visible even when the project has no costs in it.
+  const projectCostCategories = useMemo(
+    () =>
+      [
+        ...new Set([
+          ...projectCostRecords.map((record) => record.expenditureCategory),
+          ...(category ? [category] : []),
+        ]),
+      ].sort(),
+    [category, projectCostRecords]
+  );
+  // Keep a URL-selected task visible even when the project has no costs on it.
+  const projectCostTasks = useMemo(() => {
+    const taskNames = new Map<string, string>(task ? [[task, '']] : []);
 
+    for (const record of projectCostRecords) {
+      taskNames.set(record.taskNumber, record.taskName);
+    }
+
+    return [...taskNames]
+      .map(([taskNumber, taskName]) => ({ taskName, taskNumber }))
+      .sort((a, b) => a.taskNumber.localeCompare(b.taskNumber));
+  }, [projectCostRecords, task]);
+  const filteredRecords = useMemo(() => {
     return projectCostRecords.filter((record) => {
-      const isWithinTimeline =
-        earliestTimelineMonthIndex === null ||
-        getAccountingPeriodMonthIndex(record.accountingPeriod) >=
-          earliestTimelineMonthIndex;
+      // Dates are 'YYYY-MM-DD' strings, so string comparison orders them.
+      const itemDate = record.expenditureItemDate.slice(0, 10);
+      const isWithinDates =
+        (!fromDate || itemDate >= fromDate) && (!toDate || itemDate <= toDate);
       const matchesCategory =
         selectedCategories.length === 0 ||
         selectedCategories.includes(record.expenditureCategory);
+      const matchesTask = !selectedTask || record.taskNumber === selectedTask;
 
-      return isWithinTimeline && matchesCategory;
+      return isWithinDates && matchesCategory && matchesTask;
     });
-  }, [selectedCategories, selectedTimeline]);
+  }, [fromDate, projectCostRecords, selectedCategories, selectedTask, toDate]);
   const toggleCategory = (category: string) => {
     setSelectedCategories((current) =>
       current.includes(category)
@@ -307,39 +257,80 @@ export function ProjectCostsTable({ category }: { category?: string }) {
 
   return (
     <div data-testid="project-costs-table">
-      <div className="mb-4">
-        <div className="mb-4">
-          <span className="stat-label mb-1 block">Timeline</span>
-          <div aria-label="Timeline" className="join" role="group">
-            {projectCostTimelineOptions.map((option) => {
-              const isSelected = selectedTimeline === option.value;
-
-              return (
+      <div className="mb-6 sm:mb-8 mt-4">
+        <div className="mb-6 flex flex-wrap items-end gap-4">
+          <fieldset className="min-w-0 w-full sm:w-auto">
+            <legend className="mb-2 text-sm font-semibold text-base-content/80">
+              Expenditure item date
+            </legend>
+            <div className="flex flex-wrap items-end gap-4">
+              <DatePicker
+                id="project-costs-from-date"
+                label="From"
+                max={toDate || undefined}
+                onChange={setFromDate}
+                placeholder="Any start date"
+                value={fromDate}
+              />
+              <DatePicker
+                id="project-costs-to-date"
+                label="To"
+                min={fromDate || undefined}
+                onChange={setToDate}
+                placeholder="Any end date"
+                value={toDate}
+              />
+              {fromDate || toDate ? (
                 <button
-                  aria-pressed={isSelected}
-                  className={`btn btn-sm join-item ${
-                    isSelected ? 'btn-active' : ''
-                  }`}
-                  key={option.value}
-                  onClick={() => setSelectedTimeline(option.value)}
+                  className="btn btn-ghost min-h-11 text-base"
+                  onClick={() => {
+                    setFromDate('');
+                    setToDate('');
+                  }}
                   type="button"
                 >
-                  {option.label}
+                  Clear dates
                 </button>
-              );
-            })}
-          </div>
+              ) : null}
+            </div>
+          </fieldset>
+
+          {isInternal ? (
+            <div className="w-full min-w-0 sm:w-auto sm:min-w-56 sm:max-w-full">
+              <label
+                className="mb-2 block text-sm font-medium text-base-content"
+                htmlFor="project-costs-task"
+              >
+                Task
+              </label>
+              <select
+                className="select min-h-11 w-full max-w-full border-main-border bg-base-100 text-base focus:border-primary focus:outline-primary"
+                id="project-costs-task"
+                onChange={(event) => setSelectedTask(event.target.value)}
+                value={selectedTask}
+              >
+                <option value="">All Tasks</option>
+                {projectCostTasks.map((task) => (
+                  <option key={task.taskNumber} value={task.taskNumber}>
+                    {task.taskName
+                      ? `${task.taskNumber} - ${task.taskName}`
+                      : task.taskNumber}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
           <div
             aria-label="Filter by expenditure category"
-            className="tabs tabs-box flex w-fit flex-wrap"
+            className="tabs tabs-box flex w-fit max-w-full flex-wrap gap-1"
             role="group"
           >
             <button
               aria-pressed={selectedCategories.length === 0}
-              className={`tab ${
+              className={`tab h-auto min-h-11 px-4 py-2 text-base font-medium ${
                 selectedCategories.length === 0 ? 'tab-active' : ''
               }`}
               onClick={() => setSelectedCategories([])}
@@ -353,7 +344,7 @@ export function ProjectCostsTable({ category }: { category?: string }) {
               return (
                 <button
                   aria-pressed={isSelected}
-                  className={`tab ${isSelected ? 'tab-active' : ''}`}
+                  className={`tab h-auto min-h-11 px-4 py-2 text-base font-medium ${isSelected ? 'tab-active' : ''}`}
                   key={category}
                   onClick={() => toggleCategory(category)}
                   type="button"
@@ -375,6 +366,40 @@ export function ProjectCostsTable({ category }: { category?: string }) {
       <DataTable
         columns={columns}
         data={filteredRecords}
+        emptyState={(table) => (
+          <div
+            className="flex flex-col items-center gap-3 px-4 py-12 text-center"
+            role="status"
+          >
+            <div>
+              <h3 className="text-lg font-semibold">
+                {projectCostRecords.length === 0
+                  ? 'No project costs available'
+                  : 'No matching project costs'}
+              </h3>
+              <p className="mt-1 text-base text-base-content/70">
+                {projectCostRecords.length === 0
+                  ? 'There are no cost records available for this project.'
+                  : 'Try adjusting your dates, categories, or search to see more costs.'}
+              </p>
+            </div>
+            {projectCostRecords.length > 0 ? (
+              <button
+                className="btn btn-sm btn-outline"
+                onClick={() => {
+                  setFromDate('');
+                  setToDate('');
+                  setSelectedCategories([]);
+                  setSelectedTask('');
+                  table.setGlobalFilter('');
+                }}
+                type="button"
+              >
+                Clear filters
+              </button>
+            ) : null}
+          </div>
+        )}
         footerRowClassName="totaltr"
         getRowProps={(row) => ({
           className: 'hover:bg-base-200/50',
@@ -385,7 +410,7 @@ export function ProjectCostsTable({ category }: { category?: string }) {
           },
         })}
         globalFilter="left"
-        pagination="off"
+        initialState={{ pagination: { pageSize: 100 } }}
         tableActions={(table) => (
           <TableExportActions
             baseFilename="project-costs"

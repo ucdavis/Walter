@@ -1,0 +1,12 @@
+{
+  "subscription": "105dede4-4731-492e-8c28-5121226319b0",
+  "resource-group": "rg-walter-test",
+  "location": "westus2",
+  "app-name": "walter",
+  "env": "test",
+  "app-service-plan-id": "/subscriptions/105dede4-4731-492e-8c28-5121226319b0/resourceGroups/Default-Web-WestUS/providers/Microsoft.Web/serverfarms/DefaultPlan2",
+  "app-configuration-store-name": "appcs-caes-shared-test",
+  "app-configuration-resource-group": "rg-shared-appconfig-test",
+  "app-configuration-subscription-id": "105dede4-4731-492e-8c28-5121226319b0",
+  "runtime-environment": "Test"
+}

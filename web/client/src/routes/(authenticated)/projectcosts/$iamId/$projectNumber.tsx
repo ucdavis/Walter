@@ -1,5 +1,4 @@
 import { ProjectCostsTable } from '@/components/project/ProjectCostsTable.tsx';
-import { hasProjectCostCategory } from '@/components/project/projectCostCategories.ts';
 import { ProjectPortfolioLayout } from '@/components/project/ProjectPortfolioLayout.tsx';
 import { PageEmpty } from '@/components/states/PageEmpty.tsx';
 import { PageError } from '@/components/states/PageError.tsx';
@@ -7,12 +6,15 @@ import { PageLoading } from '@/components/states/PageLoading.tsx';
 import { isAwardExpired } from '@/lib/date.ts';
 import { getErrorPresentation } from '@/lib/errorPresentation.ts';
 import { summarizeProjectByNumber } from '@/lib/projectSummary.ts';
+import { meQueryOptions } from '@/queries/user.ts';
 import { featureFlagsQueryOptions } from '@/queries/featureFlags.ts';
 import { projectsDetailQueryOptions } from '@/queries/project.ts';
+import { projectCostsQueryOptions } from '@/queries/projectCosts.ts';
 import { useUser } from '@/shared/auth/UserContext.tsx';
 import {
   ClipboardDocumentListIcon,
   PresentationChartLineIcon,
+  TableCellsIcon,
 } from '@heroicons/react/24/outline';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import {
@@ -23,12 +25,13 @@ import {
 
 interface ProjectCostsSearch {
   category?: string;
+  task?: string;
 }
 
-function parseCategory(value: unknown) {
-  const category = typeof value === 'string' ? value.trim() : '';
+function parseSearchValue(value: unknown) {
+  const text = typeof value === 'string' ? value.trim() : '';
 
-  return category && hasProjectCostCategory(category) ? category : undefined;
+  return text || undefined;
 }
 
 export const Route = createFileRoute(
@@ -37,14 +40,25 @@ export const Route = createFileRoute(
   component: RouteComponent,
   errorComponent: ProjectCostsErrorBoundary,
   validateSearch: (search: Record<string, unknown>): ProjectCostsSearch => ({
-    category: parseCategory(search.category),
+    category: parseSearchValue(search.category),
+    task: parseSearchValue(search.task),
   }),
   // Keep validation ahead of the loader so TanStack Router infers the search type.
-  loader: async ({ context: { queryClient }, params: { iamId } }) => {
-    await Promise.all([
+  loader: async ({
+    context: { queryClient },
+    params: { iamId, projectNumber },
+  }) => {
+    const user = await queryClient.ensureQueryData(meQueryOptions());
+    const [, featureFlags] = await Promise.all([
       queryClient.ensureQueryData(projectsDetailQueryOptions(iamId)),
-      queryClient.ensureQueryData(featureFlagsQueryOptions()),
+      queryClient.ensureQueryData(featureFlagsQueryOptions(user.id)),
     ]);
+
+    if (featureFlags.projectCostsEnabled) {
+      await queryClient.ensureQueryData(
+        projectCostsQueryOptions(projectNumber)
+      );
+    }
   },
   pendingComponent: () => <PageLoading message="Fetching project costs..." />,
 });
@@ -63,12 +77,15 @@ const ProjectNotFound = ({ projectNumber }: { projectNumber: string }) => (
 );
 
 function RouteComponent() {
+  const user = useUser();
   const { iamId, projectNumber } = Route.useParams();
-  const { category } = Route.useSearch();
+  const { category, task } = Route.useSearch();
   const { data: projects } = useSuspenseQuery(
     projectsDetailQueryOptions(iamId)
   );
-  const { data: featureFlags } = useSuspenseQuery(featureFlagsQueryOptions());
+  const { data: featureFlags } = useSuspenseQuery(
+    featureFlagsQueryOptions(user.id)
+  );
   const summary = summarizeProjectByNumber(projects, projectNumber);
 
   if (!summary) {
@@ -88,7 +105,7 @@ function RouteComponent() {
     <ProjectPortfolioLayout>
       <main className="flex-1 min-w-0">
         <section className="mt-8 mb-2">
-          <div className="mb-4 flex flex-wrap gap-2">
+          <div className="mb-12 flex flex-wrap gap-2">
             <Link
               className="btn btn-sm"
               params={{ iamId, projectNumber: summary.projectNumber }}
@@ -109,13 +126,27 @@ function RouteComponent() {
             ) : null}
           </div>
 
-          <h1 className="h1">Project Costs</h1>
-          <h2 className="subtitle max-w-5xl">{summary.displayName}</h2>
+          <p className="mb-2 flex items-center gap-2 font-semibold uppercase text-base-content/70">
+            <TableCellsIcon aria-hidden="true" className="size-4 shrink-0" />
+            Project Costs
+          </p>
+          <h1 className="h1 max-w-5xl">{summary.displayName}</h1>
         </section>
 
         {featureFlags.projectCostsEnabled ? (
           <section className="section-margin">
-            <ProjectCostsTable category={category} key={category ?? 'all'} />
+            <p className="max-w-3xl">
+              Project Costs are updated weekly on Mondays from the Cognos
+              Project Expense Report. Costs that have occurred since the latest
+              data refresh are not included.
+            </p>
+            <ProjectCostsTable
+              category={category}
+              isInternal={summary.isInternal}
+              key={`${category ?? 'all'}|${task ?? 'all'}`}
+              projectNumber={projectNumber}
+              task={task}
+            />
           </section>
         ) : (
           <PageEmpty message="Project costs are not available in this environment." />

@@ -11,7 +11,6 @@ import {
   ProjectExpenditureProgressCategories,
   ProjectExpenditureProgressSummary,
 } from '@/components/project/ProjectExpenditureProgress.tsx';
-import { hasProjectCostCategory } from '@/components/project/projectCostCategories.ts';
 import { formatCurrency } from '@/lib/currency.ts';
 import type { ProjectRecord } from '@/queries/project.ts';
 import {
@@ -72,19 +71,28 @@ function buildRows(
   filters: ExpenditureCategoryFilters = {}
 ): ExpenditureCategoryRow[] {
   const filtered = records.filter((r) => {
-    if (filters.task && (r.taskNum ?? '') !== filters.task) {
+    if (filters.task !== undefined && (r.taskNum ?? '') !== filters.task) {
       return false;
     }
-    if (filters.fund && (r.fundCode ?? '') !== filters.fund) {
+    if (filters.fund !== undefined && (r.fundCode ?? '') !== filters.fund) {
       return false;
     }
-    if (filters.program && (r.programCode ?? '') !== filters.program) {
+    if (
+      filters.program !== undefined &&
+      (r.programCode ?? '') !== filters.program
+    ) {
       return false;
     }
-    if (filters.activity && (r.activityCode ?? '') !== filters.activity) {
+    if (
+      filters.activity !== undefined &&
+      (r.activityCode ?? '') !== filters.activity
+    ) {
       return false;
     }
-    if (filters.dept && (r.projectOwningOrgCode ?? '') !== filters.dept) {
+    if (
+      filters.dept !== undefined &&
+      (r.projectOwningOrgCode ?? '') !== filters.dept
+    ) {
       return false;
     }
     return true;
@@ -130,41 +138,42 @@ function buildProgressCategories(
   }));
 }
 
-function ExpensesValue({
+export function ExpensesValue({
   category,
   iamId,
   projectCostsEnabled,
   projectNumber,
+  task,
   value,
 }: {
   category?: string;
   iamId?: string;
   projectCostsEnabled: boolean;
   projectNumber: string;
+  task?: string;
   value: number;
 }) {
   const formattedValue = formatCurrency(value);
 
-  if (
-    !projectCostsEnabled ||
-    !iamId ||
-    (category && !hasProjectCostCategory(category))
-  ) {
+  if (!projectCostsEnabled || !iamId) {
     return <span>{formattedValue}</span>;
   }
-
-  const hasCategory = Boolean(category);
 
   return (
     <Link
       aria-label={
-        hasCategory
+        category
           ? `View project costs for ${category}`
-          : 'View all project costs'
+          : task
+            ? `View project costs for task ${task}`
+            : 'View all project costs'
       }
       className="link underline underline-offset-2"
       params={{ iamId, projectNumber }}
-      search={hasCategory ? { category } : {}}
+      search={{
+        ...(category ? { category } : {}),
+        ...(task ? { task } : {}),
+      }}
       to="/projectcosts/$iamId/$projectNumber"
     >
       {formattedValue}
@@ -283,9 +292,9 @@ export function ExpenditureCategoryBreakdown({
   projectNumber,
   records,
 }: ExpenditureCategoryBreakdownProps) {
-  const [selectedView, setSelectedView] = useState<
-    'progress' | 'table' | null
-  >(null);
+  const [selectedView, setSelectedView] = useState<'progress' | 'table' | null>(
+    null
+  );
   const [isExpanded, setIsExpanded] = useState(false);
   const view = progressEnabled ? (selectedView ?? 'table') : 'table';
   const rows = useMemo(() => buildRows(records, filters), [filters, records]);
@@ -351,6 +360,7 @@ export function ExpenditureCategoryBreakdown({
               iamId={iamId}
               projectCostsEnabled={projectCostsEnabled}
               projectNumber={projectNumber}
+              task={filters?.task}
               value={info.getValue()}
             />
           </span>
@@ -361,6 +371,7 @@ export function ExpenditureCategoryBreakdown({
               iamId={iamId}
               projectCostsEnabled={projectCostsEnabled}
               projectNumber={projectNumber}
+              task={filters?.task}
               value={totals.expenses}
             />
           </span>
@@ -418,6 +429,7 @@ export function ExpenditureCategoryBreakdown({
       }),
     ],
     [
+      filters?.task,
       iamId,
       projectCostsEnabled,
       projectNumber,

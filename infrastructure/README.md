@@ -15,8 +15,9 @@ Deployed by `infrastructure/azure/main.bicep`:
 - **Azure Functions App (Linux)** for scheduled notification work (uses the same existing App Service Plan)
 - **Storage Account** for the Azure Functions runtime
 - Optional: SQL firewall rule `AllowAzureServices` (`0.0.0.0`) when `allowAzureServicesToSql=true`
+- Optional: Web App system-assigned identity and store-scoped App Configuration Data Reader access to an existing store
 
-After the Bicep deployment succeeds, `infrastructure/azure/scripts/deploy.sh` seeds missing app settings only:
+After the Bicep deployment succeeds, `infrastructure/azure/scripts/deploy.sh` seeds these app settings when missing:
 
 - **App Setting**: `DB_CONNECTION` on the Web App (built from the SQL server/db + SQL login/password when a SQL password is provided)
 - **App Setting**: `DM_CONNECTION` on the Web App for Datamart-backed reports
@@ -26,7 +27,7 @@ After the Bicep deployment succeeds, `infrastructure/azure/scripts/deploy.sh` se
 - **App Setting**: `Datamart__ApplicationName` on the Functions App for Datamart logging/auditing
 - Notification timer jobs are seeded disabled by default via `Notifications__SenderEnabled=false` and `Notifications__AccrualGenerationEnabled=false`
 
-App settings are additive-only defaults. The deployment script creates these settings when they are missing, but preserves existing app setting keys and values on later runs. If `DB_CONNECTION` is missing, pass `--sql-admin-password` to seed that missing setting. If `DM_CONNECTION` is missing, pass `--datamart-connection-string` or set `DM_CONNECTION` to seed it.
+These settings are additive-only defaults. The deployment script creates them when missing and preserves existing values on later runs. If `DB_CONNECTION` is missing, pass `--sql-admin-password` to seed that missing setting. If `DM_CONNECTION` is missing, pass `--datamart-connection-string` or set `DM_CONNECTION` to seed it. Explicit App Configuration opt-in manages its endpoint and runtime environment separately, as described below.
 
 ### Naming
 
@@ -44,7 +45,8 @@ Resources are generated deterministically from `resourceGroup().id`, `appName`, 
 Prereqs:
 
 - Azure CLI (`az`) installed and authenticated (`az login`)
-- You’re targeting the intended subscription (check with `az account show`)
+- `jq` installed when using a saved JSON configuration
+- Select the intended subscription with a saved configuration or `--subscription`. Manual invocations without either use the current Azure CLI subscription. The script passes the selected subscription on every resource operation without changing the CLI default.
 - An **existing App Service Plan** (Linux-capable) to host the Web App (you pass its resource ID)
 
 Deploy against existing generated SQL infrastructure (creates the resource group if missing):
@@ -79,6 +81,38 @@ infrastructure/azure/scripts/deploy.sh \
   --app-service-plan-id "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Web/serverfarms/<plan>" \
   --what-if
 ```
+
+### App Configuration
+
+App Configuration is opt-in. With no store name, this flow does not configure an endpoint or runtime environment. The template never creates a store or feature flags. `appConfigurationStoreName`, `appConfigurationResourceGroupName`, and `appConfigurationSubscriptionId` select an existing store, including one in another subscription within the same Microsoft Entra tenant. The deploying account needs permission to deploy into the store's resource group, read the store, and create role assignments at store scope.
+
+Saved configurations include the verified resource group, App Service Plan, naming inputs, and separate deployment/store subscription IDs. They contain no secrets or endpoint URLs. Command-line arguments override configuration values.
+
+| Configuration | Deployment | Shared store | Flag label |
+| --- | --- | --- | --- |
+| [`test.json`](azure/config/test.json) | `rg-walter-test`, TEST subscription | `appcs-caes-shared-test` in `rg-shared-appconfig-test` | `Test` |
+| [`production.json`](azure/config/production.json) | `rg-walter-prod`, Production subscription | `appcs-caes-shared-prod` in `rg-shared-appconfig` | `Production` |
+
+Preview either environment from the repository root:
+
+```bash
+infrastructure/azure/scripts/deploy.sh \
+  --config infrastructure/azure/config/test.json --what-if
+infrastructure/azure/scripts/deploy.sh \
+  --config infrastructure/azure/config/production.json --what-if
+```
+
+To provision access before enabling the endpoint, select the intended configuration and add `--app-configuration-access-only`:
+
+```bash
+infrastructure/azure/scripts/deploy.sh \
+  --config infrastructure/azure/config/test.json \
+  --app-configuration-access-only
+```
+
+Allow up to [15 minutes for the role assignment to propagate](https://learn.microsoft.com/en-us/azure/azure-app-configuration/concept-enable-rbac), then rerun without `--app-configuration-access-only`. The script reads the endpoint from the selected store and updates only `AppConfiguration__Endpoint`, `ASPNETCORE_ENVIRONMENT`, and `DOTNET_ENVIRONMENT` together, preserving unrelated settings. Both environment keys use the exact label supplied by `--runtime-environment`, since `DOTNET_ENVIRONMENT` takes precedence in this app. The access-only option skips these three settings; normal infrastructure deployment and default seeding still run. Direct Bicep deployments provision access and output `appConfigurationEndpoint`; the script owns the settings update.
+
+The hosted runtime accepts `Test` or `Production` here. The TEST store also serves local `Development`, which uses Azure CLI authentication as described in [web/README.md](../web/README.md). Shared store creation remains outside Walter's deployment. Removing the opt-in arguments later does not remove existing settings or access. A configured endpoint requires the store to be reachable and authorized at startup, so verify access before enabling it. `--what-if` previews Bicep changes and describes the subsequent settings update without applying it.
 
 ### SQL firewall: allow the Web App outbound IPs
 
