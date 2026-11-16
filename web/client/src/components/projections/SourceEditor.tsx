@@ -434,17 +434,6 @@ export function SourceEditor<T extends ProjectionDraft>({
                 Captured dates: {capturedStart ?? 'No start date'} to{' '}
                 {capturedEnd ?? 'No end date'}
               </p>
-              <button
-                className="btn btn-ghost btn-sm mt-2"
-                onClick={() => {
-                  form.setFieldValue('startDate', capturedStart ?? '');
-                  form.setFieldValue('endDate', capturedEnd ?? '');
-                }}
-                type="button"
-              >
-                <ArrowPathIcon aria-hidden="true" className="size-4" />
-                Reset dates
-              </button>
             </div>
           )
         )}
