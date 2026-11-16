@@ -104,7 +104,7 @@ export function ProjectCostsTable({
   task,
 }: {
   category?: string;
-  /** Internal projects show a task column and task filter; sponsored projects have a single task. */
+  /** Internal, Capital and Fabrication projects show a task column and task filter; sponsored projects have a single task. */
   isInternal?: boolean;
   projectNumber: string;
   task?: string;

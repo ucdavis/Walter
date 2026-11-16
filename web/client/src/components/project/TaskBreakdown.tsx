@@ -97,7 +97,7 @@ const csvColumns = [
 
 interface TaskBreakdownProps {
   iamId?: string;
-  /** Internal projects link each task to Finjector; sponsored projects link at the project level instead. */
+  /** Internal, Capital and Fabrication projects link each task to Finjector; sponsored projects link at the project level instead. */
   isInternal: boolean;
   projectCostsEnabled?: boolean;
   projectNumber: string;
