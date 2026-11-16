@@ -190,32 +190,12 @@ function getPositionSearchText(position: AggregatedPosition): string {
     position.positionDescription,
     position.positionNumber,
     position.jobCode,
-    position.fte,
-    formatDate(position.jobEffectiveDate, ''),
-    formatDate(position.jobEndDate, ''),
-    ...(!position.salaryUnknown
-      ? [
-          position.monthlyRate,
-          position.monthlyFringe,
-          position.monthlyTotal,
-        ].flatMap((amount) => [String(amount), formatCurrency(amount)])
-      : []),
     ...position.distributions.flatMap((distribution) => [
       distribution.record.projectDescription,
       distribution.record.projectId,
       distribution.record.projectType === 'Internal'
         ? distribution.record.task
         : '',
-      `${formatPercent(distribution.distributionPercent)}%`,
-      formatDate(distribution.record.fundingEffectiveDate, ''),
-      formatDate(distribution.record.fundingEndDate, ''),
-      ...(!distribution.salaryUnknown
-        ? [
-            distribution.monthlyRate,
-            distribution.monthlyFringe,
-            distribution.monthlyTotal,
-          ].flatMap((amount) => [String(amount), formatCurrency(amount)])
-        : []),
     ]),
   ].join(' ');
 }
@@ -617,9 +597,16 @@ export function PersonnelTable({ data }: PersonnelTableProps) {
     const normalizedSearch = search.trim().toLocaleLowerCase();
     const matchingPositions = normalizedSearch
       ? positions.filter((position) =>
-          getPositionSearchText(position)
-            .toLocaleLowerCase()
-            .includes(normalizedSearch)
+          normalizedSearch.endsWith('%')
+            ? position.distributions.some(
+                (distribution) =>
+                  !distribution.salaryUnknown &&
+                  `${formatPercent(distribution.distributionPercent)}%` ===
+                    normalizedSearch
+              )
+            : getPositionSearchText(position)
+                .toLocaleLowerCase()
+                .includes(normalizedSearch)
         )
       : positions;
 
@@ -733,7 +720,7 @@ export function PersonnelTable({ data }: PersonnelTableProps) {
               aria-label="Search personnel"
               className="grow"
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search all columns..."
+              placeholder="Search employees or projects..."
               type="text"
               value={search}
             />

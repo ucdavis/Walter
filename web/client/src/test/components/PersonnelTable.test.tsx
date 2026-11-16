@@ -770,9 +770,12 @@ describe('PersonnelTable', () => {
       screen.queryByRole('button', { name: 'Export filtered' })
     ).not.toBeInTheDocument();
 
-    fireEvent.input(screen.getByPlaceholderText('Search all columns...'), {
-      target: { value: 'Sunny' },
-    });
+    fireEvent.input(
+      screen.getByPlaceholderText('Search employees or projects...'),
+      {
+        target: { value: 'Sunny' },
+      }
+    );
 
     expect(
       screen.getByRole('button', { name: 'Export filtered' })
@@ -798,9 +801,12 @@ describe('PersonnelTable', () => {
 
     render(<PersonnelTable data={records} />);
 
-    fireEvent.input(screen.getByPlaceholderText('Search all columns...'), {
-      target: { value: 'Sunny' },
-    });
+    fireEvent.input(
+      screen.getByPlaceholderText('Search employees or projects...'),
+      {
+        target: { value: 'Sunny' },
+      }
+    );
 
     fireEvent.click(screen.getByRole('button', { name: 'Export filtered' }));
 
@@ -816,48 +822,43 @@ describe('PersonnelTable', () => {
     expect(csv).toContain('07/01/2024');
     expect(filename).toBe('personnel-filtered.csv');
   });
-  it.each([
-    '1001',
-    '001234',
-    'TASK-42',
-    formatDate('2020-01-01T00:00:00.000Z', ''),
-    '5000',
-  ])('searches personnel for %s', async (query) => {
-    const user = userEvent.setup();
-    render(
-      <PersonnelTable
-        data={[
-          createRecord({ projectType: 'Internal', task: 'TASK-42' }),
-          createRecord({
-            employeeId: '1002',
-            jobCode: '009999',
-            jobEffectiveDate: '2022-01-01T00:00:00.000Z',
-            monthlyRate: 9000,
-            name: 'Baker, Bob',
-            positionNumber: '40009999',
-            projectType: 'Internal',
-            task: 'OTHER',
-          }),
-        ]}
-      />
-    );
-    await user.type(
-      screen.getByRole('textbox', { name: 'Search personnel' }),
-      query
-    );
-    expect(
-      screen.getByRole('button', { name: /Smith, John/ })
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByRole('button', { name: /Baker, Bob/ })
-    ).not.toBeInTheDocument();
-  });
+  it.each(['1001', '001234', 'TASK-42'])(
+    'searches personnel for %s',
+    async (query) => {
+      const user = userEvent.setup();
+      render(
+        <PersonnelTable
+          data={[
+            createRecord({ projectType: 'Internal', task: 'TASK-42' }),
+            createRecord({
+              employeeId: '1002',
+              jobCode: '009999',
+              jobEffectiveDate: '2022-01-01T00:00:00.000Z',
+              monthlyRate: 9000,
+              name: 'Baker, Bob',
+              positionNumber: '40009999',
+              projectType: 'Internal',
+              task: 'OTHER',
+            }),
+          ]}
+        />
+      );
+      await user.type(
+        screen.getByRole('textbox', { name: 'Search personnel' }),
+        query
+      );
+      expect(
+        screen.getByRole('button', { name: /Smith, John/ })
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: /Baker, Bob/ })
+      ).not.toBeInTheDocument();
+    }
+  );
 
   it.each([
     ['100%', 100],
-    ['100', 100],
     ['33.33%', 33.3333],
-    ['33.33', 33.3333],
   ] as const)(
     'searches displayed distribution percentages for %s',
     async (query, distributionPercent) => {
@@ -886,6 +887,49 @@ describe('PersonnelTable', () => {
       expect(
         screen.queryByRole('button', { name: /Baker, Bob/ })
       ).not.toBeInTheDocument();
+    }
+  );
+
+  it('keeps single-digit searches from matching FTE, percentages, dates, or amounts', async () => {
+    const user = userEvent.setup();
+    render(
+      <PersonnelTable
+        data={[
+          createRecord({ employeeId: '7001', projectId: 'ALPHA' }),
+          createRecord({
+            employeeId: '8002',
+            jobCode: '009999',
+            name: 'Baker, Bob',
+            positionNumber: '87654322',
+            projectId: 'BETA',
+          }),
+        ]}
+      />
+    );
+    await user.type(
+      screen.getByRole('textbox', { name: 'Search personnel' }),
+      '1'
+    );
+    expect(
+      screen.getByRole('button', { name: /Smith, John/ })
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /Baker, Bob/ })
+    ).not.toBeInTheDocument();
+  });
+
+  it.each(['5000', formatDate('2020-01-01T00:00:00.000Z', '')])(
+    'does not search financial amounts or dates for %s',
+    async (query) => {
+      const user = userEvent.setup();
+      render(<PersonnelTable data={[createRecord()]} />);
+      await user.type(
+        screen.getByRole('textbox', { name: 'Search personnel' }),
+        query
+      );
+      expect(
+        screen.getByText('No matching personnel found.')
+      ).toBeInTheDocument();
     }
   );
 
