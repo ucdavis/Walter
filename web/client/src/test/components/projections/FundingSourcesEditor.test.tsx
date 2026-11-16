@@ -121,10 +121,12 @@ describe('funding source selection and grouping', () => {
       screen.queryByRole('region', { name: /search results$/ })
     ).not.toBeInTheDocument();
     expect(
-      screen.getByRole('searchbox', { name: 'Search funding sources' })
+      screen.getByRole('searchbox', { name: 'Choose from your projects' })
     ).toHaveValue('');
     expect(
-      screen.getByRole('button', { name: 'Add planned source' })
+      screen.getByRole('button', {
+        name: "Planning for funding you don't have yet?",
+      })
     ).toBeInTheDocument();
   });
 
@@ -134,7 +136,7 @@ describe('funding source selection and grouping', () => {
       const user = userEvent.setup();
       render(<Harness />);
       await user.type(
-        screen.getByRole('searchbox', { name: 'Search funding sources' }),
+        screen.getByRole('searchbox', { name: 'Choose from your projects' }),
         query
       );
       const results = screen.getByRole('region', {
@@ -151,7 +153,7 @@ describe('funding source selection and grouping', () => {
         })
       ).toHaveTextContent('All 2 tasks');
       const search = screen.getByRole('searchbox', {
-        name: 'Search funding sources',
+        name: 'Choose from your projects',
       });
       expect(search).toHaveValue('');
       await user.type(search, query);
@@ -166,11 +168,70 @@ describe('funding source selection and grouping', () => {
     }
   );
 
+  it('browses all own projects without typing, closes after adding, and reopens for another project', async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+    const search = screen.getByRole('searchbox', {
+      name: 'Choose from your projects',
+    });
+    await user.click(search);
+    expect(search).toHaveValue('');
+    expect(
+      screen.getByRole('region', { name: 'Equipment grant search results' })
+    ).toBeVisible();
+    await user.click(
+      within(
+        screen.getByRole('region', { name: 'Coastal research search results' })
+      ).getByRole('button', { name: 'Add all 2 tasks' })
+    );
+    expectSelection([1, 2]);
+    expect(
+      screen.queryByRole('region', { name: /search results$/ })
+    ).not.toBeInTheDocument();
+    await user.click(search);
+    await user.click(
+      within(
+        screen.getByRole('region', { name: 'Equipment grant search results' })
+      ).getByRole('button', { name: 'Add source' })
+    );
+    expectSelection([1, 2, 3]);
+  });
+
+  it('lets keyboard users browse and add, and dismisses browsing without changing selections', async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+    const search = screen.getByRole('searchbox', {
+      name: 'Choose from your projects',
+    });
+    await user.tab();
+    expect(search).toHaveFocus();
+    await user.tab();
+    expect(
+      screen.getByRole('button', { name: 'Add all 2 tasks' })
+    ).toHaveFocus();
+    await user.keyboard('{Enter}');
+    expectSelection([1, 2]);
+    await user.click(search);
+    await user.keyboard('{Escape}');
+    expect(
+      screen.queryByRole('region', { name: /search results$/ })
+    ).not.toBeInTheDocument();
+    expectSelection([1, 2]);
+    await user.click(search);
+    await user.click(
+      screen.getByRole('heading', { name: 'Your funding sources' })
+    );
+    expect(
+      screen.queryByRole('region', { name: /search results$/ })
+    ).not.toBeInTheDocument();
+    expectSelection([1, 2]);
+  });
+
   it('adds all project tasks even when search matches only one sibling', async () => {
     const user = userEvent.setup();
     render(<Harness />);
     await user.type(
-      screen.getByRole('searchbox', { name: 'Search funding sources' }),
+      screen.getByRole('searchbox', { name: 'Choose from your projects' }),
       'Fieldwork'
     );
     const results = screen.getByRole('region', {
@@ -191,7 +252,7 @@ describe('funding source selection and grouping', () => {
       const user = userEvent.setup();
       render(<Harness />);
       await user.type(
-        screen.getByRole('searchbox', { name: 'Search funding sources' }),
+        screen.getByRole('searchbox', { name: 'Choose from your projects' }),
         query
       );
       const results = screen.getByRole('region', {
@@ -317,7 +378,7 @@ describe('funding source selection and grouping', () => {
     const user = userEvent.setup();
     render(<Harness />);
     await user.type(
-      screen.getByRole('searchbox', { name: 'Search funding sources' }),
+      screen.getByRole('searchbox', { name: 'Choose from your projects' }),
       '01'
     );
     const results = screen.getByRole('region', {
@@ -409,7 +470,9 @@ describe('funding source selection and grouping', () => {
     const user = userEvent.setup();
     render(<Harness />);
     await user.click(
-      screen.getByRole('button', { name: 'Add planned source' })
+      screen.getByRole('button', {
+        name: "Planning for funding you don't have yet?",
+      })
     );
     await user.type(screen.getByLabelText('Source name'), 'Project renewal');
     await user.type(screen.getByLabelText('Planning balance'), '42000');

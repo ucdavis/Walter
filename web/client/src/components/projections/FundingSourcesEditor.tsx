@@ -76,12 +76,12 @@ export function FundingSourcesEditor<T extends ProjectionDraft>({
             <BanknotesIcon aria-hidden="true" className="size-5" />
             Your funding sources
           </h2>
-          <p className="mt-1 text-sm leading-relaxed text-base-content/80">
-            {initialSelection
-              ? 'Search and add the funding sources to include in your plan.'
-              : 'Review your funding sources and add planned funding.'}{' '}
-            Each task keeps its own balance and forecast.
-          </p>
+          {!initialSelection && (
+            <p className="mt-1 text-sm leading-relaxed text-base-content/80">
+              Review your funding sources and add planned funding. Each task
+              keeps its own balance and forecast.
+            </p>
+          )}
         </div>
         <div className="flex flex-wrap gap-2">
           {iamId && !initialSelection && (
@@ -94,14 +94,16 @@ export function FundingSourcesEditor<T extends ProjectionDraft>({
               Add funding source
             </button>
           )}
-          <button
-            className="btn btn-outline"
-            onClick={() => setEditing('planned')}
-            type="button"
-          >
-            <PlusIcon aria-hidden="true" className="size-5" />
-            Add planned source
-          </button>
+          {!initialSelection && (
+            <button
+              className="btn btn-outline"
+              onClick={() => setEditing('planned')}
+              type="button"
+            >
+              <PlusIcon aria-hidden="true" className="size-5" />
+              Add planned source
+            </button>
+          )}
         </div>
       </div>
       {initialSelection ? (
@@ -148,6 +150,15 @@ export function FundingSourcesEditor<T extends ProjectionDraft>({
           }
           sources={draft.content.fundingSources}
         />
+      )}
+      {initialSelection && (
+        <button
+          className="link link-primary mt-4 text-sm"
+          onClick={() => setEditing('planned')}
+          type="button"
+        >
+          Planning for funding you don&apos;t have yet?
+        </button>
       )}
       <p className="mt-5 text-sm text-base-content/80">
         Balances already account for recorded expenses and commitments. Your

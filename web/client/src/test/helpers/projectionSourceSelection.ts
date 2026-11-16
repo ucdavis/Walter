@@ -7,7 +7,7 @@ export async function chooseInitialProjects(
   projects: string[]
 ) {
   const search = await screen.findByRole('searchbox', {
-    name: 'Search funding sources',
+    name: 'Choose from your projects',
   });
   for (const project of projects) {
     await user.clear(search);

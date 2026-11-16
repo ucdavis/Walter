@@ -211,7 +211,9 @@ describe('funding source lifecycle', () => {
         screen.getByLabelText('Plan name'),
         'Empty planning scenario'
       );
-      await screen.findByText('0 funding sources selected');
+      await screen.findByText(
+        'Your selected funding sources will appear here.'
+      );
       await user.click(screen.getByRole('button', { name: 'Continue' }));
       expect(
         screen.queryByRole('button', { name: /^Edit appointment for / })
@@ -332,10 +334,10 @@ describe('funding source lifecycle', () => {
         'Selected task plan'
       );
       const search = await screen.findByRole('searchbox', {
-        name: 'Search funding sources',
+        name: 'Choose from your projects',
       });
       expect(
-        screen.getByText('0 funding sources selected')
+        screen.getByText('Your selected funding sources will appear here.')
       ).toBeInTheDocument();
       expect(screen.queryByRole('article')).not.toBeInTheDocument();
       await user.type(search, 'Task One');
@@ -412,7 +414,7 @@ describe('funding source lifecycle', () => {
       await user.type(screen.getByLabelText('Plan name'), 'Chosen staff only');
       await user.type(
         await screen.findByRole('searchbox', {
-          name: 'Search funding sources',
+          name: 'Choose from your projects',
         }),
         'Task One'
       );
@@ -439,7 +441,7 @@ describe('funding source lifecycle', () => {
       const picker = screen.getByRole('dialog', { name: 'Add funding source' });
       await user.type(
         await within(picker).findByRole('searchbox', {
-          name: 'Search funding sources',
+          name: 'Choose from your projects',
         }),
         'Task Two'
       );
@@ -633,7 +635,7 @@ describe('funding source lifecycle', () => {
         await within(
           screen.getByRole('dialog', { name: 'Add funding source' })
         ).findByRole('searchbox', {
-          name: 'Search funding sources',
+          name: 'Choose from your projects',
         }),
         'Task Two'
       );
