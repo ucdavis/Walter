@@ -890,6 +890,36 @@ describe('PersonnelTable', () => {
     }
   );
 
+  it.each(['Progress 50%', '50%'])(
+    'matches project text ending in a percent sign for %s',
+    async (query) => {
+      const user = userEvent.setup();
+      render(
+        <PersonnelTable
+          data={[
+            createRecord({ projectDescription: 'Progress 50%' }),
+            createRecord({
+              employeeId: '8002',
+              name: 'Baker, Bob',
+              positionNumber: '40009999',
+              projectDescription: 'Other project',
+            }),
+          ]}
+        />
+      );
+      await user.type(
+        screen.getByRole('textbox', { name: 'Search personnel' }),
+        query
+      );
+      expect(
+        screen.getByRole('button', { name: /Smith, John/ })
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: /Baker, Bob/ })
+      ).not.toBeInTheDocument();
+    }
+  );
+
   it('keeps single-digit searches from matching FTE, percentages, dates, or amounts', async () => {
     const user = userEvent.setup();
     render(

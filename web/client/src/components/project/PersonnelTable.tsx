@@ -596,17 +596,18 @@ export function PersonnelTable({ data }: PersonnelTableProps) {
   const filteredPositions = useMemo(() => {
     const normalizedSearch = search.trim().toLocaleLowerCase();
     const matchingPositions = normalizedSearch
-      ? positions.filter((position) =>
-          normalizedSearch.endsWith('%')
-            ? position.distributions.some(
+      ? positions.filter(
+          (position) =>
+            getPositionSearchText(position)
+              .toLocaleLowerCase()
+              .includes(normalizedSearch) ||
+            (normalizedSearch.endsWith('%') &&
+              position.distributions.some(
                 (distribution) =>
                   !distribution.salaryUnknown &&
                   `${formatPercent(distribution.distributionPercent)}%` ===
                     normalizedSearch
-              )
-            : getPositionSearchText(position)
-                .toLocaleLowerCase()
-                .includes(normalizedSearch)
+              ))
         )
       : positions;
 
