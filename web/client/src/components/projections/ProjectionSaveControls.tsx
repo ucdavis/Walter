@@ -21,15 +21,9 @@ export function ProjectionSaveControls() {
   const dirty = isProjectionDirty(session);
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <p
-        className="px-2 text-xs font-medium tracking-wide text-base-content/60 uppercase"
-        role="status"
-      >
-        {dirty ? 'Unsaved changes' : 'No changes'}
-      </p>
       {canSave && (
         <button
-          className="btn btn-primary btn-sm"
+          className="btn btn-primary"
           disabled={
             saving ||
             reloading ||

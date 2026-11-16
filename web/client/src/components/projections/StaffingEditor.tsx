@@ -1,10 +1,5 @@
-import {
-  BanknotesIcon,
-  PencilSquareIcon,
-  PlusIcon,
-  TrashIcon,
-  UserGroupIcon,
-} from '@heroicons/react/24/outline';
+import { formatDate } from '@/lib/date.ts';
+import { PlusIcon, UserGroupIcon } from '@heroicons/react/24/outline';
 import { useImperativeHandle, useRef, useState, type Ref } from 'react';
 import {
   AppointmentEditor,
@@ -22,7 +17,7 @@ import {
   AppointmentFundingStatus,
 } from '@/components/projections/AppointmentFundingStatus.tsx';
 import { ProjectionDialog } from '@/components/projections/ProjectionDialog.tsx';
-import { formatCurrency } from '@/lib/currency.ts';
+import { formatProjectionCurrency as formatCurrency } from '@/components/projections/projectionFormatting.ts';
 import type {
   AppointmentFundingMonth,
   PiProjectionRow,
@@ -114,16 +109,16 @@ export function StaffingEditor<T extends ProjectionDraft>({
     return result;
   }
   return (
-    <div className="mt-5">
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
+    <div className="@container">
+      <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
         <div>
           <h2 className="flex items-center gap-2 text-xl font-semibold">
             <UserGroupIcon aria-hidden="true" className="size-5 shrink-0" />
-            Staffing
+            People & project funding
           </h2>
           <p className="mt-1 text-sm leading-relaxed text-base-content/80">
-            Review salary and benefits, then choose how each appointment is
-            funded.
+            Split a person&apos;s time across funding sources, or change funding
+            over time.
           </p>
         </div>
         <button
@@ -133,26 +128,27 @@ export function StaffingEditor<T extends ProjectionDraft>({
           type="button"
         >
           <PlusIcon aria-hidden="true" className="size-5" />
-          Add hypothetical hire
+          Add person
         </button>
       </div>
+      <p className="mb-5 rounded-md bg-base-200 px-4 py-3 text-sm leading-relaxed text-base-content/80">
+        Each share is a percentage of the appointment. Shares should add up to
+        100%. Outside plan shares count toward the appointment but do not charge
+        these funding sources.
+      </p>
       {draft.content.appointments.length === 0 && (
         <p className="mt-4">No appointments in this plan.</p>
       )}
-      <div className="mt-4 space-y-4">
+      <div className="grid gap-4">
         {draft.content.appointments.map((item) => (
           <article
-            className="overflow-hidden rounded-lg border border-main-border bg-base-100"
+            className="scroll-mt-24 overflow-hidden rounded-lg border border-main-border"
             key={item.id}
           >
-            <div className="flex flex-wrap items-start justify-between gap-3 px-3.5 pt-3.5 pb-2">
-              <div>
-                <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+            <div className="flex flex-wrap items-start justify-between gap-3 p-3.5">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
                   <h3 className="text-base font-semibold">{item.name}</h3>
-                  <span className="text-sm text-base-content/80">
-                    {item.title ? `${item.title} · ` : ''}
-                    {shareFormat.format(item.fte)} FTE
-                  </span>
                   <AppointmentFundingBadges
                     appointmentId={item.id}
                     months={appointmentFunding}
@@ -166,63 +162,37 @@ export function StaffingEditor<T extends ProjectionDraft>({
                     sources={draft.content.fundingSources}
                   />
                 </div>
-                <p className="mt-1 text-sm text-base-content/80 tabular-nums">
-                  <span>
+                <p className="mt-1 text-sm text-base-content/80">
+                  <span className="mr-6 inline-block">
                     {item.monthlySalary === null
                       ? 'Salary needs input'
-                      : `${formatCurrency(item.monthlySalary * 12)} per year at full time`}
+                      : `${formatCurrency(item.monthlySalary * 12)} annual salary`}
                   </span>
-                  {' · '}Fringe (CBR) {shareFormat.format(item.cbrRate)}
+                  <span className="mr-6 inline-block">
+                    {shareFormat.format(item.cbrRate)} CBR
+                  </span>
+                  <span className="mr-6 inline-block">{item.fte} FTE</span>
+                  <span className="inline-block">
+                    Appointment end: {formatDate(item.endDate, 'Not set')}
+                  </span>
                 </p>
-                {!item.isSeeded && (
-                  <p className="mt-1 text-sm">Hypothetical hire</p>
-                )}
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="ms-auto flex flex-wrap gap-2">
                 <button
+                  aria-haspopup="dialog"
                   aria-label={`Edit appointment for ${item.name}`}
-                  className="btn btn-ghost btn-sm text-primary"
+                  className="btn btn-outline btn-sm"
                   id={`edit-appointment-${item.id}`}
                   onClick={() =>
                     target ? target.onChange(item.id) : setEditing(item.id)
                   }
                   type="button"
                 >
-                  <PencilSquareIcon aria-hidden="true" className="size-4" />
-                  Edit appointment
-                </button>
-                <button
-                  aria-label={`Edit funding for ${item.name}`}
-                  className="btn btn-ghost btn-sm text-primary"
-                  id={`edit-funding-${item.id}`}
-                  onClick={() =>
-                    editFunding(
-                      item.id,
-                      item.startDate &&
-                        item.startDate.slice(0, 7) > forecastWindow.startMonth
-                        ? item.startDate.slice(0, 7)
-                        : forecastWindow.startMonth
-                    )
-                  }
-                  type="button"
-                >
-                  <BanknotesIcon aria-hidden="true" className="size-4" />
-                  Edit funding
-                </button>
-                <button
-                  aria-label={`Remove appointment for ${item.name}`}
-                  className="btn btn-ghost btn-sm"
-                  onClick={() => setRemoving(item.id)}
-                  type="button"
-                >
-                  <TrashIcon aria-hidden="true" className="size-4" />
-                  <span className="sr-only">
-                    Remove appointment for {item.name}
-                  </span>
+                  Salary &amp; person details
                 </button>
               </div>
             </div>
-            <div className="px-3.5 pb-3">
+            <div className="px-3.5 empty:hidden [&:has(p)]:pb-3">
               <AppointmentFundingStatus
                 appointment={item}
                 forecastWindow={forecastWindow}
@@ -244,7 +214,7 @@ export function StaffingEditor<T extends ProjectionDraft>({
           {error}
         </p>
       )}
-      {(appointment || editing === 'new') && (
+      {((appointment && removing === null) || editing === 'new') && (
         <AppointmentEditor
           appointment={appointment}
           key={appointment?.id ?? 'new'}
@@ -258,6 +228,7 @@ export function StaffingEditor<T extends ProjectionDraft>({
           onClose={() =>
             appointment && target ? target.onChange(null) : setEditing(null)
           }
+          onRemove={appointment ? () => setRemoving(appointment.id) : undefined}
           ref={editorRef}
           snapshotMonth={draft.seededAt.slice(0, 7)}
         />

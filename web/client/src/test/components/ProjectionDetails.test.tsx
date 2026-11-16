@@ -214,32 +214,24 @@ describe('projection plan details', () => {
       },
     ];
     const user = openWorkspace(plan, false, '?section=expenses&source=1');
-    await screen.findByRole('heading', { name: 'Other expenses' });
+    await screen.findByRole('heading', { name: 'Expenses' });
     const row = (name: string) => screen.getByText(name).closest('tr')!;
-    expect(
-      within(row('Open monthly')).getByText('$3,710.00')
-    ).toBeInTheDocument();
-    expect(
-      within(row('Fixed monthly')).getByText('$920.00')
-    ).toBeInTheDocument();
+    expect(within(row('Open monthly')).getByText('$3,710')).toBeInTheDocument();
+    expect(within(row('Fixed monthly')).getByText('$920')).toBeInTheDocument();
     await openDetails(user);
     await user.selectOptions(screen.getByLabelText('Forecast duration'), '18');
     await user.click(
       screen.getByRole('button', { name: 'Apply plan details' })
     );
+    expect(within(row('Open monthly')).getByText('$5,570')).toBeInTheDocument();
     expect(
-      within(row('Open monthly')).getByText('$5,570.00')
+      within(row('Open monthly')).getByText(/Jan 2026 – Jun 2027/)
     ).toBeInTheDocument();
-    expect(
-      within(row('Open monthly')).getByText(/Jan 2026 through Jun 2027/)
-    ).toBeInTheDocument();
-    expect(
-      within(row('Fixed monthly')).getByText('$920.00')
-    ).toBeInTheDocument();
+    expect(within(row('Fixed monthly')).getByText('$920')).toBeInTheDocument();
     expect(
       within(
-        screen.getByRole('region', { name: 'Historical expense estimates' })
-      ).getByText('$5,570.00')
+        screen.getByRole('rowgroup', { name: 'Historical expense estimates' })
+      ).getByText('$5,570')
     ).toBeInTheDocument();
     expect(read().draft.content.fundingSources[0].expenses).toEqual(
       source.expenses

@@ -1,9 +1,10 @@
+import { projectionSeriesTextColor } from '@/components/projections/projectionFormatting.ts';
 import { useState } from 'react';
 import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
 import { FundingSourceTooltip } from '@/components/projections/FundingSourceTooltip.tsx';
 import { ExclamationTriangleIcon } from '@heroicons/react/24/solid';
 import { budgetShortfallLabel } from '@/components/projections/AppointmentBudgetWarnings.tsx';
-import { formatCurrency } from '@/lib/currency.ts';
+import { formatProjectionCurrency as formatCurrency } from '@/components/projections/projectionFormatting.ts';
 import {
   getAppointmentFundingShortfalls,
   type SourceFundingBalances,
@@ -14,7 +15,7 @@ import {
 } from '@/components/projections/fundingTimelineDates.ts';
 import type { AppointmentFundingMonth } from '@/lib/piProjection.ts';
 import { sourceLabel } from '@/lib/projectionSources.ts';
-import { chartSeriesColor } from '@/shared/chartColors.ts';
+import { projectionSeriesColor as chartSeriesColor } from '@/components/projections/projectionFormatting.ts';
 import type {
   ProjectionAppointment,
   ProjectionFundingSource,
@@ -47,7 +48,7 @@ export function FundingTimeline({
   return (
     <div
       aria-label={`${appointment.name} monthly funding`}
-      className="overflow-x-auto border-t border-base-300 p-3.5 focus-visible:outline-2 focus-visible:outline-primary"
+      className="overflow-x-auto border-t border-main-border p-3.5 pb-4 focus-visible:outline-2 focus-visible:outline-primary"
       role="region"
       tabIndex={0}
     >
@@ -129,7 +130,12 @@ export function FundingTimeline({
                     {fundingMonthLabel(month)}
                   </span>
                   <span
-                    className={`flex h-28 flex-col overflow-hidden rounded-sm border bg-base-200 transition-colors group-hover/month:border-primary ${funding?.hasOverlap ? 'border-error' : funding?.hasGap ? 'border-warning' : 'border-base-300'}`}
+                    className={`flex h-28 flex-col overflow-hidden rounded-sm border transition-colors group-hover/month:border-primary ${funding ? 'bg-base-200' : 'bg-base-300/40'} ${funding?.hasOverlap ? 'border-error' : 'border-main-border'}`}
+                    style={{
+                      backgroundImage: funding
+                        ? undefined
+                        : 'repeating-linear-gradient(135deg, transparent 0 6px, color-mix(in oklab, var(--color-base-content) 5%, transparent) 6px 8px)',
+                    }}
                   >
                     {funding ? (
                       <>
@@ -152,7 +158,7 @@ export function FundingTimeline({
                             );
                             return (
                               <span
-                                className="block shrink-0 overflow-hidden px-1 py-0.5 text-[11px] leading-tight"
+                                className="block shrink-0 overflow-hidden px-1.5 pt-1 text-[11px] leading-tight font-medium"
                                 key={share.fundingSourceId ?? 'outside'}
                                 onMouseEnter={() =>
                                   setHoveredShare({
@@ -173,7 +179,7 @@ export function FundingTimeline({
                                     ? 'var(--color-error-content)'
                                     : share.fundingSourceId === null
                                       ? 'var(--color-neutral-content)'
-                                      : 'var(--color-light-font)',
+                                      : projectionSeriesTextColor(sourceIndex),
                                   height: `${(share.percent / scale) * 100}%`,
                                 }}
                               >
@@ -191,7 +197,7 @@ export function FundingTimeline({
                             );
                           })}
                         {funding.fundedPercent < 1 && (
-                          <span className="flex-1 overflow-hidden px-1 py-1 text-[11px]">
+                          <span className="min-h-0 flex-1 overflow-hidden px-1.5 py-1 text-[11px] leading-tight text-base-content/60">
                             {percent.format(1 - funding.fundedPercent)} open
                           </span>
                         )}
@@ -202,7 +208,7 @@ export function FundingTimeline({
                       </span>
                     )}
                   </span>
-                  <span className="mt-1 block min-h-4 text-center text-[10px]">
+                  <span className="mt-1 block h-4 text-center text-[11px] text-error">
                     {funding?.hasGap && funding.hasOverlap
                       ? 'Gap + overlap'
                       : funding?.hasOverlap

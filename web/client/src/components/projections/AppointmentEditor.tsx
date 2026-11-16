@@ -1,3 +1,4 @@
+import { XMarkIcon, TrashIcon } from '@heroicons/react/24/outline';
 import {
   useEffect,
   useId,
@@ -10,7 +11,7 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { useStore } from '@tanstack/react-form';
 import { useAppForm } from '@/shared/forms/formContext.tsx';
-import { formatCurrency } from '@/lib/currency.ts';
+import { formatProjectionCurrency as formatCurrency } from '@/components/projections/projectionFormatting.ts';
 import { getAppointmentSalaryBaseMonth } from '@/lib/piProjection.ts';
 import {
   validateAppointmentInputs,
@@ -34,12 +35,14 @@ export function AppointmentEditor({
   appointment,
   onApply,
   onClose,
+  onRemove,
   ref,
   snapshotMonth,
 }: {
   appointment?: ProjectionAppointment;
   onApply: (inputs: AppointmentInputs) => ApplyResult;
   onClose: () => void;
+  onRemove?: () => void;
   ref?: Ref<AppointmentEditorHandle>;
   snapshotMonth: string;
 }) {
@@ -83,53 +86,66 @@ export function AppointmentEditor({
   return (
     <dialog
       aria-labelledby={titleId}
-      className="modal"
+      className="m-auto max-h-[calc(100dvh-2rem)] w-[min(48rem,calc(100vw-2rem))] max-w-none overflow-x-hidden overflow-y-auto rounded-lg border border-main-border bg-base-100 p-0 text-base text-base-content shadow-xl backdrop:bg-base-content/30"
       onCancel={(event) => {
         event.preventDefault();
         onClose();
       }}
       ref={dialogRef}
     >
-      <div className="modal-box max-w-3xl rounded-xl border border-main-border p-6">
-        <h2 className="text-xl font-semibold" id={titleId}>
-          {appointment
-            ? `Edit appointment for ${appointment.name}`
-            : 'Add hypothetical hire'}
-        </h2>
-        {initialDefaults ? (
-          <AppointmentForm
-            appointment={appointment}
-            initialDefaults={initialDefaults}
-            inputRef={inputRef}
-            lookups={lookups.data}
-            onApply={onApply}
-            onClose={onClose}
-            ref={formRef}
-            snapshotMonth={snapshotMonth}
-          />
-        ) : lookups.isPending ? (
-          <p className="mt-4" role="status">
-            Loading appointment defaults...
-          </p>
-        ) : lookups.isError ? (
-          <div className="mt-4">
-            <p role="alert">Appointment defaults could not be loaded.</p>
-            <button
-              className="btn btn-outline mt-3"
-              onClick={() => void lookups.refetch()}
-              type="button"
-            >
-              Retry defaults
-            </button>
-          </div>
-        ) : null}
-        {!initialDefaults && (
-          <div className="modal-action border-t border-main-border pt-4">
-            <button className="btn btn-ghost" onClick={onClose} type="button">
-              Cancel
-            </button>
-          </div>
-        )}
+      <div className="min-w-0 max-w-full">
+        <header className="flex items-start justify-between gap-4 border-b border-main-border bg-base-200 px-5 py-5 sm:px-6">
+          <h2 className="text-2xl font-semibold" id={titleId}>
+            {appointment
+              ? `Edit appointment for ${appointment.name}`
+              : 'Add hypothetical hire'}
+          </h2>
+          <button
+            aria-label="Close person details"
+            className="btn btn-ghost btn-sm btn-square"
+            onClick={onClose}
+            type="button"
+          >
+            <XMarkIcon aria-hidden="true" className="size-5" />
+          </button>
+        </header>
+        <div className="p-5 sm:p-6">
+          {initialDefaults ? (
+            <AppointmentForm
+              appointment={appointment}
+              initialDefaults={initialDefaults}
+              inputRef={inputRef}
+              lookups={lookups.data}
+              onApply={onApply}
+              onClose={onClose}
+              onRemove={onRemove}
+              ref={formRef}
+              snapshotMonth={snapshotMonth}
+            />
+          ) : lookups.isPending ? (
+            <p className="mt-4" role="status">
+              Loading appointment defaults...
+            </p>
+          ) : lookups.isError ? (
+            <div className="mt-4">
+              <p role="alert">Appointment defaults could not be loaded.</p>
+              <button
+                className="btn btn-outline mt-3"
+                onClick={() => void lookups.refetch()}
+                type="button"
+              >
+                Retry defaults
+              </button>
+            </div>
+          ) : null}
+          {!initialDefaults && (
+            <div className="modal-action border-t border-main-border pt-4">
+              <button className="btn btn-ghost" onClick={onClose} type="button">
+                Cancel
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </dialog>
   );
@@ -165,6 +181,7 @@ function AppointmentForm({
   lookups,
   onApply,
   onClose,
+  onRemove,
   ref,
   snapshotMonth,
 }: {
@@ -174,6 +191,7 @@ function AppointmentForm({
   lookups?: ProjectionLookups;
   onApply: (inputs: AppointmentInputs) => ApplyResult;
   onClose: () => void;
+  onRemove?: () => void;
   ref: Ref<AppointmentEditorHandle>;
   snapshotMonth: string;
 }) {
@@ -295,7 +313,7 @@ function AppointmentForm({
   ] as const;
   return (
     <form
-      className="mt-4 space-y-4"
+      className="space-y-4"
       noValidate
       onSubmit={(event) => {
         event.preventDefault();
@@ -449,6 +467,17 @@ function AppointmentForm({
         </p>
       )}
       <div className="modal-action border-t border-main-border pt-4">
+        {onRemove && (
+          <button
+            aria-label={`Remove appointment for ${appointment?.name}`}
+            className="btn btn-ghost mr-auto text-error"
+            onClick={onRemove}
+            type="button"
+          >
+            <TrashIcon aria-hidden="true" className="size-5" />
+            Remove person
+          </button>
+        )}
         <button className="btn btn-ghost" onClick={onClose} type="button">
           Cancel
         </button>

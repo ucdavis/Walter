@@ -106,8 +106,8 @@ it('marks only the short source share and month, preserves gap warnings, and edi
   expect(
     within(card).getByText('Source overall planning balance')
   ).toBeInTheDocument();
-  expect(within(card).getByText('$20,000.00')).toBeInTheDocument();
-  expect(within(card).getByText('-$100.00')).toBeInTheDocument();
+  expect(within(card).getByText('$20,000')).toBeInTheDocument();
+  expect(within(card).getByText('-$100')).toBeInTheDocument();
   expect(within(card).getByText('SYNTHETIC-1')).toBeInTheDocument();
   expect(
     within(card).getByText(/Average appointment share/)
@@ -118,7 +118,7 @@ it('marks only the short source share and month, preserves gap warnings, and edi
   await user.unhover(shortShare);
   fireEvent.focus(february);
   const keyboardCard = await screen.findByRole('tooltip');
-  expect(within(keyboardCard).getByText('$5,000.00')).toBeInTheDocument();
+  expect(within(keyboardCard).getByText('$5,000')).toBeInTheDocument();
   expect(
     within(keyboardCard).getByText(/explicitly funded outside this plan/)
   ).toBeInTheDocument();
@@ -129,17 +129,17 @@ it('marks only the short source share and month, preserves gap warnings, and edi
   await user.hover(shortShare);
   expect(screen.getAllByRole('tooltip')).toHaveLength(1);
   expect(
-    within(screen.getByRole('tooltip')).queryByText('$5,000.00')
+    within(screen.getByRole('tooltip')).queryByText('$5,000')
   ).not.toBeInTheDocument();
   const march = screen.getByRole('button', { name: /Alex Example, Mar 2026:/ });
   await user.hover(within(march).getByText('Project A'));
-  await screen.findByText('$0.00');
+  await screen.findByText('$0');
   expect(screen.getAllByRole('tooltip')).toHaveLength(1);
   expect(
     within(screen.getByRole('tooltip')).queryByText(/below zero/)
   ).not.toBeInTheDocument();
   await user.hover(shortShare);
-  await screen.findByText('-$100.00');
+  await screen.findByText('-$100');
   fireEvent.click(february);
   expect(onEdit).toHaveBeenCalledWith('2026-02');
   expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
@@ -212,7 +212,7 @@ it('marks only the sponsored share for a fringe deficit while its overall balanc
   ).toBe('');
   await userEvent.hover(bad);
   const tooltip = await screen.findByRole('tooltip');
-  expect(within(tooltip).getByText('$150,000.00')).toBeInTheDocument();
+  expect(within(tooltip).getByText('$150,000')).toBeInTheDocument();
   expect(
     within(tooltip)
       .getAllByRole('term')
@@ -229,6 +229,6 @@ it('marks only the sponsored share for a fringe deficit while its overall balanc
     within(tooltip).getByText('Fringe month-end balance')
   ).toBeInTheDocument();
   expect(
-    within(tooltip).getByText('-$1,200.00 · No fringe budget recorded')
+    within(tooltip).getByText('-$1,200 · No fringe budget recorded')
   ).toBeInTheDocument();
 });

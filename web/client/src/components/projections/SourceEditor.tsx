@@ -26,7 +26,7 @@ import {
 import { useStore } from '@tanstack/react-form';
 import { useAppForm } from '@/shared/forms/formContext.tsx';
 import { ProjectionDialog } from '@/components/projections/ProjectionDialog.tsx';
-import { formatCurrency } from '@/lib/currency.ts';
+import { formatProjectionCurrency as formatCurrency } from '@/components/projections/projectionFormatting.ts';
 import {
   addPlannedSource,
   editProjectionSource,
@@ -52,6 +52,7 @@ export interface SourceEditorHandle {
 export function SourceEditor<T extends ProjectionDraft>({
   onApply,
   onClose,
+  onRemove,
   ref,
   session,
   source,
@@ -61,6 +62,7 @@ export function SourceEditor<T extends ProjectionDraft>({
     categories: string[]
   ) => SourceOperationResult<T>;
   onClose: () => void;
+  onRemove?: () => void;
   ref?: Ref<SourceEditorHandle>;
   session: ProjectionSession<T>;
   source?: ProjectionFundingSource;
@@ -266,7 +268,7 @@ export function SourceEditor<T extends ProjectionDraft>({
       wide={categoryMode}
     >
       <form
-        className="mt-4 space-y-4"
+        className="space-y-5"
         noValidate
         onSubmit={(event) => {
           event.preventDefault();
@@ -452,6 +454,15 @@ export function SourceEditor<T extends ProjectionDraft>({
           </p>
         )}
         <div className="modal-action">
+          {onRemove && (
+            <button
+              className="btn btn-ghost mr-auto text-error"
+              onClick={onRemove}
+              type="button"
+            >
+              Remove funding source
+            </button>
+          )}
           <button className="btn btn-ghost" onClick={onClose} type="button">
             Cancel
           </button>

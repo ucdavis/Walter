@@ -5,9 +5,8 @@ import {
 } from '@heroicons/react/24/outline';
 import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
 import { projectionHistoryTooltip } from '@/shared/tooltips.ts';
-import { formatCurrency } from '@/lib/currency.ts';
-import { HistoricalExpensesTable } from '@/components/projections/HistoricalExpensesTable.tsx';
-import { AddedExpensesTable } from '@/components/projections/AddedExpensesTable.tsx';
+import { formatProjectionCurrency as formatCurrency } from '@/components/projections/projectionFormatting.ts';
+import { ProjectionExpensesTable } from '@/components/projections/ProjectionExpensesTable.tsx';
 import { useId, useImperativeHandle, useRef, useState, type Ref } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -185,50 +184,33 @@ export function ExpensesEditor<T extends ProjectionDraft>({
     0
   );
   return (
-    <div className="mt-5 space-y-5">
-      <h2 className="flex items-center gap-2 text-xl font-semibold">
-        <ListBulletIcon aria-hidden="true" className="size-5 shrink-0" />
-        Other expenses
-      </h2>
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        {draft.content.fundingSources.length > 0 && (
-          <label className="flex min-w-0 flex-1 basis-64 flex-col gap-1.5 text-sm font-medium">
-            View expenses for
-            <select
-              aria-describedby={sourceHelpId}
-              className="select select-bordered w-full"
-              onChange={(event) =>
-                selectSource(
-                  event.target.value === '' ? null : Number(event.target.value)
-                )
-              }
-              value={selectedSource?.id ?? ''}
-            >
-              <option value="">All funding sources</option>
-              {draft.content.fundingSources.map((source) => (
-                <option key={source.id} value={source.id}>
-                  {sourceLabel(source)}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
+    <div>
+      <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h2 className="flex items-center gap-2 text-xl font-semibold">
+            <ListBulletIcon aria-hidden="true" className="size-5 shrink-0" />
+            Expenses
+          </h2>
+          <p className="mt-1 text-sm text-base-content/80">
+            Review projected costs and add planned expenses.
+          </p>
+        </div>
         <div className="ml-auto flex shrink-0 items-center gap-1">
           <button
-            className="btn btn-primary"
+            className="btn btn-outline"
             disabled={!draft.content.fundingSources.length}
             onClick={openNewExpense}
             type="button"
           >
-            <PlusIcon aria-hidden="true" className="size-5" />
-            Add expense
+            <PlusIcon aria-hidden="true" className="size-5 shrink-0" />
+            Add new expense
           </button>
           <TooltipLabel
             asChild
             label={
               <button
                 aria-label="Change history window"
-                className="btn btn-ghost btn-square btn-sm text-base-content/70"
+                className="btn btn-ghost btn-square btn-sm text-base-content/80"
                 onClick={() => setEditing({ kind: 'history' })}
                 type="button"
               >
@@ -239,9 +221,31 @@ export function ExpensesEditor<T extends ProjectionDraft>({
           />
         </div>
       </div>
+      {draft.content.fundingSources.length > 0 && (
+        <label className="mb-5 grid w-full min-w-0 gap-1.5 text-sm font-medium sm:max-w-3xl">
+          View expenses for
+          <select
+            aria-describedby={sourceHelpId}
+            className="select w-full min-w-0 truncate pr-10"
+            onChange={(event) =>
+              selectSource(
+                event.target.value === '' ? null : Number(event.target.value)
+              )
+            }
+            value={selectedSource?.id ?? ''}
+          >
+            <option value="">All funding sources</option>
+            {draft.content.fundingSources.map((source) => (
+              <option key={source.id} value={source.id}>
+                {sourceLabel(source)}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       {draft.content.fundingSources.length ? (
         <>
-          <p className="text-sm text-base-content/80" id={sourceHelpId}>
+          <p className="mb-4 text-sm text-base-content/80" id={sourceHelpId}>
             {selectedSource
               ? 'Showing expenses charged to this funding source.'
               : 'Showing expenses across all funding sources. Select a source in either table to focus this view.'}
@@ -258,71 +262,61 @@ export function ExpensesEditor<T extends ProjectionDraft>({
               costs within this plan period.
             </p>
           )}
-          <dl className="grid gap-4 rounded-lg border border-main-border bg-base-200 p-5 sm:grid-cols-3 sm:gap-6">
-            <div>
-              <dt className="text-sm text-base-content/80">
-                Historical forecast
-              </dt>
-              <dd className="mt-1 text-2xl font-semibold tabular-nums">
-                {formatCurrency(historicalTotal)}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-sm text-base-content/80">
-                Added expense forecast
-              </dt>
-              <dd className="mt-1 text-2xl font-semibold tabular-nums">
-                {formatCurrency(addedTotal)}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-sm text-base-content/80">
-                Total other expenses
-              </dt>
-              <dd className="mt-1 text-2xl font-semibold tabular-nums">
-                {formatCurrency(historicalTotal + addedTotal)}
-              </dd>
-            </div>
-          </dl>
-          <HistoricalExpensesTable
-            forecastWindow={forecastWindow}
-            historyMonths={draft.content.historyMonths}
-            onEdit={(sourceId, category) =>
-              setEditing({
-                category,
-                kind: 'historical',
-                sourceId,
-              })
-            }
-            onRestore={(sourceId, category) =>
-              apply((current) =>
-                restoreHistoricalExpense(current, sourceId, category)
-              )
-            }
-            onSelectSource={selectSource}
-            sources={visibleSources}
-          />
-          <AddedExpensesTable
-            forecastWindow={forecastWindow}
-            onEdit={(sourceId, id) =>
-              setEditing({ id, kind: 'expense', sourceId })
-            }
-            onRemove={(sourceId, id) =>
-              apply((current) => removeProjectionExpense(current, sourceId, id))
-            }
-            onSelectSource={selectSource}
-            sources={visibleSources}
-          />
-          <div className="flex justify-end">
-            <button
-              className="btn btn-primary"
-              onClick={openNewExpense}
-              type="button"
-            >
-              <PlusIcon aria-hidden="true" className="size-5" />
-              Add expense
-            </button>
+          <div className="overflow-hidden rounded-lg border border-main-border">
+            <dl className="grid gap-4 border-b border-main-border bg-base-200 p-5 sm:grid-cols-3 sm:gap-6">
+              <div>
+                <dt className="text-sm text-base-content/80">
+                  Historical forecast
+                </dt>
+                <dd className="mt-1 text-2xl font-semibold tabular-nums">
+                  {formatCurrency(historicalTotal)}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-sm text-base-content/80">
+                  Added expense forecast
+                </dt>
+                <dd className="mt-1 text-2xl font-semibold tabular-nums">
+                  {formatCurrency(addedTotal)}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-sm text-base-content/80">
+                  Total other expenses
+                </dt>
+                <dd className="mt-1 text-2xl font-semibold tabular-nums">
+                  {formatCurrency(historicalTotal + addedTotal)}
+                </dd>
+              </div>
+            </dl>
+            <ProjectionExpensesTable
+              forecastWindow={forecastWindow}
+              historyMonths={draft.content.historyMonths}
+              onEdit={(sourceId, id) =>
+                setEditing({ id, kind: 'expense', sourceId })
+              }
+              onEditHistorical={(sourceId, category) =>
+                setEditing({ category, kind: 'historical', sourceId })
+              }
+              onRemove={(sourceId, id) =>
+                apply((current) =>
+                  removeProjectionExpense(current, sourceId, id)
+                )
+              }
+              onRestore={(sourceId, category) =>
+                apply((current) =>
+                  restoreHistoricalExpense(current, sourceId, category)
+                )
+              }
+              onSelectSource={selectSource}
+              sources={visibleSources}
+            />
           </div>
+          <p className="mt-4 text-sm leading-relaxed text-base-content/80">
+            Projected expenses use the {draft.content.historyMonths}-month
+            historical average. Planned expenses are costs you add to this
+            scenario.
+          </p>
         </>
       ) : (
         <p>

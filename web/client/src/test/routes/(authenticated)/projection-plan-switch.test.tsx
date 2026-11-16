@@ -141,9 +141,7 @@ describe('switching saved projection plans', () => {
       await screen.findByRole('dialog', { name: 'Leave while saving?' });
       await user.click(screen.getByRole('button', { name: 'Leave anyway' }));
       await screen.findByRole('heading', { name: 'Second plan' });
-      expect(
-        screen.getByText('$180,000.00 per year at full time')
-      ).toBeInTheDocument();
+      expect(screen.getByText('$180,000 annual salary')).toBeInTheDocument();
 
       await act(async () => finishFirst());
       await waitFor(() =>

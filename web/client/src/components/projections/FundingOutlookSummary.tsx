@@ -7,7 +7,7 @@ import type { Ref } from 'react';
 import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
 import { tooltipDefinitions } from '@/shared/tooltips.ts';
 import { fundingMonthLabel } from '@/components/projections/fundingTimelineDates.ts';
-import { formatCurrency } from '@/lib/currency.ts';
+import { formatProjectionCurrency as formatCurrency } from '@/components/projections/projectionFormatting.ts';
 import type {
   ProjectionOutlook,
   SourceOutlook,
@@ -42,7 +42,7 @@ export function FundingOutlookNotice({
   return (
     <section
       aria-label="Funding summary"
-      className={`mb-5 grid grid-cols-[auto_1fr_auto] items-start gap-3 sm:flex rounded-lg border p-4 text-sm ${first ? 'border-error/30 bg-error/5' : 'border-warning/50 bg-warning/5'}`}
+      className={`alert alert-soft mb-6 grid grid-cols-[auto_1fr_auto] items-start gap-3 sm:flex text-sm ${first ? 'alert-error' : 'alert-warning'}`}
       ref={ref}
     >
       <ExclamationTriangleIcon
@@ -69,7 +69,7 @@ export function FundingOutlookNotice({
                   ? ` · ${first.source.taskName}`
                   : ''}
               </p>
-              <p className="mt-1 text-base-content/70">
+              <p className="mt-1 text-base-content/80">
                 {outlook.shortfallSources.length}{' '}
                 {outlook.shortfallSources.length === 1
                   ? 'source falls'
@@ -80,7 +80,7 @@ export function FundingOutlookNotice({
             </div>
             <button
               aria-label={`Explore ${first.label}`}
-              className="btn btn-outline btn-error btn-sm self-start sm:self-auto"
+              className="btn btn-outline btn-sm self-start sm:self-auto"
               onClick={() =>
                 onNavigate({ section: 'overview', source: first.source.id })
               }
@@ -151,33 +151,29 @@ export function FundingOutlookTotals({
   return (
     <dl
       aria-label="Outlook totals"
-      className="grid gap-4 border-y border-base-300 bg-base-200/40 p-4 sm:grid-cols-3 sm:p-5"
+      className="grid gap-4 border-y border-main-border bg-base-200 px-5 py-4 sm:grid-cols-3 sm:gap-6 xl:px-6"
     >
       <div>
-        <dt className="text-sm text-base-content/70">
-          {selected ? 'Planning balance' : 'Funding included in period'}
+        <dt className="text-sm text-base-content/80">
+          Opening planning balance
         </dt>
-        <dd className="mt-1 text-xl font-semibold">
+        <dd className="mt-1 text-2xl font-semibold tabular-nums">
           {formatCurrency(scope.planningBalance)}
         </dd>
-        {!selected && (
-          <p className="mt-1 text-xs text-base-content/70">
-            Sources keep their own capture and availability dates.
-          </p>
-        )}
       </div>
       <div>
-        <dt className="text-sm text-base-content/70">Net forecast costs</dt>
-        <dd className="mt-1 text-xl font-semibold">
+        <dt className="text-sm text-base-content/80">Planned spending</dt>
+        <dd className="mt-1 text-2xl font-semibold tabular-nums">
           {formatCurrency(scope.forecast)}
         </dd>
       </div>
       <div>
-        <dt className="text-sm text-base-content/70">
-          Projected balance at {fundingMonthLabel(endMonth)}
+        <dt className="text-sm text-base-content/80">
+          {selected ? 'Ending balance' : 'Combined ending balance'} ·{' '}
+          {fundingMonthLabel(endMonth)}
         </dt>
         <dd
-          className={`mt-1 text-xl font-semibold ${scope.endBalance !== null && scope.endBalance < 0 ? 'text-error' : ''}`}
+          className={`mt-1 text-2xl font-semibold tabular-nums ${scope.endBalance !== null && scope.endBalance < 0 ? 'text-error' : ''}`}
         >
           {scope.endBalance === null
             ? 'No contribution in this period'

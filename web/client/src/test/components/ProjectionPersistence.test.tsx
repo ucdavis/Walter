@@ -353,7 +353,7 @@ describe('projection saving through the workspace', () => {
     await screen.findByRole('button', {
       name: 'Edit appointment for Alex Example',
     });
-    await user.click(screen.getByRole('button', { name: 'Funding outlook' }));
+    await user.click(screen.getByRole('button', { name: 'Overview' }));
     expect(
       await screen.findByRole('heading', { name: 'Project B details' })
     ).toBeInTheDocument();

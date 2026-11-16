@@ -75,7 +75,7 @@ describe('minimal setup review', () => {
   it('keeps recovered task shortfalls and staffing issues visible with source details collapsed', async () => {
     const user = show();
     const totals = screen.getByLabelText('Outlook totals');
-    expect(totals).toHaveTextContent('$16,050.00');
+    expect(totals).toHaveTextContent('$16,050');
     const issues = screen.getByRole('region', { name: 'Items to review' });
     expect(issues).toHaveTextContent(
       '1 funding source falls below zero, first in Jan 2026.'
@@ -97,7 +97,7 @@ describe('minimal setup review', () => {
     expect(shortfall).toHaveTextContent(
       'First shortfall Jan 2026. Recovers by plan end.'
     );
-    expect(shortfall).toHaveTextContent('$50.00');
+    expect(shortfall).toHaveTextContent('$50');
   });
 
   it('distinguishes future funding from sources with no financial data without inventing zero balances', async () => {
@@ -128,7 +128,7 @@ describe('minimal setup review', () => {
     expect(emptyRow).toHaveTextContent('No forecast data in this period');
     for (const row of [futureRow, emptyRow]) {
       expect(row).toHaveTextContent('Not included');
-      expect(row).not.toHaveTextContent('$0.00');
+      expect(row).not.toHaveTextContent('$0');
     }
   });
 });

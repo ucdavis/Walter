@@ -241,7 +241,7 @@ describe('funding source lifecycle', () => {
       ).toHaveValue('2');
       const sectionButton = within(
         screen.getByRole('navigation', { name: 'Plan sections' })
-      ).getByRole('button', { name: 'Funding sources' });
+      ).getByRole('button', { name: 'Funding' });
       sectionButton.focus();
       await user.keyboard('{Enter}');
       await waitFor(() =>
@@ -605,7 +605,10 @@ describe('funding source lifecycle', () => {
     const user = userEvent.setup();
     try {
       await user.click(
-        await screen.findByRole('button', { name: /Remove .*Task T2/ })
+        await screen.findByRole('button', { name: /Edit .*Task T2/ })
+      );
+      await user.click(
+        screen.getByRole('button', { name: 'Remove funding source' })
       );
       await user.click(
         within(screen.getByRole('dialog')).getByRole('button', {

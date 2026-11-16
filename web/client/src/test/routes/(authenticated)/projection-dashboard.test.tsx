@@ -78,6 +78,37 @@ function openDashboard() {
 }
 
 describe('projection dashboard', () => {
+  it('navigates saved plans from the collapsible dashboard plan list with the keyboard', async () => {
+    handleDashboard([example(71, 'Field season'), example(72, 'Renewal')]);
+    const route = openDashboard();
+    const user = userEvent.setup();
+    try {
+      const sidebar = await screen.findByRole('complementary', {
+        name: 'Projection plans',
+      });
+      const collapse = within(sidebar).getByRole('button', {
+        name: 'Collapse plan list',
+      });
+      expect(collapse).toHaveAttribute('aria-expanded', 'true');
+      await user.click(collapse);
+      const expand = within(sidebar).getByRole('button', {
+        name: 'Expand plan list',
+      });
+      expect(expand).toHaveAttribute('aria-expanded', 'false');
+      await user.click(expand);
+      const link = within(sidebar).getByRole('link', { name: 'Renewal' });
+      expect(link).toHaveAttribute('href', '/projections/IAM-PREVIEW/72');
+      link.focus();
+      await user.keyboard('{Enter}');
+      await screen.findByRole('heading', { name: 'Renewal' });
+      expect(route.router.state.location.pathname).toBe(
+        '/projections/IAM-PREVIEW/72'
+      );
+    } finally {
+      route.cleanup();
+    }
+  });
+
   it('removes plan entry points when the flag turns off while viewing the dashboard', async () => {
     handleDashboard([example(71, 'Visible plan')]);
     const route = openDashboard();
@@ -145,7 +176,7 @@ describe('projection dashboard', () => {
       });
       release();
       const card = await screen.findByRole('article', { name: 'Latest plan' });
-      expect(await within(card).findByText('$6,000.00')).toBeInTheDocument();
+      expect(await within(card).findByText('$6,000')).toBeInTheDocument();
       expect(reads).toBe(2);
       expect(
         route.queryClient.getQueryState(['projections', original.id])
@@ -162,7 +193,7 @@ describe('projection dashboard', () => {
     handleDashboard([original]);
     const route = openDashboard();
     try {
-      expect(await screen.findByText('$2,000.00')).toBeInTheDocument();
+      expect(await screen.findByText('$2,000')).toBeInTheDocument();
       const updated = structuredClone(original);
       updated.name = 'Revised plan';
       updated.updatedAt = '2026-11-09T22:00:00.1234567Z';
@@ -185,7 +216,7 @@ describe('projection dashboard', () => {
         );
       });
       const card = await screen.findByRole('article', { name: 'Revised plan' });
-      expect(await within(card).findByText('$5,000.00')).toBeInTheDocument();
+      expect(await within(card).findByText('$5,000')).toBeInTheDocument();
       expect(
         screen.queryByRole('article', { name: 'Original plan' })
       ).not.toBeInTheDocument();
@@ -221,7 +252,7 @@ describe('projection dashboard', () => {
     const route = openDashboard();
     try {
       const ready = await screen.findByRole('article', { name: 'Ready plan' });
-      expect(await within(ready).findByText('$2,000.00')).toBeInTheDocument();
+      expect(await within(ready).findByText('$2,000')).toBeInTheDocument();
       expect(
         within(screen.getByRole('article', { name: 'Slow plan' })).getByText(
           'Loading preview...'
@@ -243,7 +274,7 @@ describe('projection dashboard', () => {
       expect(
         await within(
           screen.getByRole('article', { name: 'Slow plan' })
-        ).findByText('$2,000.00')
+        ).findByText('$2,000')
       ).toBeInTheDocument();
     } finally {
       release();
@@ -297,19 +328,19 @@ describe('projection dashboard', () => {
       const current = await screen.findByRole('region', {
         name: 'Current project balances',
       });
-      expect(await within(current).findByText('$600.00')).toBeInTheDocument();
+      expect(await within(current).findByText('$600')).toBeInTheDocument();
       expect(current.querySelector('details')).not.toHaveAttribute('open');
       await userEvent
         .setup()
         .click(within(current).getByText('Project balances (2)'));
       expect(current.querySelector('details')).toHaveAttribute('open');
-      expect(within(current).getByText('$400.00')).toBeVisible();
-      expect(within(current).getByText('-$100.00')).toBeVisible();
+      expect(within(current).getByText('$400')).toBeVisible();
+      expect(within(current).getByText('-$100')).toBeVisible();
       expect(within(current).getByText('Fieldwork T1')).toBeVisible();
       expect(
         await within(
           screen.getByRole('article', { name: 'Captured plan' })
-        ).findByText('$2,000.00')
+        ).findByText('$2,000')
       ).toBeInTheDocument();
       expect(seedReads).toBe(0);
       expect(writes).toBe(0);
@@ -350,7 +381,7 @@ describe('projection dashboard', () => {
       const card = await screen.findByRole('article', {
         name: 'Recovered shortfall',
       });
-      expect(await within(card).findByText('$1,300.00')).toBeInTheDocument();
+      expect(await within(card).findByText('$1,300')).toBeInTheDocument();
       expect(
         within(card).queryByText(/falls below zero/)
       ).not.toBeInTheDocument();
@@ -361,7 +392,7 @@ describe('projection dashboard', () => {
       expect(
         await within(absent).findByText('No forecast data')
       ).toBeInTheDocument();
-      expect(within(absent).queryByText('$0.00')).not.toBeInTheDocument();
+      expect(within(absent).queryByText('$0')).not.toBeInTheDocument();
       expect(within(absent).queryByRole('img')).not.toBeInTheDocument();
     } finally {
       route.cleanup();
@@ -398,7 +429,7 @@ describe('projection dashboard', () => {
       ).toBeTruthy();
       expect(graph.querySelector('line')).toHaveAttribute(
         'stroke-dasharray',
-        '4 4'
+        '5 3'
       );
       const link = within(shortCard).getByRole('link', {
         name: `Open plan ${short.name}`,
@@ -445,7 +476,7 @@ describe('projection dashboard', () => {
       await user.click(
         await screen.findByRole('button', { name: 'Retry balances' })
       );
-      expect(await screen.findByText('$2,000.00')).toBeInTheDocument();
+      expect(await screen.findByText('$2,000')).toBeInTheDocument();
       expect(
         await screen.findByText('No eligible project balances are available.')
       ).toBeInTheDocument();

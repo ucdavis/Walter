@@ -1,14 +1,12 @@
 import {
   BanknotesIcon,
   ListBulletIcon,
-  PencilSquareIcon,
   UserGroupIcon,
 } from '@heroicons/react/24/outline';
 import { useMemo } from 'react';
-import { FundingOutlookTotals } from '@/components/projections/FundingOutlookSummary.tsx';
 import { PlanNotesField } from '@/components/projections/PlanDetailsFields.tsx';
 import { fundingMonthLabel } from '@/components/projections/fundingTimelineDates.ts';
-import { formatCurrency } from '@/lib/currency.ts';
+import { formatProjectionCurrency as formatCurrency } from '@/components/projections/projectionFormatting.ts';
 import { buildProjectionOutlook } from '@/lib/projectionOutlook.ts';
 import type { ProjectionResults } from '@/lib/projectionWorkspace.ts';
 import type { ProjectionDraft } from '@/queries/projections.ts';
@@ -45,8 +43,11 @@ export function ProjectionReviewStep({
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <h3 className="text-2xl font-bold">{name.trim()}</h3>
-        <p className="mt-1 text-sm">
+        <span className="inline-flex items-center rounded bg-base-200 px-2 py-1 text-sm font-semibold text-primary">
+          {draft.content.forecastMonths}-month plan
+        </span>
+        <h3 className="my-2 text-2xl font-bold">{name.trim()}</h3>
+        <p className="mt-1 text-sm text-base-content/80">
           {draft.content.forecastMonths}-month forecast,{' '}
           {fundingMonthLabel(results.forecastWindow.startMonth)} through{' '}
           {fundingMonthLabel(results.forecastWindow.endMonth)}.
@@ -56,7 +57,7 @@ export function ProjectionReviewStep({
         {[
           {
             action: 'Edit funding sources',
-            detail: 'Each source keeps its own balance and forecast.',
+            detail: `${formatCurrency(outlook.planningBalance)} available`,
             icon: BanknotesIcon,
             step: 0 as const,
             title: 'Funding sources',
@@ -83,29 +84,26 @@ export function ProjectionReviewStep({
             className="flex flex-col rounded-lg border border-main-border p-4"
             key={step}
           >
-            <h3 className="flex items-center gap-2 text-sm font-medium text-base-content/80">
-              <Icon aria-hidden="true" className="size-5" />
-              {title}
-            </h3>
+            <div className="flex items-center justify-between gap-3 text-sm text-base-content/80">
+              <h3 className="flex items-center gap-2">
+                <Icon aria-hidden="true" className="size-5 shrink-0" />
+                {title}
+              </h3>
+              <button
+                aria-label={action}
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-primary"
+                disabled={disabled}
+                onClick={() => onEditStep(step)}
+                type="button"
+              >
+                Edit
+              </button>
+            </div>
             <p className="mt-4 text-xl font-semibold">{value}</p>
             <p className="mt-2 text-sm text-base-content/80">{detail}</p>
-            <button
-              className="btn btn-ghost btn-sm mt-3 self-start px-0 text-primary"
-              disabled={disabled}
-              onClick={() => onEditStep(step)}
-              type="button"
-            >
-              <PencilSquareIcon aria-hidden="true" className="size-4" />
-              {action}
-            </button>
           </div>
         ))}
       </nav>
-      <FundingOutlookTotals
-        endMonth={results.forecastWindow.endMonth}
-        outlook={outlook}
-        selected={undefined}
-      />
       {(outlook.firstShortfallMonth || gaps > 0 || overlaps > 0) && (
         <section
           aria-label="Items to review"
@@ -139,6 +137,21 @@ export function ProjectionReviewStep({
           </p>
         </section>
       )}
+      <dl
+        aria-label="Outlook totals"
+        className="flex flex-wrap items-center justify-between gap-4 border-t border-main-border pt-5"
+      >
+        <dt className="text-sm text-base-content/80">
+          Combined ending balance
+        </dt>
+        <dd
+          className={`text-3xl font-semibold ${outlook.endBalance !== null && outlook.endBalance < 0 ? 'text-error' : ''}`}
+        >
+          {outlook.endBalance === null
+            ? 'No contribution in this period'
+            : formatCurrency(outlook.endBalance)}
+        </dd>
+      </dl>
       {outlook.sources.length === 0 ? (
         <p className="text-sm">No funding sources selected.</p>
       ) : (

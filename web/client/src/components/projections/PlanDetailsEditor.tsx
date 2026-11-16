@@ -88,7 +88,7 @@ export function PlanDetailsEditor({
   return (
     <ProjectionDialog onClose={onClose} title="Edit plan details">
       <form
-        className="mt-4 space-y-4"
+        className="@container space-y-5"
         noValidate
         onSubmit={(event) => {
           event.preventDefault();
@@ -97,28 +97,30 @@ export function PlanDetailsEditor({
           }
         }}
       >
-        <form.Field name="name">
-          {(field) => (
-            <label className="flex flex-col gap-2">
-              Plan name
-              <input
-                className="input input-bordered w-full"
-                maxLength={MAX_PLAN_NAME_LENGTH}
-                onBlur={field.handleBlur}
-                onChange={(event) => field.handleChange(event.target.value)}
+        <div className="grid grid-cols-1 gap-5 @xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+          <form.Field name="name">
+            {(field) => (
+              <label className="flex min-w-0 flex-col gap-2 text-sm font-medium">
+                Plan name
+                <input
+                  className="input input-bordered w-full"
+                  maxLength={MAX_PLAN_NAME_LENGTH}
+                  onBlur={field.handleBlur}
+                  onChange={(event) => field.handleChange(event.target.value)}
+                  value={field.state.value}
+                />
+              </label>
+            )}
+          </form.Field>
+          <form.Field name="forecastMonths">
+            {(field) => (
+              <PlanDurationField
+                onChange={field.handleChange}
                 value={field.state.value}
               />
-            </label>
-          )}
-        </form.Field>
-        <form.Field name="forecastMonths">
-          {(field) => (
-            <PlanDurationField
-              onChange={field.handleChange}
-              value={field.state.value}
-            />
-          )}
-        </form.Field>
+            )}
+          </form.Field>
+        </div>
         {window && (
           <p className="text-sm">
             Forecast from {fundingMonthLabel(window.startMonth)} through{' '}

@@ -12,7 +12,7 @@ import {
   validateExpenseInputs,
   type ExpenseInputs,
 } from '@/lib/projectionExpenses.ts';
-import { formatCurrency } from '@/lib/currency.ts';
+import { formatProjectionCurrency as formatCurrency } from '@/components/projections/projectionFormatting.ts';
 import type { PendingExpenseEditor } from '@/lib/projectionWorkspace.ts';
 import type {
   ProjectionExpense,
@@ -182,7 +182,7 @@ export function ExpenseEditor({
         </p>
       )}
       <form
-        className="mt-4 space-y-4"
+        className="space-y-5"
         noValidate
         onSubmit={(event) => {
           event.preventDefault();

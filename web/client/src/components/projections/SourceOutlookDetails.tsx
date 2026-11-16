@@ -5,7 +5,7 @@ import {
   getSourceFundingBasis,
 } from '@/lib/projectionFundingBalances.ts';
 import { SourceOutlookAppointments } from '@/components/projections/SourceOutlookAppointments.tsx';
-import { formatCurrency } from '@/lib/currency.ts';
+import { formatProjectionCurrency as formatCurrency } from '@/components/projections/projectionFormatting.ts';
 import { FRINGE_CATEGORY, SALARY_CATEGORY } from '@/lib/piProjection.ts';
 import type { SourceOutlook } from '@/lib/projectionOutlook.ts';
 import { sourceCapturedBalance } from '@/lib/projectionSources.ts';

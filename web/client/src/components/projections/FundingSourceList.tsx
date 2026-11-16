@@ -5,11 +5,9 @@ import type { ProjectionFundingSource } from '@/queries/projections.ts';
 /** Captured project numbers group sources even when editable names change. */
 export function FundingSourceList({
   onEdit,
-  onRemove,
   sources,
 }: {
   onEdit: (id: number) => void;
-  onRemove: (id: number) => void;
   sources: ProjectionFundingSource[];
 }) {
   const [search, setSearch] = useState('');
@@ -39,7 +37,6 @@ export function FundingSourceList({
       grouped={grouped}
       key={source.id}
       onEdit={onEdit}
-      onRemove={onRemove}
       source={source}
     />
   );
@@ -64,11 +61,11 @@ export function FundingSourceList({
           return (
             <section
               aria-label={`${project} funding sources`}
-              className="min-w-0 rounded-lg border border-primary/40 bg-primary/5 p-4 sm:col-span-2 xl:col-span-3"
+              className="min-w-0 sm:col-span-2 xl:col-span-3"
               key={key}
             >
               <h3 className="font-semibold break-words">{project}</h3>
-              <p className="mt-1 text-sm text-base-content/70">
+              <p className="mt-1 text-sm text-base-content/80">
                 Project {group[0].projectNumber} · {group.length} tasks
               </p>
               <div

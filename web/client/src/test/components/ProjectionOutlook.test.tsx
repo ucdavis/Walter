@@ -176,7 +176,7 @@ describe('funding outlook', () => {
     ).toHaveTextContent('Source 1 · Task 1');
     const table = screen.getByRole('table', { name: 'Funding sources' });
     expect(within(table).getByText('1 task shortfall')).toBeInTheDocument();
-    expect(within(table).getByText('$1,050.00')).toBeInTheDocument();
+    expect(within(table).getByText('$1,050')).toBeInTheDocument();
     await user.click(
       within(table).getByRole('button', { name: /Field research/ })
     );
@@ -209,6 +209,9 @@ describe('funding outlook', () => {
     expect(
       screen.getByRole('region', { name: 'Funding summary' })
     ).toHaveTextContent(summary!);
+    if (!screen.queryByRole('checkbox', { name: 'Group by project' })) {
+      await user.click(screen.getByText(/Chart lines ·/));
+    }
     await user.click(
       screen.getByRole('checkbox', { name: 'Group by project' })
     );
@@ -218,7 +221,7 @@ describe('funding outlook', () => {
     ).toBeChecked();
     expect(
       screen.getByRole('table', { name: 'Funding sources' })
-    ).toHaveTextContent('$1,050.00');
+    ).toHaveTextContent('$1,050');
     await user.click(
       within(
         screen.getByRole('navigation', { name: 'Chart legend' })
@@ -229,6 +232,9 @@ describe('funding outlook', () => {
     ).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Hide all lines' }));
     expect(chartLines()).toHaveLength(0);
+    if (!screen.queryByRole('checkbox', { name: 'Group by project' })) {
+      await user.click(screen.getByText(/Chart lines ·/));
+    }
     await user.click(
       screen.getByRole('checkbox', { name: 'Group by project' })
     );
@@ -245,7 +251,7 @@ describe('funding outlook', () => {
   it('lists future funding without including its balance or drawing a line', async () => {
     const { onNavigate, user } = await show();
     expect(screen.getByLabelText('Outlook totals')).not.toHaveTextContent(
-      '$5,000.00'
+      '$5,000'
     );
     expect(chartLines()).toHaveLength(2);
     await user.click(screen.getByText(/Chart lines ·/));

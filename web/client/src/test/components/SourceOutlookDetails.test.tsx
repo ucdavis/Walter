@@ -151,9 +151,9 @@ describe('source outlook details', () => {
     const breakdown = screen.getByRole('region', {
       name: 'Net forecast cost breakdown',
     });
-    expect(breakdown).toHaveTextContent('Salary$2,900.00');
-    expect(breakdown).toHaveTextContent('Fringe$580.00');
-    expect(breakdown).toHaveTextContent('Other forecast costs$550.00');
+    expect(breakdown).toHaveTextContent('Salary$2,900');
+    expect(breakdown).toHaveTextContent('Fringe$580');
+    expect(breakdown).toHaveTextContent('Other forecast costs$550');
 
     await user.click(
       screen.getByText('Forecast costs by category', { selector: 'summary' })
@@ -165,12 +165,12 @@ describe('source outlook details', () => {
       within(categories).getByRole('row', {
         name: new RegExp(FEE_REMISSION_CATEGORY),
       })
-    ).toHaveTextContent('$600.00');
+    ).toHaveTextContent('$600');
     expect(
       within(categories).getByRole('row', {
         name: new RegExp(SUPPLIES_CATEGORY),
       })
-    ).toHaveTextContent('-$50.00');
+    ).toHaveTextContent('-$50');
 
     await user.click(
       screen.getByText('Monthly balances and costs', { selector: 'summary' })
@@ -180,7 +180,7 @@ describe('source outlook details', () => {
     });
     expect(
       within(monthly).getByRole('row', { name: /^2026-01 / })
-    ).toHaveTextContent('2026-01$120.00$230.00$10,650.00');
+    ).toHaveTextContent('2026-01$120$230$10,650');
     expect(
       screen.getByText(/Booked costs in the capture month are already included/)
     ).toBeVisible();
@@ -243,7 +243,7 @@ describe('source outlook details', () => {
     expect(
       screen.getByText(/Its entered funding and allocations remain saved/)
     ).toBeVisible();
-    expect(screen.getByText('$5,000.00')).toBeVisible();
+    expect(screen.getByText('$5,000')).toBeVisible();
     expect(
       screen.getByRole('region', { name: 'Appointments using this source' })
     ).toHaveTextContent(

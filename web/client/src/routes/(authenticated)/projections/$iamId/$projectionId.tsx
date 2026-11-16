@@ -127,15 +127,18 @@ function ProjectionEditor({ featureEnabled }: { featureEnabled: boolean }) {
         save: save.mutateAsync,
       }}
     >
-      <main>
-        <div className="mx-auto w-full max-w-[96rem] px-4 pt-4 sm:px-8">
+      <main className="container scroll-mt-24 bg-base-100 pt-12 pb-12 text-base leading-normal text-base-content [&_button:enabled]:cursor-pointer">
+        <div>
           {!featureEnabled && <ProjectionSessionNotice />}
           <Link
-            className="btn btn-outline btn-sm gap-2 border-base-300 bg-base-100"
+            className="btn mb-4 gap-2"
             params={{ iamId }}
             to="/projections/$iamId"
           >
-            <ArrowTrendingUpIcon aria-hidden="true" className="size-4" />
+            <ArrowTrendingUpIcon
+              aria-hidden="true"
+              className="size-5 shrink-0"
+            />
             Projections dashboard
           </Link>
         </div>

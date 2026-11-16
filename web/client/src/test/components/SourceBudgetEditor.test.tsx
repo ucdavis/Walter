@@ -60,7 +60,7 @@ it('warns about a negative donor without blocking the balanced move', async () =
     SALARY_CATEGORY
   );
   await user.type(screen.getByLabelText('Amount'), '300');
-  expect(screen.getByText(/\$100.00 → -\$200.00/)).toHaveTextContent(
+  expect(screen.getByText(/\$100 → -\$200/)).toHaveTextContent(
     'This move leaves the donor category negative.'
   );
   await user.click(screen.getByRole('button', { name: 'Move amount' }));

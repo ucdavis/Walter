@@ -104,7 +104,7 @@ describe('saved projection route', () => {
       await screen.findByText(/Projections have been turned off/);
       expect(salaryInput()).toHaveValue('132000');
       await user.click(screen.getByRole('button', { name: 'Apply' }));
-      await user.click(screen.getByRole('button', { name: 'Funding outlook' }));
+      await user.click(screen.getByRole('button', { name: 'Overview' }));
       expect(
         screen.queryByText('Projections are not available.')
       ).not.toBeInTheDocument();
@@ -191,7 +191,7 @@ describe('saved projection route', () => {
       await act(async () => {
         route.queryClient.setQueryData(['projections', plan.id], refreshed);
       });
-      await user.click(screen.getByRole('button', { name: 'Funding outlook' }));
+      await user.click(screen.getByRole('button', { name: 'Overview' }));
       await user.click(screen.getByRole('button', { name: 'Staffing' }));
       expect(membershipReads).toBe(0);
       await user.click(
@@ -255,7 +255,7 @@ describe('saved projection route', () => {
         });
       });
       expect(
-        await screen.findByText('$180,000.00 per year at full time')
+        await screen.findByText('$180,000 annual salary')
       ).toBeInTheDocument();
     } finally {
       route.cleanup();

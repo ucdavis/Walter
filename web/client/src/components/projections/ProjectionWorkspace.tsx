@@ -11,7 +11,7 @@ import {
   Cog6ToothIcon,
   ExclamationTriangleIcon,
   ListBulletIcon,
-  UsersIcon,
+  UserGroupIcon,
 } from '@heroicons/react/24/outline';
 import {
   PlanDetailsEditor,
@@ -201,10 +201,7 @@ export function ProjectionWorkspace({
   }));
 
   return (
-    <div
-      className="relative mx-auto w-full max-w-[96rem] p-4 sm:p-8"
-      ref={containerRef}
-    >
+    <div className="relative min-w-0" ref={containerRef}>
       <div hidden={summaryMinimized} id={summaryId}>
         <FundingOutlookNotice
           minimizeRef={minimizeSummaryRef}
@@ -217,12 +214,10 @@ export function ProjectionWorkspace({
         />
       </div>
       <div ref={contentRef}>
-        <header className="flex flex-wrap items-start justify-between gap-x-6 gap-y-4">
+        <header className="mb-6 flex flex-wrap items-start justify-between gap-4 md:items-center">
           <div className="min-w-0 flex-1 basis-80">
             <div className="flex items-start gap-2">
-              <h1 className="min-w-0 text-2xl font-bold leading-tight break-words sm:text-3xl">
-                {draft.name}
-              </h1>
+              <h1 className="h1 min-w-0 break-words">{draft.name}</h1>
               {summaryMinimized && hasFundingWarnings && (
                 <TooltipLabel
                   asChild
@@ -249,27 +244,32 @@ export function ProjectionWorkspace({
                 />
               )}
             </div>
-            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs font-medium tracking-wide text-base-content/60 uppercase">
-              <p title="Each source keeps its own capture date.">
-                Plan started {draft.seededAt.slice(0, 10)}
-              </p>
-              <p>
-                {draft.content.forecastMonths}-month forecast,{' '}
-                {fundingMonthLabel(results.forecastWindow.startMonth)} through{' '}
-                {fundingMonthLabel(results.forecastWindow.endMonth)}.
-              </p>
-            </div>
+            <p className="subtitle">
+              {fundingMonthLabel(results.forecastWindow.startMonth)} onward ·{' '}
+              {draft.content.forecastMonths} months
+              <span
+                className="mt-1 block text-base-content/80 xl:ms-4 xl:mt-0 xl:inline"
+                role="status"
+              >
+                {saving
+                  ? 'Saving…'
+                  : isProjectionDirty(session)
+                    ? 'Unsaved changes'
+                    : 'Saved in Walter'}
+              </span>
+            </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <button
               aria-label="Edit plan details"
-              className="btn btn-outline btn-sm"
+              className="btn btn-outline"
               onClick={() => setEditingDetails(true)}
               type="button"
             >
-              <Cog6ToothIcon aria-hidden="true" className="size-4" />
+              <Cog6ToothIcon aria-hidden="true" className="size-5 shrink-0" />
               Plan details
             </button>
+            <ProjectionSaveControls />
             {iamId && onDuplicated && (
               <DuplicateProjectionButton
                 canDuplicate={() =>
@@ -287,7 +287,6 @@ export function ProjectionWorkspace({
                 projection={session.baseline}
               />
             )}
-            <ProjectionSaveControls />
           </div>
         </header>
         {editingDetails && (
@@ -316,47 +315,46 @@ export function ProjectionWorkspace({
 
         <ProjectionSaveFeedback onNavigate={onNavigate} search={search} />
 
-        <nav
-          aria-label="Plan sections"
-          className="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-base-300 bg-base-300 sm:grid-cols-4"
-        >
-          {(
-            [
-              {
-                Icon: ChartBarIcon,
-                label: 'Funding outlook',
-                section: 'overview',
-              },
-              {
-                Icon: BanknotesIcon,
-                label: 'Funding sources',
-                section: 'funding',
-              },
-              { Icon: UsersIcon, label: 'Staffing', section: 'staffing' },
-              {
-                Icon: ListBulletIcon,
-                label: 'Other expenses',
-                section: 'expenses',
-              },
-            ] as const
-          ).map(({ Icon, label, section }) => (
-            <button
-              aria-current={location.section === section ? 'page' : undefined}
-              className={`btn h-auto min-h-12 w-full rounded-none border-0 px-2 py-3 text-sm shadow-none ${location.section === section ? 'bg-primary text-primary-content hover:bg-primary/90' : 'bg-base-100 text-base-content/70 hover:bg-base-200'}`}
-              key={section}
-              onClick={() =>
-                onNavigate(
-                  section === 'funding' || section === 'expenses'
-                    ? { section }
-                    : { ...sourceSearch, section }
-                )
-              }
-              type="button"
-            >
-              <Icon aria-hidden="true" className="size-4 shrink-0" />
-              {label}
-            </button>
-          ))}
+        <nav aria-label="Plan sections" className="mb-6 overflow-x-auto">
+          <div className="join flex w-full">
+            {(
+              [
+                {
+                  Icon: ChartBarIcon,
+                  label: 'Overview',
+                  section: 'overview',
+                },
+                {
+                  Icon: BanknotesIcon,
+                  label: 'Funding',
+                  section: 'funding',
+                },
+                { Icon: UserGroupIcon, label: 'Staffing', section: 'staffing' },
+                {
+                  Icon: ListBulletIcon,
+                  label: 'Expenses',
+                  section: 'expenses',
+                },
+              ] as const
+            ).map(({ Icon, label, section }) => (
+              <button
+                aria-current={location.section === section ? 'page' : undefined}
+                className={`btn join-item flex-1 gap-2 px-3 text-base whitespace-nowrap ${location.section === section ? 'btn-primary' : 'btn-outline border-main-border'}`}
+                key={section}
+                onClick={() =>
+                  onNavigate(
+                    section === 'funding' || section === 'expenses'
+                      ? { section }
+                      : { ...sourceSearch, section }
+                  )
+                }
+                type="button"
+              >
+                <Icon aria-hidden="true" className="size-5 shrink-0" />
+                {label}
+              </button>
+            ))}
+          </div>
         </nav>
 
         {location.issues.length > 0 ? (
@@ -390,7 +388,7 @@ export function ProjectionWorkspace({
             selectedSourceId={location.fundingSourceId}
           />
         ) : location.section === 'funding' ? (
-          <section className="mt-6">
+          <section>
             <FundingSourcesEditor
               iamId={iamId}
               key={`${reloadVersion}:${location.fundingSourceId ?? 'list'}`}
@@ -410,7 +408,7 @@ export function ProjectionWorkspace({
             />
           </section>
         ) : location.section === 'staffing' ? (
-          <section className="mt-6">
+          <section>
             <StaffingEditor
               appointmentFunding={results.appointmentFunding}
               forecastWindow={results.forecastWindow}
@@ -441,7 +439,7 @@ export function ProjectionWorkspace({
             />
           </section>
         ) : (
-          <section className="mt-6">
+          <section>
             <ExpensesEditor
               key={`${reloadVersion}:${location.fundingSourceId ?? 'all'}`}
               onOperation={applyExpenseOperation}

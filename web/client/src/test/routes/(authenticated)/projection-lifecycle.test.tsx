@@ -554,7 +554,9 @@ describe('projection creation and copies', () => {
       await user.click(await screen.findByRole('button', { name: 'Continue' }));
       await screen.findByText(/An imported funding task could not be matched/);
       await user.click(
-        screen.getByRole('button', { name: 'Edit funding for Alex Example' })
+        screen.getByRole('button', {
+          name: /Alex Example, Jan 2026:.*Edit allocations/,
+        })
       );
       await screen.findByRole('dialog', {
         name: 'Alex Example funding',
@@ -784,7 +786,7 @@ describe('projection creation and copies', () => {
       await user.type(screen.getByLabelText('Monthly amount'), '300');
       await user.click(screen.getByRole('button', { name: 'Apply amount' }));
       await user.click(
-        screen.getAllByRole('button', { name: 'Add expense' })[0]
+        screen.getAllByRole('button', { name: 'Add new expense' })[0]
       );
       expect(screen.getByLabelText('Charge to')).toHaveValue('');
       await user.type(

@@ -63,7 +63,7 @@ describe('appointment planning controls', () => {
       plan.seededAt = '2026-10-01T00:00:00Z';
       const user = openWorkspace(plan, false);
       await user.click(
-        await screen.findByRole('button', { name: 'Add hypothetical hire' })
+        await screen.findByRole('button', { name: 'Add person' })
       );
       await enter(user, 'Appointment name', 'Planned hire');
       await enter(user, 'Full-time annual salary', '120000');
@@ -159,9 +159,7 @@ describe('appointment planning controls', () => {
     expect(read().draft.content.fundingSources).toEqual(
       plan.content.fundingSources
     );
-    expect(
-      screen.getByText('Research specialist · 0% FTE')
-    ).toBeInTheDocument();
+    expect(screen.getByText('0 FTE')).toBeInTheDocument();
     expect(
       screen.queryByText('Allocation dates and shares')
     ).not.toBeInTheDocument();
@@ -200,9 +198,7 @@ describe('appointment planning controls', () => {
   it('adds a future unallocated hire from server defaults and confirms removal without changing recorded finances', async () => {
     const plan = createSalaryExample();
     const user = openWorkspace(plan, false);
-    await user.click(
-      await screen.findByRole('button', { name: 'Add hypothetical hire' })
-    );
+    await user.click(await screen.findByRole('button', { name: 'Add person' }));
     expect(screen.getByLabelText('FTE (%)')).toHaveValue('100');
     expect(screen.getByLabelText('CBR (%)')).toHaveValue('20');
     expect(screen.getByLabelText('Annual adjustment (%)')).toHaveValue('3');
@@ -237,6 +233,11 @@ describe('appointment planning controls', () => {
       startDate: '2028-08-01',
       vacationAccrualRate: 0,
     });
+    if (!screen.queryByRole('dialog')) {
+      await user.click(
+        screen.getByRole('button', { name: 'Edit appointment for Future hire' })
+      );
+    }
     await user.click(
       screen.getByRole('button', { name: 'Remove appointment for Future hire' })
     );
@@ -244,6 +245,11 @@ describe('appointment planning controls', () => {
       within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancel' })
     );
     expect(read().draft.content.appointments).toHaveLength(2);
+    if (!screen.queryByRole('dialog')) {
+      await user.click(
+        screen.getByRole('button', { name: 'Edit appointment for Future hire' })
+      );
+    }
     await user.click(
       screen.getByRole('button', { name: 'Remove appointment for Future hire' })
     );
@@ -270,6 +276,9 @@ describe('appointment planning controls', () => {
     await enter(user, 'CBR (%)', '25');
     expect(screen.getByRole('button', { name: 'Apply' })).toBeDisabled();
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    await user.click(
+      screen.getByRole('button', { name: 'Edit appointment for Alex Example' })
+    );
     await user.click(
       screen.getByRole('button', {
         name: 'Remove appointment for Alex Example',

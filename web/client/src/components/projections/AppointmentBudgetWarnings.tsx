@@ -3,7 +3,7 @@ import { ProjectionDialog } from '@/components/projections/ProjectionDialog.tsx'
 import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
 import { fundingMonthLabel } from '@/components/projections/fundingTimelineDates.ts';
-import { formatCurrency } from '@/lib/currency.ts';
+import { formatProjectionCurrency as formatCurrency } from '@/components/projections/projectionFormatting.ts';
 import { sourceLabel } from '@/lib/projectionSources.ts';
 import {
   getAppointmentFundingShortfalls,

@@ -4,7 +4,7 @@ import {
   BanknotesIcon,
   ArrowPathIcon,
 } from '@heroicons/react/24/outline';
-import { formatCurrency } from '@/lib/currency.ts';
+import { formatProjectionCurrency as formatCurrency } from '@/components/projections/projectionFormatting.ts';
 
 export interface BudgetEditorRow {
   category: string;

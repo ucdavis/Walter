@@ -90,7 +90,7 @@ describe('projection plan header', () => {
       within(navigation).getByRole('button', { name: 'Staffing' })
     );
     await user.click(
-      within(navigation).getByRole('button', { name: 'Other expenses' })
+      within(navigation).getByRole('button', { name: 'Expenses' })
     );
     expect(
       screen.getByRole('button', { name: 'Show funding summary' })
@@ -187,7 +187,7 @@ describe('projection plan header', () => {
     });
     expect(within(navigation).getAllByRole('button')).toHaveLength(4);
     expect(
-      within(navigation).getByRole('button', { name: 'Funding outlook' })
+      within(navigation).getByRole('button', { name: 'Overview' })
     ).toHaveAttribute('aria-current', 'page');
     expect(
       screen.getByRole('button', { name: 'Edit plan details' })
@@ -209,7 +209,7 @@ describe('projection plan header', () => {
       await screen.findByRole('heading', { name: 'Project A details' })
     ).toBeInTheDocument();
     expect(
-      within(navigation).getByRole('button', { name: 'Funding outlook' })
+      within(navigation).getByRole('button', { name: 'Overview' })
     ).toHaveAttribute('aria-current', 'page');
     const sourceTitle = screen.getByRole('heading', {
       name: 'Project A',
@@ -218,7 +218,7 @@ describe('projection plan header', () => {
     expect(
       sourceTitle.compareDocumentPosition(
         screen.getByLabelText('Outlook totals')
-      ) & Node.DOCUMENT_POSITION_FOLLOWING
+      ) & Node.DOCUMENT_POSITION_PRECEDING
     ).toBeTruthy();
     await user.click(
       within(summary).getByRole('button', { name: 'Explore Project A' })
@@ -275,10 +275,10 @@ describe('category budget persistence', () => {
     openWorkspace('?section=funding&source=1', saved);
     await screen.findByRole('dialog', { name: 'Edit Project A' });
     expect(screen.getByLabelText('Net budget changes')).toHaveTextContent(
-      '$3,000.00'
+      '$3,000'
     );
     expect(screen.getByLabelText('Net budget changes')).toHaveTextContent(
-      '-$3,000.00'
+      '-$3,000'
     );
   });
 });
@@ -403,7 +403,7 @@ describe('projection salary workspace', () => {
       within(january())
         .getAllByRole('cell')
         .map((cell) => cell.textContent)
-    ).toEqual(['$1,400.00', '$2,100.00', '$24,500.00']);
+    ).toEqual(['$1,400', '$2,100', '$24,500']);
 
     await user.click(screen.getByRole('button', { name: 'Staffing' }));
     await user.click(editButton());
@@ -424,20 +424,20 @@ describe('projection salary workspace', () => {
       remaining: 19_000,
     });
 
-    await user.click(screen.getByRole('button', { name: 'Funding outlook' }));
+    await user.click(screen.getByRole('button', { name: 'Overview' }));
     await screen.findByRole('heading', { name: 'Project A details' });
     await user.click(screen.getByText('Monthly balances and costs'));
     expect(
       within(january())
         .getAllByRole('cell')
         .map((cell) => cell.textContent)
-    ).toEqual(['$1,400.00', '$0.00', '$26,600.00']);
+    ).toEqual(['$1,400', '$0', '$26,600']);
     const february = screen.getByRole('row', { name: /^2026-02 / });
     expect(
       within(february)
         .getAllByRole('cell')
         .map((cell) => cell.textContent)
-    ).toEqual(['$0.00', '$1,260.00', '$25,340.00']);
+    ).toEqual(['$0', '$1,260', '$25,340']);
     expect(router.state.location.search).toMatchObject({
       source: 1,
     });
@@ -497,11 +497,11 @@ describe('projection salary workspace', () => {
     ).toBe(true);
     expect(screen.getByRole('status')).toHaveTextContent('Unsaved changes');
     expect(editButton()).toHaveFocus();
-    await user.click(screen.getByRole('button', { name: 'Funding outlook' }));
+    await user.click(screen.getByRole('button', { name: 'Overview' }));
     expect(
       await screen.findByText(/First funding shortfall:/)
     ).toBeInTheDocument();
-    expect(screen.getByText('-$500.00')).toBeInTheDocument();
+    expect(screen.getByText('-$500')).toBeInTheDocument();
   });
 
   it('rejects blank and invalid annual input, accepts zero, and keeps no-op precision', async () => {
@@ -574,7 +574,7 @@ describe('projection salary workspace', () => {
     expect(salaryInput()).toHaveValue('132000.00');
     expect(read().pendingEditor?.hasChanges).toBe(false);
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
-    await user.click(screen.getByRole('button', { name: 'Funding outlook' }));
+    await user.click(screen.getByRole('button', { name: 'Overview' }));
     expect(
       await screen.findByRole('heading', { name: 'Project B' })
     ).toHaveFocus();

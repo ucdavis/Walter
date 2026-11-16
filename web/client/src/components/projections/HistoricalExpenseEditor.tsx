@@ -4,7 +4,7 @@ import { useAppForm } from '@/shared/forms/formContext.tsx';
 import { ProjectionDialog } from '@/components/projections/ProjectionDialog.tsx';
 import { sourceLabel } from '@/lib/projectionSources.ts';
 import type { ProjectionFundingSource } from '@/queries/projections.ts';
-import { formatCurrency } from '@/lib/currency.ts';
+import { formatProjectionCurrency as formatCurrency } from '@/components/projections/projectionFormatting.ts';
 import type { PendingExpenseEditor } from '@/lib/projectionWorkspace.ts';
 
 export interface HistoricalExpenseEditorHandle {

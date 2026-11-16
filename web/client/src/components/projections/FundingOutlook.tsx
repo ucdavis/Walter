@@ -1,3 +1,4 @@
+import { fundingMonthLabel } from '@/components/projections/fundingTimelineDates.ts';
 import {
   lazy,
   Suspense,
@@ -99,38 +100,31 @@ export function FundingOutlook({
   const setHidden = grouped ? setHiddenGroups : setHiddenSources;
 
   return (
-    <section className="mt-6 min-w-0">
-      <h2 className="text-xl font-bold">Funding outlook</h2>
-      <p className="mt-2 text-sm">
-        Each funding source keeps its own balance. A surplus on one task does
-        not cover another task&apos;s shortfall.
-      </p>
+    <section className="min-w-0">
       {outlook.sources.length === 0 ? (
         <p className="mt-6">
           No funding sources in this plan. Add funding sources to explore an
           outlook.
         </p>
       ) : (
-        <div className="mt-5 overflow-hidden rounded-box border border-base-300">
-          <div className="flex flex-wrap items-end justify-between gap-4 p-4 sm:p-5">
+        <div className="overflow-hidden rounded-lg border border-main-border bg-base-100 text-base">
+          <div className="flex flex-wrap items-start justify-between gap-5 p-5 xl:p-6">
             <div className="min-w-0 flex-1">
-              <h3
-                className="scroll-mt-24 text-lg font-semibold break-words"
-                ref={headingRef}
-                tabIndex={-1}
-              >
-                {selected ? selected.label : 'All funding sources'}
-              </h3>
-              <p className="mt-1 text-sm text-base-content/70">
-                {selected
-                  ? 'Explore the inputs behind this source’s forecast.'
-                  : 'Select a source to explore its forecast.'}
+              <h2 className="text-xl font-semibold">Project outlook</h2>
+              <p className="mt-1 text-sm text-base-content/80">
+                {outlook.shortfallSources.length
+                  ? `${outlook.shortfallSources.length} of ${outlook.sources.length} funding sources ${outlook.shortfallSources.length === 1 ? 'runs' : 'run'} short`
+                  : 'Each funding source stays within funding'}
+              </p>
+              <p className="mt-1 text-sm text-base-content/80">
+                Balances stay separate. Select a funding source to explore its
+                forecast.
               </p>
             </div>
-            <label className="w-full text-sm sm:w-auto sm:max-w-sm">
+            <label className="grid w-full min-w-0 gap-1.5 text-sm font-medium sm:w-80 lg:w-96">
               Explore a funding source
               <select
-                className="select mt-1 w-full"
+                className="select w-full min-w-0 truncate pr-10"
                 onChange={(event) =>
                   onNavigate(
                     event.target.value
@@ -143,7 +137,9 @@ export function FundingOutlook({
                 }
                 value={selectedSourceId ?? ''}
               >
-                <option value="">All funding sources</option>
+                <option value="">
+                  All funding sources · separate balances
+                </option>
                 {outlook.sources.map((source) => (
                   <option key={source.source.id} value={source.source.id}>
                     {source.label}
@@ -157,7 +153,29 @@ export function FundingOutlook({
             outlook={outlook}
             selected={selected}
           />
-          {selected ? (
+          {selected && (
+            <div className="px-5 pt-5 xl:px-6">
+              <h3
+                className="scroll-mt-24 text-lg font-semibold break-words"
+                ref={headingRef}
+                tabIndex={-1}
+              >
+                {selected.label}
+              </h3>
+              <p
+                className={`mt-1 text-sm ${selected.firstShortfallMonth ? 'text-error' : 'text-base-content/80'}`}
+              >
+                {selected.firstShortfallMonth
+                  ? `First below zero in ${fundingMonthLabel(selected.firstShortfallMonth)}`
+                  : selected.outside
+                    ? 'Outside forecast period'
+                    : selected.endBalance === null
+                      ? 'No forecast data in this period'
+                      : 'Stays within funding throughout this plan'}
+              </p>
+            </div>
+          )}
+          {selected && (
             <button
               className="btn btn-ghost btn-sm mx-4 mt-4"
               onClick={() => onNavigate({ section: 'overview' })}
@@ -165,16 +183,6 @@ export function FundingOutlook({
             >
               Back to all funding sources
             </button>
-          ) : (
-            <label className="mx-4 mt-4 inline-flex items-center gap-2 text-sm sm:mx-5">
-              <input
-                checked={grouped}
-                className="checkbox checkbox-sm"
-                onChange={(event) => setGrouped(event.target.checked)}
-                type="checkbox"
-              />
-              Group by project
-            </label>
           )}
           <Suspense
             fallback={
@@ -187,6 +195,19 @@ export function FundingOutlook({
               firstShortfallMonth={selected?.firstShortfallMonth ?? null}
               focused={Boolean(selected)}
               forecastWindow={results.forecastWindow}
+              groupControl={
+                !selected && (
+                  <label className="mb-3 inline-flex items-center gap-2 text-sm">
+                    <input
+                      checked={grouped}
+                      className="checkbox checkbox-sm"
+                      onChange={(event) => setGrouped(event.target.checked)}
+                      type="checkbox"
+                    />
+                    Group by project
+                  </label>
+                )
+              }
               hidden={hidden}
               onHideAll={() => setHidden(new Set(series.map(({ id }) => id)))}
               onShowAll={() => setHidden(new Set())}
@@ -202,6 +223,7 @@ export function FundingOutlook({
               onToggleGroup={(id) =>
                 setExpandedGroups((current) => toggleSet(current, id))
               }
+              sources={outlook.sources}
             />
           )}
         </div>
@@ -216,7 +238,7 @@ export function FundingOutlook({
           results={results}
         />
       )}
-      <details className="mt-5 rounded-box border border-base-300 p-4 text-sm">
+      <details className="mt-4 text-sm text-base-content/80">
         <summary className="cursor-pointer font-semibold">
           About this forecast
         </summary>

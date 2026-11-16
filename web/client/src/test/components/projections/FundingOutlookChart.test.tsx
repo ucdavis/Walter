@@ -92,7 +92,7 @@ describe('funding outlook chart labels', () => {
     const balances = screen.getByRole('region', {
       name: 'Jan 2026 remaining balances',
     });
-    fireEvent.mouseMove(within(balances).getByText('-$1,234,567.89'));
+    fireEvent.mouseMove(within(balances).getByText('-$1,234,568'));
     fireEvent.focus(balances);
     fireEvent.keyDown(balances, { key: 'ArrowDown' });
     expect(chartMove).not.toHaveBeenCalled();
@@ -103,6 +103,7 @@ describe('funding outlook chart labels', () => {
   it('keeps compact same-name tasks distinct and reveals full identity on keyboard focus without losing navigation', async () => {
     const user = userEvent.setup();
     const entries = renderChart();
+    await user.click(screen.getByText(/Chart lines ·/));
     const legend = screen.getByRole('navigation', { name: 'Chart legend' });
     const first = within(legend).getByRole('button', {
       name: entries[0].label,
@@ -131,6 +132,7 @@ describe('funding outlook chart labels', () => {
   it('reveals full line identity when hovering a compact legend or line-control label', async () => {
     const user = userEvent.setup();
     const entries = renderChart();
+    await user.click(screen.getByText(/Chart lines ·/));
     const legend = screen.getByRole('navigation', { name: 'Chart legend' });
     const first = within(legend).getByRole('button', {
       name: entries[0].label,
@@ -140,7 +142,6 @@ describe('funding outlook chart labels', () => {
       entries[0].identityLabel!
     );
     await user.unhover(first);
-    await user.click(screen.getByText(/Chart lines ·/));
     const checkbox = screen.getByRole('checkbox', { name: entries[1].label });
     await user.hover(checkbox.closest('label')!);
     expect(await screen.findByRole('tooltip')).toHaveTextContent(
@@ -171,6 +172,6 @@ describe('funding outlook chart labels', () => {
     expect(terms[0]).toHaveTextContent(entries[0].displayLabel);
     expect(
       screen.getAllByRole('definition').map((node) => node.textContent)
-    ).toEqual(['-$1,234,567.89', '$0.00']);
+    ).toEqual(['-$1,234,568', '$0']);
   });
 });

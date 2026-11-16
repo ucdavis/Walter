@@ -65,7 +65,7 @@ it('opens category-specific details by keyboard despite positive overall balance
   const dialog = screen.getByRole('dialog', {
     name: 'Fringe budget shortfall',
   });
-  expect(within(dialog).getByText('Shortfall $1,200.00')).toBeInTheDocument();
+  expect(within(dialog).getByText('Shortfall $1,200')).toBeInTheDocument();
   expect(within(dialog).getByText('Fringe · Feb 2026')).toBeInTheDocument();
   const link = within(dialog).getByRole('button', {
     name: 'View category balances',
@@ -187,7 +187,7 @@ it('shows captured category inputs, forecast, negative remainder, and adjustment
     screen.getByRole('columnheader', { name: 'Captured available' })
   ).toBeInTheDocument();
   expect(screen.getByText('No fringe budget recorded')).toBeInTheDocument();
-  expect(screen.getByText('-$20.00')).toHaveClass('text-error');
+  expect(screen.getByText('-$20')).toHaveClass('text-error');
   expect(
     screen.getByRole('rowheader', { name: 'Planning balance adjustment' })
   ).toBeInTheDocument();

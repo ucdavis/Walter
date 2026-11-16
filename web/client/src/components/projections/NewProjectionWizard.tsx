@@ -393,7 +393,7 @@ export function NewProjectionWizard({
   return (
     <section
       aria-label="New plan setup"
-      className="w-full pt-6 pb-12 text-base leading-normal text-base-content"
+      className="w-full scroll-mt-24 bg-base-100 pt-6 pb-12 text-base leading-normal text-base-content [&_button:enabled]:cursor-pointer"
     >
       <button
         className="btn mb-6"
@@ -432,7 +432,7 @@ export function NewProjectionWizard({
         {steps.map((label, index) => (
           <li
             aria-current={index === step ? 'step' : undefined}
-            className="relative flex flex-1 flex-col items-center gap-3 px-1 text-center text-xs not-last:after:absolute not-last:after:top-4 not-last:after:right-[calc(-50%+1.75rem)] not-last:after:left-[calc(50%+1.75rem)] not-last:after:h-px not-last:after:bg-base-300 sm:text-sm"
+            className="relative flex flex-1 flex-col items-center gap-3 px-1 text-center text-xs not-last:after:absolute not-last:after:top-4 not-last:after:right-[calc(-50%+1.75rem)] not-last:after:left-[calc(50%+1.75rem)] not-last:after:h-px not-last:after:bg-main-border sm:text-sm"
             key={label}
           >
             <button
@@ -681,7 +681,7 @@ function PlanStep({
 }) {
   return (
     <form
-      className="space-y-5"
+      className="@container mb-8 space-y-5"
       id="projection-setup-plan"
       onSubmit={(event) => {
         event.preventDefault();
@@ -689,8 +689,8 @@ function PlanStep({
       }}
     >
       <h2 className="text-xl font-semibold">Plan details</h2>
-      <div className="grid items-start gap-5 md:grid-cols-3">
-        <label className="flex flex-col gap-2 text-sm font-medium md:col-span-2">
+      <div className="grid items-start gap-5 @xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <label className="flex flex-col gap-2 min-w-0 text-sm font-medium">
           Plan name
           <input
             className="input w-full text-base"

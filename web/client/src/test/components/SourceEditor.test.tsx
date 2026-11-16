@@ -108,7 +108,7 @@ it('buffers a balanced move, preserves dates when resetting budgets, and applies
     { amount: 500, expenditureCategory: SALARY_CATEGORY },
   ]);
   expect(screen.getByLabelText('Net budget changes')).toHaveTextContent(
-    '$3,500.00'
+    '$3,500'
   );
   await user.click(
     screen.getByRole('button', { name: 'Reset budget changes' })
@@ -169,7 +169,7 @@ it('creates planned category initial funding as the reset baseline', async () =>
 it('restores the original planned pool without resetting edited dates', async () => {
   const { onApply, user } = open(false, true);
   expect(
-    screen.getByText(/Initial planned funding: \$750.00/)
+    screen.getByText(/Initial planned funding: \$750/)
   ).toBeInTheDocument();
   await user.clear(screen.getByLabelText('End date'));
   await user.type(screen.getByLabelText('End date'), '2026-05-31');

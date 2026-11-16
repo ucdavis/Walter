@@ -4,7 +4,7 @@ import { Link } from '@tanstack/react-router';
 import { ArrowRightIcon } from '@heroicons/react/24/outline';
 import { ProjectionBalanceSparkline } from '@/components/projections/ProjectionBalanceSparkline.tsx';
 import { fundingMonthLabel } from '@/components/projections/fundingTimelineDates.ts';
-import { formatCurrency } from '@/lib/currency.ts';
+import { formatProjectionCurrency as formatCurrency } from '@/components/projections/projectionFormatting.ts';
 import { computePiProjection } from '@/lib/piProjection.ts';
 import { buildProjectionOutlook } from '@/lib/projectionOutlook.ts';
 import {
@@ -54,9 +54,9 @@ export function ProjectionPlanCard({
   return (
     <article
       aria-label={plan.name}
-      className="relative flex min-w-0 flex-col rounded-box border border-base-300 bg-base-100 p-4 transition-shadow hover:shadow-md"
+      className="relative flex min-w-0 flex-col rounded-box border border-main-border p-4 text-left transition-[border-color,box-shadow] hover:border-base-content/80 hover:shadow-sm motion-reduce:transition-none"
     >
-      <h3 className="line-clamp-2 text-lg font-semibold break-words">
+      <h3 className="line-clamp-2 text-xl font-semibold break-words">
         <Link
           aria-label={`Open plan ${plan.name}`}
           className="after:absolute after:inset-0 after:rounded-box focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-offset-2 focus-visible:after:outline-primary"
@@ -68,23 +68,22 @@ export function ProjectionPlanCard({
       </h3>
       {data ? (
         <>
-          <div className="mt-1 min-h-10">
-            {data.plan.content.notes && (
-              <p className="line-clamp-2 text-sm text-base-content/65 break-words">
-                {data.plan.content.notes}
-              </p>
-            )}
+          <div className="mt-1">
+            <p className="line-clamp-2 text-sm text-base-content/80 break-words">
+              {data.plan.content.notes ||
+                'A plan based on your current Walter snapshot.'}
+            </p>
           </div>
-          <div className="mt-3">
+          <div className="my-3">
             <ProjectionBalanceSparkline
               months={data.outlook.months}
               window={data.window}
             />
           </div>
-          <dl className="mt-3 mb-4 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-            <dt className="text-xs text-base-content/65">Ending balance</dt>
+          <dl className="mb-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+            <dt className="text-sm text-base-content/80">Ending balance</dt>
             <dd
-              className={`ml-auto min-w-0 max-w-full text-right text-2xl font-semibold break-words tabular-nums ${data.outlook.endBalance !== null && data.outlook.endBalance < 0 ? 'text-error' : ''}`}
+              className={`ml-auto min-w-0 max-w-full text-right text-xl font-medium break-words tabular-nums ${data.outlook.endBalance !== null && data.outlook.endBalance < 0 ? 'text-error' : ''}`}
             >
               {data.outlook.endBalance === null
                 ? 'No forecast data'
@@ -109,10 +108,10 @@ export function ProjectionPlanCard({
           Loading preview...
         </p>
       )}
-      <footer className="mt-auto flex flex-wrap items-end justify-between gap-3 border-t border-base-200 pt-3">
+      <footer className="mt-auto flex flex-wrap items-end justify-between gap-3 border-t border-main-border pt-3">
         {data && (
           <p
-            className="text-xs text-base-content/65"
+            className="text-sm text-base-content/80"
             title={`Starts ${fundingMonthLabel(data.window.startMonth)}`}
           >
             {data.plan.content.forecastMonths} months ·{' '}
@@ -124,10 +123,10 @@ export function ProjectionPlanCard({
         )}
         <span
           aria-hidden="true"
-          className="ml-auto inline-flex items-center gap-1.5 text-sm font-semibold text-primary"
+          className="ml-auto inline-flex items-center gap-1.5 text-sm text-primary"
         >
           Open plan
-          <ArrowRightIcon className="size-4" />
+          <ArrowRightIcon className="size-5 shrink-0" />
         </span>
       </footer>
     </article>

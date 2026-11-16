@@ -1,27 +1,51 @@
+import {
+  ArrowRightIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
+  ExclamationTriangleIcon,
+} from '@heroicons/react/24/outline';
+import { projectionSeriesColor } from '@/components/projections/projectionFormatting.ts';
 import { Fragment } from 'react';
 import { fundingMonthLabel } from '@/components/projections/fundingTimelineDates.ts';
-import { formatCurrency } from '@/lib/currency.ts';
+import { formatProjectionCurrency as formatCurrency } from '@/components/projections/projectionFormatting.ts';
 import type { OutlookGroup, SourceOutlook } from '@/lib/projectionOutlook.ts';
 
 function SourceRow({
+  colorIndex,
   nested = false,
   onSelect,
   outlook,
 }: {
+  colorIndex: number;
   nested?: boolean;
   onSelect: (id: number) => void;
   outlook: SourceOutlook;
 }) {
   return (
-    <tr>
-      <th className={nested ? 'pl-8 font-normal' : 'font-normal'} scope="row">
+    <tr className="hover:bg-base-200/50">
+      <th
+        className={
+          nested
+            ? 'max-w-72 pl-8 font-normal'
+            : 'max-w-72 pl-5 font-normal xl:pl-6'
+        }
+        scope="row"
+      >
         <button
           aria-label={`View ${outlook.label}`}
-          className="link text-left whitespace-normal"
+          className="flex w-full min-w-0 items-center gap-2 text-left text-base-content hover:underline"
           onClick={() => onSelect(outlook.source.id)}
           type="button"
         >
-          {outlook.label}
+          <span
+            aria-hidden="true"
+            className="size-2 shrink-0 rounded-full"
+            style={{ backgroundColor: projectionSeriesColor(colorIndex) }}
+          />
+          <span className="truncate font-semibold" title={outlook.label}>
+            {outlook.label}
+          </span>
+          <ArrowRightIcon aria-hidden="true" className="size-4 shrink-0" />
         </button>
         {outlook.source.sourceKind === 'Planned' && (
           <span className="mt-1 block text-xs text-base-content/70">
@@ -35,7 +59,11 @@ function SourceRow({
         ) : outlook.endBalance === null ? (
           <span>No forecast data in this period</span>
         ) : outlook.firstShortfallMonth ? (
-          <span className="text-error">
+          <span className="inline-flex items-center gap-1.5 text-error">
+            <ExclamationTriangleIcon
+              aria-hidden="true"
+              className="size-4 shrink-0"
+            />
             Shortfall · {fundingMonthLabel(outlook.firstShortfallMonth)}
             {outlook.endBalance >= 0 && (
               <span className="block text-xs">Recovers by plan end</span>
@@ -62,32 +90,36 @@ export function FundingOutlookTable({
   groups,
   onSelect,
   onToggleGroup,
+  sources,
 }: {
   expandedGroups: ReadonlySet<string>;
   groups: OutlookGroup[];
   onSelect: (id: number) => void;
   onToggleGroup: (id: string) => void;
+  sources?: SourceOutlook[];
 }) {
   return (
     <div
       aria-label="Funding source outlook"
-      className="overflow-x-auto"
+      className="overflow-x-auto border-t border-main-border"
       role="region"
       tabIndex={0}
     >
-      <table className="table w-full">
-        <caption className="p-5 text-left text-lg font-semibold">
+      <table className="table w-full text-sm">
+        <caption className="px-5 pt-5 pb-3 text-left text-lg font-semibold text-base-content xl:px-6">
           Funding sources
         </caption>
-        <thead>
+        <thead className="text-base-content/80">
           <tr>
-            <th scope="col">Project / funding source</th>
+            <th className="pl-5 xl:pl-6" scope="col">
+              Project/Task
+            </th>
             <th scope="col">Funding outlook</th>
             <th className="text-right" scope="col">
-              Net forecast costs
+              Planned spending
             </th>
             <th className="text-right" scope="col">
-              Projected end balance
+              Ending balance
             </th>
           </tr>
         </thead>
@@ -95,6 +127,11 @@ export function FundingOutlookTable({
           {groups.map((group) =>
             group.sources.length === 1 ? (
               <SourceRow
+                colorIndex={(
+                  sources ?? groups.flatMap((entry) => entry.sources)
+                ).findIndex(
+                  (entry) => entry.source.id === group.sources[0].source.id
+                )}
                 key={group.id}
                 onSelect={onSelect}
                 outlook={group.sources[0]}
@@ -105,11 +142,24 @@ export function FundingOutlookTable({
                   <th scope="row">
                     <button
                       aria-expanded={expandedGroups.has(group.id)}
-                      className="link text-left whitespace-normal"
+                      className="w-full min-w-0 text-left text-base-content hover:underline"
                       onClick={() => onToggleGroup(group.id)}
                       type="button"
                     >
-                      {expandedGroups.has(group.id) ? '▾' : '▸'} {group.label}
+                      <span className="inline-flex min-w-0 items-center gap-2">
+                        {expandedGroups.has(group.id) ? (
+                          <ChevronDownIcon
+                            aria-hidden="true"
+                            className="size-4 shrink-0"
+                          />
+                        ) : (
+                          <ChevronRightIcon
+                            aria-hidden="true"
+                            className="size-4 shrink-0"
+                          />
+                        )}
+                        <span className="truncate">{group.label}</span>
+                      </span>
                       <span className="mt-1 block text-xs font-normal">
                         {group.sources.length} task sources
                       </span>
@@ -150,6 +200,11 @@ export function FundingOutlookTable({
                 {expandedGroups.has(group.id) &&
                   group.sources.map((source) => (
                     <SourceRow
+                      colorIndex={(
+                        sources ?? groups.flatMap((entry) => entry.sources)
+                      ).findIndex(
+                        (entry) => entry.source.id === source.source.id
+                      )}
                       key={source.source.id}
                       nested
                       onSelect={onSelect}

@@ -332,17 +332,15 @@ describe('funding source selection and grouping', () => {
       name: 'Equipment · Task 01 · Equipment funding source',
     });
     expect(selected).toHaveTextContent('P200');
-    expect(selected).toHaveTextContent('$20,000.00');
+    expect(selected).toHaveTextContent('$20,000');
     expect(
       within(selected).getByRole('button', {
         name: 'Edit Equipment · Task 01 · Equipment',
       })
     ).toBeVisible();
     expect(
-      within(selected).getByRole('button', {
-        name: 'Remove Equipment · Task 01 · Equipment',
-      })
-    ).toBeVisible();
+      within(selected).queryByRole('button', { name: /Remove/ })
+    ).not.toBeInTheDocument();
     expect(screen.getAllByRole('article')).toHaveLength(1);
     expect(screen.queryByText('Funding details')).not.toBeInTheDocument();
     expect(
@@ -366,7 +364,7 @@ describe('funding source selection and grouping', () => {
       expect(
         within(card).queryByText('Coastal research')
       ).not.toBeInTheDocument();
-      expect(within(card).getByText('$20,000.00')).toBeVisible();
+      expect(within(card).getByText('$20,000')).toBeVisible();
     }
     expect(screen.queryByText('Funding details')).not.toBeInTheDocument();
     await user.click(
@@ -404,7 +402,7 @@ describe('funding source selection and grouping', () => {
     expect(
       within(restored).getByRole('heading', { name: 'Renamed fieldwork' })
     ).toBeInTheDocument();
-    expect(restored).toHaveTextContent('$12,345.00');
+    expect(restored).toHaveTextContent('$12,345');
   });
 
   it('shows newly added planned funding directly with one name and editable balance', async () => {
@@ -426,13 +424,13 @@ describe('funding source selection and grouping', () => {
       within(card).getByRole('heading', { name: 'Project renewal' })
     ).toBeVisible();
     expect(screen.getAllByText('Project renewal')).toHaveLength(1);
-    expect(within(card).getByText('$42,000.00')).toBeVisible();
+    expect(within(card).getByText('$42,000')).toBeVisible();
     expect(
       within(card).getByRole('button', { name: 'Edit Project renewal' })
     ).toBeVisible();
     expect(
-      within(card).getByRole('button', { name: 'Remove Project renewal' })
-    ).toBeVisible();
+      within(card).queryByRole('button', { name: /Remove/ })
+    ).not.toBeInTheDocument();
     expect(screen.queryByText('Funding details')).not.toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: 'Change tasks' })
@@ -445,8 +443,11 @@ describe('funding source selection and grouping', () => {
     expect(screen.getAllByRole('article')).toHaveLength(3);
     await user.click(
       screen.getByRole('button', {
-        name: 'Remove Renamed fieldwork · Task 01 · Fieldwork',
+        name: 'Edit Renamed fieldwork · Task 01 · Fieldwork',
       })
+    );
+    await user.click(
+      screen.getByRole('button', { name: 'Remove funding source' })
     );
     const dialog = screen.getByRole('dialog');
     expect(dialog).toHaveTextContent('those funding shares become unallocated');
@@ -454,7 +455,7 @@ describe('funding source selection and grouping', () => {
     expect(screen.getAllByRole('article')).toHaveLength(3);
     await user.click(
       screen.getByRole('button', {
-        name: 'Remove Renamed fieldwork · Task 01 · Fieldwork',
+        name: 'Remove funding source',
       })
     );
     await user.click(

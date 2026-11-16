@@ -1,6 +1,5 @@
 import { fundingMonths } from '@/components/projections/fundingTimelineDates.ts';
 import type { OutlookMonth } from '@/lib/projectionOutlook.ts';
-import { chartSeriesColor } from '@/shared/chartColors.ts';
 
 /** A small, noninteractive preview; source shortfalls are reported separately from this combined line. */
 export function ProjectionBalanceSparkline({
@@ -20,9 +19,8 @@ export function ProjectionBalanceSparkline({
   const min = Math.min(0, ...months.map((month) => month.remaining));
   const max = Math.max(0, ...months.map((month) => month.remaining));
   const span = max - min || 1;
-  const x = (index: number) =>
-    4 + (index / Math.max(1, period.length - 1)) * 312;
-  const y = (value: number) => 60 - ((value - min) / span) * 52;
+  const x = (index: number) => (index / Math.max(1, period.length - 1)) * 290;
+  const y = (value: number) => 70 - ((value - min) / span) * 62;
   const points = period.map((month, index) => {
     const balance = balances.get(month);
     return balance === undefined ? null : { x: x(index), y: y(balance) };
@@ -37,34 +35,34 @@ export function ProjectionBalanceSparkline({
   return (
     <svg
       aria-label="Combined projected balance over the forecast period"
-      className="h-20 w-full"
+      className="block h-14 w-full"
       preserveAspectRatio="none"
       role="img"
-      viewBox="0 0 320 68"
+      viewBox="0 0 290 80"
     >
       <line
-        stroke="var(--color-base-content)"
-        strokeDasharray="4 4"
-        strokeOpacity="0.3"
-        x1="4"
-        x2="316"
+        stroke="color-mix(in oklab, var(--color-base-content) 45%, transparent)"
+        strokeDasharray="5 3"
+        strokeWidth="1.5"
+        x1="0"
+        x2="290"
         y1={y(0)}
         y2={y(0)}
       />
       <path
         d={path}
         fill="none"
-        stroke={chartSeriesColor(0)}
+        stroke="var(--color-primary)"
         strokeLinecap="round"
         strokeLinejoin="round"
-        strokeWidth="2"
+        strokeWidth="2.5"
         vectorEffect="non-scaling-stroke"
       />
       {visiblePoints.length === 1 && (
         <circle
           cx={visiblePoints[0].x}
           cy={visiblePoints[0].y}
-          fill={chartSeriesColor(0)}
+          fill="var(--color-primary)"
           r="3"
         />
       )}

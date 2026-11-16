@@ -1,7 +1,7 @@
 import { hasSourceCategoryBudget } from '@/lib/projectionBudgets.ts';
 import { ExclamationTriangleIcon } from '@heroicons/react/24/solid';
 import { fundingMonthLabel } from '@/components/projections/fundingTimelineDates.ts';
-import { formatCurrency } from '@/lib/currency.ts';
+import { formatProjectionCurrency as formatCurrency } from '@/components/projections/projectionFormatting.ts';
 import { formatDate } from '@/lib/date.ts';
 import {
   getSourceFundingBasis,

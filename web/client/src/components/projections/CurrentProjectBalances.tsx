@@ -1,5 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
-import { formatCurrency } from '@/lib/currency.ts';
+import {
+  formatProjectionCurrency as formatCurrency,
+  compactProjectionCurrency,
+} from '@/components/projections/projectionFormatting.ts';
+import { projectionSeriesColor as chartSeriesColor } from '@/components/projections/projectionFormatting.ts';
 import {
   projectionSourceCatalogQueryOptions,
   type ProjectionSourceSummary,
@@ -45,11 +49,11 @@ export function CurrentProjectBalances({ iamId }: { iamId: string }) {
   return (
     <section
       aria-label="Current project balances"
-      className="mt-6 rounded-box border border-base-300 bg-base-200/40 p-5"
+      className="mb-6 rounded-box border border-main-border bg-base-200"
     >
-      <h2 className="text-lg font-semibold">Current project balances</h2>
+      <h2 className="sr-only">Current project balances</h2>
       {balances.isError ? (
-        <div className="mt-3 text-sm">
+        <div className="px-5 py-4 text-sm">
           <p>Current balances are unavailable.</p>
           <button
             className="btn btn-ghost btn-sm mt-2"
@@ -61,60 +65,80 @@ export function CurrentProjectBalances({ iamId }: { iamId: string }) {
           </button>
         </div>
       ) : !data ? (
-        <p className="mt-3 text-sm" role="status">
+        <p className="px-5 py-4 text-sm" role="status">
           Loading balances...
         </p>
       ) : !data.groups.length ? (
-        <p className="mt-3 text-sm">
+        <p className="px-5 py-4 text-sm">
           No eligible project balances are available.
         </p>
       ) : (
         <>
-          <p
-            className={`mt-2 text-3xl font-semibold ${data.total < 0 ? 'text-error' : ''}`}
-          >
-            {formatCurrency(data.total)}
-          </p>
-          <p className="mt-1 text-sm text-base-content/70">
-            After spending and commitments.
-          </p>
-          <details className="mt-4">
-            <summary className="cursor-pointer text-sm font-medium">
+          <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2 px-5 py-4">
+            <div>
+              <strong
+                className={`block text-2xl font-semibold tabular-nums ${data.total < 0 ? 'text-error' : ''}`}
+              >
+                {formatCurrency(data.total)}
+              </strong>
+              <span className="mt-0.5 block text-base font-semibold">
+                Available across active projects
+              </span>
+            </div>
+            <p className="ms-auto text-right text-sm text-base-content/80">
+              {data.groups.length} projects · From your Walter snapshot
+            </p>
+          </div>
+          <details className="border-t border-main-border">
+            <summary className="cursor-pointer px-5 py-2.5 text-sm font-semibold text-primary focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2">
               Project balances ({data.groups.length})
             </summary>
-            <ul className="mt-3 divide-y divide-base-300">
-              {data.groups.map((group) => (
-                <li className="py-3" key={group.projectNumber}>
-                  <div className="flex flex-wrap justify-between gap-x-5 gap-y-1 text-sm">
-                    <div className="min-w-0 break-words">
-                      <span className="font-medium">{group.name}</span>{' '}
-                      <span className="text-base-content/70">
-                        {group.projectNumber}
+            <ul
+              aria-label="Project balances"
+              className="grid max-h-60 grid-cols-1 gap-x-6 overflow-y-auto overscroll-contain px-5 pb-3 @2xl:grid-cols-2"
+              tabIndex={0}
+            >
+              {data.groups.map((group, index) => (
+                <li
+                  className="min-w-0 border-t border-main-border py-2 text-sm"
+                  key={group.projectNumber}
+                >
+                  <div className="flex min-w-0 items-start justify-between gap-3">
+                    <span className="flex min-w-0 items-start gap-2">
+                      <span
+                        aria-hidden="true"
+                        className="mt-1.5 block size-1.5 shrink-0 rounded-full"
+                        style={{ backgroundColor: chartSeriesColor(index) }}
+                      />
+                      <span
+                        className="min-w-0 truncate"
+                        title={`${group.name} · ${group.projectNumber}`}
+                      >
+                        {group.name}
                       </span>
-                    </div>
-                    <span
-                      className={`font-semibold ${group.balance < 0 ? 'text-error' : ''}`}
-                    >
-                      {formatCurrency(group.balance)}
                     </span>
+                    <strong
+                      className={`shrink-0 font-semibold tabular-nums ${group.balance < 0 ? 'text-error' : ''}`}
+                      title={formatCurrency(group.balance)}
+                    >
+                      {compactProjectionCurrency(group.balance)}
+                    </strong>
                   </div>
                   {group.sources.length > 1 && (
                     <ul
                       aria-label={`${group.name} tasks`}
-                      className="mt-2 space-y-2 border-l border-base-300 pl-4 text-sm"
+                      className="mt-2 space-y-2 border-l border-main-border pl-4 text-sm"
                     >
                       {group.sources.map((source) => (
                         <li
-                          className="flex flex-wrap justify-between gap-x-5 gap-y-1"
+                          className="flex min-w-0 justify-between gap-3"
                           key={source.taskNumber ?? ''}
                         >
-                          <span className="min-w-0 break-words">
+                          <span className="min-w-0 truncate">
                             {source.taskName || 'Task'} {source.taskNumber}
                           </span>
                           <span
-                            className={
-                              source.availableBalance < 0 ? 'text-error' : ''
-                            }
+                            className={`shrink-0 tabular-nums ${source.availableBalance < 0 ? 'text-error' : ''}`}
                           >
                             {formatCurrency(source.availableBalance)}
                           </span>
@@ -125,13 +149,13 @@ export function CurrentProjectBalances({ iamId }: { iamId: string }) {
                 </li>
               ))}
             </ul>
-            <p className="mt-3 text-xs text-base-content/70">
+            <p className="px-5 pb-3 text-xs text-base-content/80">
               Retrieved {new Date(data.capturedAt!).toLocaleString()}. Saved
               plans retain their captured balances.
             </p>
           </details>
           {balances.isFetching && (
-            <p className="mt-2 text-xs text-base-content/70" role="status">
+            <p className="px-5 pb-3 text-xs text-base-content/80" role="status">
               Updating balances...
             </p>
           )}

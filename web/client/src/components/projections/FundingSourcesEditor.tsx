@@ -69,17 +69,17 @@ export function FundingSourcesEditor<T extends ProjectionDraft>({
     return result;
   }
   return (
-    <div className="mt-8">
+    <div className={initialSelection ? 'mt-8' : undefined}>
       <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
         <div>
           <h2 className="flex items-center gap-2 text-xl font-semibold">
             <BanknotesIcon aria-hidden="true" className="size-5" />
-            Funding sources
+            Your funding sources
           </h2>
           <p className="mt-1 text-sm leading-relaxed text-base-content/80">
             {initialSelection
               ? 'Search and add the funding sources to include in your plan.'
-              : 'Review the funding included in your plan.'}{' '}
+              : 'Review your funding sources and add planned funding.'}{' '}
             Each task keeps its own balance and forecast.
           </p>
         </div>
@@ -135,11 +135,6 @@ export function FundingSourcesEditor<T extends ProjectionDraft>({
                 onEdit={(id) =>
                   sourceTarget ? sourceTarget.onChange(id) : setEditing(id)
                 }
-                onRemove={(id) =>
-                  initialSelection.onChange(
-                    initialSelection.ids.filter((selected) => selected !== id)
-                  )
-                }
                 source={source}
               />
             );
@@ -151,11 +146,10 @@ export function FundingSourcesEditor<T extends ProjectionDraft>({
           onEdit={(id) =>
             sourceTarget ? sourceTarget.onChange(id) : setEditing(id)
           }
-          onRemove={setRemoving}
           sources={draft.content.fundingSources}
         />
       )}
-      <p className="mt-5 text-sm text-base-content/60">
+      <p className="mt-5 text-sm text-base-content/80">
         Balances already account for recorded expenses and commitments. Your
         changes apply to this plan only.
       </p>
@@ -164,7 +158,7 @@ export function FundingSourcesEditor<T extends ProjectionDraft>({
           {error}
         </p>
       )}
-      {(source || editing === 'planned') && (
+      {((source && removing === null) || editing === 'planned') && (
         <SourceEditor
           key={source?.id ?? 'planned'}
           onApply={(inputs, categories) =>
@@ -178,6 +172,24 @@ export function FundingSourcesEditor<T extends ProjectionDraft>({
             source && sourceTarget
               ? sourceTarget.onChange(null)
               : setEditing(null)
+          }
+          onRemove={
+            source
+              ? () => {
+                  if (initialSelection) {
+                    initialSelection.onChange(
+                      initialSelection.ids.filter((id) => id !== source.id)
+                    );
+                    if (sourceTarget) {
+                      sourceTarget.onChange(null);
+                    } else {
+                      setEditing(null);
+                    }
+                  } else {
+                    setRemoving(source.id);
+                  }
+                }
+              : undefined
           }
           ref={editorRef}
           session={session}
