@@ -57,7 +57,9 @@ export function SourceOutlookHeader({
               ? 'Outside forecast period. Its entered funding and allocations remain saved.'
               : outlook.endBalance === null
                 ? 'No forecast data in this period'
-                : 'Stays within funding throughout this plan'}
+                : outlook.fundingBasis === 'unknown'
+                  ? 'Overall balance stays within funding; category budgets unverified'
+                  : 'Stays within funding throughout this plan'}
         </p>
       )}
       <SourceCategoryShortfallWarning
@@ -96,9 +98,12 @@ export function SourceForecastCosts({ outlook }: { outlook: SourceOutlook }) {
   const amounts = [
     { amount: salary, label: 'Salary' },
     { amount: fringe, label: 'Fringe' },
+    ...(outlook.staffFees !== 0
+      ? [{ amount: outlook.staffFees, label: 'Staff fees' }]
+      : []),
     {
-      amount: outlook.forecast - salary - fringe,
-      label: 'Other forecast costs',
+      amount: outlook.forecast - salary - fringe - outlook.staffFees,
+      label: 'Other expenses',
     },
   ];
   return (

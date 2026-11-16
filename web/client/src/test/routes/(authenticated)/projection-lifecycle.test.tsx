@@ -288,7 +288,7 @@ describe('projection creation and copies', () => {
       expect(
         await screen.findByRole('heading', { name: 'Revisited plan' })
       ).toBeInTheDocument();
-      expect(screen.getByText(/18-month forecast/)).toBeInTheDocument();
+      expect(screen.getByText('18-month plan')).toBeInTheDocument();
       await user.click(screen.getByRole('button', { name: 'Funding sources' }));
       await user.click(screen.getByRole('button', { name: 'Edit Project A' }));
       await user.type(screen.getByLabelText('Source name'), ' edited');
@@ -499,7 +499,7 @@ describe('projection creation and copies', () => {
       );
       await reviewWizard(user);
       expect(
-        screen.getByText('18-month forecast, Jan 2026 through Jun 2027.')
+        screen.getByText('Jan 2026 through Jun 2027.')
       ).toBeInTheDocument();
       const notes = 'Assume renewal in June.\n  Keep this indentation.';
       await user.type(screen.getByLabelText('Plan notes (optional)'), notes);
@@ -532,7 +532,7 @@ describe('projection creation and copies', () => {
       await user.click(screen.getByRole('button', { name: 'Continue' }));
       expect(screen.getByLabelText('Plan notes (optional)')).toHaveValue(notes);
       expect(
-        screen.getByText('12-month forecast, Jan 2026 through Dec 2026.')
+        screen.getByText('Jan 2026 through Dec 2026.')
       ).toBeInTheDocument();
       expect(
         screen.getByRole('button', { name: 'Create plan & open workspace' })

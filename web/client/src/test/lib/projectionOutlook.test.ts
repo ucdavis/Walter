@@ -165,11 +165,13 @@ describe('funding outlook presentation', () => {
         expenditureCategory: SALARY_CATEGORY,
         firstMonth: '2026-01',
         missingBudget: false,
+        recoveredMonth: null,
       },
       {
         expenditureCategory: FRINGE_CATEGORY,
         firstMonth: '2026-02',
         missingBudget: false,
+        recoveredMonth: null,
       },
     ]);
     expect(result.firstCategoryShortfallMonth).toBe('2026-01');
@@ -192,6 +194,7 @@ describe('funding outlook presentation', () => {
         expenditureCategory: SUPPLIES_CATEGORY,
         firstMonth: '2026-01',
         missingBudget: true,
+        recoveredMonth: '2026-02',
       },
     ]);
     expect(result.endBalance).toBe(1000);
@@ -226,10 +229,50 @@ describe('funding outlook presentation', () => {
         expenditureCategory: SALARY_CATEGORY,
         firstMonth: '2026-01',
         missingBudget: true,
+        recoveredMonth: null,
       },
     ]);
     expect(result.forecast).toBe(0);
     expect(result.endBalance).toBe(5000);
+  });
+
+  it('does not call a temporary category recovery recovered at plan end', () => {
+    const result = outlook(
+      plan([
+        source(1, {
+          expenses: [
+            expense(1, 100, '2026-01'),
+            expense(2, -100, '2026-02'),
+            expense(3, 50, '2026-03'),
+          ],
+          projectType: 'Sponsored',
+        }),
+      ])
+    );
+    expect(result.sources[0].categoryShortfalls[0]).toMatchObject({
+      firstMonth: '2026-01',
+      recoveredMonth: null,
+    });
+  });
+
+  it('uses the final recovery after recurring category deficits', () => {
+    const result = outlook(
+      plan([
+        source(1, {
+          expenses: [
+            expense(1, 100, '2026-01'),
+            expense(2, -100, '2026-02'),
+            expense(3, 50, '2026-03'),
+            expense(4, -50, '2026-04'),
+          ],
+          projectType: 'Sponsored',
+        }),
+      ])
+    );
+    expect(result.sources[0].categoryShortfalls[0]).toMatchObject({
+      firstMonth: '2026-01',
+      recoveredMonth: '2026-04',
+    });
   });
 
   it.each(['Internal', null])(
@@ -245,6 +288,9 @@ describe('funding outlook presentation', () => {
       );
       expect(result.firstCategoryShortfallMonth).toBeNull();
       expect(result.categoryShortfallSources).toEqual([]);
+      expect(result.sources[0].fundingBasis).toBe(
+        projectType === 'Internal' ? 'general' : 'unknown'
+      );
     }
   );
 
@@ -465,6 +511,7 @@ describe('funding outlook presentation', () => {
     const results = computePiProjection(draft);
     const original = structuredClone({ draft, results });
     const result = buildProjectionOutlook(draft, results);
+    expect(result.sources[0].staffFees).toBe(100);
     expect(result.sources[0].categories).toEqual([
       { expenditureCategory: SALARY_CATEGORY, forecast: 500 },
       { expenditureCategory: FRINGE_CATEGORY, forecast: 100 },

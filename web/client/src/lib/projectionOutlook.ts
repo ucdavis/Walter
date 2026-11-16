@@ -3,7 +3,10 @@ import {
   getSourceForecastWindow,
 } from '@/lib/piProjection.ts';
 import { sourceLabel, sourcePlanningBalance } from '@/lib/projectionSources.ts';
-import { buildSourceFundingBalance } from '@/lib/projectionFundingBalances.ts';
+import {
+  buildSourceFundingBalance,
+  type SourceFundingBasis,
+} from '@/lib/projectionFundingBalances.ts';
 import {
   getFundingSourceOutlook,
   type ProjectionResults,
@@ -26,18 +29,22 @@ export interface SourceOutlook {
   endBalance: number | null;
   firstShortfallMonth: string | null;
   forecast: number;
+  fundingBasis: SourceFundingBasis;
   label: string;
   minBalance: number | null;
   months: OutlookMonth[];
   outside: boolean;
   planningBalance: number;
   source: ProjectionFundingSource;
+  staffFees: number;
 }
 
 export interface CategoryBudgetShortfall {
   expenditureCategory: string;
   firstMonth: string;
   missingBudget: boolean;
+  /** The month following the last deficit, only when the balance stays recovered through plan end. */
+  recoveredMonth: string | null;
 }
 
 export interface OutlookGroup {
@@ -152,12 +159,30 @@ export function buildProjectionOutlook(
             const firstMonth = [category.firstDeficitMonth, missingMonth]
               .filter(Boolean)
               .sort()[0];
+            const categoryRows = rows
+              .filter(
+                (row) =>
+                  row.expenditureCategory === category.expenditureCategory
+              )
+              .sort((a, b) => a.month.localeCompare(b.month));
+            const lastDeficitMonth = categoryRows
+              .filter(({ remaining }) => remaining < 0)
+              .at(-1)?.month;
+            const recoveredMonth =
+              !missingMonth &&
+              lastDeficitMonth &&
+              category.endRemaining !== null &&
+              category.endRemaining >= 0
+                ? (categoryRows.find(({ month }) => month > lastDeficitMonth)
+                    ?.month ?? null)
+                : null;
             return firstMonth
               ? [
                   {
                     expenditureCategory: category.expenditureCategory,
                     firstMonth,
                     missingBudget: !category.hasBudget,
+                    recoveredMonth,
                   },
                 ]
               : [];
@@ -184,6 +209,7 @@ export function buildProjectionOutlook(
       firstShortfallMonth:
         months.find(({ remaining }) => remaining < 0)?.month ?? null,
       forecast: months.reduce((sum, month) => sum + month.forecast, 0),
+      fundingBasis: funding.basis,
       label: sourceLabel(source),
       minBalance: months.length
         ? Math.min(...months.map(({ remaining }) => remaining))
@@ -193,6 +219,9 @@ export function buildProjectionOutlook(
         .isBeyondForecast,
       planningBalance: sourcePlanningBalance(source),
       source,
+      staffFees: results.appointmentCosts
+        .filter(({ fundingSourceId }) => fundingSourceId === source.id)
+        .reduce((sum, { fees }) => sum + fees, 0),
     };
   });
   const grouped = new Map<

@@ -16,6 +16,21 @@ export function ExpenseSourceLink({
     ]
       .filter(Boolean)
       .join(' · ') || 'Planned funding';
+  const taskName =
+    source.taskName &&
+    source.taskName !== source.name &&
+    source.taskName !== source.projectName &&
+    source.taskName !== source.taskNumber
+      ? source.taskName
+      : null;
+  const label =
+    source.sourceKind === 'Task' && source.taskNumber
+      ? taskName || `Task ${source.taskNumber}`
+      : source.name;
+  const detail =
+    label === `Task ${source.taskNumber}` && source.projectNumber
+      ? `Project ${source.projectNumber}`
+      : identity;
   return (
     <TooltipLabel
       asChild
@@ -27,10 +42,10 @@ export function ExpenseSourceLink({
           type="button"
         >
           <span className="link link-hover line-clamp-2 font-medium text-primary">
-            {source.name}
+            {label}
           </span>
           <span className="mt-1 block text-xs text-base-content/70">
-            {identity}
+            {detail}
           </span>
         </button>
       }

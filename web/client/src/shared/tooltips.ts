@@ -62,3 +62,19 @@ export type TooltipDefinitionKey = keyof typeof tooltipDefinitions;
 export function projectionHistoryTooltip(months: number) {
   return `Spending history: ${months} months`;
 }
+
+export function projectionCategoryShortfallTooltip({
+  firstMonth,
+  missingBudget,
+  recoveredMonth,
+}: {
+  firstMonth: string;
+  missingBudget: boolean;
+  recoveredMonth: string | null;
+}) {
+  return `${missingBudget ? 'No budget recorded' : 'First shortfall'} · ${firstMonth}${
+    recoveredMonth
+      ? `. Recovers in ${recoveredMonth} and stays within budget through plan end.`
+      : ''
+  }`;
+}

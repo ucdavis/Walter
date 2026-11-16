@@ -103,6 +103,11 @@ export function FundingOutlookNotice({
                     : 'sources have'}{' '}
                   category budget shortfalls. An overall surplus does not cover
                   these categories.
+                  {outlook.categoryShortfallSources.every((source) =>
+                    source.categoryShortfalls.every(
+                      ({ recoveredMonth }) => recoveredMonth !== null
+                    )
+                  ) && ' These category balances recover by plan end.'}
                 </p>
               )}
               {outlook.shortfallSources.length > 0 && (

@@ -8,6 +8,8 @@ import { PlanNotesField } from '@/components/projections/PlanDetailsFields.tsx';
 import { fundingMonthLabel } from '@/components/projections/fundingTimelineDates.ts';
 import { formatProjectionCurrency as formatCurrency } from '@/components/projections/projectionFormatting.ts';
 import { buildProjectionOutlook } from '@/lib/projectionOutlook.ts';
+import { computeExpenseForecast } from '@/lib/piProjection.ts';
+import { getHistoricalExpenseRows } from '@/lib/projectionExpenses.ts';
 import type { ProjectionResults } from '@/lib/projectionWorkspace.ts';
 import type { ProjectionDraft } from '@/queries/projections.ts';
 
@@ -40,6 +42,27 @@ export function ProjectionReviewStep({
     (count, source) => count + source.expenses.length,
     0
   );
+  const expenseForecast = draft.content.fundingSources.reduce(
+    (total, source) =>
+      total +
+      [
+        ...source.expenses,
+        ...getHistoricalExpenseRows(source, draft.content.historyMonths).map(
+          (row) => ({
+            amount: row.effectiveAmount,
+            endMonth: null,
+            kind: 'Monthly' as const,
+            startMonth: null,
+          })
+        ),
+      ].reduce(
+        (sourceTotal, expense) =>
+          sourceTotal +
+          computeExpenseForecast(source, expense, results.forecastWindow).total,
+        0
+      ),
+    0
+  );
   return (
     <div className="space-y-6">
       <div className="text-center">
@@ -48,7 +71,6 @@ export function ProjectionReviewStep({
         </span>
         <h3 className="my-2 text-2xl font-bold">{name.trim()}</h3>
         <p className="mt-1 text-sm text-base-content/80">
-          {draft.content.forecastMonths}-month forecast,{' '}
           {fundingMonthLabel(results.forecastWindow.startMonth)} through{' '}
           {fundingMonthLabel(results.forecastWindow.endMonth)}.
         </p>
@@ -73,11 +95,11 @@ export function ProjectionReviewStep({
           },
           {
             action: 'Edit other expenses',
-            detail: `${draft.content.historyMonths}-month history for expense estimates.`,
+            detail: `${draft.content.historyMonths}-month history · ${expenseCount} added ${expenseCount === 1 ? 'expense' : 'expenses'}. Staff fees appear under Staffing.`,
             icon: ListBulletIcon,
             step: 2 as const,
             title: 'Other expenses',
-            value: `${expenseCount} added ${expenseCount === 1 ? 'expense' : 'expenses'}`,
+            value: `${formatCurrency(expenseForecast)} forecast`,
           },
         ].map(({ action, detail, icon: Icon, step, title, value }) => (
           <div

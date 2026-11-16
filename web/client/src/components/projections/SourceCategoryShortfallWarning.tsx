@@ -2,6 +2,7 @@ import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import { fundingMonthLabel } from '@/components/projections/fundingTimelineDates.ts';
 import type { SourceOutlook } from '@/lib/projectionOutlook.ts';
 import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
+import { projectionCategoryShortfallTooltip } from '@/shared/tooltips.ts';
 
 export function SourceCategoryShortfallWarning({
   onView,
@@ -30,7 +31,12 @@ export function SourceCategoryShortfallWarning({
             aria-hidden="true"
             className="size-4 shrink-0"
           />
-          Category shortfall · {fundingMonthLabel(firstMonth)}
+          <span>
+            Category shortfall · {fundingMonthLabel(firstMonth)}
+            {outlook.categoryShortfalls.every(
+              ({ recoveredMonth }) => recoveredMonth !== null
+            ) && <span className="block text-xs">Recovers by plan end</span>}
+          </span>
         </button>
       }
       tooltip={
@@ -39,11 +45,13 @@ export function SourceCategoryShortfallWarning({
             <li key={shortfall.expenditureCategory}>
               <p className="font-semibold">{shortfall.expenditureCategory}</p>
               <p>
-                {shortfall.missingBudget
-                  ? 'No budget recorded'
-                  : 'First shortfall'}
-                {' · '}
-                {fundingMonthLabel(shortfall.firstMonth)}
+                {projectionCategoryShortfallTooltip({
+                  firstMonth: fundingMonthLabel(shortfall.firstMonth),
+                  missingBudget: shortfall.missingBudget,
+                  recoveredMonth: shortfall.recoveredMonth
+                    ? fundingMonthLabel(shortfall.recoveredMonth)
+                    : null,
+                })}
               </p>
             </li>
           ))}

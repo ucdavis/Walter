@@ -7,7 +7,7 @@ import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
 import { projectionHistoryTooltip } from '@/shared/tooltips.ts';
 import { formatProjectionCurrency as formatCurrency } from '@/components/projections/projectionFormatting.ts';
 import { ProjectionExpensesTable } from '@/components/projections/ProjectionExpensesTable.tsx';
-import { useId, useImperativeHandle, useRef, useState, type Ref } from 'react';
+import { useImperativeHandle, useRef, useState, type Ref } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   ExpenseEditor,
@@ -21,7 +21,6 @@ import {
   HistoryWindowEditor,
   type HistoryWindowEditorHandle,
 } from '@/components/projections/HistoryWindowEditor.tsx';
-import { fundingMonthLabel } from '@/components/projections/fundingTimelineDates.ts';
 import {
   computeExpenseForecast,
   getProjectionForecastWindow,
@@ -70,7 +69,6 @@ export function ExpensesEditor<T extends ProjectionDraft>({
   sourceTarget?: { id: number | null; onChange: (id: number | null) => void };
 }) {
   const { draft } = session;
-  const sourceHelpId = useId();
   const forecastWindow = getProjectionForecastWindow(draft);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [editing, setEditing] = useState<EditorTarget | null>(null);
@@ -225,7 +223,6 @@ export function ExpensesEditor<T extends ProjectionDraft>({
         <label className="mb-5 grid w-full min-w-0 gap-1.5 text-sm font-medium sm:max-w-3xl">
           View expenses for
           <select
-            aria-describedby={sourceHelpId}
             className="select w-full min-w-0 truncate pr-10"
             onChange={(event) =>
               selectSource(
@@ -245,19 +242,8 @@ export function ExpensesEditor<T extends ProjectionDraft>({
       )}
       {draft.content.fundingSources.length ? (
         <>
-          <p className="mb-4 text-sm text-base-content/80" id={sourceHelpId}>
-            {selectedSource
-              ? 'Showing expenses charged to this funding source.'
-              : 'Showing expenses across all funding sources. Select a source in either table to focus this view.'}
-          </p>
-          {selectedSource && window && (
-            <p className="text-sm text-base-content/80">
-              Captured {selectedSource.capturedAt.slice(0, 10)}. Forecast
-              through {fundingMonthLabel(window.endMonth)}.
-            </p>
-          )}
           {window?.isBeyondForecast && (
-            <p className="text-sm text-base-content/80">
+            <p className="mb-4 text-sm text-base-content/80">
               This source starts after the forecast period. Its expenses add no
               costs within this plan period.
             </p>
@@ -282,7 +268,7 @@ export function ExpensesEditor<T extends ProjectionDraft>({
               </div>
               <div>
                 <dt className="text-sm text-base-content/80">
-                  Total other expenses
+                  Historical and added expenses
                 </dt>
                 <dd className="mt-1 text-2xl font-semibold tabular-nums">
                   {formatCurrency(historicalTotal + addedTotal)}
@@ -312,11 +298,20 @@ export function ExpensesEditor<T extends ProjectionDraft>({
               sources={visibleSources}
             />
           </div>
-          <p className="mt-4 text-sm leading-relaxed text-base-content/80">
-            Projected expenses use the {draft.content.historyMonths}-month
-            historical average. Planned expenses are costs you add to this
-            scenario.
-          </p>
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
+            <p className="text-sm leading-relaxed text-base-content/80">
+              Historical estimates use the {draft.content.historyMonths}-month
+              average. Added expenses are additional costs in this plan.
+            </p>
+            <button
+              className="btn btn-outline ml-auto"
+              onClick={openNewExpense}
+              type="button"
+            >
+              <PlusIcon aria-hidden="true" className="size-5 shrink-0" />
+              Add new expense
+            </button>
+          </div>
         </>
       ) : (
         <p>

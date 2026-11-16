@@ -176,19 +176,68 @@ async function show(draft = plan(), selectedSourceId: number | null = null) {
 const chartLines = () => document.querySelectorAll('.recharts-line-curve');
 
 describe('funding outlook', () => {
+  it('qualifies positive totals when category budgets are unverified in summary, group, and source views', async () => {
+    const draft = plan();
+    draft.content.appointments = [];
+    draft.content.fundingSources = [source(1, 500), source(2, 500)];
+    draft.content.fundingSources[0].projectType = null;
+    const { onNavigate, rerender, results, user } = await show(draft);
+    expect(
+      screen.queryByText('Each funding source stays within funding')
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Overall balances stay within funding; category budgets unverified'
+      )
+    ).toBeInTheDocument();
+    const table = screen.getByRole('table', { name: 'Funding sources' });
+    expect(table).toHaveTextContent('Category budgets unverified');
+    await user.click(
+      within(table).getByRole('button', { name: /Field research/ })
+    );
+    const unknownRow = within(table)
+      .getByRole('button', { name: 'View Source 1 · Task 1' })
+      .closest('tr')!;
+    expect(unknownRow).toHaveTextContent('Overall within funding');
+    expect(unknownRow).toHaveTextContent('Category budgets unverified');
+    rerender(
+      <OutlookView
+        draft={draft}
+        onNavigate={onNavigate}
+        outlook={buildProjectionOutlook(draft, results)}
+        results={results}
+        selectedSourceId={1}
+      />
+    );
+    expect(
+      screen.getByText(
+        'Overall balance stays within funding; category budgets unverified'
+      )
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText('Stays within funding throughout this plan')
+    ).not.toBeInTheDocument();
+  });
+
   it('keeps an earlier overall shortfall first while also calling out later category shortfalls', async () => {
     const draft = plan();
     const second = draft.content.fundingSources[1];
     second.projectType = 'Sponsored';
-    second.expenses = [{
-      ...structuredClone(draft.content.fundingSources[0].expenses[0]),
-      startMonth: '2026-02-01',
-    }];
+    second.expenses = [
+      {
+        ...structuredClone(draft.content.fundingSources[0].expenses[0]),
+        startMonth: '2026-02-01',
+      },
+    ];
     await show(draft);
     const summary = screen.getByRole('region', { name: 'Funding summary' });
     expect(summary).toHaveTextContent('First funding shortfall: Jan 2026');
-    expect(summary).toHaveTextContent('1 source has category budget shortfalls');
-    expect(within(summary).getByRole('button', {name: 'Explore Source 1 · Task 1'})).toBeInTheDocument();
+    expect(summary).toHaveTextContent(
+      '1 source has category budget shortfalls'
+    );
+    expect(
+      within(summary).getByRole('button', { name: 'Explore Source 1 · Task 1' })
+    ).toBeInTheDocument();
   });
 
   it('marks category shortfalls in the alert, project row, and source row despite a positive overall balance', async () => {
@@ -204,6 +253,9 @@ describe('funding outlook', () => {
     );
     expect(summary).toHaveTextContent(SUPPLIES_CATEGORY);
     expect(summary).not.toHaveTextContent('source falls below zero');
+    expect(summary).toHaveTextContent(
+      'These category balances recover by plan end.'
+    );
     expect(
       screen.queryByText('Each funding source stays within funding')
     ).not.toBeInTheDocument();
@@ -223,9 +275,13 @@ describe('funding outlook', () => {
     const warning = within(table).getByRole('button', {
       name: 'View category shortfalls for Source 1 · Task 1',
     });
+    expect(warning).toHaveTextContent('Recovers by plan end');
     await user.hover(warning);
     expect(await screen.findByRole('tooltip')).toHaveTextContent(
       SUPPLIES_CATEGORY
+    );
+    expect(screen.getByRole('tooltip')).toHaveTextContent(
+      'Recovers in Feb 2026 and stays within budget through plan end.'
     );
     await user.click(warning);
     expect(onViewCategoryBalances).toHaveBeenLastCalledWith(1);

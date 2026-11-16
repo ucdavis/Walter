@@ -73,7 +73,14 @@ function SourceRow({
             )}
           </span>
         ) : outlook.categoryShortfalls.length === 0 ? (
-          'Within funding'
+          outlook.fundingBasis === 'unknown' ? (
+            <span>
+              Overall within funding
+              <span className="block text-xs">Category budgets unverified</span>
+            </span>
+          ) : (
+            'Within funding'
+          )
         ) : null}
         {outlook.categoryShortfalls.length > 0 && (
           <div className="mt-1">
@@ -197,7 +204,19 @@ export function FundingOutlookTable({
                         'No forecast data in this period'
                       )
                     ) : group.categoryShortfallSources.length === 0 ? (
-                      'Within funding'
+                      group.sources.some(
+                        ({ endBalance, fundingBasis }) =>
+                          endBalance !== null && fundingBasis === 'unknown'
+                      ) ? (
+                        <span>
+                          Overall within funding
+                          <span className="block text-xs">
+                            Category budgets unverified
+                          </span>
+                        </span>
+                      ) : (
+                        'Within funding'
+                      )
                     ) : null}
                     {group.categoryShortfallSources.length > 0 && (
                       <span className="mt-1 flex items-start gap-1.5 text-error">
@@ -216,6 +235,11 @@ export function FundingOutlookTable({
                             {fundingMonthLabel(
                               group.firstCategoryShortfallMonth!
                             )}
+                            {group.categoryShortfallSources.every((source) =>
+                              source.categoryShortfalls.every(
+                                ({ recoveredMonth }) => recoveredMonth !== null
+                              )
+                            ) && ' · Recover by plan end'}
                           </span>
                         </span>
                       </span>

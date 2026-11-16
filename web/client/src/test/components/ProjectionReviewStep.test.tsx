@@ -72,6 +72,38 @@ function show(draft = example()) {
 }
 
 describe('minimal setup review', () => {
+  it('shows forecast expense dollars even when all costs come from historical estimates', () => {
+    const draft = createSalaryExample();
+    draft.content.appointments = [];
+    draft.content.historyMonths = 3;
+    const source = draft.content.fundingSources[0];
+    draft.content.fundingSources = [source];
+    source.expenses = [];
+    source.capturedAt = '2026-01-31T12:00:00Z';
+    source.endDate = null;
+    source.actuals = [
+      {
+        amount: 300,
+        expenditureCategory: SUPPLIES_CATEGORY,
+        month: '2025-12-01',
+      },
+    ];
+    source.runRates = [
+      {
+        expenditureCategory: SUPPLIES_CATEGORY,
+        historyMonths: 3,
+        monthlyAmount: 100,
+      },
+    ];
+    show(draft);
+    const card = screen
+      .getByRole('button', { name: 'Edit other expenses' })
+      .closest('div.flex-col')!;
+    expect(card).toHaveTextContent('$1,100 forecast');
+    expect(card).toHaveTextContent('0 added expenses');
+    expect(card).toHaveTextContent('3-month history');
+  });
+
   it('includes category shortfalls in setup review when the combined balance stays positive', () => {
     const draft = example();
     draft.content.appointments = [];
@@ -79,11 +111,17 @@ describe('minimal setup review', () => {
     const budget = draft.content.fundingSources[0].budgets[0];
     budget.budget = budget.spentToDate + 1000;
     show(draft);
-    expect(screen.getByRole('region', { name: 'Items to review' })).toHaveTextContent(
+    expect(
+      screen.getByRole('region', { name: 'Items to review' })
+    ).toHaveTextContent(
       '1 funding source has category budget shortfalls, first in Jan 2026.'
     );
-    expect(screen.getByLabelText('Outlook totals')).toHaveTextContent('$17,000');
-    expect(screen.queryByText(/funding source falls below zero/)).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Outlook totals')).toHaveTextContent(
+      '$17,000'
+    );
+    expect(
+      screen.queryByText(/funding source falls below zero/)
+    ).not.toBeInTheDocument();
   });
 
   it('keeps recovered task shortfalls and staffing issues visible with source details collapsed', async () => {

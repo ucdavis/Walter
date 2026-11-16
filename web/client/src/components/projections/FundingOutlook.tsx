@@ -102,6 +102,10 @@ export function FundingOutlook({
       ? hiddenGroups
       : hiddenSources;
   const setHidden = grouped ? setHiddenGroups : setHiddenSources;
+  const hasUnverifiedCategories = outlook.sources.some(
+    ({ endBalance, fundingBasis }) =>
+      endBalance !== null && fundingBasis === 'unknown'
+  );
 
   return (
     <section className="min-w-0">
@@ -134,7 +138,9 @@ export function FundingOutlook({
                       ? `${outlook.categoryShortfallSources.length} funding ${outlook.categoryShortfallSources.length === 1 ? 'source has' : 'sources have'} category budget shortfalls`
                       : outlook.shortfallSources.length
                         ? `${outlook.shortfallSources.length} of ${outlook.sources.length} funding sources ${outlook.shortfallSources.length === 1 ? 'runs' : 'run'} short`
-                        : 'Each funding source stays within funding'}
+                        : hasUnverifiedCategories
+                          ? 'Overall balances stay within funding; category budgets unverified'
+                          : 'Each funding source stays within funding'}
                   </p>
                   <p className="mt-1 text-sm text-base-content/80">
                     {outlook.categoryShortfallSources.length

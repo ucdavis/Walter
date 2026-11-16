@@ -178,7 +178,8 @@ describe('source outlook details', () => {
     const breakdown = screen.getByLabelText('Forecast spending breakdown');
     expect(breakdown).toHaveTextContent('Salary$2,900');
     expect(breakdown).toHaveTextContent('Fringe$580');
-    expect(breakdown).toHaveTextContent('Other forecast costs$550');
+    expect(breakdown).toHaveTextContent('Staff fees$600');
+    expect(breakdown).toHaveTextContent('Other expenses-$50');
 
     expect(
       screen.queryByText('Forecast costs by category')
@@ -255,6 +256,7 @@ describe('source outlook details', () => {
     );
     expect(onNavigate).toHaveBeenLastCalledWith({
       appointment: 101,
+      fundingDate: '2026-01-01',
       fundingMonth: '2026-01',
       section: 'staffing',
       source: 1,
@@ -314,6 +316,7 @@ describe('source outlook details', () => {
     );
     expect(onNavigate).toHaveBeenLastCalledWith({
       appointment: 101,
+      fundingDate: '2026-07-15',
       fundingMonth: '2026-07',
       section: 'staffing',
       source: 1,
@@ -340,6 +343,7 @@ describe('source outlook details', () => {
     );
     expect(onNavigate).toHaveBeenLastCalledWith({
       appointment: 101,
+      fundingDate: '2027-03-15',
       fundingMonth: '2027-03',
       section: 'staffing',
       source: 1,

@@ -4,7 +4,6 @@ import { fundingMonthLabel } from '@/components/projections/fundingTimelineDates
 import { formatProjectionCurrency as money } from '@/components/projections/projectionFormatting.ts';
 import {
   computeExpenseForecast,
-  getSourceForecastWindow,
   type ProjectionForecastWindow,
 } from '@/lib/piProjection.ts';
 import { getHistoricalExpenseRows } from '@/lib/projectionExpenses.ts';
@@ -77,7 +76,8 @@ export function ProjectionExpensesTable({
               },
               forecastWindow
             );
-            const window = getSourceForecastWindow(source, forecastWindow);
+            const firstMonth = forecast.months[0]?.month;
+            const lastMonth = forecast.months.at(-1)?.month;
             return (
               <tr
                 className="hover:bg-base-200/50"
@@ -129,11 +129,19 @@ export function ProjectionExpensesTable({
                   </div>
                 </td>
                 <td className="text-sm whitespace-nowrap">
-                  <p>Monthly</p>
-                  <p className="mt-0.5 text-base-content/80">
-                    {fundingMonthLabel(window.startMonth)} –{' '}
-                    {fundingMonthLabel(window.endMonth)}
-                  </p>
+                  {firstMonth && lastMonth ? (
+                    <>
+                      <p>Monthly</p>
+                      <p className="mt-0.5 text-base-content/80">
+                        {fundingMonthLabel(firstMonth)} –{' '}
+                        {fundingMonthLabel(lastMonth)}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-base-content/80">
+                      No active months in this plan
+                    </p>
+                  )}
                 </td>
                 <td className="text-right whitespace-nowrap tabular-nums">
                   <button
@@ -184,10 +192,7 @@ export function ProjectionExpensesTable({
           {!added.length && (
             <tr>
               <td className="p-6 text-center" colSpan={5}>
-                <h3 className="font-semibold">No expenses yet</h3>
-                <p className="mt-1 text-sm text-base-content/80">
-                  No added expenses for the selected funding sources.
-                </p>
+                <h3 className="font-semibold">No added expenses</h3>
               </td>
             </tr>
           )}
@@ -227,11 +232,8 @@ function ExpenseRows({
       </tr>
       {rows.map(({ item, source }) => {
         const forecast = computeExpenseForecast(source, item, forecastWindow);
-        const window = getSourceForecastWindow(source, forecastWindow);
-        const end =
-          item.endMonth?.slice(0, 7) ??
-          source.endDate?.slice(0, 7) ??
-          window.endMonth;
+        const firstMonth = forecast.months[0]?.month;
+        const lastMonth = forecast.months.at(-1)?.month;
         return (
           <tr
             className="hover:bg-base-200/50"
@@ -279,8 +281,11 @@ function ExpenseRows({
             <td className="text-sm whitespace-nowrap">
               <p>{kind === 'Monthly' ? 'Monthly' : 'One time'}</p>
               <p className="mt-0.5 text-base-content/80">
-                {fundingMonthLabel(item.startMonth.slice(0, 7))}
-                {kind === 'Monthly' && ` – ${fundingMonthLabel(end)}`}
+                {kind === 'OneTime'
+                  ? fundingMonthLabel(item.startMonth.slice(0, 7))
+                  : firstMonth && lastMonth
+                    ? `${fundingMonthLabel(firstMonth)} – ${fundingMonthLabel(lastMonth)}`
+                    : 'No active months in this plan'}
               </p>
             </td>
             <td className="text-right whitespace-nowrap tabular-nums">
