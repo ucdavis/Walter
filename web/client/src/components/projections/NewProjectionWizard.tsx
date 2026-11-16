@@ -407,7 +407,7 @@ export function NewProjectionWizard({
         <h1 className="h1 outline-none" ref={heading} tabIndex={-1}>
           {
             [
-              'Choose your starting point.',
+              'Which funding will you use?',
               'Review your team.',
               'Plan for everything else.',
               'Ready to explore your plan.',
@@ -417,7 +417,7 @@ export function NewProjectionWizard({
         <p className="mt-3 max-w-2xl text-base leading-relaxed text-base-content/80">
           {
             [
-              'Search and add the funding sources to include in your plan.',
+              'Choose one or more of your projects to start your plan.',
               'Keep current appointments or adjust them for this plan.',
               'Plan for supplies, travel, or a one-time purchase. Start with your historical spending estimates.',
               'Check your assumptions, then create a plan you can explore and adjust.',
@@ -679,6 +679,7 @@ function PlanStep({
   onNameChange: (value: string) => void;
   onNotesChange: (notes: string) => void;
 }) {
+  const [notesOpen, setNotesOpen] = useState(Boolean(notes));
   return (
     <form
       className="space-y-5"
@@ -705,12 +706,30 @@ function PlanStep({
           value={forecastMonths}
         />
       </div>
-      <PlanNotesField
-        label="What are you exploring? (optional)"
-        onChange={onNotesChange}
-        rows={1}
-        value={notes}
-      />
+      <div>
+        <button
+          aria-expanded={notesOpen}
+          className="link link-primary text-sm"
+          onClick={() => setNotesOpen((current) => !current)}
+          type="button"
+        >
+          {notesOpen
+            ? 'Hide note'
+            : notes
+              ? 'Edit note (optional)'
+              : 'Add a note (optional)'}
+        </button>
+        {notesOpen && (
+          <div className="mt-3">
+            <PlanNotesField
+              label="What are you exploring? (optional)"
+              onChange={onNotesChange}
+              rows={1}
+              value={notes}
+            />
+          </div>
+        )}
+      </div>
     </form>
   );
 }

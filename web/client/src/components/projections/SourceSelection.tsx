@@ -1,5 +1,8 @@
+import { ChevronDownIcon } from '@heroicons/react/24/outline';
 import {
   useCallback,
+  useEffect,
+  useId,
   useImperativeHandle,
   useRef,
   useState,
@@ -35,8 +38,31 @@ export function SourceSelection({
   selected: string[];
 }) {
   const [search, setSearch] = useState('');
+  const [open, setOpen] = useState(false);
+  const picker = useRef<HTMLDivElement>(null);
+  const resultsId = useId();
+  const suppressFocusOpen = useRef(false);
   const searchInput = useRef<HTMLInputElement>(null);
   const taskOpener = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    function closeOutside(event: PointerEvent) {
+      if (!picker.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener('pointerdown', closeOutside);
+    return () => document.removeEventListener('pointerdown', closeOutside);
+  }, [open]);
+  function closeAndReturnFocus() {
+    // Returning focus after selection must not reopen the project list.
+    suppressFocusOpen.current = true;
+    searchInput.current?.focus();
+    suppressFocusOpen.current = false;
+    setOpen(false);
+  }
   const returnTaskFocus = useCallback(
     () =>
       taskOpener.current?.isConnected
@@ -69,21 +95,18 @@ export function SourceSelection({
     const text = values.filter(Boolean).join(' ').toLocaleLowerCase();
     return terms.every((term) => text.includes(term));
   };
-  const results =
-    terms.length === 0
-      ? []
-      : [...groups.entries()].filter(([, group]) =>
-          group.some((choice) =>
-            matches([
-              choice.label,
-              choice.projectName,
-              choice.projectNumber,
-              choice.taskName,
-              choice.taskNumber,
-              choice.searchText,
-            ])
-          )
-        );
+  const results = [...groups.entries()].filter(([, group]) =>
+    group.some((choice) =>
+      matches([
+        choice.label,
+        choice.projectName,
+        choice.projectNumber,
+        choice.taskName,
+        choice.taskNumber,
+        choice.searchText,
+      ])
+    )
+  );
   function toggle(group: SourceSelectionChoice[], checked: boolean) {
     const next = new Set(selected);
     for (const choice of group) {
@@ -99,127 +122,171 @@ export function SourceSelection({
   }
   return (
     <div className="space-y-5">
-      <label className="flex flex-col gap-2 text-sm">
-        Search funding sources
-        <input
-          className="input input-bordered w-full"
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="Project, task, name, or number"
-          ref={searchInput}
-          type="search"
-          value={search}
-        />
-      </label>
-      {terms.length === 0 ? (
-        <p className="text-sm text-base-content/70">
-          Search to add a project or an individual task.
-        </p>
-      ) : (
-        <div className="max-h-96 space-y-3 overflow-y-auto">
-          {results.length === 0 && <p>No matching funding sources.</p>}
-          {results.map(([key, group]) => {
-            const first = group[0];
-            const project =
-              first.projectName ?? first.projectNumber ?? first.label;
-            const projectMatch = matches([
-              first.projectName,
-              first.projectNumber,
-            ]);
-            const available = group.filter(
-              (choice) => !choice.disabled && !selectedKeys.has(choice.key)
-            );
-            const taskMatches = group.filter((choice) =>
-              matches([
-                choice.label,
-                choice.projectName,
-                choice.projectNumber,
-                choice.taskName,
-                choice.taskNumber,
-                choice.searchText,
-              ])
-            );
-            return (
-              <section
-                aria-label={`${project} search results`}
-                className="rounded-lg border border-base-300 p-4"
-                key={key}
-              >
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1 break-words">
-                    <h3 className="font-semibold">{project}</h3>
-                    <p className="text-sm text-base-content/70">
-                      {first.projectNumber &&
-                        `Project ${first.projectNumber} · `}
-                      {group.length} {group.length === 1 ? 'task' : 'tasks'}
-                    </p>
+      <div
+        onBlur={(event) => {
+          if (!event.currentTarget.contains(event.relatedTarget)) {
+            setOpen(false);
+          }
+        }}
+        onKeyDown={(event) => {
+          if (event.key === 'Escape' && open) {
+            event.preventDefault();
+            event.stopPropagation();
+            closeAndReturnFocus();
+          }
+        }}
+        ref={picker}
+      >
+        <label className="flex flex-col gap-2 text-sm">
+          Choose from your projects
+          <span className="relative">
+            <input
+              aria-controls={open ? resultsId : undefined}
+              autoComplete="off"
+              className="input input-bordered w-full pr-10"
+              onChange={(event) => {
+                setSearch(event.target.value);
+                setOpen(true);
+              }}
+              onClick={() => setOpen(true)}
+              onFocus={() => {
+                if (!suppressFocusOpen.current) {
+                  setOpen(true);
+                }
+              }}
+              placeholder="Click to browse your projects, or type to search"
+              ref={searchInput}
+              type="search"
+              value={search}
+            />
+            <ChevronDownIcon
+              aria-hidden="true"
+              className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-base-content/60"
+            />
+          </span>
+        </label>
+        {open && (
+          <div
+            className="mt-2 max-h-96 space-y-3 overflow-y-auto rounded-lg border border-base-300 bg-base-100 p-3 shadow-sm"
+            id={resultsId}
+          >
+            <p className="text-sm text-base-content/70">
+              Select a project to include all its tasks.
+            </p>
+            {results.length === 0 && (
+              <p role="status">
+                {terms.length === 0
+                  ? 'No projects available.'
+                  : 'No matching funding sources.'}
+              </p>
+            )}
+            {results.map(([key, group]) => {
+              const first = group[0];
+              const project =
+                first.projectName ?? first.projectNumber ?? first.label;
+              const projectMatch = matches([
+                first.projectName,
+                first.projectNumber,
+              ]);
+              const available = group.filter(
+                (choice) => !choice.disabled && !selectedKeys.has(choice.key)
+              );
+              const taskMatches = group.filter((choice) =>
+                matches([
+                  choice.label,
+                  choice.projectName,
+                  choice.projectNumber,
+                  choice.taskName,
+                  choice.taskNumber,
+                  choice.searchText,
+                ])
+              );
+              return (
+                <section
+                  aria-label={`${project} search results`}
+                  className="rounded-lg border border-base-300 p-4"
+                  key={key}
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1 break-words">
+                      <h3 className="font-semibold">{project}</h3>
+                      <p className="text-sm text-base-content/70">
+                        {first.projectNumber &&
+                          `Project ${first.projectNumber} · `}
+                        {group.length} {group.length === 1 ? 'task' : 'tasks'}
+                      </p>
+                    </div>
+                    <button
+                      className="btn btn-primary btn-sm"
+                      disabled={available.length === 0}
+                      onClick={() => {
+                        toggle(group, true);
+                        setSearch('');
+                        closeAndReturnFocus();
+                      }}
+                      type="button"
+                    >
+                      {available.length === 0
+                        ? 'Already included'
+                        : group.length === 1
+                          ? projectMatch || !first.taskNumber
+                            ? 'Add source'
+                            : 'Add this task'
+                          : available.length < group.length
+                            ? `Add remaining ${available.length} ${available.length === 1 ? 'task' : 'tasks'}`
+                            : `Add all ${group.length} tasks`}
+                    </button>
                   </div>
-                  <button
-                    className="btn btn-primary btn-sm"
-                    disabled={available.length === 0}
-                    onClick={() => {
-                      toggle(group, true);
-                      setSearch('');
-                      searchInput.current?.focus();
-                    }}
-                    type="button"
-                  >
-                    {available.length === 0
-                      ? 'Already included'
-                      : group.length === 1
-                        ? projectMatch || !first.taskNumber
-                          ? 'Add source'
-                          : 'Add this task'
-                        : available.length < group.length
-                          ? `Add remaining ${available.length} ${available.length === 1 ? 'task' : 'tasks'}`
-                          : `Add all ${group.length} tasks`}
-                  </button>
-                </div>
-                {!projectMatch && group.length > 1 && (
-                  <div className="mt-3 space-y-2 border-t border-base-300 pt-3">
-                    {taskMatches.map((choice) => (
-                      <div
-                        className="flex flex-wrap items-center justify-between gap-2"
-                        key={choice.key}
-                      >
-                        <span className="min-w-0 flex-1 break-words text-sm">
-                          Task {choice.taskNumber}{' '}
-                          {choice.taskName && `· ${choice.taskName}`}
-                        </span>
-                        <button
-                          className="btn btn-outline btn-sm"
-                          disabled={
-                            choice.disabled || selectedKeys.has(choice.key)
-                          }
-                          onClick={() => {
-                            toggle([choice], true);
-                            setSearch('');
-                            searchInput.current?.focus();
-                          }}
-                          type="button"
+                  {!projectMatch && group.length > 1 && (
+                    <div className="mt-3 space-y-2 border-t border-base-300 pt-3">
+                      {taskMatches.map((choice) => (
+                        <div
+                          className="flex flex-wrap items-center justify-between gap-2"
+                          key={choice.key}
                         >
-                          {choice.disabled || selectedKeys.has(choice.key)
-                            ? 'Already included'
-                            : 'Add this task'}
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </section>
-            );
-          })}
-        </div>
-      )}
-      <div className="space-y-3">
-        <p className="text-sm font-semibold" role="status">
-          {selected.length} funding{' '}
-          {selected.length === 1 ? 'source' : 'sources'} selected
-        </p>
-        {selected.length === 0 && (
-          <p className="text-sm text-base-content/70">
-            No funding sources selected yet.
-          </p>
+                          <span className="min-w-0 flex-1 break-words text-sm">
+                            Task {choice.taskNumber}{' '}
+                            {choice.taskName && `· ${choice.taskName}`}
+                          </span>
+                          <button
+                            className="btn btn-outline btn-sm"
+                            disabled={
+                              choice.disabled || selectedKeys.has(choice.key)
+                            }
+                            onClick={() => {
+                              toggle([choice], true);
+                              setSearch('');
+                              closeAndReturnFocus();
+                            }}
+                            type="button"
+                          >
+                            {choice.disabled || selectedKeys.has(choice.key)
+                              ? 'Already included'
+                              : 'Add this task'}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </section>
+              );
+            })}
+          </div>
         )}
+      </div>
+      <div className="space-y-3">
+        <p
+          className={
+            selected.length === 0
+              ? 'rounded-lg border border-dashed border-base-300 px-4 py-7 text-center text-sm text-base-content/70'
+              : 'text-sm font-semibold'
+          }
+          role="status"
+        >
+          {selected.length === 0
+            ? 'Your selected funding sources will appear here.'
+            : `${selected.length} funding ${selected.length === 1 ? 'source' : 'sources'} selected`}
+        </p>
         <div className="grid items-start gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {[...groups.entries()].map(([key, group]) => {
             const included = group.filter((choice) =>

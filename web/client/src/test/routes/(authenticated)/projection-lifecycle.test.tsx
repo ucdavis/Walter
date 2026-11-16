@@ -339,19 +339,37 @@ describe('projection creation and copies', () => {
         screen.getByLabelText('Plan name'),
         'Typed while loading'
       );
+      expect(
+        screen.queryByLabelText('What are you exploring? (optional)')
+      ).not.toBeInTheDocument();
+      await user.click(
+        screen.getByRole('button', { name: 'Add a note (optional)' })
+      );
       await user.type(
         screen.getByLabelText('What are you exploring? (optional)'),
         'Keep the renewal assumption.'
       );
+      await user.click(screen.getByRole('button', { name: 'Hide note' }));
+      expect(
+        screen.queryByLabelText('What are you exploring? (optional)')
+      ).not.toBeInTheDocument();
+      await user.click(
+        screen.getByRole('button', { name: 'Edit note (optional)' })
+      );
+      expect(
+        screen.getByLabelText('What are you exploring? (optional)')
+      ).toHaveValue('Keep the renewal assumption.');
       await user.selectOptions(
         screen.getByLabelText('Forecast duration'),
         '18'
       );
       expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled();
       release();
-      await screen.findByRole('searchbox', { name: 'Search funding sources' });
+      await screen.findByRole('searchbox', {
+        name: 'Choose from your projects',
+      });
       expect(
-        screen.getByText('0 funding sources selected')
+        screen.getByText('Your selected funding sources will appear here.')
       ).toBeInTheDocument();
       expect(screen.getByLabelText('Plan name')).toHaveValue(
         'Typed while loading'
@@ -450,7 +468,9 @@ describe('projection creation and copies', () => {
     const user = userEvent.setup();
     try {
       await user.click(await screen.findByRole('button', { name: 'New plan' }));
-      await screen.findByRole('searchbox', { name: 'Search funding sources' });
+      await screen.findByRole('searchbox', {
+        name: 'Choose from your projects',
+      });
       expect(
         screen.queryByRole('checkbox', { name: /^Include / })
       ).not.toBeInTheDocument();
