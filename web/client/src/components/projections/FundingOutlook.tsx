@@ -1,4 +1,3 @@
-import { fundingMonthLabel } from '@/components/projections/fundingTimelineDates.ts';
 import {
   lazy,
   Suspense,
@@ -12,6 +11,11 @@ import { fundingOutlookSeries } from '@/components/projections/fundingOutlookSer
 import { FundingOutlookTotals } from '@/components/projections/FundingOutlookSummary.tsx';
 import { FundingOutlookTable } from '@/components/projections/FundingOutlookTable.tsx';
 import { SourceOutlookDetails } from '@/components/projections/SourceOutlookDetails.tsx';
+import {
+  SourceOutlookHeader,
+  SourceForecastCosts,
+} from '@/components/projections/SourceOutlookSummary.tsx';
+import type { SourceCategoryWorksheetHandle } from '@/components/projections/SourceCategoryWorksheet.tsx';
 import type { ProjectionOutlook } from '@/lib/projectionOutlook.ts';
 import type {
   ProjectionNavigation,
@@ -58,7 +62,7 @@ export function FundingOutlook({
   const selected = outlook.sources.find(
     ({ source }) => source.id === selectedSourceId
   );
-  const categoryHeadingRef = useRef<HTMLHeadingElement>(null);
+  const worksheetRef = useRef<SourceCategoryWorksheetHandle>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const focusSelectedSource = useCallback(() => {
     const heading = headingRef.current;
@@ -69,10 +73,8 @@ export function FundingOutlook({
   }, []);
   useImperativeHandle(ref, () => ({
     focusCategoryBudgets: () => {
-      const heading = categoryHeadingRef.current;
-      if (heading) {
-        heading.focus({ preventScroll: true });
-        heading.scrollIntoView({ block: 'start' });
+      if (worksheetRef.current) {
+        worksheetRef.current.focusBalances();
       } else {
         focusSelectedSource();
       }
@@ -110,16 +112,27 @@ export function FundingOutlook({
         <div className="overflow-hidden rounded-lg border border-main-border bg-base-100 text-base">
           <div className="flex flex-wrap items-start justify-between gap-5 p-5 xl:p-6">
             <div className="min-w-0 flex-1">
-              <h2 className="text-xl font-semibold">Project outlook</h2>
-              <p className="mt-1 text-sm text-base-content/80">
-                {outlook.shortfallSources.length
-                  ? `${outlook.shortfallSources.length} of ${outlook.sources.length} funding sources ${outlook.shortfallSources.length === 1 ? 'runs' : 'run'} short`
-                  : 'Each funding source stays within funding'}
-              </p>
-              <p className="mt-1 text-sm text-base-content/80">
-                Balances stay separate. Select a funding source to explore its
-                forecast.
-              </p>
+              {selected ? (
+                <SourceOutlookHeader
+                  headingRef={headingRef}
+                  onNavigate={onNavigate}
+                  outlook={selected}
+                  planStartDate={draft.seededAt.slice(0, 10)}
+                />
+              ) : (
+                <>
+                  <h2 className="text-xl font-semibold">Project outlook</h2>
+                  <p className="mt-1 text-sm text-base-content/80">
+                    {outlook.shortfallSources.length
+                      ? `${outlook.shortfallSources.length} of ${outlook.sources.length} funding sources ${outlook.shortfallSources.length === 1 ? 'runs' : 'run'} short`
+                      : 'Each funding source stays within funding'}
+                  </p>
+                  <p className="mt-1 text-sm text-base-content/80">
+                    Balances stay separate. Select a funding source to explore
+                    its forecast.
+                  </p>
+                </>
+              )}
             </div>
             <label className="grid w-full min-w-0 gap-1.5 text-sm font-medium sm:w-80 lg:w-96">
               Explore a funding source
@@ -153,29 +166,8 @@ export function FundingOutlook({
             outlook={outlook}
             selected={selected}
           />
-          {selected && (
-            <div className="px-5 pt-5 xl:px-6">
-              <h3
-                className="scroll-mt-24 text-lg font-semibold break-words"
-                ref={headingRef}
-                tabIndex={-1}
-              >
-                {selected.label}
-              </h3>
-              <p
-                className={`mt-1 text-sm ${selected.firstShortfallMonth ? 'text-error' : 'text-base-content/80'}`}
-              >
-                {selected.firstShortfallMonth
-                  ? `First below zero in ${fundingMonthLabel(selected.firstShortfallMonth)}`
-                  : selected.outside
-                    ? 'Outside forecast period'
-                    : selected.endBalance === null
-                      ? 'No forecast data in this period'
-                      : 'Stays within funding throughout this plan'}
-              </p>
-            </div>
-          )}
-          {selected && (
+          {selected && <SourceForecastCosts outlook={selected} />}
+          {selected && outlook.sources.length > 1 && (
             <button
               className="btn btn-ghost btn-sm mx-4 mt-4"
               onClick={() => onNavigate({ section: 'overview' })}
@@ -230,12 +222,12 @@ export function FundingOutlook({
       )}
       {selected && (
         <SourceOutlookDetails
-          categoryHeadingRef={categoryHeadingRef}
           draft={draft}
           key={selected.source.id}
           onNavigate={onNavigate}
           outlook={selected}
           results={results}
+          worksheetRef={worksheetRef}
         />
       )}
       <details className="mt-4 text-sm text-base-content/80">

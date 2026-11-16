@@ -7,7 +7,7 @@ import {
 } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { SourceOutlookDetails } from '@/components/projections/SourceOutlookDetails.tsx';
+import { FundingOutlook } from '@/components/projections/FundingOutlook.tsx';
 import {
   computePiProjection,
   FEE_REMISSION_CATEGORY,
@@ -132,14 +132,15 @@ function example(): ProjectionDraft {
 
 function open(plan = example()) {
   const results = computePiProjection(plan);
-  const outlook = buildProjectionOutlook(plan, results).sources[0];
+  const outlook = buildProjectionOutlook(plan, results);
   const onNavigate = vi.fn();
   render(
-    <SourceOutlookDetails
+    <FundingOutlook
       draft={plan}
       onNavigate={onNavigate}
       outlook={outlook}
       results={results}
+      selectedSourceId={1}
     />
   );
   return { onNavigate, user: userEvent.setup() };
@@ -170,24 +171,29 @@ describe('source outlook details', () => {
 
   it('shows additional costs with fees and signed credits without deducting booked costs twice', async () => {
     const previouslyFocused = document.activeElement;
-    const { user } = open();
-    expect(
-      screen.getByRole('heading', { name: 'Project A details' })
-    ).toBeVisible();
+    open();
+    expect(screen.getByRole('heading', { name: 'Project A' })).toBeVisible();
     // Navigation owns focus; rendering details alone must not move it.
     expect(document.activeElement).toBe(previouslyFocused);
-    const breakdown = screen.getByRole('region', {
-      name: 'Net forecast cost breakdown',
-    });
+    const breakdown = screen.getByLabelText('Forecast spending breakdown');
     expect(breakdown).toHaveTextContent('Salary$2,900');
     expect(breakdown).toHaveTextContent('Fringe$580');
     expect(breakdown).toHaveTextContent('Other forecast costs$550');
 
-    await user.click(
-      screen.getByText('Forecast costs by category', { selector: 'summary' })
-    );
+    expect(
+      screen.queryByText('Forecast costs by category')
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: 'Category budget balances' })
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText('Captured balance')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Edit budget' })
+    ).not.toBeInTheDocument();
+    expect(screen.getByText('Funding ends Dec 31, 2026')).toBeVisible();
+    expect(screen.queryByText(/Funding starts/)).not.toBeInTheDocument();
     const categories = screen.getByRole('table', {
-      name: 'Project A forecast costs by category',
+      name: 'Project A category worksheet: Net forecast costs',
     });
     expect(
       within(categories).getByRole('row', {
@@ -209,16 +215,18 @@ describe('source outlook details', () => {
     expect(january).toHaveTextContent('Balance $10,650');
   });
 
-  it('links source, expense, appointment, and allocation editors without inventing per-person costs', async () => {
+  it('links source, expense, appointment, and allocation editors from staff details', async () => {
     const { onNavigate, user } = open();
     const appointments = screen.getByRole('region', {
-      name: 'Appointments using this source',
+      name: 'Staff costs by month',
     });
+    await user.click(
+      within(appointments).getByRole('button', { name: 'Alex Example' })
+    );
     expect(appointments).toHaveTextContent(
       '50% of appointment · 25% full-time FTE · Appointment start through appointment end'
     );
     expect(appointments).toHaveTextContent('50% appointment FTE');
-    expect(appointments.textContent).not.toContain('$');
 
     await user.click(
       screen.getByRole('button', { name: 'Edit funding source' })
@@ -253,7 +261,7 @@ describe('source outlook details', () => {
     });
   });
 
-  it('retains out-of-period assignments and entered funding without fabricating monthly amounts', () => {
+  it('retains out-of-period assignments and entered funding without fabricating monthly amounts', async () => {
     const plan = example();
     const source = plan.content.fundingSources[0];
     source.startDate = '2027-01-01';
@@ -262,13 +270,17 @@ describe('source outlook details', () => {
     source.budgets = [];
     source.actuals = [];
     source.balanceAdjustment = 5000;
-    open(plan);
+    const { user } = open(plan);
+    await user.click(screen.getByRole('button', { name: 'Alex Example' }));
     expect(
       screen.getByText(/Its entered funding and allocations remain saved/)
     ).toBeVisible();
     expect(screen.getByText('$5,000')).toBeVisible();
     expect(
-      screen.getByRole('region', { name: 'Appointments using this source' })
+      screen.getByText('Funding starts Jan 1, 2027 · Funding ends Dec 31, 2027')
+    ).toBeVisible();
+    expect(
+      screen.getByRole('region', { name: 'Staff costs by month' })
     ).toHaveTextContent(
       'No funded share from this source is active in the forecast period.'
     );
@@ -277,7 +289,9 @@ describe('source outlook details', () => {
         /No category costs or monthly balances in this forecast period/
       )
     ).toBeVisible();
-    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('table', { name: /category worksheet/ })
+    ).not.toBeInTheDocument();
   });
 
   it('shows a dated later allocation and opens its first active month', async () => {
@@ -289,8 +303,9 @@ describe('source outlook details', () => {
       startDate: '2026-07-15',
     };
     const { onNavigate, user } = open(plan);
+    await user.click(screen.getByRole('button', { name: 'Alex Example' }));
     expect(
-      screen.getByRole('region', { name: 'Appointments using this source' })
+      screen.getByRole('region', { name: 'Staff costs by month' })
     ).toHaveTextContent(
       '25% of appointment · 12.5% full-time FTE · 2026-07-15 through 2026-09-30'
     );
@@ -319,6 +334,7 @@ describe('source outlook details', () => {
       },
     ];
     const { onNavigate, user } = open(plan);
+    await user.click(screen.getByRole('button', { name: 'Alex Example' }));
     await user.click(
       screen.getByRole('button', { name: 'Edit allocations for Alex Example' })
     );
@@ -341,6 +357,7 @@ describe('source outlook details', () => {
       },
     ];
     const { onNavigate, user } = open(plan);
+    await user.click(screen.getByRole('button', { name: 'Alex Example' }));
     expect(
       screen.queryByRole('button', {
         name: 'Edit allocations for Alex Example',

@@ -1,6 +1,9 @@
-import { useState } from 'react';
+import { useImperativeHandle, useRef, useState, type Ref } from 'react';
+import { InformationCircleIcon } from '@heroicons/react/24/outline';
 import type { ColumnDef } from '@tanstack/react-table';
 import { DataTable } from '@/shared/DataTable.tsx';
+import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
+import { tooltipDefinitions } from '@/shared/tooltips.ts';
 import { formatProjectionCurrency as money } from '@/components/projections/projectionFormatting.ts';
 import { fundingMonthLabel } from '@/components/projections/fundingTimelineDates.ts';
 import { getSourceForecastWindow } from '@/lib/piProjection.ts';
@@ -27,15 +30,29 @@ function Amount({
   );
 }
 
+export interface SourceCategoryWorksheetHandle {
+  focusBalances: () => void;
+}
+
 export function SourceCategoryWorksheet({
   outlook,
+  ref,
   results,
 }: {
   outlook: SourceOutlook;
+  ref?: Ref<SourceCategoryWorksheetHandle>;
   results: ProjectionResults;
 }) {
   const [mode, setMode] = useState<'costs' | 'balances'>('costs');
   const [expanded, setExpanded] = useState(false);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  useImperativeHandle(ref, () => ({
+    focusBalances: () => {
+      setMode('balances');
+      headingRef.current?.focus({ preventScroll: true });
+      headingRef.current?.scrollIntoView({ block: 'start' });
+    },
+  }));
   const balance = buildSourceFundingBalance(outlook.source, results.rows);
   const categorical = balance.basis === 'categories';
   const balances = categorical && mode === 'balances';
@@ -179,23 +196,44 @@ export function SourceCategoryWorksheet({
   ];
   return (
     <section aria-label="Category and month worksheet" className="space-y-3">
-      <h4 className="font-semibold">Category and month worksheet</h4>
+      <h3 className="scroll-mt-24 font-semibold" ref={headingRef} tabIndex={-1}>
+        Category and month worksheet
+      </h3>
       {outlook.outside || outlook.months.length === 0 ? (
         <p className="text-sm text-base-content/70">
           No category costs or monthly balances in this forecast period. This
-          source’s saved funding remains available in its details.
+          source’s saved funding remains available in the funding editor.
         </p>
       ) : (
         <>
-          <p className="text-sm text-base-content/70">
-            {categorical
-              ? 'Starting available includes budget adjustments. Month-end balances use each category’s own funding.'
-              : balance.basis === 'unknown'
-                ? 'Funding basis is unknown. Category restrictions cannot be determined; costs and the source overall balance remain available.'
-                : 'Categories show costs paid from the source overall. They do not have separate funding limits.'}{' '}
-            Months before this source’s capture or availability show a dash.
-            Balances after its end date carry forward.
-          </p>
+          <div className="flex items-center gap-1.5 text-sm text-base-content/70">
+            <p>
+              {categorical
+                ? 'Each category has its own budget.'
+                : balance.basis === 'unknown'
+                  ? 'Funding basis is unknown. Category restrictions cannot be determined.'
+                  : 'All categories use the same funding balance.'}
+            </p>
+            {categorical && (
+              <TooltipLabel
+                asChild
+                clickToOpen
+                label={
+                  <button
+                    aria-label="About category budgets"
+                    className="inline-flex shrink-0 rounded-sm hover:text-base-content focus-visible:outline-2 focus-visible:outline-primary"
+                    type="button"
+                  >
+                    <InformationCircleIcon
+                      aria-hidden="true"
+                      className="size-4"
+                    />
+                  </button>
+                }
+                tooltip={tooltipDefinitions.projectionCategoryBudgets}
+              />
+            )}
+          </div>
           <DataTable
             caption={`${outlook.label} category worksheet: ${balances ? 'Month-end balances' : 'Net forecast costs'}`}
             columns={columns}

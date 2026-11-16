@@ -266,8 +266,41 @@ Internal and unknown-basis sources show category spending with overall source
 balances; their category rows do not imply separate funding limits. The worksheet
 shows additional forecast costs; booked spending remains included in the saved
 starting balances and is not deducted again. The worksheet replaces the separate
-monthly totals panel. It and the category budget summary use the shared
-expandable-table view. Expansion changes presentation only.
+monthly totals and category budget summary tables. Captured category amounts and
+budget changes remain in the funding editor. Budget-warning links focus this
+worksheet in month-end balance mode. It uses the shared expandable-table view;
+expansion changes presentation only.
+
+The source summary shows funding end dates and starts after the plan's snapshot
+date, followed by opening balance, planned spending, and ending balance. The
+salary, fringe, and other-cost breakdown sits with these totals above the chart.
+Capture metadata remains available in the funding editor.
+
+### Staff worksheet
+
+Source outlooks show each appointment's estimated salary, fringe, and fee
+remission by month. Expanding an appointment reveals these components in aligned
+rows and its funding dates, shares, and editor links. The shared fullscreen
+table retains the source identity and expanded appointment.
+
+These amounts come from the calculator's existing appointment charges, including
+FTE, COLA, source and allocation date limits, and daily proration. Fringe includes
+CBR and vacation accrual. Fee remission is prorated by allocation and eligible
+days independently of FTE and COLA. Added expenses are not attributed to people.
+
+In the source's starting month, appointment rows show full-month estimates
+within their eligible dates. Recorded salary and fringe are known by source and
+expenditure category, not by appointment. When needed, a separate signed
+starting-month adjustment reconciles the estimates to additional personnel
+forecast costs. It does not assign recorded spending or credits to individual
+employees. Each category's adjustment is capped at its estimate for positive
+recorded spending; recorded credits can produce a positive adjustment. Fee
+remission is not reduced by recorded category 08 expenses.
+
+For example, $10,000 in appointment estimates and $3,000 already recorded give a
+-$3,000 adjustment and $7,000 in additional personnel costs. Existing forecast
+and budget calculations are unchanged, and these derived details are not
+persisted.
 
 ### Personnel budget warnings
 

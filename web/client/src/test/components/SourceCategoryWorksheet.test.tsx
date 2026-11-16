@@ -29,6 +29,16 @@ describe('source category worksheet', () => {
     plan.content.fundingSources[0].projectType = 'Sponsored';
     plan.content.fundingSources[0].balanceAdjustment = 500;
     const { outlook, results, user } = open(plan);
+    expect(screen.getByText('Each category has its own budget.')).toBeVisible();
+    await user.hover(
+      screen.getByRole('button', { name: 'About category budgets' })
+    );
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+      'Salary and fringe have separate budgets.'
+    );
+    await user.unhover(
+      screen.getByRole('button', { name: 'About category budgets' })
+    );
     const salary = results.rows.find(
       (r) =>
         r.fundingSourceId === 1 && r.expenditureCategory === SALARY_CATEGORY
@@ -91,6 +101,12 @@ describe('source category worksheet', () => {
         },
       ];
       const { outlook } = open(plan);
+      expect(
+        screen.queryByRole('button', { name: 'About category budgets' })
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByText('Each category has its own budget.')
+      ).not.toBeInTheDocument();
       expect(
         screen.queryByRole('button', { name: 'Month-end balances' })
       ).not.toBeInTheDocument();

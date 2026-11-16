@@ -29,6 +29,24 @@ export interface AppointmentFundingMonth {
   shares: AllocationShare[];
 }
 
+/** Appointment estimates before booked actuals are reconciled, excluding added expenses. */
+export interface AppointmentCostMonth {
+  appointmentId: number;
+  fees: number;
+  fringe: number;
+  fundingSourceId: number;
+  month: string;
+  salary: number;
+}
+
+/** Signed changes to appointment estimates at source capture; never assigned to a person. */
+export interface PersonnelReconciliationMonth {
+  fringe: number;
+  fundingSourceId: number;
+  month: string;
+  salary: number;
+}
+
 export interface ProjectionForecastWindow {
   endMonth: string;
   startMonth: string;
@@ -229,8 +247,10 @@ function fundingCoverage(events: Map<number, number>, active: DayRange) {
  * remain tied to the original plan snapshot, including when later sources are added.
  */
 export function computePiProjection(projection: ProjectionDraft): {
+  appointmentCosts: AppointmentCostMonth[];
   appointmentFunding: AppointmentFundingMonth[];
   forecastWindow: ProjectionForecastWindow;
+  personnelAdjustments: PersonnelReconciliationMonth[];
   rows: PiProjectionRow[];
 } {
   const seed = new Date(projection.seededAt);
@@ -266,7 +286,7 @@ export function computePiProjection(projection: ProjectionDraft): {
     amount: number
   ) => {
     if (m < capture(source).firstForecast || m > sourceEnd(source)) {
-      return;
+      return false;
     }
     const byCategory =
       charges.get(source.id) ?? new Map<string, Map<number, number>>();
@@ -274,12 +294,15 @@ export function computePiProjection(projection: ProjectionDraft): {
     byMonth.set(m, (byMonth.get(m) ?? 0) + amount);
     byCategory.set(category, byMonth);
     charges.set(source.id, byCategory);
+    return true;
   };
 
   const fundingSourcesById = new Map(
     projection.content.fundingSources.map((p) => [p.id, p])
   );
   const appointmentFunding: AppointmentFundingMonth[] = [];
+  const appointmentCosts: AppointmentCostMonth[] = [];
+  const personnelAdjustments: PersonnelReconciliationMonth[] = [];
   for (const appointment of projection.content.appointments) {
     for (let m = seedIndex; m <= horizonEnd; m++) {
       if (!within(m, appointment.startDate, appointment.endDate)) {
@@ -303,6 +326,7 @@ export function computePiProjection(projection: ProjectionDraft): {
       let fundedPercent = 0;
       const fundingEvents = new Map<number, number>();
       const fundingShares = new Map<number | null, number>();
+      const costsBySource = new Map<number, AppointmentCostMonth>();
       for (const f of appointment.allocations) {
         if (!within(m, f.startDate, f.endDate)) {
           continue;
@@ -347,10 +371,34 @@ export function computePiProjection(projection: ProjectionDraft): {
         const fraction = eligibleDays / overlapDays(days);
         for (const [category, cost] of costs) {
           if (cost) {
-            charge(source, category, m, cost * f.percent * fraction);
+            const amount = cost * f.percent * fraction;
+            if (charge(source, category, m, amount)) {
+              const estimate = costsBySource.get(source.id) ?? {
+                appointmentId: appointment.id,
+                fees: 0,
+                fringe: 0,
+                fundingSourceId: source.id,
+                month: toMonth(m),
+                salary: 0,
+              };
+              const component =
+                category === SALARY_CATEGORY
+                  ? 'salary'
+                  : category === FRINGE_CATEGORY
+                    ? 'fringe'
+                    : 'fees';
+              estimate[component] += amount;
+              costsBySource.set(source.id, estimate);
+            }
           }
         }
       }
+      appointmentCosts.push(
+        ...[...costsBySource.values()].filter(
+          ({ fees, fringe, salary }) =>
+            salary !== 0 || fringe !== 0 || fees !== 0
+        )
+      );
       if (activeAppointmentDays > 0) {
         appointmentFunding.push({
           appointmentId: appointment.id,
@@ -377,6 +425,12 @@ export function computePiProjection(projection: ProjectionDraft): {
     ) {
       continue;
     }
+    const adjustment: PersonnelReconciliationMonth = {
+      fringe: 0,
+      fundingSourceId: source.id,
+      month: toMonth(sourceIndex),
+      salary: 0,
+    };
     for (const category of PERSONNEL) {
       const target =
         charges.get(source.id)?.get(category)?.get(sourceIndex) ?? 0;
@@ -389,6 +443,8 @@ export function computePiProjection(projection: ProjectionDraft): {
         .reduce((total, actual) => total + actual.amount, 0);
       const remaining = Math.max(target - booked, 0);
       if (remaining !== target) {
+        adjustment[category === SALARY_CATEGORY ? 'salary' : 'fringe'] =
+          remaining - target;
         // Net booked credits even after source end; charge's date guard only bounds forecasts.
         const byCategory =
           charges.get(source.id) ?? new Map<string, Map<number, number>>();
@@ -397,6 +453,13 @@ export function computePiProjection(projection: ProjectionDraft): {
         byCategory.set(category, byMonth);
         charges.set(source.id, byCategory);
       }
+    }
+    // A planned source can become available after capture; those earlier charges have no output row.
+    if (
+      sourceIndex >= capture(source).firstForecast &&
+      (adjustment.salary !== 0 || adjustment.fringe !== 0)
+    ) {
+      personnelAdjustments.push(adjustment);
     }
   }
 
@@ -496,7 +559,13 @@ export function computePiProjection(projection: ProjectionDraft): {
     }
   }
 
-  return { appointmentFunding, forecastWindow, rows };
+  return {
+    appointmentCosts,
+    appointmentFunding,
+    forecastWindow,
+    personnelAdjustments,
+    rows,
+  };
 }
 
 /** Compounds COLA after the salary's base month, never within that month. */

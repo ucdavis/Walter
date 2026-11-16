@@ -206,7 +206,7 @@ describe('projection plan header', () => {
       within(summary).getByRole('button', { name: 'Explore Project A' })
     );
     expect(
-      await screen.findByRole('heading', { name: 'Project A details' })
+      await screen.findByRole('heading', { name: 'Project A' })
     ).toBeInTheDocument();
     expect(
       within(navigation).getByRole('button', { name: 'Overview' })
@@ -218,7 +218,7 @@ describe('projection plan header', () => {
     expect(
       sourceTitle.compareDocumentPosition(
         screen.getByLabelText('Outlook totals')
-      ) & Node.DOCUMENT_POSITION_PRECEDING
+      ) & Node.DOCUMENT_POSITION_FOLLOWING
     ).toBeTruthy();
     await user.click(
       within(summary).getByRole('button', { name: 'Explore Project A' })
@@ -243,7 +243,7 @@ describe('category budget persistence', () => {
     });
     const { user } = openWorkspace('?section=overview&source=1', plan);
     await user.click(
-      await screen.findByRole('button', { name: 'Edit budget' })
+      await screen.findByRole('button', { name: 'Edit funding source' })
     );
     await screen.findByRole('dialog', { name: 'Edit Project A' });
     await user.click(screen.getByRole('button', { name: 'Move budget' }));
@@ -308,7 +308,7 @@ describe('projection source focus', () => {
     link.focus();
     await user.keyboard('{Enter}');
     const heading = await screen.findByRole('heading', {
-      name: 'Category budget balances',
+      name: 'Category and month worksheet',
     });
     await waitFor(() => expect(heading).toHaveFocus());
     expect(read().location).toMatchObject({
@@ -317,7 +317,7 @@ describe('projection source focus', () => {
     });
     expect(
       screen.getByRole('table', {
-        name: 'Captured category budgets and remaining balances at plan end',
+        name: 'Project A category worksheet: Month-end balances',
       })
     ).toBeVisible();
   });
@@ -326,7 +326,7 @@ describe('projection source focus', () => {
     const scroll = vi.spyOn(Element.prototype, 'scrollIntoView');
     try {
       const { history, user } = openWorkspace('?section=overview&source=1');
-      await screen.findByRole('heading', { name: 'Project A details' });
+      await screen.findByRole('heading', { name: 'Project A' });
       expect(scroll).not.toHaveBeenCalled();
       await user.selectOptions(
         screen.getByRole('combobox', { name: 'Explore a funding source' }),
@@ -339,10 +339,10 @@ describe('projection source focus', () => {
       expect(scroll).toHaveBeenCalledWith({ block: 'start' });
       scroll.mockClear();
       await act(async () => history.back());
-      await screen.findByRole('heading', { name: 'Project A details' });
+      await screen.findByRole('heading', { name: 'Project A' });
       expect(scroll).not.toHaveBeenCalled();
       await act(async () => history.forward());
-      await screen.findByRole('heading', { name: 'Project B details' });
+      await screen.findByRole('heading', { name: 'Project B' });
       expect(scroll).not.toHaveBeenCalled();
     } finally {
       scroll.mockRestore();
@@ -354,7 +354,7 @@ describe('projection salary workspace', () => {
   it('starts the outlook at the saved snapshot month while retaining prior spending', async () => {
     const plan = createSalaryExample();
     openWorkspace('?section=overview&source=1', plan);
-    await screen.findByRole('heading', { name: 'Project A details' });
+    await screen.findByRole('heading', { name: 'Project A' });
     const table = screen.getByRole('table', {
       name: 'Project A category worksheet: Net forecast costs',
     });
@@ -396,7 +396,7 @@ describe('projection salary workspace', () => {
     const { router } = workspace;
     render(<RouterProvider router={router} />);
     const user = userEvent.setup();
-    await screen.findByRole('heading', { name: 'Project A details' });
+    await screen.findByRole('heading', { name: 'Project A' });
     const monthlyTotal = (index: number) => {
       const table = screen.getByRole('table', {
         name: 'Project A category worksheet: Net forecast costs',
@@ -428,7 +428,7 @@ describe('projection salary workspace', () => {
     });
 
     await user.click(screen.getByRole('button', { name: 'Overview' }));
-    await screen.findByRole('heading', { name: 'Project A details' });
+    await screen.findByRole('heading', { name: 'Project A' });
     expect(monthlyTotal(1)).toHaveTextContent('$0');
     expect(monthlyTotal(1)).toHaveTextContent('Balance $26,600');
     expect(monthlyTotal(2)).toHaveTextContent('$1,260');
@@ -546,7 +546,7 @@ describe('projection salary workspace', () => {
 
   it('preserves committed salary and source location through Back/Forward and discards a closed editor buffer', async () => {
     const { history, user } = openWorkspace('?section=overview&source=2');
-    await screen.findByRole('heading', { name: 'Project B details' });
+    await screen.findByRole('heading', { name: 'Project B' });
     await user.click(screen.getByRole('button', { name: 'Staffing' }));
     await user.click(editButton());
     await user.clear(salaryInput());
@@ -577,7 +577,7 @@ describe('projection salary workspace', () => {
     await act(async () => history.back());
     await waitFor(() => expect(read().location.section).toBe('staffing'));
     await act(async () => history.forward());
-    await screen.findByRole('heading', { name: 'Project B details' });
+    await screen.findByRole('heading', { name: 'Project B' });
     expect(read().revision).toBe(1);
   });
 
@@ -615,7 +615,7 @@ describe('projection salary workspace', () => {
       ref.current!.read().draft.content.appointments[0].monthlySalary
     ).toBe(11_000);
     expect(
-      screen.getByRole('heading', { name: 'Project A details' })
+      screen.getByRole('heading', { name: 'Project A' })
     ).toBeInTheDocument();
   });
 

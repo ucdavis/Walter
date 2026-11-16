@@ -38,6 +38,8 @@ export const tooltipDefinitions = {
     'Number of days after the award end date allowed for reporting and closeout activity.',
   projectBurndown:
     "Choose a timeline to view the project's remaining budget, including the current month and three, six, or twelve months of actuals (History), which also set the spending average used for non-personnel projections. Use the toggles to view All Expenses, Personnel, or Non-Personnel.",
+  projectionCategoryBudgets:
+    'Salary and fringe have separate budgets. An overall source surplus does not cover a shortfall in either category. Starting available includes budget adjustments made in this plan. These changes do not update financial-system budgets.',
   reconciliationDiscrepancy: 'GL/PPM reconciliation discrepancy',
   selectFinancialDepartmentFirst: 'Select a financial department first',
   selectSingleDepartmentToLabel:
