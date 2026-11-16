@@ -206,7 +206,7 @@ function getPositionSearchText(position: AggregatedPosition): string {
       distribution.record.projectType === 'Internal'
         ? distribution.record.task
         : '',
-      formatPercent(distribution.distributionPercent),
+      `${formatPercent(distribution.distributionPercent)}%`,
       formatDate(distribution.record.fundingEffectiveDate, ''),
       formatDate(distribution.record.fundingEndDate, ''),
       ...(!distribution.salaryUnknown
@@ -699,6 +699,7 @@ export function PersonnelTable({ data }: PersonnelTableProps) {
         </>
       )}
       <div
+        aria-label={isOverlayActive ? 'Personnel table' : undefined}
         className={
           isOverlayActive
             ? `fixed z-100 flex flex-col min-h-0 bg-base-100 rounded-box shadow-xl p-4 ${prefersReducedMotion || !canAnimateRect ? 'transition-none' : 'transition-[top,left,width,height] duration-300 ease-in-out'}`
@@ -706,6 +707,7 @@ export function PersonnelTable({ data }: PersonnelTableProps) {
         }
         onTransitionEnd={handleContainerTransitionEnd}
         ref={containerRef}
+        role={isOverlayActive ? 'dialog' : undefined}
         style={overlayStyle}
       >
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">

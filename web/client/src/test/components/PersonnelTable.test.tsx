@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import {
   aggregateByPosition,
@@ -847,6 +853,41 @@ describe('PersonnelTable', () => {
     ).not.toBeInTheDocument();
   });
 
+  it.each([
+    ['100%', 100],
+    ['100', 100],
+    ['33.33%', 33.3333],
+    ['33.33', 33.3333],
+  ] as const)(
+    'searches displayed distribution percentages for %s',
+    async (query, distributionPercent) => {
+      const user = userEvent.setup();
+      render(
+        <PersonnelTable
+          data={[
+            createRecord({ distributionPercent, employeeId: '7001' }),
+            createRecord({
+              distributionPercent: 50,
+              employeeId: '8002',
+              name: 'Baker, Bob',
+              positionNumber: '40009999',
+            }),
+          ]}
+        />
+      );
+      await user.type(
+        screen.getByRole('textbox', { name: 'Search personnel' }),
+        query
+      );
+      expect(
+        screen.getByRole('button', { name: /Smith, John/ })
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: /Baker, Bob/ })
+      ).not.toBeInTheDocument();
+    }
+  );
+
   it('expands and collapses only filtered positions and preserves hidden expansions', async () => {
     const user = userEvent.setup();
     render(
@@ -962,12 +1003,18 @@ describe('PersonnelTable', () => {
   it('restores focus and scrolling when the expanded table closes with Escape', async () => {
     const user = userEvent.setup();
     render(<PersonnelTable data={[createRecord()]} />);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Expand table' }));
+    const overlay = screen.getByRole('dialog', { name: 'Personnel table' });
+    expect(within(overlay).getByRole('table')).toBeInTheDocument();
     expect(document.body.style.overflow).toBe('hidden');
     expect(
       screen.getByRole('button', { name: 'Collapse table' })
     ).toBeInTheDocument();
     await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(overlay).not.toHaveAttribute('role');
+    expect(overlay).not.toHaveAttribute('aria-label');
     expect(screen.getByRole('button', { name: 'Expand table' })).toHaveFocus();
     expect(document.body.style.overflow).toBe('');
   });
