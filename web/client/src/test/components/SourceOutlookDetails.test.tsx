@@ -1,4 +1,10 @@
-import { cleanup, render, screen, within } from '@testing-library/react';
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SourceOutlookDetails } from '@/components/projections/SourceOutlookDetails.tsx';
@@ -140,7 +146,29 @@ function open(plan = example()) {
 }
 
 describe('source outlook details', () => {
-  it('shows additional costs with fees and signed credits while keeping booked costs separate', async () => {
+  it('expands the worksheet without changing amounts and returns focus on Escape', async () => {
+    const { user } = open();
+    const monthly = screen.getByRole('table', {
+      name: 'Project A category worksheet: Net forecast costs',
+    });
+    const section = screen.getByRole('region', {
+      name: 'Category and month worksheet',
+    });
+    const expand = within(section).getByRole('button', {
+      name: 'Expand table',
+    });
+    const before = monthly.textContent;
+    await user.click(expand);
+    expect(
+      within(section).getByRole('button', { name: 'Collapse table' })
+    ).toBeVisible();
+    expect(monthly.textContent).toBe(before);
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(expand).toHaveFocus());
+    expect(monthly.textContent).toBe(before);
+  });
+
+  it('shows additional costs with fees and signed credits without deducting booked costs twice', async () => {
     const previouslyFocused = document.activeElement;
     const { user } = open();
     expect(
@@ -172,18 +200,13 @@ describe('source outlook details', () => {
       })
     ).toHaveTextContent('-$50');
 
-    await user.click(
-      screen.getByText('Monthly balances and costs', { selector: 'summary' })
-    );
     const monthly = screen.getByRole('table', {
-      name: 'Monthly actuals, forecast, and remaining balance for Project A',
+      name: 'Project A category worksheet: Net forecast costs',
     });
-    expect(
-      within(monthly).getByRole('row', { name: /^2026-01 / })
-    ).toHaveTextContent('2026-01$120$230$10,650');
-    expect(
-      screen.getByText(/Booked costs in the capture month are already included/)
-    ).toBeVisible();
+    const january = within(monthly).getByText('Source overall').closest('tr')!
+      .children[1];
+    expect(january).toHaveTextContent('$230');
+    expect(january).toHaveTextContent('Balance $10,650');
   });
 
   it('links source, expense, appointment, and allocation editors without inventing per-person costs', async () => {
@@ -230,7 +253,7 @@ describe('source outlook details', () => {
     });
   });
 
-  it('retains out-of-period assignments and entered funding without fabricating monthly amounts', async () => {
+  it('retains out-of-period assignments and entered funding without fabricating monthly amounts', () => {
     const plan = example();
     const source = plan.content.fundingSources[0];
     source.startDate = '2027-01-01';
@@ -239,7 +262,7 @@ describe('source outlook details', () => {
     source.budgets = [];
     source.actuals = [];
     source.balanceAdjustment = 5000;
-    const { user } = open(plan);
+    open(plan);
     expect(
       screen.getByText(/Its entered funding and allocations remain saved/)
     ).toBeVisible();
@@ -249,11 +272,10 @@ describe('source outlook details', () => {
     ).toHaveTextContent(
       'No funded share from this source is active in the forecast period.'
     );
-    await user.click(
-      screen.getByText('Monthly balances and costs', { selector: 'summary' })
-    );
     expect(
-      screen.getByText('No monthly balance or costs in this forecast period.')
+      screen.getByText(
+        /No category costs or monthly balances in this forecast period/
+      )
     ).toBeVisible();
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
   });

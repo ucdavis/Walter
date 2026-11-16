@@ -51,6 +51,7 @@ function hasAnyFooter<TData extends object>(
 }
 
 interface DataTableProps<TData extends object> {
+  caption?: string;
   columns: DataTableColumns<TData>;
   data: TData[];
   defaultColumnSize?: number;
@@ -66,6 +67,7 @@ interface DataTableProps<TData extends object> {
   onOverlayActiveChange?: (isActive: boolean) => void;
   pagination?: 'auto' | 'on' | 'off'; // 'auto' shows controls only when needed; 'off' disables pagination entirely
   renderSubComponent?: (props: { row: Row<TData> }) => ReactNode;
+  rowHeaderColumnId?: string;
   subComponentRowClassName?: string;
   tableActions?: TableActionsRenderer<TData>;
   tableActionsAlignment?: 'end' | 'start';
@@ -74,6 +76,7 @@ interface DataTableProps<TData extends object> {
 }
 
 export const DataTable = <TData extends object>({
+  caption,
   columns,
   data,
   defaultColumnSize = 100,
@@ -89,6 +92,7 @@ export const DataTable = <TData extends object>({
   onOverlayActiveChange,
   pagination = 'auto',
   renderSubComponent,
+  rowHeaderColumnId,
   subComponentRowClassName,
   tableActions,
   tableActionsAlignment = 'end',
@@ -372,6 +376,7 @@ export const DataTable = <TData extends object>({
               .filter(Boolean)
               .join(' ')}
           >
+            {caption && <caption className="sr-only">{caption}</caption>}
             <thead>
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id}>
@@ -440,18 +445,24 @@ export const DataTable = <TData extends object>({
                         .filter(Boolean)
                         .join(' ')}
                     >
-                      {row.getVisibleCells().map((cell) => (
-                        <td
-                          className="align-top"
-                          key={cell.id}
-                          style={{ width: cell.column.getSize() }}
-                        >
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext()
-                          )}
-                        </td>
-                      ))}
+                      {row.getVisibleCells().map((cell) => {
+                        const isRowHeader =
+                          cell.column.id === rowHeaderColumnId;
+                        const Cell = isRowHeader ? 'th' : 'td';
+                        return (
+                          <Cell
+                            className="align-top"
+                            key={cell.id}
+                            scope={isRowHeader ? 'row' : undefined}
+                            style={{ width: cell.column.getSize() }}
+                          >
+                            {flexRender(
+                              cell.column.columnDef.cell,
+                              cell.getContext()
+                            )}
+                          </Cell>
+                        );
+                      })}
                     </tr>
 
                     {renderSubComponent && row.getIsExpanded() ? (

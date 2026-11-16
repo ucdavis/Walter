@@ -355,27 +355,27 @@ describe('projection salary workspace', () => {
     const plan = createSalaryExample();
     openWorkspace('?section=overview&source=1', plan);
     await screen.findByRole('heading', { name: 'Project A details' });
-    await userEvent.click(screen.getByText('Monthly balances and costs'));
     const table = screen.getByRole('table', {
-      name: 'Monthly actuals, forecast, and remaining balance for Project A',
+      name: 'Project A category worksheet: Net forecast costs',
     });
     expect(
       within(table)
-        .getAllByRole('rowheader')
+        .getAllByRole('columnheader')
+        .slice(1, 13)
         .map((cell) => cell.textContent)
     ).toEqual([
-      '2026-01',
-      '2026-02',
-      '2026-03',
-      '2026-04',
-      '2026-05',
-      '2026-06',
-      '2026-07',
-      '2026-08',
-      '2026-09',
-      '2026-10',
-      '2026-11',
-      '2026-12',
+      'Jan 2026',
+      'Feb 2026',
+      'Mar 2026',
+      'Apr 2026',
+      'May 2026',
+      'Jun 2026',
+      'Jul 2026',
+      'Aug 2026',
+      'Sep 2026',
+      'Oct 2026',
+      'Nov 2026',
+      'Dec 2026',
     ]);
     expect(read().draft.content.fundingSources[0].actuals).toEqual(
       plan.content.fundingSources[0].actuals
@@ -385,7 +385,7 @@ describe('projection salary workspace', () => {
     );
   });
 
-  it('keeps booked costs visible while salary edits change only the remaining snapshot forecast', async () => {
+  it('preserves booked costs while salary edits change only the remaining snapshot forecast', async () => {
     const history = createMemoryHistory({
       initialEntries: ['/projections/TEST-PI/1?section=overview&source=1'],
     });
@@ -397,13 +397,16 @@ describe('projection salary workspace', () => {
     render(<RouterProvider router={router} />);
     const user = userEvent.setup();
     await screen.findByRole('heading', { name: 'Project A details' });
-    await user.click(screen.getByText('Monthly balances and costs'));
-    const january = () => screen.getByRole('row', { name: /^2026-01 / });
-    expect(
-      within(january())
-        .getAllByRole('cell')
-        .map((cell) => cell.textContent)
-    ).toEqual(['$1,400', '$2,100', '$24,500']);
+    const monthlyTotal = (index: number) => {
+      const table = screen.getByRole('table', {
+        name: 'Project A category worksheet: Net forecast costs',
+      });
+      return within(table).getByText('Source overall').closest('tr')!.children[
+        index
+      ];
+    };
+    expect(monthlyTotal(1)).toHaveTextContent('$2,100');
+    expect(monthlyTotal(1)).toHaveTextContent('Balance $24,500');
 
     await user.click(screen.getByRole('button', { name: 'Staffing' }));
     await user.click(editButton());
@@ -426,18 +429,10 @@ describe('projection salary workspace', () => {
 
     await user.click(screen.getByRole('button', { name: 'Overview' }));
     await screen.findByRole('heading', { name: 'Project A details' });
-    await user.click(screen.getByText('Monthly balances and costs'));
-    expect(
-      within(january())
-        .getAllByRole('cell')
-        .map((cell) => cell.textContent)
-    ).toEqual(['$1,400', '$0', '$26,600']);
-    const february = screen.getByRole('row', { name: /^2026-02 / });
-    expect(
-      within(february)
-        .getAllByRole('cell')
-        .map((cell) => cell.textContent)
-    ).toEqual(['$0', '$1,260', '$25,340']);
+    expect(monthlyTotal(1)).toHaveTextContent('$0');
+    expect(monthlyTotal(1)).toHaveTextContent('Balance $26,600');
+    expect(monthlyTotal(2)).toHaveTextContent('$1,260');
+    expect(monthlyTotal(2)).toHaveTextContent('Balance $25,340');
     expect(router.state.location.search).toMatchObject({
       source: 1,
     });

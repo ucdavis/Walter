@@ -1,5 +1,6 @@
 import type { Ref } from 'react';
 import { SourceCategoryBudgets } from '@/components/projections/SourceCategoryBudgets.tsx';
+import { SourceCategoryWorksheet } from '@/components/projections/SourceCategoryWorksheet.tsx';
 import {
   buildSourceFundingBalance,
   getSourceFundingBasis,
@@ -105,7 +106,11 @@ export function SourceOutlookDetails({
         outlook={outlook}
         showCategories={getSourceFundingBasis(source) !== 'categories'}
       />
-      <SourceMonthlyAmounts outlook={outlook} />
+      <SourceCategoryWorksheet
+        key={source.id}
+        outlook={outlook}
+        results={results}
+      />
       <SourceOutlookAppointments
         appointments={draft.content.appointments}
         onNavigate={onNavigate}
@@ -191,59 +196,5 @@ function SourceForecastCosts({
         </details>
       )}
     </section>
-  );
-}
-
-function SourceMonthlyAmounts({ outlook }: { outlook: SourceOutlook }) {
-  return (
-    <details>
-      <summary className="cursor-pointer font-medium">
-        Monthly balances and costs
-      </summary>
-      <h4 className="mt-3 font-semibold">{outlook.label} by month</h4>
-      <p className="mt-2 text-sm">
-        Booked costs in the capture month are already included in the captured
-        balance. Net forecast costs are additional expected spending, including
-        planned credits.
-      </p>
-      {outlook.months.length ? (
-        <div className="mt-3 overflow-x-auto">
-          <table className="table w-full whitespace-nowrap">
-            <caption className="sr-only">
-              Monthly actuals, forecast, and remaining balance for{' '}
-              {outlook.label}
-            </caption>
-            <thead>
-              <tr>
-                <th scope="col">Month</th>
-                <th scope="col">Booked costs</th>
-                <th scope="col">Net forecast costs</th>
-                <th scope="col">End balance</th>
-              </tr>
-            </thead>
-            <tbody>
-              {outlook.months.map((month) => (
-                <tr key={month.month}>
-                  <th scope="row">{month.month}</th>
-                  <td>{formatCurrency(month.actual)}</td>
-                  <td>{formatCurrency(month.forecast)}</td>
-                  <td
-                    className={
-                      month.remaining < 0 ? 'font-semibold text-error' : ''
-                    }
-                  >
-                    {formatCurrency(month.remaining)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <p className="mt-3 text-sm">
-          No monthly balance or costs in this forecast period.
-        </p>
-      )}
-    </details>
   );
 }

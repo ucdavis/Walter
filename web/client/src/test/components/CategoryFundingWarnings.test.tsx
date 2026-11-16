@@ -10,7 +10,10 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { AppointmentBudgetWarnings } from '@/components/projections/AppointmentBudgetWarnings.tsx';
 import { SourceCategoryBudgets } from '@/components/projections/SourceCategoryBudgets.tsx';
 import { FRINGE_CATEGORY, SALARY_CATEGORY } from '@/lib/piProjection.ts';
-import type { SourceFundingBalance } from '@/lib/projectionFundingBalances.ts';
+import {
+  buildSourceFundingBalance,
+  type SourceFundingBalance,
+} from '@/lib/projectionFundingBalances.ts';
 import { createSalaryExample } from '@/test/fixtures/projections.ts';
 
 afterEach(cleanup);
@@ -199,4 +202,72 @@ it('shows captured category inputs, forecast, negative remainder, and adjustment
     <SourceCategoryBudgets balance={{ ...balance, basis: 'unknown' }} />
   );
   expect(screen.getByText(/Funding basis unknown/)).toBeInTheDocument();
+});
+
+it('preserves category balances and source identity in fullscreen', async () => {
+  const user = userEvent.setup();
+  const source = {
+    ...sources[0],
+    balanceAdjustment: 50,
+    budgets: [
+      {
+        budget: 1000,
+        committed: 100,
+        expenditureCategory: SALARY_CATEGORY,
+        spentToDate: 200,
+      },
+    ],
+    projectType: 'Sponsored',
+  };
+  const sourceBalance = {
+    ...buildSourceFundingBalance(source, []),
+    basis: 'categories' as const,
+  };
+  render(
+    <SourceCategoryBudgets balance={sourceBalance} sourceIdentity="Project A" />
+  );
+  await user.click(screen.getByRole('button', { name: 'Expand table' }));
+  expect(screen.getByRole('button', { name: 'Collapse table' })).toBeVisible();
+  const table = screen.getByRole('table', {
+    name: 'Captured category budgets and remaining balances at plan end',
+  });
+  const salary = within(table)
+    .getByRole('rowheader', { name: SALARY_CATEGORY })
+    .closest('tr')!;
+  expect(
+    within(salary)
+      .getAllByRole('cell')
+      .map((cell) => cell.textContent)
+  ).toEqual(['$700', '$0', '$700', '—']);
+  const adjustment = within(table)
+    .getByRole('rowheader', { name: 'Planning balance adjustment' })
+    .closest('tr')!;
+  expect(
+    within(adjustment)
+      .getAllByRole('cell')
+      .map((cell) => cell.textContent)
+  ).toEqual(['$0', '+$50', '$50', '—']);
+  const overall = within(table).getByText('Source overall').closest('tr')!;
+  expect(
+    within(overall)
+      .getAllByRole('cell')
+      .slice(1)
+      .map((cell) => cell.textContent)
+  ).toEqual(['$700', '$50', '$750', '—']);
+  expect(table.closest('.fixed')).toHaveTextContent('Project A');
+  const before = table.textContent;
+  await user.click(screen.getByRole('button', { name: 'Collapse table' }));
+  expect(table.textContent).toBe(before);
+});
+
+it('uses initial planned funding for planned sources', () => {
+  render(<SourceCategoryBudgets balance={balance} initialPlanned />);
+  expect(
+    screen.getByRole('table', {
+      name: 'Initial planned category budgets and remaining balances at plan end',
+    })
+  ).toBeInTheDocument();
+  expect(
+    screen.getByRole('columnheader', { name: 'Initial planned funding' })
+  ).toBeInTheDocument();
 });

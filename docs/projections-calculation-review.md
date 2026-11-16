@@ -254,6 +254,21 @@ $47,000. It does not apply November's balance back in October or deduct the
 booked $2,000 again. Existing October sources and employee salary assumptions
 remain unchanged.
 
+### Category worksheet
+
+Source outlooks show an inline worksheet with expenditure categories as rows and
+the plan's months as columns. Net forecast costs and, for sponsored funding,
+month-end category balances come directly from the existing calculator results.
+Months before a source becomes eligible show no value rather than carrying its
+captured balance backward. Signed forecast credits remain credits, not shortfalls.
+
+Internal and unknown-basis sources show category spending with overall source
+balances; their category rows do not imply separate funding limits. The worksheet
+shows additional forecast costs; booked spending remains included in the saved
+starting balances and is not deducted again. The worksheet replaces the separate
+monthly totals panel. It and the category budget summary use the shared
+expandable-table view. Expansion changes presentation only.
+
 ### Personnel budget warnings
 
 The calculator retains each expenditure category's balance. Staffing warnings for
