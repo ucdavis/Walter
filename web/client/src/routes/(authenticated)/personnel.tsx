@@ -81,7 +81,7 @@ function RouteComponent() {
       </p>
       <p className="max-w-3xl mb-4">
         Monthly amounts show current funding for this PI only. Expand an
-        employee to see their project funding details.
+        employee to see job details and full job amounts.
       </p>
       {/* Personnel Table */}
       <PersonnelTable data={data} />
