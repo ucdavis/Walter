@@ -1236,7 +1236,7 @@ describe('project detail page', () => {
     }
   });
 
-  it.each(['Capital', 'Sponsored Capital'])(
+  it.each(['Capital', 'Fabrication'])(
     'shows both breakdowns with per-task Finjector links for %s projects',
     async (projectType) => {
       const projects = [
@@ -1302,32 +1302,30 @@ describe('project detail page', () => {
     }
   );
 
-  it('keeps the sponsored layout for Sponsored Fabrication projects', async () => {
-    const projects = [
-      createProject({
-        pmEmployeeId: '2000',
-        projectType: 'Sponsored Fabrication',
-      }),
-    ];
-    setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);
+  it.each(['Sponsored Capital', 'Sponsored Fabrication'])(
+    'keeps the sponsored layout for %s projects',
+    async (projectType) => {
+      const projects = [createProject({ pmEmployeeId: '2000', projectType })];
+      setupHandlers({ employeeId: '1000', name: 'PI User' }, projects);
 
-    const { cleanup } = renderRoute({ initialPath: '/projects/1000/P1' });
+      const { cleanup } = renderRoute({ initialPath: '/projects/1000/P1' });
 
-    try {
-      const heading = await screen.findByRole('heading', {
-        level: 1,
-        name: 'Test Project',
-      });
-      expect(
-        within(heading.closest('section') as HTMLElement).getByRole('link', {
-          name: /Open in Finjector/,
-        })
-      ).toBeInTheDocument();
-      expect(screen.queryByText('Task Breakdown')).not.toBeInTheDocument();
-    } finally {
-      cleanup();
+      try {
+        const heading = await screen.findByRole('heading', {
+          level: 1,
+          name: 'Test Project',
+        });
+        expect(
+          within(heading.closest('section') as HTMLElement).getByRole('link', {
+            name: /Open in Finjector/,
+          })
+        ).toBeInTheDocument();
+        expect(screen.queryByText('Task Breakdown')).not.toBeInTheDocument();
+      } finally {
+        cleanup();
+      }
     }
-  });
+  );
 
   it('shows expenditure categories instead of task breakdown for sponsored projects', async () => {
     const user = userEvent.setup();
@@ -1639,7 +1637,33 @@ describe('project detail page', () => {
       }
     });
 
-    it.each(['Capital', 'Sponsored Capital'])(
+    it('hides reconciliation alert for project managers on Sponsored Capital project details', async () => {
+      const projects = [
+        createProject({
+          pmEmployeeId: '1000',
+          projectType: 'Sponsored Capital',
+        }),
+      ];
+      setupDetailHandlers({
+        projects,
+        reconciliation: discrepantReconciliation,
+        user: { employeeId: '1000', name: 'PM User', roles: [] },
+      });
+
+      const { cleanup } = renderRoute({ initialPath: '/projects/1000/P1' });
+
+      try {
+        await screen.findByText('Project Manager');
+        // Wait out the fetch so a late alert would be caught.
+        await expect(
+          screen.findByText(/gl\/ppm/i, {}, { timeout: 500 })
+        ).rejects.toThrow();
+      } finally {
+        cleanup();
+      }
+    });
+
+    it.each(['Capital', 'Fabrication'])(
       'shows balanced reconciliation alert for authorized project managers on %s project details',
       async (projectType) => {
         const projects = [createProject({ pmEmployeeId: '1000', projectType })];
