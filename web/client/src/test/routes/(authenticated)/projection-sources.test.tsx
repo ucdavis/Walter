@@ -1,11 +1,4 @@
-import {
-  act,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-  within,
-} from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
@@ -405,19 +398,17 @@ describe('funding source lifecycle', () => {
     }
   });
 
-  it('keeps chosen funding when returning to setup and does not add staff from later task imports', async () => {
+  it('keeps the same picker and adds missing staff when returning to setup', async () => {
     const api = setup();
     const route = renderPlan(portfolioPath);
     const user = userEvent.setup();
     try {
       await user.click(await screen.findByRole('button', { name: 'New plan' }));
-      await user.type(screen.getByLabelText('Plan name'), 'Chosen staff only');
-      await user.type(
-        await screen.findByRole('searchbox', {
-          name: 'Choose from your projects',
-        }),
-        'Task One'
-      );
+      await user.type(screen.getByLabelText('Plan name'), 'Revised selection');
+      const picker = await screen.findByRole('searchbox', {
+        name: 'Choose from your projects',
+      });
+      await user.type(picker, 'Task One');
       await user.click(
         within(
           screen.getByRole('region', { name: 'Project A search results' })
@@ -428,67 +419,24 @@ describe('funding source lifecycle', () => {
         name: 'Edit appointment for Alex Example',
       });
       await user.click(screen.getByRole('button', { name: 'Funding sources' }));
-      expect(screen.getAllByRole('article')).toHaveLength(1);
       expect(
-        screen.queryByRole('region', { name: 'Project B funding sources' })
+        screen.queryByRole('button', { name: 'Add funding source' })
       ).not.toBeInTheDocument();
-      expect(
-        screen.getByRole('button', { name: /Edit .*Task T1.*Task One/ })
-      ).toBeInTheDocument();
-      await user.click(
-        screen.getByRole('button', { name: 'Add funding source' })
-      );
-      const picker = screen.getByRole('dialog', { name: 'Add funding source' });
-      await user.type(
-        await within(picker).findByRole('searchbox', {
-          name: 'Choose from your projects',
-        }),
-        'Task Two'
-      );
-      await user.click(
-        within(picker).getByRole('button', { name: 'Add this task' })
-      );
-      await user.click(
-        within(picker).getByRole('button', { name: 'Change tasks' })
-      );
-      const taskDialog = screen.getByRole('dialog', {
-        name: 'Change tasks for Project A',
+      const returnedPicker = screen.getByRole('searchbox', {
+        name: 'Choose from your projects',
       });
+      await user.type(returnedPicker, 'Task Two');
       await user.click(
-        within(taskDialog).getByRole('button', { name: 'Clear all' })
+        within(
+          screen.getByRole('region', { name: 'Project A search results' })
+        ).getByRole('button', { name: 'Add this task' })
       );
-      // jsdom does not perform Escape's native dialog cancellation.
-      fireEvent(
-        taskDialog,
-        new Event('cancel', { bubbles: false, cancelable: true })
-      );
-      expect(
-        screen.queryByRole('dialog', { name: 'Change tasks for Project A' })
-      ).not.toBeInTheDocument();
-      expect(screen.getByRole('dialog', { name: 'Add funding source' })).toBe(
-        picker
-      );
-      expect(
-        within(picker).getByText('1 funding source selected')
-      ).toBeInTheDocument();
-      await user.click(
-        within(picker).getByRole('button', { name: 'Add selected sources' })
-      );
-      await waitFor(() =>
-        expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-      );
-      expect(screen.getAllByRole('article')).toHaveLength(2);
       await user.click(screen.getByRole('button', { name: 'Continue' }));
       expect(
         screen.getByRole('button', {
-          name: 'Edit appointment for Alex Example',
-        })
-      ).toBeInTheDocument();
-      expect(
-        screen.queryByRole('button', {
           name: 'Edit appointment for Blair Example',
         })
-      ).not.toBeInTheDocument();
+      ).toBeInTheDocument();
       expect(
         screen.queryByRole('button', {
           name: 'Edit appointment for Casey Example',
@@ -507,10 +455,11 @@ describe('funding source lifecycle', () => {
       ).toEqual(['T1', 'T2']);
       expect(
         api.creates[0].draft.content.appointments.map(({ name }) => name)
-      ).toEqual(['Alex Example']);
-      expect(api.creates[0].draft.content.appointments[0].allocations).toEqual([
-        api.plan.content.appointments[0].allocations[0],
-      ]);
+      ).toEqual(['Alex Example', 'Blair Example']);
+      expect(api.creates[0].draft.content.appointments[0].allocations).toEqual(
+        api.plan.content.appointments[0].allocations
+      );
+      expect(api.imports).toHaveLength(0);
     } finally {
       route.cleanup();
     }

@@ -9,6 +9,7 @@ import {
 } from '@/components/projections/SourceEditor.tsx';
 import { SourceSelection } from '@/components/projections/SourceSelection.tsx';
 import { SourcePicker } from '@/components/projections/SourcePicker.tsx';
+import { getProjectionForecastWindow } from '@/lib/piProjection.ts';
 import {
   addPlannedSource,
   editProjectionSource,
@@ -17,7 +18,10 @@ import {
   type SourceOperation,
   type SourceOperationResult,
 } from '@/lib/projectionSources.ts';
-import type { ProjectionDraft } from '@/queries/projections.ts';
+import type {
+  ProjectionDraft,
+  ProjectionFundingSource,
+} from '@/queries/projections.ts';
 import type {
   PendingSourceEditor,
   ProjectionSession,
@@ -36,7 +40,11 @@ export function FundingSourcesEditor<T extends ProjectionDraft>({
   sourceTarget,
 }: {
   iamId?: string;
-  initialSelection?: { ids: number[]; onChange: (ids: number[]) => void };
+  initialSelection?: {
+    ids: number[];
+    onChange: (ids: number[]) => void;
+    sources?: ProjectionFundingSource[];
+  };
   onOperation: (operation: SourceOperation) => SourceOperationResult<T>;
   ref?: Ref<FundingSourcesEditorHandle>;
   session: ProjectionSession<T>;
@@ -50,6 +58,8 @@ export function FundingSourcesEditor<T extends ProjectionDraft>({
   const editorRef = useRef<SourceEditorHandle>(null);
   const selectionRef = useRef<SourceEditorHandle>(null);
   const { draft } = session;
+  const forecastWindow = getProjectionForecastWindow(draft);
+  const choices = initialSelection?.sources ?? draft.content.fundingSources;
   const editingSourceId = sourceTarget ? sourceTarget.id : editing;
   const source = draft.content.fundingSources.find(
     ({ id }) => id === editingSourceId
@@ -108,7 +118,7 @@ export function FundingSourcesEditor<T extends ProjectionDraft>({
       </div>
       {initialSelection ? (
         <SourceSelection
-          choices={draft.content.fundingSources.map((source) => ({
+          choices={choices.map((source) => ({
             key: String(source.id),
             label: sourceLabel(source),
             projectName: source.projectName,
@@ -126,12 +136,11 @@ export function FundingSourcesEditor<T extends ProjectionDraft>({
           onChange={(keys) => initialSelection.onChange(keys.map(Number))}
           ref={selectionRef}
           renderSource={(choice, grouped) => {
-            const source = draft.content.fundingSources.find(
-              ({ id }) => String(id) === choice.key
-            )!;
+            const source = choices.find(({ id }) => String(id) === choice.key)!;
             return (
               <FundingSourceCard
-                colorIndex={draft.content.fundingSources.indexOf(source)}
+                colorIndex={choices.indexOf(source)}
+                forecastWindow={forecastWindow}
                 grouped={grouped}
                 key={choice.key}
                 onEdit={(id) =>
@@ -145,6 +154,7 @@ export function FundingSourcesEditor<T extends ProjectionDraft>({
         />
       ) : (
         <FundingSourceList
+          forecastWindow={forecastWindow}
           onEdit={(id) =>
             sourceTarget ? sourceTarget.onChange(id) : setEditing(id)
           }

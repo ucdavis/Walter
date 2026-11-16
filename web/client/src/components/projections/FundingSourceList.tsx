@@ -1,12 +1,15 @@
 import { useState } from 'react';
 import { FundingSourceCard } from '@/components/projections/FundingSourceCard.tsx';
+import type { ProjectionForecastWindow } from '@/lib/piProjection.ts';
 import type { ProjectionFundingSource } from '@/queries/projections.ts';
 
 /** Captured project numbers group sources even when editable names change. */
 export function FundingSourceList({
+  forecastWindow,
   onEdit,
   sources,
 }: {
+  forecastWindow?: ProjectionForecastWindow;
   onEdit: (id: number) => void;
   sources: ProjectionFundingSource[];
 }) {
@@ -34,6 +37,7 @@ export function FundingSourceList({
   const card = (source: ProjectionFundingSource, grouped: boolean) => (
     <FundingSourceCard
       colorIndex={sources.indexOf(source)}
+      forecastWindow={forecastWindow}
       grouped={grouped}
       key={source.id}
       onEdit={onEdit}

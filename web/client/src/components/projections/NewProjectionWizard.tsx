@@ -31,10 +31,11 @@ import {
   FundingSourcesEditor,
   type FundingSourcesEditorHandle,
 } from '@/components/projections/FundingSourcesEditor.tsx';
+import { type SourceOperation } from '@/lib/projectionSources.ts';
 import {
-  selectInitialSources,
-  type SourceOperation,
-} from '@/lib/projectionSources.ts';
+  mergeSetupEdits,
+  selectedSetupSession,
+} from '@/lib/projectionSetup.ts';
 import { ProjectionDialog } from '@/components/projections/ProjectionDialog.tsx';
 import {
   StaffingEditor,
@@ -90,7 +91,7 @@ export function NewProjectionWizard({
   const [selectionTouched, setSelectionTouched] = useState(false);
   const [returningToReview, setReturningToReview] = useState(false);
   const seedStarted = useRef(false);
-  const [rosterSelected, setRosterSelected] = useState(false);
+  const editedAppointmentIds = useRef(new Set<number>());
   const [roster, setRoster] = useState<ProjectionRosterEntry[]>([]);
   const currentSession = useRef<ProjectionSession<ProjectionDraft> | null>(
     null
@@ -100,7 +101,7 @@ export function NewProjectionWizard({
   const staffingEditorRef = useRef<StaffingEditorHandle>(null);
   const [step, setStep] = useState(0);
   const [visitedStep, setVisitedStep] = useState(0);
-  const [session, setSession] =
+  const [catalog, setSession] =
     useState<ProjectionSession<ProjectionDraft> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -111,6 +112,18 @@ export function NewProjectionWizard({
   const requestPending = useRef(false);
   const heading = useRef<HTMLHeadingElement>(null);
   const create = useCreateProjectionDraft(iamId);
+  const session = useMemo(
+    () =>
+      catalog
+        ? selectedSetupSession(
+            catalog,
+            selectedSourceIds,
+            roster,
+            editedAppointmentIds.current
+          )
+        : null,
+    [catalog, selectedSourceIds, roster]
+  );
   const draft = session?.draft;
   const results = useMemo(
     () => (draft ? computePiProjection(draft) : null),
@@ -166,22 +179,20 @@ export function NewProjectionWizard({
     const result = operation(previous);
     if (result.ok) {
       updateSession(result.session);
-      if (!rosterSelected) {
-        const fundingSources = result.session.draft.content.fundingSources;
-        setSelectedSourceIds((ids) => [
-          ...ids.filter((id) =>
-            fundingSources.some((source) => source.id === id)
-          ),
-          ...fundingSources
-            .filter(
-              (source) =>
-                !previous.draft.content.fundingSources.some(
-                  ({ id }) => id === source.id
-                )
-            )
-            .map(({ id }) => id),
-        ]);
-      }
+      const fundingSources = result.session.draft.content.fundingSources;
+      setSelectedSourceIds((ids) => [
+        ...ids.filter((id) =>
+          fundingSources.some((source) => source.id === id)
+        ),
+        ...fundingSources
+          .filter(
+            (source) =>
+              !previous.draft.content.fundingSources.some(
+                ({ id }) => id === source.id
+              )
+          )
+          .map(({ id }) => id),
+      ]);
     }
     return result;
   }
@@ -193,9 +204,22 @@ export function NewProjectionWizard({
   >(
     operation: (session: ProjectionSession<ProjectionDraft>) => Result
   ): Result {
-    const result = operation(currentSession.current!);
+    const before = selectedSetupSession(
+      currentSession.current!,
+      selectedSourceIds,
+      roster,
+      editedAppointmentIds.current
+    );
+    const result = operation(before);
     if (result.ok) {
-      updateSession(result.session);
+      const merged = mergeSetupEdits(
+        currentSession.current!,
+        before,
+        result.session,
+        editedAppointmentIds.current
+      );
+      editedAppointmentIds.current = merged.editedAppointmentIds;
+      updateSession(merged.catalog);
     }
     return result;
   }
@@ -211,26 +235,12 @@ export function NewProjectionWizard({
     }
     setError(null);
     if (session) {
-      const updated = editPlanDetails(session, details);
+      const updated = editPlanDetails(currentSession.current!, details);
       if (!updated.ok) {
         setError(updated.error);
         return;
       }
       updateSession(updated.session);
-      if (!rosterSelected) {
-        const selected = selectInitialSources(
-          updated.session,
-          selectedSourceIds,
-          roster
-        );
-        if (!selected.ok) {
-          setError(selected.error);
-          return;
-        }
-        updateSession(selected.session);
-        setRosterSelected(true);
-        setRoster([]);
-      }
       setVisitedStep((visited) => Math.max(visited, 1));
       setStep(1);
       return;
@@ -294,7 +304,7 @@ export function NewProjectionWizard({
       return;
     }
     if (step === 0 && target !== 0 && session) {
-      const updated = editPlanDetails(session, details);
+      const updated = editPlanDetails(currentSession.current!, details);
       if (!updated.ok) {
         setError(updated.error);
         return;
@@ -314,7 +324,7 @@ export function NewProjectionWizard({
       );
       return;
     }
-    const updated = editPlanDetails(session, details);
+    const updated = editPlanDetails(currentSession.current!, details);
     if (!updated.ok) {
       setError(updated.error);
       return;
@@ -480,17 +490,14 @@ export function NewProjectionWizard({
         {step === 0 && session && (
           <FundingSourcesEditor
             iamId={iamId}
-            initialSelection={
-              rosterSelected
-                ? undefined
-                : {
-                    ids: selectedSourceIds,
-                    onChange: (ids) => {
-                      setSelectionTouched(true);
-                      setSelectedSourceIds(ids);
-                    },
-                  }
-            }
+            initialSelection={{
+              ids: selectedSourceIds,
+              onChange: (ids) => {
+                setSelectionTouched(true);
+                setSelectedSourceIds(ids);
+              },
+              sources: catalog!.draft.content.fundingSources,
+            }}
             onOperation={applySourceOperation}
             ref={sourceEditorRef}
             session={session}

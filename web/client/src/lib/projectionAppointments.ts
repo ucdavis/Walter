@@ -172,7 +172,11 @@ export function addProjectionAppointment<T extends ProjectionDraft>(
     return { error, ok: false };
   }
   const id =
-    Math.max(0, ...session.draft.content.appointments.map(({ id }) => id)) + 1;
+    Math.max(
+      0,
+      ...session.baseline.content.appointments.map(({ id }) => id),
+      ...session.draft.content.appointments.map(({ id }) => id)
+    ) + 1;
   const appointment: ProjectionAppointment = {
     ...inputs,
     ...normalizedIdentity(inputs),

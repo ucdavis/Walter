@@ -2,20 +2,34 @@ import { fundingMonthLabel } from '@/components/projections/fundingTimelineDates
 import { projectionSeriesColor as chartSeriesColor } from '@/components/projections/projectionFormatting.ts';
 import { formatProjectionCurrency as formatCurrency } from '@/components/projections/projectionFormatting.ts';
 import { sourceLabel, sourcePlanningBalance } from '@/lib/projectionSources.ts';
+import {
+  getSourceForecastWindow,
+  type ProjectionForecastWindow,
+} from '@/lib/piProjection.ts';
 import type { ProjectionFundingSource } from '@/queries/projections.ts';
 
 export function FundingSourceCard({
   colorIndex,
+  forecastWindow,
   grouped = false,
   onEdit,
   source,
 }: {
   colorIndex: number;
+  forecastWindow?: ProjectionForecastWindow;
   grouped?: boolean;
   onEdit: (id: number) => void;
   source: ProjectionFundingSource;
 }) {
   const project = source.projectName ?? source.projectNumber;
+  const window =
+    forecastWindow && getSourceForecastWindow(source, forecastWindow);
+  const outsideForecast =
+    window && (window.isBeyondForecast || window.startMonth > window.endMonth);
+  const futureStart =
+    source.startDate &&
+    forecastWindow &&
+    source.startDate.slice(0, 7) > forecastWindow.startMonth;
   const taskTitle =
     source.taskName &&
     source.taskName !== project &&
@@ -58,9 +72,21 @@ export function FundingSourceCard({
               : 'No end date'}
           </span>
         </div>
+        {(futureStart || outsideForecast) && (
+          <p className="mb-3 text-sm text-base-content/80">
+            {futureStart &&
+              `Available from ${fundingMonthLabel(source.startDate!.slice(0, 7))}`}
+            {futureStart && outsideForecast && ' · '}
+            {outsideForecast && 'Outside this forecast'}
+          </p>
+        )}
         <div className="flex flex-wrap items-end justify-between gap-3 border-t border-main-border pt-3">
           <dl className="min-w-0">
-            <dt className="text-sm text-base-content/80">Available balance</dt>
+            <dt className="text-sm text-base-content/80">
+              {futureStart || outsideForecast
+                ? 'Planning balance'
+                : 'Available balance'}
+            </dt>
             <dd
               className={`mt-0.5 text-xl font-semibold tabular-nums ${sourcePlanningBalance(source) < 0 ? 'text-error' : ''}`}
             >
