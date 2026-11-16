@@ -339,6 +339,31 @@ describe('allocation editor seed', () => {
       '9999-12-31'
     );
   });
+
+  it('opens the constant segment containing a source shortcut date without changing ordinary timeline selection', () => {
+    const appointment = initial([
+      allocation(1, 1, '2026-03-01', '2026-03-15'),
+      allocation(2, 1, '2026-03-16', '2026-03-25'),
+      allocation(1, 1, '2026-03-26', null),
+    ]).draft.content.appointments[0];
+    expect(
+      getAllocationEditorSeed(appointment, '2026-03', '2026-03-20')
+    ).toEqual({
+      mixed: true,
+      range: { endDate: '2026-03-25', startDate: '2026-03-16' },
+      shares: [{ fundingSourceId: 2, percent: 1 }],
+    });
+    expect(
+      getAllocationEditorSeed(appointment, '2026-03', '2026-03-28').range
+    ).toEqual({
+      endDate: '2026-03-31',
+      startDate: '2026-03-26',
+    });
+    expect(getAllocationEditorSeed(appointment, '2026-03').range).toEqual({
+      endDate: '2026-03-15',
+      startDate: '2026-03-01',
+    });
+  });
 });
 
 describe('dated allocation coverage', () => {

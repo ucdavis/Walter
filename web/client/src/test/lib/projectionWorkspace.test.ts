@@ -17,6 +17,7 @@ describe('salary workspace operations without React', () => {
       readProjectionLocation({ appointment: '101', source: '2' }, plan)
     ).toEqual({
       appointmentId: 101,
+      fundingDate: null,
       fundingMonth: null,
       fundingSourceId: 2,
       issues: [],
@@ -26,6 +27,7 @@ describe('salary workspace operations without React', () => {
       readProjectionLocation({ section: 'funding', source: 1 }, plan)
     ).toEqual({
       appointmentId: null,
+      fundingDate: null,
       fundingMonth: null,
       fundingSourceId: 1,
       issues: [],
@@ -59,6 +61,57 @@ describe('salary workspace operations without React', () => {
         plan
       ).issues
     ).toContain('A funding month requires an appointment.');
+  });
+
+  it('accepts a real funding date only within its selected allocation month', () => {
+    const plan = createSalaryExample();
+    const target = {
+      appointment: 101,
+      fundingMonth: '2026-07',
+      section: 'staffing',
+    };
+    expect(
+      readProjectionLocation({ ...target, fundingDate: '2026-07-15' }, plan)
+    ).toMatchObject({
+      fundingDate: '2026-07-15',
+      issues: [],
+    });
+    for (const fundingDate of [
+      '2026-07-32',
+      '2026-06-30',
+      '2026-7-15',
+      20_260_715,
+    ]) {
+      expect(
+        readProjectionLocation({ ...target, fundingDate }, plan)
+      ).toMatchObject({
+        fundingDate: null,
+        issues: [
+          'The funding date must be a valid date in the selected month.',
+        ],
+      });
+    }
+    expect(
+      readProjectionLocation(
+        { ...target, fundingDate: '2026-02-29', fundingMonth: '2026-02' },
+        plan
+      ).fundingDate
+    ).toBeNull();
+    expect(
+      readProjectionLocation(
+        { ...target, fundingDate: '2028-02-29', fundingMonth: '2028-02' },
+        plan
+      )
+    ).toMatchObject({
+      fundingDate: '2028-02-29',
+      issues: [],
+    });
+    expect(
+      readProjectionLocation(
+        { appointment: 101, fundingDate: '2026-07-15' },
+        plan
+      ).fundingDate
+    ).toBeNull();
   });
 
   it('acknowledges a submitted draft with exact authoritative tokens', () => {

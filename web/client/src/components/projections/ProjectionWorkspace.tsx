@@ -420,7 +420,7 @@ export function ProjectionWorkspace({
             <StaffingEditor
               appointmentFunding={results.appointmentFunding}
               forecastWindow={results.forecastWindow}
-              key={`${reloadVersion}:${location.appointmentId ?? 'list'}:${location.fundingMonth ?? 'details'}`}
+              key={`${reloadVersion}:${location.appointmentId ?? 'list'}:${location.fundingMonth ?? 'details'}:${location.fundingDate ?? ''}`}
               onOperation={applyAppointmentOperation}
               onViewSource={(id) =>
                 onNavigate({ section: 'overview', source: id }, false, true)
@@ -429,6 +429,7 @@ export function ProjectionWorkspace({
               results={results}
               session={session}
               target={{
+                fundingDate: location.fundingDate,
                 fundingMonth: location.fundingMonth,
                 id: location.appointmentId,
                 onChange: (id, month) =>

@@ -63,7 +63,7 @@ describe('appointment planning controls', () => {
       plan.seededAt = '2026-10-01T00:00:00Z';
       const user = openWorkspace(plan, false);
       await user.click(
-        await screen.findByRole('button', { name: 'Add person' })
+        await screen.findByRole('button', { name: 'Add appointment' })
       );
       await enter(user, 'Appointment name', 'Planned hire');
       await enter(user, 'Full-time annual salary', '120000');
@@ -198,7 +198,9 @@ describe('appointment planning controls', () => {
   it('adds a future unallocated hire from server defaults and confirms removal without changing recorded finances', async () => {
     const plan = createSalaryExample();
     const user = openWorkspace(plan, false);
-    await user.click(await screen.findByRole('button', { name: 'Add person' }));
+    await user.click(
+      await screen.findByRole('button', { name: 'Add appointment' })
+    );
     expect(screen.getByLabelText('FTE (%)')).toHaveValue('100');
     expect(screen.getByLabelText('CBR (%)')).toHaveValue('20');
     expect(screen.getByLabelText('Annual adjustment (%)')).toHaveValue('3');
@@ -212,6 +214,9 @@ describe('appointment planning controls', () => {
       target: { value: '2028-08-01' },
     });
     await user.selectOptions(screen.getByLabelText('Job code'), 'EXAMPLE');
+    expect(
+      screen.getByRole('option', { name: 'EXAMPLE · Research specialist' })
+    ).toHaveValue('EXAMPLE');
     await user.selectOptions(screen.getByLabelText('Business unit'), 'UCANR');
     expect(screen.getByLabelText('CBR (%)')).toHaveValue('20');
     await user.click(screen.getByRole('button', { name: 'Apply' }));
@@ -262,6 +267,47 @@ describe('appointment planning controls', () => {
     expect(read().draft.content.fundingSources).toEqual(
       plan.content.fundingSources
     );
+  });
+
+  it('preserves unapplied edits after canceling removal of the appointment', async () => {
+    const plan = createSalaryExample();
+    const user = openWorkspace(plan);
+    await screen.findByLabelText('Full-time annual salary');
+    await enter(user, 'Full-time annual salary', '123456');
+    await user.click(
+      screen.getByRole('button', {
+        name: 'Remove appointment for Alex Example',
+      })
+    );
+    await user.click(
+      within(
+        screen.getByRole('dialog', { name: 'Remove appointment?' })
+      ).getByRole('button', { name: 'Cancel' })
+    );
+    expect(screen.getByLabelText('Full-time annual salary')).toHaveValue(
+      '123456'
+    );
+    expect(read().pendingEditor?.hasChanges).toBe(true);
+    expect(read().draft.content.appointments).toEqual(
+      plan.content.appointments
+    );
+  });
+
+  it('distinguishes multiple appointments for the same person using title and position', async () => {
+    const plan = createSalaryExample();
+    const appointment = plan.content.appointments[0];
+    appointment.positionNumber = 'POSITION-A';
+    plan.content.appointments.push({
+      ...structuredClone(appointment),
+      id: 102,
+      positionNumber: 'POSITION-B',
+      title: 'Lecturer',
+    });
+    openWorkspace(plan, false);
+    expect(
+      await screen.findByText('Research specialist · Position POSITION-A')
+    ).toBeVisible();
+    expect(screen.getByText('Lecturer · Position POSITION-B')).toBeVisible();
   });
 
   it('blocks saving an incomplete retained salary until it is supplied or the appointment is removed', async () => {

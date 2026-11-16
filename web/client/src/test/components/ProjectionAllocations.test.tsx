@@ -73,6 +73,39 @@ function date(label: string, value: string) {
 }
 
 describe('appointment allocation period editor', () => {
+  it('honors a source worksheet date anchor and clears it for a later timeline click', async () => {
+    const plan = fullYearPlan();
+    plan.content.appointments[0].allocations = [
+      {
+        endDate: '2026-07-14',
+        fundingSourceId: 1,
+        percent: 1,
+        startDate: '2026-01-01',
+      },
+      {
+        endDate: null,
+        fundingSourceId: 2,
+        percent: 1,
+        startDate: '2026-07-15',
+      },
+    ];
+    const { history, user } = openWorkspace(
+      plan,
+      '?section=staffing&source=2&appointment=101&fundingMonth=2026-07&fundingDate=2026-07-15'
+    );
+    await screen.findByRole('dialog', { name: 'Alex Example funding' });
+    expect(screen.getByLabelText('Start date')).toHaveValue('2026-07-15');
+    expect(screen.getByLabelText('End date')).toHaveValue('2026-07-31');
+    expect(screen.getByLabelText('Funding source 1')).toHaveValue('2');
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    await openJuly(user);
+    expect(screen.getByLabelText('Start date')).toHaveValue('2026-07-01');
+    expect(screen.getByLabelText('End date')).toHaveValue('2026-07-14');
+    expect(screen.getByLabelText('Funding source 1')).toHaveValue('1');
+    expect(history.location.search).not.toContain('fundingDate');
+    expect(read().dirty).toBe(false);
+  });
+
   it('focuses the start date and returns to the funding cell after Escape discards typing', async () => {
     const plan = fullYearPlan();
     const { user } = openWorkspace(plan);

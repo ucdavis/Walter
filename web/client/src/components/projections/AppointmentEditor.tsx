@@ -32,6 +32,7 @@ export interface AppointmentEditorHandle {
 type ApplyResult = { error: string; ok: false } | { ok: true };
 
 export function AppointmentEditor({
+  active = true,
   appointment,
   onApply,
   onClose,
@@ -39,6 +40,7 @@ export function AppointmentEditor({
   ref,
   snapshotMonth,
 }: {
+  active?: boolean;
   appointment?: ProjectionAppointment;
   onApply: (inputs: AppointmentInputs) => ApplyResult;
   onClose: () => void;
@@ -71,18 +73,20 @@ export function AppointmentEditor({
       appointmentId !== undefined
         ? `edit-appointment-${appointmentId}`
         : 'add-hypothetical-hire';
-    dialog.showModal();
+    if (active) {
+      dialog.showModal();
+    }
     return () => {
       dialog.close();
       document.getElementById(openerId)?.focus();
     };
-  }, [appointmentId]);
+  }, [active, appointmentId]);
   useEffect(() => {
-    if (hasInputs) {
+    if (active && hasInputs) {
       inputRef.current?.focus();
       inputRef.current?.select();
     }
-  }, [hasInputs]);
+  }, [active, hasInputs]);
   return (
     <dialog
       aria-labelledby={titleId}
@@ -98,10 +102,10 @@ export function AppointmentEditor({
           <h2 className="text-2xl font-semibold" id={titleId}>
             {appointment
               ? `Edit appointment for ${appointment.name}`
-              : 'Add hypothetical hire'}
+              : 'Add appointment'}
           </h2>
           <button
-            aria-label="Close person details"
+            aria-label="Close appointment details"
             className="btn btn-ghost btn-sm btn-square"
             onClick={onClose}
             type="button"
@@ -290,6 +294,11 @@ function AppointmentForm({
   const jobCodes = [
     ...new Set((lookups?.jobCodes ?? []).map(({ jobCode }) => jobCode)),
   ];
+  const jobCodeLabels = new Map(
+    (lookups?.jobCodes ?? [])
+      .filter(({ title }) => title?.trim())
+      .map(({ jobCode, title }) => [jobCode, `${jobCode} · ${title}`])
+  );
   const rateSets = [
     ...new Set([
       ...Object.keys(businessUnits),
@@ -356,7 +365,7 @@ function AppointmentForm({
                       <option key={value} value={value}>
                         {name === 'rateSet'
                           ? (businessUnits[value] ?? value)
-                          : value}
+                          : (jobCodeLabels.get(value) ?? value)}
                       </option>
                     ))}
                   </select>
@@ -475,7 +484,7 @@ function AppointmentForm({
             type="button"
           >
             <TrashIcon aria-hidden="true" className="size-5" />
-            Remove person
+            Remove appointment
           </button>
         )}
         <button className="btn btn-ghost" onClick={onClose} type="button">

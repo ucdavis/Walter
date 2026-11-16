@@ -3,6 +3,7 @@ import {
   type PiProjectionRow,
 } from '@/lib/piProjection.ts';
 import type { Projection, ProjectionDraft } from '@/queries/projections.ts';
+import { isPlanningDate } from '@/lib/date.ts';
 
 export interface ProjectionSession<T extends ProjectionDraft = Projection> {
   baseline: T;
@@ -38,6 +39,7 @@ export function acknowledgeProjectionSave(
 
 export interface ProjectionLocation {
   appointmentId: number | null;
+  fundingDate: string | null;
   fundingMonth: string | null;
   fundingSourceId: number | null;
   issues: string[];
@@ -46,6 +48,7 @@ export interface ProjectionLocation {
 
 export interface ProjectionNavigation {
   appointment?: number;
+  fundingDate?: string;
   fundingMonth?: string;
   section: 'overview' | 'funding' | 'staffing' | 'expenses';
   source?: number;
@@ -84,6 +87,15 @@ export function readProjectionLocation(
   if (search.fundingMonth !== undefined && appointmentId === null) {
     issues.push('A funding month requires an appointment.');
   }
+  const fundingDate =
+    typeof search.fundingDate === 'string' &&
+    isPlanningDate(search.fundingDate) &&
+    search.fundingDate.slice(0, 7) === fundingMonth
+      ? search.fundingDate
+      : null;
+  if (search.fundingDate !== undefined && fundingDate === null) {
+    issues.push('The funding date must be a valid date in the selected month.');
+  }
   const section =
     search.section ??
     (search.appointment === undefined ? 'overview' : 'staffing');
@@ -112,6 +124,7 @@ export function readProjectionLocation(
   }
   return {
     appointmentId,
+    fundingDate,
     fundingMonth,
     fundingSourceId,
     issues,

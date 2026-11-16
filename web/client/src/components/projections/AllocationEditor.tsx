@@ -60,6 +60,7 @@ const shareInput = (share: AllocationShare): EditorShare => ({
 });
 
 export function AllocationEditor({
+  anchorDate,
   appointment,
   forecastWindow,
   month,
@@ -68,6 +69,7 @@ export function AllocationEditor({
   plan,
   ref,
 }: {
+  anchorDate?: string | null;
   appointment: ProjectionAppointment;
   forecastWindow: { endMonth: string; startMonth: string };
   month: string;
@@ -79,7 +81,9 @@ export function AllocationEditor({
   plan: ProjectionDraft;
   ref?: Ref<AllocationEditorHandle>;
 }) {
-  const [seed] = useState(() => getAllocationEditorSeed(appointment, month));
+  const [seed] = useState(() =>
+    getAllocationEditorSeed(appointment, month, anchorDate)
+  );
   const [applyError, setApplyError] = useState<string | null>(null);
   const startRef = useRef<HTMLInputElement>(null);
   const errorId = useId();
@@ -499,9 +503,9 @@ export function AllocationEditor({
             )}
             {seed.mixed && (
               <p className="mt-2 text-sm text-base-content/80">
-                Funding changes within {fundingMonthLabel(month)}. The first
-                unchanged portion is selected with its exact dates. Expanding
-                the period replaces the other splits too.
+                Funding changes within {fundingMonthLabel(month)}. An unchanged
+                portion is selected with its exact dates. Expanding the period
+                replaces the other splits too.
               </p>
             )}
           </section>

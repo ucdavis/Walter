@@ -17,8 +17,10 @@ import type {
 
 type CostComponent = 'salary' | 'fringe' | 'fees';
 interface StaffRow {
+  adjustment?: boolean;
   appointment?: ProjectionAppointment;
   component?: CostComponent;
+  description?: string;
   label: string;
   summary?: boolean;
   values: Map<string, number>;
@@ -50,6 +52,7 @@ export function SourceOutlookAppointments({
   sourceIdentity: string;
 }) {
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [adjustmentExpanded, setAdjustmentExpanded] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   const funded = appointments.filter((appointment) =>
     appointment.allocations.some(
@@ -72,6 +75,18 @@ export function SourceOutlookAppointments({
   const appointmentRows = funded.map(
     (appointment): StaffRow => ({
       appointment,
+      description: [
+        appointment.title,
+        appointment.positionNumber &&
+        funded.some(
+          (other) =>
+            other.id !== appointment.id && other.name === appointment.name
+        )
+          ? `Position ${appointment.positionNumber}`
+          : null,
+      ]
+        .filter(Boolean)
+        .join(' · '),
       label: appointment.name,
       values: new Map(
         months.map((month) => [
@@ -122,22 +137,28 @@ export function SourceOutlookAppointments({
     ])
   );
   // Reconciliation belongs to the source, never to an individual appointment.
-  const adjustmentsByMonth = new Map(
-    months.map((month) => [
-      month,
-      sum(
-        results.personnelAdjustments
-          .filter(
-            (adjustment) =>
-              adjustment.fundingSourceId === source.id &&
-              adjustment.month === month
-          )
-          .map(({ fringe, salary }) => salary + fringe)
-      ),
-    ])
+  const sourceAdjustments = results.personnelAdjustments.filter(
+    (adjustment) => adjustment.fundingSourceId === source.id
   );
-  const hasAdjustment = [...adjustmentsByMonth.values()].some(
-    (value) => value !== 0
+  const adjustmentValues = (component?: 'salary' | 'fringe') =>
+    new Map(
+      months.map((month) => [
+        month,
+        sum(
+          sourceAdjustments
+            .filter((adjustment) => adjustment.month === month)
+            .map((adjustment) =>
+              component
+                ? adjustment[component]
+                : adjustment.salary + adjustment.fringe
+            )
+        ),
+      ])
+    );
+  const adjustmentsByMonth = adjustmentValues();
+  const hasAdjustment = sourceAdjustments.some(
+    ({ fringe, month, salary }) =>
+      months.includes(month) && (salary !== 0 || fringe !== 0)
   );
   if (hasAdjustment) {
     rows.push(
@@ -147,11 +168,22 @@ export function SourceOutlookAppointments({
         values: estimatesByMonth,
       },
       {
+        adjustment: true,
         label: 'Starting-month adjustment',
         summary: true,
         values: adjustmentsByMonth,
       }
     );
+    if (adjustmentExpanded) {
+      rows.push(
+        ...(['salary', 'fringe'] as const).map((component) => ({
+          component,
+          label:
+            component === 'salary' ? 'Salary adjustment' : 'Fringe adjustment',
+          values: adjustmentValues(component),
+        }))
+      );
+    }
   }
   const totalByMonth = new Map(
     months.map((month) => [
@@ -190,12 +222,32 @@ export function SourceOutlookAppointments({
                 )}
                 <span>{row.label}</span>
               </button>
-              {row.appointment.title && (
+              {row.description && (
                 <span className="mt-1 block text-xs font-normal text-base-content/70">
-                  {row.appointment.title}
+                  {row.description}
                 </span>
               )}
             </>
+          ) : row.adjustment ? (
+            <button
+              aria-expanded={adjustmentExpanded}
+              className="inline-flex items-start gap-1 text-left hover:underline"
+              onClick={() => setAdjustmentExpanded(!adjustmentExpanded)}
+              type="button"
+            >
+              {adjustmentExpanded ? (
+                <ChevronDownIcon
+                  aria-hidden="true"
+                  className="mt-0.5 size-4 shrink-0"
+                />
+              ) : (
+                <ChevronRightIcon
+                  aria-hidden="true"
+                  className="mt-0.5 size-4 shrink-0"
+                />
+              )}
+              {row.label}
+            </button>
           ) : (
             <span className="pl-3 font-normal">{row.label}</span>
           )}
@@ -287,18 +339,12 @@ export function SourceOutlookAppointments({
                     and fringe already included in the starting balance.
                   </p>
                 )}
-                {fullscreen && selected && (
-                  <details>
-                    <summary className="cursor-pointer text-sm">
-                      {selected.name} details and editors
-                    </summary>
-                    <div className="mt-2 max-h-52 overflow-auto">{details}</div>
-                  </details>
+                {details && (
+                  <div className="max-h-52 overflow-auto">{details}</div>
                 )}
               </div>
             }
           />
-          {!fullscreen && details}
         </>
       ) : null}
     </section>

@@ -66,6 +66,7 @@ export function StaffingEditor<T extends ProjectionDraft>({
   results: { rows: PiProjectionRow[] };
   session: ProjectionSession<T>;
   target?: {
+    fundingDate?: string | null;
     fundingMonth: string | null;
     id: number | null;
     onChange: (id: number | null, month?: string) => void;
@@ -90,7 +91,11 @@ export function StaffingEditor<T extends ProjectionDraft>({
   );
   const fundingTarget = target
     ? target.id !== null && target.fundingMonth
-      ? { id: target.id, month: target.fundingMonth }
+      ? {
+          anchorDate: target.fundingDate,
+          id: target.id,
+          month: target.fundingMonth,
+        }
       : null
     : funding;
   const fundingAppointment = draft.content.appointments.find(
@@ -128,7 +133,7 @@ export function StaffingEditor<T extends ProjectionDraft>({
           type="button"
         >
           <PlusIcon aria-hidden="true" className="size-5" />
-          Add person
+          Add appointment
         </button>
       </div>
       <p className="mb-5 rounded-md bg-base-200 px-4 py-3 text-sm leading-relaxed text-base-content/80">
@@ -162,6 +167,27 @@ export function StaffingEditor<T extends ProjectionDraft>({
                     sources={draft.content.fundingSources}
                   />
                 </div>
+                {(item.title ||
+                  (item.positionNumber &&
+                    draft.content.appointments.some(
+                      (other) =>
+                        other.id !== item.id && other.name === item.name
+                    ))) && (
+                  <p className="mt-1 text-sm text-base-content/70">
+                    {[
+                      item.title,
+                      item.positionNumber &&
+                      draft.content.appointments.some(
+                        (other) =>
+                          other.id !== item.id && other.name === item.name
+                      )
+                        ? `Position ${item.positionNumber}`
+                        : null,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </p>
+                )}
                 <p className="mt-1 text-sm text-base-content/80">
                   <span className="mr-6 inline-block">
                     {item.monthlySalary === null
@@ -188,7 +214,7 @@ export function StaffingEditor<T extends ProjectionDraft>({
                   }
                   type="button"
                 >
-                  Salary &amp; person details
+                  Appointment details
                 </button>
               </div>
             </div>
@@ -214,8 +240,9 @@ export function StaffingEditor<T extends ProjectionDraft>({
           {error}
         </p>
       )}
-      {((appointment && removing === null) || editing === 'new') && (
+      {(appointment || editing === 'new') && (
         <AppointmentEditor
+          active={removing === null}
           appointment={appointment}
           key={appointment?.id ?? 'new'}
           onApply={(inputs) =>
@@ -235,9 +262,12 @@ export function StaffingEditor<T extends ProjectionDraft>({
       )}
       {fundingAppointment && fundingTarget && (
         <AllocationEditor
+          anchorDate={
+            'anchorDate' in fundingTarget ? fundingTarget.anchorDate : undefined
+          }
           appointment={fundingAppointment}
           forecastWindow={forecastWindow}
-          key={`${fundingAppointment.id}:${fundingTarget.month}`}
+          key={`${fundingAppointment.id}:${fundingTarget.month}:${'anchorDate' in fundingTarget ? fundingTarget.anchorDate : ''}`}
           month={fundingTarget.month}
           onApply={(range, shares) =>
             apply((current) =>

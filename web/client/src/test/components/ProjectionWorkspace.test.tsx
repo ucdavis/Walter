@@ -727,6 +727,7 @@ describe('projection salary workspace', () => {
       );
       expect(read().location).toEqual({
         appointmentId: null,
+        fundingDate: null,
         fundingMonth: null,
         fundingSourceId: null,
         issues: [],

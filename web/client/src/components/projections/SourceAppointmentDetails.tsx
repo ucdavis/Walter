@@ -34,12 +34,17 @@ function sourceAllocations(
   );
 }
 
-function allocationEditorMonth(
+function allocationEditorDate(
   appointment: ProjectionAppointment,
   sourceId: number,
-  forecastStart: string
+  anchorMonth: string,
+  activeMonth: boolean
 ) {
+  const anchor = `${anchorMonth}-01`;
   for (const [, allocation] of sourceAllocations(appointment, sourceId)) {
+    if (activeMonth && allocation.percent <= 0) {
+      continue;
+    }
     const start =
       [appointment.startDate, allocation.startDate]
         .filter((value): value is string => value !== null)
@@ -51,8 +56,10 @@ function allocationEditorMonth(
         .sort()
         .at(0) ?? '9999-12-31';
     if (start <= end) {
-      const anchor = `${forecastStart}-01`;
-      return (anchor < start ? start : anchor > end ? end : anchor).slice(0, 7);
+      const selected = anchor < start ? start : anchor > end ? end : anchor;
+      if (!activeMonth || selected.startsWith(anchorMonth)) {
+        return selected;
+      }
     }
   }
   return null;
@@ -77,13 +84,12 @@ export function SourceAppointmentDetails({
       )
   );
   const firstMonth = active[0]?.month;
-  const editorMonth =
-    firstMonth ??
-    allocationEditorMonth(
-      appointment,
-      sourceId,
-      results.forecastWindow.startMonth
-    );
+  const editorDate = allocationEditorDate(
+    appointment,
+    sourceId,
+    firstMonth ?? results.forecastWindow.startMonth,
+    Boolean(firstMonth)
+  );
   return (
     <section
       aria-label={`${appointment.name} appointment details`}
@@ -118,14 +124,15 @@ export function SourceAppointmentDetails({
           >
             Edit appointment
           </button>
-          {editorMonth && (
+          {editorDate && (
             <button
               aria-label={`Edit allocations for ${appointment.name}`}
               className="btn btn-outline btn-sm"
               onClick={() =>
                 onNavigate({
                   appointment: appointment.id,
-                  fundingMonth: editorMonth,
+                  fundingDate: editorDate,
+                  fundingMonth: editorDate.slice(0, 7),
                   section: 'staffing',
                   source: sourceId,
                 })

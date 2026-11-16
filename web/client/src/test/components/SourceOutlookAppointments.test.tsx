@@ -2,7 +2,11 @@ import { cleanup, render, screen, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SourceOutlookAppointments } from '@/components/projections/SourceOutlookAppointments.tsx';
-import { computePiProjection, SALARY_CATEGORY } from '@/lib/piProjection.ts';
+import {
+  computePiProjection,
+  FRINGE_CATEGORY,
+  SALARY_CATEGORY,
+} from '@/lib/piProjection.ts';
 import { createBookedSalaryExample } from '@/test/fixtures/projections.ts';
 import { formatProjectionCurrency as money } from '@/components/projections/projectionFormatting.ts';
 
@@ -23,6 +27,24 @@ function open(plan = createBookedSalaryExample()) {
 }
 
 describe('staff costs by month', () => {
+  it('distinguishes same-name appointments with their title and position', () => {
+    const plan = createBookedSalaryExample();
+    plan.content.appointments[0].title = 'Research specialist';
+    plan.content.appointments[0].positionNumber = 'POSITION-A';
+    plan.content.appointments.push({
+      ...structuredClone(plan.content.appointments[0]),
+      id: 102,
+      positionNumber: 'POSITION-B',
+    });
+    open(plan);
+    expect(
+      screen.getByRole('row', { name: /Position POSITION-A/ })
+    ).toHaveTextContent('Research specialist');
+    expect(
+      screen.getByRole('row', { name: /Position POSITION-B/ })
+    ).toHaveTextContent('Research specialist');
+  });
+
   it('aligns source-specific salary, fringe and fees with appointment totals and preserves selected details in fullscreen', async () => {
     const plan = createBookedSalaryExample();
     plan.content.forecastMonths = 18;
@@ -59,11 +81,9 @@ describe('staff costs by month', () => {
     expect(
       screen.getByRole('button', { name: 'Alex Example' })
     ).toHaveAttribute('aria-expanded', 'true');
-    await user.click(
-      screen.getByText('Alex Example details and editors', {
-        selector: 'summary',
-      })
-    );
+    expect(
+      screen.queryByText('Alex Example details and editors')
+    ).not.toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: 'Edit appointment for Alex Example' })
     ).toBeVisible();
@@ -102,6 +122,7 @@ describe('staff costs by month', () => {
     );
     expect(onNavigate).toHaveBeenLastCalledWith({
       appointment: 101,
+      fundingDate: '2027-03-15',
       fundingMonth: '2027-03',
       section: 'staffing',
       source: 1,
@@ -114,6 +135,67 @@ describe('staff costs by month', () => {
       section: 'staffing',
       source: 1,
     });
+  });
+
+  it('opens the source-specific segment when funding changes midway through the month', async () => {
+    const plan = createBookedSalaryExample();
+    plan.content.appointments[0].allocations = [
+      {
+        endDate: '2026-01-15',
+        fundingSourceId: 2,
+        percent: 1,
+        startDate: '2026-01-01',
+      },
+      {
+        endDate: null,
+        fundingSourceId: 1,
+        percent: 1,
+        startDate: '2026-01-16',
+      },
+    ];
+    const { onNavigate, user } = open(plan);
+    await user.click(screen.getByRole('button', { name: 'Alex Example' }));
+    await user.click(
+      screen.getByRole('button', { name: 'Edit allocations for Alex Example' })
+    );
+    expect(onNavigate).toHaveBeenLastCalledWith({
+      appointment: 101,
+      fundingDate: '2026-01-16',
+      fundingMonth: '2026-01',
+      section: 'staffing',
+      source: 1,
+    });
+  });
+
+  it('shows source-level salary and fringe adjustments even when they offset to zero', async () => {
+    const plan = createBookedSalaryExample();
+    plan.content.fundingSources[0].actuals = [
+      {
+        amount: 1000,
+        expenditureCategory: SALARY_CATEGORY,
+        month: '2026-01-01',
+      },
+      {
+        amount: -1000,
+        expenditureCategory: FRINGE_CATEGORY,
+        month: '2026-01-01',
+      },
+    ];
+    const { user } = open(plan);
+    expect(screen.getByText(/The adjustment accounts for/)).toBeVisible();
+    expect(
+      screen.getByRole('row', { name: /^Starting-month adjustment / })
+        .children[1]
+    ).toHaveTextContent('$0');
+    await user.click(
+      screen.getByRole('button', { name: 'Starting-month adjustment' })
+    );
+    expect(
+      screen.getByRole('row', { name: /^Salary adjustment / }).children[1]
+    ).toHaveTextContent('-$1,000');
+    expect(
+      screen.getByRole('row', { name: /^Fringe adjustment / }).children[1]
+    ).toHaveTextContent('$1,000');
   });
 
   it('does not invent a funding editor month when appointment and allocation dates never overlap', async () => {

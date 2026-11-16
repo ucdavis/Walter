@@ -149,7 +149,8 @@ export function allocationRangeMatches(
 
 export function getAllocationEditorSeed(
   appointment: ProjectionAppointment,
-  month: string
+  month: string,
+  anchorDate?: string | null
 ): {
   mixed: boolean;
   range: AllocationRange;
@@ -180,23 +181,43 @@ export function getAllocationEditorSeed(
     return { mixed: false, range: monthRange, shares: [] };
   }
   const boundaries = allocationBoundaries(appointment, clipped);
-  const shares = sharesOnDay(appointment, boundaries[0]);
+  const anchor =
+    anchorDate &&
+    isPlanningDate(anchorDate) &&
+    anchorDate >= clipped.startDate &&
+    anchorDate <= clipped.endDate
+      ? day(anchorDate)
+      : boundaries[0];
+  const shares = sharesOnDay(appointment, anchor);
+  const expected = shareKey(shares);
   const mixed = !allocationRangeMatches(appointment, clipped, shares);
-  // A mixed month starts with just its first constant segment; expanding it is an explicit replacement.
+  // Source shortcuts select their matching segment; timeline clicks still start at the first segment.
+  // Expanding either segment remains an explicit replacement of the surrounding schedule.
+  const previousChange = boundaries
+    .slice(0, -1)
+    .findLastIndex(
+      (boundary) =>
+        boundary < anchor &&
+        shareKey(sharesOnDay(appointment, boundary)) !== expected
+    );
+  const segmentStart = boundaries[previousChange + 1];
   const nextChange = mixed
     ? boundaries
-        .slice(1)
+        .filter((boundary) => boundary > anchor)
         .find(
           (boundary) =>
-            shareKey(sharesOnDay(appointment, boundary)) !== shareKey(shares)
+            shareKey(sharesOnDay(appointment, boundary)) !== expected
         )
     : undefined;
   return {
     mixed,
-    range:
-      nextChange === undefined
-        ? clipped
-        : { ...clipped, endDate: date(nextChange - 1) },
+    range: mixed
+      ? {
+          endDate:
+            nextChange === undefined ? clipped.endDate : date(nextChange - 1),
+          startDate: date(segmentStart),
+        }
+      : clipped,
     shares,
   };
 }
