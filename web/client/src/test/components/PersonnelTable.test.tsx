@@ -869,6 +869,7 @@ describe('PersonnelTable', () => {
             createRecord({
               distributionPercent: 50,
               employeeId: '8002',
+              monthlyRate: 6000,
               name: 'Baker, Bob',
               positionNumber: '40009999',
             }),
