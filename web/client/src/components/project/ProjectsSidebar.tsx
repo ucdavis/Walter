@@ -20,8 +20,8 @@ import {
 } from '@heroicons/react/24/outline';
 
 interface ProjectSummary {
-  awardEndDate: string | null;
   displayName: string;
+  endDate: string | null;
   isInternal: boolean;
   projectNumber: string;
   totalBalance: number;
@@ -45,11 +45,13 @@ function groupProjects(records: ProjectRecord[]): ProjectSummary[] {
 
   for (const rec of records) {
     const key = rec.projectNumber;
+    const endDate =
+      rec.projectType === 'Internal' ? rec.awardEndDate : rec.projectEndDate;
 
     if (!map[key]) {
       map[key] = {
-        awardEndDate: rec.awardEndDate,
         displayName: rec.displayName,
+        endDate,
         isInternal: rec.projectType === 'Internal',
         projectNumber: rec.projectNumber,
         totalBalance: 0,
@@ -58,10 +60,10 @@ function groupProjects(records: ProjectRecord[]): ProjectSummary[] {
 
     map[key].totalBalance += rec.balance;
 
-    if (rec.awardEndDate) {
-      const current = map[key].awardEndDate;
-      if (!current || rec.awardEndDate > current) {
-        map[key].awardEndDate = rec.awardEndDate;
+    if (endDate) {
+      const current = map[key].endDate;
+      if (!current || endDate > current) {
+        map[key].endDate = endDate;
       }
     }
   }
@@ -328,7 +330,7 @@ export function ProjectsSidebar() {
                           <div className="flex text-sm justify-between items-center text-base-content/60">
                             <Currency value={project.totalBalance} />
                             <span>
-                              {formatDate(project.awardEndDate, 'No end date')}
+                              {formatDate(project.endDate, 'No end date')}
                             </span>
                           </div>
                         </>
@@ -476,7 +478,7 @@ export function ProjectsSidebar() {
                 </div>
                 <div className="flex text-sm justify-between items-center text-base-content/60">
                   <Currency value={project.totalBalance} />
-                  <span>{formatDate(project.awardEndDate, 'No end date')}</span>
+                  <span>{formatDate(project.endDate, 'No end date')}</span>
                 </div>
               </Link>
             ))}
