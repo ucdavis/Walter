@@ -351,9 +351,9 @@ function FutureBadge() {
 
 function JobDetails({ position }: { position: AggregatedPosition }) {
   return (
-    <div className="border-base-300 py-3">
-      <h4 className="mb-2 px-8 font-semibold text-sm">Job Details</h4>
-      <table className="w-full table-fixed text-sm [&_th]:!border-y-0 [&_tr>:first-child]:!pl-8">
+    <div className="border-base-300 py-2">
+      <h4 className="mb-1 px-8 font-semibold text-sm">Job Details</h4>
+      <table className="w-full table-fixed text-sm [&_th]:!border-y-0 [&_th]:!py-1 [&_td]:!py-1 [&_tr>:first-child]:!pl-8">
         <colgroup>
           <col className="personnel-job-details-col-id" />
           <col className="personnel-job-details-col-code" />
@@ -379,15 +379,15 @@ function JobDetails({ position }: { position: AggregatedPosition }) {
             </th>
             <th className="text-right">Eff. Date</th>
             <th className="text-right">End Date</th>
-            <th className="text-right">Mo. Salary</th>
+            <th className="text-right">Mo. Job Salary</th>
             <th className="text-right">
               <TooltipLabel
-                label="Mo. CBR"
+                label="Mo. Job CBR"
                 placement="bottom"
                 tooltip={tooltipDefinitions.monthlyCbr}
               />
             </th>
-            <th className="text-right">Mo. Total</th>
+            <th className="text-right">Mo. Job Total</th>
           </tr>
         </thead>
         <tbody>

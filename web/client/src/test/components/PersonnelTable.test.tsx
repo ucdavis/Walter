@@ -615,9 +615,8 @@ describe('PersonnelTable', () => {
 
     await user.unhover(distLabel.parentElement as HTMLElement);
 
-    // The expanded job-details header is the last Mo. CBR label.
-    const cbrLabels = screen.getAllByText('Mo. CBR');
-    await user.hover(cbrLabels.at(-1)?.parentElement as HTMLElement);
+    const cbrLabel = screen.getByText('Mo. Job CBR');
+    await user.hover(cbrLabel.parentElement as HTMLElement);
     expect(await screen.findByRole('tooltip')).toHaveTextContent(
       tooltipDefinitions.monthlyCbr
     );
