@@ -20,6 +20,20 @@ The department detail report includes two fields based on vacation usage history
 
 The monthly accrual estimate uses the latest positive period award, with the existing cap-tier fallback. See the [accrual calculator](web/server.core/Services/AccrualOverviewCalculator.cs) for duplicate handling, fallback, and rounding rules. Notification projection and vacation-date fields use the same calculator.
 
+## Projection plans
+
+From a person's Projects overview, open Projections and choose New plan. Work
+through Funding sources, Staffing, Other expenses, and Review, then choose
+Create plan to save the reviewed scenario and open its workspace. Canceling
+before submission leaves no saved plan. Workspace edits require Save plan;
+Apply accepts an editor's changes into the draft.
+
+Open a saved plan from Your plans. Duplicate copies its saved version after
+pending changes are saved. Plan details contains the permanent Delete action,
+which requires confirmation. Scenario edits do not change upstream accounting.
+See the [calculation reference](docs/projections-calculation-review.md) for
+funding, salary, expense, and budget rules.
+
 ## Getting Started (Web)
 
 Open the `/web` directory in VSCode and choose "Reopen in Container" to set up the development environment.

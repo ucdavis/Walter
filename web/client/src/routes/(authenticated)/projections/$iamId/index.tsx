@@ -1,125 +1,190 @@
-import { useState } from 'react';
-import { useSuspenseQuery } from '@tanstack/react-query';
+import { PlusIcon } from '@heroicons/react/24/outline';
+import { useEffect, useRef, useState } from 'react';
+import { useQuery, useSuspenseQuery } from '@tanstack/react-query';
+import { managedPisQueryOptions } from '@/queries/project.ts';
 import {
   createFileRoute,
   type ErrorComponentProps,
-  Link,
   useNavigate,
 } from '@tanstack/react-router';
 import { PageError } from '@/components/states/PageError.tsx';
 import { PageLoading } from '@/components/states/PageLoading.tsx';
+import { CurrentProjectBalances } from '@/components/projections/CurrentProjectBalances.tsx';
+import { ProjectionPlanCard } from '@/components/projections/ProjectionPlanCard.tsx';
+import { NewProjectionWizard } from '@/components/projections/NewProjectionWizard.tsx';
+import {
+  ProjectionSessionNotice,
+  ProjectionUnavailable,
+} from '@/components/projections/ProjectionAvailability.tsx';
+import {
+  featureFlagsQueryOptions,
+  useFeatureFlagsQuery,
+} from '@/queries/featureFlags.ts';
+import { meQueryOptions } from '@/queries/user.ts';
+import { useUser } from '@/shared/auth/UserContext.tsx';
 import { getErrorPresentation } from '@/lib/errorPresentation.ts';
 import {
-  createProjection,
   projectionListQueryOptions,
+  type Projection,
 } from '@/queries/projections.ts';
 
 export const Route = createFileRoute('/(authenticated)/projections/$iamId/')({
   component: RouteComponent,
   errorComponent: ProjectionsErrorBoundary,
-  loader: ({ context: { queryClient }, params: { iamId } }) =>
-    queryClient.ensureQueryData(projectionListQueryOptions(iamId)),
+  loader: async ({ context: { queryClient }, params: { iamId } }) => {
+    const user = await queryClient.ensureQueryData(meQueryOptions());
+    const flags = await queryClient.fetchQuery(
+      featureFlagsQueryOptions(user.id)
+    );
+    if (flags.projectionsEnabled) {
+      await queryClient.ensureQueryData(projectionListQueryOptions(iamId));
+    }
+  },
   pendingComponent: () => <PageLoading message="Fetching projections..." />,
 });
 
 function RouteComponent() {
   const { iamId } = Route.useParams();
+  const user = useUser();
+  return <ProjectionDashboard iamId={iamId} key={`${user.id}:${iamId}`} />;
+}
+
+function ProjectionDashboard({ iamId }: { iamId: string }) {
+  const { data: flags } = useFeatureFlagsQuery();
+  const navigate = useNavigate();
+  const [creating, setCreating] = useState(false);
+  const [savedName, setSavedName] = useState<string>();
+
+  const projectionsEnabled = useRef(flags?.projectionsEnabled);
+  useEffect(() => {
+    projectionsEnabled.current = flags?.projectionsEnabled;
+  }, [flags?.projectionsEnabled]);
+
+  const openCreated = async (saved: Projection) => {
+    if (!projectionsEnabled.current) {
+      setSavedName(saved.name);
+      setCreating(false);
+      return;
+    }
+    await navigate({
+      ignoreBlocker: true,
+      params: { iamId, projectionId: String(saved.id) },
+      to: '/projections/$iamId/$projectionId',
+    });
+  };
+
+  if (creating) {
+    return (
+      <main className="container">
+        {!flags?.projectionsEnabled && <ProjectionSessionNotice />}
+        <NewProjectionWizard
+          iamId={iamId}
+          onCancel={() => setCreating(false)}
+          onCreated={openCreated}
+          openWorkspaceAfterCreate={!!flags?.projectionsEnabled}
+        />
+      </main>
+    );
+  }
+
+  if (!flags?.projectionsEnabled) {
+    return (
+      <>
+        {savedName && (
+          <p className="alert alert-success" role="status">
+            {savedName} was saved.
+          </p>
+        )}
+        <ProjectionUnavailable iamId={iamId} />
+      </>
+    );
+  }
+
+  return <ProjectionList iamId={iamId} onCreate={() => setCreating(true)} />;
+}
+
+function ProjectionList({
+  iamId,
+  onCreate,
+}: {
+  iamId: string;
+  onCreate: () => void;
+}) {
   const { data: projections } = useSuspenseQuery(
     projectionListQueryOptions(iamId)
   );
-  const navigate = useNavigate();
-  const [name, setName] = useState('');
-  const [historyMonths, setHistoryMonths] = useState(3);
-  const [creating, setCreating] = useState(false);
-
-  const create = async () => {
-    setCreating(true);
-    try {
-      const created = await createProjection(iamId, { historyMonths, name });
-      await navigate({
-        params: { iamId, projectionId: String(created.id) },
-        to: '/projections/$iamId/$projectionId',
-      });
-    } finally {
-      setCreating(false);
-    }
-  };
-
+  const user = useUser();
+  const { data: managed } = useQuery({
+    ...managedPisQueryOptions(user.iamId),
+    enabled: user.iamId !== iamId,
+  });
+  const ownerName =
+    user.iamId === iamId
+      ? user.name
+      : managed?.pis.find((pi) => pi.iamId === iamId)?.name;
+  const ownerDisplayName = ownerName?.includes(',')
+    ? `${ownerName.slice(ownerName.indexOf(',') + 1).trim()} ${ownerName.slice(0, ownerName.indexOf(',')).trim()}`
+    : ownerName;
   return (
-    <main className="container">
-      <h1 className="h1 mt-8">Projections</h1>
-
-      <section className="section-margin">
-        {projections.length ? (
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Data as of</th>
-                <th>Last updated</th>
-              </tr>
-            </thead>
-            <tbody>
-              {projections.map((p) => (
-                <tr key={p.id}>
-                  <td>
-                    <Link
-                      className="link"
-                      params={{ iamId, projectionId: String(p.id) }}
-                      to="/projections/$iamId/$projectionId"
-                    >
-                      {p.name}
-                    </Link>
-                  </td>
-                  <td>{new Date(p.seededAt).toLocaleDateString()}</td>
-                  <td>
-                    {new Date(p.updatedAt).toLocaleString()}
-                    {p.updatedBy ? ` by ${p.updatedBy}` : ''}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        ) : (
-          <p>No projections yet.</p>
-        )}
-      </section>
-
-      <section className="section-margin">
-        <h2 className="h2">New projection</h2>
-        <form
-          className="flex flex-wrap items-end gap-4"
-          onSubmit={(e) => {
-            e.preventDefault();
-            void create();
-          }}
-        >
-          <label className="flex flex-col gap-1">
-            Name
-            <input
-              className="input input-bordered"
-              onChange={(e) => setName(e.target.value)}
-              required
-              value={name}
-            />
-          </label>
-          <label className="flex flex-col gap-1">
-            Averaging window
-            <select
-              className="select select-bordered"
-              onChange={(e) => setHistoryMonths(Number(e.target.value))}
-              value={historyMonths}
+    <main className="container scroll-mt-24 bg-base-100 text-base leading-normal text-base-content [&_button:enabled]:cursor-pointer">
+      <div className="py-6 pb-12">
+        <div className="@container min-w-0">
+          <header className="mb-6 flex flex-wrap items-start justify-between gap-4 md:items-center">
+            <div>
+              <h1 className="h1">
+                {ownerDisplayName
+                  ? `${ownerDisplayName}’s portfolio projections`
+                  : 'Portfolio projections'}
+              </h1>
+              <p className="mt-2 max-w-2xl text-sm text-base-content/80">
+                New plans exclude inactive internal tasks and expired awards.
+                Each task keeps its own balance and forecast.
+              </p>
+            </div>
+            <button
+              className="btn btn-primary"
+              onClick={onCreate}
+              type="button"
             >
-              <option value={3}>3 months</option>
-              <option value={6}>6 months</option>
-              <option value={12}>12 months</option>
-            </select>
-          </label>
-          <button className="btn btn-primary" disabled={creating} type="submit">
-            {creating ? 'Creating...' : 'Create'}
-          </button>
-        </form>
-      </section>
+              <PlusIcon aria-hidden="true" className="size-5" />
+              New plan
+            </button>
+          </header>
+
+          <CurrentProjectBalances iamId={iamId} />
+
+          <section aria-label="Your plans">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h2 className="h2">
+                Your plans{' '}
+                <span
+                  aria-hidden="true"
+                  aria-label={`${projections.length} plans`}
+                  className="ms-2 rounded bg-base-200 px-2 py-0.5 text-sm font-medium"
+                >
+                  {projections.length}
+                </span>
+              </h2>
+              <span className="hidden text-sm text-base-content/80 sm:block">
+                Separate assumptions for each plan
+              </span>
+            </div>
+            {projections.length ? (
+              <div className="grid grid-cols-1 gap-4 @xl:grid-cols-2 @4xl:grid-cols-3">
+                {projections.map((projection) => (
+                  <ProjectionPlanCard
+                    iamId={iamId}
+                    key={projection.id}
+                    summary={projection}
+                  />
+                ))}
+              </div>
+            ) : (
+              <p>No saved plans yet. Start with New plan.</p>
+            )}
+          </section>
+        </div>
+      </div>
     </main>
   );
 }

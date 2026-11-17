@@ -29,17 +29,26 @@ export const tooltipDefinitions = {
   fundingEntryStart: 'Funding Entry From UC Path Start',
   grantAdministrator:
     'Research admin contact for award setup and ongoing award administration.',
+  minimizeFundingSummary:
+    'Minimize funding warnings beside the plan name. You can reopen the summary there.',
   monthlyCbr:
     'Monthly composite benefit rate cost, including fringe/benefit burden.',
   openDepartmentDetails: 'Open department details',
+  plannedSourceType:
+    'Internal uses one shared balance for all spending. Sponsored uses separate category budgets, including salary and fringe.',
   postReportingPeriod:
     'Number of days after the award end date allowed for reporting and closeout activity.',
   projectBurndown:
     "Choose a timeline to view the project's remaining budget, including the current month and three, six, or twelve months of actuals (History), which also set the spending average used for non-personnel projections. Use the toggles to view All Expenses, Personnel, or Non-Personnel.",
+  projectionAppointmentDetails: 'View appointment details and editing options',
+  projectionCategoryBudgets:
+    'Salary and fringe have separate budgets. An overall source surplus does not cover a shortfall in either category. Starting available includes budget adjustments made in this plan. These changes do not update financial-system budgets.',
   reconciliationDiscrepancy: 'GL/PPM reconciliation discrepancy',
   selectFinancialDepartmentFirst: 'Select a financial department first',
   selectSingleDepartmentToLabel:
     'Display Financial Department or select a single financial department to add labels',
+  showFundingSummary:
+    'Show funding shortfalls, unallocated time, and overlapping allocations.',
   taskBreakdown:
     'Summary of how project costs are organized by financial coding segments.',
   totalBalance:
@@ -47,6 +56,35 @@ export const tooltipDefinitions = {
   totalBudget:
     'Total PPM budget across all active and expired projects. Closed projects are excluded.',
   viewChartStringInFinjector: 'View chart string in Finjector',
+  viewPiProjections: 'View projections',
+  viewPiProjects: 'View projects',
 } as const;
 
 export type TooltipDefinitionKey = keyof typeof tooltipDefinitions;
+
+export function projectionHistoryTooltip(months: number) {
+  return `Spending history: ${months} months`;
+}
+
+export function projectionCategoryShortfallTooltip({
+  firstMonth,
+  missingBudget,
+  recoveredMonth,
+}: {
+  firstMonth: string;
+  missingBudget: boolean;
+  recoveredMonth: string | null;
+}) {
+  return `${missingBudget ? 'No budget recorded' : 'First shortfall'} · ${firstMonth}${
+    recoveredMonth
+      ? `. Recovers in ${recoveredMonth} and stays within budget through plan end.`
+      : ''
+  }`;
+}
+
+export function projectionExpenseSourceTooltip(
+  label: string,
+  identity: string
+) {
+  return `${label} · ${identity}`;
+}

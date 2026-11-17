@@ -4,29 +4,31 @@ using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using server.core.Models;
 
 namespace server.core.Domain;
 
 /// <summary>
 /// An editable budget scenario for one PI, seeded from a snapshot of their portfolio.
-/// Projects and jobs are JSON columns, saved whole; ids inside them are unique per projection.
+/// Scenario content is one typed JSON document; identity, access, and concurrency metadata stay in columns.
 /// </summary>
 public class Projection
 {
     [Key]
     public int Id { get; set; }
 
+    /// <summary>Deduplicates retried creation within a PI's plans while this row exists; never changes on later saves.</summary>
+    [JsonIgnore]
+    public Guid CreationKey { get; set; }
+
     /// <summary>Owner PI; the target of the portfolio access check.</summary>
     [Required, MaxLength(8)]
     public string PiEmployeeId { get; set; } = "";
 
-    [Required, MaxLength(200)]
+    [Required, MaxLength(ProjectionPlanDefaults.MaximumNameLength)]
     public string Name { get; set; } = "";
 
-    /// <summary>3, 6, or 12; the averaging window of the current Projected expenses.</summary>
-    public int HistoryMonths { get; set; }
-
-    /// <summary>When the snapshot was taken (create or last reset); the projection's "now".</summary>
+    /// <summary>Original UTC capture, snapshot identity, and salary base. Advances only on create or reset; each funding source has its own financial capture.</summary>
     public DateTime SeededAt { get; set; }
 
     [MaxLength(200)]
@@ -37,10 +39,12 @@ public class Projection
     [MaxLength(200)]
     public string? UpdatedBy { get; set; }
 
+    /// <summary>UTC audit time and exact client concurrency token; advances on every write.</summary>
     public DateTime UpdatedAt { get; set; }
 
-    public List<ProjectionProject> Projects { get; set; } = [];
-    public List<ProjectionJob> Jobs { get; set; } = [];
+    /// <summary>Complete scenario inputs, saved atomically under the plan's concurrency token.</summary>
+    [Required, JsonRequired]
+    public ProjectionContent Content { get; set; } = new();
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
@@ -48,40 +52,88 @@ public class Projection
     {
         var entity = modelBuilder.Entity<Projection>();
         entity.HasIndex(p => p.PiEmployeeId);
-        AsJson(entity.Property(p => p.Projects));
-        AsJson(entity.Property(p => p.Jobs));
+        entity.HasIndex(p => new { p.PiEmployeeId, p.CreationKey }).IsUnique();
+        // SQL datetime2 preserves ticks but drops Kind. Restore UTC without shifting the saved token.
+        foreach (var property in new[] { nameof(CreatedAt), nameof(SeededAt), nameof(UpdatedAt) })
+            entity.Property<DateTime>(property).HasConversion(
+                value => value,
+                value => DateTime.SpecifyKind(value, DateTimeKind.Utc));
+        entity.Property(p => p.UpdatedAt).IsConcurrencyToken();
+        AsJson(entity.Property(p => p.Content));
     }
 
-    /// <summary>Compares by serialized value so in-place edits to the lists are saved.</summary>
-    private static void AsJson<T>(PropertyBuilder<List<T>> property) =>
+    /// <summary>Compares and snapshots the complete document so in-place nested edits are tracked and saved.</summary>
+    private static void AsJson(PropertyBuilder<ProjectionContent> property) =>
         property.HasConversion(
             v => JsonSerializer.Serialize(v, JsonOptions),
-            v => JsonSerializer.Deserialize<List<T>>(v, JsonOptions)!,
-            new ValueComparer<List<T>>(
+            v => JsonSerializer.Deserialize<ProjectionContent>(v, JsonOptions)!,
+            new ValueComparer<ProjectionContent>(
                 (a, b) => JsonSerializer.Serialize(a, JsonOptions) == JsonSerializer.Serialize(b, JsonOptions),
                 v => JsonSerializer.Serialize(v, JsonOptions).GetHashCode(),
-                v => JsonSerializer.Deserialize<List<T>>(JsonSerializer.Serialize(v, JsonOptions), JsonOptions)!));
+                v => JsonSerializer.Deserialize<ProjectionContent>(JsonSerializer.Serialize(v, JsonOptions), JsonOptions)!));
 }
 
-/// <summary>A project/task in the projection; ProjectNumber is null for a hypothetical project.</summary>
-public class ProjectionProject
+/// <summary>An independent task or planned funding source.</summary>
+public class ProjectionFundingSource
 {
     public int Id { get; set; }
     public string? ProjectNumber { get; set; }
     public string? TaskNumber { get; set; }
     public string? TaskName { get; set; }
-    public string ProjectName { get; set; } = "";
+    /// <summary>Editable label within the scenario; captured project metadata remains unchanged.</summary>
+    public string Name { get; set; } = "";
+    public string? ProjectName { get; set; }
     public string? ProjectType { get; set; }
     public string? AwardNumber { get; set; }
     public string? AwardName { get; set; }
+    [JsonRequired]
+    public ProjectionSourceKind SourceKind { get; set; }
+    /// <summary>Exact UTC capture of this source's financial inputs, independent of the plan's salary base.</summary>
+    [JsonRequired]
+    public DateTime CapturedAt { get; set; }
+    /// <summary>Scenario-only change to a general pool; category-based sources use category adjustments instead.</summary>
+    public decimal BalanceAdjustment { get; set; }
+    /// <summary>Net scenario changes by financial category; zero explicitly defines an otherwise absent budget.</summary>
+    public List<ProjectionCategoryBudgetAdjustment> CategoryAdjustments { get; set; } = [];
+    /// <summary>Original general-pool amount for planned funding, retained when scenario changes are reset.</summary>
+    public decimal InitialPlannedBalance { get; set; }
+    /// <summary>Budgeting mode chosen when planned funding is created; null for imported tasks.</summary>
+    public ProjectionPlannedBudgetMode? PlannedBudgetMode { get; set; }
+    /// <summary>Imported date bounds, retained separately from editable scenario bounds.</summary>
+    public DateOnly? CapturedStartDate { get; set; }
+    public DateOnly? CapturedEndDate { get; set; }
     public DateOnly? StartDate { get; set; }
     public DateOnly? EndDate { get; set; }
-    public bool IsSeeded { get; set; }
 
+    /// <summary>Captured imported budgets, or the original planned category definition with no booked costs.</summary>
     public List<ProjectionBudget> Budgets { get; set; } = [];
     public List<ProjectionActual> Actuals { get; set; } = [];
     public List<ProjectionRunRate> RunRates { get; set; } = [];
+    /// <summary>Custom monthly historical estimates by category; an explicit zero disables that estimate across history windows.</summary>
+    public List<ProjectionHistoricalExpenseOverride> HistoricalExpenseOverrides { get; set; } = [];
+    /// <summary>Explicit planned expenses, separate from estimates derived from captured history.</summary>
     public List<ProjectionExpense> Expenses { get; set; } = [];
+}
+
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum ProjectionSourceKind
+{
+    Task,
+    Planned,
+}
+
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum ProjectionPlannedBudgetMode
+{
+    GeneralPool,
+    Categories,
+}
+
+/// <summary>A net scenario budget delta; no action history or effective date is persisted.</summary>
+public sealed class ProjectionCategoryBudgetAdjustment
+{
+    public string ExpenditureCategory { get; set; } = "";
+    public decimal Amount { get; set; }
 }
 
 /// <summary>Budget for a project/task x expenditure category; the projection's starting balance.</summary>
@@ -91,7 +143,6 @@ public class ProjectionBudget
     public decimal Budget { get; set; }
     public decimal SpentToDate { get; set; }
     public decimal Committed { get; set; }
-    public bool IsSeeded { get; set; }
 }
 
 /// <summary>Read-only monthly cost history captured at seed time.</summary>
@@ -110,8 +161,8 @@ public class ProjectionRunRate
     public decimal MonthlyAmount { get; set; }
 }
 
-/// <summary>A person or hypothetical hire; EmployeeId is null for a hypothetical hire.</summary>
-public class ProjectionJob
+/// <summary>An appointment for a person or hypothetical hire; EmployeeId is null for a hypothetical hire.</summary>
+public class ProjectionAppointment
 {
     public int Id { get; set; }
     public string? EmployeeId { get; set; }
@@ -123,33 +174,46 @@ public class ProjectionJob
     /// <summary>CBR rate set (UCPath business unit): DVCMP, DVMED, or UCANR.</summary>
     public string RateSet { get; set; } = "DVCMP";
 
-    /// <summary>1.0-FTE monthly rate as of SeededAt; null means the job needs input.</summary>
+    /// <summary>1.0-FTE monthly rate at the snapshot, or at the start of an unseeded future hire; null is allowed only in an unsaved seed draft.</summary>
     public decimal? MonthlySalary { get; set; }
 
     public decimal Fte { get; set; }
-    public decimal? CbrRate { get; set; }
+
+    /// <summary>Composite benefit cost as a fraction of salary, captured or explicitly chosen for this plan.</summary>
+    [JsonRequired]
+    public decimal CbrRate { get; set; }
+
+    /// <summary>Additional salary-based vacation cost rate; defaults to zero and does not represent leave hours.</summary>
     public decimal VacationAccrualRate { get; set; }
     public decimal ColaRate { get; set; }
 
     /// <summary>Month of year (1 to 12) the COLA applies.</summary>
     public int ColaMonth { get; set; } = 7;
 
+    /// <summary>Appointment's monthly fee cost, allocated by funding share without FTE or COLA scaling; null contributes zero.</summary>
     public decimal? FeeRemissionMonthly { get; set; }
     public DateOnly? StartDate { get; set; }
     public DateOnly? EndDate { get; set; }
+    /// <summary>True for an appointment imported from personnel data, whose salary remains based at the snapshot month.</summary>
     public bool IsSeeded { get; set; }
+    /// <summary>Imported funding had no exact task match and needs review; cleared when the user applies a reviewed allocation schedule.</summary>
+    public bool HasUnmatchedFunding { get; set; }
 
-    public List<ProjectionFundingEntry> FundingEntries { get; set; } = [];
+    public List<ProjectionFundingAllocation> Allocations { get; set; } = [];
 }
 
-/// <summary>Share of a job's cost; a null ProjectId means funded outside this PI's projects.</summary>
-public class ProjectionFundingEntry
+/// <summary>Share of an appointment's cost; a null FundingSourceId means funded outside this plan.</summary>
+public class ProjectionFundingAllocation
 {
-    public int? ProjectId { get; set; }
+    [JsonRequired]
+    public int? FundingSourceId { get; set; }
+    /// <summary>Fraction of the appointment, not full-time FTE; each share is 0 to 1, but combined shares need not total 1.</summary>
+    [JsonRequired]
     public decimal Percent { get; set; }
+    /// <summary>Inclusive first day; null adds no start restriction beyond the appointment and source dates.</summary>
     public DateOnly? StartDate { get; set; }
+    /// <summary>Inclusive last day; null adds no end restriction beyond the appointment and source dates.</summary>
     public DateOnly? EndDate { get; set; }
-    public bool IsSeeded { get; set; }
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
@@ -157,19 +221,36 @@ public enum ProjectionExpenseKind
 {
     OneTime,
     Monthly,
-    /// <summary>Generated from run-rates; a window change or reset replaces these, including edited ones.</summary>
-    Projected,
+}
+
+/// <summary>Replaces one category's historical monthly estimate until explicitly removed, even if it equals the selected average.</summary>
+public class ProjectionHistoricalExpenseOverride
+{
+    [JsonRequired]
+    public string ExpenditureCategory { get; set; } = "";
+    [JsonRequired]
+    public decimal Amount { get; set; }
 }
 
 public class ProjectionExpense
 {
+    /// <summary>Positive identity unique within this funding source; retained through expense edits.</summary>
+    [JsonRequired]
+    public int Id { get; set; }
+    [JsonRequired]
     public ProjectionExpenseKind Kind { get; set; }
-    public string? Description { get; set; }
+    [JsonRequired]
+    public string Description { get; set; } = "";
+    [JsonRequired]
     public string ExpenditureCategory { get; set; } = "";
 
-    /// <summary>Per month for Monthly and Projected; total for OneTime.</summary>
+    /// <summary>Signed planned cost, including zero; per month for Monthly and total for OneTime.</summary>
+    [JsonRequired]
     public decimal Amount { get; set; }
 
-    public DateOnly? StartMonth { get; set; }
+    /// <summary>Required planning month, represented by its first calendar day.</summary>
+    [JsonRequired]
+    public DateOnly StartMonth { get; set; }
+    /// <summary>Inclusive final planning month for Monthly; null follows the source end and is required for OneTime.</summary>
     public DateOnly? EndMonth { get; set; }
 }

@@ -72,9 +72,7 @@ interface UseExpandableOverlayResult {
   closeExpanded: () => void;
   containerRef: RefObject<HTMLDivElement | null>;
   expandButtonRef: RefObject<HTMLButtonElement | null>;
-  handleContainerTransitionEnd: (
-    e: TransitionEvent<HTMLDivElement>
-  ) => void;
+  handleContainerTransitionEnd: (e: TransitionEvent<HTMLDivElement>) => void;
   isOverlayActive: boolean;
   overlayStyle: CSSProperties | undefined;
   placeholderHeight: number | null;
@@ -290,6 +288,10 @@ export function useExpandableOverlay({
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') {
+        return;
+      }
+      // A dialog above the worksheet owns Escape until it is dismissed.
+      if (document.querySelector('dialog[open]')) {
         return;
       }
       e.preventDefault();

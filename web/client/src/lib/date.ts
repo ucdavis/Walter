@@ -2,6 +2,17 @@ import { format, parseISO } from 'date-fns';
 
 const ISO_DATE_PREFIX = /^(\d{4})-(\d{2})-(\d{2})(?=$|T)/;
 
+/** Planning inputs use exact ISO calendar dates within the API's DateOnly range. */
+export function isPlanningDate(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || value.startsWith('0000')) {
+    return false;
+  }
+  const date = new Date(`${value}T00:00:00Z`);
+  return (
+    Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value
+  );
+}
+
 function isValidCalendarDate(year: number, month: number, day: number) {
   if (month < 1 || month > 12 || day < 1) {
     return false;

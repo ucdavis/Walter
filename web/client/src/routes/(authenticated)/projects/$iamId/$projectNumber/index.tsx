@@ -28,6 +28,7 @@ import { buildFinjectorUrl } from '@/lib/finjector.ts';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, Link } from '@tanstack/react-router';
 import {
+  ArrowTrendingUpIcon,
   ClipboardDocumentListIcon,
   PresentationChartLineIcon,
   TableCellsIcon,
@@ -111,6 +112,7 @@ function ProjectContent({
     !summary.isInternal &&
     featureFlags?.burndownEnabled &&
     !isAwardExpired(summary.awardEndDate);
+  const showProjections = featureFlags?.projectionsEnabled;
   const showProjectCosts = featureFlags?.projectCostsEnabled;
 
   return (
@@ -179,8 +181,21 @@ function ProjectContent({
 
       <ProjectDetails
         actions={
-          summary.isInternal || showProjectBurndown || showProjectCosts ? (
+          showProjections ||
+          summary.isInternal ||
+          showProjectBurndown ||
+          showProjectCosts ? (
             <>
+              {showProjections && (
+                <Link
+                  className="btn btn-lg"
+                  params={{ iamId }}
+                  to="/projections/$iamId"
+                >
+                  <ArrowTrendingUpIcon className="h-4 w-4" />
+                  Projections
+                </Link>
+              )}
               {summary.isInternal ? (
                 <Link
                   className="btn btn-lg"

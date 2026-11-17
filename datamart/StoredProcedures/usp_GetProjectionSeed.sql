@@ -3,13 +3,14 @@
 -- Returns four result sets:
 --   1. Projects: names, award, and dates (project dates from dbo.PpmProjects, else award dates).
 --   2. Budgets: budget, spent, committed from dbo.FacultyDeptPortfolio.
---   3. Actuals: monthly burdened cost from dbo.PPMProjectCosts, 12 full months plus the current month.
+--   3. Actuals: monthly burdened cost from dbo.PPMProjectCosts, 12 full months plus the snapshot month.
 --   4. RunRates: trailing non-personnel monthly averages for 3, 6, and 12 month windows.
 CREATE PROCEDURE dbo.usp_GetProjectionSeed
     @PiEmployeeId    VARCHAR(16),
     @ApplicationName NVARCHAR(128) = NULL,
     @ApplicationUser NVARCHAR(256) = NULL,
-    @EmulatingUser   NVARCHAR(256) = NULL
+    @EmulatingUser   NVARCHAR(256) = NULL,
+    @SnapshotAt      DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -19,7 +20,10 @@ BEGIN
     DECLARE @Duration_MS    INT;
     DECLARE @ErrorMsg       NVARCHAR(MAX);
     DECLARE @ParametersJSON NVARCHAR(MAX);
-    DECLARE @CurrMonthStart DATE = DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1);
+    -- The query must use the exact timestamp captured by its caller.
+    IF @SnapshotAt IS NULL
+        THROW 50001, 'SnapshotAt is required.', 1;
+    DECLARE @SnapshotMonthStart DATE = DATEFROMPARTS(YEAR(@SnapshotAt), MONTH(@SnapshotAt), 1);
 
     EXEC dbo.usp_SanitizeInputString @ApplicationName OUTPUT;
     EXEC dbo.usp_SanitizeInputString @ApplicationUser OUTPUT;
@@ -27,6 +31,7 @@ BEGIN
     BEGIN TRY
         SET @ParametersJSON = (
             SELECT @PiEmployeeId AS PiEmployeeId,
+                   @SnapshotAt AS SnapshotAt,
                    COALESCE(@ApplicationName, APP_NAME()) AS ApplicationName
             FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
         );
@@ -41,15 +46,15 @@ BEGIN
           AND EXISTS (SELECT 1 FROM dbo.FacultyDeptPortfolio f
                       WHERE f.ProjectNumber = r.ProjectNumber AND f.ProjectStatus = 'ACTIVE');
 
-        -- Month dimension: n = -12..-1 full months, 0 = current month.
+        -- Month dimension: n = -12..-1 full months, 0 = snapshot month.
         DROP TABLE IF EXISTS #months;
         ;WITH n AS (
             SELECT TOP (13) ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) - 13 AS n
             FROM sys.all_objects
         )
         SELECT n.n,
-               DATEADD(MONTH, n.n, @CurrMonthStart) AS MonthStart,
-               FORMAT(DATEADD(MONTH, n.n, @CurrMonthStart), 'MMM-yy') AS DisplayPeriod
+               DATEADD(MONTH, n.n, @SnapshotMonthStart) AS MonthStart,
+               FORMAT(DATEADD(MONTH, n.n, @SnapshotMonthStart), 'MMM-yy') AS DisplayPeriod
         INTO #months
         FROM n;
 
@@ -57,10 +62,12 @@ BEGIN
         SELECT f.ProjectNumber,
                f.TaskNum AS TaskNumber,
                MAX(f.TaskName) AS TaskName,
+               MAX(f.TaskStatus) AS TaskStatus,
                MAX(f.ProjectName) AS ProjectName,
                MAX(f.ProjectType) AS ProjectType,
                MAX(f.AwardNumber) AS AwardNumber,
                MAX(f.AwardName) AS AwardName,
+               MAX(f.AwardEndDate) AS AwardEndDate,
                COALESCE(MAX(pp.ProjectStartDate), MAX(f.AwardStartDate)) AS StartDate,
                COALESCE(MAX(pp.ProjectEndDate), MAX(f.AwardEndDate)) AS EndDate
         FROM dbo.FacultyDeptPortfolio f

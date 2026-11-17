@@ -14,10 +14,14 @@ public sealed class ProjectionSeedProject
     public string ProjectNumber { get; set; } = string.Empty;
     public string? TaskNumber { get; set; }
     public string? TaskName { get; set; }
+    /// <summary>Source-only task visibility used when preparing a fresh plan.</summary>
+    public string? TaskStatus { get; set; }
     public string? ProjectName { get; set; }
     public string? ProjectType { get; set; }
     public string? AwardNumber { get; set; }
     public string? AwardName { get; set; }
+    /// <summary>Award expiry controls sponsored-project visibility independently of project dates.</summary>
+    public DateTime? AwardEndDate { get; set; }
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
 }
