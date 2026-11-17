@@ -303,7 +303,7 @@ describe('projection dashboard', () => {
         .setup()
         .click(within(current).getByText('Project balances (2)'));
       expect(current.querySelector('details')).toHaveAttribute('open');
-      expect(within(current).getByText('$400')).toBeVisible();
+      expect(within(current).getByText('$400.0')).toBeVisible();
       expect(within(current).getByText('-$100')).toBeVisible();
       expect(within(current).getByText('Fieldwork T1')).toBeVisible();
       expect(
