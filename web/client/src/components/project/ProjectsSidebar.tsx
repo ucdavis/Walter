@@ -45,8 +45,7 @@ function groupProjects(records: ProjectRecord[]): ProjectSummary[] {
 
   for (const rec of records) {
     const key = rec.projectNumber;
-    const endDate =
-      rec.projectType === 'Internal' ? rec.awardEndDate : rec.projectEndDate;
+    const endDate = rec.projectEndDate;
 
     if (!map[key]) {
       map[key] = {
