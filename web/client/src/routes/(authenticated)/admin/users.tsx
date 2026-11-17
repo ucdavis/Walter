@@ -34,7 +34,7 @@ export const Route = createFileRoute('/(authenticated)/admin/users')({
 function RouteComponent() {
   const [query, setQuery] = useState('');
   const debouncedQuery = useDebouncedValue(query, 300);
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [selectedIamId, setSelectedIamId] = useState<string | null>(null);
   const [roleName, setRoleName] = useState<AssignableRole>('AccrualViewer');
 
   const searchEnabled = debouncedQuery.trim().length >= 3;
@@ -48,20 +48,20 @@ function RouteComponent() {
     [searchQuery.data]
   );
   const selectedUser = useMemo(
-    () => searchResults.find((u) => u.id === selectedUserId) ?? null,
-    [searchResults, selectedUserId]
+    () => searchResults.find((u) => u.iamId === selectedIamId) ?? null,
+    [searchResults, selectedIamId]
   );
 
   const queryClient = useQueryClient();
 
-  const userRolesQuery = useUserRolesQuery(selectedUserId);
+  const userRolesQuery = useUserRolesQuery(selectedIamId);
 
   const assignRoleMutation = useMutation({
     mutationFn: assignRole,
-    onSuccess: (data) => {
-      if (selectedUserId) {
+    onSuccess: (data, variables) => {
+      if (variables.iamId) {
         queryClient.setQueryData(
-          ['admin', 'users', selectedUserId, 'roles'],
+          ['admin', 'users', variables.iamId, 'roles'],
           (old: UserRolesResponse | undefined) => ({
             ...old,
             email: data.user.email,
@@ -78,10 +78,10 @@ function RouteComponent() {
 
   const removeRoleMutation = useMutation({
     mutationFn: removeRole,
-    onSuccess: (data) => {
-      if (selectedUserId) {
+    onSuccess: (data, variables) => {
+      if (variables.iamId) {
         queryClient.setQueryData(
-          ['admin', 'users', selectedUserId, 'roles'],
+          ['admin', 'users', variables.iamId, 'roles'],
           (old: UserRolesResponse | undefined) => ({
             ...old,
             roles: data.roles,
@@ -104,7 +104,11 @@ function RouteComponent() {
     searchResults.length === 0;
   const showSearching = query.trim().length >= 3 && searchQuery.isFetching;
 
-  const addRoleDisabled = !selectedUser || assignRoleMutation.isPending;
+  const addRoleDisabled =
+    !selectedUser ||
+    userRolesQuery.isPending ||
+    !!userRolesQuery.error ||
+    assignRoleMutation.isPending;
 
   return (
     <main className="mt-8">
@@ -124,7 +128,9 @@ function RouteComponent() {
 
             <div>
               <label className="label mb-2" htmlFor="admin-user-search">
-                <span className="label-text">Search by name or email</span>
+                <span className="label-text">
+                  Search by name, email, or username
+                </span>
               </label>
               <input
                 autoComplete="off"
@@ -132,7 +138,7 @@ function RouteComponent() {
                 id="admin-user-search"
                 onChange={(e) => {
                   setQuery(e.target.value);
-                  setSelectedUserId(null);
+                  setSelectedIamId(null);
                   assignRoleMutation.reset();
                   removeRoleMutation.reset();
                 }}
@@ -170,7 +176,10 @@ function RouteComponent() {
 
             {showNoResults ? (
               <div className="alert alert-soft">
-                <span>No users found.</span>
+                <span>
+                  No people found. Newly added campus identities may appear
+                  after the next directory refresh.
+                </span>
               </div>
             ) : null}
 
@@ -178,17 +187,16 @@ function RouteComponent() {
               <div className="max-h-96 overflow-auto rounded-box border border-base-300">
                 <ul className="menu menu-sm">
                   {searchResults.map((u) => {
-                    const label =
-                      u.displayName?.trim() || u.email?.trim() || u.id;
+                    const label = u.name?.trim() || u.email?.trim() || u.iamId;
                     const secondary = u.email?.trim() || '';
-                    const isSelected = u.id === selectedUserId;
+                    const isSelected = u.iamId === selectedIamId;
 
                     return (
-                      <li key={u.id}>
+                      <li key={u.iamId}>
                         <button
                           className={isSelected ? 'active' : undefined}
                           onClick={() => {
-                            setSelectedUserId(u.id);
+                            setSelectedIamId(u.iamId);
                             assignRoleMutation.reset();
                             removeRoleMutation.reset();
                           }}
@@ -219,9 +227,9 @@ function RouteComponent() {
                 <div className="text-sm font-semibold">Selected user</div>
                 <div className="mt-1 truncate">
                   {userRolesQuery.data?.name ||
-                    selectedUser.displayName ||
+                    selectedUser.name ||
                     selectedUser.email ||
-                    selectedUser.id}
+                    selectedUser.iamId}
                 </div>
                 {(userRolesQuery.data?.email ?? selectedUser.email) ? (
                   <div className="truncate text-sm text-base-content/80">
@@ -295,7 +303,7 @@ function RouteComponent() {
                             onClick={() => {
                               removeRoleMutation.reset();
                               removeRoleMutation.mutate({
-                                entraUserId: selectedUser.id,
+                                iamId: selectedUser.iamId,
                                 roleName: r,
                               });
                             }}
@@ -351,7 +359,7 @@ function RouteComponent() {
                 onClick={() => {
                   assignRoleMutation.reset();
                   assignRoleMutation.mutate({
-                    entraUserId: selectedUser.id,
+                    iamId: selectedUser.iamId,
                     roleName,
                   });
                 }}
@@ -370,11 +378,11 @@ function RouteComponent() {
               {assignError ? (
                 <div className="alert alert-error">
                   <span>
-                    Failed to add role{' '}
-                    {assignError instanceof HttpError
-                      ? `(HTTP ${assignError.status})`
-                      : ''}
-                    .
+                    {assignError instanceof HttpError &&
+                    typeof assignError.body === 'string' &&
+                    assignError.body
+                      ? assignError.body
+                      : 'Failed to add role. Please try again.'}
                   </span>
                 </div>
               ) : null}

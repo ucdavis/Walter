@@ -5,6 +5,7 @@ using Microsoft.Identity.Web;
 using Microsoft.Kiota.Abstractions;
 using server.Helpers;
 using server.core.Domain;
+using server.core.Models;
 using server.core.Services;
 using Server.Services;
 
@@ -15,64 +16,40 @@ namespace Server.Controllers;
 [Authorize(Policy = AuthorizationHelper.Policies.IsManager)]
 public sealed class AdminUsersController : ApiControllerBase
 {
+    private const int SearchResultLimit = 25;
     private readonly IGraphService _graphService;
     private readonly IUserService _userService;
     private readonly IIdentityService _identityService;
+    private readonly IDatamartService _datamartService;
     private readonly ILogger<AdminUsersController> _logger;
 
     public AdminUsersController(
         IGraphService graphService,
         IUserService userService,
         IIdentityService identityService,
+        IDatamartService datamartService,
         ILogger<AdminUsersController> logger)
     {
         _graphService = graphService;
         _userService = userService;
         _identityService = identityService;
+        _datamartService = datamartService;
         _logger = logger;
     }
 
     [HttpGet("search")]
-    public async Task<ActionResult<IReadOnlyList<GraphUserSearchResult>>> SearchUsers(
+    public async Task<ActionResult<IReadOnlyList<SearchablePersonRecord>>> SearchUsers(
         [FromQuery] string? query,
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-
         if (string.IsNullOrWhiteSpace(query) || query.Trim().Length < 3)
         {
-            return Ok(Array.Empty<GraphUserSearchResult>());
+            return Ok(Array.Empty<SearchablePersonRecord>());
         }
 
-        try
-        {
-            var results = await _graphService.SearchUsersAsync(User, query, cancellationToken);
-            return Ok(results);
-        }
-        catch (MicrosoftIdentityWebChallengeUserException ex)
-        {
-            _logger.LogInformation(ex, "User interaction required to acquire Graph token for user search.");
-            return Unauthorized();
-        }
-        catch (MsalUiRequiredException ex)
-        {
-            _logger.LogInformation(ex, "User interaction required to acquire Graph token for user search.");
-            return Unauthorized();
-        }
-        catch (ApiException ex)
-        {
-            _logger.LogWarning(ex, "Microsoft Graph user search failed.");
-            return StatusCode(StatusCodes.Status502BadGateway);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Unexpected error searching Microsoft Graph users.");
-            return StatusCode(StatusCodes.Status502BadGateway);
-        }
+        var people = await _datamartService.SearchPeopleAsync(query.Trim(), SearchResultLimit, cancellationToken);
+        return Ok(people);
     }
 
     public sealed record AssignRoleRequest(string RoleName);
@@ -88,19 +65,13 @@ public sealed class AdminUsersController : ApiControllerBase
 
     public sealed record AssignRoleResponse(AdminManagedUser User, bool Added);
 
-    [HttpPost("{entraUserId:guid}/roles")]
+    [HttpPost("by-iam/{iamId}/roles")]
     public async Task<ActionResult<AssignRoleResponse>> AssignRole(
-        Guid entraUserId,
+        string iamId,
         [FromBody] AssignRoleRequest request,
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-
-        if (entraUserId == Guid.Empty)
-        {
-            return BadRequest("Entra user ID is required.");
-        }
-
         var roleName = request?.RoleName?.Trim();
         if (string.IsNullOrWhiteSpace(roleName))
         {
@@ -113,100 +84,89 @@ public sealed class AdminUsersController : ApiControllerBase
             return BadRequest($"Role '{roleName}' is not assignable via this endpoint.");
         }
 
-        GraphUserProfile? profile;
+        var person = await GetPersonAsync(iamId, cancellationToken);
+        if (person is null)
+        {
+            return NotFound("A People record with an Employee ID is required.");
+        }
+
+        IReadOnlyList<GraphUserProfile> profiles;
         try
         {
-            profile = await _graphService.GetUserProfileAsync(User, entraUserId.ToString(), cancellationToken);
+            profiles = await _graphService.FindEligibleUsersByIamIdAsync(User, person.IamId, cancellationToken);
         }
         catch (MicrosoftIdentityWebChallengeUserException ex)
         {
-            _logger.LogInformation(ex, "User interaction required to acquire Graph token for user lookup.");
+            _logger.LogInformation(ex, "User interaction required to acquire Graph token for account linking.");
             return Unauthorized();
         }
         catch (MsalUiRequiredException ex)
         {
-            _logger.LogInformation(ex, "User interaction required to acquire Graph token for user lookup.");
+            _logger.LogInformation(ex, "User interaction required to acquire Graph token for account linking.");
             return Unauthorized();
         }
         catch (ApiException ex)
         {
-            _logger.LogWarning(ex, "Microsoft Graph user lookup failed.");
-            return StatusCode(StatusCodes.Status502BadGateway);
+            _logger.LogWarning(ex, "Microsoft Graph IAM ID lookup failed.");
+            return StatusCode(StatusCodes.Status502BadGateway, "Unable to verify the Entra account. Please try again.");
         }
 
-        if (profile is null)
+        if (profiles.Count == 0)
         {
-            return NotFound();
+            return NotFound("No enabled Entra member account matches this person's IAM ID. Newly updated accounts may take time to appear.");
+        }
+        if (profiles.Count != 1)
+        {
+            return Conflict("Multiple enabled Entra member accounts match this person's IAM ID. Resolve the duplicate accounts before granting access.");
         }
 
-        if (string.IsNullOrWhiteSpace(profile.IamId))
+        var profile = profiles[0];
+        if (!Guid.TryParse(profile.Id, out var entraUserId) || entraUserId == Guid.Empty ||
+            !string.Equals(profile.IamId, person.IamId, StringComparison.Ordinal))
         {
-            return BadRequest("IAMID extension attribute is missing for the selected user.");
+            return Conflict("The Entra account does not match the selected person's IAM ID.");
         }
 
-        IamIdentity? iamIdentity;
-        try
+        // Never move existing permissions to another account or overwrite a different campus identity.
+        var existingUser = await _userService.GetByIamIdAsync(person.IamId, cancellationToken);
+        var linkedUser = await _userService.GetByIdAsync(entraUserId, cancellationToken);
+        if ((existingUser is not null && existingUser.Id != entraUserId) ||
+            (linkedUser is not null && linkedUser.IamId != person.IamId))
         {
-            iamIdentity = await _identityService.GetByIamId(profile.IamId);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to retrieve IAM identity for IAM ID '{IamId}'.", profile.IamId);
-            return StatusCode(StatusCodes.Status502BadGateway);
-        }
-
-        if (iamIdentity is null)
-        {
-            return BadRequest($"IAM lookup failed for IAM ID '{profile.IamId}'.");
-        }
-
-        if (string.IsNullOrWhiteSpace(iamIdentity.EmployeeId))
-        {
-            return BadRequest($"Employee ID is missing for IAM ID '{profile.IamId}'.");
+            return Conflict("This person or Entra account already has a different Walter account link. Resolve that link before granting access.");
         }
 
         string? kerberos;
         try
         {
-            kerberos = await _identityService.GetKerberosByIamId(profile.IamId);
+            kerberos = await _identityService.GetKerberosByIamId(person.IamId);
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to retrieve Kerberos for IAM ID '{IamId}'.", profile.IamId);
-            return StatusCode(StatusCodes.Status502BadGateway);
+            _logger.LogWarning(ex, "Failed to retrieve Kerberos for IAM ID '{IamId}'.", person.IamId);
+            return StatusCode(StatusCodes.Status502BadGateway, "Unable to look up the campus username. Please try again.");
         }
 
         if (string.IsNullOrWhiteSpace(kerberos))
         {
-            return BadRequest($"Kerberos is missing for IAM ID '{profile.IamId}'.");
+            return BadRequest($"Kerberos is missing for IAM ID '{person.IamId}'.");
         }
 
         var userProfile = new UserProfileData
         {
             UserId = entraUserId,
             Kerberos = kerberos,
-            IamId = profile.IamId,
-            EmployeeId = iamIdentity.EmployeeId,
-            DisplayName = iamIdentity.FullName ?? profile.DisplayName,
-            Email = profile.Email,
+            IamId = person.IamId,
+            EmployeeId = person.EmployeeId,
+            DisplayName = person.Name,
+            Email = person.Email,
         };
 
         await _userService.CreateOrUpdateUserAsync(userProfile, cancellationToken);
-
-        var grantingUserId = User.GetUserId();
-        var added = await _userService.AddRoleToUserAsync(entraUserId, roleName, grantingUserId, cancellationToken);
+        var added = await _userService.AddRoleToUserAsync(entraUserId, roleName, User.GetUserId(), cancellationToken);
         var roles = await _userService.GetRolesForUser(entraUserId);
-
-        var responseUser = new AdminManagedUser(
-            Id: entraUserId,
-            Name: userProfile.DisplayName ?? userProfile.Kerberos,
-            Email: userProfile.Email,
-            EmployeeId: userProfile.EmployeeId,
-            Kerberos: userProfile.Kerberos,
-            IamId: userProfile.IamId,
-            Roles: roles);
-
-        return Ok(new AssignRoleResponse(responseUser, added));
+        return Ok(new AssignRoleResponse(new AdminManagedUser(
+            entraUserId, person.Name, person.Email, person.EmployeeId, kerberos, person.IamId, roles), added));
     }
 
     public sealed record UserRolesResponse(
@@ -217,64 +177,60 @@ public sealed class AdminUsersController : ApiControllerBase
         string? Kerberos,
         string? IamId);
 
-    [HttpGet("{entraUserId:guid}/roles")]
-    public async Task<ActionResult<UserRolesResponse>> GetRoles(
-        Guid entraUserId,
-        CancellationToken cancellationToken)
+    [HttpGet("by-iam/{iamId}/roles")]
+    public async Task<ActionResult<UserRolesResponse>> GetRoles(string iamId, CancellationToken cancellationToken)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-
-        if (entraUserId == Guid.Empty)
+        var person = await GetPersonAsync(iamId, cancellationToken);
+        if (person is null)
         {
-            return BadRequest("Entra user ID is required.");
+            return NotFound("A People record with an Employee ID is required.");
         }
 
-        var roles = await _userService.GetRolesForUser(entraUserId);
-        var user = await _userService.GetByIdAsync(entraUserId, cancellationToken);
-        return Ok(new UserRolesResponse(
-            roles,
-            Name: user?.DisplayName,
-            Email: user?.Email,
-            EmployeeId: user?.EmployeeId,
-            Kerberos: user?.Kerberos,
-            IamId: user?.IamId));
+        var user = await _userService.GetByIamIdAsync(person.IamId, cancellationToken);
+        IReadOnlyList<string> roles = user is null ? [] : await _userService.GetRolesForUser(user.Id);
+        return Ok(new UserRolesResponse(roles, person.Name, person.Email, person.EmployeeId, user?.Kerberos, person.IamId));
     }
 
     public sealed record RemoveRoleRequest(string RoleName);
-
     public sealed record RemoveRoleResponse(IReadOnlyList<string> Roles, bool Removed);
 
-    [HttpDelete("{entraUserId:guid}/roles")]
+    [HttpDelete("by-iam/{iamId}/roles")]
     public async Task<ActionResult<RemoveRoleResponse>> RemoveRole(
-        Guid entraUserId,
+        string iamId,
         [FromBody] RemoveRoleRequest request,
         CancellationToken cancellationToken)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-
-        if (entraUserId == Guid.Empty)
-        {
-            return BadRequest("Entra user ID is required.");
-        }
-
         var roleName = request?.RoleName?.Trim();
         if (string.IsNullOrWhiteSpace(roleName))
         {
             return BadRequest("Role name is required.");
         }
 
-        bool removed;
-        try
+        var person = await GetPersonAsync(iamId, cancellationToken);
+        if (person is null)
         {
-            removed = await _userService.RemoveRoleFromUserAsync(entraUserId, roleName, cancellationToken);
-        }
-        catch (InvalidOperationException ex)
-        {
-            _logger.LogWarning(ex, "Failed to remove role '{RoleName}' from user '{UserId}'.", roleName, entraUserId);
-            return NotFound(ex.Message);
+            return NotFound("A People record with an Employee ID is required.");
         }
 
-        var roles = await _userService.GetRolesForUser(entraUserId);
+        var user = await _userService.GetByIamIdAsync(person.IamId, cancellationToken);
+        if (user is null)
+        {
+            return Ok(new RemoveRoleResponse([], false));
+        }
+
+        var removed = await _userService.RemoveRoleFromUserAsync(user.Id, roleName, cancellationToken);
+        var roles = await _userService.GetRolesForUser(user.Id);
         return Ok(new RemoveRoleResponse(roles, removed));
+    }
+
+    /// <summary>Requires a current People record with an Employee ID for every admin permission operation.</summary>
+    private async Task<SearchablePersonRecord?> GetPersonAsync(string iamId, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (string.IsNullOrWhiteSpace(iamId)) return null;
+        var person = await _datamartService.GetSearchablePersonByIamIdAsync(iamId.Trim(), cancellationToken);
+        return person is not null && person.IamId == iamId.Trim() && !string.IsNullOrWhiteSpace(person.EmployeeId)
+            ? person
+            : null;
     }
 }

@@ -67,6 +67,11 @@ _Avoid_: Directory user, employee-only result
 - A **Person** can be displayed from downstream project or personnel data without being navigable when Walter cannot identify their **IAM ID**
 - Project lookup can navigate to a **Person** only when Walter can identify their **IAM ID**
 - People search includes **Searchable People**
+- Admin user search also reads **Searchable People** from the imported People table, including its email address; it does not fall back to Entra directory search
+- Admin permission operations require a current People record with an **Employee ID**
+- Granting an admin-managed role resolves the selected **IAM ID** against Entra extensionAttribute7 and requires exactly one enabled member account; email domains do not determine eligibility
+- Walter users and permissions remain keyed by Entra object ID, allowing grants before first login; reading and removing roles resolve the existing Walter user by **IAM ID** without Graph
+- Missing or ambiguous Entra matches and conflicting existing account links block grants; imported identities can lag campus changes until the next successful People refresh
 - An **Accrual Snapshot** classifies each employee as active, **Approaching Cap**, or **At Cap**
 - An **Accrual Snapshot** identifies the employee recipient email for each employee row
 - Employees who are **Approaching Cap** or **At Cap** are eligible for accrual notifications
