@@ -16,6 +16,12 @@ public sealed class GLPPMReconciliationRecord
     [JsonPropertyName("projectDescription")]
     public string? ProjectDescription { get; set; }
 
+    /// <summary>
+    /// Oracle's internal project id, used for Aggie Enterprise deep links. Not the project number.
+    /// </summary>
+    [JsonPropertyName("oracleProjectId")]
+    public long? OracleProjectId { get; set; }
+
     [JsonPropertyName("fundCode")]
     public string? FundCode { get; set; }
 

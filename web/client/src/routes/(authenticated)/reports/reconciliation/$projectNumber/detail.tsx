@@ -3,6 +3,8 @@ import { createFileRoute, Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { createColumnHelper } from '@tanstack/react-table';
 import { ExportDataButton } from '@/components/ExportDataButton.tsx';
+import { AggieEnterpriseLink } from '@/components/project/AggieEnterpriseLink.tsx';
+import { buildAeProjectBudgetUrl } from '@/lib/aggieEnterprise.ts';
 import {
   glPpmReconciliationQueryOptions,
   glTransactionsQueryOptions,
@@ -351,6 +353,10 @@ function RouteComponent() {
     return true;
   });
 
+  const budgetUrl = buildAeProjectBudgetUrl(
+    reconciliation?.find((r) => r.oracleProjectId != null)?.oracleProjectId
+  );
+
   const keyLabel = [search.dept, search.fund, search.program, search.activity]
     .filter(Boolean)
     .join(' / ');
@@ -367,6 +373,13 @@ function RouteComponent() {
         </Link>
         <h1 className="h1">Reconciliation Detail</h1>
         <p className="subtitle">{keyLabel}</p>
+        {budgetUrl ? (
+          <p className="mt-2">
+            <AggieEnterpriseLink href={budgetUrl}>
+              Manage Project Budget
+            </AggieEnterpriseLink>
+          </p>
+        ) : null}
       </section>
 
       {isPending ? (

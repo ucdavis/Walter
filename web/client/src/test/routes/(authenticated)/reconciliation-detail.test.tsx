@@ -19,6 +19,7 @@ const createReconciliationRecord = (
   fundCode: '13U02',
   fundDescription: 'Federal Fund',
   glActualAmount: -500.25,
+  oracleProjectId: 300_000_014_220_069,
   ppmBudBal: 1500.75,
   ppmBudget: 10000,
   ppmFundCode: '13U02',
@@ -101,7 +102,67 @@ const setupHandlers = (
 const detailPath =
   '/reports/reconciliation/PROJ001/detail?dept=DEPT001&fund=13U02&program=000&activity=000000';
 
+const budgetUrl =
+  'https://fa-etfq-saasfaprod1.fa.ocs.oraclecloud.com/fscmUI/faces/deeplink?objType=PROJECT&objKey=ProjectId=300000014220069&action=MANAGE_BUDGET';
+
+describe('reconciliation page', () => {
+  it('links the project to Manage Project Budget in Aggie Enterprise', async () => {
+    setupHandlers([createReconciliationRecord()]);
+
+    const { cleanup } = renderRoute({
+      initialPath: '/reports/reconciliation/PROJ001',
+    });
+
+    try {
+      const link = await screen.findByRole('link', {
+        name: 'Manage Project Budget',
+      });
+      expect(link).toHaveAttribute('href', budgetUrl);
+      expect(link).toHaveAttribute('target', '_blank');
+      expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('omits the Aggie Enterprise link when the project has no Oracle project id', async () => {
+    setupHandlers([createReconciliationRecord({ oracleProjectId: null })]);
+
+    const { cleanup } = renderRoute({
+      initialPath: '/reports/reconciliation/PROJ001',
+    });
+
+    try {
+      expect(
+        await screen.findByRole('link', { name: 'Details' })
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('link', { name: 'Manage Project Budget' })
+      ).not.toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+});
+
 describe('reconciliation detail page', () => {
+  it('links the project to Manage Project Budget in Aggie Enterprise', async () => {
+    setupHandlers([createReconciliationRecord()]);
+
+    const { cleanup } = renderRoute({ initialPath: detailPath });
+
+    try {
+      const link = await screen.findByRole('link', {
+        name: 'Manage Project Budget',
+      });
+      expect(link).toHaveAttribute('href', budgetUrl);
+      expect(link).toHaveAttribute('target', '_blank');
+      expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    } finally {
+      cleanup();
+    }
+  });
+
   it('shows PPM balance, GL actuals, and difference from record data', async () => {
     const record = createReconciliationRecord({
       glActualAmount: -500.25,

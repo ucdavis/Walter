@@ -104,6 +104,8 @@ export interface GLPPMReconciliationRecord {
   financialDepartment: string | null;
   project: string;
   projectDescription: string | null;
+  /** Oracle's internal project id for Aggie Enterprise links; not the project number. */
+  oracleProjectId: number | null;
   fundCode: string | null;
   fundDescription: string | null;
   ppmFundCode: string;

@@ -2,7 +2,9 @@ import { useMemo, useState } from 'react';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createColumnHelper } from '@tanstack/react-table';
 import { TableExportActions } from '@/components/TableExportActions.tsx';
+import { AggieEnterpriseLink } from '@/components/project/AggieEnterpriseLink.tsx';
 import { projectExpenditureCategoryColor } from '@/components/project/projectChartColors.ts';
+import { buildAeCostUrl } from '@/lib/aggieEnterprise.ts';
 import { formatCurrency } from '@/lib/currency.ts';
 import type { CsvColumn } from '@/lib/csv.ts';
 import { formatDate } from '@/lib/date.ts';
@@ -189,6 +191,19 @@ export function ProjectCostsTable({
         header: 'Expenditure Type',
         minSize: 180,
         size: 220,
+      }),
+      columnHelper.accessor('transactionNumber', {
+        cell: (info) => (
+          <span className="text-sm whitespace-nowrap">
+            <AggieEnterpriseLink href={buildAeCostUrl(info.getValue())}>
+              {info.getValue()}
+            </AggieEnterpriseLink>
+          </span>
+        ),
+        footer: () => null,
+        header: 'Transaction Number',
+        minSize: 150,
+        size: 160,
       }),
       columnHelper.accessor('burdenedCost', {
         cell: (info) => (
