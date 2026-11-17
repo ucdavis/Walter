@@ -80,14 +80,20 @@ public sealed class GraphServiceIamLookupTests
 
     private static object Account(string id, bool? enabled = true, string type = "Member", string iamId = IamId) => new
     {
-        id, displayName = "Campus Person", mail = "alias@ad3.ucdavis.edu", userPrincipalName = "person@ucdavis.edu",
-        accountEnabled = enabled, userType = type, onPremisesExtensionAttributes = new { extensionAttribute7 = iamId },
+        id,
+        displayName = "Campus Person",
+        mail = "alias@ad3.ucdavis.edu",
+        userPrincipalName = "person@ucdavis.edu",
+        accountEnabled = enabled,
+        userType = type,
+        onPremisesExtensionAttributes = new { extensionAttribute7 = iamId },
     };
 
     private static string Page(string? nextLink, params object[] users) => JsonSerializer.Serialize(new Dictionary<string, object?>
     {
         ["@odata.context"] = "https://graph.microsoft.com/v1.0/$metadata#users",
-        ["@odata.nextLink"] = nextLink, ["value"] = users,
+        ["@odata.nextLink"] = nextLink,
+        ["value"] = users,
     });
 
     private sealed class GraphHandler(params string[] pages) : HttpMessageHandler

@@ -119,7 +119,8 @@ public sealed class AdminUsersControllerTests
         {
             Id = sameIamDifferentEntra ? Guid.NewGuid() : EntraId,
             IamId = sameIamDifferentEntra ? IamId : "1000000999",
-            EmployeeId = "99999999", Kerberos = "existing",
+            EmployeeId = "99999999",
+            Kerberos = "existing",
         });
         await h.Context.SaveChangesAsync();
         (await h.Assign()).Result.Should().BeOfType<ConflictObjectResult>();
@@ -187,8 +188,10 @@ public sealed class AdminUsersControllerTests
         public Guid ManagerId { get; } = Guid.NewGuid();
         public SearchablePersonRecord Person { get; } = new()
         {
-            IamId = AdminUsersControllerTests.IamId, EmployeeId = "12345678",
-            Name = "Campus Person", Email = "person@ucdavis.edu",
+            IamId = AdminUsersControllerTests.IamId,
+            EmployeeId = "12345678",
+            Name = "Campus Person",
+            Email = "person@ucdavis.edu",
         };
         public FakeGraphService Graph { get; } = new();
         public FakeIdentityService Identity { get; } = new();
