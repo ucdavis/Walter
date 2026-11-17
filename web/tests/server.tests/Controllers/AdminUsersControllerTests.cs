@@ -182,6 +182,37 @@ public sealed class AdminUsersControllerTests
         h.Context.Permissions.Should().BeEmpty();
     }
 
+    [Fact]
+    public async Task RemoveRole_returns_not_found_for_unknown_role_without_changing_permissions()
+    {
+        using var h = new Harness();
+        await h.Assign();
+
+        var result = await h.Controller.RemoveRole(IamId, new("UnknownRole"), default);
+
+        result.Result.Should().BeOfType<NotFoundObjectResult>().Which.Value.Should().Be("Role 'UnknownRole' not found.");
+        h.Context.Permissions.Should().ContainSingle(p => p.UserId == EntraId);
+        h.Graph.LookupCalls.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task RemoveRole_returns_false_for_existing_unassigned_role()
+    {
+        using var h = new Harness();
+        await h.Assign();
+        h.Context.Roles.Add(new Role { Name = Role.Names.FinancialViewer });
+        await h.Context.SaveChangesAsync();
+
+        var result = await h.Controller.RemoveRole(IamId, new(Role.Names.FinancialViewer), default);
+
+        var payload = result.Result.Should().BeOfType<OkObjectResult>().Which.Value
+            .Should().BeOfType<AdminUsersController.RemoveRoleResponse>().Which;
+        payload.Removed.Should().BeFalse();
+        payload.Roles.Should().Equal(Role.Names.AccrualViewer);
+        h.Context.Permissions.Should().ContainSingle(p => p.UserId == EntraId);
+        h.Graph.LookupCalls.Should().Be(1);
+    }
+
     private sealed class Harness : IDisposable
     {
         public AppDbContext Context { get; } = TestDbContextFactory.CreateInMemory();

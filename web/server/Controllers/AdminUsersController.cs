@@ -218,7 +218,17 @@ public sealed class AdminUsersController : ApiControllerBase
             return Ok(new RemoveRoleResponse([], false));
         }
 
-        var removed = await _userService.RemoveRoleFromUserAsync(user.Id, roleName, cancellationToken);
+        bool removed;
+        try
+        {
+            removed = await _userService.RemoveRoleFromUserAsync(user.Id, roleName, cancellationToken);
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Failed to remove role '{RoleName}' from user '{UserId}'.", roleName, user.Id);
+            return NotFound(ex.Message);
+        }
+
         var roles = await _userService.GetRolesForUser(user.Id);
         return Ok(new RemoveRoleResponse(roles, removed));
     }
