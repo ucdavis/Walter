@@ -1,5 +1,5 @@
 import { PlusIcon } from '@heroicons/react/24/outline';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQuery, useSuspenseQuery } from '@tanstack/react-query';
 import { managedPisQueryOptions } from '@/queries/project.ts';
 import {
@@ -55,8 +55,13 @@ function ProjectionDashboard({ iamId }: { iamId: string }) {
   const [creating, setCreating] = useState(false);
   const [savedName, setSavedName] = useState<string>();
 
+  const projectionsEnabled = useRef(flags?.projectionsEnabled);
+  useEffect(() => {
+    projectionsEnabled.current = flags?.projectionsEnabled;
+  }, [flags?.projectionsEnabled]);
+
   const openCreated = async (saved: Projection) => {
-    if (!flags?.projectionsEnabled) {
+    if (!projectionsEnabled.current) {
       setSavedName(saved.name);
       setCreating(false);
       return;

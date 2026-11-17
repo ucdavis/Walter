@@ -70,7 +70,7 @@ function open(planned = false, existingPool = false) {
       : editProjectionSource(session, source.id, inputs, categories)
   );
   const ref = createRef<SourceEditorHandle>();
-  render(
+  const view = render(
     <QueryClientProvider client={query}>
       <SourceEditor
         onApply={onApply}
@@ -81,7 +81,31 @@ function open(planned = false, existingPool = false) {
       />
     </QueryClientProvider>
   );
-  return { onApply, onClose, ref, session, source, user: userEvent.setup() };
+  const acknowledgeSave = () => {
+    const savedSession = createProjectionSession(
+      structuredClone(session.draft)
+    );
+    view.rerender(
+      <QueryClientProvider client={query}>
+        <SourceEditor
+          onApply={onApply}
+          onClose={onClose}
+          ref={ref}
+          session={savedSession}
+          source={savedSession.draft.content.fundingSources[0]}
+        />
+      </QueryClientProvider>
+    );
+  };
+  return {
+    acknowledgeSave,
+    onApply,
+    onClose,
+    ref,
+    session,
+    source,
+    user: userEvent.setup(),
+  };
 }
 it('buffers a balanced move, preserves dates when resetting budgets, and applies atomically', async () => {
   const { onApply, ref, source, user } = open();
@@ -349,3 +373,21 @@ it('offers categories saved only in expenses or overrides when the cold lookup f
   }
   queryClient.clear();
 });
+
+it.each([false, true])(
+  'preserves focus and pending input when a save replaces the source, general pool: %s',
+  async (generalPool) => {
+    const { acknowledgeSave, user } = open(false, generalPool);
+    const input = screen.getByLabelText(
+      generalPool ? 'Planning balance' : 'End date'
+    );
+    await user.click(input);
+    fireEvent.change(input, {
+      target: { value: generalPool ? '1234' : '2026-05-31' },
+    });
+    expect(input).toHaveFocus();
+    acknowledgeSave();
+    expect(input).toHaveFocus();
+    expect(input).toHaveValue(generalPool ? '1234' : '2026-05-31');
+  }
+);

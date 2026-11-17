@@ -266,6 +266,51 @@ describe('projection creation and copies', () => {
     }
   });
 
+  it('confirms creation when the flag turns off while the save is in flight', async () => {
+    const api = handleLifecycle();
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    server.use(
+      http.post(createUrl, async ({ request }) => {
+        const saved = api.create(
+          (await request.json()) as CreateProjectionDraftRequest
+        );
+        await held;
+        return HttpResponse.json(saved);
+      })
+    );
+    const route = renderPlans();
+    const user = userEvent.setup();
+    try {
+      await startWizard(user);
+      await reviewWizard(user);
+      await user.click(screen.getByRole('button', { name: /^Create plan/ }));
+      await waitFor(() => expect(api.creates).toHaveLength(1));
+      server.use(
+        http.get('/api/system/features', () =>
+          HttpResponse.json({ projectionsEnabled: false })
+        )
+      );
+      await act(async () => {
+        await route.queryClient.invalidateQueries({
+          queryKey: ['system', 'features'],
+        });
+      });
+      await screen.findByText(/Projections have been turned off/);
+      release();
+      await screen.findByText('Reviewed plan was saved.');
+      expect(
+        screen.getByText('Projections are not available.')
+      ).toBeInTheDocument();
+      expect(route.router.state.location.pathname).toBe(portfolioPath);
+    } finally {
+      release();
+      route.cleanup();
+    }
+  });
+
   it('revisits completed steps without skipping selection or losing unapplied edits', async () => {
     const api = handleLifecycle();
     const route = renderPlans();

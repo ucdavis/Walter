@@ -1,3 +1,4 @@
+import { projectionExpenseSourceTooltip } from '@/shared/tooltips.ts';
 import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
 import { sourceLabel } from '@/lib/projectionSources.ts';
 import type { ProjectionFundingSource } from '@/queries/projections.ts';
@@ -49,7 +50,7 @@ export function ExpenseSourceLink({
           </span>
         </button>
       }
-      tooltip={`${sourceLabel(source)} · ${identity}`}
+      tooltip={projectionExpenseSourceTooltip(sourceLabel(source), identity)}
     />
   );
 }

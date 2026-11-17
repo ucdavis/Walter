@@ -79,3 +79,10 @@ export function projectionCategoryShortfallTooltip({
       : ''
   }`;
 }
+
+export function projectionExpenseSourceTooltip(
+  label: string,
+  identity: string
+) {
+  return `${label} · ${identity}`;
+}

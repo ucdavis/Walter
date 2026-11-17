@@ -402,7 +402,7 @@ Reducing an estimate below the booked amount does not refund booked costs.
 Salary and benefits use separate comparisons because their postings can arrive
 at different times. Eligible days before the snapshot date still contribute to
 the estimate because their costs may not yet be booked. For a March 20 snapshot,
-a appointment active March 1 through 10 with a $1,000 estimate and $800 booked costs
+an appointment active March 1 through 10 with a $1,000 estimate and $800 booked costs
 still forecasts $200. The calculator does not also prorate personnel to days
 after the snapshot. Later months use their eligible-day estimates.
 
@@ -488,7 +488,7 @@ source ended October 10. The expense specifies a month, not a posting date.
 Entries outside the eligible months stay in the saved plan but do not contribute
 to the forecast; changing the dates can make them applicable again.
 
-A appointment's fee-remission amount is the appointment's total monthly cost. It is split
+An appointment's fee-remission amount is the appointment's total monthly cost. It is split
 across funding shares without FTE or COLA scaling, then prorated by calendar days
 when the funding source, appointment, and funding entry are all active. Start and end
 dates are inclusive. No overlap means no fee forecast.
@@ -514,7 +514,7 @@ already booked in category 08. The $400 remains visible as actuals and is alread
 included in the snapshot balance under the inclusion assumption described above.
 
 Generated category 08 estimates and explicit monthly/one-time expenses remain
-additional costs. Entering the same fees as both an explicit expense and a appointment's
+additional costs. Entering the same fees as both an explicit expense and an appointment's
 fee-remission amount would count them twice. No standard fee amount is supplied
 automatically.
 

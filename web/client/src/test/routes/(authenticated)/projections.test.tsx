@@ -109,7 +109,7 @@ describe('saved projection route', () => {
         screen.queryByText('Projections are not available.')
       ).not.toBeInTheDocument();
       expect(
-        screen.queryByRole('button', { name: 'Duplicate plan' })
+        screen.queryByRole('button', { name: `Duplicate ${plan.name}` })
       ).not.toBeInTheDocument();
       await user.click(screen.getByRole('button', { name: /^Save plan/ }));
       await screen.findByRole('button', { name: '✓ Saved' });

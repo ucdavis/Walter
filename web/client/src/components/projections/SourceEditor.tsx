@@ -235,13 +235,15 @@ export function SourceEditor<T extends ProjectionDraft>({
       validationMessage,
     }),
   }));
+  const sourceId = source?.id;
+  const fundingBasis = source ? getSourceFundingBasis(source) : undefined;
   useEffect(() => {
-    if (source && getSourceFundingBasis(source) === 'categories') {
+    if (fundingBasis === 'categories') {
       budgetHeadingRef.current?.focus();
     } else {
       inputRef.current?.focus();
     }
-  }, [source]);
+  }, [sourceId, fundingBasis]);
 
   const capturedStart = source?.capturedStartDate;
   const capturedEnd = source?.capturedEndDate;
