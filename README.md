@@ -11,6 +11,12 @@ Walter includes:
 
 Instructions for setting up and using each component are provided in their respective directories.
 
+## Managing user roles
+
+Open **User Management** from the Admin Dashboard. Search with at least three characters from a name, email, campus username, or IAM ID. Results are limited to 25 people; refine the query if needed. Select a person to view their roles, choose a role and select **Add Role**, or use the remove button beside an existing role.
+
+See the [admin eligibility, account linking, and refresh rules](CONTEXT.md#relationships) if a person is missing or a grant cannot resolve their account.
+
 ## Vacation accrual reporting
 
 The department detail report includes two fields based on vacation usage history:
