@@ -93,72 +93,77 @@ export function SourceAppointmentDetails({
   return (
     <section
       aria-label={`${appointment.name} appointment details`}
-      className="rounded-box border border-base-300 p-3 text-sm"
+      className="space-y-4 text-sm"
     >
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h5 className="font-semibold break-words">{appointment.name}</h5>
-          {appointment.title && <p>{appointment.title}</p>}
-          <p>
-            {percent.format(appointment.fte)} appointment FTE · CBR{' '}
-            {percent.format(appointment.cbrRate)} · Leave accrual{' '}
-            {percent.format(appointment.vacationAccrualRate)}
-          </p>
-          <p>
-            Appointment {appointment.startDate ?? 'without a start limit'}{' '}
-            through {appointment.endDate ?? 'no end date'}
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
+      <div className="space-y-2">
+        {appointment.title && (
+          <p className="font-semibold">{appointment.title}</p>
+        )}
+        {appointment.positionNumber && (
+          <p>Position {appointment.positionNumber}</p>
+        )}
+        <p>
+          {percent.format(appointment.fte)} appointment FTE · CBR{' '}
+          {percent.format(appointment.cbrRate)} · Leave accrual{' '}
+          {percent.format(appointment.vacationAccrualRate)}
+        </p>
+        <p>
+          Appointment {appointment.startDate ?? 'without a start limit'} through{' '}
+          {appointment.endDate ?? 'no end date'}
+        </p>
+      </div>
+      <div>
+        <h3 className="mb-2 font-semibold">Funding from this source</h3>
+        <ul className="space-y-1">
+          {sourceAllocations(appointment, sourceId).map(([key, allocation]) => (
+            <li key={key}>
+              {percent.format(allocation.percent)} of appointment ·{' '}
+              {percent.format(allocation.percent * appointment.fte)} full-time
+              FTE · {allocation.startDate ?? 'Appointment start'} through{' '}
+              {allocation.endDate ?? 'appointment end'}
+            </li>
+          ))}
+        </ul>
+        <p className="mt-2 text-base-content/70">
+          {firstMonth
+            ? `First allocated month in this plan: ${fundingMonthLabel(firstMonth)}.`
+            : 'No funded share from this source is active in the forecast period.'}
+        </p>
+      </div>
+      <div className="modal-action flex flex-wrap gap-2">
+        <button
+          aria-label={`Edit appointment for ${appointment.name}`}
+          className="btn btn-outline btn-sm"
+          onClick={() =>
+            onNavigate({
+              appointment: appointment.id,
+              section: 'staffing',
+              source: sourceId,
+            })
+          }
+          type="button"
+        >
+          Edit appointment
+        </button>
+        {editorDate && (
           <button
-            aria-label={`Edit appointment for ${appointment.name}`}
+            aria-label={`Edit allocations for ${appointment.name}`}
             className="btn btn-outline btn-sm"
             onClick={() =>
               onNavigate({
                 appointment: appointment.id,
+                fundingDate: editorDate,
+                fundingMonth: editorDate.slice(0, 7),
                 section: 'staffing',
                 source: sourceId,
               })
             }
             type="button"
           >
-            Edit appointment
+            Edit funding
           </button>
-          {editorDate && (
-            <button
-              aria-label={`Edit allocations for ${appointment.name}`}
-              className="btn btn-outline btn-sm"
-              onClick={() =>
-                onNavigate({
-                  appointment: appointment.id,
-                  fundingDate: editorDate,
-                  fundingMonth: editorDate.slice(0, 7),
-                  section: 'staffing',
-                  source: sourceId,
-                })
-              }
-              type="button"
-            >
-              Edit funding
-            </button>
-          )}
-        </div>
+        )}
       </div>
-      <ul className="mt-2 space-y-1">
-        {sourceAllocations(appointment, sourceId).map(([key, allocation]) => (
-          <li key={key}>
-            {percent.format(allocation.percent)} of appointment ·{' '}
-            {percent.format(allocation.percent * appointment.fte)} full-time FTE
-            · {allocation.startDate ?? 'Appointment start'} through{' '}
-            {allocation.endDate ?? 'appointment end'}
-          </li>
-        ))}
-      </ul>
-      <p className="mt-2 text-base-content/70">
-        {firstMonth
-          ? `First allocated month in this plan: ${fundingMonthLabel(firstMonth)}.`
-          : 'No funded share from this source is active in the forecast period.'}
-      </p>
     </section>
   );
 }

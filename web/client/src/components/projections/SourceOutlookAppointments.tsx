@@ -1,7 +1,14 @@
-import { useState } from 'react';
-import { ChevronDownIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
+import { useCallback, useRef, useState } from 'react';
+import {
+  ChevronDownIcon,
+  ChevronRightIcon,
+  InformationCircleIcon,
+} from '@heroicons/react/24/outline';
 import type { ColumnDef } from '@tanstack/react-table';
 import { DataTable } from '@/shared/DataTable.tsx';
+import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
+import { tooltipDefinitions } from '@/shared/tooltips.ts';
+import { ProjectionDialog } from '@/components/projections/ProjectionDialog.tsx';
 import { fundingMonthLabel } from '@/components/projections/fundingTimelineDates.ts';
 import { formatProjectionCurrency as money } from '@/components/projections/projectionFormatting.ts';
 import { SourceAppointmentDetails } from '@/components/projections/SourceAppointmentDetails.tsx';
@@ -52,6 +59,15 @@ export function SourceOutlookAppointments({
   sourceIdentity: string;
 }) {
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [detailsId, setDetailsId] = useState<number | null>(null);
+  const detailsButtons = useRef(new Map<number, HTMLButtonElement>());
+  const returnToDetailsButton = useCallback(
+    () =>
+      detailsId === null
+        ? null
+        : (detailsButtons.current.get(detailsId) ?? null),
+    [detailsId]
+  );
   const [adjustmentExpanded, setAdjustmentExpanded] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   const funded = appointments.filter((appointment) =>
@@ -59,7 +75,7 @@ export function SourceOutlookAppointments({
       ({ fundingSourceId }) => fundingSourceId === source.id
     )
   );
-  const selected = funded.find(({ id }) => id === selectedId);
+  const selectedDetails = funded.find(({ id }) => id === detailsId);
   const window = getSourceForecastWindow(source, results.forecastWindow);
   const months: string[] = [];
   const date = new Date(`${results.forecastWindow.startMonth}-01T00:00:00Z`);
@@ -197,31 +213,62 @@ export function SourceOutlookAppointments({
         <div className="min-w-28 max-w-32 whitespace-normal break-words sm:min-w-44 sm:max-w-60">
           {row.appointment ? (
             <>
-              <button
-                aria-expanded={row.appointment.id === selectedId}
-                className="inline-flex max-w-full items-start gap-1 text-left font-semibold hover:underline"
-                onClick={() =>
-                  setSelectedId(
-                    row.appointment!.id === selectedId
-                      ? null
-                      : row.appointment!.id
-                  )
-                }
-                type="button"
-              >
-                {row.appointment.id === selectedId ? (
-                  <ChevronDownIcon
-                    aria-hidden="true"
-                    className="mt-0.5 size-4 shrink-0"
-                  />
-                ) : (
-                  <ChevronRightIcon
-                    aria-hidden="true"
-                    className="mt-0.5 size-4 shrink-0"
-                  />
-                )}
-                <span>{row.label}</span>
-              </button>
+              <div className="flex items-start gap-1">
+                <button
+                  aria-expanded={row.appointment.id === selectedId}
+                  className="inline-flex max-w-full items-start gap-1 text-left font-semibold hover:underline"
+                  onClick={() =>
+                    setSelectedId(
+                      row.appointment!.id === selectedId
+                        ? null
+                        : row.appointment!.id
+                    )
+                  }
+                  type="button"
+                >
+                  {row.appointment.id === selectedId ? (
+                    <ChevronDownIcon
+                      aria-hidden="true"
+                      className="mt-0.5 size-4 shrink-0"
+                    />
+                  ) : (
+                    <ChevronRightIcon
+                      aria-hidden="true"
+                      className="mt-0.5 size-4 shrink-0"
+                    />
+                  )}
+                  <span>{row.label}</span>
+                </button>
+                <TooltipLabel
+                  asChild
+                  focusEnabled={false}
+                  label={
+                    <button
+                      aria-haspopup="dialog"
+                      aria-label={`View appointment details for ${row.label}`}
+                      className="btn btn-ghost btn-xs btn-square shrink-0 text-base-content/70"
+                      onClick={() => setDetailsId(row.appointment!.id)}
+                      ref={(element) => {
+                        if (element) {
+                          detailsButtons.current.set(
+                            row.appointment!.id,
+                            element
+                          );
+                        } else {
+                          detailsButtons.current.delete(row.appointment!.id);
+                        }
+                      }}
+                      type="button"
+                    >
+                      <InformationCircleIcon
+                        aria-hidden="true"
+                        className="size-4"
+                      />
+                    </button>
+                  }
+                  tooltip={tooltipDefinitions.projectionAppointmentDetails}
+                />
+              </div>
               {row.description && (
                 <span className="mt-1 block text-xs font-normal text-base-content/70">
                   {row.description}
@@ -279,21 +326,13 @@ export function SourceOutlookAppointments({
       size: 130,
     },
   ];
-  const details = selected && (
-    <SourceAppointmentDetails
-      appointment={selected}
-      onNavigate={onNavigate}
-      results={results}
-      sourceId={source.id}
-    />
-  );
   return (
     <section aria-label="Staff costs by month" className="space-y-3">
       <h3 className="font-semibold">Staff costs by month</h3>
       <p className="text-sm text-base-content/70">
         Estimated salary, fringe and fee remission for this funding source.
-        Expand a name for the breakdown and editors. Fringe includes CBR and
-        leave accrual.
+        Expand a name for the cost breakdown. Fringe includes CBR and leave
+        accrual.
       </p>
       {funded.length === 0 && (
         <p className="text-sm">No appointments allocated to this source.</p>
@@ -339,14 +378,28 @@ export function SourceOutlookAppointments({
                     and fringe already included in the starting balance.
                   </p>
                 )}
-                {details && (
-                  <div className="max-h-52 overflow-auto">{details}</div>
-                )}
               </div>
             }
           />
         </>
       ) : null}
+      {selectedDetails && (
+        <ProjectionDialog
+          onClose={() => setDetailsId(null)}
+          returnFocusTo={returnToDetailsButton}
+          title={selectedDetails.name}
+        >
+          <SourceAppointmentDetails
+            appointment={selectedDetails}
+            onNavigate={(location) => {
+              setDetailsId(null);
+              onNavigate(location);
+            }}
+            results={results}
+            sourceId={source.id}
+          />
+        </ProjectionDialog>
+      )}
     </section>
   );
 }

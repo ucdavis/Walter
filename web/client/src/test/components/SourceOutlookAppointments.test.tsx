@@ -1,4 +1,10 @@
-import { cleanup, render, screen, within } from '@testing-library/react';
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SourceOutlookAppointments } from '@/components/projections/SourceOutlookAppointments.tsx';
@@ -45,7 +51,7 @@ describe('staff costs by month', () => {
     ).toHaveTextContent('Research specialist');
   });
 
-  it('aligns source-specific salary, fringe and fees with appointment totals and preserves selected details in fullscreen', async () => {
+  it('aligns source-specific salary, fringe and fees with appointment totals and keeps expansion limited to cost rows in fullscreen', async () => {
     const plan = createBookedSalaryExample();
     plan.content.forecastMonths = 18;
     plan.content.appointments[0].feeRemissionMonthly = 600;
@@ -69,11 +75,12 @@ describe('staff costs by month', () => {
         screen.getByRole('row', { name: new RegExp(`^${label} `) }).children[2]
       ).toHaveTextContent(money(value));
     }
-    const details = screen.getByRole('region', {
-      name: 'Alex Example appointment details',
-    });
-    expect(details).toHaveTextContent('50% appointment FTE');
-    expect(details).toHaveTextContent('50% of appointment · 25% full-time FTE');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', {
+        name: 'Edit appointment for Alex Example',
+      })
+    ).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Expand table' }));
     expect(
       screen.getByText('Project A task 1', { selector: 'span' })
@@ -85,16 +92,55 @@ describe('staff costs by month', () => {
       screen.queryByText('Alex Example details and editors')
     ).not.toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: 'Edit appointment for Alex Example' })
-    ).toBeVisible();
+      screen.queryByRole('button', {
+        name: 'Edit appointment for Alex Example',
+      })
+    ).not.toBeInTheDocument();
     await user.keyboard('{Escape}');
     expect(screen.getByRole('button', { name: 'Expand table' })).toBeVisible();
     expect(
       screen.getByRole('button', { name: 'Alex Example' })
     ).toHaveAttribute('aria-expanded', 'true');
     expect(
-      screen.getByRole('region', { name: 'Alex Example appointment details' })
+      screen.queryByRole('region', { name: 'Alex Example appointment details' })
+    ).not.toBeInTheDocument();
+  });
+
+  it('opens details independently and restores focus without collapsing the fullscreen worksheet', async () => {
+    const { user } = open();
+    const info = () =>
+      screen.getByRole('button', {
+        name: 'View appointment details for Alex Example',
+      });
+    const expand = () => screen.getByRole('button', { name: 'Alex Example' });
+    await user.click(info());
+    const details = screen.getByRole('dialog', { name: 'Alex Example' });
+    expect(details).toHaveTextContent('50% appointment FTE');
+    expect(details).toHaveTextContent('50% of appointment · 25% full-time FTE');
+    expect(expand()).toHaveAttribute('aria-expanded', 'false');
+    await user.click(
+      within(details).getByRole('button', { name: 'Close alex example' })
+    );
+    expect(info()).toHaveFocus();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    await user.click(expand());
+    await user.click(screen.getByRole('button', { name: 'Expand table' }));
+    await user.click(info());
+    const fullscreenDetails = screen.getByRole('dialog', {
+      name: 'Alex Example',
+    });
+    // jsdom does not dispatch the browser's native dialog cancel after Escape.
+    await user.keyboard('{Escape}');
+    fireEvent(fullscreenDetails, new Event('cancel', { cancelable: true }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Collapse table' })
     ).toBeVisible();
+    expect(expand()).toHaveAttribute('aria-expanded', 'true');
+    expect(info()).toHaveFocus();
+    expect(screen.getByRole('row', { name: /^Salary / })).toBeVisible();
+    await user.keyboard('{Escape}');
+    expect(screen.getByRole('button', { name: 'Expand table' })).toBeVisible();
   });
 
   it('retains editor access for saved future funding with no forecast charges', async () => {
@@ -111,7 +157,11 @@ describe('staff costs by month', () => {
       },
     ];
     const { onNavigate, user } = open(plan);
-    await user.click(screen.getByRole('button', { name: 'Alex Example' }));
+    await user.click(
+      screen.getByRole('button', {
+        name: 'View appointment details for Alex Example',
+      })
+    );
     expect(
       screen.getByText(
         'No funded share from this source is active in the forecast period.'
@@ -127,6 +177,12 @@ describe('staff costs by month', () => {
       section: 'staffing',
       source: 1,
     });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    await user.click(
+      screen.getByRole('button', {
+        name: 'View appointment details for Alex Example',
+      })
+    );
     await user.click(
       screen.getByRole('button', { name: 'Edit appointment for Alex Example' })
     );
@@ -154,7 +210,11 @@ describe('staff costs by month', () => {
       },
     ];
     const { onNavigate, user } = open(plan);
-    await user.click(screen.getByRole('button', { name: 'Alex Example' }));
+    await user.click(
+      screen.getByRole('button', {
+        name: 'View appointment details for Alex Example',
+      })
+    );
     await user.click(
       screen.getByRole('button', { name: 'Edit allocations for Alex Example' })
     );
@@ -209,7 +269,11 @@ describe('staff costs by month', () => {
       },
     ];
     const { user } = open(plan);
-    await user.click(screen.getByRole('button', { name: 'Alex Example' }));
+    await user.click(
+      screen.getByRole('button', {
+        name: 'View appointment details for Alex Example',
+      })
+    );
     expect(
       screen.queryByRole('button', {
         name: 'Edit allocations for Alex Example',

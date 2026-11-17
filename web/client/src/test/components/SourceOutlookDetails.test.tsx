@@ -218,17 +218,6 @@ describe('source outlook details', () => {
 
   it('links source, expense, appointment, and allocation editors from staff details', async () => {
     const { onNavigate, user } = open();
-    const appointments = screen.getByRole('region', {
-      name: 'Staff costs by month',
-    });
-    await user.click(
-      within(appointments).getByRole('button', { name: 'Alex Example' })
-    );
-    expect(appointments).toHaveTextContent(
-      '50% of appointment · 25% full-time FTE · Appointment start through appointment end'
-    );
-    expect(appointments).toHaveTextContent('50% appointment FTE');
-
     await user.click(
       screen.getByRole('button', { name: 'Edit funding source' })
     );
@@ -243,6 +232,19 @@ describe('source outlook details', () => {
       section: 'expenses',
       source: 1,
     });
+    const appointments = screen.getByRole('region', {
+      name: 'Staff costs by month',
+    });
+    await user.click(
+      within(appointments).getByRole('button', {
+        name: 'View appointment details for Alex Example',
+      })
+    );
+    expect(appointments).toHaveTextContent(
+      '50% of appointment · 25% full-time FTE · Appointment start through appointment end'
+    );
+    expect(appointments).toHaveTextContent('50% appointment FTE');
+
     await user.click(
       screen.getByRole('button', { name: 'Edit appointment for Alex Example' })
     );
@@ -251,6 +253,11 @@ describe('source outlook details', () => {
       section: 'staffing',
       source: 1,
     });
+    await user.click(
+      screen.getByRole('button', {
+        name: 'View appointment details for Alex Example',
+      })
+    );
     await user.click(
       screen.getByRole('button', { name: 'Edit allocations for Alex Example' })
     );
@@ -273,7 +280,11 @@ describe('source outlook details', () => {
     source.actuals = [];
     source.balanceAdjustment = 5000;
     const { user } = open(plan);
-    await user.click(screen.getByRole('button', { name: 'Alex Example' }));
+    await user.click(
+      screen.getByRole('button', {
+        name: 'View appointment details for Alex Example',
+      })
+    );
     expect(
       screen.getByText(/Its entered funding and allocations remain saved/)
     ).toBeVisible();
@@ -305,7 +316,11 @@ describe('source outlook details', () => {
       startDate: '2026-07-15',
     };
     const { onNavigate, user } = open(plan);
-    await user.click(screen.getByRole('button', { name: 'Alex Example' }));
+    await user.click(
+      screen.getByRole('button', {
+        name: 'View appointment details for Alex Example',
+      })
+    );
     expect(
       screen.getByRole('region', { name: 'Staff costs by month' })
     ).toHaveTextContent(
@@ -337,7 +352,11 @@ describe('source outlook details', () => {
       },
     ];
     const { onNavigate, user } = open(plan);
-    await user.click(screen.getByRole('button', { name: 'Alex Example' }));
+    await user.click(
+      screen.getByRole('button', {
+        name: 'View appointment details for Alex Example',
+      })
+    );
     await user.click(
       screen.getByRole('button', { name: 'Edit allocations for Alex Example' })
     );
@@ -361,7 +380,11 @@ describe('source outlook details', () => {
       },
     ];
     const { onNavigate, user } = open(plan);
-    await user.click(screen.getByRole('button', { name: 'Alex Example' }));
+    await user.click(
+      screen.getByRole('button', {
+        name: 'View appointment details for Alex Example',
+      })
+    );
     expect(
       screen.queryByRole('button', {
         name: 'Edit allocations for Alex Example',
