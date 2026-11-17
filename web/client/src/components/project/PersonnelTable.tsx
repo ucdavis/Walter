@@ -1,11 +1,12 @@
-import { useMemo, useState } from 'react';
-import { createColumnHelper } from '@tanstack/react-table';
+import { Fragment, useId, useMemo, useState } from 'react';
 import {
+  ArrowsPointingInIcon,
+  ArrowsPointingOutIcon,
   ChevronDownIcon,
   ChevronUpIcon,
   ClockIcon,
 } from '@heroicons/react/24/outline';
-import { TableExportActions } from '@/components/TableExportActions.tsx';
+import { ExportDataButton } from '@/components/ExportDataButton.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import { formatDate } from '@/lib/date.ts';
 import {
@@ -13,9 +14,9 @@ import {
   fundingInfoUnavailableNote,
 } from '@/lib/fundingInfo.ts';
 import type { PersonnelRecord } from '@/queries/personnel.ts';
-import { DataTable } from '@/shared/DataTable.tsx';
 import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
 import { tooltipDefinitions } from '@/shared/tooltips.ts';
+import { useExpandableOverlay } from '@/shared/hooks/useExpandableOverlay.ts';
 
 function isEndingSoon(dateStr: string | null): boolean {
   if (!dateStr) {
@@ -182,141 +183,154 @@ export function aggregateByPosition(
   return Array.from(positionMap.values());
 }
 
-const columnHelper = createColumnHelper<AggregatedPosition>();
-
 function getPositionSearchText(position: AggregatedPosition): string {
-  const projectDescriptions = position.distributions
-    .map((dist) => dist.record.projectDescription)
-    .join(' ');
-
   return [
-    safeText(position.name),
-    safeText(position.positionDescription),
-    safeText(position.positionNumber),
-    projectDescriptions,
+    position.name,
+    position.employeeId,
+    position.positionDescription,
+    position.positionNumber,
+    position.jobCode,
+    ...position.distributions.flatMap((distribution) => [
+      distribution.record.projectDescription,
+      distribution.record.projectId,
+      distribution.record.projectType === 'Internal'
+        ? distribution.record.task
+        : '',
+    ]),
   ].join(' ');
 }
 
-function DistributionSubtable({
-  distributions,
+export function FundingColumnGroup() {
+  return (
+    <>
+      <col className="personnel-reverse-col-project" />
+      <col className="personnel-reverse-col-task" />
+      <col className="personnel-reverse-col-task" />
+      <col className="personnel-reverse-col-value" />
+      <col className="personnel-reverse-col-value" />
+      <col className="personnel-reverse-col-value" />
+      <col className="personnel-reverse-col-value" />
+      <col className="personnel-reverse-col-value" />
+    </>
+  );
+}
+
+export function FundingColumnHeaders() {
+  return (
+    <>
+      <th>Project</th>
+      <th className="text-right">Task</th>
+      <th>
+        <span className="flex justify-end w-full">
+          <TooltipLabel
+            label="Dist %"
+            placement="bottom"
+            tooltip={tooltipDefinitions.distributionPercent}
+          />
+        </span>
+      </th>
+      <th>
+        <span className="flex justify-end w-full">
+          <TooltipLabel
+            label="FE Start"
+            placement="bottom"
+            tooltip={tooltipDefinitions.fundingEntryStart}
+          />
+        </span>
+      </th>
+      <th>
+        <span className="flex justify-end w-full">
+          <TooltipLabel
+            label="FE End"
+            placement="bottom"
+            tooltip={tooltipDefinitions.fundingEntryEnd}
+          />
+        </span>
+      </th>
+      <th>
+        <span className="flex justify-end w-full">Mo. Salary</span>
+      </th>
+      <th>
+        <span className="flex justify-end w-full">
+          <TooltipLabel
+            label="Mo. CBR"
+            placement="bottom"
+            tooltip={tooltipDefinitions.monthlyCbr}
+          />
+        </span>
+      </th>
+      <th>
+        <span className="flex justify-end w-full">Mo. Total</span>
+      </th>
+    </>
+  );
+}
+
+function FundingDistributionCells({
+  distribution,
 }: {
-  distributions: AggregatedDistribution[];
+  distribution: AggregatedDistribution;
 }) {
   return (
-    <div className="pr-4">
-      <h4 className="font-semibold text-sm mb-2">Funding Distribution</h4>
-      <table className="table walter-table walter-subtable">
-        <colgroup>
-          <col className="walter-subtable-col-primary" />
-          <col className="walter-subtable-col-secondary" />
-          <col className="walter-subtable-col-secondary" />
-          <col className="walter-subtable-col-equal" />
-          <col className="walter-subtable-col-equal" />
-          <col className="walter-subtable-col-equal" />
-          <col className="walter-subtable-col-equal" />
-          <col className="walter-subtable-col-equal" />
-        </colgroup>
-        <thead>
-          <tr>
-            <th>Project</th>
-            <th className="text-right">Task</th>
-            <th>
-              <span className="flex justify-end w-full">
-                <TooltipLabel
-                  label="Dist %"
-                  placement="bottom"
-                  tooltip={tooltipDefinitions.distributionPercent}
-                />
+    <>
+      <td className="text-sm">
+        <TooltipLabel
+          className="block min-w-0"
+          focusable={false}
+          label={distribution.record.projectDescription}
+          labelClassName="block truncate"
+          placement="bottom"
+          tooltip={distribution.record.projectDescription}
+        />
+      </td>
+      <td className="text-right text-sm">
+        {distribution.record.projectType === 'Internal'
+          ? safeText(distribution.record.task)
+          : '—'}
+      </td>
+      <td className="text-right text-sm">
+        {distribution.salaryUnknown ? (
+          <span className="text-base-content/70">
+            {FUNDING_INFO_UNAVAILABLE}
+          </span>
+        ) : (
+          `${formatPercent(distribution.distributionPercent)}%`
+        )}
+      </td>
+      <td className="text-right text-sm">
+        {distribution.record.isFuture && <FutureBadge />}
+        {formatDate(distribution.record.fundingEffectiveDate, '')}
+      </td>
+      <td className="text-right text-sm">
+        {distribution.fundingEndingSoon ? (
+          <TooltipLabel
+            asChild
+            label={
+              <span
+                className="text-error inline-flex items-center gap-1"
+                tabIndex={0}
+              >
+                <ClockIcon aria-hidden="true" className="w-3 h-3" />
+                {formatDate(distribution.record.fundingEndDate, '')}
               </span>
-            </th>
-            <th>
-              <span className="flex justify-end w-full">Funding Eff. Date</span>
-            </th>
-            <th>
-              <span className="flex justify-end w-full">Funding End Date</span>
-            </th>
-            <th>
-              <span className="flex justify-end w-full">Mo. Salary</span>
-            </th>
-            <th>
-              <span className="flex justify-end w-full">
-                <TooltipLabel
-                  label="Mo. CBR"
-                  placement="bottom"
-                  tooltip={tooltipDefinitions.monthlyCbr}
-                />
-              </span>
-            </th>
-            <th>
-              <span className="flex justify-end w-full">Mo. Total</span>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {distributions.map((dist, idx) => (
-            <tr key={idx}>
-              <td className="text-sm">
-                <TooltipLabel
-                  className="block min-w-0"
-                  focusable={false}
-                  label={dist.record.projectDescription}
-                  labelClassName="block truncate"
-                  placement="bottom"
-                  tooltip={dist.record.projectDescription}
-                />
-              </td>
-              <td className="text-right text-sm">
-                {dist.record.projectType === 'Internal'
-                  ? safeText(dist.record.task)
-                  : '—'}
-              </td>
-              <td className="text-right text-sm">
-                {dist.salaryUnknown ? (
-                  <span className="text-base-content/70">
-                    {FUNDING_INFO_UNAVAILABLE}
-                  </span>
-                ) : (
-                  `${formatPercent(dist.distributionPercent)}%`
-                )}
-              </td>
-              <td className="text-right text-sm">
-                {dist.record.isFuture && <FutureBadge />}
-                {formatDate(dist.record.fundingEffectiveDate, '')}
-              </td>
-              <td className="text-right text-sm">
-                {dist.fundingEndingSoon ? (
-                  <TooltipLabel
-                    asChild
-                    label={
-                      <span
-                        className="text-error inline-flex items-center gap-1"
-                        tabIndex={0}
-                      >
-                        <ClockIcon aria-hidden="true" className="w-3 h-3" />
-                        {formatDate(dist.record.fundingEndDate, '')}
-                      </span>
-                    }
-                    placement="bottom"
-                    tooltip={tooltipDefinitions.endingWithinThreeMonths}
-                  />
-                ) : (
-                  formatDate(dist.record.fundingEndDate, '')
-                )}
-              </td>
-              <td className="text-right text-sm">
-                {formatAmount(dist.monthlyRate, dist.salaryUnknown)}
-              </td>
-              <td className="text-right text-sm">
-                {formatAmount(dist.monthlyFringe, dist.salaryUnknown)}
-              </td>
-              <td className="text-right text-sm">
-                {formatAmount(dist.monthlyTotal, dist.salaryUnknown)}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+            }
+            placement="bottom"
+            tooltip={tooltipDefinitions.endingWithinThreeMonths}
+          />
+        ) : (
+          formatDate(distribution.record.fundingEndDate, '')
+        )}
+      </td>
+      <td className="text-right text-sm">
+        {formatAmount(distribution.monthlyRate, distribution.salaryUnknown)}
+      </td>
+      <td className="text-right text-sm">
+        {formatAmount(distribution.monthlyFringe, distribution.salaryUnknown)}
+      </td>
+      <td className="text-right text-sm">
+        {formatAmount(distribution.monthlyTotal, distribution.salaryUnknown)}
+      </td>
+    </>
   );
 }
 
@@ -332,6 +346,92 @@ function formatAmount(value: number, salaryUnknown: boolean): string {
 function FutureBadge() {
   return (
     <span className="badge badge-soft badge-info badge-sm mr-2">Future</span>
+  );
+}
+
+function JobDetails({ position }: { position: AggregatedPosition }) {
+  return (
+    <div className="border-base-300 py-2">
+      <h4 className="mb-1 px-8 font-semibold text-sm">Job Details</h4>
+      <table className="w-full table-fixed text-sm [&_th]:!border-y-0 [&_th]:!py-1 [&_td]:!py-1 [&_tr>:first-child]:!pl-8">
+        <colgroup>
+          <col className="personnel-job-details-col-id" />
+          <col className="personnel-job-details-col-code" />
+          <col className="personnel-job-details-col-description" />
+          <col className="personnel-reverse-col-task" />
+          <col className="personnel-reverse-col-value" />
+          <col className="personnel-reverse-col-value" />
+          <col className="personnel-reverse-col-value" />
+          <col className="personnel-reverse-col-value" />
+          <col className="personnel-reverse-col-value" />
+        </colgroup>
+        <thead>
+          <tr>
+            <th>Empl ID</th>
+            <th>Job Code</th>
+            <th>Job Code Description</th>
+            <th className="text-right">
+              <TooltipLabel
+                label="FTE"
+                placement="bottom"
+                tooltip={tooltipDefinitions.fte}
+              />
+            </th>
+            <th className="text-right">Eff. Date</th>
+            <th className="text-right">End Date</th>
+            <th className="text-right">Mo. Job Salary</th>
+            <th className="text-right">
+              <TooltipLabel
+                label="Mo. Job CBR"
+                placement="bottom"
+                tooltip={tooltipDefinitions.monthlyCbr}
+              />
+            </th>
+            <th className="text-right">Mo. Job Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>{position.employeeId}</td>
+            <td>{position.jobCode}</td>
+            <td>{position.positionDescription}</td>
+            <td className="text-right">{position.fte}</td>
+            <td className="text-right">
+              {formatDate(position.jobEffectiveDate, '')}
+            </td>
+            <td className="text-right">
+              {position.jobEndingSoon ? (
+                <TooltipLabel
+                  asChild
+                  label={
+                    <span
+                      className="text-error inline-flex items-center gap-1"
+                      tabIndex={0}
+                    >
+                      <ClockIcon aria-hidden="true" className="w-4 h-4" />
+                      {formatDate(position.jobEndDate, '')}
+                    </span>
+                  }
+                  placement="bottom"
+                  tooltip={tooltipDefinitions.endingWithinThreeMonths}
+                />
+              ) : (
+                formatDate(position.jobEndDate, '')
+              )}
+            </td>
+            <td className="text-right">
+              {formatAmount(position.monthlyRate, position.salaryUnknown)}
+            </td>
+            <td className="text-right">
+              {formatAmount(position.monthlyFringe, position.salaryUnknown)}
+            </td>
+            <td className="text-right">
+              {formatAmount(position.monthlyTotal, position.salaryUnknown)}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -402,16 +502,18 @@ interface PersonnelTableProps {
   data: PersonnelRecord[];
 }
 
-function sumCurrent(
-  rows: { original: AggregatedPosition }[],
-  pick: (position: AggregatedPosition) => number
+function sumCurrentDistributions(
+  positions: AggregatedPosition[],
+  pick: (distribution: AggregatedDistribution) => number
 ): number {
-  return rows.reduce(
-    (sum, row) =>
-      row.original.isFutureOnly || row.original.salaryUnknown
-        ? sum
-        : sum + pick(row.original),
-    0
+  return sum(positions, (position) =>
+    sum(
+      position.distributions.filter(
+        (distribution) =>
+          !distribution.record.isFuture && !distribution.salaryUnknown
+      ),
+      pick
+    )
   );
 }
 
@@ -419,12 +521,63 @@ function sumCurrent(
 function countSalaryUnknownPeople(positions: AggregatedPosition[]): number {
   return new Set(
     positions
-      .filter((p) => p.salaryUnknown && !p.isFutureOnly)
+      .filter((position) =>
+        position.distributions.some(
+          (distribution) =>
+            distribution.salaryUnknown && !distribution.record.isFuture
+        )
+      )
       .map((p) => p.employeeId)
   ).size;
 }
 
+const sortOptions = [
+  ['name', 'Employee name'],
+  ['jobCode', 'Job code'],
+  ['fte', 'FTE'],
+  ['jobEffectiveDate', 'Job effective date'],
+  ['jobEndDate', 'Job end date'],
+  ['monthlyRate', 'Monthly funding salary'],
+  ['monthlyFringe', 'Monthly funding CBR'],
+  ['monthlyTotal', 'Monthly funding total'],
+] as const;
+type PersonnelSortKey = (typeof sortOptions)[number][0];
+
+function getSortValue(position: AggregatedPosition, key: PersonnelSortKey) {
+  switch (key) {
+    case 'monthlyRate':
+    case 'monthlyFringe':
+    case 'monthlyTotal':
+      return sumCurrentDistributions(
+        [position],
+        (distribution) => distribution[key]
+      );
+    default:
+      return position[key] ?? '';
+  }
+}
+
 export function PersonnelTable({ data }: PersonnelTableProps) {
+  const detailsPrefix = useId();
+  const [sortKey, setSortKey] = useState<PersonnelSortKey>('name');
+  const [sortDescending, setSortDescending] = useState(false);
+  const {
+    canAnimateRect,
+    closeExpanded,
+    containerRef,
+    expandButtonRef,
+    handleContainerTransitionEnd,
+    isOverlayActive,
+    overlayStyle,
+    placeholderHeight,
+    placeholderRef,
+    prefersReducedMotion,
+    toggleExpanded,
+  } = useExpandableOverlay({ enabled: true });
+  const [expandedPositionKeys, setExpandedPositionKeys] = useState<Set<string>>(
+    () => new Set()
+  );
+  const [search, setSearch] = useState('');
   const [showFuture, setShowFuture] = useState(false);
   // Unfilled positions (legacy sources only) stay hidden.
   const filledData = useMemo(() => data.filter((r) => r.name), [data]);
@@ -440,191 +593,170 @@ export function PersonnelTable({ data }: PersonnelTableProps) {
     [filledData, showFuture]
   );
 
-  const columns = useMemo(
-    () => [
-      columnHelper.accessor(getPositionSearchText, {
-        cell: ({ row }) => (
-          <div className="flex items-center gap-2">
-            {row.getCanExpand() ? (
-              row.getIsExpanded() ? (
-                <ChevronUpIcon className="w-4 h-4" />
-              ) : (
-                <ChevronDownIcon className="w-4 h-4" />
-              )
-            ) : null}
-            {row.original.isFutureOnly && <FutureBadge />}
-            {row.original.name
-              ? `${row.original.name} (${row.original.employeeId}) - `
-              : ''}
-            {safeText(row.original.positionDescription)}
-          </div>
-        ),
-        footer: () => 'Totals',
-        header: 'Position',
-        id: 'positionProject',
-        minSize: 400,
-        size: 400,
-        sortingFn: (a, b) =>
-          safeText(a.original.name).localeCompare(safeText(b.original.name)),
-      }),
-      columnHelper.accessor('jobCode', {
-        cell: (info) => info.getValue(),
-        header: 'Job Code',
-      }),
-      columnHelper.accessor('fte', {
-        cell: (info) => (
-          <span className="flex justify-end">{info.getValue()}</span>
-        ),
-        header: () => (
-          <span className="flex justify-end w-full">
-            <TooltipLabel
-              label="FTE"
-              placement="bottom"
-              tooltip={tooltipDefinitions.fte}
-            />
-          </span>
-        ),
-      }),
-      columnHelper.accessor('jobEffectiveDate', {
-        cell: (info) => (
-          <span className="flex justify-end">
-            {formatDate(info.getValue() as string | null, '')}
-          </span>
-        ),
-        header: () => (
-          <span className="flex justify-end w-full">Eff. Date</span>
-        ),
-      }),
-      columnHelper.accessor('jobEndDate', {
-        cell: ({ row }) => {
-          const { jobEndDate, jobEndingSoon } = row.original;
-          return (
-            <span className="flex justify-end">
-              {jobEndingSoon ? (
-                <TooltipLabel
-                  asChild
-                  label={
-                    <span
-                      className="text-error inline-flex items-center gap-1"
-                      tabIndex={0}
-                    >
-                      <ClockIcon aria-hidden="true" className="w-4 h-4" />
-                      {formatDate(jobEndDate, '')}
-                    </span>
-                  }
-                  placement="bottom"
-                  tooltip={tooltipDefinitions.endingWithinThreeMonths}
-                />
-              ) : (
-                formatDate(jobEndDate, '')
-              )}
-            </span>
-          );
-        },
-        header: () => <span className="flex justify-end w-full">End Date</span>,
-        minSize: 130,
-        size: 130,
-      }),
-      columnHelper.accessor('monthlyRate', {
-        cell: (info) => (
-          <span className="flex justify-end w-full">
-            {formatAmount(info.getValue(), info.row.original.salaryUnknown)}
-          </span>
-        ),
-        footer: ({ table }) => (
-          <span className="flex justify-end w-full">
-            {formatCurrency(
-              sumCurrent(table.getFilteredRowModel().rows, (p) => p.monthlyRate)
-            )}
-          </span>
-        ),
-        header: () => (
-          <span className="flex justify-end w-full">Mo. Salary</span>
-        ),
-      }),
-      columnHelper.accessor('monthlyFringe', {
-        cell: (info) => (
-          <span className="flex justify-end w-full">
-            {formatAmount(info.getValue(), info.row.original.salaryUnknown)}
-          </span>
-        ),
-        footer: ({ table }) => (
-          <span className="flex justify-end w-full">
-            {formatCurrency(
-              sumCurrent(
-                table.getFilteredRowModel().rows,
-                (p) => p.monthlyFringe
-              )
-            )}
-          </span>
-        ),
-        header: () => (
-          <span className="flex justify-end w-full">
-            <TooltipLabel
-              label="Mo. CBR"
-              placement="bottom"
-              tooltip={tooltipDefinitions.monthlyCbr}
-            />
-          </span>
-        ),
-      }),
-      columnHelper.accessor('monthlyTotal', {
-        cell: (info) => (
-          <span className="flex justify-end w-full">
-            {formatAmount(info.getValue(), info.row.original.salaryUnknown)}
-          </span>
-        ),
-        footer: ({ table }) => (
-          <span className="flex justify-end w-full">
-            {formatCurrency(
-              sumCurrent(
-                table.getFilteredRowModel().rows,
-                (p) => p.monthlyTotal
-              )
-            )}
-          </span>
-        ),
-        header: () => (
-          <span className="flex justify-end w-full">Mo. Total</span>
-        ),
-      }),
-    ],
-    []
-  );
+  const filteredPositions = useMemo(() => {
+    const normalizedSearch = search.trim().toLocaleLowerCase();
+    const matchingPositions = normalizedSearch
+      ? positions.filter(
+          (position) =>
+            getPositionSearchText(position)
+              .toLocaleLowerCase()
+              .includes(normalizedSearch) ||
+            (normalizedSearch.endsWith('%') &&
+              position.distributions.some(
+                (distribution) =>
+                  !distribution.salaryUnknown &&
+                  `${formatPercent(distribution.distributionPercent)}%` ===
+                    normalizedSearch
+              ))
+        )
+      : positions;
+
+    return [...matchingPositions].sort((a, b) => {
+      const left = getSortValue(a, sortKey);
+      const right = getSortValue(b, sortKey);
+      const comparison =
+        typeof left === 'number' && typeof right === 'number'
+          ? left - right
+          : String(left).localeCompare(String(right), undefined, {
+              numeric: true,
+            });
+      return (
+        (sortDescending ? -comparison : comparison) ||
+        a.name.localeCompare(b.name)
+      );
+    });
+  }, [positions, search, sortKey, sortDescending]);
+
+  const allExpanded =
+    filteredPositions.length > 0 &&
+    filteredPositions.every((position) =>
+      expandedPositionKeys.has(position.key)
+    );
+
+  const togglePosition = (key: string) => {
+    setExpandedPositionKeys((current) => {
+      const next = new Set(current);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  };
+
+  const toggleAllPositions = () => {
+    setExpandedPositionKeys((current) => {
+      if (allExpanded) {
+        return new Set(
+          [...current].filter(
+            (key) => !filteredPositions.some((position) => position.key === key)
+          )
+        );
+      }
+      return new Set([
+        ...current,
+        ...filteredPositions.map((position) => position.key),
+      ]);
+    });
+  };
 
   const salaryUnknownPeople = useMemo(
-    () => countSalaryUnknownPeople(positions),
-    [positions]
+    () => countSalaryUnknownPeople(filteredPositions),
+    [filteredPositions]
   );
 
-  if (positions.length === 0) {
+  if (filledData.length === 0) {
     return <p className="text-base-content/70 mt-4">No personnel found.</p>;
   }
 
   return (
-    <div>
-      <DataTable
-        columns={columns}
-        data={positions}
-        footerRowClassName="totaltr"
-        getRowCanExpand={(row) => row.original.distributions.length > 0}
-        getRowProps={(row) =>
-          row.getCanExpand()
-            ? {
-                className: 'cursor-pointer hover:bg-base-200',
-                onClick: () => row.toggleExpanded(),
-              }
-            : { className: 'hover:bg-base-200' }
+    <>
+      {isOverlayActive && (
+        <>
+          <div
+            aria-hidden="true"
+            className="fixed inset-0 bg-black/40 z-90"
+            onClick={closeExpanded}
+          />
+          <div
+            aria-hidden="true"
+            ref={placeholderRef}
+            style={{ height: placeholderHeight ?? undefined }}
+          />
+        </>
+      )}
+      <div
+        aria-label={isOverlayActive ? 'Personnel table' : undefined}
+        className={
+          isOverlayActive
+            ? `fixed z-100 flex flex-col min-h-0 bg-base-100 rounded-box shadow-xl p-4 ${prefersReducedMotion || !canAnimateRect ? 'transition-none' : 'transition-[top,left,width,height] duration-300 ease-in-out'}`
+            : ''
         }
-        globalFilter="left"
-        initialState={{ sorting: [{ desc: false, id: 'positionProject' }] }}
-        pagination="off"
-        renderSubComponent={({ row }) => (
-          <DistributionSubtable distributions={row.original.distributions} />
-        )}
-        subComponentRowClassName="pivot-row"
-        tableActions={(table) => (
+        onTransitionEnd={handleContainerTransitionEnd}
+        ref={containerRef}
+        role={isOverlayActive ? 'dialog' : undefined}
+        style={overlayStyle}
+      >
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <label className="input input-bordered flex max-w-sm flex-1 items-center gap-2">
+            <svg
+              aria-hidden="true"
+              className="h-[1em] opacity-50"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <g
+                fill="none"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2.5"
+              >
+                <circle cx="11" cy="11" r="8" />
+                <path d="m21 21-4.3-4.3" />
+              </g>
+            </svg>
+            <input
+              aria-label="Search personnel"
+              className="grow"
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search employees or projects..."
+              type="text"
+              value={search}
+            />
+          </label>
           <div className="flex flex-wrap items-center gap-2">
+            <select
+              aria-label="Sort personnel by"
+              className="select select-sm w-auto"
+              onChange={(event) =>
+                setSortKey(event.target.value as PersonnelSortKey)
+              }
+              value={sortKey}
+            >
+              {sortOptions.map(([key, label]) => (
+                <option key={key} value={key}>
+                  {label}
+                </option>
+              ))}
+            </select>
+            <button
+              aria-label={sortDescending ? 'Sort ascending' : 'Sort descending'}
+              className="btn btn-sm"
+              onClick={() => setSortDescending((current) => !current)}
+              type="button"
+            >
+              {sortDescending ? 'Descending' : 'Ascending'}
+            </button>
+            <button
+              className="btn btn-sm"
+              disabled={filteredPositions.length === 0}
+              onClick={toggleAllPositions}
+              type="button"
+            >
+              {allExpanded ? 'Collapse all' : 'Expand all'}
+            </button>
             {futureCount > 0 && (
               <button
                 className={`btn btn-sm${showFuture ? ' btn-active' : ''}`}
@@ -634,21 +766,171 @@ export function PersonnelTable({ data }: PersonnelTableProps) {
                 {showFuture ? 'Hide' : 'Show'} future entries ({futureCount})
               </button>
             )}
-            <TableExportActions
-              baseFilename="personnel"
+            <ExportDataButton
               columns={personnelCsvColumns}
-              data={positions}
-              table={table}
-              toRows={getExportData}
+              data={getExportData(positions)}
+              filename="personnel.csv"
             />
+            <button
+              aria-label={isOverlayActive ? 'Collapse table' : 'Expand table'}
+              className="btn btn-sm btn-square"
+              onClick={toggleExpanded}
+              ref={expandButtonRef}
+              type="button"
+            >
+              {isOverlayActive ? (
+                <ArrowsPointingInIcon aria-hidden="true" className="size-5" />
+              ) : (
+                <ArrowsPointingOutIcon aria-hidden="true" className="size-5" />
+              )}
+            </button>
+            {search.trim() && (
+              <ExportDataButton
+                columns={personnelCsvColumns}
+                data={getExportData(filteredPositions)}
+                filename="personnel-filtered.csv"
+                label="Export filtered"
+              />
+            )}
           </div>
+        </div>
+        <div
+          className={
+            isOverlayActive ? 'flex-1 min-h-0 overflow-auto' : 'overflow-x-auto'
+          }
+        >
+          <table className="table walter-table personnel-reverse-table">
+            <colgroup>
+              <col className="personnel-reverse-col-employee" />
+              <FundingColumnGroup />
+            </colgroup>
+            <thead>
+              <tr>
+                <th scope="col">Employee</th>
+                <FundingColumnHeaders />
+              </tr>
+            </thead>
+            <tbody aria-hidden="true">
+              <tr>
+                <td className="!h-2 !border-0 !p-0" colSpan={9} />
+              </tr>
+            </tbody>
+            {filteredPositions.map((position) => {
+              const isExpanded = expandedPositionKeys.has(position.key);
+              const detailsId = `${detailsPrefix}-${encodeURIComponent(position.key)}`;
+
+              return (
+                <Fragment key={position.key}>
+                  <tbody
+                    className={`personnel-row-group${isExpanded ? ' personnel-row-expanded' : ''}`}
+                  >
+                    {position.distributions.map((distribution, index) => (
+                      <tr
+                        className={
+                          index === position.distributions.length - 1
+                            ? 'personnel-funding-last'
+                            : undefined
+                        }
+                        key={`${position.key}-${index}`}
+                      >
+                        {index === 0 && (
+                          <td
+                            className="personnel-employee-cell align-top"
+                            rowSpan={position.distributions.length}
+                          >
+                            <button
+                              aria-controls={detailsId}
+                              aria-expanded={isExpanded}
+                              className="flex w-full items-start gap-3 rounded-sm text-left leading-relaxed focus-visible:outline-2 focus-visible:outline-primary"
+                              onClick={() => togglePosition(position.key)}
+                              type="button"
+                            >
+                              {isExpanded ? (
+                                <ChevronUpIcon
+                                  aria-hidden="true"
+                                  className="h-4 w-4 shrink-0"
+                                />
+                              ) : (
+                                <ChevronDownIcon
+                                  aria-hidden="true"
+                                  className="h-4 w-4 shrink-0"
+                                />
+                              )}
+                              <span>
+                                {position.isFutureOnly && <FutureBadge />}
+                                {position.name
+                                  ? `${position.name} (${position.employeeId}) - `
+                                  : ''}
+                                {position.positionDescription}
+                              </span>
+                            </button>
+                          </td>
+                        )}
+                        <FundingDistributionCells distribution={distribution} />
+                      </tr>
+                    ))}
+                    <tr
+                      className="personnel-job-row bg-base-200"
+                      hidden={!isExpanded}
+                      id={detailsId}
+                    >
+                      <td className="!p-0" colSpan={9}>
+                        {isExpanded && <JobDetails position={position} />}
+                      </td>
+                    </tr>
+                  </tbody>
+                  <tbody aria-hidden="true">
+                    <tr>
+                      <td className="!h-3 !border-0 !p-0" colSpan={9} />
+                    </tr>
+                  </tbody>
+                </Fragment>
+              );
+            })}
+            {filteredPositions.length === 0 && (
+              <tbody>
+                <tr>
+                  <td colSpan={9}>No matching personnel found.</td>
+                </tr>
+              </tbody>
+            )}
+            <tfoot>
+              <tr className="totaltr">
+                <th colSpan={6}>Funding Distribution Totals</th>
+                <th className="text-right">
+                  {formatCurrency(
+                    sumCurrentDistributions(
+                      filteredPositions,
+                      (d) => d.monthlyRate
+                    )
+                  )}
+                </th>
+                <th className="text-right">
+                  {formatCurrency(
+                    sumCurrentDistributions(
+                      filteredPositions,
+                      (d) => d.monthlyFringe
+                    )
+                  )}
+                </th>
+                <th className="text-right">
+                  {formatCurrency(
+                    sumCurrentDistributions(
+                      filteredPositions,
+                      (d) => d.monthlyTotal
+                    )
+                  )}
+                </th>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        {salaryUnknownPeople > 0 && (
+          <p className="mt-2 text-sm text-warning">
+            {fundingInfoUnavailableNote('Totals', salaryUnknownPeople)}
+          </p>
         )}
-      />
-      {salaryUnknownPeople > 0 && (
-        <p className="mt-2 text-sm text-warning">
-          {fundingInfoUnavailableNote('Totals', salaryUnknownPeople)}
-        </p>
-      )}
-    </div>
+      </div>
+    </>
   );
 }
