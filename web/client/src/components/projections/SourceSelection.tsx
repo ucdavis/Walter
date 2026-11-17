@@ -124,7 +124,10 @@ export function SourceSelection({
     <div className="space-y-5">
       <div
         onBlur={(event) => {
-          if (!event.currentTarget.contains(event.relatedTarget)) {
+          if (
+            event.relatedTarget &&
+            !event.currentTarget.contains(event.relatedTarget)
+          ) {
             setOpen(false);
           }
         }}

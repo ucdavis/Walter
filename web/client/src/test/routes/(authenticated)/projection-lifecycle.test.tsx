@@ -530,6 +530,28 @@ describe('projection creation and copies', () => {
     }
   });
 
+  it('updates the funding source preview when the forecast duration changes', async () => {
+    const { seed } = handleLifecycle();
+    seed.content.fundingSources[0].startDate = '2027-01-01';
+    seed.content.fundingSources[0].endDate = null;
+    const route = renderPlans();
+    const user = userEvent.setup();
+    try {
+      await startWizard(user);
+      await chooseInitialProjects(user, ['Project A']);
+      expect(screen.getByText(/Outside this forecast/)).toBeVisible();
+      await user.selectOptions(
+        screen.getByLabelText('Forecast duration'),
+        '18'
+      );
+      expect(
+        screen.queryByText(/Outside this forecast/)
+      ).not.toBeInTheDocument();
+    } finally {
+      route.cleanup();
+    }
+  });
+
   it('retains wizard duration and notes when revisiting setup and creates them with the original snapshot', async () => {
     const api = handleLifecycle();
     api.seed.content.appointments[0].allocations[0].percent = 0.25;

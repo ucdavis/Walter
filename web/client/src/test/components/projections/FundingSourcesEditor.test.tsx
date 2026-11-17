@@ -176,6 +176,8 @@ describe('funding source selection and grouping', () => {
     });
     await user.click(search);
     expect(search).toHaveValue('');
+    // Safari can blur the input without focusing the button being clicked.
+    fireEvent.blur(search, { relatedTarget: null });
     expect(
       screen.getByRole('region', { name: 'Equipment grant search results' })
     ).toBeVisible();

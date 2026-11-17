@@ -89,7 +89,7 @@ describe('staff costs by month', () => {
       screen.getByRole('button', { name: 'Alex Example' })
     ).toHaveAttribute('aria-expanded', 'true');
     expect(
-      screen.queryByText('Alex Example details and editors')
+      screen.queryByRole('region', { name: 'Alex Example appointment details' })
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole('button', {

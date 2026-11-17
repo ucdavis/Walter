@@ -119,10 +119,11 @@ export function NewProjectionWizard({
             catalog,
             selectedSourceIds,
             roster,
-            editedAppointmentIds.current
+            editedAppointmentIds.current,
+            forecastMonths
           )
         : null,
-    [catalog, selectedSourceIds, roster]
+    [catalog, selectedSourceIds, roster, forecastMonths]
   );
   const draft = session?.draft;
   const results = useMemo(

@@ -2,6 +2,7 @@ import { act, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
+import { compactProjectionCurrency } from '@/components/projections/projectionFormatting.ts';
 import { createSalaryExample } from '@/test/fixtures/projections.ts';
 import { SUPPLIES_CATEGORY } from '@/lib/piProjection.ts';
 import type {
@@ -303,7 +304,9 @@ describe('projection dashboard', () => {
         .setup()
         .click(within(current).getByText('Project balances (2)'));
       expect(current.querySelector('details')).toHaveAttribute('open');
-      expect(within(current).getByText('$400.0')).toBeVisible();
+      expect(
+        within(current).getByText(compactProjectionCurrency(400))
+      ).toBeVisible();
       expect(within(current).getByText('-$100')).toBeVisible();
       expect(within(current).getByText('Fieldwork T1')).toBeVisible();
       expect(

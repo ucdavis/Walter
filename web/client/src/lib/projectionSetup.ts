@@ -9,7 +9,8 @@ export function selectedSetupSession<T extends ProjectionDraft>(
   catalog: ProjectionSession<T>,
   sourceIds: number[],
   roster: ProjectionRosterEntry[],
-  editedAppointmentIds: Set<number>
+  editedAppointmentIds: Set<number>,
+  forecastMonths = catalog.draft.content.forecastMonths
 ): ProjectionSession<T> {
   const selected = new Set(sourceIds);
   const provenance = new Map(
@@ -23,6 +24,7 @@ export function selectedSetupSession<T extends ProjectionDraft>(
       ...catalog.draft,
       content: {
         ...catalog.draft.content,
+        forecastMonths,
         appointments: catalog.draft.content.appointments
           .filter(
             (appointment) =>
