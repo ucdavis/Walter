@@ -7,6 +7,8 @@ import {
   type GLPPMReconciliationRecord,
 } from '@/queries/project.ts';
 import { ExportDataButton } from '@/components/ExportDataButton.tsx';
+import { AggieEnterpriseLink } from '@/components/project/AggieEnterpriseLink.tsx';
+import { buildAeProjectBudgetUrl } from '@/lib/aggieEnterprise.ts';
 import { formatCurrency } from '@/lib/currency.ts';
 import { DataTable } from '@/shared/DataTable.tsx';
 import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
@@ -78,6 +80,10 @@ function RouteComponent() {
         return (a.activityCode ?? '').localeCompare(b.activityCode ?? '');
       }),
     [records]
+  );
+
+  const budgetUrl = buildAeProjectBudgetUrl(
+    records?.find((r) => r.oracleProjectId != null)?.oracleProjectId
   );
 
   const discrepancyCount = useMemo(
@@ -226,6 +232,13 @@ function RouteComponent() {
       <section className="mt-8 mb-10">
         <h1 className="h1">GL/PPM Reconciliation</h1>
         <h3 className="subtitle">{projectNumber}</h3>
+        {budgetUrl ? (
+          <p className="mt-2">
+            <AggieEnterpriseLink href={budgetUrl}>
+              Manage Project Budget
+            </AggieEnterpriseLink>
+          </p>
+        ) : null}
         <p>Comparing General Ledger balances to PPM balances</p>
         <p className="max-w-150 text-sm text-base-content/70 mt-3 mb-1">
           Known Issue: GL and PPM balances below can differ from the UCD PPM to

@@ -81,6 +81,7 @@ BEGIN
                 COALESCE(gl.FINANCIAL_DEPARTMENT, ppm.ProjectOwningOrgCode) AS FINANCIAL_DEPARTMENT,
                 COALESCE(gl.PROJECT, ppm.ProjectNumber) AS PROJECT,
                 COALESCE(gl.PROJECT_DESCRIPTION, ppm.ProjectName) AS PROJECT_DESCRIPTION,
+                pp.OracleProjectId AS ORACLE_PROJECT_ID,
                 COALESCE(gl.FUND, ppm.FundCode) AS FUND_CODE,
                 COALESCE(gl.FUND_DESCRIPTION, ppm.FundDesc) AS FUND_DESCRIPTION,
                 COALESCE(ppm.FundCode, ''Not in PPM'') AS PPM_FUND_CODE,
@@ -122,6 +123,8 @@ BEGIN
                 AND gl.FUND = ppm.FundCode
                 AND gl.PROGRAM = ppm.ProgramCode
                 AND gl.ACTIVITY = ppm.ActivityCode
+            LEFT JOIN dbo.PpmProjects pp
+                ON pp.ProjectNumber = CAST(COALESCE(gl.PROJECT, ppm.ProjectNumber) AS VARCHAR(15))
             ORDER BY PROJECT, FUND_CODE, PROGRAM_CODE, ACTIVITY_CODE';
 
         EXEC sp_executesql @TSQLCommand;

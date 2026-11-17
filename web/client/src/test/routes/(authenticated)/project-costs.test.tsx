@@ -349,6 +349,7 @@ describe('project costs page', () => {
         'Expenditure Item Date',
         'Document Entry',
         'Expenditure Type',
+        'Transaction Number',
         'Burdened Cost',
       ]);
       expect(screen.getAllByText('09.15.2026')[0]).toBeInTheDocument();
@@ -370,6 +371,29 @@ describe('project costs page', () => {
       ).toBeInTheDocument();
       expect(screen.getByLabelText('From')).toHaveValue('');
       expect(screen.getByLabelText('To')).toHaveValue('');
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('links each transaction number to its cost in Aggie Enterprise', async () => {
+    setupHandlers(
+      [createProject()],
+      [createProjectCost({ transactionNumber: 11_687_735 })]
+    );
+
+    const { cleanup } = renderRoute({
+      initialPath: '/projectcosts/1000/P1',
+    });
+
+    try {
+      const link = await screen.findByRole('link', { name: '11687735' });
+      expect(link).toHaveAttribute(
+        'href',
+        'https://fa-etfq-saasfaprod1.fa.ocs.oraclecloud.com/fscmUI/faces/deeplink?objType=EXPENDITUREITEMDETAILS&objKey=ExpItemId=11687735&action=EDIT'
+      );
+      expect(link).toHaveAttribute('target', '_blank');
+      expect(link).toHaveAttribute('rel', 'noopener noreferrer');
     } finally {
       cleanup();
     }
