@@ -171,6 +171,23 @@ describe('reconciliation page', () => {
 });
 
 describe('reconciliation detail page', () => {
+  it('links the project to Manage Financial Project Plan in Aggie Enterprise', async () => {
+    setupHandlers([createReconciliationRecord()]);
+
+    const { cleanup } = renderRoute({ initialPath: detailPath });
+
+    try {
+      const link = await screen.findByRole('link', {
+        name: 'Manage Financial Project Plan',
+      });
+      expect(link).toHaveAttribute('href', financialPlanUrl);
+      expect(link).toHaveAttribute('target', '_blank');
+      expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    } finally {
+      cleanup();
+    }
+  });
+
   it('links the project to Manage Project Budget in Aggie Enterprise', async () => {
     setupHandlers([createReconciliationRecord()]);
 

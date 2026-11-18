@@ -4,7 +4,10 @@ import { useQuery } from '@tanstack/react-query';
 import { createColumnHelper } from '@tanstack/react-table';
 import { ExportDataButton } from '@/components/ExportDataButton.tsx';
 import { AggieEnterpriseLink } from '@/components/project/AggieEnterpriseLink.tsx';
-import { buildAeProjectBudgetUrl } from '@/lib/aggieEnterprise.ts';
+import {
+  buildAeFinancialPlanUrl,
+  buildAeProjectBudgetUrl,
+} from '@/lib/aggieEnterprise.ts';
 import {
   glPpmReconciliationQueryOptions,
   glTransactionsQueryOptions,
@@ -353,9 +356,11 @@ function RouteComponent() {
     return true;
   });
 
-  const budgetUrl = buildAeProjectBudgetUrl(
-    reconciliation?.find((r) => r.oracleProjectId != null)?.oracleProjectId
-  );
+  const oracleProjectId = reconciliation?.find(
+    (r) => r.oracleProjectId != null
+  )?.oracleProjectId;
+  const budgetUrl = buildAeProjectBudgetUrl(oracleProjectId);
+  const financialPlanUrl = buildAeFinancialPlanUrl(oracleProjectId);
 
   const keyLabel = [search.dept, search.fund, search.program, search.activity]
     .filter(Boolean)
@@ -374,9 +379,12 @@ function RouteComponent() {
         <h1 className="h1">Reconciliation Detail</h1>
         <p className="subtitle">{keyLabel}</p>
         {budgetUrl ? (
-          <p className="mt-2">
+          <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
             <AggieEnterpriseLink href={budgetUrl}>
               Manage Project Budget
+            </AggieEnterpriseLink>
+            <AggieEnterpriseLink href={financialPlanUrl}>
+              Manage Financial Project Plan
             </AggieEnterpriseLink>
           </p>
         ) : null}
