@@ -8,7 +8,10 @@ import {
 } from '@/queries/project.ts';
 import { ExportDataButton } from '@/components/ExportDataButton.tsx';
 import { AggieEnterpriseLink } from '@/components/project/AggieEnterpriseLink.tsx';
-import { buildAeProjectBudgetUrl } from '@/lib/aggieEnterprise.ts';
+import {
+  buildAeFinancialPlanUrl,
+  buildAeProjectBudgetUrl,
+} from '@/lib/aggieEnterprise.ts';
 import { formatCurrency } from '@/lib/currency.ts';
 import { DataTable } from '@/shared/DataTable.tsx';
 import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
@@ -82,9 +85,11 @@ function RouteComponent() {
     [records]
   );
 
-  const budgetUrl = buildAeProjectBudgetUrl(
-    records?.find((r) => r.oracleProjectId != null)?.oracleProjectId
-  );
+  const oracleProjectId = records?.find(
+    (r) => r.oracleProjectId != null
+  )?.oracleProjectId;
+  const budgetUrl = buildAeProjectBudgetUrl(oracleProjectId);
+  const financialPlanUrl = buildAeFinancialPlanUrl(oracleProjectId);
 
   const discrepancyCount = useMemo(
     () => sorted.filter(hasDiscrepancy).length,
@@ -233,9 +238,12 @@ function RouteComponent() {
         <h1 className="h1">GL/PPM Reconciliation</h1>
         <h3 className="subtitle">{projectNumber}</h3>
         {budgetUrl ? (
-          <p className="mt-2">
+          <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
             <AggieEnterpriseLink href={budgetUrl}>
               Manage Project Budget
+            </AggieEnterpriseLink>
+            <AggieEnterpriseLink href={financialPlanUrl}>
+              Manage Financial Project Plan
             </AggieEnterpriseLink>
           </p>
         ) : null}
