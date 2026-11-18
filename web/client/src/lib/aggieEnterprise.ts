@@ -42,3 +42,22 @@ export function buildAeProjectBudgetUrl(
     'MANAGE_BUDGET'
   );
 }
+
+/**
+ * Builds the link to a project's Manage Financial Project Plan page. Takes
+ * Oracle's internal project id, not the project number. Returns null when it
+ * is missing.
+ */
+export function buildAeFinancialPlanUrl(
+  oracleProjectId: number | null | undefined
+): string | null {
+  if (oracleProjectId == null) {
+    return null;
+  }
+
+  return buildDeepLink(
+    'PROJECT',
+    `ProjectId=${oracleProjectId}`,
+    'MANAGE_FIN_PLAN'
+  );
+}

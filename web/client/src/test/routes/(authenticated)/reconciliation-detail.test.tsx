@@ -105,7 +105,29 @@ const detailPath =
 const budgetUrl =
   'https://fa-etfq-saasfaprod1.fa.ocs.oraclecloud.com/fscmUI/faces/deeplink?objType=PROJECT&objKey=ProjectId=300000014220069&action=MANAGE_BUDGET';
 
+const financialPlanUrl =
+  'https://fa-etfq-saasfaprod1.fa.ocs.oraclecloud.com/fscmUI/faces/deeplink?objType=PROJECT&objKey=ProjectId=300000014220069&action=MANAGE_FIN_PLAN';
+
 describe('reconciliation page', () => {
+  it('links the project to Manage Financial Project Plan in Aggie Enterprise', async () => {
+    setupHandlers([createReconciliationRecord()]);
+
+    const { cleanup } = renderRoute({
+      initialPath: '/reports/reconciliation/PROJ001',
+    });
+
+    try {
+      const link = await screen.findByRole('link', {
+        name: 'Manage Financial Project Plan',
+      });
+      expect(link).toHaveAttribute('href', financialPlanUrl);
+      expect(link).toHaveAttribute('target', '_blank');
+      expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    } finally {
+      cleanup();
+    }
+  });
+
   it('links the project to Manage Project Budget in Aggie Enterprise', async () => {
     setupHandlers([createReconciliationRecord()]);
 
@@ -139,6 +161,9 @@ describe('reconciliation page', () => {
       expect(
         screen.queryByRole('link', { name: 'Manage Project Budget' })
       ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('link', { name: 'Manage Financial Project Plan' })
+      ).not.toBeInTheDocument();
     } finally {
       cleanup();
     }
@@ -146,6 +171,23 @@ describe('reconciliation page', () => {
 });
 
 describe('reconciliation detail page', () => {
+  it('links the project to Manage Financial Project Plan in Aggie Enterprise', async () => {
+    setupHandlers([createReconciliationRecord()]);
+
+    const { cleanup } = renderRoute({ initialPath: detailPath });
+
+    try {
+      const link = await screen.findByRole('link', {
+        name: 'Manage Financial Project Plan',
+      });
+      expect(link).toHaveAttribute('href', financialPlanUrl);
+      expect(link).toHaveAttribute('target', '_blank');
+      expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    } finally {
+      cleanup();
+    }
+  });
+
   it('links the project to Manage Project Budget in Aggie Enterprise', async () => {
     setupHandlers([createReconciliationRecord()]);
 

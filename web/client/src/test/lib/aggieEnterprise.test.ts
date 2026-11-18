@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildAeCostUrl,
+  buildAeFinancialPlanUrl,
   buildAeProjectBudgetUrl,
 } from '@/lib/aggieEnterprise.ts';
 
@@ -27,5 +28,18 @@ describe('buildAeProjectBudgetUrl', () => {
   it('returns null when the Oracle project id is missing', () => {
     expect(buildAeProjectBudgetUrl(null)).toBeNull();
     expect(buildAeProjectBudgetUrl(undefined)).toBeNull();
+  });
+});
+
+describe('buildAeFinancialPlanUrl', () => {
+  it('builds the Manage Financial Project Plan deep link from an Oracle project id', () => {
+    expect(buildAeFinancialPlanUrl(300_000_014_220_069)).toBe(
+      'https://fa-etfq-saasfaprod1.fa.ocs.oraclecloud.com/fscmUI/faces/deeplink?objType=PROJECT&objKey=ProjectId=300000014220069&action=MANAGE_FIN_PLAN'
+    );
+  });
+
+  it('returns null when the Oracle project id is missing', () => {
+    expect(buildAeFinancialPlanUrl(null)).toBeNull();
+    expect(buildAeFinancialPlanUrl(undefined)).toBeNull();
   });
 });
