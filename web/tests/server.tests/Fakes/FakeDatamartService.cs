@@ -6,6 +6,9 @@ namespace server.tests.Fakes;
 public sealed class FakeDatamartService : IDatamartService
 {
     private readonly SearchablePersonRecord? _person;
+    private readonly IReadOnlyList<SearchablePersonRecord> _searchPeople;
+    public string? LastPeopleQuery { get; private set; }
+    public int? LastPeopleLimit { get; private set; }
     private readonly ProjectProjectionResult? _projection;
     private readonly IReadOnlyList<FacultyPortfolioRecord>? _portfolio;
     private readonly IReadOnlyList<DepartmentBalanceRow> _summaryRows;
@@ -22,10 +25,12 @@ public sealed class FakeDatamartService : IDatamartService
         IReadOnlyList<FacultyPortfolioRecord>? portfolio = null,
         IReadOnlyList<DepartmentBalanceRow>? summaryRows = null,
         IReadOnlyList<DepartmentBalanceOption>? options = null,
-        bool allowReports = false)
+        bool allowReports = false,
+        IReadOnlyList<SearchablePersonRecord>? searchPeople = null)
     {
         _allowReports = allowReports;
         _person = person;
+        _searchPeople = searchPeople ?? [];
         _projection = projection;
         _portfolio = portfolio;
         _summaryRows = summaryRows ?? Array.Empty<DepartmentBalanceRow>();
@@ -41,7 +46,9 @@ public sealed class FakeDatamartService : IDatamartService
         int limit,
         CancellationToken ct = default)
     {
-        return Task.FromResult<IReadOnlyList<SearchablePersonRecord>>(Array.Empty<SearchablePersonRecord>());
+        LastPeopleQuery = query;
+        LastPeopleLimit = limit;
+        return Task.FromResult(_searchPeople);
     }
 
     public Task<SearchablePersonRecord?> GetSearchablePersonByIamIdAsync(

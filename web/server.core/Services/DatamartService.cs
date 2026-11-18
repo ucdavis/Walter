@@ -59,7 +59,7 @@ public interface IDatamartService
         string query, int limit, CancellationToken ct = default);
 
     /// <summary>
-    /// Resolves a public IAM ID to the corresponding People record when downstream services require Employee ID.
+    /// Resolves an IAM ID using the same Employee ID requirement as people search.
     /// </summary>
     Task<SearchablePersonRecord?> GetSearchablePersonByIamIdAsync(
         string iamId, CancellationToken ct = default);

@@ -5,89 +5,117 @@ import { userEvent } from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 
-const createUser = (roles: string[]) => ({
-  email: 'test@example.com',
-  employeeId: '1000',
-  iamId: 'IAM-1000',
-  id: 'user-1',
-  kerberos: 'testuser',
-  name: 'Test User',
-  roles,
-});
+const iamId = '1000000123';
+const entraId = '11111111-1111-1111-1111-111111111111';
+const person = {
+  email: 'person@ucdavis.edu',
+  employeeId: '12345678',
+  iamId,
+  name: 'Campus Person',
+};
 
-const registerHomeApis = () => {
+const registerApis = () => {
   server.use(
+    http.get('/api/user/me', () =>
+      HttpResponse.json({
+        email: 'manager@example.com',
+        employeeId: '1000',
+        iamId: 'IAM-1000',
+        id: 'user-1',
+        kerberos: 'manager',
+        name: 'Manager',
+        roles: ['Manager'],
+      })
+    ),
     http.get('/api/project/managed/by-iam/:iamId', () =>
       HttpResponse.json({ pis: [], projectManager: null })
     ),
     http.get('/api/project/by-iam/:iamId', () => HttpResponse.json([])),
-    http.get('/api/project/personnel', () => HttpResponse.json([]))
+    http.get('/api/project/personnel', () => HttpResponse.json([])),
+    http.get('/api/admin/users/search', ({ request }) => {
+      expect(new URL(request.url).searchParams.get('query')).toBe('person');
+      return HttpResponse.json([person]);
+    }),
+    http.get(`/api/admin/users/by-iam/${iamId}/roles`, () =>
+      HttpResponse.json({ ...person, roles: [] })
+    )
   );
 };
 
+const selectPerson = async (ue: ReturnType<typeof userEvent.setup>) => {
+  await screen.findByRole('heading', { name: 'User Management' });
+  await ue.type(
+    screen.getByLabelText(/search by name, email, or username/i),
+    'person'
+  );
+  await ue.click(await screen.findByRole('button', { name: /campus person/i }));
+  await screen.findByText('No roles assigned.');
+};
+
 describe('/admin/users', () => {
-  it('searches directory users and assigns a role', async () => {
-    const entraUserId = '11111111-1111-1111-1111-111111111111';
-
+  it('selects a People result without an Entra ID, then grants and removes roles by IAM ID', async () => {
+    registerApis();
+    let assignedRole = '';
     server.use(
-      http.get('/api/user/me', () =>
-        HttpResponse.json(createUser(['Manager']))
-      ),
-      http.get('/api/admin/users/search', ({ request }) => {
-        const url = new URL(request.url);
-        const query = url.searchParams.get('query') ?? '';
-
-        if (query.toLowerCase() === 'gra') {
-          return HttpResponse.json([
-            {
-              displayName: 'Graph User',
-              email: 'graph.user@example.com',
-              id: entraUserId,
+      http.post(
+        `/api/admin/users/by-iam/${iamId}/roles`,
+        async ({ request }) => {
+          const body = (await request.json()) as { roleName: string };
+          assignedRole = body.roleName;
+          return HttpResponse.json({
+            added: true,
+            user: {
+              ...person,
+              id: entraId,
+              kerberos: 'pusername',
+              roles: [body.roleName],
             },
-          ]);
+          });
         }
-
-        return HttpResponse.json([]);
-      }),
-      http.post('/api/admin/users/:entraUserId/roles', async ({ request }) => {
-        const body = (await request.json()) as { roleName?: string };
-
-        return HttpResponse.json({
-          added: true,
-          user: {
-            email: 'graph.user@example.com',
-            employeeId: 'E12345',
-            iamId: 'IAM-123',
-            id: entraUserId,
-            kerberos: 'guser',
-            name: 'Iam FullName',
-            roles: [body.roleName ?? 'AccrualViewer'],
-          },
-        });
-      })
+      ),
+      http.delete(
+        `/api/admin/users/by-iam/${iamId}/roles`,
+        async ({ request }) => {
+          expect(await request.json()).toEqual({ roleName: 'AccrualViewer' });
+          return HttpResponse.json({ removed: true, roles: [] });
+        }
+      )
     );
-    registerHomeApis();
-
     const ue = userEvent.setup();
     const { cleanup } = renderRoute({ initialPath: '/admin/users' });
-
     try {
-      await screen.findByRole('heading', { name: 'User Management' });
-
-      await ue.type(screen.getByLabelText(/search by name or email/i), 'gra');
-
-      const result = await screen.findByRole('button', {
-        name: /graph user/i,
-      });
-      await ue.click(result);
-
+      await selectPerson(ue);
       await ue.click(screen.getByRole('button', { name: 'Add Role' }));
-
       expect(await screen.findByText('Role added.')).toBeInTheDocument();
+      expect(assignedRole).toBe('AccrualViewer');
       expect(
         await screen.findByText('AccrualViewer', { selector: '.badge' })
       ).toBeInTheDocument();
-      expect(await screen.findByText('Iam FullName')).toBeInTheDocument();
+      await ue.click(
+        screen.getByRole('button', { name: 'Remove role AccrualViewer' })
+      );
+      expect(await screen.findByText('No roles assigned.')).toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('shows an actionable ambiguous-account error and does not show a successful grant', async () => {
+    registerApis();
+    const message =
+      'Multiple enabled Entra member accounts match this person’s IAM ID.';
+    server.use(
+      http.post(`/api/admin/users/by-iam/${iamId}/roles`, () =>
+        HttpResponse.text(message, { status: 409 })
+      )
+    );
+    const ue = userEvent.setup();
+    const { cleanup } = renderRoute({ initialPath: '/admin/users' });
+    try {
+      await selectPerson(ue);
+      await ue.click(screen.getByRole('button', { name: 'Add Role' }));
+      expect(await screen.findByText(message)).toBeInTheDocument();
+      expect(screen.queryByText('Role added.')).not.toBeInTheDocument();
     } finally {
       cleanup();
     }

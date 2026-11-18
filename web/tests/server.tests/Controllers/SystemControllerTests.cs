@@ -445,6 +445,10 @@ public class SystemControllerTests
             CancellationToken cancellationToken = default)
             => throw new NotImplementedException();
 
+        public Task<IReadOnlyList<GraphUserProfile>> FindEligibleUsersByIamIdAsync(
+            ClaimsPrincipal principal, string iamId, CancellationToken cancellationToken = default)
+            => throw new NotImplementedException();
+
         public Task<GraphUserProfile?> FindUserByEmailAsync(
             ClaimsPrincipal principal,
             string email,

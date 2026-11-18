@@ -1,27 +1,32 @@
 import { fetchJson, postJson } from '@/lib/api.ts';
 import { useQuery } from '@tanstack/react-query';
 
-export type AssignableRole = 'Manager' | 'AccrualViewer' | 'FinancialViewer' | 'DepartmentViewer';
+export type AssignableRole =
+  | 'Manager'
+  | 'AccrualViewer'
+  | 'FinancialViewer'
+  | 'DepartmentViewer';
 
 export type AdminUserSearchResult = {
-  id: string;
-  displayName?: string | null;
   email?: string | null;
+  employeeId: string;
+  iamId: string;
+  name: string;
 };
 
 export type AdminManagedUser = {
-  id: string;
-  name: string;
   email?: string | null;
   employeeId: string;
-  kerberos: string;
   iamId: string;
+  id: string;
+  kerberos: string;
+  name: string;
   roles: string[];
 };
 
 export type AssignRoleResponse = {
-  user: AdminManagedUser;
   added: boolean;
+  user: AdminManagedUser;
 };
 
 export const adminUserSearchQueryOptions = (query: string) => {
@@ -64,37 +69,37 @@ export const useAdminUserSearchQuery = ({
 };
 
 export async function assignRole({
-  entraUserId,
+  iamId,
   roleName,
   signal,
 }: {
-  entraUserId: string;
+  iamId: string;
   roleName: AssignableRole;
   signal?: AbortSignal;
 }): Promise<AssignRoleResponse> {
   return await postJson<AssignRoleResponse>(
-    `/api/admin/users/${encodeURIComponent(entraUserId)}/roles`,
+    `/api/admin/users/by-iam/${encodeURIComponent(iamId)}/roles`,
     { roleName },
     signal
   );
 }
 
 export type UserRolesResponse = {
-  roles: string[];
-  name?: string | null;
   email?: string | null;
   employeeId?: string | null;
-  kerberos?: string | null;
   iamId?: string | null;
+  kerberos?: string | null;
+  name?: string | null;
+  roles: string[];
 };
 
 export type RemoveRoleResponse = {
-  roles: string[];
   removed: boolean;
+  roles: string[];
 };
 
-export const userRolesQueryOptions = (entraUserId: string | null) => ({
-  enabled: !!entraUserId,
+export const userRolesQueryOptions = (iamId: string | null) => ({
+  enabled: !!iamId,
   gcTime: 0,
   queryFn: async ({
     signal,
@@ -102,33 +107,33 @@ export const userRolesQueryOptions = (entraUserId: string | null) => ({
     signal: AbortSignal;
   }): Promise<UserRolesResponse> => {
     return await fetchJson<UserRolesResponse>(
-      `/api/admin/users/${encodeURIComponent(entraUserId!)}/roles`,
+      `/api/admin/users/by-iam/${encodeURIComponent(iamId!)}/roles`,
       {},
       signal
     );
   },
-  queryKey: ['admin', 'users', entraUserId, 'roles'] as const,
+  queryKey: ['admin', 'users', iamId, 'roles'] as const,
   staleTime: 0,
 });
 
-export const useUserRolesQuery = (entraUserId: string | null) => {
-  return useQuery(userRolesQueryOptions(entraUserId));
+export const useUserRolesQuery = (iamId: string | null) => {
+  return useQuery(userRolesQueryOptions(iamId));
 };
 
 export async function removeRole({
-  entraUserId,
+  iamId,
   roleName,
   signal,
 }: {
-  entraUserId: string;
+  iamId: string;
   roleName: string;
   signal?: AbortSignal;
 }): Promise<RemoveRoleResponse> {
   return await fetchJson<RemoveRoleResponse>(
-    `/api/admin/users/${encodeURIComponent(entraUserId)}/roles`,
+    `/api/admin/users/by-iam/${encodeURIComponent(iamId)}/roles`,
     {
-      method: 'DELETE',
       body: JSON.stringify({ roleName }),
+      method: 'DELETE',
     },
     signal
   );

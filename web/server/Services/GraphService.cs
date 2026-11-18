@@ -19,6 +19,12 @@ public interface IGraphService
         string query,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Finds up to two enabled member accounts with this exact campus IAM ID; two means the identity is ambiguous.</summary>
+    Task<IReadOnlyList<GraphUserProfile>> FindEligibleUsersByIamIdAsync(
+        ClaimsPrincipal principal,
+        string iamId,
+        CancellationToken cancellationToken = default);
+
     Task<GraphUserProfile?> FindUserByEmailAsync(
         ClaimsPrincipal principal,
         string email,
@@ -189,6 +195,75 @@ public sealed class GraphService : IGraphService
             // Fallback to a prefix-filter search in case $search is unavailable in a given tenant/config.
             return await SearchByPrefixAsync();
         }
+    }
+
+    /// <summary>Resolves a selected Person to enabled Entra member accounts without relying on email aliases.</summary>
+    public Task<IReadOnlyList<GraphUserProfile>> FindEligibleUsersByIamIdAsync(
+        ClaimsPrincipal principal,
+        string iamId,
+        CancellationToken cancellationToken = default)
+    {
+        return FindEligibleUsersByIamIdAsync(CreateGraphClient(principal), iamId, cancellationToken);
+    }
+
+    /// <summary>Checks all result pages until uniqueness is established or a second eligible account makes the match ambiguous.</summary>
+    internal static async Task<IReadOnlyList<GraphUserProfile>> FindEligibleUsersByIamIdAsync(
+        GraphServiceClient graphClient,
+        string iamId,
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedIamId = iamId.Trim();
+        if (normalizedIamId.Length == 0)
+        {
+            return Array.Empty<GraphUserProfile>();
+        }
+
+        var escaped = normalizedIamId.Replace("'", "''");
+        var page = await graphClient.Users.GetAsync(config =>
+        {
+            config.Headers.Add("ConsistencyLevel", "eventual");
+            config.QueryParameters.Count = true;
+            config.QueryParameters.Top = 25;
+            config.QueryParameters.Filter = $"onPremisesExtensionAttributes/extensionAttribute7 eq '{escaped}'";
+            config.QueryParameters.Select = new[]
+            {
+                "id", "displayName", "mail", "userPrincipalName", "accountEnabled", "userType",
+                "onPremisesExtensionAttributes",
+            };
+        }, cancellationToken);
+
+        var matches = new Dictionary<string, GraphUserProfile>(StringComparer.OrdinalIgnoreCase);
+        while (page is not null)
+        {
+            foreach (var user in page.Value ?? [])
+            {
+                // IAM identity and account eligibility determine access, not the mail domain.
+                if (!Guid.TryParse(user.Id, out _) || user.AccountEnabled != true ||
+                    !string.Equals(user.UserType, "Member", StringComparison.OrdinalIgnoreCase) ||
+                    !string.Equals(user.OnPremisesExtensionAttributes?.ExtensionAttribute7?.Trim(), normalizedIamId, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                matches.TryAdd(user.Id!, new GraphUserProfile(
+                    user.Id!, user.DisplayName, user.Mail ?? user.UserPrincipalName, normalizedIamId));
+                if (matches.Count == 2)
+                {
+                    return matches.Values.ToArray();
+                }
+            }
+
+            // A later page may contain a second eligible account; never grant based on the first match alone.
+            if (string.IsNullOrWhiteSpace(page.OdataNextLink))
+            {
+                break;
+            }
+
+            page = await graphClient.Users.WithUrl(page.OdataNextLink).GetAsync(
+                config => config.Headers.Add("ConsistencyLevel", "eventual"), cancellationToken);
+        }
+
+        return matches.Values.ToArray();
     }
 
     public async Task<GraphUserProfile?> FindUserByEmailAsync(

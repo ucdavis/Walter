@@ -16,6 +16,8 @@ public interface IUserService
 
     Task<User?> GetByIdAsync(Guid userId, CancellationToken cancellationToken = default);
 
+    Task<User?> GetByIamIdAsync(string iamId, CancellationToken cancellationToken = default);
+
     Task<User?> GetByEmployeeIdAsync(string employeeId, CancellationToken cancellationToken = default);
 
     Task<bool> AddRoleToUserAsync(
@@ -232,6 +234,11 @@ public class UserService : IUserService
     public Task<User?> GetByIdAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         return _dbContext.Users.SingleOrDefaultAsync(u => u.Id == userId, cancellationToken);
+    }
+
+    public Task<User?> GetByIamIdAsync(string iamId, CancellationToken cancellationToken = default)
+    {
+        return _dbContext.Users.SingleOrDefaultAsync(u => u.IamId == iamId, cancellationToken);
     }
 
     public Task<User?> GetByEmployeeIdAsync(string employeeId, CancellationToken cancellationToken = default)
