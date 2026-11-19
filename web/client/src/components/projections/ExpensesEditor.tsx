@@ -195,7 +195,7 @@ export function ExpensesEditor<T extends ProjectionDraft>({
         </div>
         <div className="ml-auto flex shrink-0 items-center gap-1">
           <button
-            className="btn btn-outline"
+            className="btn"
             disabled={!draft.content.fundingSources.length}
             onClick={openNewExpense}
             type="button"
@@ -304,7 +304,7 @@ export function ExpensesEditor<T extends ProjectionDraft>({
               average. Added expenses are additional costs in this plan.
             </p>
             <button
-              className="btn btn-outline ml-auto"
+              className="btn ml-auto"
               onClick={openNewExpense}
               type="button"
             >

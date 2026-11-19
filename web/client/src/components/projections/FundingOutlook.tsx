@@ -194,7 +194,7 @@ export function FundingOutlook({
           )}
           <Suspense
             fallback={
-              <p className="flex h-80 items-center justify-center text-sm text-base-content/70 sm:h-96">
+              <p className="flex h-72 items-center justify-center text-sm text-base-content/80 sm:h-80">
                 Loading balance chart…
               </p>
             }
@@ -251,15 +251,17 @@ export function FundingOutlook({
         <summary className="cursor-pointer font-semibold">
           About this forecast
         </summary>
-        <p className="mt-3">
-          Net forecast costs are additional expected costs, including planned
-          credits. Booked spending is already reflected in captured balances.
-        </p>
-        <p className="mt-2">
-          Sources keep their own capture dates. Project groups combine displayed
-          amounts, while shortfalls remain visible for each source. Changing
-          chart lines changes only this view.
-        </p>
+        <div className="mt-3 max-w-4xl space-y-2 leading-relaxed">
+          <p>
+            Net forecast costs are additional expected costs, including planned
+            credits. Booked spending is already reflected in captured balances.
+          </p>
+          <p>
+            Sources keep their own capture dates. Project groups combine
+            displayed amounts, while shortfalls remain visible for each source.
+            Changing chart lines changes only this view.
+          </p>
+        </div>
       </details>
     </section>
   );

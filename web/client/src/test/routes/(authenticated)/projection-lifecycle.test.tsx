@@ -411,10 +411,10 @@ describe('projection creation and copies', () => {
       expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled();
       release();
       await screen.findByRole('searchbox', {
-        name: 'Choose from your projects',
+        name: 'Search funding sources',
       });
       expect(
-        screen.getByText('Your selected funding sources will appear here.')
+        screen.getByText('0 sources across 0 projects')
       ).toBeInTheDocument();
       expect(screen.getByLabelText('Plan name')).toHaveValue(
         'Typed while loading'
@@ -514,11 +514,13 @@ describe('projection creation and copies', () => {
     try {
       await user.click(await screen.findByRole('button', { name: 'New plan' }));
       await screen.findByRole('searchbox', {
-        name: 'Choose from your projects',
+        name: 'Search funding sources',
       });
       expect(
-        screen.queryByRole('checkbox', { name: /^Include / })
-      ).not.toBeInTheDocument();
+        screen.getByRole('checkbox', {
+          name: 'Include all sources for Project A',
+        })
+      ).not.toBeChecked();
       expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled();
       await user.click(screen.getByRole('button', { name: 'Cancel setup' }));
       await screen.findByRole('button', { name: 'New plan' });

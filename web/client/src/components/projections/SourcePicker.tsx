@@ -8,7 +8,7 @@ import {
 } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ProjectionDialog } from '@/components/projections/ProjectionDialog.tsx';
-import { SourceSelection } from '@/components/projections/SourceSelection.tsx';
+import { SourceSelectionRows } from '@/components/projections/SourceSelectionRows.tsx';
 import type { SourceEditorHandle } from '@/components/projections/SourceEditor.tsx';
 import {
   addImportedSources,
@@ -42,7 +42,6 @@ export function SourcePicker<T extends ProjectionDraft>({
   const selectedKeys = new Set(selected);
   const [error, setError] = useState<string | null>(null);
   const mounted = useRef(true);
-  const selectionRef = useRef<SourceEditorHandle>(null);
   const busy = useRef(false);
   useEffect(() => {
     mounted.current = true;
@@ -53,15 +52,13 @@ export function SourcePicker<T extends ProjectionDraft>({
   useImperativeHandle(ref, () => ({
     read: () => ({
       fundingSourceId: null,
-      hasChanges:
-        selected.length > 0 ||
-        pending ||
-        Boolean(selectionRef.current?.read().hasChanges),
+      hasChanges: selected.length > 0 || pending,
       kind: 'source',
       validationMessage: error,
     }),
   }));
   const choices = (catalog.data ?? []).map((source) => ({
+    balance: source.availableBalance,
     disabled: session.draft.content.fundingSources.some((existing) =>
       sourcesOverlap(existing, source)
     ),
@@ -75,11 +72,12 @@ export function SourcePicker<T extends ProjectionDraft>({
       .join(' · '),
     projectName: source.projectName,
     projectNumber: source.projectNumber,
+    projectType: source.projectType,
     taskName: source.taskName,
     taskNumber: source.taskNumber,
   }));
   async function add() {
-    if (busy.current || selectionRef.current?.read().hasChanges) {
+    if (busy.current) {
       return;
     }
     const sources = (catalog.data ?? [])
@@ -122,9 +120,9 @@ export function SourcePicker<T extends ProjectionDraft>({
     }
   }
   return (
-    <ProjectionDialog onClose={onClose} title="Add funding source" wide>
+    <ProjectionDialog onClose={onClose} title="Add funding sources" wide>
       <p className="mt-3 text-sm text-base-content/70">
-        Capture current financial inputs for selected tasks. Employees and their
+        Pick the projects and tasks this projection should cover. Employee
         allocations stay unchanged.
       </p>
       <div className="mt-4" inert={pending}>
@@ -136,7 +134,7 @@ export function SourcePicker<T extends ProjectionDraft>({
           <div className="mt-4">
             <p role="alert">Available sources could not be loaded.</p>
             <button
-              className="btn btn-outline mt-2"
+              className="btn btn-primary mt-2"
               onClick={() => void catalog.refetch()}
               type="button"
             >
@@ -145,10 +143,9 @@ export function SourcePicker<T extends ProjectionDraft>({
           </div>
         ) : (
           <div className="mt-4">
-            <SourceSelection
+            <SourceSelectionRows
               choices={choices}
               onChange={setSelected}
-              ref={selectionRef}
               selected={selected}
             />
           </div>
@@ -170,7 +167,9 @@ export function SourcePicker<T extends ProjectionDraft>({
           type="button"
         >
           <PlusIcon aria-hidden="true" className="size-4" />
-          {pending ? 'Adding sources...' : 'Add selected sources'}
+          {pending
+            ? 'Adding sources...'
+            : `Add ${selected.length} ${selected.length === 1 ? 'source' : 'sources'}`}
         </button>
       </div>
     </ProjectionDialog>

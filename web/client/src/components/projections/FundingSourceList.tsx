@@ -56,7 +56,7 @@ export function FundingSourceList({
           value={search}
         />
       </label>
-      <div className="mt-5 grid items-start gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {shown.map(({ group, key, visible }) => {
           if (group.length === 1) {
             return card(group[0], false);
@@ -74,7 +74,7 @@ export function FundingSourceList({
               </p>
               <div
                 aria-label={`${project} tasks`}
-                className="mt-3 grid items-start gap-3 sm:grid-cols-2 xl:grid-cols-3"
+                className="mt-3 grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
                 role="region"
               >
                 {visible.map((source) => card(source, true))}

@@ -127,7 +127,7 @@ export function StaffingEditor<T extends ProjectionDraft>({
           </p>
         </div>
         <button
-          className="btn btn-outline"
+          className="btn"
           id="add-hypothetical-hire"
           onClick={() => setEditing('new')}
           type="button"
@@ -207,14 +207,14 @@ export function StaffingEditor<T extends ProjectionDraft>({
                 <button
                   aria-haspopup="dialog"
                   aria-label={`Edit appointment for ${item.name}`}
-                  className="btn btn-outline btn-sm"
+                  className="btn btn-sm"
                   id={`edit-appointment-${item.id}`}
                   onClick={() =>
                     target ? target.onChange(item.id) : setEditing(item.id)
                   }
                   type="button"
                 >
-                  Appointment details
+                  Edit details
                 </button>
               </div>
             </div>

@@ -68,14 +68,14 @@ export function SourceOutlookHeader({
       />
       <div className="flex flex-wrap gap-2 pt-1">
         <button
-          className="btn btn-outline btn-sm"
+          className="btn btn-sm"
           onClick={() => onNavigate({ section: 'funding', source: source.id })}
           type="button"
         >
           Edit funding source
         </button>
         <button
-          className="btn btn-outline btn-sm"
+          className="btn btn-sm"
           onClick={() => onNavigate({ section: 'expenses', source: source.id })}
           type="button"
         >

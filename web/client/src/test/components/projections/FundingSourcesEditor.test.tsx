@@ -1,13 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { projectionLookupsQueryOptions } from '@/queries/projections.ts';
-import { createRef, useState, type Ref } from 'react';
-import {
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  within,
-} from '@testing-library/react';
+import { useState, type Ref } from 'react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
@@ -112,368 +106,117 @@ function expectSelection(ids: number[]) {
 }
 
 describe('funding source selection and grouping', () => {
-  it('starts without selected funding or an expanded catalog while keeping planned funding available', () => {
+  it('shows searchable project rows and nested tasks with no sources initially selected', () => {
     render(<Harness />);
     expectSelection([]);
+    expect(screen.getAllByText('$20,000')).toHaveLength(3);
+    expect(screen.getAllByRole('button', { name: /^Edit / })).toHaveLength(3);
     expect(screen.queryByRole('article')).not.toBeInTheDocument();
-    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
     expect(
-      screen.queryByRole('region', { name: /search results$/ })
-    ).not.toBeInTheDocument();
-    expect(
-      screen.getByRole('searchbox', { name: 'Choose from your projects' })
+      screen.getByRole('searchbox', { name: 'Search funding sources' })
     ).toHaveValue('');
     expect(
-      screen.getByRole('button', {
-        name: "Planning for funding you don't have yet?",
+      screen.getByRole('checkbox', {
+        name: 'Include all sources for Coastal research',
       })
-    ).toBeInTheDocument();
+    ).not.toBeChecked();
+    expect(
+      screen.getByRole('checkbox', { name: /Include Renamed fieldwork/ })
+    ).not.toBeChecked();
+    expect(
+      screen.getByRole('button', {
+        name: 'Add New Funding Source',
+      })
+    ).toBeVisible();
   });
-
-  it.each(['Coastal', 'p100'])(
-    'finds a project by %s and adds every task in one action',
+  it.each(['Coastal', 'p100', 'Fieldwork'])(
+    'finds a project by %s and selects every sibling task',
     async (query) => {
       const user = userEvent.setup();
       render(<Harness />);
-      await user.type(
-        screen.getByRole('searchbox', { name: 'Choose from your projects' }),
-        query
-      );
-      const results = screen.getByRole('region', {
-        name: 'Coastal research search results',
-      });
-      expect(results).toHaveTextContent('P100');
+      await user.type(screen.getByRole('searchbox'), query);
       await user.click(
-        within(results).getByRole('button', { name: 'Add all 2 tasks' })
+        screen.getByRole('checkbox', {
+          name: 'Include all sources for Coastal research',
+        })
       );
       expectSelection([1, 2]);
       expect(
-        screen.getByRole('region', {
-          name: 'Coastal research selected funding',
-        })
-      ).toHaveTextContent('All 2 tasks');
-      const search = screen.getByRole('searchbox', {
-        name: 'Choose from your projects',
-      });
-      expect(search).toHaveValue('');
-      await user.type(search, query);
-      expect(
-        within(
-          screen.getByRole('region', {
-            name: 'Coastal research search results',
-          })
-        ).getByRole('button', { name: 'Already included' })
-      ).toBeDisabled();
-      expectSelection([1, 2]);
+        screen.getByRole('region', { name: 'Coastal research funding sources' })
+      ).toHaveTextContent('2 of 2 tasks');
+      expect(screen.queryByRole('article')).not.toBeInTheDocument();
     }
   );
-
-  it('browses all own projects without typing, closes after adding, and reopens for another project', async () => {
-    const user = userEvent.setup();
-    render(<Harness />);
-    const search = screen.getByRole('searchbox', {
-      name: 'Choose from your projects',
-    });
-    await user.click(search);
-    expect(search).toHaveValue('');
-    // Safari can blur the input without focusing the button being clicked.
-    fireEvent.blur(search, { relatedTarget: null });
-    expect(
-      screen.getByRole('region', { name: 'Equipment grant search results' })
-    ).toBeVisible();
-    await user.click(
-      within(
-        screen.getByRole('region', { name: 'Coastal research search results' })
-      ).getByRole('button', { name: 'Add all 2 tasks' })
-    );
-    expectSelection([1, 2]);
-    expect(
-      screen.queryByRole('region', { name: /search results$/ })
-    ).not.toBeInTheDocument();
-    await user.click(search);
-    await user.click(
-      within(
-        screen.getByRole('region', { name: 'Equipment grant search results' })
-      ).getByRole('button', { name: 'Add source' })
-    );
-    expectSelection([1, 2, 3]);
-  });
-
-  it('lets keyboard users browse and add, and dismisses browsing without changing selections', async () => {
-    const user = userEvent.setup();
-    render(<Harness />);
-    const search = screen.getByRole('searchbox', {
-      name: 'Choose from your projects',
-    });
-    await user.tab();
-    expect(search).toHaveFocus();
-    await user.tab();
-    expect(
-      screen.getByRole('button', { name: 'Add all 2 tasks' })
-    ).toHaveFocus();
-    await user.keyboard('{Enter}');
-    expectSelection([1, 2]);
-    await user.click(search);
-    await user.keyboard('{Escape}');
-    expect(
-      screen.queryByRole('region', { name: /search results$/ })
-    ).not.toBeInTheDocument();
-    expectSelection([1, 2]);
-    await user.click(search);
-    await user.click(
-      screen.getByRole('heading', { name: 'Your funding sources' })
-    );
-    expect(
-      screen.queryByRole('region', { name: /search results$/ })
-    ).not.toBeInTheDocument();
-    expectSelection([1, 2]);
-  });
-
-  it('adds all project tasks even when search matches only one sibling', async () => {
-    const user = userEvent.setup();
-    render(<Harness />);
-    await user.type(
-      screen.getByRole('searchbox', { name: 'Choose from your projects' }),
-      'Fieldwork'
-    );
-    const results = screen.getByRole('region', {
-      name: 'Coastal research search results',
-    });
-    expect(
-      within(results).getAllByRole('button', { name: 'Add this task' })
-    ).toHaveLength(1);
-    await user.click(
-      within(results).getByRole('button', { name: 'Add all 2 tasks' })
-    );
-    expectSelection([1, 2]);
-  });
-
   it.each(['Fieldwork', '02'])(
-    'adds only the matching task for %s with its parent visible',
+    'selects just the matching task for %s',
     async (query) => {
       const user = userEvent.setup();
       render(<Harness />);
-      await user.type(
-        screen.getByRole('searchbox', { name: 'Choose from your projects' }),
-        query
-      );
-      const results = screen.getByRole('region', {
-        name: 'Coastal research search results',
-      });
-      expect(results).toHaveTextContent('P100');
+      await user.type(screen.getByRole('searchbox'), query);
       await user.click(
-        within(results).getByRole('button', { name: 'Add this task' })
+        screen.getByRole('checkbox', { name: /^Include (?!all sources)/ })
       );
       expectSelection(query === '02' ? [2] : [1]);
       expect(
-        screen.getByRole('region', {
-          name: 'Coastal research selected funding',
+        screen.getByRole('checkbox', {
+          name: 'Include all sources for Coastal research',
         })
-      ).toHaveTextContent('1 of 2 tasks');
+      ).toBePartiallyChecked();
     }
   );
-
-  it('stages task changes until Apply, preserves other projects, and removes a group when no tasks remain', async () => {
+  it('updates task selection inline while preserving other projects', async () => {
     const user = userEvent.setup();
     render(<Harness />);
     await chooseInitialProjects(user, ['Coastal research', 'Equipment grant']);
-    const coastal = screen.getByRole('region', {
-      name: 'Coastal research selected funding',
-    });
     await user.click(
-      within(coastal).getByRole('button', { name: 'Change tasks' })
+      screen.getByRole('checkbox', { name: /Include Analysis/ })
     );
-    let dialog = screen.getByRole('dialog', {
-      name: 'Change tasks for Coastal research',
+    expectSelection([1, 3]);
+    const group = screen.getByRole('region', {
+      name: 'Coastal research funding sources',
     });
     await user.click(
-      within(dialog).getByRole('checkbox', { name: /Include Analysis/ })
+      within(group).getByRole('button', { name: 'Select all 2' })
     );
     expectSelection([1, 2, 3]);
-    await user.click(within(dialog).getByRole('button', { name: 'Apply' }));
+    await user.click(within(group).getByRole('button', { name: 'Clear' }));
+    expectSelection([3]);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expectSelection([1, 3]);
-    expect(coastal).toHaveTextContent('1 of 2 tasks');
-    expect(within(coastal).getAllByRole('article')).toHaveLength(1);
-    await user.click(
-      within(coastal).getByRole('button', { name: 'Change tasks' })
-    );
-    dialog = screen.getByRole('dialog');
-    await user.click(
-      within(dialog).getByRole('button', { name: 'Select all tasks' })
-    );
-    expectSelection([1, 3]);
-    await user.click(within(dialog).getByRole('button', { name: 'Apply' }));
-    expectSelection([1, 2, 3]);
-    await user.click(
-      within(coastal).getByRole('button', { name: 'Change tasks' })
-    );
-    dialog = screen.getByRole('dialog');
-    await user.click(within(dialog).getByRole('button', { name: 'Clear all' }));
-    expectSelection([1, 2, 3]);
-    expect(
-      within(dialog)
-        .getAllByRole('checkbox')
-        .every((input) => !(input as HTMLInputElement).checked)
-    ).toBe(true);
-    await user.click(within(dialog).getByRole('button', { name: 'Apply' }));
-    expectSelection([3]);
-    expect(
-      screen.queryByRole('region', {
-        name: 'Coastal research selected funding',
-      })
-    ).not.toBeInTheDocument();
-    await chooseInitialProjects(user, ['Coastal research']);
-    expectSelection([1, 2, 3]);
   });
-
-  it.each(['Cancel', 'Escape'])(
-    'discards staged task changes with %s',
-    async (dismiss) => {
-      const user = userEvent.setup();
-      const editorRef = createRef<FundingSourcesEditorHandle>();
-      render(<Harness editorRef={editorRef} />);
-      await chooseInitialProjects(user, ['Coastal research']);
-      await user.click(screen.getByRole('button', { name: 'Change tasks' }));
-      const dialog = screen.getByRole('dialog', {
-        name: 'Change tasks for Coastal research',
-      });
-      await user.click(
-        within(dialog).getByRole('button', { name: 'Clear all' })
-      );
-      expectSelection([1, 2]);
-      expect(editorRef.current?.read()).toMatchObject({
-        hasChanges: true,
-        kind: 'source',
-      });
-      if (dismiss === 'Escape') {
-        // jsdom does not perform Escape's native dialog cancellation.
-        const cancel = new Event('cancel', {
-          bubbles: false,
-          cancelable: true,
-        });
-        fireEvent(dialog, cancel);
-        expect(cancel.defaultPrevented).toBe(true);
-      } else {
-        await user.click(
-          within(dialog).getByRole('button', { name: 'Cancel' })
-        );
-      }
-      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-      expectSelection([1, 2]);
-      expect(editorRef.current?.read()).toBeNull();
-      expect(screen.getAllByRole('article')).toHaveLength(2);
-      await user.click(screen.getByRole('button', { name: 'Change tasks' }));
-      const reopened = screen.getByRole('dialog');
-      expect(
-        within(reopened).getByRole('checkbox', { name: /Include Analysis/ })
-      ).toBeChecked();
-      expect(
-        within(reopened).getByRole('checkbox', {
-          name: /Include Renamed fieldwork/,
-        })
-      ).toBeChecked();
-    }
-  );
-
-  it('adds a single-task project from its task code without an unnecessary task chooser', async () => {
-    const user = userEvent.setup();
-    render(<Harness />);
-    await user.type(
-      screen.getByRole('searchbox', { name: 'Choose from your projects' }),
-      '01'
-    );
-    const results = screen.getByRole('region', {
-      name: 'Equipment grant search results',
-    });
-    expect(results).toHaveTextContent('P200');
-    await user.click(
-      within(results).getByRole('button', { name: 'Add this task' })
-    );
-    expectSelection([3]);
-    const selected = screen.getByRole('article', {
-      name: 'Equipment · Task 01 · Equipment funding source',
-    });
-    expect(selected).toHaveTextContent('P200');
-    expect(selected).toHaveTextContent('$20,000');
-    expect(
-      within(selected).getByRole('button', {
-        name: 'Edit Equipment · Task 01 · Equipment',
-      })
-    ).toBeVisible();
-    expect(
-      within(selected).queryByRole('button', { name: /Remove/ })
-    ).not.toBeInTheDocument();
-    expect(screen.getAllByRole('article')).toHaveLength(1);
-    expect(screen.queryByText('Funding details')).not.toBeInTheDocument();
-    expect(
-      within(selected).queryByText('Change tasks')
-    ).not.toBeInTheDocument();
-  });
-
-  it('keeps captured project identity and source edits when a selection is removed and added again', async () => {
+  it('keeps edited balances and captured project identity when deselecting and selecting again', async () => {
     const user = userEvent.setup();
     render(<Harness />);
     await chooseInitialProjects(user, ['Coastal research']);
-    const coastal = screen.getByRole('region', {
-      name: 'Coastal research selected funding',
-    });
-    expect(within(coastal).getByText(/Project P100/)).toBeInTheDocument();
-    expect(within(coastal).getAllByRole('article')).toHaveLength(2);
-    expect(
-      screen.getAllByRole('heading', { name: 'Coastal research' })
-    ).toHaveLength(1);
-    for (const card of within(coastal).getAllByRole('article')) {
-      expect(
-        within(card).queryByText('Coastal research')
-      ).not.toBeInTheDocument();
-      expect(within(card).getByText('$20,000')).toBeVisible();
-    }
-    expect(screen.queryByText('Funding details')).not.toBeInTheDocument();
     await user.click(
-      within(coastal).getByRole('button', {
+      screen.getByRole('button', {
         name: 'Edit Renamed fieldwork · Task 01 · Fieldwork',
       })
     );
-    await user.clear(screen.getByRole('textbox', { name: 'Planning balance' }));
+    await user.clear(
+      screen.getByLabelText('Planning balance', { selector: 'input' })
+    );
     await user.type(
-      screen.getByRole('textbox', { name: 'Planning balance' }),
+      screen.getByLabelText('Planning balance', { selector: 'input' }),
       '12345'
     );
-    await user.click(screen.getByRole('button', { name: /^Apply$/ }));
-    const selected = screen.getByRole('region', {
-      name: 'Coastal research selected funding',
+    await user.click(screen.getByRole('button', { name: 'Apply' }));
+    const project = screen.getByRole('checkbox', {
+      name: 'Include all sources for Coastal research',
     });
-    await user.click(
-      within(selected).getByRole('button', { name: 'Change tasks' })
-    );
-    await user.click(
-      within(screen.getByRole('dialog')).getByRole('button', {
-        name: 'Clear all',
-      })
-    );
-    await user.click(
-      within(screen.getByRole('dialog')).getByRole('button', { name: 'Apply' })
-    );
+    await user.click(project);
     expectSelection([]);
-    await chooseInitialProjects(user, ['Coastal research']);
+    await user.click(project);
     expectSelection([1, 2]);
-    const restored = screen.getByRole('region', {
-      name: 'Coastal research selected funding',
-    });
-    expect(within(restored).getAllByRole('article')).toHaveLength(2);
     expect(
-      within(restored).getByRole('heading', { name: 'Renamed fieldwork' })
-    ).toBeInTheDocument();
-    expect(restored).toHaveTextContent('$12,345');
+      screen.getByRole('region', { name: 'Coastal research funding sources' })
+    ).toHaveTextContent('$12,345');
   });
-
-  it('shows newly added planned funding directly with one name and editable balance', async () => {
+  it('adds planned funding as a selected row with an editable balance', async () => {
     const user = userEvent.setup();
     render(<Harness />);
     await user.click(
       screen.getByRole('button', {
-        name: "Planning for funding you don't have yet?",
+        name: 'Add New Funding Source',
       })
     );
     await user.type(screen.getByLabelText('Source name'), 'Project renewal');
@@ -482,26 +225,16 @@ describe('funding source selection and grouping', () => {
     await user.type(screen.getByLabelText('End date'), '2026-12-31');
     await user.click(screen.getByRole('button', { name: 'Apply' }));
     expectSelection([4]);
-    const card = screen.getByRole('article', {
-      name: 'Project renewal funding source',
+    const row = screen.getByRole('region', {
+      name: 'Project renewal funding sources',
     });
+    expect(within(row).getByRole('checkbox')).toBeChecked();
+    expect(row).toHaveTextContent('$42,000');
     expect(
-      within(card).getByRole('heading', { name: 'Project renewal' })
+      within(row).getByRole('button', { name: 'Edit Project renewal' })
     ).toBeVisible();
-    expect(screen.getAllByText('Project renewal')).toHaveLength(1);
-    expect(within(card).getByText('$42,000')).toBeVisible();
-    expect(
-      within(card).getByRole('button', { name: 'Edit Project renewal' })
-    ).toBeVisible();
-    expect(
-      within(card).queryByRole('button', { name: /Remove/ })
-    ).not.toBeInTheDocument();
-    expect(screen.queryByText('Funding details')).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole('button', { name: 'Change tasks' })
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('article')).not.toBeInTheDocument();
   });
-
   it('keeps saved source removal behind confirmation and does not reset saved funding', async () => {
     const user = userEvent.setup();
     render(<Harness initial={false} />);

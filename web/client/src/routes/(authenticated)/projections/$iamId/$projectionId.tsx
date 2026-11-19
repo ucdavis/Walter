@@ -6,7 +6,6 @@ import {
   Link,
   type ErrorComponentProps,
 } from '@tanstack/react-router';
-import { ProjectionPortfolioLayout } from '@/components/projections/ProjectionPortfolioLayout.tsx';
 import { ProjectionSessionProvider } from '@/components/projections/ProjectionSession.tsx';
 import { ProjectionWorkspace } from '@/components/projections/ProjectionWorkspace.tsx';
 import {
@@ -128,67 +127,60 @@ function ProjectionEditor({ featureEnabled }: { featureEnabled: boolean }) {
         save: save.mutateAsync,
       }}
     >
-      <ProjectionPortfolioLayout
-        currentPlanId={Number(projectionId)}
-        enabled={featureEnabled}
-        iamId={iamId}
-      >
-        <main className="scroll-mt-24 bg-base-100 pt-6 pb-12 text-base leading-normal text-base-content [&_button:enabled]:cursor-pointer">
-          <div>
-            {!featureEnabled && <ProjectionSessionNotice />}
-            <Link
-              className="btn mb-4 gap-2"
-              params={{ iamId }}
-              to="/projections/$iamId"
-            >
-              <ArrowTrendingUpIcon
-                aria-hidden="true"
-                className="size-5 shrink-0"
-              />
-              Projections dashboard
-            </Link>
-          </div>
-          <ProjectionWorkspace
-            iamId={iamId}
-            onDeleted={async () => {
-              await navigate({
-                params: { iamId },
-                search: {},
-                to: '/projections/$iamId',
-              });
-              // Remove only after the detail observer has left, avoiding a deleted-plan refetch.
-              queryClient.removeQueries({
-                exact: true,
-                queryKey: options.queryKey,
-              });
-            }}
-            onDuplicated={
-              featureEnabled
-                ? async (saved) => {
-                    await navigate({
-                      params: { iamId, projectionId: String(saved.id) },
-                      search: {},
-                      to: '/projections/$iamId/$projectionId',
-                    });
-                  }
-                : undefined
-            }
-            onNavigate={(location, replace = false) => {
-              void navigate({
-                replace,
-                // Source selection focuses its forecast card; do not reset that scroll to the page top.
-                resetScroll: !(
-                  location.section === 'overview' &&
-                  location.source !== undefined
-                ),
-                search: () => location,
-              });
-            }}
-            planPath={`/projections/${encodeURIComponent(iamId)}/${projectionId}`}
-            search={search}
-          />
-        </main>
-      </ProjectionPortfolioLayout>
+      <main className="container scroll-mt-24 bg-base-100 pt-12 pb-12 text-base leading-normal text-base-content [&_button:enabled]:cursor-pointer">
+        <div>
+          {!featureEnabled && <ProjectionSessionNotice />}
+          <Link
+            className="btn mb-4 gap-2"
+            params={{ iamId }}
+            to="/projections/$iamId"
+          >
+            <ArrowTrendingUpIcon
+              aria-hidden="true"
+              className="size-5 shrink-0"
+            />
+            Projections dashboard
+          </Link>
+        </div>
+        <ProjectionWorkspace
+          iamId={iamId}
+          onDeleted={async () => {
+            await navigate({
+              params: { iamId },
+              search: {},
+              to: '/projections/$iamId',
+            });
+            // Remove only after the detail observer has left, avoiding a deleted-plan refetch.
+            queryClient.removeQueries({
+              exact: true,
+              queryKey: options.queryKey,
+            });
+          }}
+          onDuplicated={
+            featureEnabled
+              ? async (saved) => {
+                  await navigate({
+                    params: { iamId, projectionId: String(saved.id) },
+                    search: {},
+                    to: '/projections/$iamId/$projectionId',
+                  });
+                }
+              : undefined
+          }
+          onNavigate={(location, replace = false) => {
+            void navigate({
+              replace,
+              // Source selection focuses its forecast card; do not reset that scroll to the page top.
+              resetScroll: !(
+                location.section === 'overview' && location.source !== undefined
+              ),
+              search: () => location,
+            });
+          }}
+          planPath={`/projections/${encodeURIComponent(iamId)}/${projectionId}`}
+          search={search}
+        />
+      </main>
     </ProjectionSessionProvider>
   );
 }

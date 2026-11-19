@@ -1,4 +1,3 @@
-import { ProjectionPortfolioLayout } from '@/components/projections/ProjectionPortfolioLayout.tsx';
 import { PlusIcon } from '@heroicons/react/24/outline';
 import { useEffect, useRef, useState } from 'react';
 import { useQuery, useSuspenseQuery } from '@tanstack/react-query';
@@ -47,15 +46,7 @@ export const Route = createFileRoute('/(authenticated)/projections/$iamId/')({
 function RouteComponent() {
   const { iamId } = Route.useParams();
   const user = useUser();
-  const { data: flags } = useFeatureFlagsQuery();
-  return (
-    <ProjectionPortfolioLayout
-      enabled={!!flags?.projectionsEnabled}
-      iamId={iamId}
-    >
-      <ProjectionDashboard iamId={iamId} key={`${user.id}:${iamId}`} />
-    </ProjectionPortfolioLayout>
-  );
+  return <ProjectionDashboard iamId={iamId} key={`${user.id}:${iamId}`} />;
 }
 
 function ProjectionDashboard({ iamId }: { iamId: string }) {
@@ -84,7 +75,7 @@ function ProjectionDashboard({ iamId }: { iamId: string }) {
 
   if (creating) {
     return (
-      <main>
+      <main className="container">
         {!flags?.projectionsEnabled && <ProjectionSessionNotice />}
         <NewProjectionWizard
           iamId={iamId}
@@ -135,8 +126,8 @@ function ProjectionList({
     ? `${ownerName.slice(ownerName.indexOf(',') + 1).trim()} ${ownerName.slice(0, ownerName.indexOf(',')).trim()}`
     : ownerName;
   return (
-    <main className="scroll-mt-24 bg-base-100 text-base leading-normal text-base-content [&_button:enabled]:cursor-pointer">
-      <div className="py-6 pb-12">
+    <main className="container scroll-mt-24 bg-base-100 text-base leading-normal text-base-content [&_button:enabled]:cursor-pointer">
+      <div className="pt-12 pb-12">
         <div className="@container min-w-0">
           <header className="mb-6 flex flex-wrap items-start justify-between gap-4 md:items-center">
             <div>
@@ -192,6 +183,10 @@ function ProjectionList({
               <p>No saved plans yet. Start with New plan.</p>
             )}
           </section>
+          <p className="mt-4 text-sm leading-relaxed text-base-content/80">
+            Plans are shared with people who can access this PI’s portfolio. Use
+            Save plan to keep your changes.
+          </p>
         </div>
       </div>
     </main>

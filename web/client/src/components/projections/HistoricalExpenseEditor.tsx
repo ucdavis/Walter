@@ -128,7 +128,7 @@ export function HistoricalExpenseEditor({
           )}
         </form.Field>
         <button
-          className="btn btn-outline btn-sm"
+          className="btn btn-sm"
           onClick={() => {
             form.setFieldValue('amount', '0.00');
             form.setFieldValue('forceZero', true);

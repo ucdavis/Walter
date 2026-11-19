@@ -26,7 +26,7 @@ export function PlanDurationField({
           ))}
         </select>
       </label>
-      <p className="text-xs text-base-content/60">
+      <p className="text-sm text-base-content/80">
         Starts in the original snapshot month.
       </p>
     </div>
@@ -59,7 +59,7 @@ export function PlanNotesField({
           value={value}
         />
       </label>
-      <p className="text-xs text-base-content/60">
+      <p className="text-sm text-base-content/80">
         Visible to everyone who can view this plan. Up to{' '}
         {MAX_PLAN_NOTES_LENGTH.toLocaleString()} characters.
       </p>

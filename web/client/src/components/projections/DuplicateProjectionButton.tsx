@@ -100,7 +100,7 @@ export function DuplicateProjectionButton({
                 ? `Retry duplicate ${projection.name}`
                 : `Duplicate ${projection.name}`
         }
-        className="btn btn-outline"
+        className="btn"
         disabled={disabled || duplicate.isPending}
         onClick={() => void copy()}
         title={

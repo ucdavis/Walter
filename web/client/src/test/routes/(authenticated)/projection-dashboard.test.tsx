@@ -260,6 +260,7 @@ describe('projection dashboard', () => {
         capturedAt: '2026-11-09T12:00:00.1234567Z',
         projectName: 'Field study',
         projectNumber: 'P1',
+        projectType: 'Sponsored',
         taskName: 'Fieldwork',
         taskNumber: 'T1',
       },
@@ -268,6 +269,7 @@ describe('projection dashboard', () => {
         capturedAt: '2026-11-09T12:00:00.1234567Z',
         projectName: 'Field study',
         projectNumber: 'P1',
+        projectType: 'Sponsored',
         taskName: 'Analysis',
         taskNumber: 'T2',
       },
@@ -276,6 +278,7 @@ describe('projection dashboard', () => {
         capturedAt: '2026-11-09T12:00:00.1234567Z',
         projectName: 'Teaching',
         projectNumber: 'P2',
+        projectType: 'Internal',
         taskName: null,
         taskNumber: 'T1',
       },
@@ -406,8 +409,8 @@ describe('projection dashboard', () => {
         )
       ).toBeInTheDocument();
       expect(
-        screen.getByRole('navigation', { name: 'Plan navigation' })
-      ).toBeInTheDocument();
+        screen.queryByRole('navigation', { name: 'Plan navigation' })
+      ).not.toBeInTheDocument();
       expect(within(shortCard).getAllByRole('link')).toHaveLength(1);
       const graph = within(shortCard).getByRole('img');
       const ending = within(shortCard).getByText('Ending balance');

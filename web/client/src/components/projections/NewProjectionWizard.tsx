@@ -3,6 +3,7 @@ import {
   ArrowRightIcon,
   ArrowTrendingUpIcon,
   CheckIcon,
+  PencilSquareIcon,
 } from '@heroicons/react/24/outline';
 import {
   PlanDurationField,
@@ -546,7 +547,7 @@ export function NewProjectionWizard({
       )}
       {step === 0 && !loading && !session && (
         <button
-          className="btn btn-secondary mt-5"
+          className="btn btn-primary mt-5"
           onClick={() => void captureFunding()}
           type="button"
         >
@@ -564,18 +565,18 @@ export function NewProjectionWizard({
           {error}
         </p>
       )}
-      <div className="mt-8 flex flex-wrap items-center justify-between gap-4 border-t border-main-border pt-6">
+      <footer className="mt-8 grid grid-cols-2 items-center gap-4 border-t border-main-border pt-6 sm:grid-cols-[auto_minmax(0,1fr)_auto]">
         <button
-          className="btn btn-ghost"
+          className="btn btn-ghost justify-self-start text-base-content/80"
           onClick={() => (hasWork() ? setCancelRequested(true) : leave())}
           type="button"
         >
           Cancel setup
         </button>
-        <p className="hidden text-sm text-base-content/60 lg:block">
+        <p className="order-3 col-span-2 text-center text-sm leading-relaxed text-base-content/80 sm:order-none sm:col-span-1">
           You can revisit every assumption in your workspace.
         </p>
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap justify-end gap-3">
           {step > 0 && (
             <button
               className="btn btn-ghost"
@@ -594,7 +595,7 @@ export function NewProjectionWizard({
           )}
           {returningToReview && step < 3 && (
             <button
-              className="btn btn-outline"
+              className="btn"
               disabled={
                 Boolean(detailsValidationMessage) ||
                 loading ||
@@ -608,7 +609,7 @@ export function NewProjectionWizard({
           )}
           {step === 0 ? (
             <button
-              className="btn btn-primary"
+              className="btn btn-primary h-auto min-h-12 py-3 text-center whitespace-normal"
               disabled={
                 loading || !session || Boolean(detailsValidationMessage)
               }
@@ -620,7 +621,7 @@ export function NewProjectionWizard({
             </button>
           ) : step < 3 ? (
             <button
-              className="btn btn-primary"
+              className="btn btn-primary h-auto min-h-12 py-3 text-center whitespace-normal"
               onClick={() => navigateStep(step + 1)}
               type="button"
             >
@@ -629,7 +630,7 @@ export function NewProjectionWizard({
             </button>
           ) : (
             <button
-              className="btn btn-primary"
+              className="btn btn-primary h-auto min-h-12 py-3 text-center whitespace-normal"
               disabled={create.isPending || Boolean(validationMessage)}
               onClick={() => void finish()}
               type="button"
@@ -644,7 +645,7 @@ export function NewProjectionWizard({
             </button>
           )}
         </div>
-      </div>
+      </footer>
 
       {(cancelRequested || blocker.status === 'blocked') && (
         <ProjectionDialog
@@ -717,10 +718,11 @@ function PlanStep({
       <div>
         <button
           aria-expanded={notesOpen}
-          className="link link-primary text-sm"
+          className="btn"
           onClick={() => setNotesOpen((current) => !current)}
           type="button"
         >
+          <PencilSquareIcon aria-hidden="true" className="size-5" />
           {notesOpen
             ? 'Hide note'
             : notes

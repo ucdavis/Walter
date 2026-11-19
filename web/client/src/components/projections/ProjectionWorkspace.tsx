@@ -267,7 +267,7 @@ export function ProjectionWorkspace({
           <div className="flex flex-wrap items-center gap-2">
             <button
               aria-label="Edit plan details"
-              className="btn btn-outline"
+              className="btn"
               onClick={() => setEditingDetails(true)}
               type="button"
             >
@@ -344,7 +344,7 @@ export function ProjectionWorkspace({
             ).map(({ Icon, label, section }) => (
               <button
                 aria-current={location.section === section ? 'page' : undefined}
-                className={`btn join-item flex-1 gap-2 px-3 text-base whitespace-nowrap ${location.section === section ? 'btn-primary' : 'btn-outline border-main-border'}`}
+                className={`btn join-item flex-1 gap-2 px-3 text-base whitespace-nowrap ${location.section === section ? 'btn-primary' : ''}`}
                 key={section}
                 onClick={() =>
                   onNavigate(
@@ -376,7 +376,7 @@ export function ProjectionWorkspace({
               </p>
             ))}
             <button
-              className="btn btn-outline mt-4"
+              className="btn mt-4"
               onClick={() => onNavigate({ section: 'overview' }, true)}
               type="button"
             >

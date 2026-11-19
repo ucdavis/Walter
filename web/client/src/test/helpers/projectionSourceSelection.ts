@@ -7,17 +7,17 @@ export async function chooseInitialProjects(
   projects: string[]
 ) {
   const search = await screen.findByRole('searchbox', {
-    name: 'Choose from your projects',
+    name: 'Search funding sources',
   });
   for (const project of projects) {
     await user.clear(search);
     await user.type(search, project);
     const results = screen.getByRole('region', {
-      name: `${project} search results`,
+      name: `${project} funding sources`,
     });
     await user.click(
-      within(results).getByRole('button', {
-        name: /^(Add all \d+ tasks|Add source)$/,
+      within(results).getByRole('checkbox', {
+        name: `Include all sources for ${project}`,
       })
     );
   }

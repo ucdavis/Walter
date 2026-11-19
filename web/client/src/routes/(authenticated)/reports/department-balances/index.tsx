@@ -801,7 +801,7 @@ function RouteComponent() {
                           <label className="label cursor-pointer justify-start gap-3">
                             <input
                               checked={dimensions.includes(d.key)}
-                              className="checkbox checkbox-primary checkbox-sm"
+                              className="checkbox checkbox-sm"
                               disabled={department.length === 0}
                               onChange={(e) =>
                                 setDimensions(

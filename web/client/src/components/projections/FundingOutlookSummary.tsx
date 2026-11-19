@@ -127,7 +127,7 @@ export function FundingOutlookNotice({
                   ? `View category balances for ${first.label}`
                   : `Explore ${first.label}`
               }
-              className="btn btn-outline btn-sm self-start sm:self-auto"
+              className="btn btn-sm self-start sm:self-auto"
               onClick={() =>
                 categoryFirst && onViewCategoryBalances
                   ? onViewCategoryBalances(first.source.id)
@@ -153,7 +153,7 @@ export function FundingOutlookNotice({
               . Unallocated shares do not charge a funding source.
             </p>
             <button
-              className="btn btn-outline btn-sm self-start sm:self-auto"
+              className="btn btn-sm self-start sm:self-auto"
               onClick={() => onNavigate({ section: 'staffing' })}
               type="button"
             >

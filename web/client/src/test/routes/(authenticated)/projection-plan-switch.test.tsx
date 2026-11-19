@@ -131,16 +131,16 @@ describe('switching saved projection plans', () => {
       await user.click(screen.getByRole('button', { name: 'Save plan' }));
       await waitFor(() => expect(requests).toHaveLength(1));
 
-      const navigation = screen.getByRole('navigation', {
-        name: 'Plan navigation',
+      await act(async () => {
+        void route.router.navigate({
+          params: { iamId: 'IAM-PREVIEW', projectionId: String(second.id) },
+          search: { section: 'staffing' },
+          to: '/projections/$iamId/$projectionId',
+        });
       });
-      await user.click(
-        within(navigation).getByRole('link', { name: 'Second plan' })
-      );
       await screen.findByRole('dialog', { name: 'Leave while saving?' });
       await user.click(screen.getByRole('button', { name: 'Leave anyway' }));
       await screen.findByRole('heading', { name: 'Second plan' });
-      await user.click(screen.getByRole('button', { name: 'Staffing' }));
       expect(screen.getByText('$180,000 annual salary')).toBeInTheDocument();
 
       await act(async () => finishFirst());

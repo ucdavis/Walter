@@ -130,7 +130,7 @@ export function SourceBudgetEditor({
       {!action ? (
         <div className="flex flex-wrap gap-2">
           <button
-            className="btn btn-outline btn-sm"
+            className="btn btn-sm"
             onClick={() => {
               setAction('move');
               onPendingChange(true);
@@ -141,7 +141,7 @@ export function SourceBudgetEditor({
             Move budget
           </button>
           <button
-            className="btn btn-outline btn-sm"
+            className="btn btn-sm"
             onClick={() => {
               setAction('adjust');
               onPendingChange(true);
