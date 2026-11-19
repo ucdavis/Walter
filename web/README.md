@@ -205,7 +205,7 @@ Outside of local dev, `/login` behaves like the normal auth entrypoint (OIDC cha
 
 Setting `FeatureFlags:DemoDataEnabled` (env `FeatureFlags__DemoDataEnabled=true`) serves a fictional PI and three fictional projects from memory, for demos. It is on in Development and off everywhere else unless set. The setting is read at startup, so changing it needs a restart.
 
-Open the demo PI at `/projects/DEMO000001`; the project, burndown, project costs, and projections pages work from there. The projects are `DEMO-1001`, `DEMO-1002` (runs out of money), and `DEMO-1004`. A second demo PI, `/projects/DEMO000003`, has `DEMO-1003`.
+Open the demo PI at `/projects/DEMO000001`; the project, burndown, project costs, and projections pages work from there. The projects are `SP0DEMO101`, `SP0DEMO102` (runs out of money), and `FPDEMO0104`. A second demo PI, `/projects/DEMO000003`, has `SP0DEMO103`.
 
 The demo project manager's page is `/principalInvestigators/DEMO000002`, which lists both demo PIs.
 
