@@ -238,7 +238,12 @@ describe('funding source selection and grouping', () => {
   it('keeps saved source removal behind confirmation and does not reset saved funding', async () => {
     const user = userEvent.setup();
     render(<Harness initial={false} />);
-    expect(screen.getAllByRole('article')).toHaveLength(3);
+    expect(screen.getAllByRole('button', { name: /^Edit / })).toHaveLength(3);
+    expect(screen.queryByRole('article')).not.toBeInTheDocument();
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /^Select all$/ })
+    ).not.toBeInTheDocument();
     await user.click(
       screen.getByRole('button', {
         name: 'Edit Renamed fieldwork · Task 01 · Fieldwork',
@@ -250,7 +255,7 @@ describe('funding source selection and grouping', () => {
     const dialog = screen.getByRole('dialog');
     expect(dialog).toHaveTextContent('those funding shares become unallocated');
     await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
-    expect(screen.getAllByRole('article')).toHaveLength(3);
+    expect(screen.getAllByRole('button', { name: /^Edit / })).toHaveLength(3);
     await user.click(
       screen.getByRole('button', {
         name: 'Remove funding source',
@@ -261,10 +266,10 @@ describe('funding source selection and grouping', () => {
         name: /^Remove$/,
       })
     );
-    expect(screen.getAllByRole('article')).toHaveLength(2);
+    expect(screen.getAllByRole('button', { name: /^Edit / })).toHaveLength(2);
     expect(
-      screen.getByRole('article', {
-        name: 'Analysis · Task 02 · Analysis funding source',
+      screen.getByRole('region', {
+        name: 'Coastal research funding sources',
       })
     ).toHaveTextContent('P100');
   });

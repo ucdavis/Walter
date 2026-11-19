@@ -602,7 +602,9 @@ describe('funding source lifecycle', () => {
       );
       await user.click(
         within(
-          screen.getByRole('region', { name: 'Project A funding sources' })
+          within(
+            screen.getByRole('dialog', { name: 'Add funding sources' })
+          ).getByRole('region', { name: 'Project A funding sources' })
         ).getByRole('checkbox', { name: /Include .*Task T2/ })
       );
       await user.click(screen.getByRole('button', { name: 'Add 1 source' }));

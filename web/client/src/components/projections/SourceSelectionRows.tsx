@@ -22,11 +22,13 @@ export function SourceSelectionRows({
   choices,
   onChange,
   renderDetails,
+  selectable = true,
   selected,
 }: {
   choices: SourceSelectionChoice[];
   onChange: (keys: string[]) => void;
   renderDetails?: (choice: SourceSelectionChoice) => ReactNode;
+  selectable?: boolean;
   selected: string[];
 }) {
   const [search, setSearch] = useState('');
@@ -101,26 +103,34 @@ export function SourceSelectionRows({
             value={search}
           />
         </label>
-        <div aria-label="Funding source view" className="join" role="group">
-          <button
-            aria-pressed={!selectedOnly}
-            className={`btn btn-sm join-item ${!selectedOnly ? 'btn-primary' : 'btn-ghost'}`}
-            onClick={() => setSelectedOnly(false)}
-            type="button"
-          >
-            Browse all
-          </button>
-          <button
-            aria-pressed={selectedOnly}
-            className={`btn btn-sm join-item ${selectedOnly ? 'btn-primary' : 'btn-ghost'}`}
-            onClick={() => setSelectedOnly(true)}
-            type="button"
-          >
-            Selected · {selected.length}
-          </button>
-        </div>
+        {selectable && (
+          <div aria-label="Funding source view" className="join" role="group">
+            <button
+              aria-pressed={!selectedOnly}
+              className={`btn btn-sm join-item ${!selectedOnly ? 'btn-primary' : 'btn-ghost'}`}
+              onClick={() => setSelectedOnly(false)}
+              type="button"
+            >
+              Browse all
+            </button>
+            <button
+              aria-pressed={selectedOnly}
+              className={`btn btn-sm join-item ${selectedOnly ? 'btn-primary' : 'btn-ghost'}`}
+              onClick={() => setSelectedOnly(true)}
+              type="button"
+            >
+              Selected · {selected.length}
+            </button>
+          </div>
+        )}
       </div>
-      <div className="max-h-[65dvh] overflow-y-auto overscroll-contain">
+      <div
+        className={
+          selectable
+            ? 'max-h-[65dvh] overflow-y-auto overscroll-contain'
+            : undefined
+        }
+      >
         {visibleGroups.length === 0 && (
           <p
             className="px-4 py-8 text-center text-sm text-base-content/80"
@@ -150,19 +160,21 @@ export function SourceSelectionRows({
               key={key}
             >
               <div className="flex flex-wrap items-center gap-3 px-3 py-4">
-                <input
-                  aria-label={`Include all sources for ${name}`}
-                  checked={allSelected}
-                  className="checkbox checkbox-sm mt-0.5 shrink-0"
-                  disabled={available.length === 0}
-                  onChange={(event) => toggle(group, event.target.checked)}
-                  ref={(input) => {
-                    if (input) {
-                      input.indeterminate = count > 0 && !allSelected;
-                    }
-                  }}
-                  type="checkbox"
-                />
+                {selectable && (
+                  <input
+                    aria-label={`Include all sources for ${name}`}
+                    checked={allSelected}
+                    className="checkbox checkbox-sm mt-0.5 shrink-0"
+                    disabled={available.length === 0}
+                    onChange={(event) => toggle(group, event.target.checked)}
+                    ref={(input) => {
+                      if (input) {
+                        input.indeterminate = count > 0 && !allSelected;
+                      }
+                    }}
+                    type="checkbox"
+                  />
+                )}
                 <div className="min-w-40 flex-1">
                   <h3 className="text-sm font-semibold break-words">{name}</h3>
                   <p className="mt-1 text-xs text-base-content/80">
@@ -204,7 +216,9 @@ export function SourceSelectionRows({
                     }
                     type="button"
                   >
-                    {count} of {group.length} tasks
+                    {selectable
+                      ? `${count} of ${group.length} tasks`
+                      : `${group.length} tasks`}
                     <ChevronDownIcon
                       aria-hidden="true"
                       className={`size-4 ${expanded ? 'rotate-180' : ''}`}
@@ -224,25 +238,27 @@ export function SourceSelectionRows({
                 )}
               </div>
               {hasTasks && expanded && (
-                <div className="pb-3 pl-10 pr-3" id={tasksId}>
-                  <div className="mb-2 flex gap-4 text-xs">
-                    <button
-                      className="link link-primary"
-                      disabled={available.length === 0}
-                      onClick={() => toggle(group, true)}
-                      type="button"
-                    >
-                      Select all {group.length}
-                    </button>
-                    <button
-                      className="link link-primary"
-                      disabled={count === 0}
-                      onClick={() => toggle(group, false)}
-                      type="button"
-                    >
-                      Clear
-                    </button>
-                  </div>
+                <div className={`pb-3 pr-3 ${selectable ? 'pl-10' : ''}`} id={tasksId}>
+                  {selectable && (
+                    <div className="mb-2 flex gap-4 text-xs">
+                      <button
+                        className="link link-primary"
+                        disabled={available.length === 0}
+                        onClick={() => toggle(group, true)}
+                        type="button"
+                      >
+                        Select all {group.length}
+                      </button>
+                      <button
+                        className="link link-primary"
+                        disabled={count === 0}
+                        onClick={() => toggle(group, false)}
+                        type="button"
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  )}
                   <ul className="divide-y divide-main-border">
                     {visible.map((choice) => (
                       <li
@@ -250,20 +266,22 @@ export function SourceSelectionRows({
                         key={choice.key}
                       >
                         <label
-                          className={`flex min-w-40 flex-1 cursor-pointer items-start gap-3 px-3 py-2.5 text-sm hover:bg-base-200 ${selectedKeys.has(choice.key) ? 'bg-primary/5' : ''} ${choice.disabled ? 'cursor-default text-base-content/80' : ''}`}
+                          className={`flex min-w-40 flex-1 ${selectable ? 'cursor-pointer' : ''} items-start gap-3 px-3 py-2.5 text-sm hover:bg-base-200 ${selectedKeys.has(choice.key) ? 'bg-primary/5' : ''} ${choice.disabled ? 'cursor-default text-base-content/80' : ''}`}
                         >
-                          <input
-                            aria-label={`Include ${choice.label}`}
-                            checked={
-                              choice.disabled || selectedKeys.has(choice.key)
-                            }
-                            className="checkbox checkbox-sm shrink-0"
-                            disabled={choice.disabled}
-                            onChange={(event) =>
-                              toggle([choice], event.target.checked)
-                            }
-                            type="checkbox"
-                          />
+                          {selectable && (
+                            <input
+                              aria-label={`Include ${choice.label}`}
+                              checked={
+                                choice.disabled || selectedKeys.has(choice.key)
+                              }
+                              className="checkbox checkbox-sm shrink-0"
+                              disabled={choice.disabled}
+                              onChange={(event) =>
+                                toggle([choice], event.target.checked)
+                              }
+                              type="checkbox"
+                            />
+                          )}
                           <span className="min-w-0 flex-1 break-words">
                             {choice.taskName || choice.label}
                             {choice.disabled && (
@@ -295,32 +313,34 @@ export function SourceSelectionRows({
           );
         })}
       </div>
-      <div className="flex flex-wrap items-center gap-3 border-t border-main-border pt-4 text-sm">
-        <p className="font-semibold" role="status">
-          {selected.length} {selected.length === 1 ? 'source' : 'sources'}{' '}
-          across {projectCount} {projectCount === 1 ? 'project' : 'projects'}
-        </p>
-        <button
-          className="link link-primary"
-          disabled={
-            !choices.some(
-              (choice) => !choice.disabled && !selectedKeys.has(choice.key)
-            )
-          }
-          onClick={() => toggle(choices, true)}
-          type="button"
-        >
-          Select all
-        </button>
-        <button
-          className="link link-primary"
-          disabled={selected.length === 0}
-          onClick={() => toggle(choices, false)}
-          type="button"
-        >
-          Clear all
-        </button>
-      </div>
+      {selectable && (
+        <div className="flex flex-wrap items-center gap-3 border-t border-main-border pt-4 text-sm">
+          <p className="font-semibold" role="status">
+            {selected.length} {selected.length === 1 ? 'source' : 'sources'}{' '}
+            across {projectCount} {projectCount === 1 ? 'project' : 'projects'}
+          </p>
+          <button
+            className="link link-primary"
+            disabled={
+              !choices.some(
+                (choice) => !choice.disabled && !selectedKeys.has(choice.key)
+              )
+            }
+            onClick={() => toggle(choices, true)}
+            type="button"
+          >
+            Select all
+          </button>
+          <button
+            className="link link-primary"
+            disabled={selected.length === 0}
+            onClick={() => toggle(choices, false)}
+            type="button"
+          >
+            Clear all
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,7 +1,6 @@
 import { BanknotesIcon, PlusIcon } from '@heroicons/react/24/outline';
 import { useImperativeHandle, useRef, useState, type Ref } from 'react';
 import { ProjectionDialog } from '@/components/projections/ProjectionDialog.tsx';
-import { FundingSourceList } from '@/components/projections/FundingSourceList.tsx';
 import {
   SourceEditor,
   type SourceEditorHandle,
@@ -113,67 +112,52 @@ export function FundingSourcesEditor<T extends ProjectionDraft>({
           )}
         </div>
       </div>
-      {initialSelection ? (
-        <SourceSelectionRows
-          choices={choices.map((source) => ({
-            balance: sourcePlanningBalance(source),
-            key: String(source.id),
-            label: sourceLabel(source),
-            projectName: source.projectName,
-            projectNumber: source.projectNumber,
-            projectType: source.projectType,
-            searchText: [
-              source.awardName,
-              source.awardNumber,
-              source.projectType,
-            ]
-              .filter(Boolean)
-              .join(' '),
-            taskName:
-              source.name !== source.projectName
-                ? source.name
-                : source.taskName,
-            taskNumber: source.taskNumber,
-          }))}
-          onChange={(keys) => initialSelection.onChange(keys.map(Number))}
-          renderDetails={(choice) => {
-            const source = choices.find(({ id }) => String(id) === choice.key)!;
-            const window = getSourceForecastWindow(source, forecastWindow);
-            return (
-              <>
-                {(window.isBeyondForecast ||
-                  window.startMonth > window.endMonth) && (
-                  <span className="text-xs text-base-content/80">
-                    Outside this forecast
-                  </span>
-                )}
-                <button
-                  aria-haspopup="dialog"
-                  aria-label={`Edit ${sourceLabel(source)}`}
-                  className="btn btn-ghost btn-sm text-primary"
-                  onClick={() =>
-                    sourceTarget
-                      ? sourceTarget.onChange(source.id)
-                      : setEditing(source.id)
-                  }
-                  type="button"
-                >
-                  Edit details
-                </button>
-              </>
-            );
-          }}
-          selected={initialSelection.ids.map(String)}
-        />
-      ) : (
-        <FundingSourceList
-          forecastWindow={forecastWindow}
-          onEdit={(id) =>
-            sourceTarget ? sourceTarget.onChange(id) : setEditing(id)
-          }
-          sources={draft.content.fundingSources}
-        />
-      )}
+      <SourceSelectionRows
+        choices={choices.map((source) => ({
+          balance: sourcePlanningBalance(source),
+          key: String(source.id),
+          label: sourceLabel(source),
+          projectName: source.projectName,
+          projectNumber: source.projectNumber,
+          projectType: source.projectType,
+          searchText: [source.awardName, source.awardNumber, source.projectType]
+            .filter(Boolean)
+            .join(' '),
+          taskName:
+            source.name !== source.projectName ? source.name : source.taskName,
+          taskNumber: source.taskNumber,
+        }))}
+        onChange={(keys) => initialSelection?.onChange(keys.map(Number))}
+        renderDetails={(choice) => {
+          const source = choices.find(({ id }) => String(id) === choice.key)!;
+          const window = getSourceForecastWindow(source, forecastWindow);
+          return (
+            <>
+              {(window.isBeyondForecast ||
+                window.startMonth > window.endMonth) && (
+                <span className="text-xs text-base-content/80">
+                  Outside this forecast
+                </span>
+              )}
+              <button
+                aria-haspopup="dialog"
+                aria-label={`Edit ${sourceLabel(source)}`}
+                className="btn btn-ghost btn-sm text-primary"
+                onClick={() =>
+                  sourceTarget
+                    ? sourceTarget.onChange(source.id)
+                    : setEditing(source.id)
+                }
+                type="button"
+              >
+                Edit details
+              </button>
+            </>
+          );
+        }}
+        selectable={Boolean(initialSelection)}
+        selected={initialSelection?.ids.map(String) ?? []}
+      />
       {initialSelection && (
         <button
           className="btn mt-4"
