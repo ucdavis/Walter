@@ -3,7 +3,7 @@ using server.core.Services;
 
 namespace Server.Demo;
 
-/// <summary>Answers DEMO-prefixed ids from in-memory demo data and sends every other id to the datamart.</summary>
+/// <summary>Answers DEMO-prefixed ids and the demo project numbers from in-memory demo data and sends every other id to the datamart.</summary>
 public sealed class DemoDataRouter(
     IDatamartService datamart,
     IPpmPortfolioReader reader,
@@ -11,7 +11,8 @@ public sealed class DemoDataRouter(
     DemoDataSource demo) : IDatamartService, IPpmPortfolioReader, IProjectionDataSource
 {
     private static bool IsDemo(string? id) =>
-        id?.TrimStart().StartsWith("DEMO", StringComparison.OrdinalIgnoreCase) == true;
+        id?.Trim() is { } trimmed
+        && (trimmed.StartsWith("DEMO", StringComparison.OrdinalIgnoreCase) || DemoDataSet.IsProjectNumber(trimmed));
 
     public Task<IReadOnlyList<ProjectSearchRecord>> SearchProjectsAsync(string fuzzyQuery, string exactProjectNumber, CancellationToken ct = default) =>
         datamart.SearchProjectsAsync(fuzzyQuery, exactProjectNumber, ct);

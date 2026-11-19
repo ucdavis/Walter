@@ -26,12 +26,16 @@ public static class DemoDataSet
         new() { IamId = "DEMO000103", EmployeeId = "DEMO0103", Name = "Morgan Makebelieve", Email = "morgan.makebelieve@example.invalid" },
     ];
 
-    private static (string Number, string Name, string Pi, bool Internal, int EndMonth, decimal BudgetMonths, decimal Salary, decimal Supplies)[] Projects() =>
+    /// <summary>True for the demo project numbers, which do not all carry the DEMO prefix.</summary>
+    internal static bool IsProjectNumber(string id) =>
+        Projects().Any(p => string.Equals(p.Number, id, StringComparison.OrdinalIgnoreCase));
+
+    private static (string Number, string Task, string Name, string Pi, bool Internal, int EndMonth, decimal BudgetMonths, decimal Salary, decimal Supplies)[] Projects() =>
     [
-        ("DEMO-1001", "Sky Garden Demonstration Research", PiEmployeeId, false, 18, 48m, 2500m, 500m),
-        ("DEMO-1002", "Rainbow Soil Demonstration Study", PiEmployeeId, false, 2, 16m, 2500m, 1500m),
-        ("DEMO-1003", "Moon Orchard Demonstration Research", SecondPiEmployeeId, false, 12, 30m, 6000m, 800m),
-        ("DEMO-1004", "Imaginary Laboratory Start-up", PiEmployeeId, true, 24, 24m, 2000m, 400m),
+        ("SP0DEMO101", "1", "Sky Garden Demonstration Research", PiEmployeeId, false, 18, 48m, 2500m, 500m),
+        ("SP0DEMO102", "1", "Rainbow Soil Demonstration Study", PiEmployeeId, false, 2, 16m, 2500m, 1500m),
+        ("SP0DEMO103", "1", "Moon Orchard Demonstration Research", SecondPiEmployeeId, false, 12, 30m, 6000m, 800m),
+        ("FPDEMO0104", "TSKDEM", "Imaginary Laboratory Start-up", PiEmployeeId, true, 24, 24m, 2000m, 400m),
     ];
 
     internal static PpmProjectMembership[] CreateMemberships()
@@ -59,18 +63,18 @@ public static class DemoDataSet
             ProjectStatus = "ACTIVE", ProjectOwningOrgCode = "DEMO-DEPT",
             ProjectOwningOrg = "Department of Imaginary Research",
             ProjectStartDate = month.AddMonths(-12), ProjectEndDate = month.AddMonths(project.EndMonth),
-            AwardNumber = project.Internal ? null : $"DEMO-AWARD-{project.Number[^4..]}",
+            AwardNumber = project.Internal ? null : $"DEMO-AWARD-{project.Number[^3..]}",
             AwardName = project.Internal ? null : $"Fictional {project.Name} Award",
             AwardStartDate = project.Internal ? null : month.AddMonths(-12),
             AwardEndDate = project.Internal ? null : month.AddMonths(project.EndMonth),
             AwardType = project.Internal ? null : "Grant", AwardStatus = project.Internal ? null : "ACTIVE",
             AwardPi = project.Internal ? null : people[project.Pi].Name,
-            TaskNum = "1", TaskName = "Demonstration Research", TaskStatus = "ACTIVE",
+            TaskNum = project.Task, TaskName = "Demonstration Research", TaskStatus = "ACTIVE",
             Pi = people[project.Pi].Name, Pm = people[PmEmployeeId].Name, PmEmployeeId = PmEmployeeId,
             OwnerName = people[project.Pi].Name, Pa = "Alex Example Administrator",
             GrantAdministrator = "Alex Example Administrator", ContractAdministrator = "Alex Example Administrator",
             PrimarySponsorName = project.Internal ? null : "Imaginary Research Foundation",
-            SponsorAwardNumber = project.Internal ? null : $"FICTION-{project.Number[^4..]}",
+            SponsorAwardNumber = project.Internal ? null : $"FICTION-{project.Number[^3..]}",
             ExpenditureCategoryName = category.Category,
             FundCode = "DEMO-FUND", FundDesc = "Fictional Research Fund", ProjectFund = "DEMO-FUND",
             PurposeCode = "DEMO-PURPOSE", PurposeDesc = "Demonstration Research",
@@ -94,8 +98,8 @@ public static class DemoDataSet
         {
             var employeeId = project.Number switch
             {
-                "DEMO-1003" => "DEMO0102",
-                "DEMO-1004" => "DEMO0103",
+                "SP0DEMO103" => "DEMO0102",
+                "FPDEMO0104" => "DEMO0103",
                 _ => "DEMO0101",
             };
             var rate = employeeId == "DEMO0102" ? 7500m : employeeId == "DEMO0103" ? 4000m : 5000m;
@@ -103,7 +107,7 @@ public static class DemoDataSet
             return new PositionBudgetRecord
             {
                 EmployeeId = employeeId, Name = people[employeeId].Name, PositionNumber = $"POS-{employeeId}",
-                ProjectId = project.Number, ProjectDescription = project.Name, Task = "1",
+                ProjectId = project.Number, ProjectDescription = project.Name, Task = project.Task,
                 ProjectType = project.Internal ? "Internal" : "Sponsored", PositionDescription = "Fictional Research Specialist",
                 JobCode = "DEMO-JOB", MonthlyRate = rate, Fte = fte,
                 DistributionPercent = 100m * project.Salary / (rate * fte), CompositeBenefitRate = 0.3m,

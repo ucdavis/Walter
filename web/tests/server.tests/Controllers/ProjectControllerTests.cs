@@ -474,9 +474,9 @@ public sealed class ProjectControllerTests
         var portfolio = await controller.GetByIamIdAsync(DemoDataSet.PiIamId, default);
 
         portfolio.Should().BeOfType<OkObjectResult>().Which.Value.Should().BeAssignableTo<IEnumerable<FacultyPortfolioRecord>>()
-            .Which.Select(r => r.ProjectNumber).Distinct().Should().BeEquivalentTo(["DEMO-1001", "DEMO-1002", "DEMO-1004"]);
+            .Which.Select(r => r.ProjectNumber).Distinct().Should().BeEquivalentTo(["SP0DEMO101", "SP0DEMO102", "FPDEMO0104"]);
         foreach (var endpoint in new[] { "byNumber", "personnel", "transactions", "reconciliation", "projection", "costs" })
-            (await InvokeProjectEndpoint(controller, endpoint, "DEMO-1001", null)).Should().BeOfType<OkObjectResult>();
+            (await InvokeProjectEndpoint(controller, endpoint, "SP0DEMO101", null)).Should().BeOfType<OkObjectResult>();
 
         var managed = await controller.GetManagedFaculty(DemoDataSet.PmIamId, default);
 

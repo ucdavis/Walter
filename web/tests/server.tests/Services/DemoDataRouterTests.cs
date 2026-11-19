@@ -39,10 +39,10 @@ public sealed class DemoDataRouterTests
 
         (await router.GetSearchablePersonByIamIdAsync(DemoDataSet.PiIamId))!.Name.Should().Be("Professor Ada Example");
         (await router.GetSearchablePersonByEmployeeIdAsync(DemoDataSet.PiEmployeeId))!.IamId.Should().Be(DemoDataSet.PiIamId);
-        (await router.GetProjectCostsAsync("DEMO-1001")).Should().NotBeEmpty();
-        (await router.GetProjectProjectionAsync("DEMO-1001", 3)).Categories.Should().NotBeEmpty();
-        (await router.GetFacultyPortfolioAsync(["DEMO-1001"])).Should().NotBeEmpty();
-        (await router.GetPositionBudgetsAsync(["DEMO-1001"])).Should().NotBeEmpty();
+        (await router.GetProjectCostsAsync("SP0DEMO101")).Should().NotBeEmpty();
+        (await router.GetProjectProjectionAsync("SP0DEMO101", 3)).Categories.Should().NotBeEmpty();
+        (await router.GetFacultyPortfolioAsync(["SP0DEMO101"])).Should().NotBeEmpty();
+        (await router.GetPositionBudgetsAsync(["SP0DEMO101"])).Should().NotBeEmpty();
         datamart.ReportCalls.Should().Be(0);
     }
 
@@ -73,9 +73,9 @@ public sealed class DemoDataRouterTests
     {
         var datamart = new FakeDatamartService(portfolio: [new FacultyPortfolioRecord { ProjectNumber = "REAL-1" }]);
 
-        var rows = await Router(datamart).GetFacultyPortfolioAsync(["REAL-1", "DEMO-1001"]);
+        var rows = await Router(datamart).GetFacultyPortfolioAsync(["REAL-1", "SP0DEMO101"]);
 
-        rows.Select(r => r.ProjectNumber).Distinct().Should().BeEquivalentTo(["REAL-1", "DEMO-1001"]);
+        rows.Select(r => r.ProjectNumber).Distinct().Should().BeEquivalentTo(["REAL-1", "SP0DEMO101"]);
     }
 
     [Fact]
@@ -84,7 +84,7 @@ public sealed class DemoDataRouterTests
         var router = Router();
 
         (await router.GetEmployeeProjectsAsync(DemoDataSet.PiEmployeeId, PpmRole.PrincipalInvestigator)).Should().HaveCount(3);
-        (await router.GetProjectTeamAsync("DEMO-1001", PpmRole.PrincipalInvestigator))
+        (await router.GetProjectTeamAsync("SP0DEMO101", PpmRole.PrincipalInvestigator))
             .Should().ContainSingle().Which.EmployeeId.Should().Be(DemoDataSet.PiEmployeeId);
         _reader.MembershipCalls.Should().Be(0);
         _reader.TeamCalls.Should().Be(0);
@@ -131,7 +131,7 @@ public sealed class DemoDataRouterTests
             DemoDataSet.PiEmployeeId, 3, null, null, default);
         var content = response.Draft.Content;
 
-        content.FundingSources.Select(p => p.ProjectNumber).Should().BeEquivalentTo(["DEMO-1001", "DEMO-1002", "DEMO-1004"]);
+        content.FundingSources.Select(p => p.ProjectNumber).Should().BeEquivalentTo(["SP0DEMO101", "SP0DEMO102", "FPDEMO0104"]);
         content.FundingSources.Should().OnlyContain(p => p.Budgets.Count == 3 && p.Actuals.Count > 0
             && p.RunRates.Count > 0);
         var sourceIds = content.FundingSources.Select(p => (int?)p.Id).ToList();

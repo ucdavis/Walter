@@ -6,7 +6,7 @@ namespace server.tests.Services;
 
 public sealed class DemoDataSourceTests
 {
-    private static readonly string[] Projects = ["DEMO-1001", "DEMO-1002", "DEMO-1004"];
+    private static readonly string[] Projects = ["SP0DEMO101", "SP0DEMO102", "FPDEMO0104"];
 
     private readonly DemoDataSource _data = new(new DateTime(2027, 1, 15));
 
@@ -33,11 +33,11 @@ public sealed class DemoDataSourceTests
         var person = await _data.GetSearchablePersonByIamIdAsync("DEMO000003");
         var projects = await _data.GetEmployeeProjectsAsync(person!.EmployeeId, PpmRole.PrincipalInvestigator);
 
-        projects.Should().ContainSingle().Which.ProjectNumber.Should().Be("DEMO-1003");
-        (await _data.GetFacultyPortfolioAsync(["DEMO-1003"])).Should().NotBeEmpty().And.OnlyContain(r => r.Pi == person.Name);
-        (await _data.GetPositionBudgetsAsync(["DEMO-1003"])).Should().ContainSingle().Which.Name.Should().Be("Casey Placeholder");
+        projects.Should().ContainSingle().Which.ProjectNumber.Should().Be("SP0DEMO103");
+        (await _data.GetFacultyPortfolioAsync(["SP0DEMO103"])).Should().NotBeEmpty().And.OnlyContain(r => r.Pi == person.Name);
+        (await _data.GetPositionBudgetsAsync(["SP0DEMO103"])).Should().ContainSingle().Which.Name.Should().Be("Casey Placeholder");
         (await _data.GetProjectionSeedAsync(person.EmployeeId)).Projects.Should().ContainSingle()
-            .Which.ProjectNumber.Should().Be("DEMO-1003");
+            .Which.ProjectNumber.Should().Be("SP0DEMO103");
     }
 
     [Fact]
@@ -50,28 +50,28 @@ public sealed class DemoDataSourceTests
         (await _data.GetPositionBudgetsAsync(["REAL-PROJECT"])).Should().BeEmpty();
         (await _data.GetProjectCostsAsync("REAL-PROJECT")).Should().BeEmpty();
         (await _data.GetProjectProjectionAsync("REAL-PROJECT", 3)).Categories.Should().BeEmpty();
-        (await _data.GetFacultyPortfolioAsync(["REAL-PROJECT", "DEMO-1001"]))
-            .Should().OnlyContain(p => p.ProjectNumber == "DEMO-1001");
+        (await _data.GetFacultyPortfolioAsync(["REAL-PROJECT", "SP0DEMO101"]))
+            .Should().OnlyContain(p => p.ProjectNumber == "SP0DEMO101");
     }
 
     [Fact]
     public async Task Responses_are_fresh_so_enrichment_cannot_change_other_requests()
     {
-        var first = await _data.GetFacultyPortfolioAsync(["DEMO-1001"]);
+        var first = await _data.GetFacultyPortfolioAsync(["SP0DEMO101"]);
         first[0].OwnerName = "Changed by a caller";
         first[0].PpmBudget = -1m;
 
-        var next = await _data.GetFacultyPortfolioAsync(["DEMO-1001"]);
+        var next = await _data.GetFacultyPortfolioAsync(["SP0DEMO101"]);
 
         next[0].OwnerName.Should().Be("Professor Ada Example");
         next[0].PpmBudget.Should().BePositive();
     }
 
     [Theory]
-    [InlineData("DEMO-1001")]
-    [InlineData("DEMO-1002")]
-    [InlineData("DEMO-1003")]
-    [InlineData("DEMO-1004")]
+    [InlineData("SP0DEMO101")]
+    [InlineData("SP0DEMO102")]
+    [InlineData("SP0DEMO103")]
+    [InlineData("FPDEMO0104")]
     public async Task Costs_personnel_and_burndown_agree_with_the_portfolio(string project)
     {
         var rows = await _data.GetFacultyPortfolioAsync([project]);
@@ -92,12 +92,12 @@ public sealed class DemoDataSourceTests
     [InlineData(12)]
     public async Task Burndown_honors_history_and_only_the_short_project_runs_out(int history)
     {
-        var shortfall = await _data.GetProjectProjectionAsync("DEMO-1002", history);
+        var shortfall = await _data.GetProjectProjectionAsync("SP0DEMO102", history);
         shortfall.Periods.Should().HaveCount(shortfall.Categories.Count * (history + 13));
         shortfall.Periods.Count(p => p.Kind == "actual").Should().Be(shortfall.Categories.Count * history);
         shortfall.Periods.Should().Contain(p => p.Remaining < 0m);
 
-        var healthy = await _data.GetProjectProjectionAsync("DEMO-1001", history);
+        var healthy = await _data.GetProjectProjectionAsync("SP0DEMO101", history);
         healthy.Periods.Should().OnlyContain(p => p.Remaining > 0m);
     }
 
@@ -106,7 +106,8 @@ public sealed class DemoDataSourceTests
     {
         var seed = await _data.GetProjectionSeedAsync(DemoDataSet.PiEmployeeId);
         seed.Projects.Select(p => p.ProjectNumber).Should().BeEquivalentTo(Projects);
-        seed.Projects.Should().OnlyContain(p => p.TaskNumber == "1" && p.EndDate > p.StartDate);
+        seed.Projects.Should().OnlyContain(p => p.EndDate > p.StartDate);
+        seed.Projects.Select(p => p.TaskNumber).Should().BeEquivalentTo(["1", "1", "TSKDEM"]);
 
         var none = await _data.GetProjectionSeedAsync("12345678");
         none.Projects.Should().BeEmpty();
@@ -116,9 +117,9 @@ public sealed class DemoDataSourceTests
     }
 
     [Theory]
-    [InlineData("DEMO-1001")]
-    [InlineData("DEMO-1002")]
-    [InlineData("DEMO-1004")]
+    [InlineData("SP0DEMO101")]
+    [InlineData("SP0DEMO102")]
+    [InlineData("FPDEMO0104")]
     public async Task Projection_seed_budgets_and_actuals_match_the_portfolio(string project)
     {
         var seed = await _data.GetProjectionSeedAsync(DemoDataSet.PiEmployeeId);
@@ -154,7 +155,7 @@ public sealed class DemoDataSourceTests
     [Fact]
     public async Task Expenditure_categories_use_names_from_the_real_category_list()
     {
-        var rows = await _data.GetFacultyPortfolioAsync(["DEMO-1001"]);
+        var rows = await _data.GetFacultyPortfolioAsync(["SP0DEMO101"]);
         rows.Select(r => r.ExpenditureCategoryName).Should().BeEquivalentTo(
             ["01 - Salaries and Wages", "02 - Fringe Benefits", "03 - Supplies / Services / Other Expenses"]);
     }
@@ -163,7 +164,7 @@ public sealed class DemoDataSourceTests
     public async Task Dates_follow_the_current_month_when_no_reference_date_is_given()
     {
         var now = DateTime.UtcNow;
-        var rows = await new DemoDataSource().GetFacultyPortfolioAsync(["DEMO-1001"]);
+        var rows = await new DemoDataSource().GetFacultyPortfolioAsync(["SP0DEMO101"]);
 
         // Allows for a month rollover between the two clock reads.
         var start = rows[0].ProjectStartDate!.Value.AddMonths(12);
