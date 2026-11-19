@@ -193,7 +193,8 @@ describe('saved projection route', () => {
       });
       await user.click(screen.getByRole('button', { name: 'Overview' }));
       await user.click(screen.getByRole('button', { name: 'Staffing' }));
-      expect(membershipReads).toBe(0);
+      // The sidebar may reload its plan list without interrupting the draft.
+      await waitFor(() => expect(membershipReads).toBe(1));
       await user.click(
         screen.getByRole('button', {
           name: 'Edit appointment for Alex Example',

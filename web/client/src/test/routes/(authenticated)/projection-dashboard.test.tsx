@@ -406,8 +406,8 @@ describe('projection dashboard', () => {
         )
       ).toBeInTheDocument();
       expect(
-        screen.queryByRole('navigation', { name: 'Plan navigation' })
-      ).not.toBeInTheDocument();
+        screen.getByRole('navigation', { name: 'Plan navigation' })
+      ).toBeInTheDocument();
       expect(within(shortCard).getAllByRole('link')).toHaveLength(1);
       const graph = within(shortCard).getByRole('img');
       const ending = within(shortCard).getByText('Ending balance');
