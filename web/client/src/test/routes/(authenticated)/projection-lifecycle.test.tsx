@@ -335,7 +335,9 @@ describe('projection creation and copies', () => {
       ).toBeInTheDocument();
       expect(screen.getByText('18-month plan')).toBeInTheDocument();
       await user.click(screen.getByRole('button', { name: 'Funding sources' }));
-      await user.click(screen.getByRole('button', { name: 'Edit Project A' }));
+      await user.click(
+        screen.getByRole('button', { name: 'Edit details for Project A' })
+      );
       await user.type(screen.getByLabelText('Source name'), ' edited');
       await user.click(screen.getByRole('button', { name: 'Review' }));
       expect(screen.getByRole('dialog')).toBeInTheDocument();
@@ -866,7 +868,8 @@ describe('projection creation and copies', () => {
       expect(screen.getByLabelText('View expenses for')).toHaveValue('');
       await user.click(
         screen.getByRole('button', {
-          name: `Edit historical amount for ${category}`,
+          name: (name) =>
+            name.endsWith(`Edit historical amount for ${category}`),
         })
       );
       await user.clear(screen.getByLabelText('Monthly amount'));

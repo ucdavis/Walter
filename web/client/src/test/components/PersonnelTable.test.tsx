@@ -363,6 +363,13 @@ describe('PersonnelTable', () => {
     expect(footer).toHaveTextContent('$3,000.00');
     expect(footer).toHaveTextContent('$1,000.00');
     expect(footer).toHaveTextContent('$4,000.00');
+    expect(
+      within(footer).getByRole('rowheader', {
+        name: 'Funding Distribution Totals',
+      })
+    ).toHaveAttribute('scope', 'row');
+    expect(within(footer).getAllByRole('cell')).toHaveLength(3);
+    expect(within(footer).queryByRole('columnheader')).not.toBeInTheDocument();
 
     await user.click(
       screen.getByRole('button', { name: 'Smith, John (1001) - PROF-FY' })
@@ -1065,7 +1072,16 @@ describe('PersonnelTable', () => {
         screen.getByRole('button', { name: /Smith/ }).closest('tbody')!
       ).getByText('Smith funding')
     ).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Sort descending' }));
+    await user.click(
+      screen.getByRole('button', {
+        name: 'Ascending; switch to descending order',
+      })
+    );
+    expect(
+      screen.getByRole('button', {
+        name: 'Descending; switch to ascending order',
+      })
+    ).toHaveTextContent('Descending');
     expect(names()[0]).toContain('Baker');
     await user.selectOptions(
       screen.getByRole('combobox', { name: 'Sort personnel by' }),

@@ -1,5 +1,5 @@
 import { createElement } from 'react';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { User } from '@/queries/user.ts';
@@ -64,6 +64,16 @@ describe('isLocalLoopbackHost', () => {
 describe('UserAvatar', () => {
   beforeEach(() => {
     mockUser = defaultUser;
+  });
+
+  it('includes the visible initials in the local login link name after a photo fails', () => {
+    render(createElement(UserAvatar));
+    fireEvent.error(screen.getByRole('img', { name: 'User avatar' }));
+    const link = screen.getByRole('link', {
+      name: 'User avatar TU: Open local login chooser',
+    });
+    expect(link).toHaveTextContent('TU');
+    expect(link).toHaveAttribute('href', '/login');
   });
 
   it('shows the profile photo with one styled tooltip', async () => {

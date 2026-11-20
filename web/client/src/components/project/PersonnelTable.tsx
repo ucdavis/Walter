@@ -742,7 +742,11 @@ export function PersonnelTable({ data }: PersonnelTableProps) {
               ))}
             </select>
             <button
-              aria-label={sortDescending ? 'Sort ascending' : 'Sort descending'}
+              aria-label={
+                sortDescending
+                  ? 'Descending; switch to ascending order'
+                  : 'Ascending; switch to descending order'
+              }
               className="btn btn-sm"
               onClick={() => setSortDescending((current) => !current)}
               type="button"
@@ -896,31 +900,33 @@ export function PersonnelTable({ data }: PersonnelTableProps) {
             )}
             <tfoot>
               <tr className="totaltr">
-                <th colSpan={6}>Funding Distribution Totals</th>
-                <th className="text-right">
+                <th colSpan={6} scope="row">
+                  Funding Distribution Totals
+                </th>
+                <td className="text-right">
                   {formatCurrency(
                     sumCurrentDistributions(
                       filteredPositions,
                       (d) => d.monthlyRate
                     )
                   )}
-                </th>
-                <th className="text-right">
+                </td>
+                <td className="text-right">
                   {formatCurrency(
                     sumCurrentDistributions(
                       filteredPositions,
                       (d) => d.monthlyFringe
                     )
                   )}
-                </th>
-                <th className="text-right">
+                </td>
+                <td className="text-right">
                   {formatCurrency(
                     sumCurrentDistributions(
                       filteredPositions,
                       (d) => d.monthlyTotal
                     )
                   )}
-                </th>
+                </td>
               </tr>
             </tfoot>
           </table>

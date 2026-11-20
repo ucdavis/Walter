@@ -398,7 +398,7 @@ describe('funding source selection and grouping', () => {
     expect(selected).toHaveTextContent('$20,000');
     expect(
       within(selected).getByRole('button', {
-        name: 'Edit Equipment · Task 01 · Equipment',
+        name: 'Edit details for Equipment · Task 01 · Equipment',
       })
     ).toBeVisible();
     expect(
@@ -432,7 +432,7 @@ describe('funding source selection and grouping', () => {
     expect(screen.queryByText('Funding details')).not.toBeInTheDocument();
     await user.click(
       within(coastal).getByRole('button', {
-        name: 'Edit Renamed fieldwork · Task 01 · Fieldwork',
+        name: 'Edit details for Renamed fieldwork · Task 01 · Fieldwork',
       })
     );
     await user.clear(screen.getByRole('textbox', { name: 'Planning balance' }));
@@ -491,7 +491,9 @@ describe('funding source selection and grouping', () => {
     expect(screen.getAllByText('Project renewal')).toHaveLength(1);
     expect(within(card).getByText('$42,000')).toBeVisible();
     expect(
-      within(card).getByRole('button', { name: 'Edit Project renewal' })
+      within(card).getByRole('button', {
+        name: 'Edit details for Project renewal',
+      })
     ).toBeVisible();
     expect(
       within(card).queryByRole('button', { name: /Remove/ })
@@ -508,7 +510,7 @@ describe('funding source selection and grouping', () => {
     expect(screen.getAllByRole('article')).toHaveLength(3);
     await user.click(
       screen.getByRole('button', {
-        name: 'Edit Renamed fieldwork · Task 01 · Fieldwork',
+        name: 'Edit details for Renamed fieldwork · Task 01 · Fieldwork',
       })
     );
     await user.click(

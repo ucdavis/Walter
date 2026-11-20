@@ -1,5 +1,6 @@
 import { useFieldContext } from './formContext.tsx';
 import { FieldWrapper } from './FieldWrapper.tsx';
+import { useId } from 'react';
 
 interface SelectFieldProps {
   label: string;
@@ -9,14 +10,19 @@ interface SelectFieldProps {
 
 export function SelectField({ label, options, placeholder }: SelectFieldProps) {
   const field = useFieldContext<string>();
+  const inputId = useId();
   const hasError = field.state.meta.isTouched && !field.state.meta.isValid;
 
   return (
-    <FieldWrapper label={label}>
+    <FieldWrapper inputId={inputId} label={label}>
       <select
+        aria-describedby={hasError ? `${inputId}-error` : undefined}
+        aria-invalid={hasError}
         className={`select select-bordered w-full ${
           hasError ? 'select-error' : ''
         }`}
+        id={inputId}
+        onBlur={field.handleBlur}
         onChange={(e) => field.handleChange(e.target.value)}
         value={field.state.value || ''}
       >

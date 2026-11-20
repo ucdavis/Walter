@@ -146,7 +146,7 @@ export function ProjectionExpensesTable({
                 <td className="text-right whitespace-nowrap tabular-nums">
                   <button
                     aria-haspopup="dialog"
-                    aria-label={`Edit historical amount for ${row.expenditureCategory}`}
+                    aria-label={`${money(row.effectiveAmount)} /mo: Edit historical amount for ${row.expenditureCategory}`}
                     className="input input-sm w-36 justify-end gap-1 text-right tabular-nums"
                     onClick={() =>
                       onEditHistorical(source.id, row.expenditureCategory)

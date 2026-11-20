@@ -163,10 +163,10 @@ export function ExpensesValue({
     <Link
       aria-label={
         category
-          ? `View project costs for ${category}`
+          ? `${formattedValue}: View project costs for ${category}`
           : task
-            ? `View project costs for task ${task}`
-            : 'View all project costs'
+            ? `${formattedValue}: View project costs for task ${task}`
+            : `${formattedValue}: View all project costs`
       }
       className="link underline underline-offset-2"
       params={{ iamId, projectNumber }}

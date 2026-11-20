@@ -40,6 +40,9 @@ describe('funding availability in cards', () => {
           source={source}
         />
       );
+      expect(
+        screen.getByRole('button', { name: /^Edit details for / })
+      ).toHaveTextContent('Edit details');
       if (text) {
         expect(screen.getByText(text, { exact: false })).toBeInTheDocument();
       } else {

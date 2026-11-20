@@ -236,7 +236,9 @@ describe('funding outlook', () => {
       '1 source has category budget shortfalls'
     );
     expect(
-      within(summary).getByRole('button', { name: 'Explore Source 1 · Task 1' })
+      within(summary).getByRole('button', {
+        name: 'Explore funding source Source 1 · Task 1',
+      })
     ).toBeInTheDocument();
   });
 

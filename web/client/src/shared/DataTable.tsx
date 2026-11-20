@@ -203,6 +203,7 @@ export const DataTable = <TData extends object>({
           </g>
         </svg>
         <input
+          aria-label={filterPlaceholder}
           className="grow"
           onChange={(e) => table.setGlobalFilter(e.target.value)}
           placeholder={filterPlaceholder}
@@ -211,6 +212,7 @@ export const DataTable = <TData extends object>({
         />
         {hasFilterValue ? (
           <button
+            aria-label="Clear table search"
             className="btn btn-ghost btn-sm btn-circle"
             onClick={() => table.setGlobalFilter('')}
             type="button"
@@ -382,6 +384,13 @@ export const DataTable = <TData extends object>({
                 <tr key={headerGroup.id}>
                   {headerGroup.headers.map((header) => (
                     <th
+                      aria-sort={
+                        header.column.getIsSorted() === 'asc'
+                          ? 'ascending'
+                          : header.column.getIsSorted() === 'desc'
+                            ? 'descending'
+                            : undefined
+                      }
                       className={
                         header.column.getCanSort()
                           ? 'cursor-pointer select-none'
@@ -394,7 +403,23 @@ export const DataTable = <TData extends object>({
                           ? header.column.getToggleSortingHandler()
                           : undefined
                       }
+                      onKeyDown={(event) => {
+                        if (
+                          event.target === event.currentTarget &&
+                          header.column.getCanSort() &&
+                          (event.key === 'Enter' || event.key === ' ')
+                        ) {
+                          event.preventDefault();
+                          header.column.getToggleSortingHandler()?.(event);
+                        }
+                      }}
+                      scope="col"
                       style={{ width: header.getSize() }}
+                      tabIndex={
+                        header.column.getCanSort() && !header.isPlaceholder
+                          ? 0
+                          : undefined
+                      }
                     >
                       <div className="flex flex-nowrap items-center gap-1 w-full">
                         <div className="flex-1 min-w-0">

@@ -11,10 +11,10 @@
   --color-primary-color: #2459a6;
   --color-secondary-color: #916600;
   --color-accent-color: #a34272;
-  --color-error-color: #bd3038;
+  --color-error-color: #a51d2d;
   --color-info-color: #006f85;
   --color-success-color: #24734b;
-  --color-warning-color: #a65400;
+  --color-warning-color: #c05200;
   --color-neutral-color: #4b5563;
 }
 
@@ -334,6 +334,12 @@
 
 .personnel-reverse-table > thead > tr > th {
   padding: 12px;
+}
+
+.personnel-reverse-table > tfoot > .totaltr > th,
+.personnel-reverse-table > tfoot > .totaltr > td {
+  border-top: 1px solid var(--color-main-border);
+  border-bottom: 1px solid var(--color-main-border);
 }
 
 .personnel-reverse-table > .personnel-row-group > tr > td {

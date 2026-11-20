@@ -125,7 +125,7 @@ export function FundingOutlookNotice({
               aria-label={
                 categoryFirst
                   ? `View category balances for ${first.label}`
-                  : `Explore ${first.label}`
+                  : `Explore funding source ${first.label}`
               }
               className="btn btn-outline btn-sm self-start sm:self-auto"
               onClick={() =>

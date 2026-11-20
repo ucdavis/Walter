@@ -484,7 +484,7 @@ describe('funding source lifecycle', () => {
       ).toBeInTheDocument();
       expect(
         screen.getByRole('button', {
-          name: /Edit Field research.*Task T1/,
+          name: /Edit details for Field research.*Task T1/,
         })
       ).toBeInTheDocument();
       expect(

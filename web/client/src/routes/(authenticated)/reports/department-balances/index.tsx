@@ -629,6 +629,7 @@ function RouteComponent() {
                         </span>
                       </label>
                       <MultiSelectFilter
+                        label="Financial Department"
                         loading={deptOptions.isPending}
                         onChange={handleDeptChange}
                         options={toFilterOptions(deptOptions.data, true)}
@@ -662,6 +663,7 @@ function RouteComponent() {
                       </label>
                       <MultiSelectFilter
                         disabled={department.length === 0}
+                        label="Entity"
                         loading={entityOptions.isFetching}
                         onChange={(vals) => setFilter('entities', vals)}
                         options={toFilterOptions(entityOptions.data)}
@@ -678,6 +680,7 @@ function RouteComponent() {
                       </label>
                       <MultiSelectFilter
                         disabled={department.length === 0}
+                        label="Fund"
                         loading={fundOptions.isFetching}
                         onChange={(vals) => setFilter('funds', vals)}
                         options={toFilterOptions(fundOptions.data, true)}
@@ -694,6 +697,7 @@ function RouteComponent() {
                       </label>
                       <MultiSelectFilter
                         disabled={department.length === 0}
+                        label="Account"
                         loading={accountOptions.isFetching}
                         onChange={(vals) => setFilter('accounts', vals)}
                         options={toFilterOptions(accountOptions.data, true)}
@@ -710,6 +714,7 @@ function RouteComponent() {
                       </label>
                       <MultiSelectFilter
                         disabled={department.length === 0}
+                        label="Purpose"
                         loading={purposeOptions.isFetching}
                         onChange={(vals) => setFilter('purposes', vals)}
                         options={toFilterOptions(purposeOptions.data)}
@@ -726,6 +731,7 @@ function RouteComponent() {
                       </label>
                       <MultiSelectFilter
                         disabled={department.length === 0}
+                        label="Program"
                         loading={programOptions.isFetching}
                         onChange={(vals) => setFilter('programs', vals)}
                         options={toFilterOptions(programOptions.data)}
@@ -742,6 +748,7 @@ function RouteComponent() {
                       </label>
                       <MultiSelectFilter
                         disabled={department.length === 0}
+                        label="Project"
                         loading={projectOptions.isFetching}
                         onChange={(vals) => setFilter('projects', vals)}
                         options={toFilterOptions(projectOptions.data)}
@@ -758,6 +765,7 @@ function RouteComponent() {
                       </label>
                       <MultiSelectFilter
                         disabled={department.length === 0}
+                        label="Activity"
                         loading={activityOptions.isFetching}
                         onChange={(vals) => setFilter('activities', vals)}
                         options={toFilterOptions(activityOptions.data)}

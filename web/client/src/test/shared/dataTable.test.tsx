@@ -18,6 +18,53 @@ const columns: ColumnDef<Row>[] = [
 ];
 
 describe('DataTable expandable overlay', () => {
+  it('sorts columns with Enter and Space and exposes the direction', async () => {
+    const user = userEvent.setup();
+    render(
+      <DataTable
+        columns={columns}
+        data={[
+          { name: 'B', value: 2 },
+          { name: 'A', value: 1 },
+        ]}
+        expandable={false}
+        globalFilter="none"
+      />
+    );
+    const header = screen.getByRole('columnheader', { name: 'Name' });
+    await user.tab();
+    expect(header).toHaveFocus();
+    await user.keyboard('{Enter}');
+    expect(header).toHaveAttribute('aria-sort', 'ascending');
+    expect(screen.getAllByRole('row')[1]).toHaveTextContent('A');
+    await user.keyboard(' ');
+    expect(header).toHaveAttribute('aria-sort', 'descending');
+    expect(screen.getAllByRole('row')[1]).toHaveTextContent('B');
+  });
+  it('exposes a named search and clears its filter with the keyboard', async () => {
+    const user = userEvent.setup();
+    render(
+      <DataTable
+        columns={columns}
+        data={[
+          { name: 'Row1', value: 1 },
+          { name: 'Row2', value: 2 },
+        ]}
+      />
+    );
+    const search = screen.getByRole('textbox', {
+      name: 'Search all columns...',
+    });
+    await user.type(search, 'Row1');
+    expect(screen.queryByText('Row2')).not.toBeInTheDocument();
+    await user.tab();
+    expect(
+      screen.getByRole('button', { name: 'Clear table search' })
+    ).toHaveFocus();
+    await user.keyboard('{Enter}');
+    expect(search).toHaveValue('');
+    expect(screen.getByText('Row2')).toBeInTheDocument();
+  });
   it('expands into an overlay and locks body scroll', async () => {
     const user = userEvent.setup();
 
@@ -61,7 +108,9 @@ describe('DataTable expandable overlay', () => {
     await user.click(screen.getByRole('button', { name: /collapse table/i }));
 
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: /expand table/i })).toBeVisible()
+      expect(
+        screen.getByRole('button', { name: /expand table/i })
+      ).toBeVisible()
     );
 
     expect(screen.getByPlaceholderText('Search all columns...')).toHaveValue(
@@ -140,7 +189,10 @@ describe('DataTable tableActions', () => {
       screen.queryByRole('button', { name: 'Filtered Action' })
     ).not.toBeInTheDocument();
 
-    await user.type(screen.getByPlaceholderText('Search all columns...'), 'Row1');
+    await user.type(
+      screen.getByPlaceholderText('Search all columns...'),
+      'Row1'
+    );
 
     expect(
       screen.getByRole('button', { name: 'Filtered Action' })
@@ -168,7 +220,9 @@ describe('DataTable row expansion', () => {
       />
     );
 
-    const expandAllButton = screen.getByRole('button', { name: /expand all rows/i });
+    const expandAllButton = screen.getByRole('button', {
+      name: /expand all rows/i,
+    });
     expect(expandAllButton).toHaveTextContent('Expand all');
 
     await user.click(expandAllButton);
@@ -178,7 +232,9 @@ describe('DataTable row expansion', () => {
       screen.getByRole('button', { name: /collapse all rows/i })
     ).toHaveTextContent('Collapse all');
 
-    await user.click(screen.getByRole('button', { name: /collapse all rows/i }));
+    await user.click(
+      screen.getByRole('button', { name: /collapse all rows/i })
+    );
     expect(screen.queryByText('Expanded Row1')).not.toBeInTheDocument();
     expect(screen.queryByText('Expanded Row2')).not.toBeInTheDocument();
   });

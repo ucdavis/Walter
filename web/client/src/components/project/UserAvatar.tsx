@@ -104,7 +104,10 @@ export const UserAvatar: React.FC = () => {
   );
 
   const avatarContent = shouldLinkToLogin ? (
-    <a aria-label="Open local login chooser" href="/login">
+    <a
+      aria-label={`User avatar ${initials}: Open local login chooser`}
+      href="/login"
+    >
       {avatar}
     </a>
   ) : (

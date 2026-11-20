@@ -203,7 +203,9 @@ describe('projection plan header', () => {
       within(navigation).getByRole('button', { name: 'Staffing' })
     ).toHaveAttribute('aria-current', 'page');
     await user.click(
-      within(summary).getByRole('button', { name: 'Explore Project A' })
+      within(summary).getByRole('button', {
+        name: 'Explore funding source Project A',
+      })
     );
     expect(
       await screen.findByRole('heading', { name: 'Project A' })
@@ -221,7 +223,9 @@ describe('projection plan header', () => {
       ) & Node.DOCUMENT_POSITION_FOLLOWING
     ).toBeTruthy();
     await user.click(
-      within(summary).getByRole('button', { name: 'Explore Project A' })
+      within(summary).getByRole('button', {
+        name: 'Explore funding source Project A',
+      })
     );
     expect(sourceTitle).toHaveFocus();
     expect(read().location).toMatchObject({

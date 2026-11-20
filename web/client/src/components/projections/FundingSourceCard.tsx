@@ -95,7 +95,7 @@ export function FundingSourceCard({
           </dl>
           <button
             aria-haspopup="dialog"
-            aria-label={`Edit ${sourceLabel(source)}`}
+            aria-label={`Edit details for ${sourceLabel(source)}`}
             className="btn btn-ghost btn-sm gap-2 text-primary"
             onClick={() => onEdit(source.id)}
             type="button"

@@ -32,6 +32,7 @@ export interface FilterOption {
 interface MultiSelectFilterProps {
   disabled?: boolean;
   emptyText?: string;
+  label: string;
   loading?: boolean;
   /** Single-select when false: picking a value replaces the selection and closes. */
   multiple?: boolean;
@@ -51,6 +52,7 @@ interface MultiSelectFilterProps {
 export function MultiSelectFilter({
   disabled = false,
   emptyText = 'No matches',
+  label,
   loading = false,
   multiple = true,
   onChange,
@@ -88,7 +90,7 @@ export function MultiSelectFilter({
 
   const click = useClick(context, { enabled: !disabled });
   const dismiss = useDismiss(context);
-  const role = useRole(context, { role: 'listbox' });
+  const role = useRole(context, { role: 'dialog' });
   const { getFloatingProps, getReferenceProps } = useInteractions([
     click,
     dismiss,
@@ -129,10 +131,13 @@ export function MultiSelectFilter({
     <>
       <div
         aria-disabled={disabled}
+        aria-label={label}
         className={`flex min-h-10 w-full min-w-0 max-w-full flex-wrap items-center gap-1 overflow-x-hidden rounded-lg border border-base-300 bg-base-100 px-2 py-1.5 text-sm ${
           disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
         } ${open ? 'ring-2 ring-primary' : ''}`}
         ref={setReference}
+        role="combobox"
+        tabIndex={disabled ? -1 : 0}
         {...getReferenceProps()}
       >
         {selected.length === 0 ? (
@@ -182,6 +187,7 @@ export function MultiSelectFilter({
             modal={false}
           >
             <div
+              aria-label={`${label} options`}
               className="z-50 overflow-hidden rounded-box border border-base-300 bg-base-100 shadow-lg"
               ref={setFloating}
               style={floatingStyles}
@@ -194,16 +200,21 @@ export function MultiSelectFilter({
                 filter={(value, search) =>
                   value.toLowerCase().includes(search.toLowerCase()) ? 1 : 0
                 }
+                label={`Search ${label}`}
                 loop
               >
                 <div className="border-b border-base-200 p-2">
                   <Command.Input
+                    aria-label={`Search ${label}`}
                     className="input input-sm input-bordered w-full"
                     placeholder={searchPlaceholder}
                     ref={inputRef}
                   />
                 </div>
-                <Command.List className="overflow-y-auto p-1">
+                <Command.List
+                  className="overflow-y-auto p-1"
+                  label={`${label} choices`}
+                >
                   <Command.Empty className="px-2 py-4 text-center text-sm text-base-content/70">
                     {emptyText}
                   </Command.Empty>

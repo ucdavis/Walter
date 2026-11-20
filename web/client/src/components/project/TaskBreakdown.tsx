@@ -340,7 +340,7 @@ export function TaskBreakdown({
                 return (
                   <div className="flex justify-end w-full">
                     <Link
-                      aria-label={`View expenditure categories for task ${row.taskNum}`}
+                      aria-label={`Details: View expenditure categories for task ${row.taskNum}`}
                       className="link font-semibold text-sm whitespace-nowrap"
                       params={{ iamId, projectNumber }}
                       search={{

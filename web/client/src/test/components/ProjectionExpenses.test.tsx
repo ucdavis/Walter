@@ -152,11 +152,13 @@ describe('other expenses planning controls', () => {
     const plan = expensePlan();
     const { user } = openWorkspace(plan);
     await screen.findByText('No costs captured in this window');
-    await user.click(
-      screen.getByRole('button', {
-        name: `Edit historical amount for ${supplies}`,
-      })
+    const historicalAmount = screen.getByRole('button', {
+      name: (name) => name.endsWith(`Edit historical amount for ${supplies}`),
+    });
+    expect(historicalAmount).toHaveAccessibleName(
+      expect.stringContaining('$310 /mo')
     );
+    await user.click(historicalAmount);
     expect(screen.getByLabelText('Monthly amount')).toHaveValue('310.12');
     await user.click(screen.getByRole('button', { name: 'Apply amount' }));
     expect(read().revision).toBe(0);
@@ -190,7 +192,7 @@ describe('other expenses planning controls', () => {
     const { user } = openWorkspace();
     await user.click(
       await screen.findByRole('button', {
-        name: `Edit historical amount for ${supplies}`,
+        name: (name) => name.endsWith(`Edit historical amount for ${supplies}`),
       })
     );
     await enter(user, 'Monthly amount', '-20');
@@ -227,7 +229,7 @@ describe('other expenses planning controls', () => {
     const { user } = openWorkspace();
     await user.click(
       await screen.findByRole('button', {
-        name: `Edit historical amount for ${travel}`,
+        name: (name) => name.endsWith(`Edit historical amount for ${travel}`),
       })
     );
     expect(
@@ -242,7 +244,7 @@ describe('other expenses planning controls', () => {
     ).toEqual([]);
     await user.click(
       screen.getByRole('button', {
-        name: `Edit historical amount for ${travel}`,
+        name: (name) => name.endsWith(`Edit historical amount for ${travel}`),
       })
     );
     await user.click(screen.getByRole('button', { name: 'Turn off estimate' }));
@@ -270,7 +272,7 @@ describe('other expenses planning controls', () => {
     const { user } = openWorkspace(plan);
     await user.click(
       await screen.findByRole('button', {
-        name: `Edit historical amount for ${supplies}`,
+        name: (name) => name.endsWith(`Edit historical amount for ${supplies}`),
       })
     );
     expect(screen.getByLabelText('Monthly amount')).toHaveValue('0.00');
@@ -281,7 +283,7 @@ describe('other expenses planning controls', () => {
     ).toBe(0.004);
     await user.click(
       screen.getByRole('button', {
-        name: `Edit historical amount for ${supplies}`,
+        name: (name) => name.endsWith(`Edit historical amount for ${supplies}`),
       })
     );
     await user.click(screen.getByRole('button', { name: 'Turn off estimate' }));
@@ -883,7 +885,7 @@ describe('combined expense tables', () => {
     expect(read().draft.content.fundingSources[0]).toEqual(originalFirst);
     await user.click(
       within(sourceRow('Historical expense estimates')).getByRole('button', {
-        name: `Edit historical amount for ${supplies}`,
+        name: (name) => name.endsWith(`Edit historical amount for ${supplies}`),
       })
     );
     expect(screen.getByRole('dialog')).toHaveTextContent(

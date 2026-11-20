@@ -653,10 +653,10 @@ describe('project detail page', () => {
 
     try {
       const categoryExpenseLink = await screen.findByRole('link', {
-        name: 'View project costs for 07 - Travel',
+        name: /View project costs for 07 - Travel$/,
       });
       const totalExpensesLink = screen.getByRole('link', {
-        name: 'View all project costs',
+        name: /View all project costs$/,
       });
 
       expect(categoryExpenseLink).toHaveAttribute(
@@ -713,7 +713,7 @@ describe('project detail page', () => {
 
     try {
       const categoryExpenseLink = await screen.findByRole('link', {
-        name: 'View project costs for 04 - Equipment and Facilities',
+        name: /View project costs for 04 - Equipment and Facilities$/,
       });
 
       expect(categoryExpenseLink).toHaveAttribute(
@@ -757,15 +757,19 @@ describe('project detail page', () => {
 
     try {
       const taskExpenseLink = await screen.findByRole('link', {
-        name: 'View project costs for task T001',
+        name: /View project costs for task T001$/,
       });
+
+      expect(taskExpenseLink).toHaveAccessibleName(
+        expect.stringContaining(taskExpenseLink.textContent!.trim())
+      );
 
       expect(taskExpenseLink).toHaveAttribute(
         'href',
         '/projectcosts/1000/P1?task=T001'
       );
       expect(
-        screen.getByRole('link', { name: 'View all project costs' })
+        screen.getByRole('link', { name: /View all project costs$/ })
       ).toHaveAttribute('href', '/projectcosts/1000/P1');
 
       await user.click(taskExpenseLink);
@@ -839,18 +843,18 @@ describe('project detail page', () => {
         task: 'T002',
       });
       expect(
-        screen.getByRole('link', { name: 'View project costs for task T002' })
+        screen.getByRole('link', { name: /View project costs for task T002$/ })
       ).toHaveAttribute('href', '/projectcosts/1000/P1?task=T002');
 
       await user.click(screen.getByRole('link', { name: 'Project Details' }));
       expect(
         await screen.findByRole('link', {
-          name: 'View expenditure categories for task T001',
+          name: 'Details: View expenditure categories for task T001',
         })
       ).toBeInTheDocument();
       expect(
         screen.getByRole('link', {
-          name: 'View expenditure categories for task T002',
+          name: 'Details: View expenditure categories for task T002',
         })
       ).toBeInTheDocument();
     } finally {
@@ -913,7 +917,7 @@ describe('project detail page', () => {
     try {
       await user.click(
         await screen.findByRole('link', {
-          name: 'View expenditure categories for task T001',
+          name: 'Details: View expenditure categories for task T001',
         })
       );
 
@@ -931,12 +935,14 @@ describe('project detail page', () => {
       expect(screen.queryByText('01 - Salaries')).not.toBeInTheDocument();
       expect(
         await screen.findByRole('link', {
-          name: 'View project costs for task T001',
+          name: /View project costs for task T001$/,
         })
       ).toHaveAttribute('href', '/projectcosts/1000/P1?task=T001');
 
       await user.click(
-        screen.getByRole('link', { name: 'View project costs for 07 - Travel' })
+        screen.getByRole('link', {
+          name: /View project costs for 07 - Travel$/,
+        })
       );
 
       const projectCostsTable = await screen.findByTestId(
@@ -978,7 +984,7 @@ describe('project detail page', () => {
 
     try {
       const [blankActivityLink] = await screen.findAllByRole('link', {
-        name: 'View expenditure categories for task T001',
+        name: 'Details: View expenditure categories for task T001',
       });
       await user.click(blankActivityLink);
 
@@ -1233,11 +1239,11 @@ describe('project detail page', () => {
       ).not.toBeInTheDocument();
       expect(
         screen.queryByRole('link', {
-          name: 'View project costs for 07 - Travel',
+          name: /View project costs for 07 - Travel$/,
         })
       ).not.toBeInTheDocument();
       expect(
-        screen.queryByRole('link', { name: 'View all project costs' })
+        screen.queryByRole('link', { name: /View all project costs$/ })
       ).not.toBeInTheDocument();
       expect(screen.queryByText('Project Burndown')).not.toBeInTheDocument();
     } finally {
