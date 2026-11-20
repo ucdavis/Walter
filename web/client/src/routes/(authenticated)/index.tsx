@@ -175,7 +175,7 @@ function RouteComponent() {
                     {tab.id === 'alerts' &&
                       !alertsLoading &&
                       allAlerts.length > 0 && (
-                        <span className="badge badge-sm badge-warning ms-2">
+                        <span className="badge badge-soft badge-sm badge-warning ms-2">
                           {allAlerts.length}
                         </span>
                       )}

@@ -15,6 +15,10 @@ import {
 import { DataTable } from '@/shared/DataTable.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import { projectionSeriesColor } from '@/components/projections/projectionFormatting.ts';
+import {
+  PROJECT_SERIES_COLORS,
+  projectExpenditureCategoryColor,
+} from '@/components/project/projectChartColors.ts';
 import type { ColumnDef } from '@tanstack/react-table';
 
 export const Route = createFileRoute('/(authenticated)/styles')({
@@ -240,6 +244,59 @@ function RouteComponent() {
               </div>
             ))}
           </div>
+        </section>
+        <section aria-labelledby="spending-colors-title">
+          <h2 className="h2 mb-4" id="spending-colors-title">
+            Spending colors
+          </h2>
+          <div className="grid gap-4 sm:grid-cols-3">
+            {Object.entries(PROJECT_SERIES_COLORS).map(([name, color]) => (
+              <div key={name}>
+                <div
+                  className="h-12 rounded-sm"
+                  style={{ backgroundColor: color }}
+                />
+                <p className="mt-2 font-semibold">{name}</p>
+              </div>
+            ))}
+          </div>
+          {[
+            {
+              categories: ['01 - Salaries and Wages', '02 - Fringe Benefits'],
+              title: 'Personnel categories',
+            },
+            {
+              categories: [
+                '03 - Supplies / Services / Other Expenses',
+                '04 - Equipment and Facilities',
+                '05 - Contracts (Subrecipients)',
+                '06 - UC Multi-Campus',
+                '07 - Travel',
+                '08 - Fellowship & Scholarships',
+                '09 - Indirect Costs',
+                '99 - Uncategorized',
+              ],
+              title: 'Non-personnel categories',
+            },
+          ].map(({ categories, title }) => (
+            <div className="mt-6" key={title}>
+              <h3 className="font-semibold">{title}</h3>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                {categories.map((category) => (
+                  <div key={category}>
+                    <div
+                      className="h-12 rounded-sm"
+                      style={{
+                        backgroundColor:
+                          projectExpenditureCategoryColor(category),
+                      }}
+                    />
+                    <p className="mt-2 text-sm">{category}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
         </section>
         <section aria-labelledby="buttons-title">
           <h2 className="h2 mb-4" id="buttons-title">
