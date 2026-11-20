@@ -115,12 +115,12 @@ export function ProjectionExpensesTable({
                   )}
                 </th>
                 <td>
-                  <span
-                    className={`badge badge-soft badge-sm ${row.overrideAmount === null ? 'badge-neutral' : 'badge-primary'}`}
-                  >
-                    {row.overrideAmount === null ? 'Projected' : 'Custom'}
-                    {row.effectiveAmount === 0 ? ' · Off' : ''}
-                  </span>
+                  {row.overrideAmount !== null && (
+                    <span className="badge badge-soft badge-primary badge-sm">
+                      Custom
+                      {row.effectiveAmount === 0 ? ' · Off' : ''}
+                    </span>
+                  )}
                   <div className="mt-1">
                     <ExpenseSourceLink
                       onSelect={onSelectSource}
@@ -227,7 +227,7 @@ function ExpenseRows({
     <>
       <tr className="bg-base-200">
         <th colSpan={5} scope="rowgroup">
-          {kind === 'Monthly' ? 'Monthly expenses' : 'One-time expenses'}
+          {kind === 'Monthly' ? 'Added monthly expenses' : 'One-time expenses'}
         </th>
       </tr>
       {rows.map(({ item, source }) => {
