@@ -45,7 +45,7 @@ export function ProjectionExpensesTable({
       role="region"
       tabIndex={0}
     >
-      <table className="table walter-table text-sm">
+      <table className="table walter-table text-sm [&_th[scope=row]]:border-y-0!">
         <thead>
           <tr>
             <th scope="col">Expense</th>
