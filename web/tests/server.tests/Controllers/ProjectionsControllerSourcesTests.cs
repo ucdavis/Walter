@@ -51,6 +51,7 @@ public sealed partial class ProjectionsControllerTests
         sources.Select(s => (s.ProjectNumber, s.TaskNumber, s.TaskName)).Should().Equal(
             ("P1", "T1", "First"), ("P1", "T2", "Second"));
         sources.Select(s => s.AvailableBalance).Should().Equal(600m, 9000m);
+        sources.Should().OnlyContain(s => s.ProjectType == "Internal");
         sources.Should().OnlyContain(s => s.CapturedAt == SourceCapture && s.CapturedAt.Kind == DateTimeKind.Utc);
         data.SnapshotAtUtc.Should().Be(SourceCapture);
         data.PersonnelProjectNumbers.Should().BeNull();

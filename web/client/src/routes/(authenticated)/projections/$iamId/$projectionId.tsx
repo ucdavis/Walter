@@ -128,7 +128,7 @@ function ProjectionEditor({ featureEnabled }: { featureEnabled: boolean }) {
       }}
     >
       <main className="container scroll-mt-24 bg-base-100 pt-12 pb-12 text-base leading-normal text-base-content [&_button:enabled]:cursor-pointer">
-        <div>
+        <div className="pt-4">
           {!featureEnabled && <ProjectionSessionNotice />}
           <Link
             className="btn mb-4 gap-2"

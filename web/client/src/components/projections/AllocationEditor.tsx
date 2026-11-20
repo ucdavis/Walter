@@ -328,7 +328,7 @@ export function AllocationEditor({
                 <div className="flex flex-wrap gap-1.5">
                   <button
                     aria-pressed={values.mode === 'dates'}
-                    className={`btn btn-xs ${values.mode === 'dates' ? 'btn-primary' : 'btn-outline'}`}
+                    className={`btn btn-xs ${values.mode === 'dates' ? 'btn-primary' : ''}`}
                     onClick={() => form.setFieldValue('mode', 'dates')}
                     type="button"
                   >
@@ -336,7 +336,7 @@ export function AllocationEditor({
                   </button>
                   <button
                     aria-pressed={values.mode === 'entire'}
-                    className={`btn btn-xs ${values.mode === 'entire' ? 'btn-primary' : 'btn-outline'}`}
+                    className={`btn btn-xs ${values.mode === 'entire' ? 'btn-primary' : ''}`}
                     onClick={() => form.setFieldValue('mode', 'entire')}
                     type="button"
                   >
@@ -344,7 +344,7 @@ export function AllocationEditor({
                   </button>
                   <button
                     aria-pressed={values.mode === 'throughEnd'}
-                    className={`btn btn-xs ${values.mode === 'throughEnd' ? 'btn-primary' : 'btn-outline'}`}
+                    className={`btn btn-xs ${values.mode === 'throughEnd' ? 'btn-primary' : ''}`}
                     onClick={() => form.setFieldValue('mode', 'throughEnd')}
                     type="button"
                   >
@@ -519,7 +519,7 @@ export function AllocationEditor({
                 </p>
               </div>
               <button
-                className="btn btn-outline btn-sm"
+                className="btn btn-sm"
                 onClick={() =>
                   form.pushFieldValue('shares', {
                     id: crypto.randomUUID(),
@@ -675,7 +675,7 @@ export function AllocationEditor({
               {validationMessage ?? applyError}
             </p>
           )}
-          <button className="btn btn-outline" onClick={onClose} type="button">
+          <button className="btn" onClick={onClose} type="button">
             Cancel
           </button>
           <button

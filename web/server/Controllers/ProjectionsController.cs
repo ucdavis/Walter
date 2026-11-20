@@ -41,7 +41,7 @@ public sealed class ProjectionsController(
     public sealed record ProjectionSourceKey(string ProjectNumber, string? TaskNumber);
     /// <summary>Fresh task identity and budget remaining after spending and commitments, without forecast assumptions.</summary>
     public sealed record ProjectionSourceSummary(string ProjectNumber, string? ProjectName, string? TaskNumber, string? TaskName,
-        decimal AvailableBalance, DateTime CapturedAt);
+        decimal AvailableBalance, DateTime CapturedAt, string? ProjectType);
     public sealed record ImportProjectionSourcesRequest(List<ProjectionSourceKey>? Sources);
 
     [HttpGet("by-iam/{iamId}")]
@@ -79,7 +79,7 @@ public sealed class ProjectionsController(
         if (error is not null) return error;
         var sources = await seeder.CaptureSourcesAsync(piEmployeeId!, User.GetUserIdentifier(), User.GetEmulatingUser(), ct);
         return Ok(sources.Select(p => new ProjectionSourceSummary(p.ProjectNumber!, p.ProjectName, p.TaskNumber, p.TaskName,
-            p.Budgets.Sum(b => b.Budget - b.SpentToDate - b.Committed), p.CapturedAt)).ToList());
+            p.Budgets.Sum(b => b.Budget - b.SpentToDate - b.Committed), p.CapturedAt, p.ProjectType)).ToList());
     }
 
     /// <summary>Imports selected current task financials only; client assignment of local IDs cannot refresh staffing or persist a plan.</summary>

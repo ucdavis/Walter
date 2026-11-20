@@ -7,7 +7,7 @@ export function ProjectionUnavailable({ iamId }: { iamId: string }) {
       <PageEmpty message="Projections are not available." />
       <div className="mt-6 text-center">
         <Link
-          className="btn btn-outline"
+          className="btn"
           params={{ iamId }}
           to="/projects/$iamId"
         >

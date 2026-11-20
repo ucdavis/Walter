@@ -156,7 +156,7 @@ export function PlanDetailsEditor({
       {iamId && onDeleted && (
         <div className="mt-6 border-t border-base-300 pt-4">
           <button
-            className="btn btn-outline btn-error btn-sm"
+            className="btn btn-error btn-sm"
             disabled={deleteDisabled}
             onClick={() => setConfirmDelete(true)}
             type="button"

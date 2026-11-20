@@ -133,7 +133,7 @@ export function SourceAppointmentDetails({
       <div className="modal-action flex flex-wrap gap-2">
         <button
           aria-label={`Edit appointment for ${appointment.name}`}
-          className="btn btn-outline btn-sm"
+          className="btn btn-sm"
           onClick={() =>
             onNavigate({
               appointment: appointment.id,
@@ -148,7 +148,7 @@ export function SourceAppointmentDetails({
         {editorDate && (
           <button
             aria-label={`Edit allocations for ${appointment.name}`}
-            className="btn btn-outline btn-sm"
+            className="btn btn-sm"
             onClick={() =>
               onNavigate({
                 appointment: appointment.id,

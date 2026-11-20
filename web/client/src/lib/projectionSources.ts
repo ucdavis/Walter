@@ -53,6 +53,10 @@ export const sourceLabel = (source: ProjectionFundingSource) =>
     .filter(Boolean)
     .join(' · ');
 
+export const isSponsoredProject = (source: ProjectionFundingSource) =>
+  source.sourceKind === 'Task' &&
+  getSourceFundingBasis(source) === 'categories';
+
 export const sourceKey = (source: ProjectionFundingSource) =>
   source.projectNumber
     ? JSON.stringify([source.projectNumber, source.taskNumber ?? ''])

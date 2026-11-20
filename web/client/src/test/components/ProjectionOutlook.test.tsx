@@ -162,7 +162,9 @@ async function show(draft = plan(), selectedSourceId: number | null = null) {
       selectedSourceId={selectedSourceId}
     />
   );
-  await screen.findByRole('img', {}, { timeout: 5000 });
+  if (selectedSourceId !== null || draft.content.fundingSources.length === 1) {
+    await screen.findByRole('img', {}, { timeout: 5000 });
+  }
   return {
     ...view,
     draft,
@@ -176,6 +178,36 @@ async function show(draft = plan(), selectedSourceId: number | null = null) {
 const chartLines = () => document.querySelectorAll('.recharts-line-curve');
 
 describe('funding outlook', () => {
+  it('defaults to the sole funding source and shows its forecast details', async () => {
+    const draft = plan();
+    draft.content.fundingSources = [source(2, 1000)];
+    await show(draft);
+    expect(
+      screen.getByRole('combobox', { name: 'Explore a funding source' })
+    ).toHaveValue('2');
+    expect(
+      screen.getByRole('heading', { name: 'Source 2 · Task 2' })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('img', {
+        name: 'Monthly remaining balance for Source 2 · Task 2',
+      })
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('option', { name: /All funding sources/ })
+    ).not.toBeInTheDocument();
+  });
+
+  it('defaults to all funding sources when there are multiple choices', async () => {
+    await show();
+    expect(
+      screen.getByRole('combobox', { name: 'Explore a funding source' })
+    ).toHaveValue('');
+    expect(
+      screen.getByRole('heading', { name: 'Project outlook' })
+    ).toBeInTheDocument();
+  });
+
   it('qualifies positive totals when category budgets are unverified in summary, group, and source views', async () => {
     const draft = plan();
     draft.content.appointments = [];
@@ -251,7 +283,9 @@ describe('funding outlook', () => {
     expect(summary).toHaveTextContent(
       'First category budget shortfall: Jan 2026'
     );
-    expect(summary).toHaveTextContent(SUPPLIES_CATEGORY);
+    expect(
+      within(summary).getByRole('list', { name: 'Categories with a shortfall' })
+    ).toHaveTextContent('Supplies / Services / Other Expenses');
     expect(summary).not.toHaveTextContent('source falls below zero');
     expect(summary).toHaveTextContent(
       'These category balances recover by plan end.'
@@ -326,76 +360,15 @@ describe('funding outlook', () => {
     });
   });
 
-  it('hides lines without changing totals, warnings, the draft, or full project sums', async () => {
-    const { draft, user } = await show();
-    const before = JSON.stringify(draft);
-    const summary = screen.getByRole('region', {
-      name: 'Funding summary',
-    }).textContent;
-    const beforeTotals = screen.getByLabelText('Outlook totals').textContent;
-    expect(chartLines()).toHaveLength(2);
-    await user.click(screen.getByText(/Chart lines ·/));
-    await user.click(
-      screen.getByRole('checkbox', { name: 'Source 1 · Task 1' })
-    );
-    expect(chartLines()).toHaveLength(1);
-    expect(screen.getByLabelText('Outlook totals')).toHaveTextContent(
-      beforeTotals!
-    );
-    expect(
-      screen.getByRole('region', { name: 'Funding summary' })
-    ).toHaveTextContent(summary!);
-    if (!screen.queryByRole('checkbox', { name: 'Group by project' })) {
-      await user.click(screen.getByText(/Chart lines ·/));
-    }
-    await user.click(
-      screen.getByRole('checkbox', { name: 'Group by project' })
-    );
-    expect(chartLines()).toHaveLength(1);
-    expect(
-      screen.getByRole('checkbox', { name: 'Field research' })
-    ).toBeChecked();
-    expect(
-      screen.getByRole('table', { name: 'Funding sources' })
-    ).toHaveTextContent('$1,050');
-    await user.click(
-      within(
-        screen.getByRole('navigation', { name: 'Chart legend' })
-      ).getByRole('button', { name: 'Field research' })
-    );
-    expect(
-      screen.getByRole('button', { name: 'View Source 1 · Task 1' })
-    ).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Hide all lines' }));
-    expect(chartLines()).toHaveLength(0);
-    if (!screen.queryByRole('checkbox', { name: 'Group by project' })) {
-      await user.click(screen.getByText(/Chart lines ·/));
-    }
-    await user.click(
-      screen.getByRole('checkbox', { name: 'Group by project' })
-    );
-    expect(chartLines()).toHaveLength(1);
-    expect(
-      screen.getByRole('checkbox', { name: 'Source 1 · Task 1' })
-    ).not.toBeChecked();
-    expect(
-      screen.getByRole('checkbox', { name: 'Source 2 · Task 2' })
-    ).toBeChecked();
-    expect(JSON.stringify(draft)).toBe(before);
-  });
-
   it('lists future funding without including its balance or drawing a line', async () => {
     const { onNavigate, user } = await show();
     expect(screen.getByLabelText('Outlook totals')).not.toHaveTextContent(
       '$5,000'
     );
-    expect(chartLines()).toHaveLength(2);
-    await user.click(screen.getByText(/Chart lines ·/));
+    expect(chartLines()).toHaveLength(0);
     expect(
-      screen.getByRole('checkbox', {
-        name: 'Future grant: Outside forecast period',
-      })
-    ).toBeDisabled();
+      screen.getByRole('table', { name: 'Funding sources' })
+    ).toHaveTextContent('Future grant');
     await user.selectOptions(
       screen.getByRole('combobox', { name: 'Explore a funding source' }),
       '3'
@@ -412,18 +385,13 @@ describe('funding outlook', () => {
     empty.budgets = [];
     empty.projectNumber = 'P2';
     draft.content.fundingSources.push(empty);
-    const { user } = await show(draft);
+    await show(draft);
     const row = screen
       .getByRole('button', { name: 'View Source 4 · Task 4' })
       .closest('tr')!;
     expect(row).toHaveTextContent('No forecast data in this period');
     expect(row).not.toHaveTextContent('Outside forecast period');
-    await user.click(screen.getByText(/Chart lines ·/));
-    expect(
-      screen.getByRole('checkbox', {
-        name: 'Source 4 · Task 4: No forecast data in this period',
-      })
-    ).toBeDisabled();
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
   });
 
   it('links separate appointment gap and overlap counts to Staffing', async () => {
@@ -438,12 +406,12 @@ describe('funding outlook', () => {
     expect(onNavigate).toHaveBeenLastCalledWith({ section: 'staffing' });
   });
 
-  it('opens a previously hidden source in detail and preserves overview line choices on return', async () => {
+  it('shows a chart for a selected source and restores only the table on return', async () => {
     const { draft, onNavigate, rerender, results, user } = await show();
-    await user.click(screen.getByText(/Chart lines ·/));
-    await user.click(
-      screen.getByRole('checkbox', { name: 'Source 1 · Task 1' })
-    );
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('table', { name: 'Funding sources' })
+    ).toBeInTheDocument();
     rerender(
       <OutlookView
         draft={draft}
@@ -475,6 +443,10 @@ describe('funding outlook', () => {
         selectedSourceId={null}
       />
     );
-    expect(chartLines()).toHaveLength(1);
+    expect(chartLines()).toHaveLength(0);
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('table', { name: 'Funding sources' })
+    ).toBeInTheDocument();
   });
 });

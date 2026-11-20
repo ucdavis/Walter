@@ -1,3 +1,4 @@
+import { fundingMonthLabel } from '@/components/projections/fundingTimelineDates.ts';
 import {
   Cog6ToothIcon,
   ListBulletIcon,
@@ -38,7 +39,7 @@ import {
   type ExpenseOperation,
   type ExpenseOperationResult,
 } from '@/lib/projectionExpenses.ts';
-import { sourceLabel } from '@/lib/projectionSources.ts';
+import { isSponsoredProject, sourceLabel } from '@/lib/projectionSources.ts';
 import type {
   PendingExpenseEditor,
   PendingHistoryEditor,
@@ -170,15 +171,37 @@ export function ExpensesEditor<T extends ProjectionDraft>({
       ),
     0
   );
-  const addedTotal = visibleSources.reduce(
+  const addedTotal = (kind: 'Monthly' | 'OneTime') =>
+    visibleSources.reduce(
+      (total, source) =>
+        total +
+        source.expenses
+          .filter((item) => item.kind === kind)
+          .reduce(
+            (sourceTotal, item) =>
+              sourceTotal +
+              computeExpenseForecast(source, item, forecastWindow).total,
+            0
+          ),
+      0
+    );
+  const addedMonthlyTotal = addedTotal('Monthly');
+  const monthlyRate = visibleSources.reduce(
     (total, source) =>
       total +
-      source.expenses.reduce(
-        (sourceTotal, item) =>
-          sourceTotal +
-          computeExpenseForecast(source, item, forecastWindow).total,
+      getHistoricalExpenseRows(source, draft.content.historyMonths).reduce(
+        (sum, row) => sum + row.effectiveAmount,
         0
-      ),
+      ) +
+      source.expenses
+        .filter(({ kind }) => kind === 'Monthly')
+        .reduce((sum, item) => sum + item.amount, 0),
+    0
+  );
+  const oneTimeTotal = addedTotal('OneTime');
+  const oneTimeCount = visibleSources.reduce(
+    (count, source) =>
+      count + source.expenses.filter(({ kind }) => kind === 'OneTime').length,
     0
   );
   return (
@@ -195,7 +218,7 @@ export function ExpensesEditor<T extends ProjectionDraft>({
         </div>
         <div className="ml-auto flex shrink-0 items-center gap-1">
           <button
-            className="btn btn-outline"
+            className="btn"
             disabled={!draft.content.fundingSources.length}
             onClick={openNewExpense}
             type="button"
@@ -234,7 +257,7 @@ export function ExpensesEditor<T extends ProjectionDraft>({
             <option value="">All funding sources</option>
             {draft.content.fundingSources.map((source) => (
               <option key={source.id} value={source.id}>
-                {sourceLabel(source)}
+                {isSponsoredProject(source) ? source.name : sourceLabel(source)}
               </option>
             ))}
           </select>
@@ -249,29 +272,48 @@ export function ExpensesEditor<T extends ProjectionDraft>({
             </p>
           )}
           <div className="overflow-hidden rounded-lg border border-main-border">
-            <dl className="grid gap-4 border-b border-main-border bg-base-200 p-5 sm:grid-cols-3 sm:gap-6">
-              <div>
+            <dl className="grid border-b border-main-border sm:grid-cols-3">
+              <div className="bg-base-200 p-5">
                 <dt className="text-sm text-base-content/80">
-                  Historical forecast
+                  Projected monthly expenses
                 </dt>
                 <dd className="mt-1 text-2xl font-semibold tabular-nums">
-                  {formatCurrency(historicalTotal)}
+                  {formatCurrency(historicalTotal + addedMonthlyTotal)}
+                </dd>
+                <dd className="mt-1 text-sm font-medium tabular-nums">
+                  {formatCurrency(monthlyRate)} per month
+                </dd>
+                <dd className="mt-1 text-sm text-base-content/80">
+                  {addedMonthlyTotal === 0
+                    ? `From the ${draft.content.historyMonths}-month spending average`
+                    : `${formatCurrency(historicalTotal)} from spending average + ${formatCurrency(addedMonthlyTotal)} added`}
                 </dd>
               </div>
-              <div>
+              <div className="border-t border-main-border bg-base-200 p-5 sm:border-t-0 sm:border-l">
                 <dt className="text-sm text-base-content/80">
-                  Added expense forecast
+                  One-time expenses
                 </dt>
                 <dd className="mt-1 text-2xl font-semibold tabular-nums">
-                  {formatCurrency(addedTotal)}
+                  {formatCurrency(oneTimeTotal)}
+                </dd>
+                <dd className="mt-1 text-sm text-base-content/80">
+                  {oneTimeCount === 0
+                    ? 'None added'
+                    : `${oneTimeCount} planned ${oneTimeCount === 1 ? 'purchase' : 'purchases'}`}
                 </dd>
               </div>
-              <div>
-                <dt className="text-sm text-base-content/80">
-                  Historical and added expenses
+              <div className="border-t border-main-border p-5 sm:border-t-0 sm:border-l">
+                <dt className="text-sm font-semibold">
+                  Total planned spending
                 </dt>
-                <dd className="mt-1 text-2xl font-semibold tabular-nums">
-                  {formatCurrency(historicalTotal + addedTotal)}
+                <dd className="mt-1 text-3xl font-semibold tabular-nums">
+                  {formatCurrency(
+                    historicalTotal + addedMonthlyTotal + oneTimeTotal
+                  )}
+                </dd>
+                <dd className="mt-1 text-sm text-base-content/80">
+                  {fundingMonthLabel(forecastWindow.startMonth)} through{' '}
+                  {fundingMonthLabel(forecastWindow.endMonth)}
                 </dd>
               </div>
             </dl>
@@ -300,11 +342,12 @@ export function ExpensesEditor<T extends ProjectionDraft>({
           </div>
           <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
             <p className="text-sm leading-relaxed text-base-content/80">
-              Historical estimates use the {draft.content.historyMonths}-month
-              average. Added expenses are additional costs in this plan.
+              Projected expenses repeat the {draft.content.historyMonths}-month
+              spending average each month. Added expenses are extra costs you
+              enter for this plan.
             </p>
             <button
-              className="btn btn-outline ml-auto"
+              className="btn ml-auto"
               onClick={openNewExpense}
               type="button"
             >

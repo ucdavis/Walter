@@ -87,7 +87,16 @@ export function SourceEditor<T extends ProjectionDraft>({
   const [initialCategories, setInitialCategories] = useState<
     CategoryBudgetAdjustment[]
   >([]);
-  const [budgetPending, setBudgetPending] = useState(false);
+  // A new sponsored source always budgets every financial category.
+  const initialBudgets = categories.map((expenditureCategory) => ({
+    amount:
+      initialCategories.find(
+        (row) => row.expenditureCategory === expenditureCategory
+      )?.amount ?? 0,
+    expenditureCategory,
+  }));
+  const [budgetMismatch, setBudgetMismatch] = useState<string | null>(null);
+  const [budgetVersion, setBudgetVersion] = useState(0);
   const [budgetError, setBudgetError] = useState<string | null>(null);
   const budgetHeadingRef = useRef<HTMLDivElement>(null);
   const initialBalance = source ? sourcePlanningBalance(source) : null;
@@ -127,7 +136,7 @@ export function SourceEditor<T extends ProjectionDraft>({
       categoryAdjustments: budgetSource?.categoryAdjustments,
       endDate: value.endDate || null,
       initialCategoryBudgets:
-        value.plannedBudgetMode === 'Categories' ? initialCategories : [],
+        value.plannedBudgetMode === 'Categories' ? initialBudgets : [],
       name: value.name,
       plannedBudgetMode: value.plannedBudgetMode,
       startDate: value.startDate || null,
@@ -136,9 +145,8 @@ export function SourceEditor<T extends ProjectionDraft>({
   const validation = source
     ? editProjectionSource(session, source.id, inputsFrom(values), categories)
     : addPlannedSource(session, inputsFrom(values), categories);
-  const validationMessage = budgetPending
-    ? 'Finish or cancel the budget action before applying source changes.'
-    : (budgetError ?? (validation.ok ? null : validation.error));
+  const validationMessage =
+    budgetMismatch ?? budgetError ?? (validation.ok ? null : validation.error);
   const previewDraft = validation.ok ? validation.session.draft : session.draft;
   const previewSource = validation.ok
     ? source
@@ -153,20 +161,38 @@ export function SourceEditor<T extends ProjectionDraft>({
         validation.ok ? computePiProjection(previewDraft).rows : []
       )
     : null;
+  const sourceBalances = (balances?.categories ?? []).filter(
+    (row) => !row.isBalanceAdjustment
+  );
+  // Every financial category is listed, so money can move into one that has no budget yet.
   const budgetRows = source
-    ? (balances?.categories
-        .filter((row) => !row.isBalanceAdjustment)
-        .map((row) => ({
-          category: row.expenditureCategory,
-          change: row.adjustment,
-          initial: row.capturedAvailable,
-          initialRecorded: row.budgetRecorded,
-          remaining: row.endRemaining,
-          revised: row.revisedAvailable,
-        })) ?? [])
-    : initialCategories.map((row) => ({
+    ? [
+        ...new Set([
+          ...sourceBalances.map((row) => row.expenditureCategory),
+          ...categories,
+        ]),
+      ]
+        .sort()
+        .map((category) => {
+          const row = sourceBalances.find(
+            (balance) => balance.expenditureCategory === category
+          );
+          const budget = source.budgets.find(
+            (entry) => entry.expenditureCategory === category
+          );
+          // Rows show the full budget; booked spending and commitments are added back to the available balance.
+          const booked = budget ? budget.spentToDate + budget.committed : 0;
+          return {
+            category,
+            initial: budget?.budget ?? 0,
+            initialRecorded: budget !== undefined,
+            remaining: row?.endRemaining ?? null,
+            revised:
+              Math.round(((row?.revisedAvailable ?? 0) + booked) * 100) / 100,
+          };
+        })
+    : initialBudgets.map((row) => ({
         category: row.expenditureCategory,
-        change: 0,
         initial: row.amount,
         remaining:
           balances?.categories.find(
@@ -195,10 +221,7 @@ export function SourceEditor<T extends ProjectionDraft>({
           category,
           Math.round(((next.get(category) ?? 0) + amount) * 100) / 100
         );
-      if (change.kind === 'move') {
-        add(change.from, -change.amount);
-        add(change.to, change.amount);
-      } else {
+      if (change.kind === 'adjust') {
         add(change.expenditureCategory, change.amount);
       }
       setInitialCategories(
@@ -212,6 +235,7 @@ export function SourceEditor<T extends ProjectionDraft>({
   function resetBudget() {
     if (categoryMode) {
       changeBudget({ kind: 'reset' });
+      setBudgetVersion((version) => version + 1);
     } else if (source) {
       const result = updateSourceBudget(source, { kind: 'reset' }, categories);
       if (result.ok) {
@@ -227,7 +251,7 @@ export function SourceEditor<T extends ProjectionDraft>({
       fundingSourceId: source?.id ?? null,
       hasChanges:
         form.state.isDirty ||
-        budgetPending ||
+        Boolean(budgetMismatch) ||
         JSON.stringify(budgetSource?.categoryAdjustments) !==
           JSON.stringify(source?.categoryAdjustments) ||
         initialCategories.length > 0,
@@ -294,6 +318,36 @@ export function SourceEditor<T extends ProjectionDraft>({
             </label>
           )}
         </form.Field>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <form.Field name="startDate">
+            {(field) => (
+              <label className="flex flex-col gap-2 text-sm">
+                Start date
+                <input
+                  className="input input-bordered w-full"
+                  onBlur={field.handleBlur}
+                  onChange={(event) => field.handleChange(event.target.value)}
+                  type="date"
+                  value={field.state.value}
+                />
+              </label>
+            )}
+          </form.Field>
+          <form.Field name="endDate">
+            {(field) => (
+              <label className="flex flex-col gap-2 text-sm">
+                End date
+                <input
+                  className="input input-bordered w-full"
+                  onBlur={field.handleBlur}
+                  onChange={(event) => field.handleChange(event.target.value)}
+                  type="date"
+                  value={field.state.value}
+                />
+              </label>
+            )}
+          </form.Field>
+        </div>
         {!source && (
           <form.Field name="plannedBudgetMode">
             {(field) => (
@@ -302,7 +356,6 @@ export function SourceEditor<T extends ProjectionDraft>({
                 <select
                   aria-label="Source type"
                   className="select w-full"
-                  disabled={budgetPending}
                   onChange={(event) =>
                     field.handleChange(
                       event.target.value as 'GeneralPool' | 'Categories'
@@ -334,16 +387,24 @@ export function SourceEditor<T extends ProjectionDraft>({
         {categoryMode ? (
           <div ref={budgetHeadingRef} tabIndex={-1}>
             <SourceBudgetEditor
-              categories={categories}
               initialPlanned={planned}
-              onAdjust={(expenditureCategory, amount) =>
-                changeBudget({ amount, expenditureCategory, kind: 'adjust' })
-              }
-              onMove={(from, to, amount) =>
-                changeBudget({ amount, from, kind: 'move', to })
-              }
-              onPendingChange={setBudgetPending}
+              key={budgetVersion}
+              onErrorChange={setBudgetMismatch}
               onReset={resetBudget}
+              onSet={(expenditureCategory, amount) =>
+                changeBudget({
+                  amount:
+                    Math.round(
+                      (amount -
+                        (budgetRows.find(
+                          (row) => row.category === expenditureCategory
+                        )?.revised ?? 0)) *
+                        100
+                    ) / 100,
+                  expenditureCategory,
+                  kind: 'adjust',
+                })
+              }
               rows={budgetRows}
             />
             {lookup.isPending && (
@@ -391,36 +452,6 @@ export function SourceEditor<T extends ProjectionDraft>({
             )}
           </>
         )}
-        <div className="grid gap-4 sm:grid-cols-2">
-          <form.Field name="startDate">
-            {(field) => (
-              <label className="flex flex-col gap-2 text-sm">
-                Start date
-                <input
-                  className="input input-bordered w-full"
-                  onBlur={field.handleBlur}
-                  onChange={(event) => field.handleChange(event.target.value)}
-                  type="date"
-                  value={field.state.value}
-                />
-              </label>
-            )}
-          </form.Field>
-          <form.Field name="endDate">
-            {(field) => (
-              <label className="flex flex-col gap-2 text-sm">
-                End date
-                <input
-                  className="input input-bordered w-full"
-                  onBlur={field.handleBlur}
-                  onChange={(event) => field.handleChange(event.target.value)}
-                  type="date"
-                  value={field.state.value}
-                />
-              </label>
-            )}
-          </form.Field>
-        </div>
         {planned ? (
           <p className="text-sm">
             Planned funding becomes available in full on its start date.
