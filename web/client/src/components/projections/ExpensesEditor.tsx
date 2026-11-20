@@ -252,7 +252,7 @@ export function ExpensesEditor<T extends ProjectionDraft>({
             <dl className="grid gap-4 border-b border-main-border bg-base-200 p-5 sm:grid-cols-3 sm:gap-6">
               <div>
                 <dt className="text-sm text-base-content/80">
-                  Historical forecast
+                  Projected expense forecast
                 </dt>
                 <dd className="mt-1 text-2xl font-semibold tabular-nums">
                   {formatCurrency(historicalTotal)}
@@ -268,7 +268,7 @@ export function ExpensesEditor<T extends ProjectionDraft>({
               </div>
               <div>
                 <dt className="text-sm text-base-content/80">
-                  Historical and added expenses
+                  Projected and added expenses
                 </dt>
                 <dd className="mt-1 text-2xl font-semibold tabular-nums">
                   {formatCurrency(historicalTotal + addedTotal)}
@@ -300,7 +300,7 @@ export function ExpensesEditor<T extends ProjectionDraft>({
           </div>
           <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
             <p className="text-sm leading-relaxed text-base-content/80">
-              Historical estimates use the {draft.content.historyMonths}-month
+              Projected expenses use the {draft.content.historyMonths}-month
               average. Added expenses are additional costs in this plan.
             </p>
             <button

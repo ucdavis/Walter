@@ -431,7 +431,7 @@ export function NewProjectionWizard({
             [
               'Choose one or more of your projects to start your plan.',
               'Keep current appointments or adjust them for this plan.',
-              'Plan for supplies, travel, or a one-time purchase. Start with your historical spending estimates.',
+              'Plan for supplies, travel, or a one-time purchase. Start with your projected expenses.',
               'Check your assumptions, then create a plan you can explore and adjust.',
             ][step]
           }

@@ -868,7 +868,7 @@ describe('projection creation and copies', () => {
       expect(screen.getByLabelText('View expenses for')).toHaveValue('');
       await user.click(
         screen.getByRole('button', {
-          name: `Edit historical amount for ${category}`,
+          name: `Edit projected amount for ${category}`,
         })
       );
       await user.clear(screen.getByLabelText('Monthly amount'));
