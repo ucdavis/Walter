@@ -88,7 +88,7 @@ export function ProjectionExpensesTable({
               >
                 <th className="min-w-56 font-normal" scope="row">
                   <p className="font-semibold">{row.expenditureCategory}</p>
-                  <p className="mt-0.5 text-sm text-base-content/80">
+                  <p className="mt-0.5 text-sm text-base-content/85">
                     {source.runRates.some(
                       (rate) =>
                         rate.expenditureCategory === row.expenditureCategory &&
@@ -132,13 +132,13 @@ export function ProjectionExpensesTable({
                   {firstMonth && lastMonth ? (
                     <>
                       <p>Monthly</p>
-                      <p className="mt-0.5 text-base-content/80">
+                      <p className="mt-0.5 text-base-content/85">
                         {fundingMonthLabel(firstMonth)} –{' '}
                         {fundingMonthLabel(lastMonth)}
                       </p>
                     </>
                   ) : (
-                    <p className="text-base-content/80">
+                    <p className="text-base-content/85">
                       No active months in this plan
                     </p>
                   )}
@@ -154,13 +154,13 @@ export function ProjectionExpensesTable({
                     type="button"
                   >
                     {money(row.effectiveAmount)}
-                    <span className="text-xs text-base-content/80">/mo</span>
+                    <span className="text-xs text-base-content/70">/mo</span>
                   </button>
                 </td>
                 <td className="text-right font-semibold whitespace-nowrap tabular-nums">
                   {money(forecast.total)}
                   {row.effectiveAmount !== 0 && !forecast.hasEligibleDates && (
-                    <span className="mt-1 block text-xs font-normal text-base-content/80">
+                    <span className="mt-1 block text-xs font-normal text-base-content/70">
                       No eligible dates in the forecast period.
                     </span>
                   )}
@@ -246,7 +246,7 @@ function ExpenseRows({
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="font-semibold">{item.description}</p>
-                  <p className="mt-0.5 text-sm text-base-content/80">
+                  <p className="mt-0.5 text-sm text-base-content/85">
                     {item.expenditureCategory}
                   </p>
                 </div>
@@ -280,7 +280,7 @@ function ExpenseRows({
             </td>
             <td className="text-sm whitespace-nowrap">
               <p>{kind === 'Monthly' ? 'Monthly' : 'One time'}</p>
-              <p className="mt-0.5 text-base-content/80">
+              <p className="mt-0.5 text-base-content/85">
                 {kind === 'OneTime'
                   ? fundingMonthLabel(item.startMonth.slice(0, 7))
                   : firstMonth && lastMonth
@@ -291,13 +291,13 @@ function ExpenseRows({
             <td className="text-right whitespace-nowrap tabular-nums">
               {money(item.amount)}
               {kind === 'Monthly' && (
-                <span className="ml-1 text-xs text-base-content/80">/mo</span>
+                <span className="ml-1 text-xs text-base-content/70">/mo</span>
               )}
             </td>
             <td className="text-right font-semibold whitespace-nowrap tabular-nums">
               {money(forecast.total)}
               {item.amount !== 0 && !forecast.hasEligibleDates && (
-                <span className="mt-1 block text-xs font-normal text-base-content/80">
+                <span className="mt-1 block text-xs font-normal text-base-content/70">
                   No eligible dates in the forecast period.
                 </span>
               )}

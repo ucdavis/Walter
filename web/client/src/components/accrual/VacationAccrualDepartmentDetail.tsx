@@ -106,7 +106,7 @@ function SummaryMetric({
       >
         {value}
       </dd>
-      <dd className="mt-1 text-sm text-base-content/65">{description}</dd>
+      <dd className="mt-1 text-sm text-base-content/85">{description}</dd>
     </div>
   );
 }
@@ -154,7 +154,7 @@ function ClassificationBadge({ classification }: { classification: string }) {
   let className = 'bg-success/10 text-success';
 
   if (classification === 'PSS') {
-    className = 'bg-base-200 text-base-content/75';
+    className = 'bg-base-200 text-base-content/85';
   } else if (classification === 'MSP') {
     className = 'bg-secondary/10 text-secondary';
   } else if (classification === 'SMG') {
@@ -434,7 +434,7 @@ export function VacationAccrualDepartmentDetail({
         const value = info.getValue<number>();
         return (
           <span
-            className={`flex justify-end w-full ${value > 0 ? 'font-semibold text-error' : 'text-base-content/55'}`}
+            className={`flex justify-end w-full ${value > 0 ? 'font-semibold text-error' : 'text-base-content/70'}`}
           >
             {value > 0 ? formatCurrency(value) : '—'}
           </span>
@@ -454,7 +454,7 @@ export function VacationAccrualDepartmentDetail({
         const value = info.getValue<number>();
         return (
           <span
-            className={`flex justify-end w-full ${value > 0 ? 'font-semibold text-error' : 'text-base-content/55'}`}
+            className={`flex justify-end w-full ${value > 0 ? 'font-semibold text-error' : 'text-base-content/70'}`}
           >
             {value > 0 ? formatCurrency(value) : '—'}
           </span>

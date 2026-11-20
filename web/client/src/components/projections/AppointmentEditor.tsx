@@ -457,7 +457,7 @@ function AppointmentForm({
             : `CBR for job ${values.jobCode} in ${businessUnits[values.rateSet] ?? values.rateSet}. Apply to save this rate in the plan.`}
         </span>
       </div>
-      <p className="text-sm text-base-content/80">
+      <p className="text-sm text-base-content/85">
         {formatCurrency(inputs.monthlySalary)} per month at full time. Salary
         base:{' '}
         {getAppointmentSalaryBaseMonth(
@@ -466,7 +466,7 @@ function AppointmentForm({
         )}
         .
       </p>
-      <p className="text-sm text-base-content/80">
+      <p className="text-sm text-base-content/85">
         Apply updates this plan. Cancel or leave this editor to discard
         unapplied changes.
       </p>

@@ -167,12 +167,12 @@ export function ExpenseEditor({
       title={expense ? `Edit expense: ${expense.description}` : 'Add expense'}
     >
       {expense && source && (
-        <p className="mt-2 text-sm text-base-content/80">
+        <p className="mt-2 text-sm text-base-content/85">
           <span className="font-medium">Charge to:</span> {sourceLabel(source)}
         </p>
       )}
       {expense && source && (source.projectNumber || source.taskNumber) && (
-        <p className="mt-1 text-sm text-base-content/80">
+        <p className="mt-1 text-sm text-base-content/85">
           {[
             source.projectNumber && `Project ${source.projectNumber}`,
             source.taskNumber && `Task ${source.taskNumber}`,
@@ -229,7 +229,7 @@ export function ExpenseEditor({
                   </select>
                 </label>
                 {source && (source.projectNumber || source.taskNumber) && (
-                  <p className="mt-1 text-sm text-base-content/80">
+                  <p className="mt-1 text-sm text-base-content/85">
                     {[
                       source.projectNumber && `Project ${source.projectNumber}`,
                       source.taskNumber && `Task ${source.taskNumber}`,
@@ -277,7 +277,7 @@ export function ExpenseEditor({
           )}
         </form.Field>
         {lookupFailed && (
-          <p className="text-sm text-base-content/80">
+          <p className="text-sm text-base-content/85">
             The category lookup is unavailable; captured categories are still
             listed.{' '}
             <button className="link" onClick={onRetryCategories} type="button">
@@ -320,7 +320,7 @@ export function ExpenseEditor({
             )}
           </form.Field>
         </div>
-        <p className="text-sm text-base-content/80">
+        <p className="text-sm text-base-content/85">
           A negative amount reduces forecast costs. Zero is allowed.
         </p>
         <form.Field name="start">
@@ -384,7 +384,7 @@ export function ExpenseEditor({
                 )}
               </form.Field>
             ) : (
-              <p className="text-sm text-base-content/80">
+              <p className="text-sm text-base-content/85">
                 {source?.endDate
                   ? `Through source end: ${source?.endDate}. This follows changes to the source end date.`
                   : `Through forecast end: ${fundingMonthLabel(window.endMonth)}. This follows the source's forecast period.`}
@@ -393,7 +393,7 @@ export function ExpenseEditor({
           </>
         )}
         {forecast && (
-          <p className="text-sm text-base-content/80">
+          <p className="text-sm text-base-content/85">
             Forecast total: {formatCurrency(forecast.total)}
             {inputs.amount !== 0 && !forecast.hasEligibleDates
               ? '. These dates fall outside the source forecast period, so this expense adds no forecast cost.'

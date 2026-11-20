@@ -435,7 +435,7 @@ function CommandPaletteDialog({
           <div className="min-w-0">
             <div className="truncate">{item.label}</div>
             {item.secondary ? (
-              <div className="truncate text-xs text-base-content/60">
+              <div className="truncate text-xs text-base-content/70">
                 {item.secondary}
               </div>
             ) : null}
@@ -473,7 +473,7 @@ function CommandPaletteDialog({
 
           <Command.List>
             {showFinancialStartTypingHint ? (
-              <div className="px-4 py-2 text-sm text-base-content/60">
+              <div className="px-4 py-2 text-sm text-base-content/70">
                 Start typing to search all projects and people.
               </div>
             ) : null}
@@ -569,13 +569,13 @@ function CommandPaletteDialog({
             ) : null}
 
             {showFinancialSearchHint ? (
-              <div className="px-4 py-8 text-sm text-base-content/60">
+              <div className="px-4 py-8 text-sm text-base-content/70">
                 Type at least 3 characters to search all projects and people.
               </div>
             ) : null}
 
             {showEmptyState ? (
-              <div className="px-4 py-8 text-sm text-base-content/60">
+              <div className="px-4 py-8 text-sm text-base-content/70">
                 No matches found.
               </div>
             ) : null}

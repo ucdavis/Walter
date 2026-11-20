@@ -313,7 +313,7 @@ export function SourceEditor<T extends ProjectionDraft>({
                   <option value="GeneralPool">Internal</option>
                   <option value="Categories">Sponsored</option>
                 </select>
-                <span className="text-base-content/60">
+                <span className="text-base-content/70">
                   The source type is fixed when this planned source is created.
                 </span>
               </div>
@@ -326,7 +326,7 @@ export function SourceEditor<T extends ProjectionDraft>({
             <p className="mt-1 font-medium">
               {categoryMode ? 'Sponsored' : 'Internal'}
             </p>
-            <p className="mt-1 text-base-content/60">
+            <p className="mt-1 text-base-content/70">
               The source type was fixed when this planned source was created.
             </p>
           </div>
@@ -427,7 +427,7 @@ export function SourceEditor<T extends ProjectionDraft>({
           </p>
         ) : (
           source && (
-            <div className="rounded-lg border border-main-border bg-base-200/40 p-4 text-sm text-base-content/80">
+            <div className="rounded-lg border border-main-border bg-base-200/40 p-4 text-sm text-base-content/85">
               <p>
                 Captured balance:{' '}
                 {formatCurrency(sourceCapturedBalance(source))}
@@ -481,7 +481,7 @@ function SourceTypeLabel() {
         label={
           <button
             aria-label="About source types"
-            className="inline-flex rounded-sm text-base-content/60 hover:text-base-content focus-visible:outline-2 focus-visible:outline-primary"
+            className="inline-flex rounded-sm text-base-content/70 hover:text-base-content focus-visible:outline-2 focus-visible:outline-primary"
             type="button"
           >
             <InformationCircleIcon aria-hidden="true" className="size-4" />

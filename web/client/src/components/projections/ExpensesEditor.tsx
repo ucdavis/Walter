@@ -189,7 +189,7 @@ export function ExpensesEditor<T extends ProjectionDraft>({
             <ListBulletIcon aria-hidden="true" className="size-5 shrink-0" />
             Expenses
           </h2>
-          <p className="mt-1 text-sm text-base-content/80">
+          <p className="mt-1 text-sm text-base-content/85">
             Review projected costs and add planned expenses.
           </p>
         </div>
@@ -208,7 +208,7 @@ export function ExpensesEditor<T extends ProjectionDraft>({
             label={
               <button
                 aria-label="Change history window"
-                className="btn btn-ghost btn-square btn-sm text-base-content/80"
+                className="btn btn-ghost btn-square btn-sm text-base-content/85"
                 onClick={() => setEditing({ kind: 'history' })}
                 type="button"
               >
@@ -243,7 +243,7 @@ export function ExpensesEditor<T extends ProjectionDraft>({
       {draft.content.fundingSources.length ? (
         <>
           {window?.isBeyondForecast && (
-            <p className="mb-4 text-sm text-base-content/80">
+            <p className="mb-4 text-sm text-base-content/85">
               This source starts after the forecast period. Its expenses add no
               costs within this plan period.
             </p>
@@ -251,7 +251,7 @@ export function ExpensesEditor<T extends ProjectionDraft>({
           <div className="overflow-hidden rounded-lg border border-main-border">
             <dl className="grid gap-4 border-b border-main-border bg-base-200 p-5 sm:grid-cols-3 sm:gap-6">
               <div>
-                <dt className="text-sm text-base-content/80">
+                <dt className="text-sm text-base-content/85">
                   Historical forecast
                 </dt>
                 <dd className="mt-1 text-2xl font-semibold tabular-nums">
@@ -259,7 +259,7 @@ export function ExpensesEditor<T extends ProjectionDraft>({
                 </dd>
               </div>
               <div>
-                <dt className="text-sm text-base-content/80">
+                <dt className="text-sm text-base-content/85">
                   Added expense forecast
                 </dt>
                 <dd className="mt-1 text-2xl font-semibold tabular-nums">
@@ -267,7 +267,7 @@ export function ExpensesEditor<T extends ProjectionDraft>({
                 </dd>
               </div>
               <div>
-                <dt className="text-sm text-base-content/80">
+                <dt className="text-sm text-base-content/85">
                   Historical and added expenses
                 </dt>
                 <dd className="mt-1 text-2xl font-semibold tabular-nums">
@@ -299,7 +299,7 @@ export function ExpensesEditor<T extends ProjectionDraft>({
             />
           </div>
           <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
-            <p className="text-sm leading-relaxed text-base-content/80">
+            <p className="text-sm leading-relaxed text-base-content/85">
               Historical estimates use the {draft.content.historyMonths}-month
               average. Added expenses are additional costs in this plan.
             </p>

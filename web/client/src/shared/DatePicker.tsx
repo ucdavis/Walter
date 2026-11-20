@@ -143,7 +143,7 @@ export function DatePicker({
         {...getReferenceProps()}
       >
         <span
-          className={selected ? 'text-base-content' : 'text-base-content/50'}
+          className={selected ? 'text-base-content' : 'text-base-content/70'}
           id={`${id}-value`}
         >
           {selected ? format(selected, 'MM/dd/yyyy') : placeholder}

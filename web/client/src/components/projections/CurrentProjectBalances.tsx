@@ -85,7 +85,7 @@ export function CurrentProjectBalances({ iamId }: { iamId: string }) {
                 Available across active projects
               </span>
             </div>
-            <p className="ms-auto text-right text-sm text-base-content/80">
+            <p className="ms-auto text-right text-sm text-base-content/85">
               {data.groups.length} projects · From your Walter snapshot
             </p>
           </div>
@@ -149,13 +149,13 @@ export function CurrentProjectBalances({ iamId }: { iamId: string }) {
                 </li>
               ))}
             </ul>
-            <p className="px-5 pb-3 text-xs text-base-content/80">
+            <p className="px-5 pb-3 text-xs text-base-content/70">
               Retrieved {new Date(data.capturedAt!).toLocaleString()}. Saved
               plans retain their captured balances.
             </p>
           </details>
           {balances.isFetching && (
-            <p className="px-5 pb-3 text-xs text-base-content/80" role="status">
+            <p className="px-5 pb-3 text-xs text-base-content/70" role="status">
               Updating balances...
             </p>
           )}

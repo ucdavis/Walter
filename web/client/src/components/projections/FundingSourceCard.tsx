@@ -60,7 +60,7 @@ export function FundingSourceCard({
             style={{ backgroundColor: chartSeriesColor(colorIndex) }}
           />
         </div>
-        <div className="mt-auto mb-3 flex min-h-5 items-center justify-between gap-x-4 pt-2 text-sm text-base-content/80">
+        <div className="mt-auto mb-3 flex min-h-5 items-center justify-between gap-x-4 pt-2 text-sm text-base-content/85">
           <span className="min-w-0 truncate" title={sourceLabel(source)}>
             {source.taskNumber
               ? `${grouped ? '' : `Project ${source.projectNumber} · `}Task ${source.taskNumber}`
@@ -73,7 +73,7 @@ export function FundingSourceCard({
           </span>
         </div>
         {(futureStart || outsideForecast) && (
-          <p className="mb-3 text-sm text-base-content/80">
+          <p className="mb-3 text-sm text-base-content/85">
             {futureStart &&
               `Available from ${fundingMonthLabel(source.startDate!.slice(0, 7))}`}
             {futureStart && outsideForecast && ' · '}
@@ -82,7 +82,7 @@ export function FundingSourceCard({
         )}
         <div className="flex flex-wrap items-end justify-between gap-3 border-t border-main-border pt-3">
           <dl className="min-w-0">
-            <dt className="text-sm text-base-content/80">
+            <dt className="text-sm text-base-content/85">
               {futureStart || outsideForecast
                 ? 'Planning balance'
                 : 'Available balance'}

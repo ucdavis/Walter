@@ -232,7 +232,7 @@ function RouteComponent() {
                     selectedUser.iamId}
                 </div>
                 {(userRolesQuery.data?.email ?? selectedUser.email) ? (
-                  <div className="truncate text-sm text-base-content/80">
+                  <div className="truncate text-sm text-base-content/85">
                     {userRolesQuery.data?.email ?? selectedUser.email}
                   </div>
                 ) : null}

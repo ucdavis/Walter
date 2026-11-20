@@ -164,7 +164,7 @@ export function SourceSelection({
             />
             <ChevronDownIcon
               aria-hidden="true"
-              className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-base-content/60"
+              className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-base-content/70"
             />
           </span>
         </label>

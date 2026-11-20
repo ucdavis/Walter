@@ -168,7 +168,7 @@ function RouteComponent() {
           <p className="subtitle">
             Theme colors and components used throughout Walter.
           </p>
-          <p className="mt-2 text-sm text-base-content/80">
+          <p className="mt-2 text-sm text-base-content/85">
             Examples below use sample data.
           </p>
         </header>
@@ -184,7 +184,7 @@ function RouteComponent() {
                   style={{ backgroundColor: `var(--color-${token})` }}
                 />
                 <p className="mt-2 font-semibold">{name}</p>
-                <p className="text-sm text-base-content/80">{token}</p>
+                <p className="text-sm text-base-content/85">{token}</p>
               </div>
             ))}
           </div>
@@ -209,7 +209,7 @@ function RouteComponent() {
                       {type}
                     </span>
                   </div>
-                  <p className="mt-2 text-sm text-base-content/80">
+                  <p className="mt-2 text-sm text-base-content/85">
                     {internal ? 'Secondary' : 'Info'} · balances, chart labels,
                     and sidebar highlights
                   </p>
@@ -226,7 +226,7 @@ function RouteComponent() {
             })}
           </div>
           <h3 className="mt-6 font-semibold">Projection funding sources</h3>
-          <p className="mt-1 text-sm text-base-content/80">
+          <p className="mt-1 text-sm text-base-content/85">
             Funding sources use their own chart series colors across the
             forecast and staffing timeline.
           </p>
@@ -238,7 +238,7 @@ function RouteComponent() {
                   style={{ backgroundColor: projectionSeriesColor(index) }}
                 />
                 <p className="mt-2 font-semibold">Source {index + 1}</p>
-                <code className="text-sm text-base-content/80">
+                <code className="text-sm text-base-content/85">
                   {projectionSeriesColor(index)}
                 </code>
               </div>
@@ -358,10 +358,10 @@ function RouteComponent() {
               >
                 <div className="flex items-start justify-between gap-3">
                   <Icon className="size-6" />
-                  <ArrowRightIcon className="mt-1 size-5 shrink-0 text-base-content/40 transition group-hover:translate-x-1 group-hover:text-primary" />
+                  <ArrowRightIcon className="mt-1 size-5 shrink-0 text-base-content/70 transition group-hover:translate-x-1 group-hover:text-primary" />
                 </div>
                 <h3 className="mt-4 text-xl font-sans font-bold">{title}</h3>
-                <p className="mt-2 text-sm leading-6 text-base-content/80">
+                <p className="mt-2 text-sm leading-6 text-base-content/85">
                   {description}
                 </p>
               </Link>
@@ -405,7 +405,7 @@ function RouteComponent() {
           <h2 className="h2" id="table-title">
             Project table
           </h2>
-          <p className="mt-1 mb-4 text-base-content/80">
+          <p className="mt-1 mb-4 text-base-content/85">
             Search and sort the sample projects using Walter’s shared table.
           </p>
           <DataTable

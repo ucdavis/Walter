@@ -129,7 +129,7 @@ export function FundingOutlookTable({
         <caption className="px-5 pt-5 pb-3 text-left text-lg font-semibold text-base-content xl:px-6">
           Funding sources
         </caption>
-        <thead className="text-base-content/80">
+        <thead className="text-base-content/85">
           <tr>
             <th className="pl-5 xl:pl-6" scope="col">
               Project/Task

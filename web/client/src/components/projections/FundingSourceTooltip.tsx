@@ -168,7 +168,7 @@ export function FundingSourceTooltip({
             className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)] gap-4"
             key={label}
           >
-            <dt className="text-base-content/60">{label}</dt>
+            <dt className="text-base-content/70">{label}</dt>
             <dd className="text-right font-medium break-words">{value}</dd>
           </div>
         ))}

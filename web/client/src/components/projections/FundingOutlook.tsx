@@ -132,7 +132,7 @@ export function FundingOutlook({
                 <>
                   <h2 className="text-xl font-semibold">Project outlook</h2>
                   <p
-                    className={`mt-1 text-sm ${outlook.categoryShortfallSources.length ? 'text-error' : 'text-base-content/80'}`}
+                    className={`mt-1 text-sm ${outlook.categoryShortfallSources.length ? 'text-error' : 'text-base-content/85'}`}
                   >
                     {outlook.categoryShortfallSources.length
                       ? `${outlook.categoryShortfallSources.length} funding ${outlook.categoryShortfallSources.length === 1 ? 'source has' : 'sources have'} category budget shortfalls`
@@ -142,7 +142,7 @@ export function FundingOutlook({
                           ? 'Overall balances stay within funding; category budgets unverified'
                           : 'Each funding source stays within funding'}
                   </p>
-                  <p className="mt-1 text-sm text-base-content/80">
+                  <p className="mt-1 text-sm text-base-content/85">
                     {outlook.categoryShortfallSources.length
                       ? 'An overall surplus does not cover a shortfall in a category budget. Select a warning to review category balances.'
                       : 'Balances stay separate. Select a funding source to explore its forecast.'}
@@ -247,7 +247,7 @@ export function FundingOutlook({
           worksheetRef={worksheetRef}
         />
       )}
-      <details className="mt-4 text-sm text-base-content/80">
+      <details className="mt-4 text-sm text-base-content/85">
         <summary className="cursor-pointer font-semibold">
           About this forecast
         </summary>

@@ -70,7 +70,7 @@ export function ProjectionReviewStep({
           {draft.content.forecastMonths}-month plan
         </span>
         <h3 className="my-2 text-2xl font-bold">{name.trim()}</h3>
-        <p className="mt-1 text-sm text-base-content/80">
+        <p className="mt-1 text-sm text-base-content/85">
           {fundingMonthLabel(results.forecastWindow.startMonth)} through{' '}
           {fundingMonthLabel(results.forecastWindow.endMonth)}.
         </p>
@@ -106,7 +106,7 @@ export function ProjectionReviewStep({
             className="flex flex-col rounded-lg border border-main-border p-4"
             key={step}
           >
-            <div className="flex items-center justify-between gap-3 text-sm text-base-content/80">
+            <div className="flex items-center justify-between gap-3 text-sm text-base-content/85">
               <h3 className="flex items-center gap-2">
                 <Icon aria-hidden="true" className="size-5 shrink-0" />
                 {title}
@@ -122,7 +122,7 @@ export function ProjectionReviewStep({
               </button>
             </div>
             <p className="mt-4 text-xl font-semibold">{value}</p>
-            <p className="mt-2 text-sm text-base-content/80">{detail}</p>
+            <p className="mt-2 text-sm text-base-content/85">{detail}</p>
           </div>
         ))}
       </nav>
@@ -168,7 +168,7 @@ export function ProjectionReviewStep({
               overlapping allocations.
             </p>
           )}
-          <p className="text-base-content/80">
+          <p className="text-base-content/85">
             You can create this plan and make adjustments later.
           </p>
         </section>
@@ -177,7 +177,7 @@ export function ProjectionReviewStep({
         aria-label="Outlook totals"
         className="flex flex-wrap items-center justify-between gap-4 border-t border-main-border pt-5"
       >
-        <dt className="text-sm text-base-content/80">
+        <dt className="text-sm text-base-content/85">
           Combined ending balance
         </dt>
         <dd
@@ -196,7 +196,7 @@ export function ProjectionReviewStep({
             Funding source details ({outlook.sources.length})
           </summary>
           <div className="px-4 pb-4">
-            <p className="mb-3 text-sm text-base-content/80">
+            <p className="mb-3 text-sm text-base-content/85">
               Plan started {draft.seededAt.slice(0, 10)}.{' '}
               {draft.content.historyMonths}-month spending history.
             </p>
@@ -224,7 +224,7 @@ export function ProjectionReviewStep({
                     <tr key={source.source.id}>
                       <th className="font-normal" scope="row">
                         <span className="font-medium">{source.label}</span>
-                        <span className="mt-1 block text-xs text-base-content/80">
+                        <span className="mt-1 block text-xs text-base-content/70">
                           {source.source.sourceKind === 'Planned'
                             ? 'Planned funding'
                             : `Captured ${source.source.capturedAt.slice(0, 10)}`}

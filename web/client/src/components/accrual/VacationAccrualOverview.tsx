@@ -97,7 +97,7 @@ function SummaryMetric({
       >
         {value}
       </dd>
-      <dd className="mt-1 text-sm text-base-content/65">{description}</dd>
+      <dd className="mt-1 text-sm text-base-content/85">{description}</dd>
     </div>
   );
 }
@@ -245,7 +245,7 @@ export function VacationAccrualOverview({
         </span>
       ),
       footer: () => (
-        <span className="flex justify-end w-full text-base-content/55">-</span>
+        <span className="flex justify-end w-full text-base-content/70">-</span>
       ),
       header: () => (
         <span className="flex justify-end w-full">Avg Balance</span>

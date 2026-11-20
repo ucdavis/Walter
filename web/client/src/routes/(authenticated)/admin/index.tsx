@@ -69,7 +69,7 @@ function RouteComponent() {
               <div className="flex h-full flex-col gap-4">
                 <div className="flex items-start justify-between gap-3">
                   <UsersIcon className="h-6 w-6" />
-                  <ArrowRightIcon className="mt-1 h-5 w-5 shrink-0 text-base-content/40 transition group-hover:translate-x-1 group-hover:text-primary" />
+                  <ArrowRightIcon className="mt-1 h-5 w-5 shrink-0 text-base-content/70 transition group-hover:translate-x-1 group-hover:text-primary" />
                 </div>
                 <div>
                   <h2 className="text-xl font-sans font-bold">
@@ -92,7 +92,7 @@ function RouteComponent() {
                 <div className="flex h-full flex-col gap-4">
                   <div className="flex items-start justify-between gap-3">
                     <MegaphoneIcon className="h-6 w-6" />
-                    <ArrowRightIcon className="mt-1 h-5 w-5 shrink-0 text-base-content/40 transition group-hover:translate-x-1 group-hover:text-primary" />
+                    <ArrowRightIcon className="mt-1 h-5 w-5 shrink-0 text-base-content/70 transition group-hover:translate-x-1 group-hover:text-primary" />
                   </div>
                   <div>
                     <h2 className="text-xl font-sans font-bold">
@@ -112,7 +112,7 @@ function RouteComponent() {
                 <div className="flex h-full flex-col gap-4">
                   <div className="flex items-start justify-between gap-3">
                     <EnvelopeIcon className="h-6 w-6" />
-                    <ArrowRightIcon className="mt-1 h-5 w-5 shrink-0 text-base-content/40 transition group-hover:translate-x-1 group-hover:text-primary" />
+                    <ArrowRightIcon className="mt-1 h-5 w-5 shrink-0 text-base-content/70 transition group-hover:translate-x-1 group-hover:text-primary" />
                   </div>
                   <div>
                     <h2 className="text-xl font-sans font-bold">

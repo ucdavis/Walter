@@ -126,7 +126,7 @@ export function FundingTimeline({
                   onMouseEnter={() => setHoveredShare(null)}
                   type="button"
                 >
-                  <span className="mb-2 block text-center text-xs font-medium text-base-content/80">
+                  <span className="mb-2 block text-center text-xs font-medium text-base-content/70">
                     {fundingMonthLabel(month)}
                   </span>
                   <span
@@ -197,13 +197,13 @@ export function FundingTimeline({
                             );
                           })}
                         {funding.fundedPercent < 1 && (
-                          <span className="min-h-0 flex-1 overflow-hidden px-1.5 py-1 text-[11px] leading-tight text-base-content/60">
+                          <span className="min-h-0 flex-1 overflow-hidden px-1.5 py-1 text-[11px] leading-tight text-base-content/70">
                             {percent.format(1 - funding.fundedPercent)} open
                           </span>
                         )}
                       </>
                     ) : (
-                      <span className="m-auto px-1 text-center text-xs text-base-content/60">
+                      <span className="m-auto px-1 text-center text-xs text-base-content/70">
                         Not active
                       </span>
                     )}

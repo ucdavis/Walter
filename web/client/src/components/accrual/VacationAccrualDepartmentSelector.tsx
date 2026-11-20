@@ -55,7 +55,7 @@ const departmentColumns: ColumnDef<DepartmentSelectorRow>[] = [
               {row.department}
             </span>
           </span>
-          <span className="block text-sm font-semibold text-base-content/75">
+          <span className="block text-sm font-semibold text-base-content/85">
             {employeeLabel}
           </span>
         </span>

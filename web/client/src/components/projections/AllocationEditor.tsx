@@ -299,7 +299,7 @@ export function AllocationEditor({
               </button>
             </div>
           </div>
-          <p className="mt-2 text-sm leading-relaxed text-base-content/80">
+          <p className="mt-2 text-sm leading-relaxed text-base-content/85">
             Editing {fundingMonthLabel(month)}. Expand the range to replace
             nearby months with this same setup.
           </p>
@@ -375,7 +375,7 @@ export function AllocationEditor({
                         }
                       />
                       {values.mode === 'entire' && (
-                        <span className="text-sm text-base-content/80">
+                        <span className="text-sm text-base-content/85">
                           {appointment.startDate
                             ? 'Uses appointment start'
                             : 'Appointment has no start limit'}
@@ -405,7 +405,7 @@ export function AllocationEditor({
                         }
                       />
                       {values.mode !== 'dates' && (
-                        <span className="text-sm text-base-content/80">
+                        <span className="text-sm text-base-content/85">
                           {appointment.endDate
                             ? 'Uses appointment end'
                             : 'Continues until the appointment ends'}
@@ -450,7 +450,7 @@ export function AllocationEditor({
                 return (
                   <button
                     aria-pressed={selected}
-                    className={`min-w-28 shrink-0 rounded-sm border px-3 py-2 text-left text-sm ${selected ? 'border-primary bg-primary/10 text-primary' : 'border-main-border bg-base-100 text-base-content/80'}`}
+                    className={`min-w-28 shrink-0 rounded-sm border px-3 py-2 text-left text-sm ${selected ? 'border-primary bg-primary/10 text-primary' : 'border-main-border bg-base-100 text-base-content/85'}`}
                     key={value}
                     onClick={() => {
                       form.setFieldValue('mode', 'dates');
@@ -485,7 +485,7 @@ export function AllocationEditor({
               })}
             </div>
             {partlyOutsideAppointment && (
-              <p className="mt-3 text-sm text-base-content/80" role="status">
+              <p className="mt-3 text-sm text-base-content/85" role="status">
                 Appointment dates: {appointment.startDate ?? 'No start limit'}{' '}
                 to {appointment.endDate ?? 'no end limit'}. Funding outside
                 these dates stays inactive. Use Edit appointment to extend them.
@@ -502,7 +502,7 @@ export function AllocationEditor({
               </p>
             )}
             {seed.mixed && (
-              <p className="mt-2 text-sm text-base-content/80">
+              <p className="mt-2 text-sm text-base-content/85">
                 Funding changes within {fundingMonthLabel(month)}. An unchanged
                 portion is selected with its exact dates. Expanding the period
                 replaces the other splits too.
@@ -513,7 +513,7 @@ export function AllocationEditor({
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h3 className="text-base font-semibold">Funding split</h3>
-                <p className="mt-1 text-sm text-base-content/80">
+                <p className="mt-1 text-sm text-base-content/85">
                   Shares are percentages of the appointment. This appointment is{' '}
                   {percentText(appointment.fte)}% FTE.
                 </p>

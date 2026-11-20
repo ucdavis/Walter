@@ -69,7 +69,7 @@ export function ProjectionPlanCard({
       {data ? (
         <>
           <div className="mt-1">
-            <p className="line-clamp-2 text-sm text-base-content/80 break-words">
+            <p className="line-clamp-2 text-sm text-base-content/85 break-words">
               {data.plan.content.notes ||
                 'Based on saved funding and staffing assumptions.'}
             </p>
@@ -81,7 +81,7 @@ export function ProjectionPlanCard({
             />
           </div>
           <dl className="mb-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-            <dt className="text-sm text-base-content/80">Ending balance</dt>
+            <dt className="text-sm text-base-content/85">Ending balance</dt>
             <dd
               className={`ml-auto min-w-0 max-w-full text-right text-xl font-medium break-words tabular-nums ${data.outlook.endBalance !== null && data.outlook.endBalance < 0 ? 'text-error' : ''}`}
             >
@@ -110,7 +110,7 @@ export function ProjectionPlanCard({
       )}
       <footer className="mt-auto flex flex-wrap items-end justify-between gap-3 border-t border-main-border pt-3">
         {data && (
-          <p className="text-sm text-base-content/80">
+          <p className="text-sm text-base-content/85">
             <span className="block">
               {fundingMonthLabel(data.window.startMonth)} to{' '}
               {fundingMonthLabel(data.window.endMonth)}

@@ -39,7 +39,7 @@ export function PageError({
           <p className="mt-4 text-lg text-base-content/85">{message}</p>
         ) : null}
         {detail ? (
-          <p className="mt-2 text-sm text-base-content/65">{detail}</p>
+          <p className="mt-2 text-sm text-base-content/85">{detail}</p>
         ) : null}
         {children ? <div className="mt-6">{children}</div> : null}
         {actions ? (

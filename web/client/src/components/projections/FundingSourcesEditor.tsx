@@ -87,7 +87,7 @@ export function FundingSourcesEditor<T extends ProjectionDraft>({
             Your funding sources
           </h2>
           {!initialSelection && (
-            <p className="mt-1 text-sm leading-relaxed text-base-content/80">
+            <p className="mt-1 text-sm leading-relaxed text-base-content/85">
               Review your funding sources and add planned funding. Each task
               keeps its own balance and forecast.
             </p>
@@ -170,7 +170,7 @@ export function FundingSourcesEditor<T extends ProjectionDraft>({
           Planning for funding you don&apos;t have yet?
         </button>
       )}
-      <p className="mt-5 text-sm text-base-content/80">
+      <p className="mt-5 text-sm text-base-content/85">
         Balances already account for recorded expenses and commitments. Your
         changes apply to this plan only.
       </p>

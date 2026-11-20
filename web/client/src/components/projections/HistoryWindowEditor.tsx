@@ -71,7 +71,7 @@ export function HistoryWindowEditor({
             </label>
           )}
         </form.Field>
-        <p className="text-sm text-base-content/80">
+        <p className="text-sm text-base-content/85">
           Uses the spending captured with each funding source. Custom monthly
           amounts and added expenses stay unchanged. This does not refresh
           balances or staffing.

@@ -121,7 +121,7 @@ export function StaffingEditor<T extends ProjectionDraft>({
             <UserGroupIcon aria-hidden="true" className="size-5 shrink-0" />
             People & project funding
           </h2>
-          <p className="mt-1 text-sm leading-relaxed text-base-content/80">
+          <p className="mt-1 text-sm leading-relaxed text-base-content/85">
             Split a person&apos;s time across funding sources, or change funding
             over time.
           </p>
@@ -136,7 +136,7 @@ export function StaffingEditor<T extends ProjectionDraft>({
           Add appointment
         </button>
       </div>
-      <p className="mb-5 rounded-md bg-base-200 px-4 py-3 text-sm leading-relaxed text-base-content/80">
+      <p className="mb-5 rounded-md bg-base-200 px-4 py-3 text-sm leading-relaxed text-base-content/85">
         Each share is a percentage of the appointment. Shares should add up to
         100%. Outside plan shares count toward the appointment but do not charge
         these funding sources.
@@ -188,7 +188,7 @@ export function StaffingEditor<T extends ProjectionDraft>({
                       .join(' · ')}
                   </p>
                 )}
-                <p className="mt-1 text-sm text-base-content/80">
+                <p className="mt-1 text-sm text-base-content/85">
                   <span className="mr-6 inline-block">
                     {item.monthlySalary === null
                       ? 'Salary needs input'

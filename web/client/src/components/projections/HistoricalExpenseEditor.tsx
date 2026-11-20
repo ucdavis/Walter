@@ -85,11 +85,11 @@ export function HistoricalExpenseEditor({
       onClose={onClose}
       title={`Edit historical amount: ${category}`}
     >
-      <p className="mt-2 text-sm text-base-content/80">
+      <p className="mt-2 text-sm text-base-content/85">
         <span className="font-medium">Charge to:</span> {sourceLabel(source)}
       </p>
       {(source.projectNumber || source.taskNumber) && (
-        <p className="mt-1 text-sm text-base-content/80">
+        <p className="mt-1 text-sm text-base-content/85">
           {[
             source.projectNumber && `Project ${source.projectNumber}`,
             source.taskNumber && `Task ${source.taskNumber}`,
@@ -138,11 +138,11 @@ export function HistoricalExpenseEditor({
           Turn off estimate
         </button>
         {forceZero && amount === 0 && (
-          <p className="text-sm text-base-content/80">
+          <p className="text-sm text-base-content/85">
             This estimate will stay off when the history window changes.
           </p>
         )}
-        <p className="text-sm text-base-content/80">
+        <p className="text-sm text-base-content/85">
           Use Turn off estimate to keep it at zero across history windows. A
           negative amount reduces forecast costs. A custom amount stays in place
           when the history window changes; Use historical amount restores the

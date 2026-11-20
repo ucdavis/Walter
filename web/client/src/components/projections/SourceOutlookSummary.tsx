@@ -44,12 +44,12 @@ export function SourceOutlookHeader({
         {outlook.label}
       </h2>
       {dates.length > 0 && (
-        <p className="text-sm text-base-content/80">{dates.join(' · ')}</p>
+        <p className="text-sm text-base-content/85">{dates.join(' · ')}</p>
       )}
       {(outlook.firstShortfallMonth ||
         outlook.categoryShortfalls.length === 0) && (
         <p
-          className={`text-sm ${outlook.firstShortfallMonth ? 'text-error' : 'text-base-content/80'}`}
+          className={`text-sm ${outlook.firstShortfallMonth ? 'text-error' : 'text-base-content/85'}`}
         >
           {outlook.firstShortfallMonth
             ? `First below zero in ${fundingMonthLabel(outlook.firstShortfallMonth)}`

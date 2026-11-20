@@ -38,10 +38,10 @@ export function SearchButton({
       onClick={open}
       type="button"
     >
-      <MagnifyingGlassIcon className="h-5 w-5 shrink-0 text-base-content/40" />
-      <span className="flex-1 text-base-content/60">{resolvedPlaceholder}</span>
+      <MagnifyingGlassIcon className="h-5 w-5 shrink-0 text-base-content/70" />
+      <span className="flex-1 text-base-content/70">{resolvedPlaceholder}</span>
       {showShortcut ? (
-        <span className="flex items-center gap-1 text-base-content/40">
+        <span className="flex items-center gap-1 text-base-content/70">
           <kbd className="kbd kbd-sm">{shortcut}</kbd>
           <kbd className="kbd kbd-sm">K</kbd>
         </span>

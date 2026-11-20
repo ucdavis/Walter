@@ -74,7 +74,7 @@ export function Reports() {
                 <div className="flex items-start justify-between gap-3">
                   <report.Icon className="h-6 w-6" />
 
-                  <ArrowRightIcon className="mt-1 h-5 w-5 shrink-0 text-base-content/40 transition group-hover:translate-x-1 group-hover:text-primary" />
+                  <ArrowRightIcon className="mt-1 h-5 w-5 shrink-0 text-base-content/70 transition group-hover:translate-x-1 group-hover:text-primary" />
                 </div>
                 <div>
                   <h2 className="text-xl font-sans font-bold">{report.title}</h2>

@@ -136,7 +136,7 @@ function ProjectionList({
                   ? `${ownerDisplayName}’s portfolio projections`
                   : 'Portfolio projections'}
               </h1>
-              <p className="mt-2 max-w-2xl text-sm text-base-content/80">
+              <p className="mt-2 max-w-2xl text-sm text-base-content/85">
                 New plans exclude inactive internal tasks and expired awards.
                 Each task keeps its own balance and forecast.
               </p>
@@ -165,7 +165,7 @@ function ProjectionList({
                   {projections.length}
                 </span>
               </h2>
-              <span className="hidden text-sm text-base-content/80 sm:block">
+              <span className="hidden text-sm text-base-content/85 sm:block">
                 Separate assumptions for each plan
               </span>
             </div>

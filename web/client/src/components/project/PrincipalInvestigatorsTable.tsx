@@ -26,7 +26,7 @@ const createColumns = (
         return (
           <div
             aria-disabled="true"
-            className="flex min-h-20 flex-col justify-center gap-1 rounded border border-main-border bg-base-200 p-3 text-base-content/60"
+            className="flex min-h-20 flex-col justify-center gap-1 rounded border border-main-border bg-base-200 p-3 text-base-content/70"
           >
             <span className="truncate">{info.getValue()}</span>
             <span className="text-xs">Campus identity unavailable</span>

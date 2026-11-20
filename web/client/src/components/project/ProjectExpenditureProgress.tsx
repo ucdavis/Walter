@@ -207,7 +207,7 @@ function CategoryProgressRows({ rows }: { rows: CategoryProgressRow[] }) {
                 </p>
                 <p className="text-sm">{formatCurrency(row.budget)} budget</p>
               </div>
-              <div className="mt-1 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-sm text-base-content/80">
+              <div className="mt-1 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-sm text-base-content/85">
                 <p className="flex flex-wrap gap-x-3 gap-y-1">
                   <span>{spentText}</span>
                   <span>|</span>

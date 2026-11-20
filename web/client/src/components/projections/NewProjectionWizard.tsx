@@ -425,7 +425,7 @@ export function NewProjectionWizard({
             ][step]
           }
         </h1>
-        <p className="mt-3 max-w-2xl text-base leading-relaxed text-base-content/80">
+        <p className="mt-3 max-w-2xl text-base leading-relaxed text-base-content/85">
           {
             [
               'Choose one or more of your projects to start your plan.',
@@ -457,7 +457,7 @@ export function NewProjectionWizard({
             >
               <span
                 aria-hidden="true"
-                className={`relative z-10 grid size-8 place-items-center rounded-full border font-semibold ${index === step ? 'border-primary bg-primary text-primary-content ring-4 ring-base-200' : index < step ? 'border-base-200 bg-base-200 text-primary' : 'border-main-border bg-base-200 text-base-content/60'}`}
+                className={`relative z-10 grid size-8 place-items-center rounded-full border font-semibold ${index === step ? 'border-primary bg-primary text-primary-content ring-4 ring-base-200' : index < step ? 'border-base-200 bg-base-200 text-primary' : 'border-main-border bg-base-200 text-base-content/70'}`}
               >
                 {index < step ? <CheckIcon className="size-4" /> : index + 1}
               </span>
@@ -465,7 +465,7 @@ export function NewProjectionWizard({
                 className={
                   index <= step
                     ? 'font-medium text-primary'
-                    : 'text-base-content/60'
+                    : 'text-base-content/70'
                 }
               >
                 {label}
@@ -572,7 +572,7 @@ export function NewProjectionWizard({
         >
           Cancel setup
         </button>
-        <p className="hidden text-sm text-base-content/60 lg:block">
+        <p className="hidden text-sm text-base-content/70 lg:block">
           You can revisit every assumption in your workspace.
         </p>
         <div className="flex flex-wrap gap-3">

@@ -93,7 +93,7 @@ const ppmTaskColumns = [
       <div className="text-sm">
         <div>{info.getValue()}</div>
         {info.row.original.taskName && (
-          <div className="text-xs text-base-content/80">
+          <div className="text-xs text-base-content/70">
             {info.row.original.taskName}
           </div>
         )}
@@ -106,7 +106,7 @@ const ppmTaskColumns = [
       <div className="text-sm">
         <div>{info.getValue() ?? '-'}</div>
         {info.row.original.fundDesc && (
-          <div className="text-xs text-base-content/80">
+          <div className="text-xs text-base-content/70">
             {info.row.original.fundDesc}
           </div>
         )}
@@ -119,7 +119,7 @@ const ppmTaskColumns = [
       <div className="text-sm">
         <div>{info.getValue() ?? '-'}</div>
         {info.row.original.activityDesc && (
-          <div className="text-xs text-base-content/80">
+          <div className="text-xs text-base-content/70">
             {info.row.original.activityDesc}
           </div>
         )}
@@ -431,7 +431,7 @@ function RouteComponent() {
                 </div>
               </div>
             ) : (
-              <p className="text-base-content/80">No record found.</p>
+              <p className="text-base-content/85">No record found.</p>
             )}
           </section>
 
@@ -484,7 +484,7 @@ function RouteComponent() {
               </div>
             </div>
             {filteredGlTransactions.length === 0 ? (
-              <p className="text-base-content/80">No GL transactions found.</p>
+              <p className="text-base-content/85">No GL transactions found.</p>
             ) : (
               <DataTable
                 columns={glColumns}

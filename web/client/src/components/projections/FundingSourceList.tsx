@@ -69,7 +69,7 @@ export function FundingSourceList({
               key={key}
             >
               <h3 className="font-semibold break-words">{project}</h3>
-              <p className="mt-1 text-sm text-base-content/80">
+              <p className="mt-1 text-sm text-base-content/85">
                 Project {group[0].projectNumber} · {group.length} tasks
               </p>
               <div

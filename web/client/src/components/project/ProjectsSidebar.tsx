@@ -230,7 +230,7 @@ export function ProjectsSidebar() {
               {!collapsed && (
                 <div className="px-4 py-1">
                   <div className="relative">
-                    <MagnifyingGlassIcon className="w-4 h-4 absolute left-0 top-1/2 -translate-y-1/2 pointer-events-none text-base-content/55" />
+                    <MagnifyingGlassIcon className="w-4 h-4 absolute left-0 top-1/2 -translate-y-1/2 pointer-events-none text-base-content/70" />
 
                     <input
                       aria-label="Search projects"
@@ -280,7 +280,7 @@ export function ProjectsSidebar() {
                         <div className="flex justify-between items-start mb-1">
                           <span className="text-base">All Projects</span>
                         </div>
-                        <div className="flex justify-between text-sm items-center text-base-content/60">
+                        <div className="flex justify-between text-sm items-center text-base-content/70">
                           <Currency value={totalOverviewBalance} />
                         </div>
                       </>
@@ -326,7 +326,7 @@ export function ProjectsSidebar() {
                               {project.displayName}
                             </span>
                           </div>
-                          <div className="flex text-sm justify-between items-center text-base-content/60">
+                          <div className="flex text-sm justify-between items-center text-base-content/70">
                             <Currency value={project.totalBalance} />
                             <span>
                               {formatDate(project.endDate, 'No end date')}
@@ -415,7 +415,7 @@ export function ProjectsSidebar() {
 
           <div className="px-4 py-1 border-b border-main-border">
             <div className="relative">
-              <MagnifyingGlassIcon className="w-4 h-4 absolute left-0 top-1/2 -translate-y-1/2 pointer-events-none text-base-content/55" />
+              <MagnifyingGlassIcon className="w-4 h-4 absolute left-0 top-1/2 -translate-y-1/2 pointer-events-none text-base-content/70" />
 
               <input
                 aria-label="Search projects"
@@ -449,7 +449,7 @@ export function ProjectsSidebar() {
               <div className="flex justify-between items-start mb-1">
                 <span className="text-base">All Projects</span>
               </div>
-              <div className="flex justify-between text-sm items-center text-base-content/60">
+              <div className="flex justify-between text-sm items-center text-base-content/70">
                 <Currency value={totalOverviewBalance} />
                 <span>total proj #</span>
               </div>
@@ -475,7 +475,7 @@ export function ProjectsSidebar() {
                 <div className="flex justify-between items-start mb-1">
                   <span className="text-base">{project.displayName}</span>
                 </div>
-                <div className="flex text-sm justify-between items-center text-base-content/60">
+                <div className="flex text-sm justify-between items-center text-base-content/70">
                   <Currency value={project.totalBalance} />
                   <span>{formatDate(project.endDate, 'No end date')}</span>
                 </div>

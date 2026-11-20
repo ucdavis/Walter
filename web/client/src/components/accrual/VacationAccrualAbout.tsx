@@ -176,7 +176,7 @@ export function VacationAccrualAbout({
               </p>
             </div>
 
-            <div className="space-y-3 text-sm text-base-content/75">
+            <div className="space-y-3 text-sm text-base-content/85">
               <div className="flex gap-2">
                 <CheckCircleIcon className="mt-0.5 h-4 w-4 shrink-0 text-success" />
                 <span>

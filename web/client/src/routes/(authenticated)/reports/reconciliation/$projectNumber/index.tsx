@@ -268,7 +268,7 @@ function RouteComponent() {
       </section>
 
       {isReconciliationPending ? (
-        <p className="text-base-content/80 mt-4">
+        <p className="text-base-content/85 mt-4">
           Loading reconciliation data…
         </p>
       ) : isReconciliationError ? (

@@ -295,19 +295,19 @@ export function FundingOutlookChart({
               : 'No funding sources contribute within this forecast period.'}
         </p>
       )}
-      <p className="mt-1.5 mb-3.5 text-center text-sm text-base-content/80">
+      <p className="mt-1.5 mb-3.5 text-center text-sm text-base-content/85">
         Month-end balances · {fundingMonthLabel(forecastWindow.startMonth)} to{' '}
         {fundingMonthLabel(forecastWindow.endMonth)}. Lines begin with each
         source&apos;s first forecast month.
       </p>
       {!focused && series.length > 0 && (
-        <details className="mb-4 text-sm text-base-content/80">
+        <details className="mb-4 text-sm text-base-content/85">
           <summary className="cursor-pointer text-sm font-medium">
             Chart lines · {visible.length} of{' '}
             {series.filter(({ months }) => months.length > 0).length} shown
           </summary>
           {groupControl && <div className="mt-3">{groupControl}</div>}
-          <p className="mt-2 text-xs text-base-content/80">
+          <p className="mt-2 text-xs text-base-content/70">
             Hiding a line leaves totals and funding checks unchanged.
           </p>
           <div className="my-2 flex gap-2">

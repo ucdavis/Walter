@@ -136,7 +136,7 @@ export function MultiSelectFilter({
         {...getReferenceProps()}
       >
         {selected.length === 0 ? (
-          <span className="text-base-content/50">
+          <span className="text-base-content/70">
             {loading ? 'Loading…' : placeholder}
           </span>
         ) : (
@@ -171,7 +171,7 @@ export function MultiSelectFilter({
             })}
           </div>
         )}
-        <ChevronUpDownIcon className="ml-auto h-4 w-4 shrink-0 text-base-content/50" />
+        <ChevronUpDownIcon className="ml-auto h-4 w-4 shrink-0 text-base-content/70" />
       </div>
 
       {open ? (
@@ -204,12 +204,12 @@ export function MultiSelectFilter({
                   />
                 </div>
                 <Command.List className="overflow-y-auto p-1">
-                  <Command.Empty className="px-2 py-4 text-center text-sm text-base-content/60">
+                  <Command.Empty className="px-2 py-4 text-center text-sm text-base-content/70">
                     {emptyText}
                   </Command.Empty>
                   {groups.map(([group, opts]) => (
                     <Command.Group
-                      className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wide [&_[cmdk-group-heading]]:text-base-content/60"
+                      className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wide [&_[cmdk-group-heading]]:text-base-content/70"
                       heading={group || undefined}
                       key={group || 'default'}
                     >
@@ -229,7 +229,7 @@ export function MultiSelectFilter({
                             />
                             <span className="truncate">{opt.label}</span>
                             {opt.hint ? (
-                              <span className="ml-auto shrink-0 text-xs text-base-content/50">
+                              <span className="ml-auto shrink-0 text-xs text-base-content/70">
                                 {opt.hint}
                               </span>
                             ) : null}

@@ -442,7 +442,7 @@ function BurndownTooltip({
               <dd className="ml-5">
                 Remaining {formatCurrency(remaining)}
                 {spend !== null && spend !== undefined && (
-                  <span className="text-base-content/60">
+                  <span className="text-base-content/70">
                     {' '}
                     &middot; Spend {formatCurrency(spend)}
                   </span>

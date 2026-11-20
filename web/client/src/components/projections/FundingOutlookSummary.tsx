@@ -96,7 +96,7 @@ export function FundingOutlookNotice({
                 </p>
               )}
               {outlook.categoryShortfallSources.length > 0 && (
-                <p className="mt-1 text-base-content/80">
+                <p className="mt-1 text-base-content/85">
                   {outlook.categoryShortfallSources.length}{' '}
                   {outlook.categoryShortfallSources.length === 1
                     ? 'source has'
@@ -111,7 +111,7 @@ export function FundingOutlookNotice({
                 </p>
               )}
               {outlook.shortfallSources.length > 0 && (
-                <p className="mt-1 text-base-content/80">
+                <p className="mt-1 text-base-content/85">
                   {outlook.shortfallSources.length}{' '}
                   {outlook.shortfallSources.length === 1
                     ? 'source falls'
@@ -205,7 +205,7 @@ export function FundingOutlookTotals({
       className="grid gap-4 border-y border-main-border bg-base-200 px-5 py-4 sm:grid-cols-3 sm:gap-6 xl:px-6"
     >
       <div>
-        <dt className="text-sm text-base-content/80">
+        <dt className="text-sm text-base-content/85">
           Opening planning balance
         </dt>
         <dd className="mt-1 text-2xl font-semibold tabular-nums">
@@ -213,13 +213,13 @@ export function FundingOutlookTotals({
         </dd>
       </div>
       <div>
-        <dt className="text-sm text-base-content/80">Planned spending</dt>
+        <dt className="text-sm text-base-content/85">Planned spending</dt>
         <dd className="mt-1 text-2xl font-semibold tabular-nums">
           {formatCurrency(scope.forecast)}
         </dd>
       </div>
       <div>
-        <dt className="text-sm text-base-content/80">
+        <dt className="text-sm text-base-content/85">
           {selected ? 'Ending balance' : 'Combined ending balance'} ·{' '}
           {fundingMonthLabel(endMonth)}
         </dt>

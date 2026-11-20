@@ -190,7 +190,7 @@ export function TaskBreakdown({
                 )}
               </div>
               {info.row.original.taskName && (
-                <div className="text-xs text-base-content/80">
+                <div className="text-xs text-base-content/70">
                   {info.row.original.taskName}
                 </div>
               )}

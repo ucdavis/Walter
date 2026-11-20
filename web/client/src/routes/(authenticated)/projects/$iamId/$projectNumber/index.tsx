@@ -119,7 +119,7 @@ function ProjectContent({
     <main className="flex-1 min-w-0">
       <section className="mt-8 mb-2">
         <h1 className="h1 max-w-4xl">{summary.displayName}</h1>
-        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-base text-base-content/80">
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-base text-base-content/85">
           <span className="font-sans font-bold text-base-content">
             {summary.projectNumber}
           </span>
@@ -139,7 +139,7 @@ function ProjectContent({
               />
             </span>
           )}
-          <span aria-hidden="true" className="text-base-content/40">
+          <span aria-hidden="true" className="text-base-content/70">
             |
           </span>
           <span className="inline-flex items-center gap-2">

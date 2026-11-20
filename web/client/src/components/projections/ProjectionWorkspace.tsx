@@ -253,7 +253,7 @@ export function ProjectionWorkspace({
               {fundingMonthLabel(results.forecastWindow.startMonth)} onward ·{' '}
               {draft.content.forecastMonths} months
               <span
-                className="mt-1 block text-base-content/80 xl:ms-4 xl:mt-0 xl:inline"
+                className="mt-1 block text-base-content/85 xl:ms-4 xl:mt-0 xl:inline"
                 role="status"
               >
                 {saving
