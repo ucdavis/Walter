@@ -11,7 +11,7 @@ import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
 import type { ProjectRecord } from '@/queries/project.ts';
 
 const FUNDING_COLORS: Record<string, string> = {
-  internal: 'var(--color-accent)',
+  internal: 'var(--color-secondary)',
   sponsored: 'var(--color-info)',
   'sponsored capital': 'color-mix(in srgb, var(--color-info) 88%, white)',
   'sponsored fabrication': 'color-mix(in srgb, var(--color-info) 72%, white)',

@@ -152,7 +152,7 @@ function ProjectContent({
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1">
           <span
-            className={`badge font-sans font-bold badge-sm ${summary.isInternal ? 'badge-accent' : 'badge-info'}`}
+            className={`badge font-sans font-bold badge-sm ${summary.isInternal ? 'badge-secondary' : 'badge-info'}`}
           >
             {`${projectRecords[0].projectType} Project`}
           </span>
@@ -162,7 +162,7 @@ function ProjectContent({
         </div>
         {summary.isInternal && (
           <div
-            className="alert alert-soft alert-accent mt-4 max-w-3xl"
+            className="alert alert-soft alert-secondary mt-4 max-w-3xl"
             role="alert"
           >
             Totals for internal projects do not reflect transactions that have

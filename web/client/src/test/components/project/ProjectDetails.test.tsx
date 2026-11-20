@@ -147,7 +147,7 @@ describe('ProjectDetails', () => {
     expect(screen.getByText('Project Manager')).toBeInTheDocument();
     expect(screen.getByText('Balance')).toBeInTheDocument();
     expect(screen.getByText('$4,000.00').closest('dd')).toHaveClass(
-      'text-accent'
+      'text-secondary'
     );
     expect(screen.getByText('Balance').closest('div')).toHaveClass(
       'lg:col-start-4'

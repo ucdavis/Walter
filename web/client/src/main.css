@@ -8,13 +8,14 @@
   --color-light-bg-300: #e9e9e9;
   --color-main-border: #dfdfdf;
 
-  --color-primary-color: var(--color-ucd-gunrock);
-  --color-secondary-color: var(--color-ucd-gold);
-  --color-accent-color: var(--color-ucd-poppy);
-  --color-error-color: var(--color-ucd-doubledecker);
-  --color-info-color: var(--color-ucd-putahcreek);
-  --color-success-color: var(--color-ucd-quad);
-  --color-warning-color: #cd9400;
+  --color-primary-color: #2459a6;
+  --color-secondary-color: #a65400;
+  --color-accent-color: #a34272;
+  --color-error-color: #bd3038;
+  --color-info-color: #006f85;
+  --color-success-color: #24734b;
+  --color-warning-color: #916600;
+  --color-neutral-color: #4b5563;
 }
 
 @plugin "daisyui/theme" {
@@ -44,6 +45,9 @@
 
   --color-warning: var(--color-warning-color);
   --color-warning-content: var(--color-light-font);
+
+  --color-neutral: var(--color-neutral-color);
+  --color-neutral-content: var(--color-light-font);
 }
 @import './animations.css';
 

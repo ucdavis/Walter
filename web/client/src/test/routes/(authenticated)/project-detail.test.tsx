@@ -285,13 +285,13 @@ describe('project detail page', () => {
       const message = await screen.findByText('Award ended on 01/15/2000');
       const alert = message.closest('[role="alert"]');
 
-      expect(alert).toHaveClass('alert-soft', 'alert-accent');
+      expect(alert).toHaveClass('alert-soft', 'alert-secondary');
     } finally {
       cleanup();
     }
   });
 
-  it('shows the internal totals warning as a soft accent alert', async () => {
+  it('shows the internal totals warning as a soft secondary alert', async () => {
     const projects = [
       createProject({
         awardEndDate: null,
@@ -312,7 +312,7 @@ describe('project detail page', () => {
       );
       const alert = message.closest('[role="alert"]');
 
-      expect(alert).toHaveClass('alert-soft', 'alert-accent');
+      expect(alert).toHaveClass('alert-soft', 'alert-secondary');
     } finally {
       cleanup();
     }

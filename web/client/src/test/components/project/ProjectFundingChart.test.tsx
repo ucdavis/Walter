@@ -111,7 +111,7 @@ describe('ProjectFundingChart', () => {
     const internalLabel = screen.getByText('Internal');
     const internalBalance = screen.getByText(/-\$3,000/);
     expect(internalLabel).toHaveClass('font-sans', 'font-bold');
-    expect(internalLabel).toHaveStyle({ color: 'var(--color-accent)' });
+    expect(internalLabel).toHaveStyle({ color: 'var(--color-secondary)' });
     expect(internalBalance).toHaveClass('font-sans', 'font-bold', 'text-error');
   });
 
@@ -153,7 +153,7 @@ describe('ProjectFundingChart', () => {
     const sponsoredLabel = screen.getByText('Sponsored');
     const internalBalance = screen.getByText(/-\$1,000/);
     const sponsoredBalance = screen.getByText(/-\$2,000/);
-    expect(internalLabel).toHaveStyle({ color: 'var(--color-accent)' });
+    expect(internalLabel).toHaveStyle({ color: 'var(--color-secondary)' });
     expect(sponsoredLabel).toHaveClass('font-sans', 'font-bold');
     expect(sponsoredLabel).toHaveStyle({ color: 'var(--color-info)' });
     expect(internalBalance).toHaveClass('font-sans', 'font-bold', 'text-error');

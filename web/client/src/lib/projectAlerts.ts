@@ -9,7 +9,7 @@ import { format } from 'date-fns';
 export interface Alert {
   id: string;
   message: string;
-  severity: 'accent' | 'error' | 'info' | 'success' | 'warning';
+  severity: 'secondary' | 'error' | 'info' | 'success' | 'warning';
   type:
     | 'award-ended'
     | 'negative-balance'
@@ -35,7 +35,7 @@ export function getAwardEndedAlert(
     ? {
         id: `award-ended-${summary.projectNumber}`,
         message: `Award ended on ${format(endDate, 'MM/dd/yyyy')}`,
-        severity: summary.isInternal ? 'accent' : 'info',
+        severity: summary.isInternal ? 'secondary' : 'info',
         type: 'award-ended',
       }
     : null;

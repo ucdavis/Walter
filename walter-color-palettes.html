@@ -1,0 +1,61 @@
+<div id="walter-palettes">
+  <div class="viz-controls">
+    <label class="form-label">Palette
+      <select class="form-select" id="walter-palette-choice">
+        <option>Davis-inspired</option><option>Clear and modern</option><option>Muted and warm</option>
+      </select>
+    </label>
+    <label class="form-label">Text sample background
+      <select class="form-select" id="walter-surface-choice">
+        <option value="#FFFFFF">White · base-100</option>
+        <option value="#FAFAFA">Off-white · base-200</option>
+        <option value="#E9E9E9">Light gray · base-300</option>
+      </select>
+    </label>
+  </div>
+  <div class="table-responsive">
+    <table class="table">
+      <caption class="sr-only">Proposed Walter theme colors, white label samples, colored text samples, and calculated WCAG contrast ratios.</caption>
+      <thead><tr><th>Role</th><th>White on color</th><th>Color on background</th><th>Contrast</th></tr></thead>
+      <tbody id="walter-color-rows"></tbody>
+    </table>
+  </div>
+  <div id="walter-palette-status" class="text-small" aria-live="polite"></div>
+</div>
+<style>
+  #walter-palettes .wp-filled {display:inline-block;padding:10px 14px;border-radius:5px;color:#fff;white-space:nowrap}
+  #walter-palettes .wp-text {display:inline-block;padding:10px 14px;white-space:nowrap;text-decoration:underline;text-underline-offset:3px}
+  #walter-palettes .wp-hex {display:block;margin-top:5px;color:var(--foreground)}
+</style>
+<script>
+(() => {
+  const root = document.getElementById('walter-palettes');
+  const palettes = [
+    ['#022851','#866300','#6D4488','#287344','#00758A','#946500','#B42338','#475569'],
+    ['#2459A6','#6B4CA5','#A34272','#24734B','#006F85','#916600','#BD3038','#4B5563'],
+    ['#36576F','#7C6040','#855274','#486C4E','#386D78','#8A6827','#A8413A','#56534F']
+  ];
+  const roles = ['Primary','Secondary','Accent','Success','Info','Warning','Error','Neutral'];
+  const samples = ['Save plan','Edit details','Projections','Saved','View details','Review dates','Remove','Cancel'];
+  const select = root.querySelector('#walter-palette-choice');
+  const surface = root.querySelector('#walter-surface-choice');
+  function luminance(hex) {
+    const rgb = hex.match(/[0-9a-f]{2}/ig).map(v => parseInt(v,16)/255).map(v => v <= 0.04045 ? v/12.92 : ((v+0.055)/1.055)**2.4);
+    return rgb[0]*0.2126 + rgb[1]*0.7152 + rgb[2]*0.0722;
+  }
+  function ratio(a,b) {const x=luminance(a),y=luminance(b);return (Math.max(x,y)+0.05)/(Math.min(x,y)+0.05);}
+  function render() {
+    const colors=palettes[select.selectedIndex];
+    root.querySelector('#walter-color-rows').innerHTML=colors.map((hex,i) => {
+      const filled=ratio(hex,'#FFFFFF');
+      const text=ratio(hex,surface.value);
+      return `<tr><th scope="row">${roles[i]}<code class="wp-hex text-small">${hex}</code></th><td><span class="wp-filled" style="background:${hex}">${samples[i]}</span></td><td><span class="wp-text" style="color:${hex};background:${surface.value}">${samples[i]}</span></td><td class="tabular-nums"><span>${filled.toFixed(2)}:1 filled</span><br><span>${text.toFixed(2)}:1 text · ${text>=4.5?'Pass':'Below 4.5'}</span></td></tr>`;
+    }).join('');
+    const passes=colors.filter(hex=>ratio(hex,surface.value)>=4.5).length;
+    root.querySelector('#walter-palette-status').textContent=`White labels: 8 of 8 pass 4.5:1. Colored text on selected background: ${passes} of 8 pass. Solid colors at 100% opacity.`;
+  }
+  select.addEventListener('change',render);
+  surface.addEventListener('change',render);
+  render();
+})();
+</script>

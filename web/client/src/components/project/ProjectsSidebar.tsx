@@ -101,13 +101,13 @@ const linkClasses = (isActive: boolean, isInternal?: boolean) => {
     isInternal === undefined
       ? 'border-l-primary bg-primary/10'
       : isInternal
-        ? 'border-l-accent bg-accent/10'
+        ? 'border-l-secondary bg-secondary/10'
         : 'border-l-info bg-info/10';
   const hoverClasses =
     isInternal === undefined
       ? 'hover:bg-primary/5'
       : isInternal
-        ? 'hover:bg-accent/5'
+        ? 'hover:bg-secondary/5'
         : 'hover:bg-info/5';
 
   return [
@@ -117,7 +117,7 @@ const linkClasses = (isActive: boolean, isInternal?: boolean) => {
 };
 
 const projectNumberClasses = (isInternal: boolean) =>
-  isInternal ? 'text-accent' : 'text-info';
+  isInternal ? 'text-secondary' : 'text-info';
 
 export function ProjectsSidebar() {
   const user = useUser();

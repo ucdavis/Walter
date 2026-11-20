@@ -21,7 +21,7 @@ interface ProjectDetailsProps {
 }
 
 const displayValue = (value: string | null) => value ?? 'Not provided';
-const INTERNAL_PROJECT_COLOR = 'var(--color-accent)';
+const INTERNAL_PROJECT_COLOR = 'var(--color-secondary)';
 const SPONSORED_PROJECT_COLOR = 'var(--color-info)';
 
 const hasProjectDates = (summary: ProjectSummary) =>
@@ -149,7 +149,7 @@ export function ProjectDetails({ actions, summary }: ProjectDetailsProps) {
     summary.totals.balance < 0
       ? 'text-error'
       : summary.isInternal
-        ? 'text-accent'
+        ? 'text-secondary'
         : 'text-info'
   }`;
   const renderBalanceDetail = (className = 'flex flex-col') => (
