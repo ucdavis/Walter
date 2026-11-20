@@ -2,13 +2,9 @@ import { act, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
-import { compactProjectionCurrency } from '@/components/projections/projectionFormatting.ts';
 import { createSalaryExample } from '@/test/fixtures/projections.ts';
 import { SUPPLIES_CATEGORY } from '@/lib/piProjection.ts';
-import type {
-  Projection,
-  ProjectionSourceSummary,
-} from '@/queries/projections.ts';
+import type { Projection } from '@/queries/projections.ts';
 import { server } from '@/test/mswUtils.ts';
 import { renderRoute } from '@/test/routerUtils.tsx';
 
@@ -195,7 +191,7 @@ describe('projection dashboard', () => {
     }
   });
 
-  it('keeps cards and New plan usable while balances and another preview are delayed or fail', async () => {
+  it('keeps cards and New plan usable while another preview is delayed or fails', async () => {
     handleDashboard([
       example(71, 'Ready plan'),
       example(72, 'Slow plan'),
@@ -206,10 +202,6 @@ describe('projection dashboard', () => {
       release = resolve;
     });
     server.use(
-      http.get(listUrl + '/sources', async () => {
-        await held;
-        return new HttpResponse(null, { status: 500 });
-      }),
       http.get('/api/projections/72', async () => {
         await held;
         return HttpResponse.json(example(72, 'Slow plan'));
@@ -239,9 +231,6 @@ describe('projection dashboard', () => {
       ).toHaveAttribute('href', '/projections/IAM-PREVIEW/72');
       release();
       expect(
-        await screen.findByText('Current balances are unavailable.')
-      ).toBeInTheDocument();
-      expect(
         await within(
           screen.getByRole('article', { name: 'Slow plan' })
         ).findByText('$2,000')
@@ -252,73 +241,26 @@ describe('projection dashboard', () => {
     }
   });
 
-  it('keeps current project/task balances separate from saved forecasts, with the breakdown collapsed', async () => {
+  it('shows saved plans without the current project balances panel or fetching its sources', async () => {
     handleDashboard([example(71, 'Captured plan')]);
-    const sources: ProjectionSourceSummary[] = [
-      {
-        availableBalance: -100,
-        capturedAt: '2026-11-09T12:00:00.1234567Z',
-        projectName: 'Field study',
-        projectNumber: 'P1',
-        projectType: 'Sponsored',
-        taskName: 'Fieldwork',
-        taskNumber: 'T1',
-      },
-      {
-        availableBalance: 500,
-        capturedAt: '2026-11-09T12:00:00.1234567Z',
-        projectName: 'Field study',
-        projectNumber: 'P1',
-        projectType: 'Sponsored',
-        taskName: 'Analysis',
-        taskNumber: 'T2',
-      },
-      {
-        availableBalance: 200,
-        capturedAt: '2026-11-09T12:00:00.1234567Z',
-        projectName: 'Teaching',
-        projectNumber: 'P2',
-        projectType: 'Internal',
-        taskName: null,
-        taskNumber: 'T1',
-      },
-    ];
-    let seedReads = 0;
-    let writes = 0;
+    let sourceReads = 0;
     server.use(
-      http.get(listUrl + '/sources', () => HttpResponse.json(sources)),
-      http.get(listUrl + '/seed', () => {
-        seedReads++;
-        return new HttpResponse(null, { status: 500 });
-      }),
-      http.post(listUrl, () => {
-        writes++;
-        return new HttpResponse(null, { status: 500 });
+      http.get(listUrl + '/sources', () => {
+        sourceReads++;
+        return HttpResponse.json([]);
       })
     );
     const route = openDashboard();
     try {
-      const current = await screen.findByRole('region', {
-        name: 'Current project balances',
-      });
-      expect(await within(current).findByText('$600')).toBeInTheDocument();
-      expect(current.querySelector('details')).not.toHaveAttribute('open');
-      await userEvent
-        .setup()
-        .click(within(current).getByText('Project balances (2)'));
-      expect(current.querySelector('details')).toHaveAttribute('open');
-      expect(
-        within(current).getByText(compactProjectionCurrency(400))
-      ).toBeVisible();
-      expect(within(current).getByText('-$100')).toBeVisible();
-      expect(within(current).getByText('Fieldwork T1')).toBeVisible();
       expect(
         await within(
-          screen.getByRole('article', { name: 'Captured plan' })
+          await screen.findByRole('article', { name: 'Captured plan' })
         ).findByText('$2,000')
       ).toBeInTheDocument();
-      expect(seedReads).toBe(0);
-      expect(writes).toBe(0);
+      expect(
+        screen.queryByRole('region', { name: 'Current project balances' })
+      ).not.toBeInTheDocument();
+      expect(sourceReads).toBe(0);
     } finally {
       route.cleanup();
     }
@@ -438,21 +380,15 @@ describe('projection dashboard', () => {
     }
   });
 
-  it('retries failed previews and balances without recreating or opening a plan', async () => {
+  it('retries failed previews without recreating or opening a plan', async () => {
     const plan = example(71, 'Retry plan');
     handleDashboard([plan]);
     let planReads = 0;
-    let balanceReads = 0;
     server.use(
       http.get('/api/projections/71', () =>
         ++planReads === 1
           ? new HttpResponse(null, { status: 500 })
           : HttpResponse.json(plan)
-      ),
-      http.get(listUrl + '/sources', () =>
-        ++balanceReads === 1
-          ? new HttpResponse(null, { status: 500 })
-          : HttpResponse.json([])
       )
     );
     const route = openDashboard();
@@ -463,15 +399,8 @@ describe('projection dashboard', () => {
       });
       expect(retry.closest('a')).toBeNull();
       await user.click(retry);
-      await user.click(
-        await screen.findByRole('button', { name: 'Retry balances' })
-      );
       expect(await screen.findByText('$2,000')).toBeInTheDocument();
-      expect(
-        await screen.findByText('No eligible project balances are available.')
-      ).toBeInTheDocument();
       await waitFor(() => expect(planReads).toBe(2));
-      expect(balanceReads).toBe(2);
       expect(route.router.state.location.pathname).toBe(
         '/projections/IAM-PREVIEW'
       );

@@ -9,7 +9,6 @@ import {
 } from '@tanstack/react-router';
 import { PageError } from '@/components/states/PageError.tsx';
 import { PageLoading } from '@/components/states/PageLoading.tsx';
-import { CurrentProjectBalances } from '@/components/projections/CurrentProjectBalances.tsx';
 import { ProjectionPlanCard } from '@/components/projections/ProjectionPlanCard.tsx';
 import { NewProjectionWizard } from '@/components/projections/NewProjectionWizard.tsx';
 import {
@@ -141,17 +140,17 @@ function ProjectionList({
                 Each task keeps its own balance and forecast.
               </p>
             </div>
-            <button
-              className="btn btn-primary"
-              onClick={onCreate}
-              type="button"
-            >
-              <PlusIcon aria-hidden="true" className="size-5" />
-              New plan
-            </button>
+            {projections.length > 0 && (
+              <button
+                className="btn btn-primary"
+                onClick={onCreate}
+                type="button"
+              >
+                <PlusIcon aria-hidden="true" className="size-5" />
+                New plan
+              </button>
+            )}
           </header>
-
-          <CurrentProjectBalances iamId={iamId} />
 
           <section aria-label="Your plans">
             <div className="mb-4 flex items-center justify-between gap-3">
@@ -180,7 +179,21 @@ function ProjectionList({
                 ))}
               </div>
             ) : (
-              <p>No saved plans yet. Start with New plan.</p>
+              <div className="rounded-lg border border-base-300 bg-base-200 px-6 py-12 text-center">
+                <h3 className="text-xl font-semibold">No saved plans yet</h3>
+                <p className="mx-auto mt-2 max-w-md text-base-content/85">
+                  Create your first plan to explore staffing and spending across
+                  your funding sources.
+                </p>
+                <button
+                  className="btn btn-primary mt-6"
+                  onClick={onCreate}
+                  type="button"
+                >
+                  <PlusIcon aria-hidden="true" className="size-5" />
+                  New plan
+                </button>
+              </div>
             )}
           </section>
           <p className="mt-4 text-sm leading-relaxed text-base-content/80">
