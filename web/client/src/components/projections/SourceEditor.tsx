@@ -177,12 +177,18 @@ export function SourceEditor<T extends ProjectionDraft>({
           const row = sourceBalances.find(
             (balance) => balance.expenditureCategory === category
           );
+          const budget = source.budgets.find(
+            (entry) => entry.expenditureCategory === category
+          );
+          // Rows show the full budget; booked spending and commitments are added back to the available balance.
+          const booked = budget ? budget.spentToDate + budget.committed : 0;
           return {
             category,
-            initial: row?.capturedAvailable ?? 0,
-            initialRecorded: row?.budgetRecorded ?? false,
+            initial: budget?.budget ?? 0,
+            initialRecorded: budget !== undefined,
             remaining: row?.endRemaining ?? null,
-            revised: row?.revisedAvailable ?? 0,
+            revised:
+              Math.round(((row?.revisedAvailable ?? 0) + booked) * 100) / 100,
           };
         })
     : initialBudgets.map((row) => ({

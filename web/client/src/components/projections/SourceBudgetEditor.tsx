@@ -69,9 +69,7 @@ export function SourceBudgetEditor({
             <tr>
               <th>Category</th>
               <th className="text-right">
-                {initialPlanned
-                  ? 'Initial planned funding'
-                  : 'Captured available'}
+                {initialPlanned ? 'Initial planned funding' : 'Current budget'}
               </th>
               <th className="text-right">Budget</th>
               <th className="text-right">Forecast remaining</th>
