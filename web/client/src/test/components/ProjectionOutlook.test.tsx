@@ -251,7 +251,9 @@ describe('funding outlook', () => {
     expect(summary).toHaveTextContent(
       'First category budget shortfall: Jan 2026'
     );
-    expect(summary).toHaveTextContent(SUPPLIES_CATEGORY);
+    expect(
+      within(summary).getByRole('list', { name: 'Categories with a shortfall' })
+    ).toHaveTextContent('Supplies / Services / Other Expenses');
     expect(summary).not.toHaveTextContent('source falls below zero');
     expect(summary).toHaveTextContent(
       'These category balances recover by plan end.'

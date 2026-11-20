@@ -58,7 +58,7 @@ export function FundingOutlookNotice({
   return (
     <section
       aria-label="Funding summary"
-      className={`alert alert-soft mb-6 grid grid-cols-[auto_1fr_auto] items-start gap-3 sm:flex text-sm ${first ? 'alert-error' : 'alert-warning'}`}
+      className={`alert alert-soft mb-6 grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-3 text-sm text-base-content ${first ? 'alert-error' : 'alert-warning'}`}
       ref={ref}
     >
       <ExclamationTriangleIcon
@@ -66,17 +66,18 @@ export function FundingOutlookNotice({
         className={`mt-0.5 size-5 shrink-0 ${first ? 'text-error' : 'text-warning'}`}
         data-funding-summary-icon
       />
-      <div className="col-span-3 row-start-2 min-w-0 flex-1 space-y-3">
-        {first && (
-          <div className="flex flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-center">
-            <div className="min-w-0 flex-1">
-              <p className="font-semibold text-error">
-                {categoryFirst
-                  ? 'First category budget shortfall'
-                  : 'First funding shortfall'}
-                : {fundingMonthLabel(firstMonth!)}
-              </p>
-              <p className="mt-1 font-semibold break-words">
+      <div className="col-start-2 row-start-1 min-w-0 space-y-3">
+        <div>
+          <p
+            className={`font-semibold ${first ? 'text-error' : 'text-warning-content'}`}
+          >
+            {first
+              ? `${categoryFirst ? 'First category budget shortfall' : 'First funding shortfall'}: ${fundingMonthLabel(firstMonth!)}`
+              : 'Staffing allocations need review'}
+          </p>
+          {first && (
+            <div className="mt-2 space-y-2">
+              <p className="font-medium break-words">
                 {first.source.name}
                 {first.source.taskNumber
                   ? ` · Task ${first.source.taskNumber}`
@@ -88,46 +89,79 @@ export function FundingOutlookNotice({
                   : ''}
               </p>
               {categoryFirst && (
-                <p className="mt-1">
+                <ul
+                  aria-label="Categories with a shortfall"
+                  className="list-disc space-y-1 pl-5 text-base-content"
+                >
                   {first.categoryShortfalls
                     .filter((shortfall) => shortfall.firstMonth === firstMonth)
-                    .map(({ expenditureCategory }) => expenditureCategory)
-                    .join(' · ')}
-                </p>
+                    .map(({ expenditureCategory }) => (
+                      <li
+                        className="text-sm"
+                        key={expenditureCategory}
+                      >
+                        {expenditureCategory.replace(/^\d+\s*-\s*/, '')}
+                      </li>
+                    ))}
+                </ul>
               )}
-              {outlook.categoryShortfallSources.length > 0 && (
-                <p className="mt-1 text-base-content/80">
-                  {outlook.categoryShortfallSources.length}{' '}
-                  {outlook.categoryShortfallSources.length === 1
-                    ? 'source has'
-                    : 'sources have'}{' '}
-                  category budget shortfalls. An overall surplus does not cover
-                  these categories.
-                  {outlook.categoryShortfallSources.every((source) =>
-                    source.categoryShortfalls.every(
-                      ({ recoveredMonth }) => recoveredMonth !== null
-                    )
-                  ) && ' These category balances recover by plan end.'}
-                </p>
-              )}
-              {outlook.shortfallSources.length > 0 && (
-                <p className="mt-1 text-base-content/80">
-                  {outlook.shortfallSources.length}{' '}
-                  {outlook.shortfallSources.length === 1
-                    ? 'source falls'
-                    : 'sources fall'}{' '}
-                  below zero. Balances remain separate, even when grouped by
-                  project.
-                </p>
-              )}
+              <div className="space-y-1 text-base-content">
+                {outlook.categoryShortfallSources.length > 0 && (
+                  <p>
+                    {outlook.categoryShortfallSources.length}{' '}
+                    {outlook.categoryShortfallSources.length === 1
+                      ? 'source has'
+                      : 'sources have'}{' '}
+                    category budget shortfalls. An overall surplus does not
+                    cover these categories.
+                    {outlook.categoryShortfallSources.every((source) =>
+                      source.categoryShortfalls.every(
+                        ({ recoveredMonth }) => recoveredMonth !== null
+                      )
+                    ) && ' These category balances recover by plan end.'}
+                  </p>
+                )}
+                {outlook.shortfallSources.length > 0 && (
+                  <p>
+                    {outlook.shortfallSources.length}{' '}
+                    {outlook.shortfallSources.length === 1
+                      ? 'source falls'
+                      : 'sources fall'}{' '}
+                    below zero.
+                  </p>
+                )}
+              </div>
             </div>
+          )}
+        </div>
+        {(gaps > 0 || overlaps > 0) && (
+          <div
+            className={first ? 'border-t border-current/10 pt-3' : undefined}
+          >
+            <p className="font-medium">
+              {gaps > 0 &&
+                `${gaps} ${gaps === 1 ? 'appointment has' : 'appointments have'} unallocated time`}
+              {gaps > 0 && overlaps > 0 && '; '}
+              {overlaps > 0 &&
+                `${overlaps} ${overlaps === 1 ? 'appointment has' : 'appointments have'} overlapping allocations`}
+              .
+            </p>
+            {gaps > 0 && (
+              <p className="mt-1 text-base-content">
+                Unallocated shares do not charge a funding source.
+              </p>
+            )}
+          </div>
+        )}
+        <div className="flex flex-wrap gap-2 pt-1">
+          {first && (
             <button
               aria-label={
                 categoryFirst
                   ? `View category balances for ${first.label}`
                   : `Explore ${first.label}`
               }
-              className="btn btn-sm self-start sm:self-auto"
+              className="btn btn-sm"
               onClick={() =>
                 categoryFirst && onViewCategoryBalances
                   ? onViewCategoryBalances(first.source.id)
@@ -140,27 +174,17 @@ export function FundingOutlookNotice({
                 : 'Explore funding source'}
               <ArrowRightIcon aria-hidden="true" className="size-4" />
             </button>
-          </div>
-        )}
-        {(gaps > 0 || overlaps > 0) && (
-          <div className="flex flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-center">
-            <p>
-              {gaps > 0 &&
-                `${gaps} ${gaps === 1 ? 'appointment has' : 'appointments have'} unallocated time`}
-              {gaps > 0 && overlaps > 0 && '; '}
-              {overlaps > 0 &&
-                `${overlaps} ${overlaps === 1 ? 'appointment has' : 'appointments have'} overlapping allocations`}
-              . Unallocated shares do not charge a funding source.
-            </p>
+          )}
+          {(gaps > 0 || overlaps > 0) && (
             <button
-              className="btn btn-sm self-start sm:self-auto"
+              className="btn btn-sm"
               onClick={() => onNavigate({ section: 'staffing' })}
               type="button"
             >
               Review staffing
             </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
       {onMinimize && (
         <TooltipLabel
