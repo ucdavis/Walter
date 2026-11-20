@@ -17,6 +17,7 @@ import {
   type SourceOperationResult,
 } from '@/lib/projectionSources.ts';
 import type { ProjectionSession } from '@/lib/projectionWorkspace.ts';
+import { usePersonnelQuery } from '@/queries/personnel.ts';
 import {
   importProjectionSources,
   projectionSourceCatalogQueryOptions,
@@ -37,6 +38,12 @@ export function SourcePicker<T extends ProjectionDraft>({
   session: ProjectionSession<T>;
 }) {
   const catalog = useQuery(projectionSourceCatalogQueryOptions(iamId));
+  const personnel = usePersonnelQuery(
+    iamId,
+    [
+      ...new Set((catalog.data ?? []).map((source) => source.projectNumber)),
+    ].sort()
+  );
   const [selected, setSelected] = useState<string[]>([]);
   const [pending, setPending] = useState(false);
   const selectedKeys = new Set(selected);
@@ -70,6 +77,12 @@ export function SourcePicker<T extends ProjectionDraft>({
     ]
       .filter(Boolean)
       .join(' · '),
+    personnelIds: personnel.data
+      ?.filter(
+        (person) =>
+          person.projectId === source.projectNumber && !person.isFuture
+      )
+      .map((person) => person.employeeId),
     projectName: source.projectName,
     projectNumber: source.projectNumber,
     projectType: source.projectType,

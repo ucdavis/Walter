@@ -1,6 +1,7 @@
 import {
   ChevronDownIcon,
   MagnifyingGlassIcon,
+  UsersIcon,
 } from '@heroicons/react/24/outline';
 import { useId, useState, type ReactNode } from 'react';
 import { formatProjectionCurrency } from '@/components/projections/projectionFormatting.ts';
@@ -9,6 +10,7 @@ export interface SourceSelectionChoice {
   disabled?: boolean;
   key: string;
   label: string;
+  personnelIds?: string[];
   projectName: string | null;
   projectNumber: string | null;
   projectType?: string | null;
@@ -143,6 +145,11 @@ export function SourceSelectionRows({
         )}
         {visibleGroups.map(({ group, key, visible }, index) => {
           const first = group[0];
+          const personnelCount = group.some(
+            (choice) => choice.personnelIds !== undefined
+          )
+            ? new Set(group.flatMap((choice) => choice.personnelIds ?? [])).size
+            : undefined;
           const name = first.projectName ?? first.projectNumber ?? first.label;
           const available = group.filter((choice) => !choice.disabled);
           const count = available.filter((choice) =>
@@ -197,6 +204,15 @@ export function SourceSelectionRows({
                       ` · ${first.projectNumber ? '1 task' : 'Planned funding'}`}
                   </p>
                 </div>
+                {personnelCount !== undefined && (
+                  <span
+                    aria-label={`${personnelCount} ${personnelCount === 1 ? 'person' : 'people'} tied to ${name}`}
+                    className="inline-flex shrink-0 items-center gap-1.5 text-sm text-base-content/80 tabular-nums"
+                  >
+                    <UsersIcon aria-hidden="true" className="size-4" />
+                    {personnelCount}
+                  </span>
+                )}
                 {hasTasks ? (
                   <button
                     aria-controls={tasksId}
@@ -238,7 +254,10 @@ export function SourceSelectionRows({
                 )}
               </div>
               {hasTasks && expanded && (
-                <div className={`pb-3 pr-3 ${selectable ? 'pl-10' : ''}`} id={tasksId}>
+                <div
+                  className={`pb-3 pr-3 ${selectable ? 'pl-10' : ''}`}
+                  id={tasksId}
+                >
                   {selectable && (
                     <div className="mb-2 flex gap-4 text-xs">
                       <button

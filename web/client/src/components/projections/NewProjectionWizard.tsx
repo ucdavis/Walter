@@ -493,11 +493,13 @@ export function NewProjectionWizard({
           <FundingSourcesEditor
             iamId={iamId}
             initialSelection={{
+              appointments: catalog!.draft.content.appointments,
               ids: selectedSourceIds,
               onChange: (ids) => {
                 setSelectionTouched(true);
                 setSelectedSourceIds(ids);
               },
+              roster,
               sources: catalog!.draft.content.fundingSources,
             }}
             onOperation={applySourceOperation}

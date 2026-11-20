@@ -50,6 +50,35 @@ function Picker() {
 
 describe('funding source rows', () => {
   afterEach(cleanup);
+  it('counts each person once per project across tasks and keeps the total while searching', async () => {
+    const user = userEvent.setup();
+    render(
+      <SourceSelectionRows
+        choices={choices.map((choice) => ({
+          ...choice,
+          personnelIds:
+            choice.key === 'a'
+              ? ['100', '200', '100']
+              : choice.key === 'b'
+                ? ['200', '300']
+                : [],
+        }))}
+        onChange={() => {}}
+        selected={[]}
+      />
+    );
+    expect(
+      screen.getByLabelText('3 people tied to Project A')
+    ).toHaveTextContent('3');
+    expect(
+      screen.getByLabelText('0 people tied to Project B')
+    ).toHaveTextContent('0');
+    await user.type(screen.getByRole('searchbox'), 'T2');
+    expect(
+      screen.getByLabelText('3 people tied to Project A')
+    ).toHaveTextContent('3');
+  });
+
   it('selects individual tasks, shows mixed project selection, and excludes existing sources from bulk actions', async () => {
     const user = userEvent.setup();
     render(<Picker />);
@@ -142,15 +171,11 @@ describe('funding source rows', () => {
     const user = userEvent.setup();
     render(<Picker />);
     await user.type(screen.getByRole('searchbox'), 'T2');
-    await user.click(
-      screen.getByRole('button', { name: /^Select all$/ })
-    );
+    await user.click(screen.getByRole('button', { name: /^Select all$/ }));
     expect(screen.getByRole('status')).toHaveTextContent(
       '3 sources across 2 projects'
     );
-    expect(
-      screen.getByRole('button', { name: /^Select all$/ })
-    ).toBeDisabled();
+    expect(screen.getByRole('button', { name: /^Select all$/ })).toBeDisabled();
     await user.clear(screen.getByRole('searchbox'));
     expect(
       screen.getByRole('checkbox', {

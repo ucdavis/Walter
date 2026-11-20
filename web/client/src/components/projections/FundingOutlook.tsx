@@ -61,8 +61,11 @@ export function FundingOutlook({
   results: ProjectionResults;
   selectedSourceId: number | null;
 }) {
+  const activeSourceId =
+    selectedSourceId ??
+    (outlook.sources.length === 1 ? outlook.sources[0].source.id : null);
   const selected = outlook.sources.find(
-    ({ source }) => source.id === selectedSourceId
+    ({ source }) => source.id === activeSourceId
   );
   const worksheetRef = useRef<SourceCategoryWorksheetHandle>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -83,25 +86,17 @@ export function FundingOutlook({
     },
     focusSelectedSource,
   }));
-  const [grouped, setGrouped] = useState(false);
   const [hiddenSources, setHiddenSources] = useState<Set<string>>(new Set());
-  const [hiddenGroups, setHiddenGroups] = useState<Set<string>>(new Set());
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const selectSource = (id: number) =>
     onNavigate({ section: 'overview', source: id });
   const series = fundingOutlookSeries(
     outlook,
-    grouped,
-    selectedSourceId,
+    false,
+    activeSourceId,
     selectSource,
     (id) => setExpandedGroups((current) => new Set([...current, id]))
   );
-  const hidden = selected
-    ? new Set<string>()
-    : grouped
-      ? hiddenGroups
-      : hiddenSources;
-  const setHidden = grouped ? setHiddenGroups : setHiddenSources;
   const hasUnverifiedCategories = outlook.sources.some(
     ({ endBalance, fundingBasis }) =>
       endBalance !== null && fundingBasis === 'unknown'
@@ -164,11 +159,13 @@ export function FundingOutlook({
                       : { section: 'overview' }
                   )
                 }
-                value={selectedSourceId ?? ''}
+                value={activeSourceId ?? ''}
               >
-                <option value="">
-                  All funding sources · separate balances
-                </option>
+                {outlook.sources.length > 1 && (
+                  <option value="">
+                    All funding sources · separate balances
+                  </option>
+                )}
                 {outlook.sources.map((source) => (
                   <option key={source.source.id} value={source.source.id}>
                     {source.label}
@@ -192,37 +189,30 @@ export function FundingOutlook({
               Back to all funding sources
             </button>
           )}
-          <Suspense
-            fallback={
-              <p className="flex h-72 items-center justify-center text-sm text-base-content/80 sm:h-80">
-                Loading balance chart…
-              </p>
-            }
-          >
-            <FundingOutlookChart
-              firstShortfallMonth={selected?.firstShortfallMonth ?? null}
-              focused={Boolean(selected)}
-              forecastWindow={results.forecastWindow}
-              groupControl={
-                !selected && (
-                  <label className="mb-3 inline-flex items-center gap-2 text-sm">
-                    <input
-                      checked={grouped}
-                      className="checkbox checkbox-sm"
-                      onChange={(event) => setGrouped(event.target.checked)}
-                      type="checkbox"
-                    />
-                    Group by project
-                  </label>
-                )
+          {selected && (
+            <Suspense
+              fallback={
+                <p className="flex h-72 items-center justify-center text-sm text-base-content/80 sm:h-80">
+                  Loading balance chart…
+                </p>
               }
-              hidden={hidden}
-              onHideAll={() => setHidden(new Set(series.map(({ id }) => id)))}
-              onShowAll={() => setHidden(new Set())}
-              onToggle={(id) => setHidden((current) => toggleSet(current, id))}
-              series={series}
-            />
-          </Suspense>
+            >
+              <FundingOutlookChart
+                firstShortfallMonth={selected?.firstShortfallMonth ?? null}
+                focused={Boolean(selected)}
+                forecastWindow={results.forecastWindow}
+                hidden={hiddenSources}
+                onHideAll={() =>
+                  setHiddenSources(new Set(series.map(({ id }) => id)))
+                }
+                onShowAll={() => setHiddenSources(new Set())}
+                onToggle={(id) =>
+                  setHiddenSources((current) => toggleSet(current, id))
+                }
+                series={series}
+              />
+            </Suspense>
+          )}
           {!selected && (
             <FundingOutlookTable
               expandedGroups={expandedGroups}
@@ -259,7 +249,6 @@ export function FundingOutlook({
           <p>
             Sources keep their own capture dates. Project groups combine
             displayed amounts, while shortfalls remain visible for each source.
-            Changing chart lines changes only this view.
           </p>
         </div>
       </details>

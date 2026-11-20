@@ -22,7 +22,9 @@ import {
 } from '@/lib/projectionSources.ts';
 import type {
   ProjectionDraft,
+  ProjectionAppointment,
   ProjectionFundingSource,
+  ProjectionRosterEntry,
 } from '@/queries/projections.ts';
 import type {
   PendingSourceEditor,
@@ -43,8 +45,10 @@ export function FundingSourcesEditor<T extends ProjectionDraft>({
 }: {
   iamId?: string;
   initialSelection?: {
+    appointments?: ProjectionAppointment[];
     ids: number[];
     onChange: (ids: number[]) => void;
+    roster?: ProjectionRosterEntry[];
     sources?: ProjectionFundingSource[];
   };
   onOperation: (operation: SourceOperation) => SourceOperationResult<T>;
@@ -117,6 +121,24 @@ export function FundingSourcesEditor<T extends ProjectionDraft>({
           balance: sourcePlanningBalance(source),
           key: String(source.id),
           label: sourceLabel(source),
+          personnelIds: (
+            initialSelection?.appointments ?? draft.content.appointments
+          )
+            .filter(
+              (appointment) =>
+                appointment.allocations.some(
+                  ({ fundingSourceId }) => fundingSourceId === source.id
+                ) ||
+                initialSelection?.roster?.some(
+                  (entry) =>
+                    entry.appointmentId === appointment.id &&
+                    entry.fundingSourceIds.includes(source.id)
+                )
+            )
+            .map(
+              (appointment) =>
+                appointment.employeeId ?? `appointment:${appointment.id}`
+            ),
           projectName: source.projectName,
           projectNumber: source.projectNumber,
           projectType: source.projectType,
