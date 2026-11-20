@@ -1,11 +1,6 @@
 import { createRef } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import {
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-} from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, expect, it, vi } from 'vitest';
 import {
@@ -295,3 +290,16 @@ it.each([false, true])(
     expect(input).toHaveValue(generalPool ? '1234' : '2026-05-31');
   }
 );
+
+it('lists every financial category for an existing source, including ones with no budget', () => {
+  const { source } = open();
+  const unbudgeted =
+    createAppointmentLookupsExample().expenditureCategories.filter(
+      (category) =>
+        !source.budgets.some((row) => row.expenditureCategory === category)
+    );
+  expect(unbudgeted.length).toBeGreaterThan(0);
+  for (const category of unbudgeted) {
+    expect(screen.getByLabelText(`Budget for ${category}`)).toHaveValue('0.00');
+  }
+});

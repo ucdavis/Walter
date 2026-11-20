@@ -161,16 +161,30 @@ export function SourceEditor<T extends ProjectionDraft>({
         validation.ok ? computePiProjection(previewDraft).rows : []
       )
     : null;
+  const sourceBalances = (balances?.categories ?? []).filter(
+    (row) => !row.isBalanceAdjustment
+  );
+  // Every financial category is listed, so money can move into one that has no budget yet.
   const budgetRows = source
-    ? (balances?.categories
-        .filter((row) => !row.isBalanceAdjustment)
-        .map((row) => ({
-          category: row.expenditureCategory,
-          initial: row.capturedAvailable,
-          initialRecorded: row.budgetRecorded,
-          remaining: row.endRemaining,
-          revised: row.revisedAvailable,
-        })) ?? [])
+    ? [
+        ...new Set([
+          ...sourceBalances.map((row) => row.expenditureCategory),
+          ...categories,
+        ]),
+      ]
+        .sort()
+        .map((category) => {
+          const row = sourceBalances.find(
+            (balance) => balance.expenditureCategory === category
+          );
+          return {
+            category,
+            initial: row?.capturedAvailable ?? 0,
+            initialRecorded: row?.budgetRecorded ?? false,
+            remaining: row?.endRemaining ?? null,
+            revised: row?.revisedAvailable ?? 0,
+          };
+        })
     : initialBudgets.map((row) => ({
         category: row.expenditureCategory,
         initial: row.amount,
