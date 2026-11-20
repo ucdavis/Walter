@@ -18,7 +18,7 @@ export const compactProjectionCurrency = (value: number) =>
 const colors = [
   'var(--color-primary)',
   '#2d806e',
-  '#a45f16',
+  '#b76522',
   '#7854a2',
   '#ae4e66',
   '#487e95',
