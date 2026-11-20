@@ -17,7 +17,6 @@ import { Route as authenticatedReportsRouteImport } from './routes/(authenticate
 import { Route as authenticatedPersonnelRouteImport } from './routes/(authenticated)/personnel'
 import { Route as authenticatedMeRouteImport } from './routes/(authenticated)/me'
 import { Route as authenticatedHelpRouteImport } from './routes/(authenticated)/help'
-import { Route as authenticatedFormRouteImport } from './routes/(authenticated)/form'
 import { Route as authenticatedProjectsRouteRouteImport } from './routes/(authenticated)/projects/route'
 import { Route as authenticatedAdminRouteRouteImport } from './routes/(authenticated)/admin/route'
 import { Route as authenticatedReportsIndexRouteImport } from './routes/(authenticated)/reports/index'
@@ -82,11 +81,6 @@ const authenticatedMeRoute = authenticatedMeRouteImport.update({
 const authenticatedHelpRoute = authenticatedHelpRouteImport.update({
   id: '/help',
   path: '/help',
-  getParentRoute: () => authenticatedRouteRoute,
-} as any)
-const authenticatedFormRoute = authenticatedFormRouteImport.update({
-  id: '/form',
-  path: '/form',
   getParentRoute: () => authenticatedRouteRoute,
 } as any)
 const authenticatedProjectsRouteRoute =
@@ -249,7 +243,6 @@ export interface FileRoutesByFullPath {
   '/about': typeof AboutRoute
   '/admin': typeof authenticatedAdminRouteRouteWithChildren
   '/projects': typeof authenticatedProjectsRouteRouteWithChildren
-  '/form': typeof authenticatedFormRoute
   '/help': typeof authenticatedHelpRoute
   '/me': typeof authenticatedMeRoute
   '/personnel': typeof authenticatedPersonnelRoute
@@ -284,7 +277,6 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/about': typeof AboutRoute
   '/projects': typeof authenticatedProjectsRouteRouteWithChildren
-  '/form': typeof authenticatedFormRoute
   '/help': typeof authenticatedHelpRoute
   '/me': typeof authenticatedMeRoute
   '/personnel': typeof authenticatedPersonnelRoute
@@ -320,7 +312,6 @@ export interface FileRoutesById {
   '/about': typeof AboutRoute
   '/(authenticated)/admin': typeof authenticatedAdminRouteRouteWithChildren
   '/(authenticated)/projects': typeof authenticatedProjectsRouteRouteWithChildren
-  '/(authenticated)/form': typeof authenticatedFormRoute
   '/(authenticated)/help': typeof authenticatedHelpRoute
   '/(authenticated)/me': typeof authenticatedMeRoute
   '/(authenticated)/personnel': typeof authenticatedPersonnelRoute
@@ -358,7 +349,6 @@ export interface FileRouteTypes {
     | '/about'
     | '/admin'
     | '/projects'
-    | '/form'
     | '/help'
     | '/me'
     | '/personnel'
@@ -393,7 +383,6 @@ export interface FileRouteTypes {
   to:
     | '/about'
     | '/projects'
-    | '/form'
     | '/help'
     | '/me'
     | '/personnel'
@@ -428,7 +417,6 @@ export interface FileRouteTypes {
     | '/about'
     | '/(authenticated)/admin'
     | '/(authenticated)/projects'
-    | '/(authenticated)/form'
     | '/(authenticated)/help'
     | '/(authenticated)/me'
     | '/(authenticated)/personnel'
@@ -522,13 +510,6 @@ declare module '@tanstack/react-router' {
       path: '/help'
       fullPath: '/help'
       preLoaderRoute: typeof authenticatedHelpRouteImport
-      parentRoute: typeof authenticatedRouteRoute
-    }
-    '/(authenticated)/form': {
-      id: '/(authenticated)/form'
-      path: '/form'
-      fullPath: '/form'
-      preLoaderRoute: typeof authenticatedFormRouteImport
       parentRoute: typeof authenticatedRouteRoute
     }
     '/(authenticated)/projects': {
@@ -797,7 +778,6 @@ const authenticatedReportsRouteWithChildren =
 interface authenticatedRouteRouteChildren {
   authenticatedAdminRouteRoute: typeof authenticatedAdminRouteRouteWithChildren
   authenticatedProjectsRouteRoute: typeof authenticatedProjectsRouteRouteWithChildren
-  authenticatedFormRoute: typeof authenticatedFormRoute
   authenticatedHelpRoute: typeof authenticatedHelpRoute
   authenticatedMeRoute: typeof authenticatedMeRoute
   authenticatedPersonnelRoute: typeof authenticatedPersonnelRoute
@@ -820,7 +800,6 @@ interface authenticatedRouteRouteChildren {
 const authenticatedRouteRouteChildren: authenticatedRouteRouteChildren = {
   authenticatedAdminRouteRoute: authenticatedAdminRouteRouteWithChildren,
   authenticatedProjectsRouteRoute: authenticatedProjectsRouteRouteWithChildren,
-  authenticatedFormRoute: authenticatedFormRoute,
   authenticatedHelpRoute: authenticatedHelpRoute,
   authenticatedMeRoute: authenticatedMeRoute,
   authenticatedPersonnelRoute: authenticatedPersonnelRoute,

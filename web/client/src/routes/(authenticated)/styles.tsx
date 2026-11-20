@@ -1,178 +1,390 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
+import {
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  ArrowTrendingUpIcon,
+  BanknotesIcon,
+  CheckCircleIcon,
+  ClipboardDocumentListIcon,
+  EnvelopeIcon,
+  ExclamationTriangleIcon,
+  InformationCircleIcon,
+  MegaphoneIcon,
+  UsersIcon,
+} from '@heroicons/react/24/outline';
+import { DataTable } from '@/shared/DataTable.tsx';
+import { formatCurrency } from '@/lib/currency.ts';
+import { projectionSeriesColor } from '@/components/projections/projectionFormatting.ts';
+import type { ColumnDef } from '@tanstack/react-table';
 
 export const Route = createFileRoute('/(authenticated)/styles')({
   component: RouteComponent,
 });
 
+const themeColors = [
+  {
+    badge: 'badge-primary',
+    button: 'btn-primary',
+    name: 'Primary',
+    token: 'primary',
+  },
+  {
+    badge: 'badge-secondary',
+    button: 'btn-secondary',
+    name: 'Secondary',
+    token: 'secondary',
+  },
+  {
+    badge: 'badge-accent',
+    button: 'btn-accent',
+    name: 'Accent',
+    token: 'accent',
+  },
+  {
+    badge: 'badge-success',
+    button: 'btn-success',
+    name: 'Success',
+    token: 'success',
+  },
+  { badge: 'badge-info', button: 'btn-info', name: 'Info', token: 'info' },
+  {
+    badge: 'badge-warning',
+    button: 'btn-warning',
+    name: 'Warning',
+    token: 'warning',
+  },
+  { badge: 'badge-error', button: 'btn-error', name: 'Error', token: 'error' },
+  {
+    badge: 'badge-neutral',
+    button: 'btn-neutral',
+    name: 'Neutral',
+    token: 'neutral',
+  },
+];
+interface SampleProject {
+  balance: number;
+  budget: number;
+  name: string;
+  personnel: number;
+  projectNumber: string;
+  type: 'Internal' | 'Sponsored';
+}
+const sampleProjects: SampleProject[] = [
+  {
+    balance: 82_500,
+    budget: 240_000,
+    name: 'Agricultural field research',
+    personnel: 6,
+    projectNumber: 'A26RESEARCH',
+    type: 'Sponsored',
+  },
+  {
+    balance: 45_000,
+    budget: 120_000,
+    name: 'Department operations',
+    personnel: 3,
+    projectNumber: 'K26OPERATIONS',
+    type: 'Internal',
+  },
+  {
+    balance: -2400,
+    budget: 85_000,
+    name: 'Graduate research support',
+    personnel: 4,
+    projectNumber: 'A26GRAD',
+    type: 'Sponsored',
+  },
+];
+const projectColumns: ColumnDef<SampleProject>[] = [
+  { accessorKey: 'projectNumber', header: 'Project', size: 180 },
+  { accessorKey: 'name', header: 'Project name', size: 260 },
+  {
+    accessorKey: 'type',
+    cell: ({ row }) => (
+      <span
+        className={`badge badge-soft ${row.original.type === 'Internal' ? 'badge-secondary' : 'badge-info'}`}
+      >
+        {row.original.type}
+      </span>
+    ),
+    header: 'Type',
+    size: 140,
+  },
+  { accessorKey: 'personnel', header: 'Personnel', size: 110 },
+  {
+    accessorKey: 'budget',
+    cell: ({ row }) => (
+      <span className="tabular-nums">
+        {formatCurrency(row.original.budget)}
+      </span>
+    ),
+    header: 'Budget',
+    size: 140,
+  },
+  {
+    accessorKey: 'balance',
+    cell: ({ row }) => (
+      <span
+        className={`tabular-nums ${row.original.balance < 0 ? 'text-error' : row.original.type === 'Internal' ? 'text-secondary' : 'text-info'}`}
+      >
+        {formatCurrency(row.original.balance)}
+      </span>
+    ),
+    header: 'Balance',
+    size: 140,
+  },
+];
+const adminTools = [
+  {
+    description: 'Search for users and manage their Walter access.',
+    Icon: UsersIcon,
+    title: 'User Management',
+    to: '/admin/users',
+  },
+  {
+    description: 'Share an announcement with Walter users.',
+    Icon: MegaphoneIcon,
+    title: 'Site Notification',
+    to: '/admin/notification',
+  },
+  {
+    description: 'Preview the notification emails sent by Walter.',
+    Icon: EnvelopeIcon,
+    title: 'Email Preview',
+    to: '/admin/email-preview',
+  },
+] as const;
+
 function RouteComponent() {
   return (
-    <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      {/* Homepage Link */}
-      <div className="absolute top-4 left-4 z-10">
-        <Link className="btn btn-ghost btn-sm" to="/">
-          <svg
-            className="w-4 h-4 mr-2"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-            />
-          </svg>
-          Home
-        </Link>
-      </div>
-
-      <div className="w-full max-w-1/2 space-y-8">
-        {/* Typography */}
-        <section>
-          <h1 className="h1">Heading 1</h1>
-          <h2 className="h2">Heading 2</h2>
-          <h3 className="h3">Heading 3</h3>
-          <p>This is a paragraph of base text.</p>
-          <p className="text-sm">This is small, muted text.</p>
-        </section>
-
-        {/* Buttons */}
-        <section className="space-x-2">
-          <button className="btn">Default</button>
-          <button className="btn btn-primary">Primary</button>
-          <button className="btn btn-secondary">Secondary</button>
-
-          <button className="btn btn-info">Info</button>
-          <button className="btn btn-success">Success</button>
-          <button className="btn btn-warning">Warning</button>
-          <button className="btn btn-error">Error</button>
-        </section>
-
-        {/* Inputs */}
-        <section className="space-y-2">
-          <input
-            className="input input-bordered w-full max-w-xs"
-            placeholder="Text input"
-            type="text"
-          />
-          <fieldset className="fieldset">
-            <legend className="fieldset-legend">Page title</legend>
-            <input
-              className="input"
-              placeholder="My awesome page"
-              type="text"
-            />
-            <p className="label">
-              You can edit page title later on from settings
-            </p>
-          </fieldset>
-          <fieldset className="fieldset bg-base-200 border-base-300 rounded-box w-xs border p-4">
-            <legend className="fieldset-legend">Page details</legend>
-
-            <label className="label">Title</label>
-            <input
-              className="input"
-              placeholder="My awesome page"
-              type="text"
-            />
-
-            <label className="label">Slug</label>
-            <input
-              className="input"
-              placeholder="my-awesome-page"
-              type="text"
-            />
-
-            <label className="label">Author</label>
-            <input className="input" placeholder="Name" type="text" />
-          </fieldset>
-          <fieldset className="fieldset bg-base-200 border-base-300 rounded-box w-xs border p-4">
-            <legend className="fieldset-legend">Settings</legend>
-            <div className="join">
-              <input
-                className="input join-item"
-                placeholder="Product name"
-                type="text"
-              />
-              <button className="btn join-item">save</button>
-            </div>
-          </fieldset>
-        </section>
-
-        {/* Cards */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="card bg-base-100 shadow-md">
-            <div className="card-body">
-              <h2 className="card-title">Card Title</h2>
-              <p>This is a card with some content and a button.</p>
-              <div className="card-actions justify-end">
-                <button className="btn btn-primary">Go</button>
+    <main className="mt-8 min-w-0 pb-12">
+      <div className="container space-y-12">
+        <header>
+          <h1 className="h1">Walter styles</h1>
+          <p className="subtitle">
+            Theme colors and components used throughout Walter.
+          </p>
+          <p className="mt-2 text-sm text-base-content/80">
+            Examples below use sample data.
+          </p>
+        </header>
+        <section aria-labelledby="theme-colors-title">
+          <h2 className="h2 mb-4" id="theme-colors-title">
+            Theme colors
+          </h2>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 xl:grid-cols-8">
+            {themeColors.map(({ name, token }) => (
+              <div className="min-w-0" key={token}>
+                <div
+                  className="h-16 rounded-sm"
+                  style={{ backgroundColor: `var(--color-${token})` }}
+                />
+                <p className="mt-2 font-semibold">{name}</p>
+                <p className="text-sm text-base-content/80">{token}</p>
               </div>
+            ))}
+          </div>
+        </section>
+        <section aria-labelledby="project-colors-title">
+          <h2 className="h2 mb-4" id="project-colors-title">
+            Project and projection colors
+          </h2>
+          <div className="grid gap-4 md:grid-cols-2">
+            {(['Internal', 'Sponsored'] as const).map((type) => {
+              const internal = type === 'Internal';
+              return (
+                <div
+                  className={`border-l-4 bg-base-200 p-5 ${internal ? 'border-secondary' : 'border-info'}`}
+                  key={type}
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <h3 className="text-lg font-semibold">{type} projects</h3>
+                    <span
+                      className={`badge badge-soft ${internal ? 'badge-secondary' : 'badge-info'}`}
+                    >
+                      {type}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-sm text-base-content/80">
+                    {internal ? 'Secondary' : 'Info'} · balances, chart labels,
+                    and sidebar highlights
+                  </p>
+                  <dl className="mt-4">
+                    <dt className="stat-label">Available balance</dt>
+                    <dd
+                      className={`text-3xl font-semibold tabular-nums ${internal ? 'text-secondary' : 'text-info'}`}
+                    >
+                      {formatCurrency(internal ? 45_000 : 82_500)}
+                    </dd>
+                  </dl>
+                </div>
+              );
+            })}
+          </div>
+          <h3 className="mt-6 font-semibold">Projection funding sources</h3>
+          <p className="mt-1 text-sm text-base-content/80">
+            Funding sources use their own chart series colors across the
+            forecast and staffing timeline.
+          </p>
+          <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+            {Array.from({ length: 6 }, (_, index) => (
+              <div key={index}>
+                <div
+                  className="h-12 rounded-sm"
+                  style={{ backgroundColor: projectionSeriesColor(index) }}
+                />
+                <p className="mt-2 font-semibold">Source {index + 1}</p>
+                <code className="text-sm text-base-content/80">
+                  {projectionSeriesColor(index)}
+                </code>
+              </div>
+            ))}
+          </div>
+        </section>
+        <section aria-labelledby="buttons-title">
+          <h2 className="h2 mb-4" id="buttons-title">
+            Buttons and badges
+          </h2>
+          <div className="flex flex-wrap gap-3">
+            <Link className="btn btn-sm" to="/admin">
+              <ArrowLeftIcon className="size-4" />
+              Admin Dashboard
+            </Link>
+            <Link className="btn btn-primary" to="/admin/users">
+              <UsersIcon className="size-4" />
+              User Management
+            </Link>
+            <Link className="btn btn-link" to="/projections">
+              <ArrowTrendingUpIcon className="size-4" />
+              Projections Dashboard
+            </Link>
+            <button className="btn" disabled type="button">
+              Save plan
+            </button>
+          </div>
+          <div className="mt-6 flex flex-wrap gap-3">
+            {themeColors.map(({ button, name }) => (
+              <button className={`btn ${button}`} key={name} type="button">
+                {name}
+              </button>
+            ))}
+          </div>
+          <div className="mt-4 flex flex-wrap gap-3">
+            {themeColors.map(({ button, name }) => (
+              <button
+                className={`btn btn-soft ${button}`}
+                key={name}
+                type="button"
+              >
+                {name}
+              </button>
+            ))}
+          </div>
+          <div className="mt-4 flex flex-wrap gap-3">
+            {themeColors.map(({ badge, name }) => (
+              <span className={`badge badge-soft ${badge}`} key={name}>
+                {name}
+              </span>
+            ))}
+          </div>
+        </section>
+        <section aria-labelledby="admin-tools-title">
+          <h2 className="h2 mb-4" id="admin-tools-title">
+            Admin navigation
+          </h2>
+          <div className="grid gap-4 md:grid-cols-3">
+            {adminTools.map(({ description, Icon, title, to }) => (
+              <Link
+                className="border-main-border group block h-full rounded-sm border bg-base-100 p-5 transition hover:bg-[#F2F6FC] hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                key={title}
+                to={to}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <Icon className="size-6" />
+                  <ArrowRightIcon className="mt-1 size-5 shrink-0 text-base-content/40 transition group-hover:translate-x-1 group-hover:text-primary" />
+                </div>
+                <h3 className="mt-4 text-xl font-sans font-bold">{title}</h3>
+                <p className="mt-2 text-sm leading-6 text-base-content/80">
+                  {description}
+                </p>
+              </Link>
+            ))}
+          </div>
+        </section>
+        <section aria-labelledby="summary-title">
+          <h2 className="h2" id="summary-title">
+            Fancy data
+          </h2>
+          <div className="fancy-data">
+            <dl className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              {[
+                {
+                  Icon: ClipboardDocumentListIcon,
+                  label: 'Projects',
+                  value: '3',
+                },
+                { Icon: UsersIcon, label: 'Personnel', value: '13' },
+                {
+                  Icon: BanknotesIcon,
+                  label: 'Total Budget',
+                  value: formatCurrency(445_000),
+                },
+                {
+                  Icon: BanknotesIcon,
+                  label: 'Balance',
+                  value: formatCurrency(125_100),
+                },
+              ].map(({ Icon, label, value }) => (
+                <div className="flex flex-col" key={label}>
+                  <Icon className="size-4" />
+                  <dt className="stat-label-lg">{label}</dt>
+                  <dd className="stat-value-lg tabular-nums">{value}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        </section>
+        <section aria-labelledby="table-title">
+          <h2 className="h2" id="table-title">
+            Project table
+          </h2>
+          <p className="mt-1 mb-4 text-base-content/80">
+            Search and sort the sample projects using Walter’s shared table.
+          </p>
+          <DataTable
+            caption="Sample project balances"
+            columns={projectColumns}
+            data={sampleProjects}
+            filterPlaceholder="Search sample projects…"
+            rowHeaderColumnId="projectNumber"
+          />
+        </section>
+        <section aria-labelledby="alerts-title">
+          <h2 className="h2 mb-4" id="alerts-title">
+            Alerts
+          </h2>
+          <div className="grid gap-4 lg:grid-cols-2">
+            <div className="alert alert-soft alert-info">
+              <InformationCircleIcon className="size-5" />
+              <span>Financial data refreshes weekly on Monday.</span>
+            </div>
+            <div className="alert alert-soft alert-success">
+              <CheckCircleIcon className="size-5" />
+              <span>Your projection plan has been saved.</span>
+            </div>
+            <div className="alert alert-soft alert-warning">
+              <ExclamationTriangleIcon className="size-5" />
+              <span>
+                This project has less than 10% of its budget remaining.
+              </span>
+            </div>
+            <div className="alert alert-soft alert-error">
+              <ExclamationTriangleIcon className="size-5" />
+              <span>One funding source is projected to run short.</span>
             </div>
           </div>
-          <div className="card bg-neutral text-neutral-content">
-            <div className="card-body">
-              <h2 className="card-title">Dark Card</h2>
-              <p>This one uses the neutral theme colors.</p>
-            </div>
-          </div>
-        </section>
-
-        {/* Alerts */}
-        <section className="space-y-2">
-          <div className="alert alert-info">
-            <span>Info alert message</span>
-          </div>
-          <div className="alert alert-success">
-            <span>Success alert message</span>
-          </div>
-          <div className="alert alert-warning">
-            <span>Warning alert message</span>
-          </div>
-          <div className="alert alert-error">
-            <span>Error alert message</span>
-          </div>
-        </section>
-
-        <section className="space-y-2">
-          <div className="alert alert-soft alert-info">
-            <span>Info alert message</span>
-          </div>
-          <div className="alert alert-soft alert-success">
-            <span>Success alert message</span>
-          </div>
-          <div className="alert alert-soft alert-warning">
-            <span>Warning alert message</span>
-          </div>
-          <div className="alert alert-soft alert-error">
-            <span>Error alert message</span>
-          </div>
-        </section>
-
-        {/* Badges */}
-        <section className="space-x-2">
-          <div className="badge badge-soft badge-primary">Primary</div>
-          <div className="badge badge-soft badge-secondary">Secondary</div>
-
-          <div className="badge badge-soft badge-info">Info</div>
-          <div className="badge badge-soft badge-success">Success</div>
-          <div className="badge badge-soft badge-warning">Warning</div>
-          <div className="badge badge-soft badge-error">Error</div>
-        </section>
-
-        <section className="space-x-2">
-          <div className="badge badge-primary">Primary</div>
-          <div className="badge badge-secondary">Secondary</div>
-
-          <div className="badge badge-neutral">Neutral</div>
-          <div className="badge badge-info">Info</div>
-          <div className="badge badge-success">Success</div>
-          <div className="badge badge-warning">Warning</div>
-          <div className="badge badge-error">Error</div>
         </section>
       </div>
-    </div>
+    </main>
   );
 }
