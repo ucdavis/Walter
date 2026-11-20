@@ -10,29 +10,25 @@ import {
 
 afterEach(cleanup);
 function open() {
-  const onMove = vi.fn(),
-    onAdjust = vi.fn(),
-    onPendingChange = vi.fn(),
+  const onSet = vi.fn(),
+    onErrorChange = vi.fn(),
     onReset = vi.fn();
   render(
     <SourceBudgetEditor
       categories={[SALARY_CATEGORY, FRINGE_CATEGORY, SUPPLIES_CATEGORY]}
       initialPlanned={false}
-      onAdjust={onAdjust}
-      onMove={onMove}
-      onPendingChange={onPendingChange}
+      onErrorChange={onErrorChange}
       onReset={onReset}
+      onSet={onSet}
       rows={[
         {
           category: SALARY_CATEGORY,
-          change: 0,
           initial: 1000,
           remaining: 500,
           revised: 1000,
         },
         {
           category: SUPPLIES_CATEGORY,
-          change: 0,
           initial: 100,
           remaining: 100,
           revised: 100,
@@ -40,79 +36,41 @@ function open() {
       ]}
     />
   );
-  return {
-    onAdjust,
-    onMove,
-    onPendingChange,
-    onReset,
-    user: userEvent.setup(),
-  };
+  return { onErrorChange, onReset, onSet, user: userEvent.setup() };
 }
-it('warns about a negative donor without blocking the balanced move', async () => {
-  const { onMove, onPendingChange, user } = open();
-  await user.click(screen.getByRole('button', { name: 'Move budget' }));
-  await user.selectOptions(
-    screen.getByLabelText('From category'),
-    SUPPLIES_CATEGORY
+it('starts with the project total equal to its categories', () => {
+  const { onErrorChange } = open();
+  expect(screen.getByLabelText('Project total')).toHaveValue('1100.00');
+  expect(screen.getByLabelText(`Budget for ${SALARY_CATEGORY}`)).toHaveValue(
+    '1000.00'
   );
-  await user.selectOptions(
-    screen.getByLabelText('To category'),
-    SALARY_CATEGORY
-  );
-  await user.type(screen.getByLabelText('Amount'), '300');
-  expect(screen.getByText(/\$100 → -\$200/)).toHaveTextContent(
-    'This move leaves the donor category negative.'
-  );
-  await user.click(screen.getByRole('button', { name: 'Move amount' }));
-  expect(onMove).toHaveBeenCalledWith(SUPPLIES_CATEGORY, SALARY_CATEGORY, 300);
-  expect(onPendingChange).toHaveBeenLastCalledWith(false);
+  expect(onErrorChange).toHaveBeenLastCalledWith(null);
 });
-it('allows explicitly adding an absent category with zero and cancels partial input', async () => {
-  const { onAdjust, onPendingChange, user } = open();
-  await user.click(screen.getByRole('button', { name: 'Adjust funding' }));
-  await user.selectOptions(screen.getByLabelText('Category'), FRINGE_CATEGORY);
-  await user.type(screen.getByLabelText('Amount'), '0');
-  await user.click(screen.getByRole('button', { name: 'Apply adjustment' }));
-  expect(onAdjust).toHaveBeenCalledWith(FRINGE_CATEGORY, 0);
-  await user.click(screen.getByRole('button', { name: 'Adjust funding' }));
-  await user.type(screen.getByLabelText('Amount'), '-');
-  expect(onPendingChange).toHaveBeenLastCalledWith(true);
-  expect(
-    screen.getByRole('button', { name: 'Apply adjustment' })
-  ).toBeDisabled();
-  await user.click(screen.getByRole('button', { name: 'Cancel adjustment' }));
-  expect(onAdjust).toHaveBeenCalledTimes(1);
-  expect(onPendingChange).toHaveBeenLastCalledWith(false);
+it('reports a project total that differs from the category budgets', async () => {
+  const { onErrorChange, user } = open();
+  const total = screen.getByLabelText('Project total');
+  await user.clear(total);
+  await user.type(total, '1500');
+  expect(onErrorChange).toHaveBeenLastCalledWith(
+    'Categories add up to $1,100, $400 under the project total.'
+  );
 });
-it('keeps funding adjustment distinct from a budget move', async () => {
-  const { onAdjust, onMove, onReset, user } = open();
-  await user.click(screen.getByRole('button', { name: 'Adjust funding' }));
-  await user.selectOptions(screen.getByLabelText('Category'), SALARY_CATEGORY);
-  await user.selectOptions(screen.getByLabelText('Change'), 'subtract');
-  await user.type(screen.getByLabelText('Amount'), '500');
-  await user.click(screen.getByRole('button', { name: 'Apply adjustment' }));
-  expect(onAdjust).toHaveBeenCalledWith(SALARY_CATEGORY, -500);
-  expect(onMove).not.toHaveBeenCalled();
+it('sets category amounts, rejects sub-cent input, and adds a zero category', async () => {
+  const { onErrorChange, onReset, onSet, user } = open();
+  const supplies = screen.getByLabelText(`Budget for ${SUPPLIES_CATEGORY}`);
+  await user.clear(supplies);
+  await user.type(supplies, '1.125');
+  expect(onSet).toHaveBeenLastCalledWith(SUPPLIES_CATEGORY, 1.12);
+  expect(onErrorChange).toHaveBeenLastCalledWith(
+    'Enter amounts with at most two decimal places.'
+  );
+  await user.selectOptions(
+    screen.getByLabelText('Add category'),
+    FRINGE_CATEGORY
+  );
+  expect(onSet).toHaveBeenLastCalledWith(FRINGE_CATEGORY, 0);
   await user.click(
     screen.getByRole('button', { name: 'Reset budget changes' })
   );
   expect(onReset).toHaveBeenCalledOnce();
-});
-
-it('keeps a sub-cent adjustment pending until corrected', async () => {
-  const { onAdjust, user } = open();
-  await user.click(screen.getByRole('button', { name: 'Adjust funding' }));
-  await user.selectOptions(screen.getByLabelText('Category'), SALARY_CATEGORY);
-  await user.type(screen.getByLabelText('Amount'), '1.125');
-  expect(screen.getByRole('alert')).toHaveTextContent(
-    'at most two decimal places'
-  );
-  expect(
-    screen.getByRole('button', { name: 'Apply adjustment' })
-  ).toBeDisabled();
-  expect(onAdjust).not.toHaveBeenCalled();
-  await user.clear(screen.getByLabelText('Amount'));
-  await user.type(screen.getByLabelText('Amount'), '1.12');
-  await user.click(screen.getByRole('button', { name: 'Apply adjustment' }));
-  expect(onAdjust).toHaveBeenCalledWith(SALARY_CATEGORY, 1.12);
 });

@@ -107,38 +107,36 @@ function open(planned = false, existingPool = false) {
     user: userEvent.setup(),
   };
 }
+async function setBudget(
+  user: ReturnType<typeof userEvent.setup>,
+  label: string,
+  change: number
+) {
+  const input = screen.getByLabelText<HTMLInputElement>(label);
+  const next = String(Number(input.value) + change);
+  await user.clear(input);
+  await user.type(input, next);
+}
 it('buffers a balanced move, preserves dates when resetting budgets, and applies atomically', async () => {
   const { onApply, ref, source, user } = open();
   expect(screen.queryByLabelText('Planning balance')).not.toBeInTheDocument();
   await user.clear(screen.getByLabelText('End date'));
   await user.type(screen.getByLabelText('End date'), '2026-05-31');
-  await user.click(screen.getByRole('button', { name: 'Move budget' }));
-  await user.selectOptions(
-    screen.getByLabelText('From category'),
-    SUPPLIES_CATEGORY
-  );
-  await user.selectOptions(
-    screen.getByLabelText('To category'),
-    SALARY_CATEGORY
-  );
-  await user.type(screen.getByLabelText('Amount'), '3000');
+  await setBudget(user, `Budget for ${SUPPLIES_CATEGORY}`, -3000);
   expect(ref.current?.read().hasChanges).toBe(true);
   expect(screen.getByRole('button', { name: 'Apply' })).toBeDisabled();
-  expect(
-    screen.getByText(/leaves the donor category negative/)
-  ).toBeInTheDocument();
-  await user.click(screen.getByRole('button', { name: 'Move amount' }));
+  expect(screen.getByRole('alert')).toHaveTextContent(
+    '$3,000 under the project total'
+  );
+  await setBudget(user, `Budget for ${SALARY_CATEGORY}`, 3000);
+  expect(screen.getByRole('button', { name: 'Apply' })).toBeEnabled();
   expect(source.categoryAdjustments).toEqual([
     { amount: 500, expenditureCategory: SALARY_CATEGORY },
   ]);
-  expect(screen.getByLabelText('Net budget changes')).toHaveTextContent(
-    '$3,500'
-  );
   await user.click(
     screen.getByRole('button', { name: 'Reset budget changes' })
   );
   expect(screen.getByLabelText('End date')).toHaveValue('2026-05-31');
-  expect(screen.queryByLabelText('Net budget changes')).not.toBeInTheDocument();
   await user.click(screen.getByRole('button', { name: 'Apply' }));
   const result = onApply.mock.results[0].value;
   expect(result.ok).toBe(true);
@@ -150,10 +148,9 @@ it('buffers a balanced move, preserves dates when resetting budgets, and applies
 });
 it('defines missing category zero and discards every buffered change on outer Cancel', async () => {
   const { onApply, onClose, source, user } = open();
-  await user.click(screen.getByRole('button', { name: 'Adjust funding' }));
-  await user.selectOptions(screen.getByLabelText('Category'), FRINGE_CATEGORY);
-  await user.type(screen.getByLabelText('Amount'), '0');
-  await user.click(screen.getByRole('button', { name: 'Apply adjustment' }));
+  const fringe = screen.getByLabelText(`Budget for ${FRINGE_CATEGORY}`);
+  await user.clear(fringe);
+  await user.type(fringe, '0');
   await user.click(screen.getByRole('button', { name: 'Cancel' }));
   expect(onApply).not.toHaveBeenCalled();
   expect(onClose).toHaveBeenCalledOnce();
@@ -166,10 +163,12 @@ it('creates planned category initial funding as the reset baseline', async () =>
   await user.type(screen.getByLabelText('Source name'), 'Planned award');
   await user.type(screen.getByLabelText('Start date'), '2026-01-01');
   await user.selectOptions(screen.getByLabelText('Source type'), 'Categories');
-  await user.click(screen.getByRole('button', { name: 'Adjust funding' }));
-  await user.selectOptions(screen.getByLabelText('Category'), SALARY_CATEGORY);
-  await user.type(screen.getByLabelText('Amount'), '9000');
-  await user.click(screen.getByRole('button', { name: 'Apply adjustment' }));
+  await user.selectOptions(
+    screen.getByLabelText('Add category'),
+    SALARY_CATEGORY
+  );
+  await setBudget(user, `Budget for ${SALARY_CATEGORY}`, 9000);
+  await setBudget(user, 'Project total', 9000);
   expect(
     screen.getByRole('columnheader', { name: 'Initial planned funding' })
   ).toBeInTheDocument();
@@ -215,10 +214,11 @@ it('can switch a new category draft to a general pool without submitting hidden 
   await user.type(screen.getByLabelText('Source name'), 'Planned pool');
   await user.type(screen.getByLabelText('Start date'), '2026-01-01');
   await user.selectOptions(screen.getByLabelText('Source type'), 'Categories');
-  await user.click(screen.getByRole('button', { name: 'Adjust funding' }));
-  await user.selectOptions(screen.getByLabelText('Category'), SALARY_CATEGORY);
-  await user.type(screen.getByLabelText('Amount'), '9000');
-  await user.click(screen.getByRole('button', { name: 'Apply adjustment' }));
+  await user.selectOptions(
+    screen.getByLabelText('Add category'),
+    SALARY_CATEGORY
+  );
+  await setBudget(user, `Budget for ${SALARY_CATEGORY}`, 9000);
   await user.selectOptions(screen.getByLabelText('Source type'), 'GeneralPool');
   await user.type(screen.getByLabelText('Planning balance'), '5000');
   await user.click(screen.getByRole('button', { name: 'Apply' }));
@@ -232,19 +232,10 @@ it('can switch a new category draft to a general pool without submitting hidden 
   });
 });
 
-it('retains an in-progress native date edit across budget reset and action panel rerenders', async () => {
+it('retains an in-progress native date edit across budget edits and reset', async () => {
   const { onApply, user } = open();
-  await user.click(screen.getByRole('button', { name: 'Move budget' }));
-  await user.selectOptions(
-    screen.getByLabelText('From category'),
-    SUPPLIES_CATEGORY
-  );
-  await user.selectOptions(
-    screen.getByLabelText('To category'),
-    SALARY_CATEGORY
-  );
-  await user.type(screen.getByLabelText('Amount'), '1000');
-  await user.click(screen.getByRole('button', { name: 'Move amount' }));
+  await setBudget(user, `Budget for ${SUPPLIES_CATEGORY}`, -1000);
+  await setBudget(user, `Budget for ${SALARY_CATEGORY}`, 1000);
   const start = screen.getByLabelText('Start date');
   fireEvent.input(start, { target: { value: '2025-12-02' } });
   expect(start).toHaveValue('2025-12-02');
@@ -257,11 +248,7 @@ it('retains an in-progress native date edit across budget reset and action panel
   fireEvent.input(screen.getByLabelText('End date'), {
     target: { value: '2026-05-31' },
   });
-  await user.click(screen.getByRole('button', { name: 'Adjust funding' }));
   expect(start).toHaveValue('2025-12-02');
-  expect(screen.getByLabelText('End date')).toHaveValue('2026-05-31');
-  expect(screen.getByLabelText('Source name')).toHaveValue('Edited source');
-  await user.click(screen.getByRole('button', { name: 'Cancel adjustment' }));
   await user.click(screen.getByRole('button', { name: 'Apply' }));
   expect(onApply.mock.calls[0][0]).toMatchObject({
     categoryAdjustments: [],
@@ -350,19 +337,12 @@ it('offers categories saved only in expenses or overrides when the cold lookup f
     ).toBe('error')
   );
   const user = userEvent.setup();
-  await user.click(screen.getByRole('button', { name: 'Adjust funding' }));
-  expect(
-    screen.getByRole('option', { name: SUPPLIES_CATEGORY })
-  ).toBeInTheDocument();
-  expect(
-    screen.getByRole('option', { name: FEE_REMISSION_CATEGORY })
-  ).toBeInTheDocument();
   await user.selectOptions(
-    screen.getByLabelText('Category'),
+    screen.getByLabelText('Add category'),
     FEE_REMISSION_CATEGORY
   );
-  await user.type(screen.getByLabelText('Amount'), '100');
-  await user.click(screen.getByRole('button', { name: 'Apply adjustment' }));
+  await setBudget(user, `Budget for ${FEE_REMISSION_CATEGORY}`, 100);
+  await setBudget(user, 'Project total', 100);
   await user.click(screen.getByRole('button', { name: 'Apply' }));
   const result = onApply.mock.results[0].value;
   expect(result.ok).toBe(true);

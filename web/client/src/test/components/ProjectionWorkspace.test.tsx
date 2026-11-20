@@ -232,7 +232,7 @@ describe('projection plan header', () => {
 });
 
 describe('category budget persistence', () => {
-  it('applies a budget move through the source route and preserves it after save and reopen', async () => {
+  it('applies a rebudget through the source route and preserves it after save and reopen', async () => {
     const plan = createSalaryExample();
     plan.content.fundingSources[0].projectType = 'Sponsored';
     plan.content.fundingSources[0].budgets.push({
@@ -246,18 +246,18 @@ describe('category budget persistence', () => {
       await screen.findByRole('button', { name: 'Edit funding source' })
     );
     await screen.findByRole('dialog', { name: 'Edit Project A' });
-    await user.click(screen.getByRole('button', { name: 'Move budget' }));
-    await user.selectOptions(
-      screen.getByLabelText('From category'),
-      SUPPLIES_CATEGORY
+    const supplies = screen.getByLabelText<HTMLInputElement>(
+      `Budget for ${SUPPLIES_CATEGORY}`
     );
-    await user.selectOptions(
-      screen.getByLabelText('To category'),
-      SALARY_CATEGORY
+    const salary = screen.getByLabelText<HTMLInputElement>(
+      `Budget for ${SALARY_CATEGORY}`
     );
-    await user.type(screen.getByLabelText('Amount'), '3000');
+    const salaryBudget = Number(salary.value) + 3000;
+    await user.clear(supplies);
+    await user.type(supplies, '2000');
     expect(read().pendingEditor?.hasChanges).toBe(true);
-    await user.click(screen.getByRole('button', { name: 'Move amount' }));
+    await user.clear(salary);
+    await user.type(salary, String(salaryBudget));
     await user.click(screen.getByRole('button', { name: 'Apply' }));
     expect(read().draft.content.fundingSources[0].categoryAdjustments).toEqual([
       { amount: 3000, expenditureCategory: SALARY_CATEGORY },
@@ -274,11 +274,11 @@ describe('category budget persistence', () => {
     cleanup();
     openWorkspace('?section=funding&source=1', saved);
     await screen.findByRole('dialog', { name: 'Edit Project A' });
-    expect(screen.getByLabelText('Net budget changes')).toHaveTextContent(
-      '$3,000'
+    expect(screen.getByLabelText(`Budget for ${SUPPLIES_CATEGORY}`)).toHaveValue(
+      '2000.00'
     );
-    expect(screen.getByLabelText('Net budget changes')).toHaveTextContent(
-      '-$3,000'
+    expect(screen.getByLabelText(`Budget for ${SALARY_CATEGORY}`)).toHaveValue(
+      salaryBudget.toFixed(2)
     );
   });
 });
