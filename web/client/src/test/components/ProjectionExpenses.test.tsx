@@ -205,7 +205,7 @@ describe('other expenses planning controls', () => {
     });
     await user.click(screen.getByRole('button', { name: 'Apply amount' }));
     expectSummary('Projected monthly expenses', '-$119');
-    expectSummary('Total projected expenses', '-$119');
+    expectSummary('Total planned spending', '-$119');
     await changeWindow(user, '6');
     expect(
       read().draft.content.fundingSources[0].historicalExpenseOverrides
@@ -416,7 +416,7 @@ describe('other expenses planning controls', () => {
       kind: 'OneTime',
     });
     expectSummary('One-time expenses', '-$500');
-    expectSummary('Total projected expenses', '$1,351');
+    expectSummary('Total planned spending', '$1,351');
     await user.click(
       screen.getByRole('button', { name: 'Remove expense Refund' })
     );
@@ -524,7 +524,7 @@ describe('other expenses planning controls', () => {
     expect(expenseDialog).toHaveTextContent('Project P-EXPENSES');
     await user.click(screen.getByRole('button', { name: 'Apply expense' }));
     expectSummary('Projected monthly expenses', '$5,520');
-    expectSummary('Total projected expenses', '$5,520');
+    expectSummary('Total planned spending', '$5,520');
     expect(sourceOptions()).toEqual(initialOptions);
     expect(screen.getByLabelText('View expenses for')).toHaveValue('2');
     expect(read().draft.content.fundingSources[0].expenses).toEqual([]);
@@ -533,7 +533,7 @@ describe('other expenses planning controls', () => {
     ]);
     await user.selectOptions(screen.getByLabelText('View expenses for'), '1');
     expectSummary('One-time expenses', '$0');
-    expectSummary('Total projected expenses', '$1,851');
+    expectSummary('Total planned spending', '$1,851');
     expect(screen.getByText('3-month average: $310')).toBeInTheDocument();
     expect(
       screen.getByRole('heading', { name: 'No added expenses' })
@@ -712,7 +712,7 @@ describe('combined expense tables', () => {
     expect(await screen.findByLabelText('View expenses for')).toHaveValue('');
     expectSummary('Projected monthly expenses', '$348');
     expectSummary('One-time expenses', '$0');
-    expectSummary('Total projected expenses', '$348');
+    expectSummary('Total planned spending', '$348');
     const added = screen.getByRole('rowgroup', { name: 'Added expenses' });
     expect(within(added).getAllByText('Shared order')).toHaveLength(2);
     await user.click(
@@ -723,7 +723,7 @@ describe('combined expense tables', () => {
     expectSummary('One-time expenses', '$0');
     expect(read().location.fundingSourceId).toBe(2);
     await user.selectOptions(screen.getByLabelText('View expenses for'), '');
-    expectSummary('Total projected expenses', '$348');
+    expectSummary('Total planned spending', '$348');
     expect(read().location.fundingSourceId).toBeNull();
     expect(read().dirty).toBe(false);
   });
@@ -736,7 +736,7 @@ describe('combined expense tables', () => {
     );
     await user.click(await screen.findByRole('button', { name: 'Expenses' }));
     expect(await screen.findByLabelText('View expenses for')).toHaveValue('');
-    expectSummary('Total projected expenses', '$348');
+    expectSummary('Total planned spending', '$348');
   });
 
   it('requires a charge target in All, retains typed details when changing it, and follows untouched source date defaults', async () => {
@@ -806,7 +806,7 @@ describe('combined expense tables', () => {
     ).toBeInTheDocument();
     await user.click(task);
     expect(screen.getByLabelText('View expenses for')).toHaveValue('2');
-    expectSummary('Total projected expenses', '$168');
+    expectSummary('Total planned spending', '$168');
   });
 
   it('guards typed expenses before any charge source has been chosen', async () => {

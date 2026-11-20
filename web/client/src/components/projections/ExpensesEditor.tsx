@@ -289,7 +289,7 @@ export function ExpensesEditor<T extends ProjectionDraft>({
               </div>
               <div className="border-t border-main-border p-5 sm:border-t-0 sm:border-l">
                 <dt className="text-sm font-semibold">
-                  Total projected expenses
+                  Total planned spending
                 </dt>
                 <dd className="mt-1 text-3xl font-semibold tabular-nums">
                   {formatCurrency(
