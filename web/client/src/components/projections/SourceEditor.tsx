@@ -87,6 +87,14 @@ export function SourceEditor<T extends ProjectionDraft>({
   const [initialCategories, setInitialCategories] = useState<
     CategoryBudgetAdjustment[]
   >([]);
+  // A new sponsored source always budgets every financial category.
+  const initialBudgets = categories.map((expenditureCategory) => ({
+    amount:
+      initialCategories.find(
+        (row) => row.expenditureCategory === expenditureCategory
+      )?.amount ?? 0,
+    expenditureCategory,
+  }));
   const [budgetMismatch, setBudgetMismatch] = useState<string | null>(null);
   const [budgetVersion, setBudgetVersion] = useState(0);
   const [budgetError, setBudgetError] = useState<string | null>(null);
@@ -128,7 +136,7 @@ export function SourceEditor<T extends ProjectionDraft>({
       categoryAdjustments: budgetSource?.categoryAdjustments,
       endDate: value.endDate || null,
       initialCategoryBudgets:
-        value.plannedBudgetMode === 'Categories' ? initialCategories : [],
+        value.plannedBudgetMode === 'Categories' ? initialBudgets : [],
       name: value.name,
       plannedBudgetMode: value.plannedBudgetMode,
       startDate: value.startDate || null,
@@ -163,7 +171,7 @@ export function SourceEditor<T extends ProjectionDraft>({
           remaining: row.endRemaining,
           revised: row.revisedAvailable,
         })) ?? [])
-    : initialCategories.map((row) => ({
+    : initialBudgets.map((row) => ({
         category: row.expenditureCategory,
         initial: row.amount,
         remaining:
@@ -359,7 +367,6 @@ export function SourceEditor<T extends ProjectionDraft>({
         {categoryMode ? (
           <div ref={budgetHeadingRef} tabIndex={-1}>
             <SourceBudgetEditor
-              categories={categories}
               initialPlanned={planned}
               key={budgetVersion}
               onErrorChange={setBudgetMismatch}

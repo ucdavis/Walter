@@ -2,11 +2,7 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, expect, it, vi } from 'vitest';
 import { SourceBudgetEditor } from '@/components/projections/SourceBudgetEditor.tsx';
-import {
-  FRINGE_CATEGORY,
-  SALARY_CATEGORY,
-  SUPPLIES_CATEGORY,
-} from '@/lib/piProjection.ts';
+import { SALARY_CATEGORY, SUPPLIES_CATEGORY } from '@/lib/piProjection.ts';
 
 afterEach(cleanup);
 function open() {
@@ -15,7 +11,6 @@ function open() {
     onReset = vi.fn();
   render(
     <SourceBudgetEditor
-      categories={[SALARY_CATEGORY, FRINGE_CATEGORY, SUPPLIES_CATEGORY]}
       initialPlanned={false}
       onErrorChange={onErrorChange}
       onReset={onReset}
@@ -55,7 +50,7 @@ it('reports a project total that differs from the category budgets', async () =>
     'Categories add up to $1,100, $400 under the project total.'
   );
 });
-it('sets category amounts, rejects sub-cent input, and adds a zero category', async () => {
+it('sets category amounts, rejects sub-cent input, and keeps the categories fixed', async () => {
   const { onErrorChange, onReset, onSet, user } = open();
   const supplies = screen.getByLabelText(`Budget for ${SUPPLIES_CATEGORY}`);
   await user.clear(supplies);
@@ -64,11 +59,7 @@ it('sets category amounts, rejects sub-cent input, and adds a zero category', as
   expect(onErrorChange).toHaveBeenLastCalledWith(
     'Enter amounts with at most two decimal places.'
   );
-  await user.selectOptions(
-    screen.getByLabelText('Add category'),
-    FRINGE_CATEGORY
-  );
-  expect(onSet).toHaveBeenLastCalledWith(FRINGE_CATEGORY, 0);
+  expect(screen.queryByLabelText('Add category')).not.toBeInTheDocument();
   await user.click(
     screen.getByRole('button', { name: 'Reset budget changes' })
   );

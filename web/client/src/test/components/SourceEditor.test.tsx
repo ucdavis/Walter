@@ -1,5 +1,3 @@
-import { http, HttpResponse } from 'msw';
-import { server } from '@/test/mswUtils.ts';
 import { createRef } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
@@ -7,7 +5,6 @@ import {
   fireEvent,
   render,
   screen,
-  waitFor,
 } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, expect, it, vi } from 'vitest';
@@ -25,7 +22,6 @@ import {
   FRINGE_CATEGORY,
   SALARY_CATEGORY,
   SUPPLIES_CATEGORY,
-  FEE_REMISSION_CATEGORY,
 } from '@/lib/piProjection.ts';
 import { projectionLookupsQueryOptions } from '@/queries/projections.ts';
 import {
@@ -163,10 +159,6 @@ it('creates planned category initial funding as the reset baseline', async () =>
   await user.type(screen.getByLabelText('Source name'), 'Planned award');
   await user.type(screen.getByLabelText('Start date'), '2026-01-01');
   await user.selectOptions(screen.getByLabelText('Source type'), 'Categories');
-  await user.selectOptions(
-    screen.getByLabelText('Add category'),
-    SALARY_CATEGORY
-  );
   await setBudget(user, `Budget for ${SALARY_CATEGORY}`, 9000);
   await setBudget(user, 'Project total', 9000);
   expect(
@@ -177,14 +169,15 @@ it('creates planned category initial funding as the reset baseline', async () =>
   expect(result.ok).toBe(true);
   const created = result.session.draft.content.fundingSources.at(-1);
   expect(created.plannedBudgetMode).toBe('Categories');
-  expect(created.budgets).toEqual([
-    {
-      budget: 9000,
-      committed: 0,
-      expenditureCategory: SALARY_CATEGORY,
-      spentToDate: 0,
-    },
-  ]);
+  expect(created.budgets).toContainEqual({
+    budget: 9000,
+    committed: 0,
+    expenditureCategory: SALARY_CATEGORY,
+    spentToDate: 0,
+  });
+  expect(created.budgets).toHaveLength(
+    createAppointmentLookupsExample().expenditureCategories.length
+  );
   expect(created.categoryAdjustments).toEqual([]);
   expect(sourcePlanningBalance(created)).toBe(9000);
 });
@@ -214,10 +207,6 @@ it('can switch a new category draft to a general pool without submitting hidden 
   await user.type(screen.getByLabelText('Source name'), 'Planned pool');
   await user.type(screen.getByLabelText('Start date'), '2026-01-01');
   await user.selectOptions(screen.getByLabelText('Source type'), 'Categories');
-  await user.selectOptions(
-    screen.getByLabelText('Add category'),
-    SALARY_CATEGORY
-  );
   await setBudget(user, `Budget for ${SALARY_CATEGORY}`, 9000);
   await user.selectOptions(screen.getByLabelText('Source type'), 'GeneralPool');
   await user.type(screen.getByLabelText('Planning balance'), '5000');
@@ -287,71 +276,6 @@ it('shows the fixed planned source type without offering to change imported fina
   cleanup();
   open();
   expect(screen.queryByText('Source type')).not.toBeInTheDocument();
-});
-
-it('offers categories saved only in expenses or overrides when the cold lookup fails', async () => {
-  server.use(
-    http.get(
-      '/api/projections/lookups',
-      () => new HttpResponse(null, { status: 500 })
-    )
-  );
-  const plan = createSalaryExample();
-  const source = plan.content.fundingSources[0];
-  source.projectType = 'Sponsored';
-  source.expenses = [
-    {
-      amount: 20,
-      description: 'Saved expense',
-      endMonth: null,
-      expenditureCategory: SUPPLIES_CATEGORY,
-      id: 1,
-      kind: 'Monthly',
-      startMonth: '2026-01-01',
-    },
-  ];
-  source.historicalExpenseOverrides = [
-    { amount: 0, expenditureCategory: FEE_REMISSION_CATEGORY },
-  ];
-  const session = createProjectionSession(plan);
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  const onApply = vi.fn((inputs, categories) =>
-    editProjectionSource(session, source.id, inputs, categories)
-  );
-  render(
-    <QueryClientProvider client={queryClient}>
-      <SourceEditor
-        onApply={onApply}
-        onClose={vi.fn()}
-        session={session}
-        source={source}
-      />
-    </QueryClientProvider>
-  );
-  await waitFor(() =>
-    expect(
-      queryClient.getQueryState(projectionLookupsQueryOptions().queryKey)
-        ?.status
-    ).toBe('error')
-  );
-  const user = userEvent.setup();
-  await user.selectOptions(
-    screen.getByLabelText('Add category'),
-    FEE_REMISSION_CATEGORY
-  );
-  await setBudget(user, `Budget for ${FEE_REMISSION_CATEGORY}`, 100);
-  await setBudget(user, 'Project total', 100);
-  await user.click(screen.getByRole('button', { name: 'Apply' }));
-  const result = onApply.mock.results[0].value;
-  expect(result.ok).toBe(true);
-  if (result.ok) {
-    expect(
-      result.session.draft.content.fundingSources[0].categoryAdjustments
-    ).toEqual([{ amount: 100, expenditureCategory: FEE_REMISSION_CATEGORY }]);
-  }
-  queryClient.clear();
 });
 
 it.each([false, true])(

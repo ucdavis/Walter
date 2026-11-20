@@ -18,14 +18,12 @@ function parseAmount(text: string) {
 }
 
 export function SourceBudgetEditor({
-  categories,
   initialPlanned,
   onErrorChange,
   onReset,
   onSet,
   rows,
 }: {
-  categories: string[];
   initialPlanned: boolean;
   onErrorChange: (error: string | null) => void;
   onReset: () => void;
@@ -48,15 +46,13 @@ export function SourceBudgetEditor({
     onErrorChange(error);
     return () => onErrorChange(null);
   }, [error, onErrorChange]);
-  const unused = categories.filter(
-    (category) => !rows.some((row) => row.category === category)
-  );
   return (
     <section aria-label="Edit category budget" className="space-y-3">
       <h3 className="font-semibold">Category budget</h3>
       <p className="text-sm text-base-content/70">
-        Enter the project total and the budget for each category. The categories
-        must add up to the total.
+        Enter the project total and the budget for each category. Move money
+        between categories by changing their amounts; they must add up to the
+        total.
       </p>
       <label className="flex flex-col gap-2 text-sm sm:max-w-xs">
         Project total
@@ -132,24 +128,11 @@ export function SourceBudgetEditor({
         </table>
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        {unused.length > 0 && (
-          <select
-            aria-label="Add category"
-            className="select select-sm w-auto"
-            onChange={(event) => {
-              if (event.target.value) {
-                onSet(event.target.value, 0);
-              }
-            }}
-            value=""
-          >
-            <option value="">Add category</option>
-            {unused.map((category) => (
-              <option key={category}>{category}</option>
-            ))}
-          </select>
-        )}
-        <button className="btn btn-ghost btn-sm" onClick={onReset} type="button">
+        <button
+          className="btn btn-ghost btn-sm"
+          onClick={onReset}
+          type="button"
+        >
           <ArrowPathIcon aria-hidden="true" className="size-4" />
           Reset budget changes
         </button>
