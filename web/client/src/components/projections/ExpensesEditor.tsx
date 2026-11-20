@@ -186,6 +186,18 @@ export function ExpensesEditor<T extends ProjectionDraft>({
       0
     );
   const addedMonthlyTotal = addedTotal('Monthly');
+  const monthlyRate = visibleSources.reduce(
+    (total, source) =>
+      total +
+      getHistoricalExpenseRows(source, draft.content.historyMonths).reduce(
+        (sum, row) => sum + row.effectiveAmount,
+        0
+      ) +
+      source.expenses
+        .filter(({ kind }) => kind === 'Monthly')
+        .reduce((sum, item) => sum + item.amount, 0),
+    0
+  );
   const oneTimeTotal = addedTotal('OneTime');
   const oneTimeCount = visibleSources.reduce(
     (count, source) =>
@@ -267,6 +279,9 @@ export function ExpensesEditor<T extends ProjectionDraft>({
                 </dt>
                 <dd className="mt-1 text-2xl font-semibold tabular-nums">
                   {formatCurrency(historicalTotal + addedMonthlyTotal)}
+                </dd>
+                <dd className="mt-1 text-sm font-medium tabular-nums">
+                  {formatCurrency(monthlyRate)} per month
                 </dd>
                 <dd className="mt-1 text-sm text-base-content/80">
                   {addedMonthlyTotal === 0
