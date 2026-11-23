@@ -92,7 +92,9 @@ export function ProjectionSaveFeedback({
               ? 'This plan was reset'
               : conflict === 'deleted'
                 ? 'This plan was deleted'
-                : 'This plan has changed'
+                : conflict === 'identitiesChanged'
+                  ? 'This draft needs a reload'
+                  : 'This plan has changed'
           }
         >
           <p className="mt-4">
@@ -100,7 +102,9 @@ export function ProjectionSaveFeedback({
               ? 'Another edit was saved. Overwrite replaces the saved plan with your current applied draft. Discard loads the saved plan and discards your changes.'
               : conflict === 'snapshotChanged'
                 ? 'Your draft uses an earlier snapshot and cannot overwrite this reset. Discard loads the saved snapshot. Close keeps your draft here.'
-                : 'This saved plan no longer exists. Your draft is still here, but it cannot be saved to the deleted plan.'}
+                : conflict === 'identitiesChanged'
+                  ? 'Newer edits used or removed appointment or funding source IDs in your draft. Discard loads the saved plan. Close keeps your draft here.'
+                  : 'This saved plan no longer exists. Your draft is still here, but it cannot be saved to the deleted plan.'}
           </p>
           {error && (
             <p className="mt-3 text-error" role="alert">

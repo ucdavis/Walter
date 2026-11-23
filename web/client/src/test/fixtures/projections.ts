@@ -6,6 +6,7 @@ import {
   SUPPLIES_CATEGORY,
 } from '@/lib/piProjection.ts';
 import type {
+  CapturedAppointment,
   Projection,
   ProjectionFundingSource,
   ProjectionLookups,
@@ -82,34 +83,37 @@ const source = (
 
 /** Deliberately excludes benefits, COLA, and other costs to isolate the salary rule. */
 export function createSalaryExample(): Projection {
+  const appointment: CapturedAppointment = {
+    allocations: [1, 2].map((fundingSourceId) => ({
+      endDate: '2026-06-30',
+      fundingSourceId,
+      percent: 0.5,
+      startDate: '2026-01-01',
+    })),
+    cbrRate: 0,
+    colaMonth: 7,
+    colaRate: 0,
+    endDate: '2026-06-30',
+    feeRemissionMonthly: 0,
+    fte: 0.5,
+    id: 101,
+    isSeeded: true,
+    jobCode: null,
+    monthlySalary: 10_000,
+    name: 'Alex Example',
+    positionNumber: 'EXAMPLE-101',
+    rateSet: 'DVCMP',
+    startDate: '2026-01-01',
+    title: 'Research specialist',
+    vacationAccrualRate: 0,
+  };
   const plan: Projection = {
     content: {
       appointments: [
         {
-          allocations: [1, 2].map((fundingSourceId) => ({
-            endDate: '2026-06-30',
-            fundingSourceId,
-            percent: 0.5,
-            startDate: '2026-01-01',
-          })),
-          cbrRate: 0,
-          colaMonth: 7,
-          colaRate: 0,
+          ...structuredClone(appointment),
           employeeId: null,
-          endDate: '2026-06-30',
-          feeRemissionMonthly: 0,
-          fte: 0.5,
           hasUnmatchedFunding: false,
-          id: 101,
-          isSeeded: true,
-          jobCode: null,
-          monthlySalary: 10_000,
-          name: 'Alex Example',
-          positionNumber: 'EXAMPLE-101',
-          rateSet: 'DVCMP',
-          startDate: '2026-01-01',
-          title: 'Research specialist',
-          vacationAccrualRate: 0,
         },
       ],
       comparison: { appointments: [], fundingSources: [] },
@@ -133,7 +137,7 @@ export function createSalaryExample(): Projection {
     updatedBy: null,
   };
   plan.content.comparison = {
-    appointments: structuredClone(plan.content.appointments),
+    appointments: [appointment],
     fundingSources: plan.content.fundingSources.map(
       ({ id, name, projectNumber, taskNumber }) => ({
         id,

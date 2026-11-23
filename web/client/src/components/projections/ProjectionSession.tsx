@@ -16,6 +16,7 @@ import { computePiProjection } from '@/lib/piProjection.ts';
 import {
   acknowledgeProjectionSave,
   createProjectionSession,
+  type ProjectionConflict,
   type ProjectionSession,
 } from '@/lib/projectionWorkspace.ts';
 import type {
@@ -37,9 +38,7 @@ export interface ProjectionPersistence {
   save: (request: SaveProjectionRequest) => Promise<Projection>;
 }
 
-type Conflict = 'conflict' | 'snapshotChanged' | 'deleted';
-
-function conflictCode(error: unknown): Conflict | null {
+function conflictCode(error: unknown): ProjectionConflict | null {
   if (!(error instanceof HttpError)) {
     return null;
   }
@@ -49,12 +48,13 @@ function conflictCode(error: unknown): Conflict | null {
   if (error.status !== 409) {
     return null;
   }
-  return error.body &&
-    typeof error.body === 'object' &&
-    'code' in error.body &&
-    error.body.code === 'snapshotChanged'
-    ? 'snapshotChanged'
-    : 'conflict';
+  if (error.body && typeof error.body === 'object' && 'code' in error.body) {
+    const { code } = error.body;
+    if (code === 'snapshotChanged' || code === 'identitiesChanged') {
+      return code;
+    }
+  }
+  return 'conflict';
 }
 
 function logFailure(operation: 'save' | 'reload', error: unknown) {
@@ -78,7 +78,7 @@ function useSession(
   );
   const [reloading, setReloading] = useState(false);
   const [reloadVersion, setReloadVersion] = useState(0);
-  const [conflict, setConflict] = useState<Conflict | null>(null);
+  const [conflict, setConflict] = useState<ProjectionConflict | null>(null);
   const [overwriteConfirmed, setOverwriteConfirmed] = useState(false);
   const [conflictOpen, setConflictOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -145,6 +145,11 @@ function useSession(
       content,
       expectedSeededAt: submitted.baseline.seededAt,
       expectedUpdatedAt: submitted.baseline.updatedAt,
+      ...(useOverwrite && {
+        expectedLastAppointmentId: submitted.baseline.content.lastAppointmentId,
+        expectedLastFundingSourceId:
+          submitted.baseline.content.lastFundingSourceId,
+      }),
       name,
       overwrite: useOverwrite,
     });

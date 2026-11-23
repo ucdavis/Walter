@@ -37,10 +37,32 @@ public sealed record ProjectionContent
 public sealed record ProjectionComparison
 {
     [JsonRequired]
-    public List<ProjectionAppointment> Appointments { get; init; } = [];
+    public List<ProjectionCapturedAppointment> Appointments { get; init; } = [];
     /// <summary>Retains enough identity to label excluded sources and their original funding shares.</summary>
     [JsonRequired]
     public List<ProjectionCapturedSource> FundingSources { get; init; } = [];
+}
+
+public sealed record ProjectionCapturedAppointment
+{
+    public int Id { get; init; }
+    public string? PositionNumber { get; init; }
+    public string Name { get; init; } = "";
+    public string? JobCode { get; init; }
+    public string? Title { get; init; }
+    public string RateSet { get; init; } = "DVCMP";
+    public decimal? MonthlySalary { get; init; }
+    public decimal Fte { get; init; }
+    [JsonRequired]
+    public decimal CbrRate { get; init; }
+    public decimal VacationAccrualRate { get; init; }
+    public decimal ColaRate { get; init; }
+    public int ColaMonth { get; init; } = 7;
+    public decimal? FeeRemissionMonthly { get; init; }
+    public DateOnly? StartDate { get; init; }
+    public DateOnly? EndDate { get; init; }
+    public bool IsSeeded { get; init; }
+    public List<ProjectionFundingAllocation> Allocations { get; init; } = [];
 }
 
 public sealed record ProjectionCapturedSource(int Id, string Name, string? ProjectNumber, string? TaskNumber);

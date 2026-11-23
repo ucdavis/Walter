@@ -230,6 +230,8 @@ describe('projection saving through the workspace', () => {
     await screen.findByRole('button', { name: '✓ Saved' });
     expect(server.read().requests).toHaveLength(2);
     expect(server.read().requests[1]).toMatchObject({
+      expectedLastAppointmentId: plan.content.lastAppointmentId,
+      expectedLastFundingSourceId: plan.content.lastFundingSourceId,
       expectedUpdatedAt: plan.updatedAt,
       overwrite: true,
     });
@@ -324,6 +326,26 @@ describe('projection saving through the workspace', () => {
       fundingSourceId: 2,
       section: 'staffing',
     });
+  });
+
+  it('requires reload after the server rejects conflicting plan identities', async () => {
+    const { server, user } = openWorkspace();
+    await applySalary(user, '132000');
+    act(() => server.editRemotely());
+    await user.click(saveButton());
+    await screen.findByRole('dialog', { name: 'This plan has changed' });
+    act(() => server.setOutcome('identities-changed'));
+    await user.click(screen.getByRole('button', { name: 'Overwrite' }));
+    await screen.findByRole('dialog', { name: 'This draft needs a reload' });
+    expect(screen.queryByRole('button', { name: 'Overwrite' })).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Close' }));
+    expect(read().draft.content.appointments[0].monthlySalary).toBe(11_000);
+    await user.click(saveButton());
+    await screen.findByRole('dialog', { name: 'This draft needs a reload' });
+    expect(server.read().requests).toHaveLength(2);
+    await user.click(screen.getByRole('button', { name: 'Discard' }));
+    await waitFor(() => expect(read().dirty).toBe(false));
+    expect(read().draft).toEqual(server.read().stored);
   });
 
   it.each(['reset', 'delete'] as const)(

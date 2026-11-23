@@ -426,6 +426,8 @@ public sealed partial class ProjectionSqlServerTests(ProjectionSqlServerFixture 
             UpdatedBy = "owner",
             Content = new()
             {
+                LastAppointmentId = 1,
+                LastFundingSourceId = 1,
                 ForecastMonths = forecastMonths,
                 Notes = notes,
                 FundingSources = [new() { Id = 1, Name = "Source", SourceKind = ProjectionSourceKind.Task, CapturedAt = Snapshot, ProjectNumber = "P1", TaskNumber = "T1", ProjectName = "Project", Actuals = [new() { Month = new(2029, 12, 1), Amount = 2500, ExpenditureCategory = "Salary" }] }],
@@ -441,7 +443,8 @@ public sealed partial class ProjectionSqlServerTests(ProjectionSqlServerFixture 
     private static ProjectionsController.SaveProjectionRequest Draft(Projection plan, string name, bool overwrite = false)
     {
         var copy = JsonSerializer.Deserialize<Projection>(JsonSerializer.Serialize(plan))!;
-        return new(name, copy.Content, copy.UpdatedAt, copy.SeededAt, overwrite);
+        return new(name, copy.Content, copy.UpdatedAt, copy.SeededAt, overwrite,
+            copy.Content.LastAppointmentId, copy.Content.LastFundingSourceId);
     }
 
     private static ClaimsPrincipal Viewer() => new(new ClaimsIdentity(

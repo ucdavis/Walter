@@ -1,6 +1,6 @@
 import type {
+  CapturedAppointment,
   CapturedFundingSource,
-  ProjectionAppointment,
   ProjectionDraft,
   ProjectionRosterEntry,
 } from '@/queries/projections.ts';
@@ -16,8 +16,6 @@ export function selectedSetupSession<T extends ProjectionDraft>(
 ): ProjectionSession<T> {
   return {
     ...catalog,
-    // Reserve identities from unselected appointments when adding a hypothetical hire.
-    baseline: catalog.draft,
     draft: {
       ...catalog.draft,
       content: {
@@ -117,8 +115,11 @@ export function mergeSetupEdits<T extends ProjectionDraft>(
 }
 
 /** Final selection defines scope. Explicit edits and exclusions keep their original appointment even after deselection. */
-export function selectSetupScope<T extends CapturedFundingSource>(
-  content: { appointments: ProjectionAppointment[]; fundingSources: T[] },
+export function selectSetupScope<
+  A extends CapturedAppointment,
+  S extends CapturedFundingSource,
+>(
+  content: { appointments: A[]; fundingSources: S[] },
   sourceIds: number[],
   roster: ProjectionRosterEntry[],
   editedAppointmentIds: Set<number>

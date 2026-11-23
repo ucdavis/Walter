@@ -6,12 +6,12 @@ import {
   addPlannedSource,
   editProjectionSource,
   removeProjectionSource,
-  selectInitialSources,
   sourceCapturedBalance,
   sourcePlanningBalance,
   sourcesOverlap,
   type SourceOperationResult,
 } from '@/lib/projectionSources.ts';
+import { selectedSetupSession } from '@/lib/projectionSetup.ts';
 import {
   acknowledgeProjectionSave,
   createProjectionSession,
@@ -246,17 +246,17 @@ describe('funding source operations', () => {
         id: 104,
       }
     );
-    const selected = applied(
-      selectInitialSources(
-        original,
-        [1],
-        [
-          { appointmentId: 101, fundingSourceIds: [1, 2] },
-          { appointmentId: 102, fundingSourceIds: [1] },
-          { appointmentId: 103, fundingSourceIds: [] },
-          { appointmentId: 104, fundingSourceIds: [2] },
-        ]
-      )
+    original.draft.content.lastAppointmentId = 104;
+    const selected = selectedSetupSession(
+      original,
+      [1],
+      [
+        { appointmentId: 101, fundingSourceIds: [1, 2] },
+        { appointmentId: 102, fundingSourceIds: [1] },
+        { appointmentId: 103, fundingSourceIds: [] },
+        { appointmentId: 104, fundingSourceIds: [2] },
+      ],
+      new Set()
     );
     expect(selected.draft.content.appointments.map(({ id }) => id)).toEqual([
       101, 102,
@@ -282,11 +282,18 @@ describe('funding source operations', () => {
       ...structuredClone(submitted.draft),
       updatedAt: '2026-01-02T00:00:00.1234567Z',
     };
+    saved.content.lastFundingSourceId = 5;
+    saved.content.lastAppointmentId = 105;
     const acknowledged = acknowledgeProjectionSave(newer, submitted, saved);
     expect(
       acknowledged.draft.content.fundingSources.map(({ id }) => id)
     ).toEqual([2, 3]);
     expect(acknowledged.draft.updatedAt).toBe(saved.updatedAt);
+    expect(
+      applied(addPlannedSource(acknowledged, planned))
+        .draft.content.fundingSources.at(-1)?.id
+    ).toBe(6);
+    expect(acknowledged.draft.content.lastAppointmentId).toBe(105);
     expect(isProjectionDirty(acknowledged)).toBe(true);
     const reordered = {
       ...original,

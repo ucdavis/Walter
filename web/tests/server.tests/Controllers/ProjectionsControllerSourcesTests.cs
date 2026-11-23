@@ -204,9 +204,9 @@ public sealed partial class ProjectionsControllerTests
             case "duplicate": var duplicate = NewTaskSource(); duplicate.Id = 2; sources.Add(duplicate); break;
             case "planned-capture": task.SourceKind = ProjectionSourceKind.Planned; task.ProjectNumber = null; task.TaskNumber = null; task.CapturedAt = default; break;
         }
-        var snapshot = new ProjectionDraft("Invalid", saved.SeededAt, new() { FundingSources = sources });
+        var snapshot = new ProjectionDraft("Invalid", saved.SeededAt, new() { FundingSources = sources, LastFundingSourceId = sources.Max(s => s.Id) });
         (await controller.Create(PiIam, new(snapshot, Guid.NewGuid()), default)).Should().BeOfType<BadRequestObjectResult>();
-        (await controller.Save(saved.Id, Draft(saved) with { Content = saved.Content with { FundingSources = sources } }, default)).Should().BeOfType<BadRequestObjectResult>();
+        (await controller.Save(saved.Id, Draft(saved) with { Content = saved.Content with { FundingSources = sources, LastFundingSourceId = snapshot.Content.LastFundingSourceId } }, default)).Should().BeOfType<BadRequestObjectResult>();
         ctx.Projections.Should().ContainSingle();
         JsonSerializer.Serialize(saved).Should().Be(before);
     }
@@ -232,7 +232,8 @@ public sealed partial class ProjectionsControllerTests
             new() { Id = 1, Name = "Existing person", IsSeeded = true, MonthlySalary = 5000, HasUnmatchedFunding = true,
                 Allocations = [new() { FundingSourceId = 1, Percent = 0.3m }] },
         };
-        (await controller.Save(saved.Id, Draft(saved) with { Content = saved.Content with { FundingSources = sources, Appointments = jobs } }, default)).Should().BeOfType<OkObjectResult>();
+        (await controller.Save(saved.Id, Draft(saved) with { Content = saved.Content with
+            { FundingSources = sources, Appointments = jobs, LastFundingSourceId = 2, LastAppointmentId = 1 } }, default)).Should().BeOfType<OkObjectResult>();
         ctx.ChangeTracker.Clear();
         var loaded = (Projection)((OkObjectResult)await controller.Get(saved.Id, default)).Value!;
         loaded.Content.FundingSources.Should().BeEquivalentTo(sources);

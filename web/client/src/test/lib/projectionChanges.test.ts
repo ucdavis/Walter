@@ -41,7 +41,7 @@ describe('plan changes', () => {
     const source = plan.content.fundingSources[0];
     const before = structuredClone(plan);
     appointment.monthlySalary = 11_000;
-    appointment.monthlySalary = 12_000;
+    appointment.monthlySalary = 120_000.01 / 12;
     appointment.endDate = source.endDate = '2026-09-30';
     expect(buildPlanChanges(plan).staffing[0].assumptions).toEqual([
       {
@@ -51,11 +51,16 @@ describe('plan changes', () => {
       },
       {
         label: 'Full-time base salary assumption',
-        original: '$10,000.00 / month',
-        planned: '$12,000.00 / month',
+        original: '$120,000.00 / year',
+        planned: '$120,000.01 / year',
       },
     ]);
     expect(buildPlanChanges(plan).funding[0].dates).toEqual([
+      {
+        label: 'Funding start date',
+        original: 'Dec 1, 2025',
+        planned: 'Dec 1, 2025',
+      },
       {
         label: 'Funding end date',
         original: 'Jun 30, 2026',
@@ -75,7 +80,7 @@ describe('plan changes', () => {
     const plan = createSalaryExample();
     const imported = {
       ...plan.content.fundingSources[0],
-      capturedAt: plan.seededAt,
+      capturedAt: '2026-02-12T00:00:00Z',
       projectNumber: 'ANOTHER-PROJECT',
       projectType: 'Sponsored',
     };
@@ -99,8 +104,12 @@ describe('plan changes', () => {
     expect(report.fundingSourceCount).toBe(1);
     expect(report.funding).toHaveLength(1);
     expect(report.funding[0]).toMatchObject({
+      capturedAt: imported.capturedAt,
       categories: [{ adjustment: -500 }, { adjustment: 500 }],
-      dates: [],
+      dates: [
+        { original: 'Dec 1, 2025', planned: 'Dec 1, 2025' },
+        { original: 'Jun 30, 2026', planned: 'Jun 30, 2026' },
+      ],
       total: { adjustment: 0, original: 20_000, revised: 20_000 },
     });
 
@@ -108,13 +117,14 @@ describe('plan changes', () => {
     source.endDate = '2027-09-30';
     expect(buildPlanChanges(draft).funding[0]).toMatchObject({
       dates: [
+        { original: 'Dec 1, 2025', planned: 'Dec 1, 2025' },
         {
           label: 'Funding end date',
           original: 'Jun 30, 2026',
           planned: 'Sep 30, 2027',
         },
       ],
-      total: null,
+      total: { adjustment: 0, original: 20_000, revised: 20_000 },
     });
     source.endDate = source.capturedEndDate;
     expect(buildPlanChanges(draft)).toMatchObject({
@@ -163,7 +173,7 @@ describe('plan changes', () => {
         adjustment: 10_000.01,
         category: salary,
         original: 20_000,
-        revised: 30_000.01,
+        revised: expect.closeTo(30_000.01, 2),
       },
       {
         adjustment: 3999.99,
@@ -175,7 +185,7 @@ describe('plan changes', () => {
       { adjustment: 0, category: '04 - Equipment', original: null, revised: 0 },
     ]);
     source.categoryAdjustments[0].amount -= 100.25;
-    expect(buildPlanChanges(plan).funding[0].total?.adjustment).toBe(-100.25);
+    expect(buildPlanChanges(plan).funding[0].total.adjustment).toBe(-100.25);
     source.categoryAdjustments = [];
     expect(buildPlanChanges(plan).funding).toEqual([]);
   });
@@ -255,7 +265,19 @@ describe('plan changes', () => {
       [102, 'added'],
       [101, 'excluded'],
     ]);
-    expect(buildPlanChanges(added.draft).funding).toEqual([]);
+    expect(buildPlanChanges(added.draft)).toMatchObject({
+      funding: [],
+      fundingSourceCount: 1,
+      staffing: [
+        { kind: 'added' },
+        {
+          allocations: [
+            { shares: [{ fundingSourceId: 1, original: 0.5, planned: 0 }] },
+          ],
+          kind: 'excluded',
+        },
+      ],
+    });
     const noSource = applied(removeProjectionSource(added, 1));
     const planned = applied(
       addPlannedSource(createProjectionSession(noSource.draft), {
@@ -273,6 +295,34 @@ describe('plan changes', () => {
       dates: [{ planned: 'Jan 15, 2026' }, { planned: null }],
       plannedSource: true,
       total: { revised: 8500 },
+    });
+  });
+
+  it('reports removed workspace appointments with both captured source shares', () => {
+    const removed = applied(
+      removeProjectionAppointment(
+        createProjectionSession(createSalaryExample()),
+        101
+      )
+    );
+    expect(buildPlanChanges(removed.draft)).toMatchObject({
+      funding: [],
+      fundingSourceCount: 2,
+      staffing: [
+        {
+          allocations: [
+            {
+              endDate: '2026-06-30',
+              shares: [
+                { fundingSourceId: 1, original: 0.5, planned: 0 },
+                { fundingSourceId: 2, original: 0.5, planned: 0 },
+              ],
+              startDate: '2026-01-01',
+            },
+          ],
+          kind: 'excluded',
+        },
+      ],
     });
   });
 });

@@ -1,9 +1,10 @@
 import { compareAllocationSchedules } from '@/lib/projectionAllocations.ts';
+import { sumCategoryBudgets } from '@/lib/projectionBudgets.ts';
 import { buildSourceFundingBalance } from '@/lib/projectionFundingBalances.ts';
 import { formatCurrency } from '@/lib/currency.ts';
 import type {
+  CapturedAppointment,
   CapturedFundingSource,
-  ProjectionAppointment,
   ProjectionDraft,
   ProjectionFundingSource,
 } from '@/queries/projections.ts';
@@ -30,14 +31,14 @@ export interface AssumptionChange {
 }
 
 function appointmentAssumptions(
-  original: ProjectionAppointment | undefined,
-  planned: ProjectionAppointment
+  original: CapturedAppointment | undefined,
+  planned: CapturedAppointment
 ) {
   const rows: AssumptionChange[] = [];
-  function add<K extends keyof ProjectionAppointment>(
+  function add<K extends keyof CapturedAppointment>(
     key: K,
     label: string,
-    format: (value: NonNullable<ProjectionAppointment[K]>) => string
+    format: (value: NonNullable<CapturedAppointment[K]>) => string
   ) {
     const from = original?.[key];
     const to = planned[key];
@@ -55,7 +56,7 @@ function appointmentAssumptions(
   add(
     'monthlySalary',
     'Full-time base salary assumption',
-    (n) => formatCurrency(n) + ' / month'
+    (n) => formatCurrency(n * 12) + ' / year'
   );
   add('fte', 'Appointment FTE', changePercent);
   add('cbrRate', 'Composite benefit rate', changePercent);
@@ -71,7 +72,7 @@ type ChangeKind = 'added' | 'changed' | 'excluded';
 
 export interface StaffingChange {
   allocations: ReturnType<typeof compareAllocationSchedules>;
-  appointment: ProjectionAppointment;
+  appointment: CapturedAppointment;
   assumptions: AssumptionChange[];
   kind: ChangeKind;
 }
@@ -84,44 +85,33 @@ export interface BudgetChange {
 }
 
 export interface FundingChange {
+  capturedAt: string;
   categories: BudgetChange[];
   dates: AssumptionChange[];
   plannedSource: boolean;
   source: CapturedFundingSource;
-  total: BudgetChange | null;
+  total: BudgetChange;
 }
 
 function compareFunding(source: ProjectionFundingSource): FundingChange | null {
   const plannedSource = source.sourceKind === 'Planned';
-  const dates: AssumptionChange[] = [];
-  function dateChange(
+  function dateRow(
     label: string,
     captured: string | null,
     planned: string | null
   ) {
-    if (plannedSource || captured !== planned) {
-      dates.push({
-        label,
-        original: plannedSource || !captured ? null : changeDate(captured),
-        planned: planned ? changeDate(planned) : null,
-      });
-    }
+    return {
+      label,
+      original: plannedSource || !captured ? null : changeDate(captured),
+      planned: planned ? changeDate(planned) : null,
+    };
   }
-  dateChange('Funding start date', source.capturedStartDate, source.startDate);
-  dateChange('Funding end date', source.capturedEndDate, source.endDate);
 
   const categories: BudgetChange[] = [];
   const balances = buildSourceFundingBalance(source, []).categories;
-  const total = {
-    adjustment: 0,
-    category: 'Source total',
-    original: 0,
-    revised: 0,
-  };
+  let original = 0;
   for (const row of balances) {
-    total.original += row.capturedAvailable;
-    total.adjustment += row.adjustment;
-    total.revised += row.revisedAvailable;
+    original += row.capturedAvailable;
     // The general-pool adjustment belongs to the source total, not to a financial category.
     if (row.isBalanceAdjustment) {
       continue;
@@ -132,25 +122,36 @@ function compareFunding(source: ProjectionFundingSource): FundingChange | null {
         adjustment: row.adjustment,
         category: row.expenditureCategory,
         original: row.budgetRecorded ? row.capturedAvailable : null,
-        revised: Math.round(row.revisedAvailable * 100) / 100,
+        revised: row.revisedAvailable,
       });
     }
   }
-  // Net cents determine whether a source grew, shrank, or only redistributed its budget.
-  total.adjustment = Math.round(total.adjustment * 100) / 100;
-  total.original = Math.round(total.original * 100) / 100;
-  total.revised = Math.round(total.revised * 100) / 100;
-  const showBudget =
-    plannedSource || categories.length > 0 || source.balanceAdjustment !== 0;
-  if (!showBudget && !dates.length) {
+  if (
+    !plannedSource &&
+    !categories.length &&
+    source.balanceAdjustment === 0 &&
+    source.capturedStartDate === source.startDate &&
+    source.capturedEndDate === source.endDate
+  ) {
     return null;
   }
+  const adjustment =
+    sumCategoryBudgets(source.categoryAdjustments) + source.balanceAdjustment;
   return {
+    capturedAt: source.capturedAt,
     categories,
-    dates,
+    dates: [
+      dateRow('Funding start date', source.capturedStartDate, source.startDate),
+      dateRow('Funding end date', source.capturedEndDate, source.endDate),
+    ],
     plannedSource,
     source,
-    total: showBudget ? total : null,
+    total: {
+      adjustment,
+      category: 'Source total',
+      original,
+      revised: original + adjustment,
+    },
   };
 }
 
@@ -178,7 +179,7 @@ export function buildPlanChanges(plan: ProjectionDraft) {
   }
   for (const appointment of originals.values()) {
     staffing.push({
-      allocations: [],
+      allocations: compareAllocationSchedules(appointment.allocations, []),
       appointment,
       assumptions: [],
       kind: 'excluded',

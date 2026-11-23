@@ -147,20 +147,29 @@ function budgetSummary(change: FundingChange) {
   if (change.plannedSource) {
     return 'Proposed funding';
   }
-  if (change.total && change.total.adjustment > 0) {
+  if (change.total.adjustment > 0) {
     return 'Overall funding increased';
   }
-  if (change.total && change.total.adjustment < 0) {
+  if (change.total.adjustment < 0) {
     return 'Overall funding decreased';
   }
   if (change.categories.some((row) => row.adjustment !== 0)) {
     return 'Budget redistributed across categories';
   }
-  return 'Category budget established';
+  return change.categories.length
+    ? 'Category budget established'
+    : 'Available funding';
 }
 
-function FundingCard({ change }: { change: FundingChange }) {
+function FundingCard({
+  change,
+  planCaptureDate,
+}: {
+  change: FundingChange;
+  planCaptureDate: string;
+}) {
   const { categories, dates, plannedSource, source, total } = change;
+  const captureDate = changeDate(change.capturedAt);
   return (
     <article className="min-w-0 rounded-lg border border-main-border p-4">
       <h4 className="text-lg font-semibold wrap-anywhere">{source.name}</h4>
@@ -175,57 +184,60 @@ function FundingCard({ change }: { change: FundingChange }) {
       {plannedSource && (
         <p className="mt-2 font-semibold">New planned funding source</p>
       )}
-      {total && (
-        <div className="mt-4 overflow-x-auto">
-          <table className="table table-sm w-full tabular-nums">
-            <caption className="mb-2 text-left font-semibold">
-              {budgetSummary(change)}
-            </caption>
-            <thead>
-              <tr>
-                <th>Category</th>
+      {!plannedSource && captureDate !== planCaptureDate && (
+        <p className="mt-2 text-sm text-base-content/75">
+          Source inputs captured {captureDate}
+        </p>
+      )}
+      <div className="mt-4 overflow-x-auto">
+        <table className="table table-sm w-full tabular-nums">
+          <caption className="mb-2 text-left font-semibold">
+            {budgetSummary(change)}
+          </caption>
+          <thead>
+            <tr>
+              <th>Category</th>
+              {!plannedSource && (
+                <>
+                  <th className="text-right">Original available</th>
+                  <th className="text-right">Net adjustment</th>
+                </>
+              )}
+              <th className="text-right">
+                {plannedSource ? 'Proposed available' : 'Revised available'}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {[...categories, total].map((row) => (
+              <tr
+                className={
+                  row === total ? 'bg-base-200 font-semibold' : undefined
+                }
+                key={row.category}
+              >
+                <th className="wrap-anywhere" scope="row">
+                  {row.category}
+                </th>
                 {!plannedSource && (
                   <>
-                    <th className="text-right">Original available</th>
-                    <th className="text-right">Net adjustment</th>
+                    <td className="text-right">
+                      {row.original === null
+                        ? 'No budget'
+                        : formatCurrency(row.original)}
+                    </td>
+                    <td className="text-right">
+                      {row.adjustment > 0 ? '+' : ''}
+                      {formatCurrency(row.adjustment)}
+                    </td>
                   </>
                 )}
-                <th className="text-right">
-                  {plannedSource ? 'Proposed available' : 'Revised available'}
-                </th>
+                <td className="text-right">{formatCurrency(row.revised)}</td>
               </tr>
-            </thead>
-            <tbody>
-              {[...categories, total].map((row) => (
-                <tr
-                  className={
-                    row === total ? 'bg-base-200 font-semibold' : undefined
-                  }
-                  key={row.category}
-                >
-                  <th className="wrap-anywhere" scope="row">
-                    {row.category}
-                  </th>
-                  {!plannedSource && (
-                    <>
-                      <td className="text-right">
-                        {row.original === null
-                          ? 'No budget'
-                          : formatCurrency(row.original)}
-                      </td>
-                      <td className="text-right">
-                        {row.adjustment > 0 ? '+' : ''}
-                        {formatCurrency(row.adjustment)}
-                      </td>
-                    </>
-                  )}
-                  <td className="text-right">{formatCurrency(row.revised)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+            ))}
+          </tbody>
+        </table>
+      </div>
       <Assumptions added={plannedSource} label="Funding dates" rows={dates} />
     </article>
   );
@@ -235,12 +247,15 @@ export function PlanChangesDialog({
   dirty,
   draft,
   onClose,
+  returnFocusTo,
 }: {
   dirty: boolean;
   draft: ProjectionDraft;
   onClose: () => void;
+  returnFocusTo: () => HTMLButtonElement | null;
 }) {
   const report = useMemo(() => buildPlanChanges(draft), [draft]);
+  const planCaptureDate = changeDate(draft.seededAt);
   const count = report.staffing.length;
   const sources = report.fundingSourceCount;
   return (
@@ -261,7 +276,7 @@ export function PlanChangesDialog({
             </button>
           </div>
           <p className="mt-1 text-base-content/75">
-            Compared with inputs captured {changeDate(draft.seededAt)}
+            Plan inputs captured {planCaptureDate}
           </p>
           <div className="mt-2 flex flex-wrap items-center gap-3">
             <p className="font-semibold">
@@ -277,6 +292,7 @@ export function PlanChangesDialog({
         </>
       )}
       onClose={onClose}
+      returnFocusTo={returnFocusTo}
       title="Plan changes"
       wide
     >
@@ -305,7 +321,11 @@ export function PlanChangesDialog({
             Funding
           </h3>
           {report.funding.map((change) => (
-            <FundingCard change={change} key={change.source.id} />
+            <FundingCard
+              change={change}
+              key={change.source.id}
+              planCaptureDate={planCaptureDate}
+            />
           ))}
         </section>
       )}

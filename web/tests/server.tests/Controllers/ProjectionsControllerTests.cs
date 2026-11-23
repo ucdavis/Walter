@@ -634,6 +634,8 @@ public sealed partial class ProjectionsControllerTests
             UpdatedAt = snapshot,
             Content = new()
             {
+                LastAppointmentId = 1,
+                LastFundingSourceId = 2,
                 FundingSources = [
                     new() { Id = 1, SourceKind = ProjectionSourceKind.Task, CapturedAt = snapshot, ProjectNumber = "P1", TaskNumber = "TASK01", Name = "First task", ProjectName = "First captured task", EndDate = new DateOnly(2025, 3, 31) },
                     new() { Id = 2, SourceKind = ProjectionSourceKind.Task, CapturedAt = snapshot, ProjectNumber = "P1", TaskNumber = "TASK02", Name = "Second task", ProjectName = "Second captured task", EndDate = new DateOnly(2025, 3, 31) },
@@ -687,7 +689,8 @@ public sealed partial class ProjectionsControllerTests
 
     private static ProjectionsController.SaveProjectionRequest Draft(Projection p, int? historyMonths = null) =>
         JsonSerializer.Deserialize<ProjectionsController.SaveProjectionRequest>(JsonSerializer.Serialize(
-            new ProjectionsController.SaveProjectionRequest(p.Name, p.Content with { HistoryMonths = historyMonths ?? p.Content.HistoryMonths }, p.UpdatedAt, p.SeededAt)))!;
+            new ProjectionsController.SaveProjectionRequest(p.Name, p.Content with { HistoryMonths = historyMonths ?? p.Content.HistoryMonths }, p.UpdatedAt, p.SeededAt,
+                ExpectedLastAppointmentId: p.Content.LastAppointmentId, ExpectedLastFundingSourceId: p.Content.LastFundingSourceId)))!;
 
     [Fact]
     public async Task Reset_keeps_id_name_and_creator_and_drops_edits()
@@ -709,6 +712,7 @@ public sealed partial class ProjectionsControllerTests
             StartMonth = new(2027, 1, 1),
         });
         created.Content.FundingSources.Add(new ProjectionFundingSource { Id = 2, Name = "Hypothetical", SourceKind = ProjectionSourceKind.Planned, PlannedBudgetMode = ProjectionPlannedBudgetMode.GeneralPool, CapturedAt = created.SeededAt, StartDate = new(2027, 1, 1) });
+        created.Content.LastFundingSourceId = 2;
         await controller.Save(created.Id, Draft(created), default);
 
         var result = await controller.Reset(created.Id, new ProjectionsController.HistoryMonthsRequest(3, created.UpdatedAt), default);
@@ -780,6 +784,7 @@ public sealed partial class ProjectionsControllerTests
             Fte = 0.5m,
             Allocations = [new() { FundingSourceId = created.Content.FundingSources.Single().Id, Percent = 1 }],
         });
+        created.Content.LastAppointmentId = 1;
 
         (await controller.Save(created.Id, Draft(created) with { Name = "Plan B" }, default)).Should().BeOfType<OkObjectResult>();
         ctx.ChangeTracker.Clear();
@@ -868,13 +873,14 @@ public sealed partial class ProjectionsControllerTests
         var draft = Draft(created) with { Name = "My plan" };
         draft.Content.FundingSources.Single().HistoricalExpenseOverrides.Add(new() { ExpenditureCategory = Supplies, Amount = 123 });
         draft.Content.Appointments.Add(new ProjectionAppointment { Id = 7, Name = "My new hire", MonthlySalary = 8000, StartDate = new DateOnly(2026, 12, 1) });
+        draft.Content.LastAppointmentId = 7;
         await controller.Save(created.Id, Draft(created) with { Name = "First competing edit" }, default);
         ConflictCode(await controller.Save(created.Id, draft, default)).Should().Be("conflict");
 
         var later = Draft(created) with { Name = "Another edit after conflict" };
-        later.Content.FundingSources.Clear();
         later.Content.FundingSources.Add(new ProjectionFundingSource { Id = 2, Name = "Other editor's source", SourceKind = ProjectionSourceKind.Planned, PlannedBudgetMode = ProjectionPlannedBudgetMode.GeneralPool, CapturedAt = later.ExpectedSeededAt!.Value, StartDate = new(2027, 1, 1) });
-        await controller.Save(created.Id, later, default);
+        later.Content.LastFundingSourceId = 2;
+        Document(await controller.Save(created.Id, later, default));
         var result = await controller.Save(created.Id, draft with { Overwrite = true }, default);
 
         var saved = Document(result);
@@ -883,8 +889,55 @@ public sealed partial class ProjectionsControllerTests
         saved.Content.FundingSources.Single().Actuals.Single().Amount.Should().Be(250);
         saved.Content.FundingSources.Single().RunRates.Should().HaveCount(2);
         saved.Content.Appointments.Should().ContainSingle().Which.Name.Should().Be("My new hire");
+        saved.Content.LastFundingSourceId.Should().Be(2);
         saved.SeededAt.Should().Be(draft.ExpectedSeededAt!.Value);
         saved.UpdatedAt.Should().BeAfter(later.ExpectedUpdatedAt!.Value);
+    }
+
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    public async Task Overwrite_cannot_reuse_another_editors_live_or_retired_identity(bool appointment, bool retire)
+    {
+        using var ctx = TestDbContextFactory.CreateInMemory();
+        var controller = CreateController(ctx, financialViewer: true);
+        var created = Document(await controller.Create(PiIam, NewPlanRequest(), default));
+        var remote = Draft(created);
+        var local = Draft(created) with { Overwrite = true };
+        if (appointment)
+        {
+            remote.Content.Appointments.Add(new() { Id = 74, Name = "Remote hire", MonthlySalary = 5000, StartDate = new(2027, 1, 1) });
+            remote.Content.LastAppointmentId = 74;
+            local.Content.Appointments.Add(new() { Id = 74, Name = "Local hire", MonthlySalary = 5000, StartDate = new(2027, 1, 1) });
+            local.Content.LastAppointmentId = 74;
+        }
+        else
+        {
+            remote.Content.FundingSources.Add(new() { Id = 42, Name = "Remote source", SourceKind = ProjectionSourceKind.Planned, PlannedBudgetMode = ProjectionPlannedBudgetMode.GeneralPool, CapturedAt = created.SeededAt, StartDate = new(2027, 1, 1) });
+            remote.Content.LastFundingSourceId = 42;
+            local.Content.FundingSources.Add(new() { Id = 42, Name = "Local source", SourceKind = ProjectionSourceKind.Planned, PlannedBudgetMode = ProjectionPlannedBudgetMode.GeneralPool, CapturedAt = created.SeededAt, StartDate = new(2027, 1, 1) });
+            local.Content.LastFundingSourceId = 42;
+            local.Content.Appointments.Single().Allocations.Add(new() { FundingSourceId = 42, Percent = 0.5m });
+        }
+        var latest = Document(await controller.Save(created.Id, remote, default));
+        if (retire)
+        {
+            var removal = Draft(latest);
+            if (appointment)
+                removal.Content.Appointments.RemoveAll(a => a.Id == 74);
+            else
+                removal.Content.FundingSources.RemoveAll(s => s.Id == 42);
+            latest = Document(await controller.Save(created.Id, removal, default));
+            ConflictCode(await controller.Save(created.Id, local with { ExpectedUpdatedAt = latest.UpdatedAt, Overwrite = false }, default))
+                .Should().Be("identitiesChanged");
+        }
+
+        var expected = JsonSerializer.Serialize(latest);
+        ctx.ChangeTracker.Clear();
+        ConflictCode(await controller.Save(created.Id, local, default)).Should().Be("identitiesChanged");
+        JsonSerializer.Serialize(Document(await controller.Get(created.Id, default))).Should().Be(expected);
     }
 
     [Theory]
@@ -991,6 +1044,7 @@ public sealed partial class ProjectionsControllerTests
             EndDate = new DateOnly(2027, 6, 30),
             Allocations = [new() { FundingSourceId = created.Content.FundingSources.Single().Id, Percent = 1 }],
         });
+        draft.Content.LastAppointmentId = 7;
 
         var saved = Document(await CreateController(ctx, financialViewer: true).Save(created.Id, draft, default));
 
@@ -1047,6 +1101,8 @@ public sealed partial class ProjectionsControllerTests
         {
             HistoryMonths = 12,
             ForecastMonths = 18,
+            LastAppointmentId = 73,
+            LastFundingSourceId = 41,
             Notes = "Captured planning notes\nKeep this context.",
             FundingSources = [
                 new ProjectionFundingSource

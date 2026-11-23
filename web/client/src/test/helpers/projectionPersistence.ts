@@ -4,7 +4,7 @@ import type {
   SaveProjectionRequest,
 } from '@/queries/projections.ts';
 
-type SaveOutcome = 'success' | 'failure' | 'lost-response';
+type SaveOutcome = 'success' | 'failure' | 'lost-response' | 'identities-changed';
 
 function nextTimestamp(timestamp: string) {
   const [seconds, fraction = ''] = timestamp.replace(/Z$/, '').split('.');
@@ -97,6 +97,9 @@ export function createProjectionPersistenceDouble(initialPlan: Projection) {
           code: 'conflict',
           message: 'Someone else changed this plan.',
         });
+      }
+      if (nextOutcome === 'identities-changed') {
+        throw new HttpError(409, url, { code: 'identitiesChanged' });
       }
       stored = {
         ...stored,

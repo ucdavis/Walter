@@ -122,8 +122,13 @@ export type CapturedFundingSource = Pick<
   'id' | 'name' | 'projectNumber' | 'taskNumber'
 >;
 
+export type CapturedAppointment = Omit<
+  ProjectionAppointment,
+  'employeeId' | 'hasUnmatchedFunding'
+>;
+
 export interface ProjectionComparison {
-  appointments: ProjectionAppointment[];
+  appointments: CapturedAppointment[];
   fundingSources: CapturedFundingSource[];
 }
 
@@ -329,6 +334,8 @@ export type SaveProjectionRequest = Omit<ProjectionDraft, 'seededAt'> & {
   /** Opaque server strings. Parsing through Date would lose datetime2 precision. */
   expectedSeededAt: string;
   expectedUpdatedAt: string;
+  expectedLastAppointmentId?: number;
+  expectedLastFundingSourceId?: number;
   overwrite?: boolean;
 };
 

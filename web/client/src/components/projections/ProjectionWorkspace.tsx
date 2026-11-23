@@ -30,6 +30,7 @@ import {
   type ExpensesEditorHandle,
 } from '@/components/projections/ExpensesEditor.tsx';
 import {
+  useCallback,
   useEffect,
   useId,
   useImperativeHandle,
@@ -126,6 +127,8 @@ export function ProjectionWorkspace({
   const location = readProjectionLocation(search, draft);
   const [editingDetails, setEditingDetails] = useState(false);
   const detailsEditorRef = useRef<PlanDetailsEditorHandle>(null);
+  const planChangesButton = useRef<HTMLButtonElement>(null);
+  const returnToPlanChanges = useCallback(() => planChangesButton.current, []);
   const editorRef = useRef<StaffingEditorHandle>(null);
   const expenseEditorRef = useRef<ExpensesEditorHandle>(null);
   const sourceEditorRef = useRef<FundingSourcesEditorHandle>(null);
@@ -280,6 +283,7 @@ export function ProjectionWorkspace({
             <button
               className="btn"
               onClick={() => setShowChanges(true)}
+              ref={planChangesButton}
               type="button"
             >
               <DocumentTextIcon
@@ -313,6 +317,7 @@ export function ProjectionWorkspace({
             dirty={isProjectionDirty(session)}
             draft={draft}
             onClose={() => setShowChanges(false)}
+            returnFocusTo={returnToPlanChanges}
           />
         )}
         {editingDetails && (

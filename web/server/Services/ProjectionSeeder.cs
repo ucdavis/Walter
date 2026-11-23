@@ -1,4 +1,3 @@
-using System.Text.Json;
 using server.core.Domain;
 using server.core.Models;
 using server.core.Services;
@@ -49,7 +48,32 @@ public sealed class ProjectionSeeder(IProjectionDataSource data, TimeProvider? t
             // Setup edits must never mutate the original inputs, including their nested allocation schedules.
             Comparison = new()
             {
-                Appointments = JsonSerializer.Deserialize<List<ProjectionAppointment>>(JsonSerializer.Serialize(appointments))!,
+                Appointments = appointments.Select(a => new ProjectionCapturedAppointment
+                {
+                    Id = a.Id,
+                    PositionNumber = a.PositionNumber,
+                    Name = a.Name,
+                    JobCode = a.JobCode,
+                    Title = a.Title,
+                    RateSet = a.RateSet,
+                    MonthlySalary = a.MonthlySalary,
+                    Fte = a.Fte,
+                    CbrRate = a.CbrRate,
+                    VacationAccrualRate = a.VacationAccrualRate,
+                    ColaRate = a.ColaRate,
+                    ColaMonth = a.ColaMonth,
+                    FeeRemissionMonthly = a.FeeRemissionMonthly,
+                    StartDate = a.StartDate,
+                    EndDate = a.EndDate,
+                    IsSeeded = a.IsSeeded,
+                    Allocations = a.Allocations.Select(f => new ProjectionFundingAllocation
+                    {
+                        FundingSourceId = f.FundingSourceId,
+                        Percent = f.Percent,
+                        StartDate = f.StartDate,
+                        EndDate = f.EndDate,
+                    }).ToList(),
+                }).ToList(),
                 FundingSources = prepared.FundingSources.Select(s => new ProjectionCapturedSource(s.Id, s.Name, s.ProjectNumber, s.TaskNumber)).ToList(),
             },
             LastAppointmentId = appointments.Select(a => a.Id).DefaultIfEmpty().Max(),
