@@ -150,12 +150,16 @@ function sharesBySource(
   allocations: ProjectionFundingAllocation[],
   currentDay: number
 ) {
-  const totals = new Map<number | null, number>();
-  for (const share of sharesOnDay({ allocations }, currentDay)) {
-    totals.set(
-      share.fundingSourceId,
-      (totals.get(share.fundingSourceId) ?? 0) + share.percent
-    );
+  const totals = new Map<number | null, { editable: number; raw: number }>();
+  for (const { fundingSourceId, percent } of sharesOnDay(
+    { allocations },
+    currentDay
+  )) {
+    const total = totals.get(fundingSourceId) ?? { editable: 0, raw: 0 };
+    total.raw += percent;
+    // Retyping a displayed share rounds the individual row before the rows are summed.
+    total.editable += Number(allocationPercentText(percent)) / 100;
+    totals.set(fundingSourceId, total);
   }
   return totals;
 }
@@ -180,18 +184,26 @@ export function compareAllocationSchedules(
     );
     const shares: AllocationDifference[] = [];
     for (const fundingSourceId of ids) {
+      const originalTotal = before.get(fundingSourceId);
+      const plannedTotal = after.get(fundingSourceId);
       const from =
         original === null
           ? null
-          : allocationPercentText(before.get(fundingSourceId) ?? 0);
-      const to = allocationPercentText(after.get(fundingSourceId) ?? 0);
-      if (from !== to) {
-        shares.push({
-          fundingSourceId,
-          original: from === null ? null : Number(from) / 100,
-          planned: Number(to) / 100,
-        });
+          : allocationPercentText(originalTotal?.raw ?? 0);
+      const to = allocationPercentText(plannedTotal?.raw ?? 0);
+      // Compare both totals so regrouping and retyping rounded shares have the same effect.
+      const sameEditableTotal =
+        original !== null &&
+        allocationPercentText(originalTotal?.editable ?? 0) ===
+          allocationPercentText(plannedTotal?.editable ?? 0);
+      if (from === to || sameEditableTotal) {
+        continue;
       }
+      shares.push({
+        fundingSourceId,
+        original: from === null ? null : Number(from) / 100,
+        planned: Number(to) / 100,
+      });
     }
     if (!shares.length) {
       continue;

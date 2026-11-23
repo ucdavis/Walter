@@ -92,6 +92,67 @@ describe('projection plan header', () => {
     expect(dialog()).toHaveTextContent('No staffing or funding changes');
   });
 
+  it('clears overlapping allocation changes when both original displayed shares are reapplied', async () => {
+    const plan = createSalaryExample();
+    const shares = Array.from({ length: 2 }, () => ({
+      endDate: '2026-01-31',
+      fundingSourceId: 1,
+      percent: 0.123_456_789_012_34,
+      startDate: '2026-01-01',
+    }));
+    plan.content.appointments[0].allocations = structuredClone(shares);
+    plan.content.comparison.appointments[0].allocations = shares;
+    const { user } = openWorkspace('?section=staffing', plan);
+    const openAllocations = async () => {
+      await user.click(
+        await screen.findByRole('button', {
+          name: /Alex Example, Jan 2026:.*Edit allocations/,
+        })
+      );
+      return within(
+        screen.getByRole('dialog', { name: 'Alex Example funding' })
+      );
+    };
+    const applyShares = async (
+      editor: ReturnType<typeof within>,
+      values: string[]
+    ) => {
+      for (const [index, value] of values.entries()) {
+        const input = editor.getByRole('textbox', {
+          name: `Appointment share ${index + 1} (%)`,
+        });
+        await user.clear(input);
+        await user.type(input, value);
+      }
+      await user.click(editor.getByRole('button', { name: /^Replace / }));
+    };
+    const openReport = async () => {
+      await user.click(screen.getByRole('button', { name: 'Plan changes' }));
+      return screen.getByRole('dialog', { name: 'Plan changes' });
+    };
+
+    const editor = await openAllocations();
+    const originals = [1, 2].map(
+      (row) =>
+        editor.getByRole<HTMLInputElement>('textbox', {
+          name: `Appointment share ${row} (%)`,
+        }).value
+    );
+    await applyShares(editor, ['15', '16']);
+    const changed = await openReport();
+    expect(changed).toHaveTextContent(
+      '1 appointment and 1 funding source affected'
+    );
+    await user.click(
+      within(changed).getByRole('button', { name: 'Close plan changes' })
+    );
+
+    await applyShares(await openAllocations(), originals);
+    expect(await openReport()).toHaveTextContent(
+      'No staffing or funding changes'
+    );
+  });
+
   it('shows dates and preserves subcent pool adjustments and balances', async () => {
     const plan = createSalaryExample();
     const [pooled, dateOnly] = plan.content.fundingSources;

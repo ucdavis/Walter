@@ -201,6 +201,16 @@ describe('plan changes', () => {
       row(1, 0.2, null, null),
     ];
     expect(compareAllocationSchedules(original, split)).toEqual([]);
+    const fractionalShare = 0.123_456_789_012_34;
+    expect(
+      compareAllocationSchedules(
+        [
+          row(1, fractionalShare, null, null),
+          row(1, fractionalShare, null, null),
+        ],
+        [row(1, fractionalShare * 2, null, null)]
+      )
+    ).toEqual([]);
     const planned = [
       ...original.map((r) => ({ ...r, endDate: '2026-04-14' })),
       ...original.map((r) => ({ ...r, startDate: '2026-05-06' })),
