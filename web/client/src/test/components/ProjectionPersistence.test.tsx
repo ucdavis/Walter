@@ -310,6 +310,52 @@ describe('projection saving through the workspace', () => {
     );
   });
 
+  it('clears a draft-only selection when another save claims its source ID', async () => {
+    const { plan, server, user } = openWorkspace();
+    await user.click(await screen.findByRole('button', { name: 'Funding' }));
+    await user.click(screen.getByRole('button', { name: 'Add planned source' }));
+    await user.type(screen.getByLabelText('Source name'), 'Local renewal');
+    await user.type(screen.getByLabelText('Planning balance'), '42000');
+    await user.type(screen.getByLabelText('Start date'), '2026-07-01');
+    await user.click(screen.getByRole('button', { name: 'Apply' }));
+    const added = read().draft.content.fundingSources.find(
+      ({ name }) => name === 'Local renewal'
+    )!;
+    await user.click(screen.getByRole('button', { name: 'Overview' }));
+    await user.selectOptions(
+      await screen.findByRole('combobox', { name: 'Explore a funding source' }),
+      String(added.id)
+    );
+    await screen.findByRole('heading', { name: 'Local renewal' });
+
+    const saved = await server.save({
+      content: {
+        ...plan.content,
+        fundingSources: [
+          ...plan.content.fundingSources,
+          { ...added, name: 'Remote renewal' },
+        ],
+        lastFundingSourceId: added.id,
+      },
+      expectedSeededAt: plan.seededAt,
+      expectedUpdatedAt: plan.updatedAt,
+      name: plan.name,
+    });
+    await user.click(saveButton());
+    await screen.findByRole('dialog', { name: 'This plan has changed' });
+    await user.click(screen.getByRole('button', { name: 'Discard and reload' }));
+
+    expect(
+      await screen.findByRole('heading', { name: 'Project outlook' })
+    ).toBeVisible();
+    expect(read().location).toMatchObject({
+      fundingSourceId: null,
+      section: 'overview',
+    });
+    expect(read().draft).toEqual(saved);
+    expect(read().dirty).toBe(false);
+  });
+
   it.each(['reset', 'delete'] as const)(
     'blocks saving after a remote %s and preserves the local draft',
     async (change) => {
@@ -329,6 +375,18 @@ describe('projection saving through the workspace', () => {
       expect(read().draft.content.appointments[0].monthlySalary).toBe(11_000);
       expect(read().dirty).toBe(true);
       expect(server.read().requests).toHaveLength(1);
+      if (change === 'reset') {
+        await user.click(
+          screen.getByRole('button', { name: 'Discard and reload' })
+        );
+        await waitFor(() =>
+          expect(read().location).toMatchObject({
+            fundingSourceId: null,
+            section: 'overview',
+          })
+        );
+        expect(read().draft).toEqual(server.read().stored);
+      }
     }
   );
 

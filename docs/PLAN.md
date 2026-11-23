@@ -365,8 +365,9 @@ These decisions were confirmed after reviewing the saving and conflict cases:
   originally loaded. The database checks that timestamp as part of the write.
 - **Save conflicts** require the latest saved version. Close keeps the local draft
   visible, and the next Save opens the same prompt. Discard and reload fetches
-  the saved plan and discards the local edits, preserving the selected location
-  if it still exists. It does not fetch a fresh source snapshot.
+  the saved plan and discards the local edits. It keeps a selected appointment or
+  source only when that row exists in both saved versions of the same snapshot.
+  Otherwise, it opens the plan overview.
 - **Snapshot replacement or deletion** also blocks an older draft from saving.
   `SeededAt` identifies the original snapshot. The browser keeps the draft for
   reference.
@@ -477,21 +478,21 @@ while a save is pending, conflict reload, failed and lost responses,
 reset/deletion protection, and departure/reload warnings. They operate on the
 production workspace with a test-only persistence double.
 
-Browser checks against the real authenticated route with synthetic HTTP responses
-covered delayed saves, two-tab conflicts, reload and discard, failure/retry,
-reset protection, reload warnings for unapplied input,
-and leaving during a save followed by reopening. Desktop/mobile layouts were
-also checked. Automated
-tests also cover exact timestamp tokens, query refresh, reopening, and late
-responses after switching plans. The accepted server tests separately establish
-the SQL persistence and concurrency contract.
+The Stage 1b browser checks recorded in `7115090c` exercised the earlier
+Overwrite and Discard flow on the authenticated route with synthetic HTTP
+responses. They covered delayed saves, overwriting the current draft after a
+two-tab conflict, discard, manual retry, reset protection, warnings for unapplied
+input, and reopening after leaving during a save. That record also covers desktop
+and mobile layouts, the full client suite, TypeScript, the production build,
+changed-file ESLint, independent review, and a React Doctor score of 100/100 for
+the changed files. The production build contained only the application entry,
+and the user accepted the saving behavior in that preview.
 
-The full client suite passed, along with TypeScript, the production build,
-changed-file ESLint, and independent review. React Doctor scored the changed
-files 100/100. The production build contains only the normal application entry;
-the synthetic preview and controls are excluded.
-
-The user exercised the preview and accepted the saving behavior.
+The reload-only verification record for `c3bca43f` reports 1,029 client tests,
+the production build, changed-file ESLint, React Doctor, 250 projection server
+tests, and 16 isolated SQL Server tests. The automated coverage includes exact
+timestamp round trips, stale saves, reset and delete races, and reloading the
+saved plan after a conflict.
 
 ### Calculation review
 

@@ -120,9 +120,18 @@ export function ProjectionSaveFeedback({
                 className="btn"
                 disabled={reloading}
                 onClick={async () => {
+                  const { baseline } = session;
                   const saved = await discardSaved();
+                  if (!saved) {
+                    return;
+                  }
+                  const previous = readProjectionLocation(search, baseline);
+                  const hasRowTarget =
+                    previous.appointmentId !== null ||
+                    previous.fundingSourceId !== null;
                   if (
-                    saved &&
+                    previous.issues.length > 0 ||
+                    (hasRowTarget && baseline.seededAt !== saved.seededAt) ||
                     readProjectionLocation(search, saved).issues.length > 0
                   ) {
                     onNavigate({ section: 'overview' }, true);
