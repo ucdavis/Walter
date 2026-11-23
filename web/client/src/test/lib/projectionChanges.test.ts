@@ -12,6 +12,7 @@ import {
   removeProjectionAppointment,
 } from '@/lib/projectionAppointments.ts';
 import {
+  addImportedSources,
   addPlannedSource,
   removeProjectionSource,
 } from '@/lib/projectionSources.ts';
@@ -67,6 +68,58 @@ describe('plan changes', () => {
       funding: [],
       fundingSourceCount: 0,
       staffing: [],
+    });
+  });
+
+  it('reports edits to an imported source only while they differ from its captured inputs', () => {
+    const plan = createSalaryExample();
+    const imported = {
+      ...plan.content.fundingSources[0],
+      capturedAt: plan.seededAt,
+      projectNumber: 'ANOTHER-PROJECT',
+      projectType: 'Sponsored',
+    };
+    const { draft } = applied(
+      addImportedSources(createProjectionSession(plan), [imported])
+    );
+    const source = draft.content.fundingSources.at(-1)!;
+    expect(buildPlanChanges(draft)).toMatchObject({
+      funding: [],
+      fundingSourceCount: 0,
+    });
+
+    source.categoryAdjustments = [
+      {
+        amount: -500,
+        expenditureCategory: source.budgets[0].expenditureCategory,
+      },
+      { amount: 500, expenditureCategory: '03 - Supplies' },
+    ];
+    const report = buildPlanChanges(draft);
+    expect(report.fundingSourceCount).toBe(1);
+    expect(report.funding).toHaveLength(1);
+    expect(report.funding[0]).toMatchObject({
+      categories: [{ adjustment: -500 }, { adjustment: 500 }],
+      dates: [],
+      total: { adjustment: 0, original: 20_000, revised: 20_000 },
+    });
+
+    source.categoryAdjustments = [];
+    source.endDate = '2027-09-30';
+    expect(buildPlanChanges(draft).funding[0]).toMatchObject({
+      dates: [
+        {
+          label: 'Funding end date',
+          original: 'Jun 30, 2026',
+          planned: 'Sep 30, 2027',
+        },
+      ],
+      total: null,
+    });
+    source.endDate = source.capturedEndDate;
+    expect(buildPlanChanges(draft)).toMatchObject({
+      funding: [],
+      fundingSourceCount: 0,
     });
   });
 
@@ -215,10 +268,7 @@ describe('plan changes', () => {
       })
     );
     const changes = buildPlanChanges(planned.draft).funding;
-    expect(changes.map((c) => [c.source.id, c.kind])).toEqual([
-      [3, 'added'],
-      [1, 'excluded'],
-    ]);
+    expect(changes.map((c) => c.source.id)).toEqual([3]);
     expect(changes[0]).toMatchObject({
       dates: [{ planned: 'Jan 15, 2026' }, { planned: null }],
       plannedSource: true,

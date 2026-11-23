@@ -86,17 +86,12 @@ export interface BudgetChange {
 export interface FundingChange {
   categories: BudgetChange[];
   dates: AssumptionChange[];
-  importedAt?: string;
-  kind: ChangeKind;
   plannedSource: boolean;
   source: CapturedFundingSource;
   total: BudgetChange | null;
 }
 
-function compareFunding(
-  source: ProjectionFundingSource,
-  added: boolean
-): FundingChange | null {
+function compareFunding(source: ProjectionFundingSource): FundingChange | null {
   const plannedSource = source.sourceKind === 'Planned';
   const dates: AssumptionChange[] = [];
   function dateChange(
@@ -104,7 +99,7 @@ function compareFunding(
     captured: string | null,
     planned: string | null
   ) {
-    if (added || captured !== planned) {
+    if (plannedSource || captured !== planned) {
       dates.push({
         label,
         original: plannedSource || !captured ? null : changeDate(captured),
@@ -132,7 +127,7 @@ function compareFunding(
       continue;
     }
     const established = !row.budgetRecorded && row.hasBudget;
-    if (row.adjustment || established || (added && row.hasBudget)) {
+    if (row.adjustment || established || (plannedSource && row.hasBudget)) {
       categories.push({
         adjustment: row.adjustment,
         category: row.expenditureCategory,
@@ -146,15 +141,13 @@ function compareFunding(
   total.original = Math.round(total.original * 100) / 100;
   total.revised = Math.round(total.revised * 100) / 100;
   const showBudget =
-    added || categories.length > 0 || source.balanceAdjustment !== 0;
+    plannedSource || categories.length > 0 || source.balanceAdjustment !== 0;
   if (!showBudget && !dates.length) {
     return null;
   }
   return {
     categories,
     dates,
-    importedAt: added && !plannedSource ? source.capturedAt : undefined,
-    kind: added ? 'added' : 'changed',
     plannedSource,
     source,
     total: showBudget ? total : null,
@@ -192,24 +185,12 @@ export function buildPlanChanges(plan: ProjectionDraft) {
     });
   }
 
-  const captured = new Map(comparison.fundingSources.map((s) => [s.id, s]));
   const funding: FundingChange[] = [];
   for (const source of fundingSources) {
-    const included = captured.delete(source.id);
-    const change = compareFunding(source, !included);
+    const change = compareFunding(source);
     if (change) {
       funding.push(change);
     }
-  }
-  for (const source of captured.values()) {
-    funding.push({
-      categories: [],
-      dates: [],
-      kind: 'excluded',
-      plannedSource: false,
-      source,
-      total: null,
-    });
   }
   const sourceNames = new Map(
     [...comparison.fundingSources, ...fundingSources].map((s) => [

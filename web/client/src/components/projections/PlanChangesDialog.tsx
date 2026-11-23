@@ -156,13 +156,11 @@ function budgetSummary(change: FundingChange) {
   if (change.categories.some((row) => row.adjustment !== 0)) {
     return 'Budget redistributed across categories';
   }
-  return change.kind === 'added'
-    ? 'Available funding'
-    : 'Category budget established';
+  return 'Category budget established';
 }
 
 function FundingCard({ change }: { change: FundingChange }) {
-  const { categories, dates, kind, plannedSource, source, total } = change;
+  const { categories, dates, plannedSource, source, total } = change;
   return (
     <article className="min-w-0 rounded-lg border border-main-border p-4">
       <h4 className="text-lg font-semibold wrap-anywhere">{source.name}</h4>
@@ -174,18 +172,8 @@ function FundingCard({ change }: { change: FundingChange }) {
           .filter(Boolean)
           .join(' · ')}
       </p>
-      {kind === 'added' && (
-        <p className="mt-2 font-semibold">
-          {plannedSource
-            ? 'New planned funding source'
-            : 'Funding source added to this plan'}
-        </p>
-      )}
-      {kind === 'excluded' && <p className="mt-2">Excluded from this plan</p>}
-      {change.importedAt && (
-        <p className="text-sm text-base-content/75">
-          Inputs captured {changeDate(change.importedAt)}
-        </p>
+      {plannedSource && (
+        <p className="mt-2 font-semibold">New planned funding source</p>
       )}
       {total && (
         <div className="mt-4 overflow-x-auto">
