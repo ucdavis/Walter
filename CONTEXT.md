@@ -62,13 +62,10 @@ _Avoid_: Directory user, employee-only result
 
 **Projection Plan**:
 A saved scenario for one PI that contains captured funding inputs and editable cost assumptions. The plan is saved and copied as a whole.
-Its typed `Content` contains funding sources, appointments, the history window,
-forecast duration, notes, and the original scoped inputs for the **Plan changes** report.
-Setup edits are measured from the initial capture. Ordinary saves and duplication
-retain that comparison; a reset starts a fresh capture. A setup selection defines
-which sources and appointments belong to the plan.
-Identity, ownership, name, snapshot timestamp, and
-audit fields sit outside that content.
+Its [typed `Content`](docs/PLAN.md#agreed-document-names-and-ownership) holds the
+scenario inputs and the original staffing comparison for **Plan changes**.
+Identity, ownership, name, snapshot timestamp, and audit fields sit outside that
+content.
 _Avoid_: Project, live financial report
 
 **Forecast Period**:

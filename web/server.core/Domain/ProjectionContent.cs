@@ -17,7 +17,7 @@ public sealed record ProjectionContent
     /// <summary>Optional plain-text planning context; has no effect on forecast calculations.</summary>
     public string? Notes { get; set; }
 
-    /// <summary>Original scoped staffing and source identities. Ordinary saves and copies retain this capture.</summary>
+    /// <summary>Original staffing assumptions and the source labels needed to compare funding shares.</summary>
     [JsonRequired]
     public ProjectionComparison Comparison { get; set; } = new();
 
@@ -61,6 +61,7 @@ public sealed record ProjectionCapturedAppointment
     public decimal? FeeRemissionMonthly { get; init; }
     public DateOnly? StartDate { get; init; }
     public DateOnly? EndDate { get; init; }
+    /// <summary>Null records an Unsplit appointment whose original funding schedule is unavailable.</summary>
     [JsonRequired]
     public List<ProjectionFundingAllocation>? Allocations { get; init; } = [];
 }

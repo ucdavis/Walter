@@ -159,9 +159,9 @@ public sealed class ProjectionsController(
     }
 
     /// <summary>
-    /// Replaces the whole scenario document, preserves snapshot, identity and creator metadata, and updates audit fields.
+    /// Saves editable scenario inputs and keeps the original <see cref="ProjectionContent.Comparison"/>.
+    /// Updates audit fields while preserving snapshot, identity, and creator metadata.
     /// Saves keep captured averages, historical overrides, and explicit planned expenses as submitted.
-    /// Confirmed overwrite retries ordinary edits, but never crosses a reset or recreates a deleted plan.
     /// </summary>
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Save(int id, SaveProjectionRequest request, CancellationToken ct)
@@ -303,6 +303,7 @@ public sealed class ProjectionsController(
         ProjectionPlanDefaults.ForecastMonthOptions.Contains(forecastMonths)
         && seededAt.Year * 12 + seededAt.Month + forecastMonths - 1 <= 9999 * 12 + 12;
 
+    /// <summary>Reject retired IDs and IDs first issued by another save after the draft was loaded.</summary>
     private static bool PreservesIdentities(IEnumerable<int> submittedIds, IEnumerable<int> storedIds,
         int lastId, int? expectedLastId)
     {

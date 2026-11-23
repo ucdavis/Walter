@@ -37,6 +37,28 @@ Apply accepts an editor's changes into the draft.
 Open a saved plan from Your plans. Duplicate copies its saved version after
 pending changes are saved. Plan details contains the permanent Delete action,
 which requires confirmation. Scenario edits do not change upstream accounting.
+
+Open **Plan changes** beside **Plan details** for a read-only comparison with the
+captured inputs. The report shows the capture date and counts affected
+appointments and funding sources. It uses applied draft edits and shows **Plan
+has unsaved edits** when the draft differs from the saved plan. Restoring a
+captured value clears its change from the report.
+
+**Staffing** shows changes to appointment assumptions, including full-time base
+salary, FTE, dates, benefits, and fees. It also lists proposed appointments and
+appointments excluded from this plan. Expand **Funding allocation** to see
+changed shares by date range, including outside-plan funding. Adjacent periods
+with the same changes appear together. When personnel data marks an appointment
+as Unsplit, the report labels its original funding shares unavailable.
+
+**Funding** lists proposed sources and imported tasks with date or budget edits.
+A task added to or removed from scope can still count as affected when its
+staffing allocations change. For an edited task, the report shows captured and
+planned dates. It shows original and revised available balances and signed
+adjustments for changed categories and the source total. A redistribution shows
+a zero net adjustment for the source. A newly budgeted category can appear with
+a revised balance of $0.
+
 See the [calculation reference](docs/projections-calculation-review.md) for
 funding, salary, expense, and budget rules.
 

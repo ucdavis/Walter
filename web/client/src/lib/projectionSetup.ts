@@ -50,10 +50,10 @@ export function selectedSetupSession<T extends ProjectionDraft>(
                 fundingSourceId === null || selected.has(fundingSourceId)
             ),
           })),
+        forecastMonths,
         fundingSources: content.fundingSources.filter(({ id }) =>
           selected.has(id)
         ),
-        forecastMonths,
       },
     },
   };
