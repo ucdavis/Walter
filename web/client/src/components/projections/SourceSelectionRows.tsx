@@ -40,7 +40,10 @@ export function SourceSelectionRows({
   const selectedKeys = new Set(selected);
   const groups = new Map<string, SourceSelectionChoice[]>();
   for (const choice of choices) {
-    const key = choice.projectNumber ?? choice.key;
+    const key =
+      choice.projectNumber != null
+        ? `project:${choice.projectNumber}`
+        : `source:${choice.key}`;
     groups.set(key, [...(groups.get(key) ?? []), choice]);
   }
   const terms = search.toLocaleLowerCase().trim().split(/\s+/).filter(Boolean);
@@ -197,8 +200,9 @@ export function SourceSelectionRows({
                       {first.projectNumber}
                     </span>
                     {!hasTasks &&
-                      first.taskNumber &&
-                      ` · ${first.taskName || 'Task'} · ${first.taskNumber}`}
+                      (first.taskNumber ||
+                        (first.taskName && first.taskName !== name)) &&
+                      ` · ${first.taskName || 'Task'}${first.taskNumber ? ` · ${first.taskNumber}` : ''}`}
                     {available.length === 0 && ' · Already included'}
                     {!hasTasks &&
                       ` · ${first.projectNumber ? '1 task' : 'Planned funding'}`}

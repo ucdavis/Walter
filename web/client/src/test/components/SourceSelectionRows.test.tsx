@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { cleanup, render, screen, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SourceSelectionRows } from '@/components/projections/SourceSelectionRows.tsx';
 
 const choices = [
@@ -50,6 +50,100 @@ function Picker() {
 
 describe('funding source rows', () => {
   afterEach(cleanup);
+  it.each([
+    {
+      detail: 'PA · Task One · 1 task',
+      taskName: 'Task One',
+      taskNumber: null,
+    },
+    {
+      detail: 'PA · Task One · T1 · 1 task',
+      taskName: 'Task One',
+      taskNumber: 'T1',
+    },
+    {
+      detail: 'PA · 1 task',
+      taskName: 'Project A',
+      taskNumber: null,
+    },
+    {
+      detail: 'PA · Project A · T1 · 1 task',
+      taskName: 'Project A',
+      taskNumber: 'T1',
+    },
+    {
+      detail: 'PA · Task · T1 · 1 task',
+      taskName: null,
+      taskNumber: 'T1',
+    },
+    {
+      detail: 'PA · 1 task',
+      taskName: null,
+      taskNumber: null,
+    },
+  ])('shows singleton details as "$detail"', ({ detail, ...task }) => {
+    render(
+      <SourceSelectionRows
+        choices={[{ ...choices[0], ...task }]}
+        onChange={() => {}}
+        selected={[]}
+      />
+    );
+    expect(
+      screen.getByRole('heading', { name: 'Project A' })
+    ).toBeInTheDocument();
+    const project = screen.getByRole('region', {
+      name: 'Project A funding sources',
+    });
+    expect(within(project).getByRole('paragraph')).toHaveTextContent(detail);
+  });
+
+  it('keeps standalone source keys separate from project numbers while grouping project tasks', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <SourceSelectionRows
+        choices={[
+          ...choices.slice(0, 2),
+          {
+            key: 'PA',
+            label: 'Planned funding',
+            projectName: null,
+            projectNumber: null,
+          },
+        ]}
+        onChange={onChange}
+        selected={['a', 'PA']}
+      />
+    );
+    const project = screen.getByRole('region', {
+      name: 'Project A funding sources',
+    });
+    const standalone = screen.getByRole('region', {
+      name: 'Planned funding funding sources',
+    });
+    expect(
+      within(project).getByRole('button', {
+        name: 'Collapse tasks for Project A',
+      })
+    ).toHaveTextContent('1 of 2 tasks');
+    expect(screen.getByRole('status')).toHaveTextContent(
+      '2 sources across 2 projects'
+    );
+    await user.click(
+      within(project).getByRole('checkbox', {
+        name: 'Include all sources for Project A',
+      })
+    );
+    expect(onChange).toHaveBeenLastCalledWith(['a', 'PA', 'b']);
+    await user.click(
+      within(standalone).getByRole('checkbox', {
+        name: 'Include all sources for Planned funding',
+      })
+    );
+    expect(onChange).toHaveBeenLastCalledWith(['a']);
+  });
+
   it('counts each person once per project across tasks and keeps the total while searching', async () => {
     const user = userEvent.setup();
     render(
