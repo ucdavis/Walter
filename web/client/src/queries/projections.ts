@@ -117,12 +117,31 @@ export interface ProjectionAppointment {
   vacationAccrualRate: number;
 }
 
+export type CapturedFundingSource = Pick<
+  ProjectionFundingSource,
+  'id' | 'name' | 'projectNumber' | 'taskNumber'
+>;
+
+export type CapturedAppointment = Omit<
+  ProjectionAppointment,
+  'allocations' | 'employeeId' | 'hasUnmatchedFunding' | 'isSeeded'
+> & { allocations: ProjectionFundingAllocation[] | null };
+
+export interface ProjectionComparison {
+  appointments: CapturedAppointment[];
+  fundingSources: CapturedFundingSource[];
+}
+
 export interface ProjectionContent {
   appointments: ProjectionAppointment[];
+  comparison: ProjectionComparison;
   /** Inclusive plan duration anchored to the original snapshot month. */
   forecastMonths: number;
   fundingSources: ProjectionFundingSource[];
   historyMonths: number;
+  /** High-water marks include identities retired during setup or after an ordinary save. */
+  lastAppointmentId: number;
+  lastFundingSourceId: number;
   /** Optional plain-text context for this scenario. */
   notes: string | null;
 }
@@ -315,7 +334,6 @@ export type SaveProjectionRequest = Omit<ProjectionDraft, 'seededAt'> & {
   /** Opaque server strings. Parsing through Date would lose datetime2 precision. */
   expectedSeededAt: string;
   expectedUpdatedAt: string;
-  overwrite?: boolean;
 };
 
 /** Compare UTC tokens only for cache ordering; transmit the original strings unchanged. */

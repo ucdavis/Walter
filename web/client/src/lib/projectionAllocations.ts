@@ -16,6 +16,9 @@ export type AllocationShare = Pick<
   'fundingSourceId' | 'percent'
 >;
 
+export const allocationPercentText = (value: number) =>
+  String(Number((value * 100).toPrecision(12)));
+
 const DAY_MS = 86_400_000;
 const day = (value: string) => Date.parse(`${value}T00:00:00Z`) / DAY_MS;
 const date = (value: number) =>
@@ -89,7 +92,7 @@ export function validateFundingReplacement(
 }
 
 function sharesOnDay(
-  appointment: ProjectionAppointment,
+  appointment: Pick<ProjectionAppointment, 'allocations'>,
   currentDay: number
 ): AllocationShare[] {
   return appointment.allocations.flatMap((allocation) => {
@@ -116,7 +119,7 @@ function shareKey(shares: AllocationShare[]) {
 }
 
 function allocationBoundaries(
-  appointment: ProjectionAppointment,
+  appointment: Pick<ProjectionAppointment, 'allocations'>,
   range: AllocationRange
 ) {
   const { end, start } = bounds(range);
@@ -131,6 +134,97 @@ function allocationBoundaries(
     }
   }
   return [...boundaries].sort((a, b) => a - b);
+}
+
+export interface AllocationDifference {
+  fundingSourceId: number | null;
+  original: number | null;
+  planned: number;
+}
+
+export interface AllocationChangePeriod extends AllocationRange {
+  shares: AllocationDifference[];
+}
+
+function sharesBySource(
+  allocations: ProjectionFundingAllocation[],
+  currentDay: number
+) {
+  const totals = new Map<number | null, { editable: number; raw: number }>();
+  for (const { fundingSourceId, percent } of sharesOnDay(
+    { allocations },
+    currentDay
+  )) {
+    const total = totals.get(fundingSourceId) ?? { editable: 0, raw: 0 };
+    total.raw += percent;
+    // Retyping a displayed share rounds the individual row before the rows are summed.
+    total.editable += Number(allocationPercentText(percent)) / 100;
+    totals.set(fundingSourceId, total);
+  }
+  return totals;
+}
+
+/** Compare inclusive schedule intervals by total share per source, keeping outside funding distinct from a gap. */
+export function compareAllocationSchedules(
+  original: ProjectionFundingAllocation[] | null,
+  planned: ProjectionFundingAllocation[]
+) {
+  const points = allocationBoundaries(
+    { allocations: [...(original ?? []), ...planned] },
+    { endDate: null, startDate: null }
+  );
+  const periods: AllocationChangePeriod[] = [];
+  for (let i = 0; i < points.length - 1; i++) {
+    const start = points[i];
+    const end = points[i + 1] - 1;
+    const before = sharesBySource(original ?? [], start);
+    const after = sharesBySource(planned, start);
+    const ids = [...new Set([...before.keys(), ...after.keys()])].sort(
+      (a, b) => (a ?? Infinity) - (b ?? Infinity)
+    );
+    const shares: AllocationDifference[] = [];
+    for (const fundingSourceId of ids) {
+      const originalTotal = before.get(fundingSourceId);
+      const plannedTotal = after.get(fundingSourceId);
+      const from =
+        original === null
+          ? null
+          : allocationPercentText(originalTotal?.raw ?? 0);
+      const to = allocationPercentText(plannedTotal?.raw ?? 0);
+      // Compare both totals so regrouping and retyping rounded shares have the same effect.
+      const sameEditableTotal =
+        original !== null &&
+        allocationPercentText(originalTotal?.editable ?? 0) ===
+          allocationPercentText(plannedTotal?.editable ?? 0);
+      if (from === to || sameEditableTotal) {
+        continue;
+      }
+      shares.push({
+        fundingSourceId,
+        original: from === null ? null : Number(from) / 100,
+        planned: Number(to) / 100,
+      });
+    }
+    if (!shares.length) {
+      continue;
+    }
+    const previous = periods.at(-1);
+    const endDate = end === MAX_DAY ? null : date(end);
+    if (
+      previous?.endDate &&
+      day(previous.endDate) + 1 === start &&
+      JSON.stringify(previous.shares) === JSON.stringify(shares)
+    ) {
+      previous.endDate = endDate;
+    } else {
+      periods.push({
+        endDate,
+        shares,
+        startDate: start === MIN_DAY ? null : date(start),
+      });
+    }
+  }
+  return periods;
 }
 
 /** Inspect every constant interval so an unchanged Apply does not fragment a longer schedule. */

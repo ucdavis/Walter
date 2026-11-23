@@ -7,7 +7,6 @@ import type {
   CategoryBudgetAdjustment,
   ProjectionDraft,
   ProjectionFundingSource,
-  ProjectionRosterEntry,
 } from '@/queries/projections.ts';
 import type { ProjectionSession } from '@/lib/projectionWorkspace.ts';
 import { isPlanningDate } from '@/lib/date.ts';
@@ -58,7 +57,7 @@ export const isSponsoredProject = (source: ProjectionFundingSource) =>
   source.sourceKind === 'Task' &&
   getSourceFundingBasis(source) === 'categories';
 
-export const sourceKey = (source: ProjectionFundingSource) =>
+export const sourceKey = (source: SourceIdentity & { id: number }) =>
   source.projectNumber
     ? JSON.stringify([source.projectNumber, source.taskNumber ?? ''])
     : `planned:${source.id}`;
@@ -103,12 +102,6 @@ function changed<T extends ProjectionDraft>(
     ok: true,
     session: { ...session, draft, revision: session.revision + 1 },
   };
-}
-
-function nextId(session: ProjectionSession<ProjectionDraft>) {
-  return (
-    Math.max(0, ...session.draft.content.fundingSources.map(({ id }) => id)) + 1
-  );
 }
 
 export function editProjectionSource<T extends ProjectionDraft>(
@@ -232,7 +225,7 @@ export function addPlannedSource<T extends ProjectionDraft>(
       ok: false,
     };
   }
-  const id = nextId(session);
+  const id = session.draft.content.lastFundingSourceId + 1;
   const source: ProjectionFundingSource = {
     actuals: [],
     awardName: null,
@@ -277,6 +270,7 @@ export function addPlannedSource<T extends ProjectionDraft>(
         content: {
           ...session.draft.content,
           fundingSources: [...session.draft.content.fundingSources, source],
+          lastFundingSourceId: id,
         },
       },
       revision: session.revision + 1,
@@ -293,7 +287,7 @@ export function addImportedSources<T extends ProjectionDraft>(
     return { ok: true, session };
   }
   const fundingSources = [...session.draft.content.fundingSources];
-  let id = nextId(session);
+  let id = session.draft.content.lastFundingSourceId + 1;
   for (const source of sources) {
     const error = validation(
       {
@@ -335,6 +329,7 @@ export function addImportedSources<T extends ProjectionDraft>(
         content: {
           ...session.draft.content,
           fundingSources,
+          lastFundingSourceId: id - 1,
         },
       },
       revision: session.revision + 1,
@@ -370,51 +365,6 @@ export function removeProjectionSource<T extends ProjectionDraft>(
       fundingSources: session.draft.content.fundingSources.filter(
         ({ id }) => id !== fundingSourceId
       ),
-    },
-  });
-}
-
-/** Selects the initial roster by captured task provenance once. Later removals must retain the roster. */
-export function selectInitialSources<T extends ProjectionDraft>(
-  session: ProjectionSession<T>,
-  fundingSourceIds: number[],
-  roster: ProjectionRosterEntry[]
-): SourceOperationResult<T> {
-  const ids = new Set(fundingSourceIds);
-  if (
-    fundingSourceIds.some(
-      (id) =>
-        !session.draft.content.fundingSources.some((source) => source.id === id)
-    )
-  ) {
-    return {
-      error: 'A selected funding source is no longer available.',
-      ok: false,
-    };
-  }
-  const fundingSources = session.draft.content.fundingSources.filter(({ id }) =>
-    ids.has(id)
-  );
-  const rosterSources = new Map(
-    roster.map((entry) => [entry.appointmentId, entry.fundingSourceIds])
-  );
-  const appointments = session.draft.content.appointments
-    .filter((appointment) =>
-      rosterSources.get(appointment.id)?.some((sourceId) => ids.has(sourceId))
-    )
-    .map((appointment) => ({
-      ...appointment,
-      allocations: appointment.allocations.filter(
-        ({ fundingSourceId }) =>
-          fundingSourceId === null || ids.has(fundingSourceId)
-      ),
-    }));
-  return changed(session, {
-    ...session.draft,
-    content: {
-      ...session.draft.content,
-      appointments,
-      fundingSources,
     },
   });
 }

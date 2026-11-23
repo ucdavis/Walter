@@ -79,7 +79,6 @@ function useSession(
   const [reloading, setReloading] = useState(false);
   const [reloadVersion, setReloadVersion] = useState(0);
   const [conflict, setConflict] = useState<Conflict | null>(null);
-  const [overwriteConfirmed, setOverwriteConfirmed] = useState(false);
   const [conflictOpen, setConflictOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const requestPending = useRef(false);
@@ -112,16 +111,12 @@ function useSession(
     return result;
   }
 
-  const save = async (overwrite = false) => {
+  const save = async () => {
     if (!persistence || requestPending.current) {
       return;
     }
-    const useOverwrite = overwrite || overwriteConfirmed;
-    if (conflict && (conflict !== 'conflict' || !useOverwrite)) {
+    if (conflict) {
       setConflictOpen(true);
-      return;
-    }
-    if (overwrite && conflict !== 'conflict' && !overwriteConfirmed) {
       return;
     }
     const submitted = currentSession.current;
@@ -146,12 +141,8 @@ function useSession(
       expectedSeededAt: submitted.baseline.seededAt,
       expectedUpdatedAt: submitted.baseline.updatedAt,
       name,
-      overwrite: useOverwrite,
     });
     requestPending.current = true;
-    if (useOverwrite) {
-      setOverwriteConfirmed(true);
-    }
     setError(null);
     setConflictOpen(false);
     setSaveStatus('saving');
@@ -161,7 +152,6 @@ function useSession(
         acknowledgeProjectionSave(currentSession.current, submitted, saved)
       );
       setConflict(null);
-      setOverwriteConfirmed(false);
       setSaveStatus('saved');
     } catch (error_) {
       const nextConflict = conflictCode(error_);
@@ -199,14 +189,13 @@ function useSession(
       });
       setReloadVersion((version) => version + 1);
       setConflict(null);
-      setOverwriteConfirmed(false);
       setConflictOpen(false);
       setSaveStatus('idle');
       return saved;
     } catch (error_) {
       logFailure('reload', error_);
       setError(
-        'The saved plan could not be loaded. Your changes are still here. Try Discard again.'
+        'The saved plan could not be loaded. Your changes are still here. Try Discard and reload again.'
       );
       if (conflictCode(error_) === 'deleted') {
         setConflict('deleted');
@@ -233,7 +222,6 @@ function useSession(
     discardSaved,
     dismissConflict: () => setConflictOpen(false),
     error,
-    overwrite: () => save(true),
     persistenceStatus: persistence
       ? {
           conflict,
@@ -247,7 +235,7 @@ function useSession(
     reloading,
     reloadVersion,
     results,
-    save: () => save(),
+    save,
     saveStatus,
     saving: saveStatus === 'saving',
     session,

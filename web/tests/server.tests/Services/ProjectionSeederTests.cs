@@ -203,6 +203,7 @@ public sealed class ProjectionSeederTests
         var job = projection.Content.Appointments.Should().ContainSingle().Subject;
         job.MonthlySalary.Should().BeNull();
         job.Allocations.Should().BeEmpty();
+        projection.Content.Comparison.Appointments.Should().ContainSingle().Which.Allocations.Should().BeNull();
     }
 
     [Theory]

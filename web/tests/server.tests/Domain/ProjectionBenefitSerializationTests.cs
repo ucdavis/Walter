@@ -23,7 +23,7 @@ public sealed class ProjectionBenefitSerializationTests
         var converter = ctx.Model.FindEntityType(typeof(Projection))!
             .FindProperty(nameof(Projection.Content))!.GetValueConverter()!;
 
-        var contentJson = $$"""{"historyMonths":3,"forecastMonths":12,"fundingSources":[],"appointments":{{storedJson}}}""";
+        var contentJson = $$"""{"historyMonths":3,"forecastMonths":12,"fundingSources":[],"comparison":{"fundingSources":[],"appointments":[]},"lastAppointmentId":1,"lastFundingSourceId":0,"appointments":{{storedJson}}}""";
         var content = (ProjectionContent)converter.ConvertFromProvider(contentJson)!;
 
         var job = content.Appointments.Should().ContainSingle().Subject;

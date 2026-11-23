@@ -208,10 +208,11 @@ describe('projection saving through the workspace', () => {
     }
   );
 
-  it('closes a conflict without losing work and overwrites with the current whole draft', async () => {
-    const { plan, server, user } = openWorkspace();
+  it('keeps the draft open after a stale save and requires reload before saving again', async () => {
+    const { server, user } = openWorkspace();
     await applySalary(user, '132000');
     act(() => server.editRemotely());
+    const savedByOtherEditor = server.read().stored;
     await user.click(saveButton());
     await screen.findByRole('dialog', { name: 'This plan has changed' });
     expect(read().persistence).toMatchObject({
@@ -225,19 +226,9 @@ describe('projection saving through the workspace', () => {
     await user.click(saveButton());
     await screen.findByRole('dialog', { name: 'This plan has changed' });
     expect(server.read().requests).toHaveLength(1);
-    act(() => server.editRemotely());
-    await user.click(screen.getByRole('button', { name: 'Overwrite' }));
-    await screen.findByRole('button', { name: '✓ Saved' });
-    expect(server.read().requests).toHaveLength(2);
-    expect(server.read().requests[1]).toMatchObject({
-      expectedUpdatedAt: plan.updatedAt,
-      overwrite: true,
-    });
-    expect(server.read().stored!.name).toBe(plan.name);
-    expect(server.read().stored!.content.appointments[0].monthlySalary).toBe(
-      12_000
-    );
-    expect(server.read().reloads).toBe(0);
+    expect(read().draft.content.appointments[0].monthlySalary).toBe(12_000);
+    expect(screen.queryByRole('button', { name: 'Overwrite' })).toBeNull();
+    expect(server.read().stored).toEqual(savedByOtherEditor);
   });
 
   it.each(['failure', 'lost-response'] as const)(
@@ -272,7 +263,14 @@ describe('projection saving through the workspace', () => {
       await user.click(saveButton());
       if (outcome === 'lost-response') {
         await screen.findByRole('dialog', { name: 'This plan has changed' });
-        await user.click(screen.getByRole('button', { name: 'Overwrite' }));
+        expect(read().draft.content.appointments[0].monthlySalary).toBe(10_000);
+        expect(server.read().requests).toHaveLength(2);
+        await user.click(
+          screen.getByRole('button', { name: 'Discard and reload' })
+        );
+        await waitFor(() => expect(server.read().reloads).toBe(1));
+        expect(read().draft.content.appointments[0].monthlySalary).toBe(11_000);
+        return;
       }
       await screen.findByRole('button', { name: '✓ Saved' });
       expect(read().draft.content.appointments[0].monthlySalary).toBe(10_000);
@@ -286,48 +284,84 @@ describe('projection saving through the workspace', () => {
     }
   );
 
-  it('retains confirmed overwrite intent across an explicit retry after a transient failure', async () => {
-    vi.spyOn(console, 'error').mockImplementation(() => {});
-    const { server, user } = openWorkspace();
-    await applySalary(user, '132000');
-    act(() => server.editRemotely());
-    await user.click(saveButton());
-    await screen.findByRole('dialog', { name: 'This plan has changed' });
-    act(() => server.setOutcome('failure'));
-    await user.click(screen.getByRole('button', { name: 'Overwrite' }));
-    await screen.findByRole('alert');
-    await applySalary(user, '144000');
-    await user.click(saveButton());
-    await screen.findByRole('button', { name: '✓ Saved' });
-    expect(server.read().requests.map((request) => request.overwrite)).toEqual([
-      false,
-      true,
-      true,
-    ]);
-    expect(server.read().stored!.content.appointments[0].monthlySalary).toBe(
-      12_000
-    );
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-  });
-
   it('discards by fetching the latest document and retaining a valid section and source', async () => {
     const { server, user } = openWorkspace();
     await applySalary(user, '132000');
     act(() => server.editRemotely());
     await user.click(saveButton());
     await screen.findByRole('dialog', { name: 'This plan has changed' });
-    await user.click(screen.getByRole('button', { name: 'Discard' }));
+    await user.click(
+      screen.getByRole('button', { name: 'Discard and reload' })
+    );
     await waitFor(() => expect(read().dirty).toBe(false));
     expect(server.read().reloads).toBe(1);
     expect(read().draft).toEqual(server.read().stored);
+    const loadedVersion = read().draft.updatedAt;
     expect(read().location).toMatchObject({
       fundingSourceId: 2,
       section: 'staffing',
     });
+    await applySalary(user, '144000');
+    await user.click(saveButton());
+    await screen.findByRole('button', { name: '✓ Saved' });
+    expect(server.read().requests[1].expectedUpdatedAt).toBe(loadedVersion);
+    expect(server.read().stored!.content.appointments[0].monthlySalary).toBe(
+      12_000
+    );
+  });
+
+  it('clears a draft-only selection when another save claims its source ID', async () => {
+    const { plan, server, user } = openWorkspace();
+    await user.click(await screen.findByRole('button', { name: 'Funding' }));
+    await user.click(
+      screen.getByRole('button', { name: 'Add planned source' })
+    );
+    await user.type(screen.getByLabelText('Source name'), 'Local renewal');
+    await user.type(screen.getByLabelText('Planning balance'), '42000');
+    await user.type(screen.getByLabelText('Start date'), '2026-07-01');
+    await user.click(screen.getByRole('button', { name: 'Apply' }));
+    const added = read().draft.content.fundingSources.find(
+      ({ name }) => name === 'Local renewal'
+    )!;
+    await user.click(screen.getByRole('button', { name: 'Overview' }));
+    await user.selectOptions(
+      await screen.findByRole('combobox', { name: 'Explore a funding source' }),
+      String(added.id)
+    );
+    await screen.findByRole('heading', { name: 'Local renewal' });
+
+    const saved = await server.save({
+      content: {
+        ...plan.content,
+        fundingSources: [
+          ...plan.content.fundingSources,
+          { ...added, name: 'Remote renewal' },
+        ],
+        lastFundingSourceId: added.id,
+      },
+      expectedSeededAt: plan.seededAt,
+      expectedUpdatedAt: plan.updatedAt,
+      name: plan.name,
+    });
+    await user.click(saveButton());
+    await screen.findByRole('dialog', { name: 'This plan has changed' });
+    await user.click(
+      screen.getByRole('button', { name: 'Discard and reload' })
+    );
+
+    expect(
+      await screen.findByRole('heading', { name: 'Project outlook' })
+    ).toBeVisible();
+    expect(read().location).toMatchObject({
+      fundingSourceId: null,
+      section: 'overview',
+    });
+    expect(read().draft).toEqual(saved);
+    expect(read().dirty).toBe(false);
   });
 
   it.each(['reset', 'delete'] as const)(
-    'blocks overwrite after a remote %s and preserves the local draft',
+    'blocks saving after a remote %s and preserves the local draft',
     async (change) => {
       const { server, user } = openWorkspace();
       await applySalary(user, '132000');
@@ -345,6 +379,18 @@ describe('projection saving through the workspace', () => {
       expect(read().draft.content.appointments[0].monthlySalary).toBe(11_000);
       expect(read().dirty).toBe(true);
       expect(server.read().requests).toHaveLength(1);
+      if (change === 'reset') {
+        await user.click(
+          screen.getByRole('button', { name: 'Discard and reload' })
+        );
+        await waitFor(() =>
+          expect(read().location).toMatchObject({
+            fundingSourceId: null,
+            section: 'overview',
+          })
+        );
+        expect(read().draft).toEqual(server.read().stored);
+      }
     }
   );
 

@@ -104,9 +104,12 @@ function plan(
   return {
     content: {
       appointments,
+      comparison: { appointments: [], fundingSources: [] },
       forecastMonths: 12,
       fundingSources: sources,
       historyMonths: 3,
+      lastAppointmentId: 0,
+      lastFundingSourceId: 0,
       notes: null,
     },
     name: 'Research plan',

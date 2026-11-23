@@ -123,8 +123,11 @@ const plan = ({
   ...overrides,
   content: {
     appointments: [appointment()],
+    comparison: { appointments: [], fundingSources: [] },
     forecastMonths: 12,
     historyMonths: 3,
+    lastAppointmentId: 0,
+    lastFundingSourceId: 0,
     notes: null,
     ...content,
     fundingSources: (content.fundingSources ?? [source()]).map((source) => ({

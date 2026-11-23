@@ -6,6 +6,7 @@ import {
   SUPPLIES_CATEGORY,
 } from '@/lib/piProjection.ts';
 import type {
+  CapturedAppointment,
   Projection,
   ProjectionFundingSource,
   ProjectionLookups,
@@ -82,42 +83,48 @@ const source = (
 
 /** Deliberately excludes benefits, COLA, and other costs to isolate the salary rule. */
 export function createSalaryExample(): Projection {
-  return {
+  const appointment = {
+    allocations: [1, 2].map((fundingSourceId) => ({
+      endDate: '2026-06-30',
+      fundingSourceId,
+      percent: 0.5,
+      startDate: '2026-01-01',
+    })),
+    cbrRate: 0,
+    colaMonth: 7,
+    colaRate: 0,
+    endDate: '2026-06-30',
+    feeRemissionMonthly: 0,
+    fte: 0.5,
+    id: 101,
+    jobCode: null,
+    monthlySalary: 10_000,
+    name: 'Alex Example',
+    positionNumber: 'EXAMPLE-101',
+    rateSet: 'DVCMP',
+    startDate: '2026-01-01',
+    title: 'Research specialist',
+    vacationAccrualRate: 0,
+  } satisfies CapturedAppointment;
+  const plan: Projection = {
     content: {
       appointments: [
         {
-          allocations: [1, 2].map((fundingSourceId) => ({
-            endDate: '2026-06-30',
-            fundingSourceId,
-            percent: 0.5,
-            startDate: '2026-01-01',
-          })),
-          cbrRate: 0,
-          colaMonth: 7,
-          colaRate: 0,
+          ...structuredClone(appointment),
           employeeId: null,
-          endDate: '2026-06-30',
-          feeRemissionMonthly: 0,
-          fte: 0.5,
           hasUnmatchedFunding: false,
-          id: 101,
           isSeeded: true,
-          jobCode: null,
-          monthlySalary: 10_000,
-          name: 'Alex Example',
-          positionNumber: 'EXAMPLE-101',
-          rateSet: 'DVCMP',
-          startDate: '2026-01-01',
-          title: 'Research specialist',
-          vacationAccrualRate: 0,
         },
       ],
+      comparison: { appointments: [], fundingSources: [] },
       forecastMonths: DEFAULT_FORECAST_MONTHS,
       fundingSources: [
         source(1, 'Project A', 20_000),
         source(2, 'Project B', 16_000),
       ],
       historyMonths: 3,
+      lastAppointmentId: 101,
+      lastFundingSourceId: 2,
       notes: null,
     },
     createdAt: '2026-01-01T00:00:00Z',
@@ -129,6 +136,18 @@ export function createSalaryExample(): Projection {
     updatedAt: '2026-01-01T00:00:00Z',
     updatedBy: null,
   };
+  plan.content.comparison = {
+    appointments: [appointment],
+    fundingSources: plan.content.fundingSources.map(
+      ({ id, name, projectNumber, taskNumber }) => ({
+        id,
+        name,
+        projectNumber,
+        taskNumber,
+      })
+    ),
+  };
+  return plan;
 }
 
 /** Booked costs are included in spentToDate. Benefit rates are illustrative only. */

@@ -59,6 +59,7 @@ function example(): ProjectionDraft {
           vacationAccrualRate: 0,
         },
       ],
+      comparison: { appointments: [], fundingSources: [] },
       forecastMonths: 12,
       fundingSources: [
         {
@@ -123,6 +124,8 @@ function example(): ProjectionDraft {
         },
       ],
       historyMonths: 3,
+      lastAppointmentId: 0,
+      lastFundingSourceId: 0,
       notes: null,
     },
     name: 'Cost detail example',

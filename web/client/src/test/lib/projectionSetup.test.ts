@@ -14,6 +14,7 @@ import { computePiProjection } from '@/lib/piProjection.ts';
 
 function fixture() {
   const plan = createSalaryExample();
+  plan.content.lastAppointmentId = 102;
   plan.content.appointments.push({
     ...structuredClone(plan.content.appointments[0]),
     allocations: [
@@ -34,15 +35,15 @@ function fixture() {
 describe('setup funding selection', () => {
   it('restores the same shared roster and costs when projects are selected in stages or removed and readded', () => {
     const { catalog, roster } = fixture();
-    const direct = selectedSetupSession(catalog, [1, 2], roster, new Set());
+    const direct = selectedSetupSession(catalog, [1, 2], roster, new Map());
     for (const ids of [[], [1], [2], [], [1, 2]]) {
-      const active = selectedSetupSession(catalog, ids, roster, new Set());
-      const merged = mergeSetupEdits(catalog, active, active, new Set());
+      const active = selectedSetupSession(catalog, ids, roster, new Map());
+      const merged = mergeSetupEdits(catalog, active, active, new Map());
       const restored = selectedSetupSession(
         merged.catalog,
         [1, 2],
         roster,
-        merged.editedAppointmentIds
+        merged.edits
       );
       expect(restored.draft.content).toEqual(direct.draft.content);
       expect(computePiProjection(restored.draft)).toEqual(
@@ -53,7 +54,7 @@ describe('setup funding selection', () => {
 
   it('preserves salary and allocation edits while including staff from a later selected task', () => {
     const { catalog, roster } = fixture();
-    const active = selectedSetupSession(catalog, [1], roster, new Set());
+    const active = selectedSetupSession(catalog, [1], roster, new Map());
     const operation = editProjectionAppointment(active, 101, {
       ...active.draft.content.appointments[0],
       monthlySalary: 12_345,
@@ -66,13 +67,13 @@ describe('setup funding selection', () => {
       catalog,
       active,
       operation.session,
-      new Set()
+      new Map()
     );
     const next = selectedSetupSession(
       merged.catalog,
       [1, 2],
       roster,
-      merged.editedAppointmentIds
+      merged.edits
     );
     expect(next.draft.content.appointments).toHaveLength(2);
     expect(next.draft.content.appointments[0]).toMatchObject({
@@ -86,7 +87,7 @@ describe('setup funding selection', () => {
       merged.catalog,
       [],
       roster,
-      merged.editedAppointmentIds
+      merged.edits
     );
     expect(deselected.draft.content.appointments).toHaveLength(1);
     expect(deselected.draft.content.appointments[0].monthlySalary).toBe(12_345);
@@ -94,17 +95,17 @@ describe('setup funding selection', () => {
 
   it('does not revive an intentionally removed appointment when funding is reselected', () => {
     const { catalog, roster } = fixture();
-    const active = selectedSetupSession(catalog, [1], roster, new Set());
+    const active = selectedSetupSession(catalog, [1], roster, new Map());
     const removed = removeProjectionAppointment(active, 101);
     if (!removed.ok) {
       throw new Error(removed.error);
     }
-    const merged = mergeSetupEdits(catalog, active, removed.session, new Set());
+    const merged = mergeSetupEdits(catalog, active, removed.session, new Map());
     const restored = selectedSetupSession(
       merged.catalog,
       [1, 2],
       roster,
-      merged.editedAppointmentIds
+      merged.edits
     );
     expect(restored.draft.content.appointments.map(({ id }) => id)).toEqual([
       102,
@@ -113,7 +114,7 @@ describe('setup funding selection', () => {
 
   it('reserves unselected appointment IDs when adding a hypothetical hire', () => {
     const { catalog, roster } = fixture();
-    const active = selectedSetupSession(catalog, [1], roster, new Set());
+    const active = selectedSetupSession(catalog, [1], roster, new Map());
     const added = addProjectionAppointment(active, {
       ...catalog.draft.content.appointments[0],
       name: 'New hire',
@@ -122,13 +123,13 @@ describe('setup funding selection', () => {
       throw new Error(added.error);
     }
     expect(added.appointmentId).toBe(103);
-    const merged = mergeSetupEdits(catalog, active, added.session, new Set());
+    const merged = mergeSetupEdits(catalog, active, added.session, new Map());
     expect(
       selectedSetupSession(
         merged.catalog,
         [1, 2],
         roster,
-        merged.editedAppointmentIds
+        merged.edits
       ).draft.content.appointments.map(({ id }) => id)
     ).toEqual([101, 102, 103]);
   });

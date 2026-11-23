@@ -185,7 +185,6 @@ describe('switching saved projection plans', () => {
           expectedSeededAt: second.seededAt,
           expectedUpdatedAt: second.updatedAt,
           name: 'Second plan',
-          overwrite: false,
         },
         id: second.id,
       });
@@ -246,7 +245,7 @@ describe('switching saved projection plans', () => {
         })
       );
       await user.click(
-        within(conflict).getByRole('button', { name: 'Discard' })
+        within(conflict).getByRole('button', { name: 'Discard and reload' })
       );
       await waitFor(() => expect(reloadStarted).toBe(true));
 

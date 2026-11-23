@@ -80,6 +80,8 @@ function taskFixture(): Projection {
       name: 'Casey Example',
     },
   ];
+  plan.content.lastAppointmentId = 103;
+  plan.content.lastFundingSourceId = 3;
   return plan;
 }
 
@@ -384,9 +386,12 @@ describe('funding source lifecycle', () => {
       ]);
       expect(Object.keys(api.creates[0].draft.content).sort()).toEqual([
         'appointments',
+        'comparison',
         'forecastMonths',
         'fundingSources',
         'historyMonths',
+        'lastAppointmentId',
+        'lastFundingSourceId',
         'notes',
       ]);
       for (const appointment of api.creates[0].draft.content.appointments) {

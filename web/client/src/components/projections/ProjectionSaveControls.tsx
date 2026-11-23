@@ -57,7 +57,6 @@ export function ProjectionSaveFeedback({
     discardSaved,
     dismissConflict,
     error,
-    overwrite,
     reloading,
     saveStatus,
     session,
@@ -97,10 +96,10 @@ export function ProjectionSaveFeedback({
         >
           <p className="mt-4">
             {conflict === 'conflict'
-              ? 'Another edit was saved. Overwrite replaces the saved plan with your current applied draft. Discard loads the saved plan and discards your changes.'
+              ? 'Another edit was saved. Reload the saved plan to save again. Close keeps your draft here.'
               : conflict === 'snapshotChanged'
-                ? 'Your draft uses an earlier snapshot and cannot overwrite this reset. Discard loads the saved snapshot. Close keeps your draft here.'
-                : 'This saved plan no longer exists. Your draft is still here, but it cannot be saved to the deleted plan.'}
+                ? 'The saved plan has a new snapshot. Reload it to save again. Close keeps your draft here.'
+                : 'This saved plan no longer exists. Close keeps your draft here.'}
           </p>
           {error && (
             <p className="mt-3 text-error" role="alert">
@@ -121,9 +120,18 @@ export function ProjectionSaveFeedback({
                 className="btn"
                 disabled={reloading}
                 onClick={async () => {
+                  const { baseline } = session;
                   const saved = await discardSaved();
+                  if (!saved) {
+                    return;
+                  }
+                  const previous = readProjectionLocation(search, baseline);
+                  const hasRowTarget =
+                    previous.appointmentId !== null ||
+                    previous.fundingSourceId !== null;
                   if (
-                    saved &&
+                    previous.issues.length > 0 ||
+                    (hasRowTarget && baseline.seededAt !== saved.seededAt) ||
                     readProjectionLocation(search, saved).issues.length > 0
                   ) {
                     onNavigate({ section: 'overview' }, true);
@@ -131,17 +139,7 @@ export function ProjectionSaveFeedback({
                 }}
                 type="button"
               >
-                {reloading ? 'Loading saved plan…' : 'Discard'}
-              </button>
-            )}
-            {conflict === 'conflict' && (
-              <button
-                className="btn btn-primary"
-                disabled={reloading}
-                onClick={() => void overwrite()}
-                type="button"
-              >
-                Overwrite
+                {reloading ? 'Loading saved plan…' : 'Discard and reload'}
               </button>
             )}
           </div>

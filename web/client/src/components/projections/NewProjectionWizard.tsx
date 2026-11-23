@@ -36,6 +36,8 @@ import { type SourceOperation } from '@/lib/projectionSources.ts';
 import {
   mergeSetupEdits,
   selectedSetupSession,
+  selectComparisonScope,
+  type SetupAppointmentEdits,
 } from '@/lib/projectionSetup.ts';
 import { ProjectionDialog } from '@/components/projections/ProjectionDialog.tsx';
 import {
@@ -92,7 +94,7 @@ export function NewProjectionWizard({
   const [selectionTouched, setSelectionTouched] = useState(false);
   const [returningToReview, setReturningToReview] = useState(false);
   const seedStarted = useRef(false);
-  const editedAppointmentIds = useRef(new Set<number>());
+  const appointmentEdits = useRef<SetupAppointmentEdits>(new Map());
   const [roster, setRoster] = useState<ProjectionRosterEntry[]>([]);
   const currentSession = useRef<ProjectionSession<ProjectionDraft> | null>(
     null
@@ -120,7 +122,7 @@ export function NewProjectionWizard({
             catalog,
             selectedSourceIds,
             roster,
-            editedAppointmentIds.current,
+            appointmentEdits.current,
             forecastMonths
           )
         : null,
@@ -210,7 +212,7 @@ export function NewProjectionWizard({
       currentSession.current!,
       selectedSourceIds,
       roster,
-      editedAppointmentIds.current
+      appointmentEdits.current
     );
     const result = operation(before);
     if (result.ok) {
@@ -218,9 +220,9 @@ export function NewProjectionWizard({
         currentSession.current!,
         before,
         result.session,
-        editedAppointmentIds.current
+        appointmentEdits.current
       );
-      editedAppointmentIds.current = merged.editedAppointmentIds;
+      appointmentEdits.current = merged.edits;
       updateSession(merged.catalog);
     }
     return result;
@@ -353,6 +355,12 @@ export function NewProjectionWizard({
         draft: {
           content: {
             ...draft.content,
+            comparison: selectComparisonScope(
+              draft.content.comparison,
+              selectedSourceIds,
+              roster,
+              appointmentEdits.current
+            ),
             forecastMonths,
             notes: notes.trim() ? notes : null,
           },

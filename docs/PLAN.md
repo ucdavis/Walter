@@ -85,9 +85,8 @@ as each decision is settled and each stage is reviewed.
   full-time salary as the starting rate. COLA first applies in the configured
   month strictly after the start month. Jobs captured in the snapshot keep
   the snapshot date as their salary base.
-- Stage 1b uses the existing `UpdatedAt` timestamp for concurrency and saves the
-  whole applied draft. A conflict offers Overwrite or Discard. The confirmed
-  behavior and implementation stops are recorded below.
+- The [save and conflict rules](#stage-1b-confirmed-decisions) govern which
+  version of the applied draft can be saved.
 - The [snapshot-month calculation](projections-calculation-review.md#snapshot-month-personnel-costs)
   defines personnel netting and signed-credit handling. Explicit expenses remain
   additional forecast costs.
@@ -205,10 +204,8 @@ location; it does not transfer another browser's unsaved state.
 
 The confirmed persistence behavior is explicit Save plan. Failed saves retain
 the draft. A response acknowledges the version submitted and must not replace
-edits made while the save was in flight. Normal saves reject stale timestamps
-atomically and retain local work. A confirmed overwrite replaces the saved
-editable document, including intervening ordinary edits, within the same
-snapshot. Background refresh cannot replace the editor's document.
+edits made while the save was in flight. Background refresh cannot replace the
+editor's document. See the [save and conflict rules](#stage-1b-confirmed-decisions).
 
 Reuse business rules from the first editor onward. Share presentation components
 where actual reuse supports it. The guided setup should compose the established
@@ -366,25 +363,17 @@ These decisions were confirmed after reviewing the saving and conflict cases:
 
 - **Normal Save** captures the whole applied draft and the exact `UpdatedAt`
   originally loaded. The database checks that timestamp as part of the write.
-- **Conflict** offers Overwrite or Discard. There is no field comparison,
-  selective reapplication, or automatic merge in v1. Closing the dialog keeps
-  the local draft. The next Save offers the same choice again.
-- **Overwrite** captures the current applied draft when clicked. It replaces
-  the saved editable document, including other users' ordinary edits that arrive
-  after the warning. The user does not need to confirm the same overwrite again.
-  If it fails, an explicit manual retry retains that overwrite intention until
-  success or Discard. It never retries automatically.
-- **Snapshot replacement or deletion** blocks overwrite. `SeededAt` identifies
-  the original snapshot; a draft cannot restore a deleted plan or replace a
-  freshly reset snapshot. The browser retains the draft for reference.
-- **Discard after a conflict** loads the latest saved plan in the current
-  workspace, preserving the selected location when it still exists. It does not
-  fetch a fresh source snapshot.
-- **Editing during a save** remains available. Only another Save is disabled.
-  A response acknowledges the submitted draft; later edits remain unsaved.
-  For example, saving $132,000 and then editing to $140,000 leaves $132,000 saved
-  and $140,000 visible with unsaved changes. An overwrite clicked after that
-  conflict submits the current $140,000 draft.
+- **Save conflicts** use the [reload flow](../README.md#projection-plans).
+  After Close, the next Save opens the same prompt. Discard and reload keeps a
+  selected appointment or source only when that row exists in both saved versions
+  of the same snapshot. An invalid selection returns to the plan overview.
+- **Snapshot replacement or deletion** also blocks an older draft from saving.
+  `SeededAt` identifies the original snapshot. If the plan was deleted, Close is
+  the only action in the conflict dialog.
+- **Editing during a save** remains available. A response acknowledges the
+  submitted draft, and later edits remain unsaved. For example, saving $132,000
+  and then editing to $140,000 leaves $132,000 saved and $140,000 visible with
+  unsaved changes.
 - **Leaving with pending changes** offers Stay or Discard. Same-plan navigation
   preserves applied edits. Reload and close use the browser's standard warning.
   A changed, unapplied salary buffer also counts as pending work. Back within
@@ -395,9 +384,9 @@ These decisions were confirmed after reviewing the saving and conflict cases:
 - **Save feedback** uses Saving followed by a checkmark in the Save button after
   confirmed success. Edits made after submission still appear unsaved.
 - **Failed saves** retain the draft, show simple failure feedback, log the error,
-  and allow manual retry. A lost response may mean the write completed, but the
-  client does not show success without confirmation. Automatic readback,
-  reconciliation, and retries are deferred.
+  and allow manual retry. A save sends one write request and uses its response
+  to confirm success. If the write completed but the response was lost,
+  retrying with the original version produces a save conflict.
 - **Expired login** follows Walter's existing login behavior. The user accepts
   that this can interrupt the session and lose an in-memory draft. Do not add a
   separate session-expired workflow, another-tab login, or a sign-in check.
@@ -411,67 +400,45 @@ endpoint without adding a reset/refresh UI.
 ### Stage 1b implementation stops
 
 1. **Server save contract, accepted.** Use the existing timestamps for
-   atomic checks, whole-document save and overwrite, and guarded reset/delete.
+   atomic checks, whole-document saves, and guarded reset/delete.
    Review the code and test against SQL Server before proceeding.
 2. **Saving, conflicts, and departure, accepted.** Load a saved plan,
    acknowledge the submitted version, preserve later edits, and handle failures.
-   Add Overwrite/Discard, snapshot/deletion handling, and departure warnings.
+   Add conflict reload, snapshot/deletion handling, and departure warnings.
    Review the code and exercise these flows together before proceeding.
 3. **Calculation review, current increment.** Verify real-plan costs and date
    boundaries against explicit examples before closing Stage 1b. Saving tests
    alone do not establish that the existing calculator is ready for real editing.
 
-The accepted server contract requires
-`expectedUpdatedAt` and `expectedSeededAt` on Save, with `overwrite` defaulting to
-false. Reset and Delete require `expectedUpdatedAt`. Missing tokens cannot fall
-back to an unconditional write. Conflicts distinguish an ordinary changed plan
-from a replaced snapshot; missing plans and access failures remain separate.
-
 Treat timestamps as exact opaque strings in the client; parsing them into a
 JavaScript `Date` for a save token would lose fractional precision. The server
 returns UTC timestamps, strictly advances `UpdatedAt` on writes and `SeededAt` on
-reset, and uses the expected timestamp in the atomic database predicate. Confirmed
-overwrites may retry ordinary races internally, checking snapshot identity and
-access each time. Retry exhaustion is a transient save failure, not another
-ordinary-conflict prompt.
+reset, and uses the expected timestamp in the atomic database predicate.
 
-Save retains the whole `FundingSources`/`Appointments` document, including its
-captured history arrays, while preserving server-owned identity, snapshot, and
-audit metadata. It does not merge or clear fields from the submitted document.
-This also lets overwrite restore a source removed by an ordinary edit within
-the same snapshot. The workspace keeps history read-only; broader server
+The workspace keeps captured history read-only. Save stores the submitted
+expenses and history window without regenerating estimates. Broader server
 validation of captured facts needs a separate decision as the editors expand.
-Save stores the submitted expenses and history window without regenerating
-estimates. Upstream accounting and personnel source records are unchanged.
 
 Acceptance evidence must include exact timestamp round trips, two writers using
-the same original timestamp, stale and missing tokens, overwrite races, reset and
+the same original timestamp, stale and missing tokens, reset and
 delete races, authorization, strictly advancing timestamps with a frozen or
 backward clock, and preservation of the submitted estimates. In-memory tests
 alone do not establish the SQL Server concurrency guarantee.
 
 ### Server contract review
 
-The first Stage 1b increment implements these endpoints without adding database
-columns or a migration:
+| Endpoint                           | Required preconditions                       | Behavior                                                     |
+| ---------------------------------- | -------------------------------------------- | ------------------------------------------------------------ |
+| `PUT /api/projections/{id}`        | Body `expectedUpdatedAt`, `expectedSeededAt` | Saves the name and editable inputs within the same snapshot. |
+| `POST /api/projections/{id}/reset` | Body `historyMonths`, `expectedUpdatedAt`    | Resets only the loaded version and advances both timestamps. |
+| `DELETE /api/projections/{id}`     | Query `expectedUpdatedAt`                    | Deletes only the loaded version.                             |
 
-| Endpoint                           | Required preconditions                       | Behavior                                                                                                                               |
-| ---------------------------------- | -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `PUT /api/projections/{id}`        | Body `expectedUpdatedAt`, `expectedSeededAt` | Stores the submitted name and typed `Content` document. `overwrite: true` accepts intervening ordinary edits within the same snapshot. |
-| `POST /api/projections/{id}/reset` | Body `historyMonths`, `expectedUpdatedAt`    | Resets only the loaded version and advances both timestamps.                                                                           |
-| `DELETE /api/projections/{id}`     | Query `expectedUpdatedAt`                    | Deletes only the loaded version.                                                                                                       |
+In the same snapshot, a stale save returns `409 conflict`. A replaced snapshot
+returns `409 snapshotChanged`. The client reloads the latest saved plan before
+another save. Invalid or missing tokens return `400`. Missing plans and access
+failures return `404` and `403`, respectively.
 
-Ordinary conflicts return `409` with code `conflict`; a replaced snapshot returns
-`409` with code `snapshotChanged`. Three lost overwrite attempts return `503`
-with code `busy`, unless the final check finds reset, deletion, or lost access.
-Invalid/missing tokens return `400`; missing plans and access failures retain
-their existing `404`/`403` behavior.
-
-Independent review found no remaining code issues. It identified a test gap for
-overwrite retry exhaustion and a final-attempt reset/deletion; those cases were
-added and passed. `dotnet test web/app.sln --no-restore --verbosity minimal`
-passed 433 standard tests. SQL integration tests opt out of that default run.
-The isolated SQL Server 2022 runner passed all 12 integration cases with no skips:
+Run the isolated SQL Server tests for the save and concurrency contract:
 
 ```sh
 web/tests/server.tests/run-projection-sql-tests.sh --no-restore --verbosity minimal
@@ -496,35 +463,35 @@ save mutation, so a response finishing after departure cannot update another
 plan's cache or draft.
 
 Save acknowledges the submitted document, preserves later edits, and shows a
-checkmark only after confirmation. Ordinary conflicts offer Overwrite/Discard;
-reset and deletion block overwrite. Failures keep the draft and allow manual
-retry. Discard reloads saved inputs and clears an open salary buffer. A late
-Discard response cannot navigate back to a plan the user has left.
+checkmark only after confirmation.
+Discard and reload clears an open salary buffer. A late reload response cannot
+navigate back to a plan the user has left. See the [save and conflict
+rules](#stage-1b-confirmed-decisions).
 
 The workspace read operation now includes serializable saving, conflict, error,
 and reload status alongside the draft and location. No second synchronized
 document or browser storage is introduced.
 
 The retained persistence regressions cover saving the applied salary, edits made
-while a save is pending, conflict overwrite/discard, failed and lost responses,
+while a save is pending, conflict reload, failed and lost responses,
 reset/deletion protection, and departure/reload warnings. They operate on the
 production workspace with a test-only persistence double.
 
-Browser checks against the real authenticated route with synthetic HTTP responses
-covered delayed saves, two-tab conflicts, overwrite of the current draft,
-discard, failure/retry, reset protection, reload warnings for unapplied input,
-and leaving during a save followed by reopening. Desktop/mobile layouts were
-also checked. Automated
-tests also cover exact timestamp tokens, query refresh, reopening, and late
-responses after switching plans. The accepted server tests separately establish
-the SQL persistence and concurrency contract.
+The Stage 1b browser checks recorded in `7115090c` exercised the earlier
+Overwrite and Discard flow on the authenticated route with synthetic HTTP
+responses. They covered delayed saves, overwriting the current draft after a
+two-tab conflict, discard, manual retry, reset protection, warnings for unapplied
+input, and reopening after leaving during a save. That record also covers desktop
+and mobile layouts, the full client suite, TypeScript, the production build,
+changed-file ESLint, independent review, and a React Doctor score of 100/100 for
+the changed files. The production build contained only the application entry,
+and the user accepted the saving behavior in that preview.
 
-The full client suite passed, along with TypeScript, the production build,
-changed-file ESLint, and independent review. React Doctor scored the changed
-files 100/100. The production build contains only the normal application entry;
-the synthetic preview and controls are excluded.
-
-The user exercised the preview and accepted the saving behavior.
+The reload-only verification record for `c3bca43f` reports 1,029 client tests,
+the production build, changed-file ESLint, React Doctor, 250 projection server
+tests, and 16 isolated SQL Server tests. The automated coverage includes exact
+timestamp round trips, stale saves, reset and delete races, and reloading the
+saved plan after a conflict.
 
 ### Calculation review
 
@@ -1036,12 +1003,22 @@ Use `FundingSources` and `Appointments` as the collection names inside the plan'
 typed `Content` in the database, domain, and API. This is a greenfield system.
 Keep one current document format without aliases for prototype fields, old
 request shapes, or old navigation keys. Sources record their kind and capture
-timestamp explicitly.
+timestamp explicitly. Identity, ownership, name, snapshot timestamp, and audit
+fields sit outside `Content`.
 
-Source IDs need only be unique among the plan's current sources. Removed IDs
-may be reused by later additions. Plan and section bookmarks are supported;
-durable bookmarks to a particular funding source after removal are outside the
-current scope. Do not add a persisted source ID counter for that guarantee.
+The plan's `Comparison` stores staffing assumptions from before setup edits.
+At creation, it keeps the original rows for in-scope appointments and explicit
+exclusions, with the source labels and shares needed to explain them. Saves keep
+the stored comparison. Duplication copies it, and reset captures a fresh one.
+Staffing compares allocations by project and task across reimports. Funding
+compares each imported source's dates and budgets with its own capture.
+
+`LastAppointmentId` and `LastFundingSourceId` are the highest issued IDs within
+the snapshot. Additions advance the corresponding counter, including when a
+task is reimported. Removals leave the counters in place. Saves keep the higher
+of the stored and submitted counters, duplication copies them, and reset starts
+new counters with the new snapshot. The current greenfield document requires
+`Comparison` and both counters when loading persisted JSON.
 
 ### Source selection and identity
 
@@ -1104,10 +1081,10 @@ a task from the project number. The wizard uses roster metadata once for initial
 selection; saved appointments, copies, and later saves do not retain it. Searching
 for other people the PI pays on outside projects remains deferred.
 
-Removing a source discards its captured inputs, source-specific expenses, and
-planning adjustments. Confirm destructive removal. Delete allocations to that
-source, leaving those shares unallocated; do not create replacement outside
-funding or redistribute the shares. Keep employees and their other assumptions.
+Removing a source discards its captured financial inputs, expenses, and planning
+adjustments. Confirm destructive removal. Delete allocations to that source,
+leaving those shares unallocated; do not create replacement outside funding or
+redistribute the shares. Keep employees and their other assumptions.
 Apply the same allocation rule when tasks are deliberately unchecked during
 setup. Preserve existing outside funding separately.
 

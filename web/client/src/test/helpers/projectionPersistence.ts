@@ -89,10 +89,7 @@ export function createProjectionPersistenceDouble(initialPlan: Projection) {
           message: 'The saved snapshot was reset.',
         });
       }
-      if (
-        !submitted.overwrite &&
-        stored.updatedAt !== submitted.expectedUpdatedAt
-      ) {
+      if (stored.updatedAt !== submitted.expectedUpdatedAt) {
         throw new HttpError(409, url, {
           code: 'conflict',
           message: 'Someone else changed this plan.',

@@ -786,7 +786,10 @@ describe('projection creation and copies', () => {
       await screen.findByRole('button', { name: '✓ Saved' });
       expect(api.updates).toHaveLength(1);
       expect(api.updates[0]).toMatchObject({
-        content: { appointments: [{ monthlySalary: 12_000 }] },
+        content: {
+          appointments: [{ monthlySalary: 12_000 }],
+          comparison: { appointments: [{ monthlySalary: 10_000 }] },
+        },
         expectedSeededAt: api.seed.seededAt,
         expectedUpdatedAt: '2026-02-01T00:00:00.0000001Z',
       });

@@ -1,11 +1,82 @@
+using System.Net.Http.Json;
 using FluentAssertions;
+using Microsoft.AspNetCore.TestHost;
 using server.core.Domain;
+using server.core.Models;
+using server.Services;
+using server.tests.Fakes;
 using Microsoft.EntityFrameworkCore;
+using Server.Controllers;
 
 namespace server.tests.Integration;
 
 public sealed partial class ProjectionSqlServerTests
 {
+    [ProjectionSqlServerFact]
+    public async Task Comparison_keeps_the_original_dated_funding_share_through_create_save_reload_and_duplicate()
+    {
+        var data = new FakeProjectionDataSource
+        {
+            Seed = new() { Projects = [new() { ProjectNumber = "P1", TaskNumber = "T1", ProjectName = "Captured task" }] },
+            Personnel =
+            [
+                new() { EmployeeId = "E1", PositionNumber = "1", Name = "Captured person", ProjectId = "P1", Task = "T1",
+                    MonthlyRate = 10000.25m, Fte = 1, DistributionPercent = 12.345678901234m,
+                    FundingEffectiveDate = new(2030, 2, 1), FundingEndDate = new(2030, 2, 15) },
+                new() { EmployeeId = "E2", PositionNumber = "2", ProjectId = "P1", Task = "T1", EarnCodeStatus = "Unsplit" },
+            ],
+        };
+        var capture = await new ProjectionSeeder(data, new FixedClock(Snapshot)).CaptureDraftAsync("100", 3, null, null, default);
+        var draft = capture.Draft;
+        draft.Content.Appointments.RemoveAll(a => a.PositionNumber == "2");
+        var scenario = draft.Content.Appointments.Single();
+        scenario.MonthlySalary = 11000m;
+        scenario.Allocations.First(a => a.FundingSourceId == 1).Percent = 0.25m;
+
+        using var host = CreateHttpHost();
+        using var client = host.GetTestClient();
+        using var create = await client.PostAsJsonAsync("/api/projections/by-iam/IAM-100",
+            new ProjectionsController.CreateProjectionRequest(draft, Guid.NewGuid()));
+        create.EnsureSuccessStatusCode();
+        var created = (await create.Content.ReadFromJsonAsync<Projection>())!;
+        var path = $"/api/projections/{created.Id}";
+
+        var request = Draft(created, "Revised plan");
+        request.Content.Comparison.Appointments.Clear();
+        request.Content.Appointments.Single().MonthlySalary = 12000m;
+        request.Content.Appointments.Single().Allocations.First(a => a.FundingSourceId == 1).Percent = 0.625m;
+        using var update = await client.PutAsJsonAsync(path, request);
+        update.EnsureSuccessStatusCode();
+        var saved = (await update.Content.ReadFromJsonAsync<Projection>())!;
+        var reloaded = (await client.GetFromJsonAsync<Projection>(path))!;
+        using var duplicate = await client.PostAsJsonAsync($"{path}/duplicate",
+            new ProjectionsController.DuplicateProjectionRequest("Alternative", Guid.NewGuid()));
+        duplicate.EnsureSuccessStatusCode();
+        var copy = (await duplicate.Content.ReadFromJsonAsync<Projection>())!;
+        var reopenedCopy = (await client.GetFromJsonAsync<Projection>($"/api/projections/{copy.Id}"))!;
+
+        foreach (var plan in new[] { created, saved, reloaded, reopenedCopy })
+        {
+            var original = plan.Content.Comparison.Appointments.Single(a => a.PositionNumber == "1");
+            original.MonthlySalary.Should().Be(10000.25m);
+            original.Allocations!.Single(a => a.FundingSourceId == 1).Should().BeEquivalentTo(new ProjectionFundingAllocation
+            {
+                FundingSourceId = 1,
+                Percent = 0.12345678901234m,
+                StartDate = new(2030, 2, 1),
+                EndDate = new(2030, 2, 15),
+            });
+            plan.Content.Comparison.Appointments.Single(a => a.PositionNumber == "2").Allocations.Should().BeNull();
+            plan.Content.Comparison.FundingSources.Should().ContainSingle().Which.TaskNumber.Should().Be("T1");
+        }
+        created.Content.Appointments.Single().MonthlySalary.Should().Be(11000m);
+        foreach (var plan in new[] { reloaded, reopenedCopy })
+        {
+            plan.Content.Appointments.Single().MonthlySalary.Should().Be(12000m);
+            plan.Content.Appointments.Single().Allocations.Single(a => a.FundingSourceId == 1).Percent.Should().Be(0.625m);
+        }
+    }
+
     [ProjectionSqlServerFact]
     public async Task Content_round_trips_and_tracks_in_place_nested_edits()
     {

@@ -1,3 +1,4 @@
+import { PlanChangesDialog } from '@/components/projections/PlanChangesDialog.tsx';
 import { DuplicateProjectionButton } from '@/components/projections/DuplicateProjectionButton.tsx';
 import type { Projection } from '@/queries/projections.ts';
 import { useFundingSummaryMotion } from '@/components/projections/useFundingSummaryMotion.ts';
@@ -9,6 +10,7 @@ import {
   BanknotesIcon,
   ChartBarIcon,
   Cog6ToothIcon,
+  DocumentTextIcon,
   ExclamationTriangleIcon,
   ListBulletIcon,
   UserGroupIcon,
@@ -28,6 +30,7 @@ import {
   type ExpensesEditorHandle,
 } from '@/components/projections/ExpensesEditor.tsx';
 import {
+  useCallback,
   useEffect,
   useId,
   useImperativeHandle,
@@ -93,6 +96,7 @@ export function ProjectionWorkspace({
     saving,
     session,
   } = useProjectionSession();
+  const [showChanges, setShowChanges] = useState(false);
   const [duplicating, setDuplicating] = useState(false);
   const summaryId = useId();
   const deletionConfirmed = useRef(false);
@@ -123,6 +127,8 @@ export function ProjectionWorkspace({
   const location = readProjectionLocation(search, draft);
   const [editingDetails, setEditingDetails] = useState(false);
   const detailsEditorRef = useRef<PlanDetailsEditorHandle>(null);
+  const planChangesButton = useRef<HTMLButtonElement>(null);
+  const returnToPlanChanges = useCallback(() => planChangesButton.current, []);
   const editorRef = useRef<StaffingEditorHandle>(null);
   const expenseEditorRef = useRef<ExpensesEditorHandle>(null);
   const sourceEditorRef = useRef<FundingSourcesEditorHandle>(null);
@@ -274,6 +280,18 @@ export function ProjectionWorkspace({
               <Cog6ToothIcon aria-hidden="true" className="size-5 shrink-0" />
               Plan details
             </button>
+            <button
+              className="btn"
+              onClick={() => setShowChanges(true)}
+              ref={planChangesButton}
+              type="button"
+            >
+              <DocumentTextIcon
+                aria-hidden="true"
+                className="size-5 shrink-0"
+              />
+              Plan changes
+            </button>
             <ProjectionSaveControls />
             {iamId && onDuplicated && (
               <DuplicateProjectionButton
@@ -294,6 +312,14 @@ export function ProjectionWorkspace({
             )}
           </div>
         </header>
+        {showChanges && (
+          <PlanChangesDialog
+            dirty={isProjectionDirty(session)}
+            draft={draft}
+            onClose={() => setShowChanges(false)}
+            returnFocusTo={returnToPlanChanges}
+          />
+        )}
         {editingDetails && (
           <PlanDetailsEditor
             deleteDisabled={saving || reloading || duplicating}

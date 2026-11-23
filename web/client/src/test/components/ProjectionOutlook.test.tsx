@@ -125,9 +125,12 @@ function plan(): ProjectionDraft {
   return {
     content: {
       appointments: [appointment(1, 0.5), appointment(2, 1.25)],
+      comparison: { appointments: [], fundingSources: [] },
       forecastMonths: 12,
       fundingSources: [short, source(2, 1000), future],
       historyMonths: 3,
+      lastAppointmentId: 0,
+      lastFundingSourceId: 0,
       notes: null,
     },
     name: 'Field season',

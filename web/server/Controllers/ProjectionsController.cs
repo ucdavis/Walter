@@ -27,13 +27,12 @@ public sealed class ProjectionsController(
     TimeProvider? timeProvider = null) : ApiControllerBase
 {
     private static readonly int[] Windows = [3, 6, 12];
-    private const int OverwriteAttempts = 3;
 
     public sealed record ProjectionSummary(int Id, string Name, DateTime SeededAt, string? UpdatedBy, DateTime UpdatedAt);
     public sealed record CreateProjectionRequest(ProjectionDraft? Draft, Guid CreationKey);
     public sealed record DuplicateProjectionRequest(string Name, Guid CreationKey);
     public sealed record SaveProjectionRequest(string Name, [property: JsonRequired] ProjectionContent Content,
-        DateTime? ExpectedUpdatedAt = null, DateTime? ExpectedSeededAt = null, bool Overwrite = false);
+        DateTime? ExpectedUpdatedAt = null, DateTime? ExpectedSeededAt = null);
     public sealed record HistoryMonthsRequest(int HistoryMonths, DateTime? ExpectedUpdatedAt = null);
     public sealed record ProjectionConflict(string Code, string Message);
     public sealed record ProjectionLookups(IReadOnlyList<JobCodeRecord> JobCodes, IReadOnlyList<string> ExpenditureCategories,
@@ -109,7 +108,7 @@ public sealed class ProjectionsController(
         if (request.CreationKey == Guid.Empty)
             return BadRequest("A nonempty CreationKey is required when creating a reviewed draft.");
         if (request.Draft is null || !ValidDraft(request.Draft))
-            return BadRequest("Draft requires valid sources, appointments, and expenses, including a nonnegative salary for every appointment, exact UTC SeededAt, unique positive IDs, and valid allocation references.");
+            return BadRequest("Draft requires valid sources, appointments, and expenses, including a nonnegative salary for every appointment, exact UTC SeededAt, unique positive IDs within their counters, and valid allocation references.");
         var (piEmployeeId, error) = await ResolvePiAsync(iamId, ct);
         if (error is not null) return error;
 
@@ -158,52 +157,48 @@ public sealed class ProjectionsController(
     }
 
     /// <summary>
-    /// Replaces the whole scenario document, preserves snapshot, identity and creator metadata, and updates audit fields.
+    /// Saves editable scenario inputs and keeps the original <see cref="ProjectionContent.Comparison"/>.
+    /// Updates audit fields while preserving snapshot, identity, and creator metadata.
     /// Saves keep captured averages, historical overrides, and explicit planned expenses as submitted.
-    /// Confirmed overwrite retries ordinary edits, but never crosses a reset or recreates a deleted plan.
     /// </summary>
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Save(int id, SaveProjectionRequest request, CancellationToken ct)
     {
         if (!ValidToken(request.ExpectedUpdatedAt) || !ValidToken(request.ExpectedSeededAt))
             return BadRequest("ExpectedUpdatedAt and ExpectedSeededAt must be exact UTC timestamps from the loaded plan.");
-        if (!ValidDraft(new(request.Name, request.ExpectedSeededAt!.Value, request.Content)))
-            return BadRequest("The plan requires valid sources, appointments, and expenses, including a nonnegative salary for every appointment, unique positive IDs, and valid allocation references.");
+        var (projection, error) = await LoadAsync(id, ct);
+        if (error is not null) return error;
+        if (projection!.SeededAt != request.ExpectedSeededAt) return SnapshotChanged();
+        if (projection.UpdatedAt != request.ExpectedUpdatedAt) return Changed();
 
-        // Detach the submitted content from tracked entities and reuse this frozen draft on every retry.
-        var draft = JsonSerializer.Deserialize<SaveProjectionRequest>(JsonSerializer.Serialize(request))!;
-        for (var attempt = 0; attempt < OverwriteAttempts; attempt++)
+        var stored = projection.Content;
+        var content = request.Content is null ? null : request.Content with { Comparison = stored.Comparison };
+        if (content is null || !ValidDraft(new(request.Name, projection.SeededAt, content)))
+            return BadRequest("The plan requires valid sources, appointments, and expenses, including a nonnegative salary for every appointment, unique positive IDs within their counters, and valid allocation references.");
+        if (ReusesRetiredId(content.Appointments.Select(a => a.Id), stored.Appointments.Select(a => a.Id), stored.LastAppointmentId)
+            || ReusesRetiredId(content.FundingSources.Select(s => s.Id), stored.FundingSources.Select(s => s.Id), stored.LastFundingSourceId))
+            return BadRequest("A removed appointment or funding source ID cannot be reused.");
+
+        // Keep the tracked plan independent of the mutable request document.
+        content = JsonSerializer.Deserialize<ProjectionContent>(JsonSerializer.Serialize(content))!;
+        projection.Name = request.Name;
+        projection.Content = content with
         {
-            var (projection, error) = await LoadAsync(id, ct);
-            if (error is not null) return error;
-            if (projection!.SeededAt != draft.ExpectedSeededAt) return SnapshotChanged();
-            if (!draft.Overwrite && projection.UpdatedAt != draft.ExpectedUpdatedAt) return Changed();
-
-            // Use the client's loaded version in the SQL predicate. Overwrite accepts ordinary edits
-            // only after loading and authorizing a row from the originally submitted snapshot.
-            db.Entry(projection).Property(p => p.UpdatedAt).OriginalValue =
-                draft.Overwrite ? projection.UpdatedAt : draft.ExpectedUpdatedAt!.Value;
-            projection.Name = draft.Name;
-            projection.Content = draft.Content;
-            Touch(projection);
-            try
-            {
-                await db.SaveChangesAsync(ct);
-                return Ok(projection);
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                db.Entry(projection).State = EntityState.Detached;
-                if (!draft.Overwrite) return await ConcurrentChangeAsync(id, draft.ExpectedSeededAt, ct);
-            }
+            LastAppointmentId = Math.Max(stored.LastAppointmentId, content.LastAppointmentId),
+            LastFundingSourceId = Math.Max(stored.LastFundingSourceId, content.LastFundingSourceId),
+        };
+        Touch(projection);
+        try
+        {
+            // EF checks the loaded version again as part of the write.
+            await db.SaveChangesAsync(ct);
+            return Ok(projection);
         }
-
-        // A reset, deletion, or access change still takes precedence after the final lost race.
-        var (current, currentError) = await LoadAsync(id, ct);
-        if (currentError is not null) return currentError;
-        if (current!.SeededAt != draft.ExpectedSeededAt) return SnapshotChanged();
-        return StatusCode(StatusCodes.Status503ServiceUnavailable,
-            new ProjectionConflict("busy", "The plan is being edited. Retry the overwrite."));
+        catch (DbUpdateConcurrencyException)
+        {
+            db.Entry(projection).State = EntityState.Detached;
+            return await ConcurrentChangeAsync(id, request.ExpectedSeededAt, ct);
+        }
     }
 
     /// <summary>Deletes only the version originally loaded by the caller.</summary>
@@ -289,6 +284,10 @@ public sealed class ProjectionsController(
         ProjectionPlanDefaults.ForecastMonthOptions.Contains(forecastMonths)
         && seededAt.Year * 12 + seededAt.Month + forecastMonths - 1 <= 9999 * 12 + 12;
 
+    /// <summary>Protect the original comparison from pairing a retired ID with a new row.</summary>
+    private static bool ReusesRetiredId(IEnumerable<int> submitted, IEnumerable<int> current, int lastId)
+        => submitted.Except(current).Any(id => id <= lastId);
+
     private static bool ValidDraft(ProjectionDraft draft)
     {
         var content = draft.Content;
@@ -296,16 +295,32 @@ public sealed class ProjectionsController(
             || !Windows.Contains(content.HistoryMonths)
             || !ValidForecastWindow(draft.SeededAt, content.ForecastMonths)
             || content.Notes?.Length > ProjectionPlanDefaults.MaximumNotesLength
+            || content.LastAppointmentId < 0 || content.LastFundingSourceId < 0
+            || !ValidComparison(content.Comparison, content.LastAppointmentId, content.LastFundingSourceId)
             || content.FundingSources is null || content.Appointments is null) return false;
-        if (content.FundingSources.Any(p => p is null || p.Id <= 0 || p.Budgets is null || p.CategoryAdjustments is null || p.Actuals is null || p.RunRates is null || p.HistoricalExpenseOverrides is null || p.Expenses is null
+        if (content.FundingSources.Any(p => p is null || p.Id <= 0 || p.Id > content.LastFundingSourceId || p.Budgets is null || p.CategoryAdjustments is null || p.Actuals is null || p.RunRates is null || p.HistoricalExpenseOverrides is null || p.Expenses is null
                 || p.CategoryAdjustments.Any(a => a is null) || p.Budgets.Any(b => b is null) || p.Actuals.Any(a => a is null) || p.RunRates.Any(r => r is null)
                 || p.HistoricalExpenseOverrides.Any(e => e is null) || p.Expenses.Any(e => e is null))
-            || content.Appointments.Any(j => j is null || j.Id <= 0 || j.Allocations is null || j.Allocations.Any(f => f is null))) return false;
+            || content.Appointments.Any(j => j is null || j.Id <= 0 || j.Id > content.LastAppointmentId || j.Allocations is null || j.Allocations.Any(f => f is null))) return false;
         if (!ValidSources(content.FundingSources) || !ValidAppointments(content.Appointments)) return false;
         var sourceIds = content.FundingSources.Select(p => p.Id).ToHashSet();
         return sourceIds.Count == content.FundingSources.Count
             && content.Appointments.Select(j => j.Id).Distinct().Count() == content.Appointments.Count
             && content.Appointments.SelectMany(j => j.Allocations).All(f => f.FundingSourceId is null || sourceIds.Contains(f.FundingSourceId.Value));
+    }
+
+    /// <summary>Captured inputs may have missing pay. Their immutable identities and scoped funding references must be usable.</summary>
+    private static bool ValidComparison(ProjectionComparison? comparison, int lastAppointmentId, int lastFundingSourceId)
+    {
+        if (comparison?.Appointments is null || comparison.FundingSources is null
+            || comparison.FundingSources.Any(s => s is null || s.Id <= 0 || s.Id > lastFundingSourceId || string.IsNullOrWhiteSpace(s.Name))
+            || comparison.Appointments.Any(a => a is null || a.Id <= 0 || a.Id > lastAppointmentId
+                || a.Allocations?.Any(f => f is null) == true)) return false;
+        var sourceIds = comparison.FundingSources.Select(s => s.Id).ToHashSet();
+        return sourceIds.Count == comparison.FundingSources.Count
+            && comparison.Appointments.Select(a => a.Id).Distinct().Count() == comparison.Appointments.Count
+            && comparison.Appointments.All(a => a.Allocations is null
+                || a.Allocations.All(f => f.FundingSourceId is null || sourceIds.Contains(f.FundingSourceId.Value)));
     }
 
     /// <summary>Missing imported salary may be reviewed in a draft, but every retained appointment must be complete before persistence.</summary>

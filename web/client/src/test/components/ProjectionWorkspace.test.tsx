@@ -53,6 +53,197 @@ const editButton = () =>
   screen.getByRole('button', { name: 'Edit appointment for Alex Example' });
 
 describe('projection plan header', () => {
+  it('reports applied salary edits, clears a reversion, and returns focus to Plan changes', async () => {
+    const plan = createSalaryExample();
+    plan.content.appointments[0].monthlySalary = 8000.01;
+    plan.content.comparison.appointments[0].monthlySalary = 8000.01;
+    const { user } = openWorkspace('?section=staffing', plan);
+    const opener = await screen.findByRole('button', { name: 'Plan changes' });
+    const details = screen.getByRole('button', { name: 'Edit plan details' });
+    details.focus();
+    fireEvent.click(opener);
+    const dialog = () => screen.getByRole('dialog', { name: 'Plan changes' });
+    expect(dialog()).toHaveTextContent('No staffing or funding changes');
+    fireEvent(dialog(), new Event('cancel', { cancelable: true }));
+    expect(opener).toHaveFocus();
+    await user.click(editButton());
+    await user.clear(salaryInput());
+    await user.type(salaryInput(), '144000');
+    expect(read().draft.content.appointments[0].monthlySalary).toBe(8000.01);
+    await user.click(screen.getByRole('button', { name: 'Apply' }));
+    opener.focus();
+    await user.keyboard('{Enter}');
+    expect(dialog()).toHaveTextContent('Plan has unsaved edits');
+    expect(dialog()).toHaveTextContent('$96,000.12 / year');
+    expect(dialog()).toHaveTextContent('$144,000.00 / year');
+    await user.click(
+      within(dialog()).getByRole('button', { name: 'Close plan changes' })
+    );
+    expect(opener).toHaveFocus();
+
+    await user.click(editButton());
+    await user.clear(salaryInput());
+    await user.type(salaryInput(), '96000.12');
+    await user.click(screen.getByRole('button', { name: 'Apply' }));
+    await user.click(opener);
+    expect(dialog()).toHaveTextContent(
+      '0 appointments and 0 funding sources affected'
+    );
+    expect(dialog()).toHaveTextContent('No staffing or funding changes');
+  });
+
+  it('clears overlapping allocation changes when both original displayed shares are reapplied', async () => {
+    const plan = createSalaryExample();
+    const shares = Array.from({ length: 2 }, () => ({
+      endDate: '2026-01-31',
+      fundingSourceId: 1,
+      percent: 0.123_456_789_012_34,
+      startDate: '2026-01-01',
+    }));
+    plan.content.appointments[0].allocations = structuredClone(shares);
+    plan.content.comparison.appointments[0].allocations = shares;
+    const { user } = openWorkspace('?section=staffing', plan);
+    const openAllocations = async () => {
+      await user.click(
+        await screen.findByRole('button', {
+          name: /Alex Example, Jan 2026:.*Edit allocations/,
+        })
+      );
+      return within(
+        screen.getByRole('dialog', { name: 'Alex Example funding' })
+      );
+    };
+    const applyShares = async (
+      editor: ReturnType<typeof within>,
+      values: string[]
+    ) => {
+      for (const [index, value] of values.entries()) {
+        const input = editor.getByRole('textbox', {
+          name: `Appointment share ${index + 1} (%)`,
+        });
+        await user.clear(input);
+        await user.type(input, value);
+      }
+      await user.click(editor.getByRole('button', { name: /^Replace / }));
+    };
+    const openReport = async () => {
+      await user.click(screen.getByRole('button', { name: 'Plan changes' }));
+      return screen.getByRole('dialog', { name: 'Plan changes' });
+    };
+
+    const editor = await openAllocations();
+    const originals = [1, 2].map(
+      (row) =>
+        editor.getByRole<HTMLInputElement>('textbox', {
+          name: `Appointment share ${row} (%)`,
+        }).value
+    );
+    await applyShares(editor, ['15', '16']);
+    const changed = await openReport();
+    expect(changed).toHaveTextContent(
+      '1 appointment and 1 funding source affected'
+    );
+    await user.click(
+      within(changed).getByRole('button', { name: 'Close plan changes' })
+    );
+
+    await applyShares(await openAllocations(), originals);
+    expect(await openReport()).toHaveTextContent(
+      'No staffing or funding changes'
+    );
+  });
+
+  it('shows dates and preserves subcent pool adjustments and balances', async () => {
+    const plan = createSalaryExample();
+    const [pooled, dateOnly] = plan.content.fundingSources;
+    pooled.budgets[0].budget = 2600;
+    pooled.balanceAdjustment = 99.999 - 100;
+    pooled.capturedAt = '2026-02-12T00:00:00Z';
+    dateOnly.endDate = '2026-07-31';
+    const { user } = openWorkspace('?section=overview', plan);
+    await user.click(
+      await screen.findByRole('button', { name: 'Plan changes' })
+    );
+    const dialog = within(screen.getByRole('dialog', { name: 'Plan changes' }));
+    expect(dialog.getByText('Plan inputs captured Jan 1, 2026')).toBeVisible();
+    const [first, second] = dialog
+      .getAllByRole('article')
+      .map((card) => within(card));
+    expect(
+      first.getByText('Source inputs captured Feb 12, 2026')
+    ).toBeVisible();
+    expect(
+      first.getByRole('table', { name: 'Overall funding decreased' })
+    ).toHaveTextContent('Source total$100.00-$0.001$99.999');
+    expect(
+      first.getByRole('table', { name: 'Funding dates' })
+    ).toHaveTextContent('Funding end dateJun 30, 2026Jun 30, 2026');
+    expect(
+      second.getByRole('table', { name: 'Available funding' })
+    ).toHaveTextContent('Source total$16,000.00$0.00$16,000.00');
+    expect(
+      second.getByRole('table', { name: 'Funding dates' })
+    ).toHaveTextContent('Funding end dateJun 30, 2026Jul 31, 2026');
+  });
+
+  it('shows unavailable original allocations for retained and excluded appointments', async () => {
+    const plan = createSalaryExample();
+    const original = plan.content.comparison.appointments[0];
+    original.allocations = null;
+    original.monthlySalary = null;
+    plan.content.comparison.appointments.push({
+      ...original,
+      id: 102,
+      name: 'Excluded appointment',
+    });
+    plan.content.lastAppointmentId = 102;
+    const { user } = openWorkspace('?section=overview', plan);
+    await user.click(
+      await screen.findByRole('button', { name: 'Plan changes' })
+    );
+    const dialog = within(screen.getByRole('dialog', { name: 'Plan changes' }));
+    const [retained, excluded] = dialog
+      .getAllByRole('article')
+      .map((card) => within(card));
+    expect(
+      retained.getByText(
+        'Original funding allocations were unavailable at capture.'
+      )
+    ).toBeVisible();
+    await user.click(retained.getByText('Funding allocation'));
+    expect(retained.getAllByText('Unavailable')).toHaveLength(2);
+    expect(retained.getAllByText('50%')).toHaveLength(2);
+    expect(excluded.getByText('Excluded from this plan')).toBeVisible();
+    expect(
+      excluded.getByText(
+        'Original funding allocations were unavailable at capture.'
+      )
+    ).toBeVisible();
+    expect(excluded.queryByText('Funding allocation')).toBeNull();
+  });
+
+  it('shows the plan save status when only notes changed', async () => {
+    const { user } = openWorkspace('?section=overview');
+    await user.click(
+      await screen.findByRole('button', { name: 'Edit plan details' })
+    );
+    await user.type(
+      screen.getByRole('textbox', { name: 'Plan notes (optional)' }),
+      'Review with the team'
+    );
+    await user.click(
+      screen.getByRole('button', { name: 'Apply plan details' })
+    );
+    await user.click(screen.getByRole('button', { name: 'Plan changes' }));
+    const dialog = within(screen.getByRole('dialog', { name: 'Plan changes' }));
+    expect(dialog.getByText('Plan has unsaved edits')).toBeVisible();
+    expect(
+      dialog.getByText(
+        'No staffing or funding changes from the captured inputs.'
+      )
+    ).toBeVisible();
+  });
+
   it('minimizes warnings beside the title across sections and restores them without changing the plan', async () => {
     const plan = createSalaryExample();
     plan.content.fundingSources[0].balanceAdjustment = -50_000;
@@ -274,9 +465,9 @@ describe('category budget persistence', () => {
     cleanup();
     openWorkspace('?section=funding&source=1', saved);
     await screen.findByRole('dialog', { name: 'Edit Project A' });
-    expect(screen.getByLabelText(`Budget for ${SUPPLIES_CATEGORY}`)).toHaveValue(
-      '2000.00'
-    );
+    expect(
+      screen.getByLabelText(`Budget for ${SUPPLIES_CATEGORY}`)
+    ).toHaveValue('2000.00');
     expect(screen.getByLabelText(`Budget for ${SALARY_CATEGORY}`)).toHaveValue(
       salaryBudget.toFixed(2)
     );

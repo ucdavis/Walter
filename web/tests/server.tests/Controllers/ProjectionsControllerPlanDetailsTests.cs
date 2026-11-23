@@ -62,7 +62,7 @@ public sealed partial class ProjectionsControllerTests
     }
 
     [Fact]
-    public async Task Plan_details_preserve_plain_text_and_captured_inputs_across_save_duplicate_and_stale_retry()
+    public async Task Plan_details_preserve_plain_text_and_captured_inputs_across_save_duplicate_and_reload()
     {
         using var ctx = TestDbContextFactory.CreateInMemory();
         var created = await CreateProjectionAsync(ctx);
@@ -87,10 +87,12 @@ public sealed partial class ProjectionsControllerTests
         ConflictCode(await controller.Save(reopened.Id, stale, default)).Should().Be("conflict");
         reopened.Content.ForecastMonths.Should().Be(18);
         reopened.Content.Notes.Should().Be(notes);
-        var overwritten = Document(await controller.Save(reopened.Id, stale with { Overwrite = true, Content = stale.Content with { Notes = new string('x', 2000) } }, default));
-        overwritten.Content.ForecastMonths.Should().Be(12);
-        overwritten.Content.Notes.Should().HaveLength(2000);
-        var cleared = Document(await controller.Save(reopened.Id, Draft(overwritten) with { Content = overwritten.Content with { Notes = null } }, default));
+        var reloaded = Document(await controller.Get(reopened.Id, default));
+        var reapplied = Draft(reloaded) with { Content = reloaded.Content with { ForecastMonths = 12, Notes = new string('x', 2000) } };
+        var savedAgain = Document(await controller.Save(reloaded.Id, reapplied, default));
+        savedAgain.Content.ForecastMonths.Should().Be(12);
+        savedAgain.Content.Notes.Should().HaveLength(2000);
+        var cleared = Document(await controller.Save(reopened.Id, Draft(savedAgain) with { Content = savedAgain.Content with { Notes = null } }, default));
         cleared.Content.Notes.Should().BeNull();
         copy.Content.Notes.Should().Be(notes);
     }

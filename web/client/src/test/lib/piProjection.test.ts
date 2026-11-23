@@ -82,6 +82,7 @@ const projection = ({
 } = {}): Projection => ({
   content: {
     appointments,
+    comparison: { appointments: [], fundingSources: [] },
     forecastMonths,
     fundingSources: [
       {
@@ -122,6 +123,8 @@ const projection = ({
       },
     ],
     historyMonths: 3,
+    lastAppointmentId: 0,
+    lastFundingSourceId: 0,
     notes: null,
   },
   createdAt: '2026-10-16T00:00:00Z',
