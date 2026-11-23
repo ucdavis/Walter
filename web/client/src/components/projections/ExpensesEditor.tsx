@@ -186,18 +186,29 @@ export function ExpensesEditor<T extends ProjectionDraft>({
       0
     );
   const addedMonthlyTotal = addedTotal('Monthly');
-  const monthlyRate = visibleSources.reduce(
-    (total, source) =>
+  const monthlyRate = visibleSources.reduce((total, source) => {
+    const monthlyExpenses = [
+      ...getHistoricalExpenseRows(source, draft.content.historyMonths).map(
+        (row) => ({
+          amount: row.effectiveAmount,
+          endMonth: null,
+          kind: 'Monthly' as const,
+          startMonth: null,
+        })
+      ),
+      ...source.expenses.filter(({ kind }) => kind === 'Monthly'),
+    ];
+    return (
       total +
-      getHistoricalExpenseRows(source, draft.content.historyMonths).reduce(
-        (sum, row) => sum + row.effectiveAmount,
-        0
-      ) +
-      source.expenses
-        .filter(({ kind }) => kind === 'Monthly')
-        .reduce((sum, item) => sum + item.amount, 0),
-    0
-  );
+      monthlyExpenses
+        .filter(
+          (item) =>
+            computeExpenseForecast(source, item, forecastWindow)
+              .hasEligibleDates
+        )
+        .reduce((sum, item) => sum + item.amount, 0)
+    );
+  }, 0);
   const oneTimeTotal = addedTotal('OneTime');
   const oneTimeCount = visibleSources.reduce(
     (count, source) =>

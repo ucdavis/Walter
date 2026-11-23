@@ -3,6 +3,7 @@ import {
   getSourceFundingBasis,
   hasSourceCategoryBudget,
   updateSourceBudget,
+  validateCategoryBudgets,
   type SourceBudgetChange,
 } from '@/lib/projectionBudgets.ts';
 import {
@@ -57,6 +58,64 @@ const costs = (value: ReturnType<typeof computePiProjection>) =>
   value.rows.map(({ remaining: _, ...row }) => row);
 
 describe('scenario category budgets', () => {
+  it.each([0, 12.34])(
+    'validates distinct full category names with a shared prefix, amount: %s',
+    (amount) => {
+      const other = '03 - Additional supplies';
+      const allowed = [...categories, other];
+      const rows = [
+        { amount: 0, expenditureCategory: SUPPLIES_CATEGORY },
+        { amount, expenditureCategory: other },
+      ];
+      expect(validateCategoryBudgets(rows, allowed)).toBeNull();
+      expect(validateCategoryBudgets([...rows, rows[0]], allowed)).toBe(
+        'Each financial category may appear only once.'
+      );
+    }
+  );
+
+  it.each([false, true])(
+    'checks planned category totals in cents without reordering budgets, reversed: %s',
+    (reversed) => {
+      const session = createProjectionSession(plan());
+      const rows = [
+        { amount: 0.1, expenditureCategory: SALARY_CATEGORY },
+        { amount: 0.2, expenditureCategory: FRINGE_CATEGORY },
+        { amount: 0.3, expenditureCategory: SUPPLIES_CATEGORY },
+      ];
+      const inputs = {
+        balance: 0.6,
+        endDate: null,
+        initialCategoryBudgets: reversed ? rows.toReversed() : rows,
+        name: 'Small award',
+        plannedBudgetMode: 'Categories' as const,
+        startDate: '2026-07-01',
+      };
+      const result = addPlannedSource(session, inputs, categories);
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(
+          result.session.draft.content.fundingSources.at(-1)?.budgets
+        ).toEqual(
+          inputs.initialCategoryBudgets.map(
+            ({ amount, expenditureCategory }) => ({
+              budget: amount,
+              committed: 0,
+              expenditureCategory,
+              spentToDate: 0,
+            })
+          )
+        );
+      }
+      expect(
+        addPlannedSource(session, { ...inputs, balance: 0.61 }, categories)
+      ).toEqual({
+        error: 'The planned total must equal its category budgets.',
+        ok: false,
+      });
+    }
+  );
+
   it('moves budget without changing total, captured financials, or any forecast costs', () => {
     const original = plan();
     const before = structuredClone(original);

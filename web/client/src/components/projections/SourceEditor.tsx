@@ -2,7 +2,10 @@ import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
 import { tooltipDefinitions } from '@/shared/tooltips.ts';
 import { useQuery } from '@tanstack/react-query';
 import { SourceBudgetEditor } from '@/components/projections/SourceBudgetEditor.tsx';
-import { updateSourceBudget } from '@/lib/projectionBudgets.ts';
+import {
+  sumCategoryBudgets,
+  updateSourceBudget,
+} from '@/lib/projectionBudgets.ts';
 import { buildSourceFundingBalance } from '@/lib/projectionFundingBalances.ts';
 import { computePiProjection } from '@/lib/piProjection.ts';
 import {
@@ -129,7 +132,7 @@ export function SourceEditor<T extends ProjectionDraft>({
       balance: categoryMode
         ? budgetSource
           ? sourcePlanningBalance(budgetSource)
-          : initialCategories.reduce((sum, row) => sum + row.amount, 0)
+          : sumCategoryBudgets(initialBudgets)
         : initialBalance !== null && amount === Number(initialDisplay)
           ? initialBalance
           : amount,

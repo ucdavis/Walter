@@ -25,7 +25,11 @@ import {
 } from '@/test/fixtures/projections.ts';
 
 afterEach(cleanup);
-function open(planned = false, existingPool = false) {
+function open(
+  planned = false,
+  existingPool = false,
+  extraCategories: string[] = []
+) {
   const plan = createSalaryExample();
   const source = plan.content.fundingSources[0];
   source.projectType = 'Sponsored';
@@ -50,10 +54,9 @@ function open(planned = false, existingPool = false) {
   const query = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  query.setQueryData(
-    projectionLookupsQueryOptions().queryKey,
-    createAppointmentLookupsExample()
-  );
+  const lookups = createAppointmentLookupsExample();
+  lookups.expenditureCategories.push(...extraCategories);
+  query.setQueryData(projectionLookupsQueryOptions().queryKey, lookups);
   const onClose = vi.fn();
   const onApply = vi.fn((inputs, categories) =>
     planned
@@ -176,6 +179,68 @@ it('creates planned category initial funding as the reset baseline', async () =>
   expect(created.categoryAdjustments).toEqual([]);
   expect(sourcePlanningBalance(created)).toBe(9000);
 });
+
+it.each([0, 12.34])(
+  'creates planned funding with distinct same-prefix categories, amount: %s',
+  async (amount) => {
+    const category = '03 - Additional supplies';
+    const { onApply, user } = open(true, false, [category]);
+    await user.type(screen.getByLabelText('Source name'), 'Planned award');
+    await user.type(screen.getByLabelText('Start date'), '2026-01-01');
+    await user.selectOptions(
+      screen.getByLabelText('Source type'),
+      'Categories'
+    );
+    await setBudget(user, `Budget for ${category}`, amount);
+    await setBudget(user, 'Project total', amount);
+    expect(screen.getByRole('button', { name: 'Apply' })).toBeEnabled();
+    await user.click(screen.getByRole('button', { name: 'Apply' }));
+    const result = onApply.mock.results[0].value;
+    expect(result.ok).toBe(true);
+    const budgets = result.session.draft.content.fundingSources.at(-1).budgets;
+    expect(budgets).toContainEqual({
+      budget: amount,
+      committed: 0,
+      expenditureCategory: category,
+      spentToDate: 0,
+    });
+    expect(budgets).toContainEqual({
+      budget: 0,
+      committed: 0,
+      expenditureCategory: SUPPLIES_CATEGORY,
+      spentToDate: 0,
+    });
+  }
+);
+
+it.each([false, true])(
+  'submits category totals in cents regardless of edit order, reversed: %s',
+  async (reversed) => {
+    const { onApply, user } = open(true);
+    await user.type(screen.getByLabelText('Source name'), 'Small award');
+    await user.type(screen.getByLabelText('Start date'), '2026-01-01');
+    await user.selectOptions(
+      screen.getByLabelText('Source type'),
+      'Categories'
+    );
+    const entries: [string, number][] = [
+      [SALARY_CATEGORY, 0.1],
+      [FRINGE_CATEGORY, 0.2],
+      [SUPPLIES_CATEGORY, 0.3],
+    ];
+    for (const [category, amount] of reversed
+      ? entries.toReversed()
+      : entries) {
+      await setBudget(user, `Budget for ${category}`, amount);
+    }
+    expect(screen.getByRole('button', { name: 'Apply' })).toBeDisabled();
+    await setBudget(user, 'Project total', 0.6);
+    expect(screen.getByRole('button', { name: 'Apply' })).toBeEnabled();
+    await user.click(screen.getByRole('button', { name: 'Apply' }));
+    expect(onApply.mock.calls[0][0].balance).toBe(0.6);
+    expect(onApply.mock.results[0].value.ok).toBe(true);
+  }
+);
 
 it('restores the original planned pool without resetting edited dates', async () => {
   const { onApply, user } = open(false, true);

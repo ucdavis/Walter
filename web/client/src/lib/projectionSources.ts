@@ -1,5 +1,6 @@
 import {
   getSourceFundingBasis,
+  sumCategoryBudgets,
   validateCategoryBudgets,
 } from '@/lib/projectionBudgets.ts';
 import type {
@@ -221,10 +222,7 @@ export function addPlannedSource<T extends ProjectionDraft>(
       ok: false,
     };
   }
-  const initialTotal = inputs.initialCategoryBudgets.reduce(
-    (sum, row) => sum + row.amount,
-    0
-  );
+  const initialTotal = sumCategoryBudgets(inputs.initialCategoryBudgets);
   if (
     inputs.plannedBudgetMode === 'Categories' &&
     inputs.balance !== initialTotal

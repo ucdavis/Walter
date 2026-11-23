@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Server.Controllers;
 using Server.Tests;
 using server.core.Domain;
+using server.tests.Fakes;
 
 namespace server.tests.Controllers;
 
@@ -46,11 +47,38 @@ public sealed partial class ProjectionsControllerTests
     }
 
     [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Lookup_categories_with_shared_prefixes_remain_distinct_in_budgets_and_adjustments(bool funded)
+    {
+        using var ctx = TestDbContextFactory.CreateInMemory();
+        var saved = await CreateProjectionAsync(ctx);
+        const string otherSalary = "01 - Additional salaries";
+        var data = new FakeProjectionDataSource { Categories = [SalaryBudget, otherSalary] };
+        var controller = CreateController(ctx, financialViewer: true, dataSource: data);
+        var lookups = (ProjectionsController.ProjectionLookups)((OkObjectResult)await controller.Lookups(default)).Value!;
+        lookups.ExpenditureCategories.Should().Equal(SalaryBudget, otherSalary);
+        var sources = BudgetSources();
+        sources[2].Budgets = lookups.ExpenditureCategories.Select(category => new ProjectionBudget
+        {
+            ExpenditureCategory = category,
+            Budget = funded ? 12.34m : 0,
+        }).ToList();
+        sources[0].CategoryAdjustments.Add(new() { ExpenditureCategory = otherSalary, Amount = 0 });
+        sources[2].CategoryAdjustments.Add(new() { ExpenditureCategory = otherSalary, Amount = 0 });
+        (await controller.Save(saved.Id, Draft(saved) with { Content = saved.Content with { FundingSources = sources } }, default))
+            .Should().BeOfType<OkObjectResult>();
+        ctx.ChangeTracker.Clear();
+        var loaded = (Projection)((OkObjectResult)await controller.Get(saved.Id, default)).Value!;
+        loaded.Content.FundingSources.Should().BeEquivalentTo(sources);
+    }
+
+    [Theory]
     [InlineData("category-pool-delta")]
     [InlineData("duplicate-delta")]
     [InlineData("invalid-category")]
     [InlineData("unknown-category-code")]
-    [InlineData("duplicate-category-code")]
+    [InlineData("duplicate-initial")]
     [InlineData("subcent-delta")]
     [InlineData("subcent-initial")]
     [InlineData("null-deltas")]
@@ -76,7 +104,7 @@ public sealed partial class ProjectionsControllerTests
             case "duplicate-delta": sources[0].CategoryAdjustments.Add(new() { ExpenditureCategory = SalaryBudget, Amount = 0 }); break;
             case "invalid-category": sources[0].CategoryAdjustments[0].ExpenditureCategory = "Invented"; break;
             case "unknown-category-code": sources[0].CategoryAdjustments[0].ExpenditureCategory = "99 - Unknown"; break;
-            case "duplicate-category-code": sources[0].CategoryAdjustments.Add(new() { ExpenditureCategory = "01 - Different label", Amount = 5 }); break;
+            case "duplicate-initial": sources[2].Budgets.Add(new() { ExpenditureCategory = SalaryBudget, Budget = 0 }); break;
             case "subcent-delta": sources[0].CategoryAdjustments[0].Amount = 1.125m; break;
             case "subcent-initial": sources[2].Budgets[0].Budget = 1.125m; break;
             case "null-deltas": sources[0].CategoryAdjustments = null!; break;

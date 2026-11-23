@@ -41,6 +41,11 @@ export function hasSourceCategoryBudget(
   );
 }
 
+/** Sum integer cents so a category budget total does not depend on row order. */
+export function sumCategoryBudgets(rows: CategoryBudgetAdjustment[]) {
+  return rows.reduce((sum, row) => sum + Math.round(row.amount * 100), 0) / 100;
+}
+
 export function validateCategoryBudgets(
   rows: CategoryBudgetAdjustment[],
   categories: string[]
@@ -51,7 +56,7 @@ export function validateCategoryBudgets(
     if (!allowed.has(row.expenditureCategory)) {
       return 'Choose a known financial category.';
     }
-    if (seen.has(row.expenditureCategory.slice(0, 2))) {
+    if (seen.has(row.expenditureCategory)) {
       return 'Each financial category may appear only once.';
     }
     if (!Number.isFinite(row.amount)) {
@@ -60,7 +65,7 @@ export function validateCategoryBudgets(
     if (Math.round(row.amount * 100) / 100 !== row.amount) {
       return 'Enter a budget amount with at most two decimal places.';
     }
-    seen.add(row.expenditureCategory.slice(0, 2));
+    seen.add(row.expenditureCategory);
   }
   return null;
 }

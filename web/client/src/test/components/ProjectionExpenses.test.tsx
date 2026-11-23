@@ -626,6 +626,7 @@ describe('combined expense tables', () => {
       endMonth: null,
       expected: 'No active months in this plan',
       label: 'an expense starting after the plan ends',
+      monthlyRate: '$310 per month',
       startDate: '2026-01-01',
       startMonth: '2027-01-01',
     },
@@ -634,6 +635,7 @@ describe('combined expense tables', () => {
       endMonth: null,
       expected: 'No active months in this plan',
       label: 'an expired source',
+      monthlyRate: '$0 per month',
       startDate: '2025-01-01',
       startMonth: '2026-01-01',
     },
@@ -642,6 +644,7 @@ describe('combined expense tables', () => {
       endMonth: null,
       expected: 'Apr 2026 – May 2026',
       label: 'a source starting later in the plan',
+      monthlyRate: '$372 per month',
       startDate: '2026-04-15',
       startMonth: '2026-01-01',
     },
@@ -650,12 +653,38 @@ describe('combined expense tables', () => {
       endMonth: '2027-02-01',
       expected: 'Nov 2026 – Dec 2026',
       label: 'an expense extending past the plan end',
+      monthlyRate: '$372 per month',
       startDate: '2026-01-01',
       startMonth: '2026-11-01',
     },
+    {
+      endDate: null,
+      endMonth: null,
+      expected: 'No active months in this plan',
+      label: 'a source starting after the plan ends',
+      monthlyRate: '$0 per month',
+      startDate: '2027-01-01',
+      startMonth: '2026-01-01',
+    },
+    {
+      endDate: null,
+      endMonth: '2025-12-01',
+      expected: 'No active months in this plan',
+      label: 'an expense ending before the plan starts',
+      monthlyRate: '$310 per month',
+      startDate: '2026-01-01',
+      startMonth: '2025-11-01',
+    },
   ])(
     'shows the effective added monthly schedule for $label',
-    async ({ endDate, endMonth, expected, startDate, startMonth }) => {
+    async ({
+      endDate,
+      endMonth,
+      expected,
+      monthlyRate,
+      startDate,
+      startMonth,
+    }) => {
       const plan = combinedPlan();
       const source = plan.content.fundingSources[0];
       Object.assign(source, { endDate, startDate });
@@ -669,6 +698,7 @@ describe('combined expense tables', () => {
         .getByRole('button', { name: 'Edit expense Shared order' })
         .closest('tr')!;
       expect(within(row).getAllByRole('cell')[1]).toHaveTextContent(expected);
+      expect(screen.getByText(monthlyRate)).toBeInTheDocument();
     }
   );
 
