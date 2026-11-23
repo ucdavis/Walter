@@ -1,3 +1,4 @@
+import { PlanChangesDialog } from '@/components/projections/PlanChangesDialog.tsx';
 import { DuplicateProjectionButton } from '@/components/projections/DuplicateProjectionButton.tsx';
 import type { Projection } from '@/queries/projections.ts';
 import { useFundingSummaryMotion } from '@/components/projections/useFundingSummaryMotion.ts';
@@ -9,6 +10,7 @@ import {
   BanknotesIcon,
   ChartBarIcon,
   Cog6ToothIcon,
+  DocumentTextIcon,
   ExclamationTriangleIcon,
   ListBulletIcon,
   UserGroupIcon,
@@ -93,6 +95,7 @@ export function ProjectionWorkspace({
     saving,
     session,
   } = useProjectionSession();
+  const [showChanges, setShowChanges] = useState(false);
   const [duplicating, setDuplicating] = useState(false);
   const summaryId = useId();
   const deletionConfirmed = useRef(false);
@@ -274,6 +277,17 @@ export function ProjectionWorkspace({
               <Cog6ToothIcon aria-hidden="true" className="size-5 shrink-0" />
               Plan details
             </button>
+            <button
+              className="btn"
+              onClick={() => setShowChanges(true)}
+              type="button"
+            >
+              <DocumentTextIcon
+                aria-hidden="true"
+                className="size-5 shrink-0"
+              />
+              Plan changes
+            </button>
             <ProjectionSaveControls />
             {iamId && onDuplicated && (
               <DuplicateProjectionButton
@@ -294,6 +308,13 @@ export function ProjectionWorkspace({
             )}
           </div>
         </header>
+        {showChanges && (
+          <PlanChangesDialog
+            dirty={isProjectionDirty(session)}
+            draft={draft}
+            onClose={() => setShowChanges(false)}
+          />
+        )}
         {editingDetails && (
           <PlanDetailsEditor
             deleteDisabled={saving || reloading || duplicating}

@@ -89,7 +89,7 @@ export function validateFundingReplacement(
 }
 
 function sharesOnDay(
-  appointment: ProjectionAppointment,
+  appointment: Pick<ProjectionAppointment, 'allocations'>,
   currentDay: number
 ): AllocationShare[] {
   return appointment.allocations.flatMap((allocation) => {
@@ -116,7 +116,7 @@ function shareKey(shares: AllocationShare[]) {
 }
 
 function allocationBoundaries(
-  appointment: ProjectionAppointment,
+  appointment: Pick<ProjectionAppointment, 'allocations'>,
   range: AllocationRange
 ) {
   const { end, start } = bounds(range);
@@ -131,6 +131,79 @@ function allocationBoundaries(
     }
   }
   return [...boundaries].sort((a, b) => a - b);
+}
+
+export interface AllocationDifference {
+  fundingSourceId: number | null;
+  original: number;
+  planned: number;
+}
+
+export interface AllocationChangePeriod extends AllocationRange {
+  shares: AllocationDifference[];
+}
+
+function sharesBySource(
+  allocations: ProjectionFundingAllocation[],
+  currentDay: number
+) {
+  const totals = new Map<number | null, number>();
+  for (const share of sharesOnDay({ allocations }, currentDay)) {
+    totals.set(
+      share.fundingSourceId,
+      (totals.get(share.fundingSourceId) ?? 0) + share.percent
+    );
+  }
+  return totals;
+}
+
+/** Compare inclusive schedule intervals by total share per source, keeping outside funding distinct from a gap. */
+export function compareAllocationSchedules(
+  original: ProjectionFundingAllocation[],
+  planned: ProjectionFundingAllocation[]
+) {
+  const points = allocationBoundaries(
+    { allocations: [...original, ...planned] },
+    { endDate: null, startDate: null }
+  );
+  const periods: AllocationChangePeriod[] = [];
+  for (let i = 0; i < points.length - 1; i++) {
+    const start = points[i];
+    const end = points[i + 1] - 1;
+    const before = sharesBySource(original, start);
+    const after = sharesBySource(planned, start);
+    const ids = [...new Set([...before.keys(), ...after.keys()])].sort(
+      (a, b) => (a ?? Infinity) - (b ?? Infinity)
+    );
+    const shares: AllocationDifference[] = [];
+    for (const fundingSourceId of ids) {
+      // Ignore floating point noise from equivalent split shares (for example 0.1 + 0.2).
+      const from = Number((before.get(fundingSourceId) ?? 0).toPrecision(15));
+      const to = Number((after.get(fundingSourceId) ?? 0).toPrecision(15));
+      if (from !== to) {
+        shares.push({ fundingSourceId, original: from, planned: to });
+      }
+    }
+    if (!shares.length) {
+      continue;
+    }
+    const previous = periods.at(-1);
+    const endDate = end === MAX_DAY ? null : date(end);
+    if (
+      previous?.endDate &&
+      day(previous.endDate) + 1 === start &&
+      JSON.stringify(previous.shares) === JSON.stringify(shares)
+    ) {
+      previous.endDate = endDate;
+    } else {
+      periods.push({
+        endDate,
+        shares,
+        startDate: start === MIN_DAY ? null : date(start),
+      });
+    }
+  }
+  return periods;
 }
 
 /** Inspect every constant interval so an unchanged Apply does not fragment a longer schedule. */

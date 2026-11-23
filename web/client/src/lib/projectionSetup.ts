@@ -1,4 +1,6 @@
 import type {
+  CapturedFundingSource,
+  ProjectionAppointment,
   ProjectionDraft,
   ProjectionRosterEntry,
 } from '@/queries/projections.ts';
@@ -12,10 +14,6 @@ export function selectedSetupSession<T extends ProjectionDraft>(
   editedAppointmentIds: Set<number>,
   forecastMonths = catalog.draft.content.forecastMonths
 ): ProjectionSession<T> {
-  const selected = new Set(sourceIds);
-  const provenance = new Map(
-    roster.map((entry) => [entry.appointmentId, entry.fundingSourceIds])
-  );
   return {
     ...catalog,
     // Reserve identities from unselected appointments when adding a hypothetical hire.
@@ -24,24 +22,13 @@ export function selectedSetupSession<T extends ProjectionDraft>(
       ...catalog.draft,
       content: {
         ...catalog.draft.content,
-        forecastMonths,
-        appointments: catalog.draft.content.appointments
-          .filter(
-            (appointment) =>
-              !appointment.isSeeded ||
-              editedAppointmentIds.has(appointment.id) ||
-              provenance.get(appointment.id)?.some((id) => selected.has(id))
-          )
-          .map((appointment) => ({
-            ...appointment,
-            allocations: appointment.allocations.filter(
-              ({ fundingSourceId }) =>
-                fundingSourceId === null || selected.has(fundingSourceId)
-            ),
-          })),
-        fundingSources: catalog.draft.content.fundingSources.filter(({ id }) =>
-          selected.has(id)
+        ...selectSetupScope(
+          catalog.draft.content,
+          sourceIds,
+          roster,
+          editedAppointmentIds
         ),
+        forecastMonths,
       },
     },
   };
@@ -78,6 +65,7 @@ export function mergeSetupEdits<T extends ProjectionDraft>(
       }
       const next = nextAppointments.get(appointment.id);
       if (!next) {
+        retained.add(appointment.id);
         return [];
       }
       if (JSON.stringify(previous) === JSON.stringify(next)) {
@@ -125,5 +113,32 @@ export function mergeSetupEdits<T extends ProjectionDraft>(
       revision: after.revision,
     },
     editedAppointmentIds: retained,
+  };
+}
+
+/** Final selection defines scope. Explicit edits and exclusions keep their original appointment even after deselection. */
+export function selectSetupScope<T extends CapturedFundingSource>(
+  content: { appointments: ProjectionAppointment[]; fundingSources: T[] },
+  sourceIds: number[],
+  roster: ProjectionRosterEntry[],
+  editedAppointmentIds: Set<number>
+) {
+  const selected = new Set(sourceIds);
+  const included = new Set(editedAppointmentIds);
+  for (const entry of roster) {
+    if (entry.fundingSourceIds.some((id) => selected.has(id))) {
+      included.add(entry.appointmentId);
+    }
+  }
+  return {
+    appointments: content.appointments
+      .filter((a) => !a.isSeeded || included.has(a.id))
+      .map((a) => ({
+        ...a,
+        allocations: a.allocations.filter(
+          (f) => f.fundingSourceId === null || selected.has(f.fundingSourceId)
+        ),
+      })),
+    fundingSources: content.fundingSources.filter((s) => selected.has(s.id)),
   };
 }

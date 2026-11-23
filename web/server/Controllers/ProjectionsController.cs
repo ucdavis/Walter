@@ -184,7 +184,13 @@ public sealed class ProjectionsController(
             db.Entry(projection).Property(p => p.UpdatedAt).OriginalValue =
                 draft.Overwrite ? projection.UpdatedAt : draft.ExpectedUpdatedAt!.Value;
             projection.Name = draft.Name;
-            projection.Content = draft.Content;
+            // A save/overwrite cannot replace the comparison or return identities retired by another save.
+            projection.Content = draft.Content with
+            {
+                Comparison = projection.Content.Comparison,
+                LastAppointmentId = Math.Max(projection.Content.LastAppointmentId, draft.Content.LastAppointmentId),
+                LastFundingSourceId = Math.Max(projection.Content.LastFundingSourceId, draft.Content.LastFundingSourceId),
+            };
             Touch(projection);
             try
             {
@@ -296,6 +302,8 @@ public sealed class ProjectionsController(
             || !Windows.Contains(content.HistoryMonths)
             || !ValidForecastWindow(draft.SeededAt, content.ForecastMonths)
             || content.Notes?.Length > ProjectionPlanDefaults.MaximumNotesLength
+            || content.LastAppointmentId < 0 || content.LastFundingSourceId < 0
+            || !ValidComparison(content.Comparison)
             || content.FundingSources is null || content.Appointments is null) return false;
         if (content.FundingSources.Any(p => p is null || p.Id <= 0 || p.Budgets is null || p.CategoryAdjustments is null || p.Actuals is null || p.RunRates is null || p.HistoricalExpenseOverrides is null || p.Expenses is null
                 || p.CategoryAdjustments.Any(a => a is null) || p.Budgets.Any(b => b is null) || p.Actuals.Any(a => a is null) || p.RunRates.Any(r => r is null)
@@ -306,6 +314,20 @@ public sealed class ProjectionsController(
         return sourceIds.Count == content.FundingSources.Count
             && content.Appointments.Select(j => j.Id).Distinct().Count() == content.Appointments.Count
             && content.Appointments.SelectMany(j => j.Allocations).All(f => f.FundingSourceId is null || sourceIds.Contains(f.FundingSourceId.Value));
+    }
+
+    /// <summary>Captured inputs may have missing pay. Their immutable identities and scoped funding references must be usable.</summary>
+    private static bool ValidComparison(ProjectionComparison? comparison)
+    {
+        if (comparison?.Appointments is null || comparison.FundingSources is null
+            || comparison.FundingSources.Any(s => s is null || s.Id <= 0 || string.IsNullOrWhiteSpace(s.Name))
+            || comparison.Appointments.Any(a => a is null || a.Id <= 0 || !a.IsSeeded || a.Allocations is null
+                || a.Allocations.Any(f => f is null))) return false;
+        var sourceIds = comparison.FundingSources.Select(s => s.Id).ToHashSet();
+        return sourceIds.Count == comparison.FundingSources.Count
+            && comparison.Appointments.Select(a => a.Id).Distinct().Count() == comparison.Appointments.Count
+            && comparison.Appointments.All(a => ValidAllocations(a.Allocations)
+                && a.Allocations.All(f => f.FundingSourceId is null || sourceIds.Contains(f.FundingSourceId.Value)));
     }
 
     /// <summary>Missing imported salary may be reviewed in a draft, but every retained appointment must be complete before persistence.</summary>

@@ -53,6 +53,29 @@ const editButton = () =>
   screen.getByRole('button', { name: 'Edit appointment for Alex Example' });
 
 describe('projection plan header', () => {
+  it('reports applied edits, leaves editor input private, and returns keyboard focus to Plan changes', async () => {
+    const { user } = openWorkspace('?section=staffing');
+    const opener = await screen.findByRole('button', { name: 'Plan changes' });
+    await user.click(opener);
+    const dialog = () => screen.getByRole('dialog', { name: 'Plan changes' });
+    expect(dialog()).toHaveTextContent('No staffing or funding changes');
+    fireEvent(dialog(), new Event('cancel', { cancelable: true }));
+    expect(opener).toHaveFocus();
+    await user.click(editButton());
+    await user.clear(salaryInput());
+    await user.type(salaryInput(), '144000');
+    expect(read().draft.content.appointments[0].monthlySalary).toBe(10_000);
+    await user.click(screen.getByRole('button', { name: 'Apply' }));
+    await user.click(opener);
+    expect(dialog()).toHaveTextContent('Includes unsaved changes');
+    expect(dialog()).toHaveTextContent('$10,000.00 / month');
+    expect(dialog()).toHaveTextContent('$12,000.00 / month');
+    await user.click(
+      within(dialog()).getByRole('button', { name: 'Close plan changes' })
+    );
+    expect(opener).toHaveFocus();
+  });
+
   it('minimizes warnings beside the title across sections and restores them without changing the plan', async () => {
     const plan = createSalaryExample();
     plan.content.fundingSources[0].balanceAdjustment = -50_000;
@@ -274,9 +297,9 @@ describe('category budget persistence', () => {
     cleanup();
     openWorkspace('?section=funding&source=1', saved);
     await screen.findByRole('dialog', { name: 'Edit Project A' });
-    expect(screen.getByLabelText(`Budget for ${SUPPLIES_CATEGORY}`)).toHaveValue(
-      '2000.00'
-    );
+    expect(
+      screen.getByLabelText(`Budget for ${SUPPLIES_CATEGORY}`)
+    ).toHaveValue('2000.00');
     expect(screen.getByLabelText(`Budget for ${SALARY_CATEGORY}`)).toHaveValue(
       salaryBudget.toFixed(2)
     );

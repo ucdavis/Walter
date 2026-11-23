@@ -10,6 +10,7 @@ import type {
   ProjectionRosterEntry,
 } from '@/queries/projections.ts';
 import type { ProjectionSession } from '@/lib/projectionWorkspace.ts';
+import { selectSetupScope } from '@/lib/projectionSetup.ts';
 import { isPlanningDate } from '@/lib/date.ts';
 export interface SourceInputs {
   balance: number;
@@ -107,7 +108,10 @@ function changed<T extends ProjectionDraft>(
 
 function nextId(session: ProjectionSession<ProjectionDraft>) {
   return (
-    Math.max(0, ...session.draft.content.fundingSources.map(({ id }) => id)) + 1
+    Math.max(
+      session.draft.content.lastFundingSourceId,
+      ...session.draft.content.fundingSources.map(({ id }) => id)
+    ) + 1
   );
 }
 
@@ -277,6 +281,7 @@ export function addPlannedSource<T extends ProjectionDraft>(
         content: {
           ...session.draft.content,
           fundingSources: [...session.draft.content.fundingSources, source],
+          lastFundingSourceId: id,
         },
       },
       revision: session.revision + 1,
@@ -335,6 +340,7 @@ export function addImportedSources<T extends ProjectionDraft>(
         content: {
           ...session.draft.content,
           fundingSources,
+          lastFundingSourceId: id - 1,
         },
       },
       revision: session.revision + 1,
@@ -369,6 +375,10 @@ export function removeProjectionSource<T extends ProjectionDraft>(
       })),
       fundingSources: session.draft.content.fundingSources.filter(
         ({ id }) => id !== fundingSourceId
+      ),
+      lastFundingSourceId: Math.max(
+        session.draft.content.lastFundingSourceId,
+        fundingSourceId
       ),
     },
   });
@@ -414,6 +424,12 @@ export function selectInitialSources<T extends ProjectionDraft>(
     content: {
       ...session.draft.content,
       appointments,
+      comparison: selectSetupScope(
+        session.draft.content.comparison,
+        fundingSourceIds,
+        roster,
+        new Set()
+      ),
       fundingSources,
     },
   });

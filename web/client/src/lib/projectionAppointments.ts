@@ -173,7 +173,7 @@ export function addProjectionAppointment<T extends ProjectionDraft>(
   }
   const id =
     Math.max(
-      0,
+      session.draft.content.lastAppointmentId,
       ...session.baseline.content.appointments.map(({ id }) => id),
       ...session.draft.content.appointments.map(({ id }) => id)
     ) + 1;
@@ -198,6 +198,7 @@ export function addProjectionAppointment<T extends ProjectionDraft>(
         content: {
           ...session.draft.content,
           appointments: [...session.draft.content.appointments, appointment],
+          lastAppointmentId: id,
         },
       },
       revision: session.revision + 1,
@@ -225,6 +226,10 @@ export function removeProjectionAppointment<T extends ProjectionDraft>(
           ...session.draft.content,
           appointments: session.draft.content.appointments.filter(
             ({ id }) => id !== appointmentId
+          ),
+          lastAppointmentId: Math.max(
+            session.draft.content.lastAppointmentId,
+            appointmentId
           ),
         },
       },

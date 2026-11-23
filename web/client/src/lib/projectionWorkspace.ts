@@ -200,8 +200,17 @@ export interface ProjectionPersistenceStatus {
 }
 
 function serializeEditableProjection(plan: ProjectionDraft) {
+  // Captured originals and retired IDs do not make an otherwise reverted plan dirty.
+  const { appointments, forecastMonths, fundingSources, historyMonths, notes } =
+    plan.content;
   const document = {
-    content: plan.content,
+    content: {
+      appointments,
+      forecastMonths,
+      fundingSources,
+      historyMonths,
+      notes,
+    },
     name: plan.name,
   };
   return JSON.stringify(document, (_key, value) =>

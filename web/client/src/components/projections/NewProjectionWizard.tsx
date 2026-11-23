@@ -36,6 +36,7 @@ import { type SourceOperation } from '@/lib/projectionSources.ts';
 import {
   mergeSetupEdits,
   selectedSetupSession,
+  selectSetupScope,
 } from '@/lib/projectionSetup.ts';
 import { ProjectionDialog } from '@/components/projections/ProjectionDialog.tsx';
 import {
@@ -353,6 +354,12 @@ export function NewProjectionWizard({
         draft: {
           content: {
             ...draft.content,
+            comparison: selectSetupScope(
+              draft.content.comparison,
+              selectedSourceIds,
+              roster,
+              editedAppointmentIds.current
+            ),
             forecastMonths,
             notes: notes.trim() ? notes : null,
           },

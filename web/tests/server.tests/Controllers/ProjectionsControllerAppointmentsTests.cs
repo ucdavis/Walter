@@ -11,6 +11,44 @@ namespace server.tests.Controllers;
 
 public sealed partial class ProjectionsControllerTests
 {
+    [Fact]
+    public async Task Setup_edits_save_reload_and_duplicate_preserve_original_staffing()
+    {
+        using var ctx = TestDbContextFactory.CreateInMemory();
+        var data = new FakeProjectionDataSource
+        {
+            Seed = new ProjectionSeedData { Projects = [new() { ProjectNumber = "P1", TaskNumber = "A", ProjectName = "Field study" }] },
+            Personnel = [new() { EmployeeId = "E1", PositionNumber = "123", Name = "Alex", ProjectId = "P1", Task = "A",
+                Fte = 1, MonthlyRate = 8000, DistributionPercent = 100 }],
+        };
+        var controller = CreateController(ctx, financialViewer: true, dataSource: data);
+        var draft = SeedResponse(await controller.Seed(PiIam, 3, default)).Draft;
+        var appointment = draft.Content.Appointments.Single();
+        appointment.MonthlySalary = 9000;
+        appointment.Allocations.Single().Percent = 0.6m;
+        var created = Document(await controller.Create(PiIam, new(draft, Guid.NewGuid()), default));
+        var update = Draft(created);
+        update.Content.Appointments.Single().MonthlySalary = 10000;
+        update.Content.Comparison.Appointments.Clear();
+        update.Content.LastAppointmentId = 0;
+        Document(await controller.Save(created.Id, update, default));
+        ctx.ChangeTracker.Clear();
+        var reloaded = Document(await controller.Get(created.Id, default));
+        var copy = Document(await controller.Duplicate(created.Id, new("Alternative", Guid.NewGuid()), default));
+        foreach (var plan in new[] { reloaded, copy })
+        {
+            var original = plan.Content.Comparison.Appointments.Single();
+            original.MonthlySalary.Should().Be(8000);
+            original.Allocations.Single().Percent.Should().Be(1);
+            plan.Content.LastAppointmentId.Should().BeGreaterThanOrEqualTo(original.Id);
+            plan.Content.Appointments.Single().MonthlySalary.Should().Be(10000);
+            plan.Content.Appointments.Single().Allocations.Single().Percent.Should().Be(0.6m);
+        }
+        data.Personnel[0].MonthlyRate = 11000;
+        var reset = Document(await controller.Reset(created.Id, new(3, reloaded.UpdatedAt), default));
+        reset.Content.Comparison.Appointments.Single().MonthlySalary.Should().Be(11000);
+    }
+
     [Theory]
     [InlineData("missing-salary")]
     [InlineData("negative-salary")]

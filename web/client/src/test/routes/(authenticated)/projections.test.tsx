@@ -205,13 +205,10 @@ describe('saved projection route', () => {
       await waitFor(() => expect(requests).toHaveLength(1));
       expect(requests[0]).toEqual({
         content: {
+          ...plan.content,
           appointments: [
             { ...plan.content.appointments[0], monthlySalary: 11_000 },
           ],
-          forecastMonths: plan.content.forecastMonths,
-          fundingSources: plan.content.fundingSources,
-          historyMonths: plan.content.historyMonths,
-          notes: plan.content.notes,
         },
         expectedSeededAt: plan.seededAt,
         expectedUpdatedAt: plan.updatedAt,

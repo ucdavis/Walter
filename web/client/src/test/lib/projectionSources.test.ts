@@ -54,9 +54,12 @@ describe('funding source operations', () => {
     ]);
     expect(Object.keys(added.draft.content).sort()).toEqual([
       'appointments',
+      'comparison',
       'forecastMonths',
       'fundingSources',
       'historyMonths',
+      'lastAppointmentId',
+      'lastFundingSourceId',
       'notes',
     ]);
     expect(draft.content.fundingSources).toHaveLength(2);
@@ -148,9 +151,12 @@ describe('funding source operations', () => {
     fresh.budgets[0].budget = 50_000;
     const readded = applied(addImportedSources(removed, [fresh]));
     expect(readded.draft.content.fundingSources.map(({ id }) => id)).toEqual([
-      1, 2,
+      1, 3,
     ]);
-    expect(readded.draft.content.fundingSources[1]).toEqual(fresh);
+    expect(readded.draft.content.fundingSources[1]).toEqual({
+      ...fresh,
+      id: 3,
+    });
     expect(readded.draft.content.appointments[0].allocations).toEqual(
       original.draft.content.appointments[0].allocations.filter(
         ({ fundingSourceId }) => fundingSourceId !== source.id

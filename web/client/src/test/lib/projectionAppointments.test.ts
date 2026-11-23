@@ -152,9 +152,12 @@ describe('appointment operations', () => {
     const draft: ProjectionDraft = {
       content: {
         appointments: [],
+        comparison: { appointments: [], fundingSources: [] },
         forecastMonths: 12,
         fundingSources: [],
         historyMonths: 3,
+        lastAppointmentId: 0,
+        lastFundingSourceId: 0,
         notes: null,
       },
       name: 'Draft',
@@ -184,9 +187,12 @@ describe('appointment operations', () => {
     ]);
     expect(Object.keys(added.draft.content).sort()).toEqual([
       'appointments',
+      'comparison',
       'forecastMonths',
       'fundingSources',
       'historyMonths',
+      'lastAppointmentId',
+      'lastFundingSourceId',
       'notes',
     ]);
     const second = applied(

@@ -82,7 +82,7 @@ const source = (
 
 /** Deliberately excludes benefits, COLA, and other costs to isolate the salary rule. */
 export function createSalaryExample(): Projection {
-  return {
+  const plan: Projection = {
     content: {
       appointments: [
         {
@@ -112,12 +112,15 @@ export function createSalaryExample(): Projection {
           vacationAccrualRate: 0,
         },
       ],
+      comparison: { appointments: [], fundingSources: [] },
       forecastMonths: DEFAULT_FORECAST_MONTHS,
       fundingSources: [
         source(1, 'Project A', 20_000),
         source(2, 'Project B', 16_000),
       ],
       historyMonths: 3,
+      lastAppointmentId: 101,
+      lastFundingSourceId: 2,
       notes: null,
     },
     createdAt: '2026-01-01T00:00:00Z',
@@ -129,6 +132,18 @@ export function createSalaryExample(): Projection {
     updatedAt: '2026-01-01T00:00:00Z',
     updatedBy: null,
   };
+  plan.content.comparison = {
+    appointments: structuredClone(plan.content.appointments),
+    fundingSources: plan.content.fundingSources.map(
+      ({ id, name, projectNumber, taskNumber }) => ({
+        id,
+        name,
+        projectNumber,
+        taskNumber,
+      })
+    ),
+  };
+  return plan;
 }
 
 /** Booked costs are included in spentToDate. Benefit rates are illustrative only. */

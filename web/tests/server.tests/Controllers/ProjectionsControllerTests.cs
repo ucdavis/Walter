@@ -442,7 +442,7 @@ public sealed partial class ProjectionsControllerTests
         var draftJson = json.RootElement.GetProperty("draft");
         draftJson.EnumerateObject().Select(p => p.Name).Should().BeEquivalentTo("name", "seededAt", "content");
         var contentJson = draftJson.GetProperty("content");
-        contentJson.EnumerateObject().Select(p => p.Name).Should().BeEquivalentTo("historyMonths", "forecastMonths", "notes", "fundingSources", "appointments");
+        contentJson.EnumerateObject().Select(p => p.Name).Should().BeEquivalentTo("historyMonths", "forecastMonths", "notes", "fundingSources", "appointments", "comparison", "lastAppointmentId", "lastFundingSourceId");
         contentJson.GetProperty("appointments")[0].TryGetProperty("sourceProjectNumbers", out _).Should().BeFalse();
         contentJson.GetProperty("appointments")[0].TryGetProperty("fundingSourceIds", out _).Should().BeFalse();
         contentJson.GetProperty("appointments")[0].GetProperty("isSeeded").GetBoolean().Should().BeTrue();

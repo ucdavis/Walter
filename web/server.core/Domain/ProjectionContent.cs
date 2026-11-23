@@ -17,8 +17,30 @@ public sealed record ProjectionContent
     /// <summary>Optional plain-text planning context; has no effect on forecast calculations.</summary>
     public string? Notes { get; set; }
 
+    /// <summary>Original scoped staffing and source identities. Ordinary saves and copies retain this capture.</summary>
+    [JsonRequired]
+    public ProjectionComparison Comparison { get; set; } = new();
+
+    /// <summary>Highest appointment identity issued, including appointments since removed.</summary>
+    [JsonRequired]
+    public int LastAppointmentId { get; set; }
+    /// <summary>Highest funding source identity issued, including sources since removed.</summary>
+    [JsonRequired]
+    public int LastFundingSourceId { get; set; }
+
     [JsonRequired]
     public List<ProjectionFundingSource> FundingSources { get; set; } = [];
     [JsonRequired]
     public List<ProjectionAppointment> Appointments { get; set; } = [];
 }
+
+public sealed record ProjectionComparison
+{
+    [JsonRequired]
+    public List<ProjectionAppointment> Appointments { get; init; } = [];
+    /// <summary>Retains enough identity to label excluded sources and their original funding shares.</summary>
+    [JsonRequired]
+    public List<ProjectionCapturedSource> FundingSources { get; init; } = [];
+}
+
+public sealed record ProjectionCapturedSource(int Id, string Name, string? ProjectNumber, string? TaskNumber);

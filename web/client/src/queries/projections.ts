@@ -117,12 +117,26 @@ export interface ProjectionAppointment {
   vacationAccrualRate: number;
 }
 
+export type CapturedFundingSource = Pick<
+  ProjectionFundingSource,
+  'id' | 'name' | 'projectNumber' | 'taskNumber'
+>;
+
+export interface ProjectionComparison {
+  appointments: ProjectionAppointment[];
+  fundingSources: CapturedFundingSource[];
+}
+
 export interface ProjectionContent {
   appointments: ProjectionAppointment[];
+  comparison: ProjectionComparison;
   /** Inclusive plan duration anchored to the original snapshot month. */
   forecastMonths: number;
   fundingSources: ProjectionFundingSource[];
   historyMonths: number;
+  /** High-water marks include identities retired during setup or after an ordinary save. */
+  lastAppointmentId: number;
+  lastFundingSourceId: number;
   /** Optional plain-text context for this scenario. */
   notes: string | null;
 }
