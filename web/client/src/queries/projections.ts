@@ -124,8 +124,8 @@ export type CapturedFundingSource = Pick<
 
 export type CapturedAppointment = Omit<
   ProjectionAppointment,
-  'employeeId' | 'hasUnmatchedFunding'
->;
+  'allocations' | 'employeeId' | 'hasUnmatchedFunding' | 'isSeeded'
+> & { allocations: ProjectionFundingAllocation[] | null };
 
 export interface ProjectionComparison {
   appointments: CapturedAppointment[];

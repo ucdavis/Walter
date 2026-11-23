@@ -82,7 +82,7 @@ function useSession(
   const [overwriteConfirmed, setOverwriteConfirmed] = useState(false);
   const [conflictOpen, setConflictOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const requestPending = useRef(false);
+  const requestPending = useRef<'save' | 'overwrite' | 'reload' | null>(null);
   const mounted = useRef(true);
   useLayoutEffect(() => {
     mounted.current = true;
@@ -103,9 +103,24 @@ function useSession(
   );
   function applyOperation<
     Result extends { ok: false } | { ok: true; session: ProjectionSession },
-  >(operation: (session: ProjectionSession) => Result): Result {
-    const result = operation(currentSession.current);
+  >(
+    operation: (session: ProjectionSession) => Result
+  ): Result | { error: string; ok: false } {
+    const current = currentSession.current;
+    const result = operation(current);
     if (result.ok) {
+      const before = current.draft.content;
+      const after = result.session.draft.content;
+      if (
+        requestPending.current === 'overwrite' &&
+        (after.lastAppointmentId > before.lastAppointmentId ||
+          after.lastFundingSourceId > before.lastFundingSourceId)
+      ) {
+        return {
+          error: 'Wait for the overwrite to finish, then try again.',
+          ok: false,
+        };
+      }
       updateSession(result.session);
       setSaveStatus((status) => (status === 'saving' ? status : 'idle'));
     }
@@ -153,7 +168,7 @@ function useSession(
       name,
       overwrite: useOverwrite,
     });
-    requestPending.current = true;
+    requestPending.current = useOverwrite ? 'overwrite' : 'save';
     if (useOverwrite) {
       setOverwriteConfirmed(true);
     }
@@ -181,7 +196,7 @@ function useSession(
       }
       setSaveStatus('idle');
     } finally {
-      requestPending.current = false;
+      requestPending.current = null;
     }
   };
 
@@ -189,7 +204,7 @@ function useSession(
     if (!persistence || requestPending.current) {
       return null;
     }
-    requestPending.current = true;
+    requestPending.current = 'reload';
     setReloading(true);
     setError(null);
     try {
@@ -218,7 +233,7 @@ function useSession(
       }
       return null;
     } finally {
-      requestPending.current = false;
+      requestPending.current = null;
       setReloading(false);
     }
   };

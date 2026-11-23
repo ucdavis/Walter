@@ -29,6 +29,7 @@ public sealed class ProjectionSeeder(IProjectionDataSource data, TimeProvider? t
         }
 
         var appointments = new List<ProjectionAppointment>();
+        var captures = new List<ProjectionCapturedAppointment>();
         var roster = new List<ProjectionRosterEntry>();
         foreach (var group in personnel.Where(r => !r.IsFuture).GroupBy(r => (r.EmployeeId, r.PositionNumber)))
         {
@@ -36,8 +37,10 @@ public sealed class ProjectionSeeder(IProjectionDataSource data, TimeProvider? t
             // Match raw rows even when Unsplit prevents constructing allocations, so task selection cannot hide that appointment.
             var fundingSourceIds = rows.Select(Match).Where(m => m.Source is not null)
                 .Select(m => m.Source!.Id).Distinct().Order().ToList();
-            var appointment = ToAppointment(appointments.Count + 1, rows, Match);
+            var unsplit = rows.Any(r => r.EarnCodeStatus == "Unsplit");
+            var appointment = ToAppointment(appointments.Count + 1, rows, unsplit, Match);
             appointments.Add(appointment);
+            captures.Add(CaptureAppointment(appointment, unsplit));
             roster.Add(new(appointment.Id, fundingSourceIds));
         }
         return new(new("New projection", snapshotAtUtc, new ProjectionContent
@@ -48,32 +51,7 @@ public sealed class ProjectionSeeder(IProjectionDataSource data, TimeProvider? t
             // Setup edits must never mutate the original inputs, including their nested allocation schedules.
             Comparison = new()
             {
-                Appointments = appointments.Select(a => new ProjectionCapturedAppointment
-                {
-                    Id = a.Id,
-                    PositionNumber = a.PositionNumber,
-                    Name = a.Name,
-                    JobCode = a.JobCode,
-                    Title = a.Title,
-                    RateSet = a.RateSet,
-                    MonthlySalary = a.MonthlySalary,
-                    Fte = a.Fte,
-                    CbrRate = a.CbrRate,
-                    VacationAccrualRate = a.VacationAccrualRate,
-                    ColaRate = a.ColaRate,
-                    ColaMonth = a.ColaMonth,
-                    FeeRemissionMonthly = a.FeeRemissionMonthly,
-                    StartDate = a.StartDate,
-                    EndDate = a.EndDate,
-                    IsSeeded = a.IsSeeded,
-                    Allocations = a.Allocations.Select(f => new ProjectionFundingAllocation
-                    {
-                        FundingSourceId = f.FundingSourceId,
-                        Percent = f.Percent,
-                        StartDate = f.StartDate,
-                        EndDate = f.EndDate,
-                    }).ToList(),
-                }).ToList(),
+                Appointments = captures,
                 FundingSources = prepared.FundingSources.Select(s => new ProjectionCapturedSource(s.Id, s.Name, s.ProjectNumber, s.TaskNumber)).ToList(),
             },
             LastAppointmentId = appointments.Select(a => a.Id).DefaultIfEmpty().Max(),
@@ -90,17 +68,42 @@ public sealed class ProjectionSeeder(IProjectionDataSource data, TimeProvider? t
         return ProjectionSeedPolicy.Prepare(seed, snapshotAtUtc).FundingSources;
     }
 
-    private static ProjectionAppointment ToAppointment(int id, List<PositionBudgetRecord> rows,
+    private static ProjectionCapturedAppointment CaptureAppointment(ProjectionAppointment a, bool unsplit) => new()
+    {
+        Id = a.Id,
+        PositionNumber = a.PositionNumber,
+        Name = a.Name,
+        JobCode = a.JobCode,
+        Title = a.Title,
+        RateSet = a.RateSet,
+        MonthlySalary = a.MonthlySalary,
+        Fte = a.Fte,
+        CbrRate = a.CbrRate,
+        VacationAccrualRate = a.VacationAccrualRate,
+        ColaRate = a.ColaRate,
+        ColaMonth = a.ColaMonth,
+        FeeRemissionMonthly = a.FeeRemissionMonthly,
+        StartDate = a.StartDate,
+        EndDate = a.EndDate,
+        Allocations = unsplit ? null : a.Allocations.Select(f => new ProjectionFundingAllocation
+        {
+            FundingSourceId = f.FundingSourceId,
+            Percent = f.Percent,
+            StartDate = f.StartDate,
+            EndDate = f.EndDate,
+        }).ToList(),
+    };
+
+    private static ProjectionAppointment ToAppointment(int id, List<PositionBudgetRecord> rows, bool unsplit,
         Func<PositionBudgetRecord, (bool Known, ProjectionFundingSource? Source)> match)
     {
         var first = rows[0];
-        var unsplit = rows.Any(r => r.EarnCodeStatus == "Unsplit");
         var appointment = new ProjectionAppointment
         {
             Id = id,
             EmployeeId = first.EmployeeId,
             PositionNumber = first.PositionNumber,
-            Name = first.Name ?? first.EmployeeId ?? "",
+            Name = string.IsNullOrWhiteSpace(first.Name) ? $"Appointment {id}" : first.Name,
             JobCode = first.JobCode,
             Title = first.PositionDescription,
             RateSet = first.BusinessUnit ?? "DVCMP",

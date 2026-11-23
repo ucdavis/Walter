@@ -57,7 +57,7 @@ export const isSponsoredProject = (source: ProjectionFundingSource) =>
   source.sourceKind === 'Task' &&
   getSourceFundingBasis(source) === 'categories';
 
-export const sourceKey = (source: ProjectionFundingSource) =>
+export const sourceKey = (source: SourceIdentity & { id: number }) =>
   source.projectNumber
     ? JSON.stringify([source.projectNumber, source.taskNumber ?? ''])
     : `planned:${source.id}`;

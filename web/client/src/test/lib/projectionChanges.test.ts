@@ -4,7 +4,7 @@ import { compareAllocationSchedules } from '@/lib/projectionAllocations.ts';
 import { createProjectionSession } from '@/lib/projectionWorkspace.ts';
 import {
   mergeSetupEdits,
-  selectSetupScope,
+  selectComparisonScope,
   selectedSetupSession,
 } from '@/lib/projectionSetup.ts';
 import {
@@ -222,34 +222,53 @@ describe('plan changes', () => {
     const catalog = createProjectionSession(plan);
     const original = plan.content.comparison;
     const roster = [{ appointmentId: 101, fundingSourceIds: [1, 2] }];
-    expect(selectSetupScope(original, [], roster, new Set())).toEqual({
+    expect(selectComparisonScope(original, [], roster, new Map())).toEqual({
       appointments: [],
       fundingSources: [],
     });
-    const selected = selectedSetupSession(catalog, [1], roster, new Set());
+    const selected = selectedSetupSession(catalog, [1], roster, new Map());
     const removed = applied(removeProjectionAppointment(selected, 101));
-    const merged = mergeSetupEdits(catalog, selected, removed, new Set());
+    const merged = mergeSetupEdits(catalog, selected, removed, new Map());
     const scoped = selectedSetupSession(
       merged.catalog,
       [1],
       roster,
-      merged.editedAppointmentIds
+      merged.edits
     );
-    scoped.draft.content.comparison = selectSetupScope(
+    scoped.draft.content.comparison = selectComparisonScope(
       original,
       [1],
       roster,
-      merged.editedAppointmentIds
+      merged.edits
     );
     expect(
-      scoped.draft.content.comparison.appointments[0].allocations.map(
+      scoped.draft.content.comparison.appointments[0].allocations?.map(
         (a) => a.fundingSourceId
       )
     ).toEqual([1]);
-    expect(
-      selectSetupScope(original, [], roster, merged.editedAppointmentIds)
-        .appointments
-    ).toHaveLength(1);
+    const deselected = selectedSetupSession(
+      merged.catalog,
+      [2],
+      roster,
+      merged.edits
+    );
+    deselected.draft.content.comparison = selectComparisonScope(
+      original,
+      [2],
+      roster,
+      merged.edits
+    );
+    expect(deselected.draft.content.fundingSources.map(({ id }) => id)).toEqual(
+      [2]
+    );
+    const exclusion = buildPlanChanges(deselected.draft);
+    expect(exclusion.funding).toEqual([]);
+    expect(exclusion.fundingSourceCount).toBe(2);
+    expect(exclusion.sourceNames.get(1)).toContain('Project A');
+    expect(exclusion.staffing[0].allocations[0].shares).toEqual([
+      { fundingSourceId: 1, original: 0.5, planned: 0 },
+      { fundingSourceId: 2, original: 0.5, planned: 0 },
+    ]);
     const added = applied(
       addProjectionAppointment(createProjectionSession(scoped.draft), {
         ...original.appointments[0],
@@ -323,6 +342,90 @@ describe('plan changes', () => {
           kind: 'excluded',
         },
       ],
+    });
+  });
+
+  it('compares a reimported task as one source while using the newer financial capture', () => {
+    const plan = createSalaryExample();
+    const original = plan.content.fundingSources[0];
+    const removed = applied(
+      removeProjectionSource(createProjectionSession(plan), original.id)
+    );
+    const reimported = applied(
+      addImportedSources(removed, [
+        {
+          ...original,
+          budgets: [{ ...original.budgets[0], budget: 27_500 }],
+          capturedAt: '2026-02-12T00:00:00Z',
+        },
+      ])
+    );
+    const { draft } = reimported;
+    const fresh = draft.content.fundingSources[1];
+    expect(fresh.id).toBe(3);
+    const shares = draft.content.appointments[0].allocations;
+    shares.push({
+      ...plan.content.appointments[0].allocations[0],
+      fundingSourceId: fresh.id,
+    });
+    expect(buildPlanChanges(draft)).toMatchObject({
+      funding: [],
+      fundingSourceCount: 0,
+      staffing: [],
+    });
+    shares[1].percent = 0.25;
+    fresh.balanceAdjustment = 10;
+    expect(buildPlanChanges(draft)).toMatchObject({
+      funding: [
+        {
+          capturedAt: fresh.capturedAt,
+          total: { original: 25_000, revised: 25_010 },
+        },
+      ],
+      fundingSourceCount: 1,
+      staffing: [
+        {
+          allocations: [
+            { shares: [{ fundingSourceId: 3, original: 0.5, planned: 0.25 }] },
+          ],
+        },
+      ],
+    });
+    expect(
+      draft.content.comparison.appointments[0].allocations?.[0].fundingSourceId
+    ).toBe(1);
+  });
+
+  it('distinguishes unavailable staffing capture from an empty schedule', () => {
+    const plan = createSalaryExample();
+    const capture = plan.content.comparison.appointments[0];
+    capture.allocations = null;
+    capture.monthlySalary = null;
+    const selected = selectComparisonScope(
+      plan.content.comparison,
+      [1],
+      [{ appointmentId: 101, fundingSourceIds: [1, 2] }],
+      new Map()
+    );
+    expect(selected.appointments[0].allocations).toBeNull();
+    expect(buildPlanChanges(plan).staffing[0]).toMatchObject({
+      allocationCaptureUnavailable: true,
+      allocations: [
+        {
+          shares: [
+            { fundingSourceId: 1, original: null, planned: 0.5 },
+            { fundingSourceId: 2, original: null, planned: 0.5 },
+          ],
+        },
+      ],
+    });
+    const removed = applied(
+      removeProjectionAppointment(createProjectionSession(plan), 101)
+    );
+    expect(buildPlanChanges(removed.draft).staffing[0]).toMatchObject({
+      allocationCaptureUnavailable: true,
+      allocations: [],
+      kind: 'excluded',
     });
   });
 });

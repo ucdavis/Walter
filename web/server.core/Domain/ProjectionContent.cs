@@ -61,8 +61,8 @@ public sealed record ProjectionCapturedAppointment
     public decimal? FeeRemissionMonthly { get; init; }
     public DateOnly? StartDate { get; init; }
     public DateOnly? EndDate { get; init; }
-    public bool IsSeeded { get; init; }
-    public List<ProjectionFundingAllocation> Allocations { get; init; } = [];
+    [JsonRequired]
+    public List<ProjectionFundingAllocation>? Allocations { get; init; } = [];
 }
 
 public sealed record ProjectionCapturedSource(int Id, string Name, string? ProjectNumber, string? TaskNumber);

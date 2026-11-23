@@ -83,7 +83,7 @@ const source = (
 
 /** Deliberately excludes benefits, COLA, and other costs to isolate the salary rule. */
 export function createSalaryExample(): Projection {
-  const appointment: CapturedAppointment = {
+  const appointment = {
     allocations: [1, 2].map((fundingSourceId) => ({
       endDate: '2026-06-30',
       fundingSourceId,
@@ -97,7 +97,6 @@ export function createSalaryExample(): Projection {
     feeRemissionMonthly: 0,
     fte: 0.5,
     id: 101,
-    isSeeded: true,
     jobCode: null,
     monthlySalary: 10_000,
     name: 'Alex Example',
@@ -106,7 +105,7 @@ export function createSalaryExample(): Projection {
     startDate: '2026-01-01',
     title: 'Research specialist',
     vacationAccrualRate: 0,
-  };
+  } satisfies CapturedAppointment;
   const plan: Projection = {
     content: {
       appointments: [
@@ -114,6 +113,7 @@ export function createSalaryExample(): Projection {
           ...structuredClone(appointment),
           employeeId: null,
           hasUnmatchedFunding: false,
+          isSeeded: true,
         },
       ],
       comparison: { appointments: [], fundingSources: [] },

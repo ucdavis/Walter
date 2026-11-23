@@ -256,7 +256,7 @@ describe('funding source operations', () => {
         { appointmentId: 103, fundingSourceIds: [] },
         { appointmentId: 104, fundingSourceIds: [2] },
       ],
-      new Set()
+      new Map()
     );
     expect(selected.draft.content.appointments.map(({ id }) => id)).toEqual([
       101, 102,
@@ -290,8 +290,9 @@ describe('funding source operations', () => {
     ).toEqual([2, 3]);
     expect(acknowledged.draft.updatedAt).toBe(saved.updatedAt);
     expect(
-      applied(addPlannedSource(acknowledged, planned))
-        .draft.content.fundingSources.at(-1)?.id
+      applied(
+        addPlannedSource(acknowledged, planned)
+      ).draft.content.fundingSources.at(-1)?.id
     ).toBe(6);
     expect(acknowledged.draft.content.lastAppointmentId).toBe(105);
     expect(isProjectionDirty(acknowledged)).toBe(true);

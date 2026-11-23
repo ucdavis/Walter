@@ -6,6 +6,7 @@ import {
 import { useMemo } from 'react';
 import { ProjectionDialog } from '@/components/projections/ProjectionDialog.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
+import { getSourceFundingBasis } from '@/lib/projectionBudgets.ts';
 import {
   buildPlanChanges,
   changeDate,
@@ -73,7 +74,13 @@ function StaffingCard({
   change: StaffingChange;
   sourceNames: Map<number, string>;
 }) {
-  const { allocations, appointment, assumptions, kind } = change;
+  const {
+    allocationCaptureUnavailable,
+    allocations,
+    appointment,
+    assumptions,
+    kind,
+  } = change;
   return (
     <article className="min-w-0 rounded-lg border border-main-border p-4">
       <h4 className="text-lg font-semibold wrap-anywhere">
@@ -98,6 +105,11 @@ function StaffingCard({
         label="Assumption"
         rows={assumptions}
       />
+      {allocationCaptureUnavailable && (
+        <p className="mt-3 text-sm">
+          Original funding allocations were unavailable at capture.
+        </p>
+      )}
       {allocations.length > 0 && (
         <details className="mt-3 border-t border-main-border pt-3">
           <summary className="cursor-pointer font-semibold text-primary">
@@ -127,7 +139,11 @@ function StaffingCard({
                         : sourceNames.get(share.fundingSourceId)}
                     </th>
                     {kind !== 'added' && (
-                      <td>{changePercent(share.original)}</td>
+                      <td>
+                        {share.original === null
+                          ? 'Unavailable'
+                          : changePercent(share.original)}
+                      </td>
                     )}
                     <td className="font-semibold">
                       {changePercent(share.planned)}
@@ -161,6 +177,11 @@ function budgetSummary(change: FundingChange) {
     : 'Available funding';
 }
 
+function fractionDigits(amount: number) {
+  const [coefficient, exponent = '0'] = amount.toString().split('e');
+  return (coefficient.split('.')[1]?.length ?? 0) - Number(exponent);
+}
+
 function FundingCard({
   change,
   planCaptureDate,
@@ -170,6 +191,22 @@ function FundingCard({
 }) {
   const { categories, dates, plannedSource, source, total } = change;
   const captureDate = changeDate(change.capturedAt);
+  const maximumFractionDigits =
+    getSourceFundingBasis(source) === 'categories'
+      ? undefined
+      : Math.min(
+          28,
+          Math.max(
+            2,
+            fractionDigits(total.original ?? 0),
+            fractionDigits(total.revised),
+            total.adjustment === 0
+              ? 0
+              : -Math.floor(Math.log10(Math.abs(total.adjustment)))
+          )
+        );
+  const money = (amount: number) =>
+    formatCurrency(amount, { maximumFractionDigits });
   return (
     <article className="min-w-0 rounded-lg border border-main-border p-4">
       <h4 className="text-lg font-semibold wrap-anywhere">{source.name}</h4>
@@ -224,15 +261,15 @@ function FundingCard({
                     <td className="text-right">
                       {row.original === null
                         ? 'No budget'
-                        : formatCurrency(row.original)}
+                        : money(row.original)}
                     </td>
                     <td className="text-right">
                       {row.adjustment > 0 ? '+' : ''}
-                      {formatCurrency(row.adjustment)}
+                      {money(row.adjustment)}
                     </td>
                   </>
                 )}
-                <td className="text-right">{formatCurrency(row.revised)}</td>
+                <td className="text-right">{money(row.revised)}</td>
               </tr>
             ))}
           </tbody>
@@ -285,7 +322,7 @@ export function PlanChangesDialog({
             </p>
             {dirty && (
               <span className="rounded-full bg-warning/15 px-3 py-1 text-sm font-semibold">
-                Includes unsaved changes
+                Plan has unsaved edits
               </span>
             )}
           </div>

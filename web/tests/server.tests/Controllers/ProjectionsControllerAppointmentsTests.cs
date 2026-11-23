@@ -18,7 +18,7 @@ public sealed partial class ProjectionsControllerTests
         var data = new FakeProjectionDataSource
         {
             Seed = new ProjectionSeedData { Projects = [new() { ProjectNumber = "P1", TaskNumber = "A", ProjectName = "Field study" }] },
-            Personnel = [new() { EmployeeId = "E1", PositionNumber = "123", Name = "Alex", ProjectId = "P1", Task = "A",
+            Personnel = [new() { EmployeeId = "E1", PositionNumber = "123", ProjectId = "P1", Task = "A",
                 Fte = 1, MonthlyRate = 8000, DistributionPercent = 100 }],
         };
         var controller = CreateController(ctx, financialViewer: true, dataSource: data);
@@ -38,7 +38,7 @@ public sealed partial class ProjectionsControllerTests
         {
             var original = plan.Content.Comparison.Appointments.Single();
             original.MonthlySalary.Should().Be(8000);
-            original.Allocations.Single().Percent.Should().Be(1);
+            original.Allocations!.Single().Percent.Should().Be(1);
             plan.Content.LastAppointmentId.Should().BeGreaterThanOrEqualTo(original.Id);
             plan.Content.Appointments.Single().MonthlySalary.Should().Be(10000);
             plan.Content.Appointments.Single().Allocations.Single().Percent.Should().Be(0.6m);
@@ -46,6 +46,9 @@ public sealed partial class ProjectionsControllerTests
             var captured = json.GetProperty("Comparison").GetProperty("Appointments")[0];
             captured.TryGetProperty("EmployeeId", out _).Should().BeFalse();
             captured.TryGetProperty("HasUnmatchedFunding", out _).Should().BeFalse();
+            captured.TryGetProperty("IsSeeded", out _).Should().BeFalse();
+            captured.GetProperty("Name").GetString().Should().Be("Appointment 1");
+            captured.GetProperty("PositionNumber").GetString().Should().Be("123");
             json.GetProperty("Appointments")[0].GetProperty("EmployeeId").GetString().Should().Be("E1");
             json.GetProperty("Appointments")[0].TryGetProperty("HasUnmatchedFunding", out _).Should().BeTrue();
         }

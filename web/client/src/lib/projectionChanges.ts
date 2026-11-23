@@ -1,11 +1,12 @@
 import { compareAllocationSchedules } from '@/lib/projectionAllocations.ts';
 import { sumCategoryBudgets } from '@/lib/projectionBudgets.ts';
 import { buildSourceFundingBalance } from '@/lib/projectionFundingBalances.ts';
+import { sourceKey } from '@/lib/projectionSources.ts';
 import { formatCurrency } from '@/lib/currency.ts';
 import type {
   CapturedAppointment,
-  CapturedFundingSource,
   ProjectionDraft,
+  ProjectionFundingAllocation,
   ProjectionFundingSource,
 } from '@/queries/projections.ts';
 
@@ -71,6 +72,7 @@ function appointmentAssumptions(
 type ChangeKind = 'added' | 'changed' | 'excluded';
 
 export interface StaffingChange {
+  allocationCaptureUnavailable: boolean;
   allocations: ReturnType<typeof compareAllocationSchedules>;
   appointment: CapturedAppointment;
   assumptions: AssumptionChange[];
@@ -89,7 +91,7 @@ export interface FundingChange {
   categories: BudgetChange[];
   dates: AssumptionChange[];
   plannedSource: boolean;
-  source: CapturedFundingSource;
+  source: ProjectionFundingSource;
   total: BudgetChange;
 }
 
@@ -158,18 +160,43 @@ function compareFunding(source: ProjectionFundingSource): FundingChange | null {
 /** Derive the final report only from the original capture and applied workspace content. */
 export function buildPlanChanges(plan: ProjectionDraft) {
   const { appointments, comparison, fundingSources } = plan.content;
+  const allSources = [...comparison.fundingSources, ...fundingSources];
+  const sourcesByKey = new Map(
+    allSources.map((source) => [sourceKey(source), source])
+  );
+  const sourceIds = new Map(
+    allSources.map((source) => [
+      source.id,
+      sourcesByKey.get(sourceKey(source))!.id,
+    ])
+  );
+  function canonicalAllocations(
+    allocations: ProjectionFundingAllocation[] | null
+  ) {
+    return allocations === null
+      ? null
+      : allocations.map((allocation) => ({
+          ...allocation,
+          fundingSourceId:
+            allocation.fundingSourceId === null
+              ? null
+              : sourceIds.get(allocation.fundingSourceId)!,
+        }));
+  }
   const originals = new Map(comparison.appointments.map((a) => [a.id, a]));
   const staffing: StaffingChange[] = [];
   for (const appointment of appointments) {
     const original = originals.get(appointment.id);
     originals.delete(appointment.id);
     const assumptions = appointmentAssumptions(original, appointment);
+    const originalAllocations = original ? original.allocations : [];
     const allocations = compareAllocationSchedules(
-      original?.allocations ?? [],
+      canonicalAllocations(originalAllocations),
       appointment.allocations
     );
     if (!original || assumptions.length || allocations.length) {
       staffing.push({
+        allocationCaptureUnavailable: originalAllocations === null,
         allocations,
         appointment,
         assumptions,
@@ -179,7 +206,11 @@ export function buildPlanChanges(plan: ProjectionDraft) {
   }
   for (const appointment of originals.values()) {
     staffing.push({
-      allocations: compareAllocationSchedules(appointment.allocations, []),
+      allocationCaptureUnavailable: appointment.allocations === null,
+      allocations: compareAllocationSchedules(
+        canonicalAllocations(appointment.allocations),
+        []
+      ),
       appointment,
       assumptions: [],
       kind: 'excluded',
@@ -194,7 +225,7 @@ export function buildPlanChanges(plan: ProjectionDraft) {
     }
   }
   const sourceNames = new Map(
-    [...comparison.fundingSources, ...fundingSources].map((s) => [
+    [...sourcesByKey.values()].map((s) => [
       s.id,
       [s.name, s.projectNumber, s.taskNumber && 'Task ' + s.taskNumber]
         .filter(Boolean)

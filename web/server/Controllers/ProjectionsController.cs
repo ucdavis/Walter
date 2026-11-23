@@ -337,13 +337,13 @@ public sealed class ProjectionsController(
     {
         if (comparison?.Appointments is null || comparison.FundingSources is null
             || comparison.FundingSources.Any(s => s is null || s.Id <= 0 || s.Id > lastFundingSourceId || string.IsNullOrWhiteSpace(s.Name))
-            || comparison.Appointments.Any(a => a is null || a.Id <= 0 || a.Id > lastAppointmentId || !a.IsSeeded || a.Allocations is null
-                || a.Allocations.Any(f => f is null))) return false;
+            || comparison.Appointments.Any(a => a is null || a.Id <= 0 || a.Id > lastAppointmentId
+                || a.Allocations?.Any(f => f is null) == true)) return false;
         var sourceIds = comparison.FundingSources.Select(s => s.Id).ToHashSet();
         return sourceIds.Count == comparison.FundingSources.Count
             && comparison.Appointments.Select(a => a.Id).Distinct().Count() == comparison.Appointments.Count
-            && comparison.Appointments.All(a => ValidAllocations(a.Allocations)
-                && a.Allocations.All(f => f.FundingSourceId is null || sourceIds.Contains(f.FundingSourceId.Value)));
+            && comparison.Appointments.All(a => a.Allocations is null || (ValidAllocations(a.Allocations)
+                && a.Allocations.All(f => f.FundingSourceId is null || sourceIds.Contains(f.FundingSourceId.Value))));
     }
 
     /// <summary>Missing imported salary may be reviewed in a draft, but every retained appointment must be complete before persistence.</summary>

@@ -70,7 +70,7 @@ describe('projection plan header', () => {
     await user.click(screen.getByRole('button', { name: 'Apply' }));
     opener.focus();
     await user.keyboard('{Enter}');
-    expect(dialog()).toHaveTextContent('Includes unsaved changes');
+    expect(dialog()).toHaveTextContent('Plan has unsaved edits');
     expect(dialog()).toHaveTextContent('$120,000.00 / year');
     expect(dialog()).toHaveTextContent('$144,000.00 / year');
     await user.click(
@@ -79,33 +79,95 @@ describe('projection plan header', () => {
     expect(opener).toHaveFocus();
   });
 
-  it('shows each funding card with its dates and totals at workspace precision', async () => {
+  it('shows dates and preserves subcent pool adjustments and balances', async () => {
     const plan = createSalaryExample();
     const [pooled, dateOnly] = plan.content.fundingSources;
-    pooled.budgets = [];
-    pooled.balanceAdjustment = -0.005;
+    pooled.budgets[0].budget = 2600;
+    pooled.balanceAdjustment = 99.999 - 100;
     pooled.capturedAt = '2026-02-12T00:00:00Z';
     dateOnly.endDate = '2026-07-31';
     const { user } = openWorkspace('?section=overview', plan);
-    await user.click(await screen.findByRole('button', { name: 'Plan changes' }));
+    await user.click(
+      await screen.findByRole('button', { name: 'Plan changes' })
+    );
     const dialog = within(screen.getByRole('dialog', { name: 'Plan changes' }));
     expect(dialog.getByText('Plan inputs captured Jan 1, 2026')).toBeVisible();
     const [first, second] = dialog
       .getAllByRole('article')
       .map((card) => within(card));
-    expect(first.getByText('Source inputs captured Feb 12, 2026')).toBeVisible();
+    expect(
+      first.getByText('Source inputs captured Feb 12, 2026')
+    ).toBeVisible();
     expect(
       first.getByRole('table', { name: 'Overall funding decreased' })
-    ).toHaveTextContent('Source total$0.00-$0.01-$0.01');
-    expect(first.getByRole('table', { name: 'Funding dates' })).toHaveTextContent(
-      'Funding end dateJun 30, 2026Jun 30, 2026'
-    );
+    ).toHaveTextContent('Source total$100.00-$0.001$99.999');
+    expect(
+      first.getByRole('table', { name: 'Funding dates' })
+    ).toHaveTextContent('Funding end dateJun 30, 2026Jun 30, 2026');
     expect(
       second.getByRole('table', { name: 'Available funding' })
     ).toHaveTextContent('Source total$16,000.00$0.00$16,000.00');
     expect(
       second.getByRole('table', { name: 'Funding dates' })
     ).toHaveTextContent('Funding end dateJun 30, 2026Jul 31, 2026');
+  });
+
+  it('shows unavailable original allocations for retained and excluded appointments', async () => {
+    const plan = createSalaryExample();
+    const original = plan.content.comparison.appointments[0];
+    original.allocations = null;
+    original.monthlySalary = null;
+    plan.content.comparison.appointments.push({
+      ...original,
+      id: 102,
+      name: 'Excluded appointment',
+    });
+    plan.content.lastAppointmentId = 102;
+    const { user } = openWorkspace('?section=overview', plan);
+    await user.click(
+      await screen.findByRole('button', { name: 'Plan changes' })
+    );
+    const dialog = within(screen.getByRole('dialog', { name: 'Plan changes' }));
+    const [retained, excluded] = dialog
+      .getAllByRole('article')
+      .map((card) => within(card));
+    expect(
+      retained.getByText(
+        'Original funding allocations were unavailable at capture.'
+      )
+    ).toBeVisible();
+    await user.click(retained.getByText('Funding allocation'));
+    expect(retained.getAllByText('Unavailable')).toHaveLength(2);
+    expect(retained.getAllByText('50%')).toHaveLength(2);
+    expect(excluded.getByText('Excluded from this plan')).toBeVisible();
+    expect(
+      excluded.getByText(
+        'Original funding allocations were unavailable at capture.'
+      )
+    ).toBeVisible();
+    expect(excluded.queryByText('Funding allocation')).toBeNull();
+  });
+
+  it('shows the plan save status when only notes changed', async () => {
+    const { user } = openWorkspace('?section=overview');
+    await user.click(
+      await screen.findByRole('button', { name: 'Edit plan details' })
+    );
+    await user.type(
+      screen.getByRole('textbox', { name: 'Plan notes (optional)' }),
+      'Review with the team'
+    );
+    await user.click(
+      screen.getByRole('button', { name: 'Apply plan details' })
+    );
+    await user.click(screen.getByRole('button', { name: 'Plan changes' }));
+    const dialog = within(screen.getByRole('dialog', { name: 'Plan changes' }));
+    expect(dialog.getByText('Plan has unsaved edits')).toBeVisible();
+    expect(
+      dialog.getByText(
+        'No staffing or funding changes from the captured inputs.'
+      )
+    ).toBeVisible();
   });
 
   it('minimizes warnings beside the title across sections and restores them without changing the plan', async () => {

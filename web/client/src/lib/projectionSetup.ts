@@ -1,30 +1,57 @@
 import type {
-  CapturedAppointment,
-  CapturedFundingSource,
+  ProjectionComparison,
   ProjectionDraft,
   ProjectionRosterEntry,
 } from '@/queries/projections.ts';
 import type { ProjectionSession } from '@/lib/projectionWorkspace.ts';
+
+export type SetupAppointmentEdits = ReadonlyMap<
+  number,
+  ReadonlySet<number> | null
+>;
+
+function includedAppointments(
+  selected: ReadonlySet<number>,
+  roster: ProjectionRosterEntry[],
+  edits: SetupAppointmentEdits
+) {
+  const included = new Set(edits.keys());
+  for (const entry of roster) {
+    if (entry.fundingSourceIds.some((id) => selected.has(id))) {
+      included.add(entry.appointmentId);
+    }
+  }
+  return included;
+}
 
 /** Keep the captured roster available while projecting only the selected sources into setup. */
 export function selectedSetupSession<T extends ProjectionDraft>(
   catalog: ProjectionSession<T>,
   sourceIds: number[],
   roster: ProjectionRosterEntry[],
-  editedAppointmentIds: Set<number>,
+  edits: SetupAppointmentEdits,
   forecastMonths = catalog.draft.content.forecastMonths
 ): ProjectionSession<T> {
+  const selected = new Set(sourceIds);
+  const included = includedAppointments(selected, roster, edits);
+  const content = catalog.draft.content;
   return {
     ...catalog,
     draft: {
       ...catalog.draft,
       content: {
-        ...catalog.draft.content,
-        ...selectSetupScope(
-          catalog.draft.content,
-          sourceIds,
-          roster,
-          editedAppointmentIds
+        ...content,
+        appointments: content.appointments
+          .filter((a) => !a.isSeeded || included.has(a.id))
+          .map((a) => ({
+            ...a,
+            allocations: a.allocations.filter(
+              ({ fundingSourceId }) =>
+                fundingSourceId === null || selected.has(fundingSourceId)
+            ),
+          })),
+        fundingSources: content.fundingSources.filter(({ id }) =>
+          selected.has(id)
         ),
         forecastMonths,
       },
@@ -37,8 +64,8 @@ export function mergeSetupEdits<T extends ProjectionDraft>(
   catalog: ProjectionSession<T>,
   before: ProjectionSession<T>,
   after: ProjectionSession<T>,
-  editedAppointmentIds: Set<number>
-): { catalog: ProjectionSession<T>; editedAppointmentIds: Set<number> } {
+  edits: SetupAppointmentEdits
+) {
   const selected = new Set(
     before.draft.content.fundingSources.map(({ id }) => id)
   );
@@ -54,7 +81,7 @@ export function mergeSetupEdits<T extends ProjectionDraft>(
       appointment,
     ])
   );
-  const retained = new Set(editedAppointmentIds);
+  const retained = new Map(edits);
   const appointments = catalog.draft.content.appointments.flatMap(
     (appointment) => {
       const previous = previousAppointments.get(appointment.id);
@@ -63,13 +90,13 @@ export function mergeSetupEdits<T extends ProjectionDraft>(
       }
       const next = nextAppointments.get(appointment.id);
       if (!next) {
-        retained.add(appointment.id);
+        retained.set(appointment.id, selected);
         return [];
       }
       if (JSON.stringify(previous) === JSON.stringify(next)) {
         return [appointment];
       }
-      retained.add(appointment.id);
+      retained.set(appointment.id, null);
       return [
         {
           ...next,
@@ -110,36 +137,40 @@ export function mergeSetupEdits<T extends ProjectionDraft>(
       },
       revision: after.revision,
     },
-    editedAppointmentIds: retained,
+    edits: retained,
   };
 }
 
-/** Final selection defines scope. Explicit edits and exclusions keep their original appointment even after deselection. */
-export function selectSetupScope<
-  A extends CapturedAppointment,
-  S extends CapturedFundingSource,
->(
-  content: { appointments: A[]; fundingSources: S[] },
+export function selectComparisonScope(
+  comparison: ProjectionComparison,
   sourceIds: number[],
   roster: ProjectionRosterEntry[],
-  editedAppointmentIds: Set<number>
-) {
+  edits: SetupAppointmentEdits
+): ProjectionComparison {
   const selected = new Set(sourceIds);
-  const included = new Set(editedAppointmentIds);
-  for (const entry of roster) {
-    if (entry.fundingSourceIds.some((id) => selected.has(id))) {
-      included.add(entry.appointmentId);
-    }
-  }
+  const included = includedAppointments(selected, roster, edits);
+  const capturedSources = new Set(selected);
+  const appointments = comparison.appointments
+    .filter(({ id }) => included.has(id))
+    .map((appointment) => {
+      const excludedSources = edits.get(appointment.id);
+      const allocations =
+        appointment.allocations?.filter(({ fundingSourceId }) => {
+          if (fundingSourceId === null || selected.has(fundingSourceId)) {
+            return true;
+          }
+          if (excludedSources?.has(fundingSourceId)) {
+            capturedSources.add(fundingSourceId);
+            return true;
+          }
+          return false;
+        }) ?? null;
+      return { ...appointment, allocations };
+    });
   return {
-    appointments: content.appointments
-      .filter((a) => !a.isSeeded || included.has(a.id))
-      .map((a) => ({
-        ...a,
-        allocations: a.allocations.filter(
-          (f) => f.fundingSourceId === null || selected.has(f.fundingSourceId)
-        ),
-      })),
-    fundingSources: content.fundingSources.filter((s) => selected.has(s.id)),
+    appointments,
+    fundingSources: comparison.fundingSources.filter(({ id }) =>
+      capturedSources.has(id)
+    ),
   };
 }
