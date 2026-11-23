@@ -55,8 +55,8 @@ const editButton = () =>
 describe('projection plan header', () => {
   it('reports applied salary edits, clears a reversion, and returns focus to Plan changes', async () => {
     const plan = createSalaryExample();
-    plan.content.appointments[0].monthlySalary = 8_000.01;
-    plan.content.comparison.appointments[0].monthlySalary = 8_000.01;
+    plan.content.appointments[0].monthlySalary = 8000.01;
+    plan.content.comparison.appointments[0].monthlySalary = 8000.01;
     const { user } = openWorkspace('?section=staffing', plan);
     const opener = await screen.findByRole('button', { name: 'Plan changes' });
     const details = screen.getByRole('button', { name: 'Edit plan details' });
@@ -69,7 +69,7 @@ describe('projection plan header', () => {
     await user.click(editButton());
     await user.clear(salaryInput());
     await user.type(salaryInput(), '144000');
-    expect(read().draft.content.appointments[0].monthlySalary).toBe(8_000.01);
+    expect(read().draft.content.appointments[0].monthlySalary).toBe(8000.01);
     await user.click(screen.getByRole('button', { name: 'Apply' }));
     opener.focus();
     await user.keyboard('{Enter}');

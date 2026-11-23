@@ -313,7 +313,9 @@ describe('projection saving through the workspace', () => {
   it('clears a draft-only selection when another save claims its source ID', async () => {
     const { plan, server, user } = openWorkspace();
     await user.click(await screen.findByRole('button', { name: 'Funding' }));
-    await user.click(screen.getByRole('button', { name: 'Add planned source' }));
+    await user.click(
+      screen.getByRole('button', { name: 'Add planned source' })
+    );
     await user.type(screen.getByLabelText('Source name'), 'Local renewal');
     await user.type(screen.getByLabelText('Planning balance'), '42000');
     await user.type(screen.getByLabelText('Start date'), '2026-07-01');
@@ -343,7 +345,9 @@ describe('projection saving through the workspace', () => {
     });
     await user.click(saveButton());
     await screen.findByRole('dialog', { name: 'This plan has changed' });
-    await user.click(screen.getByRole('button', { name: 'Discard and reload' }));
+    await user.click(
+      screen.getByRole('button', { name: 'Discard and reload' })
+    );
 
     expect(
       await screen.findByRole('heading', { name: 'Project outlook' })

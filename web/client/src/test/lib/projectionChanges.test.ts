@@ -206,7 +206,7 @@ describe('plan changes', () => {
       ...original.map((r) => ({ ...r, startDate: '2026-05-06' })),
       row(1, 0.3, '2026-04-15', '2026-05-05'),
       row(2, 0.5, '2026-04-15', '2026-04-30'),
-      row(2, 0.50000000000001, '2026-05-01', '2026-05-05'),
+      row(2, 0.500_000_000_000_01, '2026-05-01', '2026-05-05'),
     ];
     expect(compareAllocationSchedules(original, planned)).toEqual([
       {
@@ -224,7 +224,7 @@ describe('plan changes', () => {
     const plan = createSalaryExample();
     const appointment = plan.content.appointments[0];
     const [captured, other] = appointment.allocations;
-    captured.percent = 0.10821451853376;
+    captured.percent = 0.108_214_518_533_76;
     plan.content.comparison.appointments[0].allocations![0].percent =
       captured.percent;
     const { endDate, fundingSourceId, startDate } = captured;
@@ -245,7 +245,7 @@ describe('plan changes', () => {
 
     const reverted = applied(
       replaceAppointmentFunding(edited, appointment.id, range, [
-        { fundingSourceId, percent: 10.8214518534 / 100 },
+        { fundingSourceId, percent: 10.821_451_853_4 / 100 },
         other,
       ])
     );
