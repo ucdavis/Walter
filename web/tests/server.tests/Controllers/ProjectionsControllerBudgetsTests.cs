@@ -35,7 +35,7 @@ public sealed partial class ProjectionsControllerTests
         var sources = BudgetSources();
         var original = JsonSerializer.Serialize(sources);
         var result = (OkObjectResult)await controller.Save(saved.Id, Draft(saved) with
-            { Content = saved.Content with { FundingSources = sources, LastFundingSourceId = sources.Max(s => s.Id) } }, default);
+        { Content = saved.Content with { FundingSources = sources, LastFundingSourceId = sources.Max(s => s.Id) } }, default);
         var updated = (Projection)result.Value!;
         ctx.ChangeTracker.Clear();
         var loaded = (Projection)((OkObjectResult)await controller.Get(saved.Id, default)).Value!;
@@ -68,7 +68,7 @@ public sealed partial class ProjectionsControllerTests
         sources[0].CategoryAdjustments.Add(new() { ExpenditureCategory = otherSalary, Amount = 0 });
         sources[2].CategoryAdjustments.Add(new() { ExpenditureCategory = otherSalary, Amount = 0 });
         (await controller.Save(saved.Id, Draft(saved) with
-            { Content = saved.Content with { FundingSources = sources, LastFundingSourceId = sources.Max(s => s.Id) } }, default))
+        { Content = saved.Content with { FundingSources = sources, LastFundingSourceId = sources.Max(s => s.Id) } }, default))
             .Should().BeOfType<OkObjectResult>();
         ctx.ChangeTracker.Clear();
         var loaded = (Projection)((OkObjectResult)await controller.Get(saved.Id, default)).Value!;
@@ -121,7 +121,7 @@ public sealed partial class ProjectionsControllerTests
             case "imported-pool-baseline": sources[0].InitialPlannedBalance = 1; break;
         }
         (await controller.Save(saved.Id, Draft(saved) with
-            { Content = saved.Content with { FundingSources = sources, LastFundingSourceId = sources.Max(s => s.Id) } }, default))
+        { Content = saved.Content with { FundingSources = sources, LastFundingSourceId = sources.Max(s => s.Id) } }, default))
             .Should().BeOfType<BadRequestObjectResult>();
         JsonSerializer.Serialize(saved.Content).Should().Be(before);
     }

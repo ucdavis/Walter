@@ -232,8 +232,11 @@ public sealed partial class ProjectionsControllerTests
             new() { Id = 1, Name = "Existing person", IsSeeded = true, MonthlySalary = 5000, HasUnmatchedFunding = true,
                 Allocations = [new() { FundingSourceId = 1, Percent = 0.3m }] },
         };
-        (await controller.Save(saved.Id, Draft(saved) with { Content = saved.Content with
-            { FundingSources = sources, Appointments = jobs, LastFundingSourceId = 2, LastAppointmentId = 1 } }, default)).Should().BeOfType<OkObjectResult>();
+        (await controller.Save(saved.Id, Draft(saved) with
+        {
+            Content = saved.Content with
+            { FundingSources = sources, Appointments = jobs, LastFundingSourceId = 2, LastAppointmentId = 1 }
+        }, default)).Should().BeOfType<OkObjectResult>();
         ctx.ChangeTracker.Clear();
         var loaded = (Projection)((OkObjectResult)await controller.Get(saved.Id, default)).Value!;
         loaded.Content.FundingSources.Should().BeEquivalentTo(sources);

@@ -4,7 +4,11 @@ import type {
   SaveProjectionRequest,
 } from '@/queries/projections.ts';
 
-type SaveOutcome = 'success' | 'failure' | 'lost-response' | 'identities-changed';
+type SaveOutcome =
+  | 'success'
+  | 'failure'
+  | 'lost-response'
+  | 'identities-changed';
 
 function nextTimestamp(timestamp: string) {
   const [seconds, fraction = ''] = timestamp.replace(/Z$/, '').split('.');
