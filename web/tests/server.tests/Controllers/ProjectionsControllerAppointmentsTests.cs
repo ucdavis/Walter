@@ -11,25 +11,34 @@ namespace server.tests.Controllers;
 
 public sealed partial class ProjectionsControllerTests
 {
-    [Fact]
-    public async Task Setup_edits_save_reload_and_duplicate_preserve_original_staffing()
+    [Theory]
+    [InlineData(100, false)]
+    [InlineData(-1, false)]
+    [InlineData(101, false)]
+    [InlineData(100, true)]
+    public async Task Setup_edits_save_reload_and_duplicate_preserve_original_staffing(int distributionPercent, bool reversedDates)
     {
         using var ctx = TestDbContextFactory.CreateInMemory();
+        var capturedEnd = new DateTime(reversedDates ? 2025 : 2026, 12, 31);
         var data = new FakeProjectionDataSource
         {
             Seed = new ProjectionSeedData { Projects = [new() { ProjectNumber = "P1", TaskNumber = "A", ProjectName = "Field study" }] },
             Personnel = [new() { EmployeeId = "E1", PositionNumber = "123", ProjectId = "P1", Task = "A",
-                Fte = 1, MonthlyRate = 8000, DistributionPercent = 100 }],
+                Fte = 1, MonthlyRate = 8000, DistributionPercent = distributionPercent,
+                FundingEffectiveDate = new DateTime(2026, 1, 1), FundingEndDate = capturedEnd }],
         };
         var controller = CreateController(ctx, financialViewer: true, dataSource: data);
         var draft = SeedResponse(await controller.Seed(PiIam, 3, default)).Draft;
         var appointment = draft.Content.Appointments.Single();
         appointment.MonthlySalary = 9000;
-        appointment.Allocations.Single().Percent = 0.6m;
+        var allocation = appointment.Allocations.Single(a => a.FundingSourceId is not null);
+        allocation.Percent = 0.6m;
+        allocation.EndDate = new DateOnly(2026, 12, 31);
+        appointment.Allocations = [allocation];
         var created = Document(await controller.Create(PiIam, new(draft, Guid.NewGuid()), default));
         var update = Draft(created);
         update.Content.Appointments.Single().MonthlySalary = 10000;
-        update.Content.Comparison.Appointments.Single().Allocations!.Single().FundingSourceId = int.MaxValue;
+        update.Content.Comparison.Appointments.Single().Allocations!.Single(a => a.FundingSourceId is not null).FundingSourceId = int.MaxValue;
         var saved = Document(await controller.Save(created.Id, update, default));
         ctx.ChangeTracker.Clear();
         var reloaded = Document(await controller.Get(created.Id, default));
@@ -38,12 +47,15 @@ public sealed partial class ProjectionsControllerTests
         {
             var original = plan.Content.Comparison.Appointments.Single();
             original.MonthlySalary.Should().Be(8000);
-            var originalAllocation = original.Allocations!.Single();
+            var originalAllocation = original.Allocations!.Single(a => a.FundingSourceId is not null);
             originalAllocation.FundingSourceId.Should().Be(plan.Content.FundingSources.Single().Id);
-            originalAllocation.Percent.Should().Be(1);
+            originalAllocation.Percent.Should().Be(distributionPercent / 100m);
+            originalAllocation.StartDate.Should().Be(new DateOnly(2026, 1, 1));
+            originalAllocation.EndDate.Should().Be(DateOnly.FromDateTime(capturedEnd));
             plan.Content.LastAppointmentId.Should().BeGreaterThanOrEqualTo(original.Id);
             plan.Content.Appointments.Single().MonthlySalary.Should().Be(10000);
             plan.Content.Appointments.Single().Allocations.Single().Percent.Should().Be(0.6m);
+            plan.Content.Appointments.Single().Allocations.Single().EndDate.Should().Be(new DateOnly(2026, 12, 31));
             var json = JsonSerializer.SerializeToElement(plan.Content);
             var captured = json.GetProperty("Comparison").GetProperty("Appointments")[0];
             captured.TryGetProperty("EmployeeId", out _).Should().BeFalse();
@@ -55,6 +67,8 @@ public sealed partial class ProjectionsControllerTests
             json.GetProperty("Appointments")[0].TryGetProperty("HasUnmatchedFunding", out _).Should().BeTrue();
         }
         data.Personnel[0].MonthlyRate = 11000;
+        data.Personnel[0].DistributionPercent = 100;
+        data.Personnel[0].FundingEndDate = new DateTime(2026, 12, 31);
         var reset = Document(await controller.Reset(created.Id, new(3, reloaded.UpdatedAt), default));
         reset.Content.Comparison.Appointments.Single().MonthlySalary.Should().Be(11000);
     }
@@ -70,26 +84,44 @@ public sealed partial class ProjectionsControllerTests
         var data = AppointmentData(new() { EmployeeId = "E1", PositionNumber = "POS1", Name = "Imported person", ProjectId = "P1", Task = "T1", MonthlyRate = 5000 });
         var controller = CreateController(ctx, financialViewer: true, dataSource: data);
         var draft = SeedResponse(await controller.Seed(PiIam, 3, default)).Draft;
+        if (!capturedOnly)
+        {
+            draft.Content.Appointments.Add(new()
+            {
+                Id = ++draft.Content.LastAppointmentId,
+                Name = "Planned hire",
+                MonthlySalary = 5000,
+                StartDate = new DateOnly(2026, 1, 1),
+            });
+            draft.Content.FundingSources.Add(new()
+            {
+                Id = ++draft.Content.LastFundingSourceId,
+                Name = "Planned source",
+                SourceKind = ProjectionSourceKind.Planned,
+                PlannedBudgetMode = ProjectionPlannedBudgetMode.GeneralPool,
+                CapturedAt = draft.SeededAt,
+                StartDate = new DateOnly(2026, 1, 1),
+            });
+        }
         var created = Document(await controller.Create(PiIam, new(draft, Guid.NewGuid()), default));
+        var before = JsonSerializer.Serialize(created);
         var update = Draft(created);
         if (capturedOnly)
         {
             update.Content.Appointments.Clear();
             update.Content.FundingSources.Clear();
         }
-        else
-        {
-            update.Content.Comparison.Appointments.Clear();
-            update.Content.Comparison.FundingSources.Clear();
-        }
         if (appointment)
-            update.Content.LastAppointmentId = 0;
+            update.Content.LastAppointmentId--;
         else
-            update.Content.LastFundingSourceId = 0;
+            update.Content.LastFundingSourceId--;
 
         (await controller.Create(PiIam, new(draft with { Content = update.Content }, Guid.NewGuid()), default))
             .Should().BeOfType<BadRequestObjectResult>();
         (await controller.Save(created.Id, update, default)).Should().BeOfType<BadRequestObjectResult>();
+        ctx.ChangeTracker.Clear();
+        JsonSerializer.Serialize(Document(await controller.Get(created.Id, default))).Should().Be(before);
+        ctx.Projections.Should().ContainSingle();
     }
 
     [Theory]

@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { buildPlanChanges } from '@/lib/projectionChanges.ts';
-import { compareAllocationSchedules } from '@/lib/projectionAllocations.ts';
+import {
+  compareAllocationSchedules,
+  replaceAppointmentFunding,
+} from '@/lib/projectionAllocations.ts';
 import { createProjectionSession } from '@/lib/projectionWorkspace.ts';
 import {
   mergeSetupEdits,
@@ -203,7 +206,7 @@ describe('plan changes', () => {
       ...original.map((r) => ({ ...r, startDate: '2026-05-06' })),
       row(1, 0.3, '2026-04-15', '2026-05-05'),
       row(2, 0.5, '2026-04-15', '2026-04-30'),
-      row(2, 0.5, '2026-05-01', '2026-05-05'),
+      row(2, 0.50000000000001, '2026-05-01', '2026-05-05'),
     ];
     expect(compareAllocationSchedules(original, planned)).toEqual([
       {
@@ -215,6 +218,42 @@ describe('plan changes', () => {
         startDate: '2026-04-15',
       },
     ]);
+  });
+
+  it('clears allocation changes when the original displayed share is reapplied', () => {
+    const plan = createSalaryExample();
+    const appointment = plan.content.appointments[0];
+    const [captured, other] = appointment.allocations;
+    captured.percent = 0.10821451853376;
+    plan.content.comparison.appointments[0].allocations![0].percent =
+      captured.percent;
+    const { endDate, fundingSourceId, startDate } = captured;
+    const range = { endDate, startDate };
+    const edited = applied(
+      replaceAppointmentFunding(
+        createProjectionSession(plan),
+        appointment.id,
+        range,
+        [{ fundingSourceId, percent: 0.25 }, other]
+      )
+    );
+    expect(buildPlanChanges(edited.draft)).toMatchObject({
+      funding: [],
+      fundingSourceCount: 1,
+      staffing: [{ kind: 'changed' }],
+    });
+
+    const reverted = applied(
+      replaceAppointmentFunding(edited, appointment.id, range, [
+        { fundingSourceId, percent: 10.8214518534 / 100 },
+        other,
+      ])
+    );
+    expect(buildPlanChanges(reverted.draft)).toMatchObject({
+      funding: [],
+      fundingSourceCount: 0,
+      staffing: [],
+    });
   });
 
   it('scopes pristine inputs to selected sources, retains an explicit exclusion even after deselection, and reserves retired IDs', () => {

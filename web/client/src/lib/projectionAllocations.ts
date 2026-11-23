@@ -16,6 +16,9 @@ export type AllocationShare = Pick<
   'fundingSourceId' | 'percent'
 >;
 
+export const allocationPercentText = (value: number) =>
+  String(Number((value * 100).toPrecision(12)));
+
 const DAY_MS = 86_400_000;
 const day = (value: string) => Date.parse(`${value}T00:00:00Z`) / DAY_MS;
 const date = (value: number) =>
@@ -177,14 +180,17 @@ export function compareAllocationSchedules(
     );
     const shares: AllocationDifference[] = [];
     for (const fundingSourceId of ids) {
-      // Ignore floating point noise from equivalent split shares (for example 0.1 + 0.2).
       const from =
         original === null
           ? null
-          : Number((before.get(fundingSourceId) ?? 0).toPrecision(15));
-      const to = Number((after.get(fundingSourceId) ?? 0).toPrecision(15));
+          : allocationPercentText(before.get(fundingSourceId) ?? 0);
+      const to = allocationPercentText(after.get(fundingSourceId) ?? 0);
       if (from !== to) {
-        shares.push({ fundingSourceId, original: from, planned: to });
+        shares.push({
+          fundingSourceId,
+          original: from === null ? null : Number(from) / 100,
+          planned: Number(to) / 100,
+        });
       }
     }
     if (!shares.length) {

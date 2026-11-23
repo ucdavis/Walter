@@ -319,8 +319,8 @@ public sealed class ProjectionsController(
         var sourceIds = comparison.FundingSources.Select(s => s.Id).ToHashSet();
         return sourceIds.Count == comparison.FundingSources.Count
             && comparison.Appointments.Select(a => a.Id).Distinct().Count() == comparison.Appointments.Count
-            && comparison.Appointments.All(a => a.Allocations is null || (ValidAllocations(a.Allocations)
-                && a.Allocations.All(f => f.FundingSourceId is null || sourceIds.Contains(f.FundingSourceId.Value))));
+            && comparison.Appointments.All(a => a.Allocations is null
+                || a.Allocations.All(f => f.FundingSourceId is null || sourceIds.Contains(f.FundingSourceId.Value)));
     }
 
     /// <summary>Missing imported salary may be reviewed in a draft, but every retained appointment must be complete before persistence.</summary>

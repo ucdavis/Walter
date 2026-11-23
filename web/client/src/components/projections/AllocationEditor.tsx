@@ -16,6 +16,7 @@ import {
 import { useStore } from '@tanstack/react-form';
 import { useAppForm } from '@/shared/forms/formContext.tsx';
 import {
+  allocationPercentText as percentText,
   allocationRangeMatches,
   getAllocationEditorSeed,
   validateFundingReplacement,
@@ -48,8 +49,6 @@ type EditorShare = {
   percent: string;
   source: string;
 };
-const percentText = (value: number) =>
-  String(Number((value * 100).toPrecision(12)));
 const shareInput = (share: AllocationShare): EditorShare => ({
   id: crypto.randomUUID(),
   originalPercent: share.percent,
