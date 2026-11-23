@@ -132,7 +132,7 @@ export function validateProjectionExpenses(
         categories.has(category) ||
         !Number.isFinite(override.amount)
       ) {
-        return `${source.name}: Historical estimates need unique eligible categories and valid amounts.`;
+        return `${source.name}: Projected expenses need unique eligible categories and valid amounts.`;
       }
       categories.add(category);
     }
@@ -279,7 +279,7 @@ export function setHistoricalExpenseOverride<T extends ProjectionDraft>(
   const category = expenditureCategory.trim();
   if (!isHistoricalExpenseCategory(category) || !Number.isFinite(amount)) {
     return {
-      error: 'Choose an eligible historical category and enter a valid amount.',
+      error: 'Choose an eligible projected expense category and enter a valid amount.',
       ok: false,
     };
   }
@@ -289,7 +289,7 @@ export function setHistoricalExpenseOverride<T extends ProjectionDraft>(
   ).find((row) => row.expenditureCategory === category);
   if (!row) {
     return {
-      error: 'This historical estimate is no longer available.',
+      error: 'This projected expense is no longer available.',
       ok: false,
     };
   }

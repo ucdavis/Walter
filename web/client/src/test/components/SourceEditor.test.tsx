@@ -1,14 +1,6 @@
-import { http, HttpResponse } from 'msw';
-import { server } from '@/test/mswUtils.ts';
 import { createRef } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import {
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, expect, it, vi } from 'vitest';
 import {
@@ -25,7 +17,6 @@ import {
   FRINGE_CATEGORY,
   SALARY_CATEGORY,
   SUPPLIES_CATEGORY,
-  FEE_REMISSION_CATEGORY,
 } from '@/lib/piProjection.ts';
 import { projectionLookupsQueryOptions } from '@/queries/projections.ts';
 import {
@@ -34,7 +25,11 @@ import {
 } from '@/test/fixtures/projections.ts';
 
 afterEach(cleanup);
-function open(planned = false, existingPool = false) {
+function open(
+  planned = false,
+  existingPool = false,
+  extraCategories: string[] = []
+) {
   const plan = createSalaryExample();
   const source = plan.content.fundingSources[0];
   source.projectType = 'Sponsored';
@@ -59,10 +54,9 @@ function open(planned = false, existingPool = false) {
   const query = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  query.setQueryData(
-    projectionLookupsQueryOptions().queryKey,
-    createAppointmentLookupsExample()
-  );
+  const lookups = createAppointmentLookupsExample();
+  lookups.expenditureCategories.push(...extraCategories);
+  query.setQueryData(projectionLookupsQueryOptions().queryKey, lookups);
   const onClose = vi.fn();
   const onApply = vi.fn((inputs, categories) =>
     planned
@@ -107,38 +101,36 @@ function open(planned = false, existingPool = false) {
     user: userEvent.setup(),
   };
 }
+async function setBudget(
+  user: ReturnType<typeof userEvent.setup>,
+  label: string,
+  change: number
+) {
+  const input = screen.getByLabelText<HTMLInputElement>(label);
+  const next = String(Number(input.value) + change);
+  await user.clear(input);
+  await user.type(input, next);
+}
 it('buffers a balanced move, preserves dates when resetting budgets, and applies atomically', async () => {
   const { onApply, ref, source, user } = open();
   expect(screen.queryByLabelText('Planning balance')).not.toBeInTheDocument();
   await user.clear(screen.getByLabelText('End date'));
   await user.type(screen.getByLabelText('End date'), '2026-05-31');
-  await user.click(screen.getByRole('button', { name: 'Move budget' }));
-  await user.selectOptions(
-    screen.getByLabelText('From category'),
-    SUPPLIES_CATEGORY
-  );
-  await user.selectOptions(
-    screen.getByLabelText('To category'),
-    SALARY_CATEGORY
-  );
-  await user.type(screen.getByLabelText('Amount'), '3000');
+  await setBudget(user, `Budget for ${SUPPLIES_CATEGORY}`, -3000);
   expect(ref.current?.read().hasChanges).toBe(true);
   expect(screen.getByRole('button', { name: 'Apply' })).toBeDisabled();
-  expect(
-    screen.getByText(/leaves the donor category negative/)
-  ).toBeInTheDocument();
-  await user.click(screen.getByRole('button', { name: 'Move amount' }));
+  expect(screen.getByRole('alert')).toHaveTextContent(
+    '$3,000 under the project total'
+  );
+  await setBudget(user, `Budget for ${SALARY_CATEGORY}`, 3000);
+  expect(screen.getByRole('button', { name: 'Apply' })).toBeEnabled();
   expect(source.categoryAdjustments).toEqual([
     { amount: 500, expenditureCategory: SALARY_CATEGORY },
   ]);
-  expect(screen.getByLabelText('Net budget changes')).toHaveTextContent(
-    '$3,500'
-  );
   await user.click(
     screen.getByRole('button', { name: 'Reset budget changes' })
   );
   expect(screen.getByLabelText('End date')).toHaveValue('2026-05-31');
-  expect(screen.queryByLabelText('Net budget changes')).not.toBeInTheDocument();
   await user.click(screen.getByRole('button', { name: 'Apply' }));
   const result = onApply.mock.results[0].value;
   expect(result.ok).toBe(true);
@@ -150,10 +142,9 @@ it('buffers a balanced move, preserves dates when resetting budgets, and applies
 });
 it('defines missing category zero and discards every buffered change on outer Cancel', async () => {
   const { onApply, onClose, source, user } = open();
-  await user.click(screen.getByRole('button', { name: 'Adjust funding' }));
-  await user.selectOptions(screen.getByLabelText('Category'), FRINGE_CATEGORY);
-  await user.type(screen.getByLabelText('Amount'), '0');
-  await user.click(screen.getByRole('button', { name: 'Apply adjustment' }));
+  const fringe = screen.getByLabelText(`Budget for ${FRINGE_CATEGORY}`);
+  await user.clear(fringe);
+  await user.type(fringe, '0');
   await user.click(screen.getByRole('button', { name: 'Cancel' }));
   expect(onApply).not.toHaveBeenCalled();
   expect(onClose).toHaveBeenCalledOnce();
@@ -166,10 +157,8 @@ it('creates planned category initial funding as the reset baseline', async () =>
   await user.type(screen.getByLabelText('Source name'), 'Planned award');
   await user.type(screen.getByLabelText('Start date'), '2026-01-01');
   await user.selectOptions(screen.getByLabelText('Source type'), 'Categories');
-  await user.click(screen.getByRole('button', { name: 'Adjust funding' }));
-  await user.selectOptions(screen.getByLabelText('Category'), SALARY_CATEGORY);
-  await user.type(screen.getByLabelText('Amount'), '9000');
-  await user.click(screen.getByRole('button', { name: 'Apply adjustment' }));
+  await setBudget(user, `Budget for ${SALARY_CATEGORY}`, 9000);
+  await setBudget(user, 'Project total', 9000);
   expect(
     screen.getByRole('columnheader', { name: 'Initial planned funding' })
   ).toBeInTheDocument();
@@ -178,17 +167,80 @@ it('creates planned category initial funding as the reset baseline', async () =>
   expect(result.ok).toBe(true);
   const created = result.session.draft.content.fundingSources.at(-1);
   expect(created.plannedBudgetMode).toBe('Categories');
-  expect(created.budgets).toEqual([
-    {
-      budget: 9000,
-      committed: 0,
-      expenditureCategory: SALARY_CATEGORY,
-      spentToDate: 0,
-    },
-  ]);
+  expect(created.budgets).toContainEqual({
+    budget: 9000,
+    committed: 0,
+    expenditureCategory: SALARY_CATEGORY,
+    spentToDate: 0,
+  });
+  expect(created.budgets).toHaveLength(
+    createAppointmentLookupsExample().expenditureCategories.length
+  );
   expect(created.categoryAdjustments).toEqual([]);
   expect(sourcePlanningBalance(created)).toBe(9000);
 });
+
+it.each([0, 12.34])(
+  'creates planned funding with distinct same-prefix categories, amount: %s',
+  async (amount) => {
+    const category = '03 - Additional supplies';
+    const { onApply, user } = open(true, false, [category]);
+    await user.type(screen.getByLabelText('Source name'), 'Planned award');
+    await user.type(screen.getByLabelText('Start date'), '2026-01-01');
+    await user.selectOptions(
+      screen.getByLabelText('Source type'),
+      'Categories'
+    );
+    await setBudget(user, `Budget for ${category}`, amount);
+    await setBudget(user, 'Project total', amount);
+    expect(screen.getByRole('button', { name: 'Apply' })).toBeEnabled();
+    await user.click(screen.getByRole('button', { name: 'Apply' }));
+    const result = onApply.mock.results[0].value;
+    expect(result.ok).toBe(true);
+    const budgets = result.session.draft.content.fundingSources.at(-1).budgets;
+    expect(budgets).toContainEqual({
+      budget: amount,
+      committed: 0,
+      expenditureCategory: category,
+      spentToDate: 0,
+    });
+    expect(budgets).toContainEqual({
+      budget: 0,
+      committed: 0,
+      expenditureCategory: SUPPLIES_CATEGORY,
+      spentToDate: 0,
+    });
+  }
+);
+
+it.each([false, true])(
+  'submits category totals in cents regardless of edit order, reversed: %s',
+  async (reversed) => {
+    const { onApply, user } = open(true);
+    await user.type(screen.getByLabelText('Source name'), 'Small award');
+    await user.type(screen.getByLabelText('Start date'), '2026-01-01');
+    await user.selectOptions(
+      screen.getByLabelText('Source type'),
+      'Categories'
+    );
+    const entries: [string, number][] = [
+      [SALARY_CATEGORY, 0.1],
+      [FRINGE_CATEGORY, 0.2],
+      [SUPPLIES_CATEGORY, 0.3],
+    ];
+    for (const [category, amount] of reversed
+      ? entries.toReversed()
+      : entries) {
+      await setBudget(user, `Budget for ${category}`, amount);
+    }
+    expect(screen.getByRole('button', { name: 'Apply' })).toBeDisabled();
+    await setBudget(user, 'Project total', 0.6);
+    expect(screen.getByRole('button', { name: 'Apply' })).toBeEnabled();
+    await user.click(screen.getByRole('button', { name: 'Apply' }));
+    expect(onApply.mock.calls[0][0].balance).toBe(0.6);
+    expect(onApply.mock.results[0].value.ok).toBe(true);
+  }
+);
 
 it('restores the original planned pool without resetting edited dates', async () => {
   const { onApply, user } = open(false, true);
@@ -215,10 +267,7 @@ it('can switch a new category draft to a general pool without submitting hidden 
   await user.type(screen.getByLabelText('Source name'), 'Planned pool');
   await user.type(screen.getByLabelText('Start date'), '2026-01-01');
   await user.selectOptions(screen.getByLabelText('Source type'), 'Categories');
-  await user.click(screen.getByRole('button', { name: 'Adjust funding' }));
-  await user.selectOptions(screen.getByLabelText('Category'), SALARY_CATEGORY);
-  await user.type(screen.getByLabelText('Amount'), '9000');
-  await user.click(screen.getByRole('button', { name: 'Apply adjustment' }));
+  await setBudget(user, `Budget for ${SALARY_CATEGORY}`, 9000);
   await user.selectOptions(screen.getByLabelText('Source type'), 'GeneralPool');
   await user.type(screen.getByLabelText('Planning balance'), '5000');
   await user.click(screen.getByRole('button', { name: 'Apply' }));
@@ -232,19 +281,10 @@ it('can switch a new category draft to a general pool without submitting hidden 
   });
 });
 
-it('retains an in-progress native date edit across budget reset and action panel rerenders', async () => {
+it('retains an in-progress native date edit across budget edits and reset', async () => {
   const { onApply, user } = open();
-  await user.click(screen.getByRole('button', { name: 'Move budget' }));
-  await user.selectOptions(
-    screen.getByLabelText('From category'),
-    SUPPLIES_CATEGORY
-  );
-  await user.selectOptions(
-    screen.getByLabelText('To category'),
-    SALARY_CATEGORY
-  );
-  await user.type(screen.getByLabelText('Amount'), '1000');
-  await user.click(screen.getByRole('button', { name: 'Move amount' }));
+  await setBudget(user, `Budget for ${SUPPLIES_CATEGORY}`, -1000);
+  await setBudget(user, `Budget for ${SALARY_CATEGORY}`, 1000);
   const start = screen.getByLabelText('Start date');
   fireEvent.input(start, { target: { value: '2025-12-02' } });
   expect(start).toHaveValue('2025-12-02');
@@ -257,11 +297,7 @@ it('retains an in-progress native date edit across budget reset and action panel
   fireEvent.input(screen.getByLabelText('End date'), {
     target: { value: '2026-05-31' },
   });
-  await user.click(screen.getByRole('button', { name: 'Adjust funding' }));
   expect(start).toHaveValue('2025-12-02');
-  expect(screen.getByLabelText('End date')).toHaveValue('2026-05-31');
-  expect(screen.getByLabelText('Source name')).toHaveValue('Edited source');
-  await user.click(screen.getByRole('button', { name: 'Cancel adjustment' }));
   await user.click(screen.getByRole('button', { name: 'Apply' }));
   expect(onApply.mock.calls[0][0]).toMatchObject({
     categoryAdjustments: [],
@@ -302,78 +338,6 @@ it('shows the fixed planned source type without offering to change imported fina
   expect(screen.queryByText('Source type')).not.toBeInTheDocument();
 });
 
-it('offers categories saved only in expenses or overrides when the cold lookup fails', async () => {
-  server.use(
-    http.get(
-      '/api/projections/lookups',
-      () => new HttpResponse(null, { status: 500 })
-    )
-  );
-  const plan = createSalaryExample();
-  const source = plan.content.fundingSources[0];
-  source.projectType = 'Sponsored';
-  source.expenses = [
-    {
-      amount: 20,
-      description: 'Saved expense',
-      endMonth: null,
-      expenditureCategory: SUPPLIES_CATEGORY,
-      id: 1,
-      kind: 'Monthly',
-      startMonth: '2026-01-01',
-    },
-  ];
-  source.historicalExpenseOverrides = [
-    { amount: 0, expenditureCategory: FEE_REMISSION_CATEGORY },
-  ];
-  const session = createProjectionSession(plan);
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  const onApply = vi.fn((inputs, categories) =>
-    editProjectionSource(session, source.id, inputs, categories)
-  );
-  render(
-    <QueryClientProvider client={queryClient}>
-      <SourceEditor
-        onApply={onApply}
-        onClose={vi.fn()}
-        session={session}
-        source={source}
-      />
-    </QueryClientProvider>
-  );
-  await waitFor(() =>
-    expect(
-      queryClient.getQueryState(projectionLookupsQueryOptions().queryKey)
-        ?.status
-    ).toBe('error')
-  );
-  const user = userEvent.setup();
-  await user.click(screen.getByRole('button', { name: 'Adjust funding' }));
-  expect(
-    screen.getByRole('option', { name: SUPPLIES_CATEGORY })
-  ).toBeInTheDocument();
-  expect(
-    screen.getByRole('option', { name: FEE_REMISSION_CATEGORY })
-  ).toBeInTheDocument();
-  await user.selectOptions(
-    screen.getByLabelText('Category'),
-    FEE_REMISSION_CATEGORY
-  );
-  await user.type(screen.getByLabelText('Amount'), '100');
-  await user.click(screen.getByRole('button', { name: 'Apply adjustment' }));
-  await user.click(screen.getByRole('button', { name: 'Apply' }));
-  const result = onApply.mock.results[0].value;
-  expect(result.ok).toBe(true);
-  if (result.ok) {
-    expect(
-      result.session.draft.content.fundingSources[0].categoryAdjustments
-    ).toEqual([{ amount: 100, expenditureCategory: FEE_REMISSION_CATEGORY }]);
-  }
-  queryClient.clear();
-});
-
 it.each([false, true])(
   'preserves focus and pending input when a save replaces the source, general pool: %s',
   async (generalPool) => {
@@ -391,3 +355,16 @@ it.each([false, true])(
     expect(input).toHaveValue(generalPool ? '1234' : '2026-05-31');
   }
 );
+
+it('lists every financial category for an existing source, including ones with no budget', () => {
+  const { source } = open();
+  const unbudgeted =
+    createAppointmentLookupsExample().expenditureCategories.filter(
+      (category) =>
+        !source.budgets.some((row) => row.expenditureCategory === category)
+    );
+  expect(unbudgeted.length).toBeGreaterThan(0);
+  for (const category of unbudgeted) {
+    expect(screen.getByLabelText(`Budget for ${category}`)).toHaveValue('0.00');
+  }
+});

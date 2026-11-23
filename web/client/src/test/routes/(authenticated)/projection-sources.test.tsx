@@ -157,6 +157,7 @@ function setup(plan = taskFixture()) {
           capturedAt: source.capturedAt,
           projectName: source.projectName,
           projectNumber: source.projectNumber,
+          projectType: source.projectType,
           taskName: source.taskName,
           taskNumber: source.taskNumber,
         }))
@@ -204,9 +205,7 @@ describe('funding source lifecycle', () => {
         screen.getByLabelText('Plan name'),
         'Empty planning scenario'
       );
-      await screen.findByText(
-        'Your selected funding sources will appear here.'
-      );
+      await screen.findByText('0 sources across 0 projects');
       await user.click(screen.getByRole('button', { name: 'Continue' }));
       expect(
         screen.queryByRole('button', { name: /^Edit appointment for / })
@@ -327,21 +326,23 @@ describe('funding source lifecycle', () => {
         'Selected task plan'
       );
       const search = await screen.findByRole('searchbox', {
-        name: 'Choose from your projects',
+        name: 'Search funding sources',
       });
       expect(
-        screen.getByText('Your selected funding sources will appear here.')
+        screen.getByText('0 sources across 0 projects')
       ).toBeInTheDocument();
       expect(screen.queryByRole('article')).not.toBeInTheDocument();
       await user.type(search, 'Task One');
       const results = screen.getByRole('region', {
-        name: 'Project A search results',
+        name: 'Project A funding sources',
       });
       await user.click(
-        within(results).getByRole('button', { name: 'Add this task' })
+        within(results).getByRole('checkbox', {
+          name: /^Include (?!all sources)/,
+        })
       );
       expect(
-        screen.getByRole('region', { name: 'Project A selected funding' })
+        screen.getByRole('region', { name: 'Project A funding sources' })
       ).toHaveTextContent('1 of 2 tasks');
       await user.click(screen.getByRole('button', { name: 'Continue' }));
       await screen.findByRole('button', {
@@ -406,13 +407,13 @@ describe('funding source lifecycle', () => {
       await user.click(await screen.findByRole('button', { name: 'New plan' }));
       await user.type(screen.getByLabelText('Plan name'), 'Revised selection');
       const picker = await screen.findByRole('searchbox', {
-        name: 'Choose from your projects',
+        name: 'Search funding sources',
       });
       await user.type(picker, 'Task One');
       await user.click(
         within(
-          screen.getByRole('region', { name: 'Project A search results' })
-        ).getByRole('button', { name: 'Add this task' })
+          screen.getByRole('region', { name: 'Project A funding sources' })
+        ).getByRole('checkbox', { name: /^Include (?!all sources)/ })
       );
       await user.click(screen.getByRole('button', { name: 'Continue' }));
       await screen.findByRole('button', {
@@ -423,13 +424,14 @@ describe('funding source lifecycle', () => {
         screen.queryByRole('button', { name: 'Add funding source' })
       ).not.toBeInTheDocument();
       const returnedPicker = screen.getByRole('searchbox', {
-        name: 'Choose from your projects',
+        name: 'Search funding sources',
       });
+      await user.clear(returnedPicker);
       await user.type(returnedPicker, 'Task Two');
       await user.click(
         within(
-          screen.getByRole('region', { name: 'Project A search results' })
-        ).getByRole('button', { name: 'Add this task' })
+          screen.getByRole('region', { name: 'Project A funding sources' })
+        ).getByRole('checkbox', { name: /^Include (?!all sources)/ })
       );
       await user.click(screen.getByRole('button', { name: 'Continue' }));
       expect(
@@ -465,22 +467,31 @@ describe('funding source lifecycle', () => {
     }
   });
 
-  it('renames a task source without changing its captured parent project heading', async () => {
+  it('edits an unselected task without selecting it and retains the edit when selected later', async () => {
     const api = setup();
     const route = renderPlan(portfolioPath);
     const user = userEvent.setup();
     try {
       await user.click(await screen.findByRole('button', { name: 'New plan' }));
       await user.type(screen.getByLabelText('Plan name'), 'Renamed task plan');
-      await chooseInitialProjects(user, ['Project A']);
       await user.click(
-        screen.getByRole('button', { name: /Edit .*Task T1.*Task One/ })
+        await screen.findByRole('button', { name: /Edit .*Task T1.*Task One/ })
       );
       await user.clear(screen.getByLabelText('Source name'));
       await user.type(screen.getByLabelText('Source name'), 'Field research');
       await user.click(screen.getByRole('button', { name: 'Apply' }));
       expect(
-        screen.getByRole('region', { name: 'Project A selected funding' })
+        screen.getByRole('checkbox', {
+          name: /Include Field research.*Task T1/,
+        })
+      ).not.toBeChecked();
+      expect(
+        screen.getByRole('checkbox', {
+          name: 'Include all sources for Project A',
+        })
+      ).not.toBeChecked();
+      expect(
+        screen.getByRole('region', { name: 'Project A funding sources' })
       ).toBeInTheDocument();
       expect(
         screen.getByRole('button', {
@@ -489,9 +500,10 @@ describe('funding source lifecycle', () => {
       ).toBeInTheDocument();
       expect(
         screen.queryByRole('region', {
-          name: 'Field research selected funding',
+          name: 'Field research funding sources',
         })
       ).not.toBeInTheDocument();
+      await chooseInitialProjects(user, ['Project A']);
       await user.click(screen.getByRole('button', { name: 'Continue' }));
       await user.click(screen.getByRole('button', { name: 'Continue' }));
       await user.click(screen.getByRole('button', { name: 'Continue' }));
@@ -582,20 +594,20 @@ describe('funding source lifecycle', () => {
       );
       await user.type(
         await within(
-          screen.getByRole('dialog', { name: 'Add funding source' })
+          screen.getByRole('dialog', { name: 'Add funding sources' })
         ).findByRole('searchbox', {
-          name: 'Choose from your projects',
+          name: 'Search funding sources',
         }),
         'Task Two'
       );
       await user.click(
         within(
-          screen.getByRole('region', { name: 'Project A search results' })
-        ).getByRole('button', { name: 'Add this task' })
+          within(
+            screen.getByRole('dialog', { name: 'Add funding sources' })
+          ).getByRole('region', { name: 'Project A funding sources' })
+        ).getByRole('checkbox', { name: /Include .*Task T2/ })
       );
-      await user.click(
-        screen.getByRole('button', { name: 'Add selected sources' })
-      );
+      await user.click(screen.getByRole('button', { name: 'Add 1 source' }));
       await waitFor(() =>
         expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
       );

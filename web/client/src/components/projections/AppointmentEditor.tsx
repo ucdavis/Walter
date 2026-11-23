@@ -134,7 +134,7 @@ export function AppointmentEditor({
             <div className="mt-4">
               <p role="alert">Appointment defaults could not be loaded.</p>
               <button
-                className="btn btn-outline mt-3"
+                className="btn mt-3"
                 onClick={() => void lookups.refetch()}
                 type="button"
               >
@@ -438,7 +438,7 @@ function AppointmentForm({
       </div>
       <div className="flex flex-wrap items-center gap-3 text-sm">
         <button
-          className="btn btn-outline btn-sm"
+          className="btn btn-sm"
           disabled={lookupRate == null || !Number.isFinite(lookupRate)}
           onClick={() => {
             if (lookupRate != null) {

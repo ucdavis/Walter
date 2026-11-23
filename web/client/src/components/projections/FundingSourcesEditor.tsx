@@ -1,26 +1,30 @@
 import { BanknotesIcon, PlusIcon } from '@heroicons/react/24/outline';
 import { useImperativeHandle, useRef, useState, type Ref } from 'react';
 import { ProjectionDialog } from '@/components/projections/ProjectionDialog.tsx';
-import { FundingSourceCard } from '@/components/projections/FundingSourceCard.tsx';
-import { FundingSourceList } from '@/components/projections/FundingSourceList.tsx';
 import {
   SourceEditor,
   type SourceEditorHandle,
 } from '@/components/projections/SourceEditor.tsx';
-import { SourceSelection } from '@/components/projections/SourceSelection.tsx';
+import { SourceSelectionRows } from '@/components/projections/SourceSelectionRows.tsx';
 import { SourcePicker } from '@/components/projections/SourcePicker.tsx';
-import { getProjectionForecastWindow } from '@/lib/piProjection.ts';
+import {
+  getProjectionForecastWindow,
+  getSourceForecastWindow,
+} from '@/lib/piProjection.ts';
 import {
   addPlannedSource,
   editProjectionSource,
   removeProjectionSource,
   sourceLabel,
+  sourcePlanningBalance,
   type SourceOperation,
   type SourceOperationResult,
 } from '@/lib/projectionSources.ts';
 import type {
   ProjectionDraft,
+  ProjectionAppointment,
   ProjectionFundingSource,
+  ProjectionRosterEntry,
 } from '@/queries/projections.ts';
 import type {
   PendingSourceEditor,
@@ -41,8 +45,10 @@ export function FundingSourcesEditor<T extends ProjectionDraft>({
 }: {
   iamId?: string;
   initialSelection?: {
+    appointments?: ProjectionAppointment[];
     ids: number[];
     onChange: (ids: number[]) => void;
+    roster?: ProjectionRosterEntry[];
     sources?: ProjectionFundingSource[];
   };
   onOperation: (operation: SourceOperation) => SourceOperationResult<T>;
@@ -56,22 +62,16 @@ export function FundingSourcesEditor<T extends ProjectionDraft>({
   const [removing, setRemoving] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const editorRef = useRef<SourceEditorHandle>(null);
-  const selectionRef = useRef<SourceEditorHandle>(null);
   const { draft } = session;
   const forecastWindow = getProjectionForecastWindow(draft);
   const choices = initialSelection?.sources ?? draft.content.fundingSources;
   const editingSourceId = sourceTarget ? sourceTarget.id : editing;
-  const source = draft.content.fundingSources.find(
-    ({ id }) => id === editingSourceId
-  );
+  const source = choices.find(({ id }) => id === editingSourceId);
   const removed = draft.content.fundingSources.find(
     ({ id }) => id === removing
   );
   useImperativeHandle(ref, () => ({
-    read: () =>
-      selectionRef.current?.read()?.hasChanges
-        ? selectionRef.current.read()
-        : (editorRef.current?.read() ?? null),
+    read: () => editorRef.current?.read() ?? null,
   }));
   function apply(operation: SourceOperation) {
     const result = onOperation(operation);
@@ -96,7 +96,7 @@ export function FundingSourcesEditor<T extends ProjectionDraft>({
         <div className="flex flex-wrap gap-2">
           {iamId && !initialSelection && (
             <button
-              className="btn btn-outline"
+              className="btn"
               onClick={() => setEditing('import')}
               type="button"
             >
@@ -106,7 +106,7 @@ export function FundingSourcesEditor<T extends ProjectionDraft>({
           )}
           {!initialSelection && (
             <button
-              className="btn btn-outline"
+              className="btn"
               onClick={() => setEditing('planned')}
               type="button"
             >
@@ -116,58 +116,78 @@ export function FundingSourcesEditor<T extends ProjectionDraft>({
           )}
         </div>
       </div>
-      {initialSelection ? (
-        <SourceSelection
-          choices={choices.map((source) => ({
-            key: String(source.id),
-            label: sourceLabel(source),
-            projectName: source.projectName,
-            projectNumber: source.projectNumber,
-            searchText: [
-              source.awardName,
-              source.awardNumber,
-              source.projectType,
-            ]
-              .filter(Boolean)
-              .join(' '),
-            taskName: source.taskName,
-            taskNumber: source.taskNumber,
-          }))}
-          onChange={(keys) => initialSelection.onChange(keys.map(Number))}
-          ref={selectionRef}
-          renderSource={(choice, grouped) => {
-            const source = choices.find(({ id }) => String(id) === choice.key)!;
-            return (
-              <FundingSourceCard
-                colorIndex={choices.indexOf(source)}
-                forecastWindow={forecastWindow}
-                grouped={grouped}
-                key={choice.key}
-                onEdit={(id) =>
-                  sourceTarget ? sourceTarget.onChange(id) : setEditing(id)
+      <SourceSelectionRows
+        choices={choices.map((source) => ({
+          balance: sourcePlanningBalance(source),
+          key: String(source.id),
+          label: sourceLabel(source),
+          personnelIds: (
+            initialSelection?.appointments ?? draft.content.appointments
+          )
+            .filter(
+              (appointment) =>
+                appointment.allocations.some(
+                  ({ fundingSourceId }) => fundingSourceId === source.id
+                ) ||
+                initialSelection?.roster?.some(
+                  (entry) =>
+                    entry.appointmentId === appointment.id &&
+                    entry.fundingSourceIds.includes(source.id)
+                )
+            )
+            .map(
+              (appointment) =>
+                appointment.employeeId ?? `appointment:${appointment.id}`
+            ),
+          projectName: source.projectName,
+          projectNumber: source.projectNumber,
+          projectType: source.projectType,
+          searchText: [source.awardName, source.awardNumber, source.projectType]
+            .filter(Boolean)
+            .join(' '),
+          taskName:
+            source.name !== source.projectName ? source.name : source.taskName,
+          taskNumber: source.taskNumber,
+        }))}
+        onChange={(keys) => initialSelection?.onChange(keys.map(Number))}
+        renderDetails={(choice) => {
+          const source = choices.find(({ id }) => String(id) === choice.key)!;
+          const window = getSourceForecastWindow(source, forecastWindow);
+          return (
+            <>
+              {(window.isBeyondForecast ||
+                window.startMonth > window.endMonth) && (
+                <span className="text-xs text-base-content/80">
+                  Outside this forecast
+                </span>
+              )}
+              <button
+                aria-haspopup="dialog"
+                aria-label={`Edit ${sourceLabel(source)}`}
+                className="btn btn-ghost btn-sm text-primary"
+                onClick={() =>
+                  sourceTarget
+                    ? sourceTarget.onChange(source.id)
+                    : setEditing(source.id)
                 }
-                source={source}
-              />
-            );
-          }}
-          selected={initialSelection.ids.map(String)}
-        />
-      ) : (
-        <FundingSourceList
-          forecastWindow={forecastWindow}
-          onEdit={(id) =>
-            sourceTarget ? sourceTarget.onChange(id) : setEditing(id)
-          }
-          sources={draft.content.fundingSources}
-        />
-      )}
+                type="button"
+              >
+                Edit details
+              </button>
+            </>
+          );
+        }}
+        selectable={Boolean(initialSelection)}
+        selected={initialSelection?.ids.map(String) ?? []}
+      />
       {initialSelection && (
         <button
-          className="link link-primary mt-4 text-sm"
+          className="btn mt-4"
           onClick={() => setEditing('planned')}
           type="button"
         >
-          Planning for funding you don&apos;t have yet?
+          <PlusIcon aria-hidden="true" className="size-5" />
+          Add New Funding Source
         </button>
       )}
       <p className="mt-5 text-sm text-base-content/80">
@@ -213,7 +233,17 @@ export function FundingSourcesEditor<T extends ProjectionDraft>({
               : undefined
           }
           ref={editorRef}
-          session={session}
+          session={
+            initialSelection
+              ? {
+                  ...session,
+                  draft: {
+                    ...draft,
+                    content: { ...draft.content, fundingSources: choices },
+                  },
+                }
+              : session
+          }
           source={source}
         />
       )}

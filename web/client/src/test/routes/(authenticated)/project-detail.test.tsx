@@ -106,7 +106,7 @@ const setupHandlers = (
 
 describe('project detail page', () => {
   it.each([true, false])(
-    'gates the PI-wide projections action with flag %s',
+    'omits the projections action with flag %s',
     async (enabled) => {
       setupHandlers({ employeeId: '1000', name: 'PI User' }, [createProject()]);
       server.use(
@@ -120,17 +120,9 @@ describe('project detail page', () => {
         const main = screen
           .getByRole('heading', { level: 1, name: 'Test Project' })
           .closest('main')!;
-        if (enabled) {
-          const link = await within(main).findByRole('link', {
-            name: 'Projections',
-          });
-          expect(link).toHaveAttribute('href', '/projections/1000');
-          expect(link).toHaveClass('btn', 'btn-lg');
-        } else {
-          expect(
-            within(main).queryByRole('link', { name: 'Projections' })
-          ).not.toBeInTheDocument();
-        }
+        expect(
+          within(main).queryByRole('link', { name: 'Projections' })
+        ).not.toBeInTheDocument();
       } finally {
         cleanup();
       }

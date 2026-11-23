@@ -41,7 +41,7 @@ public sealed class ProjectionsController(
     public sealed record ProjectionSourceKey(string ProjectNumber, string? TaskNumber);
     /// <summary>Fresh task identity and budget remaining after spending and commitments, without forecast assumptions.</summary>
     public sealed record ProjectionSourceSummary(string ProjectNumber, string? ProjectName, string? TaskNumber, string? TaskName,
-        decimal AvailableBalance, DateTime CapturedAt);
+        decimal AvailableBalance, DateTime CapturedAt, string? ProjectType);
     public sealed record ImportProjectionSourcesRequest(List<ProjectionSourceKey>? Sources);
 
     [HttpGet("by-iam/{iamId}")]
@@ -79,7 +79,7 @@ public sealed class ProjectionsController(
         if (error is not null) return error;
         var sources = await seeder.CaptureSourcesAsync(piEmployeeId!, User.GetUserIdentifier(), User.GetEmulatingUser(), ct);
         return Ok(sources.Select(p => new ProjectionSourceSummary(p.ProjectNumber!, p.ProjectName, p.TaskNumber, p.TaskName,
-            p.Budgets.Sum(b => b.Budget - b.SpentToDate - b.Committed), p.CapturedAt)).ToList());
+            p.Budgets.Sum(b => b.Budget - b.SpentToDate - b.Committed), p.CapturedAt, p.ProjectType)).ToList());
     }
 
     /// <summary>Imports selected current task financials only; client assignment of local IDs cannot refresh staffing or persist a plan.</summary>
@@ -360,11 +360,11 @@ public sealed class ProjectionsController(
         return tasks.Select(s => ProjectionSeedPolicy.TaskKey(s.ProjectNumber, s.TaskNumber)).Distinct().Count() == tasks.Count;
     }
 
-    /// <summary>Validate scenario shape without requiring live datamart access to save a captured plan.</summary>
+    /// <summary>Category identity is its full financial label; saving a captured plan does not require live datamart access.</summary>
     private static bool ValidSourceBudgets(ProjectionFundingSource source)
     {
         if (source.CategoryAdjustments.Any(row => !ValidFinancialCategory(row.ExpenditureCategory) || row.Amount != decimal.Round(row.Amount, 2))
-            || source.CategoryAdjustments.Select(row => row.ExpenditureCategory[..2]).Distinct(StringComparer.Ordinal).Count() != source.CategoryAdjustments.Count)
+            || source.CategoryAdjustments.Select(row => row.ExpenditureCategory).Distinct(StringComparer.Ordinal).Count() != source.CategoryAdjustments.Count)
             return false;
         var categoryBased = source.SourceKind == ProjectionSourceKind.Planned
             ? source.PlannedBudgetMode == ProjectionPlannedBudgetMode.Categories
@@ -379,7 +379,7 @@ public sealed class ProjectionsController(
         if (source.PlannedBudgetMode == ProjectionPlannedBudgetMode.GeneralPool) return source.Budgets.Count == 0;
         return source.InitialPlannedBalance == 0
             && source.Budgets.All(row => ValidFinancialCategory(row.ExpenditureCategory) && row.Budget == decimal.Round(row.Budget, 2) && row.SpentToDate == 0 && row.Committed == 0)
-            && source.Budgets.Select(row => row.ExpenditureCategory[..2]).Distinct(StringComparer.Ordinal).Count() == source.Budgets.Count;
+            && source.Budgets.Select(row => row.ExpenditureCategory).Distinct(StringComparer.Ordinal).Count() == source.Budgets.Count;
     }
 
     private static bool ValidFinancialCategory(string? category) => category is { Length: <= 200 }

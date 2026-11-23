@@ -83,7 +83,7 @@ export function HistoricalExpenseEditor({
   return (
     <ProjectionDialog
       onClose={onClose}
-      title={`Edit historical amount: ${category}`}
+      title={`Edit projected amount: ${category}`}
     >
       <p className="mt-2 text-sm text-base-content/80">
         <span className="font-medium">Charge to:</span> {sourceLabel(source)}
@@ -101,7 +101,7 @@ export function HistoricalExpenseEditor({
       <p className="mt-3 text-sm">
         {hasCapturedAmount
           ? `Captured ${historyMonths}-month average: ${formatCurrency(baselineAmount)} per month.`
-          : 'No costs captured in this window. The historical amount is $0.00 per month.'}
+          : 'No costs captured in this window. The projected amount is $0.00 per month.'}
       </p>
       <form
         className="mt-4 space-y-4"
@@ -128,7 +128,7 @@ export function HistoricalExpenseEditor({
           )}
         </form.Field>
         <button
-          className="btn btn-outline btn-sm"
+          className="btn btn-sm"
           onClick={() => {
             form.setFieldValue('amount', '0.00');
             form.setFieldValue('forceZero', true);
@@ -145,7 +145,7 @@ export function HistoricalExpenseEditor({
         <p className="text-sm text-base-content/80">
           Use Turn off estimate to keep it at zero across history windows. A
           negative amount reduces forecast costs. A custom amount stays in place
-          when the history window changes; Use historical amount restores the
+          when the history window changes; Use projected amount restores the
           selected history average.
         </p>
         {(validationMessage || error) && (

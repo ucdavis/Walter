@@ -1,6 +1,6 @@
 import { projectionExpenseSourceTooltip } from '@/shared/tooltips.ts';
 import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
-import { sourceLabel } from '@/lib/projectionSources.ts';
+import { isSponsoredProject, sourceLabel } from '@/lib/projectionSources.ts';
 import type { ProjectionFundingSource } from '@/queries/projections.ts';
 
 export function ExpenseSourceLink({
@@ -24,12 +24,15 @@ export function ExpenseSourceLink({
     source.taskName !== source.taskNumber
       ? source.taskName
       : null;
-  const label =
-    source.sourceKind === 'Task' && source.taskNumber
+  // Sponsored projects are shown by project only; their task adds nothing for the reader.
+  const sponsored = isSponsoredProject(source);
+  const label = sponsored
+    ? source.name
+    : source.sourceKind === 'Task' && source.taskNumber
       ? taskName || `Task ${source.taskNumber}`
       : source.name;
   const detail =
-    label === `Task ${source.taskNumber}` && source.projectNumber
+    (sponsored || label === `Task ${source.taskNumber}`) && source.projectNumber
       ? `Project ${source.projectNumber}`
       : identity;
   return (

@@ -224,6 +224,7 @@ export interface ProjectionSourceSummary {
   capturedAt: string;
   projectName: string | null;
   projectNumber: string;
+  projectType: string | null;
   taskName: string | null;
   taskNumber: string | null;
 }

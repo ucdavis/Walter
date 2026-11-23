@@ -45,7 +45,7 @@ export function ProjectionExpensesTable({
       role="region"
       tabIndex={0}
     >
-      <table className="table walter-table text-sm">
+      <table className="table walter-table text-sm [&_th[scope=row]]:border-y-0!">
         <thead>
           <tr>
             <th scope="col">Expense</th>
@@ -59,10 +59,10 @@ export function ProjectionExpensesTable({
             </th>
           </tr>
         </thead>
-        <tbody aria-label="Historical expense estimates">
+        <tbody aria-label="Projected expenses">
           <tr className="bg-base-200">
             <th colSpan={5} scope="rowgroup">
-              Historical estimates
+              Projected expenses
             </th>
           </tr>
           {historical.map(({ row, source }) => {
@@ -99,7 +99,7 @@ export function ProjectionExpensesTable({
                   </p>
                   {row.overrideAmount !== null && (
                     <button
-                      aria-label={`Use historical amount for ${row.expenditureCategory}`}
+                      aria-label={`Use projected amount for ${row.expenditureCategory}`}
                       className="btn btn-ghost btn-sm mt-1 px-0"
                       onClick={() =>
                         onRestore(source.id, row.expenditureCategory)
@@ -110,17 +110,17 @@ export function ProjectionExpensesTable({
                         aria-hidden="true"
                         className="size-4"
                       />
-                      Use historical amount
+                      Use projected amount
                     </button>
                   )}
                 </th>
                 <td>
-                  <span
-                    className={`badge badge-soft badge-sm ${row.overrideAmount === null ? 'badge-neutral' : 'badge-primary'}`}
-                  >
-                    {row.overrideAmount === null ? 'Projected' : 'Custom'}
-                    {row.effectiveAmount === 0 ? ' · Off' : ''}
-                  </span>
+                  {row.overrideAmount !== null && (
+                    <span className="badge badge-soft badge-primary badge-sm">
+                      Custom
+                      {row.effectiveAmount === 0 ? ' · Off' : ''}
+                    </span>
+                  )}
                   <div className="mt-1">
                     <ExpenseSourceLink
                       onSelect={onSelectSource}
@@ -146,7 +146,7 @@ export function ProjectionExpensesTable({
                 <td className="text-right whitespace-nowrap tabular-nums">
                   <button
                     aria-haspopup="dialog"
-                    aria-label={`Edit historical amount for ${row.expenditureCategory}`}
+                    aria-label={`Edit projected amount for ${row.expenditureCategory}`}
                     className="input input-sm w-36 justify-end gap-1 text-right tabular-nums"
                     onClick={() =>
                       onEditHistorical(source.id, row.expenditureCategory)
@@ -171,7 +171,7 @@ export function ProjectionExpensesTable({
           {!historical.length && (
             <tr>
               <td colSpan={5}>
-                No historical expense categories were captured for the selected
+                No projected expense categories were captured for the selected
                 funding sources.
               </td>
             </tr>
@@ -227,7 +227,7 @@ function ExpenseRows({
     <>
       <tr className="bg-base-200">
         <th colSpan={5} scope="rowgroup">
-          {kind === 'Monthly' ? 'Monthly expenses' : 'One-time expenses'}
+          {kind === 'Monthly' ? 'Added monthly expenses' : 'One-time expenses'}
         </th>
       </tr>
       {rows.map(({ item, source }) => {

@@ -118,7 +118,7 @@ export function ProjectionSaveFeedback({
             </button>
             {conflict !== 'deleted' && (
               <button
-                className="btn btn-outline"
+                className="btn"
                 disabled={reloading}
                 onClick={async () => {
                   const saved = await discardSaved();

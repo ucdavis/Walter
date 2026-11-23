@@ -230,7 +230,7 @@ describe('projection plan details', () => {
     expect(within(row('Fixed monthly')).getByText('$920')).toBeInTheDocument();
     expect(
       within(
-        screen.getByRole('rowgroup', { name: 'Historical expense estimates' })
+        screen.getByRole('rowgroup', { name: 'Projected expenses' })
       ).getByText('$5,570')
     ).toBeInTheDocument();
     expect(read().draft.content.fundingSources[0].expenses).toEqual(

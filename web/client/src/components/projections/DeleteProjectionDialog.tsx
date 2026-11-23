@@ -148,7 +148,7 @@ export function DeleteProjectionDialog({
           </button>
         ) : failure === 'changed' ? (
           <button
-            className="btn btn-outline"
+            className="btn"
             disabled={busy}
             onClick={async () => {
               const saved = await discardSaved();
