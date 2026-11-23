@@ -27,14 +27,12 @@ public sealed class ProjectionsController(
     TimeProvider? timeProvider = null) : ApiControllerBase
 {
     private static readonly int[] Windows = [3, 6, 12];
-    private const int OverwriteAttempts = 3;
 
     public sealed record ProjectionSummary(int Id, string Name, DateTime SeededAt, string? UpdatedBy, DateTime UpdatedAt);
     public sealed record CreateProjectionRequest(ProjectionDraft? Draft, Guid CreationKey);
     public sealed record DuplicateProjectionRequest(string Name, Guid CreationKey);
     public sealed record SaveProjectionRequest(string Name, [property: JsonRequired] ProjectionContent Content,
-        DateTime? ExpectedUpdatedAt = null, DateTime? ExpectedSeededAt = null, bool Overwrite = false,
-        int? ExpectedLastAppointmentId = null, int? ExpectedLastFundingSourceId = null);
+        DateTime? ExpectedUpdatedAt = null, DateTime? ExpectedSeededAt = null);
     public sealed record HistoryMonthsRequest(int HistoryMonths, DateTime? ExpectedUpdatedAt = null);
     public sealed record ProjectionConflict(string Code, string Message);
     public sealed record ProjectionLookups(IReadOnlyList<JobCodeRecord> JobCodes, IReadOnlyList<string> ExpenditureCategories,
@@ -171,53 +169,37 @@ public sealed class ProjectionsController(
         if (!ValidDraft(new(request.Name, request.ExpectedSeededAt!.Value, request.Content)))
             return BadRequest("The plan requires valid sources, appointments, and expenses, including a nonnegative salary for every appointment, unique positive IDs within their counters, and valid allocation references.");
 
-        // Detach the submitted content from tracked entities and reuse this frozen draft on every retry.
-        var draft = JsonSerializer.Deserialize<SaveProjectionRequest>(JsonSerializer.Serialize(request))!;
-        for (var attempt = 0; attempt < OverwriteAttempts; attempt++)
+        var (projection, error) = await LoadAsync(id, ct);
+        if (error is not null) return error;
+        if (projection!.SeededAt != request.ExpectedSeededAt) return SnapshotChanged();
+        if (projection.UpdatedAt != request.ExpectedUpdatedAt) return Changed();
+
+        var stored = projection.Content;
+        if (ReusesRetiredId(request.Content.Appointments.Select(a => a.Id), stored.Appointments.Select(a => a.Id), stored.LastAppointmentId)
+            || ReusesRetiredId(request.Content.FundingSources.Select(s => s.Id), stored.FundingSources.Select(s => s.Id), stored.LastFundingSourceId))
+            return BadRequest("A removed appointment or funding source ID cannot be reused.");
+
+        // Keep the tracked plan independent of the mutable request document.
+        var content = JsonSerializer.Deserialize<ProjectionContent>(JsonSerializer.Serialize(request.Content))!;
+        projection.Name = request.Name;
+        projection.Content = content with
         {
-            var (projection, error) = await LoadAsync(id, ct);
-            if (error is not null) return error;
-            if (projection!.SeededAt != draft.ExpectedSeededAt) return SnapshotChanged();
-            var stale = projection.UpdatedAt != draft.ExpectedUpdatedAt;
-            if (stale && !draft.Overwrite) return Changed();
-
-            var stored = projection.Content;
-            if (!PreservesIdentities(draft.Content.Appointments.Select(a => a.Id), stored.Appointments.Select(a => a.Id),
-                    stored.LastAppointmentId, stale ? draft.ExpectedLastAppointmentId : stored.LastAppointmentId)
-                || !PreservesIdentities(draft.Content.FundingSources.Select(s => s.Id), stored.FundingSources.Select(s => s.Id),
-                    stored.LastFundingSourceId, stale ? draft.ExpectedLastFundingSourceId : stored.LastFundingSourceId))
-                return Conflict(new ProjectionConflict("identitiesChanged", "Reload the saved plan before saving appointment or funding source IDs that may have been used or removed."));
-
-            // Use the client's loaded version in the SQL predicate. Overwrite accepts ordinary edits
-            // only after loading and authorizing a row from the originally submitted snapshot.
-            db.Entry(projection).Property(p => p.UpdatedAt).OriginalValue =
-                draft.Overwrite ? projection.UpdatedAt : draft.ExpectedUpdatedAt!.Value;
-            projection.Name = draft.Name;
-            projection.Content = draft.Content with
-            {
-                Comparison = stored.Comparison,
-                LastAppointmentId = Math.Max(stored.LastAppointmentId, draft.Content.LastAppointmentId),
-                LastFundingSourceId = Math.Max(stored.LastFundingSourceId, draft.Content.LastFundingSourceId),
-            };
-            Touch(projection);
-            try
-            {
-                await db.SaveChangesAsync(ct);
-                return Ok(projection);
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                db.Entry(projection).State = EntityState.Detached;
-                if (!draft.Overwrite) return await ConcurrentChangeAsync(id, draft.ExpectedSeededAt, ct);
-            }
+            Comparison = stored.Comparison,
+            LastAppointmentId = Math.Max(stored.LastAppointmentId, content.LastAppointmentId),
+            LastFundingSourceId = Math.Max(stored.LastFundingSourceId, content.LastFundingSourceId),
+        };
+        Touch(projection);
+        try
+        {
+            // EF checks the loaded version again as part of the write.
+            await db.SaveChangesAsync(ct);
+            return Ok(projection);
         }
-
-        // A reset, deletion, or access change still takes precedence after the final lost race.
-        var (current, currentError) = await LoadAsync(id, ct);
-        if (currentError is not null) return currentError;
-        if (current!.SeededAt != draft.ExpectedSeededAt) return SnapshotChanged();
-        return StatusCode(StatusCodes.Status503ServiceUnavailable,
-            new ProjectionConflict("busy", "The plan is being edited. Retry the overwrite."));
+        catch (DbUpdateConcurrencyException)
+        {
+            db.Entry(projection).State = EntityState.Detached;
+            return await ConcurrentChangeAsync(id, request.ExpectedSeededAt, ct);
+        }
     }
 
     /// <summary>Deletes only the version originally loaded by the caller.</summary>
@@ -303,14 +285,9 @@ public sealed class ProjectionsController(
         ProjectionPlanDefaults.ForecastMonthOptions.Contains(forecastMonths)
         && seededAt.Year * 12 + seededAt.Month + forecastMonths - 1 <= 9999 * 12 + 12;
 
-    /// <summary>Reject retired IDs and IDs first issued by another save after the draft was loaded.</summary>
-    private static bool PreservesIdentities(IEnumerable<int> submittedIds, IEnumerable<int> storedIds,
-        int lastId, int? expectedLastId)
-    {
-        if (expectedLastId is null || expectedLastId < 0 || expectedLastId > lastId) return false;
-        var liveIds = storedIds.ToHashSet();
-        return submittedIds.All(id => id > lastId || (id <= expectedLastId && liveIds.Contains(id)));
-    }
+    /// <summary>Protect the original comparison from pairing a retired ID with a new row.</summary>
+    private static bool ReusesRetiredId(IEnumerable<int> submitted, IEnumerable<int> current, int lastId)
+        => submitted.Except(current).Any(id => id <= lastId);
 
     private static bool ValidDraft(ProjectionDraft draft)
     {

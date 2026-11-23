@@ -67,6 +67,7 @@ function Harness({
         taskNumber: '01',
       },
     ];
+    draft.content.lastFundingSourceId = 3;
     return createProjectionSession(draft);
   });
   const [queryClient] = useState(createLookupClient);

@@ -689,8 +689,7 @@ public sealed partial class ProjectionsControllerTests
 
     private static ProjectionsController.SaveProjectionRequest Draft(Projection p, int? historyMonths = null) =>
         JsonSerializer.Deserialize<ProjectionsController.SaveProjectionRequest>(JsonSerializer.Serialize(
-            new ProjectionsController.SaveProjectionRequest(p.Name, p.Content with { HistoryMonths = historyMonths ?? p.Content.HistoryMonths }, p.UpdatedAt, p.SeededAt,
-                ExpectedLastAppointmentId: p.Content.LastAppointmentId, ExpectedLastFundingSourceId: p.Content.LastFundingSourceId)))!;
+            new ProjectionsController.SaveProjectionRequest(p.Name, p.Content with { HistoryMonths = historyMonths ?? p.Content.HistoryMonths }, p.UpdatedAt, p.SeededAt)))!;
 
     [Fact]
     public async Task Reset_keeps_id_name_and_creator_and_drops_edits()
@@ -846,15 +845,13 @@ public sealed partial class ProjectionsControllerTests
         saved.Content.FundingSources.Single().RunRates.Single(r => r.HistoryMonths == 3).MonthlyAmount.Should().Be(50);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task Save_requires_both_original_timestamp_tokens(bool overwrite)
+    [Fact]
+    public async Task Save_requires_both_original_timestamp_tokens()
     {
         using var ctx = TestDbContextFactory.CreateInMemory();
         var created = await CreateProjectionAsync(ctx);
         var controller = CreateController(ctx, financialViewer: true);
-        var draft = Draft(created) with { Overwrite = overwrite };
+        var draft = Draft(created);
 
         (await controller.Save(created.Id, draft with { ExpectedUpdatedAt = null }, default)).Should().BeOfType<BadRequestObjectResult>();
         (await controller.Save(created.Id, draft with { ExpectedSeededAt = null }, default)).Should().BeOfType<BadRequestObjectResult>();
@@ -864,48 +861,18 @@ public sealed partial class ProjectionsControllerTests
         created.Name.Should().Be("Plan A");
     }
 
-    [Fact]
-    public async Task Confirmed_overwrite_replaces_all_submitted_inputs_after_further_ordinary_saves()
-    {
-        using var ctx = TestDbContextFactory.CreateInMemory();
-        var created = await CreateProjectionAsync(ctx);
-        var controller = CreateController(ctx, financialViewer: true);
-        var draft = Draft(created) with { Name = "My plan" };
-        draft.Content.FundingSources.Single().HistoricalExpenseOverrides.Add(new() { ExpenditureCategory = Supplies, Amount = 123 });
-        draft.Content.Appointments.Add(new ProjectionAppointment { Id = 7, Name = "My new hire", MonthlySalary = 8000, StartDate = new DateOnly(2026, 12, 1) });
-        draft.Content.LastAppointmentId = 7;
-        await controller.Save(created.Id, Draft(created) with { Name = "First competing edit" }, default);
-        ConflictCode(await controller.Save(created.Id, draft, default)).Should().Be("conflict");
-
-        var later = Draft(created) with { Name = "Another edit after conflict" };
-        later.Content.FundingSources.Add(new ProjectionFundingSource { Id = 2, Name = "Other editor's source", SourceKind = ProjectionSourceKind.Planned, PlannedBudgetMode = ProjectionPlannedBudgetMode.GeneralPool, CapturedAt = later.ExpectedSeededAt!.Value, StartDate = new(2027, 1, 1) });
-        later.Content.LastFundingSourceId = 2;
-        Document(await controller.Save(created.Id, later, default));
-        var result = await controller.Save(created.Id, draft with { Overwrite = true }, default);
-
-        var saved = Document(result);
-        saved.Name.Should().Be("My plan");
-        saved.Content.FundingSources.Should().ContainSingle().Which.HistoricalExpenseOverrides.Single().Amount.Should().Be(123);
-        saved.Content.FundingSources.Single().Actuals.Single().Amount.Should().Be(250);
-        saved.Content.FundingSources.Single().RunRates.Should().HaveCount(2);
-        saved.Content.Appointments.Should().ContainSingle().Which.Name.Should().Be("My new hire");
-        saved.Content.LastFundingSourceId.Should().Be(2);
-        saved.SeededAt.Should().Be(draft.ExpectedSeededAt!.Value);
-        saved.UpdatedAt.Should().BeAfter(later.ExpectedUpdatedAt!.Value);
-    }
-
     [Theory]
     [InlineData(true, false)]
     [InlineData(true, true)]
     [InlineData(false, false)]
     [InlineData(false, true)]
-    public async Task Overwrite_cannot_reuse_another_editors_live_or_retired_identity(bool appointment, bool retire)
+    public async Task Stale_save_rejects_edits_with_conflicting_ids(bool appointment, bool retire)
     {
         using var ctx = TestDbContextFactory.CreateInMemory();
         var controller = CreateController(ctx, financialViewer: true);
         var created = Document(await controller.Create(PiIam, NewPlanRequest(), default));
         var remote = Draft(created);
-        var local = Draft(created) with { Overwrite = true };
+        var local = Draft(created);
         if (appointment)
         {
             remote.Content.Appointments.Add(new() { Id = 74, Name = "Remote hire", MonthlySalary = 5000, StartDate = new(2027, 1, 1) });
@@ -930,25 +897,23 @@ public sealed partial class ProjectionsControllerTests
             else
                 removal.Content.FundingSources.RemoveAll(s => s.Id == 42);
             latest = Document(await controller.Save(created.Id, removal, default));
-            ConflictCode(await controller.Save(created.Id, local with { ExpectedUpdatedAt = latest.UpdatedAt, Overwrite = false }, default))
-                .Should().Be("identitiesChanged");
+            (await controller.Save(created.Id, local with { ExpectedUpdatedAt = latest.UpdatedAt }, default))
+                .Should().BeOfType<BadRequestObjectResult>();
         }
 
         var expected = JsonSerializer.Serialize(latest);
         ctx.ChangeTracker.Clear();
-        ConflictCode(await controller.Save(created.Id, local, default)).Should().Be("identitiesChanged");
+        ConflictCode(await controller.Save(created.Id, local, default)).Should().Be("conflict");
         JsonSerializer.Serialize(Document(await controller.Get(created.Id, default))).Should().Be(expected);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task Save_cannot_cross_a_reset(bool overwrite)
+    [Fact]
+    public async Task Save_cannot_cross_a_reset()
     {
         using var ctx = TestDbContextFactory.CreateInMemory();
         var created = await CreateProjectionAsync(ctx);
         var controller = CreateController(ctx, financialViewer: true);
-        var draft = Draft(created) with { Name = "Old snapshot", Overwrite = overwrite };
+        var draft = Draft(created) with { Name = "Old snapshot" };
         var reset = Document(await controller.Reset(created.Id, new(12, created.UpdatedAt), default));
 
         var result = await controller.Save(created.Id, draft, default);
@@ -961,15 +926,13 @@ public sealed partial class ProjectionsControllerTests
         saved.Content.HistoryMonths.Should().Be(12);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task Save_cannot_resurrect_a_deleted_plan(bool overwrite)
+    [Fact]
+    public async Task Save_cannot_resurrect_a_deleted_plan()
     {
         using var ctx = TestDbContextFactory.CreateInMemory();
         var created = await CreateProjectionAsync(ctx);
         var controller = CreateController(ctx, financialViewer: true);
-        var draft = Draft(created) with { Overwrite = overwrite };
+        var draft = Draft(created);
         (await controller.Delete(created.Id, created.UpdatedAt, default)).Should().BeOfType<NoContentResult>();
 
         (await controller.Save(created.Id, draft, default)).Should().BeOfType<NotFoundResult>();
@@ -996,13 +959,13 @@ public sealed partial class ProjectionsControllerTests
     }
 
     [Fact]
-    public async Task Unrelated_user_cannot_overwrite_reset_or_delete()
+    public async Task Unrelated_user_cannot_save_reset_or_delete()
     {
         using var ctx = TestDbContextFactory.CreateInMemory();
         var created = await CreateProjectionAsync(ctx);
         var controller = CreateController(ctx, employeeId: "999");
 
-        (await controller.Save(created.Id, Draft(created) with { Overwrite = true }, default)).Should().BeOfType<ForbidResult>();
+        (await controller.Save(created.Id, Draft(created), default)).Should().BeOfType<ForbidResult>();
         (await controller.Reset(created.Id, new(3, created.UpdatedAt), default)).Should().BeOfType<ForbidResult>();
         (await controller.Delete(created.Id, created.UpdatedAt, default)).Should().BeOfType<ForbidResult>();
         created.Name.Should().Be("Plan A");

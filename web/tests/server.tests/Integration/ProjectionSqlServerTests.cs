@@ -245,72 +245,10 @@ public sealed partial class ProjectionSqlServerTests(ProjectionSqlServerFixture 
         winner.UpdatedAt.Should().BeAfter(original.UpdatedAt);
     }
 
-    [ProjectionSqlServerFact]
-    public async Task Confirmed_overwrite_retries_an_ordinary_edit_that_wins_the_database_race()
-    {
-        var original = await SeedAsync();
-        var race = new BeforeWrite(async () =>
-        {
-            await using var competing = sql.CreateContext();
-            var latest = await competing.Projections.SingleAsync(p => p.Id == original.Id);
-            (await Controller(competing).Save(latest.Id, Draft(latest, "Intervening edit"), default))
-                .Should().BeOfType<OkObjectResult>();
-        });
-        await using var writer = sql.CreateContext(race);
-
-        var result = await Controller(writer).Save(original.Id, Draft(original, "Confirmed replacement", overwrite: true), default);
-
-        result.Should().BeOfType<OkObjectResult>();
-        race.Executions.Should().Be(1);
-        await using var check = sql.CreateContext();
-        (await check.Projections.SingleAsync(p => p.Id == original.Id)).Name.Should().Be("Confirmed replacement");
-    }
-
-    [ProjectionSqlServerTheory]
-    [InlineData("edit")]
-    [InlineData("reset")]
-    [InlineData("delete")]
-    public async Task Overwrite_retry_exhaustion_preserves_the_latest_write_and_rechecks_snapshot_existence(string finalChange)
-    {
-        var original = await SeedAsync();
-        var attempt = 0;
-        var race = new BeforeWrite(async () =>
-        {
-            attempt++;
-            await using var competing = sql.CreateContext();
-            var latest = await competing.Projections.SingleAsync(p => p.Id == original.Id);
-            var controller = Controller(competing);
-            if (attempt == 3 && finalChange == "delete")
-                (await controller.Delete(latest.Id, latest.UpdatedAt, default)).Should().BeOfType<NoContentResult>();
-            else if (attempt == 3 && finalChange == "reset")
-                (await controller.Reset(latest.Id, new(3, latest.UpdatedAt), default)).Should().BeOfType<OkObjectResult>();
-            else
-                (await controller.Save(latest.Id, Draft(latest, $"Concurrent edit {attempt}"), default)).Should().BeOfType<OkObjectResult>();
-        }, once: false);
-        await using var writer = sql.CreateContext(race);
-
-        var result = await Controller(writer).Save(original.Id, Draft(original, "Must not be saved", overwrite: true), default);
-
-        race.Executions.Should().Be(3);
-        await using var check = sql.CreateContext();
-        var stored = await check.Projections.SingleOrDefaultAsync(p => p.Id == original.Id);
-        if (finalChange == "delete")
-        {
-            result.Should().BeOfType<NotFoundResult>();
-            stored.Should().BeNull();
-            return;
-        }
-        var response = result.Should().BeAssignableTo<ObjectResult>().Subject;
-        response.StatusCode.Should().Be(finalChange == "reset" ? 409 : 503);
-        response.Value.Should().BeOfType<ProjectionsController.ProjectionConflict>().Which.Code
-            .Should().Be(finalChange == "reset" ? "snapshotChanged" : "busy");
-        stored!.Name.Should().Be(finalChange == "reset" ? "Concurrent edit 2" : "Concurrent edit 3");
-    }
-
     [ProjectionSqlServerTheory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task Confirmed_overwrite_cannot_cross_a_reset_or_deletion_during_its_write(bool delete)
+    public async Task Save_cannot_cross_a_reset_or_deletion_during_its_write(bool delete)
     {
         var original = await SeedAsync();
         var race = new BeforeWrite(async () =>
@@ -325,7 +263,7 @@ public sealed partial class ProjectionSqlServerTests(ProjectionSqlServerFixture 
         });
         await using var writer = sql.CreateContext(race);
 
-        var result = await Controller(writer).Save(original.Id, Draft(original, "Must not be saved", overwrite: true), default);
+        var result = await Controller(writer).Save(original.Id, Draft(original, "Must not be saved"), default);
 
         race.Executions.Should().Be(1);
         await using var check = sql.CreateContext();
@@ -440,11 +378,10 @@ public sealed partial class ProjectionSqlServerTests(ProjectionSqlServerFixture 
         return plan;
     }
 
-    private static ProjectionsController.SaveProjectionRequest Draft(Projection plan, string name, bool overwrite = false)
+    private static ProjectionsController.SaveProjectionRequest Draft(Projection plan, string name)
     {
         var copy = JsonSerializer.Deserialize<Projection>(JsonSerializer.Serialize(plan))!;
-        return new(name, copy.Content, copy.UpdatedAt, copy.SeededAt, overwrite,
-            copy.Content.LastAppointmentId, copy.Content.LastFundingSourceId);
+        return new(name, copy.Content, copy.UpdatedAt, copy.SeededAt);
     }
 
     private static ClaimsPrincipal Viewer() => new(new ClaimsIdentity(

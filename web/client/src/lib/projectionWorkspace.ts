@@ -31,18 +31,7 @@ export function acknowledgeProjectionSave(
         ? saved
         : {
             ...saved,
-            content: {
-              ...current.draft.content,
-              comparison: saved.content.comparison,
-              lastAppointmentId: Math.max(
-                current.draft.content.lastAppointmentId,
-                saved.content.lastAppointmentId
-              ),
-              lastFundingSourceId: Math.max(
-                current.draft.content.lastFundingSourceId,
-                saved.content.lastFundingSourceId
-              ),
-            },
+            content: current.draft.content,
             name: current.draft.name,
           },
   };
@@ -201,14 +190,8 @@ export type PendingProjectionEditor =
   | PendingPlanDetailsEditor
   | PendingSourceEditor;
 
-export type ProjectionConflict =
-  | 'conflict'
-  | 'snapshotChanged'
-  | 'identitiesChanged'
-  | 'deleted';
-
 export interface ProjectionPersistenceStatus {
-  conflict: ProjectionConflict | null;
+  conflict: 'conflict' | 'snapshotChanged' | 'deleted' | null;
   conflictOpen: boolean;
   error: string | null;
   reloading: boolean;

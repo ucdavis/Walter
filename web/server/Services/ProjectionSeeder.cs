@@ -40,7 +40,7 @@ public sealed class ProjectionSeeder(IProjectionDataSource data, TimeProvider? t
             var unsplit = rows.Any(r => r.EarnCodeStatus == "Unsplit");
             var appointment = ToAppointment(appointments.Count + 1, rows, unsplit, Match);
             appointments.Add(appointment);
-            captures.Add(CaptureAppointment(appointment, unsplit));
+            captures.Add(CaptureAppointment(appointment, rows[0].Name, unsplit));
             roster.Add(new(appointment.Id, fundingSourceIds));
         }
         return new(new("New projection", snapshotAtUtc, new ProjectionContent
@@ -68,11 +68,11 @@ public sealed class ProjectionSeeder(IProjectionDataSource data, TimeProvider? t
         return ProjectionSeedPolicy.Prepare(seed, snapshotAtUtc).FundingSources;
     }
 
-    private static ProjectionCapturedAppointment CaptureAppointment(ProjectionAppointment a, bool unsplit) => new()
+    private static ProjectionCapturedAppointment CaptureAppointment(ProjectionAppointment a, string? originalName, bool unsplit) => new()
     {
         Id = a.Id,
         PositionNumber = a.PositionNumber,
-        Name = a.Name,
+        Name = string.IsNullOrWhiteSpace(originalName) ? $"Appointment {a.Id}" : originalName,
         JobCode = a.JobCode,
         Title = a.Title,
         RateSet = a.RateSet,
@@ -103,7 +103,7 @@ public sealed class ProjectionSeeder(IProjectionDataSource data, TimeProvider? t
             Id = id,
             EmployeeId = first.EmployeeId,
             PositionNumber = first.PositionNumber,
-            Name = string.IsNullOrWhiteSpace(first.Name) ? $"Appointment {id}" : first.Name,
+            Name = first.Name ?? first.EmployeeId ?? "",
             JobCode = first.JobCode,
             Title = first.PositionDescription,
             RateSet = first.BusinessUnit ?? "DVCMP",

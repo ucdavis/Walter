@@ -282,8 +282,6 @@ describe('funding source operations', () => {
       ...structuredClone(submitted.draft),
       updatedAt: '2026-01-02T00:00:00.1234567Z',
     };
-    saved.content.lastFundingSourceId = 5;
-    saved.content.lastAppointmentId = 105;
     const acknowledged = acknowledgeProjectionSave(newer, submitted, saved);
     expect(
       acknowledged.draft.content.fundingSources.map(({ id }) => id)
@@ -293,8 +291,7 @@ describe('funding source operations', () => {
       applied(
         addPlannedSource(acknowledged, planned)
       ).draft.content.fundingSources.at(-1)?.id
-    ).toBe(6);
-    expect(acknowledged.draft.content.lastAppointmentId).toBe(105);
+    ).toBe(4);
     expect(isProjectionDirty(acknowledged)).toBe(true);
     const reordered = {
       ...original,

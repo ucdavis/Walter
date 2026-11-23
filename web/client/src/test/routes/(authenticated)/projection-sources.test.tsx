@@ -80,6 +80,8 @@ function taskFixture(): Projection {
       name: 'Casey Example',
     },
   ];
+  plan.content.lastAppointmentId = 103;
+  plan.content.lastFundingSourceId = 3;
   return plan;
 }
 

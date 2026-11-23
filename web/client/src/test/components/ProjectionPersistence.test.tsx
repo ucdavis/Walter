@@ -208,10 +208,11 @@ describe('projection saving through the workspace', () => {
     }
   );
 
-  it('closes a conflict without losing work and overwrites with the current whole draft', async () => {
-    const { plan, server, user } = openWorkspace();
+  it('keeps the draft open after a stale save and requires reload before saving again', async () => {
+    const { server, user } = openWorkspace();
     await applySalary(user, '132000');
     act(() => server.editRemotely());
+    const savedByOtherEditor = server.read().stored;
     await user.click(saveButton());
     await screen.findByRole('dialog', { name: 'This plan has changed' });
     expect(read().persistence).toMatchObject({
@@ -225,21 +226,9 @@ describe('projection saving through the workspace', () => {
     await user.click(saveButton());
     await screen.findByRole('dialog', { name: 'This plan has changed' });
     expect(server.read().requests).toHaveLength(1);
-    act(() => server.editRemotely());
-    await user.click(screen.getByRole('button', { name: 'Overwrite' }));
-    await screen.findByRole('button', { name: '✓ Saved' });
-    expect(server.read().requests).toHaveLength(2);
-    expect(server.read().requests[1]).toMatchObject({
-      expectedLastAppointmentId: plan.content.lastAppointmentId,
-      expectedLastFundingSourceId: plan.content.lastFundingSourceId,
-      expectedUpdatedAt: plan.updatedAt,
-      overwrite: true,
-    });
-    expect(server.read().stored!.name).toBe(plan.name);
-    expect(server.read().stored!.content.appointments[0].monthlySalary).toBe(
-      12_000
-    );
-    expect(server.read().reloads).toBe(0);
+    expect(read().draft.content.appointments[0].monthlySalary).toBe(12_000);
+    expect(screen.queryByRole('button', { name: 'Overwrite' })).toBeNull();
+    expect(server.read().stored).toEqual(savedByOtherEditor);
   });
 
   it.each(['failure', 'lost-response'] as const)(
@@ -274,7 +263,14 @@ describe('projection saving through the workspace', () => {
       await user.click(saveButton());
       if (outcome === 'lost-response') {
         await screen.findByRole('dialog', { name: 'This plan has changed' });
-        await user.click(screen.getByRole('button', { name: 'Overwrite' }));
+        expect(read().draft.content.appointments[0].monthlySalary).toBe(10_000);
+        expect(server.read().requests).toHaveLength(2);
+        await user.click(
+          screen.getByRole('button', { name: 'Discard and reload' })
+        );
+        await waitFor(() => expect(server.read().reloads).toBe(1));
+        expect(read().draft.content.appointments[0].monthlySalary).toBe(11_000);
+        return;
       }
       await screen.findByRole('button', { name: '✓ Saved' });
       expect(read().draft.content.appointments[0].monthlySalary).toBe(10_000);
@@ -288,68 +284,34 @@ describe('projection saving through the workspace', () => {
     }
   );
 
-  it('retains confirmed overwrite intent across an explicit retry after a transient failure', async () => {
-    vi.spyOn(console, 'error').mockImplementation(() => {});
-    const { server, user } = openWorkspace();
-    await applySalary(user, '132000');
-    act(() => server.editRemotely());
-    await user.click(saveButton());
-    await screen.findByRole('dialog', { name: 'This plan has changed' });
-    act(() => server.setOutcome('failure'));
-    await user.click(screen.getByRole('button', { name: 'Overwrite' }));
-    await screen.findByRole('alert');
-    await applySalary(user, '144000');
-    await user.click(saveButton());
-    await screen.findByRole('button', { name: '✓ Saved' });
-    expect(server.read().requests.map((request) => request.overwrite)).toEqual([
-      false,
-      true,
-      true,
-    ]);
-    expect(server.read().stored!.content.appointments[0].monthlySalary).toBe(
-      12_000
-    );
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-  });
-
   it('discards by fetching the latest document and retaining a valid section and source', async () => {
     const { server, user } = openWorkspace();
     await applySalary(user, '132000');
     act(() => server.editRemotely());
     await user.click(saveButton());
     await screen.findByRole('dialog', { name: 'This plan has changed' });
-    await user.click(screen.getByRole('button', { name: 'Discard' }));
+    await user.click(
+      screen.getByRole('button', { name: 'Discard and reload' })
+    );
     await waitFor(() => expect(read().dirty).toBe(false));
     expect(server.read().reloads).toBe(1);
     expect(read().draft).toEqual(server.read().stored);
+    const loadedVersion = read().draft.updatedAt;
     expect(read().location).toMatchObject({
       fundingSourceId: 2,
       section: 'staffing',
     });
-  });
-
-  it('requires reload after the server rejects conflicting plan identities', async () => {
-    const { server, user } = openWorkspace();
-    await applySalary(user, '132000');
-    act(() => server.editRemotely());
+    await applySalary(user, '144000');
     await user.click(saveButton());
-    await screen.findByRole('dialog', { name: 'This plan has changed' });
-    act(() => server.setOutcome('identities-changed'));
-    await user.click(screen.getByRole('button', { name: 'Overwrite' }));
-    await screen.findByRole('dialog', { name: 'This draft needs a reload' });
-    expect(screen.queryByRole('button', { name: 'Overwrite' })).toBeNull();
-    await user.click(screen.getByRole('button', { name: 'Close' }));
-    expect(read().draft.content.appointments[0].monthlySalary).toBe(11_000);
-    await user.click(saveButton());
-    await screen.findByRole('dialog', { name: 'This draft needs a reload' });
-    expect(server.read().requests).toHaveLength(2);
-    await user.click(screen.getByRole('button', { name: 'Discard' }));
-    await waitFor(() => expect(read().dirty).toBe(false));
-    expect(read().draft).toEqual(server.read().stored);
+    await screen.findByRole('button', { name: '✓ Saved' });
+    expect(server.read().requests[1].expectedUpdatedAt).toBe(loadedVersion);
+    expect(server.read().stored!.content.appointments[0].monthlySalary).toBe(
+      12_000
+    );
   });
 
   it.each(['reset', 'delete'] as const)(
-    'blocks overwrite after a remote %s and preserves the local draft',
+    'blocks saving after a remote %s and preserves the local draft',
     async (change) => {
       const { server, user } = openWorkspace();
       await applySalary(user, '132000');

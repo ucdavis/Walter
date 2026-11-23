@@ -331,12 +331,9 @@ export const useDuplicateProjection = (iamId: string, id: number) => {
 };
 
 export type SaveProjectionRequest = Omit<ProjectionDraft, 'seededAt'> & {
-  expectedLastAppointmentId?: number;
-  expectedLastFundingSourceId?: number;
   /** Opaque server strings. Parsing through Date would lose datetime2 precision. */
   expectedSeededAt: string;
   expectedUpdatedAt: string;
-  overwrite?: boolean;
 };
 
 /** Compare UTC tokens only for cache ordering; transmit the original strings unchanged. */

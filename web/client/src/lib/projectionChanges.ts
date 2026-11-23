@@ -198,7 +198,7 @@ export function buildPlanChanges(plan: ProjectionDraft) {
       staffing.push({
         allocationCaptureUnavailable: originalAllocations === null,
         allocations,
-        appointment,
+        appointment: original ?? appointment,
         assumptions,
         kind: original ? 'changed' : 'added',
       });

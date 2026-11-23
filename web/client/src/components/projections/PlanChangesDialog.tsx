@@ -178,7 +178,10 @@ function budgetSummary(change: FundingChange) {
 }
 
 function fractionDigits(amount: number) {
-  const [coefficient, exponent = '0'] = amount.toString().split('e');
+  // Ignore binary floating-point tails from adding or subtracting balances.
+  const [coefficient, exponent = '0'] = Number(amount.toPrecision(15))
+    .toString()
+    .split('e');
   return (coefficient.split('.')[1]?.length ?? 0) - Number(exponent);
 }
 
@@ -205,8 +208,17 @@ function FundingCard({
               : -Math.floor(Math.log10(Math.abs(total.adjustment)))
           )
         );
-  const money = (amount: number) =>
-    formatCurrency(amount, { maximumFractionDigits });
+  const money = useMemo(
+    () =>
+      maximumFractionDigits === undefined
+        ? formatCurrency
+        : new Intl.NumberFormat('en-US', {
+            currency: 'USD',
+            maximumFractionDigits,
+            style: 'currency',
+          }).format,
+    [maximumFractionDigits]
+  );
   return (
     <article className="min-w-0 rounded-lg border border-main-border p-4">
       <h4 className="text-lg font-semibold wrap-anywhere">{source.name}</h4>

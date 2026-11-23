@@ -16,7 +16,6 @@ import { computePiProjection } from '@/lib/piProjection.ts';
 import {
   acknowledgeProjectionSave,
   createProjectionSession,
-  type ProjectionConflict,
   type ProjectionSession,
 } from '@/lib/projectionWorkspace.ts';
 import type {
@@ -38,7 +37,9 @@ export interface ProjectionPersistence {
   save: (request: SaveProjectionRequest) => Promise<Projection>;
 }
 
-function conflictCode(error: unknown): ProjectionConflict | null {
+type Conflict = 'conflict' | 'snapshotChanged' | 'deleted';
+
+function conflictCode(error: unknown): Conflict | null {
   if (!(error instanceof HttpError)) {
     return null;
   }
@@ -48,13 +49,12 @@ function conflictCode(error: unknown): ProjectionConflict | null {
   if (error.status !== 409) {
     return null;
   }
-  if (error.body && typeof error.body === 'object' && 'code' in error.body) {
-    const { code } = error.body;
-    if (code === 'snapshotChanged' || code === 'identitiesChanged') {
-      return code;
-    }
-  }
-  return 'conflict';
+  return error.body &&
+    typeof error.body === 'object' &&
+    'code' in error.body &&
+    error.body.code === 'snapshotChanged'
+    ? 'snapshotChanged'
+    : 'conflict';
 }
 
 function logFailure(operation: 'save' | 'reload', error: unknown) {
@@ -78,11 +78,10 @@ function useSession(
   );
   const [reloading, setReloading] = useState(false);
   const [reloadVersion, setReloadVersion] = useState(0);
-  const [conflict, setConflict] = useState<ProjectionConflict | null>(null);
-  const [overwriteConfirmed, setOverwriteConfirmed] = useState(false);
+  const [conflict, setConflict] = useState<Conflict | null>(null);
   const [conflictOpen, setConflictOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const requestPending = useRef<'save' | 'overwrite' | 'reload' | null>(null);
+  const requestPending = useRef(false);
   const mounted = useRef(true);
   useLayoutEffect(() => {
     mounted.current = true;
@@ -103,40 +102,21 @@ function useSession(
   );
   function applyOperation<
     Result extends { ok: false } | { ok: true; session: ProjectionSession },
-  >(
-    operation: (session: ProjectionSession) => Result
-  ): Result | { error: string; ok: false } {
-    const current = currentSession.current;
-    const result = operation(current);
+  >(operation: (session: ProjectionSession) => Result): Result {
+    const result = operation(currentSession.current);
     if (result.ok) {
-      const before = current.draft.content;
-      const after = result.session.draft.content;
-      if (
-        requestPending.current === 'overwrite' &&
-        (after.lastAppointmentId > before.lastAppointmentId ||
-          after.lastFundingSourceId > before.lastFundingSourceId)
-      ) {
-        return {
-          error: 'Wait for the overwrite to finish, then try again.',
-          ok: false,
-        };
-      }
       updateSession(result.session);
       setSaveStatus((status) => (status === 'saving' ? status : 'idle'));
     }
     return result;
   }
 
-  const save = async (overwrite = false) => {
+  const save = async () => {
     if (!persistence || requestPending.current) {
       return;
     }
-    const useOverwrite = overwrite || overwriteConfirmed;
-    if (conflict && (conflict !== 'conflict' || !useOverwrite)) {
+    if (conflict) {
       setConflictOpen(true);
-      return;
-    }
-    if (overwrite && conflict !== 'conflict' && !overwriteConfirmed) {
       return;
     }
     const submitted = currentSession.current;
@@ -160,18 +140,9 @@ function useSession(
       content,
       expectedSeededAt: submitted.baseline.seededAt,
       expectedUpdatedAt: submitted.baseline.updatedAt,
-      ...(useOverwrite && {
-        expectedLastAppointmentId: submitted.baseline.content.lastAppointmentId,
-        expectedLastFundingSourceId:
-          submitted.baseline.content.lastFundingSourceId,
-      }),
       name,
-      overwrite: useOverwrite,
     });
-    requestPending.current = useOverwrite ? 'overwrite' : 'save';
-    if (useOverwrite) {
-      setOverwriteConfirmed(true);
-    }
+    requestPending.current = true;
     setError(null);
     setConflictOpen(false);
     setSaveStatus('saving');
@@ -181,7 +152,6 @@ function useSession(
         acknowledgeProjectionSave(currentSession.current, submitted, saved)
       );
       setConflict(null);
-      setOverwriteConfirmed(false);
       setSaveStatus('saved');
     } catch (error_) {
       const nextConflict = conflictCode(error_);
@@ -196,7 +166,7 @@ function useSession(
       }
       setSaveStatus('idle');
     } finally {
-      requestPending.current = null;
+      requestPending.current = false;
     }
   };
 
@@ -204,7 +174,7 @@ function useSession(
     if (!persistence || requestPending.current) {
       return null;
     }
-    requestPending.current = 'reload';
+    requestPending.current = true;
     setReloading(true);
     setError(null);
     try {
@@ -219,21 +189,20 @@ function useSession(
       });
       setReloadVersion((version) => version + 1);
       setConflict(null);
-      setOverwriteConfirmed(false);
       setConflictOpen(false);
       setSaveStatus('idle');
       return saved;
     } catch (error_) {
       logFailure('reload', error_);
       setError(
-        'The saved plan could not be loaded. Your changes are still here. Try Discard again.'
+        'The saved plan could not be loaded. Your changes are still here. Try Discard and reload again.'
       );
       if (conflictCode(error_) === 'deleted') {
         setConflict('deleted');
       }
       return null;
     } finally {
-      requestPending.current = null;
+      requestPending.current = false;
       setReloading(false);
     }
   };
@@ -253,7 +222,6 @@ function useSession(
     discardSaved,
     dismissConflict: () => setConflictOpen(false),
     error,
-    overwrite: () => save(true),
     persistenceStatus: persistence
       ? {
           conflict,
@@ -267,7 +235,7 @@ function useSession(
     reloading,
     reloadVersion,
     results,
-    save: () => save(),
+    save,
     saveStatus,
     saving: saveStatus === 'saving',
     session,

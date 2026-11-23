@@ -3,7 +3,6 @@ type NegativeStyle = 'minus' | 'parentheses' | 'plain';
 export type FormatCurrencyOptions = {
   currency?: string;
   locale?: string;
-  maximumFractionDigits?: number;
   negativeStyle?: NegativeStyle;
 };
 
@@ -13,12 +12,8 @@ const DEFAULT_NEGATIVE_STYLE: NegativeStyle = 'minus';
 
 const formatterCache = new Map<string, Intl.NumberFormat>();
 
-const getFormatter = (
-  locale: string,
-  currency: string,
-  maximumFractionDigits?: number
-) => {
-  const cacheKey = `${locale}-${currency}-${maximumFractionDigits}`;
+const getFormatter = (locale: string, currency: string) => {
+  const cacheKey = `${locale}-${currency}`;
   const cached = formatterCache.get(cacheKey);
   if (cached) {
     return cached;
@@ -26,7 +21,6 @@ const getFormatter = (
 
   const formatter = new Intl.NumberFormat(locale, {
     currency,
-    maximumFractionDigits,
     signDisplay: 'never',
     style: 'currency',
   });
@@ -53,11 +47,7 @@ export const formatCurrency = (
   const currency = options.currency ?? DEFAULT_CURRENCY;
   const negativeStyle = options.negativeStyle ?? DEFAULT_NEGATIVE_STYLE;
 
-  const formatter = getFormatter(
-    locale,
-    currency,
-    options.maximumFractionDigits
-  );
+  const formatter = getFormatter(locale, currency);
   const absoluteFormatted = formatter.format(Math.abs(amount));
 
   if (amount >= 0 || negativeStyle === 'plain') {

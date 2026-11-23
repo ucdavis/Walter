@@ -363,29 +363,17 @@ These decisions were confirmed after reviewing the saving and conflict cases:
 
 - **Normal Save** captures the whole applied draft and the exact `UpdatedAt`
   originally loaded. The database checks that timestamp as part of the write.
-- **Ordinary save conflicts** offer Overwrite or Discard. There is no field
-  comparison, selective reapplication, or automatic merge in v1. Closing the
-  dialog keeps the local draft. The next Save offers the same choice again.
-- **Overwrite** captures the current applied draft when clicked. It replaces
-  the saved editable document, including other users' ordinary edits that arrive
-  after the warning, subject to the [server's ID checks](#server-contract-review).
-  The user does not need to confirm the same overwrite again.
-  If it fails, an explicit manual retry retains that overwrite intention until
-  success or Discard. It never retries automatically.
-- **Snapshot replacement or deletion** blocks overwrite. `SeededAt` identifies
-  the original snapshot; a draft cannot restore a deleted plan or replace a
-  freshly reset snapshot. The browser retains the draft for reference.
-- **ID conflict** requires reloading the saved plan. Close keeps the draft
-  visible for reference. Discard reloads the saved version and drops local edits.
-- **Discard after a conflict** loads the latest saved plan in the current
-  workspace, preserving the selected location when it still exists. It does not
-  fetch a fresh source snapshot.
-- **Editing during a save** remains available. Wait for a pending overwrite to
-  finish before adding an appointment or funding source. A response acknowledges
-  the submitted draft, and later edits remain unsaved.
-  For example, saving $132,000 and then editing to $140,000 leaves $132,000 saved
-  and $140,000 visible with unsaved changes. An overwrite clicked after that
-  conflict submits the current $140,000 draft.
+- **Save conflicts** require the latest saved version. Close keeps the local draft
+  visible, and the next Save opens the same prompt. Discard and reload fetches
+  the saved plan and discards the local edits, preserving the selected location
+  if it still exists. It does not fetch a fresh source snapshot.
+- **Snapshot replacement or deletion** also blocks an older draft from saving.
+  `SeededAt` identifies the original snapshot. The browser keeps the draft for
+  reference.
+- **Editing during a save** remains available. A response acknowledges the
+  submitted draft, and later edits remain unsaved. For example, saving $132,000
+  and then editing to $140,000 leaves $132,000 saved and $140,000 visible with
+  unsaved changes.
 - **Leaving with pending changes** offers Stay or Discard. Same-plan navigation
   preserves applied edits. Reload and close use the browser's standard warning.
   A changed, unapplied salary buffer also counts as pending work. Back within
@@ -412,11 +400,11 @@ endpoint without adding a reset/refresh UI.
 ### Stage 1b implementation stops
 
 1. **Server save contract, accepted.** Use the existing timestamps for
-   atomic checks, whole-document save and overwrite, and guarded reset/delete.
+   atomic checks, whole-document saves, and guarded reset/delete.
    Review the code and test against SQL Server before proceeding.
 2. **Saving, conflicts, and departure, accepted.** Load a saved plan,
    acknowledge the submitted version, preserve later edits, and handle failures.
-   Add Overwrite/Discard, snapshot/deletion handling, and departure warnings.
+   Add conflict reload, snapshot/deletion handling, and departure warnings.
    Review the code and exercise these flows together before proceeding.
 3. **Calculation review, current increment.** Verify real-plan costs and date
    boundaries against explicit examples before closing Stage 1b. Saving tests
@@ -432,7 +420,7 @@ expenses and history window without regenerating estimates. Broader server
 validation of captured facts needs a separate decision as the editors expand.
 
 Acceptance evidence must include exact timestamp round trips, two writers using
-the same original timestamp, stale and missing tokens, overwrite races, reset and
+the same original timestamp, stale and missing tokens, reset and
 delete races, authorization, strictly advancing timestamps with a frozen or
 backward clock, and preservation of the submitted estimates. In-memory tests
 alone do not establish the SQL Server concurrency guarantee.
@@ -445,23 +433,12 @@ alone do not establish the SQL Server concurrency guarantee.
 | `POST /api/projections/{id}/reset` | Body `historyMonths`, `expectedUpdatedAt`    | Resets only the loaded version and advances both timestamps. |
 | `DELETE /api/projections/{id}`     | Query `expectedUpdatedAt`                    | Deletes only the loaded version.                             |
 
-Ordinary conflicts return `409 conflict`, and a replaced snapshot returns
-`409 snapshotChanged`. To overwrite intervening edits within the same snapshot,
-send `overwrite: true` with `expectedLastAppointmentId` and
-`expectedLastFundingSourceId` from the version the draft was based on. Submitted
-IDs must either still exist and be at or below the corresponding loaded counter,
-or exceed the server's current counter. An ID conflict returns `409 identitiesChanged`.
-The server checks access, snapshot, and IDs on each retry. Three lost overwrite
-attempts return `503 busy`, unless the final check finds reset, deletion, or
-lost access.
-Invalid/missing tokens return `400`; missing plans and access failures retain
-their existing `404`/`403` behavior.
+In the same snapshot, a stale save returns `409 conflict`. A replaced snapshot
+returns `409 snapshotChanged`. The client reloads the latest saved plan before
+another save. Invalid or missing tokens return `400`. Missing plans and access
+failures return `404` and `403`, respectively.
 
-Independent review found no remaining code issues. It identified a test gap for
-overwrite retry exhaustion and a final-attempt reset/deletion; those cases were
-added and passed. `dotnet test web/app.sln --no-restore --verbosity minimal`
-passed 433 standard tests. SQL integration tests opt out of that default run.
-The isolated SQL Server 2022 runner passed all 12 integration cases with no skips:
+Run the isolated SQL Server tests for the save and concurrency contract:
 
 ```sh
 web/tests/server.tests/run-projection-sql-tests.sh --no-restore --verbosity minimal
@@ -496,13 +473,13 @@ and reload status alongside the draft and location. No second synchronized
 document or browser storage is introduced.
 
 The retained persistence regressions cover saving the applied salary, edits made
-while a save is pending, conflict overwrite/discard, failed and lost responses,
+while a save is pending, conflict reload, failed and lost responses,
 reset/deletion protection, and departure/reload warnings. They operate on the
 production workspace with a test-only persistence double.
 
 Browser checks against the real authenticated route with synthetic HTTP responses
-covered delayed saves, two-tab conflicts, overwrite of the current draft,
-discard, failure/retry, reset protection, reload warnings for unapplied input,
+covered delayed saves, two-tab conflicts, reload and discard, failure/retry,
+reset protection, reload warnings for unapplied input,
 and leaving during a save followed by reopening. Desktop/mobile layouts were
 also checked. Automated
 tests also cover exact timestamp tokens, query refresh, reopening, and late

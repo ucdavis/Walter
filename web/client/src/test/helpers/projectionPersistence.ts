@@ -4,11 +4,7 @@ import type {
   SaveProjectionRequest,
 } from '@/queries/projections.ts';
 
-type SaveOutcome =
-  | 'success'
-  | 'failure'
-  | 'lost-response'
-  | 'identities-changed';
+type SaveOutcome = 'success' | 'failure' | 'lost-response';
 
 function nextTimestamp(timestamp: string) {
   const [seconds, fraction = ''] = timestamp.replace(/Z$/, '').split('.');
@@ -93,17 +89,11 @@ export function createProjectionPersistenceDouble(initialPlan: Projection) {
           message: 'The saved snapshot was reset.',
         });
       }
-      if (
-        !submitted.overwrite &&
-        stored.updatedAt !== submitted.expectedUpdatedAt
-      ) {
+      if (stored.updatedAt !== submitted.expectedUpdatedAt) {
         throw new HttpError(409, url, {
           code: 'conflict',
           message: 'Someone else changed this plan.',
         });
-      }
-      if (nextOutcome === 'identities-changed') {
-        throw new HttpError(409, url, { code: 'identitiesChanged' });
       }
       stored = {
         ...stored,
