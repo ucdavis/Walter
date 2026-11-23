@@ -43,14 +43,11 @@ function appointmentAssumptions(
   ) {
     const from = original?.[key];
     const to = planned[key];
-    if (from === to || (from == null && to == null)) {
-      return;
+    const originalValue = from == null ? null : format(from);
+    const plannedValue = to == null ? null : format(to);
+    if (originalValue !== plannedValue) {
+      rows.push({ label, original: originalValue, planned: plannedValue });
     }
-    rows.push({
-      label,
-      original: from == null ? null : format(from),
-      planned: to == null ? null : format(to),
-    });
   }
   add('startDate', 'Appointment start date', changeDate);
   add('endDate', 'Appointment end date', changeDate);

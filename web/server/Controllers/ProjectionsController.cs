@@ -166,25 +166,24 @@ public sealed class ProjectionsController(
     {
         if (!ValidToken(request.ExpectedUpdatedAt) || !ValidToken(request.ExpectedSeededAt))
             return BadRequest("ExpectedUpdatedAt and ExpectedSeededAt must be exact UTC timestamps from the loaded plan.");
-        if (!ValidDraft(new(request.Name, request.ExpectedSeededAt!.Value, request.Content)))
-            return BadRequest("The plan requires valid sources, appointments, and expenses, including a nonnegative salary for every appointment, unique positive IDs within their counters, and valid allocation references.");
-
         var (projection, error) = await LoadAsync(id, ct);
         if (error is not null) return error;
         if (projection!.SeededAt != request.ExpectedSeededAt) return SnapshotChanged();
         if (projection.UpdatedAt != request.ExpectedUpdatedAt) return Changed();
 
         var stored = projection.Content;
-        if (ReusesRetiredId(request.Content.Appointments.Select(a => a.Id), stored.Appointments.Select(a => a.Id), stored.LastAppointmentId)
-            || ReusesRetiredId(request.Content.FundingSources.Select(s => s.Id), stored.FundingSources.Select(s => s.Id), stored.LastFundingSourceId))
+        var content = request.Content is null ? null : request.Content with { Comparison = stored.Comparison };
+        if (content is null || !ValidDraft(new(request.Name, projection.SeededAt, content)))
+            return BadRequest("The plan requires valid sources, appointments, and expenses, including a nonnegative salary for every appointment, unique positive IDs within their counters, and valid allocation references.");
+        if (ReusesRetiredId(content.Appointments.Select(a => a.Id), stored.Appointments.Select(a => a.Id), stored.LastAppointmentId)
+            || ReusesRetiredId(content.FundingSources.Select(s => s.Id), stored.FundingSources.Select(s => s.Id), stored.LastFundingSourceId))
             return BadRequest("A removed appointment or funding source ID cannot be reused.");
 
         // Keep the tracked plan independent of the mutable request document.
-        var content = JsonSerializer.Deserialize<ProjectionContent>(JsonSerializer.Serialize(request.Content))!;
+        content = JsonSerializer.Deserialize<ProjectionContent>(JsonSerializer.Serialize(content))!;
         projection.Name = request.Name;
         projection.Content = content with
         {
-            Comparison = stored.Comparison,
             LastAppointmentId = Math.Max(stored.LastAppointmentId, content.LastAppointmentId),
             LastFundingSourceId = Math.Max(stored.LastFundingSourceId, content.LastFundingSourceId),
         };

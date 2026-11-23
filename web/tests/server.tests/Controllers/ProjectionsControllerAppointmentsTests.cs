@@ -29,16 +29,18 @@ public sealed partial class ProjectionsControllerTests
         var created = Document(await controller.Create(PiIam, new(draft, Guid.NewGuid()), default));
         var update = Draft(created);
         update.Content.Appointments.Single().MonthlySalary = 10000;
-        update.Content.Comparison.Appointments.Clear();
-        Document(await controller.Save(created.Id, update, default));
+        update.Content.Comparison.Appointments.Single().Allocations!.Single().FundingSourceId = int.MaxValue;
+        var saved = Document(await controller.Save(created.Id, update, default));
         ctx.ChangeTracker.Clear();
         var reloaded = Document(await controller.Get(created.Id, default));
         var copy = Document(await controller.Duplicate(created.Id, new("Alternative", Guid.NewGuid()), default));
-        foreach (var plan in new[] { reloaded, copy })
+        foreach (var plan in new[] { saved, reloaded, copy })
         {
             var original = plan.Content.Comparison.Appointments.Single();
             original.MonthlySalary.Should().Be(8000);
-            original.Allocations!.Single().Percent.Should().Be(1);
+            var originalAllocation = original.Allocations!.Single();
+            originalAllocation.FundingSourceId.Should().Be(plan.Content.FundingSources.Single().Id);
+            originalAllocation.Percent.Should().Be(1);
             plan.Content.LastAppointmentId.Should().BeGreaterThanOrEqualTo(original.Id);
             plan.Content.Appointments.Single().MonthlySalary.Should().Be(10000);
             plan.Content.Appointments.Single().Allocations.Single().Percent.Should().Be(0.6m);

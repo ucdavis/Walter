@@ -53,8 +53,11 @@ const editButton = () =>
   screen.getByRole('button', { name: 'Edit appointment for Alex Example' });
 
 describe('projection plan header', () => {
-  it('reports applied edits, leaves editor input private, and returns keyboard focus to Plan changes', async () => {
-    const { user } = openWorkspace('?section=staffing');
+  it('reports applied salary edits, clears a reversion, and returns focus to Plan changes', async () => {
+    const plan = createSalaryExample();
+    plan.content.appointments[0].monthlySalary = 8_000.01;
+    plan.content.comparison.appointments[0].monthlySalary = 8_000.01;
+    const { user } = openWorkspace('?section=staffing', plan);
     const opener = await screen.findByRole('button', { name: 'Plan changes' });
     const details = screen.getByRole('button', { name: 'Edit plan details' });
     details.focus();
@@ -66,17 +69,27 @@ describe('projection plan header', () => {
     await user.click(editButton());
     await user.clear(salaryInput());
     await user.type(salaryInput(), '144000');
-    expect(read().draft.content.appointments[0].monthlySalary).toBe(10_000);
+    expect(read().draft.content.appointments[0].monthlySalary).toBe(8_000.01);
     await user.click(screen.getByRole('button', { name: 'Apply' }));
     opener.focus();
     await user.keyboard('{Enter}');
     expect(dialog()).toHaveTextContent('Plan has unsaved edits');
-    expect(dialog()).toHaveTextContent('$120,000.00 / year');
+    expect(dialog()).toHaveTextContent('$96,000.12 / year');
     expect(dialog()).toHaveTextContent('$144,000.00 / year');
     await user.click(
       within(dialog()).getByRole('button', { name: 'Close plan changes' })
     );
     expect(opener).toHaveFocus();
+
+    await user.click(editButton());
+    await user.clear(salaryInput());
+    await user.type(salaryInput(), '96000.12');
+    await user.click(screen.getByRole('button', { name: 'Apply' }));
+    await user.click(opener);
+    expect(dialog()).toHaveTextContent(
+      '0 appointments and 0 funding sources affected'
+    );
+    expect(dialog()).toHaveTextContent('No staffing or funding changes');
   });
 
   it('shows dates and preserves subcent pool adjustments and balances', async () => {
