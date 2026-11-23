@@ -21,10 +21,10 @@ public sealed record ProjectionContent
     [JsonRequired]
     public ProjectionComparison Comparison { get; set; } = new();
 
-    /// <summary>Highest appointment identity issued, including appointments since removed.</summary>
+    /// <summary>Highest appointment identity issued in this snapshot, including removed appointments.</summary>
     [JsonRequired]
     public int LastAppointmentId { get; set; }
-    /// <summary>Highest funding source identity issued, including sources since removed.</summary>
+    /// <summary>Highest funding source identity issued in this snapshot, including removed sources.</summary>
     [JsonRequired]
     public int LastFundingSourceId { get; set; }
 

@@ -34,6 +34,10 @@ Create plan to save the reviewed scenario and open its workspace. Canceling
 before submission leaves no saved plan. Workspace edits require Save plan;
 Apply accepts an editor's changes into the draft.
 
+If **Save plan** reports a conflict, choose **Discard and reload** to replace
+your draft with the latest saved plan. Choose **Close** to keep your draft for
+reference.
+
 Open a saved plan from Your plans. Duplicate copies its saved version after
 pending changes are saved. Plan details contains the permanent Delete action,
 which requires confirmation. Scenario edits do not change upstream accounting.
@@ -54,10 +58,11 @@ as Unsplit, the report labels its original funding shares unavailable.
 **Funding** lists proposed sources and imported tasks with date or budget edits.
 A task added to or removed from scope can still count as affected when its
 staffing allocations change. For an edited task, the report shows captured and
-planned dates. It shows original and revised available balances and signed
-adjustments for changed categories and the source total. A redistribution shows
-a zero net adjustment for the source. A newly budgeted category can appear with
-a revised balance of $0.
+planned funding dates and displays the task's capture date if it differs from
+the plan's capture date. It shows original and revised available balances and
+signed adjustments for changed categories and the source total. A redistribution
+shows a zero net adjustment for the source. A newly budgeted category can appear
+with a revised balance of $0.
 
 See the [calculation reference](docs/projections-calculation-review.md) for
 funding, salary, expense, and budget rules.

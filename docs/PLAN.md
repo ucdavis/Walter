@@ -363,14 +363,13 @@ These decisions were confirmed after reviewing the saving and conflict cases:
 
 - **Normal Save** captures the whole applied draft and the exact `UpdatedAt`
   originally loaded. The database checks that timestamp as part of the write.
-- **Save conflicts** require the latest saved version. Close keeps the local draft
-  visible, and the next Save opens the same prompt. Discard and reload fetches
-  the saved plan and discards the local edits. It keeps a selected appointment or
-  source only when that row exists in both saved versions of the same snapshot.
-  Otherwise, it opens the plan overview.
+- **Save conflicts** use the [reload flow](../README.md#projection-plans).
+  After Close, the next Save opens the same prompt. Discard and reload keeps a
+  selected appointment or source only when that row exists in both saved versions
+  of the same snapshot. An invalid selection returns to the plan overview.
 - **Snapshot replacement or deletion** also blocks an older draft from saving.
-  `SeededAt` identifies the original snapshot. The browser keeps the draft for
-  reference.
+  `SeededAt` identifies the original snapshot. If the plan was deleted, Close is
+  the only action in the conflict dialog.
 - **Editing during a save** remains available. A response acknowledges the
   submitted draft, and later edits remain unsaved. For example, saving $132,000
   and then editing to $140,000 leaves $132,000 saved and $140,000 visible with
@@ -385,9 +384,9 @@ These decisions were confirmed after reviewing the saving and conflict cases:
 - **Save feedback** uses Saving followed by a checkmark in the Save button after
   confirmed success. Edits made after submission still appear unsaved.
 - **Failed saves** retain the draft, show simple failure feedback, log the error,
-  and allow manual retry. A lost response may mean the write completed, but the
-  client does not show success without confirmation. Automatic readback,
-  reconciliation, and retries are deferred.
+  and allow manual retry. A save sends one write request and uses its response
+  to confirm success. If the write completed but the response was lost,
+  retrying with the original version produces a save conflict.
 - **Expired login** follows Walter's existing login behavior. The user accepts
   that this can interrupt the session and lose an in-memory draft. Do not add a
   separate session-expired workflow, another-tab login, or a sign-in check.
@@ -465,9 +464,9 @@ plan's cache or draft.
 
 Save acknowledges the submitted document, preserves later edits, and shows a
 checkmark only after confirmation.
-Discard clears an open salary buffer when it reloads the saved inputs. A late
-Discard response cannot navigate back to a plan the user has left. See the
-[save and conflict rules](#stage-1b-confirmed-decisions).
+Discard and reload clears an open salary buffer. A late reload response cannot
+navigate back to a plan the user has left. See the [save and conflict
+rules](#stage-1b-confirmed-decisions).
 
 The workspace read operation now includes serializable saving, conflict, error,
 and reload status alongside the draft and location. No second synchronized
@@ -1004,14 +1003,15 @@ Use `FundingSources` and `Appointments` as the collection names inside the plan'
 typed `Content` in the database, domain, and API. This is a greenfield system.
 Keep one current document format without aliases for prototype fields, old
 request shapes, or old navigation keys. Sources record their kind and capture
-timestamp explicitly.
+timestamp explicitly. Identity, ownership, name, snapshot timestamp, and audit
+fields sit outside `Content`.
 
 The plan's `Comparison` stores staffing assumptions from before setup edits.
 At creation, it keeps the original rows for in-scope appointments and explicit
 exclusions, with the source labels and shares needed to explain them. Saves keep
 the stored comparison. Duplication copies it, and reset captures a fresh one.
-Staffing compares allocations to the same project and task across reimports.
-Funding compares dates and budgets with the task's most recent import.
+Staffing compares allocations by project and task across reimports. Funding
+compares each imported source's dates and budgets with its own capture.
 
 `LastAppointmentId` and `LastFundingSourceId` are the highest issued IDs within
 the snapshot. Additions advance the corresponding counter, including when a
