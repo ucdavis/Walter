@@ -7,11 +7,14 @@ import {
   FinjectorLink,
 } from '@/components/project/FinjectorLink.tsx';
 import { NicknameEditor } from '@/components/project/NicknameEditor.tsx';
-import { TaskName } from '@/components/project/NicknamedName.tsx';
+import { Nicknamed } from '@/components/project/NicknamedName.tsx';
 import { TableExportActions } from '@/components/TableExportActions.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import type { ProjectRecord } from '@/queries/project.ts';
-import { useProjectNicknames } from '@/queries/projectNicknames.ts';
+import {
+  type NicknameLookup,
+  useProjectNicknames,
+} from '@/queries/projectNicknames.ts';
 import { DataTable } from '@/shared/DataTable.tsx';
 import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
 import { tooltipDefinitions } from '@/shared/tooltips.ts';
@@ -38,7 +41,11 @@ interface TaskBreakdownRow {
 
 const columnHelper = createColumnHelper<TaskBreakdownRow>();
 
-function buildRows(records: ProjectRecord[]): TaskBreakdownRow[] {
+function buildRows(
+  records: ProjectRecord[],
+  projectNumber: string,
+  nicknames: NicknameLookup
+): TaskBreakdownRow[] {
   const map = new Map<string, TaskBreakdownRow>();
 
   for (const r of records) {
@@ -70,7 +77,7 @@ function buildRows(records: ProjectRecord[]): TaskBreakdownRow[] {
         programCode: program,
         programDesc: r.programDesc,
         taskName: r.taskName ?? '',
-        taskNickname: '',
+        taskNickname: nicknames.task(projectNumber, task) ?? '',
         taskNum: task,
         taskStatus: r.taskStatus,
       });
@@ -142,11 +149,7 @@ export function TaskBreakdown({
   const [showAll, setShowAll] = useState(false);
   const nicknames = useProjectNicknames();
   const allRows = useMemo(
-    () =>
-      buildRows(records).map((row) => ({
-        ...row,
-        taskNickname: nicknames.task(projectNumber, row.taskNum) ?? '',
-      })),
+    () => buildRows(records, projectNumber, nicknames),
     [nicknames, projectNumber, records]
   );
   const hiddenCount = useMemo(
@@ -206,10 +209,10 @@ export function TaskBreakdown({
               {(info.row.original.taskName ||
                 info.row.original.taskNickname) && (
                 <div className="text-xs text-base-content/80">
-                  <TaskName
+                  <Nicknamed
                     name={info.row.original.taskName || null}
-                    projectNumber={projectNumber}
-                    taskNumber={info.row.original.taskNum}
+                    nickname={info.row.original.taskNickname}
+                    secondary="tooltip"
                   />
                 </div>
               )}

@@ -1,4 +1,4 @@
-import { TaskName } from '@/components/project/NicknamedName.tsx';
+import { Nicknamed } from '@/components/project/NicknamedName.tsx';
 import { useProjectNicknames } from '@/queries/projectNicknames.ts';
 import { useState } from 'react';
 import { createFileRoute, Link } from '@tanstack/react-router';
@@ -100,10 +100,10 @@ const ppmTaskColumns = [
           <div>{info.row.original.taskNum}</div>
           {(info.row.original.taskName || info.row.original.taskNickname) && (
             <div className="text-xs text-base-content/80">
-              <TaskName
+              <Nicknamed
                 name={info.row.original.taskName}
-                projectNumber={info.row.original.projectNumber}
-                taskNumber={info.row.original.taskNum}
+                nickname={info.row.original.taskNickname}
+                secondary="tooltip"
               />
             </div>
           )}

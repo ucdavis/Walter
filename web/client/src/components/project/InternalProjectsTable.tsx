@@ -2,11 +2,14 @@ import { useMemo, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { createColumnHelper } from '@tanstack/react-table';
 import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
-import { TaskName } from '@/components/project/NicknamedName.tsx';
+import { Nicknamed } from '@/components/project/NicknamedName.tsx';
 import { TableExportActions } from '@/components/TableExportActions.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import type { ProjectRecord } from '@/queries/project.ts';
-import { useProjectNicknames } from '@/queries/projectNicknames.ts';
+import {
+  type NicknameLookup,
+  useProjectNicknames,
+} from '@/queries/projectNicknames.ts';
 import { DataTable } from '@/shared/DataTable.tsx';
 import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
 import { tooltipDefinitions } from '@/shared/tooltips.ts';
@@ -38,7 +41,10 @@ function isInactiveTask(row: AggregatedProject): boolean {
 
 const columnHelper = createColumnHelper<AggregatedProject>();
 
-function aggregateProjects(records: ProjectRecord[]): AggregatedProject[] {
+function aggregateProjects(
+  records: ProjectRecord[],
+  nicknames: NicknameLookup
+): AggregatedProject[] {
   const projectsMap = new Map<string, AggregatedProject>();
 
   for (const p of records) {
@@ -56,12 +62,12 @@ function aggregateProjects(records: ProjectRecord[]): AggregatedProject[] {
         pi: p.pi,
         pm: p.pm,
         projectName: p.projectName,
-        projectNickname: '',
+        projectNickname: nicknames.project(p.projectNumber) ?? '',
         projectNumber: p.projectNumber,
         projectOwningOrg: p.projectOwningOrg,
         projectStatusCode: p.projectStatusCode,
         taskName: p.taskName,
-        taskNickname: '',
+        taskNickname: nicknames.task(p.projectNumber, p.taskNum) ?? '',
         taskNum: p.taskNum,
         taskStatus: p.taskStatus,
         totalBalance: p.balance,
@@ -120,12 +126,7 @@ export function InternalProjectsTable({
   const [showInactive, setShowInactive] = useState(false);
   const nicknames = useProjectNicknames();
   const allProjects = useMemo(
-    () =>
-      aggregateProjects(records).map((p) => ({
-        ...p,
-        projectNickname: nicknames.project(p.projectNumber) ?? '',
-        taskNickname: nicknames.task(p.projectNumber, p.taskNum) ?? '',
-      })),
+    () => aggregateProjects(records, nicknames),
     [nicknames, records]
   );
   const inactiveCount = useMemo(
@@ -231,10 +232,10 @@ export function InternalProjectsTable({
               {(info.row.original.taskName ||
                 info.row.original.taskNickname) && (
                 <div className="text-xs text-base-content/80">
-                  <TaskName
+                  <Nicknamed
                     name={info.row.original.taskName || null}
-                    projectNumber={info.row.original.projectNumber}
-                    taskNumber={info.row.original.taskNum}
+                    nickname={info.row.original.taskNickname}
+                    secondary="tooltip"
                   />
                 </div>
               )}

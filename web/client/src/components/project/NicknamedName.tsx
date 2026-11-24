@@ -5,12 +5,13 @@ type Secondary = 'below' | 'tooltip';
 
 interface NicknamedProps {
   name: string | null;
+  /** Empty or missing when there is no nickname. */
   nickname: string | undefined;
   secondary: Secondary;
 }
 
 // The official name always stays reachable: beneath the nickname, or in its tooltip.
-function Nicknamed({ name, nickname, secondary }: NicknamedProps) {
+export function Nicknamed({ name, nickname, secondary }: NicknamedProps) {
   if (!nickname) {
     return name ? <>{name}</> : null;
   }

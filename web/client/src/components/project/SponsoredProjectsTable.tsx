@@ -10,7 +10,10 @@ import {
   parseProjectDate,
 } from '@/lib/date.ts';
 import type { ProjectRecord } from '@/queries/project.ts';
-import { useProjectNicknames } from '@/queries/projectNicknames.ts';
+import {
+  type NicknameLookup,
+  useProjectNicknames,
+} from '@/queries/projectNicknames.ts';
 import { DataTable } from '@/shared/DataTable.tsx';
 import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
 import { tooltipDefinitions } from '@/shared/tooltips.ts';
@@ -40,7 +43,10 @@ interface AggregatedProject {
 
 const columnHelper = createColumnHelper<AggregatedProject>();
 
-function aggregateProjects(records: ProjectRecord[]): AggregatedProject[] {
+function aggregateProjects(
+  records: ProjectRecord[],
+  nicknames: NicknameLookup
+): AggregatedProject[] {
   const projectsMap = new Map<string, AggregatedProject>();
 
   for (const p of records) {
@@ -75,7 +81,7 @@ function aggregateProjects(records: ProjectRecord[]): AggregatedProject[] {
         pm: p.pm,
         primarySponsorName: p.primarySponsorName,
         projectName: p.projectName,
-        projectNickname: '',
+        projectNickname: nicknames.project(p.projectNumber) ?? '',
         projectNumber: p.projectNumber,
         projectOwningOrg: p.projectOwningOrg,
         projectStatusCode: p.projectStatusCode,
@@ -177,10 +183,7 @@ export function SponsoredProjectsTable({
 
   const nicknames = useProjectNicknames();
   const allProjects = useMemo(() => {
-    const aggregated = aggregateProjects(records).map((p) => ({
-      ...p,
-      projectNickname: nicknames.project(p.projectNumber) ?? '',
-    }));
+    const aggregated = aggregateProjects(records, nicknames);
     return sortByEndDate(aggregated);
   }, [nicknames, records]);
 
